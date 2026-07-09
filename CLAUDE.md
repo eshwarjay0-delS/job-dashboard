@@ -1,5 +1,30 @@
 @AGENTS.md
 
+# STANDING RULE — commit + log progress every session (added 2026-07-09)
+
+This project went a full week with real, working code (the resume-tailoring engine, the browser
+extension, the whole dashboard app) sitting ONLY as uncommitted files — zero git history beyond the
+original scaffold commit, no remote, nothing durable. Eshwar could not tell what had or hadn't actually
+been done across sessions. **Every Claude Code session working in this folder must, before ending or at
+natural pausing points:**
+
+1. **Commit meaningful checkpoints to git** as the work happens — not just once at the very end of a long
+   session. `git add` the relevant files (never `-A` blindly — check `git status` first, and never commit
+   `.env*` or `/data/` — see `.gitignore`) and write a commit message that says what changed and why. Small,
+   frequent commits beat one giant one; if a session touches several unrelated things, commit them separately.
+2. **Add a dated entry to `TODO.md`** (top of the file, newest first) summarizing what was actually built,
+   what was verified vs. NOT verified (e.g. "Chrome unavailable, needs live click-through"), and where to
+   pick up next. Follow the existing entries' format/density — dense and specific, not vague.
+3. If a change has no visible UI signature (backend wiring, bug fixes, invisible-until-dark-mode CSS fixes,
+   extension code that can't be seen on localhost) — **say so explicitly** in both the chat response and the
+   TODO.md entry. Eshwar has been repeatedly confused by real work that "looks like nothing changed" — don't
+   let that ambiguity stand uncorrected.
+
+This is not optional busywork — it's the difference between a week of real progress being verifiable and
+recoverable versus indistinguishable from nothing having happened at all.
+
+---
+
 # CLAUDE.md — Resume Generation Instructions for CareerOS
 **From: Review AI (Cowork) | To: VS Code AI working on index.html**
 **Date: June 2026**
