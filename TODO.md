@@ -184,18 +184,53 @@ This session finished ALL of Phase 1. Also fixed real bugs unrelated to the road
   a real look. If you (Eshwar or next session) load the app and something looks visually off on dashboard
   home or the jobs board that didn't before, START by checking this diff — it's the most likely place.
 
-### What's left / where to pick up
-Phase 1 is done. Next per the plan: **Phase 2 — real job matching at scale**, replacing the fake
-`src/app/dashboard/recommended/page.tsx` (hardcoded `SAMPLE_JOBS`, fixed `"security engineer"` query,
-`60 + (i % 30)` placeholder match%) by running the ALREADY-EXISTING `src/lib/matching/computeMatchScore.ts`
-(currently only used for the single-JD-paste Tailor flow) across the whole job board instead. Also flagged
-in the plan as a real deployment blocker, not just a code gap: `RAPID_API_KEY` is unset, so `/api/jobs`
-silently falls back to a hardcoded 13-job sample array — real job data needs that key set.
+### Phase 2 — Real job matching (done same day, right after Phase 1)
+- **Root cause**: `src/app/dashboard/recommended/page.tsx` was fully fake — hardcoded `SAMPLE_JOBS` (6
+  hand-written jobs), a fixed `"security engineer"` search query regardless of the user's actual role, and
+  `matchPct: 60 + (i % 30)` — a modulo index trick, not a real score. Also never read the REAL server profile
+  (Phase 1A's whole point) — only `localStorage.jd_profile`, a per-browser cache with no `education`/
+  `years_experience` fields the DB profile doesn't carry either.
+- Fixed: deleted `SAMPLE_JOBS` entirely. New `loadRealProfile()` fetches `GET /api/profile` (the real
+  Supabase-backed profile Phase 1A now actually writes to) and merges it with the localStorage cache only
+  for fields the DB doesn't carry (years exp, education — resume-extracted, not asked in onboarding yet;
+  API wins on anything both provide). Every job returned by `/api/jobs` gets scored for real via the
+  ALREADY-EXISTING `src/lib/matching/computeMatchScore.ts` (same lib the single-JD Tailor flow already
+  trusts — 70+ skill aliases, security/staffing domain coverage) — no new scoring logic invented, just run
+  in a loop instead of once. Search query now uses the user's real title instead of a hardcoded string.
+  `matchReasons` are now derived from actually-matched skills + real remote/location fit, not hand-written.
+- **`RAPID_API_KEY` unset is still a real gap** (flagged in the plan, not fixed by this — I can't obtain a
+  key myself): without it, `/api/jobs` itself falls back to ITS OWN hardcoded 13-job sample array. The
+  scoring against those 13 is now real (computed from the user's actual profile), but the underlying jobs
+  are still sample data. Added an honest empty/sample-state to the page instead of pretending otherwise —
+  it now says "Sample data — no job API key configured" instead of showing a fake "● Live" badge. Note:
+  Settings already has a self-serve path for this (`jd_settings.rapidApiKey` → sent as `x-rapid-api-key`
+  header) — a user CAN unlock real data without touching `.env.local`, just wasn't surfaced anywhere. Worth
+  pointing Eshwar at Settings if he wants real job data before a server-side key gets configured.
+- `tsc --noEmit` clean, dev server compiles with no runtime error in the log, jsdom suite still 133/133
+  (unrelated to this change, re-run as a safety net). **NOT visually verified** — same Chrome-unavailable
+  caveat as everything else this session.
 
-**Three things a live Chrome/browser session still needs to confirm, unchanged from before this session
-started and not resolved by it:** (1) Phase 1A's signup→setup-wizard redirect, click-through. (2) Phase 1B's
+### Separate, unrelated finding this session: Google OAuth still broken (pre-existing, not caused by today)
+Eshwar reported Google sign-in not working. Verified `src/lib/google-auth.ts` is correct — it fully
+delegates to `supabase.auth.signInWithOAuth()`, so the failure is entirely upstream in Supabase's Google
+provider config, not app code. This is the SAME `deleted_client` issue already logged 2026-07-06 (see that
+section further down this file) — still unresolved 3 days later because it needs Eshwar's own action in
+Google Cloud Console (new OAuth client → paste Client ID/Secret into Supabase Auth → Providers → Google).
+Gave him the exact steps in chat. Nothing to fix in code here.
+
+### What's left / where to pick up
+Phase 1 AND Phase 2 are done. Next per the plan: **Phase 3 — assisted one-click apply**. Note: a
+concurrent/prior process already built the SAFE ENGINE HALF of this in `extension/content.js` —
+`runAutofillFlow(profile, resumeUrl, resumeName, autoSubmit)`, opt-in via a 4th arg every existing caller
+omits, gated on zero `needsAttention` items, Greenhouse/Lever only, queues to `chrome.storage.local` for the
+dashboard tracker. Grepped `sidebar.js`/`popup.js` — **nothing calls it with `autoSubmit` yet.** Phase 3 work
+is building that UI trigger (an explicit per-application confirm click, per the engine's own documented
+contract), NOT rebuilding the engine.
+
+**Things a live Chrome/browser session still needs to confirm, unchanged from before this session started
+and not resolved by it:** (1) Phase 1A's signup→setup-wizard redirect, click-through. (2) Phase 1B's
 work-auth fix + general autofill, click-through on a real ATS posting — still the #1 open unknown project-
-wide. (3) Phase 1C's dark-mode fix, visual before/after.
+wide. (3) Phase 1C's dark-mode fix, visual before/after. (4) Phase 2's recommended-jobs page, visual check.
 
 ## 🔬 2026-07-06 — RESEARCH: "make redirect/placeholder pages real" (Eshwar request)
 

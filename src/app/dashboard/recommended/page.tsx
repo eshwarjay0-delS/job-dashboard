@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { getH1BScore } from "@/lib/h1b"
 import { fetchJobs as fetchJobsApi } from "@/lib/jobsClient"
+import { computeMatchScore, type UserProfile } from "@/lib/matching/computeMatchScore"
 
 const P = {
   bg:      "#f4f6f9",
@@ -39,70 +40,6 @@ const WORK_AUTH_COLORS: Record<string, { label: string; color: string; bg: strin
   w2:          { label: "W2",         color: "#0369a1", bg: "#f0f9ff", border: "#bae6fd" },
   c2c:         { label: "C2C",        color: "#92400e", bg: "#fffbeb", border: "#fde68a" },
 }
-
-// ── Sample recommended jobs (populated from profile skills) ────────────────────
-const SAMPLE_JOBS: RecommendedJob[] = [
-  {
-    id: "r1", title: "Senior Cloud Security Engineer", company: "Palo Alto Networks",
-    domain: "paloaltonetworks.com", location: "Santa Clara, CA", remote: true,
-    salary: "$175k–$230k", workAuth: ["h1b", "w2"],
-    url: "https://www.paloaltonetworks.com/company/careers",
-    posted: new Date(Date.now() - 2 * 3600000).toISOString(),
-    description: "5+ years cloud security, AWS/Azure, SIEM, threat modeling, SOC leadership.",
-    matchPct: 94, matchReasons: ["Cloud Security", "SIEM", "Threat modeling", "H-1B sponsor"],
-    source: "Jobright",
-  },
-  {
-    id: "r2", title: "Staff Security Engineer – AppSec", company: "Stripe",
-    domain: "stripe.com", location: "San Francisco, CA", remote: true,
-    salary: "$200k–$270k", workAuth: ["h1b", "green_card", "w2"],
-    url: "https://stripe.com/jobs",
-    posted: new Date(Date.now() - 5 * 3600000).toISOString(),
-    description: "SAST, DAST, SCA, Burp Suite, threat modeling, secure SDLC, CI/CD security gates.",
-    matchPct: 91, matchReasons: ["SAST/DAST", "Burp Suite", "SDLC", "Green Card sponsor"],
-    source: "LinkedIn",
-  },
-  {
-    id: "r3", title: "Senior OT Security Analyst", company: "Cigna",
-    domain: "cigna.com", location: "Bloomfield, CT", remote: true,
-    salary: "$140k–$185k", workAuth: ["h1b", "w2"],
-    url: "https://careers.cigna.com",
-    posted: new Date(Date.now() - 1 * 86400000).toISOString(),
-    description: "ICS/SCADA, Dragos/Claroty, NERC CIP, NIST 800-82, ISA/IEC 62443.",
-    matchPct: 88, matchReasons: ["OT Security", "SCADA/ICS", "NERC CIP", "Previous employer match"],
-    source: "Indeed",
-  },
-  {
-    id: "r4", title: "Senior ServiceNow Developer", company: "Deloitte",
-    domain: "deloitte.com", location: "Remote", remote: true,
-    salary: "$130k–$175k", workAuth: ["h1b", "c2c", "w2"],
-    url: "https://apply.deloitte.com",
-    posted: new Date(Date.now() - 2 * 86400000).toISOString(),
-    description: "ServiceNow ITSM/ITOM/GRC, FlowDesigner, REST/SOAP integrations, 5+ years.",
-    matchPct: 86, matchReasons: ["ServiceNow", "ITSM", "FlowDesigner", "C2C eligible"],
-    source: "Simplify",
-  },
-  {
-    id: "r5", title: "DevSecOps Engineer", company: "CrowdStrike",
-    domain: "crowdstrike.com", location: "Austin, TX", remote: true,
-    salary: "$155k–$200k", workAuth: ["h1b", "c2c", "w2"],
-    url: "https://crowdstrike.com/careers",
-    posted: new Date(Date.now() - 3 * 86400000).toISOString(),
-    description: "CI/CD security, container security, Kubernetes, Terraform, CrowdStrike Falcon.",
-    matchPct: 82, matchReasons: ["CrowdStrike", "DevSecOps", "Kubernetes", "H-1B sponsor"],
-    source: "Jobright",
-  },
-  {
-    id: "r6", title: "GRC Security Analyst", company: "Morgan Stanley",
-    domain: "morganstanley.com", location: "New York, NY", remote: false,
-    salary: "$120k–$160k", workAuth: ["h1b", "w2"],
-    url: "https://morganstanley.com/careers",
-    posted: new Date(Date.now() - 4 * 86400000).toISOString(),
-    description: "CISSP, risk management, ISO 27001, SOX compliance, policy writing.",
-    matchPct: 78, matchReasons: ["CISSP", "GRC", "Risk management", "H-1B sponsor"],
-    source: "LinkedIn",
-  },
-]
 
 function timeAgo(iso: string): string {
   try {
@@ -146,56 +83,109 @@ function CompanyLogo({ domain, name, size = 40 }: { domain: string; name: string
   )
 }
 
+// Merge the real server profile (Supabase `profiles` — skills/location/work_auth,
+// the source of truth since Phase 1A wired the setup wizard to actually write it)
+// with the localStorage cache for fields the DB profile doesn't carry (years of
+// experience, education — extracted from a resume, not asked in onboarding yet).
+// API wins on any field both provide; localStorage only fills genuine gaps.
+async function loadRealProfile(): Promise<UserProfile & { title: string }> {
+  let local: Record<string, unknown> = {}
+  try { local = JSON.parse(localStorage.getItem("jd_profile") || "{}") } catch {}
+  const localSkills = Array.isArray(local.skills)
+    ? local.skills as string[]
+    : typeof local.skills === "string"
+    ? (local.skills as string).split(/[,\n]+/).map(s => s.trim()).filter(Boolean)
+    : []
+
+  let apiProfile: Record<string, unknown> | null = null
+  try {
+    const res = await fetch("/api/profile")
+    const data = await res.json()
+    apiProfile = data?.profile || null
+  } catch { /* offline / not signed in — localStorage-only */ }
+
+  const skills = (Array.isArray(apiProfile?.skills) && (apiProfile!.skills as string[]).length)
+    ? apiProfile!.skills as string[]
+    : localSkills
+  const location = String(apiProfile?.location || local.location || "")
+  const title = String(apiProfile?.title || local.title || "")
+
+  return {
+    skills,
+    location,
+    title,
+    experience_years: Number(local.yearsExp || local.years_experience || 0),
+    education: String(local.education || ""),
+  }
+}
+
+// A job listing's "skills" aren't pre-tagged (unlike a parsed resume) — score
+// runs computeMatchScore's own extractSkillsFromJD() over the description text,
+// same keyword/alias approach the single-JD Tailor flow already trusts, just
+// looped across the whole board instead of one pasted JD at a time.
+function deriveMatchReasons(profile: UserProfile, job: { location: string; remote: boolean }, matched: string[]): string[] {
+  const reasons = matched.slice(0, 3).map(s => s.charAt(0).toUpperCase() + s.slice(1))
+  if (job.remote) reasons.push("Remote")
+  else if (profile.location && job.location && job.location.toLowerCase().includes(profile.location.toLowerCase().split(",")[0].trim())) {
+    reasons.push("Local to you")
+  }
+  return reasons
+}
+
 export default function RecommendedPage() {
-  const [jobs, setJobs] = useState<RecommendedJob[]>(SAMPLE_JOBS)
+  const [jobs, setJobs] = useState<RecommendedJob[]>([])
   const [filter, setFilter] = useState<"all" | "remote" | "h1b" | "strong">("all")
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [profileSkills, setProfileSkills] = useState<string[]>([])
   const [lastRefresh] = useState(new Date())
-  const [liveJobs, setLiveJobs] = useState<RecommendedJob[]>([])
+  const [isLive, setIsLive] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Read profile for personalized match context
-    try {
-      const p = JSON.parse(localStorage.getItem("jd_profile") || "{}")
-      if (p.skills) setProfileSkills(String(p.skills).split(/[,\n]+/).map((s: string) => s.trim()).filter(Boolean).slice(0, 20))
-    } catch {}
     try {
       const d = new Set<string>(JSON.parse(localStorage.getItem("jd_reco_dismissed") || "[]"))
       setDismissed(d)
     } catch {}
 
-    // Attempt to load live jobs from /api/jobs and score them
-    async function loadLive() {
+    async function loadAndScore() {
+      const profile = await loadRealProfile()
+      setProfileSkills((profile.skills || []).slice(0, 20))
+
       try {
-        const res = await fetchJobsApi("/api/jobs?q=security engineer")
+        // Query the board with the user's own stated title/target role when we
+        // have one — a fixed "security engineer" query (the old hardcoded
+        // default) has nothing to do with a non-security candidate's profile.
+        const q = profile.title || "software engineer"
+        const res = await fetchJobsApi(`/api/jobs?q=${encodeURIComponent(q)}`)
         const data = await res.json()
+        setIsLive(data.live === true)
         if (Array.isArray(data.jobs) && data.jobs.length > 0) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const live: RecommendedJob[] = data.jobs.slice(0, 8).map((j: any, i: number) => ({
-            id: `live-${i}`,
-            title: String(j.title || ""),
-            company: String(j.company || ""),
-            domain: String(j.company || "").toLowerCase().replace(/\s+/g, "") + ".com",
-            location: String(j.location || ""),
-            remote: Boolean(j.remote),
-            salary: j.salary ? String(j.salary) : null,
-            workAuth: Array.isArray(j.workAuth) ? j.workAuth : [],
-            url: String(j.url || "#"),
-            posted: String(j.posted || new Date().toISOString()),
-            description: String(j.description || ""),
-            matchPct: 60 + (i % 30),
-            matchReasons: ["Profile match", j.remote ? "Remote" : ""].filter(Boolean),
-            source: String(j.source || "Live"),
-          }))
-          setLiveJobs(live)
-          setJobs([...live, ...SAMPLE_JOBS])
+          const scored: RecommendedJob[] = data.jobs.map((j: any) => {
+            const match = computeMatchScore(profile, { description: j.description, location: j.location, work_model: j.remote ? "remote" : undefined })
+            return {
+              id: String(j.id || j.url || Math.random()),
+              title: String(j.title || ""),
+              company: String(j.company || ""),
+              domain: String(j.company || "").toLowerCase().replace(/\s+/g, "") + ".com",
+              location: String(j.location || ""),
+              remote: Boolean(j.remote),
+              salary: j.salary ? String(j.salary) : null,
+              workAuth: Array.isArray(j.workAuth) ? j.workAuth : [],
+              url: String(j.url || "#"),
+              posted: String(j.posted || new Date().toISOString()),
+              description: String(j.description || ""),
+              matchPct: match.overall,
+              matchReasons: deriveMatchReasons(profile, { location: String(j.location || ""), remote: Boolean(j.remote) }, match.matchedSkills),
+              source: String(j.source || "Live"),
+            }
+          }).sort((a: RecommendedJob, b: RecommendedJob) => b.matchPct - a.matchPct)
+          setJobs(scored)
         }
-      } catch { /* keep sample */ }
+      } catch { /* leave jobs empty — the empty state below explains why */ }
       setLoading(false)
     }
-    void loadLive()
+    void loadAndScore()
   }, [])
 
   function dismiss(id: string) {
@@ -216,7 +206,6 @@ export default function RecommendedPage() {
   })
 
   const hasProfile = profileSkills.length > 0
-  const isLive = liveJobs.length > 0
 
   return (
     <div style={{ maxWidth: 920, margin: "0 auto" }}>
@@ -231,7 +220,9 @@ export default function RecommendedPage() {
             {hasProfile
               ? `Matched to your ${profileSkills.slice(0, 3).join(", ")} skills — updated ${lastRefresh.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
               : "Complete your profile to get personalized matches — showing broad recommendations now."}
-            {" "}{isLive && <span style={{ color: "#059669", fontWeight: 600 }}>● Live</span>}
+            {" "}{isLive
+              ? <span style={{ color: "#059669", fontWeight: 600 }}>● Live</span>
+              : jobs.length > 0 && <span style={{ color: P.hint, fontWeight: 600 }}>Sample data — no job API key configured</span>}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -285,11 +276,22 @@ export default function RecommendedPage() {
           Loading recommendations…
         </div>
       )}
-      {!loading && filtered.length === 0 && (
+      {!loading && filtered.length === 0 && jobs.length > 0 && (
         <div style={{ textAlign: "center", padding: "48px 24px", background: P.surface, borderRadius: 16, border: `1px solid ${P.border}` }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>🎯</div>
           <p style={{ fontSize: 15, fontWeight: 700, color: P.text, marginBottom: 8 }}>No matches for this filter</p>
           <button onClick={() => setFilter("all")} style={{ padding: "8px 18px", borderRadius: 9, background: "var(--accent)", color: "#fff", border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Show All</button>
+        </div>
+      )}
+      {!loading && jobs.length === 0 && (
+        <div style={{ textAlign: "center", padding: "48px 24px", background: P.surface, borderRadius: 16, border: `1px solid ${P.border}` }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
+          <p style={{ fontSize: 15, fontWeight: 700, color: P.text, marginBottom: 8 }}>No live job data configured yet</p>
+          <p style={{ fontSize: 13, color: P.muted, marginBottom: 16, maxWidth: 420, margin: "0 auto 16px" }}>
+            This board needs a job-search API key (RapidAPI/JSearch) to pull real postings — either set one
+            in Settings yourself, or ask whoever runs this deployment to configure <code>RAPID_API_KEY</code>.
+          </p>
+          <Link href="/dashboard/settings" style={{ padding: "8px 18px", borderRadius: 9, background: "var(--accent)", color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>Open Settings →</Link>
         </div>
       )}
 
