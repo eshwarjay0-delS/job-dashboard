@@ -1,5 +1,93 @@
 # MarketFit — Single Project Tracker (`todo.md`)
 
+## ⚠️ 2026-07-09 (Claude Code, separate session — read this before the "Roadmap kickoff" entry below) — CONCURRENT-SESSION WARNING + independent Tsenta-parity work
+
+**This ran in parallel with the "Roadmap kickoff" session below, from a different trigger (Eshwar showed this
+session a live screen recording of tsenta.com/dashboard.tsenta.com directly, not via a written plan doc) and
+NEITHER session knew the other existed until Eshwar said "I can't see any changes, are you sandbagging" and
+"I always say to save progress to todo, so the next AI knows where to continue" — this file wasn't being
+updated by this session at all until this entry, which is the actual root cause of that confusion, not missing
+work. Verified before writing this: every file both sessions touched (`extension/content.js`,
+`src/app/api/profile/route.ts`, `src/app/dashboard/page.tsx`, `src/app/dashboard/jobs/page.tsx`) currently has
+BOTH sessions' changes intact, nothing clobbered — checked by grep for both sessions' specific additions post-
+hoc, not assumed. `tsc --noEmit` clean, `npm run build` clean, both test suites green. But this was two sessions
+writing to the same files with no lock/merge — lucky non-overlap, not a guarantee. If you're a future session
+and about to touch any file in that list, `grep` for what's already there first.**
+
+**Important overlap with the roadmap below:** its Phase 3 section (and its own TODO entry, "Phase 1B" below)
+says the autoSubmit engine exists in `content.js` but **"nothing calls it with autoSubmit yet... wire a UI
+trigger... when you get to Phase 3."** That's now done — see "Task 22/23" below. Don't rebuild it.
+
+### What this session did (all verified: `npx tsc --noEmit` clean, `npm run build` clean, 148 automated
+assertions passing — 133 in `scripts/test-autofill-dom.mjs`, 15 in the new `scripts/test-applications-merge.mts`)
+
+**Root cause of "we were pulling fake live jobs" (Eshwar's own words) — found and fixed:**
+- `/api/jobs` (`src/app/api/jobs/route.ts`) silently fell back to a hardcoded 13-job `SAMPLE` array whenever
+  its 4 live sources failed — confirmed via live curl/node-fetch that ALL FOUR were dead: no API keys set
+  anywhere, `infosecjobs.com`'s RSS has a broken TLS cert on their end, and `data.usajobs.gov` actually 401s
+  without a key despite the code's own comment claiming "no key needed" (fixed that comment too).
+- Non-coder-accessible fix, not a `.env.local` instruction: added real paste-a-key fields to
+  `/dashboard/settings` (RapidAPI + USAJobs, both free-tier/instant-signup) — stored the same way the
+  existing `claudeKey` already is (`localStorage.jd_settings`), sent as request headers via new
+  `src/lib/jobsClient.ts`, read by `/api/jobs` as a header first, `process.env` fallback second. Migration
+  needed once in Supabase SQL editor for 3 new profile columns — see `supabase/schema.sql`, bottom, dated
+  2026-07-09.
+- The existing "Sample" indicator was a tiny gray pill, easy to miss (confirmed — that's how Eshwar got
+  fooled). New `src/components/SampleDataBanner.tsx`, a loud red/amber banner, wired into jobs/jobs-ft/
+  contracts. Contracts gets a `variant="snapshot"` wording (its static library is REAL recruiter posts from a
+  2026-06-30 collection date, not fabricated — different situation from the other two, worded honestly).
+
+**Closed the "ask once, reuse everywhere" gap vs Tsenta:**
+- `/dashboard/settings` → new "Application Preferences" card: remote/relocate/start-immediately/
+  transportation/clearance, tri-state Yes/No/unanswered (unanswered ≠ "No" — never guesses). `extension/
+  content.js` has 4 new `fillXRadio()` functions (mirrors the existing `fillWorkAuthRadio` trust pattern) that
+  auto-answer these on real ATS forms instead of leaving them blank every single time.
+
+**Built Tsenta's actual trust mechanic — the pre-fill "receipt":**
+- `extension/sidebar.js` now pauses after resolving what WOULD be filled (name/email/resume/every preference)
+  and shows it before touching the page. Nothing fills until the user clicks confirm. `extension/sidebar.css`
+  has the new `#mf-receipt` styles.
+
+**Task 22/23 — real auto-submit, Greenhouse/Lever only (this is the one that needed a judgment call, not a
+silent build — see AskUserQuestion note below):**
+- Eshwar chose "fill + real Submit click, one motion after receipt confirm" over a two-gate or fill-only
+  option when explicitly asked (this WAS the "unattended vs assisted" line the roadmap-plan session
+  independently also flagged as needing an explicit decision — both sessions converged on the same risk
+  without knowing about each other). What got built matches the roadmap's own Phase 3 definition of "assisted"
+  exactly: `runAutofillFlow(profile, resumeUrl, resumeName, autoSubmit)` — 4th param opt-in, every pre-existing
+  caller (popup.js's AUTOFILL path) unaffected — only fires when `needsAttention.length === 0` (a flagged
+  sponsorship/EEO question blocks it — user resolves + submits that one manually) and only on Greenhouse/
+  Lever. `findSubmitButton()` matches by role+text within the actual form, returns null (no attempt) rather
+  than a document-wide search if the form can't be located. A submitted application queues via
+  `chrome.storage.local` and `extension/web-bridge.js` drains it into `jd_applications_v2` on the dashboard's
+  next load (cross-origin — content.js on e.g. boards.greenhouse.io can't reach the dashboard's own
+  localStorage directly).
+- If it ever fills but can't find the real Submit button (or a question's flagged), the sidebar button turns
+  into a distinct red "⚠ Filled but NOT submitted" state — deliberately never blends into the plain green
+  "success" state, so nobody walks away thinking they applied when they didn't.
+- **Not click-through tested against a real live posting** — same standing limitation as every extension
+  change either session has ever made, per this file's own history below. Covered by jsdom simulation only.
+  **Also: Chrome extensions do not hot-reload.** If you're testing this, reload the unpacked extension in
+  `chrome://extensions` first or you're looking at old code.
+
+**Second real bug found (unrelated to Tsenta, found while investigating why Gmail sync "felt fake"):**
+- `<GmailSync onSync={() => {}} />` in `settings/page.tsx` was a no-op. `/api/gmail-sync` genuinely parses
+  application emails and the UI genuinely showed "N added" — nothing ever wrote those N into the tracker.
+  Fixed via new `mergeGmailApplications()` in `src/lib/applications.ts`: dedupes against every existing entry
+  (by stable `gmail_<threadId>` id, or company+role for anything already manually tracked), and for a
+  previously-synced thread, only ever moves its stage forward (offer/rejected are terminal — an older or
+  misclassified email can't downgrade a later, more specific one). 15 new tests in
+  `scripts/test-applications-merge.mts` (now wired into `npm run check`) cover this specifically, including
+  the "gmail reply merges into an already-manually-tracked row instead of duplicating it" case.
+
+**What's left, not attempted:** ATS coverage beyond Greenhouse/Lever for auto-submit; WhatsApp/iMessage/MCP
+multi-surface access (Tsenta has this, explicitly deferred, large); a live 50k-page-crawler equivalent (still
+resting on the 3 API keys above being filled in). Memory files with more detail if picking this back up:
+`project-tsenta-competitor.md`, `project-extension-autosubmit.md`, `project-job-data-source.md`,
+`project-gmail-connect.md` (all under the Claude memory dir, not in this repo).
+
+---
+
 ## 🚧 2026-07-09 (Claude Code) — Roadmap kickoff: "beat Tsenta/Jobright" — Phase 1 done, Phase 2+ next
 
 Eshwar compared the app unfavorably to Tsenta (YC-backed auto-apply agent — matches 2M+ jobs, auto-tailors
