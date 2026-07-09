@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareerKit — AI Resume Ops</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-icon">CK</div>
+    <div class="brand-text">
+      <span class="brand-name">CareerKit</span>
+      <span class="brand-sub">AI Resume Ops</span>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <button class="nav-item" data-tab="jobs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+      <span>Jobs</span>
+      <span class="nav-badge" id="jobs-count-badge" style="display:none">0</span>
+    </button>
+    <button class="nav-item active" data-tab="library">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>Library</span>
+    </button>
+    <button class="nav-item" data-tab="tailor">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span>AI Tailor</span>
+    </button>
+    <button class="nav-item" data-tab="tracker">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Tracker</span>
+      <span class="nav-badge" id="tracker-count-badge" style="display:none">0</span>
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    {% if not has_key %}
+    <div class="key-warn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Add <code>ANTHROPIC_API_KEY</code> to <code>.env</code> to enable AI
+    </div>
+    {% endif %}
+    <div class="sidebar-version">v2.0</div>
+  </div>
+</aside>
+
+<!-- ── Main ─────────────────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- ═══════════════════════════════════════════════════════════ JOBS TAB -->
+  <section id="tab-jobs" class="tab-panel" hidden>
+    <div class="page-header">
+      <div>
+        <h1>Job Board</h1>
+        <p class="subtitle">Remote tech jobs with visa & work authorization filters</p>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="jobs-refresh-btn" onclick="loadJobs(true)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Refresh
+      </button>
+    </div>
+
+    <!-- Search + Filters -->
+    <div class="jobs-controls">
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="jobs-search" placeholder="Search jobs, companies, skills…" />
+      </div>
+      <div class="filter-chips" id="visa-filters">
+        <button class="filter-chip active" data-filter="all">All</button>
+        <button class="filter-chip" data-filter="h1b">
+          <span class="chip-dot purple"></span>H1B Sponsor
+        </button>
+        <button class="filter-chip" data-filter="gc">
+          <span class="chip-dot green"></span>GC / Perm
+        </button>
+        <button class="filter-chip" data-filter="opt">
+          <span class="chip-dot blue"></span>OPT/CPT
+        </button>
+        <button class="filter-chip" data-filter="c2c">
+          <span class="chip-dot orange"></span>C2C / 1099
+        </button>
+        <button class="filter-chip" data-filter="remote">
+          <span class="chip-dot teal"></span>Remote
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="jobs-stats" id="jobs-stats" style="display:none">
+      <span id="jobs-showing-count">0 jobs</span>
+      <span class="stats-sep">·</span>
+      <span id="jobs-source-label">Loading…</span>
+    </div>
+
+    <!-- Loading skeleton (hidden until JS shows it) -->
+    <div id="jobs-loading" class="jobs-skeleton" style="display:none">
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+    </div>
+
+    <!-- Job grid -->
+    <div id="jobs-grid" class="jobs-grid" style="display:none"></div>
+
+    <!-- Empty state -->
+    <div id="jobs-empty" class="empty-state" hidden>
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+      <h2>No matching jobs</h2>
+      <p>Try a different filter or search term.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════ LIBRARY TAB -->
+  <section id="tab-library" class="tab-panel">
+    <div class="page-header">
+      <div>
+        <h1>Resume Library</h1>
+        <p class="subtitle">Upload your resumes — AI tags them automatically</p>
+      </div>
+      <label class="btn btn-primary upload-trigger" for="file-input">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Upload Resume
+        <input type="file" id="file-input" accept=".docx" hidden multiple />
+      </label>
+    </div>
+
+    <div class="drop-zone" id="drop-zone">
+      <div class="drop-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <p class="drop-text">Drop <strong>.docx</strong> files here or <label for="file-input" class="link">browse</label></p>
+      <p class="drop-hint">Supports multiple files · AI auto-tags domains &amp; keywords</p>
+    </div>
+
+    <div id="upload-progress" class="upload-progress" hidden>
+      <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill"></div></div>
+      <span id="progress-label">Uploading…</span>
+    </div>
+
+    <div id="resume-grid" class="resume-grid"></div>
+
+    <div id="library-empty" class="empty-state" hidden>
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </div>
+      <h2>No resumes yet</h2>
+      <p>Upload your .docx resume files and CareerKit will automatically read and tag each one with its domain and keywords.</p>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════ TAILOR TAB -->
+  <section id="tab-tailor" class="tab-panel" hidden>
+    <div class="page-header">
+      <div>
+        <h1>AI Resume Tailor</h1>
+        <p class="subtitle">Paste a job description — get a tailored resume in seconds</p>
+      </div>
+    </div>
+
+    <div class="tailor-layout">
+      <div class="tailor-input-col">
+        <div class="card">
+          <label class="card-label">Job Description</label>
+          <textarea id="jd-input" class="jd-textarea"
+            placeholder="Paste the full job description here…&#10;&#10;The more detail, the better the match."
+            rows="14"></textarea>
+
+          <div class="resume-picker-row">
+            <label class="card-label" style="margin:0">Resume</label>
+            <select id="resume-select" class="select">
+              <option value="">— auto-pick best match —</option>
+            </select>
+          </div>
+
+          <button id="tailor-btn" class="btn btn-primary btn-full">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Find &amp; Tailor
+          </button>
+
+          {% if not has_key %}
+          <div class="no-key-note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Add <code>ANTHROPIC_API_KEY</code> to <code>.env</code> to enable tailoring
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="tailor-result-col">
+        <div id="result-idle" class="result-idle">
+          <div class="idle-graphic">
+            <div class="idle-ring"></div>
+            <div class="idle-inner">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </div>
+          </div>
+          <p>Paste a JD and click <strong>Find &amp; Tailor</strong></p>
+        </div>
+
+        <div id="result-loading" class="result-loading" hidden>
+          <div class="spinner"></div>
+          <p>Matching resume, tailoring content…</p>
+        </div>
+
+        <div id="result-card" class="card result-card" hidden>
+          <div class="score-row">
+            <div class="score-ring-wrap">
+              <svg class="score-ring" viewBox="0 0 80 80">
+                <circle class="ring-bg" cx="40" cy="40" r="34"/>
+                <circle class="ring-fill" id="ring-fill" cx="40" cy="40" r="34"
+                        stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+              </svg>
+              <span class="score-num" id="score-num">0</span>
+            </div>
+            <div class="score-meta">
+              <div class="score-label">Match score</div>
+              <div class="score-resume" id="score-resume-name"></div>
+            </div>
+          </div>
+
+          <div class="changes-section">
+            <div class="changes-title">What changed</div>
+            <ul class="changes-list" id="changes-list"></ul>
+          </div>
+
+          <div class="download-section">
+            <p class="download-hint">Pick your format:</p>
+            <div class="download-btns">
+              <button class="btn btn-download btn-docx" id="dl-docx">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Word <span class="badge">Recommended</span>
+              </button>
+              <button class="btn btn-download btn-pdf" id="dl-pdf">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                PDF
+              </button>
+            </div>
+          </div>
+
+          <div class="feedback-section" id="feedback-section" hidden>
+            <div class="feedback-title">How did this turn out?</div>
+            <div class="feedback-chips" id="feedback-chips">
+              <button class="chip" data-tag="Looks great">👍 Looks great</button>
+              <button class="chip" data-tag="Shorter bullets">Shorter bullets</button>
+              <button class="chip" data-tag="More specific">More specific</button>
+              <button class="chip" data-tag="More keywords">More keywords</button>
+              <button class="chip" data-tag="Shorter summary">Shorter summary</button>
+            </div>
+            <textarea id="feedback-custom" class="feedback-textarea" placeholder="Anything else? (optional)" rows="2"></textarea>
+            <button class="btn btn-ghost btn-full" id="submit-feedback">Save feedback</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════ TRACKER TAB -->
+  <section id="tab-tracker" class="tab-panel" hidden>
+    <div class="page-header">
+      <div>
+        <h1>Application Tracker</h1>
+        <p class="subtitle">Track every application from saved to offer</p>
+      </div>
+      <button class="btn btn-primary btn-sm" id="add-app-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Application
+      </button>
+    </div>
+
+    <!-- Stats row -->
+    <div class="tracker-stats" id="tracker-stats">
+      <div class="stat-pill">
+        <span class="stat-num" id="stat-total">0</span>
+        <span class="stat-label">Total</span>
+      </div>
+      <div class="stat-pill stat-applied">
+        <span class="stat-num" id="stat-applied">0</span>
+        <span class="stat-label">Applied</span>
+      </div>
+      <div class="stat-pill stat-interview">
+        <span class="stat-num" id="stat-interview">0</span>
+        <span class="stat-label">Interview</span>
+      </div>
+      <div class="stat-pill stat-offer">
+        <span class="stat-num" id="stat-offer">0</span>
+        <span class="stat-label">Offer 🎉</span>
+      </div>
+      <div class="stat-pill stat-rejected">
+        <span class="stat-num" id="stat-rejected">0</span>
+        <span class="stat-label">Rejected</span>
+      </div>
+    </div>
+
+    <!-- Kanban board -->
+    <div class="kanban-board" id="kanban-board">
+      <div class="kanban-col" data-status="saved">
+        <div class="kanban-col-header">
+          <span class="kanban-col-dot saved"></span>
+          <span class="kanban-col-title">Saved</span>
+          <span class="kanban-col-count" id="col-count-saved">0</span>
+        </div>
+        <div class="kanban-cards" id="col-saved"></div>
+      </div>
+      <div class="kanban-col" data-status="applied">
+        <div class="kanban-col-header">
+          <span class="kanban-col-dot applied"></span>
+          <span class="kanban-col-title">Applied</span>
+          <span class="kanban-col-count" id="col-count-applied">0</span>
+        </div>
+        <div class="kanban-cards" id="col-applied"></div>
+      </div>
+      <div class="kanban-col" data-status="interview">
+        <div class="kanban-col-header">
+          <span class="kanban-col-dot interview"></span>
+          <span class="kanban-col-title">Interview</span>
+          <span class="kanban-col-count" id="col-count-interview">0</span>
+        </div>
+        <div class="kanban-cards" id="col-interview"></div>
+      </div>
+      <div class="kanban-col" data-status="offer">
+        <div class="kanban-col-header">
+          <span class="kanban-col-dot offer"></span>
+          <span class="kanban-col-title">Offer</span>
+          <span class="kanban-col-count" id="col-count-offer">0</span>
+        </div>
+        <div class="kanban-cards" id="col-offer"></div>
+      </div>
+      <div class="kanban-col" data-status="rejected">
+        <div class="kanban-col-header">
+          <span class="kanban-col-dot rejected"></span>
+          <span class="kanban-col-title">Rejected</span>
+          <span class="kanban-col-count" id="col-count-rejected">0</span>
+        </div>
+        <div class="kanban-cards" id="col-rejected"></div>
+      </div>
+    </div>
+
+    <div id="tracker-empty" class="empty-state" hidden>
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <h2>No applications yet</h2>
+      <p>Click "Add Application" or apply to a job from the Jobs tab — it'll appear here automatically.</p>
+    </div>
+  </section>
+
+</main>
+
+<!-- ── Add Application Modal ─────────────────────────────────────────────── -->
+<div id="app-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-title">Add Application</h2>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Job Title *</label>
+        <input type="text" class="form-input" id="modal-title-input" placeholder="e.g. Senior Security Engineer" />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Company *</label>
+        <input type="text" class="form-input" id="modal-company" placeholder="e.g. Cigna Health" />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Job URL</label>
+        <input type="url" class="form-input" id="modal-url" placeholder="https://…" />
+      </div>
+      <div class="form-row-2">
+        <div>
+          <label class="form-label">Status</label>
+          <select class="form-input select" id="modal-status">
+            <option value="saved">Saved</option>
+            <option value="applied" selected>Applied</option>
+            <option value="interview">Interview</option>
+            <option value="offer">Offer</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Salary</label>
+          <input type="text" class="form-input" id="modal-salary" placeholder="e.g. $140K–$180K" />
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Notes</label>
+        <textarea class="form-input form-textarea" id="modal-notes" rows="3" placeholder="Recruiter name, referral, next steps…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-save">Save Application</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────────────────────── -->
+<div id="toast" class="toast" aria-live="polite"></div>
+
+<script>window.HAS_KEY = {{ 'true' if has_key else 'false' }};</script>
+<script src="/static/app.js"></script>
+</body>
+</html>

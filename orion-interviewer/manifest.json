@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Orion Interviewer",
+  "version": "1.0",
+  "description": "Auto-interrogates Jobright Orion AI and exports all answers",
+  "permissions": ["activeTab", "scripting", "downloads"],
+  "host_permissions": ["*://jobright.ai/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Run Orion Interview"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://jobright.ai/jobs/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

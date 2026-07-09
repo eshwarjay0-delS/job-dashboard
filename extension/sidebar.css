@@ -1,0 +1,697 @@
+/* MarketFit Extension — sidebar.css
+   Injected alongside content.js into all supported ATS pages.
+   The sidebar panel slides in from the right edge.
+   Light, brand-blue theme — matches popup.html's design tokens
+   (was a dark-navy/indigo theme, inconsistent with the rest of the product). */
+
+#careeeros-sidebar {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 380px !important;
+  height: 100vh !important;
+  z-index: 2147483647 !important; /* Max z-index */
+  box-shadow: -4px 0 32px rgba(26, 32, 53, 0.12) !important;
+  border-left: 1px solid #e4e8ef !important;
+  background: #ffffff !important;
+  color: #1a2035 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif !important;
+  font-size: 13px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  transform: translateX(100%) !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+#careeeros-sidebar.open {
+  transform: translateX(0) !important;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+#mf-header {
+  background: linear-gradient(135deg, #2483e0 0%, #1d6fc4 55%, #1558a0 100%) !important;
+  padding: 14px 16px !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.18) !important;
+  flex-shrink: 0 !important;
+}
+
+.mf-header-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 8px !important;
+}
+
+.mf-logo {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.mf-logo-icon {
+  width: 28px !important;
+  height: 28px !important;
+  background: rgba(255,255,255,0.18) !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
+  border-radius: 7px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+  flex-shrink: 0 !important;
+}
+
+.mf-logo-name {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+  letter-spacing: -0.3px !important;
+}
+
+.mf-logo-name span {
+  color: #bfe0ff !important;
+}
+
+#mf-close-btn {
+  width: 24px !important;
+  height: 24px !important;
+  background: rgba(255,255,255,0.15) !important;
+  border: none !important;
+  border-radius: 5px !important;
+  color: rgba(255,255,255,0.85) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 16px !important;
+  transition: background 0.15s !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+#mf-close-btn:hover {
+  background: rgba(255,255,255,0.28) !important;
+  color: #fff !important;
+}
+
+/* ATS badge row */
+.mf-badge-row {
+  display: flex !important;
+  gap: 6px !important;
+  flex-wrap: wrap !important;
+}
+
+.mf-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 2px 8px !important;
+  background: rgba(255,255,255,0.16) !important;
+  border: 1px solid rgba(255,255,255,0.28) !important;
+  border-radius: 20px !important;
+  font-size: 10.5px !important;
+  color: rgba(255,255,255,0.92) !important;
+  font-weight: 500 !important;
+}
+
+.mf-badge.green {
+  background: rgba(16, 185, 129, 0.22) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  color: #ecfdf5 !important;
+}
+
+.mf-badge.yellow {
+  background: rgba(245, 158, 11, 0.22) !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  color: #fffbeb !important;
+}
+
+.mf-badge .dot {
+  width: 5px !important;
+  height: 5px !important;
+  border-radius: 50% !important;
+  background: currentColor !important;
+}
+
+/* ── Job Context ─────────────────────────────────────────────────────────── */
+#mf-job-context {
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #e4e8ef !important;
+  flex-shrink: 0 !important;
+  background: #ffffff !important;
+}
+
+.mf-company {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #1a2035 !important;
+  margin-bottom: 2px !important;
+}
+
+.mf-role {
+  font-size: 11.5px !important;
+  color: #6b7a99 !important;
+  margin-bottom: 8px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.mf-match-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.mf-match-score {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 3px 10px !important;
+  border-radius: 20px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.mf-match-score.high {
+  background: #f0fdf4 !important;
+  color: #15803d !important;
+  border: 1px solid #bbf7d0 !important;
+}
+
+.mf-match-score.medium {
+  background: #fffbeb !important;
+  color: #b45309 !important;
+  border: 1px solid #fde68a !important;
+}
+
+/* ── Body / Scrollable Content ───────────────────────────────────────────── */
+#mf-body {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 0 !important;
+  background: #ffffff !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #d0d7e3 transparent !important;
+}
+
+#mf-body::-webkit-scrollbar {
+  width: 4px !important;
+}
+#mf-body::-webkit-scrollbar-thumb {
+  background: #d0d7e3 !important;
+  border-radius: 2px !important;
+}
+
+/* ── Profile Section ─────────────────────────────────────────────────────── */
+#mf-profile-section {
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #e4e8ef !important;
+}
+
+.mf-section-label {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.07em !important;
+  color: #9aa4bc !important;
+  margin-bottom: 8px !important;
+}
+
+.mf-profile-card {
+  background: #f8f9fb !important;
+  border: 1px solid #e4e8ef !important;
+  border-radius: 8px !important;
+  padding: 10px 12px !important;
+}
+
+.mf-profile-name {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #1a2035 !important;
+  margin-bottom: 2px !important;
+}
+
+.mf-profile-email {
+  font-size: 11px !important;
+  color: #9aa4bc !important;
+}
+
+/* ── Resume Selector ─────────────────────────────────────────────────────── */
+#mf-resume-section {
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #e4e8ef !important;
+}
+
+.mf-resume-select {
+  width: 100% !important;
+  background: #ffffff !important;
+  border: 1.5px solid #e4e8ef !important;
+  border-radius: 7px !important;
+  padding: 8px 10px !important;
+  color: #1a2035 !important;
+  font-size: 12px !important;
+  font-family: inherit !important;
+  outline: none !important;
+  cursor: pointer !important;
+  transition: border-color 0.15s !important;
+}
+
+.mf-resume-select:focus {
+  border-color: #1d6fc4 !important;
+  box-shadow: 0 0 0 3px rgba(29,111,196,.1) !important;
+}
+
+.mf-resume-select option {
+  background: #ffffff !important;
+  color: #1a2035 !important;
+}
+
+/* ── Progress Section ────────────────────────────────────────────────────── */
+#mf-progress-section {
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #e4e8ef !important;
+  display: none !important;
+}
+
+#mf-progress-section.visible {
+  display: block !important;
+}
+
+.mf-progress-bar-bg {
+  height: 4px !important;
+  background: #e4e8ef !important;
+  border-radius: 99px !important;
+  overflow: hidden !important;
+  margin-bottom: 12px !important;
+}
+
+.mf-progress-bar-fill {
+  height: 100% !important;
+  background: linear-gradient(90deg, #1d6fc4, #60a5fa) !important;
+  border-radius: 99px !important;
+  width: 0% !important;
+  transition: width 0.4s ease !important;
+}
+
+.mf-field-checklist {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.mf-field-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 12px !important;
+  color: #6b7a99 !important;
+  padding: 3px 0 !important;
+  transition: color 0.2s !important;
+}
+
+.mf-field-item.filled {
+  color: #15803d !important;
+}
+
+.mf-field-item.filling {
+  color: #1558a0 !important;
+}
+
+.mf-field-item.error {
+  color: #dc2626 !important;
+}
+
+.mf-field-dot {
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 50% !important;
+  background: #f4f6f9 !important;
+  border: 1px solid #e4e8ef !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 9px !important;
+  flex-shrink: 0 !important;
+  transition: all 0.2s !important;
+}
+
+.mf-field-item.filled .mf-field-dot {
+  background: #f0fdf4 !important;
+  border-color: #34d399 !important;
+  color: #15803d !important;
+}
+
+.mf-field-item.filling .mf-field-dot {
+  background: #eff6ff !important;
+  border-color: #1d6fc4 !important;
+  color: #1558a0 !important;
+  animation: mf-pulse 0.8s ease-in-out infinite !important;
+}
+
+.mf-field-item.error .mf-field-dot {
+  background: #fef2f2 !important;
+  border-color: #f87171 !important;
+  color: #dc2626 !important;
+}
+
+@keyframes mf-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ── Controls ────────────────────────────────────────────────────────────── */
+#mf-controls {
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #e4e8ef !important;
+}
+
+.mf-autofill-btn {
+  width: 100% !important;
+  padding: 11px 16px !important;
+  background: linear-gradient(135deg, #2483e0, #1d6fc4) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  font-family: inherit !important;
+  position: relative !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 10px rgba(29,111,196,.28) !important;
+}
+
+.mf-autofill-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d6fc4, #1558a0) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(29, 111, 196, 0.38) !important;
+}
+
+.mf-autofill-btn:active:not(:disabled) {
+  transform: translateY(0) !important;
+}
+
+.mf-autofill-btn:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+.mf-autofill-btn.running {
+  background: linear-gradient(135deg, #1558a0, #114280) !important;
+}
+
+.mf-autofill-btn.success {
+  background: linear-gradient(135deg, #059669, #10b981) !important;
+}
+
+.mf-autofill-btn.error {
+  background: linear-gradient(135deg, #991b1b, #dc2626) !important;
+}
+
+/* ── Pre-fill Receipt — reviewed & confirmed before anything is filled ──────
+   Amber/warning-toned (matches the website's --warning token, hardcoded here
+   since this panel is injected into arbitrary third-party ATS pages and can't
+   rely on the app's CSS variables being present). ──────────────────────── */
+#mf-receipt {
+  display: none !important;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #e4e8ef !important;
+  background: #fffbeb !important;
+}
+
+#mf-receipt.visible {
+  display: block !important;
+}
+
+.mf-receipt-title {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #b45309 !important;
+  margin-bottom: 2px !important;
+}
+
+.mf-receipt-sub {
+  font-size: 11px !important;
+  color: #92722a !important;
+  margin-bottom: 10px !important;
+}
+
+.mf-receipt-rows {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  margin-bottom: 12px !important;
+  background: #ffffff !important;
+  border: 1px solid #fde68a !important;
+  border-radius: 8px !important;
+  padding: 8px 10px !important;
+}
+
+.mf-receipt-row {
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  font-size: 12px !important;
+}
+
+.mf-receipt-label {
+  color: #6b7a99 !important;
+  flex-shrink: 0 !important;
+}
+
+.mf-receipt-value {
+  color: #1a2035 !important;
+  font-weight: 600 !important;
+  text-align: right !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.mf-receipt-actions {
+  display: flex !important;
+  gap: 8px !important;
+}
+
+.mf-receipt-cancel, .mf-receipt-confirm {
+  flex: 1 !important;
+  padding: 9px 12px !important;
+  border-radius: 8px !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  font-family: inherit !important;
+  border: none !important;
+}
+
+.mf-receipt-cancel {
+  background: #ffffff !important;
+  color: #6b7a99 !important;
+  border: 1.5px solid #e4e8ef !important;
+}
+
+.mf-receipt-cancel:hover {
+  border-color: #d0d7e3 !important;
+  color: #1a2035 !important;
+}
+
+.mf-receipt-confirm {
+  background: linear-gradient(135deg, #d97706, #b45309) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 10px rgba(217,119,6,.28) !important;
+}
+
+.mf-receipt-confirm:hover {
+  opacity: 0.92 !important;
+}
+
+/* Submit mode — confirming sends a REAL application, not just fills the page.
+   Meaningfully more urgent (red, not amber) than the fill-only state. */
+#mf-receipt.submit-mode {
+  background: #fef2f2 !important;
+}
+
+#mf-receipt.submit-mode .mf-receipt-title,
+#mf-receipt.submit-mode .mf-receipt-sub {
+  color: #b91c1c !important;
+}
+
+#mf-receipt.submit-mode .mf-receipt-rows {
+  border-color: #fecaca !important;
+}
+
+#mf-receipt.submit-mode .mf-receipt-confirm {
+  background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+  box-shadow: 0 2px 10px rgba(220,38,38,.28) !important;
+}
+
+/* ── Status Log ──────────────────────────────────────────────────────────── */
+#mf-status-log {
+  padding: 12px 16px !important;
+  flex: 1 !important;
+}
+
+.mf-log-entries {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  max-height: 200px !important;
+  overflow-y: auto !important;
+}
+
+.mf-log-entry {
+  display: flex !important;
+  gap: 8px !important;
+  align-items: flex-start !important;
+  font-size: 11px !important;
+  padding: 3px 0 !important;
+  animation: mf-slide-in 0.15s ease !important;
+}
+
+@keyframes mf-slide-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.mf-log-time {
+  color: #9aa4bc !important;
+  flex-shrink: 0 !important;
+  font-variant-numeric: tabular-nums !important;
+  font-size: 10px !important;
+  margin-top: 1px !important;
+}
+
+.mf-log-msg {
+  flex: 1 !important;
+}
+
+.mf-log-entry.info .mf-log-msg { color: #6b7a99 !important; }
+.mf-log-entry.success .mf-log-msg { color: #15803d !important; }
+.mf-log-entry.warning .mf-log-msg { color: #b45309 !important; }
+.mf-log-entry.error .mf-log-msg { color: #dc2626 !important; }
+.mf-log-entry.debug .mf-log-msg { color: #9aa4bc !important; }
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+#mf-footer {
+  padding: 10px 16px !important;
+  border-top: 1px solid #e4e8ef !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+  background: #ffffff !important;
+}
+
+.mf-footer-link {
+  font-size: 11px !important;
+  color: #6b7a99 !important;
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  font-family: inherit !important;
+  transition: color 0.15s !important;
+  text-decoration: none !important;
+}
+
+.mf-footer-link:hover {
+  color: #1d6fc4 !important;
+}
+
+.mf-footer-sep {
+  width: 1px !important;
+  height: 12px !important;
+  background: #e4e8ef !important;
+}
+
+/* ── Login Prompt ────────────────────────────────────────────────────────── */
+#mf-login-prompt {
+  padding: 20px 16px !important;
+  text-align: center !important;
+  display: none !important;
+}
+
+#mf-login-prompt.visible {
+  display: block !important;
+}
+
+.mf-login-icon {
+  font-size: 32px !important;
+  margin-bottom: 12px !important;
+}
+
+.mf-login-title {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #1a2035 !important;
+  margin-bottom: 6px !important;
+}
+
+.mf-login-sub {
+  font-size: 12px !important;
+  color: #6b7a99 !important;
+  margin-bottom: 16px !important;
+  line-height: 1.5 !important;
+}
+
+.mf-login-btn {
+  width: 100% !important;
+  padding: 10px 16px !important;
+  background: linear-gradient(135deg, #2483e0, #1d6fc4) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  font-family: inherit !important;
+  transition: opacity 0.15s !important;
+  box-shadow: 0 2px 10px rgba(29,111,196,.28) !important;
+}
+
+.mf-login-btn:hover {
+  opacity: 0.92 !important;
+}
+
+/* ── Toggle Button (visible when sidebar is closed) ──────────────────────── */
+#careeeros-toggle {
+  position: fixed !important;
+  right: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 2147483646 !important;
+  width: 36px !important;
+  height: 80px !important;
+  background: linear-gradient(180deg, #2483e0, #1d6fc4) !important;
+  border: none !important;
+  border-radius: 8px 0 0 8px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: -2px 0 12px rgba(29, 111, 196, 0.38) !important;
+  transition: all 0.2s !important;
+  writing-mode: vertical-lr !important;
+  color: #fff !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  font-family: inherit !important;
+  letter-spacing: 0.05em !important;
+}
+
+#careeeros-toggle:hover {
+  width: 44px !important;
+  box-shadow: -4px 0 20px rgba(29, 111, 196, 0.48) !important;
+}
+
+#careeeros-toggle.hidden {
+  display: none !important;
+}

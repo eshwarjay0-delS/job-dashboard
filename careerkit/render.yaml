@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: careerkit
+    runtime: python
+    rootDir: careerkit
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    plan: free
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false          # set manually in Render dashboard → env vars
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    disk:
+      name: careerkit-data
+      mountPath: /opt/render/project/src/careerkit
+      sizeGB: 1              # persists uploads/ and careerkit.db between deploys

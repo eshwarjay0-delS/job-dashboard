@@ -1,0 +1,41 @@
+name: CareerKit CI (Flask)
+
+on:
+  push:
+    branches: [main]
+    paths: ["careerkit/**"]
+  pull_request:
+    branches: [main]
+    paths: ["careerkit/**"]
+
+defaults:
+  run:
+    working-directory: careerkit
+
+jobs:
+  ci:
+    name: Lint + Import-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: careerkit/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install dev tools
+        run: pip install ruff
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Verify imports compile
+        run: python -c "import app, db, resume_tagger, word_editor"
+        env:
+          ANTHROPIC_API_KEY: dummy-key-for-import-check

@@ -1,26 +1,1440 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+/* Dark mode is driven by data-theme="dark" (set by ThemeProvider), not a .dark class. */
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+/* Skeleton shimmer */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THEME TOKENS  —  single source of truth.
+   Set on <html> by ThemeProvider (src/app/theme-provider.tsx):
+   data-accent = blue|teal|violet|rose|amber|emerald (brand color)
+   data-theme  = light|dark (color mode)
+   data-layout = clean|focus|apple|glass|pro|minimal (visual template)
+═══════════════════════════════════════════════════════════════ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg:           #ffffff;   /* app canvas — clean white */
+  --surface:      #ffffff;   /* cards / panels */
+  --surface-2:    #f8f9fb;   /* insets / hovers */
+  --surface-3:    #eaecf2;   /* deeper inset */
+  --border:       #e4e8ef;   /* hairline dividers */
+  --border-strong:#d0d7e3;   /* control / button borders */
+  --text:         #1a2035;   /* near-black navy */
+  --text-muted:   #6b7a99;   /* secondary copy */
+  --text-soft:    #9aa4bc;   /* tertiary / hints */
+
+  /* Accent — professional blue matching dashboard_preview palette */
+  --accent:        #1d6fc4;
+  --accent-h:      #1558a0;
+  --accent-soft:   #eff6ff;
+  --accent-border: #bfdbfe;
+  --accent-txt:    #1558a0;
+
+  /* Semantic status colors — fixed hues, independent of accent.
+     Use these (not --accent) for pipeline stages, ATS bands, and
+     success/warn/error messaging so status meaning never depends
+     on which brand accent the user picked. */
+  --success:       #059669;
+  --success-soft:  #ecfdf5;
+  --success-border:#a7f3d0;
+  --warning:       #d97706;
+  --warning-soft:  #fffbeb;
+  --warning-border:#fde68a;
+  --danger:        #dc2626;
+  --danger-soft:   #fef2f2;
+  --danger-border: #fecaca;
+
+  /* Chrome — NOW WHITE (top nav bar). Content canvas is light gray. */
+  --chrome-bg:     #ffffff;
+  --chrome-elev:   #f4f6f9;
+  --chrome-text:   #1a2035;
+  --chrome-muted:  #6b7a99;
+  --chrome-border: #e4e8ef;
+  --chrome-hover:  #f4f6f9;
+
+  /* ── Category palette (matches dashboard_preview.html) ──────────
+     Used for status/stage badges, kanban lanes, stat cards, and pills */
+  --cat-rtr:       #d97706;  --cat-rtr-bg:   #fffbeb;  --cat-rtr-b:   #fde68a;
+  --cat-reply:     #dc2626;  --cat-reply-bg: #fef2f2;  --cat-reply-b: #fecaca;
+  --cat-out:       #1d6fc4;  --cat-out-bg:   #eff6ff;  --cat-out-b:   #bfdbfe;
+  --cat-int:       #0ea5e9;  --cat-int-bg:   #f0f9ff;  --cat-int-b:   #bae6fd;
+  --cat-ass:       #7c3aed;  --cat-ass-bg:   #f5f3ff;  --cat-ass-b:   #ddd6fe;
+  --cat-fol:       #0369a1;  --cat-fol-bg:   #f0f9ff;  --cat-fol-b:   #bae6fd;
+  --cat-saved:     #9d174d;  --cat-saved-bg: #fdf2f8;  --cat-saved-b: #f9a8d4;
+
+  /* Transitions */
+  --t-fast:   150ms cubic-bezier(.4,0,.2,1);
+  --t-base:   220ms cubic-bezier(.4,0,.2,1);
+  --t-slow:   380ms cubic-bezier(.4,0,.2,1);
+  --t-spring: 320ms cubic-bezier(.34,1.56,.64,1);
+
+  /* ── Per-template design tokens ──────────────────────────────────
+     These are the "design language" knobs each template overrides.
+     Defaults below reproduce the Tailwind defaults, so the "clean"
+     template is a no-op and every other template just re-points them. */
+  --radius-sm:  8px;   /* maps .rounded-lg  */
+  --radius:    12px;   /* maps .rounded-xl  */
+  --radius-lg: 16px;   /* maps .rounded-2xl */
+  --shadow-card:       0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+  --shadow-card-hover: 0 14px 32px -6px rgba(15,23,42,.11), 0 4px 10px -4px rgba(15,23,42,.07);
+  --card-blur: none;
+  --card-border-w: 1px;
+  --lift-y: -3px;
+  --font-ui: var(--font-geist-sans, ui-sans-serif), -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  /* shadcn/ui semantic tokens — aliased to our own tokens above so there is
+     ONE token system, not a second parallel neutral palette. */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-muted);
+  --accent-foreground: var(--accent-txt);
+  --destructive: var(--danger);
+  --input: var(--border);
+  --ring: var(--accent);
+  --chart-1: var(--accent);
+  --chart-2: var(--success);
+  --chart-3: var(--warning);
+  --chart-4: var(--danger);
+  --chart-5: var(--text-muted);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--text);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: var(--text);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--accent);
+}
+
+/* Re-point the common Tailwind radius utilities at the template tokens.
+   One declaration each → switching a template restyles every card,
+   input, avatar and panel at once (no per-component edits needed). */
+.rounded-lg  { border-radius: var(--radius-sm) !important; }
+.rounded-xl  { border-radius: var(--radius)    !important; }
+.rounded-2xl { border-radius: var(--radius-lg) !important; }
+
+/* ── Accent palettes ──────────────────────────────────────────── */
+[data-accent="teal"]    { --accent:#0d9488; --accent-h:#0f766e; --accent-soft:#f0fdfa; --accent-border:#99f6e4; --accent-txt:#0f766e; }
+[data-accent="violet"]  { --accent:#7c3aed; --accent-h:#6d28d9; --accent-soft:#f5f3ff; --accent-border:#c4b5fd; --accent-txt:#6d28d9; }
+[data-accent="rose"]    { --accent:#e11d48; --accent-h:#be123c; --accent-soft:#fff1f2; --accent-border:#fecdd3; --accent-txt:#be123c; }
+[data-accent="blue"]    { --accent:#1d6fc4; --accent-h:#1558a0; --accent-soft:#eff6ff; --accent-border:#bfdbfe; --accent-txt:#1558a0; }
+[data-accent="amber"]   { --accent:#d97706; --accent-h:#b45309; --accent-soft:#fffbeb; --accent-border:#fde68a; --accent-txt:#b45309; }
+[data-accent="emerald"] { --accent:#059669; --accent-h:#047857; --accent-soft:#ecfdf5; --accent-border:#a7f3d0; --accent-txt:#047857; }
+
+/* ── Dark mode ────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:            #0b1120;
+  --surface:       #151c2c;
+  --surface-2:     #1c2536;
+  --surface-3:     #232e42;
+  --border:        #2a3650;
+  --border-strong: #3a4866;
+  --text:          #f1f5f9;
+  --text-muted:    #9aa6bd;
+  --text-soft:     #66718a;
+  --background:    #0b1120;
+  --foreground:    #f1f5f9;
+  --success:       #34d399;
+  --success-soft:  rgba(5,150,105,.15);
+  --success-border:rgba(52,211,153,.35);
+  --warning:       #fbbf24;
+  --warning-soft:  rgba(217,119,6,.15);
+  --warning-border:rgba(251,191,36,.35);
+  --danger:        #f87171;
+  --danger-soft:   rgba(220,38,38,.15);
+  --danger-border: rgba(248,113,113,.35);
+  /* Chrome goes dark in dark mode */
+  --chrome-bg:     #0f1729;
+  --chrome-elev:   #151c2c;
+  --chrome-text:   #f1f5f9;
+  --chrome-muted:  #7a8fad;
+  --chrome-border: #1e2d47;
+  --chrome-hover:  #1c2536;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  /* shadcn's "accent" = a subtle hover/highlight background (menus, tabs),
+     distinct from our solid brand --accent used for primary CTAs. */
+  --color-accent: var(--accent-soft);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* NOTE: no `prefers-color-scheme` pre-hydration override here on purpose.
+   The default look is the LIGHT brand palette for everyone; dark mode applies
+   only when the user explicitly picks it (ThemeProvider sets data-theme).
+   The old media-query block made the first paint dark on dark-OS machines,
+   which read as an unchosen "black & white theme". */
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  transition: background var(--t-base), color var(--t-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+html { scroll-behavior: smooth; }
+
+/* ── Dashboard sidebar — always visible, never hidden by any theme or global rule ──
+   Uses a stable class (not an inline-style attribute match, which breaks on
+   whitespace differences in React's serialized style). The final, highest-
+   specificity guard lives at the very end of this file so no later [data-layout]
+   rule can ever hide the persistent nav. */
+aside.dash-sidebar {
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: flex !important;
+  transform: none !important;
+}
+/* Premium typographic rhythm: tighten display headings, relax body measure. */
+h1, h2, h3 { letter-spacing: -0.021em; }
+h1 { line-height: 1.08; }
+kbd {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: .75em;
+  padding: .1em .4em;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  box-shadow: 0 1px 0 var(--border);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   KEYFRAMES
+═══════════════════════════════════════════════════════════════ */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slide-right {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes bounce-in {
+  0%   { opacity: 0; transform: scale(0.75); }
+  55%  { opacity: 1; transform: scale(1.06); }
+  100% {             transform: scale(1); }
+}
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-7px); }
+}
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 30%, transparent); }
+  50%       { box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 0%, transparent); }
+}
+@keyframes check-draw {
+  from { stroke-dashoffset: 30; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .5; transform: scale(1.3); }
+}
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+@keyframes number-count {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATION UTILITY CLASSES
+═══════════════════════════════════════════════════════════════ */
+.anim-fade-up      { animation: fade-up      .45s var(--t-spring) both; }
+.anim-fade-in      { animation: fade-in      .3s  ease both; }
+.anim-slide-right  { animation: slide-right  .38s var(--t-spring) both; }
+.anim-slide-down   { animation: slide-down   .3s  var(--t-spring) both; }
+.anim-scale-in     { animation: scale-in     .28s var(--t-spring) both; }
+.anim-bounce-in    { animation: bounce-in    .5s  var(--t-spring) both; }
+.anim-float        { animation: float        3.5s ease-in-out infinite; }
+.anim-spin-slow    { animation: spin-slow    3s   linear infinite; }
+
+/* Stagger delay helpers */
+.d-0  { animation-delay:   0ms; }
+.d-1  { animation-delay:  60ms; }
+.d-2  { animation-delay: 120ms; }
+.d-3  { animation-delay: 180ms; }
+.d-4  { animation-delay: 240ms; }
+.d-5  { animation-delay: 300ms; }
+.d-6  { animation-delay: 360ms; }
+.d-7  { animation-delay: 420ms; }
+.d-8  { animation-delay: 480ms; }
+.d-9  { animation-delay: 540ms; }
+.d-10 { animation-delay: 600ms; }
+.d-11 { animation-delay: 660ms; }
+.d-12 { animation-delay: 720ms; }
+.d-13 { animation-delay: 780ms; }
+.d-14 { animation-delay: 840ms; }
+.d-15 { animation-delay: 900ms; }
+
+/* ═══════════════════════════════════════════════════════════════
+   REUSABLE COMPONENT STYLES
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Card lift ────────────────────────────────────────────────── */
+.card-lift {
+  box-shadow: var(--shadow-card);
+  backdrop-filter: var(--card-blur);
+  -webkit-backdrop-filter: var(--card-blur);
+  transition: box-shadow var(--t-base), transform var(--t-base), border-color var(--t-base), background var(--t-base);
+  will-change: transform;
+}
+.card-lift:hover {
+  transform: translateY(var(--lift-y));
+  box-shadow: var(--shadow-card-hover), 0 0 0 1px var(--accent-border);
+}
+
+/* ── Shimmer skeleton ─────────────────────────────────────────── */
+.shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* ── Accent-aware ring ────────────────────────────────────────── */
+.ring-accent {
+  transition: box-shadow var(--t-fast), border-color var(--t-fast);
+}
+.ring-accent:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+  border-color: var(--accent) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PREMIUM CONTROL SYSTEM  —  buttons with class, borders, depth
+═══════════════════════════════════════════════════════════════ */
+
+/* Shared baseline for every pill/action control */
+.btn-accent, .btn-outline, .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  letter-spacing: -0.006em;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background var(--t-fast), color var(--t-fast),
+              border-color var(--t-fast), transform var(--t-fast),
+              box-shadow var(--t-fast);
+  will-change: transform;
+}
+
+/* ── Primary (accent) — gradient sheen + accent-tinted elevation ── */
+.btn-accent {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, #fff 16%, var(--accent)) 0%, var(--accent) 55%, var(--accent-h) 100%);
+  color: #fff;
+  border-color: color-mix(in srgb, var(--accent-h) 70%, #000 8%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),
+    0 1px 1px rgba(8,12,22,.08),
+    0 4px 12px -3px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+.btn-accent:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.32),
+    0 2px 4px rgba(8,12,22,.10),
+    0 10px 24px -4px color-mix(in srgb, var(--accent) 52%, transparent);
+}
+.btn-accent:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow:
+    inset 0 1px 2px rgba(8,12,22,.22),
+    0 1px 2px rgba(8,12,22,.10);
+}
+
+/* ── Secondary (outline) — bordered, surface-filled, lifts on hover ── */
+.btn-outline {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+  box-shadow: 0 1px 2px rgba(8,12,22,.04);
+}
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-txt);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.btn-outline:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+
+/* ── Tertiary (ghost) — quiet until hovered ── */
+.btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: transparent;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.btn-accent:disabled, .btn-outline:disabled, .btn-ghost:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none;
+}
+
+/* ── Keyboard focus ring on every interactive control ── */
+.btn-accent:focus-visible, .btn-outline:focus-visible, .btn-ghost:focus-visible,
+.btn-surface:focus-visible,
+a:focus-visible, button:focus-visible,
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* ── Surface button — bordered secondary action that keeps its OWN layout
+   (used where a button has a two-line title/subtitle, so we don't force
+   centering like .btn-outline does). Just colour, border, and lift. ── */
+.btn-surface {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast),
+              transform var(--t-fast), box-shadow var(--t-fast);
+  will-change: transform;
+}
+.btn-surface:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--accent-border);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.btn-surface:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+
+/* ── Active nav item ──────────────────────────────────────────── */
+.nav-active {
+  background: var(--accent-soft) !important;
+  color: var(--accent-txt) !important;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.nav-active .nav-icon {
+  color: var(--accent) !important;
+}
+.nav-active .nav-icon-wrap {
+  transform: scale(1.1);
+}
+.nav-item {
+  transition: background var(--t-base), color var(--t-base), box-shadow var(--t-base), transform var(--t-fast);
+}
+.nav-item:hover:not(.nav-active) {
+  background: var(--surface-2);
+  color: var(--text) !important;
+}
+.nav-item:hover:not(.nav-active) .nav-icon-wrap {
+  transform: scale(1.08) translateX(1px);
+}
+.nav-icon-wrap {
+  transition: transform var(--t-spring);
+}
+
+/* ── Active filter chip ───────────────────────────────────────── */
+.chip-active {
+  background: linear-gradient(180deg, color-mix(in srgb, #fff 16%, var(--accent)) 0%, var(--accent) 60%, var(--accent-h) 100%) !important;
+  color: #fff !important;
+  border-color: color-mix(in srgb, var(--accent-h) 60%, #000 6%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.25),
+    0 2px 10px color-mix(in srgb, var(--accent) 40%, transparent) !important;
+  transform: translateY(-1px) scale(1.03);
+}
+
+/* ── Logo mark ────────────────────────────────────────────────── */
+.logo-mark {
+  background: var(--accent);
+  transition: transform var(--t-fast);
+}
+.logo-mark:hover {
+  transform: scale(1.04);
+}
+
+/* ── Gradient animated bg strip ──────────────────────────────── */
+.gradient-strip {
+  background: linear-gradient(270deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #6366f1), var(--accent-h));
+  background-size: 300% 300%;
+  animation: gradient-shift 6s ease infinite;
+}
+
+/* ── Glass surface ────────────────────────────────────────────── */
+.glass {
+  background: rgba(255,255,255,.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE OVERRIDES
+   (patches hardcoded Tailwind classes inside components)
+═══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Surfaces */
+[data-theme="dark"] .bg-white  { background-color: var(--surface)  !important; }
+[data-theme="dark"] .bg-gray-50 { background-color: var(--bg)      !important; }
+[data-theme="dark"] .bg-white\/80, [data-theme="dark"] .bg-white\/70 { background-color: rgba(30,41,59,.8) !important; }
+
+/* Borders */
+[data-theme="dark"] .border-gray-100,
+[data-theme="dark"] .border-gray-200 { border-color: var(--border) !important; }
+
+/* Text */
+[data-theme="dark"] .text-gray-900  { color: var(--text)       !important; }
+[data-theme="dark"] .text-gray-800  { color: var(--text)       !important; }
+[data-theme="dark"] .text-gray-700  { color: var(--text-muted) !important; }
+[data-theme="dark"] .text-gray-600  { color: var(--text-muted) !important; }
+[data-theme="dark"] .text-gray-500  { color: var(--text-soft)  !important; }
+[data-theme="dark"] .text-gray-400  { color: var(--text-soft)  !important; }
+
+/* Hover states */
+[data-theme="dark"] .hover\:bg-gray-100:hover   { background-color: var(--surface-2) !important; }
+[data-theme="dark"] .hover\:text-gray-900:hover { color: var(--text)                 !important; }
+[data-theme="dark"] .hover\:border-gray-300:hover { border-color: var(--border)      !important; }
+
+/* Form inputs */
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: var(--bg)      !important;
+  color:            var(--text)    !important;
+  border-color:     var(--border)  !important;
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder { color: var(--text-soft) !important; }
+
+/* Accent-tinted info boxes */
+[data-theme="dark"] .bg-amber-50   { background-color: rgba(217,119,6,.12)   !important; }
+[data-theme="dark"] .bg-emerald-50 { background-color: rgba(5,150,105,.12)   !important; }
+[data-theme="dark"] .bg-teal-50    { background-color: rgba(13,148,136,.12)  !important; }
+[data-theme="dark"] .bg-blue-50    { background-color: rgba(37,99,235,.12)   !important; }
+[data-theme="dark"] .bg-violet-50  { background-color: rgba(124,58,237,.12)  !important; }
+[data-theme="dark"] .border-amber-100   { border-color: rgba(217,119,6,.3)   !important; }
+[data-theme="dark"] .border-emerald-100 { border-color: rgba(5,150,105,.3)   !important; }
+[data-theme="dark"] .border-teal-200    { border-color: rgba(13,148,136,.3)  !important; }
+
+/* Shimmer dark */
+[data-theme="dark"] .shimmer {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #475569; }
+
+/* ═══════════════════════════════════════════════════════════════
+   TRANSITION POLISH
+═══════════════════════════════════════════════════════════════ */
+/* Smooth page content transitions */
+main {
+  animation: fade-up .35s var(--t-spring) both;
+}
+
+/* All links and buttons get fast transition baseline */
+a, button {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: var(--t-fast);
+  transition-timing-function: cubic-bezier(.4,0,.2,1);
+}
+
+/* Selection color */
+::selection {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* ── Input field base styling ─────────────────────────────────── */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea, select {
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+/* ── Table base ───────────────────────────────────────────────── */
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: .75rem; font-weight: 600; text-transform: uppercase;
+     letter-spacing: .05em; color: var(--text-soft); padding: .75rem 1rem; }
+td { padding: .75rem 1rem; border-top: 1px solid var(--border); color: var(--text-muted); font-size: .875rem; }
+tr:hover td { background: var(--surface-2); }
+
+/* ── Link base ────────────────────────────────────────────────── */
+a { color: inherit; text-decoration: none; }
+a:hover { color: var(--accent); }
+
+/* ── Badge / pill ─────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  padding: .2rem .6rem; border-radius: 99px; font-size: .7rem; font-weight: 600;
+  background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border);
+}
+.badge-accent {
+  background: var(--accent-soft); color: var(--accent-txt); border-color: var(--accent-border);
+}
+
+/* ── Category badge utility classes (from dashboard_preview palette) ── */
+.cat-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 6px; font-size: 10px; font-weight: 700;
+  border: 1px solid; white-space: nowrap; letter-spacing: .2px;
+}
+.cat-rtr    { background: var(--cat-rtr-bg);    border-color: var(--cat-rtr-b);    color: var(--cat-rtr);    }
+.cat-reply  { background: var(--cat-reply-bg);  border-color: var(--cat-reply-b);  color: var(--cat-reply);  }
+.cat-out    { background: var(--cat-out-bg);    border-color: var(--cat-out-b);    color: var(--cat-out);    }
+.cat-int    { background: var(--cat-int-bg);    border-color: var(--cat-int-b);    color: var(--cat-int);    }
+.cat-ass    { background: var(--cat-ass-bg);    border-color: var(--cat-ass-b);    color: var(--cat-ass);    }
+.cat-fol    { background: var(--cat-fol-bg);    border-color: var(--cat-fol-b);    color: var(--cat-fol);    }
+.cat-saved  { background: var(--cat-saved-bg);  border-color: var(--cat-saved-b);  color: var(--cat-saved);  }
+
+/* ── Stat number animation ────────────────────────────────────── */
+.stat-value {
+  animation: number-count .5s var(--t-spring) both;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Horizontal rule ──────────────────────────────────────────── */
+hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+/* ── Code / mono ──────────────────────────────────────────────── */
+code, kbd {
+  font-family: var(--font-mono, 'Fira Code', monospace);
+  font-size: .875em; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 4px; padding: .1em .4em;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT TEMPLATES  —  6 distinct visual identities
+   data-layout is set on <html> by ThemeProvider.
+   Each template re-points the design tokens (radius, shadow, palette,
+   card style) AND adjusts the chrome (sidebar / header / spacing),
+   so switching one swaps the whole look. !important wins over the
+   inline styles the components set.
+═══════════════════════════════════════════════════════════════ */
+
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║ CLEAN — the default. Polished slate sidebar app with layered  ║
+   ║ surfaces, intentional elevation, and a focused content zone.  ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+[data-layout="clean"] aside {
+  box-shadow: 1px 0 0 var(--border), 2px 0 12px -4px rgba(15,23,42,.04);
+}
+[data-layout="clean"] header {
+  box-shadow: 0 1px 0 var(--border), 0 2px 8px -4px rgba(15,23,42,.04);
+}
+[data-layout="clean"] .card-lift {
+  box-shadow: var(--shadow-card), 0 0 0 1px rgba(15,23,42,.02);
+}
+[data-layout="clean"][data-theme="dark"] aside {
+  box-shadow: 1px 0 0 var(--border);
+}
+[data-layout="clean"][data-theme="dark"] header {
+  box-shadow: 0 1px 0 var(--border);
+}
+[data-layout="clean"] .nav-active {
+  background: var(--accent-soft) !important;
+  box-shadow: inset 3px 0 0 var(--accent), 2px 0 8px -2px rgba(0,0,0,.06) !important;
+}
+[data-layout="clean"] .nav-item:hover:not(.nav-active) {
+  background: var(--surface-2) !important;
+  transform: translateX(2px);
+}
+
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║ FOCUS — Notion-style editorial flat. No sidebar, no shadows,  ║
+   ║ hairline dividers, tight radius, warm paper background,       ║
+   ║ generous reading column. Cards tint instead of lifting.       ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+[data-layout="focus"] {
+  --bg:        #faf9f7;
+  --surface:   #ffffff;
+  --surface-2: #f4f2ee;
+  --border:    #e8e4dd;
+  --radius-sm: 5px;
+  --radius:    7px;
+  --radius-lg: 9px;
+  --shadow-card:       none;
+  --shadow-card-hover: none;
+  --lift-y: 0px;
+}
+[data-layout="focus"][data-theme="dark"] {
+  --bg:        #1a1917;
+  --surface:   #211f1c;
+  --surface-2: #2a2723;
+  --border:    #36322c;
+}
+/* sidebar stays visible in every layout — persistent nav is non-negotiable */
+[data-layout="focus"] header {
+  background: color-mix(in srgb, var(--bg) 92%, transparent) !important;
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+[data-layout="focus"] main { padding: 2.75rem 7% !important; max-width: 900px; margin: 0 auto; }
+[data-layout="focus"] .card-lift { border-left: 3px solid transparent; border-radius: var(--radius-sm) !important; }
+[data-layout="focus"] .card-lift:hover {
+  background: var(--surface-2) !important;
+  border-left-color: var(--accent) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║ APPLE — premium iOS/macOS. Big radius, soft layered shadows,  ║
+   ║ frosted centered top bar, #f5f5f7 canvas, roomy cards.        ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+[data-layout="apple"] {
+  --bg:        #f5f5f7;
+  --surface:   #ffffff;
+  --surface-2: #f5f5f7;
+  --border:    #e8e8ed;
+  --radius-sm: 14px;
+  --radius:    18px;
+  --radius-lg: 24px;
+  --shadow-card:       0 2px 8px rgba(0,0,0,.04), 0 10px 28px -10px rgba(0,0,0,.10);
+  --shadow-card-hover: 0 8px 18px rgba(0,0,0,.06), 0 28px 56px -14px rgba(0,0,0,.18);
+  --lift-y: -4px;
+}
+[data-layout="apple"][data-theme="dark"] {
+  --bg:        #000000;
+  --surface:   #1c1c1e;
+  --surface-2: #2c2c2e;
+  --border:    #38383a;
+}
+/* sidebar stays visible in every layout — persistent nav is non-negotiable */
+[data-layout="apple"] .dash-shell { background: var(--bg) !important; }
+[data-layout="apple"] header {
+  background: rgba(255,255,255,.88) !important;
+  backdrop-filter: saturate(180%) blur(20px) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px) !important;
+  border-bottom: 1px solid rgba(0,0,0,.07) !important;
+  box-shadow: 0 1px 0 rgba(0,0,0,.04) !important;
+}
+[data-layout="apple"] main {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding: 3rem 1.5rem !important;
+  gap: 1.5rem;
+}
+[data-layout="apple"] main > * { width: 100%; max-width: 960px; }
+[data-layout="apple"] .card-lift:hover { transform: translateY(var(--lift-y)) scale(1.005); }
+
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║ GLASS — glassmorphism. Translucent blurred panels over a      ║
+   ║ tinted gradient, luminous edges, colored ambient shadow.      ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+[data-layout="glass"] {
+  --surface:   rgba(255,255,255,.58);
+  --surface-2: rgba(255,255,255,.40);
+  --border:    rgba(255,255,255,.55);
+  --radius-sm: 12px;
+  --radius:    16px;
+  --radius-lg: 20px;
+  --shadow-card:       0 8px 32px -10px rgba(31,38,135,.20);
+  --shadow-card-hover: 0 18px 50px -12px rgba(31,38,135,.30);
+  --card-blur: blur(16px) saturate(180%);
+  --lift-y: -4px;
+}
+[data-layout="glass"] .dash-shell {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent) 14%, #eef2ff) 0%,
+    #f6f8ff 48%,
+    color-mix(in srgb, #818cf8 12%, #eef0ff) 100%) !important;
+  background-attachment: fixed !important;
+  min-height: 100vh;
+}
+[data-layout="glass"] aside,
+[data-layout="glass"] header {
+  background: rgba(255,255,255,0.55) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+}
+[data-layout="glass"] aside   { border-right:  1px solid rgba(255,255,255,0.45) !important; }
+[data-layout="glass"] header  { border-bottom: 1px solid rgba(255,255,255,0.40) !important; }
+
+[data-layout="glass"][data-theme="dark"] {
+  --surface:   rgba(30,32,54,.55);
+  --surface-2: rgba(30,32,54,.38);
+  --border:    rgba(255,255,255,.10);
+  --shadow-card:       0 8px 32px -10px rgba(0,0,0,.45);
+  --shadow-card-hover: 0 18px 50px -12px rgba(0,0,0,.6);
+}
+[data-layout="glass"][data-theme="dark"] .dash-shell {
+  background: linear-gradient(135deg, #0a0f24 0%, #140a2e 50%, #0a0f24 100%) !important;
+}
+[data-layout="glass"][data-theme="dark"] aside,
+[data-layout="glass"][data-theme="dark"] header {
+  background: rgba(10,15,36,0.55) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+/* Glass: frosted nav active */
+[data-layout="glass"] .nav-active {
+  background: rgba(255,255,255,.35) !important;
+  backdrop-filter: blur(12px) !important;
+  box-shadow: inset 3px 0 0 var(--accent), 0 2px 12px rgba(99,102,241,.15) !important;
+}
+[data-layout="glass"][data-theme="dark"] .nav-active {
+  background: rgba(255,255,255,.10) !important;
+}
+
+/* Glass: cards float with inner glow */
+[data-layout="glass"] .card-lift {
+  border: 1px solid rgba(255,255,255,0.55) !important;
+}
+[data-layout="glass"] .card-lift:hover {
+  border-color: rgba(255,255,255,0.75) !important;
+  box-shadow: var(--shadow-card-hover), inset 0 1px 0 rgba(255,255,255,.4) !important;
+}
+[data-layout="glass"] .btn-accent {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.35),
+    0 2px 4px rgba(8,12,22,.12),
+    0 8px 24px -4px color-mix(in srgb, var(--accent) 55%, transparent) !important;
+}
+/* Glass: orb decoration behind content */
+[data-layout="glass"] .dash-shell::after {
+  content: "";
+  position: fixed;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 70%);
+  bottom: -200px; right: -200px;
+  pointer-events: none; z-index: 0;
+}
+[data-layout="glass"] .dash-shell > * { position: relative; z-index: 1; }
+
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║ PRO — Linear / Vercel. Whole app goes near-black, crisp        ║
+   ║ hairline borders, tight radius, minimal flat elevation, high  ║
+   ║ contrast text. (ThemeProvider also forces data-theme=dark.)   ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+[data-layout="pro"] {
+  --bg:         #0a0a0b;
+  --surface:    #111113;
+  --surface-2:  #18181b;
+  --border:     #26262b;
+  --text:       #ededed;
+  --text-muted: #a1a1aa;
+  --text-soft:  #71717a;
+  --background: #0a0a0b;
+  --foreground: #ededed;
+  --radius-sm:  6px;
+  --radius:     8px;
+  --radius-lg:  10px;
+  --shadow-card:       0 0 0 1px rgba(255,255,255,.02);
+  --shadow-card-hover: 0 0 0 1px var(--accent-border), 0 10px 30px -10px rgba(0,0,0,.7);
+  --lift-y: -2px;
+}
+[data-layout="pro"] .dash-shell { background: var(--bg) !important; }
+[data-layout="pro"] aside  {
+  background: var(--surface) !important;
+  border-right: 1px solid var(--border) !important;
+  box-shadow: 1px 0 20px rgba(0,0,0,.5) !important;
+}
+[data-layout="pro"] header {
+  background: color-mix(in srgb, var(--bg) 72%, transparent) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: none !important;
+}
+[data-layout="pro"] .card-lift {
+  box-shadow: 0 0 0 1px var(--border) !important;
+  border-radius: var(--radius) !important;
+}
+[data-layout="pro"] .card-lift:hover {
+  box-shadow: 0 0 0 1px var(--accent-border), 0 10px 30px -10px rgba(0,0,0,.7) !important;
+  transform: translateY(var(--lift-y)) !important;
+}
+[data-layout="pro"] .btn-outline {
+  background: var(--surface-2) !important;
+  border-color: var(--border) !important;
+}
+[data-layout="pro"] .btn-outline:hover:not(:disabled) {
+  background: var(--surface-3) !important;
+  border-color: var(--accent) !important;
+}
+[data-layout="pro"] .nav-active {
+  background: color-mix(in srgb, var(--accent) 15%, transparent) !important;
+}
+/* Pro: subtle scanline texture on the canvas */
+[data-layout="pro"] .dash-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(255,255,255,.012) 0px,
+    rgba(255,255,255,.012) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+[data-layout="pro"] .dash-shell > * { position: relative; z-index: 1; }
+
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║ MINIMAL — Microsoft Fluent flat utility. Near-square corners,  ║
+   ║ crisp 1px borders, no resting shadow, no sidebar, header       ║
+   ║ fades in on hover. Pure content focus.                         ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+[data-layout="minimal"] {
+  --bg:        #ffffff;
+  --surface:   #ffffff;
+  --surface-2: #f3f4f6;
+  --border:    #d6d9de;
+  --radius-sm: 3px;
+  --radius:    4px;
+  --radius-lg: 5px;
+  --shadow-card:       none;
+  --shadow-card-hover: 0 2px 6px rgba(0,0,0,.10);
+  --lift-y: 0px;
+}
+[data-layout="minimal"][data-theme="dark"] {
+  --bg:        #1b1b1b;
+  --surface:   #212121;
+  --surface-2: #2a2a2a;
+  --border:    #3a3a3a;
+}
+/* sidebar stays visible in every layout — persistent nav is non-negotiable */
+[data-layout="minimal"] header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05) !important;
+}
+[data-layout="minimal"] main { padding: 2.75rem 9% !important; }
+[data-layout="minimal"] .card-lift { border-width: 1px; }
+/* Minimal nav: no left-bar, flat highlight only */
+[data-layout="minimal"] .nav-active {
+  box-shadow: none !important;
+  background: var(--surface-2) !important;
+  color: var(--accent-txt) !important;
+  border-left: 2px solid var(--accent) !important;
+  border-radius: 0 !important;
+  padding-left: calc(0.75rem - 2px) !important;
+}
+[data-layout="minimal"] .nav-item {
+  border-radius: 0 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOP NAV CHROME  —  always visible, always sharp
+   Header/sidebar background driven by --chrome-* tokens.
+   CRITICAL: opacity is NEVER set to 0 — every template must show nav.
+═══════════════════════════════════════════════════════════════ */
+.app-chrome {
+  background: var(--chrome-bg) !important;
+  color: var(--chrome-text);
+  border-color: var(--chrome-border) !important;
+  border-bottom: 1px solid var(--chrome-border);
+  box-shadow: 0 1px 0 var(--chrome-border), 0 2px 16px -6px rgba(26,32,53,.07);
+}
+.app-chrome a:hover { color: var(--accent); }
+.app-chrome .chrome-muted { color: var(--chrome-muted); }
+.app-chrome .chrome-inset { background: var(--chrome-elev); border-color: var(--chrome-border); }
+[data-theme="dark"] .app-chrome { background: var(--chrome-bg) !important; }
+
+/* ── Mobile nav strip ── */
+.mobile-nav-strip {
+  display: flex;
+  border-top: 1px solid var(--chrome-border);
+  overflow-x: auto;
+  padding: 4px 12px 6px;
+  gap: 2px;
+  scrollbar-width: none;
+  background: var(--chrome-bg);
+}
+.mobile-nav-strip::-webkit-scrollbar { display: none; }
+
+/* ── Top nav link — pill style with smooth accent transition ── */
+.top-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--chrome-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  position: relative;
+  transition: background var(--t-fast), color var(--t-fast), transform var(--t-fast);
+  letter-spacing: -0.01em;
+}
+.top-nav-link:hover {
+  background: var(--surface-2);
+  color: var(--chrome-text);
+  transform: none;
+}
+.top-nav-link.top-nav-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 650;
+}
+.top-nav-link.top-nav-active::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0.7;
+}
+
+/* ── Upgrade nav button ── */
+.nav-upgrade-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 16px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-h) 100%);
+  color: #fff !important;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  flex-shrink: 0;
+  letter-spacing: -0.01em;
+  transition: filter var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.2),
+    0 2px 8px rgba(29,111,196,.30),
+    0 1px 2px rgba(29,111,196,.18);
+}
+.nav-upgrade-btn:hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.25),
+    0 6px 18px rgba(29,111,196,.38),
+    0 2px 6px rgba(29,111,196,.22);
+  color: #fff !important;
+}
+.nav-upgrade-btn:active { transform: translateY(0); filter: none; }
+
+/* ── Avatar circle with gradient ring ── */
+.nav-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-h) 100%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  user-select: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px var(--chrome-bg), 0 0 0 3.5px var(--accent-border);
+  letter-spacing: -0.02em;
+  transition: box-shadow var(--t-fast), transform var(--t-fast);
+}
+.nav-avatar:hover {
+  box-shadow: 0 0 0 2px var(--chrome-bg), 0 0 0 3.5px var(--accent);
+  transform: scale(1.06);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EXTENSION PROMO CARD  —  rich depth + layered orbs
+═══════════════════════════════════════════════════════════════ */
+.ext-promo-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: 36px 40px;
+  background: linear-gradient(135deg, #0d4a8a 0%, #1558a0 30%, #1d6fc4 60%, #2483e0 85%, #3b9fe8 100%);
+  color: #fff;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.12) inset,
+    0 20px 60px -12px rgba(21,88,160,.55),
+    0 8px 20px -8px rgba(29,111,196,.40);
+}
+.ext-promo-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 55% 90% at 88% 50%, rgba(120,190,255,.22) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 60% at 20% -10%, rgba(255,255,255,.10) 0%, transparent 60%);
+  pointer-events: none;
+}
+.ext-promo-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255,255,255,.012) 0px,
+    rgba(255,255,255,.012) 1px,
+    transparent 1px,
+    transparent 14px
+  );
+  pointer-events: none;
+}
+.ext-promo-orb {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,.06);
+  pointer-events: none;
+}
+
+/* ── Dashboard stat cards — elevated with icon color accent ── */
+.dash-stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 22px;
+  transition: box-shadow var(--t-base), transform var(--t-base), border-color var(--t-base);
+  cursor: default;
+  position: relative;
+  overflow: hidden;
+}
+.dash-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-h));
+  opacity: 0;
+  transition: opacity var(--t-base);
+}
+.dash-stat-card:hover {
+  box-shadow:
+    0 0 0 1px var(--accent-border),
+    0 10px 32px -8px rgba(29,111,196,.20),
+    0 4px 10px -4px rgba(29,111,196,.10);
+  transform: translateY(-3px);
+  border-color: var(--accent-border);
+}
+.dash-stat-card:hover::before { opacity: 1; }
+
+/* ── Feature badge pills in ext promo ── */
+.ext-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.22);
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  backdrop-filter: blur(6px);
+  white-space: nowrap;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+.ext-badge:hover {
+  background: rgba(255,255,255,.22);
+  border-color: rgba(255,255,255,.38);
+}
+
+/* ── Chip filter (work auth) ── */
+.chip-active {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-h) 100%) !important;
+  color: #fff !important;
+  border-color: var(--accent-h) !important;
+  box-shadow: 0 2px 8px rgba(29,111,196,.30) !important;
+}
+
+/* ── Job card — clean depth with accent hover state ── */
+.job-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px 24px;
+  transition: box-shadow var(--t-base), transform var(--t-base), border-color var(--t-base), background var(--t-base);
+  position: relative;
+}
+.job-card:hover {
+  box-shadow:
+    0 0 0 1px var(--accent-border),
+    0 8px 28px -8px rgba(29,111,196,.16),
+    0 4px 10px -4px rgba(29,111,196,.08);
+  transform: translateY(-2px);
+  border-color: var(--accent-border);
+  background: color-mix(in srgb, var(--surface) 97%, var(--accent-soft));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   APP SHELL — persistent navy sidebar + light content
+   Dark brand rail (#0b1220) on the left, content uses light tokens.
+═══════════════════════════════════════════════════════════════ */
+.mf-shell { min-height: 100vh; background: var(--bg); }
+
+.mf-sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0; width: 248px; z-index: 120;
+  display: flex; flex-direction: column;
+  background: #0b1220; color: #cbd5e1;
+  border-right: 1px solid #18233b;
+  overflow-y: auto; overflow-x: hidden;
+  transition: transform .26s cubic-bezier(.4,0,.2,1);
+}
+.mf-sidebar::-webkit-scrollbar { width: 7px; }
+.mf-sidebar::-webkit-scrollbar-thumb { background: #1e2d47; border-radius: 4px; }
+
+.mf-main { margin-left: 248px; min-height: 100vh; display: flex; flex-direction: column; }
+
+.mf-topbar {
+  position: sticky; top: 0; z-index: 60;
+  height: 58px; display: flex; align-items: center; gap: 10px;
+  padding: 0 28px;
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  backdrop-filter: saturate(150%) blur(10px);
+  -webkit-backdrop-filter: saturate(150%) blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.mf-content { flex: 1; width: 100%; max-width: 1240px; margin: 0 auto; padding: 26px 28px 80px; }
+
+/* ── Sidebar nav items ── */
+.mf-navitem {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 12px; margin: 1px 0; border-radius: 10px;
+  font-size: 13.5px; font-weight: 500; color: #94a3b8; text-decoration: none;
+  letter-spacing: -.01em; transition: background .15s, color .15s;
+  position: relative; cursor: pointer; border: none; background: transparent; width: 100%;
+}
+.mf-navitem:hover { background: #141d31; color: #e2e8f0; }
+.mf-navitem.active { background: #15233f; color: #fff; font-weight: 650; }
+.mf-navitem.active::before {
+  content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px;
+  border-radius: 0 3px 3px 0; background: #2563eb;
+}
+.mf-navitem.active .mf-navicon { color: #60a5fa; }
+.mf-navicon { width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #64748b; }
+.mf-sectionlabel { font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #475569; padding: 0 12px; margin: 16px 0 6px; }
+
+/* ── Hub segmented control (Find / Pipeline / Analytics, etc.) ── */
+.mf-segbar {
+  display: inline-flex; gap: 4px; padding: 4px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 12px; margin-bottom: 22px; flex-wrap: wrap;
+}
+.mf-seg {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 16px; border-radius: 9px;
+  font-size: 13.5px; font-weight: 600; color: var(--text-muted);
+  text-decoration: none; border: none; background: transparent; cursor: pointer;
+  transition: background .16s, color .16s, box-shadow .16s; white-space: nowrap;
+}
+.mf-seg:hover { color: var(--text); }
+.mf-seg.active {
+  background: var(--surface); color: var(--accent-txt);
+  box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 0 0 1px var(--border);
+}
+.mf-seg .mf-segcount {
+  font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent-txt);
+}
+
+/* ── Mobile hamburger + overlay ── */
+.mf-hamburger {
+  position: fixed; top: 11px; left: 14px; z-index: 130;
+  width: 38px; height: 38px; align-items: center; justify-content: center;
+  border-radius: 10px; background: #0b1220; color: #fff;
+  border: 1px solid #1e2d47; cursor: pointer; display: none;
+}
+.mf-overlay { display: none; }
+
+@media (max-width: 900px) {
+  .mf-sidebar { transform: translateX(-100%); box-shadow: 0 0 60px rgba(0,0,0,.55); }
+  .mf-sidebar.open { transform: translateX(0); }
+  .mf-main { margin-left: 0; }
+  .mf-hamburger { display: inline-flex; }
+  .mf-overlay.open { display: block; position: fixed; inset: 0; background: rgba(8,12,22,.55); z-index: 110; }
+  .mf-topbar { padding: 0 16px 0 64px; }
+  .mf-content { padding: 20px 16px 72px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGE TRANSITIONS  —  PDF2 §2 (route-change motion)
+   Applied once at the dashboard layout level via <PageTransition>.
+   The wrapper re-keys on pathname, so this re-fires on every nav.
+   Default = subtle slideUp (opacity 0→1, y 10px→0), per spec.
+═══════════════════════════════════════════════════════════════ */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-transition {
+  animation: page-in 320ms cubic-bezier(.4, 0, .2, 1) both;
+}
+/* Route-specific variants (spec §2.2) — the wrapper sets data-route. */
+.page-transition[data-route="resume"] {
+  animation-name: slide-right;   /* lateral — "moving into a tool" */
+  animation-duration: 360ms;
+}
+.page-transition[data-route="dashboard"] {
+  animation-name: fade-in;       /* calm home base — no movement */
+  animation-duration: 260ms;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REDUCED MOTION  —  PDF2 accessibility requirement (WCAG 2.1)
+   Users with "Reduce Motion" enabled must not experience the full
+   animation system. Because every keyframe utility uses fill-mode
+   `both`, collapsing the duration still lands on the final visible
+   state — content shows instantly instead of animating.
+═══════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ═══════════════════════════════════════════════════════════════
+   SIDEBAR — FINAL VISIBILITY GUARD (must stay last in this file)
+   The persistent dashboard nav must NEVER disappear (explicit product
+   rule). This rule's specificity (html body aside.dash-sidebar = 0,1,3)
+   and last-in-source position beat any [data-layout] / theme rule that
+   might try to hide it now or in the future. Do not move or override.
+═══════════════════════════════════════════════════════════════ */
+html body aside.dash-sidebar {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+  width: 240px !important;
+  /* z-index raised above all modals/drawers (max drawer backdrop = 300,
+     job detail panel = 301). Sidebar must always sit on top. */
+  z-index: 400 !important;
+}
+/* Keep the desktop sidebar visible even on narrow viewports (it scrolls
+   internally); content already offsets by 240px. */
+@media (max-width: 768px) {
+  html body aside.dash-sidebar { display: flex !important; }
+}
+
+/* Note: no .dark { ... } block — dark mode is driven entirely by
+   [data-theme="dark"] (see THEME TOKENS above), which already flips
+   --bg/--surface/--text/etc., and every shadcn semantic token above is
+   aliased to those, so dark mode "just works" with zero duplicate values. */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

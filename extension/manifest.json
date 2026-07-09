@@ -1,0 +1,105 @@
+{
+  "manifest_version": 3,
+  "name": "MarketFit — AI Resume Tailor",
+  "short_name": "MarketFit",
+  "version": "2.0.0",
+  "description": "Quick Fill any ATS form from your MarketFit profile. Tailor resumes with AI in under 20 seconds.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "MarketFit — Quick Fill & AI Tailor"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "http://localhost:3001/*",
+        "https://marketfit.app/*"
+      ],
+      "js": ["web-bridge.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://*.linkedin.com/jobs/*",
+        "*://*.linkedin.com/*/jobs/*",
+        "*://*.indeed.com/*",
+        "*://*.glassdoor.com/*",
+        "*://*.ziprecruiter.com/*",
+        "*://*.dice.com/*",
+        "*://*.monster.com/*",
+        "*://*.careerbuilder.com/*",
+        "*://*.simplify.jobs/*",
+        "*://*.greenhouse.io/*",
+        "*://*.boards.greenhouse.io/*",
+        "*://*.lever.co/*",
+        "*://*.workday.com/*",
+        "*://*.myworkdayjobs.com/*",
+        "*://*.wd1.myworkdayjobs.com/*",
+        "*://*.wd3.myworkdayjobs.com/*",
+        "*://*.wd5.myworkdayjobs.com/*",
+        "*://*.icims.com/*",
+        "*://*.smartrecruiters.com/*",
+        "*://*.bamboohr.com/*",
+        "*://*.ashbyhq.com/*",
+        "*://*.jobs.ashbyhq.com/*",
+        "*://*.jobvite.com/*",
+        "*://*.jvp.io/*",
+        "*://*.taleo.net/*",
+        "*://*.successfactors.com/*",
+        "*://*.eightfold.ai/*",
+        "*://*.rippling.com/*",
+        "*://*.gusto.com/careers/*",
+        "*://*.workable.com/*"
+      ],
+      "js": ["content.js", "sidebar.js"],
+      "css": ["sidebar.css"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "scripting",
+    "storage",
+    "notifications"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "http://localhost:3001/*",
+    "https://marketfit.app/*",
+    "*://*.linkedin.com/*",
+    "*://*.indeed.com/*",
+    "*://*.glassdoor.com/*",
+    "*://*.ziprecruiter.com/*",
+    "*://*.dice.com/*",
+    "*://*.monster.com/*",
+    "*://*.careerbuilder.com/*",
+    "*://*.simplify.jobs/*",
+    "*://*.greenhouse.io/*",
+    "*://*.boards.greenhouse.io/*",
+    "*://*.lever.co/*",
+    "*://*.workday.com/*",
+    "*://*.myworkdayjobs.com/*",
+    "*://*.wd1.myworkdayjobs.com/*",
+    "*://*.wd3.myworkdayjobs.com/*",
+    "*://*.wd5.myworkdayjobs.com/*",
+    "*://*.icims.com/*",
+    "*://*.smartrecruiters.com/*",
+    "*://*.bamboohr.com/*",
+    "*://*.ashbyhq.com/*",
+    "*://*.jobs.ashbyhq.com/*",
+    "*://*.jobvite.com/*",
+    "*://*.jvp.io/*",
+    "*://*.taleo.net/*",
+    "*://*.successfactors.com/*",
+    "*://*.eightfold.ai/*",
+    "*://*.rippling.com/*",
+    "*://*.gusto.com/careers/*",
+    "*://*.workable.com/*"
+  ]
+}

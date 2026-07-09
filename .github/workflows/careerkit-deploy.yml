@@ -1,0 +1,36 @@
+name: CareerKit CD → Render
+
+on:
+  push:
+    branches: [main]
+    paths: ["careerkit/**"]
+
+jobs:
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Render deploy hook
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
+          echo "Render response: $STATUS"
+          if [ "$STATUS" != "200" ] && [ "$STATUS" != "201" ]; then
+            echo "❌ Deploy hook failed (HTTP $STATUS)"
+            exit 1
+          fi
+          echo "✅ Render deploy triggered"
+
+# ─── Secrets you must add in GitHub → Settings → Secrets and variables ───
+# RENDER_DEPLOY_HOOK_URL
+#   → Render dashboard → your service → Settings → Deploy Hook → copy URL
+#
+# ─── Render service setup (one-time) ──────────────────────────────────────
+# 1. Go to https://render.com → New → Web Service
+# 2. Connect your GitHub repo, set Root Directory to: careerkit
+# 3. Build command:   pip install -r requirements.txt
+# 4. Start command:   gunicorn app:app --bind 0.0.0.0:$PORT
+# 5. Environment:     Python 3.11
+# 6. Add env vars:    ANTHROPIC_API_KEY = <your key>
+# 7. Copy the Deploy Hook URL → add as RENDER_DEPLOY_HOOK_URL secret above

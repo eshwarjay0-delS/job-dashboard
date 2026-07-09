@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "job-dashboard",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "job-dashboard-verify",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "autoPort": true
+    }
+  ]
+}

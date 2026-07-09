@@ -39,3 +39,39 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ── Python / careerkit ─────────────────────────────────────────────────────────
+careerkit/.venv/
+careerkit/__pycache__/
+careerkit/**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# CareerKit runtime data (SQLite DB, uploaded/output files)
+careerkit/uploads/
+careerkit/outputs/
+careerkit/*.db
+careerkit/*.db-shm
+careerkit/*.db-wal
+
+# careerkit .env (keep .env.example)
+careerkit/.env
+
+# ── Chrome extension build output ──────────────────────────────────────────────
+extension/dist/
+
+# Claude Code local/personal settings (machine-specific permission allowlist —
+# not shared project config) + Python bytecode cache from the ui-ux-pro-max skill
+.claude/settings.local.json
+**/__pycache__/
+
+# Dev server / setup logs — regenerated every run, not source
+devserver.log
+setup.log
+
+# Next.js app runtime data — generated at runtime, contains real uploaded resumes
+# (PII: names/emails/phone numbers), tailored output, and local test logs. None of
+# this is source; none of it belongs in git history. The BASE resume library at
+# /resumes/ is intentionally the opposite of this and stays tracked (see HANDOFF.md
+# — it's read-only reference data the deployed app needs bundled).
+/data/

@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>MarketFit</title>
+<style>
+/* ── Reset & design tokens ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+:root {
+  --white:        #ffffff;
+  --bg:           #F9FAFB;
+  --bg-2:         #F3F4F6;
+  --text:         #111827;
+  --text-2:       #374151;
+  --text-soft:    #6B7280;
+  --text-muted:   #9CA3AF;
+  --border:       #E5E7EB;
+  --border-2:     #D1D5DB;
+  --green:        #16a34a;
+  --green-dk:     #15803d;
+  --green-bg:     #F0FDF4;
+  --green-bd:     #BBF7D0;
+  --green-txt:    #166534;
+  --blue:         #1d6fc4;
+  --blue-dk:      #1558a0;
+  --blue-bg:      #EFF6FF;
+  --blue-bd:      #BFDBFE;
+  --red:          #DC2626;
+  --red-bg:       #FEF2F2;
+  --red-bd:       #FECACA;
+  --purple:       #7C3AED;
+  --purple-bg:    #F5F3FF;
+  --gold:         #D97706;
+  --r:            10px;
+  --r-sm:         7px;
+  --t:            140ms ease;
+  --shadow-sm:    0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", system-ui, sans-serif;
+  background: var(--white);
+  color: var(--text);
+  width: 380px;
+  font-size: 13.5px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+::-webkit-scrollbar { width: 3px }
+::-webkit-scrollbar-track { background: transparent }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px }
+.hidden { display: none !important }
+a { color: inherit; text-decoration: none }
+
+/* ── Header ── */
+.hdr {
+  display: flex; align-items: center; padding: 10px 14px;
+  border-bottom: 1px solid var(--border); background: var(--white);
+  position: sticky; top: 0; z-index: 20;
+}
+.logo-mark {
+  width: 27px; height: 27px; border-radius: 7px; flex-shrink: 0;
+  background: linear-gradient(145deg, #2483e0 0%, #1558a0 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9.5px; font-weight: 900; color: #fff; letter-spacing: -.5px;
+  box-shadow: 0 2px 8px rgba(29,111,196,.3), inset 0 1px 0 rgba(255,255,255,.2);
+  margin-right: 8px;
+}
+.logo-name { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -.2px; flex: 1 }
+.hdr-actions { display: flex; align-items: center; gap: 3px }
+.icon-btn {
+  width: 28px; height: 28px; border-radius: 6px; border: none;
+  background: transparent; color: var(--text-soft); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--t), color var(--t);
+}
+.icon-btn:hover { background: var(--bg); color: var(--text) }
+.feedback-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 9px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--white); color: var(--text-soft);
+  font-size: 11px; font-weight: 500; cursor: pointer;
+  transition: all var(--t); margin-right: 4px;
+}
+.feedback-pill:hover { border-color: var(--border-2); color: var(--text-2) }
+
+/* ── Tabs ── */
+.tab-strip {
+  display: flex; border-bottom: 1px solid var(--border);
+  background: var(--white); padding: 0 6px;
+}
+.tab-pill {
+  padding: 8px 14px; font-size: 12.5px; font-weight: 600;
+  color: var(--text-soft); background: none; border: none;
+  border-bottom: 2px solid transparent; cursor: pointer;
+  transition: all var(--t); white-space: nowrap; margin-bottom: -1px;
+  letter-spacing: -.01em;
+}
+.tab-pill.on { color: var(--blue); border-bottom-color: var(--blue) }
+.tab-pill:hover:not(.on) { color: var(--text-2) }
+
+/* ── Status strip ── */
+.status-strip {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 14px; background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.s-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-2); flex-shrink: 0; transition: background var(--t) }
+.s-dot.live { background: var(--green); box-shadow: 0 0 0 2.5px #dcfce7 }
+.s-dot.err  { background: var(--red) }
+.s-url { flex: 1; font-size: 11px; color: var(--text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.s-change { font-size: 11px; font-weight: 600; color: var(--blue); cursor: pointer; white-space: nowrap }
+.s-change:hover { text-decoration: underline }
+
+/* ── Content scroll ── */
+.content-scroll { overflow-y: auto; max-height: 500px }
+
+/* ── Job card ── */
+.job-card {
+  padding: 13px 14px 11px; border-bottom: 1px solid var(--border);
+}
+.jc-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 7px }
+.jc-company { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3 }
+.jc-industry { font-size: 11px; color: var(--text-muted); margin-top: 1px }
+.match-pct {
+  flex-shrink: 0; min-width: 42px; height: 26px; border-radius: 7px;
+  background: var(--green); color: #fff; font-size: 12.5px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; letter-spacing: -.3px;
+  margin-left: 10px;
+}
+.match-pct.mid { background: var(--gold) }
+.match-pct.low { background: var(--border-2); color: var(--text-soft) }
+.jc-title { font-size: 15.5px; font-weight: 750; color: var(--text); line-height: 1.3; margin-bottom: 5px; letter-spacing: -.02em }
+.jc-meta  { font-size: 11px; color: var(--text-muted) }
+
+/* ── Connections bar ── */
+.connections-bar {
+  display: flex; align-items: center; padding: 9px 14px;
+  border-bottom: 1px solid var(--border); cursor: pointer;
+  transition: background var(--t);
+}
+.connections-bar:hover { background: var(--bg) }
+.conn-label { font-size: 12px; font-weight: 600; color: var(--text-2); flex: 1 }
+.conn-pills { display: flex; align-items: center; gap: 2px; margin-right: 6px }
+.conn-av {
+  width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--white);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8.5px; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+
+/* ── Primary CTA ── */
+.cta-wrap { padding: 12px 14px; border-bottom: 1px solid var(--border) }
+.autofill-btn {
+  width: 100%; padding: 12.5px 16px; border-radius: var(--r); border: none;
+  background: var(--green); color: #fff; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all var(--t); letter-spacing: -.01em;
+  box-shadow: 0 1px 3px rgba(22,163,74,.2), 0 4px 14px rgba(22,163,74,.18);
+}
+.autofill-btn:hover:not(:disabled) {
+  background: var(--green-dk);
+  box-shadow: 0 2px 6px rgba(22,163,74,.28), 0 6px 18px rgba(22,163,74,.22);
+}
+.autofill-btn:active:not(:disabled) { transform: scale(.99) }
+.autofill-btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none }
+
+/* ── Fill progress ── */
+.fp-wrap { padding: 12px 14px; border-bottom: 1px solid var(--border) }
+.fp-header {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 7px;
+}
+.fp-pct { font-weight: 800; color: var(--green) }
+.fp-track { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden }
+.fp-bar   { height: 100%; border-radius: 3px; background: var(--green); transition: width .5s ease }
+.fp-list  { margin-top: 10px }
+.fp-section { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); margin: 8px 0 4px }
+.fp-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 2.5px 0; font-size: 11.5px; color: var(--text-soft);
+}
+.fp-row .ok   { color: var(--green); font-size: 13px }
+.fp-row .skip { color: var(--text-muted) }
+.continue-btn {
+  width: 100%; padding: 12px 16px; border-radius: var(--r); border: none;
+  background: var(--green); color: #fff; font-size: 13.5px; font-weight: 700;
+  cursor: pointer; margin-top: 12px; transition: all var(--t);
+  box-shadow: 0 1px 4px rgba(22,163,74,.2);
+}
+.continue-btn:hover { background: var(--green-dk) }
+
+/* ── Accordion ── */
+.accord-row {
+  display: flex; align-items: center; padding: 11px 14px;
+  border-bottom: 1px solid var(--border); cursor: pointer;
+  transition: background var(--t); user-select: none;
+}
+.accord-row:hover { background: var(--bg) }
+.accord-icon-wrap { position: relative; margin-right: 10px; flex-shrink: 0 }
+.accord-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--bg); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.accord-badge {
+  position: absolute; width: 8px; height: 8px; top: -2px; right: -2px;
+  border-radius: 50%; border: 1.5px solid var(--white);
+}
+.accord-badge.red { background: var(--red) }
+.accord-badge.green { background: var(--green) }
+.accord-text { flex: 1; min-width: 0 }
+.accord-title { font-size: 13px; font-weight: 600; color: var(--text-2) }
+.accord-sub   { font-size: 11px; color: var(--text-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.accord-right { display: flex; align-items: center; gap: 5px; flex-shrink: 0; margin-left: 8px }
+.accord-chip {
+  font-size: 10px; font-weight: 600; padding: 2px 9px; border-radius: 20px;
+  background: var(--blue-bg); border: 1px solid var(--blue-bd); color: var(--blue);
+  white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis;
+}
+.accord-chevron {
+  color: var(--text-muted); transition: transform var(--t); flex-shrink: 0;
+}
+.accord-row.open .accord-chevron { transform: rotate(90deg) }
+.accord-body { display: none; padding: 8px 14px 12px; border-bottom: 1px solid var(--border) }
+.accord-body.open { display: block }
+
+/* ── Resume list ── */
+.resume-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 9px }
+.resume-item {
+  display: flex; align-items: center; gap: 9px; padding: 9px 11px;
+  border-radius: var(--r-sm); border: 1.5px solid var(--border);
+  cursor: pointer; transition: all var(--t); background: var(--white);
+}
+.resume-item:hover { border-color: var(--border-2); background: var(--bg) }
+.resume-item.sel { border-color: var(--blue); background: var(--blue-bg) }
+.resume-thumb {
+  width: 32px; height: 32px; border-radius: 7px; flex-shrink: 0;
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.resume-info { flex: 1; min-width: 0 }
+.resume-name { font-size: 12px; font-weight: 600; color: var(--text-2); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.resume-date { font-size: 10px; color: var(--text-muted); margin-top: 1px }
+.resume-sel-dot {
+  width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid var(--border-2); transition: all var(--t);
+}
+.resume-item.sel .resume-sel-dot {
+  background: var(--blue); border-color: var(--blue);
+  box-shadow: inset 0 0 0 3px var(--white);
+}
+
+/* ── Action buttons in accordion ── */
+.gen-btn {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 9px 12px; border-radius: var(--r-sm); border: none;
+  border: 1.5px dashed var(--border); background: var(--white);
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all var(--t);
+}
+.gen-btn.blue   { color: var(--blue) }
+.gen-btn.blue:hover   { border-color: var(--blue); background: var(--blue-bg) }
+.gen-btn.purple { color: var(--purple) }
+.gen-btn.purple:hover { border-color: var(--purple); background: var(--purple-bg) }
+
+/* ── No job state ── */
+.no-job-state { padding: 30px 20px; text-align: center }
+.nj-icon  { font-size: 38px; margin-bottom: 14px }
+.nj-title { font-size: 14.5px; font-weight: 700; color: var(--text); margin-bottom: 7px; letter-spacing: -.02em }
+.nj-body  { font-size: 12px; color: var(--text-soft); line-height: 1.65; margin-bottom: 18px }
+.nj-btn {
+  display: inline-flex; align-items: center; gap: 5px; padding: 9px 18px;
+  border-radius: var(--r-sm); background: var(--blue); color: #fff;
+  font-size: 12.5px; font-weight: 700; box-shadow: 0 2px 8px rgba(29,111,196,.28);
+  transition: all var(--t);
+}
+.nj-btn:hover { background: var(--blue-dk) }
+
+/* ── Inline profile form ── */
+.profile-prompt { padding: 14px; border-bottom: 1px solid var(--border) }
+.pp-head { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px }
+.pp-sub  { font-size: 11px; color: var(--text-soft); margin-bottom: 12px; line-height: 1.55 }
+.pf-row { display: flex; gap: 8px }
+.pf-row .pf-grp { flex: 1 }
+.pf-grp { margin-bottom: 9px }
+.pf-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 3px }
+.pf-inp {
+  width: 100%; padding: 7px 10px; border-radius: var(--r-sm);
+  border: 1.5px solid var(--border); background: var(--white);
+  color: var(--text); font-size: 12.5px; outline: none; font-family: inherit;
+  transition: border-color var(--t), box-shadow var(--t);
+}
+.pf-inp:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(29,111,196,.1) }
+.pf-save-btn {
+  width: 100%; padding: 10px; border-radius: var(--r-sm); border: none;
+  background: var(--blue); color: #fff; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all var(--t);
+}
+.pf-save-btn:hover { background: var(--blue-dk) }
+
+/* ── Alert ── */
+.alert { padding: 8px 11px; border-radius: 8px; font-size: 11.5px; margin-top: 8px }
+.alert-ok  { background: var(--green-bg); border: 1px solid var(--green-bd); color: var(--green-txt) }
+.alert-err { background: var(--red-bg);   border: 1px solid var(--red-bd);   color: var(--red) }
+
+/* ── Tailor ── */
+.tailor-panel { padding: 14px }
+.jd-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px }
+.jd-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted) }
+.grab-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 9px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--white); color: var(--text-soft); font-size: 11px; font-weight: 500;
+  cursor: pointer; transition: all var(--t);
+}
+.grab-btn:hover { border-color: var(--blue-bd); color: var(--blue) }
+.jd-area {
+  width: 100%; min-height: 150px; max-height: 200px; resize: vertical;
+  padding: 10px 12px; border-radius: var(--r); border: 1.5px solid var(--border);
+  background: var(--white); color: var(--text); font-size: 12px; line-height: 1.65;
+  font-family: inherit; outline: none; transition: border-color var(--t);
+}
+.jd-area:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(29,111,196,.1) }
+.jd-area::placeholder { color: var(--text-muted) }
+.char-ct { font-size: 10px; color: var(--text-muted); text-align: right; margin-top: 4px }
+.tailor-cta {
+  width: 100%; padding: 12px; border-radius: var(--r); border: none;
+  background: linear-gradient(135deg, #2483e0, #1558a0); color: #fff;
+  font-size: 13.5px; font-weight: 700; cursor: pointer; margin-top: 12px;
+  box-shadow: 0 2px 10px rgba(29,111,196,.28); transition: all var(--t);
+}
+.tailor-cta:hover:not(:disabled) { background: linear-gradient(135deg, #1d6fc4, #114280) }
+.tailor-cta:disabled { opacity: .5; cursor: not-allowed; box-shadow: none }
+.prog-wrap { height: 3px; border-radius: 2px; background: var(--border); margin-top: 10px; overflow: hidden }
+.prog-bar  { height: 100%; background: linear-gradient(90deg, var(--blue), #60a5fa); width: 0; transition: width .4s }
+.prog-msg  { font-size: 10.5px; color: var(--text-muted); text-align: center; margin-top: 5px; min-height: 14px }
+
+/* ── Tailor result ── */
+.r-score-card {
+  display: flex; align-items: center; gap: 12px; padding: 12px;
+  border-radius: var(--r); border: 1px solid var(--border); margin-bottom: 11px;
+  box-shadow: var(--shadow-sm);
+}
+.score-ring { width: 58px; height: 58px; position: relative; flex-shrink: 0 }
+.score-ring svg { transform: rotate(-90deg) }
+.score-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center }
+.score-v { font-size: 19px; font-weight: 800; color: var(--text) }
+.score-l { font-size: 7.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .07em }
+.dl-row { display: flex; gap: 7px; margin-bottom: 8px }
+.dl-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px; border-radius: var(--r); border: 1.5px solid var(--border);
+  background: var(--white); color: var(--text); font-size: 12px; font-weight: 700;
+  cursor: pointer; text-decoration: none; transition: all var(--t);
+}
+.dl-btn small { font-size: 9px; color: var(--text-muted); font-weight: 400 }
+.dl-btn:hover { border-color: var(--blue-bd); background: var(--blue-bg); color: var(--blue) }
+.dl-btn.prime { background: linear-gradient(135deg, #2483e0, #1558a0); border-color: transparent; color: #fff; box-shadow: 0 2px 10px rgba(29,111,196,.26) }
+.dl-btn.prime small { color: rgba(255,255,255,.72) }
+.dl-btn.prime:hover { background: linear-gradient(135deg, #1d6fc4, #114280) }
+.secondary-btn {
+  width: 100%; padding: 9px; border-radius: var(--r); border: 1px solid var(--border);
+  background: var(--white); color: var(--text-soft); font-size: 12px; font-weight: 600;
+  cursor: pointer; margin-bottom: 6px; transition: all var(--t);
+}
+.secondary-btn:hover { background: var(--bg); color: var(--text-2) }
+
+/* ── AI scanning ── */
+.ai-scan {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 32px 20px; text-align: center;
+}
+.scan-spark { font-size: 34px; margin-bottom: 16px; display: inline-block }
+.scan-title { font-size: 14.5px; font-weight: 700; color: var(--text); margin-bottom: 6px; letter-spacing: -.02em }
+.scan-sub   { font-size: 12px; color: var(--text-soft); line-height: 1.6 }
+.scan-cancel { margin-top: 16px; color: var(--blue); font-size: 12px; font-weight: 600; background: none; border: none; cursor: pointer }
+.scan-cancel:hover { text-decoration: underline }
+
+/* ── Setup ── */
+.setup-wrap { padding: 28px 20px; text-align: center }
+.setup-ico { font-size: 38px; margin-bottom: 14px }
+.setup-wrap h2 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 7px }
+.setup-wrap p  { font-size: 12px; color: var(--text-soft); line-height: 1.65; margin-bottom: 16px }
+.setup-row { display: flex; gap: 7px; margin-bottom: 8px }
+.setup-inp {
+  flex: 1; padding: 9px 11px; border-radius: 8px; border: 1.5px solid var(--border);
+  font-family: "Courier New", monospace; font-size: 12px; color: var(--text); outline: none;
+  transition: border-color var(--t);
+}
+.setup-inp:focus { border-color: var(--blue) }
+.setup-btn {
+  padding: 9px 14px; border-radius: 8px; border: none;
+  background: var(--blue); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+code { font-family: "Courier New", monospace; font-size: 10.5px; background: var(--bg); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border); color: var(--blue) }
+
+/* ── Settings ── */
+.sett-wrap { padding: 14px }
+.sett-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); margin-bottom: 4px }
+.sett-inp {
+  width: 100%; padding: 9px 11px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: var(--white); color: var(--text); font-size: 12px; outline: none;
+  font-family: "Courier New", monospace; transition: border-color var(--t); margin-bottom: 6px;
+}
+.sett-inp:focus { border-color: var(--blue) }
+.sett-hint { font-size: 10.5px; color: var(--text-muted); line-height: 1.6; margin-bottom: 14px }
+.sett-save {
+  width: 100%; padding: 10px; border-radius: 8px; border: none;
+  background: var(--blue); color: #fff; font-size: 13px; font-weight: 700;
+  cursor: pointer; margin-bottom: 8px; transition: all var(--t);
+}
+.sett-save:hover { background: var(--blue-dk) }
+.sett-msg { min-height: 16px; font-size: 11.5px }
+
+/* ── Footer ── */
+.footer {
+  padding: 10px 14px; border-top: 1px solid var(--border);
+  background: var(--white); display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.footer-link { font-size: 11.5px; color: var(--text-soft); cursor: pointer; transition: color var(--t) }
+.footer-link:hover { color: var(--blue) }
+.footer-sep { width: 3px; height: 3px; border-radius: 50%; background: var(--border-2); flex-shrink: 0 }
+
+/* ── Loading ── */
+.loading-center { padding: 30px; text-align: center; color: var(--text-muted); font-size: 12px }
+@keyframes spin { to { transform: rotate(360deg) } }
+.spin { animation: spin .7s linear infinite; display: inline-block }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════ -->
+<div class="hdr">
+  <div class="logo-mark">MF</div>
+  <span class="logo-name">MarketFit</span>
+  <div class="hdr-actions">
+    <button class="feedback-pill" id="btn-feedback">
+      <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+        <path d="M14 1H2C1.45 1 1 1.45 1 2v8c0 .55.45 1 1 1h2v3l3-3h7c.55 0 1-.45 1-1V2c0-.55-.45-1-1-1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+      Feedback
+    </button>
+    <button class="icon-btn" id="btn-settings-icon" title="Settings">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </button>
+    <button class="icon-btn" id="btn-expand" title="Open in dashboard">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- Tab strip -->
+<div class="tab-strip">
+  <button class="tab-pill on" data-tab="fill">⚡ Fill</button>
+  <button class="tab-pill"    data-tab="tailor">✨ Tailor</button>
+  <button class="tab-pill"    data-tab="settings">Settings</button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SETUP PANEL (offline)
+══════════════════════════════════════════ -->
+<div id="panel-setup" class="hidden">
+  <div class="setup-wrap">
+    <div class="setup-ico">🔌</div>
+    <h2>Connect MarketFit</h2>
+    <p>Start the app with <code>npm run dev</code>, then save the URL below.</p>
+    <div class="setup-row">
+      <input class="setup-inp" id="setup-url-input" type="text" value="https://marketfit.app"/>
+      <button class="setup-btn" id="connect-btn">Connect</button>
+    </div>
+    <div id="setup-msg" style="min-height:16px;font-size:11.5px;text-align:center;margin-top:6px"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     FILL PANEL
+══════════════════════════════════════════ -->
+<div id="panel-fill">
+
+  <div class="status-strip">
+    <div class="s-dot" id="s-dot-f"></div>
+    <div class="s-url" id="s-url-f">Connecting…</div>
+    <div class="s-change" id="s-change-f">Change</div>
+  </div>
+
+  <div class="content-scroll" id="fill-scroll">
+
+    <!-- Loading -->
+    <div id="fill-loading" class="loading-center">
+      <span class="spin">⟳</span>&nbsp; Loading…
+    </div>
+
+    <!-- AI scanning -->
+    <div id="fill-scanning" class="hidden">
+      <div class="ai-scan">
+        <span class="scan-spark spin">✦</span>
+        <div class="scan-title">AI is scanning this page</div>
+        <div class="scan-sub">We're checking this page for the information needed to apply.</div>
+        <button class="scan-cancel" id="scan-cancel-btn">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Job card -->
+    <div id="fill-job-card" class="job-card hidden">
+      <div class="jc-top">
+        <div>
+          <div class="jc-company"  id="jc-company">Company</div>
+          <div class="jc-industry" id="jc-industry"></div>
+        </div>
+        <div class="match-pct" id="jc-match">—</div>
+      </div>
+      <div class="jc-title" id="jc-title">Job Title</div>
+      <div class="jc-meta"  id="jc-meta"></div>
+    </div>
+
+    <!-- Connections bar -->
+    <div id="fill-connections" class="connections-bar hidden">
+      <span class="conn-label">Your Insider Connections</span>
+      <div class="conn-pills" id="conn-pills"></div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="color:var(--text-muted);flex-shrink:0">
+        <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <!-- No profile → inline form -->
+    <div id="fill-noprofile" class="hidden">
+      <div class="profile-prompt">
+        <div class="pp-head">Complete your profile to autofill</div>
+        <div class="pp-sub">Fill in once — we'll autofill every application for you.</div>
+        <div class="pf-row">
+          <div class="pf-grp">
+            <div class="pf-lbl">First Name</div>
+            <input class="pf-inp" id="pf-first" type="text" placeholder="First"/>
+          </div>
+          <div class="pf-grp">
+            <div class="pf-lbl">Last Name</div>
+            <input class="pf-inp" id="pf-last" type="text" placeholder="Last"/>
+          </div>
+        </div>
+        <div class="pf-grp">
+          <div class="pf-lbl">Email</div>
+          <input class="pf-inp" id="pf-email" type="email" placeholder="you@email.com"/>
+        </div>
+        <div class="pf-row">
+          <div class="pf-grp">
+            <div class="pf-lbl">Phone</div>
+            <input class="pf-inp" id="pf-phone" type="tel" placeholder="+1 (555) 000-0000"/>
+          </div>
+          <div class="pf-grp">
+            <div class="pf-lbl">Location</div>
+            <input class="pf-inp" id="pf-loc" type="text" placeholder="City, ST"/>
+          </div>
+        </div>
+        <div class="pf-grp">
+          <div class="pf-lbl">LinkedIn URL</div>
+          <input class="pf-inp" id="pf-linkedin" type="url" placeholder="linkedin.com/in/you"/>
+        </div>
+        <div class="pf-row">
+          <div class="pf-grp">
+            <div class="pf-lbl">Work Authorization</div>
+            <select class="pf-inp" id="pf-workauth">
+              <option value="">Select…</option>
+              <option value="h1b">H-1B</option>
+              <option value="opt_cpt">OPT / CPT (F-1)</option>
+              <option value="green_card">Green Card</option>
+              <option value="citizen">U.S. Citizen</option>
+              <option value="w2">W2</option>
+              <option value="c2c">C2C</option>
+              <option value="no_sponsorship">No sponsorship needed</option>
+            </select>
+          </div>
+          <div class="pf-grp">
+            <div class="pf-lbl">GitHub / Portfolio</div>
+            <input class="pf-inp" id="pf-portfolio" type="url" placeholder="github.com/you"/>
+          </div>
+        </div>
+        <button class="pf-save-btn" id="pf-save-btn">Save &amp; Continue →</button>
+        <div id="pf-msg" style="min-height:14px;font-size:11px;margin-top:5px;color:var(--green)"></div>
+      </div>
+    </div>
+
+    <!-- Primary CTA -->
+    <div id="fill-cta" class="cta-wrap hidden">
+      <button class="autofill-btn" id="autofill-main-btn" disabled>
+        ⚡ Account Creation &amp; Autofill
+      </button>
+      <div id="fill-main-alert" class="hidden"></div>
+    </div>
+
+    <!-- Fill progress (after autofill) -->
+    <div id="fill-progress" class="fp-wrap hidden">
+      <div class="fp-header">
+        <span id="fp-label">0/0 required fields filled</span>
+        <span class="fp-pct" id="fp-pct">0%</span>
+      </div>
+      <div class="fp-track"><div class="fp-bar" id="fp-bar" style="width:0%"></div></div>
+      <div class="fp-list" id="fp-list"></div>
+      <button class="continue-btn" id="continue-next-btn">Continue To The Next Page ▶</button>
+    </div>
+
+    <!-- Autofill info accordion -->
+    <div id="accord-autofill" class="accord-row hidden" data-body="body-autofill">
+      <div class="accord-icon-wrap">
+        <div class="accord-icon">👤</div>
+        <div class="accord-badge red hidden" id="autofill-badge"></div>
+      </div>
+      <div class="accord-text">
+        <div class="accord-title">Your Autofill Information</div>
+        <div class="accord-sub" id="autofill-sub">Name, email, phone, location</div>
+      </div>
+      <div class="accord-right">
+        <svg class="accord-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="accord-body" id="body-autofill">
+      <div id="autofill-info-display" style="font-size:11.5px;color:var(--text-soft);line-height:1.8"></div>
+      <button id="pf-edit-btn" style="margin-top:8px;background:none;border:1px solid var(--border);color:var(--blue);border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:600;cursor:pointer">✎ Edit autofill info</button>
+    </div>
+
+    <!-- Resume accordion -->
+    <div id="accord-resume" class="accord-row hidden" data-body="body-resume">
+      <div class="accord-icon-wrap">
+        <div class="accord-icon">📄</div>
+        <div class="accord-badge green hidden" id="resume-badge"></div>
+      </div>
+      <div class="accord-text">
+        <div class="accord-title">Upload Resume</div>
+        <div class="accord-sub" id="resume-accord-sub">No resume selected</div>
+      </div>
+      <div class="accord-right">
+        <span class="accord-chip hidden" id="resume-chip"></span>
+        <svg class="accord-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="accord-body" id="body-resume">
+      <div class="resume-list" id="resume-list"></div>
+      <button class="gen-btn blue" id="gen-resume-btn">
+        <span>✦</span> Generate Custom Resume for This Role
+      </button>
+      <div id="gen-resume-msg" style="min-height:0"></div>
+    </div>
+
+    <!-- Cover letter accordion -->
+    <div id="accord-cl" class="accord-row hidden" data-body="body-cl">
+      <div class="accord-icon-wrap">
+        <div class="accord-icon">📝</div>
+        <div class="accord-badge green hidden" id="cl-badge"></div>
+      </div>
+      <div class="accord-text">
+        <div class="accord-title">Upload Cover Letter</div>
+        <div class="accord-sub" id="cl-sub">Optional — tailored to this role</div>
+      </div>
+      <div class="accord-right">
+        <svg class="accord-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="accord-body" id="body-cl">
+      <button class="gen-btn purple" id="gen-cl-btn">
+        <span>✦</span> Generate Cover Letter for This Role
+      </button>
+      <div id="gen-cl-msg" style="min-height:0"></div>
+    </div>
+
+    <!-- No job detected -->
+    <div id="fill-nojob" class="hidden">
+      <div class="no-job-state">
+        <div class="nj-icon">🔍</div>
+        <div class="nj-title">Navigate to a job application</div>
+        <div class="nj-body">Open a listing on LinkedIn, Workday, Greenhouse, Lever, Ashby, iCIMS, or any ATS — then click Fill.</div>
+        <a class="nj-btn" id="jobs-link" href="#" target="_blank">Browse Jobs →</a>
+      </div>
+    </div>
+
+  </div><!-- /content-scroll -->
+
+  <div class="footer">
+    <span class="footer-link" id="autofill-another">Autofill for Another Job</span>
+    <div class="footer-sep"></div>
+    <a class="footer-link" id="open-app-link" href="#" target="_blank">Open MarketFit</a>
+  </div>
+</div><!-- /panel-fill -->
+
+<!-- ══════════════════════════════════════════
+     TAILOR PANEL
+══════════════════════════════════════════ -->
+<div id="panel-tailor" class="hidden">
+
+  <div class="status-strip">
+    <div class="s-dot" id="s-dot-t"></div>
+    <div class="s-url" id="s-url-t">Connecting…</div>
+    <div class="s-change" id="s-change-t">Change</div>
+  </div>
+
+  <div id="tailor-input-view">
+    <div class="tailor-panel">
+      <div class="jd-row">
+        <div class="jd-label">Job Description</div>
+        <button class="grab-btn" id="grab-btn">⚡ Grab from page</button>
+      </div>
+      <textarea class="jd-area" id="jd-input"
+        placeholder="Paste the job description here…&#10;&#10;Or click ⚡ Grab from page to auto-extract it."></textarea>
+      <div class="char-ct" id="char-count">0 characters</div>
+      <div id="tailor-msg-area"></div>
+      <button class="tailor-cta" id="tailor-btn" disabled>✨ Tailor &amp; Download Resume</button>
+      <div class="prog-wrap hidden" id="prog-wrap"><div class="prog-bar" id="prog-bar"></div></div>
+      <div class="prog-msg hidden" id="prog-msg"></div>
+    </div>
+  </div>
+
+  <div id="tailor-result-view" class="hidden">
+    <div class="tailor-panel">
+      <div class="r-score-card">
+        <div class="score-ring">
+          <svg width="58" height="58" viewBox="0 0 58 58">
+            <circle cx="29" cy="29" r="23" fill="none" stroke="#E5E7EB" stroke-width="5"/>
+            <circle id="r-arc" cx="29" cy="29" r="23" fill="none" stroke="#1d6fc4" stroke-width="5" stroke-linecap="round" stroke-dasharray="0 144.51"/>
+          </svg>
+          <div class="score-center">
+            <span class="score-v" id="r-score">--</span>
+            <span class="score-l">match</span>
+          </div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px" id="r-name">Resume tailored</div>
+          <div style="font-size:11px;color:var(--text-muted)" id="r-cat"></div>
+        </div>
+      </div>
+
+      <div class="dl-row">
+        <a class="dl-btn prime" id="dl-docx" href="#" download>📝 Word (.docx)<small>Recommended</small></a>
+        <a class="dl-btn" id="dl-pdf" href="#" target="_blank">📄 PDF<small>Print-ready</small></a>
+      </div>
+      <button class="autofill-btn" id="autofill-from-tailor" style="margin-bottom:8px">⚡ Auto-fill Application</button>
+      <div id="tailor-fill-result" style="min-height:0"></div>
+      <button class="secondary-btn" id="btn-re-tailor">← Tailor another job</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a class="footer-link" id="open-app-t" href="#" target="_blank">Open MarketFit Dashboard</a>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SETTINGS PANEL
+══════════════════════════════════════════ -->
+<div id="panel-settings" class="hidden">
+  <div class="sett-wrap">
+    <div class="sett-lbl" style="margin-top:4px">App URL</div>
+    <input class="sett-inp" id="sett-url" type="text" placeholder="https://marketfit.app"/>
+    <div class="sett-hint">Run <code>npm run dev</code> locally or enter your deployed URL.</div>
+
+    <div class="sett-lbl">AI API Key</div>
+    <input class="sett-inp" id="sett-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…  /  sk-or-…  /  AIza…"/>
+    <div class="sett-hint">Accepts Claude (<code>sk-ant-</code>), OpenRouter (<code>sk-or-</code>), or Gemini (<code>AIza</code>). Leave blank if <code>.env.local</code> already has a key.</div>
+
+    <button class="sett-save" id="sett-save">Save Settings</button>
+    <div class="sett-msg" id="sett-msg"></div>
+  </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body { width:260px; padding:16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#0f1623; color:#fff; margin:0 }
+  h2 { font-size:14px; margin:0 0 8px; color:#e5e7eb }
+  p  { font-size:11.5px; color:#9ca3af; margin:0 0 12px; line-height:1.6 }
+  .btn { display:block; width:100%; padding:10px; border-radius:8px; border:none; background:#16a34a; color:#fff; font-size:13px; font-weight:700; cursor:pointer; margin-bottom:6px }
+  .btn:hover { background:#15803d }
+  .note { font-size:10.5px; color:#6b7a99; text-align:center; margin-top:4px }
+</style>
+</head>
+<body>
+  <h2>🤖 Orion Interviewer</h2>
+  <p>Navigate to any Jobright job page — the interview panel appears bottom-left automatically. Open the Orion chat, then click Start.</p>
+  <button class="btn" onclick="chrome.tabs.create({url:'https://jobright.ai/jobs'})">Open Jobright Jobs →</button>
+  <div class="note">The floating UI appears on all jobright.ai/jobs/* pages</div>
+</body>
+</html>
