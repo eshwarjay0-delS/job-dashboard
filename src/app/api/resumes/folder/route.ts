@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { mkdir } from "fs/promises"
 import path from "path"
 import { createClient } from "@/lib/supabase/server"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
+import { writePath } from "@/lib/storage"
 
 export const runtime = "nodejs"
 
@@ -10,14 +10,9 @@ async function getUserDir(): Promise<string> {
   try {
     const supabase = await createClient()
     const { data } = await supabase.auth.getUser()
-    const userId = data.user?.id ?? "demo"
-    const dir = path.join(USER_RESUMES_BASE, userId)
-    await mkdir(dir, { recursive: true })
-    return dir
+    return path.join(USER_RESUMES_BASE, data.user?.id ?? "demo")
   } catch {
-    const dir = path.join(USER_RESUMES_BASE, "demo")
-    await mkdir(dir, { recursive: true }).catch(() => {})
-    return dir
+    return path.join(USER_RESUMES_BASE, "demo")
   }
 }
 
@@ -35,6 +30,8 @@ export async function POST(request: NextRequest) {
   if (!dest.startsWith(path.resolve(userDir))) {
     return NextResponse.json({ error: "Invalid folder name." }, { status: 400 })
   }
-  await mkdir(dest, { recursive: true })
+  // Object stores have no empty folders — write a hidden ".keep" marker so the new
+  // (empty) folder still shows in the library listing. It's excluded from file lists.
+  await writePath(path.join(dest, ".keep"), "")
   return NextResponse.json({ ok: true, folder: parts.join(" / ") })
 }

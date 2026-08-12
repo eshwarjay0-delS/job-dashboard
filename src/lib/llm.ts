@@ -37,13 +37,19 @@ function modelFor(provider: Provider, tier: Tier): string {
                           : (e.GEMINI_MODEL_LIGHT || e.GEMINI_MODEL || "gemini-2.0-flash")
 }
 
-// Gather every available key (env + the client-provided body) keyed by detected provider.
+// Gather every available key (env + the client-provided body). Keys are classified by
+// their SOURCE (env var / body field name) — NOT by prefix — so newer key formats work.
+// (Google now issues Gemini keys as "AQ.…", not just "AIza…"; prefix-sniffing missed them.)
 export function resolveKeys(body?: { claudeKey?: string; openrouterKey?: string; geminiKey?: string }): LlmKeys {
   const out: LlmKeys = {}
-  const add = (raw?: string) => { const p = providerOfKey(raw); if (p && !out[p]) out[p] = (raw || "").trim() }
+  const set = (p: Provider, raw?: string) => { const v = (raw || "").trim(); if (v && !out[p]) out[p] = v }
   const e = process.env
-  add(e.ANTHROPIC_API_KEY); add(e.OPENROUTER_API_KEY); add(e.GEMINI_API_KEY); add(e.GOOGLE_API_KEY); add(e.GOOGLE_GENAI_API_KEY)
-  add(body?.claudeKey); add(body?.openrouterKey); add(body?.geminiKey)
+  set("anthropic", e.ANTHROPIC_API_KEY)
+  set("openrouter", e.OPENROUTER_API_KEY)
+  set("gemini", e.GEMINI_API_KEY || e.GOOGLE_API_KEY || e.GOOGLE_GENAI_API_KEY)
+  set("anthropic", body?.claudeKey)
+  set("openrouter", body?.openrouterKey)
+  set("gemini", body?.geminiKey)
   return out
 }
 
@@ -67,6 +73,15 @@ interface CallOpts {
   // Either a plain user string OR a multi-turn messages array. Prefer `messages` for chat.
   user?: string
   messages?: ChatMessage[]
+  // Force a specific model (used by the tailoring escalation ladder). Applied only
+  // when the resolved provider is Anthropic and the id looks like a Claude model —
+  // an OpenRouter/Gemini call can't run a bare "claude-*" id, so it falls back to
+  // the tier default there.
+  model?: string
+  // Sampling temperature. Low (≈0.2) for tailoring so keyword coverage & the
+  // escalation decision are CONSISTENT run-to-run (default sampling gave 93–98%
+  // coverage and 25–73s swings on identical input). Omit for chatty/creative uses.
+  temperature?: number
 }
 
 // One LLM call. Returns the assistant text plus which provider/model served it.
@@ -75,7 +90,9 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
   const chosen = pickProvider(opts.keys, opts.tier, opts.pref || "auto")
   if (!chosen) throw new Error("No API key configured. Add a Claude, OpenRouter, or Gemini key in Settings.")
   const { provider, key } = chosen
-  const model = modelFor(provider, opts.tier)
+  const model = (opts.model && provider === "anthropic" && /^claude/i.test(opts.model))
+    ? opts.model
+    : modelFor(provider, opts.tier)
   // Normalise to a messages array so providers always get structured turns.
   const msgs: ChatMessage[] = opts.messages ?? [{ role: "user", content: opts.user ?? "" }]
   const text = provider === "anthropic" ? await callAnthropic(key, model, opts, msgs)
@@ -90,6 +107,7 @@ async function callAnthropic(key: string, model: string, o: CallOpts, msgs: Chat
     headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
     body: JSON.stringify({
       model, max_tokens: o.maxTokens,
+      ...(o.temperature != null ? { temperature: o.temperature } : {}),
       system: [{ type: "text", text: o.system, cache_control: { type: "ephemeral" } }],
       messages: msgs.map(m => ({ role: m.role, content: m.content })),
     }),
@@ -107,6 +125,7 @@ async function callOpenRouter(key: string, model: string, o: CallOpts, msgs: Cha
     headers: { "authorization": `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
     body: JSON.stringify({
       model, max_tokens: cap,
+      ...(o.temperature != null ? { temperature: o.temperature } : {}),
       messages: [
         { role: "system", content: o.system },
         ...msgs.map(m => ({ role: m.role, content: m.content })),
@@ -131,7 +150,7 @@ async function callGemini(key: string, model: string, o: CallOpts, msgs: ChatMes
     body: JSON.stringify({
       system_instruction: { parts: [{ text: o.system }] },
       contents,
-      generationConfig: { maxOutputTokens: o.maxTokens, temperature: 0.7 },
+      generationConfig: { maxOutputTokens: o.maxTokens, temperature: o.temperature ?? 0.7 },
     }),
   })
   if (!res.ok) throw new Error(`Gemini API ${res.status}: ${(await res.text()).slice(0, 200)}`)

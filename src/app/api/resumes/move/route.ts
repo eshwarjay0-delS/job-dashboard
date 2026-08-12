@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { mkdir, rename, readdir, rmdir } from "fs/promises"
 import path from "path"
 import { createClient } from "@/lib/supabase/server"
 import { ensureIndex } from "@/lib/keywords"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
+import { movePath } from "@/lib/storage"
 
 export const runtime = "nodejs"
 
@@ -11,14 +11,9 @@ async function getUserDir(): Promise<string> {
   try {
     const supabase = await createClient()
     const { data } = await supabase.auth.getUser()
-    const userId = data.user?.id ?? "demo"
-    const dir = path.join(USER_RESUMES_BASE, userId)
-    await mkdir(dir, { recursive: true })
-    return dir
+    return path.join(USER_RESUMES_BASE, data.user?.id ?? "demo")
   } catch {
-    const dir = path.join(USER_RESUMES_BASE, "demo")
-    await mkdir(dir, { recursive: true }).catch(() => {})
-    return dir
+    return path.join(USER_RESUMES_BASE, "demo")
   }
 }
 
@@ -40,7 +35,6 @@ export async function POST(request: NextRequest) {
   if (!targetDir.startsWith(userResolved)) {
     return NextResponse.json({ error: "Invalid destination." }, { status: 400 })
   }
-  await mkdir(targetDir, { recursive: true })
 
   let moved = 0
   for (const f of files) {
@@ -48,14 +42,8 @@ export async function POST(request: NextRequest) {
     if (!src.startsWith(userResolved + path.sep)) continue
     const dest = path.join(targetDir, path.basename(src))
     if (dest === src) continue
-    try {
-      await rename(src, dest)
-      moved++
-      const parent = path.dirname(src)
-      if (parent !== userResolved) {
-        try { if ((await readdir(parent)).length === 0) await rmdir(parent) } catch { /* ignore */ }
-      }
-    } catch { /* ignore */ }
+    await movePath(src, dest) // copy-then-delete; works on both fs and object storage
+    moved++
   }
 
   await ensureIndex(userDir).catch(() => {})

@@ -1,34 +1,29 @@
 import { NextRequest, NextResponse } from "next/server"
-import { readdir, stat, writeFile, unlink, mkdir } from "fs/promises"
 import path from "path"
-
-// Recursively scan for .docx files in userDir and subdirectories.
-async function scanDocx(dir: string, base: string, formatSize: (b: number) => string): Promise<{
-  filename: string; filepath: string; size: string; uploadedAt: string
-}[]> {
-  let entries
-  try { entries = await readdir(dir, { withFileTypes: true }) } catch { return [] }
-  const tasks = entries
-    .filter(e => !e.name.startsWith("~$") && !e.name.startsWith("."))
-    .map(async e => {
-      const fp = path.join(dir, e.name)
-      if (e.isDirectory()) return scanDocx(fp, base, formatSize)
-      if (!e.name.toLowerCase().endsWith(".docx")) return []
-      const info = await stat(fp)
-      return [{ filename: e.name.replace(/\.docx$/i, ""), filepath: fp, size: formatSize(info.size), uploadedAt: info.mtime.toISOString() }]
-    })
-  return (await Promise.all(tasks)).flat()
-}
 import { createClientFromRequest } from "@/lib/supabase/server"
 import { USER_RESUMES_DIR as BASE_DIR } from "@/lib/paths"
+import { listFiles, statPath, writePath, deletePath } from "@/lib/storage"
+
+// Recursively scan for .docx files in userDir → filename/filepath/size/uploadedAt.
+async function scanDocx(dir: string, _base: string, formatSize: (b: number) => string): Promise<{
+  filename: string; filepath: string; size: string; uploadedAt: string
+}[]> {
+  const files = (await listFiles(dir)).filter(f => f.toLowerCase().endsWith(".docx"))
+  return Promise.all(files.map(async fp => {
+    const info = await statPath(fp)
+    return {
+      filename: path.basename(fp).replace(/\.docx$/i, ""),
+      filepath: fp,
+      size: info ? formatSize(info.size) : "",
+      uploadedAt: (info?.mtime ?? new Date()).toISOString(),
+    }
+  }))
+}
 
 export const runtime = "nodejs"
 
-// Free-tier resume limit (no Drive connected)
-const FREE_LIMIT = 2
-// Drive-connected limit
-const DRIVE_LIMIT = 78
-
+// Resume storage is unlimited (personal use). `limit: null` signals "no cap" to
+// the Settings UI.
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -61,42 +56,19 @@ export async function GET(request: NextRequest) {
   const userId = await getUserId(request)
 
   const userDir = path.join(BASE_DIR, userId)
-  await mkdir(userDir, { recursive: true })
-
   const files = await scanDocx(userDir, userDir, formatSize)
 
   const driveConnected = await hasDriveConnected(userId, request)
-  const limit = driveConnected ? DRIVE_LIMIT : FREE_LIMIT
 
-  return NextResponse.json({ files, count: files.length, limit, driveConnected })
+  // Unlimited storage — limit is null.
+  return NextResponse.json({ files, count: files.length, limit: null, driveConnected })
 }
 
-// POST — upload a resume (enforces tier limit)
+// POST — upload a resume (unlimited; no tier cap)
 export async function POST(request: NextRequest) {
   const userId = await getUserId(request)
 
   const userDir = path.join(BASE_DIR, userId)
-  await mkdir(userDir, { recursive: true })
-
-  const driveConnected = await hasDriveConnected(userId, request)
-  const limit = driveConnected ? DRIVE_LIMIT : FREE_LIMIT
-
-  // Count existing resumes (including subdirectories to match the recursive GET)
-  const existingFiles = await scanDocx(userDir, userDir, formatSize)
-
-  if (existingFiles.length >= limit) {
-    return NextResponse.json(
-      {
-        error: driveConnected
-          ? `Resume limit reached (${DRIVE_LIMIT}). Delete some to upload more.`
-          : `Free plan stores up to ${FREE_LIMIT} resumes. Connect Google Drive in Settings to store up to ${DRIVE_LIMIT}.`,
-        limitReached: true,
-        driveConnected,
-        limit,
-      },
-      { status: 403 }
-    )
-  }
 
   const formData = await request.formData()
   const file = formData.get("file") as File | null
@@ -105,13 +77,14 @@ export async function POST(request: NextRequest) {
 
   const safeName = file.name.replace(/[^A-Za-z0-9._\- ()]/g, "_")
   const dest = path.join(userDir, safeName)
-  await writeFile(dest, Buffer.from(await file.arrayBuffer()))
+  await writePath(dest, Buffer.from(await file.arrayBuffer()))
 
-  const info = await stat(dest)
+  const info = await statPath(dest)
+  const files = await scanDocx(userDir, userDir, formatSize)
   return NextResponse.json({
-    file: { filename: safeName.replace(/\.docx$/i, ""), filepath: dest, size: formatSize(info.size), uploadedAt: info.mtime.toISOString() },
-    count: existingFiles.length + 1,
-    limit,
+    file: { filename: safeName.replace(/\.docx$/i, ""), filepath: dest, size: info ? formatSize(info.size) : "", uploadedAt: (info?.mtime ?? new Date()).toISOString() },
+    count: files.length,
+    limit: null,
   })
 }
 
@@ -137,6 +110,6 @@ export async function DELETE(request: NextRequest) {
   if (!fp.startsWith(path.resolve(userDir) + path.sep) && fp !== path.resolve(userDir))
     return NextResponse.json({ error: "Forbidden." }, { status: 403 })
 
-  try { await unlink(fp) } catch { /* already gone */ }
+  await deletePath(fp)
   return NextResponse.json({ ok: true })
 }

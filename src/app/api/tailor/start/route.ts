@@ -5,12 +5,18 @@ import { resolveKeys, hasAnyKey } from "@/lib/llm"
 import { createJob, updateJob } from "@/lib/jobs"
 import { createClient } from "@/lib/supabase/server"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
-import { checkRateLimit } from "@/lib/rateLimit"
+import { checkRateLimit, clientIp } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
 
-const TAILOR_WEEKLY_LIMIT = Number(process.env.TAILOR_WEEKLY_LIMIT ?? 7)
+// Unlimited by default (personal use). Set TAILOR_WEEKLY_LIMIT>0 in .env to cap.
+const TAILOR_WEEKLY_LIMIT = Number(process.env.TAILOR_WEEKLY_LIMIT ?? 0)
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+// Per-IP hourly cap: abuse protection for the OPEN /api/tailor (no login) when the
+// app is exposed via a public tunnel — a stray/bot IP can't drain the LLM key. Set to
+// 0 to disable. You'd never hit 20/hr in normal use.
+const TAILOR_IP_HOURLY = Number(process.env.TAILOR_IP_HOURLY_LIMIT ?? 20)
+const HOUR_MS = 60 * 60 * 1000
 
 // Start a tailoring job in the BACKGROUND. Returns a job id immediately; the
 // generation continues server-side and the result is recovered via /api/tailor/status.
@@ -22,6 +28,18 @@ export async function POST(request: NextRequest) {
 
     const keys = resolveKeys(body)
     if (!hasAnyKey(keys)) return NextResponse.json({ error: "No API key found. Add a Claude, OpenRouter, or Gemini key in Settings or .env.local." }, { status: 400 })
+
+    // Per-IP abuse cap (protects the open endpoint on a public tunnel).
+    if (TAILOR_IP_HOURLY > 0) {
+      const rl = checkRateLimit(`tailor-ip:${clientIp(request)}`, { max: TAILOR_IP_HOURLY, windowMs: HOUR_MS })
+      if (!rl.ok) {
+        const mins = Math.ceil((rl.retryAfterSec ?? 3600) / 60)
+        return NextResponse.json(
+          { error: `Too many tailoring requests. Try again in ~${mins} min.` },
+          { status: 429, headers: { "Retry-After": String(rl.retryAfterSec ?? 3600) } },
+        )
+      }
+    }
 
     // Resolve auth-scoped context NOW (the request's cookies are alive here, not in
     // the detached background task below).

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { readFile } from "fs/promises"
-import path from "path"
 import mammoth from "mammoth"
 import JSZip from "jszip"
-import { TAILORED_DIR as OUT_DIR } from "@/lib/paths"
+import { blob } from "@/lib/storage"
 
 export const runtime = "nodejs"
 
@@ -39,15 +37,14 @@ export async function GET(request: NextRequest) {
   const token = (searchParams.get("token") || "").replace(/[^a-z0-9]/gi, "")
   const fmtParam = searchParams.get("fmt") || "docx"
   const fmt = ["pdf", "preview", "docx"].includes(fmtParam) ? fmtParam : "docx"
-  const name = (searchParams.get("name") || "Resume").replace(/[^a-z0-9_\-. ]/gi, "_")
+  // Keep "&()+" so role/company titles survive (e.g. "IAM Engineer (GCP)",
+  // "Testing & Validation"); still strips path-traversal / unsafe chars.
+  const name = (searchParams.get("name") || "Resume").replace(/[^a-z0-9_\-. &()+]/gi, "_")
 
   if (!token) return NextResponse.json({ error: "No token" }, { status: 400 })
-  const docxPath = path.join(OUT_DIR, token + ".docx")
 
-  let buffer: Buffer
-  try {
-    buffer = await readFile(docxPath)
-  } catch {
+  const buffer = await blob.get(`tailored/${token}.docx`)
+  if (!buffer) {
     return NextResponse.json({ error: "Tailored file expired — tailor again." }, { status: 404 })
   }
 

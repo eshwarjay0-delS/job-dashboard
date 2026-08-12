@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { readFile, writeFile, mkdir } from "fs/promises"
 import path from "path"
 import { extractZones, applyRewrites, type Edits } from "@/lib/docx"
-import { RESUMES_LIB as RESUMES_DIR, USER_RESUMES_DIR as USER_RESUMES_BASE, TAILORED_DIR as OUT_DIR } from "@/lib/paths"
+import { RESUMES_LIB as RESUMES_DIR, USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
+import { readPath, blob } from "@/lib/storage"
 
 export const runtime = "nodejs"
 
@@ -20,13 +20,13 @@ export async function POST(request: NextRequest) {
     if (!ALLOWED.some(a => resolved.startsWith(a))) {
       return NextResponse.json({ error: "That file is outside the resumes folder." }, { status: 403 })
     }
-    const buf = await readFile(resolved)
+    const buf = await readPath(resolved)
+    if (!buf) return NextResponse.json({ error: "That resume could not be read." }, { status: 404 })
     const zones = await extractZones(buf)
     const { buffer, notes } = await applyRewrites(buf, edits, zones)
 
-    await mkdir(OUT_DIR, { recursive: true })
     const token = Math.random().toString(36).slice(2, 12)
-    await writeFile(path.join(OUT_DIR, token + ".docx"), buffer)
+    await blob.put(`tailored/${token}.docx`, buffer)
 
     return NextResponse.json({
       token,

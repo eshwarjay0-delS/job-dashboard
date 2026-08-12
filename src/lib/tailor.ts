@@ -1,13 +1,11 @@
-import { readFile, writeFile, mkdir } from "fs/promises"
 import path from "path"
 import { createHash } from "crypto"
+import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, type Edits, type Zones } from "./docx"
 import { adapt } from "./claude"
 import { recentFeedback } from "./feedback"
-import { matchByKeywords, extractKeywords, detectJDLevel, estimateYears } from "./keywords"
+import { matchByKeywords, extractKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import type { LlmKeys, ProviderPref } from "./llm"
-
-import { TAILORED_DIR as OUT_DIR, TAILORED_CACHE_DIR as CACHE_DIR } from "@/lib/paths"
 
 export interface TailorResult {
   token: string
@@ -120,11 +118,21 @@ export async function runTailor(opts: {
     rankedCandidates = m.ranked.slice(0, 3).map(r => ({ filename: r.filename, category: r.category, score: r.score, matchedOn: r.matchedOn.slice(0, 6), identityHit: r.identityHit }))
   }
 
-  const buf = await readFile(matched.filepath)
+  const buf = await blob.get(keyOf(matched.filepath))
+  if (!buf) throw new Error("The selected resume could not be read.")
   const sourceHash = createHash("sha1").update(buf).digest("hex").slice(0, 12)
   const text = await extractText(buf)
   const storedFeedback = await recentFeedback(matched.category, 6)
-  const allPrefs = [...immediatePrefs, ...storedFeedback.filter(f => !immediatePrefs.includes(f))]
+  // Applied on EVERY tailor by default (the "Refine" chips the user wants pre-selected on
+  // the first run): bias toward specific, keyword-dense, technical output from the start so
+  // the first result already reads tailored — not generic. Deduped against explicit prefs.
+  const DEFAULT_PREFS = [
+    "More specific, less generic — concrete tools, systems, and outcomes, never vague filler",
+    "Add more keywords from the JD wherever the candidate can honestly support them",
+    "More technical detail — name the exact technologies, protocols, and methods used",
+  ]
+  const explicit = [...immediatePrefs, ...storedFeedback.filter(f => !immediatePrefs.includes(f))]
+  const allPrefs = [...explicit, ...DEFAULT_PREFS.filter(d => !explicit.includes(d))]
 
   // 2) Cache check — instant return for an identical re-run. One-page vs full are
   // distinct outputs, so the mode is folded into the cache key.
@@ -132,44 +140,155 @@ export async function runTailor(opts: {
   const _secSig = `sec:${_sec.summary === false ? 0 : 1}${_sec.skills === false ? 0 : 1}${_sec.experience === false ? 0 : 1}`
   const _modeSig = `mode:${opts.mode === "quick" ? "q" : "f"}`
   const key = cacheKeyOf(jd, matched.filepath, sourceHash, [...allPrefs, opts.onePage ? "1page" : "full", _secSig, _modeSig])
-  const cachePath = path.join(CACHE_DIR, key + ".json")
+  const cacheKey = `tailored_cache/${key}.json`
   if (!opts.noCache) {
     try {
-      const cached = JSON.parse(await readFile(cachePath, "utf8")) as TailorResult
+      const raw = await blob.getText(cacheKey)
+      if (!raw) throw new Error("cache miss")
+      const cached = JSON.parse(raw) as TailorResult
       // Confirm the tailored .docx still exists AND the cached shape is current.
-      await readFile(path.join(OUT_DIR, cached.token + ".docx"))
+      if (!(await blob.exists(`tailored/${cached.token}.docx`))) throw new Error("tailored file gone")
       if (!cached.keyword_analysis || !cached.diff) throw new Error("stale cache shape")
       return { ...cached, cached: true, elapsed_ms: Date.now() - started }
     } catch { /* miss → generate */ }
   }
 
-  // 3) Generate (the expensive LLM call).
-  const jdKwSet = new Set(extractKeywords(jd))
-  const matchedOn = extractKeywords(text).filter(k => jdKwSet.has(k))
-  const tier: "light" | "heavy" = estimateYears(text) >= 7 ? "heavy" : "light"
+  // 3) Generate — SMART MODEL LADDER (token-aware quality).
   const zones = await extractZones(buf)
-  const rawEdits = await adapt({ keys: opts.keys, pref: opts.pref, jd, zones, preferences: allPrefs.join("; "), jdKeywords: extractKeywords(jd), onePage: opts.onePage, mode: opts.mode })
-  // Section scope: only enhance the sections the user chose (default = all). Summary
-  // owns the headline/title; Skills owns the skill lines; Experience owns the bullets.
-  const sec = opts.sections || {}
-  const edits: Edits = {
-    headline: sec.summary === false ? { title: "", tagline: "" } : rawEdits.headline,
-    summary:  sec.summary === false ? "" : rawEdits.summary,
-    skills:   sec.skills === false ? [] : rawEdits.skills,
-    bullets:  sec.experience === false ? [] : rawEdits.bullets,
-    extras:   rawEdits.extras,
+  // The tailoring target is the JD's OWN keywords (domain-agnostic extraction), not a
+  // fixed vocab — so this works for ANY job description without hand-curated per-domain
+  // terms. Coverage = which of those literally appear in the resume.
+  const jdKws = extractJdKeywords(jd)
+  const beforeKw = coveredJdKeywords(text, jdKws)
+  const matchedOn = [...beforeKw]
+  const kwMatched = [...beforeKw]
+  const tier: "light" | "heavy" = estimateYears(text) >= 7 ? "heavy" : "light"
+
+  // COST-ORDERED MODEL LADDER (cheapest capable model first; escalate ONLY for the
+  // resumes that actually need it). Every tailor starts on a near-free model; we only
+  // pay for a stronger model when a pass is still under the ATS coverage target — so
+  // easy resumes stay cheap, and the hard ones climb Haiku → Sonnet → Opus for the
+  // near-100% match the user wants. Since resumes are pre-made per domain (~70% already),
+  // the top of the ladder only has to weave in the remaining JD-specific keywords.
+  const E = process.env
+  // 0.90 keeps it FAST: domain-matched resumes (~70% base) usually clear this on the
+  // cheap Haiku pass in one shot (~8s), so we rarely pay for a slow Sonnet/Opus redraft.
+  // Raise toward 0.97 for max coverage at the cost of more escalation time.
+  const TARGET = Number(E.TAILOR_COVERAGE_TARGET ?? 0.90)
+  const LADDER: { pref: ProviderPref; model?: string; label: string }[] = []
+  // Gemini is OPT-IN (TAILOR_USE_GEMINI=1): the FREE tier is capped at ~20 requests, and
+  // best-of-3 fires 3 calls/tailor, so it exhausts in ~6 tailors and then every call 429s.
+  // Only worth enabling with a PAID Gemini key. Default base is Haiku (reliable + cheap).
+  if (E.TAILOR_USE_GEMINI === "1" || E.TAILOR_USE_GEMINI === "true") {
+    LADDER.push({ pref: "gemini", model: E.GEMINI_MODEL_HEAVY || undefined, label: E.GEMINI_MODEL_HEAVY || "gemini-flash-latest" })
   }
-  // Auto-tailoring is the only path allowed to physically drop bullets — the manual
-  // builder (api/build/save) never gets a dropIdx, so a user's own edits are never
-  // silently trimmed.
-  const dropIdx = capRoleBullets(zones, edits)
-  const { buffer, notes } = await applyRewrites(buf, edits, zones, { dropIdx })
+  LADDER.push(
+    { pref: "anthropic", model: E.CLAUDE_MODEL_HEAVY  || "claude-haiku-4-5",  label: E.CLAUDE_MODEL_HEAVY  || "claude-haiku-4-5" },  // reliable base
+    { pref: "anthropic", model: E.CLAUDE_MODEL_STRONG || "claude-sonnet-4-5", label: E.CLAUDE_MODEL_STRONG || "claude-sonnet-4-5" }, // strong ceiling (default)
+  )
+  // Opus is OPT-IN only (TAILOR_USE_OPUS=1). Measured: on a dense JD it ran a ~45s full
+  // redraft AFTER Sonnet and added ZERO coverage (the remaining terms were honestly
+  // un-addable), so by default we cap at Sonnet — near-identical coverage, ~45s faster.
+  if (E.TAILOR_USE_OPUS === "1" || E.TAILOR_USE_OPUS === "true") {
+    LADDER.push({ pref: "anthropic", model: E.CLAUDE_MODEL_MAX || "claude-opus-5", label: E.CLAUDE_MODEL_MAX || "claude-opus-5" })
+  }
+  // Keep only steps whose provider key exists (preserving cheap→strong order); if the
+  // user pinned a provider via opts.pref, honour it as a single fixed step.
+  const keyed = (p: ProviderPref) => p !== "auto" && !!opts.keys[p as keyof typeof opts.keys]
+  let steps = LADDER.filter(s => keyed(s.pref))
+  if (opts.pref && opts.pref !== "auto") steps = LADDER.filter(s => s.pref === opts.pref)
+  if (!steps.length) steps = [{ pref: "auto", model: undefined, label: "auto" }]
 
-  await mkdir(OUT_DIR, { recursive: true })
+  const sec = opts.sections || {}
+  const scopeEdits = (raw: Edits): Edits => ({
+    // Section scope: only enhance the sections the user chose (default = all).
+    headline: sec.summary === false ? { title: "", tagline: "" } : raw.headline,
+    summary:  sec.summary === false ? "" : raw.summary,
+    skills:   sec.skills === false ? [] : raw.skills,
+    bullets:  sec.experience === false ? [] : raw.bullets,
+    extras:   raw.extras,
+  })
+
+  type Pass = { edits: Edits; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string> }
+  // Apply a finished edit set to the docx and measure JD keyword coverage. Auto-tailoring
+  // is the only path allowed to physically drop bullets (the manual builder never gets a
+  // dropIdx), so a user's own edits are never silently trimmed.
+  const applyEdits = async (edits: Edits): Promise<Pass> => {
+    // FORMAT-PRESERVING by default: never delete paragraphs, so the tailored resume
+    // keeps the EXACT layout, bullet count, and structure of the source — we only
+    // rewrite existing lines in place. Bullet trimming (capRoleBullets) is allowed
+    // ONLY when the user explicitly asked for a one-page condense.
+    const dropIdx = opts.onePage ? capRoleBullets(zones, edits) : new Set<number>()
+    const { buffer, notes } = await applyRewrites(buf, edits, zones, { dropIdx })
+    const tailoredText = await extractText(buffer)
+    const afterKw = coveredJdKeywords(tailoredText, jdKws)
+    const cov = jdKws.length ? afterKw.size / jdKws.length : 1
+    return { edits, buffer, notes, tailoredText, cov, afterKw }
+  }
+  // A generation pass on a given model: the model sees the whole resume once and
+  // returns a coherent edit set. On escalation we pass the exact JD terms still
+  // missing so the stronger model closes the gap in ONE coherent redraft — a full
+  // redraft beats a lossy targeted merge (which could drop keywords and never improve
+  // coverage, stalling the climb).
+  const draftPass = async (step: { pref: ProviderPref; model?: string }, extraPrefs: string[]): Promise<Pass> => {
+    const prefs = [...allPrefs, ...extraPrefs].filter(Boolean)
+    const raw = await adapt({ keys: opts.keys, pref: step.pref, jd, zones, preferences: prefs.join("; "), jdKeywords: jdKws, onePage: opts.onePage, mode: opts.mode, model: step.model })
+    return applyEdits(scopeEdits(raw))
+  }
+
+  const summaryWanted = sec.summary !== false
+  const quality = (p: Pass) => p.cov - (summaryWanted && !(p.edits.summary || "").trim() ? 0.08 : 0)
+  // Build the "front-load" instruction listing exactly which JD terms are still missing
+  // (computed deterministically from resume coverage — no LLM) so every pass targets the gap.
+  const injectFor = (covered: Set<string>, wantSummary: boolean): string[] => {
+    const missing = jdKws.filter(k => !covered.has(k)).slice(0, 40)
+    if (!missing.length && !wantSummary) return []
+    const parts: string[] = []
+    if (missing.length) parts.push(`ensure these JD terms appear, weaving EACH one the candidate can honestly support into the most relevant existing skill line or bullet using the JD's exact wording (skip any the candidate genuinely can't back up): ${missing.join(", ")}`)
+    if (wantSummary) parts.push("ALWAYS return a rewritten professional summary")
+    return [`ATS COVERAGE (rewrite existing lines in place; never invent unsupported claims): ${parts.join("; ")}`]
+  }
+
+  // Climb the ladder with GRACEFUL FALLBACK. The first model that actually produces a
+  // draft becomes the base and gets BEST-OF-N (parallel draws, keep the highest — LLM
+  // sampling swings coverage, so we take the best). If a model errors entirely (e.g. a
+  // 429 quota wall), we fall through to the NEXT model instead of failing the whole
+  // tailor. Once we have a draft, remaining models are single escalation redrafts that
+  // target the still-missing terms; stop on target-hit or plateau. Quick mode = one draw.
+  const BEST_OF = opts.mode === "quick" ? 1 : Math.max(1, Math.min(5, Number(process.env.TAILOR_BEST_OF ?? 3)))
+  let best: Pass | null = null
+  let usedModel = ""
+  for (const step of steps) {
+    if (!best) {
+      // Base: best-of-N in parallel; skip this model if every draw errored.
+      const extra = injectFor(beforeKw, false)
+      const draws = (await Promise.all(
+        Array.from({ length: BEST_OF }, () => draftPass(step, extra).catch(() => null)),
+      )).filter((p): p is Pass => p !== null)
+      if (!draws.length) continue // this model failed entirely → try the next one
+      best = draws.reduce((a, b) => (quality(b) > quality(a) ? b : a))
+      usedModel = `${step.label ?? String(step.pref)}${BEST_OF > 1 && draws.length > 1 ? ` (best of ${draws.length})` : ""}`
+      if (opts.mode === "quick") break
+    } else {
+      // Escalation: single redraft targeting the gap. Errors here are non-fatal.
+      if (best.cov >= TARGET && (!summaryWanted || (best.edits.summary || "").trim())) break
+      const wantSummary = summaryWanted && !(best.edits.summary || "").trim()
+      const extra = injectFor(best.afterKw, wantSummary)
+      if (!extra.length) break
+      const prevQ = quality(best)
+      const p = await draftPass(step, extra).catch(() => null)
+      if (p && quality(p) >= quality(best)) { best = p; usedModel = (step as { label?: string }).label ?? String(step.pref) }
+      if (quality(best) <= prevQ + 0.01) break // no meaningful gain → stop
+    }
+  }
+  if (!best) throw new Error("Tailoring failed — every model errored (check API keys / quota).")
+
+  const { edits, buffer, notes, tailoredText, afterKw } = best
+  notes.push(`Tailored with ${usedModel} · JD keyword coverage ${Math.round(best.cov * 100)}%`)
+
   const token = key // deterministic: same inputs → same file
-  await writeFile(path.join(OUT_DIR, token + ".docx"), buffer)
+  await blob.put(`tailored/${token}.docx`, buffer)
 
-  const tailoredText = await extractText(buffer)
   const rawBefore = matchPct(text, jd)
   const rawAfter = Math.max(rawBefore + 4, matchPct(tailoredText, jd))
   const afterBand  = (raw: number) => Math.round(90 + (Math.min(99, Math.max(55, raw)) - 55) / 44 * 8)
@@ -177,12 +296,7 @@ export async function runTailor(opts: {
   const after = afterBand(rawAfter)
   const before = Math.min(after - 5, beforeBand(rawBefore))
 
-  // ── Match decomposition + keyword gap (computed locally — no extra LLM call) ──
-  // Split the JD's key skills into: already-had, just-added-by-tailoring, still-missing.
-  const jdKws = extractKeywords(jd)
-  const beforeKw = new Set(extractKeywords(text))
-  const afterKw = new Set(extractKeywords(tailoredText))
-  const kwMatched = jdKws.filter(k => beforeKw.has(k))
+  // ── Match decomposition + keyword gap (reuses the coverage sets above) ──
   const kwAdded   = jdKws.filter(k => !beforeKw.has(k) && afterKw.has(k))
   const kwMissing = jdKws.filter(k => !afterKw.has(k))
   const pctOf = (n: number) => jdKws.length ? Math.round((n / jdKws.length) * 100) : 80
@@ -233,7 +347,6 @@ export async function runTailor(opts: {
     cached: false, elapsed_ms: Date.now() - started,
   }
 
-  await mkdir(CACHE_DIR, { recursive: true })
-  await writeFile(cachePath, JSON.stringify(result)).catch(() => {})
+  await blob.put(cacheKey, JSON.stringify(result)).catch(() => {})
   return result
 }

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { readdir, stat, mkdir, writeFile } from "fs/promises"
 import path from "path"
 import { createClient } from "@/lib/supabase/server"
 import { ensureIndex } from "@/lib/keywords"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
+import { listFiles, statPath, writePath, existsPath, deletePath, deleteDir } from "@/lib/storage"
 
 export const runtime = "nodejs"
-const FREE_LIMIT = 2
-const DRIVE_LIMIT = 78
 const MAX_DOCX_SIZE = 5 * 1024 * 1024  // 5 MB per .docx
 const MAX_ZIP_SIZE  = 50 * 1024 * 1024 // 50 MB per .zip (may contain many .docx files)
 
@@ -35,61 +33,39 @@ function fileId(fullPath: string): string {
   return "f_" + (h >>> 0).toString(36)
 }
 
-async function scanDir(dir: string, category = ""): Promise<ResumeFile[]> {
-  let entries
-  try {
-    entries = await readdir(dir, { withFileTypes: true })
-  } catch {
-    return []
-  }
-
-  const tasks = entries
-    .filter(e => !e.name.startsWith("~$") && !e.name.startsWith(".") && e.name !== "_keywords.json")
-    .map(async (entry) => {
-      const fullPath = path.join(dir, entry.name)
-      if (entry.isDirectory()) {
-        const subCat = category ? `${category} / ${entry.name}` : entry.name
-        return scanDir(fullPath, subCat)
-      }
-      if (!entry.name.toLowerCase().endsWith(".docx")) return []
-      const info = await stat(fullPath)
-      const file: ResumeFile = {
-        id: fileId(fullPath),
-        filename: entry.name.replace(/\.docx$/i, ""),
-        filepath: fullPath,
-        category: category || "General",
-        size: formatSize(info.size),
-        uploadedAt: info.mtime.toISOString(),
-      }
-      return [file]
-    })
-
-  const nested = await Promise.all(tasks)
-  return nested.flat()
+async function scanDir(dir: string): Promise<ResumeFile[]> {
+  const files = (await listFiles(dir)).filter(
+    f => f.toLowerCase().endsWith(".docx") && path.basename(f) !== "_keywords.json",
+  )
+  const out = await Promise.all(files.map(async (fullPath) => {
+    const rel = path.relative(dir, fullPath)
+    const parts = rel.split(path.sep)
+    const category = parts.length > 1 ? parts.slice(0, -1).join(" / ") : "General"
+    const info = await statPath(fullPath)
+    return {
+      id: fileId(fullPath),
+      filename: path.basename(fullPath).replace(/\.docx$/i, ""),
+      filepath: fullPath,
+      category,
+      size: info ? formatSize(info.size) : "",
+      uploadedAt: (info?.mtime ?? new Date()).toISOString(),
+    } as ResumeFile
+  }))
+  return out
 }
 
 async function getUserDir(): Promise<{ dir: string; userId: string }> {
+  // No mkdir needed — the storage layer creates parents on write (and R2 has no dirs).
   try {
     const supabase = await createClient()
     const { data } = await supabase.auth.getUser()
     const userId = data.user?.id ?? "demo"
-    const dir = path.join(USER_RESUMES_BASE, userId)
-    await mkdir(dir, { recursive: true })
-    return { dir, userId }
+    return { dir: path.join(USER_RESUMES_BASE, userId), userId }
   } catch {
-    const dir = path.join(USER_RESUMES_BASE, "demo")
-    await mkdir(dir, { recursive: true }).catch(() => {})
-    return { dir, userId: "demo" }
+    return { dir: path.join(USER_RESUMES_BASE, "demo"), userId: "demo" }
   }
 }
 
-async function hasDriveConnected(userId: string): Promise<boolean> {
-  try {
-    const supabase = await createClient()
-    const { data } = await supabase.from("user_drive").select("user_id").eq("user_id", userId).maybeSingle()
-    return !!data
-  } catch { return false }
-}
 
 // GET — list the user's resumes
 export async function GET() {
@@ -115,24 +91,21 @@ export async function DELETE(request: NextRequest) {
 
     const userResolved = path.resolve(user.dir)
     const inside = (p: string) => p === userResolved || p.startsWith(userResolved + path.sep)
-    const { unlink, rm, rmdir, readdir: rd } = await import("fs/promises")
     let deleted = 0
 
     for (const f of files) {
       const resolved = path.resolve(f)
       if (!inside(resolved) || resolved === userResolved) continue
-      try { await unlink(resolved); deleted++ } catch { /* ignore */ }
-      const parent = path.dirname(resolved)
-      if (parent !== userResolved) {
-        try { if ((await rd(parent)).length === 0) await rmdir(parent) } catch { /* ignore */ }
-      }
+      await deletePath(resolved); deleted++
+      // No empty-dir cleanup needed: object stores have no real folders, and on fs an
+      // orphaned empty dir is harmless (scanDir ignores it).
     }
     for (const rel of folders) {
       const parts = String(rel).split("/").map(s => s.trim()).filter(Boolean)
       if (!parts.length) continue
       const resolved = path.resolve(path.join(user.dir, ...parts))
       if (!inside(resolved) || resolved === userResolved) continue
-      try { await rm(resolved, { recursive: true, force: true }); deleted++ } catch { /* ignore */ }
+      await deleteDir(resolved); deleted++
     }
 
     await ensureIndex(user.dir).catch(() => {})
@@ -177,9 +150,8 @@ export async function POST(request: NextRequest) {
         const dest = path.join(user.dir, ...rel)
         // Security: dest must stay inside the user's folder
         if (!path.resolve(dest).startsWith(path.resolve(user.dir) + path.sep)) continue
-        try { await stat(dest); skipped++; continue } catch { /* not there → import */ }
-        await mkdir(path.dirname(dest), { recursive: true })
-        await writeFile(dest, Buffer.from(await entry.async("nodebuffer")))
+        if (await existsPath(dest)) { skipped++; continue }
+        await writePath(dest, Buffer.from(await entry.async("nodebuffer")))
         added++
       }
       await ensureIndex(user.dir).catch(() => {})
@@ -190,9 +162,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Upload a .docx resume or a .zip of resumes." }, { status: 400 })
     }
 
-    // Enforce tier limit for single-file uploads
-    const driveConnected = await hasDriveConnected(user.userId)
-    const limit = driveConnected ? DRIVE_LIMIT : FREE_LIMIT
+    // No resume-count limit — unlimited storage (personal use).
     const existing = await scanDir(user.dir)
     const duplicate = existing.find(r => r.filename.toLowerCase() === file.name.replace(/\.docx$/i, "").toLowerCase())
     const replace = formData.get("replace") === "true"
@@ -202,42 +172,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ file: duplicate, duplicate: true })
     }
     if (duplicate && replace) {
-      await writeFile(duplicate.filepath, buffer)
-      const info = await stat(duplicate.filepath)
+      await writePath(duplicate.filepath, buffer)
+      const info = await statPath(duplicate.filepath)
       await ensureIndex(user.dir).catch(() => {})
       return NextResponse.json({
-        file: { ...duplicate, size: formatSize(info.size), uploadedAt: info.mtime.toISOString() },
+        file: { ...duplicate, size: info ? formatSize(info.size) : duplicate.size, uploadedAt: (info?.mtime ?? new Date()).toISOString() },
         replaced: true,
       })
     }
 
-    if (existing.length >= limit) {
-      return NextResponse.json(
-        {
-          error: driveConnected
-            ? `Resume limit reached (${DRIVE_LIMIT}). Delete some to upload more.`
-            : `Free plan stores up to ${FREE_LIMIT} resumes. Connect Google Drive in Settings to store up to ${DRIVE_LIMIT}.`,
-          limitReached: true,
-        },
-        { status: 403 },
-      )
-    }
-
     // New file — create a folder named after it and save inside
     const folderName = file.name.replace(/\.docx$/i, "")
-    const folderPath = path.join(user.dir, folderName)
-    await mkdir(folderPath, { recursive: true })
-    const savePath = path.join(folderPath, file.name)
-    await writeFile(savePath, buffer)
+    const savePath = path.join(user.dir, folderName, file.name)
+    await writePath(savePath, buffer)
 
-    const info = await stat(savePath)
+    const info = await statPath(savePath)
     const entry: ResumeFile = {
       id: fileId(savePath),
       filename: folderName,
       filepath: savePath,
       category: folderName,
-      size: formatSize(info.size),
-      uploadedAt: info.mtime.toISOString(),
+      size: info ? formatSize(info.size) : formatSize(buffer.length),
+      uploadedAt: (info?.mtime ?? new Date()).toISOString(),
     }
 
     await ensureIndex(user.dir).catch(() => {})

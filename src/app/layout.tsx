@@ -51,6 +51,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <head>
         {/* Clash Display + Satoshi for the MarketFit landing page */}
@@ -64,7 +65,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full flex flex-col">
+      {/* suppressHydrationWarning: browser extensions (e.g. JobRight injects
+          jf-observer-attached on <body>) mutate the DOM before React hydrates,
+          which is harmless but otherwise throws a hydration mismatch error. */}
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider>
           <DialogProvider>{children}</DialogProvider>
         </ThemeProvider>

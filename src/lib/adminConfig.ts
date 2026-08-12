@@ -1,6 +1,5 @@
-import { readFile, writeFile, mkdir } from "fs/promises"
 import { createHmac, timingSafeEqual, randomBytes } from "crypto"
-import path from "path"
+import { blob } from "@/lib/storage"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface PostLink { id: string; url: string; label: string; date: string; enabled: boolean }
@@ -12,8 +11,7 @@ export interface AdminConfig {
   updatedAt: string
 }
 
-const DIR = path.join(process.cwd(), "data")
-const FILE = path.join(DIR, "admin-config.json")
+const KEY = "admin-config.json"
 
 const DEFAULTS: AdminConfig = {
   postLinks: [],
@@ -30,8 +28,8 @@ const DEFAULTS: AdminConfig = {
 // ── Config store (JSON file; no secrets ever written here) ──────────────────────
 export async function readAdminConfig(): Promise<AdminConfig> {
   try {
-    const parsed = JSON.parse(await readFile(FILE, "utf8"))
-    return { ...DEFAULTS, ...parsed }
+    const raw = await blob.getText(KEY)
+    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS }
   } catch {
     return { ...DEFAULTS }
   }
@@ -40,8 +38,7 @@ export async function readAdminConfig(): Promise<AdminConfig> {
 export async function writeAdminConfig(patch: Partial<AdminConfig>): Promise<AdminConfig> {
   const current = await readAdminConfig()
   const next: AdminConfig = { ...current, ...patch, updatedAt: new Date().toISOString() }
-  await mkdir(DIR, { recursive: true }).catch(() => {})
-  await writeFile(FILE, JSON.stringify(next, null, 2), "utf8")
+  await blob.put(KEY, JSON.stringify(next, null, 2))
   return next
 }
 

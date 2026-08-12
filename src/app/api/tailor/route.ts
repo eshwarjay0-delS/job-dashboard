@@ -4,13 +4,16 @@ import { runTailor } from "@/lib/tailor"
 import { resolveKeys, hasAnyKey } from "@/lib/llm"
 import { createClient } from "@/lib/supabase/server"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
-import { checkRateLimit } from "@/lib/rateLimit"
+import { checkRateLimit, clientIp } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
 
-// Free-tier weekly tailor limit. Set TAILOR_WEEKLY_LIMIT=0 in .env to disable.
-const TAILOR_WEEKLY_LIMIT = Number(process.env.TAILOR_WEEKLY_LIMIT ?? 7)
+// Unlimited by default (personal use). Set TAILOR_WEEKLY_LIMIT>0 in .env to cap.
+const TAILOR_WEEKLY_LIMIT = Number(process.env.TAILOR_WEEKLY_LIMIT ?? 0)
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+// Per-IP hourly abuse cap for the open (no-login) endpoint on a public tunnel. 0 = off.
+const TAILOR_IP_HOURLY = Number(process.env.TAILOR_IP_HOURLY_LIMIT ?? 20)
+const HOUR_MS = 60 * 60 * 1000
 
 async function resolveUserId(): Promise<string> {
   try {
@@ -35,6 +38,18 @@ export async function POST(request: NextRequest) {
         { error: "No API key found. Add a Claude, OpenRouter, or Gemini key in Settings or .env.local." },
         { status: 400 },
       )
+    }
+
+    // Per-IP abuse cap (protects the open endpoint on a public tunnel).
+    if (TAILOR_IP_HOURLY > 0) {
+      const rl = checkRateLimit(`tailor-ip:${clientIp(request)}`, { max: TAILOR_IP_HOURLY, windowMs: HOUR_MS })
+      if (!rl.ok) {
+        const mins = Math.ceil((rl.retryAfterSec ?? 3600) / 60)
+        return NextResponse.json(
+          { error: `Too many tailoring requests. Try again in ~${mins} min.` },
+          { status: 429, headers: { "Retry-After": String(rl.retryAfterSec ?? 3600) } },
+        )
+      }
     }
 
     // Server-side weekly usage cap (prevents unlimited calls by localStorage clearing or different browsers)

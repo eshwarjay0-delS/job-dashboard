@@ -1,6 +1,6 @@
 // v2
-import { readFile, writeFile, mkdir, readdir } from "fs/promises"
 import path from "path"
+import { readPath, readPathText, writePath, listFiles } from "@/lib/storage"
 import { createHash } from "crypto"
 import { extractText } from "./docx"
 
@@ -67,6 +67,65 @@ export const TECH_TERMS: string[] = [
   "power automate", "power apps", "power platform",
 ]
 
+// Business-analyst / GRC / project & process vocabulary. TECH_TERMS is security/dev
+// only, so for BA/GRC/PM job descriptions the coverage metric was BLIND to the terms
+// that actually matter (BRD, RTM, UAT, gap analysis, stakeholder interviews, etc.) —
+// it declared "100%" while these were entirely absent. These make those phrases count
+// for coverage AND get injected when missing.
+export const BUSINESS_TERMS: string[] = [
+  // business analysis core
+  "business analyst", "business analysis", "business systems analyst", "requirements gathering",
+  "requirements elicitation", "requirements management", "business requirements", "functional requirements",
+  "non-functional requirements", "business requirements document", "brd", "brds", "functional specification",
+  "requirements traceability matrix", "rtm", "requirements traceability", "traceability matrix",
+  "use cases", "user stories", "acceptance criteria", "process mapping", "process flows", "workflow analysis",
+  "business process analysis", "business process improvement", "process improvement", "as-is", "to-be",
+  "current state", "future state", "current and future state", "gap analysis", "impact analysis",
+  "root cause analysis", "cost-benefit analysis", "business case", "feasibility analysis", "swot",
+  // stakeholder / facilitation
+  "stakeholder interviews", "stakeholder management", "stakeholder engagement", "requirements workshops",
+  "elicitation sessions", "facilitation", "jad sessions", "workshop facilitation",
+  // implementation / config
+  "enterprise software implementation", "software implementation", "application configuration",
+  "software configuration", "system configuration", "configuration management", "solution design",
+  "implementation activities", "implementation support", "review configured functionality", "issue resolution",
+  "system integration", "data migration", "data migration validation", "data validation", "data mapping",
+  // testing
+  "user acceptance testing", "uat", "uat coordination", "test cases", "test scenarios", "test planning",
+  "defect tracking", "defect resolution", "defect management", "quality assurance", "regression testing",
+  // agile / delivery
+  "agile", "scrum", "kanban", "backlog refinement", "product backlog", "sprint planning", "user story mapping",
+  "change management", "change request", "release management", "deployment", "go-live", "post-implementation",
+  "cutover", "knowledge transfer", "project status report", "weekly project status", "status reports",
+  "project coordination", "project management", "raci", "work breakdown structure", "milestones",
+  // documentation / training
+  "technical documentation", "documentation", "user guides", "standard operating procedures", "sops",
+  "training documentation", "training materials", "end-user training", "end-user communications",
+  "runbooks", "job aids", "process documentation", "requirements documentation",
+  // grc / governance / compliance (BA-flavored)
+  "governance risk and compliance", "grc", "governance", "risk management", "risk assessment",
+  "regulatory compliance", "compliance", "controls", "control framework", "audit", "audit support",
+  "internal controls", "policy", "policies and procedures", "regulated environment", "healthcare",
+  "information security", "cybersecurity", "security controls",
+  // tools / office
+  "microsoft sharepoint", "sharepoint", "microsoft office", "office 365", "excel", "visio", "powerpoint",
+  "jira", "confluence", "azure devops", "servicenow",
+  // soft skills ATS scans for
+  "analytical", "analytical skills", "problem-solving", "problem solving", "written and verbal communication",
+  "communication skills", "attention to detail", "collaboration", "self-motivated", "cross-functional",
+  // network / firewall / infra-ops (JDs use exact abbreviations ATS keys on)
+  "cisco asa", "palo alto", "pan-os", "next-generation firewall", "firepower", "fortigate", "check point",
+  "zones", "security policies", "security controls", "threat prevention", "s2s vpn", "site-to-site vpn",
+  "ipsec", "nat", "natting", "access control list", "acl", "stateful inspection", "failover", "high availability",
+  "subnetting", "osi model", "routing protocols", "control plane", "data plane", "packet analysis",
+  "firewall service request", "fsr", "break-fix", "change request", "change management",
+  "infrastructure modernization", "decommissioning", "end-of-life", "eol", "hardware refresh", "hardware administration",
+  "irs compliance", "fbi compliance", "cji", "cjis", "cji compliance", "compliance standards",
+]
+
+// Combined, de-duplicated vocabulary used for keyword coverage.
+const VOCAB: string[] = Array.from(new Set([...TECH_TERMS, ...BUSINESS_TERMS]))
+
 function gramSet(text: string): Set<string> {
   const words = text.toLowerCase().match(/[a-z0-9+#.&/-]+/g) || []
   const grams = new Set<string>(words)
@@ -75,10 +134,104 @@ function gramSet(text: string): Set<string> {
   return grams
 }
 
-// Technical keywords present in a piece of text.
+// Keywords present in a piece of text, matched against the combined vocabulary.
+// Terms up to 3 words match via the gram set (fast, word-boundary-safe); longer
+// phrases (e.g. "current and future state", "written and verbal communication")
+// fall back to a normalized substring test since they exceed the 3-gram window.
 export function extractKeywords(text: string): string[] {
   const grams = gramSet(text)
-  return TECH_TERMS.filter(term => grams.has(term))
+  const low = " " + text.toLowerCase().replace(/\s+/g, " ") + " "
+  return VOCAB.filter(term =>
+    term.split(" ").length <= 3 ? grams.has(term) : low.includes(" " + term + " ") || low.includes(term),
+  )
+}
+
+// Is `term` literally present in `text`? Word-boundary for single tokens (so "nat"
+// doesn't match "coordinate"), normalized substring for multi-word phrases. This is
+// the ATS reality: keyword matching is literal, so we measure literal presence.
+export function present(text: string, term: string): boolean {
+  const t = term.trim().toLowerCase()
+  if (!t) return false
+  const low = " " + text.toLowerCase().replace(/\s+/g, " ") + " "
+  if (t.includes(" ")) return low.includes(" " + t + " ") || low.includes(t)
+  const esc = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  return new RegExp("(^|[^a-z0-9])" + esc + "([^a-z0-9]|$)").test(low)
+}
+
+// Common all-caps / short tokens that are NOT meaningful ATS keywords — filtered out
+// of the generic extractor so junk never inflates the "missing" set (junk that can
+// never be matched would force needless model escalation = wasted tokens).
+const CAPS_STOP = new Set([
+  "THE","AND","FOR","YOU","ARE","OUR","ETC","INC","LLC","LTD","USA","US","ID","IT","IS","OF","TO","IN","ON","OR","AS","AT","BY","BE","WE","AN","A",
+  "II","III","IV","VI","CO","CA","NY","TX","WA","DC","EST","PST","CST","AM","PM","EOD","ASAP","OK","NO","YES","MUST","WILL","SHALL","ALL","ANY","PER","VIA","NEW",
+  "JOB","ROLE","TEAM","YEAR","YEARS","PLUS","DAY","DAYS","WEEK","MONTH","MONTHS","FT","PT","W2","C2C","GC","USC","EAD","CFR","N/A","NA","OT",
+])
+const WORD_STOP = new Set([
+  "the","and","for","with","you","are","our","etc","will","must","shall","should","this","that","their","them","from","into","across","various","daily",
+  "such","basic","strong","excellent","ability","experience","knowledge","proficiency","responsibilities","qualifications","required","preferred","scope",
+  "candidate","contractor","client","services","state","agencies","agency","local","valid","review","execution","ensure","perform","provide","support","maintain",
+])
+// Gerund/verb words that must NOT start a domain-noun phrase (else "implementing
+// security", "performing analysis" leak in as junk that can't match the resume).
+const VERB_STOP = new Set([
+  "implementing","performing","conducting","managing","providing","ensuring","supporting","maintaining","developing","designing","configuring",
+  "troubleshooting","reviewing","executing","facilitating","leading","coordinating","assisting","addressing","resolving","monitoring","building",
+  "including","using","regular","ongoing","overall","general","strong","basic","daily","related","other","various","additional","enterprise-wide",
+])
+
+// Extract the JD's OWN keywords — DOMAIN-AGNOSTIC, so it works for any job description
+// without hand-curated per-domain vocab. Three high-precision signals:
+//   1) curated VOCAB hits (known tools/skills, highest precision)
+//   2) acronyms & distinctive tech tokens (S2S, FSR, CJI, PAN-OS, IPsec, IOS-XR, AZ-500…)
+//   3) parenthetical abbreviations — "(FSRs)", "(RTM)", "(EOL)", "(BRDs)" — near-perfect signal
+// Multi-word product/framework names (Palo Alto, Cisco ASA, Microsoft SharePoint) are
+// covered by the curated layer, so we deliberately DON'T scrape capitalized bigrams —
+// that only produced sentence-fragment junk ("develop business", "general networking")
+// that can never match and would waste model escalation. Precision over recall = fewer
+// tokens. Everything normalized to lowercase.
+export function extractJdKeywords(jd: string): string[] {
+  const out = new Set<string>()
+  for (const k of extractKeywords(jd)) out.add(k)
+
+  // 2) acronyms / tech tokens: has 2+ caps, OR a digit, OR an internal cap, OR a
+  //    hyphen/dot/slash separator (distinctive) — e.g. ASA, VPN, FSR, S2S, PAN-OS,
+  //    IPsec, IOS-XR, AZ-500, CI/CD. Skip plain Title-Case words (sentence starts).
+  for (const m of jd.matchAll(/\b([A-Za-z][A-Za-z0-9]*(?:[-./][A-Za-z0-9]+)*)\b/g)) {
+    const raw = m[1]
+    if (raw.length < 2 || raw.length > 24) continue
+    if (!(/[A-Z]{2,}/.test(raw) || /[a-z][A-Z]/.test(raw) || /[0-9]/.test(raw) || /[-./]/.test(raw))) continue
+    if (CAPS_STOP.has(raw.toUpperCase())) continue
+    const low = raw.toLowerCase().replace(/s$/, s => (raw.length > 3 ? "" : s)) // FSRs→fsr, BRDs→brd
+    if (low.length >= 2 && !WORD_STOP.has(low)) out.add(low)
+  }
+
+  // 3) parenthetical abbreviations — the JD author is literally telling us the acronym.
+  for (const m of jd.matchAll(/\(([A-Za-z][A-Za-z0-9/&+ -]{1,14})\)/g)) {
+    const low = m[1].trim().toLowerCase().replace(/s$/, "")
+    if (low.length >= 2 && !WORD_STOP.has(low)) out.add(low)
+  }
+
+  // 4) domain-noun phrases: a noun immediately followed by a domain suffix
+  //    (management/security/governance/services/training/response/testing/controls…).
+  //    HIGH-precision recall for the phrase keywords the vocab misses — "access
+  //    governance", "identity governance", "secrets management", "directory services",
+  //    "incident response", "information security", "change management" — for ANY domain.
+  //    Two words only, and the preceding word can't be a stopword or a gerund verb
+  //    (so "implementing security" / "performing analysis" never leak in).
+  const SUFFIX = /^(management|security|governance|testing|controls?|compliance|analysis|response|services|provisioning|deprovisioning|training|protocols?|assessment|monitoring|administration|remediation|authentication|authorization|architecture|mitigation|hardening|onboarding|scanning|reporting|engineering|operations)$/
+  for (const m of jd.matchAll(/\b([a-z][a-z-]{2,})\s+([a-z][a-z-]+)\b/gi)) {
+    const a = m[1].toLowerCase(), b = m[2].toLowerCase()
+    if (!SUFFIX.test(b)) continue
+    if (WORD_STOP.has(a) || VERB_STOP.has(a)) continue
+    out.add(a + " " + b)
+  }
+
+  return [...out]
+}
+
+// Which of the JD's keywords are literally present in a resume's text.
+export function coveredJdKeywords(text: string, jdKeywords: string[]): Set<string> {
+  return new Set(jdKeywords.filter(k => present(text, k)))
 }
 
 // The resume's FOLDER name is the strongest signal of what role it targets.
@@ -282,22 +435,23 @@ export function headlineTitle(text: string): string {
 }
 
 async function readIndex(indexFile: string): Promise<Index> {
-  try { return JSON.parse(await readFile(indexFile, "utf8")) } catch { return {} }
+  try { const raw = await readPathText(indexFile); return raw ? JSON.parse(raw) : {} } catch { return {} }
 }
 async function writeIndex(idx: Index, indexFile: string): Promise<void> {
-  await mkdir(path.dirname(indexFile), { recursive: true })
-  await writeFile(indexFile, JSON.stringify(idx, null, 2))
+  await writePath(indexFile, JSON.stringify(idx, null, 2))
 }
 
-async function listDocx(dir: string, category = ""): Promise<{ filepath: string; filename: string; category: string }[]> {
-  let entries
-  try { entries = await readdir(dir, { withFileTypes: true }) } catch { return [] }
+// List every .docx under a resume dir → filepath + filename + category (from the folder
+// chain relative to `root`). Uses the storage layer's recursive listing (R2-safe).
+async function listDocx(root: string): Promise<{ filepath: string; filename: string; category: string }[]> {
+  const files = await listFiles(root)
   const out: { filepath: string; filename: string; category: string }[] = []
-  for (const e of entries) {
-    if (e.name.startsWith("~$") || e.name.startsWith(".")) continue
-    const full = path.join(dir, e.name)
-    if (e.isDirectory()) out.push(...await listDocx(full, category ? `${category} / ${e.name}` : e.name))
-    else if (e.name.toLowerCase().endsWith(".docx")) out.push({ filepath: full, filename: e.name.replace(/\.docx$/i, ""), category: category || "General" })
+  for (const full of files) {
+    if (!full.toLowerCase().endsWith(".docx")) continue
+    const rel = path.relative(root, full)
+    const parts = rel.split(path.sep)
+    const category = parts.length > 1 ? parts.slice(0, -1).join(" / ") : "General"
+    out.push({ filepath: full, filename: path.basename(full).replace(/\.docx$/i, ""), category })
   }
   return out
 }
@@ -316,8 +470,8 @@ export async function ensureIndex(dir?: string): Promise<Index> {
     if (!present.has(key)) { delete idx[key]; changed = true }
   }
   for (const f of files) {
-    let buf: Buffer
-    try { buf = await readFile(f.filepath) } catch { continue }
+    const buf = await readPath(f.filepath)
+    if (!buf) continue
     const hash = createHash("sha1").update(buf).digest("hex")
     if (idx[f.filepath]?.hash === hash && typeof idx[f.filepath]?.title === "string" && typeof idx[f.filepath]?.yoe === "number") continue
     let text = ""

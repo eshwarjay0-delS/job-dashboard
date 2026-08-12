@@ -6,6 +6,7 @@ import MicButton from "../MicButton"
 import ResumeScoreCard from "@/components/ResumeScoreCard"
 import CoverLetterModal from "@/components/CoverLetterModal"
 import { toast } from "sonner"
+import { tailoredFilename } from "@/lib/filename"
 
 const FB_CHIPS = [
   "Make bullets shorter", "More specific, less generic", "Add more keywords from the JD",
@@ -320,6 +321,10 @@ function ResultContent() {
   const [resumeName, setResumeName] = useState(params.get("resumeName") || "Resume")
   const [category, setCategory]     = useState(params.get("category") || "")
   const [filepath, setFilepath]     = useState(params.get("filepath") || "")
+  // Target job this resume was tailored FOR — used to name the download after the
+  // role/company (JobRight-style), not the source resume's original title.
+  const targetRole    = params.get("role") || ""
+  const targetCompany = params.get("company") || ""
 
   const [token, setToken]         = useState(params.get("token") || "")
   const [score, setScore]         = useState(Number(params.get("score") || 85))
@@ -389,8 +394,9 @@ function ResultContent() {
 
   function download(fmt: "docx" | "pdf") {
     if (!token) { toast.error("Tailor a resume first."); return }
-    // Sanitize filename — strip path-traversal chars, keep only safe chars
-    const safeName = resumeName.replace(/[^a-zA-Z0-9._\- ]/g, "_").trim() || "Resume"
+    // Name the file after the TARGET role/company + today's date. Falls back to
+    // candidate-only (from the source name) when no role/company is known.
+    const safeName = tailoredFilename({ sourceName: resumeName, role: targetRole, company: targetCompany }) || "Resume"
     const url = `/api/tailor/file?token=${encodeURIComponent(token)}&fmt=${fmt}&name=${encodeURIComponent(safeName)}`
     if (fmt === "docx") {
       const a = document.createElement("a")
@@ -429,7 +435,9 @@ function ResultContent() {
         fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chips, custom, category }) }).catch(() => {})
       }
       // Pass immediatePrefs directly so Claude applies them in THIS call (not just future ones).
-      const res = await fetch("/api/tailor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jd, filepath: useFilepath, claudeKey, immediatePrefs }) })
+      // noCache: a manual "regenerate" is an explicit ask for a NEW attempt — never
+      // hand back a cached identical result, so feedback always visibly takes effect.
+      const res = await fetch("/api/tailor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jd, filepath: useFilepath, claudeKey, immediatePrefs, noCache: true }) })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { toast.error(data.error || "Regenerate failed."); setBusy(false); return }
       setToken(data.token)

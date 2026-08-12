@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { appendFile, mkdir, readFile } from "fs/promises"
-import path from "path"
-import { DATA_DIR } from "@/lib/paths"
+import { blob } from "@/lib/storage"
 
 export const runtime = "nodejs"
+const KEY = "waitlist.jsonl"
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,27 +15,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Valid email required." }, { status: 400 })
     }
 
-    await mkdir(DATA_DIR, { recursive: true })
-
     // Deduplicate — don't count same email twice
-    const filePath = path.join(DATA_DIR, "waitlist.jsonl")
-    let duplicate = false
-    try {
-      const existing = await readFile(filePath, "utf8")
-      duplicate = existing.split("\n").some(line => {
-        try { return JSON.parse(line).email === email } catch { return false }
-      })
-    } catch {}
+    const existing = (await blob.getText(KEY)) || ""
+    const duplicate = existing.split("\n").some(line => {
+      try { return JSON.parse(line).email === email } catch { return false }
+    })
 
-    const entry = JSON.stringify({
-      ts: new Date().toISOString(),
-      email,
-      plan,
-      ref,
-      duplicate,
-    }) + "\n"
-
-    await appendFile(filePath, entry, "utf8")
+    const entry = JSON.stringify({ ts: new Date().toISOString(), email, plan, ref, duplicate }) + "\n"
+    // Object stores have no append → read-modify-write.
+    await blob.put(KEY, existing + entry)
 
     return NextResponse.json({
       ok: true,
@@ -58,8 +45,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
   try {
-    const filePath = path.join(DATA_DIR, "waitlist.jsonl")
-    const content = await readFile(filePath, "utf8")
+    const content = (await blob.getText(KEY)) || ""
     const entries = content.split("\n").filter(l => {
       try { const p = JSON.parse(l); return p.email && !p.duplicate } catch { return false }
     })

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { appendFile, mkdir } from "fs/promises"
-import path from "path"
-import { DATA_DIR } from "@/lib/paths"
+import { blob } from "@/lib/storage"
 import { checkRateLimit, clientIp } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
@@ -26,7 +24,7 @@ export const runtime = "nodejs"
 // Auth: public endpoint (extension content script has no session cookie on ATS pages)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const LOG_FILE = path.join(DATA_DIR, "autofill_log.jsonl")
+const LOG_KEY = "autofill_log.jsonl"
 
 export async function POST(request: NextRequest) {
   const rl = checkRateLimit(`autofill-log:${clientIp(request)}`, { max: 60, windowMs: 60 * 60 * 1000 })
@@ -49,8 +47,7 @@ export async function POST(request: NextRequest) {
       pageHostname: String(body.pageHostname || "").replace(/[^a-z0-9.\-]/gi, "").slice(0, 80),
     }
 
-    await mkdir(DATA_DIR, { recursive: true })
-    await appendFile(LOG_FILE, JSON.stringify(entry) + "\n", "utf8")
+    await blob.put(LOG_KEY, ((await blob.getText(LOG_KEY)) || "") + JSON.stringify(entry) + "\n")
 
     return NextResponse.json({ ok: true })
   } catch {

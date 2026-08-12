@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { readFile, readdir, stat } from "fs/promises"
 import path from "path"
 import { extractProfile, type Profile } from "@/lib/profile"
 import { createClientFromRequest } from "@/lib/supabase/server"
 import { TAILORED_DIR as OUT_DIR, USER_RESUMES_DIR as USER_RESUMES_BASE, RESUMES_LIB as LEGACY_RESUMES } from "@/lib/paths"
+import { readPath, listFiles, statPath } from "@/lib/storage"
 
 export const runtime = "nodejs"
 
@@ -36,23 +36,13 @@ function toAutofillShape(p: Profile) {
 
 // Find the most recently modified .docx under a directory tree (best-effort).
 async function newestDocx(dir: string): Promise<string | null> {
+  const files = (await listFiles(dir)).filter(f => f.toLowerCase().endsWith(".docx"))
   let best: { p: string; m: number } | null = null
-  async function walk(d: string) {
-    let entries
-    try { entries = await readdir(d, { withFileTypes: true }) } catch { return }
-    for (const e of entries) {
-      if (e.name.startsWith("~$") || e.name.startsWith(".")) continue
-      const full = path.join(d, e.name)
-      if (e.isDirectory()) await walk(full)
-      else if (e.name.toLowerCase().endsWith(".docx")) {
-        try { const s = await stat(full); if (!best || s.mtimeMs > best.m) best = { p: full, m: s.mtimeMs } } catch { /* skip */ }
-      }
-    }
+  for (const f of files) {
+    const s = await statPath(f)
+    if (s && (!best || s.mtime.getTime() > best.m)) best = { p: f, m: s.mtime.getTime() }
   }
-  await walk(dir)
-  // `best` is only reassigned inside the nested walk() closure, so control-flow
-  // analysis narrows it to null here — re-assert its real type before reading.
-  return (best as { p: string; m: number } | null)?.p ?? null
+  return best?.p ?? null
 }
 
 // GET ?filepath= or ?token= → extract profile from that resume (extension autofill)
@@ -88,7 +78,8 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({ error: "That file is outside your resumes folder." }, { status: 403 })
         }
       }
-      const buf = await readFile(resolved)
+      const buf = await readPath(resolved)
+      if (!buf) return NextResponse.json({ error: "That resume could not be read." }, { status: 404 })
       const profile = toAutofillShape(await extractProfile(buf))
       return NextResponse.json({ profile })
     } catch (e) {
@@ -118,8 +109,11 @@ export async function GET(request: NextRequest) {
     for (const dir of dirs) {
       const newest = await newestDocx(dir)
       if (newest) {
-        const profile = toAutofillShape(await extractProfile(await readFile(newest)))
-        if (profile.full_name || profile.email) return NextResponse.json({ profile, source: "resume" })
+        const buf = await readPath(newest)
+        if (buf) {
+          const profile = toAutofillShape(await extractProfile(buf))
+          if (profile.full_name || profile.email) return NextResponse.json({ profile, source: "resume" })
+        }
       }
     }
   } catch { /* fall through */ }

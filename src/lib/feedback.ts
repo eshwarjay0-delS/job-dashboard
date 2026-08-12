@@ -1,7 +1,6 @@
-import { readFile, writeFile, mkdir } from "fs/promises"
-import path from "path"
-import { FEEDBACK_FILE as FILE } from "@/lib/paths"
+import { blob } from "@/lib/storage"
 
+const KEY = "feedback.json"
 interface Entry { cat: string; text: string }
 
 // Normalise the JD category ("Thakkuva / Thakkuva / AI_Marketing") to its top folder.
@@ -11,7 +10,8 @@ export function topCategory(category: string): string {
 
 async function readAll(): Promise<Entry[]> {
   try {
-    const raw = await readFile(FILE, "utf8")
+    const raw = await blob.getText(KEY)
+    if (!raw) return []
     const arr = JSON.parse(raw)
     if (!Array.isArray(arr)) return []
     // Back-compat: older entries were plain strings (no category) → treat as global.
@@ -29,8 +29,7 @@ export async function addFeedback(items: string[], category = ""): Promise<void>
   const cleaned = items.map(s => (s || "").trim()).filter(s => s && s.length <= 200)
   if (!cleaned.length) return
   const next = [...(await readAll()), ...cleaned.map(text => ({ cat, text }))].slice(-300)
-  await mkdir(path.dirname(FILE), { recursive: true })
-  await writeFile(FILE, JSON.stringify(next))
+  await blob.put(KEY, JSON.stringify(next))
 }
 
 // Recent feedback that applies to THIS resume: entries left on the same top-level

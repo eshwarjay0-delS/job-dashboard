@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { readFile } from "fs/promises"
 import path from "path"
 import { RESUMES_LIB as RESUMES_DIR, USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
 import { createClientFromRequest } from "@/lib/supabase/server"
+import { readPath } from "@/lib/storage"
 
 // GET /api/resumes/download?filepath=<path>&name=<filename>
 // Serves the .docx file directly.
@@ -47,18 +47,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  try {
-    const buffer = await readFile(resolved)
-    const safeFilename = `${name.replace(/[^a-z0-9_\-. ]/gi, "_")}.docx`
-
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type":        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "Content-Disposition": `attachment; filename="${safeFilename}"`,
-        "Content-Length":      String(buffer.length),
-      },
-    })
-  } catch {
-    return NextResponse.json({ error: "File not found" }, { status: 404 })
-  }
+  const buffer = await readPath(resolved)
+  if (!buffer) return NextResponse.json({ error: "File not found" }, { status: 404 })
+  const safeFilename = `${name.replace(/[^a-z0-9_\-. ]/gi, "_")}.docx`
+  return new NextResponse(new Uint8Array(buffer), {
+    headers: {
+      "Content-Type":        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "Content-Disposition": `attachment; filename="${safeFilename}"`,
+      "Content-Length":      String(buffer.length),
+    },
+  })
 }

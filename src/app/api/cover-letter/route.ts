@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
-import { readFile } from "fs/promises"
+import { readPath } from "@/lib/storage"
 import { extractText } from "@/lib/docx"
 import { matchByKeywords } from "@/lib/keywords"
 import { resolveKeys, hasAnyKey, callLLM } from "@/lib/llm"
@@ -69,8 +69,11 @@ export async function POST(request: NextRequest) {
       if (filepath) {
         const resolved = path.resolve(filepath)
         if (resolved.startsWith(path.resolve(userResumeDir))) {
-          resumeText = (await extractText(await readFile(resolved))).slice(0, 6000)
-          if (!resumeName) resumeName = path.basename(resolved).replace(/\.docx$/i, "")
+          const buf = await readPath(resolved)
+          if (buf) {
+            resumeText = (await extractText(buf)).slice(0, 6000)
+            if (!resumeName) resumeName = path.basename(resolved).replace(/\.docx$/i, "")
+          }
         }
       }
     } catch { /* no resume → write from the JD alone, still grounded, no fabrication */ }

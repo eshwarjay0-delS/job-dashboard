@@ -246,12 +246,24 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
   // ── Delete / Move / Folder ─────────────────────────────────────────────────
   async function deleteChecked() {
     if (!checked.size) return
-    const filePaths = [...checked].filter(k => k.startsWith("f:")).map(k => k.slice(2))
-    if (!filePaths.length) { setChecked(new Set()); return }
-    if (!await confirm(`Delete ${filePaths.length} file${filePaths.length > 1 ? "s" : ""}? This cannot be undone.`, { title: "Delete files", confirmLabel: "Delete", destructive: true })) return
+    const files = [...checked].filter(k => k.startsWith("f:")).map(k => k.slice(2))
+    const folders = [...checked].filter(k => k.startsWith("d:")).map(k => k.slice(2))
+    if (!files.length && !folders.length) { setChecked(new Set()); return }
+    const label = [
+      files.length ? `${files.length} file${files.length > 1 ? "s" : ""}` : "",
+      folders.length ? `${folders.length} folder${folders.length > 1 ? "s" : ""}` : "",
+    ].filter(Boolean).join(" and ")
+    if (!await confirm(`Delete ${label}? Folders are removed with everything inside them. This cannot be undone.`, { title: "Delete", confirmLabel: "Delete", destructive: true })) return
     try {
-      await Promise.all(filePaths.map(fp => fetch("/api/resumes", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filepath: fp }) })))
+      const res = await fetch("/api/resumes", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files, folders }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) { setErr(d.error ?? `Delete failed (HTTP ${res.status})`); return }
       setChecked(new Set())
+      setNotice(`Deleted ${d.deleted ?? label}.`)
       router.refresh()
     } catch (e) { setErr(`Delete failed: ${String(e)}`) }
   }

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { appendFile, mkdir } from "fs/promises"
-import path from "path"
-import { DATA_DIR } from "@/lib/paths"
+import { blob } from "@/lib/storage"
 import { checkRateLimit, clientIp } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
@@ -26,8 +24,7 @@ export async function POST(request: NextRequest) {
       message: message.trim(),
     }) + "\n"
 
-    await mkdir(DATA_DIR, { recursive: true })
-    await appendFile(path.join(DATA_DIR, "contact_messages.jsonl"), line, "utf8")
+    await blob.put("contact_messages.jsonl", ((await blob.getText("contact_messages.jsonl")) || "") + line)
 
     // ── Owner notification — fire-and-forget, never blocks the 200 response ──
     // Supports two outbound channels; configure one or both via env vars:

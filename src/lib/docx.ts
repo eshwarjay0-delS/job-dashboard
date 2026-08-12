@@ -217,6 +217,22 @@ function parseStackedHeader(paras: string[]): Header | null {
       title = cand; titleIdx = before[k].i
     }
   }
+  // Title AFTER the contact line: some resumes stack Name → Contact → TITLE →
+  // Summary (the title sits below the email/phone). parseHeader/the loop above only
+  // look BEFORE contact, so scan a few paragraphs past it for a short title-like line
+  // (stop at the first section heading or a long paragraph = the summary body).
+  if (!title) {
+    for (let i = contactIdx + 1; i < Math.min(paras.length, contactIdx + 6); i++) {
+      const t = paraText(paras[i]).trim()
+      if (!t) continue
+      if (t.replace(/\s+/g, " ").length > 70) break          // long line → summary body, stop
+      if (sectionHead(t, paras[i])) break                    // hit a real section heading, stop
+      if (looksLikeContact(t) || looksLikeLocationList(t) || isBullet(t, paras[i])) continue
+      if (/[•·]/.test(t)) continue                           // that's a tagline strip, not the title
+      title = t; titleIdx = i; break                         // first qualifying short line = the title
+    }
+  }
+
   if (!title && !tagline) return null // nothing safely editable → leave header alone
   return { idx: nameIdx, name, title, tagline, titleIdx, taglineIdx }
 }
@@ -281,6 +297,10 @@ export async function extractZones(buffer: Buffer): Promise<Zones> {
   let summaryIdx: number | null = null
   let summaryText = ""
   const summaryOverflowIdx: number[] = []
+  // True when the summary was found via the no-heading fallback (a bulleted highlight
+  // block with no "Summary" heading). Those follow-on lines are prime keyword space —
+  // capture them as in-place editable lines instead of leaving them stale.
+  let summaryNoHeading = false
   const skills: { idx: number; text: string }[] = []
   type Role = { role: string; bullets: { idx: number; text: string }[]; current?: boolean }
   const roles: Role[] = []
@@ -331,13 +351,20 @@ export async function extractZones(buffer: Buffer): Promise<Zones> {
 
     if (section === "summary") {
       if (summaryIdx === null && t.length > 40 && !looksLikeContact(t)) { summaryIdx = idx; summaryText = t }
-      // A second (third, fourth…) paragraph before the next heading — a concatenated
-      // multi-AI-run summary. Capped at 6 so a genuinely misclassified section (a heading
-      // our regexes missed) can't silently absorb a whole unrelated block.
-      else if (summaryIdx !== null && t.length > 20 && !looksLikeContact(t) && !isBullet(t, p)
-               && !looksLikeRoleTitle(t) && summaryOverflowIdx.length < 6) {
-        summaryOverflowIdx.push(idx)
-        summaryText += " " + t
+      else if (summaryIdx !== null && !looksLikeContact(t) && !looksLikeRoleTitle(t)) {
+        if (summaryNoHeading) {
+          // No-heading bulleted "summary" = highlight lines (often 10-17 of them). These
+          // are the resume's best keyword real estate. Capture each as an in-place
+          // editable line (routed through the skills channel, which rewrites at its own
+          // [idx]) so the model can retarget it to the JD — format preserved (rewritten
+          // in place, never blanked or deleted), and no keyword space wasted.
+          if (t.length > 20) skills.push({ idx, text: t })
+        } else if (t.length > 20 && !isBullet(t, p) && summaryOverflowIdx.length < 6) {
+          // Heading-based summary with a few concatenated paragraphs — old behaviour:
+          // fold into summaryText and blank the extras when the summary is consolidated.
+          summaryOverflowIdx.push(idx)
+          summaryText += " " + t
+        }
       }
     } else if (section === "skills") {
       if (!looksLikeContact(t)) skills.push({ idx, text: t })
@@ -367,8 +394,10 @@ export async function extractZones(buffer: Buffer): Promise<Zones> {
       // certifications / education / awards — editable in the builder, not auto-tailored.
       if (!looksLikeContact(t)) extras.push({ idx, text: t, section: otherLabel || "Other" })
     } else if (section === null && summaryIdx === null && t.length > 120 && !looksLikeContact(t)) {
-      // resume opens with a summary paragraph and no heading (but not the name/contact header)
-      summaryIdx = idx; summaryText = t
+      // resume opens with a summary paragraph and no heading (but not the name/contact
+      // header). Switch into the summary section so the follow-on highlight lines get
+      // captured as editable (see the summaryNoHeading branch above) rather than ignored.
+      summaryIdx = idx; summaryText = t; section = "summary"; summaryNoHeading = true
     }
   }
 

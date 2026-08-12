@@ -141,7 +141,7 @@ function FolderRow({ node, depth, relpath, ctx }: { node: TreeNode; depth: numbe
       {open && (
         <div>
           {[...node.folders.values()].map(c => <FolderRow key={c.name} node={c} depth={depth + 1} relpath={`${relpath}/${c.name}`} ctx={ctx} />)}
-          {node.files.map(f => <FileRow key={f.id} file={f} depth={depth + 1} active={ctx.activeId === f.id} ctx={ctx} />)}
+          {node.files.map(f => <FileRow key={f.filepath || f.id} file={f} depth={depth + 1} active={ctx.activeId === f.id} ctx={ctx} />)}
         </div>
       )}
     </div>
@@ -163,7 +163,7 @@ export default function LibraryTree({
   return (
     <div className="space-y-0.5">
       {[...root.folders.values()].map(c => <FolderRow key={c.name} node={c} depth={0} relpath={c.name} ctx={ctx} />)}
-      {root.files.map(f => <FileRow key={f.id} file={f} depth={0} active={activeId === f.id} ctx={ctx} />)}
+      {root.files.map(f => <FileRow key={f.filepath || f.id} file={f} depth={0} active={activeId === f.id} ctx={ctx} />)}
     </div>
   )
 }

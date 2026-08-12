@@ -108,7 +108,8 @@ export default function SettingsPage() {
   const [driveConnected, setDriveConnected] = useState(false)
   const [driveConnecting, setDriveConnecting] = useState(false)
   const [driveError, setDriveError] = useState("")
-  const [resumeLimit, setResumeLimit] = useState(2)
+  // null = unlimited storage (no cap).
+  const [resumeLimit, setResumeLimit] = useState<number | null>(null)
 
   // Profile fields — loaded from Supabase, used by extension autofill
   // remoteOk/reloOk/startImmediately/hasTransportation/hasClearance are tri-state
@@ -146,7 +147,7 @@ export default function SettingsPage() {
       .then(d => {
         if (d) {
           setResumeCount(d.count ?? 0)
-          setResumeLimit(d.limit ?? 2)
+          setResumeLimit(d.limit ?? null)
           setDriveConnected(d.driveConnected ?? false)
         }
       })
@@ -324,7 +325,7 @@ export default function SettingsPage() {
                 </span>
               </div>
               <p style={{ fontSize: 12, color: "var(--text-soft)", marginTop: 2 }}>
-                7 tailors / week · {resumeLimit} resumes stored{driveConnected ? " (Drive connected)" : " · Connect Drive for 78"}
+                7 tailors / week · {resumeLimit == null ? "Unlimited" : resumeLimit} resumes stored{driveConnected ? " (Drive connected)" : ""}
               </p>
             </div>
           </div>
@@ -395,11 +396,12 @@ export default function SettingsPage() {
                 Stored on this server
               </span>
             </div>
-            <UsageMeter used={resumeCount} max={resumeLimit} warn={Math.floor(resumeLimit * 0.8)} danger={resumeLimit} />
-            {!driveConnected && (
-              <p style={{ fontSize: 11, color: "var(--text-soft)", marginTop: 6 }}>
-                Connect Google Drive in the section below to store up to 78 resumes in your own Drive — still free.
+            {resumeLimit == null ? (
+              <p style={{ fontSize: 13, color: "var(--text)", marginTop: 6 }}>
+                <span style={{ fontWeight: 700 }}>{resumeCount}</span> stored · <span style={{ fontWeight: 600, color: "var(--accent-txt)" }}>Unlimited</span>
               </p>
+            ) : (
+              <UsageMeter used={resumeCount} max={resumeLimit} warn={Math.floor(resumeLimit * 0.8)} danger={resumeLimit} />
             )}
           </div>
 

@@ -9,6 +9,7 @@ import ResumeBuilder from "./ResumeBuilder"
 import DocumentsClient from "../documents/DocumentsClient"
 import { IllustLibrary, IllustBuilder } from "@/components/Illustrations"
 import PageHeader from "@/components/layout/PageHeader"
+import { tailoredFilename, extractRoleCompany } from "@/lib/filename"
 
 // ── Recent tailored resumes (persisted to localStorage) ───────────────────────
 const RECENT_KEY = "mf_recent_tailors"
@@ -24,6 +25,11 @@ interface RecentTailor {
   scoreBefore: number | null
   jdSnippet: string
   tailoredAt: number
+  // Target job this resume was tailored FOR — drives the download filename so it
+  // reflects the role/company, not the source resume's original title.
+  targetRole?: string
+  targetCompany?: string
+  downloadName?: string
 }
 
 // Poll a background tailoring job until it finishes; returns the result object
@@ -218,15 +224,20 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
       try {
         const data = await pollJob(active.id!)
         if (cancelled) return
+        const sourceName = data.matched?.filename ?? "Resume"
+        const parsed = extractRoleCompany(active.jdSnippet ?? "")
         const entry: RecentTailor = {
           token: String(data.token ?? ""),
-          resumeName: data.matched?.filename ?? "Resume",
+          resumeName: sourceName,
           category: data.matched?.category ?? "",
           filepath: data.matched?.filepath ?? "",
           score: data.score ?? 80,
           scoreBefore: typeof data.score_before === "number" ? data.score_before : null,
           jdSnippet: active.jdSnippet ?? "",
           tailoredAt: Date.now(),
+          targetRole: parsed.role,
+          targetCompany: parsed.company,
+          downloadName: tailoredFilename({ sourceName, role: parsed.role, company: parsed.company }),
         }
         const prev: RecentTailor[] = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]")
         const updated = [entry, ...prev.filter(r => r.token !== entry.token)].slice(0, 3)
@@ -386,17 +397,26 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
 
       try { sessionStorage.setItem("careerkit_last_result", JSON.stringify(data)) } catch {}
 
+      // Resolve the TARGET role/company: prefer the job card that started this
+      // tailor, fall back to a best-effort parse of the pasted JD.
+      const parsed = extractRoleCompany(jd)
+      const targetRole = (prefillRole || parsed.role || "").trim()
+      const targetCompany = (prefillCompany || parsed.company || "").trim()
+      const sourceName = data.matched?.filename ?? activeResume?.filename ?? "Resume"
+      const downloadName = tailoredFilename({ sourceName, role: targetRole, company: targetCompany })
+
       // Persist to recent tailors library (survives navigation + tab close)
       try {
         const entry: RecentTailor = {
           token:      data.token,
-          resumeName: data.matched?.filename ?? activeResume?.filename ?? "Resume",
+          resumeName: sourceName,
           category:   data.matched?.category ?? activeResume?.category ?? "",
           filepath:   data.matched?.filepath  ?? activeResume?.filepath  ?? "",
           score:      data.score      ?? 80,
           scoreBefore: typeof data.score_before === "number" ? data.score_before : null,
           jdSnippet:  jd.trim().slice(0, 120),
           tailoredAt: Date.now(),
+          targetRole, targetCompany, downloadName,
         }
         const prev: RecentTailor[] = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]")
         const updated = [entry, ...prev.filter(r => r.token !== entry.token)].slice(0, 3)
@@ -423,6 +443,8 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
         resumeName: matched.filename ?? activeResume?.filename ?? "Resume",
         category:   matched.category ?? activeResume?.category ?? "",
         filepath:   matched.filepath ?? activeResume?.filepath ?? "",
+        role:       targetRole,
+        company:    targetCompany,
       })
       router.push(`/dashboard/resume/result?${params}`)
     } catch (e) {
@@ -700,15 +722,60 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                 style={!jd.trim() ? { opacity: 0.45 } : { boxShadow: "0 4px 20px var(--accent-shadow, rgba(99,102,241,.35))" }}
               >
                 {tailoring
-                  ? <><SpinIcon /> Tailoring your resume — usually under 20 seconds…</>
+                  ? <><SpinIcon /> Tailoring your resume — usually ~20s (up to a minute for a deep rewrite)…</>
                   : <><SparkIcon size={5} /> Tailor &amp; Generate Resume →</>
                 }
               </button>
 
             </div>
 
-            {/* ── RIGHT col (2/5): Library + 1-page + Sections + Recent ── */}
+            {/* ── RIGHT col (2/5): Upload + Library + 1-page + Sections + Recent ── */}
             <div className="lg:col-span-2 flex flex-col gap-3 anim-fade-up d-3">
+
+              {/* Quick upload — drop a new resume straight into the tailor flow
+                  without leaving for the Documents tab. Uploaded files are
+                  merged into allResumes and auto-selected for tailoring. */}
+              <div
+                onDragOver={e => { e.preventDefault(); setDragging(true) }}
+                onDragLeave={e => { e.preventDefault(); setDragging(false) }}
+                onDrop={e => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }}
+                className="rounded-2xl border-2 border-dashed transition-all"
+                style={{
+                  borderColor: dragging ? "var(--accent)" : "var(--border)",
+                  background: dragging ? "var(--accent-soft)" : "var(--surface)",
+                }}
+              >
+                <label className="flex items-center gap-3 px-4 py-3 cursor-pointer">
+                  <div className="flex-shrink-0" style={{ color: "var(--accent-txt)" }}><CloudIcon /></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>Upload a new resume</p>
+                    <p className="text-xs" style={{ color: "var(--text-soft)" }}>
+                      Drop or browse a .docx (or .zip) — it&apos;s added here and selected for tailoring.
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    accept=".docx,.zip"
+                    multiple
+                    className="hidden"
+                    onChange={e => { handleFiles(e.target.files); e.currentTarget.value = "" }}
+                  />
+                </label>
+                {uploaded.length > 0 && (
+                  <div className="border-t px-3 py-2 space-y-1.5" style={{ borderColor: "var(--border)" }}>
+                    {uploaded.map(u => (
+                      <div key={u.file.id} className="flex items-center gap-2 text-xs">
+                        <span className="flex-shrink-0" style={{ color: u.status === "error" ? "var(--warning)" : u.status === "ready" ? "var(--success)" : "var(--text-soft)" }}>
+                          {u.status === "scanning" ? <SpinIcon /> : u.status === "ready" ? <CheckIcon /> : "!"}
+                        </span>
+                        <span className="flex-1 truncate" style={{ color: "var(--text)" }}>{u.file.filename}</span>
+                        {u.status === "error" && <span className="truncate" style={{ color: "var(--warning)" }}>{u.errorMsg}</span>}
+                        {u.status === "ready" && <span style={{ color: "var(--success)" }}>ready</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Resume library — always visible, no collapse */}
               {(preloaded.length > 0 || initialFolders.length > 0) ? (
@@ -843,6 +910,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                 ) : (
                   <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                     {recentTailors.map(r => {
+                      const dlName = r.downloadName || tailoredFilename({ sourceName: r.resumeName, role: r.targetRole, company: r.targetCompany })
                       const params = new URLSearchParams({
                         token:       r.token,
                         score:       String(r.score),
@@ -850,6 +918,8 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                         resumeName:  r.resumeName,
                         category:    r.category,
                         filepath:    r.filepath,
+                        role:        r.targetRole ?? "",
+                        company:     r.targetCompany ?? "",
                       })
                       const minsAgo = Math.round((Date.now() - r.tailoredAt) / 60000)
                       const timeLabel = minsAgo < 1 ? "just now" : minsAgo < 60 ? `${minsAgo}m ago` : minsAgo < 1440 ? `${Math.round(minsAgo/60)}h ago` : `${Math.round(minsAgo/1440)}d ago`
@@ -871,8 +941,8 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                           </div>
                           <div className="flex flex-col gap-1.5 flex-shrink-0">
                             <a
-                              href={`/api/tailor/file?token=${r.token}&fmt=docx&name=${encodeURIComponent(r.resumeName)}`}
-                              download={`${r.resumeName}.docx`}
+                              href={`/api/tailor/file?token=${r.token}&fmt=docx&name=${encodeURIComponent(dlName)}`}
+                              download={`${dlName}.docx`}
                               className="text-[10px] font-bold px-2.5 py-1 rounded-lg border text-center"
                               style={{ borderColor: "var(--border)", color: "var(--text-soft)", background: "var(--surface-2)", textDecoration: "none" }}>
                               ↓ .docx

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { readFile } from "fs/promises"
+import { readPath } from "@/lib/storage"
 import path from "path"
 import { extractZones, type Edits, type Zones } from "@/lib/docx"
 import { adapt } from "@/lib/claude"
@@ -48,7 +48,8 @@ export async function POST(request: NextRequest) {
     if (!ALLOWED.some(a => resolved.startsWith(a))) {
       return NextResponse.json({ error: "That file is outside the resumes folder." }, { status: 403 })
     }
-    const buf = await readFile(resolved)
+    const buf = await readPath(resolved)
+    if (!buf) return NextResponse.json({ error: "That resume could not be read." }, { status: 404 })
     const zones = await extractZones(buf)
 
     // If a JD is supplied (and a key exists), pre-fill with the tailored content.

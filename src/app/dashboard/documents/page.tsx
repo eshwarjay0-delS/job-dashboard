@@ -3,11 +3,11 @@
 // Documents tab; now a real page at its own URL, scanning the SAME on-disk
 // resume folder and rendering the SAME DocumentsClient component the hub tab
 // uses — so the two stay perfectly in sync (add a file here, it shows there).
-import { readdir, stat, mkdir } from "fs/promises"
 import path from "path"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { USER_RESUMES_DIR } from "@/lib/paths"
+import { listFiles, statPath } from "@/lib/storage"
 import DocumentsClient from "./DocumentsClient"
 
 // Mirrors DocumentsClient's internal ResumeFile shape (it doesn't export the
@@ -32,42 +32,30 @@ function fileId(fullPath: string): string {
   return "f_" + (h >>> 0).toString(36)
 }
 
-async function scanDir(dir: string, category = ""): Promise<ResumeFile[]> {
-  let entries
-  try { entries = await readdir(dir, { withFileTypes: true }) } catch { return [] }
-  const tasks = entries
-    .filter(e => !e.name.startsWith("~$") && !e.name.startsWith(".") && e.name !== "_keywords.json")
-    .map(async (entry) => {
-      const fullPath = path.join(dir, entry.name)
-      if (entry.isDirectory()) {
-        const subCat = category ? `${category} / ${entry.name}` : entry.name
-        return scanDir(fullPath, subCat)
-      }
-      if (!entry.name.toLowerCase().endsWith(".docx")) return []
-      const info = await stat(fullPath)
-      return [{
-        id: fileId(fullPath),
-        filename: entry.name.replace(/\.docx$/i, ""),
-        filepath: fullPath,
-        category: category || "General",
-        size: formatSize(info.size),
-        uploadedAt: info.mtime.toISOString(),
-      }]
+// Files + folders derived from one recursive listing (R2-safe; empty folders kept
+// visible via ".keep" markers). Mirrors scanLibrary in the resume hub page.
+async function scanLibrary(dir: string): Promise<{ files: ResumeFile[]; folders: string[] }> {
+  const all = await listFiles(dir, { includeHidden: true })
+  const files: ResumeFile[] = []
+  const folders = new Set<string>()
+  for (const full of all) {
+    const rel = path.relative(dir, full)
+    const parts = rel.split(path.sep)
+    for (let i = 1; i < parts.length; i++) folders.add(parts.slice(0, i).join(" / "))
+    const base = parts[parts.length - 1]
+    if (base === "_keywords.json" || base.startsWith(".")) continue
+    if (!base.toLowerCase().endsWith(".docx")) continue
+    const info = await statPath(full)
+    files.push({
+      id: fileId(full),
+      filename: base.replace(/\.docx$/i, ""),
+      filepath: full,
+      category: parts.length > 1 ? parts.slice(0, -1).join(" / ") : "General",
+      size: info ? formatSize(info.size) : "",
+      uploadedAt: (info?.mtime ?? new Date()).toISOString(),
     })
-  return (await Promise.all(tasks)).flat()
-}
-
-async function listFolders(dir: string, base = ""): Promise<string[]> {
-  let entries
-  try { entries = await readdir(dir, { withFileTypes: true }) } catch { return [] }
-  const out: string[] = []
-  for (const e of entries) {
-    if (!e.isDirectory() || e.name.startsWith(".")) continue
-    const rel = base ? `${base} / ${e.name}` : e.name
-    out.push(rel)
-    out.push(...await listFolders(path.join(dir, e.name), rel))
   }
-  return out
+  return { files, folders: [...folders] }
 }
 
 export const dynamic = "force-dynamic"
@@ -78,9 +66,7 @@ export default async function DocumentsPage() {
   const userId = user?.id ?? "demo"
 
   const userDir = path.join(USER_RESUMES_DIR, userId)
-  await mkdir(userDir, { recursive: true }).catch(() => {})
-
-  const [files, folders] = await Promise.all([scanDir(userDir), listFolders(userDir)])
+  const { files, folders } = await scanLibrary(userDir)
 
   return (
     <div className="max-w-4xl mx-auto">

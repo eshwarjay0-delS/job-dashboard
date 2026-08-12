@@ -1,5 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server"
-import { readFile } from "fs/promises"
+import { readPath } from "@/lib/storage"
 import path from "path"
 import mammoth from "mammoth"
 import { RESUMES_LIB as RESUMES_DIR, USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
@@ -53,7 +53,8 @@ export async function GET(request: NextRequest) {
 
   let bodyHtml = ""
   try {
-    const buffer = await readFile(resolved)
+    const buffer = await readPath(resolved)
+    if (!buffer) throw new Error("not found")
     const result = await mammoth.convertToHtml({ buffer })
     bodyHtml = result.value || "<p>(This resume appears to be empty.)</p>"
   } catch (e) {
