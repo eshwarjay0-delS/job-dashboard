@@ -1,60 +1,62 @@
 /**
  * proxy.ts — Next.js 16 request interceptor (the convention that replaced
- * middleware.ts). This is the SINGLE source of truth for session refresh +
- * route gating. Do not re-add a middleware.ts file — Next 16 would run it
- * instead of this and silently change auth behavior.
+ * middleware.ts). SINGLE source of truth for session refresh + light routing.
+ * Do NOT re-add a middleware.ts file — Next 16 would run it instead of this.
+ *
+ * RESILIENCE: this runs on EVERY request, so it must never throw — a crash here
+ * returns 500 (MIDDLEWARE_INVOCATION_FAILED) for the whole site. When Supabase
+ * isn't configured (or its call errors), we skip auth and let the request through
+ * (the app runs open / demo mode) instead of taking the site down.
  */
 
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          )
-        },
-      },
-    },
-  )
-
-  // Refresh the session if expired — required for Server Components to read it.
-  const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
 
-  // Carry the refreshed auth cookies onto any redirect we issue.
-  const redirectTo = (pathname: string) => {
+  const redirect = (pathname: string, cookies?: NextResponse) => {
     const url = request.nextUrl.clone()
     url.pathname = pathname
     url.search = ""
     const res = NextResponse.redirect(url)
-    supabaseResponse.cookies.getAll().forEach(c => res.cookies.set(c.name, c.value))
+    cookies?.cookies.getAll().forEach(c => res.cookies.set(c.name, c.value))
     return res
   }
 
-  // Gate the app: only signed-in users reach the dashboard. Teammates sign in
-  // (Google or magic link) so their resumes land in their own per-user folder.
-  if (!user && path.startsWith("/dashboard")) return redirectTo("/login")
+  // Nice default: land on the tailoring surface.
+  if (path === "/dashboard") return redirect("/dashboard/resume")
 
-  // Launch default: land on resume tailoring (the only shipped surface for now).
-  if (path === "/dashboard") return redirectTo("/dashboard/resume")
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Supabase not configured → do nothing (open app). Never crash the site.
+  if (!supabaseUrl || !supabaseKey) return NextResponse.next()
 
-  // Signed-in users skip the auth screens.
-  if (user && (path === "/login" || path === "/signup")) return redirectTo("/dashboard/resume")
+  try {
+    let res = NextResponse.next({ request })
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          res = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) => res.cookies.set(name, value, options))
+        },
+      },
+    })
 
-  return supabaseResponse
+    // Best-effort session refresh (keeps the token alive for Server Components).
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // Signed-in users skip the auth screens. The app is otherwise OPEN — no login
+    // gate — so an unauthenticated visitor still reaches the tailoring flow (demo).
+    if (user && (path === "/login" || path === "/signup")) return redirect("/dashboard/resume", res)
+
+    return res
+  } catch {
+    // Any Supabase/edge error must NOT 500 the whole site.
+    return NextResponse.next()
+  }
 }
 
 // Run on all paths except static assets and the OAuth/auth callback (which must
