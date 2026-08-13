@@ -1,5 +1,17 @@
 # MarketFit — Single Project Tracker (`todo.md`)
 
+## 2026-08-12 — Remote finally added (no code changes this entry)
+
+**No UI/code signature — pure git infra.** Eshwar provided a GitHub repo URL
+(`https://github.com/eshwarjay0-delS/job-dashboard`); ran `git remote add origin ...` and
+`git push -u origin master`. All 5 existing local commits (scaffold → resume-tailoring engine →
+extension → dashboard → Phase 2 job matching → serverless/tailoring hardening) are now pushed and
+`master` tracks `origin/master`. This closes the "zero git history beyond scaffold, no remote,
+nothing durable" gap called out in CLAUDE.md's standing rule — history now survives outside this
+machine. `gh` CLI is not authenticated in this environment, so PR/issue creation via `gh` won't work
+until Eshwar runs `gh auth login` himself. Not verified: whether the GitHub repo had any pre-existing
+content (push was a clean fast-forward with no conflicts, so assumed empty/matching).
+
 ## ⚠️ 2026-07-09 (Claude Code, separate session — read this before the "Roadmap kickoff" entry below) — CONCURRENT-SESSION WARNING + independent Tsenta-parity work
 
 **This ran in parallel with the "Roadmap kickoff" session below, from a different trigger (Eshwar showed this
