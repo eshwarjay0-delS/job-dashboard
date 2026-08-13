@@ -185,13 +185,18 @@ function isNotFound(e: unknown): boolean {
 }
 class R2Storage implements Blob {
   private s3: S3Client
-  constructor(private bucket: string, accountId: string, accessKeyId: string, secretAccessKey: string) {
+  constructor(bucket: string, accountId: string, accessKeyId: string, secretAccessKey: string) {
+    // Trim every value: a stray newline/space from pasting into a hosting dashboard's
+    // env field would otherwise land in the SigV4 `authorization` header and make the
+    // S3 client throw `ERR_INVALID_CHAR ["authorization"]` on every request.
+    this.bucket = bucket.trim()
     this.s3 = new S3Client({
       region: "auto",
-      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-      credentials: { accessKeyId, secretAccessKey },
+      endpoint: `https://${accountId.trim()}.r2.cloudflarestorage.com`,
+      credentials: { accessKeyId: accessKeyId.trim(), secretAccessKey: secretAccessKey.trim() },
     })
   }
+  private bucket: string
   private norm(key: string): string { return safeSegments(key).join("/") }
   async put(key: string, data: Buffer | string): Promise<void> {
     await this.s3.send(new PutObjectCommand({
