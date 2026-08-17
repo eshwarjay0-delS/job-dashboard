@@ -32,28 +32,6 @@ interface RecentTailor {
   downloadName?: string
 }
 
-// Poll a background tailoring job until it finishes; returns the result object
-// (same shape the old synchronous /api/tailor returned). Throws on error/timeout.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function pollJob(id: string, onTick?: (status: string) => void): Promise<any> {
-  for (let i = 0; i < 160; i++) {            // ~6.5 min ceiling
-    try {
-      const res = await fetch(`/api/tailor/status?id=${encodeURIComponent(id)}`)
-      if (res.ok) {
-        const job = await res.json()
-        onTick?.(job.status)
-        if (job.status === "done") return job.result
-        if (job.status === "error") throw new Error(job.error || "Generation failed")
-      }
-    } catch (e) {
-      if (String(e).includes("Generation failed")) throw e
-      // transient network blip — keep polling
-    }
-    await new Promise(r => setTimeout(r, 2500))
-  }
-  throw new Error("Timed out waiting for the tailored resume.")
-}
-
 // ── Icons ──────────────────────────────────────────────────────────────────────
 function CloudIcon() {
   return (
@@ -208,50 +186,11 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
     } catch {}
   }, [])
 
-  // Recover a tailoring job that was still running when the user navigated away:
-  // poll it to completion in the background and drop the finished resume into
-  // Recent tailors so it's waiting for them on return.
+  // The background-job flow was removed (it couldn't complete on serverless —
+  // Vercel freezes a function once it responds). Clear any stale job pointer a
+  // previous version may have left so it doesn't trigger a phantom poll on mount.
   useEffect(() => {
-    let cancelled = false
-    let raw: string | null = null
-    try { raw = localStorage.getItem(ACTIVE_JOB_KEY) } catch {}
-    if (!raw) return
-    let active: { id?: string; jdSnippet?: string } = {}
-    try { active = JSON.parse(raw) } catch {}
-    if (!active.id) return
-    setNotice("Picking up a resume you started earlier…")
-    ;(async () => {
-      try {
-        const data = await pollJob(active.id!)
-        if (cancelled) return
-        const sourceName = data.matched?.filename ?? "Resume"
-        const parsed = extractRoleCompany(active.jdSnippet ?? "")
-        const entry: RecentTailor = {
-          token: String(data.token ?? ""),
-          resumeName: sourceName,
-          category: data.matched?.category ?? "",
-          filepath: data.matched?.filepath ?? "",
-          score: data.score ?? 80,
-          scoreBefore: typeof data.score_before === "number" ? data.score_before : null,
-          jdSnippet: active.jdSnippet ?? "",
-          tailoredAt: Date.now(),
-          targetRole: parsed.role,
-          targetCompany: parsed.company,
-          downloadName: tailoredFilename({ sourceName, role: parsed.role, company: parsed.company }),
-        }
-        const prev: RecentTailor[] = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]")
-        const updated = [entry, ...prev.filter(r => r.token !== entry.token)].slice(0, 3)
-        localStorage.setItem(RECENT_KEY, JSON.stringify(updated))
-        setRecentTailors(updated)
-        try { sessionStorage.setItem("careerkit_last_result", JSON.stringify(data)) } catch {}
-        setNotice("✓ Your tailored resume is ready — open it from Recent tailors below.")
-      } catch {
-        /* failed or timed out — drop the pointer below so we don't loop forever */
-      } finally {
-        try { localStorage.removeItem(ACTIVE_JOB_KEY) } catch {}
-      }
-    })()
-    return () => { cancelled = true }
+    try { localStorage.removeItem(ACTIVE_JOB_KEY) } catch {}
   }, [])
 
   const allResumes: ResumeFile[] = [
@@ -377,23 +316,23 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
       const filepath = autoSelect ? "" : (activeResume?.filepath ?? "")
       try { sessionStorage.setItem("careerkit_one_page", onePage ? "1" : "0") } catch {}
 
-      // Start generation in the BACKGROUND so it survives navigation, then poll it.
-      const startRes = await fetch("/api/tailor/start", {
+      // Generate SYNCHRONOUSLY — one request that returns the finished result.
+      // The old background flow (/api/tailor/start + poll /api/tailor/status) can't
+      // work on serverless (Vercel): the function is frozen the moment it responds,
+      // so the "background" generation never ran and the poll hung forever. The sync
+      // route completes the whole tailor inside one request, which works on both
+      // localhost and Vercel.
+      const res = await fetch("/api/tailor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jd: jd.trim(), filepath, claudeKey, onePage, sections, mode }),
       })
-      const startData = await startRes.json().catch(() => ({}))
-      if (!startRes.ok || !startData.id) {
-        setErr(startData.error ?? `Tailoring failed (HTTP ${startRes.status})`)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.token) {
+        setErr(data.error ?? `Tailoring failed (HTTP ${res.status})`)
         setTailoring(false)
         return
       }
-      // Remember the in-flight job — if the user leaves now, it's recovered on return.
-      try { localStorage.setItem(ACTIVE_JOB_KEY, JSON.stringify({ id: startData.id, jdSnippet: jd.trim().slice(0, 120), startedAt: Date.now() })) } catch {}
-
-      const data = await pollJob(startData.id)
-      try { localStorage.removeItem(ACTIVE_JOB_KEY) } catch {}
 
       try { sessionStorage.setItem("careerkit_last_result", JSON.stringify(data)) } catch {}
 

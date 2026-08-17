@@ -7,6 +7,9 @@ import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
 import { checkRateLimit, clientIp } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
+// Tailoring runs the full model ladder in one request; give it the max window a
+// Vercel Hobby function allows (default is far shorter and would cut long runs off).
+export const maxDuration = 60
 
 // Unlimited by default (personal use). Set TAILOR_WEEKLY_LIMIT>0 in .env to cap.
 const TAILOR_WEEKLY_LIMIT = Number(process.env.TAILOR_WEEKLY_LIMIT ?? 0)
