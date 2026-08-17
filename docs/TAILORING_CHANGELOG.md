@@ -97,4 +97,27 @@ what was missing, and the fix. Bump the version when the *method* changes (not p
   R2_* env vars in Vercel → push repo to GitHub → connect Vercel + set all env (Anthropic/
   OpenRouter/Supabase/R2). Then it's always-on, no laptop.
 
+### 2026-08-13 — VERCEL DEPLOY LIVE + hardening (job-dashboard-fawn.vercel.app)
+- The app is now **fully working on Vercel** (not just localhost), verified end-to-end
+  against production: upload → R2 (durable) → tailor (Anthropic) → download valid .docx.
+  OT/ICS JD + OT Security resume: **score 82 → 98**, keywords (SCADA, SIEM, Purdue, NIST,
+  IEC 62443, incident response) all present in the downloaded .docx.
+- Four deploy blockers found + fixed (each was a real 500, verified live before/after):
+  1. **proxy.ts** threw when Supabase env absent → `MIDDLEWARE_INVOCATION_FAILED` site-wide.
+     Fix: guard missing env + try/catch → app runs open/demo instead of crashing.
+  2. **supabase/server.ts** `createClient()` threw "supabaseUrl is required" → every SSR
+     route 500. Fix: return a no-session stub client when env absent.
+  3. **supabase/client.ts** `createBrowserClient()` threw "Your project's URL and API key
+     are required" → every client page crashed ("This page couldn't load"). Same stub fix.
+  4. **storage.ts R2Storage** passed `R2_ACCESS_KEY_ID` to the SigV4 signer UN-trimmed; a
+     trailing newline/space pasted into Vercel's env field landed in the `authorization`
+     header → `ERR_INVALID_CHAR ["authorization"]` on every R2 op (upload 500, tailor
+     "failed"). Fix: `.trim()` all four R2 values in the constructor.
+- **Debugging method that cracked it:** a temporary `/api/diag` endpoint reporting env-var
+  PRESENCE + header-safety (never values) + an isolated 1-token Anthropic ping. It proved
+  the Anthropic key was clean (ping 200) and that R2_ACCESS_KEY_ID had surrounding
+  whitespace — turning "still can't tailor" from guesswork into a pinpoint. Removed after.
+- **Env-var gotchas for the user:** Vercel does NOT auto-apply env changes — must redeploy;
+  vars must be ticked for **Production**; paste keys as a single line (no trailing newline).
+
 <!-- Add each new run below: date · domain · resume · coverage · model · gaps · fix -->
