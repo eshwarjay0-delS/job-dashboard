@@ -255,7 +255,17 @@ export async function runTailor(opts: {
   // 429 quota wall), we fall through to the NEXT model instead of failing the whole
   // tailor. Once we have a draft, remaining models are single escalation redrafts that
   // target the still-missing terms; stop on target-hit or plateau. Quick mode = one draw.
-  const BEST_OF = opts.mode === "quick" ? 1 : Math.max(1, Math.min(5, Number(process.env.TAILOR_BEST_OF ?? 3)))
+  // best-of default 2 (was 3): 3 parallel Claude calls per tailor + a Sonnet redraft
+  // could fire up to 6 calls, tripping Anthropic's per-minute rate limit after a couple
+  // of runs (which throttles later calls until a run crosses Vercel's 60s function
+  // limit → 504, no result). 2 keeps most of the consistency benefit at 2/3 the load.
+  const BEST_OF = opts.mode === "quick" ? 1 : Math.max(1, Math.min(5, Number(process.env.TAILOR_BEST_OF ?? 2)))
+  // Wall-clock budget: never START a model call that can't finish before the serverless
+  // function is killed. TAILOR_MAX_MS (< Vercel's 60s) minus one per-call timeout is the
+  // latest we may begin an escalation redraft; past that we return the best draft so far.
+  const t0 = Date.now()
+  const TAILOR_MAX_MS = Number(E.TAILOR_MAX_MS) || 52000
+  const CALL_MS = Number(E.LLM_CALL_TIMEOUT_MS) || 35000
   let best: Pass | null = null
   let usedModel = ""
   for (const step of steps) {
@@ -271,6 +281,9 @@ export async function runTailor(opts: {
       if (opts.mode === "quick") break
     } else {
       // Escalation: single redraft targeting the gap. Errors here are non-fatal.
+      // Skip it if there isn't enough time left for a full call before the deadline —
+      // returning the current best beats 504-ing on a call that can't finish in time.
+      if (Date.now() - t0 > TAILOR_MAX_MS - CALL_MS) break
       if (best.cov >= TARGET && (!summaryWanted || (best.edits.summary || "").trim())) break
       const wantSummary = summaryWanted && !(best.edits.summary || "").trim()
       const extra = injectFor(best.afterKw, wantSummary)

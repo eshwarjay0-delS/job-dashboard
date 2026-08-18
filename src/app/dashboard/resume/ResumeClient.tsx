@@ -322,14 +322,29 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
       // so the "background" generation never ran and the poll hung forever. The sync
       // route completes the whole tailor inside one request, which works on both
       // localhost and Vercel.
-      const res = await fetch("/api/tailor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jd: jd.trim(), filepath, claudeKey, onePage, sections, mode }),
-      })
+      // Hard client timeout so the spinner can NEVER hang forever. The server returns
+      // (or Vercel 504s) by ~60s; abort a bit after that as a final safety net.
+      const ctrl = new AbortController()
+      const timeout = setTimeout(() => ctrl.abort(), 75000)
+      let res: Response
+      try {
+        res = await fetch("/api/tailor", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jd: jd.trim(), filepath, claudeKey, onePage, sections, mode }),
+          signal: ctrl.signal,
+        })
+      } finally {
+        clearTimeout(timeout)
+      }
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.token) {
-        setErr(data.error ?? `Tailoring failed (HTTP ${res.status})`)
+        const msg = res.status === 504 || res.status === 408
+          ? "That rewrite took too long and timed out. Try again, or switch to Quick mode for a faster pass."
+          : res.status === 429
+          ? (data.error ?? "Too many requests in a short window — wait about a minute, then try again.")
+          : (data.error ?? `Tailoring failed (HTTP ${res.status})`)
+        setErr(msg)
         setTailoring(false)
         return
       }
@@ -387,7 +402,10 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
       })
       router.push(`/dashboard/resume/result?${params}`)
     } catch (e) {
-      setErr("Network error while tailoring: " + String(e))
+      const aborted = e instanceof DOMException && e.name === "AbortError"
+      setErr(aborted
+        ? "That took too long and timed out. Try again, or use Quick mode for a faster pass."
+        : "Network error while tailoring: " + String(e))
       setTailoring(false)
     }
   }

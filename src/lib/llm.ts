@@ -84,6 +84,15 @@ interface CallOpts {
   temperature?: number
 }
 
+// Hard per-call timeout. Without it, a throttled/hung provider request has no
+// deadline and can consume the entire serverless function budget (Vercel kills the
+// whole request at 60s → the user gets nothing). Aborting a single slow call lets
+// best-of pick a surviving draw and the ladder fall through, instead of hanging.
+const LLM_CALL_TIMEOUT_MS = Number(process.env.LLM_CALL_TIMEOUT_MS) || 35000
+function callSignal(): AbortSignal {
+  return AbortSignal.timeout(LLM_CALL_TIMEOUT_MS)
+}
+
 // One LLM call. Returns the assistant text plus which provider/model served it.
 // Throws Error("<Provider> API <status>: …") on a non-2xx.
 export async function callLLM(opts: CallOpts): Promise<{ text: string; provider: Provider; model: string }> {
@@ -104,6 +113,7 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
 async function callAnthropic(key: string, model: string, o: CallOpts, msgs: ChatMessage[]): Promise<string> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
+    signal: callSignal(),
     headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
     body: JSON.stringify({
       model, max_tokens: o.maxTokens,
@@ -122,6 +132,7 @@ async function callOpenRouter(key: string, model: string, o: CallOpts, msgs: Cha
   const cap = Math.min(o.maxTokens, Number(process.env.OPENROUTER_MAX_TOKENS) || 2048)
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
+    signal: callSignal(),
     headers: { "authorization": `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
     body: JSON.stringify({
       model, max_tokens: cap,
@@ -146,6 +157,7 @@ async function callGemini(key: string, model: string, o: CallOpts, msgs: ChatMes
   }))
   const res = await fetch(url, {
     method: "POST",
+    signal: callSignal(),
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       system_instruction: { parts: [{ text: o.system }] },
