@@ -363,10 +363,15 @@ function ResultContent() {
     if (!tok) { setPreviewLoading(false); return }
     setPreviewLoading(true)
     try {
-      const res = await fetch(`/api/tailor/file?token=${encodeURIComponent(tok)}&fmt=preview&name=${encodeURIComponent(resumeName)}`)
+      // AbortSignal.timeout so a hung preview fetch can't leave the pane spinning
+      // forever; the finally always clears the loading flag.
+      const res = await fetch(
+        `/api/tailor/file?token=${encodeURIComponent(tok)}&fmt=preview&name=${encodeURIComponent(resumeName)}`,
+        { signal: AbortSignal.timeout(30000) },
+      )
       setPreviewHtml(await res.text())
     } catch { setPreviewHtml("") }
-    setPreviewLoading(false)
+    finally { setPreviewLoading(false) }
   }, [resumeName])
 
   useEffect(() => { loadPreview(token) }, [token, loadPreview])

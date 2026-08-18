@@ -322,10 +322,12 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
       // so the "background" generation never ran and the poll hung forever. The sync
       // route completes the whole tailor inside one request, which works on both
       // localhost and Vercel.
-      // Hard client timeout so the spinner can NEVER hang forever. The server returns
-      // (or Vercel 504s) by ~60s; abort a bit after that as a final safety net.
+      // Hard client timeout so the spinner can NEVER hang forever. The server budget is
+      // ~52s and Vercel 504s by 60s, so a real response always arrives by ~60s; abort
+      // just past that as a final safety net (a genuinely hung network fetch is the only
+      // way to reach here, and it must not spin indefinitely).
       const ctrl = new AbortController()
-      const timeout = setTimeout(() => ctrl.abort(), 75000)
+      const timeout = setTimeout(() => ctrl.abort(), 65000)
       let res: Response
       try {
         res = await fetch("/api/tailor", {
@@ -406,6 +408,9 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
       setErr(aborted
         ? "That took too long and timed out. Try again, or use Quick mode for a faster pass."
         : "Network error while tailoring: " + String(e))
+    } finally {
+      // Guarantee the spinner NEVER stays stuck: every exit path clears it, so the
+      // button can't get left disabled (which reads as "the page froze / did nothing").
       setTailoring(false)
     }
   }
@@ -673,6 +678,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
 
               {/* Generate button */}
               <button
+                type="button"
                 onClick={doTailor}
                 disabled={tailoring || !jd.trim()}
                 className="btn-accent w-full py-4 flex items-center justify-center gap-2.5 text-base font-bold rounded-2xl"
