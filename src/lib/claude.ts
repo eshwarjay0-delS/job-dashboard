@@ -1,5 +1,5 @@
 ﻿import type { Edits, Zones } from "./docx"
-import { callLLM, type LlmKeys, type ProviderPref } from "./llm"
+import { callLLM, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { fixHavingOpener, clampSummary } from "./resume/rules"
 
 const RULES = `You RETARGET an existing resume to ONE job by REWRITING its existing lines IN PLACE.
@@ -115,6 +115,8 @@ export async function adapt(opts: {
   // Force a specific Claude model for this pass (the tailoring escalation ladder
   // uses this to retry a low-coverage result on a stronger model).
   model?: string
+  // Collects per-call token usage so the caller can total a tailor's real cost.
+  usageSink?: TokenUsage[]
 }): Promise<Edits> {
   // Output ceiling — the edit JSON fits well under this. (OpenRouter is clamped lower
   // inside the provider layer.)
@@ -171,9 +173,14 @@ export async function adapt(opts: {
   const quickLine = opts.mode === "quick"
     ? `\n\nQUICK MODE: do a fast, focused pass — rewrite the headline, summary, the top 2-3 skill lines, and the 5-6 strongest bullets in the CURRENT role only. Skip marginal edits; speed over exhaustiveness.`
     : ""
+  // The RESUME + the candidate's fixed experience-length are STABLE across every JD, so
+  // they go in a cached block (cacheContext). Only the JD-derived hints + user prefs vary
+  // per call → tailoring the same resume against many JDs re-reads the resume at ~10% cost.
+  const cacheContext =
+    `RESUME LINES TO EDIT (each [idx] is stable — return only what you change):\n${lines.slice(0, 11000)}${yoeLine}`
   const user =
-    `JOB DESCRIPTION:\n${opts.jd.slice(0, 4000)}${idLine}${kwLine}${yoeLine}${onePageLine}${quickLine}\n\n` +
-    `RESUME LINES TO EDIT (each [idx] is stable — return only what you change):\n${lines.slice(0, 11000)}${pref}\n\nReturn the rewrite JSON.`
+    `JOB DESCRIPTION:\n${opts.jd.slice(0, 4000)}${idLine}${kwLine}${onePageLine}${quickLine}${pref}\n\n` +
+    `Using the resume lines provided, return the rewrite JSON (only the [idx] lines you change).`
 
   // Try twice: a one-off malformed reply no longer fails the whole tailoring.
   let lastErr: unknown = null
@@ -182,7 +189,7 @@ export async function adapt(opts: {
     try {
       // Low temperature → CONSISTENT keyword coverage & escalation decisions run-to-run
       // (default sampling swung 93–98% coverage and 25–73s on identical input).
-      text = (await callLLM({ keys: opts.keys, tier: opts.mode === "quick" ? "light" : "heavy", pref: opts.pref, system: RULES, user, maxTokens: cap, model: opts.model, temperature: 0.2 })).text
+      text = (await callLLM({ keys: opts.keys, tier: opts.mode === "quick" ? "light" : "heavy", pref: opts.pref, system: RULES, cacheContext, user, maxTokens: cap, model: opts.model, temperature: 0.2, usageSink: opts.usageSink })).text
     } catch (e) {
       lastErr = e
       // Auth / bad-request errors won't fix themselves on retry.

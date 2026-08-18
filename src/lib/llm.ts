@@ -68,11 +68,20 @@ export function pickProvider(keys: LlmKeys, tier: Tier, pref: ProviderPref = "au
 
 export type ChatMessage = { role: "user" | "assistant"; content: string }
 
+// Token accounting for one call. cacheRead tokens bill at ~10% of input, so a high
+// cacheRead share on repeat tailors of the same resume is the main cost win.
+export type TokenUsage = { input: number; output: number; cacheRead: number; cacheWrite: number }
+
 interface CallOpts {
   keys: LlmKeys; tier: Tier; pref?: ProviderPref; system: string; maxTokens: number
   // Either a plain user string OR a multi-turn messages array. Prefer `messages` for chat.
   user?: string
   messages?: ChatMessage[]
+  // Stable, reusable context (e.g. the resume being tailored) placed in a SEPARATE
+  // cached block after the system prompt. Anthropic caches [system + cacheContext] as
+  // one prefix, so tailoring the SAME resume against many JDs re-reads it at ~10% cost
+  // instead of re-sending it every time. Other providers just append it to the system.
+  cacheContext?: string
   // Force a specific model (used by the tailoring escalation ladder). Applied only
   // when the resolved provider is Anthropic and the id looks like a Claude model —
   // an OpenRouter/Gemini call can't run a bare "claude-*" id, so it falls back to
@@ -82,6 +91,9 @@ interface CallOpts {
   // escalation decision are CONSISTENT run-to-run (default sampling gave 93–98%
   // coverage and 25–73s swings on identical input). Omit for chatty/creative uses.
   temperature?: number
+  // Optional sink: each call pushes its token usage here so the caller can total the
+  // real cost of a whole tailor (and prove the cache is working).
+  usageSink?: TokenUsage[]
 }
 
 // Hard per-call timeout. Without it, a throttled/hung provider request has no
@@ -111,6 +123,15 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
 }
 
 async function callAnthropic(key: string, model: string, o: CallOpts, msgs: ChatMessage[]): Promise<string> {
+  // Two cached blocks: the stable RULES prompt AND (when present) the resume. Both are
+  // re-read at ~10% cost on the next call that shares the same prefix — which is every
+  // subsequent tailor of the SAME resume, the common batch-applying workflow.
+  const system = o.cacheContext
+    ? [
+        { type: "text", text: o.system, cache_control: { type: "ephemeral" } },
+        { type: "text", text: o.cacheContext, cache_control: { type: "ephemeral" } },
+      ]
+    : [{ type: "text", text: o.system, cache_control: { type: "ephemeral" } }]
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     signal: callSignal(),
@@ -118,12 +139,19 @@ async function callAnthropic(key: string, model: string, o: CallOpts, msgs: Chat
     body: JSON.stringify({
       model, max_tokens: o.maxTokens,
       ...(o.temperature != null ? { temperature: o.temperature } : {}),
-      system: [{ type: "text", text: o.system, cache_control: { type: "ephemeral" } }],
+      system,
       messages: msgs.map(m => ({ role: m.role, content: m.content })),
     }),
   })
   if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
+  const u = data.usage || {}
+  o.usageSink?.push({
+    input: u.input_tokens || 0,
+    output: u.output_tokens || 0,
+    cacheRead: u.cache_read_input_tokens || 0,
+    cacheWrite: u.cache_creation_input_tokens || 0,
+  })
   return (data.content || []).map((b: { text?: string }) => b.text || "").join("")
 }
 
@@ -138,13 +166,15 @@ async function callOpenRouter(key: string, model: string, o: CallOpts, msgs: Cha
       model, max_tokens: cap,
       ...(o.temperature != null ? { temperature: o.temperature } : {}),
       messages: [
-        { role: "system", content: o.system },
+        { role: "system", content: o.cacheContext ? `${o.system}\n\n${o.cacheContext}` : o.system },
         ...msgs.map(m => ({ role: m.role, content: m.content })),
       ],
     }),
   })
   if (!res.ok) throw new Error(`OpenRouter API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
+  const u = data.usage || {}
+  o.usageSink?.push({ input: u.prompt_tokens || 0, output: u.completion_tokens || 0, cacheRead: 0, cacheWrite: 0 })
   return data.choices?.[0]?.message?.content || ""
 }
 
@@ -160,13 +190,15 @@ async function callGemini(key: string, model: string, o: CallOpts, msgs: ChatMes
     signal: callSignal(),
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      system_instruction: { parts: [{ text: o.system }] },
+      system_instruction: { parts: [{ text: o.cacheContext ? `${o.system}\n\n${o.cacheContext}` : o.system }] },
       contents,
       generationConfig: { maxOutputTokens: o.maxTokens, temperature: o.temperature ?? 0.7 },
     }),
   })
   if (!res.ok) throw new Error(`Gemini API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
+  const m = data.usageMetadata || {}
+  o.usageSink?.push({ input: m.promptTokenCount || 0, output: m.candidatesTokenCount || 0, cacheRead: m.cachedContentTokenCount || 0, cacheWrite: 0 })
   const parts = data.candidates?.[0]?.content?.parts || []
   return parts.map((p: { text?: string }) => p.text || "").join("")
 }

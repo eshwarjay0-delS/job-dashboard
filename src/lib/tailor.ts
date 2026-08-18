@@ -5,7 +5,7 @@ import { extractText, extractZones, applyRewrites, capRoleBullets, type Edits, t
 import { adapt } from "./claude"
 import { recentFeedback } from "./feedback"
 import { matchByKeywords, extractKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
-import type { LlmKeys, ProviderPref } from "./llm"
+import type { LlmKeys, ProviderPref, TokenUsage } from "./llm"
 
 export interface TailorResult {
   token: string
@@ -34,6 +34,16 @@ export interface TailorResult {
   diff: { section: string; before: string; after: string }[]
   cached?: boolean
   elapsed_ms?: number
+  // Real token accounting for this tailor (proof the cache is working). estCostUSD is
+  // approximate — priced at Haiku 4.5 rates; cacheReadTokens bill at ~1/10th of input.
+  usage?: {
+    calls: number
+    inputTokens: number
+    outputTokens: number
+    cacheReadTokens: number
+    cacheWriteTokens: number
+    estCostUSD: number
+  }
 }
 
 // ── helpers (moved out of the route so the background worker can reuse them) ───
@@ -232,7 +242,7 @@ export async function runTailor(opts: {
   // coverage, stalling the climb).
   const draftPass = async (step: { pref: ProviderPref; model?: string }, extraPrefs: string[]): Promise<Pass> => {
     const prefs = [...allPrefs, ...extraPrefs].filter(Boolean)
-    const raw = await adapt({ keys: opts.keys, pref: step.pref, jd, zones, preferences: prefs.join("; "), jdKeywords: jdKws, onePage: opts.onePage, mode: opts.mode, model: step.model })
+    const raw = await adapt({ keys: opts.keys, pref: step.pref, jd, zones, preferences: prefs.join("; "), jdKeywords: jdKws, onePage: opts.onePage, mode: opts.mode, model: step.model, usageSink })
     return applyEdits(scopeEdits(raw))
   }
 
@@ -255,11 +265,13 @@ export async function runTailor(opts: {
   // 429 quota wall), we fall through to the NEXT model instead of failing the whole
   // tailor. Once we have a draft, remaining models are single escalation redrafts that
   // target the still-missing terms; stop on target-hit or plateau. Quick mode = one draw.
-  // best-of default 2 (was 3): 3 parallel Claude calls per tailor + a Sonnet redraft
-  // could fire up to 6 calls, tripping Anthropic's per-minute rate limit after a couple
-  // of runs (which throttles later calls until a run crosses Vercel's 60s function
-  // limit → 504, no result). 2 keeps most of the consistency benefit at 2/3 the load.
-  const BEST_OF = opts.mode === "quick" ? 1 : Math.max(1, Math.min(5, Number(process.env.TAILOR_BEST_OF ?? 2)))
+  // best-of default 1 (was 3→2): each extra draw is another full-price Claude call. One
+  // front-loaded draw + the conditional escalation below already lands high coverage on
+  // domain-matched resumes, so best-of-1 is the cheapest default AND the lightest on the
+  // rate limit. Raise TAILOR_BEST_OF (2-3) only if you want tighter run-to-run variance.
+  const BEST_OF = opts.mode === "quick" ? 1 : Math.max(1, Math.min(5, Number(process.env.TAILOR_BEST_OF ?? 1)))
+  // Collect every call's token usage so we can report the real cost of this tailor.
+  const usageSink: TokenUsage[] = []
   // Wall-clock budget: never START a model call that can't finish before the serverless
   // function is killed. TAILOR_MAX_MS (< Vercel's 60s) minus one per-call timeout is the
   // latest we may begin an escalation redraft; past that we return the best draft so far.
@@ -353,11 +365,22 @@ export async function runTailor(opts: {
     if (changed(bl.text || "", b)) diff.push({ section: "Experience", before: b, after: bl.text.trim() })
   }
 
+  // Total the real token usage across every model call this tailor made. Anthropic
+  // reports cached prefix tokens under cacheRead (~1/10th the price of fresh input),
+  // so a high cacheRead share = the resume+RULES cache paying off on repeat tailors.
+  const uAgg = usageSink.reduce(
+    (a, u) => ({ input: a.input + u.input, output: a.output + u.output, cacheRead: a.cacheRead + u.cacheRead, cacheWrite: a.cacheWrite + u.cacheWrite }),
+    { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+  )
+  // Approx Haiku 4.5 rates ($/M): input 1.00, output 5.00, cache write 1.25, cache read 0.10.
+  const estCostUSD = Math.round((uAgg.input * 1 + uAgg.output * 5 + uAgg.cacheWrite * 1.25 + uAgg.cacheRead * 0.1) / 1e6 * 1e5) / 1e5
+
   const result: TailorResult = {
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,
     ranked_candidates: rankedCandidates, what_changed: whatChanged(edits), edits, notes,
     applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff,
     cached: false, elapsed_ms: Date.now() - started,
+    usage: { calls: usageSink.length, inputTokens: uAgg.input, outputTokens: uAgg.output, cacheReadTokens: uAgg.cacheRead, cacheWriteTokens: uAgg.cacheWrite, estCostUSD },
   }
 
   await blob.put(cacheKey, JSON.stringify(result)).catch(() => {})
