@@ -292,7 +292,13 @@ export async function runTailor(opts: {
       usedModel = `${step.label ?? String(step.pref)}${BEST_OF > 1 && draws.length > 1 ? ` (best of ${draws.length})` : ""}`
       if (opts.mode === "quick") break
     } else {
-      // Escalation: single redraft targeting the gap. Errors here are non-fatal.
+      // Coverage-climbing escalation (base → Sonnet → Opus) is OPT-IN via TAILOR_CLIMB=1.
+      // By default the base pass IS the result. Climbing added a slow ~35s Sonnet redraft
+      // for usually only a few % coverage, which made runs swing between ~17s and ~55-80s
+      // and pushed hard JDs past Vercel's 60s cutoff ("sometimes not generating"). The
+      // next model in the ladder is still used as an ERROR fallback (the `if (!best)
+      // continue` branch above) — it just isn't used to climb coverage anymore.
+      if (process.env.TAILOR_CLIMB !== "1" && process.env.TAILOR_CLIMB !== "true") break
       // Skip it if there isn't enough time left for a full call before the deadline —
       // returning the current best beats 504-ing on a call that can't finish in time.
       if (Date.now() - t0 > TAILOR_MAX_MS - CALL_MS) break
