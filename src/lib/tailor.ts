@@ -133,14 +133,21 @@ export async function runTailor(opts: {
   const sourceHash = createHash("sha1").update(buf).digest("hex").slice(0, 12)
   const text = await extractText(buf)
   const storedFeedback = await recentFeedback(matched.category, 6)
-  // Applied on EVERY tailor by default (the "Refine" chips the user wants pre-selected on
-  // the first run): bias toward specific, keyword-dense, technical output from the start so
-  // the first result already reads tailored — not generic. Deduped against explicit prefs.
-  const DEFAULT_PREFS = [
-    "More specific, less generic — concrete tools, systems, and outcomes, never vague filler",
-    "Add more keywords from the JD wherever the candidate can honestly support them",
-    "More technical detail — name the exact technologies, protocols, and methods used",
-  ]
+  // Applied on EVERY tailor by default. ONE lean instruction (was three): it drives the
+  // JD-keyword coverage the user wants while telling the model to be SURGICAL — rewrite
+  // only the lines that actually gain a JD keyword or need retargeting, and leave lines
+  // that already fit the JD untouched. The old 3 prefs pushed rewriting nearly every line
+  // "to be more specific/technical", which ~doubled output tokens (the dominant cost, $5/M)
+  // for cosmetic polish. Set TAILOR_POLISH=1 to restore the fuller (costlier) rewrite.
+  const DEFAULT_PREFS = (process.env.TAILOR_POLISH === "1" || process.env.TAILOR_POLISH === "true")
+    ? [
+        "More specific, less generic — concrete tools, systems, and outcomes, never vague filler",
+        "Add more keywords from the JD wherever the candidate can honestly support them",
+        "More technical detail — name the exact technologies, protocols, and methods used",
+      ]
+    : [
+        "Add JD keywords the candidate can honestly support, using the JD's exact wording. Be specific and technical, but SURGICAL: rewrite only the lines that gain a JD keyword or need retargeting to the role — leave lines that already fit the JD exactly as they are (do not reword them just for polish).",
+      ]
   const explicit = [...immediatePrefs, ...storedFeedback.filter(f => !immediatePrefs.includes(f))]
   const allPrefs = [...explicit, ...DEFAULT_PREFS.filter(d => !explicit.includes(d))]
 
