@@ -193,11 +193,13 @@ export async function runTailor(opts: {
   // Raise toward 0.97 for max coverage at the cost of more escalation time.
   const TARGET = Number(E.TAILOR_COVERAGE_TARGET ?? 0.90)
   const LADDER: { pref: ProviderPref; model?: string; label: string }[] = []
-  // Gemini is OPT-IN (TAILOR_USE_GEMINI=1): the FREE tier is capped at ~20 requests, and
-  // best-of-3 fires 3 calls/tailor, so it exhausts in ~6 tailors and then every call 429s.
-  // Only worth enabling with a PAID Gemini key. Default base is Haiku (reliable + cheap).
-  if (E.TAILOR_USE_GEMINI === "1" || E.TAILOR_USE_GEMINI === "true") {
-    LADDER.push({ pref: "gemini", model: E.GEMINI_MODEL_HEAVY || undefined, label: E.GEMINI_MODEL_HEAVY || "gemini-flash-latest" })
+  // Gemini Flash costs ~$0.40/M output vs Claude Haiku's $5/M — ~12x cheaper on the token
+  // type that dominates a tailor's bill. So use it as the BASE whenever a Gemini key is
+  // configured (Claude Haiku stays right below it as the automatic error-fallback). Add a
+  // PAID key — the free tier's ~20-req cap 429s almost immediately. Set TAILOR_USE_GEMINI=0
+  // to force Claude even when a Gemini key is present.
+  if (!!opts.keys.gemini && E.TAILOR_USE_GEMINI !== "0" && E.TAILOR_USE_GEMINI !== "false") {
+    LADDER.push({ pref: "gemini", model: E.GEMINI_MODEL_HEAVY || "gemini-flash-latest", label: E.GEMINI_MODEL_HEAVY || "gemini-flash-latest" })
   }
   LADDER.push(
     { pref: "anthropic", model: E.CLAUDE_MODEL_HEAVY  || "claude-haiku-4-5",  label: E.CLAUDE_MODEL_HEAVY  || "claude-haiku-4-5" },  // reliable base
