@@ -105,6 +105,22 @@ function callSignal(): AbortSignal {
   return AbortSignal.timeout(LLM_CALL_TIMEOUT_MS)
 }
 
+// POST with automatic retry on rate-limit / overload. Concurrent use of the app (many
+// tabs/devices at once) fires several LLM calls in the same minute, which trips the
+// provider's per-minute rate limit → 429 (or 529 "overloaded"). Instead of failing the
+// tailor, wait a short backoff (honoring Retry-After when present) and retry a couple
+// times. 429/529 responses come back fast, so this adds only a few seconds under load.
+async function fetchRetry(url: string, init: RequestInit): Promise<Response> {
+  const RETRIABLE = new Set([429, 529, 503])
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { ...init, signal: callSignal() })
+    if (res.ok || attempt >= 3 || !RETRIABLE.has(res.status)) return res
+    const retryAfter = Number(res.headers.get("retry-after")) || 0
+    const waitMs = Math.min(8000, retryAfter > 0 ? retryAfter * 1000 : 1000 * (attempt + 1) * (attempt + 1))
+    await new Promise(r => setTimeout(r, waitMs))
+  }
+}
+
 // One LLM call. Returns the assistant text plus which provider/model served it.
 // Throws Error("<Provider> API <status>: …") on a non-2xx.
 export async function callLLM(opts: CallOpts): Promise<{ text: string; provider: Provider; model: string }> {
@@ -132,9 +148,8 @@ async function callAnthropic(key: string, model: string, o: CallOpts, msgs: Chat
         { type: "text", text: o.cacheContext, cache_control: { type: "ephemeral" } },
       ]
     : [{ type: "text", text: o.system, cache_control: { type: "ephemeral" } }]
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetchRetry("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    signal: callSignal(),
     headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
     body: JSON.stringify({
       model, max_tokens: o.maxTokens,
@@ -158,9 +173,8 @@ async function callAnthropic(key: string, model: string, o: CallOpts, msgs: Chat
 async function callOpenRouter(key: string, model: string, o: CallOpts, msgs: ChatMessage[]): Promise<string> {
   // OpenRouter bills the requested ceiling against the balance — keep it modest.
   const cap = Math.min(o.maxTokens, Number(process.env.OPENROUTER_MAX_TOKENS) || 2048)
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const res = await fetchRetry("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
-    signal: callSignal(),
     headers: { "authorization": `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
     body: JSON.stringify({
       model, max_tokens: cap,
@@ -185,9 +199,8 @@ async function callGemini(key: string, model: string, o: CallOpts, msgs: ChatMes
     role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }],
   }))
-  const res = await fetch(url, {
+  const res = await fetchRetry(url, {
     method: "POST",
-    signal: callSignal(),
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       system_instruction: { parts: [{ text: o.cacheContext ? `${o.system}\n\n${o.cacheContext}` : o.system }] },
