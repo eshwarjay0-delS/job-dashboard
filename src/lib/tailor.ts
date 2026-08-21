@@ -198,10 +198,18 @@ export async function runTailor(opts: {
   // configured (Claude Haiku stays right below it as the automatic error-fallback). Add a
   // PAID key — the free tier's ~20-req cap 429s almost immediately. Set TAILOR_USE_GEMINI=0
   // to force Claude even when a Gemini key is present.
+  // FREE providers first (both $0 on their free tiers), Claude only as a paid safety net.
+  // Gemini Flash-Lite leads: works cleanly AND its free tier is ~250K tokens/min, so it
+  // handles the full tailoring prompt + concurrency. Groq is the second free option, but
+  // its free tier caps at only 8K tokens/min, so it's a fallback (with a reduced output
+  // cap in callGroq to fit that budget) rather than the primary.
   if (!!opts.keys.gemini && E.TAILOR_USE_GEMINI !== "0" && E.TAILOR_USE_GEMINI !== "false") {
-    LADDER.push({ pref: "gemini", model: E.GEMINI_MODEL_HEAVY || "gemini-flash-latest", label: E.GEMINI_MODEL_HEAVY || "gemini-flash-latest" })
+    LADDER.push({ pref: "gemini", model: E.GEMINI_MODEL_HEAVY || "gemini-3.5-flash-lite", label: E.GEMINI_MODEL_HEAVY || "gemini-3.5-flash-lite" })
   }
-  // Claude Haiku: the reliable base (or the error-fallback when Gemini is the base).
+  if (!!opts.keys.groq && E.TAILOR_USE_GROQ !== "0" && E.TAILOR_USE_GROQ !== "false") {
+    LADDER.push({ pref: "groq", model: E.GROQ_MODEL_HEAVY || "openai/gpt-oss-120b", label: E.GROQ_MODEL_HEAVY || "openai/gpt-oss-120b" })
+  }
+  // Claude Haiku: paid fallback when both free providers error.
   LADDER.push({ pref: "anthropic", model: E.CLAUDE_MODEL_HEAVY || "claude-haiku-4-5", label: E.CLAUDE_MODEL_HEAVY || "claude-haiku-4-5" })
   // Sonnet is now OPT-IN only (TAILOR_USE_SONNET=1). It's 3x Haiku's price and was a big
   // part of the cost overrun, so by default it is NEVER used — not even as a fallback.

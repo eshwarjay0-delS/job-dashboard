@@ -5,10 +5,10 @@
 //   • "heavy"  (full resume tailoring)                  → quality first:    Anthropic → OpenRouter → Gemini
 // A UI preference can pin a specific provider per tier; "auto" uses the order above.
 
-export type Provider = "anthropic" | "openrouter" | "gemini"
+export type Provider = "anthropic" | "openrouter" | "gemini" | "groq"
 export type ProviderPref = Provider | "auto"
 export type Tier = "heavy" | "light"
-export interface LlmKeys { anthropic?: string; openrouter?: string; gemini?: string }
+export interface LlmKeys { anthropic?: string; openrouter?: string; gemini?: string; groq?: string }
 
 // Identify the provider that issued a key purely from its prefix — so it works no
 // matter which env var or Settings field it was pasted into.
@@ -17,6 +17,7 @@ export function providerOfKey(raw?: string): Provider | null {
   if (!k) return null
   if (k.startsWith("sk-ant-")) return "anthropic"
   if (k.startsWith("sk-or-")) return "openrouter"
+  if (k.startsWith("gsk_")) return "groq"
   if (k.startsWith("AIza")) return "gemini"
   return null
 }
@@ -33,35 +34,41 @@ function modelFor(provider: Provider, tier: Tier): string {
   if (provider === "openrouter")
     return tier === "heavy" ? (e.OPENROUTER_MODEL_HEAVY || e.OPENROUTER_MODEL || "anthropic/claude-3.5-haiku")
                             : (e.OPENROUTER_MODEL_LIGHT || "anthropic/claude-3.5-haiku")
-  return tier === "heavy" ? (e.GEMINI_MODEL_HEAVY || e.GEMINI_MODEL || "gemini-2.0-flash")
-                          : (e.GEMINI_MODEL_LIGHT || e.GEMINI_MODEL || "gemini-2.0-flash")
+  if (provider === "groq")
+    return tier === "heavy" ? (e.GROQ_MODEL_HEAVY || e.GROQ_MODEL || "openai/gpt-oss-120b")
+                            : (e.GROQ_MODEL_LIGHT || e.GROQ_MODEL || "openai/gpt-oss-20b")
+  // gemini-2.x models 404 for newer keys; 3.5-flash-lite is a current cheap/fast model.
+  return tier === "heavy" ? (e.GEMINI_MODEL_HEAVY || e.GEMINI_MODEL || "gemini-3.5-flash-lite")
+                          : (e.GEMINI_MODEL_LIGHT || e.GEMINI_MODEL || "gemini-3.5-flash-lite")
 }
 
 // Gather every available key (env + the client-provided body). Keys are classified by
 // their SOURCE (env var / body field name) — NOT by prefix — so newer key formats work.
 // (Google now issues Gemini keys as "AQ.…", not just "AIza…"; prefix-sniffing missed them.)
-export function resolveKeys(body?: { claudeKey?: string; openrouterKey?: string; geminiKey?: string }): LlmKeys {
+export function resolveKeys(body?: { claudeKey?: string; openrouterKey?: string; geminiKey?: string; groqKey?: string }): LlmKeys {
   const out: LlmKeys = {}
   const set = (p: Provider, raw?: string) => { const v = (raw || "").trim(); if (v && !out[p]) out[p] = v }
   const e = process.env
   set("anthropic", e.ANTHROPIC_API_KEY)
   set("openrouter", e.OPENROUTER_API_KEY)
   set("gemini", e.GEMINI_API_KEY || e.GOOGLE_API_KEY || e.GOOGLE_GENAI_API_KEY)
+  set("groq", e.GROQ_API_KEY)
   set("anthropic", body?.claudeKey)
   set("openrouter", body?.openrouterKey)
   set("gemini", body?.geminiKey)
+  set("groq", body?.groqKey)
   return out
 }
 
-export function hasAnyKey(keys: LlmKeys): boolean { return !!(keys.anthropic || keys.openrouter || keys.gemini) }
+export function hasAnyKey(keys: LlmKeys): boolean { return !!(keys.anthropic || keys.openrouter || keys.gemini || keys.groq) }
 
 // Choose the provider+key for a tier. Honor an explicit preference when its key
 // exists; otherwise fall back through the tier's default order.
 export function pickProvider(keys: LlmKeys, tier: Tier, pref: ProviderPref = "auto"): { provider: Provider; key: string } | null {
   if (pref !== "auto" && keys[pref]) return { provider: pref, key: keys[pref]! }
   const order: Provider[] = tier === "light"
-    ? ["gemini", "openrouter", "anthropic"]   // simple tasks: free/cheap first
-    : ["anthropic", "openrouter", "gemini"]   // tailoring: quality first
+    ? ["gemini", "groq", "openrouter", "anthropic"]   // simple tasks: free/cheap first
+    : ["gemini", "groq", "anthropic", "openrouter"]   // tailoring: free first, Claude as paid fallback
   for (const p of order) if (keys[p]) return { provider: p, key: keys[p]! }
   return null
 }
@@ -134,6 +141,7 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
   const msgs: ChatMessage[] = opts.messages ?? [{ role: "user", content: opts.user ?? "" }]
   const text = provider === "anthropic" ? await callAnthropic(key, model, opts, msgs)
     : provider === "openrouter" ? await callOpenRouter(key, model, opts, msgs)
+    : provider === "groq" ? await callGroq(key, model, opts, msgs)
     : await callGemini(key, model, opts, msgs)
   return { text, provider, model }
 }
@@ -186,6 +194,31 @@ async function callOpenRouter(key: string, model: string, o: CallOpts, msgs: Cha
     }),
   })
   if (!res.ok) throw new Error(`OpenRouter API ${res.status}: ${(await res.text()).slice(0, 200)}`)
+  const data = await res.json()
+  const u = data.usage || {}
+  o.usageSink?.push({ input: u.prompt_tokens || 0, output: u.completion_tokens || 0, cacheRead: 0, cacheWrite: 0 })
+  return data.choices?.[0]?.message?.content || ""
+}
+
+// Groq — OpenAI-compatible chat API, very fast. Free tier caps at ~8000 tokens/min
+// (prompt + completion), so keep the completion ceiling low: the cost-mode output is
+// ~550 tokens, and prompt(~6k) + 1500 stays under the limit. Raise via GROQ_MAX_TOKENS
+// on a paid Groq tier.
+async function callGroq(key: string, model: string, o: CallOpts, msgs: ChatMessage[]): Promise<string> {
+  const cap = Math.min(o.maxTokens, Number(process.env.GROQ_MAX_TOKENS) || 1500)
+  const res = await fetchRetry("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "authorization": `Bearer ${key}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      model, max_tokens: cap,
+      ...(o.temperature != null ? { temperature: o.temperature } : {}),
+      messages: [
+        { role: "system", content: o.cacheContext ? `${o.system}\n\n${o.cacheContext}` : o.system },
+        ...msgs.map(m => ({ role: m.role, content: m.content })),
+      ],
+    }),
+  })
+  if (!res.ok) throw new Error(`Groq API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
   const u = data.usage || {}
   o.usageSink?.push({ input: u.prompt_tokens || 0, output: u.completion_tokens || 0, cacheRead: 0, cacheWrite: 0 })
