@@ -146,7 +146,7 @@ export async function runTailor(opts: {
         "More technical detail — name the exact technologies, protocols, and methods used",
       ]
     : [
-        "Add JD keywords the candidate can honestly support, using the JD's exact wording. Be specific and technical, but SURGICAL: rewrite only the lines that gain a JD keyword or need retargeting to the role — leave lines that already fit the JD exactly as they are (do not reword them just for polish).",
+        "COST MODE — MINIMIZE edits (fewer rewrites = lower cost). Change ONLY: the summary; the headline title + tagline; AT MOST 8 skill lines (pick the ones that add the MOST missing JD keywords); and AT MOST 5 bullets, all in the CURRENT role (the ones that best absorb the JD's key requirements). Leave EVERY other line exactly as it is — do not return unchanged or lightly-reworded lines. Use the JD's exact keyword wording so ATS still matches. This keeps the resume strong while cutting output tokens roughly in half.",
       ]
   const explicit = [...immediatePrefs, ...storedFeedback.filter(f => !immediatePrefs.includes(f))]
   const allPrefs = [...explicit, ...DEFAULT_PREFS.filter(d => !explicit.includes(d))]
