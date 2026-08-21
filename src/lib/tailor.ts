@@ -201,10 +201,13 @@ export async function runTailor(opts: {
   if (!!opts.keys.gemini && E.TAILOR_USE_GEMINI !== "0" && E.TAILOR_USE_GEMINI !== "false") {
     LADDER.push({ pref: "gemini", model: E.GEMINI_MODEL_HEAVY || "gemini-flash-latest", label: E.GEMINI_MODEL_HEAVY || "gemini-flash-latest" })
   }
-  LADDER.push(
-    { pref: "anthropic", model: E.CLAUDE_MODEL_HEAVY  || "claude-haiku-4-5",  label: E.CLAUDE_MODEL_HEAVY  || "claude-haiku-4-5" },  // reliable base
-    { pref: "anthropic", model: E.CLAUDE_MODEL_STRONG || "claude-sonnet-4-5", label: E.CLAUDE_MODEL_STRONG || "claude-sonnet-4-5" }, // strong ceiling (default)
-  )
+  // Claude Haiku: the reliable base (or the error-fallback when Gemini is the base).
+  LADDER.push({ pref: "anthropic", model: E.CLAUDE_MODEL_HEAVY || "claude-haiku-4-5", label: E.CLAUDE_MODEL_HEAVY || "claude-haiku-4-5" })
+  // Sonnet is now OPT-IN only (TAILOR_USE_SONNET=1). It's 3x Haiku's price and was a big
+  // part of the cost overrun, so by default it is NEVER used — not even as a fallback.
+  if (E.TAILOR_USE_SONNET === "1" || E.TAILOR_USE_SONNET === "true") {
+    LADDER.push({ pref: "anthropic", model: E.CLAUDE_MODEL_STRONG || "claude-sonnet-4-5", label: E.CLAUDE_MODEL_STRONG || "claude-sonnet-4-5" })
+  }
   // Opus is OPT-IN only (TAILOR_USE_OPUS=1). Measured: on a dense JD it ran a ~45s full
   // redraft AFTER Sonnet and added ZERO coverage (the remaining terms were honestly
   // un-addable), so by default we cap at Sonnet — near-identical coverage, ~45s faster.
