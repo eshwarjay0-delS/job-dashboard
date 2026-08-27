@@ -280,11 +280,11 @@ export async function runTailor(opts: {
   // 429 quota wall), we fall through to the NEXT model instead of failing the whole
   // tailor. Once we have a draft, remaining models are single escalation redrafts that
   // target the still-missing terms; stop on target-hit or plateau. Quick mode = one draw.
-  // best-of default 1 (was 3→2): each extra draw is another full-price Claude call. One
-  // front-loaded draw + the conditional escalation below already lands high coverage on
-  // domain-matched resumes, so best-of-1 is the cheapest default AND the lightest on the
-  // rate limit. Raise TAILOR_BEST_OF (2-3) only if you want tighter run-to-run variance.
-  const BEST_OF = opts.mode === "quick" ? 1 : Math.max(1, Math.min(5, Number(process.env.TAILOR_BEST_OF ?? 1)))
+  // QUALITY-FIRST default: best-of-2 parallel draws, keep the highest-quality one. LLM
+  // sampling swings coverage run-to-run, so a second draw raises the floor (measured
+  // ~88%→~97%). The user explicitly prioritises resume quality over token cost, so this
+  // is the default; set TAILOR_BEST_OF=1 for the cheapest/fastest, or 3 for max consistency.
+  const BEST_OF = opts.mode === "quick" ? 1 : Math.max(1, Math.min(5, Number(process.env.TAILOR_BEST_OF ?? 2)))
   // Collect every call's token usage so we can report the real cost of this tailor.
   const usageSink: TokenUsage[] = []
   // Wall-clock budget: never START a model call that can't finish before the serverless
@@ -307,13 +307,13 @@ export async function runTailor(opts: {
       usedModel = `${step.label ?? String(step.pref)}${BEST_OF > 1 && draws.length > 1 ? ` (best of ${draws.length})` : ""}`
       if (opts.mode === "quick") break
     } else {
-      // Coverage-climbing escalation (base → Sonnet → Opus) is OPT-IN via TAILOR_CLIMB=1.
-      // By default the base pass IS the result. Climbing added a slow ~35s Sonnet redraft
-      // for usually only a few % coverage, which made runs swing between ~17s and ~55-80s
-      // and pushed hard JDs past Vercel's 60s cutoff ("sometimes not generating"). The
-      // next model in the ladder is still used as an ERROR fallback (the `if (!best)
-      // continue` branch above) — it just isn't used to climb coverage anymore.
-      if (process.env.TAILOR_CLIMB !== "1" && process.env.TAILOR_CLIMB !== "true") break
+      // Coverage-climbing escalation is ON by default (quality first): if the base pass is
+      // still under TARGET, redraft on the next model in the ladder with the exact missing
+      // JD terms injected. This is what pushes a resume from ~86-94% to ~97-100% coverage.
+      // It is SAFE now because of the wall-clock guard directly below — we never START a
+      // climb call that can't finish before the serverless deadline, so it can no longer
+      // cause the 60s timeouts/"frozen" runs it used to. Set TAILOR_CLIMB=0 to disable.
+      if (process.env.TAILOR_CLIMB === "0" || process.env.TAILOR_CLIMB === "false") break
       // Skip it if there isn't enough time left for a full call before the deadline —
       // returning the current best beats 504-ing on a call that can't finish in time.
       if (Date.now() - t0 > TAILOR_MAX_MS - CALL_MS) break
