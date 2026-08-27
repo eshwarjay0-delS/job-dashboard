@@ -293,15 +293,54 @@ export async function runTailor(opts: {
   const t0 = Date.now()
   const TAILOR_MAX_MS = Number(E.TAILOR_MAX_MS) || 52000
   const CALL_MS = Number(E.LLM_CALL_TIMEOUT_MS) || 35000
+  // Await parallel draws with early-exit: resolve as soon as a draw already clears the
+  // coverage target (nothing better is needed), else once every draw settles, else a short
+  // grace period after the first success — so a single slow/hung draw can't stall the run.
+  async function collectDraws(
+    promises: Promise<Pass | null>[], target: number, wantSummary: boolean, graceMs: number,
+  ): Promise<Pass[]> {
+    const done: Pass[] = []
+    return new Promise<Pass[]>(resolve => {
+      let settled = 0, finished = false
+      let timer: ReturnType<typeof setTimeout> | null = null
+      const finish = () => {
+        if (finished) return
+        finished = true
+        if (timer) clearTimeout(timer)
+        resolve(done)
+      }
+      for (const pr of promises) {
+        pr.then(p => {
+          if (p) {
+            done.push(p)
+            // Good enough on its own → stop waiting for the rest.
+            const ok = p.cov >= target && (!wantSummary || (p.edits.summary || "").trim())
+            if (ok) return finish()
+            if (!timer) timer = setTimeout(finish, graceMs)
+          }
+        }).catch(() => {}).finally(() => {
+          if (++settled === promises.length) finish()
+        })
+      }
+      if (!promises.length) finish()
+    })
+  }
+
   let best: Pass | null = null
   let usedModel = ""
   for (const step of steps) {
     if (!best) {
-      // Base: best-of-N in parallel; skip this model if every draw errored.
+      // Base: best-of-N in parallel. Collected with EARLY-EXIT instead of Promise.all,
+      // which used to make every tailor wait for the SLOWEST draw (one 40s outlier stalled
+      // the whole run and read as "frozen"). Now: the moment a draw comes back that already
+      // clears TARGET, we use it immediately; otherwise we give the remaining draws a short
+      // grace window and take the best of whatever finished. Quality is unchanged when the
+      // draws are equally fast — we only stop waiting on a straggler that can't win.
       const extra = injectFor(beforeKw, false)
-      const draws = (await Promise.all(
+      const draws = await collectDraws(
         Array.from({ length: BEST_OF }, () => draftPass(step, extra).catch(() => null)),
-      )).filter((p): p is Pass => p !== null)
+        TARGET, summaryWanted, Number(E.TAILOR_DRAW_GRACE_MS) || 6000,
+      )
       if (!draws.length) continue // this model failed entirely → try the next one
       best = draws.reduce((a, b) => (quality(b) > quality(a) ? b : a))
       usedModel = `${step.label ?? String(step.pref)}${BEST_OF > 1 && draws.length > 1 ? ` (best of ${draws.length})` : ""}`
