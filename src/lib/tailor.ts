@@ -337,13 +337,22 @@ export async function runTailor(opts: {
       // grace window and take the best of whatever finished. Quality is unchanged when the
       // draws are equally fast — we only stop waiting on a straggler that can't win.
       const extra = injectFor(beforeKw, false)
+      // CROSS-PROVIDER draws: spread the N parallel draws across the available providers
+      // (e.g. Claude Haiku + Gemini Flash) instead of N samples of the same model. Two
+      // different models disagree more usefully than two samples of one, so the "best of"
+      // pick is stronger — AND because they have very different latencies (~15s vs ~7s),
+      // the early-exit above returns as soon as the FAST one is already good enough. Same
+      // quality ceiling, roughly half the typical wait.
+      const pool = steps.length > 1 ? steps : [step]
       const draws = await collectDraws(
-        Array.from({ length: BEST_OF }, () => draftPass(step, extra).catch(() => null)),
+        Array.from({ length: BEST_OF }, (_, i) => draftPass(pool[i % pool.length], extra).catch(() => null)),
         TARGET, summaryWanted, Number(E.TAILOR_DRAW_GRACE_MS) || 6000,
       )
       if (!draws.length) continue // this model failed entirely → try the next one
       best = draws.reduce((a, b) => (quality(b) > quality(a) ? b : a))
       usedModel = `${step.label ?? String(step.pref)}${BEST_OF > 1 && draws.length > 1 ? ` (best of ${draws.length})` : ""}`
+      // Note: with cross-provider draws the winning draft may have come from another
+      // provider in the pool; the label above names the primary step for brevity.
       if (opts.mode === "quick") break
     } else {
       // Coverage-climbing escalation is ON by default (quality first): if the base pass is
