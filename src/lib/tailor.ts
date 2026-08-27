@@ -133,20 +133,19 @@ export async function runTailor(opts: {
   const sourceHash = createHash("sha1").update(buf).digest("hex").slice(0, 12)
   const text = await extractText(buf)
   const storedFeedback = await recentFeedback(matched.category, 6)
-  // Applied on EVERY tailor by default. ONE lean instruction (was three): it drives the
-  // JD-keyword coverage the user wants while telling the model to be SURGICAL — rewrite
-  // only the lines that actually gain a JD keyword or need retargeting, and leave lines
-  // that already fit the JD untouched. The old 3 prefs pushed rewriting nearly every line
-  // "to be more specific/technical", which ~doubled output tokens (the dominant cost, $5/M)
-  // for cosmetic polish. Set TAILOR_POLISH=1 to restore the fuller (costlier) rewrite.
-  const DEFAULT_PREFS = (process.env.TAILOR_POLISH === "1" || process.env.TAILOR_POLISH === "true")
+  // FULL-QUALITY default: a comprehensive, keyword-dense rewrite for maximum JD coverage —
+  // NEVER hold back on quality. On the free providers (Gemini/Groq) output tokens cost
+  // nothing, so there is no reason to minimize edits. The old "cost mode" cap traded
+  // coverage for fewer tokens; it is now OPT-IN via TAILOR_COST_MODE=1, only for someone
+  // running a paid per-token model who explicitly wants to trade thoroughness for spend.
+  const DEFAULT_PREFS = (process.env.TAILOR_COST_MODE === "1" || process.env.TAILOR_COST_MODE === "true")
     ? [
+        "COST MODE — MINIMIZE edits (fewer rewrites = lower cost). Change ONLY: the summary; the headline title + tagline; AT MOST 8 skill lines (pick the ones that add the MOST missing JD keywords); and AT MOST 5 bullets, all in the CURRENT role. Leave EVERY other line exactly as it is. Use the JD's exact keyword wording so ATS still matches.",
+      ]
+    : [
         "More specific, less generic — concrete tools, systems, and outcomes, never vague filler",
         "Add more keywords from the JD wherever the candidate can honestly support them",
         "More technical detail — name the exact technologies, protocols, and methods used",
-      ]
-    : [
-        "COST MODE — MINIMIZE edits (fewer rewrites = lower cost). Change ONLY: the summary; the headline title + tagline; AT MOST 8 skill lines (pick the ones that add the MOST missing JD keywords); and AT MOST 5 bullets, all in the CURRENT role (the ones that best absorb the JD's key requirements). Leave EVERY other line exactly as it is — do not return unchanged or lightly-reworded lines. Use the JD's exact keyword wording so ATS still matches. This keeps the resume strong while cutting output tokens roughly in half.",
       ]
   const explicit = [...immediatePrefs, ...storedFeedback.filter(f => !immediatePrefs.includes(f))]
   const allPrefs = [...explicit, ...DEFAULT_PREFS.filter(d => !explicit.includes(d))]
@@ -193,24 +192,20 @@ export async function runTailor(opts: {
   // Raise toward 0.97 for max coverage at the cost of more escalation time.
   const TARGET = Number(E.TAILOR_COVERAGE_TARGET ?? 0.90)
   const LADDER: { pref: ProviderPref; model?: string; label: string }[] = []
-  // Gemini Flash costs ~$0.40/M output vs Claude Haiku's $5/M — ~12x cheaper on the token
-  // type that dominates a tailor's bill. So use it as the BASE whenever a Gemini key is
-  // configured (Claude Haiku stays right below it as the automatic error-fallback). Add a
-  // PAID key — the free tier's ~20-req cap 429s almost immediately. Set TAILOR_USE_GEMINI=0
-  // to force Claude even when a Gemini key is present.
-  // FREE providers first (both $0 on their free tiers), Claude only as a paid safety net.
-  // Gemini Flash-Lite leads: works cleanly AND its free tier is ~250K tokens/min, so it
-  // handles the full tailoring prompt + concurrency. Groq is the second free option, but
-  // its free tier caps at only 8K tokens/min, so it's a fallback (with a reduced output
-  // cap in callGroq to fit that budget) rather than the primary.
-  if (!!opts.keys.gemini && E.TAILOR_USE_GEMINI !== "0" && E.TAILOR_USE_GEMINI !== "false") {
-    LADDER.push({ pref: "gemini", model: E.GEMINI_MODEL_HEAVY || "gemini-3.5-flash-lite", label: E.GEMINI_MODEL_HEAVY || "gemini-3.5-flash-lite" })
-  }
-  if (!!opts.keys.groq && E.TAILOR_USE_GROQ !== "0" && E.TAILOR_USE_GROQ !== "false") {
-    LADDER.push({ pref: "groq", model: E.GROQ_MODEL_HEAVY || "openai/gpt-oss-120b", label: E.GROQ_MODEL_HEAVY || "openai/gpt-oss-120b" })
-  }
-  // Claude Haiku: paid fallback when both free providers error.
-  LADDER.push({ pref: "anthropic", model: E.CLAUDE_MODEL_HEAVY || "claude-haiku-4-5", label: E.CLAUDE_MODEL_HEAVY || "claude-haiku-4-5" })
+  // PROVIDER ORDER. Default = Claude Haiku FIRST — the user's trusted quality baseline
+  // (~98% match). The free providers (Gemini Flash-Lite, then Groq) sit right below as
+  // AUTOMATIC fallbacks: used only if Claude errors or rate-limits, which also gives $0
+  // resilience and helps under concurrent load. Quality is never compromised — every model
+  // gets the same full, comprehensive rewrite prompt. Set TAILOR_FREE_FIRST=1 to instead
+  // prefer the free providers first (Gemini → Groq → Claude) when you want $0 over Claude.
+  const claudeStep = { pref: "anthropic" as ProviderPref, model: E.CLAUDE_MODEL_HEAVY || "claude-haiku-4-5", label: E.CLAUDE_MODEL_HEAVY || "claude-haiku-4-5" }
+  const freeSteps: { pref: ProviderPref; model?: string; label: string }[] = []
+  if (!!opts.keys.gemini && E.TAILOR_USE_GEMINI !== "0" && E.TAILOR_USE_GEMINI !== "false")
+    freeSteps.push({ pref: "gemini", model: E.GEMINI_MODEL_HEAVY || "gemini-3.5-flash-lite", label: E.GEMINI_MODEL_HEAVY || "gemini-3.5-flash-lite" })
+  if (!!opts.keys.groq && E.TAILOR_USE_GROQ !== "0" && E.TAILOR_USE_GROQ !== "false")
+    freeSteps.push({ pref: "groq", model: E.GROQ_MODEL_HEAVY || "openai/gpt-oss-120b", label: E.GROQ_MODEL_HEAVY || "openai/gpt-oss-120b" })
+  if (E.TAILOR_FREE_FIRST === "1" || E.TAILOR_FREE_FIRST === "true") LADDER.push(...freeSteps, claudeStep)
+  else LADDER.push(claudeStep, ...freeSteps)
   // Sonnet is now OPT-IN only (TAILOR_USE_SONNET=1). It's 3x Haiku's price and was a big
   // part of the cost overrun, so by default it is NEVER used — not even as a fallback.
   if (E.TAILOR_USE_SONNET === "1" || E.TAILOR_USE_SONNET === "true") {
