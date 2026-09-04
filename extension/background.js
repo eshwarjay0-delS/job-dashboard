@@ -113,7 +113,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "GET_RESUME") {
     ;(async () => {
       try {
-        const res = await fetch(msg.url)
+        // Send the stored Supabase access token. /api/resumes/download and
+        // /api/tailor/file resolve the caller via createClientFromRequest, which
+        // accepts `Authorization: Bearer`. A bare cross-origin fetch sends no
+        // cookies (credentials defaults to same-origin, and the app's session
+        // cookie is SameSite=Lax so it would not ride along even with
+        // credentials:"include"), so without this header the resume library
+        // now returns 401 — it is no longer served to anonymous callers.
+        const resumeToken = await getToken()
+        const res = await fetch(msg.url, {
+          headers: resumeToken ? { Authorization: `Bearer ${resumeToken}` } : {},
+        })
+        if (res.status === 401 || res.status === 403) {
+          sendResponse({ ok: false, error: "Not signed in to the dashboard — open it and sign in, then retry." })
+          return
+        }
         if (!res.ok) { sendResponse({ ok: false, error: "HTTP " + res.status }); return }
         const buf = new Uint8Array(await res.arrayBuffer())
         // Chunk the byte→char conversion so we don't blow the call-stack on big files.

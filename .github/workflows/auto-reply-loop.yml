@@ -1,0 +1,177 @@
+name: Auto Reply Loop
+
+# Pokes the auto-reply tick endpoint on a schedule so the recruiter-selection
+# loop keeps scanning without a long-lived worker. The endpoint owns all the
+# real logic (and all the safety gates) — this workflow only fires the request
+# and reports what came back.
+#
+# Every 20 minutes, 13:00–23:59 UTC, weekdays (≈ US business hours).
+
+on:
+  schedule:
+    - cron: "*/20 13-23 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (no write actions). Leave on unless you know why not."
+        type: boolean
+        required: false
+        default: true
+
+# One tick at a time. Never cancel a run in flight — a half-finished scan is
+# worse than a skipped one.
+concurrency:
+  group: auto-reply-loop
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tick:
+    name: Tick
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+
+    steps:
+      - name: Check configuration
+        env:
+          APP_URL: ${{ vars.AUTO_REPLY_APP_URL }}
+          SECRET:  ${{ secrets.AUTO_REPLY_CRON_SECRET }}
+          USER_ID: ${{ secrets.AUTO_REPLY_USER_ID }}
+        run: |
+          set -euo pipefail
+          MISSING=0
+          if [ -z "${APP_URL:-}" ]; then
+            echo "::error::Repository variable AUTO_REPLY_APP_URL is not set (Settings → Secrets and variables → Actions → Variables)."
+            MISSING=1
+          fi
+          if [ -z "${SECRET:-}" ]; then
+            echo "::error::Repository secret AUTO_REPLY_CRON_SECRET is not set."
+            MISSING=1
+          fi
+          if [ -z "${USER_ID:-}" ]; then
+            echo "::error::Repository secret AUTO_REPLY_USER_ID is not set."
+            MISSING=1
+          fi
+          if [ "$MISSING" -ne 0 ]; then
+            echo "::error::Auto-reply loop is not configured — refusing to run."
+            exit 1
+          fi
+          echo "Configuration present."
+
+      - name: POST /api/auto-reply/tick
+        id: tick
+        env:
+          APP_URL: ${{ vars.AUTO_REPLY_APP_URL }}
+          SECRET:  ${{ secrets.AUTO_REPLY_CRON_SECRET }}
+          USER_ID: ${{ secrets.AUTO_REPLY_USER_ID }}
+          DRY_RUN_INPUT: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          # Scheduled runs carry no inputs — default to the safe value.
+          DRY_RUN="${DRY_RUN_INPUT:-}"
+          if [ "$DRY_RUN" != "true" ] && [ "$DRY_RUN" != "false" ]; then
+            DRY_RUN="true"
+          fi
+
+          BASE="${APP_URL%/}"
+          ENDPOINT="$BASE/api/auto-reply/tick"
+
+          # Body written to a file so the user id never lands in a process list.
+          printf '{"userId":"%s","dryRun":%s}' "$USER_ID" "$DRY_RUN" > body.json
+
+          ATTEMPT=1
+          MAX_ATTEMPTS=3
+          BACKOFF=10
+          OUTCOME="failed"
+          CODE="000"
+
+          while : ; do
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS → POST $ENDPOINT (dryRun=$DRY_RUN)"
+            CODE=$(curl -sS -o response.txt -w "%{http_code}" \
+              --max-time 180 \
+              -X POST "$ENDPOINT" \
+              -H "content-type: application/json" \
+              -H "x-auto-reply-secret: $SECRET" \
+              --data @body.json || echo "000")
+            echo "HTTP $CODE"
+
+            case "$CODE" in
+              200)
+                OUTCOME="success"; break ;;
+              409)
+                OUTCOME="noop-busy"; break ;;
+              423)
+                OUTCOME="noop-disabled"; break ;;
+              401|403)
+                OUTCOME="unauthorized"; break ;;
+              *)
+                if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
+                  OUTCOME="failed"; break
+                fi
+                echo "Retryable response — sleeping ${BACKOFF}s"
+                sleep "$BACKOFF"
+                BACKOFF=$((BACKOFF * 3))
+                ATTEMPT=$((ATTEMPT + 1))
+                ;;
+            esac
+          done
+
+          BODY=$(head -c 800 response.txt 2>/dev/null || true)
+          [ -n "$BODY" ] || BODY="(empty)"
+
+          case "$OUTCOME" in
+            success)       RESULT="✅ Tick completed";                    EXIT=0 ;;
+            noop-busy)     RESULT="⏭️ No-op — another run is active";      EXIT=0 ;;
+            noop-disabled) RESULT="⏸️ No-op — disabled or kill switch on"; EXIT=0 ;;
+            unauthorized)  RESULT="🔒 Rejected — bad or missing secret";   EXIT=1 ;;
+            *)             RESULT="❌ Failed after $ATTEMPT attempt(s)";   EXIT=1 ;;
+          esac
+
+          {
+            echo "## Auto Reply Loop"
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Result | $RESULT |"
+            echo "| HTTP status | \`$CODE\` |"
+            echo "| Endpoint | \`$ENDPOINT\` |"
+            echo "| Dry run | \`$DRY_RUN\` |"
+            echo "| Attempts | $ATTEMPT of $MAX_ATTEMPTS |"
+            echo "| Trigger | \`${GITHUB_EVENT_NAME}\` |"
+            echo ""
+            echo "<details><summary>Response body</summary>"
+            echo ""
+            echo '```json'
+            echo "$BODY"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$EXIT" -ne 0 ]; then
+            if [ "$OUTCOME" = "unauthorized" ]; then
+              echo "::error::Tick rejected with HTTP $CODE — check AUTO_REPLY_CRON_SECRET matches the server."
+            else
+              echo "::error::Tick failed after $ATTEMPT attempt(s), last HTTP $CODE."
+            fi
+            exit 1
+          fi
+
+          echo "$RESULT"
+
+# ─── Configuration (GitHub → Settings → Secrets and variables → Actions) ───
+# Variables:
+#   AUTO_REPLY_APP_URL     → https://your-app.example.com   (no trailing path)
+# Secrets:
+#   AUTO_REPLY_CRON_SECRET → shared secret sent as x-auto-reply-secret
+#   AUTO_REPLY_USER_ID     → the user whose inbox the loop scans
+#
+# Status contract with /api/auto-reply/tick:
+#   200      → tick ran
+#   409      → another run is already active (clean no-op)
+#   423      → loop disabled or kill switch engaged (clean no-op)
+#   401/403  → bad secret; hard failure, no retry
+#   other    → retried up to 3 times with 10s/30s backoff

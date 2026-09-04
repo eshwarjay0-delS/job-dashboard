@@ -108,7 +108,10 @@ export async function runTailor(opts: {
   let rankedCandidates: TailorResult["ranked_candidates"] = []
   if (opts.givenPath) {
     const resolved = path.resolve(opts.givenPath)
-    if (!resolved.startsWith(path.resolve(opts.userResumeDir))) {
+    const baseDir = path.resolve(opts.userResumeDir)
+    // Prefix confusion: a bare startsWith lets a SIBLING directory whose name
+    // begins with the allowed path pass ("/u/demo" also matches "/u/demo2").
+    if (!(resolved === baseDir || resolved.startsWith(baseDir + path.sep))) {
       throw new Error("That file is outside your resume library.")
     }
     // Match matchByKeywords/listDocx's category format (the full folder chain, "A / B / C")
@@ -198,14 +201,27 @@ export async function runTailor(opts: {
   // resilience and helps under concurrent load. Quality is never compromised — every model
   // gets the same full, comprehensive rewrite prompt. Set TAILOR_FREE_FIRST=1 to instead
   // prefer the free providers first (Gemini → Groq → Claude) when you want $0 over Claude.
+  // FREE-FIRST ladder. Claude is a single switch: TAILOR_USE_CLAUDE=0 removes it from the
+  // ladder ENTIRELY (used while the Anthropic account has no credit — its API returns a
+  // hard 400 "credit balance is too low", which is not retryable). Flip it back to 1 the
+  // moment credits are topped up and Claude rejoins as the quality fallback. The three free
+  // providers each sit on a SEPARATE rate limit, so if one 429s the next still answers.
+  const claudeOn = !!opts.keys.anthropic && E.TAILOR_USE_CLAUDE !== "0" && E.TAILOR_USE_CLAUDE !== "false"
   const claudeStep = { pref: "anthropic" as ProviderPref, model: E.CLAUDE_MODEL_HEAVY || "claude-haiku-4-5", label: E.CLAUDE_MODEL_HEAVY || "claude-haiku-4-5" }
   const freeSteps: { pref: ProviderPref; model?: string; label: string }[] = []
   if (!!opts.keys.gemini && E.TAILOR_USE_GEMINI !== "0" && E.TAILOR_USE_GEMINI !== "false")
     freeSteps.push({ pref: "gemini", model: E.GEMINI_MODEL_HEAVY || "gemini-3.5-flash-lite", label: E.GEMINI_MODEL_HEAVY || "gemini-3.5-flash-lite" })
   if (!!opts.keys.groq && E.TAILOR_USE_GROQ !== "0" && E.TAILOR_USE_GROQ !== "false")
     freeSteps.push({ pref: "groq", model: E.GROQ_MODEL_HEAVY || "openai/gpt-oss-120b", label: E.GROQ_MODEL_HEAVY || "openai/gpt-oss-120b" })
-  if (E.TAILOR_FREE_FIRST === "1" || E.TAILOR_FREE_FIRST === "true") LADDER.push(...freeSteps, claudeStep)
-  else LADDER.push(claudeStep, ...freeSteps)
+  // OpenRouter last of the free tier: its :free models are frequently 429 rate-limited, so
+  // it is a genuine last resort rather than something to lead with. Pin a model with
+  // OPENROUTER_MODEL_HEAVY — never use the "openrouter/free" auto-router, which happily
+  // routes to unrelated models (it returned a content-safety verdict instead of the JSON).
+  if (!!opts.keys.openrouter && E.TAILOR_USE_OPENROUTER !== "0" && E.TAILOR_USE_OPENROUTER !== "false")
+    freeSteps.push({ pref: "openrouter", model: E.OPENROUTER_MODEL_HEAVY || "z-ai/glm-5.2:free", label: E.OPENROUTER_MODEL_HEAVY || "z-ai/glm-5.2:free" })
+  if (claudeOn && E.TAILOR_FREE_FIRST !== "1" && E.TAILOR_FREE_FIRST !== "true") LADDER.push(claudeStep, ...freeSteps)
+  else if (claudeOn) LADDER.push(...freeSteps, claudeStep)
+  else LADDER.push(...freeSteps)
   // Sonnet is now OPT-IN only (TAILOR_USE_SONNET=1). It's 3x Haiku's price and was a big
   // part of the cost overrun, so by default it is NEVER used — not even as a fallback.
   if (E.TAILOR_USE_SONNET === "1" || E.TAILOR_USE_SONNET === "true") {
@@ -234,7 +250,7 @@ export async function runTailor(opts: {
     extras:   raw.extras,
   })
 
-  type Pass = { edits: Edits; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string> }
+  type Pass = { edits: Edits; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string>; via?: string }
   // Apply a finished edit set to the docx and measure JD keyword coverage. Auto-tailoring
   // is the only path allowed to physically drop bullets (the manual builder never gets a
   // dropIdx), so a user's own edits are never silently trimmed.
@@ -255,10 +271,14 @@ export async function runTailor(opts: {
   // missing so the stronger model closes the gap in ONE coherent redraft — a full
   // redraft beats a lossy targeted merge (which could drop keywords and never improve
   // coverage, stalling the climb).
-  const draftPass = async (step: { pref: ProviderPref; model?: string }, extraPrefs: string[]): Promise<Pass> => {
+  const draftPass = async (step: { pref: ProviderPref; model?: string; label?: string }, extraPrefs: string[]): Promise<Pass> => {
     const prefs = [...allPrefs, ...extraPrefs].filter(Boolean)
     const raw = await adapt({ keys: opts.keys, pref: step.pref, jd, zones, preferences: prefs.join("; "), jdKeywords: jdKws, onePage: opts.onePage, mode: opts.mode, model: step.model, usageSink })
-    return applyEdits(scopeEdits(raw))
+    const pass = await applyEdits(scopeEdits(raw))
+    // Tag with the model that actually produced this draft — with cross-provider draws the
+    // winner may not be the primary step, and the notes must name the real one.
+    pass.via = step.label ?? step.model ?? String(step.pref)
+    return pass
   }
 
   const summaryWanted = sec.summary !== false
@@ -350,9 +370,7 @@ export async function runTailor(opts: {
       )
       if (!draws.length) continue // this model failed entirely → try the next one
       best = draws.reduce((a, b) => (quality(b) > quality(a) ? b : a))
-      usedModel = `${step.label ?? String(step.pref)}${BEST_OF > 1 && draws.length > 1 ? ` (best of ${draws.length})` : ""}`
-      // Note: with cross-provider draws the winning draft may have come from another
-      // provider in the pool; the label above names the primary step for brevity.
+      usedModel = `${best.via ?? step.label ?? String(step.pref)}${BEST_OF > 1 && draws.length > 1 ? ` (best of ${draws.length})` : ""}`
       if (opts.mode === "quick") break
     } else {
       // Coverage-climbing escalation is ON by default (quality first): if the base pass is

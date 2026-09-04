@@ -1467,6 +1467,15 @@ async function runAutofillFlow(profile, resumeUrl, resumeName, autoSubmit) {
   armContinuousRefill(profile)
 
   const needsAttention = result.needsAttention || []
+  // A resume was ASKED for but did not attach — never auto-submit in that state.
+  // Submitting an application with no resume is worse than not submitting, and
+  // it is unrecoverable once sent. Most likely cause now is an expired dashboard
+  // session: /api/resumes/download requires auth, so GET_RESUME returns 401 and
+  // attachResumeFile reports attached:false. Surface it instead of firing.
+  if (resumeUrl && !resumeAttached) {
+    needsAttention.push("Resume did not attach — not submitting. Open the dashboard, sign in, and retry.")
+    showInfoToast("⚠ Resume did not attach — auto-submit held")
+  }
   let submitted = false
   if (autoSubmit && count > 0 && needsAttention.length === 0) {
     const ats = getATS()

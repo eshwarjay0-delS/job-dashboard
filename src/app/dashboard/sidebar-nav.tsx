@@ -109,6 +109,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/dashboard/network",   label: "Network",       icon: I.people },
       { href: "/dashboard/messages",  label: "Messages",      icon: I.chat   },
       { href: "/dashboard/email",     label: "Emails",        icon: I.mail    },
+      { href: "/dashboard/auto-reply", label: "Auto Reply",   icon: I.mail, badge: "New" },
     ],
   },
   {

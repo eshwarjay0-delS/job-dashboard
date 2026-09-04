@@ -32,7 +32,9 @@ export async function POST(request: NextRequest) {
 
   const userResolved = path.resolve(userDir)
   const targetDir = path.resolve(path.join(userDir, ...targetParts))
-  if (!targetDir.startsWith(userResolved)) {
+  // Exact-or-separator. A bare prefix also accepts a sibling directory whose
+  // name merely starts with the allowed one (line 42 already does this right).
+  if (!(targetDir === userResolved || targetDir.startsWith(userResolved + path.sep))) {
     return NextResponse.json({ error: "Invalid destination." }, { status: 400 })
   }
 

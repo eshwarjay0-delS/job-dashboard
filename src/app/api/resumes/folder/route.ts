@@ -27,7 +27,10 @@ export async function POST(request: NextRequest) {
   if (!parts.length) return NextResponse.json({ error: "Enter a folder name." }, { status: 400 })
 
   const dest = path.resolve(path.join(userDir, ...parts))
-  if (!dest.startsWith(path.resolve(userDir))) {
+  const folderBase = path.resolve(userDir)
+  // Exact-or-separator: the name sanitizer keeps ".", so ".." can survive and
+  // a bare prefix check would also accept a sibling directory.
+  if (!(dest === folderBase || dest.startsWith(folderBase + path.sep))) {
     return NextResponse.json({ error: "Invalid folder name." }, { status: 400 })
   }
   // Object stores have no empty folders — write a hidden ".keep" marker so the new

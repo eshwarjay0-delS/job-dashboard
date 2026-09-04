@@ -63,12 +63,26 @@ export async function GET(request: NextRequest) {
         if (user?.id) userId = user.id
       } catch { /* unauthenticated — stay as "demo" */ }
 
+      // NO ANONYMOUS ACCESS. The previous fix here only removed LEGACY_RESUMES
+      // from the anonymous allow-list, which was cosmetic: it left
+      // USER_RESUMES_BASE/"demo" (where the extension actually uploads — real
+      // resumes, full contact blocks) and OUT_DIR (653 tailored resumes, each
+      // derived from one) reachable, and the ?token= branch had no allow-list
+      // at all. Every content-returning path here now requires a real session.
+      if (userId === "demo") {
+        return NextResponse.json({ error: "Authentication required." }, { status: 401 })
+      }
+
       let resolved: string
       if (token) {
         resolved = path.join(OUT_DIR, path.basename(token) + ".docx")
       } else {
         resolved = path.resolve(filepath)
         // Allow: tailored output dir, THIS user's resume folder, legacy library
+        // LEGACY_RESUMES is the SHARED library — real resumes with full contact
+        // details. Including it unconditionally let an anonymous caller extract
+        // that PII through this route, bypassing the auth on
+        // /api/resumes/download. Authenticated callers only.
         const allowed = [
           path.resolve(OUT_DIR),
           path.resolve(path.join(USER_RESUMES_BASE, userId)),
@@ -105,7 +119,14 @@ export async function GET(request: NextRequest) {
   // leak whichever real user most recently uploaded a resume (name/email/phone)
   // to an unauthenticated caller now that this route is public (see middleware.ts).
   try {
-    const dirs = [path.join(USER_RESUMES_BASE, userId), LEGACY_RESUMES]
+    // Same reasoning as the ?filepath= allow-list above: an anonymous caller
+    // (userId stays "demo") must not fall back to the shared library, or this
+    // endpoint hands out the owner's name/email/phone to the whole internet.
+    // Same rule: an anonymous caller (userId still "demo") gets nothing. The
+    // "demo" folder is not a placeholder — it is where the Chrome extension
+    // uploads real resumes, so falling back to it handed the owner's name,
+    // email and phone to any unauthenticated caller.
+    const dirs = userId !== "demo" ? [path.join(USER_RESUMES_BASE, userId), LEGACY_RESUMES] : []
     for (const dir of dirs) {
       const newest = await newestDocx(dir)
       if (newest) {

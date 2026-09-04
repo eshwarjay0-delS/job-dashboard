@@ -68,7 +68,9 @@ export async function POST(request: NextRequest) {
       }
       if (filepath) {
         const resolved = path.resolve(filepath)
-        if (resolved.startsWith(path.resolve(userResumeDir))) {
+        const clBase = path.resolve(userResumeDir)
+        // Exact-or-separator, not a bare prefix — see tailor.ts for why.
+        if (resolved === clBase || resolved.startsWith(clBase + path.sep)) {
           const buf = await readPath(resolved)
           if (buf) {
             resumeText = (await extractText(buf)).slice(0, 6000)

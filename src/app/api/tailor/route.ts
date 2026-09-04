@@ -11,6 +11,17 @@ export const runtime = "nodejs"
 // Vercel Hobby function allows (default is far shorter and would cut long runs off).
 export const maxDuration = 60
 
+// ACCEPTED RISK, decided 2026-09-02. resolveUserId() below falls back to "demo"
+// for an unauthenticated caller, so this route is reachable anonymously and will
+// tailor against the "demo" resume library — which on this deployment holds real
+// resumes, not placeholders. It is also an open LLM endpoint: the only brake is
+// TAILOR_IP_HOURLY, enforced by src/lib/rateLimit.ts, an in-memory Map that is
+// per-instance and resets on redeploy, so it is advisory on serverless.
+//
+// Left open deliberately so the gmail-jd-reply-board extension keeps working.
+// If that changes, require a session here and add a Bearer token to that
+// extension's tailor.js.
+
 // Unlimited by default (personal use). Set TAILOR_WEEKLY_LIMIT>0 in .env to cap.
 const TAILOR_WEEKLY_LIMIT = Number(process.env.TAILOR_WEEKLY_LIMIT ?? 0)
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000

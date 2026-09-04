@@ -420,7 +420,16 @@
         } catch { /* fall back to cachedProfile — resume-specific fields are a nice-to-have */ }
       }
 
-      const willAutoSubmit = AUTO_SUBMIT_ATS.has(ats)
+      // A resume was CHOSEN but no URL could be built for it (the select value
+      // carried neither a "token:" nor a "path:" prefix), so resumeUrl is null.
+      // content.js only blocks auto-submit when resumeUrl was supplied, so
+      // without this the application would be submitted with no resume attached
+      // — the one outcome that is worse than not submitting at all.
+      const resumeUnresolved = !!(select.value || "") && !resumeUrl
+      const willAutoSubmit = AUTO_SUBMIT_ATS.has(ats) && !resumeUnresolved
+      if (resumeUnresolved) {
+        log("A resume is selected but could not be resolved to a file — filling only, not submitting.", "warning")
+      }
       showReceipt(fillProfile, resumeName || "(no resume selected)", willAutoSubmit)
       log(willAutoSubmit
         ? "Review the details below — confirming will submit the real application."

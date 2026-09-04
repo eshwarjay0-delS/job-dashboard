@@ -30,9 +30,20 @@ export async function GET(request: NextRequest) {
     if (data.user?.id) userId = data.user.id
   } catch { /* unauthenticated */ }
 
-  // Allow access to the shared library regardless of auth
+  // The shared library is NOT public. It holds real resumes carrying full
+  // contact details, and this route previously served them to any anonymous
+  // caller ("no per-user restriction needed"), which made every file under
+  // RESUMES_LIB downloadable from the live deployment by anyone who could guess
+  // or enumerate a filepath. Require a session here too.
+  //
+  // Note this fails CLOSED when Supabase is unconfigured: createClientFromRequest
+  // returns a stub whose getUser() resolves to null, so a demo deployment now
+  // 401s instead of serving personal documents to the internet. That is the
+  // correct trade — an unauthenticated PII endpoint is worse than a broken demo.
   if (resolved.startsWith(sharedLib + path.sep) || resolved === sharedLib) {
-    // Shared library — no per-user restriction needed
+    if (!userId) {
+      return NextResponse.json({ error: "Authentication required." }, { status: 401 })
+    }
   } else if (resolved.startsWith(userBase + path.sep)) {
     // User-scoped folder: must be authenticated and the file must live inside THIS user's subfolder
     if (!userId) {

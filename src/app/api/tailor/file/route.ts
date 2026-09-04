@@ -5,6 +5,16 @@ import { blob } from "@/lib/storage"
 
 export const runtime = "nodejs"
 
+// ACCEPTED RISK, decided 2026-09-02. This route has NO authentication: it serves
+// any tailored .docx to whoever presents its token. The token is a sha1 hex slice
+// (unguessable), so this is a capability URL — but anyone who ever sees one keeps
+// access to that resume indefinitely, and the file carries a full contact block.
+//
+// Left open deliberately: the gmail-jd-reply-board extension fetches tailored
+// resumes from here and has no auth plumbing, so requiring a session would break
+// it. Revisit if that extension gains a Bearer token (the job-dashboard extension
+// already has one via extension/auth.js getToken()).
+
 // Extract the document's primary font from styles.xml so the PDF output uses
 // the same typeface the candidate chose for their resume, not a generic fallback.
 async function extractDocxFont(buffer: Buffer): Promise<{ body: string; heading: string }> {

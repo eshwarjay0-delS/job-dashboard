@@ -7,6 +7,7 @@ import { resolveKeys, hasAnyKey } from "@/lib/llm"
 import { recentFeedback } from "@/lib/feedback"
 import { extractKeywords } from "@/lib/keywords"
 import { RESUMES_LIB as RESUMES_DIR, USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
+import { createClientFromRequest } from "@/lib/supabase/server"
 
 export const runtime = "nodejs"
 
@@ -43,10 +44,25 @@ export async function POST(request: NextRequest) {
     const jd = (body.jd || "").trim()
     if (!given) return NextResponse.json({ error: "Pick a resume to load." }, { status: 400 })
 
+    // AUTH. This route reads arbitrary .docx off the resume storage and returns
+    // their extracted text, so it must not be anonymous. The allow-list below is
+    // also scoped to the CALLER'S OWN folder — it previously allowed the whole
+    // USER_RESUMES_BASE root, which let any caller read every other user's
+    // resumes. Note `+ path.sep`: without it "/u/demo" also matches "/u/demo2".
+    let userId = ""
+    try {
+      const supabase = await createClientFromRequest(request)
+      const { data } = await supabase.auth.getUser()
+      if (data.user?.id) userId = data.user.id
+    } catch { /* unauthenticated */ }
+    if (!userId) {
+      return NextResponse.json({ error: "Authentication required." }, { status: 401 })
+    }
+
     const resolved = path.resolve(given)
-    const ALLOWED = [path.resolve(RESUMES_DIR), path.resolve(USER_RESUMES_BASE)]
-    if (!ALLOWED.some(a => resolved.startsWith(a))) {
-      return NextResponse.json({ error: "That file is outside the resumes folder." }, { status: 403 })
+    const ALLOWED = [path.resolve(RESUMES_DIR), path.resolve(path.join(USER_RESUMES_BASE, userId))]
+    if (!ALLOWED.some(a => resolved === a || resolved.startsWith(a + path.sep))) {
+      return NextResponse.json({ error: "That file is outside your resumes folder." }, { status: 403 })
     }
     const buf = await readPath(resolved)
     if (!buf) return NextResponse.json({ error: "That resume could not be read." }, { status: 404 })

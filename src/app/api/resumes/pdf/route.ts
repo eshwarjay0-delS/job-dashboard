@@ -23,9 +23,9 @@ export async function GET(request: NextRequest) {
     return htmlError("No resume file was provided.")
   }
 
-  // Scope user-uploaded resumes to the requesting user's own folder only — the
-  // shared library (RESUMES_DIR) has no owner and stays open to any caller,
-  // same convention /api/resumes/download and /api/profile's ?filepath= use.
+  // Every path below requires a signed-in caller. This comment used to say the
+  // shared library "stays open to any caller" — that was the bug: RESUMES_DIR
+  // holds real resumes with full contact details.
   let userId = ""
   try {
     const supabase = await createClientFromRequest(request)
@@ -37,18 +37,23 @@ export async function GET(request: NextRequest) {
   const sharedLib = path.resolve(RESUMES_DIR)
   const userBase  = path.resolve(USER_RESUMES_BASE)
 
+  // Same hole as /api/resumes/download had: the shared library holds real
+  // resumes with full contact details, and rendering one to HTML/PDF for an
+  // anonymous caller leaks exactly the same PII as downloading it. Fail closed.
   if (resolved.startsWith(sharedLib + path.sep) || resolved === sharedLib) {
-    // Shared library — no per-user restriction needed
+    if (!userId) {
+      return htmlError("Please sign in to view this resume.", "", 401)
+    }
   } else if (resolved.startsWith(userBase + path.sep)) {
     if (!userId) {
-      return htmlError("Please sign in to view this resume.")
+      return htmlError("Please sign in to view this resume.", "", 401)
     }
     const userFolder = path.resolve(path.join(userBase, userId))
     if (!resolved.startsWith(userFolder + path.sep) && resolved !== userFolder) {
-      return htmlError("That file is outside your resumes folder, so it can't be opened.")
+      return htmlError("That file is outside your resumes folder, so it can't be opened.", "", 403)
     }
   } else {
-    return htmlError("That file is outside the resumes folder, so it can't be opened.")
+    return htmlError("That file is outside the resumes folder, so it can't be opened.", "", 403)
   }
 
   let bodyHtml = ""
@@ -134,12 +139,12 @@ function escapeHtml(s: string): string {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!))
 }
 
-function htmlError(title: string, detail = ""): NextResponse {
+function htmlError(title: string, detail = "", status = 200): NextResponse {
   const page = `<!doctype html><html><head><meta charset="utf-8"><title>PDF export</title>
 <style>body{font-family:Segoe UI,Arial,sans-serif;background:#f3f4f6;margin:0;padding:60px 20px;text-align:center;color:#1f2937}
 .card{background:#fff;max-width:440px;margin:0 auto;padding:32px;border-radius:16px;box-shadow:0 1px 12px rgba(0,0,0,.1)}
 h1{font-size:18px;margin:0 0 10px}p{color:#6b7280;font-size:14px;line-height:1.6}
 code{background:#f3f4f6;padding:2px 8px;border-radius:6px;font-family:Consolas,monospace;color:#0f766e}</style></head>
 <body><div class="card"><h1>${escapeHtml(title)}</h1><p>${detail || "Please try again."}</p></div></body></html>`
-  return new NextResponse(page, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } })
+  return new NextResponse(page, { status, headers: { "Content-Type": "text/html; charset=utf-8" } })
 }

@@ -949,8 +949,17 @@ async function doAutoFillFromToken() {
   res2.innerHTML = ""
 
   try {
-    const res = await fetch(`${appUrl}/api/profile?token=${encodeURIComponent(lastToken)}`, { signal: AbortSignal.timeout(10000) })
+    // Same session header as the /api/profile call above. That route no longer
+    // serves resume-derived data to anonymous callers — the ?token= branch used
+    // to reach the tailored-output directory with no auth and no allow-list.
+    const s2 = await chrome.storage.local.get(["mf_session"])
+    const tok2 = s2.mf_session?.access_token
+    const res = await fetch(`${appUrl}/api/profile?token=${encodeURIComponent(lastToken)}`, {
+      signal: AbortSignal.timeout(10000),
+      headers: tok2 ? { Authorization: `Bearer ${tok2}` } : {},
+    })
     const data = await res.json().catch(() => ({}))
+    if (res.status === 401) throw new Error("Sign in to the dashboard first, then retry.")
     if (!res.ok || !data.profile) throw new Error(data.error || "Could not fetch profile")
 
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
