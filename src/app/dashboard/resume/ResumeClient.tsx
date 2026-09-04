@@ -265,24 +265,23 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
         const res  = await fetch("/api/resumes", { method: "POST", body: fd })
         const data = await res.json()
         if (res.ok && data.duplicate) {
-          const replace = await confirm(`"${data.file.filename}" is already in your library.\n\nIs this a modified version?`, { title: "File already exists", confirmLabel: "Replace", cancelLabel: "Keep existing" })
-          if (replace) {
-            const fd2 = new FormData()
-            fd2.append("file", file)
-            fd2.append("replace", "true")
-            const res2 = await fetch("/api/resumes", { method: "POST", body: fd2 })
-            const data2 = await res2.json().catch(() => ({}))
-            if (res2.ok && data2.file) {
-              setUploaded(prev => prev.map(u => u.file.id === tempId ? { file: data2.file, status: "ready" } : u))
-              setSelected(data2.file.id)
-              router.refresh()
-            } else {
-              setUploaded(prev => prev.map(u => u.file.id === tempId ? { ...u, status: "error", errorMsg: data2.error ?? "Replace failed" } : u))
-              setErr(data2.error ?? "Replace failed")
-            }
+          // REPLACE BY DEFAULT — re-uploading a resume you already have is virtually always
+          // a newer version, so don't interrupt with a confirm dialog every single time.
+          const fd2 = new FormData()
+          fd2.append("file", file)
+          fd2.append("replace", "true")
+          const res2 = await fetch("/api/resumes", { method: "POST", body: fd2 })
+          const data2 = await res2.json().catch(() => ({}))
+          if (res2.ok && data2.file) {
+            setUploaded(prev => prev.map(u => u.file.id === tempId ? { file: data2.file, status: "ready" } : u))
+            setSelected(data2.file.id)
+            setNotice(`Replaced "${data2.file.filename}" with the version you just uploaded.`)
+            router.refresh()
           } else {
+            // Couldn't overwrite — keep the existing copy rather than losing the upload.
             setUploaded(prev => prev.map(u => u.file.id === tempId ? { file: data.file, status: "ready" } : u))
             setSelected(data.file.id)
+            setErr(data2.error ?? "Could not replace the existing file — kept the current one.")
           }
         } else if (res.ok && data.file) {
           setUploaded(prev => prev.map(u => u.file.id === tempId ? { file: data.file, status: "ready" } : u))
