@@ -201,13 +201,25 @@ export function extractJdKeywords(jd: string): string[] {
     if (raw.length < 2 || raw.length > 24) continue
     if (!(/[A-Z]{2,}/.test(raw) || /[a-z][A-Z]/.test(raw) || /[0-9]/.test(raw) || /[-./]/.test(raw))) continue
     if (CAPS_STOP.has(raw.toUpperCase())) continue
-    const low = raw.toLowerCase().replace(/s$/, s => (raw.length > 3 ? "" : s)) // FSRs→fsr, BRDs→brd
+    // Only strip a plural "s" on a PLAIN token. On separator tokens it corrupted the
+    // keyword ("EKS/AKS" → "eks/ak", "CI/CDs" → "ci/cd"), so leave those intact — and
+    // for slash tokens also emit each side ("EKS/AKS" → eks, aks) since ATS matches both.
+    const lowRaw = raw.toLowerCase()
+    const hasSep = /[-./]/.test(raw)
+    const low = hasSep ? lowRaw : lowRaw.replace(/s$/, m => (raw.length > 3 ? "" : m))
     if (low.length >= 2 && !WORD_STOP.has(low)) out.add(low)
+    if (raw.includes("/")) {
+      for (const part of lowRaw.split("/")) {
+        if (part.length >= 2 && part.length <= 12 && !WORD_STOP.has(part) && !CAPS_STOP.has(part.toUpperCase())) out.add(part)
+      }
+    }
   }
 
   // 3) parenthetical abbreviations — the JD author is literally telling us the acronym.
   for (const m of jd.matchAll(/\(([A-Za-z][A-Za-z0-9/&+ -]{1,14})\)/g)) {
-    const low = m[1].trim().toLowerCase().replace(/s$/, "")
+    const t = m[1].trim().toLowerCase()
+    // Same plural trap as layer 2: "(EKS/AKS)" must not become "eks/ak".
+    const low = /[-./]/.test(t) ? t : t.replace(/s$/, "")
     if (low.length >= 2 && !WORD_STOP.has(low)) out.add(low)
   }
 
@@ -218,7 +230,7 @@ export function extractJdKeywords(jd: string): string[] {
   //    "incident response", "information security", "change management" — for ANY domain.
   //    Two words only, and the preceding word can't be a stopword or a gerund verb
   //    (so "implementing security" / "performing analysis" never leak in).
-  const SUFFIX = /^(management|security|governance|testing|controls?|compliance|analysis|response|services|provisioning|deprovisioning|training|protocols?|assessment|monitoring|administration|remediation|authentication|authorization|architecture|mitigation|hardening|onboarding|scanning|reporting|engineering|operations)$/
+  const SUFFIX = /^(management|security|governance|testing|controls?|compliance|analysis|response|services|provisioning|deprovisioning|training|protocols?|assessment|monitoring|administration|remediation|authentication|authorization|architecture|mitigation|hardening|onboarding|scanning|reporting|engineering|operations|modeling|modelling|segmentation|privilege|detection|hunting|orchestration|migration|integration|optimization|automation|validation|encryption|recovery|continuity|discovery|enrichment|triage|forensics|resilience|pipelines?|reviews?|policies|policy)$/
   for (const m of jd.matchAll(/\b([a-z][a-z-]{2,})\s+([a-z][a-z-]+)\b/gi)) {
     const a = m[1].toLowerCase(), b = m[2].toLowerCase()
     if (!SUFFIX.test(b)) continue
@@ -226,8 +238,38 @@ export function extractJdKeywords(jd: string): string[] {
     out.add(a + " " + b)
   }
 
+  // 5) PRODUCT / TOOL proper nouns. Vendor names carry no acronym caps and aren't in the
+  //    curated vocab, so tools like Wiz, Trivy, Vault, Snowflake, Datadog were dropped
+  //    entirely — exactly the keywords an ATS looks for. High precision comes from taking
+  //    Title-Case tokens ONLY mid-sentence: a capitalised word that is NOT the first word
+  //    of a sentence/line/bullet is almost always a proper noun, not sentence casing.
+  for (const m of jd.matchAll(/(?<=[^\s.!?;:•\-–—\n])[ \t]+([A-Z][a-zA-Z0-9]{2,15})\b/g)) {
+    const raw = m[1]
+    if (/^[A-Z]+$/.test(raw)) continue              // ALL-CAPS already handled above
+    const low = raw.toLowerCase()
+    if (WORD_STOP.has(low) || CAPS_STOP.has(raw.toUpperCase()) || TITLE_STOP.has(low)) continue
+    out.add(low)
+  }
+
   return [...out]
 }
+
+// Capitalised words that are ordinary English (or JD boilerplate) rather than product
+// names — these would otherwise slip through the mid-sentence proper-noun layer.
+const TITLE_STOP = new Set([
+  "we","our","you","your","the","this","that","and","for","with","from","must","will","have","has",
+  "responsibilities","requirements","required","preferred","qualifications","experience","years",
+  "role","team","teams","company","client","clients","candidate","candidates","position","job",
+  "design","designing","implement","implementing","manage","managing","build","building","run",
+  "running","operate","operating","enforce","ensure","ensuring","support","supporting","develop",
+  "developing","maintain","maintaining","lead","leading","work","working","collaborate","provide",
+  "strong","excellent","good","great","plus","bonus","nice","ability","knowledge","skills","skill",
+  "understanding","familiarity","proficiency","expertise","background","degree","bachelor","master",
+  "senior","junior","lead","principal","staff","engineer","developer","analyst","architect","manager",
+  "monday","tuesday","wednesday","thursday","friday","january","february","march","april","june",
+  "july","august","september","october","november","december","remote","hybrid","onsite","full",
+  "part","time","note","please","apply","join","help","also","other","others","etc","including",
+])
 
 // Which of the JD's keywords are literally present in a resume's text.
 export function coveredJdKeywords(text: string, jdKeywords: string[]): Set<string> {
