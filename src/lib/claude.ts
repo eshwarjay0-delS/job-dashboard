@@ -234,6 +234,72 @@ export async function adapt(opts: {
   throw lastErr instanceof Error ? lastErr : new Error("Claude request failed")
 }
 
+// ── JD keyword EXPANSION (second prompt, runs alongside the tailor) ────────────
+// The deterministic extractor in keywords.ts only sees terms literally present in the
+// JD. This asks the model for the ATS keywords a recruiter would ALSO expect for this
+// role — synonyms, the expanded form of an acronym (and vice-versa), and standard tools
+// implied by the stack — so the tailor has a richer target list to weave in. Returns a
+// plain string[]; ALWAYS resolves (never throws) so a slow/failed call can't break or
+// stall a tailor — the caller just proceeds with the extracted keywords alone.
+export async function expandJdKeywords(opts: {
+  keys: LlmKeys
+  pref?: ProviderPref
+  jd: string
+  known?: string[]
+  model?: string
+  timeoutMs?: number
+  usageSink?: TokenUsage[]
+}): Promise<string[]> {
+  const system = `You are an ATS keyword extractor. Given a job description, list the keywords an applicant tracking system would scan for.
+RULES:
+- Output ONLY a minified JSON array of lowercase strings. No prose, no markdown, no keys.
+- Include: hard skills, tools, platforms, frameworks, certifications, methodologies, and domain phrases.
+- Include BOTH forms of an acronym when the role uses them (e.g. "iam" and "identity and access management").
+- Include standard tools/technologies clearly implied by the stack even if not named verbatim.
+- EXCLUDE soft skills, company names, benefits, locations, and generic words ("team", "strong", "experience").
+- Keep each entry 1-4 words. Max 60 entries.
+Example output: ["kubernetes","terraform","iam","identity and access management","siem"]`
+  const user =
+    `JOB DESCRIPTION:
+${opts.jd.slice(0, 4000)}
+
+` +
+    (opts.known?.length ? `ALREADY CAPTURED (return ADDITIONAL ones, do not repeat these): ${opts.known.slice(0, 60).join(", ")}
+
+` : "") +
+    `Return the JSON array of ATS keywords.`
+
+  const call = (async () => {
+    const text = (await callLLM({
+      keys: opts.keys, tier: "light", pref: opts.pref, system, user,
+      maxTokens: 700, model: opts.model, temperature: 0.2, usageSink: opts.usageSink,
+    })).text
+    let t = text.trim().replace(/^```[a-zA-Z]*\s*/, "").replace(/\s*```$/, "").trim()
+    const a = t.indexOf("["), b = t.lastIndexOf("]")
+    if (a >= 0 && b > a) t = t.slice(a, b + 1)
+    const arr = JSON.parse(t)
+    if (!Array.isArray(arr)) return []
+    const out: string[] = []
+    for (const v of arr) {
+      if (typeof v !== "string") continue
+      const k = v.toLowerCase().trim().replace(/[.,;:]+$/, "")
+      // 2-40 chars, at most 4 words, no filler — same precision bar as the extractor.
+      if (k.length < 2 || k.length > 40) continue
+      if (k.split(/\s+/).length > 4) continue
+      if (isFiller(k)) continue
+      out.push(k)
+    }
+    return [...new Set(out)].slice(0, 60)
+  })()
+
+  // Hard cap: this is an ENHANCEMENT, never a reason for the tailor to wait.
+  const ms = opts.timeoutMs ?? 8000
+  return Promise.race([
+    call.catch(() => [] as string[]),
+    new Promise<string[]>(r => setTimeout(() => r([]), ms)),
+  ])
+}
+
 // ── Targeted coverage augment (token-smart escalation) ─────────────────────────
 // Instead of re-sending the WHOLE resume to a stronger/costlier model, send only the
 // ATS surface that can absorb the gap — the skill lines + the CURRENT role's bullets

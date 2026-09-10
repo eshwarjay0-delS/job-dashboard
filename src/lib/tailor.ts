@@ -2,7 +2,7 @@ import path from "path"
 import { createHash } from "crypto"
 import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, type Edits, type Zones } from "./docx"
-import { adapt } from "./claude"
+import { adapt, expandJdKeywords } from "./claude"
 import { recentFeedback } from "./feedback"
 import { matchByKeywords, extractKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import type { LlmKeys, ProviderPref, TokenUsage } from "./llm"
@@ -102,6 +102,15 @@ export async function runTailor(opts: {
   const started = Date.now()
   const jd = opts.jd.trim()
   const immediatePrefs = (opts.immediatePrefs || []).filter(s => typeof s === "string" && s.trim())
+  // Second prompt: ask the model for the ATS keywords a recruiter expects for this JD
+  // (synonyms, acronym expansions, implied tooling) to concat with the literal extraction.
+  // Fired HERE, before resume matching/loading, so it runs CONCURRENTLY with that work and
+  // costs ~no extra wall time; it self-resolves to [] on error/timeout, so it can never
+  // stall or fail a tailor. TAILOR_KW_EXPAND=0 disables it.
+  const kwExpandPromise: Promise<string[]> =
+    (process.env.TAILOR_KW_EXPAND === "0" || process.env.TAILOR_KW_EXPAND === "false")
+      ? Promise.resolve([])
+      : expandJdKeywords({ keys: opts.keys, pref: opts.pref, jd, timeoutMs: Number(process.env.TAILOR_KW_EXPAND_MS) || 8000 })
 
   // 1) Pick the resume (cheap — no LLM).
   let matched: { filepath: string; filename: string; category: string }
@@ -177,7 +186,11 @@ export async function runTailor(opts: {
   // The tailoring target is the JD's OWN keywords (domain-agnostic extraction), not a
   // fixed vocab — so this works for ANY job description without hand-curated per-domain
   // terms. Coverage = which of those literally appear in the resume.
-  const jdKws = extractJdKeywords(jd)
+  // Literal extraction from the JD + the model-generated keywords, deduped. The union is
+  // what drives coverage scoring, the front-loaded gap list, and the tailoring prompt.
+  const jdExtracted = extractJdKeywords(jd)
+  const jdGenerated = (await kwExpandPromise).filter(k => !jdExtracted.includes(k))
+  const jdKws = [...new Set([...jdExtracted, ...jdGenerated])]
   const beforeKw = coveredJdKeywords(text, jdKws)
   const matchedOn = [...beforeKw]
   const kwMatched = [...beforeKw]

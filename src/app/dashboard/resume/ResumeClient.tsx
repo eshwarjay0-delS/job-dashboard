@@ -137,9 +137,13 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
   const [uploaded, setUploaded]   = useState<UploadedEntry[]>([])
   const [dragging, setDragging]   = useState(false)
   const [selected, setSelected]   = useState<string | null>(null)
-  const [autoSelect, setAutoSelect] = useState(true)
+  // Auto-match OFF by default — the user picks the resume themselves rather than having
+  // one chosen across the whole library.
+  const [autoSelect, setAutoSelect] = useState(false)
   const [onePage, setOnePage]     = useState(false)
-  const [sections, setSections]   = useState<{ summary: boolean; skills: boolean; experience: boolean }>({ summary: true, skills: true, experience: true })
+  // Summary deselected by default — skills + experience carry the JD keywords; the
+  // summary is left as the candidate wrote it unless they explicitly opt in.
+  const [sections, setSections]   = useState<{ summary: boolean; skills: boolean; experience: boolean }>({ summary: false, skills: true, experience: true })
   const [mode, setMode]           = useState<"quick" | "full">("full")
 
   const [jd, setJd]               = useState(() => {
