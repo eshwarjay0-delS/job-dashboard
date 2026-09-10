@@ -186,11 +186,18 @@ export async function runTailor(opts: {
   // The tailoring target is the JD's OWN keywords (domain-agnostic extraction), not a
   // fixed vocab — so this works for ANY job description without hand-curated per-domain
   // terms. Coverage = which of those literally appear in the resume.
-  // Literal extraction from the JD + the model-generated keywords, deduped. The union is
-  // what drives coverage scoring, the front-loaded gap list, and the tailoring prompt.
+  // Literal extraction from the JD, PLUS the model-generated keywords.
+  // These play DIFFERENT roles on purpose:
+  //   • jdKws (extracted only) drives coverage SCORING and the climb decision. Generated
+  //     synonyms are "nice to have", so counting them tanked coverage (95%→87%), which
+  //     tripped the climb on every run and pushed tailors to ~60s.
+  //   • jdKwsPrompt (the union) is what the MODEL sees — so the expansions still get
+  //     woven into the resume, which is the part an ATS actually reads.
+  // Result: richer keywords in the document, without the extra escalation or the delay.
   const jdExtracted = extractJdKeywords(jd)
   const jdGenerated = (await kwExpandPromise).filter(k => !jdExtracted.includes(k))
-  const jdKws = [...new Set([...jdExtracted, ...jdGenerated])]
+  const jdKws = jdExtracted
+  const jdKwsPrompt = [...new Set([...jdExtracted, ...jdGenerated])]
   const beforeKw = coveredJdKeywords(text, jdKws)
   const matchedOn = [...beforeKw]
   const kwMatched = [...beforeKw]
@@ -286,7 +293,7 @@ export async function runTailor(opts: {
   // coverage, stalling the climb).
   const draftPass = async (step: { pref: ProviderPref; model?: string; label?: string }, extraPrefs: string[]): Promise<Pass> => {
     const prefs = [...allPrefs, ...extraPrefs].filter(Boolean)
-    const raw = await adapt({ keys: opts.keys, pref: step.pref, jd, zones, preferences: prefs.join("; "), jdKeywords: jdKws, onePage: opts.onePage, mode: opts.mode, model: step.model, usageSink })
+    const raw = await adapt({ keys: opts.keys, pref: step.pref, jd, zones, preferences: prefs.join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, model: step.model, usageSink })
     const pass = await applyEdits(scopeEdits(raw))
     // Tag with the model that actually produced this draft — with cross-provider draws the
     // winner may not be the primary step, and the notes must name the real one.
@@ -299,7 +306,9 @@ export async function runTailor(opts: {
   // Build the "front-load" instruction listing exactly which JD terms are still missing
   // (computed deterministically from resume coverage — no LLM) so every pass targets the gap.
   const injectFor = (covered: Set<string>, wantSummary: boolean): string[] => {
-    const missing = jdKws.filter(k => !covered.has(k)).slice(0, 40)
+    // Enriched list here as well: the model is told to weave in the generated synonyms
+    // and acronym expansions, even though they don't count against the coverage score.
+    const missing = jdKwsPrompt.filter(k => !covered.has(k)).slice(0, 40)
     if (!missing.length && !wantSummary) return []
     const parts: string[] = []
     if (missing.length) parts.push(`ensure these JD terms appear, weaving EACH one the candidate can honestly support into the most relevant existing skill line or bullet using the JD's exact wording (skip any the candidate genuinely can't back up): ${missing.join(", ")}`)
