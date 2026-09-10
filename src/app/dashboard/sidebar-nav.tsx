@@ -198,8 +198,8 @@ export default function SidebarNav() {
     borderRadius: 9,
     fontSize: 13,
     fontWeight: active ? 650 : 450,
-    color: active ? "#fff" : "rgba(255,255,255,.52)",
-    background: active ? "color-mix(in srgb, var(--accent) 52%, transparent)" : "transparent",
+    color: active ? "#fff" : "rgba(15,23,42,.72)",
+    background: active ? "var(--accent)" : "transparent",
     transition: "all .13s",
     letterSpacing: "-0.01em",
     boxShadow: active ? "inset 0 1px 0 rgba(255,255,255,.08)" : "none",
@@ -214,11 +214,11 @@ export default function SidebarNav() {
       left: 0,
       bottom: 0,
       width: 220,
-      background: "#0f1623",
+      background: "#eff6ff",
       display: "flex",
       flexDirection: "column",
       zIndex: 400,
-      borderRight: "1px solid rgba(255,255,255,.07)",
+      borderRight: "1px solid rgba(15,23,42,.07)",
     }}>
 
       {/* ── Logo ──────────────────────────────────────────────────── */}
@@ -233,17 +233,17 @@ export default function SidebarNav() {
             flexShrink: 0,
           }}>MF</div>
           <div>
-            <div style={{ fontSize: 13.5, fontWeight: 800, color: "#fff", letterSpacing: "-0.3px", lineHeight: 1.1 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.3px", lineHeight: 1.1 }}>
               MarketFit
             </div>
-            <div style={{ fontSize: 9.5, color: "rgba(255,255,255,.35)", fontWeight: 500, letterSpacing: "0.3px" }}>
+            <div style={{ fontSize: 9.5, color: "rgba(15,23,42,.5)", fontWeight: 500, letterSpacing: "0.3px" }}>
               Own Your Next Role
             </div>
           </div>
         </a>
       </div>
 
-      <div style={{ height: 1, background: "rgba(255,255,255,.07)", margin: "0 12px 4px" }} />
+      <div style={{ height: 1, background: "rgba(15,23,42,.07)", margin: "0 12px 4px" }} />
 
       {/* ── Main Nav ──────────────────────────────────────────────── */}
       <nav style={{ flex: 1, padding: "4px 8px", overflowY: "auto", overflowX: "hidden" }}>
@@ -258,7 +258,7 @@ export default function SidebarNav() {
                   fontWeight: 700,
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
-                  color: "rgba(255,255,255,.28)",
+                  color: "rgba(15,23,42,.45)",
                   padding: "8px 10px 3px",
                 }}>
                   {section.label}
@@ -287,14 +287,14 @@ export default function SidebarNav() {
                         style={{ ...linkStyle(parentActive), flex: 1 }}
                         onMouseEnter={e => {
                           if (!parentActive) {
-                            (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)"
-                            ;(e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.82)"
+                            (e.currentTarget as HTMLElement).style.background = "rgba(15,23,42,.07)"
+                            ;(e.currentTarget as HTMLElement).style.color = "rgba(15,23,42,.92)"
                           }
                         }}
                         onMouseLeave={e => {
                           if (!parentActive) {
                             (e.currentTarget as HTMLElement).style.background = "transparent"
-                            ;(e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.52)"
+                            ;(e.currentTarget as HTMLElement).style.color = "rgba(15,23,42,.72)"
                           }
                         }}
                       >
@@ -305,7 +305,7 @@ export default function SidebarNav() {
                         {item.badge && (
                           <span style={{
                             fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 20,
-                            background: "rgba(250,204,21,.15)", color: "#fbbf24",
+                            background: "rgba(250,204,21,.15)", color: "#b45309",
                             border: "1px solid rgba(251,191,36,.25)", flexShrink: 0,
                           }}>{item.badge}</span>
                         )}
@@ -314,7 +314,7 @@ export default function SidebarNav() {
                         {item.coming && (
                           <span style={{
                             fontSize: 9, fontWeight: 600, padding: "1px 5px", borderRadius: 20,
-                            background: "rgba(148,163,184,.12)", color: "rgba(148,163,184,.7)",
+                            background: "rgba(148,163,184,.12)", color: "#64748b",
                             border: "1px solid rgba(148,163,184,.18)", flexShrink: 0,
                           }}>Soon</span>
                         )}
@@ -329,12 +329,12 @@ export default function SidebarNav() {
                           }}
                           style={{
                             flexShrink: 0, width: 26, height: 30, border: "none", cursor: "pointer",
-                            background: "transparent", color: parentActive ? "rgba(255,255,255,.6)" : "rgba(255,255,255,.28)",
+                            background: "transparent", color: parentActive ? "rgba(15,23,42,.6)" : "rgba(15,23,42,.45)",
                             display: "flex", alignItems: "center", justifyContent: "center",
                             borderRadius: 7, transition: "all .13s",
                           }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.75)" }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = parentActive ? "rgba(255,255,255,.6)" : "rgba(255,255,255,.28)" }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "rgba(15,23,42,.75)" }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = parentActive ? "rgba(15,23,42,.6)" : "rgba(15,23,42,.45)" }}
                           title={showSub ? "Collapse" : "Expand"}
                         >
                           <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{
@@ -362,20 +362,20 @@ export default function SidebarNav() {
                                 padding: "5px 9px", borderRadius: 7, marginBottom: 1,
                                 textDecoration: "none", fontSize: 12,
                                 fontWeight: subIsActive ? 600 : 400,
-                                color: subIsActive ? "#bfdbfe" : "rgba(255,255,255,.38)",
+                                color: subIsActive ? "var(--accent-txt, #1558a0)" : "rgba(15,23,42,.6)",
                                 background: subIsActive ? "color-mix(in srgb, var(--accent) 20%, transparent)" : "transparent",
                                 transition: "all .13s",
-                                borderLeft: `2px solid ${subIsActive ? "color-mix(in srgb, var(--accent) 55%, transparent)" : "rgba(255,255,255,.08)"}`,
+                                borderLeft: `2px solid ${subIsActive ? "color-mix(in srgb, var(--accent) 55%, transparent)" : "rgba(15,23,42,.1)"}`,
                               }}
                               onMouseEnter={e => {
                                 if (!subIsActive) {
-                                  (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.65)"
-                                  ;(e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"
+                                  (e.currentTarget as HTMLElement).style.color = "rgba(15,23,42,.85)"
+                                  ;(e.currentTarget as HTMLElement).style.background = "rgba(15,23,42,.05)"
                                 }
                               }}
                               onMouseLeave={e => {
                                 if (!subIsActive) {
-                                  (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.38)"
+                                  (e.currentTarget as HTMLElement).style.color = "rgba(15,23,42,.6)"
                                   ;(e.currentTarget as HTMLElement).style.background = "transparent"
                                 }
                               }}
@@ -384,7 +384,7 @@ export default function SidebarNav() {
                               {sub.coming && (
                                 <span style={{
                                   marginLeft: "auto", fontSize: 8.5, fontWeight: 600, padding: "1px 4px", borderRadius: 20,
-                                  background: "rgba(148,163,184,.1)", color: "rgba(148,163,184,.6)",
+                                  background: "rgba(148,163,184,.1)", color: "#64748b",
                                   border: "1px solid rgba(148,163,184,.16)",
                                 }}>Soon</span>
                               )}
@@ -405,14 +405,14 @@ export default function SidebarNav() {
           <div style={{ marginTop: 2 }}>
             <div style={{
               fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em",
-              textTransform: "uppercase", color: "rgba(255,255,255,.28)",
+              textTransform: "uppercase", color: "rgba(15,23,42,.45)",
               padding: "8px 10px 3px",
             }}>Admin</div>
             <a
               href="/dashboard/admin"
               style={linkStyle(isActive("/dashboard/admin", pathname))}
-              onMouseEnter={e => { if (!isActive("/dashboard/admin", pathname)) { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.82)" } }}
-              onMouseLeave={e => { if (!isActive("/dashboard/admin", pathname)) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.52)" } }}
+              onMouseEnter={e => { if (!isActive("/dashboard/admin", pathname)) { (e.currentTarget as HTMLElement).style.background = "rgba(15,23,42,.07)"; (e.currentTarget as HTMLElement).style.color = "rgba(15,23,42,.92)" } }}
+              onMouseLeave={e => { if (!isActive("/dashboard/admin", pathname)) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "rgba(15,23,42,.72)" } }}
             >
               <span style={{ opacity: 0.75 }}>{I.shield}</span>
               Admin
@@ -421,22 +421,22 @@ export default function SidebarNav() {
         )}
       </nav>
 
-      <div style={{ height: 1, background: "rgba(255,255,255,.07)", margin: "0 12px 4px" }} />
+      <div style={{ height: 1, background: "rgba(15,23,42,.07)", margin: "0 12px 4px" }} />
 
       {/* ── Settings ──────────────────────────────────────────────── */}
       <div style={{ padding: "2px 8px 6px" }}>
         <a
           href="/dashboard/settings"
           style={linkStyle(isActive("/dashboard/settings", pathname))}
-          onMouseEnter={e => { if (!isActive("/dashboard/settings", pathname)) { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.82)" } }}
-          onMouseLeave={e => { if (!isActive("/dashboard/settings", pathname)) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.52)" } }}
+          onMouseEnter={e => { if (!isActive("/dashboard/settings", pathname)) { (e.currentTarget as HTMLElement).style.background = "rgba(15,23,42,.07)"; (e.currentTarget as HTMLElement).style.color = "rgba(15,23,42,.92)" } }}
+          onMouseLeave={e => { if (!isActive("/dashboard/settings", pathname)) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "rgba(15,23,42,.72)" } }}
         >
           <span style={{ opacity: isActive("/dashboard/settings", pathname) ? 1 : 0.65 }}>{I.cog}</span>
           Settings
         </a>
       </div>
 
-      <div style={{ height: 1, background: "rgba(255,255,255,.07)", margin: "0 12px" }} />
+      <div style={{ height: 1, background: "rgba(15,23,42,.07)", margin: "0 12px" }} />
 
       {/* ── User + Upgrade ────────────────────────────────────────── */}
       <div style={{ padding: "10px 10px 14px", flexShrink: 0 }}>
@@ -446,13 +446,13 @@ export default function SidebarNav() {
             background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-h) 100%)",
             display: "flex", alignItems: "center", justifyContent: "center",
             color: "#fff", fontSize: 10.5, fontWeight: 800,
-            boxShadow: "0 0 0 2px rgba(255,255,255,.14)",
+            boxShadow: "0 0 0 2px rgba(15,23,42,.12)",
           }}>{initials}</div>
           <div style={{ overflow: "hidden", flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.88)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(15,23,42,.9)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {email?.split("@")[0] || "Account"}
             </div>
-            <div style={{ fontSize: 9.5, color: "rgba(255,255,255,.32)", fontWeight: 500 }}>Free Plan</div>
+            <div style={{ fontSize: 9.5, color: "rgba(15,23,42,.5)", fontWeight: 500 }}>Free Plan</div>
           </div>
         </div>
         <button

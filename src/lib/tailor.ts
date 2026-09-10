@@ -581,7 +581,7 @@ export async function runTailor(opts: {
   // while it keeps helping and time allows (TAILOR_FILL_ROUNDS, default 3).
   const FILL_ROUNDS = Math.max(0, Number(E.TAILOR_FILL_ROUNDS ?? 3))
   const SKILLS_PER_BULLET = 3
-  const MAX_ADD_PER_ROUND = Number(E.TAILOR_MAX_ADD_PER_ROUND) || 15
+  const MAX_ADD_PER_ROUND = Number(E.TAILOR_MAX_ADD_PER_ROUND) || 25
   async function fillGaps(start: Pass, step: { pref: ProviderPref; model?: string; label?: string }): Promise<Pass> {
     let cur = start
     for (let round = 0; round < FILL_ROUNDS; round++) {
@@ -601,19 +601,17 @@ export async function runTailor(opts: {
         todo.set(i, { skills: missing, add })
       }
       if (!todo.size) break
-      const jobs = roleGroups.map(g => {
-        const asks = g.filter(i => todo.has(i)).map(i => {
-          const { skills, add } = todo.get(i)!
-          const parts = [
-            lacking.has(i) ? "not tailored yet, so rewrite at least half of its bullets for this JD" : "",
-            skills.length ? `its bullets must show ${skills.join(", ")}` : "",
-            add ? `ADD ${add} new bullet${add === 1 ? "" : "s"} to this role in "added" for the skills its existing bullets can't carry` : "",
-          ].filter(Boolean)
-          return `ROLE #${i} (${zones.roles[i].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
-        })
-        if (!asks.length) return Promise.resolve(null)
-        const ask = `GAP FILL: this resume is already tailored to the JD. The candidate has years of hands-on experience with every skill they list, so EACH role below must show the listed skills named for it. Keep every JD term the bullets already carry. Rewrite bullets that don't carry a JD skill yet so each shows two or three related skills and what the candidate did with them at that client (never a bare list), and write any NEW bullets the same way, specific to that client's work, returned in "added" with that role's number. Certifications stay out of the bullets. ${asks.join(" || ")}`
-        return adapt({ keys: opts.keys, pref: step.pref, jd, zones: view, preferences: [...allPrefs, ask].join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, model: step.model, usageSink, part: "experience", roles: g, allowAdd: !opts.onePage }).catch(() => null)
+      // One call per role that still has a gap, all in parallel. Asked alongside other roles, a
+      // role tended to be skipped (a 4-bullet role asked for 15 new bullets came back with none).
+      const jobs = [...todo.entries()].map(([i, { skills, add }]) => {
+        const parts = [
+          lacking.has(i) ? "not tailored yet, so rewrite at least half of its bullets for this JD" : "",
+          skills.length ? `its bullets must show ${skills.join(", ")}` : "",
+          add ? `return EXACTLY ${add} new bullet${add === 1 ? "" : "s"} for it in "added" (role ${i}), covering the skills its existing bullets can't carry` : "",
+        ].filter(Boolean)
+        const task = `ROLE #${i} (${zones.roles[i].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
+        const ask = `GAP FILL: this resume is already tailored to the JD. The candidate has years of hands-on experience with every skill they list, so this role must show every listed skill named below. Keep every JD term its bullets already carry. Rewrite bullets that don't carry a JD skill yet so each shows two or three related skills and what the candidate did with them at this client (never a bare list), and write the NEW bullets the same way, specific to this client's work. Certifications stay out of the bullets. ${task}`
+        return adapt({ keys: opts.keys, pref: step.pref, jd, zones: view, preferences: [...allPrefs, ask].join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, model: step.model, usageSink, part: "experience", roles: [i], allowAdd: !opts.onePage }).catch(() => null)
       })
       const got = await beforeDeadline(Promise.all(jobs))
       const fresh = (got || []).flatMap(e => e?.bullets || [])

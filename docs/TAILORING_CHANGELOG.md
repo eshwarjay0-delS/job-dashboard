@@ -120,4 +120,18 @@ what was missing, and the fix. Bump the version when the *method* changes (not p
 - **Env-var gotchas for the user:** Vercel does NOT auto-apply env changes — must redeploy;
   vars must be ticked for **Production**; paste keys as a single line (no trailing newline).
 
+### v2.0 — 2026-09-10 — every listed skill at every client (years math + added bullets)
+- Reported: "only the Technical Skills section changes"; "at each client those keywords need to be
+  reflected"; "if I claim N years, do the math and add points, n number of them". JD: Network Security
+  Analyst I (CSOC). Resume: the user's 4-role NOC/SOC analyst resume (also checked on a 5-role one).
+- Root causes: the resume block was sliced at 11,000 chars (older roles never reached the model), the JD
+  at 4,000 (Required Qualifications dropped), and RULES concentrated 60-70% on the current role.
+- Method: profile call + parallel bullets calls; YEARS MATH (skill-line years > summary years > every
+  role); per-role GAP FILL that rewrites and ADDS bullets (cloned bullet paragraphs); echoed `[idx]`
+  tags stripped; glued "•" parts kept; certifications excluded from bullet skills.
+- Result: bullets rewritten 16/27 · 0/21 · 0/16 · 0/4 → 27/27 · 21/21 · 16/16 · 4/4, plus 34 added;
+  listed JD skills shown per role 69/71 · 69/71 · 54/71 · 66/71, all 71 in at least one role; 27s.
+- Format note: added bullets copy the role's own last bullet paragraph (style, numbering, fonts). The
+  bullet count now grows on purpose, per the user's request.
+
 <!-- Add each new run below: date · domain · resume · coverage · model · gaps · fix -->

@@ -1,5 +1,34 @@
 # MarketFit — Single Project Tracker (`todo.md`)
 
+## 2026-09-10 — Tailoring shows every listed JD skill in every client role (adds bullets where needed)
+
+**Mostly backend/prompt work with no UI signature, plus one visible confirmation:** the resume dashboard's blue
+background was changed to the lightest blue at the user's request, so they can tell the new build is live. User
+report: tailored resumes only changed the Technical Skills section, and JD keywords never reached the client
+experiences ("I claimed 6 years in each keyword; nothing reflected in the experience points").
+
+Root causes (measured, not guessed): (1) `adapt()` cut the resume block at 11,000 chars, so on a 4-role resume the
+last two roles were never sent to the model (on a 5-role resume, the last three); (2) it cut the JD at 4,000 chars,
+dropping the Required Qualifications tool list (it started at char 6,636 of 9,198); (3) RULES told the model to
+concentrate 60-70% on the CURRENT role and leave older roles nearly unchanged. Production evidence: 25/25 current-role
+bullets rewritten and 0 in the other four roles; another run rewrote 0 bullets at all.
+
+Built: full retarget = one profile call (headline/summary/skills) + parallel bullets calls per role group (limits now
+40k/12k chars); RULES spread the JD across every role; YEARS MATH (a skill claimed for N years must show in enough
+recent roles to cover N years: skill-line years, else summary years, else every role); GAP FILL runs one parallel
+pass per role that rewrites and ADDS bullets (`Edits.added`, each cloned from the role's own last bullet paragraph in
+`docx.ts applyRewrites`, with paraIds/bookmarks stripped) until the role shows its required skills; guards strip
+echoed `[idx]` tags (23 had printed into a document), keep glued "•" parts, and ignore certifications; REFINE_RULES
+also weave an added skill into each role; the WhatsApp caption reports bullets rewritten/added and skills per role.
+Vercel `TAILOR_MAX_MS` 40000 → 50000.
+
+Verified with local tsx on the user's real resume + a CSOC analyst JD. Old engine: 16/27, 0/21, 0/16, 0/4 bullets
+rewritten, 34/82 listed skills shown in any role. New engine: 27/27, 21/21, 16/16, 4/4 rewritten + 34 bullets added,
+listed skills per role 69/71 · 69/71 · 54/71 · 66/71, all 71 shown somewhere, 27s, no prompt artifacts. 5-role
+resume: every role tailored, 51/51 shown. NOT verified yet: a production WhatsApp run on the new build, and opening
+a file with added bullets in Word (only re-parsed with mammoth/extractZones). Known tradeoff: a few added bullets
+mirror JD boilerplate that the skills section lists (e.g. "federal security requirements").
+
 ## 2026-08-12 — Remote finally added (no code changes this entry)
 
 **No UI/code signature — pure git infra.** Eshwar provided a GitHub repo URL
