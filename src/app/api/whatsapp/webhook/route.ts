@@ -226,7 +226,7 @@ async function generate(from: string, session: Session) {
   if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
   if (!session.jd || !session.resumePath) return sendText(from, HELP)
 
-  await sendText(from, "Tailoring your resume… (usually 10-20 seconds)")
+  await sendText(from, "Tailoring your resume… every client role gets its own pass, so this takes up to a minute.")
 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd })
@@ -327,6 +327,21 @@ async function deliver(from: string, file: Buffer, caption: string, gen: Omit<Ge
   else await deletePath(vfile)
 }
 
+// "Experience: 41 bullets rewritten across 4/4 roles" + the listed JD skills each role's bullets
+// show: proof the JD reached every client role, not only the skills section.
+function experienceLine(result: TailorResult): string[] {
+  const roles = (result.role_alignment || []).filter(r => r.bullets >= 2)
+  const bullets = roles.reduce((n, r) => n + r.rewritten, 0)
+  const added = roles.reduce((n, r) => n + (r.added || 0), 0)
+  if (!roles.length || (!bullets && !added)) return []
+  const es = result.experience_skills
+  return [
+    `Experience: ${bullets} bullet${bullets === 1 ? "" : "s"} rewritten${added ? `, ${added} new bullet${added === 1 ? "" : "s"} added` : ""} across ${roles.filter(r => r.rewritten || r.added).length}/${roles.length} roles`,
+    `Listed JD skills shown per role: ${roles.map(r => (r.required ? `${r.skills}/${r.required}` : `${r.skills}`)).join(" · ")}`,
+    ...(es?.listed ? [`Listed JD skills shown in your experience: ${es.shown}/${es.listed}`] : []),
+  ]
+}
+
 function captionFor(meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }): string {
   // Measured coverage of the document being sent (older cached results lack it).
   const cov = result.coverage ?? result.keyword_analysis.coverage_after
@@ -336,11 +351,13 @@ function captionFor(meta: Meta, result: TailorResult, update?: { request: string
         `Change: ${clip(update.request, 200)}`,
         `Keywords: ${cov}% covered`,
         `${update.lines} line${update.lines === 1 ? "" : "s"} changed`,
+        ...experienceLine(result),
       ]
     : [
         `Match: ${result.score_before}% -> *${result.score}%*`,
         `Keywords: ${cov}% covered${added ? ` (+${added} added)` : ""}`,
         `${result.diff.length} lines rewritten`,
+        ...experienceLine(result),
       ]
   return [
     update ? `*${OUTPUT_NAME}* (update ${update.number})` : `*${OUTPUT_NAME}*`,

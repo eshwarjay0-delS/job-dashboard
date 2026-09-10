@@ -22,7 +22,8 @@ export interface Zones {
   summaryOverflowIdx: number[]
   skills: { idx: number; text: string }[]
   // roles in document order — roles[0]'s job is the most recent; `current` marks it.
-  roles: { role: string; bullets: { idx: number; text: string }[]; current?: boolean }[]
+  // `added`: bullets a tailor already appended to the role, shown to its later passes (never parsed).
+  roles: { role: string; bullets: { idx: number; text: string }[]; current?: boolean; added?: string[] }[]
   // certifications / education / awards lines, grouped by their section heading.
   extras: { idx: number; text: string; section: string }[]
 }
@@ -34,6 +35,9 @@ export interface Edits {
   skills?: { idx: number; text: string }[]
   bullets?: { idx: number; text: string }[]
   extras?: { idx: number; text: string }[]
+  // NEW experience bullets, each inserted right after paragraph `after` (a role's last bullet) as
+  // a copy of that paragraph, so it keeps the list style and fonts.
+  added?: { after: number; text: string }[]
 }
 
 const SUMMARY_HEADS = ["summary", "profile", "objective", "about me", "professional summary", "career summary", "overview"]
@@ -251,6 +255,17 @@ function parseYM(s: string): [number, number] | null {
   const ym = s.match(/((?:19|20)\d{2})\s+([a-z]{3,9})/)
   if (ym && MONTH_MAP[ym[2]]) return [+ym[1], MONTH_MAP[ym[2]]]
   return null
+}
+
+// Months a role title's date range spans: "Nov 2023 – Present", "Jan 2019 to Oct 2022", even
+// "TXMAR 2023 – OCT 2024" where the month is glued to a state code. null without a range.
+export function roleSpanMonths(role: string, now = new Date()): number | null {
+  const points = [...role.toLowerCase().matchAll(/(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*)?((?:19|20)\d{2})|\b(present|current|now)\b/g)]
+  if (points.length < 2) return null
+  const at = (m: RegExpMatchArray, end: boolean) =>
+    m[3] ? now.getFullYear() * 12 + now.getMonth() + 1 : Number(m[2]) * 12 + (m[1] ? MONTH_MAP[m[1]] : end ? 12 : 1)
+  const months = at(points[1], true) - at(points[0], false) + 1
+  return months > 0 ? months : null
 }
 
 // Calculate total unique months of work experience from role-title strings.
@@ -601,6 +616,14 @@ export async function applyRewrites(
   if (sk) notes.push(`${sk} skill line(s) updated`)
   if (bl) notes.push(`${bl} bullet(s) rewritten`)
   if (ex) notes.push(`${ex} other line(s) updated`)
+  // New bullets, grouped under the paragraph they follow.
+  const addedAfter = new Map<number, string[]>()
+  for (const a of edits.added || []) {
+    const text = (a.text || "").trim()
+    if (validBullet.has(a.after) && text) addedAfter.set(a.after, [...(addedAfter.get(a.after) || []), text])
+  }
+  const addedCount = [...addedAfter.values()].reduce((n, t) => n + t.length, 0)
+  if (addedCount) notes.push(`${addedCount} bullet(s) added`)
 
   // Header edits: a single-line header gets a run-level edit on its own paragraph;
   // a stacked header (title / tagline on their own paragraphs) gets those paragraphs
@@ -642,7 +665,13 @@ export async function applyRewrites(
       }
     }
     const r = rewrites.get(i)
-    return r !== undefined ? rewriteParaText(m, r) : m
+    const para = r !== undefined ? rewriteParaText(m, r) : m
+    const extra = addedAfter.get(i)
+    if (!extra) return para
+    // Each new bullet is a copy of this paragraph (same list numbering, style, and fonts) with its
+    // own text. Word wants paragraph ids and bookmarks unique, so the copies drop them.
+    const template = m.replace(/\s(?:w14:paraId|w14:textId)="[^"]*"/g, "").replace(/<w:bookmark(?:Start|End)\b[^>]*\/>/g, "")
+    return para + extra.map(t => rewriteParaText(template, t)).join("")
   })
   if (dropped) notes.push(`Trimmed ${dropped} over-cap/duplicate bullet(s)`)
 

@@ -5,7 +5,7 @@ import { fixHavingOpener, clampSummary } from "./resume/rules"
 const RULES = `You RETARGET an existing resume to ONE job by REWRITING its existing lines IN PLACE.
 CRITICAL RULE: You are editing REAL TEXT from a REAL person's resume. Every single word you write must be authentic professional English. ZERO tolerance for lorem ipsum, Latin, placeholder text, dummy content, or generic filler of any kind. If you output any Latin or placeholder text, the entire tailoring fails. Write only what a real engineer would actually say.
 
-Never add or remove lines (no new bullets, no deleted bullets). Never change names, contact info, company names, job titles, or dates.
+Never remove lines, and never add lines except NEW experience bullets returned in "added" when an instruction below explicitly asks for them. Never change names, contact info, company names, job titles, or dates.
 You are given the resume's editable lines, each tagged with a stable [idx]. Return ONLY the lines you change.
 
 FOUNDATION (read first): this resume is ALREADY a ~70-80% match — it is the candidate's authentic, golden copy. Your job is to BRIDGE the final ~15-20%, NOT to rebuild from scratch. Aim for a 90-98% fit (never claim 99%+). Leave already-aligned sections exactly as they are; change only the lines that move the match toward the JD.
@@ -18,20 +18,20 @@ Work in THIS order — recruiter trust first, ATS keywords LAST:
 
 1) IDENTITY. From the JD, decide the ONE primary identity (e.g. "Agentic AI Engineer", "Data Engineer", "Application Security Engineer") and at most one supporting identity. Everything you write must reinforce that identity. A recruiter must answer "what kind of engineer is this?" in 10 seconds.
 
-2) CREDIBILITY — absorption, not insertion. Only emphasize what this candidate's REAL experience can defend in a follow-up question. Do NOT bolt every JD keyword onto bullets. The result must read "of course this person does this," never "they pasted the JD in."
-   ANTI-MIRRORING (critical): Never copy JD phrasing verbatim. Rewrite what the work ACTUALLY involves. Hiring managers immediately flag word-for-word JD mirroring as AI-generated.
+2) CREDIBILITY — absorption, not insertion. Only emphasize what this candidate's REAL experience can defend in a follow-up question. Every JD tool and skill the resume claims must be PROVEN in the work history: show where the candidate actually used it. The result must read "of course this person does this," never "they pasted the JD in."
+   ANTI-MIRRORING (critical): use the JD's exact tool and technology names (ATS matching is literal), but never copy its sentences. Rewrite what the work ACTUALLY involves. Hiring managers immediately flag word-for-word JD mirroring as AI-generated.
 
-3) TIMELINE — realism. Concentrate 60-70% of the JD alignment in the CURRENT (most recent) role. Older roles SUPPORT the story; they must not repeat the same claims. CURRENT ROLE CAP: at most 10-12 bullets total. Consolidate near-duplicates. LONG RESUMES (7-10+ yrs): only the LAST ~4-5 years (current role + the one before it) get laser-focused on the JD — older roles stay nearly unchanged for authenticity, adding at most 2-3 aligned points.
+3) EXPERIENCE — SPREAD THE JD ACROSS EVERY ROLE (non-negotiable). Keywords that sit only in the skills section prove nothing: recruiters and ATS parsers look for them in the work history. When the candidate lists a skill, the bullets must show where they used it. Weave the JD's tools, platforms, and responsibilities into the bullets of EVERY role, distributed evenly, so each role carries a similar share of the JD alignment instead of the current role alone. In EACH role, rewrite at least half of its bullets (all of them in a role with 4 or fewer), and make every central JD tool appear in the bullets of two or more roles. Vary the angle per role (different systems, scale, incidents, outcomes) so roles never read as copies of each other, and keep each claim plausible for that role's employer and dates.
 
-4) TOOL EVIDENCE — show OWNERSHIP, not exposure. Write what operational ownership of THAT tool actually looks like. Examples: ML/GenAI — model eval, RAG pipeline tuning, latency/cost tradeoffs, eval harnesses, agent orchestration, tool calling; BACKEND — API design, query tuning, idempotency, failure handling; DATA — pipeline orchestration, schema evolution, backfills, data quality; CLOUD — IaC modules, CI/CD gates, autoscaling, on-call; SECURITY — scanner rule tuning, false-positive triage, PR gates. One tool per bullet; never cram.
+4) TOOL EVIDENCE — show OWNERSHIP, not exposure. Write what operational ownership of THAT tool actually looks like. Examples: ML/GenAI — model eval, RAG pipeline tuning, latency/cost tradeoffs, eval harnesses, agent orchestration, tool calling; BACKEND — API design, query tuning, idempotency, failure handling; DATA — pipeline orchestration, schema evolution, backfills, data quality; CLOUD — IaC modules, CI/CD gates, autoscaling, on-call; SECURITY — scanner rule tuning, alert triage, detection tuning, false-positive reduction, incident escalation. One or two related tools per bullet; never cram a list.
 
 5) OPERATIONAL FRICTION (non-negotiable). Include 1-2 bullets in the current role that show things going wrong: a pipeline that failed and had to be debugged, a model whose latency regressed and was investigated, a deployment that broke and required rollback, a flaky dependency upgrade, a production incident triaged. These raise hiring-manager trust more than any keyword.
 
-6) ATS / SKILLS — COVERAGE. Into the EXISTING skill lines, surface every required AND preferred qualification, tool, technology, framework, and certification from the JD that this candidate genuinely has — using the JD's exact wording. Be thorough: rewrite as many skill lines as needed to cover the JD comprehensively. Never invent a skill; never create a duplicate skills section.
+6) ATS / SKILLS — COVERAGE. Into the EXISTING skill lines, surface every required AND preferred qualification, tool, technology, framework, and certification from the JD that this candidate genuinely has — using the JD's exact wording. Be thorough: rewrite as many skill lines as needed to cover the JD comprehensively. Never invent a skill; never create a duplicate skills section. The skills section never replaces experience: every JD tool you surface in a skill line must also appear in the bullets of at least one role (rule 3).
    ONE LINE PER [idx] — NEVER MERGE: rewrite each skill line SEPARATELY at its own [idx], returning that same [idx]. NEVER collapse several skill lines into one mega-line, and never dump every keyword into a single line — that destroys the resume's structure. Return one skills entry per [idx] you change, and only use [idx] values that appear in the SKILL LINES block below.
    EXACT JD WORDING + ABBREVIATIONS: use the JD's precise terminology, including its abbreviations AND spellings. When the JD uses an acronym or short form (e.g. "S2S VPN", "IPsec", "Natting", "FSR", "CJI", "PAN-OS", "EOL"), include that EXACT token — pairing it with the expansion where natural ("site-to-site (S2S) VPN", "NAT/Natting", "end-of-life (EOL)"). ATS keyword matching is literal, so a synonym the candidate truly has but worded differently than the JD still misses — mirror the JD's exact form.
    REPLACE IRRELEVANT LINES: skill lines about domains the JD does NOT care about (e.g. payment fraud, AML/financial-crime, unrelated tooling) should be REWRITTEN in place into JD-relevant skills the candidate can honestly claim — don't leave off-topic lines sitting there. On a resume with many skill lines, expect to rewrite MOST of them, not just one.
-   TERM SWAP (adjacent stacks): when the resume centers on a stack adjacent to the JD's (e.g. resume is Azure-heavy but the JD wants AWS; or resume is AWS/Azure but the JD wants GCP), swap the off-target stack's terms for the JD's stack in the skills and the recent bullets — keep the transferable concepts (IaC, CI/CD, Kubernetes, networking, Linux), just relabel to the JD's tools. Drop clearly irrelevant or mistranslated lines instead of leaving noise.
+   TERM SWAP (adjacent stacks): when the resume centers on a stack adjacent to the JD's (e.g. resume is Azure-heavy but the JD wants AWS; or resume is AWS/Azure but the JD wants GCP), swap the off-target stack's terms for the JD's stack in the skills and in the bullets of every role — keep the transferable concepts (IaC, CI/CD, Kubernetes, networking, Linux), just relabel to the JD's tools. Drop clearly irrelevant or mistranslated lines instead of leaving noise.
    JD-PREFERRED FIRST: lead the summary AND the skills section with the JD's most-wanted tools/skills first, so the match is obvious in the first 5 seconds.
 
 VOICE — write like the real senior engineer. Vary the rhythm. No buzzwords (spearheaded, leveraged, orchestrated, championed, utilized, synergy), no em-dash stuffing, no invented percentages, no hype.
@@ -42,12 +42,12 @@ HEADER — the candidate's NAME and contact details are ALWAYS kept exactly as-i
 
 SUMMARY — ONE coherent paragraph, 3-4 sentences, 60-80 words MAXIMUM. Specific and memorable. Start: "<Target role> with <the source's own experience-length wording> <doing the core thing>...". NEVER begin with the word "Having" (or "Having <N> years…") — that opener is the #1 recruiter-flagged AI fingerprint and is strictly banned. Copy the candidate's stated years/duration of experience EXACTLY from the source summary — never recompute, inflate, or reduce it; if the source states no number, do not add one. Name only the JD's 2-3 central tools. One clean paragraph — nothing more. NEVER repeat yourself or stack 10+ technologies. ALWAYS return a rewritten summary re-aimed at the target identity — returning an empty "summary" is a failure. If the source has several stacked summary paragraphs, CONSOLIDATE them into this one coherent paragraph.
 
-GOAL: Cover as much of the JD (required + preferred qualifications) as the candidate can HONESTLY claim, in skill lines AND current-role bullets. Rewrite headline, summary, every relevant skill line, and 8-10 bullets in the CURRENT role (max 12 total).
+GOAL: Cover as much of the JD (required + preferred qualifications) as the candidate can HONESTLY claim, in skill lines AND in the bullets of EVERY role. Rewrite the headline, the summary, every relevant skill line, and at least half the bullets in EACH role, never just the current role.
 
 NEVER REFUSE: even if the resume seems senior/junior-mismatched for the JD, or a USER PREFERENCE below looks like it's about picking a different resume rather than editing this one, you still tailor THIS resume as best honestly fits — treat preferences as soft style/content hints, not instructions to abstain. Do not write prose, apologies, or explanations anywhere in the output. Always return the JSON object below, even if most fields are unchanged/empty.
 
 Return ONE minified JSON object, exactly:
-{"headline":{"title":"","tagline":""},"summary":"","skills":[{"idx":0,"text":""}],"bullets":[{"idx":0,"text":""}]}
+{"headline":{"title":"","tagline":""},"summary":"","skills":[{"idx":0,"text":""}],"bullets":[{"idx":0,"text":""}],"added":[{"role":0,"text":""}]}
 
 Output valid minified JSON only — no markdown, no commentary. Escape double-quotes inside text; never put a real newline inside a string value.`
 
@@ -60,22 +60,23 @@ const REFINE_RULES = `You apply ONE change request to a resume that is ALREADY t
 CRITICAL RULE: You are editing REAL TEXT from a REAL person's resume. Every word must be authentic professional English. ZERO tolerance for lorem ipsum, Latin, placeholder text, or generic filler.
 
 SCOPE — this is an edit, not a rewrite:
-- Change ONLY the lines the request is about, and only as much as the request needs. Lines you do not return stay exactly as they are, so return nothing for any line the request does not touch. A request about bullets never touches skill lines; a request about skills never touches bullets.
-- ADDING (a tool, skill, certification, responsibility, emphasis): put it into the single most relevant existing line WITHOUT removing anything that line already lists. Skip anything the resume already contains, and never add the same item to a second line.
+- Change ONLY the lines the request is about, and only as much as the request needs. Lines you do not return stay exactly as they are, so return nothing for any line the request does not touch. A request only about the wording or format of one section (e.g. "shorten the bullets", "reorder the skills") stays inside that section.
+- ADDING a tool, skill, or technology: put it in the most relevant skill line WITHOUT removing anything that line already lists (skip this if the skills already have it), AND prove it in the work history: weave it into one existing bullet in EACH role where it plausibly fits, rewriting that bullet in place. Skills alone are not enough. If the request names a specific role, section, or line, make the change only there.
+- ADDING a certification, responsibility, or emphasis: put it into the lines it belongs to without removing existing content. Never list the same item twice in the skills.
 - Remove, shorten, or replace existing content only when the request asks for it. When shortening, keep every tool name and metric.
 - Keep every job-description keyword already present unless the request says to remove it.
 - The candidate knows their own experience: when they ask to add something, add it where it fits best. Never invent employers, dates, metrics, or certifications they did not ask for.
 - Leave "headline" and "summary" empty unless the request is about the title/headline/tagline or the summary.
 
 HARD CONSTRAINTS (keep these even if the request conflicts):
-- Never add or remove lines. Edit existing lines in place: one entry per [idx], only [idx] values shown to you, never merge lines.
+- Never remove lines. Edit existing lines in place: one entry per [idx], only [idx] values shown to you, never merge lines. When the request asks for more points or bullets, write them as NEW bullets in "added" (role = the ROLE # shown), never by cramming them into existing lines.
 - Never change names, contact info, company names, the job titles of past roles, or dates.
 - Seniority is fixed: never frame the candidate as junior or entry-level.
 - Experience length is fixed: never change the stated years of experience.
 - Voice: write like the real senior engineer. No buzzwords (spearheaded, leveraged, orchestrated, utilized), no em-dash stuffing, no hype.
 
 Return ONE minified JSON object, exactly:
-{"headline":{"title":"","tagline":""},"summary":"","skills":[{"idx":0,"text":""}],"bullets":[{"idx":0,"text":""}]}
+{"headline":{"title":"","tagline":""},"summary":"","skills":[{"idx":0,"text":""}],"bullets":[{"idx":0,"text":""}],"added":[{"role":0,"text":""}]}
 Use "" or [] for everything you do not change. Output valid minified JSON only — no markdown, no commentary. Escape double-quotes inside text; never put a real newline inside a string value.`
 
 // Use the server env key first; fall back to a key the client saved in Settings.
@@ -104,9 +105,11 @@ function normalizeEdits(e: any): Edits {
     : v == null ? ""
     : Array.isArray(v) ? v.filter(x => typeof x === "string").join(" ")
     : typeof v === "object" ? "" : String(v)
+  // A model sometimes echoes a line's "[idx]" tag into its text ("[154] Triaged ..."), which
+  // would print into the resume, so it is stripped.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const list = (arr: unknown) => Array.isArray(arr)
-    ? arr.filter((x: any) => x && typeof x.idx === "number").map((x: any) => ({ idx: x.idx, text: str(x.text) }))
+    ? arr.filter((x: any) => x && typeof x.idx === "number").map((x: any) => ({ idx: x.idx, text: str(x.text).replace(/^\s*\[(?:\d+|\+)\]\s*/, "") }))
     : []
   return {
     headline: { title: str(e?.headline?.title), tagline: str(e?.headline?.tagline) },
@@ -147,32 +150,57 @@ export async function adapt(opts: {
   // REFINEMENT: `preferences` holds ONE change request for an already-tailored resume, run
   // under REFINE_RULES instead of a full retarget. An omitted title then means "keep".
   refine?: boolean
+  // FULL RETARGET, split into parallel calls by runTailor: "profile" rewrites the headline,
+  // summary, and skill lines; "experience" rewrites only the bullets of zones.roles[i] for each
+  // i in `roles`. One call doing everything put the JD into the skills and the current role and
+  // left the older roles untouched.
+  part?: "profile" | "experience"
+  roles?: number[]
+  // May this call append NEW bullets ("added")? Gap-fill passes, which ask for a specific number,
+  // and refinements may; every other pass only edits existing lines.
+  allowAdd?: boolean
 }): Promise<Edits> {
   // Output ceiling — the edit JSON fits well under this. (OpenRouter is clamped lower
   // inside the provider layer.) A refinement like "shorten every bullet" can return far
-  // more lines than a normal retarget, so it gets more room.
-  const cap = opts.refine ? 8192 : 4096
-  // Build the editable-lines block from the resume's zones.
+  // more lines than a normal retarget, so it gets more room, and so does a bullets pass,
+  // which rewrites at least half the bullets of every role it is given.
+  const part = opts.refine ? undefined : opts.part
+  const roleSet = part === "experience" && opts.roles ? new Set(opts.roles) : null
+  const editRoles = roleSet ? opts.zones.roles.filter((_, i) => roleSet.has(i)) : opts.zones.roles
+  const cap = opts.refine ? 8192 : part === "experience" ? 6144 : 4096
+  // Build the editable-lines block from the resume's zones. Only lines tagged [idx] can come
+  // back as edits, so each split pass shows the other sections as plain context.
   let lines = ""
-  if (opts.zones.header) {
+  if (opts.zones.header && part !== "experience") {
     const h = opts.zones.header
     lines += "HEADER (name + contact are kept automatically — you may set only the title and tagline to the target role):\n"
     lines += `Name: ${h.name || "(kept)"}\nCurrent title: ${h.title || "(none)"}\n`
     if (h.tagline) lines += `Current tagline: ${h.tagline}\n`
     lines += "\n"
   }
-  if (opts.zones.summaryText) lines += `SUMMARY (keep the real details; re-aim the identity only):\n${opts.zones.summaryText}\n\n`
-  if (opts.zones.skills.length) {
-    lines += "SKILL LINES (focus on the role; keep honest, no keyword dumping; keep each [idx]):\n"
-    lines += opts.zones.skills.map(s => `[${s.idx}] ${s.text}`).join("\n") + "\n\n"
+  if (opts.zones.summaryText) {
+    lines += part === "experience"
+      ? `CANDIDATE SUMMARY (context only, do not return it):\n${opts.zones.summaryText}\n\n`
+      : `SUMMARY (keep the real details; re-aim the identity only):\n${opts.zones.summaryText}\n\n`
   }
-  if (opts.zones.roles.length) {
-    lines += "EXPERIENCE BULLETS — rewrite ONLY the JD-relevant ones; keep each [idx]:\n"
-    for (const r of opts.zones.roles) {
-      const tag = r.current ? "  <<< CURRENT ROLE — concentrate ~60-70% of the JD alignment here" : ""
-      lines += `Role: ${r.role}${tag}\n`
+  if (opts.zones.skills.length) {
+    lines += part === "experience"
+      ? "SKILLS THE CANDIDATE LISTS (context only, do not return them; the bullets must PROVE these):\n" + opts.zones.skills.map(s => s.text).join("\n") + "\n\n"
+      : "SKILL LINES (focus on the role; keep honest, no keyword dumping; keep each [idx]):\n" + opts.zones.skills.map(s => `[${s.idx}] ${s.text}`).join("\n") + "\n\n"
+  }
+  if (part === "profile") {
+    if (opts.zones.roles.length) lines += "WORK HISTORY (context only; a parallel pass rewrites its bullets):\n" + opts.zones.roles.map(r => `- ${r.role.replace(/\s+/g, " ")}`).join("\n") + "\n"
+  } else if (editRoles.length) {
+    lines += (opts.refine || opts.mode === "quick")
+      ? "EXPERIENCE BULLETS (keep each [idx]):\n"
+      : "EXPERIENCE BULLETS — spread the JD's tools across EVERY role below; keep each [idx] ([+] lines were already added during this tailoring: leave them and don't repeat them):\n"
+    for (const r of editRoles) {
+      lines += `ROLE #${opts.zones.roles.indexOf(r)}: ${r.role}${r.current ? "  (current role)" : ""}\n`
       lines += r.bullets.map(b => `[${b.idx}] ${b.text}`).join("\n") + "\n"
+      if (r.added?.length) lines += r.added.map(t => `[+] ${t}`).join("\n") + "\n"
     }
+    const others = roleSet ? opts.zones.roles.filter((_, i) => !roleSet.has(i)) : []
+    if (others.length) lines += `\nOTHER ROLES (a parallel pass rewrites these; do not return their bullets): ${others.map(r => r.role.replace(/\s+/g, " ")).join(" | ")}\n`
   }
   // Preserve the candidate's OWN stated experience length — never recompute it
   // from dates (that was silently overwriting e.g. "8+ years" with a shorter
@@ -189,7 +217,7 @@ export async function adapt(opts: {
   // A refinement gets no keyword list: it invites "absorbing" more terms, which is exactly the
   // churn a targeted change must avoid (the JD itself is still in the prompt).
   const kwLine = opts.jdKeywords?.length && !opts.refine
-    ? `\n\nTOOLS THE JD CENTERS ON (absorb ONLY the ones this candidate can defend; put the central ones inside bullets, not just skills): ${opts.jdKeywords.join(", ")}`
+    ? `\n\nTOOLS THE JD CENTERS ON (absorb ONLY the ones this candidate can defend; ${part === "profile" ? "surface them in the skill lines" : "name them inside the bullets of every role, not just the skills section"}): ${opts.jdKeywords.join(", ")}`
     : ""
   const pref = !opts.preferences ? ""
     : opts.refine ? `\n\nCHANGE REQUEST FROM THE CANDIDATE (apply exactly this, nothing else): ${opts.preferences}`
@@ -206,13 +234,22 @@ export async function adapt(opts: {
   const quickLine = opts.mode === "quick"
     ? `\n\nQUICK MODE: do a fast, focused pass — rewrite the headline, summary, the top 2-3 skill lines, and the 5-6 strongest bullets in the CURRENT role only. Skip marginal edits; speed over exhaustiveness.`
     : ""
+  // Split passes: say exactly which fields this call owns (see `part` above).
+  const scopeLine = part === "profile"
+    ? `\n\nTHIS PASS — PROFILE ONLY: rewrite the headline, the summary, and the skill lines. Return "bullets": [] (a parallel pass is rewriting the experience bullets against the same JD).`
+    : part === "experience"
+    ? `\n\nTHIS PASS — EXPERIENCE BULLETS ONLY, for the roles shown with [idx] lines. Return "headline":{"title":"","tagline":""}, "summary":"", "skills":[]. Spread the JD's tools, platforms, and responsibilities evenly across EVERY one of these roles: in EACH role rewrite at least half of its bullets (all of them when it has 4 or fewer) and name the JD's exact tools inside them, so every role proves the skills the candidate lists. Never leave a role untouched. A bullet line that holds several "•" parts must keep every part, each rewritten in place in that same line.`
+    : ""
   // The RESUME + the candidate's fixed experience-length are STABLE across every JD, so
   // they go in a cached block (cacheContext). Only the JD-derived hints + user prefs vary
   // per call → tailoring the same resume against many JDs re-reads the resume at ~10% cost.
+  // Both limits used to be far too small for real inputs: the resume block was cut at 11,000
+  // characters, so on a 4-role resume the last two roles were never sent (on a 5-role one, the
+  // last three), and the JD at 4,000, which dropped its whole Required Qualifications tool list.
   const cacheContext =
-    `RESUME LINES TO EDIT (each [idx] is stable — return only what you change):\n${lines.slice(0, 11000)}${yoeLine}`
+    `RESUME LINES TO EDIT (each [idx] is stable — return only what you change):\n${lines.slice(0, 40000)}${yoeLine}`
   const user =
-    `JOB DESCRIPTION:\n${opts.jd.slice(0, 4000)}${idLine}${kwLine}${onePageLine}${quickLine}${pref}\n\n` +
+    `JOB DESCRIPTION:\n${opts.jd.slice(0, 12000)}${idLine}${kwLine}${onePageLine}${quickLine}${pref}${scopeLine}\n\n` +
     `Using the resume lines provided, return the rewrite JSON (only the [idx] lines you change).`
 
   // Try twice: a one-off malformed reply no longer fails the whole tailoring.
@@ -239,6 +276,28 @@ export async function adapt(opts: {
       // Hard guard: strip any lorem-ipsum / Latin / placeholder filler before it can
       // ever reach the document. Dropped fields keep the resume's real original text.
       const { edits } = stripFiller(normalized)
+      // New bullets come back as { role: <ROLE #>, text } and are anchored after that role's last
+      // bullet: only for roles this call was shown, and only when adding is allowed.
+      const rawAdded: unknown[] = Array.isArray((parsed as { added?: unknown }).added) ? (parsed as { added: unknown[] }).added : []
+      edits.added = (opts.allowAdd || opts.refine) ? rawAdded.flatMap(a => {
+        const { role, text } = (a || {}) as { role?: unknown; text?: unknown }
+        const r = typeof role === "number" ? opts.zones.roles[role] : undefined
+        const t = typeof text === "string" ? text.replace(/^\s*\[(?:\d+|\+)\]\s*/, "").trim() : ""
+        if (!r || !r.bullets.length || !t || isFiller(t) || (roleSet && !roleSet.has(role as number))) return []
+        return [{ after: r.bullets[r.bullets.length - 1].idx, text: t }]
+      }) : []
+      // A split pass owns only its own fields: an experience pass may touch nothing but the
+      // bullets of the roles it was given, and a profile pass never touches bullets.
+      if (part === "experience") {
+        const allowed = new Set(editRoles.flatMap(r => r.bullets.map(b => b.idx)))
+        edits.headline = { title: "", tagline: "" }
+        edits.summary = ""
+        edits.skills = []
+        edits.bullets = (edits.bullets || []).filter(b => allowed.has(b.idx))
+      } else if (part === "profile") {
+        edits.bullets = []
+        edits.added = []
+      }
       // Preserve the years: if the model changed the experience length, restore the
       // candidate's OWN wording from the source summary (exact string, incl. any "+").
       // We never recompute from work-history dates — that only ever misled the figure.
@@ -251,7 +310,7 @@ export async function adapt(opts: {
       // Safety net: if the model returned "" for headline.title despite the RULES,
       // infer it from the JD's first non-empty line (typically the role title).
       if (!edits.headline) edits.headline = {}
-      if (!edits.headline.title && !opts.refine) {
+      if (!edits.headline.title && !opts.refine && part !== "experience") {
         edits.headline.title = firstLine || ""
       }
       // Enforce the CLAUDE.md text rules on the summary even if the model slips:
@@ -296,7 +355,7 @@ RULES:
 Example output: ["kubernetes","terraform","iam","identity and access management","siem"]`
   const user =
     `JOB DESCRIPTION:
-${opts.jd.slice(0, 4000)}
+${opts.jd.slice(0, 12000)}
 
 ` +
     (opts.known?.length ? `ALREADY CAPTURED (return ADDITIONAL ones, do not repeat these): ${opts.known.slice(0, 60).join(", ")}
