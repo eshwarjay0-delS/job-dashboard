@@ -34,6 +34,10 @@ export interface TailorResult {
   diff: { section: string; before: string; after: string }[]
   cached?: boolean
   elapsed_ms?: number
+  // MEASURED JD keyword coverage (0-100) of the document actually returned.
+  // keyword_analysis.coverage_after still counts an original keyword that a rewrite
+  // dropped; this one doesn't, so it is the honest number to report after an edit.
+  coverage?: number
   // Real token accounting for this tailor (proof the cache is working). estCostUSD is
   // approximate — priced at Haiku 4.5 rates; cacheReadTokens bill at ~1/10th of input.
   usage?: {
@@ -96,8 +100,12 @@ export async function runTailor(opts: {
   immediatePrefs?: string[]
   noCache?: boolean
   onePage?: boolean
-  sections?: { summary?: boolean; skills?: boolean; experience?: boolean }
+  // headline (title + tagline) follows `summary` unless set explicitly.
+  sections?: { summary?: boolean; skills?: boolean; experience?: boolean; headline?: boolean }
   mode?: "quick" | "full"
+  // REFINEMENT: givenPath is a resume ALREADY tailored to this JD and this is the user's
+  // change request for it (the WhatsApp swipe-reply). Only that change is applied.
+  refine?: string
 }): Promise<TailorResult> {
   const started = Date.now()
   const jd = opts.jd.trim()
@@ -108,7 +116,9 @@ export async function runTailor(opts: {
   // costs ~no extra wall time; it self-resolves to [] on error/timeout, so it can never
   // stall or fail a tailor. TAILOR_KW_EXPAND=0 disables it.
   const kwExpandPromise: Promise<string[]> =
-    (process.env.TAILOR_KW_EXPAND === "0" || process.env.TAILOR_KW_EXPAND === "false")
+    // A refinement edits a resume the expansion keywords were already woven into, so the
+    // extra call would only add latency.
+    (opts.refine || process.env.TAILOR_KW_EXPAND === "0" || process.env.TAILOR_KW_EXPAND === "false")
       ? Promise.resolve([])
       : expandJdKeywords({ keys: opts.keys, pref: opts.pref, jd, timeoutMs: Number(process.env.TAILOR_KW_EXPAND_MS) || 8000 })
 
@@ -160,12 +170,18 @@ export async function runTailor(opts: {
         "More technical detail — name the exact technologies, protocols, and methods used",
       ]
   const explicit = [...immediatePrefs, ...storedFeedback.filter(f => !immediatePrefs.includes(f))]
-  const allPrefs = [...explicit, ...DEFAULT_PREFS.filter(d => !explicit.includes(d))]
+  // A refinement carries ONLY the user's request. The default "more keywords / more detail"
+  // prefs would make the model rewrite lines the user already accepted, so a small change
+  // ("shorten the second bullet") would come back as a different resume.
+  const refine = (opts.refine || "").trim()
+  const allPrefs = refine
+    ? [refine.slice(0, 1500)] // adapt() runs it as the change request under REFINE_RULES
+    : [...explicit, ...DEFAULT_PREFS.filter(d => !explicit.includes(d))]
 
   // 2) Cache check — instant return for an identical re-run. One-page vs full are
   // distinct outputs, so the mode is folded into the cache key.
   const _sec = opts.sections || {}
-  const _secSig = `sec:${_sec.summary === false ? 0 : 1}${_sec.skills === false ? 0 : 1}${_sec.experience === false ? 0 : 1}`
+  const _secSig = `sec:${_sec.summary === false ? 0 : 1}${_sec.skills === false ? 0 : 1}${_sec.experience === false ? 0 : 1}${_sec.headline === undefined ? "" : _sec.headline ? "h1" : "h0"}`
   const _modeSig = `mode:${opts.mode === "quick" ? "q" : "f"}`
   const key = cacheKeyOf(jd, matched.filepath, sourceHash, [...allPrefs, opts.onePage ? "1page" : "full", _secSig, _modeSig])
   const cacheKey = `tailored_cache/${key}.json`
@@ -263,7 +279,7 @@ export async function runTailor(opts: {
   const sec = opts.sections || {}
   const scopeEdits = (raw: Edits): Edits => ({
     // Section scope: only enhance the sections the user chose (default = all).
-    headline: sec.summary === false ? { title: "", tagline: "" } : raw.headline,
+    headline: (sec.headline ?? sec.summary) === false ? { title: "", tagline: "" } : raw.headline,
     summary:  sec.summary === false ? "" : raw.summary,
     skills:   sec.skills === false ? [] : raw.skills,
     bullets:  sec.experience === false ? [] : raw.bullets,
@@ -293,7 +309,7 @@ export async function runTailor(opts: {
   // coverage, stalling the climb).
   const draftPass = async (step: { pref: ProviderPref; model?: string; label?: string }, extraPrefs: string[]): Promise<Pass> => {
     const prefs = [...allPrefs, ...extraPrefs].filter(Boolean)
-    const raw = await adapt({ keys: opts.keys, pref: step.pref, jd, zones, preferences: prefs.join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, model: step.model, usageSink })
+    const raw = await adapt({ keys: opts.keys, pref: step.pref, jd, zones, preferences: prefs.join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, model: step.model, usageSink, refine: !!refine })
     const pass = await applyEdits(scopeEdits(raw))
     // Tag with the model that actually produced this draft — with cross-provider draws the
     // winner may not be the primary step, and the notes must name the real one.
@@ -326,15 +342,30 @@ export async function runTailor(opts: {
   // sampling swings coverage run-to-run, so a second draw raises the floor (measured
   // ~88%→~97%). The user explicitly prioritises resume quality over token cost, so this
   // is the default; set TAILOR_BEST_OF=1 for the cheapest/fastest, or 3 for max consistency.
-  const BEST_OF = opts.mode === "quick" ? 1 : Math.max(1, Math.min(5, Number(process.env.TAILOR_BEST_OF ?? 2)))
+  // A refinement is ONE draw with no climb: both pick by keyword coverage, so either could
+  // prefer a draft that IGNORED the request ("remove Kubernetes" lowers coverage). The
+  // user's request has to win. Provider fallback still applies if a model errors.
+  const BEST_OF = (opts.mode === "quick" || refine) ? 1 : Math.max(1, Math.min(5, Number(process.env.TAILOR_BEST_OF ?? 2)))
   // Collect every call's token usage so we can report the real cost of this tailor.
   const usageSink: TokenUsage[] = []
-  // Wall-clock budget: never START a model call that can't finish before the serverless
-  // function is killed. TAILOR_MAX_MS (< Vercel's 60s) minus one per-call timeout is the
-  // latest we may begin an escalation redraft; past that we return the best draft so far.
-  const t0 = Date.now()
+  // Wall-clock budget: the whole tailor must answer inside TAILOR_MAX_MS (< Vercel's 60s),
+  // counted from the start of runTailor. Checking only before STARTING a call wasn't enough:
+  // one call can outlive LLM_CALL_TIMEOUT_MS through rate-limit retries (Groq's 429s
+  // stretched tailors to 51-56s). So draws and climbs are also cut off AT the deadline, and
+  // the best draft so far is returned.
   const TAILOR_MAX_MS = Number(E.TAILOR_MAX_MS) || 52000
-  const CALL_MS = Number(E.LLM_CALL_TIMEOUT_MS) || 35000
+  const deadline = started + TAILOR_MAX_MS
+  // Don't START a climb redraft with less than this left (a Gemini redraft takes ~6-8s).
+  const MIN_CLIMB_MS = Number(E.TAILOR_MIN_CLIMB_MS) || 9000
+  function beforeDeadline<T>(p: Promise<T>): Promise<T | null> {
+    const ms = deadline - Date.now()
+    if (ms <= 0) return Promise.resolve(null)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    return Promise.race([
+      p.finally(() => clearTimeout(timer)),
+      new Promise<null>(r => { timer = setTimeout(() => r(null), ms) }),
+    ])
+  }
   // Await parallel draws with early-exit: resolve as soon as a draw already clears the
   // coverage target (nothing better is needed), else once every draw settles, else a short
   // grace period after the first success — so a single slow/hung draw can't stall the run.
@@ -349,8 +380,11 @@ export async function runTailor(opts: {
         if (finished) return
         finished = true
         if (timer) clearTimeout(timer)
+        clearTimeout(hardStop)
         resolve(done)
       }
+      // Hard stop at the deadline: whatever has finished by then is what we have.
+      const hardStop = setTimeout(finish, Math.max(0, deadline - Date.now()))
       for (const pr of promises) {
         pr.then(p => {
           if (p) {
@@ -378,22 +412,35 @@ export async function runTailor(opts: {
       // clears TARGET, we use it immediately; otherwise we give the remaining draws a short
       // grace window and take the best of whatever finished. Quality is unchanged when the
       // draws are equally fast — we only stop waiting on a straggler that can't win.
-      const extra = injectFor(beforeKw, false)
+      const extra = refine ? [] : injectFor(beforeKw, false)
       // CROSS-PROVIDER draws: spread the N parallel draws across the available providers
       // (e.g. Claude Haiku + Gemini Flash) instead of N samples of the same model. Two
       // different models disagree more usefully than two samples of one, so the "best of"
       // pick is stronger — AND because they have very different latencies (~15s vs ~7s),
       // the early-exit above returns as soon as the FAST one is already good enough. Same
       // quality ceiling, roughly half the typical wait.
-      const pool = steps.length > 1 ? steps : [step]
+      // Rotate so the pool STARTS at the current step. Otherwise, after the first
+      // provider(s) failed and the loop fell through, the draws went back to steps[0], so
+      // the later providers were never actually reached as fallbacks.
+      const si = steps.indexOf(step)
+      const pool = steps.length > 1 ? [...steps.slice(si), ...steps.slice(0, si)] : [step]
       const draws = await collectDraws(
-        Array.from({ length: BEST_OF }, (_, i) => draftPass(pool[i % pool.length], extra).catch(() => null)),
+        Array.from({ length: BEST_OF }, (_, i) => {
+          const s = pool[i % pool.length]
+          const d = draftPass(s, extra)
+          // A secondary provider failing fast (Groq's free-tier 429) used to shrink best-of-2
+          // to best-of-1 silently. Redraw on this step's provider instead, so quality holds.
+          return (s === step ? d : d.catch(() => draftPass(step, extra))).catch(() => null)
+        }),
         TARGET, summaryWanted, Number(E.TAILOR_DRAW_GRACE_MS) || 6000,
       )
-      if (!draws.length) continue // this model failed entirely → try the next one
+      if (!draws.length) {
+        if (Date.now() >= deadline) break // out of time: fail cleanly rather than 504
+        continue // this model failed entirely → try the next one
+      }
       best = draws.reduce((a, b) => (quality(b) > quality(a) ? b : a))
       usedModel = `${best.via ?? step.label ?? String(step.pref)}${BEST_OF > 1 && draws.length > 1 ? ` (best of ${draws.length})` : ""}`
-      if (opts.mode === "quick") break
+      if (opts.mode === "quick" || refine) break
     } else {
       // Coverage-climbing escalation is ON by default (quality first): if the base pass is
       // still under TARGET, redraft on the next model in the ladder with the exact missing
@@ -402,20 +449,29 @@ export async function runTailor(opts: {
       // climb call that can't finish before the serverless deadline, so it can no longer
       // cause the 60s timeouts/"frozen" runs it used to. Set TAILOR_CLIMB=0 to disable.
       if (process.env.TAILOR_CLIMB === "0" || process.env.TAILOR_CLIMB === "false") break
-      // Skip it if there isn't enough time left for a full call before the deadline —
+      // Skip it if there isn't enough time left for a redraft before the deadline —
       // returning the current best beats 504-ing on a call that can't finish in time.
-      if (Date.now() - t0 > TAILOR_MAX_MS - CALL_MS) break
+      if (deadline - Date.now() < MIN_CLIMB_MS) break
       if (best.cov >= TARGET && (!summaryWanted || (best.edits.summary || "").trim())) break
       const wantSummary = summaryWanted && !(best.edits.summary || "").trim()
       const extra = injectFor(best.afterKw, wantSummary)
       if (!extra.length) break
       const prevQ = quality(best)
-      const p = await draftPass(step, extra).catch(() => null)
-      if (p && quality(p) >= quality(best)) { best = p; usedModel = (step as { label?: string }).label ?? String(step.pref) }
+      // If this ladder step's provider is down or rate-limited, climb on the primary instead of
+      // giving up on the coverage push. Either way it can't run past the deadline.
+      const primary = steps[0]
+      const p = await beforeDeadline(
+        draftPass(step, extra).catch(() => (step === primary ? null : draftPass(primary, extra))).catch(() => null),
+      )
+      if (p && quality(p) >= quality(best)) { best = p; usedModel = p.via ?? (step as { label?: string }).label ?? String(step.pref) }
       if (quality(best) <= prevQ + 0.01) break // no meaningful gain → stop
     }
   }
-  if (!best) throw new Error("Tailoring failed — every model errored (check API keys / quota).")
+  if (!best) {
+    throw new Error(Date.now() >= deadline
+      ? "Tailoring timed out: the AI providers are slow or rate-limited right now. Please try again in a minute."
+      : "Tailoring failed — every model errored (check API keys / quota).")
+  }
 
   const { edits, buffer, notes, tailoredText, afterKw } = best
   notes.push(`Tailored with ${usedModel} · JD keyword coverage ${Math.round(best.cov * 100)}%`)
@@ -488,7 +544,7 @@ export async function runTailor(opts: {
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,
     ranked_candidates: rankedCandidates, what_changed: whatChanged(edits), edits, notes,
     applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff,
-    cached: false, elapsed_ms: Date.now() - started,
+    cached: false, elapsed_ms: Date.now() - started, coverage: Math.round(best.cov * 100),
     usage: { calls: usageSink.length, inputTokens: uAgg.input, outputTokens: uAgg.output, cacheReadTokens: uAgg.cacheRead, cacheWriteTokens: uAgg.cacheWrite, estCostUSD },
   }
 

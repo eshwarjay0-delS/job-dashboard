@@ -119,11 +119,20 @@ function callSignal(): AbortSignal {
 // times. 429/529 responses come back fast, so this adds only a few seconds under load.
 async function fetchRetry(url: string, init: RequestInit): Promise<Response> {
   const RETRIABLE = new Set([429, 529, 503])
+  // Total time one call may spend WAITING between retries. A short blip (a burst of concurrent
+  // tailors) clears in a second or two. A long rate-limit window, like Groq's free-tier
+  // tokens-per-minute wall (one resume prompt nearly fills it), won't clear in time: waiting
+  // it out stretched tailors to 51-56s. So return the 429 at once and let the ladder use
+  // another provider.
+  const RETRY_BUDGET_MS = Number(process.env.LLM_RETRY_BUDGET_MS) || 5000
+  let waited = 0
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(url, { ...init, signal: callSignal() })
     if (res.ok || attempt >= 3 || !RETRIABLE.has(res.status)) return res
     const retryAfter = Number(res.headers.get("retry-after")) || 0
-    const waitMs = Math.min(8000, retryAfter > 0 ? retryAfter * 1000 : 1000 * (attempt + 1) * (attempt + 1))
+    const waitMs = retryAfter > 0 ? retryAfter * 1000 : 1000 * (attempt + 1) * (attempt + 1)
+    if (waited + waitMs > RETRY_BUDGET_MS) return res
+    waited += waitMs
     await new Promise(r => setTimeout(r, waitMs))
   }
 }

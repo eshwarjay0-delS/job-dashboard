@@ -63,7 +63,8 @@ export async function sendText(to: string, body: string): Promise<void> {
 }
 
 /** Upload bytes to Meta, then send them as a document message. */
-export async function sendDocument(to: string, data: Buffer, filename: string, caption?: string): Promise<void> {
+/** Returns the sent message's id (wamid), so a later swipe-reply can be traced to THIS document. */
+export async function sendDocument(to: string, data: Buffer, filename: string, caption?: string): Promise<string> {
   const form = new FormData()
   form.append("messaging_product", "whatsapp")
   form.append("type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
@@ -87,6 +88,8 @@ export async function sendDocument(to: string, data: Buffer, filename: string, c
     signal: AbortSignal.timeout(20000),
   })
   if (!res.ok) throw new Error(`WA sendDoc ${res.status}: ${(await res.text()).slice(0, 200)}`)
+  const sent = await res.json().catch(() => ({})) as { messages?: { id?: string }[] }
+  return sent.messages?.[0]?.id || ""
 }
 
 /** Download an inbound attachment: media id → signed URL → bytes. */

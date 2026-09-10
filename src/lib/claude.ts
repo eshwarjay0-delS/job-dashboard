@@ -51,6 +51,33 @@ Return ONE minified JSON object, exactly:
 
 Output valid minified JSON only — no markdown, no commentary. Escape double-quotes inside text; never put a real newline inside a string value.`
 
+// REFINEMENT (the WhatsApp swipe-reply): the resume was already retargeted under RULES and the
+// candidate asked for one specific change. RULES is the wrong prompt for that: its goal is to
+// rewrite "most" skill lines and 8-10 bullets for coverage, so a "shorten the bullets" request
+// came back with 19-23 skill lines rewritten, and "add X" silently dropped existing tools.
+// This keeps RULES' hard constraints but limits the edit to exactly what was asked.
+const REFINE_RULES = `You apply ONE change request to a resume that is ALREADY tailored to a specific job. The candidate reviewed it and asked for a change. Make exactly that change and nothing else.
+CRITICAL RULE: You are editing REAL TEXT from a REAL person's resume. Every word must be authentic professional English. ZERO tolerance for lorem ipsum, Latin, placeholder text, or generic filler.
+
+SCOPE — this is an edit, not a rewrite:
+- Change ONLY the lines the request is about, and only as much as the request needs. Lines you do not return stay exactly as they are, so return nothing for any line the request does not touch. A request about bullets never touches skill lines; a request about skills never touches bullets.
+- ADDING (a tool, skill, certification, responsibility, emphasis): put it into the single most relevant existing line WITHOUT removing anything that line already lists. Skip anything the resume already contains, and never add the same item to a second line.
+- Remove, shorten, or replace existing content only when the request asks for it. When shortening, keep every tool name and metric.
+- Keep every job-description keyword already present unless the request says to remove it.
+- The candidate knows their own experience: when they ask to add something, add it where it fits best. Never invent employers, dates, metrics, or certifications they did not ask for.
+- Leave "headline" and "summary" empty unless the request is about the title/headline/tagline or the summary.
+
+HARD CONSTRAINTS (keep these even if the request conflicts):
+- Never add or remove lines. Edit existing lines in place: one entry per [idx], only [idx] values shown to you, never merge lines.
+- Never change names, contact info, company names, the job titles of past roles, or dates.
+- Seniority is fixed: never frame the candidate as junior or entry-level.
+- Experience length is fixed: never change the stated years of experience.
+- Voice: write like the real senior engineer. No buzzwords (spearheaded, leveraged, orchestrated, utilized), no em-dash stuffing, no hype.
+
+Return ONE minified JSON object, exactly:
+{"headline":{"title":"","tagline":""},"summary":"","skills":[{"idx":0,"text":""}],"bullets":[{"idx":0,"text":""}]}
+Use "" or [] for everything you do not change. Output valid minified JSON only — no markdown, no commentary. Escape double-quotes inside text; never put a real newline inside a string value.`
+
 // Use the server env key first; fall back to a key the client saved in Settings.
 export function resolveKey(bodyKey?: string): string {
   return (process.env.ANTHROPIC_API_KEY || bodyKey || "").trim()
@@ -117,10 +144,14 @@ export async function adapt(opts: {
   model?: string
   // Collects per-call token usage so the caller can total a tailor's real cost.
   usageSink?: TokenUsage[]
+  // REFINEMENT: `preferences` holds ONE change request for an already-tailored resume, run
+  // under REFINE_RULES instead of a full retarget. An omitted title then means "keep".
+  refine?: boolean
 }): Promise<Edits> {
   // Output ceiling — the edit JSON fits well under this. (OpenRouter is clamped lower
-  // inside the provider layer.)
-  const cap = 4096
+  // inside the provider layer.) A refinement like "shorten every bullet" can return far
+  // more lines than a normal retarget, so it gets more room.
+  const cap = opts.refine ? 8192 : 4096
   // Build the editable-lines block from the resume's zones.
   let lines = ""
   if (opts.zones.header) {
@@ -155,12 +186,14 @@ export async function adapt(opts: {
   // First non-empty JD line is usually the role title — a hint for the single identity.
   const firstLine = (opts.jd.split("\n").map(l => l.trim()).find(Boolean) || "").slice(0, 120)
   const idLine = firstLine ? `\n\nTARGET ROLE (infer the ONE primary identity from the whole JD; this line is just a hint): ${firstLine}` : ""
-  const kwLine = opts.jdKeywords?.length
+  // A refinement gets no keyword list: it invites "absorbing" more terms, which is exactly the
+  // churn a targeted change must avoid (the JD itself is still in the prompt).
+  const kwLine = opts.jdKeywords?.length && !opts.refine
     ? `\n\nTOOLS THE JD CENTERS ON (absorb ONLY the ones this candidate can defend; put the central ones inside bullets, not just skills): ${opts.jdKeywords.join(", ")}`
     : ""
-  const pref = opts.preferences
-    ? `\n\nUSER PREFERENCES (honor strictly): ${opts.preferences}`
-    : ""
+  const pref = !opts.preferences ? ""
+    : opts.refine ? `\n\nCHANGE REQUEST FROM THE CANDIDATE (apply exactly this, nothing else): ${opts.preferences}`
+    : `\n\nUSER PREFERENCES (honor strictly): ${opts.preferences}`
   // One-page mode: condense to a single page WITHOUT touching formatting — keep only the
   // most JD-relevant bullets per role (current role ≤5, older roles ≤3), make every kept
   // line tighter, and hold the summary to ~45-55 words. Edit existing lines only; do not
@@ -189,11 +222,13 @@ export async function adapt(opts: {
     try {
       // Low temperature → CONSISTENT keyword coverage & escalation decisions run-to-run
       // (default sampling swung 93–98% coverage and 25–73s on identical input).
-      text = (await callLLM({ keys: opts.keys, tier: opts.mode === "quick" ? "light" : "heavy", pref: opts.pref, system: RULES, cacheContext, user, maxTokens: cap, model: opts.model, temperature: 0.2, usageSink: opts.usageSink })).text
+      text = (await callLLM({ keys: opts.keys, tier: opts.mode === "quick" ? "light" : "heavy", pref: opts.pref, system: opts.refine ? REFINE_RULES : RULES, cacheContext, user, maxTokens: cap, model: opts.model, temperature: 0.2, usageSink: opts.usageSink })).text
     } catch (e) {
       lastErr = e
-      // Auth / bad-request errors won't fix themselves on retry.
-      if (/\b(400|401|403)\b/.test(String(e))) throw e
+      // Auth / bad-request errors won't fix themselves on retry, and a rate limit (429) was
+      // already retried inside the provider layer: repeating the whole call only burns the
+      // time budget, so hand it back and let the ladder use another provider.
+      if (/\b(400|401|403|429)\b/.test(String(e))) throw e
       continue
     }
     try {
@@ -216,7 +251,7 @@ export async function adapt(opts: {
       // Safety net: if the model returned "" for headline.title despite the RULES,
       // infer it from the JD's first non-empty line (typically the role title).
       if (!edits.headline) edits.headline = {}
-      if (!edits.headline.title) {
+      if (!edits.headline.title && !opts.refine) {
         edits.headline.title = firstLine || ""
       }
       // Enforce the CLAUDE.md text rules on the summary even if the model slips:

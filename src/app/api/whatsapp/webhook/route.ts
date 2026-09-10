@@ -6,16 +6,21 @@
  * the Role / Location / Company it was built for. The session then clears, so every
  * generation starts fresh with a new JD + resume.
  *
+ * Changes: swipe-reply to any resume the bot sent and say what to change. The bot edits
+ * THAT exact version (so replying to the newest file stacks changes) and sends the update,
+ * which can be swipe-replied to again. A message that is NOT a reply is always a new JD.
+ *
  * Serverless note: Vercel freezes a function once it responds, so the work CANNOT be
  * deferred — it runs inline and we answer 200 at the end. Meta retries a webhook it
  * considers failed, so every message id is de-duplicated before doing any work.
  */
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
-import { blob, writePath } from "@/lib/storage"
-import { USER_RESUMES_DIR } from "@/lib/paths"
+import { createHash, randomBytes } from "crypto"
+import { blob, writePath, existsPath, deletePath } from "@/lib/storage"
+import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
 import { resolveKeys, hasAnyKey } from "@/lib/llm"
-import { runTailor } from "@/lib/tailor"
+import { runTailor, type TailorResult } from "@/lib/tailor"
 import { extractJdMeta } from "@/lib/claude"
 import { sendText, sendDocument, downloadMedia, verifySignature, senderAllowed, waConfigured } from "@/lib/whatsapp"
 
@@ -26,9 +31,18 @@ export const dynamic = "force-dynamic"
 const USER_ID = process.env.WHATSAPP_USER_ID || "demo"
 const OUTPUT_NAME = process.env.WHATSAPP_OUTPUT_NAME || "Eshwar Resume"
 const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+// Every resume the bot sends is kept so a swipe-reply can edit that exact version. It lives
+// OUTSIDE the resume library on purpose: versions never appear on the dashboard (as files
+// or folders) and never compete in auto-select matching.
+const VERSIONS_DIR = path.join(DATA_DIR, "whatsapp", "versions")
+const MAX_VERSIONS = Number(process.env.WHATSAPP_MAX_VERSIONS) || 30
 
+const digits = (from: string) => from.replace(/\D/g, "")
+const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
+
+type Meta = { role: string; company: string; location: string }
 type Session = { jd?: string; resumePath?: string; resumeName?: string; seen?: string[]; updatedAt?: number }
-const sessionKey = (from: string) => `whatsapp/session-${from.replace(/\D/g, "")}.json`
+const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
 
 async function loadSession(from: string): Promise<Session> {
   try {
@@ -47,6 +61,43 @@ async function saveSession(from: string, s: Session): Promise<void> {
   try { await blob.put(sessionKey(from), JSON.stringify({ ...s, updatedAt: Date.now() })) } catch { /* non-fatal */ }
 }
 
+// One resume the bot sent, stored under the id of that WhatsApp message — the id a
+// swipe-reply carries back in `context.id`.
+type Gen = {
+  jd: string
+  file: string          // this version's .docx, under VERSIONS_DIR/<sender>/
+  meta: Meta
+  changes: string[]     // change requests applied so far, oldest first
+  source?: string       // the uploaded resume the chain started from
+  createdAt: number
+}
+const genDir = (from: string) => `whatsapp/gens/${digits(from)}`
+// Message ids are base64-like ("wamid.HBgL…==") and may contain "/", so hash them into a
+// single safe key segment.
+const genKey = (from: string, wamid: string) =>
+  `${genDir(from)}/${createHash("sha1").update(wamid).digest("hex").slice(0, 24)}.json`
+
+async function loadGen(from: string, wamid: string): Promise<Gen | null> {
+  try {
+    const raw = await blob.getText(genKey(from, wamid))
+    return raw ? (JSON.parse(raw) as Gen) : null
+  } catch { return null }
+}
+
+async function saveGen(from: string, wamid: string, gen: Gen): Promise<void> {
+  const key = genKey(from, wamid)
+  try { await blob.put(key, JSON.stringify(gen)) } catch { await deletePath(gen.file); return }
+  // Keep the newest MAX_VERSIONS per sender; older records and their files are removed.
+  try {
+    const idxKey = `${genDir(from)}/_index.json`
+    const idx = JSON.parse((await blob.getText(idxKey)) || "[]") as { key: string; file: string }[]
+    idx.push({ key, file: gen.file })
+    const drop = idx.length > MAX_VERSIONS ? idx.splice(0, idx.length - MAX_VERSIONS) : []
+    await blob.put(idxKey, JSON.stringify(idx))
+    await Promise.all(drop.flatMap(d => [blob.delete(d.key), deletePath(d.file)]))
+  } catch { /* pruning is best-effort */ }
+}
+
 const HELP = [
   "*Resume Tailor Bot*",
   "",
@@ -55,6 +106,8 @@ const HELP = [
   "2. Your *resume* as a .docx file",
   "",
   `As soon as I have both, I'll tailor it and send back *${OUTPUT_NAME}.docx*.`,
+  "",
+  "*Want changes?* Swipe right on a resume I sent (or long-press → Reply) and type what to change, e.g. _add more Terraform_ or _make the bullets shorter_. Each update builds on the version you replied to, so you can keep refining.",
   "",
   "Commands: *reset* · *status* · *help*",
 ].join("\n")
@@ -111,7 +164,7 @@ export async function POST(request: NextRequest) {
 async function handle(from: string, msg: Record<string, unknown>, session: Session) {
   const type = String(msg.type || "")
 
-  // ── Commands / JD text ──────────────────────────────────────────────────────
+  // ── Commands / change requests / JD text ────────────────────────────────────
   if (type === "text") {
     const text = String((msg.text as { body?: string })?.body || "").trim()
     const cmd = text.toLowerCase()
@@ -127,6 +180,11 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
         `Resume: ${session.resumeName ? session.resumeName : "waiting"}`,
       ].join("\n"))
     }
+    // A swipe-reply is a change request for the resume being replied to. Checked before
+    // the JD path: a reply is never a new JD (new JDs are always pasted as their own message).
+    const replyTo = (msg.context as { id?: string } | undefined)?.id
+    if (replyTo) return refine(from, replyTo, text)
+
     // Too short to be a JD — most likely a stray message, so guide instead of guessing.
     if (text.length < 60) {
       return sendText(from, `That looks too short to be a job description (${text.length} characters).\n\n${HELP}`)
@@ -168,7 +226,7 @@ async function generate(from: string, session: Session) {
   if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
   if (!session.jd || !session.resumePath) return sendText(from, HELP)
 
-  await sendText(from, "Tailoring your resume… (about 10 seconds)")
+  await sendText(from, "Tailoring your resume… (usually 10-20 seconds)")
 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd })
@@ -187,20 +245,111 @@ async function generate(from: string, session: Session) {
   if (!file) return sendText(from, "The resume generated but the file could not be read back. Please try again.")
 
   const meta = await metaPromise
-  const ka = result.keyword_analysis
-  const caption = [
-    `*${OUTPUT_NAME}*`,
-    meta.role ? `Role: ${meta.role}` : null,
-    meta.company ? `Company: ${meta.company}` : null,
-    meta.location ? `Location: ${meta.location}` : null,
-    "",
-    `Match: ${result.score_before}% -> *${result.score}%*`,
-    `Keywords: ${ka.coverage_after}% covered${ka.added.length ? ` (+${ka.added.length} added)` : ""}`,
-    `${result.diff.length} lines rewritten`,
-  ].filter(Boolean).join("\n")
-
-  await sendDocument(from, file, `${OUTPUT_NAME}.docx`, caption)
+  await deliver(from, file, captionFor(meta, result), { jd: session.jd, meta, changes: [], source: session.resumeName })
 
   // Every generation starts fresh: keep only the de-dupe list.
   await saveSession(from, { seen: session.seen })
+}
+
+// ── Swipe-reply: change a resume the bot already sent ─────────────────────────
+async function refine(from: string, replyTo: string, request: string) {
+  const gen = await loadGen(from, replyTo)
+  if (!gen) {
+    return sendText(from, [
+      "To change a resume, swipe right on the *resume file* I sent and type what to change.",
+      "",
+      "(If that was a resume, it's no longer on file. Send the JD and resume again.)",
+    ].join("\n"))
+  }
+  if (request.length < 3) {
+    return sendText(from, "Tell me what to change, e.g. _add more Terraform and AWS_ or _make the bullets shorter_.")
+  }
+  const keys = resolveKeys({})
+  if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
+  if (!(await existsPath(gen.file))) return sendText(from, "That version is no longer on file. Send the JD and resume again.")
+
+  await sendText(from, `Updating your resume: "${clip(request, 200)}"…`)
+
+  // The role/company/location lookup is best-effort; if it came back empty the first time,
+  // retry it alongside the edit so this caption still names the job.
+  const metaPromise: Promise<Meta> = gen.meta?.role || gen.meta?.company || gen.meta?.location
+    ? Promise.resolve(gen.meta)
+    : extractJdMeta({ keys, jd: gen.jd })
+
+  // Summary and header title stay as they are (the dashboard default) unless the request
+  // is about them; skills and experience are always open to the edit.
+  const asksHeadline = /\b(title|headline|header|tagline|designation)\b/i.test(request)
+  const asksSummary = /\b(summary|profile|objective|about me|intro|introduction)\b/i.test(request)
+
+  const result = await runTailor({
+    jd: gen.jd,
+    keys,
+    // Scoped to THIS sender's versions, so runTailor's inside-the-folder check also
+    // guarantees a record can only ever point at the sender's own files.
+    userResumeDir: path.join(VERSIONS_DIR, digits(from)),
+    givenPath: gen.file,
+    refine: request,
+    noCache: true, // sending the same request again should redraft, not replay the last result
+    mode: "full",
+    sections: { headline: asksHeadline, summary: asksSummary, skills: true, experience: true },
+  })
+
+  const lines = result.diff.length + (result.edits.extras || []).filter(e => (e.text || "").trim()).length
+  if (!lines) {
+    return sendText(from, `Nothing needed changing for "${clip(request, 200)}". Try naming the exact skill, section, or bullet.`)
+  }
+
+  const file = await blob.get(`tailored/${result.token}.docx`)
+  if (!file) return sendText(from, "The update generated but the file could not be read back. Please try again.")
+
+  const meta = await metaPromise
+  const changes = [...(gen.changes || []), request]
+  await deliver(from, file, captionFor(meta, result, { request, number: changes.length, lines }), {
+    jd: gen.jd, meta, changes, source: gen.source,
+  })
+}
+
+// Send the document and keep a copy of this exact version, recorded under the sent
+// message's id, so a later swipe-reply to it can be traced back and edited.
+async function deliver(from: string, file: Buffer, caption: string, gen: Omit<Gen, "file" | "createdAt">) {
+  const vfile = path.join(VERSIONS_DIR, digits(from), `${Date.now().toString(36)}-${randomBytes(4).toString("hex")}.docx`)
+  // Store the copy while the upload runs, so it costs no extra wall time.
+  const stored = writePath(vfile, file).then(() => true, () => false)
+  let wamid = ""
+  try {
+    wamid = await sendDocument(from, file, `${OUTPUT_NAME}.docx`, caption)
+  } catch (e) {
+    if (await stored) await deletePath(vfile)
+    throw e
+  }
+  if (!(await stored)) return
+  if (wamid) await saveGen(from, wamid, { ...gen, file: vfile, createdAt: Date.now() })
+  else await deletePath(vfile)
+}
+
+function captionFor(meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }): string {
+  // Measured coverage of the document being sent (older cached results lack it).
+  const cov = result.coverage ?? result.keyword_analysis.coverage_after
+  const added = result.keyword_analysis.added.length
+  const stats = update
+    ? [
+        `Change: ${clip(update.request, 200)}`,
+        `Keywords: ${cov}% covered`,
+        `${update.lines} line${update.lines === 1 ? "" : "s"} changed`,
+      ]
+    : [
+        `Match: ${result.score_before}% -> *${result.score}%*`,
+        `Keywords: ${cov}% covered${added ? ` (+${added} added)` : ""}`,
+        `${result.diff.length} lines rewritten`,
+      ]
+  return [
+    update ? `*${OUTPUT_NAME}* (update ${update.number})` : `*${OUTPUT_NAME}*`,
+    ...(meta.role ? [`Role: ${meta.role}`] : []),
+    ...(meta.company ? [`Company: ${meta.company}`] : []),
+    ...(meta.location ? [`Location: ${meta.location}`] : []),
+    "",
+    ...stats,
+    "",
+    "_Swipe-reply to this file with any changes and I'll update it._",
+  ].join("\n")
 }
