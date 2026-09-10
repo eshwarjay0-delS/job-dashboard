@@ -300,6 +300,50 @@ ${opts.jd.slice(0, 4000)}
   ])
 }
 
+// ── JD metadata (role / company / location) ───────────────────────────────────
+// Reported back on every WhatsApp generation so the user knows which job a resume was
+// built for. Cheap light-tier call; ALWAYS resolves (never throws) and self-times-out,
+// so it can never block or fail a generation — worst case the fields come back empty.
+export async function extractJdMeta(opts: {
+  keys: LlmKeys
+  pref?: ProviderPref
+  jd: string
+  timeoutMs?: number
+  usageSink?: TokenUsage[]
+}): Promise<{ role: string; company: string; location: string }> {
+  const empty = { role: "", company: "", location: "" }
+  const system = `Extract job posting metadata. Output ONLY minified JSON, no prose:
+{"role":"","company":"","location":""}
+- role: the job title only (e.g. "Senior Cloud Security Engineer"). No seniority invented.
+- company: the hiring company. Use "" if it is a staffing/bench email with no named client.
+- location: city/state/country, or "Remote", or "Hybrid - <city>". Use "" if absent.
+Never guess. If a field is not stated, return "" for it.`
+  const user = `JOB DESCRIPTION:
+${opts.jd.slice(0, 3000)}
+
+Return the JSON.`
+
+  const call = (async () => {
+    const text = (await callLLM({
+      keys: opts.keys, tier: "light", pref: opts.pref, system, user,
+      maxTokens: 200, temperature: 0, usageSink: opts.usageSink,
+    })).text
+    let t = text.trim().replace(/^```[a-zA-Z]*\s*/, "").replace(/\s*```$/, "").trim()
+    const a = t.indexOf("{"), b = t.lastIndexOf("}")
+    if (a >= 0 && b > a) t = t.slice(a, b + 1)
+    const o = JSON.parse(t) as Record<string, unknown>
+    const str = (v: unknown) => (typeof v === "string" ? v.trim().slice(0, 80) : "")
+    const clean = (v: string) => (isFiller(v) ? "" : v)
+    return { role: clean(str(o.role)), company: clean(str(o.company)), location: clean(str(o.location)) }
+  })()
+
+  const ms = opts.timeoutMs ?? 8000
+  return Promise.race([
+    call.catch(() => empty),
+    new Promise<typeof empty>(r => setTimeout(() => r(empty), ms)),
+  ])
+}
+
 // ── Targeted coverage augment (token-smart escalation) ─────────────────────────
 // Instead of re-sending the WHOLE resume to a stronger/costlier model, send only the
 // ATS surface that can absorb the gap — the skill lines + the CURRENT role's bullets
