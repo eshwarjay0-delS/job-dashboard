@@ -43,6 +43,7 @@ function show(name) {
   $("sideNav")?.classList.toggle("hidden", !SIDE_VIEWS.includes(name));
   document.querySelectorAll(".side-item[data-view]").forEach(b => b.classList.toggle("on", b.dataset.view === name));
   window.kompasDesktop?.setLive(name === "copilot");               // desktop: answer hotkeys only while the live screen is open
+  window.kompasDesktop?.setScreen?.(name);                         // desktop: the window resizes to fit this screen
   window.scrollTo(0, 0);
 }
 
@@ -507,7 +508,10 @@ function startClock() { startedAt = Date.now(); const tick = () => { $("clock").
 function stopClock() { if (clockTimer) clearInterval(clockTimer); clockTimer = null; }
 
 /* ---- sources (both ON by default), theme, drawer ---- */
-const srcOn = { mic: true, sys: true };
+// Kompas desktop never captures the computer's sound (no loopback): there, the microphone is the only source.
+const NO_SYS_AUDIO = window.kompasDesktop?.systemAudio === false;
+const srcOn = { mic: true, sys: !NO_SYS_AUDIO };
+if (NO_SYS_AUDIO) { $("sysBtn").classList.add("hidden"); $("screenBtn").classList.add("hidden"); }
 function syncSrc() {
   $("micBtn").classList.toggle("on", srcOn.mic); $("sysBtn").classList.toggle("on", srcOn.sys);
   $("micBtn").title = "Microphone (you) — " + (srcOn.mic ? "on" : "off");
@@ -2012,13 +2016,17 @@ const CONNECT_STEPS = {
 function renderConnect(s) {
   const app = LS.get("connectApp", "web");
   document.querySelectorAll(".cn-app").forEach(b => b.classList.toggle("on", b.dataset.app === app));
-  // inside Kompas desktop the call audio comes straight from the computer: no share dialog to explain
-  const steps = window.kompasDesktop && app !== "phone"
-    ? ["Press <b>Connect &amp; start</b> and allow the microphone.", "Kompas hears the call through your computer's sound. Nothing to share.", "When they finish a question, press <b>AI Answer</b> (or Ctrl+Shift+Enter from any window)."]
+  // inside Kompas desktop the microphone is the only source, so the call has to be audible to it
+  const steps = NO_SYS_AUDIO
+    ? ["Play the call through your <b>speakers</b>, not headphones, so the microphone hears the interviewer.", "Press <b>Connect &amp; start</b>. Kompas listens through your microphone.", "When they finish a question, press <b>AI Answer</b> (Ctrl+Enter while Kompas is focused)."]
     : CONNECT_STEPS[app];
   $("cnSteps").innerHTML = steps.map(t => `<li>${t}</li>`).join("");
+  $("cnApps").classList.toggle("hidden", NO_SYS_AUDIO);                     // one source, so where the call is changes nothing
+  document.querySelector(".cn-label")?.classList.toggle("hidden", NO_SYS_AUDIO);
   const note = document.querySelector(".cn-note");
-  if (note && window.kompasDesktop) note.textContent = "Hidden from screen share. Only you can see Kompas.";
+  if (note && window.kompasDesktop) window.kompasDesktop.getPrivate().then(on => {
+    note.textContent = on ? "Private is on. Only you can see Kompas." : "Private is off.";
+  });
   if (s) {
     $("cnType").textContent = s.type === "mock" ? "mock practice" : "interview";
     $("cnRole").textContent = s.role || "this role";
@@ -2030,7 +2038,7 @@ function renderConnect(s) {
 document.querySelectorAll(".cn-app").forEach(b => b.onclick = () => { LS.set("connectApp", b.dataset.app); renderConnect(); });
 $("cnStart").onclick = () => {
   const app = LS.get("connectApp", "web");
-  srcOn.mic = true; srcOn.sys = app !== "phone"; syncSrc();           // phone on speaker: the mic hears both sides
+  srcOn.mic = true; srcOn.sys = app !== "phone" && !NO_SYS_AUDIO; syncSrc();   // phone on speaker: the mic hears both sides
   $("startBtn").click();
 };
 $("startBtn").addEventListener("click", () => {
@@ -2044,10 +2052,11 @@ $("connectPanel").addEventListener("click", (e) => { if (e.target.id === "connec
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("connectPanel").classList.add("hidden"); });
 /* wizard: pasting resume text is the exception, so its box opens only when asked for */
 $("resumePasteToggle").onclick = () => { const t = $("resume"); t.classList.toggle("hidden"); if (!t.classList.contains("hidden")) t.focus(); };
-/* ---- desktop app only: "Hidden from screen share" lives in the ⋯ menu, where the other window tools are ---- */
+/* ---- desktop app only: "Private" lives in the ⋯ menu, where the other window tools are ---- */
 if (window.kompasDesktop) {
   const paint = (on) => { $("privateBtn").setAttribute("aria-checked", String(on)); $("privateCheck").textContent = on ? "✓" : ""; };
   $("privateBtn").classList.remove("hidden");
   window.kompasDesktop.getPrivate().then(paint);
+  window.kompasDesktop.onPrivate?.(paint);                         // the desktop bar's switch changes it too
   $("privateBtn").onclick = async () => paint(await window.kompasDesktop.setPrivate($("privateBtn").getAttribute("aria-checked") !== "true"));
 }

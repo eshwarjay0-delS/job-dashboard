@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Mic, Check, MessageSquare } from "lucide-react"
+import { Mic, Check, MessageSquare, Monitor } from "lucide-react"
 import { Card, Meta } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 import { interviews, prepQuestions, onsiteChecklist, fmtHour, WEEK_DAYS, WEEK_DATES } from "../_suite/sample"
@@ -10,6 +10,9 @@ import { interviews, prepQuestions, onsiteChecklist, fmtHour, WEEK_DAYS, WEEK_DA
 // Kompas is a full page served by MarketFit itself (next.config.js), not a Next route, so it is
 // reached with a plain link: client-side navigation would look for a React page that is not there.
 const KOMPAS_PATH = "/dashboard/kompas"
+// The Kompas desktop app (perfACT/desktop, `npm run dist`), a single portable exe. Too large for git, so it is
+// copied into public/downloads/ at build time and gitignored.
+const KOMPAS_EXE = "/downloads/Kompas.exe"
 
 export default function PrepPage() {
   const next = interviews.filter(i => i.day >= 2).sort((a, b) => a.day - b.day || a.start - b.start)[0]!
@@ -31,6 +34,10 @@ export default function PrepPage() {
           <a href={KOMPAS_PATH} className="btn-accent"
             style={{ minHeight: 40, padding: "0 18px", fontSize: 14.5, textDecoration: "none" }}>
             <Mic size={15} /> Open Kompas
+          </a>
+          <a href={KOMPAS_EXE} download="Kompas.exe" className="btn-outline" title="Download Kompas.exe, the Windows desktop app"
+            style={{ minHeight: 40, padding: "0 18px", fontSize: 14.5, textDecoration: "none" }}>
+            <Monitor size={15} /> Desktop
           </a>
         </div>
       </Card>

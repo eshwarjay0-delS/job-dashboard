@@ -75,3 +75,6 @@ setup.log
 # /resumes/ is intentionally the opposite of this and stays tracked (see HANDOFF.md
 # — it's read-only reference data the deployed app needs bundled).
 /data/
+
+# Kompas desktop app (perfACT/desktop: npm run dist -- --copy-to public/downloads). ~95 MB binary, never committed.
+/public/downloads/
