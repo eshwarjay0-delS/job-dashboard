@@ -489,8 +489,10 @@ function rewriteParaText(p: string, newText: string): string {
   // and introduced stray leading spaces / indents. We still blank every OTHER text run
   // so internal word-separator runs don't double up the spacing.
   let targetIdx = tMatches.length - 1
-  for (let k = tMatches.length - 1; k >= 0; k--) {
-    if (decodeXml(tMatches[k][2]).trim() !== "") { targetIdx = k; break }
+  let bestLen = -1
+  for (let k = 0; k < tMatches.length; k++) {
+    const len = decodeXml(tMatches[k][2]).trim().length
+    if (len > bestLen) { bestLen = len; targetIdx = k }
   }
 
   let runIdx = -1
@@ -616,11 +618,42 @@ export async function applyRewrites(
   if (sk) notes.push(`${sk} skill line(s) updated`)
   if (bl) notes.push(`${bl} bullet(s) rewritten`)
   if (ex) notes.push(`${ex} other line(s) updated`)
-  // New bullets, grouped under the paragraph they follow.
+  // New bullets are cloned from the role TYPICAL bullet paragraph, never from whatever line the
+  // model anchored to. A role last line is often a trailing note in another style (bold, or not a
+  // list item at all), and cloning that made every added bullet bold and unbulleted.
+  const paraAt = allParas(xml)
+  const styleSig = (p: string): string => {
+    const pPr = (p.match(/<w:pPr>[\s\S]*?<\/w:pPr>/) || [""])[0].replace(/\sw:rsid[A-Za-z]*="[^"]*"/g, "")
+    const run = [...p.matchAll(/<w:r[\s\S]*?<\/w:r>/g)].find(r => paraText(r[0]).trim())
+    const rPr = run ? (run[0].match(/<w:rPr>[\s\S]*?<\/w:rPr>/) || [""])[0].replace(/\sw:rsid[A-Za-z]*="[^"]*"/g, "") : ""
+    return pPr + "||" + rPr
+  }
+  // The last bullet whose formatting matches the role most common bullet: new lines land with the
+  // normal bullets, before any trailing note, and inherit the formatting the reader expects.
+  const typicalAnchor = (role: Zones["roles"][number]): number => {
+    const counts = new Map<string, number>()
+    for (const b of role.bullets) {
+      const sig = styleSig(paraAt[b.idx] || "")
+      counts.set(sig, (counts.get(sig) || 0) + 1)
+    }
+    let best = "", top = -1
+    for (const [sig, c] of counts) if (c > top) { best = sig; top = c }
+    const matching = role.bullets.filter(b => styleSig(paraAt[b.idx] || "") === best)
+    return (matching.length ? matching[matching.length - 1] : role.bullets[role.bullets.length - 1]).idx
+  }
+  const anchorCache = new Map<number, number>()
   const addedAfter = new Map<number, string[]>()
   for (const a of edits.added || []) {
     const text = (a.text || "").trim()
-    if (validBullet.has(a.after) && text) addedAfter.set(a.after, [...(addedAfter.get(a.after) || []), text])
+    if (!validBullet.has(a.after) || !text) continue
+    const roleIdx = zones.roles.findIndex(r => r.bullets.some(b => b.idx === a.after))
+    if (roleIdx < 0) continue
+    let anchor = anchorCache.get(roleIdx)
+    if (anchor === undefined) {
+      anchor = typicalAnchor(zones.roles[roleIdx])
+      anchorCache.set(roleIdx, anchor)
+    }
+    addedAfter.set(anchor, [...(addedAfter.get(anchor) || []), text])
   }
   const addedCount = [...addedAfter.values()].reduce((n, t) => n + t.length, 0)
   if (addedCount) notes.push(`${addedCount} bullet(s) added`)
