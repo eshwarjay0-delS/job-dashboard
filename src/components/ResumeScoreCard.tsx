@@ -35,17 +35,17 @@ interface Props {
 }
 
 const SEVERITY_COLOR: Record<string, string> = {
-  critical: "#dc2626",
-  high:     "#ea580c",
-  medium:   "#ca8a04",
+  critical: "#13120d",
+  high:     "#888471",
+  medium:   "#97937e",
 }
 
 const GRADE_COLOR: Record<string, string> = {
-  A: "#059669",
-  B: "#0d9488",
-  C: "#1d4ed8",
-  D: "#ea580c",
-  F: "#dc2626",
+  A: "#42413c",
+  B: "#5c5a4e",
+  C: "#5b594e",
+  D: "#888471",
+  F: "#13120d",
 }
 
 export default function ResumeScoreCard({ token, resumeName, jd, autoRun = false }: Props) {
@@ -129,7 +129,7 @@ export default function ResumeScoreCard({ token, resumeName, jd, autoRun = false
         style={{ background: "var(--surface-2)", borderBottom: result ? "1px solid var(--border)" : "none" }}>
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-            style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff" }}>
+            style={{ background: "linear-gradient(135deg,#757261,#605d51)", color: "#fff" }}>
             🎯
           </div>
           <div>
@@ -179,7 +179,7 @@ export default function ResumeScoreCard({ token, resumeName, jd, autoRun = false
 
       {/* Error */}
       {error && (
-        <div className="px-5 py-3 text-xs" style={{ color: "#dc2626", background: "#fef2f2" }}>
+        <div className="px-5 py-3 text-xs" style={{ color: "#13120d", background: "var(--surface)" }}>
           {error} — <button onClick={runScore} style={{ textDecoration: "underline" }}>Try again</button>
         </div>
       )}
@@ -195,7 +195,7 @@ export default function ResumeScoreCard({ token, resumeName, jd, autoRun = false
               <svg className="w-20 h-20 -rotate-90" viewBox="0 0 84 84">
                 <circle cx="42" cy="42" r="36" fill="none" stroke="var(--border)" strokeWidth="7"/>
                 <circle cx="42" cy="42" r="36" fill="none"
-                  stroke={GRADE_COLOR[result.grade] || "#6366f1"} strokeWidth="7"
+                  stroke={GRADE_COLOR[result.grade] || "#757261"} strokeWidth="7"
                   strokeDasharray={`${(result.score / 100) * circumference} ${circumference}`}
                   strokeLinecap="round"
                   style={{ transition: "stroke-dasharray 1s cubic-bezier(.34,1.56,.64,1)" }}
@@ -209,7 +209,7 @@ export default function ResumeScoreCard({ token, resumeName, jd, autoRun = false
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-2xl font-black" style={{ color: GRADE_COLOR[result.grade] || "#6366f1" }}>
+                <span className="text-2xl font-black" style={{ color: GRADE_COLOR[result.grade] || "#757261" }}>
                   {result.grade}
                 </span>
                 <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>

@@ -5,19 +5,19 @@ import { Lock, BarChart3, Users, Megaphone, Settings as SettingsIcon, X, FileTex
 
 // ── Tokens ───────────────────────────────────────────────────────────────────
 const C = {
-  bg:     "#0b1220",
-  card:   "#111827",
-  card2:  "#141f30",
+  bg:     "#13120d",
+  card:   "#161510",
+  card2:  "#1e1d17",
   border: "rgba(255,255,255,.07)",
-  text:   "#f0f4ff",
-  muted:  "#8892a8",
-  hint:   "#4b5568",
-  accent: "#3b82f6",
-  teal:   "#14b8a6",
-  green:  "#60a5fa",
-  amber:  "#f59e0b",
-  red:    "#ef4444",
-  purple: "#8b5cf6",
+  text:   "#f4f2ed",
+  muted:  "#928e79",
+  hint:   "#55534a",
+  accent: "#6e6b5b",
+  teal:   "#6a6757",
+  green:  "#9d9884",
+  amber:  "#7e7a68",
+  red:    "#2e2d27",
+  purple: "#605d51",
 }
 
 // ── Gate ─────────────────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ function LoginWall({ onAuth }: { onAuth: () => void }) {
             value={user}
             onChange={e => setUser(e.target.value)}
             style={{
-              padding: "11px 14px", borderRadius: 10, background: "#0d1929",
+              padding: "11px 14px", borderRadius: 10, background: "#161510",
               border: `1px solid ${C.border}`, color: C.text, fontSize: 14, outline: "none",
             }}
           />
@@ -109,7 +109,7 @@ function LoginWall({ onAuth }: { onAuth: () => void }) {
             value={pass}
             onChange={e => setPass(e.target.value)}
             style={{
-              padding: "11px 14px", borderRadius: 10, background: "#0d1929",
+              padding: "11px 14px", borderRadius: 10, background: "#161510",
               border: `1px solid ${C.border}`, color: C.text, fontSize: 14, outline: "none",
             }}
           />
@@ -196,7 +196,7 @@ function AdminContent() {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10,
-            background: "linear-gradient(135deg, #7c3aed, #5b21b6)",
+            background: "linear-gradient(135deg, #4d4b44, #494841)",
             display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
           }}><SettingsIcon size={17}/></div>
           <div>
@@ -208,7 +208,7 @@ function AdminContent() {
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
             <span style={{
               fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
-              background: "rgba(239,68,68,.15)", color: C.red, border: "1px solid rgba(239,68,68,.25)",
+              background: "rgba(132,128,109,.15)", color: C.red, border: "1px solid rgba(132,128,109,.25)",
               textTransform: "uppercase",
             }}>Restricted</span>
           </div>
@@ -266,7 +266,7 @@ function AdminContent() {
                   background: "rgba(255,255,255,.03)",
                 }}>
                   <span style={{ flexShrink: 0, color: C.muted, display: "flex" }}><a.Icon size={15}/></span>
-                  <span style={{ fontSize: 13, color: "#cbd5e1", flex: 1 }}>{a.msg}</span>
+                  <span style={{ fontSize: 13, color: "#d3cdc0", flex: 1 }}>{a.msg}</span>
                   <span style={{ fontSize: 11, color: C.muted, flexShrink: 0 }}>{a.time}</span>
                 </div>
               ))}
@@ -302,17 +302,17 @@ function AdminContent() {
                 </div>
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
-                  background: c.visaType === "H1B" ? "rgba(59,130,246,.15)" :
-                               c.visaType === "OPT" ? "rgba(20,184,166,.15)" :
-                               c.visaType === "GC"  ? "rgba(34,197,94,.15)"  : "rgba(245,158,11,.15)",
-                  color: c.visaType === "H1B" ? "#60a5fa" :
-                         c.visaType === "OPT" ? "#2dd4bf" :
-                         c.visaType === "GC"  ? "#93c5fd" : "#fbbf24",
+                  background: c.visaType === "H1B" ? "rgba(133,129,110,.15)" :
+                               c.visaType === "OPT" ? "rgba(163,158,140,.15)" :
+                               c.visaType === "GC"  ? "rgba(171,166,148,.15)"  : "rgba(176,170,153,.15)",
+                  color: c.visaType === "H1B" ? "#9d9884" :
+                         c.visaType === "OPT" ? "#bdb7a7" :
+                         c.visaType === "GC"  ? "#c6c0b1" : "#9d9884",
                   border: "1px solid rgba(255,255,255,.08)",
                 }}>{c.visaType}</span>
                 <span style={{
                   fontSize: 11, padding: "3px 8px", borderRadius: 6,
-                  background: c.stage === "Active" ? "rgba(34,197,94,.12)" : "rgba(255,255,255,.04)",
+                  background: c.stage === "Active" ? "rgba(171,166,148,.12)" : "rgba(255,255,255,.04)",
                   color: c.stage === "Active" ? C.green : C.muted,
                 }}>{c.stage}</span>
                 <span style={{ fontSize: 12, color: C.muted }}>{c.resumes} resumes</span>
@@ -320,13 +320,13 @@ function AdminContent() {
                 <span style={{ fontSize: 11, color: C.hint }}>{c.lastActive}</span>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button style={{
-                    padding: "5px 10px", borderRadius: 6, background: "rgba(59,130,246,.12)",
-                    color: C.accent, border: "1px solid rgba(59,130,246,.2)",
+                    padding: "5px 10px", borderRadius: 6, background: "rgba(133,129,110,.12)",
+                    color: C.accent, border: "1px solid rgba(133,129,110,.2)",
                     cursor: "pointer", fontSize: 11, fontWeight: 600,
                   }}>Edit</button>
                   <button style={{
-                    padding: "5px 10px", borderRadius: 6, background: "rgba(239,68,68,.1)",
-                    color: C.red, border: "1px solid rgba(239,68,68,.2)",
+                    padding: "5px 10px", borderRadius: 6, background: "rgba(132,128,109,.1)",
+                    color: C.red, border: "1px solid rgba(132,128,109,.2)",
                     cursor: "pointer", display: "flex", alignItems: "center",
                   }}><X size={13}/></button>
                 </div>
@@ -353,7 +353,7 @@ function AdminContent() {
                 placeholder="LinkedIn post URL"
                 style={{
                   flex: 2, minWidth: 220, padding: "10px 14px", borderRadius: 10,
-                  background: "#0d1929", border: `1px solid ${C.border}`,
+                  background: "#161510", border: `1px solid ${C.border}`,
                   color: C.text, fontSize: 13, outline: "none",
                 }}
               />
@@ -363,7 +363,7 @@ function AdminContent() {
                 placeholder="Label (e.g. TCS Java W2)"
                 style={{
                   flex: 1, minWidth: 140, padding: "10px 14px", borderRadius: 10,
-                  background: "#0d1929", border: `1px solid ${C.border}`,
+                  background: "#161510", border: `1px solid ${C.border}`,
                   color: C.text, fontSize: 13, outline: "none",
                 }}
               />
@@ -409,14 +409,14 @@ function AdminContent() {
                   style={{
                     padding: "5px 12px", borderRadius: 7, border: "none", cursor: "pointer",
                     fontSize: 11, fontWeight: 600,
-                    background: p.enabled ? "rgba(34,197,94,.12)" : "rgba(255,255,255,.06)",
+                    background: p.enabled ? "rgba(171,166,148,.12)" : "rgba(255,255,255,.06)",
                     color: p.enabled ? C.green : C.muted,
                   }}
                 >{p.enabled ? "● Live" : "○ Off"}</button>
                 <button
                   onClick={() => removePost(p.id)}
                   style={{
-                    padding: "5px 10px", borderRadius: 7, background: "rgba(239,68,68,.1)",
+                    padding: "5px 10px", borderRadius: 7, background: "rgba(132,128,109,.1)",
                     color: C.red, border: "none", cursor: "pointer", display: "flex", alignItems: "center",
                   }}
                 ><X size={13}/></button>

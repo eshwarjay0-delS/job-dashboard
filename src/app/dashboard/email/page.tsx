@@ -2,31 +2,29 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { connectGmail } from "@/lib/google-auth"
-import PageHeader from "@/components/layout/PageHeader"
-import { Mail, Loader2 } from "lucide-react"
+import PageIntro from "../_components/page-intro"
 
 // ── Tokens ───────────────────────────────────────────────────────────────────
 const C = {
-  bg:     "#0b1220",
-  card:   "#111827",
-  card2:  "#141f30",
+  bg:     "#13120d",
+  card:   "#161510",
+  card2:  "#1e1d17",
   border: "rgba(255,255,255,.07)",
-  text:   "#f0f4ff",
-  muted:  "#8892a8",
-  hint:   "#4b5568",
-  accent: "#3b82f6",
-  teal:   "#14b8a6",
-  green:  "#60a5fa",
-  amber:  "#f59e0b",
-  red:    "#ef4444",
-  purple: "#8b5cf6",
+  text:   "#f4f2ed",
+  muted:  "#928e79",
+  hint:   "#55534a",
+  accent: "#6e6b5b",
+  teal:   "#6a6757",
+  green:  "#9d9884",
+  amber:  "#7e7a68",
+  red:    "#2e2d27",
+  purple: "#605d51",
 }
 
 // ── Mock thread data ───────────────────────────────────────────────────────────
 const MOCK_THREADS = [
   {
-    id: "t1", company: "TCS", logo: "TD", logoColor: "#1d6fc4",
+    id: "t1", company: "TCS", logo: "TD", logoColor: "#1c1b16",
     subject: "Interview Invitation — Senior Java Developer",
     preview: "Congratulations! We'd like to invite you for a technical interview for the Sr. Java Developer position...",
     time: "9:42 AM", unread: true, label: "Interview", labelColor: C.green,
@@ -35,7 +33,7 @@ const MOCK_THREADS = [
     from: "talent@tcs.com",
   },
   {
-    id: "t2", company: "Apex Systems", logo: "AS", logoColor: "#7c3aed",
+    id: "t2", company: "Apex Systems", logo: "AS", logoColor: "#4d4b44",
     subject: "RE: Your Resume — Cybersecurity Openings",
     preview: "Thank you for sending your resume. We have two openings that match your profile — an AppSec role in NYC...",
     time: "Yesterday", unread: true, label: "Recruiter", labelColor: C.purple,
@@ -44,7 +42,7 @@ const MOCK_THREADS = [
     from: "recruiter@apexsystems.com",
   },
   {
-    id: "t3", company: "Infosys BPM", logo: "IB", logoColor: "#1d6fc4",
+    id: "t3", company: "Infosys BPM", logo: "IB", logoColor: "#1c1b16",
     subject: "Application Update: DevOps Engineer",
     preview: "We regret to inform you that your application has been reviewed and we will not be moving forward...",
     time: "2 days ago", unread: false, label: "Rejection", labelColor: C.red,
@@ -53,7 +51,7 @@ const MOCK_THREADS = [
     from: "noreply@infosys.com",
   },
   {
-    id: "t4", company: "Cognizant", logo: "CG", logoColor: "#0891b2",
+    id: "t4", company: "Cognizant", logo: "CG", logoColor: "#85816e",
     subject: "Offer Letter — Python Data Engineer",
     preview: "We are pleased to extend an offer for the position of Python Data Engineer (W2 Contract)...",
     time: "3 days ago", unread: true, label: "Offer!", labelColor: C.amber,
@@ -62,7 +60,7 @@ const MOCK_THREADS = [
     from: "offers@cognizant.com",
   },
   {
-    id: "t5", company: "HCL Technologies", logo: "HC", logoColor: "#dc2626",
+    id: "t5", company: "HCL Technologies", logo: "HC", logoColor: "#13120d",
     subject: "Following up — ServiceNow Developer opening",
     preview: "Hi, I wanted to follow up on the ServiceNow Developer position I reached out about last week...",
     time: "4 days ago", unread: false, label: "Follow-up", labelColor: C.teal,
@@ -71,7 +69,7 @@ const MOCK_THREADS = [
     from: "staffing@hcl.com",
   },
   {
-    id: "t6", company: "LinkedIn Job Alerts", logo: "LI", logoColor: "#0077b5",
+    id: "t6", company: "LinkedIn Job Alerts", logo: "LI", logoColor: "#6e6b5b",
     subject: "17 new jobs match: 'Cybersecurity' 'H1B' 'Remote'",
     preview: "Based on your job alert, here are 17 new postings that match your search criteria...",
     time: "Today", unread: false, label: "Job Alert", labelColor: C.accent,
@@ -93,7 +91,7 @@ const STAGE_COLOR: Record<string, string> = {
   technical: C.teal, offer: C.amber, rejected: C.red,
 }
 const LOGO_COLORS = [
-  "#1d6fc4","#7c3aed","#0891b2","#dc2626","#059669","#d97706","#6366f1",
+  "#1c1b16","#4d4b44","#85816e","#13120d","#42413c","#6b6858","#757261",
 ]
 
 interface ParsedApplication {
@@ -138,33 +136,6 @@ function Label({ text, color }: { text: string; color: string }) {
       background: `${color}18`, color, border: `1px solid ${color}30`,
       textTransform: "uppercase", letterSpacing: ".05em", flexShrink: 0,
     }}>{text}</span>
-  )
-}
-
-// ── Gmail connect state ───────────────────────────────────────────────────────
-function ConnectBanner({ onConnect }: { onConnect: () => void }) {
-  return (
-    <div style={{
-      background: "rgba(59,130,246,.08)", border: "1px solid rgba(59,130,246,.2)",
-      borderRadius: 12, padding: "16px 20px", marginBottom: 20,
-      display: "flex", alignItems: "center", gap: 14,
-    }}>
-      <div style={{ fontSize: 24 }}>📧</div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Connect your Gmail</div>
-        <div style={{ fontSize: 12, color: C.muted }}>
-          MarketFit reads your inbox to surface recruiter emails, track replies, and draft responses automatically.
-        </div>
-      </div>
-      <button
-        onClick={onConnect}
-        style={{
-          padding: "9px 18px", borderRadius: 9, background: C.accent,
-          color: "#fff", fontWeight: 700, fontSize: 13, border: "none", cursor: "pointer",
-          boxShadow: `0 4px 14px ${C.accent}44`, flexShrink: 0,
-        }}
-      >Connect Gmail →</button>
-    </div>
   )
 }
 
@@ -229,18 +200,6 @@ export default function EmailDashboard() {
     }
   }
 
-  async function connect() {
-    setSyncDone(false)
-    setAllThreads([])
-    try {
-      await connectGmail()
-    } catch {
-      try { localStorage.setItem("mf_gmail_connected", "1") } catch {}
-      setConnected(true)
-      syncGmail()
-    }
-  }
-
   const threads = allThreads.filter(t => {
     if (filter === "unread") return t.unread
     if (filter === "action") return !!t.actionNeeded
@@ -263,32 +222,18 @@ export default function EmailDashboard() {
 
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: 20 }}>
-        <PageHeader
-          icon={<Mail size={17}/>}
-          title="Email Updates"
-          description={syncing ? "Syncing Gmail…" : connected ? "Recruiter emails · AI summaries · Smart reply drafts" : "Connect Gmail to track recruiter emails automatically"}
-          actions={
-            <div style={{ display: "flex", gap: 10 }}>
-              {[
-                { label: "Unread", value: unreadCount, color: C.accent },
-                { label: "Need Action", value: actionCount, color: C.amber },
-              ].map(s => (
-                <div key={s.label} style={{
-                  background: C.card, border: `1px solid ${C.border}`,
-                  borderRadius: 8, padding: "6px 12px", textAlign: "center",
-                }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</div>
-                  <div style={{ fontSize: 10, color: C.muted }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-          }
-        />
-      </div>
-
-      {!connected && <ConnectBanner onConnect={connect} />}
+      <PageIntro
+        page="/dashboard/email"
+        action={connected
+          ? { label: syncing ? "Loading your emails…" : "Open the first email", onClick: () => { if (threads[0]) setSelected(threads[0]) } }
+          : { label: "Link Gmail first", href: "/dashboard/connections" }}
+        sample={connected ? undefined : "Gmail is not linked, so these are made-up example emails."}
+      />
+      {connected && syncDone && (
+        <p style={{ fontSize: 15, color: C.muted, margin: "0 0 16px" }}>
+          {unreadCount} unread · {actionCount} need you
+        </p>
+      )}
 
       {/* ── Layout: thread list + detail ──────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: selected ? "340px 1fr" : "1fr", gap: 14 }}>
@@ -305,31 +250,17 @@ export default function EmailDashboard() {
                 key={f}
                 onClick={() => setFilter(f)}
                 style={{
-                  flex: 1, padding: "7px 10px", borderRadius: 8, border: "none",
-                  cursor: "pointer", fontSize: 12, fontWeight: 600,
+                  flex: 1, minHeight: 40, padding: "0 12px", borderRadius: 8, border: "none",
+                  cursor: "pointer", fontSize: 14, fontWeight: 600,
                   background: filter === f ? C.accent : "transparent",
                   color: filter === f ? "#fff" : C.muted,
                   transition: "all .15s",
                 }}
               >
-                {f === "all" ? "All" : f === "unread" ? `Unread (${unreadCount})` : `Action (${actionCount})`}
+                {f === "all" ? "All" : f === "unread" ? `Unread (${unreadCount})` : `Need you (${actionCount})`}
               </button>
             ))}
           </div>
-
-          {/* Demo preview banner when not connected */}
-          {!connected && syncDone && (
-            <div style={{
-              background: "rgba(107,114,128,.08)", border: "1px dashed rgba(107,114,128,.3)",
-              borderRadius: 10, padding: "10px 14px", marginBottom: 10,
-              display: "flex", alignItems: "center", gap: 8,
-            }}>
-              <span style={{ fontSize: 13 }}>👁️</span>
-              <span style={{ fontSize: 12, color: C.muted }}>
-                Preview — connect Gmail above to see your real recruiter emails here.
-              </span>
-            </div>
-          )}
 
           {/* Empty state when connected but no emails synced yet */}
           {connected && syncDone && allThreads.length === 0 && !syncing && (
@@ -362,7 +293,7 @@ export default function EmailDashboard() {
                 key={t.id}
                 onClick={() => { setSelected(t); setDraftVisible(false) }}
                 style={{
-                  background: selected?.id === t.id ? "#1e2a40" : C.card,
+                  background: selected?.id === t.id ? "#2a2922" : C.card,
                   border: `1px solid ${selected?.id === t.id ? C.accent + "50" : C.border}`,
                   borderRadius: 12, padding: "14px 16px", cursor: "pointer",
                   transition: "all .15s",
@@ -390,7 +321,7 @@ export default function EmailDashboard() {
                   </div>
                 </div>
                 <div style={{
-                  fontSize: 12, fontWeight: t.unread ? 600 : 400, color: "#cbd5e1",
+                  fontSize: 12, fontWeight: t.unread ? 600 : 400, color: "#d3cdc0",
                   marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}>{t.subject}</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -426,14 +357,14 @@ export default function EmailDashboard() {
 
             {/* AI Summary */}
             <div style={{
-              background: "rgba(20,184,166,.08)", border: "1px solid rgba(20,184,166,.2)",
+              background: "rgba(163,158,140,.08)", border: "1px solid rgba(163,158,140,.2)",
               borderRadius: 10, padding: "14px 16px",
             }}>
               <div style={{
                 fontSize: 10, fontWeight: 700, color: C.teal, letterSpacing: ".06em",
                 textTransform: "uppercase", marginBottom: 8,
               }}>🤖 AI Summary</div>
-              <p style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.7, margin: 0 }}>
+              <p style={{ fontSize: 13, color: "#d3cdc0", lineHeight: 1.7, margin: 0 }}>
                 {selected.aiSummary}
               </p>
             </div>
@@ -441,14 +372,14 @@ export default function EmailDashboard() {
             {/* Action needed */}
             {selected.actionNeeded && (
               <div style={{
-                background: "rgba(245,158,11,.08)", border: "1px solid rgba(245,158,11,.2)",
+                background: "rgba(176,170,153,.08)", border: "1px solid rgba(176,170,153,.2)",
                 borderRadius: 10, padding: "12px 16px",
               }}>
                 <div style={{
                   fontSize: 10, fontWeight: 700, color: C.amber, letterSpacing: ".06em",
                   textTransform: "uppercase", marginBottom: 6,
                 }}>⚡ Action Needed</div>
-                <p style={{ fontSize: 13, color: "#fef3c7", lineHeight: 1.6, margin: 0 }}>
+                <p style={{ fontSize: 13, color: "#edeae2", lineHeight: 1.6, margin: 0 }}>
                   {selected.actionNeeded}
                 </p>
               </div>
@@ -485,8 +416,8 @@ export default function EmailDashboard() {
                   router.push("/dashboard/resume")
                 }}
                 style={{
-                  padding: "9px 14px", borderRadius: 9, background: "rgba(20,184,166,.12)",
-                  color: C.teal, border: "1px solid rgba(20,184,166,.25)",
+                  padding: "9px 14px", borderRadius: 9, background: "rgba(163,158,140,.12)",
+                  color: C.teal, border: "1px solid rgba(163,158,140,.25)",
                   fontWeight: 600, fontSize: 12, cursor: "pointer",
                 }}
               >📄 Tailor Resume for Role</button>
@@ -529,7 +460,7 @@ export default function EmailDashboard() {
             {/* Draft area */}
             {draftVisible && (
               <div style={{
-                background: "#0d1929", border: `1px solid ${C.border}`,
+                background: "#161510", border: `1px solid ${C.border}`,
                 borderRadius: 12, padding: "16px",
               }}>
                 <div style={{
@@ -542,8 +473,8 @@ export default function EmailDashboard() {
                   rows={10}
                   style={{
                     width: "100%", padding: "12px", borderRadius: 8,
-                    background: "#0b1220", border: `1px solid ${C.border}`,
-                    color: "#cbd5e1", fontSize: 13, lineHeight: 1.7, resize: "vertical",
+                    background: "#13120d", border: `1px solid ${C.border}`,
+                    color: "#d3cdc0", fontSize: 13, lineHeight: 1.7, resize: "vertical",
                     outline: "none", boxSizing: "border-box", fontFamily: "inherit",
                   }}
                 />

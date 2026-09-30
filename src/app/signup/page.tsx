@@ -14,8 +14,8 @@ export default function SignUpPage() {
   }, [router])
   return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center",
-      background:"#f4f6f9", fontFamily:"system-ui, sans-serif" }}>
-      <p style={{ color:"#6b7a99", fontSize:14 }}>Redirecting…</p>
+      background:"var(--surface)", fontFamily:"system-ui, sans-serif" }}>
+      <p style={{ color:"#6e6b5b", fontSize:14 }}>Redirecting…</p>
     </div>
   )
 }

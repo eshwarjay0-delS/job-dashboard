@@ -124,15 +124,15 @@ body{
   position:sticky;top:0;z-index:10;
   display:flex;gap:14px;align-items:center;justify-content:center;
   padding:11px 20px;
-  background:#111827;color:#f9fafb;
+  background:#181818;color:#f9fafb;
   font-size:13px;
 }
 .toolbar a.primary{
   font:inherit;font-weight:700;font-size:13px;text-decoration:none;
   cursor:pointer;padding:9px 20px;border-radius:8px;
-  background:#0d9488;color:#fff;transition:background .15s;
+  background:#5a5c61;color:#fff;transition:background .15s;
 }
-.toolbar a.primary:hover{background:#0f766e}
+.toolbar a.primary:hover{background:#4a4c50}
 .toolbar button{
   font:inherit;font-weight:600;font-size:13px;cursor:pointer;
   padding:9px 18px;border-radius:8px;
@@ -141,8 +141,8 @@ body{
   transition:background .15s;
 }
 .toolbar button:hover{background:rgba(255,255,255,.08)}
-.toolbar .tip{color:#9ca3af;font-size:12px;max-width:420px}
-.toolbar .tip b{color:#d1fae5}
+.toolbar .tip{color:#a2a2a2;font-size:12px;max-width:420px}
+.toolbar .tip b{color:#e4e4e4}
 
 /* ── Paper sheet ── */
 .sheet{
@@ -171,7 +171,7 @@ body{
 .sheet .doc-subtitle,.sheet p:first-of-type{
   text-align:center;
   font-size:9.5pt;
-  color:#374151;
+  color:#404040;
   margin-bottom:6px;
 }
 
@@ -235,7 +235,7 @@ body{
 /* Horizontal rules (some resumes use them as dividers) */
 .sheet hr{
   border:0;
-  border-top:1px solid #d1d5db;
+  border-top:1px solid #d5d5d5;
   margin:10px 0;
 }
 

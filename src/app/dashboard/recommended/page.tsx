@@ -7,12 +7,12 @@ import { fetchJobs as fetchJobsApi } from "@/lib/jobsClient"
 import { computeMatchScore, type UserProfile } from "@/lib/matching/computeMatchScore"
 
 const P = {
-  bg:      "#f4f6f9",
+  bg:      "var(--surface)",
   surface: "#ffffff",
-  text:    "#1a2035",
-  muted:   "#6b7a99",
-  hint:    "#9aa4bc",
-  border:  "#e4e8ef",
+  text:    "#161510",
+  muted:   "#6e6b5b",
+  hint:    "#9d9884",
+  border:  "#e6e2d9",
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -34,11 +34,11 @@ interface RecommendedJob {
 }
 
 const WORK_AUTH_COLORS: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  h1b:         { label: "H-1B",       color: "#1558a0", bg: "#eff6ff", border: "#bfdbfe" },
-  opt_cpt:     { label: "OPT/CPT",    color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  green_card:  { label: "Green Card", color: "#065f46", bg: "#ecfdf5", border: "#a7f3d0" },
-  w2:          { label: "W2",         color: "#0369a1", bg: "#f0f9ff", border: "#bae6fd" },
-  c2c:         { label: "C2C",        color: "#92400e", bg: "#fffbeb", border: "#fde68a" },
+  h1b:         { label: "H-1B",       color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
+  opt_cpt:     { label: "OPT/CPT",    color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
+  green_card:  { label: "Green Card", color: "#535149", bg: "#f4f2ed", border: "#ddd8cd" },
+  w2:          { label: "W2",         color: "#58564c", bg: "#f6f4f0", border: "#e2ded4" },
+  c2c:         { label: "C2C",        color: "#58564c", bg: "#f7f5f0", border: "#e4e0d6" },
 }
 
 function timeAgo(iso: string): string {
@@ -53,17 +53,17 @@ function timeAgo(iso: string): string {
 
 function MatchRing({ pct }: { pct: number }) {
   const size = 48, r = 19, circ = 2 * Math.PI * r
-  const color = pct >= 88 ? "#059669" : pct >= 75 ? "#1d6fc4" : pct >= 60 ? "#d97706" : "#9ca3af"
+  const color = pct >= 88 ? "#42413c" : pct >= 75 ? "#1c1b16" : pct >= 60 ? "#6b6858" : "#a29d89"
   return (
     <div style={{ width: size, height: size, position: "relative", flexShrink: 0 }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#e4e8ef" strokeWidth={4}/>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#e6e2d9" strokeWidth={4}/>
         <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={4}
           strokeLinecap="round" strokeDasharray={`${(pct/100)*circ} ${circ}`}/>
       </svg>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         <span style={{ fontSize: 12, fontWeight: 800, color, lineHeight: 1 }}>{pct}</span>
-        <span style={{ fontSize: 8, color: "#9ca3af", lineHeight: 1 }}>%</span>
+        <span style={{ fontSize: 8, color: "#a29d89", lineHeight: 1 }}>%</span>
       </div>
     </div>
   )
@@ -72,14 +72,14 @@ function MatchRing({ pct }: { pct: number }) {
 function CompanyLogo({ domain, name, size = 40 }: { domain: string; name: string; size?: number }) {
   const [err, setErr] = useState(false)
   const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-  const colors = ["#1d6fc4","#7c3aed","#d97706","#dc2626","#0ea5e9","#6366f1"]
+  const colors = ["#1c1b16","#4d4b44","#6b6858","#13120d","#7c7866","#757261"]
   const bg = colors[name.charCodeAt(0) % colors.length]
   if (err) return (
     <div style={{ width: size, height: size, borderRadius: size * 0.26, background: bg, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: size * 0.38 }}>{initials}</div>
   )
   return (
     <img src={`https://logo.clearbit.com/${domain}`} alt={name} onError={() => setErr(true)}
-      style={{ width: size, height: size, borderRadius: size * 0.26, objectFit: "contain", background: "#fff", border: "1px solid #e4e8ef", flexShrink: 0, padding: 4 }}/>
+      style={{ width: size, height: size, borderRadius: size * 0.26, objectFit: "contain", background: "var(--surface)", border: "1px solid #e6e2d9", flexShrink: 0, padding: 4 }}/>
   )
 }
 
@@ -221,7 +221,7 @@ export default function RecommendedPage() {
               ? `Matched to your ${profileSkills.slice(0, 3).join(", ")} skills — updated ${lastRefresh.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
               : "Complete your profile to get personalized matches — showing broad recommendations now."}
             {" "}{isLive
-              ? <span style={{ color: "#059669", fontWeight: 600 }}>● Live</span>
+              ? <span style={{ color: "#42413c", fontWeight: 600 }}>● Live</span>
               : jobs.length > 0 && <span style={{ color: P.hint, fontWeight: 600 }}>Sample data — no job API key configured</span>}
           </p>
         </div>
@@ -239,14 +239,14 @@ export default function RecommendedPage() {
 
       {/* ── Profile skills bar ── */}
       {hasProfile && (
-        <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12, padding: "12px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#1558a0", flexShrink: 0 }}>Matching on:</span>
+        <div style={{ background: "#f2f0ea", border: "1px solid #d9d4c8", borderRadius: 12, padding: "12px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#11100c", flexShrink: 0 }}>Matching on:</span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {profileSkills.slice(0, 12).map(s => (
-              <span key={s} style={{ padding: "2px 9px", borderRadius: 20, background: "rgba(29,111,196,.12)", color: "#1558a0", fontSize: 11.5, fontWeight: 600 }}>{s}</span>
+              <span key={s} style={{ padding: "2px 9px", borderRadius: 20, background: "rgba(107,104,88,.12)", color: "#11100c", fontSize: 11.5, fontWeight: 600 }}>{s}</span>
             ))}
           </div>
-          <Link href="/dashboard/profile" style={{ marginLeft: "auto", fontSize: 11.5, color: "#1d6fc4", fontWeight: 600, textDecoration: "none", flexShrink: 0 }}>Edit profile →</Link>
+          <Link href="/dashboard/profile" style={{ marginLeft: "auto", fontSize: 11.5, color: "#1c1b16", fontWeight: 600, textDecoration: "none", flexShrink: 0 }}>Edit profile →</Link>
         </div>
       )}
 
@@ -299,9 +299,9 @@ export default function RecommendedPage() {
         {filtered.map(job => {
           const h1b = getH1BScore(job.company)
           return (
-            <div key={job.id} style={{ background: P.surface, border: `1px solid ${P.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 16, alignItems: "flex-start", boxShadow: "0 1px 4px rgba(26,32,53,.05)", transition: "box-shadow .2s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(26,32,53,.10)" }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 4px rgba(26,32,53,.05)" }}
+            <div key={job.id} style={{ background: P.surface, border: `1px solid ${P.border}`, borderRadius: 16, padding: "18px 20px", display: "flex", gap: 16, alignItems: "flex-start", boxShadow: "0 1px 4px rgba(32,31,25,.05)", transition: "box-shadow .2s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(32,31,25,.10)" }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 4px rgba(32,31,25,.05)" }}
             >
               <CompanyLogo domain={job.domain} name={job.company} size={42} />
 
@@ -313,7 +313,7 @@ export default function RecommendedPage() {
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = P.text }}
                     >{job.title}</span>
                   </a>
-                  {job.remote && <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: "#eff6ff", color: "#1d6fc4", border: "1px solid #bfdbfe" }}>Remote</span>}
+                  {job.remote && <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: "#f2f0ea", color: "#1c1b16", border: "1px solid #d9d4c8" }}>Remote</span>}
                   <span style={{ fontSize: 10, color: P.hint, marginLeft: "auto" }}>{timeAgo(job.posted)} via {job.source}</span>
                 </div>
                 <p style={{ fontSize: 13, color: P.muted, marginBottom: 8 }}>{job.company} · {job.location}{job.salary ? ` · ${job.salary}` : ""}</p>
@@ -322,7 +322,7 @@ export default function RecommendedPage() {
                 {/* Match reasons */}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 }}>
                   {job.matchReasons.map(r => (
-                    <span key={r} style={{ padding: "2px 9px", borderRadius: 6, background: "#eff6ff", color: "#1558a0", fontSize: 11, fontWeight: 600, border: "1px solid #bfdbfe" }}>✓ {r}</span>
+                    <span key={r} style={{ padding: "2px 9px", borderRadius: 6, background: "#f2f0ea", color: "#11100c", fontSize: 11, fontWeight: 600, border: "1px solid #d9d4c8" }}>✓ {r}</span>
                   ))}
                   <span style={{ padding: "2px 8px", borderRadius: 6, background: h1b.bg, color: h1b.color, fontSize: 11, fontWeight: 700, border: `1px solid ${h1b.border}` }}>{h1b.label}</span>
                   {job.workAuth.slice(0, 2).map(k => {
@@ -338,16 +338,16 @@ export default function RecommendedPage() {
                   </a>
                   <Link href="/dashboard/resume"
                     onClick={() => { try { sessionStorage.setItem("jd_prefill", job.title + " at " + job.company + "\n\n" + job.description) } catch {} }}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, background: "#f5f3ff", color: "#6d28d9", fontSize: 12.5, fontWeight: 700, textDecoration: "none", border: "1px solid #ddd6fe" }}>
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, background: "#f6f4ef", color: "#41403b", fontSize: 12.5, fontWeight: 700, textDecoration: "none", border: "1px solid #e0dcd2" }}>
                     Tailor Resume
                   </Link>
                   <Link href="/dashboard/ai-tools"
                     onClick={() => { try { const t=job.title+" at "+job.company+"\n\n"+job.description; sessionStorage.setItem("jd_ai_tab","cover"); sessionStorage.setItem("jd_prefill_jd",t); sessionStorage.setItem("jd_prefill_role",job.title); sessionStorage.setItem("jd_prefill_company",job.company) } catch {} }}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, background: "#eff6ff", color: "#1558a0", fontSize: 12.5, fontWeight: 700, textDecoration: "none", border: "1px solid #bfdbfe" }}>
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, background: "#f2f0ea", color: "#11100c", fontSize: 12.5, fontWeight: 700, textDecoration: "none", border: "1px solid #d9d4c8" }}>
                     Ask Nexus
                   </Link>
                   <button onClick={() => dismiss(job.id)} style={{ marginLeft: "auto", padding: "5px 10px", borderRadius: 7, border: "none", background: "transparent", color: P.hint, fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#dc2626" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#13120d" }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = P.hint }}
                   >✕ Not interested</button>
                 </div>
@@ -360,7 +360,7 @@ export default function RecommendedPage() {
       </div>
 
       {/* ── CTA: improve recommendations ── */}
-      <div style={{ marginTop: 24, background: "linear-gradient(135deg, #eff6ff, #f5f3ff)", border: "1px solid #bfdbfe", borderRadius: 16, padding: "24px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+      <div style={{ marginTop: 24, background: "linear-gradient(135deg, #f2f0ea, #f6f4ef)", border: "1px solid #d9d4c8", borderRadius: 16, padding: "24px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>
           <p style={{ fontSize: 15, fontWeight: 700, color: P.text, marginBottom: 4 }}>Get sharper recommendations</p>
           <p style={{ fontSize: 13, color: P.muted }}>Complete your profile with skills, work auth, and salary expectations to unlock personalized AI matching.</p>

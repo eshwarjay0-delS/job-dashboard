@@ -89,9 +89,9 @@ export function getH1BScore(companyName: string): H1BResult {
       return {
         status: "likely",
         label: "H1B Sponsor Likely",
-        color: "#15803d",
-        bg: "#f0fdf4",
-        border: "#bbf7d0",
+        color: "#6c6959",
+        bg: "#f8f6f2",
+        border: "#e9e5dd",
         reason: `${companyName} has a strong history of filing H1B petitions based on DOL LCA data patterns.`,
       }
     }
@@ -111,9 +111,9 @@ export function getH1BScore(companyName: string): H1BResult {
     return {
       status: "possible",
       label: "H1B Sponsor Possible",
-      color: "#92400e",
-      bg: "#fffbeb",
-      border: "#fde68a",
+      color: "#58564c",
+      bg: "#f7f5f0",
+      border: "#e4e0d6",
       reason: `${companyName} appears to be a staffing/consulting firm. These companies often file H1B petitions but availability varies by client project.`,
     }
   }
@@ -122,9 +122,9 @@ export function getH1BScore(companyName: string): H1BResult {
     return {
       status: "possible",
       label: "H1B Sponsor Possible",
-      color: "#92400e",
-      bg: "#fffbeb",
-      border: "#fde68a",
+      color: "#58564c",
+      bg: "#f7f5f0",
+      border: "#e4e0d6",
       reason: `${companyName} appears to be a tech company. H1B sponsorship is common in this sector but not confirmed for this employer.`,
     }
   }
@@ -132,9 +132,9 @@ export function getH1BScore(companyName: string): H1BResult {
   return {
     status: "unknown",
     label: "H1B Status Unknown",
-    color: "#6b7280",
-    bg: "#f9fafb",
-    border: "#e5e7eb",
+    color: "#706c5c",
+    bg: "#f8f6f2",
+    border: "#e8e4db",
     reason: `No H1B sponsorship data found for ${companyName}. Research directly on their careers page or ask during screening.`,
   }
 }

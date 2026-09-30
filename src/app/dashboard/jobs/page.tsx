@@ -45,12 +45,12 @@ type DetailTab = "description" | "nexus" | "match"
 type ViewMode = "board" | "pipeline" | "analytics"
 
 const WORK_AUTH_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  h1b:           { label: "H-1B",         color: "#1558a0", bg: "#eff6ff", border: "#bfdbfe" },
-  opt_cpt:       { label: "OPT/CPT",      color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  green_card:    { label: "Green Card",   color: "#065f46", bg: "#ecfdf5", border: "#a7f3d0" },
-  w2:            { label: "W2",           color: "#0369a1", bg: "#f0f9ff", border: "#bae6fd" },
-  c2c:           { label: "C2C",          color: "#92400e", bg: "#fffbeb", border: "#fde68a" },
-  no_sponsorship:{ label: "No Sponsorship",color:"#6b7280", bg: "#f9fafb", border: "#e5e7eb" },
+  h1b:           { label: "H-1B",         color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
+  opt_cpt:       { label: "OPT/CPT",      color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
+  green_card:    { label: "Green Card",   color: "#535149", bg: "#f4f2ed", border: "#ddd8cd" },
+  w2:            { label: "W2",           color: "#58564c", bg: "#f6f4f0", border: "#e2ded4" },
+  c2c:           { label: "C2C",          color: "#58564c", bg: "#f7f5f0", border: "#e4e0d6" },
+  no_sponsorship:{ label: "No Sponsorship",color:"#706c5c", bg: "#f8f6f2", border: "#e8e4db" },
 }
 
 const VISA_FILTER_OPTIONS = [
@@ -78,10 +78,10 @@ function computeMatch(jobTitle: string, jobDesc: string, userKeywords: string[])
 }
 
 function matchVerdict(pct: number): { text: string; color: string; bg: string } {
-  if (pct >= 85) return { text: "STRONG MATCH", color: "#065f46", bg: "#ecfdf5" }
-  if (pct >= 70) return { text: "GOOD MATCH",   color: "#1558a0", bg: "#eff6ff" }
-  if (pct >= 55) return { text: "FAIR MATCH",   color: "#92400e", bg: "#fffbeb" }
-  return { text: "LOW MATCH", color: "#6b7280", bg: "#f9fafb" }
+  if (pct >= 85) return { text: "STRONG MATCH", color: "#535149", bg: "#f4f2ed" }
+  if (pct >= 70) return { text: "GOOD MATCH",   color: "#11100c", bg: "#f2f0ea" }
+  if (pct >= 55) return { text: "FAIR MATCH",   color: "#58564c", bg: "#f7f5f0" }
+  return { text: "LOW MATCH", color: "#706c5c", bg: "#f8f6f2" }
 }
 
 function getUserKeywords(): string[] {
@@ -134,7 +134,7 @@ function CompanyAvatar({ name, size = 44 }: { name: string; size?: number }) {
   const [err, setErr] = useState(false)
   const domain = name.toLowerCase().replace(/[^a-z0-9]/g, "") + ".com"
   const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-  const colors = ["#1d6fc4","#7c3aed","#1d6fc4","#d97706","#dc2626","#0ea5e9","#6366f1","#ea580c"]
+  const colors = ["#1c1b16","#4d4b44","#1c1b16","#6b6858","#13120d","#7c7866","#757261","#888471"]
   const bg = colors[name.charCodeAt(0) % colors.length]
   if (err) return (
     <div style={{ width: size, height: size, borderRadius: Math.round(size * 0.26), background: bg,
@@ -146,8 +146,8 @@ function CompanyAvatar({ name, size = 44 }: { name: string; size?: number }) {
   return (
     <img src={`https://logo.clearbit.com/${domain}`} alt={name} onError={() => setErr(true)}
       style={{ width:size, height:size, borderRadius:Math.round(size*0.26), objectFit:"contain",
-        background:"#fff", border:"1px solid var(--border)", flexShrink:0,
-        boxShadow:"0 2px 8px rgba(0,0,0,.08)", padding:4 }}
+        background:"var(--surface)", border:"1px solid var(--border)", flexShrink:0,
+        boxShadow:"0 2px 8px rgba(12,11,8,.08)", padding:4 }}
     />
   )
 }
@@ -156,7 +156,7 @@ function CompanyAvatar({ name, size = 44 }: { name: string; size?: number }) {
 function MatchRing({ pct, size = 52 }: { pct: number; size?: number }) {
   const r = (size - 7) / 2
   const circ = 2 * Math.PI * r
-  const color = pct >= 80 ? "#1558a0" : pct >= 60 ? "#1d4ed8" : pct >= 40 ? "#d97706" : "#9ca3af"
+  const color = pct >= 80 ? "#11100c" : pct >= 60 ? "#5b594e" : pct >= 40 ? "#6b6858" : "#a29d89"
   return (
     <div style={{ width: size, height: size, position: "relative", flexShrink: 0 }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
@@ -169,7 +169,7 @@ function MatchRing({ pct, size = 52 }: { pct: number; size?: number }) {
       </svg>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         <span style={{ fontSize: size * 0.25, fontWeight: 800, color, lineHeight: 1 }}>{pct}</span>
-        <span style={{ fontSize: size * 0.18, color: "#9ca3af", lineHeight: 1, marginTop: 1 }}>%</span>
+        <span style={{ fontSize: size * 0.18, color: "#a29d89", lineHeight: 1, marginTop: 1 }}>%</span>
       </div>
     </div>
   )
@@ -265,13 +265,13 @@ function JobDetailPanel({
   return (
     <>
       <div onClick={onClose} style={{
-        position:"fixed", inset:0, background:"rgba(0,0,0,.35)",
+        position:"fixed", inset:0, background:"rgba(12,11,8,.35)",
         zIndex:300, backdropFilter:"blur(2px)",
       }}/>
       <div style={{
         position:"fixed", top:0, right:0, bottom:0, width:520, maxWidth:"92vw",
-        background:"#fff", zIndex:301,
-        boxShadow:"-8px 0 40px rgba(0,0,0,.15)",
+        background:"var(--surface)", zIndex:301,
+        boxShadow:"-8px 0 40px rgba(12,11,8,.15)",
         display:"flex", flexDirection:"column",
         animation:"slideInRight .22s cubic-bezier(.16,1,.3,1)",
       }}>
@@ -309,8 +309,8 @@ function JobDetailPanel({
             {job.salary && <span style={{ color:"var(--accent)", fontWeight:700 }}>{job.salary}</span>}
             <span>{timeAgo(job.posted)}</span>
             <span style={{ fontSize:10, padding:"2px 7px", borderRadius:20,
-              background: job.source === "sample" ? "#f9fafb" : "#eff6ff",
-              border:`1px solid ${job.source === "sample" ? "#e5e7eb" : "#bfdbfe"}`,
+              background: job.source === "sample" ? "#f8f6f2" : "#f2f0ea",
+              border:`1px solid ${job.source === "sample" ? "#e8e4db" : "#d9d4c8"}`,
               color: job.source === "sample" ? "var(--text-soft)" : "var(--accent)", fontWeight:700,
             }}>{job.source === "sample" ? "Sample" : "Live"}</span>
           </div>
@@ -334,7 +334,7 @@ function JobDetailPanel({
         {/* Tab nav */}
         <div style={{
           display:"flex", borderBottom:"1px solid var(--border)", flexShrink:0,
-          background:"#f8f9fb",
+          background:"#f6f4f0",
         }}>
           {DETAIL_TABS.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
@@ -361,7 +361,7 @@ function JobDetailPanel({
               {/* AI Quick Actions */}
               <div style={{
                 padding:"12px 20px", borderBottom:"1px solid var(--border)",
-                background:"linear-gradient(135deg,#f8fbff,#f5f3ff)", flexShrink:0,
+                background:"linear-gradient(135deg,#f8f7f3,#f6f4ef)", flexShrink:0,
               }}>
                 <p style={{ fontSize:10.5, fontWeight:700, textTransform:"uppercase", letterSpacing:".5px",
                   color:"var(--text-soft)", marginBottom:8 }}>AI Quick Actions</p>
@@ -384,15 +384,15 @@ function JobDetailPanel({
                       } catch {}
                     }}
                     style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"7px 13px",
-                      background:"linear-gradient(135deg,#7c3aed,#6d28d9)", color:"#fff", borderRadius:8,
+                      background:"linear-gradient(135deg,#4d4b44,#41403b)", color:"#fff", borderRadius:8,
                       fontSize:11.5, fontWeight:700, textDecoration:"none",
-                      boxShadow:"0 3px 10px rgba(124,58,237,.28)",
+                      boxShadow:"0 3px 10px rgba(101,98,84,.28)",
                     }}><FileText size={13}/> Tailor Resume</Link>
                   <button onClick={() => setActiveTab("match")} style={{
                     display:"inline-flex", alignItems:"center", gap:5, padding:"7px 13px",
-                    background:"linear-gradient(135deg,#0ea5e9,#0f766e)", color:"#fff", borderRadius:8,
+                    background:"linear-gradient(135deg,#7c7866,#4d4b44)", color:"#fff", borderRadius:8,
                     fontSize:11.5, fontWeight:700, border:"none", cursor:"pointer",
-                    boxShadow:"0 3px 10px rgba(13,148,136,.28)",
+                    boxShadow:"0 3px 10px rgba(132,128,109,.28)",
                   }}><BarChart3 size={13}/> Match Breakdown</button>
                 </div>
               </div>
@@ -406,7 +406,7 @@ function JobDetailPanel({
                 <p style={{ fontSize:11, fontWeight:700, color: h1bResult.color, marginBottom:2, display:"flex", alignItems:"center", gap:5 }}>
                   <span style={{ width:6, height:6, borderRadius:"50%", background:"currentColor", flexShrink:0 }}/> {h1bResult.label}
                 </p>
-                <p style={{ fontSize:11, color:"#374151", lineHeight:1.5 }}>{h1bResult.reason}</p>
+                <p style={{ fontSize:11, color:"#40403a", lineHeight:1.5 }}>{h1bResult.reason}</p>
               </div>
 
               {/* Description */}
@@ -419,7 +419,7 @@ function JobDetailPanel({
                     Job Description
                   </h3>
                   {job.description ? (
-                    <p style={{ fontSize:13, color:"#4b5563", lineHeight:1.75, whiteSpace:"pre-wrap" }}>
+                    <p style={{ fontSize:13, color:"#545249", lineHeight:1.75, whiteSpace:"pre-wrap" }}>
                       {job.description}
                     </p>
                   ) : (
@@ -460,7 +460,7 @@ function JobDetailPanel({
         {/* Footer CTAs */}
         <div style={{
           padding:"14px 20px", borderTop:"1px solid var(--border)",
-          background:"#f8f9fb", display:"flex", gap:8, alignItems:"center", flexShrink:0,
+          background:"#f6f4f0", display:"flex", gap:8, alignItems:"center", flexShrink:0,
         }}>
           {job.url && job.url !== "#" ? (
             <a href={job.url} target="_blank" rel="noopener noreferrer"
@@ -478,15 +478,15 @@ function JobDetailPanel({
           ) : (
             <span style={{ flex:1, display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6,
               padding:"10px 18px", background:"var(--accent-soft)", color:"var(--accent-txt)",
-              border:"1px solid #bfdbfe", borderRadius:9, fontSize:13, fontWeight:700 }}>
+              border:"1px solid #d9d4c8", borderRadius:9, fontSize:13, fontWeight:700 }}>
               <Zap size={14} fill="currentColor"/> Apply with Autofill
             </span>
           )}
           <button onClick={onSave} style={{
             padding:"10px 14px", borderRadius:9, cursor:"pointer",
             color: isSaved ? "var(--accent)" : "var(--text-muted)",
-            background: isSaved ? "#eff6ff" : "#fff",
-            border: `1px solid ${isSaved ? "#bfdbfe" : "var(--border)"}`,
+            background: isSaved ? "#f2f0ea" : "#fff",
+            border: `1px solid ${isSaved ? "#d9d4c8" : "var(--border)"}`,
             transition:"all .15s", fontSize:12, fontWeight:700,
             display:"flex", alignItems:"center", gap:5,
           }}>
@@ -519,17 +519,17 @@ interface AppItem {
 // stage meaning stays readable regardless of which accent color is active,
 // and so no two stages are ever visually confused with each other.
 const APP_STAGES: { id: AppStage; label: string; color: string; rgb: string; Icon: typeof Send }[] = [
-  { id: "applied",    label: "Applied",    color: "#1d6fc4", rgb: "29,111,196",  Icon: Send },
-  { id: "screening",  label: "Screening",  color: "#d97706", rgb: "217,119,6",   Icon: Phone },
-  { id: "interview",  label: "Interview",  color: "#0ea5e9", rgb: "14,165,233",  Icon: Handshake },
-  { id: "technical",  label: "Technical",  color: "#7c3aed", rgb: "124,58,237",  Icon: Laptop },
-  { id: "offer",      label: "Offer",      color: "#059669", rgb: "5,150,105",   Icon: PartyPopper },
-  { id: "rejected",   label: "Rejected",   color: "#dc2626", rgb: "220,38,38",   Icon: X },
+  { id: "applied",    label: "Applied",    color: "#1c1b16", rgb: "29,111,196",  Icon: Send },
+  { id: "screening",  label: "Screening",  color: "#6b6858", rgb: "217,119,6",   Icon: Phone },
+  { id: "interview",  label: "Interview",  color: "#7c7866", rgb: "14,165,233",  Icon: Handshake },
+  { id: "technical",  label: "Technical",  color: "#4d4b44", rgb: "124,58,237",  Icon: Laptop },
+  { id: "offer",      label: "Offer",      color: "#42413c", rgb: "5,150,105",   Icon: PartyPopper },
+  { id: "rejected",   label: "Rejected",   color: "#13120d", rgb: "220,38,38",   Icon: X },
 ]
 const APP_PRIORITY = {
-  high: { label: "High", color: "#ef4444" },
-  mid:  { label: "Mid",  color: "#f59e0b" },
-  low:  { label: "Low",  color: "#6b7280" },
+  high: { label: "High", color: "#2e2d27" },
+  mid:  { label: "Mid",  color: "#7e7a68" },
+  low:  { label: "Low",  color: "#706c5c" },
 }
 const APP_COLORS = ["bg-blue-600","bg-violet-600","bg-emerald-600","bg-orange-500","bg-teal-600","bg-rose-500","bg-indigo-600","bg-amber-500"]
 function appCo(name: string) { return APP_COLORS[(name||"A").charCodeAt(0) % APP_COLORS.length] }
@@ -584,8 +584,8 @@ function AddAppModal({ onAdd, onClose }: { onAdd:(a:AppItem)=>void; onClose:()=>
     onAdd({...form, id:appUid(), appliedDate:new Date().toISOString()}); onClose()
   }
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:"rgba(0,0,0,.5)"}} onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl border p-6" style={{background:"var(--surface)",borderColor:"var(--border)",boxShadow:"0 24px 64px -12px rgba(0,0,0,.4)"}} onClick={e=>e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:"rgba(12,11,8,.5)"}} onClick={onClose}>
+      <div className="w-full max-w-lg rounded-2xl border p-6" style={{background:"var(--surface)",borderColor:"var(--border)",boxShadow:"0 24px 64px -12px rgba(12,11,8,.4)"}} onClick={e=>e.stopPropagation()}>
         <h2 className="text-lg font-bold mb-4" style={{color:"var(--text)"}}>Add Application</h2>
         <form onSubmit={submit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -656,14 +656,14 @@ function AppCard({ app, onMove, onDelete, onEdit }: { app:AppItem; onMove:(id:st
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs" style={{color:"var(--text-soft)"}}>
         {app.location&&<span className="inline-flex items-center gap-1">{app.remote?<Globe size={11}/>:<MapPin size={11}/>} {app.location}</span>}
-        {app.salary&&<span className="font-semibold" style={{color:"#3b82f6"}}>{app.salary}</span>}
+        {app.salary&&<span className="font-semibold" style={{color:"#6e6b5b"}}>{app.salary}</span>}
         <span className="ml-auto">{appDaysSince(app.appliedDate)}</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {app.visa&&<span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{background:"var(--accent-soft)",color:"var(--accent-txt)"}}>{app.visa}</span>}
-        {app.followUpDate&&appIsOverdue(app.followUpDate)&&<span className="text-xs px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1" style={{background:"#fef2f2",color:"#dc2626",border:"1px solid #fecaca"}}><Bell size={10}/> Overdue: {new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>}
-        {app.followUpDate&&appIsDueSoon(app.followUpDate)&&!appIsOverdue(app.followUpDate)&&<span className="text-xs px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1" style={{background:"#fffbeb",color:"#d97706",border:"1px solid #fde68a"}}><Bell size={10}/> Soon: {new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>}
-        {app.followUpDate&&!appIsOverdue(app.followUpDate)&&!appIsDueSoon(app.followUpDate)&&<span className="text-xs px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1" style={{background:"#f0f9ff",color:"#0369a1",border:"1px solid #bae6fd"}}><Bell size={10}/> {new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>}
+        {app.followUpDate&&appIsOverdue(app.followUpDate)&&<span className="text-xs px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1" style={{background:"var(--surface)",color:"#13120d",border:"1px solid #ddd8cd"}}><Bell size={10}/> Overdue: {new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>}
+        {app.followUpDate&&appIsDueSoon(app.followUpDate)&&!appIsOverdue(app.followUpDate)&&<span className="text-xs px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1" style={{background:"#f7f5f0",color:"#6b6858",border:"1px solid #e4e0d6"}}><Bell size={10}/> Soon: {new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>}
+        {app.followUpDate&&!appIsOverdue(app.followUpDate)&&!appIsDueSoon(app.followUpDate)&&<span className="text-xs px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1" style={{background:"#f6f4f0",color:"#58564c",border:"1px solid #e2ded4"}}><Bell size={10}/> {new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>}
       </div>
       {expanded&&(
         <div className="pt-1 space-y-2 border-t" style={{borderColor:"var(--border)"}}>
@@ -674,11 +674,11 @@ function AppCard({ app, onMove, onDelete, onEdit }: { app:AppItem; onMove:(id:st
               {nextStages.map(s=>(
                 <button key={s.id} onClick={e=>{e.stopPropagation();onMove(app.id,s.id)}} className="text-xs px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1" style={{background:`rgba(${s.rgb},.12)`,color:s.color,border:`1px solid rgba(${s.rgb},.25)`}}><s.Icon size={11}/> {s.label}</button>
               ))}
-              <button onClick={e=>{e.stopPropagation();onMove(app.id,"rejected")}} className="text-xs px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1" style={{background:"rgba(239,68,68,.1)",color:"#ef4444",border:"1px solid rgba(239,68,68,.2)"}}><X size={11}/> Reject</button>
+              <button onClick={e=>{e.stopPropagation();onMove(app.id,"rejected")}} className="text-xs px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1" style={{background:"rgba(132,128,109,.1)",color:"#2e2d27",border:"1px solid rgba(132,128,109,.2)"}}><X size={11}/> Reject</button>
             </div>
           </div>
           <div className="flex gap-2">
-            <a href="/dashboard/ai-tools#interviews" onClick={e=>e.stopPropagation()} className="text-xs px-2 py-1 rounded-lg font-semibold inline-flex items-center gap-1" style={{background:"rgba(124,58,237,.1)",color:"#7c3aed",textDecoration:"none"}}><Mic size={11}/> Prep</a>
+            <a href="/dashboard/ai-tools#interviews" onClick={e=>e.stopPropagation()} className="text-xs px-2 py-1 rounded-lg font-semibold inline-flex items-center gap-1" style={{background:"rgba(101,98,84,.1)",color:"#4d4b44",textDecoration:"none"}}><Mic size={11}/> Prep</a>
             <a href="/dashboard/ai-tools#cover" onClick={e=>e.stopPropagation()} className="text-xs px-2 py-1 rounded-lg font-semibold inline-flex items-center gap-1" style={{background:"color-mix(in srgb, var(--accent) 10%, transparent)",color:"var(--accent)",textDecoration:"none"}}><Mail size={11}/> Cover</a>
           </div>
           <div className="flex gap-2 pt-1">
@@ -740,12 +740,12 @@ function GmailGate({ children, connected, onConnect }: {
         position: "absolute", top: 12, right: 12, zIndex: 10,
         background: "var(--surface)", border: "1px solid var(--border)",
         borderRadius: 14, padding: "12px 16px",
-        boxShadow: "0 4px 20px rgba(0,0,0,.12)",
+        boxShadow: "0 4px 20px rgba(12,11,8,.12)",
         display: "flex", alignItems: "center", gap: 12, maxWidth: 340,
       }}>
         <div style={{
           width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-          background: "linear-gradient(135deg,#4285f4,#34a853)",
+          background: "linear-gradient(135deg,#888471,#938f7a)",
           display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
         }}><Lock size={16}/></div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -760,9 +760,9 @@ function GmailGate({ children, connected, onConnect }: {
           onClick={onConnect}
           style={{
             flexShrink: 0, padding: "7px 14px", borderRadius: 9, border: "none", cursor: "pointer",
-            background: "linear-gradient(135deg,#4285f4,#34a853)",
+            background: "linear-gradient(135deg,#888471,#938f7a)",
             color: "#fff", fontSize: 12, fontWeight: 700,
-            boxShadow: "0 2px 10px rgba(66,133,244,.4)",
+            boxShadow: "0 2px 10px rgba(136,132,113,.4)",
           }}
         >Connect →</button>
       </div>
@@ -807,8 +807,8 @@ function PipelineView() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex rounded-xl p-0.5 gap-0.5" style={{background:"var(--surface-2)",border:"1px solid var(--border)"}}>
-            <button onClick={()=>setPipeView("board")} className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={pipeView==="board"?{background:"var(--surface)",color:"var(--text)",boxShadow:"0 1px 3px rgba(0,0,0,.1)"}:{color:"var(--text-soft)"}}>⬜ Board</button>
-            <button onClick={()=>setPipeView("list")} className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={pipeView==="list"?{background:"var(--surface)",color:"var(--text)",boxShadow:"0 1px 3px rgba(0,0,0,.1)"}:{color:"var(--text-soft)"}}>≡ List</button>
+            <button onClick={()=>setPipeView("board")} className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={pipeView==="board"?{background:"var(--surface)",color:"var(--text)",boxShadow:"0 1px 3px rgba(12,11,8,.1)"}:{color:"var(--text-soft)"}}>⬜ Board</button>
+            <button onClick={()=>setPipeView("list")} className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={pipeView==="list"?{background:"var(--surface)",color:"var(--text)",boxShadow:"0 1px 3px rgba(12,11,8,.1)"}:{color:"var(--text-soft)"}}>≡ List</button>
           </div>
           <button onClick={()=>exportPipelineCSV(apps)} className="btn-ghost px-3 py-2 text-sm" style={{border:"1px solid var(--border)"}}>⬇ CSV</button>
           <button onClick={()=>setAdding(true)} className="btn-accent px-4 py-2 text-sm">+ Add Application</button>
@@ -860,10 +860,10 @@ function PipelineView() {
                       </div>
                     </td>
                     <td className="px-4 py-3"><span className="text-xs px-2.5 py-1 rounded-full font-semibold inline-flex items-center gap-1" style={{background:`rgba(${s.rgb},.12)`,color:s.color}}><s.Icon size={11}/> {s.label}</span></td>
-                    <td className="px-4 py-3 text-sm font-medium" style={{color:"#3b82f6"}}>{app.salary||"—"}</td>
+                    <td className="px-4 py-3 text-sm font-medium" style={{color:"#6e6b5b"}}>{app.salary||"—"}</td>
                     <td className="px-4 py-3 text-xs">
                       {app.followUpDate
-                        ?<span className="inline-flex items-center gap-1" style={{color:appIsOverdue(app.followUpDate)?"#dc2626":appIsDueSoon(app.followUpDate)?"#d97706":"var(--text-soft)",fontWeight:appIsOverdue(app.followUpDate)?700:400}}>
+                        ?<span className="inline-flex items-center gap-1" style={{color:appIsOverdue(app.followUpDate)?"#13120d":appIsDueSoon(app.followUpDate)?"#6b6858":"var(--text-soft)",fontWeight:appIsOverdue(app.followUpDate)?700:400}}>
                           {appIsOverdue(app.followUpDate)?<TriangleAlert size={10}/>:appIsDueSoon(app.followUpDate)?<Clock3 size={10}/>:null}{new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}
                          </span>
                         :<span style={{color:"var(--text-soft)"}}>—</span>}
@@ -875,7 +875,7 @@ function PipelineView() {
                           {APP_STAGES.map(st=><option key={st.id} value={st.id}>{st.label}</option>)}
                         </select>
                         <button onClick={()=>setEditing(app)} className="btn-ghost px-2 py-1 text-xs flex items-center"><Pencil size={12}/></button>
-                        <button onClick={()=>deleteApp(app.id)} className="btn-ghost px-2 py-1 text-xs flex items-center" style={{color:"#ef4444"}}><X size={12}/></button>
+                        <button onClick={()=>deleteApp(app.id)} className="btn-ghost px-2 py-1 text-xs flex items-center" style={{color:"#2e2d27"}}><X size={12}/></button>
                       </div>
                     </td>
                   </tr>
@@ -892,8 +892,8 @@ function PipelineView() {
 
       {/* Edit modal */}
       {editing&&(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:"rgba(0,0,0,.5)"}} onClick={()=>setEditing(null)}>
-          <div className="w-full max-w-lg rounded-2xl border p-6" style={{background:"var(--surface)",borderColor:"var(--border)",boxShadow:"0 24px 64px -12px rgba(0,0,0,.4)"}} onClick={e=>e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:"rgba(12,11,8,.5)"}} onClick={()=>setEditing(null)}>
+          <div className="w-full max-w-lg rounded-2xl border p-6" style={{background:"var(--surface)",borderColor:"var(--border)",boxShadow:"0 24px 64px -12px rgba(12,11,8,.4)"}} onClick={e=>e.stopPropagation()}>
             <h2 className="text-lg font-bold mb-4" style={{color:"var(--text)"}}>Edit Application</h2>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -980,9 +980,9 @@ function AnalyticsView() {
           <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:12, marginBottom:20 }}>
             {[
               { label:"Total Applied",   value:totalApps,      color:"var(--accent)", Icon:Send },
-              { label:"Interviews",      value:interviewCount,  color:"#0ea5e9", Icon:Handshake },
-              { label:"Offers",          value:offerCount,      color:"#059669", Icon:PartyPopper },
-              { label:"Last 7 Days",     value:last7,           color:"#7c3aed", Icon:Calendar },
+              { label:"Interviews",      value:interviewCount,  color:"#7c7866", Icon:Handshake },
+              { label:"Offers",          value:offerCount,      color:"#42413c", Icon:PartyPopper },
+              { label:"Last 7 Days",     value:last7,           color:"#4d4b44", Icon:Calendar },
             ].map(s => (
               <div key={s.label} style={{
                 background:"var(--surface)", border:"1px solid var(--border)", borderRadius:14,
@@ -1311,7 +1311,7 @@ export default function JobsPage() {
       {/* ── Top action bar (replaces redundant "Jobs & Apply" title) ── */}
       <div className="anim-fade-up d-0" style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
         {/* Left: view mode tabs */}
-        <div style={{ display:"flex", gap:3, padding:4, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, boxShadow:"0 1px 3px rgba(0,0,0,.04)" }}>
+        <div style={{ display:"flex", gap:3, padding:4, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, boxShadow:"0 1px 3px rgba(12,11,8,.04)" }}>
           {([
             { id:"board",     label:"Live Board",  Icon:Search },
             { id:"pipeline",  label:"Pipeline",    Icon:ClipboardList },
@@ -1339,13 +1339,13 @@ export default function JobsPage() {
             display:"inline-flex", alignItems:"center", gap:6, padding:"7px 14px",
             borderRadius:9, background:"var(--surface)", border:"1px solid var(--border)",
             color:"var(--text-soft)", fontSize:12.5, fontWeight:600, textDecoration:"none",
-            boxShadow:"0 1px 3px rgba(0,0,0,.04)",
+            boxShadow:"0 1px 3px rgba(12,11,8,.04)",
           }}><ClipboardList size={13}/> Contracts</Link>
           <Link href="/dashboard/jobs-ft" style={{
             display:"inline-flex", alignItems:"center", gap:6, padding:"7px 14px",
             borderRadius:9, background:"var(--surface)", border:"1px solid var(--border)",
             color:"var(--text-soft)", fontSize:12.5, fontWeight:600, textDecoration:"none",
-            boxShadow:"0 1px 3px rgba(0,0,0,.04)",
+            boxShadow:"0 1px 3px rgba(12,11,8,.04)",
           }}><Briefcase size={13}/> Full-Time</Link>
           <Link href="/dashboard/resume" style={{
             display:"inline-flex", alignItems:"center", gap:6, padding:"7px 14px",
@@ -1388,8 +1388,8 @@ export default function JobsPage() {
                 const live = !sourceLabel.toLowerCase().startsWith("sample")
                 return (
                   <span style={{ display:"inline-flex", alignItems:"center", gap:5, marginRight:10,
-                    background: live ? "#eff6ff" : "rgba(107,114,128,.08)",
-                    border: live ? "1px solid #bfdbfe" : "1px solid rgba(107,114,128,.2)",
+                    background: live ? "#f2f0ea" : "rgba(112,108,92,.08)",
+                    border: live ? "1px solid #d9d4c8" : "1px solid rgba(112,108,92,.2)",
                     color: live ? "var(--accent)" : "var(--text-soft)",
                     fontSize:11, fontWeight:700, padding:"2px 9px", borderRadius:20,
                   }}>
@@ -1439,7 +1439,7 @@ export default function JobsPage() {
         {/* Tabs */}
         <div style={{
           display:"flex", gap:2, background:"var(--surface)", border:"1px solid var(--border)",
-          borderRadius:12, padding:4, boxShadow:"0 1px 3px rgba(26,32,53,.05)",
+          borderRadius:12, padding:4, boxShadow:"0 1px 3px rgba(32,31,25,.05)",
         }}>
           {([
             { id:"recommended", label:"Recommended", count: jobs.length },
@@ -1477,7 +1477,7 @@ export default function JobsPage() {
       {/* ── Search + Filter ─────────────────────────────────────── */}
       <div className="anim-fade-up d-1" style={{
         background:"var(--surface)", border:"1px solid var(--border)", borderRadius:16,
-        padding:"16px 20px", boxShadow:"0 1px 3px rgba(26,32,53,.05)",
+        padding:"16px 20px", boxShadow:"0 1px 3px rgba(32,31,25,.05)",
       }}>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr auto auto auto", gap:8, marginBottom:10 }}>
           <div style={{ position:"relative" }}>
@@ -1507,11 +1507,11 @@ export default function JobsPage() {
             <Globe size={12}/> Remote
           </label>
           <label style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 12px", borderRadius:9, cursor:"pointer", whiteSpace:"nowrap" as const,
-            background: hideAgencies ? "#fef2f2" : "var(--surface-2)",
-            border: `1.5px solid ${hideAgencies ? "#fca5a5" : "var(--border)"}`,
-            fontSize:12.5, fontWeight:600, color: hideAgencies ? "#dc2626" : "var(--text-soft)",
+            background: hideAgencies ? "var(--surface)" : "var(--surface-2)",
+            border: `1.5px solid ${hideAgencies ? "#bbb5a5" : "var(--border)"}`,
+            fontSize:12.5, fontWeight:600, color: hideAgencies ? "#13120d" : "var(--text-soft)",
           }}>
-            <input type="checkbox" checked={hideAgencies} onChange={e => setHideAgencies(e.target.checked)} style={{ accentColor:"#dc2626", width:13, height:13 }} />
+            <input type="checkbox" checked={hideAgencies} onChange={e => setHideAgencies(e.target.checked)} style={{ accentColor:"#13120d", width:13, height:13 }} />
             <Ban size={12}/> No agencies
           </label>
           <button onClick={() => {
@@ -1537,23 +1537,23 @@ export default function JobsPage() {
           <select value={dateFilter} onChange={e => setDateFilter(e.target.value as DateFilterKey)}
             style={{ padding:"7px 10px", borderRadius:9, fontSize:12.5, fontWeight:600, cursor:"pointer", outline:"none",
               background:"var(--surface-2)", color: dateFilter !== "any" ? "var(--accent-txt)" : "var(--text-soft)",
-              border: `1.5px solid ${dateFilter !== "any" ? "#bfdbfe" : "var(--border)"}` }}>
+              border: `1.5px solid ${dateFilter !== "any" ? "#d9d4c8" : "var(--border)"}` }}>
             <option value="any">Date Posted</option>
             {DATE_FILTERS.filter(d => d.key !== "any").map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
           </select>
 
           <select value={expLevel} onChange={e => setExpLevel(e.target.value as ExperienceLevel)}
             style={{ padding:"7px 10px", borderRadius:9, fontSize:12.5, fontWeight:600, cursor:"pointer", outline:"none",
-              background:"var(--surface-2)", color: expLevel !== "all" ? "#15803d" : "var(--text-soft)",
-              border: `1.5px solid ${expLevel !== "all" ? "#bbf7d0" : "var(--border)"}` }}>
+              background:"var(--surface-2)", color: expLevel !== "all" ? "#6c6959" : "var(--text-soft)",
+              border: `1.5px solid ${expLevel !== "all" ? "#e9e5dd" : "var(--border)"}` }}>
             <option value="all">Experience</option>
             {EXPERIENCE_LEVELS.filter(l => l.key !== "all").map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
           </select>
 
           <select value={String(salaryMin)} onChange={e => setSalaryMin(Number(e.target.value))}
             style={{ padding:"7px 10px", borderRadius:9, fontSize:12.5, fontWeight:600, cursor:"pointer", outline:"none",
-              background:"var(--surface-2)", color: salaryMin > 0 ? "#92400e" : "var(--text-soft)",
-              border: `1.5px solid ${salaryMin > 0 ? "#fde68a" : "var(--border)"}` }}>
+              background:"var(--surface-2)", color: salaryMin > 0 ? "#58564c" : "var(--text-soft)",
+              border: `1.5px solid ${salaryMin > 0 ? "#e4e0d6" : "var(--border)"}` }}>
             <option value="0">Min Salary</option>
             {[80000,100000,120000,140000,160000,180000,200000].map(v => <option key={v} value={String(v)}>${(v/1000).toFixed(0)}k+</option>)}
           </select>
@@ -1561,8 +1561,8 @@ export default function JobsPage() {
           {skillOptions.length > 0 && (
             <select value={skillFilter[0] || ""} onChange={e => { const v = e.target.value; setSkillFilter(v ? [v] : []) }}
               style={{ padding:"7px 10px", borderRadius:9, fontSize:12.5, fontWeight:600, cursor:"pointer", outline:"none",
-                background:"var(--surface-2)", color: skillFilter.length ? "#7c3aed" : "var(--text-soft)",
-                border: `1.5px solid ${skillFilter.length ? "#ddd6fe" : "var(--border)"}` }}>
+                background:"var(--surface-2)", color: skillFilter.length ? "#4d4b44" : "var(--text-soft)",
+                border: `1.5px solid ${skillFilter.length ? "#e0dcd2" : "var(--border)"}` }}>
               <option value="">Skill</option>
               {skillOptions.map(({ skill, count }) => <option key={skill} value={skill}>{skill} ({count})</option>)}
             </select>
@@ -1579,7 +1579,7 @@ export default function JobsPage() {
             {showCompanyPanel && (
               <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, zIndex:30, minWidth:230, maxHeight:260, overflowY:"auto",
                 background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:8,
-                boxShadow:"0 16px 40px rgba(0,0,0,.18)",
+                boxShadow:"0 16px 40px rgba(12,11,8,.18)",
               }}>
                 {companyOptions.length === 0
                   ? <div style={{ padding:"10px 8px", fontSize:12, color:"var(--text-soft)" }}>No companies yet.</div>
@@ -1606,7 +1606,7 @@ export default function JobsPage() {
             {showDistancePanel && (
               <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, zIndex:30, width:250,
                 background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:12,
-                boxShadow:"0 16px 40px rgba(0,0,0,.18)",
+                boxShadow:"0 16px 40px rgba(12,11,8,.18)",
               }}>
                 <p style={{ fontSize:11, color:"var(--text-soft)", fontWeight:600, marginBottom:6 }}>Near this city</p>
                 <select value={originCity} onChange={e => setOriginCity(e.target.value)} style={{
@@ -1640,7 +1640,7 @@ export default function JobsPage() {
                   setDateFilter("any"); setExpLevel("all"); setSalaryMin(0); setHideAgencies(false)
                   setCompanyFilter([]); setOriginCity(""); setDistanceFilter("any"); setSkillFilter([]); setVisaFilter([])
                 }}
-                style={{ padding:"3px 8px", borderRadius:7, border:"none", background:"#fee2e2", color:"#dc2626", fontSize:11, fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:4 }}>
+                style={{ padding:"3px 8px", borderRadius:7, border:"none", background:"#e6e2d9", color:"#13120d", fontSize:11, fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:4 }}>
                 <X size={10}/> Reset filters
               </button>
             </span>
@@ -1710,16 +1710,16 @@ export default function JobsPage() {
             return (
               <div key={job.id}
                 style={{
-                  background: isHidden ? "#f9fafb" : "var(--surface)",
-                  border:`1px solid ${isHidden ? "#e5e7eb" : "var(--border)"}`,
+                  background: isHidden ? "#f8f6f2" : "var(--surface)",
+                  border:`1px solid ${isHidden ? "#e8e4db" : "var(--border)"}`,
                   borderRadius:16, overflow:"hidden",
                   transition:"box-shadow .2s, border-color .2s, opacity .2s",
-                  boxShadow:"0 1px 3px rgba(26,32,53,.05)",
+                  boxShadow:"0 1px 3px rgba(32,31,25,.05)",
                   opacity: isHidden ? 0.6 : 1,
                   animationDelay: `${Math.min(idx, 10) * 40}ms`,
                 }}
-                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; if (!isHidden) { el.style.boxShadow="0 4px 20px rgba(26,32,53,.1)"; el.style.borderColor="var(--accent-border)" } }}
-                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.boxShadow="0 1px 3px rgba(26,32,53,.05)"; el.style.borderColor=isHidden ? "#e5e7eb" : "var(--border)" }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; if (!isHidden) { el.style.boxShadow="0 4px 20px rgba(32,31,25,.1)"; el.style.borderColor="var(--accent-border)" } }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.boxShadow="0 1px 3px rgba(32,31,25,.05)"; el.style.borderColor=isHidden ? "#e8e4db" : "var(--border)" }}
               >
                 <div style={{ padding:"16px 20px" }}>
                   <div style={{ display:"flex", gap:14, alignItems:"flex-start" }}>
@@ -1730,14 +1730,14 @@ export default function JobsPage() {
                           <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
                             <h3
                               onClick={() => !isHidden && setDetailJob(job)}
-                              style={{ fontWeight:700, fontSize:15, color: isHidden ? "#9ca3af" : "var(--text)",
+                              style={{ fontWeight:700, fontSize:15, color: isHidden ? "#a29d89" : "var(--text)",
                                 lineHeight:1.3, margin:0, cursor: isHidden ? "default" : "pointer" }}
                               onMouseEnter={e => { if (!isHidden) (e.currentTarget as HTMLElement).style.color="var(--accent)" }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color=isHidden ? "#9ca3af" : "var(--text)" }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color=isHidden ? "#a29d89" : "var(--text)" }}
                             >{job.title}</h3>
                             {isNew && (
                               <span style={{ fontSize:9, fontWeight:800, padding:"2px 6px", borderRadius:20,
-                                background:"#dcfce7", color:"#15803d", border:"1px solid #bbf7d0",
+                                background:"#e8e4db", color:"#6c6959", border:"1px solid #e9e5dd",
                                 letterSpacing:".3px", textTransform:"uppercase", flexShrink:0,
                               }}>New</span>
                             )}
@@ -1774,8 +1774,8 @@ export default function JobsPage() {
                         {job.salary && <span style={{ color:"var(--accent)", fontWeight:700 }}>{job.salary}</span>}
                         <span>{timeAgo(job.posted)}</span>
                         <span style={{ fontSize:10, padding:"2px 7px", borderRadius:20,
-                          background:job.source === "sample" ? "#f9fafb" : "#eff6ff",
-                          border:`1px solid ${job.source === "sample" ? "#e5e7eb" : "#bfdbfe"}`,
+                          background:job.source === "sample" ? "#f8f6f2" : "#f2f0ea",
+                          border:`1px solid ${job.source === "sample" ? "#e8e4db" : "#d9d4c8"}`,
                           color: job.source === "sample" ? "var(--text-soft)" : "var(--accent)", fontWeight:700,
                         }}>{job.source === "sample" ? "Sample" : "Live"}</span>
                       </div>
@@ -1873,11 +1873,11 @@ export default function JobsPage() {
                       style={{
                         marginLeft:"auto", padding:"6px 10px", borderRadius:9, border:"none",
                         fontSize:11, fontWeight:600, cursor:"pointer", transition:"all .15s",
-                        color: isHidden ? "var(--text-soft)" : "#c4c9d4",
-                        background: isHidden ? "#f1f5f9" : "transparent",
+                        color: isHidden ? "var(--text-soft)" : "#c9c3b4",
+                        background: isHidden ? "#f4f2ed" : "transparent",
                       }}
-                      onMouseEnter={e => { if (!isHidden) (e.currentTarget as HTMLElement).style.color="#dc2626" }}
-                      onMouseLeave={e => { if (!isHidden) (e.currentTarget as HTMLElement).style.color="#c4c9d4" }}
+                      onMouseEnter={e => { if (!isHidden) (e.currentTarget as HTMLElement).style.color="#13120d" }}
+                      onMouseLeave={e => { if (!isHidden) (e.currentTarget as HTMLElement).style.color="#c9c3b4" }}
                     >
                       {isHidden ? <><Undo2 size={11}/> Undo</> : <><X size={11}/> Not interested</>}
                     </button>

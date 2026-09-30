@@ -7,11 +7,11 @@ import PageHeader from "@/components/layout/PageHeader"
 
 const P = {
   surface: "#ffffff",
-  text:    "#1a2035",
-  muted:   "#6b7a99",
-  hint:    "#9aa4bc",
-  border:  "#e4e8ef",
-  bg:      "#f4f6f9",
+  text:    "#161510",
+  muted:   "#6e6b5b",
+  hint:    "#9d9884",
+  border:  "#e6e2d9",
+  bg:      "var(--surface)",
 }
 
 interface Contact {
@@ -30,18 +30,18 @@ interface Contact {
 }
 
 const TYPE_META = {
-  recruiter:      { label: "Recruiter",      color: "#1558a0", bg: "#eff6ff", border: "#bfdbfe" },
-  referral:       { label: "Referral",       color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
-  connection:     { label: "Connection",     color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  hiring_manager: { label: "Hiring Manager", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+  recruiter:      { label: "Recruiter",      color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
+  referral:       { label: "Referral",       color: "#42413c", bg: "#f4f2ed", border: "#ddd8cd" },
+  connection:     { label: "Connection",     color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
+  hiring_manager: { label: "Hiring Manager", color: "#6b6858", bg: "#f7f5f0", border: "#e4e0d6" },
 }
 
 const STATUS_META = {
-  reached_out: { label: "Reached Out", color: "#1558a0", bg: "#eff6ff", border: "#bfdbfe" },
-  replied:     { label: "Replied ✓",   color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
-  intro_done:  { label: "Intro Done",  color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  warm:        { label: "Warm",        color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
-  cold:        { label: "Cold",        color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" },
+  reached_out: { label: "Reached Out", color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
+  replied:     { label: "Replied ✓",   color: "#42413c", bg: "#f4f2ed", border: "#ddd8cd" },
+  intro_done:  { label: "Intro Done",  color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
+  warm:        { label: "Warm",        color: "#6b6858", bg: "#f7f5f0", border: "#e4e0d6" },
+  cold:        { label: "Cold",        color: "#706c5c", bg: "#f8f6f2", border: "#e8e4db" },
 }
 
 const DEFAULTS: Contact[] = [
@@ -54,7 +54,7 @@ const DEFAULTS: Contact[] = [
 function Avatar({ seed, name, size = 40 }: { seed: number; name: string; size?: number }) {
   const [err, setErr] = useState(false)
   const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2)
-  const colors = ["#1d6fc4","#7c3aed","#059669","#d97706","#dc2626"]
+  const colors = ["#1c1b16","#4d4b44","#42413c","#6b6858","#13120d"]
   const bg = colors[seed % colors.length]
   if (err) return <div style={{ width: size, height: size, borderRadius: "50%", background: bg, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: size * 0.36, fontWeight: 700, flexShrink: 0 }}>{initials}</div>
   return <img src={`https://i.pravatar.cc/${size * 2}?img=${seed}`} alt={name} onError={() => setErr(true)} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}/>
@@ -179,9 +179,9 @@ export default function NetworkPage() {
 
       {/* ── Follow-up nudge ── */}
       {needFollowUp.length > 0 && (
-        <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: "12px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ background: "#f7f5f0", border: "1px solid #e4e0d6", borderRadius: 12, padding: "12px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 18 }}>⏰</span>
-          <p style={{ fontSize: 13, color: "#92400e" }}>
+          <p style={{ fontSize: 13, color: "#58564c" }}>
             <strong>{needFollowUp.map(c => c.name).join(", ")}</strong> — no reply in 5+ days. Time to follow up!
           </p>
         </div>
@@ -189,7 +189,7 @@ export default function NetworkPage() {
 
       {/* ── Add form ── */}
       {showAdd && (
-        <div style={{ background: P.surface, border: "1.5px solid #bfdbfe", borderRadius: 16, padding: "22px 24px", marginBottom: 20 }}>
+        <div style={{ background: P.surface, border: "1.5px solid #d9d4c8", borderRadius: 16, padding: "22px 24px", marginBottom: 20 }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: P.text, marginBottom: 16 }}>Add Contact</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[
@@ -210,7 +210,7 @@ export default function NetworkPage() {
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
             {(["recruiter","referral","connection","hiring_manager"] as const).map(t => (
-              <button key={t} onClick={() => setNewContact(p => ({ ...p, type: t }))} style={{ padding: "4px 11px", borderRadius: 20, border: `1.5px solid ${newContact.type === t ? "var(--accent)" : P.border}`, background: newContact.type === t ? "#eff6ff" : "transparent", color: newContact.type === t ? "var(--accent)" : P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              <button key={t} onClick={() => setNewContact(p => ({ ...p, type: t }))} style={{ padding: "4px 11px", borderRadius: 20, border: `1.5px solid ${newContact.type === t ? "var(--accent)" : P.border}`, background: newContact.type === t ? "#f2f0ea" : "transparent", color: newContact.type === t ? "var(--accent)" : P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                 {TYPE_META[t].label}
               </button>
             ))}
@@ -253,24 +253,24 @@ export default function NetworkPage() {
                     <span style={{ marginLeft: "auto", fontSize: 11.5, color: P.hint }}>{timeAgo(c.lastContact)}</span>
                   </div>
                   <p style={{ fontSize: 13, color: P.muted, marginBottom: 6 }}>{c.title} at {c.company}</p>
-                  {c.jobLinked && <p style={{ fontSize: 12, color: "#1558a0", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}><Link2 size={11}/> {c.jobLinked}</p>}
+                  {c.jobLinked && <p style={{ fontSize: 12, color: "#11100c", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}><Link2 size={11}/> {c.jobLinked}</p>}
                   {c.notes && <p style={{ fontSize: 12.5, color: P.muted, lineHeight: 1.5, marginBottom: 8, display: "flex", alignItems: "flex-start", gap: 5 }}><FileText size={11} style={{ marginTop: 3, flexShrink: 0 }}/> {c.notes}</p>}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                     <button onClick={() => { setExpandedId(isExpanded ? null : c.id); if (!isExpanded && !draft) generateOutreach(c) }}
-                      style={{ padding: "5px 12px", borderRadius: 8, background: "#eff6ff", color: "#1558a0", border: "1px solid #bfdbfe", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      style={{ padding: "5px 12px", borderRadius: 8, background: "#f2f0ea", color: "#11100c", border: "1px solid #d9d4c8", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
                       <Sparkles size={12}/> {loadingDraft === c.id ? "Drafting…" : "AI Message"}
                     </button>
                     {c.status === "reached_out" && (
-                      <button onClick={() => updateStatus(c.id, "replied")} style={{ padding: "5px 12px", borderRadius: 8, background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}><Check size={12}/> Got Reply</button>
+                      <button onClick={() => updateStatus(c.id, "replied")} style={{ padding: "5px 12px", borderRadius: 8, background: "#f4f2ed", color: "#42413c", border: "1px solid #ddd8cd", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}><Check size={12}/> Got Reply</button>
                     )}
                     {c.status === "replied" && (
-                      <button onClick={() => updateStatus(c.id, "intro_done")} style={{ padding: "5px 12px", borderRadius: 8, background: "#f5f3ff", color: "#7c3aed", border: "1px solid #ddd6fe", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Intro Done</button>
+                      <button onClick={() => updateStatus(c.id, "intro_done")} style={{ padding: "5px 12px", borderRadius: 8, background: "#f6f4ef", color: "#4d4b44", border: "1px solid #e0dcd2", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Intro Done</button>
                     )}
                     {c.linkedIn && (
-                      <a href={`https://${c.linkedIn}`} target="_blank" rel="noopener noreferrer" style={{ padding: "5px 11px", borderRadius: 8, background: "#0077b5", color: "#fff", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>LinkedIn</a>
+                      <a href={`https://${c.linkedIn}`} target="_blank" rel="noopener noreferrer" style={{ padding: "5px 11px", borderRadius: 8, background: "#6e6b5b", color: "#fff", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>LinkedIn</a>
                     )}
                     <button onClick={() => removeContact(c.id)} style={{ marginLeft: "auto", padding: "4px 8px", borderRadius: 7, border: "none", background: "transparent", color: P.hint, cursor: "pointer", display: "flex", alignItems: "center" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#dc2626" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#13120d" }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = P.hint }}
                     ><X size={12}/></button>
                   </div>
@@ -279,17 +279,17 @@ export default function NetworkPage() {
 
               {/* AI Draft panel */}
               {isExpanded && (
-                <div style={{ borderTop: `1px solid ${P.border}`, padding: "14px 20px", background: "#f8fbff" }}>
+                <div style={{ borderTop: `1px solid ${P.border}`, padding: "14px 20px", background: "#f8f7f3" }}>
                   <p style={{ fontSize: 12, fontWeight: 700, color: P.hint, marginBottom: 8 }}>AI-DRAFTED OUTREACH MESSAGE</p>
                   {loadingDraft === c.id ? (
                     <p style={{ fontSize: 13, color: P.muted }}>Generating personalized message…</p>
                   ) : draft ? (
                     <>
                       <textarea value={draft} onChange={e => setComposeDraft(prev => ({ ...prev, [c.id]: e.target.value }))} rows={5}
-                        style={{ width: "100%", borderRadius: 9, border: "1px solid #bfdbfe", padding: "10px 12px", fontSize: 13, color: P.text, lineHeight: 1.6, resize: "none", outline: "none", background: "#fff", boxSizing: "border-box" }}/>
+                        style={{ width: "100%", borderRadius: 9, border: "1px solid #d9d4c8", padding: "10px 12px", fontSize: 13, color: P.text, lineHeight: 1.6, resize: "none", outline: "none", background: "var(--surface)", boxSizing: "border-box" }}/>
                       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                        <button onClick={() => { if (c.linkedIn) window.open(`https://${c.linkedIn}`, "_blank") }} style={{ padding: "6px 14px", borderRadius: 8, background: "#0077b5", color: "#fff", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>Open LinkedIn →</button>
-                        <button onClick={() => generateOutreach(c)} style={{ padding: "6px 12px", borderRadius: 8, background: "#eff6ff", color: "#1558a0", border: "1px solid #bfdbfe", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>↻ Regenerate</button>
+                        <button onClick={() => { if (c.linkedIn) window.open(`https://${c.linkedIn}`, "_blank") }} style={{ padding: "6px 14px", borderRadius: 8, background: "#6e6b5b", color: "#fff", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>Open LinkedIn →</button>
+                        <button onClick={() => generateOutreach(c)} style={{ padding: "6px 12px", borderRadius: 8, background: "#f2f0ea", color: "#11100c", border: "1px solid #d9d4c8", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>↻ Regenerate</button>
                       </div>
                     </>
                   ) : null}

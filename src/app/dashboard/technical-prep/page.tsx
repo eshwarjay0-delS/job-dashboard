@@ -27,23 +27,23 @@ interface Problem {
    CONSTANTS
    ═══════════════════════════════════════════════════════════════════ */
 const DIFF_META: Record<Difficulty, { label: string; color: string; bg: string }> = {
-  easy:   { label: "Easy",   color: "#10b981", bg: "rgba(16,185,129,0.1)"  },
-  medium: { label: "Medium", color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
-  hard:   { label: "Hard",   color: "#ef4444", bg: "rgba(239,68,68,0.1)"   },
+  easy:   { label: "Easy",   color: "#58564c", bg: "rgba(163,158,139,0.1)"  },
+  medium: { label: "Medium", color: "#7e7a68", bg: "rgba(176,170,153,0.1)"  },
+  hard:   { label: "Hard",   color: "#2e2d27", bg: "rgba(132,128,109,0.1)"   },
 }
 
 const STATUS_META: Record<Status, { label: string; color: string; bg: string; icon: string }> = {
-  unsolved:  { label: "Unsolved",  color: "#94a3b8", bg: "rgba(148,163,184,0.1)", icon: "○" },
-  attempted: { label: "Attempted", color: "#f59e0b", bg: "rgba(245,158,11,0.1)",  icon: "◑" },
-  solved:    { label: "Solved",    color: "#10b981", bg: "rgba(16,185,129,0.1)",  icon: "✓" },
+  unsolved:  { label: "Unsolved",  color: "#9d9884", bg: "rgba(162,157,137,0.1)", icon: "○" },
+  attempted: { label: "Attempted", color: "#7e7a68", bg: "rgba(176,170,153,0.1)",  icon: "◑" },
+  solved:    { label: "Solved",    color: "#58564c", bg: "rgba(163,158,139,0.1)",  icon: "✓" },
 }
 
 const CAT_META: Record<Category, { icon: string; color: string; desc: string }> = {
-  "DSA":           { icon: "🔢", color: "#8b5cf6", desc: "Data structures, algorithms, LeetCode"       },
-  "System Design": { icon: "🏗️", color: "#1d6fc4", desc: "Scalable systems, architecture patterns"     },
-  "Security/CTF":  { icon: "🔐", color: "#ef4444", desc: "Offensive security, CTF challenges, pentesting" },
-  "SQL":           { icon: "🗄️", color: "#10b981", desc: "Queries, optimization, database design"        },
-  "Behavioral":    { icon: "🧠", color: "#f59e0b", desc: "STAR stories, leadership, conflict resolution"  },
+  "DSA":           { icon: "🔢", color: "#605d51", desc: "Data structures, algorithms, LeetCode"       },
+  "System Design": { icon: "🏗️", color: "#1c1b16", desc: "Scalable systems, architecture patterns"     },
+  "Security/CTF":  { icon: "🔐", color: "#2e2d27", desc: "Offensive security, CTF challenges, pentesting" },
+  "SQL":           { icon: "🗄️", color: "#58564c", desc: "Queries, optimization, database design"        },
+  "Behavioral":    { icon: "🧠", color: "#7e7a68", desc: "STAR stories, leadership, conflict resolution"  },
 }
 
 const CATEGORIES: Category[] = ["DSA", "System Design", "Security/CTF", "SQL", "Behavioral"]
@@ -214,8 +214,8 @@ export default function TechPrepPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a2035", letterSpacing: "-0.4px", marginBottom: 4 }}>Technical Prep Tracker</h1>
-          <p style={{ fontSize: 13.5, color: "#6b7a99" }}>DSA · System Design · Security/CTF · SQL · Behavioral — track your practice, build your streak</p>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#161510", letterSpacing: "-0.4px", marginBottom: 4 }}>Technical Prep Tracker</h1>
+          <p style={{ fontSize: 13.5, color: "#6e6b5b" }}>DSA · System Design · Security/CTF · SQL · Behavioral — track your practice, build your streak</p>
         </div>
         <button onClick={() => setShowAdd(true)}
           style={{ padding: "9px 18px", borderRadius: 9, background: "var(--accent)", color: "#fff", fontSize: 13.5, fontWeight: 700, border: "none", cursor: "pointer" }}>
@@ -226,22 +226,22 @@ export default function TechPrepPage() {
       {/* Stats bar */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
         {[
-          { label: "Solved",    value: solved,      sub: `of ${problems.length} total`,      color: "#10b981" },
-          { label: "Attempted", value: attempted,   sub: "in progress",                      color: "#f59e0b" },
-          { label: "🔥 Streak",  value: streak,      sub: streak === 1 ? "day" : "days",     color: "#ef4444" },
+          { label: "Solved",    value: solved,      sub: `of ${problems.length} total`,      color: "#58564c" },
+          { label: "Attempted", value: attempted,   sub: "in progress",                      color: "#7e7a68" },
+          { label: "🔥 Streak",  value: streak,      sub: streak === 1 ? "day" : "days",     color: "#2e2d27" },
           { label: "Today",     value: todaySolved,  sub: "solved today",                    color: "var(--accent)" },
         ].map(s => (
-          <div key={s.label} style={{ background: "#fff", border: "1px solid #e4e8ef", borderRadius: 12, padding: "14px 18px" }}>
+          <div key={s.label} style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "14px 18px" }}>
             <div style={{ fontSize: 24, fontWeight: 900, color: s.color, letterSpacing: "-0.5px" }}>{s.value}</div>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: "#1a2035", marginBottom: 1 }}>{s.label}</div>
-            <div style={{ fontSize: 11, color: "#aab3c5" }}>{s.sub}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: "#161510", marginBottom: 1 }}>{s.label}</div>
+            <div style={{ fontSize: 11, color: "#aaa492" }}>{s.sub}</div>
           </div>
         ))}
       </div>
 
       {/* Category progress bars */}
-      <div style={{ background: "#fff", border: "1px solid #e4e8ef", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "#1a2035", marginBottom: 12 }}>Progress by Category</div>
+      <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#161510", marginBottom: 12 }}>Progress by Category</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
           {CATEGORIES.map(cat => {
             const meta = CAT_META[cat]
@@ -249,13 +249,13 @@ export default function TechPrepPage() {
             const pct  = s.total > 0 ? Math.round(s.solved / s.total * 100) : 0
             return (
               <button key={cat} onClick={() => setActiveTab(cat === activeTab ? "All" : cat)}
-                style={{ textAlign: "left", background: activeTab === cat ? `${meta.color}10` : "#f8f9fc", border: `1.5px solid ${activeTab === cat ? meta.color + "40" : "#f1f4f9"}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
+                style={{ textAlign: "left", background: activeTab === cat ? `${meta.color}10` : "#f7f5f0", border: `1.5px solid ${activeTab === cat ? meta.color + "40" : "#f2f0ea"}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
                 <div style={{ fontSize: 18, marginBottom: 4 }}>{meta.icon}</div>
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: "#1a2035", marginBottom: 6 }}>{cat}</div>
-                <div style={{ height: 5, background: "#e4e8ef", borderRadius: 100, overflow: "hidden", marginBottom: 4 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: "#161510", marginBottom: 6 }}>{cat}</div>
+                <div style={{ height: 5, background: "#e6e2d9", borderRadius: 100, overflow: "hidden", marginBottom: 4 }}>
                   <div style={{ height: "100%", width: pct + "%", background: meta.color, borderRadius: 100 }}/>
                 </div>
-                <div style={{ fontSize: 10.5, color: "#6b7a99" }}>{s.solved}/{s.total}</div>
+                <div style={{ fontSize: 10.5, color: "#6e6b5b" }}>{s.solved}/{s.total}</div>
               </button>
             )
           })}
@@ -265,38 +265,38 @@ export default function TechPrepPage() {
       {/* Filters */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search problems or tags…"
-          style={{ padding: "8px 12px", border: "1.5px solid #e4e8ef", borderRadius: 8, fontSize: 13, flex: "1 1 200px", outline: "none", color: "#1a2035" }}/>
+          style={{ padding: "8px 12px", border: "1.5px solid #e6e2d9", borderRadius: 8, fontSize: 13, flex: "1 1 200px", outline: "none", color: "#161510" }}/>
         {(["all", "easy", "medium", "hard"] as const).map(d => (
           <button key={d} onClick={() => setFilterDiff(d)}
             style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: "pointer", border: "1.5px solid",
-              borderColor: filterDiff === d ? (d === "all" ? "var(--accent)" : DIFF_META[d]?.color || "var(--accent)") : "#e4e8ef",
-              background: filterDiff === d ? (d === "all" ? "rgba(29,111,196,0.08)" : DIFF_META[d]?.bg || "rgba(29,111,196,0.08)") : "#fff",
-              color: filterDiff === d ? (d === "all" ? "var(--accent)" : DIFF_META[d]?.color || "var(--accent)") : "#6b7a99" }}>
+              borderColor: filterDiff === d ? (d === "all" ? "var(--accent)" : DIFF_META[d]?.color || "var(--accent)") : "#e6e2d9",
+              background: filterDiff === d ? (d === "all" ? "rgba(107,104,88,0.08)" : DIFF_META[d]?.bg || "rgba(107,104,88,0.08)") : "#fff",
+              color: filterDiff === d ? (d === "all" ? "var(--accent)" : DIFF_META[d]?.color || "var(--accent)") : "#6e6b5b" }}>
             {d === "all" ? "All Levels" : d.charAt(0).toUpperCase() + d.slice(1)}
           </button>
         ))}
         {(["all", "unsolved", "attempted", "solved"] as const).map(s => (
           <button key={s} onClick={() => setFilterStatus(s)}
             style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: "pointer", border: "1.5px solid",
-              borderColor: filterStatus === s ? "var(--accent)" : "#e4e8ef",
-              background: filterStatus === s ? "rgba(29,111,196,0.08)" : "#fff",
-              color: filterStatus === s ? "var(--accent)" : "#6b7a99" }}>
+              borderColor: filterStatus === s ? "var(--accent)" : "#e6e2d9",
+              background: filterStatus === s ? "rgba(107,104,88,0.08)" : "#fff",
+              color: filterStatus === s ? "var(--accent)" : "#6e6b5b" }}>
             {s === "all" ? "All Status" : STATUS_META[s].label}
           </button>
         ))}
         {(activeTab !== "All" || filterDiff !== "all" || filterStatus !== "all" || search) && (
           <button onClick={() => { setActiveTab("All"); setFilterDiff("all"); setFilterStatus("all"); setSearch("") }}
-            style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12, color: "#ef4444", border: "1px solid #fecaca", background: "#fff", cursor: "pointer" }}>
+            style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12, color: "#2e2d27", border: "1px solid #ddd8cd", background: "var(--surface)", cursor: "pointer" }}>
             Clear
           </button>
         )}
-        <span style={{ fontSize: 12.5, color: "#aab3c5", marginLeft: "auto" }}>{filtered.length} problems</span>
+        <span style={{ fontSize: 12.5, color: "#aaa492", marginLeft: "auto" }}>{filtered.length} problems</span>
       </div>
 
       {/* Problem List */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: "48px 24px", background: "#fff", border: "1px solid #e4e8ef", borderRadius: 12, color: "#aab3c5" }}>
+          <div style={{ textAlign: "center", padding: "48px 24px", background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, color: "#aaa492" }}>
             No problems match your filters
           </div>
         )}
@@ -306,8 +306,8 @@ export default function TechPrepPage() {
           const cat    = CAT_META[p.category]
           return (
             <div key={p.id} style={{
-              background: "#fff",
-              border: `1px solid ${p.status === "solved" ? "#bbf7d0" : p.status === "attempted" ? "#fde68a" : "#e4e8ef"}`,
+              background: "var(--surface)",
+              border: `1px solid ${p.status === "solved" ? "#e9e5dd" : p.status === "attempted" ? "#e4e0d6" : "#e6e2d9"}`,
               borderRadius: 10,
               padding: "12px 16px",
               display: "flex",
@@ -324,7 +324,7 @@ export default function TechPrepPage() {
               {/* Main content */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, textDecoration: p.status === "solved" ? "line-through" : "none", color: p.status === "solved" ? "#94a3b8" : "#1a2035" }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, textDecoration: p.status === "solved" ? "line-through" : "none", color: p.status === "solved" ? "#9d9884" : "#161510" }}>
                     {p.title}
                   </span>
                   <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 100, background: diff.bg, color: diff.color, fontWeight: 700 }}>
@@ -333,22 +333,22 @@ export default function TechPrepPage() {
                   <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 100, background: `${cat.color}12`, color: cat.color, fontWeight: 600 }}>
                     {cat.icon} {p.category}
                   </span>
-                  {p.source && <span style={{ fontSize: 11, color: "#aab3c5" }}>{p.source}</span>}
+                  {p.source && <span style={{ fontSize: 11, color: "#aaa492" }}>{p.source}</span>}
                 </div>
                 {p.tags.length > 0 && (
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                     {p.tags.map(t => (
-                      <span key={t} style={{ fontSize: 11, padding: "1px 7px", background: "#f1f5f9", borderRadius: 100, color: "#64748b" }}>{t}</span>
+                      <span key={t} style={{ fontSize: 11, padding: "1px 7px", background: "#f4f2ed", borderRadius: 100, color: "#6b6858" }}>{t}</span>
                     ))}
                   </div>
                 )}
                 {p.notes && (
-                  <div style={{ fontSize: 12, color: "#6b7a99", marginTop: 5, fontStyle: "italic", borderLeft: "2px solid #e4e8ef", paddingLeft: 8 }}>
+                  <div style={{ fontSize: 12, color: "#6e6b5b", marginTop: 5, fontStyle: "italic", borderLeft: "2px solid #e6e2d9", paddingLeft: 8 }}>
                     {p.notes}
                   </div>
                 )}
                 {(p.solvedAt || p.attemptedAt) && (
-                  <div style={{ fontSize: 11, color: "#aab3c5", marginTop: 4 }}>
+                  <div style={{ fontSize: 11, color: "#aaa492", marginTop: 4 }}>
                     {p.solvedAt ? `Solved ${p.solvedAt}` : p.attemptedAt ? `Attempted ${p.attemptedAt}` : ""}
                     {p.timeToSolve ? ` · ${p.timeToSolve}m` : ""}
                   </div>
@@ -358,11 +358,11 @@ export default function TechPrepPage() {
               {/* Actions */}
               <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
                 <button onClick={() => setEditing({ ...p })}
-                  style={{ padding: "5px 10px", background: "transparent", border: "1px solid #e4e8ef", borderRadius: 7, fontSize: 12, color: "#6b7a99", cursor: "pointer" }}>
+                  style={{ padding: "5px 10px", background: "transparent", border: "1px solid #e6e2d9", borderRadius: 7, fontSize: 12, color: "#6e6b5b", cursor: "pointer" }}>
                   Edit
                 </button>
                 <button onClick={() => deleteProblem(p.id)}
-                  style={{ padding: "5px 10px", background: "transparent", border: "1px solid #fecaca", borderRadius: 7, fontSize: 12, color: "#ef4444", cursor: "pointer" }}>
+                  style={{ padding: "5px 10px", background: "transparent", border: "1px solid #ddd8cd", borderRadius: 7, fontSize: 12, color: "#2e2d27", cursor: "pointer" }}>
                   ×
                 </button>
               </div>
@@ -373,12 +373,12 @@ export default function TechPrepPage() {
 
       {/* ── EDIT DRAWER ──────────────────────────────────────────────── */}
       {editing && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }}
+        <div style={{ position: "fixed", inset: 0, background: "rgba(12,11,8,0.4)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }}
           onClick={e => { if (e.target === e.currentTarget) setEditing(null) }}>
-          <div style={{ width: "min(460px, 95vw)", background: "#fff", height: "100%", overflow: "auto", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(0,0,0,0.15)" }}>
-            <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f4f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#1a2035" }}>Edit Problem</div>
-              <button onClick={() => setEditing(null)} style={{ background: "transparent", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7a99" }}>×</button>
+          <div style={{ width: "min(460px, 95vw)", background: "var(--surface)", height: "100%", overflow: "auto", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(12,11,8,0.15)" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #f2f0ea", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#161510" }}>Edit Problem</div>
+              <button onClick={() => setEditing(null)} style={{ background: "transparent", border: "none", fontSize: 20, cursor: "pointer", color: "#6e6b5b" }}>×</button>
             </div>
             <div style={{ padding: "20px 24px", flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
@@ -426,11 +426,11 @@ export default function TechPrepPage() {
                   style={{ ...IS, resize: "vertical" }}/>
               </div>
             </div>
-            <div style={{ padding: "16px 24px", borderTop: "1px solid #f1f4f9", display: "flex", gap: 10 }}>
+            <div style={{ padding: "16px 24px", borderTop: "1px solid #f2f0ea", display: "flex", gap: 10 }}>
               <button onClick={saveEdit} style={{ flex: 1, padding: "10px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer" }}>
                 Save
               </button>
-              <button onClick={() => { deleteProblem(editing.id); setEditing(null) }} style={{ padding: "10px 16px", background: "transparent", border: "1px solid #fecaca", borderRadius: 9, color: "#ef4444", cursor: "pointer" }}>
+              <button onClick={() => { deleteProblem(editing.id); setEditing(null) }} style={{ padding: "10px 16px", background: "transparent", border: "1px solid #ddd8cd", borderRadius: 9, color: "#2e2d27", cursor: "pointer" }}>
                 Delete
               </button>
             </div>
@@ -440,10 +440,10 @@ export default function TechPrepPage() {
 
       {/* ── ADD MODAL ──────────────────────────────────────────────────── */}
       {showAdd && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+        <div style={{ position: "fixed", inset: 0, background: "rgba(12,11,8,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
           onClick={e => { if (e.target === e.currentTarget) setShowAdd(false) }}>
-          <div style={{ background: "#fff", borderRadius: 16, padding: "24px 28px", width: "100%", maxWidth: 500, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#1a2035", marginBottom: 16 }}>Add Problem</div>
+          <div style={{ background: "var(--surface)", borderRadius: 16, padding: "24px 28px", width: "100%", maxWidth: 500, boxShadow: "0 20px 60px rgba(12,11,8,0.2)" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#161510", marginBottom: 16 }}>Add Problem</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div>
                 <label style={LS}>Title *</label>
@@ -476,11 +476,11 @@ export default function TechPrepPage() {
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
               <button onClick={addProblem} disabled={!newProblem.title?.trim()}
-                style={{ flex: 1, padding: "10px", background: newProblem.title?.trim() ? "var(--accent)" : "#e4e8ef", color: newProblem.title?.trim() ? "#fff" : "#aab3c5", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer" }}>
+                style={{ flex: 1, padding: "10px", background: newProblem.title?.trim() ? "var(--accent)" : "#e6e2d9", color: newProblem.title?.trim() ? "#fff" : "#aaa492", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer" }}>
                 Add Problem
               </button>
               <button onClick={() => setShowAdd(false)}
-                style={{ padding: "10px 16px", background: "transparent", border: "1.5px solid #e4e8ef", borderRadius: 9, cursor: "pointer", color: "#6b7a99" }}>
+                style={{ padding: "10px 16px", background: "transparent", border: "1.5px solid #e6e2d9", borderRadius: 9, cursor: "pointer", color: "#6e6b5b" }}>
                 Cancel
               </button>
             </div>
@@ -491,5 +491,5 @@ export default function TechPrepPage() {
   )
 }
 
-const LS: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: "#6b7a99", display: "block", marginBottom: 5 }
-const IS: React.CSSProperties = { width: "100%", padding: "8px 11px", border: "1.5px solid #e4e8ef", borderRadius: 8, fontSize: 13, outline: "none", color: "#1a2035", background: "#fff", boxSizing: "border-box", fontFamily: "inherit" }
+const LS: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: "#6e6b5b", display: "block", marginBottom: 5 }
+const IS: React.CSSProperties = { width: "100%", padding: "8px 11px", border: "1.5px solid #e6e2d9", borderRadius: 8, fontSize: 13, outline: "none", color: "#161510", background: "var(--surface)", boxSizing: "border-box", fontFamily: "inherit" }

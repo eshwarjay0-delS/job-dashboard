@@ -1,17 +1,48 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Sans, Inter, JetBrains_Mono, Lora, Manrope, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { DialogProvider } from "@/components/ui/dialog-provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// One pairing, each face with one job, so a page never has to choose:
+// a serif for titles, an italic serif only for a short emphasised word, a humanist sans for
+// reading, a geometric sans for labels and pills, and a tight grotesk for numbers and the
+// single strong button. Monospace is left for code.
+const display = Lora({
+  variable: "--font-lora",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const accent = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  style: ["italic"],
+});
+
+const body = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const label = DM_Sans({
+  variable: "--font-dmsans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const numeric = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800", "900"],
+});
+
+const mono = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
 });
 
@@ -50,21 +81,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${display.variable} ${accent.variable} ${body.variable} ${label.variable} ${numeric.variable} ${mono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        {/* Clash Display + Satoshi for the MarketFit landing page */}
-        <link
-          rel="preconnect"
-          href="https://api.fontshare.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=satoshi@300,400,500,700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
       {/* suppressHydrationWarning: browser extensions (e.g. JobRight injects
           jf-observer-attached on <body>) mutate the DOM before React hydrates,
           which is harmless but otherwise throws a hydration mismatch error. */}

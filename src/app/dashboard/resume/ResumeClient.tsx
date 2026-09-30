@@ -8,7 +8,7 @@ import LibraryTree from "./LibraryTree"
 import ResumeBuilder from "./ResumeBuilder"
 import DocumentsClient from "../documents/DocumentsClient"
 import { IllustLibrary, IllustBuilder } from "@/components/Illustrations"
-import PageHeader from "@/components/layout/PageHeader"
+import PageIntro from "../_components/page-intro"
 import { tailoredFilename, extractRoleCompany } from "@/lib/filename"
 
 // ── Recent tailored resumes (persisted to localStorage) ───────────────────────
@@ -473,56 +473,18 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
   return (
     <div className="max-w-6xl mx-auto space-y-5 anim-fade-up">
 
-      {/* ── Header — built from the shared PageHeader primitive (see
-          src/components/layout/PageHeader.tsx) instead of a hand-rolled
-          title/description block, so this page's header structure matches
-          every other page that migrates to it. ── */}
-      <div className="d-0">
-        <PageHeader
-          title="Tailor Resume"
-          description={
-            allResumes.length > 0
-              ? `${allResumes.length} resume${allResumes.length !== 1 ? "s" : ""} in library · AI tailoring ready`
-              : "Add resumes in Documents, then tailor them here to any job in seconds"
-          }
-          actions={
-            <div
-              className="flex rounded-xl p-1 gap-1"
-              style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
-            >
-              <button
-                onClick={() => setActiveTab("tailor")}
-                className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-                style={activeTab === "tailor"
-                  ? { background: "var(--surface)", color: "var(--text)", boxShadow: "0 1px 3px rgba(0,0,0,.1)" }
-                  : { color: "var(--text-soft)" }
-                }
-              >
-                ✨ AI Tailor
-              </button>
-              <button
-                onClick={() => setActiveTab("build")}
-                className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-                style={activeTab === "build"
-                  ? { background: "var(--surface)", color: "var(--text)", boxShadow: "0 1px 3px rgba(0,0,0,.1)" }
-                  : { color: "var(--text-soft)" }
-                }
-              >
-                🏗 Builder
-              </button>
-              <button
-                onClick={() => setActiveTab("docs")}
-                className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-                style={activeTab === "docs"
-                  ? { background: "var(--surface)", color: "var(--text)", boxShadow: "0 1px 3px rgba(0,0,0,.1)" }
-                  : { color: "var(--text-soft)" }
-                }
-              >
-                📁 Documents
-              </button>
-            </div>
-          }
-        />
+      <PageIntro page="/dashboard/resume" action={{
+        label: "Paste a job post",
+        onClick: () => { setActiveTab("tailor"); window.setTimeout(() => document.getElementById("resume-jd")?.focus(), 0) },
+      }} />
+
+      <div role="tablist" aria-label="What to do with your resume" className="flex flex-wrap gap-2 d-0">
+        {([["tailor", "Fit it to a job"], ["build", "Make a new one"], ["docs", "My files"]] as const).map(([key, label]) => (
+          <button key={key} type="button" role="tab" aria-selected={activeTab === key} onClick={() => setActiveTab(key)}
+            className={activeTab === key ? "btn-accent" : "btn-outline"} style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* ── Documents tab ── */}
@@ -545,9 +507,9 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
           <div className="anim-fade-up d-1 flex items-center gap-0 rounded-2xl border overflow-hidden"
             style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
             {[
-              { n: 1, label: "Select Resume", sublabel: step1Done ? `${allResumes.length} resume${allResumes.length !== 1 ? "s" : ""} ready` : "Pick from your library", done: step1Done, active: !step1Done },
-              { n: 2, label: "Job Description", sublabel: step2Done ? `${jd.trim().length} characters` : "Paste the JD", done: step2Done, active: step1Done && !step2Done },
-              { n: 3, label: "AI Tailoring", sublabel: step3Active ? "Ready to generate" : "Complete steps above", done: false, active: step3Active },
+              { n: 1, label: "Have a resume", sublabel: step1Done ? `${allResumes.length} resume${allResumes.length !== 1 ? "s" : ""} ready` : "Add one in My files", done: step1Done, active: !step1Done },
+              { n: 2, label: "Paste the job", sublabel: step2Done ? `${jd.trim().length} characters` : "Paste the job post below", done: step2Done, active: step1Done && !step2Done },
+              { n: 3, label: "Make it fit", sublabel: step3Active ? "Ready. Press the button." : "Do steps 1 and 2 first", done: false, active: step3Active },
             ].map((step, i) => (
               <div key={i} className="flex-1 flex items-center gap-3 px-5 py-4 relative"
                 style={i < 2 ? { borderRight: "1px solid var(--border)" } : undefined}>
@@ -612,7 +574,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                     </div>
                   ) : (
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: "#d97706" }}>No resume selected</p>
+                      <p className="text-sm font-semibold" style={{ color: "#6b6858" }}>No resume selected</p>
                       <p className="text-xs" style={{ color: "var(--text-soft)" }}>Pick one in the library →, or turn Auto-match back on.</p>
                     </div>
                   )}
@@ -626,13 +588,13 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                   style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-wider flex-shrink-0" style={{ color: "var(--text-soft)" }}>
-                      Job Description
+                      Job post
                     </p>
                     {jd.trim().length > 0 && (prefillRole || prefillCompany) && (
                       <span className="text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0" style={{
-                        background: "var(--success-soft, rgba(16,185,129,.12))",
-                        color: "var(--success, #10b981)",
-                        border: "1px solid rgba(16,185,129,.25)",
+                        background: "var(--success-soft, rgba(163,158,139,.12))",
+                        color: "var(--success, #58564c)",
+                        border: "1px solid rgba(163,158,139,.25)",
                       }}>
                         from {[prefillCompany, prefillRole].filter(Boolean).join(" – ")}
                       </span>
@@ -648,9 +610,11 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                   )}
                 </div>
                 <textarea
+                  id="resume-jd"
+                  aria-label="Job post"
                   value={jd}
                   onChange={e => handleJdChange(e.target.value)}
-                  placeholder={"Paste the full job description here…\n\nThe AI reads every line to find which of your resumes is the closest match, then rewrites it to hit 90–95% keyword alignment."}
+                  placeholder={"Paste the whole job post here.\n\nMarketFit picks your closest resume and rewrites it for this job. You read it before you use it."}
                   className="w-full p-4 text-sm resize-none focus:outline-none leading-relaxed"
                   style={{ background: "var(--surface)", color: "var(--text)", minHeight: 280 }}
                 />
@@ -685,11 +649,11 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                 onClick={doTailor}
                 disabled={tailoring || !jd.trim()}
                 className="btn-accent w-full py-4 flex items-center justify-center gap-2.5 text-base font-bold rounded-2xl"
-                style={!jd.trim() ? { opacity: 0.45 } : { boxShadow: "0 4px 20px var(--accent-shadow, rgba(99,102,241,.35))" }}
+                style={!jd.trim() ? { opacity: 0.45 } : { boxShadow: "0 4px 20px var(--accent-shadow, rgba(117,114,97,.35))" }}
               >
                 {tailoring
-                  ? <><SpinIcon /> Tailoring your resume — usually ~20s (up to a minute for a deep rewrite)…</>
-                  : <><SparkIcon size={5} /> Tailor &amp; Generate Resume →</>
+                  ? <><SpinIcon /> Rewriting your resume. This can take up to a minute…</>
+                  : <><SparkIcon size={5} /> Make my resume fit this job →</>
                 }
               </button>
 
@@ -774,12 +738,11 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                   <IllustLibrary style={{ width: 180, height: 135, borderRadius: 12 }}/>
                   <div>
                     <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>No resumes yet</p>
-                    <p className="text-xs mt-1" style={{ color: "var(--text-soft)" }}>Upload .docx files in Documents first</p>
+                    <p className="text-xs mt-1" style={{ color: "var(--text-soft)" }}>Add a Word (.docx) resume first</p>
                   </div>
-                  <button onClick={() => setActiveTab("docs")}
-                    className="text-xs font-semibold px-4 py-2 rounded-xl"
-                    style={{ background: "var(--accent)", color: "#fff", border: "none", cursor: "pointer" }}>
-                    Go to Documents →
+                  <button type="button" onClick={() => setActiveTab("docs")} className="btn-accent"
+                    style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>
+                    Add a resume →
                   </button>
                 </div>
               )}
@@ -791,7 +754,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                 aria-pressed={onePage}
                 className="rounded-2xl border w-full text-left transition-all overflow-hidden"
                 style={onePage
-                  ? { background: "linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, #7c3aed) 100%)", borderColor: "var(--accent)", boxShadow: "0 4px 20px var(--accent-shadow, rgba(99,102,241,.4))" }
+                  ? { background: "linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, #4d4b44) 100%)", borderColor: "var(--accent)", boxShadow: "0 4px 20px var(--accent-shadow, rgba(117,114,97,.4))" }
                   : { background: "var(--surface)", borderColor: "var(--border)" }}
               >
                 <div className="px-4 py-4 flex items-center gap-4">

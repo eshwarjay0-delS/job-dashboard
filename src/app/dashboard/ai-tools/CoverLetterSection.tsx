@@ -78,14 +78,14 @@ export default function CoverLetterSection() {
 
   const inputStyle: React.CSSProperties = {
     width: "100%", fontSize: 13, padding: "10px 12px", borderRadius: 10,
-    border: "1px solid var(--border, #e4e8ef)", background: "var(--surface-2, #f8f9fb)",
-    color: "var(--text, #1a2035)", outline: "none", boxSizing: "border-box",
+    border: "1px solid var(--border, #e6e2d9)", background: "var(--surface-2, #f6f4f0)",
+    color: "var(--text, #161510)", outline: "none", boxSizing: "border-box",
   }
 
   return (
     <div style={{ maxWidth: 680, margin: "0 auto" }}>
       <div style={{
-        background: "var(--surface, #fff)", border: "1px solid var(--border, #e4e8ef)",
+        background: "var(--surface, #fff)", border: "1px solid var(--border, #e6e2d9)",
         borderRadius: 20, padding: "26px 28px",
       }}>
         {/* Header */}
@@ -96,8 +96,8 @@ export default function CoverLetterSection() {
             display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19,
           }}>✉️</div>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: "var(--text, #1a2035)" }}>Cover Letter Generator</div>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted, #6b7a99)", marginTop: 1 }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "var(--text, #161510)" }}>Cover Letter Generator</div>
+            <div style={{ fontSize: 12.5, color: "var(--text-muted, #6e6b5b)", marginTop: 1 }}>
               AI-written from your best-matching resume + the job description
             </div>
           </div>
@@ -106,18 +106,18 @@ export default function CoverLetterSection() {
         {/* Company + Role */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
           <div>
-            <label style={{ display: "block", fontSize: 11.5, fontWeight: 700, color: "var(--text-muted, #6b7a99)", marginBottom: 6 }}>Company</label>
+            <label style={{ display: "block", fontSize: 11.5, fontWeight: 700, color: "var(--text-muted, #6e6b5b)", marginBottom: 6 }}>Company</label>
             <input value={company} onChange={e => setCompany(e.target.value)} placeholder="e.g. Stripe" style={inputStyle} />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: 11.5, fontWeight: 700, color: "var(--text-muted, #6b7a99)", marginBottom: 6 }}>Role</label>
+            <label style={{ display: "block", fontSize: 11.5, fontWeight: 700, color: "var(--text-muted, #6e6b5b)", marginBottom: 6 }}>Role</label>
             <input value={role} onChange={e => setRole(e.target.value)} placeholder="e.g. Senior Security Engineer" style={inputStyle} />
           </div>
         </div>
 
         {/* JD */}
         <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", fontSize: 11.5, fontWeight: 700, color: "var(--text-muted, #6b7a99)", marginBottom: 6 }}>
+          <label style={{ display: "block", fontSize: 11.5, fontWeight: 700, color: "var(--text-muted, #6e6b5b)", marginBottom: 6 }}>
             Job Description <span style={{ fontWeight: 400 }}>(optional, but makes it far better)</span>
           </label>
           <textarea value={jd} onChange={e => setJd(e.target.value)} placeholder="Paste the job description…"
@@ -126,7 +126,7 @@ export default function CoverLetterSection() {
 
         {/* Tone */}
         <div style={{ marginBottom: 18 }}>
-          <label style={{ display: "block", fontSize: 11.5, fontWeight: 700, color: "var(--text-muted, #6b7a99)", marginBottom: 8 }}>Tone</label>
+          <label style={{ display: "block", fontSize: 11.5, fontWeight: 700, color: "var(--text-muted, #6e6b5b)", marginBottom: 8 }}>Tone</label>
           <div style={{ display: "flex", gap: 8 }}>
             {(Object.entries(TONE_LABELS) as [Tone, typeof TONE_LABELS[Tone]][]).map(([key, { label, desc, icon }]) => {
               const on = tone === key
@@ -138,7 +138,7 @@ export default function CoverLetterSection() {
                   boxShadow: on ? "0 0 0 1px var(--accent)" : "none", transition: "all .15s",
                 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: on ? "var(--accent-txt)" : "var(--text)" }}>{icon} {label}</div>
-                  <div style={{ fontSize: 10.5, color: "var(--text-muted, #6b7a99)", marginTop: 2 }}>{desc}</div>
+                  <div style={{ fontSize: 10.5, color: "var(--text-muted, #6e6b5b)", marginTop: 2 }}>{desc}</div>
                 </button>
               )
             })}
@@ -148,7 +148,7 @@ export default function CoverLetterSection() {
         {/* Error */}
         {error && (
           <div style={{ marginBottom: 14, padding: "10px 14px", borderRadius: 10, fontSize: 12.5,
-            background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", color: "#dc2626" }}>
+            background: "rgba(112,108,92,.08)", border: "1px solid rgba(112,108,92,.2)", color: "#13120d" }}>
             {error}
           </div>
         )}
@@ -167,25 +167,25 @@ export default function CoverLetterSection() {
         {letter && (
           <div style={{ marginTop: 22 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "var(--text-muted, #6b7a99)" }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "var(--text-muted, #6e6b5b)" }}>
                 Generated Letter
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={handleCopy} style={{
                   fontSize: 12, fontWeight: 700, padding: "6px 12px", borderRadius: 8, cursor: "pointer",
-                  border: "1px solid var(--border, #e4e8ef)", background: "var(--surface-2, #f8f9fb)",
+                  border: "1px solid var(--border, #e6e2d9)", background: "var(--surface-2, #f6f4f0)",
                   color: copied ? "var(--accent-txt)" : "var(--text-muted)",
                 }}>{copied ? "✓ Copied!" : "Copy"}</button>
                 <button onClick={handleDownload} style={{
                   fontSize: 12, fontWeight: 700, padding: "6px 12px", borderRadius: 8, cursor: "pointer",
-                  border: "1px solid var(--border, #e4e8ef)", background: "var(--surface-2, #f8f9fb)",
-                  color: "var(--text-muted, #6b7a99)",
+                  border: "1px solid var(--border, #e6e2d9)", background: "var(--surface-2, #f6f4f0)",
+                  color: "var(--text-muted, #6e6b5b)",
                 }}>↓ .txt</button>
               </div>
             </div>
             <div style={{
-              borderRadius: 12, border: "1px solid var(--border, #e4e8ef)", background: "var(--surface-2, #f8f9fb)",
-              padding: 18, fontSize: 13.5, color: "var(--text, #1a2035)", whiteSpace: "pre-wrap",
+              borderRadius: 12, border: "1px solid var(--border, #e6e2d9)", background: "var(--surface-2, #f6f4f0)",
+              padding: 18, fontSize: 13.5, color: "var(--text, #161510)", whiteSpace: "pre-wrap",
               fontFamily: "Georgia, serif", lineHeight: 1.8,
             }}>
               {letter}

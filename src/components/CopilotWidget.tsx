@@ -52,7 +52,7 @@ function renderMarkdown(text: string) {
   return text
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, '<code style="background:var(--surface-3,#eee);padding:1px 4px;border-radius:4px;font-size:.85em">$1</code>')
+    .replace(/`([^`]+)`/g, '<code style="background:var(--surface-3,#eeebe4);padding:1px 4px;border-radius:4px;font-size:.85em">$1</code>')
     .replace(/^[-•] (.+)$/gm, '<li>$1</li>')
     .replace(/((<li>.*<\/li>\n?)+)/g, '<ul style="padding-left:1.25rem;margin:.25rem 0;list-style:disc">$1</ul>')
     .replace(/\n{2,}/g, '<br><br>')
@@ -155,10 +155,10 @@ export default function CopilotWidget() {
           width: 52, height: 52,
           background: open
             ? "var(--surface)"
-            : "linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, #7c3aed) 100%)",
+            : "linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, #4d4b44) 100%)",
           border: open ? "1.5px solid var(--border)" : "none",
           color: open ? "var(--text-soft)" : "#fff",
-          boxShadow: open ? "0 4px 16px rgba(0,0,0,.15)" : "0 6px 24px rgba(99,102,241,.5)",
+          boxShadow: open ? "0 4px 16px rgba(12,11,8,.15)" : "0 6px 24px rgba(117,114,97,.5)",
         }}
         aria-label={open ? "Close Copilot" : "Open MarketFit Copilot"}
       >
@@ -171,7 +171,7 @@ export default function CopilotWidget() {
         )}
         {!open && unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-            style={{ background: "#ef4444" }}>
+            style={{ background: "#2e2d27" }}>
             {unread}
           </span>
         )}
@@ -186,13 +186,13 @@ export default function CopilotWidget() {
             height: 520,
             background: "var(--surface)",
             border: "1px solid var(--border)",
-            boxShadow: "0 24px 64px rgba(0,0,0,.25)",
+            boxShadow: "0 24px 64px rgba(12,11,8,.25)",
           }}
         >
           {/* Header */}
           <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3"
             style={{
-              background: "linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, #7c3aed) 100%)",
+              background: "linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, #4d4b44) 100%)",
               color: "#fff",
             }}>
             <div className="w-8 h-8 rounded-xl flex items-center justify-center"
@@ -219,7 +219,7 @@ export default function CopilotWidget() {
               <div className="space-y-3 py-2">
                 <div className="flex items-start gap-2.5">
                   <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                    style={{ background: "linear-gradient(135deg,var(--accent),#7c3aed)" }}>
+                    style={{ background: "linear-gradient(135deg,var(--accent),#4d4b44)" }}>
                     <CopilotIcon />
                   </div>
                   <div className="rounded-2xl rounded-tl-sm px-3 py-2.5 max-w-[85%]"
@@ -244,7 +244,7 @@ export default function CopilotWidget() {
               <div key={i} className={`flex items-end gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                 {msg.role === "assistant" && (
                   <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mb-0.5"
-                    style={{ background: "linear-gradient(135deg,var(--accent),#7c3aed)", color: "#fff" }}>
+                    style={{ background: "linear-gradient(135deg,var(--accent),#4d4b44)", color: "#fff" }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
                     </svg>
@@ -271,7 +271,7 @@ export default function CopilotWidget() {
             {loading && (
               <div className="flex items-end gap-2">
                 <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mb-0.5"
-                  style={{ background: "linear-gradient(135deg,var(--accent),#7c3aed)", color: "#fff" }}>
+                  style={{ background: "linear-gradient(135deg,var(--accent),#4d4b44)", color: "#fff" }}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
                   </svg>
@@ -311,7 +311,7 @@ export default function CopilotWidget() {
                 className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
                 style={input.trim() && !loading
                   ? { background: "var(--accent)", color: "#fff" }
-                  : { background: "var(--surface-3, #ddd)", color: "var(--text-soft)", opacity: .5 }}
+                  : { background: "var(--surface-3, #ded9ce)", color: "var(--text-soft)", opacity: .5 }}
               >
                 <SendIcon />
               </button>

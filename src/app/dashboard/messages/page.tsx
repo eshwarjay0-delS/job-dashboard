@@ -4,11 +4,11 @@ import { useState, useEffect } from "react"
 
 const P = {
   surface: "#ffffff",
-  text:    "#1a2035",
-  muted:   "#6b7a99",
-  hint:    "#9aa4bc",
-  border:  "#e4e8ef",
-  bg:      "#f4f6f9",
+  text:    "#161510",
+  muted:   "#6e6b5b",
+  hint:    "#9d9884",
+  border:  "#e6e2d9",
+  bg:      "var(--surface)",
 }
 
 interface Message {
@@ -89,10 +89,10 @@ const SEED_MESSAGES: Message[] = [
 ]
 
 const STATUS_META = {
-  draft:    { label: "Draft",     color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" },
-  sent:     { label: "Sent",      color: "#1558a0", bg: "#eff6ff", border: "#bfdbfe" },
-  received: { label: "Received",  color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
-  replied:  { label: "Replied ✓", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
+  draft:    { label: "Draft",     color: "#706c5c", bg: "#f8f6f2", border: "#e8e4db" },
+  sent:     { label: "Sent",      color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
+  received: { label: "Received",  color: "#42413c", bg: "#f4f2ed", border: "#ddd8cd" },
+  replied:  { label: "Replied ✓", color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
 }
 
 function timeAgo(iso: string) {
@@ -220,7 +220,7 @@ export default function MessagesPage() {
           </div>
           <div style={{ display: "flex", gap: 4 }}>
             {(["all","inbound","outbound","draft"] as const).map(k => (
-              <button key={k} onClick={() => setFilter(k)} style={{ flex: 1, padding: "5px 0", borderRadius: 7, border: "none", background: filter === k ? "#eff6ff" : "transparent", color: filter === k ? "var(--accent)" : P.muted, fontSize: 11, fontWeight: 700, cursor: "pointer", textTransform: "capitalize" as const }}>
+              <button key={k} onClick={() => setFilter(k)} style={{ flex: 1, padding: "5px 0", borderRadius: 7, border: "none", background: filter === k ? "#f2f0ea" : "transparent", color: filter === k ? "var(--accent)" : P.muted, fontSize: 11, fontWeight: 700, cursor: "pointer", textTransform: "capitalize" as const }}>
                 {k === "all" ? "All" : k === "inbound" ? "Inbox" : k === "outbound" ? "Sent" : "Drafts"}
               </button>
             ))}
@@ -233,16 +233,16 @@ export default function MessagesPage() {
             const isUnread = m.status === "received"
             return (
               <button key={m.id} onClick={() => { setSelectedId(m.id); setShowCompose(false); setAiReply(null) }}
-                style={{ width: "100%", textAlign: "left", padding: "12px 16px", background: isActive ? "#eff6ff" : "transparent", border: "none", borderBottom: `1px solid ${P.border}`, borderLeft: isActive ? "3px solid var(--accent)" : "3px solid transparent", cursor: "pointer" }}>
+                style={{ width: "100%", textAlign: "left", padding: "12px 16px", background: isActive ? "#f2f0ea" : "transparent", border: "none", borderBottom: `1px solid ${P.border}`, borderLeft: isActive ? "3px solid var(--accent)" : "3px solid transparent", cursor: "pointer" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: isUnread ? "var(--accent)" : "#e4e8ef", display: "flex", alignItems: "center", justifyContent: "center", color: isUnread ? "#fff" : P.muted, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{initials(m.contactName)}</div>
+                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: isUnread ? "var(--accent)" : "#e6e2d9", display: "flex", alignItems: "center", justifyContent: "center", color: isUnread ? "#fff" : P.muted, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{initials(m.contactName)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <p style={{ fontSize: 13, fontWeight: isUnread ? 800 : 600, color: P.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>{m.contactName}</p>
                       <span style={{ fontSize: 10.5, color: P.hint, flexShrink: 0 }}>{timeAgo(m.timestamp)}</span>
                     </div>
                     <p style={{ fontSize: 12, color: isUnread ? P.text : P.muted, fontWeight: isUnread ? 700 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.subject}</p>
-                    {m.status === "draft" && <span style={{ fontSize: 10.5, color: "#d97706", fontWeight: 700 }}>Draft</span>}
+                    {m.status === "draft" && <span style={{ fontSize: 10.5, color: "#6b6858", fontWeight: 700 }}>Draft</span>}
                   </div>
                 </div>
               </button>
@@ -262,7 +262,7 @@ export default function MessagesPage() {
           <div style={{ padding: "10px 24px", borderBottom: `1px solid ${P.border}`, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
             <p style={{ fontSize: 11.5, fontWeight: 700, color: P.hint }}>TEMPLATE:</p>
             {(Object.keys(TEMPLATES) as TemplateKey[]).map(k => (
-              <button key={k} onClick={() => applyTemplate(k)} style={{ padding: "3px 10px", borderRadius: 20, border: `1.5px solid ${template === k ? "var(--accent)" : P.border}`, background: template === k ? "#eff6ff" : "transparent", color: template === k ? "var(--accent)" : P.muted, fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
+              <button key={k} onClick={() => applyTemplate(k)} style={{ padding: "3px 10px", borderRadius: 20, border: `1.5px solid ${template === k ? "var(--accent)" : P.border}`, background: template === k ? "#f2f0ea" : "transparent", color: template === k ? "var(--accent)" : P.muted, fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
                 {TEMPLATES[k].label}
               </button>
             ))}
@@ -311,24 +311,24 @@ export default function MessagesPage() {
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
-            <div style={{ background: selected.direction === "inbound" ? "#f8fbff" : P.bg, border: `1px solid ${P.border}`, borderRadius: 14, padding: "18px 22px", marginBottom: 20, whiteSpace: "pre-wrap", fontSize: 14, color: P.text, lineHeight: 1.7 }}>
+            <div style={{ background: selected.direction === "inbound" ? "#f8f7f3" : P.bg, border: `1px solid ${P.border}`, borderRadius: 14, padding: "18px 22px", marginBottom: 20, whiteSpace: "pre-wrap", fontSize: 14, color: P.text, lineHeight: 1.7 }}>
               {selected.body}
             </div>
 
             {selected.direction === "inbound" && (
-              <div style={{ background: "#f8fbff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "16px 20px" }}>
+              <div style={{ background: "#f8f7f3", border: "1.5px solid #d9d4c8", borderRadius: 14, padding: "16px 20px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <span style={{ fontSize: 16 }}>✨</span>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: "#1558a0" }}>AI-Suggested Reply</p>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "#11100c" }}>AI-Suggested Reply</p>
                   <button onClick={() => generateAIReply(selected)} disabled={loadingReply}
-                    style={{ marginLeft: "auto", padding: "4px 11px", borderRadius: 7, background: "#1558a0", color: "#fff", fontSize: 11.5, fontWeight: 700, border: "none", cursor: loadingReply ? "default" : "pointer", opacity: loadingReply ? 0.7 : 1 }}>
+                    style={{ marginLeft: "auto", padding: "4px 11px", borderRadius: 7, background: "#11100c", color: "#fff", fontSize: 11.5, fontWeight: 700, border: "none", cursor: loadingReply ? "default" : "pointer", opacity: loadingReply ? 0.7 : 1 }}>
                     {loadingReply ? "Drafting…" : aiReply ? "↻ Regenerate" : "Generate Reply"}
                   </button>
                 </div>
                 {aiReply ? (
                   <>
                     <textarea defaultValue={aiReply} rows={4}
-                      style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: "1px solid #bfdbfe", fontSize: 13, color: P.text, lineHeight: 1.6, resize: "none" as const, outline: "none", background: "#fff", boxSizing: "border-box" as const, fontFamily: "inherit" }}/>
+                      style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: "1px solid #d9d4c8", fontSize: 13, color: P.text, lineHeight: 1.6, resize: "none" as const, outline: "none", background: "var(--surface)", boxSizing: "border-box" as const, fontFamily: "inherit" }}/>
                     <button style={{ marginTop: 8, padding: "7px 16px", borderRadius: 8, background: "var(--accent)", color: "#fff", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}
                       onClick={() => persist(messages.map(m => m.id === selected.id ? { ...m, status: "replied" as const } : m))}>
                       Send Reply ↗
@@ -352,7 +352,7 @@ export default function MessagesPage() {
               const next = messages.filter(m => m.id !== selected.id)
               persist(next)
               if (next.length) setSelectedId(next[0].id)
-            }} style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${P.border}`, background: "transparent", color: "#dc2626", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
+            }} style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${P.border}`, background: "transparent", color: "#13120d", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
               Delete
             </button>
             {selected.gmailThreadId && (

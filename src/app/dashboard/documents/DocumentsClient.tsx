@@ -55,7 +55,7 @@ function Chevron({ open }: { open: boolean }) {
   return <svg className="w-3 h-3 transition-transform" style={{ transform: open ? "rotate(90deg)" : "" }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
 }
 function FolderIcon() {
-  return <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: "#f59e0b" }}><path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" /></svg>
+  return <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: "#7e7a68" }}><path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" /></svg>
 }
 function FileIcon() {
   return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24" style={{ color: "var(--accent)" }}><path strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path strokeLinejoin="round" d="M14 2v6h6" /></svg>
@@ -296,33 +296,16 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
     <div style={{ maxWidth: 900, margin: "0 auto" }} className="space-y-5">
 
       {/* Header */}
-      <div className="anim-fade-up d-0 flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>Documents</h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-soft)" }}>
-            {allFiles.length > 0
-              ? `${allFiles.length} resume${allFiles.length !== 1 ? "s" : ""} in library · Available for AI tailoring`
-              : "Upload your resumes here — then tailor them to any job in seconds"}
-          </p>
-        </div>
-        {onDone ? (
-          <button onClick={onDone}
-            className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
-            style={{ background: "var(--accent)", color: "#fff", border: "none", cursor: "pointer" }}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
-            </svg>
-            Tailor a Resume
+      <div className="anim-fade-up d-0 flex items-center justify-between gap-4 flex-wrap">
+        <p style={{ fontSize: 15, color: "var(--text-muted)", margin: 0 }}>
+          {allFiles.length > 0
+            ? `You have ${allFiles.length} resume file${allFiles.length !== 1 ? "s" : ""} here.`
+            : "No resume files yet. Add one to get started."}
+        </p>
+        {onDone && (
+          <button type="button" onClick={onDone} className="btn-outline" style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>
+            Back to tailoring
           </button>
-        ) : (
-          <a href="/dashboard/resume"
-            className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
-            style={{ background: "var(--accent)", color: "#fff", textDecoration: "none" }}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
-            </svg>
-            Tailor a Resume
-          </a>
         )}
       </div>
 
@@ -352,22 +335,21 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
           </span>
           <div>
             <p className="text-base font-semibold" style={{ color: "var(--text)" }}>
-              {dragging ? "Drop to upload" : "Drag & drop your resumes"}
+              {dragging ? "Let go to add it" : "Drop your resume files here"}
             </p>
             <p className="text-sm mt-1" style={{ color: "var(--text-soft)" }}>
-              .docx files or a .zip bundle — folders are auto-extracted
+              Word files (.docx), or a .zip with folders inside
             </p>
           </div>
-          <span className="text-sm px-4 py-2 rounded-xl border font-semibold transition-colors"
-            style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}>
-            Browse files
+          <span className="btn-outline" style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>
+            Choose files
           </span>
         </label>
       </div>
 
       {/* Status messages */}
       {err && (
-        <p className="text-sm rounded-xl px-4 py-2.5" style={{ color: "#dc2626", background: "rgba(220,38,38,0.08)" }}>
+        <p className="text-sm rounded-xl px-4 py-2.5" style={{ color: "#13120d", background: "rgba(112,108,92,0.08)" }}>
           ✗ {err}
         </p>
       )}
@@ -382,8 +364,8 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
         <div className="rounded-2xl border overflow-hidden anim-fade-up" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
           {uploaded.filter(u => u.status !== "ready").map(u => {
             const statusStyle = u.status === "scanning"
-              ? { bg: "rgba(217,119,6,0.12)", color: "#d97706" }
-              : { bg: "rgba(220,38,38,0.12)", color: "#dc2626" }
+              ? { bg: "rgba(144,140,119,0.12)", color: "#6b6858" }
+              : { bg: "rgba(112,108,92,0.12)", color: "#13120d" }
             return (
               <div key={u.file.id} className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0"
                 style={{ borderColor: "var(--border)" }}>
@@ -421,7 +403,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
                   </button>
                   <button onClick={deleteChecked}
                     className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
-                    style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626" }}>
+                    style={{ background: "rgba(112,108,92,0.1)", color: "#13120d" }}>
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     Delete ({checked.size})
                   </button>

@@ -25,11 +25,11 @@ interface PrepResult {
 }
 
 const TYPE_LABELS: Record<string, { label: string; icon: string; color: string }> = {
-  phone:     { label: "Phone Screen",    icon: "📞", color: "#6366f1" },
-  video:     { label: "Video Call",      icon: "🎥", color: "#0ea5e9" },
-  technical: { label: "Technical Round", icon: "💻", color: "#8b5cf6" },
-  onsite:    { label: "On-site",         icon: "🏢", color: "#f59e0b" },
-  final:     { label: "Final Round",     icon: "🎯", color: "#10b981" },
+  phone:     { label: "Phone Screen",    icon: "📞", color: "#757261" },
+  video:     { label: "Video Call",      icon: "🎥", color: "#7c7866" },
+  technical: { label: "Technical Round", icon: "💻", color: "#605d51" },
+  onsite:    { label: "On-site",         icon: "🏢", color: "#7e7a68" },
+  final:     { label: "Final Round",     icon: "🎯", color: "#58564c" },
 }
 
 const SECTION_CONFIG = [
@@ -37,36 +37,36 @@ const SECTION_CONFIG = [
     key: "questions" as const,
     label: "Likely Questions",
     icon: "❓",
-    color: "#6366f1",
-    bg: "rgba(99,102,241,.06)",
-    border: "rgba(99,102,241,.2)",
+    color: "#757261",
+    bg: "rgba(117,114,97,.06)",
+    border: "rgba(117,114,97,.2)",
     desc: "Expected for this round at this company",
   },
   {
     key: "starPrompts" as const,
     label: "STAR Stories to Prepare",
     icon: "⭐",
-    color: "#f59e0b",
-    bg: "rgba(245,158,11,.06)",
-    border: "rgba(245,158,11,.2)",
+    color: "#7e7a68",
+    bg: "rgba(176,170,153,.06)",
+    border: "rgba(176,170,153,.2)",
     desc: "Situation–Task–Action–Result frameworks tailored to this role",
   },
   {
     key: "tips" as const,
     label: "Tactical Prep Tips",
     icon: "⚡",
-    color: "#10b981",
-    bg: "rgba(16,185,129,.06)",
-    border: "rgba(16,185,129,.2)",
+    color: "#58564c",
+    bg: "rgba(163,158,139,.06)",
+    border: "rgba(163,158,139,.2)",
     desc: "Specific to this company and interview type",
   },
   {
     key: "whatToResearch" as const,
     label: "What to Research",
     icon: "🔍",
-    color: "#0ea5e9",
-    bg: "rgba(14,165,233,.06)",
-    border: "rgba(14,165,233,.2)",
+    color: "#7c7866",
+    bg: "rgba(155,150,130,.06)",
+    border: "rgba(155,150,130,.2)",
     desc: "Look these up before the interview",
   },
 ]
@@ -86,7 +86,7 @@ export default function InterviewPrepPanel({ company, role, interviewType, inter
   const [error, setError]     = useState("")
   const [checked, setChecked] = useState<Set<string>>(new Set())
 
-  const typeInfo = TYPE_LABELS[interviewType] || { label: interviewType, icon: "📋", color: "#6b7a99" }
+  const typeInfo = TYPE_LABELS[interviewType] || { label: interviewType, icon: "📋", color: "#6e6b5b" }
 
   async function generate() {
     setLoading(true)
@@ -127,7 +127,7 @@ export default function InterviewPrepPanel({ company, role, interviewType, inter
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-40"
-        style={{ background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)" }}
+        style={{ background: "rgba(12,11,8,.45)", backdropFilter: "blur(3px)" }}
         onClick={onClose}
       />
 
@@ -138,7 +138,7 @@ export default function InterviewPrepPanel({ company, role, interviewType, inter
           width: "min(480px, 100vw)",
           background: "var(--surface)",
           borderLeft: "1px solid var(--border)",
-          boxShadow: "-8px 0 48px rgba(0,0,0,.2)",
+          boxShadow: "-8px 0 48px rgba(12,11,8,.2)",
           animation: "slideInRight .25s cubic-bezier(.34,1.2,.64,1)",
         }}
       >
@@ -171,7 +171,7 @@ export default function InterviewPrepPanel({ company, role, interviewType, inter
             <div className="mt-3">
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-[11px] font-semibold" style={{ color: "var(--text-soft)" }}>Prep progress</p>
-                <p className="text-[11px] font-bold" style={{ color: doneCount === totalItems ? "#059669" : "var(--accent-txt)" }}>
+                <p className="text-[11px] font-bold" style={{ color: doneCount === totalItems ? "#42413c" : "var(--accent-txt)" }}>
                   {doneCount}/{totalItems} done
                 </p>
               </div>
@@ -181,8 +181,8 @@ export default function InterviewPrepPanel({ company, role, interviewType, inter
                   style={{
                     width: `${(doneCount / totalItems) * 100}%`,
                     background: doneCount === totalItems
-                      ? "linear-gradient(90deg, #059669, #10b981)"
-                      : "linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #7c3aed))",
+                      ? "linear-gradient(90deg, #42413c, #58564c)"
+                      : "linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #4d4b44))",
                   }}
                 />
               </div>
@@ -205,7 +205,7 @@ export default function InterviewPrepPanel({ company, role, interviewType, inter
                 </p>
               </div>
               {error && (
-                <div className="w-full rounded-xl px-4 py-3 text-xs text-left" style={{ background: "#fef2f2", color: "#dc2626" }}>
+                <div className="w-full rounded-xl px-4 py-3 text-xs text-left" style={{ background: "var(--surface)", color: "#13120d" }}>
                   {error}
                 </div>
               )}

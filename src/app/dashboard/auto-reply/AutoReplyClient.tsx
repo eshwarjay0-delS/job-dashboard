@@ -105,22 +105,22 @@ interface JobsResponse {
 
 const STATE_META: Record<JobState, { label: string; color: string }> = {
   discovered:         { label: "Discovered",     color: "var(--text-soft)" },
-  jd_extracted:       { label: "JD extracted",   color: "#0891b2" },
-  recruiter_resolved: { label: "Resolved",       color: "#059669" },
-  tailoring:          { label: "Tailoring…",     color: "#0891b2" },
-  tailored:           { label: "Ready to send",  color: "#059669" },
-  awaiting_approval:  { label: "Awaiting you",   color: "#d97706" },
-  needs_human:        { label: "Needs you",      color: "#d97706" },
+  jd_extracted:       { label: "JD extracted",   color: "#85816e" },
+  recruiter_resolved: { label: "Resolved",       color: "#42413c" },
+  tailoring:          { label: "Tailoring…",     color: "#85816e" },
+  tailored:           { label: "Ready to send",  color: "#42413c" },
+  awaiting_approval:  { label: "Awaiting you",   color: "#6b6858" },
+  needs_human:        { label: "Needs you",      color: "#6b6858" },
   skipped:            { label: "Skipped",        color: "var(--text-soft)" },
-  rejected:           { label: "Rejected",       color: "#dc2626" },
+  rejected:           { label: "Rejected",       color: "#13120d" },
   cancelled:          { label: "Cancelled",      color: "var(--text-soft)" },
 }
 
 const CLASS_META: Record<CandidateClass, { label: string; color: string; bg: string; note: string }> = {
-  corporate:  { label: "Corporate", color: "#059669", bg: "rgba(5,150,105,.10)",  note: "Company domain — a real recruiter address." },
-  freemail:   { label: "Freemail",  color: "#dc2626", bg: "rgba(220,38,38,.12)",  note: "Personal inbox on this thread — almost certainly a competing job candidate. Never send here." },
-  middleman:  { label: "Middleman", color: "var(--text-soft)", bg: "rgba(148,163,184,.10)", note: "The bench-sales contact the thread came from." },
-  self:       { label: "You",       color: "var(--text-soft)", bg: "rgba(148,163,184,.10)", note: "Your own address." },
+  corporate:  { label: "Corporate", color: "#42413c", bg: "rgba(131,127,108,.10)",  note: "Company domain — a real recruiter address." },
+  freemail:   { label: "Freemail",  color: "#13120d", bg: "rgba(112,108,92,.12)",  note: "Personal inbox on this thread — almost certainly a competing job candidate. Never send here." },
+  middleman:  { label: "Middleman", color: "var(--text-soft)", bg: "rgba(162,157,137,.10)", note: "The bench-sales contact the thread came from." },
+  self:       { label: "You",       color: "var(--text-soft)", bg: "rgba(162,157,137,.10)", note: "Your own address." },
 }
 
 const NEEDS_YOU: JobState[] = ["needs_human", "awaiting_approval"]
@@ -133,9 +133,9 @@ type FilterKey = "all" | "needs" | "ready" | "resolved" | "skipped"
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function ageColor(mins: number): string {
-  if (mins > 180) return "#dc2626"
-  if (mins > 45) return "#d97706"
-  return "#059669"
+  if (mins > 180) return "#13120d"
+  if (mins > 45) return "#6b6858"
+  return "#42413c"
 }
 
 function ageLabel(mins: number): string {
@@ -272,7 +272,7 @@ export default function AutoReplyClient() {
           display: "inline-flex", alignItems: "center", gap: 6,
           padding: "6px 12px", borderRadius: 20, fontSize: 11.5, fontWeight: 800,
           letterSpacing: ".02em", whiteSpace: "nowrap",
-          background: "rgba(148,163,184,.14)", color: "var(--text-muted)",
+          background: "rgba(162,157,137,.14)", color: "var(--text-muted)",
           border: "1px dashed var(--border)",
         }}>
           🔒 READ-ONLY — this milestone cannot send email
@@ -299,7 +299,7 @@ export default function AutoReplyClient() {
         {lastRun?.halted && (
           <span style={{
             padding: "5px 10px", borderRadius: 8, fontSize: 11.5, fontWeight: 700,
-            background: "rgba(220,38,38,.10)", color: "#dc2626", border: "1px solid rgba(220,38,38,.25)",
+            background: "rgba(112,108,92,.10)", color: "#13120d", border: "1px solid rgba(112,108,92,.25)",
           }}>
             ⛔ Halted{lastRun.haltReason ? ` — ${lastRun.haltReason}` : ""}
           </span>
@@ -311,9 +311,9 @@ export default function AutoReplyClient() {
           <div style={{
             flexBasis: "100%", marginTop: 8, padding: "8px 12px", borderRadius: 8,
             fontSize: 12, lineHeight: 1.6,
-            background: lastRun.tailorNote.startsWith("WARNING") ? "rgba(217,119,6,.10)" : "var(--surface-2)",
-            color: lastRun.tailorNote.startsWith("WARNING") ? "#b45309" : "var(--text-soft)",
-            border: `1px solid ${lastRun.tailorNote.startsWith("WARNING") ? "rgba(217,119,6,.30)" : "var(--border)"}`,
+            background: lastRun.tailorNote.startsWith("WARNING") ? "rgba(144,140,119,.10)" : "var(--surface-2)",
+            color: lastRun.tailorNote.startsWith("WARNING") ? "#525048" : "var(--text-soft)",
+            border: `1px solid ${lastRun.tailorNote.startsWith("WARNING") ? "rgba(144,140,119,.30)" : "var(--border)"}`,
           }}>
             {lastRun.tailorNote.startsWith("WARNING") ? "⚠ " : "· "}{lastRun.tailorNote}
           </div>
@@ -323,9 +323,9 @@ export default function AutoReplyClient() {
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {[
-            { label: "Needs you", value: counts?.needsHuman ?? chipCounts.needs,    color: "#d97706" },
-            { label: "Ready",     value: counts?.tailored   ?? chipCounts.ready,    color: "#059669" },
-            { label: "Resolved",  value: counts?.resolved  ?? chipCounts.resolved,  color: "#0891b2" },
+            { label: "Needs you", value: counts?.needsHuman ?? chipCounts.needs,    color: "#6b6858" },
+            { label: "Ready",     value: counts?.tailored   ?? chipCounts.ready,    color: "#42413c" },
+            { label: "Resolved",  value: counts?.resolved  ?? chipCounts.resolved,  color: "#85816e" },
             { label: "Skipped",   value: counts?.skipped   ?? chipCounts.skipped,   color: "var(--text-soft)" },
             { label: "Total",     value: counts?.total     ?? chipCounts.all,       color: "var(--text)" },
           ].map(s => (
@@ -353,14 +353,14 @@ export default function AutoReplyClient() {
           display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center", marginBottom: 12,
           fontSize: 11.5, color: "var(--text-muted)",
         }}>
-          <span style={pill(settings.enabled ? "#059669" : "var(--text-soft)")}>
+          <span style={pill(settings.enabled ? "#42413c" : "var(--text-soft)")}>
             {settings.enabled ? "Loop enabled" : "Loop disabled"}
           </span>
           <span style={pill("var(--text-soft)")}>Autonomy: {settings.autonomy}</span>
-          <span style={pill(settings.dryRun ? "#0891b2" : "#d97706")}>
+          <span style={pill(settings.dryRun ? "#85816e" : "#6b6858")}>
             {settings.dryRun ? "Dry run" : "Live mode"}
           </span>
-          {settings.killSwitch && <span style={pill("#dc2626")}>⛔ Kill switch ON</span>}
+          {settings.killSwitch && <span style={pill("#13120d")}>⛔ Kill switch ON</span>}
           <span style={{ color: "var(--text-soft)" }}>
             Allowlist: {(settings.senderAllowlist ?? []).join(", ") || "—"}
           </span>
@@ -387,12 +387,12 @@ export default function AutoReplyClient() {
       {/* ── Filters ────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
         <button onClick={() => setFilter("all")}      style={chip(filter === "all")}>All ({chipCounts.all})</button>
-        <button onClick={() => setFilter("needs")}    style={chip(filter === "needs", "#d97706")}>⚠ Needs you ({chipCounts.needs})</button>
-        <button onClick={() => setFilter("ready")}    style={chip(filter === "ready", "#059669")}>📎 Ready to send ({chipCounts.ready})</button>
-        <button onClick={() => setFilter("resolved")} style={chip(filter === "resolved", "#0891b2")}>✓ Resolved ({chipCounts.resolved})</button>
+        <button onClick={() => setFilter("needs")}    style={chip(filter === "needs", "#6b6858")}>⚠ Needs you ({chipCounts.needs})</button>
+        <button onClick={() => setFilter("ready")}    style={chip(filter === "ready", "#42413c")}>📎 Ready to send ({chipCounts.ready})</button>
+        <button onClick={() => setFilter("resolved")} style={chip(filter === "resolved", "#85816e")}>✓ Resolved ({chipCounts.resolved})</button>
         <button onClick={() => setFilter("skipped")}  style={chip(filter === "skipped", "var(--text-soft)")}>↷ Skipped ({chipCounts.skipped})</button>
         {freemailSeen > 0 && (
-          <span style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#dc2626" }}>
+          <span style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#13120d" }}>
             {freemailSeen} freemail address{freemailSeen === 1 ? "" : "es"} seen on these threads — none may ever be a recipient.
           </span>
         )}
@@ -404,7 +404,7 @@ export default function AutoReplyClient() {
       ) : error ? (
         <div style={{
           textAlign: "center", padding: "50px 20px", background: "var(--surface)",
-          border: "1px solid rgba(220,38,38,.28)", borderRadius: 16,
+          border: "1px solid rgba(112,108,92,.28)", borderRadius: 16,
         }}>
           <div style={{ fontSize: 34, marginBottom: 10 }}>⚠️</div>
           <p style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", margin: "0 0 4px" }}>Couldn&apos;t load auto-reply jobs</p>
@@ -464,9 +464,9 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
 
   return (
     <div style={{
-      background: needsYou ? "rgba(217,119,6,.06)" : "var(--surface)",
-      border: `1px solid ${needsYou ? "rgba(217,119,6,.34)" : "var(--border)"}`,
-      borderLeft: `3px solid ${needsYou ? "#d97706" : "transparent"}`,
+      background: needsYou ? "rgba(144,140,119,.06)" : "var(--surface)",
+      border: `1px solid ${needsYou ? "rgba(144,140,119,.34)" : "var(--border)"}`,
+      borderLeft: `3px solid ${needsYou ? "#6b6858" : "transparent"}`,
       borderRadius: 14, overflow: "hidden",
     }}>
       {/* Header row — click to expand */}
@@ -510,7 +510,7 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
         {/* Chosen recipients — the algorithm's answer, visible without expanding */}
         <div style={{ flexShrink: 0, textAlign: "right", maxWidth: 300 }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: "var(--text-soft)", textTransform: "uppercase", letterSpacing: ".05em" }}>Would address</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: to.length ? "#059669" : "var(--text-soft)", wordBreak: "break-all" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: to.length ? "#42413c" : "var(--text-soft)", wordBreak: "break-all" }}>
             {to.length ? to.join(", ") : "— nothing chosen —"}
           </div>
           {cc.length > 0 && (
@@ -523,24 +523,24 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
       {needsYou && (job.lastError || job.skipReason || job.haltCode) && (
         <div style={{
           margin: "0 16px 13px", padding: "10px 13px", borderRadius: 10,
-          background: "rgba(217,119,6,.10)", border: "1px solid rgba(217,119,6,.28)",
+          background: "rgba(144,140,119,.10)", border: "1px solid rgba(144,140,119,.28)",
         }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: "#b45309", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: "#525048", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>
             ⚠ Needs a human
           </div>
           {!job.lastError && job.haltCode && (
             <p style={{ fontSize: 12.5, color: "var(--text)", margin: 0, lineHeight: 1.6 }}>
-              <strong style={{ color: "#b45309" }}>Halted:</strong> {job.haltCode.replace(/_/g, " ")}
+              <strong style={{ color: "#525048" }}>Halted:</strong> {job.haltCode.replace(/_/g, " ")}
             </p>
           )}
           {job.lastError && (
             <p style={{ fontSize: 12.5, color: "var(--text)", margin: 0, lineHeight: 1.6 }}>
-              <strong style={{ color: "#b45309" }}>Error:</strong> {job.lastError}
+              <strong style={{ color: "#525048" }}>Error:</strong> {job.lastError}
             </p>
           )}
           {job.skipReason && (
             <p style={{ fontSize: 12.5, color: "var(--text)", margin: job.lastError ? "4px 0 0" : 0, lineHeight: 1.6 }}>
-              <strong style={{ color: "#b45309" }}>Skipped:</strong> {job.skipReason}
+              <strong style={{ color: "#525048" }}>Skipped:</strong> {job.skipReason}
             </p>
           )}
         </div>
@@ -567,10 +567,10 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
           {/* Tailored resume (M3). Present once the loop has generated one. */}
           {job.resumeDownloadUrl && (
             <div style={{
-              background: "rgba(5,150,105,.06)", border: "1px solid rgba(5,150,105,.28)",
+              background: "rgba(131,127,108,.06)", border: "1px solid rgba(131,127,108,.28)",
               borderRadius: 10, padding: "12px 14px",
             }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: "#059669", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "#42413c", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>
                 Tailored resume · ready to attach
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
@@ -580,8 +580,8 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
                 {typeof job.tailorScore === "number" && (
                   <span style={{
                     fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999,
-                    color: job.tailorScore >= 80 ? "#059669" : "#d97706",
-                    background: job.tailorScore >= 80 ? "rgba(5,150,105,.12)" : "rgba(217,119,6,.12)",
+                    color: job.tailorScore >= 80 ? "#42413c" : "#6b6858",
+                    background: job.tailorScore >= 80 ? "rgba(131,127,108,.12)" : "rgba(144,140,119,.12)",
                   }}>match {job.tailorScore}</span>
                 )}
                 <span style={{ flex: 1 }} />
@@ -628,11 +628,11 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
                         return (
                           <tr key={`${c.address}-${i}`} style={{
                             borderTop: "1px solid var(--border)",
-                            background: danger ? "rgba(220,38,38,.07)" : c.selected ? "rgba(5,150,105,.07)" : "transparent",
+                            background: danger ? "rgba(112,108,92,.07)" : c.selected ? "rgba(131,127,108,.07)" : "transparent",
                           }}>
                             <td style={{
                               ...ctd, fontWeight: c.selected || danger ? 700 : 500,
-                              color: danger ? "#dc2626" : "var(--text)",
+                              color: danger ? "#13120d" : "var(--text)",
                               fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                               fontSize: 12, wordBreak: "break-all",
                             }}>
@@ -651,14 +651,14 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
                             </td>
                             <td style={{ ...ctd, whiteSpace: "nowrap" }}>
                               {c.selected ? (
-                                <span style={{ fontSize: 11.5, fontWeight: 800, color: "#059669" }}>Selected</span>
+                                <span style={{ fontSize: 11.5, fontWeight: 800, color: "#42413c" }}>Selected</span>
                               ) : danger ? (
-                                <span style={{ fontSize: 11.5, fontWeight: 800, color: "#dc2626" }}>Blocked</span>
+                                <span style={{ fontSize: 11.5, fontWeight: 800, color: "#13120d" }}>Blocked</span>
                               ) : (
                                 <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--text-soft)" }}>Dropped</span>
                               )}
                             </td>
-                            <td style={{ ...ctd, fontSize: 12, color: danger ? "#dc2626" : "var(--text-muted)", lineHeight: 1.5 }}>
+                            <td style={{ ...ctd, fontSize: 12, color: danger ? "#13120d" : "var(--text-muted)", lineHeight: 1.5 }}>
                               {c.selected ? "—" : (c.reason || cm.note)}
                             </td>
                           </tr>
@@ -670,7 +670,7 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
               </div>
             )}
             {candidates.some(c => classOf(c.klass) === "freemail") && (
-              <p style={{ fontSize: 11.5, color: "#dc2626", fontWeight: 600, margin: "7px 0 0", lineHeight: 1.6 }}>
+              <p style={{ fontSize: 11.5, color: "#13120d", fontWeight: 600, margin: "7px 0 0", lineHeight: 1.6 }}>
                 Freemail addresses on a bench-sales thread are competing job candidates CC&apos;d on the same blast.
                 Your resume must never reach them.
               </p>
@@ -735,8 +735,8 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
 function Facts({ title, rows, accent }: { title: string; rows: [string, string][]; accent?: boolean }) {
   return (
     <div style={{
-      background: accent ? "rgba(5,150,105,.06)" : "var(--surface-2)",
-      border: `1px solid ${accent ? "rgba(5,150,105,.25)" : "var(--border)"}`,
+      background: accent ? "rgba(131,127,108,.06)" : "var(--surface-2)",
+      border: `1px solid ${accent ? "rgba(131,127,108,.25)" : "var(--border)"}`,
       borderRadius: 10, padding: "11px 13px",
     }}>
       <div style={{ fontSize: 10, fontWeight: 800, color: "var(--text-soft)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 6 }}>{title}</div>

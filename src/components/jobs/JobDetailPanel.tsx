@@ -121,10 +121,10 @@ export default function JobDetailPanel({ job, onClose, onSave, saved }: JobDetai
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <ScoreBar label="Skills" value={job.matchScore.skills} color="#2563eb" />
-                    <ScoreBar label="Experience" value={job.matchScore.experience} color="#10b981" />
-                    <ScoreBar label="Education" value={job.matchScore.education} color="#f59e0b" />
-                    <ScoreBar label="Location" value={job.matchScore.location} color="#8b5cf6" />
+                    <ScoreBar label="Skills" value={job.matchScore.skills} color="#1c1b16" />
+                    <ScoreBar label="Experience" value={job.matchScore.experience} color="#58564c" />
+                    <ScoreBar label="Education" value={job.matchScore.education} color="#7e7a68" />
+                    <ScoreBar label="Location" value={job.matchScore.location} color="#605d51" />
                   </div>
                   {job.matchScore.missingSkills.length > 0 && (
                     <div>

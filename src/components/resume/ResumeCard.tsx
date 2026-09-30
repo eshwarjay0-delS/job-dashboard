@@ -14,11 +14,11 @@ interface ResumeCardProps {
 }
 
 function gradeFromScore(score: number) {
-  if (score >= 90) return { grade: 'A', color: '#10b981' };
-  if (score >= 80) return { grade: 'B', color: '#2563eb' };
-  if (score >= 70) return { grade: 'C', color: '#f59e0b' };
-  if (score >= 60) return { grade: 'D', color: '#f97316' };
-  return { grade: 'F', color: '#ef4444' };
+  if (score >= 90) return { grade: 'A', color: '#58564c' };
+  if (score >= 80) return { grade: 'B', color: '#1c1b16' };
+  if (score >= 70) return { grade: 'C', color: '#7e7a68' };
+  if (score >= 60) return { grade: 'D', color: '#9a9581' };
+  return { grade: 'F', color: '#2e2d27' };
 }
 
 export default function ResumeCard({ id, name, atsScore = 0, updatedAt, onEdit, onDownload, onRename }: ResumeCardProps) {

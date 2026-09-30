@@ -6,10 +6,10 @@ import { getH1BScore } from "@/lib/h1b"
 
 const P = {
   surface: "#ffffff",
-  text:    "#1a2035",
-  muted:   "#6b7a99",
-  hint:    "#9aa4bc",
-  border:  "#e4e8ef",
+  text:    "#161510",
+  muted:   "#6e6b5b",
+  hint:    "#9d9884",
+  border:  "#e6e2d9",
 }
 
 interface SavedJob {
@@ -55,10 +55,10 @@ const DEFAULT_SAVED: SavedJob[] = [
 ]
 
 const STATUS_CONFIG = {
-  saved:       { label: "Saved",        color: "#1558a0", bg: "#eff6ff", border: "#bfdbfe" },
-  applied:     { label: "Applied",      color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  interviewing:{ label: "Interviewing", color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
-  passed:      { label: "Passed",       color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" },
+  saved:       { label: "Saved",        color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
+  applied:     { label: "Applied",      color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
+  interviewing:{ label: "Interviewing", color: "#42413c", bg: "#f4f2ed", border: "#ddd8cd" },
+  passed:      { label: "Passed",       color: "#706c5c", bg: "#f8f6f2", border: "#e8e4db" },
 }
 
 function timeAgo(iso: string) {
@@ -72,14 +72,14 @@ function timeAgo(iso: string) {
 function CompanyLogo({ domain, name, size = 40 }: { domain: string; name: string; size?: number }) {
   const [err, setErr] = useState(false)
   const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-  const colors = ["#1d6fc4","#7c3aed","#d97706","#dc2626","#0ea5e9"]
+  const colors = ["#1c1b16","#4d4b44","#6b6858","#13120d","#7c7866"]
   const bg = colors[name.charCodeAt(0) % colors.length]
   if (err) return (
     <div style={{ width: size, height: size, borderRadius: size * 0.26, background: bg, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: size * 0.38 }}>{initials}</div>
   )
   return (
     <img src={`https://logo.clearbit.com/${domain}`} alt={name} onError={() => setErr(true)}
-      style={{ width: size, height: size, borderRadius: size * 0.26, objectFit: "contain", background: "#fff", border: "1px solid #e4e8ef", flexShrink: 0, padding: 4 }}/>
+      style={{ width: size, height: size, borderRadius: size * 0.26, objectFit: "contain", background: "var(--surface)", border: "1px solid #e6e2d9", flexShrink: 0, padding: 4 }}/>
   )
 }
 
@@ -184,7 +184,7 @@ export default function SavedPage() {
           <p style={{ fontSize: 13.5, color: P.muted }}>{jobs.length} job{jobs.length !== 1 ? "s" : ""} saved · Bookmark roles to revisit</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => setCompareMode(!compareMode)} style={{ padding: "8px 14px", borderRadius: 9, border: `1.5px solid ${compareMode ? "var(--accent)" : P.border}`, background: compareMode ? "#eff6ff" : P.surface, color: compareMode ? "var(--accent)" : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+          <button onClick={() => setCompareMode(!compareMode)} style={{ padding: "8px 14px", borderRadius: 9, border: `1.5px solid ${compareMode ? "var(--accent)" : P.border}`, background: compareMode ? "#f2f0ea" : P.surface, color: compareMode ? "var(--accent)" : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
             {compareMode ? `Compare (${compareSelected.size}/3)` : "⚖ Compare"}
           </button>
           <Link href="/dashboard/jobs" style={{ padding: "8px 16px", borderRadius: 9, background: "var(--accent)", color: "#fff", fontSize: 12.5, fontWeight: 700, textDecoration: "none" }}>Browse More →</Link>
@@ -214,11 +214,11 @@ export default function SavedPage() {
 
       {/* ── Compare panel ── */}
       {compareMode && compareSelected.size >= 2 && (
-        <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 14, padding: "16px 20px", marginBottom: 20 }}>
-          <p style={{ fontSize: 13.5, fontWeight: 700, color: "#1558a0", marginBottom: 12 }}>⚖ Side-by-Side Comparison</p>
+        <div style={{ background: "#f2f0ea", border: "1px solid #d9d4c8", borderRadius: 14, padding: "16px 20px", marginBottom: 20 }}>
+          <p style={{ fontSize: 13.5, fontWeight: 700, color: "#11100c", marginBottom: 12 }}>⚖ Side-by-Side Comparison</p>
           <div style={{ display: "grid", gridTemplateColumns: `repeat(${compareJobs.length}, 1fr)`, gap: 12 }}>
             {compareJobs.map(j => (
-              <div key={j.id} style={{ background: P.surface, borderRadius: 10, padding: "14px 16px", border: "1px solid #bfdbfe" }}>
+              <div key={j.id} style={{ background: P.surface, borderRadius: 10, padding: "14px 16px", border: "1px solid #d9d4c8" }}>
                 <p style={{ fontSize: 13.5, fontWeight: 700, color: P.text, marginBottom: 4 }}>{j.title}</p>
                 <p style={{ fontSize: 12, color: P.muted, marginBottom: 8 }}>{j.company}</p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -258,7 +258,7 @@ export default function SavedPage() {
           const s = STATUS_CONFIG[job.status]
           const isSelected = compareSelected.has(job.id)
           return (
-            <div key={job.id} style={{ background: P.surface, border: `1.5px solid ${isSelected ? "var(--accent)" : P.border}`, borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 4px rgba(26,32,53,.05)" }}>
+            <div key={job.id} style={{ background: P.surface, border: `1.5px solid ${isSelected ? "var(--accent)" : P.border}`, borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 4px rgba(32,31,25,.05)" }}>
               <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
                 {compareMode && (
                   <input type="checkbox" checked={isSelected} onChange={() => toggleCompare(job.id)}
@@ -281,7 +281,7 @@ export default function SavedPage() {
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
                     <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 10.5, fontWeight: 700, background: h1b.bg, color: h1b.color, border: `1px solid ${h1b.border}` }}>{h1b.label}</span>
                     {job.workAuth.slice(0, 3).map(k => {
-                      const c: Record<string, { label: string; color: string; bg: string; border: string }> = { h1b: { label: "H-1B", color: "#1558a0", bg: "#eff6ff", border: "#bfdbfe" }, w2: { label: "W2", color: "#0369a1", bg: "#f0f9ff", border: "#bae6fd" }, c2c: { label: "C2C", color: "#92400e", bg: "#fffbeb", border: "#fde68a" }, green_card: { label: "Green Card", color: "#065f46", bg: "#ecfdf5", border: "#a7f3d0" } }
+                      const c: Record<string, { label: string; color: string; bg: string; border: string }> = { h1b: { label: "H-1B", color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" }, w2: { label: "W2", color: "#58564c", bg: "#f6f4f0", border: "#e2ded4" }, c2c: { label: "C2C", color: "#58564c", bg: "#f7f5f0", border: "#e4e0d6" }, green_card: { label: "Green Card", color: "#535149", bg: "#f4f2ed", border: "#ddd8cd" } }
                       const b = c[k]; if (!b) return null
                       return <span key={k} style={{ padding: "2px 8px", borderRadius: 6, fontSize: 10.5, fontWeight: 700, background: b.bg, color: b.color, border: `1px solid ${b.border}` }}>{b.label}</span>
                     })}
@@ -291,7 +291,7 @@ export default function SavedPage() {
                   {editingNotes === job.id ? (
                     <div style={{ marginBottom: 10 }}>
                       <textarea value={noteText} onChange={e => setNoteText(e.target.value)} rows={2} placeholder="Add notes about this role…"
-                        style={{ width: "100%", borderRadius: 8, border: "1.5px solid #bfdbfe", padding: "7px 10px", fontSize: 12.5, color: P.text, resize: "none", outline: "none", background: "#f8fbff", boxSizing: "border-box" }}/>
+                        style={{ width: "100%", borderRadius: 8, border: "1.5px solid #d9d4c8", padding: "7px 10px", fontSize: 12.5, color: P.text, resize: "none", outline: "none", background: "#f8f7f3", boxSizing: "border-box" }}/>
                       <div style={{ display: "flex", gap: 6, marginTop: 5 }}>
                         <button onClick={() => saveNotes(job.id)} style={{ padding: "5px 12px", borderRadius: 7, background: "var(--accent)", color: "#fff", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>Save</button>
                         <button onClick={() => setEditingNotes(null)} style={{ padding: "5px 10px", borderRadius: 7, background: "transparent", color: P.muted, fontSize: 12, border: `1px solid ${P.border}`, cursor: "pointer" }}>Cancel</button>
@@ -299,7 +299,7 @@ export default function SavedPage() {
                     </div>
                   ) : job.notes ? (
                     <div style={{ marginBottom: 10, display: "flex", alignItems: "flex-start", gap: 6 }}>
-                      <p style={{ fontSize: 12.5, color: P.muted, lineHeight: 1.5, flex: 1, background: "#f8f9fb", padding: "6px 10px", borderRadius: 7, border: `1px solid ${P.border}` }}>📝 {job.notes}</p>
+                      <p style={{ fontSize: 12.5, color: P.muted, lineHeight: 1.5, flex: 1, background: "#f6f4f0", padding: "6px 10px", borderRadius: 7, border: `1px solid ${P.border}` }}>📝 {job.notes}</p>
                       <button onClick={() => { setEditingNotes(job.id); setNoteText(job.notes || "") }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: "transparent", color: P.hint, fontSize: 11, cursor: "pointer" }}>Edit</button>
                     </div>
                   ) : null}
@@ -312,7 +312,7 @@ export default function SavedPage() {
                       </button>
                     )}
                     {job.status === "applied" && (
-                      <button onClick={() => updateStatus(job.id, "interviewing")} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 14px", borderRadius: 8, background: "#ecfdf5", color: "#059669", fontSize: 12.5, fontWeight: 700, border: "1px solid #a7f3d0", cursor: "pointer" }}>
+                      <button onClick={() => updateStatus(job.id, "interviewing")} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 14px", borderRadius: 8, background: "#f4f2ed", color: "#42413c", fontSize: 12.5, fontWeight: 700, border: "1px solid #ddd8cd", cursor: "pointer" }}>
                         📞 Got Interview
                       </button>
                     )}
@@ -324,14 +324,14 @@ export default function SavedPage() {
                         sessionStorage.setItem("jd_prefill_role", job.title || "")
                         sessionStorage.setItem("jd_prefill_company", job.company || "")
                       } catch {} }}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, background: "#f5f3ff", color: "#6d28d9", fontSize: 12.5, fontWeight: 700, textDecoration: "none", border: "1px solid #ddd6fe" }}>
+                      style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, background: "#f6f4ef", color: "#41403b", fontSize: 12.5, fontWeight: 700, textDecoration: "none", border: "1px solid #e0dcd2" }}>
                       Tailor
                     </Link>
                     {!job.notes && editingNotes !== job.id && (
                       <button onClick={() => { setEditingNotes(job.id); setNoteText("") }} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${P.border}`, background: "transparent", color: P.muted, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>+ Note</button>
                     )}
                     <button onClick={() => unsave(job.id)} style={{ marginLeft: "auto", padding: "5px 10px", borderRadius: 7, border: "none", background: "transparent", color: P.hint, fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#dc2626" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#13120d" }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = P.hint }}
                     >✕ Remove</button>
                   </div>

@@ -203,7 +203,7 @@ export default function GmailSync({ onSync, compact = false }: GmailSyncProps) {
       <div className="flex items-center gap-3">
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: "#EA4335" + "18" }}
+          style={{ background: "#7f7c69" + "18" }}
         >
           <GmailIcon size={20} />
         </div>
@@ -216,7 +216,7 @@ export default function GmailSync({ onSync, compact = false }: GmailSyncProps) {
         {status === "connected" || status === "done" || status === "syncing" ? (
           <span
             className="ml-auto text-xs font-semibold px-2.5 py-1 rounded-full"
-            style={{ background: "#22c55e18", color: "#16a34a" }}
+            style={{ background: "#22c55e18", color: "#4d4b44" }}
           >
             ✓ Connected{email ? ` · ${email}` : ""}
           </span>
@@ -259,7 +259,7 @@ export default function GmailSync({ onSync, compact = false }: GmailSyncProps) {
       {(status === "error" || status === "disconnected") && error && (
         <div
           className="rounded-xl px-4 py-3 text-xs"
-          style={{ background: "#ef44440f", color: "#dc2626", border: "1px solid #ef444420" }}
+          style={{ background: "#ef44440f", color: "#13120d", border: "1px solid #ef444420" }}
         >
           {error}
         </div>
@@ -321,8 +321,8 @@ export default function GmailSync({ onSync, compact = false }: GmailSyncProps) {
 function GmailIcon({ size = 16, color }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6z" fill={color || "#EA4335"} opacity=".15"/>
-      <path d="M22 6L12 13 2 6" stroke={color || "#EA4335"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6z" fill={color || "#7f7c69"} opacity=".15"/>
+      <path d="M22 6L12 13 2 6" stroke={color || "#7f7c69"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }

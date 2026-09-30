@@ -103,28 +103,28 @@ function CallbackHandler() {
     return (
       <div style={{
         minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-        background: "#f4f6f9", padding: 24,
+        background: "var(--surface)", padding: 24,
         fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
       }}>
         <div style={{
-          background: "#fff", borderRadius: 16, padding: "32px 36px",
-          boxShadow: "0 4px 24px rgba(26,32,53,.1)", maxWidth: 440, width: "100%", textAlign: "center",
+          background: "var(--surface)", borderRadius: 16, padding: "32px 36px",
+          boxShadow: "0 4px 24px rgba(32,31,25,.1)", maxWidth: 440, width: "100%", textAlign: "center",
         }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>🔗</div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: "#1a2035", marginBottom: 10 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: "#161510", marginBottom: 10 }}>
             Sign-in link failed
           </h2>
-          <p style={{ fontSize: 13, color: "#6b7a99", lineHeight: 1.65, marginBottom: 20 }}>
+          <p style={{ fontSize: 13, color: "#6e6b5b", lineHeight: 1.65, marginBottom: 20 }}>
             {error}
           </p>
-          <p style={{ fontSize: 12, color: "#9aa4bc", lineHeight: 1.5, marginBottom: 24 }}>
+          <p style={{ fontSize: 12, color: "#9d9884", lineHeight: 1.5, marginBottom: 24 }}>
             Magic links are single-use and expire after 1 hour. Request a new one below.
           </p>
           <a href="/login" style={{
             display: "inline-block", padding: "12px 28px", borderRadius: 10,
             background: "linear-gradient(145deg,var(--accent),var(--accent-h))", color: "#fff",
             textDecoration: "none", fontSize: 14, fontWeight: 700,
-            boxShadow: "0 4px 16px rgba(29,111,196,.3)",
+            boxShadow: "0 4px 16px rgba(107,104,88,.3)",
           }}>
             ← Back to sign-in
           </a>
@@ -136,23 +136,23 @@ function CallbackHandler() {
   return (
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: "#f4f6f9",
+      background: "var(--surface)",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
     }}>
       <div style={{
-        background: "#fff", borderRadius: 16, padding: "36px 40px",
-        boxShadow: "0 4px 24px rgba(26,32,53,.1)", textAlign: "center",
+        background: "var(--surface)", borderRadius: 16, padding: "36px 40px",
+        boxShadow: "0 4px 24px rgba(32,31,25,.1)", textAlign: "center",
       }}>
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
           style={{ animation: "spin 1s linear infinite", marginBottom: 16 }}>
-          <circle cx="12" cy="12" r="10" stroke="#e4e8ef" strokeWidth="3"/>
-          <path fill="#1d6fc4" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          <circle cx="12" cy="12" r="10" stroke="#e6e2d9" strokeWidth="3"/>
+          <path fill="#1c1b16" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
         </svg>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        <p style={{ fontSize: 16, fontWeight: 700, color: "#1a2035", margin: 0 }}>
+        <p style={{ fontSize: 16, fontWeight: 700, color: "#161510", margin: 0 }}>
           Signing you in…
         </p>
-        <p style={{ fontSize: 13, color: "#9aa4bc", marginTop: 8 }}>
+        <p style={{ fontSize: 13, color: "#9d9884", marginTop: 8 }}>
           You&apos;ll be redirected automatically.
         </p>
       </div>
@@ -189,11 +189,11 @@ export default function AuthCallbackPage() {
   return (
     <Suspense fallback={
       <div style={{
-        minHeight: "100vh", background: "#f4f6f9", display: "flex",
+        minHeight: "100vh", background: "var(--surface)", display: "flex",
         alignItems: "center", justifyContent: "center",
         fontFamily: "system-ui, sans-serif",
       }}>
-        <p style={{ color: "#9aa4bc" }}>Verifying…</p>
+        <p style={{ color: "#9d9884" }}>Verifying…</p>
       </div>
     }>
       <CallbackHandler />

@@ -39,11 +39,11 @@ type TimelineOption = 30 | 60 | 90
    CONSTANTS
    ═══════════════════════════════════════════════════════════════════ */
 const CAT_META: Record<Milestone["category"], { label: string; color: string; bg: string; icon: string }> = {
-  skills:       { label: "Skills",        color: "#8b5cf6", bg: "rgba(139,92,246,0.08)",  icon: "🧠" },
-  networking:   { label: "Networking",    color: "#10b981", bg: "rgba(16,185,129,0.08)",  icon: "🤝" },
-  applications: { label: "Applications", color: "#1d6fc4", bg: "rgba(29,111,196,0.08)",  icon: "📤" },
-  prep:         { label: "Interview Prep",color: "#f59e0b", bg: "rgba(245,158,11,0.08)",  icon: "🎤" },
-  branding:     { label: "Branding",      color: "#ec4899", bg: "rgba(236,72,153,0.08)", icon: "✨" },
+  skills:       { label: "Skills",        color: "#605d51", bg: "rgba(122,118,100,0.08)",  icon: "🧠" },
+  networking:   { label: "Networking",    color: "#58564c", bg: "rgba(163,158,139,0.08)",  icon: "🤝" },
+  applications: { label: "Applications", color: "#1c1b16", bg: "rgba(107,104,88,0.08)",  icon: "📤" },
+  prep:         { label: "Interview Prep",color: "#7e7a68", bg: "rgba(176,170,153,0.08)",  icon: "🎤" },
+  branding:     { label: "Branding",      color: "#5e5b50", bg: "rgba(136,132,113,0.08)", icon: "✨" },
 }
 
 function newId() { return Math.random().toString(36).slice(2, 9) }
@@ -335,13 +335,13 @@ export default function RoadmapPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a2035", letterSpacing: "-0.4px", marginBottom: 4 }}>Career Roadmap</h1>
-          <p style={{ fontSize: 13.5, color: "#6b7a99" }}>AI-generated 30/60/90-day action plans · Track milestones · Land your target role</p>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#161510", letterSpacing: "-0.4px", marginBottom: 4 }}>Career Roadmap</h1>
+          <p style={{ fontSize: 13.5, color: "#6e6b5b" }}>AI-generated 30/60/90-day action plans · Track milestones · Land your target role</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           {roadmaps.length > 1 && (
             <select value={active?.id || ""} onChange={e => setActive(roadmaps.find(r => r.id === e.target.value) || null)}
-              style={{ padding: "8px 12px", border: "1.5px solid #e4e8ef", borderRadius: 8, fontSize: 13.5, color: "#1a2035", background: "#fff", outline: "none" }}>
+              style={{ padding: "8px 12px", border: "1.5px solid #e6e2d9", borderRadius: 8, fontSize: 13.5, color: "#161510", background: "var(--surface)", outline: "none" }}>
               {roadmaps.map(r => <option key={r.id} value={r.id}>{r.targetRole} ({r.timeline}d)</option>)}
             </select>
           )}
@@ -354,10 +354,10 @@ export default function RoadmapPage() {
 
       {/* No roadmap yet */}
       {!active && !showNew && (
-        <div style={{ background: "#fff", border: "1px solid #e4e8ef", borderRadius: 16, padding: "64px 32px", textAlign: "center" }}>
+        <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 16, padding: "64px 32px", textAlign: "center" }}>
           <div style={{ fontSize: 44, marginBottom: 14 }}>🗺️</div>
-          <div style={{ fontSize: 17, fontWeight: 800, color: "#1a2035", marginBottom: 8 }}>Build your 90-day career plan</div>
-          <div style={{ fontSize: 14, color: "#6b7a99", maxWidth: 460, margin: "0 auto 28px", lineHeight: 1.65 }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: "#161510", marginBottom: 8 }}>Build your 90-day career plan</div>
+          <div style={{ fontSize: 14, color: "#6e6b5b", maxWidth: 460, margin: "0 auto 28px", lineHeight: 1.65 }}>
             Tell the AI your target role and where you are now. Get a week-by-week action plan with specific tasks for skills, networking, applications, and interview prep.
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, maxWidth: 540, margin: "0 auto 32px" }}>
@@ -366,10 +366,10 @@ export default function RoadmapPage() {
               { icon: "🤝", label: "Network plan", desc: "Who to reach out to and when" },
               { icon: "📊", label: "Progress tracking", desc: "Check off tasks as you complete them" },
             ].map(f => (
-              <div key={f.label} style={{ background: "#f8f9fc", borderRadius: 10, padding: "14px 12px" }}>
+              <div key={f.label} style={{ background: "#f7f5f0", borderRadius: 10, padding: "14px 12px" }}>
                 <div style={{ fontSize: 22, marginBottom: 6 }}>{f.icon}</div>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: "#1a2035", marginBottom: 3 }}>{f.label}</div>
-                <div style={{ fontSize: 11.5, color: "#6b7a99" }}>{f.desc}</div>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: "#161510", marginBottom: 3 }}>{f.label}</div>
+                <div style={{ fontSize: 11.5, color: "#6e6b5b" }}>{f.desc}</div>
               </div>
             ))}
           </div>
@@ -384,31 +384,31 @@ export default function RoadmapPage() {
       {active && (
         <>
           {/* Overview bar */}
-          <div style={{ background: "#fff", border: "1px solid #e4e8ef", borderRadius: 14, padding: "20px 24px", marginBottom: 20 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 14, padding: "20px 24px", marginBottom: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
               <div>
-                <div style={{ fontSize: 17, fontWeight: 800, color: "#1a2035", marginBottom: 2 }}>
+                <div style={{ fontSize: 17, fontWeight: 800, color: "#161510", marginBottom: 2 }}>
                   {active.targetRole}
-                  {active.targetCompany && <span style={{ fontSize: 14, fontWeight: 600, color: "#6b7a99" }}> at {active.targetCompany}</span>}
+                  {active.targetCompany && <span style={{ fontSize: 14, fontWeight: 600, color: "#6e6b5b" }}> at {active.targetCompany}</span>}
                 </div>
-                <div style={{ fontSize: 13, color: "#6b7a99" }}>
+                <div style={{ fontSize: 13, color: "#6e6b5b" }}>
                   {active.timeline}-day plan · Day {elapsedDays} · Week {currentWeek} of {Math.ceil(active.timeline / 7)}
-                  {active.visaStatus && <span style={{ marginLeft: 8, fontSize: 12, padding: "2px 8px", background: "#eff6ff", color: "var(--accent)", borderRadius: 100, fontWeight: 600 }}>{active.visaStatus}</span>}
+                  {active.visaStatus && <span style={{ marginLeft: 8, fontSize: 12, padding: "2px 8px", background: "#f2f0ea", color: "var(--accent)", borderRadius: 100, fontWeight: 600 }}>{active.visaStatus}</span>}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: pct >= 75 ? "#10b981" : pct >= 40 ? "var(--accent)" : "#f59e0b", letterSpacing: "-0.5px" }}>{pct}%</div>
-                  <div style={{ fontSize: 11.5, color: "#aab3c5" }}>{doneTasks}/{totalTasks} tasks</div>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: pct >= 75 ? "#58564c" : pct >= 40 ? "var(--accent)" : "#7e7a68", letterSpacing: "-0.5px" }}>{pct}%</div>
+                  <div style={{ fontSize: 11.5, color: "#aaa492" }}>{doneTasks}/{totalTasks} tasks</div>
                 </div>
                 <button onClick={() => deleteRoadmap(active.id)}
-                  style={{ padding: "6px 10px", background: "transparent", border: "1px solid #fecaca", borderRadius: 7, color: "#ef4444", cursor: "pointer", fontSize: 12 }}>
+                  style={{ padding: "6px 10px", background: "transparent", border: "1px solid #ddd8cd", borderRadius: 7, color: "#2e2d27", cursor: "pointer", fontSize: 12 }}>
                   Delete
                 </button>
               </div>
             </div>
-            <div style={{ height: 10, background: "#f1f4f9", borderRadius: 100, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: pct + "%", background: pct >= 75 ? "#10b981" : "var(--accent)", borderRadius: 100, transition: "width .5s ease" }}/>
+            <div style={{ height: 10, background: "#f2f0ea", borderRadius: 100, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: pct + "%", background: pct >= 75 ? "#58564c" : "var(--accent)", borderRadius: 100, transition: "width .5s ease" }}/>
             </div>
 
             {/* Category breakdown */}
@@ -438,25 +438,25 @@ export default function RoadmapPage() {
               const isPast    = milestone.week < currentWeek
               return (
                 <div key={milestone.id} style={{
-                  background: "#fff",
-                  border: `1.5px solid ${isCurrent ? meta.color + "44" : "#e4e8ef"}`,
+                  background: "var(--surface)",
+                  border: `1.5px solid ${isCurrent ? meta.color + "44" : "#e6e2d9"}`,
                   borderRadius: 12,
                   overflow: "hidden",
                   boxShadow: isCurrent ? `0 4px 16px ${meta.color}10` : "none",
                 }}>
                   {/* Week header */}
-                  <div style={{ padding: "14px 20px", background: isCurrent ? meta.bg : "#fff", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid #f1f4f9" }}>
+                  <div style={{ padding: "14px 20px", background: isCurrent ? meta.bg : "var(--surface)", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid #f2f0ea" }}>
                     <span style={{ fontSize: 18 }}>{meta.icon}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: "#1a2035" }}>Week {milestone.week}: {milestone.title}</span>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: "#161510" }}>Week {milestone.week}: {milestone.title}</span>
                         {isCurrent && <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", background: meta.color, color: "#fff", borderRadius: 100 }}>This week</span>}
-                        {isPast && donePct === 100 && <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", background: "#10b981", color: "#fff", borderRadius: 100 }}>✓ Complete</span>}
+                        {isPast && donePct === 100 && <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", background: "#58564c", color: "#fff", borderRadius: 100 }}>✓ Complete</span>}
                       </div>
-                      <div style={{ fontSize: 12, color: "#6b7a99", marginTop: 2 }}>{meta.label} · {milestone.tasks.filter(t => t.done).length}/{milestone.tasks.length} tasks done</div>
+                      <div style={{ fontSize: 12, color: "#6e6b5b", marginTop: 2 }}>{meta.label} · {milestone.tasks.filter(t => t.done).length}/{milestone.tasks.length} tasks done</div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 48, height: 6, background: "#f1f4f9", borderRadius: 100, overflow: "hidden" }}>
+                      <div style={{ width: 48, height: 6, background: "#f2f0ea", borderRadius: 100, overflow: "hidden" }}>
                         <div style={{ height: "100%", width: donePct + "%", background: meta.color, borderRadius: 100 }}/>
                       </div>
                       <span style={{ fontSize: 12.5, fontWeight: 700, color: meta.color }}>{donePct}%</span>
@@ -476,13 +476,13 @@ export default function RoadmapPage() {
                         />
                         <div style={{ flex: 1 }}>
                           <span style={{
-                            fontSize: 13.5, color: task.done ? "#aab3c5" : "#1a2035", lineHeight: 1.5,
+                            fontSize: 13.5, color: task.done ? "#aaa492" : "#161510", lineHeight: 1.5,
                             textDecoration: task.done ? "line-through" : "none",
                           }}>
                             {task.text}
                           </span>
                           {task.dueDate && !task.done && (
-                            <div style={{ fontSize: 11, color: "#aab3c5", marginTop: 2 }}>
+                            <div style={{ fontSize: 11, color: "#aaa492", marginTop: 2 }}>
                               Due {new Date(task.dueDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                             </div>
                           )}
@@ -499,11 +499,11 @@ export default function RoadmapPage() {
 
       {/* ── NEW ROADMAP MODAL ───────────────────────────────────────── */}
       {showNew && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+        <div style={{ position: "fixed", inset: 0, background: "rgba(12,11,8,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
           onClick={e => { if (e.target === e.currentTarget && !generating) setShowNew(false) }}>
-          <div style={{ background: "#fff", borderRadius: 16, padding: "28px 32px", width: "100%", maxWidth: 560, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#1a2035", marginBottom: 4 }}>Create Career Roadmap</div>
-            <div style={{ fontSize: 13, color: "#6b7a99", marginBottom: 20 }}>The more detail you give, the more personalized your plan</div>
+          <div style={{ background: "var(--surface)", borderRadius: 16, padding: "28px 32px", width: "100%", maxWidth: 560, boxShadow: "0 20px 60px rgba(12,11,8,0.2)" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#161510", marginBottom: 4 }}>Create Career Roadmap</div>
+            <div style={{ fontSize: 13, color: "#6e6b5b", marginBottom: 20 }}>The more detail you give, the more personalized your plan</div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
@@ -541,9 +541,9 @@ export default function RoadmapPage() {
                     {([30, 60, 90] as TimelineOption[]).map(t => (
                       <button key={t} onClick={() => setForm(p => ({ ...p, timeline: t }))}
                         style={{ flex: 1, padding: "9px 0", borderRadius: 8, fontWeight: 700, fontSize: 13.5, border: "1.5px solid",
-                          borderColor: form.timeline === t ? "var(--accent)" : "#e4e8ef",
-                          background: form.timeline === t ? "rgba(29,111,196,0.07)" : "#fff",
-                          color: form.timeline === t ? "var(--accent)" : "#6b7a99", cursor: "pointer" }}>
+                          borderColor: form.timeline === t ? "var(--accent)" : "#e6e2d9",
+                          background: form.timeline === t ? "rgba(107,104,88,0.07)" : "#fff",
+                          color: form.timeline === t ? "var(--accent)" : "#6e6b5b", cursor: "pointer" }}>
                         {t}d
                       </button>
                     ))}
@@ -554,11 +554,11 @@ export default function RoadmapPage() {
 
             <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
               <button onClick={generateRoadmap} disabled={!form.targetRole.trim() || generating}
-                style={{ flex: 1, padding: "12px", background: form.targetRole.trim() ? "var(--accent)" : "#e4e8ef", color: form.targetRole.trim() ? "#fff" : "#aab3c5", border: "none", borderRadius: 9, fontWeight: 700, cursor: form.targetRole.trim() ? "pointer" : "default", fontSize: 14 }}>
+                style={{ flex: 1, padding: "12px", background: form.targetRole.trim() ? "var(--accent)" : "#e6e2d9", color: form.targetRole.trim() ? "#fff" : "#aaa492", border: "none", borderRadius: 9, fontWeight: 700, cursor: form.targetRole.trim() ? "pointer" : "default", fontSize: 14 }}>
                 {generating ? "Generating your plan…" : "✨ Generate My Roadmap"}
               </button>
               <button onClick={() => setShowNew(false)} disabled={generating}
-                style={{ padding: "12px 18px", background: "transparent", color: "#6b7a99", border: "1.5px solid #e4e8ef", borderRadius: 9, cursor: "pointer" }}>
+                style={{ padding: "12px 18px", background: "transparent", color: "#6e6b5b", border: "1.5px solid #e6e2d9", borderRadius: 9, cursor: "pointer" }}>
                 Cancel
               </button>
             </div>
@@ -569,5 +569,5 @@ export default function RoadmapPage() {
   )
 }
 
-const LS: React.CSSProperties = { fontSize: 12.5, fontWeight: 600, color: "#6b7a99", display: "block", marginBottom: 5 }
-const IS: React.CSSProperties = { width: "100%", padding: "9px 12px", border: "1.5px solid #e4e8ef", borderRadius: 8, fontSize: 13.5, outline: "none", color: "#1a2035", background: "#fff", boxSizing: "border-box", fontFamily: "inherit" }
+const LS: React.CSSProperties = { fontSize: 12.5, fontWeight: 600, color: "#6e6b5b", display: "block", marginBottom: 5 }
+const IS: React.CSSProperties = { width: "100%", padding: "9px 12px", border: "1.5px solid #e6e2d9", borderRadius: 8, fontSize: 13.5, outline: "none", color: "#161510", background: "var(--surface)", boxSizing: "border-box", fontFamily: "inherit" }

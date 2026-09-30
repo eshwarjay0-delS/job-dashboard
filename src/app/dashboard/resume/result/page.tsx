@@ -125,23 +125,23 @@ function InsightsDropdown({ score, scoreBefore, content, changes, matchedOn, ran
                     <span>Before</span><span className="font-semibold">{scoreBefore}%</span>
                   </div>
                   <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
-                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${scoreBefore}%`, background: "#9ca3af" }} />
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${scoreBefore}%`, background: "#a29d89" }} />
                   </div>
                 </div>
-                <div className="text-lg font-bold px-1" style={{ color: "#1558a0" }}>→</div>
+                <div className="text-lg font-bold px-1" style={{ color: "#11100c" }}>→</div>
                 {/* after bar */}
                 <div className="flex-1">
                   <div className="flex justify-between text-[11px] mb-1" style={{ color: "var(--text-soft)" }}>
-                    <span>After</span><span className="font-semibold" style={{ color: score >= 90 ? "#1558a0" : score >= 80 ? "#1d4ed8" : "#6b7280" }}>{score}%</span>
+                    <span>After</span><span className="font-semibold" style={{ color: score >= 90 ? "#11100c" : score >= 80 ? "#5b594e" : "#706c5c" }}>{score}%</span>
                   </div>
                   <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
                     <div className="h-full rounded-full transition-all duration-1000"
-                      style={{ width: `${score}%`, background: score >= 90 ? "#1558a0" : score >= 80 ? "#1d4ed8" : "#6b7280" }} />
+                      style={{ width: `${score}%`, background: score >= 90 ? "#11100c" : score >= 80 ? "#5b594e" : "#706c5c" }} />
                   </div>
                 </div>
                 {delta != null && delta > 0 && (
                   <span className="text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0"
-                    style={{ background: "rgba(29,111,196,0.1)", color: "#1558a0" }}>
+                    style={{ background: "rgba(107,104,88,0.1)", color: "#11100c" }}>
                     +{delta}%
                   </span>
                 )}
@@ -159,7 +159,7 @@ function InsightsDropdown({ score, scoreBefore, content, changes, matchedOn, ran
               {audit.map(a => (
                 <div key={a.label} className="flex items-start gap-2.5">
                   <span className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold"
-                    style={{ background: a.done ? "rgba(29,111,196,0.12)" : "var(--border)", color: a.done ? "#1558a0" : "var(--text-soft)" }}>
+                    style={{ background: a.done ? "rgba(107,104,88,0.12)" : "var(--border)", color: a.done ? "#11100c" : "var(--text-soft)" }}>
                     {a.done ? "✓" : "–"}
                   </span>
                   <div>
@@ -223,26 +223,26 @@ function InsightsDropdown({ score, scoreBefore, content, changes, matchedOn, ran
                   const pct = Math.round((c.score / maxScore) * 100)
                   return (
                     <div key={i} className="rounded-xl p-3" style={{
-                      background: isWinner ? "rgba(29,111,196,0.07)" : "var(--surface-2)",
-                      border: `1px solid ${isWinner ? "rgba(29,111,196,0.2)" : "var(--border)"}`,
+                      background: isWinner ? "rgba(107,104,88,0.07)" : "var(--surface-2)",
+                      border: `1px solid ${isWinner ? "rgba(107,104,88,0.2)" : "var(--border)"}`,
                     }}>
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <div className="flex items-center gap-2 min-w-0">
                           {isWinner && (
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
-                              style={{ background: "rgba(29,111,196,0.15)", color: "#1558a0" }}>✓ SELECTED</span>
+                              style={{ background: "rgba(107,104,88,0.15)", color: "#11100c" }}>✓ SELECTED</span>
                           )}
                           <span className="text-xs font-semibold truncate" style={{ color: "var(--text)" }}>
                             {c.filename}
                           </span>
                         </div>
-                        <span className="text-xs font-bold flex-shrink-0" style={{ color: isWinner ? "#1558a0" : "var(--text-soft)" }}>
+                        <span className="text-xs font-bold flex-shrink-0" style={{ color: isWinner ? "#11100c" : "var(--text-soft)" }}>
                           {c.score}pts
                         </span>
                       </div>
                       <div className="h-1.5 rounded-full overflow-hidden mb-1.5" style={{ background: "var(--border)" }}>
                         <div className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${pct}%`, background: isWinner ? "#1558a0" : "#9ca3af" }} />
+                          style={{ width: `${pct}%`, background: isWinner ? "#11100c" : "#a29d89" }} />
                       </div>
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[10px]" style={{ color: "var(--text-soft)" }}>
@@ -264,15 +264,15 @@ function InsightsDropdown({ score, scoreBefore, content, changes, matchedOn, ran
 
           {/* Interview prep */}
           {probes.length > 0 && (
-            <div className="rounded-xl p-3.5" style={{ background: "#eff6ff", border: "1px solid #bfdbfe" }}>
-              <p className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: "#1d4ed8" }}>Interview Prep Heads-Up</p>
+            <div className="rounded-xl p-3.5" style={{ background: "#f2f0ea", border: "1px solid #d9d4c8" }}>
+              <p className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: "#5b594e" }}>Interview Prep Heads-Up</p>
               <p className="text-[11px] mb-2.5" style={{ color: "var(--text-soft)" }}>
                 Based on the tools in your bullets, expect these probes. Know at least one real story for each.
               </p>
               <ul className="space-y-1">
                 {probes.map((p, i) => (
                   <li key={i} className="flex items-start gap-2 text-[12px]" style={{ color: "var(--text-muted)" }}>
-                    <span className="mt-0.5 flex-shrink-0" style={{ color: "#1d4ed8" }}>›</span>
+                    <span className="mt-0.5 flex-shrink-0" style={{ color: "#5b594e" }}>›</span>
                     <span>{p}</span>
                   </li>
                 ))}
@@ -285,7 +285,7 @@ function InsightsDropdown({ score, scoreBefore, content, changes, matchedOn, ran
             {matchedOn.length > 0 && <p className="text-[11px]" style={{ color: "var(--text-soft)" }}><span className="font-semibold" style={{ color: "var(--text)" }}>{matchedOn.length}</span> ATS keywords</p>}
             {bulletCount > 0 && <p className="text-[11px]" style={{ color: "var(--text-soft)" }}><span className="font-semibold" style={{ color: "var(--text)" }}>{bulletCount}</span> bullets rewritten</p>}
             {skillCount > 0  && <p className="text-[11px]" style={{ color: "var(--text-soft)" }}><span className="font-semibold" style={{ color: "var(--text)" }}>{skillCount}</span> skill lines</p>}
-            {wordCount > 0   && <p className="text-[11px]" style={{ color: "var(--text-soft)" }}>Summary: <span className="font-semibold" style={{ color: wordCount > 80 ? "#6b7280" : "#1558a0" }}>{wordCount}w</span> {wordCount > 80 ? "⚠ too long" : "✓"}</p>}
+            {wordCount > 0   && <p className="text-[11px]" style={{ color: "var(--text-soft)" }}>Summary: <span className="font-semibold" style={{ color: wordCount > 80 ? "#706c5c" : "#11100c" }}>{wordCount}w</span> {wordCount > 80 ? "⚠ too long" : "✓"}</p>}
           </div>
         </div>
       )}
@@ -355,7 +355,7 @@ function ResultContent() {
   // Score colour uses accent for high scores
   const scoreHigh   = score >= 80
   const scoreMedium = score >= 60 && score < 80
-  const scoreColor  = scoreHigh ? "#1558a0" : scoreMedium ? "#1d4ed8" : "#6b7280"
+  const scoreColor  = scoreHigh ? "#11100c" : scoreMedium ? "#5b594e" : "#706c5c"
   const scoreLabel  = scoreHigh ? "Excellent fit" : scoreMedium ? "Good fit" : "Partial fit"
   const circumference = 2 * Math.PI * 44
 
@@ -498,13 +498,13 @@ function ResultContent() {
       </button>
 
       {/* Panel container */}
-      <div className="rounded-2xl p-3" style={{ background: "#e4e8ef", boxShadow: "inset 0 2px 8px rgba(26,32,53,.08)" }}>
+      <div className="rounded-2xl p-3" style={{ background: "#e6e2d9", boxShadow: "inset 0 2px 8px rgba(32,31,25,.08)" }}>
       <div className="grid lg:grid-cols-5 gap-3 items-stretch">
         {/* ── LEFT col ─────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 flex flex-col rounded-xl overflow-hidden"
           style={{
             background: "var(--surface)",
-            boxShadow: "0 2px 4px rgba(26,32,53,.06), 0 8px 24px rgba(26,32,53,.08), 0 20px 48px rgba(26,32,53,.06)",
+            boxShadow: "0 2px 4px rgba(32,31,25,.06), 0 8px 24px rgba(32,31,25,.08), 0 20px 48px rgba(32,31,25,.06)",
           }}>
 
           {/* Score section */}
@@ -527,7 +527,7 @@ function ResultContent() {
               </div>
               {/* Meta */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-1" style={{ color: "#1558a0" }}>
+                <div className="flex items-center gap-1.5 mb-1" style={{ color: "#11100c" }}>
                   <CheckCircle />
                   <span className="text-sm font-semibold">Tailored</span>
                 </div>
@@ -536,7 +536,7 @@ function ResultContent() {
                 <p className="text-sm mt-1" style={{ color: scoreColor }}>{scoreLabel}</p>
                 {scoreBefore != null && score > scoreBefore && (
                   <p className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold rounded-full px-2 py-0.5"
-                    style={{ color: "#1558a0", background: "rgba(29,111,196,0.1)" }}>
+                    style={{ color: "#11100c", background: "rgba(107,104,88,0.1)" }}>
                     <ArrowUp />
                     +{score - scoreBefore}% better fit
                     <span className="font-normal ml-0.5" style={{ color: "var(--text-soft)" }}>(was {scoreBefore}%)</span>
@@ -550,7 +550,7 @@ function ResultContent() {
                 <div className="flex flex-wrap gap-1.5">
                   {applied.slice(0, 5).map((f, i) => (
                     <span key={i} className="text-[11px] px-2.5 py-1 rounded-full border max-w-[220px] truncate"
-                      style={{ background: "rgba(29,111,196,0.07)", borderColor: "rgba(29,111,196,0.2)", color: "#1558a0" }} title={f}>
+                      style={{ background: "rgba(107,104,88,0.07)", borderColor: "rgba(107,104,88,0.2)", color: "#11100c" }} title={f}>
                       ✓ {f.length > 38 ? f.slice(0, 36) + "…" : f}
                     </span>
                   ))}
@@ -669,7 +669,7 @@ function ResultContent() {
             <button
               onClick={() => setShowCoverLetter(true)}
               className="w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all"
-              style={{ background: "rgba(29,111,196,.06)", borderColor: "rgba(29,111,196,.25)", color: "var(--text)" }}
+              style={{ background: "rgba(107,104,88,.06)", borderColor: "rgba(107,104,88,.25)", color: "var(--text)" }}
             >
               <div className="text-left">
                 <p className="font-semibold text-sm">✉️ Generate Cover Letter</p>
@@ -716,7 +716,7 @@ function ResultContent() {
                             <span style={{ textDecoration: "line-through", textDecorationColor: "var(--text-soft)" }}>{d.before}</span>
                           </div>
                         : <div className="px-3 py-1.5 text-[11px]" style={{ color: "var(--text-soft)" }}>New line added to cover the role</div>}
-                      <div className="px-3 py-2 text-xs leading-relaxed flex gap-1.5" style={{ background: "#ecfdf5", color: "#065f46" }}>
+                      <div className="px-3 py-2 text-xs leading-relaxed flex gap-1.5" style={{ background: "#f4f2ed", color: "#535149" }}>
                         <span className="opacity-80">+</span><span>{d.after}</span>
                       </div>
                     </div>
@@ -737,7 +737,7 @@ function ResultContent() {
               {breakdown && (
                 <div className="grid grid-cols-3 gap-3 mb-4">
                   {([["Skills", breakdown.skills], ["Identity", breakdown.identity], ["Experience", breakdown.experience]] as [string, number][]).map(([label, val]) => {
-                    const c = val >= 85 ? "#1558a0" : val >= 70 ? "#1d4ed8" : "#6b7280"
+                    const c = val >= 85 ? "#11100c" : val >= 70 ? "#5b594e" : "#706c5c"
                     return (
                       <div key={label}>
                         <div className="flex justify-between text-[11px] mb-1">
@@ -756,10 +756,10 @@ function ResultContent() {
               {kwAnalysis && (
                 <div className="space-y-3">
                   {kwAnalysis.matched.length > 0 && (
-                    <KwRow label="Already proven" color="#1558a0" bg="#ecfdf5" border="#a7f3d0" items={kwAnalysis.matched} />
+                    <KwRow label="Already proven" color="#11100c" bg="#f4f2ed" border="#ddd8cd" items={kwAnalysis.matched} />
                   )}
                   {kwAnalysis.added.length > 0 && (
-                    <KwRow label="Added by tailoring" color="#1d4ed8" bg="#eff6ff" border="#bfdbfe" items={kwAnalysis.added} />
+                    <KwRow label="Added by tailoring" color="#5b594e" bg="#f2f0ea" border="#d9d4c8" items={kwAnalysis.added} />
                   )}
                   {kwAnalysis.missing.length > 0 && (
                     <div>
@@ -774,7 +774,7 @@ function ResultContent() {
                               onClick={() => setSelKw(p => on ? p.filter(x => x !== k) : [...p, k])}
                               className="text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all"
                               style={on
-                                ? { background: "#eff6ff", borderColor: "#1d4ed8", color: "#1d4ed8" }
+                                ? { background: "#f2f0ea", borderColor: "#5b594e", color: "#5b594e" }
                                 : { background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text-soft)" }}>
                               {on ? "✓ " : "+ "}{k}
                             </button>
@@ -858,7 +858,7 @@ function ResultContent() {
           <div className="flex flex-col rounded-xl overflow-hidden flex-1"
             style={{
               background: "var(--surface)",
-              boxShadow: "0 2px 4px rgba(26,32,53,.06), 0 8px 24px rgba(26,32,53,.08), 0 20px 48px rgba(26,32,53,.06)",
+              boxShadow: "0 2px 4px rgba(32,31,25,.06), 0 8px 24px rgba(32,31,25,.08), 0 20px 48px rgba(32,31,25,.06)",
             }}>
             <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
               <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-soft)" }}>Live Preview</h2>
@@ -873,7 +873,7 @@ function ResultContent() {
                 title="Resume preview"
                 srcDoc={previewHtml}
                 className="w-full h-full rounded-lg"
-                style={{ minHeight: "68vh", background: "#fff", border: "none" }}
+                style={{ minHeight: "68vh", background: "var(--surface)", border: "none" }}
               />
             </div>
             <p className="text-[11px] px-5 py-2 text-center" style={{ color: "var(--text-soft)", borderTop: "1px solid var(--border)" }}>
@@ -883,7 +883,7 @@ function ResultContent() {
 
           {/* Insights — separate mounted panel below, with visible dark gap above */}
           {diff.length > 0 && (
-            <details className="rounded-xl overflow-hidden mb-3" style={{ background: "var(--surface)", boxShadow: "0 2px 4px rgba(26,32,53,.06), 0 8px 24px rgba(26,32,53,.08)" }}>
+            <details className="rounded-xl overflow-hidden mb-3" style={{ background: "var(--surface)", boxShadow: "0 2px 4px rgba(32,31,25,.06), 0 8px 24px rgba(32,31,25,.08)" }}>
               <summary style={{ cursor: "pointer", listStyleType: "none", padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", fontWeight: 600, fontSize: 14, color: "var(--text)" }}>
                 <span>🔍 See your difference · {diff.length} line{diff.length === 1 ? "" : "s"} changed</span>
                 <span style={{ fontSize: 11, color: "var(--text-soft)", fontWeight: 500 }}>before → after</span>
@@ -892,8 +892,8 @@ function ResultContent() {
                 {diff.map((d, i) => (
                   <div key={i}>
                     <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--accent-txt)", marginBottom: 6 }}>{d.section}</p>
-                    <p style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text-soft)", textDecoration: "line-through", background: "var(--cat-reply-bg, #fef2f2)", borderLeft: "3px solid var(--cat-reply, #dc2626)", padding: "6px 10px", borderRadius: 6, marginBottom: 4 }}>{d.before || "(was empty)"}</p>
-                    <p style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text)", background: "var(--cat-int-bg, #eff6ff)", borderLeft: "3px solid var(--cat-int, #1d6fc4)", padding: "6px 10px", borderRadius: 6 }}>{d.after}</p>
+                    <p style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text-soft)", textDecoration: "line-through", background: "var(--cat-reply-bg, #f5f3ee)", borderLeft: "3px solid var(--cat-reply, #13120d)", padding: "6px 10px", borderRadius: 6, marginBottom: 4 }}>{d.before || "(was empty)"}</p>
+                    <p style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text)", background: "var(--cat-int-bg, #f2f0ea)", borderLeft: "3px solid var(--cat-int, #1c1b16)", padding: "6px 10px", borderRadius: 6 }}>{d.after}</p>
                   </div>
                 ))}
                 <p style={{ fontSize: 11, color: "var(--text-soft)", marginTop: 2 }}>Only the text changed — your original fonts, spacing, and layout are untouched.</p>
@@ -903,7 +903,7 @@ function ResultContent() {
           <div className="rounded-xl overflow-hidden"
             style={{
               background: "var(--surface)",
-              boxShadow: "0 2px 4px rgba(26,32,53,.06), 0 8px 24px rgba(26,32,53,.08), 0 20px 48px rgba(26,32,53,.06)",
+              boxShadow: "0 2px 4px rgba(32,31,25,.06), 0 8px 24px rgba(32,31,25,.08), 0 20px 48px rgba(32,31,25,.06)",
             }}>
             <InsightsDropdown
               score={score}

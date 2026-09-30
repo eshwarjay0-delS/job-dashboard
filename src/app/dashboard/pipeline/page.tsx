@@ -154,9 +154,9 @@ function Card({ app, onMove, onEdit, onDelete }: {
       {app.followUpDate && (
         <span style={{
           fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, alignSelf: "flex-start",
-          background: overdue ? "#fef2f2" : dueSoon ? "#fffbeb" : "#f0f9ff",
-          color: overdue ? "#dc2626" : dueSoon ? "#d97706" : "#0369a1",
-          border: `1px solid ${overdue ? "#fecaca" : dueSoon ? "#fde68a" : "#bae6fd"}`,
+          background: overdue ? "var(--surface)" : dueSoon ? "#f7f5f0" : "#f6f4f0",
+          color: overdue ? "#13120d" : dueSoon ? "#6b6858" : "#58564c",
+          border: `1px solid ${overdue ? "#ddd8cd" : dueSoon ? "#e4e0d6" : "#e2ded4"}`,
         }}>🔔 {overdue ? "Overdue " : dueSoon ? "Soon " : ""}{new Date(app.followUpDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
       )}
       {app.notes && <p style={{ fontSize: 11.5, color: "var(--text-muted)", margin: 0, lineHeight: 1.5 }}>{app.notes}</p>}
@@ -169,7 +169,7 @@ function Card({ app, onMove, onEdit, onDelete }: {
           <a href={app.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, color: "var(--text-soft)", textDecoration: "none" }}>Open ↗</a>
         )}
         <button onClick={onEdit} style={{ marginLeft: "auto", fontSize: 11.5, background: "none", border: "none", cursor: "pointer", color: "var(--text-soft)", fontWeight: 600 }}>Edit</button>
-        <button onClick={() => { if (confirm("Delete this application?")) onDelete(app.id) }} style={{ fontSize: 11.5, background: "none", border: "none", cursor: "pointer", color: "#ef4444", fontWeight: 600 }}>Delete</button>
+        <button onClick={() => { if (confirm("Delete this application?")) onDelete(app.id) }} style={{ fontSize: 11.5, background: "none", border: "none", cursor: "pointer", color: "#2e2d27", fontWeight: 600 }}>Delete</button>
       </div>
     </div>
   )
@@ -189,8 +189,8 @@ function AppForm({ initial, isNew, onClose, onSave }: {
   const input: React.CSSProperties = { width: "100%", padding: "9px 12px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)", outline: "none", fontSize: 13, boxSizing: "border-box" }
   const label: React.CSSProperties = { fontSize: 11.5, fontWeight: 700, color: "var(--text-soft)", display: "block", marginBottom: 4 }
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <form onClick={e => e.stopPropagation()} onSubmit={submit} style={{ width: "100%", maxWidth: 520, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18, padding: 24, boxShadow: "0 24px 64px -12px rgba(0,0,0,.4)", maxHeight: "90vh", overflowY: "auto" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(12,11,8,.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <form onClick={e => e.stopPropagation()} onSubmit={submit} style={{ width: "100%", maxWidth: 520, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18, padding: 24, boxShadow: "0 24px 64px -12px rgba(12,11,8,.4)", maxHeight: "90vh", overflowY: "auto" }}>
         <h2 style={{ fontSize: 17, fontWeight: 800, color: "var(--text)", marginBottom: 16 }}>{isNew ? "Add Application" : "Edit Application"}</h2>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div><label style={label}>Company *</label><input required style={input} value={form.company} onChange={e => set("company", e.target.value)} /></div>

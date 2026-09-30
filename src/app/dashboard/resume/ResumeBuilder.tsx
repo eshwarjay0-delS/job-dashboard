@@ -212,7 +212,7 @@ function Field({
   return (
     <div>
       <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-muted)" }}>
-        {label}{required && <span style={{ color: "#ef4444" }}> *</span>}
+        {label}{required && <span style={{ color: "#2e2d27" }}> *</span>}
       </label>
       {children}
       {hint && <p className="text-xs mt-0.5" style={{ color: "var(--text-soft)" }}>{hint}</p>}
@@ -254,13 +254,13 @@ function Textarea({ value, onChange, placeholder, rows = 3, warn }: {
         className="ring-accent w-full px-3 py-2 text-sm rounded-lg border resize-none"
         style={{
           background: "var(--surface-2)",
-          borderColor: warn ? "#f59e0b" : "var(--border)",
+          borderColor: warn ? "#7e7a68" : "var(--border)",
           color: "var(--text)",
           outline: "none",
           lineHeight: "1.6",
         }}
       />
-      {warn && <p className="text-xs mt-0.5 font-medium" style={{ color: "#d97706" }}>⚠ {warn}</p>}
+      {warn && <p className="text-xs mt-0.5 font-medium" style={{ color: "#6b6858" }}>⚠ {warn}</p>}
     </div>
   )
 }
@@ -326,7 +326,7 @@ function JobEntryBlock({
           >⧉ Copy</button>
           {/* Remove */}
           {canRemove && (
-            <button onClick={onRemove} className="btn-ghost px-2 py-1 text-xs" style={{ color: "#ef4444" }}>
+            <button onClick={onRemove} className="btn-ghost px-2 py-1 text-xs" style={{ color: "#2e2d27" }}>
               Remove
             </button>
           )}
@@ -377,7 +377,7 @@ function JobEntryBlock({
             Bullets ({job.bullets.length}/6)
           </p>
           {tooManyBullets && (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(239,68,68,.12)", color: "#ef4444" }}>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(132,128,109,.12)", color: "#2e2d27" }}>
               ⚠ Cap is 6
             </span>
           )}
@@ -656,11 +656,11 @@ function ResumePreview({ state }: { state: BuilderState }) {
   const sectionStyle: React.CSSProperties = { marginBottom: 14 }
   const sectionHeadStyle: React.CSSProperties = {
     fontSize: 10.5, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase",
-    color: "#1558a0", borderBottom: "1.5px solid #1558a0", paddingBottom: 2,
+    color: "#11100c", borderBottom: "1.5px solid #11100c", paddingBottom: 2,
     marginBottom: 7, fontFamily: "Arial, sans-serif",
   }
   const bulletStyle: React.CSSProperties = {
-    fontSize: 9.5, lineHeight: 1.55, color: "#2d3748", marginBottom: 3,
+    fontSize: 9.5, lineHeight: 1.55, color: "#373732", marginBottom: 3,
     paddingLeft: 12, position: "relative", fontFamily: "Arial, sans-serif",
   }
 
@@ -672,7 +672,7 @@ function ResumePreview({ state }: { state: BuilderState }) {
         return (
           <div key="summary" style={sectionStyle}>
             <div style={sectionHeadStyle}>Professional Summary</div>
-            <p style={{ fontSize: 9.5, lineHeight: 1.6, color: "#2d3748", fontFamily: "Arial, sans-serif" }}>{state.summary}</p>
+            <p style={{ fontSize: 9.5, lineHeight: 1.6, color: "#373732", fontFamily: "Arial, sans-serif" }}>{state.summary}</p>
           </div>
         )
       case "Certifications":
@@ -682,7 +682,7 @@ function ResumePreview({ state }: { state: BuilderState }) {
             <div style={sectionHeadStyle}>Certifications</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px" }}>
               {state.certs.filter(c => c.name.trim()).map(c => (
-                <span key={c.id} style={{ fontSize: 9.5, color: "#2d3748", fontFamily: "Arial, sans-serif" }}>
+                <span key={c.id} style={{ fontSize: 9.5, color: "#373732", fontFamily: "Arial, sans-serif" }}>
                   ▸ {c.name}{c.date ? ` (${c.date})` : ""}
                 </span>
               ))}
@@ -696,8 +696,8 @@ function ResumePreview({ state }: { state: BuilderState }) {
             <div style={sectionHeadStyle}>Technical Skills</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
               {state.skillGroups.filter(sg => sg.skills.trim()).map(sg => (
-                <div key={sg.id} style={{ fontSize: 9.5, color: "#2d3748", fontFamily: "Arial, sans-serif", lineHeight: 1.5 }}>
-                  {sg.category && <strong style={{ color: "#1a2035" }}>{sg.category}: </strong>}
+                <div key={sg.id} style={{ fontSize: 9.5, color: "#373732", fontFamily: "Arial, sans-serif", lineHeight: 1.5 }}>
+                  {sg.category && <strong style={{ color: "#161510" }}>{sg.category}: </strong>}
                   {sg.skills}
                 </div>
               ))}
@@ -713,15 +713,15 @@ function ResumePreview({ state }: { state: BuilderState }) {
               {state.jobs.filter(j => j.employer.trim()).map(j => (
                 <div key={j.id}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 1 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#1a2035", fontFamily: "Arial, sans-serif" }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#161510", fontFamily: "Arial, sans-serif" }}>
                       {j.employer}
                     </span>
-                    <span style={{ fontSize: 9, color: "#6b7280", fontFamily: "Arial, sans-serif" }}>
+                    <span style={{ fontSize: 9, color: "#706c5c", fontFamily: "Arial, sans-serif" }}>
                       {j.startDate}{j.startDate && (j.endDate || j.current) ? " – " : ""}{j.current ? "Present" : j.endDate}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontSize: 9.5, fontStyle: "italic", color: "#4a5568", fontFamily: "Arial, sans-serif" }}>
+                    <span style={{ fontSize: 9.5, fontStyle: "italic", color: "#545249", fontFamily: "Arial, sans-serif" }}>
                       {j.title}{j.location ? ` · ${j.location}` : ""}
                     </span>
                   </div>
@@ -742,15 +742,15 @@ function ResumePreview({ state }: { state: BuilderState }) {
           <div key="education" style={sectionStyle}>
             <div style={sectionHeadStyle}>Education</div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: "#1a2035", fontFamily: "Arial, sans-serif" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#161510", fontFamily: "Arial, sans-serif" }}>
                 {state.eduSchool || "Institution"}
               </span>
-              <span style={{ fontSize: 9, color: "#6b7280", fontFamily: "Arial, sans-serif" }}>
+              <span style={{ fontSize: 9, color: "#706c5c", fontFamily: "Arial, sans-serif" }}>
                 {state.eduDates}{state.eduLocation ? ` · ${state.eduLocation}` : ""}
               </span>
             </div>
             {state.eduDegree && (
-              <p style={{ fontSize: 9.5, color: "#4a5568", marginTop: 1, fontFamily: "Arial, sans-serif" }}>{state.eduDegree}</p>
+              <p style={{ fontSize: 9.5, color: "#545249", marginTop: 1, fontFamily: "Arial, sans-serif" }}>{state.eduDegree}</p>
             )}
           </div>
         )
@@ -765,37 +765,37 @@ function ResumePreview({ state }: { state: BuilderState }) {
 
   return (
     <div style={{
-      background: "#f1f5f9", borderRadius: 12, padding: "12px 10px",
+      background: "#f4f2ed", borderRadius: 12, padding: "12px 10px",
       minHeight: 600, display: "flex", flexDirection: "column", alignItems: "center",
     }}>
-      <p style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, marginBottom: 10, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+      <p style={{ fontSize: 10, color: "#9d9884", fontWeight: 600, marginBottom: 10, letterSpacing: "0.08em", textTransform: "uppercase" }}>
         Live Preview
       </p>
       <div style={{
-        background: "#fff", width: "100%", maxWidth: 540,
+        background: "var(--surface)", width: "100%", maxWidth: 540,
         minHeight: 700, borderRadius: 4,
-        boxShadow: "0 4px 24px rgba(0,0,0,.12), 0 1px 4px rgba(0,0,0,.08)",
+        boxShadow: "0 4px 24px rgba(12,11,8,.12), 0 1px 4px rgba(12,11,8,.08)",
         padding: "28px 30px 36px",
         fontFamily: "Arial, sans-serif",
       }}>
         {!hasContent ? (
-          <div style={{ textAlign: "center", paddingTop: 120, color: "#94a3b8" }}>
+          <div style={{ textAlign: "center", paddingTop: 120, color: "#9d9884" }}>
             <div style={{ fontSize: 32, marginBottom: 10 }}>📄</div>
             <p style={{ fontSize: 11, fontWeight: 600 }}>Fill in the form to see your resume preview</p>
           </div>
         ) : (
           <>
             {/* ── Header ── */}
-            <div style={{ textAlign: "center", marginBottom: 14, borderBottom: "2px solid #1558a0", paddingBottom: 10 }}>
-              <h1 style={{ fontSize: 18, fontWeight: 800, color: "#1a2035", letterSpacing: "-0.3px", marginBottom: 2, fontFamily: "Arial, sans-serif" }}>
+            <div style={{ textAlign: "center", marginBottom: 14, borderBottom: "2px solid #11100c", paddingBottom: 10 }}>
+              <h1 style={{ fontSize: 18, fontWeight: 800, color: "#161510", letterSpacing: "-0.3px", marginBottom: 2, fontFamily: "Arial, sans-serif" }}>
                 {state.name || "Your Name"}
               </h1>
               {state.targetRole && (
-                <p style={{ fontSize: 11, fontWeight: 600, color: "#1558a0", marginBottom: 5, fontFamily: "Arial, sans-serif" }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: "#11100c", marginBottom: 5, fontFamily: "Arial, sans-serif" }}>
                   {state.targetRole}
                 </p>
               )}
-              <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "2px 12px", fontSize: 9, color: "#4a5568", fontFamily: "Arial, sans-serif" }}>
+              <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "2px 12px", fontSize: 9, color: "#545249", fontFamily: "Arial, sans-serif" }}>
                 {state.email && <span>{state.email}</span>}
                 {state.phone && <span>{state.phone}</span>}
                 {state.location && <span>{state.location}</span>}
@@ -1044,18 +1044,18 @@ export default function ResumeBuilder() {
   const pages = estimatePages(state)
   const summaryWords = countWords(state.summary)
 
-  const pageColor = pages <= 2 ? "var(--accent)" : pages <= 2.5 ? "#d97706" : "#ef4444"
+  const pageColor = pages <= 2 ? "var(--accent)" : pages <= 2.5 ? "#6b6858" : "#2e2d27"
 
   return (
     <div className="space-y-6">
       {/* ── Hero banner with illustration ── */}
       <div
         className="rounded-2xl overflow-hidden flex items-center gap-6 px-6 py-5"
-        style={{ background: "linear-gradient(135deg, #EFF6FF 0%, #F5F3FF 100%)", border: "1px solid #BFDBFE" }}
+        style={{ background: "linear-gradient(135deg, #f2f0ea 0%, #f6f4ef 100%)", border: "1px solid #d9d4c8" }}
       >
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-bold" style={{ color: "#1e3a5f" }}>Resume Builder</h2>
-          <p className="text-sm mt-1" style={{ color: "#4b6a8e" }}>
+          <h2 className="text-xl font-bold" style={{ color: "#393935" }}>Resume Builder</h2>
+          <p className="text-sm mt-1" style={{ color: "#666355" }}>
             Build ATS-ready resumes with every defect from your reference library pre-fixed — no "Having" openers, metrics in every bullet, 2-page limit enforced.
           </p>
         </div>
@@ -1096,7 +1096,7 @@ export default function ResumeBuilder() {
           </button>
         </div>
         {dlError && (
-          <p className="text-xs mt-2 text-right" style={{ color: "var(--error, #dc2626)" }}>{dlError}</p>
+          <p className="text-xs mt-2 text-right" style={{ color: "var(--error, #13120d)" }}>{dlError}</p>
         )}
       </div>
 
@@ -1104,9 +1104,9 @@ export default function ResumeBuilder() {
       {warnings.length > 0 && (
         <div
           className="rounded-xl border p-4 space-y-1.5"
-          style={{ background: "rgba(245,158,11,.07)", borderColor: "rgba(245,158,11,.3)" }}
+          style={{ background: "rgba(176,170,153,.07)", borderColor: "rgba(176,170,153,.3)" }}
         >
-          <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#d97706" }}>
+          <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#6b6858" }}>
             {warnings.length} Issue{warnings.length !== 1 ? "s" : ""} to fix before export
           </p>
           {warnings.map((w, i) => (
@@ -1130,15 +1130,15 @@ export default function ResumeBuilder() {
           {/* ── Smart Fill convenience panel ────────────────────────────────── */}
           <div
             className="rounded-xl border p-4"
-            style={{ background: "linear-gradient(135deg, #f0f9ff 0%, #f5f3ff 100%)", borderColor: "#bfdbfe" }}
+            style={{ background: "linear-gradient(135deg, #f6f4f0 0%, #f6f4ef 100%)", borderColor: "#d9d4c8" }}
           >
             <div className="flex items-center justify-between gap-2 mb-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#1558a0" }}>⚡ Smart Fill</p>
-                <p className="text-xs mt-0.5" style={{ color: "#4b6a8e" }}>Auto-populate your contact details from saved profile or an uploaded resume.</p>
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#11100c" }}>⚡ Smart Fill</p>
+                <p className="text-xs mt-0.5" style={{ color: "#666355" }}>Auto-populate your contact details from saved profile or an uploaded resume.</p>
               </div>
               {autoSaved && (
-                <span className="text-xs px-2 py-1 rounded-full font-semibold flex-shrink-0" style={{ background: "#dbeafe", color: "#1e3a5f" }}>
+                <span className="text-xs px-2 py-1 rounded-full font-semibold flex-shrink-0" style={{ background: "#e8e4db", color: "#393935" }}>
                   ✓ Draft saved
                 </span>
               )}
@@ -1150,9 +1150,9 @@ export default function ResumeBuilder() {
                 disabled={fillStatus === "loading"}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all"
                 style={{
-                  background: fillStatus === "loaded" ? "#dbeafe" : fillStatus === "error" ? "#fee2e2" : "#fff",
-                  borderColor: fillStatus === "loaded" ? "#bfdbfe" : fillStatus === "error" ? "#fca5a5" : "#bfdbfe",
-                  color: fillStatus === "loaded" ? "#1e3a5f" : fillStatus === "error" ? "#dc2626" : "#1558a0",
+                  background: fillStatus === "loaded" ? "#e8e4db" : fillStatus === "error" ? "#e6e2d9" : "#fff",
+                  borderColor: fillStatus === "loaded" ? "#d9d4c8" : fillStatus === "error" ? "#bbb5a5" : "#d9d4c8",
+                  color: fillStatus === "loaded" ? "#393935" : fillStatus === "error" ? "#13120d" : "#11100c",
                   opacity: fillStatus === "loading" ? 0.6 : 1,
                 }}
               >
@@ -1166,7 +1166,7 @@ export default function ResumeBuilder() {
                 <button
                   onClick={() => setShowResumePicker(v => !v)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all"
-                  style={{ background: "#fff", borderColor: "#bfdbfe", color: "#1558a0" }}
+                  style={{ background: "var(--surface)", borderColor: "#d9d4c8", color: "#11100c" }}
                 >
                   📄 Import from Resume {resumeList.length > 0 ? `(${resumeList.length})` : ""}
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
@@ -1205,7 +1205,7 @@ export default function ResumeBuilder() {
                 🗑 Clear
               </button>
             </div>
-            <p className="text-xs mt-2" style={{ color: "#7ea3c4" }}>
+            <p className="text-xs mt-2" style={{ color: "#9f9a86" }}>
               Draft auto-saved locally · Your work won't be lost on refresh
             </p>
           </div>
@@ -1302,7 +1302,7 @@ export default function ResumeBuilder() {
               <SectionHeader label="Professional Summary">
                 <span
                   className="text-xs font-semibold"
-                  style={{ color: summaryWords > 80 ? "#ef4444" : summaryWords > 60 ? "#d97706" : "var(--text-soft)" }}
+                  style={{ color: summaryWords > 80 ? "#2e2d27" : summaryWords > 60 ? "#6b6858" : "var(--text-soft)" }}
                 >
                   {summaryWords}/80 words
                 </span>

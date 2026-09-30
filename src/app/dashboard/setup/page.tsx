@@ -4,8 +4,8 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
 const P = {
-  surface: "#ffffff", text: "#1a2035", muted: "#6b7a99",
-  hint: "#9aa4bc", border: "#e4e8ef", bg: "#f4f6f9",
+  surface: "#ffffff", text: "#161510", muted: "#6e6b5b",
+  hint: "#9d9884", border: "#e6e2d9", bg: "var(--surface)",
 }
 
 const STEPS = [
@@ -61,7 +61,7 @@ function StepDot({ index, current, done }: { index: number; current: number; don
       )}
       <div style={{
         width: 34, height: 34, borderRadius: "50%", border: `2px solid ${isActive ? "var(--accent)" : isPast ? "var(--accent)" : P.border}`,
-        background: isPast ? "var(--accent)" : isActive ? "#eff6ff" : P.surface,
+        background: isPast ? "var(--accent)" : isActive ? "#f2f0ea" : P.surface,
         display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1,
         transition: "all .2s",
       }}>
@@ -222,7 +222,7 @@ export default function SetupPage() {
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
                 {WORK_AUTHS.map(w => (
                   <button key={w} onClick={() => save({ workAuth: w })}
-                    style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${data.workAuth === w ? "var(--accent)" : P.border}`, background: data.workAuth === w ? "#eff6ff" : P.surface, color: data.workAuth === w ? "var(--accent)" : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+                    style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${data.workAuth === w ? "var(--accent)" : P.border}`, background: data.workAuth === w ? "#f2f0ea" : P.surface, color: data.workAuth === w ? "var(--accent)" : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
                     {w}
                   </button>
                 ))}
@@ -243,13 +243,13 @@ export default function SetupPage() {
             </div>
 
             {data.resumeUploaded ? (
-              <div style={{ padding: "20px 24px", borderRadius: 14, background: "#ecfdf5", border: "1.5px solid #a7f3d0", display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+              <div style={{ padding: "20px 24px", borderRadius: 14, background: "#f4f2ed", border: "1.5px solid #ddd8cd", display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
                 <span style={{ fontSize: 28 }}>✅</span>
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "#059669" }}>{resumeFile?.name || "Resume"} uploaded!</p>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#42413c" }}>{resumeFile?.name || "Resume"} uploaded!</p>
                   <p style={{ fontSize: 12.5, color: P.muted }}>Stored in your resume library — ready for AI Tailor, autofill, and ATS scoring.</p>
                 </div>
-                <button onClick={() => { save({ resumeUploaded: false }); setResumeFile(null); setResumeError("") }} style={{ marginLeft: "auto", padding: "5px 12px", borderRadius: 7, border: "1px solid #a7f3d0", background: "transparent", color: "#059669", fontSize: 12, cursor: "pointer" }}>Replace</button>
+                <button onClick={() => { save({ resumeUploaded: false }); setResumeFile(null); setResumeError("") }} style={{ marginLeft: "auto", padding: "5px 12px", borderRadius: 7, border: "1px solid #ddd8cd", background: "transparent", color: "#42413c", fontSize: 12, cursor: "pointer" }}>Replace</button>
               </div>
             ) : (
               <label style={{ display: "block", cursor: resumeUploading ? "wait" : "pointer" }}>
@@ -267,7 +267,7 @@ export default function SetupPage() {
               </label>
             )}
             {resumeError && (
-              <p style={{ fontSize: 12.5, color: "#dc2626", marginTop: 10 }}>⚠ {resumeError}</p>
+              <p style={{ fontSize: 12.5, color: "#13120d", marginTop: 10 }}>⚠ {resumeError}</p>
             )}
 
             <div style={{ padding: "14px 16px", borderRadius: 10, background: P.bg, border: `1px solid ${P.border}`, marginTop: 14 }}>
@@ -294,10 +294,10 @@ export default function SetupPage() {
             </div>
 
             {data.gmailConnected ? (
-              <div style={{ padding: "20px 24px", borderRadius: 14, background: "#ecfdf5", border: "1.5px solid #a7f3d0", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ padding: "20px 24px", borderRadius: 14, background: "#f4f2ed", border: "1.5px solid #ddd8cd", display: "flex", alignItems: "center", gap: 14 }}>
                 <span style={{ fontSize: 28 }}>✅</span>
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "#059669" }}>Gmail connected!</p>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#42413c" }}>Gmail connected!</p>
                   <p style={{ fontSize: 12.5, color: P.muted }}>Recruiter emails will appear in the Emails section.</p>
                 </div>
               </div>
@@ -326,8 +326,8 @@ export default function SetupPage() {
                     } catch { /* user cancelled */ }
                     setGmailLoading(false)
                   }}
-                  style={{ width: "100%", padding: "12px", borderRadius: 10, border: "none", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.08)", fontSize: 14, fontWeight: 700, color: "#3c4043", cursor: gmailLoading ? "wait" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                  style={{ width: "100%", padding: "12px", borderRadius: 10, border: "none", background: "var(--surface)", boxShadow: "0 1px 3px rgba(12,11,8,.12), 0 0 0 1px rgba(12,11,8,.08)", fontSize: 14, fontWeight: 700, color: "#403f3a", cursor: gmailLoading ? "wait" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#888471"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#938f7a"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#c6c0b0"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#7f7c69"/></svg>
                   {gmailLoading ? "Connecting…" : "Connect with Google"}
                 </button>
               </>
@@ -355,7 +355,7 @@ export default function SetupPage() {
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
                 {ROLES_LIST.map(r => (
                   <button key={r} onClick={() => toggleRole(r)}
-                    style={{ padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${data.targetRoles.includes(r) ? "var(--accent)" : P.border}`, background: data.targetRoles.includes(r) ? "#eff6ff" : P.surface, color: data.targetRoles.includes(r) ? "var(--accent)" : P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    style={{ padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${data.targetRoles.includes(r) ? "var(--accent)" : P.border}`, background: data.targetRoles.includes(r) ? "#f2f0ea" : P.surface, color: data.targetRoles.includes(r) ? "var(--accent)" : P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                     {r}
                   </button>
                 ))}
@@ -367,7 +367,7 @@ export default function SetupPage() {
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
                 {LOCS.map(l => (
                   <button key={l} onClick={() => toggleLoc(l)}
-                    style={{ padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${data.targetLocs.includes(l) ? "var(--accent)" : P.border}`, background: data.targetLocs.includes(l) ? "#eff6ff" : P.surface, color: data.targetLocs.includes(l) ? "var(--accent)" : P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    style={{ padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${data.targetLocs.includes(l) ? "var(--accent)" : P.border}`, background: data.targetLocs.includes(l) ? "#f2f0ea" : P.surface, color: data.targetLocs.includes(l) ? "var(--accent)" : P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                     {l}
                   </button>
                 ))}
@@ -385,7 +385,7 @@ export default function SetupPage() {
                 <div style={{ display: "flex", gap: 8, height: 38 }}>
                   {[true, false].map(v => (
                     <button key={String(v)} onClick={() => save({ openToRemote: v })}
-                      style={{ flex: 1, borderRadius: 9, border: `1.5px solid ${data.openToRemote === v ? "var(--accent)" : P.border}`, background: data.openToRemote === v ? "#eff6ff" : P.surface, color: data.openToRemote === v ? "var(--accent)" : P.muted, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                      style={{ flex: 1, borderRadius: 9, border: `1.5px solid ${data.openToRemote === v ? "var(--accent)" : P.border}`, background: data.openToRemote === v ? "#f2f0ea" : P.surface, color: data.openToRemote === v ? "var(--accent)" : P.muted, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                       {v ? "Yes ✓" : "On-site"}
                     </button>
                   ))}
@@ -454,7 +454,7 @@ export default function SetupPage() {
             { label: "Gmail",   done: data.gmailConnected },
             { label: "Prefs",   done: data.targetRoles.length > 0 },
           ].map(s => (
-            <div key={s.label} style={{ padding: "4px 12px", borderRadius: 20, background: s.done ? "#ecfdf5" : P.bg, border: `1px solid ${s.done ? "#a7f3d0" : P.border}`, fontSize: 12, fontWeight: 600, color: s.done ? "#059669" : P.hint }}>
+            <div key={s.label} style={{ padding: "4px 12px", borderRadius: 20, background: s.done ? "#f4f2ed" : P.bg, border: `1px solid ${s.done ? "#ddd8cd" : P.border}`, fontSize: 12, fontWeight: 600, color: s.done ? "#42413c" : P.hint }}>
               {s.done ? "✓" : "○"} {s.label}
             </div>
           ))}

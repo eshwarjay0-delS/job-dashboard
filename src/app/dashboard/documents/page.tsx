@@ -4,8 +4,8 @@
 // resume folder and rendering the SAME DocumentsClient component the hub tab
 // uses — so the two stay perfectly in sync (add a file here, it shows there).
 import path from "path"
-import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
+import PageIntro from "../_components/page-intro"
 import { USER_RESUMES_DIR } from "@/lib/paths"
 import { listFiles, statPath } from "@/lib/storage"
 import DocumentsClient from "./DocumentsClient"
@@ -69,26 +69,8 @@ export default async function DocumentsPage() {
   const { files, folders } = await scanLibrary(userDir)
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: 11, flexShrink: 0,
-          background: "linear-gradient(135deg, var(--accent), var(--accent-h))",
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#fff",
-        }}>📁</div>
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", margin: 0 }}>Documents</h1>
-          <p style={{ fontSize: 12.5, color: "var(--text-muted)", margin: "2px 0 0" }}>
-            Upload, organize, and manage your resumes and cover letters. {files.length} file{files.length === 1 ? "" : "s"} stored.
-          </p>
-        </div>
-        <Link href="/dashboard/resume" style={{
-          fontSize: 12, color: "var(--accent-txt)", textDecoration: "none", fontWeight: 600,
-          padding: "8px 14px", borderRadius: 9, background: "var(--accent-soft)",
-          border: "1px solid var(--accent-border)", flexShrink: 0,
-        }}>✦ Tailor a resume →</Link>
-      </div>
-
+    <div style={{ maxWidth: 900 }}>
+      <PageIntro page="/dashboard/documents" action={{ label: "Add a resume file", htmlFor: "doc-upload" }} />
       <DocumentsClient initialFiles={files} initialFolders={folders} />
     </div>
   )

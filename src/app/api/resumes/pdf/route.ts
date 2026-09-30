@@ -87,14 +87,14 @@ export async function GET(request: NextRequest) {
   }
   .toolbar {
     position: sticky; top: 0; display: flex; gap: 10px; align-items: center;
-    justify-content: center; padding: 12px; background: #111827; color: #fff;
+    justify-content: center; padding: 12px; background: #181818; color: #fff;
   }
   .toolbar button {
     font: inherit; font-weight: 600; border: 0; cursor: pointer;
-    padding: 9px 18px; border-radius: 9px; background: #0d9488; color: #fff;
+    padding: 9px 18px; border-radius: 9px; background: #5a5c61; color: #fff;
   }
-  .toolbar button:hover { background: #0f766e; }
-  .toolbar span { font-size: 13px; color: #cbd5e1; }
+  .toolbar button:hover { background: #4a4c50; }
+  .toolbar span { font-size: 13px; color: #d2d2d2; }
   .sheet {
     background: #fff; max-width: 8.27in; margin: 18px auto; padding: 0.7in 0.8in;
     box-shadow: 0 1px 12px rgba(0,0,0,.12);
@@ -141,10 +141,10 @@ function escapeHtml(s: string): string {
 
 function htmlError(title: string, detail = "", status = 200): NextResponse {
   const page = `<!doctype html><html><head><meta charset="utf-8"><title>PDF export</title>
-<style>body{font-family:Segoe UI,Arial,sans-serif;background:#f3f4f6;margin:0;padding:60px 20px;text-align:center;color:#1f2937}
+<style>body{font-family:Segoe UI,Arial,sans-serif;background:#f3f4f6;margin:0;padding:60px 20px;text-align:center;color:#282828}
 .card{background:#fff;max-width:440px;margin:0 auto;padding:32px;border-radius:16px;box-shadow:0 1px 12px rgba(0,0,0,.1)}
-h1{font-size:18px;margin:0 0 10px}p{color:#6b7280;font-size:14px;line-height:1.6}
-code{background:#f3f4f6;padding:2px 8px;border-radius:6px;font-family:Consolas,monospace;color:#0f766e}</style></head>
+h1{font-size:18px;margin:0 0 10px}p{color:#727272;font-size:14px;line-height:1.6}
+code{background:#f3f4f6;padding:2px 8px;border-radius:6px;font-family:Consolas,monospace;color:#4a4c50}</style></head>
 <body><div class="card"><h1>${escapeHtml(title)}</h1><p>${detail || "Please try again."}</p></div></body></html>`
   return new NextResponse(page, { status, headers: { "Content-Type": "text/html; charset=utf-8" } })
 }

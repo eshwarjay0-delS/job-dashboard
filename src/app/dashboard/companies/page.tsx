@@ -23,11 +23,11 @@ const C = {
   text:   "var(--text)",
   muted:  "var(--text-muted)",
   hint:   "var(--text-soft)",
-  teal:   "#14b8a6",
-  indigo: "#6366f1",
-  green:  "#22c55e",
-  amber:  "#f59e0b",
-  red:    "#f87171",
+  teal:   "#6a6757",
+  indigo: "#757261",
+  green:  "#605e51",
+  amber:  "#7e7a68",
+  red:    "#ccc6b7",
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -41,8 +41,8 @@ function mix(color: string, pct: number) {
 }
 
 const AVATAR_PALETTE = [
-  "#1d6fc4", "#7c3aed", "#059669", "#d97706",
-  "#e11d48", "#0d9488", "#dc2626", "#6366f1",
+  "#1c1b16", "#4d4b44", "#42413c", "#6b6858",
+  "#1a1914", "#5c5a4e", "#13120d", "#757261",
 ]
 function avatarColor(name: string): string {
   let h = 0
@@ -185,12 +185,12 @@ function CompanyCard({ c, onClick }: { c: CompanyStats; onClick: () => void }) {
           </span>
         )}
         {c.w2Count > 0 && (
-          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(96,165,250,.12)", color: "#60a5fa", border: "1px solid rgba(96,165,250,.3)" }}>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(162,157,137,.12)", color: "#9d9884", border: "1px solid rgba(162,157,137,.3)" }}>
             W2 ×{c.w2Count}
           </span>
         )}
         {c.c2cCount > 0 && (
-          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(147,197,253,.12)", color: "#93c5fd", border: "1px solid rgba(147,197,253,.3)" }}>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(193,187,171,.12)", color: "#c6c0b1", border: "1px solid rgba(193,187,171,.3)" }}>
             C2C ×{c.c2cCount}
           </span>
         )}
@@ -226,7 +226,7 @@ function CompanyDrawer({ c, onClose }: { c: CompanyStats | null; onClose: () => 
     <>
       {/* backdrop */}
       <div onClick={onClose} style={{
-        position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 300, backdropFilter: "blur(2px)",
+        position: "fixed", inset: 0, background: "rgba(12,11,8,.45)", zIndex: 300, backdropFilter: "blur(2px)",
       }} />
       {/* panel */}
       <div style={{
@@ -320,7 +320,7 @@ function CompanyDrawer({ c, onClose }: { c: CompanyStats | null; onClose: () => 
             <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>Top Skills Required</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {c.topTags.map(tag => (
-                <span key={tag} style={{ fontSize: 11.5, padding: "3px 9px", borderRadius: 6, background: "var(--surface-2,rgba(99,102,241,.07))", color: C.hint, border: `1px solid ${C.border}` }}>
+                <span key={tag} style={{ fontSize: 11.5, padding: "3px 9px", borderRadius: 6, background: "var(--surface-2,rgba(117,114,97,.07))", color: C.hint, border: `1px solid ${C.border}` }}>
                   #{tag}
                 </span>
               ))}
@@ -423,7 +423,7 @@ export default function CompaniesPage() {
           icon={<Building2 size={18}/>}
           title="Company Intelligence"
           badge={
-            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: "rgba(99,102,241,.12)", color: C.indigo, border: "1px solid rgba(99,102,241,.3)" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: "rgba(117,114,97,.12)", color: C.indigo, border: "1px solid rgba(117,114,97,.3)" }}>
               {ALL_COMPANIES.length} companies
             </span>
           }
@@ -434,7 +434,7 @@ export default function CompaniesPage() {
         <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
           {[
             { label: "Total postings", val: totalJobs, color: C.indigo },
-            { label: "H1B Likely sponsors", val: likelyCount, color: "#22c55e" },
+            { label: "H1B Likely sponsors", val: likelyCount, color: "#605e51" },
             { label: "Companies tracked", val: ALL_COMPANIES.length, color: C.teal },
             { label: "Avg contract rate", val: `$${avgRate}/hr`, color: C.amber },
           ].map(({ label, val, color }) => (
@@ -471,7 +471,7 @@ export default function CompaniesPage() {
           {(["all", "likely", "possible", "unknown"] as const).map(s => {
             const labels = { all: "All H1B", likely: "Likely", possible: "Possible", unknown: "Unknown" }
             const icons: Partial<Record<string, typeof Check>> = { likely: Check, possible: TriangleAlert, unknown: HelpCircle }
-            const colors: Record<string, string> = { likely: "#22c55e", possible: C.amber, unknown: C.muted, all: C.indigo }
+            const colors: Record<string, string> = { likely: "#605e51", possible: C.amber, unknown: C.muted, all: C.indigo }
             const active = h1bFilter === s
             const FilterIcon = icons[s]
             return (
@@ -498,8 +498,8 @@ export default function CompaniesPage() {
           {([0, 60, 80, 100] as const).map(r => (
             <button key={r} onClick={() => setRateFilter(r)} style={{
               padding: "5px 11px", borderRadius: 9, cursor: "pointer", fontSize: 11.5, fontWeight: 600,
-              background: rateFilter === r ? "rgba(251,191,36,.15)" : C.card, color: rateFilter === r ? C.amber : C.muted,
-              border: `1px solid ${rateFilter === r ? "rgba(251,191,36,.4)" : C.border}`,
+              background: rateFilter === r ? "rgba(200,194,179,.15)" : C.card, color: rateFilter === r ? C.amber : C.muted,
+              border: `1px solid ${rateFilter === r ? "rgba(200,194,179,.4)" : C.border}`,
             }}>{r === 0 ? "Any rate" : `$${r}+/hr`}</button>
           ))}
           {/* Sort */}
@@ -513,7 +513,7 @@ export default function CompaniesPage() {
                 padding: "4px 10px", borderRadius: 7, border: "none", cursor: "pointer",
                 fontSize: 11.5, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4,
                 background: sortBy === key ? C.teal : "transparent",
-                color: sortBy === key ? "#04201c" : C.muted,
+                color: sortBy === key ? "#1b1a14" : C.muted,
               }}><Icon size={11}/> {label}</button>
             ))}
           </div>
@@ -526,7 +526,7 @@ export default function CompaniesPage() {
           </span>
           {hasActive && (
             <button onClick={() => { setH1bFilter("all"); setTypeFilter("all"); setRateFilter(0) }}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", fontSize: 11, fontWeight: 700 }}>
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#2e2d27", fontSize: 11, fontWeight: 700 }}>
               ✕ Clear filters
             </button>
           )}

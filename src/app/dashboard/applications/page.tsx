@@ -141,7 +141,7 @@ export default function ApplicationsPage() {
                       <td style={{ ...td, color: "var(--accent)", fontWeight: 700, fontSize: 12.5 }}>{a.salary || "—"}</td>
                       <td style={td}>
                         {a.followUpDate ? (
-                          <span style={{ fontSize: 12, fontWeight: overdue ? 700 : 500, color: overdue ? "#dc2626" : soon ? "#d97706" : "var(--text-soft)" }}>
+                          <span style={{ fontSize: 12, fontWeight: overdue ? 700 : 500, color: overdue ? "#13120d" : soon ? "#6b6858" : "var(--text-soft)" }}>
                             {overdue ? "⚠ " : soon ? "⏰ " : ""}{new Date(a.followUpDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                           </span>
                         ) : <span style={{ color: "var(--text-soft)" }}>—</span>}
@@ -149,7 +149,7 @@ export default function ApplicationsPage() {
                       <td style={{ ...td, fontSize: 12, color: "var(--text-soft)", whiteSpace: "nowrap" }}>{daysSince(a.appliedDate)}</td>
                       <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>
                         <button onClick={() => { if (confirm("Delete this application?")) remove(a.id) }} title="Delete"
-                          style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", fontSize: 13, fontWeight: 700 }}>✕</button>
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#2e2d27", fontSize: 13, fontWeight: 700 }}>✕</button>
                       </td>
                     </tr>
                   )

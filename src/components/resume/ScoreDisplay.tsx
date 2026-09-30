@@ -30,9 +30,9 @@ export default function ScoreDisplay({ overall, skills = 0, identity = 0, experi
     <div className="flex items-center gap-6">
       <ProgressRing value={overall} size={80} strokeWidth={6} label="ATS" />
       <div className="flex-1 flex flex-col gap-3">
-        <ScoreBar label="Skills Coverage" value={skills} color="#2563eb" />
-        <ScoreBar label="Identity & Keywords" value={identity} color="#10b981" />
-        <ScoreBar label="Experience Depth" value={experience} color="#f59e0b" />
+        <ScoreBar label="Skills Coverage" value={skills} color="#1c1b16" />
+        <ScoreBar label="Identity & Keywords" value={identity} color="#58564c" />
+        <ScoreBar label="Experience Depth" value={experience} color="#7e7a68" />
       </div>
     </div>
   );

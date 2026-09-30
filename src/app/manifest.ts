@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Tailor resumes in seconds, autofill any application in one click, and find visa-friendly jobs.",
     start_url: "/dashboard",
     display: "standalone",
-    background_color: "#0b1220",
-    theme_color: "#0b1220",
+    background_color: "#121212",
+    theme_color: "#121212",
     icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }],
   }
 }

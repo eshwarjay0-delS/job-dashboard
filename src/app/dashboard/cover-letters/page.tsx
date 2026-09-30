@@ -5,14 +5,14 @@ import { Briefcase, Rocket, Zap, Mail, PenLine, FileText, Sparkles, TriangleAler
 import PageHeader from "@/components/layout/PageHeader"
 
 const P = {
-  surface: "#ffffff", text: "#1a2035", muted: "#6b7a99",
-  hint: "#9aa4bc", border: "#e4e8ef", bg: "#f4f6f9",
+  surface: "#ffffff", text: "#161510", muted: "#6e6b5b",
+  hint: "#9d9884", border: "#e6e2d9", bg: "var(--surface)",
 }
 
 const TONES = [
-  { id: "professional", label: "Professional",   desc: "Formal and polished — best for enterprise, F500, finance", Icon: Briefcase, color: "#1d6fc4", bg: "#eff6ff", border: "#bfdbfe" },
-  { id: "enthusiastic", label: "Enthusiastic",   desc: "Warm and energetic — best for startups, product, creative", Icon: Rocket, color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  { id: "concise",      label: "Sharp & Direct",  desc: "No fluff — best for engineering, DevOps, technical roles",   Icon: Zap, color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
+  { id: "professional", label: "Professional",   desc: "Formal and polished — best for enterprise, F500, finance", Icon: Briefcase, color: "#1c1b16", bg: "#f2f0ea", border: "#d9d4c8" },
+  { id: "enthusiastic", label: "Enthusiastic",   desc: "Warm and energetic — best for startups, product, creative", Icon: Rocket, color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
+  { id: "concise",      label: "Sharp & Direct",  desc: "No fluff — best for engineering, DevOps, technical roles",   Icon: Zap, color: "#42413c", bg: "#f4f2ed", border: "#ddd8cd" },
 ]
 
 const TEMPLATES = {
@@ -184,7 +184,7 @@ Write the full cover letter (250-350 words). No placeholders. Use REAL sentences
             <div style={{ display: "flex", gap: 6 }}>
               {(["compose", "saved"] as const).map(v => (
                 <button key={v} onClick={() => setView(v)}
-                  style={{ padding: "7px 14px", borderRadius: 9, border: `1.5px solid ${view === v ? "var(--accent)" : P.border}`, background: view === v ? "#eff6ff" : P.surface, color: view === v ? "var(--accent)" : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                  style={{ padding: "7px 14px", borderRadius: 9, border: `1.5px solid ${view === v ? "var(--accent)" : P.border}`, background: view === v ? "#f2f0ea" : P.surface, color: view === v ? "var(--accent)" : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
                   {v === "compose" ? <><PenLine size={13}/> Compose</> : <><Folder size={13}/> Saved ({saved.length})</>}
                 </button>
               ))}
@@ -202,11 +202,11 @@ Write the full cover letter (250-350 words). No placeholders. Use REAL sentences
             {/* Mode toggle */}
             <div style={{ display: "flex", gap: 6, padding: "4px", background: P.bg, borderRadius: 10, border: `1px solid ${P.border}` }}>
               <button onClick={() => setMode("ai")}
-                style={{ flex: 1, padding: "7px", borderRadius: 7, border: "none", background: mode === "ai" ? "#fff" : "transparent", color: mode === "ai" ? P.text : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", boxShadow: mode === "ai" ? "0 1px 3px rgba(0,0,0,.08)" : "none" }}>
+                style={{ flex: 1, padding: "7px", borderRadius: 7, border: "none", background: mode === "ai" ? "#fff" : "transparent", color: mode === "ai" ? P.text : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", boxShadow: mode === "ai" ? "0 1px 3px rgba(12,11,8,.08)" : "none" }}>
                 <Sparkles size={13} style={{ display: "inline", verticalAlign: "-2px", marginRight: 5 }}/>AI Generate
               </button>
               <button onClick={() => setMode("template")}
-                style={{ flex: 1, padding: "7px", borderRadius: 7, border: "none", background: mode === "template" ? "#fff" : "transparent", color: mode === "template" ? P.text : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", boxShadow: mode === "template" ? "0 1px 3px rgba(0,0,0,.08)" : "none" }}>
+                style={{ flex: 1, padding: "7px", borderRadius: 7, border: "none", background: mode === "template" ? "#fff" : "transparent", color: mode === "template" ? P.text : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", boxShadow: mode === "template" ? "0 1px 3px rgba(12,11,8,.08)" : "none" }}>
                 <FileText size={13} style={{ display: "inline", verticalAlign: "-2px", marginRight: 5 }}/>Template
               </button>
             </div>
@@ -281,7 +281,7 @@ Write the full cover letter (250-350 words). No placeholders. Use REAL sentences
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <p style={{ fontSize: 13, fontWeight: 700, color: P.text }}>Preview</p>
                 {currentText && (
-                  <span style={{ padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: wc > 400 ? "#fef2f2" : wc > 300 ? "#fffbeb" : "#ecfdf5", color: wc > 400 ? "#dc2626" : wc > 300 ? "#d97706" : "#059669", border: "none" }}>
+                  <span style={{ padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: wc > 400 ? "var(--surface)" : wc > 300 ? "#f7f5f0" : "#f4f2ed", color: wc > 400 ? "#13120d" : wc > 300 ? "#6b6858" : "#42413c", border: "none" }}>
                     {wc} words {wc > 400 ? "⚠ too long" : wc < 200 ? "⚠ too short" : "✓"}
                   </span>
                 )}
@@ -289,13 +289,13 @@ Write the full cover letter (250-350 words). No placeholders. Use REAL sentences
               {currentText && (
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={saveLetter} style={{ padding: "6px 12px", borderRadius: 7, border: `1px solid ${P.border}`, background: P.surface, color: P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>💾 Save</button>
-                  <button onClick={copyLetter} style={{ padding: "6px 12px", borderRadius: 7, border: "none", background: copied ? "#059669" : "var(--accent)", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{copied ? "Copied!" : "Copy"}</button>
+                  <button onClick={copyLetter} style={{ padding: "6px 12px", borderRadius: 7, border: "none", background: copied ? "#42413c" : "var(--accent)", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{copied ? "Copied!" : "Copy"}</button>
                 </div>
               )}
             </div>
 
             {currentText ? (
-              <div style={{ background: "#fafbff", border: `1.5px solid ${P.border}`, borderRadius: 14, padding: "22px 24px", flex: 1, overflowY: "auto" as const, fontFamily: "'Georgia', serif", lineHeight: 1.85, color: P.text, fontSize: 13.5, whiteSpace: "pre-wrap" as const, maxHeight: "70vh" }}>
+              <div style={{ background: "#f9f7f4", border: `1.5px solid ${P.border}`, borderRadius: 14, padding: "22px 24px", flex: 1, overflowY: "auto" as const, fontFamily: "'Georgia', serif", lineHeight: 1.85, color: P.text, fontSize: 13.5, whiteSpace: "pre-wrap" as const, maxHeight: "70vh" }}>
                 {currentText}
               </div>
             ) : (

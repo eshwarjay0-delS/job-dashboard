@@ -5,8 +5,8 @@ import { DollarSign, TriangleAlert, TrendingUp, TrendingDown, Check, Target, Lig
 import PageHeader from "@/components/layout/PageHeader"
 
 const P = {
-  surface: "#ffffff", text: "#1a2035", muted: "#6b7a99",
-  hint: "#9aa4bc", border: "#e4e8ef", bg: "#f4f6f9",
+  surface: "#ffffff", text: "#161510", muted: "#6e6b5b",
+  hint: "#9d9884", border: "#e6e2d9", bg: "var(--surface)",
 }
 
 interface SalaryData {
@@ -74,13 +74,13 @@ function Gauge({ value, min, max }: { value: number; min: number; max: number })
     <svg width="200" height="60" viewBox="0 0 200 60">
       <defs>
         <linearGradient id="g" x1="0" x2="1">
-          <stop offset="0%" stopColor="#fecaca"/>
-          <stop offset="50%" stopColor="#fde68a"/>
-          <stop offset="100%" stopColor="#a7f3d0"/>
+          <stop offset="0%" stopColor="#ddd8cd"/>
+          <stop offset="50%" stopColor="#e4e0d6"/>
+          <stop offset="100%" stopColor="#ddd8cd"/>
         </linearGradient>
       </defs>
       <rect x="10" y="20" width="180" height="10" rx="5" fill="url(#g)"/>
-      <circle cx={x} cy="25" r="8" fill="#1a2035" stroke="#fff" strokeWidth="2"/>
+      <circle cx={x} cy="25" r="8" fill="#161510" stroke="#fff" strokeWidth="2"/>
     </svg>
   )
 }
@@ -174,7 +174,7 @@ export default function SalaryPage() {
   }
 
   const trend = data?.trend
-  const trendColor = trend === "rising" ? "#059669" : trend === "declining" ? "#dc2626" : "#d97706"
+  const trendColor = trend === "rising" ? "#42413c" : trend === "declining" ? "#13120d" : "#6b6858"
   const trendLabel = trend === "rising" ? "↑ Rising market" : trend === "declining" ? "↓ Declining" : "→ Stable"
 
   return (
@@ -225,7 +225,7 @@ export default function SalaryPage() {
             </select>
           </div>
         </div>
-        {error && <p style={{ fontSize: 12.5, color: "#dc2626", marginBottom: 10, display: "flex", alignItems: "center", gap: 5 }}><TriangleAlert size={12}/> {error}</p>}
+        {error && <p style={{ fontSize: 12.5, color: "#13120d", marginBottom: 10, display: "flex", alignItems: "center", gap: 5 }}><TriangleAlert size={12}/> {error}</p>}
         <button onClick={lookup} disabled={loading} style={{ width: "100%", padding: "11px 20px", borderRadius: 10, background: "var(--accent)", color: "#fff", fontSize: 14, fontWeight: 800, border: "none", cursor: loading ? "wait" : "pointer", opacity: loading ? 0.75 : 1 }}>
           {loading ? "Fetching comp data…" : "Get Salary Data"}
         </button>
@@ -235,7 +235,7 @@ export default function SalaryPage() {
       {data && (
         <>
           {/* Hero comp card */}
-          <div style={{ background: "linear-gradient(135deg, #0f1623 0%, #1a2644 100%)", border: "1.5px solid rgba(255,255,255,.08)", borderRadius: 18, padding: "28px 32px", marginBottom: 16 }}>
+          <div style={{ background: "linear-gradient(135deg, #15140f 0%, #27261f 100%)", border: "1.5px solid rgba(255,255,255,.08)", borderRadius: 18, padding: "28px 32px", marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 16 }}>
               <div>
                 <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.4)", letterSpacing: "0.8px", marginBottom: 6 }}>MARKET MEDIAN BASE SALARY</p>
@@ -243,7 +243,7 @@ export default function SalaryPage() {
                 <p style={{ fontSize: 13.5, color: "rgba(255,255,255,.55)", marginTop: 6 }}>{data.role} · {data.location}{data.company ? ` · ${data.company}` : ""}</p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
-                <span style={{ padding: "6px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: "rgba(52,211,153,.15)", color: "#34d399", border: "1px solid rgba(52,211,153,.3)" }}>{trendLabel}</span>
+                <span style={{ padding: "6px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: "rgba(186,180,164,.15)", color: "#bbb5a5", border: "1px solid rgba(186,180,164,.3)" }}>{trendLabel}</span>
                 <span style={{ padding: "6px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, background: "rgba(255,255,255,.08)", color: "rgba(255,255,255,.7)", border: "1px solid rgba(255,255,255,.12)" }}>{data.yoe_range}</span>
               </div>
             </div>
@@ -256,9 +256,9 @@ export default function SalaryPage() {
                 <span style={{ fontSize: 12, color: "rgba(255,255,255,.4)" }}>High</span>
               </div>
               <div style={{ position: "relative", height: 10, borderRadius: 9, background: "rgba(255,255,255,.1)", overflow: "visible" }}>
-                <div style={{ position: "absolute", left: 0, right: 0, height: "100%", borderRadius: 9, background: "linear-gradient(90deg, rgba(248,113,113,.6) 0%, rgba(251,191,36,.7) 45%, rgba(52,211,153,.8) 100%)" }}/>
+                <div style={{ position: "absolute", left: 0, right: 0, height: "100%", borderRadius: 9, background: "linear-gradient(90deg, rgba(155,150,130,.6) 0%, rgba(200,194,179,.7) 45%, rgba(186,180,164,.8) 100%)" }}/>
                 {/* Median tick */}
-                <div style={{ position: "absolute", left: "50%", top: -4, width: 3, height: 18, borderRadius: 2, background: "#fff", transform: "translateX(-50%)" }}/>
+                <div style={{ position: "absolute", left: "50%", top: -4, width: 3, height: 18, borderRadius: 2, background: "var(--surface)", transform: "translateX(-50%)" }}/>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
                 <span style={{ fontSize: 12.5, fontWeight: 700, color: "rgba(255,255,255,.7)" }}>${data.base_min.toLocaleString()}</span>
@@ -275,14 +275,14 @@ export default function SalaryPage() {
             <div style={{ background: P.surface, border: `1px solid ${P.border}`, borderRadius: 16, padding: "20px 22px" }}>
               <p style={{ fontSize: 13.5, fontWeight: 800, color: P.text, marginBottom: 16 }}>Total Compensation Breakdown</p>
               <Bar label="Base Salary" value={data.base_mid} max={data.total_comp_max} color="var(--accent)"/>
-              <Bar label={`Bonus (~${data.bonus_pct}%)`} value={Math.round(data.base_mid * data.bonus_pct / 100)} max={data.total_comp_max} color="#f59e0b"/>
+              <Bar label={`Bonus (~${data.bonus_pct}%)`} value={Math.round(data.base_mid * data.bonus_pct / 100)} max={data.total_comp_max} color="#7e7a68"/>
               <div style={{ marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                   <span style={{ fontSize: 12.5, fontWeight: 600, color: P.muted }}>Equity (RSU/year)</span>
                   <span style={{ fontSize: 12.5, fontWeight: 700, color: P.text }}>{data.equity_range}</span>
                 </div>
-                <div style={{ height: 8, borderRadius: 9, background: "#f5f3ff", overflow: "hidden" }}>
-                  <div style={{ width: "55%", height: "100%", borderRadius: 9, background: "#7c3aed" }}/>
+                <div style={{ height: 8, borderRadius: 9, background: "#f6f4ef", overflow: "hidden" }}>
+                  <div style={{ width: "55%", height: "100%", borderRadius: 9, background: "#4d4b44" }}/>
                 </div>
               </div>
               <div style={{ borderTop: `1px solid ${P.border}`, paddingTop: 12, marginTop: 6 }}>
@@ -297,10 +297,10 @@ export default function SalaryPage() {
             <div style={{ background: P.surface, border: `1px solid ${P.border}`, borderRadius: 16, padding: "20px 22px" }}>
               <p style={{ fontSize: 13.5, fontWeight: 800, color: P.text, marginBottom: 16 }}>Salary Percentiles</p>
               {[
-                { label: "25th percentile", val: data.percentiles.p25, color: "#fca5a5" },
-                { label: "50th percentile (median)", val: data.percentiles.p50, color: "#fde68a" },
-                { label: "75th percentile", val: data.percentiles.p75, color: "#6ee7b7" },
-                { label: "90th percentile (top)", val: data.percentiles.p90, color: "#34d399" },
+                { label: "25th percentile", val: data.percentiles.p25, color: "#bbb5a5" },
+                { label: "50th percentile (median)", val: data.percentiles.p50, color: "#e4e0d6" },
+                { label: "75th percentile", val: data.percentiles.p75, color: "#d1ccbe" },
+                { label: "90th percentile (top)", val: data.percentiles.p90, color: "#bbb5a5" },
               ].map(p => (
                 <div key={p.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", borderRadius: 10, background: P.bg, marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -311,8 +311,8 @@ export default function SalaryPage() {
                 </div>
               ))}
 
-              <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 10, background: data.market_rate === "above" ? "#ecfdf5" : data.market_rate === "below" ? "#fef2f2" : "#fffbeb", border: `1px solid ${data.market_rate === "above" ? "#a7f3d0" : data.market_rate === "below" ? "#fecaca" : "#fde68a"}` }}>
-                <p style={{ fontSize: 12.5, fontWeight: 700, color: data.market_rate === "above" ? "#059669" : data.market_rate === "below" ? "#dc2626" : "#d97706", display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 10, background: data.market_rate === "above" ? "#f4f2ed" : data.market_rate === "below" ? "var(--surface)" : "#f7f5f0", border: `1px solid ${data.market_rate === "above" ? "#ddd8cd" : data.market_rate === "below" ? "#ddd8cd" : "#e4e0d6"}` }}>
+                <p style={{ fontSize: 12.5, fontWeight: 700, color: data.market_rate === "above" ? "#42413c" : data.market_rate === "below" ? "#13120d" : "#6b6858", display: "flex", alignItems: "center", gap: 5 }}>
                   {data.market_rate === "above" ? <><TrendingUp size={12}/> Above market rate</> : data.market_rate === "below" ? <><TrendingDown size={12}/> Below market rate</> : <><Check size={12}/> At market rate</>}
                 </p>
               </div>
@@ -320,7 +320,7 @@ export default function SalaryPage() {
           </div>
 
           {/* Negotiation coach */}
-          <div style={{ background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)", border: "1.5px solid #fde68a", borderRadius: 16, padding: "20px 24px", marginBottom: 16 }}>
+          <div style={{ background: "linear-gradient(135deg, #f7f5f0 0%, #edeae2 100%)", border: "1.5px solid #e4e0d6", borderRadius: 16, padding: "20px 24px", marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <Target size={19}/>
               <p style={{ fontSize: 15, fontWeight: 800, color: P.text }}>Negotiation Coach</p>
@@ -329,9 +329,9 @@ export default function SalaryPage() {
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 11.5, fontWeight: 600, color: P.hint, display: "block", marginBottom: 4 }}>YOUR CURRENT / OFFERED COMP</label>
                 <input value={compInput} onChange={e => setCompInput(e.target.value)} placeholder="e.g. $130,000 or $150K total"
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: 9, border: "1.5px solid #fde68a", fontSize: 13, color: P.text, background: "#fff", outline: "none", boxSizing: "border-box" as const }}/>
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: 9, border: "1.5px solid #e4e0d6", fontSize: 13, color: P.text, background: "var(--surface)", outline: "none", boxSizing: "border-box" as const }}/>
               </div>
-              <button onClick={getNegotiationTip} disabled={loadingNeg} style={{ padding: "9px 18px", borderRadius: 9, background: "#f59e0b", color: "#fff", fontSize: 13, fontWeight: 700, border: "none", cursor: loadingNeg ? "wait" : "pointer", opacity: loadingNeg ? 0.7 : 1, flexShrink: 0 }}>
+              <button onClick={getNegotiationTip} disabled={loadingNeg} style={{ padding: "9px 18px", borderRadius: 9, background: "#7e7a68", color: "#fff", fontSize: 13, fontWeight: 700, border: "none", cursor: loadingNeg ? "wait" : "pointer", opacity: loadingNeg ? 0.7 : 1, flexShrink: 0 }}>
                 {loadingNeg ? "…" : "Get Tips"}
               </button>
             </div>
@@ -340,8 +340,8 @@ export default function SalaryPage() {
             {data.tips.length > 0 && !negotiationTip && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {data.tips.map((t, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, padding: "9px 12px", borderRadius: 9, background: "#fff", border: "1px solid #fde68a" }}>
-                    <span style={{ color: "#f59e0b", flexShrink: 0, display: "flex" }}><Lightbulb size={13}/></span>
+                  <div key={i} style={{ display: "flex", gap: 8, padding: "9px 12px", borderRadius: 9, background: "var(--surface)", border: "1px solid #e4e0d6" }}>
+                    <span style={{ color: "#7e7a68", flexShrink: 0, display: "flex" }}><Lightbulb size={13}/></span>
                     <p style={{ fontSize: 12.5, color: P.text, lineHeight: 1.6 }}>{t}</p>
                   </div>
                 ))}
@@ -350,7 +350,7 @@ export default function SalaryPage() {
 
             {/* AI-generated personalized tips */}
             {negotiationTip && (
-              <div style={{ background: "#fff", border: "1.5px solid #fde68a", borderRadius: 12, padding: "14px 16px", fontSize: 13.5, color: P.text, lineHeight: 1.7 }}>
+              <div style={{ background: "var(--surface)", border: "1.5px solid #e4e0d6", borderRadius: 12, padding: "14px 16px", fontSize: 13.5, color: P.text, lineHeight: 1.7 }}>
                 {negotiationTip.split("\n").filter(Boolean).map((line, i) => (
                   <p key={i} style={{ marginBottom: 6 }}>{line}</p>
                 ))}

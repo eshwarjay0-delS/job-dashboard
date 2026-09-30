@@ -15,10 +15,10 @@ const IMGS = {
 function GoogleIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0 }}>
-      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      <path fill="#7f7c69" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#888471" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#c6c0b0" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#938f7a" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
     </svg>
   )
 }
@@ -28,16 +28,16 @@ function ErrorBanner() {
   const err = params.get("error")
   if (!err) return null
   return (
-    <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:10,
-      padding:"10px 14px", marginBottom:20, fontSize:13, color:"#dc2626" }}>
+    <div style={{ background:"var(--surface)", border:"1px solid #ddd8cd", borderRadius:10,
+      padding:"10px 14px", marginBottom:20, fontSize:13, color:"#13120d" }}>
       Sign-in failed. Please try again.
     </div>
   )
 }
 
 const PLAN_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  pro:    { label: "Pro — $49/mo",     color: "#1d6fc4", bg: "rgba(29,111,196,.08)"  },
-  agency: { label: "Agency — $199/mo", color: "#7c3aed", bg: "rgba(124,58,237,.08)" },
+  pro:    { label: "Pro — $49/mo",     color: "#1c1b16", bg: "rgba(107,104,88,.08)"  },
+  agency: { label: "Agency — $199/mo", color: "#4d4b44", bg: "rgba(101,98,84,.08)" },
 }
 
 function LoginContent() {
@@ -137,9 +137,9 @@ function LoginContent() {
     return (
       <div style={{ width:"100%", maxWidth:400, textAlign:"center" }}>
         <div style={{ fontSize:40, marginBottom:12 }}>📬</div>
-        <h1 style={{ fontSize:24, fontWeight:900, color:"#1a2035", marginBottom:8 }}>Check your email</h1>
-        <p style={{ fontSize:14, color:"#6b7a99", lineHeight:1.6, marginBottom:20 }}>
-          We sent a magic link to <strong style={{ color:"#1a2035" }}>{email}</strong>.<br/>
+        <h1 style={{ fontSize:24, fontWeight:900, color:"#161510", marginBottom:8 }}>Check your email</h1>
+        <p style={{ fontSize:14, color:"#6e6b5b", lineHeight:1.6, marginBottom:20 }}>
+          We sent a magic link to <strong style={{ color:"#161510" }}>{email}</strong>.<br/>
           Click it to sign in — no password needed.
         </p>
         <button onClick={() => { setMagicSent(false); setEmail("") }}
@@ -153,10 +153,10 @@ function LoginContent() {
   return (
     <div style={{ width:"100%", maxWidth:400 }}>
       <div style={{ marginBottom:28 }}>
-        <h1 style={{ fontSize:28, fontWeight:900, color:"#1a2035", letterSpacing:"-0.5px", lineHeight:1.15, marginBottom:8 }}>
+        <h1 style={{ fontSize:28, fontWeight:900, color:"#161510", letterSpacing:"-0.5px", lineHeight:1.15, marginBottom:8 }}>
           Welcome back 👋
         </h1>
-        <p style={{ fontSize:14.5, color:"#6b7a99", lineHeight:1.5 }}>
+        <p style={{ fontSize:14.5, color:"#6e6b5b", lineHeight:1.5 }}>
           Sign in to your MarketFit workspace. New here? An account is created automatically.
         </p>
       </div>
@@ -182,9 +182,9 @@ function LoginContent() {
           disabled={demoLoading}
           style={{
             width:"100%", padding:"12px 16px", borderRadius:12, marginBottom:16,
-            background:"#fffbeb", border:"1.5px dashed #f59e0b",
+            background:"#f7f5f0", border:"1.5px dashed #7e7a68",
             display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-            fontSize:13.5, fontWeight:700, color:"#92400e",
+            fontSize:13.5, fontWeight:700, color:"#58564c",
             cursor: demoLoading ? "not-allowed" : "pointer",
             opacity: demoLoading ? .65 : 1,
           }}
@@ -195,8 +195,8 @@ function LoginContent() {
 
       <Suspense fallback={null}><ErrorBanner /></Suspense>
       {error && (
-        <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:10,
-          padding:"10px 14px", marginBottom:20, fontSize:13, color:"#dc2626" }}>
+        <div style={{ background:"var(--surface)", border:"1px solid #ddd8cd", borderRadius:10,
+          padding:"10px 14px", marginBottom:20, fontSize:13, color:"#13120d" }}>
           {error}
         </div>
       )}
@@ -207,11 +207,11 @@ function LoginContent() {
         disabled={googleLoading}
         style={{
           width:"100%", padding:"14px 20px", borderRadius:12,
-          background:"#ffffff", border:"1.5px solid #d0d7e3",
+          background:"var(--surface)", border:"1.5px solid #d3cdc0",
           display:"flex", alignItems:"center", justifyContent:"center", gap:12,
-          fontSize:15, fontWeight:600, color:"#1a2035",
+          fontSize:15, fontWeight:600, color:"#161510",
           cursor: googleLoading ? "not-allowed" : "pointer",
-          boxShadow:"0 2px 8px rgba(0,0,0,.08)",
+          boxShadow:"0 2px 8px rgba(12,11,8,.08)",
           transition:"all .15s",
           opacity: googleLoading ? .65 : 1,
         }}
@@ -220,8 +220,8 @@ function LoginContent() {
           <>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24"
               style={{ animation:"spin 1s linear infinite", flexShrink:0 }}>
-              <circle cx="12" cy="12" r="10" stroke="#d0d7e3" strokeWidth="3"/>
-              <path fill="#1d6fc4" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              <circle cx="12" cy="12" r="10" stroke="#d3cdc0" strokeWidth="3"/>
+              <path fill="#1c1b16" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
             Redirecting to Google…
           </>
@@ -235,9 +235,9 @@ function LoginContent() {
 
       {/* Divider */}
       <div style={{ margin:"20px 0", display:"flex", alignItems:"center", gap:12 }}>
-        <div style={{ flex:1, height:1, background:"#e4e8ef" }}/>
-        <span style={{ fontSize:12, color:"#9aa4bc", fontWeight:500 }}>or</span>
-        <div style={{ flex:1, height:1, background:"#e4e8ef" }}/>
+        <div style={{ flex:1, height:1, background:"#e6e2d9" }}/>
+        <span style={{ fontSize:12, color:"#9d9884", fontWeight:500 }}>or</span>
+        <div style={{ flex:1, height:1, background:"#e6e2d9" }}/>
       </div>
 
       {/* Email Magic Link */}
@@ -246,9 +246,9 @@ function LoginContent() {
           onClick={() => setShowEmail(true)}
           style={{
             width:"100%", padding:"13px 20px", borderRadius:12,
-            background:"#f4f6f9", border:"1.5px solid #e4e8ef",
+            background:"var(--surface)", border:"1.5px solid #e6e2d9",
             display:"flex", alignItems:"center", justifyContent:"center", gap:10,
-            fontSize:14, fontWeight:600, color:"#6b7a99",
+            fontSize:14, fontWeight:600, color:"#6e6b5b",
             cursor:"pointer", transition:"all .15s",
           }}
         >
@@ -265,8 +265,8 @@ function LoginContent() {
             onChange={e => setEmail(e.target.value)}
             autoFocus
             style={{
-              width:"100%", padding:"13px 14px", borderRadius:11, border:"1.5px solid #d0d7e3",
-              fontSize:14.5, color:"#1a2035", outline:"none", background:"#fff",
+              width:"100%", padding:"13px 14px", borderRadius:11, border:"1.5px solid #d3cdc0",
+              fontSize:14.5, color:"#161510", outline:"none", background:"var(--surface)",
               boxSizing:"border-box",
             }}
           />
@@ -278,23 +278,23 @@ function LoginContent() {
               background: magicLoading || !email.trim() ? "color-mix(in srgb, var(--accent) 55%, white)" : "linear-gradient(145deg,var(--accent-h),var(--accent),var(--accent-h))",
               border:"none", color:"#fff", fontSize:14, fontWeight:700,
               cursor: magicLoading || !email.trim() ? "not-allowed" : "pointer",
-              boxShadow:"0 4px 16px rgba(29,111,196,.25)",
+              boxShadow:"0 4px 16px rgba(107,104,88,.25)",
             }}
           >
             {magicLoading ? "Sending…" : "Send magic link →"}
           </button>
           <button type="button" onClick={() => setShowEmail(false)}
-            style={{ fontSize:12.5, color:"#9aa4bc", background:"none", border:"none", cursor:"pointer", textAlign:"center" }}>
+            style={{ fontSize:12.5, color:"#9d9884", background:"none", border:"none", cursor:"pointer", textAlign:"center" }}>
             ← Back to Google sign-in
           </button>
         </form>
       )}
 
-      <div style={{ background:"#f4f6f9", border:"1px solid #e4e8ef", borderRadius:10, padding:"11px 14px",
+      <div style={{ background:"var(--surface)", border:"1px solid #e6e2d9", borderRadius:10, padding:"11px 14px",
         display:"flex", gap:10, alignItems:"flex-start", marginTop:20 }}>
         <span style={{ fontSize:16, flexShrink:0 }}>🔒</span>
-        <p style={{ fontSize:12, color:"#6b7a99", lineHeight:1.5, margin:0 }}>
-          <strong style={{ color:"#1a2035" }}>Private by default.</strong>{" "}
+        <p style={{ fontSize:12, color:"#6e6b5b", lineHeight:1.5, margin:0 }}>
+          <strong style={{ color:"#161510" }}>Private by default.</strong>{" "}
           Your resumes are processed only for tailoring — never sold or shared.
         </p>
       </div>
@@ -304,14 +304,14 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <div style={{ minHeight:"100vh", display:"flex", fontFamily:"var(--font-geist-sans, system-ui, sans-serif)" }}>
+    <div style={{ minHeight:"100vh", display:"flex", fontFamily:"var(--font-body)" }}>
 
       {/* LEFT — photo panel */}
       <div className="hidden lg:block" style={{ width:"48%", position:"relative", overflow:"hidden", flexShrink:0 }}>
         <img src={IMGS.hero} alt="Professional meeting"
           style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }}/>
         <div style={{ position:"absolute", inset:0,
-          background:"linear-gradient(150deg, rgba(10,42,90,.80) 0%, rgba(29,111,196,.60) 50%, rgba(10,42,90,.85) 100%)" }}/>
+          background:"linear-gradient(150deg, rgba(43,42,35,.80) 0%, rgba(107,104,88,.60) 50%, rgba(43,42,35,.85) 100%)" }}/>
         <div style={{ position:"relative", height:"100%", display:"flex", flexDirection:"column", padding:"36px 40px" }}>
           <Link href="/" style={{ display:"inline-flex", alignItems:"center", gap:10, textDecoration:"none" }}>
             <div style={{ width:36, height:36, borderRadius:9, background:"rgba(255,255,255,.18)", border:"1px solid rgba(255,255,255,.28)",
@@ -354,17 +354,17 @@ export default function LoginPage() {
       </div>
 
       {/* RIGHT — auth form */}
-      <div style={{ flex:1, backgroundColor:"#ffffff", display:"flex", flexDirection:"column",
+      <div style={{ flex:1, backgroundColor:"var(--surface)", display:"flex", flexDirection:"column",
         alignItems:"center", justifyContent:"center", padding:"48px 32px" }}>
         <div className="lg:hidden" style={{ marginBottom:28 }}>
           <Link href="/" style={{ display:"inline-flex", alignItems:"center", gap:10, textDecoration:"none" }}>
             <div style={{ width:36, height:36, borderRadius:9, background:"linear-gradient(145deg,var(--accent),var(--accent-h))",
               display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13, fontWeight:900,
-              boxShadow:"0 3px 12px rgba(29,111,196,.35)" }}>MF</div>
-            <span style={{ fontSize:16, fontWeight:700, color:"#1a2035" }}>MarketFit</span>
+              boxShadow:"0 3px 12px rgba(107,104,88,.35)" }}>MF</div>
+            <span style={{ fontSize:16, fontWeight:700, color:"#161510" }}>MarketFit</span>
           </Link>
         </div>
-        <Suspense fallback={<div style={{ width:400, height:280, background:"#f4f6f9", borderRadius:12 }}/>}>
+        <Suspense fallback={<div style={{ width:400, height:280, background:"var(--surface)", borderRadius:12 }}/>}>
           <LoginContent />
         </Suspense>
       </div>

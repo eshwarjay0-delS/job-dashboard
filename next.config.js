@@ -63,6 +63,28 @@ const nextConfig = {
       },
     ];
 
+    // Kompas (public/kompas, see scripts/sync-kompas.mjs) hears the call through the microphone and
+    // the shared tab's audio, and loads its fonts, DOCX/PDF readers and offline speech model from
+    // CDNs. Only its paths get those allowances; every other page keeps the policy above. These
+    // entries come after the global one so their values win for the same header keys.
+    const kompasHeaders = [
+      { key: "Permissions-Policy", value: "camera=(), microphone=(self), display-capture=(self), geolocation=()" },
+      {
+        key: "Content-Security-Policy",
+        value: [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net",
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+          "img-src 'self' data: blob: https:",
+          "font-src 'self' https://fonts.gstatic.com",
+          "connect-src 'self' https://cdn.jsdelivr.net https://ccoreilly.github.io",
+          "worker-src 'self' blob: https://cdn.jsdelivr.net",
+          "media-src 'self' blob:",
+          "frame-ancestors 'none'",
+        ].join("; "),
+      },
+    ];
+
     // NOTE: an immutable Cache-Control on /_next/static breaks dev — the browser
     // caches HMR chunks forever and never picks up edits. Only apply it in
     // production builds, where Next.js content-hashes those filenames so a
@@ -71,6 +93,8 @@ const nextConfig = {
 
     return [
       { source: "/(.*)", headers: securityHeaders },
+      { source: "/dashboard/kompas", headers: kompasHeaders },
+      { source: "/kompas/:path*", headers: kompasHeaders },
       // Long-lived cache for static assets (production only — see note above)
       ...(isProd
         ? [{
@@ -96,6 +120,18 @@ const nextConfig = {
   // the login flow's own redirect.
   async redirects() {
     return [];
+  },
+
+  // Kompas is served from MarketFit's own origin so the microphone belongs to this site. Its engine
+  // stays with the copilot deployment: /kompas/api/<name> is forwarded to <origin>/api/<name>.
+  // The default is the live copilot, perfact-ten; its frontend must match public/kompas (re-run
+  // scripts/sync-kompas.mjs when it is redeployed). KOMPAS_API_ORIGIN points at another deployment.
+  async rewrites() {
+    const kompasApi = (process.env.KOMPAS_API_ORIGIN || "https://perfact-ten.vercel.app").replace(/\/+$/, "");
+    return [
+      { source: "/dashboard/kompas", destination: "/kompas/index.html" },
+      { source: "/kompas/api/:path*", destination: `${kompasApi}/api/:path*` },
+    ];
   },
 };
 

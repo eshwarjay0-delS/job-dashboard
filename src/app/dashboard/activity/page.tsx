@@ -5,11 +5,11 @@ import Link from "next/link"
 
 const P = {
   surface: "#ffffff",
-  text:    "#1a2035",
-  muted:   "#6b7a99",
-  hint:    "#9aa4bc",
-  border:  "#e4e8ef",
-  bg:      "#f4f6f9",
+  text:    "#161510",
+  muted:   "#6e6b5b",
+  hint:    "#9d9884",
+  border:  "#e6e2d9",
+  bg:      "var(--surface)",
 }
 
 interface ActivityEvent {
@@ -26,15 +26,15 @@ interface ActivityEvent {
 }
 
 const TYPE_META: Record<ActivityEvent["type"], { icon: string; color: string; bg: string; border: string }> = {
-  applied:   { icon: "📨", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  tailored:  { icon: "✦",  color: "#1558a0", bg: "#eff6ff", border: "#bfdbfe" },
-  email:     { icon: "📧", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
-  interview: { icon: "📞", color: "#0ea5e9", bg: "#f0f9ff", border: "#bae6fd" },
-  offer:     { icon: "🏆", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
-  saved:     { icon: "🔖", color: "#1558a0", bg: "#eff6ff", border: "#bfdbfe" },
-  viewed:    { icon: "👁",  color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" },
-  alert:     { icon: "🔔", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
-  ai:        { icon: "✨", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
+  applied:   { icon: "📨", color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
+  tailored:  { icon: "✦",  color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
+  email:     { icon: "📧", color: "#13120d", bg: "var(--surface)", border: "#ddd8cd" },
+  interview: { icon: "📞", color: "#7c7866", bg: "#f6f4f0", border: "#e2ded4" },
+  offer:     { icon: "🏆", color: "#6b6858", bg: "#f7f5f0", border: "#e4e0d6" },
+  saved:     { icon: "🔖", color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
+  viewed:    { icon: "👁",  color: "#706c5c", bg: "#f8f6f2", border: "#e8e4db" },
+  alert:     { icon: "🔔", color: "#6b6858", bg: "#f7f5f0", border: "#e4e0d6" },
+  ai:        { icon: "✨", color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
 }
 
 function buildEventsFromStorage(): ActivityEvent[] {
@@ -181,7 +181,7 @@ export default function ActivityPage() {
           <h1 style={{ fontSize: 24, fontWeight: 800, color: P.text, letterSpacing: "-0.4px", marginBottom: 4 }}>⚡ Activity Feed</h1>
           <p style={{ fontSize: 13.5, color: P.muted }}>
             Your full job search timeline — applications, emails, AI actions, and milestones.
-            {!hasRealData && <span style={{ color: "#d97706" }}> · Showing example data</span>}
+            {!hasRealData && <span style={{ color: "#6b6858" }}> · Showing example data</span>}
           </p>
         </div>
       </div>
@@ -189,10 +189,10 @@ export default function ActivityPage() {
       {/* ── Stats row ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
         {[
-          { label: "Applications", count: counts["applied"] || 0, icon: "📨", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-          { label: "Tailored",     count: counts["tailored"] || 0,icon: "✦",  color: "#1558a0", bg: "#eff6ff", border: "#bfdbfe" },
-          { label: "Emails",       count: counts["email"] || 0,   icon: "📧", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
-          { label: "Interviews",   count: counts["interview"] || 0,icon: "📞",color: "#0ea5e9", bg: "#f0f9ff", border: "#bae6fd" },
+          { label: "Applications", count: counts["applied"] || 0, icon: "📨", color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
+          { label: "Tailored",     count: counts["tailored"] || 0,icon: "✦",  color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
+          { label: "Emails",       count: counts["email"] || 0,   icon: "📧", color: "#13120d", bg: "var(--surface)", border: "#ddd8cd" },
+          { label: "Interviews",   count: counts["interview"] || 0,icon: "📞",color: "#7c7866", bg: "#f6f4f0", border: "#e2ded4" },
         ].map(s => (
           <div key={s.label} style={{ background: P.surface, border: `1px solid ${P.border}`, borderRadius: 14, padding: "16px 18px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>

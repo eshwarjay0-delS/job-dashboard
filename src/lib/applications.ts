@@ -26,18 +26,18 @@ export interface AppItem {
 }
 
 export const APP_STAGES: { id: AppStage; label: string; color: string; rgb: string; icon: string }[] = [
-  { id: "applied",   label: "Applied",   color: "#1d6fc4", rgb: "29,111,196",  icon: "📨" },
-  { id: "screening", label: "Screening", color: "#d97706", rgb: "217,119,6",   icon: "📞" },
-  { id: "interview", label: "Interview", color: "#1d6fc4", rgb: "29,111,196",  icon: "🤝" },
-  { id: "technical", label: "Technical", color: "#7c3aed", rgb: "124,58,237",  icon: "💻" },
-  { id: "offer",     label: "Offer",     color: "#0369a1", rgb: "3,105,161",   icon: "🎉" },
-  { id: "rejected",  label: "Rejected",  color: "#dc2626", rgb: "220,38,38",   icon: "✗"  },
+  { id: "applied",   label: "Applied",   color: "#1c1b16", rgb: "29,111,196",  icon: "📨" },
+  { id: "screening", label: "Screening", color: "#6b6858", rgb: "217,119,6",   icon: "📞" },
+  { id: "interview", label: "Interview", color: "#1c1b16", rgb: "29,111,196",  icon: "🤝" },
+  { id: "technical", label: "Technical", color: "#4d4b44", rgb: "124,58,237",  icon: "💻" },
+  { id: "offer",     label: "Offer",     color: "#58564c", rgb: "3,105,161",   icon: "🎉" },
+  { id: "rejected",  label: "Rejected",  color: "#13120d", rgb: "220,38,38",   icon: "✗"  },
 ]
 
 export const APP_PRIORITY: Record<AppItem["priority"], { label: string; color: string }> = {
-  high: { label: "High", color: "#ef4444" },
-  mid:  { label: "Mid",  color: "#f59e0b" },
-  low:  { label: "Low",  color: "#6b7280" },
+  high: { label: "High", color: "#2e2d27" },
+  mid:  { label: "Mid",  color: "#7e7a68" },
+  low:  { label: "Low",  color: "#706c5c" },
 }
 
 export function appUid(): string {

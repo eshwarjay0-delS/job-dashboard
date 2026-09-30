@@ -44,9 +44,9 @@ function renderMarkdown(text: string) {
   return text
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, '<code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:.82em;font-family:monospace">$1</code>')
-    .replace(/^### (.+)$/gm, '<p style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b7a99;margin:10px 0 4px">$1</p>')
-    .replace(/^## (.+)$/gm, '<p style="font-weight:700;font-size:13px;color:#1a2035;margin:10px 0 4px">$1</p>')
+    .replace(/`([^`]+)`/g, '<code style="background:#f4f2ed;padding:1px 5px;border-radius:4px;font-size:.82em;font-family:monospace">$1</code>')
+    .replace(/^### (.+)$/gm, '<p style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6e6b5b;margin:10px 0 4px">$1</p>')
+    .replace(/^## (.+)$/gm, '<p style="font-weight:700;font-size:13px;color:#161510;margin:10px 0 4px">$1</p>')
     .replace(/^[-•] (.+)$/gm, '<li style="margin:3px 0">$1</li>')
     .replace(/((<li[^>]*>.*<\/li>\n?)+)/g, '<ul style="padding-left:1.2rem;margin:.3rem 0;list-style:disc">$1</ul>')
     .replace(/\n{2,}/g, "<br><br>")
@@ -129,28 +129,28 @@ export default function NexusPanel({ job, profile, matchScore, h1bStatus = "unkn
 
       {/* Header chip */}
       <div style={{
-        padding: "10px 16px", borderBottom: "1px solid #e4e8ef",
-        background: "linear-gradient(135deg,#f8fbff,#f5f3ff)",
+        padding: "10px 16px", borderBottom: "1px solid #e6e2d9",
+        background: "linear-gradient(135deg,#f8f7f3,#f6f4ef)",
         display: "flex", alignItems: "center", gap: 8, flexShrink: 0,
       }}>
         <div style={{
           width: 26, height: 26, borderRadius: 7, flexShrink: 0,
-          background: "linear-gradient(135deg,#2483e0,#7c3aed)",
+          background: "linear-gradient(135deg,#807d6a,#4d4b44)",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 12, color: "#fff",
         }}>✦</div>
         <div>
-          <p style={{ fontSize: 12, fontWeight: 700, color: "#1a2035", lineHeight: 1.2 }}>Nexus AI</p>
-          <p style={{ fontSize: 10.5, color: "#6b7a99", lineHeight: 1.2 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#161510", lineHeight: 1.2 }}>Nexus AI</p>
+          <p style={{ fontSize: 10.5, color: "#6e6b5b", lineHeight: 1.2 }}>
             Knows this job · your profile · {matchScore}% match
           </p>
         </div>
         <div style={{
           marginLeft: "auto", display: "flex", alignItems: "center", gap: 4,
-          background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 20, padding: "2px 8px",
+          background: "#f8f6f2", border: "1px solid #e9e5dd", borderRadius: 20, padding: "2px 8px",
         }}>
-          <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#16a34a" }} />
-          <span style={{ fontSize: 10, fontWeight: 700, color: "#16a34a" }}>Context loaded</span>
+          <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#4d4b44" }} />
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#4d4b44" }}>Context loaded</span>
         </div>
       </div>
 
@@ -163,12 +163,12 @@ export default function NexusPanel({ job, profile, matchScore, h1bStatus = "unkn
             <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 12 }}>
               <div style={{
                 width: 24, height: 24, borderRadius: "50%", flexShrink: 0, marginTop: 2,
-                background: "linear-gradient(135deg,#2483e0,#7c3aed)", color: "#fff",
+                background: "linear-gradient(135deg,#807d6a,#4d4b44)", color: "#fff",
                 display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10,
               }}>✦</div>
               <div style={{
-                background: "#f8f9fb", border: "1px solid #e4e8ef", borderRadius: "12px 12px 12px 3px",
-                padding: "10px 12px", maxWidth: "90%", fontSize: 12.5, lineHeight: 1.55, color: "#374151",
+                background: "#f6f4f0", border: "1px solid #e6e2d9", borderRadius: "12px 12px 12px 3px",
+                padding: "10px 12px", maxWidth: "90%", fontSize: 12.5, lineHeight: 1.55, color: "#40403a",
               }}>
                 I&apos;m Nexus — your AI assistant for <strong>{job.title}</strong> at <strong>{job.company}</strong>.
                 I know your full profile, this JD, and your {matchScore}% match score.
@@ -184,16 +184,16 @@ export default function NexusPanel({ job, profile, matchScore, h1bStatus = "unkn
                   onClick={() => send(cmd.prompt)}
                   style={{
                     display: "flex", alignItems: "center", gap: 8, padding: "8px 11px",
-                    background: "#fff", border: "1px solid #e4e8ef", borderRadius: 9,
+                    background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 9,
                     cursor: "pointer", textAlign: "left", transition: "border-color .15s, background .15s",
-                    fontSize: 12, color: "#374151", fontWeight: 500,
+                    fontSize: 12, color: "#40403a", fontWeight: 500,
                   }}
-                  onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "#bfdbfe"; el.style.background = "#f8fbff" }}
-                  onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "#e4e8ef"; el.style.background = "#fff" }}
+                  onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "#d9d4c8"; el.style.background = "#f8f7f3" }}
+                  onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "#e6e2d9"; el.style.background = "#fff" }}
                 >
                   <span style={{ fontSize: 14, flexShrink: 0 }}>{cmd.icon}</span>
                   <span>{cmd.label}</span>
-                  <span style={{ marginLeft: "auto", color: "#9aa4bc", fontSize: 10 }}>→</span>
+                  <span style={{ marginLeft: "auto", color: "#9d9884", fontSize: 10 }}>→</span>
                 </button>
               ))}
             </div>
@@ -205,7 +205,7 @@ export default function NexusPanel({ job, profile, matchScore, h1bStatus = "unkn
             {msg.role === "assistant" && (
               <div style={{
                 width: 20, height: 20, borderRadius: "50%", flexShrink: 0, marginBottom: 2,
-                background: "linear-gradient(135deg,#2483e0,#7c3aed)", color: "#fff",
+                background: "linear-gradient(135deg,#807d6a,#4d4b44)", color: "#fff",
                 display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9,
               }}>✦</div>
             )}
@@ -215,7 +215,7 @@ export default function NexusPanel({ job, profile, matchScore, h1bStatus = "unkn
                 borderRadius: "12px 12px 3px 12px",
                 padding: "8px 12px", maxWidth: "82%", fontSize: 12.5, lineHeight: 1.5,
               } : {
-                background: "#f8f9fb", border: "1px solid #e4e8ef", color: "#374151",
+                background: "#f6f4f0", border: "1px solid #e6e2d9", color: "#40403a",
                 borderRadius: "12px 12px 12px 3px",
                 padding: "10px 12px", maxWidth: "88%", fontSize: 12.5, lineHeight: 1.55,
               }}
@@ -233,11 +233,11 @@ export default function NexusPanel({ job, profile, matchScore, h1bStatus = "unkn
           <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
             <div style={{
               width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
-              background: "linear-gradient(135deg,#2483e0,#7c3aed)", color: "#fff",
+              background: "linear-gradient(135deg,#807d6a,#4d4b44)", color: "#fff",
               display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9,
             }}>✦</div>
             <div style={{
-              background: "#f8f9fb", border: "1px solid #e4e8ef", borderRadius: "12px 12px 12px 3px",
+              background: "#f6f4f0", border: "1px solid #e6e2d9", borderRadius: "12px 12px 12px 3px",
               padding: "10px 14px", display: "flex", alignItems: "center", gap: 6,
             }}>
               <div style={{
@@ -250,7 +250,7 @@ export default function NexusPanel({ job, profile, matchScore, h1bStatus = "unkn
                   }} />
                 ))}
               </div>
-              <span style={{ fontSize: 11.5, color: "#6b7a99" }}>Nexus is thinking…</span>
+              <span style={{ fontSize: 11.5, color: "#6e6b5b" }}>Nexus is thinking…</span>
             </div>
           </div>
         )}
@@ -260,16 +260,16 @@ export default function NexusPanel({ job, profile, matchScore, h1bStatus = "unkn
 
       {/* Input */}
       <div style={{
-        padding: "10px 12px", borderTop: "1px solid #e4e8ef",
-        background: "#fff", flexShrink: 0,
+        padding: "10px 12px", borderTop: "1px solid #e6e2d9",
+        background: "var(--surface)", flexShrink: 0,
       }}>
         <div style={{
           display: "flex", alignItems: "flex-end", gap: 7,
-          border: "1.5px solid #e4e8ef", borderRadius: 10, padding: "7px 10px",
-          background: "#f8f9fb", transition: "border-color .15s",
+          border: "1.5px solid #e6e2d9", borderRadius: 10, padding: "7px 10px",
+          background: "#f6f4f0", transition: "border-color .15s",
         }}
-          onFocusCapture={e => { (e.currentTarget as HTMLElement).style.borderColor = "#bfdbfe" }}
-          onBlurCapture={e => { (e.currentTarget as HTMLElement).style.borderColor = "#e4e8ef" }}
+          onFocusCapture={e => { (e.currentTarget as HTMLElement).style.borderColor = "#d9d4c8" }}
+          onBlurCapture={e => { (e.currentTarget as HTMLElement).style.borderColor = "#e6e2d9" }}
         >
           <textarea
             ref={inputRef}
@@ -280,7 +280,7 @@ export default function NexusPanel({ job, profile, matchScore, h1bStatus = "unkn
             rows={1}
             style={{
               flex: 1, resize: "none", background: "transparent", border: "none",
-              outline: "none", fontSize: 12.5, lineHeight: 1.5, color: "#1a2035",
+              outline: "none", fontSize: 12.5, lineHeight: 1.5, color: "#161510",
               fontFamily: "inherit", maxHeight: 70, overflowY: "auto",
             }}
           />
@@ -291,7 +291,7 @@ export default function NexusPanel({ job, profile, matchScore, h1bStatus = "unkn
               width: 26, height: 26, borderRadius: 7, flexShrink: 0,
               border: "none", cursor: input.trim() && !loading ? "pointer" : "default",
               background: input.trim() && !loading ? "var(--accent)" : "var(--border)",
-              color: input.trim() && !loading ? "#fff" : "#9aa4bc",
+              color: input.trim() && !loading ? "#fff" : "#9d9884",
               display: "flex", alignItems: "center", justifyContent: "center",
               transition: "all .15s",
             }}
@@ -301,7 +301,7 @@ export default function NexusPanel({ job, profile, matchScore, h1bStatus = "unkn
             </svg>
           </button>
         </div>
-        <p style={{ fontSize: 9.5, color: "#9aa4bc", textAlign: "center", marginTop: 4 }}>
+        <p style={{ fontSize: 9.5, color: "#9d9884", textAlign: "center", marginTop: 4 }}>
           Enter to send · Shift+Enter for newline
         </p>
       </div>

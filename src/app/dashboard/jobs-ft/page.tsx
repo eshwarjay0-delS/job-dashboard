@@ -39,16 +39,16 @@ const C = {
   accentH: "var(--accent-h)",
   accentSoft: "var(--accent-soft)",
   accentTxt: "var(--accent-txt)",
-  teal:   "#14b8a6",
+  teal:   "#6a6757",
   green:  "var(--success)",
   amber:  "var(--warning)",
-  purple: "#8b5cf6",
+  purple: "#605d51",
   red:    "var(--danger)",
 }
 
 // Fixed, saturated avatar palette — solid backgrounds with white text so
 // company initials stay readable regardless of the active accent color.
-const AVATAR_COLORS = ["#1d6fc4", "#7c3aed", "#059669", "#d97706", "#e11d48", "#0d9488"]
+const AVATAR_COLORS = ["#1c1b16", "#4d4b44", "#42413c", "#6b6858", "#1a1914", "#5c5a4e"]
 function avatarColor(seed: string) {
   let hash = 0
   for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
@@ -144,7 +144,7 @@ function JobCard({ job, onApply }: { job: FtJob; onApply: (job: FtJob) => void }
               <>
                 {" · "}
                 {isNewPost(job.posted) && (
-                  <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", textTransform: "uppercase", letterSpacing: ".04em" }}>NEW</span>
+                  <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: "#e8e4db", color: "#58564c", border: "1px solid #e9e5dd", textTransform: "uppercase", letterSpacing: ".04em" }}>NEW</span>
                 )}
                 {timeAgo(job.posted)}
               </>
@@ -163,10 +163,10 @@ function JobCard({ job, onApply }: { job: FtJob; onApply: (job: FtJob) => void }
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
         {job.salary && <span style={{ fontSize: 13, fontWeight: 700, color: C.green }}>{parseSalary(job.salary)}</span>}
         {job.remote && (
-          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: "rgba(20,184,166,.12)", color: C.teal, border: "1px solid rgba(20,184,166,.3)" }}>Remote</span>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: "rgba(163,158,140,.12)", color: C.teal, border: "1px solid rgba(163,158,140,.3)" }}>Remote</span>
         )}
         {job.workAuth.includes("opt_cpt") && (
-          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: "rgba(139,92,246,.12)", color: C.purple, border: "1px solid rgba(139,92,246,.3)" }}>OPT/CPT</span>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: "rgba(122,118,100,.12)", color: C.purple, border: "1px solid rgba(122,118,100,.3)" }}>OPT/CPT</span>
         )}
       </div>
 
@@ -175,7 +175,7 @@ function JobCard({ job, onApply }: { job: FtJob; onApply: (job: FtJob) => void }
         <div style={{ marginBottom: 10 }}>
           <span style={{
             fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
-            background: "rgba(16,185,129,.1)", color: "#059669", border: "1px solid rgba(16,185,129,.25)",
+            background: "rgba(163,158,139,.1)", color: "#42413c", border: "1px solid rgba(163,158,139,.25)",
           }}>GC OK</span>
         </div>
       )}
@@ -204,7 +204,7 @@ function JobCard({ job, onApply }: { job: FtJob; onApply: (job: FtJob) => void }
           onClick={() => onApply(job)}
           style={{
             padding: "8px 16px", borderRadius: 9, background: C.teal,
-            color: "#04201c", fontWeight: 800, fontSize: 12.5, border: "none",
+            color: "#1b1a14", fontWeight: 800, fontSize: 12.5, border: "none",
             cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
           }}
         ><Zap size={14} fill="currentColor"/> Apply Now</button>
@@ -283,7 +283,7 @@ function ApplyModal({ job, onClose }: {
 
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,.6)",
+      position: "fixed", inset: 0, background: "rgba(12,11,8,.6)",
       display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
     }} onClick={onClose}>
       <div
@@ -299,7 +299,7 @@ function ApplyModal({ job, onClose }: {
               Apply to {job.company}
             </h3>
             {tracked && (
-              <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 20, background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", textTransform: "uppercase", letterSpacing: ".04em", display: "inline-flex", alignItems: "center", gap: 3 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 20, background: "#e8e4db", color: "#58564c", border: "1px solid #e9e5dd", textTransform: "uppercase", letterSpacing: ".04em", display: "inline-flex", alignItems: "center", gap: 3 }}>
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Tracked
               </span>
             )}
@@ -521,9 +521,9 @@ export default function FullTimeJobBoard() {
             badge={
               <span style={{
                 fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
-                background: isLive ? "rgba(52,211,153,.15)" : "rgba(107,114,128,.1)",
+                background: isLive ? "rgba(186,180,164,.15)" : "rgba(112,108,92,.1)",
                 color: isLive ? C.green : C.muted,
-                border: `1px solid ${isLive ? "rgba(52,211,153,.3)" : "rgba(107,114,128,.2)"}`,
+                border: `1px solid ${isLive ? "rgba(186,180,164,.3)" : "rgba(112,108,92,.2)"}`,
               }}>
                 {isLive ? `● ${jobs.length} live` : `◎ ${jobs.length} sample`}
               </span>
@@ -570,9 +570,9 @@ export default function FullTimeJobBoard() {
                 style={{
                   padding: "6px 13px", borderRadius: 20, cursor: "pointer",
                   fontSize: 12, fontWeight: 600, transition: "all .15s", whiteSpace: "nowrap",
-                  background: active ? "#6366f1" : "var(--surface)",
+                  background: active ? "#757261" : "var(--surface)",
                   color: active ? "#fff" : "var(--text-muted)",
-                  border: `1px solid ${active ? "#6366f1" : "var(--border)"}`,
+                  border: `1px solid ${active ? "#757261" : "var(--border)"}`,
                 }}
               >{cat.label}</button>
             )
@@ -584,9 +584,9 @@ export default function FullTimeJobBoard() {
           {/* Visa */}
           <select value={visaFilter} onChange={e => setVisaFilter(e.target.value as "all"|"h1b"|"opt"|"gc")}
             style={{ padding: "7px 10px", borderRadius: 9, fontSize: 12.5, fontWeight: 600, cursor: "pointer", outline: "none",
-              background: visaFilter !== "all" ? "rgba(20,184,166,.12)" : "var(--surface)",
+              background: visaFilter !== "all" ? "rgba(163,158,140,.12)" : "var(--surface)",
               color: visaFilter !== "all" ? C.teal : "var(--text-muted)",
-              border: `1.5px solid ${visaFilter !== "all" ? "rgba(20,184,166,.4)" : "var(--border)"}` }}>
+              border: `1.5px solid ${visaFilter !== "all" ? "rgba(163,158,140,.4)" : "var(--border)"}` }}>
             <option value="all">Work Auth</option>
             <option value="h1b">H-1B Sponsor</option>
             <option value="opt">OPT / CPT</option>
@@ -596,9 +596,9 @@ export default function FullTimeJobBoard() {
           {/* Date posted */}
           <select value={dateFilter} onChange={e => setDateFilter(e.target.value as DateFilterKey)}
             style={{ padding: "7px 10px", borderRadius: 9, fontSize: 12.5, fontWeight: 600, cursor: "pointer", outline: "none",
-              background: dateFilter !== "any" ? "rgba(99,102,241,.12)" : "var(--surface)",
-              color: dateFilter !== "any" ? "#6366f1" : "var(--text-muted)",
-              border: `1.5px solid ${dateFilter !== "any" ? "rgba(99,102,241,.4)" : "var(--border)"}` }}>
+              background: dateFilter !== "any" ? "rgba(117,114,97,.12)" : "var(--surface)",
+              color: dateFilter !== "any" ? "#757261" : "var(--text-muted)",
+              border: `1.5px solid ${dateFilter !== "any" ? "rgba(117,114,97,.4)" : "var(--border)"}` }}>
             <option value="any">Date Posted</option>
             {DATE_FILTERS.filter(d => d.key !== "any").map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
           </select>
@@ -606,9 +606,9 @@ export default function FullTimeJobBoard() {
           {/* Experience level */}
           <select value={expLevel} onChange={e => setExpLevel(e.target.value as ExperienceLevel)}
             style={{ padding: "7px 10px", borderRadius: 9, fontSize: 12.5, fontWeight: 600, cursor: "pointer", outline: "none",
-              background: expLevel !== "all" ? "rgba(20,184,166,.12)" : "var(--surface)",
+              background: expLevel !== "all" ? "rgba(163,158,140,.12)" : "var(--surface)",
               color: expLevel !== "all" ? C.teal : "var(--text-muted)",
-              border: `1.5px solid ${expLevel !== "all" ? "rgba(20,184,166,.4)" : "var(--border)"}` }}>
+              border: `1.5px solid ${expLevel !== "all" ? "rgba(163,158,140,.4)" : "var(--border)"}` }}>
             <option value="all">Experience</option>
             <option value="entry">Entry level</option>
             <option value="mid">Mid level</option>
@@ -619,9 +619,9 @@ export default function FullTimeJobBoard() {
           {/* Min salary */}
           <select value={String(salaryMin)} onChange={e => setSalaryMin(Number(e.target.value))}
             style={{ padding: "7px 10px", borderRadius: 9, fontSize: 12.5, fontWeight: 600, cursor: "pointer", outline: "none",
-              background: salaryMin > 0 ? "rgba(251,191,36,.12)" : "var(--surface)",
-              color: salaryMin > 0 ? "#d97706" : "var(--text-muted)",
-              border: `1.5px solid ${salaryMin > 0 ? "rgba(251,191,36,.4)" : "var(--border)"}` }}>
+              background: salaryMin > 0 ? "rgba(200,194,179,.12)" : "var(--surface)",
+              color: salaryMin > 0 ? "#6b6858" : "var(--text-muted)",
+              border: `1.5px solid ${salaryMin > 0 ? "rgba(200,194,179,.4)" : "var(--border)"}` }}>
             <option value="0">Min Salary</option>
             {[80000,100000,120000,140000,160000,200000].map(v => <option key={v} value={String(v)}>${(v/1000).toFixed(0)}k+</option>)}
           </select>
@@ -629,27 +629,27 @@ export default function FullTimeJobBoard() {
           {/* Hide staffing/recruiting agencies */}
           <button onClick={() => setHideAgencies(h => !h)} title="Hide staffing/recruiting agencies re-posting the same role" style={{
             padding: "7px 11px", borderRadius: 9, cursor: "pointer", fontSize: 12.5, fontWeight: 600,
-            background: hideAgencies ? "rgba(239,68,68,.1)" : "var(--surface)",
-            color: hideAgencies ? "#dc2626" : "var(--text-muted)",
-            border: `1.5px solid ${hideAgencies ? "rgba(239,68,68,.35)" : "var(--border)"}`,
+            background: hideAgencies ? "rgba(132,128,109,.1)" : "var(--surface)",
+            color: hideAgencies ? "#13120d" : "var(--text-muted)",
+            border: `1.5px solid ${hideAgencies ? "rgba(132,128,109,.35)" : "var(--border)"}`,
             display: "inline-flex", alignItems: "center", gap: 5,
           }}><Ban size={13}/> Hide agencies</button>
 
           {/* Remote / Hybrid toggles */}
           <label style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 11px", borderRadius: 9, cursor: "pointer",
-            background: remoteOnly ? "rgba(20,184,166,.12)" : "var(--surface)",
-            border: `1.5px solid ${remoteOnly ? "rgba(20,184,166,.4)" : "var(--border)"}`,
+            background: remoteOnly ? "rgba(163,158,140,.12)" : "var(--surface)",
+            border: `1.5px solid ${remoteOnly ? "rgba(163,158,140,.4)" : "var(--border)"}`,
             fontSize: 12.5, fontWeight: 600, color: remoteOnly ? C.teal : "var(--text-muted)", whiteSpace: "nowrap" as const,
           }}>
             <input type="checkbox" checked={remoteOnly} onChange={e => setRemoteOnly(e.target.checked)} style={{ accentColor: C.teal, width: 13, height: 13 }} />
             <Globe size={13}/> Remote
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 11px", borderRadius: 9, cursor: "pointer",
-            background: hybridOnly ? "rgba(251,191,36,.12)" : "var(--surface)",
-            border: `1.5px solid ${hybridOnly ? "rgba(251,191,36,.35)" : "var(--border)"}`,
-            fontSize: 12.5, fontWeight: 600, color: hybridOnly ? "#d97706" : "var(--text-muted)", whiteSpace: "nowrap" as const,
+            background: hybridOnly ? "rgba(200,194,179,.12)" : "var(--surface)",
+            border: `1.5px solid ${hybridOnly ? "rgba(200,194,179,.35)" : "var(--border)"}`,
+            fontSize: 12.5, fontWeight: 600, color: hybridOnly ? "#6b6858" : "var(--text-muted)", whiteSpace: "nowrap" as const,
           }}>
-            <input type="checkbox" checked={hybridOnly} onChange={e => setHybridOnly(e.target.checked)} style={{ accentColor: "#d97706", width: 13, height: 13 }} />
+            <input type="checkbox" checked={hybridOnly} onChange={e => setHybridOnly(e.target.checked)} style={{ accentColor: "#6b6858", width: 13, height: 13 }} />
             <Building2 size={13}/> Hybrid
           </label>
 
@@ -695,7 +695,7 @@ export default function FullTimeJobBoard() {
               <div style={{
                 position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 20, minWidth: 220, maxHeight: 260, overflowY: "auto",
                 background: "var(--popover)", border: `1px solid ${C.border}`, borderRadius: 10, padding: 6,
-                boxShadow: "0 12px 32px rgba(0,0,0,.18)",
+                boxShadow: "0 12px 32px rgba(12,11,8,.18)",
               }}>
                 {companyOptions.length === 0 && <div style={{ padding: 8, fontSize: 12, color: C.muted }}>No companies yet.</div>}
                 {companyOptions.map(({ company, count }) => (
@@ -721,7 +721,7 @@ export default function FullTimeJobBoard() {
               <div style={{
                 position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 20, width: 240,
                 background: "var(--popover)", border: `1px solid ${C.border}`, borderRadius: 10, padding: 10,
-                boxShadow: "0 12px 32px rgba(0,0,0,.18)",
+                boxShadow: "0 12px 32px rgba(12,11,8,.18)",
               }}>
                 <label style={{ fontSize: 11, color: C.hint, display: "block", marginBottom: 4 }}>Near this city</label>
                 <select value={originCity} onChange={e => setOriginCity(e.target.value)} style={{
@@ -748,7 +748,7 @@ export default function FullTimeJobBoard() {
           <span style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>
             {filtered.length} {filtered.length === 1 ? "role" : "roles"}
             {hasActiveFilters && (
-              <button onClick={resetFilters} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "#ef4444", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}><X size={11}/> Clear</button>
+              <button onClick={resetFilters} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "#2e2d27", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}><X size={11}/> Clear</button>
             )}
           </span>
         </div>

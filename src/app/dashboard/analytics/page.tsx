@@ -59,10 +59,10 @@ export default function AnalyticsPage() {
 
   // Funnel: applied → responded → interviewed → offer
   const funnel = [
-    { label: "Applied",     n: m.total,       color: "#1d6fc4" },
-    { label: "Responded",   n: m.responded,   color: "#d97706" },
-    { label: "Interviewed", n: m.interviewed, color: "#7c3aed" },
-    { label: "Offer",       n: m.offers,      color: "#059669" },
+    { label: "Applied",     n: m.total,       color: "#1c1b16" },
+    { label: "Responded",   n: m.responded,   color: "#6b6858" },
+    { label: "Interviewed", n: m.interviewed, color: "#4d4b44" },
+    { label: "Offer",       n: m.offers,      color: "#42413c" },
   ]
   const funnelMax = Math.max(1, m.total)
 
@@ -94,10 +94,10 @@ export default function AnalyticsPage() {
           {/* KPI cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
             <Kpi label="Total applied" value={m.total} sub={`${m.active} active`} />
-            <Kpi label="Response rate" value={`${m.responseRate}%`} sub={`${m.responded} responded`} accent="#d97706" />
-            <Kpi label="Interview rate" value={`${m.interviewRate}%`} sub={`${m.interviewed} interviews`} accent="#7c3aed" />
-            <Kpi label="Offer rate" value={`${m.offerRate}%`} sub={`${m.offers} offer${m.offers !== 1 ? "s" : ""}`} accent="#059669" />
-            <Kpi label="Saved jobs" value={savedCount} sub="not yet applied" accent="#0ea5e9" />
+            <Kpi label="Response rate" value={`${m.responseRate}%`} sub={`${m.responded} responded`} accent="#6b6858" />
+            <Kpi label="Interview rate" value={`${m.interviewRate}%`} sub={`${m.interviewed} interviews`} accent="#4d4b44" />
+            <Kpi label="Offer rate" value={`${m.offerRate}%`} sub={`${m.offers} offer${m.offers !== 1 ? "s" : ""}`} accent="#42413c" />
+            <Kpi label="Saved jobs" value={savedCount} sub="not yet applied" accent="#7c7866" />
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>

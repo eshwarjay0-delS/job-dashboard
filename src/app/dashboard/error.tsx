@@ -34,7 +34,7 @@ export default function DashboardError({
       {/* Icon */}
       <div style={{
         width: 56, height: 56, borderRadius: 16,
-        background: "#fef2f2", border: "1.5px solid #fecaca",
+        background: "var(--surface)", border: "1.5px solid #ddd8cd",
         display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: 24,
       }}>
@@ -44,12 +44,12 @@ export default function DashboardError({
       {/* Heading */}
       <div>
         <h2 style={{
-          fontSize: 18, fontWeight: 800, color: "#1a2035",
+          fontSize: 18, fontWeight: 800, color: "#161510",
           marginBottom: 6, letterSpacing: "-0.3px",
         }}>
           Something went wrong
         </h2>
-        <p style={{ fontSize: 13.5, color: "#6b7a99", maxWidth: 380, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 13.5, color: "#6e6b5b", maxWidth: 380, lineHeight: 1.6 }}>
           This page ran into an error. Your data is safe — click Retry to reload
           it, or navigate to another page using the sidebar.
         </p>
@@ -59,9 +59,9 @@ export default function DashboardError({
       {process.env.NODE_ENV === "development" && error.message && (
         <div style={{
           maxWidth: 520, width: "100%",
-          background: "#0f1623", border: "1px solid rgba(255,255,255,.08)",
+          background: "#15140f", border: "1px solid rgba(255,255,255,.08)",
           borderRadius: 10, padding: "12px 16px",
-          fontFamily: "monospace", fontSize: 12, color: "#f87171",
+          fontFamily: "monospace", fontSize: 12, color: "#ccc6b7",
           textAlign: "left", overflowX: "auto",
         }}>
           <p style={{ color: "rgba(255,255,255,.3)", fontSize: 10, marginBottom: 4 }}>ERROR</p>
@@ -85,9 +85,9 @@ export default function DashboardError({
           href="/dashboard"
           style={{
             padding: "9px 20px", borderRadius: 9,
-            background: "transparent", color: "#6b7a99",
+            background: "transparent", color: "#6e6b5b",
             fontSize: 13.5, fontWeight: 600,
-            border: "1px solid #e4e8ef", textDecoration: "none",
+            border: "1px solid #e6e2d9", textDecoration: "none",
             display: "inline-flex", alignItems: "center",
           }}
         >

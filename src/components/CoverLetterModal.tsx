@@ -74,7 +74,7 @@ export default function CoverLetterModal({ jd: initialJd = "", filepath = "", re
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,.55)", backdropFilter: "blur(4px)" }}
+      style={{ background: "rgba(12,11,8,.55)", backdropFilter: "blur(4px)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
@@ -83,7 +83,7 @@ export default function CoverLetterModal({ jd: initialJd = "", filepath = "", re
           background: "var(--surface)",
           border: "1px solid var(--border)",
           maxHeight: "90vh",
-          boxShadow: "0 24px 64px rgba(0,0,0,.3)",
+          boxShadow: "0 24px 64px rgba(12,11,8,.3)",
         }}
       >
         {/* Header */}
@@ -91,7 +91,7 @@ export default function CoverLetterModal({ jd: initialJd = "", filepath = "", re
           style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
-              style={{ background: "linear-gradient(135deg,#059669,#0d9488)" }}>
+              style={{ background: "linear-gradient(135deg,#42413c,#5c5a4e)" }}>
               ✉️
             </div>
             <div>
@@ -175,7 +175,7 @@ export default function CoverLetterModal({ jd: initialJd = "", filepath = "", re
 
           {/* Error */}
           {error && (
-            <div className="rounded-xl px-4 py-3 text-xs" style={{ background: "#fef2f2", color: "#dc2626" }}>
+            <div className="rounded-xl px-4 py-3 text-xs" style={{ background: "var(--surface)", color: "#13120d" }}>
               {error}
             </div>
           )}
@@ -190,7 +190,7 @@ export default function CoverLetterModal({ jd: initialJd = "", filepath = "", re
                 <div className="flex gap-2">
                   <button onClick={handleCopy}
                     className="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5"
-                    style={{ borderColor: "var(--border)", color: copied ? "#059669" : "var(--text-soft)", background: "var(--surface-2)" }}>
+                    style={{ borderColor: "var(--border)", color: copied ? "#42413c" : "var(--text-soft)", background: "var(--surface-2)" }}>
                     {copied ? "✓ Copied!" : "Copy"}
                   </button>
                   <button onClick={handleDownload}
@@ -233,7 +233,7 @@ export default function CoverLetterModal({ jd: initialJd = "", filepath = "", re
           {letter && (
             <button onClick={handleCopy}
               className="btn-outline px-5 py-3 text-sm font-semibold rounded-xl"
-              style={{ color: copied ? "#059669" : undefined }}>
+              style={{ color: copied ? "#42413c" : undefined }}>
               {copied ? "✓ Copied!" : "Copy"}
             </button>
           )}

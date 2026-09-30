@@ -9,19 +9,19 @@ import {
 
 // ── Design tokens ────────────────────────────────────────────────────────────
 const C = {
-  bg:      "#0b1220",
-  card:    "#111827",
-  cardAlt: "#141f30",
+  bg:      "#13120d",
+  card:    "#161510",
+  cardAlt: "#1e1d17",
   border:  "rgba(255,255,255,.07)",
-  text:    "#f0f4ff",
-  muted:   "#8892a8",
-  hint:    "#4b5568",
-  accent:  "#3b82f6",
-  accentL: "#60a5fa",
-  teal:    "#14b8a6",
-  purple:  "#8b5cf6",
-  green:   "#60a5fa",
-  amber:   "#f59e0b",
+  text:    "#f4f2ed",
+  muted:   "#928e79",
+  hint:    "#55534a",
+  accent:  "#6e6b5b",
+  accentL: "#9d9884",
+  teal:    "#6a6757",
+  purple:  "#605d51",
+  green:   "#9d9884",
+  amber:   "#7e7a68",
 }
 
 // ── Animated counter ─────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ const SLIDES = [
     cta: { label: "Tailor My Resume →", href: "/dashboard/resume", color: C.accent },
     hotspot: "My Resume → Tailor",
     Icon: FileText,
-    gradient: "linear-gradient(135deg, #1e3a5f 0%, #0b1220 100%)",
+    gradient: "linear-gradient(135deg, #393935 0%, #13120d 100%)",
   },
   {
     problem: "\"H1B sponsorship jobs are impossible to find. Companies don't advertise it.\"",
@@ -65,7 +65,7 @@ const SLIDES = [
     cta: { label: "Find H1B Jobs →", href: "/dashboard/jobs", color: C.teal },
     hotspot: "Jobs & Apply → H1B Filter",
     Icon: Globe,
-    gradient: "linear-gradient(135deg, #0d3330 0%, #0b1220 100%)",
+    gradient: "linear-gradient(135deg, #2d2c26 0%, #13120d 100%)",
   },
   {
     problem: "\"I filled out the same application 50 times this week. Name, email, resume, work auth — every single time.\"",
@@ -74,7 +74,7 @@ const SLIDES = [
     cta: { label: "Get the Extension →", href: "/dashboard/settings", color: C.purple },
     hotspot: "Chrome Extension → Autofill",
     Icon: Zap,
-    gradient: "linear-gradient(135deg, #2d1b69 0%, #0b1220 100%)",
+    gradient: "linear-gradient(135deg, #2a2922 0%, #13120d 100%)",
   },
   {
     problem: "\"My resume looks the same whether I'm applying for a data role or a DevOps role. I can't afford custom resumes for every job.\"",
@@ -83,7 +83,7 @@ const SLIDES = [
     cta: { label: "Score My Resume →", href: "/dashboard/ai-tools", color: C.amber },
     hotspot: "AI Tools → ATS Score",
     Icon: Target,
-    gradient: "linear-gradient(135deg, #3d2000 0%, #0b1220 100%)",
+    gradient: "linear-gradient(135deg, #27261f 0%, #13120d 100%)",
   },
   {
     problem: "\"I have 5 different emails for different job hunts. My pipeline is a mess. I miss follow-ups constantly.\"",
@@ -92,7 +92,7 @@ const SLIDES = [
     cta: { label: "Track Applications →", href: "/dashboard/jobs", color: C.green },
     hotspot: "Jobs & Apply → Pipeline",
     Icon: BarChart3,
-    gradient: "linear-gradient(135deg, #0d3320 0%, #0b1220 100%)",
+    gradient: "linear-gradient(135deg, #2c2b25 0%, #13120d 100%)",
   },
 ]
 
@@ -144,7 +144,7 @@ const CAPABILITIES = [
     desc: "Role-specific questions. AI evaluates your answers in real time. Audio recording with instant feedback.",
     href: "/dashboard/ai-tools",
     tag: "Practice",
-    color: "#f43f5e",
+    color: "#85816e",
   },
 ]
 
@@ -179,7 +179,7 @@ export default function MarketingDashboard() {
       <div style={{ textAlign: "center", padding: "40px 0 32px" }}>
         <div style={{
           display: "inline-flex", alignItems: "center", gap: 8,
-          background: "rgba(59,130,246,.12)", border: "1px solid rgba(59,130,246,.25)",
+          background: "rgba(133,129,110,.12)", border: "1px solid rgba(133,129,110,.25)",
           borderRadius: 20, padding: "5px 14px", marginBottom: 18,
         }}>
           <span style={{ fontSize: 11, color: C.accentL, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase" }}>
@@ -271,7 +271,7 @@ export default function MarketingDashboard() {
                 textTransform: "uppercase", marginBottom: 14, display: "flex", alignItems: "center", gap: 6,
               }}><Frown size={12}/> The Problem</div>
               <p style={{
-                fontSize: 18, fontWeight: 500, color: "#e2e8f0", lineHeight: 1.6,
+                fontSize: 18, fontWeight: 500, color: "#e6e2d9", lineHeight: 1.6,
                 fontStyle: "italic", margin: 0,
               }}>
                 {s.problem}
@@ -284,7 +284,7 @@ export default function MarketingDashboard() {
                 fontSize: 11, color: s.cta.color, fontWeight: 600, letterSpacing: ".08em",
                 textTransform: "uppercase", marginBottom: 14, display: "flex", alignItems: "center", gap: 6,
               }}><CircleCheck size={12}/> MarketFit Solves It</div>
-              <p style={{ fontSize: 16, color: "#cbd5e1", lineHeight: 1.7, margin: "0 0 16px" }}>
+              <p style={{ fontSize: 16, color: "#d3cdc0", lineHeight: 1.7, margin: "0 0 16px" }}>
                 {s.solution}
               </p>
               <div style={{
@@ -316,7 +316,7 @@ export default function MarketingDashboard() {
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: "12px 24px", borderTop: `1px solid rgba(255,255,255,.06)`,
-            background: "rgba(0,0,0,.2)",
+            background: "rgba(12,11,8,.2)",
           }}>
             <button onClick={prev} style={{
               background: "rgba(255,255,255,.08)", border: "none", color: C.text,
@@ -428,8 +428,8 @@ export default function MarketingDashboard() {
 
       {/* ── CTA strip ──────────────────────────────────────────────────────── */}
       <div style={{
-        background: `linear-gradient(135deg, #1e3a5f 0%, #1a1040 100%)`,
-        border: `1px solid rgba(59,130,246,.25)`,
+        background: `linear-gradient(135deg, #393935 0%, #171611 100%)`,
+        border: `1px solid rgba(133,129,110,.25)`,
         borderRadius: 18, padding: "36px 40px", textAlign: "center",
       }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 10, color: C.accentL }}><Rocket size={24}/></div>

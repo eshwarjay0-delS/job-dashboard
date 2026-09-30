@@ -30,9 +30,9 @@ const TABS: { id: AITab; label: string; Icon: typeof Sparkles; desc: string }[] 
 // ── Skeleton loader ───────────────────────────────────────────────────────────
 function PanelSkeleton({ label }: { label: string }) {
   return (
-    <div style={{ padding: "40px 20px", textAlign: "center", color: "#9aa4bc" }}>
+    <div style={{ padding: "40px 20px", textAlign: "center", color: "#9d9884" }}>
       <div style={{
-        width: 48, height: 48, borderRadius: 14, background: "var(--surface-2, #f4f6f9)",
+        width: 48, height: 48, borderRadius: 14, background: "var(--surface-2)",
         margin: "0 auto 12px", animation: "sk-pulse 1.5s ease-in-out infinite",
       }}/>
       <div style={{ fontSize: 14, fontWeight: 600 }}>Loading {label}…</div>
@@ -57,14 +57,14 @@ function RecentTailors() {
   if (!items.length) return null
   return (
     <div style={{ marginTop: 20 }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted, #6b7a99)", letterSpacing: ".5px", marginBottom: 10 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted, #6e6b5b)", letterSpacing: ".5px", marginBottom: 10 }}>
         RECENT TAILORS
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {items.map(r => (
           <div key={r.token} style={{
             display: "flex", alignItems: "center", gap: 12, padding: "10px 14px",
-            background: "var(--surface, #fff)", border: "1px solid var(--border, #e4e8ef)",
+            background: "var(--surface, #fff)", border: "1px solid var(--border, #e6e2d9)",
             borderRadius: 12, fontSize: 13,
           }}>
             <div style={{
@@ -75,10 +75,10 @@ function RecentTailors() {
               {r.score}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600, color: "var(--text, #1a2035)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <div style={{ fontWeight: 600, color: "var(--text, #161510)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {r.resumeName}
               </div>
-              <div style={{ fontSize: 11, color: "var(--text-muted, #6b7a99)", marginTop: 1 }}>
+              <div style={{ fontSize: 11, color: "var(--text-muted, #6e6b5b)", marginTop: 1 }}>
                 {r.category} · {new Date(r.tailoredAt).toLocaleDateString()}
               </div>
             </div>
@@ -145,9 +145,9 @@ function TailorTab() {
           <Link href="/dashboard/resume" style={{
             display: "inline-flex", alignItems: "center", gap: 7,
             padding: "11px 24px", borderRadius: 12,
-            background: "#fff", color: "var(--accent)", textDecoration: "none",
+            background: "var(--surface)", color: "var(--accent)", textDecoration: "none",
             fontSize: 14, fontWeight: 800, letterSpacing: "-0.01em",
-            boxShadow: "0 4px 16px rgba(0,0,0,.15)",
+            boxShadow: "0 4px 16px rgba(12,11,8,.15)",
           }}>
             <Sparkles size={15}/> Open Tailor
           </Link>
@@ -164,10 +164,10 @@ function TailorTab() {
 
       {/* How it works */}
       <div style={{
-        background: "var(--surface, #fff)", border: "1px solid var(--border, #e4e8ef)",
+        background: "var(--surface, #fff)", border: "1px solid var(--border, #e6e2d9)",
         borderRadius: 16, padding: "20px 22px", marginBottom: 20,
       }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted, #6b7a99)", letterSpacing: ".5px", marginBottom: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted, #6e6b5b)", letterSpacing: ".5px", marginBottom: 14 }}>
           HOW IT WORKS
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
@@ -183,8 +183,8 @@ function TailorTab() {
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontWeight: 800, fontSize: 13,
               }}>{s.step}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text, #1a2035)", marginBottom: 4 }}>{s.title}</div>
-              <div style={{ fontSize: 12, color: "var(--text-muted, #6b7a99)", lineHeight: 1.5 }}>{s.desc}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text, #161510)", marginBottom: 4 }}>{s.title}</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted, #6e6b5b)", lineHeight: 1.5 }}>{s.desc}</div>
             </div>
           ))}
         </div>
@@ -204,7 +204,7 @@ function TailorTab() {
                 ? `JD ready: ${[prefillRole, prefillCompany].filter(Boolean).join(" @ ")}`
                 : "Job description ready"}
             </div>
-            <div style={{ fontSize: 12, color: "var(--text-muted, #6b7a99)", marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: "var(--text-muted, #6e6b5b)", marginTop: 2 }}>
               Prefilled from the job card — head to the Tailor page to run it.
             </div>
           </div>
@@ -262,25 +262,25 @@ function ScoreTab() {
   }
 
   const r = 44, circ = 2 * Math.PI * r
-  const scoreColor = score !== null ? (score >= 80 ? "#059669" : score >= 60 ? "#1d6fc4" : score >= 40 ? "#d97706" : "#dc2626") : "#9ca3af"
-  const severityColor = (s: string) => s === "critical" ? "#dc2626" : s === "high" ? "#d97706" : "#6b7a99"
+  const scoreColor = score !== null ? (score >= 80 ? "#42413c" : score >= 60 ? "#1c1b16" : score >= 40 ? "#6b6858" : "#13120d") : "#a29d89"
+  const severityColor = (s: string) => s === "critical" ? "#13120d" : s === "high" ? "#6b6858" : "#6e6b5b"
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto" }}>
       <div style={{
-        background: "var(--surface, #fff)", border: "1px solid var(--border, #e4e8ef)",
+        background: "var(--surface, #fff)", border: "1px solid var(--border, #e6e2d9)",
         borderRadius: 20, padding: "28px 28px",
       }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text, #1a2035)", marginBottom: 6, display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text, #161510)", marginBottom: 6, display: "flex", alignItems: "center", gap: 8 }}>
           <BarChart3 size={18}/> AI Resume Score
         </div>
-        <p style={{ fontSize: 13, color: "var(--text-muted, #6b7a99)", marginBottom: 22, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 13, color: "var(--text-muted, #6e6b5b)", marginBottom: 22, lineHeight: 1.6 }}>
           Paste your resume text and get an ATS compatibility score with specific improvement suggestions.
         </p>
 
         {/* Resume text input */}
         <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted, #6b7a99)", letterSpacing: ".4px", display: "block", marginBottom: 6 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted, #6e6b5b)", letterSpacing: ".4px", display: "block", marginBottom: 6 }}>
             RESUME TEXT (paste from your doc)
           </label>
           <textarea
@@ -292,21 +292,21 @@ function ScoreTab() {
               width: "100%", boxSizing: "border-box",
               padding: "12px 14px", borderRadius: 10, resize: "vertical",
               border: `1.5px solid ${resumeText ? "var(--accent)" : "var(--border)"}`,
-              background: "var(--surface-2, #f8f9fb)", fontSize: 13,
-              color: "var(--text, #1a2035)", lineHeight: 1.6,
+              background: "var(--surface-2, #f6f4f0)", fontSize: 13,
+              color: "var(--text, #161510)", lineHeight: 1.6,
               fontFamily: "inherit", outline: "none",
               transition: "border-color .15s",
             }}
           />
-          <div style={{ fontSize: 11, color: "#9aa4bc", marginTop: 4 }}>
+          <div style={{ fontSize: 11, color: "#9d9884", marginTop: 4 }}>
             Tip: In Word or Google Docs, press Ctrl+A → Ctrl+C, then paste here
           </div>
         </div>
 
         {/* Optional JD */}
         <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted, #6b7a99)", letterSpacing: ".4px", display: "block", marginBottom: 6 }}>
-            JOB DESCRIPTION <span style={{ fontWeight: 400, color: "#9aa4bc" }}>(optional — improves keyword scoring)</span>
+          <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted, #6e6b5b)", letterSpacing: ".4px", display: "block", marginBottom: 6 }}>
+            JOB DESCRIPTION <span style={{ fontWeight: 400, color: "#9d9884" }}>(optional — improves keyword scoring)</span>
           </label>
           <textarea
             value={jd}
@@ -316,9 +316,9 @@ function ScoreTab() {
             style={{
               width: "100%", boxSizing: "border-box",
               padding: "10px 14px", borderRadius: 10, resize: "vertical",
-              border: "1.5px solid var(--border, #e4e8ef)",
-              background: "var(--surface-2, #f8f9fb)", fontSize: 13,
-              color: "var(--text, #1a2035)", lineHeight: 1.6,
+              border: "1.5px solid var(--border, #e6e2d9)",
+              background: "var(--surface-2, #f6f4f0)", fontSize: 13,
+              color: "var(--text, #161510)", lineHeight: 1.6,
               fontFamily: "inherit", outline: "none",
             }}
           />
@@ -330,7 +330,7 @@ function ScoreTab() {
           style={{
             width: "100%", padding: "12px", borderRadius: 12, border: "none",
             background: resumeText.trim() && !loading ? "linear-gradient(135deg, var(--accent) 0%, var(--accent-h) 100%)" : "var(--border)",
-            color: resumeText.trim() && !loading ? "#fff" : "#9aa4bc", fontSize: 14, fontWeight: 700,
+            color: resumeText.trim() && !loading ? "#fff" : "#9d9884", fontSize: 14, fontWeight: 700,
             cursor: resumeText.trim() && !loading ? "pointer" : "not-allowed", transition: "all .15s",
           }}
         >
@@ -338,7 +338,7 @@ function ScoreTab() {
         </button>
 
         {error && (
-          <div style={{ marginTop: 14, padding: "10px 14px", background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 10, fontSize: 13, color: "#dc2626" }}>
+          <div style={{ marginTop: 14, padding: "10px 14px", background: "rgba(112,108,92,.08)", border: "1px solid rgba(112,108,92,.2)", borderRadius: 10, fontSize: 13, color: "#13120d" }}>
             {error}
           </div>
         )}
@@ -350,7 +350,7 @@ function ScoreTab() {
               <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center" }}>
                 <div style={{ width: 100, height: 100, position: "relative" }}>
                   <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
-                    <circle cx="50" cy="50" r={r} fill="none" stroke="#e4e8ef" strokeWidth={8}/>
+                    <circle cx="50" cy="50" r={r} fill="none" stroke="#e6e2d9" strokeWidth={8}/>
                     <circle cx="50" cy="50" r={r} fill="none" stroke={scoreColor} strokeWidth={8}
                       strokeLinecap="round"
                       strokeDasharray={`${(score/100)*circ} ${circ}`}
@@ -359,7 +359,7 @@ function ScoreTab() {
                   </svg>
                   <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                     <span style={{ fontSize: 26, fontWeight: 900, color: scoreColor, lineHeight: 1 }}>{score}</span>
-                    <span style={{ fontSize: 10, color: "#9aa4bc", fontWeight: 600 }}>/100</span>
+                    <span style={{ fontSize: 10, color: "#9d9884", fontWeight: 600 }}>/100</span>
                   </div>
                 </div>
                 <div style={{
@@ -369,7 +369,7 @@ function ScoreTab() {
                   Grade {grade} · {score >= 80 ? "Excellent" : score >= 60 ? "Good" : score >= 40 ? "Fair" : "Needs Work"}
                 </div>
               </div>
-              {summary && <p style={{ fontSize: 13, color: "var(--text-muted, #6b7a99)", marginTop: 12, lineHeight: 1.6 }}>{summary}</p>}
+              {summary && <p style={{ fontSize: 13, color: "var(--text-muted, #6e6b5b)", marginTop: 12, lineHeight: 1.6 }}>{summary}</p>}
             </div>
 
             {strengths.length > 0 && (
@@ -378,8 +378,8 @@ function ScoreTab() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {strengths.map((s, i) => (
                     <div key={i} style={{
-                      padding: "8px 12px", background: "#eff6ff", border: "1px solid #bfdbfe",
-                      borderRadius: 8, fontSize: 13, color: "#1e3a5f", lineHeight: 1.5,
+                      padding: "8px 12px", background: "#f2f0ea", border: "1px solid #d9d4c8",
+                      borderRadius: 8, fontSize: 13, color: "#393935", lineHeight: 1.5,
                     }}>{s}</div>
                   ))}
                 </div>
@@ -388,13 +388,13 @@ function ScoreTab() {
 
             {issues.length > 0 && (
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted, #6b7a99)", letterSpacing: ".5px", marginBottom: 8, display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted, #6e6b5b)", letterSpacing: ".5px", marginBottom: 8, display: "flex", alignItems: "center", gap: 5 }}>
                   <TriangleAlert size={12}/> ISSUES TO FIX
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {issues.map((issue, i) => (
                     <div key={i} style={{
-                      padding: "10px 12px", background: "var(--surface-2, #f8f9fb)",
+                      padding: "10px 12px", background: "var(--surface-2, #f6f4f0)",
                       border: `1px solid ${severityColor(issue.severity)}30`,
                       borderLeft: `3px solid ${severityColor(issue.severity)}`,
                       borderRadius: 8, fontSize: 13,
@@ -402,8 +402,8 @@ function ScoreTab() {
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                         <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: severityColor(issue.severity) }}>{issue.severity}</span>
                       </div>
-                      <div style={{ color: "var(--text, #1a2035)", lineHeight: 1.5, marginBottom: 4 }}>{issue.problem}</div>
-                      <div style={{ color: "#6b7a99", fontSize: 12 }}>→ {issue.fix}</div>
+                      <div style={{ color: "var(--text, #161510)", lineHeight: 1.5, marginBottom: 4 }}>{issue.problem}</div>
+                      <div style={{ color: "#6e6b5b", fontSize: 12 }}>→ {issue.fix}</div>
                     </div>
                   ))}
                 </div>
@@ -456,9 +456,9 @@ export default function AIToolsPage() {
       {/* ── Sub-tab bar ─────────────────────────────────────────── */}
       <div style={{
         display: "flex", gap: 4, padding: "4px", borderRadius: 14,
-        background: "var(--surface, #fff)", border: "1px solid var(--border, #e4e8ef)",
+        background: "var(--surface, #fff)", border: "1px solid var(--border, #e6e2d9)",
         width: "fit-content", marginBottom: 28,
-        boxShadow: "0 1px 4px rgba(0,0,0,.04)",
+        boxShadow: "0 1px 4px rgba(12,11,8,.04)",
       }}>
         {TABS.map(tab => {
           const active = activeTab === tab.id
@@ -471,7 +471,7 @@ export default function AIToolsPage() {
                 borderRadius: 10, border: "none", cursor: "pointer", fontSize: 13.5,
                 fontWeight: active ? 700 : 500, transition: "all .15s",
                 background: active ? "linear-gradient(135deg, var(--accent) 0%, var(--accent-h) 100%)" : "transparent",
-                color: active ? "#fff" : "var(--text-muted, #6b7a99)",
+                color: active ? "#fff" : "var(--text-muted, #6e6b5b)",
                 boxShadow: active ? "0 2px 8px color-mix(in srgb, var(--accent) 30%, transparent)" : "none",
               }}
             >

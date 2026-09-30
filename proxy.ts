@@ -61,8 +61,10 @@ export async function proxy(request: NextRequest) {
 
 // Run on all paths except static assets and the OAuth/auth callback (which must
 // reach its own handler to exchange the code/token before any gating applies).
+// kompas/ is skipped too: every live answer goes through /kompas/api/*, and a
+// Supabase round trip in front of each one is latency the listener hears.
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|auth/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|auth/callback|kompas/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }

@@ -123,15 +123,15 @@ function NumberInput({ label, value, onChange, prefix = "$", suffix = "", step =
 }) {
   return (
     <div>
-      <label style={{ fontSize: 12, fontWeight: 600, color: "#6b7a99", display: "block", marginBottom: 4 }}>{label}</label>
-      <div style={{ display: "flex", alignItems: "center", border: "1.5px solid #e4e8ef", borderRadius: 8, overflow: "hidden", background: "#fff" }}>
-        {prefix && <span style={{ padding: "0 8px", fontSize: 13, color: "#6b7a99", background: "#f8f9fc", borderRight: "1px solid #e4e8ef", height: "100%", display: "flex", alignItems: "center" }}>{prefix}</span>}
+      <label style={{ fontSize: 12, fontWeight: 600, color: "#6e6b5b", display: "block", marginBottom: 4 }}>{label}</label>
+      <div style={{ display: "flex", alignItems: "center", border: "1.5px solid #e6e2d9", borderRadius: 8, overflow: "hidden", background: "var(--surface)" }}>
+        {prefix && <span style={{ padding: "0 8px", fontSize: 13, color: "#6e6b5b", background: "#f7f5f0", borderRight: "1px solid #e6e2d9", height: "100%", display: "flex", alignItems: "center" }}>{prefix}</span>}
         <input type="number" value={value || ""} step={step} min={0}
           onChange={e => onChange(Number(e.target.value) || 0)}
-          style={{ flex: 1, padding: "8px 10px", border: "none", outline: "none", fontSize: 13.5, color: "#1a2035", background: "transparent" }}/>
-        {suffix && <span style={{ padding: "0 8px", fontSize: 12, color: "#6b7a99" }}>{suffix}</span>}
+          style={{ flex: 1, padding: "8px 10px", border: "none", outline: "none", fontSize: 13.5, color: "#161510", background: "transparent" }}/>
+        {suffix && <span style={{ padding: "0 8px", fontSize: 12, color: "#6e6b5b" }}>{suffix}</span>}
       </div>
-      {note && <div style={{ fontSize: 11, color: "#aab3c5", marginTop: 3 }}>{note}</div>}
+      {note && <div style={{ fontSize: 11, color: "#aaa492", marginTop: 3 }}>{note}</div>}
     </div>
   )
 }
@@ -204,7 +204,7 @@ export default function ComparePage() {
   /* ── ranking ── */
   const ranked = [...offers].sort((a, b) => adjustedComp(b) - adjustedComp(a))
   const best = ranked[0]
-  const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899"]
+  const COLORS = ["#58564c", "#6e6b5b", "#7e7a68", "#605d51", "#5e5b50"]
 
   /* max values for bar scaling */
   const maxComp   = Math.max(...offers.map(o => totalComp(o)), 1)
@@ -219,13 +219,13 @@ export default function ComparePage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a2035", letterSpacing: "-0.4px", marginBottom: 4 }}>Offer Comparator</h1>
-          <p style={{ fontSize: 13.5, color: "#6b7a99" }}>Side-by-side breakdown of total comp, equity, and COL-adjusted value</p>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#161510", letterSpacing: "-0.4px", marginBottom: 4 }}>Offer Comparator</h1>
+          <p style={{ fontSize: 13.5, color: "#6e6b5b" }}>Side-by-side breakdown of total comp, equity, and COL-adjusted value</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           {offers.length >= 2 && (
             <button onClick={getAIRec} disabled={aiLoad}
-              style={{ padding: "9px 16px", borderRadius: 9, background: "rgba(29,111,196,0.07)", color: "var(--accent)", fontSize: 13.5, fontWeight: 700, border: "1.5px solid rgba(29,111,196,0.2)", cursor: "pointer" }}>
+              style={{ padding: "9px 16px", borderRadius: 9, background: "rgba(107,104,88,0.07)", color: "var(--accent)", fontSize: 13.5, fontWeight: 700, border: "1.5px solid rgba(107,104,88,0.2)", cursor: "pointer" }}>
               {aiLoad ? "Thinking…" : "✨ AI Pick"}
             </button>
           )}
@@ -238,32 +238,32 @@ export default function ComparePage() {
 
       {/* AI Recommendation */}
       {aiRec && (
-        <div style={{ background: "rgba(29,111,196,0.04)", border: "1px solid rgba(29,111,196,0.2)", borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <div style={{ background: "rgba(107,104,88,0.04)", border: "1px solid rgba(107,104,88,0.2)", borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 12, alignItems: "flex-start" }}>
           <span style={{ fontSize: 20, flexShrink: 0 }}>✨</span>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)", marginBottom: 4 }}>AI Recommendation</div>
-            <div style={{ fontSize: 13.5, color: "#1a2035", lineHeight: 1.65 }}>{aiRec}</div>
+            <div style={{ fontSize: 13.5, color: "#161510", lineHeight: 1.65 }}>{aiRec}</div>
           </div>
-          <button onClick={() => setAiRec("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#aab3c5", fontSize: 18, flexShrink: 0 }}>✕</button>
+          <button onClick={() => setAiRec("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa492", fontSize: 18, flexShrink: 0 }}>✕</button>
         </div>
       )}
 
       {offers.length === 0 ? (
-        <div style={{ background: "#fff", border: "1px solid #e4e8ef", borderRadius: 14, padding: "64px 32px", textAlign: "center" }}>
+        <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 14, padding: "64px 32px", textAlign: "center" }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>⚖️</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "#1a2035", marginBottom: 6 }}>No offers to compare</div>
-          <div style={{ fontSize: 13.5, color: "#6b7a99", marginBottom: 24 }}>Add 2+ offers to get a full breakdown</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#161510", marginBottom: 6 }}>No offers to compare</div>
+          <div style={{ fontSize: 13.5, color: "#6e6b5b", marginBottom: 24 }}>Add 2+ offers to get a full breakdown</div>
           <button onClick={openAdd} style={{ padding: "10px 28px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontSize: 14 }}>+ Add First Offer</button>
         </div>
       ) : (
         <>
           {/* Tabs */}
-          <div style={{ display: "flex", gap: 4, background: "#f1f4f9", borderRadius: 10, padding: 4, marginBottom: 20, width: "fit-content" }}>
+          <div style={{ display: "flex", gap: 4, background: "#f2f0ea", borderRadius: 10, padding: 4, marginBottom: 20, width: "fit-content" }}>
             {(["overview", "equity", "benefits", "col"] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
                 style={{ padding: "6px 16px", borderRadius: 7, fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer",
-                  background: tab === t ? "#fff" : "transparent", color: tab === t ? "var(--accent)" : "#6b7a99",
-                  boxShadow: tab === t ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}>
+                  background: tab === t ? "#fff" : "transparent", color: tab === t ? "var(--accent)" : "#6e6b5b",
+                  boxShadow: tab === t ? "0 1px 3px rgba(12,11,8,0.1)" : "none" }}>
                 {t === "overview" ? "📊 Overview" : t === "equity" ? "📈 Equity" : t === "benefits" ? "🎁 Benefits" : "🌍 COL Adjust"}
               </button>
             ))}
@@ -278,18 +278,18 @@ export default function ComparePage() {
                   const color = COLORS[i % COLORS.length]
                   const isBest = o.id === best?.id
                   return (
-                    <div key={o.id} style={{ background: "#fff", borderRadius: 14, border: `1.5px solid ${isBest ? color + "55" : "#e4e8ef"}`, padding: "18px 20px", position: "relative", boxShadow: isBest ? `0 4px 20px ${color}18` : "none" }}>
+                    <div key={o.id} style={{ background: "var(--surface)", borderRadius: 14, border: `1.5px solid ${isBest ? color + "55" : "#e6e2d9"}`, padding: "18px 20px", position: "relative", boxShadow: isBest ? `0 4px 20px ${color}18` : "none" }}>
                       {isBest && <div style={{ position: "absolute", top: -1, left: -1, right: -1, height: 3, background: color, borderRadius: "12px 12px 0 0" }}/>}
                       {isBest && <div style={{ position: "absolute", top: 10, right: 12, fontSize: 10, fontWeight: 700, background: color + "18", color, padding: "2px 8px", borderRadius: 100 }}>🏆 Best Comp</div>}
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                         <img src={`https://logo.clearbit.com/${o.domain}`} width={28} height={28} style={{ borderRadius: 6, objectFit: "contain" }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }}/>
                         <div>
-                          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#1a2035" }}>{o.company}</div>
-                          <div style={{ fontSize: 11, color: "#6b7a99", marginTop: 1 }}>{o.remote === "remote" ? "🌐 Remote" : o.remote === "hybrid" ? "🔀 Hybrid" : "🏢 Onsite"}</div>
+                          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#161510" }}>{o.company}</div>
+                          <div style={{ fontSize: 11, color: "#6e6b5b", marginTop: 1 }}>{o.remote === "remote" ? "🌐 Remote" : o.remote === "hybrid" ? "🔀 Hybrid" : "🏢 Onsite"}</div>
                         </div>
                       </div>
                       <div style={{ fontSize: 28, fontWeight: 900, color, letterSpacing: "-1px", lineHeight: 1 }}>{fmtK(o.base)}</div>
-                      <div style={{ fontSize: 11.5, color: "#6b7a99", marginTop: 2, marginBottom: 12 }}>Base salary / year</div>
+                      <div style={{ fontSize: 11.5, color: "#6e6b5b", marginTop: 2, marginBottom: 12 }}>Base salary / year</div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                         {[
                           { label: "Bonus",   value: fmtK(o.bonus) },
@@ -297,25 +297,25 @@ export default function ComparePage() {
                           { label: "Equity",  value: fmtK(o.equity) + ` / ${o.vestingYears}yr` },
                           { label: "Visa",    value: o.visaSponsor ? "✅ " + o.visaType : "❌ None" },
                         ].map(({ label, value }) => (
-                          <div key={label} style={{ background: "#f8f9fc", borderRadius: 8, padding: "8px 10px" }}>
-                            <div style={{ fontSize: 10, color: "#6b7a99", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 2 }}>{label}</div>
-                            <div style={{ fontSize: 12.5, fontWeight: 700, color: "#1a2035" }}>{value}</div>
+                          <div key={label} style={{ background: "#f7f5f0", borderRadius: 8, padding: "8px 10px" }}>
+                            <div style={{ fontSize: 10, color: "#6e6b5b", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 2 }}>{label}</div>
+                            <div style={{ fontSize: 12.5, fontWeight: 700, color: "#161510" }}>{value}</div>
                           </div>
                         ))}
                       </div>
-                      <div style={{ marginTop: 10, padding: "10px 0 0", borderTop: "1px solid #f1f4f9" }}>
+                      <div style={{ marginTop: 10, padding: "10px 0 0", borderTop: "1px solid #f2f0ea" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                          <span style={{ fontSize: 11, color: "#6b7a99" }}>Total Annual Comp</span>
+                          <span style={{ fontSize: 11, color: "#6e6b5b" }}>Total Annual Comp</span>
                           <span style={{ fontSize: 12.5, fontWeight: 800, color }}>~{fmtK(Math.round(totalComp(o)))}</span>
                         </div>
                         <div style={{ display: "flex", justifyContent: "space-between" }}>
-                          <span style={{ fontSize: 11, color: "#6b7a99" }}>COL-Adjusted</span>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#1a2035" }}>~{fmtK(Math.round(adjustedComp(o)))}</span>
+                          <span style={{ fontSize: 11, color: "#6e6b5b" }}>COL-Adjusted</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#161510" }}>~{fmtK(Math.round(adjustedComp(o)))}</span>
                         </div>
                       </div>
                       <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                        <button onClick={() => openEdit(o)} style={{ flex: 1, padding: "7px", background: "transparent", border: "1px solid #e4e8ef", borderRadius: 7, fontSize: 12.5, fontWeight: 600, cursor: "pointer", color: "#6b7a99" }}>Edit</button>
-                        <button onClick={() => del(o.id)} style={{ padding: "7px 10px", background: "transparent", border: "1px solid #fecaca", borderRadius: 7, fontSize: 12.5, cursor: "pointer", color: "#ef4444" }}>✕</button>
+                        <button onClick={() => openEdit(o)} style={{ flex: 1, padding: "7px", background: "transparent", border: "1px solid #e6e2d9", borderRadius: 7, fontSize: 12.5, fontWeight: 600, cursor: "pointer", color: "#6e6b5b" }}>Edit</button>
+                        <button onClick={() => del(o.id)} style={{ padding: "7px 10px", background: "transparent", border: "1px solid #ddd8cd", borderRadius: 7, fontSize: 12.5, cursor: "pointer", color: "#2e2d27" }}>✕</button>
                       </div>
                     </div>
                   )
@@ -323,8 +323,8 @@ export default function ComparePage() {
               </div>
 
               {/* Bar charts */}
-              <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e4e8ef", padding: "20px 24px" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#1a2035", marginBottom: 16 }}>Total Comp vs. COL-Adjusted</div>
+              <div style={{ background: "var(--surface)", borderRadius: 14, border: "1px solid #e6e2d9", padding: "20px 24px" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#161510", marginBottom: 16 }}>Total Comp vs. COL-Adjusted</div>
                 {ranked.map((o, i) => {
                   const color = COLORS[i % COLORS.length]
                   const pct = (adjustedComp(o) / maxAdj) * 100
@@ -332,20 +332,20 @@ export default function ComparePage() {
                   return (
                     <div key={o.id} style={{ marginBottom: 14 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "#1a2035" }}>{o.company}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#161510" }}>{o.company}</div>
                         <div style={{ fontSize: 12.5, fontWeight: 700, color }}>~{fmtK(Math.round(adjustedComp(o)))} adjusted</div>
                       </div>
                       {/* Raw comp bar */}
-                      <div style={{ position: "relative", height: 10, background: "#f1f4f9", borderRadius: 100, marginBottom: 4, overflow: "hidden" }}>
+                      <div style={{ position: "relative", height: 10, background: "#f2f0ea", borderRadius: 100, marginBottom: 4, overflow: "hidden" }}>
                         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: pctRaw + "%", background: color + "44", borderRadius: 100, transition: "width .5s ease" }}/>
                       </div>
                       {/* Adjusted bar */}
-                      <div style={{ position: "relative", height: 10, background: "#f1f4f9", borderRadius: 100, overflow: "hidden" }}>
+                      <div style={{ position: "relative", height: 10, background: "#f2f0ea", borderRadius: 100, overflow: "hidden" }}>
                         <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: pct + "%", background: color, borderRadius: 100, transition: "width .5s ease" }}/>
                       </div>
                       <div style={{ display: "flex", gap: 14, marginTop: 4 }}>
-                        <span style={{ fontSize: 10.5, color: "#aab3c5" }}>░ Raw: ~{fmtK(Math.round(totalComp(o)))}</span>
-                        <span style={{ fontSize: 10.5, color: "#aab3c5" }}>▓ COL-adjusted</span>
+                        <span style={{ fontSize: 10.5, color: "#aaa492" }}>░ Raw: ~{fmtK(Math.round(totalComp(o)))}</span>
+                        <span style={{ fontSize: 10.5, color: "#aaa492" }}>▓ COL-adjusted</span>
                       </div>
                     </div>
                   )
@@ -353,15 +353,15 @@ export default function ComparePage() {
               </div>
 
               {/* Year 1 vs. 4-yr timeline */}
-              <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e4e8ef", padding: "20px 24px" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#1a2035", marginBottom: 16 }}>Compensation Timeline (4-year view)</div>
+              <div style={{ background: "var(--surface)", borderRadius: 14, border: "1px solid #e6e2d9", padding: "20px 24px" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#161510", marginBottom: 16 }}>Compensation Timeline (4-year view)</div>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <thead>
-                      <tr style={{ borderBottom: "2px solid #f1f4f9" }}>
-                        <th style={{ textAlign: "left", padding: "8px 12px", color: "#6b7a99", fontWeight: 600, fontSize: 12 }}>Company</th>
+                      <tr style={{ borderBottom: "2px solid #f2f0ea" }}>
+                        <th style={{ textAlign: "left", padding: "8px 12px", color: "#6e6b5b", fontWeight: 600, fontSize: 12 }}>Company</th>
                         {["Year 1", "Year 2", "Year 3", "Year 4", "4-yr Total"].map(h => (
-                          <th key={h} style={{ textAlign: "right", padding: "8px 12px", color: "#6b7a99", fontWeight: 600, fontSize: 12 }}>{h}</th>
+                          <th key={h} style={{ textAlign: "right", padding: "8px 12px", color: "#6e6b5b", fontWeight: 600, fontSize: 12 }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -375,13 +375,13 @@ export default function ComparePage() {
                         const year4 = o.base + o.bonus + vesting[3] + benefitsValue(o)
                         const total4 = year1 + year2 + year3 + year4
                         return (
-                          <tr key={o.id} style={{ borderBottom: "1px solid #f8f9fc" }}>
+                          <tr key={o.id} style={{ borderBottom: "1px solid #f7f5f0" }}>
                             <td style={{ padding: "10px 12px", fontWeight: 700, color }}>
                               {o.company}
-                              <div style={{ fontSize: 11, color: "#6b7a99", fontWeight: 400 }}>{o.role.length > 28 ? o.role.slice(0, 25) + "…" : o.role}</div>
+                              <div style={{ fontSize: 11, color: "#6e6b5b", fontWeight: 400 }}>{o.role.length > 28 ? o.role.slice(0, 25) + "…" : o.role}</div>
                             </td>
                             {[year1, year2, year3, year4].map((yr, j) => (
-                              <td key={j} style={{ textAlign: "right", padding: "10px 12px", color: "#1a2035", fontWeight: 600 }}>{fmtK(Math.round(yr))}</td>
+                              <td key={j} style={{ textAlign: "right", padding: "10px 12px", color: "#161510", fontWeight: 600 }}>{fmtK(Math.round(yr))}</td>
                             ))}
                             <td style={{ textAlign: "right", padding: "10px 12px", color, fontWeight: 800 }}>{fmtK(Math.round(total4))}</td>
                           </tr>
@@ -390,7 +390,7 @@ export default function ComparePage() {
                     </tbody>
                   </table>
                 </div>
-                <div style={{ fontSize: 11, color: "#aab3c5", marginTop: 10 }}>* Includes base + bonus + vesting equity (with cliff) + signing (Year 1) + estimated benefits value</div>
+                <div style={{ fontSize: 11, color: "#aaa492", marginTop: 10 }}>* Includes base + bonus + vesting equity (with cliff) + signing (Year 1) + estimated benefits value</div>
               </div>
             </div>
           )}
@@ -398,22 +398,22 @@ export default function ComparePage() {
           {/* ── EQUITY TAB ────────────────────────────────────────── */}
           {tab === "equity" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e4e8ef", padding: "20px 24px" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#1a2035", marginBottom: 4 }}>Equity Vesting Schedule</div>
-                <div style={{ fontSize: 13, color: "#6b7a99", marginBottom: 20 }}>RSUs/options vesting per year, accounting for cliff period</div>
+              <div style={{ background: "var(--surface)", borderRadius: 14, border: "1px solid #e6e2d9", padding: "20px 24px" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#161510", marginBottom: 4 }}>Equity Vesting Schedule</div>
+                <div style={{ fontSize: 13, color: "#6e6b5b", marginBottom: 20 }}>RSUs/options vesting per year, accounting for cliff period</div>
                 {ranked.map((o, i) => {
                   const color = COLORS[i % COLORS.length]
                   const vesting = vestingSchedule(o)
                   return (
-                    <div key={o.id} style={{ marginBottom: 24, padding: "16px 18px", background: "#f8f9fc", borderRadius: 12 }}>
+                    <div key={o.id} style={{ marginBottom: 24, padding: "16px 18px", background: "#f7f5f0", borderRadius: 12 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                         <div>
                           <div style={{ fontSize: 14, fontWeight: 800, color }}>{o.company}</div>
-                          <div style={{ fontSize: 12, color: "#6b7a99" }}>{o.rsu ? "RSU" : "Options"} · {o.vestingYears}-year vest · {o.equityCliff}-month cliff</div>
+                          <div style={{ fontSize: 12, color: "#6e6b5b" }}>{o.rsu ? "RSU" : "Options"} · {o.vestingYears}-year vest · {o.equityCliff}-month cliff</div>
                         </div>
                         <div style={{ textAlign: "right" }}>
                           <div style={{ fontSize: 20, fontWeight: 900, color }}>{fmtK(o.equity)}</div>
-                          <div style={{ fontSize: 11, color: "#6b7a99" }}>Total grant</div>
+                          <div style={{ fontSize: 11, color: "#6e6b5b" }}>Total grant</div>
                         </div>
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
@@ -421,11 +421,11 @@ export default function ComparePage() {
                           const pct = (v / maxEquity) * 100
                           return (
                             <div key={yr} style={{ textAlign: "center" }}>
-                              <div style={{ fontSize: 11, color: "#6b7a99", marginBottom: 6 }}>Year {yr + 1}</div>
-                              <div style={{ height: 80, background: "#e4e8ef", borderRadius: 6, overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "flex-end", marginBottom: 6 }}>
-                                <div style={{ width: "100%", height: Math.max((v / o.equity) * 100, 0) + "%", background: v > 0 ? color : "#d1d5db", borderRadius: 6, transition: "height .5s" }}/>
+                              <div style={{ fontSize: 11, color: "#6e6b5b", marginBottom: 6 }}>Year {yr + 1}</div>
+                              <div style={{ height: 80, background: "#e6e2d9", borderRadius: 6, overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "flex-end", marginBottom: 6 }}>
+                                <div style={{ width: "100%", height: Math.max((v / o.equity) * 100, 0) + "%", background: v > 0 ? color : "#d6d1c4", borderRadius: 6, transition: "height .5s" }}/>
                               </div>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: v > 0 ? color : "#aab3c5" }}>{v > 0 ? fmtK(v) : "—"}</div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: v > 0 ? color : "#aaa492" }}>{v > 0 ? fmtK(v) : "—"}</div>
                             </div>
                           )
                         })}
@@ -439,14 +439,14 @@ export default function ComparePage() {
 
           {/* ── BENEFITS TAB ──────────────────────────────────────── */}
           {tab === "benefits" && (
-            <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e4e8ef", padding: "20px 24px" }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#1a2035", marginBottom: 4 }}>Benefits Breakdown</div>
-              <div style={{ fontSize: 13, color: "#6b7a99", marginBottom: 20 }}>Estimated annual dollar value of each benefit</div>
+            <div style={{ background: "var(--surface)", borderRadius: 14, border: "1px solid #e6e2d9", padding: "20px 24px" }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#161510", marginBottom: 4 }}>Benefits Breakdown</div>
+              <div style={{ fontSize: 13, color: "#6e6b5b", marginBottom: 20 }}>Estimated annual dollar value of each benefit</div>
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
-                    <tr style={{ borderBottom: "2px solid #f1f4f9" }}>
-                      <th style={{ textAlign: "left", padding: "8px 12px", color: "#6b7a99", fontWeight: 600, fontSize: 12 }}>Benefit</th>
+                    <tr style={{ borderBottom: "2px solid #f2f0ea" }}>
+                      <th style={{ textAlign: "left", padding: "8px 12px", color: "#6e6b5b", fontWeight: 600, fontSize: 12 }}>Benefit</th>
                       {ranked.map((o, i) => (
                         <th key={o.id} style={{ textAlign: "right", padding: "8px 12px", color: COLORS[i % COLORS.length], fontWeight: 700, fontSize: 12 }}>{o.company}</th>
                       ))}
@@ -464,15 +464,15 @@ export default function ComparePage() {
                       { label: "Vision",                    key: (o: Offer) => o.benefits.vision ? "✅" : "❌" },
                       { label: "Visa Sponsorship",          key: (o: Offer) => o.visaSponsor ? "✅ " + o.visaType : "❌" },
                     ].map(({ label, key }) => (
-                      <tr key={label} style={{ borderBottom: "1px solid #f8f9fc" }}>
-                        <td style={{ padding: "10px 12px", color: "#6b7a99", fontSize: 13 }}>{label}</td>
+                      <tr key={label} style={{ borderBottom: "1px solid #f7f5f0" }}>
+                        <td style={{ padding: "10px 12px", color: "#6e6b5b", fontSize: 13 }}>{label}</td>
                         {ranked.map(o => (
-                          <td key={o.id} style={{ textAlign: "right", padding: "10px 12px", color: "#1a2035", fontWeight: 600 }}>{key(o)}</td>
+                          <td key={o.id} style={{ textAlign: "right", padding: "10px 12px", color: "#161510", fontWeight: 600 }}>{key(o)}</td>
                         ))}
                       </tr>
                     ))}
-                    <tr style={{ background: "#f8f9fc", borderTop: "2px solid #e4e8ef" }}>
-                      <td style={{ padding: "10px 12px", fontWeight: 700, color: "#1a2035", fontSize: 13 }}>Est. Total Benefits Value</td>
+                    <tr style={{ background: "#f7f5f0", borderTop: "2px solid #e6e2d9" }}>
+                      <td style={{ padding: "10px 12px", fontWeight: 700, color: "#161510", fontSize: 13 }}>Est. Total Benefits Value</td>
                       {ranked.map((o, i) => (
                         <td key={o.id} style={{ textAlign: "right", padding: "10px 12px", fontWeight: 800, color: COLORS[i % COLORS.length] }}>{fmtK(Math.round(benefitsValue(o)))}/yr</td>
                       ))}
@@ -486,11 +486,11 @@ export default function ComparePage() {
           {/* ── COL TAB ───────────────────────────────────────────── */}
           {tab === "col" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ background: "rgba(29,111,196,0.03)", border: "1px solid rgba(29,111,196,0.15)", borderRadius: 12, padding: "14px 18px", fontSize: 13.5, color: "#1a2035", lineHeight: 1.65 }}>
+              <div style={{ background: "rgba(107,104,88,0.03)", border: "1px solid rgba(107,104,88,0.15)", borderRadius: 12, padding: "14px 18px", fontSize: 13.5, color: "#161510", lineHeight: 1.65 }}>
                 💡 <strong>Cost of Living adjustment</strong> normalizes salaries across cities. A $200k salary in San Francisco has the same purchasing power as ~$156k in Austin. COL index = 1.00 means "Remote US average."
               </div>
-              <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e4e8ef", padding: "20px 24px" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#1a2035", marginBottom: 16 }}>COL-Adjusted Total Comp Ranking</div>
+              <div style={{ background: "var(--surface)", borderRadius: 14, border: "1px solid #e6e2d9", padding: "20px 24px" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#161510", marginBottom: 16 }}>COL-Adjusted Total Comp Ranking</div>
                 {ranked.map((o, i) => {
                   const color = COLORS[i % COLORS.length]
                   const adj = adjustedComp(o)
@@ -502,29 +502,29 @@ export default function ComparePage() {
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, alignItems: "flex-end" }}>
                         <div>
                           <div style={{ fontSize: 14, fontWeight: 700, color }}>{i + 1}. {o.company}</div>
-                          <div style={{ fontSize: 12, color: "#6b7a99" }}>{o.location} · COL factor: {o.colAdjust}×</div>
+                          <div style={{ fontSize: 12, color: "#6e6b5b" }}>{o.location} · COL factor: {o.colAdjust}×</div>
                         </div>
                         <div style={{ textAlign: "right" }}>
                           <div style={{ fontSize: 16, fontWeight: 800, color }}>~{fmtK(Math.round(adj))}</div>
-                          <div style={{ fontSize: 11.5, color: diff < 0 ? "#ef4444" : "#10b981" }}>
+                          <div style={{ fontSize: 11.5, color: diff < 0 ? "#2e2d27" : "#58564c" }}>
                             {diff < 0 ? "▼" : "▲"} {fmtK(Math.abs(Math.round(diff)))} vs raw
                           </div>
                         </div>
                       </div>
-                      <div style={{ height: 12, background: "#f1f4f9", borderRadius: 100, overflow: "hidden" }}>
+                      <div style={{ height: 12, background: "#f2f0ea", borderRadius: 100, overflow: "hidden" }}>
                         <div style={{ height: "100%", width: pct + "%", background: color, borderRadius: 100, transition: "width .5s" }}/>
                       </div>
                     </div>
                   )
                 })}
               </div>
-              <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e4e8ef", padding: "20px 24px" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#1a2035", marginBottom: 14 }}>City COL Reference</div>
+              <div style={{ background: "var(--surface)", borderRadius: 14, border: "1px solid #e6e2d9", padding: "20px 24px" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#161510", marginBottom: 14 }}>City COL Reference</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
                   {COL_CITIES.map(c => (
-                    <div key={c.label} style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#f8f9fc", borderRadius: 8 }}>
-                      <span style={{ fontSize: 13, color: "#1a2035" }}>{c.label}</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: c.value <= 0.85 ? "#ef4444" : c.value >= 0.98 ? "#10b981" : "#f59e0b" }}>{c.value}×</span>
+                    <div key={c.label} style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#f7f5f0", borderRadius: 8 }}>
+                      <span style={{ fontSize: 13, color: "#161510" }}>{c.label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: c.value <= 0.85 ? "#2e2d27" : c.value >= 0.98 ? "#58564c" : "#7e7a68" }}>{c.value}×</span>
                     </div>
                   ))}
                 </div>
@@ -536,10 +536,10 @@ export default function ComparePage() {
 
       {/* ── ADD/EDIT FORM MODAL ─────────────────────────────────────── */}
       {showForm && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+        <div style={{ position: "fixed", inset: 0, background: "rgba(12,11,8,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
           onClick={e => { if (e.target === e.currentTarget) setShowForm(false) }}>
-          <div style={{ background: "#fff", borderRadius: 16, padding: "28px 32px", width: "100%", maxWidth: 640, boxShadow: "0 20px 60px rgba(0,0,0,0.2)", maxHeight: "90vh", overflowY: "auto" }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#1a2035", marginBottom: 20 }}>{editing ? "Edit Offer" : "Add Offer"}</div>
+          <div style={{ background: "var(--surface)", borderRadius: 16, padding: "28px 32px", width: "100%", maxWidth: 640, boxShadow: "0 20px 60px rgba(12,11,8,0.2)", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#161510", marginBottom: 20 }}>{editing ? "Edit Offer" : "Add Offer"}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
@@ -575,7 +575,7 @@ export default function ComparePage() {
                 </div>
               </div>
 
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#1a2035", paddingTop: 4, borderTop: "1px solid #f1f4f9" }}>Compensation</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#161510", paddingTop: 4, borderTop: "1px solid #f2f0ea" }}>Compensation</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <NumberInput label="Base Salary *" value={f.base} onChange={v => setB("base", v)}/>
                 <NumberInput label="Target Annual Bonus" value={f.bonus} onChange={v => setB("bonus", v)}/>
@@ -585,7 +585,7 @@ export default function ComparePage() {
                 <NumberInput label="Cliff (months)" value={f.equityCliff} onChange={v => setB("equityCliff", v)} prefix="" step={6}/>
               </div>
 
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#1a2035", paddingTop: 4, borderTop: "1px solid #f1f4f9" }}>Benefits</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#161510", paddingTop: 4, borderTop: "1px solid #f2f0ea" }}>Benefits</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <NumberInput label="Your health cost / month" value={f.benefits.health} onChange={v => setB("benefits.health", v)} note="0 = fully employer-covered"/>
                 <NumberInput label="401k employer match %" value={f.benefits.retirement401k} onChange={v => setB("benefits.retirement401k", v)} prefix="" suffix="%" step={1}/>
@@ -596,7 +596,7 @@ export default function ComparePage() {
               </div>
               <div style={{ display: "flex", gap: 16 }}>
                 {[["dental", "Dental"], ["vision", "Vision"]].map(([key, label]) => (
-                  <label key={key} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 13.5, color: "#1a2035" }}>
+                  <label key={key} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 13.5, color: "#161510" }}>
                     <input type="checkbox" checked={f.benefits[key as keyof typeof f.benefits] as boolean}
                       onChange={e => setB(`benefits.${key}`, e.target.checked)}
                       style={{ width: 15, height: 15, cursor: "pointer" }}/>
@@ -605,9 +605,9 @@ export default function ComparePage() {
                 ))}
               </div>
 
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#1a2035", paddingTop: 4, borderTop: "1px solid #f1f4f9" }}>Visa</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#161510", paddingTop: 4, borderTop: "1px solid #f2f0ea" }}>Visa</div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 13.5, color: "#1a2035" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 13.5, color: "#161510" }}>
                   <input type="checkbox" checked={f.visaSponsor} onChange={e => setB("visaSponsor", e.target.checked)} style={{ width: 15, height: 15 }}/>
                   Sponsors visa
                 </label>
@@ -624,7 +624,7 @@ export default function ComparePage() {
               <button onClick={save} style={{ flex: 1, padding: "11px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
                 {editing ? "Save Changes" : "Add Offer"}
               </button>
-              <button onClick={() => setShowForm(false)} style={{ padding: "11px 18px", background: "transparent", color: "#6b7a99", border: "1.5px solid #e4e8ef", borderRadius: 9, cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => setShowForm(false)} style={{ padding: "11px 18px", background: "transparent", color: "#6e6b5b", border: "1.5px solid #e6e2d9", borderRadius: 9, cursor: "pointer" }}>Cancel</button>
             </div>
           </div>
         </div>
@@ -633,5 +633,5 @@ export default function ComparePage() {
   )
 }
 
-const LS: React.CSSProperties = { fontSize: 12.5, fontWeight: 600, color: "#6b7a99", display: "block", marginBottom: 5 }
-const IS: React.CSSProperties = { width: "100%", padding: "9px 12px", border: "1.5px solid #e4e8ef", borderRadius: 8, fontSize: 13.5, outline: "none", color: "#1a2035", background: "#fff", boxSizing: "border-box", fontFamily: "inherit" }
+const LS: React.CSSProperties = { fontSize: 12.5, fontWeight: 600, color: "#6e6b5b", display: "block", marginBottom: 5 }
+const IS: React.CSSProperties = { width: "100%", padding: "9px 12px", border: "1.5px solid #e6e2d9", borderRadius: 8, fontSize: 13.5, outline: "none", color: "#161510", background: "var(--surface)", boxSizing: "border-box", fontFamily: "inherit" }

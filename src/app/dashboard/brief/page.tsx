@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import PageIntro from "../_components/page-intro"
 
 /* ═══════════════════════════════════════════════════════════════════
    TYPES
@@ -43,11 +44,11 @@ function InsightCard({ icon, title, color, children, href, linkLabel }: {
   icon: string; title: string; color: string; children: React.ReactNode; href?: string; linkLabel?: string
 }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #e4e8ef", borderRadius: 14, padding: "20px 22px", borderLeft: `4px solid ${color}` }}>
+    <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 14, padding: "20px 22px", borderLeft: `4px solid ${color}` }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 20 }}>{icon}</span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "#1a2035" }}>{title}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "#161510" }}>{title}</span>
         </div>
         {href && linkLabel && (
           <Link href={href} style={{ fontSize: 12, color: "var(--accent)", fontWeight: 600, textDecoration: "none" }}>{linkLabel} →</Link>
@@ -131,31 +132,17 @@ export default function BriefPage() {
 
   /* ── RENDER ─────────────────────────────────────────────────────── */
   return (
-    <div style={{ padding: "28px 32px", maxWidth: 900, margin: "0 auto" }}>
+    <div style={{ maxWidth: 900 }}>
 
-      {/* Header */}
+      <PageIntro page="/dashboard/brief"
+        action={{ label: aiLoading ? "Writing it now…" : "Write today's note", onClick: () => { if (!aiLoading) void generateSummary() } }} />
       <div style={{ marginBottom: 28 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-          <div>
-            <p style={{ fontSize: 12.5, color: "#6b7a99", fontWeight: 500, marginBottom: 2, textTransform: "uppercase", letterSpacing: ".06em" }}>{todayFull()}</p>
-            <h1 style={{ fontSize: 26, fontWeight: 900, color: "#1a2035", letterSpacing: "-0.5px", lineHeight: 1.1, margin: 0 }}>
-              {greeting()}{name ? `, ${name}` : ""} ☀️
-            </h1>
-            <p style={{ fontSize: 14, color: "#6b7a99", marginTop: 4 }}>Here's your career brief for today.</p>
-          </div>
-          <button onClick={generateSummary} disabled={aiLoading}
-            style={{ padding: "10px 20px", background: aiLoading ? "#f1f4f9" : "linear-gradient(135deg, #1d6fc4, #8b5cf6)", color: aiLoading ? "#6b7a99" : "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13.5, cursor: aiLoading ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: aiLoading ? "none" : "0 4px 14px rgba(29,111,196,0.3)" }}>
-            <span style={{ fontSize: 15 }}>⚡</span> {aiLoading ? "Generating…" : "Generate AI Summary"}
-          </button>
-        </div>
+        <p style={{ fontSize: 15, color: "var(--text-muted)", margin: 0 }}>{todayFull()} · {greeting()}{name ? `, ${name}` : ""}.</p>
 
         {/* AI Summary */}
         {(aiReady || aiSummary) && (
-          <div style={{ marginTop: 16, padding: "16px 20px", background: "linear-gradient(135deg, rgba(29,111,196,0.05), rgba(139,92,246,0.04))", border: "1px solid rgba(29,111,196,0.15)", borderRadius: 12, fontSize: 14, color: "#1a2035", lineHeight: 1.7 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-              <span style={{ fontSize: 14 }}>⚡</span>
-              <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--accent)", textTransform: "uppercase", letterSpacing: ".06em" }}>AI Summary</span>
-            </div>
+          <div style={{ marginTop: 16, padding: "18px 22px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 16, color: "var(--text)", lineHeight: 1.7 }}>
+            <div className="ink-label" style={{ marginBottom: 6 }}>Today&apos;s note</div>
             {aiSummary || "No specific actions needed right now — keep applying!"}
           </div>
         )}
@@ -163,10 +150,10 @@ export default function BriefPage() {
         {/* Alert count */}
         {totalAlerts > 0 && (
           <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <AlertPill count={actionApps.length} label="need action" color="#1d6fc4"/>
-            {staleApps.length > 0 && <AlertPill count={staleApps.length} label="stale (14d+)" color="#f59e0b"/>}
-            {expiringVisas.length > 0 && <AlertPill count={expiringVisas.length} label="visa alert" color="#ef4444"/>}
-            {pendingGoals.length > 0 && <AlertPill count={pendingGoals.length} label="goal due soon" color="#8b5cf6"/>}
+            <AlertPill count={actionApps.length} label="need action" color="#1c1b16"/>
+            {staleApps.length > 0 && <AlertPill count={staleApps.length} label="stale (14d+)" color="#7e7a68"/>}
+            {expiringVisas.length > 0 && <AlertPill count={expiringVisas.length} label="visa alert" color="#2e2d27"/>}
+            {pendingGoals.length > 0 && <AlertPill count={pendingGoals.length} label="goal due soon" color="#605d51"/>}
           </div>
         )}
       </div>
@@ -174,18 +161,18 @@ export default function BriefPage() {
       {/* Stats row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 24 }}>
         {[
-          { label: "Applications",  value: apps.length,          sub: `${actionApps.length} active`,       color: "#1d6fc4", href: "/dashboard/applications" },
-          { label: "Saved Jobs",    value: saved.length,         sub: "waiting to apply",                   color: "#8b5cf6", href: "/dashboard/saved" },
-          { label: "Certs Active",  value: activeCerts.length,   sub: `${certs.filter(c=>c.status==="completed").length} completed`, color: "#10b981", href: "/dashboard/skills" },
-          { label: "Open Goals",    value: goals.filter(g=>!g.done).length, sub: `${pendingGoals.length} due in 14d`, color: "#f59e0b", href: "/dashboard/skills" },
+          { label: "Applications",  value: apps.length,          sub: `${actionApps.length} active`,       color: "#1c1b16", href: "/dashboard/applications" },
+          { label: "Saved Jobs",    value: saved.length,         sub: "waiting to apply",                   color: "#605d51", href: "/dashboard/saved" },
+          { label: "Certs Active",  value: activeCerts.length,   sub: `${certs.filter(c=>c.status==="completed").length} completed`, color: "#58564c", href: "/dashboard/skills" },
+          { label: "Open Goals",    value: goals.filter(g=>!g.done).length, sub: `${pendingGoals.length} due in 14d`, color: "#7e7a68", href: "/dashboard/skills" },
         ].map(s => (
           <Link key={s.label} href={s.href} style={{ textDecoration: "none" }}>
-            <div style={{ background: "#fff", border: "1px solid #e4e8ef", borderRadius: 12, padding: "14px 18px", cursor: "pointer", transition: "box-shadow .15s" }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "0 3px 12px rgba(0,0,0,0.07)"}
+            <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "14px 18px", cursor: "pointer", transition: "box-shadow .15s" }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "0 3px 12px rgba(12,11,8,0.07)"}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = "none"}>
               <div style={{ fontSize: 24, fontWeight: 900, color: s.color, letterSpacing: "-0.5px", lineHeight: 1.1 }}>{s.value}</div>
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: "#1a2035", marginTop: 3 }}>{s.label}</div>
-              <div style={{ fontSize: 11.5, color: "#6b7a99", marginTop: 1 }}>{s.sub}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: "#161510", marginTop: 3 }}>{s.label}</div>
+              <div style={{ fontSize: 11.5, color: "#6e6b5b", marginTop: 1 }}>{s.sub}</div>
             </div>
           </Link>
         ))}
@@ -195,30 +182,30 @@ export default function BriefPage() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
 
         {/* Applications needing action */}
-        <InsightCard icon="📋" title="Applications Needing Action" color="#1d6fc4" href="/dashboard/applications" linkLabel="View all">
+        <InsightCard icon="📋" title="Applications Needing Action" color="#1c1b16" href="/dashboard/applications" linkLabel="View all">
           {actionApps.length === 0 ? (
             <EmptyState icon="✅" text="All clear — no pending interviews or assessments" />
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {actionApps.slice(0, 4).map(a => (
-                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "#f8f9fc", borderRadius: 8 }}>
+                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "#f7f5f0", borderRadius: 8 }}>
                   <StatusDot status={(a.stage ?? a.status ?? "")}/>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: "#1a2035" }}>{a.company}</div>
-                    <div style={{ fontSize: 11.5, color: "#6b7a99" }}>{a.role || a.title || (a.stage ?? a.status ?? "")}</div>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: "#161510" }}>{a.company}</div>
+                    <div style={{ fontSize: 11.5, color: "#6e6b5b" }}>{a.role || a.title || (a.stage ?? a.status ?? "")}</div>
                   </div>
                   <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: statusBg((a.stage ?? a.status ?? "")), color: statusColor((a.stage ?? a.status ?? "")) }}>
                     {(a.stage ?? a.status ?? "").replace("_", " ")}
                   </span>
                 </div>
               ))}
-              {actionApps.length > 4 && <div style={{ fontSize: 12, color: "#6b7a99", textAlign: "center" }}>+{actionApps.length - 4} more</div>}
+              {actionApps.length > 4 && <div style={{ fontSize: 12, color: "#6e6b5b", textAlign: "center" }}>+{actionApps.length - 4} more</div>}
             </div>
           )}
         </InsightCard>
 
         {/* Visa & immigration */}
-        <InsightCard icon="🛂" title="Visa & Immigration" color="#ef4444" href="/dashboard/visa" linkLabel="Tracker">
+        <InsightCard icon="🛂" title="Visa & Immigration" color="#2e2d27" href="/dashboard/visa" linkLabel="Tracker">
           {expiringVisas.length === 0 && visas.length === 0 ? (
             <EmptyState icon="🟢" text="No visa deadlines tracked yet" linkHref="/dashboard/visa" linkText="Add visa status"/>
           ) : expiringVisas.length === 0 ? (
@@ -228,11 +215,11 @@ export default function BriefPage() {
               {expiringVisas.map(v => {
                 const days = daysUntil(v.expiryDate!)
                 return (
-                  <div key={v.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: days < 30 ? "rgba(239,68,68,0.04)" : "#f8f9fc", borderRadius: 8, border: `1px solid ${days < 30 ? "rgba(239,68,68,0.15)" : "#e4e8ef"}` }}>
+                  <div key={v.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: days < 30 ? "rgba(132,128,109,0.04)" : "#f7f5f0", borderRadius: 8, border: `1px solid ${days < 30 ? "rgba(132,128,109,0.15)" : "#e6e2d9"}` }}>
                     <span style={{ fontSize: 16 }}>{days < 30 ? "⚠️" : "📄"}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: "#1a2035" }}>{v.type}</div>
-                      <div style={{ fontSize: 11.5, color: days < 30 ? "#ef4444" : "#6b7a99", fontWeight: days < 30 ? 700 : 400 }}>{days}d until expiry · {fmtDate(v.expiryDate!)}</div>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: "#161510" }}>{v.type}</div>
+                      <div style={{ fontSize: 11.5, color: days < 30 ? "#2e2d27" : "#6e6b5b", fontWeight: days < 30 ? 700 : 400 }}>{days}d until expiry · {fmtDate(v.expiryDate!)}</div>
                     </div>
                   </div>
                 )
@@ -242,7 +229,7 @@ export default function BriefPage() {
         </InsightCard>
 
         {/* Certifications */}
-        <InsightCard icon="🏅" title="Certification Progress" color="#10b981" href="/dashboard/skills" linkLabel="View all">
+        <InsightCard icon="🏅" title="Certification Progress" color="#58564c" href="/dashboard/skills" linkLabel="View all">
           {activeCerts.length === 0 ? (
             <EmptyState icon="📚" text="No certs in progress — start studying!" linkHref="/dashboard/skills" linkText="Add certification"/>
           ) : (
@@ -250,15 +237,15 @@ export default function BriefPage() {
               {activeCerts.slice(0, 4).map(c => {
                 const days = c.targetDate ? daysUntil(c.targetDate) : null
                 return (
-                  <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "#f8f9fc", borderRadius: 8 }}>
+                  <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "#f7f5f0", borderRadius: 8 }}>
                     <span style={{ fontSize: 16 }}>📖</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: "#1a2035" }}>{c.name}</div>
-                      {days !== null && <div style={{ fontSize: 11.5, color: days < 14 ? "#f59e0b" : "#6b7a99", fontWeight: days < 14 ? 700 : 400 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: "#161510" }}>{c.name}</div>
+                      {days !== null && <div style={{ fontSize: 11.5, color: days < 14 ? "#7e7a68" : "#6e6b5b", fontWeight: days < 14 ? 700 : 400 }}>
                         {days < 0 ? "⚠ Overdue" : `${days}d to exam · ${fmtDate(c.targetDate!)}`}
                       </div>}
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: "rgba(245,158,11,0.1)", color: "#f59e0b" }}>Studying</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: "rgba(176,170,153,0.1)", color: "#7e7a68" }}>Studying</span>
                   </div>
                 )
               })}
@@ -267,7 +254,7 @@ export default function BriefPage() {
         </InsightCard>
 
         {/* Learning Goals */}
-        <InsightCard icon="📚" title="Goals Due Soon" color="#8b5cf6" href="/dashboard/skills" linkLabel="All goals">
+        <InsightCard icon="📚" title="Goals Due Soon" color="#605d51" href="/dashboard/skills" linkLabel="All goals">
           {pendingGoals.length === 0 ? (
             goals.length === 0
               ? <EmptyState icon="🎯" text="No learning goals set" linkHref="/dashboard/skills" linkText="Add a goal"/>
@@ -277,11 +264,11 @@ export default function BriefPage() {
               {pendingGoals.slice(0, 4).map(g => {
                 const days = daysUntil(g.targetDate)
                 return (
-                  <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "#f8f9fc", borderRadius: 8 }}>
+                  <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "#f7f5f0", borderRadius: 8 }}>
                     <span style={{ fontSize: 15 }}>{days < 3 ? "🔴" : days < 7 ? "🟡" : "🟢"}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: "#1a2035", lineHeight: 1.3 }}>{g.title}</div>
-                      <div style={{ fontSize: 11.5, color: days < 3 ? "#ef4444" : "#6b7a99", fontWeight: days < 3 ? 700 : 400 }}>Due {fmtDate(g.targetDate)} · {days < 0 ? "overdue" : `${days}d`}</div>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: "#161510", lineHeight: 1.3 }}>{g.title}</div>
+                      <div style={{ fontSize: 11.5, color: days < 3 ? "#2e2d27" : "#6e6b5b", fontWeight: days < 3 ? 700 : 400 }}>Due {fmtDate(g.targetDate)} · {days < 0 ? "overdue" : `${days}d`}</div>
                     </div>
                   </div>
                 )
@@ -292,34 +279,34 @@ export default function BriefPage() {
 
         {/* Stale Applications */}
         {staleApps.length > 0 && (
-          <InsightCard icon="⏰" title="Follow Up These" color="#f59e0b" href="/dashboard/applications" linkLabel="Pipeline">
+          <InsightCard icon="⏰" title="Follow Up These" color="#7e7a68" href="/dashboard/applications" linkLabel="Pipeline">
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <p style={{ fontSize: 12.5, color: "#6b7a99", marginBottom: 4, marginTop: -4 }}>Applied 14+ days ago with no update — consider following up</p>
+              <p style={{ fontSize: 12.5, color: "#6e6b5b", marginBottom: 4, marginTop: -4 }}>Applied 14+ days ago with no update — consider following up</p>
               {staleApps.slice(0, 4).map(a => (
-                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "rgba(245,158,11,0.04)", borderRadius: 8, border: "1px solid rgba(245,158,11,0.15)" }}>
+                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "rgba(176,170,153,0.04)", borderRadius: 8, border: "1px solid rgba(176,170,153,0.15)" }}>
                   <span style={{ fontSize: 15 }}>📮</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: "#1a2035" }}>{a.company}</div>
-                    <div style={{ fontSize: 11.5, color: "#6b7a99" }}>{(a.appliedDate ?? a.appliedAt) ? `Applied ${fmtDate((a.appliedDate ?? a.appliedAt) as string)}` : "Applied"}</div>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: "#161510" }}>{a.company}</div>
+                    <div style={{ fontSize: 11.5, color: "#6e6b5b" }}>{(a.appliedDate ?? a.appliedAt) ? `Applied ${fmtDate((a.appliedDate ?? a.appliedAt) as string)}` : "Applied"}</div>
                   </div>
                 </div>
               ))}
-              {staleApps.length > 4 && <div style={{ fontSize: 12, color: "#6b7a99", textAlign: "center" }}>+{staleApps.length - 4} more</div>}
+              {staleApps.length > 4 && <div style={{ fontSize: 12, color: "#6e6b5b", textAlign: "center" }}>+{staleApps.length - 4} more</div>}
             </div>
           </InsightCard>
         )}
 
         {/* Quick Actions */}
-        <div style={{ background: "linear-gradient(135deg, #0d1628, #1a2e47)", borderRadius: 14, padding: "20px 22px" }}>
+        <div style={{ background: "linear-gradient(135deg, #15140f, #2d2c26)", borderRadius: 14, padding: "20px 22px" }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 14 }}>⚡ Quick Actions</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {[
-              { label: "Tailor Resume",    href: "/dashboard/resume/builder", icon: "📄", color: "#3b82f6" },
-              { label: "Prep Interview",  href: "/dashboard/interviews",     icon: "🎤", color: "#10b981" },
-              { label: "Write Cover Ltr", href: "/dashboard/cover-letters",  icon: "✉️", color: "#8b5cf6" },
-              { label: "Ask Copilot",     href: "/dashboard/copilot",        icon: "⚡", color: "#f59e0b" },
-              { label: "Check Salary",    href: "/dashboard/salary",         icon: "💰", color: "#14b8a6" },
-              { label: "Browse Jobs",     href: "/dashboard/recommended",    icon: "🔍", color: "#ec4899" },
+              { label: "Tailor Resume",    href: "/dashboard/resume/builder", icon: "📄", color: "#6e6b5b" },
+              { label: "Prep Interview",  href: "/dashboard/prep",           icon: "🎤", color: "#58564c" },
+              { label: "Write Cover Ltr", href: "/dashboard/cover-letters",  icon: "✉️", color: "#605d51" },
+              { label: "Ask Copilot",     href: "/dashboard/copilot",        icon: "⚡", color: "#7e7a68" },
+              { label: "Check Salary",    href: "/dashboard/salary",         icon: "💰", color: "#6a6757" },
+              { label: "Browse Jobs",     href: "/dashboard/recommended",    icon: "🔍", color: "#5e5b50" },
             ].map(q => (
               <Link key={q.label} href={q.href} style={{ textDecoration: "none" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "rgba(255,255,255,0.06)", borderRadius: 9, cursor: "pointer", transition: "background .15s", border: "1px solid rgba(255,255,255,0.08)" }}
@@ -336,11 +323,11 @@ export default function BriefPage() {
       </div>
 
       {/* Market tip of the day */}
-      <div style={{ marginTop: 16, background: "rgba(29,111,196,0.04)", border: "1px solid rgba(29,111,196,0.12)", borderRadius: 12, padding: "16px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+      <div style={{ marginTop: 16, background: "rgba(107,104,88,0.04)", border: "1px solid rgba(107,104,88,0.12)", borderRadius: 12, padding: "16px 20px", display: "flex", gap: 12, alignItems: "flex-start" }}>
         <span style={{ fontSize: 22, flexShrink: 0 }}>💡</span>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)", marginBottom: 4 }}>Career Tip of the Day</div>
-          <div style={{ fontSize: 13.5, color: "#1a2035", lineHeight: 1.6 }}>
+          <div style={{ fontSize: 13.5, color: "#161510", lineHeight: 1.6 }}>
             {DAILY_TIPS[new Date().getDay()]}
           </div>
         </div>
@@ -352,17 +339,17 @@ export default function BriefPage() {
 
 /* ── Helpers ────────────────────────────────────────────────────── */
 const STATUS_STYLES: Record<string, { color: string; bg: string; dot: string }> = {
-  interview:  { color: "#0ea5e9", bg: "rgba(14,165,233,0.1)", dot: "#0ea5e9" },
-  assessment: { color: "#8b5cf6", bg: "rgba(139,92,246,0.1)", dot: "#8b5cf6" },
-  offer:      { color: "#10b981", bg: "rgba(16,185,129,0.1)", dot: "#10b981" },
-  applied:    { color: "#6b7a99", bg: "rgba(107,122,153,0.1)", dot: "#6b7a99" },
-  follow_up:  { color: "#f59e0b", bg: "rgba(245,158,11,0.1)", dot: "#f59e0b" },
-  rejected:   { color: "#ef4444", bg: "rgba(239,68,68,0.1)",  dot: "#ef4444" },
+  interview:  { color: "#7c7866", bg: "rgba(155,150,130,0.1)", dot: "#7c7866" },
+  assessment: { color: "#605d51", bg: "rgba(122,118,100,0.1)", dot: "#605d51" },
+  offer:      { color: "#58564c", bg: "rgba(163,158,139,0.1)", dot: "#58564c" },
+  applied:    { color: "#6e6b5b", bg: "rgba(121,117,100,0.1)", dot: "#6e6b5b" },
+  follow_up:  { color: "#7e7a68", bg: "rgba(176,170,153,0.1)", dot: "#7e7a68" },
+  rejected:   { color: "#2e2d27", bg: "rgba(132,128,109,0.1)",  dot: "#2e2d27" },
 }
-function statusColor(s: string) { return STATUS_STYLES[s]?.color ?? "#6b7a99" }
-function statusBg(s: string) { return STATUS_STYLES[s]?.bg ?? "rgba(107,122,153,0.1)" }
+function statusColor(s: string) { return STATUS_STYLES[s]?.color ?? "#6e6b5b" }
+function statusBg(s: string) { return STATUS_STYLES[s]?.bg ?? "rgba(121,117,100,0.1)" }
 function StatusDot({ status }: { status: string }) {
-  return <div style={{ width: 8, height: 8, borderRadius: "50%", background: STATUS_STYLES[status]?.dot ?? "#6b7a99", flexShrink: 0 }}/>
+  return <div style={{ width: 8, height: 8, borderRadius: "50%", background: STATUS_STYLES[status]?.dot ?? "#6e6b5b", flexShrink: 0 }}/>
 }
 
 function AlertPill({ count, label, color }: { count: number; label: string; color: string }) {
@@ -376,7 +363,7 @@ function AlertPill({ count, label, color }: { count: number; label: string; colo
 
 function EmptyState({ icon, text, linkHref, linkText }: { icon: string; text: string; linkHref?: string; linkText?: string }) {
   return (
-    <div style={{ textAlign: "center", padding: "16px 0", color: "#6b7a99" }}>
+    <div style={{ textAlign: "center", padding: "16px 0", color: "#6e6b5b" }}>
       <div style={{ fontSize: 24, marginBottom: 6 }}>{icon}</div>
       <div style={{ fontSize: 13, lineHeight: 1.5 }}>{text}</div>
       {linkHref && linkText && (

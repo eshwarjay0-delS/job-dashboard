@@ -16,12 +16,12 @@ interface Keys {
 }
 
 const ACCENTS: { id: Accent; label: string; color: string }[] = [
-  { id: "blue",    label: "Blue",    color: "#1d6fc4" },
-  { id: "teal",    label: "Teal",    color: "#0d9488" },
-  { id: "violet",  label: "Violet",  color: "#7c3aed" },
-  { id: "rose",    label: "Rose",    color: "#e11d48" },
-  { id: "amber",   label: "Amber",   color: "#d97706" },
-  { id: "emerald", label: "Emerald", color: "#059669" },
+  { id: "blue",    label: "Blue",    color: "#1c1b16" },
+  { id: "teal",    label: "Teal",    color: "#5c5a4e" },
+  { id: "violet",  label: "Violet",  color: "#4d4b44" },
+  { id: "rose",    label: "Rose",    color: "#1a1914" },
+  { id: "amber",   label: "Amber",   color: "#6b6858" },
+  { id: "emerald", label: "Emerald", color: "#42413c" },
 ]
 
 const MODES: { id: ColorMode; label: string; icon: string }[] = [
@@ -49,7 +49,7 @@ function getTailorsUsed(): number {
 // Tiny usage-meter bar component
 function UsageMeter({ used, max, warn, danger }: { used: number; max: number; warn: number; danger: number }) {
   const pct = Math.min(1, used / max)
-  const color = used >= danger ? "#ef4444" : used >= warn ? "#f59e0b" : "var(--accent)"
+  const color = used >= danger ? "#2e2d27" : used >= warn ? "#7e7a68" : "var(--accent)"
   return (
     <div style={{ marginTop: 6 }}>
       <div style={{
@@ -66,14 +66,14 @@ function UsageMeter({ used, max, warn, danger }: { used: number; max: number; wa
         }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-        <span style={{ fontSize: 11, color: used >= danger ? "#ef4444" : "var(--text-soft)" }}>
+        <span style={{ fontSize: 11, color: used >= danger ? "#2e2d27" : "var(--text-soft)" }}>
           {used} / {max} used
         </span>
         {used >= danger && (
-          <span style={{ fontSize: 11, color: "#ef4444", fontWeight: 600 }}>Limit reached</span>
+          <span style={{ fontSize: 11, color: "#2e2d27", fontWeight: 600 }}>Limit reached</span>
         )}
         {used >= warn && used < danger && (
-          <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>Running low</span>
+          <span style={{ fontSize: 11, color: "#7e7a68", fontWeight: 600 }}>Running low</span>
         )}
       </div>
     </div>
@@ -350,8 +350,8 @@ export default function SettingsPage() {
         {showProBanner && (
           <div style={{
             margin: "0 24px 4px", padding: "12px 16px", borderRadius: 10,
-            background: "linear-gradient(135deg,rgba(124,58,237,.12),rgba(99,102,241,.08))",
-            border: "1px solid rgba(124,58,237,.25)",
+            background: "linear-gradient(135deg,rgba(101,98,84,.12),rgba(117,114,97,.08))",
+            border: "1px solid rgba(101,98,84,.25)",
             display: "flex", alignItems: "flex-start", gap: 10,
           }}>
             <span style={{ fontSize: 18, flexShrink: 0 }}>🚀</span>
@@ -417,12 +417,12 @@ export default function SettingsPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               {/* Google Drive icon */}
               <svg width="28" height="28" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6.6 66.85L1.5 75.6A4.77 4.77 0 005.6 78h76.1a4.77 4.77 0 004.1-2.4l-5.1-8.75z" fill="#0066da"/>
-                <path d="M43.65 0L27 29.4l16.65 28.8 16.65-28.8z" fill="#00ac47"/>
-                <path d="M81.6 78l5.1-8.75-21.6-37.4h-16.7l21.6 37.4z" fill="#ea4335"/>
-                <path d="M6.6 66.85l21.6-37.45h16.7L6.6 66.85z" fill="#00832d"/>
-                <path d="M43.65 0L27 29.4H6.6L43.65 0z" fill="#2684fc"/>
-                <path d="M86.7 69.25l-21.6-37.4-16.65 28.8L64.8 78l17-9.75z" fill="#ffba00"/>
+                <path d="M6.6 66.85L1.5 75.6A4.77 4.77 0 005.6 78h76.1a4.77 4.77 0 004.1-2.4l-5.1-8.75z" fill="#686556"/>
+                <path d="M43.65 0L27 29.4l16.65 28.8 16.65-28.8z" fill="#95917c"/>
+                <path d="M81.6 78l5.1-8.75-21.6-37.4h-16.7l21.6 37.4z" fill="#7f7c69"/>
+                <path d="M6.6 66.85l21.6-37.45h16.7L6.6 66.85z" fill="#6e6b5b"/>
+                <path d="M43.65 0L27 29.4H6.6L43.65 0z" fill="#86826f"/>
+                <path d="M86.7 69.25l-21.6-37.4-16.65 28.8L64.8 78l17-9.75z" fill="#c6c0b0"/>
               </svg>
               <div>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
@@ -473,7 +473,7 @@ export default function SettingsPage() {
               </button>
             )}
             {driveError && (
-              <p className="text-xs mt-2" style={{ color: "var(--error, #dc2626)" }}>{driveError}</p>
+              <p className="text-xs mt-2" style={{ color: "var(--error, #13120d)" }}>{driveError}</p>
             )}
           </div>
         </div>
@@ -623,7 +623,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="p-3 rounded-xl text-xs" style={{
-          background: "rgba(20,184,166,.06)", border: "1px solid rgba(20,184,166,.18)", color: "var(--text-muted)",
+          background: "rgba(163,158,140,.06)", border: "1px solid rgba(163,158,140,.18)", color: "var(--text-muted)",
         }}>
           <strong style={{ color: "var(--text-soft)" }}>Used by extension autofill.</strong>{" "}
           Work Authorization fills ATS dropdowns like "Employment Status" and "Work Eligibility."

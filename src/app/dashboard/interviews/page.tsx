@@ -8,8 +8,8 @@ import {
 import PageHeader from "@/components/layout/PageHeader"
 
 const P = {
-  surface: "#ffffff", text: "#1a2035", muted: "#6b7a99",
-  hint: "#9aa4bc", border: "#e4e8ef", bg: "#f4f6f9",
+  surface: "#ffffff", text: "#161510", muted: "#6e6b5b",
+  hint: "#9d9884", border: "#e6e2d9", bg: "var(--surface)",
 }
 
 // ── Question banks ──────────────────────────────────────────────────────────
@@ -53,18 +53,18 @@ const BANKS: Record<string, { q: string; tip: string; tags: string[] }[]> = {
 }
 
 const CATEGORIES = [
-  { id: "behavioral",  label: "Behavioral",    Icon: Brain,    color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  { id: "technical",   label: "Technical",     Icon: Settings, color: "#1d6fc4", bg: "#eff6ff", border: "#bfdbfe" },
-  { id: "security",    label: "Cybersecurity", Icon: Lock,     color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
-  { id: "cloud",       label: "Cloud / DevOps", Icon: Cloud,   color: "#0ea5e9", bg: "#f0f9ff", border: "#bae6fd" },
-  { id: "servicenow",  label: "ServiceNow",    Icon: Wrench,   color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+  { id: "behavioral",  label: "Behavioral",    Icon: Brain,    color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
+  { id: "technical",   label: "Technical",     Icon: Settings, color: "#1c1b16", bg: "#f2f0ea", border: "#d9d4c8" },
+  { id: "security",    label: "Cybersecurity", Icon: Lock,     color: "#42413c", bg: "#f4f2ed", border: "#ddd8cd" },
+  { id: "cloud",       label: "Cloud / DevOps", Icon: Cloud,   color: "#7c7866", bg: "#f6f4f0", border: "#e2ded4" },
+  { id: "servicenow",  label: "ServiceNow",    Icon: Wrench,   color: "#6b6858", bg: "#f7f5f0", border: "#e4e0d6" },
 ]
 
 const STAR_STEPS = [
-  { label: "S — Situation", desc: "Set the scene. Where, when, what was the context?", color: "#7c3aed" },
-  { label: "T — Task",      desc: "What was your specific responsibility or challenge?", color: "#1d6fc4" },
-  { label: "A — Action",    desc: "What did YOU do? Use 'I', not 'we'. Be specific.",   color: "#059669" },
-  { label: "R — Result",    desc: "What was the outcome? Quantify it where possible.",  color: "#d97706" },
+  { label: "S — Situation", desc: "Set the scene. Where, when, what was the context?", color: "#4d4b44" },
+  { label: "T — Task",      desc: "What was your specific responsibility or challenge?", color: "#1c1b16" },
+  { label: "A — Action",    desc: "What did YOU do? Use 'I', not 'we'. Be specific.",   color: "#42413c" },
+  { label: "R — Result",    desc: "What was the outcome? Quantify it where possible.",  color: "#6b6858" },
 ]
 
 interface SavedAnswer { qIndex: number; category: string; answer: string; aiAnswer: string }
@@ -180,7 +180,7 @@ export default function InterviewPrepPage() {
                 const VIcon = v === "bank" ? BookOpen : v === "star" ? Star : Save
                 return (
                   <button key={v} onClick={() => setView(v)}
-                    style={{ padding: "7px 14px", borderRadius: 9, border: `1.5px solid ${view === v ? "var(--accent)" : P.border}`, background: view === v ? "#eff6ff" : P.surface, color: view === v ? "var(--accent)" : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    style={{ padding: "7px 14px", borderRadius: 9, border: `1.5px solid ${view === v ? "var(--accent)" : P.border}`, background: view === v ? "#f2f0ea" : P.surface, color: view === v ? "var(--accent)" : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
                     <VIcon size={13}/> {v === "bank" ? "Question Bank" : v === "star" ? "STAR Coach" : `Saved (${savedAnswers.length})`}
                   </button>
                 )
@@ -218,7 +218,7 @@ export default function InterviewPrepPage() {
                 const isActive = activeQ === idx
                 return (
                   <div key={idx} onClick={() => { setActiveQ(idx); setMyAnswer(""); setAiAnswer("") }}
-                    style={{ background: isActive ? "#eff6ff" : P.surface, border: `1.5px solid ${isActive ? "var(--accent)" : P.border}`, borderRadius: 12, padding: "14px 16px", cursor: "pointer", transition: "all .15s" }}>
+                    style={{ background: isActive ? "#f2f0ea" : P.surface, border: `1.5px solid ${isActive ? "var(--accent)" : P.border}`, borderRadius: 12, padding: "14px 16px", cursor: "pointer", transition: "all .15s" }}>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 6 }}>
                       {q.tags.map(t => {
                         const c = CATEGORIES.find(x => t.toLowerCase().includes(x.id.toLowerCase())) || cat
@@ -258,7 +258,7 @@ export default function InterviewPrepPage() {
                 </div>
 
                 {aiAnswer && (
-                  <div style={{ background: "#f8fbff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: "13px 15px" }}>
+                  <div style={{ background: "#f8f7f3", border: "1.5px solid #d9d4c8", borderRadius: 12, padding: "13px 15px" }}>
                     <p style={{ fontSize: 11.5, fontWeight: 700, color: "var(--accent)", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}><Sparkles size={11}/> AI MODEL ANSWER</p>
                     <p style={{ fontSize: 13, color: P.text, lineHeight: 1.7 }}>{aiAnswer}</p>
                     <button onClick={() => navigator.clipboard.writeText(aiAnswer)}
@@ -290,21 +290,21 @@ export default function InterviewPrepPage() {
           </div>
 
           {/* AI question asker */}
-          <div style={{ background: "linear-gradient(135deg, #f8fbff 0%, #f5f3ff 100%)", border: "1.5px solid #bfdbfe", borderRadius: 16, padding: "20px 24px" }}>
+          <div style={{ background: "linear-gradient(135deg, #f8f7f3 0%, #f6f4ef 100%)", border: "1.5px solid #d9d4c8", borderRadius: 16, padding: "20px 24px" }}>
             <p style={{ fontSize: 15, fontWeight: 800, color: P.text, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><Target size={15}/> Custom Question AI</p>
             <p style={{ fontSize: 13, color: P.muted, marginBottom: 14 }}>Paste any interview question and let AI generate a strong STAR-structured answer.</p>
             <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
               <input value={companyRole} onChange={e => setCompanyRole(e.target.value)} placeholder="Target role (e.g. Senior Engineer)"
-                style={{ flex: 1, padding: "8px 11px", borderRadius: 9, border: `1px solid ${P.border}`, fontSize: 13, color: P.text, background: "#fff", outline: "none" }}/>
+                style={{ flex: 1, padding: "8px 11px", borderRadius: 9, border: `1px solid ${P.border}`, fontSize: 13, color: P.text, background: "var(--surface)", outline: "none" }}/>
             </div>
             <textarea value={companyQ} onChange={e => setCompanyQ(e.target.value)} rows={3} placeholder="Paste your interview question here…"
-              style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: `1.5px solid ${P.border}`, fontSize: 13, color: P.text, background: "#fff", outline: "none", resize: "vertical" as const, marginBottom: 10, boxSizing: "border-box" as const }}/>
+              style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: `1.5px solid ${P.border}`, fontSize: 13, color: P.text, background: "var(--surface)", outline: "none", resize: "vertical" as const, marginBottom: 10, boxSizing: "border-box" as const }}/>
             <button onClick={getCompanyAnswer} disabled={!companyQ.trim() || loadingCompany}
               style={{ padding: "9px 20px", borderRadius: 9, background: "var(--accent)", color: "#fff", fontSize: 13.5, fontWeight: 700, border: "none", cursor: loadingCompany ? "wait" : "pointer", opacity: loadingCompany ? 0.7 : 1 }}>
               {loadingCompany ? "Generating STAR answer…" : "Generate STAR Answer"}
             </button>
             {companyAns && (
-              <div style={{ marginTop: 14, background: "#fff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: "14px 16px", fontSize: 13.5, color: P.text, lineHeight: 1.7 }}>
+              <div style={{ marginTop: 14, background: "var(--surface)", border: "1.5px solid #d9d4c8", borderRadius: 12, padding: "14px 16px", fontSize: 13.5, color: P.text, lineHeight: 1.7 }}>
                 {companyAns.split("\n").filter(Boolean).map((line, i) => <p key={i} style={{ marginBottom: 6 }}>{line}</p>)}
               </div>
             )}
@@ -323,8 +323,8 @@ export default function InterviewPrepPage() {
                 { bad: "Memorized, robotic delivery", good: "Know the structure, improvise the words" },
               ].map((m, i) => (
                 <div key={i} style={{ padding: "10px 13px", borderRadius: 10, background: P.bg, border: `1px solid ${P.border}` }}>
-                  <p style={{ fontSize: 12, color: "#dc2626", marginBottom: 3, display: "flex", alignItems: "center", gap: 4 }}><X size={11}/> {m.bad}</p>
-                  <p style={{ fontSize: 12, color: "#059669", display: "flex", alignItems: "center", gap: 4 }}><Check size={11}/> {m.good}</p>
+                  <p style={{ fontSize: 12, color: "#13120d", marginBottom: 3, display: "flex", alignItems: "center", gap: 4 }}><X size={11}/> {m.bad}</p>
+                  <p style={{ fontSize: 12, color: "#42413c", display: "flex", alignItems: "center", gap: 4 }}><Check size={11}/> {m.good}</p>
                 </div>
               ))}
             </div>
@@ -359,7 +359,7 @@ export default function InterviewPrepPage() {
                       <p style={{ fontSize: 13, color: P.text, lineHeight: 1.6 }}>{a.answer}</p>
                     </div>
                     {a.aiAnswer && (
-                      <div style={{ padding: "10px 12px", borderRadius: 9, background: "#f8fbff", border: "1px solid #bfdbfe" }}>
+                      <div style={{ padding: "10px 12px", borderRadius: 9, background: "#f8f7f3", border: "1px solid #d9d4c8" }}>
                         <p style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", marginBottom: 4 }}>AI ANSWER</p>
                         <p style={{ fontSize: 13, color: P.text, lineHeight: 1.6 }}>{a.aiAnswer}</p>
                       </div>

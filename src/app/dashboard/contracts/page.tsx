@@ -25,25 +25,25 @@ const C = {
   text:   "var(--text)",
   muted:  "var(--text-muted)",
   hint:   "var(--text-soft)",
-  teal:   "#14b8a6",
-  amber:  "#f59e0b",
-  green:  "#34d399",
+  teal:   "#6a6757",
+  amber:  "#7e7a68",
+  green:  "#bbb5a5",
 }
 
 const CAT_COLOR: Record<ContractCategory, string> = {
-  "Cybersecurity":    "#f87171",
-  "AI / ML":          "#c084fc",
-  "Data Engineering": "#38bdf8",
-  "DevOps / Cloud":   "#34d399",
-  "ERP / Platform":   "#fbbf24",
-  "Software Dev":     "#60a5fa",
-  "BA / PM":          "#f472b6",
-  "QA / Testing":     "#2dd4bf",
-  "Other":            "#94a3b8",
+  "Cybersecurity":    "#ccc6b7",
+  "AI / ML":          "#9f9a86",
+  "Data Engineering": "#b0aa99",
+  "DevOps / Cloud":   "#bbb5a5",
+  "ERP / Platform":   "#9d9884",
+  "Software Dev":     "#9d9884",
+  "BA / PM":          "#9f9a86",
+  "QA / Testing":     "#bdb7a7",
+  "Other":            "#9d9884",
 }
 
 const TYPE_COLOR: Record<ContractJobRec["type"], string> = {
-  W2: "#60a5fa", C2C: "#93c5fd", C2H: "#c4b5fd", Both: "#fbbf24",
+  W2: "#9d9884", C2C: "#c6c0b1", C2H: "#dad5c9", Both: "#9d9884",
 }
 
 const PAGE = 25
@@ -286,9 +286,9 @@ export default function ContractsDashboard() {
             badge={
               <span style={{
                 fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
-                background: isLive ? "rgba(52,211,153,.15)" : "rgba(148,163,184,.12)",
+                background: isLive ? "rgba(186,180,164,.15)" : "rgba(162,157,137,.12)",
                 color: isLive ? C.green : C.muted,
-                border: `1px solid ${isLive ? "rgba(52,211,153,.3)" : "rgba(148,163,184,.25)"}`,
+                border: `1px solid ${isLive ? "rgba(186,180,164,.3)" : "rgba(162,157,137,.25)"}`,
               }}>{isLive ? `● Live · ${jobs.length} posts` : `◎ ${jobs.length} posts · add a job API key in Settings for live`}</span>
             }
             description="Recruiter contract posts from LinkedIn — categorized, bench-sales removed. Message the recruiter directly."
@@ -331,16 +331,16 @@ export default function ContractsDashboard() {
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
           <select value={type} onChange={e => setType(e.target.value as "all"|"W2"|"C2C")}
             style={{ padding: "7px 10px", borderRadius: 9, fontSize: 12.5, fontWeight: 600, cursor: "pointer", outline: "none",
-              background: type !== "all" ? "rgba(20,184,166,.12)" : "var(--surface)",
+              background: type !== "all" ? "rgba(163,158,140,.12)" : "var(--surface)",
               color: type !== "all" ? C.teal : "var(--text-muted)",
-              border: `1.5px solid ${type !== "all" ? "rgba(20,184,166,.4)" : C.border}` }}>
+              border: `1.5px solid ${type !== "all" ? "rgba(163,158,140,.4)" : C.border}` }}>
             <option value="all">Contract Type</option>
             <option value="W2">W2</option>
             <option value="C2C">C2C</option>
           </select>
           <label style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 11px", borderRadius: 9, cursor: "pointer",
-            background: remoteOnly ? "rgba(20,184,166,.12)" : "var(--surface)",
-            border: `1.5px solid ${remoteOnly ? "rgba(20,184,166,.4)" : C.border}`,
+            background: remoteOnly ? "rgba(163,158,140,.12)" : "var(--surface)",
+            border: `1.5px solid ${remoteOnly ? "rgba(163,158,140,.4)" : C.border}`,
             fontSize: 12.5, fontWeight: 600, color: remoteOnly ? C.teal : "var(--text-muted)", whiteSpace: "nowrap" as const,
           }}>
             <input type="checkbox" checked={remoteOnly} onChange={e => setRemoteOnly(e.target.checked)} style={{ accentColor: C.teal, width: 13, height: 13 }} />
@@ -357,7 +357,7 @@ export default function ContractsDashboard() {
                 padding: "4px 10px", borderRadius: 7, border: "none", cursor: "pointer",
                 fontSize: 11.5, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4,
                 background: sortBy === key ? C.teal : "transparent",
-                color: sortBy === key ? "#04201c" : C.muted,
+                color: sortBy === key ? "#1b1a14" : C.muted,
               }}><Icon size={12}/> {label}</button>
             ))}
           </div>
@@ -369,21 +369,21 @@ export default function ContractsDashboard() {
           <div style={{ position: "relative" }}>
             <button onClick={() => openPanel(showDatePanel ? null : "date")} style={{
               padding: "5px 11px", borderRadius: 9, cursor: "pointer", fontSize: 11.5, fontWeight: 600,
-              background: dateFilter !== "any" ? "rgba(20,184,166,.15)" : "var(--surface)",
+              background: dateFilter !== "any" ? "rgba(163,158,140,.15)" : "var(--surface)",
               color: dateFilter !== "any" ? C.teal : C.muted,
-              border: `1px solid ${dateFilter !== "any" ? "rgba(20,184,166,.4)" : C.border}`,
+              border: `1px solid ${dateFilter !== "any" ? "rgba(163,158,140,.4)" : C.border}`,
               display: "inline-flex", alignItems: "center", gap: 5,
             }}><Clock size={12}/> {DATE_FILTERS.find(d => d.key === dateFilter)?.label} <ChevronDown size={12}/></button>
             {showDatePanel && (
               <div style={{
                 position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 20, minWidth: 150,
                 background: "var(--popover)", border: `1px solid ${C.border}`, borderRadius: 10, padding: 6,
-                boxShadow: "0 12px 32px rgba(0,0,0,.18)",
+                boxShadow: "0 12px 32px rgba(12,11,8,.18)",
               }}>
                 {DATE_FILTERS.map(d => (
                   <button key={d.key} onClick={() => { setDateFilter(d.key); openPanel(null) }} style={{
                     display: "block", width: "100%", textAlign: "left", padding: "6px 8px", borderRadius: 7,
-                    background: dateFilter === d.key ? "rgba(20,184,166,.15)" : "transparent",
+                    background: dateFilter === d.key ? "rgba(163,158,140,.15)" : "transparent",
                     color: dateFilter === d.key ? C.teal : C.text, border: "none", cursor: "pointer",
                     fontSize: 12.5, fontWeight: dateFilter === d.key ? 700 : 500,
                   }}>{d.label}</button>
@@ -395,22 +395,22 @@ export default function ContractsDashboard() {
           <div style={{ position: "relative" }}>
             <button onClick={() => openPanel(showRatePanel ? null : "rate")} style={{
               padding: "5px 11px", borderRadius: 9, cursor: "pointer", fontSize: 11.5, fontWeight: 600,
-              background: rateMin > 0 ? "rgba(251,191,36,.15)" : "var(--surface)",
-              color: rateMin > 0 ? "#d97706" : C.muted,
-              border: `1px solid ${rateMin > 0 ? "rgba(251,191,36,.4)" : C.border}`,
+              background: rateMin > 0 ? "rgba(200,194,179,.15)" : "var(--surface)",
+              color: rateMin > 0 ? "#6b6858" : C.muted,
+              border: `1px solid ${rateMin > 0 ? "rgba(200,194,179,.4)" : C.border}`,
               display: "inline-flex", alignItems: "center", gap: 5,
             }}><DollarSign size={12}/> {rateMin === 0 ? "Any rate" : `$${rateMin}+/hr`} <ChevronDown size={12}/></button>
             {showRatePanel && (
               <div style={{
                 position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 20, minWidth: 130,
                 background: "var(--popover)", border: `1px solid ${C.border}`, borderRadius: 10, padding: 6,
-                boxShadow: "0 12px 32px rgba(0,0,0,.18)",
+                boxShadow: "0 12px 32px rgba(12,11,8,.18)",
               }}>
                 {([0, 50, 75, 100] as const).map(r => (
                   <button key={r} onClick={() => { setRateMin(r); openPanel(null) }} style={{
                     display: "block", width: "100%", textAlign: "left", padding: "6px 8px", borderRadius: 7,
-                    background: rateMin === r ? "rgba(251,191,36,.15)" : "transparent",
-                    color: rateMin === r ? "#d97706" : C.text, border: "none", cursor: "pointer",
+                    background: rateMin === r ? "rgba(200,194,179,.15)" : "transparent",
+                    color: rateMin === r ? "#6b6858" : C.text, border: "none", cursor: "pointer",
                     fontSize: 12.5, fontWeight: rateMin === r ? 700 : 500,
                   }}>{r === 0 ? "Any rate" : `$${r}+/hr`}</button>
                 ))}
@@ -430,7 +430,7 @@ export default function ContractsDashboard() {
               <div style={{
                 position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 20, minWidth: 130,
                 background: "var(--popover)", border: `1px solid ${C.border}`, borderRadius: 10, padding: 6,
-                boxShadow: "0 12px 32px rgba(0,0,0,.18)",
+                boxShadow: "0 12px 32px rgba(12,11,8,.18)",
               }}>
                 {EXPERIENCE_LEVELS.map(l => (
                   <button key={l.key} onClick={() => { setExpLevel(l.key); openPanel(null) }} style={{
@@ -457,7 +457,7 @@ export default function ContractsDashboard() {
               <div style={{
                 position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 20, minWidth: 220, maxHeight: 260, overflowY: "auto",
                 background: "var(--popover)", border: `1px solid ${C.border}`, borderRadius: 10, padding: 6,
-                boxShadow: "0 12px 32px rgba(0,0,0,.18)",
+                boxShadow: "0 12px 32px rgba(12,11,8,.18)",
               }}>
                 {companyOptions.map(({ company, count }) => (
                   <label key={company} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 6px", borderRadius: 6, cursor: "pointer", fontSize: 12.5, color: C.text }}>
@@ -482,7 +482,7 @@ export default function ContractsDashboard() {
               <div style={{
                 position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 20, width: 240,
                 background: "var(--popover)", border: `1px solid ${C.border}`, borderRadius: 10, padding: 10,
-                boxShadow: "0 12px 32px rgba(0,0,0,.18)",
+                boxShadow: "0 12px 32px rgba(12,11,8,.18)",
               }}>
                 <label style={{ fontSize: 11, color: C.hint, display: "block", marginBottom: 4 }}>Near this city</label>
                 <select value={originCity} onChange={e => setOriginCity(e.target.value)} style={{
@@ -498,7 +498,7 @@ export default function ContractsDashboard() {
                     <button key={d.key} onClick={() => setDistanceFilter(d.key)} style={{
                       padding: "4px 9px", borderRadius: 7, cursor: "pointer", fontSize: 11.5, fontWeight: 600,
                       background: distanceFilter === d.key ? C.teal : "var(--surface-2)",
-                      color: distanceFilter === d.key ? "#04201c" : "var(--text-muted)", border: "none",
+                      color: distanceFilter === d.key ? "#1b1a14" : "var(--text-muted)", border: "none",
                     }}>{d.label}</button>
                   ))}
                 </div>
@@ -510,7 +510,7 @@ export default function ContractsDashboard() {
             {filtered.length} {filtered.length === 1 ? "post" : "posts"}
             {hasActive && (
               <button onClick={() => { setType("all"); setRemoteOnly(false); setRateMin(0); setDateFilter("any"); setExpLevel("all"); setCompanyFilter([]); setOriginCity(""); setDistanceFilter("any"); setSkillFilter([]); openPanel(null) }}
-                style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "#ef4444", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "#2e2d27", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>
                 <X size={11}/> Clear
               </button>
             )}
@@ -526,9 +526,9 @@ export default function ContractsDashboard() {
               return (
                 <button key={skill} onClick={() => toggleSkill(skill)} style={{
                   padding: "3px 10px", borderRadius: 20, cursor: "pointer", fontSize: 11, fontWeight: 600,
-                  background: active ? "rgba(192,132,252,.18)" : "var(--surface)",
-                  color: active ? "#c084fc" : "var(--text-muted)",
-                  border: `1px solid ${active ? "rgba(192,132,252,.4)" : C.border}`,
+                  background: active ? "rgba(159,154,134,.18)" : "var(--surface)",
+                  color: active ? "#9f9a86" : "var(--text-muted)",
+                  border: `1px solid ${active ? "rgba(159,154,134,.4)" : C.border}`,
                   textTransform: "capitalize",
                 }}>{skill} <span style={{ opacity: .6 }}>{count}</span></button>
               )
@@ -569,7 +569,7 @@ export default function ContractsDashboard() {
                     <div style={{ fontSize: 11.5, color: C.muted, display: "flex", alignItems: "center", gap: 5 }}>
                       {j.poster !== j.company ? j.poster + " · " : ""}
                       {relPostedMs(j.posted) > Date.now() - 86400000 && (
-                        <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", textTransform: "uppercase", letterSpacing: ".04em" }}>NEW</span>
+                        <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: "#e8e4db", color: "#58564c", border: "1px solid #e9e5dd", textTransform: "uppercase", letterSpacing: ".04em" }}>NEW</span>
                       )}
                       {expandPosted(j.posted)} · LinkedIn
                     </div>
@@ -621,15 +621,15 @@ export default function ContractsDashboard() {
                     target={isMail ? undefined : "_blank"}
                     rel="noreferrer"
                     onClick={() => trackJob(j)}
-                    style={{ padding: "8px 16px", borderRadius: 9, background: C.teal, color: "#04201c", fontSize: 12.5, fontWeight: 800, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}
+                    style={{ padding: "8px 16px", borderRadius: 9, background: C.teal, color: "#1b1a14", fontSize: 12.5, fontWeight: 800, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}
                   >{isMail ? <><Mail size={13}/> Contact recruiter</> : <><ExternalLink size={13}/> View on LinkedIn</>}</a>
                   <button
                     onClick={() => trackJob(j)}
                     title="Add to pipeline tracker"
                     style={{
-                      padding: "8px 12px", borderRadius: 9, border: `1px solid ${tracked.has(j.id) ? "rgba(34,197,94,.35)" : C.border}`,
-                      background: tracked.has(j.id) ? "rgba(34,197,94,.10)" : "transparent",
-                      color: tracked.has(j.id) ? "#16a34a" : C.muted, cursor: "pointer", fontSize: 12, fontWeight: 700,
+                      padding: "8px 12px", borderRadius: 9, border: `1px solid ${tracked.has(j.id) ? "rgba(171,166,148,.35)" : C.border}`,
+                      background: tracked.has(j.id) ? "rgba(171,166,148,.10)" : "transparent",
+                      color: tracked.has(j.id) ? "#4d4b44" : C.muted, cursor: "pointer", fontSize: 12, fontWeight: 700,
                       display: "inline-flex", alignItems: "center", gap: 5,
                     }}
                   >{tracked.has(j.id) ? <><Check size={13}/> Tracked</> : <><ClipboardList size={13}/> Track</>}</button>
@@ -661,7 +661,7 @@ function chip(active: boolean, color: string): CSSProperties {
     padding: "6px 12px", borderRadius: 20, cursor: "pointer", fontSize: 12, fontWeight: 600,
     // "active" text sits on a bright accent-colored chip in BOTH themes, so it
     // stays a fixed near-black for contrast — only the inactive state is themed.
-    background: active ? color : "var(--surface)", color: active ? "#0b1220" : "var(--text-muted)",
+    background: active ? color : "var(--surface)", color: active ? "#13120d" : "var(--text-muted)",
     border: `1px solid ${active ? color : "var(--border)"}`, whiteSpace: "nowrap",
   }
 }
