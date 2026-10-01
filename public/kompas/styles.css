@@ -746,3 +746,29 @@ label.pref-row{cursor:pointer}
 .pill.toggle.on,.chip.primary{border-color:#b7cfc0;color:#14382c;background:var(--bamboo-mist)}
 .cn-app.on{border-color:var(--green);background:var(--bamboo-mist);box-shadow:inset 0 0 0 1px var(--green)}
 .tgl:checked{background:var(--green)}
+
+/* Bamboo pole and crimson: the same as Kompas on perfact-ten. */
+:root{--spot:#a3121c;--crimson:#a3121c;--crimson-deep:#2a0204;
+  --bamboo-pole:
+    repeating-linear-gradient(90deg,transparent 0 58px,rgba(4,26,17,.6) 58px 60px,rgba(196,238,206,.45) 60px 61px,transparent 61px 64px),
+    repeating-linear-gradient(180deg,rgba(255,255,255,.06) 0 1px,transparent 1px 3px),
+    linear-gradient(180deg,#0f4431 0%,#2a8d5f 22%,#5cbc88 33%,#2a8a5c 50%,#14593d 78%,#082a1d 100%);
+  --asanoha:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='69.28' viewBox='0 0 40 69.28'%3E%3Cpath fill='none' stroke='%23c0283c' stroke-opacity='.34' stroke-width='.6' d='M0 0H40M0 34.64H40M0 69.28H40M0 0L40 69.28M40 0L0 69.28M0 0L-20 34.64L0 69.28M40 0L60 34.64L40 69.28M0 0L20 11.55L40 0M20 11.55V34.64M0 0V23.09M-20 34.64L0 23.09L20 34.64M40 0V23.09M20 34.64L40 23.09L60 34.64M20 34.64V57.74M0 69.28L20 57.74L40 69.28M-20 34.64L0 46.19L20 34.64M0 46.19V69.28M20 34.64L40 46.19L60 34.64M40 46.19V69.28'/%3E%3C/svg%3E")}
+.btn.primary,.pill.primary,.seg button.on,.overlay.dark .pill.primary,.session-card .btn.primary.sc-start:hover{background-image:var(--bamboo-pole);background-position:-22px 0,0 0,0 0;text-shadow:0 1px 1px rgba(3,20,12,.55)}
+.btn.primary:hover,.pill.primary:hover{background-image:var(--bamboo-pole);filter:brightness(1.1) saturate(1.05)}
+.pill.primary.on,.overlay.dark .pill.primary.on{background-color:var(--crimson-deep);background-image:linear-gradient(180deg,#050101 0%,#2a0204 55%,#6e0a10 100%);
+  border-color:#3a0306;color:#f6d9d9;box-shadow:inset 0 -1px 0 rgba(200,30,40,.45);filter:none;text-shadow:none}
+::selection{background:rgba(163,18,28,.16)}
+h1 em,h2 em{color:var(--crimson)}
+#answer.following>.read-head{background:var(--crimson)}
+.view.view-auth{background-color:#060102;
+  background-image:var(--asanoha),radial-gradient(120% 90% at 0% 100%,rgba(122,12,24,.85) 0%,rgba(42,2,4,.6) 45%,rgba(6,1,2,0) 75%),linear-gradient(180deg,#050101,#0b0203);
+  background-size:40px 69.28px,auto,auto}
+.view.view-auth .auth-card{box-shadow:0 30px 80px -30px rgba(0,0,0,.8);border-color:rgba(160,30,45,.35)}
+
+/* Icons are antique gold. An on-state keeps its own colour so you can still tell what is on. */
+:root{--gold:#9a7636;--gold-deep:#6e5221}
+html.theme-dark{--gold:#c9a45c;--gold-deep:#e2c27f}
+.icon-btn,.si-ico,.side-item.on .si-ico,.mi-ico,.send,.nav,.step{color:var(--gold)}
+.icon-btn:hover,.send:hover,.nav:hover,.step:hover,.side-item:hover .si-ico{color:var(--gold-deep)}
+.si-ico,.side-item.on .si-ico{opacity:1}
