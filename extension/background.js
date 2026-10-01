@@ -25,7 +25,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // happens to be selected, only their resume-specific talking points should.
   if (msg.type === "GET_PROFILE") {
     chrome.storage.sync.get(["appUrl"], async (s) => {
-      const appUrl = (s.appUrl || "https://marketfit.app").replace(/\/$/, "")
+      const appUrl = (s.appUrl || "https://job-dashboard-fawn.vercel.app").replace(/\/$/, "")
       try {
         // Authenticate as the signed-in user when we have their session (set by
         // web-bridge.js after login) — otherwise fetch unauthenticated, same as
@@ -57,7 +57,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // empty list ("No resumes uploaded yet") even when the account had resumes.
   if (msg.type === "GET_USER_RESUMES") {
     chrome.storage.sync.get(["appUrl"], async (s) => {
-      const appUrl = (s.appUrl || "https://marketfit.app").replace(/\/$/, "")
+      const appUrl = (s.appUrl || "https://job-dashboard-fawn.vercel.app").replace(/\/$/, "")
       try {
         const token = await getToken()
         const headers = token ? { Authorization: `Bearer ${token}` } : {}
@@ -76,7 +76,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // host_permissions-holding context to reach across origins at all.
   if (msg.type === "GET_H1B") {
     chrome.storage.sync.get(["appUrl"], async (s) => {
-      const appUrl = (s.appUrl || "https://marketfit.app").replace(/\/$/, "")
+      const appUrl = (s.appUrl || "https://job-dashboard-fawn.vercel.app").replace(/\/$/, "")
       try {
         const res = await fetch(`${appUrl}/api/h1b?company=${encodeURIComponent(msg.company || "")}`)
         const data = res.ok ? await res.json().catch(() => null) : null
@@ -90,7 +90,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === "GET_MATCH_SCORE") {
     chrome.storage.sync.get(["appUrl"], async (s) => {
-      const appUrl = (s.appUrl || "https://marketfit.app").replace(/\/$/, "")
+      const appUrl = (s.appUrl || "https://job-dashboard-fawn.vercel.app").replace(/\/$/, "")
       try {
         const res = await fetch(`${appUrl}/api/match-score`, {
           method: "POST",
@@ -188,7 +188,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // Default: production URL. Local dev can override via the popup's Settings field.
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === "install") {
-    chrome.storage.sync.set({ appUrl: "https://marketfit.app" })
+    chrome.storage.sync.set({ appUrl: "https://job-dashboard-fawn.vercel.app" })
+  }
+  // marketfit.app was never ours (a stranger's WordPress site). An install that stored it would send
+  // the user's resume there, so it is moved to the live MarketFit on update.
+  if (reason === "update") {
+    chrome.storage.sync.get(["appUrl"], s => {
+      if (/^https?:\/\/(www\.)?marketfit\.app/.test(s.appUrl || "")) chrome.storage.sync.set({ appUrl: "https://job-dashboard-fawn.vercel.app" })
+    })
   }
 })
 

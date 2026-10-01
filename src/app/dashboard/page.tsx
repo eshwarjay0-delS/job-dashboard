@@ -4,9 +4,40 @@ import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { getH1BScore } from "@/lib/h1b"
 import { fetchJobs as fetchJobsApi } from "@/lib/jobsClient"
-import { Globe, MapPin, DollarSign, X, Sparkles, FileText } from "lucide-react"
+import { Globe, MapPin, DollarSign, X, Sparkles, FileText, Mic, Briefcase } from "lucide-react"
 import PageIntro from "./_components/page-intro"
-import { NAV_ITEMS } from "./_components/nav"
+import { navItem } from "./_components/nav"
+
+// Home is what MarketFit does, in the owner's order: Kompas, then Gmail, then the resume (1 Oct 2026).
+// Each button opens the one page that does that job. No speed, match rate or callback figure is quoted:
+// none was measured. Kompas is a static page served by MarketFit (next.config.js), so it is a plain link.
+const KOMPAS_PATH = "/dashboard/kompas"
+type Feature = { href: string; label: string; why: string; what: string; button: string; icon: React.ReactNode; plain?: boolean }
+const MAIN: Feature[] = [
+  { href: KOMPAS_PATH, plain: true, icon: <Mic size={18} />, label: "Kompas",
+    why: "Don't freeze in an interview.",
+    what: "Kompas hears the interviewer's question and shows you a short answer from your own resume, while the call is on.",
+    button: "Open Kompas" },
+  { href: "/dashboard/connections", icon: navItem("/dashboard/email").icon, label: "Gmail",
+    why: "Don't miss a recruiter.",
+    what: "Link your Gmail. Recruiter replies and interview invites come into one list, so none gets buried.",
+    button: "Connect Gmail" },
+  { href: "/dashboard/resume", icon: navItem("/dashboard/resume").icon, label: "Your resume",
+    why: "Fit every job you apply to.",
+    what: "Paste a job post. MarketFit rewrites your resume for that one job. You read it before you send it.",
+    button: "Tailor my resume" },
+]
+const MORE: Feature[] = [
+  { href: "/dashboard/extension", icon: navItem("/dashboard/extension").icon, label: "Chrome extension", why: "", what: navItem("/dashboard/extension").what, button: "" },
+  { href: "/dashboard/whatsapp", icon: navItem("/dashboard/whatsapp").icon, label: "WhatsApp", why: "", what: navItem("/dashboard/whatsapp").what, button: "" },
+  { href: "/dashboard/jobs", icon: <Briefcase size={18} />, label: "Find jobs", why: "", what: "Real jobs you can apply to today.", button: "" },
+]
+
+function Go({ f, className, style, children }: { f: Feature; className: string; style?: React.CSSProperties; children: React.ReactNode }) {
+  return f.plain
+    ? <a href={f.href} className={className} style={style}>{children}</a>
+    : <Link href={f.href} className={className} style={style}>{children}</Link>
+}
 
 // This page's colors used to be literal hex — an exact copy of the light-theme
 // values in globals.css, but copied instead of referenced. Since every
@@ -182,64 +213,6 @@ function Icon({ d, size = 16, stroke = 2 }: { d: string; size?: number; stroke?:
   return <svg width={size} height={size} fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d={d}/></svg>
 }
 
-// ── Resume tailor: the one feature on this page that is live end to end ─────────
-// Nothing here quotes a speed, a match rate or a callback multiple: none of those were measured.
-function ResumeTailorCard() {
-  const [jd, setJd] = useState("")
-
-  return (
-    <section aria-labelledby="home-tailor-title" style={{
-      display:"grid", gridTemplateColumns:"minmax(0,1fr) minmax(0,1.3fr)", gap:32, alignItems:"start",
-      background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius-lg)", padding:"26px 28px",
-    }}>
-      <div>
-        <h2 id="home-tailor-title" style={{ fontSize:22, fontWeight:600, color:P.text, lineHeight:1.2, margin:"0 0 8px" }}>
-          How it works
-        </h2>
-        <ol className="mf-steps" style={{ fontSize:15.5, lineHeight:1.5, color:P.text }}>
-          {[
-            "Paste the job post in the box.",
-            "MarketFit picks your closest resume and rewrites it for that job.",
-            "You read it before you use it. Nothing is sent for you.",
-          ].map((step, i) => (
-            <li key={i} className="mf-step">
-              <span className="mf-step-dot" aria-hidden>{i + 1}</span>
-              <span>{step}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      <div>
-        <label htmlFor="home-jd" style={{ display:"block", fontSize:16, fontWeight:600, color:P.text, marginBottom:8 }}>
-          Job post
-        </label>
-        <textarea
-          id="home-jd"
-          value={jd}
-          onChange={e => setJd(e.target.value)}
-          placeholder={"Paste the whole job post here."}
-          rows={7}
-          style={{
-            width:"100%", resize:"vertical", borderRadius:"var(--radius-lg)", fontSize:16, lineHeight:1.6,
-            color:P.text, padding:"12px 14px", fontFamily:"inherit", boxSizing:"border-box",
-            border:"1px solid var(--border-strong)", background:"var(--bg)",
-          }}
-        />
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", marginTop:12, gap:10 }}>
-          <span style={{ fontSize:14, color:P.muted }}>{jd.trim() ? `${jd.trim().length} characters` : "Nothing pasted yet"}</span>
-          <Link href="/dashboard/resume"
-            onClick={() => { if (jd.trim()) try { sessionStorage.setItem("jd_prefill", jd.trim()) } catch {} }}
-            className={jd.trim() ? "btn-accent" : "btn-outline"}
-            style={{ minHeight:48, padding:"0 22px", fontSize:15.5, textDecoration:"none", whiteSpace:"nowrap" }}>
-            {jd.trim() ? "Fit my resume to this job →" : "Go to the resume tailor →"}
-          </Link>
-        </div>
-      </div>
-    </section>
-  )
-}
-
 type DashJob = { id:string; title:string; company:string; domain:string; location:string; remote:boolean; salary:string|null; description:string; workAuth:string[]; url:string; source?:string; posted:string; catKey:keyof typeof CAT_CONFIG }
 
 function normalizeStaticJobs(): DashJob[] {
@@ -318,24 +291,36 @@ export default function DashboardPage() {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:28 }}>
-      <PageIntro page="/dashboard" action={{ label: "Tailor my resume", href: "/dashboard/resume" }} />
+      <PageIntro page="/dashboard" action={{ label: "Open Kompas", onClick: () => { window.location.href = KOMPAS_PATH } }} />
 
-      <ResumeTailorCard />
+      <section aria-label="What MarketFit does for you" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:16 }}>
+        {MAIN.map((f, i) => (
+          <article key={f.href} style={{ display:"flex", flexDirection:"column", gap:10, padding:"22px 22px 20px",
+            background:P.surface, border:`1px solid ${P.border}`, borderRadius:"var(--radius-lg)" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <span className="home-tile-icon">{f.icon}</span>
+              <span style={{ fontSize:13, fontWeight:600, color:P.hint }}>{i + 1}</span>
+            </div>
+            <h2 style={{ fontSize:22, fontWeight:600, color:P.text, margin:0 }}>{f.label}</h2>
+            <p style={{ fontSize:16, fontWeight:600, color:P.text, margin:0 }}>{f.why}</p>
+            <p style={{ fontSize:15, lineHeight:1.5, color:P.muted, margin:0, flex:1 }}>{f.what}</p>
+            <Go f={f} className="btn-accent" style={{ minHeight:46, padding:"0 20px", fontSize:15, textDecoration:"none", marginTop:6 }}>
+              {f.button} <span aria-hidden>→</span>
+            </Go>
+          </article>
+        ))}
+      </section>
 
-      <section aria-labelledby="home-pages-title">
-        <h2 id="home-pages-title" style={{ fontSize:26, fontWeight:600, color:P.text, margin:"8px 0 6px" }}>Everything else</h2>
-        <p style={{ fontSize:16, color:P.muted, margin:"0 0 16px" }}>Pick a page. Each one says what it is for.</p>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(230px, 1fr))", gap:12 }}>
-          {NAV_ITEMS.filter(i => i.href !== "/dashboard").map(i => (
-            <Link key={i.href} href={i.href} className="home-tile">
-              <span className="home-tile-icon">{i.icon}</span>
-              <span>
-                <span style={{ display:"block", fontSize:17, fontWeight:600, color:P.text }}>{i.label}</span>
-                <span style={{ display:"block", fontSize:14.5, lineHeight:1.45, color:P.muted, marginTop:3 }}>{i.what}</span>
-              </span>
-            </Link>
-          ))}
-        </div>
+      <section aria-label="More ways to use MarketFit" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:12 }}>
+        {MORE.map(f => (
+          <Go key={f.href} f={f} className="home-tile">
+            <span className="home-tile-icon">{f.icon}</span>
+            <span>
+              <span style={{ display:"block", fontSize:17, fontWeight:600, color:P.text }}>{f.label}</span>
+              <span style={{ display:"block", fontSize:14.5, lineHeight:1.45, color:P.muted, marginTop:3 }}>{f.what}</span>
+            </span>
+          </Go>
+        ))}
       </section>
 
       <section aria-labelledby="home-jobs-title" style={{ background:P.surface, border:`1px solid ${P.border}`, borderRadius:"var(--radius-lg)", overflow:"hidden" }}>

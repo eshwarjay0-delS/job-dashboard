@@ -860,7 +860,7 @@ async function autoFillForm(profile) {
   ;(async () => {
     try {
       const s = await chrome.storage.sync.get(["appUrl"])
-      const appUrl = (s.appUrl || "https://marketfit.app").replace(/\/$/, "")
+      const appUrl = (s.appUrl || "https://job-dashboard-fawn.vercel.app").replace(/\/$/, "")
       await fetch(appUrl + "/api/autofill-log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

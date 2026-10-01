@@ -35,8 +35,8 @@
   function getAppUrl() {
     return new Promise(resolve => {
       try {
-        chrome.storage.sync.get(["appUrl"], s => resolve((s.appUrl || "https://marketfit.app").replace(/\/$/, "")))
-      } catch { resolve("https://marketfit.app") }
+        chrome.storage.sync.get(["appUrl"], s => resolve((s.appUrl || "https://job-dashboard-fawn.vercel.app").replace(/\/$/, "")))
+      } catch { resolve("https://job-dashboard-fawn.vercel.app") }
     })
   }
   function getProfile() {

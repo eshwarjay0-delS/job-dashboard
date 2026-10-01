@@ -1,7 +1,7 @@
 // MarketFit Extension — Popup Script v3
 // UI: Jobright-inspired — job card, accordion sections, resume selector, inline profile form
 
-const DEFAULT_URL = "https://marketfit.app"
+const DEFAULT_URL = "https://job-dashboard-fawn.vercel.app"
 let appUrl      = DEFAULT_URL
 let cachedProfile = null
 let selectedResume = null   // { name, date, token }

@@ -730,32 +730,22 @@ label.pref-row{cursor:pointer}
 .more-opts .pref-list{margin-top:4px}
 @media (max-width:620px){.pref-row{flex-direction:column;align-items:stretch}.seg.compact{flex-wrap:wrap}.pref-row select{width:100%}}
 
-/* Bamboo: the strong buttons are deep green, lit at the top, the same as Kompas on perfact-ten. Paper stays paper. */
+/* Bamboo: the strong buttons are flat deep green with no light on it, the same as Kompas on perfact-ten. Paper stays paper. */
 :root{--bamboo:#0c2e24;--bamboo-leaf:#248058;--bamboo-mist:#e7f2eb;--green:#1a5c3e;--side-bar:#1a5c3e}
-.brand-dot,.side .brand-dot{background:linear-gradient(165deg,var(--bamboo-leaf),var(--bamboo))}
-.btn.primary,.pill.primary,.seg button.on{color:#f4f7f2;border-color:var(--bamboo);background-color:var(--bamboo);
-  background-image:linear-gradient(180deg,var(--bamboo-leaf) 0%,#176344 46%,var(--bamboo) 100%);box-shadow:inset 0 1px 0 rgba(210,236,218,.32)}
-.btn.primary:hover,.pill.primary:hover{color:#f4f7f2;border-color:#10382c;background-color:#10382c;
-  background-image:linear-gradient(180deg,#2c9466 0%,#1c7350 46%,#10382c 100%)}
+.brand-dot,.side .brand-dot{background:var(--bamboo)}
+.btn.primary,.pill.primary,.seg button.on{color:#f4f7f2;border-color:var(--bamboo);background:var(--bamboo);box-shadow:none}
+.btn.primary:hover,.pill.primary:hover{color:#f4f7f2;border-color:var(--bamboo);background:var(--bamboo)}
 .pill.primary.on,.overlay.dark .pill.primary.on{background-image:none;background-color:var(--red);border-color:var(--red);color:#fff;box-shadow:none}
-.overlay.dark .pill.primary{color:#f4f7f2;border-color:#14563a;background-color:var(--bamboo);
-  background-image:linear-gradient(180deg,var(--bamboo-leaf) 0%,#176344 46%,var(--bamboo) 100%)}
+.overlay.dark .pill.primary{color:#f4f7f2;border-color:#14563a;background:var(--bamboo)}
 .session-card .btn.primary.sc-start{background-image:none;background-color:transparent;color:#14382c;border-color:var(--green);box-shadow:none}
-.session-card .btn.primary.sc-start:hover{color:#f4f7f2;border-color:var(--bamboo);background-color:var(--bamboo);
-  background-image:linear-gradient(180deg,var(--bamboo-leaf) 0%,#176344 46%,var(--bamboo) 100%)}
+.session-card .btn.primary.sc-start:hover{color:#f4f7f2;border-color:var(--bamboo);background:var(--bamboo)}
 .pill.toggle.on,.chip.primary{border-color:#b7cfc0;color:#14382c;background:var(--bamboo-mist)}
 .cn-app.on{border-color:var(--green);background:var(--bamboo-mist);box-shadow:inset 0 0 0 1px var(--green)}
 .tgl:checked{background:var(--green)}
 
-/* Bamboo pole and crimson: the same as Kompas on perfact-ten. */
+/* Crimson: the same as Kompas on perfact-ten. */
 :root{--spot:#a3121c;--crimson:#a3121c;--crimson-deep:#2a0204;
-  --bamboo-pole:
-    repeating-linear-gradient(90deg,transparent 0 58px,rgba(4,26,17,.6) 58px 60px,rgba(196,238,206,.45) 60px 61px,transparent 61px 64px),
-    repeating-linear-gradient(180deg,rgba(255,255,255,.06) 0 1px,transparent 1px 3px),
-    linear-gradient(180deg,#0f4431 0%,#2a8d5f 22%,#5cbc88 33%,#2a8a5c 50%,#14593d 78%,#082a1d 100%);
   --asanoha:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='69.28' viewBox='0 0 40 69.28'%3E%3Cpath fill='none' stroke='%23c0283c' stroke-opacity='.34' stroke-width='.6' d='M0 0H40M0 34.64H40M0 69.28H40M0 0L40 69.28M40 0L0 69.28M0 0L-20 34.64L0 69.28M40 0L60 34.64L40 69.28M0 0L20 11.55L40 0M20 11.55V34.64M0 0V23.09M-20 34.64L0 23.09L20 34.64M40 0V23.09M20 34.64L40 23.09L60 34.64M20 34.64V57.74M0 69.28L20 57.74L40 69.28M-20 34.64L0 46.19L20 34.64M0 46.19V69.28M20 34.64L40 46.19L60 34.64M40 46.19V69.28'/%3E%3C/svg%3E")}
-.btn.primary,.pill.primary,.seg button.on,.overlay.dark .pill.primary,.session-card .btn.primary.sc-start:hover{background-image:var(--bamboo-pole);background-position:-22px 0,0 0,0 0;text-shadow:0 1px 1px rgba(3,20,12,.55)}
-.btn.primary:hover,.pill.primary:hover{background-image:var(--bamboo-pole);filter:brightness(1.1) saturate(1.05)}
 .pill.primary.on,.overlay.dark .pill.primary.on{background-color:var(--crimson-deep);background-image:linear-gradient(180deg,#050101 0%,#2a0204 55%,#6e0a10 100%);
   border-color:#3a0306;color:#f6d9d9;box-shadow:inset 0 -1px 0 rgba(200,30,40,.45);filter:none;text-shadow:none}
 ::selection{background:rgba(163,18,28,.16)}

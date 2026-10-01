@@ -131,15 +131,8 @@
 /* A stored accent choice cannot put a different hue back on screen. */
 [data-accent] { --accent:#0c2e24; --accent-h:#10382c; }
 
-/* The strong button is a bamboo pole lying across it: a node ring every 64px, fine fibres, a round body lit from above. */
-:root{--bamboo-pole:
-  repeating-linear-gradient(90deg,transparent 0 58px,rgba(4,26,17,.6) 58px 60px,rgba(196,238,206,.45) 60px 61px,transparent 61px 64px),
-  repeating-linear-gradient(180deg,rgba(255,255,255,.06) 0 1px,transparent 1px 3px),
-  linear-gradient(180deg,#0f4431 0%,#2a8d5f 22%,#5cbc88 33%,#2a8a5c 50%,#14593d 78%,#082a1d 100%)}
-:root:not([data-theme="dark"]) [data-slot="button"].bg-primary{
-  background-image:var(--bamboo-pole);background-position:-22px 0,0 0,0 0;
-  color:#f4f7f2;text-shadow:0 1px 1px rgba(3,20,12,.55)}
-:root:not([data-theme="dark"]) [data-slot="button"].bg-primary:hover{filter:brightness(1.1) saturate(1.05)}
+/* The owner: the green has no light on it, and no bamboo on the buttons (1 Oct 2026). */
+:root:not([data-theme="dark"]) [data-slot="button"].bg-primary{color:#f4f7f2}
 
 /* ── Ink (dark) ───────────────────────────────────────────────── */
 [data-theme="dark"] {

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MarketFit — AI Resume Tailor",
   "short_name": "MarketFit",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Quick Fill any ATS form from your MarketFit profile. Tailor resumes with AI in under 20 seconds.",
   "action": {
     "default_popup": "popup.html",
@@ -17,7 +17,7 @@
       "matches": [
         "http://localhost:3000/*",
         "http://localhost:3001/*",
-        "https://marketfit.app/*"
+        "https://job-dashboard-fawn.vercel.app/*"
       ],
       "js": ["web-bridge.js"],
       "run_at": "document_idle"
@@ -71,7 +71,7 @@
   "host_permissions": [
     "http://localhost:3000/*",
     "http://localhost:3001/*",
-    "https://marketfit.app/*",
+    "https://job-dashboard-fawn.vercel.app/*",
     "*://*.linkedin.com/*",
     "*://*.indeed.com/*",
     "*://*.glassdoor.com/*",
