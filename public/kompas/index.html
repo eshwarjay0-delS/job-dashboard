@@ -297,7 +297,6 @@
               <span class="depth" id="depthMeter" title="Answer depth — ↑ lighter · ↓ deeper (arrow keys). Each step regenerates the answer."><button class="step" id="whoUp" aria-label="Lighter answer (↑)">▲</button><span class="depth-bars" id="depthBars" aria-hidden="true"></span><button class="step" id="whoDown" aria-label="Deeper answer (↓)">▼</button></span>
             </div>
             <div class="mi-sep"></div>
-            <button class="mi hidden" role="menuitemcheckbox" aria-checked="true" id="privateBtn"><span class="mi-ico">◌</span>Private<span class="mi-check" id="privateCheck">✓</span></button>
             <button class="mi" role="menuitem" id="themeBtn"><span class="mi-ico">◐</span>Dark answer panel</button>
             <button class="mi" role="menuitem" id="collapseBtn"><span class="mi-ico">—</span>Minimise panel</button>
             <button class="mi" role="menuitem" id="exportBtn"><span class="mi-ico">⇩</span>Export answers</button>
@@ -313,6 +312,7 @@
       <button class="pill action big" id="answerBtn" title="Answer everything heard as one question (Ctrl+Enter)"><span class="star">★</span> AI Answer <span class="pend hidden" id="pendCount">0</span></button>
       <button class="pill action toggle" id="autoBtn" aria-pressed="false" title="Auto-answer is OFF: keeps gathering what's said — press AI Answer to turn all of it into one question and answer it"><span class="sw" aria-hidden="true"><i></i></span> Auto <b id="autoState">OFF</b></button>
       <span class="follow" id="follow"><button class="pill action toggle follow-btn" id="followBtn" aria-pressed="false" title="Follow along: highlights the answer as you speak it and keeps your place in view (F)">▶ Follow along</button></span>
+      <button class="pill action toggle" id="chatBtn" aria-pressed="false" title="Type a question. Click again to hide it.">Chat</button>
       <label class="asking" title="Who is asking right now — changing it regenerates the current answer for this audience"><span>Asking</span>
       <select id="liveInterviewer" class="live-select">
         <option value="hr">HR</option>
@@ -342,10 +342,6 @@
       </div>
       <button class="nav nav-next" id="nextBtn" aria-label="Next">›</button>
     </main>
-    <div class="bar bar-ask">
-      <input class="manual" id="manualInput" placeholder="Type a question… ( / to focus )" />
-      <button class="send" id="sendBtn">Send</button>
-    </div>
     <div class="drawer hidden" id="drawer">
       <div class="drawer-head">Live transcript <span class="muted small">You = your mic · Them = call audio</span></div>
       <div class="drawer-body" id="drawerBody"><div class="muted small">Nothing heard yet.</div></div>
@@ -353,6 +349,10 @@
     <div class="dossier hidden" id="dossier">
       <div class="dossier-bar"><span id="dossierFill"></span></div>
       <span class="dossier-text" id="dossierText">Dossier: 0 pages</span>
+    </div>
+    <div class="bar bar-ask hidden" id="barAsk">
+      <input class="manual" id="manualInput" placeholder="Type a question… ( / to focus )" />
+      <button class="send" id="sendBtn" title="Answer this question (Enter)" aria-label="Answer"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 3.5v5.2a1.8 1.8 0 0 1-1.8 1.8H3.2"/><path d="M6 8.2 3.2 10.5 6 12.8"/></svg></button>
     </div>
     <div class="statusline" id="status">Ready — press Start to listen to the call.</div>
   </div>

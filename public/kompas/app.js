@@ -508,10 +508,13 @@ function startClock() { startedAt = Date.now(); const tick = () => { $("clock").
 function stopClock() { if (clockTimer) clearInterval(clockTimer); clockTimer = null; }
 
 /* ---- sources (both ON by default), theme, drawer ---- */
-// Kompas desktop never captures the computer's sound (no loopback): there, the microphone is the only source.
+// systemAudio: false is the only way the desktop hides computer audio. Otherwise the speaker control stays,
+// and Start hears the output mix (Them) as well as the microphone (You). The screen-share button stays hidden
+// on the desktop: main.js answers getDisplayMedia itself, so there is no window to pick.
 const NO_SYS_AUDIO = window.kompasDesktop?.systemAudio === false;
 const srcOn = { mic: true, sys: !NO_SYS_AUDIO };
 if (NO_SYS_AUDIO) { $("sysBtn").classList.add("hidden"); $("screenBtn").classList.add("hidden"); }
+else if (window.kompasDesktop) $("screenBtn").classList.add("hidden");
 function syncSrc() {
   $("micBtn").classList.toggle("on", srcOn.mic); $("sysBtn").classList.toggle("on", srcOn.sys);
   $("micBtn").title = "Microphone (you) — " + (srcOn.mic ? "on" : "off");
@@ -643,7 +646,12 @@ async function startMic() {
 async function startSys() {
   if (captures.some(c => c.who === "Them")) return;
   try {
-    const disp = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true, systemAudio: "include", selfBrowserSurface: "exclude" });
+    // systemAudio and selfBrowserSurface belong to the browser share dialog. Electron answers "Not supported"
+    // to that pair before main.js can hand back the output-mix loopback, so the desktop asks for video and
+    // audio only and the handler supplies the computer's sound.
+    const disp = window.kompasDesktop
+      ? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+      : await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true, systemAudio: "include", selfBrowserSurface: "exclude" });
     const audio = disp.getAudioTracks();
     if (!audio.length) {
       disp.getTracks().forEach(t => t.stop());
@@ -1100,7 +1108,20 @@ async function generateAnswer(question, card, opts = {}) {
 
 /* ---- manual, AI Answer, screen, copy, export, shortcuts ---- */
 $("sendBtn").onclick = sendManual;
-$("manualInput").addEventListener("keydown", e => { if (e.key === "Enter") sendManual(); });
+function setChat(open) {
+  $("barAsk").classList.toggle("hidden", !open);
+  $("chatBtn").classList.toggle("on", open);
+  $("chatBtn").setAttribute("aria-pressed", String(open));
+  if (open) $("manualInput").focus();
+}
+$("chatBtn").onclick = () => setChat($("barAsk").classList.contains("hidden"));
+$("manualInput").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || e.isComposing) return;
+  if (e.currentTarget.tagName === "TEXTAREA" && e.shiftKey) return;   // a textarea keeps Shift+Enter for a newline
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  e.preventDefault();
+  sendManual();
+});
 function sendManual() { const v = $("manualInput").value.trim(); if (!v) return; $("manualInput").value = ""; logEvent({ t: "line", who: "You (typed)", text: v }); generateAnswer(v, addCard(v, ["…"])); }
 $("answerBtn").onclick = () => aiAnswer(false);
 let aiBusy = false;
@@ -1497,7 +1518,7 @@ document.addEventListener("keydown", (e) => {
   }
   else if (e.ctrlKey && e.shiftKey && (e.key === "S" || e.key === "s")) { e.preventDefault(); analyseScreen(); }
   else if (typing) return;
-  else if (e.key === "/") { e.preventDefault(); $("manualInput").focus(); }
+  else if (e.key === "/") { e.preventDefault(); setChat(true); }
   else if (e.key === "t" || e.key === "T") $("drawer").classList.toggle("hidden");
   else if (e.key === "f" || e.key === "F") setFollow(!follow.on);
   else if (e.key === "p" || e.key === "P") openPersonaFile();
@@ -1831,6 +1852,7 @@ function fmtSize(n) { return n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1
 /* ---- upload (per kind) ---- */
 async function handleFiles(fileList, kind) {
   const files = [...fileList]; if (!files.length) return;
+  let finished = 0, failed = 0;
   for (const file of files) {
     const id = "d" + Date.now() + Math.round(Math.random() * 1e4);
     const docs = docsGet();
@@ -1843,15 +1865,21 @@ async function handleFiles(fileList, kind) {
       const cur = docsGet(), i = cur.findIndex(d => d.id === id);
       if (i >= 0) {
         cur[i].text = text; cur[i].chars = text.length; cur[i].processing = false;
-        if (!text) cur[i].error = "no text found";
-        else if (kind === "resume" && !cur.some(d => d.kind === "resume" && d.primary)) cur[i].primary = true;
+        if (!text) { cur[i].error = "no text found"; failed++; }
+        else {
+          if (kind === "resume" && !cur.some(d => d.kind === "resume" && d.primary)) cur[i].primary = true;
+          finished++;
+        }
         docsSet(cur); renderSection(kind);
-      }
+      } else failed++;
     } catch (e) {
+      failed++;
       const cur = docsGet(), i = cur.findIndex(d => d.id === id);
       if (i >= 0) { cur[i].processing = false; cur[i].error = String(e && e.message || e).slice(0, 40); docsSet(cur); renderSection(kind); }
     }
   }
+  // A finished upload leaves Resume and Documents. A failed one stays, with the error already on the row.
+  if (finished > 0 && failed === 0) openDashboard();
 }
 
 /* ---- render one section (resume | doc) ---- */
@@ -2014,15 +2042,18 @@ const CONNECT_STEPS = {
   phone: ["Put the phone on <b>speaker</b> near your computer.", "Press <b>Connect &amp; start</b> and allow the microphone. Kompas hears both of you through it.", "When they finish a question, press <b>AI Answer</b>."],
 };
 function renderConnect(s) {
-  const app = LS.get("connectApp", "web");
+  const desktop = !!window.kompasDesktop;
+  const app = desktop ? "desktop" : LS.get("connectApp", "web");
   document.querySelectorAll(".cn-app").forEach(b => b.classList.toggle("on", b.dataset.app === app));
-  // inside Kompas desktop the microphone is the only source, so the call has to be audible to it
+  // The desktop exe is already the decision: microphone plus the output mix. No Browser / Desktop app / Phone choice.
   const steps = NO_SYS_AUDIO
     ? ["Play the call through your <b>speakers</b>, not headphones, so the microphone hears the interviewer.", "Press <b>Connect &amp; start</b>. Kompas listens through your microphone.", "When they finish a question, press <b>AI Answer</b> (Ctrl+Enter while Kompas is focused)."]
-    : CONNECT_STEPS[app];
+    : desktop
+      ? ["Press <b>Connect &amp; start</b> and allow the microphone.", "Leave the speaker control on. Kompas hears whatever the computer is playing — the call, a video, a browser tab — as the interviewer.", "When they finish a question, press <b>AI Answer</b> (Ctrl+Enter while Kompas is focused)."]
+      : CONNECT_STEPS[app];
   $("cnSteps").innerHTML = steps.map(t => `<li>${t}</li>`).join("");
-  $("cnApps").classList.toggle("hidden", NO_SYS_AUDIO);                     // one source, so where the call is changes nothing
-  document.querySelector(".cn-label")?.classList.toggle("hidden", NO_SYS_AUDIO);
+  $("cnApps").classList.toggle("hidden", desktop || NO_SYS_AUDIO);
+  document.querySelector(".cn-label")?.classList.toggle("hidden", desktop || NO_SYS_AUDIO);
   const note = document.querySelector(".cn-note");
   if (note && window.kompasDesktop) window.kompasDesktop.getPrivate().then(on => {
     note.textContent = on ? "Private is on. Only you can see Kompas." : "Private is off.";
@@ -2037,8 +2068,8 @@ function renderConnect(s) {
 }
 document.querySelectorAll(".cn-app").forEach(b => b.onclick = () => { LS.set("connectApp", b.dataset.app); renderConnect(); });
 $("cnStart").onclick = () => {
-  const app = LS.get("connectApp", "web");
-  srcOn.mic = true; srcOn.sys = app !== "phone" && !NO_SYS_AUDIO; syncSrc();   // phone on speaker: the mic hears both sides
+  const app = window.kompasDesktop ? "desktop" : LS.get("connectApp", "web");
+  srcOn.mic = true; srcOn.sys = window.kompasDesktop ? !NO_SYS_AUDIO : app !== "phone" && !NO_SYS_AUDIO; syncSrc();
   $("startBtn").click();
 };
 $("startBtn").addEventListener("click", () => {
@@ -2052,11 +2083,3 @@ $("connectPanel").addEventListener("click", (e) => { if (e.target.id === "connec
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("connectPanel").classList.add("hidden"); });
 /* wizard: pasting resume text is the exception, so its box opens only when asked for */
 $("resumePasteToggle").onclick = () => { const t = $("resume"); t.classList.toggle("hidden"); if (!t.classList.contains("hidden")) t.focus(); };
-/* ---- desktop app only: "Private" lives in the ⋯ menu, where the other window tools are ---- */
-if (window.kompasDesktop) {
-  const paint = (on) => { $("privateBtn").setAttribute("aria-checked", String(on)); $("privateCheck").textContent = on ? "✓" : ""; };
-  $("privateBtn").classList.remove("hidden");
-  window.kompasDesktop.getPrivate().then(paint);
-  window.kompasDesktop.onPrivate?.(paint);                         // the desktop bar's switch changes it too
-  $("privateBtn").onclick = async () => paint(await window.kompasDesktop.setPrivate($("privateBtn").getAttribute("aria-checked") !== "true"));
-}

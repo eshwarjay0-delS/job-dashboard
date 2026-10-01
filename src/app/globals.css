@@ -34,9 +34,11 @@
   --spot:          #8839ef;
   --spot-ink:      #ffffff;
 
-  /* Primary controls are solid ink with paper type. */
-  --accent:        #15140f;
-  --accent-h:      #000000;
+  /* Primary controls are deep bamboo with paper type, the same green as Kompas. */
+  --accent:        #0c2e24;
+  --accent-h:      #10382c;
+  --bamboo-leaf:   #248058;
+  --bamboo-mid:    #176344;
   --accent-soft:   #efece5;
   --accent-border: #cbc5b6;
   --accent-txt:    #15140f;
@@ -127,7 +129,14 @@
 .rounded-2xl, .rounded-3xl { border-radius: var(--radius-lg) !important; }
 
 /* A stored accent choice cannot put a different hue back on screen. */
-[data-accent] { --accent:#15140f; --accent-h:#000000; }
+[data-accent] { --accent:#0c2e24; --accent-h:#10382c; }
+
+/* The strong button is lit at the top like a bamboo stalk, and darkens to the root. */
+:root:not([data-theme="dark"]) [data-slot="button"].bg-primary{
+  background-image:linear-gradient(180deg,var(--bamboo-leaf) 0%,var(--bamboo-mid) 46%,var(--accent) 100%);
+  box-shadow:inset 0 1px 0 rgba(210,236,218,.32);color:#f4f7f2}
+:root:not([data-theme="dark"]) [data-slot="button"].bg-primary:hover{
+  background-image:linear-gradient(180deg,#2c9466 0%,#1c7350 46%,var(--accent-h) 100%)}
 
 /* ── Ink (dark) ───────────────────────────────────────────────── */
 [data-theme="dark"] {

@@ -197,8 +197,9 @@ body{
   border:1px solid var(--line-strong);color:var(--ink);font-family:var(--sans);font-size:14.5px;transition:border-color .2s var(--ease),box-shadow .2s var(--ease)}
 .manual::placeholder{color:var(--faint)}
 .manual:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(28,28,30,.07)}
-.send{font-family:var(--sans);font-size:14.5px;font-weight:700;color:var(--ink);background:none;border:none;cursor:pointer;padding:0 8px;height:36px;transition:color .18s var(--ease)}
-.send:hover{color:#000}
+.send{display:inline-flex;align-items:center;justify-content:center;flex:0 0 36px;width:36px;height:36px;padding:0;border:none;border-radius:999px;background:none;color:var(--ink);cursor:pointer}
+.send svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.send:hover{background:var(--surface-2)}
 
 .content{position:relative;padding:16px 42px 10px}
 .nav{position:absolute;top:14px;width:28px;height:28px;border-radius:50%;border:1px solid var(--line-strong);background:var(--surface);color:var(--muted);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .18s var(--ease)}
@@ -728,3 +729,20 @@ label.pref-row{cursor:pointer}
 .tgl:checked::after{transform:translateX(17px)}
 .more-opts .pref-list{margin-top:4px}
 @media (max-width:620px){.pref-row{flex-direction:column;align-items:stretch}.seg.compact{flex-wrap:wrap}.pref-row select{width:100%}}
+
+/* Bamboo: the strong buttons are deep green, lit at the top, the same as Kompas on perfact-ten. Paper stays paper. */
+:root{--bamboo:#0c2e24;--bamboo-leaf:#248058;--bamboo-mist:#e7f2eb;--green:#1a5c3e;--side-bar:#1a5c3e}
+.brand-dot,.side .brand-dot{background:linear-gradient(165deg,var(--bamboo-leaf),var(--bamboo))}
+.btn.primary,.pill.primary,.seg button.on{color:#f4f7f2;border-color:var(--bamboo);background-color:var(--bamboo);
+  background-image:linear-gradient(180deg,var(--bamboo-leaf) 0%,#176344 46%,var(--bamboo) 100%);box-shadow:inset 0 1px 0 rgba(210,236,218,.32)}
+.btn.primary:hover,.pill.primary:hover{color:#f4f7f2;border-color:#10382c;background-color:#10382c;
+  background-image:linear-gradient(180deg,#2c9466 0%,#1c7350 46%,#10382c 100%)}
+.pill.primary.on,.overlay.dark .pill.primary.on{background-image:none;background-color:var(--red);border-color:var(--red);color:#fff;box-shadow:none}
+.overlay.dark .pill.primary{color:#f4f7f2;border-color:#14563a;background-color:var(--bamboo);
+  background-image:linear-gradient(180deg,var(--bamboo-leaf) 0%,#176344 46%,var(--bamboo) 100%)}
+.session-card .btn.primary.sc-start{background-image:none;background-color:transparent;color:#14382c;border-color:var(--green);box-shadow:none}
+.session-card .btn.primary.sc-start:hover{color:#f4f7f2;border-color:var(--bamboo);background-color:var(--bamboo);
+  background-image:linear-gradient(180deg,var(--bamboo-leaf) 0%,#176344 46%,var(--bamboo) 100%)}
+.pill.toggle.on,.chip.primary{border-color:#b7cfc0;color:#14382c;background:var(--bamboo-mist)}
+.cn-app.on{border-color:var(--green);background:var(--bamboo-mist);box-shadow:inset 0 0 0 1px var(--green)}
+.tgl:checked{background:var(--green)}
