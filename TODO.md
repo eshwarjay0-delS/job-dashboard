@@ -1,3 +1,11 @@
+## 2026-10-03 — Durable storage and runtime checkpoint
+
+- Storage keys now reject traversal/ambiguous paths instead of silently remapping objects; preserve legitimate filename spaces. Empty-prefix deletion is denied.
+- Vercel and partially configured R2 deployments fail explicitly instead of saving to ephemeral disk; R2 permission/network errors are no longer treated as missing objects. Configure all four R2 settings before hosted writes.
+- API runtime configuration aligned to60 seconds with the tailoring/WhatsApp route budgets. Two focused storage-policy regressions pass.
+- Browser runtime installed; previous deployed dashboard rendered successfully locally. New parallel changes still await integrated build and deployment.
+- These backend changes have no direct visible UI signature. No production data migration or email sending performed.
+
 ## 2026-10-02 — Full repository checks and publication attempt
 
 - Approved network access unlocked a full clone and real dependency installation. Repaired lockfile missing entries. Supplied GitHub credential validated repository push permission; connector itself still rejects writes.

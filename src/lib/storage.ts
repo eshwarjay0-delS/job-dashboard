@@ -21,6 +21,7 @@ import {
   DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command,
 } from "@aws-sdk/client-s3"
 import { DATA_DIR } from "@/lib/paths"
+import { storageSegments, storageMode } from "@/lib/storagePolicy"
 
 export interface Blob {
   /** Write bytes (or a string) at `key`, creating any parent structure. */
@@ -122,13 +123,7 @@ export async function listFiles(absDir: string, opts?: { includeHidden?: boolean
 }
 
 // Keys are POSIX-style ("a/b/c.json"); normalize + guard against path traversal.
-function safeSegments(key: string): string[] {
-  return key
-    .replace(/\\/g, "/")
-    .split("/")
-    .map(s => s.trim())
-    .filter(s => s && s !== "." && s !== "..")
-}
+const safeSegments = storageSegments
 
 // ── Filesystem adapter (default): everything lives under DATA_DIR ──────────────
 class FsStorage implements Blob {
@@ -157,6 +152,7 @@ class FsStorage implements Blob {
     try { await unlink(this.abs(key)) } catch { /* already gone */ }
   }
   async deletePrefix(key: string): Promise<void> {
+    if (!key) throw new Error("Cannot delete the storage root")
     try { await rm(this.abs(key), { recursive: true, force: true }) } catch { /* ignore */ }
   }
   async list(prefix: string): Promise<string[]> {
@@ -216,16 +212,16 @@ class R2Storage implements Blob {
   }
   async exists(key: string): Promise<boolean> {
     try { await this.s3.send(new HeadObjectCommand({ Bucket: this.bucket, Key: this.norm(key) })); return true }
-    catch { return false }
+    catch (e) { if (isNotFound(e)) return false; throw e }
   }
   async stat(key: string): Promise<{ size: number; mtime: Date } | null> {
     try {
       const r = await this.s3.send(new HeadObjectCommand({ Bucket: this.bucket, Key: this.norm(key) }))
       return { size: r.ContentLength ?? 0, mtime: r.LastModified ?? new Date(0) }
-    } catch { return null }
+    } catch (e) { if (isNotFound(e)) return null; throw e }
   }
   async delete(key: string): Promise<void> {
-    try { await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: this.norm(key) })) } catch { /* ignore */ }
+    await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: this.norm(key) }))
   }
   async list(prefix: string): Promise<string[]> {
     const p = this.norm(prefix)
@@ -240,6 +236,7 @@ class R2Storage implements Blob {
     return keys
   }
   async deletePrefix(prefix: string): Promise<void> {
+    if (!prefix) throw new Error("Cannot delete the storage root")
     const keys = await this.list(prefix)
     for (let i = 0; i < keys.length; i += 1000) {
       const batch = keys.slice(i, i + 1000)
@@ -257,6 +254,12 @@ class R2Storage implements Blob {
 // local filesystem (dev / persistent VPS). Set in Vercel's env, NOT in the repo.
 function makeBlob(): Blob {
   const { R2_BUCKET, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = process.env
+  if (storageMode(process.env) === "unavailable") {
+    const unavailable = async (): Promise<never> => {
+      throw new Error("Durable storage is not configured. Configure all R2 storage settings before saving data.")
+    }
+    return { put: unavailable, get: unavailable, getText: unavailable, exists: unavailable, stat: unavailable, delete: unavailable, deletePrefix: unavailable, list: unavailable }
+  }
   if (R2_BUCKET && R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY) {
     return new R2Storage(R2_BUCKET, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY)
   }
