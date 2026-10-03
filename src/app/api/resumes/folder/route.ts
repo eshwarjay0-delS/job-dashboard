@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
-import { createClient } from "@/lib/supabase/server"
+import { authenticatedUserId, signInRequired } from "@/lib/authBoundary"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
 import { writePath } from "@/lib/storage"
 
 export const runtime = "nodejs"
 
-async function getUserDir(): Promise<string> {
-  try {
-    const supabase = await createClient()
-    const { data } = await supabase.auth.getUser()
-    return path.join(USER_RESUMES_BASE, data.user?.id ?? "demo")
-  } catch {
-    return path.join(USER_RESUMES_BASE, "demo")
-  }
-}
+
 
 export async function POST(request: NextRequest) {
-  const userDir = await getUserDir()
+  const userId = await authenticatedUserId(request)
+  if (!userId) return signInRequired()
+  const userDir = path.join(USER_RESUMES_BASE, userId)
 
-  const { name } = await request.json().catch(() => ({}))
+  const body = await request.json().catch(() => null)
+  if (!body || typeof body.name !== "string") return NextResponse.json({ error: "Invalid folder name." }, { status: 400 })
+  const { name } = body
   const parts = String(name || "")
     .split("/")
     .map(s => s.replace(/[^A-Za-z0-9._ \-()]/g, "_").trim())

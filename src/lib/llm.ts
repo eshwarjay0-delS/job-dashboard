@@ -126,14 +126,20 @@ async function fetchRetry(url: string, init: RequestInit): Promise<Response> {
   // another provider.
   const RETRY_BUDGET_MS = Number(process.env.LLM_RETRY_BUDGET_MS) || 5000
   let waited = 0
+  const signal = callSignal() // One deadline across retries, not a fresh timeout per attempt.
   for (let attempt = 0; ; attempt++) {
-    const res = await fetch(url, { ...init, signal: callSignal() })
+    const res = await fetch(url, { ...init, signal })
     if (res.ok || attempt >= 3 || !RETRIABLE.has(res.status)) return res
     const retryAfter = Number(res.headers.get("retry-after")) || 0
     const waitMs = retryAfter > 0 ? retryAfter * 1000 : 1000 * (attempt + 1) * (attempt + 1)
     if (waited + waitMs > RETRY_BUDGET_MS) return res
     waited += waitMs
-    await new Promise(r => setTimeout(r, waitMs))
+    await new Promise<void>((resolve, reject) => {
+      if (signal.aborted) { reject(signal.reason); return }
+      const abort = () => { clearTimeout(timer); reject(signal.reason) }
+      const timer = setTimeout(() => { signal.removeEventListener("abort", abort); resolve() }, waitMs)
+      signal.addEventListener("abort", abort, { once: true })
+    })
   }
 }
 

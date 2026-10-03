@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { safeAuthNext } from "@/lib/authRedirect"
+import { useState, Suspense } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 const IMGS = {
@@ -41,12 +42,11 @@ const PLAN_LABELS: Record<string, { label: string; color: string; bg: string }> 
 }
 
 function LoginContent() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const planParam = searchParams.get("plan") ?? ""
   const planInfo  = PLAN_LABELS[planParam] ?? null
   // After auth, go to settings#plan if a paid plan was chosen, else dashboard
-  const postAuthNext = planInfo ? "/dashboard/settings%23plan" : "/dashboard/resume"
+  const postAuthNext = encodeURIComponent(planInfo ? "/dashboard/settings#plan" : safeAuthNext(searchParams.get("next")))
 
   const [googleLoading, setGoogleLoading] = useState(false)
   const [email,         setEmail]         = useState("")
@@ -54,40 +54,6 @@ function LoginContent() {
   const [magicSent,     setMagicSent]     = useState(false)
   const [error,         setError]         = useState<string | null>(null)
   const [showEmail,     setShowEmail]     = useState(false)
-  const [isLocalhost,   setIsLocalhost]   = useState(false)
-  const [demoLoading,   setDemoLoading]   = useState(false)
-
-  // Local-dev-only demo login — a real Supabase session (anonymous auth), not a
-  // fake flag, so it satisfies middleware's supabase.auth.getUser() check and
-  // actually unlocks gated pages (Settings, Email, etc.) for testing. Never
-  // shown outside localhost.
-  useEffect(() => {
-    setIsLocalhost(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-  }, [])
-
-  async function handleDemoLogin() {
-    setDemoLoading(true)
-    setError(null)
-    try {
-      const supabase = createClient()
-      const { error } = await supabase.auth.signInAnonymously()
-      if (error) {
-        setError(
-          error.message.toLowerCase().includes("anonymous")
-            ? "Anonymous sign-ins aren't enabled on this Supabase project yet. Turn it on: Supabase dashboard → Authentication → Providers → Anonymous Sign-Ins."
-            : error.message
-        )
-        setDemoLoading(false)
-        return
-      }
-      router.push("/dashboard")
-      router.refresh()
-    } catch (err) {
-      setError(String(err))
-      setDemoLoading(false)
-    }
-  }
-
   async function handleGoogle() {
     setGoogleLoading(true)
     setError(null)
@@ -176,23 +142,6 @@ function LoginContent() {
         </div>
       )}
 
-      {isLocalhost && (
-        <button
-          onClick={handleDemoLogin}
-          disabled={demoLoading}
-          style={{
-            width:"100%", padding:"12px 16px", borderRadius:12, marginBottom:16,
-            background:"#f7f5f0", border:"1.5px dashed #7e7a68",
-            display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-            fontSize:13.5, fontWeight:700, color:"#58564c",
-            cursor: demoLoading ? "not-allowed" : "pointer",
-            opacity: demoLoading ? .65 : 1,
-          }}
-        >
-          🧪 {demoLoading ? "Signing in…" : "Continue as Demo (local testing only)"}
-        </button>
-      )}
-
       <Suspense fallback={null}><ErrorBanner /></Suspense>
       {error && (
         <div style={{ background:"var(--surface)", border:"1px solid #ddd8cd", borderRadius:10,
@@ -260,6 +209,8 @@ function LoginContent() {
           <input
             type="email"
             required
+            aria-label="Email address"
+            autoComplete="email"
             placeholder="your@email.com"
             value={email}
             onChange={e => setEmail(e.target.value)}
@@ -295,7 +246,7 @@ function LoginContent() {
         <span style={{ fontSize:16, flexShrink:0 }}>🔒</span>
         <p style={{ fontSize:12, color:"#6e6b5b", lineHeight:1.5, margin:0 }}>
           <strong style={{ color:"#161510" }}>Private by default.</strong>{" "}
-          Your resumes are processed only for tailoring — never sold or shared.
+          Sign in to access your own resumes. Tailoring sends selected resume content to the configured AI provider.
         </p>
       </div>
     </div>

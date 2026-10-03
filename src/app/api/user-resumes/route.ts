@@ -1,5 +1,7 @@
+import { authenticatedUserId, signInRequired } from "@/lib/authBoundary"
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
+import { MAX_RESUME_BYTES, safeResumeName } from "@/lib/uploadSafety"
 import { createClientFromRequest } from "@/lib/supabase/server"
 import { USER_RESUMES_DIR as BASE_DIR } from "@/lib/paths"
 import { listFiles, statPath, writePath, deletePath } from "@/lib/storage"
@@ -35,13 +37,7 @@ function formatSize(bytes: number) {
 // Bearer` instead — see createClientFromRequest, which falls back to the
 // normal cookie session unchanged when there's no such header (every existing
 // browser-tab caller is unaffected).
-async function getUserId(request: NextRequest): Promise<string> {
-  try {
-    const supabase = await createClientFromRequest(request)
-    const { data } = await supabase.auth.getUser()
-    return data.user?.id ?? "demo"
-  } catch { return "demo" }
-}
+
 
 async function hasDriveConnected(userId: string, request: NextRequest): Promise<boolean> {
   try {
@@ -53,7 +49,8 @@ async function hasDriveConnected(userId: string, request: NextRequest): Promise<
 
 // GET — list this user's resumes (including subdirectories) + their tier info
 export async function GET(request: NextRequest) {
-  const userId = await getUserId(request)
+  const userId = await authenticatedUserId(request)
+  if (!userId) return signInRequired()
 
   const userDir = path.join(BASE_DIR, userId)
   const files = await scanDocx(userDir, userDir, formatSize)
@@ -66,16 +63,20 @@ export async function GET(request: NextRequest) {
 
 // POST — upload a resume (unlimited; no tier cap)
 export async function POST(request: NextRequest) {
-  const userId = await getUserId(request)
+  const userId = await authenticatedUserId(request)
+  if (!userId) return signInRequired()
 
   const userDir = path.join(BASE_DIR, userId)
 
   const formData = await request.formData()
   const file = formData.get("file") as File | null
-  if (!file || !file.name.toLowerCase().endsWith(".docx"))
+  if (!(file instanceof File) || !file.name.toLowerCase().endsWith(".docx"))
     return NextResponse.json({ error: "Upload a .docx file." }, { status: 400 })
 
-  const safeName = file.name.replace(/[^A-Za-z0-9._\- ()]/g, "_")
+  if (file.size > MAX_RESUME_BYTES) return NextResponse.json({ error: "Resume too large (max 5 MB)." }, { status: 413 })
+  let safeName: string
+  try { safeName = safeResumeName(file.name) }
+  catch { return NextResponse.json({ error: "Invalid resume filename." }, { status: 400 }) }
   const dest = path.join(userDir, safeName)
   await writePath(dest, Buffer.from(await file.arrayBuffer()))
 
@@ -90,9 +91,12 @@ export async function POST(request: NextRequest) {
 
 // DELETE — remove a resume by filepath (full path) or filename (basename, flat lookup)
 export async function DELETE(request: NextRequest) {
-  const userId = await getUserId(request)
+  const userId = await authenticatedUserId(request)
+  if (!userId) return signInRequired()
 
-  const { filename, filepath } = await request.json().catch(() => ({}))
+  const body = await request.json().catch(() => null)
+  if (!body || (body.filepath !== undefined && typeof body.filepath !== "string") || (body.filename !== undefined && typeof body.filename !== "string")) return NextResponse.json({ error: "Invalid filename or filepath." }, { status: 400 })
+  const { filename, filepath } = body
   if (!filename && !filepath) return NextResponse.json({ error: "No filename or filepath." }, { status: 400 })
 
   const userDir = path.join(BASE_DIR, userId)
@@ -107,7 +111,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   // Security: must stay inside this user's folder
-  if (!fp.startsWith(path.resolve(userDir) + path.sep) && fp !== path.resolve(userDir))
+  if (!fp.startsWith(path.resolve(userDir) + path.sep))
     return NextResponse.json({ error: "Forbidden." }, { status: 403 })
 
   await deletePath(fp)

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Clock, User, Mic, ChevronLeft, ChevronRight } from "lucide-react"
-import { SAMPLE_LINE, Card, Btn } from "../_suite/ui"
+import { Card, Btn } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 import { interviews, acct, fmtHour, WEEK_DAYS, WEEK_DATES, TODAY_IDX, type Interview } from "../_suite/sample"
 
@@ -133,7 +133,7 @@ export default function CalendarPage() {
   const iv = interviews.find(x => x.id === sel)!
   return (
     <div>
-      <PageIntro page="/dashboard/calendar" action={{ label: "Get ready for an interview", href: "/dashboard/prep" }} sample={SAMPLE_LINE} />
+      <PageIntro page="/dashboard/calendar" action={{ label: "Get ready for an interview", href: "/dashboard/prep" }} sample="Preview with sample interviews. This calendar is not connected to your Google Calendar." />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <Btn variant="ghost" title="Previous week" style={{ padding: "0 8px" }}><ChevronLeft size={16} /></Btn>

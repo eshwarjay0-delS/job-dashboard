@@ -1,7 +1,6 @@
-import CopilotWidget from "@/components/CopilotWidget"
+import "./dashboard-shell.css"
 import SidebarNav from "./sidebar-nav"
 import PageTransition from "./page-transition"
-import CommentBox from "./CommentBox"
 
 // Layout is synchronous — SidebarNav fetches user data client-side.
 // This ensures the sidebar renders on FIRST PAINT, not after Supabase auth resolves.
@@ -13,17 +12,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <SidebarNav />
 
       {/* ── Page content — offset by the sidebar's enforced 240px width ── */}
-      <main style={{
+      <a className="mf-skip-link" href="#dashboard-content">Skip to content</a>
+      <main id="dashboard-content" className="mf-dashboard-main" style={{
         marginLeft: 240,
         minHeight: "100vh",
         padding: "40px 44px 80px",
       }}>
         <PageTransition>{children}</PageTransition>
-        <CommentBox />
       </main>
 
-      {/* ── Floating AI Copilot ── */}
-      <CopilotWidget />
+
     </div>
   )
 }

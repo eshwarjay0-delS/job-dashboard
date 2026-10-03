@@ -1,9 +1,8 @@
-﻿import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { readPath } from "@/lib/storage"
-import path from "path"
 import mammoth from "mammoth"
-import { RESUMES_LIB as RESUMES_DIR, USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
-import { createClientFromRequest } from "@/lib/supabase/server"
+import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
+import { authenticatedUserId, signInRequired, ownedResumePath } from "@/lib/authBoundary"
 
 // This route uses Node APIs (fs) + mammoth — force the Node.js runtime.
 export const runtime = "nodejs"
@@ -23,38 +22,10 @@ export async function GET(request: NextRequest) {
     return htmlError("No resume file was provided.")
   }
 
-  // Every path below requires a signed-in caller. This comment used to say the
-  // shared library "stays open to any caller" — that was the bug: RESUMES_DIR
-  // holds real resumes with full contact details.
-  let userId = ""
-  try {
-    const supabase = await createClientFromRequest(request)
-    const { data } = await supabase.auth.getUser()
-    if (data.user?.id) userId = data.user.id
-  } catch { /* unauthenticated */ }
-
-  const resolved  = path.resolve(filepath)
-  const sharedLib = path.resolve(RESUMES_DIR)
-  const userBase  = path.resolve(USER_RESUMES_BASE)
-
-  // Same hole as /api/resumes/download had: the shared library holds real
-  // resumes with full contact details, and rendering one to HTML/PDF for an
-  // anonymous caller leaks exactly the same PII as downloading it. Fail closed.
-  if (resolved.startsWith(sharedLib + path.sep) || resolved === sharedLib) {
-    if (!userId) {
-      return htmlError("Please sign in to view this resume.", "", 401)
-    }
-  } else if (resolved.startsWith(userBase + path.sep)) {
-    if (!userId) {
-      return htmlError("Please sign in to view this resume.", "", 401)
-    }
-    const userFolder = path.resolve(path.join(userBase, userId))
-    if (!resolved.startsWith(userFolder + path.sep) && resolved !== userFolder) {
-      return htmlError("That file is outside your resumes folder, so it can't be opened.", "", 403)
-    }
-  } else {
-    return htmlError("That file is outside the resumes folder, so it can't be opened.", "", 403)
-  }
+  const userId = await authenticatedUserId(request)
+  if (!userId) return signInRequired()
+  const resolved = ownedResumePath(USER_RESUMES_BASE, userId, filepath)
+  if (!resolved) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   let bodyHtml = ""
   try {
@@ -130,7 +101,7 @@ export async function GET(request: NextRequest) {
 </html>`
 
   return new NextResponse(page, {
-    headers: { "Content-Type": "text/html; charset=utf-8" },
+    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "sandbox allow-modals allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'" },
   })
 }
 
@@ -146,5 +117,5 @@ function htmlError(title: string, detail = "", status = 200): NextResponse {
 h1{font-size:18px;margin:0 0 10px}p{color:#727272;font-size:14px;line-height:1.6}
 code{background:#f3f4f6;padding:2px 8px;border-radius:6px;font-family:Consolas,monospace;color:#4a4c50}</style></head>
 <body><div class="card"><h1>${escapeHtml(title)}</h1><p>${detail || "Please try again."}</p></div></body></html>`
-  return new NextResponse(page, { status, headers: { "Content-Type": "text/html; charset=utf-8" } })
+  return new NextResponse(page, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "sandbox allow-modals allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'" } })
 }

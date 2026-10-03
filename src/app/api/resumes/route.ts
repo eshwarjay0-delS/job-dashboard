@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
-import { createClient } from "@/lib/supabase/server"
+import { safeResumeName, readLimitedStream, MAX_ARCHIVE_FILES } from "@/lib/uploadSafety"
+import { authenticatedUserId, signInRequired } from "@/lib/authBoundary"
 import { ensureIndex } from "@/lib/keywords"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
 import { listFiles, statPath, writePath, existsPath, deletePath, deleteDir } from "@/lib/storage"
@@ -54,22 +55,14 @@ async function scanDir(dir: string): Promise<ResumeFile[]> {
   return out
 }
 
-async function getUserDir(): Promise<{ dir: string; userId: string }> {
-  // No mkdir needed — the storage layer creates parents on write (and R2 has no dirs).
-  try {
-    const supabase = await createClient()
-    const { data } = await supabase.auth.getUser()
-    const userId = data.user?.id ?? "demo"
-    return { dir: path.join(USER_RESUMES_BASE, userId), userId }
-  } catch {
-    return { dir: path.join(USER_RESUMES_BASE, "demo"), userId: "demo" }
-  }
-}
+
 
 
 // GET — list the user's resumes
-export async function GET() {
-  const user = await getUserDir()
+export async function GET(request: NextRequest) {
+  const userId = await authenticatedUserId(request)
+  if (!userId) return signInRequired()
+  const user = { userId, dir: path.join(USER_RESUMES_BASE, userId) }
 
   try {
     const files = await scanDir(user.dir)
@@ -82,13 +75,17 @@ export async function GET() {
 
 // DELETE — remove files and/or folders from the user's personal dir
 export async function DELETE(request: NextRequest) {
-  const user = await getUserDir()
+  const userId = await authenticatedUserId(request)
+  if (!userId) return signInRequired()
+  const user = { userId, dir: path.join(USER_RESUMES_BASE, userId) }
 
   try {
-    const body = await request.json().catch(() => ({}))
+    const body = await request.json().catch(() => null)
+    if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Invalid request body." }, { status: 400 })
     const files: string[] = body.files ?? (body.filepath ? [body.filepath] : [])
     const folders: string[] = body.folders ?? []
 
+    if (![files, folders].every(items => Array.isArray(items) && items.length <= 200 && items.every(item => typeof item === "string"))) return NextResponse.json({ error: "Invalid file selection." }, { status: 400 })
     const userResolved = path.resolve(user.dir)
     const inside = (p: string) => p === userResolved || p.startsWith(userResolved + path.sep)
     let deleted = 0
@@ -117,12 +114,14 @@ export async function DELETE(request: NextRequest) {
 
 // POST — upload a new .docx (or .zip) to the user's personal dir
 export async function POST(request: NextRequest) {
-  const user = await getUserDir()
+  const userId = await authenticatedUserId(request)
+  if (!userId) return signInRequired()
+  const user = { userId, dir: path.join(USER_RESUMES_BASE, userId) }
 
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File | null
-    if (!file || !file.name) {
+    if (!(file instanceof File) || !file.name) {
       return NextResponse.json({ error: "No file provided." }, { status: 400 })
     }
 
@@ -140,18 +139,25 @@ export async function POST(request: NextRequest) {
       const zip = await JSZip.loadAsync(Buffer.from(await file.arrayBuffer()))
       let added = 0
       let skipped = 0
+      let expanded = 0
+      let candidates = 0
       for (const entry of Object.values(zip.files)) {
         if (entry.dir) continue
         const parts = entry.name.split("/").filter(p => p && p !== "." && !p.startsWith("__MACOSX"))
         const base = parts[parts.length - 1] || ""
         if (!base.toLowerCase().endsWith(".docx") || base.startsWith("~$") || base.startsWith(".")) continue
+        if (++candidates > MAX_ARCHIVE_FILES) return NextResponse.json({ error: "ZIP contains too many resumes (max 200).", added, skipped }, { status: 413 })
         const safe = parts.map(p => p.replace(/[^A-Za-z0-9._ \-()]/g, "_"))
         const rel = safe.length > 1 ? safe : [safe[0].replace(/\.docx$/i, ""), safe[0]]
         const dest = path.join(user.dir, ...rel)
         // Security: dest must stay inside the user's folder
         if (!path.resolve(dest).startsWith(path.resolve(user.dir) + path.sep)) continue
         if (await existsPath(dest)) { skipped++; continue }
-        await writePath(dest, Buffer.from(await entry.async("nodebuffer")))
+        let bytes: Buffer
+        try { bytes = await readLimitedStream(entry.nodeStream(), Math.min(MAX_DOCX_SIZE, MAX_ZIP_SIZE - expanded)) }
+        catch { return NextResponse.json({ error: "ZIP expanded size limit exceeded (5 MB per resume, 50 MB total).", added, skipped }, { status: 413 }) }
+        expanded += bytes.length
+        await writePath(dest, bytes)
         added++
       }
       await ensureIndex(user.dir).catch(() => {})
@@ -182,8 +188,12 @@ export async function POST(request: NextRequest) {
     }
 
     // New file — create a folder named after it and save inside
-    const folderName = file.name.replace(/\.docx$/i, "")
-    const savePath = path.join(user.dir, folderName, file.name)
+    let safeName: string
+    try { safeName = safeResumeName(file.name) }
+    catch { return NextResponse.json({ error: "Invalid filename." }, { status: 400 }) }
+    const folderName = safeName.replace(/\.docx$/i, "")
+    const savePath = path.resolve(user.dir, folderName, safeName)
+    if (!savePath.startsWith(path.resolve(user.dir) + path.sep)) return NextResponse.json({ error: "Invalid filename." }, { status: 400 })
     await writePath(savePath, buffer)
 
     const info = await statPath(savePath)

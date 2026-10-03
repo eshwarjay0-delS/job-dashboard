@@ -1,6 +1,7 @@
 // MarketFit Extension — Background Service Worker
 
 import { listenForWebAuth, getToken } from './auth.js'
+import { trustedResumeUrl } from './trusted-url.js'
 
 // Pick up the session the web app's web-bridge.js relays after login/logout —
 // stores it in chrome.storage.local so GET_PROFILE below can authenticate.
@@ -120,8 +121,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         // cookie is SameSite=Lax so it would not ride along even with
         // credentials:"include"), so without this header the resume library
         // now returns 401 — it is no longer served to anonymous callers.
+        const settings = await chrome.storage.sync.get(["appUrl"])
+        const url = trustedResumeUrl(msg.url, settings.appUrl || "https://job-dashboard-fawn.vercel.app")
         const resumeToken = await getToken()
-        const res = await fetch(msg.url, {
+        const res = await fetch(url, {
+          redirect: "error",
           headers: resumeToken ? { Authorization: `Bearer ${resumeToken}` } : {},
         })
         if (res.status === 401 || res.status === 403) {

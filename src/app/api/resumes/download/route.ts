@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import path from "path"
-import { RESUMES_LIB as RESUMES_DIR, USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
-import { createClientFromRequest } from "@/lib/supabase/server"
+import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
+import { authenticatedUserId, signInRequired, ownedResumePath } from "@/lib/authBoundary"
 import { readPath } from "@/lib/storage"
 
 // GET /api/resumes/download?filepath=<path>&name=<filename>
@@ -18,45 +17,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "No filepath provided" }, { status: 400 })
   }
 
-  const resolved = path.resolve(filepath)
-  const sharedLib = path.resolve(RESUMES_DIR)
-  const userBase  = path.resolve(USER_RESUMES_BASE)
-
-  // Resolve the requesting user's id so we can scope per-user folder access
-  let userId = ""
-  try {
-    const supabase = await createClientFromRequest(request)
-    const { data } = await supabase.auth.getUser()
-    if (data.user?.id) userId = data.user.id
-  } catch { /* unauthenticated */ }
-
-  // The shared library is NOT public. It holds real resumes carrying full
-  // contact details, and this route previously served them to any anonymous
-  // caller ("no per-user restriction needed"), which made every file under
-  // RESUMES_LIB downloadable from the live deployment by anyone who could guess
-  // or enumerate a filepath. Require a session here too.
-  //
-  // Note this fails CLOSED when Supabase is unconfigured: createClientFromRequest
-  // returns a stub whose getUser() resolves to null, so a demo deployment now
-  // 401s instead of serving personal documents to the internet. That is the
-  // correct trade — an unauthenticated PII endpoint is worse than a broken demo.
-  if (resolved.startsWith(sharedLib + path.sep) || resolved === sharedLib) {
-    if (!userId) {
-      return NextResponse.json({ error: "Authentication required." }, { status: 401 })
-    }
-  } else if (resolved.startsWith(userBase + path.sep)) {
-    // User-scoped folder: must be authenticated and the file must live inside THIS user's subfolder
-    if (!userId) {
-      return NextResponse.json({ error: "Authentication required." }, { status: 401 })
-    }
-    const userFolder = path.resolve(path.join(userBase, userId))
-    if (!resolved.startsWith(userFolder + path.sep) && resolved !== userFolder) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-    }
-  } else {
-    // Outside all allowed roots
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-  }
+  const userId = await authenticatedUserId(request)
+  if (!userId) return signInRequired()
+  const resolved = ownedResumePath(USER_RESUMES_BASE, userId, filepath)
+  if (!resolved) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const buffer = await readPath(resolved)
   if (!buffer) return NextResponse.json({ error: "File not found" }, { status: 404 })
@@ -66,6 +30,8 @@ export async function GET(request: NextRequest) {
       "Content-Type":        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "Content-Disposition": `attachment; filename="${safeFilename}"`,
       "Content-Length":      String(buffer.length),
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   })
 }
