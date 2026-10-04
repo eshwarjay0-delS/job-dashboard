@@ -18,7 +18,7 @@
 
 import { safeAuthNext } from "@/lib/authRedirect"
 import { Suspense, useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 function CallbackHandler() {
@@ -37,12 +37,16 @@ function CallbackHandler() {
                          "email" | "recovery" | "invite" | "magiclink"
       const next       = safeAuthNext(searchParams.get("next"))
 
+      async function finish(session: { user: { id: string; email?: string | null } }) {
+        const complete = await afterAuth(supabase, session.user.id, session.user.email ?? undefined)
+        if (!cancelled) window.location.replace(complete ? next : "/dashboard/setup")
+      }
+
       // ── 1. PKCE flow ────────────────────────────────────────────────────
       if (code) {
         const { data, error: err } = await supabase.auth.exchangeCodeForSession(code)
         if (!err && data.session) {
-          const complete = await afterAuth(supabase, data.session.user.id, data.session.user.email)
-          if (!cancelled) router.replace(complete ? next : "/dashboard/setup")
+          await finish(data.session)
           return
         }
         console.warn("[auth/callback] exchangeCodeForSession failed:", err?.message)
@@ -53,8 +57,7 @@ function CallbackHandler() {
       if (token_hash) {
         const { data, error: err } = await supabase.auth.verifyOtp({ token_hash, type })
         if (!err && data.session) {
-          const complete = await afterAuth(supabase, data.session.user.id, data.session.user.email)
-          if (!cancelled) router.replace(complete ? next : "/dashboard/setup")
+          await finish(data.session)
           return
         }
         console.warn("[auth/callback] verifyOtp failed:", err?.message)
@@ -67,32 +70,33 @@ function CallbackHandler() {
         // Supabase's browser client picks up the hash automatically
         const { data, error: err } = await supabase.auth.getSession()
         if (!err && data.session) {
-          const complete = await afterAuth(supabase, data.session.user.id, data.session.user.email)
-          if (!cancelled) router.replace(complete ? next : "/dashboard/setup")
+          await finish(data.session)
           return
         }
         // Give the auth listener a moment to process
         await new Promise(r => setTimeout(r, 800))
         const { data: d2, error: e2 } = await supabase.auth.getSession()
         if (!e2 && d2.session) {
-          const complete = await afterAuth(supabase, d2.session.user.id, d2.session.user.email)
-          if (!cancelled) router.replace(complete ? next : "/dashboard/setup")
+          await finish(d2.session)
           return
         }
         if (!cancelled) setError(e2?.message ?? "Could not read session from link")
         return
       }
 
-      // ── No usable params ─────────────────────────────────────────────────
-      // Most likely the Supabase redirect URL allowlist rejected the redirect
-      // and sent the user to the site root instead of /auth/callback.
+      // ── 4. Recover an already-created session ────────────────────────────
+      // Supabase can complete the PKCE token exchange successfully before this
+      // page is refreshed or revisited. In that case there is no longer a code
+      // in the URL, but the browser already has a valid session. Treat that as
+      // success instead of showing a false "sign-in link failed" message.
+      const { data: existing, error: sessionError } = await supabase.auth.getSession()
+      if (!sessionError && existing.session) {
+        await finish(existing.session)
+        return
+      }
+
       if (!cancelled) {
-        setError(
-          "No authentication parameters found. " +
-          "The link may have expired, or the callback URL may not be in your " +
-          "Supabase allowed redirect URLs. Add http://localhost:3000/auth/callback " +
-          "(and your production URL) in Supabase → Auth → URL Configuration."
-        )
+        setError("No active sign-in session was found. Return to the sign-in page and try Google again.")
       }
     }
 
@@ -121,7 +125,7 @@ function CallbackHandler() {
             {error}
           </p>
           <p style={{ fontSize: 12, color: "#9d9884", lineHeight: 1.5, marginBottom: 24 }}>
-            Magic links expire and can only be used once. Request a new one below.
+            If Google already completed successfully, opening the dashboard again will reuse the active session.
           </p>
           <a href="/login" style={{
             display: "inline-block", padding: "12px 28px", borderRadius: 10,
