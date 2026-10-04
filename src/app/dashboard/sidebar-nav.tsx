@@ -5,7 +5,8 @@ import type { User } from "@supabase/supabase-js"
 import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { NAV_SECTIONS, NAV_ITEMS, PRIMARY_NAV } from "./_components/nav"\nimport { useTheme } from "../theme-provider"
+import { NAV_SECTIONS, NAV_ITEMS, PRIMARY_NAV } from "./_components/nav"
+import { useTheme } from "../theme-provider"
 
 const ALL_HREFS = NAV_ITEMS.map(i => i.href)
 
@@ -106,7 +107,8 @@ export default function SidebarNav() {
       >
         {signedIn ? initials : "Sign in"}
       </Link>
-    </header>\n    <aside suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
+    </header>
+    <aside suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
       background: "var(--bg)",
       display: "flex",
       flexDirection: "column",
