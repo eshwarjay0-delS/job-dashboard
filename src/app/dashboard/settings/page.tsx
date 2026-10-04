@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
-import { useTheme, type Accent, type ColorMode } from "../../theme-provider"
+import { useTheme, type ColorMode, type Palette } from "../../theme-provider"
 import { connectGoogleDrive } from "@/lib/google-auth"
 import GmailSync from "@/components/GmailSync"
 import { mergeGmailApplications } from "@/lib/applications"
@@ -15,13 +15,31 @@ interface Keys {
   usajobsApiKey: string
 }
 
-const ACCENTS: { id: Accent; label: string; color: string }[] = [
-  { id: "blue",    label: "Blue",    color: "#1c1b16" },
-  { id: "teal",    label: "Teal",    color: "#5c5a4e" },
-  { id: "violet",  label: "Violet",  color: "#4d4b44" },
-  { id: "rose",    label: "Rose",    color: "#1a1914" },
-  { id: "amber",   label: "Amber",   color: "#6b6858" },
-  { id: "emerald", label: "Emerald", color: "#42413c" },
+const PALETTES: { id: Palette; label: string; description: string; swatches: [string,string,string,string] }[] = [
+  {
+    id: "paper-bold",
+    label: "Paper Bold",
+    description: "Warm editorial paper with brighter sheets, heavier ink and subtle light.",
+    swatches: ["#f7f3e9","#fffdf8","#113b30","#c13f2c"],
+  },
+  {
+    id: "heritage",
+    label: "Heritage",
+    description: "Bright white, deep navy and vivid red. Athletic, premium and sharp after dark.",
+    swatches: ["#f4f6fb","#0c1424","#4b7cff","#ff4d5f"],
+  },
+  {
+    id: "nocturne",
+    label: "Nocturne",
+    description: "Smoky plum and graphite with jewel highlights. Dark without becoming black.",
+    swatches: ["#f5f1f7","#17151d","#d2a7ee","#ff6697"],
+  },
+  {
+    id: "alpine",
+    label: "Alpine",
+    description: "Mineral paper, petrol slate and bright teal with a warm orange signal.",
+    swatches: ["#eff5f3","#101b1c","#62d4c8","#ff8158"],
+  },
 ]
 
 const MODES: { id: ColorMode; label: string; icon: string }[] = [
@@ -98,7 +116,7 @@ function DriveSuccessBanner() {
 }
 
 export default function SettingsPage() {
-  const { accent, mode, setAccent, setMode } = useTheme()
+  const { palette, mode, setPalette, setMode } = useTheme()
 
   const [keys, setKeys] = useState<Keys>({ claudeKey: "", rapidApiKey: "", usajobsApiKey: "" })
   const [saved, setSaved] = useState(false)
@@ -693,46 +711,53 @@ export default function SettingsPage() {
           </div>
           <div>
             <h2 className="font-semibold" style={{ color: "var(--text)" }}>Appearance</h2>
-            <p className="text-sm" style={{ color: "var(--text-soft)" }}>Theme colour and dark/light mode.</p>
+            <p className="text-sm" style={{ color: "var(--text-soft)" }}>Choose the visual family first, then its light or dark expression.</p>
           </div>
         </div>
 
-        {/* Accent picker */}
+        {/* Palette picker */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-soft)" }}>
-            Accent Color
+            Visual Theme
           </p>
-          <div className="flex flex-wrap gap-3">
-            {ACCENTS.map(a => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {PALETTES.map(p => (
               <button
-                key={a.id}
-                onClick={() => setAccent(a.id)}
-                title={a.label}
-                className="group flex flex-col items-center gap-1.5"
+                key={p.id}
+                type="button"
+                onClick={() => setPalette(p.id)}
+                aria-pressed={palette === p.id}
+                className="text-left rounded-2xl border p-4 transition-all"
+                style={{
+                  background: palette === p.id ? "var(--surface-2)" : "var(--surface)",
+                  borderColor: palette === p.id ? "var(--text)" : "var(--border)",
+                  boxShadow: palette === p.id ? "var(--shadow-card-hover)" : "var(--shadow-card)",
+                  transform: palette === p.id ? "translateY(-1px)" : "none",
+                }}
               >
-                <span
-                  className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
-                  style={{
-                    background: a.color,
-                    transform: accent === a.id ? "scale(1.2)" : "scale(1)",
-                    boxShadow: accent === a.id
-                      ? `0 0 0 3px white, 0 0 0 5px ${a.color}, 0 4px 14px ${a.color}60`
-                      : `0 2px 8px ${a.color}40`,
-                    transition: "all var(--t-spring)",
-                  }}
-                >
-                  {accent === a.id && (
-                    <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                    </svg>
+                <div className="flex gap-1.5 mb-3" aria-hidden="true">
+                  {p.swatches.map((color, i) => (
+                    <span
+                      key={color + i}
+                      style={{
+                        width: i < 2 ? 28 : 18,
+                        height: 22,
+                        borderRadius: 6,
+                        background: color,
+                        border: "1px solid rgba(0,0,0,.08)",
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, color: "var(--text)" }}>{p.label}</span>
+                  {palette === p.id && (
+                    <span className="ink-label" style={{ color: "var(--spot)" }}>Selected</span>
                   )}
-                </span>
-                <span
-                  className="text-xs font-medium transition-colors"
-                  style={{ color: accent === a.id ? a.color : "var(--text-soft)" }}
-                >
-                  {a.label}
-                </span>
+                </div>
+                <p style={{ margin: "7px 0 0", fontSize: 12.5, lineHeight: 1.55, color: "var(--text-muted)" }}>
+                  {p.description}
+                </p>
               </button>
             ))}
           </div>
@@ -775,7 +800,7 @@ export default function SettingsPage() {
               className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full"
               style={{ background: "var(--accent-soft)", color: "var(--accent-txt)" }}
             >
-              {accent.charAt(0).toUpperCase() + accent.slice(1)} · {mode}
+              {PALETTES.find(p => p.id === palette)?.label || "Paper Bold"} · {mode}
             </span>
           </div>
         </div>
