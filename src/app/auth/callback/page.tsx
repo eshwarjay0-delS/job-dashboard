@@ -22,7 +22,6 @@ import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 function CallbackHandler() {
-  const router      = useRouter()
   const searchParams = useSearchParams()
   const [error, setError] = useState<string | null>(null)
 
