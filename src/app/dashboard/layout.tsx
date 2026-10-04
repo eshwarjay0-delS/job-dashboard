@@ -1,6 +1,7 @@
 import "./dashboard-shell.css"
 import SidebarNav from "./sidebar-nav"
 import PageTransition from "./page-transition"
+import DeviceGuard from "./device-guard"
 
 // Layout is synchronous — SidebarNav fetches user data client-side.
 // This ensures the sidebar renders on FIRST PAINT, not after Supabase auth resolves.
@@ -18,7 +19,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         minHeight: "100vh",
         padding: "40px 44px 80px",
       }}>
-        <PageTransition>{children}</PageTransition>
+        <DeviceGuard><PageTransition>{children}</PageTransition></DeviceGuard>
       </main>
 
 
