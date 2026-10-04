@@ -38,24 +38,34 @@ export async function connectGoogleDrive() {
 // access_type=offline + prompt=consent ensures we get a refresh token.
 // After the OAuth flow completes, the Supabase session will have provider_token
 // (access token) and provider_refresh_token. These are passed to /api/gmail-sync.
-export const GMAIL_SCOPES =
-  "email profile https://www.googleapis.com/auth/gmail.readonly"
+export const GOOGLE_WORKSPACE_SCOPES = [
+  "openid",
+  "email",
+  "profile",
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.send",
+  "https://www.googleapis.com/auth/calendar.readonly",
+].join(" ")
 
-// `returnPath` lets the caller send the user back to where they clicked Connect
-// (e.g. the Pipeline gate) instead of always landing on /dashboard/email.
-export async function connectGmail(returnPath?: string) {
+// Optional second consent after MarketFit login. Login itself stays identity-only.
+export async function connectGoogleWorkspace(returnPath = "/dashboard/setup") {
   const supabase = createClient()
-  const cb = `${window.location.origin}/auth/callback/gmail` +
-    (returnPath ? `?return=${encodeURIComponent(returnPath)}` : "")
+  const cb = `${window.location.origin}/auth/callback/workspace?return=${encodeURIComponent(returnPath)}`
   return supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo: cb,
-      scopes: GMAIL_SCOPES,
-      queryParams: { access_type: "offline", prompt: "consent" },
+      scopes: GOOGLE_WORKSPACE_SCOPES,
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+        include_granted_scopes: "true",
+      },
     },
   })
 }
+
+export const connectGmail = connectGoogleWorkspace
 
 // Legacy export kept so any existing import doesn't break during the transition.
 export const signInWithGoogleDrive = signInWithGoogle
