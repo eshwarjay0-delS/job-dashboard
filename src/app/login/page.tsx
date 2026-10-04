@@ -5,6 +5,8 @@ import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import FeatureTour from "./feature-tour"
+import "./login.css"
 
 function GoogleIcon() {
   return (
@@ -24,6 +26,7 @@ function LoginContent() {
   const [error,setError]=useState<string|null>(null)
 
   async function signIn() {
+    if (loading) return
     setLoading(true)
     setError(null)
     try {
@@ -47,24 +50,74 @@ function LoginContent() {
   }
 
   return (
-    <main style={{minHeight:"100vh",display:"grid",placeItems:"center",padding:24,background:"var(--surface-2,#f7f5ef)"}}>
-      <section style={{width:"100%",maxWidth:430,background:"var(--surface,#fff)",border:"1px solid var(--border,#e6e2d9)",borderRadius:20,padding:32,boxShadow:"0 16px 48px rgba(20,18,12,.08)"}}>
-        <Link href="/" style={{textDecoration:"none",display:"inline-flex",alignItems:"center",gap:10,marginBottom:28}}>
-          <span style={{width:38,height:38,borderRadius:10,display:"grid",placeItems:"center",background:"var(--accent,#6b6858)",color:"#fff",fontWeight:900}}>MF</span>
-          <strong style={{color:"var(--text,#161510)"}}>MarketFit</strong>
+    <main className="mf-login-shell">
+      <section className="mf-login-preview" aria-label="MarketFit product preview">
+        <Link href="/" className="mf-login-brand">
+          <span className="mf-login-brand-mark">MF</span>
+          <span>MarketFit</span>
         </Link>
-        <h1 style={{fontSize:30,lineHeight:1.1,letterSpacing:"-.6px",margin:"0 0 10px",color:"var(--text,#161510)"}}>One account. Every MarketFit surface.</h1>
-        <p style={{fontSize:14,lineHeight:1.6,color:"var(--text-muted,#6e6b5b)",margin:"0 0 24px"}}>
-          Sign in with Google. Your subscription, verified mobile number, WhatsApp, Gmail/Calendar connection and extension all attach to this identity.
-        </p>
-        {error && <div style={{padding:"10px 12px",borderRadius:10,border:"1px solid #d9d3c7",fontSize:13,marginBottom:14}}>{error}</div>}
-        <button onClick={signIn} disabled={loading} style={{width:"100%",minHeight:50,borderRadius:12,border:"1.5px solid #d3cdc0",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",gap:12,fontSize:15,fontWeight:700,cursor:loading?"wait":"pointer",opacity:loading?.7:1}}>
-          <GoogleIcon /> {loading?"Redirecting to Google…":"Continue with Google"}
-        </button>
-        <div style={{marginTop:18,padding:"12px 14px",borderRadius:11,background:"var(--surface-2,#f7f5ef)",fontSize:12.5,lineHeight:1.55,color:"var(--text-muted,#6e6b5b)"}}>
-          After sign-in, you verify one unique mobile number. That number can be linked to one WhatsApp identity, and each subscription can use up to two active devices.
+
+        <div className="mf-login-preview-head">
+          <div className="ink-eyebrow">See the mechanics before you sign in</div>
+          <h1>Know what MarketFit is doing before you give it your workflow.</h1>
+          <p>
+            Preview the core loops first. Then sign in once, add the essentials, and use the same
+            account across Resume, Kompas, Gmail + Calendar, WhatsApp and the extension.
+          </p>
+        </div>
+
+        <div className="mf-login-grid">
+          <article className="mf-login-card">
+            <div className="mf-login-card-anim mf-login-card--resume"><i/><i/><i/></div>
+            <h3>Resume</h3>
+            <p>Job description in, evidence matched, tailored document and fit score out.</p>
+          </article>
+
+          <article className="mf-login-card">
+            <div className="mf-login-card-anim mf-login-card--kompas">
+              {Array.from({length:9}).map((_,i)=><i key={i}/>)}
+            </div>
+            <h3>Kompas</h3>
+            <p>Question recognition, evidence retrieval, answer generation and session history in one loop.</p>
+          </article>
+
+          <article className="mf-login-card">
+            <div className="mf-login-card-anim mf-login-card--channels"><i/><i/><i/></div>
+            <h3>Connected channels</h3>
+            <p>Gmail, Calendar, WhatsApp and the extension resolve back to one MarketFit identity.</p>
+          </article>
+
+          <article className="mf-login-card">
+            <div className="mf-login-card-anim mf-login-card--usage"><i/><i/></div>
+            <h3>Usage + access</h3>
+            <p>Usage follows the subscription and verified channels, with two active device slots.</p>
+          </article>
         </div>
       </section>
+
+      <aside className="mf-login-panel">
+        <section className="mf-login-card-main">
+          <div className="ink-eyebrow">Ready when you are</div>
+          <h2>One account. Every MarketFit surface.</h2>
+          <p>
+            Sign in with Google. After that, setup asks for the minimum profile details and one
+            verified mobile number. Gmail + Calendar remain an optional second connection.
+          </p>
+
+          {error && <div className="mf-login-error">{error}</div>}
+
+          <button onClick={signIn} disabled={loading} className="mf-google-button">
+            <GoogleIcon /> {loading ? "Redirecting to Google…" : "Continue with Google"}
+          </button>
+
+          <div className="mf-login-note">
+            Your subscription, verified mobile number, WhatsApp identity, optional Google Workspace
+            connection and extension all attach to the same MarketFit account.
+          </div>
+
+          <FeatureTour onContinue={signIn} />
+        </section>
+      </aside>
     </main>
   )
 }
