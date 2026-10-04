@@ -92,30 +92,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return apply(accent, mode, template, palette) ?? undefined
   }, [accent, mode, template, palette, ready, apply])
 
-  const saveWith = useCallback((next: Partial<{ accent: Accent; mode: ColorMode; template: Template; palette: Palette }>) => {
-    setAccentState(a => {
-      const na = next.accent ?? a
-      setModeState(m => {
-        const nm = next.mode ?? m
-        setTemplateState(t => {
-          const nt = next.template ?? t
-          setPaletteState(p => {
-            const np = next.palette ?? p
-            persist(na, nm, nt, np)
-            return np
-          })
-          return nt
-        })
-        return nm
-      })
-      return na
-    })
-  }, [])
+  const setAccent = useCallback((a: Accent) => {
+    setAccentState(a)
+    persist(a, mode, template, palette)
+  }, [mode, template, palette])
 
-  const setAccent = useCallback((a: Accent) => saveWith({ accent: a }), [saveWith])
-  const setMode = useCallback((m: ColorMode) => saveWith({ mode: m }), [saveWith])
-  const setTemplate = useCallback((t: Template) => saveWith({ template: t }), [saveWith])
-  const setPalette = useCallback((p: Palette) => saveWith({ palette: p }), [saveWith])
+  const setMode = useCallback((m: ColorMode) => {
+    setModeState(m)
+    persist(accent, m, template, palette)
+  }, [accent, template, palette])
+
+  const setTemplate = useCallback((t: Template) => {
+    setTemplateState(t)
+    persist(accent, mode, t, palette)
+  }, [accent, mode, palette])
+
+  const setPalette = useCallback((p: Palette) => {
+    setPaletteState(p)
+    persist(accent, mode, template, p)
+  }, [accent, mode, template])
 
   return (
     <Ctx.Provider value={{ accent, mode, template, palette, setAccent, setMode, setTemplate, setPalette }}>
