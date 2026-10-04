@@ -12,6 +12,10 @@ function digest(value: string) {
 }
 
 export async function POST(req: NextRequest) {
+  if (process.env.DEVICE_ENFORCEMENT_ENABLED !== "1") {
+    return NextResponse.json({ ok: true, enforced: false })
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 })
@@ -43,7 +47,7 @@ export async function POST(req: NextRequest) {
         { status: limited ? 409 : 500 },
       )
     }
-    return NextResponse.json({ ok: true, deviceSlotId: data })
+    return NextResponse.json({ ok: true, enforced: true, deviceSlotId: data })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }
