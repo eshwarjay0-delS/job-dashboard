@@ -81,6 +81,7 @@
   --radius-lg: 6px;
   --shadow-card: none;
   --shadow-card-hover: none;
+  --page-glow: none;
   --card-blur: none;
   --card-border-w: 1px;
   --lift-y: 0px;
@@ -215,6 +216,8 @@
 
 body {
   background: var(--bg);
+  background-image: var(--page-glow);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-body);
   font-size: 14.5px;
@@ -330,12 +333,14 @@ kbd {
    COMPONENTS — flat sheets, hairlines, square controls
 ═══════════════════════════════════════════════════════════════ */
 .card-lift {
-  box-shadow: none;
-  transition: border-color var(--t-fast), background var(--t-fast);
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--t-fast), background var(--t-fast), box-shadow var(--t-base), transform var(--t-base);
 }
 .card-lift:hover {
   border-color: var(--border-strong) !important;
   background: var(--surface);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(var(--lift-y));
 }
 .shimmer {
   background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
@@ -1025,3 +1030,223 @@ html body aside.dash-sidebar {
 [data-theme="dark"]{--icon-gold:#c9a45c}
 :where(svg.lucide){color:var(--icon-gold)}
 [data-slot="button"].bg-primary svg,.bg-primary svg,.text-destructive svg,.text-primary-foreground svg{color:inherit}
+
+/* ═══════════════════════════════════════════════════════════════
+   PALETTE GALLERY
+   Palette controls color personality; light/dark controls luminance.
+   Paper Bold remains the default. Each family is designed to keep the
+   same component hierarchy and accessibility rather than becoming a
+   separate visual product.
+═══════════════════════════════════════════════════════════════ */
+
+/* 01 — Paper Bold: the current editorial identity, but brighter and heavier. */
+[data-palette="paper-bold"] {
+  --bg:#f7f3e9;
+  --surface:#fffdf8;
+  --surface-2:#f0ebe0;
+  --surface-3:#e3dccd;
+  --border:#ded6c7;
+  --border-strong:#c9beaa;
+  --text:#171510;
+  --text-muted:#575247;
+  --text-soft:#847b69;
+  --accent:#113b30;
+  --accent-h:#174d3f;
+  --accent-soft:#e5eee7;
+  --accent-border:#b9cdbf;
+  --accent-txt:#15372e;
+  --spot:#c13f2c;
+  --bamboo-leaf:#2e8b62;
+  --bamboo-mid:#1c6d4a;
+  --shadow-card:0 1px 0 rgba(53,42,25,.05),0 12px 28px -24px rgba(53,42,25,.32);
+  --shadow-card-hover:0 1px 0 rgba(53,42,25,.08),0 20px 40px -26px rgba(53,42,25,.38);
+  --lift-y:-1px;
+  --page-glow:
+    radial-gradient(circle at 16% 0%,rgba(255,255,255,.86),transparent 28rem),
+    radial-gradient(circle at 92% 12%,rgba(199,166,115,.10),transparent 24rem);
+}
+[data-theme="dark"][data-palette="paper-bold"] {
+  --bg:#181914;
+  --surface:#20221c;
+  --surface-2:#292c24;
+  --surface-3:#34372d;
+  --border:#303329;
+  --border-strong:#3d4135;
+  --text:#f0eee6;
+  --text-muted:#d0ccbf;
+  --text-soft:#969182;
+  --accent:#d7eadb;
+  --accent-h:#eff8f0;
+  --accent-soft:#273329;
+  --accent-border:#455c49;
+  --accent-txt:#e4f0e5;
+  --spot:#ff6d5a;
+  --primary-foreground:#183026;
+  --sidebar-primary-foreground:#183026;
+  --shadow-card:0 1px 0 rgba(255,255,255,.025),0 18px 42px -30px rgba(0,0,0,.72);
+  --shadow-card-hover:0 1px 0 rgba(255,255,255,.04),0 24px 52px -30px rgba(0,0,0,.82);
+  --page-glow:
+    radial-gradient(circle at 20% -5%,rgba(87,127,98,.13),transparent 31rem),
+    radial-gradient(circle at 94% 8%,rgba(210,85,61,.08),transparent 24rem);
+}
+
+/* 02 — Heritage: crisp white/navy/red in light mode; luminous navy at night.
+   This is the bright + dark sportswear/editorial direction the owner described. */
+[data-palette="heritage"] {
+  --bg:#f4f6fb;
+  --surface:#ffffff;
+  --surface-2:#eaf0f8;
+  --surface-3:#dbe4f0;
+  --border:#d8e0ea;
+  --border-strong:#bcc8d8;
+  --text:#10192d;
+  --text-muted:#4b5870;
+  --text-soft:#78869d;
+  --accent:#0d2f66;
+  --accent-h:#123e85;
+  --accent-soft:#e4ebf7;
+  --accent-border:#b8c9e2;
+  --accent-txt:#102f61;
+  --spot:#e32636;
+  --bamboo-leaf:#2454c6;
+  --bamboo-mid:#183f9f;
+  --success:#16784d;
+  --shadow-card:0 1px 0 rgba(12,34,72,.04),0 16px 34px -25px rgba(12,34,72,.25);
+  --shadow-card-hover:0 1px 0 rgba(12,34,72,.06),0 24px 46px -26px rgba(12,34,72,.33);
+  --lift-y:-1px;
+  --page-glow:
+    radial-gradient(circle at 12% 0%,rgba(255,255,255,.98),transparent 27rem),
+    radial-gradient(circle at 92% 7%,rgba(41,96,196,.12),transparent 25rem);
+}
+[data-theme="dark"][data-palette="heritage"] {
+  --bg:#0c1424;
+  --surface:#121d31;
+  --surface-2:#182640;
+  --surface-3:#213252;
+  --border:#23324a;
+  --border-strong:#314664;
+  --text:#f7f8fb;
+  --text-muted:#c7d1e1;
+  --text-soft:#8899b5;
+  --accent:#4b7cff;
+  --accent-h:#7198ff;
+  --accent-soft:#172b52;
+  --accent-border:#31558f;
+  --accent-txt:#dce7ff;
+  --spot:#ff4d5f;
+  --bamboo-leaf:#4b7cff;
+  --bamboo-mid:#315ed2;
+  --primary-foreground:#ffffff;
+  --sidebar-primary-foreground:#ffffff;
+  --shadow-card:0 1px 0 rgba(255,255,255,.03),0 22px 48px -28px rgba(0,0,0,.78);
+  --shadow-card-hover:0 1px 0 rgba(255,255,255,.05),0 28px 58px -28px rgba(0,0,0,.88);
+  --page-glow:
+    radial-gradient(circle at 12% -6%,rgba(54,102,200,.24),transparent 30rem),
+    radial-gradient(circle at 96% 8%,rgba(227,38,54,.10),transparent 23rem);
+}
+
+/* 03 — Nocturne: smoky aubergine/graphite with jewel highlights, never pure black. */
+[data-palette="nocturne"] {
+  --bg:#f5f1f7;
+  --surface:#fdfbfe;
+  --surface-2:#ece5f0;
+  --surface-3:#ddd3e3;
+  --border:#ddd3e3;
+  --border-strong:#c6b7cf;
+  --text:#201824;
+  --text-muted:#5e5265;
+  --text-soft:#8a7b91;
+  --accent:#39234b;
+  --accent-h:#4d2f65;
+  --accent-soft:#ebe2ef;
+  --accent-border:#cdbbd6;
+  --accent-txt:#432653;
+  --spot:#c93c72;
+  --bamboo-leaf:#7254c7;
+  --bamboo-mid:#5840a0;
+  --shadow-card:0 1px 0 rgba(60,35,70,.04),0 16px 36px -25px rgba(60,35,70,.24);
+  --shadow-card-hover:0 1px 0 rgba(60,35,70,.06),0 24px 46px -25px rgba(60,35,70,.32);
+  --lift-y:-1px;
+  --page-glow:
+    radial-gradient(circle at 14% 0%,rgba(255,255,255,.96),transparent 27rem),
+    radial-gradient(circle at 92% 10%,rgba(133,84,164,.12),transparent 26rem);
+}
+[data-theme="dark"][data-palette="nocturne"] {
+  --bg:#17151d;
+  --surface:#211e29;
+  --surface-2:#2a2634;
+  --surface-3:#373143;
+  --border:#322d3b;
+  --border-strong:#463e51;
+  --text:#f4eef7;
+  --text-muted:#d4c8da;
+  --text-soft:#9d8fa5;
+  --accent:#d2a7ee;
+  --accent-h:#e6c4fa;
+  --accent-soft:#30233b;
+  --accent-border:#5b416d;
+  --accent-txt:#ecdaf7;
+  --spot:#ff6697;
+  --bamboo-leaf:#9d7cf1;
+  --bamboo-mid:#7e60d2;
+  --primary-foreground:#201524;
+  --sidebar-primary-foreground:#201524;
+  --shadow-card:0 1px 0 rgba(255,255,255,.025),0 22px 48px -28px rgba(0,0,0,.76);
+  --shadow-card-hover:0 1px 0 rgba(255,255,255,.045),0 30px 62px -30px rgba(0,0,0,.86);
+  --page-glow:
+    radial-gradient(circle at 12% -8%,rgba(133,84,164,.20),transparent 30rem),
+    radial-gradient(circle at 92% 6%,rgba(255,102,151,.08),transparent 23rem);
+}
+
+/* 04 — Alpine: cool mineral paper in light mode and deep petrol/slate at night. */
+[data-palette="alpine"] {
+  --bg:#eff5f3;
+  --surface:#f9fcfb;
+  --surface-2:#e3eeeb;
+  --surface-3:#d3e2de;
+  --border:#d2e0dc;
+  --border-strong:#b4cbc5;
+  --text:#102422;
+  --text-muted:#4d625f;
+  --text-soft:#778b86;
+  --accent:#075b59;
+  --accent-h:#08716e;
+  --accent-soft:#dceceb;
+  --accent-border:#abd0cb;
+  --accent-txt:#0b5553;
+  --spot:#e0643b;
+  --bamboo-leaf:#0b8a82;
+  --bamboo-mid:#08726c;
+  --shadow-card:0 1px 0 rgba(10,65,61,.04),0 16px 36px -25px rgba(10,65,61,.22);
+  --shadow-card-hover:0 1px 0 rgba(10,65,61,.06),0 24px 48px -26px rgba(10,65,61,.30);
+  --lift-y:-1px;
+  --page-glow:
+    radial-gradient(circle at 14% 0%,rgba(255,255,255,.92),transparent 28rem),
+    radial-gradient(circle at 94% 10%,rgba(16,135,128,.11),transparent 25rem);
+}
+[data-theme="dark"][data-palette="alpine"] {
+  --bg:#101b1c;
+  --surface:#172426;
+  --surface-2:#1e2e30;
+  --surface-3:#2b3c3e;
+  --border:#263638;
+  --border-strong:#365052;
+  --text:#edf7f5;
+  --text-muted:#c5d7d3;
+  --text-soft:#8ca39f;
+  --accent:#62d4c8;
+  --accent-h:#84e8de;
+  --accent-soft:#193839;
+  --accent-border:#2e6260;
+  --accent-txt:#d9f5f1;
+  --spot:#ff8158;
+  --bamboo-leaf:#62d4c8;
+  --bamboo-mid:#39aaa0;
+  --primary-foreground:#10312f;
+  --sidebar-primary-foreground:#10312f;
+  --shadow-card:0 1px 0 rgba(255,255,255,.025),0 22px 48px -28px rgba(0,0,0,.76);
+  --shadow-card-hover:0 1px 0 rgba(255,255,255,.045),0 30px 62px -30px rgba(0,0,0,.86);
+  --page-glow:
+    radial-gradient(circle at 12% -8%,rgba(37,135,128,.20),transparent 30rem),
+    radial-gradient(circle at 94% 8%,rgba(224,100,59,.08),transparent 23rem);
+}
