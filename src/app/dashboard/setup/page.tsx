@@ -11,7 +11,7 @@ const P = {
 const STEPS = [
   { id: "profile",     label: "Your Profile",     icon: "👤", desc: "Name, title, location, work authorization" },
   { id: "resume",      label: "Resume",            icon: "📄", desc: "Upload your base resume" },
-  { id: "gmail",       label: "Connect Gmail",     icon: "📧", desc: "Track email threads with recruiters" },
+  { id: "gmail",       label: "Gmail + Calendar",  icon: "📧", desc: "Optional email and calendar connection" },
   { id: "preferences", label: "Job Preferences",  icon: "🎯", desc: "Roles, salary, location, visa filters" },
   { id: "done",        label: "Ready to Go",       icon: "🚀", desc: "Your workspace is set up" },
 ]
@@ -113,6 +113,7 @@ export default function SetupPage() {
           full_name: profile.full_name || d.full_name,
           phone: profile.phone || d.phone,
           phoneVerified: !!profile.phone_verified,
+          gmailConnected: !!(profile.gmail_connected && profile.calendar_connected),
         }))
       })
       .catch(() => {})
@@ -390,8 +391,8 @@ export default function SetupPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
               <span style={{ fontSize: 26 }}>📧</span>
               <div>
-                <p style={{ fontSize: 17, fontWeight: 800, color: P.text }}>Connect Gmail</p>
-                <p style={{ fontSize: 13, color: P.muted }}>Automatically surface recruiter emails and track reply rates.</p>
+                <p style={{ fontSize: 17, fontWeight: 800, color: P.text }}>Connect Gmail & Calendar</p>
+                <p style={{ fontSize: 13, color: P.muted }}>Optional after login: track recruiter email, send partner email, and read interview calendar events.</p>
               </div>
             </div>
 
@@ -407,9 +408,9 @@ export default function SetupPage() {
               <>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
                   {[
-                    { icon: "🔍", label: "Auto-detect recruiter emails" },
-                    { icon: "📊", label: "Track reply rates" },
-                    { icon: "⚡", label: "Pipeline auto-updates" },
+                    { icon: "🔍", label: "Track recruiter emails" },
+                    { icon: "✉️", label: "Send partner email" },
+                    { icon: "📅", label: "Track interview calendar" },
                   ].map(f => (
                     <div key={f.label} style={{ padding: "14px", borderRadius: 12, background: P.bg, border: `1px solid ${P.border}`, textAlign: "center" as const }}>
                       <span style={{ fontSize: 24, display: "block", marginBottom: 6 }}>{f.icon}</span>
