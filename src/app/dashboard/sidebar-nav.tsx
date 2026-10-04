@@ -5,7 +5,7 @@ import type { User } from "@supabase/supabase-js"
 import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { NAV_SECTIONS, NAV_ITEMS, PRIMARY_NAV } from "./_components/nav"
+import { NAV_SECTIONS, NAV_ITEMS, PRIMARY_NAV } from "./_components/nav"\nimport { useTheme } from "../../theme-provider"
 
 const ALL_HREFS = NAV_ITEMS.map(i => i.href)
 
@@ -91,6 +91,15 @@ export default function SidebarNav() {
         <span /><span /><span />
       </button>
       <Link href="/dashboard" className="mf-mobile-brand">MarketFit</Link>
+      <button
+        type="button"
+        className="mf-theme-toggle"
+        onClick={() => setMode(dark ? "light" : "dark")}
+        aria-label={dark ? "Switch to Paper theme" : "Switch to Night theme"}
+        title={dark ? "Paper theme" : "Night theme"}
+      >
+        <span aria-hidden="true">{dark ? "☀" : "☾"}</span>
+      </button>
       <Link
         href={signedIn ? "/dashboard/connections" : "/login?next=/dashboard"}
         className="mf-mobile-account"
@@ -98,20 +107,14 @@ export default function SidebarNav() {
         {signedIn ? initials : "Sign in"}
       </Link>
     </header>\n    <aside suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      bottom: 0,
-      width: 240,
       background: "var(--bg)",
       display: "flex",
       flexDirection: "column",
-      zIndex: 400,
       borderRight: "0.8px solid var(--border-strong)",
     }}>
 
       {/* ── Wordmark ──────────────────────────────────────────────── */}
-      <div style={{ padding: "18px 18px 16px", flexShrink: 0, borderBottom: "0.8px solid var(--border-strong)" }}>
+      <div className="mf-sidebar-brand-row" style={{ padding: "18px 14px 16px 18px", flexShrink: 0, borderBottom: "0.8px solid var(--border-strong)" }}>
         <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <div style={{
             width: 30, height: 30, borderRadius: 6, background: "var(--accent)", color: "var(--bg)",
@@ -125,6 +128,15 @@ export default function SidebarNav() {
             <div className="ink-label" style={{ fontSize: 11, letterSpacing: ".1em", marginTop: 5 }}>Own your next role</div>
           </div>
         </Link>
+        <button
+          type="button"
+          className="mf-sidebar-theme-toggle"
+          onClick={() => setMode(dark ? "light" : "dark")}
+          aria-label={dark ? "Switch to Paper theme" : "Switch to Night theme"}
+          title={dark ? "Paper theme" : "Night theme"}
+        >
+          <span aria-hidden="true">{dark ? "☀" : "☾"}</span>
+        </button>
       </div>
 
       {/* ── Main Nav ──────────────────────────────────────────────── */}
