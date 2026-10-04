@@ -252,7 +252,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     session.resumeName = safe.replace(/\.docx$/i, "")
     await saveSession(from, session)
     if (!session.jd) return sendText(from, `Saved *${session.resumeName}*. Now paste the job description.`)
-    return generate(from, session)
+    return generate(from, session, userId)
   }
 
   return sendText(from, HELP)
