@@ -23,7 +23,9 @@ export default function SidebarNav() {
   const [email, setEmail] = useState("")
   const [signedIn, setSignedIn] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const { mode, setMode } = useTheme()\n  const dark = mode === "dark"\n
+  const { mode, setMode } = useTheme()
+  const dark = mode === "dark"
+
   useEffect(() => {
     setMenuOpen(false)
   }, [pathname])
