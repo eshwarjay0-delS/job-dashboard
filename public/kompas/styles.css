@@ -762,3 +762,60 @@ html.theme-dark{--gold:#c9a45c;--gold-deep:#e2c27f}
 .icon-btn,.si-ico,.side-item.on .si-ico,.mi-ico,.send,.nav,.step{color:var(--gold)}
 .icon-btn:hover,.send:hover,.nav:hover,.step:hover,.side-item:hover .si-ico{color:var(--gold-deep)}
 .si-ico,.side-item.on .si-ico{opacity:1}
+
+/* ============ Responsive session shell: every Kompas control remains reachable on phone/tablet ============ */
+@media (max-width:760px){
+  html,body{width:100%;max-width:100%;overflow-x:hidden}
+  .view{min-height:100svh;max-width:100vw;overflow-x:hidden}
+  .with-side{width:100%;max-width:100vw;padding-left:0;padding-bottom:84px}
+  .dash-body{width:100%;max-width:100%;padding:22px 14px 104px}
+  .dash-head{align-items:flex-start}
+  .dash-head h2{font-size:clamp(27px,8vw,34px)}
+  .session-list{grid-template-columns:minmax(0,1fr)}
+  .session-card,.wizard,.overlay,.cn-card,.modal-card{max-width:100%;min-width:0}
+  .view-wizard{padding:14px 10px 96px}
+  .wiz-top,.wiz-body,.wiz-foot{padding-left:14px;padding-right:14px}
+  .wiz-steps{gap:10px;overflow-x:auto;scrollbar-width:none}
+  .wiz-step{white-space:nowrap}
+  .view-copilot{width:100%;max-width:100vw;padding:10px 8px 96px;align-items:stretch}
+  .overlay{width:100%;max-width:none;min-width:0;overflow:visible}
+  .bar{min-width:0;padding:10px}
+  .bar-top{align-items:flex-start;flex-wrap:wrap}
+  .bar-left{flex:1 1 100%;width:100%;min-width:0}
+  .bar-right{width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;padding-bottom:2px}
+  .persona-chip{max-width:min(58vw,240px)}
+  .bar-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:8px}
+  .bar-actions>.pill,.bar-actions>.more-wrap{min-width:0}
+  .pill.big{width:100%;min-width:0;justify-content:center;padding-inline:12px}
+  .asking{grid-column:1/-1;width:100%;margin-left:0;justify-content:space-between;min-width:0}
+  .asking .live-select{min-width:0;max-width:64vw}
+  .bar-ask{display:grid;grid-template-columns:minmax(0,1fr) 40px;gap:8px;padding:10px}
+  .manual{width:100%;min-width:0}
+  .content{width:100%;min-width:0;padding:14px 34px 8px}
+  .nav-prev{left:3px}.nav-next{right:3px}
+  .q{min-width:0;overflow-wrap:anywhere}
+  .a,.a ul,.a li{min-width:0;max-width:100%}
+  .a li,.a li.passage{overflow-wrap:anywhere}
+  .a li.codeblock pre{max-width:100%;overflow-x:auto}
+  #answer{max-height:min(54svh,520px);padding-right:4px}
+  #answer.following{max-height:min(48svh,420px)}
+  .caption{min-width:0;padding-inline:10px}
+  .cap-text{min-width:0;overflow-wrap:anywhere}
+  .drawer{max-height:32svh}
+  .drawer-body{overscroll-behavior:contain}
+  .dossier{padding-inline:10px;min-width:0}
+  .dossier-text{max-width:42vw;overflow:hidden;text-overflow:ellipsis}
+  .more-menu{position:fixed;left:10px;right:10px;bottom:88px;top:auto;min-width:0;max-width:none;max-height:68svh;overflow:auto}
+  .cn-modal,.modal{padding:10px}
+  .cn-card{max-height:88svh;overflow:auto;padding:16px}
+  .modal-card{max-height:92svh}
+  .modal-body iframe{height:70svh}
+  .doc-item{align-items:flex-start;flex-wrap:wrap}
+  .doc-actions{width:100%;padding-left:52px}
+}
+@media (max-width:420px){
+  .bar-actions{grid-template-columns:1fr}
+  .asking{grid-column:1}
+  .content{padding-left:30px;padding-right:30px}
+  .side{left:8px;right:8px;bottom:8px}
+}
