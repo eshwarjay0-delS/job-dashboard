@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
-import { useTheme, type Accent, type ColorMode } from "../../theme-provider"
+import { useTheme, type ColorMode } from "../../theme-provider"
 import { connectGoogleDrive } from "@/lib/google-auth"
 import GmailSync from "@/components/GmailSync"
 import { mergeGmailApplications } from "@/lib/applications"
@@ -15,19 +15,9 @@ interface Keys {
   usajobsApiKey: string
 }
 
-const ACCENTS: { id: Accent; label: string; color: string }[] = [
-  { id: "blue",    label: "Blue",    color: "#1c1b16" },
-  { id: "teal",    label: "Teal",    color: "#5c5a4e" },
-  { id: "violet",  label: "Violet",  color: "#4d4b44" },
-  { id: "rose",    label: "Rose",    color: "#1a1914" },
-  { id: "amber",   label: "Amber",   color: "#6b6858" },
-  { id: "emerald", label: "Emerald", color: "#42413c" },
-]
-
-const MODES: { id: ColorMode; label: string; icon: string }[] = [
-  { id: "light",  label: "Light",  icon: "☀️" },
-  { id: "dark",   label: "Dark",   icon: "🌙" },
-  { id: "system", label: "System", icon: "💻" },
+const MODES: { id: ColorMode; label: string; icon: string; description: string }[] = [
+  { id: "light", label: "Paper", icon: "☀", description: "Warm paper, strong ink, brighter sheets." },
+  { id: "dark",  label: "Night", icon: "☾", description: "Shaded navy, bright blue, coral and teal accents." },
 ]
 
 // Count tailors used this week (Mon 00:00 → Sun 23:59)
@@ -98,7 +88,7 @@ function DriveSuccessBanner() {
 }
 
 export default function SettingsPage() {
-  const { accent, mode, setAccent, setMode } = useTheme()
+  const { mode, setMode } = useTheme()
 
   const [keys, setKeys] = useState<Keys>({ claudeKey: "", rapidApiKey: "", usajobsApiKey: "" })
   const [saved, setSaved] = useState(false)
@@ -693,48 +683,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <h2 className="font-semibold" style={{ color: "var(--text)" }}>Appearance</h2>
-            <p className="text-sm" style={{ color: "var(--text-soft)" }}>Theme colour and dark/light mode.</p>
-          </div>
-        </div>
-
-        {/* Accent picker */}
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-soft)" }}>
-            Accent Color
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {ACCENTS.map(a => (
-              <button
-                key={a.id}
-                onClick={() => setAccent(a.id)}
-                title={a.label}
-                className="group flex flex-col items-center gap-1.5"
-              >
-                <span
-                  className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
-                  style={{
-                    background: a.color,
-                    transform: accent === a.id ? "scale(1.2)" : "scale(1)",
-                    boxShadow: accent === a.id
-                      ? `0 0 0 3px white, 0 0 0 5px ${a.color}, 0 4px 14px ${a.color}60`
-                      : `0 2px 8px ${a.color}40`,
-                    transition: "all var(--t-spring)",
-                  }}
-                >
-                  {accent === a.id && (
-                    <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                    </svg>
-                  )}
-                </span>
-                <span
-                  className="text-xs font-medium transition-colors"
-                  style={{ color: accent === a.id ? a.color : "var(--text-soft)" }}
-                >
-                  {a.label}
-                </span>
-              </button>
-            ))}
+            <p className="text-sm" style={{ color: "var(--text-soft)" }}>Choose between the paper identity and the shaded night identity. You can also switch instantly from the sun/moon control in navigation.</p>
           </div>
         </div>
 
@@ -758,8 +707,11 @@ export default function SettingsPage() {
                   transition: "all var(--t-base)",
                 }}
               >
-                <span>{m.icon}</span>
-                {m.label}
+                <span style={{ fontSize: 18 }}>{m.icon}</span>
+                <span style={{ display: "grid", textAlign: "left", lineHeight: 1.2 }}>
+                  <strong>{m.label}</strong>
+                  <small style={{ fontWeight: 500, color: "var(--text-soft)" }}>{m.description}</small>
+                </span>
               </button>
             ))}
           </div>
@@ -775,7 +727,7 @@ export default function SettingsPage() {
               className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full"
               style={{ background: "var(--accent-soft)", color: "var(--accent-txt)" }}
             >
-              {accent.charAt(0).toUpperCase() + accent.slice(1)} · {mode}
+              {mode === "dark" ? "Night" : "Paper"}
             </span>
           </div>
         </div>
