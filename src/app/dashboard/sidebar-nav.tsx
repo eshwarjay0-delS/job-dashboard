@@ -21,6 +21,25 @@ export default function SidebarNav() {
   const [initials, setInitials] = useState("MF")
   const [email, setEmail] = useState("")
   const [signedIn, setSignedIn] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [pathname])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false)
+    }
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    window.addEventListener("keydown", onKey)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [menuOpen])
 
   useEffect(() => {
     const supabase = createClient()
@@ -65,7 +84,7 @@ export default function SidebarNav() {
 
   return (
     <>
-    <aside suppressHydrationWarning className="dash-sidebar" style={{
+    <aside suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} aria-hidden={!menuOpen ? undefined : false} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
       position: "fixed",
       top: 0,
       left: 0,
@@ -96,7 +115,7 @@ export default function SidebarNav() {
       </div>
 
       {/* ── Main Nav ──────────────────────────────────────────────── */}
-      <nav aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
+      <nav id="marketfit-navigation" aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
         {PRIMARY_NAV.map(item => {
           const active = isActive(item.href, pathname)
           const content = <><span className="sb-icon">{item.icon}</span><span>{item.label}</span></>
@@ -145,14 +164,29 @@ export default function SidebarNav() {
         </div>
       </div>
     </aside>
+    <div
+      className={`mf-mobile-scrim${menuOpen ? " is-open" : ""}`}
+      aria-hidden="true"
+      onClick={() => setMenuOpen(false)}
+    />
     <header className="mf-mobile-home">
-      <Link href="/dashboard">MarketFit · Home</Link>
-      <nav aria-label="Main tools">
-        <Link href="/dashboard/resume">Resume</Link>
-        <Link href="/dashboard/email">Job emails</Link>
-        <a href="/dashboard/kompas">Practice</a>
-        <Link href={signedIn ? "/dashboard/connections" : "/login?next=/dashboard"}>{signedIn ? "Accounts" : "Sign in"}</Link>
-      </nav>
+      <button
+        type="button"
+        className={`mf-menu-toggle${menuOpen ? " is-open" : ""}`}
+        aria-label={menuOpen ? "Close navigation" : "Open navigation"}
+        aria-expanded={menuOpen}
+        aria-controls="marketfit-navigation"
+        onClick={() => setMenuOpen(open => !open)}
+      >
+        <span /><span /><span />
+      </button>
+      <Link href="/dashboard" className="mf-mobile-brand">MarketFit</Link>
+      <Link
+        href={signedIn ? "/dashboard/connections" : "/login?next=/dashboard"}
+        className="mf-mobile-account"
+      >
+        {signedIn ? initials : "Sign in"}
+      </Link>
     </header>
     </>
   )
