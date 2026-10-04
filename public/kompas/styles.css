@@ -250,8 +250,8 @@ body{
 #answer{max-height:max(260px,min(56vh,560px));overflow-y:auto;overscroll-behavior:contain;padding-right:10px;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent}
 #answer::-webkit-scrollbar{width:6px}
 #answer::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px}
-.a li strong,.a strong .w{font-weight:800;color:var(--ink);background:rgba(31,111,235,.1);padding:0 2px;border-radius:3px}
-.a li em{font-style:italic;color:var(--ink);text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px}
+.a li strong,.a strong .w{font-weight:800;color:var(--ink);background:transparent;padding:0;border-radius:0}
+.a li em{font-style:italic;color:var(--ink);text-decoration:none}
 .a li.passage{list-style:none;margin-left:-22px;font-size:16.5px;line-height:1.65;color:var(--ink)}
 .a li.pauseline{list-style:none;margin-left:-22px;line-height:1}
 .a .pause{display:inline-block;font-size:10.5px;font-style:normal;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);border:1px solid var(--line);border-radius:6px;padding:0 5px;margin:0 3px;vertical-align:1px}

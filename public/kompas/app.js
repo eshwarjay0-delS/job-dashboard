@@ -386,13 +386,25 @@ function unbracket(s) {
   // Only fill-in PLACEHOLDERS are folded away ("[the EDR product you used]" -> "the EDR product",
   // "[blank]" / "[the reduction and timeline]" -> dropped). Real bracket content — "[Event ID 4625]",
   // "logs[idx]", "[::1]", "[a-z]" — is left exactly as written, and nothing else is touched.
-  const isPlaceholder = (x) => /\b(you|your)\b/i.test(x) || /^(the|a|an|some|specific|insert)\s/i.test(x)
-    || /^\s*(blank|tbd|tba|n\/?a|x|n|metric|number|percent(age)?|date|year|company|employer|tool|name|value|amount|timeframe|duration)\s*$/i.test(x)
+  const isPlaceholder = (x) => /\b(you|your)\b/i.test(x) || /^(the|a|an|some|specific|insert|fill|replace)\s/i.test(x)
+    || /^\s*(blank|tbd|tba|n\/?a|x|n|metric|number|percent(age)?|date|year|company|employer|tool|name|value|amount|timeframe|duration|result|impact)\s*$/i.test(x)
     || /^[a-z]+(?:\s+[a-z]+){1,8}$/.test(x.trim());
+  const naturalFallback = (inner) => {
+    const x = inner.toLowerCase();
+    if (/percent|metric|number|reduction|increase|improvement|result|impact/.test(x)) return "a measurable improvement";
+    if (/tool|platform|product|technology/.test(x)) return "the relevant tool";
+    if (/company|employer|organization|client/.test(x)) return "the organization";
+    if (/date|year|timeframe|duration|timeline/.test(x)) return "the project timeline";
+    if (/team|people|engineers|stakeholders/.test(x)) return "the team";
+    if (/name|person|manager|leader/.test(x)) return "the person involved";
+    return "";
+  };
   let hit = false;
   const out = String(s || "").replace(/\[([^\]\n]{1,90})\]/g, (m, inner) => {
     if (!isPlaceholder(inner)) return m;
     hit = true;
+    const fallback = naturalFallback(inner);
+    if (fallback) return fallback;
     if (!/\b(you|your)\b/i.test(inner)) return "";
     const t = inner.replace(/\s+(that |which |who )?(you|your)\b.*$/i, "").replace(/^(your|the)\s+/i, "the ").trim();
     return t.split(/\s+/).length >= 2 && !/^(how|what|when|why|where)\b/i.test(t) ? t : "";
