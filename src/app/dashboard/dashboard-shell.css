@@ -69,7 +69,7 @@
   top:0;
   z-index:350;
   display:grid!important;
-  grid-template-columns:44px minmax(0,1fr) 44px;
+  grid-template-columns:44px minmax(0,1fr) 40px 44px;
   align-items:center;
   gap:10px;
   min-height:60px;
@@ -84,7 +84,7 @@
 
 @media (max-width:1024px), (hover:none) and (pointer:coarse){
   .dash-sidebar.is-open{
-    max-height:72svh!important;
+    max-height:46svh!important;
     overflow:auto!important;
     overscroll-behavior:contain;
   }
@@ -108,4 +108,46 @@
   }
   .mf-dashboard-main{margin-left:240px!important;max-width:none}
   .mf-mobile-home,.mf-menu-toggle,.mf-mobile-scrim{display:none!important}
+}
+
+/* Theme controls are available from navigation on every dashboard page. */
+.mf-theme-toggle,
+.mf-sidebar-theme-toggle{
+  border:1px solid var(--border-strong);
+  background:var(--surface);
+  color:var(--text);
+  display:inline-grid;
+  place-items:center;
+  cursor:pointer;
+  box-shadow:var(--shadow-card,none);
+  transition:transform var(--t-fast),background var(--t-fast),border-color var(--t-fast);
+}
+.mf-theme-toggle{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  font-size:21px;
+  line-height:1;
+}
+.mf-sidebar-brand-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.mf-sidebar-brand-row>a{min-width:0;flex:1}
+.mf-sidebar-theme-toggle{
+  flex:0 0 auto;
+  width:34px;
+  height:34px;
+  border-radius:10px;
+  font-size:18px;
+}
+.mf-theme-toggle:hover,
+.mf-sidebar-theme-toggle:hover{
+  background:var(--surface-2);
+  border-color:var(--text-soft);
+  transform:translateY(-1px);
+}
+@media (max-width:1024px), (hover:none) and (pointer:coarse){
+  .mf-sidebar-theme-toggle{display:none!important}
 }
