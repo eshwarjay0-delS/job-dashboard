@@ -23,13 +23,14 @@ import { resolveKeys, hasAnyKey } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
 import { extractJdMeta } from "@/lib/claude"
 import { sendText, sendDocument, downloadMedia, verifySignature, senderAllowed, waConfigured } from "@/lib/whatsapp"
+import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
 
-const USER_ID = process.env.WHATSAPP_USER_ID || "demo"
-const OUTPUT_NAME = process.env.WHATSAPP_OUTPUT_NAME || "Eshwar Resume"
+const FALLBACK_USER_ID = process.env.WHATSAPP_USER_ID || "demo"
+const OUTPUT_NAME = process.env.WHATSAPP_OUTPUT_NAME || "MarketFit Resume"
 const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 // Every resume the bot sends is kept so a swipe-reply can edit that exact version. It lives
 // OUTSIDE the resume library on purpose: versions never appear on the dashboard (as files
@@ -64,6 +65,7 @@ async function saveSession(from: string, s: Session): Promise<void> {
 // One resume the bot sent, stored under the id of that WhatsApp message — the id a
 // swipe-reply carries back in `context.id`.
 type Gen = {
+  userId: string
   jd: string
   file: string          // this version's .docx, under VERSIONS_DIR/<sender>/
   meta: Meta
@@ -72,6 +74,36 @@ type Gen = {
   createdAt: number
 }
 const genDir = (from: string) => `whatsapp/gens/${digits(from)}`
+
+async function resolveWhatsAppUserId(from: string): Promise<string | null> {
+  if (process.env.WHATSAPP_IDENTITY_BINDING_REQUIRED !== "1") return FALLBACK_USER_ID
+  if (!serviceClientAvailable()) return null
+  const phone = `+${digits(from)}`
+  const service = createServiceClient()
+  const { data, error } = await service.rpc("identity_resolve_whatsapp_user", { p_phone_e164: phone })
+  if (error || !data) return null
+  return String(data)
+}
+
+async function recordWhatsAppUsage(userId: string, featureKey: string, result: TailorResult) {
+  if (!serviceClientAvailable()) return
+  try {
+    const service = createServiceClient()
+    await service.from("usage_events").insert({
+      user_id: userId,
+      source_channel: "whatsapp",
+      feature_key: featureKey,
+      units: 1,
+      estimated_cost_usd: result.usage?.estCostUSD ?? null,
+      metadata: {
+        calls: result.usage?.calls ?? null,
+        input_tokens: result.usage?.inputTokens ?? null,
+        output_tokens: result.usage?.outputTokens ?? null,
+        score: result.score,
+      },
+    })
+  } catch { /* metering is best-effort until the GEL hard gate is enabled */ }
+}
 // Message ids are base64-like ("wamid.HBgL…==") and may contain "/", so hash them into a
 // single safe key segment.
 const genKey = (from: string, wamid: string) =>
@@ -146,6 +178,12 @@ export async function POST(request: NextRequest) {
   const msgId = String(msg.id || "")
   if (!from || !senderAllowed(from)) return ok()
 
+  const userId = await resolveWhatsAppUserId(from)
+  if (!userId) {
+    try { await sendText(from, "This WhatsApp number is not linked to a MarketFit account. Sign in with Google and verify this same mobile number in MarketFit first.") } catch {}
+    return ok()
+  }
+
   const session = await loadSession(from)
   // De-dupe: Meta re-delivers a webhook it thinks failed, and a duplicate here would
   // mean a second (slow) generation and a second document sent.
@@ -154,14 +192,14 @@ export async function POST(request: NextRequest) {
   await saveSession(from, session)
 
   try {
-    await handle(from, msg, session)
+    await handle(from, msg, session, userId)
   } catch (e) {
     try { await sendText(from, `Something went wrong: ${String(e).slice(0, 300)}`) } catch { /* ignore */ }
   }
   return ok()
 }
 
-async function handle(from: string, msg: Record<string, unknown>, session: Session) {
+async function handle(from: string, msg: Record<string, unknown>, session: Session, userId: string) {
   const type = String(msg.type || "")
 
   // ── Commands / change requests / JD text ────────────────────────────────────
@@ -183,7 +221,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     // A swipe-reply is a change request for the resume being replied to. Checked before
     // the JD path: a reply is never a new JD (new JDs are always pasted as their own message).
     const replyTo = (msg.context as { id?: string } | undefined)?.id
-    if (replyTo) return refine(from, replyTo, text)
+    if (replyTo) return refine(from, replyTo, text, userId)
 
     // Too short to be a JD — most likely a stray message, so guide instead of guessing.
     if (text.length < 60) {
@@ -193,7 +231,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     session.jd = text
     await saveSession(from, session)
     if (!session.resumePath) return sendText(from, "Got the job description. Now send your resume as a *.docx* file.")
-    return generate(from, session)
+    return generate(from, session, userId)
   }
 
   // ── Resume upload ───────────────────────────────────────────────────────────
@@ -207,7 +245,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     // Keep bot uploads in their own folder so they don't clutter the web library, and
     // reuse the same filename so re-sending simply replaces the previous copy.
     const safe = filename.replace(/[^A-Za-z0-9._\- ()]/g, "_").replace(/\.docx$/i, "") + ".docx"
-    const dest = path.join(USER_RESUMES_DIR, USER_ID, "WhatsApp", safe)
+    const dest = path.join(USER_RESUMES_DIR, userId, "WhatsApp", safe)
     await writePath(dest, bytes)
 
     session.resumePath = dest
@@ -221,7 +259,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 }
 
 // ── Tailor + reply ────────────────────────────────────────────────────────────
-async function generate(from: string, session: Session) {
+async function generate(from: string, session: Session, userId: string) {
   const keys = resolveKeys({})
   if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
   if (!session.jd || !session.resumePath) return sendText(from, HELP)
@@ -234,7 +272,7 @@ async function generate(from: string, session: Session) {
   const result = await runTailor({
     jd: session.jd,
     keys,
-    userResumeDir: path.join(USER_RESUMES_DIR, USER_ID),
+    userResumeDir: path.join(USER_RESUMES_DIR, userId),
     givenPath: session.resumePath,
     mode: "full",
     // Match the dashboard defaults: summary left as written, skills + experience retargeted.
@@ -245,14 +283,15 @@ async function generate(from: string, session: Session) {
   if (!file) return sendText(from, "The resume generated but the file could not be read back. Please try again.")
 
   const meta = await metaPromise
-  await deliver(from, file, captionFor(meta, result), { jd: session.jd, meta, changes: [], source: session.resumeName })
+  await deliver(from, file, captionFor(meta, result), { userId, jd: session.jd, meta, changes: [], source: session.resumeName })
+  await recordWhatsAppUsage(userId, "resume_tailor", result)
 
   // Every generation starts fresh: keep only the de-dupe list.
   await saveSession(from, { seen: session.seen })
 }
 
 // ── Swipe-reply: change a resume the bot already sent ─────────────────────────
-async function refine(from: string, replyTo: string, request: string) {
+async function refine(from: string, replyTo: string, request: string, userId: string) {
   const gen = await loadGen(from, replyTo)
   if (!gen) {
     return sendText(from, [
@@ -261,6 +300,7 @@ async function refine(from: string, replyTo: string, request: string) {
       "(If that was a resume, it's no longer on file. Send the JD and resume again.)",
     ].join("\n"))
   }
+  if (gen.userId !== userId) return sendText(from, "That resume version belongs to a different MarketFit identity.")
   if (request.length < 3) {
     return sendText(from, "Tell me what to change, e.g. _add more Terraform and AWS_ or _make the bullets shorter_.")
   }
@@ -305,8 +345,9 @@ async function refine(from: string, replyTo: string, request: string) {
   const meta = await metaPromise
   const changes = [...(gen.changes || []), request]
   await deliver(from, file, captionFor(meta, result, { request, number: changes.length, lines }), {
-    jd: gen.jd, meta, changes, source: gen.source,
+    userId, jd: gen.jd, meta, changes, source: gen.source,
   })
+  await recordWhatsAppUsage(userId, "resume_refine", result)
 }
 
 // Send the document and keep a copy of this exact version, recorded under the sent
