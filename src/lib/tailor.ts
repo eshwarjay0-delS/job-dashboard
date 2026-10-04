@@ -1,10 +1,11 @@
+import { J1_VERSION, constrainResumeEdits } from "./ai/j1"
 import path from "path"
 import { createHash } from "crypto"
 import { blob, keyOf } from "@/lib/storage"
-import { extractText, extractZones, applyRewrites, capRoleBullets, roleSpanMonths, type Edits, type Zones } from "./docx"
+import { extractText, extractZones, applyRewrites, capRoleBullets, type Edits, type Zones } from "./docx"
 import { adapt, expandJdKeywords } from "./claude"
 import { recentFeedback } from "./feedback"
-import { matchByKeywords, extractKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
+import { matchByKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import type { LlmKeys, ProviderPref, TokenUsage } from "./llm"
 
 export interface TailorResult {
@@ -56,13 +57,7 @@ export interface TailorResult {
 }
 
 // ── helpers (moved out of the route so the background worker can reuse them) ───
-function matchPct(resumeText: string, jd: string): number {
-  const kws = extractKeywords(jd)
-  if (kws.length < 3) return 75
-  const rt = resumeText.toLowerCase()
-  const cov = kws.filter(k => rt.includes(k.toLowerCase())).length / kws.length
-  return Math.max(55, Math.min(99, Math.round(50 + cov * 52)))
-}
+
 
 function whatChanged(edits: Edits): string[] {
   const out: string[] = []
@@ -124,7 +119,7 @@ function normJD(jd: string): string {
 // or new feedback produces a fresh result.
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
-    .update([normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
+    .update([J1_VERSION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
     .digest("hex")
     .slice(0, 16)
 }
@@ -205,7 +200,7 @@ export async function runTailor(opts: {
   // running a paid per-token model who explicitly wants to trade thoroughness for spend.
   const DEFAULT_PREFS = (process.env.TAILOR_COST_MODE === "1" || process.env.TAILOR_COST_MODE === "true")
     ? [
-        "COST MODE — MINIMIZE edits (fewer rewrites = lower cost). Change ONLY: the summary; the headline title + tagline; AT MOST 8 skill lines (pick the ones that add the MOST missing JD keywords); and AT MOST 5 bullets, all in the CURRENT role. Leave EVERY other line exactly as it is. Use the JD's exact keyword wording so ATS still matches.",
+        "COST MODE — MINIMIZE edits (fewer rewrites = lower cost). Change ONLY: the summary; AT MOST 8 skill lines (only clarify skills already supported by the baseline); and AT MOST 5 bullets, all in the CURRENT role. Leave EVERY other line exactly as it is. Use the JD's exact keyword wording so ATS still matches.",
       ]
     : [
         "More specific, less generic — concrete tools, systems, and outcomes, never vague filler",
@@ -272,7 +267,6 @@ export async function runTailor(opts: {
   // 0.90 keeps it FAST: domain-matched resumes (~70% base) usually clear this on the
   // cheap Haiku pass in one shot (~8s), so we rarely pay for a slow Sonnet/Opus redraft.
   // Raise toward 0.97 for max coverage at the cost of more escalation time.
-  const TARGET = Number(E.TAILOR_COVERAGE_TARGET ?? 0.90)
   const LADDER: { pref: ProviderPref; model?: string; label: string }[] = []
   // PROVIDER ORDER. Default = Claude Haiku FIRST — the user's trusted quality baseline
   // (~98% match). The free providers (Gemini Flash-Lite, then Groq) sit right below as
@@ -330,10 +324,7 @@ export async function runTailor(opts: {
   })
 
   // ── Work-history measurement (full retarget) ──
-  // Tailoring used to land the JD in the skill lines and the current role only: on real resumes
-  // every older role got 0 rewritten bullets, so skills the candidate lists never showed up in
-  // their client experience. Drafts are now split per section, ranked on every role, and each
-  // role's measured gap is filled.
+  // Split large inputs for bounded outputs; unchanged roles are valid results.
   const splitDraft = !refine && opts.mode !== "quick" && sec.experience !== false && zones.roles.length > 0
   const roleGroups = splitDraft ? groupRoles(zones, Number(E.TAILOR_BULLETS_PER_CALL) || 45) : []
   const bulletBefore = new Map<number, string>()
@@ -369,24 +360,6 @@ export async function runTailor(opts: {
       return bullets.filter(b => rw.has(b.idx)).length < Math.max(1, Math.ceil(bullets.length * 0.3))
     })
   }
-  // YEARS MATH: a skill claimed for N years has to show up in the bullets of enough roles to cover
-  // N years, counting back from the most recent role. The claim comes from the skill's own line
-  // ("Splunk (5+ years)"), else the summary ("9+ years of experience"). With no stated years, a
-  // listed skill has to show in EVERY role.
-  const YEARS_RE = /(\d{1,2})\s*\+?\s*(?:years?|yrs?)\b/i
-  const summaryYears = Number(zones.summaryText.match(YEARS_RE)?.[1]) || null
-  const spans = zones.roles.map(r => roleSpanMonths(r.role) ?? 0)
-  const rolesForYears = (years: number | null): number[] => {
-    if (!years) return countedRoles
-    const out: number[] = []
-    let months = 0
-    for (const i of countedRoles) {
-      out.push(i)
-      months += spans[i]
-      if (months >= years * 12) break
-    }
-    return out
-  }
   // New bullets per role (each is anchored after its role's last bullet).
   const roleOfLastBullet = new Map(zones.roles.map((r, i) => [r.bullets[r.bullets.length - 1]?.idx, i] as [number, number]))
   const addedFor = (edits: Edits): string[][] => {
@@ -397,27 +370,13 @@ export async function runTailor(opts: {
     }
     return out
   }
-  // The resume as a draft left it. A gap-fill pass must build on the draft's text, or its
-  // rewrites would replace keywords the draft already put in.
-  const zonesAfter = (edits: Edits): Zones => {
-    const rw = rewrites(edits)
-    const sk = skillEdits(edits)
-    return {
-      ...zones,
-      skills: zones.skills.map(s => ({ ...s, text: sk.get(s.idx) ?? s.text })),
-      roles: zones.roles.map((r, i) => ({ ...r, bullets: r.bullets.map(b => ({ ...b, text: rw.get(b.idx) ?? b.text })), added: addedFor(edits)[i] })),
-    }
-  }
-
-  // claimedKw: JD skills the skill lines list. required[i]: the listed skills role i must show
-  // (years math). roleKw[i]: the required ones its bullets (rewritten and added) do show.
-  // provenKw: the listed skills any bullet shows. A skill listed but shown at no client reads as
-  // padding to a recruiter.
+  // Role metrics compare only skills already evidenced in each original role.
   type Pass = { edits: Edits; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string>; claimedKw: Set<string>; roleKw: Set<string>[]; required: string[][]; provenKw: Set<string>; via?: string }
   // Apply a finished edit set to the docx and measure JD keyword coverage. Auto-tailoring
   // is the only path allowed to physically drop bullets (the manual builder never gets a
   // dropIdx), so a user's own edits are never silently trimmed.
   const applyEdits = async (edits: Edits): Promise<Pass> => {
+    edits = constrainResumeEdits(edits, zones)
     edits = { ...edits, bullets: (edits.bullets || []).filter(b => keepsParts(b.idx, b.text || "")), added: opts.onePage ? [] : edits.added || [] }
     // FORMAT-PRESERVING by default: never delete paragraphs, so the tailored resume
     // keeps the EXACT layout, bullet count, and structure of the source — we only
@@ -429,16 +388,7 @@ export async function runTailor(opts: {
     const afterKw = coveredJdKeywords(tailoredText, jdKws)
     const cov = jdKws.length ? afterKw.size / jdKws.length : 1
     const listed = provableSkills([...coveredJdKeywords(skillsText(edits), jdKwsPrompt)])
-    // Years claimed per listed skill: its own skill line's "N+ years", else the summary's.
-    const sk = skillEdits(edits)
-    const skillYears = new Map<string, number>()
-    for (const s of zones.skills) {
-      const line = sk.get(s.idx) ?? s.text
-      const y = Number(line.match(YEARS_RE)?.[1])
-      if (y) for (const k of coveredJdKeywords(line, listed)) skillYears.set(k, Math.max(y, skillYears.get(k) || 0))
-    }
-    const required = zones.roles.map(() => [] as string[])
-    for (const k of listed) for (const i of rolesForYears(skillYears.get(k) || summaryYears)) required[i].push(k)
+    const required = zones.roles.map(r => [...coveredJdKeywords(r.bullets.map(b => b.text).join("\n"), listed)])
     const rw = rewrites(edits)
     const added = addedFor(edits)
     const roleText = zones.roles.map((r, i) => [...r.bullets.map(b => rw.get(b.idx) ?? b.text), ...added[i]].join("\n"))
@@ -475,228 +425,25 @@ export async function runTailor(opts: {
     return pass
   }
 
-  const summaryWanted = sec.summary !== false
-  // A full retarget is ranked on the whole resume AND on how well EACH client role shows the
-  // listed JD skills, with a penalty per untouched role: a draft whose keywords sit only in the
-  // skills section or the current role loses to one that carries them through every role.
-  const roleReflect = (p: Pass) => {
-    const roles = countedRoles.filter(i => p.required[i].length)
-    if (!roles.length) return 1
-    return roles.reduce((s, i) => s + p.roleKw[i].size / p.required[i].length, 0) / roles.length
-  }
-  const roleShare = (p: Pass) => (countedRoles.length ? 1 - lackingRoles(p.edits).length / countedRoles.length : 1)
-  // Share of the listed JD skills that at least one role's bullets show.
-  const provenShare = (p: Pass) => (p.claimedKw.size ? p.provenKw.size / p.claimedKw.size : 1)
-  const quality = (p: Pass) =>
-    (splitDraft ? 0.4 * p.cov + 0.3 * roleReflect(p) + 0.3 * provenShare(p) - 0.25 * (1 - roleShare(p)) : p.cov)
-    - (summaryWanted && !(p.edits.summary || "").trim() ? 0.08 : 0)
-  // Build the "front-load" instruction listing exactly which JD terms are still missing
-  // (computed deterministically from resume coverage — no LLM) so every pass targets the gap.
-  const injectFor = (covered: Set<string>, wantSummary: boolean): string[] => {
-    // Enriched list here as well: the model is told to weave in the generated synonyms
-    // and acronym expansions, even though they don't count against the coverage score.
-    const missing = jdKwsPrompt.filter(k => !covered.has(k)).slice(0, 40)
-    if (!missing.length && !wantSummary) return []
-    const parts: string[] = []
-    if (missing.length) parts.push(`ensure these JD terms appear, weaving EACH one the candidate can honestly support into the experience bullets of the roles where it fits (and its matching skill line) using the JD's exact wording (skip any the candidate genuinely can't back up): ${missing.join(", ")}`)
-    if (wantSummary) parts.push("ALWAYS return a rewritten professional summary")
-    return [`ATS COVERAGE (rewrite existing lines in place; never invent unsupported claims): ${parts.join("; ")}`]
-  }
-
-  // Climb the ladder with GRACEFUL FALLBACK. The first model that actually produces a
-  // draft becomes the base and gets BEST-OF-N (parallel draws, keep the highest — LLM
-  // sampling swings coverage, so we take the best). If a model errors entirely (e.g. a
-  // 429 quota wall), we fall through to the NEXT model instead of failing the whole
-  // tailor. Once we have a draft, remaining models are single escalation redrafts that
-  // target the still-missing terms; stop on target-hit or plateau. Quick mode = one draw.
-  // QUALITY-FIRST default: best-of-2 parallel draws, keep the highest-quality one. LLM
-  // sampling swings coverage run-to-run, so a second draw raises the floor (measured
-  // ~88%→~97%). The user explicitly prioritises resume quality over token cost, so this
-  // is the default; set TAILOR_BEST_OF=1 for the cheapest/fastest, or 3 for max consistency.
-  // A refinement is ONE draw with no climb: both pick by keyword coverage, so either could
-  // prefer a draft that IGNORED the request ("remove Kubernetes" lowers coverage). The
-  // user's request has to win. Provider fallback still applies if a model errors.
-  const BEST_OF = (opts.mode === "quick" || refine) ? 1 : Math.max(1, Math.min(5, Number(process.env.TAILOR_BEST_OF ?? 2)))
-  // Collect every call's token usage so we can report the real cost of this tailor.
+  // J1: coverage describes the draft; it never authorizes fabricated gap filling.
+  // A valid first draft wins. Only provider failure triggers fallback, avoiding
+  // best-of-N selection pressure toward unsupported claims and needless API cost.
   const usageSink: TokenUsage[] = []
-  // Wall-clock budget: the whole tailor must answer inside TAILOR_MAX_MS (< Vercel's 60s),
-  // counted from the start of runTailor. Checking only before STARTING a call wasn't enough:
-  // one call can outlive LLM_CALL_TIMEOUT_MS through rate-limit retries (Groq's 429s
-  // stretched tailors to 51-56s). So draws and climbs are also cut off AT the deadline, and
-  // the best draft so far is returned.
-  const TAILOR_MAX_MS = Number(E.TAILOR_MAX_MS) || 52000
+  const TAILOR_MAX_MS = Math.max(1000, Math.min(Number(E.TAILOR_MAX_MS) || 52000, 55000))
   const deadline = started + TAILOR_MAX_MS
-  // Don't START a climb redraft with less than this left (a Gemini redraft takes ~6-8s).
-  const MIN_CLIMB_MS = Number(E.TAILOR_MIN_CLIMB_MS) || 9000
-  function beforeDeadline<T>(p: Promise<T>): Promise<T | null> {
-    const ms = deadline - Date.now()
-    if (ms <= 0) return Promise.resolve(null)
-    let timer: ReturnType<typeof setTimeout> | undefined
-    return Promise.race([
-      p.finally(() => clearTimeout(timer)),
-      new Promise<null>(r => { timer = setTimeout(() => r(null), ms) }),
-    ])
-  }
-  // Await parallel draws with early-exit: resolve as soon as a draw already clears the
-  // coverage target (nothing better is needed), else once every draw settles, else a short
-  // grace period after the first success — so a single slow/hung draw can't stall the run.
-  async function collectDraws(
-    promises: Promise<Pass | null>[], target: number, wantSummary: boolean, graceMs: number,
-  ): Promise<Pass[]> {
-    const done: Pass[] = []
-    return new Promise<Pass[]>(resolve => {
-      let settled = 0, finished = false
-      let timer: ReturnType<typeof setTimeout> | null = null
-      const finish = () => {
-        if (finished) return
-        finished = true
-        if (timer) clearTimeout(timer)
-        clearTimeout(hardStop)
-        resolve(done)
-      }
-      // Hard stop at the deadline: whatever has finished by then is what we have.
-      const hardStop = setTimeout(finish, Math.max(0, deadline - Date.now()))
-      for (const pr of promises) {
-        pr.then(p => {
-          if (p) {
-            done.push(p)
-            // Good enough on its own → stop waiting for the rest.
-            const ok = p.cov >= target && (!wantSummary || (p.edits.summary || "").trim()) && !lackingRoles(p.edits).length
-            if (ok) return finish()
-            if (!timer) timer = setTimeout(finish, graceMs)
-          }
-        }).catch(() => {}).finally(() => {
-          if (++settled === promises.length) finish()
-        })
-      }
-      if (!promises.length) finish()
-    })
-  }
-
-  // GAP FILL (full retarget). The draft is measured, not trusted: every role must show each listed
-  // JD skill the years math requires of it (see rolesForYears), and no role may be left untouched.
-  // Roles short of that get targeted bullets-only passes, one per role group in parallel, built on
-  // the draft's own text and merged in by [idx]. When a role's existing bullets can't carry all of
-  // its skills (about 3 per bullet), the pass ADDS new bullets to it, as many as it takes. Repeats
-  // while it keeps helping and time allows (TAILOR_FILL_ROUNDS, default 3).
-  const FILL_ROUNDS = Math.max(0, Number(E.TAILOR_FILL_ROUNDS ?? 3))
-  const SKILLS_PER_BULLET = 3
-  const MAX_ADD_PER_ROUND = Number(E.TAILOR_MAX_ADD_PER_ROUND) || 25
-  async function fillGaps(start: Pass, step: { pref: ProviderPref; model?: string; label?: string }): Promise<Pass> {
-    let cur = start
-    for (let round = 0; round < FILL_ROUNDS; round++) {
-      if (deadline - Date.now() < MIN_CLIMB_MS) break
-      const lacking = new Set(lackingRoles(cur.edits))
-      const view = zonesAfter(cur.edits)
-      const rw = rewrites(cur.edits)
-      // Per role: the required skills its bullets don't show yet, and how many NEW bullets it needs
-      // for the ones its existing bullets can't carry.
-      const todo = new Map<number, { skills: string[]; add: number }>()
-      for (const i of countedRoles) {
-        const missing = cur.required[i].filter(k => !cur.roleKw[i].has(k))
-        if (!missing.length && !lacking.has(i)) continue
-        const roleLines = [...zones.roles[i].bullets.map(b => rw.get(b.idx) ?? b.text), ...(view.roles[i].added || [])]
-        const spare = roleLines.reduce((n, l) => n + Math.max(0, SKILLS_PER_BULLET - coveredJdKeywords(l, cur.required[i]).size), 0)
-        const add = opts.onePage ? 0 : Math.min(MAX_ADD_PER_ROUND, Math.ceil(Math.max(0, missing.length - spare) / SKILLS_PER_BULLET))
-        todo.set(i, { skills: missing, add })
-      }
-      if (!todo.size) break
-      // One call per role that still has a gap, all in parallel. Asked alongside other roles, a
-      // role tended to be skipped (a 4-bullet role asked for 15 new bullets came back with none).
-      const jobs = [...todo.entries()].map(([i, { skills, add }]) => {
-        const parts = [
-          lacking.has(i) ? "not tailored yet, so rewrite at least half of its bullets for this JD" : "",
-          skills.length ? `its bullets must show ${skills.join(", ")}` : "",
-          add ? `return EXACTLY ${add} new bullet${add === 1 ? "" : "s"} for it in "added" (role ${i}), covering the skills its existing bullets can't carry` : "",
-        ].filter(Boolean)
-        const task = `ROLE #${i} (${zones.roles[i].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
-        const ask = `GAP FILL: this resume is already tailored to the JD. The candidate has years of hands-on experience with every skill they list, so this role must show every listed skill named below. Keep every JD term its bullets already carry. Rewrite bullets that don't carry a JD skill yet so each shows two or three related skills and what the candidate did with them at this client (never a bare list), and write the NEW bullets the same way, specific to this client's work. Certifications stay out of the bullets. ${task}`
-        return adapt({ keys: opts.keys, pref: step.pref, jd, zones: view, preferences: [...allPrefs, ask].join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, model: step.model, usageSink, part: "experience", roles: [i], allowAdd: !opts.onePage }).catch(() => null)
-      })
-      const got = await beforeDeadline(Promise.all(jobs))
-      const fresh = (got || []).flatMap(e => e?.bullets || [])
-      const freshAdded = (got || []).flatMap(e => e?.added || [])
-      if (!fresh.length && !freshAdded.length) break
-      const replaced = new Set(fresh.map(b => b.idx))
-      const next = await applyEdits({ ...cur.edits, bullets: [...(cur.edits.bullets || []).filter(b => !replaced.has(b.idx)), ...fresh], added: [...(cur.edits.added || []), ...freshAdded] })
-      next.via = cur.via
-      if (quality(next) <= quality(cur) + 0.005) break
-      cur = next
-    }
-    return cur
-  }
-
   let best: Pass | null = null
   let usedModel = ""
   for (const step of steps) {
-    if (!best) {
-      // Base: best-of-N in parallel. Collected with EARLY-EXIT instead of Promise.all,
-      // which used to make every tailor wait for the SLOWEST draw (one 40s outlier stalled
-      // the whole run and read as "frozen"). Now: the moment a draw comes back that already
-      // clears TARGET, we use it immediately; otherwise we give the remaining draws a short
-      // grace window and take the best of whatever finished. Quality is unchanged when the
-      // draws are equally fast — we only stop waiting on a straggler that can't win.
-      const extra = refine ? [] : injectFor(beforeKw, false)
-      // CROSS-PROVIDER draws: spread the N parallel draws across the available providers
-      // (e.g. Claude Haiku + Gemini Flash) instead of N samples of the same model. Two
-      // different models disagree more usefully than two samples of one, so the "best of"
-      // pick is stronger — AND because they have very different latencies (~15s vs ~7s),
-      // the early-exit above returns as soon as the FAST one is already good enough. Same
-      // quality ceiling, roughly half the typical wait.
-      // Rotate so the pool STARTS at the current step. Otherwise, after the first
-      // provider(s) failed and the loop fell through, the draws went back to steps[0], so
-      // the later providers were never actually reached as fallbacks.
-      const si = steps.indexOf(step)
-      const pool = steps.length > 1 ? [...steps.slice(si), ...steps.slice(0, si)] : [step]
-      const draws = await collectDraws(
-        Array.from({ length: BEST_OF }, (_, i) => {
-          const s = pool[i % pool.length]
-          const d = draftPass(s, extra)
-          // A secondary provider failing fast (Groq's free-tier 429) used to shrink best-of-2
-          // to best-of-1 silently. Redraw on this step's provider instead, so quality holds.
-          return (s === step ? d : d.catch(() => draftPass(step, extra))).catch(() => null)
-        }),
-        TARGET, summaryWanted, Number(E.TAILOR_DRAW_GRACE_MS) || 6000,
-      )
-      if (!draws.length) {
-        if (Date.now() >= deadline) break // out of time: fail cleanly rather than 504
-        continue // this model failed entirely → try the next one
-      }
-      best = draws.reduce((a, b) => (quality(b) > quality(a) ? b : a))
-      usedModel = `${best.via ?? step.label ?? String(step.pref)}${BEST_OF > 1 && draws.length > 1 ? ` (best of ${draws.length})` : ""}`
-      if (opts.mode === "quick" || refine) break
-      // Full retarget: fill each role's measured gap with targeted bullets passes instead of
-      // climbing to a whole-resume redraft on the next model, which would throw that work away.
-      if (splitDraft) {
-        const base: Pass = best
-        best = await fillGaps(base, steps.find(s => s.label === base.via) ?? step)
-        break
-      }
-    } else {
-      // Coverage-climbing escalation is ON by default (quality first): if the base pass is
-      // still under TARGET, redraft on the next model in the ladder with the exact missing
-      // JD terms injected. This is what pushes a resume from ~86-94% to ~97-100% coverage.
-      // It is SAFE now because of the wall-clock guard directly below — we never START a
-      // climb call that can't finish before the serverless deadline, so it can no longer
-      // cause the 60s timeouts/"frozen" runs it used to. Set TAILOR_CLIMB=0 to disable.
-      if (process.env.TAILOR_CLIMB === "0" || process.env.TAILOR_CLIMB === "false") break
-      // Skip it if there isn't enough time left for a redraft before the deadline —
-      // returning the current best beats 504-ing on a call that can't finish in time.
-      if (deadline - Date.now() < MIN_CLIMB_MS) break
-      if (best.cov >= TARGET && (!summaryWanted || (best.edits.summary || "").trim())) break
-      const wantSummary = summaryWanted && !(best.edits.summary || "").trim()
-      const extra = injectFor(best.afterKw, wantSummary)
-      if (!extra.length) break
-      const prevQ = quality(best)
-      // If this ladder step's provider is down or rate-limited, climb on the primary instead of
-      // giving up on the coverage push. Either way it can't run past the deadline.
-      const primary = steps[0]
-      const p = await beforeDeadline(
-        draftPass(step, extra).catch(() => (step === primary ? null : draftPass(primary, extra))).catch(() => null),
-      )
-      if (p && quality(p) >= quality(best)) { best = p; usedModel = p.via ?? (step as { label?: string }).label ?? String(step.pref) }
-      if (quality(best) <= prevQ + 0.01) break // no meaningful gain → stop
-    }
+    const remaining = deadline - Date.now()
+    if (remaining <= 0) break
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      best = await Promise.race([
+        draftPass(step, []).catch(() => null),
+        new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), remaining) }),
+      ])
+      if (best) { usedModel = best.via ?? step.label ?? String(step.pref); break }
+    } finally { if (timer) clearTimeout(timer) }
   }
   if (!best) {
     throw new Error(Date.now() >= deadline
@@ -704,7 +451,8 @@ export async function runTailor(opts: {
       : "Tailoring failed — every model errored (check API keys / quota).")
   }
 
-  const { edits, buffer, notes, tailoredText, afterKw, claimedKw, roleKw, required, provenKw } = best
+  const { edits, buffer, notes, afterKw, claimedKw, roleKw, required, provenKw } = best
+  notes.push("J1: review the draft against your actual experience. Scores measure keyword overlap, not hiring probability. Identity/experience breakdowns are legacy heuristics, not calibrated model confidence.")
   notes.push(`Tailored with ${usedModel} · JD keyword coverage ${Math.round(best.cov * 100)}%`)
   const finalRewrites = rewrites(edits)
   const finalAdded = addedFor(edits)
@@ -717,29 +465,26 @@ export async function runTailor(opts: {
     required: required[i].length,
   }))
   if (splitDraft) {
-    notes.push(`Experience: ${countedRoles.length - lackingRoles(edits).length}/${countedRoles.length} roles tailored · listed JD skills shown per role: ${countedRoles.map(i => `${roleKw[i].size}/${required[i].length}`).join(" · ")} · ${finalAdded.flat().length} bullet(s) added · ${provenKw.size}/${claimedKw.size} listed skills shown in at least one role`)
+    notes.push(`Draft requires review; keyword overlap is not a qualification or ATS success score. Experience: ${countedRoles.length - lackingRoles(edits).length}/${countedRoles.length} roles tailored · listed JD skills shown per role: ${countedRoles.map(i => `${roleKw[i].size}/${required[i].length}`).join(" · ")} · ${finalAdded.flat().length} bullet(s) added · ${provenKw.size}/${claimedKw.size} listed skills shown in at least one role`)
   }
 
   const token = key // deterministic: same inputs → same file
   await blob.put(`tailored/${token}.docx`, buffer)
 
-  const rawBefore = matchPct(text, jd)
-  const rawAfter = Math.max(rawBefore + 4, matchPct(tailoredText, jd))
-  const afterBand  = (raw: number) => Math.round(90 + (Math.min(99, Math.max(55, raw)) - 55) / 44 * 8)
-  const beforeBand = (raw: number) => Math.round(72 + (Math.min(99, Math.max(55, raw)) - 55) / 44 * 14)
-  const after = afterBand(rawAfter)
-  const before = Math.min(after - 5, beforeBand(rawBefore))
+  // Actual lexical coverage; no guaranteed improvement or fabricated 90–98 band.
+  const before = jdKws.length ? Math.round(beforeKw.size / jdKws.length * 100) : 0
+  const after = jdKws.length ? Math.round(afterKw.size / jdKws.length * 100) : 0
 
   // ── Match decomposition + keyword gap (reuses the coverage sets above) ──
   const kwAdded   = jdKws.filter(k => !beforeKw.has(k) && afterKw.has(k))
   const kwMissing = jdKws.filter(k => !afterKw.has(k))
-  const pctOf = (n: number) => jdKws.length ? Math.round((n / jdKws.length) * 100) : 80
+  const pctOf = (n: number) => jdKws.length ? Math.round((n / jdKws.length) * 100) : 0
   const keyword_analysis = {
     matched: kwMatched.slice(0, 24),
     added: kwAdded.slice(0, 24),
     missing: kwMissing.slice(0, 24),
     coverage_before: pctOf(kwMatched.length),
-    coverage_after: pctOf(kwMatched.length + kwAdded.length),
+    coverage_after: pctOf(afterKw.size),
   }
   // Composite drivers (Jobright-style): skills = keyword coverage; identity = how
   // decisively the right resume was picked; experience = candidate years vs JD level.

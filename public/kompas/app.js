@@ -1,3 +1,4 @@
+// marketfit-voice-v1
 "use strict";
 /* Kompas — single-page app: Login → Dashboard → Create-Session wizard → Copilot.
    The copilot listens to mic + computer audio, transcribes (Groq Whisper) and
@@ -212,6 +213,8 @@ let ledger = null;              // Water-Algorithm rotation state for the runnin
 let cards = [];
 let idx = 0;
 let transcript = [];            // [{ who, text, at }]
+let transcriptionEpoch = 0;
+let transcriptionOrder = Promise.resolve();
 // The whole session in order — every line heard, every question typed, every answer (and each
 // regeneration) — for Get transcript. Clear doesn't touch it; a reload mid-interview picks it back up.
 let sessionLog = [];
@@ -233,6 +236,8 @@ function saveSession(s) {
 }
 
 function launchCopilot(s) {
+  transcriptionEpoch++;
+  transcriptionOrder = Promise.resolve();
   current = s;
   if (s.resumeId) {                        // a session saved before the 12,000-character cut was lifted: take the full resume
     const d = docsGet().find(x => x.id === s.resumeId);
@@ -370,7 +375,7 @@ function seedIdentity(s) {
   if (cards.length === 1) idx = 0;
   renderCard();
 }
-$("exitCopilot").onclick = async () => { if (running) stop(false); await saveRunTranscript(); dossierAbort = true; resetLiveState(); openDashboard(); };
+$("exitCopilot").onclick = async () => { if (running) await stop(false); await saveRunTranscript(); dossierAbort = true; resetLiveState(); openDashboard(); };
 window.addEventListener("pagehide", () => { if (current && !$("view-copilot").classList.contains("hidden")) saveRunTranscript(); });
 
 /* ---- Q&A cards ---- */
@@ -579,6 +584,7 @@ renderDepth();
 let running = false;
 $("startBtn").onclick = () => running ? stop() : start();
 async function start() {
+  const generation = sourceGeneration.You;
   primeAudio();                       // inside the click, so the browser lets audio run
   if (!srcOn.mic && !srcOn.sys) { srcOn.mic = srcOn.sys = true; syncSrc(); }
   running = true;
@@ -587,17 +593,21 @@ async function start() {
   status("Starting capture…", "live");
   captureErrors = [];
   if (srcOn.mic) await startMic();
+  if (!running || generation !== sourceGeneration.You) return;
   if (srcOn.sys) await startSys();
   if (!captures.length) { status(captureErrors.join(" · ") || "Nothing to capture.", "err"); stop(false); return; }
   reportSources();
 }
-function stop(say = true) {
+async function stop(say = true) {
   running = false;
   $("startBtn").textContent = "Start"; $("startBtn").classList.remove("on");
   document.querySelector(".rec").classList.remove("live"); stopClock();
-  for (const c of captures.slice()) stopSource(c.who);
-  if (say) status("Stopped — transcript saved to this session.");
-  saveRunTranscript();
+  const finishing = [stopSource("You"), stopSource("Them")];
+  $("startBtn").disabled = true;
+  await Promise.allSettled([...finishing, ...finals]);
+  $("startBtn").disabled = false;
+  if (say) status("Stopped — finished processing captured speech.");
+  await saveRunTranscript();
 }
 function reportSources() {
   if (!running) return;
@@ -606,6 +616,7 @@ function reportSources() {
 }
 
 /* ---- capture: voice-activity detection per source ---- */
+let sourceGeneration = { You: 0, Them: 0 };
 let captures = [];           // { who, stream, owner, rec, chunks, ... }
 let captureErrors = [];
 let audioCtx = null;
@@ -637,13 +648,15 @@ function micError(e) {
   return (e && e.message) || String(e);
 }
 async function startMic() {
+  const generation = sourceGeneration.You;
   if (captures.some(c => c.who === "You")) return;
   try {
-    const mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: true, channelCount: 1 } });
-    await attachSource(mic, "You", null);
-  } catch (e) { captureErrors.push("Mic: " + micError(e)); srcOn.mic = false; syncSrc(); }
+    const mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+    await attachSource(mic, "You", null, generation);
+  } catch (e) { if (generation !== sourceGeneration.You || !running) return; captureErrors.push("Mic: " + micError(e)); srcOn.mic = false; syncSrc(); }
 }
 async function startSys() {
+  const generation = sourceGeneration.Them;
   if (captures.some(c => c.who === "Them")) return;
   try {
     // systemAudio and selfBrowserSurface belong to the browser share dialog. Electron answers "Not supported"
@@ -658,12 +671,17 @@ async function startSys() {
       captureErrors.push("Call audio: none shared — choose the meeting TAB and tick “Share tab audio” (or Entire screen + “Share system audio”)");
       srcOn.sys = false; syncSrc(); return;
     }
-    displayVideo = disp.getVideoTracks()[0] || null;
-    await attachSource(new MediaStream(audio), "Them", disp);
-  } catch (e) { captureErrors.push("Call audio: " + (e && e.name === "NotAllowedError" ? "share cancelled" : (e && e.message || e))); srcOn.sys = false; syncSrc(); }
+    await attachSource(new MediaStream(audio), "Them", disp, generation);
+  } catch (e) { if (generation !== sourceGeneration.Them || !running) return; captureErrors.push("Call audio: " + (e && e.name === "NotAllowedError" ? "share cancelled" : (e && e.message || e))); srcOn.sys = false; syncSrc(); }
 }
-async function attachSource(stream, who, owner) {
-  const ctx = await getCtx();
+async function attachSource(stream, who, owner, generation = sourceGeneration[who]) {
+  const stale = () => !running || generation !== sourceGeneration[who] || !srcOn[who === "You" ? "mic" : "sys"] || captures.some(c => c.who === who);
+  const releaseTracks = () => { stream.getTracks().forEach(t => t.stop()); owner?.getTracks().forEach(t => t.stop()); };
+  if (stale()) { releaseTracks(); return; }
+  let ctx;
+  try { ctx = await getCtx(); } catch (error) { releaseTracks(); throw error; }
+  if (stale()) { releaseTracks(); return; }
+  if (who === "Them") displayVideo = owner?.getVideoTracks()[0] || null;
   const src = ctx.createMediaStreamSource(stream);
   const cap = { who, stream, owner, src, stopped: false, rec: null, chunks: [], segStart: 0, speechMs: 0, lastVoice: 0, lastTick: 0, voiced: false, noise: 0.004, interimAt: 0, inflight: 0 };
   if (ctx._lvl === "worklet") {
@@ -678,22 +696,26 @@ async function attachSource(stream, who, owner) {
     cap.timer = setInterval(() => { an.getFloatTimeDomainData(buf); let s = 0; for (let k = 0; k < buf.length; k++) s += buf[k] * buf[k]; vadStep(cap, Math.sqrt(s / buf.length)); }, 30);
     cap.node = an;
   }
-  const track = stream.getAudioTracks()[0];
-  if (track) track.addEventListener("ended", () => { stopSource(who); if (who === "Them") { srcOn.sys = false; syncSrc(); } reportSources(); });
+  const tracks = owner ? owner.getTracks() : stream.getAudioTracks();
+  for (const track of tracks) track.addEventListener("ended", () => { stopSource(who); if (who === "Them") { srcOn.sys = false; syncSrc(); } reportSources(); });
   startSegment(cap);
   captures.push(cap);
 }
 function stopSource(who) {
+  sourceGeneration[who]++;
+  const finishing = [];
   for (const cap of captures.filter(c => c.who === who)) {
     cap.stopped = true; stopCaptions(cap);
-    try { if (cap.rec && cap.rec.state !== "inactive") { cap.rec.onstop = null; cap.rec.stop(); } } catch {}
+    finishing.push(endSegment(cap, cap.voiced, false));
     try { cap.src.disconnect(); cap.node && cap.node.disconnect(); cap.sink && cap.sink.disconnect(); } catch {}
     if (cap.timer) clearInterval(cap.timer);
     try { cap.stream.getTracks().forEach(t => t.stop()); } catch {}
-    try { cap.owner && cap.owner.getAudioTracks().forEach(t => t.stop()); } catch {}
+    try { cap.owner && cap.owner.getTracks().forEach(t => t.stop()); } catch {}
     meter(who, 0, false);
   }
   captures = captures.filter(c => c.who !== who);
+  if (who === "Them") displayVideo = null;
+  return Promise.allSettled(finishing);
 }
 function questionSource() { return captures.some(c => c.who === "Them") ? "Them" : "You"; }
 
@@ -706,9 +728,12 @@ function startSegment(cap) {
   cap.rec = rec;
 }
 const finals = new Set();              // final transcriptions still in flight (AI Answer waits for them)
-function endSegment(cap, keep) {
+function endSegment(cap, keep, restart = true) {
   const rec = cap.rec, chunks = cap.chunks, speech = cap.speechMs;
-  startSegment(cap);                  // the next phrase starts recording immediately — no gap
+  const epoch = transcriptionEpoch;
+  const prompt = whisperPrompt();
+  if (restart && !cap.stopped) startSegment(cap);
+  else cap.rec = null;
   if (!rec) return Promise.resolve();
   let settle;
   const done = new Promise(r => { settle = r; });
@@ -716,10 +741,11 @@ function endSegment(cap, keep) {
   rec.onstop = () => {
     if (!keep || speech < VAD.MIN_SPEECH_MS) return settle();
     const blob = new Blob(chunks, { type: rec.mimeType || MIME || "audio/webm" });
-    if (blob.size > 2000) transcribe(blob, cap.who, { final: true }).then(settle, settle); else settle();
+    if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt }).then(settle, settle); else settle();
   };
   try { rec.stop(); } catch { settle(); }
-  setTimeout(settle, 6000);           // never let a stuck recorder hold AI Answer
+  const watchdog = setTimeout(settle, 22000);
+  done.then(() => clearTimeout(watchdog));
   return done;
 }
 // AI Answer pressed mid-sentence: cut every open phrase now and wait (briefly) for its words.
@@ -753,15 +779,14 @@ function meter(who, rms, speaking) {
 
 /* ---- transcription ---- */
 let interimOffUntil = 0;
-let promptCache = { id: null, text: "" };
 function whisperPrompt() {
   const s = current || {};
-  if (promptCache.id === s.id) return promptCache.text;
+  const learned = (s.voiceVocabulary || []).filter(t => typeof t === "string").slice(-40);
   const terms = [...new Set((`${s.role || ""} ${s.jd || ""} ${(s.resume || "").slice(0, 3000)}`.match(/\b[A-Z][A-Za-z0-9+#./-]{1,}\b/g) || []))].slice(0, 45);
-  promptCache = { id: s.id, text: `Job interview for ${s.role || "a technical role"}. ${terms.join(", ")}.`.slice(0, 550) };
-  return promptCache.text;
+  return `Vocabulary: ${[...learned, ...terms].join(", ")}.`.slice(0, 550);
 }
-const HALLU = /^(you|thank you|thanks|thank you very much|thank you so much|thanks for watching|thank you for watching|bye|bye bye|okay|ok|so|um|uh|hmm|mm|mhm|yeah|yes|no|right)[.!?,]*$/i;
+// Speech activity gates silence before upload; short replies are meaningful speech.
+const HALLU = /^(thanks for watching|thank you for watching)[.!?,]*$/i;
 function cleanTranscript(t) {
   t = String(t || "").replace(/\s+/g, " ").trim();
   if (!t || HALLU.test(t) || /^[.,!?\s-]+$/.test(t)) return "";
@@ -793,19 +818,37 @@ function interim(cap) {
   if (blob.size > 4000) transcribe(blob, cap.who, { final: false, cap });
 }
 async function transcribe(blob, who, opt) {
+  const epoch = opt.epoch ?? transcriptionEpoch;
   const cap = opt.cap; if (cap) cap.inflight++;
+  // Start requests concurrently, but commit results in capture order.
+  const previous = transcriptionOrder;
+  let release;
+  if (opt.final) transcriptionOrder = new Promise(resolve => { release = resolve; });
+  const ctl = new AbortController();
+  const timeout = setTimeout(() => ctl.abort(), 18000);
+  let clean = "", failure = "";
   try {
-    const t0 = performance.now();
-    const res = await fetch("/api/transcribe", { method: "POST",
-      headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-whisper-prompt": encodeURIComponent(whisperPrompt()) }, body: blob });
-    if (res.status === 429) { interimOffUntil = performance.now() + 60000; if (opt.final) status("Transcription is rate-limited for a moment — keeping final phrases only.", "err"); return; }
-    if (!res.ok) { if (opt.final) status(`Transcription error ${res.status}.`, "err"); return; }
-    const { text } = await res.json();
-    const clean = cleanTranscript(text);
+    const res = await fetch("/api/transcribe", { method: "POST", signal: ctl.signal,
+      headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-whisper-prompt": encodeURIComponent(opt.prompt ?? whisperPrompt()) }, body: blob });
+    if (res.status === 429) {
+      interimOffUntil = performance.now() + 60000;
+      failure = "Transcription rate limit reached. This phrase was not transcribed; please repeat it or type it.";
+    } else if (!res.ok) failure = `Transcription error ${res.status}. Please repeat the phrase or type it.`;
+    else clean = cleanTranscript((await res.json()).text);
+  } catch (e) {
+    failure = e.name === "AbortError" ? "Transcription timed out. Please repeat the phrase or type it." : "Could not transcribe audio. Check your connection, then repeat the phrase.";
+  } finally {
+    clearTimeout(timeout);
+    if (cap) cap.inflight--;
+  }
+  try {
+    if (opt.final) await previous;
+    if (epoch !== transcriptionEpoch) return;
+    if (failure && opt.final) status(failure, "err");
     if (!clean) return;
-    if (opt.final) onTranscript(who, clean, performance.now() - t0);
+    if (opt.final) onTranscript(who, clean);
     else if (running) showCaption(who, clean, true);
-  } catch {} finally { if (cap) cap.inflight--; }
+  } finally { if (release) release(); }
 }
 
 /* ---- what was heard → captions, drawer, questions ---- */
@@ -818,14 +861,45 @@ function showCaption(who, text, isInterim) {
   $("capWho").textContent = who === "You" ? "You" : "Them"; $("capText").textContent = text;
   clearTimeout(capTimer); capTimer = setTimeout(() => el.classList.add("hidden"), 9000);
 }
-function appendDrawer(who, text) {
+function appendDrawer(who, text, entry) {
   const body = $("drawerBody"); if (!body) return;
   const first = body.firstElementChild; if (first && first.classList.contains("muted")) body.innerHTML = "";
   const d = document.createElement("div"); d.className = "tl " + (who === "You" ? "you" : "them");
   d.innerHTML = "<b></b><span></span>"; d.querySelector("b").textContent = who; d.querySelector("span").textContent = text;
+  if (entry) {
+    const edit = document.createElement("button"); edit.className = "mini"; edit.textContent = "Correct";
+    edit.setAttribute("aria-label", "Correct transcript: " + text);
+    edit.onclick = () => {
+      if (d.querySelector("textarea")) return;
+      const input = document.createElement("textarea"); input.value = entry.text;
+      input.setAttribute("aria-label", "Corrected transcript");
+      const vocabulary = document.createElement("input"); vocabulary.placeholder = "Terms to remember, comma-separated (optional)";
+      vocabulary.setAttribute("aria-label", "Vocabulary for this session");
+      const save = document.createElement("button"); save.className = "mini"; save.textContent = "Save correction";
+      const cancel = document.createElement("button"); cancel.className = "mini"; cancel.textContent = "Cancel";
+      cancel.onclick = () => renderDrawer();
+      save.onclick = () => {
+        const corrected = input.value.replace(/\s+/g, " ").trim().slice(0, 4000);
+        if (!corrected) return;
+        const original = entry.text; entry.text = corrected;
+        const event = sessionLog.find(e => e.t === "line" && e.seq === entry.seq);
+        if (event) { event.originalText ??= original; event.text = corrected; }
+        if (current) {
+          const terms = vocabulary.value.split(",").map(t => t.trim().slice(0, 60)).filter(Boolean);
+          current.voiceVocabulary = [...new Set([...(current.voiceVocabulary || []), ...terms])].slice(-40);
+          saveSession(current);
+        }
+        logEvent({ t: "correction", seq: entry.seq, original, text: corrected });
+        renderDrawer(); saveRunTranscript();
+        status("Correction saved. Added vocabulary will guide future Whisper phrases in this session.");
+      };
+      d.append(input, vocabulary, save, cancel); input.focus();
+    };
+    d.append(edit);
+  }
   body.append(d); body.scrollTop = body.scrollHeight;
 }
-function renderDrawer() { const body = $("drawerBody"); if (!body) return; body.innerHTML = '<div class="muted small">Nothing heard yet.</div>'; transcript.forEach(t => appendDrawer(t.who, t.text)); }
+function renderDrawer() { const body = $("drawerBody"); if (!body) return; body.innerHTML = '<div class="muted small">Nothing heard yet.</div>'; transcript.forEach(t => appendDrawer(t.who, t.text, t)); }
 // Nothing is answered phrase-by-phrase. Everything heard piles up; AI Answer (or Auto, once the
 // speaker goes quiet) merges it, derives ONE big question from all of it, and answers that in full.
 let heardSeq = 0, answeredSeq = 0, flushing = false, autoOn = false, autoTimer = null;
@@ -934,14 +1008,15 @@ function fixTerms(text) {
   return toks.join("").replace(/\s{2,}/g, " ");
 }
 function onTranscript(who, text) {
-  text = fixTerms(text);
+  const originalText = text;
+  // Keep the recognised words intact; approved vocabulary guides the next recognition.
   if (who === "You" && follow.on && !follow.sr) followHear(text, true);   // Follow along without live recognition
   transcript.push({ who, text, at: Date.now(), seq: ++heardSeq }); if (transcript.length > 500) transcript.shift();
-  logEvent({ t: "line", who, text });
-  appendDrawer(who, text);
+  logEvent({ t: "line", who, text, originalText, seq: heardSeq });
+  appendDrawer(who, text, transcript[transcript.length - 1]);
   showCaption(who, text, false);
   updatePending();
-  if (!flushing) scheduleAuto();
+  if (running && !flushing) scheduleAuto();
 }
 
 /* ---- answers: streamed, grounded on the dossier ---- */

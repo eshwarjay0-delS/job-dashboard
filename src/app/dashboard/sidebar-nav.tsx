@@ -1,10 +1,11 @@
 "use client"
 
 import Link from "next/link"
+import type { User } from "@supabase/supabase-js"
 import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { NAV_SECTIONS, NAV_ITEMS } from "./_components/nav"
+import { NAV_SECTIONS, NAV_ITEMS, PRIMARY_NAV } from "./_components/nav"
 
 const ALL_HREFS = NAV_ITEMS.map(i => i.href)
 
@@ -19,46 +20,51 @@ export default function SidebarNav() {
   const router = useRouter()
   const [initials, setInitials] = useState("MF")
   const [email, setEmail] = useState("")
+  const [signedIn, setSignedIn] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
-      const fullName = (user.user_metadata?.full_name as string) || user.email || ""
-      const ini = fullName.split(/\s+/).filter(Boolean).map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "MF"
-      setInitials(ini)
-      setEmail(user.email || "")
+    let active = true
+    let authRevision = 0
 
-      // Straggler catch, once per session mount (not on every nav — this component
-      // stays mounted across client-side routing, so re-checking per pathname change
-      // would fire a query on every page view for no benefit): a signed-in user who
-      // never finished onboarding (bookmark, back button, or a session that started
-      // before this redirect existed) landing anywhere under /dashboard/* gets sent
-      // to finish setup — auth/callback's redirect only fires once, right after sign-in.
-      if (!window.location.pathname.startsWith("/dashboard/setup")) {
-        try {
-          const { data } = await supabase.from("profiles").select("profile_complete").eq("id", user.id).maybeSingle()
-          if (data && data.profile_complete === false && !window.location.pathname.startsWith("/dashboard/setup")) {
-            router.replace("/dashboard/setup")
-          }
-        } catch { /* best-effort — don't block navigation on this check */ }
-      }
-    }).catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Broadcast session to Chrome extension
-  useEffect(() => {
-    const supabase = createClient()
-    function broadcast(session: unknown) {
-      window.postMessage({ source: "marketfit-web", type: "MF_AUTH", session }, window.location.origin)
+    function updateAccount(user: User | null) {
+      if (!active) return
+      const account = user && !user.is_anonymous ? user : null
+      setSignedIn(Boolean(account))
+      setEmail(account?.email || "")
+      const name = typeof account?.user_metadata?.full_name === "string"
+        ? account.user_metadata.full_name : account?.email || ""
+      setInitials(name.split(/\s+/).filter(Boolean).map((part: string) => part[0]).join("").slice(0, 2).toUpperCase() || "MF")
     }
-    supabase.auth.getSession().then(({ data: { session } }) => broadcast(session)).catch(() => {})
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => broadcast(session))
-    return () => sub.subscription.unsubscribe()
-  }, [])
+
+    const initialRevision = authRevision
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      // A later sign-out or account switch must win over this initial request.
+      if (!active || authRevision !== initialRevision) return
+      updateAccount(user)
+      if (!user || user.is_anonymous || window.location.pathname.startsWith("/dashboard/setup")) return
+      try {
+        const { data } = await supabase.from("profiles").select("profile_complete").eq("id", user.id).maybeSingle()
+        if (active && authRevision === initialRevision && data?.profile_complete === false && !window.location.pathname.startsWith("/dashboard/setup")) {
+          router.replace("/dashboard/setup")
+        }
+      } catch { /* Account setup checks must not block navigation. */ }
+    }).catch(() => {})
+
+    // The existing extension bridge also receives sign-out and account switches.
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event !== "INITIAL_SESSION") authRevision += 1
+      updateAccount(session?.user || null)
+      if (active) window.postMessage({ source: "marketfit-web", type: "MF_AUTH", session: session?.user.is_anonymous ? null : session }, window.location.origin)
+    })
+    return () => {
+      active = false
+      subscription.subscription.unsubscribe()
+    }
+  }, [router])
 
   return (
+    <>
     <aside suppressHydrationWarning className="dash-sidebar" style={{
       position: "fixed",
       top: 0,
@@ -91,23 +97,33 @@ export default function SidebarNav() {
 
       {/* ── Main Nav ──────────────────────────────────────────────── */}
       <nav aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
+        {PRIMARY_NAV.map(item => {
+          const active = isActive(item.href, pathname)
+          const content = <><span className="sb-icon">{item.icon}</span><span>{item.label}</span></>
+          return item.href === "/dashboard/kompas"
+            ? <a key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>{content}</a>
+            : <Link key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>{content}</Link>
+        })}
+        <details className="mf-nav-more"><summary>All tools & accounts</summary>
         {NAV_SECTIONS.map((section, si) => (
           <div key={si} style={{ marginBottom: section.label ? 8 : 4 }}>
             {section.label && <div className="sb-label">{section.label}</div>}
 
             {section.items.map(item => {
               const active = isActive(item.href, pathname)
+              const NavigationLink = item.href === "/dashboard/kompas" ? "a" : Link
               return (
-                <Link key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`}
+                <NavigationLink key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`}
                   aria-current={active ? "page" : undefined} title={item.what}>
                   <span className="sb-icon">{item.icon}</span>
                   <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
                   {active && <span className="sb-here">Here</span>}
-                </Link>
+                </NavigationLink>
               )
             })}
           </div>
         ))}
+        </details>
 
       </nav>
 
@@ -124,10 +140,20 @@ export default function SidebarNav() {
             <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {email?.split("@")[0] || "Account"}
             </div>
-            <div className="ink-label" style={{ fontSize: 11 }}>Free plan</div>
+            <Link href={signedIn ? "/dashboard/connections" : "/login?next=/dashboard"} style={{ display: "inline-flex", alignItems: "center", minHeight: 44, fontSize: 13, color: "var(--text)", textUnderlineOffset: 4 }}>{signedIn ? "Manage my accounts" : "Sign in to your account"}</Link>
           </div>
         </div>
       </div>
     </aside>
+    <header className="mf-mobile-home">
+      <Link href="/dashboard">MarketFit · Home</Link>
+      <nav aria-label="Main tools">
+        <Link href="/dashboard/resume">Resume</Link>
+        <Link href="/dashboard/email">Job emails</Link>
+        <a href="/dashboard/kompas">Practice</a>
+        <Link href={signedIn ? "/dashboard/connections" : "/login?next=/dashboard"}>{signedIn ? "Accounts" : "Sign in"}</Link>
+      </nav>
+    </header>
+    </>
   )
 }

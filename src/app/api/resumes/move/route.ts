@@ -1,27 +1,23 @@
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
-import { createClient } from "@/lib/supabase/server"
+import { authenticatedUserId, signInRequired } from "@/lib/authBoundary"
 import { ensureIndex } from "@/lib/keywords"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
 import { movePath } from "@/lib/storage"
 
 export const runtime = "nodejs"
 
-async function getUserDir(): Promise<string> {
-  try {
-    const supabase = await createClient()
-    const { data } = await supabase.auth.getUser()
-    return path.join(USER_RESUMES_BASE, data.user?.id ?? "demo")
-  } catch {
-    return path.join(USER_RESUMES_BASE, "demo")
-  }
-}
+
 
 export async function POST(request: NextRequest) {
-  const userDir = await getUserDir()
+  const userId = await authenticatedUserId(request)
+  if (!userId) return signInRequired()
+  const userDir = path.join(USER_RESUMES_BASE, userId)
 
-  const body = await request.json().catch(() => ({}))
+  const body = await request.json().catch(() => null)
+    if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Invalid request body." }, { status: 400 })
   const files: string[] = body.files ?? []
+  if (!Array.isArray(files) || files.length > 200 || files.some(f => typeof f !== "string") || typeof body.target !== "string") return NextResponse.json({ error: "Invalid move request." }, { status: 400 })
   const targetParts = String(body.target || "")
     .split("/")
     .map(s => s.replace(/[^A-Za-z0-9._ \-()]/g, "_").trim())

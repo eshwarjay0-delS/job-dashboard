@@ -4,19 +4,13 @@ import { readPath } from "@/lib/storage"
 import { extractText } from "@/lib/docx"
 import { matchByKeywords } from "@/lib/keywords"
 import { resolveKeys, hasAnyKey, callLLM } from "@/lib/llm"
-import { createClient } from "@/lib/supabase/server"
+import { authenticatedUserId, signInRequired, ownedResumePath } from "@/lib/authBoundary"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
 import { checkRateLimit, clientIp } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
 
-async function getUserResumeDir(): Promise<string> {
-  try {
-    const supabase = await createClient()
-    const { data } = await supabase.auth.getUser()
-    return path.join(USER_RESUMES_BASE, data.user?.id ?? "demo")
-  } catch { return path.join(USER_RESUMES_BASE, "demo") }
-}
+
 
 const TONE_GUIDE: Record<string, string> = {
   professional:   "polished and formal, confident but not stiff",
@@ -27,6 +21,8 @@ const TONE_GUIDE: Record<string, string> = {
 // Generate a real, resume-grounded cover letter from the JD — NOT a [BRACKET] template.
 // Grounded in the candidate's actual resume so it never fabricates experience.
 export async function POST(request: NextRequest) {
+  const userId = await authenticatedUserId(request)
+  if (!userId) return signInRequired()
   try {
     // 5 cover letters per hour per IP — LLM-heavy, ~600 tokens each
     const rl = checkRateLimit(`cover-letter:${clientIp(request)}`, { max: 5, windowMs: 60 * 60 * 1000 })
@@ -37,7 +33,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json().catch(() => ({}))
+    const body = await request.json().catch(() => null)
+    if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Invalid request body." }, { status: 400 })
+    if (['jd', 'filepath', 'company', 'role', 'tone'].some(key => body[key] !== undefined && typeof body[key] !== "string")) return NextResponse.json({ error: "Invalid text fields." }, { status: 400 })
     const jd = (body.jd || "").trim()
     const company = (body.company || "").trim()
     const role = (body.role || "").trim()
@@ -57,7 +55,8 @@ export async function POST(request: NextRequest) {
 
     // Ground the letter in the candidate's real resume: the one they picked, or the
     // best match for the JD from their library (reusing the tailoring selector).
-    const userResumeDir = await getUserResumeDir()
+    const userResumeDir = path.join(USER_RESUMES_BASE, userId)
+    if (body.filepath && !ownedResumePath(USER_RESUMES_BASE, userId, body.filepath)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     let resumeText = ""
     let resumeName = ""
     try {

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Check, Send, Shield, Archive, RotateCcw, ChevronRight, CalendarDays, Leaf } from "lucide-react"
-import { SAMPLE_LINE, Card, Meta, StagePill, Chip, Btn, Avatar, Toggle, useAnswered, useLeaving, leavingStyle } from "../_suite/ui"
+import { Card, Meta, StagePill, Chip, Btn, Avatar, Toggle, useAnswered, useLeaving, leavingStyle } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 import { mails, accounts, acct, savedAvailability, type Mail, type Stage } from "../_suite/sample"
 
@@ -89,7 +89,7 @@ function AvailabilityReply({ m, onApprove }: { m: Mail; onApprove: () => void })
       </div>
       <Toggle value={auto} onChange={setAuto} label="Send availability replies automatically next time" />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Btn onClick={onApprove} disabled={!line}><Send size={14} /> Approve & send</Btn>
+        <Btn onClick={onApprove} disabled={!line}><Send size={14} /> Try approving reply</Btn>
       </div>
     </div>
   )
@@ -115,7 +115,7 @@ function RtrReply({ m, onApprove }: { m: Mail; onApprove: () => void }) {
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
         <Btn variant="outline">Decline</Btn>
-        <Btn onClick={onApprove}><Check size={14} /> Sign & send RTR</Btn>
+        <Btn onClick={onApprove}><Check size={14} /> Preview RTR approval</Btn>
       </div>
     </div>
   )
@@ -134,7 +134,7 @@ function RateReply({ m, onApprove }: { m: Mail; onApprove: () => void }) {
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
         <Btn variant="outline">Counter</Btn>
-        <Btn onClick={onApprove}><Send size={14} /> Approve & send</Btn>
+        <Btn onClick={onApprove}><Send size={14} /> Try approving reply</Btn>
       </div>
     </div>
   )
@@ -164,7 +164,7 @@ export default function MailPage() {
 
   return (
     <div>
-      <PageIntro page="/dashboard/mail" action={{ label: "Answer the first one", href: "#reply" }} sample={SAMPLE_LINE} />
+      <PageIntro page="/dashboard/mail" action={{ label: "Answer the first one", href: "#reply" }} sample="Preview with sample messages. Changes stay in this browser session; no email is sent or signed." />
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
         <Chip label="All inboxes" active={account === "all"} onClick={() => setAccount("all")} />

@@ -155,8 +155,8 @@ export async function POST(request: NextRequest) {
         id: user.id,
         email: user.email,
         full_name: body.name ?? null,
-        phone: body.phone ?? null,
-        whatsapp: body.whatsapp ?? null,
+        // Phone/WhatsApp identity is intentionally NOT writable here.
+        // Only the Twilio verification endpoint can bind or change it.
         location: body.location ?? null,
         linkedin: body.linkedin ?? null,
         github: body.github ?? null,

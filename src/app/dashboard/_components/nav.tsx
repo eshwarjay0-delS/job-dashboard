@@ -5,7 +5,7 @@
 import type { ReactNode } from "react"
 
 const svg = (d: ReactNode) => (
-  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">{d}</svg>
+  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">{d}</svg>
 )
 
 const ICON = {
@@ -33,7 +33,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "",
     items: [
-      { href: "/dashboard",       label: "Home",    icon: ICON.home, what: "Three things that help you get the job. Start with Kompas." },
+      { href: "/dashboard",       label: "Home",    icon: ICON.home, what: "Your resume, job emails, and interview practice." },
       { href: "/dashboard/today", label: "Today",   icon: ICON.sun,  what: "See what needs you today." },
       { href: "/dashboard/brief", label: "Summary", icon: ICON.note, what: "A short note on how your job hunt is going." },
     ],
@@ -41,11 +41,12 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "Jobs and interviews",
     items: [
-      { href: "/dashboard/mail",        label: "Mail",       icon: ICON.mail,     what: "Answer job emails that are waiting for you." },
+      { href: "/dashboard/mail",        label: "Inbox preview",       icon: ICON.mail,     what: "Try sample job emails and replies. Nothing is sent." },
       { href: "/dashboard/tracker",     label: "My Jobs",    icon: ICON.list,     what: "Every job you applied to, and what step it is on." },
-      { href: "/dashboard/calendar",    label: "Calendar",   icon: ICON.calendar, what: "Your interviews, by day and time." },
-      { href: "/dashboard/workflows",   label: "Follow-ups", icon: ICON.repeat,   what: "Emails that go out after you apply or interview." },
+      { href: "/dashboard/calendar",    label: "Calendar preview",   icon: ICON.calendar, what: "Explore a sample interview calendar." },
+      { href: "/dashboard/workflows",   label: "Follow-ups preview", icon: ICON.repeat,   what: "Try a follow-up sequence using sample data. No emails are scheduled." },
       { href: "/dashboard/connections", label: "Accounts",   icon: ICON.link,     what: "See which of your accounts MarketFit can use." },
+      { href: "/dashboard/kompas", label: "Interview practice", what: "Practice with Kompas using your own resume.", icon: ICON.chat },
       { href: "/dashboard/prep",        label: "Practice",   icon: ICON.chat,     what: "Get ready for your next interview." },
     ],
   },
@@ -55,7 +56,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/dashboard/resume",         label: "My Resume",   icon: ICON.resume, what: "Make your resume fit one job." },
       { href: "/dashboard/documents",      label: "Files",       icon: ICON.folder, what: "Keep your resume files in one place." },
       { href: "/dashboard/resume/builder", label: "Make Resume", icon: ICON.pencil, what: "Build a resume one part at a time." },
-      { href: "/dashboard/email",          label: "Gmail",       icon: ICON.inbox,  what: "Read job emails from your Gmail." },
+      { href: "/dashboard/email",          label: "Job emails",  icon: ICON.inbox,  what: "Read job emails from your Gmail." },
       { href: "/dashboard/whatsapp",       label: "WhatsApp",    icon: ICON.phone,  what: "Send a job post and your resume. Get your resume back, fitted to that job." },
       { href: "/dashboard/extension",      label: "Extension",   icon: ICON.puzzle, what: "Add MarketFit to Chrome. It fills job application forms for you." },
     ],
@@ -69,3 +70,10 @@ export function navItem(href: string): NavItem {
   if (!item) throw new Error(`No nav item for ${href}`)
   return item
 }
+
+
+export const PRIMARY_NAV: NavItem[] = [
+  navItem("/dashboard"),
+  { ...navItem("/dashboard/resume"), label: "My resume" },
+  { ...navItem("/dashboard/email"), label: "Job emails" },
+]

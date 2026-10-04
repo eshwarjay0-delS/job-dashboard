@@ -16,6 +16,7 @@
 // One client handler covers every link shape Supabase might send, which a
 // server route (only ?code=) cannot. Also upserts the profile row after auth.
 
+import { safeAuthNext } from "@/lib/authRedirect"
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -34,7 +35,7 @@ function CallbackHandler() {
       const token_hash = searchParams.get("token_hash")
       const type       = (searchParams.get("type") ?? "email") as
                          "email" | "recovery" | "invite" | "magiclink"
-      const next       = searchParams.get("next") ?? "/dashboard/resume"
+      const next       = safeAuthNext(searchParams.get("next"))
 
       // ── 1. PKCE flow ────────────────────────────────────────────────────
       if (code) {
@@ -95,7 +96,9 @@ function CallbackHandler() {
       }
     }
 
-    handle()
+    handle().catch(() => {
+      if (!cancelled) setError("Sign-in could not be completed. Please try again.")
+    })
     return () => { cancelled = true }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -118,7 +121,7 @@ function CallbackHandler() {
             {error}
           </p>
           <p style={{ fontSize: 12, color: "#9d9884", lineHeight: 1.5, marginBottom: 24 }}>
-            Magic links are single-use and expire after 1 hour. Request a new one below.
+            Magic links expire and can only be used once. Request a new one below.
           </p>
           <a href="/login" style={{
             display: "inline-block", padding: "12px 28px", borderRadius: 10,

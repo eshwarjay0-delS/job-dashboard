@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual, randomBytes } from "crypto"
+export { makeAdminToken, verifyAdminToken } from "./adminSession"
 import { blob } from "@/lib/storage"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -57,23 +57,4 @@ export const KNOWN_KEYS: { id: string; label: string }[] = [
 
 export function apiKeyStatus(): { id: string; label: string; set: boolean }[] {
   return KNOWN_KEYS.map(k => ({ ...k, set: !!process.env[k.id] }))
-}
-
-// ── Admin session token (httpOnly cookie value) ─────────────────────────────────
-// Requires ADMIN_SESSION_SECRET or ADMIN_PASSWORD env var — see .env.local for local dev.
-const SECRET = process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_PASSWORD || ""
-
-export function makeAdminToken(): string {
-  // If no secret is configured, return a random token that can never be guessed
-  // or reproduced — effectively disabling persistent admin sessions until env is set.
-  if (!SECRET) return randomBytes(32).toString("hex")
-  return createHmac("sha256", SECRET).update("mf-admin-v1").digest("hex")
-}
-
-export function verifyAdminToken(token: string | undefined): boolean {
-  if (!token || !SECRET) return false
-  const expected = makeAdminToken()
-  const a = Buffer.from(token)
-  const b = Buffer.from(expected)
-  return a.length === b.length && timingSafeEqual(a, b)
 }

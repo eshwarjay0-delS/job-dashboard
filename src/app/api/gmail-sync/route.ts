@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { checkRateLimit } from "@/lib/rateLimit"
+import { getGoogleWorkspaceAccessToken } from "@/lib/googleWorkspace"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Gmail Sync — uses the Google OAuth provider_token stored in the Supabase
@@ -39,25 +40,6 @@ function buildQuery(days: number) {
 }
 
 // ── Gmail REST API helpers ────────────────────────────────────────────────────
-
-async function refreshAccessToken(refreshToken: string): Promise<string | null> {
-  try {
-    const res = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID!,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        refresh_token: refreshToken,
-        grant_type: "refresh_token",
-      }),
-    })
-    const data = await res.json()
-    return data.access_token || null
-  } catch {
-    return null
-  }
-}
 
 async function gmailGet(path: string, accessToken: string) {
   const res = await fetch(`${GMAIL_API}${path}`, {
@@ -212,44 +194,23 @@ export async function GET() {
   try {
     const supabase = await createClient()
     const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return NextResponse.json({ connected: false, reason: "not_logged_in" })
 
-    if (!session) {
-      return NextResponse.json({ connected: false, reason: "not_logged_in" })
-    }
-
-    // Check if we have a valid access token with Gmail scope
-    const token = session.provider_token
-    if (!token) {
-      // Check if we have a stored refresh token
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("gmail_refresh_token, gmail_connected_at")
-        .eq("id", session.user.id)
-        .maybeSingle()
-
-      if (profile?.gmail_refresh_token) {
-        return NextResponse.json({
-          connected: true,
-          via: "refresh_token",
-          connectedAt: profile.gmail_connected_at,
-        })
+    let token = session.provider_token || null
+    if (token) {
+      try {
+        const profile = await gmailGet("/profile", token)
+        return NextResponse.json({ connected: true, email: profile.emailAddress, totalMessages: profile.messagesTotal })
+      } catch {
+        token = null
       }
-
-      return NextResponse.json({ connected: false, reason: "no_gmail_token" })
     }
 
-    // Quick token validity check
-    try {
-      const profile = await gmailGet("/profile", token)
-      return NextResponse.json({
-        connected: true,
-        via: "provider_token",
-        email: profile.emailAddress,
-        totalMessages: profile.messagesTotal,
-      })
-    } catch {
-      return NextResponse.json({ connected: false, reason: "token_invalid" })
-    }
+    token = await getGoogleWorkspaceAccessToken(session.user.id)
+    if (!token) return NextResponse.json({ connected: false, reason: "workspace_not_connected" })
+
+    const profile = await gmailGet("/profile", token)
+    return NextResponse.json({ connected: true, via: "workspace_refresh", email: profile.emailAddress, totalMessages: profile.messagesTotal })
   } catch (err) {
     return NextResponse.json({ connected: false, reason: String(err) })
   }
@@ -282,20 +243,13 @@ export async function POST(req: Request) {
       )
     }
 
-    // Resolve access token — prefer live provider_token, fall back to refresh
+    // Prefer the live Google token from the second-consent session, then fall
+    // back to the encrypted offline Workspace connection.
     let accessToken = session.provider_token || null
-
-    if (!accessToken) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("gmail_refresh_token")
-        .eq("id", session.user.id)
-        .maybeSingle()
-
-      if (profile?.gmail_refresh_token) {
-        accessToken = await refreshAccessToken(profile.gmail_refresh_token)
-      }
+    if (accessToken) {
+      try { await gmailGet("/profile", accessToken) } catch { accessToken = null }
     }
+    if (!accessToken) accessToken = await getGoogleWorkspaceAccessToken(session.user.id)
 
     if (!accessToken) {
       return NextResponse.json(

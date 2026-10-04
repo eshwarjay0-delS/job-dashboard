@@ -11,7 +11,7 @@ const P = {
 const STEPS = [
   { id: "profile",     label: "Your Profile",     icon: "👤", desc: "Name, title, location, work authorization" },
   { id: "resume",      label: "Resume",            icon: "📄", desc: "Upload your base resume" },
-  { id: "gmail",       label: "Connect Gmail",     icon: "📧", desc: "Track email threads with recruiters" },
+  { id: "gmail",       label: "Gmail + Calendar",  icon: "📧", desc: "Optional email and calendar connection" },
   { id: "preferences", label: "Job Preferences",  icon: "🎯", desc: "Roles, salary, location, visa filters" },
   { id: "done",        label: "Ready to Go",       icon: "🚀", desc: "Your workspace is set up" },
 ]
@@ -23,7 +23,7 @@ const LOCS = ["Remote (US)", "San Francisco, CA", "New York, NY", "Seattle, WA",
 interface SetupData {
   full_name: string; title: string; location: string; workAuth: string; email: string; phone: string; linkedin: string
   targetRoles: string[]; targetLocs: string[]; minSalary: string; openToRemote: boolean; yearsExp: string
-  resumeUploaded: boolean; gmailConnected: boolean
+  resumeUploaded: boolean; gmailConnected: boolean; phoneVerified: boolean
 }
 
 // Maps this wizard's field names to what POST /api/profile (the `profiles` table)
@@ -34,7 +34,7 @@ function toProfileBody(d: SetupData, profileComplete: boolean) {
   return {
     name: d.full_name || undefined,
     title: d.title || undefined,
-    phone: d.phone || undefined,
+    phone: d.phoneVerified ? d.phone || undefined : undefined,
     location: d.location || undefined,
     linkedin: d.linkedin || undefined,
     workAuth: d.workAuth || undefined,
@@ -48,7 +48,7 @@ function toProfileBody(d: SetupData, profileComplete: boolean) {
 const DEFAULT: SetupData = {
   full_name: "", title: "", location: "", workAuth: "", email: "", phone: "", linkedin: "",
   targetRoles: [], targetLocs: [], minSalary: "", openToRemote: true, yearsExp: "",
-  resumeUploaded: false, gmailConnected: false,
+  resumeUploaded: false, gmailConnected: false, phoneVerified: false,
 }
 
 function StepDot({ index, current, done }: { index: number; current: number; done: boolean }) {
@@ -83,6 +83,9 @@ export default function SetupPage() {
   const [resumeUploading, setResumeUploading] = useState(false)
   const [resumeError, setResumeError] = useState("")
   const [gmailLoading, setGmailLoading] = useState(false)
+  const [phoneCode, setPhoneCode] = useState("")
+  const [phoneLoading, setPhoneLoading] = useState(false)
+  const [phoneStatus, setPhoneStatus] = useState("")
 
   useEffect(() => {
     // Restore any existing profile
@@ -97,6 +100,23 @@ export default function SetupPage() {
       const s = parseInt(localStorage.getItem("jd_setup_step") || "0", 10)
       if (s > 0 && s < STEPS.length - 1) setStep(s)
     } catch {}
+
+    // Server truth wins for identity fields. Email comes from Google SSO and a
+    // verified phone is never inferred from localStorage.
+    fetch("/api/profile", { cache: "no-store" })
+      .then(r => r.json())
+      .then(({ profile }) => {
+        if (!profile) return
+        setData(d => ({
+          ...d,
+          email: profile.email || d.email,
+          full_name: profile.full_name || d.full_name,
+          phone: profile.phone || d.phone,
+          phoneVerified: !!profile.phone_verified,
+          gmailConnected: !!(profile.gmail_connected && profile.calendar_connected),
+        }))
+      })
+      .catch(() => {})
   }, [])
 
   function save(patch: Partial<SetupData>) {
@@ -117,6 +137,49 @@ export default function SetupPage() {
         body: JSON.stringify(toProfileBody(current, complete)),
       })
     } catch { /* best-effort; localStorage still has the data for this session */ }
+  }
+
+  async function startPhoneVerification() {
+    setPhoneStatus("")
+    if (!/^\+[1-9]\d{7,14}$/.test(data.phone.trim())) {
+      setPhoneStatus("Enter your mobile number in international format, e.g. +13145550192.")
+      return
+    }
+    setPhoneLoading(true)
+    try {
+      const res = await fetch("/api/identity/phone/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: data.phone.trim() }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || "Could not send verification code.")
+      setPhoneStatus("Code sent by SMS.")
+    } catch (e) {
+      setPhoneStatus(String(e instanceof Error ? e.message : e))
+    } finally {
+      setPhoneLoading(false)
+    }
+  }
+
+  async function confirmPhoneVerification() {
+    setPhoneStatus("")
+    setPhoneLoading(true)
+    try {
+      const res = await fetch("/api/identity/phone/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: data.phone.trim(), code: phoneCode.trim(), whatsappOptIn: true }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || "Verification failed.")
+      save({ phoneVerified: true })
+      setPhoneStatus("Verified. This is now your unique MarketFit + WhatsApp number.")
+    } catch (e) {
+      setPhoneStatus(String(e instanceof Error ? e.message : e))
+    } finally {
+      setPhoneLoading(false)
+    }
   }
 
   async function uploadResume(file: File) {
@@ -145,6 +208,10 @@ export default function SetupPage() {
   }
 
   function advance() {
+    if (step === 0 && !data.phoneVerified) {
+      setPhoneStatus("Verify your mobile number before continuing.")
+      return
+    }
     const next = Math.min(step + 1, STEPS.length - 1)
     setStep(next)
     localStorage.setItem("jd_setup_step", String(next))
@@ -199,8 +266,7 @@ export default function SetupPage() {
               {[
                 { key: "full_name", label: "Full Name *",         placeholder: "Eshwar Janjirala",          type: "text" },
                 { key: "title",     label: "Current Title *",     placeholder: "Senior Security Engineer",  type: "text" },
-                { key: "email",     label: "Email *",             placeholder: "you@email.com",             type: "email" },
-                { key: "phone",     label: "Phone",               placeholder: "(314) 555-0192",            type: "tel" },
+                { key: "email",     label: "Google Email *",      placeholder: "you@gmail.com",              type: "email" },
                 { key: "location",  label: "Current Location",    placeholder: "St. Louis, MO",             type: "text" },
                 { key: "yearsExp",  label: "Years of Experience", placeholder: "8",                         type: "number" },
                 { key: "linkedin",  label: "LinkedIn URL",        placeholder: "linkedin.com/in/yourname",  type: "url" },
@@ -211,12 +277,49 @@ export default function SetupPage() {
                     type={f.type}
                     value={(data as any)[f.key]}
                     onChange={e => save({ [f.key]: e.target.value } as any)}
+                    readOnly={f.key === "email"}
                     placeholder={f.placeholder}
                     style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: `1.5px solid ${P.border}`, fontSize: 13, color: P.text, background: P.bg, outline: "none", boxSizing: "border-box" as const }}
                   />
                 </div>
               ))}
             </div>
+            <div style={{ marginTop: 16, padding: 14, borderRadius: 12, border: `1px solid ${P.border}`, background: P.bg }}>
+              <label style={{ fontSize: 11.5, fontWeight: 700, color: P.hint, display: "block", marginBottom: 6 }}>VERIFIED MOBILE NUMBER *</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="tel"
+                  value={data.phone}
+                  onChange={e => save({ phone: e.target.value, phoneVerified: false })}
+                  disabled={data.phoneVerified}
+                  placeholder="+13145550192"
+                  style={{ flex: 1, padding: "9px 12px", borderRadius: 9, border: `1.5px solid ${P.border}`, fontSize: 13, background: P.surface }}
+                />
+                <button type="button" disabled={phoneLoading || data.phoneVerified} onClick={startPhoneVerification}
+                  style={{ padding: "9px 14px", borderRadius: 9, border: "none", background: data.phoneVerified ? "#42413c" : "var(--accent)", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+                  {data.phoneVerified ? "Verified ✓" : phoneLoading ? "Sending…" : "Send code"}
+                </button>
+              </div>
+              {!data.phoneVerified && (
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <input
+                    inputMode="numeric"
+                    value={phoneCode}
+                    onChange={e => setPhoneCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    placeholder="Verification code"
+                    style={{ flex: 1, padding: "9px 12px", borderRadius: 9, border: `1.5px solid ${P.border}`, fontSize: 13, background: P.surface }}
+                  />
+                  <button type="button" disabled={phoneLoading || phoneCode.length < 4} onClick={confirmPhoneVerification}
+                    style={{ padding: "9px 14px", borderRadius: 9, border: `1px solid ${P.border}`, background: P.surface, fontWeight: 700, cursor: "pointer" }}>
+                    Verify
+                  </button>
+                </div>
+              )}
+              <p style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: data.phoneVerified ? "#42413c" : P.muted }}>
+                {phoneStatus || "One verified number per account. This number is also used to bind your WhatsApp identity and subscription usage."}
+              </p>
+            </div>
+
             <div style={{ marginTop: 14 }}>
               <label style={{ fontSize: 11.5, fontWeight: 700, color: P.hint, display: "block", marginBottom: 6 }}>WORK AUTHORIZATION *</label>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
@@ -288,8 +391,8 @@ export default function SetupPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
               <span style={{ fontSize: 26 }}>📧</span>
               <div>
-                <p style={{ fontSize: 17, fontWeight: 800, color: P.text }}>Connect Gmail</p>
-                <p style={{ fontSize: 13, color: P.muted }}>Automatically surface recruiter emails and track reply rates.</p>
+                <p style={{ fontSize: 17, fontWeight: 800, color: P.text }}>Connect Gmail & Calendar</p>
+                <p style={{ fontSize: 13, color: P.muted }}>Optional after login: track recruiter email, send partner email, and read interview calendar events.</p>
               </div>
             </div>
 
@@ -305,9 +408,9 @@ export default function SetupPage() {
               <>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
                   {[
-                    { icon: "🔍", label: "Auto-detect recruiter emails" },
-                    { icon: "📊", label: "Track reply rates" },
-                    { icon: "⚡", label: "Pipeline auto-updates" },
+                    { icon: "🔍", label: "Track recruiter emails" },
+                    { icon: "✉️", label: "Send partner email" },
+                    { icon: "📅", label: "Track interview calendar" },
                   ].map(f => (
                     <div key={f.label} style={{ padding: "14px", borderRadius: 12, background: P.bg, border: `1px solid ${P.border}`, textAlign: "center" as const }}>
                       <span style={{ fontSize: 24, display: "block", marginBottom: 6 }}>{f.icon}</span>
@@ -449,7 +552,7 @@ export default function SetupPage() {
       {step < 4 && (
         <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 18, flexWrap: "wrap" as const }}>
           {[
-            { label: "Profile", done: !!(data.full_name && data.email && data.workAuth) },
+            { label: "Profile", done: !!(data.full_name && data.email && data.workAuth && data.phoneVerified) },
             { label: "Resume",  done: data.resumeUploaded },
             { label: "Gmail",   done: data.gmailConnected },
             { label: "Prefs",   done: data.targetRoles.length > 0 },

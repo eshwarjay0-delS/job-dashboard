@@ -1,6 +1,5 @@
 // Kompas is built in perfACT/copilot, not here. A hand-edited copy in this repo would drift from
-// the app it claims to be, so public/kompas/ is only ever written by this script: app.js and
-// styles.css verbatim, index.html with the three changes it needs to live under MarketFit.
+// the app it claims to be, so public/kompas/ is only ever written by this script: styles.css verbatim and app.js with the reviewed voice reliability patch, index.html with the three changes it needs to live under MarketFit.
 //
 //     node scripts/sync-kompas.mjs            # source: ../../Daily jobright/perfACT/copilot
 //     KOMPAS_SRC=/path/to/copilot node scripts/sync-kompas.mjs
@@ -10,6 +9,7 @@
 // engine is not copied: there is one answer engine, and it lives with the copilot.
 
 import { readFile, writeFile, mkdir, copyFile } from "node:fs/promises"
+import { patchKompasVoice } from "./patch-kompas-voice.mjs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -37,7 +37,7 @@ const BACK_LINK = `<a class="side-item" href="/dashboard/prep" style="text-decor
     `
 
 await mkdir(OUT, { recursive: true })
-await copyFile(path.join(SRC, "app.js"), path.join(OUT, "app.js"))
+await writeFile(path.join(OUT, "app.js"), patchKompasVoice(await readFile(path.join(SRC, "app.js"), "utf8")), "utf8")
 await copyFile(path.join(SRC, "styles.css"), path.join(OUT, "styles.css"))
 
 let html = await readFile(path.join(SRC, "index.html"), "utf8")

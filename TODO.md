@@ -1,3 +1,43 @@
+## 2026-10-03 — Durable storage and runtime checkpoint
+
+- Storage keys now reject traversal/ambiguous paths instead of silently remapping objects; preserve legitimate filename spaces. Empty-prefix deletion is denied.
+- Vercel and partially configured R2 deployments fail explicitly instead of saving to ephemeral disk; R2 permission/network errors are no longer treated as missing objects. Configure all four R2 settings before hosted writes.
+- API runtime configuration aligned to60 seconds with the tailoring/WhatsApp route budgets. Two focused storage-policy regressions pass.
+- Browser runtime installed; previous deployed dashboard rendered successfully locally. New parallel changes still await integrated build and deployment.
+- These backend changes have no direct visible UI signature. No production data migration or email sending performed.
+
+## 2026-10-02 — Full repository checks and publication attempt
+
+- Approved network access unlocked a full clone and real dependency installation. Repaired lockfile missing entries. Supplied GitHub credential validated repository push permission; connector itself still rejects writes.
+- Upgraded Next + eslint-config-next to16.3.8, moved shadcn CLI to dev dependencies, refreshed compatible vulnerable dependencies. Production npm audit now0 vulnerabilities.
+- Fixed typed archive stream handling discovered by tsc; removed warnings in changed AI modules; Kompas CSP now allows its PDF blob iframe without relaxing global microphone policy.
+- Verified full tsc passes, hardening25, autofill133, application merge15. Lint has0 errors with existing repository warnings. Production build passed (Next16.3.8).
+- No live ownership migration, email sending, live Jev call or device-audio accuracy claim. Preview before production promotion; tailored capability URLs remain a known release blocker.
+
+## 2026-10-02 — JD submission confirms skill knowledge
+
+- User clarification: skills/technologies explicitly listed in a submitted JD are user-confirmed knowledge; include them in existing skills/summary even if absent from baseline. Employer use, metrics, dates, degrees and certifications still require their own facts.
+- J1 policy bumped to j1.resume.v2, invalidating older tailoring cache keys. Updated main/profile/gap prompts and policy regression assertion. No production deployment; GitHub write403 remains unresolved.
+
+## 2026-10-02 — Agent fleet integration checkpoint
+
+- Four implementation workers completed authentication/ownership, J1/Jev truthful resume prompts, two-feature dashboard navigation, and voice lifecycle. Exactly one read-only status watcher.
+- Auth routes now fail closed, including owner-only download/PDF; sign-in redirects constrained. Legacy demo/shared documents need explicit owner migration before release. Tailored capability links remain a documented blocker.
+- J1 freezes baseline identity/structure, limits edits to owned indices, versions the cache, and removes repeated coverage-driven gap filling. Optional Jev classifies single-field edit complexity only, with a 1.2-second timeout and conservative fallback; requires server opt-in/key. No live Jev calls were made.
+- UI has two primary tools, accessible mobile/desktop sign-in, secondary Kompas, and clearly labeled sample email/calendar/workflow pages. Voice guards invalidate delayed permission/AudioContext capture after stop, and drain final phrases.
+- Verified: 25 focused tests pass, voice JavaScript parses, changed AI TypeScript parses. NOT verified: full lint/typecheck/build, rendered UI, real OAuth/provider operations, device audio or production. No deployment occurred.
+- GitHub create_tree failed HTTP403 Resource not accessible by integration: unable to commit or publish a PR through current connection. Source checkpoint preserved separately; PRODUCT_DIRECTION.md and PRODUCTION_REVIEW_2026-10-02.md record expectations and release gates.
+- Backend security and prompt changes have no direct visible UI signature; dashboard/navigation changes become visible only once built and deployed.
+
+## 2026-10-02 — MarketFit hardening checkpoint (agent fleet)
+
+- Added server-expiring randomized admin sessions and secure production admin cookies; old admin tokens are invalidated.
+- Restricted extension authenticated resume downloads to the configured app origin and explicit download endpoints; redirects fail closed.
+- Added bounded resume upload utilities and four security regression checks. Upload route integration follows in the authentication checkpoint.
+- CI now includes the actual master branch, Node 24 hardening tests, and a blocking high-severity production dependency audit.
+- Verified locally: 11 voice/security tests passed before fleet edits. Full Next build, browser regression, OAuth, production configuration, and deployment NOT verified. These security changes have no visible dashboard signature.
+- Parallel workers own authentication, truthful resume/J1 policy, dashboard navigation, and voice lifecycle. One read-only status watcher. No production data migrated or emails sent.
+
 # MarketFit — Single Project Tracker (`todo.md`)
 
 ## 2026-09-10 — Tailoring shows every listed JD skill in every client role (adds bullets where needed)

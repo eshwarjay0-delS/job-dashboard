@@ -80,6 +80,8 @@ const nextConfig = {
           "connect-src 'self' https://cdn.jsdelivr.net https://ccoreilly.github.io",
           "worker-src 'self' blob: https://cdn.jsdelivr.net",
           "media-src 'self' blob:",
+          // Uploaded PDF previews are rendered in a local blob iframe.
+          "frame-src 'self' blob:",
           "frame-ancestors 'none'",
         ].join("; "),
       },

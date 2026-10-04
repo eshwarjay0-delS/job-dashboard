@@ -51,7 +51,11 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ ok: false }, { status: 400 })
   }
-  const ok = !!(body.user && body.pass && body.user === ADMIN_USER && body.pass === ADMIN_PASS)
+  const ok = !!(body && typeof body.user === "string" && typeof body.pass === "string" && body.user === ADMIN_USER && body.pass === ADMIN_PASS)
+
+  if (!body || typeof body.user !== "string" || typeof body.pass !== "string") {
+    return NextResponse.json({ ok: false }, { status: 400 })
+  }
 
   if (ok) {
     attempts.delete(ip)
@@ -68,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Real server-side session — an httpOnly, signed cookie the admin config API
     // checks (upgrades the old bypassable sessionStorage-only gate).
     res.cookies.set("mf_admin", makeAdminToken(), {
-      httpOnly: true, sameSite: "strict", path: "/", maxAge: 60 * 60 * 8,
+      httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict", path: "/", maxAge: 60 * 60 * 8,
     })
   }
   return res

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Check, ChevronUp, ChevronDown, Pause, Play, Plus } from "lucide-react"
-import { SAMPLE_LINE, Card, Btn, Toggle, useAnswered, useLeaving, leavingStyle } from "../_suite/ui"
+import { Card, Btn, Toggle, useAnswered, useLeaving, leavingStyle } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 import { mails, approvalFor, postApplySteps, postInterviewSteps, type Step } from "../_suite/sample"
 
@@ -76,7 +76,7 @@ export default function WorkflowsPage() {
 
   return (
     <div>
-      <PageIntro page="/dashboard/workflows" action={{ label: "Approve waiting emails", href: "#approve" }} sample={SAMPLE_LINE} />
+      <PageIntro page="/dashboard/workflows" action={{ label: "Try sample approvals", href: "#approve" }} sample="Preview only. Rearrange sample steps and try approvals. No email is sent or scheduled; workflow edits reset when you leave." />
 
       <Card dark style={{ padding: 28, marginBottom: 20 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(255,255,255,.55)" }}>Workflow</div>
@@ -85,11 +85,11 @@ export default function WorkflowsPage() {
           {steps.length} steps · {autoCount} automatic · {steps.length - autoCount} wait for your approval
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 18 }}>
-          <button type="button" onClick={() => setEnabled(!enabled)} aria-label={enabled ? "Pause workflow" : "Run workflow"}
+          <button type="button" onClick={() => setEnabled(!enabled)} aria-label={enabled ? "Pause preview" : "Run preview"}
             style={{ width: 44, height: 44, borderRadius: 22, border: "none", cursor: "pointer", background: "var(--surface)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {enabled ? <Pause size={18} /> : <Play size={18} />}
           </button>
-          <span style={{ fontSize: 14, fontWeight: 650 }}>{enabled ? "Running" : "Paused"}</span>
+          <span style={{ fontSize: 14, fontWeight: 650 }}>{enabled ? "Preview running" : "Preview paused"}</span>
           <div style={{ flex: 1 }} />
           <div style={{ display: "flex", gap: 2, padding: 3, borderRadius: 10, background: "rgba(255,255,255,.1)" }}>
             {([["apply", "After applying"], ["interview", "After interview"]] as const).map(([v, label]) => (
@@ -110,7 +110,7 @@ export default function WorkflowsPage() {
               update={p => set(xs => xs.map(x => x.id === s.id ? { ...x, ...p } : x))}
               nudge={d => set(xs => move(xs, i, i + d))} />
           ))}
-          <button type="button" style={{
+          <button type="button" disabled title="Adding steps is not available in this preview" style={{
             display: "flex", alignItems: "center", gap: 10, height: 52, padding: "0 16px", borderRadius: 10, cursor: "pointer",
             border: "1.5px dashed var(--border-strong)", background: "transparent", fontSize: 13.5, fontWeight: 650, color: "var(--text)",
           }}><Plus size={16} /> Add a step</button>
@@ -126,7 +126,7 @@ export default function WorkflowsPage() {
                 background: waiting.length ? "var(--accent)" : "var(--surface-3)", color: waiting.length ? "#fff" : "var(--text-muted)",
               }}>{waiting.length}</span>
             </div>
-            {!waiting.length && <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Nothing waiting — every reply has been sent.</div>}
+            {!waiting.length && <div style={{ fontSize: 13, color: "var(--text-muted)" }}>No sample replies waiting. No email was sent.</div>}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {waiting.map(m => (
                 <div key={m.id} style={{ ...leavingStyle(leaving.includes(m.id)), padding: 12, borderRadius: 10, background: "var(--surface-2)" }}>
@@ -136,8 +136,8 @@ export default function WorkflowsPage() {
                   </div>
                   <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 4 }}>{approvalFor[m.id]!.detail}</div>
                   <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                    <Btn onClick={() => leave(m.id)} style={{ flex: 1 }}><Check size={14} /> Approve</Btn>
-                    <Btn variant="outline">Edit</Btn>
+                    <Btn onClick={() => leave(m.id)} style={{ flex: 1 }}><Check size={14} /> Try approval</Btn>
+                    <Btn variant="outline" disabled>Edit · coming soon</Btn>
                   </div>
                 </div>
               ))}
@@ -145,7 +145,7 @@ export default function WorkflowsPage() {
           </Card>
 
           <Card>
-            <h3 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 700 }}>This week</h3>
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 700 }}>Example week</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {[["Mon 10:00", "Weekly follow-up", "4 sent"], ["Tue 09:12", "Polite close on rejection", "Mastercard"], ["Wed 08:40", "Thank-you + resume", "Vanguard"], ["Thu 10:00", "Weekly follow-up", "scheduled · 3"]].map(([t, s, d]) => (
                 <div key={t + s} style={{ display: "flex", gap: 12, fontSize: 13 }}>
