@@ -1,8 +1,9 @@
 /**
  * Next.js 16 request interceptor.
- * Dashboard access is authenticated when REQUIRE_AUTH=1.
+ * When REQUIRE_AUTH=1, every user-facing page requires a Supabase session.
  * Google is the only supported interactive sign-in provider when AUTH_GOOGLE_ONLY=1.
- * External webhook/API routes are not redirected here; route handlers authenticate them.
+ * Login and OAuth callbacks remain public. API handlers enforce their own auth,
+ * and external webhook routes remain reachable for signed provider callbacks.
  */
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
@@ -21,7 +22,6 @@ export async function proxy(request: NextRequest) {
     return out
   }
 
-  if (path === "/dashboard") return redirect("/dashboard/resume")
   if (!supabaseUrl || !supabaseKey) return NextResponse.next()
 
   try {
@@ -38,29 +38,38 @@ export async function proxy(request: NextRequest) {
     })
 
     const { data: { user } } = await supabase.auth.getUser()
-    const isAuthPage = path === "/login" || path === "/signup"
-    const isDashboard = path.startsWith("/dashboard")
+    const isLoginPage = path === "/login"
+    const isSignupPage = path === "/signup"
+    const isApi = path.startsWith("/api/")
+    const isPublicPage = isLoginPage
     const requireAuth = process.env.REQUIRE_AUTH === "1"
     const googleOnly = process.env.AUTH_GOOGLE_ONLY === "1"
+    const protectedPage = !isPublicPage && !isApi
 
-    if (user && googleOnly) {
+    if (isSignupPage) return user ? redirect("/dashboard/resume", res) : redirect("/login", res)
+
+    if (user && googleOnly && protectedPage) {
       const provider = String(user.app_metadata?.provider || "")
       const providers = Array.isArray(user.app_metadata?.providers)
         ? user.app_metadata.providers.map(String)
         : []
       const googleIdentity = provider === "google" || providers.includes("google")
-      if (!googleIdentity && isDashboard) return redirect("/login", res)
+      if (!googleIdentity) return redirect("/login", res)
     }
 
-    if (user && isAuthPage) return redirect("/dashboard/resume", res)
-    if (!user && requireAuth && isDashboard) {
+    if (user && isLoginPage) return redirect("/dashboard/resume", res)
+
+    if (!user && requireAuth && protectedPage) {
       const url = request.nextUrl.clone()
       url.pathname = "/login"
+      url.search = ""
       url.searchParams.set("next", path + request.nextUrl.search)
       const out = NextResponse.redirect(url)
       res.cookies.getAll().forEach(c => out.cookies.set(c.name, c.value))
       return out
     }
+
+    if (user && path === "/dashboard") return redirect("/dashboard/resume", res)
 
     return res
   } catch {
@@ -71,6 +80,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|auth/callback|api/whatsapp/webhook|api/billing/stripe/webhook|kompas/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|auth/callback|api/whatsapp/webhook|api/billing/stripe/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }
