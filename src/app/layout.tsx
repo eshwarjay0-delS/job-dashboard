@@ -3,7 +3,7 @@ import { DM_Sans, Inter, JetBrains_Mono, Lora, Manrope, Playfair_Display } from 
 import "./globals.css";
 import { ThemeProvider } from "./theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { DialogProvider } from "@/components/ui/dialog-provider";
+import { DialogProvider } from "@/components/ui/dialog-provider";\nimport GlobalThemeToggle from "./global-theme-toggle";
 
 // One pairing, each face with one job, so a page never has to choose:
 // a serif for titles, an italic serif only for a short emphasised word, a humanist sans for
@@ -89,6 +89,7 @@ export default function RootLayout({
           which is harmless but otherwise throws a hydration mismatch error. */}
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider>
+          <GlobalThemeToggle />
           <DialogProvider>{children}</DialogProvider>
         </ThemeProvider>
         <Toaster position="top-right" richColors />
