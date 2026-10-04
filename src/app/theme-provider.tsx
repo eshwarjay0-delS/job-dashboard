@@ -5,78 +5,73 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 export type Accent = "blue" | "teal" | "violet" | "rose" | "amber" | "emerald"
 export type ColorMode = "light" | "dark" | "system"
 export type Template = "clean" | "focus" | "apple" | "glass" | "pro" | "minimal"
+export type Palette = "paper-bold" | "heritage" | "nocturne" | "alpine"
 
 interface ThemeCtx {
   accent: Accent
   mode: ColorMode
   template: Template
+  palette: Palette
   setAccent: (a: Accent) => void
   setMode: (m: ColorMode) => void
   setTemplate: (t: Template) => void
+  setPalette: (p: Palette) => void
 }
 
 const Ctx = createContext<ThemeCtx>({
   accent: "blue",
   mode: "light",
   template: "clean",
+  palette: "paper-bold",
   setAccent: () => {},
   setMode: () => {},
   setTemplate: () => {},
+  setPalette: () => {},
 })
 
 export function useTheme() { return useContext(Ctx) }
 
-// v3 — job-board palette (blue default); old saved accents are ignored
-const STORAGE_KEY = "jd_theme_v3"
+const STORAGE_KEY = "jd_theme_v4"
+const LEGACY_STORAGE_KEY = "jd_theme_v3"
 
-function persist(accent: Accent, mode: ColorMode, template: Template) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ accent, mode, template })) } catch {}
+function persist(accent: Accent, mode: ColorMode, template: Template, palette: Palette) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ accent, mode, template, palette })) } catch {}
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [accent,   setAccentState]   = useState<Accent>("blue")
   const [mode,     setModeState]     = useState<ColorMode>("light")
   const [template, setTemplateState] = useState<Template>("clean")
+  const [palette,  setPaletteState]  = useState<Palette>("paper-bold")
   const [ready,    setReady]         = useState(false)
 
-  // Hydrate from localStorage once (client-only)
-  // "focus", "apple", and "minimal" hide the sidebar (display:none !important)
-  // and have no UI to change them — guard against stale persisted values.
   const SIDEBAR_SAFE_TEMPLATES: Template[] = ["clean", "glass", "pro"]
+  const PALETTES: Palette[] = ["paper-bold", "heritage", "nocturne", "alpine"]
 
   useEffect(() => {
     try {
-      const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}")
-      if (s.accent)   setAccentState(s.accent as Accent)
-      // The brand look is the LIGHT job-board palette (white cards + blue accent)
-      // on every page. "system" was only ever a consolidation-era default — it
-      // silently flipped the whole app to the dark palette for anyone whose OS
-      // prefers dark, which read as a "black & white theme" nobody chose.
-      // Migrate it to light once; picking Dark in Settings still works and sticks.
-      if (s.mode === "system") {
-        setModeState("light")
-        persist(s.accent || "blue", "light", SIDEBAR_SAFE_TEMPLATES.includes(s.template) ? s.template : "clean")
-      } else if (s.mode) {
-        setModeState(s.mode as ColorMode)
-      }
-      if (s.template && SIDEBAR_SAFE_TEMPLATES.includes(s.template as Template)) {
-        setTemplateState(s.template as Template)
-      } else if (s.template) {
-        // Stale sidebar-hiding template — reset to clean and update storage
-        persist(s.accent || "blue", s.mode === "system" ? "light" : (s.mode || "light"), "clean")
-      }
+      const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY) || "{}"
+      const s = JSON.parse(raw)
+      const nextAccent: Accent = s.accent || "blue"
+      const nextMode: ColorMode = s.mode === "system" ? "light" : (s.mode || "light")
+      const nextTemplate: Template = SIDEBAR_SAFE_TEMPLATES.includes(s.template) ? s.template : "clean"
+      const nextPalette: Palette = PALETTES.includes(s.palette) ? s.palette : "paper-bold"
+
+      setAccentState(nextAccent)
+      setModeState(nextMode)
+      setTemplateState(nextTemplate)
+      setPaletteState(nextPalette)
+      persist(nextAccent, nextMode, nextTemplate, nextPalette)
     } catch {}
     setReady(true)
   }, [])
 
-  // Apply data-accent, data-theme, data-layout to <html>
-  const apply = useCallback((acc: Accent, m: ColorMode, tpl: Template) => {
+  const apply = useCallback((acc: Accent, m: ColorMode, tpl: Template, pal: Palette) => {
     const root = document.documentElement
     root.setAttribute("data-accent", acc)
     root.setAttribute("data-layout", tpl)
+    root.setAttribute("data-palette", pal)
 
-    // "Pro" is an inherently dark identity (Linear/Vercel) — force dark
-    // regardless of the chosen mode so its palette reads correctly.
     const forceDark = tpl === "pro"
     const applyDark = (dark: boolean) =>
       root.setAttribute("data-theme", dark || forceDark ? "dark" : "light")
@@ -87,42 +82,43 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const handler = (e: MediaQueryListEvent) => applyDark(e.matches)
       mq.addEventListener("change", handler)
       return () => mq.removeEventListener("change", handler)
-    } else {
-      applyDark(m === "dark")
     }
+
+    applyDark(m === "dark")
   }, [])
 
   useEffect(() => {
     if (!ready) return
-    return apply(accent, mode, template) ?? undefined
-  }, [accent, mode, template, ready, apply])
+    return apply(accent, mode, template, palette) ?? undefined
+  }, [accent, mode, template, palette, ready, apply])
 
-  const setAccent = useCallback((a: Accent) => {
-    setAccentState(a)
-    setModeState(m => {
-      setTemplateState(t => { persist(a, m, t); return t })
-      return m
-    })
-  }, [])
-
-  const setMode = useCallback((m: ColorMode) => {
-    setModeState(m)
+  const saveWith = useCallback((next: Partial<{ accent: Accent; mode: ColorMode; template: Template; palette: Palette }>) => {
     setAccentState(a => {
-      setTemplateState(t => { persist(a, m, t); return t })
-      return a
+      const na = next.accent ?? a
+      setModeState(m => {
+        const nm = next.mode ?? m
+        setTemplateState(t => {
+          const nt = next.template ?? t
+          setPaletteState(p => {
+            const np = next.palette ?? p
+            persist(na, nm, nt, np)
+            return np
+          })
+          return nt
+        })
+        return nm
+      })
+      return na
     })
   }, [])
 
-  const setTemplate = useCallback((t: Template) => {
-    setTemplateState(t)
-    setAccentState(a => {
-      setModeState(m => { persist(a, m, t); return m })
-      return a
-    })
-  }, [])
+  const setAccent = useCallback((a: Accent) => saveWith({ accent: a }), [saveWith])
+  const setMode = useCallback((m: ColorMode) => saveWith({ mode: m }), [saveWith])
+  const setTemplate = useCallback((t: Template) => saveWith({ template: t }), [saveWith])
+  const setPalette = useCallback((p: Palette) => saveWith({ palette: p }), [saveWith])
 
   return (
-    <Ctx.Provider value={{ accent, mode, template, setAccent, setMode, setTemplate }}>
+    <Ctx.Provider value={{ accent, mode, template, palette, setAccent, setMode, setTemplate, setPalette }}>
       {children}
     </Ctx.Provider>
   )
