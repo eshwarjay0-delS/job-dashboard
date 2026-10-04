@@ -35,7 +35,7 @@ const SLIDES = [
   },
 ] as const
 
-function MechanicVisual({ kind }: { kind: typeof SLIDES[number]["kind"] }) {
+function MechanicVisual({ kind }: { kind: (typeof SLIDES)[number]["kind"] }) {
   if (kind === "identity") {
     return (
       <div className="mf-tour-visual mf-tour-identity" aria-hidden="true">
