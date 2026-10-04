@@ -12,7 +12,7 @@ function normalizePhone(input: string) {
 function twilioAuth() {
   const sid = process.env.TWILIO_ACCOUNT_SID
   const token = process.env.TWILIO_AUTH_TOKEN
-  const service = process.env.TWILIO_VERIFY_SERVICE_SID
+  const service = process.env.TWILIO_VERIFY_SERVICE_SID || process.env.TWILIO_SERVICE_SID
   if (!sid || !token || !service) return null
   return { sid, token, service }
 }
