@@ -136,5 +136,47 @@
       "evaluation"
     ],
     "default_training_eligible": false
+  },
+  "data_access": {
+    "collaboration": "Jev + internal agent",
+    "exclusive_context_assembly": false,
+    "loop": [
+      "internal_agent -> Jev: retrieval intent",
+      "Jev -> internal_agent: ranked context + provenance + conflicts",
+      "internal_agent -> Jev: optional gap/follow-up retrieval",
+      "Jev -> internal_agent: delta context",
+      "internal_agent -> Thomas renderer: answer plan",
+      "Thomas renderer -> user: first-person response"
+    ],
+    "internal_agent_role": [
+      "understand the active interview question and live session state",
+      "decide what information is missing",
+      "form targeted retrieval intents",
+      "reason across evidence",
+      "detect ambiguity and gaps",
+      "request additional Jev retrieval when necessary",
+      "select the answer path"
+    ],
+    "jev_role": [
+      "resolve persistent Kompas models and temporal memory",
+      "retrieve conversation, artifact, profile and connected-source context",
+      "rank and scope evidence",
+      "preserve provenance and confidence",
+      "surface conflicts",
+      "reuse cached context when fingerprints are unchanged",
+      "return context snapshots and provenance manifests"
+    ],
+    "sources": [
+      "kompas_model",
+      "temporal_memory",
+      "conversation",
+      "artifact",
+      "connected_app",
+      "profile",
+      "cache",
+      "external_reference"
+    ],
+    "cache_and_reuse": true,
+    "incremental_invalidation": true
   }
 }
