@@ -150,6 +150,34 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 })
 
     const body = await request.json().catch(() => ({}))
+
+    if (body.profileComplete === true) {
+      const { data: existing, error: existingError } = await supabase
+        .from("profiles")
+        .select("full_name,title,work_auth,phone_verified,open_to_roles")
+        .eq("id", user.id)
+        .maybeSingle()
+      if (existingError) return NextResponse.json({ error: existingError.message }, { status: 500 })
+
+      const fullName = String(body.name ?? existing?.full_name ?? "").trim()
+      const title = String(body.title ?? existing?.title ?? "").trim()
+      const workAuth = String(body.workAuth ?? existing?.work_auth ?? "").trim()
+      const roles = body.openToRoles ?? existing?.open_to_roles
+      const missing: string[] = []
+      if (!fullName) missing.push("full_name")
+      if (!title) missing.push("title")
+      if (!workAuth) missing.push("work_auth")
+      if (!existing?.phone_verified) missing.push("phone_verification")
+      if (!Array.isArray(roles) || roles.length === 0) missing.push("target_roles")
+
+      if (missing.length) {
+        return NextResponse.json(
+          { error: "Complete required onboarding fields before finishing setup.", missing },
+          { status: 409 },
+        )
+      }
+    }
+
     const { error } = await supabase.from("profiles").upsert(
       {
         id: user.id,
