@@ -207,7 +207,7 @@ body{
 .nav-prev{left:10px}.nav-next{right:10px}
 .card{animation:cardIn .26s var(--ease) both}
 @keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.q{display:flex;gap:9px;font-size:16px;line-height:1.55;margin-bottom:14px}
+.q{display:flex;gap:9px;font-size:16px;line-height:1.55;margin-bottom:14px;max-height:7.75em;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .q b{font-weight:700}
 .a-head{font-size:14.5px;font-weight:700;margin:2px 0 9px}
 .a ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px}
