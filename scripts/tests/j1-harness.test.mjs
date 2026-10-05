@@ -32,16 +32,18 @@ test('Jev sends a bounded structured state and fixed endpoint without candidate 
     return reply('simple', .95, .95)()
   }})
 })
-test('J1 preserves identity and structure and rejects indices outside their section', () => {
-  const zones = { header:null,summaryIdx:1,summaryText:'Original',summaryOverflowIdx:[2],skills:[{idx:3,text:'Azure'}],roles:[{role:'Intern',bullets:[{idx:5,text:'Tested'}]}],extras:[] }
-  const result = constrainResumeEdits({headline:{title:'Senior engineer'},summary:'Merged',skills:[{idx:5,text:'AWS'},{idx:3,text:'Azure'},{idx:3,text:'duplicate'}],bullets:[{idx:999,text:'invented'},{idx:5,text:'Tested security'}],added:[{after:5,text:'Invented incident'}]},zones)
-  assert.deepEqual(result.headline,{title:'',tagline:''})
-  assert.equal(result.summary,'')
-  assert.deepEqual(result.skills,[{idx:3,text:'Azure'}])
-  assert.deepEqual(result.bullets,[{idx:5,text:'Tested security'}])
-  assert.deepEqual(result.added,[])
-  assert.match(J1_HEADER,/submitting a job description is the user.s confirmation/)
-  assert.match(J1_HEADER,/This confirms skill knowledge only/)
+test('an edit lands only on a line of its own section, once, and a new bullet only after a real role', () => {
+  const zones = { header:null,summaryIdx:1,summaryText:'Original',summaryOverflowIdx:[2],skills:[{idx:3,text:'Azure'}],roles:[{role:'Engineer',bullets:[{idx:4,text:'Built'},{idx:5,text:'Tested'}]}],extras:[] }
+  const result = constrainResumeEdits({summary:'Security engineer',skills:[{idx:5,text:'AWS'},{idx:3,text:'Azure, AWS'},{idx:3,text:'duplicate'}],bullets:[{idx:999,text:'invented'},{idx:5,text:'Tested AWS IAM'}],added:[{after:5,text:'Threat-modelled the AI agent integrations'},{after:4,text:'not after the last bullet'},{after:77,text:'no such role'}]},zones)
+  assert.equal(result.summary,'Security engineer')
+  assert.deepEqual(result.skills,[{idx:3,text:'Azure, AWS'}])
+  assert.deepEqual(result.bullets,[{idx:5,text:'Tested AWS IAM'}])
+  assert.deepEqual(result.added,[{after:5,text:'Threat-modelled the AI agent integrations'}])
+})
+test('the resume and the job description are read as one record, and identity still comes only from the resume', () => {
+  assert.match(J1_HEADER,/RESUME AND THE JOB DESCRIPTION COMBINED/)
+  assert.match(J1_HEADER,/employers, job titles of past roles, dates, years of experience, seniority, certifications/)
+  assert.match(J1_HEADER,/never delete what the candidate actually used/)
 })
 
 test('provider retry backoff obeys one overall request deadline', async () => {

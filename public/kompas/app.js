@@ -176,7 +176,7 @@ document.querySelectorAll(".choice").forEach(c => c.onclick = () => {
 function segSet(id, val) { const box = $(id); if (!box) return; [...box.children].forEach(b => b.classList.toggle("on", b.dataset.v === val)); }
 ["lengthSeg", "toneSeg", "modeSeg"].forEach(id => { const box = $(id); if (box) box.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; [...box.children].forEach(x => x.classList.remove("on")); b.classList.add("on"); draft[{ lengthSeg: "length", toneSeg: "tone", modeSeg: "mode" }[id]] = b.dataset.v;
   // the interview type suggests who is asking: Behavioural -> Technical HR, Technical -> Engineer, Coding -> Developer
-  if (id === "modeSeg" && $("interviewerSelect")) { const who = { behavioural: "technical_hr", technical: "engineer", coding: "developer", final: "architect" }[b.dataset.v]; if (who) $("interviewerSelect").value = who; } }; });
+  if (id === "modeSeg" && $("interviewerSelect")) { const who = { behavioural: "technical_hr", technical: "engineer", coding: "engineer", final: "architect" }[b.dataset.v]; if (who) $("interviewerSelect").value = who; } }; });
 
 function finishWizard() {
   const s = {
@@ -257,7 +257,7 @@ function launchCopilot(s) {
   cards = [{ question: "Preparing…", answer: ["Forming your identity and persona from the four factors…"] }];
   idx = 0;
   $("ovTitle").textContent = "Kompas";
-  if ($("liveInterviewer")) $("liveInterviewer").value = s.interviewer || "engineer";
+  if ($("liveInterviewer")) $("liveInterviewer").value = keptLevel(s.interviewer);
   renderDepth();
   resetLiveState();
   setAuto(s.autoMode === true);          // default OFF: nothing answers until you press AI Answer
@@ -556,7 +556,11 @@ $("clearBtn").onclick = () => { cards = [{ question: "Cleared.", answer: ["Ask s
 // steps one level deeper — "they weren't loving that depth, go further" — like Claude's effort meter,
 // faster → smarter; ↑ steps back to lighter. The answer on screen regenerates for the new level, once,
 // after you stop pressing (same question — it isn't re-derived). Peer sits outside the ladder: it mirrors.
-const LADDER = ["hr", "technical_hr", "analyst", "engineer", "developer", "supervisor", "architect", "lead", "director"];
+const LADDER = ["technical_hr", "engineer", "architect", "director"];   // cut to four by the owner (5 Oct 2026); the closed level map still holds all nine
+function keptLevel(v) {
+  const near = { hr: "technical_hr", analyst: "engineer", developer: "engineer", peer: "engineer", supervisor: "architect", lead: "director" };
+  return LADDER.includes(v) ? v : near[v] || "engineer";
+}
 function renderDepth() {
   const box = $("depthBars"); if (!box) return;
   const who = $("liveInterviewer").value, i = LADDER.indexOf(who);
@@ -1630,7 +1634,7 @@ const DossierDB = {
   async get(id) { try { const db = await this.open(); return await new Promise(res => { const rq = db.transaction("d", "readonly").objectStore("d").get(id); rq.onsuccess = () => res(rq.result || null); rq.onerror = () => res(null); }); } catch { return null; } },
   async put(id, v) { try { const db = await this.open(); await new Promise(res => { const tx = db.transaction("d", "readwrite"); tx.objectStore("d").put(v, id); tx.oncomplete = res; tx.onerror = res; }); } catch {} },
 };
-const INTERVIEWER_KEYS = ["hr", "technical_hr", "developer", "engineer", "architect", "analyst", "peer", "director", "lead", "supervisor"];
+const INTERVIEWER_KEYS = ["technical_hr", "engineer", "architect", "director"];   // the four levels offered (owner, 5 Oct 2026)
 const CATEGORIES = ["identity & background", "behavioral (STAR)", "technical deep-dive", "scenario & troubleshooting", "system & architecture design", "tools & stack specifics", "failure & lessons", "conflict & collaboration", "leadership & ownership", "gaps & weaknesses", "motivation & culture fit", "closing & questions to ask"];
 const PAGES_BY_DIFFICULTY = { easy: 100, standard: 250, hard: 500, expert: 1000 };
 const WORDS_PER_PAGE = 500;
@@ -1670,7 +1674,9 @@ function showDossierProgress(finished) {
    ranked ahead of the dossier — relevance to what the interviewer asked is the top priority. */
 let persona = { v: 1, sid: null, parts: {}, done: 0, total: 0, items: [] };
 let dossierOff = false, slowUntil = 0, personaLane = "";
-const writerOnGroq = () => personaLane === "groq" || (!personaLane && !/^(localhost|127.0.0.1)$/.test(location.hostname));            // dossier needs local Claude; persona parts written on Groq are paced
+// Persona parts written on Groq are paced and wait out a live call. Before the first reply the writer is unknown: one
+// part is sent to find out, so a live call never holds the file at 0 parts when GPT Luna is the writer.
+const writerOnGroq = () => personaLane === "groq";
 function personaPlan(s) {
   const projects = (s.prep && s.prep.projects) || [];
   const plan = [{ key: "cover", part: "cover" }, { key: "who", part: "who" }];
@@ -1768,7 +1774,9 @@ async function buildPersonaFile(s) {
       else { backoff = Math.min(20000, backoff ? backoff * 1.6 : 3000); if (job.tries++ < 2) queue.push(job); await sleep(backoff); }
     }
   };
-  await Promise.all([worker(), worker(), worker()]);
+  const first = worker();
+  while (!personaLane && queue.length && !dossierAbort && current === s) await sleep(300);
+  await Promise.all([first, worker(), worker()]);
   if (current === s) showDossierProgress();
 }
 function openPersonaFile() {

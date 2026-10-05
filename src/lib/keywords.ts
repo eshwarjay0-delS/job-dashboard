@@ -174,6 +174,7 @@ const WORD_STOP = new Set([
 // Gerund/verb words that must NOT start a domain-noun phrase (else "implementing
 // security", "performing analysis" leak in as junk that can't match the resume).
 const VERB_STOP = new Set([
+  "implement","perform","conduct","manage","provide","ensure","support","maintain","develop","design","configure","review","execute","lead","assist","assess","partner","track","report","test","work",
   "implementing","performing","conducting","managing","providing","ensuring","supporting","maintaining","developing","designing","configuring",
   "troubleshooting","reviewing","executing","facilitating","leading","coordinating","assisting","addressing","resolving","monitoring","building",
   "including","using","regular","ongoing","overall","general","strong","basic","daily","related","other","various","additional","enterprise-wide",
@@ -189,7 +190,13 @@ const VERB_STOP = new Set([
 // that only produced sentence-fragment junk ("develop business", "general networking")
 // that can never match and would waste model escalation. Precision over recall = fewer
 // tokens. Everything normalized to lowercase.
+// A recruiter's header lines ("Location: Seattle, WA / Sunnyvale, CA (Local Candidates Only)", "Duration: Long Term
+// Contract") are logistics, not skills: scraped as keywords they put "sunnyvale", "only" and "contract" into the coverage a
+// resume is scored against, where no rewrite can or should cover them.
+const META_LINE = /^\s*(?:(?:hello|hi|dear)\s[^\n]*|(?:[-•·*]\s*)?(?:locations?|duration|hiring|job\s*title|position|title|job\s*type|employment(?:\s*type)?|work\s*(?:mode|type|authori[sz]ation)|visa|pay(?:\s*rate)?|rate|salary|compensation|start\s*date|(?:end\s*)?client|contact|email|phone|interview(?:\s*mode)?|openings?)\s*:[^\n]*)$/gim
+
 export function extractJdKeywords(jd: string): string[] {
+  jd = jd.replace(META_LINE, "")
   const out = new Set<string>()
   for (const k of extractKeywords(jd)) out.add(k)
 
@@ -247,7 +254,7 @@ export function extractJdKeywords(jd: string): string[] {
     const raw = m[1]
     if (/^[A-Z]+$/.test(raw)) continue              // ALL-CAPS already handled above
     const low = raw.toLowerCase()
-    if (WORD_STOP.has(low) || CAPS_STOP.has(raw.toUpperCase()) || TITLE_STOP.has(low)) continue
+    if (WORD_STOP.has(low) || CAPS_STOP.has(raw.toUpperCase()) || TITLE_STOP.has(low) || (low.endsWith("s") && TITLE_STOP.has(low.slice(0, -1)))) continue
     out.add(low)
   }
 
@@ -269,6 +276,8 @@ const TITLE_STOP = new Set([
   "monday","tuesday","wednesday","thursday","friday","january","february","march","april","june",
   "july","august","september","october","november","december","remote","hybrid","onsite","full",
   "part","time","note","please","apply","join","help","also","other","others","etc","including",
+  "only","long","short","term","contract","contractor","permanent","local","overview","summary","description","details","about",
+  "mandatory","duration","location","hiring","benefits","salary","hourly","responsibility","duties","opportunity","selected",
 ])
 
 // Which of the JD's keywords are literally present in a resume's text.

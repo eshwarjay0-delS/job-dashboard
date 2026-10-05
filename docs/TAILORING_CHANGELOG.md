@@ -134,4 +134,18 @@ what was missing, and the fix. Bump the version when the *method* changes (not p
 - Format note: added bullets copy the role's own last bullet paragraph (style, numbering, fonts). The
   bullet count now grows on purpose, per the user's request.
 
+### v3.0 — 2026-10-05 — the resume and the JD are one record (WhatsApp + /dashboard/resume)
+- Reported: WhatsApp tailor came back "Match 41% -> 45%, keywords 45%"; "It used to cover 98% match and coverage of all
+  keywords. Should treat resume + his version JD as combined. that's the rule."
+- Root cause: commit 6a83739 (2 Oct) replaced RULES with an evidence-only prompt ("use them only in roles where their use is
+  documented", "leave every unsupported JD requirement out"), dropped every added bullet in `constrainResumeEdits`, and
+  removed the missing-terms injection, the years math and the per-role gap fill. The first draft was the result.
+- Fix: J1 v3 states the combined rule; the v2.0 RULES are back (adjacent stacks are added beside the real one, not
+  swapped); the first pass names the missing JD terms; the gap fill runs per role on the lanes (`workParts`) and also hands
+  the current role any JD term missing from the whole resume. The extractor no longer scores recruiter header lines
+  ("Location:", "Duration:", greetings) or words like "only", "contract", "overview", "engineers".
+- Measured locally, free models only (Groq), 3-role security resume vs the recruiter's Security Engineer JD:
+  20% -> 94% in 20 s, 21/21 listed skills shown at every client, 11 bullets added. Back-to-back runs on spent Groq
+  allowances: 94% in 48 s with a thinner current role. GPT Luna (owner number) is not on that allowance.
+
 <!-- Add each new run below: date · domain · resume · coverage · model · gaps · fix -->

@@ -8,6 +8,13 @@ MarketFit is the main application. Resume preparation and job email are the two 
 
 ## Resume preparation
 
+**Superseded by the owner, 2026-10-05:** "Should treat resume + his version JD as combined. that's the rule." The resume and
+the job description together are the candidate's record: every skill, tool and responsibility the JD lists is theirs and is
+shown in the skill lines and in the bullets of every role where it fits, with new bullets added where a role can't carry them.
+Identity still comes only from the resume (name, employers, titles of past roles, dates, years, seniority, certifications,
+degrees, clearances, work authorization), a JD's stack is added beside the real one rather than replacing it, and no metric
+is invented. This is J1 `j1.resume.v3`. Where the paragraph below says otherwise, this rule wins.
+
 Begin with the user's original baseline for each new JD. Preserve its identity, job titles, formatting and structure. Emphasize supported experience using clear human language. The user clarified that submitting a JD confirms knowledge of its explicitly listed skills and technologies. Include those in existing skills lines and relevant summary wording even if absent from the baseline. This does not establish employer-specific use, years, certifications, degrees, clearance or work authorization. Experience with Azure does not authorize changing an employer history to AWS. Do not generate plausible metrics or fictional incidents. Show changes for review and retain the baseline. Keyword coverage is not an ATS acceptance probability or a factual-accuracy score.
 
 ## Email target, not a claim of current functionality
