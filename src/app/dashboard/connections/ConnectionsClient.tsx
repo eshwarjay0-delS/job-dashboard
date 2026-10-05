@@ -1,231 +1,250 @@
 "use client"
 
-// One place that says, for every account, whether it is really connected, exactly what access it
-// carries, and which actions run on their own versus wait for Approve. MarketFit owns that boundary;
-// a connected account only carries out what is listed here. A row never reports Connected on the
-// strength of a button press — only on what the server or the provider actually confirms.
-
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { connectGmail } from "@/lib/google-auth"
-import { useAnswered } from "../_suite/ui"
-import { mails } from "../_suite/sample"
 import PageIntro from "../_components/page-intro"
+import "./connections.css"
 
-type Status = "checking" | "connected" | "not_connected"
-type Policy = "runs" | "approve" | "exception"
-type Access = { action: string; policy: Policy; note: string }
-type Row = {
-  id: "gmail" | "calendar" | "whatsapp" | "linkedin"
-  name: string
-  scope: string
-  status: Status
-  detail: string
-  access: Access[]
-  connect?: () => void
-  unavailable?: string
+type GoogleAccount = {
+  id: string
+  google_email: string
+  gmail_enabled: boolean
+  calendar_enabled: boolean
+  is_primary: boolean
+  connected_at: string
+  updated_at: string
 }
 
-const POLICY_LABEL: Record<Policy, string> = {
-  runs: "Runs",
-  approve: "Waits for Approve",
-  exception: "Runs · exception",
+type ConnectionStatus = {
+  google: {
+    accounts: GoogleAccount[]
+    maxAccounts: number
+    canAdd: boolean
+  }
+  whatsapp: {
+    phoneVerified: boolean
+    phoneLast4: string | null
+    optedIn: boolean
+    systemReady: boolean
+    connected: boolean
+    label: string | null
+  }
 }
 
-export default function ConnectionsClient({ whatsappWired }: { whatsappWired: boolean }) {
-  const [gmail, setGmail] = useState<{ status: Status; detail: string }>({ status: "checking", detail: "Checking with the server…" })
-  const [note, setNote] = useState<Record<string, string>>({})
-  const [answered] = useAnswered()
-  const waiting = mails.filter(m => m.needsReply && !answered.includes(m.id)).length
+const EMPTY: ConnectionStatus = {
+  google: { accounts: [], maxAccounts: 4, canAdd: true },
+  whatsapp: { phoneVerified: false, phoneLast4: null, optedIn: false, systemReady: false, connected: false, label: null },
+}
 
-  useEffect(() => {
-    let live = true
-    fetch("/api/gmail-sync", { cache: "no-store" })
-      .then(r => r.json())
-      .then((d: { connected?: boolean; reason?: string; via?: string }) => {
-        if (!live) return
-        if (d.connected) setGmail({ status: "connected", detail: d.via === "refresh_token" ? "Connected with a saved Google grant." : "Connected through your Google sign-in." })
-        else setGmail({
-          status: "not_connected",
-          detail: d.reason === "not_logged_in" ? "You are not signed in, so no Google access exists yet." : "No Gmail access has been granted.",
-        })
-      })
-      .catch(() => { if (live) setGmail({ status: "not_connected", detail: "The server could not confirm Gmail access." }) })
-    return () => { live = false }
+function googleErrorMessage(code: string | null) {
+  if (!code) return null
+  const messages: Record<string,string> = {
+    access_denied: "Google did not grant access. If this OAuth app is still in Testing, this Google address must be added as a test user.",
+    redirect_uri_mismatch: "Google rejected the callback URL. Add the MarketFit callback URL to this OAuth client in Google Cloud.",
+    limit_reached: "This MarketFit account already has four Google accounts connected.",
+    already_linked: "That Google account is already linked to another MarketFit account.",
+    refresh_token_missing: "Google did not return offline access. Reconnect and approve the requested access.",
+    token_exchange_failed: "Google authorization completed, but MarketFit could not exchange the authorization code.",
+    account_verification_failed: "MarketFit could not verify the Google account after authorization.",
+    server_not_configured: "Google account linking is not configured on the server.",
+    invalid_state: "The Google connection attempt expired. Start the connection again.",
+    session_mismatch: "Your MarketFit login changed while Google was connecting. Try again.",
+    save_failed: "Google authorized access, but MarketFit could not save the connection.",
+  }
+  return messages[code] || `Google connection failed: ${decodeURIComponent(code)}`
+}
+
+export default function ConnectionsClient() {
+  const params = useSearchParams()
+  const [status, setStatus] = useState<ConnectionStatus>(EMPTY)
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState("")
+  const [message, setMessage] = useState("")
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/connections/status", { cache: "no-store" })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error || "Could not load connections.")
+      setStatus(body)
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  const say = (id: string, text: string) => setNote(n => ({ ...n, [id]: text }))
+  useEffect(() => { void load() }, [load])
 
-  const rows: Row[] = [
-    {
-      id: "gmail",
-      name: "Gmail",
-      scope: "Job mail",
-      status: gmail.status,
-      detail: gmail.detail,
-      access: [
-        { action: "Read job mail", policy: "runs", note: "Read-only Gmail permission. The only access MarketFit asks Google for." },
-        { action: "Label threads", policy: "runs", note: "Not granted. Labelling needs a Gmail permission MarketFit does not request." },
-        { action: "Draft replies", policy: "runs", note: "Drafted inside MarketFit. Nothing is written to your Gmail." },
-        { action: "Send a reply", policy: "approve", note: "Not granted. MarketFit cannot send from Gmail today." },
-      ],
-      connect: () => { say("gmail", "Opening Google to ask for read-only mail access…"); void connectGmail("/dashboard/connections") },
-    },
-    {
-      id: "calendar",
-      name: "Calendar",
-      scope: "Interview invites only",
-      status: "not_connected",
-      detail: "MarketFit does not request calendar access yet.",
-      access: [
-        { action: "Read interview invites", policy: "runs", note: "Not granted." },
-        { action: "Hold a time as a draft", policy: "runs", note: "Not granted." },
-        { action: "Accept or decline an invite", policy: "approve", note: "Not granted. Replies to the organiser, so it would always wait." },
-      ],
-      unavailable: "Calendar connection is not built yet, so nothing was connected. The Interview Calendar screen shows sample data until it is.",
-    },
-    {
-      id: "whatsapp",
-      name: "WhatsApp",
-      scope: "Resume in and out",
-      status: whatsappWired ? "connected" : "not_connected",
-      detail: whatsappWired
-        ? "The resume bot's credentials are set on this server."
-        : "The resume bot is not configured on this server.",
-      access: [
-        { action: "Receive a job description and resume you send", policy: "runs", note: "Only from numbers on the bot's allowlist, when one is set." },
-        { action: "Tailor the resume", policy: "runs", note: "The same tailoring engine as the Resume screen." },
-        { action: "Send the tailored resume back", policy: "exception", note: "Goes straight back to the number that asked, with no Approve step. It only ever answers your own message." },
-      ],
-      unavailable: whatsappWired ? undefined : "The WhatsApp bot is set up on the server with Meta's credentials, not from this page, so nothing was connected.",
-    },
-    {
-      id: "linkedin",
-      name: "LinkedIn",
-      scope: "Saved searches",
-      status: "not_connected",
-      detail: "MarketFit has no LinkedIn access.",
-      access: [
-        { action: "Read saved searches", policy: "runs", note: "Not granted." },
-        { action: "Apply or message a recruiter", policy: "approve", note: "Not granted. Would always wait for Approve." },
-      ],
-      unavailable: "LinkedIn connection is not built yet, so nothing was connected.",
-    },
-  ]
+  const callbackMessage = useMemo(() => {
+    if (params.get("google") === "connected") {
+      const email = params.get("email")
+      return email ? `${email} is now connected.` : "Google account connected."
+    }
+    return googleErrorMessage(params.get("google_error"))
+  }, [params])
 
-  const linked = [gmail.status === "connected" && "Gmail", whatsappWired && "WhatsApp"].filter(Boolean) as string[]
-  const linkedLine = gmail.status === "checking"
-    ? (whatsappWired ? "WhatsApp is linked. Checking Gmail now." : "Checking Gmail now. Nothing else is linked.")
-    : linked.length
-      ? `Only ${linked.join(" and ")} ${linked.length === 1 ? "is" : "are"} linked. Nothing else is.`
-      : "Nothing is linked yet."
+  async function setPrimary(accountId: string) {
+    setBusy(accountId)
+    setMessage("")
+    try {
+      const res = await fetch("/api/identity/google-workspace/accounts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || "Could not change the primary account.")
+      await load()
+      setMessage("Primary Google account updated.")
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy("")
+    }
+  }
+
+  async function disconnect(accountId: string) {
+    if (!window.confirm("Disconnect this Google account from MarketFit?")) return
+    setBusy(accountId)
+    setMessage("")
+    try {
+      const res = await fetch("/api/identity/google-workspace/accounts", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || "Could not disconnect the Google account.")
+      await load()
+      setMessage("Google account disconnected.")
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy("")
+    }
+  }
+
+  const googleAccounts = status.google.accounts
+  const wa = status.whatsapp
 
   return (
-    <div style={{ maxWidth: 1000 }}>
-      <PageIntro page="/dashboard/connections" action={{ label: "See what is linked", href: "#accounts" }} sample={linkedLine} />
+    <div className="conn-page">
+      <PageIntro
+        page="/dashboard/connections"
+        action={{ label: googleAccounts.length < status.google.maxAccounts ? "Add Google account" : "Review accounts", href: "#google-accounts" }}
+        sample={loading ? "Checking your connected accounts…" : `${googleAccounts.length} Google account${googleAccounts.length === 1 ? "" : "s"} connected · WhatsApp ${wa.connected ? "connected" : "not connected"}.`}
+      />
 
-      {/* ── The rule ─────────────────────────────────────────────── */}
-      <section style={{
-        marginTop: 28, display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "0.8px solid var(--border-strong)",
-        borderBottom: "0.8px solid var(--border-strong)",
-      }}>
-        <div style={{ padding: "20px 24px 20px 0", borderRight: "0.8px solid var(--border-strong)" }}>
-          <div className="ink-label">Goes ahead</div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, letterSpacing: "-0.01em", marginTop: 6 }}>
-            Reads, labels and drafts.
-          </div>
-          <p style={{ fontSize: 13.5, color: "var(--text-muted)", margin: "6px 0 0", lineHeight: 1.6 }}>
-            Nothing leaves your hands, so these run without asking.
-          </p>
+      {(callbackMessage || message) && (
+        <div className="conn-banner" role="status">
+          {callbackMessage || message}
         </div>
-        <div style={{ padding: "20px 0 20px 24px" }}>
-          <div className="ink-label">Waits for Approve</div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, letterSpacing: "-0.01em", marginTop: 6 }}>
-            Anything that sends, deletes or pays.
+      )}
+
+      <section id="google-accounts" className="conn-section">
+        <div className="conn-heading">
+          <div>
+            <div className="ink-label">Google</div>
+            <h2>Gmail + Calendar accounts</h2>
+            <p>Connect up to four Google accounts. Each one keeps its own encrypted offline grant while MarketFit stays signed in as the same user.</p>
           </div>
-          <p style={{ fontSize: 13.5, color: "var(--text-muted)", margin: "6px 0 0", lineHeight: 1.6 }}>
-            {waiting === 0
-              ? "Nothing is waiting right now."
-              : <>{waiting} {waiting === 1 ? "reply is" : "replies are"} waiting now (sample). Approving one in <Link href="/dashboard/mail" style={{ color: "var(--text)", textDecoration: "underline", textUnderlineOffset: 3 }}>Mail</Link>, Follow-ups or Today clears it everywhere.</>}
-          </p>
+          <div className="conn-count">{googleAccounts.length} / {status.google.maxAccounts}</div>
+        </div>
+
+        <div className="conn-account-list">
+          {loading ? (
+            <div className="conn-empty">Checking Google connections…</div>
+          ) : googleAccounts.length === 0 ? (
+            <div className="conn-empty">
+              <strong>No Google mailbox is connected yet.</strong>
+              <span>Connect one Gmail account first. You can add three more afterward.</span>
+            </div>
+          ) : googleAccounts.map(account => (
+            <article className="conn-account" key={account.id}>
+              <div className="conn-account-main">
+                <div className="conn-account-avatar">G</div>
+                <div>
+                  <div className="conn-email">{account.google_email}</div>
+                  <div className="conn-badges">
+                    {account.is_primary && <span className="conn-badge primary">Primary</span>}
+                    {account.gmail_enabled && <span className="conn-badge">Gmail</span>}
+                    {account.calendar_enabled && <span className="conn-badge">Calendar</span>}
+                  </div>
+                </div>
+              </div>
+              <div className="conn-actions">
+                {!account.is_primary && (
+                  <button disabled={busy === account.id} onClick={() => void setPrimary(account.id)} className="btn-outline">
+                    Make primary
+                  </button>
+                )}
+                <button disabled={busy === account.id} onClick={() => void disconnect(account.id)} className="conn-danger">
+                  Disconnect
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="conn-footer">
+          <div>
+            <strong>Primary account</strong>
+            <span>Poke and other send actions use the primary account unless you explicitly choose another sender.</span>
+          </div>
+          <button
+            className="btn-accent"
+            disabled={!status.google.canAdd || loading}
+            onClick={() => void connectGmail("/dashboard/connections")}
+          >
+            {status.google.canAdd ? "Add Google account" : "4 accounts connected"}
+          </button>
+        </div>
+
+        <div className="conn-permissions">
+          <div><span>Gmail read</span><small>Find job mail and application updates.</small></div>
+          <div><span>Gmail send</span><small>Send only when a MarketFit feature explicitly performs a send action.</small></div>
+          <div><span>Calendar read</span><small>Read interview and recruiting events.</small></div>
         </div>
       </section>
 
-      {/* ── Accounts ─────────────────────────────────────────────── */}
-      <div id="accounts" style={{ marginTop: 8, scrollMarginTop: 24 }}>
-        {rows.map((r, i) => (
-          <section key={r.id} aria-labelledby={`conn-${r.id}`} style={{
-            display: "grid", gridTemplateColumns: "48px minmax(160px, 220px) minmax(0, 1fr)", gap: 20, padding: "26px 0",
-            borderBottom: "0.8px solid var(--border-strong)",
-          }}>
-            <div aria-hidden style={{ fontFamily: "var(--font-num)", fontSize: 32, fontWeight: 700, letterSpacing: "-0.03em", color: "var(--surface-3)", lineHeight: 1 }}>
-              {String(i + 1).padStart(2, "0")}
-            </div>
+      <section className="conn-section">
+        <div className="conn-heading">
+          <div>
+            <div className="ink-label">WhatsApp</div>
+            <h2>Your verified mobile channel</h2>
+            <p>The WhatsApp channel is tied to the same MarketFit user and subscription, not to a separate account.</p>
+          </div>
+          <div className={`conn-state ${wa.connected ? "ok" : ""}`}>{wa.connected ? "Connected" : "Needs setup"}</div>
+        </div>
 
-            <div>
-              <h2 id={`conn-${r.id}`} style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.01em", margin: 0 }}>{r.name}</h2>
-              <div className="ink-label" style={{ marginTop: 4 }}>{r.scope}</div>
-              <StatusMark status={r.status} />
-              <p style={{ fontSize: 12.5, color: "var(--text-muted)", margin: "8px 0 0", lineHeight: 1.55 }}>{r.detail}</p>
-              {r.status !== "connected" && r.status !== "checking" && (
-                <button type="button" className="btn-outline" style={{ marginTop: 12, minHeight: 44, padding: "0 18px", fontSize: 15 }}
-                  onClick={() => r.connect ? r.connect() : say(r.id, r.unavailable ?? "")}>
-                  Connect
-                </button>
-              )}
-              {note[r.id] && (
-                <p role="status" style={{ fontSize: 12.5, color: "var(--text)", margin: "10px 0 0", lineHeight: 1.55, paddingLeft: 10, borderLeft: "2px solid var(--spot)" }}>
-                  {note[r.id]}
-                </p>
-              )}
-            </div>
+        <div className="conn-steps">
+          <div className={wa.phoneVerified ? "done" : ""}><b>1</b><span><strong>Verify mobile number</strong><small>{wa.phoneVerified ? `Verified ${wa.label || ""}` : "Required before WhatsApp can be linked."}</small></span></div>
+          <div className={wa.optedIn ? "done" : ""}><b>2</b><span><strong>Enable WhatsApp</strong><small>{wa.optedIn ? "This number is opted in for the MarketFit WhatsApp channel." : "Choose WhatsApp during mobile verification/setup."}</small></span></div>
+          <div className={wa.systemReady ? "done" : ""}><b>3</b><span><strong>Bot transport ready</strong><small>{wa.systemReady ? "MarketFit's WhatsApp transport is configured." : "The server transport still needs configuration."}</small></span></div>
+        </div>
 
-            <div>
-              <div className="ink-label" style={{ marginBottom: 6 }}>Access</div>
-              {r.access.map(a => (
-                <div key={a.action} style={{
-                  display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 12, alignItems: "baseline",
-                  padding: "9px 0", borderTop: "1px solid var(--border)",
-                }}>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 550, color: "var(--text)" }}>{a.action}</div>
-                    <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 2, lineHeight: 1.5 }}>{a.note}</div>
-                  </div>
-                  <PolicyTag policy={a.policy} />
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
+        {!wa.connected && (
+          <div className="conn-footer">
+            <div><strong>Next step</strong><span>Finish the missing step above, then this page will show the channel as connected.</span></div>
+            <Link className="btn-outline conn-link-button" href="/dashboard/setup">Open setup</Link>
+          </div>
+        )}
+      </section>
+
+      <section className="conn-section muted">
+        <div className="conn-heading">
+          <div>
+            <div className="ink-label">LinkedIn</div>
+            <h2>Not connected</h2>
+            <p>LinkedIn access remains unavailable. MarketFit will not pretend it is connected until there is a real provider integration.</p>
+          </div>
+          <div className="conn-state">Coming soon</div>
+        </div>
+      </section>
     </div>
-  )
-}
-
-function StatusMark({ status }: { status: Status }) {
-  const label = status === "connected" ? "Connected" : status === "checking" ? "Checking" : "Not connected"
-  const dot = status === "connected" ? "var(--success)" : status === "checking" ? "var(--text-soft)" : "transparent"
-  return (
-    <div style={{
-      display: "inline-flex", alignItems: "center", gap: 7, marginTop: 12,
-      fontFamily: "var(--font-label)", fontSize: 11, letterSpacing: ".12em", textTransform: "uppercase",
-      color: status === "connected" ? "var(--text)" : "var(--text-muted)",
-    }}>
-      <span style={{ width: 7, height: 7, background: dot, border: status === "not_connected" ? "1px solid var(--text-soft)" : "none" }} />
-      {label}
-    </div>
-  )
-}
-
-function PolicyTag({ policy }: { policy: Policy }) {
-  const solid = policy === "approve"
-  return (
-    <span style={{
-      fontFamily: "var(--font-label)", fontSize: 11, letterSpacing: ".1em", textTransform: "uppercase", whiteSpace: "nowrap",
-      padding: "2px 7px",
-      background: solid ? "var(--accent)" : "transparent",
-      color: solid ? "var(--bg)" : policy === "exception" ? "var(--spot)" : "var(--text-muted)",
-      border: `0.8px solid ${solid ? "var(--accent)" : policy === "exception" ? "var(--spot)" : "var(--border-strong)"}`,
-    }}>{POLICY_LABEL[policy]}</span>
   )
 }

@@ -29,11 +29,12 @@ export async function POST(req: NextRequest) {
   const to = String(body.to || "").trim()
   const subject = String(body.subject || "").trim().slice(0, 180)
   const message = String(body.body || "").trim().slice(0, 20000)
+  const accountId = typeof body.accountId === "string" && body.accountId ? body.accountId : null
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || !subject || !message) {
     return NextResponse.json({ error: "Recipient, subject and message are required." }, { status: 400 })
   }
 
-  const token = await getGoogleWorkspaceAccessToken(user.id)
+  const token = await getGoogleWorkspaceAccessToken(user.id, accountId)
   if (!token) return NextResponse.json({ error: "Gmail is not connected." }, { status: 403 })
 
   const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {

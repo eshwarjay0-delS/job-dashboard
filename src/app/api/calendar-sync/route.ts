@@ -5,7 +5,7 @@ import { checkRateLimit } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
 
-export async function GET() {
+export async function GET(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 })
@@ -13,7 +13,8 @@ export async function GET() {
   const rl = checkRateLimit(`calendar-sync:${user.id}`, { max: 20, windowMs: 60 * 60 * 1000 })
   if (!rl.ok) return NextResponse.json({ error: "Calendar sync limit reached. Try again later." }, { status: 429 })
 
-  const token = await getGoogleWorkspaceAccessToken(user.id)
+  const accountId = new URL(req.url).searchParams.get("accountId")
+  const token = await getGoogleWorkspaceAccessToken(user.id, accountId)
   if (!token) return NextResponse.json({ connected: false, events: [] }, { status: 403 })
 
   const start = new Date()
@@ -41,5 +42,5 @@ export async function GET() {
     meetingUrl: e.hangoutLink || e.conferenceData?.entryPoints?.find((x: any) => x.entryPointType === "video")?.uri || "",
   }))
 
-  return NextResponse.json({ connected: true, events })
+  return NextResponse.json({ connected: true, accountId, events })
 }

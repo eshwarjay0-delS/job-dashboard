@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { checkRateLimit } from "@/lib/rateLimit"
-import { getGoogleWorkspaceAccessToken } from "@/lib/googleWorkspace"
+import { getGoogleWorkspaceAccessToken, listGoogleWorkspaceAccounts } from "@/lib/googleWorkspace"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Gmail Sync — uses the Google OAuth provider_token stored in the Supabase
@@ -121,12 +121,12 @@ function parseThread(thread: {
   // ── Extract role ──────────────────────────────────────────────────────────
   let role = ""
   const rolePatterns = [
-    /(?:application|apply)(?:ing)? (?:for|to)(?: the)? (.{5,70?})(?:\s*[-–|@]|\s*at\s|\s*position|$)/i,
-    /your (.{5,60?}) (?:application|position|role|opportunity)/i,
-    /interview.*?for(?: the)? (.{5,60?})(?:\s*[-–|@]|$)/i,
-    /(?:re|regarding):?\s+(.{5,70?}) (?:application|interview|opportunity)/i,
-    /(?:offer|congratulations)[^.]*?(?:for|as)(?: a| an)? (.{5,60?})(?:\s*[-–|@]|$)/i,
-    /(.{5,70?}) (?:position|role|opening|job)/i,
+    /(?:application|apply)(?:ing)? (?:for|to)(?: the)? (.{5,70})(?:\s*[-–|@]|\s*at\s|\s*position|$)/i,
+    /your (.{5,60}) (?:application|position|role|opportunity)/i,
+    /interview.*?for(?: the)? (.{5,60})(?:\s*[-–|@]|$)/i,
+    /(?:re|regarding):?\s+(.{5,70}) (?:application|interview|opportunity)/i,
+    /(?:offer|congratulations)[^.]*?(?:for|as)(?: a| an)? (.{5,60})(?:\s*[-–|@]|$)/i,
+    /(.{5,70}) (?:position|role|opening|job)/i,
   ]
   for (const re of rolePatterns) {
     const m = subject.match(re)
@@ -194,25 +194,17 @@ export async function GET() {
   try {
     const supabase = await createClient()
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return NextResponse.json({ connected: false, reason: "not_logged_in" })
+    if (!session) return NextResponse.json({ connected: false, reason: "not_logged_in", accounts: [] })
 
-    let token = session.provider_token || null
-    if (token) {
-      try {
-        const profile = await gmailGet("/profile", token)
-        return NextResponse.json({ connected: true, email: profile.emailAddress, totalMessages: profile.messagesTotal })
-      } catch {
-        token = null
-      }
-    }
-
-    token = await getGoogleWorkspaceAccessToken(session.user.id)
-    if (!token) return NextResponse.json({ connected: false, reason: "workspace_not_connected" })
-
-    const profile = await gmailGet("/profile", token)
-    return NextResponse.json({ connected: true, via: "workspace_refresh", email: profile.emailAddress, totalMessages: profile.messagesTotal })
+    const accounts = await listGoogleWorkspaceAccounts(session.user.id)
+    return NextResponse.json({
+      connected: accounts.some(a => a.gmail_enabled),
+      accounts,
+      maxAccounts: 4,
+      primaryAccountId: accounts.find(a => a.is_primary)?.id || accounts[0]?.id || null,
+    })
   } catch (err) {
-    return NextResponse.json({ connected: false, reason: String(err) })
+    return NextResponse.json({ connected: false, reason: String(err), accounts: [] })
   }
 }
 
@@ -243,13 +235,8 @@ export async function POST(req: Request) {
       )
     }
 
-    // Prefer the live Google token from the second-consent session, then fall
-    // back to the encrypted offline Workspace connection.
-    let accessToken = session.provider_token || null
-    if (accessToken) {
-      try { await gmailGet("/profile", accessToken) } catch { accessToken = null }
-    }
-    if (!accessToken) accessToken = await getGoogleWorkspaceAccessToken(session.user.id)
+    const accountId = typeof body.accountId === "string" && body.accountId ? body.accountId : null
+    const accessToken = await getGoogleWorkspaceAccessToken(session.user.id, accountId)
 
     if (!accessToken) {
       return NextResponse.json(
@@ -310,6 +297,7 @@ export async function POST(req: Request) {
       ok: true,
       count: deduped.length,
       skipped: parsed.length - deduped.length,
+      accountId,
       applications: deduped,
     })
   } catch (err) {

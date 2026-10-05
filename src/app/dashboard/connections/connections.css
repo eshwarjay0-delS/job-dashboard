@@ -1,0 +1,54 @@
+.conn-page{max-width:1040px;margin:0 auto;padding-bottom:56px}
+.conn-banner{margin:20px 0;padding:14px 16px;border:1px solid var(--border-strong);border-left:3px solid var(--spot);background:var(--surface);font-size:13px;line-height:1.55}
+.conn-section{margin-top:24px;border:1px solid var(--border);border-radius:18px;background:var(--surface);overflow:hidden;box-shadow:var(--shadow-card)}
+.conn-section.muted{opacity:.82}
+.conn-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:24px;border-bottom:1px solid var(--border)}
+.conn-heading h2{margin:5px 0 7px;font-size:24px;letter-spacing:-.025em}
+.conn-heading p{margin:0;max-width:680px;color:var(--text-muted);font-size:13.5px;line-height:1.65}
+.conn-count,.conn-state{flex:0 0 auto;padding:7px 10px;border:1px solid var(--border-strong);border-radius:999px;font:700 11px/1 var(--font-label);letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);background:var(--surface-2)}
+.conn-state.ok{color:var(--success);border-color:var(--success-border);background:var(--success-soft)}
+.conn-account-list{display:grid}
+.conn-empty{padding:26px 24px;color:var(--text-muted);display:grid;gap:5px;font-size:13px}
+.conn-empty strong{color:var(--text);font-size:15px}
+.conn-account{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 24px;border-bottom:1px solid var(--border)}
+.conn-account-main{display:flex;align-items:center;gap:12px;min-width:0}
+.conn-account-avatar{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:var(--surface-2);border:1px solid var(--border-strong);font:800 15px/1 var(--font-num);color:var(--text)}
+.conn-email{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conn-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.conn-badge{padding:3px 7px;border-radius:999px;border:1px solid var(--border);font:600 10px/1 var(--font-label);color:var(--text-muted)}
+.conn-badge.primary{border-color:var(--accent-border);background:var(--accent-soft);color:var(--accent-txt)}
+.conn-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.conn-actions .btn-outline,.conn-danger{min-height:38px;padding:0 12px;border-radius:9px;font-size:12px;font-weight:700}
+.conn-danger{border:1px solid var(--danger-border);background:transparent;color:var(--danger);cursor:pointer}
+.conn-footer{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px 24px}
+.conn-footer>div{display:grid;gap:4px}
+.conn-footer strong{font-size:13px}
+.conn-footer span{font-size:12.5px;line-height:1.5;color:var(--text-muted)}
+.conn-footer .btn-accent{min-height:44px;padding:0 18px;border-radius:999px;white-space:nowrap}
+.conn-permissions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--border)}
+.conn-permissions>div{padding:16px 18px;display:grid;gap:4px;border-right:1px solid var(--border)}
+.conn-permissions>div:last-child{border-right:0}
+.conn-permissions span{font-size:12px;font-weight:700}
+.conn-permissions small{font-size:11.5px;line-height:1.45;color:var(--text-muted)}
+.conn-steps{display:grid;gap:0}
+.conn-steps>div{display:flex;gap:12px;padding:16px 24px;border-bottom:1px solid var(--border)}
+.conn-steps b{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;border:1px solid var(--border-strong);font:700 11px/1 var(--font-num);color:var(--text-muted)}
+.conn-steps>div.done b{background:var(--success-soft);color:var(--success);border-color:var(--success-border)}
+.conn-steps span{display:grid;gap:3px}
+.conn-steps strong{font-size:13px}
+.conn-steps small{font-size:12px;line-height:1.5;color:var(--text-muted)}
+.conn-link-button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:999px;text-decoration:none}
+@media(max-width:760px){
+  .conn-page{width:100%}
+  .conn-heading{padding:20px 18px;gap:12px}
+  .conn-heading h2{font-size:21px}
+  .conn-account{align-items:flex-start;flex-direction:column;padding:16px 18px}
+  .conn-actions{width:100%}
+  .conn-actions button{flex:1}
+  .conn-footer{align-items:stretch;flex-direction:column;padding:18px}
+  .conn-footer .btn-accent,.conn-link-button{width:100%;justify-content:center}
+  .conn-permissions{grid-template-columns:1fr}
+  .conn-permissions>div{border-right:0;border-bottom:1px solid var(--border)}
+  .conn-permissions>div:last-child{border-bottom:0}
+  .conn-steps>div{padding:15px 18px}
+}
