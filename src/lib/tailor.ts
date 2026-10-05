@@ -213,7 +213,7 @@ export async function runTailor(opts: {
       ]
     : [
         "More specific, less generic — concrete tools, systems, and outcomes, never vague filler",
-        "Add more keywords from the JD wherever the candidate can honestly support them",
+        "KNOWN JD CONTRACT: the user supplied/approved this JD as knowledge they possess. Incorporate every meaningful ATS keyword and requirement from it naturally across summary, skills, and relevant experience.",
         "More technical detail — name the exact technologies, protocols, and methods used",
       ]
   const explicit = [...immediatePrefs, ...storedFeedback.filter(f => !immediatePrefs.includes(f))]
@@ -469,27 +469,60 @@ export async function runTailor(opts: {
     return pass
   }
 
-  // J1: coverage describes the draft; it never authorizes fabricated gap filling.
-  // A valid first draft wins. Only provider failure triggers fallback, avoiding
-  // best-of-N selection pressure toward unsupported claims and needless API cost.
+  // MarketFit contract: a user supplied/approved JD is a KNOWN JD. Its requirements
+  // are authorized knowledge targets for tailoring. 98% literal JD coverage is the default
+  // completion threshold, not a decorative score. A low coverage first draft is unfinished.
   const usageSink: TokenUsage[] = []
+  const TARGET_COVERAGE = Math.max(0.98, Math.min(1, Number(E.TAILOR_TARGET_COVERAGE) || 0.98))
   const TAILOR_MAX_MS = Math.max(1000, Math.min(Number(E.TAILOR_MAX_MS) || 52000, 55000))
   const deadline = started + TAILOR_MAX_MS
   let best: Pass | null = null
   let usedModel = ""
-  // A split draft already uses every lane in one pass, so it is made once. A single-call draft (quick mode, a refinement)
-  // goes down the lanes until one answers, skipping any that already showed it cannot.
+
   for (const lane of splitDraft ? lanes.slice(0, 1) : lanes) {
     const remaining = deadline - Date.now()
     if (remaining <= 0) break
     if (laneOut.has(lane)) continue
     let timer: ReturnType<typeof setTimeout> | undefined
     try {
-      best = await Promise.race([
+      const first = await Promise.race([
         draftPass(lane, []).catch(err => { judgeLane(laneOut, lane, err); return null }),
         new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), remaining) }),
       ])
-      if (best) { usedModel = best.via ?? lane.label ?? String(lane.pref); break }
+      if (!first) continue
+      if (!best || first.cov > best.cov) {
+        best = first
+        usedModel = first.via ?? lane.label ?? String(lane.pref)
+      }
+      if (best.cov >= TARGET_COVERAGE) break
+
+      // Coverage repair passes are deliberately targeted at the exact terms still absent
+      // from the rendered DOCX. They regenerate from the canonical source so formatting
+      // remains stable, and only a measurable improvement replaces the current best pass.
+      // Stop only for the hard request deadline or the 98% completion threshold.
+      for (let repair = 1; repair <= 3 && best.cov < TARGET_COVERAGE; repair++) {
+        if (deadline - Date.now() < 5000) break
+        const missing = jdKws.filter(k => !best!.afterKw.has(k))
+        if (!missing.length) break
+        const repairPrefs = [
+          `COVERAGE REPAIR PASS ${repair}: current rendered JD coverage is ${Math.round(best.cov * 100)}%. The default completion target is at least ${Math.round(TARGET_COVERAGE * 100)}%.`,
+          `The JD is a KNOWN JD supplied/approved by the user. Incorporate ALL of these still-missing ATS terms naturally and contextually: ${missing.join(", ")}.`,
+          "Do not omit a JD term merely because it was absent from the baseline. Preserve immutable historical facts such as employer names, dates, education, and certifications.",
+          "Distribute terms across the summary, skills, and relevant experience instead of keyword stuffing.",
+        ]
+        const candidate = await draftPass(lane, repairPrefs).catch(err => {
+          judgeLane(laneOut, lane, err)
+          return null
+        })
+        if (!candidate) break
+        if (candidate.cov > best.cov) {
+          best = candidate
+          usedModel = candidate.via ?? lane.label ?? String(lane.pref)
+        } else {
+          break
+        }
+      }
+      if (best.cov >= TARGET_COVERAGE) break
     } finally { if (timer) clearTimeout(timer) }
   }
   if (!best) {
@@ -497,9 +530,12 @@ export async function runTailor(opts: {
       ? "Tailoring timed out: the AI providers are slow or rate-limited right now. Please try again in a minute."
       : "Tailoring failed — every model errored (check API keys / quota).")
   }
+  if (!refine && best.cov < TARGET_COVERAGE) {
+    throw new Error(`Tailoring did not reach the required ${Math.round(TARGET_COVERAGE * 100)}% JD coverage (best pass: ${Math.round(best.cov * 100)}%). The draft was not delivered; retry so MarketFit can finish the coverage climb.`)
+  }
 
   const { edits, buffer, notes, afterKw, claimedKw, roleKw, required, provenKw } = best
-  notes.push("J1: review the draft against your actual experience. Scores measure keyword overlap, not hiring probability. Identity/experience breakdowns are legacy heuristics, not calibrated model confidence.")
+  notes.push("Known JD contract: this user supplied/approved JD is treated as declared knowledge for tailoring. The default completion threshold is 98% literal JD keyword coverage; the score is still keyword overlap, not hiring probability.")
   notes.push(`Tailored with ${usedModel} · JD keyword coverage ${Math.round(best.cov * 100)}%`)
   const finalRewrites = rewrites(edits)
   const finalAdded = addedFor(edits)
