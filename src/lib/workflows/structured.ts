@@ -55,3 +55,33 @@ export function exactStringObject<T extends readonly string[]>(
   }
   return out
 }
+
+export function exactStringArrayObject<T extends readonly string[]>(
+  value: Record<string, unknown>,
+  keys: T,
+): Record<T[number], string[]> {
+  const expected = new Set<string>(keys)
+  for (const key of Object.keys(value)) {
+    if (!expected.has(key)) {
+      throw new StructuredOutputError("Unexpected structured-output key: " + key)
+    }
+  }
+
+  const out = {} as Record<T[number], string[]>
+  for (const key of keys) {
+    const raw = value[key]
+    if (!Array.isArray(raw)) {
+      throw new StructuredOutputError("Structured-output key " + key + " must be an array.")
+    }
+    const items = raw
+      .filter((item): item is string => typeof item === "string")
+      .map(item => item.trim())
+      .filter(Boolean)
+
+    if (items.length !== raw.length) {
+      throw new StructuredOutputError("Structured-output key " + key + " must contain strings only.")
+    }
+    out[key as T[number]] = items
+  }
+  return out
+}
