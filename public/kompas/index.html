@@ -296,6 +296,12 @@
             <div class="mi mi-depth"><span class="mi-ico">≡</span>Answer depth
               <span class="depth" id="depthMeter" title="Answer depth — ↑ lighter · ↓ deeper (arrow keys). Each step regenerates the answer."><button class="step" id="whoUp" aria-label="Lighter answer (↑)">▲</button><span class="depth-bars" id="depthBars" aria-hidden="true"></span><button class="step" id="whoDown" aria-label="Deeper answer (↓)">▼</button></span>
             </div>
+            <div class="mi mi-model"><span class="mi-ico">◇</span>Model
+              <select id="liveModel" class="live-select" title="Which model writes the answers">
+                <option value="">Kompas default</option>
+                <option value="gpt-5.6-luna">GPT Luna</option>
+              </select>
+            </div>
             <div class="mi-sep"></div>
             <button class="mi" role="menuitem" id="themeBtn"><span class="mi-ico">◐</span>Dark answer panel</button>
             <button class="mi" role="menuitem" id="collapseBtn"><span class="mi-ico">—</span>Minimise panel</button>

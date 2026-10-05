@@ -35,6 +35,11 @@ const LS = {
   get(k, d) { try { const v = localStorage.getItem("perfact." + k); return v ? JSON.parse(v) : d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem("perfact." + k, JSON.stringify(v)); } catch {} },
 };
+// The model that writes answers. Empty is the server's own lanes; the server ignores anything not on its list.
+const LIVE_MODELS = ["", "gpt-5.6-luna"];
+const liveModel = () => { const m = LS.get("liveModel", ""); return LIVE_MODELS.includes(m) ? m : ""; };
+if ($("liveModel")) $("liveModel").value = liveModel();
+$("liveModel")?.addEventListener("change", (e) => LS.set("liveModel", LIVE_MODELS.includes(e.target.value) ? e.target.value : ""));
 
 /* ------------------------------- router ---------------------------------- */
 const VIEWS = ["login", "dashboard", "transcripts", "resume", "documents", "wizard", "copilot"];
@@ -1110,7 +1115,7 @@ async function generateAnswer(question, card, opts = {}) {
   const show = (t) => { if (card.req !== ctl) return; card.answer = t.trim() ? t : ["…"]; if (cards[idx] === card) renderCard(); };
   try {
     const res = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
-      body: JSON.stringify({ stream: true, client: BUILD, consolidated, derived: derivedQ || undefined, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: liveConfig(), prep, retrieved, ledger, history: recentQA(card) }) });
+      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: liveConfig(), prep, retrieved, ledger, history: recentQA(card) }) });
     if (!res.ok || !res.body) throw new Error("answer " + res.status);
     if (!(res.headers.get("content-type") || "").includes("event-stream")) {
       const data = await res.json(); text = data.text || ""; first = performance.now() - t0; meta = data;
