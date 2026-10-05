@@ -64,12 +64,29 @@ export async function POST(req: NextRequest) {
   })
 
   if (error) {
-    const duplicate = /duplicate key|unique constraint/i.test(error.message || "")
+    const duplicate = /duplicate key|unique constraint|PHONE_ALREADY_BOUND/i.test(error.message || "")
     return NextResponse.json(
       { error: duplicate ? "That mobile number is already attached to another MarketFit account." : error.message },
       { status: duplicate ? 409 : 500 },
     )
   }
 
-  return NextResponse.json({ ok: true, phoneLast4: phone.slice(-4), whatsappConnected: whatsappOptIn })
+  const { data: resolvedUserId, error: resolveError } = await service.rpc("identity_resolve_whatsapp_user", {
+    p_phone_e164: phone,
+  })
+  const bindingReady = !resolveError && String(resolvedUserId || "") === user.id
+
+  if (whatsappOptIn && !bindingReady) {
+    return NextResponse.json(
+      { error: "Your phone was verified, but the WhatsApp identity binding could not be confirmed. Please retry verification." },
+      { status: 500 },
+    )
+  }
+
+  return NextResponse.json({
+    ok: true,
+    phoneLast4: phone.slice(-4),
+    whatsappConnected: whatsappOptIn && bindingReady,
+    identityReady: bindingReady,
+  })
 }
