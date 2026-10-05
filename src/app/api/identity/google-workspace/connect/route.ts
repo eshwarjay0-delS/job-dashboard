@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   }
 
   const service = createServiceClient()
-  const { error } = await service.rpc("identity_attach_google_workspace", {
+  const { error } = await service.rpc("identity_attach_google_workspace_account", {
     p_user_id: user.id,
     p_google_subject: String(info.sub),
     p_google_email: String(info.email),
