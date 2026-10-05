@@ -5,8 +5,11 @@ export const runtime = "nodejs"
 
 function normalizePhone(input: string) {
   const trimmed = input.trim()
-  if (!/^\+[1-9]\d{7,14}$/.test(trimmed)) return null
-  return trimmed
+  if (/^\+[1-9]\d{7,14}$/.test(trimmed)) return trimmed
+  const digits = trimmed.replace(/\D/g, "")
+  if (digits.length === 10) return `+1${digits}`
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`
+  return null
 }
 
 function twilioAuth() {
@@ -25,7 +28,7 @@ export async function POST(req: NextRequest) {
   const { phone } = await req.json().catch(() => ({ phone: "" }))
   const normalized = normalizePhone(String(phone || ""))
   if (!normalized) {
-    return NextResponse.json({ error: "Use E.164 format, for example +13145550192." }, { status: 400 })
+    return NextResponse.json({ error: "Enter a valid US 10 digit number or an international number in E.164 format." }, { status: 400 })
   }
 
   const cfg = twilioAuth()
