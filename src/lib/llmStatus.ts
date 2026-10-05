@@ -22,6 +22,7 @@ export type LlmStatus = {
 
 const ORDER: Provider[] = ["openai", "gemini", "groq", "anthropic", "openrouter"]   // the tailoring ladder's order (src/lib/tailor.ts)
 // OpenAI is held apart (tailorKeys in src/lib/llm.ts): it is probed here only when the deployment has its key and uses it.
+// tailorScope() is "off" when OPENAI_TAILOR_FOR says so or TAILOR_USE_OPENAI=0, and then tailorKeys() hands nothing over.
 const scopeOf = (provider: Provider): { scope?: string } => provider !== "openai" ? {}
   : { scope: tailorScope() === "owner" ? "resume tailoring only, owner only" : "resume tailoring only" }
 

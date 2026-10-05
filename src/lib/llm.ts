@@ -79,10 +79,20 @@ export function tailorKeys(keys: LlmKeys, who: { owner: boolean }): LlmKeys {
   const scope = tailorScope()
   return scope === "all" || (scope === "owner" && who.owner) ? { ...keys, openai: key } : keys
 }
-/** Whose resume tailoring the OpenAI key is used for: OPENAI_TAILOR_FOR, "all" unless set. One definition, read by the status page too. */
+/**
+ * Whose resume tailoring the OpenAI key is used for. One definition, read by the status page too.
+ *   OPENAI_TAILOR_FOR  unset: "all". Otherwise "all", "owner" or "off", with the words people actually type accepted for each.
+ *                      A value that is set but not understood means "off": this decides who spends the owner's money, so a
+ *                      typo must not open it to everyone (found in review, 2026-10-05: "admin" was read as "all").
+ *   TAILOR_USE_OPENAI  "0" or "false" takes the tailor off OpenAI altogether, the status probe included.
+ */
 export function tailorScope(): "all" | "owner" | "off" {
-  const scope = (process.env.OPENAI_TAILOR_FOR || "all").trim().toLowerCase()
-  return scope === "owner" || scope === "off" ? scope : "all"
+  const e = process.env
+  if (e.TAILOR_USE_OPENAI === "0" || e.TAILOR_USE_OPENAI === "false") return "off"
+  const said = (e.OPENAI_TAILOR_FOR || "").trim().toLowerCase()
+  if (!said || ["all", "everyone", "any", "on", "true", "1", "yes"].includes(said)) return "all"
+  if (["owner", "owners", "owner-only", "owner only", "admin", "admins", "admin-only", "me"].includes(said)) return "owner"
+  return "off"
 }
 
 // The order an automatic call asks the providers in. OpenAI is deliberately in neither list: see tailorKeys().
@@ -184,16 +194,27 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
   const first = pickProvider(opts.keys, opts.tier, pref)
   if (!first) throw new Error("No API key configured. Add a Claude, OpenRouter, or Gemini key in Settings.")
   const named = pref !== "auto" && !!opts.keys[pref]
+  const began = Date.now()
   let order: Provider[] = [first.provider]
   if (!named) {
-    const now = Date.now()
-    const keyed = AUTO_ORDER[opts.tier].filter(p => !!opts.keys[p])
-    order = [...keyed.filter(p => (downUntil.get(p) || 0) <= now), ...keyed.filter(p => (downUntil.get(p) || 0) > now)]
+    // Falling through is for the providers that cost nothing. The first provider with a key is asked as it always was;
+    // after it, only a free one: Gemini, Groq, or OpenRouter on a ":free" model. Several routes that make automatic calls
+    // need no sign-in, so without this a stranger could push requests past the free providers onto a paid key (found in
+    // review, 2026-10-05). LLM_AUTO_FALLBACK_PAID=1 lifts the limit.
+    const paidToo = process.env.LLM_AUTO_FALLBACK_PAID === "1" || process.env.LLM_AUTO_FALLBACK_PAID === "true"
+    const free = (p: Provider) => p === "gemini" || p === "groq" || (p === "openrouter" && /:free$/i.test(modelFor(p, opts.tier)))
+    const keyed = AUTO_ORDER[opts.tier].filter(p => !!opts.keys[p]).filter((p, i) => i === 0 || paidToo || free(p))
+    order = [...keyed.filter(p => (downUntil.get(p) || 0) <= began), ...keyed.filter(p => (downUntil.get(p) || 0) > began)]
   }
+  // A further provider is started only while the call is young. A refusal that will not clear comes back in under a second,
+  // so the next provider is asked at once; after a slow failure (a timeout, a rate limit waited out) the caller has usually
+  // given up already, and a new request would be paid for and thrown away.
+  const window = Number(process.env.LLM_AUTO_FALLBACK_WINDOW_MS) || 6000
   // Normalise to a messages array so providers always get structured turns.
   const msgs: ChatMessage[] = opts.messages ?? [{ role: "user", content: opts.user ?? "" }]
   let lastErr: unknown = null
   for (const provider of order) {
+    if (lastErr && Date.now() - began > window) break
     const key = opts.keys[provider]!
     const model = named && opts.exactModel ? opts.exactModel
       : (opts.model && provider === "anthropic" && /^claude/i.test(opts.model)) ? opts.model
@@ -209,7 +230,7 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
       return { text, provider, model: provider === "openai" ? openaiAlias.get(model) || model : model }
     } catch (e) {
       lastErr = e
-      if (WONT_CLEAR.test(String((e as Error)?.message || e))) downUntil.set(provider, Date.now() + 5 * 60_000)
+      if (wontClear(String((e as Error)?.message || e), !!(named && opts.exactModel))) downUntil.set(provider, Date.now() + 5 * 60_000)
     }
   }
   throw lastErr
@@ -219,7 +240,15 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
 // that does not exist) is remembered for five minutes per server instance, and an automatic call asks it last. It is still
 // asked when nothing else answers, so it comes back by itself once it is fixed.
 const downUntil = new Map<Provider, number>()
-const WONT_CLEAR = /API (400|401|402|403|404)\b/
+// What counts: a rejected key (401, 403), no credit (402, or a 400 that says so: Anthropic reports "credit balance is too low"
+// as a 400), and a missing model (404) when the model was the provider's own default. Not a 400 about one malformed request,
+// and not a 404 for an exact model a tailor lane asked for: either would mark a healthy provider down for everyone.
+function wontClear(message: string, exactModel: boolean): boolean {
+  const status = Number((/API (\d{3})\b/.exec(message) || [])[1]) || 0
+  if (status === 401 || status === 402 || status === 403) return true
+  if (status === 400) return /credit|billing|balance|quota|api key/i.test(message)
+  return status === 404 && !exactModel
+}
 /** For tests. */
 export function forgetProviderFailures() { downUntil.clear() }
 
@@ -292,7 +321,7 @@ async function callOpenRouter(key: string, model: string, o: CallOpts, msgs: Cha
 // GROQ_MAX_TOKENS still fixes the ceiling for an account on a paid tier; GROQ_TPM names a different allowance.
 async function callGroq(key: string, model: string, o: CallOpts, msgs: ChatMessage[]): Promise<string> {
   const system = o.cacheContext ? `${o.system}\n\n${o.cacheContext}` : o.system
-  const promptChars = system.length + msgs.reduce((n, m) => n + m.content.length, 0)
+  const promptChars = system.length + msgs.reduce((n, m) => n + String(m.content ?? "").length, 0)
   const allowance = Number(process.env.GROQ_TPM) || 8000
   const room = allowance - Math.ceil(promptChars / 3.2) - 250   // 3.2 characters a token overestimates English prose a little
   const cap = Math.min(o.maxTokens, Number(process.env.GROQ_MAX_TOKENS) || Math.max(1024, room))
@@ -377,7 +406,11 @@ async function callOpenAI(key: string, wanted: string, o: CallOpts, msgs: ChatMe
       openaiRefused.set(model, new Set([...refused, field]))
       continue
     }
-    if (attempt < 4 && (res.status === 404 || err.code === "model_not_found") && !openaiAlias.has(wanted)) {
+    const missing = res.status === 404 || err.code === "model_not_found"
+    // Another call may have learned this account's id for the model while this one was in flight: use it, do not fail.
+    const learned = openaiAlias.get(wanted)
+    if (attempt < 4 && missing && learned && learned !== model) { model = learned; continue }
+    if (attempt < 4 && missing && !openaiAlias.has(wanted)) {
       const list = await fetchRetry("https://api.openai.com/v1/models", { method: "GET", headers })
       const ids: string[] = list.ok ? ((await list.json()).data || []).map((m: { id?: string }) => String(m.id || "")) : []
       const found = closestOpenAIModel(wanted, ids)

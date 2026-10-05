@@ -13,7 +13,7 @@ let script = () => reply(500, {})
 const reply = (status, body) => ({ ok: status >= 200 && status < 300, status, headers: { get: () => null }, json: async () => body, text: async () => JSON.stringify(body) })
 const stubFetch = async (url, init = {}) => { const c = { url: String(url), init, body: init.body ? JSON.parse(init.body) : null }; calls.push(c); return script(c) }
 const chat = (text) => reply(200, { choices: [{ message: { content: text }, finish_reason: 'stop' }], usage: { prompt_tokens: 10, completion_tokens: 5 } })
-const AI_ENV = ['OPENAI_API_KEY', 'OPEN_API_KEY', 'OPENAI_TAILOR_FOR', 'OPENAI_MODEL_TAILOR', 'OPENAI_MODEL', 'GROQ_MAX_TOKENS', 'GROQ_TPM', 'GROQ_MODEL_HEAVY', 'GROQ_MODEL', 'GEMINI_MODEL_HEAVY', 'GEMINI_MODEL', 'GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_GENAI_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'ANTHROPIC_API_KEY', 'LLM_RETRY_BUDGET_MS']
+const AI_ENV = ['OPENAI_API_KEY', 'OPEN_API_KEY', 'TAILOR_USE_OPENAI', 'LLM_AUTO_FALLBACK_PAID', 'LLM_AUTO_FALLBACK_WINDOW_MS', 'OPENROUTER_MODEL', 'OPENROUTER_MODEL_LIGHT', 'OPENROUTER_MODEL_HEAVY', 'OPENAI_TAILOR_FOR', 'OPENAI_MODEL_TAILOR', 'OPENAI_MODEL', 'GROQ_MAX_TOKENS', 'GROQ_TPM', 'GROQ_MODEL_HEAVY', 'GROQ_MODEL', 'GEMINI_MODEL_HEAVY', 'GEMINI_MODEL', 'GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_GENAI_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'ANTHROPIC_API_KEY', 'LLM_RETRY_BUDGET_MS']
 function fresh(values = {}) {
   globalThis.fetch = stubFetch                       // another test file in this process may have replaced it
   for (const k of AI_ENV) delete process.env[k]
@@ -33,7 +33,15 @@ test('the OpenAI key is handed over for resume tailoring only (everyone\'s since
   process.env.OPENAI_TAILOR_FOR = 'owner'; assert.equal(L.tailorScope(), 'owner')
   assert.equal(L.tailorKeys({}, { owner: false }).openai, undefined, 'narrowed to the owner: not for anyone else'); assert.equal(L.tailorKeys({}, { owner: true }).openai, 'k-openai')
   process.env.OPENAI_TAILOR_FOR = 'off'; assert.equal(L.tailorKeys({}, { owner: true }).openai, undefined)
-  process.env.OPENAI_TAILOR_FOR = 'everyone-please'; assert.equal(L.tailorScope(), 'all', 'an unknown value is the default, and the status page says the same')
+  for (const word of ['admin', 'Owners', 'owner-only', 'me']) { process.env.OPENAI_TAILOR_FOR = word; assert.equal(L.tailorScope(), 'owner', word) }
+  for (const word of ['everyone', 'ALL', 'on']) { process.env.OPENAI_TAILOR_FOR = word; assert.equal(L.tailorScope(), 'all', word) }
+  for (const word of ['none', 'disabled', 'nobody', 'ownr', '0']) {
+    process.env.OPENAI_TAILOR_FOR = word; assert.equal(L.tailorScope(), 'off', word + ': a value that is not understood must not open the key to everyone')
+    assert.equal(L.tailorKeys({}, { owner: true }).openai, undefined)
+  }
+  delete process.env.OPENAI_TAILOR_FOR; process.env.TAILOR_USE_OPENAI = '0'
+  assert.equal(L.tailorScope(), 'off', 'the tailor switched off OpenAI'); assert.equal(L.tailorKeys({}, { owner: true }).openai, undefined, 'so nothing is handed over, to the status probe either')
+  delete process.env.TAILOR_USE_OPENAI
   delete process.env.OPENAI_TAILOR_FOR; delete process.env.OPENAI_API_KEY
   assert.equal(L.tailorKeys({ groq: 'g' }, { owner: true }).openai, undefined, 'no key on the deployment, nothing to hand over')
   process.env.OPEN_API_KEY = 'k-as-saved'
@@ -77,6 +85,42 @@ test('an automatic call asks the next provider when the first is out of credit, 
   script = (c) => host(c).includes('groq') ? reply(429, { error: { message: 'Rate limit reached' } }) : host(c).includes('anthropic') ? reply(529, {}) : reply(200, { candidates: [{ content: { parts: [{ text: 'gemini is back' }] } }] })
   calls.length = 0
   assert.equal((await ask({ keys })).text, 'gemini is back', 'and it is still asked when nothing else answers')
+})
+
+test('an automatic call does not climb onto a paid provider, and starts nothing new once it is no longer young', async () => {
+  fresh()
+  const keys = { gemini: 'k-gem', groq: 'k-groq', openrouter: 'k-or', anthropic: 'k-ant' }
+  script = () => reply(402, { error: { message: 'no credit' } })
+  await assert.rejects(ask({ keys }), /API 402/)
+  assert.deepEqual(calls.map(c => host(c).split('.').slice(-2)[0]), ['googleapis', 'groq'], 'OpenRouter on a paid model and Anthropic are not asked')
+  fresh({ OPENROUTER_MODEL_HEAVY: 'nvidia/nemotron-3-super-120b-a12b:free' })
+  await assert.rejects(ask({ keys }), /API 402/)
+  assert.deepEqual(calls.map(c => host(c).split('.').slice(-2)[0]), ['googleapis', 'groq', 'openrouter'], 'OpenRouter on a :free model is')
+  fresh({ LLM_AUTO_FALLBACK_PAID: '1' })
+  await assert.rejects(ask({ keys }), /API 402/); assert.equal(calls.length, 4, 'the owner can lift the limit')
+  fresh()
+  script = () => chat('only one')
+  assert.equal((await ask({ keys: { anthropic: 'k-ant' } })).provider, 'anthropic', 'the first provider with a key is asked as it always was, paid or not')
+  // a slow failure: the caller has given up by then, so nothing further is started
+  fresh({ LLM_AUTO_FALLBACK_WINDOW_MS: '40' })
+  script = async (c) => { if (host(c).includes('googleapis')) { await new Promise(r => setTimeout(r, 90)); return reply(503, {}) } return chat('too late') }
+  await assert.rejects(ask({ keys: { gemini: 'k', groq: 'k' } }), /API 503/); assert.equal(calls.length, 1)
+})
+
+test('what marks a provider as down for automatic calls, and what does not', async () => {
+  fresh()
+  const keys = { gemini: 'k-gem', groq: 'k-groq' }
+  const first = async () => { calls.length = 0; script = () => chat('ok'); await ask({ keys }); return host(calls[0]).includes('googleapis') ? 'gemini' : 'groq' }
+  script = (c) => host(c).includes('googleapis') ? reply(400, { error: { message: 'Invalid value at contents[0].parts[0]' } }) : chat('ok')
+  await ask({ keys }); assert.equal(await first(), 'gemini', 'a 400 about one malformed request does not')
+  script = () => reply(404, { error: { message: 'model not found' } })
+  await assert.rejects(ask({ keys, pref: 'groq', exactModel: 'some/withdrawn-model' }), /API 404/)
+  script = (c) => host(c).includes('googleapis') ? reply(500, {}) : chat('ok'); await ask({ keys })
+  calls.length = 0; script = (c) => host(c).includes('googleapis') ? reply(500, {}) : chat('ok'); await ask({ keys })
+  assert.equal(host(calls[0]).includes('googleapis'), true, 'a 404 for an exact model on a named lane does not mark Groq down, and a 500 marks nothing')
+  script = (c) => host(c).includes('googleapis') ? reply(400, { error: { message: 'Your credit balance is too low' } }) : chat('ok')
+  await ask({ keys }); assert.equal(await first(), 'groq', 'a 400 that says there is no credit does')
+  assert.equal((await L.callLLM({ keys: { groq: 'k' }, tier: 'heavy', pref: 'groq', system: 'S', maxTokens: 50, messages: [{ role: 'user' }, { role: 'user', content: 'hi' }] })).text, 'ok', 'a message with no text does not crash the size estimate')
 })
 
 test('a call that names its provider asks only that one, and that is where an exact model applies', async () => {
@@ -127,6 +171,21 @@ test('OpenAI: a refused field is dropped and asked again, and a model id the acc
   calls.length = 0
   await ask({ keys: { openai: 'k' }, pref: 'openai' })
   assert.equal(calls.length, 1, 'what was learned is kept: the next call goes straight through')
+})
+
+test('OpenAI: a 404 that arrives after another call learned the account\'s model id uses that id', async () => {
+  fresh()
+  let release; const held = new Promise(r => { release = r })
+  script = async (c) => {
+    if (c.url.endsWith('/v1/models')) return reply(200, { data: [{ id: 'gpt-6-luna-2026-09-02' }] })
+    if (c.body.model === 'gpt-6-luna') { if (c.body.messages[1].content === 'slow') await held; return reply(404, { error: { message: 'no such model', code: 'model_not_found' } }) }
+    return chat('by ' + c.body.model)
+  }
+  const slow = ask({ keys: { openai: 'k' }, pref: 'openai', user: 'slow' })
+  const quick = await ask({ keys: { openai: 'k' }, pref: 'openai', user: 'quick' })
+  assert.equal(quick.text, 'by gpt-6-luna-2026-09-02')
+  release()
+  assert.equal((await slow).text, 'by gpt-6-luna-2026-09-02', 'the call that was in flight does not fail with 404')
 })
 
 test('OpenAI: a 400 that is not about an unsupported field is reported, not "healed"', async () => {
