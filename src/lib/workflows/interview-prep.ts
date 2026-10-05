@@ -3,7 +3,7 @@ import { exactStringArrayObject, parseJsonObject } from "./structured"
 import {
   failWorkflowRun,
   getWorkflowCache,
-  markWorkflowAwaitingApproval,
+  completeWorkflowRun,
   putWorkflowCache,
   recordWorkflowStep,
   requireActiveSubscription,
@@ -167,7 +167,7 @@ export async function runInterviewPrepWorkflow(args: {
 
     if (cached) {
       const output = validateOutput(cached)
-      await markWorkflowAwaitingApproval(run, output, { cacheHit: true })
+      await completeWorkflowRun(run, output, { cacheHit: true })
       return { output, runId: run.id, cacheHit: true, provider: null, model: null }
     }
 
@@ -223,7 +223,7 @@ export async function runInterviewPrepWorkflow(args: {
       output: { stored: true },
     })
 
-    await markWorkflowAwaitingApproval(
+    await completeWorkflowRun(
       run,
       output,
       { provider: result.provider, model: result.model, cacheHit: false },
