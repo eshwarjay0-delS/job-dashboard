@@ -176,7 +176,7 @@ document.querySelectorAll(".choice").forEach(c => c.onclick = () => {
 function segSet(id, val) { const box = $(id); if (!box) return; [...box.children].forEach(b => b.classList.toggle("on", b.dataset.v === val)); }
 ["lengthSeg", "toneSeg", "modeSeg"].forEach(id => { const box = $(id); if (box) box.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; [...box.children].forEach(x => x.classList.remove("on")); b.classList.add("on"); draft[{ lengthSeg: "length", toneSeg: "tone", modeSeg: "mode" }[id]] = b.dataset.v;
   // the interview type suggests who is asking: Behavioural -> Technical HR, Technical -> Engineer, Coding -> Developer
-  if (id === "modeSeg" && $("interviewerSelect")) { const who = { behavioural: "technical_hr", technical: "engineer", coding: "engineer", final: "architect" }[b.dataset.v]; if (who) $("interviewerSelect").value = who; } }; });
+  if (id === "modeSeg" && $("interviewerSelect")) { showCodingLevels($("interviewerSelect"), b.dataset.v); const who = { behavioural: "technical_hr", technical: "engineer", coding: "architect", final: "architect" }[b.dataset.v]; if (who) $("interviewerSelect").value = who; } }; });
 
 function finishWizard() {
   const s = {
@@ -257,7 +257,7 @@ function launchCopilot(s) {
   cards = [{ question: "Preparing…", answer: ["Forming your identity and persona from the four factors…"] }];
   idx = 0;
   $("ovTitle").textContent = "Kompas";
-  if ($("liveInterviewer")) $("liveInterviewer").value = keptLevel(s.interviewer);
+  if ($("liveInterviewer")) { showCodingLevels($("liveInterviewer"), s.mode); $("liveInterviewer").value = keptLevel(s.interviewer, s.mode); }
   renderDepth();
   resetLiveState();
   setAuto(s.autoMode === true);          // default OFF: nothing answers until you press AI Answer
@@ -556,15 +556,24 @@ $("clearBtn").onclick = () => { cards = [{ question: "Cleared.", answer: ["Ask s
 // steps one level deeper — "they weren't loving that depth, go further" — like Claude's effort meter,
 // faster → smarter; ↑ steps back to lighter. The answer on screen regenerates for the new level, once,
 // after you stop pressing (same question — it isn't re-derived). Peer sits outside the ladder: it mirrors.
-const LADDER = ["technical_hr", "engineer", "architect", "director"];   // cut to four by the owner (5 Oct 2026); the closed level map still holds all nine
-function keptLevel(v) {
+// Cut to four by the owner (5 Oct 2026); Coding adds Developer between Engineer and Architect ("Developer + Architect for Coding").
+const LADDER_FOUR = ["technical_hr", "engineer", "architect", "director"];
+const LADDER_CODING = ["technical_hr", "engineer", "developer", "architect", "director"];
+const ladderFor = (mode) => mode === "coding" ? LADDER_CODING : LADDER_FOUR;
+let LADDER = LADDER_FOUR;
+function showCodingLevels(sel, mode) {
+  if (!sel) return;
+  sel.querySelectorAll("option[data-coding]").forEach(o => { o.hidden = mode !== "coding"; o.disabled = mode !== "coding"; });
+  if (sel.id === "liveInterviewer") LADDER = ladderFor(mode);
+}
+function keptLevel(v, mode) {
   const near = { hr: "technical_hr", analyst: "engineer", developer: "engineer", peer: "engineer", supervisor: "architect", lead: "director" };
-  return LADDER.includes(v) ? v : near[v] || "engineer";
+  return ladderFor(mode).includes(v) ? v : near[v] || "engineer";
 }
 function renderDepth() {
   const box = $("depthBars"); if (!box) return;
   const who = $("liveInterviewer").value, i = LADDER.indexOf(who);
-  if (!box.children.length) LADDER.forEach((_, k) => { const b = document.createElement("i"); b.style.height = (5 + k * 1.6).toFixed(1) + "px"; box.append(b); });
+  if (box.children.length !== LADDER.length) { box.replaceChildren(); LADDER.forEach((_, k) => { const b = document.createElement("i"); b.style.height = (5 + k * 1.6).toFixed(1) + "px"; box.append(b); }); }
   [...box.children].forEach((b, k) => b.classList.toggle("on", i >= 0 && k <= i));
   const label = $("liveInterviewer").selectedOptions[0].textContent;
   $("depthMeter").title = i >= 0 ? `Answer depth ${i + 1} of ${LADDER.length}: ${label} — ↑ lighter · ↓ deeper (arrow keys). Each step regenerates the answer.` : "Peer mirrors the interviewer — ↓ steps onto the depth ladder.";
