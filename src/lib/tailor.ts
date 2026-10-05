@@ -323,8 +323,8 @@ export async function runTailor(opts: {
   if (E.TAILOR_USE_OPUS === "1" || E.TAILOR_USE_OPUS === "true") {
     LADDER.push({ pref: "anthropic", model: E.CLAUDE_MODEL_MAX || "claude-opus-5", label: E.CLAUDE_MODEL_MAX || "claude-opus-5" })
   }
-  // GPT Luna leads when this caller was handed the OpenAI key, which tailorKeys() in llm.ts does only for the owner
-  // ("use GPT Luna, for resume tailoring only, for my admin account only", 2026-10-05). The other providers stand behind it.
+  // GPT Luna leads when this caller was handed the OpenAI key, which tailorKeys() in llm.ts does for every tailor
+  // ("reroute to them use OPEN_API_KEY", 2026-10-05). The free providers stand behind it.
   const lunaStep = { pref: "openai" as ProviderPref, model: E.OPENAI_MODEL_TAILOR || E.OPENAI_MODEL || "gpt-6-luna", label: E.OPENAI_MODEL_TAILOR || E.OPENAI_MODEL || "gpt-6-luna" }
   if (opts.keys.openai && E.TAILOR_USE_OPENAI !== "0" && E.TAILOR_USE_OPENAI !== "false") LADDER.unshift(lunaStep)
   // Keep only steps whose provider key exists (preserving cheap→strong order); if the

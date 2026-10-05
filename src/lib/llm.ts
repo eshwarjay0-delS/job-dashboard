@@ -68,13 +68,15 @@ export function hasAnyKey(keys: LlmKeys): boolean { return !!(keys.anthropic || 
 // The owner's instruction (2026-10-05): use GPT Luna, "for Resume tailoring only for now", "for my admin account only".
 // So resolveKeys() never returns this key and the automatic provider order never includes OpenAI. The one way to an OpenAI
 // call is tailorKeys(), which the callers of the resume tailor use, and it hands the key over only for the people
-// OPENAI_TAILOR_FOR allows: "owner" (the default: an admin email or a listed owner WhatsApp number), "all", or "off".
+// OPENAI_TAILOR_FOR allows: "all" (the default), "owner" (an admin email or a listed owner WhatsApp number), or "off".
+// "all" since the owner's "Replace or say or reroute to them use OPEN_API_KEY" (2026-10-05, 13:06), after the free
+// providers ran out of allowance and a tailor came back "busy or out of their allowance".
 // The setting is OPENAI_API_KEY. OPEN_API_KEY is read as well because that is the name the owner saved it under on Vercel
 // (2026-10-05, 09:20), and sending a busy person back to rename a setting would have been the worse fix.
 export function tailorKeys(keys: LlmKeys, who: { owner: boolean }): LlmKeys {
   const key = (process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY || "").trim()
   if (!key || keys.openai) return keys
-  const scope = (process.env.OPENAI_TAILOR_FOR || "owner").trim().toLowerCase()
+  const scope = (process.env.OPENAI_TAILOR_FOR || "all").trim().toLowerCase()
   return scope === "all" || (scope === "owner" && who.owner) ? { ...keys, openai: key } : keys
 }
 
