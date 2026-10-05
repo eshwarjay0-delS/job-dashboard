@@ -180,8 +180,12 @@ export default function SetupPage() {
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || "Verification failed.")
+      if (!body.identityReady || !body.whatsappConnected) {
+        throw new Error("Phone verification completed, but WhatsApp is not ready yet. Retry verification.")
+      }
       save({ phoneVerified: true })
-      setPhoneStatus("Verified. This is now your unique MarketFit + WhatsApp number.")
+      await syncProfile({ ...data, phoneVerified: true }, false)
+      setPhoneStatus("Verified and connected. You can use this number with the MarketFit WhatsApp resume tailor.")
     } catch (e) {
       setPhoneStatus(String(e instanceof Error ? e.message : e))
     } finally {
