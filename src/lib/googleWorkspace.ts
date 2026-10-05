@@ -1,10 +1,37 @@
 import { createServiceClient } from "@/lib/supabase/service"
 import { decryptSecret } from "@/lib/secretCrypto"
 
-export async function getGoogleWorkspaceAccessToken(userId: string): Promise<string | null> {
+export type GoogleWorkspaceAccount = {
+  id: string
+  google_email: string
+  granted_scopes: string[]
+  gmail_enabled: boolean
+  calendar_enabled: boolean
+  is_primary: boolean
+  last_gmail_sync_at: string | null
+  last_calendar_sync_at: string | null
+  connected_at: string
+  updated_at: string
+}
+
+export async function listGoogleWorkspaceAccounts(userId: string): Promise<GoogleWorkspaceAccount[]> {
   const service = createServiceClient()
-  const { data, error } = await service.rpc("identity_get_google_workspace_connection", { p_user_id: userId })
+  const { data, error } = await service.rpc("identity_list_google_workspace_accounts", { p_user_id: userId })
   if (error) throw new Error(error.message)
+  return (data || []) as GoogleWorkspaceAccount[]
+}
+
+export async function getGoogleWorkspaceAccessToken(
+  userId: string,
+  accountId?: string | null,
+): Promise<string | null> {
+  const service = createServiceClient()
+  const { data, error } = await service.rpc("identity_get_google_workspace_account", {
+    p_user_id: userId,
+    p_account_id: accountId || null,
+  })
+  if (error) throw new Error(error.message)
+
   const row = Array.isArray(data) ? data[0] : data
   if (!row?.refresh_token_ciphertext) return null
 
