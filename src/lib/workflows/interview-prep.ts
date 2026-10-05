@@ -1,4 +1,4 @@
-import { callLLM, hasAnyKey, resolveKeys, type ProviderPref } from "@/lib/llm"
+import { callLLM, hasAnyKey, resolveKeys, type ProviderPref, type TokenUsage } from "@/lib/llm"
 import { exactStringArrayObject, parseJsonObject } from "./structured"
 import {
   failWorkflowRun,
@@ -6,6 +6,7 @@ import {
   completeWorkflowRun,
   putWorkflowCache,
   recordWorkflowStep,
+  recordWorkflowUsage,
   requireActiveSubscription,
   startWorkflowRun,
 } from "./runtime"
@@ -176,6 +177,7 @@ export async function runInterviewPrepWorkflow(args: {
 
     const prompt = promptFor(input)
     const llmStarted = Date.now()
+    const usage: TokenUsage[] = []
     const result = await callLLM({
       keys,
       tier: "light",
@@ -184,6 +186,7 @@ export async function runInterviewPrepWorkflow(args: {
       user: prompt.user,
       maxTokens: 1000,
       temperature: 0.2,
+      usageSink: usage,
     })
 
     const parsed = exactStringArrayObject(
@@ -191,6 +194,16 @@ export async function runInterviewPrepWorkflow(args: {
       ["questions", "tips", "starPrompts", "whatToResearch"] as const,
     )
     const output = validateOutput(parsed)
+
+    const tokenTotals = usage.reduce(
+      (sum, item) => ({
+        input: sum.input + item.input,
+        output: sum.output + item.output,
+        cacheRead: sum.cacheRead + item.cacheRead,
+        cacheWrite: sum.cacheWrite + item.cacheWrite,
+      }),
+      { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    )
 
     await recordWorkflowStep({
       run,
@@ -202,8 +215,21 @@ export async function runInterviewPrepWorkflow(args: {
         provider: result.provider,
         model: result.model,
         questionCount: output.questions.length,
+        tokenUsage: tokenTotals,
       },
       latencyMs: Date.now() - llmStarted,
+    })
+
+    await recordWorkflowUsage({
+      userId: args.userId,
+      runId: run.id,
+      featureKey: "interview_prep",
+      provider: result.provider,
+      model: result.model,
+      inputTokens: tokenTotals.input,
+      outputTokens: tokenTotals.output,
+      cacheReadTokens: tokenTotals.cacheRead,
+      cacheWriteTokens: tokenTotals.cacheWrite,
     })
 
     await putWorkflowCache({
