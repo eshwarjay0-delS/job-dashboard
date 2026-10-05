@@ -131,12 +131,19 @@ export default function SetupPage() {
   // sidebar's straggler-catch (Phase 1A) key off of).
   async function syncProfile(current: SetupData, complete: boolean) {
     try {
-      await fetch("/api/profile", {
+      const response = await fetch("/api/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(toProfileBody(current, complete)),
       })
-    } catch { /* best-effort; localStorage still has the data for this session */ }
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        return { ok: false, error: body.error || "Could not save onboarding progress.", missing: body.missing || [] }
+      }
+      return { ok: true, error: "", missing: [] as string[] }
+    } catch {
+      return { ok: false, error: "Could not save onboarding progress. Check your connection and try again.", missing: [] as string[] }
+    }
   }
 
   async function startPhoneVerification() {
@@ -207,16 +214,28 @@ export default function SetupPage() {
     setResumeUploading(false)
   }
 
-  function advance() {
+  async function advance() {
     if (step === 0 && !data.phoneVerified) {
       setPhoneStatus("Verify your mobile number before continuing.")
       return
     }
+
     const next = Math.min(step + 1, STEPS.length - 1)
+    const finishing = next === STEPS.length - 1
+    const saved = await syncProfile(data, finishing)
+
+    if (!saved.ok) {
+      if (saved.missing.includes("phone_verification")) {
+        setStep(0)
+        setPhoneStatus("Verify your mobile number before continuing.")
+      } else if (saved.missing.includes("target_roles")) {
+        setStep(3)
+      }
+      return
+    }
+
     setStep(next)
     localStorage.setItem("jd_setup_step", String(next))
-    const finishing = next === STEPS.length - 1
-    syncProfile(data, finishing)
   }
 
   function toggleRole(r: string) {
