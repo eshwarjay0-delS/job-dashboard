@@ -1,0 +1,166 @@
+{
+  "schema_version": 2,
+  "model_key": "security_engineer_seattle_sunnyvale_2026_10",
+  "source_fingerprint": "85fcd3682cb10a7ba93fb2909792cf3c4016f0549c0ebda3e55aa1d91d46873a",
+  "resume_fingerprint": "a10dc5abb633584cdfc898723ebe785ccff9e183211689a5c484da8a263d936c",
+  "jd_fingerprint": "d793cdcece2326b4e3fbe75dee4ff6c31c5ac6556be5ce770988ff51562775cc",
+  "source_provenance": {
+    "source_document": "The_Security_File_Complete_Edition.pdf",
+    "source_document_sha256": "78706a37e0f8477572111adad61cb81c1a723e9134cd02e6378bacb2c58ff4b1",
+    "note": "Resume and JD facts are reconstructed from the supplied merged dossier because the separate original resume and JD files were not present in this turn."
+  },
+  "source_contract": {
+    "always_merge_resume_and_jd": true,
+    "retain_separate_provenance": true,
+    "incremental_invalidation": true,
+    "reuse_unchanged_knowledge": true,
+    "one_model_for_pdf_prep_and_live_session": true
+  },
+  "candidate_evidence": {
+    "Citi": [
+      "architecture review",
+      "GenAI and agent risk",
+      "prompt injection",
+      "RAG",
+      "tool permissions",
+      "cloud identity",
+      "adversarial validation",
+      "automation"
+    ],
+    "CVS Health": [
+      "application/API/cloud/container security",
+      "identity",
+      "vulnerability management",
+      "privacy"
+    ],
+    "City of San Diego": [
+      "Azure",
+      "application testing",
+      "privileged access",
+      "design review",
+      "cloud/data protection",
+      "stakeholder remediation"
+    ],
+    "Charter": [
+      "firewalls",
+      "identity",
+      "network monitoring",
+      "packet analysis",
+      "segmentation",
+      "security operations"
+    ],
+    "Accenture": [
+      "vulnerability assessment",
+      "web/application testing",
+      "hardening",
+      "incident support",
+      "evidence handling"
+    ]
+  },
+  "jd_surface": [
+    "3+ years professional security",
+    "complex design review",
+    "threat and risk modeling",
+    "authentication",
+    "authorization",
+    "least privilege",
+    "hands on testing",
+    "communication and collaboration",
+    "AI/LLM agents",
+    "privacy design",
+    "cloud",
+    "Python",
+    "Go",
+    "Bash",
+    "local within 40 minutes of Seattle or Sunnyvale"
+  ],
+  "high_depth_topics": [
+    "complex design review",
+    "threat modeling",
+    "risk modeling",
+    "BOLA/IDOR",
+    "least privilege",
+    "application and API security",
+    "microservices",
+    "network segmentation",
+    "privacy",
+    "AWS and Azure IAM",
+    "containers and Kubernetes",
+    "CI/CD and supply chain",
+    "secrets",
+    "AI/LLM system anatomy",
+    "prompt injection",
+    "RAG and vector stores",
+    "agent tools",
+    "agent memory",
+    "guardrails and AI red teaming",
+    "vulnerability validation",
+    "detection engineering",
+    "Python/Go/Bash automation"
+  ],
+  "narrative": {
+    "persona": "Thomas",
+    "default": "first_person",
+    "qualities": [
+      "meticulous",
+      "precise",
+      "comfortable to follow",
+      "field realistic",
+      "technically mature"
+    ],
+    "examples": [
+      "production architecture",
+      "project bottleneck",
+      "release constraint",
+      "cross team ownership",
+      "incident pattern"
+    ],
+    "avoid": [
+      "childish analogy in interview output",
+      "meta interview coaching as primary content",
+      "keyword dump",
+      "unsupported candidate history"
+    ]
+  },
+  "audience_projection": {
+    "engineer": [
+      "implementation",
+      "architecture",
+      "protocol/data flow",
+      "failure modes",
+      "attack paths",
+      "tests",
+      "debugging",
+      "code/config",
+      "remediation"
+    ],
+    "director": [
+      "business impact",
+      "risk tradeoffs",
+      "ownership",
+      "prioritization",
+      "metrics",
+      "delivery constraints",
+      "cross team decisions",
+      "strategic consequence"
+    ]
+  },
+  "generated_artifact": {
+    "filename": "Kompas_Thomas_Security_Engineer_Deep_Dossier_v2.pdf",
+    "sha256": "effc23fad0d61825ce914b8dbfcdd54249e71046bb4e0d5485f6a7264f7fc32c",
+    "pages": 63,
+    "words": 16861,
+    "chapters": 29
+  },
+  "production_seed": {
+    "supabase_project": "Mfit",
+    "model_rows": 1,
+    "source_rows": 2,
+    "knowledge_nodes": 26,
+    "knowledge_edges": 28,
+    "presentation_layers": 10,
+    "interview_bundles": 2,
+    "cache_rows": 1,
+    "feedback_rows": 2
+  }
+}
