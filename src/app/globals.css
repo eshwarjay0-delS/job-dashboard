@@ -31,14 +31,24 @@
   --text-muted:   #55534a;   /* body copy under a heading */
   --text-soft:    #86826f;   /* labels, hints */
 
-  --spot:          #a3121c;   /* crimson: focus, eyebrows, one italic word */
+  /* Reference palette: teal, terracotta, parchment, sage, slate, coral, blue, ochre. */
+  --palette-teal:       #43727c;
+  --palette-terracotta: #9a5c47;
+  --palette-parchment:  #c7bba3;
+  --palette-sage:       #546c5c;
+  --palette-slate:      #586365;
+  --palette-coral:      #b16d56;
+  --palette-blue:       #4c6289;
+  --palette-ochre:      #ab8240;
+
+  --spot:          var(--palette-terracotta);
   --spot-ink:      #ffffff;
 
   /* Primary controls are deep bamboo with paper type, the same green as Kompas. */
-  --accent:        #0c2e24;
-  --accent-h:      #10382c;
-  --bamboo-leaf:   #248058;
-  --bamboo-mid:    #176344;
+  --accent:        var(--palette-teal);
+  --accent-h:      #365f68;
+  --bamboo-leaf:   var(--palette-sage);
+  --bamboo-mid:    #466052;
   --accent-soft:   #efece5;
   --accent-border: #cbc5b6;
   --accent-txt:    #15140f;
@@ -132,7 +142,7 @@
 .rounded-2xl, .rounded-3xl { border-radius: var(--radius-lg) !important; }
 
 /* A stored accent choice cannot put a different hue back on screen. */
-[data-accent] { --accent:#0c2e24; --accent-h:#10382c; }
+[data-accent] { --accent:var(--palette-teal); --accent-h:#365f68; }
 
 /* The owner: the green has no light on it, and no bamboo on the buttons (1 Oct 2026). */
 :root:not([data-theme="dark"]) [data-slot="button"].bg-primary{color:#f4f7f2}
@@ -148,7 +158,7 @@
   --text:          #f7f4ee;
   --text-muted:    #d4d8e2;
   --text-soft:     #95a1b8;
-  --spot:          #ff5d73;
+  --spot:          #d98268;
   --spot-ink:      #121723;
   --background:    #121723;
   --foreground:    #f7f4ee;
@@ -161,13 +171,13 @@
   --danger:        #ff708a;
   --danger-soft:   rgba(255,112,138,.12);
   --danger-border: rgba(255,112,138,.32);
-  --accent:        #7394ff;
-  --accent-h:      #8da8ff;
-  --accent-soft:   #25345b;
-  --accent-border: #4664a9;
-  --accent-txt:    #eef2ff;
-  --bamboo-leaf:   #65d7c1;
-  --bamboo-mid:    #3cb7a0;
+  --accent:        #5f8090;
+  --accent-h:      #7396a5;
+  --accent-soft:   #273a40;
+  --accent-border: #49656c;
+  --accent-txt:    #f4efe5;
+  --bamboo-leaf:   #78937f;
+  --bamboo-mid:    #607d69;
   --primary-foreground: #ffffff;
   --sidebar-primary-foreground: #ffffff;
   --shadow-card: 0 1px 0 rgba(255,255,255,.035), 0 20px 48px -30px rgba(0,0,0,.78);
@@ -177,7 +187,7 @@
     radial-gradient(circle at 92% 4%, rgba(255,93,115,.11), transparent 24rem),
     radial-gradient(circle at 48% 110%, rgba(101,215,193,.08), transparent 32rem);
 }
-[data-theme="dark"][data-accent] { --accent:#7394ff; --accent-h:#8da8ff; }
+[data-theme="dark"][data-accent] { --accent:#5f8090; --accent-h:#7396a5; }
 
 @theme inline {
   --color-background: var(--bg);
@@ -1034,8 +1044,8 @@ html body aside.dash-sidebar {
 }
 
 /* Icons are antique gold. A colour set on the icon itself still wins; icons on a strong or danger button keep the button's text colour. */
-:root{--icon-gold:#9a7636}
-[data-theme="dark"]{--icon-gold:#c9a45c}
+:root{--icon-gold:var(--palette-ochre)}
+[data-theme="dark"]{--icon-gold:#c59b55}
 :where(svg.lucide){color:var(--icon-gold)}
 [data-slot="button"].bg-primary svg,.bg-primary svg,.text-destructive svg,.text-primary-foreground svg{color:inherit}
 
