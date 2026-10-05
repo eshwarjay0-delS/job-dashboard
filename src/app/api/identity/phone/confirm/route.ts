@@ -1,26 +1,11 @@
 import { createHmac } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { createServiceClient } from "@/lib/supabase/service"
+import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
+import { normalizePhone, checkVerificationCode } from "@/lib/phoneVerify"
+import { waDisplayNumber } from "@/lib/whatsapp"
 
 export const runtime = "nodejs"
-
-function normalizePhone(input: string) {
-  const trimmed = input.trim()
-  if (/^\+[1-9]\d{7,14}$/.test(trimmed)) return trimmed
-  const digits = trimmed.replace(/\D/g, "")
-  if (digits.length === 10) return `+1${digits}`
-  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`
-  return null
-}
-
-function twilioAuth() {
-  const sid = process.env.TWILIO_ACCOUNT_SID
-  const token = process.env.TWILIO_AUTH_TOKEN
-  const service = process.env.TWILIO_VERIFY_SERVICE_SID || process.env.TWILIO_SERVICE_SID
-  if (!sid || !token || !service) return null
-  return { sid, token, service }
-}
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -36,25 +21,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid phone or verification code." }, { status: 400 })
   }
 
-  const cfg = twilioAuth()
-  if (!cfg) return NextResponse.json({ error: "Phone verification is not configured." }, { status: 503 })
-
-  const verify = await fetch(`https://verify.twilio.com/v2/Services/${cfg.service}/VerificationCheck`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${cfg.sid}:${cfg.token}`).toString("base64")}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({ To: phone, Code: code }),
-    signal: AbortSignal.timeout(20000),
-  })
-  const result = await verify.json().catch(() => ({}))
-  if (!verify.ok || result.status !== "approved") {
-    return NextResponse.json({ error: result?.message || "Verification code was not approved." }, { status: 400 })
+  // The link to the account is checked BEFORE the code is spent: a code can be used once, so if the account cannot be linked
+  // (the service key or the database function is missing) the person must not lose their code finding that out.
+  const secret = process.env.IDENTITY_PHONE_HASH_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!secret || !serviceClientAvailable()) {
+    console.error("[phone-verify] cannot link: the identity service is not configured")
+    return NextResponse.json({ error: "We cannot link a mobile number to your account right now. This is on our side. Your code is still valid: please try again in a few minutes.", reason: "identity_not_configured" }, { status: 503 })
   }
 
-  const secret = process.env.IDENTITY_PHONE_HASH_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!secret) return NextResponse.json({ error: "Identity service is not configured." }, { status: 503 })
+  const checked = await checkVerificationCode(phone, code)
+  if (!checked.ok) return NextResponse.json({ error: checked.message, reason: checked.reason }, { status: checked.http })
 
   const phoneHash = createHmac("sha256", secret).update(phone).digest("hex")
   const service = createServiceClient()
@@ -68,8 +44,15 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     const duplicate = /duplicate key|unique constraint|PHONE_ALREADY_BOUND/i.test(error.message || "")
+    // The database's own message (it can name tables and functions) stays in the server log.
+    if (!duplicate) console.error("[phone-verify] binding failed", { message: String(error.message || "").slice(0, 300) })
     return NextResponse.json(
-      { error: duplicate ? "That mobile number is already attached to another MarketFit account." : error.message },
+      {
+        error: duplicate
+          ? "That mobile number is already attached to another MarketFit account."
+          : "Your code was right, but we could not link the number to your account. This is on our side. Press Send code and try again in a few minutes.",
+        reason: duplicate ? "already_bound" : "binding_failed",
+      },
       { status: duplicate ? 409 : 500 },
     )
   }
@@ -91,5 +74,7 @@ export async function POST(req: NextRequest) {
     phoneLast4: phone.slice(-4),
     whatsappConnected: whatsappOptIn && bindingReady,
     identityReady: bindingReady,
+    // The number this person can now message. Empty when the bot's sender is not wired on this deployment.
+    whatsappNumber: whatsappOptIn && bindingReady ? await waDisplayNumber() : "",
   })
 }

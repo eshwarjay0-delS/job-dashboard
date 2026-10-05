@@ -11,7 +11,7 @@ export async function GET() {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("full_name,title,work_auth,phone_verified,open_to_roles,profile_complete")
+    .select("full_name,title,phone_verified,open_to_roles,profile_complete")
     .eq("id", user.id)
     .maybeSingle()
 
@@ -31,7 +31,6 @@ export async function GET() {
   const missing: string[] = []
   if (!profile?.full_name?.trim()) missing.push("full_name")
   if (!profile?.title?.trim()) missing.push("title")
-  if (!profile?.work_auth?.trim()) missing.push("work_auth")
   if (!profile?.phone_verified) missing.push("phone_verification")
   if (!Array.isArray(profile?.open_to_roles) || profile.open_to_roles.length === 0) missing.push("target_roles")
 

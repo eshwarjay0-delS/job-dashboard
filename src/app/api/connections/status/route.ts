@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/service"
-import { waConfigured } from "@/lib/whatsapp"
+import { waConfigured, waDisplayNumber } from "@/lib/whatsapp"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -31,6 +31,8 @@ export async function GET() {
   const phoneVerified = Boolean(profile?.phone_verified)
   const optedIn = Boolean(profile?.whatsapp_opt_in)
   const systemReady = waConfigured()
+  // The number to message is only handed to someone whose own number is verified and linked: the bot answers nobody else.
+  const number = phoneVerified && optedIn && systemReady ? await waDisplayNumber() : ""
 
   return NextResponse.json({
     google: {
@@ -45,6 +47,7 @@ export async function GET() {
       systemReady,
       connected: Boolean(phoneVerified && optedIn && systemReady && whatsappRow?.status === "connected"),
       label: whatsappRow?.connected_account_label || (profile?.phone_last4 ? `••••${profile.phone_last4}` : null),
+      number: number || null,
     },
   })
 }

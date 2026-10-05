@@ -154,19 +154,19 @@ export async function POST(request: NextRequest) {
     if (body.profileComplete === true) {
       const { data: existing, error: existingError } = await supabase
         .from("profiles")
-        .select("full_name,title,work_auth,phone_verified,open_to_roles")
+        .select("full_name,title,phone_verified,open_to_roles")
         .eq("id", user.id)
         .maybeSingle()
       if (existingError) return NextResponse.json({ error: existingError.message }, { status: 500 })
 
       const fullName = String(body.name ?? existing?.full_name ?? "").trim()
       const title = String(body.title ?? existing?.title ?? "").trim()
-      const workAuth = String(body.workAuth ?? existing?.work_auth ?? "").trim()
       const roles = body.openToRoles ?? existing?.open_to_roles
       const missing: string[] = []
       if (!fullName) missing.push("full_name")
       if (!title) missing.push("title")
-      if (!workAuth) missing.push("work_auth")
+      // Work authorization is not asked for during setup any more (owner, 2026-10-05: "It won't be necessary for now"), so it
+      // cannot be what stops someone finishing. It can still be set in Settings.
       if (!existing?.phone_verified) missing.push("phone_verification")
       if (!Array.isArray(roles) || roles.length === 0) missing.push("target_roles")
 
@@ -192,7 +192,8 @@ export async function POST(request: NextRequest) {
         title: body.title ?? null,
         bio: body.bio ?? null,
         visa_status: body.visaStatus ?? null,
-        work_auth: body.workAuth ?? null,
+        // Written only when the caller sent it. Setup no longer asks for it, and a missing value must not erase one saved in Settings.
+        ...(body.workAuth !== undefined ? { work_auth: body.workAuth } : {}),
         skills: body.skills ?? null,
         // Tri-state (null = not answered yet) so the extension only auto-fills
         // a form's Yes/No radio once the user has actually stated a preference

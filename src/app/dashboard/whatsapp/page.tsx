@@ -1,10 +1,11 @@
 import type { Metadata } from "next"
-import { waConfigured } from "@/lib/whatsapp"
+import { waConfigured, waDisplayNumber } from "@/lib/whatsapp"
 import { Card, Meta } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 
 // This page never offers a chat that cannot answer. The button appears only when the bot is wired on this
-// deployment and a public number to message is set (WHATSAPP_DISPLAY_NUMBER, digits with country code).
+// deployment and it has a number to message: WHATSAPP_DISPLAY_NUMBER when that is set, otherwise the wired
+// sender's own number, read from Meta (see waDisplayNumber).
 export const dynamic = "force-dynamic"
 export const metadata: Metadata = { title: "WhatsApp" }
 
@@ -15,8 +16,8 @@ const STEPS = [
   "Want a change? Swipe to reply to that resume and say what to change.",
 ]
 
-export default function WhatsAppPage() {
-  const digits = (process.env.WHATSAPP_DISPLAY_NUMBER || "").replace(/\D/g, "")
+export default async function WhatsAppPage() {
+  const digits = await waDisplayNumber()
   const live = waConfigured() && digits.length >= 8
 
   return (

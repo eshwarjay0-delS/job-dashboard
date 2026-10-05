@@ -27,6 +27,59 @@ function phoneId(): string {
   return (process.env.WHATSAPP_PHONE_NUMBER_ID || "").trim()
 }
 
+/**
+ * The number people message, as digits with the country code ("15552017131").
+ *
+ * WHATSAPP_DISPLAY_NUMBER wins when it is set. Otherwise the number is read from Meta for the configured sender and kept for an
+ * hour. Before 2026-10-05 the page showed a number only when that one setting existed; it had never been set, so every person who
+ * finished setup was told "WhatsApp is not switched on yet" while the bot was in fact wired. A sender that is wired always has a
+ * number, so it is looked up rather than asked for twice.
+ */
+type SenderInfo = { digits: string; mode: string; reached: boolean; status: number }
+// A good answer is kept for an hour; a refusal or a silence for one minute, so a repaired token shows up quickly.
+let numberCache: (SenderInfo & { at: number }) | null = null
+async function senderInfo(): Promise<SenderInfo> {
+  if (numberCache && Date.now() - numberCache.at < (numberCache.reached ? 3600_000 : 60_000)) return numberCache
+  const keep = (info: SenderInfo) => { numberCache = { ...info, at: Date.now() }; return info }
+  try {
+    const res = await fetch(`${GRAPH}/${phoneId()}?fields=display_phone_number,account_mode`, { headers: auth(), signal: AbortSignal.timeout(8000) })
+    if (!res.ok) return keep({ digits: "", mode: "", reached: false, status: res.status })
+    const body = await res.json().catch(() => ({})) as { display_phone_number?: string; account_mode?: string }
+    const digits = String(body.display_phone_number || "").replace(/\D/g, "")
+    return keep({ digits: digits.length >= 8 ? digits : "", mode: String(body.account_mode || ""), reached: true, status: 200 })
+  } catch { return keep({ digits: "", mode: "", reached: false, status: 0 }) }
+}
+
+export async function waDisplayNumber(): Promise<string> {
+  const fromEnv = (process.env.WHATSAPP_DISPLAY_NUMBER || "").replace(/\D/g, "")
+  if (fromEnv.length >= 8) return fromEnv
+  if (!waConfigured()) return ""
+  return (await senderInfo()).digits
+}
+
+export type WhatsAppStatus = {
+  state: "ok" | "not_configured" | "token_rejected" | "test_number" | "unreachable"
+  /** What to do about it, for whoever runs the deployment. No value of any setting is included. */
+  fix: string
+  hasNumber: boolean
+}
+
+/** Is the bot's sender usable by people who are not on Meta's test list? One read-only request, kept for an hour. */
+export async function waStatus(): Promise<WhatsAppStatus> {
+  if (!waConfigured()) return { state: "not_configured", hasNumber: false, fix: "Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID on the deployment, then redeploy." }
+  const info = await senderInfo()
+  const fromEnv = (process.env.WHATSAPP_DISPLAY_NUMBER || "").replace(/\D/g, "").length >= 8
+  if (!info.reached) {
+    return info.status === 401 || info.status === 403 || info.status === 400
+      ? { state: "token_rejected", hasNumber: fromEnv, fix: "Meta refused WHATSAPP_TOKEN for this sender. The token has expired or lost access to the phone number: create a new permanent System User token in Meta Business settings, save it on the deployment, then redeploy." }
+      : { state: "unreachable", hasNumber: fromEnv, fix: "Meta did not answer. Try again in a minute." }
+  }
+  if (/sandbox/i.test(info.mode)) {
+    return { state: "test_number", hasNumber: !!info.digits || fromEnv, fix: "The bot is on Meta's test number. It can only reply to the (at most five) numbers added as recipients in the Meta developer console. For everyone else to get replies, add a real phone number to the WhatsApp Business account and put its phone number id in WHATSAPP_PHONE_NUMBER_ID." }
+  }
+  return { state: "ok", hasNumber: !!info.digits || fromEnv, fix: "" }
+}
+
 /** Only these numbers may drive the bot (defence against a leaked webhook URL). */
 export function senderAllowed(from: string): boolean {
   const raw = (process.env.WHATSAPP_ALLOWED_FROM || "").trim()

@@ -9,14 +9,13 @@ const P = {
 }
 
 const STEPS = [
-  { id: "profile",     label: "Your Profile",     icon: "👤", desc: "Name, title, location, work authorization" },
+  { id: "profile",     label: "Your Profile",     icon: "👤", desc: "Name, title, location, mobile number" },
   { id: "resume",      label: "Resume",            icon: "📄", desc: "Upload your base resume" },
   { id: "gmail",       label: "Gmail + Calendar",  icon: "📧", desc: "Optional email and calendar connection" },
-  { id: "preferences", label: "Job Preferences",  icon: "🎯", desc: "Roles, salary, location, visa filters" },
+  { id: "preferences", label: "Job Preferences",  icon: "🎯", desc: "Roles, salary, location" },
   { id: "done",        label: "Ready to Go",       icon: "🚀", desc: "Your workspace is set up" },
 ]
 
-const WORK_AUTHS = ["US Citizen", "Green Card", "H-1B", "OPT (STEM)", "CPT", "TN Visa", "L-1", "Need Sponsorship"]
 const ROLES_LIST = ["Software Engineer", "Senior Software Engineer", "Security Engineer", "DevOps / SRE", "ML Engineer", "Data Scientist", "Full Stack Engineer", "Backend Engineer", "Product Manager", "Cloud Architect", "ServiceNow Developer", "Data Engineer"]
 const LOCS = ["Remote (US)", "San Francisco, CA", "New York, NY", "Seattle, WA", "Austin, TX", "Chicago, IL", "Boston, MA", "Los Angeles, CA", "Denver, CO"]
 
@@ -37,7 +36,6 @@ function toProfileBody(d: SetupData, profileComplete: boolean) {
     phone: d.phoneVerified ? d.phone || undefined : undefined,
     location: d.location || undefined,
     linkedin: d.linkedin || undefined,
-    workAuth: d.workAuth || undefined,
     remoteOk: d.openToRemote,
     salaryMin: d.minSalary ? Number(d.minSalary) : undefined,
     openToRoles: d.targetRoles.length ? d.targetRoles : undefined,
@@ -48,9 +46,10 @@ function toProfileBody(d: SetupData, profileComplete: boolean) {
 function normalizeUsPhone(input: string) {
   const raw = input.trim()
   if (/^\+[1-9]\d{7,14}$/.test(raw)) return raw
+  if (raw.startsWith("+")) return null                       // the same rule as the server (src/lib/phoneVerify.ts)
   const digits = raw.replace(/\D/g, "")
-  if (digits.length === 10) return `+1${digits}`
-  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`
+  if (/^[2-9]\d{9}$/.test(digits)) return `+1${digits}`
+  if (/^1[2-9]\d{9}$/.test(digits)) return `+${digits}`
   return null
 }
 
@@ -95,6 +94,8 @@ export default function SetupPage() {
   const [phoneCode, setPhoneCode] = useState("")
   const [phoneLoading, setPhoneLoading] = useState(false)
   const [phoneStatus, setPhoneStatus] = useState("")
+  // The number this person can message once their own number is verified and linked (digits with country code, "" until known).
+  const [waNumber, setWaNumber] = useState("")
 
   useEffect(() => {
     // Restore any existing profile
@@ -125,6 +126,12 @@ export default function SetupPage() {
           gmailConnected: !!(profile.gmail_connected && profile.calendar_connected),
         }))
       })
+      .catch(() => {})
+
+    // Someone who verified on an earlier visit still needs to see the number they can message.
+    fetch("/api/connections/status", { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : null))
+      .then(body => { if (body?.whatsapp?.number) setWaNumber(String(body.whatsapp.number)) })
       .catch(() => {})
   }, [])
 
@@ -195,6 +202,7 @@ export default function SetupPage() {
         throw new Error("Phone verification completed, but WhatsApp is not ready yet. Retry verification.")
       }
       save({ phoneVerified: true })
+      if (body.whatsappNumber) setWaNumber(String(body.whatsappNumber))
       await syncProfile({ ...data, phoneVerified: true }, false)
       setPhoneStatus("Verified and connected. You can use this number with the MarketFit WhatsApp resume tailor.")
     } catch (e) {
@@ -352,19 +360,14 @@ export default function SetupPage() {
               <p style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: data.phoneVerified ? "#42413c" : P.muted }}>
                 {phoneStatus || "Enter a US 10 digit number or international number with country code. We normalize it before verification and use the verified identity for WhatsApp resume tailoring."}
               </p>
+              {data.phoneVerified && waNumber && (
+                <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer"
+                  style={{ display: "inline-block", marginTop: 8, padding: "8px 14px", borderRadius: 9, border: `1px solid ${P.border}`, background: P.surface, color: P.text, fontSize: 12.5, fontWeight: 700, textDecoration: "none" }}>
+                  Message MarketFit on WhatsApp: +{waNumber}
+                </a>
+              )}
             </div>
 
-            <div style={{ marginTop: 14 }}>
-              <label style={{ fontSize: 11.5, fontWeight: 700, color: P.hint, display: "block", marginBottom: 6 }}>WORK AUTHORIZATION *</label>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                {WORK_AUTHS.map(w => (
-                  <button key={w} onClick={() => save({ workAuth: w })}
-                    style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${data.workAuth === w ? "var(--accent)" : P.border}`, background: data.workAuth === w ? "#f2f0ea" : P.surface, color: data.workAuth === w ? "var(--accent)" : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
-                    {w}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         )}
 
@@ -586,7 +589,7 @@ export default function SetupPage() {
       {step < 4 && (
         <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 18, flexWrap: "wrap" as const }}>
           {[
-            { label: "Profile", done: !!(data.full_name && data.email && data.workAuth && data.phoneVerified) },
+            { label: "Profile", done: !!(data.full_name && data.email && data.phoneVerified) },
             { label: "Resume",  done: data.resumeUploaded },
             { label: "Gmail",   done: data.gmailConnected },
             { label: "Prefs",   done: data.targetRoles.length > 0 },
