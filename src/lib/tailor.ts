@@ -131,7 +131,7 @@ function normJD(jd: string): string {
 // or new feedback produces a fresh result.
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
-const CACHE_GENERATION = "2"
+const CACHE_GENERATION = "3"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -247,6 +247,9 @@ export async function runTailor(opts: {
       // Confirm the tailored .docx still exists AND the cached shape is current.
       if (!(await blob.exists(`tailored/${cached.token}.docx`))) throw new Error("tailored file gone")
       if (!cached.keyword_analysis || !cached.diff) throw new Error("stale cache shape")
+      // Never replay a pre-contract low-coverage artifact. A known JD tailor is complete
+      // only when the rendered DOCX itself clears the keyword quality gate.
+      if (!refine && (cached.coverage ?? cached.keyword_analysis.coverage_after ?? 0) < 90) throw new Error("cached result below keyword quality gate")
       return { ...cached, cached: true, elapsed_ms: Date.now() - started }
     } catch { /* miss → generate */ }
   }
@@ -480,7 +483,8 @@ export async function runTailor(opts: {
   // are authorized knowledge targets for tailoring. 98% literal JD coverage is the default
   // completion threshold, not a decorative score. A low coverage first draft is unfinished.
   const usageSink: TokenUsage[] = []
-  const TARGET_COVERAGE = Math.max(0.98, Math.min(1, Number(E.TAILOR_TARGET_COVERAGE) || 0.98))
+  const MIN_KEYWORD_COVERAGE = 0.90
+  const TARGET_COVERAGE = Math.max(MIN_KEYWORD_COVERAGE, Math.min(1, Number(E.TAILOR_TARGET_COVERAGE) || 0.98))
   const TAILOR_MAX_MS = Math.max(1000, Math.min(Number(E.TAILOR_MAX_MS) || 52000, 55000))
   const deadline = started + TAILOR_MAX_MS
   let best: Pass | null = null
