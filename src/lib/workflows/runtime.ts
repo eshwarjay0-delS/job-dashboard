@@ -278,3 +278,37 @@ export async function createWorkflowApproval(args: {
     payloadFingerprint: String(data.payload_fingerprint),
   }
 }
+
+export async function recordWorkflowUsage(args: {
+  userId: string
+  runId: string
+  featureKey: string
+  sourceChannel?: WorkflowSourceChannel
+  provider?: string
+  model?: string
+  inputTokens?: number
+  outputTokens?: number
+  cacheReadTokens?: number
+  cacheWriteTokens?: number
+}) {
+  const db = createServiceClient()
+  const { error } = await db.from("usage_events").insert({
+    user_id: args.userId,
+    source_channel: args.sourceChannel ?? "web",
+    feature_key: args.featureKey,
+    source_event_key: "workflow:" + args.runId,
+    units: 1,
+    metadata: {
+      workflow_run_id: args.runId,
+      provider: args.provider ?? null,
+      model: args.model ?? null,
+      input_tokens: args.inputTokens ?? 0,
+      output_tokens: args.outputTokens ?? 0,
+      cache_read_tokens: args.cacheReadTokens ?? 0,
+      cache_write_tokens: args.cacheWriteTokens ?? 0,
+    },
+  })
+  if (error && !String(error.message).toLowerCase().includes("duplicate")) {
+    throw new Error(error.message)
+  }
+}
