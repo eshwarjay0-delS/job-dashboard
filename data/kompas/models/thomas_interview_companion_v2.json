@@ -178,5 +178,45 @@
     ],
     "cache_and_reuse": true,
     "incremental_invalidation": true
+  },
+  "narration_maturity": {
+    "goal": "NotebookLM-like explanatory comfort with Thomas first-person interview realism",
+    "source_library": "kompas_narration_cases",
+    "evidence_rule": "Use acoustic evidence immediately; do not promote semantic narrative patterns until transcript-grounded.",
+    "acoustic_targets": {
+      "speech_occupancy": [
+        0.86,
+        0.9
+      ],
+      "median_pause_seconds": [
+        0.38,
+        0.43
+      ],
+      "pause_events_per_minute": [
+        14,
+        18
+      ],
+      "loudness_range_lu": [
+        5.5,
+        6.1
+      ]
+    },
+    "rules": [
+      "keep internal knowledge deeper than spoken output",
+      "build explanation in progressively connected idea units",
+      "use clause-level micro-pauses instead of uninterrupted walls of speech",
+      "reserve longer pauses for transitions, contrast and conclusions",
+      "condition cadence on technical density, interviewer role and stakes",
+      "use production incidents, architecture constraints, project bottlenecks and cross-team tradeoffs instead of childish analogies",
+      "preserve first-person candidate voice for interview renderings",
+      "keep narration style evidence separate from candidate factual evidence"
+    ],
+    "case_archetypes_pending_semantic_transcript": [
+      "technical_architecture_critique",
+      "interview_preparation_healthcare",
+      "institutional_strategy_business",
+      "technical_education_analysis",
+      "business_pitch_critical_evaluation"
+    ]
   }
 }
