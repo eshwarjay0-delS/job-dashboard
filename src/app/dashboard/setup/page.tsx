@@ -45,6 +45,15 @@ function toProfileBody(d: SetupData, profileComplete: boolean) {
   }
 }
 
+function normalizeUsPhone(input: string) {
+  const raw = input.trim()
+  if (/^\+[1-9]\d{7,14}$/.test(raw)) return raw
+  const digits = raw.replace(/\D/g, "")
+  if (digits.length === 10) return `+1${digits}`
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`
+  return null
+}
+
 const DEFAULT: SetupData = {
   full_name: "", title: "", location: "", workAuth: "", email: "", phone: "", linkedin: "",
   targetRoles: [], targetLocs: [], minSalary: "", openToRemote: true, yearsExp: "",
@@ -148,16 +157,18 @@ export default function SetupPage() {
 
   async function startPhoneVerification() {
     setPhoneStatus("")
-    if (!/^\+[1-9]\d{7,14}$/.test(data.phone.trim())) {
-      setPhoneStatus("Enter your mobile number in international format, e.g. +13145550192.")
+    const normalizedPhone = normalizeUsPhone(data.phone)
+    if (!normalizedPhone) {
+      setPhoneStatus("Enter a valid US mobile number or an international number with country code.")
       return
     }
+    if (normalizedPhone !== data.phone) save({ phone: normalizedPhone, phoneVerified: false })
     setPhoneLoading(true)
     try {
       const res = await fetch("/api/identity/phone/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: data.phone.trim() }),
+        body: JSON.stringify({ phone: normalizedPhone }),
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || "Could not send verification code.")
@@ -176,7 +187,7 @@ export default function SetupPage() {
       const res = await fetch("/api/identity/phone/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: data.phone.trim(), code: phoneCode.trim(), whatsappOptIn: true }),
+        body: JSON.stringify({ phone: normalizeUsPhone(data.phone) || data.phone.trim(), code: phoneCode.trim(), whatsappOptIn: true }),
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || "Verification failed.")
@@ -315,7 +326,7 @@ export default function SetupPage() {
                   value={data.phone}
                   onChange={e => save({ phone: e.target.value, phoneVerified: false })}
                   disabled={data.phoneVerified}
-                  placeholder="+13145550192"
+                  placeholder="3142559156 or +13142559156"
                   style={{ flex: 1, padding: "9px 12px", borderRadius: 9, border: `1.5px solid ${P.border}`, fontSize: 13, background: P.surface }}
                 />
                 <button type="button" disabled={phoneLoading || data.phoneVerified} onClick={startPhoneVerification}
@@ -339,7 +350,7 @@ export default function SetupPage() {
                 </div>
               )}
               <p style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: data.phoneVerified ? "#42413c" : P.muted }}>
-                {phoneStatus || "One verified number per account. This number is also used to bind your WhatsApp identity and subscription usage."}
+                {phoneStatus || "Enter a US 10 digit number or international number with country code. We normalize it before verification and use the verified identity for WhatsApp resume tailoring."}
               </p>
             </div>
 
