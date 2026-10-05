@@ -25,6 +25,10 @@ export function isOwnerWhatsApp(from: string): boolean {
 
 /** The account a listed owner number writes as, or null when the sender is not listed. */
 export function ownerWhatsAppUserId(from: string, fallbackUserId: string): string | null {
+  // The list is only as good as the proof of who sent the message. Without WHATSAPP_APP_SECRET the webhook cannot check
+  // Meta's signature (verifySignature lets everything through), so anyone could post a message "from" an owner number:
+  // then nobody is an owner. Found in review, 2026-10-05; the secret is set on the live deployment.
+  if (!(process.env.WHATSAPP_APP_SECRET || "").trim()) return null
   const sender = digits(String(from || ""))
   if (sender.length < 8) return null
   for (const entry of items(process.env.WHATSAPP_OWNER_NUMBERS)) {

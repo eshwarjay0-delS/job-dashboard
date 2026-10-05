@@ -24,19 +24,23 @@ const ask = (extra) => L.callLLM({ tier: 'heavy', system: 'S', user: 'U', maxTok
 const host = (c) => new URL(c.url).host
 
 // ── who gets the OpenAI key ──────────────────────────────────────────────────
-test('the OpenAI key is handed over for the owner\'s tailoring only, and never by the general key lookup', () => {
+test('the OpenAI key is handed over for resume tailoring only (everyone\'s since 13:06 on 2026-10-05, unless narrowed), and never by the general key lookup', () => {
   fresh({ OPENAI_API_KEY: 'k-openai', GROQ_API_KEY: 'k-groq' })
   assert.equal(L.resolveKeys({}).openai, undefined, 'the general lookup never returns it')
+  assert.equal(L.tailorScope(), 'all')
   assert.equal(L.tailorKeys(L.resolveKeys({}), { owner: true }).openai, 'k-openai')
-  assert.equal(L.tailorKeys(L.resolveKeys({}), { owner: false }).openai, undefined, 'not for anyone else')
-  process.env.OPENAI_TAILOR_FOR = 'all'; assert.equal(L.tailorKeys({}, { owner: false }).openai, 'k-openai')
+  assert.equal(L.tailorKeys(L.resolveKeys({}), { owner: false }).openai, 'k-openai', 'every tailor, by the owner\'s later instruction')
+  process.env.OPENAI_TAILOR_FOR = 'owner'; assert.equal(L.tailorScope(), 'owner')
+  assert.equal(L.tailorKeys({}, { owner: false }).openai, undefined, 'narrowed to the owner: not for anyone else'); assert.equal(L.tailorKeys({}, { owner: true }).openai, 'k-openai')
   process.env.OPENAI_TAILOR_FOR = 'off'; assert.equal(L.tailorKeys({}, { owner: true }).openai, undefined)
+  process.env.OPENAI_TAILOR_FOR = 'everyone-please'; assert.equal(L.tailorScope(), 'all', 'an unknown value is the default, and the status page says the same')
   delete process.env.OPENAI_TAILOR_FOR; delete process.env.OPENAI_API_KEY
   assert.equal(L.tailorKeys({ groq: 'g' }, { owner: true }).openai, undefined, 'no key on the deployment, nothing to hand over')
   process.env.OPEN_API_KEY = 'k-as-saved'
   assert.equal(L.tailorKeys({}, { owner: true }).openai, 'k-as-saved', 'the name the owner saved it under on Vercel is read too')
-  assert.equal(L.tailorKeys({}, { owner: false }).openai, undefined); assert.equal(L.resolveKeys({}).openai, undefined)
+  assert.equal(L.resolveKeys({}).openai, undefined)
   delete process.env.OPEN_API_KEY
+  assert.match(read('src/lib/llmStatus.ts'), /tailorScope\(\) === "owner" \? "resume tailoring only, owner only" : "resume tailoring only"/, 'the status page reads the same definition')
 })
 
 test('an automatic call never reaches OpenAI, even when the caller holds the key', async () => {
@@ -193,10 +197,37 @@ test('an empty reply from a free model is offered to other lanes; from a wide la
   assert.deepEqual(one.map(w => [w.e, w.via]), [['rewritten', 'qwen']])
   const asked = []
   const none = await spread({ parts: ['roles-1'], lanes, ask: async (_p, l) => { asked.push(l.label); return 'empty' } })
-  assert.deepEqual(asked, ['g120', 'qwen', 'g20'], 'three lanes agree: nothing to change'); assert.deepEqual(none.map(w => [w.e, w.via]), [['empty', 'g120']].map(([e]) => [e, 'g20']))
+  assert.deepEqual(asked, ['g120', 'qwen', 'g20'], 'three lanes agree: nothing to change'); assert.deepEqual(none.map(w => [w.e, w.via]), [['empty', 'g20']])
   const wide = await spread({ parts: ['roles-1'], lanes: [lane('openai', 'luna'), ...lanes], ask: async (_p, l) => { asked.push(l.label); return 'empty' } })
   assert.deepEqual(wide.map(w => [w.e, w.via]), [['empty', 'luna']]); assert.equal(asked.filter(a => a === 'luna').length, 1)
   assert.equal(asked.length, 4, 'no free lane is asked to second-guess the strong one')
+})
+
+test('one free model\'s empty reply that nobody could check is a part that was not done', async () => {
+  const lanes = [lane('groq', 'g120'), lane('groq', 'qwen'), lane('groq', 'g20')]
+  const out = new Map()
+  const done = await spread({ parts: ['roles-2'], lanes, out, ask: async (_p, l) => { if (l.label === 'g20') return 'empty'; if (l.label === 'g120') return 'empty-not'; throw new Error('Groq API 429: Rate limit reached') },
+    says: (_p, e) => e !== 'empty' && e !== 'empty-not' ? true : false })
+  assert.equal(done[0].e, 'empty', 'two lanes changed nothing: that stands'); assert.equal(out.get(lanes[1]), 'busy')
+  const alone = await spread({ parts: ['roles-2'], lanes, ask: async (_p, l) => { if (l.label === 'g20') return 'empty'; throw new Error('Groq API 429: Rate limit reached') } })
+  assert.equal(alone[0].e, null, 'one empty reply, the other lanes refused: not done'); assert.match(String(alone[0].err), /429|no other model/)
+  const hollowOnly = await spread({ parts: ['roles-2'], lanes: [lane('groq', 'g20'), lane('groq', 'qwen')], ask: async (_p, l) => { if (l.label === 'g20') return 'empty'; throw new Error('TimeoutError: The operation was aborted due to timeout') } })
+  assert.equal(hollowOnly[0].e, null)
+  const single = await spread({ parts: ['roles-2'], lanes: [lane('groq', 'g20')], ask: async () => 'empty' })
+  assert.equal(single[0].e, 'empty', 'with one lane in all there is nobody else to ask: its answer stands')
+})
+
+test('a provider that hangs is given up on while another lane still has room, instead of taking the whole time', async () => {
+  const lanes = [lane('openai', 'luna'), lane('groq', 'g120'), lane('groq', 'qwen')]
+  const t0 = Date.now(); const asked = []
+  const done = await W.workParts({ parts: ['profile', 'roles-1'], lanes, out: new Map(), says: () => true, startBy: t0 + 400, assembleBy: t0 + 900, fallbackMs: 150,
+    ask: (p, l) => { asked.push(`${l.label}:${p}`); return l.label === 'luna' ? new Promise(r => setTimeout(() => r('late from luna'), 5000)) : new Promise(r => setTimeout(() => r(`${p} by ${l.label}`), 20)) } })
+  assert.deepEqual(done.map(w => w.e), ['profile by g120', 'roles-1 by qwen'], 'the free lanes wrote it after the leader was given up on')
+  assert.ok(Date.now() - t0 < 800, 'well before the leader\'s own timeout'); assert.equal(asked.filter(a => a.startsWith('luna:')).length, 2)
+  // With nobody else to ask, the only lane is waited for as long as the tailor has.
+  const only = await W.workParts({ parts: ['profile'], lanes: [lane('openai', 'luna')], out: new Map(), says: () => true, startBy: Date.now() + 400, assembleBy: Date.now() + 900, fallbackMs: 150,
+    ask: () => new Promise(r => setTimeout(() => r('slow but there'), 450)) })
+  assert.deepEqual(only.map(w => w.e), ['slow but there'])
 })
 
 test('when time is nearly up the draft is made of what came back, and nothing new is started late', async () => {
@@ -232,4 +263,17 @@ test('an incomplete or unchanged draft is not stored, not sent as tailored, and 
   assert.match(tailor, /for \(const lane of splitDraft \? lanes\.slice\(0, 1\) : lanes\)/, 'a split draft is made once: it already uses every lane')
   assert.match(bot, /if \(result\.unchanged\) \{[\s\S]{0,400}I am not sending you the same file/)
   assert.match(claude, /API \(400\|401\|402\|403\|404\|413\|429\)\\b\|TimeoutError/, 'a refusal that will not clear, or a timeout, is not asked again on the same model')
+})
+
+test('the review\'s fixes in the tailor, read from the source', () => {
+  const tailor = read('src/lib/tailor.ts')
+  assert.match(tailor, /const token = !best\.partial && diff\.length \? key : `\$\{key\}x`/, 'an incomplete or unchanged file never overwrites the one a cached result points at')
+  assert.ok(tailor.indexOf('const token = !best.partial') > tailor.indexOf('const diff: {'), 'and its name is decided after the diff is known')
+  assert.match(tailor, /let kwExpandPromise: Promise<string\[\]> \| null = openaiOn && !opts\.noCache \? null : expandKeywords\(\)/, 'a paid keyword call waits for the cache to miss')
+  assert.match(tailor, /await \(kwExpandPromise \?\?= expandKeywords\(\)\)/)
+  assert.match(tailor, /if \(fromLuna\.length \|\| left < 1500\) return fromLuna/, 'and falls back to the usual order when OpenAI gives nothing')
+  assert.match(tailor, /if \(openaiOn\) LADDER\.unshift\(lunaStep\)/, 'one switch (TAILOR_USE_OPENAI) for the ladder and the keyword call')
+  assert.match(tailor, /modelFor\(s\.pref, opts\.mode === "quick" \? "light" : "heavy"\)/, 'a lane is named after the model it really calls')
+  assert.match(tailor, /extra\.filter\(m => m !== own\)/)
+  assert.match(tailor, /Date\.now\(\) >= deadline - 4000 \|\| \/TimeoutError\|timed out\|aborted\/i\.test\(why\)/, 'slow providers are reported as out of time, not as bad keys')
 })

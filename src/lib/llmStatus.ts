@@ -8,7 +8,7 @@
  * retry rule) and the refusal, if any, is sorted into a state. Each probe asks for a handful of output tokens; the answers are
  * kept for five minutes per server instance, and callers that arrive together share one probe. No key or reply text is returned.
  */
-import { callLLM, resolveKeys, tailorKeys, type Provider } from "@/lib/llm"
+import { callLLM, resolveKeys, tailorKeys, tailorScope, type Provider } from "@/lib/llm"
 
 export type ProviderState = "ok" | "rate_limited" | "key_rejected" | "no_credit" | "model_not_found" | "slow_or_down" | "refused"
 export type LlmStatus = {
@@ -23,7 +23,7 @@ export type LlmStatus = {
 const ORDER: Provider[] = ["openai", "gemini", "groq", "anthropic", "openrouter"]   // the tailoring ladder's order (src/lib/tailor.ts)
 // OpenAI is held apart (tailorKeys in src/lib/llm.ts): it is probed here only when the deployment has its key and uses it.
 const scopeOf = (provider: Provider): { scope?: string } => provider !== "openai" ? {}
-  : { scope: (process.env.OPENAI_TAILOR_FOR || "owner").trim().toLowerCase() === "all" ? "resume tailoring only" : "resume tailoring only, owner only" }
+  : { scope: tailorScope() === "owner" ? "resume tailoring only, owner only" : "resume tailoring only" }
 
 function sort(message: string): { state: ProviderState; limit?: string } {
   const status = Number((/API (\d{3})/.exec(message) || [])[1]) || 0

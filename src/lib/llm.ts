@@ -26,7 +26,7 @@ export function providerOfKey(raw?: string): Provider | null {
 // SPEED RULE: tailoring must finish in < 20s, so the HEAVY default is a FAST model
 // (Haiku / Gemini Flash), not Sonnet (~30s). Set CLAUDE_MODEL_HEAVY=claude-sonnet-4-6
 // (or OPENROUTER_MODEL_HEAVY) to trade speed for maximum quality.
-function modelFor(provider: Provider, tier: Tier): string {
+export function modelFor(provider: Provider, tier: Tier): string {
   const e = process.env
   if (provider === "anthropic")
     return tier === "heavy" ? (e.CLAUDE_MODEL_HEAVY || e.CLAUDE_MODEL || "claude-haiku-4-5")
@@ -76,8 +76,13 @@ export function hasAnyKey(keys: LlmKeys): boolean { return !!(keys.anthropic || 
 export function tailorKeys(keys: LlmKeys, who: { owner: boolean }): LlmKeys {
   const key = (process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY || "").trim()
   if (!key || keys.openai) return keys
-  const scope = (process.env.OPENAI_TAILOR_FOR || "all").trim().toLowerCase()
+  const scope = tailorScope()
   return scope === "all" || (scope === "owner" && who.owner) ? { ...keys, openai: key } : keys
+}
+/** Whose resume tailoring the OpenAI key is used for: OPENAI_TAILOR_FOR, "all" unless set. One definition, read by the status page too. */
+export function tailorScope(): "all" | "owner" | "off" {
+  const scope = (process.env.OPENAI_TAILOR_FOR || "all").trim().toLowerCase()
+  return scope === "owner" || scope === "off" ? scope : "all"
 }
 
 // The order an automatic call asks the providers in. OpenAI is deliberately in neither list: see tailorKeys().

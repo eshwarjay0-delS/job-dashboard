@@ -6,7 +6,7 @@ import { extractText, extractZones, applyRewrites, capRoleBullets, roleSpanMonth
 import { adapt, expandJdKeywords } from "./claude"
 import { recentFeedback } from "./feedback"
 import { matchByKeywords, extractKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
-import type { LlmKeys, ProviderPref, TokenUsage } from "./llm"
+import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 
 export interface TailorResult {
@@ -171,13 +171,28 @@ export async function runTailor(opts: {
   // Fired HERE, before resume matching/loading, so it runs CONCURRENTLY with that work and
   // costs ~no extra wall time; it self-resolves to [] on error/timeout, so it can never
   // stall or fail a tailor. TAILOR_KW_EXPAND=0 disables it.
-  const kwExpandPromise: Promise<string[]> =
+  // Is GPT Luna in use for this tailor? One switch for the ladder below and for the keyword call here.
+  const openaiOn = !!opts.keys.openai && process.env.TAILOR_USE_OPENAI !== "0" && process.env.TAILOR_USE_OPENAI !== "false"
+  const expandKeywords = async (): Promise<string[]> => {
     // A refinement edits a resume the expansion keywords were already woven into, so the
     // extra call would only add latency.
-    (opts.refine || process.env.TAILOR_KW_EXPAND === "0" || process.env.TAILOR_KW_EXPAND === "false")
-      ? Promise.resolve([])
-      // Part of the tailoring, so when this caller was given the OpenAI key (tailorKeys in llm.ts) it runs there too.
-      : expandJdKeywords({ keys: opts.keys, pref: opts.keys.openai ? "openai" : opts.pref, jd, timeoutMs: Number(process.env.TAILOR_KW_EXPAND_MS) || 8000 })
+    if (opts.refine || process.env.TAILOR_KW_EXPAND === "0" || process.env.TAILOR_KW_EXPAND === "false") return []
+    const ms = Number(process.env.TAILOR_KW_EXPAND_MS) || 8000
+    const began = Date.now()
+    const usual = opts.pref === "openai" ? "auto" : opts.pref
+    // Part of the tailoring, so with the OpenAI key it runs there. A provider named by `pref` is the only one asked, so
+    // when OpenAI gives nothing (a rejected key, a missing model, no quota) the usual order is asked with the time left.
+    if (openaiOn) {
+      const fromLuna = await expandJdKeywords({ keys: opts.keys, pref: "openai", jd, timeoutMs: ms })
+      const left = ms - (Date.now() - began)
+      if (fromLuna.length || left < 1500) return fromLuna
+      return expandJdKeywords({ keys: opts.keys, pref: usual, jd, timeoutMs: left })
+    }
+    return expandJdKeywords({ keys: opts.keys, pref: usual, jd, timeoutMs: ms })
+  }
+  // A free call starts at once, alongside the resume loading. A paid one waits until the cache has missed: found in review
+  // (2026-10-05), every cache hit was sending OpenAI a request whose answer was thrown away.
+  let kwExpandPromise: Promise<string[]> | null = openaiOn && !opts.noCache ? null : expandKeywords()
 
   // 1) Pick the resume (cheap — no LLM).
   let matched: { filepath: string; filename: string; category: string }
@@ -271,7 +286,7 @@ export async function runTailor(opts: {
   //     woven into the resume, which is the part an ATS actually reads.
   // Result: richer keywords in the document, without the extra escalation or the delay.
   const jdExtracted = extractJdKeywords(jd)
-  const jdGenerated = (await kwExpandPromise).filter(k => !jdExtracted.includes(k))
+  const jdGenerated = (await (kwExpandPromise ??= expandKeywords())).filter(k => !jdExtracted.includes(k))
   const jdKws = jdExtracted
   const jdKwsPrompt = [...new Set([...jdExtracted, ...jdGenerated])]
   const beforeKw = coveredJdKeywords(text, jdKws)
@@ -328,7 +343,7 @@ export async function runTailor(opts: {
   // GPT Luna leads when this caller was handed the OpenAI key, which tailorKeys() in llm.ts does for every tailor
   // ("reroute to them use OPEN_API_KEY", 2026-10-05). The free providers stand behind it.
   const lunaStep = { pref: "openai" as ProviderPref, model: E.OPENAI_MODEL_TAILOR || E.OPENAI_MODEL || "gpt-6-luna", label: E.OPENAI_MODEL_TAILOR || E.OPENAI_MODEL || "gpt-6-luna" }
-  if (opts.keys.openai && E.TAILOR_USE_OPENAI !== "0" && E.TAILOR_USE_OPENAI !== "false") LADDER.unshift(lunaStep)
+  if (openaiOn) LADDER.unshift(lunaStep)
   // Keep only steps whose provider key exists (preserving cheap→strong order); if the
   // user pinned a provider via opts.pref, honour it as a single fixed step.
   const keyed = (p: ProviderPref) => p !== "auto" && !!opts.keys[p as keyof typeof opts.keys]
@@ -343,10 +358,16 @@ export async function runTailor(opts: {
     const extra = s.pref === "groq" ? extraModels(E.GROQ_MODELS_EXTRA, "qwen/qwen3.8-27b,openai/gpt-oss-20b")
       : s.pref === "openrouter" ? extraModels(E.OPENROUTER_MODELS_EXTRA, "nvidia/nemotron-3-super-120b-a12b:free")
       : []
-    return [{ ...s, exact: s.pref === "openai" }, ...extra.filter(m => m !== s.model).map(m => ({ pref: s.pref, model: m, label: m, exact: true }))]
+    // A lane is named after the model it really calls. For the free providers that is the provider's own choice for the
+    // tier (its light model in quick mode), which is not always the model the step is labelled with: a quick tailor on Groq
+    // was reported as written by gpt-oss-120b while gpt-oss-20b wrote it, and 20b was then asked a second time as an "extra"
+    // lane while 120b was never asked (found in review, 2026-10-05).
+    const own = s.pref === "gemini" || s.pref === "groq" || s.pref === "openrouter" ? modelFor(s.pref, opts.mode === "quick" ? "light" : "heavy") : s.model
+    const first: Lane = s.pref === "anthropic" || s.pref === "auto" ? { ...s } : { pref: s.pref, model: own, label: own || s.label, exact: true }
+    return [first, ...extra.filter(m => m !== own).map(m => ({ pref: s.pref, model: m, label: m, exact: true }))]
   })
   const laneOut: LaneOut = new Map()
-  // Quick mode keeps the provider's light model on a step's own lane; an added lane IS its model.
+  // An exact lane IS its model; a Claude lane passes its model the old way (callLLM honours a claude-* id for Anthropic).
   const laneCall = (lane: Lane) => ({ pref: lane.pref, model: lane.model, exactModel: lane.exact ? lane.model : undefined })
 
   const sec = opts.sections || {}
@@ -608,6 +629,7 @@ export async function runTailor(opts: {
 
   let best: Pass | null = null
   let usedModel = ""
+  let draftErr: unknown = null   // why the last draft that failed did, for the message below
   const firstAsk = refine ? [] : injectFor(beforeKw)
   // A split draft already uses every lane in one pass, so it is made once and then gap-filled per role. A single-call
   // draft (quick mode, a refinement) goes down the lanes until one answers, skipping any that already showed it cannot.
@@ -618,7 +640,7 @@ export async function runTailor(opts: {
     let timer: ReturnType<typeof setTimeout> | undefined
     try {
       const first = await Promise.race([
-        draftPass(lane, firstAsk).catch(err => { judgeLane(laneOut, lane, err); return null }),
+        draftPass(lane, firstAsk).catch(err => { judgeLane(laneOut, lane, err); draftErr = err; return null }),
         new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), remaining) }),
       ])
       if (!first) continue
@@ -665,8 +687,12 @@ export async function runTailor(opts: {
     best = filled
   }
   if (!best) {
-    throw new Error(Date.now() >= deadline
+    // A split draft is put together a few seconds BEFORE the deadline, so "out of time" is judged with that margin and by
+    // what the draft itself said: otherwise slow providers were reported as "check API keys".
+    const why = String((draftErr as Error)?.message || draftErr || "")
+    throw new Error(Date.now() >= deadline - 4000 || /TimeoutError|timed out|aborted/i.test(why)
       ? "Tailoring timed out: the AI providers are slow or rate-limited right now. Please try again in a minute."
+      : /^Tailoring incomplete/.test(why) ? `${why} Please try again in a minute.`
       : "Tailoring failed — every model errored (check API keys / quota).")
   }
   const { edits, buffer, notes, tailoredText, afterKw, claimedKw, roleKw, required, provenKw } = best
@@ -686,8 +712,6 @@ export async function runTailor(opts: {
     notes.push(`Draft requires review; keyword overlap is not a qualification or ATS success score. Experience: ${countedRoles.length - lackingRoles(edits).length}/${countedRoles.length} roles tailored · listed JD skills shown per role: ${countedRoles.map(i => `${roleKw[i].size}/${required[i].length}`).join(" · ")} · ${finalAdded.flat().length} bullet(s) added · ${provenKw.size}/${claimedKw.size} listed skills shown in at least one role`)
   }
 
-  const token = key // deterministic: same inputs → same file
-  await blob.put(`tailored/${token}.docx`, buffer)
 
   // Preserve the original MarketFit ATS match scale. This is deliberately distinct
   // from literal keyword coverage, which is reported separately below. The pre-login
@@ -752,6 +776,13 @@ export async function runTailor(opts: {
   )
   // Approx Haiku 4.5 rates ($/M): input 1.00, output 5.00, cache write 1.25, cache read 0.10.
   const estCostUSD = Math.round((uAgg.input * 1 + uAgg.output * 5 + uAgg.cacheWrite * 1.25 + uAgg.cacheRead * 0.1) / 1e6 * 1e5) / 1e5
+
+  // The file's name. A whole draft that changed something is stored under the deterministic key, beside its cached result
+  // (same inputs → same file). An incomplete or unchanged one gets another name: written over the key, it left an EARLIER
+  // whole result in the cache pointing at this lesser file, so the next identical request was told "31 bullets rewritten"
+  // and handed an untailored resume (found in review, 2026-10-05).
+  const token = !best.partial && diff.length ? key : `${key}x`
+  await blob.put(`tailored/${token}.docx`, buffer)
 
   const result: TailorResult = {
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,

@@ -159,10 +159,14 @@ test('an owner named in settings is let through, and nobody else is', async () =
   assert.equal(O.isAdminEmail('owner@example.com'), true); assert.equal(O.isAdminEmail('OWNER@EXAMPLE.COM '), true)
   for (const no of ['', null, undefined, 'other@example.com', 'owner@example.com.evil.test', 'xowner@example.com']) assert.equal(O.isAdminEmail(no), false)
   process.env.WHATSAPP_OWNER_NUMBERS = '+1 (314) 555-0100, 919876543210=user-uuid-1'
+  delete process.env.WHATSAPP_APP_SECRET
+  assert.equal(O.ownerWhatsAppUserId('13145550100', 'demo'), null, 'without the signing secret a sender cannot be proved, so nobody is an owner')
+  assert.equal(O.isOwnerWhatsApp('13145550100'), false)
+  process.env.WHATSAPP_APP_SECRET = 'a-signing-secret'
   assert.equal(O.ownerWhatsAppUserId('13145550100', 'demo'), 'demo')
   assert.equal(O.ownerWhatsAppUserId('919876543210', 'demo'), 'user-uuid-1')
   for (const no of ['3145550100', '113145550100', '1314555010', '', '99913145550100']) assert.equal(O.ownerWhatsAppUserId(no, 'demo'), null, no)
   const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8')
   assert.match(read('src/app/api/whatsapp/webhook/route.ts'), /verifySignature\(raw[\s\S]{0,1600}resolveWhatsAppUserId\(from\)/, 'the signature is checked before the sender is trusted')
-  delete process.env.ADMIN_EMAILS; delete process.env.WHATSAPP_OWNER_NUMBERS
+  delete process.env.ADMIN_EMAILS; delete process.env.WHATSAPP_OWNER_NUMBERS; delete process.env.WHATSAPP_APP_SECRET
 })

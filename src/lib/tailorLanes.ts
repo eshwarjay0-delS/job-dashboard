@@ -59,21 +59,37 @@ export async function workParts<P, E>(o: {
   /** No call is started after this time (ms since epoch): it would not be back in time. */
   startBy: number
   assembleBy: number
+  /** How long before `startBy` another lane must be given a part for it to have a fair chance (default 6 s). A call still
+   *  unanswered at that moment is given up on while another lane could do its part. Found in review (2026-10-05): the lane
+   *  that leads works alone until its whole burst has settled, so one provider that hung until the call timeout left every
+   *  other lane no time, and the tailor failed with all of them idle. */
+  fallbackMs?: number
   now?: () => number
 }): Promise<Worked<P, E>[]> {
   const now = o.now || Date.now
+  const fallbackMs = o.fallbackMs ?? 6000
   type Slot = { part: P; e: E | null; err: unknown; via: string; tried: Set<Lane>; busy: Promise<void> | null; hollow: E | null; hollowVia: string; asked: number }
   const slots: Slot[] = o.parts.map(part => ({ part, e: null, err: null, via: "", tried: new Set<Lane>(), busy: null, hollow: null, hollowVia: "", asked: 0 }))
   const wanted = (s: Slot, lane: Lane) => s.e === null && !s.tried.has(lane) && s.asked < 3
 
   const run = (s: Slot, lane: Lane): Promise<void> => {
     s.tried.add(lane)
-    const going: Promise<void> = o.ask(s.part, lane)
+    // Wait for this call only as long as that still leaves another lane room. The call itself is not cancelled (it has its
+    // own timeout); its late answer is simply not used. With too little time left to be worth a limit, it runs unlimited.
+    const elsewhere = o.lanes.some(l => l !== lane && !o.out.has(l) && !s.tried.has(l))
+    const wait = o.startBy - fallbackMs - now()
+    let limit: ReturnType<typeof setTimeout> | undefined
+    const answer: Promise<E> = elsewhere && wait >= fallbackMs / 3
+      ? Promise.race([o.ask(s.part, lane), new Promise<never>((_, reject) => {
+          limit = setTimeout(() => reject(new Error("TimeoutError: no answer in the time that still leaves another model room for this part")), wait)
+        })])
+      : o.ask(s.part, lane)
+    const going: Promise<void> = answer
       .then(e => {
         if (o.says(s.part, e) || wideLane(lane)) { s.e = e; s.via = lane.label }
         else { s.hollow = e; s.hollowVia = lane.label; s.asked++ }
       }, err => { s.err = err; judgeLane(o.out, lane, err) })
-      .then(() => { s.busy = null })
+      .then(() => { if (limit) clearTimeout(limit); s.busy = null })
     s.busy = going
     return going
   }
@@ -101,8 +117,12 @@ export async function workParts<P, E>(o: {
   let clock: ReturnType<typeof setTimeout> | undefined
   await Promise.race([everything, new Promise<void>(resolve => { clock = setTimeout(resolve, Math.max(0, o.assembleBy - now())) })])
   if (clock) clearTimeout(clock)
+  // An empty reply stands as the result only when a second lane also changed nothing, or when there was no other lane to
+  // ask. One free model's empty reply that nobody could check (the others refused, or time ran out) is a part that was not
+  // done: counted as done, the draft went out and was cached as whole with that part untouched (found in review).
+  const stands = (s: Slot) => s.asked >= 2 || o.lanes.length < 2
   // Read once, now: a call that comes back after this moment changes nothing.
   return slots.map(s => s.e !== null ? { part: s.part, e: s.e, via: s.via, err: null }
-    : s.hollow !== null ? { part: s.part, e: s.hollow, via: s.hollowVia, err: null }
-    : { part: s.part, e: null, via: "", err: s.err })
+    : s.hollow !== null && stands(s) ? { part: s.part, e: s.hollow, via: s.hollowVia, err: null }
+    : { part: s.part, e: null, via: "", err: s.err ?? (s.hollow !== null ? new Error("The reply changed nothing and no other model could be asked to check it") : null) })
 }
