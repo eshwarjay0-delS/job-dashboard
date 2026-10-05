@@ -45,7 +45,6 @@ export async function POST(req: NextRequest) {
     }
 
     const appVersion = body.appVersion ? String(body.appVersion).slice(0, 64) : null
-    const deviceSlotId = body.deviceSlotId ? String(body.deviceSlotId).slice(0, 80) : null
     const metadata =
       body.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata)
         ? body.metadata as Record<string, unknown>
@@ -56,7 +55,9 @@ export async function POST(req: NextRequest) {
       clientInstanceId,
       platform,
       appVersion,
-      deviceSlotId,
+      // Device-slot attachment is intentionally server-controlled. A native client
+      // cannot assert its own subscription/device slot.
+      deviceSlotId: null,
       metadata,
     })
 
