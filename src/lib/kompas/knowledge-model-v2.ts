@@ -67,8 +67,8 @@ export interface KompasKnowledgeModelIdentity {
 export const THOMAS_RENDERER_VERSION = "thomas-v2";
 export const KOMPAS_KNOWLEDGE_SCHEMA_VERSION = 2;
 
-function stablePairs(value: Record<string, string | number | boolean | undefined>) {
-  return Object.entries(value)
+function stablePairs(value: object) {
+  return Object.entries(value as Record<string, unknown>)
     .filter(([, item]) => item !== undefined)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, item]) => [key, String(item)] as const);
