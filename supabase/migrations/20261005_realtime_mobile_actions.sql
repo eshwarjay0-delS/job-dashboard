@@ -5,6 +5,7 @@ create table if not exists public.realtime_mobile_actions (
   user_id uuid not null references auth.users(id) on delete cascade,
   request_id text not null,
   action_type text not null,
+  input jsonb not null default '{}'::jsonb,
   status text not null default 'accepted'
     check (status in ('accepted','running','succeeded','failed','cancelled')),
   workflow_run_id uuid references public.ai_workflow_runs(id) on delete set null,
