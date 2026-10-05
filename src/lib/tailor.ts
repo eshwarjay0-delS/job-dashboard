@@ -5,7 +5,7 @@ import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, type Edits, type Zones } from "./docx"
 import { adapt, expandJdKeywords } from "./claude"
 import { recentFeedback } from "./feedback"
-import { matchByKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
+import { matchByKeywords, extractKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import type { LlmKeys, ProviderPref, TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 
@@ -62,6 +62,13 @@ export interface TailorResult {
 }
 
 // ── helpers (moved out of the route so the background worker can reuse them) ───
+function matchPct(resumeText: string, jd: string): number {
+  const kws = extractKeywords(jd)
+  if (kws.length < 3) return 75
+  const rt = resumeText.toLowerCase()
+  const cov = kws.filter(k => rt.includes(k.toLowerCase())).length / kws.length
+  return Math.max(55, Math.min(99, Math.round(50 + cov * 52)))
+}
 
 
 function whatChanged(edits: Edits): string[] {
@@ -494,35 +501,36 @@ export async function runTailor(opts: {
         best = first
         usedModel = first.via ?? lane.label ?? String(lane.pref)
       }
-      if (best.cov >= TARGET_COVERAGE) break
+      const current = best
+      if (current.cov >= TARGET_COVERAGE) break
 
       // Coverage repair passes are deliberately targeted at the exact terms still absent
       // from the rendered DOCX. They regenerate from the canonical source so formatting
       // remains stable, and only a measurable improvement replaces the current best pass.
       // Stop only for the hard request deadline or the 98% completion threshold.
-      for (let repair = 1; repair <= 3 && best.cov < TARGET_COVERAGE; repair++) {
+      for (let repair = 1; repair <= 3 && current.cov < TARGET_COVERAGE; repair++) {
         if (deadline - Date.now() < 5000) break
-        const missing = jdKws.filter(k => !best!.afterKw.has(k))
+        const missing = jdKws.filter(k => !current.afterKw.has(k))
         if (!missing.length) break
-        const repairPrefs = [
-          `COVERAGE REPAIR PASS ${repair}: current rendered JD coverage is ${Math.round(best.cov * 100)}%. The default completion target is at least ${Math.round(TARGET_COVERAGE * 100)}%.`,
+        const repairPrefs: string[] = [
+          `COVERAGE REPAIR PASS ${repair}: current rendered JD coverage is ${Math.round(current.cov * 100)}%. The default completion target is at least ${Math.round(TARGET_COVERAGE * 100)}%.`,
           `The JD is a KNOWN JD supplied/approved by the user. Incorporate ALL of these still-missing ATS terms naturally and contextually: ${missing.join(", ")}.`,
           "Do not omit a JD term merely because it was absent from the baseline. Preserve immutable historical facts such as employer names, dates, education, and certifications.",
           "Distribute terms across the summary, skills, and relevant experience instead of keyword stuffing.",
         ]
-        const candidate = await draftPass(lane, repairPrefs).catch(err => {
+        const candidate: Pass | null = await draftPass(lane, repairPrefs).catch(err => {
           judgeLane(laneOut, lane, err)
           return null
         })
         if (!candidate) break
-        if (candidate.cov > best.cov) {
+        if (candidate.cov > current.cov) {
           best = candidate
           usedModel = candidate.via ?? lane.label ?? String(lane.pref)
         } else {
           break
         }
       }
-      if (best.cov >= TARGET_COVERAGE) break
+      if (best && best.cov >= TARGET_COVERAGE) break
     } finally { if (timer) clearTimeout(timer) }
   }
   if (!best) {
@@ -534,7 +542,7 @@ export async function runTailor(opts: {
     throw new Error(`Tailoring did not reach the required ${Math.round(TARGET_COVERAGE * 100)}% JD coverage (best pass: ${Math.round(best.cov * 100)}%). The draft was not delivered; retry so MarketFit can finish the coverage climb.`)
   }
 
-  const { edits, buffer, notes, afterKw, claimedKw, roleKw, required, provenKw } = best
+  const { edits, buffer, notes, tailoredText, afterKw, claimedKw, roleKw, required, provenKw } = best
   notes.push("Known JD contract: this user supplied/approved JD is treated as declared knowledge for tailoring. The default completion threshold is 98% literal JD keyword coverage; the score is still keyword overlap, not hiring probability.")
   notes.push(`Tailored with ${usedModel} · JD keyword coverage ${Math.round(best.cov * 100)}%`)
   const finalRewrites = rewrites(edits)
