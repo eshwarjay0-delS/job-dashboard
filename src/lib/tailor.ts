@@ -157,6 +157,8 @@ export async function runTailor(opts: {
   // headline (title + tagline) follows `summary` unless set explicitly.
   sections?: { summary?: boolean; skills?: boolean; experience?: boolean; headline?: boolean }
   mode?: "quick" | "full"
+  // Time budget for this tailor when the caller already spent part of its request time (capped by TAILOR_MAX_MS).
+  maxMs?: number
   // REFINEMENT: givenPath is a resume ALREADY tailored to this JD and this is the user's
   // change request for it (the WhatsApp swipe-reply). Only that change is applied.
   refine?: string
@@ -525,7 +527,7 @@ export async function runTailor(opts: {
   const usageSink: TokenUsage[] = []
   const MIN_KEYWORD_COVERAGE = 0.90
   const TARGET_COVERAGE = Math.max(MIN_KEYWORD_COVERAGE, Math.min(1, Number(E.TAILOR_TARGET_COVERAGE) || 0.98))
-  const TAILOR_MAX_MS = Math.max(1000, Math.min(Number(E.TAILOR_MAX_MS) || 52000, 55000))
+  const TAILOR_MAX_MS = Math.max(1000, Math.min(Number(E.TAILOR_MAX_MS) || 52000, 55000, opts.maxMs || Infinity))
   const deadline = started + TAILOR_MAX_MS
   const MIN_CLIMB_MS = Number(E.TAILOR_MIN_CLIMB_MS) || 9000
   const summaryWanted = sec.summary !== false

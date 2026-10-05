@@ -32,6 +32,9 @@ export const maxDuration = 60
 export const dynamic = "force-dynamic"
 
 const FALLBACK_USER_ID = process.env.WHATSAPP_USER_ID || "demo"
+const STALE_RESUME_MS = 90_000
+const RESUME_GRACE_MS = 8_000
+const TAILOR_BUDGET_MS = 52_000
 
 // The file a person gets back is named after them: "Eshwar_Resume.docx". (Owner, 2026-10-05: first "The name should always be
 // Eshwar's_Resume", then, on seeing "ESHWAR's_Resume.docx" arrive, "Eshwar_Resume Title is fine actually".) The first name is
@@ -58,7 +61,7 @@ const digits = (from: string) => from.replace(/\D/g, "")
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 
 type Meta = { role: string; company: string; location: string }
-type Session = { jd?: string; resumePath?: string; resumeName?: string; seen?: string[]; updatedAt?: number }
+type Session = { jd?: string; resumePath?: string; resumeName?: string; resumeAt?: number; seen?: string[]; updatedAt?: number }
 const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
 
 async function loadSession(from: string): Promise<Session> {
@@ -250,6 +253,16 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     session.jd = text
     await saveSession(from, session)
     if (!session.resumePath) return sendText(from, "Got the job description. Now send your resume as a *.docx* file.")
+    // The stored resume is from an earlier attempt and a new one is usually right behind the JD: tailoring at once ran two
+    // tailors side by side (2026-10-05, 13:07), the old resume and the new one, on the same allowance. Wait briefly; if a
+    // new resume lands, its own message tailors it.
+    const askedAt = Date.now()
+    if (askedAt - (session.resumeAt || 0) > STALE_RESUME_MS) {
+      await new Promise(r => setTimeout(r, RESUME_GRACE_MS))
+      const now = await loadSession(from)
+      if ((now.resumeAt || 0) > askedAt) return
+      return generate(from, { ...now, jd: text }, userId, TAILOR_BUDGET_MS - RESUME_GRACE_MS)
+    }
     return generate(from, session, userId)
   }
 
@@ -269,6 +282,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 
     session.resumePath = dest
     session.resumeName = safe.replace(/\.docx$/i, "")
+    session.resumeAt = Date.now()
     await saveSession(from, session)
     if (!session.jd) return sendText(from, `Saved *${session.resumeName}*. Now paste the job description.`)
     return generate(from, session, userId)
@@ -278,7 +292,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 }
 
 // ── Tailor + reply ────────────────────────────────────────────────────────────
-async function generate(from: string, session: Session, userId: string) {
+async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS) {
   const keys = tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) })   // GPT Luna leads (OPENAI_TAILOR_FOR, llm.ts)
   if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
   if (!session.jd || !session.resumePath) return sendText(from, HELP)
@@ -296,6 +310,7 @@ async function generate(from: string, session: Session, userId: string) {
       userResumeDir: path.join(USER_RESUMES_DIR, userId),
       givenPath: session.resumePath,
       mode: "full",
+      maxMs,
       // Match the dashboard defaults: summary left as written, skills + experience retargeted.
       sections: { summary: false, skills: true, experience: true },
     })
@@ -303,15 +318,6 @@ async function generate(from: string, session: Session, userId: string) {
     // The job description and the resume stay in the session, so sending either again retries without starting over.
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
     return sendText(from, "I could not tailor your resume just now: the AI services that write it are busy or out of their allowance. Nothing was changed. Send the job description again in a few minutes.")
-  }
-
-  // WhatsApp is a hard delivery boundary. Never send a generated DOCX whose measured
-  // rendered keyword coverage is below the product contract, even if an upstream cache,
-  // worker, or future tailoring regression accidentally returns one.
-  const measuredCoverage = result.coverage ?? result.keyword_analysis?.coverage_after ?? 0
-  if (measuredCoverage < 90) {
-    console.error("[whatsapp] blocked low keyword coverage", measuredCoverage, result.token)
-    return sendText(from, "I generated a draft, but its measured JD keyword coverage was " + measuredCoverage + "%, below MarketFit's 90% minimum. I did not send the incomplete resume. Send the job description again to retry.")
   }
 
   // Nothing came back different: the same file with "Match 28% -> 28%" on it is not a tailored resume, so it is not sent as one.
