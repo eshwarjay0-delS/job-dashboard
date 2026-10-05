@@ -133,6 +133,40 @@ async function runAcceptedAction(args: {
   }
 }
 
+export async function GET(req: NextRequest) {
+  const supabase = await createClientFromRequest(req)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 })
+
+  const sessionId = String(req.nextUrl.searchParams.get("sessionId") || "").trim()
+  const requestId = String(req.nextUrl.searchParams.get("requestId") || "").trim()
+  if (!sessionId || !requestId) {
+    return NextResponse.json({ error: "sessionId and requestId are required." }, { status: 400 })
+  }
+
+  try {
+    await assertMobileSession({ userId: user.id, sessionId })
+    const db = createServiceClient()
+    const { data: action, error } = await db
+      .from("realtime_mobile_actions")
+      .select("id,request_id,action_type,status,workflow_run_id,result,error_message,started_at,completed_at,created_at,updated_at")
+      .eq("user_id", user.id)
+      .eq("session_id", sessionId)
+      .eq("request_id", requestId)
+      .maybeSingle()
+
+    if (error) throw new Error(error.message)
+    if (!action) return NextResponse.json({ error: "Action was not found." }, { status: 404 })
+
+    return NextResponse.json({ ok: true, action })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : String(error) },
+      { status: 409 },
+    )
+  }
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClientFromRequest(req)
   const { data: { user } } = await supabase.auth.getUser()
