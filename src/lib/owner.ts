@@ -18,6 +18,11 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   return !!mine && items(process.env.ADMIN_EMAILS).some(e => e.toLowerCase() === mine)
 }
 
+/** Is this WhatsApp sender one of the listed owner numbers? */
+export function isOwnerWhatsApp(from: string): boolean {
+  return ownerWhatsAppUserId(from, "-") !== null
+}
+
 /** The account a listed owner number writes as, or null when the sender is not listed. */
 export function ownerWhatsAppUserId(from: string, fallbackUserId: string): string | null {
   const sender = digits(String(from || ""))

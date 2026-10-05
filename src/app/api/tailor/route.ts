@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
 import { runTailor } from "@/lib/tailor"
-import { resolveKeys, hasAnyKey } from "@/lib/llm"
-import { authenticatedUserId, signInRequired, ownedResumePath } from "@/lib/authBoundary"
+import { resolveKeys, hasAnyKey, tailorKeys } from "@/lib/llm"
+import { authenticatedUser, signInRequired, ownedResumePath } from "@/lib/authBoundary"
+import { isAdminEmail } from "@/lib/owner"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
 import { checkRateLimit, clientIp } from "@/lib/rateLimit"
 
@@ -25,8 +26,9 @@ const HOUR_MS = 60 * 60 * 1000
 // JD + resume + feedback) and responds with the full result. The background flow
 // (/api/tailor/start + /api/tailor/status) shares the same runTailor core.
 export async function POST(request: NextRequest) {
-  const userId = await authenticatedUserId(request)
-  if (!userId) return signInRequired()
+  const user = await authenticatedUser(request)
+  if (!user) return signInRequired()
+  const userId = user.id
   try {
     const body = await request.json().catch(() => null)
     if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Invalid request body." }, { status: 400 })
@@ -35,7 +37,8 @@ export async function POST(request: NextRequest) {
     if (!jd) return NextResponse.json({ error: "Paste a job description first." }, { status: 400 })
 
     if (body.filepath && !ownedResumePath(USER_RESUMES_BASE, userId, body.filepath)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-    const keys = resolveKeys(body)
+    // The OpenAI key (GPT Luna) is handed over for an admin's tailoring only: see tailorKeys.
+    const keys = tailorKeys(resolveKeys(body), { owner: isAdminEmail(user.email) })
     if (!hasAnyKey(keys)) {
       return NextResponse.json(
         { error: "No API key found. Add a Claude, OpenRouter, or Gemini key in Settings or .env.local." },

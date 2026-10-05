@@ -83,6 +83,8 @@ export async function adapt(opts: {
   // Force a specific Claude model for this pass (the tailoring escalation ladder
   // uses this to retry a low-coverage result on a stronger model).
   model?: string
+  // Exactly this model id on the provider `pref` names (one lane of the tailor: see runTailor).
+  exactModel?: string
   // Collects per-call token usage so the caller can total a tailor's real cost.
   usageSink?: TokenUsage[]
   // REFINEMENT: `preferences` holds ONE change request for an already-tailored resume, run
@@ -197,13 +199,15 @@ export async function adapt(opts: {
     try {
       // Low temperature → CONSISTENT keyword coverage & escalation decisions run-to-run
       // (default sampling swung 93–98% coverage and 25–73s on identical input).
-      text = (await callLLM({ keys: opts.keys, tier: opts.mode === "quick" ? "light" : "heavy", pref: opts.pref, system: opts.refine ? REFINE_RULES : RULES, cacheContext, user, maxTokens: cap, model: opts.model, temperature: 0.2, usageSink: opts.usageSink })).text
+      text = (await callLLM({ keys: opts.keys, tier: opts.mode === "quick" ? "light" : "heavy", pref: opts.pref, system: opts.refine ? REFINE_RULES : RULES, cacheContext, user, maxTokens: cap, model: opts.model, exactModel: opts.exactModel, temperature: 0.2, usageSink: opts.usageSink })).text
     } catch (e) {
       lastErr = e
       // Auth / bad-request errors won't fix themselves on retry, and a rate limit (429) was
       // already retried inside the provider layer: repeating the whole call only burns the
-      // time budget, so hand it back and let the ladder use another provider.
-      if (/\b(400|401|403|429)\b/.test(String(e))) throw e
+      // time budget, so hand it back and let the ladder use another provider. The same goes for
+      // "no credit" (402), a model that does not exist (404) and a request too large for the allowance (413), and for a
+      // call that ran out of time: asking the same model again would spend the rest of the tailor's time on it.
+      if (/API (400|401|402|403|404|413|429)\b|TimeoutError|AbortError|timed out|aborted/i.test(String(e))) throw e
       continue
     }
     try {

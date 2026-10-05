@@ -7,6 +7,7 @@ import { adapt, expandJdKeywords } from "./claude"
 import { recentFeedback } from "./feedback"
 import { matchByKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import type { LlmKeys, ProviderPref, TokenUsage } from "./llm"
+import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 
 export interface TailorResult {
   token: string
@@ -46,6 +47,8 @@ export interface TailorResult {
   experience_skills?: { listed: number; shown: number }
   // Set when some parts of the draft were refused by every model and left as they were (the rest is tailored).
   partial?: { failed: number; total: number }
+  /** The document that came out has no line different from the one that went in. The caller should say so, not present it as tailored. */
+  unchanged?: boolean
   // Real token accounting for this tailor (proof the cache is working). estCostUSD is
   // approximate — priced at Haiku 4.5 rates; cacheReadTokens bill at ~1/10th of input.
   usage?: {
@@ -119,9 +122,12 @@ function normJD(jd: string): string {
 // user re-running while testing) must be instant, not another 30-second LLM round-trip.
 // Key folds in the resume's content hash and the applied feedback so a changed resume
 // or new feedback produces a fresh result.
+// Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
+// one with no line changed, was stored like any other, so sending the same job description again returned the same file.
+const CACHE_GENERATION = "2"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
-    .update([J1_VERSION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
+    .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
     .digest("hex")
     .slice(0, 16)
 }
@@ -160,7 +166,8 @@ export async function runTailor(opts: {
     // extra call would only add latency.
     (opts.refine || process.env.TAILOR_KW_EXPAND === "0" || process.env.TAILOR_KW_EXPAND === "false")
       ? Promise.resolve([])
-      : expandJdKeywords({ keys: opts.keys, pref: opts.pref, jd, timeoutMs: Number(process.env.TAILOR_KW_EXPAND_MS) || 8000 })
+      // Part of the tailoring, so when this caller was given the OpenAI key (tailorKeys in llm.ts) it runs there too.
+      : expandJdKeywords({ keys: opts.keys, pref: opts.keys.openai ? "openai" : opts.pref, jd, timeoutMs: Number(process.env.TAILOR_KW_EXPAND_MS) || 8000 })
 
   // 1) Pick the resume (cheap — no LLM).
   let matched: { filepath: string; filename: string; category: string }
@@ -308,12 +315,29 @@ export async function runTailor(opts: {
   if (E.TAILOR_USE_OPUS === "1" || E.TAILOR_USE_OPUS === "true") {
     LADDER.push({ pref: "anthropic", model: E.CLAUDE_MODEL_MAX || "claude-opus-5", label: E.CLAUDE_MODEL_MAX || "claude-opus-5" })
   }
+  // GPT Luna leads when this caller was handed the OpenAI key, which tailorKeys() in llm.ts does only for the owner
+  // ("use GPT Luna, for resume tailoring only, for my admin account only", 2026-10-05). The other providers stand behind it.
+  const lunaStep = { pref: "openai" as ProviderPref, model: E.OPENAI_MODEL_TAILOR || E.OPENAI_MODEL || "gpt-6-luna", label: E.OPENAI_MODEL_TAILOR || E.OPENAI_MODEL || "gpt-6-luna" }
+  if (opts.keys.openai && E.TAILOR_USE_OPENAI !== "0" && E.TAILOR_USE_OPENAI !== "false") LADDER.unshift(lunaStep)
   // Keep only steps whose provider key exists (preserving cheap→strong order); if the
   // user pinned a provider via opts.pref, honour it as a single fixed step.
   const keyed = (p: ProviderPref) => p !== "auto" && !!opts.keys[p as keyof typeof opts.keys]
   let steps = LADDER.filter(s => keyed(s.pref))
-  if (opts.pref && opts.pref !== "auto") steps = LADDER.filter(s => s.pref === opts.pref)
+  if (opts.pref && opts.pref !== "auto") steps = LADDER.filter(s => s.pref === opts.pref || (s === lunaStep && keyed(s.pref)))
   if (!steps.length) steps = [{ pref: "auto", model: undefined, label: "auto" }]
+
+  // LANES: one (provider, model) pair each, because a provider counts its limits per model. See tailorLanes.ts.
+  //   GROQ_MODELS_EXTRA / OPENROUTER_MODELS_EXTRA  comma-separated model ids; set either to an empty value to use none.
+  // The standard extras are the models that answered on this deployment's keys when measured on 2026-10-05.
+  const lanes: Lane[] = steps.flatMap((s): Lane[] => {
+    const extra = s.pref === "groq" ? extraModels(E.GROQ_MODELS_EXTRA, "qwen/qwen3.8-27b,openai/gpt-oss-20b")
+      : s.pref === "openrouter" ? extraModels(E.OPENROUTER_MODELS_EXTRA, "nvidia/nemotron-3-super-120b-a12b:free")
+      : []
+    return [{ ...s, exact: s.pref === "openai" }, ...extra.filter(m => m !== s.model).map(m => ({ pref: s.pref, model: m, label: m, exact: true }))]
+  })
+  const laneOut: LaneOut = new Map()
+  // Quick mode keeps the provider's light model on a step's own lane; an added lane IS its model.
+  const laneCall = (lane: Lane) => ({ pref: lane.pref, model: lane.model, exactModel: lane.exact ? lane.model : undefined })
 
   const sec = opts.sections || {}
   const scopeEdits = (raw: Edits): Edits => ({
@@ -402,53 +426,46 @@ export async function runTailor(opts: {
   // profile (headline, summary, skills) and one per role group for the bullets, so every role
   // gets a dedicated pass and a long reply can't run out before the older roles. Quick mode and
   // refinements stay one call. On escalation we pass the exact JD terms still missing.
-  const draftPass = async (step: { pref: ProviderPref; model?: string; label?: string }, extraPrefs: string[]): Promise<Pass> => {
+  const draftPass = async (step: Lane, extraPrefs: string[]): Promise<Pass> => {
     const prefs = [...allPrefs, ...extraPrefs].filter(Boolean)
-    const call = { keys: opts.keys, pref: step.pref, jd, zones, preferences: prefs.join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, model: step.model, usageSink, refine: !!refine }
+    const call = { keys: opts.keys, jd, zones, preferences: prefs.join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, refine: !!refine }
     let raw: Edits
     let partsFailed = 0, partsTotal = 0
+    let via = step.label ?? step.model ?? String(step.pref)
     if (splitDraft) {
-      // Any part may fail on its own; the draft only fails when every part did.
-      type Part = { e: Edits | null; err: unknown }
-      const settle = (p: Promise<Edits>): Promise<Part> => p.then(e => ({ e, err: null }), err => ({ e: null, err }))
+      // The draft is a list of parts: the profile, then each group of roles (current role first). workParts hands them to the
+      // lanes: a healthy first provider writes them all in one burst, and when it is down they spread over whatever answers.
+      type Part = { kind: "profile" | "experience"; roles?: number[] }
       const wantProfile = sec.skills !== false || sec.summary !== false || (sec.headline ?? sec.summary) !== false
-      const [exp, prof] = await Promise.all([
-        Promise.all(roleGroups.map(g => settle(adapt({ ...call, part: "experience", roles: g })))),
-        wantProfile ? settle(adapt({ ...call, part: "profile" })) : Promise.resolve<Part>({ e: null, err: null }),
-      ])
-      // A part that was refused is asked again, one call at a time, on the other models and then once more on this one, while
-      // there is time. The parallel burst above is what trips a provider's per-minute limit; a single call a moment later
-      // usually goes through. Before this (seen 2026-10-05) a draft in which five of six calls were refused still "won",
-      // and the person was sent their own resume back with two bullets changed and "Match 28% -> 28%".
-      const others = steps.filter(s => s !== step)
-      const again = async (make: (s: typeof step) => Promise<Edits>, first: Part): Promise<Part> => {
-        let part = first
-        for (const s of [...others, step]) {
-          if (part.e || Date.now() > deadline - 8000) break
-          part = await settle(make(s))
-        }
-        return part
-      }
-      const expDone: Part[] = []
-      for (let i = 0; i < exp.length; i++) {
-        expDone.push(exp[i].e ? exp[i] : await again(s => adapt({ ...call, pref: s.pref, model: s.model, part: "experience", roles: roleGroups[i] }), exp[i]))
-      }
-      const profDone = wantProfile && !prof.e ? await again(s => adapt({ ...call, pref: s.pref, model: s.model, part: "profile" }), prof) : prof
-      const total = expDone.length + (wantProfile ? 1 : 0)
-      const failed = expDone.filter(x => !x.e).length + (wantProfile && !profDone.e ? 1 : 0)
-      if (!profDone.e && !expDone.some(x => x.e)) throw [profDone, ...expDone].find(x => x.err)?.err ?? new Error("Tailoring draft came back empty")
-      // Most of it refused even after asking again: that is not a draft. Failing here lets the caller say so.
+      const parts: Part[] = [...(wantProfile ? [{ kind: "profile" as const }] : []), ...roleGroups.map(g => ({ kind: "experience" as const, roles: g }))]
+      // Does a reply change anything this tailor will keep? (An empty one from a free model is offered to another lane.)
+      const says = (part: Part, e: Edits): boolean => part.kind === "experience"
+        ? (e.bullets || []).some(b => (b.text || "").trim() && b.text.trim() !== (bulletBefore.get(b.idx) || "").trim())
+        : (sec.skills !== false && (e.skills || []).some(k => (k.text || "").trim()))
+          || (sec.summary !== false && !!(e.summary || "").trim())
+          || ((sec.headline ?? sec.summary) !== false && !!`${e.headline?.title || ""}${e.headline?.tagline || ""}`.trim())
+      const worked = await workParts<Part, Edits>({
+        parts, lanes, out: laneOut, says,
+        ask: (part, lane) => adapt({ ...call, ...laneCall(lane), part: part.kind, roles: part.roles }),
+        startBy: deadline - 9000,     // a call started later than this would not be back in time
+        assembleBy: deadline - 3000,  // what is still running then is left behind; the draft is made of what came back
+      })
+      const done = worked.filter(w => w.e)
+      const total = worked.length, failed = total - done.length
+      if (!done.length) throw worked.find(w => w.err)?.err ?? new Error("Tailoring draft came back empty")
+      // Most of it refused on every lane: that is not a draft. Failing here lets the caller say so.
       if (failed * 2 > total) throw new Error(`Tailoring incomplete: the AI providers refused ${failed} of ${total} parts of the draft.`)
       partsFailed = failed; partsTotal = total
-      raw = { headline: profDone.e?.headline, summary: profDone.e?.summary || "", skills: profDone.e?.skills || [], bullets: expDone.flatMap(x => x.e?.bullets || []), extras: [] }
+      const profile = worked.find(w => w.part.kind === "profile")?.e
+      raw = { headline: profile?.headline, summary: profile?.summary || "", skills: profile?.skills || [], bullets: worked.filter(w => w.part.kind === "experience").flatMap(w => w.e?.bullets || []), extras: [] }
+      via = [...new Set(done.map(w => w.via))].join(" + ")
     } else {
-      raw = await adapt(call)
+      raw = await adapt({ ...call, ...laneCall(step) })
     }
     const pass = await applyEdits(scopeEdits(raw))
     if (partsFailed) pass.partial = { failed: partsFailed, total: partsTotal }
-    // Tag with the model that actually produced this draft — with cross-provider draws the
-    // winner may not be the primary step, and the notes must name the real one.
-    pass.via = step.label ?? step.model ?? String(step.pref)
+    // Tag with the model(s) that actually produced this draft: when the parts were spread, the notes name every one.
+    pass.via = via
     return pass
   }
 
@@ -460,16 +477,19 @@ export async function runTailor(opts: {
   const deadline = started + TAILOR_MAX_MS
   let best: Pass | null = null
   let usedModel = ""
-  for (const step of steps) {
+  // A split draft already uses every lane in one pass, so it is made once. A single-call draft (quick mode, a refinement)
+  // goes down the lanes until one answers, skipping any that already showed it cannot.
+  for (const lane of splitDraft ? lanes.slice(0, 1) : lanes) {
     const remaining = deadline - Date.now()
     if (remaining <= 0) break
+    if (laneOut.has(lane)) continue
     let timer: ReturnType<typeof setTimeout> | undefined
     try {
       best = await Promise.race([
-        draftPass(step, []).catch(() => null),
+        draftPass(lane, []).catch(err => { judgeLane(laneOut, lane, err); return null }),
         new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), remaining) }),
       ])
-      if (best) { usedModel = best.via ?? step.label ?? String(step.pref); break }
+      if (best) { usedModel = best.via ?? lane.label ?? String(lane.pref); break }
     } finally { if (timer) clearTimeout(timer) }
   }
   if (!best) {
@@ -562,9 +582,12 @@ export async function runTailor(opts: {
     cached: false, elapsed_ms: Date.now() - started, coverage: Math.round(best.cov * 100), role_alignment,
     experience_skills: { listed: claimedKw.size, shown: provenKw.size },
     ...(best.partial ? { partial: best.partial } : {}),
+    ...(diff.length ? {} : { unchanged: true }),
     usage: { calls: usageSink.length, inputTokens: uAgg.input, outputTokens: uAgg.output, cacheReadTokens: uAgg.cacheRead, cacheWriteTokens: uAgg.cacheWrite, estCostUSD },
   }
 
-  await blob.put(cacheKey, JSON.stringify(result)).catch(() => {})
+  // Only a whole draft that changed something is worth serving again: an incomplete or unchanged one should be redone
+  // the next time it is asked for, when the providers may have room.
+  if (!result.partial && !result.unchanged) await blob.put(cacheKey, JSON.stringify(result)).catch(() => {})
   return result
 }

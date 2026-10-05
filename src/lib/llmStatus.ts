@@ -8,18 +8,22 @@
  * retry rule) and the refusal, if any, is sorted into a state. Each probe asks for a handful of output tokens; the answers are
  * kept for five minutes per server instance, and callers that arrive together share one probe. No key or reply text is returned.
  */
-import { callLLM, resolveKeys, type Provider } from "@/lib/llm"
+import { callLLM, resolveKeys, tailorKeys, type Provider } from "@/lib/llm"
 
 export type ProviderState = "ok" | "rate_limited" | "key_rejected" | "no_credit" | "model_not_found" | "slow_or_down" | "refused"
 export type LlmStatus = {
   state: "ok" | "degraded" | "down" | "not_configured"
   /** What to do about it, for whoever runs the deployment. */
   fix: string
-  /** In the order the tailoring tries them. `limit` names the limit when the provider said which. */
-  providers: { provider: Provider; state: ProviderState; limit?: string }[]
+  /** In the order the tailoring tries them. `limit` names the limit when the provider said which; `model` is the model that
+   *  answered; `scope` says when a provider is not used for everything. */
+  providers: { provider: Provider; state: ProviderState; limit?: string; model?: string; scope?: string }[]
 }
 
-const ORDER: Provider[] = ["gemini", "groq", "anthropic", "openrouter"]   // the tailoring ladder's order (src/lib/llm.ts)
+const ORDER: Provider[] = ["openai", "gemini", "groq", "anthropic", "openrouter"]   // the tailoring ladder's order (src/lib/tailor.ts)
+// OpenAI is held apart (tailorKeys in src/lib/llm.ts): it is probed here only when the deployment has its key and uses it.
+const scopeOf = (provider: Provider): { scope?: string } => provider !== "openai" ? {}
+  : { scope: (process.env.OPENAI_TAILOR_FOR || "owner").trim().toLowerCase() === "all" ? "resume tailoring only" : "resume tailoring only, owner only" }
 
 function sort(message: string): { state: ProviderState; limit?: string } {
   const status = Number((/API (\d{3})/.exec(message) || [])[1]) || 0
@@ -42,15 +46,15 @@ export async function llmStatus(): Promise<LlmStatus> {
 }
 
 async function probe(): Promise<LlmStatus> {
-  const keys = resolveKeys({})
+  const keys = tailorKeys(resolveKeys({}), { owner: true })
   const have = ORDER.filter(p => !!keys[p])
   if (!have.length) return { state: "not_configured", providers: [], fix: "No AI provider key is set on the deployment. Set at least one of GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, ANTHROPIC_API_KEY, then redeploy." }
-  const providers = await Promise.all(have.map(async (provider) => {
+  const providers = await Promise.all(have.map(async (provider): Promise<LlmStatus["providers"][number]> => {
     try {
-      await callLLM({ keys, tier: "heavy", pref: provider, system: "Reply with the single word OK.", user: "OK?", maxTokens: 8, temperature: 0 })
-      return { provider, state: "ok" as ProviderState }
+      const answer = await callLLM({ keys, tier: "heavy", pref: provider, system: "Reply with the single word OK.", user: "OK?", maxTokens: 16, temperature: 0 })
+      return { provider, state: "ok" as ProviderState, model: answer.model, ...scopeOf(provider) }
     } catch (e) {
-      return { provider, ...sort(String((e as Error)?.message || e)) }
+      return { provider, ...sort(String((e as Error)?.message || e)), ...scopeOf(provider) }
     }
   }))
   const up = providers.filter(p => p.state === "ok").length

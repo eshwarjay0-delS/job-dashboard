@@ -19,11 +19,11 @@ import path from "path"
 import { createHash, randomBytes } from "crypto"
 import { blob, writePath, existsPath, deletePath } from "@/lib/storage"
 import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
-import { resolveKeys, hasAnyKey } from "@/lib/llm"
+import { resolveKeys, hasAnyKey, tailorKeys } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
 import { extractJdMeta } from "@/lib/claude"
 import { sendText, sendDocument, downloadMedia, verifySignature, senderAllowed, waConfigured } from "@/lib/whatsapp"
-import { ownerWhatsAppUserId } from "@/lib/owner"
+import { ownerWhatsAppUserId, isOwnerWhatsApp } from "@/lib/owner"
 import { extractProfile } from "@/lib/profile"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
@@ -33,14 +33,15 @@ export const dynamic = "force-dynamic"
 
 const FALLBACK_USER_ID = process.env.WHATSAPP_USER_ID || "demo"
 
-// The file a person gets back is named after them: "Eshwar's_Resume.docx" (owner, 2026-10-05: "The name should always be
-// Eshwar's_Resume"). The first name is read from the resume itself, so it is right for whoever sent it; when no name can be read
-// the deployment's default name is used.
+// The file a person gets back is named after them: "Eshwar_Resume.docx". (Owner, 2026-10-05: first "The name should always be
+// Eshwar's_Resume", then, on seeing "ESHWAR's_Resume.docx" arrive, "Eshwar_Resume Title is fine actually".) The first name is
+// read from the resume itself, so it is right for whoever sent it, and it is written as a name ("Eshwar") however the resume
+// prints it ("ESHWAR"); when no name can be read the deployment's default name is used.
 async function outputNameFor(resume: Buffer | null): Promise<string> {
   try {
     if (resume) {
       const first = String((await extractProfile(resume)).firstName || "").trim().split(/\s+/)[0] || ""
-      if (/^[\p{L}][\p{L}'.-]{1,29}$/u.test(first)) return `${first[0].toUpperCase()}${first.slice(1)}'s_Resume`
+      if (/^[\p{L}][\p{L}'.-]{1,29}$/u.test(first)) return `${first[0].toUpperCase()}${first.slice(1).toLowerCase()}_Resume`
     }
   } catch { /* fall through to the default */ }
   return OUTPUT_NAME
@@ -278,7 +279,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 
 // ── Tailor + reply ────────────────────────────────────────────────────────────
 async function generate(from: string, session: Session, userId: string) {
-  const keys = resolveKeys({})
+  const keys = tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) })   // GPT Luna for a listed owner number only
   if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
   if (!session.jd || !session.resumePath) return sendText(from, HELP)
 
@@ -302,6 +303,13 @@ async function generate(from: string, session: Session, userId: string) {
     // The job description and the resume stay in the session, so sending either again retries without starting over.
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
     return sendText(from, "I could not tailor your resume just now: the AI services that write it are busy or out of their allowance. Nothing was changed. Send the job description again in a few minutes.")
+  }
+
+  // Nothing came back different: the same file with "Match 28% -> 28%" on it is not a tailored resume, so it is not sent as one.
+  // (The job description and the resume stay in the session, as above.)
+  if (result.unchanged) {
+    console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
+    return sendText(from, "I read the job description against your resume and no line came back changed, so I am not sending you the same file. This usually means the AI services were short of capacity. Send the job description again in a few minutes.")
   }
 
   const file = await blob.get(`tailored/${result.token}.docx`)
@@ -330,7 +338,7 @@ async function refine(from: string, replyTo: string, request: string, userId: st
   if (request.length < 3) {
     return sendText(from, "Tell me what to change, e.g. _add more Terraform and AWS_ or _make the bullets shorter_.")
   }
-  const keys = resolveKeys({})
+  const keys = tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) })   // GPT Luna for a listed owner number only
   if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
   if (!(await existsPath(gen.file))) return sendText(from, "That version is no longer on file. Send the JD and resume again.")
 

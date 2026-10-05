@@ -67,6 +67,6 @@ test('what the routes and the engine promise, read from the source', () => {
   const tailor = read('src/lib/tailor.ts')
   assert.match(tailor, /if \(failed \* 2 > total\) throw new Error\(`Tailoring incomplete/, 'a draft most providers refused is not delivered as a draft')
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
-  assert.match(bot, /'s_Resume`/, 'the file is named after the person'); assert.match(bot, /sendDocument\(from, file, `\$\{name\}\.docx`/)
+  assert.match(bot, /first\.slice\(1\)\.toLowerCase\(\)\}_Resume`/, 'the file is named after the person, written as a name: Eshwar_Resume'); assert.match(bot, /sendDocument\(from, file, `\$\{name\}\.docx`/)
   assert.ok(!/Something went wrong: \$\{String\(e\)[^`]*`\)[^\n]*runTailor/.test(bot) && /Nothing was changed/.test(bot), 'a failed tailor is said plainly')
 })

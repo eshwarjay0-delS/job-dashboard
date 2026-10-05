@@ -4,6 +4,11 @@ import type { NextRequest } from "next/server"
 import { createClient, createClientFromRequest } from "./supabase/server"
 
 export async function authenticatedUserId(request?: NextRequest): Promise<string | null> {
+  return (await authenticatedUser(request))?.id ?? null
+}
+
+/** The signed-in person, with their email only when the identity provider has confirmed it. */
+export async function authenticatedUser(request?: NextRequest): Promise<{ id: string; email: string | null } | null> {
   try {
     if (request) {
       const authorization = request.headers.get("authorization")
@@ -18,7 +23,7 @@ export async function authenticatedUserId(request?: NextRequest): Promise<string
     const client = request ? await createClientFromRequest(request) : await createClient()
     const { data, error } = await client.auth.getUser()
     if (error || !data.user || data.user.is_anonymous) return null
-    return data.user.id
+    return { id: data.user.id, email: data.user.email_confirmed_at ? data.user.email ?? null : null }
   } catch { return null }
 }
 
