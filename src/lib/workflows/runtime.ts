@@ -88,6 +88,28 @@ export async function startWorkflowRun(args: {
   } satisfies WorkflowRun
 }
 
+export async function completeWorkflowRun(
+  run: WorkflowRun,
+  output: Record<string, unknown>,
+  meta?: { provider?: string; model?: string; cacheHit?: boolean },
+) {
+  const db = createServiceClient()
+  const { error } = await db
+    .from("ai_workflow_runs")
+    .update({
+      status: "succeeded",
+      output,
+      provider: meta?.provider ?? null,
+      model: meta?.model ?? null,
+      cache_hit: meta?.cacheHit ?? false,
+      completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", run.id)
+    .eq("user_id", run.userId)
+  if (error) throw new Error(error.message)
+}
+
 export async function markWorkflowAwaitingApproval(
   run: WorkflowRun,
   output: Record<string, unknown>,
