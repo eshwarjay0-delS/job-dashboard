@@ -69,8 +69,10 @@ export function hasAnyKey(keys: LlmKeys): boolean { return !!(keys.anthropic || 
 // So resolveKeys() never returns this key and the automatic provider order never includes OpenAI. The one way to an OpenAI
 // call is tailorKeys(), which the callers of the resume tailor use, and it hands the key over only for the people
 // OPENAI_TAILOR_FOR allows: "owner" (the default: an admin email or a listed owner WhatsApp number), "all", or "off".
+// The setting is OPENAI_API_KEY. OPEN_API_KEY is read as well because that is the name the owner saved it under on Vercel
+// (2026-10-05, 09:20), and sending a busy person back to rename a setting would have been the worse fix.
 export function tailorKeys(keys: LlmKeys, who: { owner: boolean }): LlmKeys {
-  const key = (process.env.OPENAI_API_KEY || "").trim()
+  const key = (process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY || "").trim()
   if (!key || keys.openai) return keys
   const scope = (process.env.OPENAI_TAILOR_FOR || "owner").trim().toLowerCase()
   return scope === "all" || (scope === "owner" && who.owner) ? { ...keys, openai: key } : keys

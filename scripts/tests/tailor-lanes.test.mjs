@@ -13,7 +13,7 @@ let script = () => reply(500, {})
 const reply = (status, body) => ({ ok: status >= 200 && status < 300, status, headers: { get: () => null }, json: async () => body, text: async () => JSON.stringify(body) })
 const stubFetch = async (url, init = {}) => { const c = { url: String(url), init, body: init.body ? JSON.parse(init.body) : null }; calls.push(c); return script(c) }
 const chat = (text) => reply(200, { choices: [{ message: { content: text }, finish_reason: 'stop' }], usage: { prompt_tokens: 10, completion_tokens: 5 } })
-const AI_ENV = ['OPENAI_API_KEY', 'OPENAI_TAILOR_FOR', 'OPENAI_MODEL_TAILOR', 'OPENAI_MODEL', 'GROQ_MAX_TOKENS', 'GROQ_TPM', 'GROQ_MODEL_HEAVY', 'GROQ_MODEL', 'GEMINI_MODEL_HEAVY', 'GEMINI_MODEL', 'GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_GENAI_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'ANTHROPIC_API_KEY', 'LLM_RETRY_BUDGET_MS']
+const AI_ENV = ['OPENAI_API_KEY', 'OPEN_API_KEY', 'OPENAI_TAILOR_FOR', 'OPENAI_MODEL_TAILOR', 'OPENAI_MODEL', 'GROQ_MAX_TOKENS', 'GROQ_TPM', 'GROQ_MODEL_HEAVY', 'GROQ_MODEL', 'GEMINI_MODEL_HEAVY', 'GEMINI_MODEL', 'GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_GENAI_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'ANTHROPIC_API_KEY', 'LLM_RETRY_BUDGET_MS']
 function fresh(values = {}) {
   globalThis.fetch = stubFetch                       // another test file in this process may have replaced it
   for (const k of AI_ENV) delete process.env[k]
@@ -33,6 +33,10 @@ test('the OpenAI key is handed over for the owner\'s tailoring only, and never b
   process.env.OPENAI_TAILOR_FOR = 'off'; assert.equal(L.tailorKeys({}, { owner: true }).openai, undefined)
   delete process.env.OPENAI_TAILOR_FOR; delete process.env.OPENAI_API_KEY
   assert.equal(L.tailorKeys({ groq: 'g' }, { owner: true }).openai, undefined, 'no key on the deployment, nothing to hand over')
+  process.env.OPEN_API_KEY = 'k-as-saved'
+  assert.equal(L.tailorKeys({}, { owner: true }).openai, 'k-as-saved', 'the name the owner saved it under on Vercel is read too')
+  assert.equal(L.tailorKeys({}, { owner: false }).openai, undefined); assert.equal(L.resolveKeys({}).openai, undefined)
+  delete process.env.OPEN_API_KEY
 })
 
 test('an automatic call never reaches OpenAI, even when the caller holds the key', async () => {
