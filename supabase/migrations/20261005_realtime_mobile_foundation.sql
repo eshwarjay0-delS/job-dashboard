@@ -32,7 +32,7 @@ drop policy if exists "realtime mobile sessions owner read" on public.realtime_m
 create policy "realtime mobile sessions owner read"
 on public.realtime_mobile_sessions
 for select to authenticated
-using (user_id = auth.uid());
+using (user_id = (select auth.uid()));
 
 create table if not exists public.realtime_mobile_events (
   id bigint generated always as identity primary key,
@@ -61,7 +61,7 @@ drop policy if exists "realtime mobile events owner read" on public.realtime_mob
 create policy "realtime mobile events owner read"
 on public.realtime_mobile_events
 for select to authenticated
-using (user_id = auth.uid());
+using (user_id = (select auth.uid()));
 
 do $$
 begin
