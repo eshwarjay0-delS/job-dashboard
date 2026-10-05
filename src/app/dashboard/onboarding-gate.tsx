@@ -24,14 +24,22 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
         }
         const body = await response.json()
         if (!active) return
-        if (!response.ok || !body.complete) {
-          router.replace("/dashboard/setup")
+        if (!response.ok) {
+          // A transient status failure is not proof that an existing user needs
+          // onboarding. Keep the dashboard usable and let service health recover.
+          setReady(true)
+          return
+        }
+        if (!body.complete) {
+          router.replace(body.resumeTo || "/dashboard/setup")
           return
         }
         setReady(true)
       })
       .catch(() => {
-        if (active) router.replace("/dashboard/setup")
+        // Fail open for service availability. The server is authoritative when it
+        // positively reports incomplete onboarding.
+        if (active) setReady(true)
       })
 
     return () => { active = false }
