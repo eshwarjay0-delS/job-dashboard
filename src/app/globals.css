@@ -1046,3 +1046,72 @@ html body aside.dash-sidebar {
 [data-theme="dark"] .mf-feature,
 [data-theme="dark"] [data-slot="card"] { box-shadow:var(--shadow-card); }
 [data-theme="dark"] ::selection { background:rgba(115,148,255,.30); }
+
+/* ═══════════════════════════════════════════════════════════════
+   EXPERIENCE RUNTIME GUARDRAILS
+   Core actions remain DOM-first. Optional motion/rich media adapts to
+   accessibility preferences and device capability.
+═══════════════════════════════════════════════════════════════ */
+[data-experience-tier="static"] .experience-optional-motion,
+[data-motion="reduced"] .experience-optional-motion {
+  animation: none !important;
+  transition-duration: 0.01ms !important;
+  transform: none !important;
+}
+
+[data-page-visibility="hidden"] .experience-continuous-motion {
+  animation-play-state: paused !important;
+}
+
+.experience-deferred-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 800px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .anim-float,
+  .anim-spin-slow,
+  .skeleton-shimmer,
+  .shimmer {
+    animation: none !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .mf-mobile-home,
+  .glass-card,
+  [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: var(--surface) !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid CanvasText !important;
+    outline-offset: 3px !important;
+  }
+
+  button,
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [data-slot="card"] {
+    border: 1px solid CanvasText !important;
+  }
+}
