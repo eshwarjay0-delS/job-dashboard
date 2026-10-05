@@ -47,22 +47,14 @@ export const GOOGLE_WORKSPACE_SCOPES = [
   "https://www.googleapis.com/auth/calendar.readonly",
 ].join(" ")
 
-// Optional second consent after MarketFit login. Login itself stays identity-only.
+// Optional second consent after MarketFit login. This intentionally does NOT
+// use Supabase OAuth because a secondary Google account must not replace the
+// user's MarketFit authentication session. The server runs a standard Google
+// authorization-code flow and stores the grant against the existing MarketFit user.
 export async function connectGoogleWorkspace(returnPath = "/dashboard/setup") {
-  const supabase = createClient()
-  const cb = `${window.location.origin}/auth/callback/workspace?return=${encodeURIComponent(returnPath)}`
-  return supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: cb,
-      scopes: GOOGLE_WORKSPACE_SCOPES,
-      queryParams: {
-        access_type: "offline",
-        prompt: "consent",
-        include_granted_scopes: "true",
-      },
-    },
-  })
+  const target = `/api/identity/google-workspace/start?return=${encodeURIComponent(returnPath)}`
+  window.location.assign(target)
+  return { data: null, error: null }
 }
 
 export const connectGmail = connectGoogleWorkspace
