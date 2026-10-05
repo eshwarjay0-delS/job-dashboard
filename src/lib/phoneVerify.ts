@@ -19,8 +19,10 @@
 
 export function normalizePhone(input: string): string | null {
   const trimmed = String(input || "").trim()
-  if (/^\+[1-9]\d{7,14}$/.test(trimmed)) return trimmed
-  if (trimmed.startsWith("+")) return null                    // written as international but not a valid one: never re-read as a US number
+  // The way a contact card or autofill writes it: "+1 (314) 255-9156", "+44 7911 123456". Spaces, brackets, dots and dashes go first.
+  const compact = trimmed.replace(/[\s().-]/g, "")
+  // Written as international: it is that number or it is refused. It is never re-read as a US number.
+  if (compact.startsWith("+")) return /^\+[1-9]\d{7,14}$/.test(compact) ? compact : null
   const digits = trimmed.replace(/\D/g, "")
   // A US number: ten digits whose area code starts 2 to 9, with or without the leading 1.
   if (/^[2-9]\d{9}$/.test(digits)) return `+1${digits}`
@@ -54,6 +56,7 @@ export type VerifyReason =
   | "invalid_number"      // not a number a code can be sent to
   | "landline"            // the number cannot receive text messages
   | "too_many_attempts"   // the provider is rate limiting this number
+  | "too_many_wrong_codes" // the code was mistyped past the provider's limit: this verification is spent
   | "trial_account"       // a trial account can only text numbers verified in the provider's console
   | "blocked"             // the provider blocked this number or region
   | "wrong_code"          // the code is not the one that was sent
@@ -69,6 +72,7 @@ const USER_MESSAGE: Record<VerifyReason, string> = {
   invalid_number: "That number does not look right. Enter a US 10-digit mobile number, or an international number starting with + and the country code.",
   landline: "That number cannot receive text messages. Enter a mobile number.",
   too_many_attempts: "Too many codes were requested for this number. Wait 10 minutes, then try again.",
+  too_many_wrong_codes: "Too many wrong codes. Wait 10 minutes, then press Send code for a new one.",
   trial_account: "We cannot text this number yet. This is a limit on our side, not a problem with your number.",
   blocked: "Text messages to this number are blocked by the carrier or region. Try another mobile number.",
   wrong_code: "That code is not right. Check the latest text message and try again.",
@@ -83,7 +87,9 @@ function reasonFor(status: number, code: number, message: string, checking: bool
   if (code === 20404 || status === 404) return checking ? "expired" : "service_not_found"
   if (code === 60200 || code === 21211 || code === 21614 || code === 60033) return "invalid_number"
   if (code === 60205) return "landline"
-  if (code === 60203 || code === 60202 || code === 20429 || status === 429) return "too_many_attempts"
+  // 60202 is the limit on CHECKING a code, 60203 on SENDING one. A person who mistyped five times did not request too many codes.
+  if (code === 60202 || (checking && status === 429 && code !== 60203)) return "too_many_wrong_codes"
+  if (code === 60203 || code === 20429 || status === 429) return "too_many_attempts"
   if (code === 21608 || code === 60238 || /unverified|trial account/i.test(message)) return "trial_account"
   if (code === 60410 || code === 60605 || code === 21612 || code === 60220) return "blocked"
   if (status >= 500) return "provider_down"
@@ -95,7 +101,7 @@ export type VerifyResult = { ok: true } | { ok: false; reason: VerifyReason; mes
 const fail = (reason: VerifyReason): VerifyResult => ({
   ok: false, reason, message: USER_MESSAGE[reason],
   // 503: ours to fix. 400: the person can fix it. 429: wait.
-  http: reason === "too_many_attempts" ? 429
+  http: reason === "too_many_attempts" || reason === "too_many_wrong_codes" ? 429
     : ["invalid_number", "landline", "wrong_code", "expired", "blocked"].includes(reason) ? 400 : 503,
 })
 
@@ -116,8 +122,9 @@ async function call(c: Config, path: string, form: Record<string, string>, check
   if (res.ok) return { ok: true, body }
   const code = Number(body.code) || 0, message = String(body.message || "")
   const reason = reasonFor(res.status, code, message, checking)
-  // The provider's own message stays here, in the server log. It names the account, so it never goes to a browser.
-  console.error("[phone-verify] refused", { step: path, status: res.status, code, reason, message: message.slice(0, 200) })
+  // The provider's own message stays here, in the server log. It names the account, so it never goes to a browser. Some of its
+  // messages repeat the person's number; only the last four digits of any number are kept.
+  console.error("[phone-verify] refused", { step: path, status: res.status, code, reason, message: message.slice(0, 200).replace(/\+?\d{7,15}/g, m => `***${m.slice(-4)}`) })
   return { ok: false, result: fail(reason) }
 }
 
@@ -172,17 +179,23 @@ export async function phoneVerifyStatus(): Promise<PhoneVerifyStatus> {
     try { const r = await fetch(url, { headers: { Authorization: basic(c) }, signal: AbortSignal.timeout(12000) }); return { status: r.status, body: (await r.json().catch(() => ({}))) as Record<string, unknown> } }
     catch { return { status: 0, body: {} as Record<string, unknown> } }
   }
-  const account = await get(`https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(c.accountSid)}.json`)
-  if (account.status === 0 || account.status >= 500) return { state: "provider_down", settings, fix: "The text-message provider did not answer. Try again in a minute." }
-  if (account.status === 401 || account.status === 403 || account.status === 404) {
+  // What to say when the credentials are refused. It names the pair that is actually in use: with an API key pair set, the auth
+  // token is not what was refused, and re-pasting it would change nothing.
+  const refused = (): PhoneVerifyStatus => {
+    if (usingKey) return { state: "credentials_rejected", settings, fix: "Twilio refused the API key pair (TWILIO_API_KEY_SID / TWILIO_API_KEY_SECRET) for this account id: it was revoked, mistyped, or belongs to another account. Create a new API key in the Twilio console and save both values, or delete both settings so TWILIO_AUTH_TOKEN is used instead, then redeploy." }
     const hint = settings.accountId !== "ok" ? "TWILIO_ACCOUNT_SID is not an account id (it starts with AC and has 34 characters)."
-      : settings.secret !== "ok" ? (usingKey ? "The API key pair does not have the right shape (the key id starts with SK)." : "TWILIO_AUTH_TOKEN is not an auth token (32 letters and digits). An API key secret, a test token or a clipped paste will not work there.")
+      : settings.secret !== "ok" ? "TWILIO_AUTH_TOKEN is not an auth token (32 letters and digits). An API key secret, a test token or a clipped paste will not work there."
       : "TWILIO_AUTH_TOKEN does not belong to this account id, or it was replaced in the provider's console after it was copied."
     return { state: "credentials_rejected", settings, fix: `${hint} Copy the Account SID and the live Auth Token again from the Twilio console (Account Info), save both on the deployment, then redeploy.` }
   }
+  // A standard API key may not read the account itself, so with a key pair the Verify service alone proves the credentials
+  // (and the trial check, which needs the account, is left out).
+  const account = usingKey ? { status: 200, body: {} as Record<string, unknown> } : await get(`https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(c.accountSid)}.json`)
+  if (account.status === 0 || account.status >= 500) return { state: "provider_down", settings, fix: "The text-message provider did not answer. Try again in a minute." }
+  if (account.status === 401 || account.status === 403 || account.status === 404) return refused()
   const svc = await get(`https://verify.twilio.com/v2/Services/${encodeURIComponent(c.service)}`)
   if (svc.status === 404) return { state: "service_not_found", settings, fix: "The Verify service id does not exist on this account. In the Twilio console open Verify, Services, copy the Service SID (it starts with VA) into TWILIO_VERIFY_SERVICE_SID, then redeploy." }
-  if (svc.status === 401 || svc.status === 403) return { state: "credentials_rejected", settings, fix: "The account answered but refused the Verify service. Check that the Verify service belongs to this account id." }
+  if (svc.status === 401 || svc.status === 403) return usingKey ? refused() : { state: "credentials_rejected", settings, fix: "The account answered but refused the Verify service. Check that the Verify service belongs to this account id." }
   if (svc.status === 0 || svc.status >= 500) return { state: "provider_down", settings, fix: "The text-message provider did not answer. Try again in a minute." }
   if (String(account.body.type || "").toLowerCase() === "trial") {
     return { state: "trial_account", settings, fix: "The credentials work, but this is a trial account: it can only text numbers that were verified in the Twilio console. Upgrade the account so new people can receive their code." }

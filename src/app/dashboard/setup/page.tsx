@@ -45,8 +45,10 @@ function toProfileBody(d: SetupData, profileComplete: boolean) {
 
 function normalizeUsPhone(input: string) {
   const raw = input.trim()
-  if (/^\+[1-9]\d{7,14}$/.test(raw)) return raw
-  if (raw.startsWith("+")) return null                       // the same rule as the server (src/lib/phoneVerify.ts)
+  // The same rule as the server (src/lib/phoneVerify.ts): "+1 (314) 255-9156" is an international number once its spaces,
+  // brackets, dots and dashes are gone; written with a +, it is that number or it is refused.
+  const compact = raw.replace(/[\s().-]/g, "")
+  if (compact.startsWith("+")) return /^\+[1-9]\d{7,14}$/.test(compact) ? compact : null
   const digits = raw.replace(/\D/g, "")
   if (/^[2-9]\d{9}$/.test(digits)) return `+1${digits}`
   if (/^1[2-9]\d{9}$/.test(digits)) return `+${digits}`
@@ -98,6 +100,10 @@ export default function SetupPage() {
   const [waNumber, setWaNumber] = useState("")
   // False for an admin of this deployment: they may continue without a verified number (the server decides, see /api/onboarding/status).
   const [phoneRequired, setPhoneRequired] = useState(true)
+  // Why the number is not required: "admin", or "unavailable" (codes cannot be sent right now; the person verifies later).
+  const [phoneNote, setPhoneNote] = useState("")
+  // What stopped Continue or Finish, said on the page. Before, a refused save left the button looking dead.
+  const [stepError, setStepError] = useState("")
 
   useEffect(() => {
     // Restore any existing profile
@@ -123,6 +129,9 @@ export default function SetupPage() {
           ...d,
           email: profile.email || d.email,
           full_name: profile.full_name || d.full_name,
+          title: profile.title || d.title,
+          location: profile.location || d.location,
+          linkedin: profile.linkedin || d.linkedin,
           phone: profile.phone || d.phone,
           phoneVerified: !!profile.phone_verified,
           gmailConnected: !!(profile.gmail_connected && profile.calendar_connected),
@@ -132,7 +141,7 @@ export default function SetupPage() {
 
     fetch("/api/onboarding/status", { cache: "no-store" })
       .then(r => (r.ok ? r.json() : null))
-      .then(body => { if (body && body.phoneRequired === false) setPhoneRequired(false) })
+      .then(body => { if (body && body.phoneRequired === false) { setPhoneRequired(false); setPhoneNote(String(body.phoneNote || "")) } })
       .catch(() => {})
 
     // Someone who verified on an earlier visit still needs to see the number they can message.
@@ -245,6 +254,11 @@ export default function SetupPage() {
   }
 
   async function advance() {
+    setStepError("")
+    if (step === 0 && (!data.full_name.trim() || !data.title.trim())) {
+      setStepError("Enter your full name and your current title to continue.")
+      return
+    }
     if (step === 0 && !data.phoneVerified && phoneRequired) {
       setPhoneStatus("Verify your mobile number before continuing.")
       return
@@ -258,8 +272,14 @@ export default function SetupPage() {
       if (saved.missing.includes("phone_verification")) {
         setStep(0)
         setPhoneStatus("Verify your mobile number before continuing.")
+      } else if (saved.missing.includes("full_name") || saved.missing.includes("title")) {
+        setStep(0)
+        setStepError("Enter your full name and your current title, then continue.")
       } else if (saved.missing.includes("target_roles")) {
         setStep(3)
+        setStepError("Pick at least one target role to finish.")
+      } else {
+        setStepError(saved.error || "Could not save. Please try again.")
       }
       return
     }
@@ -334,7 +354,7 @@ export default function SetupPage() {
               ))}
             </div>
             <div style={{ marginTop: 16, padding: 14, borderRadius: 12, border: `1px solid ${P.border}`, background: P.bg }}>
-              <label style={{ fontSize: 11.5, fontWeight: 700, color: P.hint, display: "block", marginBottom: 6 }}>{phoneRequired ? "VERIFIED MOBILE NUMBER *" : "VERIFIED MOBILE NUMBER (optional for your account)"}</label>
+              <label style={{ fontSize: 11.5, fontWeight: 700, color: P.hint, display: "block", marginBottom: 6 }}>{phoneRequired ? "VERIFIED MOBILE NUMBER *" : phoneNote === "admin" ? "VERIFIED MOBILE NUMBER (optional for your account)" : "VERIFIED MOBILE NUMBER (optional for now)"}</label>
               <div style={{ display: "flex", gap: 8 }}>
                 <input
                   type="tel"
@@ -367,6 +387,11 @@ export default function SetupPage() {
               <p style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: data.phoneVerified ? "#42413c" : P.muted }}>
                 {phoneStatus || "Enter a US 10 digit number or international number with country code. We normalize it before verification and use the verified identity for WhatsApp resume tailoring."}
               </p>
+              {!phoneRequired && phoneNote === "unavailable" && !data.phoneVerified && (
+                <p style={{ marginTop: 6, fontSize: 11.5, lineHeight: 1.5, color: P.text }}>
+                  Text verification is not working on our side right now. You can continue without it and verify your number later from Connections. WhatsApp resume tailoring starts once your number is verified.
+                </p>
+              )}
               {data.phoneVerified && waNumber && (
                 <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer"
                   style={{ display: "inline-block", marginTop: 8, padding: "8px 14px", borderRadius: 9, border: `1px solid ${P.border}`, background: P.surface, color: P.text, fontSize: 12.5, fontWeight: 700, textDecoration: "none" }}>
@@ -574,6 +599,10 @@ export default function SetupPage() {
               </a>
             </div>
           </div>
+        )}
+
+        {stepError && step < 4 && (
+          <p role="alert" style={{ marginTop: 16, fontSize: 12.5, lineHeight: 1.5, color: P.text, fontWeight: 600 }}>{stepError}</p>
         )}
 
         {/* ── Nav buttons ── */}

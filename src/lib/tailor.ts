@@ -44,6 +44,8 @@ export interface TailorResult {
   role_alignment?: { role: string; bullets: number; rewritten: number; added: number; skills: number; required: number }[]
   // JD skills the skills section lists, and how many of them at least one role's bullets show.
   experience_skills?: { listed: number; shown: number }
+  // Set when some parts of the draft were refused by every model and left as they were (the rest is tailored).
+  partial?: { failed: number; total: number }
   // Real token accounting for this tailor (proof the cache is working). estCostUSD is
   // approximate — priced at Haiku 4.5 rates; cacheReadTokens bill at ~1/10th of input.
   usage?: {
@@ -371,7 +373,7 @@ export async function runTailor(opts: {
     return out
   }
   // Role metrics compare only skills already evidenced in each original role.
-  type Pass = { edits: Edits; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string>; claimedKw: Set<string>; roleKw: Set<string>[]; required: string[][]; provenKw: Set<string>; via?: string }
+  type Pass = { edits: Edits; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string>; claimedKw: Set<string>; roleKw: Set<string>[]; required: string[][]; provenKw: Set<string>; via?: string; partial?: { failed: number; total: number } }
   // Apply a finished edit set to the docx and measure JD keyword coverage. Auto-tailoring
   // is the only path allowed to physically drop bullets (the manual builder never gets a
   // dropIdx), so a user's own edits are never silently trimmed.
@@ -404,6 +406,7 @@ export async function runTailor(opts: {
     const prefs = [...allPrefs, ...extraPrefs].filter(Boolean)
     const call = { keys: opts.keys, pref: step.pref, jd, zones, preferences: prefs.join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, model: step.model, usageSink, refine: !!refine }
     let raw: Edits
+    let partsFailed = 0, partsTotal = 0
     if (splitDraft) {
       // Any part may fail on its own; the draft only fails when every part did.
       type Part = { e: Edits | null; err: unknown }
@@ -413,12 +416,36 @@ export async function runTailor(opts: {
         Promise.all(roleGroups.map(g => settle(adapt({ ...call, part: "experience", roles: g })))),
         wantProfile ? settle(adapt({ ...call, part: "profile" })) : Promise.resolve<Part>({ e: null, err: null }),
       ])
-      if (!prof.e && !exp.some(x => x.e)) throw [prof, ...exp].find(x => x.err)?.err ?? new Error("Tailoring draft came back empty")
-      raw = { headline: prof.e?.headline, summary: prof.e?.summary || "", skills: prof.e?.skills || [], bullets: exp.flatMap(x => x.e?.bullets || []), extras: [] }
+      // A part that was refused is asked again, one call at a time, on the other models and then once more on this one, while
+      // there is time. The parallel burst above is what trips a provider's per-minute limit; a single call a moment later
+      // usually goes through. Before this (seen 2026-10-05) a draft in which five of six calls were refused still "won",
+      // and the person was sent their own resume back with two bullets changed and "Match 28% -> 28%".
+      const others = steps.filter(s => s !== step)
+      const again = async (make: (s: typeof step) => Promise<Edits>, first: Part): Promise<Part> => {
+        let part = first
+        for (const s of [...others, step]) {
+          if (part.e || Date.now() > deadline - 8000) break
+          part = await settle(make(s))
+        }
+        return part
+      }
+      const expDone: Part[] = []
+      for (let i = 0; i < exp.length; i++) {
+        expDone.push(exp[i].e ? exp[i] : await again(s => adapt({ ...call, pref: s.pref, model: s.model, part: "experience", roles: roleGroups[i] }), exp[i]))
+      }
+      const profDone = wantProfile && !prof.e ? await again(s => adapt({ ...call, pref: s.pref, model: s.model, part: "profile" }), prof) : prof
+      const total = expDone.length + (wantProfile ? 1 : 0)
+      const failed = expDone.filter(x => !x.e).length + (wantProfile && !profDone.e ? 1 : 0)
+      if (!profDone.e && !expDone.some(x => x.e)) throw [profDone, ...expDone].find(x => x.err)?.err ?? new Error("Tailoring draft came back empty")
+      // Most of it refused even after asking again: that is not a draft. Failing here lets the caller say so.
+      if (failed * 2 > total) throw new Error(`Tailoring incomplete: the AI providers refused ${failed} of ${total} parts of the draft.`)
+      partsFailed = failed; partsTotal = total
+      raw = { headline: profDone.e?.headline, summary: profDone.e?.summary || "", skills: profDone.e?.skills || [], bullets: expDone.flatMap(x => x.e?.bullets || []), extras: [] }
     } else {
       raw = await adapt(call)
     }
     const pass = await applyEdits(scopeEdits(raw))
+    if (partsFailed) pass.partial = { failed: partsFailed, total: partsTotal }
     // Tag with the model that actually produced this draft — with cross-provider draws the
     // winner may not be the primary step, and the notes must name the real one.
     pass.via = step.label ?? step.model ?? String(step.pref)
@@ -534,6 +561,7 @@ export async function runTailor(opts: {
     applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff,
     cached: false, elapsed_ms: Date.now() - started, coverage: Math.round(best.cov * 100), role_alignment,
     experience_skills: { listed: claimedKw.size, shown: provenKw.size },
+    ...(best.partial ? { partial: best.partial } : {}),
     usage: { calls: usageSink.length, inputTokens: uAgg.input, outputTokens: uAgg.output, cacheReadTokens: uAgg.cacheRead, cacheWriteTokens: uAgg.cacheWrite, estCostUSD },
   }
 

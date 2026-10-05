@@ -24,6 +24,7 @@ import { runTailor, type TailorResult } from "@/lib/tailor"
 import { extractJdMeta } from "@/lib/claude"
 import { sendText, sendDocument, downloadMedia, verifySignature, senderAllowed, waConfigured } from "@/lib/whatsapp"
 import { ownerWhatsAppUserId } from "@/lib/owner"
+import { extractProfile } from "@/lib/profile"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
 export const runtime = "nodejs"
@@ -31,6 +32,19 @@ export const maxDuration = 60
 export const dynamic = "force-dynamic"
 
 const FALLBACK_USER_ID = process.env.WHATSAPP_USER_ID || "demo"
+
+// The file a person gets back is named after them: "Eshwar's_Resume.docx" (owner, 2026-10-05: "The name should always be
+// Eshwar's_Resume"). The first name is read from the resume itself, so it is right for whoever sent it; when no name can be read
+// the deployment's default name is used.
+async function outputNameFor(resume: Buffer | null): Promise<string> {
+  try {
+    if (resume) {
+      const first = String((await extractProfile(resume)).firstName || "").trim().split(/\s+/)[0] || ""
+      if (/^[\p{L}][\p{L}'.-]{1,29}$/u.test(first)) return `${first[0].toUpperCase()}${first.slice(1)}'s_Resume`
+    }
+  } catch { /* fall through to the default */ }
+  return OUTPUT_NAME
+}
 const OUTPUT_NAME = process.env.WHATSAPP_OUTPUT_NAME || "MarketFit Resume"
 const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 // Every resume the bot sends is kept so a swipe-reply can edit that exact version. It lives
@@ -141,7 +155,7 @@ const HELP = [
   "1. The *job description* (paste it as a message)",
   "2. Your *resume* as a .docx file",
   "",
-  `As soon as I have both, I'll tailor it and send back *${OUTPUT_NAME}.docx*.`,
+  "As soon as I have both, I'll tailor it and send it back as a Word file named after you.",
   "",
   "*Want changes?* Swipe right on a resume I sent (or long-press → Reply) and type what to change, e.g. _add more Terraform_ or _make the bullets shorter_. Each update builds on the version you replied to, so you can keep refining.",
   "",
@@ -273,21 +287,29 @@ async function generate(from: string, session: Session, userId: string) {
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd })
 
-  const result = await runTailor({
-    jd: session.jd,
-    keys,
-    userResumeDir: path.join(USER_RESUMES_DIR, userId),
-    givenPath: session.resumePath,
-    mode: "full",
-    // Match the dashboard defaults: summary left as written, skills + experience retargeted.
-    sections: { summary: false, skills: true, experience: true },
-  })
+  let result: TailorResult
+  try {
+    result = await runTailor({
+      jd: session.jd,
+      keys,
+      userResumeDir: path.join(USER_RESUMES_DIR, userId),
+      givenPath: session.resumePath,
+      mode: "full",
+      // Match the dashboard defaults: summary left as written, skills + experience retargeted.
+      sections: { summary: false, skills: true, experience: true },
+    })
+  } catch (e) {
+    // The job description and the resume stay in the session, so sending either again retries without starting over.
+    console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
+    return sendText(from, "I could not tailor your resume just now: the AI services that write it are busy or out of their allowance. Nothing was changed. Send the job description again in a few minutes.")
+  }
 
   const file = await blob.get(`tailored/${result.token}.docx`)
   if (!file) return sendText(from, "The resume generated but the file could not be read back. Please try again.")
 
   const meta = await metaPromise
-  await deliver(from, file, captionFor(meta, result), { userId, jd: session.jd, meta, changes: [], source: session.resumeName })
+  const name = await outputNameFor(file)
+  await deliver(from, file, name, captionFor(name, meta, result), { userId, jd: session.jd, meta, changes: [], source: session.resumeName })
   await recordWhatsAppUsage(userId, "resume_tailor", result)
 
   // Every generation starts fresh: keep only the de-dupe list.
@@ -348,7 +370,8 @@ async function refine(from: string, replyTo: string, request: string, userId: st
 
   const meta = await metaPromise
   const changes = [...(gen.changes || []), request]
-  await deliver(from, file, captionFor(meta, result, { request, number: changes.length, lines }), {
+  const name = await outputNameFor(file)
+  await deliver(from, file, name, captionFor(name, meta, result, { request, number: changes.length, lines }), {
     userId, jd: gen.jd, meta, changes, source: gen.source,
   })
   await recordWhatsAppUsage(userId, "resume_refine", result)
@@ -356,13 +379,13 @@ async function refine(from: string, replyTo: string, request: string, userId: st
 
 // Send the document and keep a copy of this exact version, recorded under the sent
 // message's id, so a later swipe-reply to it can be traced back and edited.
-async function deliver(from: string, file: Buffer, caption: string, gen: Omit<Gen, "file" | "createdAt">) {
+async function deliver(from: string, file: Buffer, name: string, caption: string, gen: Omit<Gen, "file" | "createdAt">) {
   const vfile = path.join(VERSIONS_DIR, digits(from), `${Date.now().toString(36)}-${randomBytes(4).toString("hex")}.docx`)
   // Store the copy while the upload runs, so it costs no extra wall time.
   const stored = writePath(vfile, file).then(() => true, () => false)
   let wamid = ""
   try {
-    wamid = await sendDocument(from, file, `${OUTPUT_NAME}.docx`, caption)
+    wamid = await sendDocument(from, file, `${name}.docx`, caption)
   } catch (e) {
     if (await stored) await deletePath(vfile)
     throw e
@@ -387,7 +410,7 @@ function experienceLine(result: TailorResult): string[] {
   ]
 }
 
-function captionFor(meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }): string {
+function captionFor(name: string, meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }): string {
   // Measured coverage of the document being sent (older cached results lack it).
   const cov = result.coverage ?? result.keyword_analysis.coverage_after
   const added = result.keyword_analysis.added.length
@@ -405,7 +428,9 @@ function captionFor(meta: Meta, result: TailorResult, update?: { request: string
         ...experienceLine(result),
       ]
   return [
-    update ? `*${OUTPUT_NAME}* (update ${update.number})` : `*${OUTPUT_NAME}*`,
+    update ? `*${name}* (update ${update.number})` : `*${name}*`,
+    // Said first, before any number: part of the draft was refused by the AI services and left as it was.
+    ...(result.partial ? [`_${result.partial.failed} of ${result.partial.total} parts could not be rewritten (the AI services were busy) and are unchanged. Send the job description again in a few minutes for a full pass._`] : []),
     ...(meta.role ? [`Role: ${meta.role}`] : []),
     ...(meta.company ? [`Company: ${meta.company}`] : []),
     ...(meta.location ? [`Location: ${meta.location}`] : []),

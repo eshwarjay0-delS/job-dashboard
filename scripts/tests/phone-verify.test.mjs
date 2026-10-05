@@ -11,9 +11,10 @@ const SID = 'AC' + 'a1'.repeat(16), TOKEN = 'b2'.repeat(16), SERVICE = 'VA' + 'c
 const calls = []
 let script = () => reply(500, {})
 const reply = (status, body) => ({ ok: status >= 200 && status < 300, status, json: async () => body, text: async () => JSON.stringify(body) })
-globalThis.fetch = async (url, init = {}) => { calls.push({ url: String(url), init }); return script(String(url), init) }
-const errors = []; console.error = (...a) => errors.push(a)
-function env(values) { for (const k of ENV) delete process.env[k]; Object.assign(process.env, values); calls.length = 0; errors.length = 0 }
+const stubFetch = async (url, init = {}) => { calls.push({ url: String(url), init }); return script(String(url), init) }
+const errors = []; const capture = (...a) => errors.push(a)
+// Re-armed before every case: another test file in this process may have replaced fetch and console.error.
+function env(values) { globalThis.fetch = stubFetch; console.error = capture; for (const k of ENV) delete process.env[k]; Object.assign(process.env, values); calls.length = 0; errors.length = 0 }
 const basic = (user, pass) => 'Basic ' + Buffer.from(`${user}:${pass}`).toString('base64')
 
 const P = await import('../../src/lib/phoneVerify.ts')

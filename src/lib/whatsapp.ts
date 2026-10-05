@@ -38,8 +38,13 @@ function phoneId(): string {
 type SenderInfo = { digits: string; mode: string; reached: boolean; status: number }
 // A good answer is kept for an hour; a refusal or a silence for one minute, so a repaired token shows up quickly.
 let numberCache: (SenderInfo & { at: number }) | null = null
+let senderLookup: Promise<SenderInfo> | null = null
 async function senderInfo(): Promise<SenderInfo> {
   if (numberCache && Date.now() - numberCache.at < (numberCache.reached ? 3600_000 : 60_000)) return numberCache
+  senderLookup ??= lookUpSender().finally(() => { senderLookup = null })   // callers that arrive together share one request
+  return senderLookup
+}
+async function lookUpSender(): Promise<SenderInfo> {
   const keep = (info: SenderInfo) => { numberCache = { ...info, at: Date.now() }; return info }
   try {
     const res = await fetch(`${GRAPH}/${phoneId()}?fields=display_phone_number,account_mode`, { headers: auth(), signal: AbortSignal.timeout(8000) })

@@ -3,6 +3,7 @@ import path from "path"
 import { extractProfile, type Profile } from "@/lib/profile"
 import { createClientFromRequest } from "@/lib/supabase/server"
 import { isAdminEmail } from "@/lib/owner"
+import { phoneStepAvailable } from "@/lib/identityStatus"
 import { TAILORED_DIR as OUT_DIR, USER_RESUMES_DIR as USER_RESUMES_BASE, RESUMES_LIB as LEGACY_RESUMES } from "@/lib/paths"
 import { readPath, listFiles, statPath } from "@/lib/storage"
 
@@ -168,8 +169,9 @@ export async function POST(request: NextRequest) {
       if (!title) missing.push("title")
       // Work authorization is not asked for during setup any more (owner, 2026-10-05: "It won't be necessary for now"), so it
       // cannot be what stops someone finishing. It can still be set in Settings.
-      // An admin named in ADMIN_EMAILS can finish without a verified number (src/lib/owner.ts).
-      if (!existing?.phone_verified && !isAdminEmail(user.email)) missing.push("phone_verification")
+      // A verified number is required unless it cannot be had: an admin named in ADMIN_EMAILS (src/lib/owner.ts), or a moment
+      // when codes cannot be texted or numbers cannot be linked (src/lib/identityStatus.ts). The person can verify later.
+      if (!existing?.phone_verified && !isAdminEmail(user.email) && await phoneStepAvailable()) missing.push("phone_verification")
       if (!Array.isArray(roles) || roles.length === 0) missing.push("target_roles")
 
       if (missing.length) {

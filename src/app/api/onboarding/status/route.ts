@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { isAdminEmail } from "@/lib/owner"
+import { phoneStepAvailable } from "@/lib/identityStatus"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -33,7 +34,10 @@ export async function GET() {
   if (!profile?.full_name?.trim()) missing.push("full_name")
   if (!profile?.title?.trim()) missing.push("title")
   const admin = isAdminEmail(user.email)
-  if (!profile?.phone_verified && !admin) missing.push("phone_verification")
+  // Asked only when it matters: someone already verified never triggers the probe.
+  const available = profile?.phone_verified || admin ? true : await phoneStepAvailable()
+  const phoneRequired = !admin && available
+  if (!profile?.phone_verified && phoneRequired) missing.push("phone_verification")
   if (!Array.isArray(profile?.open_to_roles) || profile.open_to_roles.length === 0) missing.push("target_roles")
 
   return NextResponse.json({
@@ -41,7 +45,9 @@ export async function GET() {
     missing,
     resumeTo: "/dashboard/setup",
     durable: false,
-    // false for an admin named in ADMIN_EMAILS: setup lets them continue without a verified number
-    phoneRequired: !admin,
+    // false for an admin named in ADMIN_EMAILS, and for everyone while codes cannot be texted or numbers cannot be linked:
+    // setup then lets the person continue and verify later. phoneNote says which.
+    phoneRequired,
+    phoneNote: admin ? "admin" : available ? "" : "unavailable",
   })
 }
