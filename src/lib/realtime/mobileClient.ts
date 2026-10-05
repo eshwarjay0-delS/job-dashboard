@@ -398,3 +398,68 @@ export class RealtimeMobileClient {
     if (this.options.storage) await this.options.storage.removeItem(key)
   }
 }
+
+export async function requestRealtimeInterviewPrep(args: {
+  baseUrl: string
+  getAccessToken: () => Promise<string | null>
+  sessionId: string
+  requestId: string
+  company?: string
+  role?: string
+  interviewType?: string
+  notes?: string
+}) {
+  const token = await args.getAccessToken()
+  if (!token) throw new Error("Authentication token is unavailable.")
+
+  const res = await fetch(args.baseUrl.replace(/\/$/, "") + "/api/realtime/mobile/actions/interview-prep", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token,
+    },
+    body: JSON.stringify({
+      sessionId: args.sessionId,
+      requestId: args.requestId,
+      company: args.company || "",
+      role: args.role || "",
+      interviewType: args.interviewType || "video",
+      notes: args.notes || "",
+    }),
+  })
+
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data?.error || "Realtime interview prep request failed.")
+  return data as {
+    ok: true
+    accepted: true
+    duplicate: boolean
+    actionId: string
+    requestId: string
+    status: "accepted" | "running" | "succeeded" | "failed" | "cancelled"
+    workflowRunId?: string | null
+    result?: Record<string, unknown>
+    error?: string
+  }
+}
+
+export async function getRealtimeInterviewPrepStatus(args: {
+  baseUrl: string
+  getAccessToken: () => Promise<string | null>
+  sessionId: string
+  requestId: string
+}) {
+  const token = await args.getAccessToken()
+  if (!token) throw new Error("Authentication token is unavailable.")
+
+  const url = new URL(args.baseUrl.replace(/\/$/, "") + "/api/realtime/mobile/actions/interview-prep")
+  url.searchParams.set("sessionId", args.sessionId)
+  url.searchParams.set("requestId", args.requestId)
+
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: "Bearer " + token },
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data?.error || "Realtime action status request failed.")
+  return data
+}
