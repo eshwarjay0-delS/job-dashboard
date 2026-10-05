@@ -17,6 +17,17 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // profile_complete is a durable milestone. Once earned, transient integration
+  // health must never send an existing user through onboarding again.
+  if (profile?.profile_complete === true) {
+    return NextResponse.json({
+      complete: true,
+      missing: [],
+      resumeTo: null,
+      durable: true,
+    })
+  }
+
   const missing: string[] = []
   if (!profile?.full_name?.trim()) missing.push("full_name")
   if (!profile?.title?.trim()) missing.push("title")
@@ -24,10 +35,10 @@ export async function GET() {
   if (!profile?.phone_verified) missing.push("phone_verification")
   if (!Array.isArray(profile?.open_to_roles) || profile.open_to_roles.length === 0) missing.push("target_roles")
 
-  const complete = missing.length === 0 && profile?.profile_complete === true
   return NextResponse.json({
-    complete,
+    complete: false,
     missing,
-    resumeTo: complete ? null : "/dashboard/setup",
+    resumeTo: "/dashboard/setup",
+    durable: false,
   })
 }
