@@ -72,10 +72,10 @@ export async function GET(req: NextRequest) {
   // Re-connections should normally receive a refresh token because the flow uses
   // prompt=consent + access_type=offline. If Google omits it, preserve an existing
   // connection only when we can find the same subject; otherwise ask for consent again.
-  let refreshToken = String(tokens.refresh_token || "")
+  const refreshToken = String(tokens.refresh_token || "")
   if (!refreshToken) {
     const { data: existing } = await service.rpc("identity_list_google_workspace_accounts", { p_user_id: user.id })
-    const same = (existing || []).find((row: any) => String(row.google_email).toLowerCase() === String(info.email).toLowerCase())
+    const same = (existing || []).find((row: { id: string; google_email: string }) => String(row.google_email).toLowerCase() === String(info.email).toLowerCase())
     if (!same) return redirectWith(req, state.returnTo, { google_error: "refresh_token_missing" })
 
     const { data: stored } = await service.rpc("identity_get_google_workspace_account", {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import { useTheme, type ColorMode } from "../../theme-provider"
+import { useExperience, type ExperiencePreference } from "@/experience"
 import { connectGoogleDrive } from "@/lib/google-auth"
 import GmailSync from "@/components/GmailSync"
 import { mergeGmailApplications } from "@/lib/applications"
@@ -89,6 +90,7 @@ function DriveSuccessBanner() {
 
 export default function SettingsPage() {
   const { mode, setMode } = useTheme()
+  const { preference: experiencePreference, tier: experienceTier, setPreference: setExperiencePreference } = useExperience()
 
   const [keys, setKeys] = useState<Keys>({ claudeKey: "", rapidApiKey: "", usajobsApiKey: "" })
   const [saved, setSaved] = useState(false)
@@ -730,6 +732,63 @@ export default function SettingsPage() {
               {mode === "dark" ? "Night" : "Paper"}
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* ── Experience quality ───────────────────────────────────── */}
+      <div
+        className="anim-fade-up d-3 rounded-2xl border p-6 space-y-5"
+        style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--surface-2)", border: "1px solid var(--border-strong)" }}>
+            ◫
+          </div>
+          <div>
+            <h2 className="font-semibold" style={{ color: "var(--text)" }}>Motion & rich visuals</h2>
+            <p className="text-sm" style={{ color: "var(--text-soft)" }}>
+              Keep core features identical while MarketFit adapts animation and future 3D to the device.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-3 gap-2">
+          {([
+            { id: "auto", label: "Auto", description: "Recommended. Adapts to motion preference, network and device capability." },
+            { id: "reduced", label: "Reduced", description: "Keep the interface functional with optional motion and rich media minimized." },
+            { id: "rich", label: "Rich", description: "Prefer premium motion and future 3D when the device can render it safely." },
+          ] as { id: ExperiencePreference; label: string; description: string }[]).map(option => {
+            const selected = experiencePreference === option.id
+            return (
+              <button
+                type="button"
+                key={option.id}
+                onClick={() => setExperiencePreference(option.id)}
+                aria-pressed={selected}
+                className="rounded-xl border p-3 text-left transition-all"
+                style={{
+                  background: selected ? "var(--accent-soft)" : "var(--surface-2)",
+                  borderColor: selected ? "var(--accent-border)" : "var(--border)",
+                  color: selected ? "var(--accent-txt)" : "var(--text-muted)",
+                }}
+              >
+                <strong className="block text-sm" style={{ color: selected ? "var(--accent-txt)" : "var(--text)" }}>{option.label}</strong>
+                <span className="block text-xs mt-1 leading-relaxed" style={{ color: "var(--text-soft)" }}>{option.description}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-soft)" }}>Current delivery tier</div>
+            <div className="text-sm mt-1" style={{ color: "var(--text)" }}>
+              {experienceTier === "rich" ? "Rich" : experienceTier === "balanced" ? "Balanced" : "Static-safe"}
+            </div>
+          </div>
+          <span className="text-xs" style={{ color: "var(--text-soft)" }}>
+            Core actions never change
+          </span>
         </div>
       </div>
 

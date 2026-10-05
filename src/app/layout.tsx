@@ -5,6 +5,8 @@ import { ThemeProvider } from "./theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { DialogProvider } from "@/components/ui/dialog-provider";
 import GlobalThemeToggle from "./global-theme-toggle";
+import { ExperienceProvider } from "@/experience/experience-provider";
+import { WebVitalsReporter } from "@/experience/web-vitals-reporter";
 
 // One pairing, each face with one job, so a page never has to choose:
 // a serif for titles, an italic serif only for a short emphasised word, a humanist sans for
@@ -98,8 +100,11 @@ export default function RootLayout({
           which is harmless but otherwise throws a hydration mismatch error. */}
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider>
-          <GlobalThemeToggle />
-          <DialogProvider>{children}</DialogProvider>
+          <ExperienceProvider>
+            <WebVitalsReporter />
+            <GlobalThemeToggle />
+            <DialogProvider>{children}</DialogProvider>
+          </ExperienceProvider>
         </ThemeProvider>
         <Toaster position="top-right" richColors />
       </body>
