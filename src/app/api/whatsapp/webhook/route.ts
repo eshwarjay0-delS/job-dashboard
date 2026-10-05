@@ -305,6 +305,15 @@ async function generate(from: string, session: Session, userId: string) {
     return sendText(from, "I could not tailor your resume just now: the AI services that write it are busy or out of their allowance. Nothing was changed. Send the job description again in a few minutes.")
   }
 
+  // WhatsApp is a hard delivery boundary. Never send a generated DOCX whose measured
+  // rendered keyword coverage is below the product contract, even if an upstream cache,
+  // worker, or future tailoring regression accidentally returns one.
+  const measuredCoverage = result.coverage ?? result.keyword_analysis?.coverage_after ?? 0
+  if (measuredCoverage < 90) {
+    console.error("[whatsapp] blocked low keyword coverage", measuredCoverage, result.token)
+    return sendText(from, "I generated a draft, but its measured JD keyword coverage was " + measuredCoverage + "%, below MarketFit's 90% minimum. I did not send the incomplete resume. Send the job description again to retry.")
+  }
+
   // Nothing came back different: the same file with "Match 28% -> 28%" on it is not a tailored resume, so it is not sent as one.
   // (The job description and the resume stay in the session, as above.)
   if (result.unchanged) {
