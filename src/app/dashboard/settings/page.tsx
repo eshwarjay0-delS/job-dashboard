@@ -90,6 +90,7 @@ function DriveSuccessBanner() {
 
 export default function SettingsPage() {
   const { mode, setMode } = useTheme()
+  const { preference: experiencePreference, tier: experienceTier, setPreference: setExperiencePreference } = useExperience()
 
   const [keys, setKeys] = useState<Keys>({ claudeKey: "", rapidApiKey: "", usajobsApiKey: "" })
   const [saved, setSaved] = useState(false)
