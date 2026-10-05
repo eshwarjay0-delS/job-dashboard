@@ -159,7 +159,7 @@ export async function ingestClientMobileEvent(args: {
     .maybeSingle()
 
   if (error) throw new Error(error.message)
-  if (data) return data
+  if (data) return { ...data, created: true }
 
   const { data: existing, error: existingError } = await db
     .from("realtime_mobile_events")
@@ -169,7 +169,7 @@ export async function ingestClientMobileEvent(args: {
     .maybeSingle()
 
   if (existingError) throw new Error(existingError.message)
-  return existing
+  return existing ? { ...existing, created: false } : null
 }
 
 export async function publishMobileEvent(args: {
