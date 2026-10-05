@@ -96,6 +96,8 @@ export default function SetupPage() {
   const [phoneStatus, setPhoneStatus] = useState("")
   // The number this person can message once their own number is verified and linked (digits with country code, "" until known).
   const [waNumber, setWaNumber] = useState("")
+  // False for an admin of this deployment: they may continue without a verified number (the server decides, see /api/onboarding/status).
+  const [phoneRequired, setPhoneRequired] = useState(true)
 
   useEffect(() => {
     // Restore any existing profile
@@ -126,6 +128,11 @@ export default function SetupPage() {
           gmailConnected: !!(profile.gmail_connected && profile.calendar_connected),
         }))
       })
+      .catch(() => {})
+
+    fetch("/api/onboarding/status", { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : null))
+      .then(body => { if (body && body.phoneRequired === false) setPhoneRequired(false) })
       .catch(() => {})
 
     // Someone who verified on an earlier visit still needs to see the number they can message.
@@ -238,7 +245,7 @@ export default function SetupPage() {
   }
 
   async function advance() {
-    if (step === 0 && !data.phoneVerified) {
+    if (step === 0 && !data.phoneVerified && phoneRequired) {
       setPhoneStatus("Verify your mobile number before continuing.")
       return
     }
@@ -327,7 +334,7 @@ export default function SetupPage() {
               ))}
             </div>
             <div style={{ marginTop: 16, padding: 14, borderRadius: 12, border: `1px solid ${P.border}`, background: P.bg }}>
-              <label style={{ fontSize: 11.5, fontWeight: 700, color: P.hint, display: "block", marginBottom: 6 }}>VERIFIED MOBILE NUMBER *</label>
+              <label style={{ fontSize: 11.5, fontWeight: 700, color: P.hint, display: "block", marginBottom: 6 }}>{phoneRequired ? "VERIFIED MOBILE NUMBER *" : "VERIFIED MOBILE NUMBER (optional for your account)"}</label>
               <div style={{ display: "flex", gap: 8 }}>
                 <input
                   type="tel"

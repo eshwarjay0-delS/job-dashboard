@@ -23,6 +23,7 @@ import { resolveKeys, hasAnyKey } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
 import { extractJdMeta } from "@/lib/claude"
 import { sendText, sendDocument, downloadMedia, verifySignature, senderAllowed, waConfigured } from "@/lib/whatsapp"
+import { ownerWhatsAppUserId } from "@/lib/owner"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
 export const runtime = "nodejs"
@@ -77,6 +78,9 @@ const genDir = (from: string) => `whatsapp/gens/${digits(from)}`
 
 async function resolveWhatsAppUserId(from: string): Promise<string | null> {
   if (process.env.WHATSAPP_IDENTITY_BINDING_REQUIRED !== "1") return FALLBACK_USER_ID
+  // A number the owner listed in settings is answered without the binding (see src/lib/owner.ts for why).
+  const owner = ownerWhatsAppUserId(from, FALLBACK_USER_ID)
+  if (owner) return owner
   if (!serviceClientAvailable()) return null
   const phone = `+${digits(from)}`
   const service = createServiceClient()
