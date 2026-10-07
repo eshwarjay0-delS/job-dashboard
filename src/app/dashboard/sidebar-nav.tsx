@@ -21,7 +21,8 @@ export default function SidebarNav() {
   const router = useRouter()
   const [initials, setInitials] = useState("MF")
   const [email, setEmail] = useState("")
-  const [signedIn, setSignedIn] = useState(false)\n  const [owner, setOwner] = useState(false)
+  const [signedIn, setSignedIn] = useState(false)
+  const [owner, setOwner] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const { mode, setMode } = useTheme()
   const dark = mode === "dark"
@@ -59,10 +60,23 @@ export default function SidebarNav() {
       // A later sign-out or account switch must win over this initial request.
       if (!active || authRevision !== initialRevision) return
       updateAccount(user)
-      if (!user || user.is_anonymous || window.location.pathname.startsWith("/dashboard/setup")) return
+      if (!user || user.is_anonymous) {
+        setOwner(false)
+        return
+      }
       try {
+        const ownerResponse = await fetch("/api/admin/owner", { cache: "no-store" })
+        const ownerState = ownerResponse.ok ? await ownerResponse.json() : null
+        if (!active || authRevision !== initialRevision) return
+        if (ownerState?.owner === true) {
+          setOwner(true)
+          if (window.location.pathname.startsWith("/dashboard/setup")) router.replace("/dashboard/admin")
+          return
+        }
+        setOwner(false)
+        if (window.location.pathname.startsWith("/dashboard/setup")) return
         const { data } = await supabase.from("profiles").select("profile_complete").eq("id", user.id).maybeSingle()
-        if (active && authRevision === initialRevision && data?.profile_complete === false && !window.location.pathname.startsWith("/dashboard/setup")) {
+        if (active && authRevision === initialRevision && data?.profile_complete === false) {
           router.replace("/dashboard/setup")
         }
       } catch { /* Account setup checks must not block navigation. */ }
@@ -144,7 +158,8 @@ export default function SidebarNav() {
       </div>
 
       {/* ── Main Nav ──────────────────────────────────────────────── */}
-      <nav id="marketfit-navigation" aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>\n        {owner && <Link href="/dashboard/admin" className={`sb-link${pathname.startsWith("/dashboard/admin") ? " active" : ""}`}><span className="sb-icon">⚙</span><span>Admin</span></Link>}
+      <nav id="marketfit-navigation" aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
+        {owner && <Link href="/dashboard/admin" className={`sb-link${pathname.startsWith("/dashboard/admin") ? " active" : ""}`}><span className="sb-icon">⚙</span><span>Admin</span></Link>}
         {PRIMARY_NAV.map(item => {
           const active = isActive(item.href, pathname)
           const content = <><span className="sb-icon">{item.icon}</span><span>{item.label}</span></>
