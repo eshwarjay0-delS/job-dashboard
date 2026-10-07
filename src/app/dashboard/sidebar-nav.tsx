@@ -3,7 +3,7 @@
 import Link from "next/link"
 import type { User } from "@supabase/supabase-js"
 import { usePathname, useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { NAV_SECTIONS, NAV_ITEMS, PRIMARY_NAV } from "./_components/nav"
 import { useTheme } from "../theme-provider"
@@ -23,12 +23,46 @@ export default function SidebarNav() {
   const [email, setEmail] = useState("")
   const [signedIn, setSignedIn] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const accountRef = useRef<HTMLDivElement>(null)
   const { mode, setMode } = useTheme()
   const dark = mode === "dark"
 
   useEffect(() => {
     setMenuOpen(false)
+    setAccountOpen(false)
   }, [pathname])
+
+  useEffect(() => {
+    if (!accountOpen) return
+    const close = (event: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(event.target as Node)) setAccountOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAccountOpen(false)
+    }
+    document.addEventListener("mousedown", close)
+    window.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", close)
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [accountOpen])
+
+  async function signOut() {
+    if (signingOut) return
+    setSigningOut(true)
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+      setAccountOpen(false)
+      router.replace("/login")
+      router.refresh()
+    } finally {
+      setSigningOut(false)
+    }
+  }
 
   useEffect(() => {
     if (!menuOpen) return
@@ -176,8 +210,32 @@ export default function SidebarNav() {
       </nav>
 
       {/* ── Account ────────────────────────────────────────── */}
-      <div style={{ padding: "12px 14px 16px", flexShrink: 0, borderTop: "0.8px solid var(--border-strong)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+      <div ref={accountRef} style={{ padding: "12px 14px 16px", flexShrink: 0, borderTop: "0.8px solid var(--border-strong)", position: "relative" }}>
+        {signedIn && accountOpen && (
+          <div role="menu" aria-label="Account menu" style={{
+            position: "absolute", left: 12, right: 12, bottom: "calc(100% + 8px)", zIndex: 80,
+            background: "var(--surface)", border: "0.8px solid var(--border-strong)", borderRadius: 12,
+            boxShadow: "0 14px 36px rgba(0,0,0,.16)", padding: 10,
+          }}>
+            <div style={{ padding: "6px 8px 10px", borderBottom: "0.8px solid var(--border-strong)" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {email?.split("@")[0] || "Account"}
+              </div>
+              <div style={{ marginTop: 3, fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</div>
+            </div>
+            <Link role="menuitem" href="/dashboard/connections" onClick={() => setAccountOpen(false)} style={{
+              display: "flex", alignItems: "center", minHeight: 42, padding: "0 8px", color: "var(--text)", textDecoration: "none", fontSize: 13,
+            }}>Manage account</Link>
+            <button role="menuitem" type="button" onClick={signOut} disabled={signingOut} style={{
+              width: "100%", minHeight: 42, padding: "0 8px", textAlign: "left", border: 0,
+              borderTop: "0.8px solid var(--border-strong)", background: "transparent", color: "var(--text)",
+              font: "inherit", fontSize: 13, fontWeight: 650, cursor: signingOut ? "wait" : "pointer",
+            }}>{signingOut ? "Logging out…" : "Log out"}</button>
+          </div>
+        )}
+        <button type="button" onClick={() => signedIn ? setAccountOpen(open => !open) : router.push("/login?next=/dashboard")}
+          aria-expanded={signedIn ? accountOpen : undefined} aria-haspopup={signedIn ? "menu" : undefined}
+          style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: 0, border: 0, background: "transparent", textAlign: "left", cursor: "pointer" }}>
           <div style={{
             width: 28, height: 28, flexShrink: 0, background: "var(--surface-2)", color: "var(--text)",
             border: "0.8px solid var(--border-strong)",
@@ -188,9 +246,9 @@ export default function SidebarNav() {
             <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {email?.split("@")[0] || "Account"}
             </div>
-            <Link href={signedIn ? "/dashboard/connections" : "/login?next=/dashboard"} style={{ display: "inline-flex", alignItems: "center", minHeight: 44, fontSize: 13, color: "var(--text)", textUnderlineOffset: 4 }}>{signedIn ? "Manage my accounts" : "Sign in to your account"}</Link>
+            <div style={{ minHeight: 30, display: "flex", alignItems: "center", fontSize: 13, color: "var(--text)" }}>{signedIn ? "Manage my account" : "Sign in to your account"}</div>
           </div>
-        </div>
+        </button>
       </div>
     </aside>
     </>
