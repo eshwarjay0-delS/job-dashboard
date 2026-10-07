@@ -221,7 +221,7 @@ export default function SidebarNav() {
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {email?.split("@")[0] || "Account"}
               </div>
-              <div style={{ marginTop: 3, fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</div>
+              <div style={{ marginTop: 3, fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</div>
             </div>
             <Link role="menuitem" href="/dashboard/connections" onClick={() => setAccountOpen(false)} style={{
               display: "flex", alignItems: "center", minHeight: 42, padding: "0 8px", color: "var(--text)", textDecoration: "none", fontSize: 13,
