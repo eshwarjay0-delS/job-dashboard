@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"\nimport ChatIntegrationsCard from "./ChatIntegrationsCard"
 
 /* ═══════════════════════════════════════════════════════════════════
    TYPES
@@ -116,7 +116,7 @@ export default function CopilotPage() {
   const [input, setInput]           = useState("")
   const [loading, setLoading]       = useState(false)
   const [ctx, setCtx]               = useState<UserContext>({})
-  const [activeGroup, setActiveGroup] = useState(0)
+  const [activeGroup, setActiveGroup] = useState(0)\n  const [showIntegrations, setShowIntegrations] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef  = useRef<HTMLTextAreaElement>(null)
 
