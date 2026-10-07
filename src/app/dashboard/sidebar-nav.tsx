@@ -21,7 +21,7 @@ export default function SidebarNav() {
   const router = useRouter()
   const [initials, setInitials] = useState("MF")
   const [email, setEmail] = useState("")
-  const [signedIn, setSignedIn] = useState(false)
+  const [signedIn, setSignedIn] = useState(false)\n  const [owner, setOwner] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const { mode, setMode } = useTheme()
   const dark = mode === "dark"
@@ -144,7 +144,7 @@ export default function SidebarNav() {
       </div>
 
       {/* ── Main Nav ──────────────────────────────────────────────── */}
-      <nav id="marketfit-navigation" aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
+      <nav id="marketfit-navigation" aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>\n        {owner && <Link href="/dashboard/admin" className={`sb-link${pathname.startsWith("/dashboard/admin") ? " active" : ""}`}><span className="sb-icon">⚙</span><span>Admin</span></Link>}
         {PRIMARY_NAV.map(item => {
           const active = isActive(item.href, pathname)
           const content = <><span className="sb-icon">{item.icon}</span><span>{item.label}</span></>
