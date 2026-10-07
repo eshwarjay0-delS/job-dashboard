@@ -8,6 +8,7 @@ import { recentFeedback } from "./feedback"
 import { matchByKeywords, extractKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
+import { priceCalls, type PricedCall } from "./llmPrices"
 
 export interface TailorResult {
   token: string
@@ -58,6 +59,10 @@ export interface TailorResult {
     cacheReadTokens: number
     cacheWriteTokens: number
     estCostUSD: number
+    /** Calls to a model with no known price. When not 0, estCostUSD is a floor, not the cost. */
+    unpricedCalls?: number
+    /** The same usage, per model that served it. */
+    byModel?: PricedCall[]
   }
 }
 
@@ -774,8 +779,10 @@ export async function runTailor(opts: {
     (a, u) => ({ input: a.input + u.input, output: a.output + u.output, cacheRead: a.cacheRead + u.cacheRead, cacheWrite: a.cacheWrite + u.cacheWrite }),
     { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
   )
-  // Approx Haiku 4.5 rates ($/M): input 1.00, output 5.00, cache write 1.25, cache read 0.10.
-  const estCostUSD = Math.round((uAgg.input * 1 + uAgg.output * 5 + uAgg.cacheWrite * 1.25 + uAgg.cacheRead * 0.1) / 1e6 * 1e5) / 1e5
+  // Priced per call by the model that served it (src/lib/llmPrices.ts). This used to price every token at Claude Haiku's rate,
+  // so a resume written by GPT Luna showed ten times its cost and one written on Groq's free allowance showed as money spent.
+  const priced = priceCalls(usageSink)
+  const estCostUSD = priced.costUsd
 
   // The file's name. A whole draft that changed something is stored under the deterministic key, beside its cached result
   // (same inputs → same file). An incomplete or unchanged one gets another name: written over the key, it left an EARLIER
@@ -792,7 +799,7 @@ export async function runTailor(opts: {
     experience_skills: { listed: claimedKw.size, shown: provenKw.size },
     ...(best.partial ? { partial: best.partial } : {}),
     ...(diff.length ? {} : { unchanged: true }),
-    usage: { calls: usageSink.length, inputTokens: uAgg.input, outputTokens: uAgg.output, cacheReadTokens: uAgg.cacheRead, cacheWriteTokens: uAgg.cacheWrite, estCostUSD },
+    usage: { calls: usageSink.length, inputTokens: uAgg.input, outputTokens: uAgg.output, cacheReadTokens: uAgg.cacheRead, cacheWriteTokens: uAgg.cacheWrite, estCostUSD, unpricedCalls: priced.unpricedCalls, byModel: priced.byModel },
   }
 
   // Only a whole draft that changed something is worth serving again: an incomplete or unchanged one should be redone

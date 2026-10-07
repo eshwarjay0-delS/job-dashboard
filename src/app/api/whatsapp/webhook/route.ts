@@ -21,6 +21,7 @@ import { blob, writePath, existsPath, deletePath } from "@/lib/storage"
 import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
 import { resolveKeys, hasAnyKey, tailorKeys } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
+import { recordTailor } from "@/lib/tailorLedger"
 import { extractJdMeta } from "@/lib/claude"
 import { sendText, sendDocument, downloadMedia, verifySignature, senderAllowed, waConfigured } from "@/lib/whatsapp"
 import { ownerWhatsAppUserId, isOwnerWhatsApp } from "@/lib/owner"
@@ -302,6 +303,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd })
 
+  // Every generation is written down as it ends, failed ones included: the admin page counts them (src/lib/tailorLedger.ts).
+  const began = Date.now()
   let result: TailorResult
   try {
     result = await runTailor({
@@ -314,7 +317,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       // Match the dashboard defaults: summary left as written, skills + experience retargeted.
       sections: { summary: false, skills: true, experience: true },
     })
+    await recordTailor({ channel: "whatsapp", kind: "tailor", personId: digits(from), startedAt: began, result })
   } catch (e) {
+    await recordTailor({ channel: "whatsapp", kind: "tailor", personId: digits(from), startedAt: began, error: e })
     // The job description and the resume stay in the session, so sending either again retries without starting over.
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
     return sendText(from, "I could not tailor your resume just now: the AI services that write it are busy or out of their allowance. Nothing was changed. Send the job description again in a few minutes.")
@@ -370,6 +375,7 @@ async function refine(from: string, replyTo: string, request: string, userId: st
   const asksHeadline = /\b(title|headline|header|tagline|designation)\b/i.test(request)
   const asksSummary = /\b(summary|profile|objective|about me|intro|introduction)\b/i.test(request)
 
+  const began = Date.now()
   const result = await runTailor({
     jd: gen.jd,
     keys,
@@ -381,7 +387,11 @@ async function refine(from: string, replyTo: string, request: string, userId: st
     noCache: true, // sending the same request again should redraft, not replay the last result
     mode: "full",
     sections: { headline: asksHeadline, summary: asksSummary, skills: true, experience: true },
+  }).catch(async (e: unknown) => {
+    await recordTailor({ channel: "whatsapp", kind: "refine", personId: digits(from), startedAt: began, error: e })
+    throw e
   })
+  await recordTailor({ channel: "whatsapp", kind: "refine", personId: digits(from), startedAt: began, result })
 
   const lines = result.diff.length + (result.edits.extras || []).filter(e => (e.text || "").trim()).length
   if (!lines) {

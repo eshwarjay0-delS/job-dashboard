@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
 import { runTailor } from "@/lib/tailor"
+import { recordTailor } from "@/lib/tailorLedger"
 import { resolveKeys, hasAnyKey, tailorKeys } from "@/lib/llm"
 import { authenticatedUser, signInRequired, ownedResumePath } from "@/lib/authBoundary"
 import { isAdminEmail } from "@/lib/owner"
@@ -71,6 +72,8 @@ export async function POST(request: NextRequest) {
     }
 
     const userResumeDir = path.join(USER_RESUMES_BASE, userId)
+    // Every generation is written down as it ends, failed ones included: the admin page counts them (src/lib/tailorLedger.ts).
+    const began = Date.now()
     const result = await runTailor({
       jd, keys, pref: body.llmHeavy, userResumeDir,
       givenPath: body.filepath || undefined,
@@ -79,7 +82,11 @@ export async function POST(request: NextRequest) {
       onePage: !!body.onePage,
       sections: body.sections,
       mode: body.mode === "quick" ? "quick" : "full",
+    }).catch(async (e: unknown) => {
+      await recordTailor({ channel: "web", kind: "tailor", personId: userId, startedAt: began, error: e })
+      throw e
     })
+    await recordTailor({ channel: "web", kind: "tailor", personId: userId, startedAt: began, result })
     return NextResponse.json(result)
   } catch (e: unknown) {
     return NextResponse.json({ error: `Tailoring failed: ${String(e)}` }, { status: 500 })

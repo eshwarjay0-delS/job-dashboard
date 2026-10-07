@@ -30,6 +30,14 @@ export async function GET() {
     })
   }
 
+  // An admin is never sent through setup (owner, 2026-10-07: "skip onboarding for this user as well"). The address must be one
+  // the identity provider has confirmed, the same test every admin route applies (src/lib/adminAccess.ts): an unconfirmed
+  // address proves nothing about who is signed in. Not durable: the profile is left as it is, so removing the address from
+  // ADMIN_EMAILS puts the account back on the ordinary path. Setup stays open to an admin who wants to fill it in.
+  if (user.email_confirmed_at && isAdminEmail(user.email)) {
+    return NextResponse.json({ complete: true, missing: [], resumeTo: null, durable: false, admin: true })
+  }
+
   const missing: string[] = []
   if (!profile?.full_name?.trim()) missing.push("full_name")
   if (!profile?.title?.trim()) missing.push("title")

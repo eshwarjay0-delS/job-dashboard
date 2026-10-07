@@ -1,3 +1,38 @@
+## 2026-10-07 — One Admin page for MarketFit and Kompas: resumes, model calls, cost, what is left (Claude Code)
+
+The owner: "it should also provide good overview about how much usage is left. How many were interacted. clear picture of resume gen costs. How many generated this week and today", "Make this another nav for admin only eshwarjay0@gmail.com is the admin. And skip onboarding for this user as well", "This should be a centralized place for job-dashboard and kompas usage. API costs, tokens costs".
+
+**Built**
+
+- **`/dashboard/admin`** (`src/app/dashboard/admin/page.tsx`): resumes written today / last 7 days / this month with people who asked, cost, cost for one resume, failed, unchanged, served again; the week day by day; where they came from; what is left (OpenAI against a budget, Groq's own allowance, every provider's state); every model call by app, by job and by model with tokens in and out and cost; the latest twenty resumes; the prices used. Built from the dashboard's tokens and shared parts (`PageIntro`, `Card`, `Meta`, `Chip`): no colour of its own, so Paper and Night both hold.
+- **An Admin link in the sidebar for admins only** (`ADMIN_NAV` in `_components/nav.tsx`, `sidebar-nav.tsx`). The sidebar asks `GET /api/admin/me`; the link is kept out of `NAV_SECTIONS` so the Home tiles never list it. Hiding it guards nothing: the data route checks again.
+- **Who is an admin** (`src/lib/adminAccess.ts`): a signed-in person whose confirmed email is in `ADMIN_EMAILS`, or the older shared login. `/api/admin/config` now takes either. `eshwarjay0@gmail.com` was added to `ADMIN_EMAILS` on Vercel beside the address already there (two listed now).
+- **An admin skips setup**: `/api/onboarding/status` answers complete for a confirmed admin address, and the sidebar's own profile check leaves an admin where they are.
+- **Two ledgers in storage, no database**: `src/lib/llmLedger.ts` files every model call (app, job, provider, model, ok or the refusal's status, tokens, time) as one empty object whose NAME is the record, read back with one listing a day; `src/lib/tailorLedger.ts` keeps one small record per resume request with a hash of who asked. Neither holds a word of anyone's resume or any identity. Cost is worked out when the page loads from `src/lib/llmPrices.ts`, so a corrected price corrects the past.
+- **`callLLM` records every call** (`src/lib/llm.ts`), labelled by what it was for (`purpose` in `claude.ts`, `llmStatus.ts`, `workflows/interview-prep.ts`). Groq's allowance headers are kept as they arrive (`groqAllowances()`).
+- **Kompas reports in** through `POST /api/usage/ingest` (`src/lib/usageIngest.ts`): a signed report of counts and labels, refused when stale, oversized, misshapen or back-dated. The signing key is derived from the Groq key both deployments already hold (the Groq key itself is never sent), or `USAGE_INGEST_SECRET` when set on both.
+- The older panel (post links, job sources, sample candidates, its own dark palette, a login nobody could pass on the live site) moved untouched to `/dashboard/admin/links`.
+
+**Verified**
+
+- `scripts/tests/usage-ledger.test.mjs`, 18 of 18; the suite 92 of 93 (the standing Windows path test). `npx tsc --noEmit` clean.
+- The round-trip test caught a real defect before anything shipped: the time in a call's key went through the token-count cap and every call was filed on 2 January 1970. Fixed.
+- Storage round trip on this machine's disk store through the real record and read functions: 7 of 7 calls and 7 of 7 resume records kept and read back; week cost $0.00227 as worked out by hand.
+- The page rendered in a local browser at 1366 wide and at phone width with that data: five sections, no sideways scroll, no console error from the page.
+
+**NOT verified**
+
+- **The page signed in as the admin on the live site.** I cannot sign in. Open `/dashboard/admin` signed in as the admin address and it should show; any other account sees "This page is for admins".
+- The ledgers on R2 (only the disk store was run), and `after()` keeping a record when the function ends: the first live resume proves or disproves both. If the page stays empty after a resume, that is where to look.
+- Groq's allowance is per server instance: an instance that has not called Groq shows none.
+- Kompas does not send anything until its side ships (perfACT `copilot/api/_usage.js`); until then the page says its numbers are missing.
+
+**Where to pick up**
+
+- `OPENAI_MONTHLY_BUDGET_USD` on Vercel gives "left" a figure for OpenAI; without it the card shows the month's spend and says why.
+- `ADMIN_TIME_ZONE` (default `America/Chicago`) decides what "today" means.
+- `/dashboard/admin/links` still shows sample candidates: rebuild in the product's look, or retire. `settings/page.tsx` shows an "Admin Panel" card to everyone; it now leads to the admin page, which refuses non-admins.
+
 ## 2026-10-05 (evening) — Review of the tailor's lanes: twelve defects confirmed, eleven fixed, two more tightened by choice (Claude Code)
 
 A review of commit `d2ca775` (three reviewers by subject: the scheduler, who can cause an OpenAI call, the provider layer; each finding then traced by a second agent told to refute it). It was cut off once by a usage limit and re-run to the end: 16 agents, 15 second opinions, 14 of them "real", 1 "not a defect". The count, exactly: twelve distinct defects confirmed by a second agent; eleven are fixed below and one is left as it was (the keyword call spending Groq's light model, see the second pass). Two further items were changed without that confirmation and are marked so. Everything was re-checked against the code as it stands now, which other commits have changed since. No visible page: this is the tailor behind `POST /api/tailor` and the WhatsApp bot.

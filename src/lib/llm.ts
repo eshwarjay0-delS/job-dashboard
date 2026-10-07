@@ -113,7 +113,9 @@ export type ChatMessage = { role: "user" | "assistant"; content: string }
 
 // Token accounting for one call. cacheRead tokens bill at ~10% of input, so a high
 // cacheRead share on repeat tailors of the same resume is the main cost win.
-export type TokenUsage = { input: number; output: number; cacheRead: number; cacheWrite: number }
+// `provider` and `model` say who served the call. Without them a tailor's tokens could only be priced at one model's rate
+// whatever had answered (src/lib/llmPrices.ts): a resume written on a free allowance was shown as money spent.
+export type TokenUsage = { input: number; output: number; cacheRead: number; cacheWrite: number; provider?: Provider; model?: string }
 
 interface CallOpts {
   keys: LlmKeys; tier: Tier; pref?: ProviderPref; system: string; maxTokens: number
@@ -140,6 +142,22 @@ interface CallOpts {
   // Optional sink: each call pushes its token usage here so the caller can total the
   // real cost of a whole tailor (and prove the cache is working).
   usageSink?: TokenUsage[]
+  // What the call is for, as a short label ("resume-tailor", "field-edit"). It is what the admin page groups cost by; a
+  // call that does not say is filed under "other".
+  purpose?: string
+}
+
+// Every call is written down after the response has gone (src/lib/llmLedger.ts): provider, model, purpose, tokens, whether
+// it answered. No words. The module is loaded on first use and by a relative path, so this file still has no import a
+// plain Node test cannot resolve; where it cannot be loaded (those tests), nothing is recorded and nothing fails.
+function recordCall(call: { purpose?: string; provider: Provider; model: string; ok: boolean; status?: number; usage?: TokenUsage; began: number }): void {
+  const at = Date.now()
+  void import("./llmLedger").then(m => m.scheduleLlmRecord({
+    at, app: "marketfit", purpose: call.purpose || "other", provider: call.provider, model: call.model, ok: call.ok,
+    ...(call.status ? { status: call.status } : {}),
+    input: call.usage?.input || 0, output: call.usage?.output || 0, cacheRead: call.usage?.cacheRead || 0, cacheWrite: call.usage?.cacheWrite || 0,
+    ms: at - call.began,
+  })).catch(() => { /* no ledger here: a test, or a build without one */ })
 }
 
 // Hard per-call timeout. Without it, a throttled/hung provider request has no
@@ -219,17 +237,24 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
     const model = named && opts.exactModel ? opts.exactModel
       : (opts.model && provider === "anthropic" && /^claude/i.test(opts.model)) ? opts.model
       : modelFor(provider, opts.tier)
+    // The call's own usage is read back from the sink the provider function writes to: the caller's, or one made here.
+    const sink = opts.usageSink ?? []
+    const o = opts.usageSink ? opts : { ...opts, usageSink: sink }
+    const before = sink.length, calledAt = Date.now()
     try {
-      const text = provider === "anthropic" ? await callAnthropic(key, model, opts, msgs)
-        : provider === "openrouter" ? await callOpenRouter(key, model, opts, msgs)
-        : provider === "groq" ? await callGroq(key, model, opts, msgs)
-        : provider === "openai" ? await callOpenAI(key, model, opts, msgs)
-        : await callGemini(key, model, opts, msgs)
+      const text = provider === "anthropic" ? await callAnthropic(key, model, o, msgs)
+        : provider === "openrouter" ? await callOpenRouter(key, model, o, msgs)
+        : provider === "groq" ? await callGroq(key, model, o, msgs)
+        : provider === "openai" ? await callOpenAI(key, model, o, msgs)
+        : await callGemini(key, model, o, msgs)
       downUntil.delete(provider)
       // For OpenAI, report the id that answered: it may be the account's own name for the model that was asked for.
-      return { text, provider, model: provider === "openai" ? openaiAlias.get(model) || model : model }
+      const answered = provider === "openai" ? openaiAlias.get(model) || model : model
+      recordCall({ purpose: opts.purpose, provider, model: answered, ok: true, usage: sink.length > before ? sink[sink.length - 1] : undefined, began: calledAt })
+      return { text, provider, model: answered }
     } catch (e) {
       lastErr = e
+      recordCall({ purpose: opts.purpose, provider, model, ok: false, status: Number((/API (\d{3})\b/.exec(String((e as Error)?.message || e)) || [])[1]) || undefined, began: calledAt })
       if (wontClear(String((e as Error)?.message || e), !!(named && opts.exactModel))) downUntil.set(provider, Date.now() + 5 * 60_000)
     }
   }
@@ -280,6 +305,7 @@ async function callAnthropic(key: string, model: string, o: CallOpts, msgs: Chat
     output: u.output_tokens || 0,
     cacheRead: u.cache_read_input_tokens || 0,
     cacheWrite: u.cache_creation_input_tokens || 0,
+    provider: "anthropic", model,
   })
   return (data.content || []).map((b: { text?: string }) => b.text || "").join("")
 }
@@ -305,7 +331,7 @@ async function callOpenRouter(key: string, model: string, o: CallOpts, msgs: Cha
   if (!res.ok) throw new Error(`OpenRouter API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
   const u = data.usage || {}
-  o.usageSink?.push({ input: u.prompt_tokens || 0, output: u.completion_tokens || 0, cacheRead: 0, cacheWrite: 0 })
+  o.usageSink?.push({ input: u.prompt_tokens || 0, output: u.completion_tokens || 0, cacheRead: 0, cacheWrite: 0, provider: "openrouter", model })
   return data.choices?.[0]?.message?.content || ""
 }
 
@@ -341,8 +367,32 @@ async function callGroq(key: string, model: string, o: CallOpts, msgs: ChatMessa
   if (!res.ok) throw new Error(`Groq API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
   const u = data.usage || {}
-  o.usageSink?.push({ input: u.prompt_tokens || 0, output: u.completion_tokens || 0, cacheRead: 0, cacheWrite: 0 })
+  o.usageSink?.push({ input: u.prompt_tokens || 0, output: u.completion_tokens || 0, cacheRead: 0, cacheWrite: 0, provider: "groq", model })
+  noteGroqAllowance(model, res.headers)
   return data.choices?.[0]?.message?.content || ""
+}
+
+// What Groq says is left, per model, as of the last answer this server instance got from it.
+//
+// "How much usage is left" (owner, 2026-10-07) has one honest source on a free allowance: the provider's own headers. Every
+// Groq answer carries the day's request allowance and the minute's token allowance with what remains of each. They are kept
+// here as they arrive, so the admin page reads what Groq last said and never an estimate of ours. `at` is when it was said: a
+// figure from an instance that has been idle for an hour is an hour old, and the page shows that.
+export type GroqAllowance = { model: string; at: number; requestsLimit: number | null; requestsLeft: number | null; tokensLimit: number | null; tokensLeft: number | null }
+const groqLeft = new Map<string, GroqAllowance>()
+function noteGroqAllowance(model: string, headers: Headers | undefined): void {
+  if (!headers || typeof headers.get !== "function") return
+  const n = (name: string) => { const v = headers.get(name); return v !== null && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null }
+  const seen: GroqAllowance = {
+    model, at: Date.now(),
+    requestsLimit: n("x-ratelimit-limit-requests"), requestsLeft: n("x-ratelimit-remaining-requests"),
+    tokensLimit: n("x-ratelimit-limit-tokens"), tokensLeft: n("x-ratelimit-remaining-tokens"),
+  }
+  if (seen.requestsLimit !== null || seen.tokensLimit !== null) groqLeft.set(model, seen)
+}
+/** Newest first. Empty until this instance has had an answer from Groq. */
+export function groqAllowances(): GroqAllowance[] {
+  return [...groqLeft.values()].sort((a, b) => b.at - a.at)
 }
 
 // OpenAI (resume tailoring only: see tailorKeys).
@@ -392,7 +442,7 @@ async function callOpenAI(key: string, wanted: string, o: CallOpts, msgs: ChatMe
       const data = await res.json()
       const u = data.usage || {}
       const cached = u.prompt_tokens_details?.cached_tokens || 0
-      o.usageSink?.push({ input: Math.max(0, (u.prompt_tokens || 0) - cached), output: u.completion_tokens || 0, cacheRead: cached, cacheWrite: 0 })
+      o.usageSink?.push({ input: Math.max(0, (u.prompt_tokens || 0) - cached), output: u.completion_tokens || 0, cacheRead: cached, cacheWrite: 0, provider: "openai", model })
       return data.choices?.[0]?.message?.content || ""
     }
     const raw = await res.text()
@@ -439,7 +489,7 @@ async function callGemini(key: string, model: string, o: CallOpts, msgs: ChatMes
   if (!res.ok) throw new Error(`Gemini API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
   const m = data.usageMetadata || {}
-  o.usageSink?.push({ input: m.promptTokenCount || 0, output: m.candidatesTokenCount || 0, cacheRead: m.cachedContentTokenCount || 0, cacheWrite: 0 })
+  o.usageSink?.push({ input: m.promptTokenCount || 0, output: m.candidatesTokenCount || 0, cacheRead: m.cachedContentTokenCount || 0, cacheWrite: 0, provider: "gemini", model })
   const parts = data.candidates?.[0]?.content?.parts || []
   return parts.map((p: { text?: string }) => p.text || "").join("")
 }

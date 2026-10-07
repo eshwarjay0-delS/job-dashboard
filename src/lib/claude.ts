@@ -268,7 +268,7 @@ export async function adapt(opts: {
     try {
       // Low temperature → CONSISTENT keyword coverage & escalation decisions run-to-run
       // (default sampling swung 93–98% coverage and 25–73s on identical input).
-      text = (await callLLM({ keys: opts.keys, tier: opts.mode === "quick" ? "light" : "heavy", pref: opts.pref, system: opts.refine ? REFINE_RULES : RULES, cacheContext, user, maxTokens: cap, model: opts.model, exactModel: opts.exactModel, temperature: 0.2, usageSink: opts.usageSink })).text
+      text = (await callLLM({ keys: opts.keys, tier: opts.mode === "quick" ? "light" : "heavy", pref: opts.pref, system: opts.refine ? REFINE_RULES : RULES, cacheContext, user, maxTokens: cap, purpose: opts.refine ? "resume-change" : "resume-tailor", model: opts.model, exactModel: opts.exactModel, temperature: 0.2, usageSink: opts.usageSink })).text
     } catch (e) {
       lastErr = e
       // Auth / bad-request errors won't fix themselves on retry, and a rate limit (429) was
@@ -377,7 +377,7 @@ ${opts.jd.slice(0, 12000)}
   const call = (async () => {
     const text = (await callLLM({
       keys: opts.keys, tier: "light", pref: opts.pref, system, user,
-      maxTokens: 700, model: opts.model, temperature: 0.2, usageSink: opts.usageSink,
+      maxTokens: 700, model: opts.model, temperature: 0.2, usageSink: opts.usageSink, purpose: "resume-keywords",
     })).text
     let t = text.trim().replace(/^```[a-zA-Z]*\s*/, "").replace(/\s*```$/, "").trim()
     const a = t.indexOf("["), b = t.lastIndexOf("]")
@@ -431,7 +431,7 @@ Return the JSON.`
   const call = (async () => {
     const text = (await callLLM({
       keys: opts.keys, tier: "light", pref: opts.pref, system, user,
-      maxTokens: 200, temperature: 0, usageSink: opts.usageSink,
+      maxTokens: 200, temperature: 0, usageSink: opts.usageSink, purpose: "job-details",
     })).text
     let t = text.trim().replace(/^```[a-zA-Z]*\s*/, "").replace(/\s*```$/, "").trim()
     const a = t.indexOf("{"), b = t.lastIndexOf("}")
@@ -486,7 +486,7 @@ export async function augmentCoverage(opts: {
   for (let attempt = 0; attempt < 2; attempt++) {
     let text: string
     try {
-      text = (await callLLM({ keys: opts.keys, tier: "heavy", pref: opts.pref, system: RULES, user, maxTokens: cap, model: opts.model })).text
+      text = (await callLLM({ keys: opts.keys, tier: "heavy", pref: opts.pref, system: RULES, user, maxTokens: cap, model: opts.model, purpose: "resume-coverage" })).text
     } catch (e) {
       if (/\b(400|401|403)\b/.test(String(e))) throw e
       continue
@@ -525,7 +525,7 @@ export async function assistField(opts: {
     `INSTRUCTION: ${opts.instruction}\n\nReturn ONLY the revised ${opts.section} text.`
 
   const route = await routeFieldEdit({ section: opts.section, instruction: opts.instruction })
-  const text = (await callLLM({ keys: opts.keys, tier: route.tier, pref: opts.pref, system, user, maxTokens: 600 })).text.trim()
+  const text = (await callLLM({ keys: opts.keys, tier: route.tier, pref: opts.pref, system, user, maxTokens: 600, purpose: "field-edit" })).text.trim()
   // Strip any stray wrapping quotes / leading bullet the model may add.
   const cleaned = text.replace(/^["'`]+|["'`]+$/g, "").replace(/^\s*[•\-–*]\s*/, "").trim()
   // Never let placeholder/Latin filler replace the user's real line — keep the original.

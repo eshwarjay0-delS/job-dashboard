@@ -5,10 +5,18 @@ import type { User } from "@supabase/supabase-js"
 import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { NAV_SECTIONS, NAV_ITEMS, PRIMARY_NAV } from "./_components/nav"
+import { ADMIN_NAV, NAV_SECTIONS, NAV_ITEMS, PRIMARY_NAV } from "./_components/nav"
 import { useTheme } from "../theme-provider"
 
-const ALL_HREFS = NAV_ITEMS.map(i => i.href)
+const ALL_HREFS = [...NAV_ITEMS, ...ADMIN_NAV].map(i => i.href)
+
+// Is the signed-in person an admin? Asked of the server, which is the only place that knows the list. Any failure is "no".
+async function askIsAdmin(): Promise<boolean> {
+  try {
+    const response = await fetch("/api/admin/me", { cache: "no-store" })
+    return response.ok && (await response.json()).admin === true
+  } catch { return false }
+}
 
 function isActive(href: string, pathname: string) {
   const matches = (h: string) => h === "/dashboard" ? pathname === h : pathname === h || pathname.startsWith(h + "/")
@@ -22,6 +30,7 @@ export default function SidebarNav() {
   const [initials, setInitials] = useState("MF")
   const [email, setEmail] = useState("")
   const [signedIn, setSignedIn] = useState(false)
+  const [admin, setAdmin] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
@@ -93,7 +102,13 @@ export default function SidebarNav() {
       // A later sign-out or account switch must win over this initial request.
       if (!active || authRevision !== initialRevision) return
       updateAccount(user)
-      if (!user || user.is_anonymous || window.location.pathname.startsWith("/dashboard/setup")) return
+      if (!user || user.is_anonymous) return
+      // An admin is never sent to setup (owner, 2026-10-07: "skip onboarding for this user"), so the answer is needed before
+      // the setup check below may redirect.
+      const isAdmin = await askIsAdmin()
+      if (!active || authRevision !== initialRevision) return
+      setAdmin(isAdmin)
+      if (isAdmin || window.location.pathname.startsWith("/dashboard/setup")) return
       try {
         const { data } = await supabase.from("profiles").select("profile_complete").eq("id", user.id).maybeSingle()
         if (active && authRevision === initialRevision && data?.profile_complete === false && !window.location.pathname.startsWith("/dashboard/setup")) {
@@ -104,7 +119,13 @@ export default function SidebarNav() {
 
     // The existing extension bridge also receives sign-out and account switches.
     const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event !== "INITIAL_SESSION") authRevision += 1
+      if (event !== "INITIAL_SESSION") {
+        authRevision += 1
+        // Another account, or none: the link goes at once and comes back only if the server says this one is an admin too.
+        const revision = authRevision
+        setAdmin(false)
+        if (session?.user && !session.user.is_anonymous) void askIsAdmin().then(isAdmin => { if (active && authRevision === revision) setAdmin(isAdmin) })
+      }
       updateAccount(session?.user || null)
       if (active) window.postMessage({ source: "marketfit-web", type: "MF_AUTH", session: session?.user.is_anonymous ? null : session }, window.location.origin)
     })
@@ -185,6 +206,14 @@ export default function SidebarNav() {
           return item.href === "/dashboard/kompas"
             ? <a key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>{content}</a>
             : <Link key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>{content}</Link>
+        })}
+        {admin && ADMIN_NAV.map(item => {
+          const active = isActive(item.href, pathname)
+          return (
+            <Link key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined} title={item.what}>
+              <span className="sb-icon">{item.icon}</span><span>{item.label}</span>
+            </Link>
+          )
         })}
         <details className="mf-nav-more"><summary>All tools & accounts</summary>
         {NAV_SECTIONS.map((section, si) => (

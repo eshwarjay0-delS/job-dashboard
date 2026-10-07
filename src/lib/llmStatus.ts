@@ -52,7 +52,7 @@ async function probe(): Promise<LlmStatus> {
   if (!have.length) return { state: "not_configured", providers: [], fix: "No AI provider key is set on the deployment. Set at least one of GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, ANTHROPIC_API_KEY, then redeploy." }
   const providers = await Promise.all(have.map(async (provider): Promise<LlmStatus["providers"][number]> => {
     try {
-      const answer = await callLLM({ keys, tier: "heavy", pref: provider, system: "Reply with the single word OK.", user: "OK?", maxTokens: 16, temperature: 0 })
+      const answer = await callLLM({ keys, tier: "heavy", pref: provider, system: "Reply with the single word OK.", user: "OK?", maxTokens: 16, temperature: 0, purpose: "status-check" })
       return { provider, state: "ok" as ProviderState, model: answer.model, ...scopeOf(provider) }
     } catch (e) {
       return { provider, ...sort(String((e as Error)?.message || e)), ...scopeOf(provider) }
