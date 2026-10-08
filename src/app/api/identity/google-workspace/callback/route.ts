@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     return redirectWith(req, state.returnTo, { google_error: "server_not_configured" })
   }
 
-  const redirectUri = `${req.nextUrl.origin}/api/identity/google-workspace/callback`
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${req.nextUrl.origin}/api/identity/google-workspace/callback`
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },

@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   }
 
   const returnTo = req.nextUrl.searchParams.get("return") || "/dashboard/connections"
-  const redirectUri = `${req.nextUrl.origin}/api/identity/google-workspace/callback`
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${req.nextUrl.origin}/api/identity/google-workspace/callback`
   const state = createGoogleOAuthState(user.id, returnTo)
 
   const params = new URLSearchParams({
