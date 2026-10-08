@@ -87,6 +87,26 @@ const nextConfig = {
       },
     ];
 
+    // Kompas Flow and Kompas Transcribe (src/app/dashboard/kompas/flow, .../transcribe) are ordinary MarketFit pages that
+    // listen through the microphone and play a recording back. They get the microphone and blob media, and nothing else:
+    // no tab or screen capture, which only the copilot above is given.
+    const speechHeaders = [
+      { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
+      {
+        key: "Content-Security-Policy",
+        value: [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+          "style-src 'self' 'unsafe-inline' https://api.fontshare.com",
+          "img-src 'self' data: blob: https: http:",
+          "font-src 'self' https://api.fontshare.com https://cdn.fontshare.com",
+          "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+          "media-src 'self' blob:",
+          "frame-ancestors 'none'",
+        ].join("; "),
+      },
+    ];
+
     // NOTE: an immutable Cache-Control on /_next/static breaks dev — the browser
     // caches HMR chunks forever and never picks up edits. Only apply it in
     // production builds, where Next.js content-hashes those filenames so a
@@ -97,6 +117,7 @@ const nextConfig = {
       { source: "/(.*)", headers: securityHeaders },
       { source: "/dashboard/kompas", headers: kompasHeaders },
       { source: "/kompas/:path*", headers: kompasHeaders },
+      { source: "/dashboard/kompas/:page(flow|transcribe)", headers: speechHeaders },
       // Long-lived cache for static assets (production only — see note above)
       ...(isProd
         ? [{

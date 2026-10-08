@@ -45,6 +45,8 @@ export const FEATURES: Feature[] = [
   { id: "field-edit", app: "marketfit", label: "Rewriting one field" },
   { id: "interview-prep", app: "marketfit", label: "Interview practice" },
   { id: "other", app: "marketfit", label: "Everything else (cover letters, scores, chat)" },
+  { id: "kompas:flow", app: "kompas", label: "Flow: speaking to write" },
+  { id: "kompas:transcribe", app: "kompas", label: "Transcribe: a talk or a recording into text" },
 ]
 const FEATURE_IDS = new Set(FEATURES.map(f => f.id))
 

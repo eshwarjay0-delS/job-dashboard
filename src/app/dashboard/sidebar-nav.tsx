@@ -203,7 +203,7 @@ export default function SidebarNav() {
         {PRIMARY_NAV.map(item => {
           const active = isActive(item.href, pathname)
           const content = <><span className="sb-icon">{item.icon}</span><span>{item.label}</span></>
-          return item.href === "/dashboard/kompas"
+          return item.href.startsWith("/dashboard/kompas")
             ? <a key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>{content}</a>
             : <Link key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>{content}</Link>
         })}
@@ -222,7 +222,7 @@ export default function SidebarNav() {
 
             {section.items.map(item => {
               const active = isActive(item.href, pathname)
-              const NavigationLink = item.href === "/dashboard/kompas" ? "a" : Link
+              const NavigationLink = item.href.startsWith("/dashboard/kompas") ? "a" : Link
               return (
                 <NavigationLink key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`}
                   aria-current={active ? "page" : undefined} title={item.what}>
