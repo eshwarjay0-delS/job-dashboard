@@ -41,3 +41,18 @@ This records design decisions, not a claim that implementation or deployment is 
 Jake's Resume remains APPROVED. The earlier rejected FlowCV Templates, Modern Deedy and Classic Professional remain REJECTED.
 
 Approved references are design candidates and source inspirations, not proof of formal employer or HR endorsement. Avoid claiming that all hiring managers or ATS systems have approved these templates. Test resulting MarketFit implementations for reading order, parsability, page breaks, typographic consistency and recruiter usability before displaying verified badges.
+
+## Additional owner decisions (2026-10-08)
+
+| Reference | Decision | Reference source |
+| --- | --- | --- |
+| Harvard College Resume | APPROVED | https://careerservices.fas.harvard.edu/resources/create-a-strong-resume/ |
+| Yale Technical Resume | APPROVED | https://ocs.yale.edu/channels/resumes/ |
+| MIT Career Resume | APPROVED | https://capd.mit.edu/resources/resumes/ |
+| CareerOneStop Professional | APPROVED | https://www.careeronestop.org/JobSearch/Resumes/resumes.aspx |
+| Overleaf AltaCV | REJECTED | https://www.overleaf.com/latex/templates/altacv-template/trgqjpwnmtgv |
+| Overleaf Simple Hipster | REJECTED | https://www.overleaf.com/gallery/tagged/cv |
+| Harvard Paragraph Resume | APPROVED | https://careerservices.fas.harvard.edu/resources/create-a-strong-resume/ |
+| Yale General Resume | APPROVED | https://ocs.yale.edu/channels/resumes/ |
+
+Jake's Resume remains APPROVED. Totals: seven approved references, five rejected references. These are owner design selections, not claims of university, employer, or HR endorsement of MarketFit. Confirm the exact sample for broad reference families (e.g. Harvard Paragraph, Yale Technical) before reproducing a layout. Review licensing and validate ATS readability before publication.
