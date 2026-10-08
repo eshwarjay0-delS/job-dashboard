@@ -17,7 +17,8 @@ const BUTTON: CSSProperties = {
   minHeight: 48, padding: "0 24px", fontSize: 15.5, textDecoration: "none", cursor: "pointer",
 }
 
-export default function PageIntro({ page, action, sample }: { page: string; action: IntroAction; sample?: string }) {
+// `what` replaces the page's one line when a page does two things and is showing the second of them (Kompas Flow).
+export default function PageIntro({ page, action, sample, what }: { page: string; action: IntroAction; sample?: string; what?: string }) {
   const item = navItem(page)
   const text = <>{action.label}<span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>→</span></>
 
@@ -27,7 +28,7 @@ export default function PageIntro({ page, action, sample }: { page: string; acti
       <h1 style={{ fontFamily: "var(--font-display)", fontSize: 38, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--text)", margin: "10px 0 0" }}>
         {item.label}
       </h1>
-      <p style={{ fontSize: 17, lineHeight: 1.55, color: "var(--text-muted)", margin: "8px 0 0", maxWidth: 640 }}>{item.what}</p>
+      <p style={{ fontSize: 17, lineHeight: 1.55, color: "var(--text-muted)", margin: "8px 0 0", maxWidth: 640 }}>{what ?? item.what}</p>
       <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", marginTop: 20 }}>
         {"href" in action ? (
           action.external

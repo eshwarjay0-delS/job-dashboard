@@ -1,3 +1,28 @@
+## 2026-10-08 (evening) — Kompas Flow and Transcribe are one page (Claude Code)
+
+The owner: "Still kompas flow has some serious bugs even now. Combine kompas flow and transcribe to be in one page. And there so many pages in the web app which can be combined try to see which which can be organized And cut distractions and confusions for the userrs"
+
+**Built**
+
+- **One page, one menu entry.** `/dashboard/kompas/flow` opens with the choice at the top in plain words: **Dictate** (speak for a moment, get text to paste) or **Transcribe** (a meeting, a call or a recording, with times and who spoke). `flow/page.tsx` is the page; what the two pages were are now `flow/dictate.tsx` and `transcribe/panel.tsx`, unchanged inside apart from the wiring below.
+- **The old address still arrives.** `/dashboard/kompas/transcribe` is a real redirect (`next.config.js`) to the Flow page with Transcribe showing; `transcribe/page.tsx` is the net under it.
+- **Nothing is lost by looking at the other mode**: both stay alive, the hidden one is only hidden.
+- **Two microphones cannot run.** While one mode records or works, the other cannot be opened, and the page says "Transcribe opens when this one has finished."
+- **The space bar belongs to Dictate only while Dictate is showing.**
+- The microphone check (`useOwnDocument`) is made once, by the page. `PageIntro` takes an optional `what`, so the second mode says what it is for under the same page name.
+
+**Verified**
+
+- In the local preview with a test microphone and stubbed speech routes, driven end to end: Dictate records, Transcribe is locked meanwhile and a click on it does nothing; Stop gives the tidied text and the microphone track ends; on Transcribe the space bar starts nothing; Transcribe records with Dictate locked; Stop gives a timed line; back on Dictate the earlier result is still there; every microphone track ended.
+- `kompas-speech.test.mjs` 43 of 43 (four new tests for the above); whole suite 171 of 172 (the standing Windows path test); type check clean.
+
+**NOT verified**
+
+- **Which bugs the owner means.** He did not say, and nothing failed in the run above. It is not known whether he means this page, the Android app (2.1.0, never run by me on a phone) or the iPhone Home Screen app. Asked him.
+- A real microphone, a real person, a phone.
+
+**Not done: the other pages.** "So many pages which can be combined" is a judgement about his product, so it is proposed to him first and not yet built. The dashboard has about 50 page folders; the menu already shows four.
+
 ## 2026-10-08 (theme, second push) — Production was serving the old stylesheet; the entrance page was a white card on the night (Claude Code)
 
 **What went wrong.** The theme commit (`2fdece2`) went live with its new HTML and manifest and the **stylesheet of 5 Oct**. Proof: the live sign-in page linked `/_next/static/immutable/chunks/293o2cdl8ybsi.css`, last modified 5 Oct, holding `[data-theme=dark]{--bg:#121723` and no `#060817` anywhere, while the same page's HTML already carried the new `mf-dashboard-shell` class. The build log: "Restored build cache from previous deployment", "Compiled successfully in 4.5s" (a full compile here is 19.5 s). A fresh local build of the same commit produced the new stylesheet under a new name. So the owner was looking at the old night while I reported a new one.

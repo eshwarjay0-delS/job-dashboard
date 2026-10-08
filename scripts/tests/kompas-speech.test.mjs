@@ -166,7 +166,8 @@ test('Flow and Transcribe are in the admin\'s checklist, so a key can be kept fr
 })
 
 // ── the pages ────────────────────────────────────────────────────────────────
-const pages = ['src/app/dashboard/kompas/flow/page.tsx', 'src/app/dashboard/kompas/transcribe/page.tsx']
+// Dictate and Transcribe: the two things the one Kompas Flow page does (they were two pages until 8 Oct 2026).
+const pages = ['src/app/dashboard/kompas/flow/dictate.tsx', 'src/app/dashboard/kompas/transcribe/panel.tsx']
 const pageFiles = ['flow', 'transcribe'].flatMap(dir => readdirSync(new URL(`../../src/app/dashboard/kompas/${dir}/`, import.meta.url)).map(f => `src/app/dashboard/kompas/${dir}/${f}`)).concat('src/app/dashboard/kompas/_mic.ts')
 
 test('the pages are built from the dashboard\'s tokens and shared parts, with no colour of their own and one strong button', () => {
@@ -225,13 +226,14 @@ test('an answer for an earlier dictation or transcript cannot land in a newer on
   assert.ok(/if \(!now \|\| now\.id !== forId\) return/.test(transcribe), 'Transcribe writes only into the transcript an answer was for')
 })
 
-test('the two pages are served with the microphone allowed and nothing else new, and are opened as whole pages', () => {
+test('the page is served with the microphone allowed and nothing else new, and is opened as a whole page', () => {
   const config = read('next.config.js'), side = read('src/app/dashboard/sidebar-nav.tsx'), nav = read('src/app/dashboard/_components/nav.tsx')
   assert.ok(/\{ source: "\/dashboard\/kompas\/:page\(flow\|transcribe\)", headers: speechHeaders \}/.test(config))
   const speech = config.slice(config.indexOf('const speechHeaders'), config.indexOf('// NOTE: an immutable'))
   assert.ok(/microphone=\(self\)/.test(speech) && !/display-capture/.test(speech), 'the microphone, and no screen or tab capture')
   assert.equal((side.match(/item\.href\.startsWith\("\/dashboard\/kompas"\)/g) || []).length, 2, 'a plain link, so the page comes with its own headers')
-  for (const href of ['/dashboard/kompas/flow', '/dashboard/kompas/transcribe']) assert.ok(nav.includes(`href: "${href}"`), href)
+  assert.ok(nav.includes('href: "/dashboard/kompas/flow"'), 'one entry in the menu')
+  assert.ok(!nav.includes('href: "/dashboard/kompas/transcribe"'), 'and no second one for Transcribe')
 })
 
 // ── found in review, 2026-10-08 ──────────────────────────────────────────────
@@ -271,7 +273,7 @@ test('an answer that stops before the end is not a tidying, however few words ar
 
 test('in Transcribe the Recording line and Stop follow the microphone itself, and nothing can start while it is being opened', () => {
   const page = read(pages[1])
-  assert.ok(/\{mic && phase !== "learning" && \(/.test(page) && /: mic && live\.current \? \{ label: "Stop", onClick: stopRecording \}/.test(page), 'drawn from whether the microphone is on')
+  assert.ok(/\{mic && phase !== "learning" && \(/.test(page) && /: mic \? \{ label: "Stop", onClick: stopRecording \}/.test(page), 'drawn from whether the microphone is on')
   // Two things open the microphone, a recording and the person reading for their voice print; each has one way of letting it go.
   assert.equal((page.match(/setMic\(true\)/g) || []).length, 2); assert.equal((page.match(/setMic\(false\)/g) || []).length, 2, 'only release() and endLearning() turn it off')
   assert.ok(page.indexOf('live.current = state') < page.indexOf('setMic(true)') && page.indexOf('setMic(true)') < page.search(/^ {6}part\(\)\r?$/m), 'on before the first recorder starts')
@@ -449,3 +451,44 @@ test('on an iPhone Flow is a page kept on the Home Screen, and the page says pla
   assert.ok(/if \(!handedOver\) void context\?\.close\(\)/.test(page), 'and closed when the recording does not start')
 })
 
+// ── one page (2026-10-08) ────────────────────────────────────────────────────
+// The owner: "Combine kompas flow and transcribe to be in one page ... cut distractions and confusions for the users."
+const shell = read('src/app/dashboard/kompas/flow/page.tsx')
+
+test('Kompas Flow is one page that offers both, in plain words, and the old Transcribe address still arrives', () => {
+  assert.ok(/import Dictate from "\.\/dictate"/.test(shell) && /import Transcribe from "\.\.\/transcribe\/panel"/.test(shell))
+  assert.ok(/label: "Dictate", more: "/.test(shell) && /label: "Transcribe", more: "/.test(shell), 'each choice says what it is for')
+  assert.ok(/role="tablist"/.test(shell) && /role="tab"/.test(shell) && /aria-selected=\{on\}/.test(shell) && (shell.match(/role="tabpanel"/g) || []).length === 2)
+  const moved = read('src/app/dashboard/kompas/transcribe/page.tsx')
+  assert.ok(/redirect\("\/dashboard\/kompas\/flow\?mode=transcribe"\)/.test(moved), 'a bookmark of the old page is not a dead end')
+  assert.ok(/\{ source: "\/dashboard\/kompas\/transcribe", destination: "\/dashboard\/kompas\/flow\?mode=transcribe", permanent: false \}/.test(read('next.config.js')), 'and it is a real redirect, so Flow arrives as its own document with the microphone allowed')
+  assert.ok(/get\("mode"\) === "transcribe"\) setMode\("transcribe"\)/.test(shell), 'and it opens with Transcribe showing')
+  assert.ok(!/useSearchParams/.test(shell), 'read from the address itself, so the page needs no suspense boundary to build')
+})
+
+test('looking at the other mode loses nothing, and two microphones can never run at once', () => {
+  // Both stay mounted: a hidden mode keeps its result, its transcript and its half-typed name.
+  assert.ok(/display: mode === "dictate" \? "block" : "none"/.test(shell) && /display: mode === "transcribe" \? "block" : "none"/.test(shell))
+  assert.ok(!/mode === "dictate" && <Dictate|mode === "transcribe" && <Transcribe/.test(shell), 'neither is unmounted by the switch')
+  // While one is recording or working, the other cannot be opened.
+  assert.ok(/if \(next === mode \|\| \(busy && busy !== next\)\) return/.test(shell) && /disabled=\{locked\}/.test(shell))
+  const dictate = read(pages[0]), transcribe = read(pages[1])
+  assert.ok(/useEffect\(\(\) => \{ onBusy\(phase !== "idle"\) \}, \[phase, onBusy\]\)/.test(dictate), 'Dictate says when it is recording or writing down')
+  assert.ok(/useEffect\(\(\) => \{ onBusy\(phase !== "idle" \|\| mic\) \}, \[phase, mic, onBusy\]\)/.test(transcribe), 'Transcribe says when the microphone is on or it is working')
+  assert.ok(/const dictating = useCallback\(/.test(shell) && /const transcribing = useCallback\(/.test(shell), 'told through functions that do not change, so telling does not redraw in a loop')
+})
+
+test('the space bar starts a dictation only while Dictate is the mode on screen', () => {
+  const dictate = read(pages[0])
+  const keys = dictate.slice(dictate.indexOf('// Only while this mode is the one on screen'), dictate.indexOf('const shown = result'))
+  assert.ok(/if \(!active\) return\r?\n\s+const onKey/.test(keys), 'no key listener at all while Transcribe is showing')
+  assert.ok(/\}, \[press, active\]\)/.test(keys), 'and it is put back when Dictate is shown again')
+  assert.ok(/<Dictate active=\{mode === "dictate"\} onBusy=\{dictating\} \/>/.test(shell))
+})
+
+test('the microphone check is made once, by the page, and both modes say one page name', () => {
+  assert.equal((shell.match(/useOwnDocument\(\)/g) || []).length, 1)
+  for (const file of pages) assert.ok(!/useOwnDocument/.test(read(file)), file)
+  for (const file of pages) assert.ok(/<PageIntro page="\/dashboard\/kompas\/flow"/.test(read(file)), file + ': the heading is Kompas Flow in both')
+  assert.ok(/\{what \?\? item\.what\}/.test(read('src/app/dashboard/_components/page-intro.tsx')), 'the second mode says what it is for under the same name')
+})

@@ -50,8 +50,9 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/dashboard/workflows",   label: "Follow-ups", icon: ICON.repeat,   what: "Automatic follow-ups that run on their own. Some wait for your OK." },
       { href: "/dashboard/connections", label: "Gmail accounts",   icon: ICON.link,     what: "Connect your Gmail so MarketFit can read your job emails." },
       { href: "/dashboard/kompas", label: "Interview practice", what: "Practice with Kompas using your own resume.", icon: ICON.chat },
-      { href: "/dashboard/kompas/flow",       label: "Kompas Flow",       icon: ICON.mic,   what: "Speak, and get clean text you can paste anywhere." },
-      { href: "/dashboard/kompas/transcribe", label: "Kompas Transcribe", icon: ICON.lines, what: "Turn a talk or a recording into text, once everyone in it knows." },
+      // One page for both since 8 Oct 2026 (the owner: "Combine kompas flow and transcribe to be in one page"). The old
+      // address, /dashboard/kompas/transcribe, sends people to this page with Transcribe showing.
+      { href: "/dashboard/kompas/flow", label: "Kompas Flow", icon: ICON.mic, what: "Speak, and get clean text you can paste anywhere." },
       { href: "/dashboard/prep",        label: "Practice",   icon: ICON.chat,     what: "Get ready for your next interview." },
     ],
   },

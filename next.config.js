@@ -148,7 +148,12 @@ const nextConfig = {
   // auth gate exists; logged-in users still land on /dashboard normally via
   // the login flow's own redirect.
   async redirects() {
-    return [];
+    return [
+      // Transcribe is part of the Kompas Flow page since 8 Oct 2026. Sent on here, as a real redirect, so the browser
+      // loads the Flow page as its own document (with the microphone header) and a bookmark is not a dead end.
+      // src/app/dashboard/kompas/transcribe/page.tsx is the net under this line.
+      { source: "/dashboard/kompas/transcribe", destination: "/dashboard/kompas/flow?mode=transcribe", permanent: false },
+    ];
   },
 
   // Kompas is served from MarketFit's own origin so the microphone belongs to this site. Its engine
