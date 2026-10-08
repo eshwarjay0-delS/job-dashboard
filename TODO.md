@@ -1,3 +1,27 @@
+## 2026-10-08 (late night) — Kompas Flow on an iPhone (Claude Code)
+
+The owner: "And make the same version available on ios friendly."
+
+**Said plainly first.** The Android app's floating button cannot exist on an iPhone. Apple does not let any app draw over other apps or type into them; no build of ours changes that. What an iPhone allows: a page kept on the Home Screen that opens like an app, and (a separate, much larger thing) a custom keyboard.
+
+**Built**
+
+- **Flow is installable on an iPhone's Home Screen**: its own name, icon and manifest (`flow/layout.tsx`, `public/apps/kompas-flow.webmanifest`, three icons), opening without the browser's bars and starting on Flow. The scope is the whole site so signing in stays inside it.
+- **On an iPhone the Flow page says how** (Share, then Add to Home Screen) and says there is no floating button there: you speak, tap Copy, and paste. An iPhone is never offered the Android file.
+- **The voice meter is made inside the tap**, because Safari on an iPhone leaves an audio context made after a wait switched off (the bars would not move).
+
+**Verified**
+
+- `scripts/tests/kompas-speech.test.mjs` 39 of 39; suite 154 of 155 (the standing Windows path test). The manifest, icons and page metadata are served by the live site (checked after the deploy).
+
+**NOT verified**
+
+- **On an iPhone.** There is none here. Whether Safari's recording format is taken by the recogniser, whether Google sign-in returns inside the Home Screen app, and whether the bars move are unknown until someone tries it.
+
+**Not built, and his to decide**
+
+- **A Kompas keyboard for iPhone**, the nearest thing iOS allows to "appears at every text field". It needs a Mac to build, his Apple Developer account (99 dollars a year, his to create), and TestFlight or the App Store to install: an iPhone takes no downloaded file the way Android takes an APK. An iPhone keyboard also may not use the microphone itself; the ones that dictate hop to their app and back.
+
 ## 2026-10-08 (night) — Transcribe: two answers, "Recognize my voice", and who said each line (Claude Code)
 
 The owner, on a screenshot of "Who is speaking?": "Just keep it as only me and other people involved. And if there was other people are involved ask the person to say something with some text on the screen to speak and record that audio. And recognize the user as you in the transcribing output ... recognizing multiple voices. Mainly distinguishing them ... Just like a fingerprint ... Everytime a user using it should prompt on whether is it the first time using it. Saying we wouldn't know who are you in the meeting. give a recognize button. And register those voices."

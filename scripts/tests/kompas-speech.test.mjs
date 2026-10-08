@@ -274,7 +274,7 @@ test('in Transcribe the Recording line and Stop follow the microphone itself, an
   assert.ok(/\{mic && phase !== "learning" && \(/.test(page) && /: mic && live\.current \? \{ label: "Stop", onClick: stopRecording \}/.test(page), 'drawn from whether the microphone is on')
   // Two things open the microphone, a recording and the person reading for their voice print; each has one way of letting it go.
   assert.equal((page.match(/setMic\(true\)/g) || []).length, 2); assert.equal((page.match(/setMic\(false\)/g) || []).length, 2, 'only release() and endLearning() turn it off')
-  assert.ok(page.indexOf('live.current = state') < page.indexOf('setMic(true)') && page.indexOf('setMic(true)') < page.indexOf('      part()\n'), 'on before the first recorder starts')
+  assert.ok(page.indexOf('live.current = state') < page.indexOf('setMic(true)') && page.indexOf('setMic(true)') < page.search(/^ {6}part\(\)\r?$/m), 'on before the first recorder starts')
   const record = page.slice(page.indexOf('const record = useCallback'), page.indexOf('// ── choose a recording'))
   assert.ok(record.indexOf('go("starting")') < record.indexOf('getUserMedia'), 'the page is busy before the browser is asked for the microphone')
   for (const fn of ['const readFile = useCallback', 'const tidy = useCallback']) {
@@ -427,5 +427,25 @@ test('the server says when each stretch was said and nothing else new, so the vo
   assert.ok(/\[\{ start: Math\.round\(start \* 100\) \/ 100, end: Math\.round\(end \* 100\) \/ 100, text \}\]/.test(lib), 'times and words: no other field of the recogniser\'s answer is passed on')
   const page = read(pages[1])
   assert.ok(/voiceprintOf\(sound\.subarray\(/.test(page), 'the print of a stretch is made in the page from sound the page already holds')
+})
+
+// ── an iPhone (2026-10-08) ───────────────────────────────────────────────────
+test('on an iPhone Flow is a page kept on the Home Screen, and the page says plainly that there is no floating button there', () => {
+  const page = read(pages[0]), layout = read('src/app/dashboard/kompas/flow/layout.tsx')
+  assert.ok(/Add to Home Screen/.test(page) && /An iPhone does not let any app keep a button over other apps or type into them/.test(page), 'what an iPhone allows, and what it does not')
+  assert.ok(/\{onIphone && phase === "idle" && !result && iphone\}/.test(page) && /navigator\.maxTouchPoints > 1/.test(page), 'shown on an iPhone or iPad that has not installed it')
+  assert.ok(!/href=\{FLOW_APK\}[^\n]*iphone|iphone[^\n]*FLOW_APK/i.test(page), 'an iPhone is never offered the Android file')
+  assert.ok(/manifest: "\/apps\/kompas-flow\.webmanifest"/.test(layout) && /appleWebApp: \{ capable: true/.test(layout) && /kompas-flow-180\.png/.test(layout))
+  const manifest = JSON.parse(read('public/apps/kompas-flow.webmanifest'))
+  assert.equal(manifest.start_url, '/dashboard/kompas/flow', 'the icon opens Flow, not the dashboard\'s front page')
+  assert.equal(manifest.display, 'standalone'); assert.equal(manifest.scope, '/', 'signing in stays inside the app')
+  for (const size of [180, 192, 512]) {
+    const png = readFileSync(new URL(`../../public/apps/kompas-flow-${size}.png`, import.meta.url))
+    assert.equal(png.subarray(1, 4).toString('latin1'), 'PNG', size + ' is a PNG')
+    assert.equal(png.readUInt32BE(16), size); assert.equal(png.readUInt32BE(20), size, 'and the size its name says')
+    assert.equal(png[25], 2, 'with no see-through parts: an iPhone draws those black')
+  }
+  assert.ok(page.indexOf('context = new AudioContext()') < page.indexOf('await navigator.mediaDevices.getUserMedia'), 'the voice meter is made inside the tap, or an iPhone leaves it switched off')
+  assert.ok(/if \(!handedOver\) void context\?\.close\(\)/.test(page), 'and closed when the recording does not start')
 })
 

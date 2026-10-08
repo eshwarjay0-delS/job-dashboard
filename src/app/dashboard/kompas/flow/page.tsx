@@ -71,6 +71,8 @@ export default function FlowPage() {
   const [past, setPast] = useState<Past[]>([])
   const [open, setOpen] = useState<string | null>(null)
   const [onAndroid, setOnAndroid] = useState(false)
+  // An iPhone or iPad that has not yet put this page on its Home Screen. (An iPad says it is a Mac; a Mac has no touch.)
+  const [onIphone, setOnIphone] = useState(false)
 
   // What a recording holds while it runs. Kept in refs: stopping must work from a timer, a key press and an unmount alike.
   const live = useRef<{ stream: MediaStream; recorder: MediaRecorder; context: AudioContext | null; frame: number; tick: number } | null>(null)
@@ -79,7 +81,11 @@ export default function FlowPage() {
   const hintRef = useRef("")
 
   useOwnDocument()
-  useEffect(() => { const h = read<string>(HINT_KEY, ""); setHint(h); hintRef.current = h; setPast(read<Past[]>(HISTORY_KEY, [])); setOnAndroid(/Android/i.test(navigator.userAgent)) }, [])
+  useEffect(() => { const h = read<string>(HINT_KEY, ""); setHint(h); hintRef.current = h; setPast(read<Past[]>(HISTORY_KEY, [])); setOnAndroid(/Android/i.test(navigator.userAgent))
+    const apple = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+    const installed = window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
+    setOnIphone(apple && !installed)
+  }, [])
 
   // Every way out of a recording goes through here, so the microphone is always let go.
   const release = useCallback(() => {
@@ -138,6 +144,11 @@ export default function FlowPage() {
     starting.current = true
     const mine = ++run.current
     setError(""); setNote(""); setCut(false); setCopied(""); setResult(null); setSeconds(0)
+    // Made here, inside the person's tap. Safari on an iPhone leaves an audio context that is made later, after the wait for
+    // the microphone, switched off, and the bars would then never move. It is closed below if the recording does not start.
+    let context: AudioContext | null = null
+    try { context = new AudioContext() } catch { context = null }
+    let handedOver = false
     try {
       if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") { setError("This browser cannot record sound. Try a current version of Chrome, Edge, Safari or Firefox."); return }
       let stream: MediaStream
@@ -161,9 +172,10 @@ export default function FlowPage() {
       recorder.onerror = () => { release(); if (run.current === mine) { setError("The recording stopped unexpectedly. Try again."); setPhase("idle") } }
 
       // A small picture of the voice, so the person can see they are being heard. It is optional: no meter is not an error.
-      let context: AudioContext | null = null, frame = 0
+      let frame = 0
       try {
-        context = new AudioContext()
+        if (!context) throw new Error("no meter")
+        void context.resume().catch(() => {})
         const analyser = context.createAnalyser(); analyser.fftSize = 512
         context.createMediaStreamSource(stream).connect(analyser)
         const samples = new Uint8Array(analyser.fftSize)
@@ -175,7 +187,7 @@ export default function FlowPage() {
           if (live.current) live.current.frame = requestAnimationFrame(draw)
         }
         frame = requestAnimationFrame(draw)
-      } catch { context = null }
+      } catch { void context?.close().catch(() => {}); context = null }
 
       const began = Date.now()
       const tick = window.setInterval(() => {
@@ -184,9 +196,13 @@ export default function FlowPage() {
         if (s >= MAX_SECONDS) { setCut(true); stop() }
       }, 250)
       live.current = { stream, recorder, context, frame, tick }
+      handedOver = true
       recorder.start()
       setPhase("recording"); setStatus("")
-    } finally { starting.current = false }
+    } finally {
+      starting.current = false
+      if (!handedOver) void context?.close().catch(() => {})
+    }
   }, [release, stop, toText])
 
   // Leaving the page lets the microphone go and makes any answer still on its way stale.
@@ -221,6 +237,16 @@ export default function FlowPage() {
     </Card>
   )
 
+  // On an iPhone there is no app to download and there cannot be a floating button: Apple allows neither. What it allows
+  // is this page on the Home Screen, and the card says how, and says plainly what is different from Android.
+  const iphone = (
+    <Card style={{ marginBottom: 16 }}>
+      <Meta>Kompas Flow on iPhone</Meta>
+      <p style={{ ...SMALL, fontSize: 15.5, marginTop: 8 }}>Put Kompas Flow on your Home Screen: tap the Share button in Safari, then <strong style={{ color: "var(--text)" }}>Add to Home Screen</strong>. It opens like an app, ready to speak.</p>
+      <p style={{ ...SMALL, marginTop: 10 }}>An iPhone does not let any app keep a button over other apps or type into them, so there is no floating button here. You speak, tap Copy, and paste where you were.</p>
+    </Card>
+  )
+
   return (
     <div style={{ maxWidth: 760 }}>
       <PageIntro page="/dashboard/kompas/flow"
@@ -228,6 +254,7 @@ export default function FlowPage() {
         sample="Or press the space bar to start and stop." />
 
       {onAndroid && phase === "idle" && !result && app}
+      {onIphone && phase === "idle" && !result && iphone}
 
       {phase === "recording" && (
         <Card style={{ marginBottom: 16 }}>
@@ -273,7 +300,7 @@ export default function FlowPage() {
         <p style={{ ...SMALL, marginTop: 8 }}>Optional. It helps unusual names and technical words come out right.</p>
       </section>
 
-      {!onAndroid && <section style={{ marginTop: 32 }}>{app}</section>}
+      {!onAndroid && !onIphone && <section style={{ marginTop: 32 }}>{app}<p style={{ ...SMALL, marginTop: -6 }}>On an iPhone: open this page in Safari, tap Share, then Add to Home Screen.</p></section>}
 
       <section style={{ marginTop: 36 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
