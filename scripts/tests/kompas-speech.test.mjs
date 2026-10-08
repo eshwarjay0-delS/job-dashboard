@@ -7,19 +7,21 @@ import { readFileSync, readdirSync } from 'node:fs'
 const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8')
 const T = await import('../../src/lib/kompasTranscript.ts')
 const V = await import('../../src/lib/keyVault.ts')
+const K = await import('../../src/lib/kompasVoice.ts')
 
 const NOW = Date.UTC(2026, 9, 7, 18)
 const open = (consent = 'only-me', title) => T.startSession({ id: 's1', title, startedAt: NOW, consent })
 
-// ── nobody is recorded without being told ────────────────────────────────────
-test('a transcript of people who have not been told does not start, and anything but a clear yes is a no', () => {
-  assert.deepEqual(open('others-not-told'), { ok: false, because: 'others-not-told' })
-  for (const odd of [undefined, null, '', 'yes', 'ONLY-ME', 'others']) assert.equal(T.startSession({ id: 's', startedAt: NOW, consent: odd }).ok, false, String(odd))
+// ── who is speaking ──────────────────────────────────────────────────────────
+test('a transcript starts only after one of the two answers to "Who is speaking?": only me, or other people too', () => {
+  for (const odd of [undefined, null, '', 'yes', 'ONLY-ME', 'others-not-told', 'everyone']) assert.deepEqual(T.startSession({ id: 's', startedAt: NOW, consent: odd }), { ok: false, because: 'not-answered' }, String(odd))
   const mine = open('only-me', '  Notes  ')
   assert.equal(mine.ok, true); assert.equal(mine.session.title, 'Notes'); assert.equal(mine.session.consent, 'only-me')
   assert.equal(mine.session.startedAt, '2026-10-07T18:00:00.000Z', 'the time is the one handed in')
-  assert.equal(open('others-told').session.consent, 'others-told')
+  assert.equal(open('others').session.consent, 'others')
+  assert.equal(open('others-told').session.consent, 'others-told', 'a transcript kept before 8 Oct still opens')
   assert.equal(open('only-me', '').session.title, 'Untitled transcript')
+  assert.equal(T.hasOthers(open('only-me').session), false); assert.equal(T.hasOthers(open('others').session), true)
 })
 
 // ── the guard on tidying ─────────────────────────────────────────────────────
@@ -100,7 +102,7 @@ test('a part that could not be read stays in the transcript as a marked gap, and
   let s = open().session
   s = T.appendSegment(s, { id: 'a', startMs: 0, endMs: 20000, raw: 'first part' })
   s = T.appendSegment(s, { id: 'b', startMs: 20000, endMs: 40000, raw: '', failed: true })
-  assert.deepEqual(T.transcriptLines(s, 'raw')[1], { id: 'b', clock: '0:20', text: '', failed: true })
+  assert.deepEqual(T.transcriptLines(s, 'raw')[1], { id: 'b', clock: '0:20', text: '', failed: true, speaker: '', who: '', guessed: false })
   assert.ok(T.asPlainText(s, 'raw').includes('0:20  [This part could not be read]'), 'the gap is in the file a person downloads')
   assert.ok(T.asMarkdown(s, 'raw').includes('_[This part could not be read]_'))
   assert.equal(T.wordCount(s, 'raw'), 2, 'a gap has no words')
@@ -183,22 +185,29 @@ test('the pages talk to the two speech routes and nothing else, and keep what a 
     for (const url of calls) assert.ok(url === '/api/kompas/speech' || url === '/api/kompas/tidy', `${file} fetches ${url}`)
   }
   assert.ok(/Kept only in this browser\. MarketFit keeps nothing you say\./.test(read(pages[0])))
-  assert.ok(/Transcripts stay on this device\. MarketFit keeps no sound and no text\./.test(read(pages[1])))
+  assert.ok(/Transcripts stay on this device, and so does your voice print if you saved one\. MarketFit keeps no sound and no text\./.test(read(pages[1])))
   assert.ok(!/localStorage|sessionStorage/.test(read(pages[1])), 'a transcript is not put in storage that is read on every page')
 })
 
-test('Transcribe cannot reach the microphone or a file until "Who is speaking?" has been answered in this visit', () => {
+test('Transcribe cannot record a transcript or open a file until "Who is speaking?" has been answered in this visit', () => {
   const page = read(pages[1])
   const record = page.slice(page.indexOf('const record = useCallback'), page.indexOf('// ── choose a recording'))
   assert.ok(record.indexOf('answeredRef.current !== open.id') > 0 && record.indexOf('answeredRef.current !== open.id') < record.indexOf('getUserMedia'), 'the answer is checked before the microphone is asked for')
   const file = page.slice(page.indexOf('const readFile = useCallback'), page.indexOf('const again'))
   assert.ok(file.indexOf('answeredRef.current !== open.id') > 0 && file.indexOf('answeredRef.current !== open.id') < file.indexOf('decode(file)'))
   assert.equal((page.match(/answeredRef\.current = started\.session\.id/g) || []).length, 1, 'only an accepted startSession sets the answer')
-  assert.ok(page.indexOf('if (!started.ok) { setRefused(true); return }') < page.indexOf('answeredRef.current = started.session.id'))
+  assert.ok(page.indexOf('if (!started.ok) return') < page.indexOf('answeredRef.current = started.session.id'))
   assert.ok(/answeredRef\.current = null; setAnswered\(null\); current\.current = s/.test(page), 'a transcript opened from the list was answered for on another day: nothing more is recorded into it')
-  assert.ok(/Transcribe will not start\. Tell everyone who will be heard/.test(page), 'the refusal says what to do')
   assert.ok(/\{answered === session\.id && <input ref=\{fileInput\} type="file"/.test(page), 'the file picker exists only for an answered transcript')
   assert.ok(/Recording <span/.test(page) && /The microphone is on until you press Stop/.test(page), 'the recording state is on the screen while the microphone is on')
+})
+
+test('the question has two answers, and the second says that everyone in it should know', () => {
+  const page = read(pages[1])
+  const who = page.slice(page.indexOf('const WHO:'), page.indexOf('const PASSAGE'))
+  assert.deepEqual([...who.matchAll(/consent: "([a-z-]+)"/g)].map(m => m[1]), ['only-me', 'others'], 'the owner, 2026-10-08: "Just keep it as only me and other people involved"')
+  assert.ok(/Everyone in it should know it is being recorded\./.test(who))
+  assert.ok(!/have not been told/.test(page), 'the third answer is gone')
 })
 
 test('every way out of a recording lets the microphone go, on both pages', () => {
@@ -262,8 +271,9 @@ test('an answer that stops before the end is not a tidying, however few words ar
 
 test('in Transcribe the Recording line and Stop follow the microphone itself, and nothing can start while it is being opened', () => {
   const page = read(pages[1])
-  assert.ok(/\{mic && \(/.test(page) && /: mic \? \{ label: "Stop", onClick: stopRecording \}/.test(page), 'drawn from whether the microphone is on')
-  assert.equal((page.match(/setMic\(true\)/g) || []).length, 1); assert.equal((page.match(/setMic\(false\)/g) || []).length, 1, 'only release() turns it off')
+  assert.ok(/\{mic && phase !== "learning" && \(/.test(page) && /: mic && live\.current \? \{ label: "Stop", onClick: stopRecording \}/.test(page), 'drawn from whether the microphone is on')
+  // Two things open the microphone, a recording and the person reading for their voice print; each has one way of letting it go.
+  assert.equal((page.match(/setMic\(true\)/g) || []).length, 2); assert.equal((page.match(/setMic\(false\)/g) || []).length, 2, 'only release() and endLearning() turn it off')
   assert.ok(page.indexOf('live.current = state') < page.indexOf('setMic(true)') && page.indexOf('setMic(true)') < page.indexOf('      part()\n'), 'on before the first recorder starts')
   const record = page.slice(page.indexOf('const record = useCallback'), page.indexOf('// ── choose a recording'))
   assert.ok(record.indexOf('go("starting")') < record.indexOf('getUserMedia'), 'the page is busy before the browser is asked for the microphone')
@@ -313,5 +323,109 @@ test('a person sent to sign in comes back to the page they asked for, so the And
   assert.ok(/router\.replace\(pathname && pathname !== "\/dashboard" \? `\/login\?next=\$\{encodeURIComponent\(pathname\)\}` : "\/login"\)/.test(gate))
   const next = read('src/lib/authRedirect.ts')
   assert.ok(/url\.pathname\.startsWith\("\/dashboard\/"\)/.test(next), 'and only a dashboard page is accepted as where to go back to')
+})
+
+// ── whose voice (2026-10-08) ─────────────────────────────────────────────────
+// A made-up voice: a buzz at one pitch, shaped by two resonances, with a little hiss. Enough to give a print; not a person.
+function voice(pitch, first, second, seed, seconds = 3) {
+  let a = seed >>> 0
+  const rand = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
+  const out = new Float32Array(Math.round(seconds * K.VOICE_RATE))
+  const harmonics = []
+  for (let k = 1; k * pitch < 6000; k++) {
+    const hz = k * pitch, near = (centre, width) => 1 / (1 + ((hz - centre) / width) ** 2)
+    harmonics.push({ hz, loud: (near(first, 110) + 0.7 * near(second, 160) + 0.02) / k ** 0.3, phase: rand() * 6.283 })
+  }
+  for (let i = 0; i < out.length; i++) {
+    const t = i / K.VOICE_RATE
+    let x = 0
+    for (const h of harmonics) x += h.loud * Math.sin(6.283 * h.hz * t + h.phase)
+    out[i] = 0.12 * x * (0.6 + 0.4 * Math.sin(6.283 * 2.1 * t + seed)) + 0.004 * (rand() - 0.5)
+  }
+  return out
+}
+const low = (seed, seconds) => voice(112, 620, 1250, seed, seconds), high = (seed, seconds) => voice(218, 860, 2150, seed, seconds)
+
+test('one voice twice is close, two voices are far apart, and too little sound gives no print at all', () => {
+  const a1 = K.voiceprintOf(low(1)), a2 = K.voiceprintOf(low(2)), b1 = K.voiceprintOf(high(3)), b2 = K.voiceprintOf(high(4))
+  assert.ok(a1 && a2 && b1 && b2)
+  assert.equal(a1.dims.length, K.SCALE.length)
+  assert.ok(K.voiceDistance(a1, a2) < K.SAME, 'the low voice against itself: ' + K.voiceDistance(a1, a2).toFixed(2))
+  assert.ok(K.voiceDistance(b1, b2) < K.SAME, 'the high voice against itself: ' + K.voiceDistance(b1, b2).toFixed(2))
+  assert.ok(K.voiceDistance(a1, b1) > K.SAME, 'one against the other: ' + K.voiceDistance(a1, b1).toFixed(2))
+  assert.ok(Math.abs(Math.exp(a1.dims[24]) - 112) < 8 && Math.abs(Math.exp(b1.dims[24]) - 218) < 12, 'the pitch found is the pitch made, not an octave below it')
+  assert.equal(K.voiceprintOf(low(5, 0.3)), null, 'a third of a second is not judged')
+  assert.equal(K.voiceprintOf(new Float32Array(K.VOICE_RATE * 2)), null, 'silence has no voice')
+})
+
+test('with the person\'s own print their lines say You and the others are numbered; a line too short to judge takes the line before it', () => {
+  const mine = K.voiceprintOf(low(10, 6))
+  const lines = [
+    { id: 'a', print: K.voiceprintOf(low(11)) }, { id: 'b', print: K.voiceprintOf(high(12)) }, { id: 'c', print: null },
+    { id: 'd', print: K.voiceprintOf(low(13)) }, { id: 'e', print: K.voiceprintOf(high(14)) },
+  ]
+  assert.deepEqual(K.speakersOf(lines, mine), { a: 'you', b: 's1', c: 's1', d: 'you', e: 's1' })
+  assert.deepEqual(K.speakersOf(lines, null), { a: 's1', b: 's2', c: 's2', d: 's1', e: 's2' }, 'with no print of their own nobody is You: both voices are numbered')
+})
+
+test('a speaker the person set is kept, and the rest of the transcript learns from it', () => {
+  const lines = [{ id: 'a', print: K.voiceprintOf(low(21)) }, { id: 'b', print: K.voiceprintOf(high(22)), set: 'you' }, { id: 'c', print: K.voiceprintOf(high(23)) }, { id: 'd', print: K.voiceprintOf(low(24)) }]
+  const named = K.speakersOf(lines, null)
+  assert.equal(named.b, 'you', 'what the person said stands')
+  assert.equal(named.c, 'you', 'and the same voice later is You too')
+  assert.equal(named.a, named.d); assert.notEqual(named.a, 'you')
+})
+
+test('a kept voice print is checked before it is used, and the voice code keeps and sends nothing', () => {
+  const real = K.voiceprintOf(low(30))
+  assert.deepEqual(K.readVoiceprint(JSON.parse(JSON.stringify(real))).dims.slice(0, 24), real.dims.slice(0, 24))
+  for (const junk of [null, {}, { v: 1, dims: [1, 2], frames: 10 }, { v: 2, dims: real.dims, frames: 10 }, { v: 1, dims: real.dims.map(() => 'x'), frames: 10 }, { v: 1, dims: real.dims, frames: 0 }]) assert.equal(K.readVoiceprint(junk), null)
+  const code = read('src/lib/kompasVoice.ts').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+  assert.ok(!/fetch\(|XMLHttpRequest|localStorage|sessionStorage|indexedDB|document\.|window\.|import /.test(code), 'arithmetic only: no request, no storage, no page')
+})
+
+test('who said a line is kept in the transcript, a guess never overrides the person, and a download names the speakers', () => {
+  let s = open('others', 'Team call').session
+  s = T.appendSegment(s, { id: 'a', startMs: 0, endMs: 4000, raw: 'good morning' })
+  s = T.appendSegment(s, { id: 'b', startMs: 4000, endMs: 9000, raw: 'morning all' })
+  s = T.withSpeakers(s, { a: 'you', b: 's1' })
+  assert.deepEqual(T.transcriptLines(s, 'raw').map(l => [l.who, l.guessed]), [['You', true], ['Speaker 1', true]])
+  s = T.setSpeaker(s, 'b', 'you')
+  s = T.withSpeakers(s, { a: 's1', b: 's2' })
+  assert.equal(s.segments[1].speaker, 'you', 'set by the person: a later guess does not change it'); assert.equal(s.segments[0].speaker, 's1')
+  assert.equal(T.transcriptLines(s, 'raw')[1].guessed, false)
+  assert.equal(T.setSpeaker(s, 'a', 'the boss').segments[0].speaker, 's1', 'only You or a numbered speaker can be set')
+  s = T.nameSpeaker(s, 's1', '  Priya  ')
+  assert.equal(T.speakerLabel(s, 's1'), 'Priya'); assert.equal(T.speakerLabel(T.nameSpeaker(s, 's1', ''), 's1'), 'Speaker 1')
+  assert.equal(T.nameSpeaker(s, 'you', 'Somebody').names?.you, undefined, 'You is not renamed')
+  assert.ok(T.asPlainText(s, 'raw').includes('0:00  Priya: good morning') && T.asMarkdown(s, 'raw').includes('**0:04** **You:** morning all'))
+  assert.deepEqual(T.speakersHeard(s), ['s1', 'you'])
+  let alone = T.appendSegment(open('only-me').session, { id: 'a', startMs: 0, endMs: 4000, raw: 'a note to myself' })
+  alone = T.withSpeakers(alone, { a: 'you' })
+  assert.equal(T.transcriptLines(alone, 'raw')[0].who, '', 'a transcript of only the person names nobody')
+})
+
+test('the page asks before it learns a voice, keeps only the person\'s own on the device, and draws a guess as a guess', () => {
+  const page = read(pages[1]), store = read('src/app/dashboard/kompas/transcribe/store.ts')
+  assert.ok(/Is this your first time here\? We would not know which voice is yours in the meeting\./.test(page) && /"Recognize my voice"/.test(page), 'the owner\'s words, and his button')
+  assert.ok(/who === "others" && \(/.test(page), 'asked only when other people are in it')
+  assert.ok(/You can skip this/.test(page), 'and it can be skipped')
+  const learn = page.slice(page.indexOf('const learn = useCallback'), page.indexOf('const forget = useCallback'))
+  assert.ok(learn.indexOf('go("learning")') < learn.indexOf('getUserMedia') && /starting\.current \|\| live\.current \|\| learner\.current \|\| at\(\) !== "idle"/.test(learn), 'nothing else can start while the person is reading')
+  assert.ok(/Listening to you read <span/.test(page), 'the reading is on the screen while the microphone is on')
+  assert.ok(/print\.frames < LEARN_LEAST/.test(learn), 'too little speech is refused, not saved')
+  assert.ok(/saveVoice\(print, now\)/.test(learn) && !/saveVoice\([^)]*samples|saveVoice\([^)]*blob/i.test(page), 'the print is kept; the reading is not')
+  assert.ok(/const VOICE_ID = "__my_voice__"/.test(store) && /indexedDB/.test(store) && !/fetch\(/.test(store), 'on this device, in the browser\'s own database')
+  assert.ok(/const prints = useRef\(new Map/.test(page) && !/saveVoice\(prints|saveSession\([^)]*prints/.test(page), 'other people\'s prints live in memory only')
+  assert.ok(/their voices are never saved/.test(page) && /can be wrong/.test(page) && /line\.guessed \? "dashed" : "solid"/.test(page))
+  assert.ok(/Forget my voice/.test(page) && /forgetVoice\(\)/.test(page))
+})
+
+test('the server says when each stretch was said and nothing else new, so the voices are worked out on the device', () => {
+  const lib = read('src/lib/kompasSpeech.ts')
+  assert.ok(/segments: \(Array\.isArray\(body\.segments\) \? body\.segments : \[\]\)\.slice\(0, 400\)/.test(lib))
+  assert.ok(/\[\{ start: Math\.round\(start \* 100\) \/ 100, end: Math\.round\(end \* 100\) \/ 100, text \}\]/.test(lib), 'times and words: no other field of the recogniser\'s answer is passed on')
+  const page = read(pages[1])
+  assert.ok(/voiceprintOf\(sound\.subarray\(/.test(page), 'the print of a stretch is made in the page from sound the page already holds')
 })
 

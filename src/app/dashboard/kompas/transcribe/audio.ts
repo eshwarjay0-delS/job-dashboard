@@ -114,3 +114,31 @@ export function wavPart(samples: Float32Array, from: number, to: number): Blob {
   }
   return new Blob([view], { type: "audio/wav" })
 }
+
+/**
+ * A recorded part (or the person reading for their voice print) as one channel at 16,000 samples a second, or null when
+ * the browser cannot open it. Used on the device to work out whose voice a stretch is; nothing is sent anywhere.
+ */
+export async function samplesOf(blob: Blob): Promise<Float32Array | null> {
+  if (typeof OfflineAudioContext === "undefined") return null
+  try {
+    const heard = await new OfflineAudioContext(1, 1, RATE).decodeAudioData(await blob.arrayBuffer())
+    if (!(heard.length > 0)) return null
+    if (heard.sampleRate !== RATE) {
+      const offline = new OfflineAudioContext(1, Math.max(1, Math.ceil(heard.duration * RATE)), RATE)
+      const source = offline.createBufferSource()
+      source.buffer = heard
+      source.connect(offline.destination)
+      source.start()
+      return (await offline.startRendering()).getChannelData(0)
+    }
+    if (heard.numberOfChannels === 1) return heard.getChannelData(0)
+    const samples = new Float32Array(heard.length)
+    for (let c = 0; c < heard.numberOfChannels; c++) {
+      const channel = heard.getChannelData(c)
+      for (let i = 0; i < channel.length; i++) samples[i] += channel[i] / heard.numberOfChannels
+    }
+    return samples
+  } catch { return null }
+}
+

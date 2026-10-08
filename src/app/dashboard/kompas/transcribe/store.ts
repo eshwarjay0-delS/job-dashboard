@@ -53,3 +53,24 @@ export async function saveSession(session: Session, now: number): Promise<boolea
 export async function deleteSession(id: string): Promise<boolean> {
   return (await run("readwrite", store => store.delete(id))).ok
 }
+
+// ── the person's own voice print ─────────────────────────────────────────────
+// Kept beside the transcripts, in the same database on this device, under a name no transcript can have. It is a short
+// list of numbers that describes how the person's voice sounds (src/lib/kompasVoice.ts); the recording it was worked out
+// from is not kept. Only the person's own is ever stored: other people's voices are told apart while a transcript is open
+// and are gone when it is closed.
+const VOICE_ID = "__my_voice__"
+
+export async function loadVoice(): Promise<{ print: unknown; savedAt: number } | null> {
+  const got = await run<{ print?: unknown; savedAt?: number } | undefined>("readonly", store => store.get(VOICE_ID))
+  return got.ok && got.value && got.value.print && typeof got.value.savedAt === "number" ? { print: got.value.print, savedAt: got.value.savedAt } : null
+}
+
+export async function saveVoice(print: unknown, now: number): Promise<boolean> {
+  return (await run("readwrite", store => store.put({ id: VOICE_ID, print, savedAt: now }))).ok
+}
+
+export async function forgetVoice(): Promise<boolean> {
+  return (await run("readwrite", store => store.delete(VOICE_ID))).ok
+}
+

@@ -41,7 +41,10 @@ export function audioType(mime: string | null): string | null {
 
 const SPEECH_TIMEOUT_MS = 25_000
 
-export async function transcribeAudio(input: { audio: Uint8Array; mime: string; hint?: string; language?: string; purpose: SpeechPurpose }): Promise<{ text: string; seconds: number | null; language: string | null; model: string }> {
+/** One sentence or so of a recording, with when it starts and ends in seconds from the start of that recording. */
+export type SpokenStretch = { start: number; end: number; text: string }
+
+export async function transcribeAudio(input: { audio: Uint8Array; mime: string; hint?: string; language?: string; purpose: SpeechPurpose }): Promise<{ text: string; seconds: number | null; language: string | null; model: string; segments: SpokenStretch[] }> {
   const type = audioType(input.mime)
   if (!type) throw new SpeechError("bad-audio")
   const key = (await keysFor(`kompas:${input.purpose}`, resolveKeys({}))).groq
@@ -79,7 +82,7 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
     if (response.status === 400 || response.status === 415 || response.status === 422) throw new SpeechError("bad-audio")
     throw new SpeechError("unavailable")
   }
-  let body: { text?: unknown; duration?: unknown; language?: unknown }
+  let body: { text?: unknown; duration?: unknown; language?: unknown; segments?: unknown }
   try { body = await response.json() } catch { record(false); throw new SpeechError("unavailable") }
   record(true)
   return {
@@ -87,6 +90,13 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
     seconds: typeof body.duration === "number" && Number.isFinite(body.duration) ? Math.round(body.duration * 10) / 10 : null,
     language: typeof body.language === "string" ? body.language.slice(0, 24) : null,
     model,
+    // The recogniser's own division into stretches, each with its times. Times and words only: the page uses them to cut
+    // the sound it already holds and work out, on the device, whose voice each stretch is.
+    segments: (Array.isArray(body.segments) ? body.segments : []).slice(0, 400).flatMap((s): SpokenStretch[] => {
+      const row = s as { start?: unknown; end?: unknown; text?: unknown }
+      const start = Number(row?.start), end = Number(row?.end), text = typeof row?.text === "string" ? row.text.trim() : ""
+      return text && Number.isFinite(start) && Number.isFinite(end) && end >= start && start >= 0 ? [{ start: Math.round(start * 100) / 100, end: Math.round(end * 100) / 100, text }] : []
+    }),
   }
 }
 

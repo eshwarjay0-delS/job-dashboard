@@ -1,3 +1,31 @@
+## 2026-10-08 (night) — Transcribe: two answers, "Recognize my voice", and who said each line (Claude Code)
+
+The owner, on a screenshot of "Who is speaking?": "Just keep it as only me and other people involved. And if there was other people are involved ask the person to say something with some text on the screen to speak and record that audio. And recognize the user as you in the transcribing output ... recognizing multiple voices. Mainly distinguishing them ... Just like a fingerprint ... Everytime a user using it should prompt on whether is it the first time using it. Saying we wouldn't know who are you in the meeting. give a recognize button. And register those voices."
+
+**Built**
+
+- **Two answers**: "Only me" and "Other people too". The third answer ("other people who have not been told") and its refusal are gone by his decision. What I kept is one sentence beside the second answer: "Everyone in it should know it is being recorded."
+- **"Which voice is yours?"**, shown every time "Other people too" is chosen: "Is this your first time here? We would not know which voice is yours in the meeting." and a **Recognize my voice** button. The person reads a short passage; a voice print is worked out in the browser and kept on the device (IndexedDB, beside the transcripts); the reading itself is dropped. With a print saved it says so, with "Read it again" and "Forget my voice". It can be skipped.
+- **Who said each line** (`src/lib/kompasVoice.ts`): with other people in a transcript, each stretch the recogniser marks becomes a line with a speaker: **You** when it matches the person's print, otherwise Speaker 1, Speaker 2... told apart by voice. A dashed edge marks a guess; a tap changes it (You, any speaker heard, someone new) or names the speaker for that transcript. What the person sets is never changed back, and the rest of the transcript learns from it. Downloads carry the names.
+- **Only the person's own voice is registered.** Other people's voice prints live in memory while a transcript is open and are never stored. That is my reading of "register those voices", on purpose: a voice print describes a person's body, and theirs is not ours to keep. Their NAMES can be kept in a transcript.
+- The server answer gained each stretch's start, end and words (`segments`), nothing else. Voices are worked out on the device; nothing new is sent anywhere.
+
+**Verified**
+
+- **Measured** with `scripts/measure-voice.mjs` on the recordings in hand: four synthetic voices (two men, two women), 120 sentences each, settings made on one half and tested on the other. Whole sentences (7 to 8 s): own lines called You 100%, another voice called You 0%, three others told apart with every line under the right name. Lines cut to 2.5 s: own lines called You 93.5 to 100%, another voice called You 0%, You-or-not right on 97.5 to 100% of lines in a four-voice meeting; the three others were sometimes split into four or five names.
+- `scripts/tests/kompas-speech.test.mjs` 38 of 38; suite 153 of 154 (the standing Windows path test). `npx tsc --noEmit` clean.
+- In a local browser: the two answers; the voice step with his words and button; pressing it with the microphone blocked gives the plain message and the page is idle again; Continue opens the transcript.
+
+**NOT verified**
+
+- **Real people.** Synthetic voices differ from themselves far less than a person does, and two men in one room are closer than these four are. Expect it to be worse than the numbers above; that is why every label can be changed with a tap. Nobody has read the passage into a microphone, and no real meeting has been transcribed.
+- The same person on another microphone, a noisy room, people talking over each other (one stretch gets one speaker).
+
+**Where to pick up**
+
+- Settings (`SCALE`, `SAME`) should be measured again on real recordings: `node scripts/measure-voice.mjs <folder> [n] [labels.json]`.
+- A proper speaker model (a trained embedding) would do far better than this arithmetic; it means a model file of several MB in the page or a provider that tells speakers apart. His choice.
+
 ## 2026-10-08 (evening) — Kompas Flow for Android is now the floating button the owner described (Claude Code)
 
 Shown the launcher, the owner asked: "Does it work similar to whisper flow. Like a mini hovering button that goes everywhere", and then described it: "an button that hovers over ... user can keep it everywhere with draging around the screen. with tapping once it goes into listen mode ... 2 buttons such as right and wrong symbols. The microphone vibrations reacting real time with the voice. Once clicked on right it would instantly paste the audio into text".

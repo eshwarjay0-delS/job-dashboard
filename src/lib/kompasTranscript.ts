@@ -13,18 +13,28 @@
  *     `cleanupAllowed` is the control: the tidied words must be the raw words, in order, with some left out. That allows
  *     dropping a filler or a false start and changing punctuation and capitals, and nothing else, because anything else has to
  *     use a word that was never said.
- *  3. RECORDING PEOPLE WHO WERE NOT TOLD. A transcript of other people will not start unless the person starting it says the
- *     others know. There is no path around that refusal in code.
+ *  3. NOT KNOWING WHO IS IN IT. A transcript starts only after the person has said whether it is only them or other
+ *     people too (the owner, 2026-10-08: "Just keep it as only me and other people involved"). The earlier third answer,
+ *     "other people who have not been told", and its refusal are gone by his decision; what stays is that the page says,
+ *     beside the second answer, that everyone in it should know it is being recorded. Any answer that is neither of the
+ *     two starts nothing.
+ *  5. A GUESS SHOWN AS A FACT. Who said a line is worked out from the sound (src/lib/kompasVoice.ts) and can be wrong. A
+ *     speaker the person set themselves is marked as theirs (`by: "you"`) and is never changed by a later guess.
  *  4. A PART THAT QUIETLY GOES MISSING. A part of a recording that could not be read is kept in the transcript as a marked gap
  *     with its time. It is never dropped.
  *
  * No browser, no server, no clock: every time is handed in. Loads in plain Node, which is how the tests hold it still.
  */
 
-export type Consent = "only-me" | "others-told" | "others-not-told"
+/** The two answers to "Who is speaking?". "others-told" is the name the second answer had before 8 Oct; kept transcripts carry it. */
+export type Consent = "only-me" | "others" | "others-told"
 export type Layer = "raw" | "clean"
-export type Segment = { id: string; startMs: number; endMs: number; raw: string; clean?: string; failed?: true }
-export type Session = { v: 1; id: string; title: string; startedAt: string; consent: "only-me" | "others-told"; segments: Segment[] }
+/**
+ * `speaker` is who said it: "you", or "s1", "s2"... for the other voices in the order they were first heard. `by` says who
+ * decided that: absent when it was worked out from the sound, "you" when the person set it.
+ */
+export type Segment = { id: string; startMs: number; endMs: number; raw: string; clean?: string; failed?: true; speaker?: string; by?: "you" }
+export type Session = { v: 1; id: string; title: string; startedAt: string; consent: Consent; segments: Segment[]; names?: Record<string, string> }
 
 // ─────────────────────────────────────────── the guard on tidying ────────────────────────────────────────────
 
@@ -163,11 +173,10 @@ export function flowResult(raw: string, clean: string | null): { raw: string; cl
 // ─────────────────────────────────────────── Transcribe: a kept session ────────────────────────────────────────────
 
 /**
- * Start a transcript. Refused when other people are in it and have not been told: tell them first.
- * Recording only oneself needs nothing but one's own Start.
+ * Start a transcript, once the person has said who is in it. Anything but one of the two answers starts nothing.
  */
-export function startSession(input: { id: string; title?: string; startedAt: number; consent: Consent }): { ok: true; session: Session } | { ok: false; because: "others-not-told" } {
-  if (input.consent !== "only-me" && input.consent !== "others-told") return { ok: false, because: "others-not-told" }
+export function startSession(input: { id: string; title?: string; startedAt: number; consent: Consent }): { ok: true; session: Session } | { ok: false; because: "not-answered" } {
+  if (input.consent !== "only-me" && input.consent !== "others" && input.consent !== "others-told") return { ok: false, because: "not-answered" }
   const title = (input.title ?? "").trim().slice(0, 120) || "Untitled transcript"
   return { ok: true, session: { v: 1, id: input.id, title, startedAt: new Date(input.startedAt).toISOString(), consent: input.consent, segments: [] } }
 }
@@ -185,7 +194,56 @@ export function appendSegment(session: Session, segment: { id: string; startMs: 
 export function replaceSegment(session: Session, segmentId: string, raw: string): Session {
   const text = raw.trim()
   if (!text) return session
-  return { ...session, segments: session.segments.map(s => (s.id === segmentId ? { id: s.id, startMs: s.startMs, endMs: s.endMs, raw: text } : s)) }
+  return { ...session, segments: session.segments.map(s => (s.id === segmentId ? { id: s.id, startMs: s.startMs, endMs: s.endMs, raw: text, ...(s.speaker ? { speaker: s.speaker } : {}), ...(s.by ? { by: s.by } : {}) } : s)) }
+}
+
+// ─────────────────────────────────────────── who said it ────────────────────────────────────────────
+
+/** Is anyone but the person in this transcript? Only then are lines given a speaker. */
+export function hasOthers(session: Session): boolean {
+  return session.consent !== "only-me"
+}
+
+/** Take the speakers worked out from the sound. A line whose speaker the person set keeps what they set. */
+export function withSpeakers(session: Session, speakers: Readonly<Record<string, string>>): Session {
+  let changed = false
+  const segments = session.segments.map(s => {
+    const guess = speakers[s.id]
+    if (!guess || s.by === "you" || s.speaker === guess) return s
+    changed = true
+    return { ...s, speaker: guess }
+  })
+  return changed ? { ...session, segments } : session
+}
+
+/** The person says who said a line. It is theirs from then on: no later guess changes it. */
+export function setSpeaker(session: Session, segmentId: string, speaker: string): Session {
+  const id = speaker.trim()
+  if (!/^(you|s[1-9][0-9]?)$/.test(id)) return session
+  return { ...session, segments: session.segments.map(s => (s.id === segmentId ? { ...s, speaker: id, by: "you" as const } : s)) }
+}
+
+/** Give a speaker a name in this transcript ("s1" becomes "Priya"). An empty name goes back to "Speaker 1". */
+export function nameSpeaker(session: Session, speaker: string, name: string): Session {
+  if (speaker === "you" || !/^s[1-9][0-9]?$/.test(speaker)) return session
+  const names = { ...(session.names ?? {}) }
+  const clean = name.replace(/[\u0000-\u001f]+/g, " ").trim().slice(0, 40)
+  if (clean) names[speaker] = clean; else delete names[speaker]
+  return { ...session, names }
+}
+
+/** What a speaker is called on the page and in a download: "You", the name the person gave, or "Speaker 2". */
+export function speakerLabel(session: Session, speaker: string | undefined): string {
+  if (!speaker) return ""
+  if (speaker === "you") return "You"
+  return session.names?.[speaker] || `Speaker ${speaker.slice(1)}`
+}
+
+/** The speakers heard so far, in the order of their first line: for the list a person picks from. */
+export function speakersHeard(session: Session): string[] {
+  const seen: string[] = []
+  for (const s of session.segments) if (s.speaker && !seen.includes(s.speaker)) seen.push(s.speaker)
+  return seen
 }
 
 /** Keep a tidied wording beside a part's own words. Unchanged when the tidied text fails the guard. */
@@ -206,9 +264,13 @@ export function clockAt(ms: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`
 }
 
-/** The transcript as lines with their times. A part that could not be read is a line too, marked, with no words. */
-export function transcriptLines(session: Session, layer: Layer): { id: string; clock: string; text: string; failed: boolean }[] {
-  return session.segments.map(s => ({ id: s.id, clock: clockAt(s.startMs), text: s.failed ? "" : segmentText(s, layer), failed: !!s.failed }))
+/** The transcript as lines with their times and, when other people are in it, who said each. A part that could not be read is a line too, marked, with no words. */
+export function transcriptLines(session: Session, layer: Layer): { id: string; clock: string; text: string; failed: boolean; speaker: string; who: string; guessed: boolean }[] {
+  const others = hasOthers(session)
+  return session.segments.map(s => ({
+    id: s.id, clock: clockAt(s.startMs), text: s.failed ? "" : segmentText(s, layer), failed: !!s.failed,
+    speaker: others && !s.failed ? s.speaker ?? "" : "", who: others && !s.failed ? speakerLabel(session, s.speaker) : "", guessed: others && !!s.speaker && s.by !== "you",
+  }))
 }
 
 export function wordCount(session: Session, layer: Layer): number {
@@ -223,11 +285,11 @@ export function lengthMs(session: Session): number {
 const GAP = "[This part could not be read]"
 
 export function asPlainText(session: Session, layer: Layer): string {
-  const lines = transcriptLines(session, layer).map(l => `${l.clock}  ${l.failed ? GAP : l.text}`)
+  const lines = transcriptLines(session, layer).map(l => `${l.clock}  ${l.failed ? GAP : `${l.who ? `${l.who}: ` : ""}${l.text}`}`)
   return [session.title, `${session.startedAt.slice(0, 10)}, ${clockAt(lengthMs(session))} long, ${layer === "clean" ? "tidied" : "as said"}`, "", ...lines, ""].join("\n")
 }
 
 export function asMarkdown(session: Session, layer: Layer): string {
-  const lines = transcriptLines(session, layer).map(l => `**${l.clock}** ${l.failed ? `_${GAP}_` : l.text}`)
+  const lines = transcriptLines(session, layer).map(l => `**${l.clock}** ${l.failed ? `_${GAP}_` : `${l.who ? `**${l.who}:** ` : ""}${l.text}`}`)
   return [`# ${session.title}`, "", `${session.startedAt.slice(0, 10)} · ${clockAt(lengthMs(session))} long · ${wordCount(session, layer)} words · ${layer === "clean" ? "tidied" : "as said"}`, "", lines.join("\n\n"), ""].join("\n")
 }
