@@ -56,3 +56,14 @@ Approved references are design candidates and source inspirations, not proof of 
 | Yale General Resume | APPROVED | https://ocs.yale.edu/channels/resumes/ |
 
 Jake's Resume remains APPROVED. Totals: seven approved references, five rejected references. These are owner design selections, not claims of university, employer, or HR endorsement of MarketFit. Confirm the exact sample for broad reference families (e.g. Harvard Paragraph, Yale Technical) before reproducing a layout. Review licensing and validate ATS readability before publication.
+
+## Experienced professional review (2026-10-08)
+
+| Reference | Decision |
+| --- | --- |
+| Columbia Business School Experienced Resume | APPROVED |
+| Harvard Extension Senior Finance | REJECTED |
+
+Columbia reference: https://business.columbia.edu/sites/default/files-efs/imce-uploads/CMC/CBS%20Experienced%20Resume%20Checklist.2025April.pdf
+
+Only these two references were reviewed in this round. Carlson Experienced Professional, Tusculum Executive, Monster Experienced Executive, and Robert Half Executive Structure remain UNREVIEWED. All previous decisions are preserved. Total owner-approved references: 8. Total rejected: 6. Approval is the owner's design preference, not a claim of corporate HR endorsement.
