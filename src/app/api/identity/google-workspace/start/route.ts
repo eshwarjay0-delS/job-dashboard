@@ -27,6 +27,18 @@ export async function GET(req: NextRequest) {
   const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${req.nextUrl.origin}/api/identity/google-workspace/callback`
   const state = createGoogleOAuthState(user.id, returnTo)
 
+  // Smart prompt: first account gets full consent; accounts 2-4 just get the
+  // account picker. Google still shows permissions once per NEW account (their
+  // rule), but we skip the redundant re-consent theater after the user already
+  // trusts the app.
+  let prompt = "consent select_account"
+  try {
+    const { data: existing } = await supabase.rpc("identity_list_google_workspace_accounts", { p_user_id: user.id })
+    if (existing && existing.length > 0) prompt = "select_account"
+  } catch {
+    // If the count check fails, fall back to full consent — safe default.
+  }
+
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -34,7 +46,7 @@ export async function GET(req: NextRequest) {
     scope: SCOPES.join(" "),
     access_type: "offline",
     include_granted_scopes: "true",
-    prompt: "consent select_account",
+    prompt,
     state,
   })
 
