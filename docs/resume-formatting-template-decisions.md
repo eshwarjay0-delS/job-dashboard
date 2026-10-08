@@ -24,3 +24,20 @@ Add a Resume Formatting page immediately after Resume Tailoring in the MarketFit
 Preserve factual resume data and let users correct extraction errors. Changing a template changes layout, not work history. Support legible page breaks, ATS text extraction, balanced spacing and clear section hierarchy.
 
 This records design decisions, not a claim that implementation or deployment is complete.
+
+## Additional owner reviews — 2026-10-08
+
+| Reference | Decision |
+| --- | --- |
+| Harvard College Resume | APPROVED |
+| Yale Technical Resume | APPROVED |
+| MIT Career Resume | APPROVED |
+| CareerOneStop Professional | APPROVED |
+| Overleaf AltaCV | REJECTED |
+| Overleaf Simple Hipster | REJECTED |
+| Harvard Paragraph Resume | APPROVED |
+| Yale General Resume | APPROVED |
+
+Jake's Resume remains APPROVED. The earlier rejected FlowCV Templates, Modern Deedy and Classic Professional remain REJECTED.
+
+Approved references are design candidates and source inspirations, not proof of formal employer or HR endorsement. Avoid claiming that all hiring managers or ATS systems have approved these templates. Test resulting MarketFit implementations for reading order, parsability, page breaks, typographic consistency and recruiter usability before displaying verified badges.
