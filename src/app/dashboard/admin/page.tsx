@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import PageIntro from "../_components/page-intro"
 import { Card, Chip, Meta } from "../_suite/ui"
+import KeysPanel from "./keys-panel"
 import type { GroqAllowance } from "@/lib/llm"
 import type { CallSummary } from "@/lib/llmLedger"
 import type { LlmStatus } from "@/lib/llmStatus"
@@ -348,6 +349,10 @@ export default function AdminPage() {
               count(m.calls), tokens(m.input), tokens(m.output), m.kind === "unpriced" ? "–" : money(m.costUsd),
             ])} />
         </Card>
+      </Section>
+
+      <Section title="API keys" lede="Add or replace any provider's key here, and tick what may use it. A key is sealed before it is stored and is never shown again; a change takes effect within half a minute, with no redeploy.">
+        <KeysPanel />
       </Section>
 
       <Section title="The latest resumes" lede="The newest twenty requests, newest first. No names and no words from anyone's resume are kept here.">

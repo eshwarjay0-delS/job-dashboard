@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import path from "path"
 import { runTailor } from "@/lib/tailor"
 import { recordTailor } from "@/lib/tailorLedger"
-import { resolveKeys, hasAnyKey, tailorKeys } from "@/lib/llm"
+import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { authenticatedUser, signInRequired, ownedResumePath } from "@/lib/authBoundary"
 import { isAdminEmail } from "@/lib/owner"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
@@ -39,7 +39,8 @@ export async function POST(request: NextRequest) {
 
     if (body.filepath && !ownedResumePath(USER_RESUMES_BASE, userId, body.filepath)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     // The OpenAI key (GPT Luna) is handed over for an admin's tailoring only: see tailorKeys.
-    const keys = tailorKeys(resolveKeys(body), { owner: isAdminEmail(user.email) })
+    // Then the admin's checklist of which features may use which provider's key (src/lib/keyVault.ts).
+    const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys(body), { owner: isAdminEmail(user.email) }))
     if (!hasAnyKey(keys)) {
       return NextResponse.json(
         { error: "No API key found. Add a Claude, OpenRouter, or Gemini key in Settings or .env.local." },

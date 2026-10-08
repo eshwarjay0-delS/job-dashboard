@@ -19,7 +19,7 @@ import path from "path"
 import { createHash, randomBytes } from "crypto"
 import { blob, writePath, existsPath, deletePath } from "@/lib/storage"
 import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
-import { resolveKeys, hasAnyKey, tailorKeys } from "@/lib/llm"
+import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
 import { recordTailor } from "@/lib/tailorLedger"
 import { extractJdMeta } from "@/lib/claude"
@@ -294,7 +294,8 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 
 // ── Tailor + reply ────────────────────────────────────────────────────────────
 async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS) {
-  const keys = tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) })   // GPT Luna leads (OPENAI_TAILOR_FOR, llm.ts)
+  // GPT Luna leads (OPENAI_TAILOR_FOR, llm.ts), within the admin's checklist of what each key may be used for (keyVault.ts).
+  const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
   if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
   if (!session.jd || !session.resumePath) return sendText(from, HELP)
 
@@ -358,7 +359,7 @@ async function refine(from: string, replyTo: string, request: string, userId: st
   if (request.length < 3) {
     return sendText(from, "Tell me what to change, e.g. _add more Terraform and AWS_ or _make the bullets shorter_.")
   }
-  const keys = tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) })   // GPT Luna leads (OPENAI_TAILOR_FOR, llm.ts)
+  const keys = await keysFor("resume-change", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
   if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
   if (!(await existsPath(gen.file))) return sendText(from, "That version is no longer on file. Send the JD and resume again.")
 

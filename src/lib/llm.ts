@@ -5,6 +5,8 @@
 //   • "heavy"  (full resume tailoring)                  → quality first:    Anthropic → OpenRouter → Gemini
 // A UI preference can pin a specific provider per tier; "auto" uses the order above.
 
+import { OPENAI_DEFAULT, VAULT_PROVIDERS, allows, loadVault, ticked, vaultKey } from "./keyVault.ts"
+
 export type Provider = "anthropic" | "openrouter" | "gemini" | "groq" | "openai"
 export type ProviderPref = Provider | "auto"
 export type Tier = "heavy" | "light"
@@ -44,17 +46,26 @@ export function modelFor(provider: Provider, tier: Tier): string {
                           : (e.GEMINI_MODEL_LIGHT || e.GEMINI_MODEL || "gemini-3.5-flash-lite")
 }
 
+// The deployment's own key for a provider, from its settings.
+export function envKey(p: Provider): string {
+  const e = process.env
+  return ((p === "anthropic" ? e.ANTHROPIC_API_KEY : p === "openrouter" ? e.OPENROUTER_API_KEY : p === "groq" ? e.GROQ_API_KEY
+    : p === "gemini" ? (e.GEMINI_API_KEY || e.GOOGLE_API_KEY || e.GOOGLE_GENAI_API_KEY) : (e.OPENAI_API_KEY || e.OPEN_API_KEY)) || "").trim()
+}
+// The key this deployment uses for a provider: the one the admin stored from the Admin page (src/lib/keyVault.ts) when this
+// server instance has read one, otherwise the one in the deployment's settings.
+const deploymentKey = (p: Provider): string => vaultKey(p) || envKey(p)
+
 // Gather every available key (env + the client-provided body). Keys are classified by
 // their SOURCE (env var / body field name) — NOT by prefix — so newer key formats work.
 // (Google now issues Gemini keys as "AQ.…", not just "AIza…"; prefix-sniffing missed them.)
 export function resolveKeys(body?: { claudeKey?: string; openrouterKey?: string; geminiKey?: string; groqKey?: string }): LlmKeys {
   const out: LlmKeys = {}
   const set = (p: Provider, raw?: string) => { const v = (raw || "").trim(); if (v && !out[p]) out[p] = v }
-  const e = process.env
-  set("anthropic", e.ANTHROPIC_API_KEY)
-  set("openrouter", e.OPENROUTER_API_KEY)
-  set("gemini", e.GEMINI_API_KEY || e.GOOGLE_API_KEY || e.GOOGLE_GENAI_API_KEY)
-  set("groq", e.GROQ_API_KEY)
+  set("anthropic", deploymentKey("anthropic"))
+  set("openrouter", deploymentKey("openrouter"))
+  set("gemini", deploymentKey("gemini"))
+  set("groq", deploymentKey("groq"))
   set("anthropic", body?.claudeKey)
   set("openrouter", body?.openrouterKey)
   set("gemini", body?.geminiKey)
@@ -74,7 +85,7 @@ export function hasAnyKey(keys: LlmKeys): boolean { return !!(keys.anthropic || 
 // The setting is OPENAI_API_KEY. OPEN_API_KEY is read as well because that is the name the owner saved it under on Vercel
 // (2026-10-05, 09:20), and sending a busy person back to rename a setting would have been the worse fix.
 export function tailorKeys(keys: LlmKeys, who: { owner: boolean }): LlmKeys {
-  const key = (process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY || "").trim()
+  const key = deploymentKey("openai")
   if (!key || keys.openai) return keys
   const scope = tailorScope()
   return scope === "all" || (scope === "owner" && who.owner) ? { ...keys, openai: key } : keys
@@ -93,6 +104,38 @@ export function tailorScope(): "all" | "owner" | "off" {
   if (!said || ["all", "everyone", "any", "on", "true", "1", "yes"].includes(said)) return "all"
   if (["owner", "owners", "owner-only", "owner only", "admin", "admins", "admin-only", "me"].includes(said)) return "owner"
   return "off"
+}
+
+/**
+ * The admin's checklist applied to a set of keys, for one feature (src/lib/keyVault.ts).
+ *
+ * A provider whose key is not ticked for this feature is taken out, exactly as if it had no key, so the other providers
+ * serve the feature. A key the admin stored replaces the deployment's own. A person's own key (from their Settings) is
+ * theirs: it is neither replaced nor taken out. Applying this twice gives the same keys as applying it once.
+ *
+ * OpenAI is added here, for a caller that was not handed it, only when the admin ticked a feature outside the resume
+ * tailor for it. For the tailor itself tailorKeys() still decides who is handed the key.
+ */
+export function applyVault(keys: LlmKeys, purpose: string): LlmKeys {
+  const out: LlmKeys = { ...keys }
+  for (const p of VAULT_PROVIDERS) {
+    const own = envKey(p), stored = vaultKey(p), held = out[p]
+    if (held && held !== own && held !== stored) continue
+    if (!allows(p, purpose)) { delete out[p]; continue }
+    if (held) { if (stored) out[p] = stored; continue }
+    if (p === "openai") { if (ticked(p, purpose) && !OPENAI_DEFAULT.includes(purpose) && (stored || own)) out[p] = stored || own }
+    else if (stored) out[p] = stored
+  }
+  return out
+}
+/**
+ * The keys a feature may use, with the vault read first. For callers that choose providers before they call callLLM.
+ * Hand it a function when the keys are gathered with tailorKeys(): a key the admin stored for OpenAI is only seen by
+ * tailorKeys() once this server instance has read the vault, so the gathering has to wait for that.
+ */
+export async function keysFor(purpose: string, keys: LlmKeys | (() => LlmKeys)): Promise<LlmKeys> {
+  await loadVault()
+  return applyVault(typeof keys === "function" ? keys() : keys, purpose)
 }
 
 // The order an automatic call asks the providers in. OpenAI is deliberately in neither list: see tailorKeys().
@@ -152,8 +195,10 @@ interface CallOpts {
 // plain Node test cannot resolve; where it cannot be loaded (those tests), nothing is recorded and nothing fails.
 function recordCall(call: { purpose?: string; provider: Provider; model: string; ok: boolean; status?: number; usage?: TokenUsage; began: number }): void {
   const at = Date.now()
+  // A call made for a Kompas feature ("kompas:flow") is filed under Kompas, whichever deployment made it.
+  const forKompas = (call.purpose || "").startsWith("kompas:")
   void import("./llmLedger").then(m => m.scheduleLlmRecord({
-    at, app: "marketfit", purpose: call.purpose || "other", provider: call.provider, model: call.model, ok: call.ok,
+    at, app: forKompas ? "kompas" : "marketfit", purpose: (forKompas ? call.purpose!.slice(7) : call.purpose) || "other", provider: call.provider, model: call.model, ok: call.ok,
     ...(call.status ? { status: call.status } : {}),
     input: call.usage?.input || 0, output: call.usage?.output || 0, cacheRead: call.usage?.cacheRead || 0, cacheWrite: call.usage?.cacheWrite || 0,
     ms: at - call.began,
@@ -209,11 +254,18 @@ async function fetchRetry(url: string, init: RequestInit): Promise<Response> {
 // single-field edit), although Groq was answering the whole time.
 export async function callLLM(opts: CallOpts): Promise<{ text: string; provider: Provider; model: string }> {
   const pref = opts.pref || "auto"
-  const first = pickProvider(opts.keys, opts.tier, pref)
-  if (!first) throw new Error("No API key configured. Add a Claude, OpenRouter, or Gemini key in Settings.")
-  const named = pref !== "auto" && !!opts.keys[pref]
+  await loadVault()
+  const purpose = opts.purpose || "other"
+  const keys = applyVault(opts.keys, purpose)
+  const first = pickProvider(keys, opts.tier, pref)
+  // OpenAI is in no automatic order (see tailorKeys). The one automatic call that asks it is for a feature outside the
+  // resume tailor that the admin ticked for OpenAI on the Admin page: that tick is the instruction to use it, so it is
+  // asked first and the free providers stand behind it.
+  const lead: Provider[] = pref === "auto" && keys.openai && ticked("openai", purpose) && !OPENAI_DEFAULT.includes(purpose) ? ["openai"] : []
+  if (!first && !lead.length) throw new Error("No API key configured. Add a Claude, OpenRouter, or Gemini key in Settings.")
+  const named = pref !== "auto" && !!keys[pref]
   const began = Date.now()
-  let order: Provider[] = [first.provider]
+  let order: Provider[] = first ? [first.provider] : []
   if (!named) {
     // Falling through is for the providers that cost nothing. The first provider with a key is asked as it always was;
     // after it, only a free one: Gemini, Groq, or OpenRouter on a ":free" model. Several routes that make automatic calls
@@ -221,8 +273,8 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
     // review, 2026-10-05). LLM_AUTO_FALLBACK_PAID=1 lifts the limit.
     const paidToo = process.env.LLM_AUTO_FALLBACK_PAID === "1" || process.env.LLM_AUTO_FALLBACK_PAID === "true"
     const free = (p: Provider) => p === "gemini" || p === "groq" || (p === "openrouter" && /:free$/i.test(modelFor(p, opts.tier)))
-    const keyed = AUTO_ORDER[opts.tier].filter(p => !!opts.keys[p]).filter((p, i) => i === 0 || paidToo || free(p))
-    order = [...keyed.filter(p => (downUntil.get(p) || 0) <= began), ...keyed.filter(p => (downUntil.get(p) || 0) > began)]
+    const keyed = AUTO_ORDER[opts.tier].filter(p => !!keys[p]).filter((p, i) => i === 0 || paidToo || free(p))
+    order = [...lead, ...keyed.filter(p => (downUntil.get(p) || 0) <= began), ...keyed.filter(p => (downUntil.get(p) || 0) > began)]
   }
   // A further provider is started only while the call is young. A refusal that will not clear comes back in under a second,
   // so the next provider is asked at once; after a slow failure (a timeout, a rate limit waited out) the caller has usually
@@ -233,7 +285,7 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
   let lastErr: unknown = null
   for (const provider of order) {
     if (lastErr && Date.now() - began > window) break
-    const key = opts.keys[provider]!
+    const key = keys[provider]!
     const model = named && opts.exactModel ? opts.exactModel
       : (opts.model && provider === "anthropic" && /^claude/i.test(opts.model)) ? opts.model
       : modelFor(provider, opts.tier)

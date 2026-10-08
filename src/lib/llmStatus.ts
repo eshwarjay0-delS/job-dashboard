@@ -8,7 +8,7 @@
  * retry rule) and the refusal, if any, is sorted into a state. Each probe asks for a handful of output tokens; the answers are
  * kept for five minutes per server instance, and callers that arrive together share one probe. No key or reply text is returned.
  */
-import { callLLM, resolveKeys, tailorKeys, tailorScope, type Provider } from "@/lib/llm"
+import { callLLM, keysFor, resolveKeys, tailorKeys, tailorScope, type Provider } from "@/lib/llm"
 
 export type ProviderState = "ok" | "rate_limited" | "key_rejected" | "no_credit" | "model_not_found" | "slow_or_down" | "refused"
 export type LlmStatus = {
@@ -39,6 +39,8 @@ function sort(message: string): { state: ProviderState; limit?: string } {
 
 let kept: { at: number; status: LlmStatus } | null = null
 let inflight: Promise<LlmStatus> | null = null
+/** Forget the last answer, so the next question probes again. Called when the admin changes a key. */
+export function forgetLlmStatus(): void { kept = null }
 
 export async function llmStatus(): Promise<LlmStatus> {
   if (kept && Date.now() - kept.at < 5 * 60_000) return kept.status
@@ -47,7 +49,8 @@ export async function llmStatus(): Promise<LlmStatus> {
 }
 
 async function probe(): Promise<LlmStatus> {
-  const keys = tailorKeys(resolveKeys({}), { owner: true })
+  // The health check looks at every key in use, a key the admin stored from the Admin page included (keyVault.ts).
+  const keys = await keysFor("status-check", () => tailorKeys(resolveKeys({}), { owner: true }))
   const have = ORDER.filter(p => !!keys[p])
   if (!have.length) return { state: "not_configured", providers: [], fix: "No AI provider key is set on the deployment. Set at least one of GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, ANTHROPIC_API_KEY, then redeploy." }
   const providers = await Promise.all(have.map(async (provider): Promise<LlmStatus["providers"][number]> => {

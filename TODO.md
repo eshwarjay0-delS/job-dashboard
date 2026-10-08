@@ -1,3 +1,33 @@
+## 2026-10-07 (evening) — API keys on the Admin page, with a checklist of what may use each (Claude Code)
+
+The owner: "give me placeholder to update any API-key I want. And also select and edit checklist which apps or features can use that API right there."
+
+**Built**
+
+- **`/dashboard/admin`, section "API keys"** (`src/app/dashboard/admin/keys-panel.tsx`): one row per provider (OpenAI, Groq, OpenRouter, Anthropic, Gemini): where its key is kept, a field to paste a new one, and a checklist of the features that may use it. The field hides what is typed and is emptied when the save answers; nothing is kept in the browser.
+- **`src/lib/keyVault.ts`**: a key stored from the page is sealed with AES-256-GCM before it reaches storage (`admin/key-vault.json`), under a key derived from `KEY_VAULT_SECRET` when set, otherwise from the storage account's own secret; the provider's name is bound into the seal. A stored key replaces the one on Vercel for that provider on every server instance within half a minute, with no redeploy; removing it puts the Vercel key back. A key is never sent back to a browser: the page gets the last four characters and the day.
+- **The checklist is enforced where calls are made** (`applyVault` and `keysFor` in `src/lib/llm.ts`, used by `callLLM`, the web tailor route, both WhatsApp tailor paths and the health check): a provider that is not ticked for a feature is treated as having no key for it, so the others serve it. A person's own key from their Settings is never touched.
+- **Defaults keep today's behaviour**: OpenAI is ticked for the resume tailor only (writing, changes, keywords); every other provider for everything. Ticking another feature for OpenAI (say interview practice) makes that feature ask OpenAI first, with the free providers behind it. An automatic call still never reaches OpenAI without that tick.
+- **`GET/POST /api/admin/keys`**: admins only on both; a change is accepted only from this site's own pages; no key in any answer or log line.
+
+**Verified**
+
+- `scripts/tests/key-vault.test.mjs`, 16 of 16; the suite 108 of 109 (the standing Windows path test). `npx tsc --noEmit` clean.
+- An existing test caught a hole in my first wiring (an automatic call reached OpenAI when the caller held a key that was not the deployment's): the tick is now required explicitly.
+- Through real storage on this machine's disk store: saved, the stored file does not contain the key, a fresh instance reads it back, the checklist takes Groq away from an unticked feature, removal works.
+- The panel rendered in a local browser with stand-in data: five providers, checklists, no sideways scroll.
+
+**NOT verified**
+
+- Storing a key on the live site: I do not enter keys. The first key the owner pastes proves the R2 path; the page says "Saved. The new key is in use." or the reason it was not.
+- Other server instances picking a change up within half a minute (one instance was run).
+
+**Where to pick up**
+
+- Features that run on the Kompas deployment are not in the checklist yet: a tick that does nothing is not offered. They come with the endpoint that hands a stored key across and Kompas's side of it.
+- Kompas Flow and Kompas Transcribe join the checklist in the commit that ships them.
+- `KEY_VAULT_SECRET` on Vercel (32 or more random characters) separates the sealing secret from the storage account's. Setting it later makes keys stored before it unreadable; the page then asks for them again.
+
 ## 2026-10-07 — One Admin page for MarketFit and Kompas: resumes, model calls, cost, what is left (Claude Code)
 
 The owner: "it should also provide good overview about how much usage is left. How many were interacted. clear picture of resume gen costs. How many generated this week and today", "Make this another nav for admin only eshwarjay0@gmail.com is the admin. And skip onboarding for this user as well", "This should be a centralized place for job-dashboard and kompas usage. API costs, tokens costs".
