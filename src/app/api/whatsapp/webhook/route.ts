@@ -314,7 +314,7 @@ async function formatWhatsAppResume(from: string, session: Session, template: Fo
   const formatted = await renderResumeDocx(extracted, template)
   const name = await outputNameFor(source)
   await sendText(from, "Formatting with " + RESUME_FORMATS.find(t => t.id === template)?.label + "…")
-  await deliver(from, formatted, name + "_Formatted", "Formatted resume. Please review content and layout before submitting.", { userId: "format", jd: "", meta: { role: "", company: "", location: "" }, changes: [] })
+  await sendDocument(from, formatted, name + "_Formatted.docx", "Formatted resume. Please review content and layout before submitting.")
   await saveSession(from, { seen: session.seen })
 }
 
