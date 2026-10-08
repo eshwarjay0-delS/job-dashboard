@@ -31,6 +31,12 @@ const nextConfig = {
 
   // ── Experimental ────────────────────────────────────────────────────────
   experimental: {
+    // Turbopack's on-disk cache for `next build`, off. Vercel restores .next from the previous
+    // deployment; on 8 Oct 2026 a build that restored it compiled in 4.5 s and shipped the
+    // stylesheet of 5 Oct, although globals.css had changed in that commit (the new HTML and
+    // the new manifest were live beside the old CSS chunk, under its old name). A full compile
+    // is about 20 s. scripts/tests/theme-palette.test.mjs holds this line.
+    turbopackFileSystemCacheForBuild: false,
     optimizePackageImports: [
       "@supabase/supabase-js",
       "@supabase/ssr",

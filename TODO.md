@@ -1,3 +1,15 @@
+## 2026-10-08 (theme, second push) — Production was serving the old stylesheet; the entrance page was a white card on the night (Claude Code)
+
+**What went wrong.** The theme commit (`2fdece2`) went live with its new HTML and manifest and the **stylesheet of 5 Oct**. Proof: the live sign-in page linked `/_next/static/immutable/chunks/293o2cdl8ybsi.css`, last modified 5 Oct, holding `[data-theme=dark]{--bg:#121723` and no `#060817` anywhere, while the same page's HTML already carried the new `mf-dashboard-shell` class. The build log: "Restored build cache from previous deployment", "Compiled successfully in 4.5s" (a full compile here is 19.5 s). A fresh local build of the same commit produced the new stylesheet under a new name. So the owner was looking at the old night while I reported a new one.
+
+**Fix.** `next.config.js`: `experimental.turbopackFileSystemCacheForBuild: false`, with the reason beside it and a test that holds the line. This costs about 20 s a build.
+
+**Also in this push.** The owner, with a screenshot of the setup page: "The Entrance white colors alone is cute poop". `src/app/dashboard/setup/page.tsx` kept six paper colours in a palette of its own and a dozen inline, so on the night the card and the step circles stayed white with night-coloured fields inside. All of it is on theme tokens now; a failed upload is written in the alert colour. Left as literals: white type on the accent, and the four greys of the Google mark.
+
+**Verified.** `theme-palette.test.mjs` 13 of 13. Setup page seen in the local preview on the night at 1280 wide: no element with a white fill in the page (counted in the page, 0). Type check clean.
+
+**NOT verified at the time of writing.** That the next production build really compiles the stylesheet from source: check the live CSS for `#060817` after this deploys. If it is still the old one, the cause is not the Turbopack cache and the next thing to look at is how the CDN keeps `/_next/static/immutable/*` across deployments.
+
 ## 2026-10-08 (theme) — A lunar night, the ink corrected on paper, and warm signals in both (Claude Code)
 
 The owner, in four messages: "Also use this colors for dark theme across the job-dashboard. the current ones sucks" (#1B3A57, #2C3E50, #4A6E8D, #A4C8E1); "This are our standards mostly. The present lighter version is fine. paper mode but the ink needs correction!" (#060817, #16254F, #667D9D, #ACBBC6, #ECECEC); "It should feel more lunar and nice"; and, with a blood-moon palette (#F47C54, #CB4E42, #AD564B, #5C646C, #414150), "These are good as well more better wherever we need show distinguishes and push alerts even on the paper mode."

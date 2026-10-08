@@ -160,3 +160,22 @@ test('the installed app opens on the night sky, not on a grey that is in neither
   assert.match(manifest, /background_color: "#060817"/)
   assert.match(manifest, /theme_color: "#060817"/)
 })
+
+test('the entrance page takes every colour from the theme, so its card is not a white sheet on the night', () => {
+  // The owner's screenshot (8 Oct): a white card and white step circles on the night page, with night-coloured fields inside.
+  // The page kept six paper colours of its own in a local palette, and a dozen more inline.
+  const page = read('src/app/dashboard/setup/page.tsx')
+  const palette = page.slice(page.indexOf('const P = {'), page.indexOf('}', page.indexOf('const P = {')))
+  assert.ok(!/#[0-9a-f]{3,8}/i.test(palette), 'the page palette holds tokens only')
+  for (const name of ['surface', 'text', 'muted', 'hint', 'border', 'bg']) assert.match(palette, new RegExp(name + ': "var\\(--[a-z-]+\\)"'))
+  // What is left as a literal: white type on the accent, and the four greys of the Google mark, which is a drawing.
+  const literals = new Set(page.match(/#[0-9a-fA-F]{6}\b|#fff\b/g))
+  assert.deepEqual([...literals].sort(), ['#7f7c69', '#888471', '#938f7a', '#c6c0b0', '#fff'])
+})
+
+test('a production build compiles the stylesheet from the source, never from a restored cache', () => {
+  // 8 Oct 2026: the commit that changed the theme went live with its new HTML and the stylesheet of 5 Oct. Vercel had restored
+  // .next from the previous deployment and the build "compiled" in 4.5 s. Everything in this file passed while production
+  // showed the old colours, so the switch that lets that happen is held here too.
+  assert.match(read('next.config.js'), /^\s*turbopackFileSystemCacheForBuild: false,$/m)
+})
