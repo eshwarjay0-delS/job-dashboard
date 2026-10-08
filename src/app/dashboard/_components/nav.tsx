@@ -59,6 +59,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Resume and email",
     items: [
       { href: "/dashboard/resume",         label: "My Resume",   icon: ICON.resume, what: "Make your resume fit one job." },
+      { href: "/dashboard/resume/format",  label: "Resume Formatting", icon: ICON.pencil, what: "Turn your existing resume into an approved professional format." },
       { href: "/dashboard/documents",      label: "Files",       icon: ICON.folder, what: "Keep your resume files in one place." },
       { href: "/dashboard/resume/builder", label: "Make Resume", icon: ICON.pencil, what: "Build a resume one part at a time." },
       { href: "/dashboard/email",          label: "Job emails",  icon: ICON.inbox,  what: "Read job emails from your Gmail." },
@@ -87,5 +88,6 @@ export function navItem(href: string): NavItem {
 export const PRIMARY_NAV: NavItem[] = [
   navItem("/dashboard"),
   { ...navItem("/dashboard/resume"), label: "My resume" },
+  navItem("/dashboard/resume/format"),
   { ...navItem("/dashboard/email"), label: "Job emails" },
 ]
