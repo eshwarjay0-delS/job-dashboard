@@ -44,11 +44,11 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "Jobs and interviews",
     items: [
-      { href: "/dashboard/mail",        label: "Inbox preview",       icon: ICON.mail,     what: "Try sample job emails and replies. Nothing is sent." },
-      { href: "/dashboard/tracker",     label: "My Jobs",    icon: ICON.list,     what: "Every job you applied to, and what step it is on." },
-      { href: "/dashboard/calendar",    label: "Calendar preview",   icon: ICON.calendar, what: "Explore a sample interview calendar." },
-      { href: "/dashboard/workflows",   label: "Follow-ups preview", icon: ICON.repeat,   what: "Try a follow-up sequence using sample data. No emails are scheduled." },
-      { href: "/dashboard/connections", label: "Accounts",   icon: ICON.link,     what: "See which of your accounts MarketFit can use." },
+      { href: "/dashboard/mail",        label: "Inbox",       icon: ICON.mail,     what: "Emails from recruiters. The ones at the top need you to reply." },
+      { href: "/dashboard/tracker",     label: "My Jobs",    icon: ICON.list,     what: "Every job you applied to, and where each one stands right now." },
+      { href: "/dashboard/calendar",    label: "Interviews",   icon: ICON.calendar, what: "Your upcoming interviews. Don't miss any." },
+      { href: "/dashboard/workflows",   label: "Follow-ups", icon: ICON.repeat,   what: "Automatic follow-ups that run on their own. Some wait for your OK." },
+      { href: "/dashboard/connections", label: "Gmail accounts",   icon: ICON.link,     what: "Connect your Gmail so MarketFit can read your job emails." },
       { href: "/dashboard/kompas", label: "Interview practice", what: "Practice with Kompas using your own resume.", icon: ICON.chat },
       { href: "/dashboard/kompas/flow",       label: "Kompas Flow",       icon: ICON.mic,   what: "Speak, and get clean text you can paste anywhere." },
       { href: "/dashboard/kompas/transcribe", label: "Kompas Transcribe", icon: ICON.lines, what: "Turn a talk or a recording into text, once everyone in it knows." },

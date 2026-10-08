@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Clock, User, Mic, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card, Btn } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
+import MetricHero from "../_components/metric-hero"
 import { fmtHour, type Interview } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 
@@ -157,6 +158,21 @@ export default function CalendarPage() {
   return (
     <div>
       <PageIntro page="/dashboard/calendar" action={{ label: "Get ready for an interview", href: "/dashboard/prep" }} sample={connected ? undefined : "Connect Gmail to see interviews from your inbox."} />
+      {!loading && (
+        <MetricHero
+          why={(() => {
+            if (!connected) return "This is your interview calendar. Connect Gmail and your real interviews will show up here."
+            if (interviews.length === 0) return "This is your interview calendar. No interviews scheduled yet."
+            const next = interviews[0]
+            return `This is your interview calendar. Your next interview is ${next ? `${next.company} — don't miss it.` : "coming up."}`
+          })()}
+          metrics={[
+            { value: interviews.length, label: "interviews scheduled", hot: interviews.length > 0 },
+            { value: interviews.filter(i => i.day === TODAY_IDX).length, label: "today" },
+            { value: new Set(interviews.map(i => i.company)).size, label: "companies" },
+          ]}
+        />
+      )}
       {loading && (
         <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: 13 }}>
           ⟳ Loading interviews…

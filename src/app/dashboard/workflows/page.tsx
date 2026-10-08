@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Check, ChevronUp, ChevronDown, Pause, Play, Plus } from "lucide-react"
 import { Card, Btn, Toggle, useAnswered, useLeaving, leavingStyle } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
+import MetricHero from "../_components/metric-hero"
 import { type Step } from "../_suite/sample"
 import { useGmailData } from "@/lib/use-gmail-data"
 
@@ -105,6 +106,20 @@ export default function WorkflowsPage() {
   return (
     <div>
       <PageIntro page="/dashboard/workflows" action={{ label: "Try approvals", href: "#approve" }} sample={connected ? undefined : "Connect Gmail to see live workflow state. No email is sent or scheduled without your approval."} />
+      {!loading && (
+        <MetricHero
+          why={(() => {
+            const w = waiting.length
+            if (w === 0) return "These are your automatic follow-ups. Nothing is waiting for your OK right now."
+            return `These are your automatic follow-ups. ${w} ${w === 1 ? "needs" : "need"} your OK before anything goes out — nothing sends without you saying yes.`
+          })()}
+          metrics={[
+            { value: waiting.length, label: "waiting for your OK", hot: waiting.length > 0 },
+            { value: autoCount, label: "run automatically" },
+            { value: steps.length - autoCount, label: "need your approval" },
+          ]}
+        />
+      )}
       {loading && (
         <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: 13 }}>
           ⟳ Loading workflows…

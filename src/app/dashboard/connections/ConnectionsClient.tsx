@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { connectGmail } from "@/lib/google-auth"
 import PageIntro from "../_components/page-intro"
+import MetricHero from "../_components/metric-hero"
 import "./connections.css"
 
 type GoogleAccount = {
@@ -158,6 +159,22 @@ export default function ConnectionsClient() {
         action={{ label: googleAccounts.length < status.google.maxAccounts ? "Add Google account" : "Review accounts", href: "#google-accounts" }}
         sample={loading ? "Checking your connected accounts…" : `${googleAccounts.length} Google account${googleAccounts.length === 1 ? "" : "s"} connected · WhatsApp ${wa.connected ? "connected" : "not connected"}.`}
       />
+
+      {!loading && (
+        <MetricHero
+          why={
+            googleAccounts.length === 0
+              ? "This is where you connect your Gmail. Without it, MarketFit can't read your job emails — nothing else here works."
+              : googleAccounts.length >= status.google.maxAccounts
+                ? "This is where you connect your Gmail. You're at the max — 4 accounts connected, everything is live."
+                : `This is where you connect your Gmail. ${googleAccounts.length} connected — you can add ${status.google.maxAccounts - googleAccounts.length} more.`
+          }
+          metrics={[
+            { value: `${googleAccounts.length} / ${status.google.maxAccounts}`, label: "Gmail accounts connected", hot: googleAccounts.length === 0 },
+            { value: wa.connected ? "Yes" : "No", label: "WhatsApp connected" },
+          ]}
+        />
+      )}
 
       {(callbackMessage || message || syncMessage) && (
         <div className="conn-banner" role="status">

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Zap } from "lucide-react"
 import { Card, Chip, StagePill } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
+import MetricHero from "../_components/metric-hero"
 import { STAGE, type App, type Stage } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 
@@ -117,6 +118,23 @@ export default function TrackerPage() {
   return (
     <div>
       <PageIntro page="/dashboard/tracker" action={{ label: "Change a job's step", href: "#jobs" }} sample={connected ? undefined : "Connect Gmail to track your live pipeline."} />
+      {!loading && (
+        <MetricHero
+          why={(() => {
+            const iv = apps.filter(a => a.stage === "invite").length
+            if (!connected) return "This is where every job you applied to lives. Connect Gmail and your real jobs will show up here."
+            if (iv === 0) return "This is where every job you applied to lives. No interviews yet — keep applying."
+            return `This is where every job you applied to lives. ${iv} ${iv === 1 ? "is at the interview step" : "are at the interview step"} — that's where your attention goes.`
+          })()}
+          metrics={[
+            { value: apps.length, label: "total jobs" },
+            { value: apps.filter(a => a.stage === "invite").length, label: "interviewing", hot: apps.filter(a => a.stage === "invite").length > 0 },
+            { value: apps.filter(a => a.stage === "offer").length, label: "offers", hot: apps.filter(a => a.stage === "offer").length > 0 },
+            { value: apps.filter(a => ["pending", "followup"].includes(a.stage)).length, label: "waiting to hear back" },
+            { value: apps.filter(a => a.stage === "rejected").length, label: "rejected" },
+          ]}
+        />
+      )}
       {loading && (
         <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: 13 }}>
           ⟳ Loading your pipeline…

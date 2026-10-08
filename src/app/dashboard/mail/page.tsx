@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Check, Send, Shield, Archive, RotateCcw, ChevronRight, CalendarDays, Leaf } from "lucide-react"
 import { Card, Meta, StagePill, Chip, Btn, Avatar, Toggle, useAnswered, useLeaving, leavingStyle } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
+import MetricHero from "../_components/metric-hero"
 import { savedAvailability, type Mail, type Stage } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 
@@ -173,6 +174,24 @@ export default function MailPage() {
   return (
     <div>
       <PageIntro page="/dashboard/mail" action={{ label: "Answer the first one", href: "#reply" }} sample={connected ? undefined : "Connect Gmail to see your live inbox. Changes stay in this browser session; no email is sent or signed."} />
+
+      {!loading && (
+        <MetricHero
+          why={(() => {
+            const n = live.filter(waiting).length
+            if (!connected) return "This is your inbox. Connect Gmail and your real recruiter emails will show up here."
+            if (n === 0) return "This is your inbox. Nothing needs you right now — every email is answered."
+            return `This is your inbox. ${n} ${n === 1 ? "email needs" : "emails need"} YOU to reply — start at the top.`
+          })()}
+          metrics={[
+            { value: live.filter(waiting).length, label: "need your reply", hot: live.filter(waiting).length > 0 },
+            { value: count("invite"), label: "interview invites" },
+            { value: count("rtr"), label: "RTR forms" },
+            { value: count("rate"), label: "pay rates" },
+            { value: live.length, label: "total emails" },
+          ]}
+        />
+      )}
 
       {loading && (
         <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: 13 }}>
