@@ -1,3 +1,21 @@
+## 2026-10-08 (after the owner tried it) — Kompas Flow for Android 2.1.0: the button appears beside the keyboard (Claude Code)
+
+The owner installed 2.0.0 on a Samsung phone, met Android's "App was denied access" on the accessibility step, and sent a video of Wispr Flow's Android setup: "I need to see wherever the keyboard is needed ... The app isn't floating or aren't kompas flow really needs system level changes."
+
+**Built** (`android-flow/` in the Kompas repository, commit `c18b310`, run 3; the APK here is 36,073 bytes, sha256 `873b9706…`)
+
+- **The button comes with the keyboard.** The accessibility service asks the phone which windows are on screen, so it knows when a keyboard opens and where its top edge is. The button appears just above the keyboard at the right edge, in any app, remembers where it is dragged, and goes when the keyboard goes. The service reads no text. Without it (or with "all the time" ticked) the button stays on screen.
+- **The button turns itself on** once the microphone and showing over other apps are allowed; "Show the button" was easy to miss. The first line of the app's screen says whether it is on and, when it is not, why.
+- **A fourth thing to allow**: running without the battery limit, so the phone does not remove it.
+
+**Verified**
+
+- The build log ends "BUILD SUCCESSFUL"; size and sha256 match. Opened here: it asks for the microphone, showing over other apps, the microphone-typed service, notices, the battery question and the accessibility service; no internet access; its code looks at windows for a keyboard and holds no network client.
+
+**NOT verified**
+
+- **On a phone.** Whether the keyboard is noticed on his Samsung, where the button lands, and whether listening and the paste work are unknown until he installs this build (after removing the old one: each build is signed with a different throwaway key) and says what happened.
+
 ## 2026-10-08 (late night) — Kompas Flow on an iPhone (Claude Code)
 
 The owner: "And make the same version available on ios friendly."

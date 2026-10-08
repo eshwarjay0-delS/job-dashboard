@@ -229,11 +229,11 @@ export default function FlowPage() {
   const app = (
     <Card style={{ marginBottom: 16 }}>
       <Meta>Kompas Flow for Android</Meta>
-      <p style={{ ...SMALL, fontSize: 15.5, marginTop: 8 }}>{onAndroid ? "A small button that stays on your screen, in every app. Tap it, speak, tap the tick, and your words go into the text box you were in." : "On an Android phone? The app is a small button that stays on the screen in every app. Tap it, speak, tap the tick, and your words go into the text box you were in."}</p>
+      <p style={{ ...SMALL, fontSize: 15.5, marginTop: 8 }}>{onAndroid ? "A small button that appears beside your keyboard, in every app. Tap it, speak, tap the tick, and your words go into the text box you were in." : "On an Android phone? The app is a small button that appears beside the keyboard in every app. Tap it, speak, tap the tick, and your words go into the text box you were in."}</p>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
         <a href={FLOW_APK} download="Kompas-Flow.apk" className="btn-outline" style={{ ...QUIET, display: "inline-flex", alignItems: "center", textDecoration: "none" }} title="Download Kompas-Flow.apk, the Android app">Download for Android</a>
       </div>
-      <p style={{ ...SMALL, marginTop: 10 }}>It is not in the Play Store yet, so your phone will ask you to allow installing from your browser. It needs Android 8 or later. The app asks for the microphone and to show over other apps, and tells you what each is for; letting it put the words in for you is a third step you can skip. It is an early build: if something does not work on your phone, the page here still does.</p>
+      <p style={{ ...SMALL, marginTop: 10 }}>It is not in the Play Store yet, so your phone will ask you to allow installing from your browser. It needs Android 8 or later. The app asks for the microphone and to show over other apps, and tells you what each is for. Turning it on under Accessibility is what makes it appear at the keyboard and put the words in for you; without that it stays on screen and copies your words. If you had an earlier copy, remove it before installing this one. It is an early build: if something does not work on your phone, the page here still does.</p>
     </Card>
   )
 
