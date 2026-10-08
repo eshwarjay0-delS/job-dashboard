@@ -21,9 +21,11 @@ type Past = { id: string; at: number; raw: string; clean: string | null; kept: L
 
 const MAX_SECONDS = 90
 // Kompas Flow for Android (owner, 2026-10-08: "Just like how we would get a desktop version. while starting kompas flow it
-// download apk version of the app"). Built from android-flow/ in the Kompas repository by its own workflow and copied here;
-// small enough to live in git, unlike the desktop app. It is an icon that opens this page in the phone's browser, so the
-// sign-in and the microphone are the browser's, exactly as here.
+// download apk version of the app", and then: "an button that hovers over ... tapping once it goes into listen mode ...
+// Once clicked on right it would instantly paste the audio into text"). Built from android-flow/ in the Kompas repository
+// by its own workflow and copied here; small enough to live in git, unlike the desktop app. It is a button that stays on
+// the phone's screen over every app: tap, speak, tick, and the words go into the text box the person was in. It is its own
+// app with the phone's own speech service; it does not use this page or this site's speech routes.
 const FLOW_APK = "/apps/Kompas-Flow.apk"
 const HISTORY_KEY = "mf_flow_history"
 const HINT_KEY = "mf_flow_hint"
@@ -211,11 +213,11 @@ export default function FlowPage() {
   const app = (
     <Card style={{ marginBottom: 16 }}>
       <Meta>Kompas Flow for Android</Meta>
-      <p style={{ ...SMALL, fontSize: 15.5, marginTop: 8 }}>{onAndroid ? "Put Kompas Flow on your home screen. One tap and you are here, ready to speak." : "On an Android phone? The app puts Kompas Flow on its home screen: one tap and you are ready to speak."}</p>
+      <p style={{ ...SMALL, fontSize: 15.5, marginTop: 8 }}>{onAndroid ? "A small button that stays on your screen, in every app. Tap it, speak, tap the tick, and your words go into the text box you were in." : "On an Android phone? The app is a small button that stays on the screen in every app. Tap it, speak, tap the tick, and your words go into the text box you were in."}</p>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
         <a href={FLOW_APK} download="Kompas-Flow.apk" className="btn-outline" style={{ ...QUIET, display: "inline-flex", alignItems: "center", textDecoration: "none" }} title="Download Kompas-Flow.apk, the Android app">Download for Android</a>
       </div>
-      <p style={{ ...SMALL, marginTop: 10 }}>It is not in the Play Store yet, so your phone will ask you to allow installing from your browser. It needs Android 8 or later. It opens this page in your browser, so you sign in and allow the microphone the same way as here.</p>
+      <p style={{ ...SMALL, marginTop: 10 }}>It is not in the Play Store yet, so your phone will ask you to allow installing from your browser. It needs Android 8 or later. The app asks for the microphone and to show over other apps, and tells you what each is for; letting it put the words in for you is a third step you can skip. It is an early build: if something does not work on your phone, the page here still does.</p>
     </Card>
   )
 

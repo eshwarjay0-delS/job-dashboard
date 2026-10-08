@@ -1,3 +1,27 @@
+## 2026-10-08 (evening) — Kompas Flow for Android is now the floating button the owner described (Claude Code)
+
+Shown the launcher, the owner asked: "Does it work similar to whisper flow. Like a mini hovering button that goes everywhere", and then described it: "an button that hovers over ... user can keep it everywhere with draging around the screen. with tapping once it goes into listen mode ... 2 buttons such as right and wrong symbols. The microphone vibrations reacting real time with the voice. Once clicked on right it would instantly paste the audio into text".
+
+**Built**
+
+- **`public/apps/Kompas-Flow.apk` replaced** (30,801 bytes, sha256 `4c192506…`): version 2.0.0 of `android-flow/` in the Kompas repository (branch `feat/android-flow-launcher`, commit `245956d`, run 2). A small round button over every app, dragged anywhere; a tap opens the microphone and a slim strip with bars fed by the recogniser's own loudness, the words as they arrive, a cross and a tick; the tick puts the words into the focused text box through an accessibility service, or copies them when that is not allowed. The microphone is open only from the tap to the tick, the cross or three minutes.
+- **The Flow page's offer says what the app now is** and that it is an early build.
+
+**Verified**
+
+- The build log ends "BUILD SUCCESSFUL"; size and sha256 match what the build machine wrote. Opened here: it asks for the microphone, showing over other apps, a microphone-typed foreground service and notices, declares the accessibility service, and asks for NO internet access; its code holds the speech recogniser and no web view and no network client.
+- Suite 145 of 146 (the standing Windows path test).
+
+**NOT verified**
+
+- **It has never run on a phone.** Whether the button draws, the recogniser keeps listening while another app is in front (Android 14 and 15 are strict about that), the bars move, and the tick lands the words in WhatsApp, Gmail or Chrome is unknown until someone installs it and says what happened.
+
+**Where to pick up**
+
+- The words are what the phone's recogniser returns: this site's tidying is not applied (the app has no internet permission, on purpose).
+- "as if theres a live translator" was built as words appearing live. If he meant another language coming out, that is not built.
+- Each build is signed with a throwaway key: remove the old build before installing a new one.
+
 ## 2026-10-08 (later) — Kompas Flow for Android: an APK, offered from the Flow page (Claude Code)
 
 The owner: "Just like how we would get a desktop version. while starting kompas flow it download apk version of the app."

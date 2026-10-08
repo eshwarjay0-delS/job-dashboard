@@ -295,10 +295,11 @@ test('a chosen recording is measured before it is decoded, and decoded at the re
 })
 
 // ── the Android app (2026-10-08) ─────────────────────────────────────────────
-test('the Flow page offers the Android app, and the file it offers is that app: it opens this page in the browser and asks for nothing', () => {
+test('the Flow page offers the Android app as a plain download, says what installing it involves, and the file is a whole APK', () => {
   const page = read(pages[0])
   assert.ok(/const FLOW_APK = "\/apps\/Kompas-Flow\.apk"/.test(page) && /<a href=\{FLOW_APK\} download="Kompas-Flow\.apk" className="btn-outline"/.test(page), 'offered as a plain download, not as the page\'s strong button')
   assert.ok(/not in the Play Store yet/.test(page) && /Android 8 or later/.test(page), 'and the page says what installing it involves')
+  assert.ok(/asks for the microphone and to show over other apps/.test(page) && /a third step you can skip/.test(page) && /an early build/.test(page), 'what it will ask for, what is optional, and that it is early')
   const apk = readFileSync(new URL('../../public/apps/Kompas-Flow.apk', import.meta.url))
   assert.equal(apk.subarray(0, 2).toString('latin1'), 'PK', 'an APK is a zip')
   assert.ok(apk.length > 4000 && apk.length < 2_000_000, 'small enough to live in git: ' + apk.length + ' bytes')
