@@ -4,7 +4,8 @@ import { useState } from "react"
 import { Check, ChevronUp, ChevronDown, Pause, Play, Plus } from "lucide-react"
 import { Card, Btn, Toggle, useAnswered, useLeaving, leavingStyle } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
-import { mails, approvalFor, postApplySteps, postInterviewSteps, type Step } from "../_suite/sample"
+import { type Step } from "../_suite/sample"
+import { useGmailData } from "@/lib/use-gmail-data"
 
 const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -63,11 +64,38 @@ const arrow = (off: boolean): React.CSSProperties => ({
 
 export default function WorkflowsPage() {
   const [tab, setTab] = useState<"apply" | "interview">("apply")
-  const [apply, setApply] = useState(postApplySteps)
-  const [interview, setInterview] = useState(postInterviewSteps)
   const [enabled, setEnabled] = useState(true)
   const [answered, answer] = useAnswered()
   const [leaving, leave] = useLeaving(answer)
+
+  // ── Live Gmail data (replaces ../_suite/sample mocks) ────────────────────
+  const { mails, steps: liveSteps, loading, connected } = useGmailData()
+
+  // Derive approval queue from mails that need replies
+  const approvalFor: Record<string, { step: string; detail: string }> = {}
+  for (const m of mails) {
+    if (!m.needsReply) continue
+    if (m.needsReply === "availability") {
+      approvalFor[m.id] = { step: "Share availability", detail: `${m.role} · ${m.company}` }
+    } else if (m.needsReply === "rtr") {
+      approvalFor[m.id] = { step: "Send RTR back", detail: `${m.role}${m.rate ? ` · ${m.rate}` : ""}` }
+    } else if (m.needsReply === "rate") {
+      approvalFor[m.id] = { step: "Rate confirmation", detail: `${m.role}${m.rate ? ` · ${m.rate}` : ""}` }
+    }
+  }
+
+  // Live follow-up engine steps; fall back to the standing automation when empty
+  const engineSteps: Step[] = liveSteps.length > 0 ? liveSteps : [
+    { id: "s-default-1", title: "Weekly follow-up sweep", trigger: "Mon / Wed / Fri — threads with 24–48h activity", days: ["Mon", "Wed", "Fri"], time: "9:00 AM", mode: "auto" },
+    { id: "s-default-2", title: "Thursday call list", trigger: "Threads 10+ days silent after follow-up", days: ["Thu"], time: "9:00 AM", mode: "auto" },
+  ]
+  const [apply, setApply] = useState<Step[]>(engineSteps)
+  const [interview, setInterview] = useState<Step[]>([
+    { id: "t1", title: "Thank-you note to the panel", trigger: "2 hours after the interview", days: [], time: "+2h", mode: "approve" },
+    { id: "t2", title: "Recruiter debrief", trigger: "Same evening", days: [], time: "6:00 PM", mode: "auto" },
+    { id: "t3", title: "Status check", trigger: "No reply after 3 business days", days: ["Tue", "Fri"], time: "11:00 AM", mode: "auto" },
+    { id: "t4", title: "Decision follow-up", trigger: "One week after", days: ["Mon"], time: "9:30 AM", mode: "approve" },
+  ])
 
   const steps = tab === "apply" ? apply : interview
   const set = tab === "apply" ? setApply : setInterview
@@ -76,7 +104,12 @@ export default function WorkflowsPage() {
 
   return (
     <div>
-      <PageIntro page="/dashboard/workflows" action={{ label: "Try sample approvals", href: "#approve" }} sample="Preview only. Rearrange sample steps and try approvals. No email is sent or scheduled; workflow edits reset when you leave." />
+      <PageIntro page="/dashboard/workflows" action={{ label: "Try approvals", href: "#approve" }} sample={connected ? undefined : "Connect Gmail to see live workflow state. No email is sent or scheduled without your approval."} />
+      {loading && (
+        <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: 13 }}>
+          ⟳ Loading workflows…
+        </div>
+      )}
 
       <Card dark style={{ padding: 28, marginBottom: 20 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(255,255,255,.55)" }}>Workflow</div>

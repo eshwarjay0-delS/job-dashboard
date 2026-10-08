@@ -4,7 +4,8 @@ import { useState } from "react"
 import { Check, Send, Shield, Archive, RotateCcw, ChevronRight, CalendarDays, Leaf } from "lucide-react"
 import { Card, Meta, StagePill, Chip, Btn, Avatar, Toggle, useAnswered, useLeaving, leavingStyle } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
-import { mails, accounts, acct, savedAvailability, type Mail, type Stage } from "../_suite/sample"
+import { savedAvailability, type Mail, type Stage } from "../_suite/sample"
+import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 
 type Filter = "needs" | "invite" | "rtr" | "rate" | "pending" | "all"
 const FILTERS: [Filter, string][] = [["needs", "Needs you"], ["invite", "Interview invites"], ["rtr", "RTR forms"], ["rate", "Pay rates"], ["pending", "Waiting"], ["all", "All"]]
@@ -15,7 +16,9 @@ const pretty = (t: string) => {
   return `${((h! + 11) % 12) + 1}${m ? ":" + String(m).padStart(2, "0") : ""}${h! < 12 ? "am" : "pm"}`
 }
 
-function MailRow({ m, on, restored, leaving, onClick }: { m: Mail; on: boolean; restored: boolean; leaving: boolean; onClick: () => void }) {
+type AcctFn = (id: string) => { tint: string; email: string }
+
+function MailRow({ m, on, restored, leaving, onClick, acct }: { m: Mail; on: boolean; restored: boolean; leaving: boolean; onClick: () => void; acct: AcctFn }) {
   const a = acct(m.account)
   return (
     <button type="button" onClick={onClick} aria-current={on ? "true" : undefined}
@@ -46,7 +49,7 @@ function MailRow({ m, on, restored, leaving, onClick }: { m: Mail; on: boolean; 
   )
 }
 
-function AvailabilityReply({ m, onApprove }: { m: Mail; onApprove: () => void }) {
+function AvailabilityReply({ m, onApprove, acct }: { m: Mail; onApprove: () => void; acct: AcctFn }) {
   const [slots, setSlots] = useState<Record<string, string[]>>(savedAvailability)
   const [auto, setAuto] = useState(false)
   const toggle = (d: string, s: string) =>
@@ -143,11 +146,16 @@ function RateReply({ m, onApprove }: { m: Mail; onApprove: () => void }) {
 export default function MailPage() {
   const [account, setAccount] = useState("all")
   const [filter, setFilter] = useState<Filter>("needs")
-  const [sel, setSel] = useState("m1")
+  const [sel, setSel] = useState<string | null>(null)
   const [showFiled, setShowFiled] = useState(false)
   const [restored, setRestored] = useState<string[]>([])
   const [answered, answer] = useAnswered()
   const [leaving, leave] = useLeaving(answer)
+
+  // ── Live Gmail data (replaces ../_suite/sample mocks) ────────────────────
+  const { mails, loading, connected } = useGmailData()
+  const accounts = buildAccounts(mails.map(m => m.account))
+  const acct = makeAcct(accounts)
 
   const waiting = (x: Mail) => !!x.needsReply && !answered.includes(x.id)
   const live = mails.filter(x => (x.stage !== "rejected" || restored.includes(x.id)) && (account === "all" || x.account === account))
@@ -164,8 +172,15 @@ export default function MailPage() {
 
   return (
     <div>
-      <PageIntro page="/dashboard/mail" action={{ label: "Answer the first one", href: "#reply" }} sample="Preview with sample messages. Changes stay in this browser session; no email is sent or signed." />
+      <PageIntro page="/dashboard/mail" action={{ label: "Answer the first one", href: "#reply" }} sample={connected ? undefined : "Connect Gmail to see your live inbox. Changes stay in this browser session; no email is sent or signed."} />
 
+      {loading && (
+        <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: 13 }}>
+          ⟳ Loading your inbox…
+        </div>
+      )}
+      {!loading && (
+      <>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
         <Chip label="All inboxes" active={account === "all"} onClick={() => setAccount("all")} />
         {accounts.map(a => (
@@ -180,7 +195,7 @@ export default function MailPage() {
       <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
         <div style={{ flex: "0 1 400px", minWidth: 300 }}>
           {shown.map(x => (
-            <MailRow key={x.id} m={x} on={x.id === m?.id} restored={restored.includes(x.id)} leaving={leaving.includes(x.id)} onClick={() => setSel(x.id)} />
+            <MailRow key={x.id} m={x} on={x.id === m?.id} restored={restored.includes(x.id)} leaving={leaving.includes(x.id)} onClick={() => setSel(x.id)} acct={acct} />
           ))}
           {!shown.length && (
             <div style={{ padding: 24, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 10, color: "var(--text-muted)", fontSize: 13 }}>
@@ -249,13 +264,15 @@ export default function MailPage() {
                       ? "Restored from Rejected. It stays in your inbox and the tracker until you file it again."
                       : "No reply needed. The follow-up workflow checks in on Monday and Thursday at 10:00 AM if nothing changes."}
                 </div>
-              ) : m.needsReply === "availability" ? <AvailabilityReply m={m} onApprove={() => approve(m.id)} />
+              ) : m.needsReply === "availability" ? <AvailabilityReply m={m} onApprove={() => approve(m.id)} acct={acct} />
                 : m.needsReply === "rtr" ? <RtrReply m={m} onApprove={() => approve(m.id)} />
                 : <RateReply m={m} onApprove={() => approve(m.id)} />}
             </div>
           </Card>
         )}
       </div>
+      </>
+      )}
     </div>
   )
 }

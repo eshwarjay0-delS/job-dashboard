@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import { Zap } from "lucide-react"
-import { SAMPLE_LINE, Card, Chip, StagePill } from "../_suite/ui"
+import { Card, Chip, StagePill } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
-import { applications as seed, acct, STAGE, type App, type Stage } from "../_suite/sample"
+import { STAGE, type App, type Stage } from "../_suite/sample"
+import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 
 const COLUMNS: { title: string; stages: Stage[] }[] = [
   { title: "Applied", stages: ["applied"] },
@@ -18,7 +19,7 @@ const MOVES: Stage[] = ["applied", "pending", "followup", "rtr", "rate", "invite
 const TH: React.CSSProperties = { textAlign: "left", padding: "10px 16px", fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--text-soft)", whiteSpace: "nowrap" }
 const TD: React.CSSProperties = { padding: "10px 16px", fontSize: 13, color: "var(--text-muted)", borderTop: "1px solid var(--border)", whiteSpace: "nowrap" }
 
-function TableView({ apps, setStage }: { apps: App[]; setStage: (id: string, s: Stage) => void }) {
+function TableView({ apps, setStage, acct }: { apps: App[]; setStage: (id: string, s: Stage) => void; acct: (id: string) => { tint: string; email: string } }) {
   return (
     <Card style={{ padding: 0, overflowX: "auto" }}>
       <table style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
@@ -63,7 +64,7 @@ function TableView({ apps, setStage }: { apps: App[]; setStage: (id: string, s: 
   )
 }
 
-function BoardView({ apps }: { apps: App[] }) {
+function BoardView({ apps, acct }: { apps: App[]; acct: (id: string) => { tint: string; email: string } }) {
   return (
     <div style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 8 }}>
       {COLUMNS.map(c => {
@@ -98,17 +99,31 @@ function BoardView({ apps }: { apps: App[] }) {
 }
 
 export default function TrackerPage() {
-  const [apps, setApps] = useState(seed)
+  // ── Live Gmail data (replaces ../_suite/sample mocks) ────────────────────
+  const { applications, loading, connected } = useGmailData()
+  const [overrides, setOverrides] = useState<Record<string, Stage>>({})
   const [view, setView] = useState<"table" | "board">("table")
   const [type, setType] = useState<"all" | App["type"]>("all")
   const [hideRejected, setHideRejected] = useState(false)
+
+  const apps = applications.map(a => overrides[a.id] ? { ...a, stage: overrides[a.id] as Stage } : a)
+  const accounts = buildAccounts(apps.map(a => a.account))
+  const acct = makeAcct(accounts)
+
   const shown = apps.filter(a => (type === "all" || a.type === type) && !(hideRejected && a.stage === "rejected"))
   const setStage = (id: string, s: Stage) =>
-    setApps(xs => xs.map(a => a.id === id ? { ...a, stage: s, last: `Moved to ${STAGE[s].label} · now` } : a))
+    setOverrides(xs => ({ ...xs, [id]: s }))
 
   return (
     <div>
-      <PageIntro page="/dashboard/tracker" action={{ label: "Change a job's step", href: "#jobs" }} sample={SAMPLE_LINE} />
+      <PageIntro page="/dashboard/tracker" action={{ label: "Change a job's step", href: "#jobs" }} sample={connected ? undefined : "Connect Gmail to track your live pipeline."} />
+      {loading && (
+        <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: 13 }}>
+          ⟳ Loading your pipeline…
+        </div>
+      )}
+      {!loading && (
+      <>
       <div id="jobs" style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 20, scrollMarginTop: 24 }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Chip label="All" active={type === "all"} onClick={() => setType("all")} count={apps.length} />
@@ -124,7 +139,8 @@ export default function TrackerPage() {
           ))}
         </div>
       </div>
-      {view === "table" ? <TableView apps={shown} setStage={setStage} /> : <BoardView apps={shown} />}
+      {view === "table" ? <TableView apps={shown} setStage={setStage} acct={acct} /> : <BoardView apps={shown} acct={acct} />}
+      </>)}
       <div style={{ display: "flex", gap: 10, marginTop: 20, padding: 16, borderRadius: 10, background: "var(--surface-2)", fontSize: 13, lineHeight: 1.55, color: "var(--text-muted)" }}>
         <Zap size={16} style={{ flexShrink: 0, color: "var(--text)" }} />
         <span><b style={{ color: "var(--text)" }}>Auto-status:</b> rejection mail → Rejected and archived · invite → added to the calendar · RTR or rate mail → RTR · Rate. Anything uncertain stays where it is and asks you.</span>

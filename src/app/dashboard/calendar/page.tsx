@@ -5,7 +5,26 @@ import Link from "next/link"
 import { Clock, User, Mic, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card, Btn } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
-import { interviews, acct, fmtHour, WEEK_DAYS, WEEK_DATES, TODAY_IDX, type Interview } from "../_suite/sample"
+import { fmtHour, type Interview } from "../_suite/sample"
+import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
+
+// ── Current week (Mon–Sun), computed live ───────────────────────────────────
+const now = new Date()
+const monday = new Date(now)
+monday.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+const WEEK_DATES = WEEK_DAYS.map((_, i) => {
+  const d = new Date(monday)
+  d.setDate(monday.getDate() + i)
+  return d.getDate()
+})
+const TODAY_IDX = (now.getDay() + 6) % 7
+const WEEK_LABEL = (() => {
+  const end = new Date(monday)
+  end.setDate(monday.getDate() + 6)
+  const fmt = (d: Date) => d.toLocaleDateString("en-US", { day: "numeric", month: "short" })
+  return `${fmt(monday)} – ${fmt(end)}`
+})()
 
 // Interviews only: no meetings, reminders or other calendar noise ever lands on this grid.
 // One hour is 64px, so 30 minutes is exactly 32px, and a block is its duration minus a 1px breath at
@@ -55,7 +74,7 @@ function Event({ iv, selected, onPick }: { iv: Interview; selected: boolean; onP
   )
 }
 
-function Week({ sel, onPick }: { sel: string; onPick: (id: string) => void }) {
+function Week({ sel, onPick, interviews }: { sel: string | null; onPick: (id: string) => void; interviews: Interview[] }) {
   const hours = Array.from({ length: END - START }, (_, i) => START + i)
   const nowY = (10.6 - START) * HOUR
   return (
@@ -105,7 +124,7 @@ function Week({ sel, onPick }: { sel: string; onPick: (id: string) => void }) {
   )
 }
 
-function Detail({ iv }: { iv: Interview }) {
+function Detail({ iv, acct }: { iv: Interview; acct: (id: string) => { tint: string; email: string } }) {
   const k = KIND[iv.kind]
   return (
     <Card style={{ flex: "0 1 320px", minWidth: 280 }}>
@@ -129,15 +148,31 @@ function Detail({ iv }: { iv: Interview }) {
 }
 
 export default function CalendarPage() {
-  const [sel, setSel] = useState("i1")
-  const iv = interviews.find(x => x.id === sel)!
+  // ── Live Gmail data (replaces ../_suite/sample mocks) ────────────────────
+  const { interviews, loading, connected } = useGmailData()
+  const [sel, setSel] = useState<string | null>(null)
+  const accounts = buildAccounts(interviews.map(i => i.account))
+  const acct = makeAcct(accounts)
+  const iv = interviews.find(x => x.id === sel) ?? interviews[0]
   return (
     <div>
-      <PageIntro page="/dashboard/calendar" action={{ label: "Get ready for an interview", href: "/dashboard/prep" }} sample="Preview with sample interviews. This calendar is not connected to your Google Calendar." />
+      <PageIntro page="/dashboard/calendar" action={{ label: "Get ready for an interview", href: "/dashboard/prep" }} sample={connected ? undefined : "Connect Gmail to see interviews from your inbox."} />
+      {loading && (
+        <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: 13 }}>
+          ⟳ Loading interviews…
+        </div>
+      )}
+      {!loading && interviews.length === 0 && (
+        <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--text-muted)", fontSize: 13 }}>
+          No interviews found in your inbox yet.
+        </div>
+      )}
+      {!loading && interviews.length > 0 && (
+      <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <Btn variant="ghost" title="Previous week" style={{ padding: "0 8px" }}><ChevronLeft size={16} /></Btn>
-          <span style={{ fontSize: 17, fontWeight: 750, letterSpacing: "-0.02em" }}>28 Sep – 4 Oct</span>
+          <span style={{ fontSize: 17, fontWeight: 750, letterSpacing: "-0.02em" }}>{WEEK_LABEL}</span>
           <Btn variant="ghost" title="Next week" style={{ padding: "0 8px" }}><ChevronRight size={16} /></Btn>
         </div>
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
@@ -149,9 +184,11 @@ export default function CalendarPage() {
         </div>
       </div>
       <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
-        <div style={{ flex: "1 1 780px", minWidth: 0 }}><Week sel={sel} onPick={setSel} /></div>
-        <Detail iv={iv} />
+        <div style={{ flex: "1 1 780px", minWidth: 0 }}><Week sel={sel} onPick={setSel} interviews={interviews} /></div>
+        {iv && <Detail iv={iv} acct={acct} />}
       </div>
+      </>
+      )}
     </div>
   )
 }
