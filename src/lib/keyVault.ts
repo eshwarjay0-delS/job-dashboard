@@ -197,6 +197,9 @@ export async function readyVault(waitMs = 1500): Promise<void> {
 
 const HELD_BACK_UNREAD: ReadonlySet<VaultProvider> = new Set<VaultProvider>(["openai", "anthropic", "openrouter"])
 
+/** Has this server instance read the checklist? While it has not, the providers that cost money are held back. */
+export function vaultKnown(): boolean { return known }
+
 /** The key the admin stored for this provider, when this instance has read it. */
 export function vaultKey(provider: VaultProvider): string | undefined { return plain[provider] }
 
