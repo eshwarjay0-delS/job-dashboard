@@ -116,7 +116,10 @@ export async function tidyText(input: { text: string; purpose: SpeechPurpose }):
     const reply = await callLLM({
       keys: resolveKeys({}), tier: "light", temperature: 0, purpose: `kompas:${input.purpose}`,
       system: TIDY_RULES, user: `${OPEN}\n${quoted}\n${CLOSE}`,
-      maxTokens: Math.min(4096, Math.max(256, Math.ceil(text.length / 2.5) + 128)),
+      // Room for the whole answer and then some: sized from the text's bytes, since a script other than Latin costs more
+      // tokens a character, and some models spend thinking tokens from the same allowance. An answer that is cut off
+      // anyway is caught by the guard (its ending is missing) and the person's own words are shown.
+      maxTokens: Math.min(4096, Math.max(512, Math.ceil(new TextEncoder().encode(text).length / 2) + 512)),
     })
     answer = reply.text
   } catch {

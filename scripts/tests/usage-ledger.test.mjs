@@ -197,3 +197,48 @@ test('the admin page is built from the dashboard\'s own tokens and parts, with n
   assert.deepEqual(page.match(/#[0-9a-fA-F]{3,8}\b|rgba?\(/g) || [], [], 'every colour is a theme token, so Paper and Night both hold')
   assert.ok(/fetch\("\/api\/admin\/usage"/.test(page), 'its numbers come from the checked route and nowhere else')
 })
+
+// ── found in review, 2026-10-08 ──────────────────────────────────────────────
+test('the last seven days are seven different calendar days on the nights the clocks change', () => {
+  assert.deepEqual(T.daysEnding('2026-11-01', 7), ['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01'])
+  const zone = 'America/Chicago'
+  // 23:30 on 1 November 2026 in Chicago, the 25-hour day: 24 hours earlier is still 1 November.
+  const autumn = T.overviewOf([], Date.UTC(2026, 10, 2, 5, 30), zone)
+  assert.equal(autumn.today.generated, 0); assert.equal(new Set(autumn.days.map(d => d.day)).size, 7)
+  assert.equal(autumn.days[6].day, '2026-11-01'); assert.equal(autumn.days[0].day, '2026-10-26')
+  // 00:30 on 9 March 2026 in Chicago, the night after the 23-hour day.
+  const spring = T.overviewOf([], Date.UTC(2026, 2, 9, 5, 30), zone)
+  assert.deepEqual(spring.days.map(d => d.day), ['2026-03-03', '2026-03-04', '2026-03-05', '2026-03-06', '2026-03-07', '2026-03-08', '2026-03-09'])
+  assert.ok(/new Set<string>\(daysEnding\(today, 7\)\)/.test(read('src/app/api/admin/usage/route.ts')), 'the model calls use the same seven days')
+})
+
+test('a report delivered twice is the same records, not twice as many', async () => {
+  const one = C.callKey(call({ app: 'kompas' }), 'abcdef012345'), again = C.callKey(call({ app: 'kompas' }), 'abcdef012345')
+  assert.equal(one, again, 'a record named after its report lands on the same name')
+  assert.notEqual(C.callKey(call({ app: 'kompas' })), C.callKey(call({ app: 'kompas' })), 'this app\'s own calls stay distinct')
+  const route = read('src/app/api/usage/ingest/route.ts')
+  assert.ok(/const stamp = createHash\("sha256"\)\.update\(body\)\.digest\("hex"\)/.test(route) && /recordLlmCall\(call, createHash\("sha256"\)\.update\(`\$\{stamp\}:\$\{i\}`\)/.test(route))
+  assert.deepEqual(C.callFromKey(one), call({ app: 'kompas' }), 'and it is still a record the ledger reads')
+})
+
+test('a cost that leaves something out is carried as such to every line that shows it', () => {
+  const sum = C.summarizeCalls([call({ provider: 'gemini', model: 'gemini-3.5-flash-lite', purpose: 'field-edit' }), call()])
+  const edit = sum.byPurpose.find(p => p.purpose === 'field-edit')
+  assert.equal(edit.unpricedCalls, 1); assert.equal(edit.costUsd, 0, 'no price is known for it: the page shows "not known", never $0')
+  assert.equal(sum.byPurpose.find(p => p.purpose === 'resume-tailor').unpricedCalls, 0)
+  const at = Date.UTC(2026, 9, 7, 18)
+  const unpriced = { calls: 2, inputTokens: 100, outputTokens: 50, cacheReadTokens: 0, cacheWriteTokens: 0, estCostUSD: 0, unpricedCalls: 2, byModel: [] }
+  const o = T.overviewOf([made(at, { result: { notes: [], usage: unpriced } }), made(at, { result: undefined, error: new Error('Tailoring timed out') })], at, 'America/Chicago')
+  assert.equal(o.week.byChannel.whatsapp.unpricedCalls, 2); assert.equal(o.days[6].unpricedCalls, 2); assert.equal(o.recent.find(r => r.outcome === 'whole').unpricedCalls, 2)
+  const page = read('src/app/dashboard/admin/page.tsx')
+  assert.ok(/const cost = \(usd: number, more: boolean\) => \(more \? \(usd > 0 \? `\$\{money\(usd\)\} or more` : "not known"\) : money\(usd\)\)/.test(page))
+  assert.ok(/cost\(p\.costUsd, p\.unpricedCalls > 0\)/.test(page) && /r\.outcome === "failed" \? "not known"/.test(page) && /cost\(v\.costUsd, v\.unpricedCalls > 0 \|\| v\.failed > 0\)/.test(page))
+  assert.ok(/left\.openai\.unpricedCalls > 0 \? "at most, " : ""/.test(page), 'what is left of the OpenAI budget is "at most" when a call had no price')
+})
+
+test('"counting began" is said only when it began inside what is shown, and what a failed request cost is counted from the calls', () => {
+  const route = read('src/app/api/admin/usage/route.ts')
+  assert.ok(/llm\.calls\[0\]\.at > Date\.parse\(`\$\{readFrom\}T00:00:00Z`\) \+ 2 \* 86_400_000/.test(route))
+  assert.ok(/empty: llm\.calls\.length === 0 && tailors\.events\.length === 0/.test(route))
+  assert.ok(/p\.app === "marketfit" && p\.purpose\.startsWith\("resume-"\)/.test(route), 'the cost of one resume includes what failed requests spent')
+})

@@ -152,12 +152,12 @@ export type TailorWindow = {
   output: number
   /** costUsd over the resumes that called a model and came back changed. 0 when there were none. */
   costPerResumeUsd: number
-  byChannel: Record<string, { generated: number; failed: number; people: number; costUsd: number }>
+  byChannel: Record<string, { generated: number; failed: number; people: number; costUsd: number; unpricedCalls: number }>
   byModel: { provider: string; model: string; calls: number; input: number; output: number; costUsd: number; kind: string }[]
 }
 
 export function summarizeTailor(events: readonly TailorEvent[]): TailorWindow {
-  const people = new Set<string>(), channels = new Map<string, { generated: number; failed: number; people: Set<string>; costUsd: number }>(), models = new Map<string, TailorWindow["byModel"][number]>()
+  const people = new Set<string>(), channels = new Map<string, { generated: number; failed: number; people: Set<string>; costUsd: number; unpricedCalls: number }>(), models = new Map<string, TailorWindow["byModel"][number]>()
   const w = { generated: 0, whole: 0, partial: 0, unchanged: 0, cached: 0, failed: 0, costUsd: 0, unpricedCalls: 0, calls: 0, input: 0, output: 0 }
   let paidFor = 0
   for (const e of events) {
@@ -166,10 +166,10 @@ export function summarizeTailor(events: readonly TailorEvent[]): TailorWindow {
     if (made) { w.generated++; if (e.calls > 0) paidFor++ }
     w[e.outcome]++
     w.costUsd += e.costUsd; w.unpricedCalls += e.unpricedCalls; w.calls += e.calls; w.input += e.input; w.output += e.output
-    const c = channels.get(e.channel) || { generated: 0, failed: 0, people: new Set<string>(), costUsd: 0 }
+    const c = channels.get(e.channel) || { generated: 0, failed: 0, people: new Set<string>(), costUsd: 0, unpricedCalls: 0 }
     if (made) c.generated++
     if (e.outcome === "failed") c.failed++
-    c.people.add(e.person); c.costUsd += e.costUsd; channels.set(e.channel, c)
+    c.people.add(e.person); c.costUsd += e.costUsd; c.unpricedCalls += e.unpricedCalls; channels.set(e.channel, c)
     for (const m of e.byModel || []) {
       const key = `${m.provider}\u0000${m.model}`, line = models.get(key) || { provider: m.provider, model: m.model, calls: 0, input: 0, output: 0, costUsd: 0, kind: m.kind }
       line.calls += m.calls; line.input += m.input; line.output += m.output; line.costUsd += m.costUsd; models.set(key, line)
@@ -179,7 +179,7 @@ export function summarizeTailor(events: readonly TailorEvent[]): TailorWindow {
   return {
     ...w, costUsd: money(w.costUsd), people: people.size,
     costPerResumeUsd: paidFor ? money(w.costUsd / paidFor) : 0,
-    byChannel: Object.fromEntries([...channels.entries()].map(([k, c]) => [k, { generated: c.generated, failed: c.failed, people: c.people.size, costUsd: money(c.costUsd) }])),
+    byChannel: Object.fromEntries([...channels.entries()].map(([k, c]) => [k, { generated: c.generated, failed: c.failed, people: c.people.size, costUsd: money(c.costUsd), unpricedCalls: c.unpricedCalls }])),
     byModel: [...models.values()].map(m => ({ ...m, costUsd: money(m.costUsd) })).sort((a, b) => b.costUsd - a.costUsd || b.calls - a.calls),
   }
 }
@@ -201,15 +201,24 @@ export type TailorOverview = {
   /** The calendar month so far. */
   month: TailorWindow
   /** One row per day of the week window, oldest first: for the picture of the week. */
-  days: { day: string; generated: number; failed: number; people: number; costUsd: number }[]
+  days: { day: string; generated: number; failed: number; people: number; costUsd: number; unpricedCalls: number }[]
   /** The newest twenty, newest first, with no person on them. */
-  recent: Pick<TailorEvent, "at" | "channel" | "kind" | "outcome" | "ms" | "via" | "costUsd" | "failure">[]
+  recent: Pick<TailorEvent, "at" | "channel" | "kind" | "outcome" | "ms" | "via" | "costUsd" | "unpricedCalls" | "failure">[]
+}
+
+/**
+ * The `count` calendar days that end on `today` (YYYY-MM-DD), oldest first.
+ * It steps the DATE. Taking 24 hours at a time off "now" names the same local day twice on the night the clocks go back and
+ * skips one when they go forward (found in review, 2026-10-08), so a week would have six days or lose a day's resumes.
+ */
+export function daysEnding(today: string, count: number): string[] {
+  const noon = Date.parse(`${today}T12:00:00Z`)
+  return Array.from({ length: count }, (_, i) => utcDay(noon - (count - 1 - i) * 86_400_000))
 }
 
 export function overviewOf(events: readonly TailorEvent[], now: number, timeZone: string): TailorOverview {
   const today = dayIn(timeZone, now)
-  const weekDays: string[] = []
-  for (let back = 6; back >= 0; back--) weekDays.push(dayIn(timeZone, now - back * 86_400_000))
+  const weekDays = daysEnding(today, 7)
   const inDays = new Set(weekDays), month = today.slice(0, 7)
   const local = events.map(e => ({ e, day: dayIn(timeZone, e.at) }))
   return {
@@ -217,7 +226,7 @@ export function overviewOf(events: readonly TailorEvent[], now: number, timeZone
     today: summarizeTailor(local.filter(x => x.day === today).map(x => x.e)),
     week: summarizeTailor(local.filter(x => inDays.has(x.day)).map(x => x.e)),
     month: summarizeTailor(local.filter(x => x.day.startsWith(month)).map(x => x.e)),
-    days: weekDays.map(day => { const s = summarizeTailor(local.filter(x => x.day === day).map(x => x.e)); return { day, generated: s.generated, failed: s.failed, people: s.people, costUsd: s.costUsd } }),
-    recent: [...events].sort((a, b) => a.at.localeCompare(b.at)).slice(-20).reverse().map(({ at, channel, kind, outcome, ms, via, costUsd, failure }) => ({ at, channel, kind, outcome, ms, via, costUsd, ...(failure ? { failure } : {}) })),
+    days: weekDays.map(day => { const s = summarizeTailor(local.filter(x => x.day === day).map(x => x.e)); return { day, generated: s.generated, failed: s.failed, people: s.people, costUsd: s.costUsd, unpricedCalls: s.unpricedCalls } }),
+    recent: [...events].sort((a, b) => a.at.localeCompare(b.at)).slice(-20).reverse().map(({ at, channel, kind, outcome, ms, via, costUsd, unpricedCalls, failure }) => ({ at, channel, kind, outcome, ms, via, costUsd, unpricedCalls, ...(failure ? { failure } : {}) })),
   }
 }

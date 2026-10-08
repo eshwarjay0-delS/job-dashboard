@@ -28,10 +28,18 @@ export type Session = { v: 1; id: string; title: string; startedAt: string; cons
 
 // ─────────────────────────────────────────── the guard on tidying ────────────────────────────────────────────
 
-// Letters, combining marks and digits in every script, never the ASCII-only word class: a name in Telugu is a word too.
-const WORD = /[\p{L}\p{M}\p{Nd}]+/gu
-const DIGIT = /\p{Nd}/gu
+// A word, in every script: letters, combining marks and digits, never the ASCII-only word class (a name in Telugu is a word
+// too). An apostrophe or a hyphen BETWEEN letters is part of the word. Without that, "can't" is the two words "can" and "t",
+// and a tidier that drops the "t" has turned a refusal into a promise while the guard calls it a deleted stumble (found in
+// review, 2026-10-08). The same goes for "non-refundable".
+const WORD = /[\p{L}\p{M}\p{Nd}]+(?:['’ʼ-][\p{L}\p{M}\p{Nd}]+)*/gu
 const LETTER = /\p{L}/u
+// A number as it is written: its digits with the marks inside it and the sign, currency or percent touching it. "1.5" and
+// "1-5", "50" and "50%", "5" and "-5" have the same digits and are different numbers.
+const NUMBER = /[-+−$€£₹¥]?\p{Nd}+(?:[.,:/]\p{Nd}+)*%?/gu
+// Words that are numbers. Tidying may never leave one out: "two hundred fifty thousand" must not become "two hundred
+// thousand". The price is that a number corrected aloud ("five, no, six") is left as it was said. That is the safe side.
+const NUMBER_WORDS = new Set("zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety hundred thousand million billion trillion lakh lakhs crore crores half dozen double triple twice thrice percent minus point".split(" "))
 
 /**
  * How much of a passage tidying may delete before it is cutting content.
@@ -46,13 +54,23 @@ export const MAX_DELETED_SHARE = 0.4
 export const ALWAYS_DELETABLE = 4
 /** The longest single stretch tidying may drop. Scattered deletions are stumbles; one long one is a missing thought. */
 export const MAX_DELETED_RUN = 12
+/**
+ * How many words may be missing from the very end. Far fewer than from the middle: a tidier that ran out of room stops
+ * mid-sentence, and an answer with its last ten words gone used to pass as ten deleted stumbles (found in review, 2026-10-08).
+ */
+export const MAX_DROPPED_TAIL = 3
 
-const wordsOf = (text: string): string[] => text.normalize("NFC").toLowerCase().match(WORD) ?? []
-const digitsOf = (text: string): string => (text.normalize("NFC").match(DIGIT) ?? []).join("")
+/** The words of a text as written, lower-cased, with every kind of apostrophe made the plain one. */
+const tokensOf = (text: string): string[] => text.normalize("NFC").toLowerCase().replace(/[’ʼ]/g, "'").match(WORD) ?? []
+/** A word as it is compared: a hyphen inside it does not make it another word ("follow-up" is "followup"). */
+const plainWord = (token: string): string => token.replace(/-/g, "")
+const wordsOf = (text: string): string[] => tokensOf(text).map(plainWord)
+const numbersOf = (text: string): string => (text.normalize("NFC").match(NUMBER) ?? []).join(" ")
+const numberWordsOf = (text: string): string => tokensOf(text).filter(t => t.split(/['-]/).some(part => NUMBER_WORDS.has(part))).map(plainWord).join(" ")
 const lettersIn = (text: string): number => [...text.normalize("NFC")].filter(ch => LETTER.test(ch)).length
 
-/** Is `clean` the raw words in order with some left out? The longest stretch left out, or -1 when a word was never said. */
-function longestGap(raw: readonly string[], clean: readonly string[]): number {
+/** Is `clean` the raw words in order with some left out? The longest stretch left out and how much of the end, or null when a word was never said. */
+function gaps(raw: readonly string[], clean: readonly string[]): { longest: number; tail: number } | null {
   let longest = 0, gap = 0, at = 0
   for (const word of clean) {
     let found = false
@@ -63,11 +81,10 @@ function longestGap(raw: readonly string[], clean: readonly string[]): number {
       gap += 1
       if (gap > longest) longest = gap
     }
-    if (!found) return -1
+    if (!found) return null
     gap = 0
   }
-  // What is left at the end was deleted too: a cut-off ending is the easiest way to lose a sentence.
-  return Math.max(longest, raw.length - at)
+  return { longest, tail: raw.length - at }
 }
 
 /** Why a tidied text may not stand in for what was said, or "" when it may. Every rule fails closed. */
@@ -77,12 +94,13 @@ export function cleanupRefusal(raw: string, clean: string): string {
   if (after === before) return ""
   const rawWords = wordsOf(before), cleanWords = wordsOf(after)
   if (rawWords.length === 0) return "there were no words to tidy"
-  const gap = longestGap(rawWords, cleanWords)
-  if (gap === -1) return "it used a word that was never said"
-  if (digitsOf(after) !== digitsOf(before)) return "it changed a number"
+  const left = gaps(rawWords, cleanWords)
+  if (!left) return "it used a word that was never said"
+  if (numbersOf(after) !== numbersOf(before) || numberWordsOf(after) !== numberWordsOf(before)) return "it changed a number"
+  if (left.tail > MAX_DROPPED_TAIL) return "it stopped before the end"
   const deleted = rawWords.length - cleanWords.length
   if (deleted > Math.max(ALWAYS_DELETABLE, Math.floor(rawWords.length * MAX_DELETED_SHARE))) return "it deleted too much"
-  if (gap > MAX_DELETED_RUN) return "it dropped a whole passage"
+  if (left.longest > MAX_DELETED_RUN) return "it dropped a whole passage"
   if (lettersIn(after) > lettersIn(before)) return "it added text"
   return ""
 }
@@ -106,22 +124,25 @@ function lettersApart(a: string, b: string, limit: number): number {
  * run), and the guard then rightly refuses the whole answer, so a good tidying is lost to one letter. This undoes exactly
  * that and nothing more: a tidied word that was never said, of five letters or more and with no digit in it, is replaced by
  * the said word it is a letter or two away from and shares a first letter with. The result is then judged by the guard like
- * any other answer. A different name ("Priya" for "Priyanka") is too far away to be put back, and is still refused.
+ * any other answer. A different name ("Priya" for "Priyanka") is too far away to be put back, and is still refused; so is a
+ * word with its "n't" or its "non-" taken off.
  */
 export function restoreSpelling(raw: string, clean: string): string {
-  const said = [...new Set(wordsOf(raw))]
-  const known = new Set(said)
+  // Every said word, by the form it is compared in, with the form it was written in.
+  const written = new Map<string, string>()
+  for (const token of tokensOf(raw)) if (!written.has(plainWord(token))) written.set(plainWord(token), token)
   return clean.normalize("NFC").replace(WORD, word => {
-    const lower = word.toLowerCase()
-    if (known.has(lower) || lower.length < 5 || /\p{Nd}/u.test(lower)) return word
+    const lower = plainWord(word.toLowerCase().replace(/[’ʼ]/g, "'"))
+    if (written.has(lower) || lower.length < 5 || /\p{Nd}/u.test(lower)) return word
     let best = "", bestApart = 3
-    for (const candidate of said) {
+    for (const candidate of written.keys()) {
       if (candidate.length < 5 || candidate[0] !== lower[0] || /\p{Nd}/u.test(candidate)) continue
       const apart = lettersApart(candidate, lower, 2)
       if (apart < bestApart) { best = candidate; bestApart = apart }
     }
     if (!best) return word
-    return word[0] !== lower[0] ? best[0].toUpperCase() + best.slice(1) : best
+    const back = written.get(best) as string
+    return word[0] !== word[0].toLowerCase() ? back[0].toUpperCase() + back.slice(1) : back
   })
 }
 

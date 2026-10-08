@@ -4,7 +4,7 @@ import { groqAllowances } from "@/lib/llm"
 import { readLlmCalls, summarizeCalls, type LlmCall } from "@/lib/llmLedger"
 import { priceTable } from "@/lib/llmPrices"
 import { llmStatus } from "@/lib/llmStatus"
-import { dayIn, overviewOf, readTailorEvents, utcDay } from "@/lib/tailorLedger"
+import { dayIn, daysEnding, overviewOf, readTailorEvents, utcDay } from "@/lib/tailorLedger"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   ])
 
   const local = llm.calls.map(c => ({ c, day: dayIn(timeZone, c.at) }))
-  const weekDays = new Set<string>(); for (let back = 0; back < 7; back++) weekDays.add(dayIn(timeZone, now - back * 86_400_000))
+  const weekDays = new Set<string>(daysEnding(today, 7))
   const pick = (keep: (day: string) => boolean): LlmCall[] => local.filter(x => keep(x.day)).map(x => x.c)
   const month = summarizeCalls(pick(d => d.startsWith(today.slice(0, 7))))
   const calls = { today: summarizeCalls(pick(d => d === today)), week: summarizeCalls(pick(d => weekDays.has(d))), month }
@@ -46,12 +46,20 @@ export async function GET(request: NextRequest) {
   // What is left. OpenAI does not tell a key how much credit remains, so the only honest figure is the owner's own budget
   // (OPENAI_MONTHLY_BUDGET_USD) less what the ledger says was spent this month. With no budget set there is no "left" to show.
   const openaiSpent = month.byModel.filter(m => m.provider === "openai").reduce((n, m) => n + m.costUsd, 0)
+  // OpenAI calls answered by a model with no price in the table add nothing to "spent": when there are any, what is left is
+  // "at most" the figure, and the page says so.
+  const openaiUnpriced = month.byModel.filter(m => m.provider === "openai" && m.kind === "unpriced").reduce((n, m) => n + m.calls, 0)
   const budget = Number(process.env.OPENAI_MONTHLY_BUDGET_USD)
   const resumes = overviewOf(tailors.events, now, timeZone)
-  const perResume = resumes.month.costPerResumeUsd || resumes.week.costPerResumeUsd
+  // What one delivered resume costs, counted from the calls themselves: every call made for the resume tailor this month,
+  // the ones spent on requests that failed included (a failed request is recorded with no cost of its own), over the resumes
+  // that were written. The resume ledger's own average is the fallback when the call ledger has nothing.
+  const resumeSpend = month.byPurpose.filter(p => p.app === "marketfit" && p.purpose.startsWith("resume-")).reduce((n, p) => n + p.costUsd, 0)
+  const perResume = (resumes.month.generated > 0 && resumeSpend > 0 ? resumeSpend / resumes.month.generated : 0) || resumes.month.costPerResumeUsd || resumes.week.costPerResumeUsd
   const openai = {
     budgetUsd: Number.isFinite(budget) && budget > 0 ? budget : null,
     spentMonthUsd: Math.round(openaiSpent * 1e6) / 1e6,
+    unpricedCalls: openaiUnpriced,
     leftUsd: Number.isFinite(budget) && budget > 0 ? Math.round((budget - openaiSpent) * 1e6) / 1e6 : null,
     // How many more resumes the money left would buy at this month's average. Null when either number is missing.
     resumesLeft: Number.isFinite(budget) && budget > 0 && perResume > 0 ? Math.max(0, Math.floor((budget - openaiSpent) / perResume)) : null,
@@ -77,7 +85,11 @@ export async function GET(request: NextRequest) {
       unreadable: tailors.unreadable + llm.unreadableDays,
       truncated: tailors.truncated,
       kompasReporting: month.byApp.kompas !== undefined,
-      recordingSince: llm.calls[0] ? new Date(llm.calls[0].at).toISOString() : null,
+      // Said only when counting really began inside what is shown: the oldest record is later than the first two days that
+      // were read. In a later month the oldest record read is simply the start of the window, and saying "counting began"
+      // then would be false.
+      recordingSince: llm.calls[0] && llm.calls[0].at > Date.parse(`${readFrom}T00:00:00Z`) + 2 * 86_400_000 ? new Date(llm.calls[0].at).toISOString() : null,
+      empty: llm.calls.length === 0 && tailors.events.length === 0,
     },
   }, { headers: { "Cache-Control": "no-store" } })
 }

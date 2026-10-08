@@ -72,9 +72,11 @@ export function callFromKey(key: string): LlmCall | null {
 }
 
 /** Write one call down. Resolves to whether it was kept; never rejects. */
-export async function recordLlmCall(call: LlmCall): Promise<boolean> {
+// `id` names the record. Left out, it is random. A report from another app passes one made from the report itself, so the
+// same report delivered twice (a replay, or the sender trying again) writes the same objects again instead of new ones.
+export async function recordLlmCall(call: LlmCall, id?: string): Promise<boolean> {
   try {
-    await (await storage()).put(callKey(call), "{}")
+    await (await storage()).put(id ? callKey(call, id) : callKey(call), "{}")
     return true
   } catch (e) {
     console.error("[llm-ledger] a call could not be recorded:", String((e as Error)?.message || e).slice(0, 160))
@@ -110,7 +112,7 @@ export type CallSummary = PricedUsage & {
   /** Mean time to an answer over the calls that answered, in milliseconds. */
   meanMs: number
   byApp: Record<string, { calls: number; failed: number; input: number; output: number; costUsd: number; unpricedCalls: number }>
-  byPurpose: { app: string; purpose: string; calls: number; failed: number; input: number; output: number; costUsd: number }[]
+  byPurpose: { app: string; purpose: string; calls: number; failed: number; input: number; output: number; costUsd: number; unpricedCalls: number }[]
 }
 
 /** Totals for a set of calls. A failed call is counted and costs nothing: no provider bills a refusal. */
@@ -119,8 +121,8 @@ export function summarizeCalls(calls: readonly LlmCall[]): CallSummary {
   const priced = priceCalls(answered)
   const apps = new Map<string, LlmCall[]>(), purposes = new Map<string, LlmCall[]>()
   for (const c of calls) {
-    apps.set(c.app, [...(apps.get(c.app) || []), c])
-    const k = `${c.app}\u0000${c.purpose}`; purposes.set(k, [...(purposes.get(k) || []), c])
+    const a = apps.get(c.app); if (a) a.push(c); else apps.set(c.app, [c])
+    const k = `${c.app}\u0000${c.purpose}`, list = purposes.get(k); if (list) list.push(c); else purposes.set(k, [c])
   }
   const line = (list: LlmCall[]) => { const p = priceCalls(list.filter(c => c.ok)); return { calls: list.length, failed: list.filter(c => !c.ok).length, input: p.input, output: p.output, costUsd: p.costUsd, unpricedCalls: p.unpricedCalls } }
   return {
@@ -129,7 +131,7 @@ export function summarizeCalls(calls: readonly LlmCall[]): CallSummary {
     failed: calls.length - answered.length,
     meanMs: answered.length ? Math.round(answered.reduce((n, c) => n + c.ms, 0) / answered.length) : 0,
     byApp: Object.fromEntries([...apps.entries()].map(([app, list]) => [app, line(list)])),
-    byPurpose: [...purposes.entries()].map(([k, list]) => { const [app, purpose] = k.split("\u0000"); const l = line(list); return { app, purpose, calls: l.calls, failed: l.failed, input: l.input, output: l.output, costUsd: l.costUsd } })
+    byPurpose: [...purposes.entries()].map(([k, list]) => { const [app, purpose] = k.split("\u0000"); const l = line(list); return { app, purpose, calls: l.calls, failed: l.failed, input: l.input, output: l.output, costUsd: l.costUsd, unpricedCalls: l.unpricedCalls } })
       .sort((a, b) => b.costUsd - a.costUsd || b.calls - a.calls),
   }
 }

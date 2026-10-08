@@ -25,13 +25,13 @@ type Usage = {
   resumes: TailorOverview
   calls: { today: CallSummary; week: CallSummary; month: CallSummary }
   left: {
-    openai: { budgetUsd: number | null; spentMonthUsd: number; leftUsd: number | null; resumesLeft: number | null }
+    openai: { budgetUsd: number | null; spentMonthUsd: number; unpricedCalls: number; leftUsd: number | null; resumesLeft: number | null }
     groq: GroqAllowance[]
     providers: LlmStatus["providers"]
     perPersonWeeklyLimit: number | null
   }
   prices: { model: string; in: number; out: number; source: string; read: string }[]
-  gaps: { unreadable: number; truncated: boolean; kompasReporting: boolean; recordingSince: string | null }
+  gaps: { unreadable: number; truncated: boolean; kompasReporting: boolean; recordingSince: string | null; empty: boolean }
 }
 
 type Span = "today" | "week" | "month"
@@ -39,6 +39,9 @@ const SPANS: { id: Span; label: string }[] = [{ id: "today", label: "Today" }, {
 
 // A cost here is often a fraction of a cent, so small sums keep the digits that carry the meaning.
 const money = (usd: number) => (usd === 0 ? "$0" : usd < 0.01 ? `$${usd.toFixed(4)}` : usd < 1 ? `$${usd.toFixed(3)}` : `$${usd.toFixed(2)}`)
+// A sum that leaves something out is never shown as if it were whole. `more` is true when part of the cost is not known:
+// a call to a model with no price in the table, or a request that failed after its models had already been paid.
+const cost = (usd: number, more: boolean) => (more ? (usd > 0 ? `${money(usd)} or more` : "not known") : money(usd))
 const count = (n: number) => n.toLocaleString("en-US")
 const tokens = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e4 ? `${(n / 1e3).toFixed(1)}k` : count(n))
 const words = (slug: string) => { const s = slug.replace(/[-_]+/g, " "); return s.charAt(0).toUpperCase() + s.slice(1) }
@@ -124,7 +127,7 @@ function ResumeCard({ label, w }: { label: string; w: TailorWindow }) {
       <div style={{ ...NUM, fontFamily: "var(--font-display)", fontSize: 46, fontWeight: 700, lineHeight: 1.05, color: "var(--text)", marginTop: 10 }}>{count(w.generated)}</div>
       <div style={{ fontSize: 14.5, color: "var(--text-muted)", margin: "2px 0 14px" }}>{w.generated === 1 ? "resume written" : "resumes written"}</div>
       <Fact label="People who asked" value={count(w.people)} />
-      <Fact label="Cost" value={<>{money(w.costUsd)}{w.unpricedCalls > 0 ? " or more" : ""}</>} />
+      <Fact label="Cost" value={w.failed > 0 && w.costUsd === 0 && w.unpricedCalls === 0 && w.generated === 0 ? "not known" : cost(w.costUsd, w.unpricedCalls > 0 || w.failed > 0)} />
       <Fact label="Cost for one resume" value={w.costPerResumeUsd > 0 ? money(w.costPerResumeUsd) : "–"} />
       <Fact label="Failed" value={count(w.failed)} />
       <Fact label="Came back unchanged" value={count(w.unchanged)} />
@@ -195,8 +198,9 @@ export default function AdminPage() {
 
   const notes: string[] = []
   if (!gaps.kompasReporting) notes.push("Kompas has not reported a model call this month. Its numbers are missing from this page; they are not zero.")
-  if (gaps.recordingSince) notes.push(`Counting began ${time(gaps.recordingSince)}. Nothing before that is in these numbers.`)
-  else notes.push("Nothing has been recorded yet. Counting began when this page went live; the next resume or model call will show here.")
+  if (gaps.empty) notes.push("Nothing has been recorded yet. Counting began when this page went live; the next resume or model call will show here.")
+  else if (gaps.recordingSince) notes.push(`Counting began ${time(gaps.recordingSince)}. Nothing before that is in these numbers.`)
+  if (resumes.month.failed > 0) notes.push("A resume request that failed is listed with no cost of its own, so the resume costs below read \"or more\". What its models were paid is in Model calls and cost, under the resume jobs.")
   if (calls.month.unpricedCalls > 0) notes.push(`${count(calls.month.unpricedCalls)} ${calls.month.unpricedCalls === 1 ? "call" : "calls"} this month went to a model with no price in the table at the bottom, so the cost shown is the least it can be.`)
   if (gaps.unreadable > 0) notes.push(`${count(gaps.unreadable)} ${gaps.unreadable === 1 ? "record or day" : "records or days"} could not be read and ${gaps.unreadable === 1 ? "is" : "are"} left out.`)
   if (gaps.truncated) notes.push("There are more resume records this month than one page load reads, so the monthly resume figures are short.")
@@ -236,7 +240,7 @@ export default function AdminPage() {
                 <span style={{ fontSize: 14, color: "var(--text-muted)" }}>{dayName(d.day)}</span>
                 <Bar part={d.generated} whole={maxDay} />
                 <span style={{ ...NUM, fontSize: 14, color: "var(--text)", minWidth: 150, textAlign: "right" }}>
-                  {count(d.generated)} written{d.failed > 0 ? ` · ${count(d.failed)} failed` : ""} · {money(d.costUsd)}
+                  {count(d.generated)} written{d.failed > 0 ? ` · ${count(d.failed)} failed` : ""} · {d.generated + d.failed === 0 ? money(0) : cost(d.costUsd, d.unpricedCalls > 0 || d.failed > 0)}
                 </span>
               </div>
             ))}
@@ -244,7 +248,7 @@ export default function AdminPage() {
           <Card>
             <Meta style={{ marginBottom: 14 }}>Where they came from, last 7 days</Meta>
             <Table head={["From", "Written", "Failed", "People", "Cost"]} empty="No resumes in the last 7 days."
-              rows={Object.entries(week.byChannel).map(([channel, v]) => [CHANNEL[channel] ?? words(channel), count(v.generated), count(v.failed), count(v.people), money(v.costUsd)])} />
+              rows={Object.entries(week.byChannel).map(([channel, v]) => [CHANNEL[channel] ?? words(channel), count(v.generated), count(v.failed), count(v.people), cost(v.costUsd, v.unpricedCalls > 0 || v.failed > 0)])} />
           </Card>
         </div>
       </Section>
@@ -256,17 +260,17 @@ export default function AdminPage() {
             {left.openai.budgetUsd !== null && left.openai.leftUsd !== null ? (
               <>
                 <div style={{ ...NUM, fontFamily: "var(--font-display)", fontSize: 38, fontWeight: 700, color: left.openai.leftUsd <= 0 ? "var(--danger)" : "var(--text)", margin: "10px 0 2px" }}>{money(Math.max(0, left.openai.leftUsd))}</div>
-                <p style={{ ...SMALL, marginBottom: 12 }}>left of your {money(left.openai.budgetUsd)} for this month</p>
+                <p style={{ ...SMALL, marginBottom: 12 }}>{left.openai.unpricedCalls > 0 ? "at most, " : ""}left of your {money(left.openai.budgetUsd)} for this month</p>
                 <Bar part={Math.max(0, left.openai.leftUsd)} whole={left.openai.budgetUsd} />
                 <div style={{ marginTop: 12 }}>
-                  <Fact label="Spent this month" value={money(left.openai.spentMonthUsd)} />
-                  <Fact label="Resumes that would buy" value={left.openai.resumesLeft === null ? "–" : `about ${count(left.openai.resumesLeft)}`} />
+                  <Fact label="Spent this month" value={cost(left.openai.spentMonthUsd, left.openai.unpricedCalls > 0)} />
+                  <Fact label="Resumes that would buy" value={left.openai.resumesLeft === null ? "–" : `${left.openai.unpricedCalls > 0 ? "at most" : "about"} ${count(left.openai.resumesLeft)}`} />
                 </div>
               </>
             ) : (
               <>
                 <div style={{ ...NUM, fontFamily: "var(--font-display)", fontSize: 38, fontWeight: 700, color: "var(--text)", margin: "10px 0 2px" }}>{money(left.openai.spentMonthUsd)}</div>
-                <p style={{ ...SMALL, marginBottom: 10 }}>spent this month</p>
+                <p style={{ ...SMALL, marginBottom: 10 }}>spent this month{left.openai.unpricedCalls > 0 ? `, or more: ${count(left.openai.unpricedCalls)} ${left.openai.unpricedCalls === 1 ? "call was" : "calls were"} answered by a model with no price in the table` : ""}</p>
                 <p style={SMALL}>OpenAI does not tell a key how much credit remains, so there is no &ldquo;left&rdquo; to show yet. Set a monthly budget on Vercel (OPENAI_MONTHLY_BUDGET_USD, a number of dollars) and this card counts down from it.</p>
               </>
             )}
@@ -336,7 +340,7 @@ export default function AdminPage() {
           <Card>
             <Meta style={{ marginBottom: 14 }}>By job</Meta>
             <Table left={2} head={["App", "What it was for", "Calls", "Failed", "Tokens", "Cost"]} empty="No calls in this time."
-              rows={c.byPurpose.map(p => [APP[p.app] ?? words(p.app), words(p.purpose), count(p.calls), count(p.failed), tokens(p.input + p.output), money(p.costUsd)])} />
+              rows={c.byPurpose.map(p => [APP[p.app] ?? words(p.app), words(p.purpose), count(p.calls), count(p.failed), tokens(p.input + p.output), cost(p.costUsd, p.unpricedCalls > 0)])} />
           </Card>
         </div>
 
@@ -364,12 +368,12 @@ export default function AdminPage() {
               <Tag key="o" tone={r.outcome === "failed" ? "bad" : r.outcome === "whole" ? "good" : r.outcome === "cached" ? "plain" : "warn"}>{OUTCOME[r.outcome] ?? r.outcome}{r.failure ? `: ${r.failure}` : ""}</Tag>,
               `${(r.ms / 1000).toFixed(1)} s`,
               <span key="v" style={{ fontFamily: "var(--font-body)", color: "var(--text-muted)" }}>{r.via || "–"}</span>,
-              money(r.costUsd),
+              r.outcome === "failed" ? "not known" : cost(r.costUsd, r.unpricedCalls > 0),
             ])} />
         </Card>
       </Section>
 
-      <Section title="The prices used" lede="Dollars for a million tokens. Cost is worked out from these when the page loads, so a corrected price corrects the past too.">
+      <Section title="The prices used" lede="Dollars for a million tokens. Model calls are priced from these when the page loads, so a corrected price corrects their past too. A resume's own cost is the figure worked out when it was written.">
         <Card>
           <Table head={["Model", "In", "Out", "Checked"]} empty="No prices."
             rows={data.prices.map(p => [

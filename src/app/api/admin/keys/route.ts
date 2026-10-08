@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { adminOf } from "@/lib/adminAccess"
-import { FEATURES, cleanKey, cleanUse, isVaultProvider, loadVault, saveVault, vaultRows, vaultSecret, type VaultChange } from "@/lib/keyVault"
+import { FEATURES, cleanKey, cleanUse, isVaultProvider, loadVault, saveVault, sealedWith, vaultRows, vaultSecret, type VaultChange } from "@/lib/keyVault"
 import { envKey, forgetProviderFailures } from "@/lib/llm"
 import { forgetLlmStatus } from "@/lib/llmStatus"
 import { checkRateLimit, clientIp } from "@/lib/rateLimit"
@@ -19,12 +19,14 @@ export const dynamic = "force-dynamic"
 const NO_STORE = { "Cache-Control": "no-store" }
 
 function view() {
-  return { canStore: vaultSecret() !== null, providers: vaultRows(p => !!envKey(p)), features: FEATURES }
+  return { canStore: vaultSecret() !== null, sealedWith: sealedWith(), providers: vaultRows(p => !!envKey(p)), features: FEATURES }
 }
 
 export async function GET(request: NextRequest) {
   if (!(await adminOf(request))) return NextResponse.json({ error: "Admins only." }, { status: 403, headers: NO_STORE })
-  await loadVault(true)
+  // What could not be read is not shown as if it were the defaults: the page would be telling the admin that nothing is
+  // unticked and no key is kept here when it simply does not know.
+  if (!(await loadVault(true))) return NextResponse.json({ error: "The stored keys and checklists could not be read just now. Nothing is changed. Try again in a moment." }, { status: 503, headers: NO_STORE })
   return NextResponse.json(view(), { headers: NO_STORE })
 }
 

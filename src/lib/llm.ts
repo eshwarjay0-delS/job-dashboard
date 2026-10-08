@@ -5,7 +5,16 @@
 //   • "heavy"  (full resume tailoring)                  → quality first:    Anthropic → OpenRouter → Gemini
 // A UI preference can pin a specific provider per tier; "auto" uses the order above.
 
-import { OPENAI_DEFAULT, VAULT_PROVIDERS, allows, loadVault, ticked, vaultKey } from "./keyVault.ts"
+import { OPENAI_DEFAULT, VAULT_PROVIDERS, allows, loadVault, readyVault, ticked, vaultKey } from "./keyVault.ts"
+
+// The vault is asked for as soon as this file is loaded, so that by the time a route gathers its keys a key kept only on
+// the Admin page is usually already known to this server instance.
+void loadVault()
+
+// A person's own keys (from their Settings), remembered beside the set of keys they were gathered into. resolveKeys() puts
+// the deployment's key first, so where both exist the person's own would otherwise be lost: it is needed again when the
+// admin's checklist takes the deployment's key away from a feature (applyVault).
+const personal = new WeakMap<object, LlmKeys>()
 
 export type Provider = "anthropic" | "openrouter" | "gemini" | "groq" | "openai"
 export type ProviderPref = Provider | "auto"
@@ -70,6 +79,10 @@ export function resolveKeys(body?: { claudeKey?: string; openrouterKey?: string;
   set("openrouter", body?.openrouterKey)
   set("gemini", body?.geminiKey)
   set("groq", body?.groqKey)
+  const own: LlmKeys = {}
+  const mine = (p: Provider, raw?: string) => { const v = (raw || "").trim(); if (v) own[p] = v }
+  mine("anthropic", body?.claudeKey); mine("openrouter", body?.openrouterKey); mine("gemini", body?.geminiKey); mine("groq", body?.groqKey)
+  if (own.anthropic || own.openrouter || own.gemini || own.groq) personal.set(out, own)
   return out
 }
 
@@ -88,7 +101,11 @@ export function tailorKeys(keys: LlmKeys, who: { owner: boolean }): LlmKeys {
   const key = deploymentKey("openai")
   if (!key || keys.openai) return keys
   const scope = tailorScope()
-  return scope === "all" || (scope === "owner" && who.owner) ? { ...keys, openai: key } : keys
+  if (!(scope === "all" || (scope === "owner" && who.owner))) return keys
+  const next = { ...keys, openai: key }
+  const own = personal.get(keys)
+  if (own) personal.set(next, own)
+  return next
 }
 /**
  * Whose resume tailoring the OpenAI key is used for. One definition, read by the status page too.
@@ -118,10 +135,14 @@ export function tailorScope(): "all" | "owner" | "off" {
  */
 export function applyVault(keys: LlmKeys, purpose: string): LlmKeys {
   const out: LlmKeys = { ...keys }
+  const theirs = personal.get(keys)
+  if (theirs) personal.set(out, theirs)
   for (const p of VAULT_PROVIDERS) {
     const own = envKey(p), stored = vaultKey(p), held = out[p]
     if (held && held !== own && held !== stored) continue
-    if (!allows(p, purpose)) { delete out[p]; continue }
+    // Not ticked: exactly as if the deployment had no key for this provider, which means the person's own key, when they
+    // have one, is the key in use (found in review, 2026-10-08: it used to be dropped along with the deployment's).
+    if (!allows(p, purpose)) { if (theirs?.[p]) out[p] = theirs[p]; else delete out[p]; continue }
     if (held) { if (stored) out[p] = stored; continue }
     if (p === "openai") { if (ticked(p, purpose) && !OPENAI_DEFAULT.includes(purpose) && (stored || own)) out[p] = stored || own }
     else if (stored) out[p] = stored
@@ -134,7 +155,7 @@ export function applyVault(keys: LlmKeys, purpose: string): LlmKeys {
  * tailorKeys() once this server instance has read the vault, so the gathering has to wait for that.
  */
 export async function keysFor(purpose: string, keys: LlmKeys | (() => LlmKeys)): Promise<LlmKeys> {
-  await loadVault()
+  await readyVault(4000)
   return applyVault(typeof keys === "function" ? keys() : keys, purpose)
 }
 
@@ -254,7 +275,7 @@ async function fetchRetry(url: string, init: RequestInit): Promise<Response> {
 // single-field edit), although Groq was answering the whole time.
 export async function callLLM(opts: CallOpts): Promise<{ text: string; provider: Provider; model: string }> {
   const pref = opts.pref || "auto"
-  await loadVault()
+  await readyVault()
   const purpose = opts.purpose || "other"
   const keys = applyVault(opts.keys, purpose)
   const first = pickProvider(keys, opts.tier, pref)

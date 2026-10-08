@@ -1,3 +1,39 @@
+## 2026-10-08 — Review of the admin, key vault and speech work: 18 findings, 17 fixed, 1 left with its reason (Claude Code)
+
+Three reviewers read the code that went live on 7 October, one area each (the key vault and admin access; the usage ledgers and the ingest door; Flow and Transcribe), told to report only defects with a concrete failure. 18 findings. I read each against the code and reproduced the ones that could be run; all 18 hold.
+
+**Fixed**
+
+- **Transcribe: the microphone could be on with no "Recording" line and no Stop** (`transcribe/page.tsx`). Record now left the page "idle" while the browser was still asking for the microphone, so a file or a tidy could start; when it finished it set the page idle over the recording. Now the Recording line and Stop are drawn from the microphone itself (`mic`), the page is "starting" before the browser is asked, a file or a tidy refuses unless the page is idle and hands it back only if it is still theirs, and leaving or opening another transcript is refused with the microphone on.
+- **Transcribe: the last part could be lost on Stop.** The tracks were stopped before the recorder; some browsers end a recorder the moment its tracks stop. Stop now closes the recorder first, lets the microphone go when it has closed (or after three seconds), and the page is not idle until that part has been sent.
+- **The tidy guard accepted "I can't" as "I can"** (`kompasTranscript.ts`): a contraction was two words, so its tail could be "left out". An apostrophe or hyphen between letters is now part of the word; "non-refundable" to "refundable" is refused too.
+- **The guard let a number change three ways**: a number said in words could be left out ("two hundred fifty thousand" to "two hundred thousand"), the mark inside a number could change ("1.5" to "1-5"), and a sign or unit could be added ("50" to "50%"). Numbers are now compared as written, and number words may not be left out.
+- **A tidied answer cut off before the end was accepted** as up to twelve deleted words. At most three words may be missing from the end now, and the tidier is given room sized from the text's bytes.
+- **A long file was measured after it was decoded** (`transcribe/audio.ts`): a three-hour mp3 is under the size limit and needed gigabytes to find out it was too long. The length is now read from the file's header first, a file that will not say is taken only when small, decoding is straight at 16,000 samples a second, and the limits are 30 minutes and 60 MB.
+- **A usage report delivered twice was counted twice** (`/api/usage/ingest`): a replay inside the ten minutes a report stays fresh, or the sender trying again, wrote new records each time. Records are now named after the report they came in, so a second delivery lands on the same names.
+- **Costs that leave something out were shown as exact** (`admin/page.tsx`, `admin/usage/route.ts`): a failed resume request is recorded with no cost; a call to a model with no known price added $0 to "By job", the day rows, the channel table, the latest resumes and the OpenAI "left" figure. Each now reads "or more", "not known" or "at most"; the cost of one resume is counted from the calls themselves, failed requests included.
+- **"Last 7 days" repeated or skipped a day when the clocks change**: the days are now stepped by date, not by 24 hours.
+- **"Counting began" would have named a wrong date from the second month**: it is said only when counting began inside what is shown. The prices note no longer claims a corrected price re-prices past resumes (it re-prices model calls; a resume keeps the figure worked out when it was written).
+- **The key checklist failed open on a server instance that could not read it** (`keyVault.ts`): the defaults applied, so a paid key the admin had unticked could be spent. Until an instance has read the checklist, OpenAI, Anthropic and OpenRouter are held back and the free providers serve; a failed read is tried again after three seconds; the Admin page gets an error, not the defaults.
+- **Every model call waited on storage with no deadline.** Once the checklist is known it is refreshed behind the call; a cold instance waits 1.5 seconds at most (4 for the tailor's first gathering).
+- **A person's own key was lost when the deployment had one too**, so unticking a provider left them with neither. Their own key is now used when the deployment's is taken away from a feature.
+- **Two saves at once could lose one**: saves on an instance go one at a time and the page saves one card at a time.
+- The page now says which secret seals the keys (the deployment's own, or the storage account's) and what that means.
+
+**Left, with the reason**
+
+- **Routes that check for a key before calling a model can answer "no key" on a cold instance when a provider's key is kept ONLY on the Admin page.** Not triggered today (every provider in use also has a key on Vercel). The vault is now read as soon as the model layer loads, which narrows it; closing it needs those ten routes to gather keys through `keysFor`, and they are not mine to rewrite in a review pass.
+
+**Verified**
+
+- Suite 143 of 144 (the standing Windows path test); `scripts/tests/key-vault.test.mjs` 19, `kompas-speech.test.mjs` 28, `usage-ledger.test.mjs` 22. `npx tsc --noEmit` clean.
+- The reviewers' cases run through the guard: all refused; my four measured sentences through the live tidier: still 4 of 4 kept.
+- Transcribe in a local browser after the rework: consent, the open transcript, Record now with the microphone blocked (the plain message, no Recording line, the page back to idle), Back.
+
+**NOT verified**
+
+- The race itself and Stop on Safari: no microphone and no Safari here. They are closed by construction and held by source tests, not by a recording.
+
 ## 2026-10-07 (night) — Kompas Flow and Kompas Transcribe in the dashboard's Kompas section (Claude Code)
 
 The owner: "Kompas flow and transcribe in the kompas section in job dashboard." A fleet of four agents was started for it and hit the usage limit before writing a file (366k tokens of reading); it was then built directly.

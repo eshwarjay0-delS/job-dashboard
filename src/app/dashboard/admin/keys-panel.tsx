@@ -11,7 +11,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react"
 import { Card, Meta } from "../_suite/ui"
 import type { Feature, VaultRow } from "@/lib/keyVault"
 
-type View = { canStore: boolean; providers: VaultRow[]; features: Feature[] }
+type View = { canStore: boolean; sealedWith?: "own" | "storage" | "none"; providers: VaultRow[]; features: Feature[] }
 
 const SMALL: CSSProperties = { fontSize: 14, lineHeight: 1.55, color: "var(--text-muted)", margin: 0 }
 const FIELD: CSSProperties = {
@@ -27,17 +27,20 @@ function Pill({ children, tone }: { children: string; tone: "good" | "plain" | "
   return <span style={{ fontFamily: "var(--font-label)", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", padding: "2px 9px", borderRadius: 100, background: c[0], color: c[1], border: `1px solid ${c[2]}` }}>{children}</span>
 }
 
-function ProviderCard({ row, features, canStore, onSaved }: { row: VaultRow; features: Feature[]; canStore: boolean; onSaved: (v: View) => void }) {
+// `locked` is true while ANY card is saving: each save rewrites the one stored document, so two at once could lose one.
+function ProviderCard({ row, features, canStore, locked, onSaving, onSaved }: { row: VaultRow; features: Feature[]; canStore: boolean; locked: boolean; onSaving: (on: boolean) => void; onSaved: (v: View) => void }) {
   const [key, setKey] = useState("")
   const [use, setUse] = useState<string[]>(row.use)
-  const [busy, setBusy] = useState(false)
+  const [mine, setMine] = useState(false)
+  const busy = mine || locked
   const [said, setSaid] = useState<{ ok: boolean; text: string } | null>(null)
   // The server's answer is the truth: after a save, or when another admin changed it, the ticks follow what is stored.
   useEffect(() => { setUse(row.use) }, [row.use])
 
   const ticksChanged = use.length !== row.use.length || use.some(id => !row.use.includes(id))
   const send = async (body: Record<string, unknown>, done: string) => {
-    setBusy(true); setSaid(null)
+    if (locked) return
+    setMine(true); onSaving(true); setSaid(null)
     try {
       const response = await fetch("/api/admin/keys", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ provider: row.provider, ...body }) })
       const answer = await response.json().catch(() => ({}))
@@ -47,7 +50,7 @@ function ProviderCard({ row, features, canStore, onSaved }: { row: VaultRow; fea
       setSaid({ ok: true, text: done })
     } catch {
       setSaid({ ok: false, text: "That could not be sent. Check your connection and try again. Nothing was changed." })
-    } finally { setBusy(false) }
+    } finally { setMine(false); onSaving(false) }
   }
 
   const where = row.kept === "here" ? `Kept here, ends in ${row.last4}` : row.kept === "deployment" ? "Kept on Vercel" : "No key"
@@ -58,7 +61,7 @@ function ProviderCard({ row, features, canStore, onSaved }: { row: VaultRow; fea
     <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
       <button type="button" className="btn-outline" disabled={busy || (!key.trim() && !ticksChanged)}
         onClick={() => void send({ ...(key.trim() ? { key: key.trim() } : {}), ...(ticksChanged || key.trim() ? { use } : {}) }, key.trim() ? "Saved. The new key is in use." : "Saved.")}
-        style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>{busy ? "Saving…" : "Save"}</button>
+        style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>{mine ? "Saving…" : "Save"}</button>
       {row.setAt && (
         <button type="button" className="btn-ghost" disabled={busy}
           onClick={() => { if (window.confirm(`Remove the ${row.name} key kept here?${row.deploymentHasKey ? " The key on Vercel will be used again." : " This provider will have no key."}`)) void send({ remove: true }, "Removed.") }}
@@ -113,6 +116,7 @@ function ProviderCard({ row, features, canStore, onSaved }: { row: VaultRow; fea
 export default function KeysPanel() {
   const [view, setView] = useState<View | null>(null)
   const [failed, setFailed] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -123,7 +127,7 @@ export default function KeysPanel() {
   }, [])
   useEffect(() => { void load() }, [load])
 
-  if (!view) return <Card><p style={{ ...SMALL, fontSize: 15.5 }} role="status">{failed ? "The keys could not be read just now. Reload the page to try again." : "Reading the keys…"}</p></Card>
+  if (!view) return <Card><p style={{ ...SMALL, fontSize: 15.5 }} role="status">{failed ? "The keys and checklists could not be read just now, so nothing is shown instead of a guess. Nothing is changed." : "Reading the keys…"}</p>{failed && <button type="button" className="btn-outline" style={{ minHeight: 44, padding: "0 18px", fontSize: 15, marginTop: 12 }} onClick={() => { setFailed(false); void load() }}>Try again</button>}</Card>
 
   return (
     <>
@@ -133,8 +137,13 @@ export default function KeysPanel() {
         </div>
       )}
       <div style={{ display: "grid", gap: 16 }}>
-        {view.providers.map(row => <ProviderCard key={row.provider} row={row} features={view.features} canStore={view.canStore} onSaved={setView} />)}
+        {view.providers.map(row => <ProviderCard key={row.provider} row={row} features={view.features} canStore={view.canStore} locked={saving} onSaving={setSaving} onSaved={setView} />)}
       </div>
+      {view.canStore && view.sealedWith === "storage" && (
+        <p style={{ ...SMALL, marginTop: 14, maxWidth: 760 }}>
+          Keys kept here are sealed with the storage account&apos;s own secret, so the seal does not protect them from someone who has that secret. For a separate seal, set KEY_VAULT_SECRET on Vercel (32 or more random characters) and paste the keys again.
+        </p>
+      )}
     </>
   )
 }

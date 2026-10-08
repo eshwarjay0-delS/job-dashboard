@@ -55,6 +55,7 @@ const FILE_PROBLEM: Record<DecodeProblem, string> = {
   "cannot-read": "This browser could not open that file. The kinds that work are mp3, m4a, wav, webm and ogg.",
   "no-support": "This browser cannot open sound files. Try a current version of Chrome, Edge, Safari or Firefox.",
 }
+type Phase = "idle" | "starting" | "recording" | "sending" | "file" | "tidying"
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 const wait = (seconds: number) => new Promise(resolve => window.setTimeout(resolve, seconds * 1000))
 
@@ -92,7 +93,10 @@ export default function TranscribePage() {
   const [title, setTitle] = useState("")
   const [refused, setRefused] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
-  const [phase, setPhase] = useState<"idle" | "recording" | "sending" | "file" | "tidying">("idle")
+  const [phase, setPhase] = useState<Phase>("idle")
+  // Is the microphone on? Kept apart from `phase` on purpose: the Recording line and the Stop button are drawn from this and
+  // nothing else, so nothing the page is busy with can hide a microphone that is live (found in review, 2026-10-08).
+  const [mic, setMic] = useState(false)
   const [seconds, setSeconds] = useState(0)
   const [progress, setProgress] = useState("")
   const [error, setError] = useState("")
@@ -112,6 +116,12 @@ export default function TranscribePage() {
   const sounds = useRef(new Map<string, Blob>())    // the sound of parts that failed, so they can be tried again; memory only
   const pending = useRef(0)
   const starting = useRef(false)
+  const closing = useRef(false)                      // Stop was pressed and the last part has not been collected yet
+  // What the page is busy with, readable at once by every handler. Every change goes through go(), so a handler never acts on
+  // a value from an earlier drawing of the page: two things cannot both believe the page is idle.
+  const phaseRef = useRef<Phase>("idle")
+  const go = useCallback((next: Phase) => { phaseRef.current = next; setPhase(next) }, [])
+  const at = useCallback((): Phase => phaseRef.current, [])   // asked through a function: go() changes it between two lines of one handler
   const hintRef = useRef("")
   const fileInput = useRef<HTMLInputElement>(null)
   const answeredRef = useRef<string | null>(null)
@@ -138,8 +148,12 @@ export default function TranscribePage() {
     now.on = false
     window.clearTimeout(now.rotate); window.clearInterval(now.tick)
     now.stream.getTracks().forEach(track => track.stop())
+    setMic(false)
   }, [])
-  useEffect(() => () => { const now = live.current; if (now?.recorder && now.recorder.state !== "inactive") { now.recorder.onstop = null; try { now.recorder.stop() } catch { /* already stopped */ } } release(); current.current = null }, [release])
+  useEffect(() => () => { const now = live.current; if (now?.recorder && now.recorder.state !== "inactive") { now.recorder.onstop = null; try { now.recorder.stop() } catch { /* already stopped */ } } release(); closing.current = false; current.current = null }, [release])
+
+  // Back to idle only when the microphone is off, the last part has been collected and nothing is still on its way.
+  const settle = useCallback(() => { if (!live.current && !closing.current && pending.current === 0 && at() === "sending") go("idle") }, [go])
 
   const sendPart = useCallback(async (part: { id: string; blob: Blob; startMs: number; endMs: number }, forId: string) => {
     pending.current++
@@ -151,8 +165,8 @@ export default function TranscribePage() {
       if (current.current?.id === forId) { setRetryable([...sounds.current.keys()]); setError(problem(heard.code)) }
       put(s => appendSegment(s, { id: part.id, startMs: part.startMs, endMs: part.endMs, raw: "", failed: true }), forId)
     }
-    if (current.current?.id === forId && !live.current && pending.current === 0) setPhase(p => (p === "sending" ? "idle" : p))
-  }, [put])
+    settle()
+  }, [put, settle])
 
   // ── who is speaking ──────────────────────────────────────────────────────────
   const begin = () => {
@@ -166,31 +180,61 @@ export default function TranscribePage() {
   }
 
   // ── record now ───────────────────────────────────────────────────────────────
+  const stopRecording = useCallback(() => {
+    const now = live.current
+    if (!now) return
+    now.on = false
+    window.clearTimeout(now.rotate); window.clearInterval(now.tick)
+    const last = now.recorder
+    go("sending")
+    if (!last || last.state === "inactive") { release(); settle(); return }
+    // The recorder is closed FIRST and the microphone is let go once it has closed. Some browsers end a recorder the moment
+    // its tracks stop, before its last part can be collected: the last twenty seconds would be lost and the page would read
+    // idle with a part still unsent (found in review, 2026-10-08). The recorder's own onstop runs before `done` and sends
+    // that part, so it is counted as on its way before the page is allowed to settle.
+    closing.current = true
+    const done = () => { if (!closing.current) return; closing.current = false; release(); settle() }
+    last.addEventListener("stop", done, { once: true })
+    window.setTimeout(done, 3000)                  // a recorder that never says it stopped still gives the microphone back
+    try { last.stop() } catch { done() }
+  }, [go, release, settle])
+
   const record = useCallback(async () => {
     const open = current.current
-    if (!open || answeredRef.current !== open.id || starting.current || live.current) return      // no answer for this transcript in this visit, no microphone
+    // No answer for this transcript in this visit, no microphone. And never while anything else is going on: from the next
+    // line the page is "starting", so a file or a tidy cannot begin while the browser is still asking for the microphone.
+    if (!open || answeredRef.current !== open.id || starting.current || live.current || at() !== "idle") return
     starting.current = true
-    setError("")
+    go("starting"); setError("")
+    let stream: MediaStream | null = null
     try {
       if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") { setError("This browser cannot record sound. Try a current version of Chrome, Edge, Safari or Firefox."); return }
-      let stream: MediaStream
       try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }) }
       catch (e) {
         setError((e as DOMException)?.name === "NotFoundError" ? "No microphone was found. Plug one in, or check that it is turned on." : "The microphone is blocked for this site. Allow it from the lock icon in the address bar, then press Record now again.")
         return
       }
-      if (current.current?.id !== open.id) { stream.getTracks().forEach(t => t.stop()); return }
+      if (current.current?.id !== open.id) return
+      const sound = stream
       const type = TYPES.find(t => MediaRecorder.isTypeSupported(t))
       // A transcript that already has parts is continued after its last one.
       const offset = lengthMs(open)
       const began = Date.now()
-      const state = { stream, recorder: null as MediaRecorder | null, rotate: 0, tick: 0, began, on: true }
-      live.current = state
-
+      const state = { stream: sound, recorder: null as MediaRecorder | null, rotate: 0, tick: 0, began, on: true }
+      // A recorder that breaks mid-way ends the recording in the open: what was recorded is kept and sent, the microphone is
+      // let go, and the person is told.
+      const broke = () => {
+        if (live.current !== state) return
+        const last = state.recorder
+        setError("The recording stopped unexpectedly. What was recorded so far is kept.")
+        go("sending"); release()
+        try { if (last && last.state !== "inactive") last.stop() } catch { /* already stopped */ }
+        settle()
+      }
       // Each part is a whole file by itself: a new recorder is started on the same microphone before the old one is closed,
       // so no sound falls between two parts.
       const part = () => {
-        const recorder = new MediaRecorder(stream, { ...(type ? { mimeType: type } : {}), audioBitsPerSecond: 32000 })
+        const recorder = new MediaRecorder(sound, { ...(type ? { mimeType: type } : {}), audioBitsPerSecond: 32000 })
         const chunks: Blob[] = []
         const startMs = offset + (Date.now() - began)
         recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data) }
@@ -198,34 +242,38 @@ export default function TranscribePage() {
           const blob = new Blob(chunks, { type: recorder.mimeType || type || "audio/webm" })
           void sendPart({ id: newId(), blob, startMs, endMs: offset + (Date.now() - began) }, open.id)
         }
+        recorder.onerror = broke
         recorder.start()
         state.recorder = recorder
-        state.rotate = window.setTimeout(() => { if (!state.on) return; const old = recorder; part(); if (old.state !== "inactive") old.stop() }, PART_MS)
+        state.rotate = window.setTimeout(() => {
+          if (!state.on) return
+          try { part(); if (recorder.state !== "inactive") recorder.stop() } catch { broke() }
+        }, PART_MS)
       }
+      live.current = state
+      setMic(true)
       part()
       state.tick = window.setInterval(() => setSeconds(Math.floor((offset + Date.now() - began) / 1000)), 500)
-      setSeconds(Math.floor(offset / 1000)); setPhase("recording")
-    } finally { starting.current = false }
-  }, [sendPart])
-
-  const stopRecording = useCallback(() => {
-    const now = live.current
-    if (!now) return
-    const last = now.recorder
-    release()
-    setPhase("sending")
-    if (last && last.state !== "inactive") last.stop()          // its onstop sends the last part
-    else if (pending.current === 0) setPhase("idle")
-  }, [release])
+      setSeconds(Math.floor(offset / 1000)); go("recording")
+    } catch {
+      // The recorder could not be made or started.
+      setError("The recording could not start. Try again.")
+      release()
+    } finally {
+      starting.current = false
+      // The microphone was opened but no recording holds it: it is let go here, whatever went wrong above.
+      if (!live.current) { stream?.getTracks().forEach(track => track.stop()); if (at() === "starting" || at() === "recording") go("idle") }
+    }
+  }, [go, release, sendPart, settle])
 
   // ── choose a recording ───────────────────────────────────────────────────────
   const readFile = useCallback(async (file: File) => {
     const open = current.current
-    if (!open || answeredRef.current !== open.id || phase !== "idle") return
-    setError(""); setPhase("file"); setProgress("Opening the recording…")
+    if (!open || answeredRef.current !== open.id || starting.current || live.current || at() !== "idle") return
+    setError(""); go("file"); setProgress("Opening the recording…")
     const opened = await decode(file)
     if (current.current?.id !== open.id) return
-    if (!opened.ok) { setError(FILE_PROBLEM[opened.because]); setPhase("idle"); setProgress(""); return }
+    if (!opened.ok) { setError(FILE_PROBLEM[opened.because]); if (at() === "file") go("idle"); setProgress(""); return }
     const offset = lengthMs(open)
     const parts = partsOf(opened.audio.samples.length)
     for (let i = 0; i < parts.length; i++) {
@@ -234,8 +282,8 @@ export default function TranscribePage() {
       const p = parts[i]
       await sendPart({ id: newId(), blob: wavPart(opened.audio.samples, p.from, p.to), startMs: offset + p.startMs, endMs: offset + p.endMs }, open.id)
     }
-    if (current.current?.id === open.id) { setPhase("idle"); setProgress("") }
-  }, [phase, sendPart])
+    if (current.current?.id === open.id) { if (at() === "file") go("idle"); setProgress("") }
+  }, [go, sendPart])
 
   const again = useCallback(async (id: string) => {
     const open = current.current, blob = sounds.current.get(id)
@@ -252,10 +300,10 @@ export default function TranscribePage() {
   // ── tidy ─────────────────────────────────────────────────────────────────────
   const tidy = useCallback(async () => {
     const open = current.current
-    if (!open || phase !== "idle") return
+    if (!open || starting.current || live.current || at() !== "idle") return
     const todo = open.segments.filter(s => !s.failed && !s.clean && s.raw)
     if (!todo.length) { setLayer("clean"); return }
-    setPhase("tidying"); setError("")
+    go("tidying"); setError("")
     let leftRaw = 0
     for (let i = 0; i < todo.length; i++) {
       if (current.current?.id !== open.id) return
@@ -268,20 +316,21 @@ export default function TranscribePage() {
       } catch { leftRaw++ }
     }
     if (current.current?.id !== open.id) return
-    setPhase("idle"); setLayer("clean")
+    if (at() === "tidying") go("idle")
+    setLayer("clean")
     setProgress(leftRaw ? `${leftRaw} ${leftRaw === 1 ? "part was" : "parts were"} left as said, because tidying would have changed the words or was not available.` : "")
-  }, [phase, put])
+  }, [go, put])
 
   const lines = session ? transcriptLines(session, layer) : []
   const hasText = lines.some(l => l.text)
   const busy = phase !== "idle"
   const copyAll = async () => { if (!session) return; try { await navigator.clipboard.writeText(asPlainText(session, layer)); setCopied("yes") } catch { setCopied("no") } window.setTimeout(() => setCopied(""), 2400) }
-  const leave = () => { if (busy) return; current.current = null; answeredRef.current = null; setAnswered(null); setSession(null); setWho(null); setTitle(""); setPhase("idle"); setProgress(""); setError(""); setRenaming(false); sounds.current.clear(); setRetryable([]) }
-  const openKept = (k: Kept) => { const { updatedAt: _dropped, ...s } = k; void _dropped; answeredRef.current = null; setAnswered(null); current.current = s; setSession(s); setLayer(s.segments.some(x => x.clean) ? "clean" : "raw"); setError(""); setProgress(""); setNotKept(false); sounds.current.clear(); setRetryable([]); window.scrollTo({ top: 0, behavior: "smooth" }) }
+  const leave = () => { if (busy || mic) return; release(); current.current = null; answeredRef.current = null; setAnswered(null); setSession(null); setWho(null); setTitle(""); go("idle"); setProgress(""); setError(""); setRenaming(false); sounds.current.clear(); setRetryable([]) }
+  const openKept = (k: Kept) => { if (busy || mic) return; const { updatedAt: _dropped, ...s } = k; void _dropped; release(); answeredRef.current = null; setAnswered(null); current.current = s; setSession(s); setLayer(s.segments.some(x => x.clean) ? "clean" : "raw"); setError(""); setProgress(""); setNotKept(false); sounds.current.clear(); setRetryable([]); window.scrollTo({ top: 0, behavior: "smooth" }) }
   const fileName = (ext: string) => `${(session?.title || "transcript").replace(/[^\p{L}\p{N} _-]+/gu, "").trim().slice(0, 60) || "transcript"}.${ext}`
 
   const action = !session ? { label: "Start a transcript", href: "#who" }
-    : phase === "recording" ? { label: "Stop", onClick: stopRecording }
+    : mic ? { label: "Stop", onClick: stopRecording }
     : busy ? { label: "Working…", onClick: () => {} }
     : hasText ? { label: copied === "yes" ? "Copied" : "Copy all", onClick: () => void copyAll() }
     : answered === session.id ? { label: "Record now", onClick: () => void record() }
@@ -323,7 +372,7 @@ export default function TranscribePage() {
         </Card>
       ) : (
         <>
-          {phase === "recording" && (
+          {mic && (
             <Card style={{ marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span aria-hidden style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--danger)", flexShrink: 0 }} />
@@ -332,7 +381,7 @@ export default function TranscribePage() {
               <p style={{ ...SMALL, marginTop: 8 }}>The microphone is on until you press Stop. The words arrive every 20 seconds.</p>
             </Card>
           )}
-          <p role="status" aria-live="polite" style={{ ...SMALL, minHeight: progress || phase === "sending" ? 24 : 0, marginBottom: progress || phase === "sending" ? 12 : 0 }}>{phase === "sending" ? "Writing down the last part…" : progress}</p>
+          <p role="status" aria-live="polite" style={{ ...SMALL, minHeight: progress || phase === "sending" || phase === "starting" ? 24 : 0, marginBottom: progress || phase === "sending" || phase === "starting" ? 12 : 0 }}>{phase === "sending" ? "Writing down the last part…" : phase === "starting" ? "Waiting for the microphone…" : progress}</p>
           {notKept && <p role="status" style={{ ...SMALL, marginBottom: 12, color: "var(--warning)" }}>This browser would not keep the transcript, so it lives only in this tab. Copy or download it before you leave.</p>}
 
           <Card>
@@ -405,7 +454,7 @@ export default function TranscribePage() {
                 <div style={{ fontSize: 16.5, fontWeight: 600, color: "var(--text)", overflowWrap: "anywhere" }}>{k.title}</div>
                 <Meta style={{ marginTop: 6 }}>{new Date(k.startedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · {clockAt(lengthMs(k))} long · {wordCount(k, "raw").toLocaleString("en-US")} words</Meta>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-                  <button type="button" className="btn-outline" style={QUIET} disabled={busy || session?.id === k.id} onClick={() => openKept(k)}>{session?.id === k.id ? "Open now" : "Open"}</button>
+                  <button type="button" className="btn-outline" style={QUIET} disabled={busy || mic || session?.id === k.id} onClick={() => openKept(k)}>{session?.id === k.id ? "Open now" : "Open"}</button>
                   <button type="button" className="btn-ghost" style={QUIET} disabled={session?.id === k.id}
                     onClick={() => { if (window.confirm(`Delete "${k.title}" from this device? It cannot be brought back.`)) void deleteSession(k.id).then(refreshKept) }}>Delete</button>
                 </div>

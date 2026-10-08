@@ -86,7 +86,12 @@ test('unticking a feature takes the deployment\'s key away from it and leaves a 
   assert.equal(L.applyVault(keys, 'interview-prep').groq, undefined, 'not ticked: as if Groq had no key')
   assert.equal(L.applyVault(keys, 'interview-prep').gemini, fake.gemini, 'the other providers serve it')
   const own = 'gsk_' + 'z'.repeat(40)
-  assert.equal(L.applyVault(L.resolveKeys({ groqKey: own }), 'interview-prep').groq, undefined, 'where the deployment has a key, that is the one resolveKeys gathers, so that is the one judged')
+  const both = L.resolveKeys({ groqKey: own })
+  assert.equal(both.groq, fake.groq, 'where the deployment has a key, that is the one in use')
+  assert.equal(L.applyVault(both, 'resume-tailor').groq, fake.groq)
+  assert.equal(L.applyVault(both, 'interview-prep').groq, own, 'unticked: as if the deployment had no key, so the person\'s own is the one used (found in review, 2026-10-08)')
+  assert.equal(L.applyVault(L.applyVault(both, 'interview-prep'), 'interview-prep').groq, own, 'and applying it again changes nothing')
+  assert.equal(L.applyVault(L.tailorKeys(both, { owner: true }), 'interview-prep').groq, own, 'the person\'s key is not lost when the tailor adds its own')
   assert.equal(L.applyVault({ groq: own }, 'interview-prep').groq, own, 'a key that is not the deployment\'s is the person\'s own: never taken out')
 })
 
@@ -100,6 +105,39 @@ test('a key the admin stored replaces the deployment\'s own, is used where the d
   assert.deepEqual(L.applyVault(cold, 'other'), cold)
   fresh({ GROQ_API_KEY: fake.groq }, [{ provider: 'groq', key: stored }, { provider: 'groq', remove: true }])
   assert.equal(L.resolveKeys({}).groq, fake.groq, 'removing the stored key puts the deployment\'s own back in use')
+})
+
+test('an instance that has not managed to read the checklist does not spend a paid key on the strength of the defaults', async () => {
+  fresh({ OPENAI_API_KEY: fake.openai, ANTHROPIC_API_KEY: fake.anthropic, GROQ_API_KEY: fake.groq })
+  V.forgetVault()                                     // a cold start with storage failing
+  assert.equal(V.allows('anthropic', 'other'), false); assert.equal(V.allows('openai', 'resume-tailor'), false); assert.equal(V.allows('openrouter', 'other'), false)
+  assert.equal(V.allows('groq', 'other'), true, 'the free providers go on serving')
+  assert.equal(V.allows('anthropic', 'status-check'), true, 'the health check may still look')
+  const keys = L.applyVault(L.tailorKeys(L.resolveKeys({}), { owner: true }), 'resume-tailor')
+  assert.deepEqual(Object.keys(keys).sort(), ['groq'], 'the tailor runs on the free lane until the checklist is known')
+  V.useVaultDoc(null)                                 // the read succeeded: nothing is stored, the defaults are the truth
+  assert.equal(V.allows('anthropic', 'other'), true); assert.equal(V.allows('openai', 'resume-tailor'), true)
+})
+
+test('a call never waits on storage once the vault is known, and waits a bounded time when it is not', async () => {
+  fresh({ GROQ_API_KEY: fake.groq })
+  let began = Date.now()
+  await V.readyVault(); assert.ok(Date.now() - began < 200, 'known: no wait')
+  const src = read('src/lib/keyVault.ts')
+  assert.ok(/if \(known\) \{ void loadVault\(\); return \}/.test(src), 'refreshed behind the call')
+  assert.ok(/Promise\.race\(\[loadVault\(\), new Promise<void>/.test(src), 'the first read is raced against a deadline')
+  assert.ok(/readAt = ok \? Date\.now\(\) : Date\.now\(\) - TTL_MS \+ RETRY_MS/.test(src), 'a failed read is tried again in seconds, not half a minute')
+  const llm = read('src/lib/llm.ts')
+  assert.ok(/await readyVault\(\)\n/.test(llm) && !/await loadVault\(\)/.test(llm), 'callLLM and keysFor use the bounded wait')
+})
+
+test('the page is told which secret seals the keys, and an unread vault is an error, not the defaults', () => {
+  assert.equal(V.sealedWith({ KEY_VAULT_SECRET: 'x'.repeat(40) }), 'own')
+  assert.equal(V.sealedWith({ R2_SECRET_ACCESS_KEY: 'placeholder-storage-secret-value' }), 'storage')
+  assert.equal(V.sealedWith({}), 'none')
+  const route = read('src/app/api/admin/keys/route.ts')
+  assert.ok(/if \(!\(await loadVault\(true\)\)\) return NextResponse\.json\(\{ error: "The stored keys and checklists could not be read/.test(route))
+  assert.ok(/status: 503/.test(route.slice(route.indexOf('loadVault(true)'), route.indexOf('loadVault(true)') + 400)))
 })
 
 test('a stored key that no longer opens is not used, and the page is told to ask for it again', () => {

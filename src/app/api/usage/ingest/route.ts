@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { recordLlmCall } from "@/lib/llmLedger"
 import { checkRateLimit, clientIp } from "@/lib/rateLimit"
@@ -24,6 +25,9 @@ export async function POST(request: NextRequest) {
   const report = readReport(body, Date.now())
   if (!report.ok) return NextResponse.json({ error: "Not accepted.", because: report.because }, { status: 400 })
 
-  const kept = (await Promise.all(report.calls.map(recordLlmCall))).filter(Boolean).length
+  // Each record is named after the report it came in and its place in it. A report delivered again, by a replay inside the
+  // ten minutes it stays fresh or by a sender trying again after a partial failure, lands on the same names: counted once.
+  const stamp = createHash("sha256").update(body).digest("hex")
+  const kept = (await Promise.all(report.calls.map((call, i) => recordLlmCall(call, createHash("sha256").update(`${stamp}:${i}`).digest("hex").slice(0, 12))))).filter(Boolean).length
   return NextResponse.json({ ok: kept === report.calls.length, kept, received: report.calls.length }, { status: kept === report.calls.length ? 200 : 500 })
 }

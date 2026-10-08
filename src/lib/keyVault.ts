@@ -127,7 +127,11 @@ export const isVaultProvider = (v: unknown): v is VaultProvider => typeof v === 
 let doc: VaultDoc = EMPTY
 let plain: Partial<Record<VaultProvider, string>> = {}
 let readAt = 0
-let reading: Promise<void> | null = null
+let reading: Promise<boolean> | null = null
+// Does this instance hold a checklist it can trust: one read from storage, or none because there is no storage here at all?
+// False from a cold start until the first read answers, and for as long as storage keeps failing (review, 2026-10-08).
+let known = false
+const RETRY_MS = 3000
 
 // Loaded when the vault is read or written, not when this file is: the rules above are plain code (the tests load them bare).
 const storage = () => import("./storage").then(m => m.blob)
@@ -152,14 +156,46 @@ function readDoc(text: string | null): VaultDoc {
   return out
 }
 
-/** Bring this instance up to date with storage, at most once in half a minute. Never throws. */
-export async function loadVault(force = false): Promise<void> {
-  if (!force && Date.now() - readAt < TTL_MS) return
+/**
+ * Bring this instance up to date with storage, at most once in half a minute. Never throws. Answers whether the vault is
+ * known: a failed read is tried again after three seconds, not after thirty, and until one succeeds `allows()` holds the
+ * providers that cost money back, because this instance cannot know what the admin unticked.
+ */
+export async function loadVault(force = false): Promise<boolean> {
+  if (!force && Date.now() - readAt < TTL_MS) return known
   reading ??= (async () => {
-    try { take(readDoc(await (await storage()).getText(PATH))) } catch { /* keep what is known */ } finally { readAt = Date.now(); reading = null }
+    let ok = false
+    try {
+      // A build with no storage module at all (a test, a script) has no vault to read. That is known, not unknown.
+      const blob = await storage().catch(() => null)
+      if (blob) take(readDoc(await blob.getText(PATH)))
+      ok = true
+    } catch (e) {
+      // A deployment with no storage configured has no vault either. Any other failure leaves what is known as it was.
+      ok = /not configured/i.test(String((e as Error)?.message || e))
+    } finally {
+      if (ok) known = true
+      readAt = ok ? Date.now() : Date.now() - TTL_MS + RETRY_MS
+      reading = null
+    }
+    return ok
   })()
   return reading
 }
+
+/**
+ * For a call about to be made. Once the vault is known it is refreshed behind the call and never waited for, so a slow or
+ * stalled storage account cannot hold up an answer whose keys are already in memory. Only an instance that has read nothing
+ * yet waits, and for no longer than `waitMs`.
+ */
+export async function readyVault(waitMs = 1500): Promise<void> {
+  if (known) { void loadVault(); return }
+  let timer: ReturnType<typeof setTimeout> | undefined
+  await Promise.race([loadVault(), new Promise<void>(resolve => { timer = setTimeout(resolve, waitMs); (timer as { unref?: () => void }).unref?.() })])
+  if (timer) clearTimeout(timer)
+}
+
+const HELD_BACK_UNREAD: ReadonlySet<VaultProvider> = new Set<VaultProvider>(["openai", "anthropic", "openrouter"])
 
 /** The key the admin stored for this provider, when this instance has read it. */
 export function vaultKey(provider: VaultProvider): string | undefined { return plain[provider] }
@@ -167,6 +203,9 @@ export function vaultKey(provider: VaultProvider): string | undefined { return p
 /** May this provider's key be used for this feature? The health check may always look at every key. */
 export function allows(provider: VaultProvider, feature: string): boolean {
   if (feature === "status-check") return true
+  // Fail closed where it costs money: an instance that has not managed to read the checklist does not spend a paid key on
+  // the strength of the defaults. The free providers go on serving, so a storage fault does not stop the product.
+  if (!known && HELD_BACK_UNREAD.has(provider)) return false
   return (doc.use[provider] ?? defaultUse(provider)).includes(FEATURE_IDS.has(feature) ? feature : "other")
 }
 /** Did the admin tick this feature for this provider, as opposed to it being allowed by default? */
@@ -190,13 +229,28 @@ export function changed(before: VaultDoc, change: VaultChange, secret: Buffer | 
   return next
 }
 
+// Saves on one instance go one at a time: each reads the document, changes one provider and writes it back, and two that
+// overlapped would lose one change while both answered "saved". (Two instances can still overlap; the page also takes one
+// save at a time, and the answer to every save is the document as stored, so a lost change shows at once.)
+let saving: Promise<unknown> = Promise.resolve()
+
 /** Save one change and take it into use on this instance at once. Other instances follow within half a minute. */
-export async function saveVault(change: VaultChange): Promise<void> {
-  const blob = await storage()
-  const before = readDoc(await blob.getText(PATH))
-  const next = changed(before, change, vaultSecret(), Date.now())
-  await blob.put(PATH, JSON.stringify(next))
-  take(next); readAt = Date.now()
+export function saveVault(change: VaultChange): Promise<void> {
+  const run = saving.then(async () => {
+    const blob = await storage()
+    const before = readDoc(await blob.getText(PATH))
+    const next = changed(before, change, vaultSecret(), Date.now())
+    await blob.put(PATH, JSON.stringify(next))
+    take(next); known = true; readAt = Date.now()
+  })
+  saving = run.catch(() => {})
+  return run
+}
+
+/** Which secret keys are sealed under, so the page can say: the deployment's own, the storage account's, or none. */
+export function sealedWith(env: Record<string, string | undefined> = process.env): "own" | "storage" | "none" {
+  if ((env.KEY_VAULT_SECRET || "").trim().length >= 32) return "own"
+  return (env.R2_SECRET_ACCESS_KEY || "").trim().length >= 16 ? "storage" : "none"
 }
 
 export type VaultRow = {
@@ -237,5 +291,7 @@ export function useVaultDoc(next: VaultDoc | null, env: Record<string, string | 
   const opened: Partial<Record<VaultProvider, string>> = {}
   const d = next ?? EMPTY
   if (secret) for (const p of VAULT_PROVIDERS) { const k = d.keys[p]; const v = k ? openKey(p, k.sealed, secret) : null; if (v) opened[p] = v }
-  doc = d; plain = opened; readAt = Date.now()
+  doc = d; plain = opened; readAt = Date.now(); known = true
 }
+/** For tests: an instance that has read nothing and whose storage is failing. */
+export function forgetVault(): void { doc = EMPTY; plain = {}; known = false; readAt = Date.now() }

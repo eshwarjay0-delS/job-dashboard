@@ -42,7 +42,7 @@ test('a tidied text that says anything the person did not say is refused, with t
     ['i spoke with priyanka about it', 'I spoke with Priya about it.', 'never said'],
     ['i am gonna do it', 'I am going to do it.', 'never said'],
     ['we met on monday', '', 'empty'],
-    ['we met on monday and agreed the price and the date and then we wrote it all down for the team to read later', 'We met.', 'too much'],
+    ['we met on monday and agreed the price and the date and then we wrote it all down for the team to read later', 'We met.', 'before the end'],
   ]
   for (const [raw, clean, why] of refused) {
     assert.equal(T.cleanupAllowed(raw, clean), false, clean)
@@ -189,7 +189,7 @@ test('the pages talk to the two speech routes and nothing else, and keep what a 
 
 test('Transcribe cannot reach the microphone or a file until "Who is speaking?" has been answered in this visit', () => {
   const page = read(pages[1])
-  const record = page.slice(page.indexOf('const record = useCallback'), page.indexOf('const stopRecording'))
+  const record = page.slice(page.indexOf('const record = useCallback'), page.indexOf('// ── choose a recording'))
   assert.ok(record.indexOf('answeredRef.current !== open.id') > 0 && record.indexOf('answeredRef.current !== open.id') < record.indexOf('getUserMedia'), 'the answer is checked before the microphone is asked for')
   const file = page.slice(page.indexOf('const readFile = useCallback'), page.indexOf('const again'))
   assert.ok(file.indexOf('answeredRef.current !== open.id') > 0 && file.indexOf('answeredRef.current !== open.id') < file.indexOf('decode(file)'))
@@ -206,7 +206,7 @@ test('every way out of a recording lets the microphone go, on both pages', () =>
     const page = read(file)
     assert.ok(/getTracks\(\)\.forEach\(track => track\.stop\(\)\)/.test(page), file + ': tracks are stopped')
     assert.ok(/useEffect\(\(\) => \(\) => \{[^\n]*release\(\)/.test(page), file + ': leaving the page releases it')
-    assert.ok(/if \((starting\.current \|\| live\.current|!open \|\| answeredRef\.current !== open\.id \|\| starting\.current \|\| live\.current)\) return/.test(page), file + ': a second Start cannot open a second recorder')
+    assert.ok(/if \((starting\.current \|\| live\.current|!open \|\| answeredRef\.current !== open\.id \|\| starting\.current \|\| live\.current \|\| at\(\) !== "idle")\) return/.test(page), file + ': a second Start cannot open a second recorder')
   }
 })
 
@@ -223,4 +223,73 @@ test('the two pages are served with the microphone allowed and nothing else new,
   assert.ok(/microphone=\(self\)/.test(speech) && !/display-capture/.test(speech), 'the microphone, and no screen or tab capture')
   assert.equal((side.match(/item\.href\.startsWith\("\/dashboard\/kompas"\)/g) || []).length, 2, 'a plain link, so the page comes with its own headers')
   for (const href of ['/dashboard/kompas/flow', '/dashboard/kompas/transcribe']) assert.ok(nav.includes(`href: "${href}"`), href)
+})
+
+// ── found in review, 2026-10-08 ──────────────────────────────────────────────
+test('a word with its "n\'t" or its "non-" taken off is another word, whichever apostrophe was typed', () => {
+  for (const [raw, clean] of [
+    ["I can't make it on Friday", 'I can make it on Friday.'], ['I can’t make it on Friday', 'I can make it on Friday.'],
+    ["we'll go", 'We go.'], ["I'd say no", 'I say no.'], ['the fee is non-refundable', 'The fee is refundable.'],
+  ]) assert.equal(T.cleanupAllowed(raw, clean), false, clean)
+  assert.equal(T.cleanupAllowed("I can't make it on Friday", 'I can’t make it on Friday.'), true, 'the same word with the other apostrophe is the same word')
+  assert.equal(T.cleanupAllowed('we need a follow-up call um today', 'We need a follow-up call today.'), true)
+  const fixed = T.restoreSpelling("I couldn't open it", 'I could open it.')
+  assert.equal(fixed, 'I could open it.', 'putting spelling back never turns "could" into "couldn\'t" or half of it')
+  assert.equal(T.cleanupAllowed("I couldn't open it", fixed), false)
+})
+
+test('a number is its digits, the marks inside it, its sign and its unit, and a number said in words may not be left out', () => {
+  const changed = [
+    ['send him two hundred fifty thousand by friday', 'Send him two hundred thousand by Friday.'],
+    ['i need five no six copies', 'I need five copies.'],
+    ['the dose is 1.5 milligrams', 'The dose is 1-5 milligrams.'], ['the dose is 1.5 milligrams', 'The dose is 1,5 milligrams.'], ['the dose is 1.5 milligrams', 'The dose is 1 5 milligrams.'],
+    ['it went up 50', 'It went up 50%.'], ['it was 5 degrees', 'It was -5 degrees.'], ['it cost 50', 'It cost $50.'],
+    ['we rolled back to version 3 point 2', 'We rolled back to version 3 2.'],
+  ]
+  for (const [raw, clean] of changed) assert.equal(T.cleanupAllowed(raw, clean), false, clean)
+  for (const [raw, clean] of [['the dose is 1.5 milligrams', 'The dose is 1.5 milligrams.'], ['um it cost $50 at 5:30', 'It cost $50 at 5:30.'], ['we rolled back to version 3 point 2', 'We rolled back to version 3 point 2.'], ['hey send me the the report by five pm thanks', 'Hey, send me the report by five pm. Thanks.']]) {
+    assert.equal(T.cleanupRefusal(raw, clean), '', clean)
+  }
+})
+
+test('an answer that stops before the end is not a tidying, however few words are missing', () => {
+  const raw = 'we met on monday and agreed the price and the date and then we wrote it all down for the team'
+  assert.equal(T.cleanupRefusal(raw, 'We met on Monday and agreed the price and the date and then we wrote it'), 'it stopped before the end')
+  assert.equal(T.cleanupRefusal(raw + ' um yeah okay', 'We met on Monday and agreed the price and the date and then we wrote it all down for the team.'), '', 'a few filler words at the very end may go')
+  const lib = read('src/lib/kompasSpeech.ts')
+  assert.ok(/new TextEncoder\(\)\.encode\(text\)\.length \/ 2\) \+ 512/.test(lib), 'the tidier is given room sized from the text\'s bytes')
+})
+
+test('in Transcribe the Recording line and Stop follow the microphone itself, and nothing can start while it is being opened', () => {
+  const page = read(pages[1])
+  assert.ok(/\{mic && \(/.test(page) && /: mic \? \{ label: "Stop", onClick: stopRecording \}/.test(page), 'drawn from whether the microphone is on')
+  assert.equal((page.match(/setMic\(true\)/g) || []).length, 1); assert.equal((page.match(/setMic\(false\)/g) || []).length, 1, 'only release() turns it off')
+  assert.ok(page.indexOf('live.current = state') < page.indexOf('setMic(true)') && page.indexOf('setMic(true)') < page.indexOf('      part()\n'), 'on before the first recorder starts')
+  const record = page.slice(page.indexOf('const record = useCallback'), page.indexOf('// ── choose a recording'))
+  assert.ok(record.indexOf('go("starting")') < record.indexOf('getUserMedia'), 'the page is busy before the browser is asked for the microphone')
+  for (const fn of ['const readFile = useCallback', 'const tidy = useCallback']) {
+    const body = page.slice(page.indexOf(fn), page.indexOf(fn) + 400)
+    assert.ok(/starting\.current \|\| live\.current \|\| at\(\) !== "idle"/.test(body), fn + ': refuses unless the page is idle and the microphone is off')
+  }
+  assert.ok(/if \(at\(\) === "file"\) go\("idle"\)/.test(page) && /if \(at\(\) === "tidying"\) go\("idle"\)/.test(page), 'a file or a tidy hands the page back only if it is still theirs')
+  assert.ok(/const leave = \(\) => \{ if \(busy \|\| mic\) return; release\(\)/.test(page) && /const openKept = \(k: Kept\) => \{ if \(busy \|\| mic\) return;/.test(page), 'no leaving or opening another transcript with the microphone on')
+  assert.ok(/if \(!live\.current\) \{ stream\?\.getTracks\(\)\.forEach\(track => track\.stop\(\)\)/.test(record), 'a microphone that was opened and not used is let go')
+})
+
+test('Stop closes the recorder before the microphone, and the page is not idle until the last part has been sent', () => {
+  const page = read(pages[1])
+  const stop = page.slice(page.indexOf('const stopRecording = useCallback'), page.indexOf('const record = useCallback'))
+  assert.ok(stop.indexOf('closing.current = true') < stop.indexOf('last.stop()'), 'marked as closing first')
+  assert.ok(/const done = \(\) => \{ if \(!closing\.current\) return; closing\.current = false; release\(\); settle\(\) \}/.test(stop), 'the microphone is let go when the recorder has closed')
+  assert.ok(/window\.setTimeout\(done, 3000\)/.test(stop), 'and in any case within three seconds')
+  assert.ok(/if \(!live\.current && !closing\.current && pending\.current === 0 && at\(\) === "sending"\) go\("idle"\)/.test(page))
+})
+
+test('a chosen recording is measured before it is decoded, and decoded at the recogniser\'s rate', () => {
+  const audio = read('src/app/dashboard/kompas/transcribe/audio.ts')
+  const decode = audio.slice(audio.indexOf('export async function decode'))
+  assert.ok(decode.indexOf('file.size > MAX_FILE_BYTES') < decode.indexOf('lengthOf(file)') && decode.indexOf('lengthOf(file)') < decode.indexOf('decodeAudioData'), 'size, then length from the header, then decoding')
+  assert.ok(/stated === null && file\.size > MAX_UNMEASURED_BYTES/.test(decode), 'a file that will not say how long it is is taken only when small')
+  assert.ok(/new OfflineAudioContext\(1, 1, RATE\)/.test(decode), 'decoded straight at 16,000 samples a second')
+  assert.ok(/URL\.revokeObjectURL\(url\)/.test(audio))
 })
