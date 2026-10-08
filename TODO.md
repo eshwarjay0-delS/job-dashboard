@@ -29,6 +29,7 @@ Three reviewers read the code that went live on 7 October, one area each (the ke
 - Suite 143 of 144 (the standing Windows path test); `scripts/tests/key-vault.test.mjs` 19, `kompas-speech.test.mjs` 28, `usage-ledger.test.mjs` 22. `npx tsc --noEmit` clean.
 - The reviewers' cases run through the guard: all refused; my four measured sentences through the live tidier: still 4 of 4 kept.
 - Transcribe in a local browser after the rework: consent, the open transcript, Record now with the microphone blocked (the plain message, no Recording line, the page back to idle), Back.
+- Live, after the deploy: `/api/health/services` now carries `ai.checklist`, and it reads `read` with `openai=ok`: the production instance read the checklist from storage, so the paid providers are not being held back there. The pages and routes answer as before (403 for a non-admin, 401 signed out), and Kompas's `GET /api/usage` still says "signature accepted".
 
 **NOT verified**
 
