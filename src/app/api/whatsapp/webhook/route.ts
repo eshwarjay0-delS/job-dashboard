@@ -17,7 +17,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
 import { createHash, randomBytes } from "crypto"
-import { blob, writePath, existsPath, deletePath } from "@/lib/storage"
+import { blob, writePath, readPath, existsPath, deletePath } from "@/lib/storage"
+import mammoth from "mammoth"
+import { RESUME_FORMATS, validFormat, renderResumeDocx, type FormatId } from "@/lib/resume-formatting"
 import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
 import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
@@ -62,7 +64,7 @@ const digits = (from: string) => from.replace(/\D/g, "")
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 
 type Meta = { role: string; company: string; location: string }
-type Session = { jd?: string; resumePath?: string; resumeName?: string; resumeAt?: number; seen?: string[]; updatedAt?: number }
+type Session = { formatTemplate?: FormatId; jd?: string; resumePath?: string; resumeName?: string; resumeAt?: number; seen?: string[]; updatedAt?: number }
 const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
 
 async function loadSession(from: string): Promise<Session> {
@@ -164,7 +166,7 @@ const HELP = [
   "",
   "*Want changes?* Swipe right on a resume I sent (or long-press → Reply) and type what to change, e.g. _add more Terraform_ or _make the bullets shorter_. Each update builds on the version you replied to, so you can keep refining.",
   "",
-  "Commands: *reset* · *status* · *help*",
+  "Commands: *reset* · *status* · *help* · *formats* · *format columbia*",
 ].join("\n")
 
 // ── Meta webhook verification (GET) ───────────────────────────────────────────
@@ -231,6 +233,15 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     const cmd = text.toLowerCase()
 
     if (["help", "hi", "hello", "start", "menu"].includes(cmd)) return sendText(from, HELP)
+    if (cmd === "formats") return sendText(from, "Choose a format by sending *format jakes* or one of:\\n" + RESUME_FORMATS.map(t => "*format " + t.id + "* — " + t.label).join("\\n"))
+    if (cmd.startsWith("format ")) {
+      const id = cmd.slice(7).trim()
+      if (!validFormat(id)) return sendText(from, "Unknown template. Send *formats* to see the approved choices.")
+      session.formatTemplate = id
+      await saveSession(from, session)
+      if (session.resumePath) return formatWhatsAppResume(from, session, id)
+      return sendText(from, "Selected *" + RESUME_FORMATS.find(t => t.id === id)?.label + "*. Now send your DOCX resume. No job description is required.")
+    }
     if (cmd === "reset" || cmd === "clear") {
       await saveSession(from, { seen: session.seen })
       return sendText(from, "Cleared. Send a new job description and resume.")
@@ -285,11 +296,26 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     session.resumeName = safe.replace(/\.docx$/i, "")
     session.resumeAt = Date.now()
     await saveSession(from, session)
+    if (session.formatTemplate) return formatWhatsAppResume(from, session, session.formatTemplate)
     if (!session.jd) return sendText(from, `Saved *${session.resumeName}*. Now paste the job description.`)
     return generate(from, session, userId)
   }
 
   return sendText(from, HELP)
+}
+
+// Format an uploaded resume without requiring a job description or an AI provider key.
+async function formatWhatsAppResume(from: string, session: Session, template: FormatId) {
+  if (!session.resumePath) return sendText(from, "Send your DOCX resume first.")
+  const source = await readPath(session.resumePath)
+  if (!source || source.length > 4 * 1024 * 1024) return sendText(from, "Could not read that resume. Please send a DOCX file smaller than 4 MB.")
+  const extracted = (await mammoth.extractRawText({ buffer: source })).value.trim()
+  if (!extracted) return sendText(from, "This DOCX has no extractable text. Please send a text based Word document.")
+  const formatted = await renderResumeDocx(extracted, template)
+  const name = await outputNameFor(source)
+  await sendText(from, "Formatting with " + RESUME_FORMATS.find(t => t.id === template)?.label + "…")
+  await deliver(from, formatted, name + "_Formatted", "Formatted resume. Please review content and layout before submitting.", { userId: "format", jd: "", meta: { role: "", company: "", location: "" }, changes: [] })
+  await saveSession(from, { seen: session.seen })
 }
 
 // ── Tailor + reply ────────────────────────────────────────────────────────────
