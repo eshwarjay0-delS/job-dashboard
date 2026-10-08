@@ -1,3 +1,23 @@
+## 2026-10-08 (night) — Kompas Flow for Android 2.2.0: the four things he named after using it (Claude Code)
+
+The owner, after using 2.1.0 on his phone: "The kompas flow app icon should be the icon for floating button around and it needs to spinned once on tap. The waves only need to wave upon speaking and the button needs to dissolve into background just like how the whisper flow works."
+
+**Built** (`android-flow/` in the Kompas repository, branch `feat/android-flow-launcher`, commit `f08d9ab`, build run 4; the APK here is 37,977 bytes, sha256 `02e86807…`)
+
+- **The button is the app's own mark**: the needle on paper, not a microphone on a black disc. While it listens it wears a red ring.
+- **One tap turns the needle once**, at once, so the tap is seen to be taken before the phone's speech service has started.
+- **The bars move only for a voice.** The app learns how loud the room is while nobody speaks and draws only sound that stands clear of that, and only between the speech service's "speech began" and "speech ended". A fan or a street no longer moves them.
+- **Left alone for 2.5 seconds the button thins** to about a third, with no plate or shadow behind it, so what is under it shows through. A touch, or a keyboard opening, brings it back whole. It never thins while it is listening.
+
+**Verified**
+
+- The build log ends "BUILD SUCCESSFUL"; size and sha256 match the build record. Opened here: version 2.2.0, the needle drawing is inside, it asks for the microphone and still has no internet permission.
+
+**NOT verified**
+
+- **On a phone.** None of the four has been seen running by me. The thresholds for "a voice" (2 dB clear of the room to draw anything, 8 dB for a full bar) are a first setting from what Android documents the loudness range to be, not from his phone; if the bars are now too still or still twitch, those two numbers in `LevelView.java` are what to change.
+- An installed 2.1.0 must be removed before 2.2.0 will install (each build is signed with a throwaway key).
+
 ## 2026-10-08 (night) — The night theme, rebuilt for his eyes (Claude Code)
 
 The owner, with a description of migraine aura and kaleidoscope vision: "I feel like I'm having all this problems when I see the dark mode. see what other people in dark mode had developed and find optimal colors."
