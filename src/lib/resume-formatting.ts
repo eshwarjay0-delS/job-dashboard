@@ -13,18 +13,29 @@ export const RESUME_FORMATS = [
 
 export type FormatId = typeof RESUME_FORMATS[number]["id"]
 export function validFormat(id: string): id is FormatId { return RESUME_FORMATS.some(t => t.id === id) }
-export function resumeLines(text: string): string[] { return text.replace(/\r/g, "").split("\n").map(s => s.trim()).filter(Boolean).slice(0, 450) }
+export function resumeLines(text: string): string[] { return text.replace(/\r/g, "").split("\n").map(s => s.trim()).filter(Boolean) }
 const headings = /^(experience|professional experience|work experience|education|skills|technical skills|projects|certifications|summary|professional summary|leadership|awards|publications|additional information|core competencies|career highlights)$/i
 export function isHeading(line: string) { return headings.test(line.trim()) }
 export function xmlEscape(s: string) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;") }
 export function renderResumeHtml(text: string, template: FormatId) {
   const lines = resumeLines(text)
-  const accent = template === "columbia" ? "#173653" : "#222"
+  const styles: Record<FormatId, { accent: string; font: string; size: string; margin: string; rule: string }> = {
+    jakes: { accent: "#111", font: "Arial, sans-serif", size: "10pt", margin: ".65in", rule: "1px solid" },
+    harvard: { accent: "#222", font: "Georgia, serif", size: "11pt", margin: ".85in", rule: "1px solid" },
+    "yale-tech": { accent: "#00356b", font: "Arial, sans-serif", size: "10pt", margin: ".7in", rule: "2px solid" },
+    mit: { accent: "#a31f34", font: "Arial, sans-serif", size: "10.5pt", margin: ".75in", rule: "1px solid" },
+    careeronestop: { accent: "#333", font: "Arial, sans-serif", size: "11pt", margin: ".8in", rule: "1px solid" },
+    "harvard-paragraph": { accent: "#222", font: "Georgia, serif", size: "11pt", margin: ".85in", rule: "1px solid" },
+    "yale-general": { accent: "#00356b", font: "Georgia, serif", size: "10.5pt", margin: ".75in", rule: "1px solid" },
+    columbia: { accent: "#173653", font: "Arial, sans-serif", size: "10pt", margin: ".68in", rule: "2px solid" },
+  }
+  const style = styles[template]
+  const accent = style.accent
   const body = lines.map((line, i) => {
     const tag = i === 0 ? "h1" : isHeading(line) ? "h2" : "p"
     return `<${tag}>${xmlEscape(line)}</${tag}>`
   }).join("")
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Resume</title><style>@page{size:letter;margin:0.72in}body{font-family:Georgia,'Times New Roman',serif;color:#202020;line-height:1.35;font-size:10.5pt;max-width:7.2in;margin:auto}h1{text-align:center;font-size:18pt;margin:0 0 9pt;color:${accent}}h2{font-family:Arial,sans-serif;text-transform:uppercase;font-size:10.5pt;letter-spacing:.055em;border-bottom:1px solid ${accent};padding-bottom:3pt;margin:13pt 0 5pt;break-after:avoid}p{margin:0 0 5pt;white-space:pre-wrap;overflow-wrap:anywhere} @media print{body{max-width:none}}</style></head><body>${body}</body></html>`
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Resume</title><style>@page{size:letter;margin:0.72in}body{font-family:Georgia,'Times New Roman',serif;color:#202020;line-height:1.35;font-size:${style.size};max-width:7.2in;margin:auto}h1{text-align:center;font-size:18pt;margin:0 0 9pt;color:${accent}}h2{font-family:Arial,sans-serif;text-transform:uppercase;font-size:10.5pt;letter-spacing:.055em;border-bottom:${style.rule} ${accent};padding-bottom:3pt;margin:13pt 0 5pt;break-after:avoid}p{margin:0 0 5pt;white-space:pre-wrap;overflow-wrap:anywhere} @media print{body{max-width:none}}</style></head><body>${body}</body></html>`
 }
 export async function renderResumeDocx(text: string, template: FormatId): Promise<Buffer> {
   const lines = resumeLines(text)
