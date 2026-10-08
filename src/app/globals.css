@@ -16,7 +16,7 @@
    THEME TOKENS — ink and paper, the only theme.
    Paper is the page, ink is the type, and structure comes from hairline rules rather than
    shadows or fills. One warm spot colour is used sparingly (eyebrows, "new" marks, focus).
-   Light mode is paper; data-theme="dark" is night, the same system under a moon.
+   Light mode is paper; data-theme="dark" is night, the same system in the range that is easy on the eye.
    data-accent and data-layout are still set by ThemeProvider so saved preferences resolve,
    but neither can change the look: there is no second or third theme to switch to.
 ═══════════════════════════════════════════════════════════════ */
@@ -175,71 +175,79 @@
 /* The owner: the green has no light on it, and no bamboo on the buttons (1 Oct 2026). */
 :root:not([data-theme="dark"]) [data-slot="button"].bg-primary{color:#f4f7f2}
 
-/* ── Night (dark): lunar ──────────────────────────────────────────
-   The owner, 8 Oct 2026: "use this colors for dark theme across the job-dashboard. the current
-   ones sucks", then "It should feel more lunar and nice". So: a night sky, navy panels lit from
-   one corner, slate and steel rules, silver type, and moonlight for what is chosen. Everything
-   cool is one of his nine standards or a step between two of them; nothing warm is on the page
-   except a signal, which is why a mark or an alert cannot be missed here.
+/* ── Night (dark): a calm night ───────────────────────────────────
+   The owner, 8 Oct 2026, after the first night theme of that day: "I feel like I'm having all this
+   problems when I see the dark mode" (shimmering, zigzag lines, patterns), and "see what other
+   people in dark mode had developed and find optimal colors".
 
-   Three values are a step off a standard, each for a reason that test holds:
-     --surface    #0f1836  a panel has to sit between the sky and the navy, or cards vanish
-     --text-soft  #7c91aa  #667d9d is 3.5 to 1 on a navy panel; a hint has to be readable
-     --accent     #557997  #4a6e8d under white type is fine, but the same token is the colour of
-                           sixty small links, and there it is 3.2 to 1; this is the nearest steel
-                           that carries white type (4.6) and still reads as a link (3.8)        */
+   So this is not chosen by eye. Eleven widely used dark themes were measured (Material, GitHub and
+   GitHub Dimmed, Nord, Tokyo Night, One Dark, VS Code, Discord, Slack, Solarized, Catppuccin):
+     page lightness (OKLCH)   0.18 to 0.32, median 0.24      the theme this replaces: 0.14
+     body type against page   4.8 to 16 to 1, median 9.4     the theme this replaces: 16.9
+   Bright type on a near-black page is what blooms and shimmers, and both nights this app has had
+   were at the far end of both numbers. These values sit in the middle of what the others agree on:
+     - the page is a dark blue-grey, never near black; a panel is one small step lighter
+     - type is a soft silver at about 10 to 1, never near white
+     - every surface and every line of type is the owner's own blue (hue 250), with little colour
+       in it, so nothing large is vivid
+     - a signal is still warm, but softened: vivid orange on blue is the pair that appears to
+       float and vibrate, so bonfire and chilli keep their hue and lose about 40% of their strength
+     - there is no glow and no gradient behind the page, and rules are faint
+   scripts/tests/theme-palette.test.mjs holds each of these as a number.
+
+   One compromise is left, and it is older than this theme: --accent is both the fill under white
+   type (75 places) and the colour of small links (59 places). One colour cannot be 4.5 to 1 both
+   ways on a page this light; it is 4.25 under white and 3.7 as a link on a panel. Splitting the
+   token in those 130 places is the real fix.                                                     */
 [data-theme="dark"] {
-  --bg:            #060817;   /* night sky */
-  --surface:       #0f1836;   /* a panel */
-  --surface-2:     #16254f;   /* inset, hover */
-  --surface-3:     #1b3a57;   /* deeper inset, the chosen row */
-  --border:        #2c3e50;   /* hairline */
-  --border-strong: #4a6e8d;   /* structural rule, control outline */
-  --text:          #ececec;   /* silver */
-  --text-muted:    #acbbc6;   /* mist */
-  --text-soft:     #7c91aa;
-  --spot:          var(--signal-bonfire);
-  --spot-ink:      #060817;
-  --background:    #060817;
-  --foreground:    #ececec;
-  --success:       #67d6a0;
-  --success-soft:  rgba(103,214,160,.12);
-  --success-border:rgba(103,214,160,.32);
-  --warning:       var(--signal-bonfire);
-  --warning-soft:  rgba(244,124,84,.14);
-  --warning-border:var(--signal-bonfire);
-  --danger:        #d57168;   /* chilli lifted until it reads on its own tint (4.7 to 1) */
-  --danger-soft:   rgba(203,78,66,.14);
-  --danger-border: var(--signal-chilli);
-  --accent:        #557997;
-  --accent-h:      #6387a5;
-  --accent-soft:   #16254f;
-  --accent-border: #4a6e8d;
-  --accent-txt:    #a4c8e1;   /* moonlight */
+  --bg:            #131d27;   /* the page */
+  --surface:       #1a2530;   /* a panel */
+  --surface-2:     #222f3d;   /* inset, hover */
+  --surface-3:     #2d3d4e;   /* deeper inset, the chosen row */
+  --border:        #2d3b48;   /* hairline */
+  --border-strong: #405367;   /* structural rule, control outline */
+  --text:          #c6cdd4;   /* soft silver */
+  --text-muted:    #9eabb8;
+  --text-soft:     #8799ab;
+  --spot:          #de9a7c;   /* bonfire, softened */
+  --spot-ink:      #131d27;
+  --background:    #131d27;
+  --foreground:    #c6cdd4;
+  --success:       #83caa4;
+  --success-soft:  rgba(131,202,164,.12);
+  --success-border:rgba(131,202,164,.32);
+  --warning:       #de9a7c;
+  --warning-soft:  rgba(222,154,124,.14);
+  --warning-border:rgba(222,154,124,.55);
+  --danger:        #d7877e;   /* chilli, softened */
+  --danger-soft:   rgba(185,101,92,.14);
+  --danger-border: #b9655c;
+  --accent:        #557fa2;
+  --accent-h:      #6590b4;
+  --accent-soft:   #222f3d;
+  --accent-border: #405367;
+  --accent-txt:    #a4c8e1;   /* moonlight: the owner's own, already in the calm range */
   --bamboo-leaf:   #78937f;
   --bamboo-mid:    #607d69;
   --primary-foreground: #ffffff;
   --sidebar-primary-foreground: #ffffff;
 
-  /* Stages, on the night: a tint of the stage's own colour, its exact colour as the rule. Without
-     these the paper values showed through, and a folder drawn in --cat-out was ink on the sky. */
-  --cat-out:       #ececec;  --cat-out-bg:   rgba(172,187,198,.10);  --cat-out-b:   rgba(172,187,198,.30);
-  --cat-reply:     #f47c54;  --cat-reply-bg: rgba(244,124,84,.14);   --cat-reply-b: rgba(244,124,84,.55);
-  --cat-int:       #d57168;  --cat-int-bg:   rgba(203,78,66,.14);    --cat-int-b:   rgba(203,78,66,.70);
-  --cat-ass:       #ce9a93;  --cat-ass-bg:   rgba(173,86,75,.14);    --cat-ass-b:   rgba(173,86,75,.70);
+  /* Stages, on the night: a tint of the stage's own colour. Without these the paper values showed
+     through, and a folder drawn in --cat-out was ink on the page. */
+  --cat-out:       #c6cdd4;  --cat-out-bg:   rgba(158,171,184,.10);  --cat-out-b:   rgba(158,171,184,.30);
+  --cat-reply:     #de9a7c;  --cat-reply-bg: rgba(222,154,124,.14);  --cat-reply-b: rgba(222,154,124,.50);
+  --cat-int:       #d7877e;  --cat-int-bg:   rgba(185,101,92,.14);   --cat-int-b:   rgba(185,101,92,.70);
+  --cat-ass:       #d4a6a1;  --cat-ass-bg:   rgba(212,166,161,.12);  --cat-ass-b:   rgba(212,166,161,.42);
   --cat-fol:       #a4c8e1;  --cat-fol-bg:   rgba(164,200,225,.10);  --cat-fol-b:   rgba(164,200,225,.34);
-  --cat-rtr:       #acbbc6;  --cat-rtr-bg:   rgba(102,125,157,.14);  --cat-rtr-b:   rgba(102,125,157,.44);
-  --cat-saved:     #7c91aa;  --cat-saved-bg: rgba(102,125,157,.08);  --cat-saved-b: rgba(102,125,157,.26);
+  --cat-rtr:       #9eabb8;  --cat-rtr-bg:   rgba(135,153,171,.14);  --cat-rtr-b:   rgba(135,153,171,.44);
+  --cat-saved:     #8799ab;  --cat-saved-bg: rgba(135,153,171,.08);  --cat-saved-b: rgba(135,153,171,.26);
 
-  --shadow-card: 0 1px 0 rgba(164,200,225,.05), 0 20px 48px -30px rgba(0,0,0,.82);
-  --shadow-card-hover: 0 1px 0 rgba(164,200,225,.09), 0 28px 60px -30px rgba(0,0,0,.9);
-  /* The moon is just off the top right corner; its light crosses the sky and thins to nothing. */
-  --page-glow:
-    radial-gradient(circle at 86% -14%, rgba(164,200,225,.20), transparent 24rem),
-    radial-gradient(circle at 70% -30%, rgba(74,110,141,.30), transparent 46rem),
-    radial-gradient(circle at 8% 112%, rgba(22,37,79,.70), transparent 40rem);
+  --shadow-card: 0 1px 0 rgba(255,255,255,.03), 0 16px 40px -30px rgba(0,0,0,.6);
+  --shadow-card-hover: 0 1px 0 rgba(255,255,255,.05), 0 22px 48px -30px rgba(0,0,0,.7);
+  /* Nothing behind the page: a flat page is the calm one. */
+  --page-glow: none;
 }
-[data-theme="dark"][data-accent] { --accent:#557997; --accent-h:#6387a5; }
+[data-theme="dark"][data-accent] { --accent:#557fa2; --accent-h:#6590b4; }
 
 @theme inline {
   --color-background: var(--bg);
@@ -1097,20 +1105,17 @@ html body aside.dash-sidebar {
 
 /* Icons are antique gold. A colour set on the icon itself still wins; icons on a strong or danger button keep the button's text colour. */
 :root{--icon-gold:var(--palette-ochre)}
-[data-theme="dark"]{--icon-gold:#c59b55}
+[data-theme="dark"]{--icon-gold:#c1a874}
 :where(svg.lucide){color:var(--icon-gold)}
 [data-slot="button"].bg-primary svg,.bg-primary svg,.text-destructive svg,.text-primary-foreground svg{color:inherit}
 
-/* Night: a lit sky, never pure black. What is selected is moonlight. */
+/* Night: never near black, never near white. What is selected is moonlight. */
 [data-theme="dark"] h1,
 [data-theme="dark"] h2,
 [data-theme="dark"] h3 { letter-spacing:-.025em; }
 [data-theme="dark"] .mf-feature,
 [data-theme="dark"] [data-slot="card"] { box-shadow:var(--shadow-card); }
-[data-theme="dark"] ::selection { background:rgba(164,200,225,.28); }
-/* The dashboard shell paints the page colour over <body>, which hid the sky on every signed-in
-   page. On the night it carries the same light as the body; paper is left exactly as it was. */
-[data-theme="dark"] .mf-dashboard-shell { background-image:var(--page-glow); background-attachment:fixed; }
+[data-theme="dark"] ::selection { background:rgba(164,200,225,.24); }
 
 /* ═══════════════════════════════════════════════════════════════
    EXPERIENCE RUNTIME GUARDRAILS

@@ -42,6 +42,14 @@ function contrast(type, surface, under) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)
 }
 
+// How light a colour looks (0 to 1), how strong it is (0 is grey), and its hue in degrees: OKLCH.
+function seen(hex) {
+  const [r, g, b] = channels(hex).map(linear)
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b), s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+  const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, B = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+  return { light: 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, strength: Math.hypot(A, B), hue: (Math.atan2(B, A) * 180 / Math.PI + 360) % 360 }
+}
+
 const STANDARDS = { sky: '#060817', navy: '#16254f', deep: '#1b3a57', slate: '#2c3e50', steel: '#4a6e8d', haze: '#667d9d', mist: '#acbbc6', moon: '#a4c8e1', silver: '#ececec' }
 const SIGNALS = { bonfire: '#f47c54', chilli: '#cb4e42', ember: '#ad564b', graphite: '#5c646c', dusk: '#414150' }
 
@@ -60,28 +68,66 @@ test('paper keeps its paper and takes the standard inks: only the type changed',
   assert.ok(!/#15140f|#55534a|#86826f/i.test(css), 'none of the old brown inks is left anywhere in the stylesheet')
 })
 
-test('the night is built from the standards, and none of the colours it replaced is left', () => {
-  const made = { '--bg': 'sky', '--surface-2': 'navy', '--surface-3': 'deep', '--border': 'slate', '--border-strong': 'steel', '--text': 'silver', '--text-muted': 'mist', '--accent-txt': 'moon', '--accent-soft': 'navy', '--accent-border': 'steel' }
-  for (const [name, standard] of Object.entries(made)) assert.equal(value(night, name), STANDARDS[standard], `${name} is ${standard}`)
-  assert.ok(!/#121723|#192131|#222c40|#2c3850|#2c3952|#3b4b69|#5f8090|#7396a5|#d98268/i.test(css), 'the old night is gone')
+// ── the night, for eyes (2026-10-08) ─────────────────────────────────────────
+// The owner: "I feel like I'm having all this problems when I see the dark mode" (shimmering, zigzag lines, patterns), and
+// "see what other people in dark mode had developed and find optimal colors". Eleven widely used dark themes were measured
+// (Material, GitHub, GitHub Dimmed, Nord, Tokyo Night, One Dark, VS Code, Discord, Slack, Solarized, Catppuccin): page
+// lightness 0.18 to 0.32 with a median of 0.24, body type against the page 4.8 to 16 to 1 with a median of 9.4. Both nights
+// this app had before were outside the first and at the very top of the second. These tests keep the night inside.
+test('the night page is never near black, and a panel is one small step lighter than the page', () => {
+  const page = seen(night['--bg']).light, panel = seen(night['--surface']).light, inset = seen(night['--surface-2']).light
+  assert.ok(page >= 0.20 && page <= 0.30, `the page is ${page.toFixed(3)}; the eleven themes are 0.18 to 0.32`)
+  assert.ok(panel > page && panel - page <= 0.05, 'a panel is told from the page by a step, not a jump')
+  assert.ok(inset > panel && inset - panel <= 0.06)
+  for (const gone of [/#060817;\s*\/\* night sky \*\//, /--bg:\s*#121723/]) assert.ok(!gone.test(css), 'neither of the two near-black pages is back')
+  assert.ok(!/#121723|#192131|#222c40|#2c3850|#2c3952|#3b4b69|#5f8090|#7396a5|#d98268/i.test(css), 'the night before today is gone')
 })
 
-test('the three night values that are a step off a standard each read better than the standard they left', () => {
-  // A hint in haze is 3.5 to 1 on a navy panel; the step taken has to clear the floor there.
-  assert.ok(contrast(STANDARDS.haze, night['--surface-2']) < 4.5)
-  assert.ok(contrast(night['--text-soft'], night['--surface-2']) >= 4.5)
-  // The accent is both the fill under white type and the colour of small links. Steel fails as a link; the step taken
-  // carries white type and reads as a link better than steel does.
-  assert.ok(contrast('#ffffff', night['--accent']) >= 4.5, 'white type on the accent')
-  assert.ok(contrast(night['--accent'], night['--surface']) > contrast(STANDARDS.steel, night['--surface']) + 0.4, 'a link in the accent')
-  assert.ok(contrast(night['--accent'], night['--surface']) >= 3.6)
-  // A panel is distinguishable from the sky and from the inset inside it.
-  assert.ok(light(channels(night['--bg'])) < light(channels(night['--surface'])))
-  assert.ok(light(channels(night['--surface'])) < light(channels(night['--surface-2'])))
+test('night type is a soft silver: bright enough to read, never bright enough to bloom', () => {
+  assert.ok(seen(night['--text']).light <= 0.88, 'not near white')
+  for (const surface of ['--bg', '--surface']) {
+    const got = contrast(night['--text'], night[surface])
+    assert.ok(got >= 9 && got <= 11.5, `body type on ${surface} is ${got.toFixed(2)}; the median of the eleven is 9.4 and the two nights before were 16`)
+  }
+  const quiet = contrast(night['--text-muted'], night['--surface'])
+  assert.ok(quiet >= 5.5 && quiet <= 8 && quiet < contrast(night['--text'], night['--surface']) - 2, 'quieter type is visibly quieter')
+})
+
+test('nothing large on the night is vivid, and everything is the owner\'s own blue', () => {
+  for (const name of ['--bg', '--surface', '--surface-2', '--surface-3', '--border', '--border-strong', '--text', '--text-muted', '--text-soft']) {
+    const c = seen(night[name])
+    assert.ok(c.strength <= 0.045, `${name} has little colour in it (${c.strength.toFixed(3)})`)
+    assert.ok(c.hue >= 235 && c.hue <= 262, `${name} is the blue of the standards (hue ${c.hue.toFixed(0)})`)
+  }
+  assert.equal(night['--accent-txt'], STANDARDS.moon, 'what is chosen is his moonlight, exactly')
+  // Rules are faint: a grid of bright lines on a dark page is its own shimmer.
+  assert.ok(contrast(night['--border'], night['--surface']) <= 1.5)
+  assert.ok(contrast(night['--border-strong'], night['--surface']) <= 2.2)
+})
+
+test('a signal on the night keeps its hue and loses its glare: vivid orange on blue is the pair that seems to vibrate', () => {
+  const bonfire = seen(SIGNALS.bonfire), chilli = seen(SIGNALS.chilli)
+  const mark = seen(night['--spot']), alert = seen(night['--danger']), rule = seen(night['--danger-border'])
+  assert.ok(Math.abs(mark.hue - bonfire.hue) <= 10 && mark.strength <= bonfire.strength * 0.65, 'the mark is bonfire, softened')
+  assert.ok(Math.abs(alert.hue - chilli.hue) <= 10 && alert.strength <= chilli.strength * 0.65, 'an alert is chilli, softened')
+  assert.ok(Math.abs(rule.hue - chilli.hue) <= 10 && rule.strength <= chilli.strength * 0.7)
+  for (const name of ['--spot', '--warning', '--danger', '--success', '--cat-reply', '--cat-int', '--cat-ass']) assert.ok(seen(night[name]).strength <= 0.105, `${name} is not vivid`)
+  assert.ok(!Object.values(block('[data-theme="dark"]')).some((v) => /var\(--signal-(bonfire|chilli)\)/.test(v)), 'the full-strength signals are for paper only')
+})
+
+test('there is no glow, no gradient and no picture behind the night page', () => {
+  assert.equal(night['--page-glow'], 'none')
+  assert.ok(!/\.mf-dashboard-shell\s*\{[^}]*background-image/.test(css), 'and the signed-in shell does not put one back')
+})
+
+test('the one compromise on the night is known and does not get worse: one accent, under white type and as a link', () => {
+  assert.ok(contrast('#ffffff', night['--accent']) >= 4.2, 'white type on the accent')
+  assert.ok(contrast(night['--accent'], night['--surface']) >= 3.6, 'a link in the accent on a panel')
+  assert.ok(contrast(night['--accent-txt'], night['--accent-soft']) >= 7, 'what is chosen reads easily')
 })
 
 test('type clears the floor on every surface it is set on, in both themes', () => {
-  for (const [label, theme, floor] of [['paper', paper, 7], ['night', night, 4.5]]) {
+  for (const [label, theme, floor] of [['paper', paper, 7], ['night', night, 5.5]]) {
     for (const surface of ['--bg', '--surface', '--surface-2']) {
       for (const type of ['--text', '--text-muted']) {
         const got = contrast(value(theme, type), value(theme, surface))
@@ -96,12 +142,11 @@ test('type clears the floor on every surface it is set on, in both themes', () =
   assert.ok(contrast(value(paper, '--text-soft'), paper['--bg']) >= 3.58)
 })
 
-test('a signal is warm in both themes, readable as type, and its rule is the exact colour', () => {
+test('a signal is warm in both themes and readable as type; on paper its rule is the exact colour', () => {
   assert.equal(value(paper, '--spot'), SIGNALS.ember)
-  assert.equal(value(night, '--spot'), SIGNALS.bonfire)
+  assert.equal(value(paper, '--warning-border'), SIGNALS.bonfire, 'paper: a warning is ruled in bonfire')
+  assert.equal(value(paper, '--danger-border'), SIGNALS.chilli, 'paper: an alert is ruled in chilli')
   for (const [label, theme] of [['paper', paper], ['night', night]]) {
-    assert.equal(value(theme, '--warning-border'), SIGNALS.bonfire, `${label}: a warning is ruled in bonfire`)
-    assert.equal(value(theme, '--danger-border'), SIGNALS.chilli, `${label}: an alert is ruled in chilli`)
     for (const surface of ['--bg', '--surface']) {
       const got = contrast(value(theme, '--spot'), value(theme, surface))
       assert.ok(got >= 4.5, `${label}: the mark on ${surface} is ${got.toFixed(2)}`)
@@ -128,18 +173,6 @@ test('every stage can be read on its own chip in both themes, and the three that
   }
 })
 
-test('nothing warm lights the night sky, so a signal is the only warm thing on the page', () => {
-  const glow = [...night['--page-glow'].matchAll(/rgba\((\d+),(\d+),(\d+),/g)].map((m) => m.slice(1, 4).map(Number))
-  assert.ok(glow.length >= 2)
-  for (const [r, , b] of glow) assert.ok(b > r, `rgba(${r}, …, ${b}) is cool`)
-})
-
-test('the signed-in pages show the same sky: the shell that covers the body carries its light on the night only', () => {
-  assert.match(read('src/app/dashboard/layout.tsx'), /className="mf-dashboard-shell"/)
-  assert.match(css, /\[data-theme="dark"\] \.mf-dashboard-shell \{ background-image:var\(--page-glow\)/)
-  assert.ok(!/^\.mf-dashboard-shell/m.test(css), 'paper is not given a glow it did not have')
-})
-
 test('a warm stage colour is not borrowed for something that is not a stage, where it would read as an alert', () => {
   // Three places used --cat-int and --cat-reply as a general tint while they were grey: a note in Settings, a key chip, and the
   // before and after lines of a resume change. Made warm, they turned a plain note into what looked like an error.
@@ -155,10 +188,9 @@ test('a warm stage colour is not borrowed for something that is not a stage, whe
   assert.deepEqual(borrowed, ['src/app/dashboard/resume/LibraryTree.tsx'], 'only the resume folders, which are told apart by colour on purpose')
 })
 
-test('the installed app opens on the night sky, not on a grey that is in neither theme', () => {
+test('the installed app opens on the night page, not on a grey that is in neither theme', () => {
   const manifest = read('src/app/manifest.ts')
-  assert.match(manifest, /background_color: "#060817"/)
-  assert.match(manifest, /theme_color: "#060817"/)
+  assert.ok(manifest.includes(`background_color: "${night['--bg']}"`) && manifest.includes(`theme_color: "${night['--bg']}"`))
 })
 
 test('the entrance page takes every colour from the theme, so its card is not a white sheet on the night', () => {

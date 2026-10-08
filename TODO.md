@@ -1,3 +1,29 @@
+## 2026-10-08 (night) — The night theme, rebuilt for his eyes (Claude Code)
+
+The owner, with a description of migraine aura and kaleidoscope vision: "I feel like I'm having all this problems when I see the dark mode. see what other people in dark mode had developed and find optimal colors."
+
+**What went wrong.** The night I shipped earlier today was chosen by eye for a "lunar" look. Measured against eleven widely used dark themes (Material, GitHub, GitHub Dimmed, Nord, Tokyo Night, One Dark, VS Code, Discord, Slack, Solarized, Catppuccin), it was darker than every one of them (page lightness 0.14 against 0.18 to 0.32, median 0.24) and had more contrast than every one of them (body type 16.9 to 1 against a median of 9.4). The night before it was just as extreme (16.3 to 1). Bright type on a near-black page is the combination that blooms; vivid orange on deep blue is the pair that seems to float and vibrate. Both were in it, with a glow behind the page.
+
+**Built** (`src/app/globals.css`, night only; paper is untouched)
+
+- Page `#131d27` (lightness 0.23), panel `#1a2530`, insets `#222f3d` / `#2d3d4e`: a dark blue-grey in his own hue, with little colour in it.
+- Type `#c6cdd4`: 10.6 to 1 on the page and 9.7 on a panel. Quieter type `#9eabb8` (6.6), hints `#8799ab` (5.3).
+- Rules are faint (`#2d3b48`, `#405367`). No glow, no gradient: `--page-glow: none`.
+- Signals keep their hue and lose about 40% of their strength: the mark and a warning `#de9a7c`, an alert `#d7877e`.
+- What is chosen is still his moonlight, `#a4c8e1`, exactly: it was already in the calm range.
+- `src/app/manifest.ts`: the installed app opens on the same page colour.
+- The reference themes' colours were written from memory, not fetched; the two scripts that measured them and built these values are not in the repo (they are a few lines of contrast and OKLCH arithmetic, repeated in the test).
+
+**Verified**
+
+- `theme-palette.test.mjs` 15 of 15. The night tests are now numbers: page lightness 0.20 to 0.30; body type 9 to 11.5 to 1 and never lighter than 0.88; every surface and line of type low in colour and in his blue; signals under a strength limit; no glow; rules faint.
+- Seen in the local preview (Settings, night, 1280 wide): flat blue-grey page, soft silver type, no white anywhere.
+
+**NOT verified**
+
+- **Whether it is easier on his eyes.** Only he can say. If it is not, the next things to change are motion (Settings has Auto / Reduced / Rich; Reduced turns the optional animation off) and the pages that still hard-code a white fill (see the entry below: about 98 lines), which show as bright boxes on the night.
+- One compromise remains and is written in the stylesheet: `--accent` is both the fill under white type and the colour of small links, 4.25 and 3.7 to 1. Splitting that token is the fix.
+
 ## 2026-10-08 (evening) — Kompas Flow and Transcribe are one page (Claude Code)
 
 The owner: "Still kompas flow has some serious bugs even now. Combine kompas flow and transcribe to be in one page. And there so many pages in the web app which can be combined try to see which which can be organized And cut distractions and confusions for the userrs"
