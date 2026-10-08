@@ -56,13 +56,20 @@ export default function ResumeFormattingPage() {
         <label style={{ display: "grid", gap: 6 }}>Upload your resume when ready (DOCX)
           <input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={e => { setFile(e.target.files?.[0] || null); setText(""); setHtml("") }} />
         </label>
-        <label style={{ display: "grid", gap: 6 }}>Approved template
-          <select value={template} onChange={e => { setTemplate(e.target.value as FormatId); setHtml("") }} style={{ padding: 12, border: "1px solid var(--border-strong)", background: "var(--surface)", color: "var(--text)", borderRadius: 8 }}>
-            {RESUME_FORMATS.map(t => <option key={t.id} value={t.id}>{t.label} · {t.family}</option>)}
-          </select>
-        </label>
-        <p style={{ fontSize: 13, opacity: .75 }}>{RESUME_FORMATS.find(t => t.id === template)?.description}. Inspired by the approved reference, not endorsed by its publisher.</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }} aria-label="Resume template gallery">{RESUME_FORMATS.map(t => <button key={t.id} type="button" onClick={() => { setTemplate(t.id); setHtml("") }} aria-pressed={template === t.id} style={{ padding: 10, textAlign: "left", border: template === t.id ? "2px solid var(--accent)" : "1px solid var(--border-strong)", borderRadius: 8, background: "var(--surface)", color: "var(--text)", cursor: "pointer" }}><strong style={{ display: "block", fontSize: 13 }}>{t.label}</strong><span style={{ fontSize: 12, opacity: .7 }}>{t.family}</span></button>)}</div>
+        <div style={{ display: "grid", gap: 8 }}>
+          <strong style={{ fontSize: 14 }}>Choose a layout</strong>
+          <p style={{ fontSize: 13, opacity: .75, margin: 0 }}>Select any preview to compare styles instantly. No upload needed.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }} aria-label="Resume template gallery">
+            {RESUME_FORMATS.map(t => <button key={t.id} type="button" onClick={() => { setTemplate(t.id); setHtml("") }} aria-pressed={template === t.id} style={{ padding: 8, textAlign: "left", border: template === t.id ? "2px solid var(--accent)" : "1px solid var(--border-strong)", borderRadius: 9, background: "var(--surface)", color: "var(--text)", cursor: "pointer", minWidth: 0 }}>
+              <div aria-hidden="true" style={{ height: 132, background: "#fff", overflow: "hidden", position: "relative", borderRadius: 3, marginBottom: 8 }}>
+                <iframe tabIndex={-1} title={`${t.label} thumbnail`} srcDoc={renderResumeHtml(SAMPLE, t.id)} sandbox="" scrolling="no" style={{ width: 540, height: 360, border: 0, pointerEvents: "none", position: "absolute", top: 0, left: 0, transform: "scale(.37)", transformOrigin: "top left" }} />
+              </div>
+              <strong style={{ display: "block", fontSize: 13 }}>{t.label}</strong>
+              <span style={{ fontSize: 12, opacity: .7 }}>{t.family}</span>
+            </button>)}
+          </div>
+          <p style={{ fontSize: 13, opacity: .75, margin: 0 }}>{RESUME_FORMATS.find(t => t.id === template)?.description}. Inspired by the approved reference, not endorsed by its publisher.</p>
+        </div>
         <button disabled={busy} onClick={() => call("preview")} style={{ padding: 12, borderRadius: 8, background: "var(--accent)", color: "var(--bg)", fontWeight: 700 }}>{busy ? "Working…" : "Extract and preview"}</button>
         {text && <label style={{ display: "grid", gap: 6 }}>Check and correct extracted resume text
           <textarea value={text} onChange={e => { setText(e.target.value); setHtml("") }} rows={14} style={{ width: "100%", border: "1px solid var(--border-strong)", padding: 12, background: "var(--surface)", color: "var(--text)" }} />
