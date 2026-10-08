@@ -293,3 +293,24 @@ test('a chosen recording is measured before it is decoded, and decoded at the re
   assert.ok(/new OfflineAudioContext\(1, 1, RATE\)/.test(decode), 'decoded straight at 16,000 samples a second')
   assert.ok(/URL\.revokeObjectURL\(url\)/.test(audio))
 })
+
+// ── the Android app (2026-10-08) ─────────────────────────────────────────────
+test('the Flow page offers the Android app, and the file it offers is that app: it opens this page in the browser and asks for nothing', () => {
+  const page = read(pages[0])
+  assert.ok(/const FLOW_APK = "\/apps\/Kompas-Flow\.apk"/.test(page) && /<a href=\{FLOW_APK\} download="Kompas-Flow\.apk" className="btn-outline"/.test(page), 'offered as a plain download, not as the page\'s strong button')
+  assert.ok(/not in the Play Store yet/.test(page) && /Android 8 or later/.test(page), 'and the page says what installing it involves')
+  const apk = readFileSync(new URL('../../public/apps/Kompas-Flow.apk', import.meta.url))
+  assert.equal(apk.subarray(0, 2).toString('latin1'), 'PK', 'an APK is a zip')
+  assert.ok(apk.length > 4000 && apk.length < 2_000_000, 'small enough to live in git: ' + apk.length + ' bytes')
+  const has = (text) => apk.includes(Buffer.from(text, 'latin1'))
+  assert.ok(has('AndroidManifest.xml') && has('classes.dex') && has('resources.arsc'))
+  assert.ok(apk.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06])) > 0, 'the zip has its directory, so it is whole')
+})
+
+test('a person sent to sign in comes back to the page they asked for, so the Android app lands on Flow', () => {
+  const gate = read('src/app/dashboard/onboarding-gate.tsx')
+  assert.ok(/router\.replace\(pathname && pathname !== "\/dashboard" \? `\/login\?next=\$\{encodeURIComponent\(pathname\)\}` : "\/login"\)/.test(gate))
+  const next = read('src/lib/authRedirect.ts')
+  assert.ok(/url\.pathname\.startsWith\("\/dashboard\/"\)/.test(next), 'and only a dashboard page is accepted as where to go back to')
+})
+

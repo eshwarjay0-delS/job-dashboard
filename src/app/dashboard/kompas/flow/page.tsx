@@ -20,6 +20,11 @@ type Result = { raw: string; clean: string | null; kept: Layer }
 type Past = { id: string; at: number; raw: string; clean: string | null; kept: Layer }
 
 const MAX_SECONDS = 90
+// Kompas Flow for Android (owner, 2026-10-08: "Just like how we would get a desktop version. while starting kompas flow it
+// download apk version of the app"). Built from android-flow/ in the Kompas repository by its own workflow and copied here;
+// small enough to live in git, unlike the desktop app. It is an icon that opens this page in the phone's browser, so the
+// sign-in and the microphone are the browser's, exactly as here.
+const FLOW_APK = "/apps/Kompas-Flow.apk"
 const HISTORY_KEY = "mf_flow_history"
 const HINT_KEY = "mf_flow_hint"
 const TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]
@@ -63,6 +68,7 @@ export default function FlowPage() {
   const [hint, setHint] = useState("")
   const [past, setPast] = useState<Past[]>([])
   const [open, setOpen] = useState<string | null>(null)
+  const [onAndroid, setOnAndroid] = useState(false)
 
   // What a recording holds while it runs. Kept in refs: stopping must work from a timer, a key press and an unmount alike.
   const live = useRef<{ stream: MediaStream; recorder: MediaRecorder; context: AudioContext | null; frame: number; tick: number } | null>(null)
@@ -71,7 +77,7 @@ export default function FlowPage() {
   const hintRef = useRef("")
 
   useOwnDocument()
-  useEffect(() => { const h = read<string>(HINT_KEY, ""); setHint(h); hintRef.current = h; setPast(read<Past[]>(HISTORY_KEY, [])) }, [])
+  useEffect(() => { const h = read<string>(HINT_KEY, ""); setHint(h); hintRef.current = h; setPast(read<Past[]>(HISTORY_KEY, [])); setOnAndroid(/Android/i.test(navigator.userAgent)) }, [])
 
   // Every way out of a recording goes through here, so the microphone is always let go.
   const release = useCallback(() => {
@@ -200,11 +206,26 @@ export default function FlowPage() {
   const doCopy = async (text: string, id: string) => { setCopied((await copy(text)) ? id : `${id}:failed`); window.setTimeout(() => setCopied(c => (c.startsWith(id) ? "" : c)), 2200) }
   const forget = (id: string) => setPast(before => { const next = before.filter(p => p.id !== id); write(HISTORY_KEY, next); return next })
 
+  // The offer of the Android app. On an Android phone it sits at the top, where a person starting Flow sees it; anywhere
+  // else it is a quiet card further down, for someone who wants to send the file to their phone.
+  const app = (
+    <Card style={{ marginBottom: 16 }}>
+      <Meta>Kompas Flow for Android</Meta>
+      <p style={{ ...SMALL, fontSize: 15.5, marginTop: 8 }}>{onAndroid ? "Put Kompas Flow on your home screen. One tap and you are here, ready to speak." : "On an Android phone? The app puts Kompas Flow on its home screen: one tap and you are ready to speak."}</p>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+        <a href={FLOW_APK} download="Kompas-Flow.apk" className="btn-outline" style={{ ...QUIET, display: "inline-flex", alignItems: "center", textDecoration: "none" }} title="Download Kompas-Flow.apk, the Android app">Download for Android</a>
+      </div>
+      <p style={{ ...SMALL, marginTop: 10 }}>It is not in the Play Store yet, so your phone will ask you to allow installing from your browser. It needs Android 8 or later. It opens this page in your browser, so you sign in and allow the microphone the same way as here.</p>
+    </Card>
+  )
+
   return (
     <div style={{ maxWidth: 760 }}>
       <PageIntro page="/dashboard/kompas/flow"
         action={{ label: phase === "recording" ? "Stop" : phase === "working" ? "Working…" : "Start speaking", onClick: press }}
         sample="Or press the space bar to start and stop." />
+
+      {onAndroid && phase === "idle" && !result && app}
 
       {phase === "recording" && (
         <Card style={{ marginBottom: 16 }}>
@@ -249,6 +270,8 @@ export default function FlowPage() {
           style={{ ...FIELD, marginTop: 8 }} />
         <p style={{ ...SMALL, marginTop: 8 }}>Optional. It helps unusual names and technical words come out right.</p>
       </section>
+
+      {!onAndroid && <section style={{ marginTop: 32 }}>{app}</section>}
 
       <section style={{ marginTop: 36 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>

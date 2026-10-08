@@ -1,3 +1,28 @@
+## 2026-10-08 (later) — Kompas Flow for Android: an APK, offered from the Flow page (Claude Code)
+
+The owner: "Just like how we would get a desktop version. while starting kompas flow it download apk version of the app."
+
+**Built**
+
+- **`public/apps/Kompas-Flow.apk`** (10,570 bytes, sha256 `bb804637…`): built by GitHub from `android-flow/` in the Kompas repository (branch `feat/android-flow-launcher`, commit `d6b7cad`, run 1) and copied here from that repository's `apk-builds` branch. It is one screenless activity that opens `/dashboard/kompas/flow` in the phone's own browser as a custom tab. It is not a WebView on purpose: this site signs people in with Google, and Google refuses sign-in inside an app's WebView. It asks the phone for no permission; the browser asks for the microphone.
+- **The Flow page offers it** ("Download for Android"): at the top on an Android phone, lower down elsewhere, with what installing involves in plain words.
+- **A signed-out visitor comes back to the page they asked for** (`onboarding-gate.tsx` sends `next`), so the app's first run lands on Flow after sign-in, not on Home.
+
+**Verified**
+
+- The build log ends "BUILD SUCCESSFUL"; the file's size and sha256 match what the build machine wrote. Opened as a zip here: whole, the manifest names `app.kompas.flow` and a launcher activity and no permission, and the code holds the Flow address and the custom-tab mark and no WebView.
+- Suite 145 of 146 (the standing Windows path test).
+
+**NOT verified**
+
+- **Nobody has installed it on a phone.** It compiled; whether the tab opens, the sign-in returns to Flow and the microphone works in it is known only when someone taps it.
+
+**What it is not**
+
+- It is not a button that floats over other apps or appears at a text field. That is a different, larger app (an Android keyboard or an overlay with an accessibility service), not started: the owner's decision, asked for on 2026-10-08.
+- Every build is signed with a throwaway key, so a phone must remove one build before installing the next, until the owner keeps a signing key.
+- The desktop download this was modelled on (`/downloads/Kompas.exe`) answers 404 on the live site: the file is too large for git and exists only on the laptop.
+
 ## 2026-10-08 — Review of the admin, key vault and speech work: 18 findings, 17 fixed, 1 left with its reason (Claude Code)
 
 Three reviewers read the code that went live on 7 October, one area each (the key vault and admin access; the usage ledgers and the ingest door; Flow and Transcribe), told to report only defects with a concrete failure. 18 findings. I read each against the code and reproduced the ones that could be run; all 18 hold.

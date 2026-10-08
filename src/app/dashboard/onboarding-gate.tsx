@@ -19,7 +19,8 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
     fetch("/api/onboarding/status", { cache: "no-store" })
       .then(async response => {
         if (response.status === 401) {
-          router.replace("/login")
+          // Back to the page that was asked for once signed in (the sign-in page checks `next` with safeAuthNext).
+          router.replace(pathname && pathname !== "/dashboard" ? `/login?next=${encodeURIComponent(pathname)}` : "/login")
           return
         }
         const body = await response.json()
