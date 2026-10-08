@@ -79,6 +79,26 @@ export default function ConnectionsClient() {
 
   useEffect(() => { void load() }, [load])
 
+  // Auto-sync Gmail right after a successful OAuth connection so the demo
+  // flows straight from "connected" into live data with visible progress.
+  const [syncing, setSyncing] = useState(false)
+  const [syncDone, setSyncDone] = useState(false)
+  useEffect(() => {
+    if (params.get("google") !== "connected" || syncing || syncDone) return
+    setSyncing(true)
+    fetch("/api/gmail-sync", { method: "POST", cache: "no-store" })
+      .then(r => r.json())
+      .then(() => setSyncDone(true))
+      .catch(() => {})
+      .finally(() => setSyncing(false))
+  }, [params, syncing, syncDone])
+
+  const syncMessage = syncing
+    ? "Syncing your emails — this takes about 30 seconds…"
+    : syncDone
+      ? "Sync complete! Your mail, tracker, calendar and workflows are now live."
+      : null
+
   const callbackMessage = useMemo(() => {
     if (params.get("google") === "connected") {
       const email = params.get("email")
@@ -139,9 +159,20 @@ export default function ConnectionsClient() {
         sample={loading ? "Checking your connected accounts…" : `${googleAccounts.length} Google account${googleAccounts.length === 1 ? "" : "s"} connected · WhatsApp ${wa.connected ? "connected" : "not connected"}.`}
       />
 
-      {(callbackMessage || message) && (
+      {(callbackMessage || message || syncMessage) && (
         <div className="conn-banner" role="status">
           {callbackMessage || message}
+          {syncMessage && (
+            <div style={{ marginTop: 8, fontWeight: 600 }}>
+              {syncing ? "⏳ " : "✅ "}{syncMessage}
+              {syncDone && (
+                <div style={{ marginTop: 8 }}>
+                  <a href="/dashboard/mail" style={{ marginRight: 16, fontWeight: 700 }}>View your inbox →</a>
+                  {status.google.canAdd && <span>Add another account above to connect more.</span>}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
