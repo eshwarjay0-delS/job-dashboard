@@ -817,7 +817,7 @@ export default function SettingsPage() {
         {/* Key type toggle hint */}
         <div style={{ display: "flex", gap: 8 }}>
           {[
-            { label: "sk-or-…", desc: "OpenRouter", color: "var(--cat-int)", bg: "var(--cat-int-bg)", border: "var(--cat-int-b)" },
+            { label: "sk-or-…", desc: "OpenRouter", color: "var(--cat-fol)", bg: "var(--cat-fol-bg)", border: "var(--cat-fol-b)" },
             { label: "sk-ant-…", desc: "Anthropic", color: "var(--cat-out)", bg: "var(--cat-out-bg)", border: "var(--cat-out-b)" },
           ].map(t => {
             const active = keys.claudeKey.startsWith(t.label.replace("…",""))
@@ -853,7 +853,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="p-3 rounded-xl text-xs" style={{
-          background: "var(--cat-int-bg)", border: "1px solid var(--cat-int-b)", color: "var(--cat-int)"
+          background: "var(--cat-out-bg)", border: "1px solid var(--cat-out-b)", color: "var(--cat-out)"
         }}>
           <strong>Auto-routed.</strong> Paste either key — the app detects the prefix and calls the right API.
           OpenRouter gives access to Claude Sonnet, GPT-4o, and others on one key.

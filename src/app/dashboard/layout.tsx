@@ -8,7 +8,7 @@ import OnboardingGate from "./onboarding-gate"
 // This ensures the sidebar renders on FIRST PAINT, not after Supabase auth resolves.
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "var(--bg)", color: "var(--text)" }}>
+    <div className="mf-dashboard-shell" style={{ minHeight: "100vh", backgroundColor: "var(--bg)", color: "var(--text)" }}>
 
       {/* ── Persistent left sidebar — always visible, never waits for auth ── */}
       <SidebarNav />

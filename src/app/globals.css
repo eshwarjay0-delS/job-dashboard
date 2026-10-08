@@ -15,8 +15,8 @@
 /* ═══════════════════════════════════════════════════════════════
    THEME TOKENS — ink and paper, the only theme.
    Paper is the page, ink is the type, and structure comes from hairline rules rather than
-   shadows or fills. One violet spot colour is used sparingly (eyebrows, "new" marks, focus).
-   Light mode is paper; data-theme="dark" is ink, the same system with the values swapped.
+   shadows or fills. One warm spot colour is used sparingly (eyebrows, "new" marks, focus).
+   Light mode is paper; data-theme="dark" is night, the same system under a moon.
    data-accent and data-layout are still set by ThemeProvider so saved preferences resolve,
    but neither can change the look: there is no second or third theme to switch to.
 ═══════════════════════════════════════════════════════════════ */
@@ -27,9 +27,33 @@
   --surface-3:    #e6e2d8;   /* deeper inset, the faded numeral colour */
   --border:       #e2ded4;   /* hairline between rows */
   --border-strong:#d3cec1;   /* structural rule: section breaks, control outlines */
-  --text:         #15140f;   /* ink */
-  --text-muted:   #55534a;   /* body copy under a heading */
-  --text-soft:    #86826f;   /* labels, hints */
+  /* The ink is blue-black, not brown-black (the owner, 8 Oct 2026: "paper mode but the ink needs
+     correction"). The paper itself is unchanged. These three are his standard inks, exactly. */
+  --text:         #060817;   /* ink */
+  --text-muted:   #16254f;   /* navy ink: body copy under a heading */
+  --text-soft:    #667d9d;   /* thinned ink: labels, hints */
+
+  /* The standards, named once so both themes draw from the same nine colours. */
+  --night-sky:    #060817;
+  --night-navy:   #16254f;
+  --night-deep:   #1b3a57;
+  --night-slate:  #2c3e50;
+  --night-steel:  #4a6e8d;
+  --night-haze:   #667d9d;
+  --night-mist:   #acbbc6;
+  --night-moon:   #a4c8e1;
+  --night-silver: #ececec;
+
+  /* Signals: the only warm colours, kept for what has to be told apart or noticed (a mark, a
+     stage that needs you, an alert), in both themes. The owner: "more better wherever we need
+     show distinguishes and push alerts even on the paper mode." Bonfire is too light to read as
+     type on paper and ember too dark to read on the night sky, so each theme takes its type
+     colour from the end of the family that reads there and keeps the exact colours for rules. */
+  --signal-bonfire:  #f47c54;
+  --signal-chilli:   #cb4e42;
+  --signal-ember:    #ad564b;
+  --signal-graphite: #5c646c;
+  --signal-dusk:     #414150;
 
   /* Reference palette: teal, terracotta, parchment, sage, slate, coral, blue, ochre. */
   --palette-teal:       #43727c;
@@ -41,7 +65,7 @@
   --palette-blue:       #4c6289;
   --palette-ochre:      #ab8240;
 
-  --spot:          var(--palette-terracotta);
+  --spot:          var(--signal-ember);
   --spot-ink:      #ffffff;
 
   /* Primary controls are deep bamboo with paper type, the same green as Kompas. */
@@ -51,18 +75,20 @@
   --bamboo-mid:    #466052;
   --accent-soft:   #efece5;
   --accent-border: #cbc5b6;
-  --accent-txt:    #15140f;
+  --accent-txt:    #060817;
 
-  /* Status keeps a hue, muted to sit on paper; the label still carries the meaning. */
+  /* Status keeps a hue, muted to sit on paper; the label still carries the meaning. A warning is
+     bonfire and an alert is chilli: the rule round each is the exact colour, the type is that
+     colour deepened until it reads on its own tint (5.2 and 5.2 to 1). */
   --success:       #2d7a45;
   --success-soft:  #e3e8d9;
   --success-border:#c3cfb3;
-  --warning:       #8a6410;
-  --warning-soft:  #eee5cf;
-  --warning-border:#dccba0;
-  --danger:        #b33a3a;
-  --danger-soft:   #f0dcd6;
-  --danger-border: #deb9b0;
+  --warning:       #9a503d;
+  --warning-soft:  #fcefe9;
+  --warning-border:var(--signal-bonfire);
+  --danger:        #a8413a;
+  --danger-soft:   #f8ebe7;
+  --danger-border: var(--signal-chilli);
 
   --chrome-bg:     var(--bg);
   --chrome-elev:   var(--surface-2);
@@ -71,14 +97,16 @@
   --chrome-border: var(--border-strong);
   --chrome-hover:  var(--surface-2);
 
-  /* Stage / category palette — ink tints on paper. */
-  --cat-out:       #15140f;  --cat-out-bg:   #efece5;  --cat-out-b:   #cbc5b6;
-  --cat-reply:     #2a2922;  --cat-reply-bg: #e9e5dc;  --cat-reply-b: #cfc9bb;
-  --cat-int:       #3a3a36;  --cat-int-bg:   #ebe7df;  --cat-int-b:   #d3cdbf;
-  --cat-ass:       #55534a;  --cat-ass-bg:   #ece9e1;  --cat-ass-b:   #d6d1c4;
-  --cat-fol:       #6b6858;  --cat-fol-bg:   #edeae3;  --cat-fol-b:   #d9d4c8;
-  --cat-rtr:       #86826f;  --cat-rtr-bg:   #eeebe4;  --cat-rtr-b:   #dcd7cb;
-  --cat-saved:     #928e79;  --cat-saved-bg: #f0ede7;  --cat-saved-b: #e2ded4;
+  /* Stage / category palette. These were seven near-identical greys, so a stage could not be told
+     from the next one. The three stages that need the person (a reply, an interview, an
+     assessment) are the signal colours; the quiet ones are the standard inks on a paper tint. */
+  --cat-out:       #16254f;  --cat-out-bg:   #efece5;  --cat-out-b:   #cbc5b6;
+  --cat-reply:     #9a503d;  --cat-reply-bg: #fcefe9;  --cat-reply-b: #f6b9a3;
+  --cat-int:       #a8413a;  --cat-int-bg:   #f8ebe7;  --cat-int-b:   #e4a49c;
+  --cat-ass:       #994d45;  --cat-ass-bg:   #f5ebe8;  --cat-ass-b:   #d9aea8;
+  --cat-fol:       #4a6e8d;  --cat-fol-bg:   #f3f0ea;  --cat-fol-b:   #d9d4c8;
+  --cat-rtr:       #414150;  --cat-rtr-bg:   #eeebe4;  --cat-rtr-b:   #dcd7cb;
+  --cat-saved:     #5c646c;  --cat-saved-bg: #f0ede7;  --cat-saved-b: #e2ded4;
 
   --t-fast:   150ms cubic-bezier(.4,0,.2,1);
   --t-base:   220ms cubic-bezier(.4,0,.2,1);
@@ -147,47 +175,71 @@
 /* The owner: the green has no light on it, and no bamboo on the buttons (1 Oct 2026). */
 :root:not([data-theme="dark"]) [data-slot="button"].bg-primary{color:#f4f7f2}
 
-/* ── Ink (dark) ───────────────────────────────────────────────── */
+/* ── Night (dark): lunar ──────────────────────────────────────────
+   The owner, 8 Oct 2026: "use this colors for dark theme across the job-dashboard. the current
+   ones sucks", then "It should feel more lunar and nice". So: a night sky, navy panels lit from
+   one corner, slate and steel rules, silver type, and moonlight for what is chosen. Everything
+   cool is one of his nine standards or a step between two of them; nothing warm is on the page
+   except a signal, which is why a mark or an alert cannot be missed here.
+
+   Three values are a step off a standard, each for a reason that test holds:
+     --surface    #0f1836  a panel has to sit between the sky and the navy, or cards vanish
+     --text-soft  #7c91aa  #667d9d is 3.5 to 1 on a navy panel; a hint has to be readable
+     --accent     #557997  #4a6e8d under white type is fine, but the same token is the colour of
+                           sixty small links, and there it is 3.2 to 1; this is the nearest steel
+                           that carries white type (4.6) and still reads as a link (3.8)        */
 [data-theme="dark"] {
-  --bg:            #121723;
-  --surface:       #192131;
-  --surface-2:     #222c40;
-  --surface-3:     #2c3850;
-  --border:        #2c3952;
-  --border-strong: #3b4b69;
-  --text:          #f7f4ee;
-  --text-muted:    #d4d8e2;
-  --text-soft:     #95a1b8;
-  --spot:          #d98268;
-  --spot-ink:      #121723;
-  --background:    #121723;
-  --foreground:    #f7f4ee;
+  --bg:            #060817;   /* night sky */
+  --surface:       #0f1836;   /* a panel */
+  --surface-2:     #16254f;   /* inset, hover */
+  --surface-3:     #1b3a57;   /* deeper inset, the chosen row */
+  --border:        #2c3e50;   /* hairline */
+  --border-strong: #4a6e8d;   /* structural rule, control outline */
+  --text:          #ececec;   /* silver */
+  --text-muted:    #acbbc6;   /* mist */
+  --text-soft:     #7c91aa;
+  --spot:          var(--signal-bonfire);
+  --spot-ink:      #060817;
+  --background:    #060817;
+  --foreground:    #ececec;
   --success:       #67d6a0;
   --success-soft:  rgba(103,214,160,.12);
   --success-border:rgba(103,214,160,.32);
-  --warning:       #ffd166;
-  --warning-soft:  rgba(255,209,102,.12);
-  --warning-border:rgba(255,209,102,.32);
-  --danger:        #ff708a;
-  --danger-soft:   rgba(255,112,138,.12);
-  --danger-border: rgba(255,112,138,.32);
-  --accent:        #5f8090;
-  --accent-h:      #7396a5;
-  --accent-soft:   #273a40;
-  --accent-border: #49656c;
-  --accent-txt:    #f4efe5;
+  --warning:       var(--signal-bonfire);
+  --warning-soft:  rgba(244,124,84,.14);
+  --warning-border:var(--signal-bonfire);
+  --danger:        #d57168;   /* chilli lifted until it reads on its own tint (4.7 to 1) */
+  --danger-soft:   rgba(203,78,66,.14);
+  --danger-border: var(--signal-chilli);
+  --accent:        #557997;
+  --accent-h:      #6387a5;
+  --accent-soft:   #16254f;
+  --accent-border: #4a6e8d;
+  --accent-txt:    #a4c8e1;   /* moonlight */
   --bamboo-leaf:   #78937f;
   --bamboo-mid:    #607d69;
   --primary-foreground: #ffffff;
   --sidebar-primary-foreground: #ffffff;
-  --shadow-card: 0 1px 0 rgba(255,255,255,.035), 0 20px 48px -30px rgba(0,0,0,.78);
-  --shadow-card-hover: 0 1px 0 rgba(255,255,255,.055), 0 28px 60px -30px rgba(0,0,0,.88);
+
+  /* Stages, on the night: a tint of the stage's own colour, its exact colour as the rule. Without
+     these the paper values showed through, and a folder drawn in --cat-out was ink on the sky. */
+  --cat-out:       #ececec;  --cat-out-bg:   rgba(172,187,198,.10);  --cat-out-b:   rgba(172,187,198,.30);
+  --cat-reply:     #f47c54;  --cat-reply-bg: rgba(244,124,84,.14);   --cat-reply-b: rgba(244,124,84,.55);
+  --cat-int:       #d57168;  --cat-int-bg:   rgba(203,78,66,.14);    --cat-int-b:   rgba(203,78,66,.70);
+  --cat-ass:       #ce9a93;  --cat-ass-bg:   rgba(173,86,75,.14);    --cat-ass-b:   rgba(173,86,75,.70);
+  --cat-fol:       #a4c8e1;  --cat-fol-bg:   rgba(164,200,225,.10);  --cat-fol-b:   rgba(164,200,225,.34);
+  --cat-rtr:       #acbbc6;  --cat-rtr-bg:   rgba(102,125,157,.14);  --cat-rtr-b:   rgba(102,125,157,.44);
+  --cat-saved:     #7c91aa;  --cat-saved-bg: rgba(102,125,157,.08);  --cat-saved-b: rgba(102,125,157,.26);
+
+  --shadow-card: 0 1px 0 rgba(164,200,225,.05), 0 20px 48px -30px rgba(0,0,0,.82);
+  --shadow-card-hover: 0 1px 0 rgba(164,200,225,.09), 0 28px 60px -30px rgba(0,0,0,.9);
+  /* The moon is just off the top right corner; its light crosses the sky and thins to nothing. */
   --page-glow:
-    radial-gradient(circle at 12% -8%, rgba(74,107,206,.24), transparent 31rem),
-    radial-gradient(circle at 92% 4%, rgba(255,93,115,.11), transparent 24rem),
-    radial-gradient(circle at 48% 110%, rgba(101,215,193,.08), transparent 32rem);
+    radial-gradient(circle at 86% -14%, rgba(164,200,225,.20), transparent 24rem),
+    radial-gradient(circle at 70% -30%, rgba(74,110,141,.30), transparent 46rem),
+    radial-gradient(circle at 8% 112%, rgba(22,37,79,.70), transparent 40rem);
 }
-[data-theme="dark"][data-accent] { --accent:#5f8090; --accent-h:#7396a5; }
+[data-theme="dark"][data-accent] { --accent:#557997; --accent-h:#6387a5; }
 
 @theme inline {
   --color-background: var(--bg);
@@ -1049,13 +1101,16 @@ html body aside.dash-sidebar {
 :where(svg.lucide){color:var(--icon-gold)}
 [data-slot="button"].bg-primary svg,.bg-primary svg,.text-destructive svg,.text-primary-foreground svg{color:inherit}
 
-/* Night: shaded navy + bright comic/editorial accents, never pure black. */
+/* Night: a lit sky, never pure black. What is selected is moonlight. */
 [data-theme="dark"] h1,
 [data-theme="dark"] h2,
 [data-theme="dark"] h3 { letter-spacing:-.025em; }
 [data-theme="dark"] .mf-feature,
 [data-theme="dark"] [data-slot="card"] { box-shadow:var(--shadow-card); }
-[data-theme="dark"] ::selection { background:rgba(115,148,255,.30); }
+[data-theme="dark"] ::selection { background:rgba(164,200,225,.28); }
+/* The dashboard shell paints the page colour over <body>, which hid the sky on every signed-in
+   page. On the night it carries the same light as the body; paper is left exactly as it was. */
+[data-theme="dark"] .mf-dashboard-shell { background-image:var(--page-glow); background-attachment:fixed; }
 
 /* ═══════════════════════════════════════════════════════════════
    EXPERIENCE RUNTIME GUARDRAILS

@@ -892,8 +892,8 @@ function ResultContent() {
                 {diff.map((d, i) => (
                   <div key={i}>
                     <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--accent-txt)", marginBottom: 6 }}>{d.section}</p>
-                    <p style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text-soft)", textDecoration: "line-through", background: "var(--cat-reply-bg, #f5f3ee)", borderLeft: "3px solid var(--cat-reply, #13120d)", padding: "6px 10px", borderRadius: 6, marginBottom: 4 }}>{d.before || "(was empty)"}</p>
-                    <p style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text)", background: "var(--cat-int-bg, #f2f0ea)", borderLeft: "3px solid var(--cat-int, #1c1b16)", padding: "6px 10px", borderRadius: 6 }}>{d.after}</p>
+                    <p style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text-soft)", textDecoration: "line-through", background: "var(--cat-saved-bg, #f5f3ee)", borderLeft: "3px solid var(--cat-saved, #13120d)", padding: "6px 10px", borderRadius: 6, marginBottom: 4 }}>{d.before || "(was empty)"}</p>
+                    <p style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text)", background: "var(--cat-out-bg, #f2f0ea)", borderLeft: "3px solid var(--cat-out, #1c1b16)", padding: "6px 10px", borderRadius: 6 }}>{d.after}</p>
                   </div>
                 ))}
                 <p style={{ fontSize: 11, color: "var(--text-soft)", marginTop: 2 }}>Only the text changed — your original fonts, spacing, and layout are untouched.</p>
