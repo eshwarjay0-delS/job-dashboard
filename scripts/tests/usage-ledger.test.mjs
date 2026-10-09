@@ -242,3 +242,27 @@ test('"counting began" is said only when it began inside what is shown, and what
   assert.ok(/empty: llm\.calls\.length === 0 && tailors\.events\.length === 0/.test(route))
   assert.ok(/p\.app === "marketfit" && p\.purpose\.startsWith\("resume-"\)/.test(route), 'the cost of one resume includes what failed requests spent')
 })
+
+
+test('failed generations retain billable reported usage in every cost total', () => {
+  const failed = call({ ok: false, status: 500, input: 1_000_000, output: 1_000_000 })
+  const refusal = call({ ok: false, status: 429, input: 0, output: 0 })
+  const sum = C.summarizeCalls([failed, refusal])
+  assert.equal(sum.failed, 2)
+  assert.equal(sum.failedWithUsage, 1)
+  assert.equal(sum.failedWithoutUsage, 1)
+  assert.equal(sum.costUsd, 0.6)
+  assert.equal(sum.input, 1_000_000)
+  assert.equal(sum.output, 1_000_000)
+  assert.equal(sum.byApp.marketfit.costUsd, 0.6)
+  assert.equal(sum.byPurpose[0].costUsd, 0.6)
+  assert.equal(sum.meanMs, 0, 'failed requests do not become successful latency samples')
+})
+
+test('unknown models remain unpriced even when generation fails after reporting usage', () => {
+  const sum = C.summarizeCalls([call({ ok: false, provider: 'unknown', model: 'unknown', input: 800 })])
+  assert.equal(sum.unpricedCalls, 1)
+  assert.equal(sum.failedWithUsage, 1)
+  assert.equal(sum.byApp.marketfit.unpricedCalls, 1)
+  assert.equal(sum.byPurpose[0].unpricedCalls, 1)
+})

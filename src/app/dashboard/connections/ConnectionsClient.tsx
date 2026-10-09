@@ -1,9 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { connectGmail } from "@/lib/google-auth"
+import { checkGmailRead } from "@/lib/connectionCheck"
 import PageIntro from "../_components/page-intro"
 import MetricHero from "../_components/metric-hero"
 import "./connections.css"
@@ -29,6 +30,9 @@ type ConnectionStatus = {
     phoneLast4: string | null
     optedIn: boolean
     systemReady: boolean
+    systemConfigured?: boolean
+    providerState?: string
+    webhookState?: string
     connected: boolean
     label: string | null
   }
@@ -61,17 +65,20 @@ export default function ConnectionsClient() {
   const params = useSearchParams()
   const [status, setStatus] = useState<ConnectionStatus>(EMPTY)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [busy, setBusy] = useState("")
   const [message, setMessage] = useState("")
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(false)
     try {
       const res = await fetch("/api/connections/status", { cache: "no-store" })
       const body = await res.json()
       if (!res.ok) throw new Error(body.error || "Could not load connections.")
       setStatus(body)
     } catch (e) {
+      setLoadError(true)
       setMessage(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
@@ -80,25 +87,36 @@ export default function ConnectionsClient() {
 
   useEffect(() => { void load() }, [load])
 
-  // Auto-sync Gmail right after a successful OAuth connection so the demo
-  // flows straight from "connected" into live data with visible progress.
+  // A saved OAuth grant is separate from a successful Gmail request. Check once;
+  // failures are explicit and retry only when the person asks.
   const [syncing, setSyncing] = useState(false)
   const [syncDone, setSyncDone] = useState(false)
-  useEffect(() => {
-    if (params.get("google") !== "connected" || syncing || syncDone) return
+  const [syncError, setSyncError] = useState("")
+  const attemptedSync = useRef(false)
+  const checkGmail = useCallback(async () => {
     setSyncing(true)
-    fetch("/api/gmail-sync", { method: "POST", cache: "no-store" })
-      .then(r => r.json())
-      .then(() => setSyncDone(true))
-      .catch(() => {})
-      .finally(() => setSyncing(false))
-  }, [params, syncing, syncDone])
+    setSyncError("")
+    setSyncDone(false)
+    try {
+      if (!(await checkGmailRead())) throw new Error("Gmail could not be read. Retry, or reconnect the account if Google access was revoked.")
+      setSyncDone(true)
+    } catch {
+      setSyncError("Gmail could not be read. Retry, or reconnect the account if Google access was revoked.")
+    } finally {
+      setSyncing(false)
+    }
+  }, [])
+  useEffect(() => {
+    if (params.get("google") !== "connected" || attemptedSync.current) return
+    attemptedSync.current = true
+    void checkGmail()
+  }, [params, checkGmail])
 
   const syncMessage = syncing
-    ? "Syncing your emails — this takes about 30 seconds…"
+    ? "Checking Gmail access…"
     : syncDone
-      ? "Sync complete! Your mail, tracker, calendar and workflows are now live."
-      : null
+      ? "Gmail access verified. Open your inbox to load your mail. Calendar access is checked separately when you open it."
+      : syncError || null
 
   const callbackMessage = useMemo(() => {
     if (params.get("google") === "connected") {
@@ -157,31 +175,33 @@ export default function ConnectionsClient() {
       <PageIntro
         page="/dashboard/connections"
         action={{ label: googleAccounts.length < status.google.maxAccounts ? "Add Google account" : "Review accounts", href: "#google-accounts" }}
-        sample={loading ? "Checking your connected accounts…" : `${googleAccounts.length} Google account${googleAccounts.length === 1 ? "" : "s"} connected · WhatsApp ${wa.connected ? "connected" : "not connected"}.`}
+        sample={loadError ? "Connection status could not be checked." : loading ? "Checking your connected accounts…" : `${googleAccounts.length} Google account${googleAccounts.length === 1 ? "" : "s"} saved · WhatsApp ${wa.connected ? "linked" : "needs attention"}.`}
       />
 
-      {!loading && (
+      {!loading && !loadError && (
         <MetricHero
           why={
             googleAccounts.length === 0
               ? "This is where you connect your Gmail. Without it, MarketFit can't read your job emails — nothing else here works."
               : googleAccounts.length >= status.google.maxAccounts
-                ? "This is where you connect your Gmail. You're at the max — 4 accounts connected, everything is live."
+                ? "This is where you connect your Gmail. You're at the max — 4 saved Google grants. Access is checked when you use each account."
                 : `This is where you connect your Gmail. ${googleAccounts.length} connected — you can add ${status.google.maxAccounts - googleAccounts.length} more.`
           }
           metrics={[
-            { value: `${googleAccounts.length} / ${status.google.maxAccounts}`, label: "Gmail accounts connected", hot: googleAccounts.length === 0 },
-            { value: wa.connected ? "Yes" : "No", label: "WhatsApp connected" },
+            { value: `${googleAccounts.length} / ${status.google.maxAccounts}`, label: "Saved Google accounts", hot: googleAccounts.length === 0 },
+            { value: wa.connected ? "Yes" : "No", label: "WhatsApp linked" },
           ]}
         />
       )}
 
       {(callbackMessage || message || syncMessage) && (
         <div className="conn-banner" role="status">
-          {callbackMessage || message}
+          {message || callbackMessage}
+          {loadError && <button className="btn-outline" onClick={() => void load()}>Retry status check</button>}
           {syncMessage && (
             <div style={{ marginTop: 8, fontWeight: 600 }}>
-              {syncing ? "⏳ " : "✅ "}{syncMessage}
+              {syncing ? "⏳ " : syncDone ? "✅ " : ""}{syncMessage}
+              {syncError && <button className="btn-outline" onClick={() => void checkGmail()}>Retry Gmail check</button>}
               {syncDone && (
                 <div style={{ marginTop: 8 }}>
                   <a href="/dashboard/mail" style={{ marginRight: 16, fontWeight: 700 }}>View your inbox →</a>
@@ -198,7 +218,7 @@ export default function ConnectionsClient() {
           <div>
             <div className="ink-label">Google</div>
             <h2>Gmail + Calendar accounts</h2>
-            <p>Connect up to four Google accounts. Each one keeps its own encrypted offline grant while MarketFit stays signed in as the same user.</p>
+            <p>Connect up to four Google accounts. Saved grants are shown below; Google access is checked when you read mail or calendar events.</p>
           </div>
           <div className="conn-count">{googleAccounts.length} / {status.google.maxAccounts}</div>
         </div>
@@ -206,6 +226,8 @@ export default function ConnectionsClient() {
         <div className="conn-account-list">
           {loading ? (
             <div className="conn-empty">Checking Google connections…</div>
+          ) : loadError ? (
+            <div className="conn-empty">Saved accounts could not be loaded. Retry the status check above.</div>
           ) : googleAccounts.length === 0 ? (
             <div className="conn-empty">
               <strong>No Google mailbox is connected yet.</strong>
@@ -245,7 +267,7 @@ export default function ConnectionsClient() {
           </div>
           <button
             className="btn-accent"
-            disabled={!status.google.canAdd || loading}
+            disabled={!status.google.canAdd || loading || loadError}
             onClick={() => void connectGmail("/dashboard/connections")}
           >
             {status.google.canAdd ? "Add Google account" : "4 accounts connected"}
@@ -266,19 +288,19 @@ export default function ConnectionsClient() {
             <h2>Your verified mobile channel</h2>
             <p>The WhatsApp channel is tied to the same MarketFit user and subscription, not to a separate account.</p>
           </div>
-          <div className={`conn-state ${wa.connected ? "ok" : ""}`}>{wa.connected ? "Connected" : "Needs setup"}</div>
+          <div className={`conn-state ${wa.connected ? "ok" : ""}`}>{loadError ? "Unknown" : wa.connected ? "Linked" : wa.phoneVerified && wa.optedIn ? "Provider needs attention" : "Needs setup"}</div>
         </div>
 
-        <div className="conn-steps">
+        {loadError ? <p>Phone and channel status could not be loaded. Retry the status check above.</p> : <div className="conn-steps">
           <div className={wa.phoneVerified ? "done" : ""}><b>1</b><span><strong>Verify mobile number</strong><small>{wa.phoneVerified ? `Verified ${wa.label || ""}` : "Required before WhatsApp can be linked."}</small></span></div>
           <div className={wa.optedIn ? "done" : ""}><b>2</b><span><strong>Enable WhatsApp</strong><small>{wa.optedIn ? "This number is opted in for the MarketFit WhatsApp channel." : "Choose WhatsApp during mobile verification/setup."}</small></span></div>
-          <div className={wa.systemReady ? "done" : ""}><b>3</b><span><strong>Bot transport ready</strong><small>{wa.systemReady ? "MarketFit's WhatsApp transport is configured." : "The server transport still needs configuration."}</small></span></div>
-        </div>
+          <div className={wa.systemReady ? "done" : ""}><b>3</b><span><strong>Provider access</strong><small>{wa.systemReady ? "Meta accepted access to the sender. Webhook delivery has not been verified by this check." : wa.providerState === "test_number" ? "This sender is restricted to approved test recipients." : wa.systemConfigured ? "Credentials are saved, but Meta access could not be verified. This requires service recovery, not repeating your phone setup." : "The WhatsApp sender still needs configuration."}</small></span></div>
+        </div>}
 
-        {!wa.connected && (
+        {!wa.connected && !loadError && (
           <div className="conn-footer">
-            <div><strong>Next step</strong><span>Finish the missing step above, then this page will show the channel as connected.</span></div>
-            <Link className="btn-outline conn-link-button" href="/dashboard/setup">Open setup</Link>
+            <div><strong>Next step</strong><span>{wa.phoneVerified && wa.optedIn ? "Your phone setup is saved. Check again after the WhatsApp service recovers." : "Verify your number and choose WhatsApp to link your account."}</span></div>
+            {wa.phoneVerified && wa.optedIn ? <button className="btn-outline" onClick={() => void load()}>Check again</button> : <Link className="btn-outline conn-link-button" href="/dashboard/setup">Open setup</Link>}
           </div>
         )}
       </section>

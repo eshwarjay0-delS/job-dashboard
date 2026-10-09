@@ -3,7 +3,7 @@ import { adminOf } from "@/lib/adminAccess"
 import { groqAllowances } from "@/lib/llm"
 import { readLlmCalls, summarizeCalls, type LlmCall } from "@/lib/llmLedger"
 import { priceTable } from "@/lib/llmPrices"
-import { llmStatus } from "@/lib/llmStatus"
+import { cachedLlmStatus } from "@/lib/llmStatus"
 import { dayIn, daysEnding, overviewOf, readTailorEvents, utcDay } from "@/lib/tailorLedger"
 
 export const runtime = "nodejs"
@@ -31,12 +31,12 @@ export async function GET(request: NextRequest) {
   const weekFrom = utcDay(now - 8 * 86_400_000)
   const readFrom = weekFrom < from ? weekFrom : from
 
-  const [tailors, llm, providers] = await Promise.all([
+  const [tailors, llm] = await Promise.all([
     readTailorEvents(readFrom, to),
     readLlmCalls(readFrom, to),
-    llmStatus().catch(() => null),
   ])
 
+  const providers = cachedLlmStatus()
   const local = llm.calls.map(c => ({ c, day: dayIn(timeZone, c.at) }))
   const weekDays = new Set<string>(daysEnding(today, 7))
   const pick = (keep: (day: string) => boolean): LlmCall[] => local.filter(x => keep(x.day)).map(x => x.c)
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
   const budget = Number(process.env.OPENAI_MONTHLY_BUDGET_USD)
   const resumes = overviewOf(tailors.events, now, timeZone)
   // What one delivered resume costs, counted from the calls themselves: every call made for the resume tailor this month,
-  // the ones spent on requests that failed included (a failed request is recorded with no cost of its own), over the resumes
+  // including reported usage on failed calls, over the resumes
   // that were written. The resume ledger's own average is the fallback when the call ledger has nothing.
   const resumeSpend = month.byPurpose.filter(p => p.app === "marketfit" && p.purpose.startsWith("resume-")).reduce((n, p) => n + p.costUsd, 0)
   const perResume = (resumes.month.generated > 0 && resumeSpend > 0 ? resumeSpend / resumes.month.generated : 0) || resumes.month.costPerResumeUsd || resumes.week.costPerResumeUsd
@@ -76,10 +76,17 @@ export async function GET(request: NextRequest) {
       openai,
       // Groq's own count, as of the last answer THIS server instance had from it. An idle instance has nothing to show.
       groq: groqAllowances(),
-      providers: providers ? providers.providers : [],
+      providers: providers ? providers.status.providers : [],
+      providersCheckedAt: providers?.checkedAt ?? null,
       perPersonWeeklyLimit: Number.isFinite(weeklyLimit) && weeklyLimit > 0 ? weeklyLimit : null,
     },
     prices: priceTable(),
+    accounting: {
+      state: "UNRECONCILED",
+      source: "reported token usage and current price table",
+      reconciledCostUsd: null,
+      reason: "Provider invoice reconciliation is not connected. Estimates exclude missing usage and unpriced models.",
+    },
     // Said plainly when the picture is incomplete, so a low number is never mistaken for a quiet week.
     gaps: {
       unreadable: tailors.unreadable + llm.unreadableDays,

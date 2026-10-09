@@ -15,10 +15,11 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
 import PageIntro from "../../_components/page-intro"
 import { Card, Chip, Meta } from "../../_suite/ui"
-import { flowResult, type Layer } from "@/lib/kompasTranscript"
+import RevisionEditor from "./revision-editor"
+import { flowResult, manualRewrite, type TranscriptRevision, type Layer } from "@/lib/kompasTranscript"
 
-type Result = { raw: string; clean: string | null; kept: Layer }
-type Past = { id: string; at: number; raw: string; clean: string | null; kept: Layer }
+type Result = { raw: string; clean: string | null; kept: Layer; rewrite?: string; revisions?: TranscriptRevision[] }
+type Past = Result & { id: string; at: number }
 
 const MAX_SECONDS = 90
 // Kompas Flow for Android (owner, 2026-10-08: "Just like how we would get a desktop version. while starting kompas flow it
@@ -72,6 +73,8 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
   const [copied, setCopied] = useState("")
   const [hint, setHint] = useState("")
   const [past, setPast] = useState<Past[]>([])
+  const resultId = useRef("")
+  const [search, setSearch] = useState("")
   const [open, setOpen] = useState<string | null>(null)
   const [onAndroid, setOnAndroid] = useState(false)
   // An iPhone or iPad that has not yet put this page on its Home Screen. (An iPad says it is a Mac; a Mac has no touch.)
@@ -128,7 +131,8 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
       if (run.current !== mine) return
       const made = flowResult(raw, clean)
       setResult(made); setLayer(made.kept); setNote(made.kept === "raw" ? said || "The tidied text changed what was said, so your own words are shown." : "")
-      setPast(before => { const next = [{ id: `${Date.now()}-${mine}`, at: Date.now(), ...made }, ...before].slice(0, 20); write(HISTORY_KEY, next); return next })
+      resultId.current = `${Date.now()}-${mine}`
+      setPast(before => { const next = [{ id: resultId.current, at: Date.now(), ...made }, ...before].slice(0, 20); write(HISTORY_KEY, next); return next })
       setStatus(""); setPhase("idle")
     } catch {
       if (run.current !== mine) return
@@ -226,7 +230,8 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
     return () => window.removeEventListener("keydown", onKey)
   }, [press, active])
 
-  const shown = result ? (layer === "clean" && result.clean ? result.clean : result.raw) : ""
+  const matchingPast = past.filter(p => [p.raw, p.clean, p.rewrite, ...(p.revisions || []).map(r => r.reason)].join(" ").toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
+  const shown = result ? (layer === "rewrite" && result.rewrite ? result.rewrite : layer === "clean" && result.clean ? result.clean : result.raw) : ""
   const doCopy = async (text: string, id: string) => { setCopied((await copy(text)) ? id : `${id}:failed`); window.setTimeout(() => setCopied(c => (c.startsWith(id) ? "" : c)), 2200) }
   const forget = (id: string) => setPast(before => { const next = before.filter(p => p.id !== id); write(HISTORY_KEY, next); return next })
 
@@ -282,10 +287,17 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
       {result ? (
         <Card>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Chip label="Rewritten by you" active={layer === "rewrite"} disabled={!result.rewrite} onClick={() => setLayer("rewrite")} />
             <Chip label="Tidied" active={layer === "clean"} disabled={!result.clean} onClick={() => setLayer("clean")} />
             <Chip label="As you said it" active={layer === "raw"} onClick={() => setLayer("raw")} />
           </div>
           <p style={SAID}>{shown}</p>
+          <RevisionEditor key={result.raw} text={result.rewrite || result.clean || result.raw} revisions={result.revisions} disabled={phase !== "idle"}
+            onSave={(text, reason) => {
+              const next = { ...manualRewrite(result, text, reason, Date.now()), kept: "rewrite" as const }
+              setResult(next); setLayer("rewrite")
+              setPast(before => { const history = before.map(p => p.id === resultId.current ? { ...p, ...next } : p); write(HISTORY_KEY, history); return history })
+            }} />
           {note && <p style={{ ...SMALL, marginTop: 12 }}>{note}</p>}
           {cut && <p style={{ ...SMALL, marginTop: 12 }}>Stopped at {MAX_SECONDS} seconds, the longest one dictation can be. Press Speak again to go on.</p>}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
@@ -314,15 +326,24 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
           {past.length > 0 && <button type="button" className="btn-ghost" style={QUIET} onClick={() => { if (window.confirm("Remove everything you dictated earlier from this browser?")) { setPast([]); write(HISTORY_KEY, []) } }}>Remove all</button>}
         </div>
         <p style={{ ...SMALL, margin: "4px 0 16px" }}>Kept only in this browser. MarketFit keeps nothing you say.</p>
+        <label htmlFor="dictation-search">Search earlier dictations</label>
+        <input id="dictation-search" type="search" value={search} onChange={e => setSearch(e.target.value)} style={{ ...FIELD, marginBottom: 12 }} />
+        {past.length > 0 && <p role="status" style={SMALL}>{matchingPast.length} matching dictations</p>}
         {past.length === 0 ? <Card><p style={SMALL}>Nothing yet. What you dictate will be listed here.</p></Card> : (
           <div style={{ display: "grid", gap: 12 }}>
-            {past.map(p => {
-              const text = p.kept === "clean" && p.clean ? p.clean : p.raw
+            {matchingPast.map(p => {
+              const text = p.kept === "rewrite" && p.rewrite ? p.rewrite : p.kept === "clean" && p.clean ? p.clean : p.raw
               const wide = open === p.id
               return (
                 <Card key={p.id} style={{ padding: 16 }}>
-                  <Meta>{new Date(p.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} · {p.kept === "clean" ? "tidied" : "as said"}</Meta>
+                  <Meta>{new Date(p.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} · {p.kept === "rewrite" ? "rewritten by you" : p.kept === "clean" ? "tidied" : "as said"}</Meta>
                   <p style={{ fontSize: 15.5, lineHeight: 1.55, color: "var(--text)", margin: "8px 0 0", overflowWrap: "anywhere", whiteSpace: wide ? "pre-wrap" : "normal", ...(wide ? {} : { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }) }}>{text}</p>
+                  {wide && <><p style={SMALL}>Original: {p.raw}</p>{p.clean && <p style={SMALL}>Tidied: {p.clean}</p>}
+                    <RevisionEditor text={p.rewrite || p.clean || p.raw} revisions={p.revisions} onSave={(value, reason) => {
+                      const next = { ...manualRewrite(p, value, reason, Date.now()), kept: "rewrite" as const }
+                      setPast(before => { const history = before.map(item => item.id === p.id ? next : item); write(HISTORY_KEY, history); return history })
+                      if (resultId.current === p.id) { setResult(next); setLayer("rewrite") }
+                    }} /></>}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
                     <button type="button" className="btn-outline" style={QUIET} onClick={() => void doCopy(text, p.id)}>{copied === p.id ? "Copied" : "Copy"}</button>
                     <button type="button" className="btn-ghost" style={QUIET} aria-expanded={wide} onClick={() => setOpen(wide ? null : p.id)}>{wide ? "Show less" : "Show all"}</button>

@@ -109,26 +109,33 @@ export async function readLlmCalls(fromDay: string, toDay: string): Promise<{ ca
 
 export type CallSummary = PricedUsage & {
   failed: number
+  /** Failures with reported token usage can still be billable. */
+  failedWithUsage: number
+  failedWithoutUsage: number
   /** Mean time to an answer over the calls that answered, in milliseconds. */
   meanMs: number
   byApp: Record<string, { calls: number; failed: number; input: number; output: number; costUsd: number; unpricedCalls: number }>
   byPurpose: { app: string; purpose: string; calls: number; failed: number; input: number; output: number; costUsd: number; unpricedCalls: number }[]
 }
 
-/** Totals for a set of calls. A failed call is counted and costs nothing: no provider bills a refusal. */
+/** Price reported usage even when a request failed after generation. No usage means unknown billing, not proof of a free call. */
 export function summarizeCalls(calls: readonly LlmCall[]): CallSummary {
   const answered = calls.filter(c => c.ok)
-  const priced = priceCalls(answered)
+  const withUsage = (c: LlmCall) => c.input + c.output + c.cacheRead + c.cacheWrite > 0
+  const failedWithUsage = calls.filter(c => !c.ok && withUsage(c)).length
+  const priced = priceCalls(calls.filter(c => c.ok || withUsage(c)))
   const apps = new Map<string, LlmCall[]>(), purposes = new Map<string, LlmCall[]>()
   for (const c of calls) {
     const a = apps.get(c.app); if (a) a.push(c); else apps.set(c.app, [c])
     const k = `${c.app}\u0000${c.purpose}`, list = purposes.get(k); if (list) list.push(c); else purposes.set(k, [c])
   }
-  const line = (list: LlmCall[]) => { const p = priceCalls(list.filter(c => c.ok)); return { calls: list.length, failed: list.filter(c => !c.ok).length, input: p.input, output: p.output, costUsd: p.costUsd, unpricedCalls: p.unpricedCalls } }
+  const line = (list: LlmCall[]) => { const p = priceCalls(list.filter(c => c.ok || withUsage(c))); return { calls: list.length, failed: list.filter(c => !c.ok).length, input: p.input, output: p.output, costUsd: p.costUsd, unpricedCalls: p.unpricedCalls } }
   return {
     ...priced,
     calls: calls.length,
     failed: calls.length - answered.length,
+    failedWithUsage,
+    failedWithoutUsage: calls.length - answered.length - failedWithUsage,
     meanMs: answered.length ? Math.round(answered.reduce((n, c) => n + c.ms, 0) / answered.length) : 0,
     byApp: Object.fromEntries([...apps.entries()].map(([app, list]) => [app, line(list)])),
     byPurpose: [...purposes.entries()].map(([k, list]) => { const [app, purpose] = k.split("\u0000"); const l = line(list); return { app, purpose, calls: l.calls, failed: l.failed, input: l.input, output: l.output, costUsd: l.costUsd, unpricedCalls: l.unpricedCalls } })

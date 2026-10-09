@@ -1,11 +1,9 @@
 import type { Metadata } from "next"
-import { waConfigured, waDisplayNumber } from "@/lib/whatsapp"
+import { waStatus, waDisplayNumber } from "@/lib/whatsapp"
 import { Card, Meta } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 
-// This page never offers a chat that cannot answer. The button appears only when the bot is wired on this
-// deployment and it has a number to message: WHATSAPP_DISPLAY_NUMBER when that is set, otherwise the wired
-// sender's own number, read from Meta (see waDisplayNumber).
+// Credentials alone do not establish provider access. Probe the sender before offering chat.
 export const dynamic = "force-dynamic"
 export const metadata: Metadata = { title: "WhatsApp" }
 
@@ -17,8 +15,9 @@ const STEPS = [
 ]
 
 export default async function WhatsAppPage() {
-  const digits = await waDisplayNumber()
-  const live = waConfigured() && digits.length >= 8
+  const status = await waStatus()
+  const digits = status.state === "ok" ? await waDisplayNumber() : ""
+  const live = status.state === "ok" && digits.length >= 8
 
   return (
     <div style={{ maxWidth: 820, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -42,7 +41,7 @@ export default async function WhatsAppPage() {
           </a>
         ) : (
           <p style={{ margin: "16px 0 0", fontSize: 15, lineHeight: 1.6, color: "var(--text-muted)" }}>
-            WhatsApp is not switched on yet. When it is, a button to message MarketFit appears here.
+            {status.state === "test_number" ? "WhatsApp is using a test number and is only available to approved test recipients." : status.state === "not_configured" ? "WhatsApp is not configured yet." : "WhatsApp provider access could not be verified. Please try again later."}
           </p>
         )}
       </Card>

@@ -28,6 +28,7 @@ type Usage = {
     openai: { budgetUsd: number | null; spentMonthUsd: number; unpricedCalls: number; leftUsd: number | null; resumesLeft: number | null }
     groq: GroqAllowance[]
     providers: LlmStatus["providers"]
+    providersCheckedAt: string | null
     perPersonWeeklyLimit: number | null
   }
   prices: { model: string; in: number; out: number; source: string; read: string }[]
@@ -196,7 +197,8 @@ export default function AdminPage() {
   })
   const dayName = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" })
 
-  const notes: string[] = []
+  const notes: string[] = ["UNRECONCILED: costs are estimates from reported tokens, not provider invoices. Historical calls without recorded usage are missing."]
+  if (c.failedWithoutUsage > 0) notes.push(`${count(c.failedWithoutUsage)} failed calls have no recorded tokens. Their billing is unknown until provider reconciliation.`)
   if (!gaps.kompasReporting) notes.push("Kompas has not reported a model call this month. Its numbers are missing from this page; they are not zero.")
   if (gaps.empty) notes.push("Nothing has been recorded yet. Counting began when this page went live; the next resume or model call will show here.")
   else if (gaps.recordingSince) notes.push(`Counting began ${time(gaps.recordingSince)}. Nothing before that is in these numbers.`)
@@ -293,10 +295,11 @@ export default function AdminPage() {
           </Card>
 
           <Card>
-            <Meta>Every provider, right now</Meta>
+            <Meta>Last provider check</Meta>
+            {left.providersCheckedAt && <p style={SMALL}>Checked {time(left.providersCheckedAt)}. This page does not run paid probes.</p>}
             <div style={{ marginTop: 12 }}>
               {left.providers.length === 0
-                ? <p style={SMALL}>The providers could not be checked just now.</p>
+                ? <p style={SMALL}>No provider check is cached on this server. Health is unknown; configured keys alone do not prove connectivity.</p>
                 : left.providers.map(p => (
                   <div key={p.provider} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "8px 0", borderTop: "1px solid var(--border)" }}>
                     <span style={{ fontSize: 14.5, color: "var(--text)" }}>
@@ -312,11 +315,11 @@ export default function AdminPage() {
         </div>
       </Section>
 
-      <Section title="Model calls and cost" lede="Every call either app made to a model: how many, how many tokens went in and came out, and what it cost."
+      <Section title="Model calls and cost" lede="Recorded model calls from both apps, token usage, and estimated cost. Failed calls with reported usage are included."
         aside={SPANS.map(s => <Chip key={s.id} label={s.label} active={span === s.id} onClick={() => setSpan(s.id)} />)}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
           {([
-            ["Cost", money(c.costUsd), c.unpricedCalls > 0 ? "or more: some calls have no known price" : ""],
+            ["Estimated cost", money(c.costUsd), c.unpricedCalls > 0 ? "or more: some calls have no known price" : ""],
             ["Calls", count(c.calls), c.failed > 0 ? `${count(c.failed)} of them failed` : "none failed"],
             ["Time to answer", c.meanMs > 0 ? `${(c.meanMs / 1000).toFixed(1)} s` : "–", "on average, for calls that answered"],
             ["Tokens in", tokens(c.input), "what was sent to the models"],

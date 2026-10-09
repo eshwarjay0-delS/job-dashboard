@@ -27,9 +27,10 @@ import PageIntro from "../../_components/page-intro"
 import { Card, Chip, Meta } from "../../_suite/ui"
 import {
   appendSegment, asMarkdown, asPlainText, clockAt, hasOthers, lengthMs, nameSpeaker, replaceSegment, setSpeaker, speakerLabel, speakersHeard,
-  startSession, transcriptLines, withClean, withSpeakers, wordCount,
+  startSession, transcriptLines, withClean, withSpeakers, wordCount, withManualRewrite, transcriptMatches,
   type Consent, type Layer, type Session,
 } from "@/lib/kompasTranscript"
+import RevisionEditor from "../flow/revision-editor"
 import { MAX_OTHERS, VOICE_RATE, YOU, readVoiceprint, speakersOf, voiceprintOf, type Voiceprint } from "@/lib/kompasVoice"
 import { MAX_FILE_BYTES, MAX_MINUTES, decode, partsOf, samplesOf, wavPart, type DecodeProblem } from "./audio"
 import { deleteSession, forgetVoice, listSessions, loadVoice, saveSession, saveVoice, type Kept } from "./store"
@@ -128,6 +129,8 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
   const [hint, setHint] = useState("")
   const [copied, setCopied] = useState<"" | "yes" | "no">("")
   const [kept, setKept] = useState<Kept[]>([])
+  const [search, setSearch] = useState("")
+  const [issuesOnly, setIssuesOnly] = useState(false)
   const [retryable, setRetryable] = useState<string[]>([])
   const [renaming, setRenaming] = useState(false)
   // "Who is speaking?" is answered for the recording about to be made. A transcript opened from the list was answered for
@@ -445,6 +448,8 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
     setProgress(leftRaw ? `${leftRaw} ${leftRaw === 1 ? "part was" : "parts were"} left as said, because tidying would have changed the words or was not available.` : "")
   }, [go, put])
 
+  const matchingKept = kept.filter(k => transcriptMatches(k, search) && (!issuesOnly || k.segments.some(s => s.failed || s.revisions?.length)))
+  const segmentsById = new Map(session?.segments.map(s => [s.id, s]) || [])
   const lines = session ? transcriptLines(session, layer) : []
   // The speakers a line can be given: You, everyone heard so far, and one more for a voice that has no name yet.
   const heard = session ? speakersHeard(session) : []
@@ -453,7 +458,7 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
   const busy = phase !== "idle"
   const copyAll = async () => { if (!session) return; try { await navigator.clipboard.writeText(asPlainText(session, layer)); setCopied("yes") } catch { setCopied("no") } window.setTimeout(() => setCopied(""), 2400) }
   const leave = () => { if (busy || mic) return; release(); current.current = null; answeredRef.current = null; setAnswered(null); setSession(null); setWho(null); setTitle(""); go("idle"); setProgress(""); setError(""); setRenaming(false); sounds.current.clear(); prints.current.clear(); setPicking(null); setRetryable([]) }
-  const openKept = (k: Kept) => { if (busy || mic) return; const { updatedAt: _dropped, ...s } = k; void _dropped; release(); answeredRef.current = null; setAnswered(null); current.current = s; setSession(s); setLayer(s.segments.some(x => x.clean) ? "clean" : "raw"); setError(""); setProgress(""); setNotKept(false); sounds.current.clear(); prints.current.clear(); setPicking(null); setRetryable([]); window.scrollTo({ top: 0, behavior: "smooth" }) }
+  const openKept = (k: Kept) => { if (busy || mic) return; const { updatedAt: _dropped, ...s } = k; void _dropped; release(); answeredRef.current = null; setAnswered(null); current.current = s; setSession(s); setLayer(s.segments.some(x => x.rewrite) ? "rewrite" : s.segments.some(x => x.clean) ? "clean" : "raw"); setError(""); setProgress(""); setNotKept(false); sounds.current.clear(); prints.current.clear(); setPicking(null); setRetryable([]); window.scrollTo({ top: 0, behavior: "smooth" }) }
   const fileName = (ext: string) => `${(session?.title || "transcript").replace(/[^\p{L}\p{N} _-]+/gu, "").trim().slice(0, 60) || "transcript"}.${ext}`
 
   const action = !session ? { label: "Start a transcript", href: "#who" }
@@ -561,7 +566,9 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 16 }}>
                   <Chip label="As said" active={layer === "raw"} onClick={() => setLayer("raw")} />
                   <Chip label="Tidied" active={layer === "clean"} disabled={!session.segments.some(s => s.clean)} onClick={() => setLayer("clean")} />
+                  <Chip label="Rewritten by you" active={layer === "rewrite"} disabled={!session.segments.some(s => s.rewrite)} onClick={() => setLayer("rewrite")} />
                 </div>
+                {layer === "rewrite" && <p style={{ ...SMALL, marginTop: 12 }}>Your saved edits are shown. Parts without an edit retain their tidied or original wording.</p>}
                 {lines.some(l => l.who) && <p style={{ ...SMALL, marginTop: 12 }}>Who said each line is worked out from the sound and can be wrong. A name with a dashed edge is a guess: tap it to change it.</p>}
                 <div style={{ marginTop: 14 }}>
                   {lines.map(line => (
@@ -597,6 +604,9 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
                           )}
                         </span>
                       )}
+                      {!line.failed && <div style={{ gridColumn: 2 }}><RevisionEditor key={`${session.id}:${line.id}`} text={segmentsById.get(line.id)?.rewrite || segmentsById.get(line.id)?.clean || line.text}
+                        revisions={segmentsById.get(line.id)?.revisions} disabled={busy}
+                        onSave={(text, reason) => { put(now => withManualRewrite(now, line.id, text, reason, Date.now()), session.id); setLayer("rewrite") }} /></div>}
                     </div>
                   ))}
                 </div>
@@ -606,6 +616,7 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
                   {answered === session.id && <button type="button" className="btn-ghost" style={QUIET} disabled={busy} onClick={() => fileInput.current?.click()}>Add a recording</button>}
                   <button type="button" className="btn-ghost" style={QUIET} disabled={!hasText} onClick={() => download(fileName("md"), asMarkdown(session, layer), "text/markdown")}>Download .md</button>
                   <button type="button" className="btn-ghost" style={QUIET} disabled={!hasText} onClick={() => download(fileName("txt"), asPlainText(session, layer), "text/plain")}>Download .txt</button>
+                  <button type="button" className="btn-ghost" style={QUIET} disabled={!hasText} onClick={() => download(fileName("json"), JSON.stringify(session, null, 2), "application/json")}>Export all layers and revisions</button>
                   <button type="button" className="btn-ghost" style={QUIET} disabled={busy} onClick={() => setRenaming(true)}>Rename</button>
                   <button type="button" className="btn-ghost" style={QUIET} disabled={busy} onClick={leave}>Start another</button>
                 </div>
@@ -625,9 +636,13 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
       <section style={{ marginTop: 40 }}>
         <h2 style={H2}>Your transcripts</h2>
         <p style={{ ...SMALL, margin: "4px 0 16px" }}>Transcripts stay on this device, and so does your voice print if you saved one. MarketFit keeps no sound and no text.</p>
+        <label htmlFor="transcript-search">Search transcripts</label>
+        <input id="transcript-search" type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Words, names, titles or corrections" style={{ ...FIELD, margin: "8px 0" }} />
+        <label style={{ display: "block", marginBottom: 12 }}><input type="checkbox" checked={issuesOnly} onChange={e => setIssuesOnly(e.target.checked)} /> What Went Wrong: revisions and missed audio</label>
+        {kept.length > 0 && <p role="status" style={SMALL}>{matchingKept.length} matching transcripts</p>}
         {kept.length === 0 ? <Card><p style={SMALL}>None yet. A transcript is kept here as soon as it has its first words.</p></Card> : (
           <div style={{ display: "grid", gap: 12 }}>
-            {kept.map(k => (
+            {matchingKept.map(k => (
               <Card key={k.id} style={{ padding: 16 }}>
                 <div style={{ fontSize: 16.5, fontWeight: 600, color: "var(--text)", overflowWrap: "anywhere" }}>{k.title}</div>
                 <Meta style={{ marginTop: 6 }}>{new Date(k.startedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · {clockAt(lengthMs(k))} long · {wordCount(k, "raw").toLocaleString("en-US")} words</Meta>
