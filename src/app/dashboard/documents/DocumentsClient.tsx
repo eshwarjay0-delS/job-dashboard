@@ -156,6 +156,18 @@ interface UploadedEntry {
 export default function DocumentsClient({ initialFiles, initialFolders = [], onDone }: { initialFiles: ResumeFile[]; initialFolders?: string[]; onDone?: () => void }) {
   const router = useRouter()
   const { confirm, prompt } = useDialogs()
+  const [emailCounts, setEmailCounts] = useState<Record<string, number>>({})
+  useEffect(() => {
+    fetch("/api/resumes/library-index", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("Index unavailable")))
+      .then(data => {
+        const counts: Record<string, number> = {}
+        for (const entry of data.entries || []) {
+          if (entry.identity) counts[entry.identity] = (counts[entry.identity] || 0) + 1
+        }
+        setEmailCounts(counts)
+      }).catch(() => {})
+  }, [initialFiles])
   const [preloaded, setPreloaded] = useState<ResumeFile[]>(initialFiles)
   useEffect(() => { setPreloaded(initialFiles) }, [initialFiles])
 
@@ -307,6 +319,17 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
             Back to tailoring
           </button>
         )}
+      </div>
+
+      {/* Verified email identities remain visible even before the first import. */}
+      <div className="grid gap-3 sm:grid-cols-2" aria-label="Resume libraries by email">
+        {["eshwarjay05@gmail.com", "jayeshwar44@gmail.com"].map(email => (
+          <div key={email} className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+            <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>Associated with {email}</p>
+            <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>{emailCounts[email] || 0} indexed resumes</p>
+            <p className="text-xs mt-1" style={{ color: "var(--text-soft)" }}>Resumes appear here after verified import.</p>
+          </div>
+        ))}
       </div>
 
       {/* Upload zone */}
