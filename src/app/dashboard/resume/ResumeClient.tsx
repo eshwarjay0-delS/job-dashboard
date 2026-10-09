@@ -132,6 +132,17 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
     return "tailor"
   })
 
+  const [emailLibraries, setEmailLibraries] = useState<{email:string; count:number}[]>([])
+  useEffect(() => {
+    fetch("/api/resumes/library-index").then(response => response.ok ? response.json() : Promise.reject()).then(data => {
+      const counts: Record<string,number> = {}
+      for (const entry of data.entries || []) {
+        const email = entry.identity || "Unassigned"
+        counts[email] = (counts[email] || 0) + 1
+      }
+      setEmailLibraries(Object.entries(counts).map(([email,count]) => ({email,count})))
+    }).catch(() => {})
+  }, [preloaded])
   const [preloaded, setPreloaded] = useState<ResumeFile[]>(initialFiles)
   useEffect(() => { setPreloaded(initialFiles) }, [initialFiles])
   const [uploaded, setUploaded]   = useState<UploadedEntry[]>([])
@@ -720,6 +731,9 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
                       </svg>
                     </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 px-3 pb-3" aria-label="Resume libraries by email">
+                    {emailLibraries.map(group => <div key={group.email} className="rounded-xl border px-3 py-2 text-xs"><strong className="block">Associated with {group.email}</strong><span className="opacity-70">{group.count} indexed resumes</span></div>)}
                   </div>
                   <div className="overflow-y-auto p-2" style={{ maxHeight: 320 }}>
                     <LibraryTree
