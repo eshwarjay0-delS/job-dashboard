@@ -449,6 +449,20 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
     } catch (e) { setErr("Move error: " + String(e)) }
   }
 
+  async function clearAllResumes() {
+    if (!preloaded.length) return
+    if (!await confirm(`Permanently delete all ${preloaded.length} resumes in your library? This does not delete WhatsApp revision history.`, { title: "Clear resume library", confirmLabel: "Clear all", destructive: true })) return
+    try {
+      const res = await fetch("/api/resumes", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clearAll: true, confirm: "CLEAR MY RESUME LIBRARY" }) })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setErr(data.error || "Could not clear library."); return }
+      setSelected(null)
+      setChecked(new Set())
+      setNotice(`Cleared ${data.deleted} resumes from your library.`)
+      router.refresh()
+    } catch (e) { setErr("Clear failed: " + String(e)) }
+  }
+
   async function deleteChecked() {
     if (checked.size === 0) return
     const files = [...checked].filter(k => k.startsWith("f:")).map(k => k.slice(2))
@@ -721,6 +735,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                       </svg>
                     </button>
                   </div>
+                  <div className="flex justify-end px-3 pb-2"><button type="button" onClick={clearAllResumes} disabled={!preloaded.length} className="text-xs font-semibold text-red-600 disabled:opacity-40">Clear all</button></div>
                   <div className="overflow-y-auto p-2" style={{ maxHeight: 320 }}>
                     <LibraryTree
                       files={preloaded}
