@@ -162,10 +162,18 @@ const nextConfig = {
   // scripts/sync-kompas.mjs when it is redeployed). KOMPAS_API_ORIGIN points at another deployment.
   async rewrites() {
     const kompasApi = (process.env.KOMPAS_API_ORIGIN || "https://perfact-ten.vercel.app").replace(/\/+$/, "");
-    return [
-      { source: "/dashboard/kompas", destination: "/kompas/index.html" },
-      { source: "/kompas/api/:path*", destination: `${kompasApi}/api/:path*` },
-    ];
+    return {
+      beforeFiles: [
+        { source: "/dashboard/kompas", destination: "/api/kompas/shell" },
+        { source: "/kompas/index.html", destination: "/api/kompas/shell" },
+        { source: "/kompas", destination: "/api/kompas/shell" },
+        // The HTML is mounted locally, while every dependency and API uses the same live release.
+        // Run before public/ so historical snapshots can never shadow the canonical deployment.
+        { source: "/kompas/:path+", destination: `${kompasApi}/:path+` },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
   },
 };
 

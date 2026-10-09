@@ -1,3 +1,4 @@
+// Legacy offline snapshot utility only. Production now mounts the canonical release through /api/kompas/shell.
 // Kompas is built in perfACT/copilot, not here. A hand-edited copy in this repo would drift from
 // the app it claims to be, so public/kompas/ is only ever written by this script: styles.css verbatim and app.js with the reviewed voice reliability patch, index.html with the three changes it needs to live under MarketFit.
 //
