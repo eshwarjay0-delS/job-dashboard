@@ -396,3 +396,17 @@ Owner renewed: sync job-dashboard-fawn /dashboard/kompas and perfact-ten as one 
 - Native Android source and existing v2.2.0 APK were found in the separate kompas repository, feat/android-flow-launcher. The branch has not been merged to main. It uses platform SpeechRecognizer; bundled offline inference and cloud session integration are not implemented. Physical-device testing is not available here.
 
 Publishing a tested incremental release does not close the open acceptance items above.
+
+
+### Shared response guidance and native correction follow-up
+
+- Shared response guidance now requests answer-first reasoning, useful technical explanations, constructive next actions and evidence-grounded experience; explicitly hypothetical scenarios cannot be narrated as observed personal events. Syntax/module checks pass. No model evaluation was run, so attention/accuracy gains remain unmeasured; existing cached answers are unchanged. The closed answer-route scenario classification conflict remains open.
+- Canonical sidebar now exposes Transcribe and shows the release ID separately from the capability-policy version. Both entry points share these changes.
+- Native cursor/password-field correction is committed as 626c74e on fix/android-cursor-insertion. Its existing GitHub Android workflow is the build gate; installation and device behavior still require verification.
+
+
+### Deployment and APK verification follow-up
+
+- Dashboard b9c735a: production READY, deployment dpl_XCBWneKhAFWYKBckjnsrbgg989tf. Perfact a566ef1: production READY, deployment dpl_DbRA15yYNX1xFgDm2YuxZj8nD4k7. Both public entry points display release A566EF1A1D72; manifests and app.js/qbank.js/feedback.js match their SHA-256 values. Question Bank navigation works in the mounted dashboard browser.
+- Flow correctly requests account sign-in in the remote browser. No authenticated end-to-end Gmail, WhatsApp, Admin or microphone test is claimed.
+- Android workflow run 5 for commit 626c74ef0231cfcf58511ed4bb47385f81bf948b succeeded, assembleDebug, 33 tasks, 1m24s. Built 2026-10-09T04:32:27Z. APK 38,985 bytes, SHA-256 8a933e0c25eef311c5ec1a8507b579e01d63431dfd691878a5e42a6c2726ab39. Retrieved from apk-builds and hash verified. The dashboard download is updated to this build. This supersedes the earlier unbuilt-patch status; physical-device and guaranteed offline recognition remain unverified.
