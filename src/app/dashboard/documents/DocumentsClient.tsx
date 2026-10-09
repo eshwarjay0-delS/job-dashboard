@@ -157,6 +157,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
   const router = useRouter()
   const { confirm, prompt } = useDialogs()
   const [emailCounts, setEmailCounts] = useState<Record<string, number>>({})
+  const [discoveredEmails, setDiscoveredEmails] = useState<string[]>([])
   useEffect(() => {
     fetch("/api/resumes/library-index", { cache: "no-store" })
       .then(r => r.ok ? r.json() : Promise.reject(new Error("Index unavailable")))
@@ -166,6 +167,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
           if (entry.identity) counts[entry.identity] = (counts[entry.identity] || 0) + 1
         }
         setEmailCounts(counts)
+        setDiscoveredEmails((data.libraries || []).map((lib: {email:string}) => lib.email).filter((email: string) => email !== "Unverified"))
       }).catch(() => {})
   }, [initialFiles])
   const [preloaded, setPreloaded] = useState<ResumeFile[]>(initialFiles)
@@ -321,9 +323,9 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
         )}
       </div>
 
-      {/* Verified email identities remain visible even before the first import. */}
+      {/* Discover email identities from actual tenant-owned resumes; never hardcode an owner. */}
       <div className="grid gap-3 sm:grid-cols-2" aria-label="Resume libraries by email">
-        {["eshwarjay05@gmail.com", "jayeshwar44@gmail.com"].map(email => (
+        {discoveredEmails.map(email => (
           <div key={email} className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
             <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>Associated with {email}</p>
             <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>{emailCounts[email] || 0} indexed resumes</p>
