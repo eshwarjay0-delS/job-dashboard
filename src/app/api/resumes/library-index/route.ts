@@ -49,7 +49,8 @@ export async function GET(request:NextRequest) {
       const signature=`${stat.size}:${stat.mtime.getTime()}`
       if(!refresh && cache[relative]?.signature===signature) { next[relative]=cache[relative];continue }
       const bytes=await readPath(filepath)
-      if (!bytes) { errors.push(path.basename(filepath)); continue }\n      const plain=await extractText(bytes)
+      if (!bytes) { errors.push(path.basename(filepath)); continue }
+      const plain=await extractText(bytes)
       const technologies=extractKeywords(plain)
       const identities=safeEmail(plain.slice(0,2500))
       const fingerprint=createHash("sha256").update(bytes).digest("hex")
