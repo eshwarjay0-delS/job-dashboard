@@ -5,6 +5,7 @@ import { Check, Send, Shield, Archive, RotateCcw, ChevronRight, CalendarDays, Le
 import { Card, Meta, StagePill, Chip, Btn, Avatar, Toggle, useAnswered, useLeaving, leavingStyle } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 import MetricHero from "../_components/metric-hero"
+import SmartReply from "./_components/smart-reply"
 import { savedAvailability, type Mail, type Stage } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 
@@ -283,9 +284,15 @@ export default function MailPage() {
                       ? "Restored from Rejected. It stays in your inbox and the tracker until you file it again."
                       : "No reply needed. The follow-up workflow checks in on Monday and Thursday at 10:00 AM if nothing changes."}
                 </div>
-              ) : m.needsReply === "availability" ? <AvailabilityReply m={m} onApprove={() => approve(m.id)} acct={acct} />
-                : m.needsReply === "rtr" ? <RtrReply m={m} onApprove={() => approve(m.id)} />
-                : <RateReply m={m} onApprove={() => approve(m.id)} />}
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+                  <SmartReply mail={m} onSent={() => approve(m.id)} />
+                  <div style={{ height: 1, background: "var(--border)" }} />
+                  {m.needsReply === "availability" ? <AvailabilityReply m={m} onApprove={() => approve(m.id)} acct={acct} />
+                    : m.needsReply === "rtr" ? <RtrReply m={m} onApprove={() => approve(m.id)} />
+                    : <RateReply m={m} onApprove={() => approve(m.id)} />}
+                </div>
+              )}
             </div>
           </Card>
         )}
