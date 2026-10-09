@@ -158,6 +158,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
   const { confirm, prompt } = useDialogs()
   const [emailCounts, setEmailCounts] = useState<Record<string, number>>({})
   const [discoveredEmails, setDiscoveredEmails] = useState<string[]>([])
+  const [libraryIndexError, setLibraryIndexError] = useState(false)
   useEffect(() => {
     fetch("/api/resumes/library-index", { cache: "no-store" })
       .then(r => r.ok ? r.json() : Promise.reject(new Error("Index unavailable")))
@@ -168,7 +169,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
         }
         setEmailCounts(counts)
         setDiscoveredEmails((data.libraries || []).map((lib: {email:string}) => lib.email).filter((email: string) => email !== "Unverified"))
-      }).catch(() => {})
+      }).catch(() => setLibraryIndexError(true))
   }, [initialFiles])
   const [preloaded, setPreloaded] = useState<ResumeFile[]>(initialFiles)
   useEffect(() => { setPreloaded(initialFiles) }, [initialFiles])
@@ -324,6 +325,8 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
       </div>
 
       {/* Discover email identities from actual tenant-owned resumes; never hardcode an owner. */}
+      {libraryIndexError && <p role="alert" className="text-sm" style={{color:"var(--text-muted)"}}>Resume indexing is temporarily unavailable. Your uploaded files are not affected.</p>}
+      {discoveredEmails.length === 0 && <div className="rounded-xl border p-4 text-sm" style={{borderColor:"var(--border)",background:"var(--surface)"}}><strong>No indexed email libraries yet.</strong><p className="mt-2">Import your existing resume ZIP using Choose files below. Each resume is indexed under its verified contact email. You can maintain multiple email libraries in one account.</p></div>}
       <div className="grid gap-3 sm:grid-cols-2" aria-label="Resume libraries by email">
         {discoveredEmails.map(email => (
           <div key={email} className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
