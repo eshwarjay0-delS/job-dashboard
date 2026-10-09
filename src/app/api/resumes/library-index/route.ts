@@ -6,6 +6,7 @@ import { USER_RESUMES_DIR } from "@/lib/paths"
 import { listFiles, readPath, readPathText, writePath, statPath } from "@/lib/storage"
 import { extractText } from "@/lib/docx"
 import { extractKeywords } from "@/lib/keywords"
+import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
 export const runtime = "nodejs"
 const MAX_INDEXED = 200
@@ -65,6 +66,25 @@ export async function GET(request:NextRequest) {
   }
   try { await writePath(cacheFile,Buffer.from(JSON.stringify(next))) } catch { errors.push("Index cache could not be saved") }
   const entries=Object.values(next).map(x=>x.entry)
+  if (serviceClientAvailable() && /^[0-9a-f-]{36}$/i.test(userId)) {
+    try {
+      const db = createServiceClient()
+      const { data: docs, error: dbError } = await db.from("resume_documents").select("id,sha256,storage_path,keywords,created_at,library_id,specialization_id").eq("user_id",userId).order("created_at",{ascending:false}).limit(1000)
+      if (dbError) throw dbError
+      const { data: libs } = await db.from("resume_email_libraries").select("id,email").eq("user_id",userId)
+      const { data: folders } = await db.from("resume_specializations").select("id,name").eq("user_id",userId)
+      const emails = new Map((libs||[]).map(v=>[v.id,v.email]))
+      const names = new Map((folders||[]).map(v=>[v.id,v.name]))
+      const known = new Set(entries.map(v=>v.fingerprint))
+      for (const doc of docs||[]) {
+        if (known.has(doc.sha256)) continue
+        const identity=emails.get(doc.library_id)||null
+        const category=names.get(doc.specialization_id)||"General"
+        entries.push({id:doc.id,filename:path.basename(doc.storage_path),sourceFilename:path.basename(doc.storage_path),category,identity,identities:identity?[identity]:[],technologies:doc.keywords||[],specializations:[category],fingerprint:doc.sha256,updatedAt:doc.created_at})
+        known.add(doc.sha256)
+      }
+    } catch(error) { errors.push("Supabase index unavailable: "+String(error).slice(0,120)) }
+  } else if (!serviceClientAvailable()) { errors.push("Supabase service credentials not configured.") }
   const identity=request.nextUrl.searchParams.get("identity")?.toLowerCase()
   const filtered=identity?entries.filter(x=>x.identity===identity):entries
   const libraries=Object.entries(entries.reduce((acc,entry)=>{ const key=entry.identity || "Unverified"; (acc[key] ||= []).push(entry); return acc },{} as Record<string,Entry[]>)).map(([email,items])=>({email,documentCount:items.length,specializations:[...new Set(items.flatMap(item=>item.specializations))],ambiguous:email==="Unverified"})).sort((a,b)=>a.email.localeCompare(b.email))
