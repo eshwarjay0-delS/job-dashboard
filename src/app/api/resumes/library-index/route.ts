@@ -22,7 +22,7 @@ const GROUPS: Record<string, string[]> = {
   "Network Security": ["firewall","cisco","vpn","ids","ips","network security"],
   "GRC": ["grc","nist","iso 27001","risk assessment","compliance"]
 }
-type Entry = { id:string; filename:string; category:string; identity:string|null; identities:string[]; technologies:string[]; specializations:string[]; fingerprint:string; updatedAt:string }
+type Entry = { id:string; filename:string; sourceFilename:string; category:string; identity:string|null; identities:string[]; technologies:string[]; specializations:string[]; fingerprint:string; updatedAt:string }
 type Cached = { signature:string; entry:Entry }
 function classify(terms:string[]) {
   const set=new Set(terms)
@@ -55,7 +55,7 @@ export async function GET(request:NextRequest) {
       const fingerprint=createHash("sha256").update(bytes).digest("hex")
       next[relative]={signature,entry:{
         id:createHash("sha256").update(userId+"\0"+relative).digest("hex").slice(0,24),
-        filename:path.basename(filepath),category:path.dirname(relative)==="."?"General":path.dirname(relative),
+        filename:"Eshwar_Resume.docx",sourceFilename:path.basename(filepath),category:path.dirname(relative)==="."?"General":path.dirname(relative),
         identity:identities.length===1?identities[0]:null,identities,
         technologies,specializations:classify(technologies),fingerprint,updatedAt:stat.mtime.toISOString()
       }}
