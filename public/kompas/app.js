@@ -1,4 +1,4 @@
-// marketfit-voice-v1
+// marketfit-voice-v2
 "use strict";
 /* Kompas — single-page app: Login → Dashboard → Create-Session wizard → Copilot.
    The copilot listens to mic + computer audio, transcribes (Groq Whisper) and
@@ -622,9 +622,11 @@ async function start() {
   document.querySelector(".rec").classList.add("live"); startClock();
   status("Starting capture…", "live");
   captureErrors = [];
-  if (srcOn.mic) await startMic();
+  const opening = [];
+  if (srcOn.sys) opening.push(startSys());
+  if (srcOn.mic) opening.push(startMic());
+  await Promise.allSettled(opening);
   if (!running || generation !== sourceGeneration.You) return;
-  if (srcOn.sys) await startSys();
   if (!captures.length) { status(captureErrors.join(" · ") || "Nothing to capture.", "err"); stop(false); return; }
   reportSources();
 }
@@ -636,7 +638,7 @@ async function stop(say = true) {
   $("startBtn").disabled = true;
   await Promise.allSettled([...finishing, ...finals]);
   $("startBtn").disabled = false;
-  if (say) status("Stopped — finished processing captured speech.");
+  if (say && transcriptionFailedEpoch !== transcriptionEpoch) status("Stopped — finished processing captured speech.");
   await saveRunTranscript();
 }
 function reportSources() {
@@ -651,7 +653,7 @@ let captures = [];           // { who, stream, owner, rec, chunks, ... }
 let captureErrors = [];
 let audioCtx = null;
 let displayVideo = null;     // kept from the call-audio share, reused by Analyse Screen
-const VAD = { SILENCE_MS: 650, MIN_SPEECH_MS: 280, MAX_SEG_MS: 14000, IDLE_RECYCLE_MS: 6000, INTERIM_MS: 3000 };
+const VAD = { SILENCE_MS: 850, MIN_SPEECH_MS: 160, MAX_SEG_MS: 14000, IDLE_RECYCLE_MS: 6000, INTERIM_MS: 3000 };
 const LEVEL_WORKLET = "class L extends AudioWorkletProcessor{constructor(){super();this.a=0;this.n=0}process(i){const c=i[0]&&i[0][0];if(c){let s=0;for(let k=0;k<c.length;k++)s+=c[k]*c[k];this.a+=s;this.n+=c.length;if(this.n>=1024){this.port.postMessage(Math.sqrt(this.a/this.n));this.a=0;this.n=0}}return true}}registerProcessor('perfact-level',L);";
 function pickMime() { for (const m of ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]) { try { if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; } catch {} } return ""; }
 const MIME = pickMime();
@@ -661,6 +663,10 @@ function primeAudio() {
     if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
   } catch {}
 }
+document.addEventListener("visibilitychange", () => {
+  if (running && document.visibilityState === "visible") primeAudio();
+});
+window.addEventListener("focus", () => { if (running) primeAudio(); });
 async function getCtx() {
   primeAudio();
   if (audioCtx.state === "suspended") { try { await audioCtx.resume(); } catch {} }
@@ -713,7 +719,7 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
   if (stale()) { releaseTracks(); return; }
   if (who === "Them") displayVideo = owner?.getVideoTracks()[0] || null;
   const src = ctx.createMediaStreamSource(stream);
-  const cap = { who, stream, owner, src, stopped: false, rec: null, chunks: [], segStart: 0, speechMs: 0, lastVoice: 0, lastTick: 0, voiced: false, noise: 0.004, interimAt: 0, inflight: 0 };
+  const cap = { who, stream, owner, src, stopped: false, rec: null, chunks: [], segStart: 0, speechMs: 0, lastVoice: 0, lastTick: 0, voiced: false, noise: 0.001, interimAt: 0, inflight: 0 };
   if (ctx._lvl === "worklet") {
     const node = new AudioWorkletNode(ctx, "perfact-level");
     node.port.onmessage = (e) => vadStep(cap, e.data);
@@ -727,9 +733,22 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
     cap.node = an;
   }
   const tracks = owner ? owner.getTracks() : stream.getAudioTracks();
-  for (const track of tracks) track.addEventListener("ended", () => { stopSource(who); if (who === "Them") { srcOn.sys = false; syncSrc(); } reportSources(); });
-  startSegment(cap);
+  for (const track of tracks) {
+    track.addEventListener("ended", () => {
+      if (cap.stopped) return;
+      void stopSource(who);
+      srcOn[who === "You" ? "mic" : "sys"] = false; syncSrc();
+      captureErrors.push(who === "You" ? "Microphone disconnected. Reconnect it and press the mic button." : "Call sharing ended. Press the speaker button to share audio again.");
+      reportSources();
+      if (!captures.length) void stop(false);
+    });
+    if (track.kind === "audio") {
+      track.addEventListener("mute", () => { if (!cap.stopped && running) status(`${who === "You" ? "Microphone" : "Call audio"} is interrupted. Check the device or return to this tab.`, "err"); });
+      track.addEventListener("unmute", () => { if (!cap.stopped) reportSources(); });
+    }
+  }
   captures.push(cap);
+  try { startSegment(cap); } catch (error) { captureErrors.push("Audio recorder: " + (error.message || "could not start")); await stopSource(who); throw error; }
 }
 function stopSource(who) {
   sourceGeneration[who]++;
@@ -751,10 +770,17 @@ function questionSource() { return captures.some(c => c.who === "Them") ? "Them"
 
 function startSegment(cap) {
   cap.chunks = []; cap.segStart = performance.now(); cap.speechMs = 0; cap.voiced = false; cap.interimAt = 0;
-  let rec; try { rec = new MediaRecorder(cap.stream, MIME ? { mimeType: MIME } : undefined); } catch { cap.rec = null; return; }
+  let rec; try { rec = new MediaRecorder(cap.stream, MIME ? { mimeType: MIME } : undefined); } catch (error) { cap.rec = null; throw error; }
   const chunks = cap.chunks;
   rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-  try { rec.start(250); } catch { cap.rec = null; return; }
+  rec.onerror = () => {
+    if (cap.stopped || cap.rec !== rec) return;
+    captureErrors.push("Audio recorder interrupted. Reconnect using the mic or speaker button.");
+    srcOn[cap.who === "You" ? "mic" : "sys"] = false; syncSrc();
+    void stopSource(cap.who); reportSources();
+    if (!captures.length) void stop(false);
+  };
+  try { rec.start(250); } catch (error) { cap.rec = null; throw error; }
   cap.rec = rec;
 }
 const finals = new Set();              // final transcriptions still in flight (AI Answer waits for them)
@@ -762,7 +788,13 @@ function endSegment(cap, keep, restart = true) {
   const rec = cap.rec, chunks = cap.chunks, speech = cap.speechMs;
   const epoch = transcriptionEpoch;
   const prompt = whisperPrompt();
-  if (restart && !cap.stopped) startSegment(cap);
+  if (restart && !cap.stopped) {
+    try { startSegment(cap); } catch {
+      cap.rec = null;
+      status("Audio recording stopped unexpectedly. Press Stop, then Start to reconnect.", "err");
+      queueMicrotask(() => stopSource(cap.who));
+    }
+  }
   else cap.rec = null;
   if (!rec) return Promise.resolve();
   let settle;
@@ -774,22 +806,34 @@ function endSegment(cap, keep, restart = true) {
     if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt }).then(settle, settle); else settle();
   };
   try { rec.stop(); } catch { settle(); }
-  const watchdog = setTimeout(settle, 22000);
+  const watchdog = setTimeout(() => {
+    if (epoch === transcriptionEpoch) status("Audio processing stalled. Check your connection and retry AI Answer.", "err");
+    settle(false);
+  }, 42000);
   done.then(() => clearTimeout(watchdog));
   return done;
 }
 // AI Answer pressed mid-sentence: cut every open phrase now and wait (briefly) for its words.
-async function flushHeard(maxMs = 2500) {
+async function flushHeard(maxMs = 43000) {
   for (const cap of captures) if (cap.voiced && cap.speechMs >= VAD.MIN_SPEECH_MS) endSegment(cap, true);
   const wait = [...finals];
-  if (wait.length) await Promise.race([Promise.allSettled(wait), new Promise(r => setTimeout(r, maxMs))]);
+  if (!wait.length) return;
+  let timer;
+  try {
+    const results = await Promise.race([Promise.all(wait), new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Still processing your last words. Retry AI Answer shortly.")), maxMs);
+    })]);
+    if (results.some(result => result === false)) throw new Error("Some speech could not be transcribed. Please repeat it or type it before requesting an answer.");
+  } finally { clearTimeout(timer); }
 }
 function vadStep(cap, rms) {
   if (cap.stopped || !running) return;
   const now = performance.now();
   const dt = cap.lastTick ? Math.min(100, now - cap.lastTick) : 20; cap.lastTick = now;
-  if (!cap.voiced || now - cap.lastVoice > 1500) cap.noise = cap.noise * 0.995 + Math.min(rms, 0.05) * 0.005;   // adaptive noise floor
-  const speaking = rms > Math.max(0.006, cap.noise * 3);
+  const threshold = Math.max(0.003, cap.noise * 2.5);
+  const speaking = rms > threshold;
+  // Never learn quiet speech as background noise and then erase it.
+  if (!speaking) cap.noise = cap.noise * 0.995 + rms * 0.005;
   meter(cap.who, rms, speaking);
   if (speaking) { cap.lastVoice = now; cap.speechMs += dt; if (cap.speechMs > 120) cap.voiced = true; }
   const segLen = now - cap.segStart;
@@ -809,6 +853,7 @@ function meter(who, rms, speaking) {
 
 /* ---- transcription ---- */
 let interimOffUntil = 0;
+let transcriptionFailedEpoch = -1;
 function whisperPrompt() {
   const s = current || {};
   const learned = (s.voiceVocabulary || []).filter(t => typeof t === "string").slice(-40);
@@ -850,35 +895,49 @@ function interim(cap) {
 async function transcribe(blob, who, opt) {
   const epoch = opt.epoch ?? transcriptionEpoch;
   const cap = opt.cap; if (cap) cap.inflight++;
-  // Start requests concurrently, but commit results in capture order.
   const previous = transcriptionOrder;
   let release;
   if (opt.final) transcriptionOrder = new Promise(resolve => { release = resolve; });
-  const ctl = new AbortController();
-  const timeout = setTimeout(() => ctl.abort(), 18000);
   let clean = "", failure = "";
   try {
-    const res = await fetch("/api/transcribe", { method: "POST", signal: ctl.signal,
-      headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-whisper-prompt": encodeURIComponent(opt.prompt ?? whisperPrompt()) }, body: blob });
-    if (res.status === 429) {
-      interimOffUntil = performance.now() + 60000;
-      failure = "Transcription rate limit reached. This phrase was not transcribed; please repeat it or type it.";
-    } else if (!res.ok) failure = `Transcription error ${res.status}. Please repeat the phrase or type it.`;
-    else clean = cleanTranscript((await res.json()).text);
-  } catch (e) {
-    failure = e.name === "AbortError" ? "Transcription timed out. Please repeat the phrase or type it." : "Could not transcribe audio. Check your connection, then repeat the phrase.";
-  } finally {
-    clearTimeout(timeout);
-    if (cap) cap.inflight--;
-  }
-  try {
+    // One bounded retry preserves the same audio after a temporary connection or server failure.
+    for (let attempt = 0; attempt < (opt.final ? 2 : 1); attempt++) {
+      if (epoch !== transcriptionEpoch) break;
+      const ctl = new AbortController();
+      const timeout = setTimeout(() => ctl.abort(), 18000);
+      let retry = false, delay = 500;
+      try {
+        const res = await fetch("/api/transcribe", { method: "POST", signal: ctl.signal,
+          headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-whisper-prompt": encodeURIComponent(opt.prompt ?? whisperPrompt()) }, body: blob });
+        if (!res.ok) {
+          retry = res.status === 429 || res.status >= 500;
+          const retrySeconds = Number(res.headers?.get("retry-after"));
+          if (res.status === 429) {
+            interimOffUntil = performance.now() + 60000;
+            if (retrySeconds > 2) retry = false;
+            delay = Math.min(2000, Math.max(500, retrySeconds * 1000 || 500));
+          }
+          failure = `Transcription unavailable (${res.status}). This phrase was not transcribed; please repeat it or type it.`;
+        } else {
+          clean = cleanTranscript((await res.json()).text);
+          failure = clean ? "" : "No clear words were recognized in that phrase. Please repeat it or type it.";
+          break;
+        }
+      } catch (error) {
+        retry = true;
+        failure = error.name === "AbortError" ? "Transcription timed out. Please repeat the phrase or type it." : "Could not transcribe audio. Check your connection, then repeat the phrase.";
+      } finally { clearTimeout(timeout); }
+      if (!retry || attempt || !opt.final) break;
+      if (epoch === transcriptionEpoch) status("Connection interrupted. Retrying the captured phrase…", "live");
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
     if (opt.final) await previous;
     if (epoch !== transcriptionEpoch) return;
-    if (failure && opt.final) status(failure, "err");
+    if (failure && opt.final) { transcriptionFailedEpoch = epoch; status(failure, "err"); return false; }
     if (!clean) return;
-    if (opt.final) onTranscript(who, clean);
+    if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(who, clean); }
     else if (running) showCaption(who, clean, true);
-  } finally { if (release) release(); }
+  } finally { if (cap) cap.inflight--; if (release) release(); }
 }
 
 /* ---- what was heard → captions, drawer, questions ---- */
@@ -1069,6 +1128,31 @@ function serveBook(card, hit, depthKey) {
   status("Answered from the opening book — no wait, no AI call. Press ↓ for a deeper live answer.", "live");
 }
 async function generateAnswer(question, card, opts = {}) {
+  card = card || addCard(question, ["…"]);
+  let timer;
+  const request = generateAnswerRequest(question, card, opts);
+  const ctl = card.req;
+  try {
+    await Promise.race([request, new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Answer request timed out")), 60000);
+    })]);
+  } catch (error) {
+    if (card.req !== ctl) return;
+    // Invalidate first: an aborted/late read cannot overwrite the visible recovery message.
+    card.req = null;
+    ctl?.abort();
+    card.streaming = false;
+    const partial = typeof card.answer === "string" && card.answer.trim();
+    if (!partial) card.answer = ["The answer could not finish. Your question is saved on this card. Press AI Answer to retry."];
+    card.meta = partial ? "Incomplete answer. Press AI Answer to retry." : "Answer interrupted. Retry available.";
+    if (cards[idx] === card) renderCard();
+    status(error.message || "Answer interrupted. Please retry.", "err");
+  } finally {
+    clearTimeout(timer);
+    if (answerCtl === ctl) answerCtl = null;
+  }
+}
+async function generateAnswerRequest(question, card, opts = {}) {
   question = String(question || "").trim(); if (!question) return;
   card = card || addCard(question, ["…"]);
   if (location.protocol === "file:") { card.answer = ["(Preview) Serve the deployed app for grounded answers."]; renderCard(); return; }
@@ -1183,7 +1267,8 @@ async function generateAnswer(question, card, opts = {}) {
       logAnswer({ noQuestion: true });
       status("No question heard yet.", "live"); return;
     }
-    show(text || "- The answer engine returned nothing — press AI Answer again.");
+    if (!text.trim()) throw new Error("The answer engine returned an empty response. Please retry.");
+    show(text);
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.split("\n").pop().slice(0, 200);
     const kind = ({ 0: "intro", 1: "story", 2: "reasoning", 3: "drill-down", 4: "your experience" }[meta.tier] || "") + (meta.length && ["closed", "which", "theirq", "logistics"].includes(meta.length.kind) ? " · short form" : "") + (meta.derived ? " · from everything heard" : "") + (meta.voice ? ` · voice ${meta.voice.passed}/${meta.voice.total}` : "");
     const spoken = (s) => s >= 90 ? `${Math.round(s / 60)} min` : `${s}s`;
@@ -1207,7 +1292,7 @@ async function generateAnswer(question, card, opts = {}) {
     card.meta = fb ? "prepared answer (engine unreachable)" : "";
     if (cards[idx] === card) renderCard();
     logAnswer({ failed: String(e && e.message || e) });
-    status("Answer engine unreachable — showing the prepared answer.", "err");
+    status(fb ? "Answer engine unavailable. Showing a prepared answer." : "Answer engine unavailable. Your question is saved; press AI Answer to retry.", "err");
   } finally { if (answerCtl === ctl) answerCtl = null; }
 }
 
@@ -1233,9 +1318,16 @@ let aiBusy = false;
 async function aiAnswer(fromAuto) {
   if (aiBusy) return; aiBusy = true; clearTimeout(autoTimer);
   try {
-    if (running && captures.length) {
+    const sessionEpoch = transcriptionEpoch;
+    if ((running && captures.length) || finals.size) {
       flushing = true; if (!fromAuto) status("Catching your last words…", "live");
       try { await flushHeard(); } finally { flushing = false; }
+    }
+    if (sessionEpoch !== transcriptionEpoch) return;
+    if (transcriptionFailedEpoch === sessionEpoch) {
+      setChat(true);
+      status("The last phrase could not be transcribed. Please repeat it or type it here.", "err");
+      return;
     }
     const pending = pendingHeard();
     if (pending.length) {
@@ -1244,15 +1336,17 @@ async function aiAnswer(fromAuto) {
       const earlier = transcript.filter(t => t.seq <= pending[0].seq - 1).slice(-10).map(t => `${t.who}: ${t.text}`).join("\n");
       const card = addCard("Deriving the question from everything heard…", ["…"]);
       card.heard = heard; card.earlier = earlier;
-      return generateAnswer(heard, card, { consolidated: true, earlier });
+      return await generateAnswer(heard, card, { consolidated: true, earlier });
     }
     if (fromAuto) return;
     const c = cards[idx];
-    if (c && c.heard) return generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "" });   // answer the same thing again
-    if (c && /^(Your introduction)$/.test(c.question)) return generateAnswer("Tell me about yourself", c);
-    if (c && !/^(Preparing…|Ready|Cleared\.|Deriving)/.test(c.question)) return generateAnswer(c.question, c);
+    if (c && c.heard) return await generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "" });   // answer the same thing again
+    if (c && /^(Your introduction)$/.test(c.question)) return await generateAnswer("Tell me about yourself", c);
+    if (c && !/^(Preparing…|Ready|Cleared\.|Deriving)/.test(c.question)) return await generateAnswer(c.question, c);
     status("Nothing heard yet — press Start, or type a question.", "live");
-    $("manualInput").focus();
+    setChat(true);
+  } catch (error) {
+    status(error.message || "Could not prepare an answer. Please retry.", "err");
   } finally { aiBusy = false; }
 }
 $("screenBtn").onclick = analyseScreen;

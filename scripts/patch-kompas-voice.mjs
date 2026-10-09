@@ -151,7 +151,7 @@ const replacements = [
   ]
 ];
 export function patchKompasVoice(source) {
-  if (source.includes("// marketfit-voice-v1")) return source;
+  if (source.includes("// marketfit-voice-v1") || source.includes("// marketfit-voice-v2")) return source;
   for (const [before, after] of replacements) {
     if (source.split(before).length !== 2) throw new Error("Kompas voice patch needs review near: " + before.slice(0, 80));
     source = source.replace(before, () => after);
