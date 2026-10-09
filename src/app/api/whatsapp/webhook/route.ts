@@ -143,18 +143,42 @@ async function loadGen(from: string, wamid: string): Promise<Gen | null> {
 // Persist every newly generated resume in its authenticated account library.
 // Keep the original WhatsApp version ledger independent for swipe-reply editing.
 async function archiveGeneratedResume(from: string, wamid: string, gen: Gen): Promise<void> {
+  // Only an explicitly bound UUID may write to the multi-tenant database.
+  if (!serviceClientAvailable() || !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(gen.userId)) return
   const boundUser = await resolveWhatsAppUserId(from)
   if (!boundUser || boundUser !== gen.userId) return
   const bytes = await readPath(gen.file)
   if (!bytes) return
   const plain = await extractText(bytes)
   const emails = [...new Set((plain.slice(0, 4000).match(/[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}/gi) || []).map(v => v.toLowerCase()))]
-  if (emails.length !== 1) return // Never guess between multiple resume identities.
+  if (emails.length !== 1) return
   const email = emails[0]
   const specialization = (gen.meta.role || "General").replace(/[^a-zA-Z0-9 _-]/g, "").trim().slice(0, 65) || "General"
   const fingerprint = createHash("sha256").update(bytes).digest("hex")
-  const key = path.join(USER_RESUMES_DIR, boundUser, email, specialization, fingerprint.slice(0, 20) + ".docx")
-  await writePath(key, bytes)
+  const service = createServiceClient()
+  const { data: library, error: libError } = await service.from("resume_email_libraries")
+    .upsert({ user_id: boundUser, email }, { onConflict: "user_id,email" }).select("id").single()
+  if (libError || !library) throw libError || Error("Cannot create email library")
+  let { data: folder } = await service.from("resume_specializations").select("id")
+    .eq("user_id", boundUser).eq("library_id", library.id).eq("name", specialization).maybeSingle()
+  if (!folder) {
+    const created = await service.from("resume_specializations")
+      .insert({ user_id: boundUser, library_id: library.id, name: specialization }).select("id").single()
+    if (created.error) throw created.error
+    folder = created.data
+  }
+  if (!folder) throw Error("Cannot create specialization")
+  const key = [boundUser, library.id, folder.id, fingerprint + ".docx"].join("/")
+  const upload = await service.storage.from("resume-library").upload(key, bytes, {
+    contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", upsert: true
+  })
+  if (upload.error) throw upload.error
+  const indexed = await service.from("resume_documents").upsert({
+    user_id: boundUser, library_id: library.id, specialization_id: folder.id,
+    sha256: fingerprint, storage_path: key, source: "whatsapp",
+    searchable_text: plain.slice(0, 50000)
+  }, { onConflict: "user_id,sha256" })
+  if (indexed.error) throw indexed.error
 }
 
 async function saveGen(from: string, wamid: string, gen: Gen): Promise<void> {
