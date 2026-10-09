@@ -37,7 +37,8 @@ export async function GET(request:NextRequest) {
   const refresh=request.nextUrl.searchParams.get("refresh")==="true"
   let cache:Record<string,Cached>={}
   try { cache=JSON.parse((await readPathText(cacheFile)) || "{}") } catch {}
-  const paths=(await listFiles(base)).filter(p=>p.toLowerCase().endsWith(".docx")).slice(0,MAX_INDEXED)
+  const allPaths=(await listFiles(base).catch(() => [] as string[])).filter(p=>p.toLowerCase().endsWith(".docx"))
+  const paths=allPaths.slice(0,MAX_INDEXED)
   const next:Record<string,Cached>={}
   const errors:string[]=[]
   for(const filepath of paths) {
@@ -56,7 +57,7 @@ export async function GET(request:NextRequest) {
       const fingerprint=createHash("sha256").update(bytes).digest("hex")
       next[relative]={signature,entry:{
         id:createHash("sha256").update(userId+"\0"+relative).digest("hex").slice(0,24),
-        filename:"Eshwar_Resume.docx",sourceFilename:path.basename(filepath),category:path.dirname(relative)==="."?"General":path.dirname(relative),
+        filename:path.basename(filepath),sourceFilename:path.basename(filepath),category:path.dirname(relative)==="."?"General":path.dirname(relative),
         identity:identities.length===1?identities[0]:null,identities,
         technologies,specializations:classify(technologies),fingerprint,updatedAt:stat.mtime.toISOString()
       }}
@@ -66,5 +67,6 @@ export async function GET(request:NextRequest) {
   const entries=Object.values(next).map(x=>x.entry)
   const identity=request.nextUrl.searchParams.get("identity")?.toLowerCase()
   const filtered=identity?entries.filter(x=>x.identity===identity):entries
-  return NextResponse.json({entries:filtered,total:entries.length,scanned:paths.length,limited:paths.length===MAX_INDEXED,errors,identities:[...new Set(entries.flatMap(x=>x.identities))].sort(),note:"Ambiguous or missing resume email remains unassigned. All data is scoped to the signed-in user."})
+  const libraries=Object.entries(entries.reduce((acc,entry)=>{ const key=entry.identity || "Unverified"; (acc[key] ||= []).push(entry); return acc },{} as Record<string,Entry[]>)).map(([email,items])=>({email,documentCount:items.length,specializations:[...new Set(items.flatMap(item=>item.specializations))],ambiguous:email==="Unverified"})).sort((a,b)=>a.email.localeCompare(b.email))
+  return NextResponse.json({entries:filtered,total:entries.length,scanned:paths.length,limited:allPaths.length>MAX_INDEXED,libraries,errors,identities:[...new Set(entries.flatMap(x=>x.identities))].sort(),note:"Ambiguous or missing resume email remains unassigned. All data is scoped to the signed-in user."})
 }
