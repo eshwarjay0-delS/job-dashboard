@@ -17,7 +17,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
 import { createHash, randomBytes } from "crypto"
-import { blob, writePath, existsPath, deletePath } from "@/lib/storage"
+import { blob, writePath, existsPath, deletePath, readPath } from "@/lib/storage"
+import { extractText } from "@/lib/docx"
 import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
 import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
@@ -139,9 +140,27 @@ async function loadGen(from: string, wamid: string): Promise<Gen | null> {
   } catch { return null }
 }
 
+// Persist every newly generated resume in its authenticated account library.
+// Keep the original WhatsApp version ledger independent for swipe-reply editing.
+async function archiveGeneratedResume(from: string, wamid: string, gen: Gen): Promise<void> {
+  const boundUser = await resolveWhatsAppUserId(from)
+  if (!boundUser || boundUser !== gen.userId) return
+  const bytes = await readPath(gen.file)
+  if (!bytes) return
+  const plain = await extractText(bytes)
+  const emails = [...new Set((plain.slice(0, 4000).match(/[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}/gi) || []).map(v => v.toLowerCase()))]
+  if (emails.length !== 1) return // Never guess between multiple resume identities.
+  const email = emails[0]
+  const specialization = (gen.meta.role || "General").replace(/[^a-zA-Z0-9 _-]/g, "").trim().slice(0, 65) || "General"
+  const fingerprint = createHash("sha256").update(bytes).digest("hex")
+  const key = path.join(USER_RESUMES_DIR, boundUser, email, specialization, fingerprint.slice(0, 20) + ".docx")
+  await writePath(key, bytes)
+}
+
 async function saveGen(from: string, wamid: string, gen: Gen): Promise<void> {
   const key = genKey(from, wamid)
   try { await blob.put(key, JSON.stringify(gen)) } catch { await deletePath(gen.file); return }
+  try { await archiveGeneratedResume(from, wamid, gen) } catch (error) { console.error("[whatsapp] library archive failed", error) }
   // Keep the newest MAX_VERSIONS per sender; older records and their files are removed.
   try {
     const idxKey = `${genDir(from)}/_index.json`
