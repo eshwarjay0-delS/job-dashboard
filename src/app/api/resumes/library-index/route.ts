@@ -36,7 +36,7 @@ export async function GET(request:NextRequest) {
   const cacheFile=path.join(base,".resume-library-index.json")
   const refresh=request.nextUrl.searchParams.get("refresh")==="true"
   let cache:Record<string,Cached>={}
-  try { cache=JSON.parse(await readPathText(cacheFile)) } catch {}
+  try { cache=JSON.parse((await readPathText(cacheFile)) || "{}") } catch {}
   const paths=(await listFiles(base)).filter(p=>p.toLowerCase().endsWith(".docx")).slice(0,MAX_INDEXED)
   const next:Record<string,Cached>={}
   const errors:string[]=[]
@@ -49,7 +49,7 @@ export async function GET(request:NextRequest) {
       const signature=`${stat.size}:${stat.mtime.getTime()}`
       if(!refresh && cache[relative]?.signature===signature) { next[relative]=cache[relative];continue }
       const bytes=await readPath(filepath)
-      const plain=await extractText(bytes)
+      if (!bytes) { errors.push(path.basename(filepath)); continue }\n      const plain=await extractText(bytes)
       const technologies=extractKeywords(plain)
       const identities=safeEmail(plain.slice(0,2500))
       const fingerprint=createHash("sha256").update(bytes).digest("hex")
