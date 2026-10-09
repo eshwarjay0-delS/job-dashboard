@@ -132,6 +132,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
     return "tailor"
   })
 
+  const [preloaded, setPreloaded] = useState<ResumeFile[]>(initialFiles)
   const [emailLibraries, setEmailLibraries] = useState<{email:string; count:number}[]>([])
   useEffect(() => {
     fetch("/api/resumes/library-index").then(response => response.ok ? response.json() : Promise.reject()).then(data => {
@@ -143,7 +144,6 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
       setEmailLibraries(Object.entries(counts).map(([email,count]) => ({email,count})))
     }).catch(() => {})
   }, [preloaded])
-  const [preloaded, setPreloaded] = useState<ResumeFile[]>(initialFiles)
   useEffect(() => { setPreloaded(initialFiles) }, [initialFiles])
   const [uploaded, setUploaded]   = useState<UploadedEntry[]>([])
   const [dragging, setDragging]   = useState(false)
