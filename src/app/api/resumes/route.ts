@@ -82,6 +82,15 @@ export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json().catch(() => null)
     if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Invalid request body." }, { status: 400 })
+    // Explicit, confirmed bulk deletion. Never delete the user's root directory or WhatsApp version history.
+    if (body.clearAll === true) {
+      if (body.confirm !== "CLEAR MY RESUME LIBRARY") return NextResponse.json({ error: "Confirmation required." }, { status: 400 })
+      const all = await scanDir(user.dir)
+      for (const item of all) await deletePath(item.filepath)
+      await deletePath(path.join(user.dir, ".resume-library-index.json")).catch(() => {})
+      await ensureIndex(user.dir).catch(() => {})
+      return NextResponse.json({ ok: true, deleted: all.length })
+    }
     const files: string[] = body.files ?? (body.filepath ? [body.filepath] : [])
     const folders: string[] = body.folders ?? []
 
