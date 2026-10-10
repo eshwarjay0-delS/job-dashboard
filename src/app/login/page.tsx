@@ -53,6 +53,7 @@ function LoginContent() {
   }
 
   async function emailSignIn() {
+    if(email.trim().toLowerCase()!=="eshwarjay0@gmail.com"){setError("Direct password login is currently restricted to the administrator account.");return}
     if (loading) return
     setLoading(true)
     setError(null)
@@ -66,6 +67,7 @@ function LoginContent() {
   }
 
   async function sendPasswordSetup() {
+    if(email.trim().toLowerCase()!=="eshwarjay0@gmail.com"){setError("Password setup is currently restricted to the administrator account.");return}
     if (loading) return
     setLoading(true)
     setError(null)
@@ -131,7 +133,7 @@ function LoginContent() {
           <div className="ink-eyebrow">Member login</div>
           <h2>One account. Every MarketFit surface.</h2>
           <p>
-            Existing members can sign in directly with email and password. New accounts are created through Google only.
+            Password login is currently reserved for the administrator. Other members continue using Google.
           </p>
 
           {error && <div className="mf-login-error">{error}</div>}
