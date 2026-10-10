@@ -550,6 +550,9 @@ export function threadsToInterviews(threads: ClassifiedThread[]): Interview[] {
     if (!iv) continue
     const domain = extractDomain(iv.from)
 
+    const requestTs = iv.internalDate ? Number(iv.internalDate) : 0
+    const firstTouchTs = Math.min(...t.messages.map(m => Number(m.internalDate || 0)).filter(n => n > 0))
+
     // Try to parse a date from subject/snippet
     const text = `${iv.subject} ${iv.snippet}`
     let dayOffset: number | null = null
@@ -566,13 +569,26 @@ export function threadsToInterviews(threads: ClassifiedThread[]): Interview[] {
       if (timeMatch[3].toLowerCase() === "pm" && h < 12) h += 12
       start = h + (Number(timeMatch[2] || 0) / 60)
     }
-    // Fallback: use email date
-    if (dayOffset === null && iv.internalDate) {
-      const d = new Date(Number(iv.internalDate))
-      const diff = Math.floor((d.getTime() - monday.getTime()) / DAY_MS)
-      if (diff >= 0 && diff < 14) dayOffset = diff % 7
+
+    // Best estimate of when the interview happens/happened (epoch ms).
+    // A weekday name refers to the email's own week; otherwise fall back to the request email date.
+    let at: number | null = null
+    if (dayOffset !== null && requestTs) {
+      const emailDate = new Date(requestTs)
+      const emailMonday = new Date(emailDate)
+      emailMonday.setDate(emailDate.getDate() - ((emailDate.getDay() + 6) % 7))
+      emailMonday.setHours(0, 0, 0, 0)
+      at = emailMonday.getTime() + dayOffset * DAY_MS + start * 3_600_000
+      // If the parsed date is more than a day before the request email, it meant *next* week.
+      if (at < requestTs - DAY_MS) at += 7 * DAY_MS
+    } else if (requestTs) {
+      at = requestTs + 2 * DAY_MS // assume ~2 days out when no weekday is named
     }
-    if (dayOffset === null) continue
+    if (!at) continue
+
+    // Calendar grid still wants a 0-6 day offset relative to the *current* week for upcoming ones.
+    const diffDays = Math.floor((at - monday.getTime()) / DAY_MS)
+    const day = ((diffDays % 7) + 7) % 7
 
     const kind: Interview["kind"] = /onsite|in.person|office/i.test(text) ? "Onsite"
       : /panel/i.test(text) ? "Panel"
@@ -582,13 +598,19 @@ export function threadsToInterviews(threads: ClassifiedThread[]): Interview[] {
       id: t.threadId,
       company: companyFromDomain(domain, iv.from),
       role: iv.jobTitle || iv.subject.slice(0, 50),
-      day: dayOffset,
+      day,
       start,
       end: start + 1,
       kind,
       account: t.accountEmail,
       with: iv.vendor,
+      ts: at,
+      firstTouchTs: firstTouchTs > 0 ? firstTouchTs : undefined,
+      requestTs: requestTs || undefined,
+      threadId: t.threadId,
     })
   }
+  // Newest first — the page splits past vs upcoming itself.
+  out.sort((a, b) => (b.ts || 0) - (a.ts || 0))
   return out
 }
