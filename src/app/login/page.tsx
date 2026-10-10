@@ -23,6 +23,9 @@ function LoginContent() {
   const searchParams = useSearchParams()
   const next = safeAuthNext(searchParams.get("next"))
   const [loading,setLoading]=useState(false)
+  const [email,setEmail]=useState("")
+  const [password,setPassword]=useState("")
+  const [resetMode,setResetMode]=useState(false)
   const [error,setError]=useState<string|null>(null)
 
   async function signIn() {
@@ -47,6 +50,34 @@ function LoginContent() {
       setError(String(e))
       setLoading(false)
     }
+  }
+
+  async function emailSignIn() {
+    if (loading) return
+    setLoading(true)
+    setError(null)
+    try {
+      const supabase=createClient()
+      const { error }=await supabase.auth.signInWithPassword({email:email.trim().toLowerCase(),password})
+      if (error) throw error
+      window.location.assign(next)
+    } catch(e) { setError(e instanceof Error?e.message:"Unable to sign in") }
+    finally { setLoading(false) }
+  }
+
+  async function sendPasswordSetup() {
+    if (loading) return
+    setLoading(true)
+    setError(null)
+    try {
+      const supabase=createClient()
+      const { error }=await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(),{
+        redirectTo:`${window.location.origin}/auth/reset-password`
+      })
+      if (error) throw error
+      setError("If the email is registered, a password setup link has been sent. Check your inbox.")
+    } catch(e) { setError(e instanceof Error?e.message:"Unable to send password setup link") }
+    finally { setLoading(false) }
   }
 
   return (
@@ -106,6 +137,17 @@ function LoginContent() {
 
           {error && <div className="mf-login-error">{error}</div>}
 
+          <form onSubmit={e=>{e.preventDefault();void (resetMode?sendPasswordSetup():emailSignIn())}} style={{display:"grid",gap:12,marginBottom:20}}>
+            <label htmlFor="mf-email">Email address</label>
+            <input id="mf-email" type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@gmail.com" style={{padding:12,borderRadius:8,border:"1px solid var(--border)",background:"var(--bg)",color:"var(--text)"}}/>
+            {!resetMode && <>
+              <label htmlFor="mf-password">Password</label>
+              <input id="mf-password" type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} style={{padding:12,borderRadius:8,border:"1px solid var(--border)",background:"var(--bg)",color:"var(--text)"}}/>
+            </>}
+            <button type="submit" disabled={loading} className="mf-google-button">{loading?"Please wait…":resetMode?"Send password setup link":"Sign in with email"}</button>
+            <button type="button" onClick={()=>{setResetMode(!resetMode);setError(null)}} style={{background:"transparent",border:0,color:"var(--accent)",cursor:"pointer"}}>{resetMode?"Back to sign in":"Set or reset password"}</button>
+          </form>
+          <p style={{textAlign:"center",margin:"12px 0"}}>or</p>
           <button onClick={signIn} disabled={loading} className="mf-google-button">
             <GoogleIcon /> {loading ? "Redirecting to Google…" : "Continue with Google"}
           </button>
