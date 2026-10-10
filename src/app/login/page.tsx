@@ -23,7 +23,7 @@ function LoginContent() {
   const searchParams = useSearchParams()
   const next = safeAuthNext(searchParams.get("next"))
   const [loading,setLoading]=useState(false)
-  const [email,setEmail]=useState("")
+  const [email,setEmail]=useState("eshwarjay0@gmail.com")
   const [password,setPassword]=useState("")
   const [resetMode,setResetMode]=useState(false)
   const [error,setError]=useState<string|null>(null)
@@ -128,11 +128,10 @@ function LoginContent() {
 
       <aside className="mf-login-panel">
         <section className="mf-login-card-main">
-          <div className="ink-eyebrow">Ready when you are</div>
+          <div className="ink-eyebrow">Member login</div>
           <h2>One account. Every MarketFit surface.</h2>
           <p>
-            Sign in with Google. After that, setup asks for the minimum profile details and one
-            verified mobile number. Gmail + Calendar remain an optional second connection.
+            Existing members can sign in directly with email and password. New accounts are created through Google only.
           </p>
 
           {error && <div className="mf-login-error">{error}</div>}
@@ -147,9 +146,9 @@ function LoginContent() {
             <button type="submit" disabled={loading} className="mf-google-button">{loading?"Please wait…":resetMode?"Send password setup link":"Sign in with email"}</button>
             <button type="button" onClick={()=>{setResetMode(!resetMode);setError(null)}} style={{background:"transparent",border:0,color:"var(--accent)",cursor:"pointer"}}>{resetMode?"Back to sign in":"Set or reset password"}</button>
           </form>
-          <p style={{textAlign:"center",margin:"12px 0"}}>or</p>
+          <p style={{textAlign:"center",margin:"12px 0"}}>New to MarketFit? Register with Google</p>
           <button onClick={signIn} disabled={loading} className="mf-google-button">
-            <GoogleIcon /> {loading ? "Redirecting to Google…" : "Continue with Google"}
+            <GoogleIcon /> {loading ? "Redirecting to Google…" : "Sign up or continue with Google"}
           </button>
 
           <div className="mf-login-note">
