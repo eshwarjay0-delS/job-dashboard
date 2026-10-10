@@ -18,11 +18,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url)
     const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 60, 1), 90)
 
-    const { threads } = await fetchClassifiedThreads(ctx.userId, {
-      days,
-      max: 50,
-      query: "(subject:(interview) OR subject:(screening) OR subject:(invite))",
-    })
+    const { threads } = await fetchClassifiedThreads(ctx.userId, { days, max: 50 })
     const interviews = threadsToInterviews(threads)
 
     return NextResponse.json({ ok: true, count: interviews.length, interviews })

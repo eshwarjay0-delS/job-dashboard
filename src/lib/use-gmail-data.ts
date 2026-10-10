@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import type { Mail, App, Interview, Step } from "@/app/dashboard/_suite/sample"
 
 // ── Shared Gmail data hook ──────────────────────────────────────────────────
@@ -50,12 +50,20 @@ export function useGmailData(): GmailData {
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
-  const refresh = useCallback(() => setTick(t => t + 1), [])
+  // Manual refresh forces an incremental Gmail sync (only what's new — fast).
+  // The silent pulse below refreshes quietly without any spinner.
+  const freshRef = useRef(false)
+  const silentRef = useRef(false)
+  const refresh = useCallback((force = true) => { freshRef.current = force; setTick(t => t + 1) }, [])
 
   useEffect(() => {
     let cancelled = false
     async function load() {
-      setLoading(true)
+      const silent = silentRef.current
+      silentRef.current = false
+      const force = freshRef.current
+      freshRef.current = false
+      if (!silent) setLoading(true)
       setError(null)
 
       // Check Gmail connection first
@@ -78,7 +86,7 @@ export function useGmailData(): GmailData {
 
       const [threadsRes, trackerRes, interviewsRes, stepsRes, unfollowedRes, draftsRes, radarRes] =
         await Promise.all([
-          getJSON<{ mails: Mail[]; issues?: GmailData["issues"] }>("/api/gmail/threads?days=30&max=50"),
+          getJSON<{ mails: Mail[]; issues?: GmailData["issues"] }>(`/api/gmail/threads?days=30&max=50${force ? "&fresh=1" : ""}`),
           getJSON<{ applications: App[] }>("/api/gmail/tracker?days=60"),
           getJSON<{ interviews: Interview[] }>("/api/gmail/interviews?days=60"),
           getJSON<{ steps: Step[] }>("/api/gmail/workflow-steps"),
@@ -118,6 +126,15 @@ export function useGmailData(): GmailData {
     load()
     return () => { cancelled = true }
   }, [tick])
+
+  // Real-time pulse: quietly re-check every 2 minutes. The server answers from
+  // cache and only asks Gmail for what's new, so this feels live without
+  // re-downloading anything or spinning the UI.
+  useEffect(() => {
+    if (!connected) return
+    const id = setInterval(() => { silentRef.current = true; setTick(t => t + 1) }, 120000)
+    return () => clearInterval(id)
+  }, [connected])
 
   return { mails, applications, interviews, steps, unfollowed, drafts, radar, issues, loading, connected, error, refresh }
 }

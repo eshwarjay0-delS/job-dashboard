@@ -18,8 +18,9 @@ export async function GET(req: Request) {
     const url = new URL(req.url)
     const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 30, 1), 90)
     const max = Math.min(Math.max(Number(url.searchParams.get("max")) || 50, 1), 100)
+    const fresh = url.searchParams.get("fresh") === "1"
 
-    const { threads, issues } = await fetchClassifiedThreads(ctx.userId, { days, max })
+    const { threads, issues } = await fetchClassifiedThreads(ctx.userId, { days, max }, { force: fresh })
     const mails = threadsToMails(threads)
 
     return NextResponse.json({ ok: true, count: mails.length, mails, issues })
