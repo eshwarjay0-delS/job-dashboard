@@ -56,7 +56,7 @@ interface GmailMessage {
   threadId: string
   snippet: string
   labelIds?: string[]
-  payload?: { headers: GmailHeader[] }
+  payload?: { headers: GmailHeader[]; parts?: Array<{ filename?: string; mimeType?: string }> }
   internalDate?: string
 }
 
@@ -135,6 +135,7 @@ export interface ClassifiedThread {
     rate: string
     vendor: string
     vendorDomain: string
+    hasIcs?: boolean
   }>
 }
 
@@ -251,6 +252,7 @@ async function fetchAccountThreads(
         const subject = getHeader(headers, "Subject")
         const snippet = m.snippet || ""
         const c = classifyEmail({ subject, snippet, from })
+        const hasIcs = (m.payload?.parts || []).some(p => (p.filename || "").toLowerCase().endsWith(".ics"))
         return {
           id: m.id,
           from,
@@ -264,6 +266,7 @@ async function fetchAccountThreads(
           rate: c.rate,
           vendor: c.vendor,
           vendorDomain: c.vendorDomain,
+          hasIcs,
         }
       })
 
@@ -537,6 +540,104 @@ export function threadsToApps(threads: ClassifiedThread[]): App[] {
 
 const DAY_MS = 86_400_000
 
+// ── Confirmed-invite detection ────────────────────────────────────────────
+// An "interview" only counts when there's evidence it was actually scheduled:
+// a calendar invite (.ics attachment), a meeting link (Teams/Zoom/Meet/Webex/
+// GoTo/Chime/BlueJeans), or explicit confirmation language ("scheduled for",
+// "confirmed for", "looking forward to speaking").
+// "Interview slots available" / "share your availability" is a REQUEST — it
+// stays in Needs-you, never in the interview list. No guessing, no
+// celebrating emails that were never meetings.
+
+const MEETING_LINK_RE = /(teams\.microsoft\.com|teams\.live\.com|zoom\.us|zoom\.com|meet\.google\.com|webex\.com|gotomeeting\.com|goto\.com|chime\.aws|bluejeans\.com|meetings\.ringcentral\.com)/i
+const CONFIRMED_LANG_RE = /\b(scheduled|confirmed|booked)\b[^.]{0,60}\b(for|on)\b|\blooking forward to (speaking|talking|meeting|connecting)\b|\bcalendar invite\b/i
+
+export interface InviteEvidence {
+  confirmed: boolean
+  how: "calendar-invite" | "meeting-link" | "confirmed-email" | "request-only"
+  via: string
+}
+
+export function inviteEvidence(t: ClassifiedThread): InviteEvidence {
+  for (const m of t.messages) {
+    if (m.hasIcs) return { confirmed: true, how: "calendar-invite", via: m.vendor || m.from }
+    const text = `${m.subject} ${m.snippet}`
+    if (MEETING_LINK_RE.test(text)) return { confirmed: true, how: "meeting-link", via: m.vendor || m.from }
+    if (CONFIRMED_LANG_RE.test(text)) return { confirmed: true, how: "confirmed-email", via: m.vendor || m.from }
+  }
+  return { confirmed: false, how: "request-only", via: "" }
+}
+
+// ── Evidence catch-up ─────────────────────────────────────────────────────
+// Threads cached before the .ics signal existed get re-verified: for threads
+// containing an Interview Request message but no hasIcs field yet, re-fetch
+// the thread metadata live (batched, max 15) and update the cache. This keeps
+// the confirmed/requested split deterministic even for old cache rows.
+export async function enrichInterviewEvidence(
+  userId: string,
+  threads: ClassifiedThread[],
+): Promise<ClassifiedThread[]> {
+  const candidates = threads.filter(
+    t => t.messages.some(m => m.category === "Interview Request") && t.messages.every(m => m.hasIcs === undefined),
+  ).slice(0, 15)
+  if (candidates.length === 0) return threads
+
+  let sb: Sb | null = null
+  try {
+    sb = await createClient()
+    if (!(await cacheAvailable(sb))) return threads
+  } catch {
+    return threads
+  }
+
+  const byAccount = new Map<string, ClassifiedThread[]>()
+  for (const t of candidates) {
+    if (!byAccount.get(t.accountEmail)) byAccount.set(t.accountEmail, [])
+    byAccount.get(t.accountEmail)!.push(t)
+  }
+
+  const updated = new Map<string, ClassifiedThread>()
+  const accounts = await listGoogleWorkspaceAccounts(userId).catch(() => [])
+  for (const [accountEmail, ts] of byAccount) {
+    const acct = accounts.find(a => a.google_email.toLowerCase() === accountEmail.toLowerCase() && a.gmail_enabled)
+    if (!acct) continue
+    const token = await getGoogleWorkspaceAccessToken(userId, acct.id).catch(() => null)
+    if (!token) continue
+    for (let i = 0; i < ts.length; i += 4) {
+      if (i > 0) await new Promise(r => setTimeout(r, 400))
+      const slice = ts.slice(i, i + 4)
+      const results = await Promise.allSettled(
+        slice.map(t =>
+          gmailGet(
+            `/threads/${t.threadId}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Date`,
+            token,
+          ),
+        ),
+      )
+      results.forEach((r, idx) => {
+        if (r.status !== "fulfilled") return
+        const raw = r.value as { id: string; messages: GmailMessage[] }
+        const orig = slice[idx]
+        const messages = orig.messages.map((m, mi) => {
+          const rm = raw.messages?.[mi]
+          const hasIcs = rm
+            ? (rm.payload?.parts || []).some(p => (p.filename || "").toLowerCase().endsWith(".ics"))
+            : m.hasIcs
+          return { ...m, hasIcs }
+        })
+        const nt: ClassifiedThread = { ...orig, messages }
+        updated.set(orig.threadId, nt)
+        // Persist the enriched thread back to the cache.
+        upsertCachedThreads(sb!, userId, acct, [nt]).catch(() => {})
+      })
+    }
+  }
+
+  if (updated.size === 0) return threads
+  return threads.map(t => updated.get(t.threadId) || t)
+}
+
+
 export function threadsToInterviews(threads: ClassifiedThread[]): Interview[] {
   const out: Interview[] = []
   const now = new Date()
@@ -548,6 +649,11 @@ export function threadsToInterviews(threads: ClassifiedThread[]): Interview[] {
   for (const t of threads) {
     const iv = t.messages.find(m => m.category === "Interview Request")
     if (!iv) continue
+
+    // EVIDENCE GATE: no confirmed invite, no interview. Requests stay in Needs-you.
+    const evidence = inviteEvidence(t)
+    if (!evidence.confirmed) continue
+
     const domain = extractDomain(iv.from)
 
     const requestTs = iv.internalDate ? Number(iv.internalDate) : 0
@@ -608,9 +714,12 @@ export function threadsToInterviews(threads: ClassifiedThread[]): Interview[] {
       firstTouchTs: firstTouchTs > 0 ? firstTouchTs : undefined,
       requestTs: requestTs || undefined,
       threadId: t.threadId,
+      evidence: evidence.how as Exclude<typeof evidence.how, "request-only">,
+      inviteVia: evidence.via,
     })
   }
   // Newest first — the page splits past vs upcoming itself.
   out.sort((a, b) => (b.ts || 0) - (a.ts || 0))
   return out
 }
+

@@ -56,7 +56,8 @@ export const approvalFor: Record<string, { step: string; detail: string }> = {
   m3: { step: "Rate confirmation",  detail: "$68/hr C2C · start in 2 weeks" },
 }
 
-export type Interview = { id: string; company: string; role: string; day: number; start: number; end: number; kind: "Phone" | "Video" | "Onsite" | "Panel"; account: string; with: string; ts?: number; firstTouchTs?: number; requestTs?: number; threadId?: string }
+export type Interview = { id: string; company: string; role: string; day: number; start: number; end: number; kind: "Phone" | "Video" | "Onsite" | "Panel"; account: string; with: string; ts?: number; firstTouchTs?: number; requestTs?: number; threadId?: string;
+  evidence?: "calendar-invite" | "meeting-link" | "confirmed-email"; inviteVia?: string }
 // ts = best estimate of when the interview happens/happened (epoch ms).
 // firstTouchTs = first message in the thread (the journey's start).
 // requestTs = when the interview request email arrived.

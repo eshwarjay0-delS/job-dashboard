@@ -203,8 +203,19 @@ function JourneyCard({ iv }: { iv: Interview }) {
               </span>
             </div>
           )}
+          {iv.evidence && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12, fontSize: 12.5, color: "var(--text-muted)" }}>
+              <span style={{
+                fontSize: 11, fontWeight: 800, padding: "3px 9px", borderRadius: 999,
+                background: "var(--accent-soft)", border: "1px solid var(--accent-border)", color: "var(--accent-txt)",
+              }}>
+                {iv.evidence === "calendar-invite" ? "Calendar invite" : iv.evidence === "meeting-link" ? "Meeting link" : "Confirmed by email"}
+              </span>
+              <span>from {iv.inviteVia || iv.with || "the vendor"}</span>
+            </div>
+          )}
           <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: 1.6, color: "var(--text-muted)" }}>
-            This one happened — which means you earned it. What did it teach you?
+            This one was real — a confirmed invite, now behind you. What did it teach you?
           </p>
         </div>
       </div>
