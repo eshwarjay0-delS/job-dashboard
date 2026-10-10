@@ -35,14 +35,17 @@ async function gmailGet(path: string, accessToken: string): Promise<unknown> {
     // Capture Gmail's own reason — "accessNotConfigured" vs "insufficientPermissions"
     // tells us (and the user) exactly what to fix.
     let detail = ""
+    let rateLimited = false
     try {
       const body = await res.json()
       const err = body?.error
       const reason = err?.errors?.[0]?.reason || ""
+      if (reason === "rateLimitExceeded") rateLimited = true
       const msg = (err?.message || "").slice(0, 180)
       detail = [reason, msg].filter(Boolean).join(": ")
     } catch { /* ignore */ }
-    throw new Error(`Gmail API ${res.status}${detail ? ` — ${detail}` : ""}`)
+    // RATE_LIMIT: prefix lets callers give "wait and refresh" guidance instead of "reconnect".
+    throw new Error(`${rateLimited ? "RATE_LIMIT: " : ""}Gmail API ${res.status}${detail ? ` — ${detail}` : ""}`)
   }
   return res.json()
 }
@@ -181,9 +184,11 @@ export async function fetchClassifiedThreads(
       const stubs = search.threads || []
       if (stubs.length === 0) continue
 
-      // Fetch thread details in batches
-      const BATCH = 8
+      // Fetch thread details in small batches with a breather between them —
+      // a fresh Cloud project gets throttled fast if we hammer the Gmail API.
+      const BATCH = 4
       for (let i = 0; i < stubs.length; i += BATCH) {
+        if (i > 0) await new Promise(r => setTimeout(r, 400))
         const slice = stubs.slice(i, i + BATCH)
         const results = await Promise.allSettled(
           slice.map(t =>
@@ -229,7 +234,11 @@ export async function fetchClassifiedThreads(
       }
     } catch (e) {
       // Per-account failure shouldn't kill the whole sync — but say so.
-      issues.push({ account: acct.google_email, reason: `Gmail search failed: ${e instanceof Error ? e.message : String(e)}`.slice(0, 160) })
+      const msg = e instanceof Error ? e.message : String(e)
+      const reason = msg.startsWith("RATE_LIMIT:")
+        ? "Google is throttling requests right now (it just got enabled — quotas need a few minutes). Wait 2–3 minutes, then refresh. Nothing is broken."
+        : `Gmail search failed: ${msg.replace(/^RATE_LIMIT: /, "")}`.slice(0, 200)
+      issues.push({ account: acct.google_email, reason })
       continue
     }
   }

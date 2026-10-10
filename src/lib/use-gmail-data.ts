@@ -102,10 +102,13 @@ export function useGmailData(): GmailData {
       const gotMails = (threadsRes.data?.mails || []).length
       const acctIssues = threadsRes.data?.issues || []
       if (acctIssues.length > 0 && gotMails === 0) {
+        const throttled = acctIssues.some(i => /throttling|wait .* refresh/i.test(i.reason))
         setError(
           `Couldn't read ${acctIssues.length === 1 ? "this account" : "these accounts"}: ` +
           acctIssues.map(i => `${i.account} — ${i.reason}`).join(" ") +
-          ` Reconnect ${acctIssues.length === 1 ? "it" : "them"} on the connections page, then refresh.`
+          (throttled
+            ? ` Just wait a couple of minutes and tap refresh.`
+            : ` Reconnect ${acctIssues.length === 1 ? "it" : "them"} on the connections page, then refresh.`)
         )
       } else if (firstErr && gotMails === 0) {
         setError(`Couldn't read your Gmail just now: ${firstErr}. Tap refresh to retry.`)
