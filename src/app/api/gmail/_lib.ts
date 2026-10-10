@@ -31,7 +31,19 @@ async function gmailGet(path: string, accessToken: string): Promise<unknown> {
   const res = await fetch(`${GMAIL_API}${path}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
-  if (!res.ok) throw new Error(`Gmail API ${res.status}`)
+  if (!res.ok) {
+    // Capture Gmail's own reason — "accessNotConfigured" vs "insufficientPermissions"
+    // tells us (and the user) exactly what to fix.
+    let detail = ""
+    try {
+      const body = await res.json()
+      const err = body?.error
+      const reason = err?.errors?.[0]?.reason || ""
+      const msg = (err?.message || "").slice(0, 180)
+      detail = [reason, msg].filter(Boolean).join(": ")
+    } catch { /* ignore */ }
+    throw new Error(`Gmail API ${res.status}${detail ? ` — ${detail}` : ""}`)
+  }
   return res.json()
 }
 
