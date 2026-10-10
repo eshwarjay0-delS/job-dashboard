@@ -2,12 +2,10 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Check, Send, Shield, Archive, RotateCcw, ChevronRight, CalendarDays, Leaf, History } from "lucide-react"
+import { Check, Send, Shield, Archive, RotateCcw, ChevronRight, CalendarDays, Leaf, History, ArrowRight } from "lucide-react"
 import { Card, Meta, StagePill, Chip, Btn, Avatar, Toggle, useAnswered, useLeaving, leavingStyle } from "../_suite/ui"
-import PageIntro from "../_components/page-intro"
-import MetricHero from "../_components/metric-hero"
 import SmartReply from "./_components/smart-reply"
-import { savedAvailability, type Mail, type Stage } from "../_suite/sample"
+import { savedAvailability, type Mail } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 
 type Filter = "needs" | "invite" | "rtr" | "rate" | "pending" | "all"
@@ -159,26 +157,157 @@ function RateReply({ m, onApprove }: { m: Mail; onApprove: () => void }) {
   )
 }
 
+/* ── Role aggregation: Gmail's essence, organized ───────────────────────────
+   One role = one card. Every vendor chain touching the same posting lives
+   inside it, with rates side by side. This is where duplicate submissions
+   get caught at a glance. */
+
+interface RoleGroup {
+  key: string
+  label: string
+  req: string | null
+  mails: Mail[]
+  vendors: string[]
+  rates: string[]
+  fit: number | null
+  unread: number
+  latestAt: string
+}
+
+function domainOf(email: string): string {
+  const m = (email || "").match(/@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/)
+  return m ? m[1].toLowerCase() : (email || "").toLowerCase()
+}
+
+function roleKeyFor(m: Mail): string {
+  const hay = `${m.subject} ${m.role}`
+  const req = hay.match(/(?:req|posting|position|job)[\s#:]*(\d{4,7})/i)
+  if (req) return `req:${req[1]}`
+  const t = (m.role || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ")
+  return `role:${t.slice(0, 50) || m.company.toLowerCase().slice(0, 40)}`
+}
+
+function groupByRole(mails: Mail[]): RoleGroup[] {
+  const map = new Map<string, Mail[]>()
+  for (const m of mails) {
+    const k = roleKeyFor(m)
+    if (!map.get(k)) map.set(k, [])
+    map.get(k)!.push(m)
+  }
+  const groups: RoleGroup[] = []
+  for (const [key, ms] of map) {
+    const req = key.startsWith("req:") ? key.slice(4) : null
+    const vendors = [...new Set(ms.map(m => domainOf(m.fromEmail)).filter(Boolean))]
+    const rates = [...new Set(ms.map(m => m.rate).filter(Boolean) as string[])]
+    const fits = ms.map(m => m.jdFit).filter((f): f is number => f != null)
+    const label = req
+      ? (ms.find(m => m.role)?.role || ms[0].subject.slice(0, 50))
+      : (ms.find(m => m.role)?.role || ms[0].company)
+    groups.push({
+      key, label, req, mails: ms, vendors, rates,
+      fit: fits.length ? Math.max(...fits) : null,
+      unread: ms.filter(m => m.unread).length,
+      latestAt: ms[0].at,
+    })
+  }
+  // Most chains first, then most mail
+  groups.sort((a, b) => b.vendors.length - a.vendors.length || b.mails.length - a.mails.length)
+  return groups
+}
+
+function RoleCard({ group, onOpen, acct }: { group: RoleGroup; onOpen: (id: string) => void; acct: AcctFn }) {
+  const [open, setOpen] = useState(false)
+  const multi = group.vendors.length > 1
+  return (
+    <article style={{
+      background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18,
+      boxShadow: "var(--shadow-card)", overflow: "hidden",
+    }}>
+      <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open}
+        style={{ width: "100%", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: "18px 20px" }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <h3 style={{ margin: 0, fontSize: 16, letterSpacing: "-0.015em" }}>{group.label}</h3>
+              {group.req && (
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", background: "var(--surface-2)", border: "1px solid var(--border)", padding: "3px 8px", borderRadius: 999 }}>
+                  req {group.req}
+                </span>
+              )}
+              {multi && (
+                <span style={{ fontSize: 11, fontWeight: 800, color: "var(--danger)", background: "var(--surface-2)", border: "1px solid var(--danger-border)", padding: "3px 8px", borderRadius: 999 }}>
+                  {group.vendors.length} vendors — pick one
+                </span>
+              )}
+              {group.unread > 0 && (
+                <span style={{ fontSize: 11, fontWeight: 800, color: "var(--accent-txt)", background: "var(--accent-soft)", border: "1px solid var(--accent-border)", padding: "3px 8px", borderRadius: 999 }}>
+                  {group.unread} new
+                </span>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 14, marginTop: 10, flexWrap: "wrap" }}>
+              {group.vendors.map(v => {
+                const vm = group.mails.find(m => domainOf(m.fromEmail) === v)
+                return (
+                  <span key={v} style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+                    <strong style={{ color: "var(--text)", fontWeight: 650 }}>{v}</strong>
+                    {vm?.rate ? ` · ${vm.rate}` : ""}
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flex: "none" }}>
+            {group.fit != null && <JdFitPill score={group.fit} />}
+            <span style={{ fontSize: 11.5, color: "var(--text-soft)" }}>{group.mails.length} email{group.mails.length === 1 ? "" : "s"}</span>
+            <ChevronRight size={16} style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform .2s", color: "var(--text-muted)" }} />
+          </div>
+        </div>
+      </button>
+      {open && (
+        <div style={{ borderTop: "1px solid var(--border)", padding: "8px 12px 12px" }}>
+          {group.mails.map(m => (
+            <MailRow key={m.id} m={m} on={false} restored={false} leaving={false}
+              onClick={() => onOpen(m.id)} acct={acct} />
+          ))}
+        </div>
+      )}
+    </article>
+  )
+}
+
+type View = "needs" | "roles" | "all" | "drafts" | "waiting"
+
 export default function MailPage() {
   const [account, setAccount] = useState("all")
-  const [filter, setFilter] = useState<Filter>("needs")
+  const [view, setView] = useState<View>("needs")
   const [sel, setSel] = useState<string | null>(null)
   const [showFiled, setShowFiled] = useState(false)
   const [restored, setRestored] = useState<string[]>([])
   const [answered, answer] = useAnswered()
   const [leaving, leave] = useLeaving(answer)
 
-  // ── Live Gmail data (replaces ../_suite/sample mocks) ────────────────────
+  // ── Live Gmail data ────────────────────────────────────────────────────
   const { mails, loading, connected, error, refresh, drafts, radar } = useGmailData()
   const accounts = buildAccounts(mails.map(m => m.account))
   const acct = makeAcct(accounts)
 
   const waiting = (x: Mail) => !!x.needsReply && !answered.includes(x.id)
   const live = mails.filter(x => (x.stage !== "rejected" || restored.includes(x.id)) && (account === "all" || x.account === account))
-  const shown = live.filter(x => filter === "all" ? true : filter === "needs" ? waiting(x) : x.stage === filter)
+  const needsList = live.filter(waiting)
   const filed = mails.filter(x => x.stage === "rejected" && !restored.includes(x.id))
+  const roles = groupByRole(live.filter(x => x.stage !== "rejected"))
+
+  const shown = view === "needs" ? needsList : view === "all" ? live : live
   const m = shown.find(x => x.id === sel) ?? shown[0]
-  const count = (f: Filter) => live.filter(x => f === "all" ? true : f === "needs" ? waiting(x) : x.stage === (f as Stage)).length
+
+  const VIEWS: [View, string, number][] = [
+    ["needs", "Needs you", needsList.length],
+    ["roles", "By role", roles.length],
+    ["all", "All mail", live.length],
+    ["drafts", "Drafts", drafts.length],
+    ["waiting", "Waiting", radar.length],
+  ]
 
   const approve = (id: string) => {
     const nextUp = shown.find(x => x.id !== id && !leaving.includes(x.id) && waiting(x))
@@ -186,205 +315,216 @@ export default function MailPage() {
     leave(id)
   }
 
+  const openMail = (id: string) => {
+    setSel(id)
+    setView("all")
+    setTimeout(() => document.getElementById("reply")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60)
+  }
+
+  const needsCount = needsList.length
+
   return (
-    <div>
-      <PageIntro page="/dashboard/mail" action={{ label: "Answer the first one", href: "#reply" }} sample={connected ? undefined : "Connect Gmail to see your live inbox. Changes stay in this browser session; no email is sent or signed."} />
+    <div className="mf-home" style={{ paddingBottom: 56 }}>
+      <header className="mf-home-heading">
+        <p className="mf-eyebrow">INBOX</p>
+        <h1>Your job mail, organized.</h1>
+        <p>
+          {!connected
+            ? "Connect Gmail and your recruiter emails land here — grouped by role, fit-scored, with drafts and follow-ups in view."
+            : loading
+              ? "Reading your inboxes…"
+              : needsCount === 0
+                ? "Nothing needs you right now. Everything below is sorted and waiting."
+                : `${needsCount} ${needsCount === 1 ? "email needs" : "emails need"} your reply — start at the top.`}
+        </p>
+      </header>
 
-      {!loading && (
-        <MetricHero
-          why={(() => {
-            const n = live.filter(waiting).length
-            if (!connected) return "This is your inbox. Connect Gmail and your real recruiter emails will show up here."
-            if (n === 0) return "This is your inbox. Nothing needs you right now — every email is answered."
-            return `This is your inbox. ${n} ${n === 1 ? "email needs" : "emails need"} YOU to reply — start at the top.`
-          })()}
-          metrics={[
-            { value: live.filter(waiting).length, label: "need your reply", hot: live.filter(waiting).length > 0 },
-            { value: count("invite"), label: "interview invites" },
-            { value: count("rtr"), label: "RTR forms" },
-            { value: count("rate"), label: "pay rates" },
-            { value: live.length, label: "total emails" },
-          ]}
-        />
-      )}
-
-      {loading && (
-        <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: 13 }}>
-          ⟳ Loading your inbox…
-        </div>
-      )}
       {error && !loading && (
-        <div style={{ marginBottom: 16, padding: "14px 18px", borderRadius: 12, border: "1px solid var(--danger-border)", background: "var(--surface)", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ marginBottom: 20, padding: "14px 18px", borderRadius: 12, border: "1px solid var(--danger-border)", background: "var(--surface)", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 240, fontSize: 13.5, lineHeight: 1.55 }}>{error}</div>
-          <Btn variant="outline" onClick={refresh}><RotateCcw size={13} /> Refresh</Btn>
+          <button className="btn-outline" style={{ minHeight: 38 }} onClick={refresh}>Refresh</button>
           <Link href="/dashboard/connections" style={{ fontSize: 13, fontWeight: 700 }}>Check connections →</Link>
         </div>
       )}
-      {!loading && (
-      <>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-        <Chip label="All inboxes" active={account === "all"} onClick={() => setAccount("all")} />
-        {accounts.map(a => (
-          <Chip key={a.id} active={account === a.id} disabled={!a.connected} onClick={() => setAccount(a.id)}
-            label={<><span style={{ width: 8, height: 8, borderRadius: 10, background: a.tint }} />{a.email.split("@")[0]}<span style={{ opacity: 0.6, fontWeight: 500 }}>{a.connected ? a.label : "Not connected"}</span></>} />
-        ))}
-      </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
-        {FILTERS.map(([f, label]) => <Chip key={f} label={label} active={filter === f} onClick={() => setFilter(f)} count={count(f)} />)}
-      </div>
 
-      <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
-        <div style={{ flex: "0 1 400px", minWidth: 300 }}>
-          {shown.map(x => (
-            <MailRow key={x.id} m={x} on={x.id === m?.id} restored={restored.includes(x.id)} leaving={leaving.includes(x.id)} onClick={() => setSel(x.id)} acct={acct} />
-          ))}
-          {!shown.length && (
-            <div style={{ padding: 24, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 10, color: "var(--text-muted)", fontSize: 13 }}>
-              <Leaf size={18} style={{ marginBottom: 6 }} />
-              <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
-                {live.length === 0 && connected ? "This inbox is empty" : "Nothing waiting here"}
-              </div>
-              {live.length === 0 && connected ? (
-                <div style={{ lineHeight: 1.6 }}>
-                  No job emails found in the last 30 days on the connected account{accounts.length > 1 ? "s" : ""}.
-                  Your recruiter mail may live on an account you haven&apos;t connected yet —{" "}
-                  <Link href="/dashboard/connections" style={{ fontWeight: 700, color: "var(--text)" }}>connect it here</Link>.
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "60px 24px", color: "var(--text-muted)", fontSize: 14 }}>
+          ⟳ Reading your inboxes…
+        </div>
+      ) : !connected ? (
+        <section style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18, padding: 32, textAlign: "center", boxShadow: "var(--shadow-card)" }}>
+          <h2 style={{ margin: "0 0 10px", fontSize: 22, letterSpacing: "-0.02em" }}>Connect Gmail to fill this up</h2>
+          <p style={{ color: "var(--text-muted)", fontSize: 14.5, maxWidth: 480, margin: "0 auto 20px", lineHeight: 1.65 }}>
+            Your emails group themselves by role here — every vendor chain side by side, fit-scored, with reply drafts one tap away.
+          </p>
+          <Link href="/dashboard/connections" className="btn-accent" style={{ minHeight: 46, padding: "0 26px", borderRadius: 999, display: "inline-flex", alignItems: "center", textDecoration: "none", fontWeight: 700 }}>
+            Connect Gmail <ArrowRight size={16} style={{ marginLeft: 8 }} />
+          </Link>
+        </section>
+      ) : (
+        <>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+            <Chip label="All inboxes" active={account === "all"} onClick={() => setAccount("all")} />
+            {accounts.map(a => (
+              <Chip key={a.id} active={account === a.id} disabled={!a.connected} onClick={() => setAccount(a.id)}
+                label={<><span style={{ width: 8, height: 8, borderRadius: 10, background: a.tint }} />{a.email.split("@")[0]}<span style={{ opacity: 0.6, fontWeight: 500 }}>{a.connected ? a.label : "Not connected"}</span></>} />
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+            {VIEWS.map(([v, label, n]) => (
+              <Chip key={v} label={label} active={view === v} onClick={() => setView(v)} count={n} />
+            ))}
+          </div>
+
+          {view === "roles" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {roles.length === 0 && (
+                <div style={{ padding: 32, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 14, color: "var(--text-muted)", fontSize: 13.5 }}>
+                  No roles found in the last 30 days.
                 </div>
-              ) : (
-                "Every thread in this view is answered or scheduled."
+              )}
+              {roles.map(g => <RoleCard key={g.key} group={g} onOpen={openMail} acct={acct} />)}
+            </div>
+          ) : view === "drafts" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {drafts.length === 0 && (
+                <div style={{ padding: 32, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 14, color: "var(--text-muted)", fontSize: 13.5 }}>
+                  No unsent drafts. Replies you start in the inbox land here.
+                </div>
+              )}
+              {drafts.map(d => (
+                <div key={d.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "16px 20px", boxShadow: "var(--shadow-card)" }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 700 }}>{d.subject}</div>
+                  <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 4 }}>
+                    to {(d.to || "").split("<")[0].trim() || "—"} · {d.snippet.slice(0, 100)}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--text-soft)", marginTop: 8 }}>Open Gmail drafts to review and send — nothing sends from here on its own.</div>
+                </div>
+              ))}
+            </div>
+          ) : view === "waiting" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {radar.length === 0 && (
+                <div style={{ padding: 32, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 14, color: "var(--text-muted)", fontSize: 13.5 }}>
+                  Nobody owes you a reply.
+                </div>
+              )}
+              {radar.map(r => (
+                <div key={r.threadId} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "16px 20px", boxShadow: "var(--shadow-card)", display: "flex", gap: 14, alignItems: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", color: r.daysWaiting >= 10 ? "var(--danger)" : "var(--accent-txt)", minWidth: 54 }}>
+                    {r.daysWaiting}d
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.subject}</div>
+                    <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 4 }}>
+                      {(r.vendor || r.to || "").split("<")[0].trim().slice(0, 40)}{r.jobTitle ? ` · ${r.jobTitle}` : ""}
+                    </div>
+                  </div>
+                  <button className="btn-outline" style={{ minHeight: 38, flex: "none" }} onClick={() => openMail(r.threadId)}>Open</button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
+              <div style={{ flex: "0 1 400px", minWidth: 300 }}>
+                {shown.map(x => (
+                  <MailRow key={x.id} m={x} on={x.id === m?.id} restored={restored.includes(x.id)} leaving={leaving.includes(x.id)} onClick={() => setSel(x.id)} acct={acct} />
+                ))}
+                {!shown.length && (
+                  <div style={{ padding: 32, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 14, color: "var(--text-muted)", fontSize: 13.5 }}>
+                    <Leaf size={18} style={{ marginBottom: 8 }} />
+                    <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
+                      {view === "needs" ? "Nothing needs you" : "Nothing here"}
+                    </div>
+                    {view === "needs" ? "Every thread is answered or scheduled." : live.length === 0 ? (
+                      <span>No job emails in the last 30 days on the connected account{accounts.length > 1 ? "s" : ""}. <Link href="/dashboard/connections" style={{ fontWeight: 700, color: "var(--text)" }}>Connect your main inbox →</Link></span>
+                    ) : "Try another view."}
+                  </div>
+                )}
+
+                <div style={{ marginTop: 8, borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                  <button type="button" onClick={() => setShowFiled(!showFiled)} aria-expanded={showFiled}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: 12, background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}>
+                    <Archive size={16} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 650 }}>{filed.length ? `${filed.length} rejection${filed.length === 1 ? "" : "s"} filed automatically` : "No rejections filed"}</div>
+                      {filed.length > 0 && <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{filed.map(a => a.company).join(", ")} — moved to Rejected in the tracker</div>}
+                    </div>
+                    <ChevronRight size={16} style={{ transform: showFiled ? "rotate(90deg)" : "none", transition: "transform .2s" }} />
+                  </button>
+                  {showFiled && (
+                    <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 12 }}>
+                      {filed.map(a => (
+                        <div key={a.id}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 13, fontWeight: 600 }}>{a.company} · {a.role}</span>
+                            <Btn variant="ghost" onClick={() => setRestored(xs => [...xs, a.id])}><RotateCcw size={13} /> Restore</Btn>
+                          </div>
+                          <blockquote style={{ margin: "4px 0 0", padding: "6px 10px", borderLeft: "2px solid var(--border-strong)", fontSize: 12.5, fontStyle: "italic", color: "var(--text-muted)" }}>
+                            “{a.trigger ?? a.preview}”
+                            <div style={{ fontStyle: "normal", fontSize: 11.5, color: "var(--text-soft)", marginTop: 2 }}>Filed because this line matched · {a.fromEmail} · {a.at}</div>
+                          </blockquote>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {m && (
+                <Card id="reply" style={{ flex: "1 1 420px", minWidth: 320, scrollMarginTop: 24 }}>
+                  <div key={m.id}>
+                    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                      <Avatar name={m.from} tint={acct(m.account).tint} size={42} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 750 }}>{m.company}</h2>
+                          {restored.includes(m.id) ? <StagePill stage="applied" label="Restored" /> : <StagePill stage={m.stage} />}
+                        </div>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{m.from} · {m.fromEmail} → {acct(m.account).email}</div>
+                      </div>
+                      <span style={{ fontSize: 12, color: "var(--text-soft)" }}>{m.at}</span>
+                    </div>
+                    <div style={{ fontSize: 15, fontWeight: 650, marginTop: 20 }}>{m.subject}</div>
+                    <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--text-muted)", margin: "6px 0 0" }}>{m.preview}</p>
+                    {m.jdFit != null && (
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+                        <JdFitPill score={m.jdFit} why={m.jdFitWhy} />
+                        {m.jdFitWhy && m.jdFitWhy.length > 0 && (
+                          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Matched: {m.jdFitWhy.join(", ")}</span>
+                        )}
+                      </div>
+                    )}
+                    {m.when && (
+                      <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 14, padding: 12, borderRadius: 10, background: "var(--surface-2)", fontSize: 13.5, fontWeight: 600 }}>
+                        <CalendarDays size={16} /> {m.when} — on your interview calendar
+                      </div>
+                    )}
+                    <div style={{ height: 1, background: "var(--border)", margin: "20px 0" }} />
+                    {!waiting(m) || leaving.includes(m.id) ? (
+                      <div style={{ display: "flex", gap: 10, padding: 12, borderRadius: 10, background: "var(--surface-2)", fontSize: 13, lineHeight: 1.5 }}>
+                        <Check size={16} style={{ flexShrink: 0 }} />
+                        {answered.includes(m.id) || leaving.includes(m.id)
+                          ? "Reply approved and sent. The follow-up workflow picks it up from here."
+                          : restored.includes(m.id)
+                            ? "Restored from Rejected. It stays in your inbox and the tracker until you file it again."
+                            : "No reply needed. The follow-up workflow checks in on Monday and Thursday at 10:00 AM if nothing changes."}
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+                        <SmartReply mail={m} onSent={() => approve(m.id)} />
+                        <div style={{ height: 1, background: "var(--border)" }} />
+                        {m.needsReply === "availability" ? <AvailabilityReply m={m} onApprove={() => approve(m.id)} acct={acct} />
+                          : m.needsReply === "rtr" ? <RtrReply m={m} onApprove={() => approve(m.id)} />
+                          : <RateReply m={m} onApprove={() => approve(m.id)} />}
+                      </div>
+                    )}
+                  </div>
+                </Card>
               )}
             </div>
           )}
-
-          <div style={{ marginTop: 8, borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-            <button type="button" onClick={() => setShowFiled(!showFiled)} aria-expanded={showFiled}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: 12, background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}>
-              <Archive size={16} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 650 }}>{filed.length ? `${filed.length} rejection${filed.length === 1 ? "" : "s"} filed automatically` : "No rejections filed"}</div>
-                {filed.length > 0 && <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{filed.map(a => a.company).join(", ")} — moved to Rejected in the tracker</div>}
-              </div>
-              <ChevronRight size={16} style={{ transform: showFiled ? "rotate(90deg)" : "none", transition: "transform .2s" }} />
-            </button>
-            {showFiled && (
-              <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 12 }}>
-                {filed.map(a => (
-                  <div key={a.id}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600 }}>{a.company} · {a.role}</span>
-                      <Btn variant="ghost" onClick={() => setRestored(xs => [...xs, a.id])}><RotateCcw size={13} /> Restore</Btn>
-                    </div>
-                    <blockquote style={{ margin: "4px 0 0", padding: "6px 10px", borderLeft: "2px solid var(--border-strong)", fontSize: 12.5, fontStyle: "italic", color: "var(--text-muted)" }}>
-                      “{a.trigger ?? a.preview}”
-                      <div style={{ fontStyle: "normal", fontSize: 11.5, color: "var(--text-soft)", marginTop: 2 }}>Filed because this line matched · {a.fromEmail} · {a.at}</div>
-                    </blockquote>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {m && (
-          <Card id="reply" style={{ flex: "1 1 420px", minWidth: 320, scrollMarginTop: 24 }}>
-            <div key={m.id}>
-              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <Avatar name={m.from} tint={acct(m.account).tint} size={42} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                    <h2 style={{ margin: 0, fontSize: 18, fontWeight: 750 }}>{m.company}</h2>
-                    {restored.includes(m.id) ? <StagePill stage="applied" label="Restored" /> : <StagePill stage={m.stage} />}
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{m.from} · {m.fromEmail} → {acct(m.account).email}</div>
-                </div>
-                <span style={{ fontSize: 12, color: "var(--text-soft)" }}>{m.at}</span>
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 650, marginTop: 20 }}>{m.subject}</div>
-              <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--text-muted)", margin: "6px 0 0" }}>{m.preview}</p>
-              {m.jdFit != null && (
-                <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
-                  <JdFitPill score={m.jdFit} why={m.jdFitWhy} />
-                  {m.jdFitWhy && m.jdFitWhy.length > 0 && (
-                    <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Matched: {m.jdFitWhy.join(", ")}</span>
-                  )}
-                </div>
-              )}
-              {m.when && (
-                <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 14, padding: 12, borderRadius: 10, background: "var(--surface-2)", fontSize: 13.5, fontWeight: 600 }}>
-                  <CalendarDays size={16} /> {m.when} — on your interview calendar
-                </div>
-              )}
-              <div style={{ height: 1, background: "var(--border)", margin: "20px 0" }} />
-              {!waiting(m) || leaving.includes(m.id) ? (
-                <div style={{ display: "flex", gap: 10, padding: 12, borderRadius: 10, background: "var(--surface-2)", fontSize: 13, lineHeight: 1.5 }}>
-                  <Check size={16} style={{ flexShrink: 0 }} />
-                  {answered.includes(m.id) || leaving.includes(m.id)
-                    ? "Reply approved and sent. The follow-up workflow picks it up from here."
-                    : restored.includes(m.id)
-                      ? "Restored from Rejected. It stays in your inbox and the tracker until you file it again."
-                      : "No reply needed. The follow-up workflow checks in on Monday and Thursday at 10:00 AM if nothing changes."}
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-                  <SmartReply mail={m} onSent={() => approve(m.id)} />
-                  <div style={{ height: 1, background: "var(--border)" }} />
-                  {m.needsReply === "availability" ? <AvailabilityReply m={m} onApprove={() => approve(m.id)} acct={acct} />
-                    : m.needsReply === "rtr" ? <RtrReply m={m} onApprove={() => approve(m.id)} />
-                    : <RateReply m={m} onApprove={() => approve(m.id)} />}
-                </div>
-              )}
-            </div>
-          </Card>
-        )}
-      </div>
-
-      {/* Drafts — started, not sent */}
-      {drafts.length > 0 && (
-        <div style={{ marginTop: 20, borderRadius: 12, background: "var(--surface)", border: "1px solid var(--border)" }}>
-          <div style={{ padding: "14px 18px", display: "flex", alignItems: "center", gap: 10 }}>
-            <Send size={16} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>{drafts.length} draft{drafts.length === 1 ? "" : "s"} waiting for your tap</div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Nothing here sends on its own — open Gmail to review and send.</div>
-            </div>
-          </div>
-          <div style={{ padding: "0 18px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-            {drafts.slice(0, 5).map(d => (
-              <div key={d.id} style={{ display: "flex", gap: 10, alignItems: "baseline", fontSize: 13 }}>
-                <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{d.subject}</span>
-                <span style={{ fontSize: 11.5, color: "var(--text-muted)", whiteSpace: "nowrap" }}>to {d.to.split("<")[0].trim().slice(0, 28)}</span>
-              </div>
-            ))}
-            {drafts.length > 5 && <div style={{ fontSize: 12, color: "var(--text-muted)" }}>+{drafts.length - 5} more in Gmail drafts</div>}
-          </div>
-        </div>
-      )}
-
-      {/* Follow-up radar — you wrote, they went quiet */}
-      {radar.length > 0 && (
-        <div style={{ marginTop: 12, borderRadius: 12, background: "var(--surface)", border: "1px solid var(--border)" }}>
-          <div style={{ padding: "14px 18px", display: "flex", alignItems: "center", gap: 10 }}>
-            <History size={16} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>Waiting on them ({radar.length})</div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>You wrote last — no reply back yet. Longest silence first.</div>
-            </div>
-          </div>
-          <div style={{ padding: "0 18px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-            {radar.slice(0, 5).map(r => (
-              <div key={r.threadId} style={{ display: "flex", gap: 10, alignItems: "baseline", fontSize: 13 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 800, color: r.daysWaiting >= 10 ? "var(--danger)" : "var(--accent-txt)", whiteSpace: "nowrap", minWidth: 52 }}>
-                  {r.daysWaiting}d
-                </span>
-                <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{r.subject}</span>
-                <span style={{ fontSize: 11.5, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{(r.vendor || r.to).split("<")[0].trim().slice(0, 24)}</span>
-              </div>
-            ))}
-            {radar.length > 5 && <div style={{ fontSize: 12, color: "var(--text-muted)" }}>+{radar.length - 5} more waiting</div>}
-          </div>
-        </div>
-      )}
-      </>
+        </>
       )}
     </div>
   )
