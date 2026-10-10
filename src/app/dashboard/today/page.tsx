@@ -1,4 +1,5 @@
 "use client"
+import TypingDots from "../_components/typing-dots"
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
@@ -174,7 +175,7 @@ export default function TodayPage() {
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 24px", color: "var(--text-muted)", fontSize: 14 }}>
-          ⟳ Reading your inboxes…
+          <TypingDots label="Reading your inboxes…" />
         </div>
       ) : !connected ? (
         <StoryCard>

@@ -36,6 +36,42 @@ async function getJSON<T>(url: string): Promise<{ data: T | null; error: string 
   }
 }
 
+// ── Instant local cache: Gmail-speed ────────────────────────────────────────
+// The last good snapshot lives in localStorage. Pages render it INSTANTLY on
+// mount, then a silent background load refreshes it — exactly how the Gmail
+// app feels: your mail is already there, and new mail slides in.
+const LOCAL_CACHE_KEY = "mfit:gmail-snapshot:v1"
+
+interface Snapshot {
+  mails: Mail[]
+  applications: App[]
+  interviews: Interview[]
+  drafts: GmailData["drafts"]
+  radar: GmailData["radar"]
+  issues: GmailData["issues"]
+  savedAt: number
+}
+
+function readSnapshot(): Snapshot | null {
+  try {
+    const raw = localStorage.getItem(LOCAL_CACHE_KEY)
+    if (!raw) return null
+    const s = JSON.parse(raw) as Snapshot
+    if (!s || !Array.isArray(s.mails)) return null
+    return s
+  } catch {
+    return null
+  }
+}
+
+function writeSnapshot(s: Snapshot): void {
+  try {
+    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(s))
+  } catch {
+    /* storage full or unavailable — the live load still works */
+  }
+}
+
 export function useGmailData(): GmailData {
   const [mails, setMails] = useState<Mail[]>([])
   const [applications, setApplications] = useState<App[]>([])
@@ -55,6 +91,28 @@ export function useGmailData(): GmailData {
   const freshRef = useRef(false)
   const silentRef = useRef(false)
   const refresh = useCallback((force = true) => { freshRef.current = force; setTick(t => t + 1) }, [])
+
+  const lastLoadRef = useRef(0)
+  // Hydrate from the local snapshot BEFORE the first network load so the
+  // page paints instantly, then the load below refreshes silently.
+  const hydratedRef = useRef(false)
+  useEffect(() => {
+    if (hydratedRef.current) return
+    hydratedRef.current = true
+    const snap = readSnapshot()
+    if (snap && snap.mails.length > 0) {
+      setMails(snap.mails)
+      setApplications(snap.applications || [])
+      setInterviews(snap.interviews || [])
+      setDrafts(snap.drafts || [])
+      setRadar(snap.radar || [])
+      setIssues(snap.issues || [])
+      setLoading(false)
+      setConnected(true)
+      // The load below will still run — silently — to bring in anything new.
+      silentRef.current = true
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -104,6 +162,18 @@ export function useGmailData(): GmailData {
       setUnfollowed(unfollowedRes.data?.domains || [])
       setDrafts(draftsRes.data?.drafts || [])
       setRadar(radarRes.data?.radar || [])
+      // Save the fresh snapshot so the next page opens instantly.
+      if ((threadsRes.data?.mails || []).length > 0) {
+        writeSnapshot({
+          mails: threadsRes.data?.mails || [],
+          applications: trackerRes.data?.applications || [],
+          interviews: interviewsRes.data?.interviews || [],
+          drafts: draftsRes.data?.drafts || [],
+          radar: radarRes.data?.radar || [],
+          issues: threadsRes.data?.issues || [],
+          savedAt: Date.now(),
+        })
+      }
 
       // Surface the first real failure instead of showing a silent empty inbox.
       const firstErr = threadsRes.error || draftsRes.error || radarRes.error
@@ -122,6 +192,7 @@ export function useGmailData(): GmailData {
         setError(`Couldn't read your Gmail just now: ${firstErr}. Tap refresh to retry.`)
       }
       setLoading(false)
+      lastLoadRef.current = Date.now()
     }
     load()
     return () => { cancelled = true }
@@ -133,7 +204,21 @@ export function useGmailData(): GmailData {
   useEffect(() => {
     if (!connected) return
     const id = setInterval(() => { silentRef.current = true; setTick(t => t + 1) }, 120000)
-    return () => clearInterval(id)
+    // Like the Gmail app: when the tab comes back into focus, quietly catch up.
+    const onFocus = () => {
+      if (Date.now() - lastLoadRef.current > 60000) {
+        silentRef.current = true
+        setTick(t => t + 1)
+      }
+    }
+    const onVis = () => { if (!document.hidden) onFocus() }
+    window.addEventListener("focus", onFocus)
+    document.addEventListener("visibilitychange", onVis)
+    return () => {
+      clearInterval(id)
+      window.removeEventListener("focus", onFocus)
+      document.removeEventListener("visibilitychange", onVis)
+    }
   }, [connected])
 
   return { mails, applications, interviews, steps, unfollowed, drafts, radar, issues, loading, connected, error, refresh }

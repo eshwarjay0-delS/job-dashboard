@@ -1,4 +1,5 @@
 "use client"
+import TypingDots from "../_components/typing-dots"
 
 import { useState } from "react"
 import Link from "next/link"
@@ -308,7 +309,7 @@ export default function CalendarPage() {
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 24px", color: "var(--text-muted)", fontSize: 14 }}>
-          ⟳ Loading interviews…
+          <TypingDots label="Loading interviews…" />
         </div>
       ) : tab === "upcoming" ? (
         upcoming.length === 0 ? (

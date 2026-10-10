@@ -1,4 +1,5 @@
 "use client"
+import TypingDots from "../_components/typing-dots"
 
 import { useState } from "react"
 import { Check, ChevronUp, ChevronDown, Pause, Play, Plus } from "lucide-react"
@@ -122,7 +123,7 @@ export default function WorkflowsPage() {
       )}
       {loading && (
         <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: 13 }}>
-          ⟳ Loading workflows…
+          <TypingDots label="Loading workflows…" />
         </div>
       )}
 

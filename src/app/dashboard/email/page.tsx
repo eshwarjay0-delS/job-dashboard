@@ -1,4 +1,5 @@
 "use client"
+import TypingDots from "../_components/typing-dots"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -283,7 +284,7 @@ export default function EmailDashboard() {
               textAlign: "center", padding: "40px 24px",
               background: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
             }}>
-              <div style={{ fontSize: 13, color: C.muted }}>⟳ Scanning your inbox…</div>
+              <div><TypingDots label="Scanning your inbox…" size={8} /></div>
             </div>
           )}
 

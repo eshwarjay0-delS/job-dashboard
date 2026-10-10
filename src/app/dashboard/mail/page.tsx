@@ -1,4 +1,5 @@
 "use client"
+import TypingDots from "../_components/typing-dots"
 
 import { useState } from "react"
 import Link from "next/link"
@@ -349,7 +350,7 @@ export default function MailPage() {
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 24px", color: "var(--text-muted)", fontSize: 14 }}>
-          ⟳ Reading your inboxes…
+          <TypingDots label="Reading your inboxes…" />
         </div>
       ) : !connected ? (
         <section style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18, padding: 32, textAlign: "center", boxShadow: "var(--shadow-card)" }}>

@@ -1,4 +1,5 @@
 "use client"
+import TypingDots from "../../_components/typing-dots"
 
 import { useEffect, useState } from "react"
 import { Send, Lock } from "lucide-react"
@@ -109,7 +110,7 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
       )}
 
       {!chips && !loadError && (
-        <div style={{ fontSize: 13, color: "var(--text-muted)" }}>⟳ Writing suggestions…</div>
+        <div><TypingDots label="Writing suggestions…" size={8} /></div>
       )}
 
       {chips && chips.length > 0 && (
