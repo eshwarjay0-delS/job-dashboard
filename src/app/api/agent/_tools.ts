@@ -9,6 +9,7 @@ import {
   fetchClassifiedThreads,
   threadsToApps,
   type ClassifiedThread,
+  type AccountIssue,
 } from "@/app/api/gmail/_lib"
 
 export interface ToolContext {
@@ -37,7 +38,7 @@ async function supabase() {
 
 // ── inbox_search ──────────────────────────────────────────────────────────
 async function inboxSearch(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
-  const threads = await fetchClassifiedThreads(ctx.userId, {
+  const { threads } = await fetchClassifiedThreads(ctx.userId, {
     days: Math.min(Math.max(num(args.days, 14), 1), 90),
     max: Math.min(Math.max(num(args.max, 30), 1), 100),
     query: str(args.query) || undefined,
@@ -67,7 +68,7 @@ async function readThread(ctx: ToolContext, args: Record<string, unknown>): Prom
   const threadId = str(args.threadId)
   const accountEmail = str(args.accountEmail).toLowerCase()
   if (!threadId) return { ok: false, error: "threadId is required" }
-  const threads = await fetchClassifiedThreads(ctx.userId, { days: 90, max: 100 })
+  const { threads } = await fetchClassifiedThreads(ctx.userId, { days: 90, max: 100 })
   const t = threads.find(
     x => x.threadId === threadId && (!accountEmail || x.accountEmail.toLowerCase() === accountEmail),
   )
@@ -93,7 +94,7 @@ async function readThread(ctx: ToolContext, args: Record<string, unknown>): Prom
 
 // ── list_submissions ──────────────────────────────────────────────────────
 async function listSubmissions(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
-  const threads = await fetchClassifiedThreads(ctx.userId, {
+  const { threads } = await fetchClassifiedThreads(ctx.userId, {
     days: Math.min(Math.max(num(args.days, 60), 1), 90),
     max: 100,
   })
@@ -215,5 +216,5 @@ export async function runTool(
 }
 
 // Narrow the type for the watchdog's own analysis
-export type { ClassifiedThread }
+export type { ClassifiedThread, AccountIssue }
 export { fetchClassifiedThreads, threadsToApps }

@@ -168,7 +168,7 @@ function runChecks(threads: ClassifiedThread[]): Finding[] {
 
 async function runForUser(userId: string): Promise<{ checked: number; notified: number }> {
   const service = createServiceClient()
-  const threads = await fetchClassifiedThreads(userId, { days: 21, max: 100 })
+  const { threads } = await fetchClassifiedThreads(userId, { days: 21, max: 100 })
   if (!threads.length) return { checked: 0, notified: 0 }
 
   const findings = runChecks(threads)

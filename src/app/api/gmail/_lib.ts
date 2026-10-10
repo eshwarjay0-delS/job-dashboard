@@ -123,16 +123,21 @@ export interface ClassifiedThread {
   }>
 }
 
+export interface AccountIssue {
+  account: string
+  reason: string
+}
+
 export async function fetchClassifiedThreads(
   userId: string,
   opts: { days?: number; max?: number; query?: string } = {},
-): Promise<ClassifiedThread[]> {
+): Promise<{ threads: ClassifiedThread[]; issues: AccountIssue[] }> {
   const days = Math.min(Math.max(opts.days ?? 30, 1), 90)
   const max = Math.min(Math.max(opts.max ?? 50, 1), 100)
 
   const accounts = await listGoogleWorkspaceAccounts(userId)
   const enabled = accounts.filter(a => a.gmail_enabled)
-  if (enabled.length === 0) return []
+  if (enabled.length === 0) return { threads: [], issues: [] }
 
   const after = new Date()
   after.setDate(after.getDate() - days)
@@ -141,13 +146,20 @@ export async function fetchClassifiedThreads(
   const query = `${baseQuery} after:${afterStr}`
 
   const allThreads: ClassifiedThread[] = []
+  const issues: AccountIssue[] = []
 
   for (const acct of enabled) {
     let token: string | null = null
     try {
       token = await getGoogleWorkspaceAccessToken(userId, acct.id)
-    } catch { continue }
-    if (!token) continue
+    } catch (e) {
+      issues.push({ account: acct.google_email, reason: `Google access failed: ${e instanceof Error ? e.message : String(e)}`.slice(0, 160) })
+      continue
+    }
+    if (!token) {
+      issues.push({ account: acct.google_email, reason: "Google didn't return an access token — reconnect this account." })
+      continue
+    }
 
     try {
       const search = (await gmailGet(
@@ -203,8 +215,9 @@ export async function fetchClassifiedThreads(
           })
         }
       }
-    } catch {
-      // Per-account failure shouldn't kill the whole sync
+    } catch (e) {
+      // Per-account failure shouldn't kill the whole sync — but say so.
+      issues.push({ account: acct.google_email, reason: `Gmail search failed: ${e instanceof Error ? e.message : String(e)}`.slice(0, 160) })
       continue
     }
   }
@@ -216,7 +229,7 @@ export async function fetchClassifiedThreads(
     return bMax - aMax
   })
 
-  return allThreads
+  return { threads: allThreads, issues }
 }
 
 // ── Shape to Mail[] ─────────────────────────────────────────────────────────

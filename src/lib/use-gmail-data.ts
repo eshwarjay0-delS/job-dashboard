@@ -16,6 +16,7 @@ interface GmailData {
   unfollowed: Array<{ id: string; domain: string; company_name: string; reason: string }>
   drafts: Array<{ id: string; threadId: string; account: string; to: string; subject: string; snippet: string }>
   radar: Array<{ threadId: string; account: string; to: string; subject: string; snippet: string; daysWaiting: number; jobTitle: string; vendor: string }>
+  issues: Array<{ account: string; reason: string }>
   loading: boolean
   connected: boolean
   error: string | null
@@ -43,6 +44,7 @@ export function useGmailData(): GmailData {
   const [unfollowed, setUnfollowed] = useState<GmailData["unfollowed"]>([])
   const [drafts, setDrafts] = useState<GmailData["drafts"]>([])
   const [radar, setRadar] = useState<GmailData["radar"]>([])
+  const [issues, setIssues] = useState<GmailData["issues"]>([])
   const [loading, setLoading] = useState(true)
   const [connected, setConnected] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -76,7 +78,7 @@ export function useGmailData(): GmailData {
 
       const [threadsRes, trackerRes, interviewsRes, stepsRes, unfollowedRes, draftsRes, radarRes] =
         await Promise.all([
-          getJSON<{ mails: Mail[] }>("/api/gmail/threads?days=30&max=50"),
+          getJSON<{ mails: Mail[]; issues?: GmailData["issues"] }>("/api/gmail/threads?days=30&max=50"),
           getJSON<{ applications: App[] }>("/api/gmail/tracker?days=60"),
           getJSON<{ interviews: Interview[] }>("/api/gmail/interviews?days=60"),
           getJSON<{ steps: Step[] }>("/api/gmail/workflow-steps"),
@@ -87,6 +89,7 @@ export function useGmailData(): GmailData {
       if (cancelled) return
 
       setMails(threadsRes.data?.mails || [])
+      setIssues(threadsRes.data?.issues || [])
       setApplications(trackerRes.data?.applications || [])
       setInterviews(interviewsRes.data?.interviews || [])
       setSteps(stepsRes.data?.steps || [])
@@ -97,7 +100,14 @@ export function useGmailData(): GmailData {
       // Surface the first real failure instead of showing a silent empty inbox.
       const firstErr = threadsRes.error || draftsRes.error || radarRes.error
       const gotMails = (threadsRes.data?.mails || []).length
-      if (firstErr && gotMails === 0) {
+      const acctIssues = threadsRes.data?.issues || []
+      if (acctIssues.length > 0 && gotMails === 0) {
+        setError(
+          `Couldn't read ${acctIssues.length === 1 ? "this account" : "these accounts"}: ` +
+          acctIssues.map(i => `${i.account} — ${i.reason}`).join(" ") +
+          ` Reconnect ${acctIssues.length === 1 ? "it" : "them"} on the connections page, then refresh.`
+        )
+      } else if (firstErr && gotMails === 0) {
         setError(`Couldn't read your Gmail just now: ${firstErr}. Tap refresh to retry.`)
       }
       setLoading(false)
@@ -106,7 +116,7 @@ export function useGmailData(): GmailData {
     return () => { cancelled = true }
   }, [tick])
 
-  return { mails, applications, interviews, steps, unfollowed, drafts, radar, loading, connected, error, refresh }
+  return { mails, applications, interviews, steps, unfollowed, drafts, radar, issues, loading, connected, error, refresh }
 }
 
 // ── Unfollowed domain helpers ───────────────────────────────────────────────

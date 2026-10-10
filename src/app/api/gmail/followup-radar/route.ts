@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 30, 1), 90)
     const minWait = Math.min(Math.max(Number(url.searchParams.get("minWait")) || 3, 1), 30)
 
-    const threads = await fetchClassifiedThreads(ctx.userId, { days, max: 100 })
+    const { threads } = await fetchClassifiedThreads(ctx.userId, { days, max: 100 })
     const radar: Array<{
       threadId: string; account: string
       to: string; subject: string; snippet: string

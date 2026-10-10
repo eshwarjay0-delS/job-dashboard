@@ -26,7 +26,7 @@ export async function GET(req: Request) {
       .eq("user_id", ctx.userId)
     const unfollowedDomains: string[] = (unfollowed || []).map((u: { domain: string }) => u.domain)
 
-    const threads = await fetchClassifiedThreads(ctx.userId, { days: 30, max: 50 })
+    const { threads } = await fetchClassifiedThreads(ctx.userId, { days: 30, max: 50 })
 
     const steps: Step[] = []
     const now = new Date()
