@@ -31,6 +31,8 @@ export type Mail = {
   id: string; account: string; from: string; fromEmail: string; company: string; role: string
   subject: string; preview: string; at: string; stage: Stage; rate?: string; when?: string
   unread?: boolean; needsReply?: NeedsReply
+  jdFit?: number // 0-100 role-fit score for this email
+  jdFitWhy?: string[] // matched keywords behind the score
   trigger?: string // the exact phrase the rejection detector matched
 }
 export const mails: Mail[] = [

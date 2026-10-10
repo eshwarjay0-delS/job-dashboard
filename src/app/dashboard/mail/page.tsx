@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Send, Shield, Archive, RotateCcw, ChevronRight, CalendarDays, Leaf } from "lucide-react"
+import Link from "next/link"
+import { Check, Send, Shield, Archive, RotateCcw, ChevronRight, CalendarDays, Leaf, History } from "lucide-react"
 import { Card, Meta, StagePill, Chip, Btn, Avatar, Toggle, useAnswered, useLeaving, leavingStyle } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 import MetricHero from "../_components/metric-hero"
@@ -19,6 +20,18 @@ const pretty = (t: string) => {
 }
 
 type AcctFn = (id: string) => { tint: string; email: string }
+
+function JdFitPill({ score, why }: { score?: number; why?: string[] }) {
+  if (score == null) return null
+  const color = score >= 60 ? "var(--success)" : score >= 30 ? "var(--accent-txt)" : "var(--text-muted)"
+  const bg = score >= 60 ? "var(--success-soft)" : score >= 30 ? "var(--accent-soft)" : "var(--surface-2)"
+  return (
+    <span title={why?.length ? `Matched: ${why.join(", ")}` : "Role fit"}
+      style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 999, background: bg, color }}>
+      {score}% fit
+    </span>
+  )
+}
 
 function MailRow({ m, on, restored, leaving, onClick, acct }: { m: Mail; on: boolean; restored: boolean; leaving: boolean; onClick: () => void; acct: AcctFn }) {
   const a = acct(m.account)
@@ -42,6 +55,7 @@ function MailRow({ m, on, restored, leaving, onClick, acct }: { m: Mail; on: boo
         <div style={{ fontSize: 12.5, color: "var(--text-soft)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.preview}</div>
         <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 6 }}>
           {restored ? <StagePill stage="applied" label="Restored" /> : <StagePill stage={m.stage} />}
+          <JdFitPill score={m.jdFit} why={m.jdFitWhy} />
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, color: "var(--text-muted)" }}>
             <span style={{ width: 6, height: 6, borderRadius: 3, background: a.tint }} />{a.email.split("@")[0]}
           </span>
@@ -155,7 +169,7 @@ export default function MailPage() {
   const [leaving, leave] = useLeaving(answer)
 
   // ── Live Gmail data (replaces ../_suite/sample mocks) ────────────────────
-  const { mails, loading, connected } = useGmailData()
+  const { mails, loading, connected, error, refresh, drafts, radar } = useGmailData()
   const accounts = buildAccounts(mails.map(m => m.account))
   const acct = makeAcct(accounts)
 
@@ -199,6 +213,13 @@ export default function MailPage() {
           ⟳ Loading your inbox…
         </div>
       )}
+      {error && !loading && (
+        <div style={{ marginBottom: 16, padding: "14px 18px", borderRadius: 12, border: "1px solid var(--danger-border)", background: "var(--surface)", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 240, fontSize: 13.5, lineHeight: 1.55 }}>{error}</div>
+          <Btn variant="outline" onClick={refresh}><RotateCcw size={13} /> Refresh</Btn>
+          <Link href="/dashboard/connections" style={{ fontSize: 13, fontWeight: 700 }}>Check connections →</Link>
+        </div>
+      )}
       {!loading && (
       <>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
@@ -219,8 +240,19 @@ export default function MailPage() {
           ))}
           {!shown.length && (
             <div style={{ padding: 24, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 10, color: "var(--text-muted)", fontSize: 13 }}>
-              <Leaf size={18} style={{ marginBottom: 6 }} /><div style={{ fontWeight: 700, color: "var(--text)" }}>Nothing waiting here</div>
-              Every thread in this view is answered or scheduled.
+              <Leaf size={18} style={{ marginBottom: 6 }} />
+              <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
+                {live.length === 0 && connected ? "This inbox is empty" : "Nothing waiting here"}
+              </div>
+              {live.length === 0 && connected ? (
+                <div style={{ lineHeight: 1.6 }}>
+                  No job emails found in the last 30 days on the connected account{accounts.length > 1 ? "s" : ""}.
+                  Your recruiter mail may live on an account you haven&apos;t connected yet —{" "}
+                  <Link href="/dashboard/connections" style={{ fontWeight: 700, color: "var(--text)" }}>connect it here</Link>.
+                </div>
+              ) : (
+                "Every thread in this view is answered or scheduled."
+              )}
             </div>
           )}
 
@@ -269,6 +301,14 @@ export default function MailPage() {
               </div>
               <div style={{ fontSize: 15, fontWeight: 650, marginTop: 20 }}>{m.subject}</div>
               <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--text-muted)", margin: "6px 0 0" }}>{m.preview}</p>
+              {m.jdFit != null && (
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+                  <JdFitPill score={m.jdFit} why={m.jdFitWhy} />
+                  {m.jdFitWhy && m.jdFitWhy.length > 0 && (
+                    <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Matched: {m.jdFitWhy.join(", ")}</span>
+                  )}
+                </div>
+              )}
               {m.when && (
                 <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 14, padding: 12, borderRadius: 10, background: "var(--surface-2)", fontSize: 13.5, fontWeight: 600 }}>
                   <CalendarDays size={16} /> {m.when} — on your interview calendar
@@ -297,6 +337,53 @@ export default function MailPage() {
           </Card>
         )}
       </div>
+
+      {/* Drafts — started, not sent */}
+      {drafts.length > 0 && (
+        <div style={{ marginTop: 20, borderRadius: 12, background: "var(--surface)", border: "1px solid var(--border)" }}>
+          <div style={{ padding: "14px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+            <Send size={16} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>{drafts.length} draft{drafts.length === 1 ? "" : "s"} waiting for your tap</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Nothing here sends on its own — open Gmail to review and send.</div>
+            </div>
+          </div>
+          <div style={{ padding: "0 18px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+            {drafts.slice(0, 5).map(d => (
+              <div key={d.id} style={{ display: "flex", gap: 10, alignItems: "baseline", fontSize: 13 }}>
+                <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{d.subject}</span>
+                <span style={{ fontSize: 11.5, color: "var(--text-muted)", whiteSpace: "nowrap" }}>to {d.to.split("<")[0].trim().slice(0, 28)}</span>
+              </div>
+            ))}
+            {drafts.length > 5 && <div style={{ fontSize: 12, color: "var(--text-muted)" }}>+{drafts.length - 5} more in Gmail drafts</div>}
+          </div>
+        </div>
+      )}
+
+      {/* Follow-up radar — you wrote, they went quiet */}
+      {radar.length > 0 && (
+        <div style={{ marginTop: 12, borderRadius: 12, background: "var(--surface)", border: "1px solid var(--border)" }}>
+          <div style={{ padding: "14px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+            <History size={16} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Waiting on them ({radar.length})</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>You wrote last — no reply back yet. Longest silence first.</div>
+            </div>
+          </div>
+          <div style={{ padding: "0 18px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+            {radar.slice(0, 5).map(r => (
+              <div key={r.threadId} style={{ display: "flex", gap: 10, alignItems: "baseline", fontSize: 13 }}>
+                <span style={{ fontSize: 11.5, fontWeight: 800, color: r.daysWaiting >= 10 ? "var(--danger)" : "var(--accent-txt)", whiteSpace: "nowrap", minWidth: 52 }}>
+                  {r.daysWaiting}d
+                </span>
+                <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{r.subject}</span>
+                <span style={{ fontSize: 11.5, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{(r.vendor || r.to).split("<")[0].trim().slice(0, 24)}</span>
+              </div>
+            ))}
+            {radar.length > 5 && <div style={{ fontSize: 12, color: "var(--text-muted)" }}>+{radar.length - 5} more waiting</div>}
+          </div>
+        </div>
+      )}
       </>
       )}
     </div>

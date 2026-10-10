@@ -221,6 +221,43 @@ export async function fetchClassifiedThreads(
 
 // ── Shape to Mail[] ─────────────────────────────────────────────────────────
 
+// ── JD-fit scoring ──────────────────────────────────────────────────────────
+// Lightweight, explainable relevance: how closely does this email's role look
+// like the security roles he hunts? Title keywords weigh 2x, body keywords 1x.
+// Returns 0-100 plus the matched keywords so the UI can show its work.
+
+const JD_TITLE_KEYWORDS = [
+  "security analyst", "soc analyst", "soc lead", "senior soc", "security engineer",
+  "cyber security", "cybersecurity", "information security", "infosec",
+  "vulnerability", "siem", "splunk", "qradar", "sentinel", "incident response",
+  "threat", "iam", "cyberark", "sailpoint", "okta", "pam", "pki",
+  "grc", "risk analyst", "soc", "appsec", "application security",
+]
+const JD_BODY_KEYWORDS = [
+  "c2c", "contract", "remote", "soc", "siem", "splunk", "incident", "vulnerability",
+  "triage", "playbook", "runbook", "edr", "crowdstrike", "firewall", "ids", "ips",
+  "nist", "iso 27001", "cissp", "security+", "ceh", "gcih", "gcfa",
+  "log analysis", "threat hunting", "forensics", "malware", "phishing",
+]
+
+export function jdFitScore(jobTitle: string, subject: string, snippet: string): { score: number; matched: string[] } {
+  const title = (jobTitle || "").toLowerCase()
+  const body = `${subject || ""} ${snippet || ""}`.toLowerCase()
+  const matched: string[] = []
+  let points = 0
+  for (const k of JD_TITLE_KEYWORDS) {
+    if (title.includes(k) && !matched.includes(k)) { matched.push(k); points += 2 }
+  }
+  for (const k of JD_BODY_KEYWORDS) {
+    if (body.includes(k) && !matched.includes(k)) { matched.push(k); points += 1 }
+  }
+  // Normalize: ~14 points ≈ strong fit
+  const score = Math.min(100, Math.round((points / 14) * 100))
+  return { score, matched: matched.slice(0, 8) }
+}
+
+// ── Shape to Mail[] ─────────────────────────────────────────────────────────
+
 export function threadsToMails(threads: ClassifiedThread[]): Mail[] {
   return threads.map(t => {
     // Use the most recent message for the row; classification from the most
@@ -244,13 +281,16 @@ export function threadsToMails(threads: ClassifiedThread[]): Mail[] {
       primary.category === "Rate Confirmation" ? "rate" as const :
       undefined
 
+    const role = primary.jobTitle || latest.subject.slice(0, 60)
+    const jdFit = jdFitScore(role, latest.subject, latest.snippet)
+
     return {
       id: t.threadId,
       account: t.accountEmail,
       from: primary.vendor,
       fromEmail: primary.from,
       company: companyFromDomain(domain, primary.from),
-      role: primary.jobTitle || latest.subject.slice(0, 60),
+      role,
       subject: latest.subject,
       preview: latest.snippet.slice(0, 140),
       at: formatAt(latest.internalDate),
@@ -258,6 +298,8 @@ export function threadsToMails(threads: ClassifiedThread[]): Mail[] {
       rate: primary.rate || undefined,
       unread: t.messages.some(m => m.unread),
       needsReply,
+      jdFit: jdFit.score,
+      jdFitWhy: jdFit.matched,
     }
   })
 }
