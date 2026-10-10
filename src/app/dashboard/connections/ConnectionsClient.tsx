@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation"
 import { connectGmail } from "@/lib/google-auth"
 import { checkGmailRead } from "@/lib/connectionCheck"
 import GoogleConsentExplainer from "./GoogleConsentExplainer"
+import ConnectedWrap from "./ConnectedWrap"
 import PageIntro from "../_components/page-intro"
 import MetricHero from "../_components/metric-hero"
 import "./connections.css"
@@ -257,10 +258,8 @@ export default function ConnectionsClient() {
       : syncError || null
 
   const callbackMessage = useMemo(() => {
-    if (params.get("google") === "connected") {
-      const email = params.get("email")
-      return email ? `${email} is now connected.` : "Google account connected."
-    }
+    // Successful connects render the ConnectedWrap card instead of a flat line.
+    if (params.get("google") === "connected") return null
     return googleErrorMessage(params.get("google_error"))
   }, [params])
 
@@ -329,6 +328,14 @@ export default function ConnectionsClient() {
             { value: `${googleAccounts.length} / ${status.google.maxAccounts}`, label: "Saved Google accounts", hot: googleAccounts.length === 0 },
             { value: wa.connected ? "Yes" : "No", label: "WhatsApp linked" },
           ]}
+        />
+      )}
+
+      {params.get("google") === "connected" && (
+        <ConnectedWrap
+          email={params.get("email")}
+          canAddMore={status.google.canAdd}
+          onAddAnother={() => setShowConsentModal(true)}
         />
       )}
 

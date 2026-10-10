@@ -73,3 +73,20 @@
 .consent-actions .btn-accent,.consent-actions .btn-outline{min-height:44px;padding:0 20px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer}
 .consent-actions .btn-accent{background:#2f6f6a;color:#fff;border:none}
 .consent-actions .btn-outline{background:transparent;border:1.5px solid #d9d4c8;color:#4d4b44}
+
+/* ── Post-connect wrap card ───────────────────────────────────────────── */
+.wrap-card{background:#fffdf8;border:1px solid #e6e2d9;border-radius:20px;padding:24px;margin-bottom:20px;box-shadow:0 8px 28px rgba(20,18,12,.08)}
+.wrap-hero{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px}
+.wrap-check{flex:none;width:38px;height:38px;border-radius:50%;background:#2f6f6a;color:#fff;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.wrap-hero h3{margin:0 0 4px;font-size:18px;color:#161510}
+.wrap-hero p{margin:0;font-size:14px;color:#6e6b5b}
+.wrap-steps{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:12px;counter-reset:wrap}
+.wrap-steps li{display:grid;gap:2px;padding-left:34px;position:relative}
+.wrap-steps li::before{counter-increment:wrap;content:counter(wrap);position:absolute;left:0;top:0;width:24px;height:24px;border-radius:50%;background:#f4f2ed;border:1px solid #e6e2d9;font-size:12.5px;font-weight:700;color:#4d4b44;display:flex;align-items:center;justify-content:center}
+.wrap-steps strong{font-size:14px;color:#161510}
+.wrap-steps span{font-size:13.5px;line-height:1.55;color:#6e6b5b}
+.wrap-fine{font-size:12.5px;line-height:1.6;color:#9d9884;margin:0 0 18px}
+.wrap-actions{display:flex;gap:12px;flex-wrap:wrap}
+.wrap-actions .btn-accent,.wrap-actions .btn-outline{min-height:44px;padding:0 20px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.wrap-actions .btn-accent{background:#2f6f6a;color:#fff;border:none}
+.wrap-actions .btn-outline{background:transparent;border:1.5px solid #d9d4c8;color:#4d4b44}
