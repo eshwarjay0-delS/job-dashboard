@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { connectGmail } from "@/lib/google-auth"
 import { checkGmailRead } from "@/lib/connectionCheck"
+import GoogleConsentExplainer from "./GoogleConsentExplainer"
 import PageIntro from "../_components/page-intro"
 import MetricHero from "../_components/metric-hero"
 import "./connections.css"
@@ -226,6 +227,9 @@ export default function ConnectionsClient() {
   const [syncing, setSyncing] = useState(false)
   const [syncDone, setSyncDone] = useState(false)
   const [syncError, setSyncError] = useState("")
+  // Explainer shown before Google's OAuth screen so the "unverified app"
+  // warning doesn't blindside people.
+  const [showConsentModal, setShowConsentModal] = useState(false)
   const attemptedSync = useRef(false)
   const checkGmail = useCallback(async () => {
     setSyncing(true)
@@ -405,11 +409,17 @@ export default function ConnectionsClient() {
           <button
             className="btn-accent"
             disabled={!status.google.canAdd || loading || loadError}
-            onClick={() => void connectGmail("/dashboard/connections")}
+            onClick={() => setShowConsentModal(true)}
           >
             {status.google.canAdd ? "Add Google account" : "4 accounts connected"}
           </button>
         </div>
+        {showConsentModal && (
+          <GoogleConsentExplainer
+            onContinue={() => { setShowConsentModal(false); void connectGmail("/dashboard/connections") }}
+            onCancel={() => setShowConsentModal(false)}
+          />
+        )}
 
         <div className="conn-permissions">
           <div><span>Gmail read</span><small>Find job mail and application updates.</small></div>

@@ -52,3 +52,24 @@
   .conn-permissions>div:last-child{border-bottom:0}
   .conn-steps>div{padding:15px 18px}
 }
+
+/* ── Google consent explainer modal ─────────────────────────────────────── */
+.consent-modal-backdrop{position:fixed;inset:0;background:rgba(20,18,12,.55);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.consent-modal{background:#fffdf8;border:1px solid #e6e2d9;border-radius:20px;max-width:520px;width:100%;padding:28px;box-shadow:0 24px 64px rgba(20,18,12,.25);max-height:90vh;overflow-y:auto}
+.consent-modal h2{font-size:22px;margin:0 0 10px;color:#161510}
+.consent-lead{font-size:14.5px;line-height:1.6;color:#4d4b44;margin:0 0 18px}
+.consent-lead em{font-style:normal;font-weight:600;color:#161510}
+.consent-steps{display:grid;gap:10px;margin-bottom:18px}
+.consent-step{display:flex;gap:12px;align-items:flex-start;font-size:14px;line-height:1.5;color:#4d4b44}
+.consent-num{flex:none;width:26px;height:26px;border-radius:50%;background:#161510;color:#fffdf8;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.consent-step strong{color:#161510}
+.consent-perms{display:grid;gap:10px;background:#f4f2ed;border:1px solid #e6e2d9;border-radius:14px;padding:16px;margin-bottom:16px}
+.consent-perms>div{display:grid;gap:2px}
+.consent-perms strong{font-size:13.5px;color:#161510}
+.consent-perms span{font-size:13px;line-height:1.5;color:#6e6b5b}
+.consent-perms em{font-style:normal;font-weight:600;color:#4d4b44}
+.consent-fine{font-size:12.5px;line-height:1.6;color:#9d9884;margin:0 0 20px}
+.consent-actions{display:flex;gap:12px;justify-content:flex-end}
+.consent-actions .btn-accent,.consent-actions .btn-outline{min-height:44px;padding:0 20px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer}
+.consent-actions .btn-accent{background:#2f6f6a;color:#fff;border:none}
+.consent-actions .btn-outline{background:transparent;border:1.5px solid #d9d4c8;color:#4d4b44}
