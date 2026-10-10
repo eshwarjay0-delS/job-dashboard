@@ -328,6 +328,7 @@ export function threadsToMails(threads: ClassifiedThread[]): Mail[] {
       subject: latest.subject,
       preview: latest.snippet.slice(0, 140),
       at: formatAt(latest.internalDate),
+      ts: latest.internalDate ? Number(latest.internalDate) : 0,
       stage: categoryToStage(primary.category),
       rate: primary.rate || undefined,
       unread: t.messages.some(m => m.unread),

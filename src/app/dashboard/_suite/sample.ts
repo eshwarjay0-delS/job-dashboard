@@ -33,6 +33,7 @@ export type Mail = {
   unread?: boolean; needsReply?: NeedsReply
   jdFit?: number // 0-100 role-fit score for this email
   jdFitWhy?: string[] // matched keywords behind the score
+  ts?: number // epoch ms of the latest message — for "this week" stories
   trigger?: string // the exact phrase the rejection detector matched
 }
 export const mails: Mail[] = [

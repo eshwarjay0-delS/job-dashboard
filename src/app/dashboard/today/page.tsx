@@ -5,12 +5,68 @@ import Link from "next/link"
 import {
   ArrowRight, ArrowUpRight, Inbox, Briefcase, CalendarDays,
   Repeat, Bot, Link2, Mail as MailIcon, FileSignature,
-  Send, History, ShieldAlert, RefreshCw,
+  Send, History, ShieldAlert, RefreshCw, Sparkles, TrendingUp,
 } from "lucide-react"
 import { useGmailData } from "@/lib/use-gmail-data"
-import type { Mail } from "../_suite/sample"
+import type { Mail, App } from "../_suite/sample"
 
-const WORDS = ["Nothing", "One thing", "Two things", "Three things", "Four things", "Five things", "Six things"]
+const WEEK_MS = 7 * 86_400_000
+
+function greeting(): string {
+  const h = new Date().getHours()
+  if (h < 12) return "Good morning"
+  if (h < 17) return "Good afternoon"
+  return "Good evening"
+}
+
+function dateLine(): string {
+  return new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
+}
+
+function parseApplied(s: string): number {
+  const d = new Date(`${s}, 2026`)
+  return isNaN(d.getTime()) ? 0 : d.getTime()
+}
+
+/* ── Small pieces ─────────────────────────────────────────────────────── */
+
+function Chapter({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section style={{ marginTop: 30 }}>
+      <h2 style={{ fontSize: 13, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-muted)", margin: "0 0 12px", fontWeight: 800 }}>
+        {title}
+      </h2>
+      {children}
+    </section>
+  )
+}
+
+function StoryCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18,
+      padding: "18px 20px", boxShadow: "var(--shadow-card)",
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function StoryLine({ children }: { children: React.ReactNode }) {
+  return <p style={{ margin: "0 0 10px", fontSize: 14.5, lineHeight: 1.65 }}>{children}</p>
+}
+
+function Num({ value, label }: { value: number | string; label: string }) {
+  return (
+    <div style={{
+      background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16,
+      padding: "16px 18px", boxShadow: "var(--shadow-card)", flex: "1 1 140px",
+    }}>
+      <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em" }}>{value}</div>
+      <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 4 }}>{label}</div>
+    </div>
+  )
+}
 
 function LensButton({ href, icon: Icon, label, sub }: { href: string; icon: typeof Inbox; label: string; sub: string }) {
   return (
@@ -34,40 +90,6 @@ function LensButton({ href, icon: Icon, label, sub }: { href: string; icon: type
   )
 }
 
-function Section({ icon: Icon, title, href, linkLabel, count, children }: {
-  icon: typeof Inbox; title: string; href: string; linkLabel: string; count?: number; children: React.ReactNode
-}) {
-  return (
-    <section style={{
-      background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18,
-      padding: 20, boxShadow: "var(--shadow-card)", display: "flex", flexDirection: "column",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-        <span style={{
-          width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center",
-          background: "var(--surface-2)", border: "1px solid var(--border-strong)", flex: "none",
-        }}>
-          <Icon size={16} />
-        </span>
-        <h2 style={{ margin: 0, fontSize: 16, letterSpacing: "-0.015em", flex: 1 }}>{title}</h2>
-        {count != null && count > 0 && (
-          <span style={{
-            fontSize: 11.5, fontWeight: 800, padding: "4px 10px", borderRadius: 999,
-            background: "var(--accent-soft)", border: "1px solid var(--accent-border)", color: "var(--accent-txt)",
-          }}>{count}</span>
-        )}
-      </div>
-      <div style={{ flex: 1 }}>{children}</div>
-      <Link href={href} style={{
-        display: "inline-flex", alignItems: "center", gap: 6, marginTop: 14,
-        fontSize: 13, fontWeight: 700, color: "var(--text)", textDecoration: "none",
-      }}>
-        {linkLabel} <ArrowRight size={15} />
-      </Link>
-    </section>
-  )
-}
-
 function Row({ primary, secondary, meta, accent }: { primary: string; secondary?: string; meta?: string; accent?: boolean }) {
   return (
     <div style={{ display: "flex", gap: 10, alignItems: "baseline", padding: "9px 0", borderBottom: "1px solid var(--border)" }}>
@@ -88,8 +110,10 @@ const ask = (m: Mail) =>
 
 interface Note { id: string; title: string; body: string; created_at: string; read: boolean }
 
+/* ── The page: one dashboard, one story ────────────────────────────────── */
+
 export default function TodayPage() {
-  const { mails, interviews, drafts, radar, loading, connected, error, refresh } = useGmailData()
+  const { mails, applications, interviews, drafts, radar, loading, connected, error, refresh } = useGmailData()
   const [notes, setNotes] = useState<Note[]>([])
 
   useEffect(() => {
@@ -99,30 +123,48 @@ export default function TodayPage() {
       .catch(() => {})
   }, [])
 
+  const now = Date.now()
   const needs = mails.filter(m => m.needsReply)
-  const rtrs = mails.filter(m => m.stage === "rtr")
-  const rates = mails.filter(m => m.stage === "rate")
   const upcoming = interviews.slice(0, 3)
 
-  const total = needs.length + rtrs.length + rates.length + drafts.length + radar.length + notes.length
+  // ── The week's story ──
+  const weekMails = mails.filter(m => (m.ts || 0) > now - WEEK_MS)
+  const newIv = weekMails.filter(m => m.needsReply === "availability").length
+  const newRtr = weekMails.filter(m => m.needsReply === "rtr").length
+  const newRate = weekMails.filter(m => m.needsReply === "rate").length
+  const newApps = applications.filter(a => parseApplied(a.applied) > now - WEEK_MS)
+  const touched = radar.filter(r => r.daysWaiting <= 14)
+  const quiet = radar.filter(r => r.daysWaiting > 3)
+  const longest = radar[0]
+
+  // ── State of the union ──
+  const union: string[] = []
+  if (needs.length) union.push(`${needs.length} need${needs.length === 1 ? "s" : ""} your reply`)
+  if (quiet.length) union.push(`${quiet.length} owe${quiet.length === 1 ? "s" : ""} you a reply`)
+  if (upcoming.length) union.push(`${upcoming.length} interview${upcoming.length === 1 ? "" : "s"} lined up`)
+  if (drafts.length) union.push(`${drafts.length} draft${drafts.length === 1 ? "" : "s"} waiting for your tap`)
+  const unionLine = union.length
+    ? `${union.join(" · ")}. Nothing's on fire — here's the whole story.`
+    : "Nothing needs you. The hunt is humming — here's the whole story."
+
+  const landedBits: string[] = []
+  if (newIv) landedBits.push(`${newIv} interview request${newIv === 1 ? "" : "s"}`)
+  if (newRtr) landedBits.push(`${newRtr} RTR${newRtr === 1 ? "" : "s"}`)
+  if (newRate) landedBits.push(`${newRate} rate confirmation${newRate === 1 ? "" : "s"}`)
+
+  const hasStory = weekMails.length > 0 || newApps.length > 0 || touched.length > 0 || quiet.length > 0
 
   return (
     <div className="mf-home" style={{ paddingBottom: 56 }}>
       <header className="mf-home-heading">
-        <p className="mf-eyebrow">TODAY</p>
-        <h1>{loading ? "Checking your inboxes…" : total === 0 ? "All clear." : `${WORDS[Math.min(total, 6)] ?? `${total} things`} need${total === 1 ? "s" : ""} you today.`}</h1>
-        <p>
-          {loading
-            ? "Pulling your latest recruiter emails, drafts, and alerts."
-            : connected
-              ? "Everything below is live from your connected Gmail — one glance, then dive in where it matters."
-              : "Connect your Gmail and this page comes alive with your real job hunt."}
-        </p>
+        <p className="mf-eyebrow">{dateLine()}</p>
+        <h1>{greeting()}, Eshwar.</h1>
+        <p>{loading ? "Reading your inboxes — gathering your story…" : connected ? unionLine : "Connect your Gmail and I'll keep the story of your hunt right here — so you never have to hold it all in your head."}</p>
       </header>
 
       {error && !loading && (
-        <div style={{ marginBottom: 20, padding: "14px 18px", borderRadius: 12, border: "1px solid var(--danger-border)", background: "var(--surface)", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 240, fontSize: 13.5, lineHeight: 1.55 }}>{error}</div>
+        <div style={{ marginBottom: 20, padding: "16px 18px", borderRadius: 14, border: "1px solid var(--danger-border)", background: "var(--surface)", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 240, fontSize: 13.5, lineHeight: 1.6 }}>{error}</div>
           <button className="btn-outline" style={{ minHeight: 38, display: "inline-flex", alignItems: "center", gap: 6 }} onClick={refresh}>
             <RefreshCw size={13} /> Refresh
           </button>
@@ -135,76 +177,136 @@ export default function TodayPage() {
           ⟳ Reading your inboxes…
         </div>
       ) : !connected ? (
-        <section style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18, padding: 32, textAlign: "center", boxShadow: "var(--shadow-card)" }}>
-          <h2 style={{ margin: "0 0 10px", fontSize: 22, letterSpacing: "-0.02em" }}>Connect Gmail to wake this up</h2>
-          <p style={{ color: "var(--text-muted)", fontSize: 14.5, maxWidth: 480, margin: "0 auto 20px", lineHeight: 1.65 }}>
-            Your replies, interviews, RTRs, drafts, and follow-ups will all live here — one tab, everything visible.
-          </p>
-          <Link href="/dashboard/connections" className="btn-accent" style={{ minHeight: 46, padding: "0 26px", borderRadius: 999, display: "inline-flex", alignItems: "center", textDecoration: "none", fontWeight: 700 }}>
-            Connect Gmail <ArrowRight size={16} style={{ marginLeft: 8 }} />
-          </Link>
-        </section>
+        <StoryCard>
+          <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+            <Sparkles size={20} style={{ flex: "none", marginTop: 2 }} />
+            <div>
+              <h2 style={{ margin: "0 0 8px", fontSize: 18, letterSpacing: "-0.015em" }}>Your hunt, narrated</h2>
+              <p style={{ margin: "0 0 16px", fontSize: 14, lineHeight: 1.65, color: "var(--text-muted)" }}>
+                Once your inbox is connected, this page becomes your chief of staff: what landed this week,
+                who you should nudge next, which interviews are coming — all in one story, so the hundred
+                things in your head get to rest.
+              </p>
+              <Link href="/dashboard/connections" className="btn-accent" style={{ minHeight: 44, padding: "0 24px", borderRadius: 999, display: "inline-flex", alignItems: "center", textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
+                Connect Gmail <ArrowRight size={16} style={{ marginLeft: 8 }} />
+              </Link>
+            </div>
+          </div>
+        </StoryCard>
       ) : (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
-            <Section icon={MailIcon} title="Needs your reply" href="/dashboard/mail" linkLabel="Open inbox" count={needs.length}>
-              {needs.length === 0 ? (
-                <p style={{ fontSize: 13.5, color: "var(--text-muted)", margin: 0, lineHeight: 1.6 }}>Nothing waiting — every thread is answered.</p>
-              ) : needs.slice(0, 4).map(m => (
-                <Row key={m.id} primary={m.company} secondary={ask(m)}
-                  meta={m.jdFit != null ? `${m.jdFit}% fit` : undefined} />
-              ))}
-            </Section>
+          {hasStory && (
+            <Chapter title="Your week in the hunt">
+              <StoryCard>
+                {weekMails.length > 0 && (
+                  <StoryLine>
+                    <TrendingUp size={15} style={{ verticalAlign: "-2px", marginRight: 6 }} />
+                    <strong>{weekMails.length} new thread{weekMails.length === 1 ? "" : "s"} landed this week</strong>
+                    {landedBits.length > 0 && <> — {landedBits.join(", ")}</>}. We sorted every one of them for you.
+                  </StoryLine>
+                )}
+                {newApps.length > 0 && (
+                  <StoryLine>
+                    You put yourself out there <strong>{newApps.length} time{newApps.length === 1 ? "" : "s"}</strong> this week:{" "}
+                    {newApps.slice(0, 3).map((a: App) => a.role).join(" · ")}
+                    {newApps.length > 3 && ` and ${newApps.length - 3} more`}. That's the work — we track the rest.
+                  </StoryLine>
+                )}
+                {touched.length > 0 && (
+                  <StoryLine>
+                    You reached out to <strong>{touched.length} {touched.length === 1 ? "person" : "people"}</strong> in the last two weeks.{" "}
+                    {quiet.length > 0
+                      ? <>{quiet.length} {quiet.length === 1 ? "hasn't" : "haven't"} written back yet — that's normal, and we've got the nudges queued below.</>
+                      : "Every one of them replied. That's a good hit rate."}
+                  </StoryLine>
+                )}
+                {!hasStory && (
+                  <StoryLine>A quiet week — no new threads, no new applications. The hunt hums on.</StoryLine>
+                )}
+              </StoryCard>
+            </Chapter>
+          )}
 
-            <Section icon={CalendarDays} title="Interviews" href="/dashboard/calendar" linkLabel="Open calendar" count={upcoming.length}>
-              {upcoming.length === 0 ? (
-                <p style={{ fontSize: 13.5, color: "var(--text-muted)", margin: 0, lineHeight: 1.6 }}>No interviews parsed from recent emails.</p>
-              ) : upcoming.map(i => (
-                <Row key={i.id} primary={`${i.company} — ${i.role}`} secondary={i.kind} meta={i.with || undefined} />
-              ))}
-            </Section>
+          {needs.length > 0 && (
+            <Chapter title={`Needs you · ${needs.length}`}>
+              <StoryCard>
+                {needs.slice(0, 5).map(m => (
+                  <Row key={m.id} primary={m.company} secondary={ask(m)}
+                    meta={m.jdFit != null ? `${m.jdFit}% fit` : undefined} />
+                ))}
+                <Link href="/dashboard/mail" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 12, fontSize: 13, fontWeight: 700, color: "var(--text)", textDecoration: "none" }}>
+                  Open inbox <ArrowRight size={15} />
+                </Link>
+              </StoryCard>
+            </Chapter>
+          )}
 
-            <Section icon={FileSignature} title="RTRs & rates" href="/dashboard/mail" linkLabel="Review them" count={rtrs.length + rates.length}>
-              {rtrs.length + rates.length === 0 ? (
-                <p style={{ fontSize: 13.5, color: "var(--text-muted)", margin: 0, lineHeight: 1.6 }}>No RTR forms or rate confirmations waiting.</p>
-              ) : (
-                <>
-                  {rtrs.slice(0, 2).map(m => <Row key={m.id} primary={m.company} secondary={`RTR — ${m.role}`} />)}
-                  {rates.slice(0, 2).map(m => <Row key={m.id} primary={m.company} secondary={`${m.rate || "Rate"} — ${m.role}`} />)}
-                </>
-              )}
-            </Section>
+          {(quiet.length > 0 || longest) && (
+            <Chapter title="Follow-ups — we've got this">
+              <StoryCard>
+                {longest && (
+                  <>
+                    <StoryLine>
+                      Longest silence: <strong>{(longest.vendor || longest.to || "").split("<")[0].trim().slice(0, 40) || "a vendor"}</strong>
+                      {" "}— <strong>{longest.daysWaiting} days</strong> since you wrote
+                      {longest.jobTitle ? <> about <em>{longest.jobTitle}</em></> : null}.
+                    </StoryLine>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
+                      <Link href="/dashboard/agent" className="btn-accent" style={{ minHeight: 40, padding: "0 20px", borderRadius: 999, display: "inline-flex", alignItems: "center", textDecoration: "none", fontWeight: 700, fontSize: 13.5 }}>
+                        Draft the nudge <ArrowRight size={15} style={{ marginLeft: 6 }} />
+                      </Link>
+                      <Link href="/dashboard/mail" className="btn-outline" style={{ minHeight: 40, padding: "0 20px", borderRadius: 999, display: "inline-flex", alignItems: "center", textDecoration: "none", fontWeight: 700, fontSize: 13.5 }}>
+                        See all waiting
+                      </Link>
+                    </div>
+                  </>
+                )}
+                {quiet.length > 1 && (
+                  <div style={{ marginTop: 12 }}>
+                    {quiet.slice(1, 4).map(r => (
+                      <Row key={r.threadId} primary={r.subject} secondary={(r.vendor || r.to || "").split("<")[0].trim().slice(0, 36)}
+                        meta={`${r.daysWaiting}d`} accent={r.daysWaiting >= 10} />
+                    ))}
+                  </div>
+                )}
+              </StoryCard>
+            </Chapter>
+          )}
 
-            <Section icon={Send} title="Drafts waiting" href="/dashboard/mail" linkLabel="Review drafts" count={drafts.length}>
-              {drafts.length === 0 ? (
-                <p style={{ fontSize: 13.5, color: "var(--text-muted)", margin: 0, lineHeight: 1.6 }}>No unsent drafts.</p>
-              ) : drafts.slice(0, 4).map(d => (
-                <Row key={d.id} primary={d.subject} secondary={`to ${(d.to || "").split("<")[0].trim().slice(0, 30)}`} />
-              ))}
-            </Section>
+          {upcoming.length > 0 && (
+            <Chapter title={`Interviews · ${upcoming.length}`}>
+              <StoryCard>
+                {upcoming.map(i => (
+                  <Row key={i.id} primary={`${i.company} — ${i.role}`} secondary={i.kind} meta={i.with || undefined} />
+                ))}
+                <Link href="/dashboard/calendar" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 12, fontSize: 13, fontWeight: 700, color: "var(--text)", textDecoration: "none" }}>
+                  Open calendar <ArrowRight size={15} />
+                </Link>
+              </StoryCard>
+            </Chapter>
+          )}
 
-            <Section icon={History} title="Waiting on them" href="/dashboard/mail" linkLabel="See all" count={radar.length}>
-              {radar.length === 0 ? (
-                <p style={{ fontSize: 13.5, color: "var(--text-muted)", margin: 0, lineHeight: 1.6 }}>Nobody owes you a reply.</p>
-              ) : radar.slice(0, 4).map(r => (
-                <Row key={r.threadId} primary={r.subject} secondary={(r.vendor || r.to || "").split("<")[0].trim().slice(0, 32)}
-                  meta={`${r.daysWaiting}d`} accent={r.daysWaiting >= 10} />
-              ))}
-            </Section>
+          {notes.length > 0 && (
+            <Chapter title="Watchdog">
+              <StoryCard>
+                {notes.map(n => <Row key={n.id} primary={n.title} secondary={n.body.slice(0, 90)} />)}
+                <Link href="/dashboard/agent" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 12, fontSize: 13, fontWeight: 700, color: "var(--text)", textDecoration: "none" }}>
+                  Ask the agent <ArrowRight size={15} />
+                </Link>
+              </StoryCard>
+            </Chapter>
+          )}
 
-            <Section icon={ShieldAlert} title="Watchdog" href="/dashboard/agent" linkLabel="Ask the agent" count={notes.length}>
-              {notes.length === 0 ? (
-                <p style={{ fontSize: 13.5, color: "var(--text-muted)", margin: 0, lineHeight: 1.6 }}>
-                  No alerts. The watchdog checks for duplicate submissions, RTR conflicts, and quiet vendors.
-                </p>
-              ) : notes.map(n => (
-                <Row key={n.id} primary={n.title} secondary={n.body.slice(0, 80)} />
-              ))}
-            </Section>
-          </div>
+          <Chapter title="The numbers">
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <Num value={applications.filter(a => !["rejected", "offer"].includes(a.stage)).length} label="Active applications" />
+              <Num value={upcoming.length} label="Interviews lined up" />
+              <Num value={quiet.length} label="Waiting on a reply" />
+              <Num value={drafts.length} label="Drafts for your tap" />
+            </div>
+          </Chapter>
 
-          <div style={{ marginTop: 28 }}>
-            <h2 style={{ fontSize: 16, letterSpacing: "-0.015em", margin: "0 0 12px" }}>All your tabs</h2>
+          <Chapter title="All your tabs">
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
               <LensButton href="/dashboard/mail" icon={Inbox} label="Inbox" sub="Every recruiter email, sorted" />
               <LensButton href="/dashboard/tracker" icon={Briefcase} label="My Jobs" sub="Applications and where they stand" />
@@ -213,7 +315,12 @@ export default function TodayPage() {
               <LensButton href="/dashboard/agent" icon={Bot} label="Agent" sub="Your job-hunt strategist" />
               <LensButton href="/dashboard/connections" icon={Link2} label="Gmail accounts" sub="Connect and manage inboxes" />
             </div>
-          </div>
+          </Chapter>
+
+          <p style={{ marginTop: 28, fontSize: 12.5, color: "var(--text-soft)", lineHeight: 1.6, textAlign: "center" }}>
+            This page is the whole hunt. Everything else is one tap away —<br />
+            the app serves you, not the other way around.
+          </p>
         </>
       )}
     </div>
