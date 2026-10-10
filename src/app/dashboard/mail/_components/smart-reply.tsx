@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Send, Lock } from "lucide-react"
 import { Chip, Btn } from "../../_suite/ui"
+import SmartCompose from "./smart-compose"
 import type { Mail } from "../../_suite/sample"
 
 interface ReplyChip {
@@ -126,11 +127,15 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
             <input value={subject} onChange={e => setSubject(e.target.value)}
               style={{ height: 38, padding: "0 10px", borderRadius: 10, border: "1px solid var(--border-strong)", fontSize: 13.5, color: "var(--text)", background: "var(--surface)" }} />
           </label>
-          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>
-            Message — edit anything before sending
-            <textarea value={body} onChange={e => setBody(e.target.value)} rows={12}
-              style={{ padding: 10, borderRadius: 10, border: "1px solid var(--border-strong)", fontSize: 13.5, lineHeight: 1.6, color: "var(--text)", background: "var(--surface)", resize: "vertical", fontFamily: "inherit" }} />
-          </label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>
+            <span>Message — edit anything before sending. Pause while typing and it suggests the next words; grammar fixes appear below.</span>
+            <SmartCompose
+              value={body}
+              onChange={setBody}
+              rows={12}
+              context={{ to: mail.from, subject, role: mail.role }}
+            />
+          </div>
           {sendError && <div style={{ fontSize: 12.5, color: "var(--danger)" }}>{sendError}</div>}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-muted)" }}>
