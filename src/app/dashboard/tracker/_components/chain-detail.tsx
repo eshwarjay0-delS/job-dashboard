@@ -1,0 +1,157 @@
+"use client"
+
+import Link from "next/link"
+import { X, TrainFront, User, ArrowRight } from "lucide-react"
+import ChainRail from "./chain-rail"
+import TypingDots from "../../_components/typing-dots"
+import type { ApplicationChain } from "@/app/api/gmail/_lib"
+
+/* ── ChainDetail — one application's full journey ──────────────────────────
+   The train on its track, the people who carried the profile, who holds it
+   now, and the next move. Slides up as a bottom sheet on mobile. */
+
+export default function ChainDetail({
+  chain, loading, onClose,
+}: {
+  chain: ApplicationChain | null
+  loading: boolean
+  onClose: () => void
+}) {
+  if (!chain && !loading) return null
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 70, background: "rgba(20,18,12,0.45)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: "min(560px, 100%)", maxHeight: "88dvh", overflowY: "auto",
+          background: "var(--surface)", borderRadius: "22px 22px 0 0",
+          borderTop: "1px solid var(--border-strong)",
+          padding: "14px 20px calc(20px + env(safe-area-inset-bottom))",
+          animation: "sheet-up 0.28s ease-out",
+        }}
+      >
+        <style>{`@keyframes sheet-up { from { transform: translateY(40px); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }`}</style>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
+          <div style={{ width: 40, height: 4, borderRadius: 4, background: "var(--border-strong)" }} />
+        </div>
+
+        {loading || !chain ? (
+          <div style={{ padding: "40px 0", textAlign: "center" }}>
+            <TypingDots label="Tracing the chain…" />
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 6 }}>
+                  <TrainFront size={13} /> Application journey
+                </div>
+                <h2 style={{ margin: "6px 0 2px", fontSize: 20 }}>{chain.company}</h2>
+                <div style={{ fontSize: 13.5, color: "var(--text-muted)" }}>{chain.role}{chain.rate ? ` · ${chain.rate}` : ""}</div>
+              </div>
+              <button onClick={onClose} aria-label="Close"
+                style={{ border: "none", background: "var(--surface-2)", borderRadius: 999, width: 36, height: 36, display: "grid", placeItems: "center", cursor: "pointer", color: "var(--text-muted)", flex: "none" }}>
+                <X size={17} />
+              </button>
+            </div>
+
+            <div style={{ margin: "18px 0 6px" }}>
+              <ChainRail chain={chain} />
+            </div>
+
+            {/* Who holds the profile right now */}
+            {!chain.terminal && (
+              <div style={{
+                marginTop: 14, padding: "12px 14px", borderRadius: 14,
+                background: chain.stalledDays >= 7 ? "#fdf3e7" : "var(--accent-soft)",
+                border: `1px solid ${chain.stalledDays >= 7 ? "#e8c98f" : "var(--accent-border)"}`,
+                fontSize: 13.5, lineHeight: 1.55,
+              }}>
+                <strong>{chain.holder}</strong> has your profile
+                {chain.stalledDays > 0 && <> · quiet for <strong>{chain.stalledDays} day{chain.stalledDays === 1 ? "" : "s"}</strong></>}.
+                <div style={{ marginTop: 4, color: "var(--text-muted)" }}>{chain.nextAction}</div>
+              </div>
+            )}
+            {chain.terminal && (
+              <div style={{
+                marginTop: 14, padding: "12px 14px", borderRadius: 14,
+                background: chain.terminal === "offer" ? "#f4ecd4" : "var(--surface-2)",
+                border: "1px solid var(--border-strong)", fontSize: 13.5,
+              }}>
+                {chain.nextAction}
+              </div>
+            )}
+
+            {/* The hands it passed through */}
+            {chain.links.length > 0 && (
+              <div style={{ marginTop: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase", marginBottom: 10 }}>
+                  Hands it passed through
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, padding: "7px 12px", borderRadius: 999, background: "var(--accent)", color: "#fff" }}>
+                    <User size={13} /> You
+                  </span>
+                  {chain.links.map((l, i) => (
+                    <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <ArrowRight size={13} style={{ color: "var(--text-soft)" }} />
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, padding: "7px 12px", borderRadius: 999, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}>
+                        {l.name}
+                        <span style={{ fontWeight: 500, color: "var(--text-soft)", fontSize: 11 }}>{l.role}</span>
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Milestones with evidence */}
+            <div style={{ marginTop: 18 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase", marginBottom: 10 }}>
+                Milestones
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {chain.stops.filter(s => s.reached).map(s => (
+                  <div key={s.key} style={{ display: "flex", gap: 10, fontSize: 13, alignItems: "baseline" }}>
+                    <span style={{ fontWeight: 700, minWidth: 88 }}>{s.label}</span>
+                    {s.at && <span style={{ color: "var(--text-soft)" }}>{new Date(s.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
+                    {s.evidence && <span style={{ color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>· {s.evidence}</span>}
+                  </div>
+                ))}
+                {chain.stops.filter(s => s.reached).length === 0 && (
+                  <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Early days — the first handoff hasn't shown up in email yet.</div>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              {!chain.terminal && chain.stalledDays >= 7 && (
+                <Link href="/dashboard/mail" style={{
+                  flex: 1, textAlign: "center", padding: "13px", borderRadius: 14, fontWeight: 750, fontSize: 14,
+                  background: "var(--accent)", color: "#fff", textDecoration: "none",
+                }}>
+                  Draft the follow-up
+                </Link>
+              )}
+              {chain.interviewThreadId && (
+                <Link href="/dashboard/calendar" style={{
+                  flex: 1, textAlign: "center", padding: "13px", borderRadius: 14, fontWeight: 700, fontSize: 14,
+                  border: "1px solid var(--border-strong)", color: "var(--text)", textDecoration: "none",
+                }}>
+                  View interview
+                </Link>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}

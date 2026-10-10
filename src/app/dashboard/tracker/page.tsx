@@ -1,7 +1,10 @@
 "use client"
 import TypingDots from "../_components/typing-dots"
+import ChainDetail from "./_components/chain-detail"
+import type { ApplicationChain } from "@/app/api/gmail/_lib"
+import { tapBuzz } from "@/lib/haptics"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Zap } from "lucide-react"
 import { Card, Chip, StagePill } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
@@ -21,7 +24,7 @@ const MOVES: Stage[] = ["applied", "pending", "followup", "rtr", "rate", "invite
 const TH: React.CSSProperties = { textAlign: "left", padding: "10px 16px", fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--text-soft)", whiteSpace: "nowrap" }
 const TD: React.CSSProperties = { padding: "10px 16px", fontSize: 13, color: "var(--text-muted)", borderTop: "1px solid var(--border)", whiteSpace: "nowrap" }
 
-function TableView({ apps, setStage, acct }: { apps: App[]; setStage: (id: string, s: Stage) => void; acct: (id: string) => { tint: string; email: string } }) {
+function TableView({ apps, setStage, acct, onOpen }: { apps: App[]; setStage: (id: string, s: Stage) => void; acct: (id: string) => { tint: string; email: string }; onOpen: (id: string) => void }) {
   return (
     <Card style={{ padding: 0, overflowX: "auto" }}>
       <table style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
@@ -30,7 +33,7 @@ function TableView({ apps, setStage, acct }: { apps: App[]; setStage: (id: strin
         </thead>
         <tbody>
           {apps.map(a => (
-            <tr key={a.id} style={{ opacity: a.stage === "rejected" ? 0.6 : 1 }}>
+            <tr key={a.id} onClick={() => onOpen(a.id)} style={{ opacity: a.stage === "rejected" ? 0.6 : 1, cursor: "pointer" }}>
               <td style={TD}>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   <div style={{ width: 34, height: 34, borderRadius: 10, background: STAGE[a.stage].bg, color: STAGE[a.stage].fg, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{a.company[0]}</div>
@@ -51,7 +54,7 @@ function TableView({ apps, setStage, acct }: { apps: App[]; setStage: (id: strin
               <td style={TD}>
                 <label style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                   <StagePill stage={a.stage} />
-                  <select value={a.stage} onChange={e => setStage(a.id, e.target.value as Stage)} aria-label={`Change stage for ${a.company}`}
+                  <select value={a.stage} onClick={e => e.stopPropagation()} onChange={e => setStage(a.id, e.target.value as Stage)} aria-label={`Change stage for ${a.company}`}
                     style={{ height: 28, fontSize: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-muted)", cursor: "pointer" }}>
                     {MOVES.map(s => <option key={s} value={s}>{STAGE[s].label}</option>)}
                   </select>
@@ -66,7 +69,7 @@ function TableView({ apps, setStage, acct }: { apps: App[]; setStage: (id: strin
   )
 }
 
-function BoardView({ apps, acct }: { apps: App[]; acct: (id: string) => { tint: string; email: string } }) {
+function BoardView({ apps, acct, onOpen }: { apps: App[]; acct: (id: string) => { tint: string; email: string }; onOpen: (id: string) => void }) {
   return (
     <div style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 8 }}>
       {COLUMNS.map(c => {
@@ -80,7 +83,7 @@ function BoardView({ apps, acct }: { apps: App[]; acct: (id: string) => { tint: 
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 8, borderRadius: 10, background: "var(--surface-2)", minHeight: 220 }}>
               {items.map(a => (
-                <div key={a.id} style={{ padding: 12, borderRadius: 10, background: "var(--surface)", border: "1px solid var(--border)", opacity: a.stage === "rejected" ? 0.6 : 1 }}>
+                <div key={a.id} onClick={() => onOpen(a.id)} style={{ padding: 12, borderRadius: 10, background: "var(--surface)", border: "1px solid var(--border)", opacity: a.stage === "rejected" ? 0.6 : 1, cursor: "pointer" }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600 }}>{a.company}</div>
                   <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{a.role}</div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 12, color: "var(--text-muted)" }}>
@@ -107,6 +110,35 @@ export default function TrackerPage() {
   const [view, setView] = useState<"table" | "board">("table")
   const [type, setType] = useState<"all" | App["type"]>("all")
   const [hideRejected, setHideRejected] = useState(false)
+
+  const [chains, setChains] = useState<ApplicationChain[]>([])
+  const [chainLoading, setChainLoading] = useState(false)
+  const [openChain, setOpenChain] = useState<ApplicationChain | null>(null)
+
+  useEffect(() => {
+    if (!connected) return
+    fetch("/api/gmail/application-chains", { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => { if (j.ok) setChains(j.chains || []) })
+      .catch(() => {})
+  }, [connected])
+
+  const openApp = (id: string) => {
+    tapBuzz()
+    const found = chains.find(ch => ch.threadId === id)
+    if (found) { setOpenChain(found); return }
+    // Chains still loading — fetch on demand, then open.
+    setChainLoading(true)
+    fetch("/api/gmail/application-chains", { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => {
+        const list: ApplicationChain[] = j.ok ? (j.chains || []) : []
+        setChains(list)
+        setOpenChain(list.find(ch => ch.threadId === id) || null)
+      })
+      .catch(() => setOpenChain(null))
+      .finally(() => setChainLoading(false))
+  }
 
   const apps = applications.map(a => overrides[a.id] ? { ...a, stage: overrides[a.id] as Stage } : a)
   const accounts = buildAccounts(apps.map(a => a.account))
@@ -158,7 +190,10 @@ export default function TrackerPage() {
           ))}
         </div>
       </div>
-      {view === "table" ? <TableView apps={shown} setStage={setStage} acct={acct} /> : <BoardView apps={shown} acct={acct} />}
+      {view === "table" ? <TableView apps={shown} setStage={setStage} acct={acct} onOpen={openApp} /> : <BoardView apps={shown} acct={acct} onOpen={openApp} />}
+      {(openChain || chainLoading) && (
+        <ChainDetail chain={openChain} loading={chainLoading && !openChain} onClose={() => { setOpenChain(null); setChainLoading(false) }} />
+      )}
       </>)}
       <div style={{ display: "flex", gap: 10, marginTop: 20, padding: 16, borderRadius: 10, background: "var(--surface-2)", fontSize: 13, lineHeight: 1.55, color: "var(--text-muted)" }}>
         <Zap size={16} style={{ flexShrink: 0, color: "var(--text)" }} />

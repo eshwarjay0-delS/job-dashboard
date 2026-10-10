@@ -745,3 +745,183 @@ export function threadsToInterviews(threads: ClassifiedThread[]): Interview[] {
   return out
 }
 
+
+// ── Application chains ────────────────────────────────────────────────────
+// Every RTR/submission is the start of a chain: the profile travels from hand
+// to hand — recruiter → vendor → implementation partner → client — and each
+// handoff is progress. This builds the full chain per application thread:
+// the stages reached (with dates + evidence), who currently holds the
+// profile, whether it's stalled, and the next action. Deterministic: every
+// stage needs a message that proves it.
+
+export type ChainStageKey = "rtr" | "submitted" | "client" | "interview" | "decision"
+
+export interface ChainStop {
+  key: ChainStageKey
+  label: string
+  reached: boolean
+  at?: number
+  evidence?: string
+}
+
+export interface ChainLink {
+  name: string
+  role: string // "recruiter" | "vendor" | "partner" | "client" | "you"
+  at?: number
+}
+
+export interface ApplicationChain {
+  threadId: string
+  accountEmail: string
+  company: string
+  role: string
+  rate?: string
+  stops: ChainStop[]
+  current: ChainStageKey
+  terminal: "offer" | "rejected" | null
+  links: ChainLink[]
+  holder: string
+  holderSince?: number
+  stalledDays: number
+  nextAction: string
+  interviewThreadId?: string
+  lastActivity?: number
+}
+
+const SUBMITTED_RE = /submitted your profile|profile submitted|have submitted|submission (is )?done|submitted to (the )?client|resume (has been )?submitted/i
+const SHARED_RE = /shared .*profile|forwarded .*profile|sent .*profile to/i
+const CLIENT_RE = /\bclient\b/i
+const RTR_SIGNED_RE = /\brtr\b.{0,40}\bsign|\bsign.{0,40}\brtr\b|authorization .*signed|exclusive representation/i
+const FOLLOWUP_SENT_RE = /follow.?up|any update|checking in|next steps/i
+
+const RAIL: Array<{ key: ChainStageKey; label: string }> = [
+  { key: "rtr", label: "RTR" },
+  { key: "submitted", label: "Submitted" },
+  { key: "client", label: "With client" },
+  { key: "interview", label: "Interview" },
+  { key: "decision", label: "Decision" },
+]
+
+function personName(from: string): string {
+  const m = from.match(/^"?([^"<@]+)"?\s*</)
+  if (m) return m[1].trim()
+  const bare = from.split("@")[0].replace(/[._-]+/g, " ").trim()
+  return bare || from
+}
+
+export function buildApplicationChains(threads: ClassifiedThread[]): ApplicationChain[] {
+  const out: ApplicationChain[] = []
+  const now = Date.now()
+
+  for (const t of threads) {
+    const primary = t.messages[0]
+    if (primary.category === "General Correspondence" || primary.category === "Sales Pitch") continue
+
+    const domain = extractDomain(primary.from)
+    const reached = new Map<ChainStageKey, { at: number; evidence: string }>()
+    let terminal: "offer" | "rejected" | null = null
+    let interviewThreadId: string | undefined
+    const people = new Map<string, ChainLink>()
+
+    const mark = (key: ChainStageKey, at: number, evidence: string) => {
+      const prev = reached.get(key)
+      if (!prev || at < prev.at) reached.set(key, { at, evidence })
+    }
+
+    for (const m of t.messages) {
+      const text = `${m.subject} ${m.snippet}`
+      const ts = m.internalDate ? Number(m.internalDate) : 0
+      const isMe = m.from.toLowerCase().includes(t.accountEmail.toLowerCase().split("@")[0])
+      const name = personName(m.from)
+
+      if (!isMe && name && !people.has(name.toLowerCase())) {
+        people.set(name.toLowerCase(), {
+          name,
+          role: /client|hiring/i.test(text) ? "client" : m.vendorDomain && !/gmail|yahoo|hotmail/i.test(m.vendorDomain) ? "vendor" : "recruiter",
+          at: ts || undefined,
+        })
+      }
+
+      if (m.category === "RTR Request") mark("rtr", ts, m.subject.slice(0, 60))
+      else if (RTR_SIGNED_RE.test(text) && !isMe) mark("rtr", ts, "RTR signed")
+      if (SUBMITTED_RE.test(text) && !isMe) {
+        mark("submitted", ts, m.subject.slice(0, 60))
+        if (SHARED_RE.test(text) || CLIENT_RE.test(text)) mark("client", ts, m.subject.slice(0, 60))
+      }
+      if (m.category === "Interview Request") {
+        const ev = inviteEvidence({ ...t, messages: [m] })
+        if (ev.confirmed) {
+          mark("interview", ts, `${ev.how === "meeting-link" ? "Meeting link" : ev.how === "calendar-invite" ? "Calendar invite" : "Confirmed"} · ${m.subject.slice(0, 50)}`)
+          interviewThreadId = t.threadId
+        }
+      }
+      if (m.category === "Offer") terminal = "offer"
+      if (m.category === "Rejection") terminal = "rejected"
+    }
+
+    // A thread with real back-and-forth but no explicit "submitted" language
+    // still counts as submitted once the vendor is engaged past the RTR.
+    if (!reached.has("submitted") && (reached.has("client") || reached.has("interview") || terminal)) {
+      const first = t.messages.find(m => SUBMITTED_RE.test(`${m.subject} ${m.snippet}`))
+      mark("submitted", first && first.internalDate ? Number(first.internalDate) : (reached.get("client")?.at || reached.get("interview")?.at || now), "Vendor engaged")
+    }
+
+    const order: ChainStageKey[] = ["rtr", "submitted", "client", "interview", "decision"]
+    let current: ChainStageKey = "rtr"
+    for (const k of order) if (reached.has(k)) current = k
+    if (terminal) current = "decision"
+
+    const stops: ChainStop[] = RAIL.map(s => {
+      const r = reached.get(s.key)
+      const isDecision = s.key === "decision"
+      return {
+        key: s.key,
+        label: isDecision ? (terminal === "offer" ? "Offer" : terminal === "rejected" ? "Rejected" : "Decision") : s.label,
+        reached: isDecision ? terminal !== null : !!r,
+        at: isDecision ? undefined : r?.at,
+        evidence: isDecision ? undefined : r?.evidence,
+      }
+    })
+
+    const lastMsg = t.messages[t.messages.length - 1]
+    const lastTs = lastMsg?.internalDate ? Number(lastMsg.internalDate) : 0
+    const stalledDays = terminal ? 0 : lastTs ? Math.floor((now - lastTs) / 86_400_000) : 0
+    const holder = terminal
+      ? terminal === "offer" ? "You — offer in hand" : "Closed"
+      : personName(lastMsg?.from || "") || primary.vendor || "the vendor"
+
+    const nextAction = terminal === "offer"
+      ? "Offer received — review the terms and decide."
+      : terminal === "rejected"
+        ? "Closed. Reflect in Kompas if there's anything to learn."
+        : current === "interview"
+          ? "Interview stage — prepare, then reflect in Kompas after."
+          : stalledDays >= 10
+            ? `Quiet for ${stalledDays} days — ${holder} has your profile. Time to call.`
+            : stalledDays >= 7
+              ? `No movement in ${stalledDays} days — send ${holder} a follow-up.`
+              : `${holder} has your profile — check back if nothing moves in a few days.`
+
+    out.push({
+      threadId: t.threadId,
+      accountEmail: t.accountEmail,
+      company: companyFromDomain(domain, primary.from),
+      role: primary.jobTitle || primary.subject.slice(0, 50),
+      rate: primary.rate || undefined,
+      stops,
+      current,
+      terminal,
+      links: [...people.values()].slice(0, 6),
+      holder,
+      holderSince: lastTs || undefined,
+      stalledDays,
+      nextAction,
+      interviewThreadId,
+      lastActivity: lastTs || undefined,
+    })
+  }
+
+  out.sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0))
+  return out
+}
+
