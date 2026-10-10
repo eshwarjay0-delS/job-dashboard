@@ -1,9 +1,8 @@
 "use client"
 
-/* ── Post-connect wrap card ───────────────────────────────────────────────
-   Replaces the flat "X is now connected" line with a moment that keeps the
-   person involved and informed: what just happened, what MarketFit is doing
-   with the access, and the exact next steps. */
+/* ── Post-connect confirmation ────────────────────────────────────────────
+   Light wrap-up after a successful connect. The reassurance lives up front
+   in the pre-connect explainer; this just confirms and points at next steps. */
 
 export default function ConnectedWrap({
   email,
@@ -20,28 +19,20 @@ export default function ConnectedWrap({
         <span className="wrap-check" aria-hidden="true">✓</span>
         <div>
           <h3>{email ? `${email} is connected` : "Google account connected"}</h3>
-          <p>You&rsquo;re in. Here&rsquo;s what happens now.</p>
+          <p>Your inbox is syncing now. Two quick next steps:</p>
         </div>
       </div>
 
       <ol className="wrap-steps">
         <li>
-          <strong>Your inbox is syncing.</strong>
-          <span>MarketFit reads your job emails and sorts them — RTRs, rate confirmations, interviews, follow-ups.</span>
-        </li>
-        <li>
           <strong>Fill your reply profile.</strong>
-          <span>One-time setup under this account. Smart Reply uses it to draft answers in your voice — nothing ever sends without your tap.</span>
+          <span>One-time setup under this account — Smart Reply uses it to draft answers in your voice.</span>
         </li>
         <li>
-          <strong>The watchdog is on.</strong>
-          <span>MarketFit watches for trouble in the background: duplicate submissions, conflicting RTRs, silent vendors — and tells you before it costs you.</span>
+          <strong>Open your inbox.</strong>
+          <span>Your job emails are being sorted into RTRs, rates, interviews, and follow-ups.</span>
         </li>
       </ol>
-
-      <p className="wrap-fine">
-        Your mail stays in your Google account. Disconnect anytime from this page and access is revoked immediately.
-      </p>
 
       <div className="wrap-actions">
         <a className="btn-accent" href="/dashboard/mail">Open your inbox</a>
