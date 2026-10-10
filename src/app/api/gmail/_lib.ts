@@ -176,7 +176,29 @@ async function readCachedThreads(sb: Sb, userId: string, days: number): Promise<
     .order("latest_ts", { ascending: false })
     .limit(500)
   if (error) throw error
-  return (data || []).map((r: { data: unknown }) => r.data as ClassifiedThread)
+  return (data || []).map((r: { data: unknown }) => {
+    const t = r.data as ClassifiedThread
+    let healed = false
+    const messages = t.messages.map(m => {
+      const c = classifyEmail({ subject: m.subject, snippet: m.snippet, from: m.from })
+      if (c.category !== m.category) {
+        healed = true
+        return { ...m, category: c.category, confidence: c.confidence, jobTitle: c.jobTitle, rate: c.rate, vendor: c.vendor, vendorDomain: c.vendorDomain }
+      }
+      return m
+    })
+    if (healed) {
+      // Persist the healed classification so the next read is already correct.
+      const nt = { ...t, messages }
+      sb.from("mfit_gmail_threads")
+        .update({ data: nt, updated_at: new Date().toISOString() })
+        .eq("user_id", userId)
+        .eq("thread_id", t.threadId)
+        .then(() => {})
+      return nt
+    }
+    return t
+  })
 }
 
 async function upsertCachedThreads(sb: Sb, userId: string, acct: GwAccount, threads: ClassifiedThread[]): Promise<void> {

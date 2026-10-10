@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url)
     const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 60, 1), 90)
 
-    const { threads } = await fetchClassifiedThreads(ctx.userId, { days, max: 50 })
+    const { threads } = await fetchClassifiedThreads(ctx.userId, { days: Math.max(days, 90), max: 100 })
     // One-time catch-up: re-verify .ics evidence on interview threads cached before the signal existed.
     const enriched = await enrichInterviewEvidence(ctx.userId, threads)
     const interviews = threadsToInterviews(enriched)
