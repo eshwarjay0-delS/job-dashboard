@@ -48,6 +48,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/dashboard/tracker",     label: "My Jobs",    icon: ICON.list,     what: "Every job you applied to, and where each one stands right now." },
       { href: "/dashboard/calendar",    label: "Interviews",   icon: ICON.calendar, what: "Your upcoming interviews. Don't miss any." },
       { href: "/dashboard/workflows",   label: "Follow-ups", icon: ICON.repeat,   what: "Automatic follow-ups that run on their own. Some wait for your OK." },
+      { href: "/dashboard/agent",       label: "Agent",      icon: ICON.chat,     what: "Your job-hunt strategist. Ask about any role or vendor — it maps every chain and gives you one precise call." },
       { href: "/dashboard/connections", label: "Gmail accounts",   icon: ICON.link,     what: "Connect your Gmail so MarketFit can read your job emails." },
       { href: "/dashboard/kompas", label: "Interview practice", what: "Practice with Kompas using your own resume.", icon: ICON.chat },
       // One page for both since 8 Oct 2026 (the owner: "Combine kompas flow and transcribe to be in one page"). The old
