@@ -103,6 +103,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, reply })
   } catch (err) {
     console.error("agent/chat error:", err)
-    return NextResponse.json({ error: "The agent hit an error. Try again." }, { status: 500 })
+    // Surface the real cause (provider + status, never any key material) so the
+    // user — and the admin — knows exactly what to fix instead of guessing.
+    const raw = err instanceof Error ? err.message : String(err)
+    const safe = raw
+      .replace(/sk-[A-Za-z0-9-_]+/g, "[key]")
+      .replace(/gsk_[A-Za-z0-9]+/g, "[key]")
+      .replace(/AIza[A-Za-z0-9-_]+/g, "[key]")
+      .replace(/sk-or-[A-Za-z0-9-_]+/g, "[key]")
+      .slice(0, 300)
+    const hint = /no api key configured/i.test(safe)
+      ? " The agent's AI key isn't enabled for chat — the app owner needs to tick a provider for it on the Admin page."
+      : ""
+    return NextResponse.json({ error: `The agent hit an error: ${safe}.${hint}` }, { status: 500 })
   }
 }
