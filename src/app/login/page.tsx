@@ -53,7 +53,7 @@ function LoginContent() {
   }
 
   async function emailSignIn() {
-    if(email.trim().toLowerCase()!=="eshwarjay0@gmail.com"){setError("Direct password login is currently restricted to the administrator account.");return}
+    if(email.trim().toLowerCase()!=="eshwarjay0@gmail.com"){setError("You are not an admin.");return}
     if (loading) return
     setLoading(true)
     setError(null)
@@ -67,7 +67,7 @@ function LoginContent() {
   }
 
   async function sendPasswordSetup() {
-    if(email.trim().toLowerCase()!=="eshwarjay0@gmail.com"){setError("Password setup is currently restricted to the administrator account.");return}
+    if(email.trim().toLowerCase()!=="eshwarjay0@gmail.com"){setError("You are not an admin.");return}
     if (loading) return
     setLoading(true)
     setError(null)
