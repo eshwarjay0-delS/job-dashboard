@@ -3,6 +3,7 @@ import SidebarNav from "./sidebar-nav"
 import PageTransition from "./page-transition"
 import DeviceGuard from "./device-guard"
 import OnboardingGate from "./onboarding-gate"
+import FloatingAgent from "./_components/floating-agent"
 
 // Layout is synchronous — SidebarNav fetches user data client-side.
 // This ensures the sidebar renders on FIRST PAINT, not after Supabase auth resolves.
@@ -22,6 +23,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }}>
         <OnboardingGate><DeviceGuard><PageTransition>{children}</PageTransition></DeviceGuard></OnboardingGate>
       </main>
+
+      {/* ── Floating MFit Agent — the strategist, on every page ── */}
+      <FloatingAgent />
 
 
     </div>

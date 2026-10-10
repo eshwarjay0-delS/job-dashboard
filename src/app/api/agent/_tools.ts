@@ -92,6 +92,43 @@ async function readThread(ctx: ToolContext, args: Record<string, unknown>): Prom
   }
 }
 
+// ── find_contact ──────────────────────────────────────────────────────────
+// "Search me this guy's number": find a recruiter/vendor's phone and email
+// across classified threads. Matches name fragments against From headers,
+// vendor names, and subjects; pulls phone-looking strings from snippets.
+async function findContact(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
+  const name = str(args.name).toLowerCase()
+  if (!name) return { ok: false, error: "name is required" }
+  const { threads } = await fetchClassifiedThreads(ctx.userId, { days: 90, max: 100 })
+  const hits: Array<{ name: string; email: string; phones: string[]; vendor: string; role: string; lastSeen: string }> = []
+  const seen = new Set<string>()
+  const phoneRe = /(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}/g
+  for (const t of threads) {
+    for (const m of t.messages) {
+      const hay = `${m.from} ${m.vendor} ${m.subject}`.toLowerCase()
+      if (!hay.includes(name)) continue
+      const emailMatch = m.from.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)
+      const email = emailMatch ? emailMatch[0] : ""
+      const key = `${m.vendor}|${email}`.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      const phones = [...new Set((m.snippet.match(phoneRe) || []).map(p => p.trim()))].slice(0, 3)
+      hits.push({
+        name: m.vendor || m.from.split("<")[0].trim(),
+        email,
+        phones,
+        vendor: m.vendorDomain || "",
+        role: m.jobTitle || m.subject.slice(0, 60),
+        lastSeen: m.internalDate ? new Date(Number(m.internalDate)).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "",
+      })
+      if (hits.length >= 8) break
+    }
+    if (hits.length >= 8) break
+  }
+  if (hits.length === 0) return { ok: false, error: `No contact found matching "${str(args.name)}" in the last 90 days of threads.` }
+  return { ok: true, data: { count: hits.length, contacts: hits } }
+}
+
 // ── list_submissions ──────────────────────────────────────────────────────
 async function listSubmissions(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
   const { threads } = await fetchClassifiedThreads(ctx.userId, {
@@ -105,11 +142,12 @@ async function listSubmissions(ctx: ToolContext, args: Record<string, unknown>):
 // ── create_draft ──────────────────────────────────────────────────────────
 // Draft-only. The Gmail API drafts.create endpoint. Never sends.
 async function createDraft(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
-  const to = str(args.to)
-  const subject = str(args.subject)
+  const to = str(args.to).replace(/[\r\n]/g, " ").trim()
+  const subject = str(args.subject).replace(/[\r\n]/g, " ").trim()
   const body = str(args.body)
   const accountEmail = str(args.accountEmail).toLowerCase()
   if (!to || !subject || !body) return { ok: false, error: "to, subject, and body are required" }
+  if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(to)) return { ok: false, error: "to must be a single valid email address" }
 
   const accounts = await listGoogleWorkspaceAccounts(ctx.userId)
   const acct = accounts.find(
@@ -171,6 +209,11 @@ export const AGENT_TOOLS: Record<string, { description: string; fn: ToolFn }> = 
     description:
       "List job submissions derived from classified threads. Args: days (1-90, default 60). Returns applications with role, vendor, stage, rate.",
     fn: listSubmissions,
+  },
+  find_contact: {
+    description:
+      "Find a recruiter or vendor's contact details. Args: name (required — full or partial name, e.g. 'Amit Singh'). Searches 90 days of threads and returns names, emails, phone numbers, vendor, role, and last-seen date.",
+    fn: findContact,
   },
   create_draft: {
     description:

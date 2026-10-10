@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
+import { sendBuzz, arriveBuzz } from "@/lib/haptics"
 
 interface Msg { role: "user" | "assistant"; content: string }
 interface Note { id: string; type: string; title: string; body: string; link: string | null; read: boolean; created_at: string }
@@ -48,6 +49,7 @@ export default function AgentChat() {
     const content = (text ?? input).trim()
     if (!content || busy) return
     setInput("")
+    sendBuzz()
     const next = [...messages, { role: "user" as const, content }]
     setMessages(next)
     setBusy(true)
@@ -58,6 +60,7 @@ export default function AgentChat() {
       })
       const j = await r.json()
       setMessages([...next, { role: "assistant" as const, content: j.reply || j.error || "Something went wrong." }])
+      arriveBuzz()
     } catch {
       setMessages([...next, { role: "assistant" as const, content: "Couldn't reach the agent. Try again." }])
     } finally {
