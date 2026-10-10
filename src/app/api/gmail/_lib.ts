@@ -602,7 +602,6 @@ export async function enrichInterviewEvidence(
   const candidates = threads.filter(
     t => t.messages.some(m => m.category === "Interview Request") && t.messages.every(m => m.hasIcs === undefined),
   ).slice(0, 15)
-  if (candidates.length === 0) return threads
 
   let sb: Sb | null = null
   try {
@@ -655,8 +654,80 @@ export async function enrichInterviewEvidence(
     }
   }
 
-  if (updated.size === 0) return threads
-  return threads.map(t => updated.get(t.threadId) || t)
+  const merged = threads.map(t => updated.get(t.threadId) || t)
+
+  // ── Live discovery: interview-subject threads the cache fill missed ─────
+  // The cache keeps only the N most recent threads, so a real interview from
+  // weeks ago may never have been cached. Search Gmail live for interview
+  // subjects and pull in anything missing. Bounded and batched (rate-limit
+  // safe): at most 30 missing threads per call.
+  try {
+    const have = new Set(merged.map(t => t.threadId))
+    const missing: Array<{ acct: GwAccount; token: string; threadId: string }> = []
+    for (const acct of accounts) {
+      if (missing.length >= 30) break
+      const token = await getGoogleWorkspaceAccessToken(userId, acct.id).catch(() => null)
+      if (!token) continue
+      const list = (await gmailGet(
+        `/messages?q=${encodeURIComponent("subject:(interview) newer_than:90d")}&maxResults=50`,
+        token,
+      )) as { messages?: Array<{ id: string; threadId: string }> }
+      for (const m of list.messages || []) {
+        if (m.threadId && !have.has(m.threadId) && missing.length < 30) {
+          have.add(m.threadId)
+          missing.push({ acct, token, threadId: m.threadId })
+        }
+      }
+    }
+    for (let i = 0; i < missing.length; i += 4) {
+      if (i > 0) await new Promise(r => setTimeout(r, 400))
+      const slice = missing.slice(i, i + 4)
+      const results = await Promise.allSettled(
+        slice.map(x =>
+          gmailGet(
+            `/threads/${x.threadId}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Date`,
+            x.token,
+          ),
+        ),
+      )
+      results.forEach((r, idx) => {
+        if (r.status !== "fulfilled") return
+        const raw = r.value as { id: string; messages: GmailMessage[] }
+        if (!raw.messages?.length) return
+        const x = slice[idx]
+        const messages = raw.messages.map(m => {
+          const headers = m.payload?.headers || []
+          const subject = getHeader(headers, "Subject")
+          const from = getHeader(headers, "From")
+          const c = classifyEmail({ subject, snippet: m.snippet || "", from })
+          const hasIcs = (m.payload?.parts || []).some(p => (p.filename || "").toLowerCase().endsWith(".ics"))
+          return {
+            id: m.id,
+            from,
+            subject,
+            snippet: m.snippet || "",
+            internalDate: m.internalDate,
+            unread: (m.labelIds || []).includes("UNREAD"),
+            category: c.category,
+            confidence: c.confidence,
+            jobTitle: c.jobTitle,
+            rate: c.rate,
+            vendor: c.vendor,
+            vendorDomain: c.vendorDomain,
+            hasIcs,
+          }
+        })
+        const nt: ClassifiedThread = { threadId: raw.id, accountEmail: x.acct.google_email, messages }
+        merged.push(nt)
+        // Cache it so the next load finds it without the live search.
+        upsertCachedThreads(sb!, userId, x.acct, [nt]).catch(() => {})
+      })
+    }
+  } catch {
+    /* live discovery is best-effort — cached results still stand */
+  }
+
+  return merged
 }
 
 
