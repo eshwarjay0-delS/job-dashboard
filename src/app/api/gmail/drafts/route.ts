@@ -4,6 +4,7 @@ import { getGoogleWorkspaceAccessToken, listGoogleWorkspaceAccounts } from "@/li
 import { checkRateLimit } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
+export const maxDuration = 60
 
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me"
 
