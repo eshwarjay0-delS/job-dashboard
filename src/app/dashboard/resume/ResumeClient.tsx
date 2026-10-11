@@ -686,6 +686,12 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                   : <><SparkIcon size={5} /> Make my resume fit this job →</>
                 }
               </button>
+              {jd.trim() && !tailoring && budget && (
+                <p className="text-xs text-center" style={{ color: "var(--text-soft)" }}>
+                  Estimated cost: ~${(((jd.trim().length / 4 + 2100) * 0.15 + 1200 * 0.60) / 1e6).toFixed(4)}
+                  {" "}· exact receipt after generation
+                </p>
+              )}
 
             </div>
 
