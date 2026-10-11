@@ -163,11 +163,48 @@ function Bar({ part, whole }: { part: number; whole: number }) {
   )
 }
 
+function BudgetBoard({ tick }: { tick: number }) {
+  const [b, setB] = useState<any>(null)
+  useEffect(() => {
+    fetch("/api/budget", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { if (j && j.ok) setB(j) }).catch(() => {})
+  }, [tick])
+  if (!b) return <Card><p className="text-sm" style={{ color: "var(--text-muted)" }}>Loading budget…</p></Card>
+  const u = b.unitEconomics
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+        {b.keys.map((k: any) => (
+          <Card key={k.provider}>
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-soft)" }}>{k.label} key</p>
+            <p className="text-2xl font-bold mt-1" style={{ color: "var(--text)", fontFamily: "var(--font-display)" }}>${k.remainingUsd.toFixed(2)}</p>
+            <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>left of ${k.loadedUsd.toFixed(2)} · spent ${k.spentUsd.toFixed(4)}</p>
+            <div className="mt-3 space-y-1 text-sm">
+              {k.buys.resumes !== null && <p style={{ color: "var(--text)" }}><b>{k.buys.resumes.toLocaleString()}</b> <span style={{ color: "var(--text-muted)" }}>resumes</span></p>}
+              {k.buys.sessionMinutes !== undefined && <p style={{ color: "var(--text)" }}><b>{k.buys.sessionMinutes.toLocaleString()}</b> <span style={{ color: "var(--text-muted)" }}>STT minutes</span></p>}
+              <p className="text-xs" style={{ color: "var(--text-soft)" }}>{k.buys.unit}</p>
+            </div>
+          </Card>
+        ))}
+        <Card>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-soft)" }}>Unit economics</p>
+          <div className="mt-2 space-y-1 text-sm" style={{ color: "var(--text-muted)" }}>
+            <p><b style={{ color: "var(--text)" }}>${u.perResumeUsd.toFixed(4)}</b> per resume {u.perResumeCalibrated ? <Tag tone="good">measured</Tag> : <Tag tone="warn">estimate</Tag>}</p>
+            <p><b style={{ color: "var(--text)" }}>${u.perSession20MinUsd.toFixed(4)}</b> per 20-min session (STT)</p>
+            <p><b style={{ color: "var(--text)" }}>${u.freePlanMonthlyCostUsd.toFixed(4)}</b> <span>free plan cost / user / month</span></p>
+            <p className="text-xs" style={{ color: "var(--text-soft)" }}>{u.note}</p>
+          </div>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const [data, setData] = useState<Usage | null>(null)
   const [state, setState] = useState<"loading" | "ready" | "not-admin" | "failed">("loading")
   const [busy, setBusy] = useState(false)
   const [span, setSpan] = useState<Span>("week")
+  const [budgetTick, setBudgetTick] = useState(0)
   const loadedAt = useRef(0)
 
   const load = useCallback(async () => {
@@ -373,6 +410,11 @@ export default function AdminPage() {
               count(m.calls), tokens(m.input), tokens(m.output), m.kind === "unpriced" ? "–" : money(m.costUsd),
             ])} />
         </Card>
+      </Section>
+
+      <Section title="API budget — what your keys buy" lede="Declared balances minus measured spend. Resumes left, session minutes left, and the unit economics underneath."
+        aside={<Chip label="Refresh" active={false} onClick={() => setBudgetTick(t => t + 1)} />}>
+        <BudgetBoard tick={budgetTick} />
       </Section>
 
       <Section title="Voice sessions and cost" lede="Every live Kompas session's speech-to-text: audio minutes, what each session cost, and what the next ones will cost. The business-model numbers."
