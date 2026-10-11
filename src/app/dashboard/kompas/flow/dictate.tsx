@@ -17,6 +17,7 @@ import PageIntro from "../../_components/page-intro"
 import { Card, Chip, Meta } from "../../_suite/ui"
 import RevisionEditor from "./revision-editor"
 import { flowResult, manualRewrite, type TranscriptRevision, type Layer } from "@/lib/kompasTranscript"
+import { learnedWords, learnFromCorrection, buildVocabHint, readStoredLang, writeStored, KOMPAS_HINT_KEY, KOMPAS_LANG_KEY } from "@/lib/kompasVocab"
 
 type Result = { raw: string; clean: string | null; kept: Layer; rewrite?: string; revisions?: TranscriptRevision[] }
 type Past = Result & { id: string; at: number }
@@ -30,23 +31,7 @@ const MAX_SECONDS = 90
 // app with the phone's own speech service; it does not use this page or this site's speech routes.
 const FLOW_APK = "/apps/Kompas-Flow.apk"
 const HISTORY_KEY = "mf_flow_history"
-const HINT_KEY = "mf_flow_hint"
-const LEARNED_KEY = "mf_flow_learned"
-// User correction learning: words the person fixed after dictation are remembered
-// (this browser only) and fed back as vocabulary hints next time — the recogniser
-// gets better at *their* names and terms without any account or server.
-function learnedWords(): string[] {
-  try { const v = JSON.parse(localStorage.getItem(LEARNED_KEY) || "[]"); return Array.isArray(v) ? v.filter(x => typeof x === "string").slice(0, 40) : [] } catch { return [] }
-}
-function learnFromCorrection(before: string, after: string) {
-  const inBefore = new Set(before.toLocaleLowerCase().split(/[^\p{L}\p{N}']+/u).filter(w => w.length > 2))
-  const fresh = [...new Set(after.split(/[^\p{L}\p{N}']+/u).filter(w => w.length > 2 && !inBefore.has(w.toLocaleLowerCase())))]
-  if (!fresh.length) return
-  try {
-    const keep = [...new Set([...fresh, ...learnedWords()])].slice(0, 40)
-    localStorage.setItem(LEARNED_KEY, JSON.stringify(keep))
-  } catch { /* storage blocked: learning simply doesn't persist */ }
-}
+const HINT_KEY = KOMPAS_HINT_KEY
 const TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]
 
 const SMALL: CSSProperties = { fontSize: 14.5, lineHeight: 1.55, color: "var(--text-muted)", margin: 0 }
@@ -107,10 +92,10 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
   const hintRef = useRef("")
   const [lang, setLang] = useState("")
   const langRef = useRef("")
-  const LANG_KEY = "mf_flow_lang"
+  const LANG_KEY = KOMPAS_LANG_KEY
 
   useEffect(() => { onBusy(phase !== "idle") }, [phase, onBusy])
-  useEffect(() => { const h = read<string>(HINT_KEY, ""); setHint(h); hintRef.current = h; const l = read<string>(LANG_KEY, ""); setLang(l); langRef.current = l; setPast(read<Past[]>(HISTORY_KEY, [])); setOnAndroid(/Android/i.test(navigator.userAgent))
+  useEffect(() => { const h = read<string>(HINT_KEY, ""); setHint(h); hintRef.current = h; const l = readStoredLang(); setLang(l); langRef.current = l; setPast(read<Past[]>(HISTORY_KEY, [])); setOnAndroid(/Android/i.test(navigator.userAgent))
     const apple = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
     const installed = window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
     setOnIphone(apple && !installed)
@@ -133,7 +118,7 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
     try {
       // Contextual vocabulary: their typed hint words plus every word they ever corrected,
       // so the recogniser learns their names and terms. The spoken language locks it in.
-      const vocab = [hintRef.current, ...learnedWords()].filter(Boolean).join(", ")
+      const vocab = buildVocabHint(hintRef.current)
       const headers: Record<string, string> = {
         "content-type": "application/octet-stream",
         "x-audio-mime": blob.type || "audio/webm",

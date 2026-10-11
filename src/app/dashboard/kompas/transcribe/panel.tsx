@@ -31,6 +31,7 @@ import {
   type Consent, type Layer, type Session,
 } from "@/lib/kompasTranscript"
 import RevisionEditor from "../flow/revision-editor"
+import { learnedWords, learnFromCorrection, buildVocabHint, readStoredLang, writeStored, KOMPAS_HINT_KEY } from "@/lib/kompasVocab"
 import { MAX_OTHERS, VOICE_RATE, YOU, readVoiceprint, speakersOf, voiceprintOf, type Voiceprint } from "@/lib/kompasVoice"
 import { MAX_FILE_BYTES, MAX_MINUTES, decode, partsOf, samplesOf, wavPart, type DecodeProblem } from "./audio"
 import { deleteSession, forgetVoice, listSessions, loadVoice, saveSession, saveVoice, type Kept } from "./store"
@@ -77,14 +78,21 @@ type Stretch = { start: number; end: number; text: string }
 type Heard = { ok: true; text: string; stretches: Stretch[] } | { ok: false; code: string }
 
 // One part to the server. A busy answer is waited out and tried again, three times at most; anything else comes straight back.
-async function hear(blob: Blob, hint: string, stillWanted: () => boolean): Promise<Heard> {
+// The vocabulary is the typed hint plus every word the person ever corrected (browser-local learning);
+// the language lock is shared with Flow's setting.
+async function hear(blob: Blob, hint: string, lang: string, stillWanted: () => boolean): Promise<Heard> {
   for (let attempt = 0; ; attempt++) {
     let response: Response
     try {
-      response = await fetch("/api/kompas/speech", {
-        method: "POST", body: blob,
-        headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-speech-for": "transcribe", ...(hint ? { "x-speech-hint": encodeURIComponent(hint) } : {}) },
-      })
+      const vocab = buildVocabHint(hint)
+      const headers: Record<string, string> = {
+        "content-type": "application/octet-stream",
+        "x-audio-mime": blob.type || "audio/webm",
+        "x-speech-for": "transcribe",
+        "x-speech-lang": lang,
+      }
+      if (vocab) headers["x-speech-hint"] = encodeURIComponent(vocab)
+      response = await fetch("/api/kompas/speech", { method: "POST", body: blob, headers })
     } catch { return { ok: false, code: "network" } }
     const body = await response.json().catch(() => ({}))
     if (response.ok) {
@@ -127,6 +135,12 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
   const [notKept, setNotKept] = useState(false)
   const [layer, setLayer] = useState<Layer>("raw")
   const [hint, setHint] = useState("")
+  useEffect(() => {
+    try {
+      const h = localStorage.getItem(KOMPAS_HINT_KEY) || ""
+      if (h) { setHint(h.slice(0, 400)); hintRef.current = h.slice(0, 400) }
+    } catch { /* storage blocked */ }
+  }, [])
   const [copied, setCopied] = useState<"" | "yes" | "no">("")
   const [kept, setKept] = useState<Kept[]>([])
   const [search, setSearch] = useState("")
@@ -155,6 +169,17 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
   // The voice print of each line of the open transcript. Memory only: other people's voices are never written anywhere.
   const prints = useRef(new Map<string, Voiceprint | null>())
   const learner = useRef<{ stream: MediaStream; recorder: MediaRecorder; tick: number; end: number } | null>(null)
+  // Signal quality monitor: is the microphone hearing speech, or air? Same watchdog as Flow.
+  const [signalNote, setSignalNote] = useState("")
+  const meterRef = useRef<{ ctx: AudioContext; analyser: AnalyserNode; samples: Uint8Array; iv: number } | null>(null)
+  const stopMeter = useCallback(() => {
+    const m = meterRef.current
+    meterRef.current = null
+    if (!m) return
+    window.clearInterval(m.iv)
+    void m.ctx.close().catch(() => {})
+    setSignalNote("")
+  }, [])
 
   useEffect(() => { onBusy(phase !== "idle" || mic) }, [phase, mic, onBusy])
   useEffect(() => { void loadVoice().then(kept => { const print = kept ? readVoiceprint(kept.print) : null; if (kept && print) { voiceRef.current = print; setVoice({ print, savedAt: kept.savedAt }) } }) }, [])
@@ -188,7 +213,10 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
     window.clearTimeout(now.rotate); window.clearInterval(now.tick)
     now.stream.getTracks().forEach(track => track.stop())
     setMic(false)
-  }, [])
+    stopMeter()
+  }, [stopMeter])
+  // The meter dies with the microphone, wherever the microphone dies.
+  useEffect(() => () => stopMeter(), [stopMeter])
   useEffect(() => () => { const now = live.current; if (now?.recorder && now.recorder.state !== "inactive") { now.recorder.onstop = null; try { now.recorder.stop() } catch { /* already stopped */ } } release(); closing.current = false; current.current = null }, [release])
 
   // Back to idle only when the microphone is off, the last part has been collected and nothing is still on its way.
@@ -209,7 +237,7 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
 
   const sendPart = useCallback(async (part: { id: string; blob: Blob; startMs: number; endMs: number; samples?: Float32Array }, forId: string) => {
     pending.current++
-    const heard = await hear(part.blob, hintRef.current, () => current.current?.id === forId)
+    const heard = await hear(part.blob, hintRef.current, readStoredLang(), () => current.current?.id === forId)
     const lines = heard.ok && current.current?.id === forId ? await linesOf(part, heard, hasOthers(current.current)) : []
     pending.current--
     if (heard.ok) { sounds.current.delete(part.id); put(s => relabel(lines.reduce((now, line) => appendSegment(now, line), s)), forId) }
@@ -287,7 +315,7 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
       // Each part is a whole file by itself: a new recorder is started on the same microphone before the old one is closed,
       // so no sound falls between two parts.
       const part = () => {
-        const recorder = new MediaRecorder(sound, { ...(type ? { mimeType: type } : {}), audioBitsPerSecond: 32000 })
+        const recorder = new MediaRecorder(sound, { ...(type ? { mimeType: type } : {}), audioBitsPerSecond: 128000 })
         const chunks: Blob[] = []
         const startMs = offset + (Date.now() - began)
         recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data) }
@@ -306,6 +334,28 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
       live.current = state
       setMic(true)
       part()
+      // Nondestructive signal watch: advise, never alter the audio.
+      try {
+        const ctx = new AudioContext()
+        void ctx.resume().catch(() => {})
+        const analyser = ctx.createAnalyser(); analyser.fftSize = 512
+        ctx.createMediaStreamSource(sound).connect(analyser)
+        const samples = new Uint8Array(analyser.fftSize)
+        let quietMs = 0, loudHits = 0, last = Date.now()
+        const iv = window.setInterval(() => {
+          analyser.getByteTimeDomainData(samples)
+          let peak = 0
+          for (const v of samples) peak = Math.max(peak, Math.abs(v - 128))
+          const norm = Math.min(1, peak / 64)
+          const nowMs = Date.now(), dt = nowMs - last; last = nowMs
+          if (norm > 0.08) quietMs = 0; else quietMs += dt
+          if (norm > 0.92) loudHits++
+          if (quietMs > 8000) setSignalNote("Very quiet — move closer to the microphone.")
+          else if (loudHits > 60) { setSignalNote("Clipping — back off the microphone a little."); loudHits = 0 }
+          else setSignalNote(n => (n ? "" : n))
+        }, 500)
+        meterRef.current = { ctx, analyser, samples, iv }
+      } catch { /* no meter is not an error */ }
       state.tick = window.setInterval(() => setSeconds(Math.floor((offset + Date.now() - began) / 1000)), 500)
       setSeconds(Math.floor(offset / 1000)); go("recording")
     } catch {
@@ -342,7 +392,7 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
     const open = current.current, blob = sounds.current.get(id)
     if (!open || !blob) return
     setError("")
-    const heard = await hear(blob, hintRef.current, () => current.current?.id === open.id)
+    const heard = await hear(blob, hintRef.current, readStoredLang(), () => current.current?.id === open.id)
     if (current.current?.id !== open.id) return
     if (!heard.ok) { setError(problem(heard.code)); return }
     sounds.current.delete(id); setRetryable([...sounds.current.keys()])
@@ -537,6 +587,7 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
                 <span style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>Recording <span style={{ ...NUM, color: "var(--text-muted)", fontWeight: 500 }}>{clockAt(seconds * 1000)}</span></span>
               </div>
               <p style={{ ...SMALL, marginTop: 8 }}>The microphone is on until you press Stop. The words arrive every 20 seconds.</p>
+              {signalNote && <p style={{ ...SMALL, marginTop: 6, color: "var(--text)" }}>{signalNote}</p>}
             </Card>
           )}
           <p role="status" aria-live="polite" style={{ ...SMALL, minHeight: progress || phase === "sending" || phase === "starting" ? 24 : 0, marginBottom: progress || phase === "sending" || phase === "starting" ? 12 : 0 }}>{phase === "sending" ? "Writing down the last part…" : phase === "starting" ? "Waiting for the microphone…" : progress}</p>
@@ -606,7 +657,7 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
                       )}
                       {!line.failed && <div style={{ gridColumn: 2 }}><RevisionEditor key={`${session.id}:${line.id}`} text={segmentsById.get(line.id)?.rewrite || segmentsById.get(line.id)?.clean || line.text}
                         revisions={segmentsById.get(line.id)?.revisions} disabled={busy}
-                        onSave={(text, reason) => { put(now => withManualRewrite(now, line.id, text, reason, Date.now()), session.id); setLayer("rewrite") }} /></div>}
+                        onSave={(text, reason) => { const seg = segmentsById.get(line.id); learnFromCorrection(seg?.rewrite || seg?.clean || line.text, text); put(now => withManualRewrite(now, line.id, text, reason, Date.now()), session.id); setLayer("rewrite") }} /></div>}
                     </div>
                   ))}
                 </div>
@@ -627,7 +678,7 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
 
           <section style={{ marginTop: 24 }}>
             <label htmlFor="transcribe-hint"><Meta>Words to listen for</Meta></label>
-            <input id="transcribe-hint" value={hint} maxLength={400} placeholder="Names and unusual words that will be said" onChange={e => { const v = e.target.value.slice(0, 400); setHint(v); hintRef.current = v }} style={{ ...FIELD, marginTop: 8 }} />
+            <input id="transcribe-hint" value={hint} maxLength={400} placeholder="Names and unusual words that will be said" onChange={e => { const v = e.target.value.slice(0, 400); setHint(v); hintRef.current = v; writeStored(KOMPAS_HINT_KEY, v) }} style={{ ...FIELD, marginTop: 8 }} />
             <p style={{ ...SMALL, marginTop: 8 }}>Optional. It helps unusual names and technical words come out right.</p>
           </section>
         </>
