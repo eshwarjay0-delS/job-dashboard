@@ -662,26 +662,32 @@ export async function enrichInterviewEvidence(
 
   const merged = threads.map(t => updated.get(t.threadId) || t)
 
-  // ── Live discovery: interview-subject threads the cache fill missed ─────
+  // ── Live discovery: interview threads the cache fill missed ────────────
   // The cache keeps only the N most recent threads, so a real interview from
   // weeks ago may never have been cached. Search Gmail live for interview
-  // subjects and pull in anything missing. Bounded and batched (rate-limit
-  // safe): at most 30 missing threads per call.
+  // subjects AND calendar invites (.ics) — the .ics query catches confirmed
+  // interviews whose subject never says "interview" (e.g. "Screening call
+  // with Eshwar", "Eshwar Janjirala - IT Security Analyst_USA"). Bounded and
+  // batched (rate-limit safe): at most 30 missing threads per call.
   try {
     const have = new Set(merged.map(t => t.threadId))
     const missing: Array<{ acct: GwAccount; token: string; threadId: string }> = []
+    const queries = ["subject:(interview) newer_than:45d", "filename:ics newer_than:45d"]
     for (const acct of accounts) {
       if (missing.length >= 30) break
       const token = await getGoogleWorkspaceAccessToken(userId, acct.id).catch(() => null)
       if (!token) continue
-      const list = (await gmailGet(
-        `/messages?q=${encodeURIComponent("subject:(interview) newer_than:45d")}&maxResults=50`,
-        token,
-      )) as { messages?: Array<{ id: string; threadId: string }> }
-      for (const m of list.messages || []) {
-        if (m.threadId && !have.has(m.threadId) && missing.length < 30) {
-          have.add(m.threadId)
-          missing.push({ acct, token, threadId: m.threadId })
+      for (const q of queries) {
+        if (missing.length >= 30) break
+        const list = (await gmailGet(
+          `/messages?q=${encodeURIComponent(q)}&maxResults=50`,
+          token,
+        )) as { messages?: Array<{ id: string; threadId: string }> }
+        for (const m of list.messages || []) {
+          if (m.threadId && !have.has(m.threadId) && missing.length < 30) {
+            have.add(m.threadId)
+            missing.push({ acct, token, threadId: m.threadId })
+          }
         }
       }
     }

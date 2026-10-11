@@ -50,12 +50,11 @@ export const NAV_TABS: NavTab[] = [
   },
   {
     href: "/dashboard/mail", label: "Jobs", icon: ICON.mail,
-    what: "Inbox, applications, interviews, follow-ups — the hunt itself.",
+    what: "Inbox, applications, interviews, follow-ups — the hunt itself. The agent floats everywhere: tap the robot.",
     items: [
       { href: "/dashboard/tracker",     label: "My Jobs",       icon: ICON.list,   what: "Every job you applied to, and where each one stands right now." },
       { href: "/dashboard/calendar",    label: "Interviews",    icon: ICON.calendar, what: "Your upcoming interviews. Don't miss any." },
       { href: "/dashboard/workflows",   label: "Follow-ups",   icon: ICON.repeat, what: "Automatic follow-ups that run on their own. Some wait for your OK." },
-      { href: "/dashboard/agent",       label: "Agent",         icon: ICON.chat,   what: "Your job-hunt strategist. Ask about any role or vendor — it maps every chain and gives you one precise call." },
       { href: "/dashboard/connections", label: "Gmail accounts", icon: ICON.link,  what: "Connect your Gmail so MarketFit can read your job emails." },
       { href: "/dashboard/whatsapp",    label: "WhatsApp",      icon: ICON.phone,  what: "Send a job post and your resume. Get your resume back, fitted to that job." },
       { href: "/dashboard/extension",   label: "Extension",     icon: ICON.puzzle, what: "Add MarketFit to Chrome. It fills job application forms for you." },
@@ -69,6 +68,11 @@ export const NAV_TABS: NavTab[] = [
       // address, /dashboard/kompas/transcribe, sends people to this page with Transcribe showing.
       { href: "/dashboard/kompas/flow", label: "Kompas Flow", icon: ICON.mic, what: "Speak, and get clean text you can paste anywhere." },
     ],
+  },
+  {
+    href: "/dashboard/overview", label: "Overview", icon: ICON.gauge,
+    what: "Every submission as a mind map and a progress bar — who touched your profile, where it stands, what is next.",
+    items: [],
   },
   {
     href: "/dashboard/resume", label: "Resume", icon: ICON.resume,

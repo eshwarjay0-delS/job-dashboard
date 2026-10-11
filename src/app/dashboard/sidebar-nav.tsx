@@ -214,13 +214,15 @@ export default function SidebarNav() {
                   title={tab.what} style={{ flex: 1 }}>
                   <span className="sb-icon">{tab.icon}</span><span>{tab.label}</span>
                 </TabLink>
-                <button type="button" onClick={() => toggleTab(tab.href)} aria-expanded={expanded}
-                  aria-label={expanded ? `Hide ${tab.label} pages` : `Show ${tab.label} pages`}
-                  style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--muted)", padding: "8px 10px", fontSize: 12 }}>
-                  <span aria-hidden style={{ display: "inline-block", transform: expanded ? "rotate(90deg)" : "none", transition: "transform .15s" }}>▶</span>
-                </button>
+                {tab.items.length > 0 && (
+                  <button type="button" onClick={() => toggleTab(tab.href)} aria-expanded={expanded}
+                    aria-label={expanded ? `Hide ${tab.label} pages` : `Show ${tab.label} pages`}
+                    style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--muted)", padding: "8px 10px", fontSize: 12 }}>
+                    <span aria-hidden style={{ display: "inline-block", transform: expanded ? "rotate(90deg)" : "none", transition: "transform .15s" }}>▶</span>
+                  </button>
+                )}
               </div>
-              {expanded && (
+              {expanded && tab.items.length > 0 && (
                 <div style={{ marginLeft: 18, borderLeft: "1px solid var(--border)", paddingLeft: 8 }}>
                   {tab.items.map(item => {
                     const active = isActive(item.href, pathname)
