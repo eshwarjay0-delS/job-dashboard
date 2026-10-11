@@ -156,6 +156,10 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
   // summary is left as the candidate wrote it unless they explicitly opt in.
   const [sections, setSections]   = useState<{ summary: boolean; skills: boolean; experience: boolean }>({ summary: false, skills: true, experience: true })
   const [mode, setMode]           = useState<"quick" | "full">("full")
+  const [budget, setBudget] = useState<null | { loadedUsd: number; spentUsd: number; remainingUsd: number; perResumeUsd: number; resumesLeft: number | null; calibrated: boolean; note: string }>(null)
+  useEffect(() => {
+    fetch("/api/tailor/budget", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { if (j && j.ok) setBudget(j) }).catch(() => {})
+  }, [])
 
   const [jd, setJd]               = useState(() => {
     // Pre-fill from any source: job card "Tailor Resume" or dashboard quick-tailor
@@ -513,6 +517,21 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
       {/* ── Tailor tab ── */}
       {activeTab === "tailor" && (
         <div className="space-y-5">
+          {budget && budget.loadedUsd > 0 && (
+            <div className="rounded-2xl border px-5 py-4 flex items-center gap-4 flex-wrap"
+              style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+              <div className="text-2xl font-bold" style={{ color: "var(--text)", fontFamily: "var(--font-display)" }}>
+                {budget.resumesLeft !== null ? budget.resumesLeft : "–"}
+              </div>
+              <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+                <div className="font-semibold" style={{ color: "var(--text)" }}>resumes left on your key</div>
+                <div>${budget.remainingUsd.toFixed(2)} of ${budget.loadedUsd.toFixed(2)} remaining · ~${budget.perResumeUsd.toFixed(4)} each</div>
+              </div>
+              <div className="text-xs ml-auto" style={{ color: "var(--text-soft)" }}>
+                {budget.calibrated ? "Measured from your real generations." : "Estimate — your first resume calibrates it."}
+              </div>
+            </div>
+          )}
 
           {/* Step progress bar */}
           <div className="anim-fade-up d-1 flex items-center gap-0 rounded-2xl border overflow-hidden"
