@@ -19,11 +19,22 @@ export function mountKompasHtml(html: string): string {
     if (url.origin === location.origin && url.pathname === '/api/transcribe') {
       // Kompas session transcription runs through MarketFit's voice pipeline, not the
       // copilot backend: word timestamps, the hallucination guard, vocabulary hints and
-      // the language lock. The app's x-whisper-prompt becomes the pipeline's hint.
+      // the language lock. The app's x-whisper-prompt becomes the pipeline's hint, merged
+      // with MarketFit's own vocabulary and the words it learned from your corrections —
+      // one shared ear across every Kompas endpoint.
       url.pathname = '/api/kompas/speech';
       const headers = withHeaders(input, options);
       const prompt = headers.get('x-whisper-prompt');
-      if (prompt && !headers.get('x-speech-hint')) headers.set('x-speech-hint', prompt);
+      try {
+        const mfHint = (localStorage.getItem('mf_flow_hint') || '').trim();
+        const mfLearned = JSON.parse(localStorage.getItem('mf_flow_learned') || '[]');
+        const learned = Array.isArray(mfLearned) ? mfLearned.filter(w => typeof w === 'string').slice(-40) : [];
+        const merged = [prompt ? decodeURIComponent(prompt).replace(/^Vocabulary:\s*/i, '') : '', mfHint, learned.join(', ')]
+          .map(s => (s || '').trim()).filter(Boolean).join(', ').slice(0, 550);
+        if (merged) headers.set('x-speech-hint', encodeURIComponent('Vocabulary: ' + merged));
+        const mfLang = (localStorage.getItem('mf_flow_lang') || '').trim().toLowerCase();
+        if (/^[a-z]{2}$/.test(mfLang)) headers.set('x-speech-lang', mfLang);
+      } catch { if (prompt && !headers.get('x-speech-hint')) headers.set('x-speech-hint', prompt); }
       headers.set('x-speech-for', 'transcribe');
       if (input instanceof Request) {
         input = new Request(url, {
