@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth, isAuthContext, fetchClassifiedThreads, buildApplicationChains } from "../_lib"
+import { requireAuth, isAuthContext, fetchClassifiedThreads, buildApplicationChains, TRACKING_DAYS } from "../_lib"
 import { checkRateLimit } from "@/lib/rateLimit"
 
 // GET /api/gmail/application-chains — every application as a chain:
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     }
 
     const url = new URL(req.url)
-    const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 90, 1), 90)
+    const days = Math.min(Math.max(Number(url.searchParams.get("days")) || TRACKING_DAYS, 1), TRACKING_DAYS)
 
     const { threads } = await fetchClassifiedThreads(ctx.userId, { days, max: 100 })
     const chains = buildApplicationChains(threads)

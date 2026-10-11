@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth, isAuthContext, fetchClassifiedThreads, threadsToInterviews, enrichInterviewEvidence } from "../_lib"
+import { requireAuth, isAuthContext, fetchClassifiedThreads, threadsToInterviews, enrichInterviewEvidence, TRACKING_DAYS } from "../_lib"
 import { checkRateLimit } from "@/lib/rateLimit"
 
 // GET /api/gmail/interviews — interviews parsed from Interview Request emails, shaped as Interview[]
@@ -16,9 +16,9 @@ export async function GET(req: Request) {
     }
 
     const url = new URL(req.url)
-    const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 60, 1), 90)
+    const days = Math.min(Math.max(Number(url.searchParams.get("days")) || TRACKING_DAYS, 1), TRACKING_DAYS)
 
-    const { threads } = await fetchClassifiedThreads(ctx.userId, { days: Math.max(days, 90), max: 100 })
+    const { threads } = await fetchClassifiedThreads(ctx.userId, { days, max: 100 })
     // One-time catch-up: re-verify .ics evidence on interview threads cached before the signal existed.
     const enriched = await enrichInterviewEvidence(ctx.userId, threads)
     const interviews = threadsToInterviews(enriched)

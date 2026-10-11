@@ -178,7 +178,7 @@ export default function EmailDashboard() {
       const res = await fetch("/api/gmail-sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ days: 90, max: 50 }),
+        body: JSON.stringify({ days: 45, max: 50 }),
       })
       if (res.ok) {
         const data = await res.json()

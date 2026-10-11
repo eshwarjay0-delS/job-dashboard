@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
-import { fetchClassifiedThreads, enrichInterviewEvidence, threadsToInterviews } from "../_lib"
+import { fetchClassifiedThreads, enrichInterviewEvidence, threadsToInterviews, TRACKING_DAYS } from "../_lib"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -24,7 +24,7 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 async function crawlForUser(userId: string): Promise<{ threads: number; discovered: number; interviews: number }> {
-  const { threads } = await fetchClassifiedThreads(userId, { days: 90, max: 100 })
+  const { threads } = await fetchClassifiedThreads(userId, { days: TRACKING_DAYS, max: 100 })
   const before = threads.length
   const enriched = await enrichInterviewEvidence(userId, threads)
   const discovered = enriched.length - before

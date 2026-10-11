@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth, isAuthContext, fetchClassifiedThreads, threadsToMails } from "../_lib"
+import { requireAuth, isAuthContext, fetchClassifiedThreads, threadsToMails, TRACKING_DAYS } from "../_lib"
 import { checkRateLimit } from "@/lib/rateLimit"
 
 // GET /api/gmail/threads — classified inbox threads shaped as Mail[]
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     }
 
     const url = new URL(req.url)
-    const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 30, 1), 90)
+    const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 30, 1), TRACKING_DAYS)
     const max = Math.min(Math.max(Number(url.searchParams.get("max")) || 50, 1), 100)
     const fresh = url.searchParams.get("fresh") === "1"
 

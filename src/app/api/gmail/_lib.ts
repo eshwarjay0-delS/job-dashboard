@@ -146,6 +146,12 @@ export interface AccountIssue {
 
 const BASE_QUERY = "(subject:(interview) OR subject:(RTR) OR subject:(rate) OR subject:(offer) OR subject:(application) OR subject:(recruiter) OR subject:(position) OR subject:(role))"
 
+// ── Tracking window ─────────────────────────────────────────────────────────
+// The app tracks the last 45 days of activity — interviews, applications,
+// chains, crawls. One constant, used everywhere, so the window can't drift
+// between routes.
+export const TRACKING_DAYS = 45
+
 // ── Gmail cache: load once, refresh incrementally ─────────────────────────
 // First load fills the cache (slow, one time). Every later load serves the
 // cache instantly and only asks Gmail for what's new since the last sync.
@@ -167,7 +173,7 @@ function threadLatestTs(t: ClassifiedThread): number {
 }
 
 async function readCachedThreads(sb: Sb, userId: string, days: number): Promise<ClassifiedThread[]> {
-  const cutoff = Date.now() - Math.min(Math.max(days, 1), 90) * 86_400_000
+  const cutoff = Date.now() - Math.min(Math.max(days, 1), TRACKING_DAYS) * 86_400_000
   const { data, error } = await sb
     .from("mfit_gmail_threads")
     .select("data")
@@ -345,7 +351,7 @@ async function syncAccountCache(
 
   // Incremental window: since the last sync (1-day overlap), or the full window.
   const sinceDays = lastSync && wideEnough ? Math.ceil((now - lastSync) / 86_400_000) + 1 : days
-  const after = new Date(now - Math.min(Math.max(sinceDays, 1), 90) * 86_400_000)
+  const after = new Date(now - Math.min(Math.max(sinceDays, 1), TRACKING_DAYS) * 86_400_000)
   const afterStr = after.toISOString().split("T")[0].replace(/-/g, "/")
   const query = `${BASE_QUERY} after:${afterStr}`
 
@@ -364,7 +370,7 @@ export async function fetchClassifiedThreads(
   opts: { days?: number; max?: number; query?: string } = {},
   extra: { force?: boolean } = {},
 ): Promise<{ threads: ClassifiedThread[]; issues: AccountIssue[] }> {
-  const days = Math.min(Math.max(opts.days ?? 30, 1), 90)
+  const days = Math.min(Math.max(opts.days ?? 30, 1), TRACKING_DAYS)
   const max = Math.min(Math.max(opts.max ?? 50, 1), 100)
 
   const accounts = await listGoogleWorkspaceAccounts(userId)
@@ -669,7 +675,7 @@ export async function enrichInterviewEvidence(
       const token = await getGoogleWorkspaceAccessToken(userId, acct.id).catch(() => null)
       if (!token) continue
       const list = (await gmailGet(
-        `/messages?q=${encodeURIComponent("subject:(interview) newer_than:90d")}&maxResults=50`,
+        `/messages?q=${encodeURIComponent("subject:(interview) newer_than:45d")}&maxResults=50`,
         token,
       )) as { messages?: Array<{ id: string; threadId: string }> }
       for (const m of list.messages || []) {
