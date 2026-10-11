@@ -10,7 +10,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import Link from "next/link"
-import { TrainFront, Eye, X, ArrowDown, User, Mail, CalendarDays } from "lucide-react"
+import { TrainFront, Eye, X, ArrowDown, User, Mail, CalendarDays, FileText, Download } from "lucide-react"
 import { Card } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 import TypingDots from "../_components/typing-dots"
@@ -61,9 +61,35 @@ function TrackBar({ chain }: { chain: ApplicationChain }) {
   )
 }
 
+interface HopFile { filename: string; messageId: string; attachmentId: string; from: string; date: string }
+
 // ── Mind map: the people who carried the profile, in order ─────────────────
 function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => void }) {
   const hops = chain.links
+  const [files, setFiles] = useState<HopFile[]>([])
+  useEffect(() => {
+    fetch(`/api/gmail/chain-attachments?threadId=${encodeURIComponent(chain.threadId)}&account=${encodeURIComponent(chain.accountEmail)}`, { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => {
+        if (!j.ok) return
+        const out: HopFile[] = []
+        for (const m of j.messages || []) {
+          for (const a of m.attachments || []) {
+            out.push({ filename: a.filename, messageId: a.messageId, attachmentId: a.attachmentId, from: m.from, date: m.date })
+          }
+        }
+        setFiles(out)
+      })
+      .catch(() => {})
+  }, [chain.threadId, chain.accountEmail])
+
+  // Files sent by (or near in time to) a hop belong to that hop.
+  const filesFor = (hopName: string, hopAt?: number): HopFile[] =>
+    files.filter(f => {
+      const fromName = (f.from.match(/^"?([^"<@]+)"?\s*</) || [])[1]?.trim().toLowerCase()
+      if (fromName && hopName.toLowerCase().includes(fromName.split(" ")[0])) return true
+      return false
+    })
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(20,18,12,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{
@@ -109,6 +135,8 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
                 name={h.name}
                 email={h.email}
                 meta={`${h.role === "you" ? "you" : h.role} · ${fmtDate(h.at)}`}
+                files={filesFor(h.name, h.at)}
+                accountEmail={chain.accountEmail}
               />
             </div>
           ))}
@@ -150,7 +178,9 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
   )
 }
 
-function MindNode({ name, email, meta, first }: { name: string; email?: string; meta: string; first?: boolean }) {
+function MindNode({ name, email, meta, first, files, accountEmail }: {
+  name: string; email?: string; meta: string; first?: boolean; files?: HopFile[]; accountEmail?: string
+}) {
   return (
     <div style={{
       border: first ? "2px solid var(--accent)" : "1px solid var(--border-strong)",
@@ -177,6 +207,24 @@ function MindNode({ name, email, meta, first }: { name: string; email?: string; 
           <CalendarDays size={12} style={{ flex: "none" }} />
           {meta}
         </div>
+        {files && files.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+            {files.map(f => (
+              <a
+                key={`${f.messageId}-${f.attachmentId}`}
+                href={`/api/gmail/attachment?messageId=${encodeURIComponent(f.messageId)}&attachmentId=${encodeURIComponent(f.attachmentId)}&filename=${encodeURIComponent(f.filename)}&account=${encodeURIComponent(accountEmail || "")}`}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  fontSize: 12, fontWeight: 650, color: "var(--accent-txt)",
+                  background: "var(--accent-soft)", border: "1px solid var(--accent-border)",
+                  borderRadius: 999, padding: "5px 11px", textDecoration: "none",
+                }}
+              >
+                <FileText size={12} /> {f.filename.length > 28 ? f.filename.slice(0, 26) + "…" : f.filename} <Download size={11} />
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
