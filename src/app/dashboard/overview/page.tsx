@@ -31,32 +31,43 @@ const fmtDate = (ts?: number) =>
 function TrackBar({ chain }: { chain: ApplicationChain }) {
   const currentIdx = chain.terminal ? STAGES.length - 1 : STAGES.findIndex(s => s.key === chain.current)
   const doneIdx = Math.max(0, currentIdx)
+  // All dots share one baseline: the track line is absolutely positioned at the
+  // dot center, so alignment can never drift regardless of dot size or label.
+  const DOT = 12
+  const TOP = 6
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 0, minWidth: 0 }} aria-label={`At ${STAGES[doneIdx]?.label}`}>
-      {STAGES.map((s, i) => {
-        const reached = i <= doneIdx
-        const isCurrent = i === doneIdx && !chain.terminal
-        const terminal = chain.terminal && i === STAGES.length - 1
-        return (
-          <div key={s.key} style={{ display: "flex", alignItems: "center", flex: i < STAGES.length - 1 ? 1 : "none" }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flex: "none" }}>
+    <div style={{ position: "relative", paddingTop: TOP }} aria-label={`At ${STAGES[doneIdx]?.label}`}>
+      <div style={{ position: "absolute", top: TOP + DOT / 2 - 1, left: 16, right: 16, height: 2, background: "var(--border)", borderRadius: 2 }} />
+      <div style={{
+        position: "absolute", top: TOP + DOT / 2 - 1, left: 16, height: 2, borderRadius: 2,
+        width: `calc(${(doneIdx / (STAGES.length - 1)) * 100}% - ${32 * (doneIdx / (STAGES.length - 1))}px)`,
+        background: "var(--accent)",
+      }} />
+      <div style={{ position: "relative", display: "flex" }}>
+        {STAGES.map((s, i) => {
+          const reached = i <= doneIdx
+          const isCurrent = i === doneIdx && !chain.terminal
+          const terminal = chain.terminal && i === STAGES.length - 1
+          return (
+            <div key={s.key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 0 }}>
               <div style={{
-                width: isCurrent ? 14 : 10, height: isCurrent ? 14 : 10, borderRadius: "50%",
+                width: DOT, height: DOT, borderRadius: "50%", flex: "none", position: "relative", zIndex: 1,
                 background: terminal ? (chain.terminal === "offer" ? "var(--success)" : "var(--danger)")
-                  : reached ? "var(--accent)" : "var(--border-strong)",
-                border: isCurrent ? "2px solid var(--accent)" : "none",
-                boxShadow: isCurrent ? "0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent)" : "none",
+                  : reached ? "var(--accent)" : "var(--surface)",
+                border: reached && !terminal ? "none" : `2px solid ${reached ? "var(--accent)" : "var(--border-strong)"}`,
+                boxShadow: isCurrent ? "0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent)" : "none",
               }} />
-              <span style={{ fontSize: 9.5, color: reached ? "var(--text)" : "var(--text-muted)", fontWeight: reached ? 700 : 400, whiteSpace: "nowrap" }}>
+              <span style={{
+                fontSize: 9.5, color: reached ? "var(--text)" : "var(--text-muted)",
+                fontWeight: reached ? 700 : 400, whiteSpace: "nowrap",
+                overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%",
+              }}>
                 {terminal ? (chain.terminal === "offer" ? "Offer" : "Rejected") : s.label}
               </span>
             </div>
-            {i < STAGES.length - 1 && (
-              <div style={{ flex: 1, height: 2, margin: "0 2px 14px", background: i < doneIdx ? "var(--accent)" : "var(--border)", borderRadius: 2 }} />
-            )}
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -279,6 +290,41 @@ function ChainRow({ chain, onView }: { chain: ApplicationChain; onView: () => vo
           {chain.stalledDays >= 7 && !chain.terminal && (
             <div style={{ fontSize: 12, color: "var(--warning)", marginTop: 3, fontWeight: 600 }}>
               Quiet {chain.stalledDays}d — held by {chain.holder}
+            </div>
+          )}
+          {/* The pattern at a glance: numbers + who, no tap needed */}
+          {chain.journey && (
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+              {chain.journey.emails} emails · {chain.journey.people} {chain.journey.people === 1 ? "person" : "people"}
+              {chain.journey.daysToInterview !== undefined ? ` · ${chain.journey.daysToInterview}d to interview` : ""}
+            </div>
+          )}
+          {chain.contacts.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 7 }}>
+              {chain.contacts.slice(0, 4).map(ct => (
+                <span key={ct.email || ct.name} title={ct.email || ct.name} style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  fontSize: 11.5, fontWeight: 600, color: "var(--text)",
+                  background: "var(--surface-2)", border: "1px solid var(--border)",
+                  borderRadius: 999, padding: "4px 10px", maxWidth: "100%",
+                }}>
+                  <span style={{
+                    width: 18, height: 18, borderRadius: "50%", flex: "none",
+                    background: "var(--accent-soft)", color: "var(--accent-txt)",
+                    display: "grid", placeItems: "center", fontWeight: 800, fontSize: 10,
+                  }}>
+                    {ct.name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {ct.name}
+                  </span>
+                </span>
+              ))}
+              {chain.contacts.length > 4 && (
+                <span style={{ fontSize: 11.5, color: "var(--text-soft)", alignSelf: "center" }}>
+                  +{chain.contacts.length - 4} more
+                </span>
+              )}
             </div>
           )}
         </div>
