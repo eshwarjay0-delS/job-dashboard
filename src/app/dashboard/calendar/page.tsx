@@ -139,7 +139,7 @@ function Detail({ iv, acct }: { iv: Interview; acct: (id: string) => { tint: str
           Invite came to {acct(iv.account).email}
         </div>
       </div>
-      <Link href="/dashboard/prep" style={{
+      <Link href="/dashboard/kompas" style={{
         marginTop: 20, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 36, borderRadius: 10,
         background: "var(--accent)", color: "#fff", fontSize: 13, fontWeight: 650, textDecoration: "none",
       }}><Mic size={14} /> Prep for this interview</Link>

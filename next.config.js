@@ -153,6 +153,11 @@ const nextConfig = {
       // loads the Flow page as its own document (with the microphone header) and a bookmark is not a dead end.
       // src/app/dashboard/kompas/transcribe/page.tsx is the net under this line.
       { source: "/dashboard/kompas/transcribe", destination: "/dashboard/kompas/flow?mode=transcribe", permanent: false },
+      // Dummy pages, removed 2026-10-11 (owner: "get rid of dummy pages"). /dashboard/email showed made-up sample
+      // emails when Gmail was not linked — the real inbox is /dashboard/mail. /dashboard/prep showed made-up sample
+      // interviews and questions — the real practice hub is /dashboard/kompas.
+      { source: "/dashboard/email", destination: "/dashboard/mail", permanent: false },
+      { source: "/dashboard/prep", destination: "/dashboard/kompas", permanent: false },
     ];
   },
 

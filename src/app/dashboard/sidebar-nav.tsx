@@ -5,7 +5,7 @@ import type { User } from "@supabase/supabase-js"
 import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { ADMIN_NAV, NAV_SECTIONS, NAV_ITEMS, PRIMARY_NAV } from "./_components/nav"
+import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV } from "./_components/nav"
 import { useTheme } from "../theme-provider"
 
 const ALL_HREFS = [...NAV_ITEMS, ...ADMIN_NAV].map(i => i.href)
@@ -33,6 +33,8 @@ export default function SidebarNav() {
   const [admin, setAdmin] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [openTabs, setOpenTabs] = useState<string[]>([])
+  const toggleTab = (href: string) => setOpenTabs(open => open.includes(href) ? open.filter(h => h !== href) : [...open, href])
   const [signingOut, setSigningOut] = useState(false)
   const accountRef = useRef<HTMLDivElement>(null)
   const { mode, setMode } = useTheme()
@@ -200,13 +202,44 @@ export default function SidebarNav() {
 
       {/* ── Main Nav ──────────────────────────────────────────────── */}
       <nav id="marketfit-navigation" aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
-        {PRIMARY_NAV.map(item => {
-          const active = isActive(item.href, pathname)
-          const content = <><span className="sb-icon">{item.icon}</span><span>{item.label}</span></>
-          return item.href.startsWith("/dashboard/kompas")
-            ? <a key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>{content}</a>
-            : <Link key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>{content}</Link>
+        {NAV_TABS.map(tab => {
+          const inTab = (h: string) => h === tab.href ? pathname === h : pathname === h || pathname.startsWith(h + "/")
+          const tabActive = inTab(tab.href) || tab.items.some(i => inTab(i.href))
+          const expanded = tabActive || openTabs.includes(tab.href)
+          const TabLink = tab.href.startsWith("/dashboard/kompas") ? "a" : Link
+          return (
+            <div key={tab.href} style={{ marginBottom: 2 }}>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <TabLink href={tab.href} className={`sb-link${tabActive ? " active" : ""}`} aria-current={tabActive ? "page" : undefined}
+                  title={tab.what} style={{ flex: 1 }}>
+                  <span className="sb-icon">{tab.icon}</span><span>{tab.label}</span>
+                </TabLink>
+                <button type="button" onClick={() => toggleTab(tab.href)} aria-expanded={expanded}
+                  aria-label={expanded ? `Hide ${tab.label} pages` : `Show ${tab.label} pages`}
+                  style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--muted)", padding: "8px 10px", fontSize: 12 }}>
+                  <span aria-hidden style={{ display: "inline-block", transform: expanded ? "rotate(90deg)" : "none", transition: "transform .15s" }}>▶</span>
+                </button>
+              </div>
+              {expanded && (
+                <div style={{ marginLeft: 18, borderLeft: "1px solid var(--border)", paddingLeft: 8 }}>
+                  {tab.items.map(item => {
+                    const active = isActive(item.href, pathname)
+                    const NavigationLink = item.href.startsWith("/dashboard/kompas") ? "a" : Link
+                    return (
+                      <NavigationLink key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`}
+                        aria-current={active ? "page" : undefined} title={item.what}>
+                        <span className="sb-icon">{item.icon}</span>
+                        <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
+                        {active && <span className="sb-here">Here</span>}
+                      </NavigationLink>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
         })}
+        <div style={{ borderTop: "0.8px solid var(--border-strong)", margin: "10px 4px" }} />
         {admin && ADMIN_NAV.map(item => {
           const active = isActive(item.href, pathname)
           return (
@@ -215,27 +248,14 @@ export default function SidebarNav() {
             </Link>
           )
         })}
-        <details className="mf-nav-more"><summary>All tools & accounts</summary>
-        {NAV_SECTIONS.map((section, si) => (
-          <div key={si} style={{ marginBottom: section.label ? 8 : 4 }}>
-            {section.label && <div className="sb-label">{section.label}</div>}
-
-            {section.items.map(item => {
-              const active = isActive(item.href, pathname)
-              const NavigationLink = item.href.startsWith("/dashboard/kompas") ? "a" : Link
-              return (
-                <NavigationLink key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`}
-                  aria-current={active ? "page" : undefined} title={item.what}>
-                  <span className="sb-icon">{item.icon}</span>
-                  <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
-                  {active && <span className="sb-here">Here</span>}
-                </NavigationLink>
-              )
-            })}
-          </div>
-        ))}
-        </details>
-
+        {(() => {
+          const active = isActive(SETTINGS_NAV.href, pathname)
+          return (
+            <Link href={SETTINGS_NAV.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined} title={SETTINGS_NAV.what}>
+              <span className="sb-icon">{SETTINGS_NAV.icon}</span><span>{SETTINGS_NAV.label}</span>
+            </Link>
+          )
+        })()}
       </nav>
 
       {/* ── Account ────────────────────────────────────────── */}

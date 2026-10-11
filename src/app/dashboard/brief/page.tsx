@@ -333,7 +333,7 @@ export default function BriefPage() {
           <div className="mf-access-links" style={{ marginTop: 4 }}>
             {[
               { label: "Tailor resume", sub: "Fit it to a job post", href: "/dashboard/resume/builder" },
-              { label: "Prep interview", sub: "Practice with Kompas", href: "/dashboard/prep" },
+              { label: "Prep interview", sub: "Practice with Kompas", href: "/dashboard/kompas" },
               { label: "Ask the Agent", sub: "Strategy on any role", href: "/dashboard/agent" },
               { label: "Check salary", sub: "Know your number", href: "/dashboard/salary" },
             ].map(q => (

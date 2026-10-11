@@ -3,7 +3,7 @@ import { FileText, Mail, Mic, ArrowRight, MessageCircle, Puzzle } from "lucide-r
 
 const features = [
   { title: "Fix my resume", text: "Choose your resume. Paste a job post. Review what changed.", href: "/dashboard/resume", icon: FileText, note: "Your experience. Your original file kept safe.", links: [{ href: "/dashboard/documents", label: "My files" }, { href: "/dashboard/resume/builder", label: "Build a resume" }] },
-  { title: "Check job emails", text: "Connect Gmail and find the messages about your job search.", href: "/dashboard/email", icon: Mail, note: "Start with your connected inbox.", links: [{ href: "/dashboard/connections", label: "Connect Gmail" }, { href: "/dashboard/tracker", label: "My applications" }] },
+  { title: "Check job emails", text: "Connect Gmail and find the messages about your job search.", href: "/dashboard/mail", icon: Mail, note: "Start with your connected inbox.", links: [{ href: "/dashboard/connections", label: "Connect Gmail" }, { href: "/dashboard/tracker", label: "My applications" }] },
 ]
 
 export default function DashboardPage() {
