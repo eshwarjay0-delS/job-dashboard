@@ -10,11 +10,11 @@ import { useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import Link from "next/link"
-import { TrainFront, Eye, X, ArrowDown, User, Mail, CalendarDays, FileText, Download } from "lucide-react"
+import { TrainFront, Eye, X, ArrowDown, FileText, Download } from "lucide-react"
 import { Card } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 import TypingDots from "../_components/typing-dots"
-import type { ApplicationChain, ChainStageKey } from "@/app/api/gmail/_lib"
+import type { ApplicationChain, ChainStageKey, ChainEventKind } from "@/app/api/gmail/_lib"
 
 const STAGES: Array<{ key: ChainStageKey; label: string }> = [
   { key: "rtr", label: "RTR" },
@@ -63,9 +63,25 @@ function TrackBar({ chain }: { chain: ApplicationChain }) {
 
 interface HopFile { filename: string; messageId: string; attachmentId: string; from: string; date: string }
 
+const EVENT_DOT: Record<ChainEventKind, string> = {
+  first_contact: "var(--text-muted)",
+  rtr_request: "#b3541e",
+  rtr_signed: "#2f6f6a",
+  resume_sent: "#2f6f6a",
+  rate: "#8a6d1b",
+  submitted: "var(--accent)",
+  client: "var(--accent)",
+  interview_request: "#6d4fa3",
+  interview_scheduled: "#6d4fa3",
+  followup: "#a3a099",
+  response: "var(--text-muted)",
+  note: "var(--text-muted)",
+  offer: "var(--success)",
+  rejection: "var(--danger)",
+}
+
 // ── Mind map: the people who carried the profile, in order ─────────────────
 function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => void }) {
-  const hops = chain.links
   const [files, setFiles] = useState<HopFile[]>([])
   useEffect(() => {
     fetch(`/api/gmail/chain-attachments?threadId=${encodeURIComponent(chain.threadId)}&account=${encodeURIComponent(chain.accountEmail)}`, { cache: "no-store" })
@@ -83,13 +99,8 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
       .catch(() => {})
   }, [chain.threadId, chain.accountEmail])
 
-  // Files sent by (or near in time to) a hop belong to that hop.
-  const filesFor = (hopName: string, hopAt?: number): HopFile[] =>
-    files.filter(f => {
-      const fromName = (f.from.match(/^"?([^"<@]+)"?\s*</) || [])[1]?.trim().toLowerCase()
-      if (fromName && hopName.toLowerCase().includes(fromName.split(" ")[0])) return true
-      return false
-    })
+  // Files ride on the exact email that carried them.
+  const filesForEvent = (messageId: string): HopFile[] => files.filter(f => f.messageId === messageId)
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(20,18,12,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{
@@ -118,26 +129,56 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
           <TrackBar chain={chain} />
         </div>
 
-        {/* You → hop → hop → … */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 0, marginTop: 8 }}>
-          <MindNode
-            name="You"
-            email={chain.accountEmail}
-            meta="Your profile started here"
-            first
-          />
-          {hops.map((h, i) => (
-            <div key={`${h.name}-${i}`}>
-              <div style={{ display: "flex", justifyContent: "center", padding: "2px 0" }}>
-                <ArrowDown size={16} style={{ color: "var(--text-muted)" }} />
+        {/* Step by step: every email, in order, who passed to whom */}
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase", margin: "14px 0 4px" }}>
+          Every step, in order
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 0, marginTop: 4 }}>
+          {chain.events.map((e, i) => (
+            <div key={`${e.messageId}-${i}`} style={{ display: "flex", gap: 10 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "none", width: 20 }}>
+                <div style={{
+                  width: 11, height: 11, borderRadius: "50%", marginTop: 4, flex: "none",
+                  background: EVENT_DOT[e.kind] || "var(--text-muted)",
+                  boxShadow: e.handoffFrom ? "0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent)" : "none",
+                }} />
+                {i < chain.events.length - 1 && (
+                  <div style={{ width: 2, flex: 1, minHeight: 14, background: "var(--border)", borderRadius: 2 }} />
+                )}
               </div>
-              <MindNode
-                name={h.name}
-                email={h.email}
-                meta={`${h.role === "you" ? "you" : h.role} · ${fmtDate(h.at)}`}
-                files={filesFor(h.name, h.at)}
-                accountEmail={chain.accountEmail}
-              />
+              <div style={{ paddingBottom: 14, minWidth: 0, flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 7, flexWrap: "wrap" }}>
+                  <span style={{ fontWeight: 700, fontSize: 13.5 }}>{e.label}</span>
+                  <span style={{ fontSize: 11.5, color: "var(--text-muted)" }}>{fmtDate(e.at)}</span>
+                </div>
+                <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 1 }}>
+                  {e.isMe ? "You" : e.from}{e.handoffFrom ? <span> · handed off by {e.handoffFrom}</span> : null}
+                  {e.detail ? <span> — {e.detail}</span> : null}
+                </div>
+                {e.mentions.length > 0 && (
+                  <div style={{ fontSize: 11.5, color: "var(--text-soft)", marginTop: 2 }}>
+                    Named: {e.mentions.join(", ")}
+                  </div>
+                )}
+                {filesForEvent(e.messageId).length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                    {filesForEvent(e.messageId).map(f => (
+                      <a
+                        key={`${f.messageId}-${f.attachmentId}`}
+                        href={`/api/gmail/attachment?messageId=${encodeURIComponent(f.messageId)}&attachmentId=${encodeURIComponent(f.attachmentId)}&filename=${encodeURIComponent(f.filename)}&account=${encodeURIComponent(chain.accountEmail)}`}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 6,
+                          fontSize: 12, fontWeight: 650, color: "var(--accent-txt)",
+                          background: "var(--accent-soft)", border: "1px solid var(--accent-border)",
+                          borderRadius: 999, padding: "5px 11px", textDecoration: "none",
+                        }}
+                      >
+                        <FileText size={12} /> {f.filename.length > 28 ? f.filename.slice(0, 26) + "…" : f.filename} <Download size={11} />
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           ))}
           {chain.terminal || chain.current === "interview" || chain.current === "decision" ? null : (
@@ -178,57 +219,6 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
   )
 }
 
-function MindNode({ name, email, meta, first, files, accountEmail }: {
-  name: string; email?: string; meta: string; first?: boolean; files?: HopFile[]; accountEmail?: string
-}) {
-  return (
-    <div style={{
-      border: first ? "2px solid var(--accent)" : "1px solid var(--border-strong)",
-      borderRadius: 12, padding: "12px 14px", background: first ? "color-mix(in srgb, var(--accent) 8%, var(--surface))" : "var(--surface)",
-      display: "flex", gap: 12, alignItems: "flex-start",
-    }}>
-      <div style={{
-        width: 34, height: 34, borderRadius: "50%", flex: "none",
-        background: first ? "var(--accent)" : "var(--surface-2)",
-        color: first ? "#fff" : "var(--text-muted)",
-        display: "grid", placeItems: "center",
-      }}>
-        <User size={16} />
-      </div>
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ fontWeight: 700, fontSize: 14.5 }}>{name}</div>
-        {email && (
-          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12.5, color: "var(--text-muted)", marginTop: 2, overflow: "hidden" }}>
-            <Mail size={12} style={{ flex: "none" }} />
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</span>
-          </div>
-        )}
-        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12.5, color: "var(--text-muted)", marginTop: 2 }}>
-          <CalendarDays size={12} style={{ flex: "none" }} />
-          {meta}
-        </div>
-        {files && files.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-            {files.map(f => (
-              <a
-                key={`${f.messageId}-${f.attachmentId}`}
-                href={`/api/gmail/attachment?messageId=${encodeURIComponent(f.messageId)}&attachmentId=${encodeURIComponent(f.attachmentId)}&filename=${encodeURIComponent(f.filename)}&account=${encodeURIComponent(accountEmail || "")}`}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  fontSize: 12, fontWeight: 650, color: "var(--accent-txt)",
-                  background: "var(--accent-soft)", border: "1px solid var(--accent-border)",
-                  borderRadius: 999, padding: "5px 11px", textDecoration: "none",
-                }}
-              >
-                <FileText size={12} /> {f.filename.length > 28 ? f.filename.slice(0, 26) + "…" : f.filename} <Download size={11} />
-              </a>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 function ChainRow({ chain, onView }: { chain: ApplicationChain; onView: () => void }) {
   return (

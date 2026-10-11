@@ -4,7 +4,24 @@ import Link from "next/link"
 import { X, TrainFront, User, ArrowRight } from "lucide-react"
 import ChainRail from "./chain-rail"
 import TypingDots from "../../_components/typing-dots"
-import type { ApplicationChain } from "@/app/api/gmail/_lib"
+import type { ApplicationChain, ChainEventKind } from "@/app/api/gmail/_lib"
+
+const EVENT_DOT: Record<ChainEventKind, string> = {
+  first_contact: "var(--text-muted)",
+  rtr_request: "#b3541e",
+  rtr_signed: "#2f6f6a",
+  resume_sent: "#2f6f6a",
+  rate: "#8a6d1b",
+  submitted: "var(--accent)",
+  client: "var(--accent)",
+  interview_request: "#6d4fa3",
+  interview_scheduled: "#6d4fa3",
+  followup: "#a3a099",
+  response: "var(--text-muted)",
+  note: "var(--text-muted)",
+  offer: "var(--success)",
+  rejection: "var(--danger)",
+}
 
 /* ── ChainDetail — one application's full journey ──────────────────────────
    The train on its track, the people who carried the profile, who holds it
@@ -88,24 +105,37 @@ export default function ChainDetail({
               </div>
             )}
 
-            {/* The hands it passed through */}
-            {chain.links.length > 0 && (
+            {/* Step by step: every email, in order, who passed to whom */}
+            {chain.events.length > 0 && (
               <div style={{ marginTop: 18 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase", marginBottom: 10 }}>
-                  Hands it passed through
+                  Every step, in order
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, padding: "7px 12px", borderRadius: 999, background: "var(--accent)", color: "#fff" }}>
-                    <User size={13} /> You
-                  </span>
-                  {chain.links.map((l, i) => (
-                    <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <ArrowRight size={13} style={{ color: "var(--text-soft)" }} />
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, padding: "7px 12px", borderRadius: 999, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}>
-                        {l.name}
-                        <span style={{ fontWeight: 500, color: "var(--text-soft)", fontSize: 11 }}>{l.role}</span>
-                      </span>
-                    </span>
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {chain.events.map((e, i) => (
+                    <div key={`${e.messageId}-${i}`} style={{ display: "flex", gap: 10 }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "none", width: 18 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: "50%", marginTop: 4, flex: "none", background: EVENT_DOT[e.kind] || "var(--text-muted)" }} />
+                        {i < chain.events.length - 1 && <div style={{ width: 2, flex: 1, minHeight: 12, background: "var(--border)", borderRadius: 2 }} />}
+                      </div>
+                      <div style={{ paddingBottom: 12, minWidth: 0, flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 7, flexWrap: "wrap" }}>
+                          <span style={{ fontWeight: 700, fontSize: 13.5 }}>{e.label}</span>
+                          <span style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
+                            {e.at ? new Date(e.at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 1 }}>
+                          {e.isMe ? "You" : e.from}{e.handoffFrom ? <span> · handed off by {e.handoffFrom}</span> : null}
+                          {e.detail ? <span> — {e.detail}</span> : null}
+                        </div>
+                        {e.mentions.length > 0 && (
+                          <div style={{ fontSize: 11.5, color: "var(--text-soft)", marginTop: 2 }}>
+                            Named: {e.mentions.join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

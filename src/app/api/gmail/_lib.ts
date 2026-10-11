@@ -854,6 +854,24 @@ export interface ChainLink {
   at?: number
 }
 
+export type ChainEventKind =
+  | "first_contact" | "rtr_request" | "rtr_signed" | "resume_sent" | "rate"
+  | "submitted" | "client" | "interview_request" | "interview_scheduled"
+  | "followup" | "response" | "note" | "offer" | "rejection"
+
+export interface ChainEvent {
+  at: number
+  from: string
+  fromEmail?: string
+  isMe: boolean
+  kind: ChainEventKind
+  label: string
+  detail: string
+  mentions: string[]
+  handoffFrom?: string // this sender was named in an earlier mail — the profile passed hand to hand
+  messageId: string
+}
+
 export interface ApplicationChain {
   threadId: string
   accountEmail: string
@@ -870,12 +888,13 @@ export interface ApplicationChain {
   nextAction: string
   interviewThreadId?: string
   lastActivity?: number
+  events: ChainEvent[]
 }
 
 const SUBMITTED_RE = /submitted your profile|profile submitted|have submitted|submission (is )?done|submitted to (the )?client|resume (has been )?submitted/i
 const SHARED_RE = /shared .*profile|forwarded .*profile|sent .*profile to/i
 const CLIENT_RE = /\bclient\b/i
-const RTR_SIGNED_RE = /\brtr\b.{0,40}\bsign|\bsign.{0,40}\brtr\b|authorization .*signed|exclusive representation/i
+const RTR_SIGNED_RE = /\brtr\b.{0,40}\bsign|\bsign.{0,40}\brtr\b|authorization .*signed|exclusive representation|\bi agree to (the )?rtr\b|\bagree\b.{0,30}\brtr\b/i
 const FOLLOWUP_SENT_RE = /follow.?up|any update|checking in|next steps/i
 
 const RAIL: Array<{ key: ChainStageKey; label: string }> = [
@@ -893,6 +912,68 @@ function personName(from: string): string {
   return bare || from
 }
 
+const RESUME_SENT_RE = /resume (attached|enclosed|herewith)|attached .*resume|updated resume|my resume/i
+const RATE_RE = /\$\s?\d|\b\d+\s?\/\s?hr\b|rate confirmation|\bc2c\b/i
+const INTERVIEW_SCHED_RE = /scheduled|invite|calendar|teams\.microsoft|meet\.google|zoom\.us|webex/i
+
+function emailOf(from: string): string | undefined {
+  const m = from.match(/<([^>]+)>/)
+  return m ? m[1] : undefined
+}
+
+/** First names of everyone in the thread, for mention-threading. */
+function threadRoster(t: ClassifiedThread): Array<{ name: string; first: string }> {
+  const seen = new Map<string, { name: string; first: string }>()
+  for (const m of t.messages) {
+    const name = personName(m.from)
+    const first = name.split(/\s+/)[0].toLowerCase()
+    if (name && first.length >= 2 && !seen.has(first)) seen.set(first, { name, first })
+  }
+  return [...seen.values()]
+}
+
+/** Which roster people are named in this mail's text. */
+function findMentions(text: string, roster: Array<{ name: string; first: string }>, selfFirst: string): string[] {
+  const out: string[] = []
+  const lower = ` ${text.toLowerCase()} `
+  for (const r of roster) {
+    if (r.first === selfFirst) continue
+    // Name appears as a standalone word ("from Shikha", "contact Emon").
+    if (new RegExp(`[^\\p{L}]${r.first}[^\\p{L}]`, "iu").test(lower)) out.push(r.name)
+  }
+  return [...new Set(out)]
+}
+
+function classifyEvent(
+  m: ClassifiedThread["messages"][number],
+  isMe: boolean,
+  isFirst: boolean,
+  roster: Array<{ name: string; first: string }>,
+  selfFirst: string,
+): { kind: ChainEventKind; label: string } {
+  const text = `${m.subject} ${m.snippet}`
+  if (m.category === "Offer") return { kind: "offer", label: "Offer received" }
+  if (m.category === "Rejection") return { kind: "rejection", label: "Rejected" }
+  if (m.category === "RTR Request") return { kind: "rtr_request", label: "RTR requested" }
+  if (RTR_SIGNED_RE.test(text)) return { kind: "rtr_signed", label: isMe ? "You signed the RTR" : "RTR signed" }
+  if (m.category === "Interview Request") {
+    const ev = inviteEvidence({ messages: [m] } as ClassifiedThread)
+    if (ev.confirmed) return { kind: "interview_scheduled", label: "Interview scheduled" }
+    return { kind: "interview_request", label: "Interview requested" }
+  }
+  if (isMe && FOLLOWUP_SENT_RE.test(text)) return { kind: "followup", label: "You followed up" }
+  if (isMe && RESUME_SENT_RE.test(text)) return { kind: "resume_sent", label: "You sent your resume" }
+  if (RATE_RE.test(text) && (m.category === "Rate Confirmation" || /rate/i.test(m.subject))) {
+    return { kind: "rate", label: "Rate discussed" }
+  }
+  if (SUBMITTED_RE.test(text) && !isMe) {
+    if (SHARED_RE.test(text) || CLIENT_RE.test(text)) return { kind: "client", label: "With the end client" }
+    return { kind: "submitted", label: "Profile submitted" }
+  }
+  if (isFirst) return { kind: "first_contact", label: "First contact" }
+  return { kind: isMe ? "response" : "note", label: isMe ? "You replied" : "Update" }
+}
+
 export function buildApplicationChains(threads: ClassifiedThread[]): ApplicationChain[] {
   const out: ApplicationChain[] = []
   const now = Date.now()
@@ -906,6 +987,38 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
     let terminal: "offer" | "rejected" | null = null
     let interviewThreadId: string | undefined
     const people = new Map<string, ChainLink>()
+
+    // ── Granular event timeline: every email is a step, in order ──────────
+    const roster = threadRoster(t)
+    const selfFirst = (t.accountEmail || "").split("@")[0].toLowerCase()
+    const events: ChainEvent[] = []
+    t.messages.forEach((m, idx) => {
+      const ts = m.internalDate ? Number(m.internalDate) : 0
+      const isMe = m.from.toLowerCase().includes(t.accountEmail.toLowerCase().split("@")[0])
+      const name = personName(m.from)
+      const text = `${m.subject} ${m.snippet}`
+      const { kind, label } = classifyEvent(m, isMe, idx === 0, roster, selfFirst)
+      const mentions = findMentions(text, roster, selfFirst)
+      // Name threading: this sender was named in an earlier mail — the profile
+      // passed from hand to hand. Credit the earliest mail that named them.
+      const myFirst = name.split(/\s+/)[0].toLowerCase()
+      const namingEvent = !isMe
+        ? events.find(e => e.mentions.some(mn => mn.split(/\s+/)[0].toLowerCase() === myFirst))
+        : undefined
+      const handoffFrom = namingEvent?.from
+      events.push({
+        at: ts,
+        from: name,
+        fromEmail: emailOf(m.from),
+        isMe,
+        kind,
+        label,
+        detail: m.subject.slice(0, 80),
+        mentions,
+        handoffFrom,
+        messageId: m.id,
+      })
+    })
 
     const mark = (key: ChainStageKey, at: number, evidence: string) => {
       const prev = reached.get(key)
@@ -1004,6 +1117,7 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
       nextAction,
       interviewThreadId,
       lastActivity: lastTs || undefined,
+      events,
     })
   }
 
