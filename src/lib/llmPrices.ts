@@ -18,6 +18,33 @@ export type CallUsage = { provider?: Provider | string; model?: string; input: n
 
 type Price = { in: number; out: number; cacheRead?: number; cacheWrite?: number; source: string; read: string }
 
+/**
+ * Audio prices, US dollars per MINUTE of audio. Whisper and TTS bill by time,
+ * not by token — a separate table because the unit differs.
+ * First match wins, matched against the model id as the provider reported it.
+ */
+export type AudioPrice = { perMinute: number; source: string; read: string }
+const AUDIO_PRICES: { match: RegExp; price: AudioPrice }[] = [
+  // Groq's list price for whisper-large-v3-turbo. Re-read before trusting a
+  // total built on it — and note isFree() below: while the key is on Groq's
+  // free tier these calls cost this deployment nothing, whatever the list says.
+  { match: /whisper-large-v3-turbo/i, price: { perMinute: 0.000667, source: "Groq public pricing, whisper-large-v3-turbo $0.04/hr", read: "2026-10-11" } },
+  { match: /whisper-large-v3/i, price: { perMinute: 0.00185, source: "Groq public pricing, whisper-large-v3 $0.111/hr", read: "2026-10-11" } },
+  { match: /whisper/i, price: { perMinute: 0.00185, source: "Fallback: whisper-large-v3 rate", read: "2026-10-11" } },
+]
+
+/** US dollars for `minutes` of audio on `model`, or null when unpriced or free-tier. */
+export function priceAudioMinutes(model: string, provider: string, minutes: number): { costUsd: number; kind: "priced" | "free" | "unpriced" } {
+  if (isFree(provider, model)) return { costUsd: 0, kind: "free" }
+  const row = AUDIO_PRICES.find(p => p.match.test(model))
+  if (!row) return { costUsd: 0, kind: "unpriced" }
+  return { costUsd: Math.round(minutes * row.price.perMinute * 1e6) / 1e6, kind: "priced" }
+}
+
+export function audioPriceTable(): { model: string; perMinute: number; source: string; read: string }[] {
+  return AUDIO_PRICES.map(p => ({ model: p.match.source, perMinute: p.price.perMinute, source: p.price.source, read: p.price.read }))
+}
+
 /** First match wins. Matched against the model id as the provider reported it. */
 const PRICES: { match: RegExp; price: Price }[] = [
   { match: /^gpt-6-luna(?!-pro)/i, price: { in: 0.10, out: 0.50, source: "OpenRouter's public model list (openai/gpt-6-luna), not OpenAI's own price page", read: "2026-10-05" } },

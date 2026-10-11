@@ -24,6 +24,18 @@ type Usage = {
   today: string
   resumes: TailorOverview
   calls: { today: CallSummary; week: CallSummary; month: CallSummary }
+  speech: {
+    today: SttSummary; week: SttSummary; month: SttSummary
+    sessions: { session: string; minutes: number; chunks: number; costUsd: number; at: number }[]
+    sessionCount: number
+    avgSessionCostUsd: number
+    avgSessionMinutes: number
+    cost30minUsd: number
+    cost60minUsd: number
+    budgetUsd: number | null
+    sessionsLeft: number | null
+  }
+  audioPrices: { model: string; perMinute: number; source: string; read: string }[]
   left: {
     openai: { budgetUsd: number | null; spentMonthUsd: number; unpricedCalls: number; leftUsd: number | null; resumesLeft: number | null }
     groq: GroqAllowance[]
@@ -33,6 +45,11 @@ type Usage = {
   }
   prices: { model: string; in: number; out: number; source: string; read: string }[]
   gaps: { unreadable: number; truncated: boolean; kompasReporting: boolean; recordingSince: string | null; empty: boolean }
+}
+
+type SttSummary = {
+  calls: number; minutes: number; costUsd: number; freeCalls: number; unpricedCalls: number
+  byModel: { model: string; provider: string; calls: number; minutes: number; costUsd: number; kind: string }[]
 }
 
 type Span = "today" | "week" | "month"
@@ -356,6 +373,68 @@ export default function AdminPage() {
               count(m.calls), tokens(m.input), tokens(m.output), m.kind === "unpriced" ? "–" : money(m.costUsd),
             ])} />
         </Card>
+      </Section>
+
+      <Section title="Voice sessions and cost" lede="Every live Kompas session's speech-to-text: audio minutes, what each session cost, and what the next ones will cost. The business-model numbers."
+        aside={SPANS.map(s => <Chip key={s.id} label={s.label} active={span === s.id} onClick={() => setSpan(s.id)} />)}>
+        {(() => {
+          const s = data.speech[span]
+          const mins = (m: number) => (m < 60 ? `${m.toFixed(1)} min` : `${(m / 60).toFixed(1)} hr`)
+          return (<>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+              {([
+                ["Speech cost", money(s.costUsd), s.unpricedCalls > 0 ? "or more: some audio has no known price" : s.freeCalls > 0 ? "on the free tier — billed $0" : ""],
+                ["Audio transcribed", mins(s.minutes), `${count(s.calls)} chunks`],
+                ["Sessions", count(data.speech.sessionCount), data.speech.avgSessionMinutes > 0 ? `avg ${mins(data.speech.avgSessionMinutes)} each` : "no sessions yet"],
+                ["Avg session cost", money(data.speech.avgSessionCostUsd), "what one live run costs"],
+                ["30-minute session", money(data.speech.cost30minUsd), "at this month's rate"],
+                ["One-hour session", money(data.speech.cost60minUsd), "at this month's rate"],
+              ] as const).map(([label, value, under]) => (
+                <Card key={label} style={{ padding: 16 }}>
+                  <Meta>{label}</Meta>
+                  <div style={{ ...NUM, fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 700, color: "var(--text)", marginTop: 8 }}>{value}</div>
+                  <div style={{ fontSize: 13.5, color: "var(--text-soft)", marginTop: 2, minHeight: 20 }}>{under}</div>
+                </Card>
+              ))}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16, marginTop: 16 }}>
+              <Card>
+                <Meta style={{ marginBottom: 14 }}>Budget</Meta>
+                {data.speech.budgetUsd !== null ? (<>
+                  <div style={{ ...NUM, fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 700 }}>{money(data.speech.budgetUsd - s.costUsd)}</div>
+                  <div style={{ fontSize: 13.5, color: "var(--text-soft)", marginTop: 4 }}>
+                    left of {money(data.speech.budgetUsd)} this month
+                    {data.speech.sessionsLeft !== null ? ` — about ${count(data.speech.sessionsLeft)} sessions at the average cost` : ""}
+                  </div>
+                </>) : (
+                  <div style={{ fontSize: 13.5, color: "var(--text-soft)" }}>
+                    Set GROQ_MONTHLY_BUDGET_USD to see what's left and how many sessions it buys.
+                  </div>
+                )}
+              </Card>
+              <Card>
+                <Meta style={{ marginBottom: 14 }}>By model</Meta>
+                <Table head={["Provider", "Model", "Chunks", "Audio", "Cost"]} empty="No speech in this time."
+                  rows={s.byModel.map(m => [
+                    provider(m.provider),
+                    <span key="m">{m.model} {m.kind === "free" ? <Tag tone="good">Free</Tag> : m.kind === "unpriced" ? <Tag tone="warn">No price known</Tag> : null}</span>,
+                    count(m.calls), mins(m.minutes), m.kind === "unpriced" ? "–" : money(m.costUsd),
+                  ])} />
+              </Card>
+            </div>
+
+            <Card style={{ marginTop: 16 }}>
+              <Meta style={{ marginBottom: 14 }}>Sessions this month — what each live run cost</Meta>
+              <Table left={1} head={["Session", "Date", "Chunks", "Audio", "Cost"]} empty="No sessions yet."
+                rows={data.speech.sessions.map(x => [
+                  <span key="s" style={{ ...NUM }}>{x.session}</span>,
+                  new Date(x.at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                  count(x.chunks), mins(x.minutes), money(x.costUsd),
+                ])} />
+            </Card>
+          </>)
+        })()}
       </Section>
 
       <Section title="API keys" lede="Add or replace any provider's key here, and tick what may use it. A key is sealed before it is stored and is never shown again; a change takes effect within half a minute, with no redeploy.">

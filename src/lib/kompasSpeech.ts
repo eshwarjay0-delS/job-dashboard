@@ -12,7 +12,7 @@
  *    answer fails cleanupAllowed (src/lib/kompasTranscript.ts) or the model cannot be reached. It is never an error.
  */
 import { callLLM, keysFor, resolveKeys } from "@/lib/llm"
-import { scheduleLlmRecord } from "@/lib/llmLedger"
+import { scheduleSttRecord } from "@/lib/sttLedger"
 import { cleanupAllowed, restoreSpelling } from "@/lib/kompasTranscript"
 import { guardHallucinations, deLooped as guardDeLooped } from "@/lib/kompasGuard"
 
@@ -58,7 +58,7 @@ function collapseRepeats(text: string): { text: string; collapsed: boolean } {
   return { text: result.text, collapsed: guardDeLooped(result) }
 }
 
-export async function transcribeAudio(input: { audio: Uint8Array; mime: string; hint?: string; language?: string; purpose: SpeechPurpose }): Promise<{ text: string; seconds: number | null; language: string | null; model: string; segments: SpokenStretch[]; words: SpokenWord[]; deLooped: boolean }> {
+export async function transcribeAudio(input: { audio: Uint8Array; mime: string; hint?: string; language?: string; purpose: SpeechPurpose; sessionId?: string; userHash?: string }): Promise<{ text: string; seconds: number | null; language: string | null; model: string; segments: SpokenStretch[]; words: SpokenWord[]; deLooped: boolean }> {
   const type = audioType(input.mime)
   if (!type) throw new SpeechError("bad-audio")
   const key = (await keysFor(`kompas:${input.purpose}`, resolveKeys({}))).groq
@@ -78,9 +78,15 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
   if (input.language) form.append("language", input.language)
 
   const began = Date.now()
-  const record = (ok: boolean, status?: number) => scheduleLlmRecord({
+  // Estimate billable seconds up front from the bytes (the provider's own
+  // duration comes back later and replaces it on success).
+  const estSeconds = Math.max(1, Math.round(input.audio.byteLength / 16000))
+  const record = (ok: boolean, status?: number, seconds?: number | null) => scheduleSttRecord({
     at: Date.now(), app: "kompas", purpose: input.purpose, provider: "groq", model, ok, ...(status ? { status } : {}),
-    input: 0, output: 0, cacheRead: 0, cacheWrite: 0, ms: Date.now() - began,
+    seconds: seconds ?? estSeconds,
+    ...(input.sessionId ? { session: input.sessionId } : {}),
+    ...(input.userHash ? { userHash: input.userHash } : {}),
+    ms: Date.now() - began,
   })
 
   const stop = new AbortController()
@@ -102,7 +108,8 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
   }
   let body: { text?: unknown; duration?: unknown; language?: unknown; segments?: unknown; words?: unknown }
   try { body = await response.json() } catch { record(false); throw new SpeechError("unavailable") }
-  record(true)
+  const provSeconds = typeof body.duration === "number" && Number.isFinite(body.duration) ? Math.round(body.duration * 10) / 10 : null
+  record(true, undefined, provSeconds)
   const rawText = typeof body.text === "string" ? body.text.trim() : ""
   // Selective secondary verification, cheap edition: the recogniser's own text is
   // checked for its signature failure (looping) before anyone sees it.
@@ -117,7 +124,7 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
   return {
     text,
     deLooped: collapsed,
-    seconds: typeof body.duration === "number" && Number.isFinite(body.duration) ? Math.round(body.duration * 10) / 10 : null,
+    seconds: provSeconds,
     language: typeof body.language === "string" ? body.language.slice(0, 24) : null,
     model,
     words,

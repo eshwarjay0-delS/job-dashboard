@@ -3,6 +3,7 @@ import { after } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { SpeechError, audioType, transcribeAudio, type SpeechCode } from "@/lib/kompasSpeech"
 import { archiveSessionChunk } from "@/lib/kompasSessionArchive"
+import { hashUserId } from "@/lib/sttLedger"
 import { checkRateLimit } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
@@ -62,6 +63,8 @@ export async function POST(request: NextRequest) {
       audio, mime: mime!, purpose,
       hint: decoded(request.headers.get("x-speech-hint"), 400) || undefined,
       language: /^[a-z]{2}$/.test(language) ? language : undefined,
+      sessionId: sessionId || undefined,
+      userHash: hashUserId(user.id),
     })
     if (sessionId) {
       const bytes = audio
