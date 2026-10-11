@@ -44,7 +44,43 @@ const SPEECH_TIMEOUT_MS = 25_000
 /** One sentence or so of a recording, with when it starts and ends in seconds from the start of that recording. */
 export type SpokenStretch = { start: number; end: number; text: string }
 
-export async function transcribeAudio(input: { audio: Uint8Array; mime: string; hint?: string; language?: string; purpose: SpeechPurpose }): Promise<{ text: string; seconds: number | null; language: string | null; model: string; segments: SpokenStretch[] }> {
+/** One word with its times in seconds — the raw material of word boundary resolution. */
+export type SpokenWord = { start: number; end: number; word: string }
+
+/**
+ * Whisper's classic failure mode: when the audio goes quiet, noisy, or confusing it loops —
+ * "Thank you for watching. Thank you for watching." — or stutters a phrase into a run.
+ * Nobody ever *means* the same 4+ words twice in a row, so an exact immediate repeat of a
+ * 4–12 word window is collapsed to one telling. Shorter repeats ("no, no") are left alone:
+ * those can be genuine emphasis.
+ */
+function collapseRepeats(text: string): { text: string; collapsed: boolean } {
+  const words = text.split(/\s+/)
+  if (words.length < 8) return { text, collapsed: false }
+  const out: string[] = []
+  let collapsed = false
+  let i = 0
+  while (i < words.length) {
+    let done = false
+    for (let w = 12; w >= 4; w--) {
+      if (i + w * 2 > words.length) continue
+      const a = words.slice(i, i + w).join(" ").toLowerCase()
+      const b = words.slice(i + w, i + w * 2).join(" ").toLowerCase()
+      if (a !== b) continue
+      let reps = 2
+      while (i + w * (reps + 1) <= words.length && words.slice(i + w * reps, i + w * (reps + 1)).join(" ").toLowerCase() === a) reps++
+      out.push(...words.slice(i, i + w))
+      i += w * reps
+      collapsed = true
+      done = true
+      break
+    }
+    if (!done) { out.push(words[i]); i++ }
+  }
+  return { text: out.join(" "), collapsed }
+}
+
+export async function transcribeAudio(input: { audio: Uint8Array; mime: string; hint?: string; language?: string; purpose: SpeechPurpose }): Promise<{ text: string; seconds: number | null; language: string | null; model: string; segments: SpokenStretch[]; words: SpokenWord[]; deLooped: boolean }> {
   const type = audioType(input.mime)
   if (!type) throw new SpeechError("bad-audio")
   const key = (await keysFor(`kompas:${input.purpose}`, resolveKeys({}))).groq
@@ -56,6 +92,10 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
   form.append("model", model)
   form.append("response_format", "verbose_json")
   form.append("temperature", "0")
+  // Word boundary resolution: ask for per-word times, not just per-segment.
+  // Falls back gracefully — a recogniser that ignores it still returns segments.
+  form.append("timestamp_granularities[]", "word")
+  form.append("timestamp_granularities[]", "segment")
   if (input.hint) form.append("prompt", input.hint.slice(0, 600))
   if (input.language) form.append("language", input.language)
 
@@ -82,14 +122,27 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
     if (response.status === 400 || response.status === 415 || response.status === 422) throw new SpeechError("bad-audio")
     throw new SpeechError("unavailable")
   }
-  let body: { text?: unknown; duration?: unknown; language?: unknown; segments?: unknown }
+  let body: { text?: unknown; duration?: unknown; language?: unknown; segments?: unknown; words?: unknown }
   try { body = await response.json() } catch { record(false); throw new SpeechError("unavailable") }
   record(true)
+  const rawText = typeof body.text === "string" ? body.text.trim() : ""
+  // Selective secondary verification, cheap edition: the recogniser's own text is
+  // checked for its signature failure (looping) before anyone sees it.
+  const { text, collapsed } = collapseRepeats(rawText)
+  const words: SpokenWord[] = (Array.isArray(body.words) ? body.words : []).slice(0, 2000).flatMap((w): SpokenWord[] => {
+    const row = w as { start?: unknown; end?: unknown; word?: unknown }
+    const start = Number(row?.start), end = Number(row?.end), word = typeof row?.word === "string" ? row.word : ""
+    return word && Number.isFinite(start) && Number.isFinite(end) && end >= start && start >= 0
+      ? [{ start: Math.round(start * 100) / 100, end: Math.round(end * 100) / 100, word }]
+      : []
+  })
   return {
-    text: typeof body.text === "string" ? body.text.trim() : "",
+    text,
+    deLooped: collapsed,
     seconds: typeof body.duration === "number" && Number.isFinite(body.duration) ? Math.round(body.duration * 10) / 10 : null,
     language: typeof body.language === "string" ? body.language.slice(0, 24) : null,
     model,
+    words,
     // The recogniser's own division into stretches, each with its times. Times and words only: the page uses them to cut
     // the sound it already holds and work out, on the device, whose voice each stretch is.
     segments: (Array.isArray(body.segments) ? body.segments : []).slice(0, 400).flatMap((s): SpokenStretch[] => {

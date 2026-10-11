@@ -31,6 +31,22 @@ const MAX_SECONDS = 90
 const FLOW_APK = "/apps/Kompas-Flow.apk"
 const HISTORY_KEY = "mf_flow_history"
 const HINT_KEY = "mf_flow_hint"
+const LEARNED_KEY = "mf_flow_learned"
+// User correction learning: words the person fixed after dictation are remembered
+// (this browser only) and fed back as vocabulary hints next time — the recogniser
+// gets better at *their* names and terms without any account or server.
+function learnedWords(): string[] {
+  try { const v = JSON.parse(localStorage.getItem(LEARNED_KEY) || "[]"); return Array.isArray(v) ? v.filter(x => typeof x === "string").slice(0, 40) : [] } catch { return [] }
+}
+function learnFromCorrection(before: string, after: string) {
+  const inBefore = new Set(before.toLocaleLowerCase().split(/[^\p{L}\p{N}']+/u).filter(w => w.length > 2))
+  const fresh = [...new Set(after.split(/[^\p{L}\p{N}']+/u).filter(w => w.length > 2 && !inBefore.has(w.toLocaleLowerCase())))]
+  if (!fresh.length) return
+  try {
+    const keep = [...new Set([...fresh, ...learnedWords()])].slice(0, 40)
+    localStorage.setItem(LEARNED_KEY, JSON.stringify(keep))
+  } catch { /* storage blocked: learning simply doesn't persist */ }
+}
 const TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]
 
 const SMALL: CSSProperties = { fontSize: 14.5, lineHeight: 1.55, color: "var(--text-muted)", margin: 0 }
@@ -64,6 +80,10 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
   const [phase, setPhase] = useState<"idle" | "recording" | "working">("idle")
   const [seconds, setSeconds] = useState(0)
   const [level, setLevel] = useState(0)
+  // Signal quality monitor: is the mic actually hearing speech, or air?
+  const [speaking, setSpeaking] = useState(false)
+  const [signalNote, setSignalNote] = useState("")
+  const sigRef = useRef({ quietMs: 0, loudHits: 0, last: 0 })
   const [result, setResult] = useState<Result | null>(null)
   const [layer, setLayer] = useState<Layer>("raw")
   const [note, setNote] = useState("")
@@ -85,9 +105,12 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
   const starting = useRef(false)
   const run = useRef(0)          // which dictation an answer belongs to: a later Start makes earlier answers stale
   const hintRef = useRef("")
+  const [lang, setLang] = useState("")
+  const langRef = useRef("")
+  const LANG_KEY = "mf_flow_lang"
 
   useEffect(() => { onBusy(phase !== "idle") }, [phase, onBusy])
-  useEffect(() => { const h = read<string>(HINT_KEY, ""); setHint(h); hintRef.current = h; setPast(read<Past[]>(HISTORY_KEY, [])); setOnAndroid(/Android/i.test(navigator.userAgent))
+  useEffect(() => { const h = read<string>(HINT_KEY, ""); setHint(h); hintRef.current = h; const l = read<string>(LANG_KEY, ""); setLang(l); langRef.current = l; setPast(read<Past[]>(HISTORY_KEY, [])); setOnAndroid(/Android/i.test(navigator.userAgent))
     const apple = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
     const installed = window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
     setOnIphone(apple && !installed)
@@ -108,10 +131,17 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
   const toText = useCallback(async (blob: Blob, mine: number) => {
     setPhase("working"); setStatus("Writing down what you said…")
     try {
-      const heard = await fetch("/api/kompas/speech", {
-        method: "POST", body: blob,
-        headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-speech-for": "flow", ...(hintRef.current ? { "x-speech-hint": encodeURIComponent(hintRef.current) } : {}) },
-      })
+      // Contextual vocabulary: their typed hint words plus every word they ever corrected,
+      // so the recogniser learns their names and terms. The spoken language locks it in.
+      const vocab = [hintRef.current, ...learnedWords()].filter(Boolean).join(", ")
+      const headers: Record<string, string> = {
+        "content-type": "application/octet-stream",
+        "x-audio-mime": blob.type || "audio/webm",
+        "x-speech-for": "flow",
+        "x-speech-lang": langRef.current,
+      }
+      if (vocab) headers["x-speech-hint"] = encodeURIComponent(vocab)
+      const heard = await fetch("/api/kompas/speech", { method: "POST", body: blob, headers })
       if (run.current !== mine) return
       const body = await heard.json().catch(() => ({}))
       if (run.current !== mine) return
@@ -150,7 +180,7 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
     if (starting.current || live.current) return
     starting.current = true
     const mine = ++run.current
-    setError(""); setNote(""); setCut(false); setCopied(""); setResult(null); setSeconds(0)
+    setError(""); setNote(""); setCut(false); setCopied(""); setResult(null); setSeconds(0); setSignalNote(""); sigRef.current = { quietMs: 0, loudHits: 0, last: 0 }
     // Made here, inside the person's tap. Safari on an iPhone leaves an audio context that is made later, after the wait for
     // the microphone, switched off, and the bars would then never move. It is closed below if the recording does not start.
     let context: AudioContext | null = null
@@ -167,7 +197,7 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
       }
       if (run.current !== mine) { stream.getTracks().forEach(t => t.stop()); return }
       const type = TYPES.find(t => MediaRecorder.isTypeSupported(t))
-      const recorder = new MediaRecorder(stream, { ...(type ? { mimeType: type } : {}), audioBitsPerSecond: 32000 })
+      const recorder = new MediaRecorder(stream, { ...(type ? { mimeType: type } : {}), audioBitsPerSecond: 128000 })
       const parts: Blob[] = []
       recorder.ondataavailable = e => { if (e.data.size) parts.push(e.data) }
       recorder.onstop = () => {
@@ -190,7 +220,21 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
           analyser.getByteTimeDomainData(samples)
           let peak = 0
           for (const v of samples) peak = Math.max(peak, Math.abs(v - 128))
-          setLevel(Math.min(1, peak / 64))
+          const norm = Math.min(1, peak / 64)
+          setLevel(norm)
+          // Speech activity detection, energy edition: speech is loud-and-varying, silence is flat.
+          const heard = norm > 0.08
+          setSpeaking(h => (h === heard ? h : heard))
+          const nowMs = Date.now()
+          const dt = nowMs - (sigRef.current.last || nowMs)
+          sigRef.current.last = nowMs
+          if (heard) { sigRef.current.quietMs = 0 } else { sigRef.current.quietMs += dt }
+          if (norm > 0.92) sigRef.current.loudHits++
+          // Nondestructive advice only — the audio itself is never altered.
+          const s = Math.floor((Date.now() - began) / 1000)
+          if (s > 3 && sigRef.current.quietMs > 5000) setSignalNote("Very quiet — move closer to the microphone.")
+          else if (sigRef.current.loudHits > 40) { setSignalNote("Clipping — back off the microphone a little."); sigRef.current.loudHits = 0 }
+          else setSignalNote(n => (n ? "" : n))
           if (live.current) live.current.frame = requestAnimationFrame(draw)
         }
         frame = requestAnimationFrame(draw)
@@ -272,7 +316,10 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <span aria-hidden style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--danger)", flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>Listening <span style={{ fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", color: "var(--text-muted)", fontWeight: 500 }}>{clock(seconds)}</span></div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", display: "flex", alignItems: "center", gap: 8 }}>Listening <span style={{ fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", color: "var(--text-muted)", fontWeight: 500 }}>{clock(seconds)}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: speaking ? "var(--accent)" : "var(--text-soft)" }}>{speaking ? "● hearing you" : "○ quiet"}</span>
+              </div>
+              {signalNote && <div style={{ fontSize: 13.5, color: "var(--text-muted)", marginTop: 6 }}>{signalNote}</div>}
               <div aria-hidden style={{ height: 8, marginTop: 8, borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", overflow: "hidden" }}>
                 <div style={{ width: `${Math.round(level * 100)}%`, height: "100%", background: "var(--accent)", transition: "width 80ms linear" }} />
               </div>
@@ -294,6 +341,7 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
           <p style={SAID}>{shown}</p>
           <RevisionEditor key={result.raw} text={result.rewrite || result.clean || result.raw} revisions={result.revisions} disabled={phase !== "idle"}
             onSave={(text, reason) => {
+              learnFromCorrection(result.rewrite || result.clean || result.raw, text)
               const next = { ...manualRewrite(result, text, reason, Date.now()), kept: "rewrite" as const }
               setResult(next); setLayer("rewrite")
               setPast(before => { const history = before.map(p => p.id === resultId.current ? { ...p, ...next } : p); write(HISTORY_KEY, history); return history })
@@ -315,7 +363,16 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
         <input id="flow-hint" value={hint} maxLength={400} placeholder="Names and unusual words, like Kubernetes, Priyanka, Terraform"
           onChange={e => { const v = e.target.value.slice(0, 400); setHint(v); hintRef.current = v; write(HINT_KEY, v) }}
           style={{ ...FIELD, marginTop: 8 }} />
-        <p style={{ ...SMALL, marginTop: 8 }}>Optional. It helps unusual names and technical words come out right.</p>
+        <p style={{ ...SMALL, marginTop: 8 }}>Optional. It helps unusual names and technical words come out right. Words you correct are remembered here automatically.</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
+          <label htmlFor="flow-lang" style={{ ...SMALL, fontWeight: 600 }}>Spoken language</label>
+          <select id="flow-lang" value={lang} onChange={e => { setLang(e.target.value); langRef.current = e.target.value; write(LANG_KEY, e.target.value) }}
+            style={{ ...FIELD, width: "auto", minWidth: 140 }}>
+            <option value="">Auto-detect</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+        <p style={{ ...SMALL, marginTop: 8 }}>English locks the recogniser to English — best when you speak English with any accent. Auto-detect guesses each time.</p>
       </section>
 
       {!onAndroid && !onIphone && <section style={{ marginTop: 32 }}>{app}<p style={{ ...SMALL, marginTop: -6 }}>On an iPhone: open this page in Safari, tap Share, then Add to Home Screen.</p></section>}
@@ -340,6 +397,7 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
                   <p style={{ fontSize: 15.5, lineHeight: 1.55, color: "var(--text)", margin: "8px 0 0", overflowWrap: "anywhere", whiteSpace: wide ? "pre-wrap" : "normal", ...(wide ? {} : { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }) }}>{text}</p>
                   {wide && <><p style={SMALL}>Original: {p.raw}</p>{p.clean && <p style={SMALL}>Tidied: {p.clean}</p>}
                     <RevisionEditor text={p.rewrite || p.clean || p.raw} revisions={p.revisions} onSave={(value, reason) => {
+                      learnFromCorrection(p.rewrite || p.clean || p.raw, value)
                       const next = { ...manualRewrite(p, value, reason, Date.now()), kept: "rewrite" as const }
                       setPast(before => { const history = before.map(item => item.id === p.id ? next : item); write(HISTORY_KEY, history); return history })
                       if (resultId.current === p.id) { setResult(next); setLayer("rewrite") }
