@@ -34,9 +34,10 @@ export async function GET(request: NextRequest) {
 
   const now = Date.now()
   const today = new Date(now).toISOString().slice(0, 10)
-  const [openaiBal, groqBal, llm, tailors, stt] = await Promise.all([
+  const [openaiBal, groqBal, orBal, llm, tailors, stt] = await Promise.all([
     getKeyBalance("openai"),
     getKeyBalance("groq"),
+    getKeyBalance("openrouter"),
     readLlmCalls("2026-09-01", today),
     readTailorEvents("2026-09-01", today),
     readSttCalls("2026-09-01", today),
@@ -58,6 +59,10 @@ export async function GET(request: NextRequest) {
 
   const openaiLeft = Math.max(0, openaiBal.loadedUsd - (spentByProvider.openai || 0))
   const groqLeft = Math.max(0, groqBal.loadedUsd - (spentByProvider.groq || 0))
+  const orLeft = Math.max(0, orBal.loadedUsd - (spentByProvider.openrouter || 0))
+  // OpenRouter can route gpt-oss-120b to the cheapest provider (DeepInfra
+  // $0.037/$0.17 per M, per llm-stats.com Oct 2026) — the floor for resume cost.
+  const OR_120B_FLOOR = { in: 0.037, out: 0.17 }
 
   // Free plan as he described it: 7 resumes/month + 20 session-minutes.
   const freePlanCost = 7 * perResume + perSession20
@@ -69,6 +74,14 @@ export async function GET(request: NextRequest) {
         provider: "openai", label: "OpenAI", loadedUsd: openaiBal.loadedUsd,
         spentUsd: r6(spentByProvider.openai || 0), remainingUsd: r6(openaiLeft),
         buys: { resumes: perResume > 0 ? Math.floor(openaiLeft / perResume) : null, unit: "resumes (gpt-6-luna)" },
+      },
+      {
+        provider: "openrouter", label: "OpenRouter", loadedUsd: orBal.loadedUsd,
+        spentUsd: r6(spentByProvider.openrouter || 0), remainingUsd: r6(orLeft),
+        buys: {
+          resumes: Math.floor(orLeft / resumeCost(OR_120B_FLOOR)),
+          unit: "resumes (gpt-oss-120b via cheapest route)",
+        },
       },
       {
         provider: "groq", label: "Groq", loadedUsd: groqBal.loadedUsd,
