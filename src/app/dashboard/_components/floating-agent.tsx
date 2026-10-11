@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Bot, X, Mic, MicOff, Send } from "lucide-react"
+import { Bot, X, Mic, MicOff, Send, Volume2, VolumeX } from "lucide-react"
 import { tapBuzz, sendBuzz, arriveBuzz } from "@/lib/haptics"
+import { speak, stopSpeaking, canSpeak, isSpeaking } from "@/lib/speak"
 
 interface Msg { role: "user" | "assistant"; content: string }
 
@@ -23,11 +24,12 @@ export default function FloatingAgent() {
   const [busy, setBusy] = useState(false)
   const [listening, setListening] = useState(false)
   const [unread, setUnread] = useState(0)
+  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const recogRef = useRef<any>(null)
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages, busy, open])
-  useEffect(() => () => { try { recogRef.current?.stop() } catch { /* noop */ } }, [])
+  useEffect(() => () => { try { recogRef.current?.stop() } catch { /* noop */ } stopSpeaking() }, [])
 
   // Unread watchdog alerts nudge the bubble.
   useEffect(() => {
@@ -39,10 +41,29 @@ export default function FloatingAgent() {
 
   function toggle() {
     tapBuzz()
+    stopSpeaking()
+    setSpeakingIdx(null)
     setOpen(o => {
       if (!o) setUnread(0)
       return !o
     })
+  }
+
+  function toggleSpeak(idx: number, text: string) {
+    if (speakingIdx === idx && isSpeaking()) {
+      stopSpeaking()
+      setSpeakingIdx(null)
+      return
+    }
+    tapBuzz()
+    stopSpeaking()
+    if (speak(text)) {
+      setSpeakingIdx(idx)
+      // Clear the indicator when speech ends.
+      const check = setInterval(() => {
+        if (!isSpeaking()) { setSpeakingIdx(null); clearInterval(check) }
+      }, 500)
+    }
   }
 
   async function send(text?: string) {
@@ -206,6 +227,22 @@ export default function FloatingAgent() {
                 fontSize: 13.5, lineHeight: 1.55, whiteSpace: "pre-line",
               }}>
                 {m.content}
+                {m.role === "assistant" && canSpeak() && (
+                  <button
+                    onClick={() => toggleSpeak(i, m.content)}
+                    aria-label={speakingIdx === i ? "Stop reading aloud" : "Read this aloud"}
+                    title="Read aloud"
+                    style={{
+                      display: "inline-grid", placeItems: "center", verticalAlign: "middle",
+                      marginLeft: 8, width: 26, height: 26, borderRadius: 999,
+                      border: "1px solid var(--border)", background: "var(--surface)",
+                      color: speakingIdx === i ? "var(--accent)" : "var(--text-muted)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {speakingIdx === i ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                  </button>
+                )}
               </div>
             ))}
             {busy && <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Thinking through your threads…</div>}

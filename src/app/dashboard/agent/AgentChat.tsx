@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { sendBuzz, arriveBuzz } from "@/lib/haptics"
+import { speak, stopSpeaking, canSpeak, isSpeaking } from "@/lib/speak"
 
 interface Msg { role: "user" | "assistant"; content: string }
 interface Note { id: string; type: string; title: string; body: string; link: string | null; read: boolean; created_at: string }
@@ -21,6 +22,7 @@ export default function AgentChat() {
   const [notes, setNotes] = useState<Note[]>([])
   const [unread, setUnread] = useState(0)
   const [watchdogMsg, setWatchdogMsg] = useState("")
+  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages, busy])
@@ -80,6 +82,15 @@ export default function AgentChat() {
       void loadNotes()
     } catch {
       setWatchdogMsg("Check failed.")
+    }
+  }
+
+  function toggleSpeak(idx: number, text: string) {
+    if (speakingIdx === idx && isSpeaking()) { stopSpeaking(); setSpeakingIdx(null); return }
+    stopSpeaking()
+    if (speak(text)) {
+      setSpeakingIdx(idx)
+      const check = setInterval(() => { if (!isSpeaking()) { setSpeakingIdx(null); clearInterval(check) } }, 500)
     }
   }
 
@@ -153,6 +164,18 @@ export default function AgentChat() {
               fontSize: 14, lineHeight: 1.55, whiteSpace: "pre-line",
             }}>
               {m.content}
+              {m.role === "assistant" && canSpeak() && (
+                <button onClick={() => toggleSpeak(i, m.content)}
+                  aria-label={speakingIdx === i ? "Stop reading aloud" : "Read this aloud"}
+                  style={{
+                    display: "inline-grid", placeItems: "center", verticalAlign: "middle",
+                    marginLeft: 8, width: 26, height: 26, borderRadius: 999,
+                    border: "1px solid var(--border)", background: "var(--surface)",
+                    color: speakingIdx === i ? "var(--accent)" : "var(--text-muted)", cursor: "pointer",
+                  }}>
+                  {speakingIdx === i ? "🔇" : "🔊"}
+                </button>
+              )}
             </div>
           ))}
           {busy && <div style={{ fontSize: 13, color: "var(--hint)" }}>Thinking through your threads…</div>}
