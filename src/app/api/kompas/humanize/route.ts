@@ -22,15 +22,19 @@ export const maxDuration = 30
 
 const NO_STORE = { "Cache-Control": "no-store" }
 
-const SYSTEM = `You are polishing an interview answer for a live copilot. The answer's technical substance is excellent — keep it ALL: every technical term, every detail, every real-world scenario, exactly as stated. Do not simplify the substance. Do not remove details. Do not add new facts.
+const SYSTEM = `You are polishing an interview answer for a live copilot. The answer's technical substance is excellent — keep its technical LEVEL exactly where it is. Do not dumb it down. Do not remove details. Do not add new facts.
 
-The problem you are fixing is PACING and listener-awareness, especially on deep, rigorous technical questions. The original reads like a robot reciting — technically right but the listener gets lost and can't stay at the speaker's pace.
+The problem you are fixing is that it reads like a robot reciting — technically right, but no human speaks like that. The listener gets lost.
 
-Rewrite the delivery so a human listener stays with the speaker, breath by breath:
-- PACING IS EVERYTHING. Structure the answer so it can be spoken at a pace the listener can follow: build ideas step by step, one clear point at a time, with natural pause points between them. Never dump a wall of technical detail — unfold it.
-- Guide the listener: set up each technical point so the other person can anticipate where it's going, then land it. Help them step into the speaker's shoes.
-- Warm and conversational, grammatically clean — a person talking, not a textbook reciting.
-- Balanced: technically precise AND human. The listener should feel the speaker is thinking with them, not at them.
+Rewrite it the way a sharp mentor explains it — think Josh Madakor walking through a cybersecurity concept: conversational, intelligent word choice, narrating like a human talking to another human.
+
+The mix, exactly:
+- About 60% balanced narrative flow, 40% technical precision. The technical points land crisply and briefly — said once, said well — inside a human narration, not as a spec sheet.
+- PACING: unfold step by step with natural pause points. One clear idea at a time, so the speaker can deliver it at a pace the listener follows. Never a wall of detail.
+- Intelligent forming of words: choose phrasing a smart human would actually say out loud. Grammatically clean, warm, no jargon-dumping.
+- Guide the listener: set up each point so they can see where it's going, then land it. The listener should feel thought WITH, not talked AT.
+
+The answer's depth level is set by who is asking (given below when known) — a tech-HR answer stays accessible, a director answer stays strategic, an architect/developer answer keeps its technical teeth. Whatever the level, it must sound like a person.
 
 Return only the polished answer, no preamble, no commentary about the rewrite.`
 
@@ -40,7 +44,7 @@ export async function POST(request: NextRequest) {
   const limited = checkRateLimit(`kompas-humanize:${user.id}`, { max: 60, windowMs: 60_000 })
   if (!limited.ok) return NextResponse.json({ error: "Too much at once. Wait a moment." }, { status: 429, headers: NO_STORE })
 
-  let body: { text?: unknown; question?: unknown }
+  let body: { text?: unknown; question?: unknown; role?: unknown }
   try { body = await request.json() } catch {
     return NextResponse.json({ error: "Nothing to polish." }, { status: 400, headers: NO_STORE })
   }
@@ -48,6 +52,7 @@ export async function POST(request: NextRequest) {
   if (!text) return NextResponse.json({ error: "Nothing to polish." }, { status: 400, headers: NO_STORE })
   if (text.length > 8000) return NextResponse.json({ error: "That answer is too long to polish in one pass." }, { status: 413, headers: NO_STORE })
   const question = typeof body.question === "string" ? body.question.trim().slice(0, 500) : ""
+  const role = typeof body.role === "string" ? body.role.trim().slice(0, 40) : ""
 
   try {
     const keys = resolveKeys({})
@@ -56,7 +61,7 @@ export async function POST(request: NextRequest) {
       purpose: "kompas:humanize",
       tier: "light",
       system: SYSTEM,
-      user: question ? `The interviewer asked: "${question}"\n\nThe answer to polish:\n${text}` : text,
+      user: `${role ? `The person asking is a ${role} — pitch the technical depth to them, but sound human.\n` : ""}${question ? `The interviewer asked: "${question}"\n\n` : ""}The answer to polish:\n${text}`,
       maxTokens: 1200,
     })
     const out = polished.trim()

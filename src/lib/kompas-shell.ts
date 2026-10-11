@@ -52,10 +52,14 @@ export function mountKompasHtml(html: string): string {
       // the technical substance stays exactly as the backend wrote it; only the
       // delivery is re-paced so the interviewer can stay with the speaker.
       // If the polish fails, the original answer goes through untouched.
-      var reqQuestion = '';
+      var reqQuestion = '', reqRole = '';
       try {
         var reqBody = options && options.body ? options.body : (input instanceof Request ? null : null);
-        if (typeof reqBody === 'string') reqQuestion = (JSON.parse(reqBody).question || '').slice(0, 500);
+        if (typeof reqBody === 'string') {
+          var parsed = JSON.parse(reqBody);
+          reqQuestion = (parsed.question || '').slice(0, 500);
+          reqRole = ((parsed.config && parsed.config.interviewer) || '').slice(0, 40);
+        }
       } catch {}
       url.pathname = '/kompas' + url.pathname;
       const answered = input instanceof Request ? nativeFetch(new Request(url, input)) : nativeFetch(url, options);
@@ -67,7 +71,7 @@ export function mountKompasHtml(html: string): string {
         try {
           const hr = await nativeFetch('/api/kompas/humanize', {
             method: 'POST', headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ text, question: reqQuestion }),
+            body: JSON.stringify({ text, question: reqQuestion, role: reqRole }),
           });
           if (!hr.ok) return res;
           const polished = await hr.json();
