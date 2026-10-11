@@ -14,6 +14,7 @@
 import { callLLM, keysFor, resolveKeys } from "@/lib/llm"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
 import { cleanupAllowed, restoreSpelling } from "@/lib/kompasTranscript"
+import { guardHallucinations, deLooped as guardDeLooped } from "@/lib/kompasGuard"
 
 export type SpeechPurpose = "flow" | "transcribe"
 export type SpeechCode = "too-large" | "empty" | "bad-audio" | "busy" | "unavailable"
@@ -48,36 +49,13 @@ export type SpokenStretch = { start: number; end: number; text: string }
 export type SpokenWord = { start: number; end: number; word: string }
 
 /**
- * Whisper's classic failure mode: when the audio goes quiet, noisy, or confusing it loops —
- * "Thank you for watching. Thank you for watching." — or stutters a phrase into a run.
- * Nobody ever *means* the same 4+ words twice in a row, so an exact immediate repeat of a
- * 4–12 word window is collapsed to one telling. Shorter repeats ("no, no") are left alone:
- * those can be genuine emphasis.
+ * Hallucination guard v2 (src/lib/kompasGuard.ts): exact loops, fuzzy loops
+ * (stuttered repeats), and whole-utterance subtitle boilerplate. Never rewrites
+ * words — only removes what nobody said.
  */
 function collapseRepeats(text: string): { text: string; collapsed: boolean } {
-  const words = text.split(/\s+/)
-  if (words.length < 8) return { text, collapsed: false }
-  const out: string[] = []
-  let collapsed = false
-  let i = 0
-  while (i < words.length) {
-    let done = false
-    for (let w = 12; w >= 4; w--) {
-      if (i + w * 2 > words.length) continue
-      const a = words.slice(i, i + w).join(" ").toLowerCase()
-      const b = words.slice(i + w, i + w * 2).join(" ").toLowerCase()
-      if (a !== b) continue
-      let reps = 2
-      while (i + w * (reps + 1) <= words.length && words.slice(i + w * reps, i + w * (reps + 1)).join(" ").toLowerCase() === a) reps++
-      out.push(...words.slice(i, i + w))
-      i += w * reps
-      collapsed = true
-      done = true
-      break
-    }
-    if (!done) { out.push(words[i]); i++ }
-  }
-  return { text: out.join(" "), collapsed }
+  const result = guardHallucinations(text)
+  return { text: result.text, collapsed: guardDeLooped(result) }
 }
 
 export async function transcribeAudio(input: { audio: Uint8Array; mime: string; hint?: string; language?: string; purpose: SpeechPurpose }): Promise<{ text: string; seconds: number | null; language: string | null; model: string; segments: SpokenStretch[]; words: SpokenWord[]; deLooped: boolean }> {

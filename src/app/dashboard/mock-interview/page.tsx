@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { speak, stopSpeaking, canSpeak } from "@/lib/speak"
 
 /* ═══════════════════════════════════════════════════════════════════
    TYPES
@@ -141,6 +142,7 @@ export default function MockInterviewPage() {
     setShowTip(false)
     setTimer(0)
     setTimerRunning(true)
+    stopSpeaking()
   }
 
   function handleAnswerChange(v: string) {
@@ -352,6 +354,13 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
                     style={{ padding: "5px 12px", fontSize: 12.5, fontWeight: 600, color: "#7e7a68", background: "rgba(176,170,153,0.08)", border: "1px solid rgba(176,170,153,0.2)", borderRadius: 8, cursor: "pointer" }}>
                     💡 {showTip ? "Hide" : "Show"} Tip
                   </button>
+                  {canSpeak() && (
+                    <button onClick={() => speak(current.text)}
+                      style={{ padding: "5px 12px", fontSize: 12.5, fontWeight: 600, color: "#7e7a68", background: "rgba(176,170,153,0.08)", border: "1px solid rgba(176,170,153,0.2)", borderRadius: 8, cursor: "pointer" }}
+                      aria-label="Hear the question read aloud">
+                      🔊 Hear it
+                    </button>
+                  )}
                 </div>
               </div>
 
