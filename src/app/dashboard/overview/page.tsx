@@ -129,6 +129,53 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
           <TrackBar chain={chain} />
         </div>
 
+        {/* The numbers behind it: emails, people, days to interview */}
+        {chain.journey && (
+          <div style={{
+            display: "flex", gap: 14, flexWrap: "wrap", margin: "10px 0 4px",
+            background: "var(--surface-2)", border: "1px solid var(--border)",
+            borderRadius: 12, padding: "10px 14px",
+          }}>
+            <span style={{ fontSize: 13 }}><strong>{chain.journey.emails}</strong> <span style={{ color: "var(--text-muted)" }}>emails</span></span>
+            <span style={{ fontSize: 13 }}><strong>{chain.journey.people}</strong> <span style={{ color: "var(--text-muted)" }}>people</span></span>
+            {chain.journey.daysToInterview !== undefined && (
+              <span style={{ fontSize: 13 }}><strong>{chain.journey.daysToInterview}</strong> <span style={{ color: "var(--text-muted)" }}>days to interview</span></span>
+            )}
+          </div>
+        )}
+
+        {/* People & contacts */}
+        {chain.contacts.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase", marginBottom: 8 }}>
+              People involved
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {chain.contacts.map(ct => (
+                <div key={ct.email || ct.name} style={{
+                  border: "1px solid var(--border)", borderRadius: 10, padding: "9px 12px",
+                  display: "flex", gap: 10, alignItems: "center", background: "var(--surface)",
+                }}>
+                  <div style={{
+                    width: 30, height: 30, borderRadius: "50%", flex: "none",
+                    background: "var(--accent-soft)", color: "var(--accent-txt)",
+                    display: "grid", placeItems: "center", fontWeight: 800, fontSize: 13,
+                  }}>
+                    {ct.name.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13.5 }}>{ct.name}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {ct.email}{ct.phone ? ` · ${ct.phone}` : ""}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 11, color: "var(--text-soft)", flex: "none" }}>{ct.emails} mail{ct.emails === 1 ? "" : "s"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Step by step: every email, in order, who passed to whom */}
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase", margin: "14px 0 4px" }}>
           Every step, in order

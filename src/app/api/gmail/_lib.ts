@@ -859,6 +859,14 @@ export type ChainEventKind =
   | "submitted" | "client" | "interview_request" | "interview_scheduled"
   | "followup" | "response" | "note" | "offer" | "rejection"
 
+export interface ChainContact {
+  name: string
+  email?: string
+  phone?: string
+  firstSeen?: number
+  emails: number
+}
+
 export interface ChainEvent {
   at: number
   from: string
@@ -870,6 +878,7 @@ export interface ChainEvent {
   mentions: string[]
   handoffFrom?: string // this sender was named in an earlier mail — the profile passed hand to hand
   messageId: string
+  phone?: string
 }
 
 export interface ApplicationChain {
@@ -889,6 +898,8 @@ export interface ApplicationChain {
   interviewThreadId?: string
   lastActivity?: number
   events: ChainEvent[]
+  contacts: ChainContact[]
+  journey?: { emails: number; people: number; daysToInterview?: number }
 }
 
 const SUBMITTED_RE = /submitted your profile|profile submitted|have submitted|submission (is )?done|submitted to (the )?client|resume (has been )?submitted/i
@@ -915,6 +926,13 @@ function personName(from: string): string {
 const RESUME_SENT_RE = /resume (attached|enclosed|herewith)|attached .*resume|updated resume|my resume/i
 const RATE_RE = /\$\s?\d|\b\d+\s?\/\s?hr\b|rate confirmation|\bc2c\b/i
 const INTERVIEW_SCHED_RE = /scheduled|invite|calendar|teams\.microsoft|meet\.google|zoom\.us|webex/i
+
+const PHONE_RE = /(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}(?:\s*(?:x|ext\.?|extension)\s*\d{2,5})?/i
+
+function extractPhone(text: string): string | undefined {
+  const m = text.match(PHONE_RE)
+  return m ? m[0].trim() : undefined
+}
 
 function emailOf(from: string): string | undefined {
   const m = from.match(/<([^>]+)>/)
@@ -1017,6 +1035,7 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
         mentions,
         handoffFrom,
         messageId: m.id,
+        phone: extractPhone(text),
       })
     })
 
@@ -1082,6 +1101,38 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
       }
     })
 
+    // ── People & contacts: who was involved, how to reach them ──────────
+    const contactMap = new Map<string, ChainContact>()
+    for (const e of events) {
+      if (e.isMe) continue
+      const key = (e.fromEmail || e.from).toLowerCase()
+      const existing = contactMap.get(key)
+      if (existing) {
+        existing.emails += 1
+        if (!existing.phone) existing.phone = e.phone
+      } else {
+        contactMap.set(key, {
+          name: e.from,
+          email: e.fromEmail,
+          phone: e.phone,
+          firstSeen: e.at,
+          emails: 1,
+        })
+      }
+    }
+    const contacts = [...contactMap.values()].sort((a, b) => (a.firstSeen || 0) - (b.firstSeen || 0))
+
+    // ── Journey to interview: the numbers behind the win ─────────────────
+    const interviewEv = events.find(e => e.kind === "interview_scheduled" || e.kind === "interview_request")
+    const firstEv = events[0]
+    const journey = {
+      emails: events.length,
+      people: contactMap.size,
+      daysToInterview: interviewEv && firstEv?.at && interviewEv.at
+        ? Math.max(0, Math.round((interviewEv.at - firstEv.at) / 86_400_000))
+        : undefined,
+    }
+
     const lastMsg = t.messages[t.messages.length - 1]
     const lastTs = lastMsg?.internalDate ? Number(lastMsg.internalDate) : 0
     const stalledDays = terminal ? 0 : lastTs ? Math.floor((now - lastTs) / 86_400_000) : 0
@@ -1118,6 +1169,8 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
       interviewThreadId,
       lastActivity: lastTs || undefined,
       events,
+      contacts,
+      journey,
     })
   }
 
