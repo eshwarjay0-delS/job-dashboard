@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
+import { after } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { SpeechError, audioType, transcribeAudio, type SpeechCode } from "@/lib/kompasSpeech"
+import { archiveSessionChunk } from "@/lib/kompasSessionArchive"
 import { checkRateLimit } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
@@ -51,12 +53,26 @@ export async function POST(request: NextRequest) {
   if (audio.byteLength < MIN_BYTES) return refuse("empty")
 
   const language = (request.headers.get("x-speech-lang") || "").trim().toLowerCase()
+  // Session archive: when the client tags a live session, its microphone and
+  // computer audio are saved for maturation and accuracy training.
+  const sessionId = (request.headers.get("x-session-id") || "").replace(/[^a-zA-Z0-9-]/g, "").slice(0, 64)
+  const audioSource = request.headers.get("x-audio-source") === "system" ? "system" : "mic"
   try {
     const heard = await transcribeAudio({
       audio, mime: mime!, purpose,
       hint: decoded(request.headers.get("x-speech-hint"), 400) || undefined,
       language: /^[a-z]{2}$/.test(language) ? language : undefined,
     })
+    if (sessionId) {
+      const bytes = audio
+      const text = typeof heard === "object" && heard ? String((heard as { text?: unknown }).text || "") : ""
+      after(() => archiveSessionChunk({
+        userId: user.id, sessionId, source: audioSource,
+        audio: bytes, mime: mime!, transcript: text,
+        language: /^[a-z]{2}$/.test(language) ? language : undefined,
+        at: Date.now(),
+      }))
+    }
     return NextResponse.json(heard, { headers: NO_STORE })
   } catch (e) {
     if (e instanceof SpeechError) return refuse(e.code, e.retryAfterSec)

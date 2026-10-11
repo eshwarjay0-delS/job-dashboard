@@ -18,6 +18,7 @@ import { Card, Chip, Meta } from "../../_suite/ui"
 import RevisionEditor from "./revision-editor"
 import { flowResult, manualRewrite, type TranscriptRevision, type Layer } from "@/lib/kompasTranscript"
 import { learnedWords, learnFromCorrection, buildVocabHint, readStoredLang, writeStored, KOMPAS_HINT_KEY, KOMPAS_LANG_KEY } from "@/lib/kompasVocab"
+import { sessionHeaders } from "@/lib/kompasSession"
 
 type Result = { raw: string; clean: string | null; kept: Layer; rewrite?: string; revisions?: TranscriptRevision[] }
 type Past = Result & { id: string; at: number }
@@ -126,6 +127,7 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
         "x-speech-lang": langRef.current,
       }
       if (vocab) headers["x-speech-hint"] = encodeURIComponent(vocab)
+      Object.assign(headers, sessionHeaders("mic"))
       const heard = await fetch("/api/kompas/speech", { method: "POST", body: blob, headers })
       if (run.current !== mine) return
       const body = await heard.json().catch(() => ({}))

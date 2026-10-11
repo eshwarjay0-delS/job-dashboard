@@ -32,6 +32,7 @@ import {
 } from "@/lib/kompasTranscript"
 import RevisionEditor from "../flow/revision-editor"
 import { learnedWords, learnFromCorrection, buildVocabHint, readStoredLang, writeStored, KOMPAS_HINT_KEY } from "@/lib/kompasVocab"
+import { sessionHeaders } from "@/lib/kompasSession"
 import { MAX_OTHERS, VOICE_RATE, YOU, readVoiceprint, speakersOf, voiceprintOf, type Voiceprint } from "@/lib/kompasVoice"
 import { MAX_FILE_BYTES, MAX_MINUTES, decode, partsOf, samplesOf, wavPart, type DecodeProblem } from "./audio"
 import { deleteSession, forgetVoice, listSessions, loadVoice, saveSession, saveVoice, type Kept } from "./store"
@@ -80,7 +81,7 @@ type Heard = { ok: true; text: string; stretches: Stretch[] } | { ok: false; cod
 // One part to the server. A busy answer is waited out and tried again, three times at most; anything else comes straight back.
 // The vocabulary is the typed hint plus every word the person ever corrected (browser-local learning);
 // the language lock is shared with Flow's setting.
-async function hear(blob: Blob, hint: string, lang: string, stillWanted: () => boolean): Promise<Heard> {
+async function hear(blob: Blob, hint: string, lang: string, stillWanted: () => boolean, session: Record<string, string>): Promise<Heard> {
   for (let attempt = 0; ; attempt++) {
     let response: Response
     try {
@@ -92,6 +93,7 @@ async function hear(blob: Blob, hint: string, lang: string, stillWanted: () => b
         "x-speech-lang": lang,
       }
       if (vocab) headers["x-speech-hint"] = encodeURIComponent(vocab)
+      Object.assign(headers, session)
       response = await fetch("/api/kompas/speech", { method: "POST", body: blob, headers })
     } catch { return { ok: false, code: "network" } }
     const body = await response.json().catch(() => ({}))
@@ -237,7 +239,7 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
 
   const sendPart = useCallback(async (part: { id: string; blob: Blob; startMs: number; endMs: number; samples?: Float32Array }, forId: string) => {
     pending.current++
-    const heard = await hear(part.blob, hintRef.current, readStoredLang(), () => current.current?.id === forId)
+    const heard = await hear(part.blob, hintRef.current, readStoredLang(), () => current.current?.id === forId, sessionHeaders("mic"))
     const lines = heard.ok && current.current?.id === forId ? await linesOf(part, heard, hasOthers(current.current)) : []
     pending.current--
     if (heard.ok) { sounds.current.delete(part.id); put(s => relabel(lines.reduce((now, line) => appendSegment(now, line), s)), forId) }
@@ -392,7 +394,7 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
     const open = current.current, blob = sounds.current.get(id)
     if (!open || !blob) return
     setError("")
-    const heard = await hear(blob, hintRef.current, readStoredLang(), () => current.current?.id === open.id)
+    const heard = await hear(blob, hintRef.current, readStoredLang(), () => current.current?.id === open.id, sessionHeaders("mic"))
     if (current.current?.id !== open.id) return
     if (!heard.ok) { setError(problem(heard.code)); return }
     sounds.current.delete(id); setRetryable([...sounds.current.keys()])
