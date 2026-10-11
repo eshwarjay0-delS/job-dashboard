@@ -155,9 +155,10 @@ const nextConfig = {
       { source: "/dashboard/kompas/transcribe", destination: "/dashboard/kompas/flow?mode=transcribe", permanent: false },
       // Dummy pages, removed 2026-10-11 (owner: "get rid of dummy pages"). /dashboard/email showed made-up sample
       // emails when Gmail was not linked — the real inbox is /dashboard/mail. /dashboard/prep showed made-up sample
-      // interviews and questions — the real practice hub is /dashboard/kompas.
+      // interviews and questions. The Kompas app's "Back to MarketFit" button points at /dashboard/prep, so it
+      // must land on MarketFit home — NOT /dashboard/kompas, which loops straight back into the app.
       { source: "/dashboard/email", destination: "/dashboard/mail", permanent: false },
-      { source: "/dashboard/prep", destination: "/dashboard/kompas", permanent: false },
+      { source: "/dashboard/prep", destination: "/dashboard", permanent: false },
     ];
   },
 
