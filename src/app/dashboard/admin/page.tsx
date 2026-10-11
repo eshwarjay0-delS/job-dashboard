@@ -163,7 +163,32 @@ function Bar({ part, whole }: { part: number; whole: number }) {
   )
 }
 
-function BudgetBoard({ tick }: { tick: number }) {
+function TopUp({ provider, onDone }: { provider: string; onDone: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [amount, setAmount] = useState("10")
+  const [busy, setBusy] = useState(false)
+  if (!open) return <button className="text-xs mt-2 underline" style={{ color: "var(--text-muted)" }} onClick={() => setOpen(true)}>+ Top up</button>
+  return (
+    <div className="flex items-center gap-2 mt-2">
+      <span className="text-xs" style={{ color: "var(--text-muted)" }}>$</span>
+      <input value={amount} onChange={e => setAmount(e.target.value)} inputMode="decimal"
+        className="w-20 text-xs rounded-lg border px-2 py-1" style={{ borderColor: "var(--border)", background: "var(--surface)" }} />
+      <button disabled={busy} className="text-xs font-semibold rounded-lg px-2 py-1"
+        style={{ background: "var(--text)", color: "var(--surface)" }}
+        onClick={async () => {
+          setBusy(true)
+          try {
+            const r = await fetch("/api/budget/topup", { method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ provider, amountUsd: Number(amount) }) })
+            if (r.ok) onDone()
+          } finally { setBusy(false); setOpen(false) }
+        }}>Add</button>
+      <button className="text-xs" style={{ color: "var(--text-soft)" }} onClick={() => setOpen(false)}>Cancel</button>
+    </div>
+  )
+}
+
+function BudgetBoard({ tick, setBudgetTick }: { tick: number; setBudgetTick: (f: (t: number) => number) => void }) {
   const [b, setB] = useState<any>(null)
   useEffect(() => {
     fetch("/api/budget", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { if (j && j.ok) setB(j) }).catch(() => {})
@@ -178,6 +203,12 @@ function BudgetBoard({ tick }: { tick: number }) {
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-soft)" }}>{k.label} key</p>
             <p className="text-2xl font-bold mt-1" style={{ color: "var(--text)", fontFamily: "var(--font-display)" }}>${k.remainingUsd.toFixed(2)}</p>
             <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>left of ${k.loadedUsd.toFixed(2)} · spent ${k.spentUsd.toFixed(4)}</p>
+            {k.loadedUsd > 0 && k.spentUsd >= k.loadedUsd * 0.9 && (
+              <p className="text-xs mt-1 font-semibold" style={{ color: "#b3541e" }}>
+                {k.spentUsd >= k.loadedUsd ? "Depleted — top up before the next run." : "Nearly depleted — top up soon."}
+              </p>
+            )}
+            <TopUp provider={k.provider} onDone={() => setBudgetTick(t => t + 1)} />
             <div className="mt-3 space-y-1 text-sm">
               {k.buys.resumes !== null && <p style={{ color: "var(--text)" }}><b>{k.buys.resumes.toLocaleString()}</b> <span style={{ color: "var(--text-muted)" }}>resumes</span></p>}
               {k.buys.sessionMinutes !== undefined && <p style={{ color: "var(--text)" }}><b>{k.buys.sessionMinutes.toLocaleString()}</b> <span style={{ color: "var(--text-muted)" }}>STT minutes</span></p>}
@@ -414,7 +445,7 @@ export default function AdminPage() {
 
       <Section title="API budget — what your keys buy" lede="Declared balances minus measured spend. Resumes left, session minutes left, and the unit economics underneath."
         aside={<Chip label="Refresh" active={false} onClick={() => setBudgetTick(t => t + 1)} />}>
-        <BudgetBoard tick={budgetTick} />
+        <BudgetBoard tick={budgetTick} setBudgetTick={setBudgetTick} />
       </Section>
 
       <Section title="Voice sessions and cost" lede="Every live Kompas session's speech-to-text: audio minutes, what each session cost, and what the next ones will cost. The business-model numbers."
