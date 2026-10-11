@@ -4,6 +4,7 @@ import { authenticatedUser } from "@/lib/authBoundary"
 import { SpeechError, audioType, transcribeAudio, type SpeechCode } from "@/lib/kompasSpeech"
 import { archiveSessionChunk } from "@/lib/kompasSessionArchive"
 import { hashUserId } from "@/lib/sttLedger"
+import { deductPoints, POINTS_PER_INTERVIEW } from "@/lib/creditsLedger"
 import { checkRateLimit } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
@@ -69,12 +70,17 @@ export async function POST(request: NextRequest) {
     if (sessionId) {
       const bytes = audio
       const text = typeof heard === "object" && heard ? String((heard as { text?: unknown }).text || "") : ""
+      const uHash = hashUserId(user.id)
+      // Gel points: a Kompas app interview session costs 1 point, deducted once
+      // per session (idempotent — retries cost nothing extra).
+      const isKompasApp = request.headers.get("x-kompas-app") === "1"
       after(() => archiveSessionChunk({
         userId: user.id, sessionId, source: audioSource,
         audio: bytes, mime: mime!, transcript: text,
         language: /^[a-z]{2}$/.test(language) ? language : undefined,
         at: Date.now(),
       }))
+      if (isKompasApp) after(() => deductPoints(uHash, POINTS_PER_INTERVIEW, `session:${sessionId}`, "interview"))
     }
     return NextResponse.json(heard, { headers: NO_STORE })
   } catch (e) {

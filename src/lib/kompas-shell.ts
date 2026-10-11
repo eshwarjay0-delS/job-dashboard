@@ -36,6 +36,7 @@ export function mountKompasHtml(html: string): string {
         if (/^[a-z]{2}$/.test(mfLang)) headers.set('x-speech-lang', mfLang);
       } catch { if (prompt && !headers.get('x-speech-hint')) headers.set('x-speech-hint', prompt); }
       headers.set('x-speech-for', 'transcribe');
+      headers.set('x-kompas-app', '1');
       if (input instanceof Request) {
         input = new Request(url, {
           method: input.method, headers: headers, body: input.body, mode: input.mode,
@@ -84,10 +85,36 @@ export function mountKompasHtml(html: string): string {
       });
     }
     if (url.origin === location.origin && (url.pathname.startsWith('/api/') || url.pathname === '/version.json' || url.pathname === '/release.json')) {
-      url.pathname = '/kompas' + url.pathname;
-      input = input instanceof Request ? new Request(url, input) : url;
+      if (!url.pathname.startsWith('/api/kompas/')) {
+        url.pathname = '/kompas' + url.pathname;
+        input = input instanceof Request ? new Request(url, input) : url;
+      }
     }
     return nativeFetch(input, options);
+  };
+
+  // Gel points pill: right after the Kompas title, "X interviews · Y resumes left".
+  // Refreshed when the header appears and every two minutes after.
+  function paintCredits() {
+    const title = document.getElementById('ovTitle');
+    if (!title || document.getElementById('mfCredits')) return;
+    const pill = document.createElement('span');
+    pill.id = 'mfCredits';
+    pill.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-left:10px;font-size:11.5px;font-weight:700;color:var(--text-muted,#8a8578);background:var(--surface-2,rgba(0,0,0,0.06));border:1px solid var(--border,rgba(0,0,0,0.12));border-radius:999px;padding:4px 11px;white-space:nowrap;';
+    pill.textContent = '…';
+    title.after(pill);
+    const load = () => nativeFetch('/api/kompas/credits', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        if (j && j.ok) pill.textContent = '◉ ' + j.interviews + ' interviews · ' + j.resumes + ' resumes left';
+      })
+      .catch(() => {});
+    load();
+    setInterval(load, 120000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paintCredits);
+  else paintCredits();
+  new MutationObserver(paintCredits).observe(document.documentElement, { childList: true, subtree: true });
   };
 })();
 </script>`
