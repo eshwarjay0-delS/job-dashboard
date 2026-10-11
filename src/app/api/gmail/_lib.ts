@@ -849,6 +849,7 @@ export interface ChainStop {
 
 export interface ChainLink {
   name: string
+  email?: string
   role: string // "recruiter" | "vendor" | "partner" | "client" | "you"
   at?: number
 }
@@ -918,8 +919,10 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
       const name = personName(m.from)
 
       if (!isMe && name && !people.has(name.toLowerCase())) {
+        const emailMatch = m.from.match(/<([^>]+)>/)
         people.set(name.toLowerCase(), {
           name,
+          email: emailMatch ? emailMatch[1] : undefined,
           role: /client|hiring/i.test(text) ? "client" : m.vendorDomain && !/gmail|yahoo|hotmail/i.test(m.vendorDomain) ? "vendor" : "recruiter",
           at: ts || undefined,
         })

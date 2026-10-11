@@ -3,7 +3,7 @@ import TypingDots from "../_components/typing-dots"
 
 import { useState } from "react"
 import Link from "next/link"
-import { Clock, User, Mic, ChevronLeft, ChevronRight } from "lucide-react"
+import { Clock, User, Mic, ChevronLeft, ChevronRight, Eye } from "lucide-react"
 import { Card, Btn, Chip } from "../_suite/ui"
 import { fmtHour, type Interview } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
@@ -233,6 +233,14 @@ function JourneyCard({ iv }: { iv: Interview }) {
         }}>
           Practice for the next one
         </Link>
+        {iv.threadId && (
+          <Link href={`/dashboard/overview?chain=${encodeURIComponent(iv.threadId)}`} style={{
+            display: "inline-flex", alignItems: "center", gap: 6, minHeight: 40, padding: "0 18px", borderRadius: 999,
+            border: "1px solid var(--border-strong)", fontSize: 13.5, fontWeight: 700, textDecoration: "none", color: "var(--text)",
+          }}>
+            <Eye size={14} /> Overview
+          </Link>
+        )}
       </div>
       <div style={{ marginTop: 10, fontSize: 11.5, color: "var(--text-soft)", lineHeight: 1.5 }}>
         In Kompas you can upload the interview transcript or recording, walk through what went wrong, and get sharper for next time.
