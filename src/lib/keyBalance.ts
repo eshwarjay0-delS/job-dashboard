@@ -19,6 +19,18 @@ const storage = () => import("./storage").then(m => m.blob)
 
 export type KeyBalance = { loadedUsd: number; updatedAt: number }
 
+/**
+ * Declared starting balances (2026-10-11): the owner loaded $10 on his OpenAI
+ * key and $9.94 in OpenRouter credits. These are the seed — the first top-up
+ * written through /api/budget/topup replaces them in storage. Kept in code
+ * (not only in R2) so a fresh deployment never shows $0 for money he loaded.
+ */
+const SEED_BALANCES: Record<string, number> = {
+  openai: 10,
+  openrouter: 9.94,
+  groq: 0,
+}
+
 export async function getKeyBalance(provider: string): Promise<KeyBalance> {
   try {
     const raw = await (await storage()).getText(`key-balances/${provider}.json`)
@@ -27,7 +39,8 @@ export async function getKeyBalance(provider: string): Promise<KeyBalance> {
       if (Number.isFinite(b.loadedUsd) && b.loadedUsd >= 0) return b
     }
   } catch { /* never set */ }
-  return { loadedUsd: 0, updatedAt: 0 }
+  const seed = SEED_BALANCES[provider] ?? 0
+  return { loadedUsd: seed, updatedAt: 0 }
 }
 
 /** Declare (or re-declare) what was loaded on a key. Admin/owner only — the route checks. */
