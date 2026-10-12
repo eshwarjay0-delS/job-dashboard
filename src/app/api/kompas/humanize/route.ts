@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { callLLM, resolveKeys } from "@/lib/llm"
 import { checkRateLimit } from "@/lib/rateLimit"
+import { dossierContext } from "@/lib/dossier"
+import { hashUserId } from "@/lib/sttLedger"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest) {
   const limited = checkRateLimit(`kompas-humanize:${user.id}`, { max: 60, windowMs: 60_000 })
   if (!limited.ok) return NextResponse.json({ error: "Too much at once. Wait a moment." }, { status: 429, headers: NO_STORE })
 
-  let body: { text?: unknown; question?: unknown; role?: unknown }
+  let body: { text?: unknown; question?: unknown; role?: unknown; field?: unknown }
   try { body = await request.json() } catch {
     return NextResponse.json({ error: "Nothing to polish." }, { status: 400, headers: NO_STORE })
   }
@@ -58,11 +60,18 @@ export async function POST(request: NextRequest) {
 
   try {
     const keys = resolveKeys({})
+    // Dossier grounding (2026-10-12): the user's real projects, prior answers,
+    // and field realism bank ride along so the polish speaks from their actual
+    // experience — peer-to-peer, not textbook. Best-effort; never blocks.
+    let grounding = ""
+    try {
+      grounding = await dossierContext(hashUserId(user.id), String(body.field || "general").slice(0, 40))
+    } catch { /* ungrounded polish is still a polish */ }
     const { text: polished } = await callLLM({
       keys,
       purpose: "kompas:humanize",
       tier: "light",
-      system: SYSTEM,
+      system: SYSTEM + (grounding ? `\n\nGROUNDING — the speaker's real background. Prefer their actual projects and prior answers over generic examples:\n${grounding.slice(0, 3000)}` : ""),
       user: `${role ? `The person asking is a ${role} — pitch the technical depth to them, but sound human.\n` : ""}${question ? `The interviewer asked: "${question}"\n\n` : ""}The answer to polish:\n${text}`,
       maxTokens: 1200,
     })
