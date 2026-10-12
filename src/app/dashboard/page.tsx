@@ -1,3 +1,5 @@
+import { authenticatedUser } from "@/lib/authBoundary"
+import { redirect } from "next/navigation"
 import Link from "next/link"
 import { FileText, Mail, Mic, ArrowRight, MessageCircle, Puzzle } from "lucide-react"
 
@@ -6,7 +8,9 @@ const features = [
   { title: "Check job emails", text: "Connect Gmail and find the messages about your job search.", href: "/dashboard/mail", icon: Mail, note: "Start with your connected inbox.", links: [{ href: "/dashboard/connections", label: "Connect Gmail" }, { href: "/dashboard/tracker", label: "My applications" }] },
 ]
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const user = await authenticatedUser()
+  if (["janjiaarya@gmail.com","tryguessup@gmail.com"].includes(user?.email?.toLowerCase() || "")) redirect("/dashboard/resume")
   return <div className="mf-home">
     <header className="mf-home-heading">
       <p className="mf-eyebrow">YOUR JOB SEARCH, ONE PLACE</p>
