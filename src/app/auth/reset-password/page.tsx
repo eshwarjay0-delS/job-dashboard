@@ -21,11 +21,11 @@ export default function ResetPasswordPage() {
         window.history.replaceState({}, "", window.location.pathname)
       }
       const {data}=await supabase.auth.getUser()
-      if(data.user && ["eshwarjay0@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes((data.user.email||"").toLowerCase())) setReady(true)
+      if(data.user && ["eshwarjay05@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes((data.user.email||"").toLowerCase())) setReady(true)
       else setMessage("Sign in with an approved account to set a password.")
     })()
     const {data}=supabase.auth.onAuthStateChange((event)=>{
-      if(event==="PASSWORD_RECOVERY" || event==="SIGNED_IN") void supabase.auth.getUser().then(({data})=>{if(data.user && ["eshwarjay0@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes((data.user.email||"").toLowerCase())) setReady(true)})
+      if(event==="PASSWORD_RECOVERY" || event==="SIGNED_IN") void supabase.auth.getUser().then(({data})=>{if(data.user && ["eshwarjay05@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes((data.user.email||"").toLowerCase())) setReady(true)})
     })
     return ()=>data.subscription.unsubscribe()
   },[])
@@ -36,7 +36,7 @@ export default function ResetPasswordPage() {
     setLoading(true)
     const client=createClient()
     const {data:identity}=await client.auth.getUser()
-    if(!identity.user || !["eshwarjay0@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes((identity.user.email||"").toLowerCase())) {setLoading(false);setMessage("Not an approved account.");return}
+    if(!identity.user || !["eshwarjay05@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes((identity.user.email||"").toLowerCase())) {setLoading(false);setMessage("Not an approved account.");return}
     const {error}=await client.auth.updateUser({password})
     setLoading(false)
     setMessage(error?error.message:"Password updated. You can now sign in.")
