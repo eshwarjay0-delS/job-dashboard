@@ -134,7 +134,7 @@ function CreditsPillCompact() {
   )
 }
 
-export default function SidebarNav() {
+export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolean }) {
   const pathname = usePathname()
   const router = useRouter()
   const [initials, setInitials] = useState("MF")
@@ -310,11 +310,11 @@ export default function SidebarNav() {
           <span aria-hidden="true">{dark ? "☀" : "☾"}</span>
         </button>
       </div>
-      <CreditsPill />
+      {!resumeOnly && <CreditsPill />}
 
       {/* ── Main Nav ──────────────────────────────────────────────── */}
       <nav id="marketfit-navigation" aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
-        {NAV_TABS.map(tab => {
+        {NAV_TABS.filter(tab => !resumeOnly || tab.href === "/dashboard/resume").map(tab => {
           const inTab = (h: string) => h === tab.href ? pathname === h : pathname === h || pathname.startsWith(h + "/")
           const tabActive = inTab(tab.href) || tab.items.some(i => inTab(i.href))
           const expanded = tabActive || openTabs.includes(tab.href)
@@ -354,7 +354,7 @@ export default function SidebarNav() {
           )
         })}
         <div style={{ borderTop: "0.8px solid var(--border-strong)", margin: "10px 4px" }} />
-        {admin && ADMIN_NAV.map(item => {
+        {!resumeOnly && admin && ADMIN_NAV.map(item => {
           const active = isActive(item.href, pathname)
           return (
             <Link key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined} title={item.what}>
@@ -362,7 +362,7 @@ export default function SidebarNav() {
             </Link>
           )
         })}
-        {(() => {
+        {!resumeOnly && (() => {
           const active = isActive(SETTINGS_NAV.href, pathname)
           return (
             <Link href={SETTINGS_NAV.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined} title={SETTINGS_NAV.what}>
