@@ -1,7 +1,7 @@
 /* Dashboard shell
    Desktop: persistent 240px rail.
    Mobile/tablet: ordinary top bar; navigation is completely hidden until the
-   hamburger is pressed, then opens as a normal-flow panel below the header. */
+   hamburger is pressed, then opens as a drawer floating over the page. */
 
 .mf-home{max-width:1160px;margin:0 auto}
 .mf-home-heading{padding:12px 0 36px}
@@ -36,8 +36,11 @@
 .mf-mobile-home a:focus-visible,.dash-sidebar a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 
 /* Desktop shell */
+:root{--mf-topbar-h:64px}
+@keyframes mf-drawer-in{from{translate:-16px 0}to{translate:0 0}}
 .mf-mobile-home{display:none}
 .mf-menu-toggle{display:none}
+.mf-nav-scrim{display:none}
 .dash-sidebar{
   position:fixed!important;
   top:0!important;
@@ -92,7 +95,7 @@
     grid-template-columns:44px minmax(0,1fr) auto 40px 44px;
     align-items:center;
     gap:8px;
-    min-height:64px;
+    min-height:var(--mf-topbar-h);
     padding:8px 12px;
     background:color-mix(in srgb,var(--bg) 96%,transparent);
     border-bottom:1px solid var(--border);
@@ -150,28 +153,41 @@
   .mf-menu-toggle.is-open span:nth-child(2){opacity:0}
   .mf-menu-toggle.is-open span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
 
-  /* Closed means completely absent. No miniature desktop rail. */
-  .dash-sidebar{
-    position:relative!important;
-    inset:auto!important;
-    width:100%!important;
-    max-width:100%!important;
+  /* Closed means completely absent. Open is a drawer that floats over the page, under the top bar; the page does not move.
+     The selectors carry ".mf-dashboard-shell" on purpose: the visibility guard at the end of globals.css
+     ("html body aside.dash-sidebar") forces display:flex and width:240px, and that is what left the opened menu as a
+     240px block in the page with blank space beside it (owner, 12 Oct 2026). These must out-rank it. */
+  html body .mf-dashboard-shell aside.dash-sidebar{
+    position:fixed!important;
+    inset:var(--mf-topbar-h) auto 0 0!important;
+    width:min(300px,calc(100vw - 48px))!important;
+    max-width:none!important;
     height:auto!important;
-    max-height:0!important;
+    max-height:none!important;
     display:none!important;
     overflow:hidden!important;
-    border-right:0!important;
-    border-bottom:1px solid var(--border-strong)!important;
-    transform:none!important;
-    box-shadow:none!important;
+    border-right:.8px solid var(--border-strong)!important;
+    border-bottom:0!important;
     z-index:450!important;
   }
-  .dash-sidebar.is-open{
+  html body .mf-dashboard-shell aside.dash-sidebar.is-open{
     display:flex!important;
-    max-height:min(72dvh,720px)!important;
-    overflow:auto!important;
     overscroll-behavior:contain;
     background:var(--bg);
+    box-shadow:0 18px 44px rgba(12,11,8,.28)!important;
+    animation:mf-drawer-in .18s ease-out;
+  }
+  /* The rest of the page, dimmed. Pressing it closes the menu. */
+  .mf-nav-scrim{
+    display:block;
+    position:fixed;
+    inset:var(--mf-topbar-h) 0 0 0;
+    z-index:440;
+    padding:0;
+    border:0;
+    background:rgba(12,11,8,.45);
+    touch-action:none;
+    cursor:default;
   }
   .dash-sidebar .mf-sidebar-brand-row{display:none!important}
   .dash-sidebar nav{padding:12px 14px 4px!important}

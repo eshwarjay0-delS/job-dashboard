@@ -278,6 +278,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
         {signedIn ? initials : "Sign in"}
       </Link>
     </header>
+    {menuOpen && <button type="button" className="mf-nav-scrim" aria-label="Close navigation" tabIndex={-1} onClick={() => setMenuOpen(false)} />}
     <aside suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
       background: "var(--bg)",
       display: "flex",
