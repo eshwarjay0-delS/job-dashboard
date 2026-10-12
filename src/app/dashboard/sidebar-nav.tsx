@@ -4,6 +4,7 @@ import Link from "next/link"
 import type { User } from "@supabase/supabase-js"
 import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
+import { createPortal } from "react-dom"
 import { createClient } from "@/lib/supabase/client"
 import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV } from "./_components/nav"
 import { useTheme } from "../theme-provider"
@@ -37,41 +38,73 @@ function useCreditSummary() {
   return s
 }
 
-function ExplainerPanel({ s, onClose, align = "left" }: { s: CreditSummary; onClose: () => void; align?: "left" | "right" }) {
-  return (
-    <div onClick={e => e.stopPropagation()}
-      style={{
-        position: "absolute", top: "calc(100% + 8px)", zIndex: 600,
-        ...(align === "right" ? { right: 0 } : { left: 0 }),
-        width: 260, maxWidth: "calc(100vw - 24px)",
-        borderRadius: 14, border: "1px solid var(--border)", background: "var(--surface)",
-        boxShadow: "0 12px 40px rgba(32,31,25,.18)", padding: "14px 16px", textAlign: "left",
-      }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", margin: "0 0 8px" }}>What this means</p>
-      <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
-        <b style={{ color: "var(--text)" }}>{s.resumesLeft.toLocaleString()} resumes</b> — generations your API balances buy (${s.remainingUsd.toFixed(2)} left across keys).
-      </p>
-      <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
-        <b style={{ color: "var(--text)" }}>{s.sessionsLeft} sessions</b> — 1-hour interview sessions left on your gel points (1 hour = 1 session · 30 min = 0.5 session; listening is free).
-      </p>
-      <p style={{ fontSize: 11, color: "var(--text-soft)", margin: "0 0 10px" }}>
-        {s.calibrated ? "Measured from your real generations." : "Estimate — your first generation calibrates it."}
-      </p>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Link href="/dashboard/admin" style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)" }}>Full breakdown →</Link>
-        <button onClick={onClose} style={{ fontSize: 12, color: "var(--text-soft)", background: "none", border: "none", cursor: "pointer" }}>Close</button>
+/** Pinned overlay: renders into document.body via portal so no ancestor
+ *  stacking context can trap or clip it. Anchored under the pill button,
+ *  clamped inside the viewport. Backdrop tap or Escape closes it. */
+function ExplainerPanel({ s, onClose, anchor, align = "left" }: {
+  s: CreditSummary; onClose: () => void; anchor: HTMLElement | null; align?: "left" | "right"
+}) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  useEffect(() => {
+    const place = () => {
+      if (!anchor) return
+      const r = anchor.getBoundingClientRect()
+      const w = Math.min(300, window.innerWidth - 24)
+      let left = align === "right" ? r.right - w : r.left
+      left = Math.max(12, Math.min(left, window.innerWidth - w - 12))
+      setPos({ top: Math.min(r.bottom + 8, window.innerHeight - 40), left })
+    }
+    place()
+    window.addEventListener("resize", place)
+    window.addEventListener("scroll", place, true)
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+    window.addEventListener("keydown", esc)
+    return () => {
+      window.removeEventListener("resize", place)
+      window.removeEventListener("scroll", place, true)
+      window.removeEventListener("keydown", esc)
+    }
+  }, [anchor, align, onClose])
+  if (typeof document === "undefined" || !pos) return null
+  return createPortal(
+    <>
+      <div onClick={onClose} aria-hidden="true"
+        style={{ position: "fixed", inset: 0, zIndex: 9990, background: "transparent", cursor: "default" }} />
+      <div role="dialog" aria-label="What these numbers mean" onClick={e => e.stopPropagation()}
+        style={{
+          position: "fixed", top: pos.top, left: pos.left, zIndex: 9991,
+          width: 300, maxWidth: "calc(100vw - 24px)",
+          borderRadius: 14, border: "1px solid var(--border)", background: "var(--surface)",
+          boxShadow: "0 16px 48px rgba(32,31,25,.25)", padding: "14px 16px", textAlign: "left",
+        }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", margin: "0 0 8px" }}>What this means</p>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
+          <b style={{ color: "var(--text)" }}>{s.resumesLeft.toLocaleString()} resumes</b> — generations your API balances buy (${s.remainingUsd.toFixed(2)} left across keys).
+        </p>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
+          <b style={{ color: "var(--text)" }}>{s.sessionsLeft} sessions</b> — 1-hour interview sessions left on your gel points (1 hour = 1 session · 30 min = 0.5 session; listening is free).
+        </p>
+        <p style={{ fontSize: 11, color: "var(--text-soft)", margin: "0 0 10px" }}>
+          {s.calibrated ? "Measured from your real generations." : "Estimate — your first generation calibrates it."}
+        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Link href="/dashboard/admin" onClick={onClose} style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)" }}>Full breakdown →</Link>
+          <button onClick={onClose} style={{ fontSize: 12, color: "var(--text-soft)", background: "none", border: "none", cursor: "pointer" }}>Close</button>
+        </div>
       </div>
-    </div>
+    </>,
+    document.body
   )
 }
 
 function CreditsPill() {
   const s = useCreditSummary()
   const [open, setOpen] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
   if (!s) return null
   return (
-    <div style={{ position: "relative", margin: "10px 14px 0" }}>
-      <button onClick={() => setOpen(o => !o)} title="What do these numbers mean?"
+    <div style={{ margin: "10px 14px 0" }}>
+      <button ref={btnRef} onClick={() => setOpen(o => !o)} title="What do these numbers mean?"
         style={{
           display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px",
           borderRadius: 999, border: "1px solid var(--border)", background: "var(--surface)",
@@ -80,7 +113,7 @@ function CreditsPill() {
         <span aria-hidden="true">◉</span>
         <span>{s.resumesLeft.toLocaleString()} resumes · {s.sessionsLeft} sessions left</span>
       </button>
-      {open && <ExplainerPanel s={s} onClose={() => setOpen(false)} align="left" />}
+      {open && <ExplainerPanel s={s} onClose={() => setOpen(false)} anchor={btnRef.current} align="left" />}
     </div>
   )
 }
@@ -88,14 +121,15 @@ function CreditsPill() {
 function CreditsPillCompact() {
   const s = useCreditSummary()
   const [open, setOpen] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
   if (!s) return <span />
   return (
-    <div style={{ position: "relative" }}>
-      <button onClick={() => setOpen(o => !o)} title="What do these numbers mean?"
+    <div>
+      <button ref={btnRef} onClick={() => setOpen(o => !o)} title="What do these numbers mean?"
         style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", background: "none", border: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer", padding: 0 }}>
         ◉ {s.resumesLeft > 999 ? `${(s.resumesLeft / 1000).toFixed(1)}k` : s.resumesLeft}r · {s.sessionsLeft}s
       </button>
-      {open && <ExplainerPanel s={s} onClose={() => setOpen(false)} align="right" />}
+      {open && <ExplainerPanel s={s} onClose={() => setOpen(false)} anchor={btnRef.current} align="right" />}
     </div>
   )
 }
