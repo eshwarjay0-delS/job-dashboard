@@ -53,7 +53,7 @@ function LoginContent() {
   }
 
   async function emailSignIn() {
-    if(email.trim().toLowerCase()!=="eshwarjay0@gmail.com"){setError("You are not an admin.");return}
+    if(!["eshwarjay0@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes(email.trim().toLowerCase())){setError("You are not an admin.");return}
     if (loading) return
     setLoading(true)
     setError(null)
@@ -61,13 +61,13 @@ function LoginContent() {
       const supabase=createClient()
       const { error }=await supabase.auth.signInWithPassword({email:email.trim().toLowerCase(),password})
       if (error) throw error
-      window.location.assign(next)
+      window.location.assign(["janjiaarya@gmail.com","tryguessup@gmail.com"].includes(email.trim().toLowerCase()) ? "/dashboard/resume" : next)
     } catch(e) { setError(e instanceof Error?e.message:"Unable to sign in") }
     finally { setLoading(false) }
   }
 
   async function sendPasswordSetup() {
-    if(email.trim().toLowerCase()!=="eshwarjay0@gmail.com"){setError("You are not an admin.");return}
+    if(!["eshwarjay0@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes(email.trim().toLowerCase())){setError("You are not an admin.");return}
     if (loading) return
     setLoading(true)
     setError(null)
@@ -133,7 +133,7 @@ function LoginContent() {
           <div className="ink-eyebrow">Member login</div>
           <h2>One account. Every MarketFit surface.</h2>
           <p>
-            Password login is currently reserved for the administrator. Other members continue using Google.
+            Email login is available to approved members. Other members can continue using Google.
           </p>
 
           {error && <div className="mf-login-error">{error}</div>}
