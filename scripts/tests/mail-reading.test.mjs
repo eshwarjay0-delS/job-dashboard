@@ -1,0 +1,136 @@
+// The inbox, readable (12 Oct 2026). The owner, of /dashboard/mail: "the Email inboxes are so freaking messy I can't read
+// or understand anything from it", then: "only present how much a 5 year old baby could consume understand and respond,
+// think, ask for clarification, question, ask for automated replies, ask for history about the mail sequence. occurence.
+// details contact numbers".
+// The page never showed an email: only Gmail's 140-character snippet, with "&amp;" and "&#39;" still in it, under a stack
+// of reply tools. These hold what a conversation now gives the page, and that making it readable never rewords a line.
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { decodeEntities, senderName, senderEmail, splitQuoted, dropFooter, tidy, readThread, contactsOf, sequenceOf } from '../../src/lib/mail-reading.ts'
+
+const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
+const ME = 'me@example.com'
+// A made-up thread in the shape the server keeps. Nothing here is a real person or a real email.
+const THREAD = {
+  threadId: 't1', accountEmail: ME,
+  messages: [
+    { id: 'a', from: 'Dana Whitfield <dana.whitfield@northpier-staffing.example>', subject: 'Cybersecurity Analyst 220417 || State agency || Madison, WI (Hybrid)', snippet: 'Hi, I have an urgent role', internalDate: '1791800000000',
+      bodyText: 'Hi,\n\nI have an urgent role with a State agency in Madison. It is hybrid, 12 months, and the rate is open.\nCould you send your updated resume and the best number to reach you?\n\nThanks &amp; Regards,\nDana Whitfield | IT Recruiter\nNorthpier Staffing\nM: (608) 555-0142 x204\ndana.whitfield@northpier-staffing.example\n\nCONFIDENTIALITY NOTICE: This e-mail and any attachments are confidential and intended only for the addressee.\nIf you are not the intended recipient, delete it.' },
+    { id: 'b', from: `Me <${ME}>`, subject: 'Re: Cybersecurity Analyst 220417 || State agency || Madison, WI (Hybrid)', snippet: 'Completed my bachelor&#39;s in 2015', internalDate: '1791803600000',
+      bodyText: 'Hi Dana,\n\nCompleted my bachelor&#39;s in 2015. My resume is attached and you can reach me on 555-010-7788.\n\nOn Mon, Oct 12, 2026 at 9:14 AM Dana Whitfield <dana.whitfield@northpier-staffing.example> wrote:\n> Hi,\n> I have an urgent role with a State agency in Madison.' },
+    { id: 'c', from: '"Whitfield, Dana" <dana.whitfield@northpier-staffing.example>', subject: 'RE: Cybersecurity Analyst 220417 || State agency || Madison, WI (Hybrid)', snippet: 'Thank you Thanks &amp; With Regards', internalDate: '1791807200000',
+      bodyText: 'Thank you. Please confirm the rate of $62/hr on C2C and sign the attached Right to Represent.\n\nThanks & With Regards,\nDana Whitfield\nDesk: 608.555.0199\n\nFrom: Me <me@example.com>\nSent: Monday, October 12, 2026 10:14 AM\nTo: Whitfield, Dana\nSubject: Re: Cybersecurity Analyst\n\nHi Dana,\nCompleted my bachelor\'s in 2015.' },
+  ],
+}
+
+test('the codes Gmail leaves in a snippet become the characters they stand for', () => {
+  assert.equal(decodeEntities('Completed my bachelor&#39;s in 2015! Thanks &amp; Regards &quot;soon&quot; &nbsp;ok &#x2014; done'), 'Completed my bachelor\'s in 2015! Thanks & Regards "soon"  ok — done')
+  assert.equal(decodeEntities('AT&T &unknown; &#0; 5 < 6'), 'AT&T &unknown; &#0; 5 < 6', 'what is not a code is left alone')
+})
+
+test('a sender is shown by name, once', () => {
+  assert.deepEqual([senderName('Dana Whitfield <dana@x.example>'), senderName('"Whitfield, Dana" <dana@x.example>'), senderName('dana.whitfield@x.example'), senderName('<dana@x.example>')], ['Dana Whitfield', 'Whitfield, Dana', 'dana.whitfield', 'dana'])
+  assert.equal(senderEmail('Dana Whitfield <Dana.Whitfield@X.example>'), 'dana.whitfield@x.example')
+})
+
+test('what a person wrote is split from the history their mail program quoted under it', () => {
+  const gmail = splitQuoted(THREAD.messages[1].bodyText), outlook = splitQuoted(THREAD.messages[2].bodyText)
+  assert.ok(gmail.said.endsWith('555-010-7788.') && gmail.earlier.startsWith('On Mon, Oct 12, 2026'))
+  assert.ok(outlook.said.endsWith('Desk: 608.555.0199') && outlook.earlier.startsWith('From: Me'))
+  assert.deepEqual(splitQuoted('Just a note.\nNo history here.'), { said: 'Just a note.\nNo history here.', earlier: '' })
+  const forward = '---------- Forwarded message ---------\nFrom: Someone\nThe role is open.'
+  assert.equal(splitQuoted(forward).said, forward, 'a forward with nothing written above it is the message')
+  assert.equal(splitQuoted('From: the hiring manager I heard it is urgent.').earlier, '', 'the word "From:" in a sentence is not a quoted header')
+})
+
+test('the notice at the foot is set aside, and never the message itself', () => {
+  const body = dropFooter(tidy(splitQuoted(THREAD.messages[0].bodyText).said))
+  assert.ok(body.cut && body.text.endsWith('dana.whitfield@northpier-staffing.example') && !/CONFIDENTIALITY/.test(body.text))
+  assert.deepEqual(dropFooter('Unsubscribe me from this list please, I am not looking.'), { text: 'Unsubscribe me from this list please, I am not looking.', cut: false }, 'a message that opens with the word is not all footer')
+})
+
+test('tidying changes spacing and noise, and not one word', () => {
+  const wrapped = 'I have an urgent role with a State agency in Madison and it is a hybrid\nposition for twelve months.\n\n\n\n- one\n- two\n[image: logo.png]\nSee https://track.example/c/' + 'a'.repeat(90) + ' today.'
+  const out = tidy(wrapped)
+  assert.ok(out.startsWith('I have an urgent role with a State agency in Madison and it is a hybrid position for twelve months.\n\n- one\n- two'), out)
+  assert.ok(out.endsWith('See https://track.example/… today.') && !/\[image/.test(out))
+  const words = (t) => t.replace(/https?:\S+/g, '').replace(/\[image[^\]]*\]/g, '').split(/\s+/).filter(Boolean)
+  assert.deepEqual(words(out), words(wrapped), 'the same words in the same order')
+})
+
+test('a link is shown by its name and where it goes, and a staffing system\'s opt-out notice is set aside', () => {
+  // The shape of a real recruiter mail read on 12 Oct 2026 (the words here are made up): a signing link with a tail of
+  // 400 characters, and a notice under the signature that every mail from that system carries.
+  const tail = 'signPDF.jsp?role=0&roleid=' + '1'.repeat(40) + '&enccode=' + 'Ab3'.repeat(60)
+  const mail = `Hi,\n\nPlease find the Right to Represent form.\n\n* [RTR_Form_#12345](https://sign.staffing.example/${tail})\n\nBest Regards\nNorthpier Staffing\n\n*You have received this message because either you have contacted our Company or you have posted your resume. You may opt out at anytime by clicking here[](https://sign.staffing.example/optout.jsp?d=${'9'.repeat(70)}).*`
+  const body = dropFooter(tidy(mail))
+  assert.equal(body.text, 'Hi,\n\nPlease find the Right to Represent form.\n\n* RTR_Form_#12345 (link: sign.staffing.example)\n\nBest Regards\nNorthpier Staffing')
+  assert.equal(body.cut, true)
+  assert.equal(tidy('> - RTR_Form_#12345\n> <https://sign.staffing.example/' + tail + '>'), '> - RTR_Form_#12345\n> (link: sign.staffing.example)', 'the same link as a reply quotes it: its tail is gone there too')
+  assert.equal(tidy('Sign here <https://sign.staffing.example/' + tail + '> today.'), 'Sign here (link: sign.staffing.example) today.')
+  assert.equal(tidy('See https://example.com/jobs for more.'), 'See https://example.com/jobs for more.', 'a short link is left as it is')
+})
+
+test('a conversation is read oldest first, each message with its own words and who wrote it', () => {
+  const r = readThread(THREAD, [ME])
+  assert.equal(r.subject, 'Cybersecurity Analyst 220417 || State agency || Madison, WI (Hybrid)', 'the subject without its "Re:"')
+  assert.deepEqual(r.messages.map((m) => [m.who, m.mine]), [['Dana Whitfield', false], ['Me', true], ['Whitfield, Dana', false]])
+  assert.ok(r.messages[1].text.includes("bachelor's") && !r.messages[1].text.includes('wrote:'), 'no code and no quoted history in what is read')
+  assert.ok(r.messages[1].earlier.includes('I have an urgent role'), 'the history is kept for "show earlier"')
+  assert.ok(r.messages[2].text.startsWith('Thank you. Please confirm the rate of $62/hr on C2C'), 'the latest message says what it says, not its signature')
+  assert.deepEqual(sequenceOf(r), { count: 3, first: 1791800000000, last: 1791807200000, lastMine: false })
+  const bare = readThread({ threadId: 't2', accountEmail: ME, messages: [{ id: 'x', from: 'A <a@b.example>', subject: 'Hello', snippet: 'Thanks &amp; regards', internalDate: '5' }] }, [ME])
+  assert.equal(bare.messages[0].text, 'Thanks & regards', 'with no stored text, Gmail\'s own first line is shown, decoded')
+  assert.equal(readThread({ threadId: 't3', accountEmail: ME, messages: Array.from({ length: 20 }, (_, i) => ({ id: 'm' + i, from: 'A <a@b.example>', subject: 's', snippet: 'x', internalDate: String(i) })) }, []).messages.length, 12)
+})
+
+test('the numbers and addresses to reach them are the ones THEY wrote', () => {
+  const c = contactsOf(readThread(THREAD, [ME]))
+  assert.deepEqual(c.phones, [{ number: '(608) 555-0142 ext. 204', who: 'Dana Whitfield' }, { number: '(608) 555-0199', who: 'Whitfield, Dana' }])
+  assert.deepEqual(c.emails.map((e) => e.email), ['dana.whitfield@northpier-staffing.example'])
+  assert.ok(!JSON.stringify(c).includes('555-010-7788') && !JSON.stringify(c).includes('5550107788') && !JSON.stringify(c).includes(ME), 'never the person\'s own number or address')
+  const none = contactsOf({ subject: '', messages: [{ id: '1', who: 'A', email: 'a@b.example', mine: false, at: 0, text: 'Job 166719, posted 10/12/2026, pay 62.50, ref 2204170098765.', earlier: '', footer: false }] })
+  assert.deepEqual(none.phones, [], 'a job number, a date and a long reference are not phone numbers')
+})
+
+test('the page reads first: the title comes before any control, and a row is one line each', () => {
+  const page = read('src/app/dashboard/mail/page.tsx'), row = read('src/app/dashboard/mail/_components/mail-row.tsx'), pane = read('src/app/dashboard/mail/_components/reading-pane.tsx')
+  // The ignore bar used to be the first thing on the page, above the title, and a bare tick box hung beside every row.
+  assert.ok(page.indexOf('<header className="mf-home-heading">') < page.indexOf('<IgnoreControls'), 'the title first')
+  assert.match(page, /\{\(tidying \|\| showIgnored\) && \(\s*<>\s*<IgnoreControls/, 'the ignore controls wait behind "Tidy up"')
+  assert.match(page, /\{\(tidying \|\| showIgnored\) && \(\s*<input type="checkbox"/, 'and so do the tick boxes')
+  assert.match(page, /<ReadingPane key=\{`\$\{m\.account\}:\$\{m\.id\}`\}/, 'the conversation is read in the reading pane')
+  assert.ok(!/<p [^>]*>\{m\.preview\}<\/p>/.test(page) && !/\{m\.from\} · \{m\.fromEmail\}/.test(page), 'no bare snippet and no raw "Name <address>" header in the pane')
+  // The three sample forms said things nobody had checked. They are not shown.
+  assert.ok(!/<RtrReply m=|<AvailabilityReply m=|<RateReply m=/.test(page.slice(page.indexOf('export default function MailPage'))))
+  assert.equal((row.match(/\.\.\.oneLine/g) || []).length, 4, 'who, what about, how it begins, where from: one line each')
+  assert.ok(/decodeEntities\(m\.role\)/.test(row) && /decodeEntities\(m\.preview\)/.test(row), 'no "&amp;" or "&#39;" in a row')
+  assert.ok(!/var\(--text-soft\)/.test(row + pane), 'small text is the readable grey: the soft grey measured 3.6 to 1 on a chosen row')
+  assert.ok(!/#[0-9a-fA-F]{3,8}\b/.test((row + pane).replace(/&#\d+;|#all\/|#44310|#12345/g, '')), 'colours come from the theme')
+})
+
+test('the reading pane says in one sentence who wants what, and offers three things to do', async () => {
+  const pane = read('src/app/dashboard/mail/_components/reading-pane.tsx')
+  // The sentence is worked out from the stage, never written by a model. The function is checked here by its own text.
+  const body = pane.slice(pane.indexOf('export function narrate'), pane.indexOf('type Panel'))
+  const narrate = new Function('m', 'first', 'youWroteLast', body.slice(body.indexOf('{') + 1, body.lastIndexOf('}')).replace(/: string/g, ''))
+  assert.equal(narrate({ needsReply: 'rtr', stage: 'rtr' }, 'Dana', false), 'Dana wants your go-ahead to put you forward for this job (a Right to Represent).')
+  assert.equal(narrate({ needsReply: 'availability', stage: 'invite' }, 'Lena', false), 'Lena wants to set up an interview and is waiting for your times.')
+  assert.equal(narrate({ needsReply: 'rate', stage: 'rate', rate: '$62/hr C2C' }, 'Omar', false), 'Omar wants you to confirm the pay rate of $62/hr C2C.')
+  assert.equal(narrate({ needsReply: 'rtr', stage: 'rtr' }, 'Dana', true), 'You answered Dana. Now it is their turn.')
+  assert.equal(narrate({ stage: 'rejected' }, 'Sam', false), 'Sam says this one is not going ahead. Nothing to do.')
+  assert.equal(narrate({ stage: 'invite', when: 'Thu 2:00 PM' }, 'Lena', false), 'Your interview is set: Thu 2:00 PM.')
+  assert.equal(narrate({ stage: 'applied' }, 'Talent', false), 'Talent is keeping you posted. Nothing is being asked of you yet.')
+  for (const text of ['"Reply"', '`History (${seq.count})`', '"Contact and details"']) assert.ok(pane.includes(text), text)
+  assert.match(pane, /fetch\(`\/api\/gmail\/reading\?id=\$\{encodeURIComponent\(m\.id\)\}&account=\$\{encodeURIComponent\(m\.account\)\}`\)/)
+  assert.match(pane, /href=\{`tel:/); assert.match(pane, /href=\{`mailto:/); assert.match(pane, /Open the original in Gmail/)
+})
+
+test('the endpoint reads the kept copy of one conversation and makes no call to Gmail for it', () => {
+  const route = read('src/app/api/gmail/reading/route.ts')
+  assert.match(route, /from\("mfit_gmail_threads"\)\.select\("data, account_email"\)\.eq\("user_id", ctx\.userId\)\.eq\("thread_id", id\)/)
+  assert.ok(route.indexOf('mfit_gmail_threads') < route.indexOf('fetchClassifiedThreads(ctx.userId'), 'the kept copy first; the list\'s own fetch only when it is not there')
+  assert.match(route, /requireAuth\(\)/); assert.match(route, /checkRateLimit\(`gmail-reading:/)
+  assert.match(route, /readThread\(thread, mine\)/)
+})

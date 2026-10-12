@@ -1,3 +1,37 @@
+## 2026-10-12 (evening) — The inbox is readable, and the Kompas page on this address routes its calls again
+
+Owner: "the Email inboxes are so freaking messy I can't read or understand anything from it." Then: "only present how much a 5 year old baby could consume understand and respond, think, ask for clarification, question, ask for automated replies, ask for history about the mail sequence. occurence. details contact numbers". And of Kompas here: "Can't run kompas", "Even then, I can't start the session".
+
+**What was wrong**
+
+- **Kompas on this address.** `src/lib/kompas-shell.ts` puts a script into the Kompas page that sends its calls to `/kompas/api`. Since the gel points commit (`d40b8fa`, 11 Oct 16:51) that script ended in a stray `};` and did not parse, so a browser ran none of it: answers, questions, scoring and transcription from `/dashboard/kompas` went to this app's own `/api` and failed. Proof: the live page's first inline script failed `new vm.Script()` at line 113 of 115; `scripts/tests/kompas-shared-release.test.mjs` had been red since that commit. Fixed in `f67fcff` (the line is gone; the test now asserts the script parses).
+- **The inbox never showed an email.** `/dashboard/mail` showed Gmail's 140-character snippet (often only the signature), with `&amp;` and `&#39;` still in it, under every reply tool at once. The ignore bar sat above the page title and a bare tick box hung beside each row. The text of each message was already kept on the server and was never sent to the page.
+
+**Built**
+
+- `src/lib/mail-reading.ts` (pure): a thread as it is read. Each message's own words, the quoted history and the legal or opt-out notice set aside, codes decoded, a tracking link shown as its name and site. `contactsOf` gives the phone numbers and addresses THEY wrote, never the person's own.
+- `GET /api/gmail/reading?id=&account=`: one conversation, read from the copy this app keeps (one row, no call to Gmail).
+- `mail/_components/reading-pane.tsx`: who, one plain sentence saying what they want, the message, then three buttons: Reply, History, Contact and details. `mail/_components/mail-row.tsx`: one line each for who, what about, how it begins.
+- `mail/page.tsx`: the title comes first; the ignore controls and the tick boxes wait behind "Tidy up"; an inbox chip shows its name once.
+- The three sample forms (availability grid, RTR form, rate form) are no longer shown: they sent nothing, filled "End client" with the sender's name, and said "No other submission found in the last 90 days across your four inboxes" without that check being made. The suggested replies, which do send, cover the same three cases. The forms' code is still in `page.tsx`.
+
+**Verified**
+
+- `scripts/tests/mail-reading.test.mjs` 11 of 11; `kompas-shared-release.test.mjs` 3 of 3; type-check clean; lint 0 errors.
+- In a browser on the dev server, with made-up mail in the real shapes (the API stubbed): the list, the reading pane and its three panels in both themes; small text raised from the soft grey (3.6 to 1 on a chosen row) to the muted one.
+- The cleaning was checked against one real two-message recruiter thread read through the Gmail connector (the jayeshwar44 inbox): a 430-character signing link and a staffing system's opt-out notice were the two things it did not yet handle, and now does.
+
+**NOT verified**
+
+- Signed in, on real mail, with the owner's eyes. I cannot sign in here.
+- `/api/gmail/reading` against the real cache table. Its query follows the table's columns in `supabase/migrations/20261010_mfit_gmail_cache.sql`; if a kept thread has no `bodyText`, the pane shows Gmail's snippet, decoded.
+- The eshwarjay05 inbox: the Gmail connector in this session is jayeshwar44.
+
+**Where to pick up**
+
+- The twelve-colour palette is read off his picture (`#d7a970 #a06789 #ac8556 #c57b6d #ab9591 #886e51 #ab9fe5 #622d46 #7c6531 #83504b #315050 #614243`) and not placed yet. The plan: company and person tiles, which are eight near-identical ink greys in eight pages today (`jobs`, `jobs-ft`, `network`, `offers`, `recommended`, `saved`, `companies`, `compare`).
+- By role, Drafts and Waiting views of the inbox still use the old cards.
+
 ## 2026-10-12 (later) — Night follows into Kompas, a theme switch there, and a page that moves Kompas data to this address
 
 Owner: "make sure the night mode follows to the kompas in job dashboard as well. And even in the session of kompas give the option of paper & ink." Then: "Give me that option as well. to toggle. the same goes for desktop app." Then: "can you combine perfact kompas and job dashboard to & one place? All the data transcripts and updates from over there as well. And finally delete perfACT".

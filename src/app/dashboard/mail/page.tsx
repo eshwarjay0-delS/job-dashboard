@@ -4,8 +4,10 @@ import TypingDots from "../_components/typing-dots"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Check, Send, Shield, Archive, RotateCcw, ChevronRight, CalendarDays, Leaf, History, ArrowRight } from "lucide-react"
-import { Card, Meta, StagePill, Chip, Btn, Avatar, Toggle, useAnswered, useLeaving, leavingStyle } from "../_suite/ui"
+import { Card, Meta, Chip, Btn, Toggle, useAnswered, useLeaving } from "../_suite/ui"
 import SmartReply from "./_components/smart-reply"
+import MailRow from "./_components/mail-row"
+import ReadingPane from "./_components/reading-pane"
 import { savedAvailability, type Mail } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 
@@ -35,37 +37,8 @@ function JdFitPill({ score, why }: { score?: number; why?: string[] }) {
   )
 }
 
-function MailRow({ m, on, restored, leaving, onClick, acct }: { m: Mail; on: boolean; restored: boolean; leaving: boolean; onClick: () => void; acct: AcctFn }) {
-  const a = acct(m.account)
-  return (
-    <button type="button" onClick={onClick} aria-current={on ? "true" : undefined}
-      style={{
-        ...leavingStyle(leaving), width: "100%", textAlign: "left", display: "flex", gap: 12, padding: 12, marginBottom: 6,
-        borderRadius: 10, cursor: "pointer", background: on ? "var(--surface-2)" : "var(--surface)",
-        border: `1px solid ${on ? "var(--border-strong)" : "var(--border)"}`,
-      }}>
-      <div style={{ position: "relative" }}>
-        <Avatar name={m.from} tint={a.tint} size={38} />
-        {m.unread && <span style={{ position: "absolute", right: -1, top: -1, width: 11, height: 11, borderRadius: 10, background: "var(--accent)", border: "2px solid var(--surface)" }} />}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: m.unread ? 700 : 600, color: "var(--text)" }}>{m.company}</span>
-          <span style={{ fontSize: 11.5, color: "var(--text-soft)", whiteSpace: "nowrap" }}>{m.at}</span>
-        </div>
-        <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>{m.role}</div>
-        <div style={{ fontSize: 12.5, color: "var(--text-soft)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.preview}</div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 6 }}>
-          {restored ? <StagePill stage="applied" label="Restored" /> : <StagePill stage={m.stage} />}
-          <JdFitPill score={m.jdFit} why={m.jdFitWhy} />
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, color: "var(--text-muted)" }}>
-            <span style={{ width: 6, height: 6, borderRadius: 3, background: a.tint }} />{a.email.split("@")[0]}
-          </span>
-        </div>
-      </div>
-    </button>
-  )
-}
+// The row itself is _components/mail-row.tsx: one line each for who, what about, how it begins.
+const rowProps = (m: Mail, acct: AcctFn) => { const a = acct(m.account); return { tint: a.tint, inbox: a.email.split("@")[0] || a.email } }
 
 function AvailabilityReply({ m, onApprove, acct }: { m: Mail; onApprove: () => void; acct: AcctFn }) {
   const [slots, setSlots] = useState<Record<string, string[]>>(savedAvailability)
@@ -272,7 +245,7 @@ function RoleCard({ group, onOpen, acct }: { group: RoleGroup; onOpen: (id: stri
         <div style={{ borderTop: "1px solid var(--border)", padding: "8px 12px 12px" }}>
           {group.mails.map(m => (
             <MailRow key={m.id} m={m} on={false} restored={false} leaving={false}
-              onClick={() => onOpen(m.id)} acct={acct} />
+              onClick={() => onOpen(m.id)} {...rowProps(m, acct)} />
           ))}
         </div>
       )}
@@ -286,6 +259,7 @@ export default function MailPage() {
   const [ignoreRules, setIgnoreRules] = useState<IgnoreRule[]>([])
   const [selected, setSelected] = useState<string[]>([])
   const [showIgnored, setShowIgnored] = useState(false)
+  const [tidying, setTidying] = useState(false)   // the tick boxes and the ignore controls, shown only while tidying
   const [ignoreError, setIgnoreError] = useState("")
   useEffect(() => {
     let active = true
@@ -344,9 +318,6 @@ export default function MailPage() {
 
   return (
     <div className="mf-home" style={{ paddingBottom: 56 }}>
-      <IgnoreControls mails={mails} selected={selected} rules={ignoreRules} onSave={saveIgnoreRules} showIgnored={showIgnored} onToggle={() => { setShowIgnored(v => !v); setView("all") }} />
-      {ignoreError && <p role="status">{ignoreError}</p>}
-
       <header className="mf-home-heading">
         <p className="mf-eyebrow">INBOX</p>
         <h1>Your job mail, organized.</h1>
@@ -389,14 +360,25 @@ export default function MailPage() {
             <Chip label="All inboxes" active={account === "all"} onClick={() => setAccount("all")} />
             {accounts.map(a => (
               <Chip key={a.id} active={account === a.id} disabled={!a.connected} onClick={() => setAccount(a.id)}
-                label={<><span style={{ width: 8, height: 8, borderRadius: 10, background: a.tint }} />{a.email.split("@")[0]}<span style={{ opacity: 0.6, fontWeight: 500 }}>{a.connected ? a.label : "Not connected"}</span></>} />
+                label={<><span style={{ width: 8, height: 8, borderRadius: 10, background: a.tint }} />{a.email.split("@")[0]}{(!a.connected || (a.label && a.label !== a.email.split("@")[0])) && <span style={{ opacity: 0.6, fontWeight: 500 }}>{a.connected ? a.label : "Not connected"}</span>}</>} />
             ))}
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: tidying || showIgnored ? 10 : 20 }}>
             {VIEWS.map(([v, label, n]) => (
               <Chip key={v} label={label} active={view === v} onClick={() => setView(v)} count={n} />
             ))}
+            {/* Hiding senders is a chore, not the page. It waits behind one quiet button, and so do the tick boxes. */}
+            <button type="button" className="btn-ghost" aria-expanded={tidying || showIgnored} onClick={() => { if (tidying || showIgnored) { setTidying(false); setShowIgnored(false); setSelected([]) } else { setTidying(true); if (view !== "needs" && view !== "all") setView("all") } }}
+              style={{ marginLeft: "auto", minHeight: 40, padding: "0 14px", fontSize: 14 }}>
+              {tidying || showIgnored ? "Done tidying" : "Tidy up"}
+            </button>
           </div>
+          {(tidying || showIgnored) && (
+            <>
+              <IgnoreControls mails={mails} selected={selected} rules={ignoreRules} onSave={saveIgnoreRules} showIgnored={showIgnored} onToggle={() => { setShowIgnored(v => !v); setView("all") }} />
+              {ignoreError && <p role="status" style={{ fontSize: 13, color: "var(--danger)", margin: "0 0 12px" }}>{ignoreError}</p>}
+            </>
+          )}
 
           {view === "roles" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -450,10 +432,18 @@ export default function MailPage() {
             <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
               <div style={{ flex: "0 1 400px", minWidth: 300 }}>
                 {shown.map(x => (
-                  <div key={`${x.account}:${x.id}`} style={{ display: "flex", gap: 8 }}>
-                    <input type="checkbox" aria-label={`Select ${x.subject}`} checked={selected.includes(`${x.account}:${x.id}`)} onChange={e => setSelected(ids => e.target.checked ? [...ids, `${x.account}:${x.id}`] : ids.filter(id => id !== `${x.account}:${x.id}`))} />
-                    <div style={{ flex: 1, minWidth: 0 }}><MailRow m={x} on={x.id === m?.id} restored={restored.includes(x.id)} leaving={leaving.includes(x.id)} onClick={() => setSel(x.id)} acct={acct} />
-                    {showIgnored && <div><small>{ignoreReason(x, ignoreRules)}</small><button onClick={() => saveIgnoreRules([...ignoreRules.filter(r => !(r.account === x.account && r.kind === "thread" && r.value === x.id)), { account: x.account.toLowerCase(), kind: "thread", value: x.id, action: "allow" }]).catch(e => setIgnoreError(String(e)))}>Restore this conversation</button></div>}</div>
+                  <div key={`${x.account}:${x.id}`} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    {(tidying || showIgnored) && (
+                      <input type="checkbox" aria-label={`Select ${x.subject}`} checked={selected.includes(`${x.account}:${x.id}`)} onChange={e => setSelected(ids => e.target.checked ? [...ids, `${x.account}:${x.id}`] : ids.filter(id => id !== `${x.account}:${x.id}`))}
+                        style={{ width: 18, height: 18, marginTop: 22, flex: "none", accentColor: "var(--accent)" }} />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}><MailRow m={x} on={x.id === m?.id} restored={restored.includes(x.id)} leaving={leaving.includes(x.id)} onClick={() => setSel(x.id)} {...rowProps(x, acct)} />
+                    {showIgnored && (
+                      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "-2px 0 10px 4px", fontSize: 12.5, color: "var(--text-muted)" }}>
+                        <span>{ignoreReason(x, ignoreRules)}</span>
+                        <button type="button" className="btn-ghost" style={{ minHeight: 32, padding: "0 10px", fontSize: 13 }} onClick={() => saveIgnoreRules([...ignoreRules.filter(r => !(r.account === x.account && r.kind === "thread" && r.value === x.id)), { account: x.account.toLowerCase(), kind: "thread", value: x.id, action: "allow" }]).catch(e => setIgnoreError(String(e)))}>Bring it back</button>
+                      </div>
+                    )}</div>
                   </div>
                 ))}
                 {!shown.length && (
@@ -499,53 +489,30 @@ export default function MailPage() {
 
               {m && (
                 <Card id="reply" style={{ flex: "1 1 420px", minWidth: 320, scrollMarginTop: 24 }}>
-                  <div key={m.id}>
-                    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                      <Avatar name={m.from} tint={acct(m.account).tint} size={42} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 750 }}>{m.company}</h2>
-                          {restored.includes(m.id) ? <StagePill stage="applied" label="Restored" /> : <StagePill stage={m.stage} />}
-                        </div>
-                        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{m.from} · {m.fromEmail} → {acct(m.account).email}</div>
-                      </div>
-                      <span style={{ fontSize: 12, color: "var(--text-soft)" }}>{m.at}</span>
-                    </div>
-                    <div style={{ fontSize: 15, fontWeight: 650, marginTop: 20 }}>{m.subject}</div>
-                    <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--text-muted)", margin: "6px 0 0" }}>{m.preview}</p>
-                    {m.jdFit != null && (
-                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
-                        <JdFitPill score={m.jdFit} why={m.jdFitWhy} />
-                        {m.jdFitWhy && m.jdFitWhy.length > 0 && (
-                          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Matched: {m.jdFitWhy.join(", ")}</span>
+                  {/* Read first: who, what about, what they wrote. Reply, the history and the contact details each wait behind
+                      one button (_components/reading-pane.tsx). The reply tools are the same ones as before; they were all on
+                      screen at once, under a snippet, with the email itself nowhere on the page. */}
+                  <ReadingPane key={`${m.account}:${m.id}`} m={m} myEmail={acct(m.account).email} tint={acct(m.account).tint} restored={restored.includes(m.id)}
+                    reply={
+                      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                        {(answered.includes(m.id) || leaving.includes(m.id) || restored.includes(m.id) || m.when) && (
+                          <div style={{ display: "flex", gap: 10, padding: 12, borderRadius: 10, background: "var(--surface-2)", fontSize: 13.5, lineHeight: 1.5 }}>
+                            {m.when && !answered.includes(m.id) && !leaving.includes(m.id) ? <CalendarDays size={16} style={{ flexShrink: 0 }} /> : <Check size={16} style={{ flexShrink: 0 }} />}
+                            {answered.includes(m.id) || leaving.includes(m.id)
+                              ? "Reply approved and sent. The follow-up workflow picks it up from here."
+                              : restored.includes(m.id)
+                                ? "Restored from Rejected. It stays in your inbox and the tracker until you file it again."
+                                : `${m.when} is on your interview calendar.`}
+                          </div>
                         )}
+                        {!leaving.includes(m.id) && <SmartReply mail={m} onSent={() => approve(m.id)} />}
+                        {/* The three sample forms that used to sit here (AvailabilityReply, RtrReply, RateReply, still defined
+                            above) are no longer shown. They sent nothing ("Preview", "Try approving"), filled "End client"
+                            with the sender's own name, and said "No other submission found in the last 90 days across your
+                            four inboxes" without that check being made. The suggested replies above are the real ones: they
+                            cover availability, the RTR and the rate, and they send. */}
                       </div>
-                    )}
-                    {m.when && (
-                      <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 14, padding: 12, borderRadius: 10, background: "var(--surface-2)", fontSize: 13.5, fontWeight: 600 }}>
-                        <CalendarDays size={16} /> {m.when} — on your interview calendar
-                      </div>
-                    )}
-                    <div style={{ height: 1, background: "var(--border)", margin: "20px 0" }} />
-                    {!waiting(m) || leaving.includes(m.id) ? (
-                      <div style={{ display: "flex", gap: 10, padding: 12, borderRadius: 10, background: "var(--surface-2)", fontSize: 13, lineHeight: 1.5 }}>
-                        <Check size={16} style={{ flexShrink: 0 }} />
-                        {answered.includes(m.id) || leaving.includes(m.id)
-                          ? "Reply approved and sent. The follow-up workflow picks it up from here."
-                          : restored.includes(m.id)
-                            ? "Restored from Rejected. It stays in your inbox and the tracker until you file it again."
-                            : "No reply needed. The follow-up workflow checks in on Monday and Thursday at 10:00 AM if nothing changes."}
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-                        <SmartReply mail={m} onSent={() => approve(m.id)} />
-                        <div style={{ height: 1, background: "var(--border)" }} />
-                        {m.needsReply === "availability" ? <AvailabilityReply m={m} onApprove={() => approve(m.id)} acct={acct} />
-                          : m.needsReply === "rtr" ? <RtrReply m={m} onApprove={() => approve(m.id)} />
-                          : <RateReply m={m} onApprove={() => approve(m.id)} />}
-                      </div>
-                    )}
-                  </div>
+                    } />
                 </Card>
               )}
             </div>
