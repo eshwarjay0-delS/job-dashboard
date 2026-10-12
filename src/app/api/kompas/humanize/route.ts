@@ -38,6 +38,11 @@ Rewrite it the way Josh Madakor answers interview questions — a sharp practiti
 - TALK WITH, NOT AT. Conversational scaffolding — "right?", "you know", "basically" — so the listener feels included in the reasoning, not lectured.
 - Intelligent word choice throughout: the words a smart human would actually say out loud.
 
+STRUCTURAL PAUSES — the answer must breathe. Write these markers into the text; the speaker (human or voice) honors them as silence:
+- [beat] — a dramatic pause BEFORE the key insight or takeaway. Use it once or twice per answer, never more: right before the sentence the listener must remember. Example: "…and that's when we realized [beat] the alerts were firing on the wrong field entirely."
+- [breath] — a natural breath BETWEEN ideas or steps. Use it after each step in a sequence and after any dense technical point, so the listener catches up before the next one lands. Example: "So first we turned on file auditing. [breath] Then we defined what 'unauthorized' actually meant for us."
+- Never stack markers. Never open with one. A short answer needs just one [breath]; a long one earns its [beat].
+
 The answer's depth level is set by who is asking (given below when known) — a tech-HR answer stays accessible, a director answer stays strategic, an architect/developer answer keeps its technical teeth. Whatever the level, it must sound like a person reasoning, not a manual.
 
 Return only the polished answer, no preamble, no commentary about the rewrite.`

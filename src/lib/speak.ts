@@ -48,6 +48,15 @@ const ABBR: Array<[RegExp, string]> = [
   [/\bi\.e\./g, "that is"],
 ]
 
+/** Pause markers the humanize pass writes; speak() turns them into real silence.
+ *  [beat]   — dramatic pause before a key insight (~900ms). The listener leans in.
+ *  [breath] — natural breath between ideas (~450ms). The listener catches up.
+ *  Visible in text so a human speaker sees them too. */
+const PAUSES: Array<[RegExp, number]> = [
+  [/\[beat\]/gi, 900],
+  [/\[breath\]/gi, 450],
+]
+
 /** Strip formatting and expand abbreviations so it sounds like a person talking. */
 export function prepareForSpeech(text: string): string {
   let t = text
@@ -56,6 +65,8 @@ export function prepareForSpeech(text: string): string {
     .replace(/\n{2,}/g, ". ")
     .replace(/\n/g, " ")
   for (const [re, spoken] of ABBR) t = t.replace(re, spoken)
+  // Keep pause markers out of the spoken words; speak() handles them as silence.
+  for (const [re] of PAUSES) t = t.replace(re, " ")
   return t.replace(/\s+/g, " ").trim().slice(0, 2000)
 }
 
@@ -63,18 +74,58 @@ export function canSpeak(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window
 }
 
-/** Read text aloud. Returns false when speech isn't available. */
+/** Read text aloud. Pause markers become real silence between utterances. Returns false when speech isn't available. */
 export function speak(text: string): boolean {
   if (!canSpeak()) return false
-  const clean = prepareForSpeech(text)
-  if (!clean) return false
+  // Split on pause markers so each becomes a timed silence.
+  const segments: { text: string; pauseAfter: number }[] = []
+  let remaining = text
+  const markerRe = /(\[beat\]|\[breath\])/gi
+  let last = 0, m: RegExpExecArray | null
+  const pauses: { index: number; ms: number }[] = []
+  while ((m = markerRe.exec(text)) !== null) {
+    pauses.push({ index: m.index, ms: /beat/i.test(m[1]) ? 900 : 450 })
+  }
+  if (!pauses.length) {
+    const clean = prepareForSpeech(text)
+    if (!clean) return false
+    window.speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(clean)
+    const v = pickVoice()
+    if (v) u.voice = v
+    u.rate = 1
+    u.pitch = 1
+    window.speechSynthesis.speak(u)
+    return true
+  }
+  let cursor = 0
+  for (const p of pauses) {
+    const chunk = text.slice(cursor, p.index)
+    if (prepareForSpeech(chunk)) segments.push({ text: chunk, pauseAfter: p.ms })
+    cursor = p.index + (text.slice(p.index).match(/^\[(beat|breath)\]/i)?.[0].length || 0)
+  }
+  const tail = text.slice(cursor)
+  if (prepareForSpeech(tail)) segments.push({ text: tail, pauseAfter: 0 })
+  if (!segments.length) return false
+
   window.speechSynthesis.cancel()
-  const u = new SpeechSynthesisUtterance(clean)
-  const v = pickVoice()
-  if (v) u.voice = v
-  u.rate = 1
-  u.pitch = 1
-  window.speechSynthesis.speak(u)
+  const voice = pickVoice()
+  let i = 0
+  const playNext = () => {
+    if (i >= segments.length) return
+    const seg = segments[i++]
+    const u = new SpeechSynthesisUtterance(prepareForSpeech(seg.text))
+    if (voice) u.voice = voice
+    u.rate = 1
+    u.pitch = 1
+    u.onend = () => {
+      if (seg.pauseAfter > 0) setTimeout(playNext, seg.pauseAfter)
+      else playNext()
+    }
+    u.onerror = () => playNext()
+    window.speechSynthesis.speak(u)
+  }
+  playNext()
   return true
 }
 
