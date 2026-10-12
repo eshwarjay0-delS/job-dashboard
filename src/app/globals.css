@@ -155,6 +155,23 @@
   --chart-3: var(--text-soft);
   --chart-4: var(--danger);
   --chart-5: var(--success);
+
+  /* The twelve. The owner's palette of 8 Oct 2026 ("These colors are good asl"), read off his picture pan by pan. They tell
+     apart things that are neither good nor bad: one company from another, one person from another (src/lib/jewel.ts).
+     Never a signal. Each has the lettering that reads on it, ink or white, at 4.5 to 1 or better. The same on paper and on
+     the night: the brightest of them (honey) is dimmer than the night's own moonlight blue and its text. */
+  --jewel-1:  #d7a970;  --jewel-1-ink:  #060817;   /* honey */
+  --jewel-2:  #a06789;  --jewel-2-ink:  #060817;   /* orchid */
+  --jewel-3:  #ac8556;  --jewel-3-ink:  #060817;   /* bronze */
+  --jewel-4:  #c57b6d;  --jewel-4-ink:  #060817;   /* coral */
+  --jewel-5:  #ab9591;  --jewel-5-ink:  #060817;   /* rose taupe */
+  --jewel-6:  #886e51;  --jewel-6-ink:  #ffffff;   /* antique bronze */
+  --jewel-7:  #ab9fe5;  --jewel-7-ink:  #060817;   /* lavender */
+  --jewel-8:  #622d46;  --jewel-8-ink:  #ffffff;   /* plum */
+  --jewel-9:  #7c6531;  --jewel-9-ink:  #ffffff;   /* olive gold */
+  --jewel-10: #83504b;  --jewel-10-ink: #ffffff;   /* clay */
+  --jewel-11: #315050;  --jewel-11-ink: #ffffff;   /* deep teal */
+  --jewel-12: #614243;  --jewel-12-ink: #ffffff;   /* cocoa */
   --sidebar: var(--bg);
   --sidebar-foreground: var(--text);
   --sidebar-primary: var(--accent);

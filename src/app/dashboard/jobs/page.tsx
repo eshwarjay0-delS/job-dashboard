@@ -1,4 +1,5 @@
 "use client"
+import { jewel } from "@/lib/jewel"
 
 import { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react"
 import Link from "next/link"
@@ -134,13 +135,11 @@ function CompanyAvatar({ name, size = 44 }: { name: string; size?: number }) {
   const [err, setErr] = useState(false)
   const domain = name.toLowerCase().replace(/[^a-z0-9]/g, "") + ".com"
   const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-  const colors = ["#1c1b16","#4d4b44","#1c1b16","#6b6858","#13120d","#7c7866","#757261","#888471"]
-  const bg = colors[name.charCodeAt(0) % colors.length]
+  const tile = jewel(name)
   if (err) return (
-    <div style={{ width: size, height: size, borderRadius: Math.round(size * 0.26), background: bg,
+    <div style={{ width: size, height: size, borderRadius: Math.round(size * 0.26), background: tile.background,
       display:"flex", alignItems:"center", justifyContent:"center",
-      color:"#fff", fontWeight:800, fontSize:size*0.38, flexShrink:0,
-      boxShadow:`0 3px 10px ${bg}55`,
+      color: tile.color, fontWeight:800, fontSize:size*0.38, flexShrink:0,
     }}>{initials}</div>
   )
   return (
@@ -531,8 +530,6 @@ const APP_PRIORITY = {
   mid:  { label: "Mid",  color: "#7e7a68" },
   low:  { label: "Low",  color: "#706c5c" },
 }
-const APP_COLORS = ["bg-blue-600","bg-violet-600","bg-emerald-600","bg-orange-500","bg-teal-600","bg-rose-500","bg-indigo-600","bg-amber-500"]
-function appCo(name: string) { return APP_COLORS[(name||"A").charCodeAt(0) % APP_COLORS.length] }
 function appUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2) }
 function appIsOverdue(d?: string) { return !!d && new Date(d) < new Date(new Date().toDateString()) }
 function appIsDueSoon(d?: string) {
@@ -647,7 +644,7 @@ function AppCard({ app, onMove, onDelete, onEdit }: { app:AppItem; onMove:(id:st
       onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="";(e.currentTarget as HTMLElement).style.transform=""}}
       onClick={()=>setExpanded(!expanded)}>
       <div className="flex items-start gap-2">
-        <div className={`w-8 h-8 rounded-lg ${appCo(app.company)} flex-shrink-0 flex items-center justify-center text-white font-bold text-sm select-none`}>{app.company[0]}</div>
+        <div className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center font-bold text-sm select-none" style={jewel(app.company)}>{app.company[0]}</div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold leading-tight truncate" style={{color:"var(--text)"}}>{app.role}</p>
           <p className="text-xs truncate" style={{color:"var(--text-muted)"}}>{app.company}</p>
@@ -855,7 +852,7 @@ function PipelineView() {
                     onMouseLeave={e=>((e.currentTarget as HTMLElement).style.background="")}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg ${appCo(app.company)} flex-shrink-0 flex items-center justify-center text-white font-bold text-sm`}>{app.company[0]}</div>
+                        <div className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center font-bold text-sm" style={jewel(app.company)}>{app.company[0]}</div>
                         <div><p className="text-sm font-semibold" style={{color:"var(--text)"}}>{app.role}</p><p className="text-xs" style={{color:"var(--text-muted)"}}>{app.company}</p></div>
                       </div>
                     </td>

@@ -1,4 +1,5 @@
 "use client"
+import { jewel } from "@/lib/jewel"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
@@ -69,10 +70,9 @@ const DEFAULTS: Offer[] = [
 function CompanyLogo({ domain, name, size = 42 }: { domain: string; name: string; size?: number }) {
   const [err, setErr] = useState(false)
   const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-  const colors = ["#1c1b16","#4d4b44","#6b6858","#13120d","#7c7866"]
-  const bg = colors[name.charCodeAt(0) % colors.length]
+  const tile = jewel(name)
   if (err) return (
-    <div style={{ width: size, height: size, borderRadius: size * 0.26, background: bg, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: size * 0.38 }}>{initials}</div>
+    <div style={{ width: size, height: size, borderRadius: size * 0.26, background: tile.background, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: tile.color, fontWeight: 800, fontSize: size * 0.38 }}>{initials}</div>
   )
   return (
     <img src={`https://logo.clearbit.com/${domain}`} alt={name} onError={() => setErr(true)}

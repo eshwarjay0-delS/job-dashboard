@@ -252,3 +252,31 @@ test('Kompas follows this theme on this address, so the setting it reads and the
   const config = read('next.config.js')
   assert.match(config, /beforeFiles: \[\s*\{ source: "\/dashboard\/kompas", destination: "\/api\/kompas\/shell" \}/)
 })
+
+test('the twelve are the owner\'s own colours, each with lettering that reads on it, and they name companies and people', async () => {
+  // His palette of 8 Oct 2026 ("These colors are good asl"), read off his picture pan by pan on 12 Oct, when he said of
+  // where to put it: "DIY". They went to the tiles that carry a company's or a person's initials: eight near-identical ink
+  // greys before, written out in eight pages, and a dark square on the night.
+  const TWELVE = ['#d7a970', '#a06789', '#ac8556', '#c57b6d', '#ab9591', '#886e51', '#ab9fe5', '#622d46', '#7c6531', '#83504b', '#315050', '#614243']
+  const lum = (h) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] }
+  const ratio = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05)
+  TWELVE.forEach((hex, i) => {
+    const fill = new RegExp(`--jewel-${i + 1}:\\s+(#[0-9a-f]{6});`).exec(css)?.[1], ink = new RegExp(`--jewel-${i + 1}-ink:\\s+(#[0-9a-f]{6});`).exec(css)?.[1]
+    assert.equal(fill, hex, `--jewel-${i + 1} is the colour in his picture`)
+    assert.ok(ink === '#060817' || ink === '#ffffff', 'the lettering is the paper ink or white, nothing invented')
+    assert.ok(ratio(fill, ink) >= 4.5, `--jewel-${i + 1}: ${ink} on ${fill} is ${ratio(fill, ink).toFixed(2)} to 1`)
+    assert.ok(ratio(fill, ink) >= ratio(fill, ink === '#ffffff' ? '#060817' : '#ffffff'), 'and it is the better of the two')
+  })
+  // On the night the brightest of them (honey) is dimmer than the night's own moonlight blue and its text: nothing glows.
+  assert.ok(Math.max(...TWELVE.map(lum)) < lum('#a4c8e1') && Math.max(...TWELVE.map(lum)) < lum('#c6cdd4'))
+  const { jewel, jewelIndex, JEWELS } = await import('../../src/lib/jewel.ts')
+  assert.equal(JEWELS, 12)
+  assert.deepEqual(jewel('Northwind Health'), jewel('  northwind health '), 'the same company is the same colour every time')
+  assert.equal(new Set(['Acme', 'Northwind', 'Cedar Bank', 'Aspen Travel', 'Fieldstone', 'Harborline', 'Oakfield', 'Lakeshore', 'Brightline', 'Tallgrass', 'Ridgeway', 'Datum', 'Karoni', 'Sage', 'Teksolve', 'Marss'].map(jewelIndex)).size >= 8, true, 'and different companies spread over the twelve')
+  assert.match(JSON.stringify(jewel('x')), /^\{"background":"var\(--jewel-\d+\)","color":"var\(--jewel-\d+-ink\)"\}$/)
+  for (const page of ['jobs', 'jobs-ft', 'network', 'offers', 'recommended', 'saved']) {
+    const src = read(`src/app/dashboard/${page}/page.tsx`)
+    assert.match(src, /import \{ jewel \} from "@\/lib\/jewel"/, page + ' takes its tile colours from the twelve')
+    assert.ok(!/const (?:colors|AVATAR_COLORS|APP_COLORS) = \["?(?:#|bg-)/.test(src), page + ' keeps no list of tile colours of its own')
+  }
+})

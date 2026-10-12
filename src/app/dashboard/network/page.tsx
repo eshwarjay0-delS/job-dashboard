@@ -1,4 +1,5 @@
 "use client"
+import { jewel } from "@/lib/jewel"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
@@ -54,9 +55,8 @@ const DEFAULTS: Contact[] = [
 function Avatar({ seed, name, size = 40 }: { seed: number; name: string; size?: number }) {
   const [err, setErr] = useState(false)
   const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2)
-  const colors = ["#1c1b16","#4d4b44","#42413c","#6b6858","#13120d"]
-  const bg = colors[seed % colors.length]
-  if (err) return <div style={{ width: size, height: size, borderRadius: "50%", background: bg, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: size * 0.36, fontWeight: 700, flexShrink: 0 }}>{initials}</div>
+  const tile = jewel(name || seed)
+  if (err) return <div style={{ width: size, height: size, borderRadius: "50%", background: tile.background, display: "flex", alignItems: "center", justifyContent: "center", color: tile.color, fontSize: size * 0.36, fontWeight: 700, flexShrink: 0 }}>{initials}</div>
   return <img src={`https://i.pravatar.cc/${size * 2}?img=${seed}`} alt={name} onError={() => setErr(true)} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}/>
 }
 

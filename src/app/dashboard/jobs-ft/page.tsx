@@ -1,4 +1,5 @@
 "use client"
+import { jewel } from "@/lib/jewel"
 
 /**
  * Full-Time STEM Job Board
@@ -48,12 +49,6 @@ const C = {
 
 // Fixed, saturated avatar palette — solid backgrounds with white text so
 // company initials stay readable regardless of the active accent color.
-const AVATAR_COLORS = ["#1c1b16", "#4d4b44", "#42413c", "#6b6858", "#1a1914", "#5c5a4e"]
-function avatarColor(seed: string) {
-  let hash = 0
-  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length]
-}
 
 // Alpha-blend a color (literal hex or a var(--token) reference) against
 // transparent — works for both, unlike string-concatenating a hex-alpha suffix.
@@ -120,7 +115,7 @@ type FtJob = {
 function JobCard({ job, onApply }: { job: FtJob; onApply: (job: FtJob) => void }) {
   const [expanded, setExpanded] = useState(false)
   const h1b = getH1BScore(job.company)
-  const avColor = avatarColor(job.company || "?")
+  const tile = jewel(job.company || "?")
   const long = (job.description || "").length > 300
 
   return (
@@ -130,9 +125,9 @@ function JobCard({ job, onApply }: { job: FtJob; onApply: (job: FtJob) => void }
       <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 12 }}>
         <div style={{
           width: 42, height: 42, borderRadius: "50%", flexShrink: 0,
-          background: `linear-gradient(135deg, ${avColor}, var(--bg))`,
+          background: tile.background,
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: "#fff", fontWeight: 800, fontSize: 14,
+          color: tile.color, fontWeight: 800, fontSize: 14,
         }}>{job.company.slice(0, 2).toUpperCase()}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
