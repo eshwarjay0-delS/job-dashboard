@@ -24,42 +24,77 @@ function isActive(href: string, pathname: string) {
   return !ALL_HREFS.some(h => h !== href && h.length > href.length && matches(h))
 }
 
-function CreditsPill() {
-  const [s, setS] = useState<null | { resumesLeft: number; sessionsLeft: number }>(null)
+type CreditSummary = { resumesLeft: number; sessionsLeft: number; calibrated: boolean; remainingUsd: number }
+
+function useCreditSummary() {
+  const [s, setS] = useState<null | CreditSummary>(null)
   useEffect(() => {
     fetch("/api/credits/summary", { cache: "no-store" })
       .then(r => (r.ok ? r.json() : null))
       .then(j => { if (j && j.ok) setS(j) })
       .catch(() => {})
   }, [])
+  return s
+}
+
+function ExplainerPanel({ s, onClose }: { s: CreditSummary; onClose: () => void }) {
+  return (
+    <div onClick={e => e.stopPropagation()}
+      style={{
+        position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 600, width: 260,
+        borderRadius: 14, border: "1px solid var(--border)", background: "var(--surface)",
+        boxShadow: "0 12px 40px rgba(32,31,25,.18)", padding: "14px 16px", textAlign: "left",
+      }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", margin: "0 0 8px" }}>What this means</p>
+      <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
+        <b style={{ color: "var(--text)" }}>{s.resumesLeft.toLocaleString()} resumes</b> — generations your API balances buy (${s.remainingUsd.toFixed(2)} left across keys).
+      </p>
+      <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
+        <b style={{ color: "var(--text)" }}>{s.sessionsLeft} sessions</b> — interview sessions left on your gel points (1 point each; listening is free).
+      </p>
+      <p style={{ fontSize: 11, color: "var(--text-soft)", margin: "0 0 10px" }}>
+        {s.calibrated ? "Measured from your real generations." : "Estimate — your first generation calibrates it."}
+      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Link href="/dashboard/admin" style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)" }}>Full breakdown →</Link>
+        <button onClick={onClose} style={{ fontSize: 12, color: "var(--text-soft)", background: "none", border: "none", cursor: "pointer" }}>Close</button>
+      </div>
+    </div>
+  )
+}
+
+function CreditsPill() {
+  const s = useCreditSummary()
+  const [open, setOpen] = useState(false)
   if (!s) return null
   return (
-    <Link href="/dashboard/admin" title="API budget — see the full breakdown"
-      style={{
-        display: "flex", alignItems: "center", gap: 8, margin: "10px 14px 0", padding: "8px 12px",
-        borderRadius: 999, border: "1px solid var(--border)", background: "var(--surface)",
-        fontSize: 12, fontWeight: 700, color: "var(--text)", textDecoration: "none", whiteSpace: "nowrap",
-      }}>
-      <span aria-hidden="true">◉</span>
-      <span>{s.resumesLeft.toLocaleString()} resumes · {s.sessionsLeft} sessions left</span>
-    </Link>
+    <div style={{ position: "relative", margin: "10px 14px 0" }}>
+      <button onClick={() => setOpen(o => !o)} title="What do these numbers mean?"
+        style={{
+          display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px",
+          borderRadius: 999, border: "1px solid var(--border)", background: "var(--surface)",
+          fontSize: 12, fontWeight: 700, color: "var(--text)", whiteSpace: "nowrap", cursor: "pointer",
+        }}>
+        <span aria-hidden="true">◉</span>
+        <span>{s.resumesLeft.toLocaleString()} resumes · {s.sessionsLeft} sessions left</span>
+      </button>
+      {open && <ExplainerPanel s={s} onClose={() => setOpen(false)} />}
+    </div>
   )
 }
 
 function CreditsPillCompact() {
-  const [s, setS] = useState<null | { resumesLeft: number; sessionsLeft: number }>(null)
-  useEffect(() => {
-    fetch("/api/credits/summary", { cache: "no-store" })
-      .then(r => (r.ok ? r.json() : null))
-      .then(j => { if (j && j.ok) setS(j) })
-      .catch(() => {})
-  }, [])
+  const s = useCreditSummary()
+  const [open, setOpen] = useState(false)
   if (!s) return <span />
   return (
-    <Link href="/dashboard/admin" title="API budget"
-      style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-      ◉ {s.resumesLeft > 999 ? `${(s.resumesLeft / 1000).toFixed(1)}k` : s.resumesLeft}r · {s.sessionsLeft}s
-    </Link>
+    <div style={{ position: "relative" }}>
+      <button onClick={() => setOpen(o => !o)} title="What do these numbers mean?"
+        style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", background: "none", border: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer", padding: 0 }}>
+        ◉ {s.resumesLeft > 999 ? `${(s.resumesLeft / 1000).toFixed(1)}k` : s.resumesLeft}r · {s.sessionsLeft}s
+      </button>
+      {open && <ExplainerPanel s={s} onClose={() => setOpen(false)} />}
+    </div>
   )
 }
 
