@@ -604,7 +604,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                     </div>
                   ) : (
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: "#6b6858" }}>No resume selected</p>
+                      <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>No resume selected</p>
                       <p className="text-xs" style={{ color: "var(--text-soft)" }}>Pick one in the library →, or turn Auto-match back on.</p>
                     </div>
                   )}

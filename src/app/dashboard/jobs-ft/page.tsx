@@ -144,7 +144,7 @@ function JobCard({ job, onApply }: { job: FtJob; onApply: (job: FtJob) => void }
               <>
                 {" · "}
                 {isNewPost(job.posted) && (
-                  <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: "#e8e4db", color: "#58564c", border: "1px solid #e9e5dd", textTransform: "uppercase", letterSpacing: ".04em" }}>NEW</span>
+                  <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: "var(--surface-3)", color: "var(--text-muted)", border: "1px solid var(--border)", textTransform: "uppercase", letterSpacing: ".04em" }}>NEW</span>
                 )}
                 {timeAgo(job.posted)}
               </>
@@ -204,7 +204,7 @@ function JobCard({ job, onApply }: { job: FtJob; onApply: (job: FtJob) => void }
           onClick={() => onApply(job)}
           style={{
             padding: "8px 16px", borderRadius: 9, background: C.teal,
-            color: "#1b1a14", fontWeight: 800, fontSize: 12.5, border: "none",
+            color: "var(--text)", fontWeight: 800, fontSize: 12.5, border: "none",
             cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
           }}
         ><Zap size={14} fill="currentColor"/> Apply Now</button>
@@ -299,7 +299,7 @@ function ApplyModal({ job, onClose }: {
               Apply to {job.company}
             </h3>
             {tracked && (
-              <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 20, background: "#e8e4db", color: "#58564c", border: "1px solid #e9e5dd", textTransform: "uppercase", letterSpacing: ".04em", display: "inline-flex", alignItems: "center", gap: 3 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 20, background: "var(--surface-3)", color: "var(--text-muted)", border: "1px solid var(--border)", textTransform: "uppercase", letterSpacing: ".04em", display: "inline-flex", alignItems: "center", gap: 3 }}>
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Tracked
               </span>
             )}
@@ -597,7 +597,7 @@ export default function FullTimeJobBoard() {
           <select value={dateFilter} onChange={e => setDateFilter(e.target.value as DateFilterKey)}
             style={{ padding: "7px 10px", borderRadius: 9, fontSize: 12.5, fontWeight: 600, cursor: "pointer", outline: "none",
               background: dateFilter !== "any" ? "rgba(117,114,97,.12)" : "var(--surface)",
-              color: dateFilter !== "any" ? "#757261" : "var(--text-muted)",
+              color: dateFilter !== "any" ? "var(--text-soft)" : "var(--text-muted)",
               border: `1.5px solid ${dateFilter !== "any" ? "rgba(117,114,97,.4)" : "var(--border)"}` }}>
             <option value="any">Date Posted</option>
             {DATE_FILTERS.filter(d => d.key !== "any").map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
@@ -620,7 +620,7 @@ export default function FullTimeJobBoard() {
           <select value={String(salaryMin)} onChange={e => setSalaryMin(Number(e.target.value))}
             style={{ padding: "7px 10px", borderRadius: 9, fontSize: 12.5, fontWeight: 600, cursor: "pointer", outline: "none",
               background: salaryMin > 0 ? "rgba(200,194,179,.12)" : "var(--surface)",
-              color: salaryMin > 0 ? "#6b6858" : "var(--text-muted)",
+              color: salaryMin > 0 ? "var(--text-muted)" : "var(--text-muted)",
               border: `1.5px solid ${salaryMin > 0 ? "rgba(200,194,179,.4)" : "var(--border)"}` }}>
             <option value="0">Min Salary</option>
             {[80000,100000,120000,140000,160000,200000].map(v => <option key={v} value={String(v)}>${(v/1000).toFixed(0)}k+</option>)}
@@ -630,7 +630,7 @@ export default function FullTimeJobBoard() {
           <button onClick={() => setHideAgencies(h => !h)} title="Hide staffing/recruiting agencies re-posting the same role" style={{
             padding: "7px 11px", borderRadius: 9, cursor: "pointer", fontSize: 12.5, fontWeight: 600,
             background: hideAgencies ? "rgba(132,128,109,.1)" : "var(--surface)",
-            color: hideAgencies ? "#13120d" : "var(--text-muted)",
+            color: hideAgencies ? "var(--text)" : "var(--text-muted)",
             border: `1.5px solid ${hideAgencies ? "rgba(132,128,109,.35)" : "var(--border)"}`,
             display: "inline-flex", alignItems: "center", gap: 5,
           }}><Ban size={13}/> Hide agencies</button>
@@ -647,7 +647,7 @@ export default function FullTimeJobBoard() {
           <label style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 11px", borderRadius: 9, cursor: "pointer",
             background: hybridOnly ? "rgba(200,194,179,.12)" : "var(--surface)",
             border: `1.5px solid ${hybridOnly ? "rgba(200,194,179,.35)" : "var(--border)"}`,
-            fontSize: 12.5, fontWeight: 600, color: hybridOnly ? "#6b6858" : "var(--text-muted)", whiteSpace: "nowrap" as const,
+            fontSize: 12.5, fontWeight: 600, color: hybridOnly ? "var(--text-muted)" : "var(--text-muted)", whiteSpace: "nowrap" as const,
           }}>
             <input type="checkbox" checked={hybridOnly} onChange={e => setHybridOnly(e.target.checked)} style={{ accentColor: "#6b6858", width: 13, height: 13 }} />
             <Building2 size={13}/> Hybrid
@@ -748,7 +748,7 @@ export default function FullTimeJobBoard() {
           <span style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>
             {filtered.length} {filtered.length === 1 ? "role" : "roles"}
             {hasActiveFilters && (
-              <button onClick={resetFilters} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "#2e2d27", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}><X size={11}/> Clear</button>
+              <button onClick={resetFilters} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "var(--text)", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}><X size={11}/> Clear</button>
             )}
           </span>
         </div>

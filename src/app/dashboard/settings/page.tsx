@@ -57,14 +57,14 @@ function UsageMeter({ used, max, warn, danger }: { used: number; max: number; wa
         }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-        <span style={{ fontSize: 11, color: used >= danger ? "#2e2d27" : "var(--text-soft)" }}>
+        <span style={{ fontSize: 11, color: used >= danger ? "var(--text)" : "var(--text-soft)" }}>
           {used} / {max} used
         </span>
         {used >= danger && (
-          <span style={{ fontSize: 11, color: "#2e2d27", fontWeight: 600 }}>Limit reached</span>
+          <span style={{ fontSize: 11, color: "var(--text)", fontWeight: 600 }}>Limit reached</span>
         )}
         {used >= warn && used < danger && (
-          <span style={{ fontSize: 11, color: "#7e7a68", fontWeight: 600 }}>Running low</span>
+          <span style={{ fontSize: 11, color: "var(--text-soft)", fontWeight: 600 }}>Running low</span>
         )}
       </div>
     </div>

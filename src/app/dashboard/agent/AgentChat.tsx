@@ -107,7 +107,7 @@ export default function AgentChat() {
       </div>
 
       {notes.length > 0 && (
-        <section style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 16, background: "#fffdf8" }}>
+        <section style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 16, background: "var(--surface)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <strong>Watchdog alerts{unread > 0 ? ` (${unread} new)` : ""}</strong>
             <div style={{ display: "flex", gap: 8 }}>
@@ -126,7 +126,7 @@ export default function AgentChat() {
             {notes.slice(0, 6).map(n => (
               <div key={n.id} style={{
                 borderLeft: `3px solid ${n.read ? "var(--border)" : "#b3541e"}`,
-                padding: "8px 12px", background: n.read ? "transparent" : "#fff",
+                padding: "8px 12px", background: n.read ? "transparent" : "var(--surface)",
                 borderRadius: 8,
               }}>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>{n.title}</div>
@@ -159,7 +159,7 @@ export default function AgentChat() {
             <div key={i} style={{
               alignSelf: m.role === "user" ? "flex-end" : "flex-start",
               maxWidth: "85%", padding: "10px 14px", borderRadius: 14,
-              background: m.role === "user" ? "#2f6f6a" : "#f4f2ed",
+              background: m.role === "user" ? "#2f6f6a" : "var(--surface-2)",
               color: m.role === "user" ? "#fff" : "var(--text)",
               fontSize: 14, lineHeight: 1.55, whiteSpace: "pre-line",
             }}>

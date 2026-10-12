@@ -33,10 +33,10 @@ const START = 8, END = 19, HOUR = 64, GUTTER = 56, COL_MIN = 104
 const SHORT = 0.75 // under 45 minutes a block has room for one line only
 
 const KIND: Record<Interview["kind"], { bg: string; bar: string }> = {
-  Onsite: { bg: "#e4e0d6", bar: "#11100c" },
-  Panel:  { bg: "#ebe8e0", bar: "#42413c" },
-  Video:  { bg: "#f0ede7", bar: "#6e6b5b" },
-  Phone:  { bg: "#f4f2ed", bar: "#a29d89" },
+  Onsite: { bg: "var(--surface-3)", bar: "#11100c" },
+  Panel:  { bg: "var(--surface-2)", bar: "#42413c" },
+  Video:  { bg: "var(--surface-2)", bar: "#6e6b5b" },
+  Phone:  { bg: "var(--surface-2)", bar: "#a29d89" },
 }
 const range = (a: number, b: number) => `${fmtHour(a, true)}–${fmtHour(b, true)}`
 const brief = (a: number, b: number) => `${fmtHour(a, true).slice(0, -2)}–${fmtHour(b, true).slice(0, -2)}`

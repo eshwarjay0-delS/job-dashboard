@@ -216,7 +216,7 @@ export default function GmailSync({ onSync, compact = false }: GmailSyncProps) {
         {status === "connected" || status === "done" || status === "syncing" ? (
           <span
             className="ml-auto text-xs font-semibold px-2.5 py-1 rounded-full"
-            style={{ background: "#22c55e18", color: "#4d4b44" }}
+            style={{ background: "#22c55e18", color: "var(--text-muted)" }}
           >
             ✓ Connected{email ? ` · ${email}` : ""}
           </span>
@@ -259,7 +259,7 @@ export default function GmailSync({ onSync, compact = false }: GmailSyncProps) {
       {(status === "error" || status === "disconnected") && error && (
         <div
           className="rounded-xl px-4 py-3 text-xs"
-          style={{ background: "#ef44440f", color: "#13120d", border: "1px solid #ef444420" }}
+          style={{ background: "#ef44440f", color: "var(--text)", border: "1px solid #ef444420" }}
         >
           {error}
         </div>

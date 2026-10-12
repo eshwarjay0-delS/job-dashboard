@@ -125,7 +125,7 @@ function WaitlistInline({ plan = "starter" }: { plan?: string }) {
         {state === "loading" ? "Joining…" : <><IcoZap /> Join waitlist</>}
       </button>
       {state === "error" && (
-        <p style={{ width: "100%", textAlign: "center", fontSize: 13, color: "#9b9682" }}>{message}</p>
+        <p style={{ width: "100%", textAlign: "center", fontSize: 13, color: "var(--text-soft)" }}>{message}</p>
       )}
     </form>
   )

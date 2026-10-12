@@ -211,3 +211,24 @@ test('a production build compiles the stylesheet from the source, never from a r
   // showed the old colours, so the switch that lets that happen is held here too.
   assert.match(read('next.config.js'), /^\s*turbopackFileSystemCacheForBuild: false,$/m)
 })
+
+test('no page keeps a paper palette of its own, so its boxes and its type follow the theme together', () => {
+  // 12 Oct 2026. Twelve pages carried `const P = { surface: "#ffffff", text: "#161510", ... }`. Moving only the inline
+  // colours left those pages with theme-coloured type on paper-white boxes: unreadable on the night. A palette whose
+  // ground is dark is a page that is dark on purpose and is left alone.
+  const light = (hex) => { const [r, g, b] = channels(hex.length === 4 ? '#' + [...hex.slice(1)].map((c) => c + c).join('') : hex); return (r + g + b) / 3 > 128 }
+  const kept = []
+  const walk = (dir) => {
+    for (const entry of readdirSync(new URL('../../' + dir + '/', import.meta.url), { withFileTypes: true })) {
+      const path = dir + '/' + entry.name
+      if (entry.isDirectory()) { walk(path); continue }
+      if (!path.endsWith('.tsx')) continue
+      for (const m of read(path).matchAll(/^const [A-Z]{1,3} = \{\n((?:.*\n)*?)\}/gm)) {
+        const ground = /\b(?:surface|card|bg):\s*"(#[0-9a-fA-F]{3,6})"/.exec(m[1])
+        if (ground && light(ground[1])) kept.push(path)
+      }
+    }
+  }
+  walk('src/app/dashboard')
+  assert.deepEqual(kept, [])
+})

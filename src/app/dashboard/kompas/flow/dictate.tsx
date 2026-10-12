@@ -217,10 +217,10 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
           sigRef.current.last = nowMs
           if (heard) { sigRef.current.quietMs = 0 } else { sigRef.current.quietMs += dt }
           if (norm > 0.92) sigRef.current.loudHits++
-          // Nondestructive advice only — the audio itself is never altered.
+          // Nondestructive advice only: the audio itself is never altered.
           const s = Math.floor((Date.now() - began) / 1000)
-          if (s > 3 && sigRef.current.quietMs > 5000) setSignalNote("Very quiet — move closer to the microphone.")
-          else if (sigRef.current.loudHits > 40) { setSignalNote("Clipping — back off the microphone a little."); sigRef.current.loudHits = 0 }
+          if (s > 3 && sigRef.current.quietMs > 5000) setSignalNote("Very quiet. Move closer to the microphone.")
+          else if (sigRef.current.loudHits > 40) { setSignalNote("Too loud. Move back from the microphone a little."); sigRef.current.loudHits = 0 }
           else setSignalNote(n => (n ? "" : n))
           if (live.current) live.current.frame = requestAnimationFrame(draw)
         }
@@ -359,7 +359,7 @@ export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (
             <option value="en">English</option>
           </select>
         </div>
-        <p style={{ ...SMALL, marginTop: 8 }}>English locks the recogniser to English — best when you speak English with any accent. Auto-detect guesses each time.</p>
+        <p style={{ ...SMALL, marginTop: 8 }}>English locks the recogniser to English: best when you speak English with any accent. Auto-detect guesses each time.</p>
       </section>
 
       {!onAndroid && !onIphone && <section style={{ marginTop: 32 }}>{app}<p style={{ ...SMALL, marginTop: -6 }}>On an iPhone: open this page in Safari, tap Share, then Add to Home Screen.</p></section>}

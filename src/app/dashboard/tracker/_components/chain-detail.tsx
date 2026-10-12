@@ -86,7 +86,7 @@ export default function ChainDetail({
             {!chain.terminal && (
               <div style={{
                 marginTop: 14, padding: "12px 14px", borderRadius: 14,
-                background: chain.stalledDays >= 7 ? "#fdf3e7" : "var(--accent-soft)",
+                background: chain.stalledDays >= 7 ? "var(--surface-2)" : "var(--accent-soft)",
                 border: `1px solid ${chain.stalledDays >= 7 ? "#e8c98f" : "var(--accent-border)"}`,
                 fontSize: 13.5, lineHeight: 1.55,
               }}>

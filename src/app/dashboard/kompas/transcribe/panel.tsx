@@ -352,8 +352,8 @@ export default function Transcribe({ onBusy }: { onBusy: (busy: boolean) => void
           const nowMs = Date.now(), dt = nowMs - last; last = nowMs
           if (norm > 0.08) quietMs = 0; else quietMs += dt
           if (norm > 0.92) loudHits++
-          if (quietMs > 8000) setSignalNote("Very quiet — move closer to the microphone.")
-          else if (loudHits > 60) { setSignalNote("Clipping — back off the microphone a little."); loudHits = 0 }
+          if (quietMs > 8000) setSignalNote("Very quiet. Move closer to the microphone.")
+          else if (loudHits > 60) { setSignalNote("Too loud. Move back from the microphone a little."); loudHits = 0 }
           else setSignalNote(n => (n ? "" : n))
         }, 500)
         meterRef.current = { ctx, analyser, samples, iv }

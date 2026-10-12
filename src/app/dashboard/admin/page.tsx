@@ -204,7 +204,7 @@ function BudgetBoard({ tick, setBudgetTick }: { tick: number; setBudgetTick: (f:
             <p className="text-2xl font-bold mt-1" style={{ color: "var(--text)", fontFamily: "var(--font-display)" }}>${k.remainingUsd.toFixed(2)}</p>
             <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>left of ${k.loadedUsd.toFixed(2)} · spent ${k.spentUsd.toFixed(4)}</p>
             {k.loadedUsd > 0 && k.spentUsd >= k.loadedUsd * 0.9 && (
-              <p className="text-xs mt-1 font-semibold" style={{ color: "#b3541e" }}>
+              <p className="text-xs mt-1 font-semibold" style={{ color: "var(--warning)" }}>
                 {k.spentUsd >= k.loadedUsd ? "Depleted — top up before the next run." : "Nearly depleted — top up soon."}
               </p>
             )}

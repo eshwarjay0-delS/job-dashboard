@@ -1,3 +1,24 @@
+## 2026-10-12 — Pages that kept paper colours of their own now follow the theme (Claude Code)
+
+The owner's dark-mode eye strain (8 Oct) had one cause left: pages that write colours as literal hex showed paper-white boxes on the night page. This is the pass over those pages. It was first made on 8 Oct and lost to a session limit before it was committed; it is re-made here on top of the 87 commits that landed since.
+
+**Built**
+
+- Literal neutral colours in about 50 page and component files are theme tokens now: inks to `--text` / `--text-muted` / `--text-soft`, paper fills to `--surface` / `--surface-2` / `--surface-3`, rules to `--border` / `--border-strong`. On paper each lands within a shade of what it was; on the night they are the night's colours.
+- Done by four small scripts, by what a colour is and not by a list of values: inline styles, colours inside conditions, a page's own palette constant (twelve pages had `const P = { surface: "#ffffff", ... }`), and neutral per-item colour sets kept as data. A fill is never moved without the type on it, and the reverse.
+- Left alone on purpose: anything that draws a document or an image (resume previews stay white paper in every theme), the three pages that are dark by design (Companies, Contracts, Marketing), gradients, SVG drawings, real hues, and colour data that is joined to an alpha suffix (15 files: a `var()` there would be invalid CSS).
+- Repairs after the upstream changes: four em dashes in the Flow page's own words, one literal colour on the Admin page, and three of my tests that described the menu and the speech ledger as they were before other work changed them.
+
+**Verified**
+
+- Every one of the 31 changed routes opened in the local preview in both themes and measured: text against what it sits on, and bright boxes. Night: no unreadable text left except Technical prep's "Easy / Medium / Hard" badges, which were already a mid-grey on the night before this pass (their colours are joined to an alpha suffix). Paper: nothing unreadable; the pass did not change how paper looks beyond a shade.
+- `theme-palette.test.mjs` 16 of 16 (new: no page keeps a paper palette of its own). Whole suite 200 of 202: the two failures are the standing Windows path test and `kompas-shared-release.test.mjs`, which is another session's and was failing before this change. Type check clean.
+
+**NOT verified, and not reached**
+
+- Signed in, with real data: the pages were opened with stubbed data. A state that only appears with real records (an error banner, a long list) was not seen.
+- Still bright on the night: the Interviews page's chips and a few status chips elsewhere, where colour data is joined to an alpha suffix. They are readable, only bright. They need a hand pass with `color-mix()`.
+
 ## 2026-10-08 (night) — Kompas Flow for Android 2.2.0: the four things he named after using it (Claude Code)
 
 The owner, after using 2.1.0 on his phone: "The kompas flow app icon should be the icon for floating button around and it needs to spinned once on tap. The waves only need to wave upon speaking and the button needs to dissolve into background just like how the whisper flow works."

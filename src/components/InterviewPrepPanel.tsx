@@ -37,7 +37,7 @@ const SECTION_CONFIG = [
     key: "questions" as const,
     label: "Likely Questions",
     icon: "❓",
-    color: "#757261",
+    color: "var(--text-soft)",
     bg: "rgba(117,114,97,.06)",
     border: "rgba(117,114,97,.2)",
     desc: "Expected for this round at this company",
@@ -46,7 +46,7 @@ const SECTION_CONFIG = [
     key: "starPrompts" as const,
     label: "STAR Stories to Prepare",
     icon: "⭐",
-    color: "#7e7a68",
+    color: "var(--text-soft)",
     bg: "rgba(176,170,153,.06)",
     border: "rgba(176,170,153,.2)",
     desc: "Situation–Task–Action–Result frameworks tailored to this role",
@@ -55,7 +55,7 @@ const SECTION_CONFIG = [
     key: "tips" as const,
     label: "Tactical Prep Tips",
     icon: "⚡",
-    color: "#58564c",
+    color: "var(--text-muted)",
     bg: "rgba(163,158,139,.06)",
     border: "rgba(163,158,139,.2)",
     desc: "Specific to this company and interview type",
@@ -64,7 +64,7 @@ const SECTION_CONFIG = [
     key: "whatToResearch" as const,
     label: "What to Research",
     icon: "🔍",
-    color: "#7c7866",
+    color: "var(--text-soft)",
     bg: "rgba(155,150,130,.06)",
     border: "rgba(155,150,130,.2)",
     desc: "Look these up before the interview",
@@ -171,7 +171,7 @@ export default function InterviewPrepPanel({ company, role, interviewType, inter
             <div className="mt-3">
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-[11px] font-semibold" style={{ color: "var(--text-soft)" }}>Prep progress</p>
-                <p className="text-[11px] font-bold" style={{ color: doneCount === totalItems ? "#42413c" : "var(--accent-txt)" }}>
+                <p className="text-[11px] font-bold" style={{ color: doneCount === totalItems ? "var(--text-muted)" : "var(--accent-txt)" }}>
                   {doneCount}/{totalItems} done
                 </p>
               </div>
@@ -205,7 +205,7 @@ export default function InterviewPrepPanel({ company, role, interviewType, inter
                 </p>
               </div>
               {error && (
-                <div className="w-full rounded-xl px-4 py-3 text-xs text-left" style={{ background: "var(--surface)", color: "#13120d" }}>
+                <div className="w-full rounded-xl px-4 py-3 text-xs text-left" style={{ background: "var(--surface)", color: "var(--text)" }}>
                   {error}
                 </div>
               )}

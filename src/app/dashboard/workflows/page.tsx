@@ -145,7 +145,7 @@ export default function WorkflowsPage() {
               <button key={v} type="button" aria-pressed={tab === v} onClick={() => setTab(v)}
                 style={{
                   height: 30, padding: "0 14px", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 650,
-                  background: tab === v ? "#fff" : "transparent", color: tab === v ? "var(--accent)" : "rgba(255,255,255,.75)",
+                  background: tab === v ? "var(--surface)" : "transparent", color: tab === v ? "var(--accent)" : "rgba(255,255,255,.75)",
                 }}>{label}</button>
             ))}
           </div>

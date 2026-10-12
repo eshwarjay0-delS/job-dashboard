@@ -8,11 +8,11 @@ import { computeMatchScore, type UserProfile } from "@/lib/matching/computeMatch
 
 const P = {
   bg:      "var(--surface)",
-  surface: "#ffffff",
-  text:    "#161510",
-  muted:   "#6e6b5b",
-  hint:    "#9d9884",
-  border:  "#e6e2d9",
+  surface: "var(--surface)",
+  text:    "var(--text)",
+  muted:   "var(--text-muted)",
+  hint:    "var(--text-soft)",
+  border:  "var(--border)",
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -34,11 +34,11 @@ interface RecommendedJob {
 }
 
 const WORK_AUTH_COLORS: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  h1b:         { label: "H-1B",       color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
-  opt_cpt:     { label: "OPT/CPT",    color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
-  green_card:  { label: "Green Card", color: "#535149", bg: "#f4f2ed", border: "#ddd8cd" },
-  w2:          { label: "W2",         color: "#58564c", bg: "#f6f4f0", border: "#e2ded4" },
-  c2c:         { label: "C2C",        color: "#58564c", bg: "#f7f5f0", border: "#e4e0d6" },
+  h1b:         { label: "H-1B",       color: "var(--text)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+  opt_cpt:     { label: "OPT/CPT",    color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+  green_card:  { label: "Green Card", color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+  w2:          { label: "W2",         color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+  c2c:         { label: "C2C",        color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border)" },
 }
 
 function timeAgo(iso: string): string {
@@ -63,7 +63,7 @@ function MatchRing({ pct }: { pct: number }) {
       </svg>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         <span style={{ fontSize: 12, fontWeight: 800, color, lineHeight: 1 }}>{pct}</span>
-        <span style={{ fontSize: 8, color: "#a29d89", lineHeight: 1 }}>%</span>
+        <span style={{ fontSize: 8, color: "var(--text-soft)", lineHeight: 1 }}>%</span>
       </div>
     </div>
   )
@@ -79,7 +79,7 @@ function CompanyLogo({ domain, name, size = 40 }: { domain: string; name: string
   )
   return (
     <img src={`https://logo.clearbit.com/${domain}`} alt={name} onError={() => setErr(true)}
-      style={{ width: size, height: size, borderRadius: size * 0.26, objectFit: "contain", background: "var(--surface)", border: "1px solid #e6e2d9", flexShrink: 0, padding: 4 }}/>
+      style={{ width: size, height: size, borderRadius: size * 0.26, objectFit: "contain", background: "var(--surface)", border: "1px solid var(--border)", flexShrink: 0, padding: 4 }}/>
   )
 }
 
@@ -221,7 +221,7 @@ export default function RecommendedPage() {
               ? `Matched to your ${profileSkills.slice(0, 3).join(", ")} skills — updated ${lastRefresh.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
               : "Complete your profile to get personalized matches — showing broad recommendations now."}
             {" "}{isLive
-              ? <span style={{ color: "#42413c", fontWeight: 600 }}>● Live</span>
+              ? <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>● Live</span>
               : jobs.length > 0 && <span style={{ color: P.hint, fontWeight: 600 }}>Sample data — no job API key configured</span>}
           </p>
         </div>
@@ -239,14 +239,14 @@ export default function RecommendedPage() {
 
       {/* ── Profile skills bar ── */}
       {hasProfile && (
-        <div style={{ background: "#f2f0ea", border: "1px solid #d9d4c8", borderRadius: 12, padding: "12px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#11100c", flexShrink: 0 }}>Matching on:</span>
+        <div style={{ background: "var(--surface-2)", border: "1px solid var(--border-strong)", borderRadius: 12, padding: "12px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", flexShrink: 0 }}>Matching on:</span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {profileSkills.slice(0, 12).map(s => (
-              <span key={s} style={{ padding: "2px 9px", borderRadius: 20, background: "rgba(107,104,88,.12)", color: "#11100c", fontSize: 11.5, fontWeight: 600 }}>{s}</span>
+              <span key={s} style={{ padding: "2px 9px", borderRadius: 20, background: "rgba(107,104,88,.12)", color: "var(--text)", fontSize: 11.5, fontWeight: 600 }}>{s}</span>
             ))}
           </div>
-          <Link href="/dashboard/profile" style={{ marginLeft: "auto", fontSize: 11.5, color: "#1c1b16", fontWeight: 600, textDecoration: "none", flexShrink: 0 }}>Edit profile →</Link>
+          <Link href="/dashboard/profile" style={{ marginLeft: "auto", fontSize: 11.5, color: "var(--text)", fontWeight: 600, textDecoration: "none", flexShrink: 0 }}>Edit profile →</Link>
         </div>
       )}
 
@@ -313,7 +313,7 @@ export default function RecommendedPage() {
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = P.text }}
                     >{job.title}</span>
                   </a>
-                  {job.remote && <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: "#f2f0ea", color: "#1c1b16", border: "1px solid #d9d4c8" }}>Remote</span>}
+                  {job.remote && <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border-strong)" }}>Remote</span>}
                   <span style={{ fontSize: 10, color: P.hint, marginLeft: "auto" }}>{timeAgo(job.posted)} via {job.source}</span>
                 </div>
                 <p style={{ fontSize: 13, color: P.muted, marginBottom: 8 }}>{job.company} · {job.location}{job.salary ? ` · ${job.salary}` : ""}</p>
@@ -322,7 +322,7 @@ export default function RecommendedPage() {
                 {/* Match reasons */}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 }}>
                   {job.matchReasons.map(r => (
-                    <span key={r} style={{ padding: "2px 9px", borderRadius: 6, background: "#f2f0ea", color: "#11100c", fontSize: 11, fontWeight: 600, border: "1px solid #d9d4c8" }}>✓ {r}</span>
+                    <span key={r} style={{ padding: "2px 9px", borderRadius: 6, background: "var(--surface-2)", color: "var(--text)", fontSize: 11, fontWeight: 600, border: "1px solid var(--border-strong)" }}>✓ {r}</span>
                   ))}
                   <span style={{ padding: "2px 8px", borderRadius: 6, background: h1b.bg, color: h1b.color, fontSize: 11, fontWeight: 700, border: `1px solid ${h1b.border}` }}>{h1b.label}</span>
                   {job.workAuth.slice(0, 2).map(k => {
@@ -338,12 +338,12 @@ export default function RecommendedPage() {
                   </a>
                   <Link href="/dashboard/resume"
                     onClick={() => { try { sessionStorage.setItem("jd_prefill", job.title + " at " + job.company + "\n\n" + job.description) } catch {} }}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, background: "#f6f4ef", color: "#41403b", fontSize: 12.5, fontWeight: 700, textDecoration: "none", border: "1px solid #e0dcd2" }}>
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, background: "var(--surface-2)", color: "var(--text-muted)", fontSize: 12.5, fontWeight: 700, textDecoration: "none", border: "1px solid var(--border-strong)" }}>
                     Tailor Resume
                   </Link>
                   <Link href="/dashboard/ai-tools"
                     onClick={() => { try { const t=job.title+" at "+job.company+"\n\n"+job.description; sessionStorage.setItem("jd_ai_tab","cover"); sessionStorage.setItem("jd_prefill_jd",t); sessionStorage.setItem("jd_prefill_role",job.title); sessionStorage.setItem("jd_prefill_company",job.company) } catch {} }}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, background: "#f2f0ea", color: "#11100c", fontSize: 12.5, fontWeight: 700, textDecoration: "none", border: "1px solid #d9d4c8" }}>
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, background: "var(--surface-2)", color: "var(--text)", fontSize: 12.5, fontWeight: 700, textDecoration: "none", border: "1px solid var(--border-strong)" }}>
                     Ask Nexus
                   </Link>
                   <button onClick={() => dismiss(job.id)} style={{ marginLeft: "auto", padding: "5px 10px", borderRadius: 7, border: "none", background: "transparent", color: P.hint, fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}

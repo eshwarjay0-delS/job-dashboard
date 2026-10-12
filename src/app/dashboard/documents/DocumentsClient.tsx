@@ -55,7 +55,7 @@ function Chevron({ open }: { open: boolean }) {
   return <svg className="w-3 h-3 transition-transform" style={{ transform: open ? "rotate(90deg)" : "" }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
 }
 function FolderIcon() {
-  return <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: "#7e7a68" }}><path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" /></svg>
+  return <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: "var(--text-soft)" }}><path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" /></svg>
 }
 function FileIcon() {
   return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24" style={{ color: "var(--accent)" }}><path strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path strokeLinejoin="round" d="M14 2v6h6" /></svg>
@@ -411,7 +411,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
 
       {/* Status messages */}
       {err && (
-        <p className="text-sm rounded-xl px-4 py-2.5" style={{ color: "#13120d", background: "rgba(112,108,92,0.08)" }}>
+        <p className="text-sm rounded-xl px-4 py-2.5" style={{ color: "var(--text)", background: "rgba(112,108,92,0.08)" }}>
           ✗ {err}
         </p>
       )}
@@ -426,8 +426,8 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
         <div className="rounded-2xl border overflow-hidden anim-fade-up" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
           {uploaded.filter(u => u.status !== "ready").map(u => {
             const statusStyle = u.status === "scanning"
-              ? { bg: "rgba(144,140,119,0.12)", color: "#6b6858" }
-              : { bg: "rgba(112,108,92,0.12)", color: "#13120d" }
+              ? { bg: "rgba(144,140,119,0.12)", color: "var(--text-muted)" }
+              : { bg: "rgba(112,108,92,0.12)", color: "var(--text)" }
             return (
               <div key={u.file.id} className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0"
                 style={{ borderColor: "var(--border)" }}>
@@ -465,7 +465,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
                   </button>
                   <button onClick={deleteChecked}
                     className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
-                    style={{ background: "rgba(112,108,92,0.1)", color: "#13120d" }}>
+                    style={{ background: "rgba(112,108,92,0.1)", color: "var(--text)" }}>
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     Delete ({checked.size})
                   </button>

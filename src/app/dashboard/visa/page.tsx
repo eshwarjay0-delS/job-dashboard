@@ -6,8 +6,8 @@ import { Building2, GraduationCap, ClipboardList, Globe, Scale, TriangleAlert, B
 import PageHeader from "@/components/layout/PageHeader"
 
 const P = {
-  surface: "#ffffff", text: "#161510", muted: "#6e6b5b",
-  hint: "#9d9884", border: "#e6e2d9", bg: "var(--surface)",
+  surface: "var(--surface)", text: "var(--text)", muted: "var(--text-muted)",
+  hint: "var(--text-soft)", border: "var(--border)", bg: "var(--surface)",
 }
 
 // ── Key USCIS dates for FY2025 ───────────────────────────────────────────────
@@ -20,11 +20,11 @@ const H1B_DATES = {
 }
 
 const VISA_TYPES = [
-  { id: "h1b",    label: "H-1B",       Icon: Building2,    color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
-  { id: "opt",    label: "OPT/CPT",    Icon: GraduationCap, color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
-  { id: "gc",     label: "Green Card", Icon: BadgeCheck,   color: "#42413c", bg: "#f4f2ed", border: "#ddd8cd" },
-  { id: "ead",    label: "EAD/AP",     Icon: ClipboardList, color: "#6b6858", bg: "#f7f5f0", border: "#e4e0d6" },
-  { id: "l1",     label: "L-1",        Icon: Globe,        color: "#7c7866", bg: "#f6f4f0", border: "#e2ded4" },
+  { id: "h1b",    label: "H-1B",       Icon: Building2,    color: "var(--text)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+  { id: "opt",    label: "OPT/CPT",    Icon: GraduationCap, color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+  { id: "gc",     label: "Green Card", Icon: BadgeCheck,   color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+  { id: "ead",    label: "EAD/AP",     Icon: ClipboardList, color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border)" },
+  { id: "l1",     label: "L-1",        Icon: Globe,        color: "var(--text-soft)", bg: "var(--surface-2)", border: "var(--border-strong)" },
 ]
 
 interface VisaEntry {
@@ -38,10 +38,10 @@ interface VisaEntry {
 }
 
 const STATUS_META = {
-  active:   { label: "Active",    color: "#42413c", bg: "#f4f2ed", border: "#ddd8cd" },
-  pending:  { label: "Pending",   color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
-  expiring: { label: "Expiring",  color: "#6b6858", bg: "#f7f5f0", border: "#e4e0d6" },
-  expired:  { label: "Expired",   color: "#13120d", bg: "var(--surface)", border: "#ddd8cd" },
+  active:   { label: "Active",    color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+  pending:  { label: "Pending",   color: "var(--text)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+  expiring: { label: "Expiring",  color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border)" },
+  expired:  { label: "Expired",   color: "var(--text)", bg: "var(--surface)", border: "var(--border-strong)" },
 }
 
 // OPT timeline stages
@@ -177,9 +177,9 @@ export default function VisaPage() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
           {[
-            { label: "Registration Opens", date: "Mar 1, 2026",  color: "#9d9884", done: false },
-            { label: "Registration Closes", date: "Mar 20, 2026", color: "#918d78", done: false },
-            { label: "Lottery Results",     date: "Apr 1, 2026",  color: "#7e7a68", done: false },
+            { label: "Registration Opens", date: "Mar 1, 2026",  color: "var(--text-soft)", done: false },
+            { label: "Registration Closes", date: "Mar 20, 2026", color: "var(--text-soft)", done: false },
+            { label: "Lottery Results",     date: "Apr 1, 2026",  color: "var(--text-soft)", done: false },
             { label: "H-1B Work Begins",    date: "Oct 1, 2026",  color: "#bbb5a5", done: false },
           ].map(m => (
             <div key={m.label} style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 12, padding: "14px 16px" }}>
@@ -193,7 +193,7 @@ export default function VisaPage() {
 
       {/* ── Add status form ── */}
       {showAdd && (
-        <div style={{ background: P.surface, border: "1.5px solid #d9d4c8", borderRadius: 16, padding: "20px 22px", marginBottom: 16 }}>
+        <div style={{ background: P.surface, border: "1.5px solid var(--border-strong)", borderRadius: 16, padding: "20px 22px", marginBottom: 16 }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: P.text, marginBottom: 14 }}>Add Visa / Status</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
@@ -256,7 +256,7 @@ export default function VisaPage() {
                     <p style={{ fontSize: 14.5, fontWeight: 700, color: P.text }}>{vt.label}</p>
                     <span style={{ padding: "2px 8px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, background: sm.bg, color: sm.color, border: `1px solid ${sm.border}` }}>{sm.label}</span>
                     {days !== null && days <= 90 && days > 0 && (
-                      <span style={{ padding: "2px 8px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, background: "var(--surface)", color: "#13120d", border: "1px solid #ddd8cd" }}>⚠ {days}d left</span>
+                      <span style={{ padding: "2px 8px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border-strong)" }}>⚠ {days}d left</span>
                     )}
                   </div>
                   <p style={{ fontSize: 12.5, color: P.muted }}>
@@ -278,7 +278,7 @@ export default function VisaPage() {
         <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
           {([["h1b","H-1B Process"], ["opt","OPT Timeline"], ["gc","Green Card"]] as const).map(([k, l]) => (
             <button key={k} onClick={() => setActiveGuide(activeGuide === k ? null : k)}
-              style={{ padding: "8px 16px", borderRadius: 9, border: `1.5px solid ${activeGuide === k ? "var(--accent)" : P.border}`, background: activeGuide === k ? "#f2f0ea" : P.surface, color: activeGuide === k ? "var(--accent)" : P.muted, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+              style={{ padding: "8px 16px", borderRadius: 9, border: `1.5px solid ${activeGuide === k ? "var(--accent)" : P.border}`, background: activeGuide === k ? "var(--surface-2)" : P.surface, color: activeGuide === k ? "var(--accent)" : P.muted, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
               {l} {activeGuide === k ? "↑" : "↓"}
             </button>
           ))}
@@ -293,7 +293,7 @@ export default function VisaPage() {
               {(activeGuide === "h1b" ? H1B_STAGES : activeGuide === "opt" ? OPT_STAGES : GC_STAGES).map((s, i, arr) => (
                 <div key={i} style={{ display: "flex", gap: 14, position: "relative" }}>
                   {/* Line */}
-                  {i < arr.length - 1 && <div style={{ position: "absolute", left: 16, top: 32, bottom: 0, width: 2, background: s.done ? "#ddd8cd" : "#e6e2d9" }}/>}
+                  {i < arr.length - 1 && <div style={{ position: "absolute", left: 16, top: 32, bottom: 0, width: 2, background: s.done ? "#ddd8cd" : "var(--surface-3)" }}/>}
                   {/* Dot */}
                   <div style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, background: s.done ? "#42413c" : P.bg, border: `2px solid ${s.done ? "#42413c" : P.border}`, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
                     {s.done
@@ -302,7 +302,7 @@ export default function VisaPage() {
                     }
                   </div>
                   <div style={{ paddingBottom: i < arr.length - 1 ? 18 : 0, paddingTop: 4 }}>
-                    <p style={{ fontSize: 13.5, fontWeight: 700, color: s.done ? "#42413c" : P.text, marginBottom: 2 }}>{s.label}</p>
+                    <p style={{ fontSize: 13.5, fontWeight: 700, color: s.done ? "var(--text-muted)" : P.text, marginBottom: 2 }}>{s.label}</p>
                     <p style={{ fontSize: 12.5, color: P.muted }}>{s.detail}</p>
                   </div>
                 </div>
@@ -327,20 +327,20 @@ export default function VisaPage() {
             "How long does PERM take in 2025?",
             "What is the H-1B premium processing fee?",
           ].map(q => (
-            <button key={q} onClick={() => setAiQ(q)} style={{ padding: "5px 11px", borderRadius: 20, border: "1px solid #d9d4c8", background: "#f2f0ea", color: "#11100c", fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "left" as const }}>{q}</button>
+            <button key={q} onClick={() => setAiQ(q)} style={{ padding: "5px 11px", borderRadius: 20, border: "1px solid var(--border-strong)", background: "var(--surface-2)", color: "var(--text)", fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "left" as const }}>{q}</button>
           ))}
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           <input value={aiQ} onChange={e => setAiQ(e.target.value)} placeholder="Ask an immigration question…" onKeyDown={e => e.key === "Enter" && askAI()}
-            style={{ flex: 1, padding: "9px 13px", borderRadius: 9, border: "1px solid #d9d4c8", fontSize: 13, color: P.text, background: "var(--surface)", outline: "none" }}/>
+            style={{ flex: 1, padding: "9px 13px", borderRadius: 9, border: "1px solid var(--border-strong)", fontSize: 13, color: P.text, background: "var(--surface)", outline: "none" }}/>
           <button onClick={askAI} disabled={!aiQ.trim() || loadingAI} style={{ padding: "9px 18px", borderRadius: 9, background: "var(--accent)", color: "#fff", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", opacity: loadingAI ? 0.7 : 1 }}>
             {loadingAI ? "…" : "Ask"}
           </button>
         </div>
 
         {aiAnswer && (
-          <div style={{ background: "var(--surface)", border: "1px solid #d9d4c8", borderRadius: 12, padding: "14px 16px", fontSize: 13.5, color: P.text, lineHeight: 1.65 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border-strong)", borderRadius: 12, padding: "14px 16px", fontSize: 13.5, color: P.text, lineHeight: 1.65 }}>
             {aiAnswer}
             <p style={{ fontSize: 11.5, color: P.hint, marginTop: 10, fontStyle: "italic", display: "flex", alignItems: "center", gap: 5 }}><TriangleAlert size={11}/> This is general information only, not legal advice. Consult an immigration attorney for your specific situation.</p>
           </div>

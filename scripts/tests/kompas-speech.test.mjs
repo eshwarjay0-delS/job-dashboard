@@ -153,7 +153,7 @@ test('nothing a person said is stored or logged by the server, and a refusal nev
   }
   const lib = read('src/lib/kompasSpeech.ts')
   assert.ok(!/response\.text\(\)|\.message\b/.test(lib), 'the provider\'s message is never read into an error')
-  assert.ok(/input: 0, output: 0/.test(lib) && /app: "kompas"/.test(lib), 'the ledger gets counts and time, under Kompas')
+  assert.ok(/scheduleSttRecord\(\{/.test(lib) && /seconds: seconds \?\? estSeconds/.test(lib) && /app: "kompas"/.test(lib) && /ms: Date\.now\(\) - began/.test(lib), 'the ledger gets the seconds of sound and the time taken, under Kompas')
   assert.ok(/keysFor\(`kompas:\$\{input\.purpose\}`/.test(lib), 'the key comes through the admin\'s checklist')
   assert.ok(/if \(!cleanupAllowed\(text, tidy\)\) return \{ tidy: text, kept: "raw"/.test(lib), 'a tidied text that fails the guard is answered with the person\'s own words')
 })
@@ -187,7 +187,8 @@ test('the pages talk to the two speech routes and nothing else, and keep what a 
   }
   assert.ok(/Kept only in this browser\. MarketFit keeps nothing you say\./.test(read(pages[0])))
   assert.ok(/Transcripts stay on this device, and so does your voice print if you saved one\. MarketFit keeps no sound and no text\./.test(read(pages[1])))
-  assert.ok(!/localStorage|sessionStorage/.test(read(pages[1])), 'a transcript is not put in storage that is read on every page')
+  const shared = read(pages[1]).match(/(?:localStorage|sessionStorage)\.\w+\([^)]*\)/g) || []
+  assert.deepEqual(shared, ['localStorage.getItem(KOMPAS_HINT_KEY)'], 'a transcript is not put in storage that is read on every page: the one thing read from it is the list of words to listen for')
 })
 
 test('Transcribe cannot record a transcript or open a file until "Who is speaking?" has been answered in this visit', () => {
@@ -231,7 +232,7 @@ test('the page is served with the microphone allowed and nothing else new, and i
   assert.ok(/\{ source: "\/dashboard\/kompas\/:page\(flow\|transcribe\)", headers: speechHeaders \}/.test(config))
   const speech = config.slice(config.indexOf('const speechHeaders'), config.indexOf('// NOTE: an immutable'))
   assert.ok(/microphone=\(self\)/.test(speech) && !/display-capture/.test(speech), 'the microphone, and no screen or tab capture')
-  assert.equal((side.match(/item\.href\.startsWith\("\/dashboard\/kompas"\)/g) || []).length, 2, 'a plain link, so the page comes with its own headers')
+  assert.equal((side.match(/(?:item|tab)\.href\.startsWith\("\/dashboard\/kompas"\) \? "a" : Link/g) || []).length, 2, 'a plain link at both levels of the menu, so the page comes with its own headers')
   assert.ok(nav.includes('href: "/dashboard/kompas/flow"'), 'one entry in the menu')
   assert.ok(!nav.includes('href: "/dashboard/kompas/transcribe"'), 'and no second one for Transcribe')
 })

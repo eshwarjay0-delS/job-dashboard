@@ -105,20 +105,20 @@ interface JobsResponse {
 
 const STATE_META: Record<JobState, { label: string; color: string }> = {
   discovered:         { label: "Discovered",     color: "var(--text-soft)" },
-  jd_extracted:       { label: "JD extracted",   color: "#85816e" },
-  recruiter_resolved: { label: "Resolved",       color: "#42413c" },
-  tailoring:          { label: "Tailoring…",     color: "#85816e" },
-  tailored:           { label: "Ready to send",  color: "#42413c" },
-  awaiting_approval:  { label: "Awaiting you",   color: "#6b6858" },
-  needs_human:        { label: "Needs you",      color: "#6b6858" },
+  jd_extracted:       { label: "JD extracted",   color: "var(--text-soft)" },
+  recruiter_resolved: { label: "Resolved",       color: "var(--text-muted)" },
+  tailoring:          { label: "Tailoring…",     color: "var(--text-soft)" },
+  tailored:           { label: "Ready to send",  color: "var(--text-muted)" },
+  awaiting_approval:  { label: "Awaiting you",   color: "var(--text-muted)" },
+  needs_human:        { label: "Needs you",      color: "var(--text-muted)" },
   skipped:            { label: "Skipped",        color: "var(--text-soft)" },
-  rejected:           { label: "Rejected",       color: "#13120d" },
+  rejected:           { label: "Rejected",       color: "var(--text)" },
   cancelled:          { label: "Cancelled",      color: "var(--text-soft)" },
 }
 
 const CLASS_META: Record<CandidateClass, { label: string; color: string; bg: string; note: string }> = {
-  corporate:  { label: "Corporate", color: "#42413c", bg: "rgba(131,127,108,.10)",  note: "Company domain — a real recruiter address." },
-  freemail:   { label: "Freemail",  color: "#13120d", bg: "rgba(112,108,92,.12)",  note: "Personal inbox on this thread — almost certainly a competing job candidate. Never send here." },
+  corporate:  { label: "Corporate", color: "var(--text-muted)", bg: "rgba(131,127,108,.10)",  note: "Company domain — a real recruiter address." },
+  freemail:   { label: "Freemail",  color: "var(--text)", bg: "rgba(112,108,92,.12)",  note: "Personal inbox on this thread — almost certainly a competing job candidate. Never send here." },
   middleman:  { label: "Middleman", color: "var(--text-soft)", bg: "rgba(162,157,137,.10)", note: "The bench-sales contact the thread came from." },
   self:       { label: "You",       color: "var(--text-soft)", bg: "rgba(162,157,137,.10)", note: "Your own address." },
 }
@@ -299,7 +299,7 @@ export default function AutoReplyClient() {
         {lastRun?.halted && (
           <span style={{
             padding: "5px 10px", borderRadius: 8, fontSize: 11.5, fontWeight: 700,
-            background: "rgba(112,108,92,.10)", color: "#13120d", border: "1px solid rgba(112,108,92,.25)",
+            background: "rgba(112,108,92,.10)", color: "var(--text)", border: "1px solid rgba(112,108,92,.25)",
           }}>
             ⛔ Halted{lastRun.haltReason ? ` — ${lastRun.haltReason}` : ""}
           </span>
@@ -312,7 +312,7 @@ export default function AutoReplyClient() {
             flexBasis: "100%", marginTop: 8, padding: "8px 12px", borderRadius: 8,
             fontSize: 12, lineHeight: 1.6,
             background: lastRun.tailorNote.startsWith("WARNING") ? "rgba(144,140,119,.10)" : "var(--surface-2)",
-            color: lastRun.tailorNote.startsWith("WARNING") ? "#525048" : "var(--text-soft)",
+            color: lastRun.tailorNote.startsWith("WARNING") ? "var(--text-muted)" : "var(--text-soft)",
             border: `1px solid ${lastRun.tailorNote.startsWith("WARNING") ? "rgba(144,140,119,.30)" : "var(--border)"}`,
           }}>
             {lastRun.tailorNote.startsWith("WARNING") ? "⚠ " : "· "}{lastRun.tailorNote}
@@ -323,9 +323,9 @@ export default function AutoReplyClient() {
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {[
-            { label: "Needs you", value: counts?.needsHuman ?? chipCounts.needs,    color: "#6b6858" },
-            { label: "Ready",     value: counts?.tailored   ?? chipCounts.ready,    color: "#42413c" },
-            { label: "Resolved",  value: counts?.resolved  ?? chipCounts.resolved,  color: "#85816e" },
+            { label: "Needs you", value: counts?.needsHuman ?? chipCounts.needs,    color: "var(--text-muted)" },
+            { label: "Ready",     value: counts?.tailored   ?? chipCounts.ready,    color: "var(--text-muted)" },
+            { label: "Resolved",  value: counts?.resolved  ?? chipCounts.resolved,  color: "var(--text-soft)" },
             { label: "Skipped",   value: counts?.skipped   ?? chipCounts.skipped,   color: "var(--text-soft)" },
             { label: "Total",     value: counts?.total     ?? chipCounts.all,       color: "var(--text)" },
           ].map(s => (
@@ -392,7 +392,7 @@ export default function AutoReplyClient() {
         <button onClick={() => setFilter("resolved")} style={chip(filter === "resolved", "#85816e")}>✓ Resolved ({chipCounts.resolved})</button>
         <button onClick={() => setFilter("skipped")}  style={chip(filter === "skipped", "var(--text-soft)")}>↷ Skipped ({chipCounts.skipped})</button>
         {freemailSeen > 0 && (
-          <span style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#13120d" }}>
+          <span style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "var(--text)" }}>
             {freemailSeen} freemail address{freemailSeen === 1 ? "" : "es"} seen on these threads — none may ever be a recipient.
           </span>
         )}
@@ -510,7 +510,7 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
         {/* Chosen recipients — the algorithm's answer, visible without expanding */}
         <div style={{ flexShrink: 0, textAlign: "right", maxWidth: 300 }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: "var(--text-soft)", textTransform: "uppercase", letterSpacing: ".05em" }}>Would address</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: to.length ? "#42413c" : "var(--text-soft)", wordBreak: "break-all" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: to.length ? "var(--text-muted)" : "var(--text-soft)", wordBreak: "break-all" }}>
             {to.length ? to.join(", ") : "— nothing chosen —"}
           </div>
           {cc.length > 0 && (
@@ -525,22 +525,22 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
           margin: "0 16px 13px", padding: "10px 13px", borderRadius: 10,
           background: "rgba(144,140,119,.10)", border: "1px solid rgba(144,140,119,.28)",
         }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: "#525048", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>
             ⚠ Needs a human
           </div>
           {!job.lastError && job.haltCode && (
             <p style={{ fontSize: 12.5, color: "var(--text)", margin: 0, lineHeight: 1.6 }}>
-              <strong style={{ color: "#525048" }}>Halted:</strong> {job.haltCode.replace(/_/g, " ")}
+              <strong style={{ color: "var(--text-muted)" }}>Halted:</strong> {job.haltCode.replace(/_/g, " ")}
             </p>
           )}
           {job.lastError && (
             <p style={{ fontSize: 12.5, color: "var(--text)", margin: 0, lineHeight: 1.6 }}>
-              <strong style={{ color: "#525048" }}>Error:</strong> {job.lastError}
+              <strong style={{ color: "var(--text-muted)" }}>Error:</strong> {job.lastError}
             </p>
           )}
           {job.skipReason && (
             <p style={{ fontSize: 12.5, color: "var(--text)", margin: job.lastError ? "4px 0 0" : 0, lineHeight: 1.6 }}>
-              <strong style={{ color: "#525048" }}>Skipped:</strong> {job.skipReason}
+              <strong style={{ color: "var(--text-muted)" }}>Skipped:</strong> {job.skipReason}
             </p>
           )}
         </div>
@@ -570,7 +570,7 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
               background: "rgba(131,127,108,.06)", border: "1px solid rgba(131,127,108,.28)",
               borderRadius: 10, padding: "12px 14px",
             }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: "#42413c", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>
                 Tailored resume · ready to attach
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
@@ -580,7 +580,7 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
                 {typeof job.tailorScore === "number" && (
                   <span style={{
                     fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999,
-                    color: job.tailorScore >= 80 ? "#42413c" : "#6b6858",
+                    color: job.tailorScore >= 80 ? "var(--text-muted)" : "var(--text-muted)",
                     background: job.tailorScore >= 80 ? "rgba(131,127,108,.12)" : "rgba(144,140,119,.12)",
                   }}>match {job.tailorScore}</span>
                 )}
@@ -632,7 +632,7 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
                           }}>
                             <td style={{
                               ...ctd, fontWeight: c.selected || danger ? 700 : 500,
-                              color: danger ? "#13120d" : "var(--text)",
+                              color: danger ? "var(--text)" : "var(--text)",
                               fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                               fontSize: 12, wordBreak: "break-all",
                             }}>
@@ -651,14 +651,14 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
                             </td>
                             <td style={{ ...ctd, whiteSpace: "nowrap" }}>
                               {c.selected ? (
-                                <span style={{ fontSize: 11.5, fontWeight: 800, color: "#42413c" }}>Selected</span>
+                                <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--text-muted)" }}>Selected</span>
                               ) : danger ? (
-                                <span style={{ fontSize: 11.5, fontWeight: 800, color: "#13120d" }}>Blocked</span>
+                                <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--text)" }}>Blocked</span>
                               ) : (
                                 <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--text-soft)" }}>Dropped</span>
                               )}
                             </td>
-                            <td style={{ ...ctd, fontSize: 12, color: danger ? "#13120d" : "var(--text-muted)", lineHeight: 1.5 }}>
+                            <td style={{ ...ctd, fontSize: 12, color: danger ? "var(--text)" : "var(--text-muted)", lineHeight: 1.5 }}>
                               {c.selected ? "—" : (c.reason || cm.note)}
                             </td>
                           </tr>
@@ -670,7 +670,7 @@ function JobCard({ job, expanded, jdOpen, onToggle, onToggleJd }: {
               </div>
             )}
             {candidates.some(c => classOf(c.klass) === "freemail") && (
-              <p style={{ fontSize: 11.5, color: "#13120d", fontWeight: 600, margin: "7px 0 0", lineHeight: 1.6 }}>
+              <p style={{ fontSize: 11.5, color: "var(--text)", fontWeight: 600, margin: "7px 0 0", lineHeight: 1.6 }}>
                 Freemail addresses on a bench-sales thread are competing job candidates CC&apos;d on the same blast.
                 Your resume must never reach them.
               </p>

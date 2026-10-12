@@ -8,8 +8,8 @@ import {
 import PageHeader from "@/components/layout/PageHeader"
 
 const P = {
-  surface: "#ffffff", text: "#161510", muted: "#6e6b5b",
-  hint: "#9d9884", border: "#e6e2d9", bg: "var(--surface)",
+  surface: "var(--surface)", text: "var(--text)", muted: "var(--text-muted)",
+  hint: "var(--text-soft)", border: "var(--border)", bg: "var(--surface)",
 }
 
 // ── Question banks ──────────────────────────────────────────────────────────
@@ -180,7 +180,7 @@ export default function InterviewPrepPage() {
                 const VIcon = v === "bank" ? BookOpen : v === "star" ? Star : Save
                 return (
                   <button key={v} onClick={() => setView(v)}
-                    style={{ padding: "7px 14px", borderRadius: 9, border: `1.5px solid ${view === v ? "var(--accent)" : P.border}`, background: view === v ? "#f2f0ea" : P.surface, color: view === v ? "var(--accent)" : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    style={{ padding: "7px 14px", borderRadius: 9, border: `1.5px solid ${view === v ? "var(--accent)" : P.border}`, background: view === v ? "var(--surface-2)" : P.surface, color: view === v ? "var(--accent)" : P.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
                     <VIcon size={13}/> {v === "bank" ? "Question Bank" : v === "star" ? "STAR Coach" : `Saved (${savedAnswers.length})`}
                   </button>
                 )
@@ -218,7 +218,7 @@ export default function InterviewPrepPage() {
                 const isActive = activeQ === idx
                 return (
                   <div key={idx} onClick={() => { setActiveQ(idx); setMyAnswer(""); setAiAnswer("") }}
-                    style={{ background: isActive ? "#f2f0ea" : P.surface, border: `1.5px solid ${isActive ? "var(--accent)" : P.border}`, borderRadius: 12, padding: "14px 16px", cursor: "pointer", transition: "all .15s" }}>
+                    style={{ background: isActive ? "var(--surface-2)" : P.surface, border: `1.5px solid ${isActive ? "var(--accent)" : P.border}`, borderRadius: 12, padding: "14px 16px", cursor: "pointer", transition: "all .15s" }}>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 6 }}>
                       {q.tags.map(t => {
                         const c = CATEGORIES.find(x => t.toLowerCase().includes(x.id.toLowerCase())) || cat
@@ -258,7 +258,7 @@ export default function InterviewPrepPage() {
                 </div>
 
                 {aiAnswer && (
-                  <div style={{ background: "#f8f7f3", border: "1.5px solid #d9d4c8", borderRadius: 12, padding: "13px 15px" }}>
+                  <div style={{ background: "var(--surface-2)", border: "1.5px solid var(--border-strong)", borderRadius: 12, padding: "13px 15px" }}>
                     <p style={{ fontSize: 11.5, fontWeight: 700, color: "var(--accent)", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}><Sparkles size={11}/> AI MODEL ANSWER</p>
                     <p style={{ fontSize: 13, color: P.text, lineHeight: 1.7 }}>{aiAnswer}</p>
                     <button onClick={() => navigator.clipboard.writeText(aiAnswer)}
@@ -304,7 +304,7 @@ export default function InterviewPrepPage() {
               {loadingCompany ? "Generating STAR answer…" : "Generate STAR Answer"}
             </button>
             {companyAns && (
-              <div style={{ marginTop: 14, background: "var(--surface)", border: "1.5px solid #d9d4c8", borderRadius: 12, padding: "14px 16px", fontSize: 13.5, color: P.text, lineHeight: 1.7 }}>
+              <div style={{ marginTop: 14, background: "var(--surface)", border: "1.5px solid var(--border-strong)", borderRadius: 12, padding: "14px 16px", fontSize: 13.5, color: P.text, lineHeight: 1.7 }}>
                 {companyAns.split("\n").filter(Boolean).map((line, i) => <p key={i} style={{ marginBottom: 6 }}>{line}</p>)}
               </div>
             )}
@@ -323,8 +323,8 @@ export default function InterviewPrepPage() {
                 { bad: "Memorized, robotic delivery", good: "Know the structure, improvise the words" },
               ].map((m, i) => (
                 <div key={i} style={{ padding: "10px 13px", borderRadius: 10, background: P.bg, border: `1px solid ${P.border}` }}>
-                  <p style={{ fontSize: 12, color: "#13120d", marginBottom: 3, display: "flex", alignItems: "center", gap: 4 }}><X size={11}/> {m.bad}</p>
-                  <p style={{ fontSize: 12, color: "#42413c", display: "flex", alignItems: "center", gap: 4 }}><Check size={11}/> {m.good}</p>
+                  <p style={{ fontSize: 12, color: "var(--text)", marginBottom: 3, display: "flex", alignItems: "center", gap: 4 }}><X size={11}/> {m.bad}</p>
+                  <p style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4 }}><Check size={11}/> {m.good}</p>
                 </div>
               ))}
             </div>
@@ -359,7 +359,7 @@ export default function InterviewPrepPage() {
                       <p style={{ fontSize: 13, color: P.text, lineHeight: 1.6 }}>{a.answer}</p>
                     </div>
                     {a.aiAnswer && (
-                      <div style={{ padding: "10px 12px", borderRadius: 9, background: "#f8f7f3", border: "1px solid #d9d4c8" }}>
+                      <div style={{ padding: "10px 12px", borderRadius: 9, background: "var(--surface-2)", border: "1px solid var(--border-strong)" }}>
                         <p style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", marginBottom: 4 }}>AI ANSWER</p>
                         <p style={{ fontSize: 13, color: P.text, lineHeight: 1.6 }}>{a.aiAnswer}</p>
                       </div>

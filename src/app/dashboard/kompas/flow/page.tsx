@@ -34,7 +34,7 @@ export default function FlowPage() {
 
   useOwnDocument()
   // The old Transcribe address, and a reload while Transcribe is showing, open Transcribe.
-  // A past interview can link here with ?company=&role= — shown as reflection context.
+  // A past interview can link here with ?company=&role=: shown as reflection context.
   const [reflectCtx, setReflectCtx] = useState<{ company: string; role: string } | null>(null)
   useEffect(() => {
     const q = new URLSearchParams(window.location.search)

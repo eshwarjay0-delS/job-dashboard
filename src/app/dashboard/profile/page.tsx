@@ -6,11 +6,11 @@ import { Send, Phone, PartyPopper, BarChart3, Check, Zap, Sparkles, Bot, Target,
 import PageHeader from "@/components/layout/PageHeader"
 
 const P = {
-  surface: "#ffffff",
-  text:    "#161510",
-  muted:   "#6e6b5b",
-  hint:    "#9d9884",
-  border:  "#e6e2d9",
+  surface: "var(--surface)",
+  text:    "var(--text)",
+  muted:   "var(--text-muted)",
+  hint:    "var(--text-soft)",
+  border:  "var(--border)",
   bg:      "var(--surface)",
 }
 
@@ -59,10 +59,10 @@ function scoreProfile(p: Profile, apps: AppEntry[]): { score: number; items: Arr
 }
 
 function getStrengthLabel(score: number): { label: string; color: string; bg: string; border: string } {
-  if (score >= 85) return { label: "All-Star",     color: "#42413c", bg: "#f4f2ed", border: "#ddd8cd" }
-  if (score >= 65) return { label: "Advanced",     color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" }
-  if (score >= 45) return { label: "Intermediate", color: "#6b6858", bg: "#f7f5f0", border: "#e4e0d6" }
-  return                   { label: "Beginner",    color: "#13120d", bg: "var(--surface)", border: "#ddd8cd" }
+  if (score >= 85) return { label: "All-Star",     color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border-strong)" }
+  if (score >= 65) return { label: "Advanced",     color: "var(--text)", bg: "var(--surface-2)", border: "var(--border-strong)" }
+  if (score >= 45) return { label: "Intermediate", color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border)" }
+  return                   { label: "Beginner",    color: "var(--text)", bg: "var(--surface)", border: "var(--border-strong)" }
 }
 
 function ProfileRing({ score }: { score: number }) {
@@ -244,9 +244,9 @@ export default function ProfilePage() {
         {/* Funnel stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
           {[
-            { label: "Applied",      value: totalApps,    Icon: Send, color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
-            { label: "Interviews",   value: interviews,    Icon: Phone, color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
-            { label: "Offers",       value: offers,        Icon: PartyPopper, color: "#42413c", bg: "#f4f2ed", border: "#ddd8cd" },
+            { label: "Applied",      value: totalApps,    Icon: Send, color: "var(--text)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+            { label: "Interviews",   value: interviews,    Icon: Phone, color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+            { label: "Offers",       value: offers,        Icon: PartyPopper, color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border-strong)" },
             { label: "Response Rate",value: `${responseRate}%`, Icon: BarChart3, color: "#6b6858", bg: "#f7f5f0", border: "#e4e0d6" },
           ].map(s => (
             <div key={s.label} style={{ background: P.surface, border: `1px solid ${P.border}`, borderRadius: 14, padding: "20px 18px" }}>
@@ -265,21 +265,21 @@ export default function ProfilePage() {
         <div style={{ background: P.surface, border: `1px solid ${P.border}`, borderRadius: 16, padding: "20px 22px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
             <p style={{ fontSize: 15, fontWeight: 800, color: P.text }}>Profile Completeness</p>
-            <div style={{ height: 6, width: 120, background: "#e6e2d9", borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ height: 6, width: 120, background: "var(--surface-3)", borderRadius: 3, overflow: "hidden" }}>
               <div style={{ height: "100%", width: `${score}%`, background: strength.color, borderRadius: 3, transition: "width 1s" }}/>
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {items.map(item => (
               <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: item.done ? "#f4f2ed" : "var(--surface)", border: `1.5px solid ${item.done ? "#ddd8cd" : "#e6e2d9"}` }}>
+                <div style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: item.done ? "var(--surface-2)" : "var(--surface)", border: `1.5px solid ${item.done ? "#ddd8cd" : "#e6e2d9"}` }}>
                   {item.done
                     ? <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="#42413c" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
                     : <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#d3cdc0" }}/>
                   }
                 </div>
                 <p style={{ fontSize: 13, color: item.done ? P.muted : P.text, flex: 1, textDecoration: item.done ? "line-through" : "none", textDecorationColor: "#d3cdc0" }}>{item.label}</p>
-                <span style={{ fontSize: 11, fontWeight: 700, color: item.done ? "#42413c" : P.hint }}>+{item.points}pts</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: item.done ? "var(--text-muted)" : P.hint }}>+{item.points}pts</span>
                 {!item.done && (
                   <Link href={item.href} style={{ fontSize: 11.5, color: "var(--accent)", fontWeight: 600, textDecoration: "none" }}>Fix →</Link>
                 )}
@@ -294,19 +294,19 @@ export default function ProfilePage() {
           <p style={{ fontSize: 12.5, color: P.muted, marginBottom: 16 }}>In-demand skills by role — vs. what's on your profile</p>
 
           <div style={{ marginBottom: 16 }}>
-            <p style={{ fontSize: 11.5, fontWeight: 700, color: "#42413c", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 4 }}><Check size={11}/> You have ({hotHave.length})</p>
+            <p style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 4 }}><Check size={11}/> You have ({hotHave.length})</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {hotHave.length > 0 ? hotHave.slice(0, 10).map(s => (
-                <span key={s} style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 600, background: "#f4f2ed", color: "#42413c", border: "1px solid #ddd8cd" }}>{s}</span>
+                <span key={s} style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 600, background: "var(--surface-2)", color: "var(--text-muted)", border: "1px solid var(--border-strong)" }}>{s}</span>
               )) : <p style={{ fontSize: 12.5, color: P.hint }}>Add skills to your profile to see matches</p>}
             </div>
           </div>
 
           <div>
-            <p style={{ fontSize: 11.5, fontWeight: 700, color: "#6b6858", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 4 }}><Zap size={11}/> High-demand gaps ({hotMissing.length})</p>
+            <p style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 4 }}><Zap size={11}/> High-demand gaps ({hotMissing.length})</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {hotMissing.slice(0, 8).map(s => (
-                <span key={s} style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 600, background: "#f7f5f0", color: "#6b6858", border: "1px solid #e4e0d6" }}>{s}</span>
+                <span key={s} style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 600, background: "var(--surface-2)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>{s}</span>
               ))}
             </div>
           </div>
@@ -327,10 +327,10 @@ export default function ProfilePage() {
           {/* Funnel bars */}
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
             {[
-              { label: "Applied",    count: totalApps,  color: "#11100c", pct: 100 },
-              { label: "Screening",  count: apps.filter(a => a.stage === "screening").length, color: "#4d4b44", pct: totalApps ? (apps.filter(a => a.stage === "screening").length / totalApps) * 100 : 0 },
-              { label: "Interview",  count: interviews, color: "#6b6858", pct: totalApps ? (interviews / totalApps) * 100 : 0 },
-              { label: "Offer",      count: offers,     color: "#42413c", pct: totalApps ? (offers / totalApps) * 100 : 0 },
+              { label: "Applied",    count: totalApps,  color: "var(--text)", pct: 100 },
+              { label: "Screening",  count: apps.filter(a => a.stage === "screening").length, color: "var(--text-muted)", pct: totalApps ? (apps.filter(a => a.stage === "screening").length / totalApps) * 100 : 0 },
+              { label: "Interview",  count: interviews, color: "var(--text-muted)", pct: totalApps ? (interviews / totalApps) * 100 : 0 },
+              { label: "Offer",      count: offers,     color: "var(--text-muted)", pct: totalApps ? (offers / totalApps) * 100 : 0 },
             ].map(row => (
               <div key={row.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <p style={{ fontSize: 12.5, color: P.muted, width: 72, flexShrink: 0 }}>{row.label}</p>
@@ -373,7 +373,7 @@ export default function ProfilePage() {
               {aiTips.map((tip, i) => {
                 const TipIcon = [Target, TrendingUp, Lightbulb, Zap][i] ?? Lightbulb
                 return (
-                  <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "var(--surface)", borderRadius: 12, padding: "10px 14px", border: "1px solid #e6e2d9" }}>
+                  <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "var(--surface)", borderRadius: 12, padding: "10px 14px", border: "1px solid var(--border)" }}>
                     <span style={{ flexShrink: 0, display: "flex" }}><TipIcon size={15}/></span>
                     <p style={{ fontSize: 13, color: P.text, lineHeight: 1.5 }}>{tip.replace(/^["'\d.\-*\s]+/, "")}</p>
                   </div>
@@ -389,10 +389,10 @@ export default function ProfilePage() {
           )}
 
           {/* Quick actions */}
-          <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #e6e2d9", display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Link href="/dashboard/resume" style={{ padding: "6px 13px", borderRadius: 8, background: "#f2f0ea", color: "#11100c", fontSize: 12, fontWeight: 700, textDecoration: "none", border: "1px solid #d9d4c8", display: "inline-flex", alignItems: "center", gap: 5 }}><Sparkles size={12}/> Tailor Resume</Link>
-            <Link href="/dashboard/jobs" style={{ padding: "6px 13px", borderRadius: 8, background: "#f6f4ef", color: "#4d4b44", fontSize: 12, fontWeight: 700, textDecoration: "none", border: "1px solid #e0dcd2", display: "inline-flex", alignItems: "center", gap: 5 }}><Search size={12}/> Browse Jobs</Link>
-            <Link href="/dashboard/network" style={{ padding: "6px 13px", borderRadius: 8, background: "#f4f2ed", color: "#42413c", fontSize: 12, fontWeight: 700, textDecoration: "none", border: "1px solid #ddd8cd", display: "inline-flex", alignItems: "center", gap: 5 }}><Handshake size={12}/> Network</Link>
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--border)", display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link href="/dashboard/resume" style={{ padding: "6px 13px", borderRadius: 8, background: "var(--surface-2)", color: "var(--text)", fontSize: 12, fontWeight: 700, textDecoration: "none", border: "1px solid var(--border-strong)", display: "inline-flex", alignItems: "center", gap: 5 }}><Sparkles size={12}/> Tailor Resume</Link>
+            <Link href="/dashboard/jobs" style={{ padding: "6px 13px", borderRadius: 8, background: "var(--surface-2)", color: "var(--text-muted)", fontSize: 12, fontWeight: 700, textDecoration: "none", border: "1px solid var(--border-strong)", display: "inline-flex", alignItems: "center", gap: 5 }}><Search size={12}/> Browse Jobs</Link>
+            <Link href="/dashboard/network" style={{ padding: "6px 13px", borderRadius: 8, background: "var(--surface-2)", color: "var(--text-muted)", fontSize: 12, fontWeight: 700, textDecoration: "none", border: "1px solid var(--border-strong)", display: "inline-flex", alignItems: "center", gap: 5 }}><Handshake size={12}/> Network</Link>
           </div>
         </div>
       </div>
@@ -412,12 +412,12 @@ export default function ProfilePage() {
             const demand = 55 + (skill.charCodeAt(0) + skill.charCodeAt(skill.length - 1)) % 40
             const isHot = demand >= 80
             return (
-              <div key={skill} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${isHot ? "#d9d4c8" : P.border}`, background: isHot ? "#f8f7f3" : P.bg }}>
+              <div key={skill} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${isHot ? "#d9d4c8" : P.border}`, background: isHot ? "var(--surface-2)" : P.bg }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                   <p style={{ fontSize: 12.5, fontWeight: 700, color: P.text }}>{skill}</p>
-                  {isHot && <span style={{ fontSize: 9.5, fontWeight: 700, color: "#11100c", background: "#f2f0ea", padding: "1px 5px", borderRadius: 20, border: "1px solid #d9d4c8" }}>HOT</span>}
+                  {isHot && <span style={{ fontSize: 9.5, fontWeight: 700, color: "var(--text)", background: "var(--surface-2)", padding: "1px 5px", borderRadius: 20, border: "1px solid var(--border-strong)" }}>HOT</span>}
                 </div>
-                <div style={{ height: 4, background: "#e6e2d9", borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ height: 4, background: "var(--surface-3)", borderRadius: 2, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${demand}%`, background: isHot ? "#11100c" : "#9d9884", borderRadius: 2 }}/>
                 </div>
                 <p style={{ fontSize: 11, color: P.hint, marginTop: 4 }}>{demand}% demand score</p>

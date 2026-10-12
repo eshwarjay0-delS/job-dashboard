@@ -214,8 +214,8 @@ export default function TechPrepPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#161510", letterSpacing: "-0.4px", marginBottom: 4 }}>Technical Prep Tracker</h1>
-          <p style={{ fontSize: 13.5, color: "#6e6b5b" }}>DSA · System Design · Security/CTF · SQL · Behavioral — track your practice, build your streak</p>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.4px", marginBottom: 4 }}>Technical Prep Tracker</h1>
+          <p style={{ fontSize: 13.5, color: "var(--text-muted)" }}>DSA · System Design · Security/CTF · SQL · Behavioral — track your practice, build your streak</p>
         </div>
         <button onClick={() => setShowAdd(true)}
           style={{ padding: "9px 18px", borderRadius: 9, background: "var(--accent)", color: "#fff", fontSize: 13.5, fontWeight: 700, border: "none", cursor: "pointer" }}>
@@ -231,17 +231,17 @@ export default function TechPrepPage() {
           { label: "🔥 Streak",  value: streak,      sub: streak === 1 ? "day" : "days",     color: "#2e2d27" },
           { label: "Today",     value: todaySolved,  sub: "solved today",                    color: "var(--accent)" },
         ].map(s => (
-          <div key={s.label} style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "14px 18px" }}>
+          <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 18px" }}>
             <div style={{ fontSize: 24, fontWeight: 900, color: s.color, letterSpacing: "-0.5px" }}>{s.value}</div>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: "#161510", marginBottom: 1 }}>{s.label}</div>
-            <div style={{ fontSize: 11, color: "#aaa492" }}>{s.sub}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)", marginBottom: 1 }}>{s.label}</div>
+            <div style={{ fontSize: 11, color: "var(--text-soft)" }}>{s.sub}</div>
           </div>
         ))}
       </div>
 
       {/* Category progress bars */}
-      <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "#161510", marginBottom: 12 }}>Progress by Category</div>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>Progress by Category</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
           {CATEGORIES.map(cat => {
             const meta = CAT_META[cat]
@@ -249,13 +249,13 @@ export default function TechPrepPage() {
             const pct  = s.total > 0 ? Math.round(s.solved / s.total * 100) : 0
             return (
               <button key={cat} onClick={() => setActiveTab(cat === activeTab ? "All" : cat)}
-                style={{ textAlign: "left", background: activeTab === cat ? `${meta.color}10` : "#f7f5f0", border: `1.5px solid ${activeTab === cat ? meta.color + "40" : "#f2f0ea"}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
+                style={{ textAlign: "left", background: activeTab === cat ? `${meta.color}10` : "var(--surface-2)", border: `1.5px solid ${activeTab === cat ? meta.color + "40" : "#f2f0ea"}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
                 <div style={{ fontSize: 18, marginBottom: 4 }}>{meta.icon}</div>
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: "#161510", marginBottom: 6 }}>{cat}</div>
-                <div style={{ height: 5, background: "#e6e2d9", borderRadius: 100, overflow: "hidden", marginBottom: 4 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>{cat}</div>
+                <div style={{ height: 5, background: "var(--surface-3)", borderRadius: 100, overflow: "hidden", marginBottom: 4 }}>
                   <div style={{ height: "100%", width: pct + "%", background: meta.color, borderRadius: 100 }}/>
                 </div>
-                <div style={{ fontSize: 10.5, color: "#6e6b5b" }}>{s.solved}/{s.total}</div>
+                <div style={{ fontSize: 10.5, color: "var(--text-muted)" }}>{s.solved}/{s.total}</div>
               </button>
             )
           })}
@@ -265,12 +265,12 @@ export default function TechPrepPage() {
       {/* Filters */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search problems or tags…"
-          style={{ padding: "8px 12px", border: "1.5px solid #e6e2d9", borderRadius: 8, fontSize: 13, flex: "1 1 200px", outline: "none", color: "#161510" }}/>
+          style={{ padding: "8px 12px", border: "1.5px solid var(--border)", borderRadius: 8, fontSize: 13, flex: "1 1 200px", outline: "none", color: "var(--text)" }}/>
         {(["all", "easy", "medium", "hard"] as const).map(d => (
           <button key={d} onClick={() => setFilterDiff(d)}
             style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: "pointer", border: "1.5px solid",
-              borderColor: filterDiff === d ? (d === "all" ? "var(--accent)" : DIFF_META[d]?.color || "var(--accent)") : "#e6e2d9",
-              background: filterDiff === d ? (d === "all" ? "rgba(107,104,88,0.08)" : DIFF_META[d]?.bg || "rgba(107,104,88,0.08)") : "#fff",
+              borderColor: filterDiff === d ? (d === "all" ? "var(--accent)" : DIFF_META[d]?.color || "var(--accent)") : "var(--border)",
+              background: filterDiff === d ? (d === "all" ? "rgba(107,104,88,0.08)" : DIFF_META[d]?.bg || "rgba(107,104,88,0.08)") : "var(--surface)",
               color: filterDiff === d ? (d === "all" ? "var(--accent)" : DIFF_META[d]?.color || "var(--accent)") : "#6e6b5b" }}>
             {d === "all" ? "All Levels" : d.charAt(0).toUpperCase() + d.slice(1)}
           </button>
@@ -278,25 +278,25 @@ export default function TechPrepPage() {
         {(["all", "unsolved", "attempted", "solved"] as const).map(s => (
           <button key={s} onClick={() => setFilterStatus(s)}
             style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: "pointer", border: "1.5px solid",
-              borderColor: filterStatus === s ? "var(--accent)" : "#e6e2d9",
-              background: filterStatus === s ? "rgba(107,104,88,0.08)" : "#fff",
+              borderColor: filterStatus === s ? "var(--accent)" : "var(--border)",
+              background: filterStatus === s ? "rgba(107,104,88,0.08)" : "var(--surface)",
               color: filterStatus === s ? "var(--accent)" : "#6e6b5b" }}>
             {s === "all" ? "All Status" : STATUS_META[s].label}
           </button>
         ))}
         {(activeTab !== "All" || filterDiff !== "all" || filterStatus !== "all" || search) && (
           <button onClick={() => { setActiveTab("All"); setFilterDiff("all"); setFilterStatus("all"); setSearch("") }}
-            style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12, color: "#2e2d27", border: "1px solid #ddd8cd", background: "var(--surface)", cursor: "pointer" }}>
+            style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12, color: "var(--text)", border: "1px solid var(--border-strong)", background: "var(--surface)", cursor: "pointer" }}>
             Clear
           </button>
         )}
-        <span style={{ fontSize: 12.5, color: "#aaa492", marginLeft: "auto" }}>{filtered.length} problems</span>
+        <span style={{ fontSize: 12.5, color: "var(--text-soft)", marginLeft: "auto" }}>{filtered.length} problems</span>
       </div>
 
       {/* Problem List */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: "48px 24px", background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, color: "#aaa492" }}>
+          <div style={{ textAlign: "center", padding: "48px 24px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, color: "var(--text-soft)" }}>
             No problems match your filters
           </div>
         )}
@@ -324,7 +324,7 @@ export default function TechPrepPage() {
               {/* Main content */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, textDecoration: p.status === "solved" ? "line-through" : "none", color: p.status === "solved" ? "#9d9884" : "#161510" }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, textDecoration: p.status === "solved" ? "line-through" : "none", color: p.status === "solved" ? "var(--text-soft)" : "var(--text)" }}>
                     {p.title}
                   </span>
                   <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 100, background: diff.bg, color: diff.color, fontWeight: 700 }}>
@@ -333,22 +333,22 @@ export default function TechPrepPage() {
                   <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 100, background: `${cat.color}12`, color: cat.color, fontWeight: 600 }}>
                     {cat.icon} {p.category}
                   </span>
-                  {p.source && <span style={{ fontSize: 11, color: "#aaa492" }}>{p.source}</span>}
+                  {p.source && <span style={{ fontSize: 11, color: "var(--text-soft)" }}>{p.source}</span>}
                 </div>
                 {p.tags.length > 0 && (
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                     {p.tags.map(t => (
-                      <span key={t} style={{ fontSize: 11, padding: "1px 7px", background: "#f4f2ed", borderRadius: 100, color: "#6b6858" }}>{t}</span>
+                      <span key={t} style={{ fontSize: 11, padding: "1px 7px", background: "var(--surface-2)", borderRadius: 100, color: "var(--text-muted)" }}>{t}</span>
                     ))}
                   </div>
                 )}
                 {p.notes && (
-                  <div style={{ fontSize: 12, color: "#6e6b5b", marginTop: 5, fontStyle: "italic", borderLeft: "2px solid #e6e2d9", paddingLeft: 8 }}>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 5, fontStyle: "italic", borderLeft: "2px solid var(--border)", paddingLeft: 8 }}>
                     {p.notes}
                   </div>
                 )}
                 {(p.solvedAt || p.attemptedAt) && (
-                  <div style={{ fontSize: 11, color: "#aaa492", marginTop: 4 }}>
+                  <div style={{ fontSize: 11, color: "var(--text-soft)", marginTop: 4 }}>
                     {p.solvedAt ? `Solved ${p.solvedAt}` : p.attemptedAt ? `Attempted ${p.attemptedAt}` : ""}
                     {p.timeToSolve ? ` · ${p.timeToSolve}m` : ""}
                   </div>
@@ -358,11 +358,11 @@ export default function TechPrepPage() {
               {/* Actions */}
               <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
                 <button onClick={() => setEditing({ ...p })}
-                  style={{ padding: "5px 10px", background: "transparent", border: "1px solid #e6e2d9", borderRadius: 7, fontSize: 12, color: "#6e6b5b", cursor: "pointer" }}>
+                  style={{ padding: "5px 10px", background: "transparent", border: "1px solid var(--border)", borderRadius: 7, fontSize: 12, color: "var(--text-muted)", cursor: "pointer" }}>
                   Edit
                 </button>
                 <button onClick={() => deleteProblem(p.id)}
-                  style={{ padding: "5px 10px", background: "transparent", border: "1px solid #ddd8cd", borderRadius: 7, fontSize: 12, color: "#2e2d27", cursor: "pointer" }}>
+                  style={{ padding: "5px 10px", background: "transparent", border: "1px solid var(--border-strong)", borderRadius: 7, fontSize: 12, color: "var(--text)", cursor: "pointer" }}>
                   ×
                 </button>
               </div>
@@ -376,9 +376,9 @@ export default function TechPrepPage() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(12,11,8,0.4)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }}
           onClick={e => { if (e.target === e.currentTarget) setEditing(null) }}>
           <div style={{ width: "min(460px, 95vw)", background: "var(--surface)", height: "100%", overflow: "auto", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(12,11,8,0.15)" }}>
-            <div style={{ padding: "20px 24px", borderBottom: "1px solid #f2f0ea", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#161510" }}>Edit Problem</div>
-              <button onClick={() => setEditing(null)} style={{ background: "transparent", border: "none", fontSize: 20, cursor: "pointer", color: "#6e6b5b" }}>×</button>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "var(--text)" }}>Edit Problem</div>
+              <button onClick={() => setEditing(null)} style={{ background: "transparent", border: "none", fontSize: 20, cursor: "pointer", color: "var(--text-muted)" }}>×</button>
             </div>
             <div style={{ padding: "20px 24px", flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
@@ -426,11 +426,11 @@ export default function TechPrepPage() {
                   style={{ ...IS, resize: "vertical" }}/>
               </div>
             </div>
-            <div style={{ padding: "16px 24px", borderTop: "1px solid #f2f0ea", display: "flex", gap: 10 }}>
+            <div style={{ padding: "16px 24px", borderTop: "1px solid var(--border)", display: "flex", gap: 10 }}>
               <button onClick={saveEdit} style={{ flex: 1, padding: "10px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer" }}>
                 Save
               </button>
-              <button onClick={() => { deleteProblem(editing.id); setEditing(null) }} style={{ padding: "10px 16px", background: "transparent", border: "1px solid #ddd8cd", borderRadius: 9, color: "#2e2d27", cursor: "pointer" }}>
+              <button onClick={() => { deleteProblem(editing.id); setEditing(null) }} style={{ padding: "10px 16px", background: "transparent", border: "1px solid var(--border-strong)", borderRadius: 9, color: "var(--text)", cursor: "pointer" }}>
                 Delete
               </button>
             </div>
@@ -443,7 +443,7 @@ export default function TechPrepPage() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(12,11,8,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
           onClick={e => { if (e.target === e.currentTarget) setShowAdd(false) }}>
           <div style={{ background: "var(--surface)", borderRadius: 16, padding: "24px 28px", width: "100%", maxWidth: 500, boxShadow: "0 20px 60px rgba(12,11,8,0.2)" }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#161510", marginBottom: 16 }}>Add Problem</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)", marginBottom: 16 }}>Add Problem</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div>
                 <label style={LS}>Title *</label>
@@ -476,11 +476,11 @@ export default function TechPrepPage() {
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
               <button onClick={addProblem} disabled={!newProblem.title?.trim()}
-                style={{ flex: 1, padding: "10px", background: newProblem.title?.trim() ? "var(--accent)" : "#e6e2d9", color: newProblem.title?.trim() ? "#fff" : "#aaa492", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer" }}>
+                style={{ flex: 1, padding: "10px", background: newProblem.title?.trim() ? "var(--accent)" : "var(--surface-3)", color: newProblem.title?.trim() ? "#fff" : "#aaa492", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer" }}>
                 Add Problem
               </button>
               <button onClick={() => setShowAdd(false)}
-                style={{ padding: "10px 16px", background: "transparent", border: "1.5px solid #e6e2d9", borderRadius: 9, cursor: "pointer", color: "#6e6b5b" }}>
+                style={{ padding: "10px 16px", background: "transparent", border: "1.5px solid var(--border)", borderRadius: 9, cursor: "pointer", color: "var(--text-muted)" }}>
                 Cancel
               </button>
             </div>
