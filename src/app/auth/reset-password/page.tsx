@@ -11,11 +11,19 @@ export default function ResetPasswordPage() {
   const [ready,setReady]=useState(false)
   const [accountEmail,setAccountEmail]=useState("")
   const [loading,setLoading]=useState(false)
+  const [setupEmail,setSetupEmail]=useState("eshwarjay05@gmail.com")
   useEffect(()=>{
     const supabase=createClient()
     void (async()=>{
       const params = new URLSearchParams(window.location.search)
       const code = params.get("code")
+      const tokenHash = params.get("token_hash")
+      const type = params.get("type")
+      if (tokenHash && type === "recovery") {
+        const {error}=await supabase.auth.verifyOtp({token_hash:tokenHash,type:"recovery"})
+        if(error){setMessage(`Recovery link failed: ${error.message}`);return}
+        window.history.replaceState({}, "", window.location.pathname)
+      }
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code)
         if (error) { setMessage("This setup link is invalid or expired. Request a new link."); return }
@@ -40,6 +48,7 @@ export default function ResetPasswordPage() {
     const {data:identity}=await client.auth.getUser()
     if(!identity.user || !["eshwarjay05@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes((identity.user.email||"").toLowerCase())) {setLoading(false);setMessage("Not an approved account.");return}
     const {error}=await client.auth.updateUser({password})
+    if(!error){const {data:check}=await client.auth.getUser();if(!check.user){setLoading(false);setMessage("Password update could not be verified. Sign in again and retry.");return}}
     setLoading(false)
     setMessage(error?error.message:"Password updated. You can now sign in.")
     if(!error){setPassword("");setConfirm("")}
@@ -48,6 +57,7 @@ export default function ResetPasswordPage() {
     <h1>Set your MarketFit password</h1>
     <p>{message}</p>
     {accountEmail && <p>Signed in as: <strong>{accountEmail}</strong></p>}
+    {!ready && <form onSubmit={async e=>{e.preventDefault();setLoading(true);const {error}=await createClient().auth.resetPasswordForEmail(setupEmail.trim().toLowerCase(),{redirectTo:`${window.location.origin}/auth/reset-password`});setLoading(false);setMessage(error?error.message:"If this account exists, a password setup link has been sent to its inbox.")}} style={{display:"grid",gap:12}}><label htmlFor="setup-email">Account email</label><input id="setup-email" type="email" value={setupEmail} onChange={e=>setSetupEmail(e.target.value)} required/><button type="submit" disabled={loading}>Email me a password setup link</button></form>}
     {ready && <form onSubmit={save} style={{display:"grid",gap:12}}>
       <label htmlFor="new-pass">New password</label>
       <input id="new-pass" type="password" autoComplete="new-password" required minLength={12} value={password} onChange={e=>setPassword(e.target.value)}/>
