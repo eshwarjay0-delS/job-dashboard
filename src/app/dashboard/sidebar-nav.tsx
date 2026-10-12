@@ -37,11 +37,13 @@ function useCreditSummary() {
   return s
 }
 
-function ExplainerPanel({ s, onClose }: { s: CreditSummary; onClose: () => void }) {
+function ExplainerPanel({ s, onClose, align = "left" }: { s: CreditSummary; onClose: () => void; align?: "left" | "right" }) {
   return (
     <div onClick={e => e.stopPropagation()}
       style={{
-        position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 600, width: 260,
+        position: "absolute", top: "calc(100% + 8px)", zIndex: 600,
+        ...(align === "right" ? { right: 0 } : { left: 0 }),
+        width: 260, maxWidth: "calc(100vw - 24px)",
         borderRadius: 14, border: "1px solid var(--border)", background: "var(--surface)",
         boxShadow: "0 12px 40px rgba(32,31,25,.18)", padding: "14px 16px", textAlign: "left",
       }}>
@@ -78,7 +80,7 @@ function CreditsPill() {
         <span aria-hidden="true">◉</span>
         <span>{s.resumesLeft.toLocaleString()} resumes · {s.sessionsLeft} sessions left</span>
       </button>
-      {open && <ExplainerPanel s={s} onClose={() => setOpen(false)} />}
+      {open && <ExplainerPanel s={s} onClose={() => setOpen(false)} align="left" />}
     </div>
   )
 }
@@ -93,7 +95,7 @@ function CreditsPillCompact() {
         style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", background: "none", border: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer", padding: 0 }}>
         ◉ {s.resumesLeft > 999 ? `${(s.resumesLeft / 1000).toFixed(1)}k` : s.resumesLeft}r · {s.sessionsLeft}s
       </button>
-      {open && <ExplainerPanel s={s} onClose={() => setOpen(false)} />}
+      {open && <ExplainerPanel s={s} onClose={() => setOpen(false)} align="right" />}
     </div>
   )
 }
