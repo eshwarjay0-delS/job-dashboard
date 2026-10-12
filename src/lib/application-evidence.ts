@@ -4,18 +4,36 @@ export function emailAddress(value: string): string {
 }
 
 export function authoredText(body: string): string {
-  return body.split(/\n\s*(?:On .+wrote:|From:|>+|[-_]{3,}\s*(?:Original|Forwarded))/i)[0].trim()
+  return body.split(/(?:^|\n)\s*(?:On [^\n]*(?:\n[^\n]*){0,3}?wrote:|From:|>+|[-_]{3,}\s*(?:Original|Forwarded))/i)[0].trim()
 }
 
-export function submissionEvidence(body: string): { submitted: boolean; client: boolean; recipient?: string; quote?: string } {
-  const sentences = authoredText(body).split(/(?<=[.!?])\s+|\n/)
+export interface SubmissionEvidence {
+  submitted: boolean
+  client: boolean
+  targetKind?: "client" | "end_client" | "partner" | "recipient" | "unknown"
+  recipient?: string
+  recipientLabel?: string
+  quote?: string
+}
+
+export function submissionEvidence(body: string): SubmissionEvidence {
+  // Match completed clauses, not entire sentences: a later promise does not
+  // invalidate an earlier completed submission. Unfold MIME hard line wraps.
+  const sentences = authoredText(body).replace(/\*/g, "").replace(/\s+/g, " ").split(/(?<=[.!?])\s+|;|\s+(?:and|but)\s+(?=(?:soon\s+)?(?:I|we|will|you|please)\b)/i)
+  const proofs: SubmissionEvidence[] = []
   for (const sentence of sentences) {
-    if (/\b(not|never|haven't|hasn't|hadn't|will|would|could|can|please|if|once|plan|planning|pending)\b|\?/i.test(sentence)) continue
-    if (!/\b(?:I|we)\s+(?:have\s+)?(?:submitted|forwarded|shared|sent)\s+(?:your|the)\s+(?:profile|resume)\b|\b(?:your|the)\s+(?:profile|resume)\s+(?:(?:has been|was)\s+)(?:submitted|forwarded|shared|sent)\b/i.test(sentence)) continue
-    const target = sentence.match(/\bto\s+(.+)$/i)?.[1] || ""
-    return { submitted: true, client: /\b(?:end client|hiring manager|end customer)\b/i.test(target), recipient: emailAddress(target) || undefined, quote: sentence.trim() }
+    if (/\b(not|never|haven't|hasn't|hadn't|isn't|wasn't|will|would|could|can|please|if|once|plan|planning|pending)\b|\?/i.test(sentence)) continue
+    const completed = /\b(?:I|we)\s+(?:(?:have|had|already|just|successfully)\s+)*(?:submitted|forwarded|shared|sent)\s+(?:your|the)\s+(?:profile|resume|CV)\b|\b(?:your|the)\s+(?:profile|resume|CV)\s+(?:(?:has been|was|is|already|successfully)\s+)*(?:submitted|forwarded|shared|sent)\b|^(?:submitted|forwarded|shared|sent)\s+(?:your|the)\s+(?:profile|resume|CV)\b|^(?:profile|resume|CV)\s+(?:(?:has been|was|is|already|successfully)\s+)*(?:submitted|forwarded|shared|sent)\b/i
+    const action = sentence.match(completed)
+    if (!action) continue
+    const afterAction = sentence.slice((action.index || 0) + action[0].length)
+    const target = (afterAction.match(/\b(?:to|with)\s+(.+)$/i)?.[1] || "").replace(/\s+(?:for|regarding)\s+.*$/i, "").replace(/[.,;]+$/, "").trim()
+    const partner = /\b(?:partner|vendor|agency|staffing)\b/i.test(target)
+    const endClient = !partner && /\b(?:end[ -]client|hiring manager|end[ -]customer)\b/i.test(target)
+    const client = !partner && /\b(?:client|customer|hiring manager)\b/i.test(target)
+    proofs.push({ submitted: true, client, targetKind: partner ? "partner" : endClient ? "end_client" : client ? "client" : target ? "recipient" : "unknown", recipient: emailAddress(target) || undefined, recipientLabel: target.slice(0, 120) || undefined, quote: sentence.trim() })
   }
-  return { submitted: false, client: false }
+  return proofs.find(p => p.client) || proofs.at(-1) || { submitted: false, client: false }
 }
 
 export interface CalendarEvidence { uid: string; start?: number; end?: number; cancelled: boolean; summary: string }
@@ -56,7 +74,7 @@ export function gmailEvidenceUrl(account: string, messageId: string): string {
 
 export interface LinkableThread {
   threadId: string; accountEmail: string;
-  messages: Array<{ id: string; internalDate?: string; rfcMessageId?: string; references?: string; sourceThreadId?: string }>
+  messages: Array<{ id: string; internalDate?: string; rfcMessageId?: string; references?: string; sourceThreadId?: string; subject?: string; from?: string; to?: string; cc?: string }>
 }
 // Only explicit email reference headers merge conversations. Name/domain signals
 // can suggest a search, but cannot create a confirmed transfer.
@@ -72,6 +90,23 @@ export function linkReferencedThreads<T extends LinkableThread>(input: T[]): Arr
       if (other !== undefined) parents[root(i)] = root(other)
     }
   }))
+  // A requisition ID plus the same exact external participant can reconcile
+  // separate RTR/update threads. Role titles, domains and first names alone
+  // never establish an application identity or a transfer.
+  const requisitions = new Map<string, number>()
+  ordered.forEach((t, i) => {
+    const ids = [...new Set(t.messages.flatMap(m => m.subject?.match(/\b\d{5,9}(?:-\d+)?\b/g) || []))]
+    if (ids.length !== 1) return
+    const participants = new Set(t.messages.flatMap(m => `${m.from || ""} ${m.to || ""}`.match(/[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []).map(s => s.toLowerCase()))
+    participants.delete(t.accountEmail.toLowerCase())
+    for (const email of participants) {
+      if (/^(?:no-?reply|notifications?|calendar)[@+]/i.test(email)) continue
+      const key = `${t.accountEmail.toLowerCase()}:${ids[0]}:${email}`
+      const other = requisitions.get(key)
+      if (other !== undefined) parents[root(i)] = root(other)
+      requisitions.set(key, i)
+    }
+  })
   const groups = new Map<number, T[]>()
   ordered.forEach((t, i) => { const key = root(i); groups.set(key, [...(groups.get(key) || []), t]) })
   return [...groups.values()].map(group => {

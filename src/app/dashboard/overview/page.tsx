@@ -63,7 +63,7 @@ function TrackBar({ chain }: { chain: ApplicationChain }) {
                 fontWeight: reached ? 700 : 400, whiteSpace: "nowrap",
                 overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%",
               }}>
-                {terminal ? (chain.terminal === "offer" ? "Offer" : "Rejected") : s.label}
+                {terminal ? (chain.terminal === "offer" ? "Offer" : "Rejected") : chain.stops.find(stop => stop.key === s.key)?.label || s.label}
               </span>
             </div>
           )
@@ -271,7 +271,7 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
           {chain.stops.filter(s => s.reached).map(s => (
             <div key={s.key} style={{ display: "flex", gap: 10, padding: "7px 0", borderTop: "1px solid var(--border)", fontSize: 13.5 }}>
               <span style={{ fontWeight: 700, flex: "none", minWidth: 88 }}>{s.label}</span>
-              <span style={{ color: "var(--text-muted)" }}>{fmtDate(s.at)}{s.evidence ? ` · ${s.evidence}` : ""}</span>
+              <span style={{ color: "var(--text-muted)" }}>{fmtDate(s.at)}{s.evidence ? ` · ${s.evidence}` : ""}{s.messageId && <> · <a href={gmailEvidenceUrl(chain.accountEmail, s.messageId)} target="_blank" rel="noreferrer">Source email</a></>}</span>
             </div>
           ))}
         </div>
@@ -291,6 +291,11 @@ function ChainRow({ chain, onView }: { chain: ApplicationChain; onView: () => vo
           <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 1 }}>
             {chain.role}{chain.rate ? ` · ${chain.rate}` : ""}
           </div>
+          {chain.latestProgress && <div style={{ fontSize: 13, marginTop: 8, padding: 10, background: "var(--surface-2)", borderRadius: 8 }}>
+            <strong>{chain.latestProgress.label}</strong> · {fmtDate(chain.latestProgress.at)}
+            <div>{chain.latestProgress.quote}</div>
+            <div>Reported destination: {chain.holder} · <a href={gmailEvidenceUrl(chain.accountEmail, chain.latestProgress.messageId)} target="_blank" rel="noreferrer">Source email</a></div>
+          </div>}
           {chain.stalledDays >= 7 && !chain.terminal && (
             <div style={{ fontSize: 12, color: "var(--warning)", marginTop: 3, fontWeight: 600 }}>
               Quiet {chain.stalledDays}d — recipient: {chain.holder}
@@ -360,25 +365,68 @@ function OverviewInner() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [chains, setChains] = useState<ApplicationChain[]>([])
   const [loading, setLoading] = useState(true)
+  const [scanning, setScanning] = useState(false)
+  const [scanStatus, setScanStatus] = useState("")
   const [error, setError] = useState("")
   const [viewId, setViewId] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
+    const controller = new AbortController()
     setLoading(true)
+    setScanning(true)
+    setChains([])
+    setIssues([])
     setError("")
-    fetch(`/api/gmail/application-chains?days=90&account=${encodeURIComponent(account)}${refreshKey ? "&refresh=1" : ""}`, { cache: "no-store" })
-      .then(r => r.json())
-      .then(j => {
-        if (!active) return
-        setAccounts(j.accounts || [])
-        setIssues((j.issues || []).map((i: { account: string; reason: string }) => `${i.account}: ${i.reason}`))
-        if (j.ok) setChains(j.chains || [])
-        else setError(j.error || "Could not load submissions.")
-        setLoading(false)
-      })
-      .catch(() => { if (active) { setError("Could not load submissions."); setLoading(false) } })
-    return () => { active = false }
+    setScanStatus("Reading submission evidence from Gmail…")
+    async function scan() {
+      const byAccount = new Map<string, ApplicationChain[]>()
+      const discovery = await fetch("/api/gmail/application-chains?accountsOnly=1", { cache: "no-store", signal: controller.signal })
+      const connections = await discovery.json()
+      if (!discovery.ok || !connections.ok) throw new Error(connections.error || "Could not load connected inboxes")
+      if (!active) return
+      setAccounts(connections.accounts || [])
+      const pending: string[] = account ? [account] : connections.accounts || []
+      const failures = new Map<string, string>()
+      let scanned = 0
+      // Read important progress from every inbox before backfilling the rest.
+      for (const phase of ["progress", "history"]) {
+        for (const selected of pending) {
+          if (!active) return
+          if (failures.has(selected)) continue
+          let token: string | null = null
+          const seen = new Set<string>()
+          try {
+            do {
+              const query = new URLSearchParams({ days: "90", scan: "1", account: selected, phase })
+              if (token) query.set("pageToken", token)
+              const response = await fetch(`/api/gmail/application-chains?${query}`, { cache: "no-store", signal: controller.signal })
+              const j = await response.json()
+              if (!active) return
+              if (!response.ok || !j.ok) throw new Error(j.error || "Could not read history")
+              byAccount.set(selected, j.chains || [])
+              setChains([...byAccount.values()].flat())
+              setLoading(false)
+              scanned += j.scanned || 0
+              token = j.nextPageToken || null
+              if (token && seen.has(token)) throw new Error("Gmail repeated a history page")
+              if (token) seen.add(token)
+              setScanStatus(`Reading ${selected}: ${scanned} conversation checks. Older updates are still loading.`)
+            } while (token && active)
+          } catch (e) {
+            if (!active) return
+            failures.set(selected, `${selected}: ${e instanceof Error ? e.message : "Could not read history"}. History is incomplete. Refresh to retry.`)
+            setIssues([...failures.values()])
+          }
+        }
+      }
+      if (active) setScanStatus(failures.size
+        ? `History incomplete for ${failures.size} inboxes. ${scanned} conversation checks completed.`
+        : `History scan finished for ${pending.length} inboxes. ${scanned} conversation checks completed.`)
+    }
+    scan().catch(e => { if (active) { setIssues([`History scan stopped before completion: ${e.message}. Refresh history to retry.`]); setScanStatus("History incomplete. Displayed stages may change as more emails are read.") } })
+      .finally(() => { if (active) { setLoading(false); setScanning(false) } })
+    return () => { active = false; controller.abort() }
   }, [account, refreshKey])
 
   // Deep link: /dashboard/overview?chain=<threadId> opens that mind map.
@@ -403,7 +451,7 @@ function OverviewInner() {
   const viewing = viewId ? chains.find(c => (c.threadId === viewId || c.sourceThreadIds?.includes(viewId)) && (!account || c.accountEmail === account)) || null : null
   const interviews = chains.filter(c => c.stops.some(s => s.key === "interview" && s.reached)).length
 
-  if (viewing && !loading) return <MindMap chain={viewing} onClose={() => router.push(`/dashboard/overview?account=${encodeURIComponent(viewing.accountEmail)}`)} />
+  if (viewing && !loading) return <><p role="status">{scanStatus}</p>{issues.map(issue => <p key={issue} role="alert">{issue}</p>)}<MindMap chain={viewing} onClose={() => router.push(`/dashboard/overview?account=${encodeURIComponent(viewing.accountEmail)}`)} /></>
 
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto" }}>
@@ -414,9 +462,10 @@ function OverviewInner() {
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <label>Inbox <select aria-label="Filter inbox" value={account} onChange={e => router.push(`/dashboard/overview?account=${encodeURIComponent(e.target.value)}`)}><option value="">All connected inboxes</option>{accounts.map(a => <option key={a} value={a}>{a}</option>)}</select></label>
-        <button className="btn-outline" disabled={loading} onClick={() => setRefreshKey(k => k + 1)}>Refresh history</button>
+        <button className="btn-outline" disabled={scanning} onClick={() => setRefreshKey(k => k + 1)}>{scanning ? "Reading history…" : "Refresh history"}</button>
       </div>
       <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Last 90 days. Counts reflect scanned matching emails. Open circles are evidence gaps.</p>
+      <p role="status" style={{ fontSize: 13 }}>{scanStatus}</p>
       {issues.map(issue => <p role="status" key={issue}>{issue}</p>)}
       {viewId && !viewing && !loading && <p role="status">This chain was not found in the scanned history for this inbox.</p>}
       {loading ? (
