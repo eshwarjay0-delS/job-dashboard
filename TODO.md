@@ -1,3 +1,27 @@
+## 2026-10-12 — Resume Formatting, rebuilt (Claude Code)
+
+The owner: "And also this had implemented so sloppy as well. wheenever you get implement this perfectly. https://job-dashboard-fawn.vercel.app/dashboard/resume/format"
+
+**What was wrong, with the proof, and the fix for each**
+
+1. **The result did not look like a resume.** `resumeBlocks` knew four kinds of line (name, heading, bullet, the rest), so "Software Engineer | Northstar Labs | 2023 – Present" was an ordinary paragraph in all ten templates: no weight on the title, the dates wherever the line ended. Ten templates were one page of plain text in ten fonts. **Fix** (`src/lib/resume-formatting.ts`): a line with its dates is an *entry* (title in weight on the left, dates at the right edge: a flexible row on the page, a right tab stop in the Word file); a "Languages: Python, Go" line under a skills heading carries its label in weight; everything above the first section title is the person's header; a two-to-five-word line in capitals is a section title even when it is not on the list of known ones. A sentence that merely ends in a year ("migrated the platform in 2021") stays a sentence. No word is changed or dropped.
+2. **The order was backwards.** Ten sample resumes came first and the person's own last, behind a second "Load my resume" button that appeared only after a file was chosen. **Fix** (`format/page.tsx`): three steps, top to bottom: your resume, the look, the download. Choosing a file loads it at once.
+3. **The preview was somewhere else.** Choosing a template scrolled the page down to it. **Fix**: the sheet stays beside the steps, and every thumbnail is the person's own resume once it is loaded.
+4. **A long resume was cut off at one page**, with a note saying to scroll inside the frame. **Fix**: the sheet is as long as the resume, with a dashed line where each page ends and the page count in words.
+5. **The page had colours of its own** (`#e5e7eb`, `#b91c1c`, `#fff` panels). **Fix**: theme tokens; only the sheet is white, in every theme, because it is paper.
+6. **"Print" opened a new window**, which browsers block. **Fix**: it prints from a frame inside the page.
+
+**Verified**
+
+- `scripts/tests/resume-structure.test.mjs`, 7 of 7 (new): entries, sentences that only end in a year, the header, capitals titles, skill labels, the row and the tab stop in all ten templates, every word of a resume still in the Word file, nothing typed can become markup. The three existing formatter tests still pass.
+- In the local preview: the sample shows five entries with dates at the right edge; pasting a 70-line resume gives "Your resume · 2 pages" with one page line, thumbnails of that resume, and the download buttons come alive; a shorter resume goes back to 1 page; Start over returns to the sample. Night: nothing unreadable, and the sheet stays white.
+
+**NOT verified**
+
+- **Uploading a Word file and downloading one**: both go through `/api/resume/format`, which needs a signed-in person. The Word file itself is built and read back in the tests; the round trip through the browser was not made.
+- **Save as PDF**: the print window cannot be seen from here.
+- **How it reads a real resume of his.** The rules were written against common shapes (bars, commas, month and year, slashes). A resume laid out in tables or two columns in Word loses that layout when its text is taken out: the words survive, the columns do not.
+
 ## 2026-10-12 — Pages that kept paper colours of their own now follow the theme (Claude Code)
 
 The owner's dark-mode eye strain (8 Oct) had one cause left: pages that write colours as literal hex showed paper-white boxes on the night page. This is the pass over those pages. It was first made on 8 Oct and lost to a session limit before it was committed; it is re-made here on top of the 87 commits that landed since.
