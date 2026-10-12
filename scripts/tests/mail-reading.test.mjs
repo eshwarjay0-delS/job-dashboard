@@ -30,7 +30,8 @@ test('the codes Gmail leaves in a snippet become the characters they stand for',
 })
 
 test('a sender is shown by name, once', () => {
-  assert.deepEqual([senderName('Dana Whitfield <dana@x.example>'), senderName('"Whitfield, Dana" <dana@x.example>'), senderName('dana.whitfield@x.example'), senderName('<dana@x.example>')], ['Dana Whitfield', 'Whitfield, Dana', 'dana.whitfield', 'dana'])
+  assert.deepEqual([senderName('Dana Whitfield <dana@x.example>'), senderName('"Whitfield, Dana" <dana@x.example>'), senderName('dana.whitfield@x.example'), senderName('<dana@x.example>')], ['Dana Whitfield', 'Dana Whitfield', 'dana.whitfield', 'dana'], '"Whitfield, Dana" is said the way people say it')
+  assert.equal(senderName('Northpier Staffing, Inc <jobs@x.example>'), 'Northpier Staffing, Inc', 'a company with a comma is not a person to turn round')
   assert.equal(senderEmail('Dana Whitfield <Dana.Whitfield@X.example>'), 'dana.whitfield@x.example')
 })
 
@@ -75,7 +76,7 @@ test('a link is shown by its name and where it goes, and a staffing system\'s op
 test('a conversation is read oldest first, each message with its own words and who wrote it', () => {
   const r = readThread(THREAD, [ME])
   assert.equal(r.subject, 'Cybersecurity Analyst 220417 || State agency || Madison, WI (Hybrid)', 'the subject without its "Re:"')
-  assert.deepEqual(r.messages.map((m) => [m.who, m.mine]), [['Dana Whitfield', false], ['Me', true], ['Whitfield, Dana', false]])
+  assert.deepEqual(r.messages.map((m) => [m.who, m.mine]), [['Dana Whitfield', false], ['Me', true], ['Dana Whitfield', false]])
   assert.ok(r.messages[1].text.includes("bachelor's") && !r.messages[1].text.includes('wrote:'), 'no code and no quoted history in what is read')
   assert.ok(r.messages[1].earlier.includes('I have an urgent role'), 'the history is kept for "show earlier"')
   assert.ok(r.messages[2].text.startsWith('Thank you. Please confirm the rate of $62/hr on C2C'), 'the latest message says what it says, not its signature')
@@ -87,7 +88,7 @@ test('a conversation is read oldest first, each message with its own words and w
 
 test('the numbers and addresses to reach them are the ones THEY wrote', () => {
   const c = contactsOf(readThread(THREAD, [ME]))
-  assert.deepEqual(c.phones, [{ number: '(608) 555-0142 ext. 204', who: 'Dana Whitfield' }, { number: '(608) 555-0199', who: 'Whitfield, Dana' }])
+  assert.deepEqual(c.phones, [{ number: '(608) 555-0142 ext. 204', who: 'Dana Whitfield' }, { number: '(608) 555-0199', who: 'Dana Whitfield' }])
   assert.deepEqual(c.emails.map((e) => e.email), ['dana.whitfield@northpier-staffing.example'])
   assert.ok(!JSON.stringify(c).includes('555-010-7788') && !JSON.stringify(c).includes('5550107788') && !JSON.stringify(c).includes(ME), 'never the person\'s own number or address')
   const none = contactsOf({ subject: '', messages: [{ id: '1', who: 'A', email: 'a@b.example', mine: false, at: 0, text: 'Job 166719, posted 10/12/2026, pay 62.50, ref 2204170098765.', earlier: '', footer: false }] })
@@ -109,6 +110,23 @@ test('an ask is open only if they made it after you last wrote', () => {
   assert.match(lib, /yourTurn: !!askKind\(pendingAsk\?\.category\)/); assert.match(lib, /lastMine: turn\.lastMine/)
 })
 
+test('"no news yet, I will follow up" leaves the turn with them', async () => {
+  // Read on the owner's mail, 12 Oct 2026: the first mail under "Your turn" was a recruiter saying there was no update.
+  const { saysWaitForUs } = await import('../../src/lib/mail-reading.ts')
+  assert.equal(saysWaitForUs("Hi,\n\nWe haven't received any updates regarding this role yet. I will follow up and provide you with an update as soon as I receive one.\nThank you!"), true)
+  assert.equal(saysWaitForUs('No update yet from the client. We will keep you posted.'), true)
+  assert.equal(saysWaitForUs('Still awaiting feedback from the manager.'), true)
+  assert.equal(saysWaitForUs('I will follow up with the client. Could you send your updated resume?'), false, 'one question and it is an ask')
+  assert.equal(saysWaitForUs('No update yet. Please confirm your rate in the meantime.'), false)
+  assert.equal(saysWaitForUs('Please sign the attached Right to Represent.'), false)
+  assert.equal(saysWaitForUs('I will let you know.\n\nOn Mon, Oct 12, 2026 at 9:14 AM Me <me@example.com> wrote:\n> Could you confirm?'), true, 'a question in the quoted history is not theirs')
+  assert.equal(saysWaitForUs(''), false)
+  const lib = read('src/app/api/gmail/_lib.ts')
+  assert.match(lib, /&& !saysWaitForUs\(turn\.since\[turn\.since\.length - 1\]\?\.bodyText/)
+  assert.equal(tidy('Reach me at dana@site.example<mailto:dana@site.example> or call.'), 'Reach me at dana@site.example or call.', 'an address written twice by a mail program is shown once')
+  assert.match(read('src/app/dashboard/mail/_components/mail-row.tsx'), /decodeEntities\(m\.preview\)\.replace\(\/\[_=\*~-\]\{4,\}\/g, " "\)/, 'a row of underscores is not how a mail begins')
+})
+
 test('a row says what the mail is about in the words a person would use: the job', () => {
   // The shapes of real subject lines on those inboxes; the words are made up.
   assert.equal(aboutOf('Re: Urgent Hiring II Cybersecurity Analyst 220417 II State agency - Department of Records II Madison, WI (HYBRID)'), 'Cybersecurity Analyst')
@@ -116,6 +134,10 @@ test('a row says what the mail is about in the words a person would use: the job
   assert.equal(aboutOf('DFI - Security Analyst II ( 220417) ---- RTR &amp; On-site Requirement Acknowledgement'), 'Security Analyst II', 'a grade is not a divider, and the request number goes')
   assert.equal(aboutOf('Fwd: Immediate need: IAM Architect (C2C)'), 'IAM Architect')
   assert.equal(aboutOf('Senior IAM Engineer'), 'Senior IAM Engineer')
+  // Two real shapes read on his mail on 12 Oct that the first version got wrong ("SRE", "-Network Security Analyst 1").
+  assert.equal(aboutOf('Interview Slots Available - SRE With Java Experience -100% Remote (Fulltime)'), 'SRE With Java Experience')
+  assert.equal(aboutOf('Jordan Rivera - 220417 -Network Security Analyst 1 - Austin, TX - State Health Commission'), 'Network Security Analyst 1')
+  assert.equal(aboutOf('On-site Security Engineer - Denver'), 'On-site Security Engineer', 'a hyphen inside a word is not a divider')
   assert.equal(aboutOf('RTR Confirmation_State Of Wisconsin'), 'RTR Confirmation State Of Wisconsin', 'no job named: the subject, tidied')
   assert.equal(aboutOf('Northwind - Right to Represent - Please respond ASAP'), 'Northwind - Right to Represent - Please respond ASAP')
   assert.equal(aboutOf(''), ''); assert.ok(aboutOf('x'.repeat(200)).length <= 78)

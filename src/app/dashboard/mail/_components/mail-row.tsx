@@ -31,7 +31,7 @@ export default function MailRow({ m, on, restored, leaving, onClick, tint, inbox
           <span style={{ fontSize: 11.5, color: "var(--text-muted)", whiteSpace: "nowrap", flex: "none" }}>{m.at}</span>
         </div>
         <div style={{ ...oneLine, fontSize: 13, color: "var(--text)", marginTop: 1 }}>{aboutOf(m.role) || decodeEntities(m.role)}</div>
-        <div style={{ ...oneLine, fontSize: 12.5, color: "var(--text-muted)", marginTop: 2 }}>{decodeEntities(m.preview)}</div>
+        <div style={{ ...oneLine, fontSize: 12.5, color: "var(--text-muted)", marginTop: 2 }}>{decodeEntities(m.preview).replace(/[_=*~-]{4,}/g, " ").replace(/\s+/g, " ").trim()}</div>
         <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 7, minWidth: 0 }}>
           {restored ? <StagePill stage="applied" label="Restored" /> : <StagePill stage={m.stage} />}
           <span style={{ ...oneLine, fontSize: 11.5, color: "var(--text-muted)" }}>{m.lastMine ? `You wrote last · from ${inbox}` : `${org ? org + " · " : ""}to ${inbox}`}</span>

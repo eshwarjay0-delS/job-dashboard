@@ -8,7 +8,7 @@ import { classifyEmail, type EmailCategory } from "@/lib/email-classifier"
 import type { Mail, Stage, App, Interview } from "@/app/dashboard/_suite/sample"
 
 import { emailAddress, authoredText, submissionEvidence, calendarEvidence, linkReferencedThreads, type CalendarEvidence } from "@/lib/application-evidence"
-import { turnOf } from "@/lib/mail-reading"
+import { turnOf, saysWaitForUs } from "@/lib/mail-reading"
 
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me"
 
@@ -613,7 +613,8 @@ export function threadsToMails(threads: ClassifiedThread[]): Mail[] {
       rate: primary.rate || undefined,
       unread: t.messages.some(m => m.unread),
       needsReply,
-      yourTurn: !!askKind(pendingAsk?.category),
+      // Not your turn when the last thing they wrote says they will come back to you and asks nothing.
+      yourTurn: !!askKind(pendingAsk?.category) && !saysWaitForUs(turn.since[turn.since.length - 1]?.bodyText || turn.since[turn.since.length - 1]?.snippet || ""),
       lastMine: turn.lastMine,
       messages: t.messages.length,
       jdFit: jdFit.score,

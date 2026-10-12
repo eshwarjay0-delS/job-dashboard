@@ -42,8 +42,21 @@ export function senderName(from: string): string {
   const raw = decodeEntities(String(from || "")).trim()
   const email = raw.match(/[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || ""
   const name = raw.replace(/<[^>]*>/g, "").replace(email, "").replace(/^["'\s]+|["'\s]+$/g, "").trim()
+  // A directory writes "Dasari, Jeevan". People say "Jeevan Dasari", and the first word is then the name to greet by.
+  const flipped = /^([^,]{2,30}),\s*([^,]{2,30})$/.exec(name)
+  if (flipped && !/\b(?:inc|llc|ltd|corp|co|group|team|via)\b/i.test(name)) return `${flipped[2]!.trim()} ${flipped[1]!.trim()}`
   if (name) return name
   return email ? email.split("@")[0]! : raw
+}
+
+/* Is the last thing they wrote a "nothing for you to do yet"? Read on the owner's mail, 12 Oct 2026: the first mail under
+   "Your turn" said they had no update and would follow up. A message that says they will come back to you, and asks
+   nothing, leaves the turn with them. Conservative on purpose: one question mark or one "please" and it is an ask. */
+const THEY_WILL = /\b(?:(?:i|we)(?:'ll| will| shall) (?:follow up|keep you (?:posted|updated|informed)|get back to you|update you|let you know|reach out|be in touch|circle back)|(?:haven'?t|have not|yet to) (?:received|heard|gotten|got)\b[^.?!]{0,60}\b(?:update|feedback|response|back)|no (?:update|feedback|news) (?:yet|so far|at this time)|still (?:waiting|awaiting)|awaiting (?:feedback|an update|a response|client))/i
+const ASKS = /\?|\b(?:please|kindly|could you|can you|would you|let me know|need you to|you need to|at your earliest|asap)\b/i
+export function saysWaitForUs(text: string): boolean {
+  const said = splitQuoted(decodeEntities(String(text || ""))).said
+  return THEY_WILL.test(said) && !ASKS.test(said)
 }
 export function senderEmail(from: string): string {
   return String(from || "").match(/[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0].toLowerCase() || ""
@@ -78,6 +91,8 @@ export function tidy(text: string): string {
   // "Sign the form <https://site/a-very-long-tail>". What a person reads is its name and where it goes; the tail is noise.
   // Seen in a real recruiter mail on 12 Oct 2026: one signing link was 430 characters of the message.
   const host = (url: string) => url.replace(/^https?:\/\//i, "").split(/[/?#]/)[0] || url
+  // An address a mail program wrote twice: "dana@site.example<mailto:dana@site.example>". Once is enough.
+  t = t.replace(/<mailto:[^>\s]*>?/gi, "")
   t = t.replace(/\[([^\]\n]{0,160})\]\((https?:\/\/[^\s)]+)\)/g, (_m, name: string, url: string) => (name.trim() ? `${name.trim()} (link: ${host(url)})` : `(link: ${host(url)})`))
   t = t.replace(/(\S)[ \t]*\n?[ \t]*<(https?:\/\/[^\s>]+)>/g, (_m, before: string, url: string) => `${before} (link: ${host(url)})`)
   // A bare link with a tracking tail: its address is kept, its tail is not shown.
@@ -146,12 +161,13 @@ export function aboutOf(subject: string): string {
   if (!clean) return ""
   // "II" typed for "||" is a divider only when it is used as one, twice or more: "Security Analyst II" is a grade.
   const bars = (clean.match(/ II /g) || []).length >= 2 ? clean.replace(/ II /g, " || ") : clean
-  const parts = bars.split(/\s*(?:\|\|+|\||!!+|::|-{2,}|–|—|\s-\s|:\s)\s*/).map(p => p.trim()).filter(Boolean)
+  // A hyphen divides when it has a space on either side ("220417 -Network Analyst", "Analyst - Austin"); inside a word it does not ("On-site").
+  const parts = bars.split(/\s*(?:\|\|+|\||!!+|::|-{2,}|–|—|\s+-\s*|\s*-\s+|:\s)\s*/).map(p => p.replace(/^[\s\-–—:|#]+/, "").trim()).filter(Boolean)
   const part = parts.find(p => TITLE.test(p))
   if (!part) return clean.length > 80 ? clean.slice(0, 77).trimEnd() + "…" : clean
   const job = part
     .replace(/^(?:(?:urgent(?:ly)?|immediate(?:ly)?|hot|new|direct client|hiring|need(?:ed)?|opening|requirement|role|position|job|for|a|an|the)\b[\s:!-]*)+/i, "")
-    .replace(/\s+(?:at|in|for|with|@)\s+.*$/i, "")                 // "... at Atlanta GA for Delta Air Lines"
+    .replace(/\s+(?:at|in|for|@)\s+.*$/i, "")                      // "... at Atlanta GA for Delta Air Lines"; "with Java experience" is part of the job
     .replace(/\s*[#(\[]?\s*\b\d{4,}\b\s*[)\]]?/g, "")               // a request number
     .replace(/\s*\((?:[^)]*)\)\s*$/g, "")                           // "(Hybrid)", "(C2C)"
     .replace(/[\s,;:-]+$/g, "").trim()
