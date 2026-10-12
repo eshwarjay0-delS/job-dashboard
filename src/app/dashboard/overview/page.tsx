@@ -1,19 +1,20 @@
 "use client"
 
 // Overview — every submission as a mind map and a progress bar.
-// Two tables: "On the rails" (submitted RTRs moving forward) and "Waiting to
+// Two tables: "Submission progress" (submitted RTRs moving forward) and "Waiting to
 // board" (RTRs and rate confirmations with no submission yet). Every row has a
 // View button that opens the submission's mind map: who touched the profile,
 // in what order, where it stands, and what is next.
 
 import { useEffect, useMemo, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Suspense } from "react"
 import Link from "next/link"
 import { TrainFront, Eye, X, ArrowDown, FileText, Download } from "lucide-react"
 import { Card } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 import TypingDots from "../_components/typing-dots"
+import { gmailEvidenceUrl } from "@/lib/application-evidence"
 import type { ApplicationChain, ChainStageKey, ChainEventKind } from "@/app/api/gmail/_lib"
 
 const STAGES: Array<{ key: ChainStageKey; label: string }> = [
@@ -41,12 +42,12 @@ function TrackBar({ chain }: { chain: ApplicationChain }) {
       <div style={{
         position: "absolute", top: TOP + DOT / 2 - 1, left: 16, height: 2, borderRadius: 2,
         width: `calc(${(doneIdx / (STAGES.length - 1)) * 100}% - ${32 * (doneIdx / (STAGES.length - 1))}px)`,
-        background: "var(--accent)",
+        background: "var(--border)",
       }} />
       <div style={{ position: "relative", display: "flex" }}>
         {STAGES.map((s, i) => {
-          const reached = i <= doneIdx
-          const isCurrent = i === doneIdx && !chain.terminal
+          const reached = !!chain.stops.find(stop => stop.key === s.key)?.reached
+          const isCurrent = reached && i === doneIdx && !chain.terminal
           const terminal = chain.terminal && i === STAGES.length - 1
           return (
             <div key={s.key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 0 }}>
@@ -95,8 +96,8 @@ const EVENT_DOT: Record<ChainEventKind, string> = {
 function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => void }) {
   const [files, setFiles] = useState<HopFile[]>([])
   useEffect(() => {
-    fetch(`/api/gmail/chain-attachments?threadId=${encodeURIComponent(chain.threadId)}&account=${encodeURIComponent(chain.accountEmail)}`, { cache: "no-store" })
-      .then(r => r.json())
+    Promise.all((chain.sourceThreadIds || [chain.threadId]).map(id => fetch(`/api/gmail/chain-attachments?threadId=${encodeURIComponent(id)}&account=${encodeURIComponent(chain.accountEmail)}`, { cache: "no-store" }).then(r => r.json())))
+      .then(results => ({ ok: results.every(j => j.ok), messages: results.flatMap(j => j.messages || []) }))
       .then(j => {
         if (!j.ok) return
         const out: HopFile[] = []
@@ -113,9 +114,9 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
   // Files ride on the exact email that carried them.
   const filesForEvent = (messageId: string): HopFile[] => files.filter(f => f.messageId === messageId)
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(20,18,12,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
+    <div style={{ width: "100%" }}>
       <div onClick={e => e.stopPropagation()} style={{
-        width: "min(600px, 100%)", maxHeight: "88dvh", overflowY: "auto",
+        width: "100%",
         background: "var(--surface)", borderRadius: "22px 22px 0 0",
         borderTop: "1px solid var(--border-strong)",
         padding: "14px 22px calc(22px + env(safe-area-inset-bottom))",
@@ -126,7 +127,7 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 6 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase" }}>
-              How your profile traveled
+              Application evidence map
             </div>
             <h2 style={{ margin: "6px 0 2px", fontSize: 20 }}>{chain.company}</h2>
             <div style={{ fontSize: 13.5, color: "var(--text-muted)" }}>{chain.role}{chain.rate ? ` · ${chain.rate}` : ""}</div>
@@ -212,6 +213,7 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
                 <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 1 }}>
                   {e.isMe ? "You" : e.from}{e.handoffFrom ? <span> · handed off by {e.handoffFrom}</span> : null}
                   {e.detail ? <span> — {e.detail}</span> : null}
+                  <a href={gmailEvidenceUrl(chain.accountEmail, e.messageId)} target="_blank" rel="noreferrer" style={{ display: "block", color: "var(--accent)" }}>Open source email</a>
                 </div>
                 {e.mentions.length > 0 && (
                   <div style={{ fontSize: 11.5, color: "var(--text-soft)", marginTop: 2 }}>
@@ -252,7 +254,7 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
                 <div style={{ fontSize: 13.5 }}>
                   <div style={{ fontWeight: 700 }}>Next: {chain.nextAction}</div>
                   <div style={{ color: "var(--text-muted)", marginTop: 2 }}>
-                    Held by {chain.holder}{chain.stalledDays > 0 ? ` · quiet ${chain.stalledDays}d` : ""}
+                    Last documented recipient: {chain.holder}{chain.stalledDays > 0 ? ` · quiet ${chain.stalledDays}d` : ""}
                   </div>
                 </div>
               </div>
@@ -260,6 +262,7 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
           )}
         </div>
 
+        <p style={{ padding: 12, border: "1px dashed var(--border)", fontSize: 13 }}>Open circles mean no evidence found. People appearing in the same conversation do not by themselves prove a profile handoff. Interview attendance remains unconfirmed.</p>
         {/* Stage evidence */}
         <div style={{ marginTop: 18 }}>
           <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--text-soft)", textTransform: "uppercase", marginBottom: 8 }}>
@@ -284,12 +287,13 @@ function ChainRow({ chain, onView }: { chain: ApplicationChain; onView: () => vo
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{chain.company}</div>
+          <div style={{ fontSize: 12 }}>{chain.accountEmail}</div>
           <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 1 }}>
             {chain.role}{chain.rate ? ` · ${chain.rate}` : ""}
           </div>
           {chain.stalledDays >= 7 && !chain.terminal && (
             <div style={{ fontSize: 12, color: "var(--warning)", marginTop: 3, fontWeight: 600 }}>
-              Quiet {chain.stalledDays}d — held by {chain.holder}
+              Quiet {chain.stalledDays}d — recipient: {chain.holder}
             </div>
           )}
           {/* The pattern at a glance: numbers + who, no tap needed */}
@@ -349,33 +353,45 @@ function ChainRow({ chain, onView }: { chain: ApplicationChain; onView: () => vo
 
 function OverviewInner() {
   const params = useSearchParams()
+  const router = useRouter()
+  const account = params.get("account") || ""
+  const [accounts, setAccounts] = useState<string[]>([])
+  const [issues, setIssues] = useState<string[]>([])
+  const [refreshKey, setRefreshKey] = useState(0)
   const [chains, setChains] = useState<ApplicationChain[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [viewId, setViewId] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch("/api/gmail/application-chains", { cache: "no-store" })
+    let active = true
+    setLoading(true)
+    setError("")
+    fetch(`/api/gmail/application-chains?days=90&account=${encodeURIComponent(account)}${refreshKey ? "&refresh=1" : ""}`, { cache: "no-store" })
       .then(r => r.json())
       .then(j => {
+        if (!active) return
+        setAccounts(j.accounts || [])
+        setIssues((j.issues || []).map((i: { account: string; reason: string }) => `${i.account}: ${i.reason}`))
         if (j.ok) setChains(j.chains || [])
         else setError(j.error || "Could not load submissions.")
         setLoading(false)
       })
-      .catch(() => { setError("Could not load submissions."); setLoading(false) })
-  }, [])
+      .catch(() => { if (active) { setError("Could not load submissions."); setLoading(false) } })
+    return () => { active = false }
+  }, [account, refreshKey])
 
   // Deep link: /dashboard/overview?chain=<threadId> opens that mind map.
   useEffect(() => {
     const id = params.get("chain")
-    if (id) setViewId(id)
+    setViewId(id)
   }, [params])
 
   const { rails, waiting } = useMemo(() => {
     const rails: ApplicationChain[] = []
     const waiting: ApplicationChain[] = []
     for (const c of chains) {
-      if (c.current === "rtr" && !c.terminal) waiting.push(c)
+      if (!c.stops.some(s => s.key !== "rtr" && s.reached)) waiting.push(c)
       else rails.push(c)
     }
     const byActivity = (a: ApplicationChain, b: ApplicationChain) => (b.lastActivity || 0) - (a.lastActivity || 0)
@@ -384,16 +400,25 @@ function OverviewInner() {
     return { rails, waiting }
   }, [chains])
 
-  const viewing = viewId ? chains.find(c => c.threadId === viewId) || null : null
+  const viewing = viewId ? chains.find(c => (c.threadId === viewId || c.sourceThreadIds?.includes(viewId)) && (!account || c.accountEmail === account)) || null : null
   const interviews = chains.filter(c => c.stops.some(s => s.key === "interview" && s.reached)).length
 
+  if (viewing && !loading) return <MindMap chain={viewing} onClose={() => router.push(`/dashboard/overview?account=${encodeURIComponent(viewing.accountEmail)}`)} />
+
   return (
-    <div style={{ maxWidth: 860, margin: "0 auto" }}>
+    <div style={{ maxWidth: 1000, margin: "0 auto" }}>
       <PageIntro
         page="/dashboard/overview"
         action={{ label: "Open My Jobs", href: "/dashboard/tracker" }}
       />
 
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+        <label>Inbox <select aria-label="Filter inbox" value={account} onChange={e => router.push(`/dashboard/overview?account=${encodeURIComponent(e.target.value)}`)}><option value="">All connected inboxes</option>{accounts.map(a => <option key={a} value={a}>{a}</option>)}</select></label>
+        <button className="btn-outline" disabled={loading} onClick={() => setRefreshKey(k => k + 1)}>Refresh history</button>
+      </div>
+      <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Last 90 days. Counts reflect scanned matching emails. Open circles are evidence gaps.</p>
+      {issues.map(issue => <p role="status" key={issue}>{issue}</p>)}
+      {viewId && !viewing && !loading && <p role="status">This chain was not found in the scanned history for this inbox.</p>}
       {loading ? (
         <div style={{ padding: "60px 0", textAlign: "center" }}><TypingDots label="Mapping your submissions…" /></div>
       ) : error ? (
@@ -403,9 +428,9 @@ function OverviewInner() {
           {/* Big numbers */}
           <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
             {[
-              { n: rails.length, label: "on the rails" },
-              { n: waiting.length, label: "waiting to board" },
-              { n: interviews, label: "reached interview" },
+              { n: rails.length, label: "with progress evidence" },
+              { n: waiting.length, label: "awaiting submission evidence" },
+              { n: interviews, label: "invite evidence" },
             ].map(s => (
               <Card key={s.label} style={{ flex: 1, padding: "14px 16px", textAlign: "center" }}>
                 <div style={{ fontSize: 28, fontWeight: 800 }}>{s.n}</div>
@@ -414,31 +439,31 @@ function OverviewInner() {
             ))}
           </div>
 
-          {/* On the rails */}
+          {/* Submission progress */}
           <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
-            <TrainFront size={17} /> On the rails
+            <TrainFront size={17} /> Submission progress
           </h2>
           <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 6px" }}>
-            Submitted RTRs, and how far each one has traveled toward an interview.
+            One application per row, with only documented milestones filled.
           </p>
           <Card style={{ padding: "4px 18px 14px", marginBottom: 26 }}>
             {rails.length === 0 ? (
-              <p style={{ color: "var(--text-muted)", fontSize: 14, padding: "12px 0" }}>Nothing submitted yet.</p>
+              <p style={{ color: "var(--text-muted)", fontSize: 14, padding: "12px 0" }}>No submission or later stage evidence found in this scan.</p>
             ) : rails.map(c => (
-              <ChainRow key={c.threadId} chain={c} onView={() => setViewId(c.threadId)} />
+              <ChainRow key={`${c.accountEmail}:${c.threadId}`} chain={c} onView={() => router.push(`/dashboard/overview?chain=${encodeURIComponent(c.threadId)}&account=${encodeURIComponent(c.accountEmail)}`)} />
             ))}
           </Card>
 
-          {/* Waiting to board */}
-          <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 4px" }}>Waiting to board</h2>
+          {/* RTR and rate discussions */}
+          <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 4px" }}>RTR and rate discussions</h2>
           <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 6px" }}>
-            RTRs and rate confirmations with no submission yet — the next move is yours or theirs.
+            RTRs and rate discussions without submission evidence in the scanned emails.
           </p>
           <Card style={{ padding: "4px 18px 14px" }}>
             {waiting.length === 0 ? (
               <p style={{ color: "var(--text-muted)", fontSize: 14, padding: "12px 0" }}>Nothing waiting.</p>
             ) : waiting.map(c => (
-              <ChainRow key={c.threadId} chain={c} onView={() => setViewId(c.threadId)} />
+              <ChainRow key={`${c.accountEmail}:${c.threadId}`} chain={c} onView={() => router.push(`/dashboard/overview?chain=${encodeURIComponent(c.threadId)}&account=${encodeURIComponent(c.accountEmail)}`)} />
             ))}
           </Card>
 
@@ -449,7 +474,7 @@ function OverviewInner() {
         </>
       )}
 
-      {viewing && <MindMap chain={viewing} onClose={() => setViewId(null)} />}
+
     </div>
   )
 }

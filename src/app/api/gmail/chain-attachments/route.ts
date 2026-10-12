@@ -61,14 +61,14 @@ export async function GET(req: Request) {
 
     const accounts = await listGoogleWorkspaceAccounts(ctx.userId)
     const acct = accounts.find(a => (a.google_email || "").toLowerCase() === accountEmail)
-      || accounts.find(a => a.gmail_enabled)
+
     if (!acct) return NextResponse.json({ ok: false, error: "No Gmail account" }, { status: 400 })
 
     const token = await getGoogleWorkspaceAccessToken(ctx.userId, acct.id).catch(() => null)
     if (!token) return NextResponse.json({ ok: false, error: "Gmail not connected" }, { status: 400 })
 
     // Try the requested account first, then any other connected account.
-    const ordered = [acct, ...accounts.filter(a => a.id !== acct.id && a.gmail_enabled)]
+    const ordered = [acct]
     let thread: any = null
     for (const a of ordered) {
       const t = await getGoogleWorkspaceAccessToken(ctx.userId, a.id).catch(() => null)

@@ -7,6 +7,8 @@ import { getGoogleWorkspaceAccessToken, listGoogleWorkspaceAccounts } from "@/li
 import { classifyEmail, type EmailCategory } from "@/lib/email-classifier"
 import type { Mail, Stage, App, Interview } from "@/app/dashboard/_suite/sample"
 
+import { emailAddress, authoredText, submissionEvidence, calendarEvidence, linkReferencedThreads, type CalendarEvidence } from "@/lib/application-evidence"
+
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me"
 
 export interface AuthContext {
@@ -50,13 +52,14 @@ async function gmailGet(path: string, accessToken: string): Promise<unknown> {
   return res.json()
 }
 
+interface GmailPart { filename?: string; mimeType?: string; body?: { data?: string; attachmentId?: string }; parts?: GmailPart[] }
 interface GmailHeader { name: string; value: string }
 interface GmailMessage {
   id: string
   threadId: string
   snippet: string
   labelIds?: string[]
-  payload?: { headers: GmailHeader[]; parts?: Array<{ filename?: string; mimeType?: string }> }
+  payload?: GmailPart & { headers: GmailHeader[] }
   internalDate?: string
 }
 
@@ -122,9 +125,12 @@ function formatAt(internalDate: string | undefined): string {
 export interface ClassifiedThread {
   threadId: string
   accountEmail: string
+  sourceThreadIds?: string[]
   messages: Array<{
     id: string
     from: string
+    to?: string
+    cc?: string
     subject: string
     snippet: string
     internalDate?: string
@@ -135,6 +141,11 @@ export interface ClassifiedThread {
     rate: string
     vendor: string
     vendorDomain: string
+    bodyText?: string
+    rfcMessageId?: string
+    references?: string
+    sourceThreadId?: string
+    calendar?: CalendarEvidence[]
     hasIcs?: boolean
   }>
 }
@@ -144,13 +155,10 @@ export interface AccountIssue {
   reason: string
 }
 
-const BASE_QUERY = "(subject:(interview) OR subject:(RTR) OR subject:(rate) OR subject:(offer) OR subject:(application) OR subject:(recruiter) OR subject:(position) OR subject:(role))"
+const BASE_QUERY = '(interview OR screening OR recruiter OR "right to represent" OR RTR OR "rate confirmation" OR "profile submitted" OR "submitted your profile" OR "application received" OR "Teams meeting" OR "meet.google.com" OR "zoom.us" OR filename:ics OR subject:invitation OR subject:offer OR subject:position OR subject:role)'
 
-// ── Tracking window ─────────────────────────────────────────────────────────
-// The app tracks the last 45 days of activity — interviews, applications,
-// chains, crawls. One constant, used everywhere, so the window can't drift
-// between routes.
-export const TRACKING_DAYS = 45
+// Three months, including the beginning of submission chains.
+export const TRACKING_DAYS = 90
 
 // ── Gmail cache: load once, refresh incrementally ─────────────────────────
 // First load fills the cache (slow, one time). Every later load serves the
@@ -200,6 +208,7 @@ async function readCachedThreads(sb: Sb, userId: string, days: number): Promise<
         .update({ data: nt, updated_at: new Date().toISOString() })
         .eq("user_id", userId)
         .eq("thread_id", t.threadId)
+        .eq("account_email", t.accountEmail)
         .then(() => {})
       return nt
     }
@@ -242,18 +251,49 @@ async function setSyncState(sb: Sb, userId: string, accountId: string, days: num
 }
 
 // Live-fetch + classify one account's threads for a Gmail query. Throws on failure.
+async function messageEvidence(m: GmailMessage, token: string) {
+  const texts: string[] = []
+  const htmlTexts: string[] = []
+  const calendars: CalendarEvidence[] = []
+  let hasIcs = false
+  async function walk(p: GmailPart) {
+    const isCalendar = p.mimeType === "text/calendar" || /\.ics$/i.test(p.filename || "")
+    if (isCalendar) hasIcs = true
+    let data = p.body?.data
+    if (isCalendar && !data && p.body?.attachmentId) {
+      const a = await gmailGet(`/messages/${encodeURIComponent(m.id)}/attachments/${encodeURIComponent(p.body.attachmentId)}`, token) as { data?: string }
+      data = a.data
+    }
+    if (data) {
+      const text = Buffer.from(data, "base64url").toString("utf8")
+      if (isCalendar) calendars.push(...calendarEvidence(text))
+      else if (p.mimeType === "text/plain" && !p.filename) texts.push(text)
+      else if (p.mimeType === "text/html" && !p.filename) htmlTexts.push(text.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<\/?(?:p|div|br|tr)[^>]*>/gi, "\n").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&"))
+    }
+    for (const child of p.parts || []) await walk(child)
+  }
+  if (m.payload) await walk(m.payload)
+  return { bodyText: (texts.length ? texts : htmlTexts).join("\n").slice(0, 100000), calendar: calendars, hasIcs,
+    rfcMessageId: getHeader(m.payload?.headers, "Message-ID"),
+    references: [getHeader(m.payload?.headers, "References"), getHeader(m.payload?.headers, "In-Reply-To")].join(" "),
+    sourceThreadId: m.threadId, to: getHeader(m.payload?.headers, "To"), cc: getHeader(m.payload?.headers, "Cc") }
+}
+
 async function fetchAccountThreads(
   acct: GwAccount,
   token: string,
   query: string,
   max: number,
-): Promise<ClassifiedThread[]> {
-  const out: ClassifiedThread[] = []
-  const search = (await gmailGet(
-    `/threads?q=${encodeURIComponent(query)}&maxResults=${max}`,
-    token,
-  )) as { threads?: Array<{ id: string }> }
-  const stubs = search.threads || []
+ ): Promise<ClassifiedThread[] & { partial?: boolean }> {
+  const out: ClassifiedThread[] & { partial?: boolean } = []
+  const stubs: Array<{ id: string }> = []
+  let pageToken = ""
+  do {
+    const search = await gmailGet(`/threads?q=${encodeURIComponent(query)}&maxResults=${Math.min(100, max - stubs.length)}${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ""}`, token) as { threads?: Array<{ id: string }>; nextPageToken?: string }
+    stubs.push(...(search.threads || []))
+    pageToken = search.nextPageToken || ""
+  } while (pageToken && stubs.length < max)
+  let failed = 0
   if (stubs.length === 0) return out
 
   // Small batches with a breather — a fresh Cloud project gets throttled fast.
@@ -264,23 +304,23 @@ async function fetchAccountThreads(
     const results = await Promise.allSettled(
       slice.map(t =>
         gmailGet(
-          `/threads/${t.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Date`,
+          `/threads/${t.id}?format=full`,
           token,
         ),
       ),
     )
     for (const r of results) {
-      if (r.status !== "fulfilled") continue
+      if (r.status !== "fulfilled") { failed++; continue }
       const thread = r.value as { id: string; messages: GmailMessage[] }
       if (!thread.messages?.length) continue
 
-      const messages = thread.messages.map(m => {
+      const messages = await Promise.all(thread.messages.filter(m => !m.labelIds?.includes("DRAFT")).map(async m => {
         const headers = m.payload?.headers
         const from = getHeader(headers, "From")
         const subject = getHeader(headers, "Subject")
         const snippet = m.snippet || ""
         const c = classifyEmail({ subject, snippet, from })
-        const hasIcs = (m.payload?.parts || []).some(p => (p.filename || "").toLowerCase().endsWith(".ics"))
+        const evidence = await messageEvidence(m, token)
         return {
           id: m.id,
           from,
@@ -294,10 +334,11 @@ async function fetchAccountThreads(
           rate: c.rate,
           vendor: c.vendor,
           vendorDomain: c.vendorDomain,
-          hasIcs,
+          ...evidence,
         }
-      })
+      }))
 
+      if (!messages.length) continue
       out.push({
         threadId: thread.id,
         accountEmail: acct.google_email,
@@ -305,6 +346,7 @@ async function fetchAccountThreads(
       })
     }
   }
+  out.partial = !!pageToken || failed > 0
   return out
 }
 
@@ -358,6 +400,7 @@ async function syncAccountCache(
   try {
     const threads = await fetchAccountThreads(acct, token, query, max)
     await upsertCachedThreads(sb, userId, acct, threads)
+    if (threads.partial) return { account: acct.google_email, reason: `History scan is partial (up to ${max} threads). Counts are not a complete inbox inventory.` }
     await setSyncState(sb, userId, acct.id, Math.max(days, sync?.days_synced || 0))
     return null
   } catch (e) {
@@ -367,14 +410,14 @@ async function syncAccountCache(
 
 export async function fetchClassifiedThreads(
   userId: string,
-  opts: { days?: number; max?: number; query?: string } = {},
+  opts: { days?: number; max?: number; query?: string; account?: string } = {},
   extra: { force?: boolean } = {},
 ): Promise<{ threads: ClassifiedThread[]; issues: AccountIssue[] }> {
   const days = Math.min(Math.max(opts.days ?? 30, 1), TRACKING_DAYS)
-  const max = Math.min(Math.max(opts.max ?? 50, 1), 100)
+  const max = Math.min(Math.max(opts.max ?? 50, 1), 300)
 
   const accounts = await listGoogleWorkspaceAccounts(userId)
-  const enabled = accounts.filter(a => a.gmail_enabled)
+  const enabled = accounts.filter(a => a.gmail_enabled && (!opts.account || a.google_email.toLowerCase() === opts.account.toLowerCase()))
   if (enabled.length === 0) return { threads: [], issues: [] }
 
   // A custom Gmail query bypasses the cache (direct live fetch, old behavior).
@@ -404,7 +447,8 @@ export async function fetchClassifiedThreads(
       }
     }
     try {
-      const threads = await readCachedThreads(sb, userId, days)
+      const cached = await readCachedThreads(sb, userId, days)
+      const threads = cached.filter(t => enabled.some(a => a.google_email.toLowerCase() === t.accountEmail.toLowerCase()))
       threads.sort((a, b) => threadLatestTs(b) - threadLatestTs(a))
       return { threads, issues }
     } catch {
@@ -436,6 +480,7 @@ export async function fetchClassifiedThreads(
     try {
       const threads = await fetchAccountThreads(acct, token, query, max)
       allThreads.push(...threads)
+      if (threads.partial) issues.push({ account: acct.google_email, reason: "History scan is partial. Counts are not a complete inbox inventory." })
     } catch (e) {
       issues.push(toIssue(acct, e))
       continue
@@ -578,7 +623,7 @@ const DAY_MS = 86_400_000
 // celebrating emails that were never meetings.
 
 const MEETING_LINK_RE = /(teams\.microsoft\.com|teams\.live\.com|zoom\.us|zoom\.com|meet\.google\.com|webex\.com|gotomeeting\.com|goto\.com|chime\.aws|bluejeans\.com|meetings\.ringcentral\.com)/i
-const CONFIRMED_LANG_RE = /\b(scheduled|confirmed|booked)\b[^.]{0,60}\b(for|on)\b|\blooking forward to (speaking|talking|meeting|connecting)\b|\bcalendar invite\b/i
+const CONFIRMED_LANG_RE = /\b(scheduled|confirmed|booked)\b[^.]{0,60}\b(for|on)\b/i
 
 export interface InviteEvidence {
   confirmed: boolean
@@ -588,8 +633,10 @@ export interface InviteEvidence {
 
 export function inviteEvidence(t: ClassifiedThread): InviteEvidence {
   for (const m of t.messages) {
+    if ((m.calendar?.length && m.calendar.every(c => c.cancelled)) || /\b(cancelled|canceled|not scheduled|not confirmed)\b/i.test(m.subject)) continue
     if (m.hasIcs) return { confirmed: true, how: "calendar-invite", via: m.vendor || m.from }
-    const text = `${m.subject} ${m.snippet}`
+    const text = `${m.subject} ${authoredText(m.bodyText || m.snippet)}`
+    if (!/interview|screening|recruiter|recruiting|candidate|hiring/i.test(text)) continue
     if (MEETING_LINK_RE.test(text)) return { confirmed: true, how: "meeting-link", via: m.vendor || m.from }
     if (CONFIRMED_LANG_RE.test(text)) return { confirmed: true, how: "confirmed-email", via: m.vendor || m.from }
   }
@@ -744,88 +791,37 @@ export async function enrichInterviewEvidence(
 
 
 export function threadsToInterviews(threads: ClassifiedThread[]): Interview[] {
-  const out: Interview[] = []
-  const now = new Date()
-  // Week starts Monday
-  const monday = new Date(now)
-  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7))
-  monday.setHours(0, 0, 0, 0)
-
+  const out = new Map<string, { at: number; item: Interview | null }>()
   for (const t of threads) {
-    const iv = t.messages.find(m => m.category === "Interview Request")
-    if (!iv) continue
-
-    // EVIDENCE GATE: no confirmed invite, no interview. Requests stay in Needs-you.
-    const evidence = inviteEvidence(t)
-    if (!evidence.confirmed) continue
-
-    const domain = extractDomain(iv.from)
-
-    const requestTs = iv.internalDate ? Number(iv.internalDate) : 0
     const firstTouchTs = Math.min(...t.messages.map(m => Number(m.internalDate || 0)).filter(n => n > 0))
-
-    // Try to parse a date from subject/snippet
-    const text = `${iv.subject} ${iv.snippet}`
-    let dayOffset: number | null = null
-    let start = 10
-
-    const dayMatch = text.match(/\b(mon|tue|wed|thu|fri)(?:day)?\b/i)
-    if (dayMatch) {
-      const days: Record<string, number> = { mon: 0, tue: 1, wed: 2, thu: 3, fri: 4 }
-      dayOffset = days[dayMatch[1].toLowerCase().slice(0, 3)]
+    for (const m of t.messages) {
+      const text = `${m.subject} ${authoredText(m.bodyText || m.snippet)}`
+      if (!/interview|screening|recruit|candidate|hiring/i.test(text)) continue
+      const evidence = inviteEvidence({ ...t, messages: [m] })
+      const calendars = m.calendar?.length ? m.calendar : [undefined]
+      for (const calendar of calendars) {
+        const key = `${t.accountEmail}:${calendar?.uid || t.threadId}`
+        const at = Number(m.internalDate || 0)
+        if ((out.get(key)?.at ?? -1) > at) continue
+        if (calendar?.cancelled || /\b(cancelled|canceled)\b/i.test(authoredText(m.bodyText || m.snippet))) { out.set(key, { at, item: null }); continue }
+        if (!evidence.confirmed) continue
+        const ts = calendar?.start
+        const date = ts ? new Date(ts) : null
+        const start = date ? date.getUTCHours() + date.getUTCMinutes() / 60 : 0
+        out.set(key, { at, item: {
+          id: key, company: companyFromDomain(extractDomain(m.from), m.from),
+          role: m.jobTitle || m.subject.slice(0, 80), account: t.accountEmail,
+          with: m.vendor, day: date ? (date.getUTCDay() + 6) % 7 : 0,
+          start, end: calendar?.end && ts ? start + (calendar.end - ts) / 3600000 : start + 1,
+          kind: /onsite|in.person/i.test(text) ? "Onsite" : /phone|call/i.test(text) ? "Phone" : "Video",
+          ts, timingStatus: ts ? "scheduled" : "unknown", requestTs: at || undefined,
+          firstTouchTs: Number.isFinite(firstTouchTs) ? firstTouchTs : undefined,
+          threadId: t.threadId, evidence: evidence.how as Interview["evidence"], inviteVia: evidence.via,
+        } })
+      }
     }
-    const timeMatch = text.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i)
-    if (timeMatch) {
-      let h = Number(timeMatch[1])
-      if (timeMatch[3].toLowerCase() === "pm" && h < 12) h += 12
-      start = h + (Number(timeMatch[2] || 0) / 60)
-    }
-
-    // Best estimate of when the interview happens/happened (epoch ms).
-    // A weekday name refers to the email's own week; otherwise fall back to the request email date.
-    let at: number | null = null
-    if (dayOffset !== null && requestTs) {
-      const emailDate = new Date(requestTs)
-      const emailMonday = new Date(emailDate)
-      emailMonday.setDate(emailDate.getDate() - ((emailDate.getDay() + 6) % 7))
-      emailMonday.setHours(0, 0, 0, 0)
-      at = emailMonday.getTime() + dayOffset * DAY_MS + start * 3_600_000
-      // If the parsed date is more than a day before the request email, it meant *next* week.
-      if (at < requestTs - DAY_MS) at += 7 * DAY_MS
-    } else if (requestTs) {
-      at = requestTs + 2 * DAY_MS // assume ~2 days out when no weekday is named
-    }
-    if (!at) continue
-
-    // Calendar grid still wants a 0-6 day offset relative to the *current* week for upcoming ones.
-    const diffDays = Math.floor((at - monday.getTime()) / DAY_MS)
-    const day = ((diffDays % 7) + 7) % 7
-
-    const kind: Interview["kind"] = /onsite|in.person|office/i.test(text) ? "Onsite"
-      : /panel/i.test(text) ? "Panel"
-      : /phone|call/i.test(text) ? "Phone" : "Video"
-
-    out.push({
-      id: t.threadId,
-      company: companyFromDomain(domain, iv.from),
-      role: iv.jobTitle || iv.subject.slice(0, 50),
-      day,
-      start,
-      end: start + 1,
-      kind,
-      account: t.accountEmail,
-      with: iv.vendor,
-      ts: at,
-      firstTouchTs: firstTouchTs > 0 ? firstTouchTs : undefined,
-      requestTs: requestTs || undefined,
-      threadId: t.threadId,
-      evidence: evidence.how as Exclude<typeof evidence.how, "request-only">,
-      inviteVia: evidence.via,
-    })
   }
-  // Newest first — the page splits past vs upcoming itself.
-  out.sort((a, b) => (b.ts || 0) - (a.ts || 0))
-  return out
+  return [...out.values()].flatMap(x => x.item ? [x.item] : []).sort((a, b) => (b.ts || b.requestTs || 0) - (a.ts || a.requestTs || 0))
 }
 
 
@@ -891,6 +887,8 @@ export interface ApplicationChain {
   current: ChainStageKey
   terminal: "offer" | "rejected" | null
   links: ChainLink[]
+  sourceThreadIds?: string[]
+  holderConfirmed?: boolean
   holder: string
   holderSince?: number
   stalledDays: number
@@ -935,8 +933,7 @@ function extractPhone(text: string): string | undefined {
 }
 
 function emailOf(from: string): string | undefined {
-  const m = from.match(/<([^>]+)>/)
-  return m ? m[1] : undefined
+  return emailAddress(from) || undefined
 }
 
 /** First names of everyone in the thread, for mention-threading. */
@@ -969,7 +966,7 @@ function classifyEvent(
   roster: Array<{ name: string; first: string }>,
   selfFirst: string,
 ): { kind: ChainEventKind; label: string } {
-  const text = `${m.subject} ${m.snippet}`
+  const text = `${m.subject} ${authoredText(m.bodyText || m.snippet)}`
   if (m.category === "Offer") return { kind: "offer", label: "Offer received" }
   if (m.category === "Rejection") return { kind: "rejection", label: "Rejected" }
   if (m.category === "RTR Request") return { kind: "rtr_request", label: "RTR requested" }
@@ -984,8 +981,8 @@ function classifyEvent(
   if (RATE_RE.test(text) && (m.category === "Rate Confirmation" || /rate/i.test(m.subject))) {
     return { kind: "rate", label: "Rate discussed" }
   }
-  if (SUBMITTED_RE.test(text) && !isMe) {
-    if (SHARED_RE.test(text) || CLIENT_RE.test(text)) return { kind: "client", label: "With the end client" }
+  if (submissionEvidence(m.bodyText || m.snippet).submitted && !isMe) {
+    if (submissionEvidence(m.bodyText || m.snippet).client) return { kind: "client", label: "With the end client" }
     return { kind: "submitted", label: "Profile submitted" }
   }
   if (isFirst) return { kind: "first_contact", label: "First contact" }
@@ -996,9 +993,10 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
   const out: ApplicationChain[] = []
   const now = Date.now()
 
-  for (const t of threads) {
+  for (const raw of linkReferencedThreads(threads)) {
+    const t = { ...raw, messages: [...raw.messages].sort((a, b) => Number(a.internalDate || 0) - Number(b.internalDate || 0) || a.id.localeCompare(b.id)) }
     const primary = t.messages[0]
-    if (primary.category === "General Correspondence" || primary.category === "Sales Pitch") continue
+    if (!primary || !t.messages.some(m => ["RTR Request", "Rate Confirmation", "Submission Confirmation", "Interview Request", "Offer", "Rejection"].includes(m.category) || m.hasIcs)) continue
 
     const domain = extractDomain(primary.from)
     const reached = new Map<ChainStageKey, { at: number; evidence: string }>()
@@ -1012,18 +1010,16 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
     const events: ChainEvent[] = []
     t.messages.forEach((m, idx) => {
       const ts = m.internalDate ? Number(m.internalDate) : 0
-      const isMe = m.from.toLowerCase().includes(t.accountEmail.toLowerCase().split("@")[0])
+      const isMe = emailAddress(m.from) === t.accountEmail.toLowerCase()
       const name = personName(m.from)
-      const text = `${m.subject} ${m.snippet}`
+      const text = `${m.subject} ${authoredText(m.bodyText || m.snippet)}`
       const { kind, label } = classifyEvent(m, isMe, idx === 0, roster, selfFirst)
       const mentions = findMentions(text, roster, selfFirst)
-      // Name threading: this sender was named in an earlier mail — the profile
-      // passed from hand to hand. Credit the earliest mail that named them.
-      const myFirst = name.split(/\s+/)[0].toLowerCase()
-      const namingEvent = !isMe
-        ? events.find(e => e.mentions.some(mn => mn.split(/\s+/)[0].toLowerCase() === myFirst))
-        : undefined
-      const handoffFrom = namingEvent?.from
+      // A name mention is not a transfer. Require explicit completed sharing
+      // language naming this exact email address in an earlier source message.
+      const namingMessage = t.messages.slice(0, idx).find(previous =>
+        submissionEvidence(previous.bodyText || previous.snippet).recipient === emailAddress(m.from))
+      const handoffFrom = namingMessage ? personName(namingMessage.from) : undefined
       events.push({
         at: ts,
         from: name,
@@ -1045,9 +1041,9 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
     }
 
     for (const m of t.messages) {
-      const text = `${m.subject} ${m.snippet}`
+      const text = `${m.subject} ${authoredText(m.bodyText || m.snippet)}`
       const ts = m.internalDate ? Number(m.internalDate) : 0
-      const isMe = m.from.toLowerCase().includes(t.accountEmail.toLowerCase().split("@")[0])
+      const isMe = emailAddress(m.from) === t.accountEmail.toLowerCase()
       const name = personName(m.from)
 
       if (!isMe && name && !people.has(name.toLowerCase())) {
@@ -1055,16 +1051,17 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
         people.set(name.toLowerCase(), {
           name,
           email: emailMatch ? emailMatch[1] : undefined,
-          role: /client|hiring/i.test(text) ? "client" : m.vendorDomain && !/gmail|yahoo|hotmail/i.test(m.vendorDomain) ? "vendor" : "recruiter",
+          role: "participant",
           at: ts || undefined,
         })
       }
 
       if (m.category === "RTR Request") mark("rtr", ts, m.subject.slice(0, 60))
       else if (RTR_SIGNED_RE.test(text) && !isMe) mark("rtr", ts, "RTR signed")
-      if (SUBMITTED_RE.test(text) && !isMe) {
-        mark("submitted", ts, m.subject.slice(0, 60))
-        if (SHARED_RE.test(text) || CLIENT_RE.test(text)) mark("client", ts, m.subject.slice(0, 60))
+      const submission = submissionEvidence(m.bodyText || m.snippet)
+      if (submission.submitted && !isMe) {
+        mark("submitted", ts, submission.quote || m.subject)
+        if (submission.client) mark("client", ts, submission.quote || m.subject)
       }
       if (m.category === "Interview Request") {
         const ev = inviteEvidence({ ...t, messages: [m] })
@@ -1075,13 +1072,6 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
       }
       if (m.category === "Offer") terminal = "offer"
       if (m.category === "Rejection") terminal = "rejected"
-    }
-
-    // A thread with real back-and-forth but no explicit "submitted" language
-    // still counts as submitted once the vendor is engaged past the RTR.
-    if (!reached.has("submitted") && (reached.has("client") || reached.has("interview") || terminal)) {
-      const first = t.messages.find(m => SUBMITTED_RE.test(`${m.subject} ${m.snippet}`))
-      mark("submitted", first && first.internalDate ? Number(first.internalDate) : (reached.get("client")?.at || reached.get("interview")?.at || now), "Vendor engaged")
     }
 
     const order: ChainStageKey[] = ["rtr", "submitted", "client", "interview", "decision"]
@@ -1123,7 +1113,7 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
     const contacts = [...contactMap.values()].sort((a, b) => (a.firstSeen || 0) - (b.firstSeen || 0))
 
     // ── Journey to interview: the numbers behind the win ─────────────────
-    const interviewEv = events.find(e => e.kind === "interview_scheduled" || e.kind === "interview_request")
+    const interviewEv = events.find(e => e.kind === "interview_scheduled")
     const firstEv = events[0]
     const journey = {
       emails: events.length,
@@ -1136,21 +1126,14 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
     const lastMsg = t.messages[t.messages.length - 1]
     const lastTs = lastMsg?.internalDate ? Number(lastMsg.internalDate) : 0
     const stalledDays = terminal ? 0 : lastTs ? Math.floor((now - lastTs) / 86_400_000) : 0
-    const holder = terminal
-      ? terminal === "offer" ? "You — offer in hand" : "Closed"
-      : personName(lastMsg?.from || "") || primary.vendor || "the vendor"
-
-    const nextAction = terminal === "offer"
-      ? "Offer received — review the terms and decide."
-      : terminal === "rejected"
-        ? "Closed. Reflect in Kompas if there's anything to learn."
-        : current === "interview"
-          ? "Interview stage — prepare, then reflect in Kompas after."
-          : stalledDays >= 10
-            ? `Quiet for ${stalledDays} days — ${holder} has your profile. Time to call.`
-            : stalledDays >= 7
-              ? `No movement in ${stalledDays} days — send ${holder} a follow-up.`
-              : `${holder} has your profile — check back if nothing moves in a few days.`
+    const transfer = [...t.messages].reverse().map(m => ({ m, proof: submissionEvidence(m.bodyText || m.snippet) })).find(x => x.proof.recipient)
+    const holder = terminal ? "Closed" : transfer?.proof.recipient || "Unknown"
+    const holderConfirmed = !!transfer?.proof.recipient
+    const nextAction = terminal === "offer" ? "Offer email found. Review the terms."
+      : terminal === "rejected" ? "Rejection email found."
+      : current === "interview" ? "Invite evidence found. Attendance and outcome remain unconfirmed."
+      : stalledDays >= 7 ? `No new email for ${stalledDays} days. Review the latest contact and draft a follow up.`
+      : "Awaiting the next documented update. Missing handoffs remain open."
 
     out.push({
       threadId: t.threadId,
@@ -1163,7 +1146,9 @@ export function buildApplicationChains(threads: ClassifiedThread[]): Application
       terminal,
       links: [...people.values()].slice(0, 6),
       holder,
-      holderSince: lastTs || undefined,
+      holderConfirmed,
+      sourceThreadIds: t.sourceThreadIds || [t.threadId],
+      holderSince: transfer?.m.internalDate ? Number(transfer.m.internalDate) : undefined,
       stalledDays,
       nextAction,
       interviewThreadId,

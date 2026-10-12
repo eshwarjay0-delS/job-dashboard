@@ -1,13 +1,16 @@
 "use client"
 import TypingDots from "../_components/typing-dots"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Check, Send, Shield, Archive, RotateCcw, ChevronRight, CalendarDays, Leaf, History, ArrowRight } from "lucide-react"
 import { Card, Meta, StagePill, Chip, Btn, Avatar, Toggle, useAnswered, useLeaving, leavingStyle } from "../_suite/ui"
 import SmartReply from "./_components/smart-reply"
 import { savedAvailability, type Mail } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
+
+import IgnoreControls from "./_components/ignore-controls"
+import { ignoreReason, type IgnoreRule } from "@/lib/gmail-ignore"
 
 type Filter = "needs" | "invite" | "rtr" | "rate" | "pending" | "all"
 const FILTERS: [Filter, string][] = [["needs", "Needs you"], ["invite", "Interview invites"], ["rtr", "RTR forms"], ["rate", "Pay rates"], ["pending", "Waiting"], ["all", "All"]]
@@ -280,6 +283,21 @@ function RoleCard({ group, onOpen, acct }: { group: RoleGroup; onOpen: (id: stri
 type View = "needs" | "roles" | "all" | "drafts" | "waiting"
 
 export default function MailPage() {
+  const [ignoreRules, setIgnoreRules] = useState<IgnoreRule[]>([])
+  const [selected, setSelected] = useState<string[]>([])
+  const [showIgnored, setShowIgnored] = useState(false)
+  const [ignoreError, setIgnoreError] = useState("")
+  useEffect(() => {
+    let active = true
+    fetch("/api/gmail/ignore-rules").then(r => r.json()).then(j => { if (!active) return; if (j.ok) setIgnoreRules(j.rules); else setIgnoreError(j.error) }).catch(() => { if (active) setIgnoreError("Ignore preferences could not be loaded") })
+    return () => { active = false }
+  }, [])
+  async function saveIgnoreRules(rules: IgnoreRule[]) {
+    const res = await fetch("/api/gmail/ignore-rules", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rules }) })
+    const data = await res.json()
+    if (!res.ok || !data.ok) throw new Error(data.error || "Could not save")
+    setIgnoreRules(data.rules); setSelected([])
+  }
   const [account, setAccount] = useState("all")
   const [view, setView] = useState<View>("needs")
   const [sel, setSel] = useState<string | null>(null)
@@ -294,12 +312,12 @@ export default function MailPage() {
   const acct = makeAcct(accounts)
 
   const waiting = (x: Mail) => !!x.needsReply && !answered.includes(x.id)
-  const live = mails.filter(x => (x.stage !== "rejected" || restored.includes(x.id)) && (account === "all" || x.account === account))
+  const live = mails.filter(x => (!!ignoreReason(x, ignoreRules) === showIgnored) && (x.stage !== "rejected" || restored.includes(x.id)) && (account === "all" || x.account === account))
   const needsList = live.filter(waiting)
   const filed = mails.filter(x => x.stage === "rejected" && !restored.includes(x.id))
   const roles = groupByRole(live.filter(x => x.stage !== "rejected"))
 
-  const shown = view === "needs" ? needsList : view === "all" ? live : live
+  const shown = showIgnored ? live : view === "needs" ? needsList : live
   const m = shown.find(x => x.id === sel) ?? shown[0]
 
   const VIEWS: [View, string, number][] = [
@@ -326,6 +344,9 @@ export default function MailPage() {
 
   return (
     <div className="mf-home" style={{ paddingBottom: 56 }}>
+      <IgnoreControls mails={mails} selected={selected} rules={ignoreRules} onSave={saveIgnoreRules} showIgnored={showIgnored} onToggle={() => { setShowIgnored(v => !v); setView("all") }} />
+      {ignoreError && <p role="status">{ignoreError}</p>}
+
       <header className="mf-home-heading">
         <p className="mf-eyebrow">INBOX</p>
         <h1>Your job mail, organized.</h1>
@@ -429,7 +450,11 @@ export default function MailPage() {
             <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
               <div style={{ flex: "0 1 400px", minWidth: 300 }}>
                 {shown.map(x => (
-                  <MailRow key={x.id} m={x} on={x.id === m?.id} restored={restored.includes(x.id)} leaving={leaving.includes(x.id)} onClick={() => setSel(x.id)} acct={acct} />
+                  <div key={`${x.account}:${x.id}`} style={{ display: "flex", gap: 8 }}>
+                    <input type="checkbox" aria-label={`Select ${x.subject}`} checked={selected.includes(`${x.account}:${x.id}`)} onChange={e => setSelected(ids => e.target.checked ? [...ids, `${x.account}:${x.id}`] : ids.filter(id => id !== `${x.account}:${x.id}`))} />
+                    <div style={{ flex: 1, minWidth: 0 }}><MailRow m={x} on={x.id === m?.id} restored={restored.includes(x.id)} leaving={leaving.includes(x.id)} onClick={() => setSel(x.id)} acct={acct} />
+                    {showIgnored && <div><small>{ignoreReason(x, ignoreRules)}</small><button onClick={() => saveIgnoreRules([...ignoreRules.filter(r => !(r.account === x.account && r.kind === "thread" && r.value === x.id)), { account: x.account.toLowerCase(), kind: "thread", value: x.id, action: "allow" }]).catch(e => setIgnoreError(String(e)))}>Restore this conversation</button></div>}</div>
+                  </div>
                 ))}
                 {!shown.length && (
                   <div style={{ padding: 32, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 14, color: "var(--text-muted)", fontSize: 13.5 }}>
