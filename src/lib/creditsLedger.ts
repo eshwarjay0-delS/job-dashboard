@@ -53,6 +53,11 @@ export function pointsToDisplay(points: number): { interviews: number; resumes: 
   return { interviews: Math.floor(p / POINTS_PER_INTERVIEW), resumes: Math.floor(p / POINTS_PER_RESUME) }
 }
 
+/** Session cost by duration: 1 hour = 1 point, 30 min = 0.5 points, prorated. */
+export function sessionPointsForMinutes(minutes: number): number {
+  return Math.round((Math.max(0, minutes) / 60) * 100) / 100
+}
+
 /**
  * Deduct points once for `ref` (a session id, a resume id). Idempotent: the
  * same ref deducted twice costs once — retries and double-deliveries are safe.

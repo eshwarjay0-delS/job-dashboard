@@ -50,7 +50,7 @@ function ExplainerPanel({ s, onClose }: { s: CreditSummary; onClose: () => void 
         <b style={{ color: "var(--text)" }}>{s.resumesLeft.toLocaleString()} resumes</b> — generations your API balances buy (${s.remainingUsd.toFixed(2)} left across keys).
       </p>
       <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
-        <b style={{ color: "var(--text)" }}>{s.sessionsLeft} sessions</b> — interview sessions left on your gel points (1 point each; listening is free).
+        <b style={{ color: "var(--text)" }}>{s.sessionsLeft} sessions</b> — 1-hour interview sessions left on your gel points (1 hour = 1 session · 30 min = 0.5 session; listening is free).
       </p>
       <p style={{ fontSize: 11, color: "var(--text-soft)", margin: "0 0 10px" }}>
         {s.calibrated ? "Measured from your real generations." : "Estimate — your first generation calibrates it."}
