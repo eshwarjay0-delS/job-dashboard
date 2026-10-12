@@ -9,6 +9,7 @@ export default function ResetPasswordPage() {
   const [confirm,setConfirm]=useState("")
   const [message,setMessage]=useState("Open this page from the password recovery link in your email.")
   const [ready,setReady]=useState(false)
+  const [accountEmail,setAccountEmail]=useState("")
   const [loading,setLoading]=useState(false)
   useEffect(()=>{
     const supabase=createClient()
@@ -21,6 +22,7 @@ export default function ResetPasswordPage() {
         window.history.replaceState({}, "", window.location.pathname)
       }
       const {data}=await supabase.auth.getUser()
+      if(data.user) setAccountEmail(data.user.email||"")
       if(data.user && ["eshwarjay05@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes((data.user.email||"").toLowerCase())) setReady(true)
       else setMessage("Sign in with an approved account to set a password.")
     })()
@@ -45,6 +47,7 @@ export default function ResetPasswordPage() {
   return <main style={{maxWidth:440,margin:"12vh auto",padding:24}}>
     <h1>Set your MarketFit password</h1>
     <p>{message}</p>
+    {accountEmail && <p>Signed in as: <strong>{accountEmail}</strong></p>}
     {ready && <form onSubmit={save} style={{display:"grid",gap:12}}>
       <label htmlFor="new-pass">New password</label>
       <input id="new-pass" type="password" autoComplete="new-password" required minLength={12} value={password} onChange={e=>setPassword(e.target.value)}/>
