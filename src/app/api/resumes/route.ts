@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
+import { createHash } from "node:crypto"
+import { extractText } from "@/lib/docx"
+import { resumeEmails, rankResumeCategories } from "@/lib/resumeOrganization"
 import { safeResumeName, readLimitedStream, MAX_ARCHIVE_FILES } from "@/lib/uploadSafety"
 import { authenticatedUserId, signInRequired } from "@/lib/authBoundary"
 import { ensureIndex } from "@/lib/keywords"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
-import { listFiles, statPath, writePath, existsPath, deletePath, deleteDir } from "@/lib/storage"
+import { listFiles, readPath, statPath, writePath, existsPath, deletePath, deleteDir } from "@/lib/storage"
 
 export const runtime = "nodejs"
 const MAX_DOCX_SIZE = 5 * 1024 * 1024  // 5 MB per .docx
@@ -147,7 +150,7 @@ export async function POST(request: NextRequest) {
         const base = parts[parts.length - 1] || ""
         if (!base.toLowerCase().endsWith(".docx") || base.startsWith("~$") || base.startsWith(".")) continue
         if (++candidates > MAX_ARCHIVE_FILES) return NextResponse.json({ error: "ZIP contains too many resumes (max 200).", added, skipped }, { status: 413 })
-        const safe = parts.map(p => p.replace(/[^A-Za-z0-9._ \-()]/g, "_"))
+        const safe = parts.map(p => p.replace(/[^A-Za-z0-9.@+_ \-()]/g, "_"))
         const rel = safe.length > 1 ? safe : [safe[0].replace(/\.docx$/i, ""), safe[0]]
         const dest = path.join(user.dir, ...rel)
         // Security: dest must stay inside the user's folder
@@ -170,9 +173,20 @@ export async function POST(request: NextRequest) {
 
     // No resume-count limit — unlimited storage (personal use).
     const existing = await scanDir(user.dir)
-    const duplicate = existing.find(r => r.filename.toLowerCase() === file.name.replace(/\.docx$/i, "").toLowerCase())
-    const replace = formData.get("replace") === "true"
     const buffer = Buffer.from(await file.arrayBuffer())
+    const plain = await extractText(buffer)
+    const emails = resumeEmails(plain)
+    const identity = emails.length === 1 ? emails[0] : null
+    let duplicate: ResumeFile | undefined
+    if (identity) {
+      for (const candidate of existing.filter(r => r.filename.replace(/__[a-f0-9]{16}$/, "").toLowerCase() === file.name.replace(/\.docx$/i, "").toLowerCase())) {
+        const bytes = await readPath(candidate.filepath)
+        if (!bytes) continue
+        const contacts = resumeEmails(await extractText(bytes))
+        if (contacts.length === 1 && contacts[0] === identity) { duplicate = candidate; break }
+      }
+    }
+    const replace = formData.get("replace") === "true"
 
     if (duplicate && !replace) {
       return NextResponse.json({ file: duplicate, duplicate: true })
@@ -191,15 +205,17 @@ export async function POST(request: NextRequest) {
     let safeName: string
     try { safeName = safeResumeName(file.name) }
     catch { return NextResponse.json({ error: "Invalid filename." }, { status: 400 }) }
-    const folderName = safeName.replace(/\.docx$/i, "")
-    const savePath = path.resolve(user.dir, folderName, safeName)
+    const category = rankResumeCategories(plain, safeName)[0]
+    const folderName = path.join(identity || "Needs email review", category.score ? category.category : "General Security")
+    const hash = createHash("sha256").update(buffer).digest("hex").slice(0, 16)
+    const savePath = path.resolve(user.dir, folderName, `${safeName.replace(/\.docx$/i, "")}__${hash}.docx`)
     if (!savePath.startsWith(path.resolve(user.dir) + path.sep)) return NextResponse.json({ error: "Invalid filename." }, { status: 400 })
     await writePath(savePath, buffer)
 
     const info = await statPath(savePath)
     const entry: ResumeFile = {
       id: fileId(savePath),
-      filename: folderName,
+      filename: safeName.replace(/\.docx$/i, ""),
       filepath: savePath,
       category: folderName,
       size: info ? formatSize(info.size) : formatSize(buffer.length),

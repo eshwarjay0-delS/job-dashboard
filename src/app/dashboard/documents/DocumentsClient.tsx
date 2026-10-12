@@ -156,6 +156,9 @@ interface UploadedEntry {
 export default function DocumentsClient({ initialFiles, initialFolders = [], onDone }: { initialFiles: ResumeFile[]; initialFolders?: string[]; onDone?: () => void }) {
   const router = useRouter()
   const { confirm, prompt } = useDialogs()
+  const [selectedEmail, setSelectedEmail] = useState("")
+  const [organizing, setOrganizing] = useState(false)
+  const [indexRevision, setIndexRevision] = useState(0)
   const [emailCounts, setEmailCounts] = useState<Record<string, number>>({})
   const [discoveredEmails, setDiscoveredEmails] = useState<string[]>([])
   const [libraryIndexError, setLibraryIndexError] = useState(false)
@@ -167,10 +170,11 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
         for (const entry of data.entries || []) {
           if (entry.identity) counts[entry.identity] = (counts[entry.identity] || 0) + 1
         }
+        setLibraryIndexError(Boolean(data.errors?.length))
         setEmailCounts(counts)
         setDiscoveredEmails((data.libraries || []).map((lib: {email:string}) => lib.email).filter((email: string) => email !== "Unverified"))
       }).catch(() => setLibraryIndexError(true))
-  }, [initialFiles])
+  }, [initialFiles, indexRevision])
   const [preloaded, setPreloaded] = useState<ResumeFile[]>(initialFiles)
   useEffect(() => { setPreloaded(initialFiles) }, [initialFiles])
 
@@ -189,6 +193,24 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
     ...uploaded.filter(u => u.status === "ready").map(u => u.file),
   ]
 
+  async function organizeLibrary() {
+    setOrganizing(true)
+    setErr("")
+    try {
+      const response = await fetch("/api/resumes/organize", { method: "POST" })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || "Organization failed")
+      setNotice(`Organized ${result.kept} resumes into ${result.foldersPerEmail} folders per email. Removed ${result.removed} duplicate or lower matching versions.${result.unassigned ? ` ${result.unassigned} need an email review.` : ""}`)
+      setUploaded([])
+      setChecked(new Set())
+      router.refresh()
+      setIndexRevision(v => v + 1)
+    } catch (error) { setErr(error instanceof Error ? error.message : "Organization failed") }
+    finally { setOrganizing(false) }
+  }
+  const visibleFiles = selectedEmail ? allFiles.filter(file => file.category.split("/")[0].trim() === selectedEmail) : allFiles
+  const visibleFolders = selectedEmail ? initialFolders.filter(folder => folder.split("/")[0].trim() === selectedEmail) : initialFolders
+
   // ── Upload ─────────────────────────────────────────────────────────────────
   async function uploadZip(file: File) {
     const tempId = `zip_${Date.now()}`
@@ -200,7 +222,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
       setUploaded(prev => prev.filter(u => u.file.id !== tempId))
       if (res.ok && data.zip) {
         setNotice(`Imported ${data.added} resume${data.added === 1 ? "" : "s"} from ${file.name}${data.skipped ? ` · skipped ${data.skipped} duplicate${data.skipped === 1 ? "" : "s"}` : ""}.`)
-        router.refresh()
+        await organizeLibrary()
       } else {
         setErr(data.error ?? "Zip import failed.")
       }
@@ -324,15 +346,27 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
         )}
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" className="btn-outline" onClick={organizeLibrary} disabled={organizing || !allFiles.length}>
+          {organizing ? "Organizing resumes…" : "Organize by email and remove duplicates"}
+        </button>
+        <p className="text-sm" style={{color:"var(--text-muted)"}}>25 category folders per email · up to 50 selected resumes · strongest two per category</p>
+      </div>
+      {discoveredEmails.length > 0 && <label className="block text-sm">Show email library
+        <select className="block mt-2 w-full rounded-lg border p-3" value={selectedEmail} onChange={e => { setSelectedEmail(e.target.value); setChecked(new Set()) }}>
+          <option value="">All email libraries</option>
+          {discoveredEmails.map(email => <option key={email} value={email}>{email}</option>)}
+        </select>
+      </label>}
       {/* Discover email identities from actual tenant-owned resumes; never hardcode an owner. */}
       {libraryIndexError && <p role="alert" className="text-sm" style={{color:"var(--text-muted)"}}>Resume indexing is temporarily unavailable. Your uploaded files are not affected.</p>}
-      {discoveredEmails.length === 0 && <div className="rounded-xl border p-4 text-sm" style={{borderColor:"var(--border)",background:"var(--surface)"}}><strong>No indexed email libraries yet.</strong><p className="mt-2">Import your existing resume ZIP using Choose files below. Each resume is indexed under its verified contact email. You can maintain multiple email libraries in one account.</p></div>}
+      {discoveredEmails.length === 0 && <div className="rounded-xl border p-4 text-sm" style={{borderColor:"var(--border)",background:"var(--surface)"}}><strong>No indexed email libraries yet.</strong><p className="mt-2">Import your existing resume ZIP using Choose files below. Each resume is grouped by the contact email inside the document. You can maintain multiple email libraries in one account.</p></div>}
       <div className="grid gap-3 sm:grid-cols-2" aria-label="Resume libraries by email">
         {discoveredEmails.map(email => (
           <div key={email} className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
             <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>Associated with {email}</p>
             <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>{emailCounts[email] || 0} indexed resumes</p>
-            <p className="text-xs mt-1" style={{ color: "var(--text-soft)" }}>Resumes appear here after verified import.</p>
+            <p className="text-xs mt-1" style={{ color: "var(--text-soft)" }}>25 category folders after organization. Empty folders remain available for future resumes.</p>
           </div>
         ))}
       </div>
@@ -418,7 +452,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
           <div className="px-4 py-3 border-b flex items-center justify-between gap-2 flex-wrap"
             style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-soft)" }}>
-              Resume Library · {allFiles.length} file{allFiles.length !== 1 ? "s" : ""}
+              Resume Library · {visibleFiles.length} file{visibleFiles.length !== 1 ? "s" : ""}
             </p>
             <div className="flex items-center gap-1.5">
               {checked.size > 0 && (
@@ -454,8 +488,8 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
           {/* Tree */}
           <div className="p-3">
             <LibraryTree
-              files={allFiles}
-              folders={initialFolders}
+              files={visibleFiles}
+              folders={visibleFolders}
               checked={checked}
               onToggle={toggleCheck}
             />
