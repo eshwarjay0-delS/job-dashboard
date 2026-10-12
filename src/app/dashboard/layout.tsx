@@ -24,7 +24,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         minHeight: "100vh",
         padding: "40px 44px 80px",
       }}>
-        <OnboardingGate><DeviceGuard><PageTransition>{children}</PageTransition></DeviceGuard></OnboardingGate>
+        {resumeOnly ? <DeviceGuard><PageTransition>{children}</PageTransition></DeviceGuard> : <OnboardingGate><DeviceGuard><PageTransition>{children}</PageTransition></DeviceGuard></OnboardingGate>}
       </main>
 
       {/* ── Floating MFit Agent — the strategist, on every page ── */}
