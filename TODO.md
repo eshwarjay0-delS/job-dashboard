@@ -1,3 +1,36 @@
+## 2026-10-12 (night) — Where we stopped: the inbox by whose turn it is, and what the owner asked for next
+
+The owner signed in as eshwarjay05 in the browser pane and said "inspect and find ultimate solutions". Then he described what is still missing (below) and said: "Let's stop here for now and make sure that we have enough of everything until now."
+
+**What the real mail showed, and what was done about it (all live)**
+
+- The page said 39 emails "need your reply". In 30 the last word was already his. The server now says `yourTurn` only when they asked for something after he last wrote (`turnOf` in `src/lib/mail-reading.ts`, used by `threadsToMails`), and not when their last message says "no news yet, I will follow up" (`saysWaitForUs`). Live answer for his mail: 7 waiting on him, 69 who owe him an answer, 257 in all.
+- Three piles on `/dashboard/mail`: Your turn, Their turn, Everything. By role, Drafts and No answer yet wait behind More. Today and Workflows list only what is still open.
+- A row names the job (`aboutOf`): 199 of 255 rows had shown the subject line cut at 60 characters as "the role".
+- The reading pane opened 39 of 39 of his conversations: 36 with the full text, 3 with only Gmail's first lines; 76 quoted histories and 7 notices set aside.
+- Seen on his page and fixed: "Dasari, Jeevan" reads "Jeevan Dasari"; an address written twice (`a@b<mailto:a@b>`) is shown once; a preview no longer begins with a row of underscores; "SRE With Java Experience" is no longer cut to "SRE".
+
+**Verified:** `scripts/tests/mail-reading.test.mjs` 15 of 15, `theme-palette.test.mjs` 18 of 18, `kompas-shared-release.test.mjs` 3 of 3; type-check clean; and the live page read signed in, twice, with counts only taken out of it.
+
+**NOT verified:** a reply actually sent from the new pane (I do not send mail); the By role, Drafts and No answer yet views, which still use the old cards; the page on a phone.
+
+**What he asked for next, in his words (NOT started: he said stop)**
+
+"See if someone was interacting with me ... saying some requirement they were sending me and someone took their lead and addressed those requirements and followed up, sent my details and they have shooted back with an written information and some way that progress were already started. Then that actually goes to the overview since something was started and it was at some point on the pathway to the interview and if no one is following up it anymore then it is gonna be a major hassle for me and I have to go through the requirement and follow it up ... whoever sends the requirement, you have to keep calling them, keep following up them, keep pestering them, but in a soft way, and make sure that your application reaches until the track to the interview ... they want the best guidance. Like, hey, you have received this email and you have to send an updated resume. Here's this recruiter's contact, Gmail, and I need a contact box for everyone, whoever that was emailing me. And so, yeah, in the overview, that was missing out. And I'm really concerned about that missing out."
+
+**How I read it (mine, to be confirmed with him before building)**
+
+1. **A started application must reach Overview.** Once a requirement was answered and they wrote back, it is on the path to an interview and belongs on Overview, with where it stands.
+2. **Stalled ones must be named.** "Their turn" with nothing for days is the hassle: say which ones went quiet and for how long, and offer the soft follow-up. The 69 in Their turn are where to start; `m.ts` and `m.lastMine` already say how long each has been quiet.
+3. **Guidance in plain words per mail.** "You received this; send an updated resume." The pane's one sentence (`narrate`) is the seed; it knows three asks today (times, go-ahead, rate) and should learn more (resume, documents, details).
+4. **A contact box for everyone who emailed him.** `contactsOf` already pulls phone numbers and addresses per conversation; he wants it per person, everywhere, including Overview.
+
+**Also open from today**
+
+- The Kompas repository is one small commit ahead of production (the data move no longer carries where the call runs). Held: a Kompas release reloads open Kompas tabs. Deploy when he says.
+- Desktop app: launch from the page, the `/downloads/Kompas.exe` link (404, the file was never deployed), night mode there. Not mine; facts are in `perfACT/HANDOFF.md`.
+- The twelve colours are on six pages; Companies and Compare are not done.
+
 ## 2026-10-12 (evening) — The inbox is readable, and the Kompas page on this address routes its calls again
 
 Owner: "the Email inboxes are so freaking messy I can't read or understand anything from it." Then: "only present how much a 5 year old baby could consume understand and respond, think, ask for clarification, question, ask for automated replies, ask for history about the mail sequence. occurence. details contact numbers". And of Kompas here: "Can't run kompas", "Even then, I can't start the session".
