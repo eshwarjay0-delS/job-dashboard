@@ -88,13 +88,48 @@ export async function decode(file: File): Promise<{ ok: true; audio: Decoded } |
   }
 }
 
-/** Where each part starts and ends, in samples and in milliseconds. */
-export function partsOf(total: number): { from: number; to: number; startMs: number; endMs: number }[] {
+/** Where each part starts and ends, in samples and in milliseconds.
+ * Prefer a nearby low-energy boundary for uploaded recordings so a word is less likely to be cut in two.
+ * No samples are dropped, repeated, uploaded for analysis, or retained; the legacy fixed split remains
+ * the fallback for continuous speech, noisy audio, or callers without decoded samples.
+ */
+export function partsOf(total: number, samples?: Float32Array): { from: number; to: number; startMs: number; endMs: number }[] {
   const size = PART_SECONDS * RATE
+  const radius = Math.round(RATE * 0.3)
+  const frame = Math.round(RATE * 0.02)
+  const step = Math.round(RATE * 0.01)
+  const tail = Math.round(RATE * 0.5)
   const out: { from: number; to: number; startMs: number; endMs: number }[] = []
-  for (let from = 0; from < total; from += size) {
-    const to = Math.min(total, from + size)
-    out.push({ from, to, startMs: Math.round((from / RATE) * 1000), endMs: Math.round((to / RATE) * 1000) })
+  const energy = (at: number): number => {
+    const lo = Math.max(0, at - Math.floor(frame / 2))
+    const hi = Math.min(total, lo + frame)
+    let power = 0
+    for (let i = lo; i < hi; i++) power += samples![i] * samples![i]
+    return power / Math.max(1, hi - lo)
+  }
+  for (let from = 0; from < total;) {
+    const nominal = from + size
+    let to = Math.min(total, nominal)
+    if (total - nominal <= tail) {
+      to = total // Avoid a near-empty trailing transcription request.
+    } else if (samples && samples.length >= total) {
+      const base = energy(nominal)
+      if (base > 0.000001) {
+        let best = nominal, lowest = base
+        const lower = Math.max(from + tail, nominal - radius)
+        const upper = Math.min(total - tail, nominal + radius)
+        for (let at = lower; at <= upper; at += step) {
+          const value = energy(at)
+          if (value < lowest - 1e-9 || (Math.abs(value - lowest) <= 1e-9 && Math.abs(at - nominal) < Math.abs(best - nominal))) {
+            lowest = value; best = at
+          }
+        }
+        // Shift only to a substantially quieter window; never infer or edit spoken words.
+        if (lowest < 0.0004 && lowest < base * 0.25) to = best
+      }
+    }
+    out.push({ from, to, startMs: Math.round(from * 1000 / RATE), endMs: Math.round(to * 1000 / RATE) })
+    from = to
   }
   return out
 }
