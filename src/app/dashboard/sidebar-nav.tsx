@@ -24,6 +24,45 @@ function isActive(href: string, pathname: string) {
   return !ALL_HREFS.some(h => h !== href && h.length > href.length && matches(h))
 }
 
+function CreditsPill() {
+  const [s, setS] = useState<null | { resumesLeft: number; sessionsLeft: number }>(null)
+  useEffect(() => {
+    fetch("/api/credits/summary", { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : null))
+      .then(j => { if (j && j.ok) setS(j) })
+      .catch(() => {})
+  }, [])
+  if (!s) return null
+  return (
+    <Link href="/dashboard/admin" title="API budget — see the full breakdown"
+      style={{
+        display: "flex", alignItems: "center", gap: 8, margin: "10px 14px 0", padding: "8px 12px",
+        borderRadius: 999, border: "1px solid var(--border)", background: "var(--surface)",
+        fontSize: 12, fontWeight: 700, color: "var(--text)", textDecoration: "none", whiteSpace: "nowrap",
+      }}>
+      <span aria-hidden="true">◉</span>
+      <span>{s.resumesLeft.toLocaleString()} resumes · {s.sessionsLeft} sessions left</span>
+    </Link>
+  )
+}
+
+function CreditsPillCompact() {
+  const [s, setS] = useState<null | { resumesLeft: number; sessionsLeft: number }>(null)
+  useEffect(() => {
+    fetch("/api/credits/summary", { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : null))
+      .then(j => { if (j && j.ok) setS(j) })
+      .catch(() => {})
+  }, [])
+  if (!s) return <span />
+  return (
+    <Link href="/dashboard/admin" title="API budget"
+      style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+      ◉ {s.resumesLeft > 999 ? `${(s.resumesLeft / 1000).toFixed(1)}k` : s.resumesLeft}r · {s.sessionsLeft}s
+    </Link>
+  )
+}
+
 export default function SidebarNav() {
   const pathname = usePathname()
   const router = useRouter()
@@ -151,6 +190,7 @@ export default function SidebarNav() {
         <span /><span /><span />
       </button>
       <Link href="/dashboard" className="mf-mobile-brand">MarketFit</Link>
+      <CreditsPillCompact />
       <button
         type="button"
         className="mf-theme-toggle"
@@ -199,6 +239,7 @@ export default function SidebarNav() {
           <span aria-hidden="true">{dark ? "☀" : "☾"}</span>
         </button>
       </div>
+      <CreditsPill />
 
       {/* ── Main Nav ──────────────────────────────────────────────── */}
       <nav id="marketfit-navigation" aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
