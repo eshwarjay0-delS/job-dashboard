@@ -8,6 +8,7 @@ import { classifyEmail, type EmailCategory } from "@/lib/email-classifier"
 import type { Mail, Stage, App, Interview } from "@/app/dashboard/_suite/sample"
 
 import { emailAddress, authoredText, submissionEvidence, calendarEvidence, linkReferencedThreads, type CalendarEvidence } from "@/lib/application-evidence"
+import { turnOf } from "@/lib/mail-reading"
 
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me"
 
@@ -578,12 +579,21 @@ export function threadsToMails(threads: ClassifiedThread[]): Mail[] {
     const latest = t.messages[t.messages.length - 1]
     const domain = extractDomain(primary.from)
 
-    // needsReply: actionable inbound categories where user hasn't replied last
-    const needsReply =
-      primary.category === "Interview Request" ? "availability" as const :
-      primary.category === "RTR Request" ? "rtr" as const :
-      primary.category === "Rate Confirmation" ? "rate" as const :
+    // Whose turn it is. Until 12 Oct 2026 this only looked at what KIND of mail the thread held, never at who wrote
+    // last: on the owner's inboxes 39 threads were listed as needing his reply and in 30 of them the last word was his.
+    // An ask is open only if they made it after he last wrote (src/lib/mail-reading.ts: turnOf).
+    const askKind = (c?: EmailCategory) =>
+      c === "Interview Request" ? "availability" as const :
+      c === "RTR Request" ? "rtr" as const :
+      c === "Rate Confirmation" ? "rate" as const :
       undefined
+    const turn = turnOf(t.messages, [t.accountEmail])
+    const pendingAsk = [...turn.since].sort((a, b) => priority.indexOf(a.category) - priority.indexOf(b.category))[0]
+    // needsReply keeps saying what kind of mail this is (other pages count "invites this week" by it); the open ask's
+    // own kind wins when there is one. yourTurn is the answer to "do I have to do something".
+    const needsReply = askKind(pendingAsk?.category) ?? askKind(primary.category)
+    // The person on the other side: the last one of them to write. `primary` can be the user's own message.
+    const them = [...t.messages].reverse().find(m => emailAddress(m.from) !== t.accountEmail.toLowerCase()) || primary
 
     const role = primary.jobTitle || latest.subject.slice(0, 60)
     const jdFit = jdFitScore(role, latest.subject, latest.snippet)
@@ -592,7 +602,7 @@ export function threadsToMails(threads: ClassifiedThread[]): Mail[] {
       id: t.threadId,
       account: t.accountEmail,
       from: primary.vendor,
-      fromEmail: primary.from,
+      fromEmail: them.from,
       company: companyFromDomain(domain, primary.from),
       role,
       subject: latest.subject,
@@ -603,6 +613,9 @@ export function threadsToMails(threads: ClassifiedThread[]): Mail[] {
       rate: primary.rate || undefined,
       unread: t.messages.some(m => m.unread),
       needsReply,
+      yourTurn: !!askKind(pendingAsk?.category),
+      lastMine: turn.lastMine,
+      messages: t.messages.length,
       jdFit: jdFit.score,
       jdFitWhy: jdFit.matched,
     }

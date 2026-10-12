@@ -83,7 +83,7 @@ export default function ReadingPane({ m, myEmail, tint, restored, reply }: {
 
       {/* In plain words: what this is and what it wants from you. Worked out from the stage the mail was sorted into,
           never from a model: it says nothing the mail does not. */}
-      <p style={{ fontSize: 16, lineHeight: 1.5, fontWeight: 600, margin: "18px 0 0", color: "var(--text)" }}>{narrate(m, who.split(/[\s,]+/)[0] || who, !!seq?.lastMine)}</p>
+      <p style={{ fontSize: 16, lineHeight: 1.5, fontWeight: 600, margin: "18px 0 0", color: "var(--text)" }}>{narrate(m, who.split(/[\s,]+/)[0] || who, seq ? seq.lastMine : !!m.lastMine)}</p>
       <h3 style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.4, margin: "6px 0 0", color: "var(--text-muted)", overflowWrap: "anywhere" }}>{subject}</h3>
       {seq && seq.count > 1 && (
         <p style={{ fontSize: 12.5, color: "var(--text-muted)", margin: "4px 0 0" }}>

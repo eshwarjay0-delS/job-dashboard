@@ -253,13 +253,14 @@ function RoleCard({ group, onOpen, acct }: { group: RoleGroup; onOpen: (id: stri
   )
 }
 
-type View = "needs" | "roles" | "all" | "drafts" | "waiting"
+type View = "needs" | "theirs" | "roles" | "all" | "drafts" | "waiting"
 
 export default function MailPage() {
   const [ignoreRules, setIgnoreRules] = useState<IgnoreRule[]>([])
   const [selected, setSelected] = useState<string[]>([])
   const [showIgnored, setShowIgnored] = useState(false)
   const [tidying, setTidying] = useState(false)   // the tick boxes and the ignore controls, shown only while tidying
+  const [more, setMore] = useState(false)         // By role, Drafts and No answer yet: the three views behind "More"
   const [ignoreError, setIgnoreError] = useState("")
   useEffect(() => {
     let active = true
@@ -285,21 +286,29 @@ export default function MailPage() {
   const accounts = buildAccounts(mails.map(m => m.account))
   const acct = makeAcct(accounts)
 
-  const waiting = (x: Mail) => !!x.needsReply && !answered.includes(x.id)
+  // Whose turn it is, by what the server found: an ask they made after you last wrote (yourTurn). On the owner's own
+  // mail, 12 Oct 2026, the old rule (any thread that ever held an ask) listed 39 as needing him; the last word was his in
+  // 30. A mail kept from before the field existed falls back to the old rule until the next refresh.
+  const waiting = (x: Mail) => (x.yourTurn ?? !!x.needsReply) && !answered.includes(x.id)
   const live = mails.filter(x => (!!ignoreReason(x, ignoreRules) === showIgnored) && (x.stage !== "rejected" || restored.includes(x.id)) && (account === "all" || x.account === account))
   const needsList = live.filter(waiting)
+  const theirsList = live.filter(x => !!x.lastMine && !waiting(x))
   const filed = mails.filter(x => x.stage === "rejected" && !restored.includes(x.id))
   const roles = groupByRole(live.filter(x => x.stage !== "rejected"))
 
-  const shown = showIgnored ? live : view === "needs" ? needsList : live
+  const shown = showIgnored ? live : view === "needs" ? needsList : view === "theirs" ? theirsList : live
   const m = shown.find(x => x.id === sel) ?? shown[0]
 
+  // Three piles a person can hold in their head. The other three ways of looking wait behind "More".
   const VIEWS: [View, string, number][] = [
-    ["needs", "Needs you", needsList.length],
+    ["needs", "Your turn", needsList.length],
+    ["theirs", "Their turn", theirsList.length],
+    ["all", "Everything", live.length],
+  ]
+  const MORE: [View, string, number][] = [
     ["roles", "By role", roles.length],
-    ["all", "All mail", live.length],
     ["drafts", "Drafts", drafts.length],
-    ["waiting", "Waiting", radar.length],
+    ["waiting", "No answer yet", radar.length],
   ]
 
   const approve = (id: string) => {
@@ -327,8 +336,8 @@ export default function MailPage() {
             : loading
               ? "Reading your inboxes…"
               : needsCount === 0
-                ? "Nothing needs you right now. Everything below is sorted and waiting."
-                : `${needsCount} ${needsCount === 1 ? "email needs" : "emails need"} your reply — start at the top.`}
+                ? `Nobody is waiting on you.${theirsList.length ? ` ${theirsList.length} ${theirsList.length === 1 ? "person owes" : "people owe"} you an answer.` : ""}`
+                : `${needsCount} ${needsCount === 1 ? "person is" : "people are"} waiting on you.${theirsList.length ? ` ${theirsList.length} ${theirsList.length === 1 ? "owes" : "owe"} you an answer.` : ""}`}
         </p>
       </header>
 
@@ -367,8 +376,16 @@ export default function MailPage() {
             {VIEWS.map(([v, label, n]) => (
               <Chip key={v} label={label} active={view === v} onClick={() => setView(v)} count={n} />
             ))}
+            {(more || MORE.some(([v]) => v === view)) && MORE.map(([v, label, n]) => (
+              <Chip key={v} label={label} active={view === v} onClick={() => setView(v)} count={n} />
+            ))}
+            {!MORE.some(([v]) => v === view) && (
+              <button type="button" className="btn-ghost" aria-expanded={more} onClick={() => setMore(v => !v)} style={{ minHeight: 40, padding: "0 12px", fontSize: 14 }}>
+                {more ? "Less" : "More"}
+              </button>
+            )}
             {/* Hiding senders is a chore, not the page. It waits behind one quiet button, and so do the tick boxes. */}
-            <button type="button" className="btn-ghost" aria-expanded={tidying || showIgnored} onClick={() => { if (tidying || showIgnored) { setTidying(false); setShowIgnored(false); setSelected([]) } else { setTidying(true); if (view !== "needs" && view !== "all") setView("all") } }}
+            <button type="button" className="btn-ghost" aria-expanded={tidying || showIgnored} onClick={() => { if (tidying || showIgnored) { setTidying(false); setShowIgnored(false); setSelected([]) } else { setTidying(true); if (view !== "needs" && view !== "theirs" && view !== "all") setView("all") } }}
               style={{ marginLeft: "auto", minHeight: 40, padding: "0 14px", fontSize: 14 }}>
               {tidying || showIgnored ? "Done tidying" : "Tidy up"}
             </button>
@@ -450,7 +467,7 @@ export default function MailPage() {
                   <div style={{ padding: 32, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 14, color: "var(--text-muted)", fontSize: 13.5 }}>
                     <Leaf size={18} style={{ marginBottom: 8 }} />
                     <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
-                      {view === "needs" ? "Nothing needs you" : "Nothing here"}
+                      {view === "needs" ? "Nobody is waiting on you" : view === "theirs" ? "Nobody owes you an answer" : "Nothing here"}
                     </div>
                     {view === "needs" ? "Every thread is answered or scheduled." : live.length === 0 ? (
                       <span>No job emails in the last 30 days on the connected account{accounts.length > 1 ? "s" : ""}. <Link href="/dashboard/connections" style={{ fontWeight: 700, color: "var(--text)" }}>Connect your main inbox →</Link></span>

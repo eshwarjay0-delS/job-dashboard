@@ -125,6 +125,39 @@ export function sequenceOf(reading: Reading): { count: number; first: number; la
   return { count: ms.length, first: ms[0]?.at || 0, last: ms[ms.length - 1]?.at || 0, lastMine: !!ms[ms.length - 1]?.mine }
 }
 
+/* Whose turn it is. Measured on the owner's own inboxes on 12 Oct 2026: the page said 39 emails "need your reply", and in
+   30 of them the last word was already his. An ask is only open if they made it AFTER he last wrote.
+   `since` is everything they have written since his last message (all of it, when he has never written). */
+export function turnOf<T extends { from: string; internalDate?: string }>(messages: T[], myEmails: string[]): { lastMine: boolean; myLastAt: number; since: T[] } {
+  const mine = new Set(myEmails.map(e => String(e || "").toLowerCase()).filter(Boolean))
+  const ordered = [...(messages || [])].sort((a, b) => Number(a.internalDate || 0) - Number(b.internalDate || 0))
+  let myLastAt = 0, myLastIndex = -1
+  ordered.forEach((m, i) => { if (mine.has(senderEmail(m.from))) { myLastAt = Number(m.internalDate || 0); myLastIndex = i } })
+  return { lastMine: ordered.length > 0 && myLastIndex === ordered.length - 1, myLastAt, since: ordered.slice(myLastIndex + 1) }
+}
+
+/* What a mail is about, in the few words a person would use: the job. A recruiter's subject line is a shout
+   ("Urgent Hiring || Cybersecurity Analyst 166719 || State of Wisconsin || Madison, WI (HYBRID)") and on the owner's
+   inboxes 199 of 255 rows showed that line, cut off at 60 characters, as "the role". This picks the part that names a job
+   and drops the shouting, the request number and the place. When no part names a job, the subject is kept, tidied. */
+const TITLE = /\b(?:engineer|analyst|architect|developer|administrator|admin|consultant|manager|specialist|lead|director|officer|designer|scientist|tester|technician|programmer|devops|sre|sme|expert|auditor|coordinator)\b/i
+export function aboutOf(subject: string): string {
+  const clean = decodeEntities(String(subject || "")).replace(/^(?:\s*(?:re|fw|fwd)\s*:\s*)+/i, "").replace(/_/g, " ").replace(/\s+/g, " ").trim()
+  if (!clean) return ""
+  // "II" typed for "||" is a divider only when it is used as one, twice or more: "Security Analyst II" is a grade.
+  const bars = (clean.match(/ II /g) || []).length >= 2 ? clean.replace(/ II /g, " || ") : clean
+  const parts = bars.split(/\s*(?:\|\|+|\||!!+|::|-{2,}|–|—|\s-\s|:\s)\s*/).map(p => p.trim()).filter(Boolean)
+  const part = parts.find(p => TITLE.test(p))
+  if (!part) return clean.length > 80 ? clean.slice(0, 77).trimEnd() + "…" : clean
+  const job = part
+    .replace(/^(?:(?:urgent(?:ly)?|immediate(?:ly)?|hot|new|direct client|hiring|need(?:ed)?|opening|requirement|role|position|job|for|a|an|the)\b[\s:!-]*)+/i, "")
+    .replace(/\s+(?:at|in|for|with|@)\s+.*$/i, "")                 // "... at Atlanta GA for Delta Air Lines"
+    .replace(/\s*[#(\[]?\s*\b\d{4,}\b\s*[)\]]?/g, "")               // a request number
+    .replace(/\s*\((?:[^)]*)\)\s*$/g, "")                           // "(Hybrid)", "(C2C)"
+    .replace(/[\s,;:-]+$/g, "").trim()
+  return job || part
+}
+
 const MOST = 12, LONGEST = 8000
 /** A thread as it is read: oldest first, each message's own words, the last twelve. */
 export function readThread(thread: ThreadLike, myEmails: string[]): Reading {

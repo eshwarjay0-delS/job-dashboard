@@ -7,7 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { decodeEntities, senderName, senderEmail, splitQuoted, dropFooter, tidy, readThread, contactsOf, sequenceOf } from '../../src/lib/mail-reading.ts'
+import { decodeEntities, senderName, senderEmail, splitQuoted, dropFooter, tidy, readThread, contactsOf, sequenceOf, turnOf, aboutOf } from '../../src/lib/mail-reading.ts'
 
 const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 const ME = 'me@example.com'
@@ -92,6 +92,46 @@ test('the numbers and addresses to reach them are the ones THEY wrote', () => {
   assert.ok(!JSON.stringify(c).includes('555-010-7788') && !JSON.stringify(c).includes('5550107788') && !JSON.stringify(c).includes(ME), 'never the person\'s own number or address')
   const none = contactsOf({ subject: '', messages: [{ id: '1', who: 'A', email: 'a@b.example', mine: false, at: 0, text: 'Job 166719, posted 10/12/2026, pay 62.50, ref 2204170098765.', earlier: '', footer: false }] })
   assert.deepEqual(none.phones, [], 'a job number, a date and a long reference are not phone numbers')
+})
+
+test('an ask is open only if they made it after you last wrote', () => {
+  // Measured on the owner's inboxes, 12 Oct 2026: 39 emails were listed as "need your reply"; in 30 the last word was his.
+  const m = (from, at, category) => ({ from, internalDate: String(at), category })
+  const asked = m('Dana <dana@x.example>', 1, 'RTR Request'), mine = m(`Me <${ME}>`, 2, 'General Correspondence'), thanks = m('Dana <dana@x.example>', 3, 'Submission Confirmation'), again = m('Dana <dana@x.example>', 4, 'Rate Confirmation')
+  assert.deepEqual([turnOf([asked], [ME]).lastMine, turnOf([asked], [ME]).since.length], [false, 1], 'never answered: it is your turn')
+  assert.deepEqual([turnOf([asked, mine], [ME]).lastMine, turnOf([asked, mine], [ME]).since.length], [true, 0], 'you answered: their turn, nothing open')
+  assert.deepEqual(turnOf([asked, mine, thanks], [ME]).since.map((x) => x.category), ['Submission Confirmation'], 'a thank-you after your answer is not a new ask')
+  assert.deepEqual(turnOf([again, asked, thanks, mine].sort(() => 0.5 - Math.random()), [ME]).since.map((x) => x.category), ['Submission Confirmation', 'Rate Confirmation'], 'read in the order it was written, however it arrives')
+  assert.deepEqual(turnOf([], [ME]), { lastMine: false, myLastAt: 0, since: [] })
+  // The server uses exactly this to decide "your turn" and "you wrote last".
+  const lib = read('src/app/api/gmail/_lib.ts')
+  assert.match(lib, /const turn = turnOf\(t\.messages, \[t\.accountEmail\]\)/)
+  assert.match(lib, /yourTurn: !!askKind\(pendingAsk\?\.category\)/); assert.match(lib, /lastMine: turn\.lastMine/)
+})
+
+test('a row says what the mail is about in the words a person would use: the job', () => {
+  // The shapes of real subject lines on those inboxes; the words are made up.
+  assert.equal(aboutOf('Re: Urgent Hiring II Cybersecurity Analyst 220417 II State agency - Department of Records II Madison, WI (HYBRID)'), 'Cybersecurity Analyst')
+  assert.equal(aboutOf('Details required for submission !! Sr. Security Engineer #44310 at Atlanta GA for Northwind Air'), 'Sr. Security Engineer')
+  assert.equal(aboutOf('DFI - Security Analyst II ( 220417) ---- RTR &amp; On-site Requirement Acknowledgement'), 'Security Analyst II', 'a grade is not a divider, and the request number goes')
+  assert.equal(aboutOf('Fwd: Immediate need: IAM Architect (C2C)'), 'IAM Architect')
+  assert.equal(aboutOf('Senior IAM Engineer'), 'Senior IAM Engineer')
+  assert.equal(aboutOf('RTR Confirmation_State Of Wisconsin'), 'RTR Confirmation State Of Wisconsin', 'no job named: the subject, tidied')
+  assert.equal(aboutOf('Northwind - Right to Represent - Please respond ASAP'), 'Northwind - Right to Represent - Please respond ASAP')
+  assert.equal(aboutOf(''), ''); assert.ok(aboutOf('x'.repeat(200)).length <= 78)
+})
+
+test('the inbox is three piles by whose turn it is, and the number in the heading is the true one', () => {
+  const page = read('src/app/dashboard/mail/page.tsx'), row = read('src/app/dashboard/mail/_components/mail-row.tsx')
+  assert.match(page, /const waiting = \(x: Mail\) => \(x\.yourTurn \?\? !!x\.needsReply\) && !answered\.includes\(x\.id\)/, 'your turn is what the server found open, not every thread that ever held an ask')
+  assert.match(page, /const theirsList = live\.filter\(x => !!x\.lastMine && !waiting\(x\)\)/)
+  assert.match(page, /\["needs", "Your turn", needsList\.length\],\s*\["theirs", "Their turn", theirsList\.length\],\s*\["all", "Everything", live\.length\],/)
+  assert.match(page, /\["roles", "By role", roles\.length\],\s*\["drafts", "Drafts", drafts\.length\],\s*\["waiting", "No answer yet", radar\.length\],/, 'the other three ways of looking wait behind "More"')
+  assert.ok(/\{more \? "Less" : "More"\}/.test(page) && /waiting on you\./.test(page) && !/emails need"\} your reply/.test(page))
+  assert.ok(/aboutOf\(m\.role\) \|\| decodeEntities\(m\.role\)/.test(row) && /m\.lastMine \? `You wrote last/.test(row), 'a row names the job, and says when the last word was yours')
+  // The two other pages that list what needs a reply use the same answer.
+  assert.match(read('src/app/dashboard/today/page.tsx'), /mails\.filter\(m => m\.needsReply && m\.yourTurn !== false\)/)
+  assert.match(read('src/app/dashboard/workflows/page.tsx'), /if \(!m\.needsReply \|\| m\.yourTurn === false\) continue/)
 })
 
 test('the page reads first: the title comes before any control, and a row is one line each', () => {

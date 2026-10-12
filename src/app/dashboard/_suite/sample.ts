@@ -31,6 +31,9 @@ export type Mail = {
   id: string; account: string; from: string; fromEmail: string; company: string; role: string
   subject: string; preview: string; at: string; stage: Stage; rate?: string; when?: string
   unread?: boolean; needsReply?: NeedsReply
+  yourTurn?: boolean // they asked for something after you last wrote: the answer to "do I have to do something"
+  lastMine?: boolean // you wrote the last message in this conversation
+  messages?: number // how many messages the conversation holds
   jdFit?: number // 0-100 role-fit score for this email
   jdFitWhy?: string[] // matched keywords behind the score
   ts?: number // epoch ms of the latest message — for "this week" stories

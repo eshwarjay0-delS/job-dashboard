@@ -125,7 +125,9 @@ export default function TodayPage() {
   }, [])
 
   const now = Date.now()
-  const needs = mails.filter(m => m.needsReply)
+  // Only what is still open: an ask they made after you last wrote (yourTurn). A mail kept from before that field
+  // existed has none, and is listed as it was.
+  const needs = mails.filter(m => m.needsReply && m.yourTurn !== false)
   const upcoming = interviews.slice(0, 3)
 
   // ── The week's story ──

@@ -76,7 +76,7 @@ export default function WorkflowsPage() {
   // Derive approval queue from mails that need replies
   const approvalFor: Record<string, { step: string; detail: string }> = {}
   for (const m of mails) {
-    if (!m.needsReply) continue
+    if (!m.needsReply || m.yourTurn === false) continue   // already answered: nothing left to approve
     if (m.needsReply === "availability") {
       approvalFor[m.id] = { step: "Share availability", detail: `${m.role} · ${m.company}` }
     } else if (m.needsReply === "rtr") {

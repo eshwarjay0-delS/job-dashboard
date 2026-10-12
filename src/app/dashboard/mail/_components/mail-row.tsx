@@ -2,7 +2,7 @@
 import type { CSSProperties } from "react"
 import { Avatar, StagePill, leavingStyle } from "../../_suite/ui"
 import type { Mail } from "../../_suite/sample"
-import { decodeEntities, senderEmail, senderName } from "@/lib/mail-reading"
+import { aboutOf, decodeEntities, senderEmail, senderName } from "@/lib/mail-reading"
 
 // One conversation in the list: who, what it is about, how it begins. One line each, never three.
 // Before 12 Oct 2026 the middle line was the whole subject wrapped over three lines, the last line still had "&amp;" and
@@ -30,11 +30,11 @@ export default function MailRow({ m, on, restored, leaving, onClick, tint, inbox
           <span style={{ ...oneLine, fontSize: 14.5, fontWeight: m.unread ? 700 : 600, color: "var(--text)" }}>{who}</span>
           <span style={{ fontSize: 11.5, color: "var(--text-muted)", whiteSpace: "nowrap", flex: "none" }}>{m.at}</span>
         </div>
-        <div style={{ ...oneLine, fontSize: 13, color: "var(--text)", marginTop: 1 }}>{decodeEntities(m.role)}</div>
+        <div style={{ ...oneLine, fontSize: 13, color: "var(--text)", marginTop: 1 }}>{aboutOf(m.role) || decodeEntities(m.role)}</div>
         <div style={{ ...oneLine, fontSize: 12.5, color: "var(--text-muted)", marginTop: 2 }}>{decodeEntities(m.preview)}</div>
         <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 7, minWidth: 0 }}>
           {restored ? <StagePill stage="applied" label="Restored" /> : <StagePill stage={m.stage} />}
-          <span style={{ ...oneLine, fontSize: 11.5, color: "var(--text-muted)" }}>{org ? org + " · " : ""}to {inbox}</span>
+          <span style={{ ...oneLine, fontSize: 11.5, color: "var(--text-muted)" }}>{m.lastMine ? `You wrote last · from ${inbox}` : `${org ? org + " · " : ""}to ${inbox}`}</span>
         </div>
       </div>
     </button>
