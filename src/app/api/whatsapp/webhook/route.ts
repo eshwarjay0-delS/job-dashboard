@@ -18,6 +18,8 @@ import { NextRequest, NextResponse } from "next/server"
 import path from "path"
 import { createHash, randomBytes } from "crypto"
 import { blob, writePath, existsPath, deletePath, readPath } from "@/lib/storage"
+import { resumeEmails } from "@/lib/resumeOrganization"
+import { recoverLibraryResume } from "@/lib/resumeRecovery"
 import { extractText } from "@/lib/docx"
 import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
 import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
@@ -150,7 +152,7 @@ async function archiveGeneratedResume(from: string, wamid: string, gen: Gen): Pr
   const bytes = await readPath(gen.file)
   if (!bytes) return
   const plain = await extractText(bytes)
-  const emails = [...new Set((plain.slice(0, 4000).match(/[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}/gi) || []).map(v => v.toLowerCase()))]
+  const emails = resumeEmails(plain)
   if (emails.length !== 1) return
   const email = emails[0]
   const specialization = (gen.meta.role || "General").replace(/[^a-zA-Z0-9 _-]/g, "").trim().slice(0, 65) || "General"
@@ -202,6 +204,7 @@ const HELP = [
   "Send me two things, in any order:",
   "1. The *job description* (paste it as a message)",
   "2. Your *resume* as a .docx file",
+  "Already saved one? Send *resumes* to browse, then *resume <id>* to recover the original.",
   "",
   "As soon as I have both, I'll tailor it and send it back as a Word file named after you.",
   "",
@@ -273,6 +276,42 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     const text = String((msg.text as { body?: string })?.body || "").trim()
     const cmd = text.toLowerCase()
 
+    if (cmd === "resumes" || cmd === "recover resume" || cmd.startsWith("resumes ")) {
+      const service = createServiceClient()
+      const requestedEmail = cmd.startsWith("resumes ") ? cmd.slice(8).trim() : ""
+      const { data: libraries, error: libraryError } = await service.from("resume_email_libraries").select("id,email").eq("user_id", userId)
+      if (libraryError) throw libraryError
+      const selected = (libraries || []).filter(l => !requestedEmail || l.email === requestedEmail)
+      if (!selected.length) return sendText(from, "No saved email library found in your linked account. Import your resume ZIP in My files first.")
+      const { data: docs, error: docsError } = await service.from("resume_documents").select("id,library_id,specialization_id").eq("user_id", userId).in("library_id", selected.map(l => l.id)).limit(100)
+      if (docsError) throw docsError
+      const { data: folders } = await service.from("resume_specializations").select("id,name").eq("user_id", userId)
+      const names = new Map((folders || []).map(f => [f.id, f.name]))
+      const emails = new Map(selected.map(l => [l.id, l.email]))
+      const lines = (docs || []).map(d => `${emails.get(d.library_id)} · ${names.get(d.specialization_id) || "Resume"}\nresume ${d.id}`)
+      if (!lines.length) return sendText(from, "Your email folders are ready, but no resumes have been imported yet.")
+      // Stay below Meta's text-message size cap without dropping later libraries.
+      let message = "Your original resumes. Copy a resume command below to recover it.\n\n"
+      for (const line of lines) {
+        if (message.length + line.length > 3500) { await sendText(from, message); message = "" }
+        message += line + "\n\n"
+      }
+      return sendText(from, message)
+    }
+    const recovery = text.match(/^resume\s+([a-f0-9-]{36})$/i)
+    if (recovery) {
+      const original = await recoverLibraryResume(userId, recovery[1])
+      if (!original) return sendText(from, "That resume is not in your linked account. Send *resumes* for your available files.")
+      const filename = original.filename.replace(/__[a-f0-9]{16}(?=\.docx$)/i, "")
+      await sendDocument(from, original.bytes, filename, "Original saved resume. Send a job description to tailor this version.")
+      if (original.filepath) {
+        session.resumePath = original.filepath
+        session.resumeName = filename
+        session.resumeAt = Date.now()
+        await saveSession(from, session)
+      }
+      return
+    }
     if (["help", "hi", "hello", "start", "menu"].includes(cmd)) return sendText(from, HELP)
     if (cmd === "reset" || cmd === "clear") {
       await saveSession(from, { seen: session.seen })

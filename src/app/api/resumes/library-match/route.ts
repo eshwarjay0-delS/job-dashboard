@@ -3,13 +3,14 @@ import path from "path"
 import { authenticatedUserId, signInRequired } from "@/lib/authBoundary"
 import { USER_RESUMES_DIR } from "@/lib/paths"
 import { listFiles, readPath } from "@/lib/storage"
+import { resumeEmails } from "@/lib/resumeOrganization"
 import { extractText } from "@/lib/docx"
 import { extractKeywords } from "@/lib/keywords"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi
+
 
 // Match is scoped to the authenticated tenant and to the resume's actual contact email.
 // Folder names alone never authorize cross-identity selection.
@@ -26,14 +27,14 @@ export async function POST(request: NextRequest) {
   const jdKeywords = new Set(extractKeywords(jd))
   const files = (await listFiles(root).catch(() => [] as string[]))
     .filter(f => f.toLowerCase().endsWith(".docx") && path.resolve(f).startsWith(root + path.sep))
-    .slice(0,250)
+    .slice(0,1000)
   const matches: {filepath:string;score:number;matched:string[];specialization:string}[] = []
   for (const filepath of files) {
     try {
       const bytes = await readPath(filepath)
       if (!bytes) continue
       const plain = await extractText(bytes)
-      const emails = [...new Set((plain.slice(0,4000).match(EMAIL_RE) || []).map(x => x.toLowerCase()))]
+      const emails = resumeEmails(plain)
       if (emails.length !== 1 || emails[0] !== email) continue
       const terms = new Set(extractKeywords(plain))
       const matched = [...jdKeywords].filter(t => terms.has(t))
