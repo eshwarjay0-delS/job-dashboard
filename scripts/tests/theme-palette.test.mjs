@@ -232,3 +232,23 @@ test('no page keeps a paper palette of its own, so its boxes and its type follow
   walk('src/app/dashboard')
   assert.deepEqual(kept, [])
 })
+
+test('Kompas follows this theme on this address, so the setting it reads and the night it copies are held here', () => {
+  // The owner (12 Oct 2026): "make sure the night mode follows to the kompas in job dashboard as well." He chose night here
+  // because a bright page hurts his eyes, clicked Kompas in the same sidebar and got a paper-white page. Kompas now reads
+  // this theme (the Kompas release: copilot/theme-follow.js) and paints this night (copilot/mf-night.css). Neither file is
+  // in this repository, so a change to the three lines below changes nothing there by itself: change both, or Kompas
+  // goes back to ignoring the theme, or shows a night that is not this one.
+  const provider = read('src/app/theme-provider.tsx')
+  assert.match(provider, /const STORAGE_KEY = "jd_theme_v3"/, 'the name Kompas looks for')
+  assert.match(provider, /JSON\.stringify\(\{ accent, mode, template \}\)/, 'the shape it reads: mode, and template for the always-dark layout')
+  assert.match(provider, /const forceDark = tpl === "pro"/, 'the one layout that is dark whatever the mode')
+  const night = css.slice(css.indexOf('\n[data-theme="dark"] {\n'))
+  for (const [token, value] of [['--bg', '#131d27'], ['--surface', '#1a2530'], ['--surface-2', '#222f3d'], ['--border', '#2d3b48'], ['--border-strong', '#405367'],
+    ['--text', '#c6cdd4'], ['--text-muted', '#9eabb8'], ['--text-soft', '#8799ab'], ['--spot', '#de9a7c'], ['--danger', '#d7877e'], ['--success', '#83caa4'], ['--accent', '#557fa2']]) {
+    assert.match(night.slice(0, night.indexOf('\n}\n')), new RegExp(token + ':\\s+' + value + ';'), `${token} is ${value} here and in Kompas's night`)
+  }
+  // The Kompas page on this address comes from the one Kompas release, ahead of any copy kept in public/.
+  const config = read('next.config.js')
+  assert.match(config, /beforeFiles: \[\s*\{ source: "\/dashboard\/kompas", destination: "\/api\/kompas\/shell" \}/)
+})

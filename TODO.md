@@ -1,3 +1,38 @@
+## 2026-10-12 (later) — Night follows into Kompas, a theme switch there, and a page that moves Kompas data to this address
+
+Owner: "make sure the night mode follows to the kompas in job dashboard as well. And even in the session of kompas give the option of paper & ink." Then: "Give me that option as well. to toggle. the same goes for desktop app." Then: "can you combine perfact kompas and job dashboard to & one place? All the data transcripts and updates from over there as well. And finally delete perfACT".
+
+**Built (all of it in the Kompas release, `perfACT/copilot`, which this address serves through the `beforeFiles` rewrites; nothing in `src/` changed)**
+
+- **Night follows.** `theme-follow.js` reads this app's `jd_theme_v3` and carries the theme into Kompas, once per change, so a choice made inside Kompas holds until the theme here changes again. `mf-night.css` paints Kompas with this app's night tokens, value for value, on this address only.
+- **A switch beside the name in the Kompas sidebar.** On this address it writes `jd_theme_v3.mode` too, so MarketFit and Kompas agree.
+- **`/kompas/move.html`.** Kompas data is in the browser, separately for each address. This page downloads it on one address and adds it on the other without replacing anything.
+- **In this repository:** one test in `scripts/tests/theme-palette.test.mjs` holding the three things Kompas depends on here: the name `jd_theme_v3`, its shape, the night token values, and that the Kompas page is rewritten ahead of `public/`.
+
+**Verified**
+
+- Kompas tests 358 of 358; this file's theme test 17 of 17.
+- In a browser with this app's theme set to night: six Kompas pages and five dialogs with no text under 4.5 to 1 and no bright surface; the switch changed both settings and back; the session's Look menu and the switch stayed in step.
+- The data move, across two addresses in a browser (localhost to 127.0.0.1): lists joined by id, nothing replaced, a file and a date restored as what they were, a second import added nothing.
+- Live: `/kompas/theme-follow.js`, `mf-night.css`, `move.html`, `move.js`, `move-core.js` are byte for byte the Kompas repository's on this address and on perfact-ten, and the page at `/dashboard/kompas` loads the theme files in its head.
+
+**NOT verified**
+
+- Signed in here, on the real page, with the owner's eyes. I did not open the live Kompas page in a browser: it calls its own API on load.
+- The data move with the owner's real data and a store near the browser's size limit.
+
+**Not done, and why**
+
+- **Deleting perfACT.** Not safe today: this address gets the Kompas page, its files and its answers from perfact-ten. Delete it and Kompas stops here too. I do not delete projects in any case: that is the owner's own action, after the move.
+- **The desktop app's theme, and the session window's own markup.** The answer engine's side, which I leave to its owner. The session's Look menu already has the choice, labelled Light and Dark.
+- **`public/kompas/` (app.js, index.html, styles.css) is an old snapshot that nothing serves** (the rewrite runs before `public/`). It is another session's file; left alone, noted here.
+
+**Where to pick up**
+
+- The owner runs the move once: open `https://perfact-ten.vercel.app/move.html`, Download my Kompas data; open `https://job-dashboard-fawn.vercel.app/kompas/move.html`, choose the file, Add it here.
+- If one address is to go: the Kompas app has to be served from this deployment first (page, twelve functions, keys the owner adds). Until then perfact-ten is the engine room and only its front door could be closed.
+- His interview feedback of 12 Oct (structure, concrete examples, concise terms) is in `perfACT/HANDOFF.md`; three of its four points are things `/kompas/api/score` already measures.
+
 ## 2026-10-12 (ledger) — What was asked of Claude Code between 8 and 12 Oct, and where each thing stands
 
 Written so the next session does not have to reconstruct it. Shipped work has its own entries below; this is the list of what is open, and why.
