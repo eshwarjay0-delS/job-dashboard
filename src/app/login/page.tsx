@@ -23,7 +23,7 @@ function LoginContent() {
   const searchParams = useSearchParams()
   const next = safeAuthNext(searchParams.get("next"))
   const [loading,setLoading]=useState(false)
-  const [email,setEmail]=useState("eshwarjay0@gmail.com")
+  const [email,setEmail]=useState("")
   const [password,setPassword]=useState("")
   const [resetMode,setResetMode]=useState(false)
   const [error,setError]=useState<string|null>(null)
@@ -53,7 +53,7 @@ function LoginContent() {
   }
 
   async function emailSignIn() {
-    if(!["eshwarjay0@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes(email.trim().toLowerCase())){setError("You are not an admin.");return}
+    if(!["eshwarjay05@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes(email.trim().toLowerCase())){setError("Password login is not enabled for this account.");return}
     if (loading) return
     setLoading(true)
     setError(null)
@@ -67,7 +67,7 @@ function LoginContent() {
   }
 
   async function sendPasswordSetup() {
-    if(!["eshwarjay0@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes(email.trim().toLowerCase())){setError("You are not an admin.");return}
+    if(!["eshwarjay05@gmail.com","janjiaarya@gmail.com","tryguessup@gmail.com"].includes(email.trim().toLowerCase())){setError("Password login is not enabled for this account.");return}
     if (loading) return
     setLoading(true)
     setError(null)
