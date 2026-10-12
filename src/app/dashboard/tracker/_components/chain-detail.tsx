@@ -90,7 +90,7 @@ export default function ChainDetail({
                 border: `1px solid ${chain.stalledDays >= 7 ? "#e8c98f" : "var(--accent-border)"}`,
                 fontSize: 13.5, lineHeight: 1.55,
               }}>
-                <strong>{chain.holder}</strong> has your profile
+                Last documented recipient: <strong>{chain.holder}</strong>
                 {chain.stalledDays > 0 && <> · quiet for <strong>{chain.stalledDays} day{chain.stalledDays === 1 ? "" : "s"}</strong></>}.
                 <div style={{ marginTop: 4, color: "var(--text-muted)" }}>{chain.nextAction}</div>
               </div>

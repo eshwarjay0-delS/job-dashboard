@@ -1,3 +1,5 @@
+import { ignoreReason, validIgnoreRule } from "@/lib/gmail-ignore"
+import { emailAddress } from "@/lib/application-evidence"
 import { NextResponse } from "next/server"
 import { requireAuth, isAuthContext, fetchClassifiedThreads } from "../_lib"
 import { decideFollowup, type FollowupThread } from "@/lib/followup-engine"
@@ -33,7 +35,12 @@ export async function GET(req: Request) {
     let followupN = 0
     let callN = 0
 
+    const { data: { user: preferenceUser } } = await ctx.supabase.auth.getUser()
+    const storedRules = preferenceUser?.user_metadata?.gmail_ignore_rules
+    const ignoreRules = Array.isArray(storedRules) ? storedRules.filter(validIgnoreRule) : []
     for (const t of threads) {
+      const contact = [...t.messages].reverse().find(m => emailAddress(m.from) !== t.accountEmail.toLowerCase())
+      if (contact && ignoreReason({ account: t.accountEmail, id: t.threadId, fromEmail: emailAddress(contact.from) }, ignoreRules)) continue
       const latest = t.messages[t.messages.length - 1]
       if (!latest) continue
       const hasInterview = t.messages.some(m => m.category === "Interview Request")

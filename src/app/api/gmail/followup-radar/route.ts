@@ -1,3 +1,5 @@
+import { ignoreReason, validIgnoreRule } from "@/lib/gmail-ignore"
+import { emailAddress } from "@/lib/application-evidence"
 import { NextResponse } from "next/server"
 import { requireAuth, isAuthContext, fetchClassifiedThreads } from "../_lib"
 import { checkRateLimit } from "@/lib/rateLimit"
@@ -28,7 +30,12 @@ export async function GET(req: Request) {
       daysWaiting: number; jobTitle: string; vendor: string
     }> = []
 
+    const { data: { user: preferenceUser } } = await ctx.supabase.auth.getUser()
+    const storedRules = preferenceUser?.user_metadata?.gmail_ignore_rules
+    const ignoreRules = Array.isArray(storedRules) ? storedRules.filter(validIgnoreRule) : []
     for (const t of threads) {
+      const contact = [...t.messages].reverse().find(m => emailAddress(m.from) !== t.accountEmail.toLowerCase())
+      if (contact && ignoreReason({ account: t.accountEmail, id: t.threadId, fromEmail: emailAddress(contact.from) }, ignoreRules)) continue
       if (!t.messages.length) continue
       const latest = t.messages[t.messages.length - 1]
       const own = t.accountEmail.toLowerCase()

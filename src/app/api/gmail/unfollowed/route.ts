@@ -5,30 +5,13 @@ import { createClient } from "@/lib/supabase/server"
 // POST /api/gmail/unfollowed { domain, company_name?, reason? } — add
 // DELETE /api/gmail/unfollowed?domain=... — remove (re-follow)
 
-const SEED_DOMAINS = [
-  { domain: "tekblu.us", company_name: "TekBlu", reason: "Marketing firm — markets my profile, never a follow-up target" },
-  { domain: "cloudquestit.com", company_name: "CloudQuestIT", reason: "Marketing firm — markets my profile, never a follow-up target" },
-  { domain: "teksolveit.com", company_name: "TeksolveIT", reason: "Marketing firm — markets my profile, never a follow-up target" },
-]
-
-async function ensureSeeded(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
-  const { data } = await supabase.from("unfollowed_domains").select("domain").eq("user_id", userId)
-  const existing = new Set((data || []).map((d: { domain: string }) => d.domain.toLowerCase()))
-  const missing = SEED_DOMAINS.filter(s => !existing.has(s.domain))
-  if (missing.length > 0) {
-    await supabase.from("unfollowed_domains").insert(
-      missing.map(s => ({ user_id: userId, ...s })),
-    )
-  }
-}
-
 export async function GET() {
   try {
     const supabase = await createClient()
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
 
-    await ensureSeeded(supabase, session.user.id)
+    // Existing rules remain user controlled; GET never recreates deleted rules.
 
     const { data, error } = await supabase
       .from("unfollowed_domains")

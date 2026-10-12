@@ -32,7 +32,7 @@ export async function GET(req: Request) {
     const accounts = await listGoogleWorkspaceAccounts(ctx.userId)
     const ordered = [
       ...accounts.filter(a => (a.google_email || "").toLowerCase() === accountEmail),
-      ...accounts.filter(a => (a.google_email || "").toLowerCase() !== accountEmail && a.gmail_enabled),
+
     ]
     let data: any = null
     for (const a of ordered) {

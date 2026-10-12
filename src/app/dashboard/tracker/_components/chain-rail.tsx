@@ -23,11 +23,11 @@ export default function ChainRail({ chain }: { chain: ApplicationChain }) {
         <div style={{
           position: "absolute", top: 11, left: 22, height: 3, borderRadius: 3,
           width: `calc(${(currentIdx / (ORDER.length - 1)) * 100}% - ${(currentIdx / (ORDER.length - 1)) * 44}px)`,
-          background: doneColor, transition: "width 0.6s ease",
+          background: "var(--border)", transition: "width 0.6s ease",
         }} />
         {chain.stops.map((s, i) => {
-          const isCurrent = i === currentIdx && !chain.terminal
-          const isDone = i < currentIdx || (chain.terminal !== null && i <= currentIdx)
+          const isCurrent = s.reached && i === currentIdx && !chain.terminal
+          const isDone = s.reached
           return (
             <div key={s.key} style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", width: 64, flexShrink: 0 }}>
               <div style={{

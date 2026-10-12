@@ -216,7 +216,7 @@ function JourneyCard({ iv }: { iv: Interview }) {
             </div>
           )}
           <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: 1.6, color: "var(--text-muted)" }}>
-            This one was real — a confirmed invite, now behind you. What did it teach you?
+            {iv.ts ? "Scheduled date found. Attendance and outcome are unconfirmed." : "Invite evidence found. Date or timezone has not been verified."}
           </p>
         </div>
       </div>
@@ -234,7 +234,7 @@ function JourneyCard({ iv }: { iv: Interview }) {
           Practice for the next one
         </Link>
         {iv.threadId && (
-          <Link href={`/dashboard/overview?chain=${encodeURIComponent(iv.threadId)}`} style={{
+          <Link href={`/dashboard/overview?chain=${encodeURIComponent(iv.threadId)}&account=${encodeURIComponent(iv.account)}`} style={{
             display: "inline-flex", alignItems: "center", gap: 6, minHeight: 40, padding: "0 18px", borderRadius: 999,
             border: "1px solid var(--border-strong)", fontSize: 13.5, fontWeight: 700, textDecoration: "none", color: "var(--text)",
           }}>
@@ -251,17 +251,24 @@ function JourneyCard({ iv }: { iv: Interview }) {
 
 export default function CalendarPage() {
   // ── Live Gmail data ────────────────────────────────────────────────────
-  const { interviews, loading, connected, error, refresh } = useGmailData()
+  const { interviews: rawInterviews, loading, connected, error, refresh } = useGmailData()
+  const interviews = rawInterviews.map(iv => {
+    if (!iv.ts) return iv
+    const d = new Date(iv.ts)
+    const start = d.getHours() + d.getMinutes() / 60
+    return { ...iv, day: (d.getDay() + 6) % 7, start, end: start + (iv.end - iv.start) }
+  })
   const [sel, setSel] = useState<string | null>(null)
-  const [tab, setTab] = useState<"upcoming" | "past">("upcoming")
+  const [tab, setTab] = useState<"upcoming" | "past" | "unknown">("upcoming")
   const [weekOff, setWeekOff] = useState(0) // 0 = this week, -1 = last week, …
   const accounts = buildAccounts(interviews.map(i => i.account))
   const acct = makeAcct(accounts)
 
   const nowTs = Date.now()
-  const isPast = (iv: Interview) => (iv.ts || 0) < nowTs - DAY_MS
-  const upcoming = interviews.filter(iv => !isPast(iv))
+  const isPast = (iv: Interview) => !!iv.ts && iv.ts < nowTs
+  const upcoming = interviews.filter(iv => !!iv.ts && !isPast(iv))
   const past = interviews.filter(isPast)
+  const unknown = interviews.filter(iv => !iv.ts)
 
   const iv = upcoming.find(x => x.id === sel) ?? upcoming[0]
 
@@ -292,7 +299,7 @@ export default function CalendarPage() {
                 : `Your next one is ${upcoming[upcoming.length - 1]?.company} — walk in ready.`
               : past.length === 0
                 ? "No past interviews parsed yet — they'll show up here with the full journey."
-                : `${past.length} interview${past.length === 1 ? "" : "s"} so far. Every one made you sharper — here's the proof.`}
+                : `${past.length} past scheduled invites. Attendance is not inferred from the date.`}
         </p>
       </header>
 
@@ -304,11 +311,11 @@ export default function CalendarPage() {
       )}
 
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {(["upcoming", "past"] as const).map(t => (
+        {(["upcoming", "past", "unknown"] as const).map(t => (
           <Chip
             key={t}
-            label={t === "upcoming" ? "Upcoming" : "Past"}
-            count={t === "upcoming" ? upcoming.length : past.length}
+            label={t === "upcoming" ? "Upcoming invites" : t === "past" ? "Past scheduled" : "Date unverified"}
+            count={t === "upcoming" ? upcoming.length : t === "past" ? past.length : unknown.length}
             active={tab === t}
             onClick={() => setTab(t)}
           />
@@ -319,7 +326,7 @@ export default function CalendarPage() {
         <div style={{ textAlign: "center", padding: "60px 24px", color: "var(--text-muted)", fontSize: 14 }}>
           <TypingDots label="Loading interviews…" />
         </div>
-      ) : tab === "upcoming" ? (
+      ) : tab === "unknown" ? (<div>{unknown.map(p => <JourneyCard key={`${p.account}:${p.id}`} iv={p} />)}</div>) : tab === "upcoming" ? (
         upcoming.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 14, color: "var(--text-muted)", fontSize: 13.5 }}>
             No interviews scheduled. When invites land in your inbox, they'll appear here — and in the meantime,{" "}
@@ -342,7 +349,7 @@ export default function CalendarPage() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
-              <div style={{ flex: "1 1 780px", minWidth: 0 }}><Week sel={sel} onPick={setSel} interviews={upcoming} /></div>
+              <div style={{ flex: "1 1 780px", minWidth: 0 }}><Week sel={sel} onPick={setSel} interviews={upcoming.filter(i => i.ts && i.ts >= mondayOf(nowTs).getTime() && i.ts < mondayOf(nowTs).getTime() + 7 * DAY_MS)} /></div>
               {iv && <Detail iv={iv} acct={acct} />}
             </div>
           </>
@@ -369,8 +376,7 @@ export default function CalendarPage() {
               {(activeWeek?.[1] || []).map(p => <JourneyCard key={p.id} iv={p} />)}
             </div>
             <p style={{ marginTop: 24, fontSize: 12.5, color: "var(--text-soft)", lineHeight: 1.6, textAlign: "center" }}>
-              Regret is a story about the past. Progress is data about the future.<br />
-              Every interview above moved you forward — reflect, adjust, keep going.
+              An elapsed invitation is not proof of attendance. Open the application overview to inspect its source emails.
             </p>
           </>
         )
