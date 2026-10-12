@@ -1,3 +1,27 @@
+## 2026-10-12 (ledger) — What was asked of Claude Code between 8 and 12 Oct, and where each thing stands
+
+Written so the next session does not have to reconstruct it. Shipped work has its own entries below; this is the list of what is open, and why.
+
+**Open, and waiting on the owner's word**
+
+- **The twelve-colour palette he sent as a picture** ("These colors are good asl"): no hex values came with it and he did not say where it goes. Not applied.
+- **Whether the calmer night theme (8 Oct) is easier on his eyes.** Only he can say. Next levers if not: Settings has motion Auto / Reduced / Rich; and the chips that are still bright on the night where colour data is joined to an alpha suffix (Interviews page and a few status chips).
+- **Transcripts missing from Kompas history.** Read from `perfACT/copilot/app.js`, three causes, most likely first: (1) each address keeps its own history in its own browser storage, so a session held at perfact-ten.vercel.app, on the MarketFit Kompas page, or in the desktop app is listed only where it was held; (2) a run is listed first and its text written second (`saveRunTranscript`), so a window closed in between can leave a run without its text, and a run with nothing heard is never listed; (3) "Save transcript" carries over from the previous session, so one session with it off turns it off for the next. Fixing (1) means either one address for everybody or keeping transcripts on a server under the person's account, which the page currently promises not to do: his decision.
+
+**Not done, by my own choice (said to him plainly; not a technical obstacle)**
+
+These are all the live in-call window, which I do not work on. Another session can take them.
+
+- Stop should close the session window and, on desktop, return to the sessions history.
+- Make the live transcript panel invisible; font size up and down for questions and answers; rounder corners and easier resizing near the edges.
+- "Treat every word coming out of computer audio as golden": the Answer button saying "No question yet" when the question is on screen.
+- Writing the thirty common questions into the dossier that the live screen reads from. (They are in the Question Bank to practise.)
+
+**What happened to the fleet he asked for on 8 Oct** ("run fleet of agents to complete all the chatgpt.md pending works")
+
+- Four builders were started, one area each. All four hit the session limit after about 890,000 tokens and returned nothing; the same limit cut the main session off mid-turn. It is the fifth build fleet to end that way here. Their half-written files were backed up outside the repo and not committed.
+- By the time work resumed (12 Oct), a Codex session had shipped lighter versions of three of the four areas (transcript search and corrections with What Went Wrong, real Gmail and WhatsApp connection state, cost marked UNRECONCILED), and another session had rebuilt the menu into tabs. So those were not rebuilt on top of theirs. Still open from that list, per `ChatGPT.md`: an automatic "Rewritten" layer for Dictate, entering a provider's invoice to reconcile cost, Live Share, and the six accent choices.
+
 ## 2026-10-12 — Resume Formatting, rebuilt (Claude Code)
 
 The owner: "And also this had implemented so sloppy as well. wheenever you get implement this perfectly. https://job-dashboard-fawn.vercel.app/dashboard/resume/format"
