@@ -220,7 +220,7 @@ function BudgetBoard({ tick, setBudgetTick }: { tick: number; setBudgetTick: (f:
           <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-soft)" }}>Unit economics</p>
           <div className="mt-2 space-y-1 text-sm" style={{ color: "var(--text-muted)" }}>
             <p><b style={{ color: "var(--text)" }}>${u.perResumeUsd.toFixed(4)}</b> per resume {u.perResumeCalibrated ? <Tag tone="good">measured</Tag> : <Tag tone="warn">estimate</Tag>}</p>
-            <p><b style={{ color: "var(--text)" }}>${u.perSession20MinUsd.toFixed(4)}</b> per 20-min session (STT)</p>
+            <p><b style={{ color: "var(--text)" }}>${u.perSession60MinUsd.toFixed(4)}</b> per 1-hour session (STT)</p>
             <p><b style={{ color: "var(--text)" }}>${u.freePlanMonthlyCostUsd.toFixed(4)}</b> <span>free plan cost / user / month</span></p>
             <p className="text-xs" style={{ color: "var(--text-soft)" }}>{u.note}</p>
           </div>

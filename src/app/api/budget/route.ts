@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
   const sttSeconds = stt.calls.reduce((n, e) => n + (e.seconds || 0), 0)
   const sttCost = sttSeconds * WHISPER_TURBO_PER_MIN * 60
-  const perSession20 = 20 * WHISPER_TURBO_PER_MIN // 20-minute practice session, STT only
+  const perSession60 = 60 * WHISPER_TURBO_PER_MIN // 1-hour interview session, STT only
 
   const openaiLeft = Math.max(0, openaiBal.loadedUsd - (spentByProvider.openai || 0))
   const groqLeft = Math.max(0, groqBal.loadedUsd - (spentByProvider.groq || 0))
@@ -64,8 +64,8 @@ export async function GET(request: NextRequest) {
   // $0.037/$0.17 per M, per llm-stats.com Oct 2026) — the floor for resume cost.
   const OR_120B_FLOOR = { in: 0.037, out: 0.17 }
 
-  // Free plan as he described it: 7 resumes/month + 20 session-minutes.
-  const freePlanCost = 7 * perResume + perSession20
+  // Free plan: 7 resumes/month + one 1-hour session.
+  const freePlanCost = 7 * perResume + perSession60
 
   return NextResponse.json({
     ok: true,
@@ -97,10 +97,10 @@ export async function GET(request: NextRequest) {
       perResumeUsd: r6(perResume),
       perResumeCalibrated: measuredPerResume > 0,
       measuredResumes: measuredCount,
-      perSession20MinUsd: r6(perSession20),
+      perSession60MinUsd: r6(perSession60),
       sttPerMinuteUsd: r6(WHISPER_TURBO_PER_MIN),
       freePlanMonthlyCostUsd: r6(freePlanCost),
-      note: "7 resumes/month + one 20-min session, at measured cost.",
+      note: "7 resumes/month + one 1-hour session, at measured cost.",
     },
     measured: {
       resumesGenerated: measuredCount,
