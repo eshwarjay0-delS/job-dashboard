@@ -115,7 +115,6 @@ export function mountKompasHtml(html: string): string {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paintCredits);
   else paintCredits();
   new MutationObserver(paintCredits).observe(document.documentElement, { childList: true, subtree: true });
-  };
 })();
 </script>`
   return html.replace(/<head([^>]*)>/i, `<head$1>\n${shim}`)

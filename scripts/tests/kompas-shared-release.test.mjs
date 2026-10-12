@@ -13,7 +13,13 @@ test('mount keeps all canonical scripts and loads them under the dashboard origi
   assert.ok(html.includes('src="https://cdn.example/a.js"'))
   const calls = []
   const window = { fetch: (input, opts) => { calls.push([input, opts]); return Promise.resolve() } }
-  vm.runInNewContext(html.match(/<script>([\s\S]*?)<\/script>/)[1], { window, URL, Request, location: { origin: 'https://dashboard.test', href: 'https://dashboard.test/dashboard/kompas' } })
+  // The script must PARSE. From 11 Oct 16:51 to 12 Oct 2026 it did not (a stray "};" at its end), so none of it ran on the
+  // live page: no Kompas call was routed to the engine from the dashboard address, and a session there could not start.
+  const shim = html.match(/<script>([\s\S]*?)<\/script>/)[1]
+  assert.doesNotThrow(() => new vm.Script(shim), 'the mount script is valid JavaScript')
+  // It also paints the credits pill, so it needs a page to look at. A bare one is enough here.
+  const document = { readyState: 'complete', getElementById: () => null, documentElement: {}, addEventListener() {} }
+  vm.runInNewContext(shim, { window, URL, Request, document, MutationObserver: class { observe() {} }, setInterval() {}, location: { origin: 'https://dashboard.test', href: 'https://dashboard.test/dashboard/kompas' } })
   window.fetch('/api/answer', { method: 'POST', body: 'question' })
   window.fetch('/version.json?t=1')
   window.fetch(new Request('https://dashboard.test/api/levels', { method: 'POST', body: 'anchors' }))
