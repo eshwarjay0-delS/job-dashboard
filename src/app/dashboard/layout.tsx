@@ -1,5 +1,4 @@
 import { authenticatedUser } from "@/lib/authBoundary"
-import { redirect } from "next/navigation"
 import "./dashboard-shell.css"
 import SidebarNav from "./sidebar-nav"
 import PageTransition from "./page-transition"
@@ -12,13 +11,6 @@ import FloatingAgent from "./_components/floating-agent"
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await authenticatedUser()
   const resumeOnly = ["janjiaarya@gmail.com", "tryguessup@gmail.com"].includes(user?.email?.toLowerCase() || "")
-  if (resumeOnly) {
-    const { headers } = await import("next/headers")
-    const h = await headers()
-    const pathname = h.get("x-invoke-path") || h.get("x-matched-path") || ""
-    // Navigation restrictions must also be enforced at the request boundary.
-    void pathname
-  }
   return (
     <div className="mf-dashboard-shell" style={{ minHeight: "100vh", backgroundColor: "var(--bg)", color: "var(--text)" }}>
 
