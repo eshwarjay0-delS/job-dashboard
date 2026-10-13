@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useDialogs } from "@/components/ui/dialog-provider"
-import Learned from "./learned"
 import WhatsAppClaim from "../_components/whatsapp-claim"
 
 // Resume-library entry shape. This view was folded into the resume hub, so its
@@ -21,6 +20,15 @@ interface ResumeFile {
 
 // The name as a person reads it: without the hash the library adds so two files of one name can live side by side.
 const shownName = (name: string) => name.replace(/__[a-f0-9]{16}$/i, "")
+// The name as a person reads it, and where a resume can be looked at before it is used (owner, 13 Oct 2026: "Give the
+// preview with view button right next to all resumes"). A Word resume opens as a page; a PDF opens as itself.
+const plainName = shownName
+const viewHref = (file: { filepath: string; filename: string; kind?: string }) => file.kind === "pdf"
+  ? `/api/resumes/download?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(plainName(file.filename))}&inline=1`
+  : `/api/resumes/pdf?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(plainName(file.filename))}&autoprint=0`
+// A top folder that is a person's email is a title, with that person's folders under it ("I need to see separate with
+// email as titles and Organized folders").
+const isEmailFolder = (name: string) => name.includes("@") || name === "Needs email review"
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 function CloudIcon() {
@@ -96,6 +104,12 @@ function FileRow({ file, depth, ctx }: { file: ResumeFile; depth: number; ctx: T
         <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{shownName(file.filename)}</p>
         <p className="text-xs" style={{ color: "var(--text-soft)" }}>{file.kind === "pdf" ? "PDF · " : ""}{file.category} · {file.size} · {fmt}</p>
       </div>
+      {file.filepath && (
+        <a href={viewHref(file)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} title="Look at this resume"
+          className="text-xs px-2 py-1 rounded-lg border" style={{ color: "var(--text)", borderColor: "var(--border)", background: "var(--surface)", textDecoration: "none", fontWeight: 600 }}>
+          View
+        </a>
+      )}
       <a
         href={`/api/resumes/download?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(shownName(file.filename))}`}
         download
@@ -142,7 +156,16 @@ function LibraryTree({ files, folders, checked, onToggle }: { files: ResumeFile[
   if (files.length === 0 && folders.length === 0) return null
   return (
     <div className="space-y-0.5">
-      {[...root.folders.values()].map(c => <FolderRow key={c.name} node={c} depth={0} relpath={c.name} ctx={ctx} />)}
+      {[...root.folders.values()].filter(c => isEmailFolder(c.name)).map(person => (
+        <section key={person.name} aria-label={person.name} style={{ marginBottom: 14 }}>
+          <h3 style={{ margin: "8px 0 6px", padding: "0 8px", fontSize: 16, fontWeight: 700, color: "var(--text)", overflowWrap: "anywhere" }}>
+            {person.name} <span style={{ fontWeight: 500, fontSize: 13, color: "var(--text-soft)" }}>· {countFiles(person)} {countFiles(person) === 1 ? "file" : "files"}</span>
+          </h3>
+          {[...person.folders.values()].map(c => <FolderRow key={c.name} node={c} depth={0} relpath={`${person.name}/${c.name}`} ctx={ctx} />)}
+          {person.files.map(f => <FileRow key={f.id} file={f} depth={0} ctx={ctx} />)}
+        </section>
+      ))}
+      {[...root.folders.values()].filter(c => !isEmailFolder(c.name)).map(c => <FolderRow key={c.name} node={c} depth={0} relpath={c.name} ctx={ctx} />)}
       {root.files.map(f => <FileRow key={f.id} file={f} depth={0} ctx={ctx} />)}
     </div>
   )
@@ -364,7 +387,6 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
       </div>
 
       <WhatsAppClaim onMoved={broughtIn} />
-      <Learned refresh={indexRevision} />
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className="btn-outline" onClick={organizeLibrary} disabled={organizing || !allFiles.length}>

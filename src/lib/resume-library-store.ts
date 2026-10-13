@@ -1,19 +1,25 @@
 // Reads and writes what `resume-library.ts` decides: the tailored files in a person's Files, and the record of what
-// each kind of job keeps asking for. The record is `_library.json` at the top of the person's library; Files lists
-// resumes only, so it is never shown as one.
+// each kind of job keeps asking for.
 //
-// Two resumes saved for the same person in the same second would both read the record and the later write would win,
-// losing the first one's counts (the file itself is still saved). The bot answers one message at a time per number, so
-// this is left as it is.
+// ONE RECORD FOR EACH FOLDER (13 Oct 2026: "maintain separate repo with headlines. Not even in the same repo!!"). The
+// record of a folder is `_library.json` INSIDE that folder (<email>/<kind of job>/_library.json), beside its files.
+// Making or picking a resume of one kind reads and writes that one small file; nothing of another kind is touched, and
+// two kinds saved at the same moment cannot overwrite each other. Files lists resumes only, so a record is never shown.
+// The first version kept one record for the whole library at its top; it is split into the folders the first time it
+// is met, and then removed.
+//
+// A FOLDER IS NAMED BY THE EMAIL AND NOTHING ELSE ("Just always only takes the emails"). A folder that was named with
+// more than the address ("x@gmail.comlinkedin") is put back under the address: its files are moved, and its record is
+// joined to the one already there.
 
 import path from "path"
 import { createHash } from "crypto"
-import { readPath, readPathText, writePath, deletePath, existsPath, listFiles } from "@/lib/storage"
+import { readPath, readPathText, writePath, deletePath, existsPath, listFiles, movePath } from "@/lib/storage"
 import { extractText } from "@/lib/docx"
-import { resumeEmails, rankResumeCategories } from "@/lib/resumeOrganization"
+import { resumeEmails, rankResumeCategories, cleanEmail } from "@/lib/resumeOrganization"
 import { extractJdKeywords, coveredJdKeywords } from "@/lib/keywords"
 import { pdfText } from "@/lib/pdf-text"
-import { categoryForJob, emptyLibrary, folderFor, isTailoredName, learnedOf, recordRun, tailoredFileName, validLibrary, NO_CATEGORY, type Learned, type Library } from "@/lib/resume-library"
+import { categoryForJob, emptyLibrary, folderFor, isTailoredName, learnedOf, mergeLibraries, recordRun, relabelEmail, shelfOnly, shelvesIn, tailoredFileName, validLibrary, NO_CATEGORY, type Learned, type Library } from "@/lib/resume-library"
 
 export const LIBRARY_FILE = "_library.json"
 
@@ -21,15 +27,101 @@ export const LIBRARY_FILE = "_library.json"
 export const relOf = (userDir: string, abs: string): string => path.relative(userDir, abs).split(path.sep).join("/")
 export const absOf = (userDir: string, rel: string): string => path.join(userDir, ...String(rel).split("/").filter(p => p && p !== "." && p !== ".."))
 const inside = (dir: string, abs: string): boolean => path.resolve(abs).startsWith(path.resolve(dir) + path.sep)
+const recordOf = (userDir: string, email: string, category: string): string => path.join(userDir, ...folderFor(email, category), LIBRARY_FILE)
+const parse = (raw: string | null): Library => { try { return raw ? validLibrary(JSON.parse(raw)) : emptyLibrary() } catch { return emptyLibrary() } }
 
-export async function readLibrary(userDir: string): Promise<Library> {
-  try {
-    const raw = await readPathText(path.join(userDir, LIBRARY_FILE))
-    return raw ? validLibrary(JSON.parse(raw)) : emptyLibrary()
-  } catch { return emptyLibrary() }
+/** The first version's single record, split into its folders and removed. True when there was one. */
+async function splitOldRecord(userDir: string): Promise<boolean> {
+  const old = path.join(userDir, LIBRARY_FILE)
+  const raw = await readPathText(old).catch(() => null)
+  if (!raw) return false
+  let library = parse(raw)
+  // An email written with more than the address is put right on the way.
+  for (const email of new Set([...library.files.map(f => f.email), ...Object.values(library.shelves).map(sh => sh.email)])) {
+    const clean = email.includes("@") ? cleanEmail(email) : email
+    if (clean && clean !== email) library = relabelEmail(library, email, clean)
+  }
+  for (const [email, category] of shelvesIn(library)) {
+    const here = parse(await readPathText(recordOf(userDir, email, category)).catch(() => null))
+    await writePath(recordOf(userDir, email, category), JSON.stringify(mergeLibraries(here, shelfOnly(library, email, category))))
+  }
+  await deletePath(old).catch(() => {})
+  return true
 }
-async function writeLibrary(userDir: string, library: Library): Promise<void> {
-  await writePath(path.join(userDir, LIBRARY_FILE), JSON.stringify(library))
+
+/** The record of one folder: what this kind of job has taught, and the files saved in it. One small read. */
+export async function readShelf(userDir: string, email: string, category: string): Promise<Library> {
+  const raw = await readPathText(recordOf(userDir, email, category)).catch(() => null)
+  if (raw) return parse(raw)
+  // Not there: either nothing was saved for this kind yet, or the old single record has not been split.
+  return (await splitOldRecord(userDir)) ? parse(await readPathText(recordOf(userDir, email, category)).catch(() => null)) : emptyLibrary()
+}
+async function writeShelf(userDir: string, library: Library, email: string, category: string): Promise<void> {
+  await writePath(recordOf(userDir, email, category), JSON.stringify(shelfOnly(library, email, category)))
+}
+
+/**
+ * A top folder named with more than an address ("x@gmail.comlinkedin") is put back under the address alone. Its files
+ * are moved (a file already there is kept once), and its records are joined to the ones already there.
+ */
+async function mendEmailFolders(userDir: string, all: string[]): Promise<boolean> {
+  const wrong = new Map<string, string>()
+  for (const abs of all) {
+    const top = relOf(userDir, abs).split("/")[0]
+    if (!top.includes("@") || wrong.has(top)) continue
+    const clean = cleanEmail(top)
+    if (clean && clean !== top) wrong.set(top, clean)
+  }
+  if (!wrong.size) return false
+  for (const abs of all) {
+    const parts = relOf(userDir, abs).split("/")
+    const right = wrong.get(parts[0])
+    if (!right) continue
+    const dest = absOf(userDir, [right, ...parts.slice(1)].join("/"))
+    if (parts[parts.length - 1] === LIBRARY_FILE) {
+      const moved = relabelEmail(parse(await readPathText(abs).catch(() => null)), parts[0], right)
+      await writePath(dest, JSON.stringify(mergeLibraries(parse(await readPathText(dest).catch(() => null)), moved)))
+      await deletePath(abs).catch(() => {})
+    } else if (!(await existsPath(dest))) await movePath(abs, dest)
+    // The same name is already under the email. Only a true copy is dropped; a file that reads differently is kept
+    // beside it under a second name, so nothing the person put there is ever lost to the tidying.
+    else if (await sameBytes(abs, dest)) await deletePath(abs).catch(() => {})
+    else await movePath(abs, await freeName(dest))
+  }
+  return true
+}
+async function sameBytes(a: string, b: string): Promise<boolean> {
+  const [x, y] = await Promise.all([readPath(a).catch(() => null), readPath(b).catch(() => null)])
+  return !!x && !!y && x.equals(y)
+}
+async function freeName(dest: string): Promise<string> {
+  const ext = path.extname(dest), stem = dest.slice(0, dest.length - ext.length)
+  for (let n = 2; n < 50; n++) { const next = `${stem} (${n})${ext}`; if (!(await existsPath(next))) return next }
+  return `${stem} (${createHash("sha256").update(dest + ext).digest("hex").slice(0, 8)})${ext}`
+}
+
+/**
+ * Put the library in order before it is shown: a folder named with more than the email goes back under the email, and
+ * the first version's single record is split into the folders. Costs one listing when there is nothing to do.
+ */
+export async function mendLibrary(userDir: string): Promise<void> {
+  const all = await listFiles(userDir).catch(() => [] as string[])
+  await mendEmailFolders(userDir, all).catch(error => console.error("[library] folders not mended", String(error).slice(0, 200)))
+  if (all.some(f => relOf(userDir, f) === LIBRARY_FILE)) await splitOldRecord(userDir).catch(() => false)
+}
+
+/** Every folder's record as one library, read from what is really there. */
+export async function readLibrary(userDir: string): Promise<Library> {
+  return (await readAll(userDir)).library
+}
+async function readAll(userDir: string): Promise<{ library: Library; all: string[] }> {
+  let all = await listFiles(userDir).catch(() => [] as string[])
+  let again = await mendEmailFolders(userDir, all).catch(error => { console.error("[library] folders not mended", String(error).slice(0, 200)); return false })
+  if (all.some(f => relOf(userDir, f) === LIBRARY_FILE)) again = (await splitOldRecord(userDir)) || again
+  if (again) all = await listFiles(userDir).catch(() => [] as string[])
+  const records = all.filter(f => { const parts = relOf(userDir, f).split("/"); return parts.length === 3 && parts[2] === LIBRARY_FILE })
+  const parts = await Promise.all(records.map(f => readPathText(f).then(parse, () => emptyLibrary())))
+  return { library: parts.reduce(mergeLibraries, emptyLibrary()), all }
 }
 
 /**
@@ -38,21 +130,21 @@ async function writeLibrary(userDir: string, library: Library): Promise<void> {
  * what is in it, so it is the same file wherever it sits).
  */
 export async function readLibraryChecked(userDir: string): Promise<Library> {
-  const library = await readLibrary(userDir)
+  const { library, all } = await readAll(userDir)
   if (!library.files.length) return library
-  const there = (await listFiles(userDir).catch(() => [] as string[])).filter(f => /\.docx$/i.test(f)).map(f => relOf(userDir, f))
+  const there = all.filter(f => /\.docx$/i.test(f)).map(f => relOf(userDir, f))
   const have = new Set(there)
   const byName = new Map(there.map(rel => [rel.split("/").pop() as string, rel]))
-  let changed = false
+  const touched = new Set<string>()
   const files = library.files.flatMap(f => {
     if (have.has(f.path)) return [f]
-    changed = true
+    touched.add(`${f.email}\n${f.category}`)
     const moved = byName.get(f.path.split("/").pop() as string)
     return moved && !library.files.some(o => o.path === moved) ? [{ ...f, path: moved }] : []
   })
-  if (!changed) return library
+  if (!touched.size) return library
   const next = { ...library, files }
-  await writeLibrary(userDir, next).catch(() => {})
+  for (const key of touched) { const [email, category] = key.split("\n"); await writeShelf(userDir, next, email, category).catch(() => {}) }
   return next
 }
 
@@ -84,12 +176,12 @@ export async function saveTailored(opts: {
   if (replaces) await deletePath(replaces).catch(() => {})
 
   const email_ = folderFor(email, category)[0]
-  const before = await readLibrary(opts.userDir)
+  const before = await readShelf(opts.userDir, email_, category)
   const library = recordRun(before, {
     path: relOf(opts.userDir, abs), email: email_, category, role: opts.role || "", company: opts.company || "", depth: opts.depth, from: opts.from,
     jd: opts.jd, asked, covers, points: opts.points, replaces: replaces ? relOf(opts.userDir, replaces) : undefined,
   }, opts.now ?? Date.now())
-  await writeLibrary(opts.userDir, library)
+  await writeShelf(opts.userDir, library, email_, category)
   const learned = learnedOf(library, email_, category)
   return { abs, rel: relOf(opts.userDir, abs), email: email_, category, learned, counted: learned.jobs > learnedOf(before, email_, category).jobs }
 }
@@ -98,10 +190,12 @@ export async function saveTailored(opts: {
 export async function forgetTailored(userDir: string, abs: string): Promise<void> {
   if (!inside(userDir, abs) || !isTailoredName(path.basename(abs))) return
   await deletePath(abs).catch(() => {})
-  const library = await readLibrary(userDir)
-  const rel = relOf(userDir, abs)
+  // The folder a file is in names its record: <email>/<kind of job>/<file>.
+  const rel = relOf(userDir, abs), parts = rel.split("/")
+  if (parts.length !== 3) return
+  const library = await readShelf(userDir, parts[0], parts[1])
   if (!library.files.some(f => f.path === rel)) return
-  await writeLibrary(userDir, { ...library, files: library.files.filter(f => f.path !== rel) })
+  await writeShelf(userDir, { ...library, files: library.files.filter(f => f.path !== rel) }, parts[0], parts[1])
 }
 
 /**

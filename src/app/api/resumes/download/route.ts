@@ -29,7 +29,8 @@ export async function GET(request: NextRequest) {
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type":        pdf ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "Content-Disposition": `attachment; filename="${safeFilename}"`,
+      // inline=1 (a PDF only): shown in the browser, for "View". A Word file is always a download.
+      "Content-Disposition": `${pdf && searchParams.get("inline") === "1" ? "inline" : "attachment"}; filename="${safeFilename}"`,
       "Content-Length":      String(buffer.length),
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",

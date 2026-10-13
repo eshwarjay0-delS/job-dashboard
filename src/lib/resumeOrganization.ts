@@ -31,11 +31,32 @@ export const CATEGORY_FOLDERS = Object.keys(RESUME_CATEGORIES)
 export const MAX_RESUMES_PER_CATEGORY = 2
 export const ORGANIZED_RESUMES_PER_EMAIL = CATEGORY_FOLDERS.length * MAX_RESUMES_PER_CATEGORY
 
+// An address, and only the address. On a resume the contact line often runs straight into the next word with no space
+// ("sam@gmail.comLinkedIn: ..."), and the pattern below then takes the word as part of the address. Found on 13 Oct
+// 2026: Files held two folders for one person, "x@gmail.com" and "x@gmail.comlinkedin" (the owner: "Both are same!!",
+// "Just always only takes the emails"). A well-known mail service ends where its name ends; anywhere else a common
+// ending is cut where a word that is plainly not part of an address begins.
+const MAIL_SERVICE = /^(gmail\.com|googlemail\.com|yahoo\.com|yahoo\.co\.in|yahoo\.in|ymail\.com|outlook\.com|hotmail\.com|live\.com|msn\.com|icloud\.com|me\.com|aol\.com|protonmail\.com|proton\.me|rediffmail\.com|zoho\.com)(?=[a-z0-9])/i
+const RUNS_INTO = /(\.(?:com|net|org|edu|gov|io|co|us|in|ai|dev|info|me|uk|ca))(?:linkedin|github|gitlab|https?|www|phone|mobile|cell|tel|portfolio|website|twitter|location|address|skype|medium|stackoverflow|summary|professional|experience|objective|profile)[a-z0-9.-]*$/i
+const NOT_AN_ADDRESS = /^(?:linkedin|github|gitlab|https?|www|phone|mobile|cell|tel|portfolio|website|twitter|location|address|skype|medium|stackoverflow)/i
+export function cleanEmail(found: string): string {
+  const [local, domain = ""] = String(found || "").trim().toLowerCase().split("@")
+  if (!local || !domain) return ""
+  const service = MAIL_SERVICE.exec(domain)
+  if (service) {
+    // What follows a mail service's name is cut when it is a word run on ("linkedin", "linkedin.com/in/x"), and kept
+    // when it is more of a real address ("gmail.company.example" is a company's own, not Gmail).
+    const rest = domain.slice(service[1].length)
+    if (!rest.includes(".") || NOT_AN_ADDRESS.test(rest)) return `${local}@${service[1]}`
+  }
+  return `${local}@${domain.replace(RUNS_INTO, "$1")}`
+}
+
 export function resumeEmails(text: string): string[] {
   // DOCX runs often split the @ sign from either side. Do not remove all spaces:
   // that would combine labels or neighboring words into the contact address.
   const header = text.slice(0, 2500).replace(/\s*@\s*/g, "@")
-  return [...new Set((header.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi) || []).map(e => e.toLowerCase()))]
+  return [...new Set((header.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi) || []).map(cleanEmail).filter(Boolean))]
 }
 export function normalizedResume(text: string): string {
   return text.normalize("NFKC").toLowerCase().replace(/\s*@\s*/g, "@").replace(/[^\p{L}\p{N}@+#]+/gu, " ").trim()

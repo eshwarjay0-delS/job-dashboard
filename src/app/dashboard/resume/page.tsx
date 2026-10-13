@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import ResumeClient from "./ResumeClient"
 import { USER_RESUMES_DIR } from "@/lib/paths"
 import { listFiles, statPath } from "@/lib/storage"
+import { mendLibrary } from "@/lib/resume-library-store"
 
 export interface ResumeFile {
   id: string
@@ -77,6 +78,9 @@ export default async function ResumePage() {
   const userId = user?.id ?? "demo"
 
   const userDir = path.join(USER_RESUMES_DIR, userId)
+  // A folder is named by the email and nothing else: one that was named with more ("x@gmail.comlinkedin") is put back
+  // under the email before anything is listed (13 Oct 2026: "Both are same!!").
+  await mendLibrary(userDir)
   const { files, pdfs, folders } = await scanLibrary(userDir)
   return <ResumeClient initialFiles={files} initialFolders={folders} otherFiles={pdfs} />
 }

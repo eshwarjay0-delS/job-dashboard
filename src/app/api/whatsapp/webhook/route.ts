@@ -22,10 +22,10 @@ import { NextRequest, NextResponse } from "next/server"
 import path from "path"
 import { createHash, randomBytes } from "crypto"
 import { blob, writePath, existsPath, deletePath, readPath, listFiles } from "@/lib/storage"
-import { resumeEmails } from "@/lib/resumeOrganization"
+import { resumeEmails, cleanEmail } from "@/lib/resumeOrganization"
 import { extractJdKeywords } from "@/lib/keywords"
-import { categoryForJob, isTailoredName, learnedAll, learnedLine, pickBase, pointsOf, COMMON_AT, NO_EMAIL } from "@/lib/resume-library"
-import { absOf, forgetTailored, readLibraryChecked, saveTailored, saveUpload, type SavedTailored } from "@/lib/resume-library-store"
+import { categoryForJob, isTailoredName, learnedAll, pickBase, pointsOf, COMMON_AT, NO_EMAIL } from "@/lib/resume-library"
+import { absOf, forgetTailored, readLibraryChecked, readShelf, saveTailored, saveUpload, type SavedTailored } from "@/lib/resume-library-store"
 import { getDossierProfile, saveDossierProfile } from "@/lib/dossier"
 import { hashUserId } from "@/lib/sttLedger"
 import { claimLinkCode, linkedUserId } from "@/lib/whatsapp-link"
@@ -278,7 +278,7 @@ const HELP = [
   "",
   "*Want changes?* Swipe right on a resume I sent (or long-press → Reply) and type what to change, e.g. _add more Terraform_ or _make the bullets shorter_.",
   "",
-  "Commands: *status* · *library* · *original* · *reset* · *help*",
+  "Commands: *status* · *original* · *reset* · *help*",
 ].join("\n")
 
 const NOT_IN_FILES = "_Not in your Files yet. In MarketFit, open WhatsApp, press Link this number, and send me the code it shows._"
@@ -563,8 +563,11 @@ async function sourceFor(from: string, session: Session, who: Who, jd: string, o
   if (!who.saves || (own && (sentNow || original))) return own
   if (own) {
     if (session.resumeEmail === undefined) session.resumeEmail = await emailOn((await readPath(own.givenPath as string)) || Buffer.alloc(0))
+    // An email remembered before 13 Oct 2026 may carry the word that ran into it ("x@gmail.comlinkedin").
+    else if (session.resumeEmail) session.resumeEmail = cleanEmail(session.resumeEmail)
     const category = categoryForJob(jd)
-    const pick = pickBase(await readLibraryChecked(userDir), { email: session.resumeEmail || NO_EMAIL, category, asked: extractJdKeywords(jd) })
+    // One small read: the record of this kind of job for this person, kept in its own folder.
+    const pick = pickBase(await readShelf(userDir, session.resumeEmail || NO_EMAIL, category), { email: session.resumeEmail || NO_EMAIL, category, asked: extractJdKeywords(jd) })
     if (pick && pick.shows > 0) {
       const abs = absOf(userDir, pick.file.path)
       if (await existsPath(abs)) return { dir: userDir, givenPath: abs, depth: 2, from: pick.file.path, said: `your saved *${category}* resume${pick.file.role ? ` (${clip(pick.file.role, 60)})` : ""}, which already shows ${pick.shows} of the ${pick.of} things this job asks for` }
@@ -772,9 +775,8 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
   // The person's own dossier grows with every new job (owner, 13 Oct 2026: it "keeps on improving with every ... resume
   // updation"): the kind of work, and what jobs of that kind keep asking for. Kompas reads the dossier when it prepares.
   if (filed.counted && UUID.test(gen.userId)) await feedDossier(gen.userId, filed).catch(e => console.error("[whatsapp] dossier not fed", String(e).slice(0, 200)))
-  // The third job of a kind is the first time something true can be said about what they all ask for: said once.
-  const line = filed.counted && filed.learned.jobs === COMMON_AT ? learnedLine(filed.learned) : ""
-  if (line) { try { await sendText(from, `${line}\n\nSend *library* any time to see this for every kind of job.`) } catch { /* ignore */ } }
+  // What each kind of job keeps asking for is kept for the tailoring, not shown to the person (owner, 13 Oct 2026, on
+  // seeing it listed in Files: "we don't need show this user as well").
 }
 
 // "Experience: 41 bullets rewritten across 4/4 roles" + the listed JD skills each role's bullets

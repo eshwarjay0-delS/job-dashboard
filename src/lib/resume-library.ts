@@ -222,3 +222,79 @@ export function learnedLine(learned: Learned): string {
   if (learned.jobs < COMMON_AT || !learned.common.length) return ""
   return `Asked for by ${COMMON_AT} or more of your ${learned.jobs} ${learned.category} jobs: ${learned.common.slice(0, 8).map(c => c.word).join(", ")}`
 }
+
+// ── One record for each folder ("repo"), and putting two records together ────────────────────────────────────────────
+// Asked on 13 Oct 2026: "maintain separate repo with headlines. Not even in the same repo!!" Each headline folder
+// (<email>/<kind of job>) keeps its own record beside its files, so reading or saving one kind of job touches one small
+// file and nothing of another kind. The functions below cut one folder's part out of a library, and join parts again.
+
+/** Only what belongs to one folder: its jobs, words and lines, and the files saved in it. */
+export function shelfOnly(library: Library, email: string, category: string): Library {
+  const key = shelfKey(email, category)
+  const shelf = library.shelves[key]
+  return {
+    version: 1,
+    files: library.files.filter(f => shelfKey(f.email, f.category) === key),
+    shelves: shelf ? { [key]: shelf } : {},
+  }
+}
+
+/** Every folder a library holds something for, as [email, kind of job]. */
+export function shelvesIn(library: Library): Array<[string, string]> {
+  const seen = new Map<string, [string, string]>()
+  for (const s of Object.values(library.shelves)) seen.set(shelfKey(s.email, s.category), [s.email, s.category])
+  for (const f of library.files) seen.set(shelfKey(f.email, f.category), [f.email || NO_EMAIL, f.category || NO_CATEGORY])
+  return [...seen.values()]
+}
+
+function joinShelves(a: Shelf, b: Shelf): Shelf {
+  const jobs = [...new Set([...a.jobs, ...b.jobs])].slice(-MOST_JOBS)
+  const words: Shelf["words"] = { ...a.words }
+  for (const [word, w] of Object.entries(b.words)) {
+    const had = words[word]
+    // A job seen by both records is one job: a word is never counted for more jobs than there are.
+    words[word] = had ? { n: Math.min(had.n + w.n, jobs.length || had.n + w.n), last: Math.max(had.last, w.last) } : w
+  }
+  const points: Point[] = a.points.map(p => ({ ...p, jobs: [...p.jobs], words: [...p.words] }))
+  for (const p of b.points) {
+    const same = points.find(x => alike(x.text, p.text))
+    if (!same) { points.push({ ...p, jobs: [...p.jobs], words: [...p.words] }); continue }
+    same.jobs = [...new Set([...same.jobs, ...p.jobs])].slice(-MOST_JOBS_ON_A_POINT)
+    same.words = [...new Set([...same.words, ...p.words])].slice(0, 24)
+    same.first = Math.min(same.first || p.first, p.first || same.first)
+    if (p.last >= same.last) { same.last = p.last; same.text = p.text }
+  }
+  return { email: a.email, category: a.category, jobs, words, points }
+}
+
+/** Two libraries as one. A file is kept once (by its path); a folder both know is joined, never counted twice. */
+export function mergeLibraries(a: Library, b: Library): Library {
+  const files = new Map<string, SavedFile>()
+  for (const f of [...a.files, ...b.files]) { const had = files.get(f.path); if (!had || f.at >= had.at) files.set(f.path, f) }
+  const shelves: Record<string, Shelf> = { ...a.shelves }
+  for (const [key, shelf] of Object.entries(b.shelves)) shelves[key] = shelves[key] ? joinShelves(shelves[key], shelf) : shelf
+  return { version: 1, files: [...files.values()].sort((x, y) => x.at - y.at).slice(-MOST_FILES), shelves }
+}
+
+/**
+ * The same library with one email written another way: every file, every folder and every path under it. Used when a
+ * folder was named with more than the address ("x@gmail.comlinkedin") and is put back under the address alone.
+ */
+export function relabelEmail(library: Library, from: string, to: string): Library {
+  if (!from || !to || from === to) return library
+  const path = (p: string) => (p.startsWith(`${from}/`) ? `${to}/${p.slice(from.length + 1)}` : p)
+  const moved: Library = {
+    version: 1,
+    files: library.files.map(f => (f.email === from ? { ...f, email: to, path: path(f.path), ...(f.from ? { from: path(f.from) } : {}) } : f)),
+    shelves: {},
+  }
+  const rest: Library = { version: 1, files: [], shelves: {} }
+  for (const shelf of Object.values(library.shelves)) {
+    const target = shelf.email === from ? moved : rest
+    const renamed = shelf.email === from ? { ...shelf, email: to } : shelf
+    const key = shelfKey(renamed.email, renamed.category)
+    target.shelves[key] = target.shelves[key] ? joinShelves(target.shelves[key], renamed) : renamed
+  }
+  // What was under the old name is joined to what the right name already holds.
+  return mergeLibraries({ version: 1, files: [], shelves: rest.shelves }, moved)
+}

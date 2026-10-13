@@ -1,6 +1,6 @@
 // v2
 import path from "path"
-import { readPath, readPathText, writePath, listFiles } from "@/lib/storage"
+import { readPath, readPathText, writePath, listFiles, statPath } from "@/lib/storage"
 import { createHash } from "crypto"
 import { extractText } from "./docx"
 
@@ -458,7 +458,7 @@ export function isGCRemoteJD(jd: string): boolean {
 // `title` = the resume's OWN headline role title, read from its content at index time
 // (the spec's "build the base at parse time" — identity comes from the resume itself,
 // not only the folder name). Powers title-first selection for arbitrary uploads.
-interface IndexEntry { keywords: string[]; title: string; hash: string; filename: string; category: string; updatedAt: string; yoe: number }
+interface IndexEntry { keywords: string[]; title: string; hash: string; filename: string; category: string; updatedAt: string; yoe: number; sig?: string }
 type Index = Record<string, IndexEntry>
 
 const TITLE_ROLE_RE = /\b(engineer|developer|analyst|architect|administrator|manager|consultant|specialist|scientist|designer|programmer|lead|director|devops|sre|administrat\w*)\b/i
@@ -507,8 +507,23 @@ async function listDocx(root: string): Promise<{ filepath: string; filename: str
   return out
 }
 
-// Make sure every current resume has up-to-date keywords saved (re-extracts only
-// new/changed files, by content hash). Pass `dir` to scope to a user's personal folder.
+// Make sure every current resume has up-to-date keywords saved. Pass `dir` to scope to a user's personal folder.
+//
+// HOW IT KNOWS A FILE HAS NOT CHANGED, WITHOUT FETCHING IT. Until 13 Oct 2026 every call downloaded every resume to hash
+// it: measured on a library of 40, picking a resume for one job read 40 whole files, each time, and a library grows by
+// one with every job. Now:
+//   - a file the library named itself ("Name__<16 hex of its content>.docx") cannot change under that name, so once it
+//     is indexed it is never read again;
+//   - any other file is looked at by its size and date only (one small request), and read again only when they differ;
+//   - what does have to be read is read several at a time.
+// What comes back is the same index as before, entry for entry.
+const NAMED_BY_CONTENT = /__[a-f0-9]{16}\.docx$/i
+const complete = (e: IndexEntry | undefined): e is IndexEntry => !!e && typeof e.title === "string" && typeof e.yoe === "number"
+async function severalAtATime<T>(items: T[], most: number, work: (item: T) => Promise<void>): Promise<void> {
+  let next = 0
+  await Promise.all(Array.from({ length: Math.min(most, items.length) }, async () => { while (next < items.length) await work(items[next++]) }))
+}
+
 export async function ensureIndex(dir?: string): Promise<Index> {
   const resumesDir = dir ?? RESUMES_DIR
   const indexFile  = dir ? path.join(dir, "_keywords.json") : INDEX_FILE
@@ -520,16 +535,30 @@ export async function ensureIndex(dir?: string): Promise<Index> {
   for (const key of Object.keys(idx)) {
     if (!present.has(key)) { delete idx[key]; changed = true }
   }
-  for (const f of files) {
-    const buf = await readPath(f.filepath)
-    if (!buf) continue
+
+  // Which files have to be read: the new ones, and the ones whose size or date is not what it was.
+  const toRead: { file: (typeof files)[number]; sig: string }[] = []
+  await severalAtATime(files, 12, async file => {
+    const entry = idx[file.filepath]
+    if (complete(entry) && NAMED_BY_CONTENT.test(file.filepath)) return
+    const info = await statPath(file.filepath).catch(() => null)
+    const sig = info ? `${info.size}:${info.mtime.getTime()}` : ""
+    if (complete(entry) && sig && entry.sig === sig) return
+    toRead.push({ file, sig })
+  })
+
+  await severalAtATime(toRead, 6, async ({ file, sig }) => {
+    const buf = await readPath(file.filepath)
+    if (!buf) return
     const hash = createHash("sha1").update(buf).digest("hex")
-    if (idx[f.filepath]?.hash === hash && typeof idx[f.filepath]?.title === "string" && typeof idx[f.filepath]?.yoe === "number") continue
+    const entry = idx[file.filepath]
+    // The same content as before (indexed by an earlier version, or only its date moved): its size and date are noted.
+    if (complete(entry) && entry.hash === hash) { if (sig && entry.sig !== sig) { entry.sig = sig; changed = true } return }
     let text = ""
     try { text = await extractText(buf) } catch { /* keep empty */ }
-    idx[f.filepath] = { keywords: extractKeywords(text), title: headlineTitle(text), hash, filename: f.filename, category: f.category, updatedAt: new Date().toISOString(), yoe: estimateYears(text) }
+    idx[file.filepath] = { keywords: extractKeywords(text), title: headlineTitle(text), hash, filename: file.filename, category: file.category, updatedAt: new Date().toISOString(), yoe: estimateYears(text), ...(sig ? { sig } : {}) }
     changed = true
-  }
+  })
   if (changed) await writeIndex(idx, indexFile)
   return idx
 }
