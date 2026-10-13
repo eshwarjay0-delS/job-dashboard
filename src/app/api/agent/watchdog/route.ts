@@ -3,6 +3,7 @@ import crypto from "crypto"
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 import { fetchClassifiedThreads, type ClassifiedThread } from "../_tools"
+import { sendInterviewFollowUps } from "@/lib/interview-followups"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -237,14 +238,25 @@ export async function GET(req: NextRequest) {
   const userIds = [...new Set(((accounts || []) as Array<{ user_id: string }>).map(a => a.user_id))]
 
   const results: Record<string, { checked: number; notified: number } | { error: string }> = {}
+  const followUps: Record<string, { sent: number; failed: number } | { error: string }> = {}
   for (const uid of userIds) {
     try {
       results[uid] = await runForUser(uid)
     } catch (err) {
       results[uid] = { error: String(err).slice(0, 200) }
     }
+    // The weekly interview follow-ups a person asked to have sent for them (13 Oct 2026, src/lib/interview-followups.ts).
+    // Only in this scheduled run, never from a page. Someone who handed nothing over costs one small read.
+    try {
+      const { data } = await service.from("profiles").select("full_name").eq("id", uid).maybeSingle()
+      const first = String((data as { full_name?: string } | null)?.full_name || "").trim().split(/\s+/)[0] || ""
+      const sent = await sendInterviewFollowUps(uid, first)
+      if (sent.sent || sent.failed) followUps[uid] = sent
+    } catch (err) {
+      followUps[uid] = { error: String(err).slice(0, 200) }
+    }
   }
-  return NextResponse.json({ ok: true, users: userIds.length, results })
+  return NextResponse.json({ ok: true, users: userIds.length, results, followUps })
 }
 
 // ── POST: on-demand run for the signed-in user ────────────────────────────

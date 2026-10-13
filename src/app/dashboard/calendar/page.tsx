@@ -7,6 +7,7 @@ import { Clock, User, Mic, ChevronLeft, ChevronRight, Eye } from "lucide-react"
 import { Card, Btn, Chip } from "../_suite/ui"
 import { fmtHour, type Interview } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
+import InterviewBoard from "./_components/interview-board"
 
 // ── Current week (Mon–Sun), computed live ───────────────────────────────────
 const now = new Date()
@@ -302,6 +303,10 @@ export default function CalendarPage() {
                 : `${past.length} past scheduled invites. Attendance is not inferred from the date.`}
         </p>
       </header>
+
+      {/* Every interview that is still open, each with what to do about it; the ones that ended are under "Past
+          interviews". Before 13 Oct 2026 this page showed a week at a time and nothing said what came after one. */}
+      {connected && <InterviewBoard />}
 
       {error && !loading && (
         <div style={{ marginBottom: 20, padding: "14px 18px", borderRadius: 12, border: "1px solid var(--danger-border)", background: "var(--surface)", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
