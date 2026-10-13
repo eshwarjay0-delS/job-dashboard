@@ -24,6 +24,8 @@ export type DossierProfile = {
   skills: string[]
   projects: { name: string; role: string; impact: string; keywords: string[] }[]
   keywords: string[]
+  /** The kinds of work the person said they are after when they were set up (13 Oct 2026), e.g. "SIEM and Incident Response". */
+  fields?: string[]
   updatedAt: number
 }
 

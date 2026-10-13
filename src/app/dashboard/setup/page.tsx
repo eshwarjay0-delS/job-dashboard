@@ -1,6 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+// Setup as a conversation: one question at a time, the resume first.
+//
+// Asked on 13 Oct 2026: "instead of putting up a screen which asks them the details, put it in a way like chatbots,
+// asking each of the question in order ... primarily ask for their resume first ... ask their consent to add the
+// profile from the resume ... the only details that we are needed from the user: mobile number verification, so we can
+// connect their WhatsApp, and we need Gmails ... be more specialized about the domains ... They would just tick it."
+//
+// The page holds no answers of its own. Every answer goes to /api/onboarding and the page draws what comes back, so a
+// reload, or the trip to Google and back, lands on the same question.
+
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 
 // The page's own palette, in theme tokens. It was six literal paper colours, so on the night the card stayed white with
@@ -10,39 +20,15 @@ const P = {
   hint: "var(--text-soft)", border: "var(--border)", bg: "var(--surface)",
 }
 
-const STEPS = [
-  { id: "profile",     label: "Your Profile",     icon: "👤", desc: "Name, title, location, mobile number" },
-  { id: "resume",      label: "Resume",            icon: "📄", desc: "Upload your base resume" },
-  { id: "gmail",       label: "Gmail + Calendar",  icon: "📧", desc: "Optional email and calendar connection" },
-  { id: "preferences", label: "Job Preferences",  icon: "🎯", desc: "Roles, salary, location" },
-  { id: "done",        label: "Ready to Go",       icon: "🚀", desc: "Your workspace is set up" },
-]
-
-const ROLES_LIST = ["Software Engineer", "Senior Software Engineer", "Security Engineer", "DevOps / SRE", "ML Engineer", "Data Scientist", "Full Stack Engineer", "Backend Engineer", "Product Manager", "Cloud Architect", "ServiceNow Developer", "Data Engineer"]
-const LOCS = ["Remote (US)", "San Francisco, CA", "New York, NY", "Seattle, WA", "Austin, TX", "Chicago, IL", "Boston, MA", "Los Angeles, CA", "Denver, CO"]
-
-interface SetupData {
-  full_name: string; title: string; location: string; workAuth: string; email: string; phone: string; linkedin: string
-  targetRoles: string[]; targetLocs: string[]; minSalary: string; openToRemote: boolean; yearsExp: string
-  resumeUploaded: boolean; gmailConnected: boolean; phoneVerified: boolean
-}
-
-// Maps this wizard's field names to what POST /api/profile (the `profiles` table)
-// actually persists — see src/app/api/profile/route.ts. targetLocs has no backing
-// column there yet, so it stays localStorage-only rather than silently dropped or
-// smuggled into an unrelated field.
-function toProfileBody(d: SetupData, profileComplete: boolean) {
-  return {
-    name: d.full_name || undefined,
-    title: d.title || undefined,
-    phone: d.phoneVerified ? d.phone || undefined : undefined,
-    location: d.location || undefined,
-    linkedin: d.linkedin || undefined,
-    remoteOk: d.openToRemote,
-    salaryMin: d.minSalary ? Number(d.minSalary) : undefined,
-    openToRoles: d.targetRoles.length ? d.targetRoles : undefined,
-    profileComplete,
-  }
+type Contact = { name: string; title: string; email: string; phone: string; location: string; linkedin: string }
+type Domain = { id: string; label: string; branches: string[] }
+type Step = "resume" | "confirm" | "phone" | "gmail" | "roles" | "done"
+type State = {
+  ok: boolean; step: Step; steps: Step[]; hello: string; already?: boolean
+  resumeName: string; read: Contact | null; consent: "" | "yes" | "no"
+  phone: { verified: boolean; required: boolean; note: string; suggested: string }
+  gmail: { inboxes: number; canAdd: boolean }
+  roles: { domains: Domain[]; domain: string; branches: string[]; suggested: { domain: string; branches: string[] } | null }
 }
 
 function normalizeUsPhone(input: string) {
@@ -57,587 +43,254 @@ function normalizeUsPhone(input: string) {
   return null
 }
 
-const DEFAULT: SetupData = {
-  full_name: "", title: "", location: "", workAuth: "", email: "", phone: "", linkedin: "",
-  targetRoles: [], targetLocs: [], minSalary: "", openToRemote: true, yearsExp: "",
-  resumeUploaded: false, gmailConnected: false, phoneVerified: false,
-}
+const bubble: CSSProperties = { maxWidth: "min(560px, 88%)", padding: "12px 16px", borderRadius: 16, fontSize: 15.5, lineHeight: 1.55, overflowWrap: "anywhere" }
+const primary: CSSProperties = { minHeight: 46, padding: "0 20px", borderRadius: 12, border: "none", background: "var(--accent)", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }
+const plain: CSSProperties = { minHeight: 46, padding: "0 18px", borderRadius: 12, border: `1px solid ${P.border}`, background: P.surface, color: P.text, fontSize: 15, fontWeight: 600, cursor: "pointer" }
+const field: CSSProperties = { minHeight: 46, padding: "0 14px", borderRadius: 12, border: `1px solid ${P.border}`, background: P.bg, color: P.text, fontSize: 16, minWidth: 0, flex: "1 1 180px" }
 
-function StepDot({ index, current, done }: { index: number; current: number; done: boolean }) {
-  const isActive = index === current
-  const isPast   = done || index < current
+function Bot({ children }: { children: ReactNode }) {
+  return <div style={{ display: "flex", justifyContent: "flex-start" }}><div style={{ ...bubble, background: P.surface, border: `1px solid ${P.border}`, color: P.text, borderBottomLeftRadius: 6 }}>{children}</div></div>
+}
+function Me({ children }: { children: ReactNode }) {
+  return <div style={{ display: "flex", justifyContent: "flex-end" }}><div style={{ ...bubble, background: "var(--accent-soft)", color: P.text, borderBottomRightRadius: 6 }}>{children}</div></div>
+}
+function Row({ children }: { children: ReactNode }) {
+  return <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", paddingLeft: 4 }}>{children}</div>
+}
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", flex: 1, position: "relative" as const }}>
-      {index > 0 && (
-        <div style={{ position: "absolute" as const, top: 16, right: "50%", left: "-50%", height: 2, background: isPast && index <= current ? "var(--accent)" : P.border, zIndex: 0 }}/>
-      )}
-      <div style={{
-        width: 34, height: 34, borderRadius: "50%", border: `2px solid ${isActive ? "var(--accent)" : isPast ? "var(--accent)" : P.border}`,
-        background: isPast ? "var(--accent)" : isActive ? "var(--accent-soft)" : P.surface,
-        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1,
-        transition: "all .2s",
-      }}>
-        {isPast && !isActive
-          ? <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
-          : <span style={{ fontSize: 14 }}>{STEPS[index].icon}</span>
-        }
-      </div>
-      <p style={{ fontSize: 10.5, fontWeight: isActive ? 700 : 500, color: isActive ? "var(--accent)" : P.muted, marginTop: 5, textAlign: "center" as const, whiteSpace: "nowrap" as const }}>{STEPS[index].label}</p>
-    </div>
+    <button type="button" aria-pressed={on} onClick={onClick}
+      style={{ minHeight: 40, padding: "0 14px", borderRadius: 999, border: `1px solid ${on ? "var(--accent)" : P.border}`, background: on ? "var(--accent-soft)" : P.surface, color: on ? P.text : P.muted, fontSize: 14.5, fontWeight: on ? 700 : 500, cursor: "pointer" }}>
+      {on ? "✓ " : ""}{children}
+    </button>
   )
 }
 
 export default function SetupPage() {
   const router = useRouter()
-  const [step, setStep]       = useState(0)
-  const [data, setData]       = useState<SetupData>(DEFAULT)
-  const [resumeFile, setResumeFile] = useState<File | null>(null)
-  const [resumeUploading, setResumeUploading] = useState(false)
-  const [resumeError, setResumeError] = useState("")
-  const [gmailLoading, setGmailLoading] = useState(false)
-  const [phoneCode, setPhoneCode] = useState("")
-  const [phoneLoading, setPhoneLoading] = useState(false)
-  const [phoneStatus, setPhoneStatus] = useState("")
-  // The number this person can message once their own number is verified and linked (digits with country code, "" until known).
-  const [waNumber, setWaNumber] = useState("")
-  // False for an admin of this deployment: they may continue without a verified number (the server decides, see /api/onboarding/status).
-  const [phoneRequired, setPhoneRequired] = useState(true)
-  // Why the number is not required: "admin", or "unavailable" (codes cannot be sent right now; the person verifies later).
-  const [phoneNote, setPhoneNote] = useState("")
-  // What stopped Continue or Finish, said on the page. Before, a refused save left the button looking dead.
-  const [stepError, setStepError] = useState("")
+  const [s, setS] = useState<State | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState("")
+  const [phone, setPhone] = useState("")
+  const [code, setCode] = useState("")
+  const [codeSent, setCodeSent] = useState(false)
+  const [domain, setDomain] = useState("")
+  const [ticked, setTicked] = useState<string[]>([])
+  const end = useRef<HTMLDivElement | null>(null)
+  const fileRef = useRef<HTMLInputElement | null>(null)
 
-  useEffect(() => {
-    // Restore any existing profile
-    try {
-      const p = JSON.parse(localStorage.getItem("jd_profile") || "{}")
-      if (p && Object.keys(p).length) {
-        setData(d => ({ ...d, ...p }))
-      }
-    } catch {}
-    // Restore setup progress
-    try {
-      const s = parseInt(localStorage.getItem("jd_setup_step") || "0", 10)
-      if (s > 0 && s < STEPS.length - 1) setStep(s)
-    } catch {}
-
-    // Server truth wins for identity fields. Email comes from Google SSO and a
-    // verified phone is never inferred from localStorage.
-    fetch("/api/profile", { cache: "no-store" })
-      .then(r => r.json())
-      .then(({ profile }) => {
-        if (!profile) return
-        setData(d => ({
-          ...d,
-          email: profile.email || d.email,
-          full_name: profile.full_name || d.full_name,
-          title: profile.title || d.title,
-          location: profile.location || d.location,
-          linkedin: profile.linkedin || d.linkedin,
-          phone: profile.phone || d.phone,
-          phoneVerified: !!profile.phone_verified,
-          gmailConnected: !!(profile.gmail_connected && profile.calendar_connected),
-        }))
-      })
-      .catch(() => {})
-
-    fetch("/api/onboarding/status", { cache: "no-store" })
-      .then(r => (r.ok ? r.json() : null))
-      .then(body => { if (body && body.phoneRequired === false) { setPhoneRequired(false); setPhoneNote(String(body.phoneNote || "")) } })
-      .catch(() => {})
-
-    // Someone who verified on an earlier visit still needs to see the number they can message.
-    fetch("/api/connections/status", { cache: "no-store" })
-      .then(r => (r.ok ? r.json() : null))
-      .then(body => { if (body?.whatsapp?.number) setWaNumber(String(body.whatsapp.number)) })
-      .catch(() => {})
+  const take = useCallback((next: State) => {
+    setS(next)
+    setPhone(p => p || next.phone.suggested || "")
+    // The kind of work the resume points to is offered already chosen, with its branches ticked: the person only confirms.
+    const chosen = next.roles.domain || next.roles.suggested?.domain || ""
+    setDomain(d => d || chosen)
+    setTicked(t => (t.length ? t : next.roles.branches.length ? next.roles.branches : next.roles.suggested?.branches || []))
   }, [])
 
-  function save(patch: Partial<SetupData>) {
-    const next = { ...data, ...patch }
-    setData(next)
-    localStorage.setItem("jd_profile", JSON.stringify(next))
-  }
-
-  // Persist to the real `profiles` table (fire-and-forget on intermediate steps;
-  // the final call on Finish is awaited so profile_complete is true before the
-  // user can navigate away — that flag is what the auth-callback redirect and the
-  // sidebar's straggler-catch (Phase 1A) key off of).
-  async function syncProfile(current: SetupData, complete: boolean) {
+  const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(toProfileBody(current, complete)),
-      })
-      const body = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        return { ok: false, error: body.error || "Could not save onboarding progress.", missing: body.missing || [] }
-      }
-      return { ok: true, error: "", missing: [] as string[] }
-    } catch {
-      return { ok: false, error: "Could not save onboarding progress. Check your connection and try again.", missing: [] as string[] }
-    }
-  }
+      const r = await fetch("/api/onboarding", { cache: "no-store" })
+      if (r.status === 401) { router.replace("/login?next=%2Fdashboard%2Fsetup"); return }
+      const j = await r.json()
+      if (j?.ok) take(j as State); else setNote("Setup could not be loaded. Reload the page in a moment.")
+    } catch { setNote("Setup could not be loaded. Check your connection and reload the page.") }
+  }, [router, take])
 
-  async function startPhoneVerification() {
-    setPhoneStatus("")
-    const normalizedPhone = normalizeUsPhone(data.phone)
-    if (!normalizedPhone) {
-      setPhoneStatus("Enter a valid US mobile number or an international number with country code.")
-      return
-    }
-    if (normalizedPhone !== data.phone) save({ phone: normalizedPhone, phoneVerified: false })
-    setPhoneLoading(true)
+  useEffect(() => { queueMicrotask(() => { void load() }) }, [load])
+  useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }) }, [s?.step, codeSent, domain, note])
+
+  async function send(action: string, more: Record<string, unknown> = {}) {
+    setBusy(true); setNote("")
     try {
-      const res = await fetch("/api/identity/phone/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: normalizedPhone }),
-      })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || "Could not send verification code.")
-      setPhoneStatus("Code sent by SMS.")
-    } catch (e) {
-      setPhoneStatus(String(e instanceof Error ? e.message : e))
-    } finally {
-      setPhoneLoading(false)
-    }
+      const r = await fetch("/api/onboarding", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...more }) })
+      const j = await r.json().catch(() => ({}))
+      if (j?.step) take(j as State)
+      if (!r.ok) setNote(j.error || "That did not go through. Try again in a moment.")
+      return r.ok
+    } catch { setNote("That did not go through. Check your connection and try again."); return false }
+    finally { setBusy(false) }
   }
 
-  async function confirmPhoneVerification() {
-    setPhoneStatus("")
-    setPhoneLoading(true)
+  async function sendResume(file: File | undefined | null) {
+    if (!file) return
+    if (!/\.(docx|pdf)$/i.test(file.name)) { setNote("Send your resume as a Word file (.docx) or a PDF."); return }
+    setBusy(true); setNote("")
     try {
-      const res = await fetch("/api/identity/phone/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: normalizeUsPhone(data.phone) || data.phone.trim(), code: phoneCode.trim(), whatsappOptIn: true }),
-      })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || "Verification failed.")
-      if (!body.identityReady || !body.whatsappConnected) {
-        throw new Error("Phone verification completed, but WhatsApp is not ready yet. Retry verification.")
-      }
-      save({ phoneVerified: true })
-      if (body.whatsappNumber) setWaNumber(String(body.whatsappNumber))
-      await syncProfile({ ...data, phoneVerified: true }, false)
-      setPhoneStatus("Verified and connected. You can use this number with the MarketFit WhatsApp resume tailor.")
-    } catch (e) {
-      setPhoneStatus(String(e instanceof Error ? e.message : e))
-    } finally {
-      setPhoneLoading(false)
-    }
+      const fd = new FormData(); fd.append("file", file)
+      const r = await fetch("/api/onboarding/resume", { method: "POST", body: fd })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) setNote(j.error || "The file could not be sent. Try again.")
+      else if (!j.read) setNote(j.readable ? "I kept your file, but could not find your name or contact details in it. You can send another file, or carry on and fill your profile in yourself." : "I kept your file, but could not read any words in it (it may be a scan). Send a Word file, or carry on and fill your profile in yourself.")
+      await load()
+    } catch { setNote("The file could not be sent. Check your connection and try again.") }
+    finally { setBusy(false); if (fileRef.current) fileRef.current.value = "" }
   }
 
-  async function uploadResume(file: File) {
-    if (!file.name.toLowerCase().endsWith(".docx")) {
-      setResumeError("Only .docx resumes can be stored right now — re-export from Word/Google Docs as .docx.")
-      return
-    }
-    setResumeUploading(true)
-    setResumeError("")
+  async function textCode() {
+    const number = normalizeUsPhone(phone)
+    if (!number) { setNote("Enter a US mobile number, or a number from another country starting with + and its country code."); return }
+    setBusy(true); setNote("")
     try {
-      const fd = new FormData()
-      fd.append("file", file)
-      const res = await fetch("/api/resumes", { method: "POST", body: fd })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok || body.error) {
-        setResumeError(body.error || "Upload failed — try again.")
-        setResumeUploading(false)
-        return
-      }
-      setResumeFile(file)
-      save({ resumeUploaded: true })
-    } catch {
-      setResumeError("Upload failed — check your connection and try again.")
-    }
-    setResumeUploading(false)
+      const r = await fetch("/api/identity/phone/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: number }) })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) setNote(j.error || "The code could not be sent. Try again in a moment.")
+      else { setPhone(number); setCodeSent(true) }
+    } catch { setNote("The code could not be sent. Check your connection and try again.") }
+    finally { setBusy(false) }
   }
 
-  async function advance() {
-    setStepError("")
-    if (step === 0 && (!data.full_name.trim() || !data.title.trim())) {
-      setStepError("Enter your full name and your current title to continue.")
-      return
-    }
-    if (step === 0 && !data.phoneVerified && phoneRequired) {
-      setPhoneStatus("Verify your mobile number before continuing.")
-      return
-    }
-
-    const next = Math.min(step + 1, STEPS.length - 1)
-    const finishing = next === STEPS.length - 1
-    const saved = await syncProfile(data, finishing)
-
-    if (!saved.ok) {
-      if (saved.missing.includes("phone_verification")) {
-        setStep(0)
-        setPhoneStatus("Verify your mobile number before continuing.")
-      } else if (saved.missing.includes("full_name") || saved.missing.includes("title")) {
-        setStep(0)
-        setStepError("Enter your full name and your current title, then continue.")
-      } else if (saved.missing.includes("target_roles")) {
-        setStep(3)
-        setStepError("Pick at least one target role to finish.")
-      } else {
-        setStepError(saved.error || "Could not save. Please try again.")
-      }
-      return
-    }
-
-    setStep(next)
-    localStorage.setItem("jd_setup_step", String(next))
+  async function checkCode() {
+    setBusy(true); setNote("")
+    try {
+      const r = await fetch("/api/identity/phone/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: normalizeUsPhone(phone) || phone.trim(), code: code.trim(), whatsappOptIn: true }) })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) setNote(j.error || "That code did not match. Try again.")
+      else { setCode(""); setCodeSent(false) }
+      await load()
+    } catch { setNote("The code could not be checked. Check your connection and try again.") }
+    finally { setBusy(false) }
   }
 
-  function toggleRole(r: string) {
-    const arr = data.targetRoles.includes(r) ? data.targetRoles.filter(x => x !== r) : [...data.targetRoles, r]
-    save({ targetRoles: arr })
-  }
-  function toggleLoc(l: string) {
-    const arr = data.targetLocs.includes(l) ? data.targetLocs.filter(x => x !== l) : [...data.targetLocs, l]
-    save({ targetLocs: arr })
+  async function connectGoogle() {
+    setBusy(true)
+    try { const { connectGmail } = await import("@/lib/google-auth"); await connectGmail() } catch { setBusy(false); setNote("Google could not be opened. Try again.") }
   }
 
-  const pct = Math.round((step / (STEPS.length - 1)) * 100)
+  async function finish() {
+    if (!(await send("finish"))) return
+    // Other pages still read these from the browser; they are given what the server now holds.
+    try {
+      const { profile } = await fetch("/api/profile", { cache: "no-store" }).then(r => r.json())
+      if (profile) localStorage.setItem("jd_profile", JSON.stringify({ full_name: profile.full_name || "", title: profile.title || "", email: profile.email || "", location: profile.location || "", linkedin: profile.linkedin || "", phone: profile.phone || "", phoneVerified: !!profile.phone_verified, targetRoles: Array.isArray(profile.open_to_roles) ? profile.open_to_roles : [] }))
+    } catch { /* the pages fall back to the server */ }
+    router.replace("/dashboard")
+  }
+
+  if (!s) return <div role="status" aria-live="polite" style={{ maxWidth: 720, margin: "0 auto", padding: 24, color: P.muted, fontSize: 15 }}>{note || "Getting things ready…"}</div>
+
+  // Someone already set up has nothing to answer here.
+  if (s.already) return (
+    <div style={{ maxWidth: 720, margin: "0 auto", display: "flex", flexDirection: "column", gap: 14 }}>
+      <Bot>You are already set up{s.hello ? `, ${s.hello}` : ""}. There is nothing more I need. To change your details, open your <a href="/dashboard/profile" style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: 3 }}>Profile page</a>.</Bot>
+      <Row><a href="/dashboard" style={{ ...primary, display: "inline-flex", alignItems: "center", textDecoration: "none" }}>Open MarketFit</a></Row>
+    </div>
+  )
+
+  const at = s.steps.indexOf(s.step)
+  const past = (step: Step) => s.steps.indexOf(step) < at
+  const now = (step: Step) => s.step === step
+  const chosen = s.roles.domains.find(d => d.id === domain)
+  const suggested = s.roles.suggested && s.roles.suggested.domain === domain ? s.roles.suggested.branches : []
+  const asked = ["resume", "phone", "gmail", "roles"] as Step[]
+  const question = Math.min(asked.length, asked.filter(q => s.steps.indexOf(q) <= at).length)
+  const details: [string, string][] = s.read ? ([["Name", s.read.name], ["Title", s.read.title], ["Email", s.read.email], ["Mobile", s.read.phone], ["Location", s.read.location], ["LinkedIn", s.read.linkedin]] as [string, string][]).filter(([, v]) => !!v) : []
 
   return (
-    <div style={{ maxWidth: 680, margin: "0 auto" }}>
+    <div style={{ maxWidth: 720, margin: "0 auto", display: "flex", flexDirection: "column", gap: 14, paddingBottom: 40 }}>
+      <p style={{ margin: 0, fontSize: 13.5, color: P.hint }}>{s.step === "done" ? "All questions answered" : `Question ${question} of ${asked.length}`}</p>
 
-      {/* ── Header ── */}
-      <div style={{ textAlign: "center" as const, marginBottom: 28 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 900, color: P.text, letterSpacing: "-0.4px", marginBottom: 6 }}>Set Up Your Workspace</h1>
-        <p style={{ fontSize: 13.5, color: P.muted }}>Takes about 3 minutes. You can always update everything in Settings later.</p>
-      </div>
-
-      {/* ── Step progress ── */}
-      <div style={{ display: "flex", alignItems: "flex-start", marginBottom: 28, padding: "0 10px" }}>
-        {STEPS.map((s, i) => <StepDot key={s.id} index={i} current={step} done={i < step}/>)}
-      </div>
-
-      {/* ── Progress bar ── */}
-      <div style={{ height: 4, borderRadius: 9, background: P.border, marginBottom: 28, overflow: "hidden" }}>
-        <div style={{ width: `${pct}%`, height: "100%", borderRadius: 9, background: "var(--accent)", transition: "width .4s ease" }}/>
-      </div>
-
-      {/* ── Step content ── */}
-      <div style={{ background: P.surface, border: `1px solid ${P.border}`, borderRadius: 18, padding: "28px 32px" }}>
-
-        {/* STEP 0: Profile */}
-        {step === 0 && (
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
-              <span style={{ fontSize: 26 }}>👤</span>
-              <div>
-                <p style={{ fontSize: 17, fontWeight: 800, color: P.text }}>Tell us about yourself</p>
-                <p style={{ fontSize: 13, color: P.muted }}>This pre-fills your resume and autofill extension.</p>
-              </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-              {[
-                { key: "full_name", label: "Full Name *",         placeholder: "Eshwar Janjirala",          type: "text" },
-                { key: "title",     label: "Current Title *",     placeholder: "Senior Security Engineer",  type: "text" },
-                { key: "email",     label: "Google Email *",      placeholder: "you@gmail.com",              type: "email" },
-                { key: "location",  label: "Current Location",    placeholder: "St. Louis, MO",             type: "text" },
-                { key: "yearsExp",  label: "Years of Experience", placeholder: "8",                         type: "number" },
-                { key: "linkedin",  label: "LinkedIn URL",        placeholder: "linkedin.com/in/yourname",  type: "url" },
-              ].map(f => (
-                <div key={f.key} style={f.key === "linkedin" ? { gridColumn: "1 / -1" } : {}}>
-                  <label style={{ fontSize: 11.5, fontWeight: 700, color: P.hint, display: "block", marginBottom: 4 }}>{f.label}</label>
-                  <input
-                    type={f.type}
-                    value={(data as any)[f.key]}
-                    onChange={e => save({ [f.key]: e.target.value } as any)}
-                    readOnly={f.key === "email"}
-                    placeholder={f.placeholder}
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: `1.5px solid ${P.border}`, fontSize: 13, color: P.text, background: P.bg, outline: "none", boxSizing: "border-box" as const }}
-                  />
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 16, padding: 14, borderRadius: 12, border: `1px solid ${P.border}`, background: P.bg }}>
-              <label style={{ fontSize: 11.5, fontWeight: 700, color: P.hint, display: "block", marginBottom: 6 }}>{phoneRequired ? "VERIFIED MOBILE NUMBER *" : phoneNote === "admin" ? "VERIFIED MOBILE NUMBER (optional for your account)" : "VERIFIED MOBILE NUMBER (optional for now)"}</label>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  type="tel"
-                  value={data.phone}
-                  onChange={e => save({ phone: e.target.value, phoneVerified: false })}
-                  disabled={data.phoneVerified}
-                  placeholder="3142559156 or +13142559156"
-                  style={{ flex: 1, padding: "9px 12px", borderRadius: 9, border: `1.5px solid ${P.border}`, fontSize: 13, background: P.surface }}
-                />
-                <button type="button" disabled={phoneLoading || data.phoneVerified} onClick={startPhoneVerification}
-                  style={{ padding: "9px 14px", borderRadius: 9, border: "none", background: data.phoneVerified ? "var(--text)" : "var(--accent)", color: data.phoneVerified ? "var(--bg)" : "#fff", fontWeight: 700, cursor: "pointer" }}>
-                  {data.phoneVerified ? "Verified ✓" : phoneLoading ? "Sending…" : "Send code"}
-                </button>
-              </div>
-              {!data.phoneVerified && (
-                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                  <input
-                    inputMode="numeric"
-                    value={phoneCode}
-                    onChange={e => setPhoneCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    placeholder="Verification code"
-                    style={{ flex: 1, padding: "9px 12px", borderRadius: 9, border: `1.5px solid ${P.border}`, fontSize: 13, background: P.surface }}
-                  />
-                  <button type="button" disabled={phoneLoading || phoneCode.length < 4} onClick={confirmPhoneVerification}
-                    style={{ padding: "9px 14px", borderRadius: 9, border: `1px solid ${P.border}`, background: P.surface, fontWeight: 700, cursor: "pointer" }}>
-                    Verify
-                  </button>
-                </div>
-              )}
-              <p style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: data.phoneVerified ? "var(--text-muted)" : P.muted }}>
-                {phoneStatus || "Enter a US 10 digit number or international number with country code. We normalize it before verification and use the verified identity for WhatsApp resume tailoring."}
-              </p>
-              {!phoneRequired && phoneNote === "unavailable" && !data.phoneVerified && (
-                <p style={{ marginTop: 6, fontSize: 11.5, lineHeight: 1.5, color: P.text }}>
-                  Text verification is not working on our side right now. You can continue without it and verify your number later from Connections. WhatsApp resume tailoring starts once your number is verified.
-                </p>
-              )}
-              {data.phoneVerified && waNumber && (
-                <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer"
-                  style={{ display: "inline-block", marginTop: 8, padding: "8px 14px", borderRadius: 9, border: `1px solid ${P.border}`, background: P.surface, color: P.text, fontSize: 12.5, fontWeight: 700, textDecoration: "none" }}>
-                  Message MarketFit on WhatsApp: +{waNumber}
-                </a>
-              )}
-            </div>
-
-          </div>
+      <div role="log" aria-live="polite" aria-label="Setting up your account" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {/* 1. The resume */}
+        <Bot>Welcome{s.hello ? `, ${s.hello}` : ""}. I will set you up in about two minutes, and I will only ask what I need.</Bot>
+        <Bot>First, your resume: a Word file or a PDF. I read your details from it, so you do not have to type them.</Bot>
+        {now("resume") && (
+          <Row>
+            <input ref={fileRef} id="setup-resume" type="file" className="sr-only" accept=".docx,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf"
+              onChange={e => { void sendResume(e.target.files?.[0]) }} />
+            <label htmlFor="setup-resume" style={{ ...primary, display: "inline-flex", alignItems: "center", opacity: busy ? 0.6 : 1 }}>{busy ? "Reading it…" : "Choose my resume"}</label>
+            <button type="button" style={plain} disabled={busy} onClick={() => { void send("decline_resume") }}>I do not have it with me</button>
+          </Row>
         )}
+        {!now("resume") && <Me>{s.resumeName || "I do not have it with me"}</Me>}
 
-        {/* STEP 1: Resume */}
-        {step === 1 && (
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
-              <span style={{ fontSize: 26 }}>📄</span>
-              <div>
-                <p style={{ fontSize: 17, fontWeight: 800, color: P.text }}>Upload your resume</p>
-                <p style={{ fontSize: 13, color: P.muted }}>Used by AI Tailor, autofill, and ATS scoring.</p>
-              </div>
-            </div>
+        {/* 2. May the profile be filled from it? */}
+        {s.read && details.length > 0 && (now("confirm") || past("confirm")) && (
+          <Bot>
+            <span>Here is what I read from it:</span>
+            <span style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 14px", margin: "10px 0" }}>
+              {details.map(([k, v]) => <span key={k} style={{ display: "contents" }}><span style={{ color: P.muted }}>{k}</span><span style={{ fontWeight: 600 }}>{v}</span></span>)}
+            </span>
+            <span>Shall I fill your profile with this?</span>
+          </Bot>
+        )}
+        {now("confirm") && (
+          <Row>
+            <button type="button" style={primary} disabled={busy} onClick={() => { void send("use_resume") }}>Yes, use it</button>
+            <button type="button" style={plain} disabled={busy} onClick={() => { void send("decline_resume") }}>No, I will fill it in myself</button>
+            <label htmlFor="setup-resume-again" style={{ fontSize: 14, color: P.muted, textDecoration: "underline", textUnderlineOffset: 3, cursor: "pointer" }}>Send a different file</label>
+            <input id="setup-resume-again" type="file" className="sr-only" accept=".docx,.pdf" onChange={e => { void sendResume(e.target.files?.[0]) }} />
+          </Row>
+        )}
+        {past("confirm") && s.read && details.length > 0 && <Me>{s.consent === "yes" ? "Yes, use it" : "No, I will fill it in myself"}</Me>}
+        {past("confirm") && s.consent === "no" && <Bot>No problem. Your <a href="/dashboard/profile" style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: 3 }}>Profile page</a> is there whenever you want to fill it in.</Bot>}
 
-            {data.resumeUploaded ? (
-              <div style={{ padding: "20px 24px", borderRadius: 14, background: "var(--surface-2)", border: "1.5px solid var(--border-strong)", display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
-                <span style={{ fontSize: 28 }}>✅</span>
-                <div>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-muted)" }}>{resumeFile?.name || "Resume"} uploaded!</p>
-                  <p style={{ fontSize: 12.5, color: P.muted }}>Stored in your resume library — ready for AI Tailor, autofill, and ATS scoring.</p>
-                </div>
-                <button onClick={() => { save({ resumeUploaded: false }); setResumeFile(null); setResumeError("") }} style={{ marginLeft: "auto", padding: "5px 12px", borderRadius: 7, border: "1px solid var(--border-strong)", background: "transparent", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }}>Replace</button>
-              </div>
-            ) : (
-              <label style={{ display: "block", cursor: resumeUploading ? "wait" : "pointer" }}>
-                <div style={{ border: `2px dashed ${P.border}`, borderRadius: 14, padding: "40px 32px", textAlign: "center" as const, background: P.bg, transition: "border-color .2s", opacity: resumeUploading ? 0.6 : 1 }}
-                  onDragOver={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)" }}
-                  onDragLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = P.border }}
-                  onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && !resumeUploading) uploadResume(f) }}>
-                  <span style={{ fontSize: 36, display: "block", marginBottom: 10 }}>{resumeUploading ? "⏳" : "📤"}</span>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: P.text, marginBottom: 4 }}>{resumeUploading ? "Uploading…" : "Drop your resume here"}</p>
-                  <p style={{ fontSize: 13, color: P.muted, marginBottom: 10 }}>or click to browse</p>
-                  <span style={{ padding: "8px 18px", borderRadius: 9, background: "var(--accent)", color: "#fff", fontSize: 13, fontWeight: 700 }}>Choose File</span>
-                  <p style={{ fontSize: 11.5, color: P.hint, marginTop: 10 }}>DOCX only — max 5MB</p>
-                </div>
-                <input type="file" accept=".docx" disabled={resumeUploading} style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadResume(f) }}/>
-              </label>
+        {/* 3. The mobile number, which connects WhatsApp */}
+        {(now("phone") || past("phone")) && (s.phone.required || s.phone.verified
+          ? <Bot>Your mobile number next. It connects WhatsApp: you send a job post there and your resume comes back fitted to it. I will text you a code.</Bot>
+          : <Bot>{s.phone.note === "admin" ? "You run this site, so your mobile number is not needed to carry on." : "A code cannot be texted right now, so we will leave your mobile number for later."} You can connect WhatsApp at any time from the WhatsApp page, with one message.</Bot>)}
+        {now("phone") && s.phone.required && !codeSent && (
+          <Row>
+            <input style={field} type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 314 555 0100" aria-label="Mobile number" value={phone} onChange={e => setPhone(e.target.value)} onKeyDown={e => { if (e.key === "Enter") void textCode() }} />
+            <button type="button" style={primary} disabled={busy || !phone.trim()} onClick={() => { void textCode() }}>{busy ? "Sending…" : "Text me a code"}</button>
+          </Row>
+        )}
+        {now("phone") && s.phone.required && codeSent && (
+          <>
+            <Me>{phone}</Me>
+            <Bot>Sent. Type the code from the text message.</Bot>
+            <Row>
+              <input style={{ ...field, flex: "0 1 160px", letterSpacing: 3 }} inputMode="numeric" autoComplete="one-time-code" placeholder="Code" aria-label="Code from the text message" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))} onKeyDown={e => { if (e.key === "Enter" && code.length >= 4) void checkCode() }} />
+              <button type="button" style={primary} disabled={busy || code.length < 4} onClick={() => { void checkCode() }}>{busy ? "Checking…" : "Verify"}</button>
+              <button type="button" style={plain} disabled={busy} onClick={() => { setCodeSent(false); setCode("") }}>Change the number</button>
+            </Row>
+          </>
+        )}
+        {now("phone") && !s.phone.required && <Row><button type="button" style={primary} disabled={busy} onClick={() => { void send("phone_later") }}>Carry on</button></Row>}
+        {past("phone") && <Me>{s.phone.verified ? "Verified" : "Later"}</Me>}
+
+        {/* 4. Gmail: every inbox in one place */}
+        {(now("gmail") || past("gmail")) && <Bot>Now Gmail. Connect it and your job mail is in one place here. You can add more than one inbox.</Bot>}
+        {now("gmail") && s.gmail.inboxes > 0 && <Bot>{s.gmail.inboxes === 1 ? "One inbox is connected." : `${s.gmail.inboxes} inboxes are connected.`} Add another, or carry on.</Bot>}
+        {now("gmail") && (
+          <Row>
+            {s.gmail.canAdd && (
+              <button type="button" disabled={busy} onClick={() => { void connectGoogle() }} style={{ ...(s.gmail.inboxes ? plain : primary), display: "inline-flex", alignItems: "center", gap: 10, ...(s.gmail.inboxes ? {} : { background: P.surface, color: P.text, boxShadow: "0 1px 3px rgba(12,11,8,.12), 0 0 0 1px rgba(12,11,8,.08)" }) }}>
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#888471"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#938f7a"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#c6c0b0"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#7f7c69"/></svg>
+                {s.gmail.inboxes ? "Add another inbox" : "Connect Gmail"}
+              </button>
             )}
-            {resumeError && (
-              <p style={{ fontSize: 12.5, color: "var(--danger)", marginTop: 10 }}>⚠ {resumeError}</p>
-            )}
-
-            <div style={{ padding: "14px 16px", borderRadius: 10, background: P.bg, border: `1px solid ${P.border}`, marginTop: 14 }}>
-              <p style={{ fontSize: 12.5, color: P.muted, lineHeight: 1.6 }}>
-                💡 <strong>Tip:</strong> Upload your most recent generic resume here. The AI Tailor feature will create role-specific versions on demand — you don't need to upload multiple files.
-              </p>
-            </div>
-
-            <button onClick={() => { advance() }} style={{ marginTop: 16, width: "100%", padding: "9px", borderRadius: 9, border: `1px solid ${P.border}`, background: "transparent", color: P.muted, fontSize: 13, cursor: "pointer" }}>
-              Skip for now →
-            </button>
-          </div>
+            {s.gmail.inboxes > 0
+              ? <button type="button" style={primary} disabled={busy} onClick={() => { void send("gmail_done") }}>Carry on</button>
+              : <button type="button" style={plain} disabled={busy} onClick={() => { void send("gmail_done") }}>Not now</button>}
+          </Row>
         )}
+        {past("gmail") && <Me>{s.gmail.inboxes ? (s.gmail.inboxes === 1 ? "One inbox connected" : `${s.gmail.inboxes} inboxes connected`) : "Not now"}</Me>}
 
-        {/* STEP 2: Gmail */}
-        {step === 2 && (
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
-              <span style={{ fontSize: 26 }}>📧</span>
-              <div>
-                <p style={{ fontSize: 17, fontWeight: 800, color: P.text }}>Connect Gmail & Calendar</p>
-                <p style={{ fontSize: 13, color: P.muted }}>Optional after login: track recruiter email, send partner email, and read interview calendar events.</p>
-              </div>
-            </div>
-
-            {data.gmailConnected ? (
-              <div style={{ padding: "20px 24px", borderRadius: 14, background: "var(--surface-2)", border: "1.5px solid var(--border-strong)", display: "flex", alignItems: "center", gap: 14 }}>
-                <span style={{ fontSize: 28 }}>✅</span>
-                <div>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-muted)" }}>Gmail connected!</p>
-                  <p style={{ fontSize: 12.5, color: P.muted }}>Recruiter emails will appear in the Emails section.</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
-                  {[
-                    { icon: "🔍", label: "Track recruiter emails" },
-                    { icon: "✉️", label: "Send partner email" },
-                    { icon: "📅", label: "Track interview calendar" },
-                  ].map(f => (
-                    <div key={f.label} style={{ padding: "14px", borderRadius: 12, background: P.bg, border: `1px solid ${P.border}`, textAlign: "center" as const }}>
-                      <span style={{ fontSize: 24, display: "block", marginBottom: 6 }}>{f.icon}</span>
-                      <p style={{ fontSize: 12, color: P.muted, lineHeight: 1.4 }}>{f.label}</p>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  disabled={gmailLoading}
-                  onClick={async () => {
-                    setGmailLoading(true)
-                    try {
-                      const { connectGmail } = await import("@/lib/google-auth")
-                      await connectGmail()
-                      save({ gmailConnected: true })
-                    } catch { /* user cancelled */ }
-                    setGmailLoading(false)
-                  }}
-                  style={{ width: "100%", padding: "12px", borderRadius: 10, border: "none", background: "var(--surface)", boxShadow: "0 1px 3px rgba(12,11,8,.12), 0 0 0 1px rgba(12,11,8,.08)", fontSize: 14, fontWeight: 700, color: "var(--text)", cursor: gmailLoading ? "wait" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#888471"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#938f7a"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#c6c0b0"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#7f7c69"/></svg>
-                  {gmailLoading ? "Connecting…" : "Connect with Google"}
-                </button>
-              </>
-            )}
-
-            <button onClick={advance} style={{ marginTop: 14, width: "100%", padding: "9px", borderRadius: 9, border: `1px solid ${P.border}`, background: "transparent", color: P.muted, fontSize: 13, cursor: "pointer" }}>
-              Skip for now →
-            </button>
-          </div>
+        {/* 5. The kind of work, then its branches */}
+        {(now("roles") || past("roles")) && <Bot>Last one. What kind of work are you looking for?</Bot>}
+        {now("roles") && <Row>{s.roles.domains.map(d => <Chip key={d.id} on={domain === d.id} onClick={() => { setDomain(d.id); setTicked(d.id === s.roles.suggested?.domain ? s.roles.suggested.branches : []) }}>{d.label}</Chip>)}</Row>}
+        {now("roles") && chosen && (
+          <>
+            <Me>{chosen.label}</Me>
+            <Bot>Which parts of {chosen.label.toLowerCase()}? Tick every one that fits.{suggested.length ? " I ticked the ones your resume points to." : ""}</Bot>
+            <Row>{chosen.branches.map(b => <Chip key={b} on={ticked.includes(b)} onClick={() => setTicked(t => (t.includes(b) ? t.filter(x => x !== b) : t.length < 12 ? [...t, b] : t))}>{b}</Chip>)}</Row>
+            <Row><button type="button" style={primary} disabled={busy || !ticked.length} onClick={() => { void send("roles", { domain, branches: ticked }) }}>{ticked.length ? `Done: ${ticked.length} ticked` : "Tick at least one"}</button></Row>
+          </>
         )}
+        {past("roles") && <Me>{(s.roles.domains.find(d => d.id === s.roles.domain)?.label || "")}: {s.roles.branches.join(", ")}</Me>}
 
-        {/* STEP 3: Job Preferences */}
-        {step === 3 && (
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
-              <span style={{ fontSize: 26 }}>🎯</span>
-              <div>
-                <p style={{ fontSize: 17, fontWeight: 800, color: P.text }}>Job Preferences</p>
-                <p style={{ fontSize: 13, color: P.muted }}>Personalizes Recommended Jobs and sets alert defaults.</p>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 11.5, fontWeight: 700, color: P.hint, display: "block", marginBottom: 6 }}>TARGET ROLES (pick all that apply)</label>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                {ROLES_LIST.map(r => (
-                  <button key={r} onClick={() => toggleRole(r)}
-                    style={{ padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${data.targetRoles.includes(r) ? "var(--accent)" : P.border}`, background: data.targetRoles.includes(r) ? "var(--accent-soft)" : P.surface, color: data.targetRoles.includes(r) ? "var(--accent)" : P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                    {r}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 11.5, fontWeight: 700, color: P.hint, display: "block", marginBottom: 6 }}>PREFERRED LOCATIONS</label>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                {LOCS.map(l => (
-                  <button key={l} onClick={() => toggleLoc(l)}
-                    style={{ padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${data.targetLocs.includes(l) ? "var(--accent)" : P.border}`, background: data.targetLocs.includes(l) ? "var(--accent-soft)" : P.surface, color: data.targetLocs.includes(l) ? "var(--accent)" : P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 11.5, fontWeight: 700, color: P.hint, display: "block", marginBottom: 4 }}>MINIMUM SALARY (USD)</label>
-                <input type="number" value={data.minSalary} onChange={e => save({ minSalary: e.target.value })} placeholder="e.g. 130000"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: `1.5px solid ${P.border}`, fontSize: 13, color: P.text, background: P.bg, outline: "none", boxSizing: "border-box" as const }}/>
-              </div>
-              <div>
-                <label style={{ fontSize: 11.5, fontWeight: 700, color: P.hint, display: "block", marginBottom: 4 }}>OPEN TO REMOTE?</label>
-                <div style={{ display: "flex", gap: 8, height: 38 }}>
-                  {[true, false].map(v => (
-                    <button key={String(v)} onClick={() => save({ openToRemote: v })}
-                      style={{ flex: 1, borderRadius: 9, border: `1.5px solid ${data.openToRemote === v ? "var(--accent)" : P.border}`, background: data.openToRemote === v ? "var(--accent-soft)" : P.surface, color: data.openToRemote === v ? "var(--accent)" : P.muted, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                      {v ? "Yes ✓" : "On-site"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 4: Done */}
-        {step === 4 && (
-          <div style={{ textAlign: "center" as const, padding: "16px 0" }}>
-            <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
-            <h2 style={{ fontSize: 22, fontWeight: 900, color: P.text, letterSpacing: "-0.4px", marginBottom: 8 }}>You're all set!</h2>
-            <p style={{ fontSize: 14, color: P.muted, marginBottom: 28, maxWidth: 380, margin: "0 auto 28px" }}>
-              Your workspace is ready. Head to the dashboard to see personalized job recommendations and start tracking applications.
-            </p>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 28, textAlign: "left" as const }}>
-              {[
-                { icon: "⭐", label: "Recommended Jobs", href: "/dashboard/recommended", desc: "AI-matched to your profile" },
-                { icon: "📊", label: "Pipeline",          href: "/dashboard/applications", desc: "Track every application" },
-                { icon: "✉️", label: "Cover Letters",     href: "/dashboard/cover-letters", desc: "AI-generated in 30 seconds" },
-              ].map(l => (
-                <a key={l.href} href={l.href} style={{ padding: "14px", borderRadius: 12, background: P.bg, border: `1px solid ${P.border}`, textDecoration: "none", display: "block" }}>
-                  <span style={{ fontSize: 22, display: "block", marginBottom: 6 }}>{l.icon}</span>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: P.text, marginBottom: 3 }}>{l.label}</p>
-                  <p style={{ fontSize: 12, color: P.muted }}>{l.desc}</p>
-                </a>
-              ))}
-            </div>
-
-            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-              <a href="/dashboard" style={{ padding: "11px 28px", borderRadius: 10, background: "var(--accent)", color: "#fff", fontSize: 14, fontWeight: 800, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                Go to Dashboard →
-              </a>
-              <a href="/dashboard/settings" style={{ padding: "11px 20px", borderRadius: 10, border: `1px solid ${P.border}`, background: P.surface, color: P.muted, fontSize: 13.5, fontWeight: 600, textDecoration: "none" }}>
-                Settings
-              </a>
-            </div>
-          </div>
-        )}
-
-        {stepError && step < 4 && (
-          <p role="alert" style={{ marginTop: 16, fontSize: 12.5, lineHeight: 1.5, color: P.text, fontWeight: 600 }}>{stepError}</p>
-        )}
-
-        {/* ── Nav buttons ── */}
-        {step < 4 && (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24, paddingTop: 20, borderTop: `1px solid ${P.border}` }}>
-            <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}
-              style={{ padding: "9px 18px", borderRadius: 9, border: `1px solid ${P.border}`, background: "transparent", color: P.muted, fontSize: 13, fontWeight: 600, cursor: step === 0 ? "default" : "pointer", opacity: step === 0 ? 0.4 : 1 }}>
-              ← Back
-            </button>
-            <div style={{ fontSize: 12, color: P.hint }}>Step {step + 1} of {STEPS.length}</div>
-            <button onClick={advance}
-              style={{ padding: "9px 24px", borderRadius: 9, background: "var(--accent)", color: "#fff", fontSize: 13.5, fontWeight: 800, border: "none", cursor: "pointer" }}>
-              {step === STEPS.length - 2 ? "Finish Setup 🚀" : "Continue →"}
-            </button>
-          </div>
+        {/* Done */}
+        {now("done") && (
+          <>
+            <Bot>That is everything I need. LinkedIn search comes later and needs nothing from you now. Your resumes are in Files, and each one made for a job is saved there by its kind of work.</Bot>
+            <Row><button type="button" style={primary} disabled={busy} onClick={() => { void finish() }}>{busy ? "Opening…" : "Open MarketFit"}</button></Row>
+          </>
         )}
       </div>
 
-      {/* ── Completion summary outside the card ── */}
-      {step < 4 && (
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 18, flexWrap: "wrap" as const }}>
-          {[
-            { label: "Profile", done: !!(data.full_name && data.email && data.phoneVerified) },
-            { label: "Resume",  done: data.resumeUploaded },
-            { label: "Gmail",   done: data.gmailConnected },
-            { label: "Prefs",   done: data.targetRoles.length > 0 },
-          ].map(s => (
-            <div key={s.label} style={{ padding: "4px 12px", borderRadius: 20, background: s.done ? "var(--surface-2)" : P.bg, border: `1px solid ${s.done ? "var(--border-strong)" : P.border}`, fontSize: 12, fontWeight: 600, color: s.done ? "var(--text-muted)" : P.hint }}>
-              {s.done ? "✓" : "○"} {s.label}
-            </div>
-          ))}
-        </div>
-      )}
+      {note && <p role="alert" style={{ margin: 0, padding: "10px 14px", borderRadius: 12, border: `1px solid ${P.border}`, background: P.bg, color: P.text, fontSize: 14.5, lineHeight: 1.5 }}>{note}</p>}
+      <div ref={end} />
     </div>
   )
 }
