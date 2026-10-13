@@ -304,6 +304,7 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
   // Normalise to a messages array so providers always get structured turns.
   const msgs: ChatMessage[] = opts.messages ?? [{ role: "user", content: opts.user ?? "" }]
   let lastErr: unknown = null
+  const tried: string[] = []
   for (const provider of order) {
     if (lastErr && Date.now() - began > window) break
     const key = keys[provider]!
@@ -327,10 +328,16 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
       return { text, provider, model: answered }
     } catch (e) {
       lastErr = e
-      recordCall({ purpose: opts.purpose, provider, model, ok: false, status: Number((/API (\d{3})\b/.exec(String((e as Error)?.message || e)) || [])[1]) || undefined, began: calledAt })
+      const status = Number((/API (\d{3})\b/.exec(String((e as Error)?.message || e)) || [])[1]) || undefined
+      recordCall({ purpose: opts.purpose, provider, model, ok: false, status, began: calledAt })
+      tried.push(`${provider} ${status ?? "failed"}`)
       if (wontClear(String((e as Error)?.message || e), !!(named && opts.exactModel))) downUntil.set(provider, Date.now() + 5 * 60_000)
     }
   }
+  // What is thrown is the last provider's refusal. Which providers were asked, and the status each answered with, goes
+  // with it (no text of theirs, nothing of a key): on 13 Oct 2026 the agent chat failed and the last refusal alone did
+  // not say why, because an earlier provider's was the one that mattered. See src/lib/plain-failure.ts.
+  if (lastErr && typeof lastErr === "object") { try { (lastErr as { tried?: string[] }).tried = tried } catch { /* a frozen error keeps what it has */ } }
   throw lastErr
 }
 

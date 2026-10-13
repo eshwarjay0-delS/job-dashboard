@@ -9,7 +9,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { categoryForJob, tailoredFileName, isTailoredName, recordRun, emptyLibrary, learnedOf, learnedAll, learnedLine, pickBase, validLibrary, saysWord, alike, pointsOf, jobKeyOf, shelfKey, COMMON_AT, MOST_RARE_WORDS, MOST_RARE_POINTS, NO_EMAIL, NO_CATEGORY } from '../../src/lib/resume-library.ts'
-import { plainFailure, failureKind } from '../../src/lib/plain-failure.ts'
+import { plainFailure, failureKind, failureTag, worthAnotherTry } from '../../src/lib/plain-failure.ts'
 import { pdfText, isPdf } from '../../src/lib/pdf-text.ts'
 import { linksOver, tidyCode, showCode, CODE_MINUTES } from '../../src/lib/whatsapp-link-core.ts'
 
@@ -247,6 +247,36 @@ test('Files takes PDFs: their words are read to file them, and a PDF is never ha
   assert.equal(JSON.parse(read('package.json')).dependencies.unpdf, '1.8.1')
 })
 
+test('when several services were asked, the reason told is the one worth telling, and the owner sees who answered what', () => {
+  // What callLLM throws: the last service's refusal, with every service asked and its status beside it.
+  const chain = (message, tried) => Object.assign(new Error(message), { tried })
+  // 13 Oct 2026: the agent answered "I could not answer this time" because only the last refusal was looked at.
+  const last404 = chain('OpenRouter API 404: {"error":{"message":"No endpoints found"}}', ['gemini 429', 'groq 413', 'openrouter 404'])
+  assert.equal(failureKind(last404), 'too_long', 'what the person can change now comes first')
+  assert.equal(plainFailure(last404), 'I could not answer: there was more to read than the AI service takes at once. Nothing was changed. Ask about one company or one job at a time.')
+  assert.equal(failureTag(last404), 'Gemini 429, Groq 413, OpenRouter 404')
+  assert.equal(failureKind(chain('OpenRouter API 404: no such model', ['gemini 429', 'openrouter 404'])), 'busy', 'one service only busy: trying again later is the true advice')
+  assert.equal(failureKind(chain('Anthropic API 400: Your credit balance is too low to access the API', ['anthropic 400'])), 'no_credit')
+  assert.equal(failureKind(chain('OpenRouter API 402: Insufficient credits', ['openrouter 402'])), 'no_credit')
+  assert.match(plainFailure(chain('x', ['openrouter 402'])), /has run out of credit\. Nothing was changed\. The owner of this site can top it up/)
+  assert.equal(failureKind(chain('Groq API 413: Request too large for model on tokens per minute (TPM): Limit 8000, Requested 9120', ['groq 413'])), 'too_long', 'too large is not "busy": waiting does not help')
+  assert.equal(failureKind(chain('Gemini API 400: API key not valid. Please pass a valid API key.', ['gemini 400'])), 'not_set_up')
+  assert.equal(failureKind(chain('Groq API 500: internal', ['groq 500'])), 'fault')
+  assert.equal(plainFailure(chain('Groq API 502: bad gateway', ['groq 502']), 'answer', true), 'I could not answer: the AI service had a fault of its own. Try again in a moment.')
+  // The tag is the service and the number, never a word of the service's own text.
+  const leaky = chain('Groq API 429: {"error":{"message":"Rate limit reached in organization org_01abc for key gsk_abcdefgh12345678"}}', ['groq 429'])
+  assert.equal(failureTag(leaky), 'Groq 429')
+  assert.equal(failureTag(new Error('OpenAI API 401: Incorrect API key provided: sk-proj-abc')), 'OpenAI 401')
+  assert.equal(failureTag(chain('x', ['groq failed', 'groq failed', 'weird text here', 5, null])), 'Groq no answer')
+  for (const nothing of [null, undefined, 'text', new Error('boom'), { tried: 'groq 429' }]) assert.equal(failureTag(nothing), '')
+  // Asked once more only for what clears by itself.
+  assert.ok(worthAnotherTry(leaky) && worthAnotherTry(chain('x', ['groq 502'])) && worthAnotherTry(new Error('boom')))
+  assert.ok(!worthAnotherTry(last404) && !worthAnotherTry(chain('x', ['openrouter 402'])) && !worthAnotherTry(new Error('No API key configured.')))
+  // The model caller leaves that list on what it throws.
+  const llm = read('src/lib/llm.ts')
+  assert.ok(llm.includes('tried.push(`${provider} ${status ?? "failed"}`)') && llm.includes('(lastErr as { tried?: string[] }).tried = tried'))
+})
+
 test('a failure is told in one plain sentence: the reason, and nothing of the machinery', () => {
   const groq = new Error('Groq API 429: {"error":{"message":"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01abc` on tokens per day (TPD): Limit 100000, Used 99874","type":"tokens","code":"rate_limit_exceeded"}}')
   assert.equal(failureKind(groq), 'busy')
@@ -265,9 +295,13 @@ test('a failure is told in one plain sentence: the reason, and nothing of the ma
   assert.equal(plainFailure(null, 'do that'), 'I could not do that this time. Nothing was changed. Try again in a moment.')
 
   const chat = read('src/app/api/agent/chat/route.ts'), bot = read('src/app/api/whatsapp/webhook/route.ts')
-  assert.ok(chat.includes('return NextResponse.json({ error: plainFailure(err, "answer", acted), reason: failureKind(err) }, { status: 500 })'))
+  assert.ok(chat.includes('return NextResponse.json({ error: plainFailure(err, "answer", acted) + (tag ? ` (${tag})` : ""), reason: failureKind(err) }, { status: 500 })'))
+  // Only the owner of the site is shown which service answered with which status.
+  assert.ok(chat.includes('owner = !!user.email_confirmed_at && isAdminEmail(user.email)') && chat.includes('const tag = owner ? failureTag(err) : ""'))
+  // A refusal that clears by itself is asked once more, once in a message, before the person is told anything.
+  assert.ok(chat.includes('if (retried || !worthAnotherTry(first)) throw first') && chat.includes('const res = await ask()'))
   assert.ok(!chat.includes('The agent hit an error') && !chat.includes('const safe = raw'), 'the raw text of a failure is not sent to the chat')
-  assert.ok(chat.includes('console.error("agent/chat error:", err)'), 'it is still written to the server log')
+  assert.ok(chat.includes('console.error("agent/chat error:", failureTag(err), err)'), 'it is still written to the server log')
   assert.ok(chat.includes('WHEN A TOOL FAILS: tell him in one plain sentence'))
   assert.ok(!bot.includes('Something went wrong: ${String(e)') && bot.includes('await sendText(from, plainFailure(e, "do that", true))'))
 })

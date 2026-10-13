@@ -509,6 +509,15 @@ export default function ResumeClient({ initialFiles, initialFolders = [], otherF
         ))}
       </div>
 
+      {/* What just happened, said on the page. These two were set all over this file and never drawn (found 13 Oct 2026):
+          a file that was refused, or a tailoring that could not start, simply did nothing. */}
+      {activeTab === "tailor" && err && (
+        <p role="alert" className="text-sm rounded-xl px-4 py-2.5" style={{ color: "var(--text)", background: "var(--surface)", border: "1px solid var(--border-strong)" }}>{err}</p>
+      )}
+      {activeTab === "tailor" && notice && (
+        <p role="status" className="text-sm rounded-xl px-4 py-2.5" style={{ color: "var(--success)", background: "var(--success-soft)" }}>{notice}</p>
+      )}
+
       {/* ── Documents tab ── */}
       {activeTab === "docs" && (
         <DocumentsClient

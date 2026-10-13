@@ -4,7 +4,8 @@ import { callLLM, resolveKeys, hasAnyKey } from "@/lib/llm"
 import { AGENT_SYSTEM_PROMPT } from "@/lib/agent/system-prompt"
 import { runTool, toolPromptBlock } from "../_tools"
 import { checkRateLimit } from "@/lib/rateLimit"
-import { plainFailure, failureKind } from "@/lib/plain-failure"
+import { plainFailure, failureKind, failureTag, worthAnotherTry } from "@/lib/plain-failure"
+import { isAdminEmail } from "@/lib/owner"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -31,10 +32,13 @@ const WHEN_A_TOOL_FAILS = "WHEN A TOOL FAILS: tell him in one plain sentence wha
 export async function POST(req: NextRequest) {
   // Set once a tool has run, so a failure after it does not say "nothing was changed".
   let acted = false
+  // The owner of the site is also told which service answered with which status (two words, none of the service's text).
+  let owner = false
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 })
+    owner = !!user.email_confirmed_at && isAdminEmail(user.email)
 
     const body = await req.json().catch(() => ({}))
     const messages: ChatMsg[] = body.messages || []
@@ -63,16 +67,23 @@ export async function POST(req: NextRequest) {
     const convo: ChatMsg[] = messages.slice(-12) // keep the turn bounded
     const ctx = { userId: user.id }
 
+    // One more try, once in a message, when the services refused for a reason that clears by itself in a moment. Seen on
+    // 13 Oct 2026: "updates" failed in 1.2 seconds, and the same message nine seconds later was answered.
+    let retried = false
+    const ask = async () => {
+      const call = () => callLLM({ keys, tier: "heavy", purpose: "agent", system, messages: convo, maxTokens: 1500 })
+      try { return await call() } catch (first) {
+        if (retried || !worthAnotherTry(first)) throw first
+        retried = true
+        console.error("agent/chat: asking once more after", failureTag(first) || failureKind(first))
+        await new Promise(r => setTimeout(r, 1500))
+        return call()
+      }
+    }
+
     let reply = ""
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const res = await callLLM({
-        keys,
-        tier: "heavy",
-        purpose: "agent",
-        system,
-        messages: convo,
-        maxTokens: 1500,
-      })
+      const res = await ask()
       const text = res.text || ""
       const m = text.match(TOOL_BLOCK_RE)
 
@@ -112,7 +123,8 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     // The whole of it goes to the server log. The person is told the reason in one plain sentence and nothing else:
     // not which service, not its status code, not its own words (owner, 13 Oct 2026: "We should not show any failpoints").
-    console.error("agent/chat error:", err)
-    return NextResponse.json({ error: plainFailure(err, "answer", acted), reason: failureKind(err) }, { status: 500 })
+    console.error("agent/chat error:", failureTag(err), err)
+    const tag = owner ? failureTag(err) : ""
+    return NextResponse.json({ error: plainFailure(err, "answer", acted) + (tag ? ` (${tag})` : ""), reason: failureKind(err) }, { status: 500 })
   }
 }
