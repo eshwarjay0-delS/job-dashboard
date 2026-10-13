@@ -1,3 +1,22 @@
+## 2026-10-13 (after midnight work) — A recruiter's "please fill this in" table is filled from what he has sent before
+
+Commits 1be3e12 and 9b6f05f, both deployed READY.
+
+**Asked**, with a picture of a ten-row table in a mail: "They want me to fill it up ... would go absolutely crazy because mobile formats wouldn't agree with that ... hey, this person has requested this and here's the suggestions of filling that up ... fill in the whole box with ... the previous data that the candidate or user had kept on filling up ... for the same names."
+
+**Built:** `src/lib/mail-forms.ts` (rules, tested, no model, nothing stored) and `POST /api/gmail/form-fill { id, account }`.
+- `formIn` finds the table in their own words, a row to a line or run together on one line.
+- `answersFrom` reads what he typed after each label in earlier replies **from the same inbox** (one candidate profile per inbox, never mixed); `fillForm` takes that first, then his profile; the rest stays empty.
+- The reply is the same rows in the same order as plain `Label: value` lines.
+- **Never filled and never read from old mail:** a date of birth, any part of a Social Security number, a passport, licence, bank or card number. Those rows are left empty and marked "yours to type".
+- Inbox: under their mail, "X sent a form with N details to fill in" and "See it filled in"; the reply shows each row with its answer and "Fill in their form" is the first reply offered. Overview: "X asked for the N details in their form".
+
+**What went wrong, and the fix (9b6f05f):** on his own mail the table came back as 9 rows of 10. "Date of Birth (DD/MM)" has no colon in that mail and only lines ending in a colon were taken as rows; the reply would have left out a row they asked for. A known label on a line of its own now counts.
+
+**Verified on the deployed page, on that real conversation** (sending blocked, no model call): 10 rows found, 8 filled from his earlier replies, the date of birth and SSN rows empty in the reply; the line under their mail; "Fill in their form" first. Tests 343 of 344 (the one red is the old Windows path check).
+
+**NOT verified:** a form that arrives as an attached Word or Excel file (only a table in the mail's own text is read); other recruiters' layouts beyond the one real mail and the two test layouts; rows this file does not know by name are kept only when they sit among known ones and end in a colon.
+
 ## 2026-10-13 (late night) — Interviews are kept in view until he says how they ended; a weekly follow-up can be handed over
 
 Commits 7563982 and a29fc60, both deployed READY.
