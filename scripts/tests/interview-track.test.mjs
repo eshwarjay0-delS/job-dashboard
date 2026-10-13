@@ -7,7 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { trackInterviews, decide, noteSent, toSendForYou, followUpWords, validState, emptyState, FIRST_AFTER_DAYS, EVERY_DAYS, MOST_SENT_FOR_YOU } from '../../src/lib/interview-track.ts'
+import { trackInterviews, decide, noteSent, toSendForYou, followUpWords, validState, emptyState, FIRST_AFTER_DAYS, EVERY_DAYS, MOST_SENT_FOR_YOU, OLD_AFTER_DAYS } from '../../src/lib/interview-track.ts'
 
 const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 const ME = 'me@example.com', DAY = 86_400_000, NOW = Date.UTC(2026, 9, 13, 18, 0, 0)
@@ -51,6 +51,34 @@ test('each interview has its place and one calm sentence; none is ever called la
   assert.equal(loose.active.length, 1); assert.equal(loose.active[0].timeKnown, false)
 })
 
+test('what is put in front of him is what is still alive: measured on his own mail the hour it shipped', () => {
+  // 13 Oct 2026: the first version said a follow-up was "a good idea" for 12 of his 15 open interviews. Eight were 63 to
+  // 83 days old with not a word since, and one was to a person on his own recruiter list.
+  const threads = [
+    thread('ancient', msg('Shikha Rao', 'shikha@vendorone.example', 70, INVITE)),
+    thread('ancientNews', msg('Shikha Rao', 'shikha@vendorone.example', 70, INVITE), msg('Shikha Rao', 'shikha@vendorone.example', 1, 'Good news, they want a final round.')),
+    thread('carried', msg('Saanvi Rao', 'saanvi@cloudmarket.example', 15, INVITE), mine('saanvi@cloudmarket.example', 13, 'Thank you, any update?')),
+    thread('quiet', msg('Shikha Rao', 'shikha@vendorone.example', 12, INVITE)),
+  ]
+  const rec = (email) => email === 'saanvi@cloudmarket.example'
+  const { active, due } = trackInterviews([found('ancient', -67), found('ancientNews', -67), found('carried', -13), found('quiet', -9)], threads, [ME], NOW, { recruiter: rec })
+  const by = Object.fromEntries(active.map(t => [t.threadId, t]))
+  // Long past with nothing since: set apart, asked only whether it is over, and no follow-up is planned.
+  assert.equal(by.ancient.old, true); assert.equal(by.ancient.action, 'none'); assert.equal(by.ancient.due, false); assert.equal(by.ancient.nextAt, 0)
+  assert.equal(by.ancient.say, 'Your interview was 67 days ago and nothing has come since. If it is over, tell me and I will stop following it.')
+  assert.ok(67 > OLD_AFTER_DAYS)
+  // However old, a word from them brings it to the top.
+  assert.equal(by.ancientNews.old, false); assert.equal(by.ancientNews.action, 'reply')
+  // His own recruiter is never the one he is told to chase.
+  assert.equal(by.carried.action, 'none'); assert.equal(by.carried.say, 'Your recruiter Saanvi is carrying this one. There is nothing for you to chase.')
+  assert.equal(by.quiet.action, 'follow_up')
+  assert.equal(due, 2, 'two things to do, not four')
+  assert.deepEqual(active.map(t => t.threadId), ['ancientNews', 'quiet', 'carried', 'ancient'], 'the old one last')
+  // The page keeps the old ones under one line, and they can be closed with one press.
+  const board = read('src/app/dashboard/calendar/_components/interview-board.tsx')
+  assert.ok(board.includes('const live = data.active.filter(t => !t.old), old = data.active.filter(t => t.old)') && board.includes('They are all over') && board.includes('I am not asking you to chase'))
+})
+
 test('marked rejected or completed, it is past and no longer followed; it can be brought back', () => {
   const threads = [thread('quiet', msg('Shikha Rao', 'shikha@vendorone.example', 12, INVITE))]
   const id = `${ME}:quiet`
@@ -90,7 +118,7 @@ test('a follow-up is sent for him only on his standing word, once a week, and it
   // Four at most, then it stops and he is asked again.
   for (let i = 1; i < MOST_SENT_FOR_YOU; i++) state = noteSent(state, id, NOW + i * 7 * DAY)
   const spent = run(state, NOW + 40 * DAY)
-  assert.deepEqual(spent.send, []); assert.equal(spent.r.active[0].forYou.ended, 'limit'); assert.equal(spent.r.active[0].action, 'follow_up')
+  assert.deepEqual(spent.send, []); assert.equal(spent.r.active[0].forYou.ended, 'limit'); assert.equal(spent.r.active[0].action, 'none'); assert.equal(spent.r.active[0].old, true)
   // Marked finished, or stopped by him: nothing more goes out. Never to one of his own recruiters.
   assert.deepEqual(run(decide(decide(emptyState(), id, 'send_for_me', NOW), id, 'completed', NOW)).send, [])
   assert.deepEqual(run(decide(decide(emptyState(), id, 'send_for_me', NOW), id, 'stop_sending', NOW)).send, [])

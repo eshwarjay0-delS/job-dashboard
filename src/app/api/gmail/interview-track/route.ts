@@ -53,11 +53,15 @@ export async function POST(req: Request) {
     const ctx = await requireAuth()
     if (!isAuthContext(ctx)) return NextResponse.json({ ok: false, error: ctx.error }, { status: ctx.status })
     if (!checkRateLimit(`interview-track:${ctx.userId}`, { max: 30, windowMs: 60_000 }).ok) return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 })
-    const body = (await req.json().catch(() => ({}))) as { id?: unknown; action?: unknown }
-    const id = String(body.id || "").slice(0, 300), action = String(body.action || "")
-    if (!id || !ACTIONS.has(action)) return NextResponse.json({ ok: false, error: "Choose an interview and what to do with it." }, { status: 400 })
-    const state = await readTrackState(ctx.userId)
-    await writeTrackState(ctx.userId, decide(state, id, action as Parameters<typeof decide>[2], Date.now()))
+    const body = (await req.json().catch(() => ({}))) as { id?: unknown; ids?: unknown; action?: unknown }
+    const action = String(body.action || "")
+    // One interview, or several at once ("they are all over") for marking only.
+    const ids = (Array.isArray(body.ids) ? body.ids : [body.id]).map(v => String(v || "").slice(0, 300)).filter(Boolean).slice(0, 60)
+    if (!ids.length || !ACTIONS.has(action) || (ids.length > 1 && action !== "completed" && action !== "rejected")) return NextResponse.json({ ok: false, error: "Choose an interview and what to do with it." }, { status: 400 })
+    let state = await readTrackState(ctx.userId)
+    const now = Date.now()
+    for (const id of ids) state = decide(state, id, action as Parameters<typeof decide>[2], now)
+    await writeTrackState(ctx.userId, state)
     return NextResponse.json(await answer(ctx), PRIVATE)
   } catch (err) {
     console.error("gmail/interview-track error:", err)

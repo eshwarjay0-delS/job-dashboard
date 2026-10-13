@@ -24,6 +24,12 @@ export const FIRST_AFTER_DAYS = 5
 export const EVERY_DAYS = 7
 /** A follow-up sent for the person, at most this many times for one interview. Then they are asked again. */
 export const MOST_SENT_FOR_YOU = 4
+// MEASURED ON THE OWNER'S OWN MAIL, 13 Oct 2026, the hour this shipped. The first version said a follow-up was "a good
+// idea" for 12 of his 15 open interviews. Eight of them were 63 to 83 days old with not a word since, and one was to a
+// person on his own recruiter list. Twelve cards asking for something is the wall he asked not to see. So: after this
+// many days of silence an interview is set apart as old, and he is only asked whether it is over; and nobody is ever
+// told to follow up with their own recruiter.
+export const OLD_AFTER_DAYS = 35
 
 export type Outcome = "rejected" | "completed"
 export type Mark = { id: string; outcome: Outcome; at: number }
@@ -48,6 +54,7 @@ export interface Tracked {
   due: boolean             // a follow-up is a good idea now
   nextAt: number           // when the next follow-up becomes a good idea (0 when none is planned)
   say: string              // one calm sentence
+  old: boolean             // long past with nothing since: set apart, and only asked whether it is over
   action: "none" | "reply" | "follow_up"
   outcome?: Outcome
   decidedAt?: number
@@ -120,28 +127,33 @@ export function trackInterviews(found: Found[], threads: OverviewThread[], myEma
     // The next follow-up: a few days after the interview, then a week after each time he (or the app, for him) wrote.
     const lastWord = Math.max(myLastAt > at ? myLastAt : 0, ...(hand?.sent || []))
     const nextAt = phase !== "waiting" || theyWrote ? 0 : lastWord ? lastWord + EVERY_DAYS * DAY : at + FIRST_AFTER_DAYS * DAY
-    const due = phase === "waiting" && !theyWrote && nextAt > 0 && now >= nextAt
+    // Long past with nothing from them since: no more follow-ups are suggested. And his own recruiter is never chased.
+    const old = phase === "waiting" && !theyWrote && since > OLD_AFTER_DAYS
+    const carried = phase === "waiting" && !theyWrote && !!contact?.recruiter
+    const due = phase === "waiting" && !theyWrote && !old && !carried && nextAt > 0 && now >= nextAt
     const name = first(contact?.name || f.with || "")
     const when = timeKnown ? `${dayWord(at)}` : `around ${dayWord(at)}`
 
     let say: string, action: Tracked["action"] = "none"
-    const sending = !!hand?.on && phase === "waiting" && !theyWrote && sentForYou < MOST_SENT_FOR_YOU && !contact?.recruiter
+    const sending = !!hand?.on && phase === "waiting" && !theyWrote && sentForYou < MOST_SENT_FOR_YOU && !contact?.recruiter && !!nextAt
     if (phase === "past") say = mark!.outcome === "rejected" ? `Not going ahead. Marked on ${dayWord(mark!.at)}, and no longer followed.` : `Finished. Marked on ${dayWord(mark!.at)}, and no longer followed.`
     else if (phase === "coming") say = `Your interview is on ${when}, in ${days(until)}. Nothing to do but be ready.`
     else if (phase === "today") say = "Your interview is today. Good luck. I will keep an eye on what comes after."
     else if (theyWrote) { say = `${name === "them" ? "They" : name} wrote to you after the interview. Read it and answer.`; action = "reply" }
+    else if (carried) say = `Your recruiter ${name} is carrying this one. There is nothing for you to chase.`
     else if (sending) say = due ? `I am sending ${name} a short follow-up for you. It goes out with the next daily check.` : `I send ${name} a short follow-up for you every week until there is news. The next one is on ${dayWord(nextAt)}.`
+    else if (old) say = `Your interview was ${days(since)} ago and nothing has come since. If it is over, tell me and I will stop following it.`
     else if (due) { say = mineAfter.length || sentForYou ? `It has been ${days(Math.floor((now - lastWord) / DAY))} since the last follow-up and there is no news yet. Another short, friendly one to ${name} is a good idea.` : `Your interview was ${days(since)} ago and there is no news yet. A short, friendly follow-up to ${name} is a good idea.`; action = "follow_up" }
     else say = mineAfter.length || sentForYou ? `You followed up ${days(Math.max(0, Math.floor((now - lastWord) / DAY)))} ago. Nothing to do now; I will bring it back on ${dayWord(nextAt)}.` : `Your interview was ${since === 0 ? "today" : `${days(since)} ago`}. It is normal to hear nothing yet. I will bring it back on ${dayWord(nextAt)}.`
 
     out.push({
       id: f.id, threadId, account, role: f.role, company: f.company, kind: f.kind || "", at, timeKnown, phase, days: phase === "coming" ? until : since, contact, lastMine, theyWrote,
-      followUps: mineAfter.length + sentForYou, due: due && !sending, nextAt, say, action,
+      followUps: mineAfter.length + sentForYou, due: due && !sending, nextAt: old || carried ? 0 : nextAt, say, old, action,
       ...(mark ? { outcome: mark.outcome, decidedAt: mark.at } : {}),
       ...(hand ? { forYou: { on: sending || (hand.on && phase !== "past" && !theyWrote && sentForYou < MOST_SENT_FOR_YOU && !contact?.recruiter), sent: sentForYou, nextAt: sending ? nextAt : 0, ...(hand.on && theyWrote ? { ended: "answered" as const } : hand.on && sentForYou >= MOST_SENT_FOR_YOU ? { ended: "limit" as const } : {}) } } : {}),
     })
   }
-  const rank = (t: Tracked) => (t.action === "reply" ? 0 : t.action === "follow_up" ? 1 : t.phase === "today" ? 2 : t.phase === "coming" ? 3 : 4)
+  const rank = (t: Tracked) => (t.action === "reply" ? 0 : t.action === "follow_up" ? 1 : t.phase === "today" ? 2 : t.phase === "coming" ? 3 : t.old ? 5 : 4)
   const active = out.filter(t => t.phase !== "past").sort((a, b) => rank(a) - rank(b) || (a.phase === "coming" ? a.at - b.at : b.at - a.at))
   const past = out.filter(t => t.phase === "past").sort((a, b) => (b.decidedAt || 0) - (a.decidedAt || 0))
   return { active, past, due: active.filter(t => t.action !== "none").length }

@@ -32,6 +32,7 @@ export default function InterviewBoard() {
   const [busy, setBusy] = useState("")
   const [asking, setAsking] = useState("")       // the interview whose "send for me" words are being shown
   const [showPast, setShowPast] = useState(false)
+  const [showOld, setShowOld] = useState(false)
 
   const take = (j: Answer) => { if (j?.ok) { setData(j); setError("") } else setError(j?.error || "Your interviews could not be read just now.") }
   const load = useCallback(() => {
@@ -39,11 +40,11 @@ export default function InterviewBoard() {
   }, [])
   useEffect(() => { queueMicrotask(load) }, [load])
 
-  const choose = async (id: string, action: "rejected" | "completed" | "reopen" | "send_for_me" | "stop_sending") => {
+  const choose = async (id: string | string[], action: "rejected" | "completed" | "reopen" | "send_for_me" | "stop_sending") => {
     if (busy) return
-    setBusy(`${action}:${id}`)
+    setBusy(`${action}:${Array.isArray(id) ? "all" : id}`)
     try {
-      const r = await fetch("/api/gmail/interview-track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action }) })
+      const r = await fetch("/api/gmail/interview-track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Array.isArray(id) ? { ids: id, action } : { id, action }) })
       take(await r.json())
       setAsking("")
     } catch { setError("That could not be saved just now.") } finally { setBusy("") }
@@ -52,18 +53,20 @@ export default function InterviewBoard() {
   if (error && !data) return <p role="status" style={{ fontSize: 14, color: "var(--text-muted)", margin: "0 0 20px" }}>{error}</p>
   if (!data) return <p role="status" style={{ fontSize: 14, color: "var(--text-muted)", margin: "0 0 20px" }}>Looking through your interviews…</p>
   if (!data.active.length && !data.past.length) return null
+  // Long past with nothing since: set apart under one line, so what is still alive is all that is in front of him.
+  const live = data.active.filter(t => !t.old), old = data.active.filter(t => t.old)
 
   return (
     <section aria-labelledby="interviews-heading" style={{ marginBottom: 28 }}>
-      <h2 id="interviews-heading" style={{ margin: "0 0 6px", fontSize: 22, letterSpacing: "-0.02em" }}>Still going <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>{data.active.length}</span></h2>
+      <h2 id="interviews-heading" style={{ margin: "0 0 6px", fontSize: 22, letterSpacing: "-0.02em" }}>Still going <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>{live.length}</span></h2>
       <p style={{ margin: "0 0 14px", fontSize: 14.5, lineHeight: 1.6, color: "var(--text-muted)", maxWidth: 720 }}>
         Every interview stays here until you tell me how it ended. Nothing below is late. I say when a follow-up is a good idea, and I can send it for you.
       </p>
       {error && <p role="alert" style={{ fontSize: 13.5, color: "var(--text-muted)", margin: "0 0 10px" }}>{error}</p>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {data.active.length === 0 && <p style={{ margin: 0, fontSize: 14, color: "var(--text-muted)" }}>No interview is open right now.</p>}
-        {data.active.map(t => {
+        {live.length === 0 && <p style={{ margin: 0, fontSize: 14, color: "var(--text-muted)" }}>No interview needs anything right now.</p>}
+        {(showOld ? [...live, ...old] : live).map(t => {
           const name = (t.contact?.name || t.contact?.email || "them").split(/\s+/)[0]
           const words = data.words[t.id]
           const mine = !!t.forYou?.on
@@ -116,6 +119,14 @@ export default function InterviewBoard() {
           )
         })}
       </div>
+
+      {old.length > 0 && (
+        <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 12, background: "var(--surface-2)", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ flex: "1 1 260px", fontSize: 14.5, lineHeight: 1.5 }}>{old.length} older {old.length === 1 ? "interview has" : "interviews have"} had no news for more than five weeks. I am not asking you to chase {old.length === 1 ? "it" : "them"}.</span>
+          <button type="button" className="btn-outline" aria-expanded={showOld} onClick={() => setShowOld(v => !v)} style={{ minHeight: 40, padding: "0 14px", fontSize: 14 }}>{showOld ? "Hide them" : "Show them"}</button>
+          <button type="button" className="btn-outline" disabled={!!busy} onClick={() => { void choose(old.map(t => t.id), "completed") }} style={{ minHeight: 40, padding: "0 14px", fontSize: 14 }}>{busy === "completed:all" ? "Saving…" : old.length === 1 ? "It is over" : "They are all over"}</button>
+        </div>
+      )}
 
       {data.past.length > 0 && (
         <div style={{ marginTop: 14 }}>
