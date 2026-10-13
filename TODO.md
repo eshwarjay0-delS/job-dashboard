@@ -1,3 +1,41 @@
+## 2026-10-13 — Overview connects the dots: what matters now, a contact box for everyone, and the hidden list
+
+The owner, 12 Oct: "if someone ... addressed those requirements and followed up, sent my details and they have shooted back ... that actually goes to the overview since something was started ... if no one is following up it anymore then it is gonna be a major hassle for me ... the best guidance. Like, hey, you have received this email and you have to send an updated resume. Here's this recruiter's contact ... I need a contact box for everyone." Then 13 Oct, after "Continue": "I don't think the dots are connected well in the overview even now, the contact info about everyone and ignore list. as AGI, You use intelligence to throw for user what's important and not" and "more ease and highlights suggestions".
+
+**What went wrong before.** Overview listed a conversation only when it held a go-ahead request, a rate, a submission, an interview, an offer or a rejection (`buildApplicationChains`). A requirement he answered and that came back was not there; a quiet one could not be acted on from there; a person was a name on a chip; the ignore list lived only in the inbox's Tidy up.
+
+**Built (commits 0469066 and a61d900, on `master`, deployed)**
+
+- `src/lib/mail-overview.ts` (pure, no model): for every started conversation, where it stands, whose turn it is, one sentence saying what to do next, how long it has been quiet, the person and how to reach them, and a weight with its reasons. The three heaviest are the highlights.
+- `GET /api/gmail/overview?account=`: that, joined with his own nudge habit (how long he waits: 3 days on his mail), the inbox's fit score, his ignore rules and the senders he never answers. Kept mail only; changes nothing.
+- `overview/_components/standing.tsx`, mounted at the top of `/dashboard/overview`: "What matters now" (three cards, each with why it is on top), Needs you / Gone quiet / Moving along, "Everyone who wrote to you" (Email, Call, Open, Hide), "Not worth your time" (who to hide, who is hidden, Show again). Hiding goes through `/api/gmail/ignore-rules`, the same rules Tidy up keeps.
+- `GET /api/gmail/conversation?id=`: one kept conversation as an inbox row. The inbox's `?open=` uses it when the conversation is older than the 30 days the inbox holds, so "Open" never shows the first conversation in the list in its place.
+- Rules now shared in `src/lib/mail-reading.ts` and used by the repeats finder too: `saidNo`, `isMachine`, and a stricter `contactsOf`.
+
+**What the sentences are built from.** A category the mail already carries, a date, or words in the other person's own message. "Asked for X" needs a sentence of theirs that asks him (a question, or "please / could you / send me ..."); "I will share your resume with the manager" asks nothing.
+
+**What is not put in front of him, and why (measured on his own mail the morning it shipped).** The first version said 36 conversations "need you": 21 were cold "send your resume" mails he had never answered, and the three on top were interview requests 2, 13 and 20 days old. Now: a step (go-ahead, rate, interview, offer) from someone he never wrote to counts for 7 days; an ask he left unanswered lapses after 14; silence is nudged for 30 days; after four of his messages in a row it is let rest. The page says how many of each were left out.
+
+**Verified**
+
+- Tests 296 of 297 (`npm run test:hardening`); the one red is `auth-boundaries` "resume ownership", a Windows path check. New: `scripts/tests/mail-overview.test.mjs` (23).
+- A two-reader review before shipping found 14 defects, all fixed, each with its failing case as a test. The serious ones: "not available on Monday, but Tuesday works" was read as him saying no and the interview vanished; "jobrien@..." was dropped as a machine; "I will share your resume with the manager" was read as an ask; his own phone number could land in the other person's contact box; "Open" on a conversation older than 30 days showed a different conversation.
+- Live, signed in as the owner, counts only, nothing pressed: 385 conversations and 198 people read in 0.9 s. 79 started: 5 need him (1 interview, 2 go-aheads, 2 that came back, all 3 days old or less), 58 gone quiet, 16 moving. Not shown: 33 silent for more than a month, 1 lapsed. On top: the interview that waits on him, then two interviews he answered that have been quiet 13 days. 4 senders suggested for hiding (45, 17, 10 and 5 mails).
+
+**NOT verified**
+
+- Hide and Show again on the live site (they change his account; the round trip was run on a local copy with made-up mail).
+- "Open and nudge" on the live site end to end. His nudge is not kept yet, so the reply box will not have the words until he keeps it on Follow-ups; the page says so.
+- Whether each of the 5 "need you" sentences reads right to him: I looked at kinds and counts, not at the mail.
+
+**Known, and left**
+
+- One of his own other addresses (not a connected inbox and not the sign-in address) is listed as a person who wrote to him, with one conversation. Connect it, or press Hide.
+- The evidence map under the new section still reads Gmail's history slowly and uses its own wording ("Quiet 9d - recipient: Unknown"). The two views overlap for conversations that have a go-ahead or a submission.
+- The rest of the Follow-ups page is still the preview it says it is.
+
+**For the owner to decide** (unchanged from the entry below): may a nudge ever go out with no press; should the search bar be on every page.
+
 ## 2026-10-12 (late) — The menu is a drawer, the inbox has a search bar, and Follow-ups shows what he keeps doing by hand
 
 Three things the owner asked for, in his words:
