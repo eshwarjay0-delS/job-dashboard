@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { blob } from "@/lib/storage"
 
 export const dynamic = "force-dynamic"
@@ -10,12 +10,8 @@ const needles = [
   "voice_and_email","voice-email","interactive_3d","interactive-3d"
 ]
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   if (process.env.VERCEL_ENV !== "preview") return NextResponse.json({error:"not found"},{status:404})
-  const token=request.nextUrl.searchParams.get("token")
-  if (!process.env.RECOVERY_SCAN_TOKEN || token!==process.env.RECOVERY_SCAN_TOKEN) {
-    return NextResponse.json({error:"not found"},{status:404})
-  }
   const keys=await blob.list("")
   const rows=await Promise.all(keys.filter(k=>{
     const s=k.toLowerCase()
