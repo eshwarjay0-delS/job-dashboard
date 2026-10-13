@@ -273,7 +273,10 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
             setUploaded(prev => prev.map(u => u.file.id === tempId ? { file: data.file, status: "ready" } : u))
           }
         } else if (res.ok && data.file) {
-          setUploaded(prev => prev.map(u => u.file.id === tempId ? { file: data.file, status: "ready" } : u))
+          // A PDF: the PDF itself is listed, and so is the Word copy made from its words when they could be read.
+          const added: UploadedEntry[] = data.pdf && data.converted && data.pdfFile ? [{ file: data.pdfFile, status: "ready" }, { file: data.file, status: "ready" }] : [{ file: data.file, status: "ready" }]
+          setUploaded(prev => prev.flatMap(u => (u.file.id === tempId ? added : [u])))
+          if (data.pdf) setNotice(data.converted ? "Your PDF is kept, and a Word copy was made from its words so it can be tailored: same words, a plain layout." : "Your PDF is kept. Its words could not be read (it may be a scan), so it cannot be tailored; add a Word file for that.")
           router.refresh()
         } else {
           setUploaded(prev => prev.map(u => u.file.id === tempId ? { ...u, status: "error", errorMsg: data.error ?? `HTTP ${res.status}` } : u))
@@ -408,7 +411,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
               {dragging ? "Let go to add it" : "Drop your resume files here"}
             </p>
             <p className="text-sm mt-1" style={{ color: "var(--text-soft)" }}>
-              Word files (.docx), PDFs, or a .zip with folders inside. Only a Word file can be tailored; a PDF is kept as it is.
+              Word files (.docx), PDFs, or a .zip with folders inside. A PDF is kept as it is, and a Word copy is made from its words so it can be tailored.
             </p>
           </div>
           <span className="btn-outline" style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>

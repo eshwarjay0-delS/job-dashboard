@@ -36,9 +36,11 @@ function fileId(fullPath: string): string {
 // Files + folders, both derived from ONE recursive listing (R2-safe — object stores
 // have no real directories). `.keep` markers (written by the New Folder action) keep
 // empty folders visible; the "_keywords.json" index and dotfiles are excluded from files.
-async function scanLibrary(dir: string): Promise<{ files: ResumeFile[]; folders: string[] }> {
+// `files` are the Word resumes, which can be fitted to a job. `pdfs` are kept and shown in My files only (13 Oct 2026).
+async function scanLibrary(dir: string): Promise<{ files: ResumeFile[]; pdfs: (ResumeFile & { kind: "pdf" })[]; folders: string[] }> {
   const all = await listFiles(dir, { includeHidden: true })
   const files: ResumeFile[] = []
+  const pdfs: (ResumeFile & { kind: "pdf" })[] = []
   const folders = new Set<string>()
   for (const full of all) {
     const rel = path.relative(dir, full)
@@ -47,6 +49,11 @@ async function scanLibrary(dir: string): Promise<{ files: ResumeFile[]; folders:
     for (let i = 1; i < parts.length; i++) folders.add(parts.slice(0, i).join(" / "))
     const base = parts[parts.length - 1]
     if (base === "_keywords.json" || base.startsWith(".")) continue
+    if (base.toLowerCase().endsWith(".pdf")) {
+      const info = await statPath(full)
+      pdfs.push({ id: fileId(full), filename: base.replace(/\.pdf$/i, ""), filepath: full, kind: "pdf", category: parts.length > 1 ? parts.slice(0, -1).join(" / ") : "General", size: info ? formatSize(info.size) : "", uploadedAt: (info?.mtime ?? new Date()).toISOString() })
+      continue
+    }
     if (!base.toLowerCase().endsWith(".docx")) continue
     const info = await statPath(full)
     files.push({
@@ -58,7 +65,7 @@ async function scanLibrary(dir: string): Promise<{ files: ResumeFile[]; folders:
       uploadedAt: (info?.mtime ?? new Date()).toISOString(),
     })
   }
-  return { files, folders: [...folders] }
+  return { files, pdfs, folders: [...folders] }
 }
 
 export const dynamic = "force-dynamic"
@@ -70,6 +77,6 @@ export default async function ResumePage() {
   const userId = user?.id ?? "demo"
 
   const userDir = path.join(USER_RESUMES_DIR, userId)
-  const { files, folders } = await scanLibrary(userDir)
-  return <ResumeClient initialFiles={files} initialFolders={folders} />
+  const { files, pdfs, folders } = await scanLibrary(userDir)
+  return <ResumeClient initialFiles={files} initialFolders={folders} otherFiles={pdfs} />
 }

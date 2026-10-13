@@ -122,7 +122,7 @@ function StepBadge({ n, done, active }: { n: number; done: boolean; active: bool
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function ResumeClient({ initialFiles, initialFolders = [] }: { initialFiles: ResumeFile[]; initialFolders?: string[] }) {
+export default function ResumeClient({ initialFiles, initialFolders = [], otherFiles = [] }: { initialFiles: ResumeFile[]; initialFolders?: string[]; otherFiles?: (ResumeFile & { kind?: "docx" | "pdf" })[] }) {
   const router = useRouter()
   const { confirm, prompt } = useDialogs()
   const [activeTab, setActiveTab] = useState<"tailor" | "build" | "docs">(() => {
@@ -264,15 +264,15 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return
-    const accepted = [...files].filter(f => /\.(docx|zip)$/i.test(f.name))
-    if (!accepted.length) { setErr("Upload a .docx resume or a .zip of resumes."); return }
+    const accepted = [...files].filter(f => /\.(docx|pdf|zip)$/i.test(f.name))
+    if (!accepted.length) { setErr("Add a Word file (.docx), a PDF, or a .zip of them."); return }
     setErr(""); setNotice("")
 
     for (const file of accepted) {
       if (/\.zip$/i.test(file.name)) { await uploadZip(file); continue }
       const tempId = `tmp_${Date.now()}_${Math.random()}`
       const tempEntry: UploadedEntry = {
-        file: { id: tempId, filename: file.name.replace(/\.docx$/i, ""), filepath: "", category: "Uploaded", size: `${(file.size/1024).toFixed(0)} KB`, uploadedAt: new Date().toISOString() },
+        file: { id: tempId, filename: file.name.replace(/\.(docx|pdf)$/i, ""), filepath: "", category: "Uploaded", size: `${(file.size/1024).toFixed(0)} KB`, uploadedAt: new Date().toISOString() },
         status: "scanning",
       }
       setUploaded(prev => [tempEntry, ...prev])
@@ -302,9 +302,16 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
             setSelected(data.file.id)
             setErr(data2.error ?? "Could not replace the existing file — kept the current one.")
           }
+        } else if (res.ok && data.pdf && !data.converted) {
+          // A PDF whose words could not be read (a scan) is kept in My files, and cannot be fitted to a job.
+          setUploaded(prev => prev.filter(u => u.file.id !== tempId))
+          setErr(`"${file.name}" is kept in My files, but its words could not be read (it may be a scan), so it cannot be fitted to a job. Add it as a Word file.`)
+          router.refresh()
         } else if (res.ok && data.file) {
           setUploaded(prev => prev.map(u => u.file.id === tempId ? { file: data.file, status: "ready" } : u))
           setSelected(data.file.id)
+          // A PDF is kept as it is, and a Word copy made from its words is what gets fitted to a job.
+          if (data.pdf) setNotice(`Your PDF is kept in My files. I made a Word copy from its words to fit to jobs: same words, a plain layout. Read it once before you send it anywhere.`)
           router.refresh()
         } else {
           setUploaded(prev => prev.map(u => u.file.id === tempId ? { ...u, status: "error", errorMsg: data.error ?? `HTTP ${res.status}` } : u))
@@ -505,7 +512,8 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
       {/* ── Documents tab ── */}
       {activeTab === "docs" && (
         <DocumentsClient
-          initialFiles={initialFiles}
+          // My files shows everything kept: the Word resumes and the PDFs. Only the Word ones are offered for tailoring.
+          initialFiles={[...initialFiles, ...otherFiles]}
           initialFolders={initialFolders}
           onDone={() => setActiveTab("tailor")}
         />
@@ -716,12 +724,12 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>Upload a new resume</p>
                     <p className="text-xs" style={{ color: "var(--text-soft)" }}>
-                      Drop or browse a .docx (or .zip) — it&apos;s added here and selected for tailoring.
+                      Drop or browse a Word file, a PDF or a .zip. It is added here and selected for tailoring.
                     </p>
                   </div>
                   <input
                     type="file"
-                    accept=".docx,.zip"
+                    accept=".docx,.pdf,.zip"
                     multiple
                     className="hidden"
                     onChange={e => { handleFiles(e.target.files); e.currentTarget.value = "" }}
@@ -777,7 +785,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                   <IllustLibrary style={{ width: 180, height: 135, borderRadius: 12 }}/>
                   <div>
                     <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>No resumes yet</p>
-                    <p className="text-xs mt-1" style={{ color: "var(--text-soft)" }}>Add a Word (.docx) resume first</p>
+                    <p className="text-xs mt-1" style={{ color: "var(--text-soft)" }}>Add a resume first: a Word file or a PDF</p>
                   </div>
                   <button type="button" onClick={() => setActiveTab("docs")} className="btn-accent"
                     style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>

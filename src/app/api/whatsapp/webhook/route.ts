@@ -30,6 +30,7 @@ import { getDossierProfile, saveDossierProfile } from "@/lib/dossier"
 import { hashUserId } from "@/lib/sttLedger"
 import { claimLinkCode, linkedUserId } from "@/lib/whatsapp-link"
 import { isPdf } from "@/lib/pdf-text"
+import { copyName, wordFromPdf } from "@/lib/pdf-to-word"
 import { plainFailure } from "@/lib/plain-failure"
 import { recoverLibraryResume } from "@/lib/resumeRecovery"
 import { extractText } from "@/lib/docx"
@@ -241,7 +242,7 @@ async function saveGen(from: string, wamid: string, gen: Gen): Promise<void> {
 const HELP = [
   "*Resume Tailor Bot*",
   "",
-  "1. Send your *resume* once, as a Word (.docx) file. I keep it.",
+  "1. Send your *resume* once, as a Word (.docx) file or a PDF. I keep it.",
   "2. Paste a *job description*. I tailor the resume to it and send it back as a Word file named after you.",
   "",
   "After the first time, the job description is all I need.",
@@ -473,31 +474,35 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     const filename = doc?.filename || "resume.docx"
     const pdf = doc?.mime_type === "application/pdf" || /\.pdf$/i.test(filename)
     if (!doc?.id || (!pdf && doc.mime_type !== DOCX && !filename.toLowerCase().endsWith(".docx"))) {
-      return sendText(from, "I can read a resume as a Word (*.docx*) file, and keep a *PDF* in your Files. Please send one of those.")
+      return sendText(from, "Send your resume as a Word (*.docx*) file or a *PDF*.")
     }
     const bytes = await downloadMedia(doc.id)
+    // A PDF is kept as it is, and a Word copy is made from its words: tailoring edits a Word file in place (owner, 13 Oct
+    // 2026: "PDF? format in resumes?"). The copy has the same words in a plain layout, and the person is told so.
+    let resume = bytes
     if (pdf) {
-      // A PDF is kept, never rewritten: tailoring edits a Word file in place, and a PDF has no such text to edit.
       if (!isPdf(bytes)) return sendText(from, "That file is named as a PDF but is not one. Please send it again.")
-      const word = "To tailor it I need the same resume as a Word (*.docx*) file, once."
-      if (!who.saves) return sendText(from, `I can keep a PDF in your Files once this number is joined to your account. ${word}\n\n${NOT_IN_FILES}`)
-      const saved = await saveUpload({ userDir: userDirOf(userId), bytes, filename, kind: "pdf" })
-      return sendText(from, `Saved *${saved.name}.pdf* in your Files, in ${saved.folder}. ${word}`)
+      if (who.saves) await saveUpload({ userDir: userDirOf(userId), bytes, filename, kind: "pdf" }).catch(() => {})
+      const word = await wordFromPdf(bytes)
+      if (!word) return sendText(from, `I could not read the words in that PDF (it may be a scan)${who.saves ? ", so I only kept it in your Files" : ""}. Send the same resume as a Word (*.docx*) file and I will tailor from that.`)
+      resume = word.docx
     }
     // The resume this number tailors from. It is kept for this number alone, under one name per file so sending the
     // same file again replaces it.
-    const safe = filename.replace(/[^A-Za-z0-9._\- ()]/g, "_").replace(/\.docx$/i, "") + ".docx"
+    const safe = (pdf ? copyName(filename) : filename).replace(/[^A-Za-z0-9._\- ()]/g, "_").replace(/\.docx$/i, "") + ".docx"
     const dest = path.join(BASELINE_DIR, digits(from), safe)
-    await writePath(dest, bytes)
+    await writePath(dest, resume)
     // A copy goes to Files, as before, in its own folder: the resumes sent over WhatsApp as they were sent.
-    if (who.saves) await writePath(path.join(userDirOf(userId), "WhatsApp", safe), bytes).catch(() => {})
+    if (who.saves) await writePath(path.join(userDirOf(userId), "WhatsApp", safe), resume).catch(() => {})
 
     session.resumePath = dest
     session.resumeName = safe.replace(/\.docx$/i, "")
     session.resumeAt = Date.now()
-    session.resumeEmail = await emailOn(bytes)
+    session.resumeEmail = await emailOn(resume)
     await saveSession(from, session)
-    if (!session.jd) return sendText(from, `Saved *${session.resumeName}*. I will keep it: from now on a job description is all I need. Paste one.`)
+    const fromPdf = pdf ? " I made a Word copy from your PDF to work on: same words, a plain layout." : ""
+    if (!session.jd) return sendText(from, `Saved *${session.resumeName}*.${fromPdf} I will keep it: from now on a job description is all I need. Paste one.`)
+    if (fromPdf) await sendText(from, fromPdf.trim())
     return generate(from, session, who)
   }
 

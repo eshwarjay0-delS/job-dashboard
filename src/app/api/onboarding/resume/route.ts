@@ -13,6 +13,7 @@ import { extractText } from "@/lib/docx"
 import { extractProfile } from "@/lib/profile"
 import { extractKeywords, ensureIndex } from "@/lib/keywords"
 import { isPdf, pdfText } from "@/lib/pdf-text"
+import { copyName, wordFromPdf } from "@/lib/pdf-to-word"
 import { saveUpload } from "@/lib/resume-library-store"
 import { readSetup, writeSetup, writeWords } from "@/lib/onboarding-store"
 import { hasContact, readContact, suggestFromResume, tidyContact, type Contact } from "@/lib/onboarding"
@@ -55,8 +56,14 @@ export async function POST(request: NextRequest) {
 
   const userDir = path.join(USER_RESUMES_DIR, user.id)
   const saved = await saveUpload({ userDir, bytes, filename: file.name, kind })
+  // A PDF also gets a Word copy made from its words, so the person can have a resume fitted to a job from day one.
+  let tailorable = kind === "docx"
+  if (kind === "pdf") {
+    const word = await wordFromPdf(bytes)
+    if (word) { await saveUpload({ userDir, bytes: word.docx, filename: copyName(file.name), kind: "docx" }); tailorable = true }
+  }
   // The index other pages pick a resume from is brought up to date; a failure there does not undo the upload.
-  if (kind === "docx") await ensureIndex(userDir).catch(() => {})
+  if (tailorable) await ensureIndex(userDir).catch(() => {})
 
   const suggested = suggestFromResume(text)
   const setup = await readSetup(user.id)
@@ -66,6 +73,6 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true, resumeName: `${saved.name}.${kind}`, read: hasContact(contact) ? contact : null, suggested: suggested.domain ? suggested : null,
     // false when no words could be read (a scan): the file is kept, and the person fills their profile in themselves.
-    readable: !!text.trim(), folder: saved.folder,
+    readable: !!text.trim(), folder: saved.folder, tailorable,
   }, PRIVATE)
 }

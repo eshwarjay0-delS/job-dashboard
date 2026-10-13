@@ -10,6 +10,7 @@ import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
 import { listFiles, readPath, statPath, writePath, existsPath, deletePath, deleteDir } from "@/lib/storage"
 import { saveUpload } from "@/lib/resume-library-store"
 import { isPdf } from "@/lib/pdf-text"
+import { copyName, wordFromPdf } from "@/lib/pdf-to-word"
 
 export const runtime = "nodejs"
 const MAX_DOCX_SIZE = 5 * 1024 * 1024  // 5 MB per .docx
@@ -165,7 +166,11 @@ export async function POST(request: NextRequest) {
           expanded += pdfBytes.length
           if (!isPdf(pdfBytes)) { skipped++; continue }
           const kept = await saveUpload({ userDir: user.dir, bytes: pdfBytes, filename: base, kind: "pdf" })
-          if (kept.existed) skipped++; else added++
+          if (kept.existed) { skipped++; continue }
+          added++
+          // Its Word copy, so it can be tailored: the tidy-up that follows files it with the other Word resumes.
+          const word = await wordFromPdf(pdfBytes)
+          if (word) await saveUpload({ userDir: user.dir, bytes: word.docx, filename: copyName(base), kind: "docx" })
           continue
         }
         const safe = parts.map(p => p.replace(/[^A-Za-z0-9.@+_ \-()]/g, "_"))
@@ -197,8 +202,21 @@ export async function POST(request: NextRequest) {
         id: fileId(kept.abs), filename: kept.name, filepath: kept.abs, category: kept.folder, kind: "pdf",
         size: info ? formatSize(info.size) : formatSize(bytes.length), uploadedAt: (info?.mtime ?? new Date()).toISOString(),
       }
-      // `read` is false when no words could be read from it (a scan): it was filed by its name alone.
-      return NextResponse.json({ file: entry, pdf: true, read: kept.read, already: kept.existed })
+      // A Word copy is made from the PDF's words, so it can be tailored like any other resume (owner, 13 Oct 2026: "PDF?
+      // format in resumes?"). Same words, a plain layout. `file` is then the copy: it is what a page selects to tailor.
+      const word = await wordFromPdf(bytes)
+      if (word) {
+        const copy = await saveUpload({ userDir: user.dir, bytes: word.docx, filename: copyName(file.name), kind: "docx" })
+        const made = await statPath(copy.abs)
+        await ensureIndex(user.dir).catch(() => {})
+        const wordEntry: ResumeFile = {
+          id: fileId(copy.abs), filename: copy.name, filepath: copy.abs, category: copy.folder, kind: "docx",
+          size: made ? formatSize(made.size) : formatSize(word.docx.length), uploadedAt: (made?.mtime ?? new Date()).toISOString(),
+        }
+        return NextResponse.json({ file: wordEntry, pdfFile: entry, pdf: true, converted: true, read: true, already: kept.existed })
+      }
+      // `read` is false when no words could be read from it (a scan): it was filed by its name alone and cannot be tailored.
+      return NextResponse.json({ file: entry, pdf: true, converted: false, read: kept.read, already: kept.existed })
     }
 
     if (!file.name.toLowerCase().endsWith(".docx")) {
