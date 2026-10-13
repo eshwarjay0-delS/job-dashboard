@@ -10,7 +10,10 @@ export function validIgnoreRule(value: unknown): value is IgnoreRule {
   return r.kind === "thread" && /^[a-zA-Z0-9_-]{1,100}$/.test(r.value)
 }
 export function ignoreReason(item: { account: string; id: string; fromEmail: string; subject?: string; preview?: string; stage?: string }, rules: IgnoreRule[]): string | null {
-  const sender = item.fromEmail.toLowerCase()
+  // The inbox hands a row's sender over as the whole From line ("Vik Rao <vik@site.example>"). A rule holds the bare
+  // address, so the address is taken out of the line before the two are compared. Until 12 Oct 2026 the whole line was
+  // compared, and a sender or domain rule never matched anyone who has a display name.
+  const sender = (item.fromEmail.match(/[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || item.fromEmail).toLowerCase()
   const rule = [...rules].sort((a,b) => Number(b.kind === "thread") - Number(a.kind === "thread")).find(r => r.account === item.account.toLowerCase() && (r.kind === "thread" ? r.value === item.id : r.kind === "sender" ? sender === r.value : sender.split("@")[1] === r.value))
   if (rule?.action === "allow") return null
   if (rule) return `Your ${rule.kind} rule: ${rule.value}`

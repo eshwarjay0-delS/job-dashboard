@@ -74,6 +74,17 @@ export function splitQuoted(body: string): { said: string; earlier: string } {
   return said ? { said, earlier: text.slice(at).trim() } : { said: text.trim(), earlier: "" }
 }
 
+/**
+ * Only what the writer typed above the quoted history. Unlike splitQuoted, a reply with nothing typed above it (an
+ * attachment on its own, a bare forward) gives "": the mail quoted under it is somebody else's words, and must never be
+ * taken for the writer's own.
+ */
+export function ownPart(body: string): string {
+  const text = String(body || "")
+  const at = text.search(QUOTED)
+  return (at < 0 ? text : text.slice(0, at)).trim()
+}
+
 // A notice that is the same under every email from that company: it is not part of what the person wrote.
 const FOOTER = /(?:^|\n)[ \t*_]*(?:CONFIDENTIALITY (?:NOTICE|STATEMENT)|DISCLAIMER\b|You have received this (?:e-?mail|message) because|This (?:e-?mail|message|communication)(?:,? (?:and|including) any (?:attachments?|files)[^\n]{0,40})? (?:is|are|may contain|contains|and its)[^\n]{0,40}(?:confidential|privileged|intended (?:only|solely))|To (?:unsubscribe|stop receiving|opt[ -]?out)|Unsubscribe\b|If you (?:no longer wish|do not wish|would like to (?:be removed|unsubscribe|opt[ -]?out))|You(?:'re| are) receiving this (?:e-?mail|message)|Note: (?:We respect|If you are not the intended)|We respect your (?:online )?privacy)/i
 /** The text without its legal notice or unsubscribe block. Cut only when real writing comes first, never the whole message. */
@@ -86,7 +97,11 @@ export function dropFooter(text: string): { text: string; cut: boolean } {
 /** Whitespace and noise only: no word of the message is changed. */
 export function tidy(text: string): string {
   let t = decodeEntities(String(text || "")).replace(/\r\n?/g, "\n").replace(/[​-‍﻿­]/g, "").replace(/ /g, " ")
-  t = t.split("\n").map(l => l.replace(/[ \t]+$/g, "")).filter(l => !/^\s*\[(?:image|cid|logo)[^\]]{0,80}\]\s*$/i.test(l)).join("\n")
+  // The spaces at the end of a line, taken off by counting back from the end. As a pattern ("spaces, then the end") this
+  // took 16 seconds on one line of 99,000 spaces followed by a full stop: each run of spaces was read again from every
+  // space in it. A body is kept up to 100,000 characters and anyone can send one.
+  const endTrimmed = (l: string) => { let e = l.length; while (e > 0 && (l[e - 1] === " " || l[e - 1] === "\t")) e--; return e === l.length ? l : l.slice(0, e) }
+  t = t.split("\n").map(endTrimmed).filter(l => !/^\s*\[(?:image|cid|logo)[^\]]{0,80}\]\s*$/i.test(l)).join("\n")
   // A link as a mail program writes it in plain text: "[Sign the form](https://site/a-very-long-tail)" or
   // "Sign the form <https://site/a-very-long-tail>". What a person reads is its name and where it goes; the tail is noise.
   // Seen in a real recruiter mail on 12 Oct 2026: one signing link was 430 characters of the message.
@@ -94,7 +109,10 @@ export function tidy(text: string): string {
   // An address a mail program wrote twice: "dana@site.example<mailto:dana@site.example>". Once is enough.
   t = t.replace(/<mailto:[^>\s]*>?/gi, "")
   t = t.replace(/\[([^\]\n]{0,160})\]\((https?:\/\/[^\s)]+)\)/g, (_m, name: string, url: string) => (name.trim() ? `${name.trim()} (link: ${host(url)})` : `(link: ${host(url)})`))
-  t = t.replace(/(\S)[ \t]*\n?[ \t]*<(https?:\/\/[^\s>]+)>/g, (_m, before: string, url: string) => `${before} (link: ${host(url)})`)
+  // The spaces before the link are written so that only one part of the pattern can take any given space (the part
+  // that ends in a line break, or the part after it): with two parts both able to, a long run of spaces was read over
+  // and over (same measurement as above).
+  t = t.replace(/(\S)(?:[ \t]*\n)?[ \t]*<(https?:\/\/[^\s>]+)>/g, (_m, before: string, url: string) => `${before} (link: ${host(url)})`)
   // A bare link with a tracking tail: its address is kept, its tail is not shown.
   t = t.replace(/https?:\/\/([^\s/<>"')]+)\/[^\s<>"')]{60,}/g, "https://$1/…")
   // A plain-text email is cut at about 72 characters a line. A long line followed by a line that carries on in small

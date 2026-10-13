@@ -9,8 +9,9 @@ import { aboutOf, decodeEntities, senderEmail, senderName } from "@/lib/mail-rea
 // "&#39;" in it, and a fit percentage and an account name competed with the one thing that matters here: what stage it is at.
 const oneLine: CSSProperties = { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }
 
-export default function MailRow({ m, on, restored, leaving, onClick, tint, inbox }: {
+export default function MailRow({ m, on, restored, leaving, onClick, tint, inbox, found }: {
   m: Mail; on: boolean; restored: boolean; leaving: boolean; onClick: () => void; tint: string; inbox: string
+  found?: { who: string; before: string; hit: string; after: string }   // a search found its word inside a message: show that place
 }) {
   const who = senderName(m.fromEmail) || m.from || m.company
   const org = senderEmail(m.fromEmail).split("@")[1] || ""
@@ -31,7 +32,13 @@ export default function MailRow({ m, on, restored, leaving, onClick, tint, inbox
           <span style={{ fontSize: 11.5, color: "var(--text-muted)", whiteSpace: "nowrap", flex: "none" }}>{m.at}</span>
         </div>
         <div style={{ ...oneLine, fontSize: 13, color: "var(--text)", marginTop: 1 }}>{aboutOf(m.role) || decodeEntities(m.role)}</div>
-        <div style={{ ...oneLine, fontSize: 12.5, color: "var(--text-muted)", marginTop: 2 }}>{decodeEntities(m.preview).replace(/[_=*~-]{4,}/g, " ").replace(/\s+/g, " ").trim()}</div>
+        {found ? (
+          <div style={{ ...oneLine, fontSize: 12.5, color: "var(--text-muted)", marginTop: 2 }}>
+            {found.who ? `${found.who}: ` : ""}{found.before}<mark style={{ background: "transparent", color: "var(--text)", fontWeight: 700 }}>{found.hit}</mark>{found.after}
+          </div>
+        ) : (
+          <div style={{ ...oneLine, fontSize: 12.5, color: "var(--text-muted)", marginTop: 2 }}>{decodeEntities(m.preview).replace(/[_=*~-]{4,}/g, " ").replace(/\s+/g, " ").trim()}</div>
+        )}
         <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 7, minWidth: 0 }}>
           {restored ? <StagePill stage="applied" label="Restored" /> : <StagePill stage={m.stage} />}
           <span style={{ ...oneLine, fontSize: 11.5, color: "var(--text-muted)" }}>{m.lastMine ? `You wrote last · from ${inbox}` : `${org ? org + " · " : ""}to ${inbox}`}</span>

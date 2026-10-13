@@ -8,6 +8,7 @@ import { Card, Meta, Chip, Btn, Toggle, useAnswered, useLeaving } from "../_suit
 import SmartReply from "./_components/smart-reply"
 import MailRow from "./_components/mail-row"
 import ReadingPane from "./_components/reading-pane"
+import MailSearchBar, { SearchSummary, useMailSearch } from "./_components/mail-search"
 import { savedAvailability, type Mail } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 
@@ -296,8 +297,16 @@ export default function MailPage() {
   const filed = mails.filter(x => x.stage === "rejected" && !restored.includes(x.id))
   const roles = groupByRole(live.filter(x => x.stage !== "rejected"))
 
-  const shown = showIgnored ? live : view === "needs" ? needsList : view === "theirs" ? theirsList : live
-  const m = shown.find(x => x.id === sel) ?? shown[0]
+  // A search looks through everything kept, whichever pile is open, hidden senders and filed rejections included: it is
+  // how something is found again, as in Gmail. Only the inbox chosen above still narrows it.
+  // The inbox is sent with the search, so the number the server gives and the rows it lists are of that inbox.
+  const search = useMailSearch(mails, account === "all" ? "" : account)
+  const found = search.active ? search.results.filter(x => account === "all" || x.account === account) : null
+  const shown = found ?? (showIgnored ? live : view === "needs" ? needsList : view === "theirs" ? theirsList : live)
+  // `opened` is a conversation asked for by its address (?open=, from the Follow-ups page). It is shown even when the
+  // list does not hold it, because it was filed as a rejection or its sender is hidden: the person asked for that one.
+  const [opened, setOpened] = useState<string | null>(null)
+  const m = shown.find(x => x.id === sel) ?? (sel && sel === opened ? mails.find(x => x.id === sel) : undefined) ?? shown[0]
 
   // Three piles a person can hold in their head. The other three ways of looking wait behind "More".
   const VIEWS: [View, string, number][] = [
@@ -310,6 +319,23 @@ export default function MailPage() {
     ["drafts", "Drafts", drafts.length],
     ["waiting", "No answer yet", radar.length],
   ]
+
+  // "Open" on the Follow-ups page lands here with ?open=<conversation>: that conversation is the one shown, and it is
+  // brought into view (on a narrow window the reading card sits under the whole list). A conversation this page does
+  // not have at all is left alone, so the wrong one is never opened in its place.
+  const [wanted, setWanted] = useState<string | null>(null)
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("open")
+    if (id) queueMicrotask(() => setWanted(id))
+  }, [])
+  const wantedIsHere = !!wanted && mails.some(x => x.id === wanted)
+  useEffect(() => {
+    if (!wanted || !wantedIsHere) return
+    queueMicrotask(() => {
+      setSel(wanted); setOpened(wanted); setView("all"); setWanted(null)
+      setTimeout(() => document.getElementById("reply")?.scrollIntoView({ behavior: "smooth", block: "start" }), 120)
+    })
+  }, [wanted, wantedIsHere])
 
   const approve = (id: string) => {
     const nextUp = shown.find(x => x.id !== id && !leaving.includes(x.id) && waiting(x))
@@ -365,6 +391,7 @@ export default function MailPage() {
         </section>
       ) : (
         <>
+          <MailSearchBar search={search} />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
             <Chip label="All inboxes" active={account === "all"} onClick={() => setAccount("all")} />
             {accounts.map(a => (
@@ -372,7 +399,9 @@ export default function MailPage() {
                 label={<><span style={{ width: 8, height: 8, borderRadius: 10, background: a.tint }} />{a.email.split("@")[0]}{(!a.connected || (a.label && a.label !== a.email.split("@")[0])) && <span style={{ opacity: 0.6, fontWeight: 500 }}>{a.connected ? a.label : "Not connected"}</span>}</>} />
             ))}
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: tidying || showIgnored ? 10 : 20 }}>
+          {/* While something is searched for, the piles step aside for one line saying what the list now is. */}
+          {search.active && <SearchSummary search={search} shown={shown.length} />}
+          <div style={{ display: search.active ? "none" : "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: tidying || showIgnored ? 10 : 20 }}>
             {VIEWS.map(([v, label, n]) => (
               <Chip key={v} label={label} active={view === v} onClick={() => setView(v)} count={n} />
             ))}
@@ -390,14 +419,17 @@ export default function MailPage() {
               {tidying || showIgnored ? "Done tidying" : "Tidy up"}
             </button>
           </div>
-          {(tidying || showIgnored) && (
+          {/* The tidy tools step aside while something is searched for. They work on the pile's own list: a search result
+              from before the last 30 days is not in it (ticking one hid nothing), and a result that is not hidden got a
+              "Bring it back" button. Clearing the search brings them back as they were. */}
+          {(tidying || showIgnored) && !search.active && (
             <>
               <IgnoreControls mails={mails} selected={selected} rules={ignoreRules} onSave={saveIgnoreRules} showIgnored={showIgnored} onToggle={() => { setShowIgnored(v => !v); setView("all") }} />
               {ignoreError && <p role="status" style={{ fontSize: 13, color: "var(--danger)", margin: "0 0 12px" }}>{ignoreError}</p>}
             </>
           )}
 
-          {view === "roles" ? (
+          {!search.active && view === "roles" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {roles.length === 0 && (
                 <div style={{ padding: 32, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 14, color: "var(--text-muted)", fontSize: 13.5 }}>
@@ -406,7 +438,7 @@ export default function MailPage() {
               )}
               {roles.map(g => <RoleCard key={g.key} group={g} onOpen={openMail} acct={acct} />)}
             </div>
-          ) : view === "drafts" ? (
+          ) : !search.active && view === "drafts" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {drafts.length === 0 && (
                 <div style={{ padding: 32, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 14, color: "var(--text-muted)", fontSize: 13.5 }}>
@@ -423,7 +455,7 @@ export default function MailPage() {
                 </div>
               ))}
             </div>
-          ) : view === "waiting" ? (
+          ) : !search.active && view === "waiting" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {radar.length === 0 && (
                 <div style={{ padding: 32, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 14, color: "var(--text-muted)", fontSize: 13.5 }}>
@@ -450,12 +482,12 @@ export default function MailPage() {
               <div style={{ flex: "0 1 400px", minWidth: 300 }}>
                 {shown.map(x => (
                   <div key={`${x.account}:${x.id}`} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    {(tidying || showIgnored) && (
+                    {(tidying || showIgnored) && !search.active && (
                       <input type="checkbox" aria-label={`Select ${x.subject}`} checked={selected.includes(`${x.account}:${x.id}`)} onChange={e => setSelected(ids => e.target.checked ? [...ids, `${x.account}:${x.id}`] : ids.filter(id => id !== `${x.account}:${x.id}`))}
                         style={{ width: 18, height: 18, marginTop: 22, flex: "none", accentColor: "var(--accent)" }} />
                     )}
-                    <div style={{ flex: 1, minWidth: 0 }}><MailRow m={x} on={x.id === m?.id} restored={restored.includes(x.id)} leaving={leaving.includes(x.id)} onClick={() => setSel(x.id)} {...rowProps(x, acct)} />
-                    {showIgnored && (
+                    <div style={{ flex: 1, minWidth: 0 }}><MailRow m={x} on={x.id === m?.id} restored={restored.includes(x.id)} leaving={leaving.includes(x.id)} onClick={() => setSel(x.id)} {...rowProps(x, acct)} found={search.active ? search.hits[`${x.account}:${x.id}`] : undefined} />
+                    {showIgnored && !search.active && (
                       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "-2px 0 10px 4px", fontSize: 12.5, color: "var(--text-muted)" }}>
                         <span>{ignoreReason(x, ignoreRules)}</span>
                         <button type="button" className="btn-ghost" style={{ minHeight: 32, padding: "0 10px", fontSize: 13 }} onClick={() => saveIgnoreRules([...ignoreRules.filter(r => !(r.account === x.account && r.kind === "thread" && r.value === x.id)), { account: x.account.toLowerCase(), kind: "thread", value: x.id, action: "allow" }]).catch(e => setIgnoreError(String(e)))}>Bring it back</button>
@@ -467,9 +499,9 @@ export default function MailPage() {
                   <div style={{ padding: 32, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 14, color: "var(--text-muted)", fontSize: 13.5 }}>
                     <Leaf size={18} style={{ marginBottom: 8 }} />
                     <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
-                      {view === "needs" ? "Nobody is waiting on you" : view === "theirs" ? "Nobody owes you an answer" : "Nothing here"}
+                      {search.active ? (search.pending ? "Looking inside every message…" : "Nothing matches") : view === "needs" ? "Nobody is waiting on you" : view === "theirs" ? "Nobody owes you an answer" : "Nothing here"}
                     </div>
-                    {view === "needs" ? "Every thread is answered or scheduled." : live.length === 0 ? (
+                    {search.active ? (search.pending ? "" : "Try fewer words, or just part of a name.") : view === "needs" ? "Every thread is answered or scheduled." : live.length === 0 ? (
                       <span>No job emails in the last 30 days on the connected account{accounts.length > 1 ? "s" : ""}. <Link href="/dashboard/connections" style={{ fontWeight: 700, color: "var(--text)" }}>Connect your main inbox →</Link></span>
                     ) : "Try another view."}
                   </div>

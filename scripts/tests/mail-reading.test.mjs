@@ -160,13 +160,17 @@ test('the page reads first: the title comes before any control, and a row is one
   const page = read('src/app/dashboard/mail/page.tsx'), row = read('src/app/dashboard/mail/_components/mail-row.tsx'), pane = read('src/app/dashboard/mail/_components/reading-pane.tsx')
   // The ignore bar used to be the first thing on the page, above the title, and a bare tick box hung beside every row.
   assert.ok(page.indexOf('<header className="mf-home-heading">') < page.indexOf('<IgnoreControls'), 'the title first')
-  assert.match(page, /\{\(tidying \|\| showIgnored\) && \(\s*<>\s*<IgnoreControls/, 'the ignore controls wait behind "Tidy up"')
-  assert.match(page, /\{\(tidying \|\| showIgnored\) && \(\s*<input type="checkbox"/, 'and so do the tick boxes')
+  // They also step aside while a search is on: they work on the pile's list, not on what a search found.
+  assert.match(page, /\{\(tidying \|\| showIgnored\) && !search\.active && \(\s*<>\s*<IgnoreControls/, 'the ignore controls wait behind "Tidy up"')
+  assert.match(page, /\{\(tidying \|\| showIgnored\) && !search\.active && \(\s*<input type="checkbox"/, 'and so do the tick boxes')
+  assert.match(page, /\{showIgnored && !search\.active && \(/, 'no "Bring it back" on a search result that is not hidden')
   assert.match(page, /<ReadingPane key=\{`\$\{m\.account\}:\$\{m\.id\}`\}/, 'the conversation is read in the reading pane')
   assert.ok(!/<p [^>]*>\{m\.preview\}<\/p>/.test(page) && !/\{m\.from\} · \{m\.fromEmail\}/.test(page), 'no bare snippet and no raw "Name <address>" header in the pane')
   // The three sample forms said things nobody had checked. They are not shown.
   assert.ok(!/<RtrReply m=|<AvailabilityReply m=|<RateReply m=/.test(page.slice(page.indexOf('export default function MailPage'))))
-  assert.equal((row.match(/\.\.\.oneLine/g) || []).length, 4, 'who, what about, how it begins, where from: one line each')
+  // Five uses for four lines: the third line is either how the mail begins or, after a search, where the searched word stands.
+  assert.equal((row.match(/\.\.\.oneLine/g) || []).length, 5, 'who, what about, how it begins (or where the searched word is), where from: one line each')
+  assert.match(row, /\{found \? \(\s*<div style=\{\{ \.\.\.oneLine/)
   assert.ok(/decodeEntities\(m\.role\)/.test(row) && /decodeEntities\(m\.preview\)/.test(row), 'no "&amp;" or "&#39;" in a row')
   assert.ok(!/var\(--text-soft\)/.test(row + pane), 'small text is the readable grey: the soft grey measured 3.6 to 1 on a chosen row')
   assert.ok(!/#[0-9a-fA-F]{3,8}\b/.test((row + pane).replace(/&#\d+;|#all\/|#44310|#12345/g, '')), 'colours come from the theme')
@@ -195,4 +199,74 @@ test('the endpoint reads the kept copy of one conversation and makes no call to 
   assert.ok(route.indexOf('mfit_gmail_threads') < route.indexOf('fetchClassifiedThreads(ctx.userId'), 'the kept copy first; the list\'s own fetch only when it is not there')
   assert.match(route, /requireAuth\(\)/); assert.match(route, /checkRateLimit\(`gmail-reading:/)
   assert.match(route, /readThread\(thread, mine\)/)
+})
+
+// ── Found by the review of 12 Oct 2026, each with the case that failed ───────────────────────────────────────────────
+
+test('one email with a very long run of spaces cannot stall the page that reads it', async () => {
+  // Measured before the fix: "a" + 40,000 spaces + "b" took 2.7 s to tidy, and 99,000 spaces then a full stop took 16 s.
+  // A body is kept up to 100,000 characters, anyone can send one, and the inbox search tidies every kept message.
+  const bodies = ['a' + ' '.repeat(40000) + 'b', 'a' + ' '.repeat(99000) + '.', 'a' + ' \t'.repeat(49000) + 'b\nnext', ('word' + ' '.repeat(900) + 'x\n').repeat(100), 'a' + ' '.repeat(50000) + '\n' + ' '.repeat(49000) + 'b', 'a ' + '<'.repeat(50000), '['.repeat(50000) + 'x', 'On '.repeat(30000) + 'x', '_'.repeat(90000) + ' x', '>'.repeat(90000)]
+  const t0 = performance.now()
+  for (const body of bodies) dropFooter(tidy(splitQuoted(body).said))
+  const took = performance.now() - t0
+  assert.ok(took < 1500, 'ten such bodies took ' + Math.round(took) + ' ms')
+  // And the two rewritten patterns still do what they did.
+  assert.equal(tidy('Sign the form   \n <https://site.example/a-very-long-tail>  \nThanks   '), 'Sign the form (link: site.example)\nThanks')
+  assert.equal(tidy('Sign here <https://site.example/x> and reply\t\t'), 'Sign here (link: site.example) and reply')
+  assert.equal(tidy('one   \ntwo\t \n   three'), 'one\ntwo\n   three', 'spaces at the end of a line go; spaces at its start stay')
+})
+
+test('what the writer typed is told apart from a reply with nothing typed in it', async () => {
+  const { ownPart } = await import('../../src/lib/mail-reading.ts')
+  assert.equal(ownPart(THREAD.messages[1].bodyText), splitQuoted(THREAD.messages[1].bodyText).said)
+  const forward = '---------- Forwarded message ---------\nFrom: Someone\nThe role is open.'
+  assert.equal(ownPart(forward), '', 'a bare forward: none of it was typed by the sender')
+  assert.equal(splitQuoted(forward).said, forward, 'the reading pane still shows it, so there is something to read')
+  assert.equal(ownPart('On Mon, Oct 5, 2026 at 9:12 AM Dana <dana@x.example> wrote:\n> Please send your resume.'), '')
+  assert.equal(ownPart('Just a note.'), 'Just a note.')
+  assert.equal(ownPart(''), '')
+})
+
+test('a rule to hide a sender matches the row it was made for, display name and all', async () => {
+  const { ignoreReason, validIgnoreRule } = await import('../../src/lib/gmail-ignore.ts')
+  const row = { account: ME, id: 't9', fromEmail: 'Vik Rao <Vik@Blastmail.example>', subject: 'Java Developer', preview: 'Hot requirement', stage: 'new' }
+  const sender = { account: ME, kind: 'sender', value: 'vik@blastmail.example' }, domain = { account: ME, kind: 'domain', value: 'blastmail.example' }
+  assert.equal(validIgnoreRule(sender) && validIgnoreRule(domain), true)
+  // Until this fix the whole From line was compared with the address, so both of these were null: the inbox went on
+  // showing the sender, and the page that hid them said they were hidden.
+  assert.equal(ignoreReason(row, [sender]), 'Your sender rule: vik@blastmail.example')
+  assert.equal(ignoreReason(row, [domain]), 'Your domain rule: blastmail.example')
+  assert.equal(ignoreReason({ ...row, fromEmail: 'vik@blastmail.example' }, [sender]), 'Your sender rule: vik@blastmail.example')
+  assert.equal(ignoreReason({ ...row, fromEmail: 'Someone Else <else@other.example>' }, [sender, domain]), null)
+  assert.equal(ignoreReason(row, [{ ...sender, account: 'another@example.com' }]), null, 'a rule belongs to one inbox')
+  assert.equal(ignoreReason(row, [sender, { account: ME, kind: 'thread', value: 't9', action: 'allow' }]), null, '"Bring it back" still wins for that one conversation')
+  // The inbox's own Tidy up built its rules from the whole line too: "vik rao <vik@...>" has a space and the server
+  // refused it; the domain ended in ">". It now takes the address out first.
+  const controls = read('src/app/dashboard/mail/_components/ignore-controls.tsx')
+  assert.match(controls, /kind === "sender" \? senderEmail\(m\.fromEmail\) : senderEmail\(m\.fromEmail\)\.split\("@"\)\[1\]/)
+  assert.doesNotMatch(controls, /m\.fromEmail\.toLowerCase\(\)/)
+  assert.equal(validIgnoreRule({ account: ME, kind: 'sender', value: senderEmail('Vik Rao <Vik@Blastmail.example>') }), true)
+  assert.equal(validIgnoreRule({ account: ME, kind: 'sender', value: 'vik rao <vik@blastmail.example>' }), false, 'what it used to send')
+})
+
+test('a search with one inbox chosen is counted in that inbox, and a conversation asked for by its address is shown', () => {
+  const page = read('src/app/dashboard/mail/page.tsx'), bar = read('src/app/dashboard/mail/_components/mail-search.tsx'), route = read('src/app/api/gmail/search/route.ts')
+  // The inbox goes with the search and is applied on the server before anything is counted or cut to the newest 60.
+  assert.match(page, /useMailSearch\(mails, account === "all" \? "" : account\)/)
+  assert.match(bar, /body: JSON\.stringify\(\{ q: typed, tz, account: inbox \}\)/)
+  assert.match(bar, /answer\.q === typed && answer\.inbox === inbox/, 'an answer for another inbox is not shown as this one\'s')
+  assert.ok(route.indexOf('r.thread.accountEmail.toLowerCase() === account') < route.indexOf('const found = all.filter'), 'the inbox first, then the count')
+  assert.match(route, /searched: all\.length, count: found\.length/)
+  // A reply quotes every message before it: each line is made searchable once, and all of it, not the first 6,000 characters.
+  assert.match(route, /const seen = new Set<string>\(\)/)
+  assert.doesNotMatch(route, /slice\(0, 6000\)/)
+  // The same work for the same person is not started twice while it is under way.
+  assert.match(route, /const under = making\.get\(key\)\s*if \(under\) return under/)
+  // While still looking, with nothing on the page itself, no number is said.
+  assert.match(bar, /\{!\(n === 0 && search\.pending\) && \(/)
+  // ?open=<conversation>: brought into view, and shown even when the list does not hold it (filed, or its sender hidden).
+  assert.match(page, /const wantedIsHere = !!wanted && mails\.some\(x => x\.id === wanted\)/)
+  assert.match(page, /setSel\(wanted\); setOpened\(wanted\); setView\("all"\); setWanted\(null\)\s*setTimeout\(\(\) => document\.getElementById\("reply"\)\?\.scrollIntoView/)
+  assert.match(page, /shown\.find\(x => x\.id === sel\) \?\? \(sel && sel === opened \? mails\.find\(x => x\.id === sel\) : undefined\) \?\? shown\[0\]/)
 })
