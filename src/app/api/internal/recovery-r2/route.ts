@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { blob } from "@/lib/storage"
 
 export const dynamic = "force-dynamic"
@@ -11,15 +11,16 @@ const needles = [
   "ai-technical-interview","voice_and_email","voice-email"
 ]
 
-export async function GET() {
-  if (process.env.VERCEL_ENV !== "preview") {
-    return NextResponse.json({ error: "preview only" }, { status: 404 })
+export async function GET(request: NextRequest) {
+  const token = request.nextUrl.searchParams.get("token")
+  if (!process.env.RECOVERY_SCAN_TOKEN || token !== process.env.RECOVERY_SCAN_TOKEN) {
+    return NextResponse.json({ error: "not found" }, { status: 404 })
   }
   const keys = await blob.list("")
   const matching = keys.filter((key) => {
     const s = key.toLowerCase()
     return needles.some((n) => s.includes(n))
-      || /\.(txt|md|json|jsonl|srt|vtt)$/i.test(key) && /trans|audio|record|kompas/i.test(key)
+      || (/\.(txt|md|json|jsonl|srt|vtt)$/i.test(key) && /trans|audio|record|kompas/i.test(key))
   })
   const rows = await Promise.all(matching.slice(0, 1000).map(async (key) => {
     const stat = await blob.stat(key)
