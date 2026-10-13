@@ -42,6 +42,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, count: chains.length, chains, issues, days, accounts: ctx.accounts.filter(a => a.gmail_enabled).map(a => a.google_email), coverage: "Counts reflect scanned matching emails, not a complete inbox inventory." })
   } catch (err) {
     console.error("gmail/application-chains error:", err)
-    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
+    // Gmail's own limit of reads per minute, or a page with mail it could not hand over: both mean "ask for this page
+    // again in a moment", and are answered as 429 so the page waits and asks again instead of giving up on the inbox.
+    const message = String(err)
+    if (/RATE_LIMIT|rateLimitExceeded|quota|could not be read/i.test(message)) return NextResponse.json({ ok: false, rateLimited: true, error: "RATE_LIMIT: Gmail allows only so many reads a minute and asked for a pause. The same page can be asked for again." }, { status: 429, headers: { "Retry-After": "30" } })
+    return NextResponse.json({ ok: false, error: message }, { status: 500 })
   }
 }

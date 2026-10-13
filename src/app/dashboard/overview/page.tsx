@@ -361,6 +361,16 @@ function OverviewInner() {
   const params = useSearchParams()
   const router = useRouter()
   const account = params.get("account") || ""
+  const chainId = params.get("chain")
+  // WHAT WENT WRONG (reported 13 Oct 2026): pressing View put ?chain=..&account=<that application's inbox> in the
+  // address, and the reading of Gmail's history below ran again whenever `account` changed. So every View threw the
+  // history away and read that inbox from the start, both passes, while the map asked Gmail for the attachments too:
+  // Gmail's limit of reads per minute was hit ("Total Query Cost ... Units per minute per user") and the retry then
+  // found mail it "could not read". The inbox being read is now the one chosen with the select; opening and closing a
+  // map does not change it, so nothing is read again.
+  const [chosen, setChosen] = useState(account)
+  if (!chainId && chosen !== account) setChosen(account)
+  const filter = chainId ? chosen : account
   const [accounts, setAccounts] = useState<string[]>([])
   const [issues, setIssues] = useState<string[]>([])
   const [refreshKey, setRefreshKey] = useState(0)
@@ -387,9 +397,27 @@ function OverviewInner() {
       if (!discovery.ok || !connections.ok) throw new Error(connections.error || "Could not load connected inboxes")
       if (!active) return
       setAccounts(connections.accounts || [])
-      const pending: string[] = account ? [account] : connections.accounts || []
+      const pending: string[] = filter ? [filter] : connections.accounts || []
       const failures = new Map<string, string>()
       let scanned = 0
+      // Gmail allows only so many reads a minute. When it says so, or a page comes back with mail it could not read, the
+      // SAME page is asked for again after a pause (its position has not moved). Three pauses, then it is said plainly.
+      const readPage = async (query: URLSearchParams) => {
+        for (let attempt = 0; ; attempt++) {
+          const response = await fetch(`/api/gmail/application-chains?${query}`, { cache: "no-store", signal: controller.signal })
+          const j = await response.json().catch(() => ({}))
+          if (response.ok && j.ok) return j
+          const message = String(j.error || "Could not read history")
+          const busy = response.status === 429 || /RATE_LIMIT|rate ?limit|quota|too many requests|could not be read/i.test(message)
+          if (!busy) throw new Error(message)
+          if (attempt >= 3) throw new Error("Gmail kept asking MarketFit to slow down")
+          for (let left = [15, 40, 65][attempt]!; left > 0; left--) {
+            if (!active) throw new Error("stopped")
+            setScanStatus(`Gmail asked for a pause: it allows only so many reads a minute. Nothing is broken. Carrying on in ${left} ${left === 1 ? "second" : "seconds"}.`)
+            await new Promise(resolve => setTimeout(resolve, 1000))
+          }
+        }
+      }
       // Read important progress from every inbox before backfilling the rest.
       for (const phase of ["progress", "history"]) {
         for (const selected of pending) {
@@ -401,10 +429,8 @@ function OverviewInner() {
             do {
               const query = new URLSearchParams({ days: "90", scan: "1", account: selected, phase })
               if (token) query.set("pageToken", token)
-              const response = await fetch(`/api/gmail/application-chains?${query}`, { cache: "no-store", signal: controller.signal })
-              const j = await response.json()
+              const j = await readPage(query)
               if (!active) return
-              if (!response.ok || !j.ok) throw new Error(j.error || "Could not read history")
               byAccount.set(selected, j.chains || [])
               setChains([...byAccount.values()].flat())
               setLoading(false)
@@ -428,7 +454,7 @@ function OverviewInner() {
     scan().catch(e => { if (active) { setIssues([`History scan stopped before completion: ${e.message}. Refresh history to retry.`]); setScanStatus("History incomplete. Displayed stages may change as more emails are read.") } })
       .finally(() => { if (active) { setLoading(false); setScanning(false) } })
     return () => { active = false; controller.abort() }
-  }, [account, refreshKey])
+  }, [filter, refreshKey])
 
   // Deep link: /dashboard/overview?chain=<threadId> opens that mind map.
   useEffect(() => {
@@ -452,7 +478,7 @@ function OverviewInner() {
   const viewing = viewId ? chains.find(c => (c.threadId === viewId || c.sourceThreadIds?.includes(viewId)) && (!account || c.accountEmail === account)) || null : null
   const interviews = chains.filter(c => c.stops.some(s => s.key === "interview" && s.reached)).length
 
-  if (viewing && !loading) return <><p role="status">{scanStatus}</p>{issues.map(issue => <p key={issue} role="alert">{issue}</p>)}<MindMap chain={viewing} onClose={() => router.push(`/dashboard/overview?account=${encodeURIComponent(viewing.accountEmail)}`)} /></>
+  if (viewing && !loading) return <><p role="status">{scanStatus}</p>{issues.map(issue => <p key={issue} role="alert">{issue}</p>)}<MindMap chain={viewing} onClose={() => router.push(filter ? `/dashboard/overview?account=${encodeURIComponent(filter)}` : "/dashboard/overview")} /></>
 
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto" }}>
@@ -463,10 +489,10 @@ function OverviewInner() {
 
       {/* What matters now: every started application by whose turn it is, a contact box for everyone, and the hidden
           list. It reads the kept mail, so it is on screen at once; the evidence map below still reads Gmail's history. */}
-      <StandingSection account={account} />
+      <StandingSection account={filter} />
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
-        <label>Inbox <select aria-label="Filter inbox" value={account} onChange={e => router.push(`/dashboard/overview?account=${encodeURIComponent(e.target.value)}`)}><option value="">All connected inboxes</option>{accounts.map(a => <option key={a} value={a}>{a}</option>)}</select></label>
+        <label>Inbox <select aria-label="Filter inbox" value={filter} onChange={e => router.push(`/dashboard/overview?account=${encodeURIComponent(e.target.value)}`)}><option value="">All connected inboxes</option>{accounts.map(a => <option key={a} value={a}>{a}</option>)}</select></label>
         <button className="btn-outline" disabled={scanning} onClick={() => setRefreshKey(k => k + 1)}>{scanning ? "Reading history…" : "Refresh history"}</button>
       </div>
       <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Last 90 days. Counts reflect scanned matching emails. Open circles are evidence gaps.</p>

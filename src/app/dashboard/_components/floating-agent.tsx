@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Bot, X, Mic, MicOff, Send, Volume2, VolumeX } from "lucide-react"
 import { tapBuzz, sendBuzz, arriveBuzz } from "@/lib/haptics"
 import { speak, stopSpeaking, canSpeak, isSpeaking } from "@/lib/speak"
+import { Markdown } from "@/lib/markdown"
 
 interface Msg { role: "user" | "assistant"; content: string }
 
@@ -226,7 +227,9 @@ export default function FloatingAgent() {
                 color: m.role === "user" ? "#fff" : "var(--text)",
                 fontSize: 13.5, lineHeight: 1.55, whiteSpace: "pre-line",
               }}>
-                {m.content}
+                {/* A reply is Markdown: a table is drawn as a table, a list as a list (src/lib/markdown.ts). What the person
+                    typed themselves is shown as they typed it. */}
+                {m.role === "assistant" ? <Markdown text={m.content} /> : m.content}
                 {m.role === "assistant" && canSpeak() && (
                   <button
                     onClick={() => toggleSpeak(i, m.content)}

@@ -174,7 +174,7 @@ test('nothing typed by him and nothing read here can be mistaken: empty and odd 
 test('Overview shows it first, reads kept mail only, and hiding is the inbox\'s own ignore list', () => {
   const page = read('src/app/dashboard/overview/page.tsx'), section = read('src/app/dashboard/overview/_components/standing.tsx'), route = read('src/app/api/gmail/overview/route.ts')
   // Above the evidence map, and not behind its slow read of Gmail's history.
-  assert.ok(page.indexOf('<StandingSection account={account} />') > 0 && page.indexOf('<StandingSection account={account} />') < page.indexOf('Filter inbox'))
+  assert.ok(page.indexOf('<StandingSection account={filter} />') > 0 && page.indexOf('<StandingSection account={filter} />') < page.indexOf('Filter inbox'))
   assert.match(section, /fetch\(`\/api\/gmail\/overview\$\{account \? `\?account=\$\{encodeURIComponent\(account\)\}` : ""\}`/)
   assert.match(route, /requireAuth\(\)/)
   assert.match(route, /keptThreads\(ctx, TRACKING_DAYS/)
@@ -397,4 +397,27 @@ test('an address with marks in it stays an address when it becomes a link', asyn
   assert.equal(new URL(mailHref('x?body=send%20it&to=someone-else@corp.example')).search, '', 'nothing after the address is read as a body or a second recipient')
   assert.equal(new URL(mailHref('pat#team@corp.example')).hash, '')
   assert.equal(mailHref('not-an-address'), '#')
+})
+
+test('opening and closing one application\'s map does not read Gmail\'s history again', () => {
+  // Reported 13 Oct 2026: after pressing View, Gmail's limit of reads per minute was hit ("Total Query Cost ... Units per
+  // minute per user"), and a retry said "Some emails could not be read". View put that application's inbox in the
+  // address, and the history was read again whenever the inbox in the address changed.
+  const page = read('src/app/dashboard/overview/page.tsx'), route = read('src/app/api/gmail/application-chains/route.ts')
+  // The inbox being read is the one chosen with the select; a map in the address does not change it.
+  assert.ok(page.includes('const filter = chainId ? chosen : account'))
+  assert.ok(page.includes('if (!chainId && chosen !== account) setChosen(account)'))
+  assert.ok(page.includes('}, [filter, refreshKey])') && !page.includes('}, [account, refreshKey])'), 'the read starts again only when the chosen inbox or Refresh changes')
+  assert.ok(page.includes('const pending: string[] = filter ? [filter] : connections.accounts || []'))
+  // Closing a map goes back to the list as it was.
+  assert.ok(page.includes('onClose={() => router.push(filter ? `/dashboard/overview?account=${encodeURIComponent(filter)}` : "/dashboard/overview")}'))
+  assert.ok(!page.includes('router.push(`/dashboard/overview?account=${encodeURIComponent(viewing.accountEmail)}`)'))
+  // When Gmail asks for a pause, the same page is asked for again after a wait, up to three times, and it says so.
+  assert.ok(page.includes('const readPage = async (query: URLSearchParams) =>'))
+  assert.ok(page.includes('[15, 40, 65][attempt]'))
+  assert.ok(page.includes('Gmail asked for a pause: it allows only so many reads a minute. Nothing is broken.'))
+  assert.ok(page.includes('const j = await readPage(query)'))
+  // The endpoint answers a limit as one (429), not as a broken server (500), in plain words.
+  assert.ok(route.includes('{ status: 429, headers: { "Retry-After": "30" } }'))
+  assert.ok(route.includes('/RATE_LIMIT|rateLimitExceeded|quota|could not be read/i.test(message)'))
 })
