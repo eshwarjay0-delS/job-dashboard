@@ -213,6 +213,14 @@ test('only a registered number is answered; one that is not gets one automated m
   assert.ok(say.startsWith('This number is not registered with MarketFit') && say.includes('1. Open app.example.com and sign in.') && say.includes('2. Add this mobile number and type the code we text you.'))
   assert.ok(!/subscri|\$|price|plan/i.test(say))
   assert.ok(notRegisteredMessage('').includes('1. Open MarketFit and sign in.'))
+  // Found on the live site the same night: the text-message service was refusing our account, so "type the code we
+  // text you" led nowhere. While codes cannot be texted the message names the way that works: the code from the site.
+  const other = notRegisteredMessage('https://app.example.com', false)
+  assert.ok(other.includes('2. Open *WhatsApp* there and press *Link this number*.') && other.includes('3. Send me the code it shows, like this: link ABCD-1234') && !other.includes('we text you'))
+  assert.ok(!/subscri|\$|price|plan/i.test(other))
+  const whoSrc = read('src/lib/whatsapp-who.ts')
+  assert.ok(whoSrc.includes('try { works = (await phoneVerifyStatus()).state === "ok" } catch { works = false }'))
+  assert.ok(read('src/app/api/whatsapp/webhook/route.ts').includes('notRegisteredMessage(siteOf(process.env.NEXT_PUBLIC_APP_URL, request.nextUrl.origin), await textCodesWork())'))
   assert.ok(NOT_CHECKED_MESSAGE.includes('on our side') && !/not registered/i.test(NOT_CHECKED_MESSAGE))
   // Only a real https address is put in front of a stranger.
   assert.equal(siteOf('https://app.example.com/dashboard?x=1'), 'https://app.example.com')

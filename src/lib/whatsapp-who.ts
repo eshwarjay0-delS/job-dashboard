@@ -5,6 +5,7 @@ import { linkedUserIdChecked } from "@/lib/whatsapp-link"
 import { ownerWhatsAppUserId, adminEmails } from "@/lib/owner"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 import { noticeDue, openToAll, type Notice, type RegisteredBy } from "@/lib/whatsapp-who-core"
+import { phoneVerifyStatus } from "@/lib/phoneVerify"
 
 export const FALLBACK_USER_ID = process.env.WHATSAPP_USER_ID || "demo"
 const UUID = /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i
@@ -70,6 +71,18 @@ export async function ownerAccountId(): Promise<string | null> {
   } catch { /* not known this time: asked again on the next message */ return null }
   ownerAccount = { id, at: Date.now() }
   return id
+}
+
+// Can a code be texted to a mobile number right now? Asked of the text-message service at most every ten minutes
+// (nothing is sent and nothing is charged). The automated message to an unregistered number names the way to
+// register that works: it must not send a stranger to a step that fails.
+let textCodes: { works: boolean; at: number } | null = null
+export async function textCodesWork(): Promise<boolean> {
+  if (textCodes && Date.now() - textCodes.at < 10 * 60_000) return textCodes.works
+  let works = false
+  try { works = (await phoneVerifyStatus()).state === "ok" } catch { works = false }
+  textCodes = { works, at: Date.now() }
+  return works
 }
 
 const noticeKey = (from: string) => `whatsapp/unregistered/${digits(from)}.json`

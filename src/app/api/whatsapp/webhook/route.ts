@@ -40,7 +40,7 @@ import { closestFor, keptCandidate, libraryOf, numberedEmails, type Resumes } fr
 import { getDossierProfile, saveDossierProfile } from "@/lib/dossier"
 import { hashUserId } from "@/lib/sttLedger"
 import { claimLinkCode } from "@/lib/whatsapp-link"
-import { claimNotice, resolveWhatsAppUser, FALLBACK_USER_ID, type Who } from "@/lib/whatsapp-who"
+import { claimNotice, resolveWhatsAppUser, textCodesWork, FALLBACK_USER_ID, type Who } from "@/lib/whatsapp-who"
 import { notRegisteredMessage, siteOf, NOT_CHECKED_MESSAGE } from "@/lib/whatsapp-who-core"
 import { collectHeld } from "@/lib/whatsapp-collect"
 import { isPdf } from "@/lib/pdf-text"
@@ -297,7 +297,7 @@ export async function POST(request: NextRequest) {
     // When the check itself failed the person is told that instead, never that they are not registered.
     const kind = sender.checked ? "unregistered" : "unchecked"
     if (await claimNotice(from, kind)) {
-      try { await sendText(from, kind === "unregistered" ? notRegisteredMessage(siteOf(process.env.NEXT_PUBLIC_APP_URL, request.nextUrl.origin)) : NOT_CHECKED_MESSAGE) } catch { /* ignore */ }
+      try { await sendText(from, kind === "unregistered" ? notRegisteredMessage(siteOf(process.env.NEXT_PUBLIC_APP_URL, request.nextUrl.origin), await textCodesWork()) : NOT_CHECKED_MESSAGE) } catch { /* ignore */ }
     }
     return ok()
   }

@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { isAdminEmail } from "@/lib/owner"
 import { checkRateLimit } from "@/lib/rateLimit"
-import { resolveWhatsAppUser } from "@/lib/whatsapp-who"
+import { resolveWhatsAppUser, textCodesWork } from "@/lib/whatsapp-who"
 import { notRegisteredMessage, openToAll, siteOf, NOT_CHECKED_MESSAGE } from "@/lib/whatsapp-who-core"
 
 export const runtime = "nodejs"
@@ -31,7 +31,9 @@ export async function GET(request: NextRequest) {
   const asked = await owner(request)
   if (asked.refuse) return asked.refuse
   const open = openToAll(process.env.WHATSAPP_IDENTITY_BINDING_REQUIRED)
-  return NextResponse.json({ ok: true, open, answers: open ? "every number" : "registered numbers only" }, PRIVATE)
+  // `textCodes`: can a mobile number be verified by a texted code right now? When not, the automated message tells
+  // an unregistered number to register with the code from the WhatsApp page instead.
+  return NextResponse.json({ ok: true, open, answers: open ? "every number" : "registered numbers only", textCodes: await textCodesWork() }, PRIVATE)
 }
 
 export async function POST(request: NextRequest) {
@@ -50,6 +52,7 @@ export async function POST(request: NextRequest) {
     by: sender.by,
     checked: sender.checked,
     open: openToAll(process.env.WHATSAPP_IDENTITY_BINDING_REQUIRED),
-    wouldSay: sender.who ? "" : sender.checked ? notRegisteredMessage(site) : NOT_CHECKED_MESSAGE,
+    textCodes: await textCodesWork(),
+    wouldSay: sender.who ? "" : sender.checked ? notRegisteredMessage(site, await textCodesWork()) : NOT_CHECKED_MESSAGE,
   }, PRIVATE)
 }

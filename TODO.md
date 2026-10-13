@@ -1,3 +1,38 @@
+## 2026-10-13 (WhatsApp, which email) — WhatsApp asks which email a job is for, starts from the closest resume of that email, and answers registered numbers only
+
+Commit f0a4ca4, deployed READY.
+
+**Asked:** "WhatsApp should ask which email, like 1 [first address] or 2 [second address], and if the person can just send the JD and say number one ... the type of resume would be selected from [that] library ... based on the closest match ... we already have a very almost relevant resume, and we just need to brush it up ... instead of always starting from 50%." "After every completion of a resume ... if you wanted to start with a different resume, please send me the resume first." Then: "we'll take the mobile number, verify with OTP ... they can either text directly to that number, or WhatsApp that number ... the other numbers which haven't registered with our databases ... wouldn't get any replies at all ... they should receive an automated message. Here, go to this website and you have to take this subscription."
+
+**What went wrong before, each with its proof:**
+1. With resumes under two emails the bot never asked whose job it was. Proof in the code: `sourceFor` used the resume last sent from the number, or with none let the tailor pick across every email in Files.
+2. The saved resume it started from had to be of the same kind of job (`pickBase`: same email, same folder). A closer one in another folder was never looked at.
+3. A number nobody had registered was answered anyway, as a default user (`return required ? null : who(FALLBACK_USER_ID, false)`, with `required` off unless a setting said 1).
+
+**Built:**
+- `src/lib/library-pick.ts` (rules) and `library-pick-store.ts`. One email is one profile; with more than one the bot asks "Which email is this job for?" and never guesses. The answer comes with the job description (a line of its own: "1", "number one", the address) or as the next message, typed or sent as a reply to the question.
+- An email keeps its number for good: kept per account in blob `library/email-order/<user>.json`, only ever added to.
+- Inside the email the closest resume wins: the one whose own keywords already show the most of what the job asks for. Whose a resume is comes from the email written IN the file (the keyword index now keeps `emails` per file), not from its folder; the file is opened and asked once more before it is used. A resume built on a saved resume is still never built on again.
+- A resume sent for the job is used as it is, for that one job (`session.resumeFresh`; ends with that job, a quiet day, or "reset"). After every new resume: "To start from a different resume, send me that resume first, then the job description."
+- `src/lib/whatsapp-who.ts` and `whatsapp-who-core.ts`: only a registered number is answered (link code, owner's settings, or mobile code confirmed in setup). Any other number gets one automated message a day saying where to register, and no other reply. When the check fails the person is told that, never "not registered". Old behaviour only with `WHATSAPP_IDENTITY_BINDING_REQUIRED=0`, and there the shared default account is no longer looked through.
+- `POST /api/resumes/library-pick { jd, email?, say? }` (reads only) and `GET/POST /api/whatsapp/who` (owner only): both rules can be checked without a message to the bot.
+
+**A three-reviewer read-only pass before shipping found these, all fixed, each with a test:** the numbers were handed out by resume count, so after a few jobs "2" meant the other person (high); an answer sent as a reply to the question went to "change a resume"; "sent for the next job" never ended and won over an email the person said; a job that finished wrote back the session of a minute ago and wiped a question asked since; once the bot's first result made an email folder a person's own unfiled resumes were never used again; a sent resume with no readable email was assumed to belong to the only email in Files; a store failure read as "not registered" for a number joined by code; on an open deployment the shared account was searched by the email on a sent resume; after five wrong link codes every further one got a reply; "no one", "$2", "(1)", "Select one:" and a bare "1." at the top of a paste were read as a choice.
+
+**Verified on the deployed site, on his real library (read only, counts):** the bot answers registered numbers only; a made-up number would get the automated message with the site's address, and the database answered the check. His resumes carry two emails, numbered 1 (17 resumes) and 2 (16 resumes); a job description alone would be asked about; with "number one" or "2" under it, or "the second one please" as the answer, the email is taken without asking. All 33 resumes can be started from (none built on a saved one). For a SIEM job the closest resume of each email already shows 10 of the 10 things asked; for an IAM job 7 and 8 of 10. His account has one number joined, so he is still answered.
+
+**Found on the live site while checking (the public status page, `GET /api/health/services`):** text-message codes cannot be sent. State `credentials_rejected`: `TWILIO_AUTH_TOKEN` on the deployment is not an auth token. So "verify the mobile number with OTP" does not work for anyone today, and that is his to fix (a setting; I do not set secrets). What I did about it (second commit): the automated message asks the text-message service first (at most every ten minutes, nothing sent, nothing charged) and, while codes cannot be texted, tells the stranger to register with the code from the WhatsApp page instead ("Open WhatsApp there and press Link this number ... link ABCD-1234"). Setup already lets a new person carry on without the mobile step when a code cannot be sent, so that path works today.
+
+**NOT verified:** a real WhatsApp message through this code (the question, the answer, the small message, the automated message to a stranger); a tailor started from a library pick end to end.
+
+**Known and left:** two messages from one unregistered number in the same instant can each get the automated message (the store cannot say "only if nobody wrote first"). A job description whose own last line is a bare "1" or "2" is read as the choice; the bot says "For *email*." first so it is seen. With no email readable in any file, the tailor still picks across Files and can pick a resume built on a saved one (as before). The keyword index is rebuilt once per person (every file read once) because it now keeps emails.
+
+**His to decide (asked):** texting the number by SMS needs a text-message provider on that number and a way to send a file (a link); what "take this subscription" should say and where it should lead, since nothing sells a plan today (there are points: 20 to start, topped up by him); whether the bot should remember the last email instead of asking each time.
+
+**Where to pick up:** his answers above; then a real message through the bot.
+
+**Still open (his answers, and not started):** library record in Postgres tables or files; reuse kept lines inside the tailoring; Kompas questions from the common words; first follow-up after 5 days or sooner; whether a follow-up sent for him should say so; prompt for form rows with no answer; nudges with no press; search bar on every page; Follow-ups preview; Overview's evidence map from kept mail; how to run the Kompas answer tests; twelve colours on Companies and Compare; the Drafts and No answer yet inbox views.
+
 ## 2026-10-13 (library) — One folder per email, a record inside each folder, a View beside every resume, faster picking
 
 Commits e9233d2 and a2032c0, both deployed READY.

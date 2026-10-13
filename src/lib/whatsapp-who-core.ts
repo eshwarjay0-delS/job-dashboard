@@ -44,17 +44,18 @@ export function siteOf(...candidates: (string | undefined | null)[]): string {
   return ""
 }
 
-/** The one automated message a number that is not registered receives. */
-export function notRegisteredMessage(site: string): string {
+/**
+ * The one automated message a number that is not registered receives. It names a way to register that works NOW:
+ * the code we text to the mobile number, or, while text codes cannot be sent (found on the live site on 13 Oct 2026:
+ * the text-message service was refusing our account), the code the WhatsApp page of the site shows.
+ */
+export function notRegisteredMessage(site: string, textCodes = true): string {
   const where = site ? site.replace(/^https:\/\//, "") : "MarketFit"
-  return [
-    "This number is not registered with MarketFit, so I cannot answer it here.",
-    "",
-    `1. Open ${where} and sign in.`,
-    "2. Add this mobile number and type the code we text you.",
-    "",
-    "Then message me again and I will answer.",
-  ].join("\n")
+  const head = ["This number is not registered with MarketFit, so I cannot answer it here.", "", `1. Open ${where} and sign in.`]
+  return (textCodes
+    ? [...head, "2. Add this mobile number and type the code we text you.", "", "Then message me again and I will answer."]
+    : [...head, "2. Open *WhatsApp* there and press *Link this number*.", "3. Send me the code it shows, like this: link ABCD-1234", "", "After that I answer every message from this number."]
+  ).join("\n")
 }
 
 /** Said when the check itself failed: the person is not told they are unregistered when that is not known. */
