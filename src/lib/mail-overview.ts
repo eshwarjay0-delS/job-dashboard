@@ -25,6 +25,15 @@
 // nothing, and neither does a word in mail they only quoted.
 
 import { senderEmail, senderName, ownPart, dropFooter, tidy, aboutOf, readThread, contactsOf, saysWaitForUs, turnOf, isMachine, saidNo } from "./mail-reading.ts"
+import { addressesIn } from "./my-recruiters.ts"
+
+// MY RECRUITERS (13 Oct 2026, src/lib/my-recruiters.ts). Some of the people who write to him work FOR him: they send his
+// resume on without being asked. He named them: "he's my recruiter so ... I don't have to follow up with him", "whoever
+// these guys are emailing would be my loop guys and that's where you start the connecting dots from". So, for someone on
+// his recruiter list: (1) no nudge is ever said to be due to them; (2) the person to watch in their conversation is
+// whoever they wrote to or whoever else answered there; (3) those people get a contact box even before they write a
+// word, marked as brought in by that recruiter. A recruiter who ASKS him something is still answered: that is not a
+// follow-up, it is a question.
 
 export interface OverviewThread {
   threadId: string
@@ -52,6 +61,8 @@ export interface Standing {
   action: "reply" | "nudge" | "call" | "none"
   weight: number           // how much it matters next to the others
   why: string[]            // the reasons for that weight, in words
+  through?: { name: string; email: string }   // one of his recruiters is in this conversation, carrying it
+  introduced?: boolean     // the contact has not written yet: his recruiter wrote to them
 }
 export interface Person {
   name: string; email: string; account: string; company: string; phones: string[]
@@ -59,6 +70,8 @@ export interface Person {
   working: boolean         // one of their conversations has started and is still open
   stage?: Stage; about?: string; yourTurn: boolean
   answered: boolean        // you have written to them at least once, from any inbox
+  recruiter?: boolean      // on his recruiter list: works for him, is never nudged
+  via?: string             // the recruiter of his who wrote to them: one of the people to let reach out
 }
 export interface Overview {
   looked: { conversations: number; people: number; machines: number }
@@ -155,8 +168,9 @@ export function topOf(needsYou: Standing[], goneQuiet: Standing[]): Standing[] {
  * `hidden` says whether a conversation or a sender is hidden by a rule of the person's own. `account` keeps what is
  * shown to one inbox; all the mail is still read, so that someone answered from another inbox is known to be answered.
  */
-export function overviewOf(threads: OverviewThread[], myEmails: string[], now: number, opts: { nudgeAfterDays?: number; fit?: (threadId: string) => number | undefined; hidden?: (account: string, email: string, threadId: string) => boolean; account?: string } = {}): Overview {
+export function overviewOf(threads: OverviewThread[], myEmails: string[], now: number, opts: { nudgeAfterDays?: number; fit?: (threadId: string) => number | undefined; hidden?: (account: string, email: string, threadId: string) => boolean; account?: string; recruiter?: (email: string) => boolean } = {}): Overview {
   const me = new Set(myEmails.map(e => String(e || "").toLowerCase()).filter(Boolean))
+  const isRec = (email: string): boolean => !!email && !!opts.recruiter?.(email)
   const wait = Math.min(Math.max(Math.round(opts.nudgeAfterDays || 4), 1), 14)
   const only = String(opts.account || "").toLowerCase()
   const standings: Standing[] = []
@@ -193,12 +207,32 @@ export function overviewOf(threads: OverviewThread[], myEmails: string[], now: n
       if (isMachine(email)) { machines.add(email); return }
       const key = `${account}|${email}`
       const when = Number(m.internalDate || 0)
-      const p = people.get(key) || { name: senderName(m.from), email, account, company: companyOf(email), phones: [], conversations: 0, lastAt: 0, lastThreadId: thread.threadId, working: false, yourTurn: false, answered: false }
+      const p: Person = people.get(key) || { name: senderName(m.from), email, account, company: companyOf(email), phones: [], conversations: 0, lastAt: 0, lastThreadId: thread.threadId, working: false, yourTurn: false, answered: false }
       for (const n of phonesBy.get(email) || []) if (!p.phones.includes(n) && p.phones.length < 3) p.phones.push(n)
       if (when >= p.lastAt) { p.lastAt = when; p.lastThreadId = thread.threadId; p.name = senderName(m.from) || p.name }
+      if (isRec(email)) p.recruiter = true
       people.set(key, p)
     })
     for (const email of new Set(others.map(m => senderEmail(m.from)))) { const p = people.get(`${account}|${email}`); if (p) p.conversations += 1 }
+
+    // ── The people one of his recruiters wrote to here: the ones to let reach out. They get a contact box before they
+    //    have written a word, and it says who brought them in. ────────────────────────────────────────────────────────
+    const loop = new Map<string, { name: string; at: number; by: string }>()
+    ordered.forEach((m, i) => {
+      if (mine[i] || !isRec(from[i])) return
+      for (const a of addressesIn(`${m.to || ""}, ${m.cc || ""}`)) {
+        if (me.has(a.email) || isRec(a.email) || isMachine(a.email)) continue
+        loop.set(a.email, { name: a.name, at: at[i] || 0, by: senderName(m.from) || from[i] })
+      }
+    })
+    for (const [email, l] of loop) {
+      const key = `${account}|${email}`
+      const p: Person = people.get(key) || { name: l.name, email, account, company: companyOf(email), phones: [], conversations: 0, lastAt: l.at, lastThreadId: thread.threadId, working: false, yourTurn: false, answered: false }
+      p.via = l.by
+      if (!p.name) p.name = l.name
+      if (p.conversations === 0 && l.at >= p.lastAt) { p.lastAt = l.at; p.lastThreadId = thread.threadId }
+      people.set(key, p)
+    }
 
     // ── Has it started? Both sides have written, or they have asked for something particular ───────────────────────
     const lastOther = others[others.length - 1]
@@ -206,7 +240,10 @@ export function overviewOf(threads: OverviewThread[], myEmails: string[], now: n
     const cats = others.map(m => String(m.category || ""))
     const iWrote = mine.some(Boolean)
     const quietDays = Math.max(0, Math.floor((now - lastAt) / DAY))
-    if (!iWrote && !(cats.some(c => STEP.has(c)) && quietDays <= FRESH_DAYS)) continue
+    // From one of his own recruiters, any ask counts while it is fresh: "send your updated resume" from a stranger is a
+    // requirement like any other, from the person who markets his profile it is something to do.
+    const stepKinds = others.some(m => isRec(senderEmail(m.from))) ? ASKING : STEP
+    if (!iWrote && !(cats.some(c => stepKinds.has(c)) && quietDays <= FRESH_DAYS)) continue
     if (opts.hidden?.(account, senderEmail(lastOther.from), thread.threadId)) continue
     // Over: their last word is a no, or he said no and they have not come back with anything to answer since.
     let noAt = -1
@@ -245,14 +282,25 @@ export function overviewOf(threads: OverviewThread[], myEmails: string[], now: n
     if (!yourTurn && (quietDays > COLD_DAYS || nudges >= MOST_IN_A_ROW)) { cold++; continue }
     nudges = Math.max(0, nudges - 1)
 
-    const person = asker?.m || lastOther
-    const email = senderEmail(person.from)
-    const name = senderName(person.from)
+    // One of his recruiters in this conversation carries it. The person to watch is then whoever else answered there;
+    // when nobody else has, it is whoever the recruiter wrote to; and the recruiter is never the one to nudge.
+    const carrier = [...others].reverse().find(m => isRec(senderEmail(m.from)))
+    const lastElse = carrier ? [...others].reverse().find(m => { const e = senderEmail(m.from); return !isRec(e) && !isMachine(e) }) : undefined
+    const person = asker?.m || lastElse || lastOther
+    const carried = !!carrier && !asker && !lastElse          // only his recruiter has written, and has asked him nothing
+    const sentTo = carried ? [...loop.entries()].sort((a, b) => b[1].at - a[1].at)[0] : undefined
+    const email = sentTo ? sentTo[0] : senderEmail(person.from)
+    const name = sentTo ? sentTo[1].name || sentTo[0] : senderName(person.from)
     const contact: Contact = { name, email, company: companyOf(email), phones: (phonesBy.get(email) || []).slice(0, 2) }
     const who = first(name)
-    const group: Group = yourTurn ? "needs_you" : quietDays >= wait ? "gone_quiet" : "moving"
+    const group: Group = yourTurn ? "needs_you" : carried ? "moving" : quietDays >= wait ? "gone_quiet" : "moving"
     let doNext: string, action: Standing["action"]
-    if (yourTurn) {
+    if (carried) {
+      const rec = first(senderName(carrier!.from))
+      action = "none"
+      doNext = sentTo ? `${rec} is your recruiter and sent this on to ${name}${contact.company ? ` at ${contact.company}` : ""} ${days(Math.max(0, Math.floor((now - sentTo[1].at) / DAY)))}. Let them reach out; there is nothing for you to chase.`
+        : `${rec} is your recruiter and is carrying this. There is nothing for you to chase.`
+    } else if (yourTurn) {
       action = "reply"
       doNext = since.some(x => x.cat === "Offer") ? `${who} sent an offer. Read the terms and answer.`
         : asked.length ? `${who} asked for ${andList(asked.slice(0, 4))}.`
@@ -281,12 +329,15 @@ export function overviewOf(threads: OverviewThread[], myEmails: string[], now: n
     const fit = opts.fit?.(thread.threadId)
     if (typeof fit === "number" && fit >= 60) { weight += Math.round(fit / 5); why.push("close to the work you look for") }
     weight -= Math.min(quietDays, 30) / 2
+    if (carrier) why.push("through your recruiter")
 
     const titled = [...ordered].reverse().find(m => m.jobTitle)?.jobTitle
     standings.push({
       threadId: thread.threadId, account, about: aboutOf(titled || lastOther.subject) || tidy(lastOther.subject), stage, group, contact,
       others: Math.max(0, new Set(others.map(m => senderEmail(m.from))).size - 1), lastAt, quietDays, yourTurn, lastMine: turn.lastMine, nudges, asked: asked.slice(0, 4), doNext, action,
       weight: Math.round(weight * 10) / 10, why,
+      ...(carrier ? { through: { name: senderName(carrier.from), email: senderEmail(carrier.from) } } : {}),
+      ...(sentTo ? { introduced: true } : {}),
     })
   }
 

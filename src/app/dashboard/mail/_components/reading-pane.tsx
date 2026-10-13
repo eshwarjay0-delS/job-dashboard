@@ -4,6 +4,7 @@ import { Reply, History, Phone } from "lucide-react"
 import { Avatar, StagePill } from "../../_suite/ui"
 import type { Mail } from "../../_suite/sample"
 import { contactsOf, decodeEntities, senderEmail, senderName, sequenceOf, type Reading } from "@/lib/mail-reading"
+import RecruiterButton from "../../_components/recruiter-button"
 
 // One conversation, the way a person reads one: who it is from, what it is about, what they wrote. Then three things to do,
 // one at a time: reply, see the history, see how to reach them.
@@ -77,6 +78,8 @@ export default function ReadingPane({ m, myEmail, tint, restored, reply }: {
             {restored ? <StagePill stage="applied" label="Restored" /> : <StagePill stage={m.stage} />}
           </div>
           <div style={{ fontSize: 12.5, color: "var(--text-muted)", overflowWrap: "anywhere" }}>{senderEmail(m.fromEmail)} · to {myEmail}</div>
+          {/* "This is my recruiter": one press, here as on Overview. Someone on that list is never chased. */}
+          <div style={{ marginTop: 8 }}><RecruiterButton email={senderEmail(m.fromEmail)} name={who} /></div>
         </div>
         <span style={{ fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{m.at}</span>
       </div>

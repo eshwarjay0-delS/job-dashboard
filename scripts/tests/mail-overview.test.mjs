@@ -367,7 +367,7 @@ test('the endpoint reads all the mail, honours every rule the inbox honours, and
   // kept to the inbox chosen.
   assert.ok(route.includes('const threads = kept.threads'))
   assert.ok(route.includes('findHabits(threads, mine, now, decisions, TRACKING_DAYS)'))
-  assert.ok(route.includes('hidden: hiddenBy, account })'))
+  assert.ok(route.includes('hidden: hiddenBy, account, recruiter: email => isMyRecruiter(recruiters, email) })'))
   assert.ok(!route.includes('kept.threads.filter'))
   // Was: a conversation he brought back by itself stayed missing, and one he hid by itself was put on top. Hidden
   // means what the inbox means: the same function decides, with the conversation's own rule first.

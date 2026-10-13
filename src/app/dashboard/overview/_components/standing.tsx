@@ -1,10 +1,12 @@
 "use client"
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react"
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react"
 import Link from "next/link"
 import { Card } from "../../_suite/ui"
 import TypingDots from "../../_components/typing-dots"
 import { jewel } from "@/lib/jewel"
 import { STAGE_WORDS, type Standing, type Person, type Overview, type Group } from "@/lib/mail-overview"
+import type { RecruiterRule } from "@/lib/my-recruiters"
+import RecruiterButton, { changeRecruiter } from "../../_components/recruiter-button"
 
 // "What matters now", at the top of Overview. The owner, 13 Oct 2026: "I don't think the dots are connected well in the
 // overview even now, the contact info about everyone and ignore list ... use intelligence to throw for user what's
@@ -25,6 +27,7 @@ interface Answer extends Omit<Overview, "highlights" | "needsYou" | "goneQuiet" 
   people: Shown[]
   suggestHide: Array<{ name: string; email: string; account: string; count: number }>
   hidden: Array<{ account: string; kind: "sender" | "domain"; value: string }>
+  recruiters?: RecruiterRule[]
 }
 interface Rule { account: string; kind: "sender" | "domain" | "thread"; value: string; action?: "ignore" | "allow" }
 
@@ -48,7 +51,7 @@ function Tile({ name, size = 36 }: { name: string; size?: number }) {
 }
 
 /** Who someone is and how to reach them: the address and the numbers they themselves wrote, one press each. */
-function ContactBox({ name, email, company, phones }: { name: string; email: string; company: string; phones: string[] }) {
+function ContactBox({ name, email, company, phones, children }: { name: string; email: string; company: string; phones: string[]; children?: ReactNode }) {
   return (
     <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", padding: "10px 12px", borderRadius: 12, background: "var(--surface-2)" }}>
       <Tile name={name || email} />
@@ -58,6 +61,7 @@ function ContactBox({ name, email, company, phones }: { name: string; email: str
       </div>
       <a href={mailHref(email)} style={pill}>Email</a>
       {phones.slice(0, 1).map(p => <a key={p} href={`tel:${digits(p)}`} style={pill}>Call {p}</a>)}
+      {children}
     </div>
   )
 }
@@ -74,7 +78,7 @@ function Stage({ s }: { s: Standing }) {
   )
 }
 
-function Conversation({ s, top, nudgeKept }: { s: Listed; top?: boolean; nudgeKept: boolean }) {
+function Conversation({ s, top, nudgeKept, onChanged }: { s: Listed; top?: boolean; nudgeKept: boolean; onChanged: () => void }) {
   const label = s.action === "reply" ? "Open and reply" : s.action === "nudge" ? "Open and nudge" : "Open"
   return (
     <Card style={top ? { borderLeft: "4px solid var(--spot)" } : undefined}>
@@ -88,7 +92,9 @@ function Conversation({ s, top, nudgeKept }: { s: Listed; top?: boolean; nudgeKe
       {/* Said only where it is true: his kept nudge is offered when the last word is his and the silence is long enough. */}
       {s.nudgeReady && <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 6 }}>Your usual nudge will be the first choice when you press Reply.</div>}
       {!nudgeKept && s.action === "nudge" && s.lastMine && <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 6 }}>Keep your usual nudge on Follow-ups and it will be written for you here.</div>}
-      <div style={{ margin: "10px 0 12px" }}><ContactBox {...s.contact} /></div>
+      {/* One of his recruiters is in this conversation: said, so it is clear why nobody is to be chased. */}
+      {s.through && <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 6 }}>Through your recruiter {s.through.name || s.through.email}.{s.introduced ? ` ${s.contact.name || s.contact.email} has not written yet.` : ""}</div>}
+      <div style={{ margin: "10px 0 12px" }}><ContactBox {...s.contact}><RecruiterButton email={s.contact.email} name={s.contact.name} onChanged={onChanged} /></ContactBox></div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <Link href={openHref(s.threadId)} className={s.action === "none" ? "btn-outline" : "btn-accent"} style={{ minHeight: 44, padding: "0 18px", fontSize: 15, display: "inline-flex", alignItems: "center", textDecoration: "none" }}>{label}</Link>
         {s.others > 0 && <span style={{ fontSize: 12.5, color: "var(--text-muted)" }}>and {s.others} more {s.others === 1 ? "person" : "people"} in this conversation</span>}
@@ -148,7 +154,7 @@ export default function StandingSection({ account = "" }: { account?: string }) 
   const rest = lists[open].filter(s => !onTop.has(`${s.account}:${s.threadId}`))
   const started = data.needsYou.length + data.goneQuiet.length + data.moving.length
   const shownPeople = FIRST_PEOPLE + morePeople
-  const tag = (p: Shown) => p.working && p.stage ? `${STAGE_WORDS[p.stage]}${p.about ? ` · ${p.about}` : ""}` : p.answered ? "You have written to them" : p.conversations >= 3 ? `Wrote ${p.conversations} times, never answered` : "Wrote to you"
+  const tag = (p: Shown) => p.recruiter ? "Your recruiter: nothing to chase" : p.via && !p.conversations ? `Your recruiter ${p.via} wrote to them. Let them reach out.` : p.working && p.stage ? `${STAGE_WORDS[p.stage]}${p.about ? ` · ${p.about}` : ""}` : p.answered ? "You have written to them" : p.conversations >= 3 ? `Wrote ${p.conversations} times, never answered` : "Wrote to you"
 
   return (
     <section aria-labelledby="standing-heading" style={{ marginBottom: 32 }}>
@@ -162,7 +168,7 @@ export default function StandingSection({ account = "" }: { account?: string }) 
 
       {data.highlights.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 22 }}>
-          {data.highlights.map(s => <Conversation key={`${s.account}:${s.threadId}`} s={s} top nudgeKept={data.nudgeKept} />)}
+          {data.highlights.map(s => <Conversation key={`${s.account}:${s.threadId}`} s={s} top nudgeKept={data.nudgeKept} onChanged={load} />)}
         </div>
       )}
 
@@ -178,7 +184,7 @@ export default function StandingSection({ account = "" }: { account?: string }) 
             ))}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {(all ? rest : rest.slice(0, FIRST)).map(s => <Conversation key={`${s.account}:${s.threadId}`} s={s} nudgeKept={data.nudgeKept} />)}
+            {(all ? rest : rest.slice(0, FIRST)).map(s => <Conversation key={`${s.account}:${s.threadId}`} s={s} nudgeKept={data.nudgeKept} onChanged={load} />)}
             {rest.length === 0 && <p style={{ margin: 0, fontSize: 14, color: "var(--text-muted)" }}>{lists[open].length ? (lists[open].length === 1 ? "It is the one shown on top." : "They are the ones shown on top.") : open === "needs_you" ? "Nobody is waiting on you." : open === "gone_quiet" ? `Nobody has been quiet for ${data.nudgeAfterDays} ${data.nudgeAfterDays === 1 ? "day" : "days"} or more.` : "Nothing else is under way."}</p>}
           </div>
           {rest.length > FIRST && (
@@ -213,6 +219,7 @@ export default function StandingSection({ account = "" }: { account?: string }) 
               <a href={mailHref(p.email)} style={pill}>Email</a>
               {p.phones.slice(0, 1).map(n => <a key={n} href={`tel:${digits(n)}`} style={pill}>Call</a>)}
               <Link href={openHref(p.lastThreadId)} style={pill}>Open</Link>
+              <RecruiterButton email={p.email} name={p.name} onChanged={load} />
               <button type="button" onClick={() => hide(p)} disabled={!!busy} title={`Stop showing mail from ${p.name || p.email}. Nothing is deleted.`} style={{ ...pill, cursor: "pointer", color: "var(--text-muted)", borderColor: "var(--border)" }}>{busy === `hide:${p.email}` ? "Hiding…" : "Hide"}</button>
             </div>
           </li>
@@ -227,6 +234,24 @@ export default function StandingSection({ account = "" }: { account?: string }) 
       )}
       {morePeople > 0 && people.length <= shownPeople && people.length > FIRST_PEOPLE && (
         <button type="button" className="btn-ghost" onClick={() => setMorePeople(0)} style={{ minHeight: 40, padding: "0 12px", marginTop: 8, fontSize: 14 }}>Show fewer</button>
+      )}
+
+      {(data.recruiters || []).length > 0 && (
+        <>
+          <h3 style={{ margin: "28px 0 4px", fontSize: 18 }}>My recruiters</h3>
+          <p style={{ margin: "0 0 12px", fontSize: 13.5, color: "var(--text-muted)" }}>They work for you, so nothing here ever asks you to chase them. Whoever they write to is shown as the one to watch.</p>
+          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+            {(data.recruiters || []).map(r => (
+              <li key={`${r.kind}:${r.value}`} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 12px", borderRadius: 10, background: "var(--surface-2)" }}>
+                <span style={{ ...oneLine, flex: 1, minWidth: 0, fontSize: 14 }}>{r.kind === "company" ? `Everyone at ${r.value}` : r.name ? `${r.name} · ${r.value}` : r.value}</span>
+                <button type="button" className="btn-ghost" disabled={!!busy} style={{ minHeight: 36, padding: "0 12px", fontSize: 13.5 }}
+                  onClick={() => { setBusy(`rec:${r.value}`); changeRecruiter("DELETE", { kind: r.kind, value: r.value }).then(() => { setError(""); load() }, e => setError(e instanceof Error ? e.message : "That could not be saved.")).finally(() => setBusy("")) }}>
+                  {busy === `rec:${r.value}` ? "Saving…" : "Take off the list"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       {(data.suggestHide.length > 0 || data.hidden.length > 0) && (

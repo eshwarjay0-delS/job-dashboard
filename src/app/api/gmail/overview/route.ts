@@ -5,6 +5,8 @@ import { checkRateLimit } from "@/lib/rateLimit"
 import { overviewOf } from "@/lib/mail-overview"
 import { findHabits, validDecision } from "@/lib/mail-habits"
 import { ignoreReason, validIgnoreRule, type IgnoreRule } from "@/lib/gmail-ignore"
+import { isMyRecruiter } from "@/lib/my-recruiters"
+import { readRecruiters } from "@/lib/my-recruiters-store"
 
 // GET /api/gmail/overview?account=<one inbox, or nothing for all>
 // Overview with the dots connected (src/lib/mail-overview.ts): where every started application stands and what to do
@@ -30,6 +32,10 @@ export async function GET(req: Request) {
     const storedHabits = user?.user_metadata?.mail_habits
     const decisions = Array.isArray(storedHabits) ? storedHabits.filter(validDecision) : []
 
+    // The people who work for him (his own list): no nudge is ever said to be due to them, and whoever they write to is
+    // shown as the one to watch (src/lib/my-recruiters.ts).
+    const recruiters = await readRecruiters(ctx.userId)
+
     const kept = await keptThreads(ctx, TRACKING_DAYS, { fetchWhenEmpty: true })
     // All the mail is read whichever inbox is shown: someone answered from another inbox is answered, and how long he
     // waits before writing again is one habit, not one per inbox. Only what is shown is kept to the inbox chosen.
@@ -53,7 +59,7 @@ export async function GET(req: Request) {
       if (latest) fit.set(t.threadId, jdFitScore(titled?.jobTitle || "", latest.subject, latest.snippet).score)
     }
 
-    const o = overviewOf(threads, mine, now, { nudgeAfterDays: chase?.days, fit: id => fit.get(id), hidden: hiddenBy, account })
+    const o = overviewOf(threads, mine, now, { nudgeAfterDays: chase?.days, fit: id => fit.get(id), hidden: hiddenBy, account, recruiter: email => isMyRecruiter(recruiters, email) })
     // His kept nudge is offered in the reply box only when the last word is his and the silence has reached the days
     // kept with it. Each conversation is told which it is, so the page never promises words that will not be there.
     const nudge = decisions.find(d => d.kind === "chase" && d.state === "on" && !!d.message)
@@ -62,6 +68,7 @@ export async function GET(req: Request) {
       ok: true, kept: kept.kept, ...o,
       highlights: o.highlights.map(ready), needsYou: o.needsYou.map(ready), goneQuiet: o.goneQuiet.map(ready), moving: o.moving.map(ready),
       nudgeKept: !!nudge,
+      recruiters,
       people: o.people.map(p => ({ ...p, hidden: hiddenBy(p.account, p.email) })),
       suggestHide: habits.filter(h => h.kind === "never_answered" && h.sender && h.state !== "off" && (!account || h.sender.account === account) && !hiddenBy(h.sender.account, h.sender.email))
         .map(h => ({ name: h.sender!.name, email: h.sender!.email, account: h.sender!.account, count: h.count })),
