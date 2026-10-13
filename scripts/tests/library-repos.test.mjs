@@ -80,6 +80,12 @@ test('the storage keeps one record inside each folder, and reads only that one t
   assert.ok(bot.includes('else if (session.resumeEmail) session.resumeEmail = cleanEmail(session.resumeEmail)'))
   // Files never lists a record as a resume.
   assert.ok(read('src/app/dashboard/documents/page.tsx').includes('if (!kind) continue'))
+  // A folder that holds only its record is not shown as an empty folder, on either page.
+  for (const page of ['src/app/dashboard/documents/page.tsx', 'src/app/dashboard/resume/page.tsx']) {
+    const src = read(page), skip = src.indexOf('if (parts[parts.length - 1] === LIBRARY_FILE) continue'), add = src.indexOf('folders.add(')
+    assert.ok(skip > 0 && skip < add, page + ': the record is skipped before its folder is counted')
+    assert.ok(src.includes('await mendLibrary(userDir)'), page + ': the library is put in order before it is listed')
+  }
 })
 
 test('picking a resume no longer fetches every file: one named by its content is never read twice', () => {

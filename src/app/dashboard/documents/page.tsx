@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server"
 import PageIntro from "../_components/page-intro"
 import { USER_RESUMES_DIR } from "@/lib/paths"
 import { listFiles, statPath } from "@/lib/storage"
-import { mendLibrary } from "@/lib/resume-library-store"
+import { mendLibrary, LIBRARY_FILE } from "@/lib/resume-library-store"
 import DocumentsClient from "./DocumentsClient"
 
 // Mirrors DocumentsClient's internal ResumeFile shape (it doesn't export the
@@ -44,6 +44,9 @@ async function scanLibrary(dir: string): Promise<{ files: ResumeFile[]; folders:
   for (const full of all) {
     const rel = path.relative(dir, full)
     const parts = rel.split(path.sep)
+    // A folder's own record is kept out of sight, and a folder that holds nothing but its record is not shown at all
+    // (found live on 13 Oct 2026: two email titles with 0 files, each holding only what a removed resume had taught).
+    if (parts[parts.length - 1] === LIBRARY_FILE) continue
     for (let i = 1; i < parts.length; i++) folders.add(parts.slice(0, i).join(" / "))
     const base = parts[parts.length - 1]
     if (base === "_keywords.json" || base.startsWith(".")) continue
