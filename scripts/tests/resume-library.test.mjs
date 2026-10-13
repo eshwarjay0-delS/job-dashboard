@@ -180,6 +180,8 @@ test('the bot keeps the resume, saves what it makes in Files, and searches no on
   const claimUi = read('src/app/dashboard/_components/whatsapp-claim.tsx')
   assert.ok(claimUi.includes('It is mine') && claimUi.includes('Not mine') && claimUi.includes('JSON.stringify(claim ? { claim } : {})'))
   assert.ok(bot.includes('return collectHeld(from, who.userId, until, again)') && mover.includes('saveTailored({ userDir, bytes, jd: gen.jd'))
+  // The held resumes are listed with a key the storage accepts (one ending in a slash is refused, and read as none).
+  assert.ok(mover.includes('blob.list("whatsapp/gens")') && !mover.includes('blob.list("whatsapp/gens/")'))
   assert.ok(read('src/app/dashboard/documents/DocumentsClient.tsx').includes('<WhatsAppClaim onMoved={broughtIn} />') && read('src/app/dashboard/whatsapp/link-card.tsx').includes('<WhatsAppClaim onMoved='))
   // A PDF is kept, never tailored.
   assert.ok(bot.includes('saveUpload({ userDir: userDirOf(userId), bytes, filename, kind: "pdf" })'))

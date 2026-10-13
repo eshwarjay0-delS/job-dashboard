@@ -24,7 +24,9 @@ export async function heldCount(number: string): Promise<number> {
 
 /** Every number the bot holds resumes for, with how many. For the owner of the site only: see /api/whatsapp/collect. */
 export async function botNumbers(): Promise<{ digits: string; held: number }[]> {
-  const keys = await blob.list("whatsapp/gens/").catch(() => [] as string[])
+  // No slash at the end: a storage key with an empty part is refused, and the refusal read as "nothing held"
+  // (13 Oct 2026: the owner was offered no number although eighteen resumes were held).
+  const keys = await blob.list("whatsapp/gens").catch(error => { console.error("[whatsapp/collect] the held resumes could not be listed", String(error).slice(0, 200)); return [] as string[] })
   const numbers = [...new Set(keys.map(k => (/whatsapp\/gens\/(\d{8,15})\//.exec(k) || [])[1]).filter((d): d is string => !!d))].slice(0, 50)
   const out: { digits: string; held: number }[] = []
   for (const digits of numbers) { const held = await heldCount(digits); if (held) out.push({ digits, held }) }
