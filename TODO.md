@@ -1,3 +1,36 @@
+## 2026-10-13 (library) — One folder per email, a record inside each folder, a View beside every resume, faster picking
+
+Commits e9233d2 and a2032c0, both deployed READY.
+
+**Asked:** "Be conventional smart programmer ... dictionaries and relational databases ... Yielding for fastest resume for future and current, without confusing or showing anything different than previously to the user." Then, with pictures of Files: "Both are same!!" (two folders, `x@gmail.com` and `x@gmail.comlinkedin`), "Just always only takes the emails. And maintain separate repo with headlines. Not even in the same repo!!", "I need to see separate with email as titles and Organized folders.", "Give the preview with view button right next to all resumes.", "we don't need show this user as well." (the strip "Made for jobs, and what those jobs keep asking for").
+
+**What went wrong, each with its proof:**
+1. Two folders for one person. On the resume the address runs straight into the next word ("x@gmail.comLinkedIn: ..."), and the email pattern took the word as part of the address. Proof: his picture of both folders.
+2. One record at the top of the library for every kind of job, so saving one kind rewrote what was kept for all.
+3. Picking a resume downloaded every file in the library, every time. Measured on a library of 40: 40 whole files read.
+4. A strip of counts and keywords on Files that he did not want, and a line about it sent by the bot unasked.
+5. A resume could be downloaded but not looked at.
+6. Found on the live page after the first deploy: two email titles with 0 files. A folder that holds only its hidden record was still counted as a folder.
+
+**Fix:**
+- `cleanEmail` in `src/lib/resumeOrganization.ts`: a folder is named by the address and nothing else. `resumeEmails` uses it, so every reader of an email gets the clean one. A real address is never cut short (tested: `sam@gmail.company.example`, `sam@acme.community`, `sam@uni.ac.in`).
+- `src/lib/resume-library-store.ts`: one record at `<email>/<kind of job>/_library.json` (`readShelf`, `writeShelf`). The old top record is split into the folders and removed (`splitOldRecord`). A wrongly named email folder is put back under the email (`mendEmailFolders`, run by `mendLibrary` when Files or My Resume opens): files moved, records joined with nothing counted twice. Only a true copy is dropped; a different file of the same name is kept beside it as `name (2)`.
+- `src/lib/keywords.ts` `ensureIndex`: a file named by its content is never read twice; any other is compared by size and date; reads go several at a time. Same library of 40: 0 whole files read, and a changed file is still read again.
+- Files (`DocumentsClient.tsx`) and the tailor page (`LibraryTree.tsx`): each email is a title with its folders under it, and a View link beside every resume (Word opens as a page through `/api/resumes/pdf?...&autoprint=0`; a PDF opens as itself through `/api/resumes/download?...&inline=1`).
+- The strip is gone (`learned.tsx` deleted). The record is still kept and still used by the tailoring; `/api/resumes/library` still answers. The bot no longer sends its line about it, and `library` is out of its help line.
+- The bot cleans an email it remembered from before, so it looks in the right folder.
+- Both pages skip a folder's record before counting the folder.
+
+**Verified on the deployed site, on his real library (read only, counts):** opening Files put the library in order. Before: the two folders in his picture. After: two email titles, 13 and 10 resumes, no folder named with more than an address, no empty title, no record listed, no strip. 24 View links, each opening in a new tab; one opened: 200, a page, no print box. The tailor page shows the same two titles and 24 View links. `/api/resumes/library`: 15 folders, each with its own record.
+
+**NOT verified:** a real WhatsApp message through the new bot code (the cleaned email, one record read); View on a PDF (he has none in Files today, 0 of 24); the speed on his real library (measured on scratch files only).
+
+**Not done, and his to decide:** the record is small files, one per folder, read by key. It is not Postgres tables. Tables would let one query answer "which kinds of job, which words" across people, and need one migration that he runs. Asked.
+
+**Where to pick up:** his answer on tables; then the open list below.
+
+**Still open (his answers, and not started):** reuse kept lines inside the tailoring; Kompas questions from the common words; first follow-up after 5 days or sooner; whether a follow-up sent for him should say so; prompt for form rows with no answer; nudges with no press; search bar on every page; Follow-ups preview; Overview's evidence map from kept mail; how to run the Kompas answer tests; twelve colours on Companies and Compare; the Drafts and No answer yet inbox views.
+
 ## 2026-10-13 (last) — "Still resumes": why his WhatsApp resumes were not in Files, and the one press that brings them in
 
 Commits ea25682, 84547ec, 5e91a1f, all deployed READY.
