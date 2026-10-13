@@ -9,6 +9,9 @@ import SmartReply from "./_components/smart-reply"
 import MailRow from "./_components/mail-row"
 import ReadingPane from "./_components/reading-pane"
 import MailSearchBar, { SearchSummary, useMailSearch } from "./_components/mail-search"
+import { Papers, PersonHistory } from "./_components/papers"
+import { useRecruiters } from "../_components/recruiter-button"
+import { isMyRecruiter } from "@/lib/my-recruiters"
 import { savedAvailability, type Mail } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 
@@ -146,6 +149,7 @@ interface RoleGroup {
   req: string | null
   mails: Mail[]
   vendors: string[]
+  mine: string[]             // companies on his recruiter list: they work for him, they are not vendors to pick between
   rates: string[]
   fit: number | null
   unread: number
@@ -165,7 +169,7 @@ function roleKeyFor(m: Mail): string {
   return `role:${t.slice(0, 50) || m.company.toLowerCase().slice(0, 40)}`
 }
 
-function groupByRole(mails: Mail[]): RoleGroup[] {
+function groupByRole(mails: Mail[], isRecruiterDomain: (domain: string) => boolean = () => false): RoleGroup[] {
   const map = new Map<string, Mail[]>()
   for (const m of mails) {
     const k = roleKeyFor(m)
@@ -175,14 +179,18 @@ function groupByRole(mails: Mail[]): RoleGroup[] {
   const groups: RoleGroup[] = []
   for (const [key, ms] of map) {
     const req = key.startsWith("req:") ? key.slice(4) : null
-    const vendors = [...new Set(ms.map(m => domainOf(m.fromEmail)).filter(Boolean))]
+    // "2 vendors: pick one" was said of the two firms that market his own profile (his picture, 13 Oct 2026). A company
+    // on his recruiter list is not a vendor competing for the same job: it is left out of that count and named apart.
+    const everyone = [...new Set(ms.map(m => domainOf(m.fromEmail)).filter(Boolean))]
+    const vendors = everyone.filter(v => !isRecruiterDomain(v))
+    const mine = everyone.filter(v => isRecruiterDomain(v))
     const rates = [...new Set(ms.map(m => m.rate).filter(Boolean) as string[])]
     const fits = ms.map(m => m.jdFit).filter((f): f is number => f != null)
     const label = req
       ? (ms.find(m => m.role)?.role || ms[0].subject.slice(0, 50))
       : (ms.find(m => m.role)?.role || ms[0].company)
     groups.push({
-      key, label, req, mails: ms, vendors, rates,
+      key, label, req, mails: ms, vendors, mine, rates,
       fit: fits.length ? Math.max(...fits) : null,
       unread: ms.filter(m => m.unread).length,
       latestAt: ms[0].at,
@@ -224,6 +232,7 @@ function RoleCard({ group, onOpen, acct }: { group: RoleGroup; onOpen: (id: stri
               )}
             </div>
             <div style={{ display: "flex", gap: 14, marginTop: 10, flexWrap: "wrap" }}>
+              {group.mine.map(v => <span key={v} style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Your recruiter: <strong style={{ color: "var(--text)", fontWeight: 650 }}>{v}</strong></span>)}
               {group.vendors.map(v => {
                 const vm = group.mails.find(m => domainOf(m.fromEmail) === v)
                 return (
@@ -254,7 +263,7 @@ function RoleCard({ group, onOpen, acct }: { group: RoleGroup; onOpen: (id: stri
   )
 }
 
-type View = "needs" | "theirs" | "roles" | "all" | "drafts" | "waiting"
+type View = "needs" | "theirs" | "roles" | "all" | "drafts" | "waiting" | "papers"
 
 export default function MailPage() {
   const [ignoreRules, setIgnoreRules] = useState<IgnoreRule[]>([])
@@ -295,7 +304,10 @@ export default function MailPage() {
   const needsList = live.filter(waiting)
   const theirsList = live.filter(x => !!x.lastMine && !waiting(x))
   const filed = mails.filter(x => x.stage === "rejected" && !restored.includes(x.id))
-  const roles = groupByRole(live.filter(x => x.stage !== "rejected"))
+  const recruiterRules = useRecruiters()
+  const isRecruiterDomain = (domain: string) => isMyRecruiter(recruiterRules, `someone@${domain}`)
+  const roles = groupByRole(live.filter(x => x.stage !== "rejected"), isRecruiterDomain)
+  const [papersCount, setPapersCount] = useState(0)
 
   // A search looks through everything kept, whichever pile is open, hidden senders and filed rejections included: it is
   // how something is found again, as in Gmail. Only the inbox chosen above still narrows it.
@@ -319,6 +331,7 @@ export default function MailPage() {
     ["all", "Everything", live.length],
   ]
   const MORE: [View, string, number][] = [
+    ["papers", "RTR and rate", papersCount],
     ["roles", "By role", roles.length],
     ["drafts", "Drafts", drafts.length],
     ["waiting", "No answer yet", radar.length],
@@ -424,6 +437,8 @@ export default function MailPage() {
           </div>
           {/* While something is searched for, the piles step aside for one line saying what the list now is. */}
           {search.active && <SearchSummary search={search} shown={shown.length} />}
+          {/* A name that was searched for: the whole history with that person, above what matched. */}
+          {search.active && <PersonHistory q={search.q} />}
           <div style={{ display: search.active ? "none" : "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: tidying || showIgnored ? 10 : 20 }}>
             {VIEWS.map(([v, label, n]) => (
               <Chip key={v} label={label} active={view === v} onClick={() => setView(v)} count={n} />
@@ -452,7 +467,9 @@ export default function MailPage() {
             </>
           )}
 
-          {!search.active && view === "roles" ? (
+          {!search.active && view === "papers" ? (
+            <Papers account={account === "all" ? "" : account} onCount={setPapersCount} />
+          ) : !search.active && view === "roles" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {roles.length === 0 && (
                 <div style={{ padding: 32, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 14, color: "var(--text-muted)", fontSize: 13.5 }}>
