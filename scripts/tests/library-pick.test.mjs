@@ -192,7 +192,7 @@ test('the bot asks before it tailors, takes the answer, and says the small messa
   assert.ok(bot.includes('const budget = () => TAILOR_BUDGET_MS - (Date.now() - lookedAt)') && bot.includes('maxMs = Math.max(20_000, maxMs - (Date.now() - lookedAt))'))
   // The same decision can be asked for without a message to the bot, and asking changes nothing.
   const api = read('src/app/api/resumes/library-pick/route.ts')
-  assert.ok(api.includes('const userId = await authenticatedUserId(request)') && api.includes('await numberedEmails(userId, resumes.counts, "", false)'))
+  assert.ok(api.includes('const userId = await authenticatedUserId(request)') && api.includes('await numberedEmails(userId, resumes.counts, "", body.keep === true)'))
 })
 
 test('only a registered number is answered; one that is not gets one automated message a day and nothing else', () => {
