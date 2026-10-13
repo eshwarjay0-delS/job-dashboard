@@ -1,9 +1,20 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { Sparkles, Check } from "lucide-react"
+// The box a reply is typed in. It offers the person's own earlier sentences as they type, in a small grid that floats
+// under the message, and puts the grammar right when G is pressed.
+//
+// The owner, 13 Oct 2026: "if I'm typing something that was already been filled out many, many times, just on the drop
+// down ... as a grid UI, just how Gmail view the suggestions. Once you click on that suggestion, it would just come out
+// to the message that you are typing, and it would also auto-correct as a Grammarly ... people then hit G, and that
+// would just correct the grammar, and the suggestion would just be a floating window that would pop [at the] bottom of
+// the message that I'm trying to type. If not, they can type whatever they wish."
+//
+// WHAT IT NO LONGER DOES. Until that day this box asked a model for the next few words after every word typed, and for
+// a proofread after every pause. Nothing is asked of a model while typing now: what is offered is found here, among
+// sentences he has himself written more than once (src/lib/my-phrases.ts). A model is asked once, when G is pressed.
 
-interface GrammarIssue { quote: string; suggestion: string; reason: string }
+import { useMemo, useRef, useState, type CSSProperties } from "react"
+import { applyPhrase, suggestPhrases, type Phrase } from "@/lib/my-phrases"
 
 interface Props {
   value: string
@@ -11,172 +22,96 @@ interface Props {
   rows?: number
   context?: { to?: string; subject?: string; role?: string }
   placeholder?: string
+  /** The person's own sentences, most used first (GET /api/gmail/phrases). */
+  phrases?: Phrase[]
 }
 
-/**
- * SmartCompose — the textarea that types with you.
- * - Ghost-text completion: pause after a word and the next few words appear
- *   faintly ahead of your cursor. Tab (or tap) accepts them.
- * - Grammar fixes: as you type, real issues surface as tappable fix chips.
- */
-export default function SmartCompose({ value, onChange, rows = 12, context, placeholder }: Props) {
-  const [ghost, setGhost] = useState("")
-  const [issues, setIssues] = useState<GrammarIssue[]>([])
-  const [checking, setChecking] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const proofTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastReq = useRef(0)
+const option: CSSProperties = { textAlign: "left", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", fontSize: 13.5, lineHeight: 1.45, cursor: "pointer", overflowWrap: "anywhere" }
+
+export default function SmartCompose({ value, onChange, rows = 12, placeholder, phrases = [] }: Props) {
+  const [closedFor, setClosedFor] = useState<string | null>(null)   // the text the grid was dismissed on: it comes back with the next letter
+  const [fixing, setFixing] = useState(false)
+  const [said, setSaid] = useState("")
+  const [undo, setUndo] = useState<string | null>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
-  // Clear stale suggestions the moment he types over them.
-  function handleChange(v: string) {
-    setGhost("")
-    onChange(v)
+  const found = useMemo(() => suggestPhrases(phrases, value), [phrases, value])
+  const offered = closedFor === value ? [] : found
 
-    if (timer.current) clearTimeout(timer.current)
-    if (proofTimer.current) clearTimeout(proofTimer.current)
-
-    // Completion: only when he just finished a word and there's substance.
-    const trimmed = v.trimEnd()
-    if (v.endsWith(" ") && trimmed.length > 24 && !/[.!?]\s*$/.test(trimmed)) {
-      timer.current = setTimeout(() => void fetchCompletion(v), 700)
-    }
-    // Proofread: debounced, only on real drafts.
-    if (trimmed.length > 60) {
-      proofTimer.current = setTimeout(() => void fetchProofread(v), 1600)
-    } else {
-      setIssues([])
-    }
-  }
-
-  async function fetchCompletion(v: string) {
-    const id = ++lastReq.current
-    try {
-      const res = await fetch("/api/gmail/writing-assist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "complete", text: v, context: context || {} }),
-      })
-      const body = await res.json().catch(() => ({}))
-      if (id !== lastReq.current) return // a newer keystroke won
-      const c = String(body.completion || "").trim()
-      // Don't ghost what's already there.
-      setGhost(c && !v.endsWith(c) ? c : "")
-    } catch { /* completions are a bonus, never an error */ }
-  }
-
-  async function fetchProofread(v: string) {
-    setChecking(true)
-    try {
-      const res = await fetch("/api/gmail/writing-assist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "proofread", text: v }),
-      })
-      const body = await res.json().catch(() => ({}))
-      const list = Array.isArray(body.issues) ? body.issues : []
-      // Keep only issues whose quote is still in the text.
-      setIssues(list.filter((i: GrammarIssue) => i.quote && v.includes(i.quote)).slice(0, 4))
-    } catch { /* proofread is a bonus, never an error */ }
-    finally { setChecking(false) }
-  }
-
-  function acceptGhost() {
-    if (!ghost) return
-    const sep = value.endsWith(" ") || ghost.startsWith(" ") ? "" : " "
-    onChange(value + sep + ghost + " ")
-    setGhost("")
+  function take(p: Phrase) {
+    onChange(applyPhrase(value, p.text))
+    setSaid(""); setUndo(null)
     taRef.current?.focus()
   }
 
-  function applyFix(i: number) {
-    const issue = issues[i]
-    if (!issue) return
-    onChange(value.replace(issue.quote, issue.suggestion))
-    setIssues(is => is.filter((_, j) => j !== i))
+  async function fixGrammar() {
+    if (fixing || !value.trim()) return
+    setFixing(true); setSaid("")
+    const before = value
+    try {
+      const res = await fetch("/api/gmail/polish", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: before }) })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || !j.ok) { setSaid(j.error || "The grammar could not be checked just now."); return }
+      if (j.text === before) { setSaid(j.note || "Nothing to fix."); setUndo(null); return }
+      onChange(String(j.text))
+      setUndo(before)
+      setSaid(j.note ? `Fixed what I could. ${j.note}` : "Grammar fixed.")
+    } catch { setSaid("The grammar could not be checked just now.") }
+    finally { setFixing(false); taRef.current?.focus() }
   }
 
-  function onKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Tab" && ghost) {
-      e.preventDefault()
-      acceptGhost()
-    }
-  }
-
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current)
-    if (proofTimer.current) clearTimeout(proofTimer.current)
-  }, [])
-
-  const box: React.CSSProperties = {
-    padding: 10, fontSize: 13.5, lineHeight: 1.6, fontFamily: "inherit",
-    whiteSpace: "pre-wrap", overflowWrap: "break-word",
+  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // A plain G is a letter of the message, so the key is Alt+G; the button beside the box does the same.
+    if (e.altKey && e.key.toLowerCase() === "g") { e.preventDefault(); void fixGrammar(); return }
+    if (e.key === "Escape" && offered.length) { e.preventDefault(); setClosedFor(value); return }
+    // Tab takes the first sentence offered, as it does in Gmail.
+    if (e.key === "Tab" && !e.shiftKey && offered.length) { e.preventDefault(); take(offered[0]) }
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ position: "relative" }}>
-        {/* Ghost layer: invisible typed text + visible faint completion */}
-        <div aria-hidden="true" style={{ ...box, position: "absolute", inset: 0, pointerEvents: "none", color: "transparent" }}>
-          {value}<span style={{ color: "var(--text-soft)", opacity: 0.75 }}>{ghost}</span>
-        </div>
         <textarea
           ref={taRef}
           value={value}
-          onChange={e => handleChange(e.target.value)}
+          onChange={e => { setUndo(null); setSaid(""); onChange(e.target.value) }}
           onKeyDown={onKeyDown}
           rows={rows}
-          placeholder={placeholder}
-          spellCheck={false}
-          style={{
-            ...box, position: "relative", width: "100%", display: "block",
-            borderRadius: 10, border: "1px solid var(--border-strong)",
-            color: "var(--text)", background: "transparent",
-            caretColor: "var(--text)", resize: "vertical",
-          }}
+          placeholder={placeholder || "Write your reply in your own words."}
+          spellCheck
+          aria-label="Your reply"
+          aria-controls="reply-own-sentences"
+          style={{ padding: "10px 52px 10px 10px", fontSize: 14.5, lineHeight: 1.6, fontFamily: "inherit", width: "100%", display: "block", borderRadius: 10, border: "1px solid var(--border-strong)", color: "var(--text)", background: "var(--surface)", resize: "vertical" }}
         />
+        <button type="button" onClick={() => { void fixGrammar() }} disabled={fixing || !value.trim()} title="Fix the grammar (Alt+G)" aria-label="Fix the grammar"
+          style={{ position: "absolute", right: 8, bottom: 8, width: 36, height: 36, borderRadius: 18, border: "1px solid var(--border-strong)", background: "var(--surface-2)", color: "var(--text)", fontSize: 15, fontWeight: 800, cursor: fixing || !value.trim() ? "default" : "pointer", opacity: !value.trim() ? 0.5 : 1 }}>
+          {fixing ? "…" : "G"}
+        </button>
+
+        {/* His own sentences that fit what he is typing: a small grid that floats under the message. */}
+        {offered.length > 0 && (
+          <div id="reply-own-sentences" role="listbox" aria-label="Sentences you have written before"
+            style={{ position: "absolute", left: 0, right: 0, top: "calc(100% + 6px)", zIndex: 30, padding: 10, borderRadius: 14, border: "1px solid var(--border-strong)", background: "var(--bg)", boxShadow: "0 14px 34px rgba(12,11,8,.22)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)" }}>You have written this before. Press one to use it (Tab takes the first).</span>
+              <button type="button" onClick={() => setClosedFor(value)} style={{ border: 0, background: "none", color: "var(--text-muted)", fontSize: 12.5, textDecoration: "underline", textUnderlineOffset: 3, cursor: "pointer" }}>Close</button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 230px), 1fr))", gap: 8 }}>
+              {offered.map(p => (
+                <button key={p.text} type="button" role="option" aria-selected={false} onMouseDown={e => e.preventDefault()} onClick={() => take(p)} style={option}>
+                  {p.text} <span style={{ color: "var(--text-muted)", fontSize: 12, whiteSpace: "nowrap" }}>· written {p.count} times</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {ghost && (
-        <button
-          type="button"
-          onClick={acceptGhost}
-          style={{
-            alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6,
-            fontSize: 12.5, fontWeight: 650, color: "var(--accent-txt)",
-            background: "var(--accent-soft)", border: "1px solid var(--accent-border)",
-            borderRadius: 999, padding: "6px 12px", cursor: "pointer",
-          }}
-        >
-          <Sparkles size={13} /> Tab to accept: “{ghost.length > 48 ? ghost.slice(0, 48) + "…" : ghost}”
-        </button>
-      )}
-
-      {(issues.length > 0 || checking) && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          {checking && issues.length === 0 && (
-            <span style={{ fontSize: 12, color: "var(--text-soft)" }}>Checking…</span>
-          )}
-          {issues.map((issue, i) => (
-            <button
-              key={`${issue.quote}-${i}`}
-              type="button"
-              onClick={() => applyFix(i)}
-              title={issue.reason}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5,
-                background: "var(--surface-2)", border: "1px solid var(--border-strong)",
-                borderRadius: 999, padding: "6px 12px", cursor: "pointer", color: "var(--text)",
-              }}
-            >
-              <span style={{ textDecoration: "line-through", opacity: 0.65 }}>{issue.quote}</span>
-              <span>→</span>
-              <strong>{issue.suggestion}</strong>
-              <Check size={13} style={{ color: "var(--success)" }} />
-            </button>
-          ))}
-        </div>
-      )}
+      <div role="status" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", minHeight: 20, fontSize: 12.5, color: "var(--text-muted)" }}>
+        {said && <span>{said}</span>}
+        {undo !== null && <button type="button" onClick={() => { onChange(undo); setUndo(null); setSaid("Put back as you wrote it.") }} style={{ border: 0, background: "none", color: "var(--text)", fontSize: 12.5, fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 3, cursor: "pointer" }}>Undo</button>}
+        {!said && <span>Press G to fix the grammar. Sentences you have written before appear under the box as you type.</span>}
+      </div>
     </div>
   )
 }

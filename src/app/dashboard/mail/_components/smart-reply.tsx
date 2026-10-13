@@ -8,6 +8,7 @@ import SmartCompose from "./smart-compose"
 import type { Mail } from "../../_suite/sample"
 import { readyFor, type Decision } from "@/lib/mail-habits"
 import { senderName } from "@/lib/mail-reading"
+import type { Phrase } from "@/lib/my-phrases"
 
 interface ReplyChip {
   label: string
@@ -39,6 +40,20 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
   const [body, setBody] = useState("")
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState("")
+  // His own words: the box can be opened with nothing in it (owner, 13 Oct 2026: "give me an option to at least write an
+  // email to them in my own words"). Before, it appeared only after one of the suggested replies was tapped.
+  const [own, setOwn] = useState(false)
+  const [phrases, setPhrases] = useState<Phrase[]>([])
+  useEffect(() => {
+    let on = true
+    fetch("/api/gmail/phrases").then(r => r.json()).then(j => { if (on && j?.ok && Array.isArray(j.phrases)) setPhrases(j.phrases) }).catch(() => { /* the box still works without them */ })
+    return () => { on = false }
+  }, [])
+  const writeOwn = () => {
+    setOwn(true); setActive(null); setSendError("")
+    setSubject(s => s || (/^re:/i.test(mail.subject) ? mail.subject : `Re: ${mail.subject}`))
+    setBody("")
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -92,6 +107,7 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
     const c = choices[i]
     if (!c) return
     setActive(i)
+    setOwn(false)
     setSubject(c.subject)
     setBody(c.body)
     setSendError("")
@@ -120,7 +136,7 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ fontSize: 13.5, color: "var(--text-muted)", lineHeight: 1.5 }}>
-        These are suggested replies. Tap one, edit anything, then approve to send.
+        Write in your own words, or tap a suggested reply and edit it. Nothing is sent until you approve it.
       </div>
 
       {loadError && (
@@ -133,15 +149,14 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
         <div><TypingDots label="Writing suggestions…" size={8} /></div>
       )}
 
-      {choices.length > 0 && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {choices.map((c, i) => (
-            <Chip key={c.label} label={c.label} active={active === i} onClick={() => pick(i)} />
-          ))}
-        </div>
-      )}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <Chip label="Write my own" active={own} onClick={writeOwn} />
+        {choices.map((c, i) => (
+          <Chip key={c.label} label={c.label} active={!own && active === i} onClick={() => pick(i)} />
+        ))}
+      </div>
 
-      {active !== null && (
+      {(own || active !== null) && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>
             Subject
@@ -149,12 +164,13 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
               style={{ height: 38, padding: "0 10px", borderRadius: 10, border: "1px solid var(--border-strong)", fontSize: 13.5, color: "var(--text)", background: "var(--surface)" }} />
           </label>
           <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>
-            <span>Message — edit anything before sending. Pause while typing and it suggests the next words; grammar fixes appear below.</span>
+            <span>Message</span>
             <SmartCompose
               value={body}
               onChange={setBody}
-              rows={12}
+              rows={own ? 9 : 12}
               context={{ to: mail.from, subject, role: mail.role }}
+              phrases={phrases}
             />
           </div>
           {sendError && <div style={{ fontSize: 12.5, color: "var(--danger)" }}>{sendError}</div>}
