@@ -134,8 +134,9 @@ test('a record read back from storage cannot point outside the library', () => {
 test('the bot keeps the resume, saves what it makes in Files, and searches no one else\'s', () => {
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
   // The resume outlives a finished job and a quiet day. Only "forget resume" drops it.
-  assert.ok(bot.includes('await saveSession(from, { ...kept(session), lastJd: session.jd })'))
-  assert.ok(bot.includes('if (s.updatedAt && Date.now() - s.updatedAt > ttl) return kept(s)'))
+  // The job that ends puts away its own job description only: the session is read again first (a minute has passed).
+  assert.ok(bot.includes('...(another ? now : kept(now)),') && bot.includes('    lastJd: session.jd,\n  })'))
+  assert.ok(bot.includes('if (s.updatedAt && Date.now() - s.updatedAt > ttl) return { ...kept(s), resumeFresh: false }'))
   assert.equal((bot.match(/saveSession\(from, \{ seen: session\.seen \}\)/g) || []).length, 1, 'the one place the resume is dropped is "forget resume"')
   assert.ok(bot.indexOf('cmd === "forget resume"') < bot.indexOf('saveSession(from, { seen: session.seen })'))
   // It is kept for this number alone, outside the shared library folder.
@@ -153,19 +154,21 @@ test('the bot keeps the resume, saves what it makes in Files, and searches no on
   assert.ok(linkShape.test('link K7QM-2XHD') && linkShape.test('LINK k7qm2xhd') && linkShape.test('link: K7QM 2XHD'))
   assert.ok(!linkShape.test('link building job') && !linkShape.test('linkedin K7QM-2XHD') && !linkShape.test('link K7QM-2XHD please') && !linkShape.test('link'))
   // A job description alone is enough once a resume is held; with none, only an account of the number's own is searched.
-  assert.ok(bot.includes('if (who.own && (await listFiles(userDirOf(userId))'))
-  assert.ok(bot.includes('return who.own ? { dir: userDir, depth: 1, said: "the closest resume in your Files" } : null'))
-  assert.ok(bot.includes('if (pick && pick.shows > 0) {') && bot.includes('depth: 2, from: pick.file.path'))
+  assert.ok(bot.includes('const resumes = who.own ? await libraryOf(userDirOf(userId)) : null'))
+  assert.ok(bot.includes('return Object.keys(resumes.index).length ? { source: { dir: userDir, depth: 1, said: "the closest resume in your Files" } } : { say: NO_RESUME }'))
+  // What is made from a saved resume that was made for a job is marked so, and never built on again.
+  assert.ok(bot.includes('depth: c.depth === 0 ? 1 : 2, from: relOf(userDir, c.path), email, said'))
   // The number that joined itself with a code is asked first; the shared default is never "own".
-  assert.ok(bot.indexOf('const linked = await linkedUserId(from)') < bot.indexOf('const owner = ownerWhatsAppUserId(from, FALLBACK_USER_ID)'))
-  assert.ok(bot.includes('return required ? null : who(FALLBACK_USER_ID, false)'))
+  const whoIs = read('src/lib/whatsapp-who.ts')
+  assert.ok(whoIs.indexOf('const linked = await linkedUserIdChecked(from)') > 0 && whoIs.indexOf('const linked = await linkedUserIdChecked(from)') < whoIs.indexOf('const owner = ownerWhatsAppUserId(from, FALLBACK_USER_ID)'))
+  assert.ok(whoIs.includes('return { who: who(FALLBACK_USER_ID, false), by: "open", checked }'))
   // A new job adds to the person's dossier (the kind of work, and what jobs of that kind keep asking for); it removes nothing.
   assert.ok(bot.includes('if (filed.counted && UUID.test(gen.userId)) await feedDossier(gen.userId, filed)'))
   assert.ok(bot.includes('skills: had?.skills || [], projects: had?.projects || [], keywords: join(had?.keywords, filed.learned.common.map(c => c.word)), fields: join(had?.fields, [filed.category])'))
   // The owner's number needs no step: it writes as the one account that signs in with the owner's own address, so his
   // resumes reach his Files (13 Oct 2026: they did not, his Files held 0). With no such account, or two, it is not guessed.
-  assert.ok(bot.includes('const account = await ownerAccountId()\n    return account ? who(account, true) : who(owner, false)'))
-  assert.ok(bot.includes('.from("profiles").select("id,email").in("email", emails).limit(3)') && bot.includes('if (rows.length === 1) id = String(rows[0].id)'))
+  assert.ok(whoIs.includes('const account = await ownerAccountId()\n    return { who: account ? who(account, true) : who(owner, false), by: "owner", checked: true }'))
+  assert.ok(whoIs.includes('.from("profiles").select("id,email").in("email", emails).limit(3)') && whoIs.includes('if (rows.length === 1) id = String(rows[0].id)'))
   // Resumes made before the number had an account are moved into Files once, and he is told when that happens.
   assert.ok(bot.includes('I made for you earlier into your Files in MarketFit, each in the folder for its kind of job.'))
   // The dashboard asks for them itself: for the owner's own numbers, joined to nobody, when Files or the WhatsApp page

@@ -10,6 +10,16 @@
  * saved in the person's Files, in a folder named for the kind of job ("SIEM and Incident Response"); the next job of
  * that kind starts from the saved resume that already shows the most of what it asks for. See src/lib/resume-library.ts.
  *
+ * WHICH EMAIL (owner, 13 Oct 2026: "WhatsApp should ask which email ... if the person can just send the JD and say
+ * number one ... the type of resume would be selected from [that] library ... based on the closest match"). One email
+ * is one person's profile, so when Files hold resumes under more than one, the bot asks which the job is for and never
+ * guesses. The answer may come with the job description (a line of its own) or as the next message. The job then
+ * starts from the closest resume of that email. A resume sent for the job is used as it is, and after every resume the
+ * person is told so. See src/lib/library-pick.ts.
+ *
+ * WHO IS ANSWERED (same day: "the other numbers which haven't registered with our databases ... wouldn't get any
+ * replies at all ... they should receive an automated message"). Only a registered number. See src/lib/whatsapp-who.ts.
+ *
  * Changes: swipe-reply to any resume the bot sent and say what to change. The bot edits
  * THAT exact version (so replying to the newest file stacks changes) and sends the update,
  * which can be swipe-replied to again. A message that is NOT a reply is always a new JD.
@@ -21,14 +31,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
 import { createHash, randomBytes } from "crypto"
-import { blob, writePath, existsPath, deletePath, readPath, listFiles } from "@/lib/storage"
+import { blob, writePath, existsPath, deletePath, readPath } from "@/lib/storage"
 import { resumeEmails, cleanEmail } from "@/lib/resumeOrganization"
-import { extractJdKeywords } from "@/lib/keywords"
-import { categoryForJob, isTailoredName, learnedAll, pickBase, pointsOf, COMMON_AT, NO_EMAIL } from "@/lib/resume-library"
-import { absOf, forgetTailored, readLibraryChecked, readShelf, saveTailored, saveUpload, type SavedTailored } from "@/lib/resume-library-store"
+import { categoryForJob, isTailoredName, jobKeyOf, learnedAll, pointsOf, COMMON_AT, NO_EMAIL } from "@/lib/resume-library"
+import { forgetTailored, readLibraryChecked, relOf, saveTailored, saveUpload, type SavedTailored } from "@/lib/resume-library-store"
+import { askWhichEmail, choiceIn, live, readChoice, saidOf, DIFFERENT_RESUME } from "@/lib/library-pick"
+import { closestFor, keptCandidate, libraryOf, numberedEmails, type Resumes } from "@/lib/library-pick-store"
 import { getDossierProfile, saveDossierProfile } from "@/lib/dossier"
 import { hashUserId } from "@/lib/sttLedger"
-import { claimLinkCode, linkedUserId } from "@/lib/whatsapp-link"
+import { claimLinkCode } from "@/lib/whatsapp-link"
+import { claimNotice, resolveWhatsAppUser, FALLBACK_USER_ID, type Who } from "@/lib/whatsapp-who"
+import { notRegisteredMessage, siteOf, NOT_CHECKED_MESSAGE } from "@/lib/whatsapp-who-core"
 import { collectHeld } from "@/lib/whatsapp-collect"
 import { isPdf } from "@/lib/pdf-text"
 import { copyName, wordFromPdf } from "@/lib/pdf-to-word"
@@ -41,7 +54,7 @@ import { runTailor, type TailorResult } from "@/lib/tailor"
 import { recordTailor } from "@/lib/tailorLedger"
 import { extractJdMeta } from "@/lib/claude"
 import { sendText, sendDocument, downloadMedia, verifySignature, senderAllowed, waConfigured } from "@/lib/whatsapp"
-import { ownerWhatsAppUserId, isOwnerWhatsApp, adminEmails } from "@/lib/owner"
+import { isOwnerWhatsApp } from "@/lib/owner"
 import { extractProfile } from "@/lib/profile"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
@@ -49,7 +62,6 @@ export const runtime = "nodejs"
 export const maxDuration = 60
 export const dynamic = "force-dynamic"
 
-const FALLBACK_USER_ID = process.env.WHATSAPP_USER_ID || "demo"
 const STALE_RESUME_MS = 90_000
 const RESUME_GRACE_MS = 8_000
 const TAILOR_BUDGET_MS = 52_000
@@ -91,11 +103,17 @@ type Session = {
   resumeEmail?: string
   /** The last job description a resume was made for, so "original" can make it again from the resume as sent. */
   lastJd?: string
+  /** True from the moment a resume is sent until a job is made from it: "send me that resume first" means the next job. */
+  resumeFresh?: boolean
+  /** "Which email is this job for?" was asked about the waiting job description: the emails, in the order they were numbered. */
+  ask?: string[]
+  /** The email chosen for the waiting job description, so sending the same one again after a failure does not ask twice. */
+  email?: string
 }
 const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
 // What outlives a finished job and a quiet day: the resume. Only a half-finished exchange (a job description waiting for
 // its resume) is forgotten.
-const kept = (s: Session): Session => ({ seen: s.seen?.slice(-40), resumePath: s.resumePath, resumeName: s.resumeName, resumeAt: s.resumeAt, resumeEmail: s.resumeEmail, lastJd: s.lastJd })
+const kept = (s: Session): Session => ({ seen: s.seen?.slice(-40), resumePath: s.resumePath, resumeName: s.resumeName, resumeAt: s.resumeAt, resumeEmail: s.resumeEmail, lastJd: s.lastJd, resumeFresh: s.resumeFresh })
 
 async function loadSession(from: string): Promise<Session> {
   try {
@@ -104,7 +122,7 @@ async function loadSession(from: string): Promise<Session> {
     const s = JSON.parse(raw) as Session
     // A job description left waiting for a day is dropped. The resume is not: it is sent once and kept.
     const ttl = Number(process.env.WHATSAPP_SESSION_TTL_MS) || 24 * 60 * 60 * 1000
-    if (s.updatedAt && Date.now() - s.updatedAt > ttl) return kept(s)
+    if (s.updatedAt && Date.now() - s.updatedAt > ttl) return { ...kept(s), resumeFresh: false }
     return s
   } catch { return {} }
 }
@@ -127,57 +145,6 @@ type Gen = {
   depth?: number        // 1: made from a resume the person wrote; 2: made from a saved resume that was made for a job
 }
 const genDir = (from: string) => `whatsapp/gens/${digits(from)}`
-
-/**
- * Who this number writes as. `own` is true when the account was found for THIS number (it joined itself with a code, the
- * owner named it in settings, or its mobile number was verified); false when it is the default every unjoined number
- * shares. `saves` says whether what the bot makes is put in Files: for an account of its own, or when the deployment's
- * default is itself a real account.
- */
-type Who = { userId: string; own: boolean; saves: boolean }
-async function resolveWhatsAppUser(from: string): Promise<Who | null> {
-  const who = (userId: string, own: boolean): Who => ({ userId, own, saves: own || UUID.test(userId) })
-  // A number that joined itself to an account with a code from the WhatsApp page (src/lib/whatsapp-link.ts).
-  const linked = await linkedUserId(from).catch(() => null)
-  if (linked) return who(linked, true)
-  // A number the owner listed in settings is answered without the binding (see src/lib/owner.ts for why).
-  const owner = ownerWhatsAppUserId(from, FALLBACK_USER_ID)
-  if (owner) {
-    if (owner !== FALLBACK_USER_ID) return who(owner, true)
-    // The owner's number with no account named beside it. Until 13 Oct 2026 it then wrote as the default bot user, so
-    // nothing the bot made for the owner ever reached his Files ("Whatsapp edited resume needs store as the rules i have
-    // stated to you!"; his Files held 0). The owner's account is the one that signs in with the owner's own address,
-    // and both are named by him in settings: the number is joined to it without a step from him.
-    const account = await ownerAccountId()
-    return account ? who(account, true) : who(owner, false)
-  }
-  const required = process.env.WHATSAPP_IDENTITY_BINDING_REQUIRED === "1"
-  if (serviceClientAvailable()) {
-    try {
-      const { data, error } = await createServiceClient().rpc("identity_resolve_whatsapp_user", { p_phone_e164: `+${digits(from)}` })
-      if (!error && data) return who(String(data), true)
-    } catch { /* the database is not reachable: fall through to the default, or to nobody when a binding is required */ }
-  }
-  return required ? null : who(FALLBACK_USER_ID, false)
-}
-
-// The one account that signs in with an address the owner listed in ADMIN_EMAILS. None when there is no such account
-// yet, or more than one (then it cannot be known whose Files to use, and the number is joined with a code instead).
-let ownerAccount: { id: string | null; at: number } | null = null
-async function ownerAccountId(): Promise<string | null> {
-  if (ownerAccount && Date.now() - ownerAccount.at < 5 * 60_000) return ownerAccount.id
-  let id: string | null = null
-  try {
-    const emails = adminEmails()
-    if (emails.length && serviceClientAvailable()) {
-      const { data } = await createServiceClient().from("profiles").select("id,email").in("email", emails).limit(3)
-      const rows = (data || []).filter(r => UUID.test(String(r.id)))
-      if (rows.length === 1) id = String(rows[0].id)
-    }
-  } catch { /* not known this time: asked again on the next message */ return null }
-  ownerAccount = { id, at: Date.now() }
-  return id
-}
 
 async function recordWhatsAppUsage(userId: string, featureKey: string, result: TailorResult) {
   if (!serviceClientAvailable()) return
@@ -215,7 +182,7 @@ async function loadGen(from: string, wamid: string): Promise<Gen | null> {
 async function archiveGeneratedResume(from: string, wamid: string, gen: Gen): Promise<void> {
   // Only an explicitly bound UUID may write to the multi-tenant database.
   if (!serviceClientAvailable() || !UUID.test(gen.userId)) return
-  const boundUser = (await resolveWhatsAppUser(from))?.userId
+  const boundUser = (await resolveWhatsAppUser(from)).who?.userId
   if (!boundUser || boundUser !== gen.userId) return
   const bytes = await readPath(gen.file)
   if (!bytes) return
@@ -272,9 +239,11 @@ const HELP = [
   "1. Send your *resume* once, as a Word (.docx) file or a PDF. I keep it.",
   "2. Paste a *job description*. I tailor the resume to it and send it back as a Word file named after you.",
   "",
-  "After the first time, the job description is all I need.",
+  "After the first time, the job description is all I need: I start from the closest resume saved in your *Files* in MarketFit, and save the new one there in a folder for its kind of job.",
   "",
-  "Every resume I make is saved in your *Files* in MarketFit, in a folder for that kind of job. The next job of the same kind starts from the closest one saved there.",
+  "*More than one email?* I ask which email the job is for. Reply with its number, or put the number on a line of its own under the job description.",
+  "",
+  "*A different resume?* Send me that resume first, then the job description.",
   "",
   "*Want changes?* Swipe right on a resume I sent (or long-press → Reply) and type what to change, e.g. _add more Terraform_ or _make the bullets shorter_.",
   "",
@@ -318,12 +287,18 @@ export async function POST(request: NextRequest) {
   if (!from || !senderAllowed(from)) return ok()
 
   const began = Date.now()
-  let who = await resolveWhatsAppUser(from)
+  const sender = await resolveWhatsAppUser(from)
+  let who = sender.who
   // "link <code>" is how a number joins an account, so it is answered before anything asks whether it has one.
   const typed = String(msg.type || "") === "text" ? String((msg.text as { body?: string })?.body || "").trim() : ""
   const linking = typed.match(/^link[\s:#-]+([A-Za-z0-9]{4}[\s-]?[A-Za-z0-9]{4})$/i)
   if (!who && !linking) {
-    try { await sendText(from, "This WhatsApp number is not joined to a MarketFit account yet. Sign in to MarketFit, open WhatsApp, press Link this number, and send me the code it shows.") } catch {}
+    // Not registered: one automated message a day that says where to register, and no other reply (owner, 13 Oct 2026).
+    // When the check itself failed the person is told that instead, never that they are not registered.
+    const kind = sender.checked ? "unregistered" : "unchecked"
+    if (await claimNotice(from, kind)) {
+      try { await sendText(from, kind === "unregistered" ? notRegisteredMessage(siteOf(process.env.NEXT_PUBLIC_APP_URL, request.nextUrl.origin)) : NOT_CHECKED_MESSAGE) } catch { /* ignore */ }
+    }
     return ok()
   }
 
@@ -357,9 +332,11 @@ export async function POST(request: NextRequest) {
 async function link(from: string, code: string, before: Who | null): Promise<Who | null> {
   const claim = await claimLinkCode(from, code)
   if (!claim.ok) {
-    await sendText(from, claim.why === "too_many"
-      ? "That is five codes in an hour that did not match, so I have stopped checking for now. Try again in an hour with a new code from the WhatsApp page of MarketFit."
-      : "That code did not match. Codes work once and for 15 minutes. Open WhatsApp in MarketFit, press Link this number for a new one, and send it as: link CODE")
+    if (claim.why === "too_many") {
+      if (await claimNotice(from, "link_limit")) await sendText(from, "That is five codes in an hour that did not match, so I have stopped checking for now. Try again in an hour with a new code from the WhatsApp page of MarketFit.")
+      return before
+    }
+    await sendText(from, "That code did not match. Codes work once and for 15 minutes. Open WhatsApp in MarketFit, press Link this number for a new one, and send it as: link CODE")
     return before
   }
   const who: Who = { userId: claim.userId, own: true, saves: true }
@@ -419,6 +396,10 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
         session.resumePath = original.filepath
         session.resumeName = filename
         session.resumeAt = Date.now()
+        // Chosen for the next job, like a resume that is sent; the email on it is read again, not the last one's.
+        session.resumeEmail = undefined
+        session.resumeFresh = true
+        session.ask = undefined
         await saveSession(from, session)
       }
       return
@@ -426,8 +407,8 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     if (["help", "hi", "hello", "start", "menu"].includes(cmd)) return sendText(from, HELP)
     if (cmd === "reset" || cmd === "clear") {
       // The waiting job description is dropped. The resume is kept: it is sent once. "forget resume" drops it too.
-      await saveSession(from, kept(session))
-      return sendText(from, session.resumeName ? `Cleared. I still have your resume *${session.resumeName}*: paste a job description to use it, or send *forget resume* to drop it.` : "Cleared. Send your resume as a Word (.docx) file, then a job description.")
+      await saveSession(from, { ...kept(session), resumeFresh: false })
+      return sendText(from, session.resumeName ? `Cleared. I still have your resume *${session.resumeName}*. Paste a job description when you are ready, or send *forget resume* to drop it.` : "Cleared. Send your resume as a Word (.docx) file, then a job description.")
     }
     if (cmd === "forget resume" || cmd === "forget my resume") {
       if (session.resumePath && under(path.join(BASELINE_DIR, digits(from)), session.resumePath)) await deletePath(session.resumePath).catch(() => {})
@@ -437,7 +418,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     if (cmd === "status") {
       return sendText(from, [
         `Resume: ${session.resumeName ? `${session.resumeName} (kept)` : "none yet. Send it once as a Word (.docx) file."}`,
-        `Job description: ${session.jd ? "received" : "waiting"}`,
+        `Job description: ${session.jd ? (session.ask?.length ? "received. Which email is it for? Reply with its number." : "received") : "waiting"}`,
         who.saves ? "Files: every resume I make is saved in your Files in MarketFit." : "Files: not joined yet. Open WhatsApp in MarketFit and press Link this number.",
       ].join("\n"))
     }
@@ -451,32 +432,63 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     // A swipe-reply is a change request for the resume being replied to. Checked before
     // the JD path: a reply is never a new JD (new JDs are always pasted as their own message).
     const replyTo = (msg.context as { id?: string } | undefined)?.id
+    // The answer to "Which email is this job for?": its number, or the address. It is read first, because people
+    // answer a question by replying to it, and a reply would otherwise be taken for a change to a resume.
+    const waiting = session.ask?.length && session.jd ? session.ask : null
+    const answer = waiting ? choiceIn(text, waiting) : ""
+    if (waiting && answer) {
+      session.email = answer
+      session.ask = undefined
+      await saveSession(from, session)
+      return generate(from, session, who, TAILOR_BUDGET_MS, false, { email: answer, slots: waiting })
+    }
     if (replyTo) return refine(from, replyTo, text, who)
+    // Anything else short while the question waits: it is asked again.
+    if (waiting && text.length < 60) return sendText(from, askWhichEmail(waiting))
 
     // Too short to be a JD — most likely a stray message, so guide instead of guessing.
     if (text.length < 60) {
       return sendText(from, `That looks too short to be a job description (${text.length} characters).\n\n${HELP}`)
     }
 
-    session.jd = text
+    // A new job description. Which email it is for may be said with it, on a line of its own ("1", "number one").
+    // Only an account of the number's own is looked in: the default every unjoined number shares holds other people's.
+    const lookedAt = Date.now()
+    const resumes = who.own ? await libraryOf(userDirOf(userId)) : null
+    const numbered = resumes ? await numberedEmails(userId, resumes.counts, await keptEmailOf(session)) : { slots: [] as string[], sure: true }
+    const slots = numbered.slots
+    // A number is read with the job description only when the numbering is the one this account has always had.
+    const said = numbered.sure ? readChoice(text, slots) : { email: "", rest: text.trim() }
+    // The same job description sent again (after a failure) keeps the email it was given.
+    const again = session.jd && session.email && live(slots).includes(session.email) && jobKeyOf(session.jd) === jobKeyOf(said.rest) ? session.email : ""
+    const email = said.email || again
+    // A job description that was still waiting for its email is given up for this one, and the person is told.
+    const replaced = !!(session.ask?.length && session.jd && jobKeyOf(session.jd) !== jobKeyOf(said.rest))
+    session.jd = said.rest
+    session.email = email || undefined
+    session.ask = undefined
     await saveSession(from, session)
+    const choice: Choice = { email, slots, resumes: resumes || undefined, replaced }
+    const budget = () => TAILOR_BUDGET_MS - (Date.now() - lookedAt)
     if (!session.resumePath) {
       // No resume was ever sent from this number. An account of its own may already hold resumes in Files: the closest
-      // one is used. The default account every unjoined number shares is never searched: it holds other people's.
-      if (who.own && (await listFiles(userDirOf(userId)).catch(() => [] as string[])).some(f => /\.docx$/i.test(f))) return generate(from, session, who)
+      // one of the email is used.
+      if (resumes && Object.keys(resumes.index).length) return generate(from, session, who, budget(), false, choice)
       return sendText(from, "Got the job description. Now send your resume as a Word (*.docx*) file. I keep it, so you only send it once.")
     }
     // The stored resume is from an earlier attempt and a new one is usually right behind the JD: tailoring at once ran two
     // tailors side by side (2026-10-05, 13:07), the old resume and the new one, on the same allowance. Wait briefly; if a
-    // new resume lands, its own message tailors it.
+    // new resume lands, its own message tailors it. When the email has to be asked first nothing is tailored yet, so
+    // there is nothing to wait for.
+    const willAsk = live(slots).length > 1 && !email && !session.resumeFresh
     const askedAt = Date.now()
-    if (askedAt - (session.resumeAt || 0) > STALE_RESUME_MS) {
+    if (!willAsk && askedAt - (session.resumeAt || 0) > STALE_RESUME_MS) {
       await new Promise(r => setTimeout(r, RESUME_GRACE_MS))
       const now = await loadSession(from)
       if ((now.resumeAt || 0) > askedAt) return
-      return generate(from, { ...now, jd: text }, who, TAILOR_BUDGET_MS - RESUME_GRACE_MS)
+      return generate(from, { ...now, jd: said.rest }, who, budget(), false, choice)
     }
-    return generate(from, session, who)
+    return generate(from, session, who, budget(), false, choice)
   }
 
   // ── Resume upload ───────────────────────────────────────────────────────────
@@ -510,9 +522,12 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     session.resumeName = safe.replace(/\.docx$/i, "")
     session.resumeAt = Date.now()
     session.resumeEmail = await emailOn(resume)
+    // Sent for the next job: that job starts from this resume as it is, with no question about which email.
+    session.resumeFresh = true
+    session.ask = undefined
     await saveSession(from, session)
     const fromPdf = pdf ? " I made a Word copy from your PDF to work on: same words, a plain layout." : ""
-    if (!session.jd) return sendText(from, `Saved *${session.resumeName}*.${fromPdf} I will keep it: from now on a job description is all I need. Paste one.`)
+    if (!session.jd) return sendText(from, `Saved *${session.resumeName}*.${fromPdf} Paste the job description and I will start from this resume. I keep it too.`)
     if (fromPdf) await sendText(from, fromPdf.trim())
     return generate(from, session, who)
   }
@@ -527,7 +542,7 @@ async function emailOn(bytes: Buffer): Promise<string> {
 
 // "library": what the jobs of each kind keep asking for, read from the resumes saved in Files.
 async function library(from: string, who: Who) {
-  if (!who.saves) return sendText(from, `Nothing is saved in Files for this number yet.\n\n${NOT_IN_FILES}`)
+  if (!who.saves || !who.own) return sendText(from, `Nothing is saved in Files for this number yet.\n\n${NOT_IN_FILES}`)
   const kinds = learnedAll(await readLibraryChecked(userDirOf(who.userId))).filter(k => k.files > 0)
   if (!kinds.length) return sendText(from, "Your Files hold no resumes made for a job yet. Paste a job description and the first one is saved there.")
   const lines = kinds.slice(0, 8).flatMap(k => [
@@ -539,56 +554,109 @@ async function library(from: string, who: Who) {
   return sendText(from, ["*Your library*", "", ...lines].join("\n").trim())
 }
 
+// The one email on the kept resume, read once and then remembered. "" when it has none or several, or no resume is kept.
+async function keptEmailOf(session: Session): Promise<string> {
+  if (!session.resumePath) return ""
+  if (session.resumeEmail === undefined) session.resumeEmail = await emailOn((await readPath(session.resumePath).catch(() => null)) || Buffer.alloc(0))
+  // An email remembered before 13 Oct 2026 may carry the word that ran into it ("x@gmail.comlinkedin").
+  else if (session.resumeEmail) session.resumeEmail = cleanEmail(session.resumeEmail)
+  return session.resumeEmail || ""
+}
+
 // Where the next resume starts from.
-type Source = { dir: string; givenPath?: string; depth: number; said: string; from?: string }
-async function sourceFor(from: string, session: Session, who: Who, jd: string, original: boolean): Promise<Source | null> {
+type Source = { dir: string; givenPath?: string; depth: number; said: string; from?: string; email?: string }
+// Either a place to start, or the question that has to be answered first, or the reason there is nowhere to start.
+type Start = { source: Source } | { ask: string[] } | { say: string }
+// What is already known about which email the job is for: the one chosen, the emails by their numbers (slots[n - 1]
+// is email number n), the person's resumes when they were already read, and whether a waiting job was given up for it.
+type Choice = { email?: string; slots?: string[]; resumes?: Resumes; replaced?: boolean }
+const NO_RESUME = "I do not have a resume from you yet. Send it once as a Word (*.docx*) file and I will keep it."
+
+// The resume this number sent and the bot kept. Null when there is none.
+async function keptSource(from: string, session: Session, who: Who): Promise<Source | null> {
   const mine = path.join(BASELINE_DIR, digits(from)), userDir = userDirOf(who.userId)
-  let own: Source | null = null
-  if (session.resumePath && (await existsPath(session.resumePath))) {
-    const dir = under(mine, session.resumePath) ? mine : under(userDir, session.resumePath) ? userDir : ""
-    if (dir) own = { dir, givenPath: session.resumePath, depth: 1, said: `your resume *${session.resumeName || "as sent"}*` }
-    else {
-      // Kept under the folder of the account this number wrote as before it was joined: brought along, once.
-      const bytes = await readPath(session.resumePath)
-      if (bytes) {
-        const dest = path.join(mine, path.basename(session.resumePath))
-        await writePath(dest, bytes)
-        session.resumePath = dest
-        own = { dir: mine, givenPath: dest, depth: 1, said: `your resume *${session.resumeName || "as sent"}*` }
-      }
-    }
+  if (!session.resumePath || !(await existsPath(session.resumePath))) return null
+  const said = `your resume *${session.resumeName || "as sent"}*`
+  const dir = under(mine, session.resumePath) ? mine : under(userDir, session.resumePath) ? userDir : ""
+  if (dir) return { dir, givenPath: session.resumePath, depth: 1, said }
+  // Kept under the folder of the account this number wrote as before it was joined: brought along, once.
+  const bytes = await readPath(session.resumePath)
+  if (!bytes) return null
+  const dest = path.join(mine, path.basename(session.resumePath))
+  await writePath(dest, bytes)
+  session.resumePath = dest
+  return { dir: mine, givenPath: dest, depth: 1, said }
+}
+
+/**
+ * 1. A resume sent for this job (or "original") is used as it is.
+ * 2. Otherwise the email is settled: the one said, the only one there is, or it is asked. It is never guessed.
+ * 3. Then the closest resume of that email: the one that already shows the most of what the job asks for.
+ */
+async function startFor(from: string, session: Session, who: Who, jd: string, original: boolean, choice: Choice): Promise<Start> {
+  const userDir = userDirOf(who.userId)
+  const own = await keptSource(from, session, who)
+  if (own && original) return { source: own }
+  const keptEmail = own ? await keptEmailOf(session) : ""
+  // A resume sent for this job is used as it is. The one exception: the person said the job is for another email than
+  // the one written on that resume. Then what they said wins, and the resume waits for a job of its own email.
+  if (own && session.resumeFresh && !(choice.email && keptEmail && choice.email !== keptEmail)) return { source: { ...own, email: keptEmail || undefined } }
+  // The default account every unjoined number shares holds other people's resumes: it is never looked through, not
+  // even for the email on the resume this number sent (found in review: a resume carrying someone's email was enough
+  // to be handed that person's saved resume).
+  if (!who.own) return own ? { source: own } : { say: NO_RESUME }
+  const resumes = choice.resumes || await libraryOf(userDir)
+  const slots = choice.slots || (await numberedEmails(who.userId, resumes.counts, keptEmail)).slots
+  const emails = live(slots)
+  const email = choice.email && emails.includes(choice.email) ? choice.email : emails.length === 1 ? emails[0] : ""
+  if (!email) {
+    if (emails.length > 1) return { ask: slots }
+    if (own) return { source: own }
+    // No resume in Files carries an email that can be read, and none came from this number: whatever Files hold (the tailor picks).
+    return Object.keys(resumes.index).length ? { source: { dir: userDir, depth: 1, said: "the closest resume in your Files" } } : { say: NO_RESUME }
   }
-  // A resume sent with this job description, or asked for by name ("original"), is the one used.
-  const sentNow = Date.now() - (session.resumeAt || 0) <= STALE_RESUME_MS + RESUME_GRACE_MS + 5_000
-  if (!who.saves || (own && (sentNow || original))) return own
-  if (own) {
-    if (session.resumeEmail === undefined) session.resumeEmail = await emailOn((await readPath(own.givenPath as string)) || Buffer.alloc(0))
-    // An email remembered before 13 Oct 2026 may carry the word that ran into it ("x@gmail.comlinkedin").
-    else if (session.resumeEmail) session.resumeEmail = cleanEmail(session.resumeEmail)
-    const category = categoryForJob(jd)
-    // One small read: the record of this kind of job for this person, kept in its own folder.
-    const pick = pickBase(await readShelf(userDir, session.resumeEmail || NO_EMAIL, category), { email: session.resumeEmail || NO_EMAIL, category, asked: extractJdKeywords(jd) })
-    if (pick && pick.shows > 0) {
-      const abs = absOf(userDir, pick.file.path)
-      if (await existsPath(abs)) return { dir: userDir, givenPath: abs, depth: 2, from: pick.file.path, said: `your saved *${category}* resume${pick.file.role ? ` (${clip(pick.file.role, 60)})` : ""}, which already shows ${pick.shows} of the ${pick.of} things this job asks for` }
-    }
-    return own
+  // A resume with no email that can be read cannot be said to be this email's. With one email in all it is used as it
+  // always was; it is never put among another email's resumes.
+  if (own && !keptEmail && emails.length === 1) return { source: own }
+  const kept_ = own && keptEmail === email ? await keptCandidate({ path: own.givenPath as string, email, name: session.resumeName || "", at: session.resumeAt || 0 }) : null
+  const found = await closestFor(userDir, email, jd, kept_, resumes.index)
+  if (found.pick) {
+    const c = found.pick.candidate, said = saidOf(found.pick)
+    if (c.kept && own) return { source: { ...own, email, said } }
+    // Made from a resume the person wrote: 1. Made from a saved resume that was made for a job: 2, and never built on again.
+    return { source: { dir: userDir, givenPath: c.path, depth: c.depth === 0 ? 1 : 2, from: relOf(userDir, c.path), email, said } }
   }
-  // No resume from this number: the closest one in the account's own Files (the tailor picks it).
-  return who.own ? { dir: userDir, depth: 1, said: "the closest resume in your Files" } : null
+  const why = found.unread && !found.wrongEmail
+    ? `I could not open the resumes of ${email} just now. This is on our side. Send the job description again in a minute, or`
+    : found.wrongEmail
+      ? `The resumes filed under ${email} carry a different email inside, so I did not use them. To go on,`
+      : found.builtOnAlready
+        ? `The resumes saved for ${email} were each built on another saved resume, and I do not build on those again. To go on,`
+        : `I have no resume of ${email} to start from. To go on,`
+  return { say: `${why} send me a resume for ${email} as a Word (*.docx*) file and I will start from it.` }
 }
 
 // ── Tailor + reply ────────────────────────────────────────────────────────────
-async function generate(from: string, session: Session, who: Who, maxMs = TAILOR_BUDGET_MS, original = false) {
+async function generate(from: string, session: Session, who: Who, maxMs = TAILOR_BUDGET_MS, original = false, choice: Choice = {}) {
   const userId = who.userId
   // GPT Luna leads (OPENAI_TAILOR_FOR, llm.ts), within the admin's checklist of what each key may be used for (keyVault.ts).
   const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
   if (!hasAnyKey(keys)) return sendText(from, "I cannot tailor yet: no AI service is switched on for this. The owner of this site can switch one on from the Admin page.")
   if (!session.jd) return sendText(from, HELP)
-  const source = await sourceFor(from, session, who, session.jd, original)
-  if (!source) return sendText(from, "I do not have a resume from you yet. Send it once as a Word (*.docx*) file and I will keep it.")
+  const lookedAt = Date.now()
+  const start = await startFor(from, session, who, session.jd, original, choice)
+  if ("ask" in start) {
+    // Asked once for this job description. It waits in the session; the answer is a number or the address.
+    session.ask = start.ask
+    await saveSession(from, session)
+    return sendText(from, `${choice.replaced ? "_This job description takes the place of the one that was waiting for its email._\n\n" : ""}${askWhichEmail(start.ask)}`)
+  }
+  if ("say" in start) return sendText(from, start.say)
+  const source = start.source
+  // Finding the closest resume is part of this minute: the tailoring gets what is left of it.
+  maxMs = Math.max(20_000, maxMs - (Date.now() - lookedAt))
 
-  await sendText(from, `Tailoring from ${source.said}… every client role gets its own pass, so this takes up to a minute.`)
+  await sendText(from, `${source.email ? `For *${source.email}*. ` : ""}Tailoring from ${source.said}… every client role gets its own pass, so this takes up to a minute.`)
 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd })
@@ -632,13 +700,30 @@ async function generate(from: string, session: Session, who: Who, maxMs = TAILOR
   // A resume the tailor picked from Files may itself have been made for a job: what is made from it is never started from again.
   const depth = source.depth === 2 || (!source.givenPath && isTailoredName(result.matched?.filename || "")) ? 2 : 1
   const keep: Keep | undefined = who.saves ? { userDir: userDirOf(userId), depth, from: source.from, result } : undefined
-  const where = who.saves ? [`Saved in your Files: ${categoryForJob(session.jd)}`] : [NOT_IN_FILES]
-  const started = source.depth === 2 ? ["Started from a resume saved in that folder. Send *original* to start from your resume as you sent it."] : []
+  const where = who.saves ? [`Saved in your Files: ${source.email ? `${source.email} / ` : ""}${categoryForJob(session.jd)}`] : [NOT_IN_FILES]
+  const started = source.depth === 2 ? ["Started from a resume saved in your Files."] : []
   await deliver(from, file, name, captionFor(name, meta, result, undefined, [...where, ...started]), { userId, jd: session.jd, meta, changes: [], source: session.resumeName, depth }, keep)
   await recordWhatsAppUsage(userId, "resume_tailor", result)
 
-  // The job is done, so its description is put away. The resume stays: it is sent once.
-  await saveSession(from, { ...kept(session), lastJd: session.jd })
+  // The job is done, so its description is put away. The resume stays: it is sent once. What is put away is THIS job
+  // only: the session is read again first, because a minute has passed. Another job description may have arrived and
+  // be waiting for its email (found in review: writing back the copy from a minute ago wiped that question), or a
+  // newer resume may have been sent.
+  const loaded = await loadSession(from)
+  const now = loaded.seen?.length ? loaded : session
+  const another = !!now.jd && jobKeyOf(now.jd) !== jobKeyOf(session.jd)
+  const sameResume = (now.resumeAt || 0) <= (session.resumeAt || 0)
+  // "Sent for the next job" ends when a job is made from that resume, not when one is made from another.
+  const usedKept = !!source.givenPath && source.givenPath === session.resumePath
+  await saveSession(from, {
+    ...(another ? now : kept(now)),
+    ...(sameResume ? { resumePath: session.resumePath, resumeEmail: session.resumeEmail } : {}),
+    resumeFresh: sameResume && usedKept ? false : now.resumeFresh,
+    lastJd: session.jd,
+  })
+  // Said after every resume (owner, 13 Oct 2026: "after every completion of a resume, you then tell that to the user
+  // as a small message"): how to start the next one from a different resume.
+  try { await sendText(from, DIFFERENT_RESUME) } catch { /* ignore */ }
 }
 
 // ── Swipe-reply: change a resume the bot already sent ─────────────────────────

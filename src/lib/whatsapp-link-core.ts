@@ -89,6 +89,21 @@ export function linksOver(blob: LinkStore) {
     return held?.userId ? String(held.userId) : null
   }
 
+  /**
+   * The same, for the bot deciding whether to answer at all: `checked` is false when the store did not answer, so a
+   * number that IS joined is never taken for one that is not (found in review, 13 Oct 2026: every read here swallowed
+   * its error and said "nobody").
+   */
+  async function linkedUserIdChecked(from: string): Promise<{ userId: string | null; checked: boolean }> {
+    const digits = digitsOf(from)
+    if (digits.length < 8) return { userId: null, checked: true }
+    try {
+      const raw = await blob.getText(linkKey(digits))
+      const held = raw ? (JSON.parse(raw) as { userId?: string } | null) : null
+      return { userId: held?.userId ? String(held.userId) : null, checked: true }
+    } catch { return { userId: null, checked: false } }
+  }
+
   /** The numbers joined to this account, shown by their last four digits only. */
   async function linkedNumbers(userId: string): Promise<{ ending: string; at: number }[]> {
     const own = await readJson<{ numbers: { digits: string; at: number }[] }>(ownKey(userId), { numbers: [] })
@@ -120,5 +135,5 @@ export function linksOver(blob: LinkStore) {
     return "joined"
   }
 
-  return { newLinkCode, claimLinkCode, linkedUserId, linkedNumbers, unlinkAll, joinIfFree }
+  return { newLinkCode, claimLinkCode, linkedUserId, linkedUserIdChecked, linkedNumbers, unlinkAll, joinIfFree }
 }

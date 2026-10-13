@@ -70,7 +70,8 @@ test('the storage keeps one record inside each folder, and reads only that one t
   const store = read('src/lib/resume-library-store.ts'), bot = read('src/app/api/whatsapp/webhook/route.ts')
   assert.ok(store.includes('path.join(userDir, ...folderFor(email, category), LIBRARY_FILE)'), 'the record is inside its folder')
   assert.ok(store.includes('const before = await readShelf(opts.userDir, email_, category)') && store.includes('await writeShelf(opts.userDir, library, email_, category)'))
-  assert.ok(bot.includes('pickBase(await readShelf(userDir, session.resumeEmail || NO_EMAIL, category)'))
+  // Picking reads the records of one email's folders, one small read a folder (src/lib/library-pick-store.ts).
+  assert.ok(read('src/lib/library-pick-store.ts').includes('const shelf = await readShelf(userDir, top, folder).catch(() => null)'))
   // The first version's single record is split into the folders and removed; a wrongly named folder is mended.
   assert.ok(store.includes('async function splitOldRecord(') && store.includes('await deletePath(old)'))
   assert.ok(store.includes('async function mendEmailFolders(') && store.includes('await movePath(abs, dest)'))

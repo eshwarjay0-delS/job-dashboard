@@ -4,4 +4,4 @@ import { blob } from "@/lib/storage"
 import { linksOver } from "@/lib/whatsapp-link-core"
 
 export { CODE_MINUTES, showCode, tidyCode, type Claim } from "@/lib/whatsapp-link-core"
-export const { newLinkCode, claimLinkCode, linkedUserId, linkedNumbers, unlinkAll, joinIfFree } = linksOver(blob)
+export const { newLinkCode, claimLinkCode, linkedUserId, linkedUserIdChecked, linkedNumbers, unlinkAll, joinIfFree } = linksOver(blob)

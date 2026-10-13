@@ -3,6 +3,7 @@ import path from "path"
 import { readPath, readPathText, writePath, listFiles, statPath } from "@/lib/storage"
 import { createHash } from "crypto"
 import { extractText } from "./docx"
+import { resumeEmails } from "./resumeOrganization"
 
 import { RESUMES_LIB as RESUMES_DIR, KEYWORDS_FILE as INDEX_FILE } from "@/lib/paths"
 
@@ -458,7 +459,9 @@ export function isGCRemoteJD(jd: string): boolean {
 // `title` = the resume's OWN headline role title, read from its content at index time
 // (the spec's "build the base at parse time" — identity comes from the resume itself,
 // not only the folder name). Powers title-first selection for arbitrary uploads.
-interface IndexEntry { keywords: string[]; title: string; hash: string; filename: string; category: string; updatedAt: string; yoe: number; sig?: string }
+// `emails`: the addresses written on the resume itself (13 Oct 2026). Whose a resume is comes from here, never from
+// the name of the folder it sits in (src/lib/library-pick-store.ts).
+interface IndexEntry { keywords: string[]; title: string; hash: string; filename: string; category: string; updatedAt: string; yoe: number; sig?: string; emails?: string[] }
 type Index = Record<string, IndexEntry>
 
 const TITLE_ROLE_RE = /\b(engineer|developer|analyst|architect|administrator|manager|consultant|specialist|scientist|designer|programmer|lead|director|devops|sre|administrat\w*)\b/i
@@ -518,7 +521,8 @@ async function listDocx(root: string): Promise<{ filepath: string; filename: str
 //   - what does have to be read is read several at a time.
 // What comes back is the same index as before, entry for entry.
 const NAMED_BY_CONTENT = /__[a-f0-9]{16}\.docx$/i
-const complete = (e: IndexEntry | undefined): e is IndexEntry => !!e && typeof e.title === "string" && typeof e.yoe === "number"
+// An entry written before the emails were kept is read once more, and then it is complete too.
+const complete = (e: IndexEntry | undefined): e is IndexEntry => !!e && typeof e.title === "string" && typeof e.yoe === "number" && Array.isArray(e.emails)
 async function severalAtATime<T>(items: T[], most: number, work: (item: T) => Promise<void>): Promise<void> {
   let next = 0
   await Promise.all(Array.from({ length: Math.min(most, items.length) }, async () => { while (next < items.length) await work(items[next++]) }))
@@ -556,7 +560,7 @@ export async function ensureIndex(dir?: string): Promise<Index> {
     if (complete(entry) && entry.hash === hash) { if (sig && entry.sig !== sig) { entry.sig = sig; changed = true } return }
     let text = ""
     try { text = await extractText(buf) } catch { /* keep empty */ }
-    idx[file.filepath] = { keywords: extractKeywords(text), title: headlineTitle(text), hash, filename: file.filename, category: file.category, updatedAt: new Date().toISOString(), yoe: estimateYears(text), ...(sig ? { sig } : {}) }
+    idx[file.filepath] = { keywords: extractKeywords(text), title: headlineTitle(text), hash, filename: file.filename, category: file.category, updatedAt: new Date().toISOString(), yoe: estimateYears(text), emails: resumeEmails(text), ...(sig ? { sig } : {}) }
     changed = true
   })
   if (changed) await writeIndex(idx, indexFile)
