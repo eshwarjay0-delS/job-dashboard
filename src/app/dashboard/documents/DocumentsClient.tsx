@@ -189,6 +189,18 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [err, setErr] = useState("")
   const [notice, setNotice] = useState("")
+  // The resumes the WhatsApp bot made are brought in when this page opens (for the owner's own numbers, with no message
+  // to the bot and no code): 13 Oct 2026, eighteen had been made that day and this page held none.
+  useEffect(() => {
+    let on = true
+    fetch("/api/whatsapp/collect", { method: "POST" }).then(r => r.json()).then(j => {
+      if (!on || !j?.moved) return
+      setNotice(`I brought in ${j.moved} resume${j.moved === 1 ? "" : "s"} made on WhatsApp. Each one is in the folder for its kind of job.`)
+      router.refresh()
+      setIndexRevision(v => v + 1)
+    }).catch(() => { /* they are brought in the next time the page opens */ })
+    return () => { on = false }
+  }, [router])
 
   function toggleCheck(key: string) {
     setChecked(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n })

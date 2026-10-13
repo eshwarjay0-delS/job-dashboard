@@ -22,7 +22,14 @@ export default function LinkCard({ bot }: { bot: string }) {
     } catch { return [] as Linked[] }
   }, [])
 
-  useEffect(() => { queueMicrotask(() => { void read() }) }, [read])
+  // The owner's own numbers are joined when this page opens (no code needed), and what the bot holds is brought into Files.
+  useEffect(() => {
+    queueMicrotask(() => {
+      void fetch("/api/whatsapp/collect", { method: "POST" }).then(r => r.json())
+        .then(j => { if (j?.moved) setNote(`I put ${j.moved} resume${j.moved === 1 ? "" : "s"} made on WhatsApp into your Files.`) }).catch(() => { /* shown as not linked; the code still works */ })
+        .finally(() => { void read() })
+    })
+  }, [read])
 
   // While a code is showing, look every few seconds for the number that sent it.
   useEffect(() => {

@@ -104,5 +104,21 @@ export function linksOver(blob: LinkStore) {
     return (own.numbers || []).length
   }
 
-  return { newLinkCode, claimLinkCode, linkedUserId, linkedNumbers, unlinkAll }
+  /**
+   * Join a number to an account when the number is joined to nobody yet. For the owner's own numbers, when the owner
+   * opens the dashboard: the number is named by him in settings and the account is his sign-in, so no code is needed.
+   * Says what is true afterwards: "joined" now, already "mine", or joined to "other" (left as it is).
+   */
+  async function joinIfFree(from: string, userId: string, now = Date.now()): Promise<"joined" | "mine" | "other" | "no"> {
+    const digits = digitsOf(from)
+    if (digits.length < 8 || !userId) return "no"
+    const held = await readJson<{ userId?: string } | null>(linkKey(digits), null)
+    if (held?.userId) return held.userId === userId ? "mine" : "other"
+    await blob.put(linkKey(digits), JSON.stringify({ userId, at: now }))
+    const own = await readJson<{ numbers: { digits: string; at: number }[]; code?: string }>(ownKey(userId), { numbers: [] })
+    await blob.put(ownKey(userId), JSON.stringify({ ...own, numbers: [...own.numbers.filter(n => n.digits !== digits), { digits, at: now }].slice(-MOST_NUMBERS) }))
+    return "joined"
+  }
+
+  return { newLinkCode, claimLinkCode, linkedUserId, linkedNumbers, unlinkAll, joinIfFree }
 }

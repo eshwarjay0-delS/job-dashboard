@@ -29,6 +29,7 @@ import { absOf, forgetTailored, readLibraryChecked, saveTailored, saveUpload, ty
 import { getDossierProfile, saveDossierProfile } from "@/lib/dossier"
 import { hashUserId } from "@/lib/sttLedger"
 import { claimLinkCode, linkedUserId } from "@/lib/whatsapp-link"
+import { collectHeld } from "@/lib/whatsapp-collect"
 import { isPdf } from "@/lib/pdf-text"
 import { copyName, wordFromPdf } from "@/lib/pdf-to-word"
 import { plainFailure } from "@/lib/plain-failure"
@@ -374,27 +375,7 @@ async function link(from: string, code: string, before: Who | null): Promise<Who
 // The versions the bot still holds for this number (the newest MAX_VERSIONS), saved into Files once. A resume and the
 // changes made to it are one job: only its newest version is kept. Safe to run again: what is saved is skipped.
 async function moveEarlierIntoFiles(from: string, who: Who, until: number, again = false): Promise<number> {
-  const doneKey = `whatsapp/moved/${digits(from)}-${who.userId.replace(/[^A-Za-z0-9_-]/g, "_")}.json`
-  if (!again && (await blob.getText(doneKey).catch(() => null))) return 0
-  const index = JSON.parse((await blob.getText(`${genDir(from)}/_index.json`)) || "[]") as { key: string; file: string }[]
-  const userDir = userDirOf(who.userId)
-  const newest = new Map<string, string>()      // job description -> the copy in Files of its newest version so far
-  let moved = 0, finished = true
-  for (const item of index) {
-    if (Date.now() > until) { finished = false; break }
-    const raw = await blob.getText(item.key).catch(() => null)
-    if (!raw) continue
-    const gen = JSON.parse(raw) as Gen
-    if (gen.saved && under(userDir, gen.saved)) { newest.set(gen.jd, gen.saved); continue }
-    const bytes = await readPath(gen.file)
-    if (!bytes) continue
-    const saved = await saveTailored({ userDir, bytes, jd: gen.jd, role: gen.meta?.role, company: gen.meta?.company, depth: gen.depth === 2 ? 2 : 1, replaces: newest.get(gen.jd), now: gen.createdAt })
-    newest.set(gen.jd, saved.abs)
-    await blob.put(item.key, JSON.stringify({ ...gen, userId: who.userId, saved: saved.abs }))
-    moved++
-  }
-  if (finished) await blob.put(doneKey, JSON.stringify({ at: Date.now(), moved }))
-  return moved
+  return collectHeld(from, who.userId, until, again)
 }
 
 async function handle(from: string, msg: Record<string, unknown>, session: Session, who: Who) {

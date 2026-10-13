@@ -168,6 +168,13 @@ test('the bot keeps the resume, saves what it makes in Files, and searches no on
   assert.ok(bot.includes('.from("profiles").select("id,email").in("email", emails).limit(3)') && bot.includes('if (rows.length === 1) id = String(rows[0].id)'))
   // Resumes made before the number had an account are moved into Files once, and he is told when that happens.
   assert.ok(bot.includes('I made for you earlier into your Files in MarketFit, each in the folder for its kind of job.'))
+  // The dashboard asks for them itself: for the owner's own numbers, joined to nobody, when Files or the WhatsApp page
+  // opens. The bot and the dashboard move them with the same code.
+  const collect = read('src/app/api/whatsapp/collect/route.ts'), mover = read('src/lib/whatsapp-collect.ts')
+  assert.ok(collect.includes('if (!isAdminEmail(user.email)) return NextResponse.json({ ok: true, owner: false') && collect.includes('ownerEntries().filter(e => !e.userId || e.userId === user.id)'))
+  assert.ok(collect.includes('await joinIfFree(entry.digits, user.id)') && collect.includes('await collectHeld(entry.digits, user.id, began + 40_000)'))
+  assert.ok(bot.includes('return collectHeld(from, who.userId, until, again)') && mover.includes('saveTailored({ userDir, bytes, jd: gen.jd'))
+  assert.ok(read('src/app/dashboard/documents/DocumentsClient.tsx').includes('fetch("/api/whatsapp/collect", { method: "POST" })') && read('src/app/dashboard/whatsapp/link-card.tsx').includes('fetch("/api/whatsapp/collect", { method: "POST" })'))
   // A PDF is kept, never tailored.
   assert.ok(bot.includes('saveUpload({ userDir: userDirOf(userId), bytes, filename, kind: "pdf" })'))
   // The tidy-up of Files leaves the resumes made for jobs alone (it keeps two per kind and removes the rest).
@@ -210,6 +217,14 @@ test('a number joins an account with a code that works once, for fifteen minutes
   assert.deepEqual(await links.linkedNumbers('user-a'), [])
   assert.equal(await links.unlinkAll('user-b'), 1)
   assert.equal(await links.linkedUserId('13145550100'), null)
+  // The owner's own number is joined without a code when it is joined to nobody; a number that is joined is left as it is.
+  assert.equal(await links.joinIfFree('+1 (646) 555-0199', 'owner-1'), 'joined')
+  assert.equal(await links.linkedUserId('16465550199'), 'owner-1')
+  assert.equal(await links.joinIfFree('16465550199', 'owner-1'), 'mine')
+  assert.equal(await links.joinIfFree('16465550199', 'someone-else'), 'other')
+  assert.equal(await links.linkedUserId('16465550199'), 'owner-1')
+  assert.deepEqual((await links.linkedNumbers('owner-1')).map(n => n.ending), ['0199'])
+  assert.equal(await links.joinIfFree('123', 'owner-1'), 'no'); assert.equal(await links.joinIfFree('16465550199', ''), 'no')
   // Nothing kept names a full phone number in a place a page can read: the page is given endings only.
   const page = read('src/app/api/whatsapp/link/route.ts')
   assert.ok(page.includes('numbers: await linkedNumbers(userId)') && !page.includes('.digits'))

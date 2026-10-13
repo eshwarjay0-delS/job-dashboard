@@ -21,6 +21,10 @@ export function isAdminEmail(email: string | null | undefined): boolean {
 /** The owner's own sign-in addresses, as listed in settings (lower case). */
 export const adminEmails = (): string[] => items(process.env.ADMIN_EMAILS).map(e => e.toLowerCase())
 
+/** The owner numbers as listed in settings: the digits, and the account named beside one, when there is one. */
+export const ownerEntries = (): { digits: string; userId: string }[] =>
+  items(process.env.WHATSAPP_OWNER_NUMBERS).map(entry => { const [number, userId] = entry.split("=").map(s => s.trim()); return { digits: digits(number || ""), userId: userId || "" } }).filter(e => e.digits.length >= 8)
+
 /** Is this WhatsApp sender one of the listed owner numbers? */
 export function isOwnerWhatsApp(from: string): boolean {
   return ownerWhatsAppUserId(from, "-") !== null
