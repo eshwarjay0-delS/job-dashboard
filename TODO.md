@@ -1,3 +1,37 @@
+## 2026-10-12 (late) — The menu is a drawer, the inbox has a search bar, and Follow-ups shows what he keeps doing by hand
+
+Three things the owner asked for, in his words:
+- of the menu on a narrow window: "I was expecting an overflow or floating navigation window ... this should happen like every other place, not just here."
+- "Give me search bar similar to gmail search bar as well."
+- "in the follow-up pages, you basically show suggestions on what are the things that you are basically repeating yourself over and over again, and how we can help you with automating it, without you even defining what you might be needed to automate ... taking that task off the user's hand and taking it as an agent's job." (He named sauna.ai as doing this.)
+
+**Built (commits 0f14dc0, 26e956a, 50c98d5, c26d085 and the one after; all on `master`, deployed)**
+
+- **Menu.** At 1024px and narrower the opened menu is a drawer under the top bar, over the page, with the rest dimmed. What went wrong before: the "visibility guard" at the end of `globals.css` forces `display:flex` and `width:240px` on `html body aside.dash-sidebar`, which out-ranked the shell's narrow-window rules, so the menu was a 240px block in the page. The drawer rules in `dashboard-shell.css` carry `.mf-dashboard-shell` to out-rank it. Also: the top bar never stayed at the top (`overflow-x:hidden` on body made body the box "sticky" holds to; measured 300px down the page, the bar stood at -300); body is `overflow-x:clip` there now.
+- **Search.** `src/lib/mail-search.ts` (what a typed search means), `POST /api/gmail/search { q, tz, account }` (looks inside every kept message of the last 90 days, never calls Gmail), the bar in `mail/_components/mail-search.tsx`. Gmail's words work: `from:` `to:` `cc:` `subject:` `is:unread` `newer_than:7d` `older_than:` `after:` `before:` `"a phrase"` `-leave out` `OR` `(brackets)`. `has:attachment` and `label:` are named as left out: this app keeps neither.
+- **What he keeps doing.** `src/lib/mail-habits.ts` (pure, no model), `GET/POST /api/gmail/habits`, the section "What you keep doing by hand" at the top of `/dashboard/workflows`, and kept words offered first in the inbox's reply box. Three kinds: the same reply again and again; writing a second time to someone quiet; someone who keeps writing and was never answered. Nothing is sent: a kept reply fills the reply box and goes out only on Approve & Send.
+- **Where a decision is kept.** In the Supabase `user_metadata` (`mail_habits`), next to `gmail_ignore_rules`. That rides in the sign-in cookie on every request, so a decision holds no words: only which message of his the words are (`account`, `thread`, `message`); the words are read back from `mfit_gmail_threads` when needed. At most 6 kept, 12 hidden senders, 8 set aside; the 7th is refused in plain words, nothing kept is dropped.
+- **Found on the way and fixed.** "Ignore sender" and "Ignore domain" in the inbox's Tidy up failed for every sender with a display name (the rule was built from, and compared with, the whole From line). `tidy()` took 16 s on one line of 99,000 spaces; now 1 ms.
+
+**Verified**
+
+- Tests 273 of 274 (`npm run test:hardening`); the one red is `auth-boundaries` "resume ownership", which expects a `/data/...` path and gets `C:\data\...` on this Windows machine. New files: `mail-search.test.mjs` (18), `mail-habits.test.mjs` (20), `dashboard-shell.test.mjs` (6); `mail-reading.test.mjs` grew to 19.
+- A three-reader review before shipping found 23 defects; all are fixed, each with the failing case as a test. The serious ones: a reply with nothing typed in it showed the other person's quoted mail as "your words"; different short answers ending in the same signature counted as one repeated reply; "Stop showing these" saved a rule the inbox never matched; a 7th kept habit silently dropped the oldest.
+- Live, signed in as the owner, counts only (no mail was read out, nothing was changed): search looked through 330 conversations; "resume" 131 matches, `is:unread` 39, `c++` 1, `has:attachment` named as left out; first answer 0.7 s, later ones 0.12 to 0.23 s. Habits: 330 conversations and 193 messages of his read in 0.7 s; found a nudge (written again 14 times to 12 people, usually after 3 days, 20 quiet that long now), a go-ahead written 11 times, another reply written 3 times, and 4 senders never answered (45, 17, 10 and 5 mails). The drawer at 960px wide: closed is gone, open is fixed under the bar, Escape puts the keyboard back on the menu button.
+
+**NOT verified**
+
+- Nobody has pressed "Keep as my usual reply", "Get nudges ready" or "Stop showing these" on the live site: that changes his account and is his to press. The round trip (keep, then the reply box offering the words) was run only on a local copy with made-up mail.
+- The search bar in Safari and on a real phone. One fix (the bar closing before a suggestion is pressed) was made for Safari from reading, not from a run.
+- The size of the sign-in cookie after decisions are kept: bounded by design (a decision is under 220 bytes), not measured.
+
+**Open, for the owner to decide**
+
+1. Kept nudges and replies wait for his press. He said "taking it as an agent's job": if he wants a nudge to go out with no press at all, that is a decision about mail leaving his account unseen, and needs a scheduler this app does not have yet.
+2. The search bar is on the inbox. Gmail has it at the top of every page; say so if it should be there too.
+3. The rest of the Follow-ups page under the new section is still the preview it says it is ("Preview running", "Example week").
+4. Still open from before: started applications and stalled ones on Overview; a contact box for everyone (see the entry below).
+
 ## 2026-10-12 (night) — Where we stopped: the inbox by whose turn it is, and what the owner asked for next
 
 The owner signed in as eshwarjay05 in the browser pane and said "inspect and find ultimate solutions". Then he described what is still missing (below) and said: "Let's stop here for now and make sure that we have enough of everything until now."

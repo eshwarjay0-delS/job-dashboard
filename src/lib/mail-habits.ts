@@ -388,7 +388,11 @@ export function findHabits(threads: HabitThread[], myEmails: string[], now: numb
     })
   }
 
-  habits.sort((a, b) => b.count - a.count || b.lastAt - a.lastAt)
+  // What takes writing off the person's hands comes first (the nudge, the usual replies), most often done first. People
+  // to stop showing come after. On the owner's own mail, 12 Oct 2026, sorting by count alone put two never-answered
+  // senders (45 and 17 mails) on top and pushed the reply he had written eleven times behind "Show more".
+  const later = (h: Habit) => (h.kind === "never_answered" ? 1 : 0)
+  habits.sort((a, b) => later(a) - later(b) || b.count - a.count || b.lastAt - a.lastAt)
   return {
     looked: { conversations: (threads || []).length, written: wrote.length, days },
     habits,

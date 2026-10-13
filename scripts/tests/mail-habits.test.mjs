@@ -127,6 +127,16 @@ test('twice is not a habit, and mail with an interview or an offer in it is neve
   assert.deepEqual(findHabits(THREADS, [], NOW).habits.filter(h => h.kind !== 'never_answered'), [])   // with no inbox of your own named, nothing is "yours"
 })
 
+test('what takes writing off your hands is listed first; people to stop showing come after, however often they wrote', () => {
+  // Seen on the owner's own mail the evening it shipped: two senders nobody answered (45 and 17 mails) stood above the
+  // reply he had written eleven times, which was behind "Show more".
+  assert.deepEqual(found.habits.map(h => h.count), [4, 3, 3, 5])            // the sender who wrote five times is last all the same
+  assert.equal(found.habits[0].kind, 'same_reply')
+  assert.equal(found.habits[3].kind, 'never_answered')
+  const kinds = found.habits.map(h => h.kind)
+  assert.ok(kinds.lastIndexOf('same_reply') < kinds.indexOf('never_answered') && kinds.lastIndexOf('chase') < kinds.indexOf('never_answered'))
+})
+
 test('what was looked at is said: how many conversations and how many messages of your own', () => {
   assert.equal(found.looked.conversations, THREADS.length)
   assert.equal(found.looked.written, 4 + 6 + 1 + 1)
