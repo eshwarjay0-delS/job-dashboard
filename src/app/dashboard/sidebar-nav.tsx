@@ -3,7 +3,7 @@
 import Link from "next/link"
 import type { User } from "@supabase/supabase-js"
 import { usePathname, useRouter } from "next/navigation"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { createClient } from "@/lib/supabase/client"
 import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV } from "./_components/nav"
@@ -147,6 +147,8 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
   const toggleTab = (href: string) => setOpenTabs(open => open.includes(href) ? open.filter(h => h !== href) : [...open, href])
   const [signingOut, setSigningOut] = useState(false)
   const accountRef = useRef<HTMLDivElement>(null)
+  const toggleRef = useRef<HTMLButtonElement>(null)   // the menu button on a narrow window
+  const drawerRef = useRef<HTMLElement>(null)         // the menu itself, a drawer on a narrow window
   const { mode, setMode } = useTheme()
   const dark = mode === "dark"
 
@@ -185,14 +187,35 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     }
   }
 
+  // Closing the drawer from inside it (Escape, or the dimmed page) puts the keyboard back on the menu button. Left alone,
+  // the link that had it is hidden with the drawer and the keyboard is dropped at the top of the document.
+  const closeMenu = useCallback(() => {
+    const el = document.activeElement as HTMLElement | null
+    const inside = !!el && (!!drawerRef.current?.contains(el) || el.classList.contains("mf-nav-scrim"))
+    setMenuOpen(false)
+    if (inside) toggleRef.current?.focus()
+  }, [])
+
   useEffect(() => {
     if (!menuOpen) return
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenuOpen(false)
+      if (event.key === "Escape") closeMenu()
     }
+    // While the drawer is open the page under the dimming cannot be reached with Tab or read out by a screen reader.
+    const page = document.getElementById("dashboard-content")
+    page?.setAttribute("inert", "")
+    // The drawer exists only on a narrow window. Widened past it, the menu is the fixed rail again: the drawer is closed,
+    // so the page is never left unreachable behind a drawer that is no longer one.
+    const wide = window.matchMedia("(min-width: 1025px)")
+    const onWide = () => { if (wide.matches) setMenuOpen(false) }
+    wide.addEventListener("change", onWide)
     window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [menuOpen])
+    return () => {
+      page?.removeAttribute("inert")
+      wide.removeEventListener("change", onWide)
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [menuOpen, closeMenu])
 
   useEffect(() => {
     const supabase = createClient()
@@ -251,6 +274,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     <>
     <header className="mf-mobile-home">
       <button
+        ref={toggleRef}
         type="button"
         className={`mf-menu-toggle${menuOpen ? " is-open" : ""}`}
         aria-label={menuOpen ? "Close navigation" : "Open navigation"}
@@ -278,8 +302,8 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
         {signedIn ? initials : "Sign in"}
       </Link>
     </header>
-    {menuOpen && <button type="button" className="mf-nav-scrim" aria-label="Close navigation" tabIndex={-1} onClick={() => setMenuOpen(false)} />}
-    <aside suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
+    {menuOpen && <button type="button" className="mf-nav-scrim" aria-label="Close navigation" tabIndex={-1} onClick={closeMenu} />}
+    <aside ref={drawerRef} suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
       background: "var(--bg)",
       display: "flex",
       flexDirection: "column",

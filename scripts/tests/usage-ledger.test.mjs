@@ -175,9 +175,14 @@ test('every admin route asks the server who is asking, and the usage report is r
 
 test('the Admin link is shown only to an admin and is kept out of the lists everyone sees', () => {
   const nav = read('src/app/dashboard/_components/nav.tsx'), side = read('src/app/dashboard/sidebar-nav.tsx')
-  const everyone = nav.slice(nav.indexOf('export const NAV_SECTIONS'), nav.indexOf('export const NAV_ITEMS'))
-  assert.ok(!everyone.includes('/dashboard/admin'), 'not in the sections the sidebar and the Home tiles list for everyone')
-  assert.ok(/export const ADMIN_NAV/.test(nav) && /\{admin && ADMIN_NAV\.map/.test(side))
+  // The menu became tabs (NAV_TABS) and gained a resume-only mode after this was written. The thing held is the same:
+  // the list everyone sees has no Admin in it, and the sidebar draws ADMIN_NAV only when the server said "admin".
+  const from = nav.indexOf('export const NAV_TABS'), to = nav.indexOf('export const NAV_ITEMS')
+  assert.ok(from > 0 && to > from, 'the list everyone sees is still where this test looks')
+  const everyone = nav.slice(from, to)
+  assert.ok(everyone.includes('/dashboard/mail') && !everyone.includes('/dashboard/admin'), 'not in the tabs the sidebar and the Home tiles list for everyone')
+  assert.ok(/export const ADMIN_NAV/.test(nav) && /\{(?:!resumeOnly && )?admin && ADMIN_NAV\.map/.test(side))
+  assert.equal((side.match(/ADMIN_NAV\.map/g) || []).length, 1, 'drawn in one place only, behind the admin check')
   assert.ok(/fetch\("\/api\/admin\/me"/.test(side), 'the sidebar asks the server; it does not decide from the email it can see')
   assert.ok(/setAdmin\(false\)/.test(side), 'the link goes at once on sign-out or an account switch')
 })

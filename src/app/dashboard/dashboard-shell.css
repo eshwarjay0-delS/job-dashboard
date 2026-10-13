@@ -86,6 +86,13 @@
    Internet, Chrome custom tabs, folded devices and tablets behave the same. */
 @media (max-width:1024px){
   html,body{width:100%;max-width:100%;overflow-x:hidden}
+  /* overflow-x:hidden on body makes body the box that "sticky" holds to, and body itself never scrolls: so the top bar
+     scrolled away with the page and took the menu button with it (measured 12 Oct 2026: 300px down the page the bar
+     stood at -300). "clip" cuts the same overflow without that. A browser that does not know it keeps the line above.
+     The drawer and the dimmed page below start where the bar ends, so the bar has to stay where it is. */
+  body{overflow-x:clip}
+  /* Now that the bar stays, what a link or a button scrolls to must stop below it, not under it. */
+  html{scroll-padding-top:calc(var(--mf-topbar-h) + 12px)}
 
   .mf-mobile-home{
     position:sticky;
@@ -182,6 +189,9 @@
     display:block;
     position:fixed;
     inset:var(--mf-topbar-h) 0 0 0;
+    /* Said outright as well: a button with nothing in it need not stretch between its edges in every browser. */
+    width:100%;
+    height:calc(100% - var(--mf-topbar-h));
     z-index:440;
     padding:0;
     border:0;
