@@ -308,6 +308,13 @@ export default function MailPage() {
   const isRecruiterDomain = (domain: string) => isMyRecruiter(recruiterRules, `someone@${domain}`)
   const roles = groupByRole(live.filter(x => x.stage !== "rejected"), isRecruiterDomain)
   const [papersCount, setPapersCount] = useState(0)
+  // The number on "RTR and rate" is known before the filter is opened (it read 0 until then: seen on the live page).
+  useEffect(() => {
+    let on = true
+    fetch(`/api/gmail/papers${account === "all" ? "" : `?account=${encodeURIComponent(account)}`}`, { cache: "no-store" }).then(r => r.json())
+      .then(j => { if (on && j?.ok && Array.isArray(j.papers)) setPapersCount(j.papers.length) }).catch(() => { /* the filter shows its own count when opened */ })
+    return () => { on = false }
+  }, [account])
 
   // A search looks through everything kept, whichever pile is open, hidden senders and filed rejections included: it is
   // how something is found again, as in Gmail. Only the inbox chosen above still narrows it.

@@ -112,6 +112,8 @@ test('the button is one press, wherever a person is shown, and the list is the p
   assert.ok(overview.includes('recruiter: email => isMyRecruiter(recruiters, email)'))
   // One press adds the person; a second choice adds everyone at their company; a press takes them off again.
   assert.ok(button.includes('My recruiter') && button.includes('Anyone at ') && button.includes('Your recruiter'))
+  // The choices sit behind three dots, in a small window that floats; who already is his recruiter is said in plain sight.
+  assert.ok(button.includes('aria-haspopup="menu"') && button.includes('role="menu"') && button.includes('role="menuitem"') && button.includes('position: "absolute"'))
   assert.ok(button.includes('run("POST", { kind: "person", value: address, name })') && button.includes('run("POST", { kind: "company", value: company })') && button.includes('run("DELETE", { kind: rule.kind, value: rule.value })'))
   // It is on the Overview cards, in the list of people, and in the inbox where a conversation is read.
   assert.ok((standing.match(/<RecruiterButton /g) || []).length >= 2, 'on the cards and in the list of people')
