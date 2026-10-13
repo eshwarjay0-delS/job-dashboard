@@ -76,7 +76,10 @@ export function formIn(text: string): FormField[] {
   const body = String(text || "")
   // Rows on lines of their own: any short "Label:" line with nothing after it counts, known or not.
   const lines = body.split(/\n+/).map(l => l.trim()).filter(Boolean)
-  const rows = lines.filter(l => l.length <= 48 && /^[A-Za-z][A-Za-z0-9 /&().#'-]{1,44}:{1,2}$/.test(l) && !/^(?:hi|hello|dear|thanks|regards|note|from|to|sent|subject|cc)\b/i.test(l))
+  // A row is a short "Label:" line with nothing after it. A known label counts without its colon too: on his own mail
+  // (13 Oct 2026) "Date of Birth (DD/MM)" stood in the table with no colon and the first version dropped that row.
+  const labelish = (l: string) => l.length <= 48 && !/^(?:hi|hello|dear|thanks|regards|note|from|to|sent|subject|cc)\b/i.test(l)
+  const rows = lines.filter(l => labelish(l) && (/^[A-Za-z][A-Za-z0-9 /&().#'-]{1,44}:{1,2}$/.test(l) || (/^[A-Za-z][A-Za-z0-9 /&().#'-]{1,44}$/.test(l) && kindOf(l) !== "other" && l.split(" ").length <= 6)))
   const knownRows = rows.filter(l => kindOf(l) !== "other")
   if (knownRows.length >= 4) return unique(rows.map(l => { const key = kindOf(l); return { label: clean(l), key, sensitive: SENSITIVE.has(key) } }))
   // Or run together on one line: the known labels, where most have nothing between them.

@@ -23,6 +23,12 @@ test('the table is found in their mail, row by row, whichever way the words arri
     assert.deepEqual(form.filter(f => f.sensitive).map(f => f.key), ['dob', 'ssn'], how)
   }
   assert.equal(formIn(BY_LINE)[0].label, 'Full Name'); assert.equal(formIn(BY_LINE)[3].label, 'Date of Birth (DD/MM)')
+  // On his own mail the date of birth row had no colon, and the first version dropped it: 9 rows of 10.
+  const asSent = `Please fill skill Metrix-\n\n${ROWS.join('\n\n')}\n\nThanks,\nShivali`
+  assert.deepEqual(formIn(asSent).map(f => f.key), ['name', 'phone', 'email', 'dob', 'location', 'relocation', 'visa', 'education', 'linkedin', 'ssn'])
+  assert.equal(formIn(asSent)[3].label, 'Date of Birth (DD/MM)')
+  // A known word alone on a line in an ordinary mail does not make a form.
+  assert.deepEqual(formIn('Hi Sam,\n\nLocation\n\nThe role is in Austin.\n\nVisa\n\nAny visa is fine.\n\nThanks'), [])
   // Not a form: a mail that GIVES details, an ordinary mail that mentions a few of the words, an empty one.
   assert.deepEqual(formIn('Full Name: Dana Whitfield\nContact No: 555-0100\nEmail ID: dana@x.example\nCurrent Location: Austin, TX\nVisa Status: Citizen'), [])
   assert.deepEqual(formIn('Please send your updated resume, your visa status and your current location. What is your rate?'), [])
