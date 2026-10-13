@@ -172,9 +172,15 @@ test('the bot keeps the resume, saves what it makes in Files, and searches no on
   // opens. The bot and the dashboard move them with the same code.
   const collect = read('src/app/api/whatsapp/collect/route.ts'), mover = read('src/lib/whatsapp-collect.ts')
   assert.ok(collect.includes('if (!isAdminEmail(user.email)) return NextResponse.json({ ok: true, owner: false') && collect.includes('ownerEntries().filter(e => !e.userId || e.userId === user.id)'))
-  assert.ok(collect.includes('await joinIfFree(entry.digits, user.id)') && collect.includes('await collectHeld(entry.digits, user.id, began + 40_000)'))
+  assert.ok(collect.includes('const state = await joinIfFree(digits, user.id)') && collect.includes('moved += await collectHeld(digits, user.id, began + 40_000)'))
+  // No number named in settings: the numbers that used the bot are offered to the owner by their last four digits, and
+  // one is taken only when exactly one ends that way. A page is never given a whole number.
+  assert.ok(collect.includes('const claimed = claim.length === 4 ? loose.filter(n => n.digits.endsWith(claim)) : []') && collect.includes('if (claim && claimed.length !== 1)'))
+  assert.ok(collect.includes('.map(n => ({ ending: n.digits.slice(-4), held: n.held }))'))
+  const claimUi = read('src/app/dashboard/_components/whatsapp-claim.tsx')
+  assert.ok(claimUi.includes('It is mine') && claimUi.includes('Not mine') && claimUi.includes('JSON.stringify(claim ? { claim } : {})'))
   assert.ok(bot.includes('return collectHeld(from, who.userId, until, again)') && mover.includes('saveTailored({ userDir, bytes, jd: gen.jd'))
-  assert.ok(read('src/app/dashboard/documents/DocumentsClient.tsx').includes('fetch("/api/whatsapp/collect", { method: "POST" })') && read('src/app/dashboard/whatsapp/link-card.tsx').includes('fetch("/api/whatsapp/collect", { method: "POST" })'))
+  assert.ok(read('src/app/dashboard/documents/DocumentsClient.tsx').includes('<WhatsAppClaim onMoved={broughtIn} />') && read('src/app/dashboard/whatsapp/link-card.tsx').includes('<WhatsAppClaim onMoved='))
   // A PDF is kept, never tailored.
   assert.ok(bot.includes('saveUpload({ userDir: userDirOf(userId), bytes, filename, kind: "pdf" })'))
   // The tidy-up of Files leaves the resumes made for jobs alone (it keeps two per kind and removes the rest).

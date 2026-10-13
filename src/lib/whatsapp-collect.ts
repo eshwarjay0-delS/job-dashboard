@@ -22,6 +22,15 @@ export async function heldCount(number: string): Promise<number> {
   try { return (JSON.parse((await blob.getText(`whatsapp/gens/${onlyDigits(number)}/_index.json`)) || "[]") as unknown[]).length } catch { return 0 }
 }
 
+/** Every number the bot holds resumes for, with how many. For the owner of the site only: see /api/whatsapp/collect. */
+export async function botNumbers(): Promise<{ digits: string; held: number }[]> {
+  const keys = await blob.list("whatsapp/gens/").catch(() => [] as string[])
+  const numbers = [...new Set(keys.map(k => (/whatsapp\/gens\/(\d{8,15})\//.exec(k) || [])[1]).filter((d): d is string => !!d))].slice(0, 50)
+  const out: { digits: string; held: number }[] = []
+  for (const digits of numbers) { const held = await heldCount(digits); if (held) out.push({ digits, held }) }
+  return out
+}
+
 /** Move what the bot holds for this number into this account's Files. Returns how many were saved there now. */
 export async function collectHeld(number: string, userId: string, until: number, again = false): Promise<number> {
   const digits = onlyDigits(number)

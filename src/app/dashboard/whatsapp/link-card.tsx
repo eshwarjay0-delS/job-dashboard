@@ -3,6 +3,7 @@
 // Join this account to a WhatsApp number, so every resume the bot makes is saved in Files.
 // One button gives a code; the person sends it to the bot from their own WhatsApp; this card sees it arrive.
 import { useCallback, useEffect, useState } from "react"
+import WhatsAppClaim from "../_components/whatsapp-claim"
 
 type Linked = { ending: string; at: number }
 type Code = { code: string; send: string; minutes: number; expiresAt: number }
@@ -22,14 +23,7 @@ export default function LinkCard({ bot }: { bot: string }) {
     } catch { return [] as Linked[] }
   }, [])
 
-  // The owner's own numbers are joined when this page opens (no code needed), and what the bot holds is brought into Files.
-  useEffect(() => {
-    queueMicrotask(() => {
-      void fetch("/api/whatsapp/collect", { method: "POST" }).then(r => r.json())
-        .then(j => { if (j?.moved) setNote(`I put ${j.moved} resume${j.moved === 1 ? "" : "s"} made on WhatsApp into your Files.`) }).catch(() => { /* shown as not linked; the code still works */ })
-        .finally(() => { void read() })
-    })
-  }, [read])
+  useEffect(() => { queueMicrotask(() => { void read() }) }, [read])
 
   // While a code is showing, look every few seconds for the number that sent it.
   useEffect(() => {
@@ -69,6 +63,8 @@ export default function LinkCard({ bot }: { bot: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
+      {/* The owner's own number: joined with nothing to press when it is named in settings, or with one press here. */}
+      <WhatsAppClaim onMoved={() => { void read() }} />
       {linked ? (
         <p style={{ ...soft, color: "var(--text)" }}>
           Linked to the number ending <strong>{(numbers || []).map(n => n.ending).join(", ")}</strong>. Every resume made there is saved in <a href="/dashboard/documents" style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: 3 }}>Files</a>, in a folder for its kind of job.
