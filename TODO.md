@@ -1,3 +1,27 @@
+## 2026-10-13 (night) — My recruiters, the RTR and rate filter, history with a person, the reply box, PDFs that can be tailored, and three things he found broken
+
+Commits 183c667, 045162a, 10a292b, 65abea8, 75883d4, d3f0ca8, 0236209. All deployed READY. Each: what went wrong, the proof, the fix.
+
+**1. "PDF? format in resumes? and myfiles library???"** I had added PDFs to the Files page only. The My Resume page has its own upload box and listing, both Word only, and a PDF could not be tailored anywhere. Fix: `src/lib/pdf-to-word.ts` makes a Word copy from the PDF's words (lines the PDF broke are put back together; same words, a plain layout, said wherever the copy is offered). `POST /api/resumes` hands the copy back as the file to select; My Resume takes and lists PDFs; the bot and setup make the copy too. Also found there: My Resume set its error and notice all over the file and never drew them. They are shown now.
+
+**2. The agent answered "I could not answer this time."** That was my own sentence from the morning for an unknown reason, and it said nothing. Proof it is a passing refusal: the same message failed in 1.2 s on the live site and was answered 9 s later; today's record was 12 agent calls, 9 failed. Fix: `callLLM` leaves on what it throws every service asked and its status; `plain-failure.ts` counts all of them and knows more reasons (too much to read at once, out of credit, a fault of the service); the agent asks once more by itself; the owner is shown two words after the sentence ("Groq 413"). **Not found:** which service refuses and with what status. The next failure will say it in the chat for him.
+
+**3. "Whatsapp edited resume needs store as the rules i have stated to you!"** Saving into Files only happened for a number joined to an account, and his owner number had none beside it, so the bot still wrote as the default bot user. Proof from the live site: 0 numbers joined, 0 resumes in his library. Fix: a listed owner number writes as the one account that signs in with an address in `ADMIN_EMAILS`; resumes the bot still holds are moved into Files on its next message and he is told.
+
+**4. My recruiters.** His picture: Overview said "a short, friendly nudge is due" to people who market his profile. `src/lib/my-recruiters.ts` + `GET/POST/DELETE /api/gmail/recruiters`. For someone on the list no nudge is ever due; the person to watch is whoever else answered in that conversation, or whoever the recruiter wrote to (read from To and Cc), and those people get a contact box before they write. A recruiter who asks him something is still shown. The choice sits behind three dots on every person shown (Overview cards, people list, inbox reading pane, RTR cards). By role no longer counts a recruiter's company as a vendor to pick between.
+
+**5. Inbox: "RTR and rate" and the history with a person.** `src/lib/mail-papers.ts`, `GET /api/gmail/papers`, `POST /api/gmail/person`. The filter lists conversations that carry an RTR or a rate confirmation: their own sentence, a form they named, whether he answered, the sender and everyone else in the conversation with numbers. Searching a name shows "History with this person": each conversation by its subject and one line on how it went.
+
+**6. Reply box.** "Write my own" opens the box empty (before, it appeared only after tapping a suggestion). His own sentences written in more than one message float under the box in a grid as he types (`src/lib/my-phrases.ts`, `GET /api/gmail/phrases`); G or Alt+G fixes the grammar (`POST /api/gmail/polish`: rules first, then one model call whose text is used only if it is still his message). The box no longer asks a model anything while he types.
+
+**Verified on the deployed pages** (writes stubbed, nothing sent, nothing changed on his account): setup chat walked end to end; link card; Files strip; a PDF upload on My Resume selecting its Word copy; the reply box (opens empty, grid floats, a press puts the sentence in, G fixes, Undo puts it back); the three-dots menu (two choices, closes on Escape, shows "Your recruiter" after a press). On his real mail, read only: "RTR and rate" holds 42 conversations, 7 not answered, 35 answered, 1 with a form named. Tests 335 of 336 (the one red is the old Windows path check).
+
+**NOT verified:** a real WhatsApp message through the new bot code; a real PDF of his through the copy (two-column PDFs can read out of order); the recruiter rule on his real Overview (he has not put anyone on the list yet; I did not press it for him); `unpdf` on the server's Node; the model half of G on a real reply.
+
+**Left by choice, recorded for its owner in the Kompas HANDOFF:** night mode in the desktop window (asked a second time, with the three lines that switch it off there).
+
+**Still his to answer:** reuse kept lines inside the tailoring; Kompas questions from the common words; start the next job from the saved same-kind resume or always the original; may a nudge go out with no press; search bar on every page; Follow-ups preview; Overview's evidence map from kept mail; how to run the Kompas answer tests. **Not started:** twelve colours on Companies and Compare; the Drafts and No answer yet views.
+
 ## 2026-10-13 (evening) — WhatsApp resumes land in Files by kind of job; the resume is sent once; Files takes PDFs; setup is a conversation
 
 Commits 8d5227e and 00433ae. Each part: what went wrong, the proof, the fix.
