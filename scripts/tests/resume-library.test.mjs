@@ -159,6 +159,9 @@ test('the bot keeps the resume, saves what it makes in Files, and searches no on
   // The number that joined itself with a code is asked first; the shared default is never "own".
   assert.ok(bot.indexOf('const linked = await linkedUserId(from)') < bot.indexOf('const owner = ownerWhatsAppUserId(from, FALLBACK_USER_ID)'))
   assert.ok(bot.includes('return required ? null : who(FALLBACK_USER_ID, false)'))
+  // A new job adds to the person's dossier (the kind of work, and what jobs of that kind keep asking for); it removes nothing.
+  assert.ok(bot.includes('if (filed.counted && UUID.test(gen.userId)) await feedDossier(gen.userId, filed)'))
+  assert.ok(bot.includes('skills: had?.skills || [], projects: had?.projects || [], keywords: join(had?.keywords, filed.learned.common.map(c => c.word)), fields: join(had?.fields, [filed.category])'))
   // A PDF is kept, never tailored.
   assert.ok(bot.includes('saveUpload({ userDir: userDirOf(userId), bytes, filename, kind: "pdf" })'))
   // The tidy-up of Files leaves the resumes made for jobs alone (it keeps two per kind and removes the rest).

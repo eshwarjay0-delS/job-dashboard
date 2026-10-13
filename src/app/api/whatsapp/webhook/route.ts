@@ -25,7 +25,9 @@ import { blob, writePath, existsPath, deletePath, readPath, listFiles } from "@/
 import { resumeEmails } from "@/lib/resumeOrganization"
 import { extractJdKeywords } from "@/lib/keywords"
 import { categoryForJob, isTailoredName, learnedAll, learnedLine, pickBase, pointsOf, COMMON_AT, NO_EMAIL } from "@/lib/resume-library"
-import { absOf, forgetTailored, readLibraryChecked, saveTailored, saveUpload } from "@/lib/resume-library-store"
+import { absOf, forgetTailored, readLibraryChecked, saveTailored, saveUpload, type SavedTailored } from "@/lib/resume-library-store"
+import { getDossierProfile, saveDossierProfile } from "@/lib/dossier"
+import { hashUserId } from "@/lib/sttLedger"
 import { claimLinkCode, linkedUserId } from "@/lib/whatsapp-link"
 import { isPdf } from "@/lib/pdf-text"
 import { plainFailure } from "@/lib/plain-failure"
@@ -703,6 +705,13 @@ async function refine(from: string, replyTo: string, request: string, who: Who) 
   await recordWhatsAppUsage(userId, "resume_refine", result)
 }
 
+// Add what a new job taught to the person's dossier: nothing already there is removed.
+async function feedDossier(userId: string, filed: SavedTailored): Promise<void> {
+  const hash = hashUserId(userId), had = await getDossierProfile(hash)
+  const join = (a: string[] = [], b: string[] = []) => [...new Set([...a, ...b])].slice(0, 200)
+  await saveDossierProfile(hash, { skills: had?.skills || [], projects: had?.projects || [], keywords: join(had?.keywords, filed.learned.common.map(c => c.word)), fields: join(had?.fields, [filed.category]) })
+}
+
 // What saving a resume into Files needs beyond the file: whose library, how it was made, and what the tailoring found.
 type Keep = { userDir: string; depth: number; from?: string; result?: TailorResult; replaces?: string }
 
@@ -744,6 +753,9 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
   if (kept_) await blob.put(genKey(from, wamid), JSON.stringify({ ...gen, file: vfile, createdAt: Date.now(), saved: filed.abs })).catch(() => {})
   // A change the person asked for takes the place of the file it changed: one job, one file, the newest.
   if (keep.replaces && keep.replaces !== filed.abs) await forgetTailored(keep.userDir, keep.replaces).catch(() => {})
+  // The person's own dossier grows with every new job (owner, 13 Oct 2026: it "keeps on improving with every ... resume
+  // updation"): the kind of work, and what jobs of that kind keep asking for. Kompas reads the dossier when it prepares.
+  if (filed.counted && UUID.test(gen.userId)) await feedDossier(gen.userId, filed).catch(e => console.error("[whatsapp] dossier not fed", String(e).slice(0, 200)))
   // The third job of a kind is the first time something true can be said about what they all ask for: said once.
   const line = filed.counted && filed.learned.jobs === COMMON_AT ? learnedLine(filed.learned) : ""
   if (line) { try { await sendText(from, `${line}\n\nSend *library* any time to see this for every kind of job.`) } catch { /* ignore */ } }

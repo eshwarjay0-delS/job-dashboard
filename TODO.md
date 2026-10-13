@@ -1,3 +1,38 @@
+## 2026-10-13 (evening) — WhatsApp resumes land in Files by kind of job; the resume is sent once; Files takes PDFs; setup is a conversation
+
+Commits 8d5227e and 00433ae. Each part: what went wrong, the proof, the fix.
+
+**1. Resumes made over WhatsApp never showed in Files.**
+- What went wrong: the bot kept every resume it sent only in `whatsapp/versions/`, by an earlier design ("OUTSIDE the resume library on purpose"); a second copy went to database tables Files does not read, and only for a number bound by text message. The bot also wrote as the deployment's default bot user, while Files shows the folder of the account that is signed in. Proof on the live site before the change: `/api/resumes` for the signed-in account listed 0 files.
+- Fix: every resume sent (and every change to one) is also saved in the person's Files as `<email>/<kind of job>/<Role - Company (tailored)__hash>.docx`. The kind comes from the job description (`categoryForJob`, e.g. "SIEM and Incident Response"). A record `_library.json` beside the files counts what each kind of job asks for: common at 3 jobs, rare words and lines replaced by newer ones (`src/lib/resume-library.ts`, tested).
+- A number is joined to an account with a code: the WhatsApp page shows it, the person sends `link CODE` to the bot (once, 15 minutes, five tries an hour). `GET/POST/DELETE /api/whatsapp/link`. Resumes the bot still holds for the number are moved into Files once.
+
+**2. The resume had to be sent with every job description.**
+- What went wrong: the session was cleared after each resume ("Every generation starts fresh") and after a quiet day.
+- Fix: the resume is kept per number (outside the shared library folder) until "forget resume". A job description alone is enough. The next job of a kind starts from the saved resume of that kind that already shows the most of it, and only from one made straight from a resume the person wrote (never a copy of a copy). "original" makes the last job again from the resume as sent.
+
+**3. Files took Word files and zips only.** Now PDFs too (single and inside a zip): filed by the email and kind of work read from them (`unpdf` 1.8.1, exact), listed and downloadable. A PDF is never tailored: `GET /api/resumes` still lists Word files only and the check that guards resume edits still answers only for a Word file.
+
+**4. The agent chat printed a failure as it came off the wire** ("The agent hit an error: Groq API 429: {...}"). Now one plain sentence (`src/lib/plain-failure.ts`: busy, not set up, too slow, unreachable); the full error goes to the server log. The bot does the same.
+
+**4b. The dossier grows with every new job.** After a resume for a job not seen before is saved, the kind of work and the words common to that kind are added to the person's dossier (`feedDossier` in the bot); nothing is removed from it.
+
+**5. Setup was a five-step form.** Now a conversation (`/dashboard/setup`, `GET/POST /api/onboarding`, `POST /api/onboarding/resume`): the resume first (Word or PDF), what was read from it shown, the profile filled only after a yes (else the person fills it in on the Profile page), then the mobile number (connects WhatsApp), Gmail (more than one inbox), and the kind of work with its branches to tick (cybersecurity's branches are the folders Files uses). At the end the person's dossier is written (`src/lib/dossier.ts`, `fields` added).
+
+**Verified:** tests 319 of 320 (the one red is the Windows path check). A real run of the Files saving on scratch files: three SIEM jobs saved under `<email>/SIEM and Incident Response/`, "siem, soc, splunk" common at the third, a change replacing its file, a PDF filed by its words, a broken PDF filed by name. Both deployments READY; the new endpoints answer 401 signed out. On the deployed pages, with stand-in data: the link card showed the code and then "Linked to the number ending 0100"; Files showed what a kind of job keeps asking for; `GET /api/resumes/library` answered for the signed-in account (0 saved, as expected before any job).
+
+**NOT verified:**
+- No real WhatsApp message was sent through the new bot code. The first real job description is the test: the caption should end "Saved in your Files: <kind>", and Files should show it.
+- Whether this deployment's bot user is his account is not known to me (settings are his). If the caption says "Not in your Files yet", press Link this number on the WhatsApp page.
+- The read-only review I started for this change died on the session limit and returned nothing. I reviewed it myself instead.
+- `unpdf` needs Node 22 or newer on the server. If it cannot load there, a PDF is still kept and filed by its name (it never blocks an upload).
+- Setup was not walked through by a new account with a real resume, a real text message and a real Google sign-in. On the deployed page it was walked from the first question to the last with stand-in answers (nothing written to any account): the details read from the resume were shown, the mobile number was offered from it after the yes, the kind of work came ticked from the resume, six requests were made in the right order.
+
+**Where to pick up:**
+- Asked of the owner, not built: reuse the kept lines inside the tailoring itself (cuts model cost; it is an engine change in `src/lib/tailor.ts`); questions for Kompas from the common words (`GET /api/resumes/library` already gives them); a PDF as the resume to tailor from.
+- Tailored files now sit in the library, so the web tailor's auto-select can pick one. That is what was asked for ("it gets more easy the next time"), and the earlier design avoided it on purpose.
+- Still open from before: nudges with no press; the search bar on every page; the preview part of Follow-ups; Overview's evidence map from kept mail; twelve colours on Companies and Compare; By role / Drafts / No answer yet inbox views; how to run the Kompas answer tests.
+
 ## 2026-10-13 (later) — Three things a user found by trying the site, and one asked that I left
 
 Notes sent after "I poked around on the site". Each with what went wrong, the proof, and the fix.
