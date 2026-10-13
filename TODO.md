@@ -1,3 +1,22 @@
+## 2026-10-13 (late night) — Interviews are kept in view until he says how they ended; a weekly follow-up can be handed over
+
+Commits 7563982 and a29fc60, both deployed READY.
+
+**Asked:** the Interviews page "was just showcasing like one at each time"; an interview must stay followed "unless a user have selected it was rejected or completed", then go "under the past interviews"; after some days suggest a follow-up, with the recruiter's contact; calm, "not ... super anxious"; and "it can be delegated ... weekly ones ... automatic follow up on behalf of the user ... just by asking".
+
+**Built:**
+- `src/lib/interview-track.ts` (rules, tested, no model): each interview the mail proves (from `threadsToInterviews`) is coming up, today, waiting for news, or past, with one calm sentence, the contact who arranged it, and when the next follow-up is a good idea (5 days after the interview, then a week after each word of his).
+- `GET/POST /api/gmail/interview-track`; the board on `/dashboard/calendar` ("Still going", then "Past interviews"): Open and follow up, It is finished, Not going ahead, Follow them again, Send one for me every week, Stop sending for me.
+- Handing over: the exact words are shown before he says yes. `sendInterviewFollowUps` (`src/lib/interview-followups.ts`) is called from the existing daily scheduled run (`/api/agent/watchdog` GET, 13:00 UTC), never from a page. It sends only for an interview he switched on, still waiting, never to his own recruiter, never two within six days, four at most; it stops when they answer or he marks the interview ended; each send is written down before the next is considered.
+
+**What went wrong, and the fix (a29fc60):** measured on his own mail the hour it shipped, the first version marked 12 of his 15 open interviews "follow up". Eight were 63 to 83 days old with nothing since, and one was to a person on his recruiter list. Now an interview more than 35 days past with no word is set apart under one line ("I am not asking you to chase them", Show them, They are all over), and nobody is told to chase their own recruiter. After the fix, read from the live site: 15 open, 7 shown, 3 where a follow-up is a good idea, 2 carried by his recruiter, 8 old.
+
+**Verified on the deployed page** with stubbed writes: the words panel, Yes then "Stop sending for me", "They are all over" moving 8 to Past. Tests 340 of 341 (the one red is the old Windows path check).
+
+**NOT verified:** a follow-up really sent by the daily job (no interview is switched on; I did not switch one on for him). It is sent as a new message with its own subject, not inside the old conversation. Names on some cards are the mail's subject line ("Screening call with ...") because that is what `threadsToInterviews` gives when the mail names no job title.
+
+**His to decide:** whether the first follow-up should come sooner or later than 5 days; whether a sent-for-him follow-up should say it was sent by MarketFit; whether "They are all over" should mark them finished or not going ahead.
+
 ## 2026-10-13 (night) — My recruiters, the RTR and rate filter, history with a person, the reply box, PDFs that can be tailored, and three things he found broken
 
 Commits 183c667, 045162a, 10a292b, 65abea8, 75883d4, d3f0ca8, 0236209. All deployed READY. Each: what went wrong, the proof, the fix.
