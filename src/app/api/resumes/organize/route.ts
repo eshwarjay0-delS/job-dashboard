@@ -6,6 +6,7 @@ import { USER_RESUMES_DIR, DATA_DIR } from "@/lib/paths"
 import { listFiles, readPath, writePath, deletePath } from "@/lib/storage"
 import { extractText } from "@/lib/docx"
 import { CATEGORY_FOLDERS, organizeResumes } from "@/lib/resumeOrganization"
+import { isTailoredName } from "@/lib/resume-library"
 
 export const runtime = "nodejs"
 export const maxDuration = 300
@@ -15,7 +16,10 @@ export async function POST(request: NextRequest) {
   if (!userId) return signInRequired()
   const root = path.join(USER_RESUMES_DIR, userId)
   try {
-    const paths = (await listFiles(root)).filter(p => p.toLowerCase().endsWith(".docx"))
+    // A resume made for one job ("... (tailored)") is left where it is. This tidy-up keeps the strongest two resumes per
+    // kind of work and removes the rest; run over the tailored ones it would delete all but two of them (13 Oct 2026:
+    // "store every other file that a user had ever updated into ... a big library").
+    const paths = (await listFiles(root)).filter(p => p.toLowerCase().endsWith(".docx") && !isTailoredName(path.basename(p)))
     if (paths.length > 1000) return NextResponse.json({ error: "Organize at most 1,000 source resumes per run." }, { status: 413 })
     const inputs = []
     let totalBytes = 0

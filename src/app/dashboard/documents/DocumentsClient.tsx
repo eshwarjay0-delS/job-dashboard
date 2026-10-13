@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useDialogs } from "@/components/ui/dialog-provider"
+import Learned from "./learned"
 
 // Resume-library entry shape. This view was folded into the resume hub, so its
 // sibling ./page is now a redirect and no longer exports this type — keep it local.
@@ -13,7 +14,12 @@ interface ResumeFile {
   category: string
   size: string
   uploadedAt: string
+  /** A PDF is kept and can be downloaded; only a Word file can be tailored. */
+  kind?: "docx" | "pdf"
 }
+
+// The name as a person reads it: without the hash the library adds so two files of one name can live side by side.
+const shownName = (name: string) => name.replace(/__[a-f0-9]{16}$/i, "")
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 function CloudIcon() {
@@ -86,11 +92,11 @@ function FileRow({ file, depth, ctx }: { file: ResumeFile; depth: number; ctx: T
       <CheckBox checked={on} onToggle={() => ctx.onToggle(key)} />
       <FileIcon />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{file.filename}</p>
-        <p className="text-xs" style={{ color: "var(--text-soft)" }}>{file.category} · {file.size} · {fmt}</p>
+        <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{shownName(file.filename)}</p>
+        <p className="text-xs" style={{ color: "var(--text-soft)" }}>{file.kind === "pdf" ? "PDF · " : ""}{file.category} · {file.size} · {fmt}</p>
       </div>
       <a
-        href={`/api/resumes/download?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(file.filename)}`}
+        href={`/api/resumes/download?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(shownName(file.filename))}`}
         download
         onClick={e => e.stopPropagation()}
         className="text-xs px-2 py-1 rounded-lg border transition-colors"
@@ -234,15 +240,15 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return
-    const accepted = [...files].filter(f => /\.(docx|zip)$/i.test(f.name))
-    if (!accepted.length) { setErr("Upload a .docx resume or a .zip of resumes."); return }
+    const accepted = [...files].filter(f => /\.(docx|pdf|zip)$/i.test(f.name))
+    if (!accepted.length) { setErr("Add a Word file (.docx), a PDF, or a .zip of them."); return }
     setErr(""); setNotice("")
 
     for (const file of accepted) {
       if (/\.zip$/i.test(file.name)) { await uploadZip(file); continue }
       const tempId = `tmp_${Date.now()}_${Math.random()}`
       const tempEntry: UploadedEntry = {
-        file: { id: tempId, filename: file.name.replace(/\.docx$/i, ""), filepath: "", category: "Uploaded", size: `${(file.size/1024).toFixed(0)} KB`, uploadedAt: new Date().toISOString() },
+        file: { id: tempId, filename: file.name.replace(/\.(docx|pdf)$/i, ""), filepath: "", category: "Uploaded", size: `${(file.size/1024).toFixed(0)} KB`, uploadedAt: new Date().toISOString(), kind: /\.pdf$/i.test(file.name) ? "pdf" : "docx" },
         status: "scanning",
       }
       setUploaded(prev => [tempEntry, ...prev])
@@ -346,6 +352,8 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
         )}
       </div>
 
+      <Learned refresh={indexRevision} />
+
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className="btn-outline" onClick={organizeLibrary} disabled={organizing || !allFiles.length}>
           {organizing ? "Organizing resumes…" : "Organize by email and remove duplicates"}
@@ -387,7 +395,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
           <input
             id="doc-upload"
             type="file"
-            accept=".docx,.zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip"
+            accept=".docx,.pdf,.zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,application/zip"
             multiple
             className="sr-only"
             onChange={e => { handleFiles(e.target.files); e.target.value = "" }}
@@ -400,7 +408,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
               {dragging ? "Let go to add it" : "Drop your resume files here"}
             </p>
             <p className="text-sm mt-1" style={{ color: "var(--text-soft)" }}>
-              Word files (.docx), or a .zip with folders inside
+              Word files (.docx), PDFs, or a .zip with folders inside. Only a Word file can be tailored; a PDF is kept as it is.
             </p>
           </div>
           <span className="btn-outline" style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>

@@ -4,6 +4,7 @@ import { callLLM, resolveKeys, hasAnyKey } from "@/lib/llm"
 import { AGENT_SYSTEM_PROMPT } from "@/lib/agent/system-prompt"
 import { runTool, toolPromptBlock } from "../_tools"
 import { checkRateLimit } from "@/lib/rateLimit"
+import { plainFailure, failureKind } from "@/lib/plain-failure"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -23,7 +24,13 @@ interface ChatMsg { role: "user" | "assistant"; content: string }
 
 const TOOL_BLOCK_RE = /```tool\s*\n([\s\S]*?)\n```/
 
+// A tool that fails hands back its own error text (a status code, a service's words). That is for the agent to read,
+// not for the person: the reply says what could not be done, in a sentence, and what to do next.
+const WHEN_A_TOOL_FAILS = "WHEN A TOOL FAILS: tell him in one plain sentence what you could not do and what he can do next. Never repeat the error text, a status code, a service's name for its own fault, or the words TOOL RESULT. Then carry on with whatever the other results allow."
+
 export async function POST(req: NextRequest) {
+  // Set once a tool has run, so a failure after it does not say "nothing was changed".
+  let acted = false
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -52,7 +59,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const system = `${AGENT_SYSTEM_PROMPT}\n\n${toolPromptBlock()}`
+    const system = `${AGENT_SYSTEM_PROMPT}\n\n${toolPromptBlock()}\n\n${WHEN_A_TOOL_FAILS}`
     const convo: ChatMsg[] = messages.slice(-12) // keep the turn bounded
     const ctx = { userId: user.id }
 
@@ -88,6 +95,7 @@ export async function POST(req: NextRequest) {
       }
 
       const result = await runTool(ctx, toolName, toolArgs)
+      acted = true
       convo.push({ role: "assistant", content: text })
       convo.push({
         role: "user",
@@ -97,24 +105,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (!reply) {
-      reply = "I ran into trouble pulling that together — try asking again in a simpler way."
+      reply = "I could not put that together this time. Ask again, or ask for one thing at a time."
     }
 
     return NextResponse.json({ ok: true, reply })
   } catch (err) {
+    // The whole of it goes to the server log. The person is told the reason in one plain sentence and nothing else:
+    // not which service, not its status code, not its own words (owner, 13 Oct 2026: "We should not show any failpoints").
     console.error("agent/chat error:", err)
-    // Surface the real cause (provider + status, never any key material) so the
-    // user — and the admin — knows exactly what to fix instead of guessing.
-    const raw = err instanceof Error ? err.message : String(err)
-    const safe = raw
-      .replace(/sk-[A-Za-z0-9-_]+/g, "[key]")
-      .replace(/gsk_[A-Za-z0-9]+/g, "[key]")
-      .replace(/AIza[A-Za-z0-9-_]+/g, "[key]")
-      .replace(/sk-or-[A-Za-z0-9-_]+/g, "[key]")
-      .slice(0, 300)
-    const hint = /no api key configured/i.test(safe)
-      ? " The agent's AI key isn't enabled for chat — the app owner needs to tick a provider for it on the Admin page."
-      : ""
-    return NextResponse.json({ error: `The agent hit an error: ${safe}.${hint}` }, { status: 500 })
+    return NextResponse.json({ error: plainFailure(err, "answer", acted), reason: failureKind(err) }, { status: 500 })
   }
 }

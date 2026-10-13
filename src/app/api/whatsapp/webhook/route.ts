@@ -3,8 +3,12 @@
  *
  * Conversation: send a JD and a .docx resume in EITHER order. As soon as the bot has
  * both, it tailors and sends the result back as "Eshwar Resume.docx", captioned with
- * the Role / Location / Company it was built for. The session then clears, so every
- * generation starts fresh with a new JD + resume.
+ * the Role / Location / Company it was built for.
+ *
+ * The resume is sent ONCE (owner, 13 Oct 2026: "he don't have to like keep providing the baseline resume, which was a
+ * major hurdle"). It is kept, and after it a job description on its own is enough. Every resume the bot makes is also
+ * saved in the person's Files, in a folder named for the kind of job ("SIEM and Incident Response"); the next job of
+ * that kind starts from the saved resume that already shows the most of what it asks for. See src/lib/resume-library.ts.
  *
  * Changes: swipe-reply to any resume the bot sent and say what to change. The bot edits
  * THAT exact version (so replying to the newest file stacks changes) and sends the update,
@@ -17,8 +21,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
 import { createHash, randomBytes } from "crypto"
-import { blob, writePath, existsPath, deletePath, readPath } from "@/lib/storage"
+import { blob, writePath, existsPath, deletePath, readPath, listFiles } from "@/lib/storage"
 import { resumeEmails } from "@/lib/resumeOrganization"
+import { extractJdKeywords } from "@/lib/keywords"
+import { categoryForJob, isTailoredName, learnedAll, learnedLine, pickBase, pointsOf, COMMON_AT, NO_EMAIL } from "@/lib/resume-library"
+import { absOf, forgetTailored, readLibraryChecked, saveTailored, saveUpload } from "@/lib/resume-library-store"
+import { claimLinkCode, linkedUserId } from "@/lib/whatsapp-link"
+import { isPdf } from "@/lib/pdf-text"
+import { plainFailure } from "@/lib/plain-failure"
 import { recoverLibraryResume } from "@/lib/resumeRecovery"
 import { extractText } from "@/lib/docx"
 import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
@@ -55,28 +65,42 @@ async function outputNameFor(resume: Buffer | null): Promise<string> {
 }
 const OUTPUT_NAME = process.env.WHATSAPP_OUTPUT_NAME || "MarketFit Resume"
 const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-// Every resume the bot sends is kept so a swipe-reply can edit that exact version. It lives
-// OUTSIDE the resume library on purpose: versions never appear on the dashboard (as files
-// or folders) and never compete in auto-select matching.
+// Every resume the bot sends is kept so a swipe-reply can edit that exact version. This copy lives outside the resume
+// library: it is the bot's own record of what it sent, under the id of the message. (Until 13 Oct 2026 it was the ONLY
+// copy, "on purpose", so nothing the bot made ever showed in Files. Now a second copy goes to Files: see `deliver`.)
 const VERSIONS_DIR = path.join(DATA_DIR, "whatsapp", "versions")
 const MAX_VERSIONS = Number(process.env.WHATSAPP_MAX_VERSIONS) || 30
+// The resume a person sent, kept for this number alone. It is not in the shared library folder, so tidying Files can
+// never move or remove it, and no other number's job can be started from it.
+const BASELINE_DIR = path.join(DATA_DIR, "whatsapp", "baseline")
+const UUID = /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i
 
 const digits = (from: string) => from.replace(/\D/g, "")
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
+const under = (dir: string, file: string) => path.resolve(file).startsWith(path.resolve(dir) + path.sep)
+const userDirOf = (userId: string) => path.join(USER_RESUMES_DIR, userId)
 
 type Meta = { role: string; company: string; location: string }
-type Session = { jd?: string; resumePath?: string; resumeName?: string; resumeAt?: number; seen?: string[]; updatedAt?: number }
+type Session = {
+  jd?: string; resumePath?: string; resumeName?: string; resumeAt?: number; seen?: string[]; updatedAt?: number
+  /** The one email written on the kept resume ("" when none or several): which person's folder its jobs are saved in. */
+  resumeEmail?: string
+  /** The last job description a resume was made for, so "original" can make it again from the resume as sent. */
+  lastJd?: string
+}
 const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
+// What outlives a finished job and a quiet day: the resume. Only a half-finished exchange (a job description waiting for
+// its resume) is forgotten.
+const kept = (s: Session): Session => ({ seen: s.seen?.slice(-40), resumePath: s.resumePath, resumeName: s.resumeName, resumeAt: s.resumeAt, resumeEmail: s.resumeEmail, lastJd: s.lastJd })
 
 async function loadSession(from: string): Promise<Session> {
   try {
     const raw = await blob.getText(sessionKey(from))
     if (!raw) return {}
     const s = JSON.parse(raw) as Session
-    // Forget a stale half-finished conversation rather than pairing a new JD with a
-    // resume that was sent days ago.
+    // A job description left waiting for a day is dropped. The resume is not: it is sent once and kept.
     const ttl = Number(process.env.WHATSAPP_SESSION_TTL_MS) || 24 * 60 * 60 * 1000
-    if (s.updatedAt && Date.now() - s.updatedAt > ttl) return { seen: s.seen?.slice(-40) }
+    if (s.updatedAt && Date.now() - s.updatedAt > ttl) return kept(s)
     return s
   } catch { return {} }
 }
@@ -95,20 +119,34 @@ type Gen = {
   changes: string[]     // change requests applied so far, oldest first
   source?: string       // the uploaded resume the chain started from
   createdAt: number
+  saved?: string        // the copy of this version in the person's Files, when it was saved there
+  depth?: number        // 1: made from a resume the person wrote; 2: made from a saved resume that was made for a job
 }
 const genDir = (from: string) => `whatsapp/gens/${digits(from)}`
 
-async function resolveWhatsAppUserId(from: string): Promise<string | null> {
-  if (process.env.WHATSAPP_IDENTITY_BINDING_REQUIRED !== "1") return FALLBACK_USER_ID
+/**
+ * Who this number writes as. `own` is true when the account was found for THIS number (it joined itself with a code, the
+ * owner named it in settings, or its mobile number was verified); false when it is the default every unjoined number
+ * shares. `saves` says whether what the bot makes is put in Files: for an account of its own, or when the deployment's
+ * default is itself a real account.
+ */
+type Who = { userId: string; own: boolean; saves: boolean }
+async function resolveWhatsAppUser(from: string): Promise<Who | null> {
+  const who = (userId: string, own: boolean): Who => ({ userId, own, saves: own || UUID.test(userId) })
+  // A number that joined itself to an account with a code from the WhatsApp page (src/lib/whatsapp-link.ts).
+  const linked = await linkedUserId(from).catch(() => null)
+  if (linked) return who(linked, true)
   // A number the owner listed in settings is answered without the binding (see src/lib/owner.ts for why).
   const owner = ownerWhatsAppUserId(from, FALLBACK_USER_ID)
-  if (owner) return owner
-  if (!serviceClientAvailable()) return null
-  const phone = `+${digits(from)}`
-  const service = createServiceClient()
-  const { data, error } = await service.rpc("identity_resolve_whatsapp_user", { p_phone_e164: phone })
-  if (error || !data) return null
-  return String(data)
+  if (owner) return who(owner, owner !== FALLBACK_USER_ID)
+  const required = process.env.WHATSAPP_IDENTITY_BINDING_REQUIRED === "1"
+  if (serviceClientAvailable()) {
+    try {
+      const { data, error } = await createServiceClient().rpc("identity_resolve_whatsapp_user", { p_phone_e164: `+${digits(from)}` })
+      if (!error && data) return who(String(data), true)
+    } catch { /* the database is not reachable: fall through to the default, or to nobody when a binding is required */ }
+  }
+  return required ? null : who(FALLBACK_USER_ID, false)
 }
 
 async function recordWhatsAppUsage(userId: string, featureKey: string, result: TailorResult) {
@@ -146,8 +184,8 @@ async function loadGen(from: string, wamid: string): Promise<Gen | null> {
 // Keep the original WhatsApp version ledger independent for swipe-reply editing.
 async function archiveGeneratedResume(from: string, wamid: string, gen: Gen): Promise<void> {
   // Only an explicitly bound UUID may write to the multi-tenant database.
-  if (!serviceClientAvailable() || !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(gen.userId)) return
-  const boundUser = await resolveWhatsAppUserId(from)
+  if (!serviceClientAvailable() || !UUID.test(gen.userId)) return
+  const boundUser = (await resolveWhatsAppUser(from))?.userId
   if (!boundUser || boundUser !== gen.userId) return
   const bytes = await readPath(gen.file)
   if (!bytes) return
@@ -201,17 +239,19 @@ async function saveGen(from: string, wamid: string, gen: Gen): Promise<void> {
 const HELP = [
   "*Resume Tailor Bot*",
   "",
-  "Send me two things, in any order:",
-  "1. The *job description* (paste it as a message)",
-  "2. Your *resume* as a .docx file",
-  "Already saved one? Send *resumes* to browse, then *resume <id>* to recover the original.",
+  "1. Send your *resume* once, as a Word (.docx) file. I keep it.",
+  "2. Paste a *job description*. I tailor the resume to it and send it back as a Word file named after you.",
   "",
-  "As soon as I have both, I'll tailor it and send it back as a Word file named after you.",
+  "After the first time, the job description is all I need.",
   "",
-  "*Want changes?* Swipe right on a resume I sent (or long-press → Reply) and type what to change, e.g. _add more Terraform_ or _make the bullets shorter_. Each update builds on the version you replied to, so you can keep refining.",
+  "Every resume I make is saved in your *Files* in MarketFit, in a folder for that kind of job. The next job of the same kind starts from the closest one saved there.",
   "",
-  "Commands: *reset* · *status* · *help*",
+  "*Want changes?* Swipe right on a resume I sent (or long-press → Reply) and type what to change, e.g. _add more Terraform_ or _make the bullets shorter_.",
+  "",
+  "Commands: *status* · *library* · *original* · *reset* · *help*",
 ].join("\n")
+
+const NOT_IN_FILES = "_Not in your Files yet. In MarketFit, open WhatsApp, press Link this number, and send me the code it shows._"
 
 // ── Meta webhook verification (GET) ───────────────────────────────────────────
 export async function GET(request: NextRequest) {
@@ -247,9 +287,13 @@ export async function POST(request: NextRequest) {
   const msgId = String(msg.id || "")
   if (!from || !senderAllowed(from)) return ok()
 
-  const userId = await resolveWhatsAppUserId(from)
-  if (!userId) {
-    try { await sendText(from, "This WhatsApp number is not linked to a MarketFit account. Sign in with Google and verify this same mobile number in MarketFit first.") } catch {}
+  const began = Date.now()
+  let who = await resolveWhatsAppUser(from)
+  // "link <code>" is how a number joins an account, so it is answered before anything asks whether it has one.
+  const typed = String(msg.type || "") === "text" ? String((msg.text as { body?: string })?.body || "").trim() : ""
+  const linking = typed.match(/^link[\s:#-]+([A-Za-z0-9]{4}[\s-]?[A-Za-z0-9]{4})$/i)
+  if (!who && !linking) {
+    try { await sendText(from, "This WhatsApp number is not joined to a MarketFit account yet. Sign in to MarketFit, open WhatsApp, press Link this number, and send me the code it shows.") } catch {}
     return ok()
   }
 
@@ -261,15 +305,68 @@ export async function POST(request: NextRequest) {
   await saveSession(from, session)
 
   try {
-    await handle(from, msg, session, userId)
+    if (linking) who = await link(from, linking[1], who)
+    else if (who) await handle(from, msg, session, who)
+    // Resumes this number was sent before its account could hold them are put in Files now, once. It is skipped when
+    // this message already used most of its minute, and done on the next one.
+    if (who?.saves && Date.now() - began < 20_000) await moveEarlierIntoFiles(from, who, began + 45_000).catch(e => console.error("[whatsapp] earlier resumes not moved", String(e).slice(0, 200)))
   } catch (e) {
-    try { await sendText(from, `Something went wrong: ${String(e).slice(0, 300)}`) } catch { /* ignore */ }
+    // The whole of it is for the server log. The person is told what could not be done, in a sentence (owner, 13 Oct
+    // 2026: "We should not show any failpoints, at least give minimal of real info").
+    console.error("[whatsapp] message failed", String(e).slice(0, 400))
+    try { await sendText(from, plainFailure(e, "do that", true)) } catch { /* ignore */ }
   }
   return ok()
 }
 
-async function handle(from: string, msg: Record<string, unknown>, session: Session, userId: string) {
+// ── Joining this number to an account, and the resumes made before it was joined ──────────────────────────────────
+async function link(from: string, code: string, before: Who | null): Promise<Who | null> {
+  const claim = await claimLinkCode(from, code)
+  if (!claim.ok) {
+    await sendText(from, claim.why === "too_many"
+      ? "That is five codes in an hour that did not match, so I have stopped checking for now. Try again in an hour with a new code from the WhatsApp page of MarketFit."
+      : "That code did not match. Codes work once and for 15 minutes. Open WhatsApp in MarketFit, press Link this number for a new one, and send it as: link CODE")
+    return before
+  }
+  const who: Who = { userId: claim.userId, own: true, saves: true }
+  const moved = await moveEarlierIntoFiles(from, who, Date.now() + 40_000, true).catch(() => 0)
+  await sendText(from, [
+    "*Linked.* Every resume I make for this number is now saved in your Files in MarketFit, in a folder for its kind of job.",
+    ...(moved ? [`I also put ${moved} resume${moved === 1 ? "" : "s"} I made for you earlier in there.`] : []),
+    "Send a job description whenever you are ready.",
+  ].join("\n"))
+  return who
+}
+
+// The versions the bot still holds for this number (the newest MAX_VERSIONS), saved into Files once. A resume and the
+// changes made to it are one job: only its newest version is kept. Safe to run again: what is saved is skipped.
+async function moveEarlierIntoFiles(from: string, who: Who, until: number, again = false): Promise<number> {
+  const doneKey = `whatsapp/moved/${digits(from)}-${who.userId.replace(/[^A-Za-z0-9_-]/g, "_")}.json`
+  if (!again && (await blob.getText(doneKey).catch(() => null))) return 0
+  const index = JSON.parse((await blob.getText(`${genDir(from)}/_index.json`)) || "[]") as { key: string; file: string }[]
+  const userDir = userDirOf(who.userId)
+  const newest = new Map<string, string>()      // job description -> the copy in Files of its newest version so far
+  let moved = 0, finished = true
+  for (const item of index) {
+    if (Date.now() > until) { finished = false; break }
+    const raw = await blob.getText(item.key).catch(() => null)
+    if (!raw) continue
+    const gen = JSON.parse(raw) as Gen
+    if (gen.saved && under(userDir, gen.saved)) { newest.set(gen.jd, gen.saved); continue }
+    const bytes = await readPath(gen.file)
+    if (!bytes) continue
+    const saved = await saveTailored({ userDir, bytes, jd: gen.jd, role: gen.meta?.role, company: gen.meta?.company, depth: gen.depth === 2 ? 2 : 1, replaces: newest.get(gen.jd), now: gen.createdAt })
+    newest.set(gen.jd, saved.abs)
+    await blob.put(item.key, JSON.stringify({ ...gen, userId: who.userId, saved: saved.abs }))
+    moved++
+  }
+  if (finished) await blob.put(doneKey, JSON.stringify({ at: Date.now(), moved }))
+  return moved
+}
+
+async function handle(from: string, msg: Record<string, unknown>, session: Session, who: Who) {
   const type = String(msg.type || "")
+  const userId = who.userId
 
   // ── Commands / change requests / JD text ────────────────────────────────────
   if (type === "text") {
@@ -314,19 +411,33 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     }
     if (["help", "hi", "hello", "start", "menu"].includes(cmd)) return sendText(from, HELP)
     if (cmd === "reset" || cmd === "clear") {
+      // The waiting job description is dropped. The resume is kept: it is sent once. "forget resume" drops it too.
+      await saveSession(from, kept(session))
+      return sendText(from, session.resumeName ? `Cleared. I still have your resume *${session.resumeName}*: paste a job description to use it, or send *forget resume* to drop it.` : "Cleared. Send your resume as a Word (.docx) file, then a job description.")
+    }
+    if (cmd === "forget resume" || cmd === "forget my resume") {
+      if (session.resumePath && under(path.join(BASELINE_DIR, digits(from)), session.resumePath)) await deletePath(session.resumePath).catch(() => {})
       await saveSession(from, { seen: session.seen })
-      return sendText(from, "Cleared. Send a new job description and resume.")
+      return sendText(from, "Done. I no longer have your resume. The ones already in your Files are untouched. Send a Word (.docx) file when you want me to keep a new one.")
     }
     if (cmd === "status") {
       return sendText(from, [
-        `JD: ${session.jd ? "received" : "waiting"}`,
-        `Resume: ${session.resumeName ? session.resumeName : "waiting"}`,
+        `Resume: ${session.resumeName ? `${session.resumeName} (kept)` : "none yet. Send it once as a Word (.docx) file."}`,
+        `Job description: ${session.jd ? "received" : "waiting"}`,
+        who.saves ? "Files: every resume I make is saved in your Files in MarketFit." : "Files: not joined yet. Open WhatsApp in MarketFit and press Link this number.",
       ].join("\n"))
+    }
+    if (cmd === "library" || cmd === "files") return library(from, who)
+    if (cmd === "original") {
+      // The last job again, started from the resume as the person sent it and not from a saved one.
+      if (!session.resumePath) return sendText(from, "I do not have a resume from you yet. Send it once as a Word (.docx) file.")
+      if (!session.lastJd) return sendText(from, "Paste the job description and I will start from your resume as you sent it.")
+      return generate(from, { ...session, jd: session.lastJd }, who, TAILOR_BUDGET_MS, true)
     }
     // A swipe-reply is a change request for the resume being replied to. Checked before
     // the JD path: a reply is never a new JD (new JDs are always pasted as their own message).
     const replyTo = (msg.context as { id?: string } | undefined)?.id
-    if (replyTo) return refine(from, replyTo, text, userId)
+    if (replyTo) return refine(from, replyTo, text, who)
 
     // Too short to be a JD — most likely a stray message, so guide instead of guessing.
     if (text.length < 60) {
@@ -335,7 +446,12 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 
     session.jd = text
     await saveSession(from, session)
-    if (!session.resumePath) return sendText(from, "Got the job description. Now send your resume as a *.docx* file.")
+    if (!session.resumePath) {
+      // No resume was ever sent from this number. An account of its own may already hold resumes in Files: the closest
+      // one is used. The default account every unjoined number shares is never searched: it holds other people's.
+      if (who.own && (await listFiles(userDirOf(userId)).catch(() => [] as string[])).some(f => /\.docx$/i.test(f))) return generate(from, session, who)
+      return sendText(from, "Got the job description. Now send your resume as a Word (*.docx*) file. I keep it, so you only send it once.")
+    }
     // The stored resume is from an earlier attempt and a new one is usually right behind the JD: tailoring at once ran two
     // tailors side by side (2026-10-05, 13:07), the old resume and the new one, on the same allowance. Wait briefly; if a
     // new resume lands, its own message tailors it.
@@ -344,44 +460,114 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       await new Promise(r => setTimeout(r, RESUME_GRACE_MS))
       const now = await loadSession(from)
       if ((now.resumeAt || 0) > askedAt) return
-      return generate(from, { ...now, jd: text }, userId, TAILOR_BUDGET_MS - RESUME_GRACE_MS)
+      return generate(from, { ...now, jd: text }, who, TAILOR_BUDGET_MS - RESUME_GRACE_MS)
     }
-    return generate(from, session, userId)
+    return generate(from, session, who)
   }
 
   // ── Resume upload ───────────────────────────────────────────────────────────
   if (type === "document") {
     const doc = msg.document as { id?: string; filename?: string; mime_type?: string } | undefined
     const filename = doc?.filename || "resume.docx"
-    if (!doc?.id || (doc.mime_type !== DOCX && !filename.toLowerCase().endsWith(".docx"))) {
-      return sendText(from, "I can only read *.docx* resumes. Please export from Word and resend.")
+    const pdf = doc?.mime_type === "application/pdf" || /\.pdf$/i.test(filename)
+    if (!doc?.id || (!pdf && doc.mime_type !== DOCX && !filename.toLowerCase().endsWith(".docx"))) {
+      return sendText(from, "I can read a resume as a Word (*.docx*) file, and keep a *PDF* in your Files. Please send one of those.")
     }
     const bytes = await downloadMedia(doc.id)
-    // Keep bot uploads in their own folder so they don't clutter the web library, and
-    // reuse the same filename so re-sending simply replaces the previous copy.
+    if (pdf) {
+      // A PDF is kept, never rewritten: tailoring edits a Word file in place, and a PDF has no such text to edit.
+      if (!isPdf(bytes)) return sendText(from, "That file is named as a PDF but is not one. Please send it again.")
+      const word = "To tailor it I need the same resume as a Word (*.docx*) file, once."
+      if (!who.saves) return sendText(from, `I can keep a PDF in your Files once this number is joined to your account. ${word}\n\n${NOT_IN_FILES}`)
+      const saved = await saveUpload({ userDir: userDirOf(userId), bytes, filename, kind: "pdf" })
+      return sendText(from, `Saved *${saved.name}.pdf* in your Files, in ${saved.folder}. ${word}`)
+    }
+    // The resume this number tailors from. It is kept for this number alone, under one name per file so sending the
+    // same file again replaces it.
     const safe = filename.replace(/[^A-Za-z0-9._\- ()]/g, "_").replace(/\.docx$/i, "") + ".docx"
-    const dest = path.join(USER_RESUMES_DIR, userId, "WhatsApp", safe)
+    const dest = path.join(BASELINE_DIR, digits(from), safe)
     await writePath(dest, bytes)
+    // A copy goes to Files, as before, in its own folder: the resumes sent over WhatsApp as they were sent.
+    if (who.saves) await writePath(path.join(userDirOf(userId), "WhatsApp", safe), bytes).catch(() => {})
 
     session.resumePath = dest
     session.resumeName = safe.replace(/\.docx$/i, "")
     session.resumeAt = Date.now()
+    session.resumeEmail = await emailOn(bytes)
     await saveSession(from, session)
-    if (!session.jd) return sendText(from, `Saved *${session.resumeName}*. Now paste the job description.`)
-    return generate(from, session, userId)
+    if (!session.jd) return sendText(from, `Saved *${session.resumeName}*. I will keep it: from now on a job description is all I need. Paste one.`)
+    return generate(from, session, who)
   }
 
   return sendText(from, HELP)
 }
 
+// The one email written on a resume, or "" when there is none or more than one.
+async function emailOn(bytes: Buffer): Promise<string> {
+  try { const emails = resumeEmails(await extractText(bytes)); return emails.length === 1 ? emails[0] : "" } catch { return "" }
+}
+
+// "library": what the jobs of each kind keep asking for, read from the resumes saved in Files.
+async function library(from: string, who: Who) {
+  if (!who.saves) return sendText(from, `Nothing is saved in Files for this number yet.\n\n${NOT_IN_FILES}`)
+  const kinds = learnedAll(await readLibraryChecked(userDirOf(who.userId))).filter(k => k.files > 0)
+  if (!kinds.length) return sendText(from, "Your Files hold no resumes made for a job yet. Paste a job description and the first one is saved there.")
+  const lines = kinds.slice(0, 8).flatMap(k => [
+    `*${k.category}*${k.email && k.email !== NO_EMAIL ? ` (${k.email})` : ""}: ${k.files} saved, ${k.jobs} job${k.jobs === 1 ? "" : "s"}`,
+    ...(k.common.length ? [`Asked for by ${COMMON_AT} or more: ${k.common.slice(0, 10).map(c => c.word).join(", ")}`] : k.jobs < COMMON_AT ? [`After ${COMMON_AT} jobs of this kind I can say what they all ask for.`] : []),
+    ...(k.recent.length ? [`Newest asks: ${k.recent.slice(0, 6).join(", ")}`] : []),
+    "",
+  ])
+  return sendText(from, ["*Your library*", "", ...lines].join("\n").trim())
+}
+
+// Where the next resume starts from.
+type Source = { dir: string; givenPath?: string; depth: number; said: string; from?: string }
+async function sourceFor(from: string, session: Session, who: Who, jd: string, original: boolean): Promise<Source | null> {
+  const mine = path.join(BASELINE_DIR, digits(from)), userDir = userDirOf(who.userId)
+  let own: Source | null = null
+  if (session.resumePath && (await existsPath(session.resumePath))) {
+    const dir = under(mine, session.resumePath) ? mine : under(userDir, session.resumePath) ? userDir : ""
+    if (dir) own = { dir, givenPath: session.resumePath, depth: 1, said: `your resume *${session.resumeName || "as sent"}*` }
+    else {
+      // Kept under the folder of the account this number wrote as before it was joined: brought along, once.
+      const bytes = await readPath(session.resumePath)
+      if (bytes) {
+        const dest = path.join(mine, path.basename(session.resumePath))
+        await writePath(dest, bytes)
+        session.resumePath = dest
+        own = { dir: mine, givenPath: dest, depth: 1, said: `your resume *${session.resumeName || "as sent"}*` }
+      }
+    }
+  }
+  // A resume sent with this job description, or asked for by name ("original"), is the one used.
+  const sentNow = Date.now() - (session.resumeAt || 0) <= STALE_RESUME_MS + RESUME_GRACE_MS + 5_000
+  if (!who.saves || (own && (sentNow || original))) return own
+  if (own) {
+    if (session.resumeEmail === undefined) session.resumeEmail = await emailOn((await readPath(own.givenPath as string)) || Buffer.alloc(0))
+    const category = categoryForJob(jd)
+    const pick = pickBase(await readLibraryChecked(userDir), { email: session.resumeEmail || NO_EMAIL, category, asked: extractJdKeywords(jd) })
+    if (pick && pick.shows > 0) {
+      const abs = absOf(userDir, pick.file.path)
+      if (await existsPath(abs)) return { dir: userDir, givenPath: abs, depth: 2, from: pick.file.path, said: `your saved *${category}* resume${pick.file.role ? ` (${clip(pick.file.role, 60)})` : ""}, which already shows ${pick.shows} of the ${pick.of} things this job asks for` }
+    }
+    return own
+  }
+  // No resume from this number: the closest one in the account's own Files (the tailor picks it).
+  return who.own ? { dir: userDir, depth: 1, said: "the closest resume in your Files" } : null
+}
+
 // ── Tailor + reply ────────────────────────────────────────────────────────────
-async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS) {
+async function generate(from: string, session: Session, who: Who, maxMs = TAILOR_BUDGET_MS, original = false) {
+  const userId = who.userId
   // GPT Luna leads (OPENAI_TAILOR_FOR, llm.ts), within the admin's checklist of what each key may be used for (keyVault.ts).
   const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
-  if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
-  if (!session.jd || !session.resumePath) return sendText(from, HELP)
+  if (!hasAnyKey(keys)) return sendText(from, "I cannot tailor yet: no AI service is switched on for this. The owner of this site can switch one on from the Admin page.")
+  if (!session.jd) return sendText(from, HELP)
+  const source = await sourceFor(from, session, who, session.jd, original)
+  if (!source) return sendText(from, "I do not have a resume from you yet. Send it once as a Word (*.docx*) file and I will keep it.")
 
-  await sendText(from, "Tailoring your resume… every client role gets its own pass, so this takes up to a minute.")
+  await sendText(from, `Tailoring from ${source.said}… every client role gets its own pass, so this takes up to a minute.`)
 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd })
@@ -393,8 +579,10 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     result = await runTailor({
       jd: session.jd,
       keys,
-      userResumeDir: path.join(USER_RESUMES_DIR, userId),
-      givenPath: session.resumePath,
+      // The folder the starting resume is in: this number's own kept resume, or the account's Files. The tailor refuses
+      // a file outside the folder it is given, so a record can never point it at someone else's.
+      userResumeDir: source.dir,
+      givenPath: source.givenPath,
       mode: "full",
       maxMs,
       // Match the dashboard defaults: summary left as written, skills + experience retargeted.
@@ -420,15 +608,21 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
 
   const meta = await metaPromise
   const name = await outputNameFor(file)
-  await deliver(from, file, name, captionFor(name, meta, result), { userId, jd: session.jd, meta, changes: [], source: session.resumeName })
+  // A resume the tailor picked from Files may itself have been made for a job: what is made from it is never started from again.
+  const depth = source.depth === 2 || (!source.givenPath && isTailoredName(result.matched?.filename || "")) ? 2 : 1
+  const keep: Keep | undefined = who.saves ? { userDir: userDirOf(userId), depth, from: source.from, result } : undefined
+  const where = who.saves ? [`Saved in your Files: ${categoryForJob(session.jd)}`] : [NOT_IN_FILES]
+  const started = source.depth === 2 ? ["Started from a resume saved in that folder. Send *original* to start from your resume as you sent it."] : []
+  await deliver(from, file, name, captionFor(name, meta, result, undefined, [...where, ...started]), { userId, jd: session.jd, meta, changes: [], source: session.resumeName, depth }, keep)
   await recordWhatsAppUsage(userId, "resume_tailor", result)
 
-  // Every generation starts fresh: keep only the de-dupe list.
-  await saveSession(from, { seen: session.seen })
+  // The job is done, so its description is put away. The resume stays: it is sent once.
+  await saveSession(from, { ...kept(session), lastJd: session.jd })
 }
 
 // ── Swipe-reply: change a resume the bot already sent ─────────────────────────
-async function refine(from: string, replyTo: string, request: string, userId: string) {
+async function refine(from: string, replyTo: string, request: string, who: Who) {
+  const userId = who.userId
   const gen = await loadGen(from, replyTo)
   if (!gen) {
     return sendText(from, [
@@ -437,13 +631,26 @@ async function refine(from: string, replyTo: string, request: string, userId: st
       "(If that was a resume, it's no longer on file. Send the JD and resume again.)",
     ].join("\n"))
   }
-  if (gen.userId !== userId) return sendText(from, "That resume version belongs to a different MarketFit identity.")
+  // The record was found under this number, so it is this number's. A resume made before the number was joined to an
+  // account was written as the default bot user: it may still be changed. Anything else is refused.
+  if (gen.userId !== userId && gen.userId !== FALLBACK_USER_ID) return sendText(from, "That resume was made under a different MarketFit account, so I cannot change it from here.")
   if (request.length < 3) {
     return sendText(from, "Tell me what to change, e.g. _add more Terraform and AWS_ or _make the bullets shorter_.")
   }
+  // "save": put this exact version in Files (it was not saved when it was made, or the number was joined since). No AI.
+  if (/^save(?: (?:it|this|to files|in files))?[.!]?$/i.test(request)) {
+    if (!who.saves) return sendText(from, NOT_IN_FILES)
+    const dir = userDirOf(userId)
+    if (gen.saved && under(dir, gen.saved) && (await existsPath(gen.saved))) return sendText(from, `That one is already in your Files: ${categoryForJob(gen.jd)}.`)
+    const bytes = await readPath(gen.file)
+    if (!bytes) return sendText(from, "That version is no longer on file, so I cannot save it. Paste the job description again.")
+    const filed = await saveTailored({ userDir: dir, bytes, jd: gen.jd, role: gen.meta?.role, company: gen.meta?.company, depth: gen.depth === 2 ? 2 : 1 })
+    await blob.put(genKey(from, replyTo), JSON.stringify({ ...gen, userId, saved: filed.abs }))
+    return sendText(from, `Saved in your Files: ${filed.category}.`)
+  }
   const keys = await keysFor("resume-change", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
-  if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
-  if (!(await existsPath(gen.file))) return sendText(from, "That version is no longer on file. Send the JD and resume again.")
+  if (!hasAnyKey(keys)) return sendText(from, "I cannot change it yet: no AI service is switched on for this. The owner of this site can switch one on from the Admin page.")
+  if (!(await existsPath(gen.file))) return sendText(from, "That version is no longer on file. Paste the job description again.")
 
   await sendText(from, `Updating your resume: "${clip(request, 200)}"…`)
 
@@ -487,28 +694,59 @@ async function refine(from: string, replyTo: string, request: string, userId: st
   const meta = await metaPromise
   const changes = [...(gen.changes || []), request]
   const name = await outputNameFor(file)
-  await deliver(from, file, name, captionFor(name, meta, result, { request, number: changes.length, lines }), {
-    userId, jd: gen.jd, meta, changes, source: gen.source,
-  })
+  // The changed resume takes the place of the one it changed in Files: one job, one file, the newest.
+  const userDir = userDirOf(userId)
+  const keep: Keep | undefined = who.saves ? { userDir, depth: gen.depth === 2 ? 2 : 1, result, replaces: gen.saved && under(userDir, gen.saved) ? gen.saved : undefined } : undefined
+  await deliver(from, file, name, captionFor(name, meta, result, { request, number: changes.length, lines }, who.saves ? [`Saved in your Files: ${categoryForJob(gen.jd)}`] : []), {
+    userId, jd: gen.jd, meta, changes, source: gen.source, depth: gen.depth,
+  }, keep)
   await recordWhatsAppUsage(userId, "resume_refine", result)
 }
 
+// What saving a resume into Files needs beyond the file: whose library, how it was made, and what the tailoring found.
+type Keep = { userDir: string; depth: number; from?: string; result?: TailorResult; replaces?: string }
+
 // Send the document and keep a copy of this exact version, recorded under the sent
 // message's id, so a later swipe-reply to it can be traced back and edited.
-async function deliver(from: string, file: Buffer, name: string, caption: string, gen: Omit<Gen, "file" | "createdAt">) {
+async function deliver(from: string, file: Buffer, name: string, caption: string, gen: Omit<Gen, "file" | "createdAt">, keep?: Keep) {
   const vfile = path.join(VERSIONS_DIR, digits(from), `${Date.now().toString(36)}-${randomBytes(4).toString("hex")}.docx`)
   // Store the copy while the upload runs, so it costs no extra wall time.
   const stored = writePath(vfile, file).then(() => true, () => false)
+  // The copy for Files is saved while the upload runs too: in the folder for this kind of job, with what the job asked
+  // for counted. This is what was missing until 13 Oct 2026: the bot kept its own copy and Files never got one.
+  const ka = keep?.result?.keyword_analysis
+  const filing = keep
+    ? saveTailored({
+        userDir: keep.userDir, bytes: file, jd: gen.jd, role: gen.meta?.role, company: gen.meta?.company, depth: keep.depth, from: keep.from,
+        asked: ka ? [...ka.matched, ...ka.added, ...ka.missing] : undefined, covers: ka ? [...ka.matched, ...ka.added] : undefined, points: pointsOf(keep.result?.diff),
+      }).catch(e => { console.error("[whatsapp] not saved in Files", String(e).slice(0, 300)); return null })
+    : Promise.resolve(null)
   let wamid = ""
   try {
     wamid = await sendDocument(from, file, `${name}.docx`, caption)
   } catch (e) {
     if (await stored) await deletePath(vfile)
+    // It never reached the person, so it is not left in their Files as if it had. The resume it would have taken the
+    // place of is still there: that one is only removed after a send that worked.
+    const filed = await filing
+    if (filed && keep) await forgetTailored(keep.userDir, filed.abs).catch(() => {})
     throw e
   }
-  if (!(await stored)) return
-  if (wamid) await saveGen(from, wamid, { ...gen, file: vfile, createdAt: Date.now() })
-  else await deletePath(vfile)
+  // The record a swipe-reply needs is written first: if the minute runs out during what follows, the person can still
+  // reply to the file they hold.
+  const kept_ = (await stored) && !!wamid
+  if (kept_) await saveGen(from, wamid, { ...gen, file: vfile, createdAt: Date.now() })
+  else if (await stored) await deletePath(vfile)
+  const filed = await filing
+  // The caption said where it was saved. When that did not happen, the person is told, so the caption is not left wrong.
+  if (keep && !filed) { try { await sendText(from, "One thing: I could not save that resume in your Files this time. The file above is complete; swipe-reply to it with *save* and I will try again.") } catch { /* ignore */ } }
+  if (!filed || !keep) return
+  if (kept_) await blob.put(genKey(from, wamid), JSON.stringify({ ...gen, file: vfile, createdAt: Date.now(), saved: filed.abs })).catch(() => {})
+  // A change the person asked for takes the place of the file it changed: one job, one file, the newest.
+  if (keep.replaces && keep.replaces !== filed.abs) await forgetTailored(keep.userDir, keep.replaces).catch(() => {})
+  // The third job of a kind is the first time something true can be said about what they all ask for: said once.
+  const line = filed.counted && filed.learned.jobs === COMMON_AT ? learnedLine(filed.learned) : ""
+  if (line) { try { await sendText(from, `${line}\n\nSend *library* any time to see this for every kind of job.`) } catch { /* ignore */ } }
 }
 
 // "Experience: 41 bullets rewritten across 4/4 roles" + the listed JD skills each role's bullets
@@ -526,7 +764,7 @@ function experienceLine(result: TailorResult): string[] {
   ]
 }
 
-function captionFor(name: string, meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }): string {
+function captionFor(name: string, meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }, more: string[] = []): string {
   // Measured coverage of the document being sent (older cached results lack it).
   const cov = result.coverage ?? result.keyword_analysis.coverage_after
   const added = result.keyword_analysis.added.length
@@ -552,6 +790,7 @@ function captionFor(name: string, meta: Meta, result: TailorResult, update?: { r
     ...(meta.location ? [`Location: ${meta.location}`] : []),
     "",
     ...stats,
+    ...(more.length ? ["", ...more] : []),
     "",
     "_Swipe-reply to this file with any changes and I'll update it._",
   ].join("\n")

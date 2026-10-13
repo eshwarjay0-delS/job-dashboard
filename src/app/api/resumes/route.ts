@@ -8,6 +8,8 @@ import { authenticatedUserId, signInRequired } from "@/lib/authBoundary"
 import { ensureIndex } from "@/lib/keywords"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
 import { listFiles, readPath, statPath, writePath, existsPath, deletePath, deleteDir } from "@/lib/storage"
+import { saveUpload } from "@/lib/resume-library-store"
+import { isPdf } from "@/lib/pdf-text"
 
 export const runtime = "nodejs"
 const MAX_DOCX_SIZE = 5 * 1024 * 1024  // 5 MB per .docx
@@ -20,6 +22,8 @@ export interface ResumeFile {
   category: string
   size: string
   uploadedAt: string
+  /** A PDF is kept in Files and can be downloaded; only a Word file can be tailored. GET lists Word files only. */
+  kind?: "docx" | "pdf"
 }
 
 function formatSize(bytes: number): string {
@@ -132,7 +136,7 @@ export async function POST(request: NextRequest) {
     if (file.size > MAX_ZIP_SIZE && file.name.toLowerCase().endsWith(".zip")) {
       return NextResponse.json({ error: `ZIP too large (max ${MAX_ZIP_SIZE / 1024 / 1024} MB).` }, { status: 413 })
     }
-    if (file.size > MAX_DOCX_SIZE && file.name.toLowerCase().endsWith(".docx")) {
+    if (file.size > MAX_DOCX_SIZE && /\.(docx|pdf)$/i.test(file.name)) {
       return NextResponse.json({ error: `File too large (max ${MAX_DOCX_SIZE / 1024 / 1024} MB).` }, { status: 413 })
     }
 
@@ -148,8 +152,22 @@ export async function POST(request: NextRequest) {
         if (entry.dir) continue
         const parts = entry.name.split("/").filter(p => p && p !== "." && !p.startsWith("__MACOSX"))
         const base = parts[parts.length - 1] || ""
-        if (!base.toLowerCase().endsWith(".docx") || base.startsWith("~$") || base.startsWith(".")) continue
+        const isPdfEntry = base.toLowerCase().endsWith(".pdf")
+        if ((!base.toLowerCase().endsWith(".docx") && !isPdfEntry) || base.startsWith("~$") || base.startsWith(".")) continue
         if (++candidates > MAX_ARCHIVE_FILES) return NextResponse.json({ error: "ZIP contains too many resumes (max 200).", added, skipped }, { status: 413 })
+        if (isPdfEntry) {
+          // A PDF in the zip is filed at once, under the email written on it and its kind of work: the tidy-up that
+          // follows a zip import sorts Word resumes only. Its name carries a hash of what is in it, so the same PDF
+          // sent again lands on the same file.
+          let pdfBytes: Buffer
+          try { pdfBytes = await readLimitedStream(entry.nodeStream(), Math.min(MAX_DOCX_SIZE, MAX_ZIP_SIZE - expanded)) }
+          catch { return NextResponse.json({ error: "ZIP expanded size limit exceeded (5 MB per file, 50 MB total).", added, skipped }, { status: 413 }) }
+          expanded += pdfBytes.length
+          if (!isPdf(pdfBytes)) { skipped++; continue }
+          const kept = await saveUpload({ userDir: user.dir, bytes: pdfBytes, filename: base, kind: "pdf" })
+          if (kept.existed) skipped++; else added++
+          continue
+        }
         const safe = parts.map(p => p.replace(/[^A-Za-z0-9.@+_ \-()]/g, "_"))
         const rel = safe.length > 1 ? safe : [safe[0].replace(/\.docx$/i, ""), safe[0]]
         const dest = path.join(user.dir, ...rel)
@@ -167,8 +185,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ zip: true, added, skipped })
     }
 
+    // ── PDF: kept in Files as it is ──────────────────────────────────────────
+    // Asked on 13 Oct 2026: "for the files, take PDFs ... not just [Word] and zip, but also PDFs." Its words are read
+    // only to choose the folder. It is never rewritten: tailoring edits a Word file in place.
+    if (file.name.toLowerCase().endsWith(".pdf")) {
+      const bytes = Buffer.from(await file.arrayBuffer())
+      if (!isPdf(bytes)) return NextResponse.json({ error: "That file is named as a PDF but is not one." }, { status: 400 })
+      const kept = await saveUpload({ userDir: user.dir, bytes, filename: file.name, kind: "pdf" })
+      const info = await statPath(kept.abs)
+      const entry: ResumeFile = {
+        id: fileId(kept.abs), filename: kept.name, filepath: kept.abs, category: kept.folder, kind: "pdf",
+        size: info ? formatSize(info.size) : formatSize(bytes.length), uploadedAt: (info?.mtime ?? new Date()).toISOString(),
+      }
+      // `read` is false when no words could be read from it (a scan): it was filed by its name alone.
+      return NextResponse.json({ file: entry, pdf: true, read: kept.read, already: kept.existed })
+    }
+
     if (!file.name.toLowerCase().endsWith(".docx")) {
-      return NextResponse.json({ error: "Upload a .docx resume or a .zip of resumes." }, { status: 400 })
+      return NextResponse.json({ error: "Upload a Word file (.docx), a PDF, or a .zip of them." }, { status: 400 })
     }
 
     // No resume-count limit — unlimited storage (personal use).

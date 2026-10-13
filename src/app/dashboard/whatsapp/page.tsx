@@ -2,15 +2,16 @@ import type { Metadata } from "next"
 import { waStatus, waDisplayNumber } from "@/lib/whatsapp"
 import { Card, Meta } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
+import LinkCard from "./link-card"
 
 // Credentials alone do not establish provider access. Probe the sender before offering chat.
 export const dynamic = "force-dynamic"
 export const metadata: Metadata = { title: "WhatsApp" }
 
 const STEPS = [
-  "Send the job post as a message.",
-  "Send your resume as a Word file (.docx).",
-  "MarketFit sends your resume back, fitted to that job.",
+  "Send your resume once, as a Word file (.docx). MarketFit keeps it.",
+  "Send a job post as a message. After the first time, that is all it needs.",
+  "MarketFit sends your resume back, fitted to that job, and saves it in your Files in a folder for that kind of job.",
   "Want a change? Swipe to reply to that resume and say what to change.",
 ]
 
@@ -44,6 +45,11 @@ export default async function WhatsAppPage() {
             {status.state === "test_number" ? "WhatsApp is using a test number and is only available to approved test recipients." : status.state === "not_configured" ? "WhatsApp is not configured yet." : "WhatsApp provider access could not be verified. Please try again later."}
           </p>
         )}
+      </Card>
+
+      <Card id="files" style={{ scrollMarginTop: 24, display: "flex", flexDirection: "column" }}>
+        <Meta>Save them in your Files</Meta>
+        <LinkCard bot={live ? digits : ""} />
       </Card>
     </div>
   )

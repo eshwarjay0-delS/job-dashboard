@@ -15,6 +15,8 @@ import DocumentsClient from "./DocumentsClient"
 type ResumeFile = {
   id: string; filename: string; filepath: string
   category: string; size: string; uploadedAt: string
+  /** A PDF is kept and can be downloaded; only a Word file can be tailored. */
+  kind?: "docx" | "pdf"
 }
 
 function formatSize(bytes: number): string {
@@ -44,12 +46,15 @@ async function scanLibrary(dir: string): Promise<{ files: ResumeFile[]; folders:
     for (let i = 1; i < parts.length; i++) folders.add(parts.slice(0, i).join(" / "))
     const base = parts[parts.length - 1]
     if (base === "_keywords.json" || base.startsWith(".")) continue
-    if (!base.toLowerCase().endsWith(".docx")) continue
+    // Word resumes, and PDFs (13 Oct 2026: "for the files, take PDFs ... as well").
+    const kind = base.toLowerCase().endsWith(".docx") ? "docx" : base.toLowerCase().endsWith(".pdf") ? "pdf" : null
+    if (!kind) continue
     const info = await statPath(full)
     files.push({
       id: fileId(full),
-      filename: base.replace(/\.docx$/i, ""),
+      filename: base.replace(/\.(docx|pdf)$/i, ""),
       filepath: full,
+      kind,
       category: parts.length > 1 ? parts.slice(0, -1).join(" / ") : "General",
       size: info ? formatSize(info.size) : "",
       uploadedAt: (info?.mtime ?? new Date()).toISOString(),
