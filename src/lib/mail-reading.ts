@@ -108,13 +108,15 @@ export function tidy(text: string): string {
   const host = (url: string) => url.replace(/^https?:\/\//i, "").split(/[/?#]/)[0] || url
   // An address a mail program wrote twice: "dana@site.example<mailto:dana@site.example>". Once is enough.
   t = t.replace(/<mailto:[^>\s]*>?/gi, "")
-  t = t.replace(/\[([^\]\n]{0,160})\]\((https?:\/\/[^\s)]+)\)/g, (_m, name: string, url: string) => (name.trim() ? `${name.trim()} (link: ${host(url)})` : `(link: ${host(url)})`))
+  // A link is read for at most 2,000 characters. With no limit, a body of links that never close ("x<https://y" over
+  // and over) was searched to its end from every one of them: 1 second for one 100,000-character mail, a minute for twenty.
+  t = t.replace(/\[([^\]\n]{0,160})\]\((https?:\/\/[^\s)]{1,2000})\)/g, (_m, name: string, url: string) => (name.trim() ? `${name.trim()} (link: ${host(url)})` : `(link: ${host(url)})`))
   // The spaces before the link are written so that only one part of the pattern can take any given space (the part
   // that ends in a line break, or the part after it): with two parts both able to, a long run of spaces was read over
   // and over (same measurement as above).
-  t = t.replace(/(\S)(?:[ \t]*\n)?[ \t]*<(https?:\/\/[^\s>]+)>/g, (_m, before: string, url: string) => `${before} (link: ${host(url)})`)
+  t = t.replace(/(\S)(?:[ \t]*\n)?[ \t]*<(https?:\/\/[^\s>]{1,2000})>/g, (_m, before: string, url: string) => `${before} (link: ${host(url)})`)
   // A bare link with a tracking tail: its address is kept, its tail is not shown.
-  t = t.replace(/https?:\/\/([^\s/<>"')]+)\/[^\s<>"')]{60,}/g, "https://$1/…")
+  t = t.replace(/https?:\/\/([^\s/<>"')]{1,255})\/[^\s<>"')]{60,}/g, "https://$1/…")
   // A plain-text email is cut at about 72 characters a line. A long line followed by a line that carries on in small
   // letters is one sentence: it is joined. A list, a signature and an address keep their lines.
   const lines = t.split("\n"), out: string[] = []
@@ -130,26 +132,89 @@ export interface Contacts { phones: Array<{ number: string; who: string }>; emai
 // A North American number as people write it in a signature: (608) 555-0123, 608-555-0123, +1 608 555 0123 x204.
 // Ten digits, so a job number ("166719") and a year are never taken for one.
 const PHONE = /(?<![\d.])(?:\+?1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}(?:\s*(?:x|ext\.?|extension)\s*\d{1,6})?(?![\d])/gi
-const ADDRESS = /[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi
-/** How to reach the people in this conversation: the numbers and addresses THEY wrote, never the person's own. */
+// The parts of an address are read up to the lengths an address may have, so a long unbroken run of letters is not
+// searched to its end from every letter in it.
+const ADDRESS = /[A-Z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@[A-Z0-9.-]{1,255}\.[A-Z]{2,}/gi
+const PHONE_LABEL = /(?:\b(?:phone|mobile|cell|direct|desk|office|tel|ph|call(?: me)?(?: at| on)?|reach me (?:at|on))\s*[:#.-]?\s*|(?:^|[\s(|,;])[mco]\s*[:.]\s*)$/i
+// A number that is said to be somebody else's: "Omar's direct line is ...", "his cell is ...".
+const SOMEONE_ELSES = /\b[A-Z][a-z]+['’]s\b|\b(?:his|her|their)\s+(?:number|line|cell|mobile|phone|desk)\b/
+
+/** The phone numbers written in a text, as ten digits and as they are shown. Job numbers and link tails are not numbers. */
+function numbersIn(text: string): Array<{ digits: string; shown: string; index: number; line: string }> {
+  const out: Array<{ digits: string; shown: string; index: number; line: string }> = []
+  for (const m of text.matchAll(PHONE)) {
+    const hit = m[0], at = m.index ?? 0
+    const before = text.slice(Math.max(0, at - 24), at)
+    // Another country's number ("+91-98765 43210") is not a ten-digit North American one with its front cut off.
+    if (/\+\d{1,3}[\s.-]?$/.test(before)) continue
+    // Ten digits in a row are a requisition number or the tail of a link unless a word before them says they are a phone.
+    const core = hit.replace(/\s*(?:x|ext\.?|extension)\s*\d+$/i, "")
+    if (!/\d[\s().-]+\d|^\(/.test(core) && !PHONE_LABEL.test(before)) continue
+    const digits = core.replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "")
+    if (digits.length !== 10) continue
+    const ext = hit.match(/(?:x|ext\.?|extension)\s*(\d+)$/i)?.[1]
+    const lineStart = text.lastIndexOf("\n", at) + 1, lineEnd = text.indexOf("\n", at)
+    out.push({ digits, shown: `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}${ext ? " ext. " + ext : ""}`, index: at, line: text.slice(lineStart, lineEnd < 0 ? text.length : lineEnd) })
+  }
+  return out
+}
+
+/**
+ * How to reach the people in this conversation: the numbers and addresses THEY wrote, never the person's own.
+ * A number counts as someone's when they typed it themselves (not in mail they only quoted), it is not a number that
+ * stands in any of the person's own messages, and it is not said to be somebody else's ("Omar's direct line is ...":
+ * then it is Omar's once Omar signs with it).
+ */
 export function contactsOf(reading: Reading): Contacts {
-  const phones = new Map<string, { number: string; who: string }>(), emails = new Map<string, { email: string; who: string }>()
+  const emails = new Map<string, { email: string; who: string }>()
   const mine = new Set(reading.messages.filter(m => m.mine).map(m => m.email))
+  const own = new Set<string>()
+  for (const m of reading.messages) if (m.mine) for (const n of numbersIn(`${m.text}\n${m.earlier}`)) own.add(n.digits)
+  const phones = new Map<string, { number: string; who: string; sure: boolean; order: number }>()
   for (const m of reading.messages) {
     if (m.mine) continue
     if (m.email && !emails.has(m.email)) emails.set(m.email, { email: m.email, who: m.who })
-    for (const hit of m.text.match(PHONE) || []) {
-      const digits = hit.replace(/(?:x|ext\.?|extension)\s*\d+$/i, "").replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "")
-      if (digits.length !== 10 || phones.has(digits)) continue
-      const ext = hit.match(/(?:x|ext\.?|extension)\s*(\d+)$/i)?.[1]
-      phones.set(digits, { number: `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}${ext ? " ext. " + ext : ""}`, who: m.who })
+    // What they typed: a reply with nothing typed above the quoted mail holds the other side's signature, not theirs.
+    const typed = ownPart(m.text).replace(/https?:\/\/\S+|\(link: [^)]*\)/gi, " ")
+    for (const n of numbersIn(typed)) {
+      if (own.has(n.digits)) continue
+      const sure = !SOMEONE_ELSES.test(n.line)
+      const had = phones.get(n.digits)
+      if (!had) phones.set(n.digits, { number: n.shown, who: m.who, sure, order: phones.size })
+      else if (sure && !had.sure) phones.set(n.digits, { ...had, who: m.who, sure })
     }
-    for (const hit of m.text.match(ADDRESS) || []) {
+    for (const hit of typed.match(ADDRESS) || []) {
       const email = hit.toLowerCase().replace(/[.]+$/, "")
       if (!mine.has(email) && !emails.has(email)) emails.set(email, { email, who: m.who })
     }
   }
-  return { phones: [...phones.values()].slice(0, 6), emails: [...emails.values()].slice(0, 6) }
+  return { phones: [...phones.values()].sort((a, b) => a.order - b.order).slice(0, 6).map(p => ({ number: p.number, who: p.who })), emails: [...emails.values()].slice(0, 6) }
+}
+
+// A sender nobody can write back to or call: no-reply and its like, and the names mail systems give themselves. The
+// word must be the whole name before the @ or a part of it set off by a dot, dash or underscore: "jobs-noreply@" and
+// "notifications@" are machines; "jobrien@" (J. O'Brien) and "newsome.kate@" are people.
+const MACHINE = /^(?:no[-_.]?reply|do[-_.]?not[-_.]?reply|auto[-_.]?reply|notifications?|mailer-daemon|postmaster|bounces?|alerts?|newsletters?|news|updates?|system|jobs?[-_.]?alerts?)(?:[-_.+][^@]*)?@/i
+const MACHINE_ANYWHERE = /(?:^|[-_.+])(?:no|do[-_.]?not|auto)[-_.]?reply(?:[-_.+][^@]*)?@/i
+/** Is this address a machine's? Then there is nobody there to answer, to nudge, or to call. */
+export function isMachine(email: string): boolean {
+  const e = String(email || "")
+  return MACHINE.test(e) || MACHINE_ANYWHERE.test(e)
+}
+
+// Words that turn a role down. "Not available" and "not looking" are left out on purpose: they are said about a day
+// ("not available on Monday") and about a number ("not looking at anything under $70") far more than about a job.
+const DECLINE = /\b(?:not (?:the right fit|a (?:good |great )?fit|interested)|no longer (?:available|interested|looking)|(?:have|need|going) to (?:decline|pass)|(?:will|would like to|must|want to) (?:pass|decline|withdraw)\b|pass on this|accepted (?:a|an|another|the) (?:offer|role|position|job)|please (?:remove|take) me|withdraw (?:my|from))/i
+/**
+ * Did the person turn it down in this message of theirs? Only when they say so and leave it there: a "but", a
+ * "however" or a question after it ("I am not interested in relocating. Is remote possible?") keeps the matter open.
+ */
+export function saidNo(text: string): boolean {
+  const said = ownPart(decodeEntities(String(text || "")))
+  const hit = DECLINE.exec(said)
+  if (!hit) return false
+  const after = said.slice(hit.index + hit[0].length)
+  return !/\?/.test(said.replace(/https?:\/\/\S+/gi, "")) && !/\b(?:but|however|unless|instead|though)\b/i.test(after)
 }
 
 /** When the conversation began, when it last moved, and who spoke last: the "where does this stand" line. */

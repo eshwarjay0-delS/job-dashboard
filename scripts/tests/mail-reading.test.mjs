@@ -268,5 +268,13 @@ test('a search with one inbox chosen is counted in that inbox, and a conversatio
   // ?open=<conversation>: brought into view, and shown even when the list does not hold it (filed, or its sender hidden).
   assert.match(page, /const wantedIsHere = !!wanted && mails\.some\(x => x\.id === wanted\)/)
   assert.match(page, /setSel\(wanted\); setOpened\(wanted\); setView\("all"\); setWanted\(null\)\s*setTimeout\(\(\) => document\.getElementById\("reply"\)\?\.scrollIntoView/)
-  assert.match(page, /shown\.find\(x => x\.id === sel\) \?\? \(sel && sel === opened \? mails\.find\(x => x\.id === sel\) : undefined\) \?\? shown\[0\]/)
+  assert.ok(page.includes('const m = shown.find(x => x.id === sel) ?? (sel && sel === opened ? mails.find(x => x.id === sel) ?? (fetched?.id === sel ? fetched : undefined) : undefined) ?? shown[0]'))
+  // One the page does not hold at all (older than its 30 days) is read by itself from the kept mail, and when it is
+  // not kept either that is said: the first conversation in the list is never shown in its place without a word.
+  assert.ok(page.includes('fetch(`/api/gmail/conversation?id=${encodeURIComponent(wanted)}`)'))
+  assert.ok(page.includes('if (!wanted || wantedIsHere || loading || !connected) return'))
+  assert.ok(page.includes('The conversation you asked for is not among the mail MarketFit keeps'))
+  const one = read('src/app/api/gmail/conversation/route.ts')
+  assert.ok(one.includes('requireAuth()') && one.includes('.eq("user_id", ctx.userId).eq("thread_id", id)') && one.includes('threadsToMails([row.data])[0]'))
+  assert.ok(!/fetchClassifiedThreads|googleapis|updateUser/.test(one), 'one kept row; no call to Gmail and nothing changed')
 })

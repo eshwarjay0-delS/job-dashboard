@@ -16,6 +16,7 @@ import PageIntro from "../_components/page-intro"
 import TypingDots from "../_components/typing-dots"
 import { gmailEvidenceUrl } from "@/lib/application-evidence"
 import type { ApplicationChain, ChainStageKey, ChainEventKind } from "@/app/api/gmail/_lib"
+import StandingSection from "./_components/standing"
 
 const STAGES: Array<{ key: ChainStageKey; label: string }> = [
   { key: "rtr", label: "RTR" },
@@ -459,6 +460,10 @@ function OverviewInner() {
         page="/dashboard/overview"
         action={{ label: "Open My Jobs", href: "/dashboard/tracker" }}
       />
+
+      {/* What matters now: every started application by whose turn it is, a contact box for everyone, and the hidden
+          list. It reads the kept mail, so it is on screen at once; the evidence map below still reads Gmail's history. */}
+      <StandingSection account={account} />
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <label>Inbox <select aria-label="Filter inbox" value={account} onChange={e => router.push(`/dashboard/overview?account=${encodeURIComponent(e.target.value)}`)}><option value="">All connected inboxes</option>{accounts.map(a => <option key={a} value={a}>{a}</option>)}</select></label>

@@ -306,7 +306,11 @@ export default function MailPage() {
   // `opened` is a conversation asked for by its address (?open=, from the Follow-ups page). It is shown even when the
   // list does not hold it, because it was filed as a rejection or its sender is hidden: the person asked for that one.
   const [opened, setOpened] = useState<string | null>(null)
-  const m = shown.find(x => x.id === sel) ?? (sel && sel === opened ? mails.find(x => x.id === sel) : undefined) ?? shown[0]
+  // And one the page does not hold at all (it holds the last 30 days; Overview points at conversations up to 90 days
+  // old) is fetched by itself from the kept mail.
+  const [fetched, setFetched] = useState<Mail | null>(null)
+  const [openNote, setOpenNote] = useState("")
+  const m = shown.find(x => x.id === sel) ?? (sel && sel === opened ? mails.find(x => x.id === sel) ?? (fetched?.id === sel ? fetched : undefined) : undefined) ?? shown[0]
 
   // Three piles a person can hold in their head. The other three ways of looking wait behind "More".
   const VIEWS: [View, string, number][] = [
@@ -336,6 +340,24 @@ export default function MailPage() {
       setTimeout(() => document.getElementById("reply")?.scrollIntoView({ behavior: "smooth", block: "start" }), 120)
     })
   }, [wanted, wantedIsHere])
+  // Asked for, and not among the 30 days this page holds: it is read by itself from the kept mail. If it is not kept
+  // either, that is said in one line. The first conversation in the list is never shown as if it were the one asked for.
+  useEffect(() => {
+    if (!wanted || wantedIsHere || loading || !connected) return
+    let active = true
+    fetch(`/api/gmail/conversation?id=${encodeURIComponent(wanted)}`)
+      .then(r => r.json())
+      .then((j: { ok?: boolean; mail?: Mail }) => {
+        if (!active) return
+        if (j?.ok && j.mail) {
+          setFetched(j.mail); setSel(wanted); setOpened(wanted); setView("all")
+          setTimeout(() => document.getElementById("reply")?.scrollIntoView({ behavior: "smooth", block: "start" }), 120)
+        } else setOpenNote("The conversation you asked for is not among the mail MarketFit keeps (the last 90 days). The list below is your inbox as usual.")
+        setWanted(null)
+      })
+      .catch(() => { if (active) { setOpenNote("The conversation you asked for could not be opened just now. The list below is your inbox as usual."); setWanted(null) } })
+    return () => { active = false }
+  }, [wanted, wantedIsHere, loading, connected])
 
   const approve = (id: string) => {
     const nextUp = shown.find(x => x.id !== id && !leaving.includes(x.id) && waiting(x))
@@ -391,6 +413,7 @@ export default function MailPage() {
         </section>
       ) : (
         <>
+          {openNote && <p role="status" style={{ margin: "0 0 14px", padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border-strong)", background: "var(--surface)", fontSize: 14, lineHeight: 1.5 }}>{openNote}</p>}
           <MailSearchBar search={search} />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
             <Chip label="All inboxes" active={account === "all"} onClick={() => setAccount("all")} />

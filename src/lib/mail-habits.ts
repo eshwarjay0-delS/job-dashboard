@@ -19,7 +19,7 @@
 // compared with nothing. The greeting (with the name of whoever it went to) and the signature are parted off, so the
 // words kept for the next person never carry the last person's name.
 
-import { senderEmail, senderName, ownPart, dropFooter, tidy, aboutOf } from "./mail-reading.ts"
+import { senderEmail, senderName, ownPart, dropFooter, tidy, aboutOf, isMachine, saidNo } from "./mail-reading.ts"
 
 export interface HabitThread {
   threadId: string
@@ -104,12 +104,12 @@ const CONTACT_LINE = /^(?:(?:email|e-mail|linkedin|web|website)\s*[:#-].*|https?
 const isContact = (line: string) => PHONE.test(line) || CONTACT_LINE.test(line)
 // A line of a signature is short and is not a sentence: a job title, a company, a phone written some other way.
 const footLike = (line: string) => isContact(line) || (line.length <= 60 && !/[.?!]$/.test(line))
-// Senders nobody answers by nature: an application system's receipt is not a recruiter being ignored.
-const AUTOMATED = /^(?:no[-_.]?reply|do[-_.]?not[-_.]?reply|noreply|notifications?|mailer-daemon|postmaster|bounces?|alerts?|jobs?[-_.]?(?:alerts?|noreply)?|careers?|talent|recruiting|support|info|news(?:letter)?|updates?|team|hello|admin|system)[^@]*@/i
+// Senders nobody answers by nature: a machine (isMachine), and a shared box such as jobs@ or careers@, whose receipt
+// is not a recruiter being ignored. The word must be the whole name before the @ or a part set off by a dot or a dash:
+// "jobrien@" and "teamlead.dana@" are people.
+const SHARED_BOX = /^(?:jobs?|careers?|talent|recruiting|support|info|team|hello|admin)(?:[-_.+][^@]*)?@/i
 // Mail that must never be suggested for hiding, whoever sent it.
 const KEEP = new Set(["Interview Request", "Offer", "RTR Request", "Rate Confirmation", "Submission Confirmation", "Document Request", "Rejection"])
-// The person's own last word closed the matter: nobody is to be nudged about a role that was turned down.
-const SAID_NO = /not (?:the right fit|a (?:good )?fit|interested|looking|available)|no longer (?:available|interested|looking)|(?:have|need) to (?:decline|pass)|pass on this|accepted (?:an|another) (?:offer|role|position)|please (?:remove|take) me/i
 const ASK: Record<string, AskKind> = { "Rate Confirmation": "rate", "Interview Request": "availability", "RTR Request": "rtr", "Document Request": "documents", "Job Description": "requirement" }
 const ADDRESS = /[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi
 
@@ -279,9 +279,10 @@ export function findHabits(threads: HabitThread[], myEmails: string[], now: numb
       unanswered.set(key, entry)
     }
 
-    // Quiet now: the last word is the person's, and the last thing the other side said, if anything, was not a no.
+    // Quiet now: the last word is the person's, it did not turn the role down, and the last thing the other side said,
+    // if anything, was not a no.
     const last = ordered.length - 1
-    if (mine[last] && String(lastOther?.category || "") !== "Rejection" && !SAID_NO.test(typedIn(ordered[last]!) || ordered[last]!.snippet || "")) {
+    if (mine[last] && String(lastOther?.category || "") !== "Rejection" && !saidNo(ordered[last]!.bodyText || "")) {
       let mineInARow = 0
       for (let k = last; k >= 0 && mine[k]; k--) mineInARow++
       // Written three times running with no answer: a fourth is not "soft".
@@ -370,7 +371,7 @@ export function findHabits(threads: HabitThread[], myEmails: string[], now: numb
 
   // ── People who keep writing and were never answered ──────────────────────────────────────────────────────────────
   for (const p of unanswered.values()) {
-    if (p.threads.length < TIMES + 1 || p.keep || !p.email || AUTOMATED.test(p.email) || answered.has(p.email)) continue
+    if (p.threads.length < TIMES + 1 || p.keep || !p.email || isMachine(p.email) || SHARED_BOX.test(p.email) || answered.has(p.email)) continue
     const id = neverId(p.account, p.email)
     const known = decided.find(d => d.id === id)
     const latest = (t: HabitThread) => Math.max(0, ...t.messages.map(m => Number(m.internalDate || 0)))
