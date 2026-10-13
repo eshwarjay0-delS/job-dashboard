@@ -1,3 +1,27 @@
+## 2026-10-13 (later) — Three things a user found by trying the site, and one asked that I left
+
+Notes sent after "I poked around on the site". Each with what went wrong, the proof, and the fix.
+
+**1. Kompas threw the user back to Sessions every minute, and on every return to the tab (both addresses).** A half-filled New Session form was lost.
+- What went wrong: the live Kompas page held two `window.PERFACT_BUILD` lines. Since 8 Oct the Kompas repository stamps its own release when Vercel builds it (`copilot/scripts/stamp-release.mjs`); my deploy script (outside any repository) still added a stamp of its own and its own `version.json`. The build step rewrote `version.json` and only the first stamp, so the page ran with one id and `version.json` held another, and the page's update check reloaded it for ever. **My deploys of 12 Oct shipped this.**
+- Proof, before the fix: `perfact-ten.vercel.app/` and `/kompas/` here both served `kompas-87bdcc6c27d5` and then `722997762f8f`; `version.json` said `kompas-87bdcc6c27d5`.
+- Fix: the script uploads the files as they are and stamps nothing, and after a production deploy it fails unless the live page holds one id equal to `version.json`. Redeployed: both addresses serve one stamp, `kompas-c1dcbee04b6e`, equal to `version.json`. In a real browser the page stayed the same page for 75 seconds and through a return to the tab. Written up in the Kompas repository's `HANDOFF.md`.
+
+**2. Overview: after pressing View, Gmail's limit of reads per minute was hit, and a retry said "Some emails could not be read".**
+- What went wrong: View put that application's inbox in the address, and the reading of Gmail's history ran again whenever the inbox in the address changed. Every View (and every Close) read that inbox from the start.
+- Fix (commit 9e61835): the inbox being read is the one chosen with the select; a map in the address does not change it. When Gmail asks for a pause the same page is asked for again after 15, 40 and 65 seconds, and the page says so; the endpoint answers a limit as 429 in plain words.
+- Verified on the deployed page with canned data (no Gmail reads): 5 history requests on load, still 5 after View and after Close; the map opened and the list came back. On real mail the pause line appeared and the read carried on (statuses 200,200,200,200,429,429,200,...).
+- NOT fixed, and worth doing: the history read itself draws 429s after about four pages when two tabs read at once, and the page mounts twice when reached by a link (the first page of history is asked for twice). The lasting fix is to draw the evidence map from the kept mail, as "What matters now" already does, and read Gmail only on Refresh.
+
+**3. MFit Agent: a reply with a Markdown table showed its pipes and dashes.** Suggested: `marked`.
+- Fix (commit 9e61835): `src/lib/markdown.ts` uses `marked` 18.1.1 only to read what the text is made of and makes React elements from it: tables, lists, headings, bold, code, links. Nothing is put on the page as HTML, so `<script>` in a reply is shown as its characters; a link is a link only to http, https or mailto. Used for the agent's replies in the floating chat and on the agent page. `scripts/tests/markdown.test.mjs` (6).
+- Verified on the deployed agent page with a canned reply (no model call): a table of 3 columns and 2 rows, one right-aligned, list numbers shown, the script shown as text and not run, the `javascript:` link not a link.
+- Left: "Read aloud" still reads the raw text, marks and all.
+
+**Asked and left, by choice:** "stop button should immediately exit the session and bring the user back to the sessions page." That is the live session window of Kompas, which I do not work on. What it does today is recorded for its owner in the Kompas `HANDOFF.md`.
+
+**Verified:** tests 303 of 304 (the one red is the Windows path check); type check clean; both deployments READY.
+
 ## 2026-10-13 — Overview connects the dots: what matters now, a contact box for everyone, and the hidden list
 
 The owner, 12 Oct: "if someone ... addressed those requirements and followed up, sent my details and they have shooted back ... that actually goes to the overview since something was started ... if no one is following up it anymore then it is gonna be a major hassle for me ... the best guidance. Like, hey, you have received this email and you have to send an updated resume. Here's this recruiter's contact ... I need a contact box for everyone." Then 13 Oct, after "Continue": "I don't think the dots are connected well in the overview even now, the contact info about everyone and ignore list. as AGI, You use intelligence to throw for user what's important and not" and "more ease and highlights suggestions".
