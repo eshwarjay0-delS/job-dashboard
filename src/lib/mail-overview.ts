@@ -67,15 +67,26 @@ export interface Overview {
   needsYou: Standing[]
   goneQuiet: Standing[]
   moving: Standing[]
-  counts: { closed: number; cold: number }
+  counts: { closed: number; cold: number; lapsed: number }   // not shown: ended with a no; silent too long; asks left unanswered too long
   people: Person[]
 }
 
 const DAY = 86_400_000
 export const STAGE_WORDS: Record<Stage, string> = { asked: "They asked", answered: "You answered", came_back: "They came back", rtr: "Go-ahead asked", rate: "Rate asked", submitted: "Put forward", interview: "Interview", offer: "Offer" }
 const STAGE_WEIGHT: Record<Stage, number> = { asked: 35, answered: 15, came_back: 30, rtr: 45, rate: 50, submitted: 60, interview: 80, offer: 100 }
-// Mail that asks something of the person even before they have written a word.
+// Mail that asks something of the person.
 const ASKING = new Set(["Interview Request", "RTR Request", "Rate Confirmation", "Document Request", "Offer"])
+// And the kinds that count even before he has written a word: a step in an application. "Send your resume" from someone
+// he never wrote to is a requirement like any other, not an application that has started.
+const STEP = new Set(["Interview Request", "RTR Request", "Rate Confirmation", "Offer"])
+// MEASURED ON THE OWNER'S OWN MAIL, 13 Oct 2026, the morning this shipped. The first version said 36 conversations
+// "need you". 21 were cold "send your resume" mails he had never answered, and the three put on top were interview
+// requests 2, 13 and 20 days old. So: an unanswered step from someone he never wrote to counts for a week; any ask he
+// has left unanswered for more than two weeks has lapsed; and silence is nudged for a month, not for ever.
+const FRESH_DAYS = 7       // a step from someone he never wrote to still counts
+const LAPSE_DAYS = 14      // an ask he left unanswered is no longer "waiting on you"
+const COLD_DAYS = 30       // silence is no longer worth a nudge
+const MOST_IN_A_ROW = 4    // he has written this many times running with no answer: let it rest
 const FREE_MAIL = /^(?:gmail|googlemail|yahoo|ymail|outlook|hotmail|live|msn|icloud|me|aol|proton|protonmail|pm|zoho|gmx)\./i
 // The second-last part of an address is a suffix, not a name, only when it is one of these: "apex.co.uk", "uni.ac.in".
 const SUFFIX = new Set(["co", "com", "org", "net", "ac", "gov", "edu"])
@@ -152,7 +163,7 @@ export function overviewOf(threads: OverviewThread[], myEmails: string[], now: n
   const people = new Map<string, Person>()
   const machines = new Set<string>()
   const writtenTo = new Set<string>()
-  let closed = 0, cold = 0, conversations = 0
+  let closed = 0, cold = 0, lapsed = 0, conversations = 0
 
   for (const thread of threads || []) {
     const ordered = [...(thread.messages || [])].sort((a, b) => Number(a.internalDate || 0) - Number(b.internalDate || 0))
@@ -194,7 +205,8 @@ export function overviewOf(threads: OverviewThread[], myEmails: string[], now: n
     if (!lastOther || isMachine(senderEmail(lastOther.from))) continue
     const cats = others.map(m => String(m.category || ""))
     const iWrote = mine.some(Boolean)
-    if (!iWrote && !cats.some(c => ASKING.has(c))) continue
+    const quietDays = Math.max(0, Math.floor((now - lastAt) / DAY))
+    if (!iWrote && !(cats.some(c => STEP.has(c)) && quietDays <= FRESH_DAYS)) continue
     if (opts.hidden?.(account, senderEmail(lastOther.from), thread.threadId)) continue
     // Over: their last word is a no, or he said no and they have not come back with anything to answer since.
     let noAt = -1
@@ -205,8 +217,6 @@ export function overviewOf(threads: OverviewThread[], myEmails: string[], now: n
     const firstMineAt = at[mine.indexOf(true)] || 0
     const stage: Stage = cats.includes("Offer") ? "offer" : cats.includes("Interview Request") ? "interview" : cats.includes("Submission Confirmation") ? "submitted"
       : cats.includes("Rate Confirmation") ? "rate" : cats.includes("RTR Request") ? "rtr" : !iWrote ? "asked" : others.some(m => Number(m.internalDate || 0) > firstMineAt) ? "came_back" : "answered"
-    const quietDays = Math.max(0, Math.floor((now - lastAt) / DAY))
-    if (quietDays > 45) { cold++; continue }
 
     // What was asked since he last wrote, message by message: from the kind of mail each is, and from its own sentences.
     const turn = turnOf(ordered, [...me])
@@ -229,6 +239,10 @@ export function overviewOf(threads: OverviewThread[], myEmails: string[], now: n
     for (const x of since) for (const label of x.wants) if (!asked.includes(label)) asked.push(label)
     let nudges = 0
     for (let k = ordered.length - 1; k >= 0 && mine[k]; k--) nudges++
+    // Not put in front of him: an ask he has left for more than two weeks, a silence of more than a month, and one
+    // he has already written to four times running.
+    if (yourTurn && quietDays > LAPSE_DAYS) { lapsed++; continue }
+    if (!yourTurn && (quietDays > COLD_DAYS || nudges >= MOST_IN_A_ROW)) { cold++; continue }
     nudges = Math.max(0, nudges - 1)
 
     const person = asker?.m || lastOther
@@ -295,6 +309,6 @@ export function overviewOf(threads: OverviewThread[], myEmails: string[], now: n
   const list = [...people.values()].sort((a, b) => rank(b) - rank(a) || b.lastAt - a.lastAt)
   return {
     looked: { conversations, people: list.length, machines: machines.size },
-    nudgeAfterDays: wait, highlights: topOf(needsYou, goneQuiet), needsYou, goneQuiet, moving, counts: { closed, cold }, people: list.slice(0, 300),
+    nudgeAfterDays: wait, highlights: topOf(needsYou, goneQuiet), needsYou, goneQuiet, moving, counts: { closed, cold, lapsed }, people: list.slice(0, 300),
   }
 }

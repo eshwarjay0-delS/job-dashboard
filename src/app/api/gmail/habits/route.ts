@@ -30,19 +30,21 @@ const MOST_ON = 6        // usual replies and the nudge that may be kept
 const MOST_HIDDEN = 12   // senders hidden from here (Tidy up in the inbox hides more)
 const MOST_OFF = 8       // suggestions set aside; the oldest "not now" falls away, and that suggestion may then come back
 
-async function decisionsOf(ctx: AuthContext): Promise<{ decisions: Decision[]; rules: IgnoreRule[] }> {
+async function decisionsOf(ctx: AuthContext): Promise<{ decisions: Decision[]; rules: IgnoreRule[]; own: string }> {
   const { data: { user } } = await ctx.supabase.auth.getUser()
   const stored = user?.user_metadata?.mail_habits
   const rules = user?.user_metadata?.gmail_ignore_rules
   return {
     decisions: Array.isArray(stored) ? stored.filter(validDecision) : [],
     rules: Array.isArray(rules) ? rules.filter(validIgnoreRule) : [],
+    // The address he signs in with is his own too, connected as an inbox or not.
+    own: user?.email || "",
   }
 }
 
-async function look(ctx: AuthContext, decisions: Decision[]) {
+async function look(ctx: AuthContext, decisions: Decision[], own = "") {
   const { threads, kept } = await keptThreads(ctx, TRACKING_DAYS, { fetchWhenEmpty: true })
-  const mine = ctx.accounts.map(a => a.google_email)
+  const mine = [...ctx.accounts.map(a => a.google_email), own].filter(Boolean)
   return { ...findHabits(threads, mine, Date.now(), decisions, TRACKING_DAYS), kept }
 }
 
@@ -73,7 +75,7 @@ export async function GET(req: Request) {
   try {
     const ctx = await requireAuth()
     if (!isAuthContext(ctx)) return NextResponse.json({ ok: false, error: ctx.error }, { status: ctx.status })
-    const { decisions, rules } = await decisionsOf(ctx)
+    const { decisions, rules, own } = await decisionsOf(ctx)
     const kept = decisions.filter(d => d.state === "on")
     if (new URL(req.url).searchParams.get("saved") === "1") {
       const rl = checkRateLimit(`gmail-habits-saved:${ctx.userId}`, { max: 90, windowMs: 60 * 1000 })
@@ -84,7 +86,7 @@ export async function GET(req: Request) {
     const rl = checkRateLimit(`gmail-habits:${ctx.userId}`, { max: 20, windowMs: 60 * 1000 })
     if (!rl.ok) return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 })
 
-    const found = await look(ctx, decisions)
+    const found = await look(ctx, decisions, own)
 
     // A decision points at one message. When that message has grown too old to be among what is read, the habit is still
     // known by its name, and the pointer is moved to a message that is there, so the words can go on being read back.
@@ -138,7 +140,7 @@ export async function POST(req: Request) {
     const state = input?.state
     if (!id || (state !== "on" && state !== "off" && state !== "undo")) return NextResponse.json({ ok: false, error: "Say which habit, and on, off or undo." }, { status: 400 })
 
-    const { decisions, rules } = await decisionsOf(ctx)
+    const { decisions, rules, own } = await decisionsOf(ctx)
     const before = decisions.find(d => d.id === id)
     let next = decisions.filter(d => d.id !== id)
     let nextRules = rules
@@ -149,7 +151,7 @@ export async function POST(req: Request) {
       if (!before) return NextResponse.json({ ok: false, error: "There is nothing kept under that name." }, { status: 404 })
       if (before.kind === "never_answered" && before.state === "on") nextRules = without()
     } else {
-      const { habits } = await look(ctx, decisions)
+      const { habits } = await look(ctx, decisions, own)
       const habit = habits.find(h => h.id === id)
       if (!habit) return NextResponse.json({ ok: false, error: "That is no longer something your mail shows. Reload the page." }, { status: 404 })
       const hides = habit.kind === "never_answered"

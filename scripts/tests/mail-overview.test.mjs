@@ -114,7 +114,7 @@ test('what is over is counted and not shown: they said no, he said no, or it wen
   assert.equal(by.rejected, undefined)
   assert.equal(by.declined, undefined)
   assert.equal(by.cold, undefined)
-  assert.deepEqual(o.counts, { closed: 2, cold: 1 })
+  assert.deepEqual(o.counts, { closed: 2, cold: 1, lapsed: 0 })
 })
 
 test('what matters most is on top, and the reasons are said', () => {
@@ -166,8 +166,8 @@ test('someone hidden by a rule of his own is not put in front of him again', () 
 test('nothing typed by him and nothing read here can be mistaken: empty and odd mail is handled', () => {
   assert.deepEqual(overviewOf([], [ME], NOW).highlights, [])
   assert.deepEqual(overviewOf([{ threadId: 'x', accountEmail: ME, messages: [] }], [ME], NOW).people, [])
-  const noBody = thread('nb', { id: 'a', from: 'A B <a@b.example>', subject: 'Role', snippet: 'Please send your resume', internalDate: String(NOW - DAY), category: 'Document Request' })
-  assert.equal(overviewOf([noBody], [ME], NOW).needsYou[0].doNext, 'A asked for your updated resume.')
+  const noBody = thread('nb', { id: 'a', from: 'A B <a@b.example>', subject: 'Role', snippet: 'Please confirm the right to represent and send your resume', internalDate: String(NOW - DAY), category: 'RTR Request' })
+  assert.equal(overviewOf([noBody], [ME], NOW).needsYou[0].doNext, 'A asked for your go-ahead to put you forward and your updated resume.')
   assert.equal(overviewOf(ALL, [], NOW).needsYou.every(s => s.stage !== 'answered' && s.stage !== 'came_back'), true, 'with no inbox of his own named, nothing is "answered"')
 })
 
@@ -297,14 +297,43 @@ test('the one to answer is whoever asked last, and "I will keep you posted" does
 })
 
 test('on top is what weighs most, whichever pile it is in', () => {
-  // Was: three stale requests he never answered pushed out an interview that had gone quiet.
-  const stale = [1, 2, 3].map(i => thread('st' + i, theirs('Doc Asker ' + i, `doc${i}@papers.example`, 44, 'Document Request', 'Please send your documents.', 'Documents ' + i)))
+  // Was: whatever waited on him filled the top before weight was looked at, so three small asks pushed out an interview
+  // that had gone quiet.
+  const small = [1, 2, 3].map(i => thread('sm' + i, theirs('Asker ' + i, `asker${i}@papers.example`, 14, 'Job Description', JD, 'Role ' + i), mine(`asker${i}@papers.example`, 13, ANSWER, 'Re: Role ' + i), theirs('Asker ' + i, `asker${i}@papers.example`, 10 + i, 'General Correspondence', 'Could you send two references?', 'RE: Role ' + i)))
   const quietInterview = thread('qi', theirs('Mara Lind', 'mara@steadfast.example', 8, 'Interview Request', 'Please share your availability.'), mine('mara@steadfast.example', 5, 'Tuesday at 2pm works well for me.'))
-  const o1 = overviewOf([...stale, quietInterview], [ME], NOW)
+  const o1 = overviewOf([...small, quietInterview], [ME], NOW)
+  assert.deepEqual([o1.needsYou.length, o1.goneQuiet.length], [3, 1])
   assert.equal(o1.highlights[0].threadId, 'qi')
   assert.equal(o1.highlights.length, 3)
   assert.deepEqual(topOf(o1.needsYou, o1.goneQuiet).map(s => s.threadId), o1.highlights.map(s => s.threadId))
   assert.ok(o1.highlights.every((s, i, xs) => i === 0 || xs[i - 1].weight >= s.weight))
+})
+
+test('what is put in front of him is what is still alive: measured on his own mail the morning it shipped', () => {
+  // The first version said 36 conversations "need you". 21 were cold "send your resume" mails he had never answered,
+  // and the three on top were interview requests 2, 13 and 20 days old.
+  const cold = (id, category, daysAgo) => thread(id, theirs('Cold Caller', id + '@blast.example', daysAgo, category, 'Please send your updated resume and confirm the right to represent.', 'Role ' + id))
+  const shown = (threads) => { const o1 = overviewOf(threads, [ME], NOW); return [...o1.needsYou, ...o1.goneQuiet, ...o1.moving].map(s => s.threadId) }
+  // "Send your resume" from someone he never wrote to is a requirement like any other: it has not started.
+  assert.deepEqual(shown([cold('doc', 'Document Request', 1)]), [])
+  // A step in an application (a go-ahead, a rate, an interview, an offer) counts before he writes, for a week.
+  assert.deepEqual(shown([cold('rtr2', 'RTR Request', 2), cold('rtr7', 'RTR Request', 7), cold('rtr8', 'RTR Request', 8), cold('iv20', 'Interview Request', 20)]), ['rtr2', 'rtr7'])
+  // Once he has written, a request for papers is a real ask.
+  assert.deepEqual(shown([thread('docs', theirs('Dana Whitfield', 'dana@northpier.example', 5, 'Job Description', JD), mine('dana@northpier.example', 4, ANSWER), theirs('Dana Whitfield', 'dana@northpier.example', 1, 'Document Request', 'Please send your passport copy.'))]), ['docs'])
+  // An ask he has left for more than two weeks is no longer "waiting on you": it is counted, not shown.
+  const left = (id, daysAgo) => thread(id, theirs('Mara Lind', id + '@steadfast.example', daysAgo + 3, 'Job Description', JD), mine(id + '@steadfast.example', daysAgo + 2, ANSWER), theirs('Mara Lind', id + '@steadfast.example', daysAgo, 'Interview Request', 'Please share your availability.'))
+  const o2 = overviewOf([left('d14', 14), left('d15', 15), left('d20', 20)], [ME], NOW)
+  assert.deepEqual([o2.needsYou.map(s => s.threadId), o2.counts.lapsed], [['d14'], 2])
+  // Silence is nudged for a month; and after four of his messages in a row it is let rest.
+  const silent = (id, daysAgo) => thread(id, theirs('Omar Haddad', id + '@brightline.example', daysAgo + 1, 'Job Description', JD), mine(id + '@brightline.example', daysAgo, ANSWER))
+  const o3 = overviewOf([silent('q30', 30), silent('q31', 31)], [ME], NOW)
+  assert.deepEqual([o3.goneQuiet.map(s => s.threadId), o3.counts.cold], [['q30'], 1])
+  const four = thread('four', theirs('Priya Menon', 'priya@harborview.example', 20, 'Job Description', JD), mine('priya@harborview.example', 19, ANSWER), mine('priya@harborview.example', 15, 'Just checking in.'), mine('priya@harborview.example', 11, 'Any update?'), mine('priya@harborview.example', 6, 'One last note on this.'))
+  assert.deepEqual([shown([four]), overviewOf([four], [ME], NOW).counts.cold], [[], 1])
+  // The page says what was left out, and the address he signs in with is his own, not a person who wrote to him.
+  const section = read('src/app/dashboard/overview/_components/standing.tsx'), route = read('src/app/api/gmail/overview/route.ts')
+  assert.ok(section.includes('{data.counts.lapsed} where you were asked something more than two weeks ago and left it.'))
+  assert.ok(route.includes('[...ctx.accounts.map(a => a.google_email), user?.email || ""].filter(Boolean)'))
 })
 
 test('one inbox can be shown while all the mail is still read: answered from another inbox is answered', () => {

@@ -34,7 +34,9 @@ export async function GET(req: Request) {
     // All the mail is read whichever inbox is shown: someone answered from another inbox is answered, and how long he
     // waits before writing again is one habit, not one per inbox. Only what is shown is kept to the inbox chosen.
     const threads = kept.threads
-    const mine = ctx.accounts.map(a => a.google_email)
+    // His own addresses: every inbox he has connected, and the address he signs in with. A mail from one of his own
+    // addresses to another is not a person who wrote to him.
+    const mine = [...ctx.accounts.map(a => a.google_email), user?.email || ""].filter(Boolean)
     const now = Date.now()
 
     // How long he himself waits before writing again, and who he never answers: both from his own mail.

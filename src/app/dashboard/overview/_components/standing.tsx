@@ -186,9 +186,9 @@ export default function StandingSection({ account = "" }: { account?: string }) 
               {all ? "Show fewer" : `Show all ${rest.length}`}
             </button>
           )}
-          {(data.counts.closed > 0 || data.counts.cold > 0) && (
+          {(data.counts.closed > 0 || data.counts.cold > 0 || data.counts.lapsed > 0) && (
             <p style={{ margin: "12px 0 0", fontSize: 12.5, color: "var(--text-muted)" }}>
-              Not shown: {data.counts.closed} that ended with a no, {data.counts.cold} with nothing for more than 45 days.
+              Not shown: {data.counts.closed} that ended with a no, {data.counts.cold} silent for more than a month, {data.counts.lapsed} where you were asked something more than two weeks ago and left it.
             </p>
           )}
         </>
