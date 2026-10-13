@@ -18,6 +18,9 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   return !!mine && items(process.env.ADMIN_EMAILS).some(e => e.toLowerCase() === mine)
 }
 
+/** The owner's own sign-in addresses, as listed in settings (lower case). */
+export const adminEmails = (): string[] => items(process.env.ADMIN_EMAILS).map(e => e.toLowerCase())
+
 /** Is this WhatsApp sender one of the listed owner numbers? */
 export function isOwnerWhatsApp(from: string): boolean {
   return ownerWhatsAppUserId(from, "-") !== null

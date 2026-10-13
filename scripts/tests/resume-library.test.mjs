@@ -162,6 +162,12 @@ test('the bot keeps the resume, saves what it makes in Files, and searches no on
   // A new job adds to the person's dossier (the kind of work, and what jobs of that kind keep asking for); it removes nothing.
   assert.ok(bot.includes('if (filed.counted && UUID.test(gen.userId)) await feedDossier(gen.userId, filed)'))
   assert.ok(bot.includes('skills: had?.skills || [], projects: had?.projects || [], keywords: join(had?.keywords, filed.learned.common.map(c => c.word)), fields: join(had?.fields, [filed.category])'))
+  // The owner's number needs no step: it writes as the one account that signs in with the owner's own address, so his
+  // resumes reach his Files (13 Oct 2026: they did not, his Files held 0). With no such account, or two, it is not guessed.
+  assert.ok(bot.includes('const account = await ownerAccountId()\n    return account ? who(account, true) : who(owner, false)'))
+  assert.ok(bot.includes('.from("profiles").select("id,email").in("email", emails).limit(3)') && bot.includes('if (rows.length === 1) id = String(rows[0].id)'))
+  // Resumes made before the number had an account are moved into Files once, and he is told when that happens.
+  assert.ok(bot.includes('I made for you earlier into your Files in MarketFit, each in the folder for its kind of job.'))
   // A PDF is kept, never tailored.
   assert.ok(bot.includes('saveUpload({ userDir: userDirOf(userId), bytes, filename, kind: "pdf" })'))
   // The tidy-up of Files leaves the resumes made for jobs alone (it keeps two per kind and removes the rest).

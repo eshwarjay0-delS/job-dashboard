@@ -40,7 +40,7 @@ import { runTailor, type TailorResult } from "@/lib/tailor"
 import { recordTailor } from "@/lib/tailorLedger"
 import { extractJdMeta } from "@/lib/claude"
 import { sendText, sendDocument, downloadMedia, verifySignature, senderAllowed, waConfigured } from "@/lib/whatsapp"
-import { ownerWhatsAppUserId, isOwnerWhatsApp } from "@/lib/owner"
+import { ownerWhatsAppUserId, isOwnerWhatsApp, adminEmails } from "@/lib/owner"
 import { extractProfile } from "@/lib/profile"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
@@ -141,7 +141,15 @@ async function resolveWhatsAppUser(from: string): Promise<Who | null> {
   if (linked) return who(linked, true)
   // A number the owner listed in settings is answered without the binding (see src/lib/owner.ts for why).
   const owner = ownerWhatsAppUserId(from, FALLBACK_USER_ID)
-  if (owner) return who(owner, owner !== FALLBACK_USER_ID)
+  if (owner) {
+    if (owner !== FALLBACK_USER_ID) return who(owner, true)
+    // The owner's number with no account named beside it. Until 13 Oct 2026 it then wrote as the default bot user, so
+    // nothing the bot made for the owner ever reached his Files ("Whatsapp edited resume needs store as the rules i have
+    // stated to you!"; his Files held 0). The owner's account is the one that signs in with the owner's own address,
+    // and both are named by him in settings: the number is joined to it without a step from him.
+    const account = await ownerAccountId()
+    return account ? who(account, true) : who(owner, false)
+  }
   const required = process.env.WHATSAPP_IDENTITY_BINDING_REQUIRED === "1"
   if (serviceClientAvailable()) {
     try {
@@ -150,6 +158,24 @@ async function resolveWhatsAppUser(from: string): Promise<Who | null> {
     } catch { /* the database is not reachable: fall through to the default, or to nobody when a binding is required */ }
   }
   return required ? null : who(FALLBACK_USER_ID, false)
+}
+
+// The one account that signs in with an address the owner listed in ADMIN_EMAILS. None when there is no such account
+// yet, or more than one (then it cannot be known whose Files to use, and the number is joined with a code instead).
+let ownerAccount: { id: string | null; at: number } | null = null
+async function ownerAccountId(): Promise<string | null> {
+  if (ownerAccount && Date.now() - ownerAccount.at < 5 * 60_000) return ownerAccount.id
+  let id: string | null = null
+  try {
+    const emails = adminEmails()
+    if (emails.length && serviceClientAvailable()) {
+      const { data } = await createServiceClient().from("profiles").select("id,email").in("email", emails).limit(3)
+      const rows = (data || []).filter(r => UUID.test(String(r.id)))
+      if (rows.length === 1) id = String(rows[0].id)
+    }
+  } catch { /* not known this time: asked again on the next message */ return null }
+  ownerAccount = { id, at: Date.now() }
+  return id
 }
 
 async function recordWhatsAppUsage(userId: string, featureKey: string, result: TailorResult) {
@@ -312,7 +338,11 @@ export async function POST(request: NextRequest) {
     else if (who) await handle(from, msg, session, who)
     // Resumes this number was sent before its account could hold them are put in Files now, once. It is skipped when
     // this message already used most of its minute, and done on the next one.
-    if (who?.saves && Date.now() - began < 20_000) await moveEarlierIntoFiles(from, who, began + 45_000).catch(e => console.error("[whatsapp] earlier resumes not moved", String(e).slice(0, 200)))
+    if (who?.saves && !linking && Date.now() - began < 20_000) {
+      const moved = await moveEarlierIntoFiles(from, who, began + 45_000).catch(e => { console.error("[whatsapp] earlier resumes not moved", String(e).slice(0, 200)); return 0 })
+      // Said once, when it happens: the resumes made before this number had an account to save into are in Files now.
+      if (moved > 0) { try { await sendText(from, `I put ${moved} resume${moved === 1 ? "" : "s"} I made for you earlier into your Files in MarketFit, each in the folder for its kind of job.`) } catch { /* ignore */ } }
+    }
   } catch (e) {
     // The whole of it is for the server log. The person is told what could not be done, in a sentence (owner, 13 Oct
     // 2026: "We should not show any failpoints, at least give minimal of real info").
