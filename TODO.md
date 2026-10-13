@@ -1,3 +1,23 @@
+## 2026-10-13 (last) — "Still resumes": why his WhatsApp resumes were not in Files, and the one press that brings them in
+
+Commits ea25682, 84547ec, 5e91a1f, all deployed READY.
+
+**Reported:** "Still resumes and other updates." Read from the live site: 18 resumes made over WhatsApp that day by one person; his Files 0, his library 0, 0 numbers joined to his account.
+
+**What went wrong, three layers, each with its proof:**
+1. The bot moves what it holds into Files only when the number sends its next message, and only once it knows the account. Nothing made the dashboard look.
+2. My fix of the morning assumed his number is named in `WHATSAPP_OWNER_NUMBERS`. Proof it is not (or is named with another account beside it): `POST /api/whatsapp/collect` answered `owner: true, numbers: 0` for him. So the bot was still writing as the default bot user.
+3. My first listing of held resumes used the key `whatsapp/gens/` with a slash at the end. The storage refuses a key with an empty part, my code swallowed the refusal as "nothing held", and he was offered no number. Proof: `unclaimed: []` while 30 versions were held.
+
+**Fix:**
+- `src/lib/whatsapp-collect.ts`: one piece of code moves held resumes into Files (the bot and the dashboard both use it); it runs again whenever more were made.
+- `POST /api/whatsapp/collect` (owner only): joins the owner's numbers named in settings, and answers with the numbers the bot holds resumes for that are joined to nobody, by last four digits. `{ claim: "last four" }` joins that number to his account and saves its resumes. A number is taken only when exactly one ends that way.
+- Files and the WhatsApp page show it (`whatsapp-claim.tsx`): "A WhatsApp number ending 9156 has 30 resumes the bot made. If it is yours ... [It is mine] [Not mine]".
+
+**Verified on the deployed Files page:** that card is shown for him now. **NOT done, by choice:** I did not press "It is mine" for him: joining a phone number to his account is his to say. After his press the 30 held resumes are saved by kind of job, and every new one is saved as it is made.
+
+**Still open (his answers, and not started):** reuse kept lines inside the tailoring; Kompas questions from the common words; first follow-up after 5 days or sooner; whether a follow-up sent for him should say so; prompt for form rows with no answer; nudges with no press; search bar on every page; Follow-ups preview; Overview's evidence map from kept mail; how to run the Kompas answer tests; twelve colours on Companies and Compare; the Drafts and No answer yet views. Night mode in the Kompas desktop window is recorded for its owner in the Kompas HANDOFF.
+
 ## 2026-10-13 (after midnight work) — A recruiter's "please fill this in" table is filled from what he has sent before
 
 Commits 1be3e12 and 9b6f05f, both deployed READY.
