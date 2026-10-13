@@ -26,6 +26,7 @@
 
 import { senderEmail, senderName, ownPart, dropFooter, tidy, aboutOf, readThread, contactsOf, saysWaitForUs, turnOf, isMachine, saidNo } from "./mail-reading.ts"
 import { addressesIn } from "./my-recruiters.ts"
+import { formIn } from "./mail-forms.ts"
 
 // MY RECRUITERS (13 Oct 2026, src/lib/my-recruiters.ts). Some of the people who write to him work FOR him: they send his
 // resume on without being asked. He named them: "he's my recruiter so ... I don't have to follow up with him", "whoever
@@ -263,7 +264,11 @@ export function overviewOf(threads: OverviewThread[], myEmails: string[], now: n
       if (cat === "Interview Request") wants.push("the times you are free")
       if (cat === "RTR Request") wants.push("your go-ahead to put you forward")
       if (cat === "Rate Confirmation") wants.push("your rate")
-      for (const label of askedFor(own)) if (!wants.includes(label)) wants.push(label)
+      // A table to fill in ("Full Name: / Contact No: / Visa Status: ...") is one thing asked for, named as what it is:
+      // the reply box fills it in from what he has sent before (src/lib/mail-forms.ts).
+      const form = formIn(own)
+      if (form.length) wants.push(`the ${form.length} details in their form`)
+      else for (const label of askedFor(own)) if (!wants.includes(label)) wants.push(label)
       return { m, cat, wants, asks: wants.length > 0 || ASKING.has(cat) || hasQuestion(own) }
     })
     // The one to answer is whoever asked last. A later "I will keep you posted" from anyone does not close a request

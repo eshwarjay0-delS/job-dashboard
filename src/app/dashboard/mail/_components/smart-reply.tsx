@@ -9,6 +9,7 @@ import type { Mail } from "../../_suite/sample"
 import { readyFor, type Decision } from "@/lib/mail-habits"
 import { senderName } from "@/lib/mail-reading"
 import type { Phrase } from "@/lib/my-phrases"
+import type { Filled } from "@/lib/mail-forms"
 
 interface ReplyChip {
   label: string
@@ -49,8 +50,24 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
     fetch("/api/gmail/phrases").then(r => r.json()).then(j => { if (on && j?.ok && Array.isArray(j.phrases)) setPhrases(j.phrases) }).catch(() => { /* the box still works without them */ })
     return () => { on = false }
   }, [])
+  // Their "please fill this in" table, filled from what he has sent before (owner, 13 Oct 2026: "fill in the whole box
+  // with ... the previous data that the candidate or user had kept on filling up"). It is the first reply offered.
+  const [form, setForm] = useState<{ fields: Filled[]; summary: string; subject: string; body: string } | null>(null)
+  const [formOn, setFormOn] = useState(false)
+  useEffect(() => {
+    let on = true
+    setForm(null); setFormOn(false)
+    fetch("/api/gmail/form-fill", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: mail.id, account: mail.account }) }).then(r => r.json())
+      .then(j => { if (on && j?.ok && j.form && j.reply) setForm({ fields: j.form.fields, summary: j.form.summary, subject: j.reply.subject, body: j.reply.body }) }).catch(() => { /* the other replies are still there */ })
+    return () => { on = false }
+  }, [mail.id, mail.account])
+  const useForm = () => {
+    if (!form) return
+    setFormOn(true); setOwn(false); setActive(null); setSendError("")
+    setSubject(form.subject); setBody(form.body)
+  }
   const writeOwn = () => {
-    setOwn(true); setActive(null); setSendError("")
+    setOwn(true); setFormOn(false); setActive(null); setSendError("")
     setSubject(s => s || (/^re:/i.test(mail.subject) ? mail.subject : `Re: ${mail.subject}`))
     setBody("")
   }
@@ -108,6 +125,7 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
     if (!c) return
     setActive(i)
     setOwn(false)
+    setFormOn(false)
     setSubject(c.subject)
     setBody(c.body)
     setSendError("")
@@ -149,14 +167,29 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
         <div><TypingDots label="Writing suggestions…" size={8} /></div>
       )}
 
+      {form && (
+        <div style={{ padding: "12px 14px", borderRadius: 12, border: "1px solid var(--border-strong)", background: "var(--surface-2)" }}>
+          <p style={{ margin: "0 0 8px", fontSize: 14.5, fontWeight: 650, lineHeight: 1.5 }}>{form.summary}</p>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(110px, auto) 1fr", gap: "4px 14px", fontSize: 13.5 }}>
+            {form.fields.map(f => (
+              <span key={f.label} style={{ display: "contents" }}>
+                <span style={{ color: "var(--text-muted)" }}>{f.label}</span>
+                <span style={{ fontWeight: f.value ? 600 : 400, color: f.value ? "var(--text)" : "var(--text-muted)", overflowWrap: "anywhere" }}>{f.value || (f.sensitive ? "yours to type" : "not known yet")}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {form && <Chip label="Fill in their form" active={formOn} onClick={useForm} />}
         <Chip label="Write my own" active={own} onClick={writeOwn} />
         {choices.map((c, i) => (
-          <Chip key={c.label} label={c.label} active={!own && active === i} onClick={() => pick(i)} />
+          <Chip key={c.label} label={c.label} active={!own && !formOn && active === i} onClick={() => pick(i)} />
         ))}
       </div>
 
-      {(own || active !== null) && (
+      {(own || formOn || active !== null) && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>
             Subject

@@ -5,6 +5,7 @@ import { Avatar, StagePill } from "../../_suite/ui"
 import type { Mail } from "../../_suite/sample"
 import { contactsOf, decodeEntities, senderEmail, senderName, sequenceOf, type Reading } from "@/lib/mail-reading"
 import RecruiterButton from "../../_components/recruiter-button"
+import { formIn } from "@/lib/mail-forms"
 
 // One conversation, the way a person reads one: who it is from, what it is about, what they wrote. Then three things to do,
 // one at a time: reply, see the history, see how to reach them.
@@ -101,6 +102,14 @@ export default function ReadingPane({ m, myEmail, tint, restored, reply }: {
             ? <><p style={label}>You wrote, {when(messages[messages.length - 1]?.at || 0)}</p><p style={letter}>{messages[messages.length - 1]?.text || decodeEntities(m.preview)}</p></>
             : <><p style={label}>{failed ? "The full message could not be opened. This is how it begins:" : "Opening the message…"}</p><p style={{ ...letter, color: "var(--text-muted)" }}>{decodeEntities(m.preview)}</p></>}
       </div>
+
+      {/* They sent a table to fill in: said here, under their mail, so it is not a surprise inside the reply. */}
+      {theirs && formIn(theirs.text).length > 0 && (
+        <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 12, border: "1px solid var(--border-strong)", background: "var(--surface)", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ flex: "1 1 260px", fontSize: 14.5, lineHeight: 1.5 }}>{theirs.who.split(/[\s,]+/)[0]} sent a form with {formIn(theirs.text).length} details to fill in. I have filled in what you have sent before.</span>
+          <button type="button" className="btn-accent" onClick={() => setPanel("reply")} style={{ minHeight: 40, padding: "0 16px", fontSize: 14.5 }}>See it filled in</button>
+        </div>
+      )}
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
         {tab("reply", <Reply size={16} aria-hidden />, "Reply")}
