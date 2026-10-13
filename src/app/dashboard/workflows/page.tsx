@@ -8,6 +8,7 @@ import PageIntro from "../_components/page-intro"
 import MetricHero from "../_components/metric-hero"
 import { type Step } from "../_suite/sample"
 import { useGmailData } from "@/lib/use-gmail-data"
+import Habits from "./_components/habits"
 
 const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -126,6 +127,10 @@ export default function WorkflowsPage() {
           <TypingDots label="Loading workflows…" />
         </div>
       )}
+
+      {/* What the person's own mail shows they keep doing, and what they have handed over. Read from real mail; the
+          workflow below it is still the preview it says it is. */}
+      {connected && <Habits />}
 
       <Card dark style={{ padding: 28, marginBottom: 20 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(255,255,255,.55)" }}>Workflow</div>

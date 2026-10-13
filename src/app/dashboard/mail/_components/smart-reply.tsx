@@ -6,6 +6,8 @@ import { Send, Lock } from "lucide-react"
 import { Chip, Btn } from "../../_suite/ui"
 import SmartCompose from "./smart-compose"
 import type { Mail } from "../../_suite/sample"
+import { readyFor, type Decision } from "@/lib/mail-habits"
+import { senderName } from "@/lib/mail-reading"
 
 interface ReplyChip {
   label: string
@@ -27,6 +29,9 @@ function bareEmail(fromEmail: string): string {
 
 export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () => void }) {
   const [chips, setChips] = useState<ReplyChip[] | null>(null)
+  // What the person handed over on the Follow-ups page (their usual reply, their usual nudge), in their own words.
+  // It is offered first, and like every other choice here it only fills the box: it goes out on Approve & Send.
+  const [usual, setUsual] = useState<ReplyChip[]>([])
   const [accountId, setAccountId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState("")
   const [active, setActive] = useState<number | null>(null)
@@ -38,8 +43,22 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
   useEffect(() => {
     let cancelled = false
     setChips(null)
+    setUsual([])
     setLoadError("")
     setActive(null)
+    fetch("/api/gmail/habits?saved=1")
+      .then(r => r.json())
+      .then((j: { ok?: boolean; decisions?: Decision[] }) => {
+        if (cancelled || !j?.ok || !j.decisions?.length) return
+        const ready = readyFor(j.decisions, {
+          ask: mail.needsReply, yourTurn: mail.yourTurn ?? !!mail.needsReply, lastMine: mail.lastMine,
+          quietDays: mail.ts ? (Date.now() - mail.ts) / 86_400_000 : 0, toName: senderName(mail.fromEmail) || mail.from,
+        })
+        const subject = /^re:/i.test(mail.subject) ? mail.subject : `Re: ${mail.subject}`
+        setUsual(ready.map(r => ({ label: r.label, subject, body: r.body })))
+        setActive(a => (a === null ? a : a + ready.length))   // a choice already tapped keeps its place when these arrive in front
+      })
+      .catch(() => { /* the ordinary suggestions below are still there */ })
     fetch("/api/gmail/suggest-reply", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -68,8 +87,9 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
     return () => { cancelled = true }
   }, [mail.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const choices = [...usual, ...(chips || [])]
   const pick = (i: number) => {
-    const c = chips?.[i]
+    const c = choices[i]
     if (!c) return
     setActive(i)
     setSubject(c.subject)
@@ -113,9 +133,9 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
         <div><TypingDots label="Writing suggestions…" size={8} /></div>
       )}
 
-      {chips && chips.length > 0 && (
+      {choices.length > 0 && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {chips.map((c, i) => (
+          {choices.map((c, i) => (
             <Chip key={c.label} label={c.label} active={active === i} onClick={() => pick(i)} />
           ))}
         </div>
