@@ -20,7 +20,7 @@ export default function PhoneReminder() {
     fetch("/api/onboarding", { cache: "no-store" }).then(async r => {
       if (!r.ok) return
       const body = await r.json()
-      if (active) setNeeded(!body.phone?.verified && body.phone?.note !== "admin")
+      if (active) setNeeded(body.ok === true && !body.phone?.verified)
     }).catch(() => {})
     return () => { active = false }
   }, [pathname])
