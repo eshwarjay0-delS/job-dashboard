@@ -17,21 +17,13 @@ export function mountKompasHtml(html: string): string {
   window.fetch = function (input, options) {
     const url = new URL(input instanceof Request ? input.url : String(input), location.href);
     if (url.origin === location.origin && url.pathname === '/api/transcribe') {
-      // The standalone Electron window has no access to a browser's MarketFit
-      // authentication cookies. Its mic/system-audio capture therefore uses the
-      // same working perfACT /api/transcribe endpoint as the original desktop,
-      // while signed-in browser tabs keep MarketFit's richer speech pipeline.
-      // next.config forwards /kompas/api/transcribe to perfACT.
-      if (window.kompasDesktop) {
-        url.pathname = '/kompas/api/transcribe';
-        input = input instanceof Request ? new Request(url, input) : url;
-        return nativeFetch(input, options);
-      }
-      // Kompas session transcription runs through MarketFit's voice pipeline, not the
-      // copilot backend: word timestamps, the hallucination guard, vocabulary hints and
-      // the language lock. The app's x-whisper-prompt becomes the pipeline's hint, merged
-      // with MarketFit's own vocabulary and the words it learned from your corrections —
-      // one shared ear across every Kompas endpoint.
+      // Kompas session transcription runs through MarketFit's voice pipeline:
+      // word timestamps, the hallucination guard, vocabulary hints and the
+      // language lock. The app's x-whisper-prompt becomes the pipeline's hint,
+      // merged with MarketFit's own vocabulary and the words it learned from
+      // your corrections — one shared ear across every Kompas endpoint.
+      // (2026-10-14, perfACT sunset: the old /kompas/api/transcribe proxy is
+      // gone; the desktop app uses this pipeline too.)
       url.pathname = '/api/kompas/speech';
       const headers = withHeaders(input, options);
       const prompt = headers.get('x-whisper-prompt');
@@ -95,10 +87,23 @@ export function mountKompasHtml(html: string): string {
         return res;
       });
     }
+    if (url.origin === location.origin && (url.pathname === '/api/guide' || url.pathname === '/api/questions')) {
+      // Question Bank prep runs on MarketFit's native endpoints (2026-10-14,
+      // perfACT sunset): /api/guide → /api/kompas/guide, /api/questions → /api/kompas/questions.
+      url.pathname = url.pathname === '/api/guide' ? '/api/kompas/guide' : '/api/kompas/questions';
+      input = input instanceof Request ? new Request(url, input) : url;
+      return nativeFetch(input, options);
+    }
     if (url.origin === location.origin && (url.pathname.startsWith('/api/') || url.pathname === '/version.json' || url.pathname === '/release.json')) {
       if (!url.pathname.startsWith('/api/kompas/')) {
-        url.pathname = '/kompas' + url.pathname;
-        input = input instanceof Request ? new Request(url, input) : url;
+        // Self-hosted since 2026-10-14 (perfACT sunset): the remaining /api/*
+        // calls are served by MarketFit's native /api/kompas/* endpoints.
+        // Anything without a native equivalent passes through untouched.
+        const native = { '/api/capabilities': '/api/kompas/capabilities', '/api/persona': '/api/kompas/persona', '/api/prep': '/api/kompas/prep', '/api/screen': '/api/kompas/screen', '/api/section': '/api/kompas/section' }[url.pathname];
+        if (native) {
+          url.pathname = native;
+          input = input instanceof Request ? new Request(url, input) : url;
+        }
       }
     }
     return nativeFetch(input, options);

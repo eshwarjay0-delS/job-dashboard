@@ -167,15 +167,15 @@ const nextConfig = {
   // The default is the live copilot, perfact-ten; its frontend must match public/kompas (re-run
   // scripts/sync-kompas.mjs when it is redeployed). KOMPAS_API_ORIGIN points at another deployment.
   async rewrites() {
-    const kompasApi = (process.env.KOMPAS_API_ORIGIN || "https://perfact-ten.vercel.app").replace(/\/+$/, "");
     return {
       beforeFiles: [
         { source: "/dashboard/kompas", destination: "/api/kompas/shell" },
         { source: "/kompas/index.html", destination: "/api/kompas/shell" },
         { source: "/kompas", destination: "/api/kompas/shell" },
-        // The HTML is mounted locally, while every dependency and API uses the same live release.
-        // Run before public/ so historical snapshots can never shadow the canonical deployment.
-        { source: "/kompas/:path+", destination: `${kompasApi}/:path+` },
+        // Self-hosted since 2026-10-14 (perfACT sunset): /kompas/:path+ now
+        // serves from public/kompas/ (copied from the copilot release).
+        // The /api/* calls are intercepted by the shell shim and routed to
+        // MarketFit's native endpoints — nothing proxies to perfact-ten.
       ],
       afterFiles: [],
       fallback: [],

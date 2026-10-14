@@ -1,0 +1,57 @@
+/* MarketFit's night, for Kompas when it is opened on MarketFit's address.
+
+   Owner, 12 Oct 2026: "make sure the night mode follows to the kompas in job dashboard as well."
+
+   theme-follow.js puts the class "mf" on <html> when MarketFit's own theme setting is on this address, and carries its
+   theme over. This file then makes Kompas's dark the SAME night MarketFit shows, value for value (job-dashboard:
+   src/app/globals.css, [data-theme="dark"]). Those values were set by measurement after a brighter dark mode made the
+   owner unwell: a page at about 0.23 lightness, text near 10:1 on it, nothing glowing behind the page.
+
+   No colour is invented here. Every value below is one of MarketFit's night tokens; mf-night.test.mjs fails if one is not.
+   On Kompas's own address (no "mf" class) nothing in this file applies, and Kompas keeps the dark it had. */
+html.mf.theme-dark{
+  --bg:#131d27;--bg-soft:#1a2530;--surface:#1a2530;--surface-2:#222f3d;
+  --line:#2d3b48;--line-strong:#405367;
+  --ink:#c6cdd4;--ink-2:#c6cdd4;--muted:#9eabb8;--faint:#8799ab;
+  --accent:#557fa2;--accent-hover:#6590b4;--spot:#de9a7c;--crimson:#d7877e;--red:#d7877e;
+  --green:#83caa4;--bamboo:#557fa2;--bamboo-leaf:#83caa4;--bamboo-mist:#222f3d;--star:#c1a874;
+  --side-bg:#131d27;--side-ink:#c6cdd4;--side-dim:#9eabb8;--side-bar:#de9a7c;
+  --sheet-r:19;--sheet-g:29;--sheet-b:39;--card-r:26;--card-g:37;--card-b:48;
+  --shadow-lg:0 1px 0 #2d3b48, 0 16px 40px -30px rgba(0,0,0,.6);
+  --gold:#c1a874;--gold-deep:#c6cdd4;
+  color-scheme:dark;
+}
+/* A flat page: no wash and nothing glowing behind it. The opacity setting still fades the page, never the letters. */
+html.mf.theme-dark:not(.kd) body,html.mf.theme-dark:not(.kd) .side,html.mf.theme-dark:not(.kd) .view{
+  background-image:none;background-color:rgba(19,29,39,var(--panel-a));
+}
+/* The strong button. On paper it is bamboo green with pale lettering; left as it was, it was a dark green shape on a dark
+   panel and could not be found. On the night it is MarketFit's own strong button: its accent, with its white lettering. */
+html.mf.theme-dark .btn.primary,html.mf.theme-dark .btn.primary:hover{color:#ffffff}
+
+/* GENERATED: scripts/mf-night.mjs. Do not edit below by hand. */
+html.mf.theme-dark .linklike:hover{color:#c6cdd4}
+html.mf.theme-dark .chip.primary{color:#83caa4}
+html.mf.theme-dark .chip.processing{color:#de9a7c}
+html.mf.theme-dark .chip.err{color:#d7877e}
+html.mf.theme-dark .chip.ok{color:#83caa4}
+html.mf.theme-dark .chip.warn{color:#d7877e}
+html.mf.theme-dark .resume-notice{color:#de9a7c}
+html.mf.theme-dark .tx-runs .mini.on{color:#83caa4}
+html.mf.theme-dark .side-group{color:#9eabb8}
+html.mf.theme-dark .side-item:hover{background:#222f3d}
+html.mf.theme-dark .side-item.on{background:#222f3d}
+html.mf.theme-dark .side-foot .credits{color:#9eabb8}
+html.mf.theme-dark .session-card .btn.primary.sc-start{color:#83caa4}
+html.mf.theme-dark .chip.primary{border-color:#405367;color:#83caa4}
+html.mf.theme-dark .chip.processing{background:#222f3d}
+html.mf.theme-dark .chip.err{background:#2d3d4e}
+html.mf.theme-dark .tgl::after{background:#1a2530}
+html.mf.theme-dark .qb-done{color:#83caa4}
+html.mf.theme-dark .qb-result.good{color:#83caa4}
+html.mf.theme-dark .qb-result.bad{color:#d7877e}
+html.mf.theme-dark .fb-bar i.good{background:#83caa4}
+html.mf.theme-dark .fb-bar i.mid{background:#de9a7c}
+html.mf.theme-dark .fb-bar i.low{background:#d7877e}
+html.mf.theme-dark .fb-cue{color:#d7877e}
+html.mf.theme-dark .cm-good b{color:#83caa4}

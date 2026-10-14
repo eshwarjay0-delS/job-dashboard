@@ -50,6 +50,8 @@ export const FEATURES: Feature[] = [
   { id: "kompas:answer", app: "kompas", label: "Sessions: answering in a live interview" },
   { id: "kompas:answer-derive", app: "kompas", label: "Sessions: hearing the interviewer's question" },
   { id: "kompas:humanize", app: "kompas", label: "Sessions: answer polish for the listener" },
+  { id: "kompas:guide", app: "kompas", label: "Question Bank: answer guides" },
+  { id: "kompas:questions", app: "kompas", label: "Question Bank: practice questions from a JD" },
 ]
 const FEATURE_IDS = new Set(FEATURES.map(f => f.id))
 

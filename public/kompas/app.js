@@ -11,6 +11,7 @@ const $ = (id) => document.getElementById(id);
 /* ---- self-update: a tab left open across a deploy reloads itself (never mid-answer) ----
    The deploy stamps window.PERFACT_BUILD into index.html and writes /version.json. */
 const BUILD = window.PERFACT_BUILD || "dev";
+if ($("releaseBuild")) $("releaseBuild").textContent = "Release " + BUILD.replace(/^kompas-/, "");
 async function checkForUpdate() {
   if (BUILD === "dev" || location.protocol === "file:") return;
   try {
@@ -29,24 +30,57 @@ async function checkForUpdate() {
   } catch {}
 }
 setInterval(checkForUpdate, 60000);
+async function showCapabilityVersion() {
+  try {
+    const c = await (await fetch("/api/capabilities", { cache: "no-store" })).json();
+    const el = $("credits");
+    if (!el || !c || !c.version) return;
+    el.classList.remove("hidden");
+    el.textContent = "Kompas " + c.version;
+    el.title = (c.policy ? c.policy + ". " : "") + (c.cycle || "");
+  } catch {}
+}
+showCapabilityVersion();
 document.addEventListener("visibilitychange", () => { if (!document.hidden) checkForUpdate(); });
 
+// A failed write used to be ignored, so a session, resume or preference that did not fit was gone
+// on the next open. Retry after dropping the bulky transcript logs, then after shortening copies
+// of resume text that the docs store already keeps. The keys stay perfact.*.
+function slimForStore(k, v) {
+  if (k === "sessions" && Array.isArray(v)) return v.map(s => {
+    if (!s || typeof s !== "object") return s;
+    const next = { ...s };
+    if (next.resumeId && next.resume && next.resume.length > 500) next.resume = next.resume.slice(0, 500);
+    if (Array.isArray(next.docIds) && next.docIds.length && next.documents && next.documents.length > 500) next.documents = next.documents.slice(0, 500);
+    return next;
+  });
+  return v;
+}
+function dropOldLogs() {
+  const names = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const name = localStorage.key(i);
+    if (name && name.startsWith("perfact.log.")) names.push(name);
+  }
+  names.slice(0, Math.max(1, names.length - 1)).forEach(name => localStorage.removeItem(name));
+}
 const LS = {
   get(k, d) { try { const v = localStorage.getItem("perfact." + k); return v ? JSON.parse(v) : d; } catch { return d; } },
-  set(k, v) { try { localStorage.setItem("perfact." + k, JSON.stringify(v)); } catch {} },
+  set(k, v) {
+    const key = "perfact." + k;
+    const write = (val) => localStorage.setItem(key, JSON.stringify(val));
+    try { write(v); return; } catch { /* the store is full; the retries below keep the record */ }
+    try { dropOldLogs(); write(v); return; } catch {}
+    try { write(slimForStore(k, v)); } catch {}
+  },
 };
-// The model that writes answers. Empty is the server's own lanes; the server ignores anything not on its list.
-const LIVE_MODELS = ["", "gpt-5.6-luna"];
-const liveModel = () => { const m = LS.get("liveModel", ""); return LIVE_MODELS.includes(m) ? m : ""; };
-if ($("liveModel")) $("liveModel").value = liveModel();
-$("liveModel")?.addEventListener("change", (e) => LS.set("liveModel", LIVE_MODELS.includes(e.target.value) ? e.target.value : ""));
 
 /* ------------------------------- router ---------------------------------- */
-const VIEWS = ["login", "dashboard", "transcripts", "resume", "documents", "wizard", "copilot"];
-const SIDE_VIEWS = ["dashboard", "transcripts", "resume", "documents"];   // pages framed by the sidebar
+const VIEWS = ["login", "dashboard", "transcripts", "qbank", "feedback", "resume", "documents", "wizard", "copilot"];
+const SIDE_VIEWS = ["dashboard", "transcripts", "qbank", "feedback", "resume", "documents"];   // pages framed by the sidebar
 function show(name) {
   for (const v of VIEWS) $("view-" + v)?.classList.toggle("hidden", v !== name);
-  $("sideNav")?.classList.toggle("hidden", !SIDE_VIEWS.includes(name));
+  $("sideNav")?.classList.toggle("hidden", !!window.kompasDesktop || !SIDE_VIEWS.includes(name));
   document.querySelectorAll(".side-item[data-view]").forEach(b => b.classList.toggle("on", b.dataset.view === name));
   window.kompasDesktop?.setLive(name === "copilot");               // desktop: answer hotkeys only while the live screen is open
   window.kompasDesktop?.setScreen?.(name);                         // desktop: the window resizes to fit this screen
@@ -99,14 +133,96 @@ function openTranscripts() {
     row.className = "doc-item";
     row.innerHTML = `<div class="doc-ico">☰</div><div class="doc-main"><div class="doc-name"></div><div class="doc-meta"></div></div><div class="doc-actions"><button class="btn">Open</button></div>`;
     row.querySelector(".doc-name").textContent = (s.role || "Untitled role") + (s.company ? " · " + s.company : "");
-    const n = s.transcripts.length;
-    row.querySelector(".doc-meta").textContent = new Date(s.createdAt).toLocaleDateString() + " · " + n + (n > 1 ? " runs" : " run");
+    row.querySelector(".doc-meta").textContent = new Date(s.createdAt).toLocaleDateString();
     row.querySelector(".btn").onclick = () => viewTranscripts(s);
     list.append(row);
   }
   show("transcripts");
 }
+/* ---- a session's life: Start → Stop (Continue for 30 minutes) → ended, by the End button or by the clock ----
+   Owner, 2026-10-01: Stop ends the run and closes the live box. The card then offers Continue for 30 minutes; after that the
+   session ends by itself. A stopped session can also be ended from its card. The transcript is kept either way. An ended session
+   is over (his second decision the same day: "Clicking on end doesn't continue anymore. Only view transcript would be visible"):
+   its card offers its transcript and nothing to start. A session has one transcript, however often it was stopped and continued.
+   On the session record: runAt (a run exists), pausedAt (when its live box closed), endedAt + endedBy ("you" | "clock"). */
+const CONTINUE_MS = 30 * 60000;
+const liveKey = (id) => id + ":live";
+const sessionOpen = (s) => !!s.runAt && !s.endedAt;
+const liveOpenFor = (s) => !!current && current.id === s.id && !$("view-copilot").classList.contains("hidden");
+const clockTime = (t) => new Date(t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+const dayTime = (t) => (new Date(t).toDateString() === new Date().toDateString() ? "" : new Date(t).toLocaleDateString([], { month: "short", day: "numeric" }) + ", ") + clockTime(t);
+function lastHeardAt(id) { try { const log = JSON.parse(localStorage.getItem("perfact.log." + id) || "[]"); return (log.length && log[log.length - 1].at) || 0; } catch { return 0; } }
+// A live box says it is open every few seconds, so another window of Kompas does not take its session for a stopped one.
+const beatKey = (id) => "perfact.live." + id;
+let beatTimer = 0, beatId = "";
+function beat(on) {
+  clearInterval(beatTimer);
+  if (beatId) { try { localStorage.removeItem(beatKey(beatId)); } catch {} beatId = ""; }
+  if (!on || !current || !current.id) return;
+  beatId = current.id;
+  const tick = () => { try { localStorage.setItem(beatKey(beatId), String(Date.now())); } catch {} };
+  tick(); beatTimer = setInterval(tick, 5000);
+}
+// 90 seconds, not 15: a window in the background is only allowed to run its timers about once a minute
+const liveElsewhere = (s) => { if (liveOpenFor(s)) return false; try { return Date.now() - Number(localStorage.getItem(beatKey(s.id)) || 0) < 90000; } catch { return false; } };
+// A run's transcript, made from its event log: the entry for the session's list and the stored text. null when nothing was heard or answered.
+function runTranscript(s, log, ended) {
+  const heard = log.filter(e => e.t === "line").length, answers = log.filter(e => e.t === "answer" && !e.noQuestion).length;
+  if (!heard && !answers) return null;
+  const at = log[0].at, key = `${s.id}:tx:${at}`;
+  return { key, entry: { key, at, ended, heard, answers }, rec: { at, ended, text: transcriptText(s, log), log: log.slice() } };   // log = training data
+}
+function listTranscript(record, entry) { record.transcripts = [...(record.transcripts || []).filter(t => t.key !== entry.key), entry].slice(-20); }
+function closeRun(s, at, by) {
+  // The run's stored log becomes its transcript before it is cleared, so a window that went without a Stop loses nothing.
+  const key = "perfact.log." + s.id; let raw = null, log = [];
+  try { raw = localStorage.getItem(key); log = JSON.parse(raw || "[]"); } catch {}
+  const t = Array.isArray(log) && log.length ? runTranscript(s, log, Math.min(at, Date.now())) : null;
+  if (t) listTranscript(s, t.entry);
+  s.endedAt = at; s.endedBy = by; s.runAt = null; s.pausedAt = null;
+  if (current && current.id === s.id && !liveOpenFor(s)) { clearTimeout(logSaveT); sessionLog = []; }   // nothing left over from the closed run writes its log back
+  // Stored a moment later (the store may not be ready while the page is still loading). The log goes only once its transcript is
+  // stored, and only if it is still that run's log; the next Start is then a new run, with its own transcript.
+  setTimeout(async () => {
+    if (t) await DossierDB.put(t.key, t.rec);
+    try { if (localStorage.getItem(key) === raw) localStorage.removeItem(key); } catch {}
+    DossierDB.put(liveKey(s.id), null);
+  }, 0);
+}
+let endTimer = 0;
+// Ends every stopped session whose 30 minutes are over, and wakes up again when the next one is due.
+function sweepSessions() {
+  const now = Date.now(); let changed = false, next = Infinity;
+  for (const s of sessions) {
+    if (!sessionOpen(s)) continue;
+    if (!s.pausedAt) { if (liveOpenFor(s) || liveElsewhere(s)) continue; s.pausedAt = lastHeardAt(s.id) || now; changed = true; }   // the window went without a Stop: counted from the last thing heard
+    if (now - s.pausedAt >= CONTINUE_MS) { closeRun(s, s.pausedAt + CONTINUE_MS, "clock"); changed = true; }
+    else next = Math.min(next, s.pausedAt + CONTINUE_MS);
+  }
+  if (changed) LS.set("sessions", sessions);
+  clearTimeout(endTimer);
+  if (next < Infinity) endTimer = setTimeout(() => { sessions = LS.get("sessions", []); if ($("view-dashboard").classList.contains("hidden")) sweepSessions(); else renderSessions(); }, next - now + 500);
+}
+// A card can be older than the store (a save elsewhere, another window), so both buttons act on the record as it is stored now.
+function continueSession(s) {
+  sessions = LS.get("sessions", []); const x = sessions.find(v => v.id === s.id);
+  if (!x || !sessionOpen(x) || liveElsewhere(x) || Date.now() - (x.pausedAt || 0) >= CONTINUE_MS) { renderSessions(); return; }   // its time ran out, or it was ended or opened elsewhere, while the card was on screen
+  x.pausedAt = null; LS.set("sessions", sessions);
+  launchCopilot(x, { resume: true });
+}
+function endSession(s) {
+  sessions = LS.get("sessions", []); const x = sessions.find(v => v.id === s.id);
+  if (x && sessionOpen(x) && !liveElsewhere(x)) { closeRun(x, Date.now(), "you"); LS.set("sessions", sessions); }
+  renderSessions();
+}
+// Another window changed the sessions: this one takes the new list, so it never writes an old one back.
+window.addEventListener("storage", (e) => {
+  if (e.key !== "perfact.sessions") return;
+  sessions = LS.get("sessions", []);
+  if (!$("view-dashboard").classList.contains("hidden")) renderSessions();
+});
 function renderSessions() {
+  sweepSessions();
   const list = $("sessionList");
   list.innerHTML = "";
   $("emptySessions").classList.toggle("hidden", sessions.length > 0);
@@ -118,17 +234,35 @@ function renderSessions() {
       <div class="sc-role"></div>
       <div class="sc-co"></div>
       <div class="sc-meta"></div>
+      <div class="sc-state hidden"></div>
       <div class="sc-actions">
         <button class="btn primary sc-start">Start</button>
+        <button class="btn ghost sc-end hidden">End</button>
         <button class="btn ghost sc-tx hidden">Transcript</button>
         <button class="btn ghost sc-del">Delete</button>
       </div>`;
     card.querySelector(".sc-role").textContent = s.role || "Untitled role";
     card.querySelector(".sc-co").textContent = s.company || (s.type === "mock" ? "Mock practice" : "Live interview");
     card.querySelector(".sc-meta").textContent = new Date(s.createdAt).toLocaleString() + " · " + (s.interviewer || "engineer").replace("_", " ") + " · " + (s.difficulty || "standard");
-    card.querySelector(".sc-start").onclick = () => launchCopilot(s);
+    const startBtn = card.querySelector(".sc-start"), state = card.querySelector(".sc-state");
+    if (sessionOpen(s) && !s.pausedAt && liveElsewhere(s)) {               // running in another window of Kompas: nothing to press here
+      startBtn.classList.add("hidden"); card.querySelector(".sc-del").classList.add("hidden");
+      state.textContent = "Open in another window."; state.classList.remove("hidden"); card.classList.add("open");
+    } else if (sessionOpen(s)) {                                           // stopped, and still inside its 30 minutes
+      const at = s.pausedAt || Date.now();
+      startBtn.textContent = "Continue"; startBtn.onclick = () => continueSession(s);
+      state.textContent = `Stopped ${clockTime(at)}. Continue until ${clockTime(at + CONTINUE_MS)}.`; state.classList.remove("hidden");
+      const end = card.querySelector(".sc-end"); end.classList.remove("hidden"); end.onclick = () => endSession(s);
+      card.querySelector(".sc-del").classList.add("hidden");               // a session is ended before it is deleted
+      card.classList.add("open");
+    } else if (s.endedAt) {                                                // ended is final: nothing to start or continue, only its transcript to read
+      startBtn.classList.add("hidden"); card.classList.add("ended");
+      state.textContent = `Ended ${dayTime(s.endedAt)}${s.endedBy === "clock" ? ", 30 minutes after it was stopped" : ""}.`; state.classList.remove("hidden");
+    } else {
+      startBtn.onclick = () => { sessions = LS.get("sessions", []); launchCopilot(sessions.find(v => v.id === s.id) || s); };   // the record as it is stored now
+    }
     const tx = card.querySelector(".sc-tx"), nTx = (s.transcripts || []).length;
-    if (nTx) { tx.classList.remove("hidden"); tx.textContent = nTx > 1 ? `Transcripts (${nTx})` : "Transcript"; tx.onclick = () => viewTranscripts(s); }
+    if (nTx) { tx.classList.remove("hidden"); tx.onclick = () => viewTranscripts(s); }   // one session, one transcript, however many times it was stopped and continued
     card.querySelector(".sc-del").onclick = () => { sessions = sessions.filter(x => x.id !== s.id); LS.set("sessions", sessions); renderSessions(); };
     list.append(card);
   }
@@ -139,21 +273,58 @@ $("newSessionBtn2").onclick = openWizard;
 /* -------------------------------- wizard ---------------------------------- */
 let step = 0;
 let draft = null;
+// The setup is cached as it is typed, so uploading a resume (which leaves the wizard) or closing it does not throw
+// the job details away (owner, 7 Oct 2026: "The details entered so far should be cached and continued filling. So
+// the user won't start everything from scratch"). Cleared only when a session is actually created.
+const DRAFT_KEY = "wizdraft";
+const wizardOpen = () => !$("view-wizard")?.classList.contains("hidden");
+function saveWizardDraft() {
+  if (!draft || !wizardOpen() || !$("company")) return;
+  LS.set(DRAFT_KEY, {
+    jobLink: $("jobLink")?.value || "", company: $("company").value, role: $("role").value, jd: $("jd").value,
+    instructions: $("instructions")?.value || "", type: draft.type, length: draft.length, tone: draft.tone, mode: draft.mode,
+    interviewer: $("interviewerSelect")?.value, difficulty: $("difficultySelect")?.value, dossierSize: $("dossierSize")?.value,
+    autoAnswer: $("autoAnswer")?.checked, saveTranscript: $("saveTranscript")?.checked,
+    resumeId: selectedResumeId, docIds: [...selectedDocIds], at: Date.now(),
+  });
+}
+function clearWizardDraft() { LS.set(DRAFT_KEY, null); }
+function applyWizardDraft() {
+  const s = LS.get(DRAFT_KEY, null);
+  if (!s || !(s.company || s.role || s.jd || s.jobLink || s.instructions || s.resumeId || (s.docIds || []).length)) return;
+  if ($("jobLink")) $("jobLink").value = s.jobLink || "";
+  $("company").value = s.company || ""; $("role").value = s.role || ""; $("jd").value = s.jd || "";
+  if ($("instructions")) $("instructions").value = s.instructions || "";
+  if (s.type) { draft.type = s.type; document.querySelectorAll(".choice").forEach(c => c.classList.toggle("on", c.dataset.type === s.type)); }
+  if (s.length) { draft.length = s.length; segSet("lengthSeg", s.length); }
+  if (s.tone) { draft.tone = s.tone; segSet("toneSeg", s.tone); }
+  if (s.mode) { draft.mode = s.mode; segSet("modeSeg", s.mode); if ($("interviewerSelect")) showCodingLevels($("interviewerSelect"), s.mode); }
+  if (s.interviewer && $("interviewerSelect")) $("interviewerSelect").value = s.interviewer;
+  if (s.difficulty && $("difficultySelect")) $("difficultySelect").value = s.difficulty;
+  if (s.dossierSize && $("dossierSize")) $("dossierSize").value = s.dossierSize;
+  if (typeof s.autoAnswer === "boolean") { draft.autoAnswer = s.autoAnswer; $("autoAnswer").checked = s.autoAnswer; }
+  if (typeof s.saveTranscript === "boolean") { draft.saveTranscript = s.saveTranscript; $("saveTranscript").checked = s.saveTranscript; }
+  if (s.resumeId && docsGet().some(d => d.id === s.resumeId)) selectedResumeId = s.resumeId;
+  selectedDocIds = new Set((s.docIds || []).filter(id => docsGet().some(d => d.id === id)));
+}
 function openWizard() {
-  draft = { type: "live", length: "balanced", tone: "professional", model: "claude-haiku-4-5", language: "en", autoAnswer: false, saveTranscript: true };
+  const prev = sessions[0] || {};
+  draft = { type: "live", length: prev.length || "balanced", tone: prev.tone || "professional", model: prev.model || "claude-haiku-4-5", language: "en", autoAnswer: !!prev.autoAnswer, saveTranscript: prev.saveTranscript !== false };
   step = 0;
-  // reset fields
-  ["jobLink", "company", "role", "jd", "resume", "instructions"].forEach(id => { if ($(id)) $(id).value = ""; });
+  // A new session starts with a blank job. The answer preferences he already saved stay.
+  ["jobLink", "company", "role", "jd", "resume"].forEach(id => { if ($(id)) $(id).value = ""; });
+  if ($("instructions")) $("instructions").value = prev.instructions || "";
   $("resume")?.classList.add("hidden");                         // paste box stays folded until asked for
   document.querySelectorAll(".choice").forEach(c => c.classList.toggle("on", c.dataset.type === "live"));
-  segSet("lengthSeg", "balanced"); segSet("toneSeg", "professional"); segSet("modeSeg", "technical");
-  $("model").value = draft.model; $("autoAnswer").checked = false; $("saveTranscript").checked = true;
-  if ($("interviewerSelect")) $("interviewerSelect").value = "engineer";
-  if ($("difficultySelect")) $("difficultySelect").value = "standard";
-  if ($("dossierSize")) $("dossierSize").value = "auto";
+  segSet("lengthSeg", draft.length); segSet("toneSeg", draft.tone); segSet("modeSeg", prev.mode || "technical");
+  $("model").value = draft.model; $("autoAnswer").checked = draft.autoAnswer; $("saveTranscript").checked = draft.saveTranscript;
+  if ($("interviewerSelect")) { showCodingLevels($("interviewerSelect"), prev.mode); $("interviewerSelect").value = keptLevel(prev.interviewer, prev.mode); }
+  if ($("difficultySelect")) $("difficultySelect").value = prev.difficulty || "standard";
+  if ($("dossierSize")) $("dossierSize").value = prev.dossierSize || "auto";
   selectedResumeId = (docsGet().find(d => d.kind === "resume" && d.primary && d.text)
                     || docsGet().find(d => d.kind === "resume" && d.text) || {}).id || "";
   selectedDocIds = new Set();
+  applyWizardDraft();                 // continue a setup left unfinished, instead of starting from scratch
   renderResumeSelect();
   renderDocPicker();
   gotoStep(0);
@@ -171,12 +342,15 @@ $("wizBack").onclick = () => { if (step === 0) openDashboard(); else gotoStep(st
 $("wizNext").onclick = () => { if (step < 2) gotoStep(step + 1); else finishWizard(); };
 document.querySelectorAll(".choice").forEach(c => c.onclick = () => {
   document.querySelectorAll(".choice").forEach(x => x.classList.remove("on"));
-  c.classList.add("on"); draft.type = c.dataset.type;
+  c.classList.add("on"); draft.type = c.dataset.type; saveWizardDraft();
 });
 function segSet(id, val) { const box = $(id); if (!box) return; [...box.children].forEach(b => b.classList.toggle("on", b.dataset.v === val)); }
 ["lengthSeg", "toneSeg", "modeSeg"].forEach(id => { const box = $(id); if (box) box.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; [...box.children].forEach(x => x.classList.remove("on")); b.classList.add("on"); draft[{ lengthSeg: "length", toneSeg: "tone", modeSeg: "mode" }[id]] = b.dataset.v;
-  // the interview type suggests who is asking: Behavioural -> Technical HR, Technical -> Engineer, Coding -> Developer
-  if (id === "modeSeg" && $("interviewerSelect")) { showCodingLevels($("interviewerSelect"), b.dataset.v); const who = { behavioural: "technical_hr", technical: "engineer", coding: "architect", final: "architect" }[b.dataset.v]; if (who) $("interviewerSelect").value = who; } }; });
+  // the interview type suggests who is asking: Behavioural -> Technical HR, Technical -> Engineer, Coding -> Architect (Developer offered beside it)
+  if (id === "modeSeg" && $("interviewerSelect")) { showCodingLevels($("interviewerSelect"), b.dataset.v); const who = { behavioural: "technical_hr", technical: "engineer", coding: "architect", final: "architect" }[b.dataset.v]; if (who) $("interviewerSelect").value = who; } saveWizardDraft(); }; });
+// The typed fields and dropdowns autosave as they change; the segmented controls and resume/document pickers
+// call saveWizardDraft from their own handlers (clicks, not input events).
+["input", "change"].forEach(ev => document.querySelectorAll(".wiz-pane").forEach(p => p.addEventListener(ev, saveWizardDraft)));
 
 function finishWizard() {
   const s = {
@@ -206,6 +380,7 @@ function finishWizard() {
   };
   sessions.unshift(s);
   LS.set("sessions", sessions);
+  clearWizardDraft();              // the setup became a session; the next new session starts clean
   launchCopilot(s);
 }
 
@@ -226,21 +401,64 @@ let sessionLog = [];
 let logSaveT = 0;
 function logEvent(ev) {
   sessionLog.push({ at: Date.now(), ...ev }); if (sessionLog.length > 4000) sessionLog.shift();
-  clearTimeout(logSaveT); logSaveT = setTimeout(() => { if (current && current.id) { try { localStorage.setItem("perfact.log." + current.id, JSON.stringify(sessionLog)); } catch {} } }, 800);
+  // written only while that session's live box is open: an event that lands after the box closed must not bring a closed run's log back
+  clearTimeout(logSaveT); logSaveT = setTimeout(() => { if (current && current.id && liveOpenFor(current)) { try { localStorage.setItem("perfact.log." + current.id, JSON.stringify(sessionLog)); } catch {} if (Date.now() - liveSavedAt > 15000) saveLive(); } }, 800);
+}
+// What is on the live screen, kept so that Continue brings it back: the cards, which one is showing, and what was heard.
+// A card's in-flight state (a request, a stream, a fill in progress) is not kept.
+const CARD_TRANSIENT = new Set(["streaming", "anchorFlight", "_flight", "_ledgerAt", "req"]);
+let liveSavedAt = 0;
+function saveLive(withLog) {
+  const s = current; if (!s || !s.id) return Promise.resolve();
+  let plain; try { plain = JSON.parse(JSON.stringify(cards, (k, v) => (CARD_TRANSIENT.has(k) || typeof v === "function" ? undefined : v))); } catch { plain = cards.map(c => ({ question: c.question, answer: c.answer })); }
+  cards.forEach((c, i) => { if (c.streaming && plain[i]) plain[i].meta = "Stopped before this answer finished. Press AI Answer to run it again."; });   // a half-written answer is not shown later as a finished one
+  liveSavedAt = Date.now();
+  return DossierDB.put(liveKey(s.id), { at: liveSavedAt, cards: plain, idx, transcript: transcript.slice(-600), ...(withLog ? { log: sessionLog.slice() } : {}) });
+}
+async function restoreLive(s) {
+  const snap = await DossierDB.get(liveKey(s.id));
+  if (current !== s || !snap || !Array.isArray(snap.cards) || !snap.cards.length) return;
+  if (Array.isArray(snap.log) && snap.log.length >= sessionLog.length) sessionLog = snap.log;
+  cards = snap.cards; idx = Math.max(0, Math.min(cards.length - 1, Number(snap.idx) || 0));
+  transcript = Array.isArray(snap.transcript) ? snap.transcript : [];
+  heardSeq = answeredSeq = transcript.reduce((n, t) => Math.max(n, Number(t.seq) || 0), heardSeq);   // what came back is already dealt with: only what is heard from now on is pending
+  updatePending(); renderDrawer(); renderCard();
+}
+// The live box is closing: the run stays open for Continue. The session is marked first (that part cannot wait when the window
+// itself is going), the screen is stored after.
+async function pauseRun() {
+  const s = current; if (!s || !s.id) return;
+  if (!s.runAt && !sessionLog.some(e => e.t === "line" || (e.t === "answer" && !e.noQuestion))) return;   // opened and left with nothing heard or answered (a depth step or a copy is not a run): the card stays as it was
+  try { localStorage.setItem("perfact.log." + s.id, JSON.stringify(sessionLog)); } catch {}
+  s.runAt = s.runAt || (sessionLog[0] && sessionLog[0].at) || Date.now(); s.pausedAt = Date.now(); s.endedAt = null; s.endedBy = null;
+  saveSession(s, true);
+  await saveLive(true);
+}
+// A run begins when capture has really started. Starting an ended session again is a new run.
+function markRun() {
+  const s = current; if (!s || !s.id) return;
+  if (!s.runAt || s.endedAt) s.runAt = Date.now();
+  s.endedAt = null; s.endedBy = null; s.pausedAt = null; saveSession(s, true);
 }
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 function cfgOf(s) { return { company: s.company, role: s.role, jd: s.jd, resume: s.resume, documents: s.documents, instructions: s.instructions, language: s.language }; }
 function liveConfig() {
   const s = current || {};
   const who = ($("liveInterviewer") && $("liveInterviewer").value) || s.interviewer || "engineer";
-  return { ...cfgOf(s), length: "long", tone: s.tone, mode: s.mode || "technical", interviewer: who, difficulty: s.difficulty || "standard" };
+  return { ...cfgOf(s), length: s.length || "balanced", tone: s.tone, mode: s.mode || "technical", interviewer: who, difficulty: s.difficulty || "standard" };
 }
-function saveSession(s) {
+// Where a session stands (runAt, pausedAt, endedAt, endedBy) is changed only by the lifecycle code (life = true), and its list of
+// transcripts only by the code that stores one. Any other save keeps what the store holds, so an object read earlier (the session
+// that was last open, a prep result that comes back late) cannot bring a closed run back or drop a transcript.
+const LIFE_KEYS = ["runAt", "pausedAt", "endedAt", "endedBy"];
+function saveSession(s, life) {
   const all = LS.get("sessions", []); const i = all.findIndex(x => x.id === s.id);
-  if (i >= 0) { all[i] = { ...all[i], ...s }; LS.set("sessions", all); sessions = all; }
+  if (i < 0) return;
+  for (const k of life ? ["transcripts"] : ["transcripts", ...LIFE_KEYS]) { if (all[i][k] === undefined) delete s[k]; else s[k] = all[i][k]; }
+  all[i] = { ...all[i], ...s }; LS.set("sessions", all); sessions = all;
 }
 
-function launchCopilot(s) {
+function launchCopilot(s, opts = {}) {
   transcriptionEpoch++;
   transcriptionOrder = Promise.resolve();
   current = s;
@@ -250,9 +468,10 @@ function launchCopilot(s) {
   }
   transcript = []; ledger = null;
   sessionLog = [];
-  try {                                  // same session reopened within 3 hours (e.g. the update reload): keep its log
+  try {                                  // a run that is still open (Continue, or the update reload): keep its log. A new run never takes an old log.
     const prev = JSON.parse(localStorage.getItem("perfact.log." + s.id) || "[]");
-    if (Array.isArray(prev) && prev.length && Date.now() - prev[prev.length - 1].at < 3 * 3600e3) sessionLog = prev;
+    if (sessionOpen(s) && Array.isArray(prev) && prev.length && Date.now() - prev[prev.length - 1].at < 3 * 3600e3) sessionLog = prev;
+    else if (!sessionOpen(s)) localStorage.removeItem("perfact.log." + s.id);
   } catch {}
   cards = [{ question: "Preparing…", answer: ["Forming your identity and persona from the four factors…"] }];
   idx = 0;
@@ -266,7 +485,11 @@ function launchCopilot(s) {
   renderDrawer();
   renderCard();
   show("copilot");
-  preparePack(s);
+  beat(true);
+  // Continue: the answers and what was heard come back first, and the transcript goes on as the same run. The prep step follows,
+  // so it fills the restored screen and is not overwritten by it.
+  if (opts.resume) restoreLive(s).catch(() => {}).then(() => { if (current === s) preparePack(s); });
+  else preparePack(s);
 }
 function personaLabel(seniority, role) {       // "Senior" + "Senior Cybersecurity Engineer" -> no duplicate
   seniority = String(seniority || "").trim(); role = String(role || "").trim();
@@ -371,8 +594,19 @@ async function preparePack(s) {
 }
 // Fill the placeholder card with the intro — never wipe answers already on screen (prep can
 // finish after the interview has started).
+function speakerFirst(s) {
+  const lines = String((s && s.resume) || "").split(/\n/).map(l => l.trim()).filter(Boolean).slice(0, 8);
+  const title = /^(Senior|Junior|Staff|Lead|Principal|Security|Cyber|Software|Network|Cloud|Data|Director|Manager|Engineer|Analyst|Developer|Architect|Associate|Internal)$/;
+  for (const line of lines) {
+    const m = line.match(/\b([A-Z][a-z]{2,})\s+[A-Z][a-z]{2,}\b/);
+    if (m && !title.test(m[1])) return m[1];
+  }
+  return "";
+}
 function seedIdentity(s) {
-  const id = s.prep && s.prep.identity;
+  window.__speakerName = speakerFirst(s);
+  let id = s.prep && s.prep.identity;
+  if (id && window.KompasCorrect && window.KompasCorrect.asSpeaker) id = window.KompasCorrect.asSpeaker(id, window.__speakerName);
   const intro = { question: "Your introduction", answer: id ? id.split(/(?<=\.)\s+|\n+/).map(x => x.trim()).filter(Boolean) : ["Press Start — answers appear here."] };
   const ph = cards.findIndex(c => /^(Preparing…|Ready)$/.test(c.question));
   if (ph >= 0) cards[ph] = intro;
@@ -380,8 +614,29 @@ function seedIdentity(s) {
   if (cards.length === 1) idx = 0;
   renderCard();
 }
-$("exitCopilot").onclick = async () => { if (running) await stop(false); await saveRunTranscript(); dossierAbort = true; resetLiveState(); openDashboard(); };
-window.addEventListener("pagehide", () => { if (current && !$("view-copilot").classList.contains("hidden")) saveRunTranscript(); });
+// Stop, ← and the Connect dialog's Back all leave the same way: capture off, the transcript saved, the run kept for Continue, the box closed.
+let leaving = false;
+async function leaveLive() {
+  if (leaving) return; leaving = true;                                     // a second click while the run is being stored does nothing
+  try {
+    if (follow.on) setFollow(false);                                       // Follow along holds its own microphone: it goes off with the box
+    if (running && captures.length) { status("Saving the last words…", "live"); try { await flushHeard(2000); } catch {} }   // a phrase still being written down lands in the transcript
+    if (running) await stop(false);
+    dropScreen();
+    await saveRunTranscript(); await pauseRun();
+    beat(false); dossierAbort = true; resetLiveState(); openDashboard();
+  } finally { leaving = false; }
+}
+// The shared tab or screen is let go when the box closes, so the browser stops showing that it is being shared.
+function dropScreen() { if (displayVideo) { try { displayVideo.stop(); } catch {} displayVideo = null; } }
+$("exitCopilot").onclick = leaveLive;
+window.addEventListener("pagehide", () => {
+  if (current && !$("view-copilot").classList.contains("hidden")) { saveRunTranscript(); pauseRun(); }
+  beat(false);
+  // The whole list is not written here any more: every change is already saved when it is made, and a window that had been idle
+  // would write an old list over what another window saved since.
+  try { docsSet(docsGet()); } catch {}
+});
 
 /* ---- Q&A cards ---- */
 function lines(answer) { return (Array.isArray(answer) ? answer : String(answer || "").split(/\n+/)).map(l => String(l).replace(/^[-•*\s]+/, "").trim()).filter(Boolean); }
@@ -391,25 +646,13 @@ function unbracket(s) {
   // Only fill-in PLACEHOLDERS are folded away ("[the EDR product you used]" -> "the EDR product",
   // "[blank]" / "[the reduction and timeline]" -> dropped). Real bracket content — "[Event ID 4625]",
   // "logs[idx]", "[::1]", "[a-z]" — is left exactly as written, and nothing else is touched.
-  const isPlaceholder = (x) => /\b(you|your)\b/i.test(x) || /^(the|a|an|some|specific|insert|fill|replace)\s/i.test(x)
-    || /^\s*(blank|tbd|tba|n\/?a|x|n|metric|number|percent(age)?|date|year|company|employer|tool|name|value|amount|timeframe|duration|result|impact)\s*$/i.test(x)
+  const isPlaceholder = (x) => /\b(you|your)\b/i.test(x) || /^(the|a|an|some|specific|insert)\s/i.test(x)
+    || /^\s*(blank|tbd|tba|n\/?a|x|n|metric|number|percent(age)?|date|year|company|employer|tool|name|value|amount|timeframe|duration)\s*$/i.test(x)
     || /^[a-z]+(?:\s+[a-z]+){1,8}$/.test(x.trim());
-  const naturalFallback = (inner) => {
-    const x = inner.toLowerCase();
-    if (/percent|metric|number|reduction|increase|improvement|result|impact/.test(x)) return "a measurable improvement";
-    if (/tool|platform|product|technology/.test(x)) return "the relevant tool";
-    if (/company|employer|organization|client/.test(x)) return "the organization";
-    if (/date|year|timeframe|duration|timeline/.test(x)) return "the project timeline";
-    if (/team|people|engineers|stakeholders/.test(x)) return "the team";
-    if (/name|person|manager|leader/.test(x)) return "the person involved";
-    return "";
-  };
   let hit = false;
   const out = String(s || "").replace(/\[([^\]\n]{1,90})\]/g, (m, inner) => {
     if (!isPlaceholder(inner)) return m;
     hit = true;
-    const fallback = naturalFallback(inner);
-    if (fallback) return fallback;
     if (!/\b(you|your)\b/i.test(inner)) return "";
     const t = inner.replace(/\s+(that |which |who )?(you|your)\b.*$/i, "").replace(/^(your|the)\s+/i, "the ").trim();
     return t.split(/\s+/).length >= 2 && !/^(how|what|when|why|where)\b/i.test(t) ? t : "";
@@ -435,8 +678,18 @@ function inline(li, text) {
     li.append(el || document.createTextNode(part));
   }
 }
-// Passage lines (no bullet) render as prose, "- " lines as bullets, "## " lines as section heads.
+// Passage lines render as prose and "- " lines as bullets. A markdown heading is dropped, not shown as a side heading.
+function sayAnswer(text) {
+  if (!window.KompasCorrect) return text;
+  const cleaned = window.KompasCorrect.correct(text);
+  const bulleted = /(?:^|\n)\s*(?:[-•*]|\d+[.)])\s+/.test(String(text || ""));
+  return bulleted && window.KompasCorrect.speak ? window.KompasCorrect.speak(cleaned) : cleaned;
+}
 function answerLines(answer) {
+  // He is rehearsing as himself. The stored introduction can still say his name; the line he reads cannot.
+  if (Array.isArray(answer)) answer = answer.map(t => String(t).trim()).filter(Boolean).join("\n");
+  if (window.KompasCorrect && window.KompasCorrect.asSpeaker) answer = window.KompasCorrect.asSpeaker(String(answer || ""), window.__speakerName);
+  if (window.KompasCorrect) answer = sayAnswer(answer);
   if (Array.isArray(answer)) return answer.map(t => ({ t: String(t).trim().replace(/^(?:[-•]|\*(?!\*))\s*/, "").trim(), kind: "bullet" })).filter(x => x.t);
   // ``` fences hold code: kept whole (blank lines and indentation intact), even while still streaming
   const out = []; let code = null, prose = [];
@@ -457,35 +710,35 @@ function proseLines(text) {
   return String(text || "").replace(/\*{4,}/g, "").replace(/\*\*\s+\*\*/g, " ").split(/\n+/).map(l => l.trim())
     .filter(l => l && !/^(EXPERIENCE|DESIGN|INTRODUCTION|DRILL-DOWN|SIMPLE|CONSOLIDATED)\b[A-Z /&-]*:?$/.test(l) && !/^<[A-Z][^>]*>$/.test(l))   // never show a template label
     .map(l => {
-    const h = l.match(/^#{1,3}\s*(.+)$/);
-    if (h) return { t: h[1].replace(/\*\*/g, "").replace(/__/g, "").trim(), kind: "head" };
+    if (/^#{1,6}\s+\S/.test(l)) return null;
     const b = l.match(/^(?:(?:[-•]|\*(?!\*)|\d+[.)])\s+)+(.*)$/);      // "- - text" too
     if (b) return { t: b[1], kind: "bullet" };
     if (/^\((pause|beat)\)\.?$/i.test(l)) return { t: l, kind: "pauseline" };
     return { t: l, kind: "passage" };
-  });
+  }).filter(Boolean);
 }
 function renderCard() {
   const c = cards[idx]; if (!c) return;
   $("question").textContent = c.question;
   $("question").title = c.heard || "";
-  // The answer never scrolls itself: it opens on its first line and stays wherever YOU scrolled,
-  // even while a long answer streams in below.
   const ul = $("answer"), keep = ul.scrollTop;
+  const lines = answerLines(c.answer);
+  const spoken = lines.map(l => l.t).join("\n");
+  const raw = Array.isArray(c.answer) ? c.answer.join("\n") : String(c.answer || "");
+  if (spoken && spoken !== raw) c.answer = spoken;
   ul.innerHTML = "";
-  answerLines(c.answer).forEach(({ t, kind, lang }) => {
+  lines.forEach(({ t, kind, lang }) => {
     const li = document.createElement("li");
     if (kind === "code") {
       li.className = "codeblock"; const pre = document.createElement("pre"), code = document.createElement("code");
       if (lang) pre.dataset.lang = lang; code.textContent = t; pre.append(code); li.append(pre); ul.append(li); return;
     }
-    if (kind === "head") li.className = "qhead";
-    else if (kind === "passage") li.className = "passage";
+    if (kind === "head") return;
+    if (kind === "passage") li.className = "passage";
     else if (kind === "pauseline") li.className = "pauseline";
     inline(li, t);
     ul.append(li);
   });
-  $("answerMeta").textContent = c.meta || "";
   $("card").classList.toggle("streaming", !!c.streaming);
   wrapWords(ul);                                     // every word is addressable, for Follow along
   ul.scrollTop = keep;
@@ -545,18 +798,57 @@ function syncSrc() {
 $("micBtn").onclick = async () => { srcOn.mic = !srcOn.mic; syncSrc(); if (running) { if (srcOn.mic) await startMic(); else stopSource("You"); reportSources(); } };
 $("sysBtn").onclick = async () => { srcOn.sys = !srcOn.sys; syncSrc(); if (running) { if (srcOn.sys) await startSys(); else stopSource("Them"); reportSources(); } };
 syncSrc();
-$("themeBtn").onclick = () => $("overlay").classList.toggle("dark");
+/* Look: paper stays the default. Opacity fades backgrounds only. Letters, including bold words, stay full ink. */
+const LOOK_FONTS = {
+  times: '"Times New Roman", Times, Georgia, "Nimbus Roman", serif',
+  lora: '"Lora", Georgia, "Times New Roman", serif',
+  manrope: '"Manrope", ui-sans-serif, system-ui, sans-serif',
+  inter: '"Inter", ui-sans-serif, system-ui, sans-serif',
+};
+function applyLook() {
+  const desk = !!window.kompasDesktop;
+  const theme = !desk && LS.get("theme", "light") === "dark" ? "dark" : "light";
+  document.documentElement.classList.toggle("theme-dark", theme === "dark");
+  const font = LOOK_FONTS[LS.get("font", "times")] ? LS.get("font", "times") : "times";
+  document.documentElement.style.setProperty("--serif", LOOK_FONTS[font]);
+  const text = Math.min(22, Math.max(14, Number(LS.get("textSize", 16)) || 16));
+  document.documentElement.style.setProperty("--text-size", text + "px");
+  const tab = [2, 4, 8].includes(Number(LS.get("tabSize", 4))) ? Number(LS.get("tabSize", 4)) : 4;
+  document.documentElement.style.setProperty("--tab-size", String(tab));
+  const fade = $("lookFade");
+  if (fade) fade.closest(".look-row")?.classList.toggle("hidden", desk);
+  if (!desk) {
+    const a = Math.min(1, Math.max(0.15, Number(LS.get("opacity", 1)) || 1));
+    document.documentElement.style.setProperty("--panel-a", String(a));
+    if (fade && document.activeElement !== fade) fade.value = String(Math.round(a * 100));
+  }
+  const fontSel = $("lookFont"); if (fontSel) fontSel.value = font;
+  const textSel = $("lookText"); if (textSel && document.activeElement !== textSel) textSel.value = String(text);
+  const tabSel = $("lookTab"); if (tabSel) tabSel.value = String(tab);
+  $("themeLight")?.classList.toggle("on", theme === "light");
+  $("themeDark")?.classList.toggle("on", theme === "dark");
+}
+applyLook();
+$("lookFade")?.addEventListener("input", (e) => { const a = Number(e.target.value) / 100; LS.set("opacity", a); applyLook(); });
+$("lookFont")?.addEventListener("change", (e) => { LS.set("font", e.target.value); applyLook(); });
+$("lookText")?.addEventListener("input", (e) => { LS.set("textSize", Number(e.target.value)); applyLook(); });
+$("lookTab")?.addEventListener("change", (e) => { LS.set("tabSize", Number(e.target.value)); applyLook(); });
+// The model that writes answers. Empty is the server's own lanes; the server ignores anything not on its list.
+const LIVE_MODELS = ["", "gpt-5.6-luna"];
+const liveModel = () => { const m = LS.get("liveModel", ""); return LIVE_MODELS.includes(m) ? m : ""; };
+if ($("liveModel")) $("liveModel").value = liveModel();
+$("liveModel")?.addEventListener("change", (e) => LS.set("liveModel", LIVE_MODELS.includes(e.target.value) ? e.target.value : ""));
+$("themeLight")?.addEventListener("click", () => { LS.set("theme", "light"); applyLook(); });
+$("themeDark")?.addEventListener("click", () => { LS.set("theme", "dark"); applyLook(); });
 $("collapseBtn").onclick = () => $("overlay").classList.toggle("collapsed");
 $("hideBtn").onclick = () => $("overlay").classList.toggle("collapsed");
 $("transcriptBtn").onclick = () => $("drawer").classList.toggle("hidden");
 $("personaBtn").onclick = () => openPersonaFile();
 $("clearBtn").onclick = () => { cards = [{ question: "Cleared.", answer: ["Ask something, or let the call fill this in."] }]; idx = 0; transcript = []; answeredSeq = heardSeq; updatePending(); renderDrawer(); renderCard(); status("Cleared."); };
-// Who is asking = the DEPTH LADDER (owner's order): HR → Technical HR → Analyst → Engineer → Developer
-// → Supervisor → Architect → Lead → Director. Pick where the interview starts; each ↓ (arrow key or ▼)
-// steps one level deeper — "they weren't loving that depth, go further" — like Claude's effort meter,
-// faster → smarter; ↑ steps back to lighter. The answer on screen regenerates for the new level, once,
-// after you stop pressing (same question — it isn't re-derived). Peer sits outside the ladder: it mirrors.
-// Cut to four by the owner (5 Oct 2026); Coding adds Developer between Engineer and Architect ("Developer + Architect for Coding").
+// Who is asking = the DEPTH LADDER, cut to four by the owner (5 Oct 2026): Technical HR → Engineer → Architect →
+// Director. Engineer and Director are the two anchors; the other two are derived from the anchor already stored,
+// so a level change is instant. The closed level map still holds all nine; only these four are offered.
+// Coding adds Developer between Engineer and Architect (owner, 5 Oct 2026: "Developer + Architect for Coding").
 const LADDER_FOUR = ["technical_hr", "engineer", "architect", "director"];
 const LADDER_CODING = ["technical_hr", "engineer", "developer", "architect", "director"];
 const ladderFor = (mode) => mode === "coding" ? LADDER_CODING : LADDER_FOUR;
@@ -566,6 +858,7 @@ function showCodingLevels(sel, mode) {
   sel.querySelectorAll("option[data-coding]").forEach(o => { o.hidden = mode !== "coding"; o.disabled = mode !== "coding"; });
   if (sel.id === "liveInterviewer") LADDER = ladderFor(mode);
 }
+// A session saved on a level that is no longer offered opens on the nearest one kept, never on a blank list.
 function keptLevel(v, mode) {
   const near = { hr: "technical_hr", analyst: "engineer", developer: "engineer", peer: "engineer", supervisor: "architect", lead: "director" };
   return ladderFor(mode).includes(v) ? v : near[v] || "engineer";
@@ -576,7 +869,7 @@ function renderDepth() {
   if (box.children.length !== LADDER.length) { box.replaceChildren(); LADDER.forEach((_, k) => { const b = document.createElement("i"); b.style.height = (5 + k * 1.6).toFixed(1) + "px"; box.append(b); }); }
   [...box.children].forEach((b, k) => b.classList.toggle("on", i >= 0 && k <= i));
   const label = $("liveInterviewer").selectedOptions[0].textContent;
-  $("depthMeter").title = i >= 0 ? `Answer depth ${i + 1} of ${LADDER.length}: ${label} — ↑ lighter · ↓ deeper (arrow keys). Each step regenerates the answer.` : "Peer mirrors the interviewer — ↓ steps onto the depth ladder.";
+  $("depthMeter").title = i >= 0 ? `Answer depth ${i + 1} of ${LADDER.length}: ${label} — ↑ lighter · ↓ deeper. A stored level is instant.` : "Peer mirrors the level already selected.";
   $("whoUp").disabled = i === 0; $("whoDown").disabled = i === LADDER.length - 1;
 }
 let regenTimer = null;
@@ -584,9 +877,17 @@ function regenerateForAudience() {
   if (typeof logAction === "function") logAction("regen", { to: $("liveInterviewer").value });
   const c = cards[idx], label = $("liveInterviewer").selectedOptions[0].textContent;
   if (!c || /^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(c.question) || !String(c.question).trim()) { status("Now answering for: " + label, "live"); return; }
-  status(`Regenerating at ${label} depth…`, "live");
+  if (paintFromAnchors(c)) { status("Shown for " + label + " — no model call.", "live"); return; }
+  const need = window.KompasDiamond && window.KompasDiamond.plan(askingLevel(), c.anchors || {}, window.__peerOf);
+  const out = window.KompasFlight && need && window.KompasFlight.pending(c, need.from);
+  if (out) {                                                      // that anchor is already being written: wait for it, never a second call
+    status("Preparing that answer…", "live");
+    out.catch(() => {}).then(() => { if (cards[idx] === c && !paintFromAnchors(c)) regenerateForAudience(); });
+    return;
+  }
+  if (c.anchorFlight) { status("Preparing that answer…", "live"); return; }
+  status("Preparing the matching answer…", "live");
   if (c.heard) generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "", derived: c.question, regen: true });
-  else if (/^Your introduction$/.test(c.question)) generateAnswer("Tell me about yourself", c, { regen: true });
   else if (!/^🖥/.test(c.question)) generateAnswer(c.question, c, { regen: true });
 }
 function audienceChanged(immediate) {
@@ -628,6 +929,7 @@ async function start() {
   await Promise.allSettled(opening);
   if (!running || generation !== sourceGeneration.You) return;
   if (!captures.length) { status(captureErrors.join(" · ") || "Nothing to capture.", "err"); stop(false); return; }
+  markRun();
   reportSources();
 }
 async function stop(say = true) {
@@ -950,45 +1252,14 @@ function showCaption(who, text, isInterim) {
   $("capWho").textContent = who === "You" ? "You" : "Them"; $("capText").textContent = text;
   clearTimeout(capTimer); capTimer = setTimeout(() => el.classList.add("hidden"), 9000);
 }
-function appendDrawer(who, text, entry) {
+function appendDrawer(who, text) {
   const body = $("drawerBody"); if (!body) return;
   const first = body.firstElementChild; if (first && first.classList.contains("muted")) body.innerHTML = "";
   const d = document.createElement("div"); d.className = "tl " + (who === "You" ? "you" : "them");
   d.innerHTML = "<b></b><span></span>"; d.querySelector("b").textContent = who; d.querySelector("span").textContent = text;
-  if (entry) {
-    const edit = document.createElement("button"); edit.className = "mini"; edit.textContent = "Correct";
-    edit.setAttribute("aria-label", "Correct transcript: " + text);
-    edit.onclick = () => {
-      if (d.querySelector("textarea")) return;
-      const input = document.createElement("textarea"); input.value = entry.text;
-      input.setAttribute("aria-label", "Corrected transcript");
-      const vocabulary = document.createElement("input"); vocabulary.placeholder = "Terms to remember, comma-separated (optional)";
-      vocabulary.setAttribute("aria-label", "Vocabulary for this session");
-      const save = document.createElement("button"); save.className = "mini"; save.textContent = "Save correction";
-      const cancel = document.createElement("button"); cancel.className = "mini"; cancel.textContent = "Cancel";
-      cancel.onclick = () => renderDrawer();
-      save.onclick = () => {
-        const corrected = input.value.replace(/\s+/g, " ").trim().slice(0, 4000);
-        if (!corrected) return;
-        const original = entry.text; entry.text = corrected;
-        const event = sessionLog.find(e => e.t === "line" && e.seq === entry.seq);
-        if (event) { event.originalText ??= original; event.text = corrected; }
-        if (current) {
-          const terms = vocabulary.value.split(",").map(t => t.trim().slice(0, 60)).filter(Boolean);
-          current.voiceVocabulary = [...new Set([...(current.voiceVocabulary || []), ...terms])].slice(-40);
-          saveSession(current);
-        }
-        logEvent({ t: "correction", seq: entry.seq, original, text: corrected });
-        renderDrawer(); saveRunTranscript();
-        status("Correction saved. Added vocabulary will guide future Whisper phrases in this session.");
-      };
-      d.append(input, vocabulary, save, cancel); input.focus();
-    };
-    d.append(edit);
-  }
   body.append(d); body.scrollTop = body.scrollHeight;
 }
-function renderDrawer() { const body = $("drawerBody"); if (!body) return; body.innerHTML = '<div class="muted small">Nothing heard yet.</div>'; transcript.forEach(t => appendDrawer(t.who, t.text, t)); }
+function renderDrawer() { const body = $("drawerBody"); if (!body) return; body.innerHTML = '<div class="muted small">Nothing heard yet.</div>'; transcript.forEach(t => appendDrawer(t.who, t.text)); }
 // Nothing is answered phrase-by-phrase. Everything heard piles up; AI Answer (or Auto, once the
 // speaker goes quiet) merges it, derives ONE big question from all of it, and answers that in full.
 let heardSeq = 0, answeredSeq = 0, flushing = false, autoOn = false, autoTimer = null;
@@ -1097,15 +1368,14 @@ function fixTerms(text) {
   return toks.join("").replace(/\s{2,}/g, " ");
 }
 function onTranscript(who, text) {
-  const originalText = text;
-  // Keep the recognised words intact; approved vocabulary guides the next recognition.
+  text = fixTerms(text);
   if (who === "You" && follow.on && !follow.sr) followHear(text, true);   // Follow along without live recognition
   transcript.push({ who, text, at: Date.now(), seq: ++heardSeq }); if (transcript.length > 500) transcript.shift();
-  logEvent({ t: "line", who, text, originalText, seq: heardSeq });
-  appendDrawer(who, text, transcript[transcript.length - 1]);
+  logEvent({ t: "line", who, text });
+  appendDrawer(who, text);
   showCaption(who, text, false);
   updatePending();
-  if (running && !flushing) scheduleAuto();
+  if (!flushing) scheduleAuto();
 }
 
 /* ---- answers: streamed, grounded on the dossier ---- */
@@ -1119,6 +1389,77 @@ function recentQA(card) {
   return prev.slice(-2).map(c => ({ q: String(c.question).slice(0, 240), a: plainAnswer(c.answer).slice(0, 900) }));
 }
 const consolidatedNeedsDerive = (opts) => !!opts.consolidated && !opts.derived;   // AI Answer: match after the question is derived
+function askingLevel() {
+  const who = ($("liveInterviewer") && $("liveInterviewer").value) || "engineer";
+  if (who !== "peer") window.__peerOf = who;
+  return who;
+}
+function anchorFacts() {
+  const s = current || {};
+  return { role: s.role || (s.prep && s.prep.persona && s.prep.persona.role) || "", resume: s.resume || "" };
+}
+function paintFromAnchors(card) {
+  if (!card || !card.anchors || !window.KompasLevels || !window.KompasDiamond) return false;
+  const level = askingLevel();
+  const plan = window.KompasDiamond.plan(level, card.anchors, window.__peerOf);
+  if (!plan.ready) return false;
+  const shown = sayAnswer(window.KompasLevels.textFor(card.anchors, level, window.__peerOf, liveConfig().mode));
+  if (!shown) return false;
+  card.answer = shown;
+  card.streaming = false;
+  card.meta = "cached";
+  if (cards[idx] === card) renderCard();
+  if (!plan.otherReady) fillAnchor(card, plan.other);
+  return true;
+}
+// What went wrong reads every anchor the moment it lands: the repair is applied before it is shown or stored, and
+// the findings travel to the other anchor's request for the same question (see nextContext).
+function criticise(card, anchor, text) {
+  const C = window.KompasCorrect, J = window.KompasJev, q = card.anchorQ || card.question;
+  if (!C || !C.review) return C ? C.correct(text) : text;
+  const r = C.review(text, q);
+  const other = anchor === "engineer" ? "director" : "engineer";
+  const sib = card.anchors && card.anchors[other];
+  const drift = J && J.storyDrift && sib && sib.prose ? J.storyDrift(sib.prose, r.text) : null;
+  if (drift) r.faults.push({ id: "drift", say: `Engineer and Director tell different stories (${drift.a} and ${drift.b}).` });
+  card.critic = card.critic || {};
+  card.critic[anchor] = r.faults;
+  if (r.faults.length) logEvent({ t: "critic", question: q, anchor, faults: r.faults.map(f => f.id), say: r.faults.map(f => f.say + (f.missing ? " " + f.missing.join("; ") : "")) });
+  return r.text;
+}
+// Both anchors of one question are written from the same ledger, and the second sees the first (with what went wrong on it).
+function nextContext(card, anchor) {
+  const F = window.KompasFlight, C = window.KompasCorrect;
+  const question = card.anchorQ || card.question;
+  if (!F) return { ledger, history: recentQA(card) };
+  const other = anchor === "engineer" ? "director" : "engineer";
+  const note = C && C.criticNote ? C.criticNote((card.critic && card.critic[other]) || []) : "";
+  return { ledger: F.ledgerFor(card, question, ledger), history: F.siblingHistory(card, anchor, recentQA(card), note) };
+}
+function fillAnchor(card, anchor) {
+  if (!card || !window.KompasAnchors || !window.KompasLevels || !window.KompasDiamond) return null;
+  if (!window.KompasDiamond.ANCHORS.includes(anchor)) return null;
+  if (card.anchors && card.anchors[anchor] && card.anchors[anchor].prose) return null;
+  const write = async () => {
+    try {
+      const question = card.anchorQ || card.question;
+      const ctx = nextContext(card, anchor);
+      const text = await window.KompasAnchors.fetchProse(question, anchor, {
+        client: BUILD, config: liveConfig(), prep: { ...slimPrep(), questions: [] },
+        retrieved: retrieve(question, 4), ledger: ctx.ledger, history: ctx.history,
+      });
+      if (!text) return;
+      const shaped = window.KompasLevels.fromProse(criticise(card, anchor, text), anchor);
+      if (!shaped) return;
+      card.anchors = card.anchors || {};
+      card.anchors[anchor] = shaped;
+      const facts = anchorFacts();
+      if (cards[idx] === card) paintFromAnchors(card);
+      await window.KompasAnchors.save(question, facts.role, facts.resume, card.anchors, current && current.id);
+    } catch {}
+  };
+  return window.KompasFlight ? window.KompasFlight.once(card, anchor, write) : write();
+}
 function serveBook(card, hit, depthKey) {
   answerCtl = null;                                                   // nothing is in flight: the book answered
   card.answer = hit.text; card.streaming = false; card.meta = "⚡ book · 0.00s · written ahead of the interview";
@@ -1126,6 +1467,10 @@ function serveBook(card, hit, depthKey) {
   if (cards[idx] === card) renderCard();
   logEvent({ t: "answer", question: card.question, derived: card.question, book: true, depth: $("liveInterviewer").selectedOptions[0].textContent, text: hit.text, meta: card.meta, depthKey });
   status("Answered from the opening book — no wait, no AI call. Press ↓ for a deeper live answer.", "live");
+  if (window.KompasDiamond) {
+    card.anchorQ = card.question;
+    for (const a of window.KompasDiamond.questionPlan(card.anchors || {}).levels) fillAnchor(card, a);
+  }
 }
 async function generateAnswer(question, card, opts = {}) {
   card = card || addCard(question, ["…"]);
@@ -1169,11 +1514,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
     const hit = bookMatch(question, depthKey);
     if (hit) { serveBook(card, hit, depthKey); return; }
   }
-  if (opts.regen && card.byDepth && card.byDepth[depthKey]) {              // stepped back to a depth already written: no AI call
-    const hit = card.byDepth[depthKey];
-    card.answer = hit.answer; card.meta = hit.meta.replace(/ · cached$/, "") + " · cached"; card.streaming = false;
+  if (opts.regen && paintFromAnchors(card)) {                              // the two anchors already hold this level
     if (answerCtl) { try { answerCtl.abort(); } catch {} answerCtl = null; }
-    if (cards[idx] === card) renderCard(); status("Shown from this card's earlier answer at this depth — no AI call.", "live");
+    status("Shown from the two anchors — no model call.", "live");
     return;
   }
   // Regenerating (depth change) or retrying: the answer on screen stays until the new one starts arriving.
@@ -1207,12 +1550,48 @@ async function generateAnswerRequest(question, card, opts = {}) {
       if (e && e.name === "AbortError") { if (card.req === ctl) { card.streaming = false; card.meta = "superseded by the next question"; if (cards[idx] === card) renderCard(); } return; }
     }
   }
+  const qText = String(derivedQ || question).trim();
+  card.anchorQ = qText;
+  let writeAnchor = askingLevel();
+  if (window.KompasAnchors && qText.length >= 8) {
+    const facts = anchorFacts();
+    try {
+      const pack = await window.KompasAnchors.load(qText, facts.role, facts.resume, current && current.id);
+      if (pack && pack.anchors) {
+        card.anchors = card.anchors || {};
+        for (const k of ["engineer", "director"]) if (pack.anchors[k] && !(card.anchors[k] && card.anchors[k].prose)) card.anchors[k] = pack.anchors[k];
+      }
+    } catch {}
+    if (card.req !== ctl) return;
+    if (paintFromAnchors(card)) {
+      if (answerCtl === ctl) answerCtl = null;
+      status("Shown from the two anchors — no model call.", "live");
+      return;
+    }
+    const planNow = window.KompasDiamond && window.KompasDiamond.plan(askingLevel(), card.anchors || {}, window.__peerOf);
+    if (planNow) writeAnchor = planNow.from;
+  }
+  if (window.KompasJev && !window.KompasJev.allowModel(writeAnchor, { hit: false, model: true })) {
+    if (answerCtl === ctl) answerCtl = null;
+    status("That level is derived. No model call.", "live");
+    return;
+  }
+  const already = window.KompasFlight && window.KompasFlight.pending(card, writeAnchor);
+  if (already) {                                                      // the background write of this anchor is still out: it is the answer
+    status("Preparing that answer…", "live");
+    try { await already; } catch {}
+    if (ctl.signal.aborted || card.req !== ctl) return;
+    if (paintFromAnchors(card)) { if (answerCtl === ctl) answerCtl = null; status("Shown from the two anchors — no model call.", "live"); return; }
+  }
+  card.anchorFlight = writeAnchor;
+  const release = window.KompasFlight ? window.KompasFlight.hold(card, writeAnchor) : () => {};
+  const ctx = nextContext(card, writeAnchor);
   const retrieved = retrieve(derivedQ || plainHeard, consolidated ? 5 : 4);
   const prep = { ...slimPrep(), questions: retrieved.length ? [] : ((current && current.prep && current.prep.questions) || []).slice(0, 30) };
   const show = (t) => { if (card.req !== ctl) return; card.answer = t.trim() ? t : ["…"]; if (cards[idx] === card) renderCard(); };
   try {
     const res = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
-      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: liveConfig(), prep, retrieved, ledger, history: recentQA(card) }) });
+      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
     if (!res.ok || !res.body) throw new Error("answer " + res.status);
     if (!(res.headers.get("content-type") || "").includes("event-stream")) {
       const data = await res.json(); text = data.text || ""; first = performance.now() - t0; meta = data;
@@ -1277,6 +1656,25 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (cards[idx] === card) renderCard();
     logAnswer({ derived: meta.derived || derivedQ || "", derivedBy: derivedBy || "", kind: meta.length && meta.length.kind, tier: meta.tier, lane: meta.timing && meta.timing.lane, voice: meta.voice && `${meta.voice.passed}/${meta.voice.total}`, ms: Math.round(performance.now() - t0), depthKey });
     if (!meta.degraded && !/backup model/.test(card.meta)) { card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta }; }
+    if (window.KompasLevels && text && !meta.degraded) {
+      const fixed = criticise(card, writeAnchor, text);
+      const shaped = window.KompasLevels.fromProse(fixed, writeAnchor);
+      if (shaped) {
+        card.anchors = card.anchors || {};
+        card.anchors[writeAnchor] = shaped;
+        const facts = anchorFacts();
+        if (window.KompasAnchors) window.KompasAnchors.save(card.anchorQ || qText, facts.role, facts.resume, card.anchors, current && current.id);
+        const shown = sayAnswer(window.KompasLevels.textFor(card.anchors, askingLevel(), window.__peerOf, liveConfig().mode));
+        const repaired = !!window.KompasCorrect && fixed !== window.KompasCorrect.correct(text);
+        if (shown && (askingLevel() !== writeAnchor || repaired)) {
+          card.answer = shown;
+          if (card.byDepth && card.byDepth[depthKey]) card.byDepth[depthKey].answer = shown;
+          if (cards[idx] === card) renderCard();
+        }
+        const other = writeAnchor === "engineer" ? "director" : "engineer";
+        if (!card.anchors[other]) fillAnchor(card, other);
+      }
+    }
     status(`Answered — first words in ${(first / 1000).toFixed(2)}s.`, "live");
   } catch (e) {
     if (card.req !== ctl) return;                                      // aborted because this same card was re-asked
@@ -1293,7 +1691,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (cards[idx] === card) renderCard();
     logAnswer({ failed: String(e && e.message || e) });
     status(fb ? "Answer engine unavailable. Showing a prepared answer." : "Answer engine unavailable. Your question is saved; press AI Answer to retry.", "err");
-  } finally { if (answerCtl === ctl) answerCtl = null; }
+  } finally { release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
 }
 
 /* ---- manual, AI Answer, screen, copy, export, shortcuts ---- */
@@ -1302,6 +1700,7 @@ function setChat(open) {
   $("barAsk").classList.toggle("hidden", !open);
   $("chatBtn").classList.toggle("on", open);
   $("chatBtn").setAttribute("aria-pressed", String(open));
+  if (!open) $("copilotTip").classList.add("hidden");
   if (open) $("manualInput").focus();
 }
 $("chatBtn").onclick = () => setChat($("barAsk").classList.contains("hidden"));
@@ -1447,30 +1846,113 @@ function followAdvance(from, spoken) {
 // a critically damped spring on requestAnimationFrame (browser smooth-scroll restarts on every word and stutters).
 const glide = { target: 0, raf: 0, last: 0 };
 function glideTo(ul, top) {
+  if (Date.now() < follow.holdUntil) return;
   glide.target = Math.max(0, Math.min(top, ul.scrollHeight - ul.clientHeight));
-  if (document.hidden) { ul.scrollTop = glide.target; return; }   // no frames in a hidden tab: jump, don't stall
+  if (document.hidden) { ul.scrollTop = glide.target; followEase(); return; }
   if (glide.raf) return;
   glide.last = performance.now();
   const step = (now) => {
-    const dt = Math.min(64, now - glide.last); glide.last = now;
+    const dt = Math.min(32, now - glide.last); glide.last = now;
+    if (Date.now() < follow.holdUntil) { glide.raf = 0; followEase(); return; }
     const diff = glide.target - ul.scrollTop;
-    if (Math.abs(diff) < 0.5 || !follow.on) { if (follow.on) ul.scrollTop = glide.target; glide.raf = 0; return; }
-    ul.scrollTop += diff * (1 - Math.exp(-dt / 260));         // τ = 260 ms: a slow, unnoticeable glide that never overshoots
+    if (Math.abs(diff) < 0.2 || !follow.on) { if (follow.on) ul.scrollTop = glide.target; glide.raf = 0; followEase(); return; }
+    // The scroll is the animation, as on groq.com: ink is read from where the line is, not from a timer.
+    ul.scrollTop += diff * (1 - Math.exp(-dt / 280));
+    followEase();
     glide.raf = requestAnimationFrame(step);
   };
   glide.raf = requestAnimationFrame(step);
 }
-function followPaint() {
-  const ul = $("answer"), spans = ul.querySelectorAll("span.w");
-  const at = Math.min(follow.words.length, Math.max(follow.pos, follow.livePos) + (follow.ghost || 0));
-  const lo = follow.on ? Math.min(at, follow.painted ?? 0) : 0, hi = follow.on ? Math.max(at, follow.painted ?? 0) + 1 : spans.length;
-  for (let k = Math.max(0, lo - 1); k < Math.min(spans.length, hi + 1); k++) {   // only the words that changed
-    spans[k].classList.toggle("said", follow.on && k < at); spans[k].classList.toggle("cur", follow.on && k === at);
+function followEase() {
+  const ul = $("answer");
+  const words = ul.querySelectorAll("span.w");
+  if (!follow.on) {
+    words.forEach(el => el.style.removeProperty("color"));
+    const old = ul.querySelector(":scope > .read-head"); if (old) old.remove();
+    return;
   }
-  follow.painted = follow.on ? at : 0;
-  $("answer").classList.toggle("following", follow.on);
-  if (!follow.on || Date.now() < follow.holdUntil) return;
-  const cur = spans[Math.min(at, spans.length - 1)]; if (!cur) return;
+  const n = words.length;
+  if (!n) return;
+  const tops = new Array(n);
+  for (let i = 0; i < n; i++) tops[i] = words[i].getBoundingClientRect().top;
+  const dark = ul.closest(".overlay") && ul.closest(".overlay").classList.contains("dark");
+  const ink = dark ? [244, 244, 245] : [21, 20, 15], paper = dark ? [90, 90, 96] : [214, 210, 200];
+  const tone = (fade) => {
+    const u = fade <= 0 ? 0 : fade >= 1 ? 1 : fade * fade * (3 - 2 * fade);
+    return "rgb(" + ink.map((a, k) => Math.round(a + (paper[k] - a) * u)).join(",") + ")";
+  };
+  const lines = [];
+  for (let i = 0; i < n;) {
+    const top = tops[i];
+    let j = i + 1;
+    while (j < n && Math.abs(tops[j] - top) < 3) j++;
+    lines.push({ start: i, end: j });
+    i = j;
+  }
+  const at = Math.min(Math.max(follow.pos, follow.livePos) + (follow.ghost || 0), n - 1);
+  let cur = 0;
+  for (let L = 0; L < lines.length; L++) if (at >= lines[L].start && at < lines[L].end) { cur = L; break; }
+  const here = lines[cur];
+  const along = (at - here.start) / Math.max(1, here.end - here.start);
+  lines.forEach((line, L) => {
+    const count = line.end - line.start;
+    for (let w = 0; w < count; w++) {
+      let fade = 1;
+      if (L < cur) fade = 0;
+      else if (L === cur) fade = 0;
+      else if (L === cur + 1 || L === cur + 2) {
+        // The next two lines stay readable. Both take ink from the left as this line is spoken: the nearer one
+        // ends in full ink, the one after ends where the nearer one began, so a line change has no jump.
+        const place = (w + 0.5) / count;
+        const ahead = place - along;
+        const t = ahead <= 0 ? 0 : Math.min(1, ahead / 0.22);
+        fade = L === cur + 1 ? 0.32 * t : 0.32 + 0.22 * t;
+      }
+      words[line.start + w].style.setProperty("color", tone(fade), "important");
+    }
+  });
+  const curLi = words[at] && words[at].closest("li");
+  if (!curLi) return;
+  let mark = ul.querySelector(":scope > .read-head");
+  if (!mark) { mark = document.createElement("i"); mark.className = "read-head"; mark.setAttribute("aria-hidden", "true"); ul.append(mark); }
+  mark.style.transform = "translate3d(0," + (curLi.offsetTop + 5) + "px,0)";
+}
+function followFrames(now) {
+  if (!follow.on) { follow.frame = 0; return; }
+  followEase(now);
+  follow.frame = requestAnimationFrame(followFrames);
+}
+const READ_LINE = ["read-now", "read-past", "read-1", "read-2", "read-3", "read-far"];
+function followPaint() {
+  const ul = $("answer"), spans = ul.querySelectorAll("span.w"), lis = ul.querySelectorAll(":scope > li");
+  const at = Math.min(follow.words.length, Math.max(follow.pos, follow.livePos) + (follow.ghost || 0));
+  ul.classList.toggle("following", follow.on);
+  if (!follow.on) {
+    lis.forEach(li => { li.classList.remove(...READ_LINE); delete li.dataset.read; });
+    if (follow.painted) spans.forEach(sp => sp.classList.remove("said", "cur"));
+    follow.painted = 0;
+    followEase();
+    if (follow.frame) { cancelAnimationFrame(follow.frame); follow.frame = 0; }
+    return;
+  }
+  // The line you are speaking stays full ink. Each line further ahead steps lighter, the way the Groq page does.
+  const cur = spans[Math.min(at, Math.max(0, spans.length - 1))];
+  const curLi = cur ? cur.closest("li") : null;
+  let ci = 0;
+  lis.forEach((li, i) => { if (li === curLi) ci = i; });
+  lis.forEach((li, i) => {
+    const d = i - ci;
+    const name = d === 0 ? "read-now" : d < 0 ? "read-past" : d === 1 ? "read-1" : d === 2 ? "read-2" : d === 3 ? "read-3" : "read-far";
+    if (li.dataset.read === name) return;
+    li.classList.remove(...READ_LINE);
+    li.classList.add(name);
+    li.dataset.read = name;
+  });
+  follow.painted = at;
+  followEase();
+  if (!follow.frame) follow.frame = requestAnimationFrame(followFrames);
+  if (Date.now() < follow.holdUntil) return;
+  if (!cur) return;
   const lh = parseFloat(getComputedStyle(cur).lineHeight) || 26;
   // Position in the scrolled content, from screen coordinates (offsetTop broke when a paragraph became the offset
   // parent — the line never looked past line two, so nothing scrolled on the owner's screen).
@@ -1481,7 +1963,8 @@ function followPaint() {
   // text creeps up a fraction of a line with every word instead of jumping a line at a time.
   const along = Math.min(1, Math.max(0, (r.left - ur.left) / Math.max(1, ul.clientWidth - 24)));
   const y = lineTop + along * lh;
-  glideTo(ul, y > lh * 2.6 ? y - lh * 2.6 : 0);
+  // The line you are on sits just under the one you finished, and the lines still to come fill the rest.
+  glideTo(ul, y > lh * 1.15 ? y - lh * 1.15 : 0);
 }
 function followRendered(c) {                        // called by renderCard: keep the word list and marks current
   if (c !== follow.card) { follow.card = c; follow.pos = 0; follow.livePos = 0; }
@@ -1618,10 +2101,14 @@ function setFollow(on) {
   followUI(); followPaint();
 }
 $("followBtn").onclick = () => setFollow(!follow.on);
-(() => {                                           // your own scrolling wins: Follow along holds off for a few seconds
+(() => {                                           // your own scrolling wins: a glide already under way stops, and Follow along waits
   const ul = $("answer"); if (!ul) return;
-  const hold = () => { if (follow.on) follow.holdUntil = Date.now() + 5000; };
-  ["wheel", "touchstart", "mousedown"].forEach(ev => ul.addEventListener(ev, hold, { passive: true }));
+  const hold = () => {
+    if (!follow.on) return;
+    follow.holdUntil = Date.now() + 8000;
+    if (glide.raf) { cancelAnimationFrame(glide.raf); glide.raf = 0; }
+  };
+  ["wheel", "touchstart", "touchmove", "mousedown"].forEach(ev => ul.addEventListener(ev, hold, { passive: true }));
 })();
 followUI();
 
@@ -1638,7 +2125,7 @@ $("exportBtn").onclick = () => {
   cards.forEach(c => {
     out.push(`### ${c.question}`);
     answerLines(c.answer).forEach(({ t, kind, lang }) => { if (kind === "code") { out.push("```" + (lang || ""), t, "```"); return; } const x = unbracket(t).replace(/\s*\((pause|beat)\)\s*/gi, " ").trim(); if (!x || kind === "pauseline") return; out.push(kind === "head" ? `#### ${x}` : kind === "bullet" ? `- ${x}` : x); });
-    if (c.meta) out.push(`_${c.meta}_`); out.push("");
+    out.push("");
   });
   out.push("## Transcript", ""); transcript.forEach(t => out.push(`**${t.who}:** ${t.text}`));
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([out.join("\n")], { type: "text/markdown" }));
@@ -1655,7 +2142,6 @@ function transcriptText(s, log) {
     if (e.noQuestion) { out.push(head, "No question detected in what was heard.", ""); continue; }
     if (e.busy) { out.push(head, `Groq per-minute limit — retried automatically after ${Math.ceil((e.retryAfterMs || 0) / 1000)}s.`, ""); continue; }
     out.push(head, `💬 Question: ${e.derived || e.question}`, "", "---", "", `⭐️ Answer: ${String(e.text || "").trim()}`);
-    if (e.meta) out.push("", `(${e.meta})`);
     if (e.failed) out.push("", `(engine unreachable: ${e.failed})`);
     out.push("");
   }
@@ -1679,31 +2165,32 @@ function getTranscript() {
 // and view." Stop, ← Dashboard or closing the tab saves this run's timeline; the dashboard card lists every saved run.
 async function saveRunTranscript() {
   const s = current; if (!s || !s.id || !sessionLog.length) return;
-  const heard = sessionLog.filter(e => e.t === "line").length, answers = sessionLog.filter(e => e.t === "answer" && !e.noQuestion).length;
-  if (!heard && !answers) return;
-  const runAt = sessionLog[0].at, key = `${s.id}:tx:${runAt}`;
-  await DossierDB.put(key, { at: runAt, ended: Date.now(), text: transcriptText(s, sessionLog), log: sessionLog.slice() });   // log = training data
-  const all = LS.get("sessions", []), i = all.findIndex(x => x.id === s.id); if (i < 0) return;
-  const list = (all[i].transcripts || []).filter(t => t.key !== key);
-  list.push({ key, at: runAt, ended: Date.now(), heard, answers });
-  all[i].transcripts = list.slice(-20); s.transcripts = all[i].transcripts; LS.set("sessions", all); sessions = all;
+  const t = runTranscript(s, sessionLog, Date.now()); if (!t) return;
+  // The session's list first: that part is done at once, so the run is listed even when the window is closing. The text follows.
+  const all = LS.get("sessions", []), i = all.findIndex(x => x.id === s.id);
+  if (i >= 0) { listTranscript(all[i], t.entry); s.transcripts = all[i].transcripts; LS.set("sessions", all); sessions = all; }
+  await DossierDB.put(t.key, t.rec);
+}
+// One session, one transcript (owner, 2026-10-01: "only have one transcript, 2 transcripts are so confusing"). Every stored run of the
+// session is read and put in order of time, so the viewer, the download and What went wrong all see a single transcript.
+async function sessionTranscript(s) {
+  const runs = ((s && s.transcripts) || []).slice().sort((a, b) => a.at - b.at); if (!runs.length) return null;
+  const recs = (await Promise.all(runs.map(t => DossierDB.get(t.key)))).filter(Boolean); if (!recs.length) return null;
+  if (recs.every(r => Array.isArray(r.log) && r.log.length)) {
+    const seen = new Set(), log = recs.flatMap(r => r.log).sort((a, b) => a.at - b.at)
+      .filter(e => { const k = e.at + "|" + e.t + "|" + (e.text || e.question || ""); if (seen.has(k)) return false; seen.add(k); return true; });
+    return { at: log[0].at, log, text: transcriptText(s, log) };
+  }
+  return { at: recs[0].at, log: null, text: recs.map(r => String(r.text || "").trim()).join("\n\n\n") };   // older runs kept only their text
 }
 async function viewTranscripts(s) {
-  const list = (s.transcripts || []).slice().reverse(); if (!list.length) return;
-  const show = async (t) => {
-    const rec = await DossierDB.get(t.key);
-    const body = $("pvBody"); body.innerHTML = "";
-    if (list.length > 1) {
-      const bar = document.createElement("div"); bar.className = "tx-runs";
-      list.forEach(x => { const b = document.createElement("button"); b.className = "mini" + (x.key === t.key ? " on" : ""); b.textContent = new Date(x.at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) + ` · ${x.answers} answers`; b.onclick = () => show(x); bar.append(b); });
-      body.append(bar);
-    }
-    const pre = document.createElement("pre"); pre.textContent = rec ? rec.text : "This transcript is no longer stored in this browser."; body.append(pre);
-    $("pvTitle").textContent = `Transcript — ${s.role || "session"} · ${new Date(t.at).toLocaleString()}`;
-    $("pvDownload").onclick = (e) => { if (!rec) return; if (e.shiftKey && rec.log) return downloadText(transcriptName(s, t.at).replace(/\.txt$/, ".training.jsonl"), rec.log.map(x => JSON.stringify(x)).join("\n")); downloadText(transcriptName(s, t.at), rec.text); };
-    $("pvDownload").title = "Download the transcript (Shift+click: the training data, one JSON record per line)";
-  };
-  await show(list[0]);
+  if (!((s && s.transcripts) || []).length) return;
+  const t = await sessionTranscript(s);
+  const body = $("pvBody"); body.innerHTML = "";
+  const pre = document.createElement("pre"); pre.textContent = t ? t.text : "This transcript is no longer stored in this browser."; body.append(pre);
+  $("pvTitle").textContent = `Transcript — ${s.role || "session"}${t ? " · " + new Date(t.at).toLocaleString() : ""}`;
+  $("pvDownload").onclick = (e) => { if (!t) return; if (e.shiftKey && t.log) return downloadText(transcriptName(s, t.at).replace(/\.txt$/, ".training.jsonl"), t.log.map(x => JSON.stringify(x)).join("\n")); downloadText(transcriptName(s, t.at), t.text); };
+  $("pvDownload").title = "Download the transcript (Shift+click: the training data, one JSON record per line)";
   $("previewModal").classList.remove("hidden");
 }
 $("getTranscriptBtn").onclick = getTranscript;
@@ -1733,7 +2220,7 @@ document.addEventListener("keydown", (e) => {
    is built so far (BM25), so the copilot is useful from the first second and sharper every minute. */
 const DossierDB = {
   _p: null,
-  open() { if (this._p) return this._p; this._p = new Promise((res, rej) => { const r = indexedDB.open("perfact-dossier", 1); r.onupgradeneeded = () => r.result.createObjectStore("d"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); return this._p; },
+  open() { if (this._p) return this._p; this._p = new Promise((res, rej) => { const r = indexedDB.open("perfact-dossier", 2); r.onupgradeneeded = () => { const db = r.result; if (!db.objectStoreNames.contains("d")) db.createObjectStore("d"); if (!db.objectStoreNames.contains("levels")) db.createObjectStore("levels"); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); return this._p; },
   async get(id) { try { const db = await this.open(); return await new Promise(res => { const rq = db.transaction("d", "readonly").objectStore("d").get(id); rq.onsuccess = () => res(rq.result || null); rq.onerror = () => res(null); }); } catch { return null; } },
   async put(id, v) { try { const db = await this.open(); await new Promise(res => { const tx = db.transaction("d", "readwrite"); tx.objectStore("d").put(v, id); tx.oncomplete = res; tx.onerror = res; }); } catch {} },
 };
@@ -1853,8 +2340,8 @@ async function buildPersonaFile(s) {
   let backoff = 0;
   const worker = async () => {
     while (!dossierAbort && current === s && queue.length) {
-      // live answer first; Groq pacing; and while you're LIVE on the hosted site (Groq shares its per-minute
-      // budget with your answers) the persona file waits until you stop — locally Claude writes it, no conflict.
+      // live answer first. When Groq is the writer it shares its per-minute budget with your answers, so it is paced
+      // and waits out a live call; GPT Luna and local Claude have their own quota and keep writing.
       while ((answerCtl || aiBusy || Date.now() < slowUntil || (running && writerOnGroq())) && !dossierAbort) await sleep(400);
       const job = queue.shift();
       if (!job) break;
@@ -1923,11 +2410,13 @@ async function buildDossier(s) {
   dossierRunningFor = s.id; dossierAbort = false;
   const size = s.dossierSize && s.dossierSize !== "auto" ? Number(s.dossierSize) : (PAGES_BY_DIFFICULTY[s.difficulty || "standard"] || 250);
   const saved = await DossierDB.get(s.id);
-  dossier = saved && Array.isArray(saved.items) && saved.v === 2 ? saved : { v: 2, items: [], words: 0, target: size, done: [] };   // pre-v2 dossiers had [blank]s: rebuild
+  const kept = saved && Array.isArray(saved.items) ? saved.items.filter(it => it && String(it.q || "").trim()) : [];
+  dossier = kept.length ? { ...saved, v: 2, items: kept, done: saved.done || [] } : { v: 2, items: [], words: 0, target: size, done: [] };
   dossier.target = size; dossier.done = dossier.done || [];
   if (!dossier.items.length && s.prep && Array.isArray(s.prep.questions)) {
     dossier.items = s.prep.questions.map(q => ({ q: q.q, a: q.answer || [], tier: q.tier || 2, category: q.group || "core", interviewer: "any", difficulty: "any", projectId: q.projectId || "" }));
   }
+  if (!dossier.md && dossier.items.length && window.KompasDossierMd) dossier.md = window.KompasDossierMd.dossierMarkdown({ interviewer: s.interviewer || "engineer", difficulty: s.difficulty || "standard", category: "core", items: dossier.items });
   dossier.words = dossier.items.reduce((n, it) => n + countWords(it), 0);
   indexDossier(); showDossierProgress();
   const plan = planSections(s);
@@ -1949,7 +2438,10 @@ async function buildDossier(s) {
           got = true;
           const fresh = data.items.filter(it => { const k = qKey(it.q); if (!k || seen.has(k)) return false; seen.add(k); return true; });
           dossier.items.push(...fresh); dossier.words += fresh.reduce((n, it) => n + countWords(it), 0);
+          if (data.md) dossier.md = [dossier.md, data.md].filter(Boolean).join("\n\n");
+          else if (window.KompasDossierMd) dossier.md = window.KompasDossierMd.dossierMarkdown({ interviewer: job.sp.interviewer, difficulty: job.sp.difficulty, category: job.sp.category, items: fresh });
           dossier.done.push(job.i);
+          dossier.sessionKey = (window.KompasLevels && window.KompasLevels.sessionDossierKey(s.id)) || ("perfact.dossier." + s.id);
           indexDossier(); await DossierDB.put(s.id, dossier); showDossierProgress();
         }
       } catch {}
@@ -2005,6 +2497,27 @@ let selectedDocIds = new Set();   // attached documents for the session
 let selectedResumeId = "";        // the resume used for the session
 const MAX_DOC_CHARS = 40000;
 
+/* A resume is kept 15 days from upload, then auto-removed; the days before, the user is warned (owner, 7 Oct 2026:
+   "resume uploaded should be directly. Unless! notify the user. Every 15 days before resumes will be auto-removed").
+   The clock is addedAt, already on every item. Nothing silent: the row shows the days left, a banner warns near the
+   end, and a boot/open sweep does the removal. */
+const DAY_MS = 86400000;
+const RESUME_TTL_DAYS = 15;
+const RESUME_WARN_DAYS = 3;
+let justRemovedResumes = [];      // names removed by the last sweep, shown once in the Resume banner
+function resumeDaysLeft(d) { const at = Number(d.addedAt) || 0; return at ? Math.ceil((at + RESUME_TTL_DAYS * DAY_MS - Date.now()) / DAY_MS) : null; }
+function pruneExpiredResumes() {
+  const now = Date.now(), docs = docsGet();
+  const expired = docs.filter(d => (d.kind || "doc") === "resume" && Number(d.addedAt) && now - d.addedAt >= RESUME_TTL_DAYS * DAY_MS);
+  if (!expired.length) return 0;
+  const ids = new Set(expired.map(d => d.id));
+  docsSet(docs.filter(d => !ids.has(d.id)));
+  for (const d of expired) { FileDB.del(d.id); selectedDocIds.delete(d.id); if (selectedResumeId === d.id) selectedResumeId = ""; }
+  justRemovedResumes = expired.map(d => d.name);
+  return expired.length;
+}
+function renameDoc(id, name) { const v = (name || "").trim(); if (!v) return; docsSet(docsGet().map(d => d.id === id ? { ...d, name: v } : d)); renderSection("resume"); }
+
 /* raw files in IndexedDB, keyed by doc id — so we can view + download them */
 const FileDB = {
   _p: null,
@@ -2055,7 +2568,7 @@ function fmtSize(n) { return n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1
 /* ---- upload (per kind) ---- */
 async function handleFiles(fileList, kind) {
   const files = [...fileList]; if (!files.length) return;
-  let finished = 0, failed = 0;
+  let finished = 0, failed = 0, lastOkResumeId = "";
   for (const file of files) {
     const id = "d" + Date.now() + Math.round(Math.random() * 1e4);
     const docs = docsGet();
@@ -2071,9 +2584,11 @@ async function handleFiles(fileList, kind) {
         if (!text) { cur[i].error = "no text found"; failed++; }
         else {
           if (kind === "resume" && !cur.some(d => d.kind === "resume" && d.primary)) cur[i].primary = true;
+          if (kind === "resume") lastOkResumeId = id;
           finished++;
         }
         docsSet(cur); renderSection(kind);
+        if (kind === "resume" && text && typeof window.qbankFromResume === "function") window.qbankFromResume(cur[i]);   // a new resume seeds the Question Bank (background)
       } else failed++;
     } catch (e) {
       failed++;
@@ -2081,8 +2596,12 @@ async function handleFiles(fileList, kind) {
       if (i >= 0) { cur[i].processing = false; cur[i].error = String(e && e.message || e).slice(0, 40); docsSet(cur); renderSection(kind); }
     }
   }
-  // A finished upload leaves Resume and Documents. A failed one stays, with the error already on the row.
-  if (finished > 0 && failed === 0) openDashboard();
+  // A finished resume upload stays on the Resume view so the success tick and rename field are there to use;
+  // the just-uploaded resume becomes the one the wizard will use. Documents behave as before.
+  if (finished > 0 && failed === 0) {
+    if (kind === "resume") { if (lastOkResumeId) selectedResumeId = lastOkResumeId; renderSection("resume"); }
+    else openDashboard();
+  }
 }
 
 /* ---- render one section (resume | doc) ---- */
@@ -2102,11 +2621,28 @@ function renderSection(kind) {
         ${kind === "resume" ? '<button class="btn ghost act-primary">Set active</button>' : ""}
         <button class="btn ghost act-del">Delete</button>
       </div>`;
-    el.querySelector(".doc-name").textContent = d.name;
+    const nameEl = el.querySelector(".doc-name");
+    nameEl.textContent = d.name;
+    // Uploaded resumes can be renamed in place, so the right one is easy to recognise later (owner, 7 Oct 2026:
+    // "give open text field they can use to rename").
+    if (kind === "resume" && !d.processing && !d.error) {
+      const inp = document.createElement("input");
+      inp.className = "doc-name doc-rename"; inp.value = d.name; inp.title = "Rename this resume"; inp.setAttribute("aria-label", "Resume name");
+      const commit = () => renameDoc(d.id, inp.value);
+      inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+      inp.addEventListener("change", commit);
+      inp.addEventListener("blur", commit);
+      nameEl.replaceWith(inp);
+    }
     const bits = [`<span>${fmtSize(d.size)}</span>`];
     if (d.processing) bits.push(`<span class="chip processing">reading…</span>`);
     else if (d.error) bits.push(`<span class="chip err">${d.error}</span>`);
     else bits.push(`<span>${(d.chars || 0).toLocaleString()} chars</span>`);
+    if (kind === "resume" && !d.processing && !d.error) {
+      bits.push(`<span class="chip ok">✓ saved</span>`);                       // the tick for a finished upload
+      const left = resumeDaysLeft(d);
+      if (left !== null) bits.push(`<span class="chip ${left <= RESUME_WARN_DAYS ? "warn" : ""}">${left <= 0 ? "removing now" : "auto-removes in " + left + (left === 1 ? " day" : " days")}</span>`);
+    }
     if (kind === "resume" && d.primary) bits.push(`<span class="chip primary">active</span>`);
     el.querySelector(".doc-meta").innerHTML = bits.join("");
     el.querySelector(".act-view").onclick = () => viewDoc(d);
@@ -2119,6 +2655,18 @@ function renderSection(kind) {
     }
     list.append(el);
   }
+  if (kind === "resume") renderResumeNotice(items);
+}
+// One banner above the list: what the last sweep removed, and anything due to go in the next few days.
+function renderResumeNotice(items) {
+  const box = $("resumeNotice"); if (!box) return;
+  const soon = items.filter(d => !d.processing && !d.error).map(d => ({ d, left: resumeDaysLeft(d) }))
+    .filter(x => x.left !== null && x.left <= RESUME_WARN_DAYS).sort((a, b) => a.left - b.left);
+  const lines = [];
+  if (justRemovedResumes.length) { lines.push(`Auto-removed after ${RESUME_TTL_DAYS} days: ${justRemovedResumes.join(", ")}.`); justRemovedResumes = []; }
+  if (soon.length) lines.push(`Auto-removes soon — ${soon.map(x => `${x.d.name} (${x.left <= 0 ? "today" : x.left + (x.left === 1 ? " day" : " days")})`).join(", ")}. Re-upload to reset the 15 days.`);
+  box.textContent = lines.join(" ");
+  box.classList.toggle("hidden", !lines.length);
 }
 function setActiveResume(id) { docsSet(docsGet().map(d => d.kind === "resume" ? { ...d, primary: d.id === id } : d)); renderSection("resume"); }
 function deleteDoc(id, kind) { docsSet(docsGet().filter(d => d.id !== id)); selectedDocIds.delete(id); if (selectedResumeId === id) selectedResumeId = ""; FileDB.del(id); renderSection(kind || "doc"); }
@@ -2168,13 +2716,13 @@ wireZone("dropzone", "fileInput", "browseBtn", "doc");
 
 /* ---- nav ---- */
 let docsReturn = "dashboard";
-function openResume(from) { docsReturn = from || "dashboard"; $("resumeBackBtn").classList.toggle("hidden", docsReturn !== "wizard"); renderSection("resume"); show("resume"); }
+function openResume(from) { docsReturn = from || "dashboard"; $("resumeBackBtn").classList.toggle("hidden", docsReturn !== "wizard"); pruneExpiredResumes(); renderSection("resume"); show("resume"); }
 function openDocuments(from) { docsReturn = from || "dashboard"; $("docsBackBtn").classList.toggle("hidden", docsReturn !== "wizard"); renderSection("doc"); show("documents"); }
 $("resumeNavBtn").onclick = () => openResume("dashboard");
 $("docsNavBtn").onclick = () => openDocuments("dashboard");
 $("resumeBackBtn").onclick = backFromMaterials;
 $("docsBackBtn").onclick = backFromMaterials;
-function backFromMaterials() { if (docsReturn === "wizard") { renderResumeSelect(); renderDocPicker(); show("wizard"); } else openDashboard(); }
+function backFromMaterials() { if (docsReturn === "wizard") { renderResumeSelect(); renderDocPicker(); show("wizard"); saveWizardDraft(); } else openDashboard(); }
 
 /* ---- wizard: resume select (①) + attached-documents picker (③) ---- */
 function renderResumeSelect() {
@@ -2202,8 +2750,8 @@ function renderDocPicker() {
     box.append(row);
   }
 }
-$("pickAll").onclick = () => { docsGet().filter(d => (d.kind || "doc") === "doc" && d.text && !d.error).forEach(d => selectedDocIds.add(d.id)); renderDocPicker(); };
-$("pickClear").onclick = () => { selectedDocIds.clear(); renderDocPicker(); };
+$("pickAll").onclick = () => { docsGet().filter(d => (d.kind || "doc") === "doc" && d.text && !d.error).forEach(d => selectedDocIds.add(d.id)); renderDocPicker(); saveWizardDraft(); };
+$("pickClear").onclick = () => { selectedDocIds.clear(); renderDocPicker(); saveWizardDraft(); };
 $("pickUpload").onclick = () => openDocuments("wizard");
 $("resumeUpload").onclick = () => openResume("wizard");
 const RESUME_MAX = 40000;
@@ -2222,6 +2770,7 @@ function resolveDocumentsText() {
 /* --------------------------------- boot ----------------------------------- */
 // Login bypassed for now — assume an authenticated session (like MarketFit).
 if (!LS.get("user")) LS.set("user", { email: "you@perfact.app" });
+pruneExpiredResumes();           // a resume past its 15 days is removed on launch, even if the Resume view is never opened
 openDashboard();
 
 /* ---- live screen: one clean row; secondary tools live in the ⋯ menu ---- */
@@ -2241,7 +2790,7 @@ openDashboard();
 /* ---- Connect card (shown before listening): where the call is decides what to pick in the share dialog ---- */
 const CONNECT_STEPS = {
   web: ["Press <b>Connect &amp; start</b> and allow the microphone.", "In the share window pick the <b>tab</b> with your meeting and switch on <b>Share tab audio</b>.", "When they finish a question, press <b>AI Answer</b>."],
-  desktop: ["Press <b>Connect &amp; start</b> and allow the microphone.", "In the share window pick <b>Entire screen</b> and switch on <b>Share system audio</b>.", "When they finish a question, press <b>AI Answer</b>."],
+  desktop: ["Press <b>Connect &amp; start</b>. The Kompas app on this computer opens this session.", "Allow the microphone there. The speaker control hears the call.", "When they finish a question, press <b>AI Answer</b>."],
   phone: ["Put the phone on <b>speaker</b> near your computer.", "Press <b>Connect &amp; start</b> and allow the microphone. Kompas hears both of you through it.", "When they finish a question, press <b>AI Answer</b>."],
 };
 function renderConnect(s) {
@@ -2257,6 +2806,8 @@ function renderConnect(s) {
   $("cnSteps").innerHTML = steps.map(t => `<li>${t}</li>`).join("");
   $("cnApps").classList.toggle("hidden", desktop || NO_SYS_AUDIO);
   document.querySelector(".cn-label")?.classList.toggle("hidden", desktop || NO_SYS_AUDIO);
+  $("cnDesk")?.classList.toggle("hidden", desktop || app !== "desktop");
+  $("cnDeskMiss")?.classList.add("hidden");
   const note = document.querySelector(".cn-note");
   if (note && window.kompasDesktop) window.kompasDesktop.getPrivate().then(on => {
     note.textContent = on ? "Private is on. Only you can see Kompas." : "Private is off.";
@@ -2279,26 +2830,28 @@ function packSession(s) {
     tone: s.tone || "professional", mode: s.mode || "technical", length: s.length || "balanced",
     autoAnswer: !!s.autoAnswer, autoMode: s.autoMode === true, saveTranscript: s.saveTranscript !== false,
     createdAt: s.createdAt || Date.now(),
+    // The same native Kompas shell opens the MarketFit session in MarketFit, not the standalone perfACT site.
+    site: (location.pathname === "/kompas" || location.pathname.startsWith("/kompas/") || location.pathname.startsWith("/dashboard/kompas")) ? "marketfit" : "perfact",
   };
   const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(slim)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-  return "kompas://open?d=" + b64;
+  return (slim.site === "marketfit" ? "marketfit-kompas://open?d=" : "kompas://open?d=") + b64;
 }
 function launchInstalled(s) {
-  if (!s || !s.id) return;
-  const url = packSession(s);
-  let left = false;
-  const mark = () => { left = true; };
-  window.addEventListener("blur", mark);
-  const frame = document.createElement("iframe");
-  frame.style.display = "none";
-  frame.src = url;
-  document.body.append(frame);
-  setTimeout(() => {
-    frame.remove();
-    window.removeEventListener("blur", mark);
-    $("cnDesk")?.classList.remove("hidden");
-    $("cnDeskMiss")?.classList.toggle("hidden", left || document.hidden);
-  }, 1200);
+  if (!s || !s.id) {
+    const status = $("cnDeskMiss");
+    if (status) { status.textContent = "Choose an interview session first. "; status.classList.remove("hidden"); }
+    return;
+  }
+  // Chromium can block external-protocol navigation from an invisible iframe.
+  // Navigate directly, synchronously inside the user's button click so Windows
+  // receives the custom-protocol request with an actual user gesture.
+  const status = $("cnDeskMiss");
+  if (status) {
+    status.textContent = "If your browser asks, choose Open Kompas. If nothing opens, install or update the desktop app and try again. ";
+    status.classList.remove("hidden");
+  }
+  $("cnDesk")?.classList.remove("hidden");
+  window.location.assign(packSession(s));
 }
 function openHandedSession(s) {
   if (!s || !s.id || !window.kompasDesktop) return;
