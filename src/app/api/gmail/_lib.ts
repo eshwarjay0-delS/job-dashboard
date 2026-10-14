@@ -430,11 +430,44 @@ async function syncAccountCache(
   try {
     const threads = await fetchAccountThreads(acct, token, query, max)
     await upsertCachedThreads(sb, userId, acct, threads)
-    if (threads.partial) return { account: acct.google_email, reason: `History scan is partial (up to ${max} threads). Counts are not a complete inbox inventory.` }
+    // Some threads could not be read: not recorded, so the next request tries again.
+    if (threads.failed) return { account: acct.google_email, reason: `History scan is partial (up to ${max} threads). Counts are not a complete inbox inventory.` }
+    // A sync that stopped at its cap (a busy inbox has more than `max` job threads in the window) read and stored the
+    // newest ones, and is recorded. It used to return here unrecorded, so the cache never counted as fresh and every
+    // request read the same threads from Gmail again: 9 to 18 seconds per request on the owner's inbox, 14 Oct 2026.
     await setSyncState(sb, userId, acct.id, Math.max(days, sync?.days_synced || 0))
+    if (threads.partial) return { account: acct.google_email, reason: `History scan is partial (up to ${max} threads). Counts are not a complete inbox inventory.` }
     return null
   } catch (e) {
     return toIssue(acct, e)
+  }
+}
+
+// One sync per account at a time on this server. The inbox, its steps, the tracker, the interviews and the follow-up
+// radar all ask at the same moment when a mail page opens; each used to read the same account from Gmail on its own
+// (five reads at once, which Gmail throttles). A request that arrives while a sync runs waits for it, then checks the
+// cache again, which is now fresh unless it needs a wider window than the one just read.
+const syncing = new Map<string, Promise<AccountIssue | null>>()
+async function syncAccountCacheOnce(
+  sb: Sb,
+  userId: string,
+  acct: GwAccount,
+  days: number,
+  max: number,
+  force: boolean,
+): Promise<AccountIssue | null> {
+  const key = `${userId}:${acct.id}`
+  const running = syncing.get(key)
+  if (running) {
+    const issue = await running.catch(() => null)
+    if (force) return issue
+  }
+  const next = syncAccountCache(sb, userId, acct, days, max, force)
+  syncing.set(key, next)
+  try {
+    return await next
+  } finally {
+    if (syncing.get(key) === next) syncing.delete(key)
   }
 }
 
@@ -470,7 +503,7 @@ export async function fetchClassifiedThreads(
   if (useCache && sb) {
     for (const acct of enabled) {
       try {
-        const issue = await syncAccountCache(sb, userId, acct, days, max, !!extra.force)
+        const issue = await syncAccountCacheOnce(sb, userId, acct, days, max, !!extra.force)
         if (issue) issues.push(issue)
       } catch (e) {
         issues.push(toIssue(acct, e))
