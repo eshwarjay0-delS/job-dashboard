@@ -99,7 +99,17 @@ export function mountKompasHtml(html: string): string {
         // Self-hosted since 2026-10-14 (perfACT sunset): the remaining /api/*
         // calls are served by MarketFit's native /api/kompas/* endpoints.
         // Anything without a native equivalent passes through untouched.
-        const native = { '/api/capabilities': '/api/kompas/capabilities', '/api/persona': '/api/kompas/persona', '/api/prep': '/api/kompas/prep', '/api/screen': '/api/kompas/screen', '/api/section': '/api/kompas/section' }[url.pathname];
+        const native = {
+          '/api/capabilities': '/api/kompas/capabilities',
+          '/api/persona': '/api/kompas/persona',
+          '/api/prep': '/api/kompas/prep',
+          '/api/screen': '/api/kompas/screen',
+          '/api/section': '/api/kompas/section',
+          // Two perfACT features still invoked by the frontend after the
+          // sunset: answer-level persistence and spoken-answer feedback.
+          '/api/levels': '/api/kompas/levels',
+          '/api/feedback': '/api/kompas/feedback',
+        }[url.pathname];
         if (native) {
           url.pathname = native;
           input = input instanceof Request ? new Request(url, input) : url;
