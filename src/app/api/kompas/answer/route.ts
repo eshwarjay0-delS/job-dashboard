@@ -7,7 +7,7 @@ import { resumeRoles, resumeDigest, employerAliases } from "@/lib/kompasResume"
 import { hashUserId } from "@/lib/sttLedger"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
-  classify, lengthPlan, plainlyNoQuestion, cleanQuestion, resolveFollowUp,
+  classify, canonicalQuestion, lengthPlan, plainlyNoQuestion, cleanQuestion, resolveFollowUp,
   tierRule, pickShape, DERIVE_SYSTEM, type LengthPlan,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
   commit, matchBank,
@@ -595,6 +595,9 @@ export async function POST(request: NextRequest) {
     return { q: str(o.q ?? o.question, 300) }
   }))
   const { tier, why } = classify(question)
+  // Minimal intro triggers ("intro") get a canonical question so the model
+  // generates a spoken self-introduction instead of echoing the trigger.
+  question = canonicalQuestion(question, tier)
   const plan = lengthPlan(tier, question, interviewer, {
     difficulty: str(config.difficulty, 20) || undefined,
     length: str(config.length, 20) || undefined,

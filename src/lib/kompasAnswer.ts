@@ -36,6 +36,21 @@ export function classify(q: string): { tier: Tier; why: string } {
   return { tier: 2, why: "design/scenario (default)" }
 }
 
+/**
+ * Minimal intro triggers ("intro", "about yourself", "who are you") confuse
+ * the model when passed verbatim — cleanQuestion() needs 4-25 words ending
+ * with ?, so short inputs fall through to derivation with no context. For
+ * tier 0 with < 4 words, substitute a canonical intro question. The existing
+ * INTRO_FOCUS and tier-0 rules then generate a proper spoken self-introduction.
+ */
+export function canonicalQuestion(q: string, tier: Tier): string {
+  const words = String(q || "").trim().split(/\s+/).filter(Boolean)
+  if (tier === 0 && words.length > 0 && words.length < 4) {
+    return "Tell me about yourself"
+  }
+  return q
+}
+
 // Parakeet baseline: median length of 1,767 real answers of each kind, scaled
 // by difficulty, length preference, question complexity and audience depth.
 // Spoken ≈ 2.5 words/sec.
