@@ -6,11 +6,23 @@ import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { createClient } from "@/lib/supabase/client"
-import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV } from "./_components/nav"
+import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV, navItem } from "./_components/nav"
 import { useTheme } from "../theme-provider"
 import { ChevronRight, Moon, Sun } from "lucide-react"
 import { forgetGmailData } from "@/lib/use-gmail-data"
 import { forgetSetupDone } from "./onboarding-gate"
+
+// Resume-only accounts retain Resume and Connections (WhatsApp only); never expose Jobs, Gmail or Kompas navigation.
+const RESUME_ONLY_TABS = [
+  ...NAV_TABS.filter(tab => tab.href === "/dashboard/resume"),
+  {
+    href: "/dashboard/connections",
+    label: "Connections",
+    icon: navItem("/dashboard/connections").icon,
+    what: "Link your WhatsApp number for resume tailoring.",
+    items: [navItem("/dashboard/whatsapp")],
+  },
+]
 
 const ALL_HREFS = [...NAV_ITEMS, ...ADMIN_NAV].map(i => i.href)
 
@@ -361,7 +373,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
 
       {/* ── Main Nav ──────────────────────────────────────────────── */}
       <nav id="marketfit-navigation" aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
-        {NAV_TABS.filter(tab => !resumeOnly || tab.href === "/dashboard/resume").map(tab => {
+        {(resumeOnly ? RESUME_ONLY_TABS : NAV_TABS).map(tab => {
           const inTab = (h: string) => h === tab.href ? pathname === h : pathname === h || pathname.startsWith(h + "/")
           const tabActive = inTab(tab.href) || tab.items.some(i => inTab(i.href))
           const expanded = tabActive || openTabs.includes(tab.href)
