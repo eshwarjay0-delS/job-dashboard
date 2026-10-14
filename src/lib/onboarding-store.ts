@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 import { blob } from "@/lib/storage"
 import { isAdminEmail } from "@/lib/owner"
+import { waDisplayNumber } from "@/lib/whatsapp"
 import { phoneStepAvailable } from "@/lib/identityStatus"
 import { nextStep, validSetup, type Facts, type Setup, type Step } from "@/lib/onboarding"
 
@@ -36,7 +37,8 @@ export type Loaded = {
   profile: ProfileRow | null
   setup: Setup
   facts: Facts
-  /** Why the mobile number is not asked for: "admin", "unavailable" (a code cannot be sent right now), or "". */
+  /** Phone availability or exemption: "admin", "unavailable" (a code cannot be sent right now), or "". */
+  whatsappNumber: string
   phoneNote: string
   step: Step
 }
@@ -51,8 +53,8 @@ export async function loadSetup(): Promise<Loaded | null> {
     readSetup(user.id),
   ])
   const row = (profile || null) as ProfileRow | null
-  const admin = isAdminEmail(user.email)
-  // The same rule as /api/onboarding/status: the number is required only while a code can really be sent.
+  const admin = !!user.email_confirmed_at && isAdminEmail(user.email)
+  // Availability changes the explanation, never the verification requirement.
   const available = row?.phone_verified || admin ? true : await phoneStepAvailable()
   let inboxes = 0
   if (serviceClientAvailable()) {
@@ -61,10 +63,11 @@ export async function loadSetup(): Promise<Loaded | null> {
       inboxes = Array.isArray(data) ? data.length : 0
     } catch { /* the count is a convenience: the step can still be passed */ }
   }
-  const facts: Facts = { phoneVerified: !!row?.phone_verified, phoneRequired: !admin && available, inboxes, complete: row?.profile_complete === true }
+  const facts: Facts = { phoneVerified: !!row?.phone_verified, phoneRequired: !admin, inboxes, complete: row?.profile_complete === true }
   const meta = (user.user_metadata || {}) as { full_name?: string; name?: string }
   return {
     user: { id: user.id, email: user.email ?? null, name: String(meta.full_name || meta.name || "").trim() },
+    whatsappNumber: row?.phone_verified ? await waDisplayNumber().catch(() => "") : "",
     supabase, profile: row, setup, facts, phoneNote: admin ? "admin" : available ? "" : "unavailable", step: nextStep(setup, facts),
   }
 }

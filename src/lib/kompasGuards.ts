@@ -36,8 +36,15 @@ export function allowedNumbers(...sources: Array<string | undefined>): Set<strin
 function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   const before = line.slice(Math.max(0, at - 28), at)
   const after = line.slice(at + fig.length, at + fig.length + 14)
+  const value = fig.replace(/[.,]+$/, "")
   if (/\b(port|ports|version|v\.?|cve[-\s]?|event\s*id|error|code|rule|threshold|severity|p[0-4]|build|ticket|case|change)\s*$/i.test(before)) return true
   if (/^\s*(port|ports)\b/i.test(after)) return true
+  // HTTP responses and product versions describe a mechanism, not a result
+  // claimed from the candidate's career. Do not turn `returns 403` into
+  // `returns several` while guarding unsupported achievement metrics.
+  if (/^[1-5]\d{2}$/.test(value) && /\b(?:http|status|returns?|responds?(?: with)?|receives?|expects?)(?: an?)?\s*$/i.test(before)) return true
+  if (/^\d+\.\d+(?:\.\d+)?$/.test(value) && /\b(?:kubernetes|istio|nginx|splunk(?: es)?|python|node(?:\.js)?|java|postgres(?:ql)?|kong|tls)\s*$/i.test(before)) return true
+  if (/\b(?:invoice_id|customer_id|tenant_id|owner_id)\s*=\s*$/i.test(before) || /\/invoices\/\s*$/i.test(before)) return true
   if (/[-_#]$/.test(before) || /^[-_]/.test(after)) return true
   return false
 }

@@ -1,9 +1,4 @@
-// Setup is a conversation, the resume first (13 Oct 2026).
-//
-// Asked for: one question at a time like a chat, the resume first, the profile filled from it only after the person
-// says yes (otherwise they fill it in themselves on the Profile page), then only what is needed: the mobile number (it
-// connects WhatsApp), Gmail (more than one inbox), and the kinds of work, with the branches of a kind to tick. A small
-// dossier is written for the person at the end.
+// Phone verification precedes the resume/profile conversation; existing completed accounts stay complete.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -14,22 +9,23 @@ const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8')
 const facts = (more = {}) => ({ phoneVerified: false, phoneRequired: true, inboxes: 0, complete: false, ...more })
 const dana = { name: 'Dana Whitfield', title: 'Senior SOC Analyst', email: 'dana@example.com', phone: '314-555-0100', location: 'Saint Louis, MO', linkedin: 'linkedin.com/in/danaw' }
 
-test('the questions come in one order: resume, may I use it, mobile, Gmail, kind of work', () => {
-  assert.deepEqual(STEPS, ['resume', 'confirm', 'phone', 'gmail', 'roles', 'done'])
-  assert.equal(nextStep({}, facts()), 'resume')
+test('the questions come in one order: mobile, resume, may I use it, Gmail, kind of work', () => {
+  assert.deepEqual(STEPS, ['phone', 'resume', 'confirm', 'gmail', 'roles', 'done'])
+  assert.equal(nextStep({}, facts()), 'phone')
+  assert.equal(nextStep({}, facts({ phoneVerified: true })), 'resume')
   // The resume was read: the person is asked before anything from it is used.
-  assert.equal(nextStep({ read: dana }, facts()), 'confirm')
+  assert.equal(nextStep({ read: dana }, facts({ phoneVerified: true })), 'confirm')
   // Nothing could be read from it (a scan): there is nothing to ask consent for, so the resume question stays.
-  assert.equal(nextStep({ read: NO_CONTACT, resumeName: 'scan.pdf' }, facts()), 'resume')
+  assert.equal(nextStep({ read: NO_CONTACT, resumeName: 'scan.pdf' }, facts({ phoneVerified: true })), 'resume')
   for (const consent of ['yes', 'no']) assert.equal(nextStep({ read: dana, consent }, facts()), 'phone', consent)
   assert.equal(nextStep({ consent: 'no' }, facts()), 'phone', 'no resume to hand: they fill the profile in themselves and carry on')
   assert.equal(nextStep({ consent: 'yes' }, facts({ phoneVerified: true })), 'gmail')
   assert.equal(nextStep({ consent: 'yes', gmailDone: true }, facts({ phoneVerified: true })), 'roles')
   assert.equal(nextStep({ consent: 'yes', gmailDone: true, domain: 'cybersecurity', branches: [] }, facts({ phoneVerified: true })), 'roles', 'a kind of work with nothing ticked is not an answer')
   assert.equal(nextStep({ consent: 'yes', gmailDone: true, domain: 'cybersecurity', branches: ['AWS Security'] }, facts({ phoneVerified: true })), 'done')
-  // The number cannot be skipped while a code can be sent.
-  assert.equal(nextStep({ consent: 'yes', phoneLater: true, gmailDone: true, domain: 'cybersecurity', branches: ['AWS Security'] }, facts()), 'phone')
-  // When a code cannot be sent, the person is told once and carries on.
+  // Later lets setup finish without changing the verified fact.
+  assert.equal(nextStep({ consent: 'yes', phoneLater: true, gmailDone: true, domain: 'cybersecurity', branches: ['AWS Security'] }, facts()), 'done')
+  // Exempt accounts can also defer.
   assert.equal(nextStep({ consent: 'yes' }, facts({ phoneRequired: false })), 'phone')
   assert.equal(nextStep({ consent: 'yes', phoneLater: true }, facts({ phoneRequired: false })), 'gmail')
   // Someone already set up is asked nothing, whatever is on file.
@@ -95,14 +91,14 @@ test('nothing from the resume reaches the profile before the person says yes, an
   assert.ok(api.includes('.upsert({ id: user.id, email: user.email, ...patch }, { onConflict: "id" })'))
   // Setup cannot be finished past an unanswered question, and the number cannot be skipped while a code can be sent.
   assert.ok(api.includes('if (step !== "done") return NextResponse.json({ ...answer(at), ok: false, error: "There is one more question to answer first." }, { status: 409'))
-  assert.ok(api.includes('if (facts.phoneRequired && !facts.phoneVerified) return NextResponse.json({ error: "Verify your mobile number to carry on." }, { status: 409'))
+  assert.ok(api.includes('setup = { ...setup, phoneLater: true }'))
   // The person's own dossier is written at the end: what the resume shows and the kinds of work chosen.
   assert.ok(api.includes('await saveDossierProfile(hash, {') && api.includes('fields: join(had?.fields, setup.branches)'))
   // The page asks one thing at a time and keeps no answers of its own.
   assert.ok(page.includes('fetch("/api/onboarding", { cache: "no-store" })') && page.includes('fetch("/api/onboarding/resume", { method: "POST", body: fd })'))
   assert.ok(page.includes('role="log" aria-live="polite"'))
   assert.ok(page.includes('accept=".docx,.pdf,'), 'a Word file or a PDF')
-  for (const said of ['First, your resume: a Word file or a PDF.', 'Shall I fill your profile with this?', 'No, I will fill it in myself', 'Your mobile number next. It connects WhatsApp', 'You can add more than one inbox.', 'Which parts of {chosen.label.toLowerCase()}? Tick every one that fits.', 'LinkedIn search comes later and needs nothing from you now.']) assert.ok(page.includes(said), said)
+  for (const said of ['Next, your resume: a Word file or a PDF.', 'Shall I fill your profile with this?', 'No, I will fill it in myself', 'First, which mobile number would you like to register?', 'You can add more than one inbox.', 'Which parts of {chosen.label.toLowerCase()}? Tick every one that fits.', 'LinkedIn search comes later and needs nothing from you now.']) assert.ok(page.includes(said), said)
   // The old form's fields are gone: nothing asks for a salary, a list of cities or a work authorization.
   for (const gone of ['minSalary', 'targetLocs', 'yearsExp', 'Set Up Your Workspace']) assert.ok(!page.includes(gone), gone)
 })

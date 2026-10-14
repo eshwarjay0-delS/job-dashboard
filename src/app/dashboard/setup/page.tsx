@@ -1,12 +1,8 @@
 "use client"
 
-// Setup as a conversation: one question at a time, the resume first.
+// Setup as a conversation: one question at a time, phone verification first.
 //
-// Asked on 13 Oct 2026: "instead of putting up a screen which asks them the details, put it in a way like chatbots,
-// asking each of the question in order ... primarily ask for their resume first ... ask their consent to add the
-// profile from the resume ... the only details that we are needed from the user: mobile number verification, so we can
-// connect their WhatsApp, and we need Gmails ... be more specialized about the domains ... They would just tick it."
-//
+// Updated 14 Oct 2026: verify the mobile number first, then offer resume-based profile setup.
 // The page holds no answers of its own. Every answer goes to /api/onboarding and the page draws what comes back, so a
 // reload, or the trip to Google and back, lands on the same question.
 
@@ -26,7 +22,7 @@ type Step = "resume" | "confirm" | "phone" | "gmail" | "roles" | "done"
 type State = {
   ok: boolean; step: Step; steps: Step[]; hello: string; already?: boolean
   resumeName: string; read: Contact | null; consent: "" | "yes" | "no"
-  phone: { verified: boolean; required: boolean; note: string; suggested: string }
+  phone: { verified: boolean; required: boolean; note: string; suggested: string; whatsappNumber: string }
   gmail: { inboxes: number; canAdd: boolean }
   roles: { domains: Domain[]; domain: string; branches: string[]; suggested: { domain: string; branches: string[] } | null }
 }
@@ -49,66 +45,7 @@ const plain: CSSProperties = { minHeight: 46, padding: "0 18px", borderRadius: 1
 const field: CSSProperties = { minHeight: 46, padding: "0 14px", borderRadius: 12, border: `1px solid ${P.border}`, background: P.bg, color: P.text, fontSize: 16, minWidth: 0, flex: "1 1 180px" }
 
 function Bot({ children }: { children: ReactNode }) {
-  return <div style={{ display: "flex", justifyContent: "flex-start" }}><div style={{ ...bubble, background: P.surface, border: `1px solid ${P.border}`, color: P.text, borderBottomLeftRadius: 6 }}>{children}</div></div>
-}
-function Me({ children }: { children: ReactNode }) {
-  return <div style={{ display: "flex", justifyContent: "flex-end" }}><div style={{ ...bubble, background: "var(--accent-soft)", color: P.text, borderBottomRightRadius: 6 }}>{children}</div></div>
-}
-function Row({ children }: { children: ReactNode }) {
-  return <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", paddingLeft: 4 }}>{children}</div>
-}
-function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
-  return (
-    <button type="button" aria-pressed={on} onClick={onClick}
-      style={{ minHeight: 40, padding: "0 14px", borderRadius: 999, border: `1px solid ${on ? "var(--accent)" : P.border}`, background: on ? "var(--accent-soft)" : P.surface, color: on ? P.text : P.muted, fontSize: 14.5, fontWeight: on ? 700 : 500, cursor: "pointer" }}>
-      {on ? "✓ " : ""}{children}
-    </button>
-  )
-}
-
-export default function SetupPage() {
-  const router = useRouter()
-  const [s, setS] = useState<State | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [note, setNote] = useState("")
-  const [phone, setPhone] = useState("")
-  const [code, setCode] = useState("")
-  const [codeSent, setCodeSent] = useState(false)
-  const [domain, setDomain] = useState("")
-  const [ticked, setTicked] = useState<string[]>([])
-  const end = useRef<HTMLDivElement | null>(null)
-  const fileRef = useRef<HTMLInputElement | null>(null)
-
-  const take = useCallback((next: State) => {
-    setS(next)
-    setPhone(p => p || next.phone.suggested || "")
-    // The kind of work the resume points to is offered already chosen, with its branches ticked: the person only confirms.
-    const chosen = next.roles.domain || next.roles.suggested?.domain || ""
-    setDomain(d => d || chosen)
-    setTicked(t => (t.length ? t : next.roles.branches.length ? next.roles.branches : next.roles.suggested?.branches || []))
-  }, [])
-
-  const load = useCallback(async () => {
-    try {
-      const r = await fetch("/api/onboarding", { cache: "no-store" })
-      if (r.status === 401) { router.replace("/login?next=%2Fdashboard%2Fsetup"); return }
-      const j = await r.json()
-      if (j?.ok) take(j as State); else setNote("Setup could not be loaded. Reload the page in a moment.")
-    } catch { setNote("Setup could not be loaded. Check your connection and reload the page.") }
-  }, [router, take])
-
-  useEffect(() => { queueMicrotask(() => { void load() }) }, [load])
-  useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }) }, [s?.step, codeSent, domain, note])
-
-  async function send(action: string, more: Record<string, unknown> = {}) {
-    setBusy(true); setNote("")
-    try {
-      const r = await fetch("/api/onboarding", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...more }) })
-      const j = await r.json().catch(() => ({}))
-      if (j?.step) take(j as State)
-      if (!r.ok) setNote(j.error || "That did not go through. Try again in a moment.")
-      return r.ok
-    } catch { setNote("That did not go through. Check your connection and try again."); return false }
+  return <div style={{ display: "flex", justifyContent: "flex-start" }}><div style={{ ...bubble, background: P.surface, border: `1px solid ${P.border}`, color: P.text, borderBottomLeftRadius: 6 }}>{…837 tokens truncated…heck your connection and try again."); return false }
     finally { setBusy(false) }
   }
 
@@ -182,7 +119,7 @@ export default function SetupPage() {
   const now = (step: Step) => s.step === step
   const chosen = s.roles.domains.find(d => d.id === domain)
   const suggested = s.roles.suggested && s.roles.suggested.domain === domain ? s.roles.suggested.branches : []
-  const asked = ["resume", "phone", "gmail", "roles"] as Step[]
+  const asked = ["phone", "resume", "gmail", "roles"] as Step[]
   const question = Math.min(asked.length, asked.filter(q => s.steps.indexOf(q) <= at).length)
   const details: [string, string][] = s.read ? ([["Name", s.read.name], ["Title", s.read.title], ["Email", s.read.email], ["Mobile", s.read.phone], ["Location", s.read.location], ["LinkedIn", s.read.linkedin]] as [string, string][]).filter(([, v]) => !!v) : []
 
@@ -193,7 +130,36 @@ export default function SetupPage() {
       <div role="log" aria-live="polite" aria-label="Setting up your account" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {/* 1. The resume */}
         <Bot>Welcome{s.hello ? `, ${s.hello}` : ""}. I will set you up in about two minutes, and I will only ask what I need.</Bot>
-        <Bot>First, your resume: a Word file or a PDF. I read your details from it, so you do not have to type them.</Bot>
+        {/* 3. The mobile number, which connects WhatsApp */}
+        {(now("phone") || past("phone")) && (s.phone.required || s.phone.verified
+          ? <Bot>First, which mobile number would you like to register? I will text you a code to verify it. Use your WhatsApp number so you can send MFit your resume and a job description.</Bot>
+          : <Bot>{s.phone.note === "admin" ? "You run this site, so your mobile number is not needed to carry on." : "A code cannot be texted right now, so we will leave your mobile number for later."} You can connect WhatsApp at any time from the WhatsApp page, with one message.</Bot>)}
+        {now("phone") && s.phone.note === "unavailable" && <Bot>Text verification is temporarily unavailable. Choose Later to continue. We will remind you at the start of your next visit.</Bot>}
+        {now("phone") && s.phone.required && !codeSent && (
+          <Row>
+            <input style={field} type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 314 555 0100" aria-label="Mobile number" value={phone} onChange={e => setPhone(e.target.value)} onKeyDown={e => { if (e.key === "Enter") void textCode() }} />
+            <button type="button" style={primary} disabled={busy || !phone.trim()} onClick={() => { void textCode() }}>{busy ? "Sending…" : "Text me a code"}</button>
+          </Row>
+        )}
+        {now("phone") && s.phone.required && codeSent && (
+          <>
+            <Me>{phone}</Me>
+            <Bot>Sent. Type the code from the text message.</Bot>
+            <Row>
+              <input style={{ ...field, flex: "0 1 160px", letterSpacing: 3 }} inputMode="numeric" autoComplete="one-time-code" placeholder="Code" aria-label="Code from the text message" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))} onKeyDown={e => { if (e.key === "Enter" && code.length >= 4) void checkCode() }} />
+              <button type="button" style={primary} disabled={busy || code.length < 4} onClick={() => { void checkCode() }}>{busy ? "Checking…" : "Verify"}</button>
+              <button type="button" style={plain} disabled={busy} onClick={() => { setCodeSent(false); setCode("") }}>Change the number</button>
+            </Row>
+          </>
+        )}
+        {now("phone") && <Row><button type="button" style={primary} disabled={busy} onClick={() => { void send("phone_later") }}>Later</button></Row>}
+        {past("phone") && <Me>{s.phone.verified ? "Verified" : "Later"}</Me>}
+
+        {s.phone.verified && <Bot>{s.phone.whatsappNumber
+          ? <>Your number is verified. Message MFit at <a href={`https://wa.me/${s.phone.whatsappNumber.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>+{s.phone.whatsappNumber.replace(/\D/g, "")}</a> from your registered number. Send your resume as a PDF or Word file and the job description; MFit will send back a tailored resume.</>
+          : <>Your number is verified. The MFit WhatsApp contact is temporarily unavailable. Check the WhatsApp page later.</>}</Bot>}
+
+        {(now("resume") || past("resume")) && <Bot>Next, your resume: a Word file or a PDF. I read your details from it, so you do not have to type them.</Bot>}
         {now("resume") && (
           <Row>
             <input ref={fileRef} id="setup-resume" type="file" className="sr-only" accept=".docx,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf"
@@ -202,7 +168,7 @@ export default function SetupPage() {
             <button type="button" style={plain} disabled={busy} onClick={() => { void send("decline_resume") }}>I do not have it with me</button>
           </Row>
         )}
-        {!now("resume") && <Me>{s.resumeName || "I do not have it with me"}</Me>}
+        {past("resume") && <Me>{s.resumeName || "I do not have it with me"}</Me>}
 
         {/* 2. May the profile be filled from it? */}
         {s.read && details.length > 0 && (now("confirm") || past("confirm")) && (
@@ -224,30 +190,6 @@ export default function SetupPage() {
         )}
         {past("confirm") && s.read && details.length > 0 && <Me>{s.consent === "yes" ? "Yes, use it" : "No, I will fill it in myself"}</Me>}
         {past("confirm") && s.consent === "no" && <Bot>No problem. Your <a href="/dashboard/profile" style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: 3 }}>Profile page</a> is there whenever you want to fill it in.</Bot>}
-
-        {/* 3. The mobile number, which connects WhatsApp */}
-        {(now("phone") || past("phone")) && (s.phone.required || s.phone.verified
-          ? <Bot>Your mobile number next. It connects WhatsApp: you send a job post there and your resume comes back fitted to it. I will text you a code.</Bot>
-          : <Bot>{s.phone.note === "admin" ? "You run this site, so your mobile number is not needed to carry on." : "A code cannot be texted right now, so we will leave your mobile number for later."} You can connect WhatsApp at any time from the WhatsApp page, with one message.</Bot>)}
-        {now("phone") && s.phone.required && !codeSent && (
-          <Row>
-            <input style={field} type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 314 555 0100" aria-label="Mobile number" value={phone} onChange={e => setPhone(e.target.value)} onKeyDown={e => { if (e.key === "Enter") void textCode() }} />
-            <button type="button" style={primary} disabled={busy || !phone.trim()} onClick={() => { void textCode() }}>{busy ? "Sending…" : "Text me a code"}</button>
-          </Row>
-        )}
-        {now("phone") && s.phone.required && codeSent && (
-          <>
-            <Me>{phone}</Me>
-            <Bot>Sent. Type the code from the text message.</Bot>
-            <Row>
-              <input style={{ ...field, flex: "0 1 160px", letterSpacing: 3 }} inputMode="numeric" autoComplete="one-time-code" placeholder="Code" aria-label="Code from the text message" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))} onKeyDown={e => { if (e.key === "Enter" && code.length >= 4) void checkCode() }} />
-              <button type="button" style={primary} disabled={busy || code.length < 4} onClick={() => { void checkCode() }}>{busy ? "Checking…" : "Verify"}</button>
-              <button type="button" style={plain} disabled={busy} onClick={() => { setCodeSent(false); setCode("") }}>Change the number</button>
-            </Row>
-          </>
-        )}
-        {now("phone") && !s.phone.required && <Row><button type="button" style={primary} disabled={busy} onClick={() => { void send("phone_later") }}>Carry on</button></Row>}
-        {past("phone") && <Me>{s.phone.verified ? "Verified" : "Later"}</Me>}
 
         {/* 4. Gmail: every inbox in one place */}
         {(now("gmail") || past("gmail")) && <Bot>Now Gmail. Connect it and your job mail is in one place here. You can add more than one inbox.</Bot>}
