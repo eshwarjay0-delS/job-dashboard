@@ -37,10 +37,11 @@ function answer(at: Loaded, setup: Setup = at.setup, facts = at.facts) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const at = await loadSetup()
   if (!at) return signIn()
-  return NextResponse.json(answer(at), PRIVATE)
+  const remind = request.nextUrl.searchParams.get("remind") === "1" && !at.facts.complete && !at.facts.phoneVerified
+  return NextResponse.json(answer(at, remind ? { ...at.setup, phoneLater: false } : at.setup), PRIVATE)
 }
 
 export async function POST(request: NextRequest) {

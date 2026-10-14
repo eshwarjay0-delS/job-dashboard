@@ -84,9 +84,9 @@ export default function SetupPage() {
     setTicked(t => (t.length ? t : next.roles.branches.length ? next.roles.branches : next.roles.suggested?.branches || []))
   }, [])
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (remind = false) => {
     try {
-      const r = await fetch("/api/onboarding", { cache: "no-store" })
+      const r = await fetch(remind ? "/api/onboarding?remind=1" : "/api/onboarding", { cache: "no-store" })
       if (r.status === 401) { router.replace("/login?next=%2Fdashboard%2Fsetup"); return }
       const j = await r.json()
       if (j?.resumeOnly) { router.replace("/dashboard/resume"); return }
@@ -94,7 +94,7 @@ export default function SetupPage() {
     } catch { setNote("Setup could not be loaded. Check your connection and reload the page.") }
   }, [router, take])
 
-  useEffect(() => { queueMicrotask(() => { void load() }) }, [load])
+  useEffect(() => { queueMicrotask(() => { void load(true) }) }, [load])
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }) }, [s?.step, codeSent, domain, note])
 
   async function send(action: string, more: Record<string, unknown> = {}) {
