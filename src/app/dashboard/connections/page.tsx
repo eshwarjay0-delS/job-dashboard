@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { authenticatedUser } from "@/lib/authBoundary"
+import { isResumeOnlyAccount } from "@/lib/resumeOnlyEntitlement"
 import { waStatus, waDisplayNumber } from "@/lib/whatsapp"
 import ConnectionsClient from "./ConnectionsClient"
 import LinkCard from "../whatsapp/link-card"
@@ -11,7 +12,7 @@ export const metadata: Metadata = { title: "Connections" }
 // Resume-only users get a WhatsApp-only Connections page. Gmail and Kompas remain outside their workspace.
 export default async function ConnectionsPage() {
   const user = await authenticatedUser()
-  const resumeOnly = ["janjiaarya@gmail.com", "tryguessup@gmail.com"].includes(user?.email?.trim().toLowerCase() || "")
+  const resumeOnly = await isResumeOnlyAccount(user)
   if (!resumeOnly) return <ConnectionsClient />
 
   const status = await waStatus()
