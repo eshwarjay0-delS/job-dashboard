@@ -42,6 +42,97 @@ export function audioType(mime: string | null): string | null {
 
 const SPEECH_TIMEOUT_MS = 25_000
 
+// ---------------------------------------------------------------------------
+// Whisper language priming — ported from perfACT (worker/whisper.ts).
+//
+// Why: Whisper's `prompt` is prepended as if it were the transcript of the
+// audio immediately before this clip. A seed sentence in the spoken language
+// anchors the SCRIPT and register — handed a Telugu sentence in Telugu script,
+// the decoder is far less likely to answer in romanised letters or drift into
+// a neighbouring language. It removes language *misdetection* (Telugu coming
+// back as similar-sounding English words); it does not improve word error rate.
+// Kept deliberately ordinary and short: on near-silent audio Whisper can echo
+// its prompt back as the transcript, so anything distinctive here would
+// surface as a hallucinated sentence.
+// ---------------------------------------------------------------------------
+
+/** Languages where the careful (bigger, slower) model earns its 2.8x price. Prefix-matched so te, te-IN land together. */
+const CAREFUL_LANGUAGES = ['te', 'hi', 'ta', 'kn', 'ml', 'bn', 'pa', 'mr', 'gu', 'or', 'as']
+
+/** Cheap default: $0.04/audio-hour. English keeps turbo — the accuracy gap there is small and the saving is real. */
+const TURBO_MODEL = 'whisper-large-v3-turbo'
+/** Careful model: $0.111/audio-hour. Turbo degrades further than large-v3 on low-resource languages (OpenAI's own note). */
+const CAREFUL_MODEL = 'whisper-large-v3'
+
+/** Which Whisper model to use for a language. Env override (GROQ_TRANSCRIBE_MODEL) wins when set. */
+export function modelForLanguage(language: string | undefined): string {
+  const base = (language ?? '').trim().toLowerCase().split('-')[0]!
+  return CAREFUL_LANGUAGES.includes(base) ? CAREFUL_MODEL : TURBO_MODEL
+}
+
+const PRIMING_BY_LANGUAGE: Readonly<Record<string, string>> = {
+  te: 'ఈరోజు వాతావరణం బాగుంది. నేను రేపు ఆఫీసుకి వెళ్తాను.',
+  hi: 'आज मौसम अच्छा है। मैं कल ऑफिस जाऊंगा।',
+  ta: 'இன்று வானிலை நன்றாக உள்ளது. நான் நாளை அலுவலகம் செல்வேன்.',
+  kn: 'ಇಂದು ಹವಾಮಾನ ಚೆನ್ನಾಗಿದೆ. ನಾನು ನಾಳೆ ಕಚೇರಿಗೆ ಹೋಗುತ್ತೇನೆ.',
+  ml: 'ഇന്ന് കാലാവസ്ഥ നല്ലതാണ്. ഞാൻ നാളെ ഓഫീസിൽ പോകും.',
+  en: 'Okay, so I was thinking about tomorrow. Let me know what you think.',
+}
+
+/** The seed sentence for a language (BCP-47 or ISO-639-1 in), or '' when there is none. */
+export function primingFor(language: string | undefined): string {
+  const base = (language ?? '').trim().toLowerCase().split('-')[0]!
+  return PRIMING_BY_LANGUAGE[base] ?? ''
+}
+
+/**
+ * Groq's ~224-token prompt ceiling, counted in estimated tokens rather than
+ * characters. 700 ASCII chars ≈ 233 tokens, but a single Indic character costs
+ * 1–2 tokens on these tokenisers — an overflowing prompt does not degrade, it
+ * returns 400 and the sentence is gone. Overestimating costs a word of priming;
+ * underestimating costs the whole turn.
+ */
+const PROMPT_TOKEN_BUDGET = 200
+const PROMPT_CHAR_BUDGET = 700
+
+/** Cheap and deliberately pessimistic: ASCII is thirds, everything else is charged at two. */
+function estimateTokens(text: string): number {
+  let tokens = 0
+  for (const character of text) tokens += character.charCodeAt(0) < 128 ? 0.34 : 2
+  return Math.ceil(tokens)
+}
+
+/**
+ * The words this clip is likely to contain, as Whisper's priming prompt.
+ * The language seed goes FIRST — it anchors the script, and if anything has
+ * to be dropped for budget it should be the twentieth vocabulary term, not the
+ * thing telling Whisper which alphabet this is.
+ */
+export function primingPrompt(vocabulary: readonly string[] | undefined, seed = ''): string {
+  const kept: string[] = []
+  let used = 0
+  if (seed.trim() !== '') {
+    kept.push(seed.trim())
+    used = estimateTokens(seed)
+  }
+  for (const term of vocabulary ?? []) {
+    const trimmed = term.trim()
+    if (!trimmed) continue
+    const cost = estimateTokens(trimmed) + (kept.length > 0 ? 1 : 0)
+    if (used + cost > PROMPT_TOKEN_BUDGET) break
+    if (trimmed.length > PROMPT_CHAR_BUDGET) break
+    kept.push(trimmed)
+    used += cost
+  }
+  return kept.join(', ')
+}
+
+/** Split a client hint string into vocabulary terms (comma/semicolon separated). */
+function hintTerms(hint: string | undefined): string[] {
+  if (!hint) return []
+  return hint.split(/[,;]+/).map(t => t.trim()).filter(Boolean)
+}
+
 /** One sentence or so of a recording, with when it starts and ends in seconds from the start of that recording. */
 export type SpokenStretch = { start: number; end: number; text: string }
 
@@ -64,7 +155,11 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
   const key = (await keysFor(`kompas:${input.purpose}`, resolveKeys({}))).groq
   if (!key) throw new SpeechError("unavailable")
 
-  const model = (process.env.GROQ_TRANSCRIBE_MODEL || "whisper-large-v3").trim()
+  const envModel = (process.env.GROQ_TRANSCRIBE_MODEL || "").trim()
+  // Per-language model selection (perfACT): turbo for English (2.8x cheaper,
+  // small accuracy gap), the careful large-v3 for Indic languages where turbo
+  // degrades. An explicit env model always wins.
+  const model = envModel || modelForLanguage(input.language)
   const form = new FormData()
   form.append("file", new Blob([input.audio as BlobPart], { type }), `audio.${AUDIO_TYPES[type]}`)
   form.append("model", model)
@@ -74,7 +169,12 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
   // Falls back gracefully — a recogniser that ignores it still returns segments.
   form.append("timestamp_granularities[]", "word")
   form.append("timestamp_granularities[]", "segment")
-  if (input.hint) form.append("prompt", input.hint.slice(0, 600))
+  // Language priming (perfACT): the seed sentence in the spoken language goes
+  // first so Whisper answers in the right script, then the client's vocabulary
+  // hint, all fitted to Groq's prompt token ceiling. Seed-first is the point —
+  // a dropped vocabulary term costs a word; a dropped seed costs the script.
+  const prompt = primingPrompt(hintTerms(input.hint), primingFor(input.language))
+  if (prompt) form.append("prompt", prompt)
   if (input.language) form.append("language", input.language)
 
   const began = Date.now()
