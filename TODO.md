@@ -1,3 +1,17 @@
+## 2026-10-14 — Never the same job twice; design system 2 (foundation, landing, sign-in, shared header)
+
+Commits 976aa41 (duplicates), a687197, 8864cb8, 312a74c (design), all deployed READY.
+
+**Duplicates.** Asked with a picture of Files holding one job twice: "we should never and ever get any duplicates like this ... you already know the outcome from the last time". Proof of the cause: the usage record of 13 Oct lists pairs of runs 5 to 10 seconds apart for one job, each paid for, sent and saved under its own name. Built: one job one file in a folder (same job description, or same role and company); a folder already holding a job twice is tidied when Files or My Resume opens; the bot sends a job made before again from Files with no AI call ("redo" makes it afresh); the same job is never run twice at once (a run with a newer resume takes over, the other stands down before sending). Verified on scratch files; NOT verified on his live library (the browser pane was signed out) or with a real WhatsApp message.
+
+**Design system 2.** Asked: "the UI sucks top to bottom ... make it look like a real product ... calm, warm, organised ... the colours are looking brilliant". Colours unchanged. Shipped: corners 6/10/14 px, soft warm shadows, headings in the reading face with the serif kept for brand moments, sentence-case labels, accent focus ring, a light menu rail with soft tints, taller buttons and fields, the shared page header (title left, one action right), chips and labels; a new landing page (true content only, launch prices from `src/lib/plans.ts`, paid plans join a list until checkout opens); a new sign-in page (Google first). The old landing page's invented testimonials ("landed at Stripe", "at Meta"), unmeasured counts, competitor table and $49/$199 plans with features that do not exist are gone.
+
+**NOT verified:** every dashboard page by eye (they need his sign-in), night mode by eye, phone width.
+
+**Where to pick up:** with him signed in in the browser pane, the page-by-page pass: Home, Overview, Inbox, Files, Resume, Interviews, WhatsApp, setup chat, then the MFit Agent chat ("engaging, not a dull bot"). His to decide: the launch prices in `src/lib/plans.ts` (see `founder/pricing-model.md`); a domain; the payment account.
+
+**Kompas desktop download (not mine, declined again):** the live link answers 404 because `public/downloads/Kompas.exe` (162 MB) is git-ignored and over GitHub's 100 MB limit; it needs a download host such as a GitHub Release or R2.
+
 ## 2026-10-13 (pricing) — How to charge for MarketFit with nothing out of the owner's pocket: analysis only, no code changed
 
 **Asked:** "I need the best pricing methods for my web app. Fully without me spending anything out of pocket." "Run all 20 skills in one go and also deduce the price metrics." He installed the founder skill pack that day and supplied four talks and two transcripts as sources.
