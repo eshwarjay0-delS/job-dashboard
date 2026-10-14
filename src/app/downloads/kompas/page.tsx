@@ -1,7 +1,11 @@
 export const dynamic = "force-dynamic";
 
 export default function KompasDesktopDownload() {
-  const desktopUrl = (process.env.KOMPAS_DESKTOP_URL || "").trim();
+  // Prefer a public release host (R2) when configured. Until then the private
+  // perfACT release lets the authorized owner install the same proven desktop.
+  const publicDesktopUrl = (process.env.KOMPAS_DESKTOP_URL || "").trim();
+  const desktopUrl = publicDesktopUrl || "https://github.com/eshwarjay0-delS/parfAct/releases/download/desktop-latest/Kompas.exe";
+  const privateRelease = !publicDesktopUrl;
 
   return (
     <main
@@ -71,7 +75,7 @@ export default function KompasDesktopDownload() {
           {desktopUrl ? (
             <>
               <p style={{ color: "var(--text-muted, #8a8578)", margin: "0 0 16px", lineHeight: 1.6, fontSize: 14 }}>
-                Download the installer, run it once, and the <code>kompas://</code> launcher
+                Download the executable, run it once, and the <code>kompas://</code> launcher
                 registers itself. After that, Kompas opens straight from the browser.
               </p>
               <a
@@ -89,10 +93,17 @@ export default function KompasDesktopDownload() {
               >
                 Download Kompas.exe
               </a>
+              {privateRelease && (
+                <p style={{ color: "var(--text-muted, #8a8578)", fontSize: 13, marginTop: 12, lineHeight: 1.5 }}>
+                  The current release is in your private perfACT GitHub repository.
+                  Sign in to GitHub with an account that has repository access.
+                  Once a public installer is hosted, the same button will use KOMPAS_DESKTOP_URL.
+                </p>
+              )}
             </>
           ) : (
             <p style={{ color: "var(--text-muted, #8a8578)", margin: 0, lineHeight: 1.7, fontSize: 14 }}>
-              The installer is published from the perfACT desktop source. Until it is
+              The desktop executable is published from the perfACT desktop source. Until it is
               published, use Kompas in the browser — pick <b>Browser tab</b> on the
               connect screen and share the tab with your meeting, audio on. Everything
               else (answers, transcription, sessions) already runs through MarketFit.
