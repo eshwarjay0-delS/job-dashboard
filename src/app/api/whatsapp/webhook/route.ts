@@ -17,6 +17,16 @@
  * starts from the closest resume of that email. A resume sent for the job is used as it is, and after every resume the
  * person is told so. See src/lib/library-pick.ts.
  *
+ * NEVER THE SAME JOB TWICE (same day, with a picture of Files holding one job twice: "you already know the outcome from
+ * the last time, and why do you keep repeating this stuff"). Three things, each small:
+ *   1. A job description already made for that email is not made again: the resume is sent again from Files, with no
+ *      AI call. "redo" makes it afresh; a resume sent for the job, or "original", does too.
+ *   2. While a job is being made, the same job is not started a second time. If a resume arrives for it meanwhile, the
+ *      run from that resume takes over and the earlier one stands down without sending or saving anything.
+ *   3. In Files a job has one file, the newest (src/lib/resume-library.ts, "One job, one file").
+ * What went wrong before: the usage record of 13 Oct shows pairs of runs five to ten seconds apart for one job (a job
+ * description, then a resume arriving after the short wait), each paid for, each sent, each saved under its own name.
+ *
  * WHO IS ANSWERED (same day: "the other numbers which haven't registered with our databases ... wouldn't get any
  * replies at all ... they should receive an automated message"). Only a registered number. See src/lib/whatsapp-who.ts.
  *
@@ -33,8 +43,8 @@ import path from "path"
 import { createHash, randomBytes } from "crypto"
 import { blob, writePath, existsPath, deletePath, readPath } from "@/lib/storage"
 import { resumeEmails, cleanEmail } from "@/lib/resumeOrganization"
-import { categoryForJob, isTailoredName, jobKeyOf, learnedAll, pointsOf, COMMON_AT, NO_EMAIL } from "@/lib/resume-library"
-import { forgetTailored, readLibraryChecked, relOf, saveTailored, saveUpload, type SavedTailored } from "@/lib/resume-library-store"
+import { categoryForJob, isTailoredName, jobKeyOf, learnedAll, pointsOf, COMMON_AT, NO_EMAIL, type SavedFile } from "@/lib/resume-library"
+import { existingForJob, forgetTailored, readLibraryChecked, relOf, saveTailored, saveUpload, type SavedTailored } from "@/lib/resume-library-store"
 import { askWhichEmail, choiceIn, live, readChoice, saidOf, DIFFERENT_RESUME } from "@/lib/library-pick"
 import { closestFor, keptCandidate, libraryOf, numberedEmails, type Resumes } from "@/lib/library-pick-store"
 import { getDossierProfile, saveDossierProfile } from "@/lib/dossier"
@@ -109,11 +119,13 @@ type Session = {
   ask?: string[]
   /** The email chosen for the waiting job description, so sending the same one again after a failure does not ask twice. */
   email?: string
+  /** The email the last job was made for, so "redo" does not have to ask. */
+  lastEmail?: string
 }
 const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
 // What outlives a finished job and a quiet day: the resume. Only a half-finished exchange (a job description waiting for
 // its resume) is forgotten.
-const kept = (s: Session): Session => ({ seen: s.seen?.slice(-40), resumePath: s.resumePath, resumeName: s.resumeName, resumeAt: s.resumeAt, resumeEmail: s.resumeEmail, lastJd: s.lastJd, resumeFresh: s.resumeFresh })
+const kept = (s: Session): Session => ({ seen: s.seen?.slice(-40), resumePath: s.resumePath, resumeName: s.resumeName, resumeAt: s.resumeAt, resumeEmail: s.resumeEmail, lastJd: s.lastJd, lastEmail: s.lastEmail, resumeFresh: s.resumeFresh })
 
 async function loadSession(from: string): Promise<Session> {
   try {
@@ -247,7 +259,7 @@ const HELP = [
   "",
   "*Want changes?* Swipe right on a resume I sent (or long-press → Reply) and type what to change, e.g. _add more Terraform_ or _make the bullets shorter_.",
   "",
-  "Commands: *status* · *original* · *reset* · *help*",
+  "Commands: *status* · *original* · *redo* · *reset* · *help*",
 ].join("\n")
 
 const NOT_IN_FILES = "_Not in your Files yet. In MarketFit, open WhatsApp, press Link this number, and send me the code it shows._"
@@ -429,6 +441,11 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       if (!session.lastJd) return sendText(from, "Paste the job description and I will start from your resume as you sent it.")
       return generate(from, { ...session, jd: session.lastJd }, who, TAILOR_BUDGET_MS, true)
     }
+    if (cmd === "redo" || cmd === "again" || cmd === "make it again") {
+      // The last job made afresh. Without this word a job that was made already is sent again as it is.
+      if (!session.lastJd) return sendText(from, "Paste the job description and I will make it.")
+      return generate(from, { ...session, jd: session.lastJd }, who, TAILOR_BUDGET_MS, false, { redo: true, email: session.lastEmail })
+    }
     // A swipe-reply is a change request for the resume being replied to. Checked before
     // the JD path: a reply is never a new JD (new JDs are always pasted as their own message).
     const replyTo = (msg.context as { id?: string } | undefined)?.id
@@ -566,10 +583,13 @@ async function keptEmailOf(session: Session): Promise<string> {
 // Where the next resume starts from.
 type Source = { dir: string; givenPath?: string; depth: number; said: string; from?: string; email?: string }
 // Either a place to start, or the question that has to be answered first, or the reason there is nowhere to start.
-type Start = { source: Source } | { ask: string[] } | { say: string }
+// `have`: the resume was made for this job already, and is sent again as it is.
+type Have = { abs: string; file: SavedFile; email: string }
+type Start = { source: Source } | { ask: string[] } | { say: string } | { have: Have }
 // What is already known about which email the job is for: the one chosen, the emails by their numbers (slots[n - 1]
-// is email number n), the person's resumes when they were already read, and whether a waiting job was given up for it.
-type Choice = { email?: string; slots?: string[]; resumes?: Resumes; replaced?: boolean }
+// is email number n), the person's resumes when they were already read, whether a waiting job was given up for it,
+// and whether the person asked for the job to be made afresh ("redo").
+type Choice = { email?: string; slots?: string[]; resumes?: Resumes; replaced?: boolean; redo?: boolean }
 const NO_RESUME = "I do not have a resume from you yet. Send it once as a Word (*.docx*) file and I will keep it."
 
 // The resume this number sent and the bot kept. Null when there is none.
@@ -605,21 +625,29 @@ async function startFor(from: string, session: Session, who: Who, jd: string, or
   // even for the email on the resume this number sent (found in review: a resume carrying someone's email was enough
   // to be handed that person's saved resume).
   if (!who.own) return own ? { source: own } : { say: NO_RESUME }
+  // Made already? One small read of that folder's record. Not asked when the person said "redo".
+  const already = async (mail: string): Promise<Start | null> => {
+    if (choice.redo) return null
+    const had = await existingForJob(userDir, mail, jd).catch(() => null)
+    return had ? { have: { abs: had.abs, file: had.file, email: mail } } : null
+  }
   const resumes = choice.resumes || await libraryOf(userDir)
   const slots = choice.slots || (await numberedEmails(who.userId, resumes.counts, keptEmail)).slots
   const emails = live(slots)
   const email = choice.email && emails.includes(choice.email) ? choice.email : emails.length === 1 ? emails[0] : ""
   if (!email) {
     if (emails.length > 1) return { ask: slots }
-    if (own) return { source: own }
+    if (own) return (await already(keptEmail)) || { source: own }
     // No resume in Files carries an email that can be read, and none came from this number: whatever Files hold (the tailor picks).
     return Object.keys(resumes.index).length ? { source: { dir: userDir, depth: 1, said: "the closest resume in your Files" } } : { say: NO_RESUME }
   }
   // A resume with no email that can be read cannot be said to be this email's. With one email in all it is used as it
   // always was; it is never put among another email's resumes.
-  if (own && !keptEmail && emails.length === 1) return { source: own }
+  if (own && !keptEmail && emails.length === 1) return (await already("")) || { source: own }
+  const made = await already(email)
+  if (made) return made
   const kept_ = own && keptEmail === email ? await keptCandidate({ path: own.givenPath as string, email, name: session.resumeName || "", at: session.resumeAt || 0 }) : null
-  const found = await closestFor(userDir, email, jd, kept_, resumes.index)
+  const found = await closestFor(userDir, email, jd, kept_, resumes.index, choice.redo ? jobKeyOf(jd) : "")
   if (found.pick) {
     const c = found.pick.candidate, said = saidOf(found.pick)
     if (c.kept && own) return { source: { ...own, email, said } }
@@ -634,6 +662,62 @@ async function startFor(from: string, session: Session, who: Who, jd: string, or
         ? `The resumes saved for ${email} were each built on another saved resume, and I do not build on those again. To go on,`
         : `I have no resume of ${email} to start from. To go on,`
   return { say: `${why} send me a resume for ${email} as a Word (*.docx*) file and I will start from it.` }
+}
+
+// A job being made right now, for one number: which job, since when, and by which run.
+type Flight = { job: string; at: number; token: string }
+const IN_FLIGHT_MS = 75_000
+const flightKey = (from: string) => `whatsapp/making/${digits(from)}.json`
+async function inFlight(from: string): Promise<Flight | null> {
+  try { const raw = await blob.getText(flightKey(from)); return raw ? (JSON.parse(raw) as Flight) : null } catch { return null }
+}
+async function clearFlight(from: string, token: string): Promise<void> {
+  try { const now = await inFlight(from); if (now && now.token === token) await blob.delete(flightKey(from)) } catch { /* it expires by its age */ }
+}
+
+/**
+ * The job is done, so its description is put away. The resume stays: it is sent once. What is put away is THIS job
+ * only: the session is read again first, because a minute has passed. Another job description may have arrived and be
+ * waiting for its email (found in review: writing back the copy from a minute ago wiped that question), or a newer
+ * resume may have been sent.
+ */
+async function putAway(from: string, session: Session, usedKept: boolean, email?: string): Promise<void> {
+  const loaded = await loadSession(from)
+  const now = loaded.seen?.length ? loaded : session
+  const another = !!now.jd && jobKeyOf(now.jd) !== jobKeyOf(session.jd || "")
+  const sameResume = (now.resumeAt || 0) <= (session.resumeAt || 0)
+  await saveSession(from, {
+    ...(another ? now : kept(now)),
+    ...(sameResume ? { resumePath: session.resumePath, resumeEmail: session.resumeEmail } : {}),
+    resumeFresh: sameResume && usedKept ? false : now.resumeFresh,
+    lastJd: session.jd,
+    lastEmail: email || undefined,
+  })
+}
+
+/**
+ * The resume made for this job before is sent again, as it is. No AI is asked, nothing new is saved: the outcome is
+ * already known (owner, 13 Oct 2026). A copy is kept under the new message so a reply to it can still change it.
+ */
+async function sendAgain(from: string, session: Session, who: Who, have: Have): Promise<void> {
+  const file = await readPath(have.abs)
+  if (!file) { await sendText(from, "I made this one before, but its file could not be opened just now. Send *redo* and I will make it again."); return }
+  const name = await outputNameFor(file)
+  const when = new Date(have.file.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+  const caption = [
+    `*${name}*`,
+    ...(have.file.role ? [`Role: ${have.file.role}`] : []),
+    ...(have.file.company ? [`Company: ${have.file.company}`] : []),
+    "",
+    `You already have this one: I made it for this job on ${when}. Nothing was made again.`,
+    `In your Files: ${have.email && have.email !== NO_EMAIL ? `${have.email} / ` : ""}${have.file.category}`,
+    "",
+    "_Swipe-reply to this file with any changes, or send *redo* to make it afresh._",
+  ].join("\n")
+  await deliver(from, file, name, caption, {
+    userId: who.userId, jd: session.jd as string, meta: { role: have.file.role, company: have.file.company, location: "" }, changes: [], source: session.resumeName, depth: have.file.depth, saved: have.abs,
+  })
+  await putAway(from, session, false, have.email)
 }
 
 // ── Tailor + reply ────────────────────────────────────────────────────────────
@@ -652,9 +736,19 @@ async function generate(from: string, session: Session, who: Who, maxMs = TAILOR
     return sendText(from, `${choice.replaced ? "_This job description takes the place of the one that was waiting for its email._\n\n" : ""}${askWhichEmail(start.ask)}`)
   }
   if ("say" in start) return sendText(from, start.say)
+  if ("have" in start) return sendAgain(from, session, who, start.have)
   const source = start.source
   // Finding the closest resume is part of this minute: the tailoring gets what is left of it.
   maxMs = Math.max(20_000, maxMs - (Date.now() - lookedAt))
+
+  // The same job is never made twice at once. A run that brings a newer resume takes over; anything else is told the
+  // job is on its way and starts nothing.
+  const job = jobKeyOf(session.jd), mine = randomBytes(6).toString("hex")
+  const flight = await inFlight(from)
+  if (flight && flight.job === job && Date.now() - flight.at < IN_FLIGHT_MS && !((session.resumeAt || 0) > flight.at)) {
+    return sendText(from, "I am already making the resume for this job. It will be with you within a minute.")
+  }
+  await blob.put(flightKey(from), JSON.stringify({ job, at: Date.now(), token: mine })).catch(() => {})
 
   await sendText(from, `${source.email ? `For *${source.email}*. ` : ""}Tailoring from ${source.said}… every client role gets its own pass, so this takes up to a minute.`)
 
@@ -674,11 +768,14 @@ async function generate(from: string, session: Session, who: Who, maxMs = TAILOR
       givenPath: source.givenPath,
       mode: "full",
       maxMs,
+      // "redo" asks for a fresh draft, so an earlier result for the same job and resume is not replayed.
+      noCache: !!choice.redo,
       // Match the dashboard defaults: summary left as written, skills + experience retargeted.
       sections: { summary: false, skills: true, experience: true },
     })
     await recordTailor({ channel: "whatsapp", kind: "tailor", personId: digits(from), startedAt: began, result })
   } catch (e) {
+    await clearFlight(from, mine)
     await recordTailor({ channel: "whatsapp", kind: "tailor", personId: digits(from), startedAt: began, error: e })
     // The job description and the resume stay in the session, so sending either again retries without starting over.
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
@@ -688,12 +785,18 @@ async function generate(from: string, session: Session, who: Who, maxMs = TAILOR
   // Nothing came back different: the same file with "Match 28% -> 28%" on it is not a tailored resume, so it is not sent as one.
   // (The job description and the resume stay in the session, as above.)
   if (result.unchanged) {
+    await clearFlight(from, mine)
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
     return sendText(from, "I read the job description against your resume and no line came back changed, so I am not sending you the same file. This usually means the AI services were short of capacity. Send the job description again in a few minutes.")
   }
 
   const file = await blob.get(`tailored/${result.token}.docx`)
-  if (!file) return sendText(from, "The resume generated but the file could not be read back. Please try again.")
+  if (!file) { await clearFlight(from, mine); return sendText(from, "The resume generated but the file could not be read back. Please try again.") }
+
+  // A newer run for this same job took over while this one worked (a resume arrived for it): this one stands down.
+  // Nothing is sent and nothing is saved, so the person gets one resume for the job and Files gets one file.
+  const still = await inFlight(from)
+  if (still && still.job === job && still.token !== mine) { console.error("[whatsapp] stood down: a newer run for the same job took over"); return }
 
   const meta = await metaPromise
   const name = await outputNameFor(file)
@@ -705,22 +808,9 @@ async function generate(from: string, session: Session, who: Who, maxMs = TAILOR
   await deliver(from, file, name, captionFor(name, meta, result, undefined, [...where, ...started]), { userId, jd: session.jd, meta, changes: [], source: session.resumeName, depth }, keep)
   await recordWhatsAppUsage(userId, "resume_tailor", result)
 
-  // The job is done, so its description is put away. The resume stays: it is sent once. What is put away is THIS job
-  // only: the session is read again first, because a minute has passed. Another job description may have arrived and
-  // be waiting for its email (found in review: writing back the copy from a minute ago wiped that question), or a
-  // newer resume may have been sent.
-  const loaded = await loadSession(from)
-  const now = loaded.seen?.length ? loaded : session
-  const another = !!now.jd && jobKeyOf(now.jd) !== jobKeyOf(session.jd)
-  const sameResume = (now.resumeAt || 0) <= (session.resumeAt || 0)
   // "Sent for the next job" ends when a job is made from that resume, not when one is made from another.
-  const usedKept = !!source.givenPath && source.givenPath === session.resumePath
-  await saveSession(from, {
-    ...(another ? now : kept(now)),
-    ...(sameResume ? { resumePath: session.resumePath, resumeEmail: session.resumeEmail } : {}),
-    resumeFresh: sameResume && usedKept ? false : now.resumeFresh,
-    lastJd: session.jd,
-  })
+  await putAway(from, session, !!source.givenPath && source.givenPath === session.resumePath, source.email)
+  await clearFlight(from, mine)
   // Said after every resume (owner, 13 Oct 2026: "after every completion of a resume, you then tell that to the user
   // as a small message"): how to start the next one from a different resume.
   try { await sendText(from, DIFFERENT_RESUME) } catch { /* ignore */ }

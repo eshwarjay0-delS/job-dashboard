@@ -26,6 +26,8 @@ export type Candidate = {
   at: number
   /** The resume this number sent and the bot kept, as opposed to a file in Files. */
   kept?: boolean
+  /** The job it was made for, when it was made for one (see jobKeyOf). */
+  job?: string
 }
 
 export type Ranked = { candidate: Candidate; shows: number; of: number }

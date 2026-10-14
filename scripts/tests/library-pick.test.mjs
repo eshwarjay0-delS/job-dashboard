@@ -159,7 +159,7 @@ test('the bot asks before it tailors, takes the answer, and says the small messa
   // 1. A resume sent for this job is used as it is; 2. the email is settled or asked; 3. the closest of that email.
   assert.ok(bot.includes('if (own && original) return { source: own }'))
   assert.ok(bot.includes('if (emails.length > 1) return { ask: slots }'))
-  assert.ok(bot.includes('const found = await closestFor(userDir, email, jd, kept_, resumes.index)'))
+  assert.ok(bot.includes('const found = await closestFor(userDir, email, jd, kept_, resumes.index, choice.redo ? jobKeyOf(jd) : "")'))
   // The question waits with the job description.
   assert.ok(bot.includes('session.ask = start.ask\n    await saveSession(from, session)'))
   assert.ok(bot.includes('const said = numbered.sure ? readChoice(text, slots)') && bot.includes('session.jd = said.rest'))
@@ -177,11 +177,11 @@ test('the bot asks before it tailors, takes the answer, and says the small messa
   assert.ok(bot.includes('resumeFresh: sameResume && usedKept ? false : now.resumeFresh,'))
   // Found in review: a resume with no email that can be read was taken to be the only email's. It is used as it
   // always was, and never put among another email's resumes.
-  assert.ok(bot.includes('if (own && !keptEmail && emails.length === 1) return { source: own }'))
+  assert.ok(bot.includes('if (own && !keptEmail && emails.length === 1) return (await already("")) || { source: own }'))
   assert.ok(bot.includes('const kept_ = own && keptEmail === email ? await keptCandidate('))
   // Found in review: the job that finishes wrote back the session of a minute ago and wiped a question asked since.
   // It reads the session again and puts away its own job only.
-  assert.ok(bot.includes('const loaded = await loadSession(from)\n  const now = loaded.seen?.length ? loaded : session\n  const another = !!now.jd && jobKeyOf(now.jd) !== jobKeyOf(session.jd)'))
+  assert.ok(bot.includes('const loaded = await loadSession(from)\n  const now = loaded.seen?.length ? loaded : session\n  const another = !!now.jd && jobKeyOf(now.jd) !== jobKeyOf(session.jd || "")'))
   assert.ok(bot.includes('...(another ? now : kept(now)),'))
   // A job description that takes the place of one still waiting for its email says so.
   assert.ok(bot.includes('This job description takes the place of the one that was waiting for its email.'))

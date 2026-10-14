@@ -135,7 +135,7 @@ test('the bot keeps the resume, saves what it makes in Files, and searches no on
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
   // The resume outlives a finished job and a quiet day. Only "forget resume" drops it.
   // The job that ends puts away its own job description only: the session is read again first (a minute has passed).
-  assert.ok(bot.includes('...(another ? now : kept(now)),') && bot.includes('    lastJd: session.jd,\n  })'))
+  assert.ok(bot.includes('...(another ? now : kept(now)),') && bot.includes('    lastJd: session.jd,\n    lastEmail: email || undefined,\n  })'))
   assert.ok(bot.includes('if (s.updatedAt && Date.now() - s.updatedAt > ttl) return { ...kept(s), resumeFresh: false }'))
   assert.equal((bot.match(/saveSession\(from, \{ seen: session\.seen \}\)/g) || []).length, 1, 'the one place the resume is dropped is "forget resume"')
   assert.ok(bot.indexOf('cmd === "forget resume"') < bot.indexOf('saveSession(from, { seen: session.seen })'))

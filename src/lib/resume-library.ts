@@ -118,13 +118,63 @@ export type Run = {
   replaces?: string
 }
 
+// ── One job, one file ────────────────────────────────────────────────────────────────────────────────────────────────
+// Asked on 13 Oct 2026, with a picture of Files holding the same job twice ("Security Engineer Application Development
+// - Allied Universal (tailored)", 31.5 KB and 33.8 KB): "We should never and ever get any duplicates like this ... you
+// already know the outcome from the last time, and why do you keep repeating this stuff".
+//
+// What went wrong: a file is named by a hash of what is in it, so the same job made a second time (the bot ran twice,
+// or the person sent the job again) was a second file under the same visible name. Only a CHANGE to a resume took the
+// place of the file it changed.
+//
+// The rule now: in one folder (one email, one kind of job) a job has one file, the newest. Two files are the same job
+// when they were made for the same job description, or carry the same role AND the same company. A file with no role
+// and company ("Resume (tailored)") is never matched by name: those are different jobs that could not be named.
+const sameWords = (a: string, b: string): boolean => !!cleanLine(a) && lower(cleanLine(a)) === lower(cleanLine(b))
+
+/** Is this saved file the same job as the one described? */
+export function sameJob(file: SavedFile, job: { key: string; role?: string; company?: string }): boolean {
+  if (job.key && file.job === job.key) return true
+  return sameWords(file.role, job.role || "") && sameWords(file.company, job.company || "")
+}
+
+/** The saved files a new one for this job takes the place of: the same job, in the same folder, under another name. */
+export function supersededBy(library: Library, run: { path: string; email: string; category: string; jd: string; role?: string; company?: string }): string[] {
+  const shelf = shelfKey(run.email, run.category), job = { key: jobKeyOf(run.jd), role: run.role, company: run.company }
+  return library.files.filter(f => f.path !== run.path && shelfKey(f.email, f.category) === shelf && sameJob(f, job)).map(f => f.path)
+}
+
+/** The resume already made for this job in this folder, the newest when there are several. Null when there is none. */
+export function madeFor(library: Library, want: { email: string; category: string; jd: string }): SavedFile | null {
+  const shelf = shelfKey(want.email, want.category), key = jobKeyOf(want.jd)
+  const made = library.files.filter(f => shelfKey(f.email, f.category) === shelf && f.job === key).sort((a, b) => b.at - a.at)
+  return made[0] || null
+}
+
+/**
+ * The files of one folder that are the same job as a newer file in it: what a tidy-up removes. `names` are the files
+ * really there (path -> when it was last written), so a file no record knows is still seen by the name it carries.
+ */
+export function duplicatesIn(library: Library, email: string, category: string): string[] {
+  const shelf = shelfKey(email, category)
+  const mine = library.files.filter(f => shelfKey(f.email, f.category) === shelf).sort((a, b) => b.at - a.at || b.path.localeCompare(a.path))
+  const kept: SavedFile[] = [], gone: string[] = []
+  for (const f of mine) {
+    if (kept.some(k => sameJob(f, { key: k.job, role: k.role, company: k.company }))) gone.push(f.path)
+    else kept.push(f)
+  }
+  return gone
+}
+
 /** The library after one more resume is saved. Nothing is changed in the library handed in. */
 export function recordRun(library: Library, run: Run, now: number): Library {
   const next: Library = JSON.parse(JSON.stringify(library && library.version === 1 ? library : emptyLibrary()))
   const asked = uniqueWords(run.asked), covers = uniqueWords(run.covers).filter(w => asked.includes(w) || !asked.length)
   const job = jobKeyOf(run.jd)
 
-  next.files = next.files.filter(f => f.path !== run.path && f.path !== run.replaces)
+  // One job, one file: whatever was saved for this job before in this folder leaves the record with the file it names.
+  const gone = new Set(supersededBy(next, run))
+  next.files = next.files.filter(f => f.path !== run.path && f.path !== run.replaces && !gone.has(f.path))
   next.files.push({ path: run.path, email: run.email, category: run.category, role: cleanLine(run.role).slice(0, 120), company: cleanLine(run.company).slice(0, 80), at: now, depth: run.depth >= 2 ? 2 : 1, job, covers, ...(run.from ? { from: run.from } : {}) })
   if (next.files.length > MOST_FILES) next.files = next.files.sort((a, b) => a.at - b.at).slice(-MOST_FILES)
 

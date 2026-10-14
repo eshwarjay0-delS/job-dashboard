@@ -58,11 +58,11 @@ export async function candidatesFor(userDir: string, email: string, index: Index
   const tailored = mine.filter(m => isTailoredName(m.rel.split("/").pop() || ""))
   // The record of a file made for a job is in the folder it was saved in: <email>/<kind of job>/_library.json.
   const folders = [...new Set(tailored.map(m => m.rel.split("/")).filter(parts => parts.length === 3).map(parts => `${parts[0]}\n${parts[1]}`))]
-  const made = new Map<string, { depth: number; at: number }>()
+  const made = new Map<string, { depth: number; at: number; job: string }>()
   await Promise.all(folders.map(async key => {
     const [top, folder] = key.split("\n")
     const shelf = await readShelf(userDir, top, folder).catch(() => null)
-    for (const f of shelf?.files || []) made.set(f.path, { depth: f.depth, at: f.at })
+    for (const f of shelf?.files || []) made.set(f.path, { depth: f.depth, at: f.at, job: f.job })
   }))
   return mine.map(({ abs, rel, entry }) => {
     const parts = rel.split("/"), known = made.get(rel)
@@ -70,7 +70,7 @@ export async function candidatesFor(userDir: string, email: string, index: Index
     const depth: 0 | 1 | 2 = !isTailoredName(parts[parts.length - 1]) ? 0 : known && known.depth !== 2 ? 1 : 2
     // The folder as a person would say it: the kind of job, without the email in front of it.
     const folder = parts.slice(parts[0].includes("@") ? 1 : 0, -1).join(" / ")
-    return { path: abs, email, folder, name: sayName(entry.filename || parts[parts.length - 1]), depth, keywords: entry.keywords || [], at: known?.at || Date.parse(entry.updatedAt || "") || 0 }
+    return { path: abs, email, folder, name: sayName(entry.filename || parts[parts.length - 1]), depth, keywords: entry.keywords || [], at: known?.at || Date.parse(entry.updatedAt || "") || 0, ...(known?.job ? { job: known.job } : {}) }
   })
 }
 
@@ -99,8 +99,9 @@ const MOST_OPENED = 8
  * The closest resume of one email for this job. The file is opened and its email read once more before it is used, so
  * nothing goes out under another person's name even if the index is behind what is in Files.
  */
-export async function closestFor(userDir: string, email: string, jd: string, kept: Candidate | null, index: Index): Promise<Closest> {
-  const candidates = await candidatesFor(userDir, email, index)
+export async function closestFor(userDir: string, email: string, jd: string, kept: Candidate | null, index: Index, notJob = ""): Promise<Closest> {
+  // `notJob`: when a job is being made afresh, the resume made for that same job before is not what it starts from.
+  const candidates = (await candidatesFor(userDir, email, index)).filter(c => !notJob || c.job !== notJob)
   if (kept && kept.email === email) candidates.push(kept)
   const { ranked, builtOnAlready } = rankFor(candidates, email, extractKeywords(jd))
   let wrongEmail = 0, unread = 0

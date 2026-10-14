@@ -19,7 +19,7 @@ import { extractText } from "@/lib/docx"
 import { resumeEmails, rankResumeCategories, cleanEmail } from "@/lib/resumeOrganization"
 import { extractJdKeywords, coveredJdKeywords } from "@/lib/keywords"
 import { pdfText } from "@/lib/pdf-text"
-import { categoryForJob, emptyLibrary, folderFor, isTailoredName, learnedOf, mergeLibraries, recordRun, relabelEmail, shelfOnly, shelvesIn, tailoredFileName, validLibrary, NO_CATEGORY, type Learned, type Library } from "@/lib/resume-library"
+import { categoryForJob, duplicatesIn, emptyLibrary, folderFor, isTailoredName, learnedOf, madeFor, mergeLibraries, recordRun, relabelEmail, shelfOnly, shelvesIn, supersededBy, tailoredFileName, validLibrary, NO_CATEGORY, type Learned, type Library, type SavedFile } from "@/lib/resume-library"
 
 export const LIBRARY_FILE = "_library.json"
 
@@ -106,8 +106,11 @@ async function freeName(dest: string): Promise<string> {
  */
 export async function mendLibrary(userDir: string): Promise<void> {
   const all = await listFiles(userDir).catch(() => [] as string[])
-  await mendEmailFolders(userDir, all).catch(error => console.error("[library] folders not mended", String(error).slice(0, 200)))
+  const moved = await mendEmailFolders(userDir, all).catch(error => { console.error("[library] folders not mended", String(error).slice(0, 200)); return false })
   if (all.some(f => relOf(userDir, f) === LIBRARY_FILE)) await splitOldRecord(userDir).catch(() => false)
+  // One job, one file: a folder that came to hold the same job twice is put right before it is shown.
+  const now = moved ? await listFiles(userDir).catch(() => [] as string[]) : all
+  await removeDuplicates(userDir, now).catch(error => console.error("[library] duplicates not removed", String(error).slice(0, 200)))
 }
 
 /** Every folder's record as one library, read from what is really there. */
@@ -177,13 +180,60 @@ export async function saveTailored(opts: {
 
   const email_ = folderFor(email, category)[0]
   const before = await readShelf(opts.userDir, email_, category)
-  const library = recordRun(before, {
+  const run = {
     path: relOf(opts.userDir, abs), email: email_, category, role: opts.role || "", company: opts.company || "", depth: opts.depth, from: opts.from,
     jd: opts.jd, asked, covers, points: opts.points, replaces: replaces ? relOf(opts.userDir, replaces) : undefined,
-  }, opts.now ?? Date.now())
+  }
+  // One job, one file: a resume saved earlier for this same job in this folder is taken out as this one goes in.
+  for (const rel of supersededBy(before, run)) {
+    const old = absOf(opts.userDir, rel)
+    if (old !== abs && inside(opts.userDir, old) && isTailoredName(path.basename(old))) await deletePath(old).catch(() => {})
+  }
+  const library = recordRun(before, run, opts.now ?? Date.now())
   await writeShelf(opts.userDir, library, email_, category)
   const learned = learnedOf(library, email_, category)
   return { abs, rel: relOf(opts.userDir, abs), email: email_, category, learned, counted: learned.jobs > learnedOf(before, email_, category).jobs }
+}
+
+/**
+ * The resume already made for this job, when there is one and its file is still there. One small read. The bot sends
+ * it again instead of making it again (owner, 13 Oct 2026: "you already know the outcome from the last time").
+ */
+export async function existingForJob(userDir: string, email: string, jd: string): Promise<{ abs: string; file: SavedFile } | null> {
+  const category = categoryForJob(jd), email_ = folderFor(email, category)[0]
+  const file = madeFor(await readShelf(userDir, email_, category), { email: email_, category, jd })
+  if (!file) return null
+  const abs = absOf(userDir, file.path)
+  return inside(userDir, abs) && (await existsPath(abs)) ? { abs, file } : null
+}
+
+/**
+ * Folders that hold the same job twice are put right: the newest file of a job stays, the older ones go, and the
+ * record follows. `all` is one listing of the person's Files. Nothing is read unless a folder shows two files made
+ * for a job under one visible name, so a tidy library costs nothing here.
+ */
+export async function removeDuplicates(userDir: string, all: string[]): Promise<number> {
+  const seen = new Map<string, number>(), folders = new Set<string>()
+  for (const abs of all) {
+    const parts = relOf(userDir, abs).split("/")
+    if (parts.length !== 3 || !isTailoredName(parts[2])) continue
+    const shown = `${parts[0]}\n${parts[1]}\n${parts[2].replace(/__[a-f0-9]{16}(?=\.docx$)/i, "").toLowerCase()}`
+    seen.set(shown, (seen.get(shown) || 0) + 1)
+    if ((seen.get(shown) || 0) > 1 && !/^resume \(tailored\)\.docx$/i.test(parts[2].replace(/__[a-f0-9]{16}(?=\.docx$)/i, ""))) folders.add(`${parts[0]}\n${parts[1]}`)
+  }
+  let removed = 0
+  for (const key of folders) {
+    const [email, category] = key.split("\n")
+    const library = await readShelf(userDir, email, category)
+    const gone = duplicatesIn(library, email, category)
+    if (!gone.length) continue
+    for (const rel of gone) {
+      const abs = absOf(userDir, rel)
+      if (inside(userDir, abs) && isTailoredName(path.basename(abs))) { await deletePath(abs).catch(() => {}); removed++ }
+    }
+    await writeShelf(userDir, { ...library, files: library.files.filter(f => !gone.includes(f.path)) }, email, category)
+  }
+  return removed
 }
 
 /** Take a saved resume back out: the file and its line in the record. (It was saved, then could not be sent.) */
