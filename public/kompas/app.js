@@ -2270,8 +2270,49 @@ function renderConnect(s) {
   $("copilotTip").classList.add("hidden");
 }
 document.querySelectorAll(".cn-app").forEach(b => b.onclick = () => { LS.set("connectApp", b.dataset.app); renderConnect(); });
+function packSession(s) {
+  const slim = {
+    id: s.id, type: s.type || "live", role: s.role || "", company: s.company || "",
+    jd: String(s.jd || "").slice(0, 6000), resume: String(s.resume || "").slice(0, 8000),
+    documents: String(s.documents || "").slice(0, 2000), instructions: s.instructions || "",
+    language: s.language || "en", interviewer: s.interviewer || "engineer", difficulty: s.difficulty || "standard",
+    tone: s.tone || "professional", mode: s.mode || "technical", length: s.length || "balanced",
+    autoAnswer: !!s.autoAnswer, autoMode: s.autoMode === true, saveTranscript: s.saveTranscript !== false,
+    createdAt: s.createdAt || Date.now(),
+  };
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(slim)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return "kompas://open?d=" + b64;
+}
+function launchInstalled(s) {
+  if (!s || !s.id) return;
+  const url = packSession(s);
+  let left = false;
+  const mark = () => { left = true; };
+  window.addEventListener("blur", mark);
+  const frame = document.createElement("iframe");
+  frame.style.display = "none";
+  frame.src = url;
+  document.body.append(frame);
+  setTimeout(() => {
+    frame.remove();
+    window.removeEventListener("blur", mark);
+    $("cnDesk")?.classList.remove("hidden");
+    $("cnDeskMiss")?.classList.toggle("hidden", left || document.hidden);
+  }, 1200);
+}
+function openHandedSession(s) {
+  if (!s || !s.id || !window.kompasDesktop) return;
+  const all = LS.get("sessions", []);
+  if (!all.some(x => x.id === s.id)) { all.unshift(s); LS.set("sessions", all); sessions = all; }
+  launchCopilot(s);
+  $("connectPanel").classList.add("hidden");
+  if (!$("startBtn").classList.contains("on")) $("startBtn").click();
+}
+window.kompasDesktop?.takeSession?.().then(s => { if (s) openHandedSession(s); });
+window.kompasDesktop?.onSession?.(openHandedSession);
 $("cnStart").onclick = () => {
   const app = window.kompasDesktop ? "desktop" : LS.get("connectApp", "web");
+  if (!window.kompasDesktop && app === "desktop") { launchInstalled(current); return; }
   srcOn.mic = true; srcOn.sys = window.kompasDesktop ? !NO_SYS_AUDIO : app !== "phone" && !NO_SYS_AUDIO; syncSrc();
   $("startBtn").click();
 };
