@@ -666,6 +666,7 @@ function unbracket(s) {
     || /^[a-z]+(?:\s+[a-z]+){1,8}$/.test(x.trim());
   let hit = false;
   const out = String(s || "").replace(/\[([^\]\n]{1,90})\]/g, (m, inner) => {
+    if (/^(?:pause|beat|breath)$/i.test(String(inner).trim())) return m;   // a spoken pause, not a fill-in
     if (!isPlaceholder(inner)) return m;
     hit = true;
     if (!/\b(you|your)\b/i.test(inner)) return "";
@@ -676,10 +677,11 @@ function unbracket(s) {
   return out.replace(/\bby\s*%/g, "significantly").replace(/(^|\s)%/g, "$1")
     .replace(/[,;]\s*([.!?;:])/g, "$1").replace(/ +([,.;:!?])(?=\s|$)/g, "$1").replace(/ {2,}/g, " ");
 }
-// `__keyword__` = main keyword · *italic* = the word to stress out loud · (pause) = stop and breathe
+// `__keyword__` = main keyword · *italic* = the word to stress out loud · (pause), [beat] and [breath] = stop and breathe
+const PAUSE_MARK = "(?:\\((?:pause|beat|breath)\\)|\\[(?:pause|beat|breath)\\])";
 function inline(li, text) {
   // `__keyword__` is the live emphasis mark (asterisks were stripped or shown raw). `**` still accepted.
-  for (const part of unbracket(text).split(/(`[^`\n]{1,120}`|__[^_\n]{1,80}__|\*\*[^*\n]{1,80}\*\*|\*[^*\s][^*\n]{0,80}\*|==[^=\n]{1,80}==|\((?:pause|beat)\))/i)) {
+  for (const part of unbracket(text).split(new RegExp("(`[^`\\n]{1,120}`|__[^_\\n]{1,80}__|\\*\\*[^*\\n]{1,80}\\*\\*|\\*[^*\\s][^*\\n]{0,80}\\*|==[^=\\n]{1,80}==|" + PAUSE_MARK + ")", "i"))) {
     if (!part) continue;
     let el = null;
     if (/^`[^`]+`$/.test(part)) { el = document.createElement("code"); el.textContent = part.slice(1, -1); }
@@ -689,7 +691,7 @@ function inline(li, text) {
     }
     else if (/^==[^=].*==$/.test(part)) { el = document.createElement("strong"); el.textContent = part.slice(2, -2); }
     else if (/^\*[^*]+\*$/.test(part)) { el = document.createElement("em"); el.textContent = part.slice(1, -1); }
-    else if (/^\((pause|beat)\)$/i.test(part)) { el = document.createElement("span"); el.className = "pause"; el.textContent = "pause"; }
+    else if (new RegExp("^" + PAUSE_MARK + "$", "i").test(part)) { el = document.createElement("span"); el.className = "pause"; el.textContent = "pause"; }
     li.append(el || document.createTextNode(part));
   }
 }
@@ -728,7 +730,7 @@ function proseLines(text) {
     if (/^#{1,6}\s+\S/.test(l)) return null;
     const b = l.match(/^(?:(?:[-•]|\*(?!\*)|\d+[.)])\s+)+(.*)$/);      // "- - text" too
     if (b) return { t: b[1], kind: "bullet" };
-    if (/^\((pause|beat)\)\.?$/i.test(l)) return { t: l, kind: "pauseline" };
+    if (new RegExp("^" + PAUSE_MARK + "\\.?$", "i").test(l)) return { t: l, kind: "pauseline" };
     return { t: l, kind: "passage" };
   }).filter(Boolean);
 }
@@ -784,7 +786,7 @@ function addCard(question, answer) { const c = { question, answer }; cards.push(
 function plainAnswer(answer) {
   return answerLines(answer).map(({ t, kind, lang }) => {
     if (kind === "code") return "```" + (lang || "") + "\n" + t + "\n```";
-    const x = unbracket(t).replace(/\*\*/g, "").replace(/__/g, "").replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1$2").replace(/\s*\((pause|beat)\)\s*/gi, " ").trim();
+    const x = unbracket(t).replace(/\*\*/g, "").replace(/__/g, "").replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1$2").replace(new RegExp("\\s*" + PAUSE_MARK + "\\s*", "gi"), " ").trim();
     return kind === "head" ? `\n${x}` : kind === "bullet" ? `• ${x}` : kind === "pauseline" ? "" : x;
   }).filter(Boolean).join("\n").trim();
 }
@@ -1745,7 +1747,9 @@ async function aiAnswer(fromAuto) {
       return;
     }
     const pending = pendingHeard();
-    if (pending.length) {
+    // Only the interviewer starts a new card. The candidate's own lines stay in the transcript; they are not a new question.
+    const asked = pending.filter(t => t.who === questionSource());
+    if (asked.length) {
       answeredSeq = heardSeq; updatePending();
       const heard = pending.map(t => `${t.who}: ${t.text}`).join("\n");
       const earlier = transcript.filter(t => t.seq <= pending[0].seq - 1).slice(-10).map(t => `${t.who}: ${t.text}`).join("\n");
@@ -1755,9 +1759,10 @@ async function aiAnswer(fromAuto) {
     }
     if (fromAuto) return;
     const c = cards[idx];
-    if (c && c.heard) return await generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "" });   // answer the same thing again
     if (c && /^(Your introduction)$/.test(c.question)) return await generateAnswer("Tell me about yourself", c);
-    if (c && !/^(Preparing…|Ready|Cleared\.|Deriving)/.test(c.question)) return await generateAnswer(c.question, c);
+    // Pressing AI Answer again answers the question already on screen. Re-deriving the old heard text is what showed "No question yet".
+    if (c && c.question && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(c.question)) return await generateAnswer(c.question, c);
+    if (c && c.heard) return await generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "" });
     status("Nothing heard yet — press Start, or type a question.", "live");
     setChat(true);
   } catch (error) {
@@ -2140,7 +2145,7 @@ $("exportBtn").onclick = () => {
   const out = [`# Kompas session — ${s.role || ""}${s.company ? " @ " + s.company : ""}`, "", `Exported ${new Date().toLocaleString()}`, "", "## Q&A", ""];
   cards.forEach(c => {
     out.push(`### ${c.question}`);
-    answerLines(c.answer).forEach(({ t, kind, lang }) => { if (kind === "code") { out.push("```" + (lang || ""), t, "```"); return; } const x = unbracket(t).replace(/\s*\((pause|beat)\)\s*/gi, " ").trim(); if (!x || kind === "pauseline") return; out.push(kind === "head" ? `#### ${x}` : kind === "bullet" ? `- ${x}` : x); });
+    answerLines(c.answer).forEach(({ t, kind, lang }) => { if (kind === "code") { out.push("```" + (lang || ""), t, "```"); return; } const x = unbracket(t).replace(new RegExp("\\s*" + PAUSE_MARK + "\\s*", "gi"), " ").trim(); if (!x || kind === "pauseline") return; out.push(kind === "head" ? `#### ${x}` : kind === "bullet" ? `- ${x}` : x); });
     out.push("");
   });
   out.push("## Transcript", ""); transcript.forEach(t => out.push(`**${t.who}:** ${t.text}`));

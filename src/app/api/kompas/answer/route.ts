@@ -551,16 +551,19 @@ export async function POST(request: NextRequest) {
   // Gate 2 (code): the transcript reduces to one clean question → extract verbatim.
   // Gate 3 (model): consolidated derivation with speaker labels.
   if (body.deriveOnly) {
-    const transcript = str(body.transcript, 3000) || str(body.question, 500)
-    if (!transcript || plainlyNoQuestion(transcript))
+    // The page sends the new speech as `question` and what was already answered as `transcript`.
+    // Deriving from the earlier text is what answered "No question yet" while the question was the new speech.
+    const heard = str(body.question, 5000)
+    const earlier = str(body.transcript, 900)
+    if (!heard || plainlyNoQuestion(heard))
       return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
-    const clean = cleanQuestion(transcript)
-    if (clean) return NextResponse.json({ derived: clean }, { headers: NO_STORE })
+    const clean = cleanQuestion(heard)
+    if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
     try {
       const { text } = await callLLM({
         keys: rawKeys, purpose: "kompas:answer-derive", tier: "light",
         system: DERIVE_SYSTEM,
-        user: `HEARD (everything said since the last answer):\n${transcript}`,
+        user: `${earlier ? `EARLIER (already answered — context only):\n${earlier}\n\n` : ""}HEARD (everything said since the last answer):\n${heard}`,
         maxTokens: 150,
       })
       const derived = text.trim()

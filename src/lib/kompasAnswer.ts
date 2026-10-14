@@ -145,7 +145,7 @@ export function lengthPlan(
 // ---- Question detection: three code gates before any model call ----
 
 const ASKS =
-  /\?\s*$|^(so,? |and,? |also,? )?(what|how|why|when|where|which|who|can|could|would|will|should|do|does|did|are|is|have|has|tell|walk|describe|explain|give|share|talk|imagine|suppose)\b|\b(tell me|walk me|how would you|what would you|can you|could you|would you|have you|do you)\b/i
+  /\?\s*$|^(so,? |and,? |also,? )?(what|how|why|when|where|which|who|can|could|would|will|should|do|does|did|are|is|have|has|tell|walk|describe|explain|give|share|talk|imagine|suppose|pick|choose|name|list|select|design|compare|outline|rank|identify|recommend|propose)\b|\b(tell me|walk me|show me|how would you|what would you|can you|could you|would you|have you|do you)\b/i
 
 /** Speaker-aware: any Them: line is a question; otherwise needs ? or an ask-pattern. */
 export function plainlyNoQuestion(heard: string): boolean {
@@ -393,6 +393,7 @@ HEARD is everything said since the last answer, merged and messy: fillers, cross
 
 FIRST derive the ONE question to answer now: centre it on what the interviewer is asking at the END of HEARD, and fold in every earlier question in HEARD that has not been answered yet, plus any constraint or context they gave. Small talk, their description of the team or role, and the candidate's own replies are context, not questions.
 
+A request with no question mark is still a question: "Pick one internal system", "Name the tool you would use", "Walk me through that". Small talk is not.
 Return ONLY the question text, in the interviewer's own words, one or two sentences. Never add topics or angles they did not ask about. If nothing in HEARD is a question for the candidate, return exactly: NO_QUESTION`
 export interface ShapeDef {
   type: string; re: RegExp; tier1: boolean; noYou: boolean; unknownProduct: boolean; shape: string
