@@ -122,8 +122,12 @@ export async function dossierContext(userHash: string, field: string, maxSession
     }
   }
   if (sessions.length) {
-    parts.push(`PRIOR SESSIONS (how this person actually answered before):`)
     for (const sess of sessions) {
+      // A prepared answer is a rehearsal, never evidence the candidate did
+      // those things. A historical browser import is unverified until reviewed.
+      if (sess.field === "prepared") parts.push("USER-PREPARED EXAMPLE (illustrative only; never claim it happened):")
+      else if (sess.field === "imported-answer") parts.push("IMPORTED USER ANSWER (voice reference; factual claims require resume corroboration):")
+      else parts.push("PRIOR SESSION (what the candidate answered before, not proof of every underlying claim):")
       for (const qa of sess.qa.slice(0, 4)) {
         parts.push(`Q: ${qa.q.slice(0, 200)}\nA: ${qa.a.slice(0, 400)}`)
       }
