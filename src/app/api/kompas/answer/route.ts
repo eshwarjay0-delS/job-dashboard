@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
-import { callLLM, keysFor, modelFor, resolveKeys, type LlmKeys } from "@/lib/llm"
+import { keysFor, resolveKeys, type LlmKeys } from "@/lib/llm"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { dossierContext } from "@/lib/dossier"
 import { resumeRoles, resumeDigest, employerAliases } from "@/lib/kompasResume"
@@ -47,6 +47,7 @@ export const maxDuration = 60
 // candidate can still say.
 
 const NO_STORE = { "Cache-Control": "no-store" }
+const PAID_MODEL = "openai/gpt-oss-120b"
 const OR_URL = "https://openrouter.ai/api/v1/chat/completions"
 // OpenRouter holds the requested ceiling against the balance — keep it modest,
 // mirroring src/lib/llm.ts.
@@ -98,7 +99,7 @@ function orError(res: Response, bodyText: string, model: string): Error {
 }
 
 // Pump an OpenRouter SSE body into deltas (perfACT's readSSE, ported).
-async function pumpSSE(body: ReadableStream<Uint8Array>, onData: (j: { choices?: Array<{ delta?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } }) => void): Promise<void> {
+async function pumpSSE(body: ReadableStream<Uint8Array>, onData: (j: { error?: { code?: number }; choices?: Array<{ delta?: { content?: string }; finish_reason?: string }>; usage?: { prompt_tokens?: number; completion_tokens?: number } }) => void): Promise<void> {
   const reader = body.getReader()
   const dec = new TextDecoder()
   let buf = ""
@@ -128,7 +129,7 @@ async function streamOpenRouter(
     method: "POST", signal,
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
     body: JSON.stringify({
-      model, max_tokens: orCap(maxTokens), stream: true,
+      model: PAID_MODEL, provider: { allow_fallbacks: true }, max_tokens: orCap(maxTokens), stream: true,
       stream_options: { include_usage: true },
       ...reasoningFor(model),
       messages: [
@@ -138,12 +139,15 @@ async function streamOpenRouter(
     }),
   })
   if (!res.ok || !res.body) throw orError(res, await res.text().catch(() => ""), model)
-  let input = 0, output = 0
+  let input = 0, output = 0, failure = 0, finished = false, received = false
   await pumpSSE(res.body, (j) => {
+    if (j.error) failure = Number(j.error.code) || 502
+    if (j.choices?.[0]?.finish_reason) finished = true
     const d = j.choices?.[0]?.delta?.content
-    if (typeof d === "string" && d) onDelta(d)
+    if (typeof d === "string" && d) { received = true; onDelta(d) }
     if (j.usage) { input = j.usage.prompt_tokens || 0; output = j.usage.completion_tokens || 0 }
   })
+  if (failure || !received || !finished) throw new Error(`openrouter ${failure || 502} incomplete stream`)
   return { input, output }
 }
 
@@ -156,7 +160,7 @@ async function fetchOpenRouter(
     method: "POST", signal,
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
     body: JSON.stringify({
-      model, max_tokens: orCap(maxTokens),
+      model: PAID_MODEL, provider: { allow_fallbacks: true }, max_tokens: orCap(maxTokens),
       ...reasoningFor(model),
       messages: [
         { role: "system", content: system },
@@ -166,6 +170,8 @@ async function fetchOpenRouter(
   })
   if (!res.ok) throw orError(res, await res.text().catch(() => ""), model)
   const data = await res.json()
+  if (data.error) throw new Error(`openrouter ${Number(data.error.code) || 502}`)
+  if (!data.choices?.[0]?.message?.content?.trim()) throw new Error("openrouter 502 empty response")
   const u = data.usage || {}
   return { text: data.choices?.[0]?.message?.content || "", usage: { input: u.prompt_tokens || 0, output: u.completion_tokens || 0 } }
 }
@@ -173,12 +179,12 @@ async function fetchOpenRouter(
 // A light non-streaming call for the post-generation fact-check (perfACT's
 // verifyAnswer). JSON-forced, low effort, never streamed to the client.
 async function verifyGenerate(key: string, system: string, user: string, signal: AbortSignal): Promise<string> {
-  const model = process.env.KOMPAS_VERIFY_MODEL || "anthropic/claude-3.5-haiku"
+  const model = PAID_MODEL
   const res = await fetch(OR_URL, {
     method: "POST", signal,
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
     body: JSON.stringify({
-      model, max_tokens: 1600, temperature: 0,
+      model: PAID_MODEL, provider: { allow_fallbacks: true }, max_tokens: 1600, temperature: 0,
       response_format: { type: "json_object" },
       ...reasoningFor(model),
       messages: [
@@ -291,14 +297,7 @@ type AnswerJob = {
 // The lanes, in order: an explicit OpenRouter pick from the live screen first,
 // then the primary, then the fallback model. Models on a long rate-limit block
 // are skipped — a later request finds them cooled down.
-function jobLanes(job: AnswerJob): string[] {
-  const lanes: string[] = []
-  if (job.liveModel.includes("/")) lanes.push(job.liveModel)
-  const primary = process.env.KOMPAS_ANSWER_MODEL || modelFor("openrouter", "heavy")
-  const fallback = process.env.OPENROUTER_MODEL_FALLBACK || "anthropic/claude-3.5-sonnet"
-  for (const m of [primary, fallback]) if (m && !lanes.includes(m)) lanes.push(m)
-  return lanes
-}
+function jobLanes(_job: AnswerJob): string[] { return [PAID_MODEL] }
 function openLanes(job: AnswerJob): { lanes: string[]; blockedNote: string } {
   const lanes = jobLanes(job).filter((m) => (blockedUntil.get(m) || 0) <= Date.now())
   let blockedNote = ""
@@ -356,6 +355,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
             try {
               const usage = await streamOpenRouter(job.orKey as string, model, job.system, job.userText, job.plan.maxTokens, onDelta, signal)
               servedModel = model
+              lastErr = ""
               recordLane(model, true, usage, began)
             } catch (e) {
               lastErr = String((e as Error)?.message || e).slice(0, 200)
@@ -378,22 +378,8 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
               await attempt(":retry")
             }
           }
-        } else {
-          // The admin routed this feature away from OpenRouter: one
-          // vault-honoring call, delivered as SSE so the contract holds.
-          const began = Date.now()
-          timing.lane = "vault"
-          try {
-            const { text, provider, model } = await callLLM({
-              keys: job.keys, purpose: "kompas:answer", tier: "heavy",
-              system: job.system, user: job.userText, maxTokens: job.plan.maxTokens,
-            })
-            servedProvider = provider
-            servedModel = model
-            if (text) onDelta(text)
-            void began
-          } catch (e) { lastErr = String((e as Error)?.message || e).slice(0, 200) }
-        }
+        } else { lastErr = "openrouter 503 missing paid key" }
+
         // Still rate-limited with nothing streamed: never a 5xx on a live turn —
         // hand the client an exact wait; it regenerates by itself.
         if (!raw.trim() && isRateLimit(lastErr)) {
@@ -410,7 +396,12 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         }
         // Degrade, never fail: stream the best prepared material as the answer.
         let degraded = false
-        if (!raw.trim()) { degraded = true; onDelta(job.fallbackText) }
+        if (!raw.trim() || lastErr) {
+          const failure = answerFailure(lastErr)
+          emit({ type: "replace", text: "" })
+          emit({ type: "done", unavailable: true, degraded: true, ...failure, ...metaBase, provider: "openrouter", model: PAID_MODEL })
+          return
+        }
         // Grounding guards (perfACT anti-hallucination) run on the complete
         // text: unbracket → place/prestige/title/version fixes → figures
         // allowlist. Voice repair runs after — the client's `replace` event
@@ -470,6 +461,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
           const r = await fetchOpenRouter(job.orKey as string, model, job.system, job.userText, job.plan.maxTokens, signal)
           raw = r.text
           servedModel = model
+          lastErr = ""
           recordLane(model, true, r.usage, began)
         } catch (e) {
           lastErr = String((e as Error)?.message || e).slice(0, 200)
@@ -486,20 +478,13 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
         const wait = retryMs(lastErr)
         if (wait > 0 && wait <= 15000) { await sleep(wait + 300); await attempt() }
       }
-    } else {
-      try {
-        const { text, provider, model } = await callLLM({
-          keys: job.keys, purpose: "kompas:answer", tier: "heavy",
-          system: job.system, user: job.userText, maxTokens: job.plan.maxTokens,
-        })
-        raw = text
-        servedProvider = provider
-        servedModel = model
-      } catch (e) { lastErr = String((e as Error)?.message || e).slice(0, 200) }
-    }
+    } else { lastErr = "openrouter 503 missing paid key" }
   } finally { cleanup() }
   const degraded = !raw.trim()
-  if (degraded) raw = job.fallbackText
+  if (degraded) {
+    const failure = answerFailure(lastErr)
+    return NextResponse.json({ ...failure, provider: "openrouter", model: PAID_MODEL }, { status: failure.status, headers: NO_STORE })
+  }
   // Grounding guards before voice repair: unbracket → place/prestige/title/
   // version fixes → figures allowlist. Then the optional fact-check.
   const g = applyGuards(raw.trim(), job.guardFacts, job.allowed)
@@ -542,7 +527,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Nothing to answer." }, { status: 400, headers: NO_STORE })
   }
 
-  const rawKeys = resolveKeys({})
+  const vaultKeys = await keysFor("kompas:answer", () => resolveKeys({}))
+  const paidKey = vaultKeys.openrouter || resolveKeys({}).openrouter
+  if (!paidKey) return NextResponse.json({ error: "Paid OpenRouter is not configured.", code: "OPENROUTER_NOT_CONFIGURED" }, { status: 503, headers: NO_STORE })
+  const rawKeys: LlmKeys = { openrouter: paidKey }
   const uHash = hashUserId(user.id)
   let grounding = ""
   try { grounding = await dossierContext(uHash, "general") } catch { /* ungrounded answer is still an answer */ }
@@ -561,17 +549,14 @@ export async function POST(request: NextRequest) {
     const clean = cleanQuestion(heard)
     if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
     try {
-      const { text } = await callLLM({
-        keys: rawKeys, purpose: "kompas:answer-derive", tier: "light",
-        system: DERIVE_SYSTEM,
-        user: `${earlier ? `EARLIER (already answered — context only):\n${earlier}\n\n` : ""}HEARD (everything said since the last answer):\n${heard}`,
-        maxTokens: 150,
-      })
+      const { text } = await fetchOpenRouter(paidKey, PAID_MODEL, DERIVE_SYSTEM,
+        `${earlier ? `EARLIER (already answered — context only):\n${earlier}\n\n` : ""}HEARD:\n${heard}`,
+        500, AbortSignal.any([request.signal, AbortSignal.timeout(15000)]))
       const derived = text.trim()
       if (!derived || /^NO_QUESTION/i.test(derived)) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
       return NextResponse.json({ derived }, { headers: NO_STORE })
-    } catch {
-      return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
+    } catch (e) {
+      return NextResponse.json({ error: "The paid provider could not identify the question. Please retry.", code: "OPENROUTER_DERIVE_FAILED" }, { status: 502, headers: NO_STORE })
     }
   }
 
@@ -686,7 +671,7 @@ export async function POST(request: NextRequest) {
   // The vault decides which providers this feature may use (Admin → "Which AI
   // each feature uses"). OpenRouter lanes run only when the vault leaves the
   // key in; otherwise one vault-honoring call is made and delivered as SSE.
-  const keys = await keysFor("kompas:answer", () => rawKeys)
+  const keys = rawKeys
   const fallbackText = retrievedList[0]
     || (prep.identity ? str(prep.identity, 600) : "")
     || "The answer engine is at its limit right now — press AI Answer again in a moment."
@@ -734,4 +719,15 @@ export async function POST(request: NextRequest) {
   }
   if (body.stream) return streamAnswer(request, job)
   return jsonAnswer(request, job)
+}
+
+function answerFailure(message: string) {
+  const status = statusOf(message) || 502
+  const code = status === 401 ? "OPENROUTER_AUTH" : status === 402 ? "OPENROUTER_CREDITS" : status === 403 ? "OPENROUTER_FORBIDDEN" : status === 429 ? "OPENROUTER_RATE_LIMIT" : "OPENROUTER_UNAVAILABLE"
+  const error = status === 401 ? "The paid OpenRouter credential was rejected."
+    : status === 402 ? "The OpenRouter account or key has insufficient credits."
+    : status === 403 ? "OpenRouter blocked the request. Check key permissions and account policy."
+    : status === 429 ? "The paid provider is temporarily rate limited. Your question is preserved."
+    : "The paid provider could not complete this answer. Your question is preserved."
+  return { status, code, error }
 }

@@ -1609,7 +1609,10 @@ async function generateAnswerRequest(question, card, opts = {}) {
   try {
     const res = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
       body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
-    if (!res.ok || !res.body) throw new Error("answer " + res.status);
+    if (!res.ok || !res.body) {
+      const failure = await res.json().catch(() => ({}));
+      throw Object.assign(new Error(failure.error || "Paid answer service returned " + res.status), { providerFailure: true });
+    }
     if (!(res.headers.get("content-type") || "").includes("event-stream")) {
       const data = await res.json(); text = data.text || ""; first = performance.now() - t0; meta = data;
     } else {
@@ -1631,6 +1634,15 @@ async function generateAnswerRequest(question, card, opts = {}) {
       }
     }
     if (card.req !== ctl) return;                                      // a newer request took this card over
+    if (meta.error || meta.unavailable) {
+      card.streaming = false;
+      card.answer = keepOld ? prevAnswer : [meta.error || "The paid provider could not complete this answer. Your question is saved."];
+      card.meta = keepOld ? "previous answer kept" : "answer unavailable";
+      if (cards[idx] === card) renderCard();
+      logAnswer({ failed: meta.code || "provider_unavailable" });
+      status(meta.error || "The paid provider is unavailable. Your question is saved.", "err");
+      return;
+    }
     if (meta.ledger) ledger = meta.ledger;
     card.streaming = false;
     if (meta.busy) {                                                    // the answer lane's quota: wait it out, then answer by itself
@@ -1701,14 +1713,14 @@ async function generateAnswerRequest(question, card, opts = {}) {
       if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.split("\n").pop().slice(0, 200);
       card.meta = "superseded by the next question"; if (cards[idx] === card) renderCard(); return;
     }
-    const fb = retrieved[0];
+    const fb = e && e.providerFailure ? null : retrieved[0];
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.split("\n").pop().slice(0, 200);
     if (keepOld) { card.answer = prevAnswer; card.meta = "couldn't regenerate — press ↓/↑ again"; if (cards[idx] === card) renderCard(); status("Couldn't reach the answer engine — kept the previous answer.", "err"); return; }
     card.answer = fb ? fb.a : ["Couldn't reach the answer engine — " + (e && e.message || e)];
     card.meta = fb ? "prepared answer (engine unreachable)" : "";
     if (cards[idx] === card) renderCard();
     logAnswer({ failed: String(e && e.message || e) });
-    status(fb ? "Answer engine unavailable. Showing a prepared answer." : "Answer engine unavailable. Your question is saved; press AI Answer to retry.", "err");
+    status(fb ? "Answer engine unavailable. Showing a prepared answer." : String(e && e.message || "Paid provider unavailable. Your question is saved."), "err");
   } finally { release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
 }
 
