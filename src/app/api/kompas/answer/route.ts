@@ -6,8 +6,9 @@ import { dossierContext } from "@/lib/dossier"
 import { hashUserId } from "@/lib/sttLedger"
 import {
   classify, lengthPlan, plainlyNoQuestion, cleanQuestion, resolveFollowUp,
-  tierRule, usedProjects, DERIVE_SYSTEM,
+  tierRule, usedProjects, pickShape, DERIVE_SYSTEM,
 } from "@/lib/kompasAnswer"
+import { voiceRepair } from "@/lib/kompasVoiceRepair"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -121,11 +122,14 @@ export async function POST(request: NextRequest) {
     length: str(config.length, 20) || undefined,
   })
   const rule = tierRule(tier, interviewer)
+  // 27 question archetypes (perfACT _shapes.js): first-win structural instruction.
+  const shape = pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
   const rotated = usedProjects(historyArr)
 
   const context = [
     `The interviewer is a ${interviewer} — pitch the technical depth to them.`,
     `QUESTION TYPE: ${why} (tier ${tier}). ${rule}`,
+    shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
     `LENGTH TARGET: about ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Hit it — a quick factual ask gets a short answer, a deep dive gets room.`,
     rotated.length ? `Already told this session — reach for a FRESH project/angle, do not retell these: ${rotated.join("; ")}.` : "",
     prep.identity ? `Candidate identity: ${str(prep.identity, 800)}` : "",
@@ -144,7 +148,7 @@ export async function POST(request: NextRequest) {
       user: `${context}\n\nThe interviewer asked: "${question}"\n\nAnswer it as the candidate's spoken reply:`,
       maxTokens: plan.maxTokens,
     })
-    const out = text.trim()
+    const out = voiceRepair(text.trim())
     if (!out) throw new Error("empty answer")
     return NextResponse.json({
       text: out,
