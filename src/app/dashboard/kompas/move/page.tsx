@@ -22,6 +22,7 @@ type BlendFile = {
     vocab: string[]
   }
   server: Record<string, unknown> | null
+  enginePolicy?: Record<string, unknown> | null
 }
 
 const safeJson = (s: string | null): unknown => {
@@ -107,14 +108,44 @@ export default function KompasMovePage() {
     setBusy(true); setMsg("")
     try {
       const browser = gatherBrowserPros()
+      // Completeness matters more than pretending a partial download worked.
+      // The old route exported only the newest 50 sessions. Keep every page
+      // and stop on any failed request rather than silently dropping history.
       let server: Record<string, unknown> | null = null
-      try {
-        const r = await fetch("/api/kompas/blend/export", { cache: "no-store" })
-        if (r.ok) server = await r.json()
-      } catch { /* server pros optional — browser pros still export */ }
+      let expected = -1
+      for (let page = 0; page < 1000; page++) {
+        const r = await fetch(`/api/kompas/blend/export?page=${page}`, { cache: "no-store" })
+        if (!r.ok) throw new Error(r.status === 401
+          ? "Sign in to MarketFit to export the full server dossier. The separate original-data port still works offline."
+          : "The server dossier export did not finish. No incomplete blend was downloaded.")
+        const data = await r.json() as Record<string, unknown>
+        const rows = Array.isArray(data.sessions) ? data.sessions : []
+        if (Number(data.page) !== page || typeof data.totalSessions !== "number")
+          throw new Error("The server sent an incompatible dossier page. No incomplete blend was downloaded.")
+        if (expected < 0) expected = data.totalSessions
+        else if (expected !== data.totalSessions)
+          throw new Error("The dossier changed during export. Retry so no sessions are omitted.")
+        if (!server) server = { ...data, sessions: [] as unknown[] }
+        ;(server.sessions as unknown[]).push(...rows)
+        if (data.nextPage === null) break
+        if (data.nextPage !== page + 1 || page === 999)
+          throw new Error("The dossier is too large or paging stopped unexpectedly. No incomplete blend was downloaded.")
+      }
+      if (!server || (server.sessions as unknown[]).length !== expected)
+        throw new Error("Not every server session arrived. The blend was not downloaded.")
+      ;(server.counts as Record<string, number>) = {
+        sessions: expected,
+        qa: (server.sessions as Array<{ qa?: unknown[] }>).reduce((n, row) => n + (Array.isArray(row.qa) ? row.qa.length : 0), 0),
+        fields: Object.keys((server.fields || {}) as Record<string, unknown>).length,
+      }
+      const manifest = await fetch("/api/kompas/migration/manifest", { cache: "no-store" })
+      if (!manifest.ok) throw new Error("The engine workflow manifest could not be verified. Retry the complete export.")
+      const enginePolicy = await manifest.json() as Record<string, unknown>
+      if (enginePolicy.kind !== "kompas-engine-policy")
+        throw new Error("Invalid engine workflow manifest. No incomplete blend was downloaded.")
       const file: BlendFile = {
         kind: "kompas-blend", version: 1,
-        exportedAt: new Date().toISOString(), browser, server,
+        exportedAt: new Date().toISOString(), browser, server, enginePolicy,
       }
       const blob = new Blob([JSON.stringify(file)], { type: "application/json" })
       const a = document.createElement("a")
@@ -124,8 +155,8 @@ export default function KompasMovePage() {
       setTimeout(() => URL.revokeObjectURL(a.href), 4000)
       const n = browser.qa.length + browser.prepared.length
       setMsg(`Exported ${n} answers, ${browser.qbank.length} bank questions, ${browser.vocab.length} learned words${server ? " + the server dossier" : ""} — pros only.`)
-    } catch {
-      setMsg("Export failed. Try again.")
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : "Export failed. Try again.")
     } finally { setBusy(false) }
   }
 
