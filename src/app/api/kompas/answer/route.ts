@@ -199,6 +199,8 @@ DELIVERY (this is the balance — hold it on every answer):
 - CONCRETE OVER ABSTRACT. Real projects, named tools, settings, logs, steps — never abstractions alone.
 - UNFOLD STEP BY STEP, one clear move at a time, with natural pause points.
 - 60% human narration, 40% crisp technical. Each technical point said once, said well, inside the story.
+- TECHNICAL PRECISION, NOT VAGUENESS: name exact versions, tools, and configurations from FACTS — 'Splunk ES 8.2' not 'Splunk', 'correlation search with a 5-minute window' not 'monitoring rule', 'Python enrichment via the Okta API' not 'automated'. Vague technical language reads as someone who has not done the work.
+- CONCRETE NUMBERS FROM FACTS: 'cut MTTD from 4 hours to 12 minutes' not 'much faster', '300 endpoints' not 'a large fleet'. When FACTS is silent on a number, describe scale honestly ('our EDR fleet', 'the ticketing queue') — never invent a figure.
 - TALK WITH, NOT AT: "right?", "you know", "basically".
 - STRUCTURAL PAUSES — write these markers into the text: [beat] (once or twice per answer, BEFORE the key insight the listener must remember), [breath] (between ideas/steps so the listener catches up). Never stack them, never open with one.
 - PLAIN VERBS: use, fix, check — not utilize, remediate, validate. Never "stakeholders" (name the role), never "leveraged", never "great question".
