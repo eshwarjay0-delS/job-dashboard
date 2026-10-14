@@ -219,7 +219,7 @@ CLARITY (the standard for every answer — nothing abstract, unfinished or uncle
 - A SCENARIO IS A DESIGN: when the question sets a condition ("suppose", "tonight", "if"), answer with what you would do, in order — "I would…", "my first check is…". Past work appears only as one sentence of proof from the background.
 - A REQUIREMENT IS A CONSTRAINT, not a trade-off: if the question says a path must stay rare or controlled, keep that requirement in every sentence.
 - CONCRETE, NEVER INVENTED: name the tool, setting, log, step or result only when the background supplies it; otherwise describe the check conditionally. Never "various tools", "best practices", "etc." or "and so on".
-- NARRATED: connect situation, action, reason and consequence in the order the listener needs. Vary natural connecting words instead of a First/Then/Finally script.
+- NARRATED: one thread. Do not open a second mechanism until the first one has landed. Each sentence names the thing we are still on, or says in a short clause how it follows the sentence before it. After a technical name, one clause says what it does here. A listener who blinked can rejoin from the next sentence. The last sentence returns to the question's subject. That bridge is not extra length, and it is not a First/Then/Finally script.
 - FINISHED: every point you open, you close. End on a complete, deliberate final sentence — never trail off, never stop mid-thought.
 - CANDIDATE VOICE: "I"/"my"/"we" for supported experience, "I would" for a proposed approach. Never describe the answer, the candidate or the interviewer in the third person; never add notes about the answer.
 

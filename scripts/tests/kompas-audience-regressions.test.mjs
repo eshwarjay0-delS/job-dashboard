@@ -32,6 +32,8 @@ test('explicit mixed audience overrides architect detail, and directors receive 
   assert.match(audienceGuidance('technical_hr', 'What is authorization?'), /everyday language/)
   assert.match(audienceGuidance('engineer', 'How would you test this?'), /trust boundary/)
   assert.match(audienceGuidance('engineer', 'How would you test this?'), /first sentence answers the question/)
+  assert.match(audienceGuidance('engineer', 'How would you test this?'), /one thread/)
+  assert.match(audienceGuidance('technical_hr', 'What is authorization?'), /listener who blinked can rejoin/)
   assert.match(audienceGuidance('director', 'Would you delay launch?'), /tradeoff, or how the result is checked/)
 })
 
