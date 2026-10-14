@@ -18,6 +18,7 @@ const round6 = (n: number) => Math.round(n * 1e6) / 1e6
 export async function GET(request: NextRequest) {
   const user = await authenticatedUser(request)
   if (!user) return NextResponse.json({ error: "Sign in again." }, { status: 401, headers: NO_STORE })
+  if (!isAdminEmail(user.email || "")) return NextResponse.json({ error: "Owner only." }, { status: 403, headers: NO_STORE })
 
   const now = Date.now()
   const [balance, llm, tailors] = await Promise.all([

@@ -28,7 +28,7 @@ function isActive(href: string, pathname: string) {
   return !ALL_HREFS.some(h => h !== href && h.length > href.length && matches(h))
 }
 
-type CreditSummary = { resumesLeft: number; sessionsLeft: number; calibrated: boolean; remainingUsd: number }
+type CreditSummary = { resumesLeft: number; sessionsLeft: number; points: number; source: "personal-credits" }
 
 let creditAsk: Promise<CreditSummary | null> | null = null
 function askCredits(): Promise<CreditSummary | null> {
@@ -91,16 +91,16 @@ function ExplainerPanel({ s, onClose, anchor, align = "left" }: {
         }}>
         <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", margin: "0 0 8px" }}>What this means</p>
         <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
-          <b style={{ color: "var(--text)" }}>{s.resumesLeft.toLocaleString()} resumes</b> — generations your API balances buy (${s.remainingUsd.toFixed(2)} left across keys).
+          <b style={{ color: "var(--text)" }}>{s.resumesLeft.toLocaleString()} resumes</b> available from your credit balance.
         </p>
         <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
-          <b style={{ color: "var(--text)" }}>{s.sessionsLeft} sessions</b> — 1-hour interview sessions left on your gel points (1 hour = 1 session · 30 min = 0.5 session; listening is free).
+          <b style={{ color: "var(--text)" }}>{s.sessionsLeft} sessions</b> available from your credit balance. One session represents one hour.
         </p>
         <p style={{ fontSize: 11, color: "var(--text-soft)", margin: "0 0 10px" }}>
-          {s.calibrated ? "Measured from your real generations." : "Estimate — your first generation calibrates it."}
+          Both counts use the same {s.points} points. Using one reduces what remains for the other.
         </p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Link href="/dashboard/admin" onClick={onClose} style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)" }}>Full breakdown →</Link>
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>1 resume = 0.25 points</span>
           <button onClick={onClose} style={{ fontSize: 12, color: "var(--text-soft)", background: "none", border: "none", cursor: "pointer" }}>Close</button>
         </div>
       </div>

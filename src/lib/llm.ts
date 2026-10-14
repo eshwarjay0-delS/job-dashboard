@@ -1,3 +1,4 @@
+import { isSessionGeneration, sessionProviderAllowed } from "./sessionProviders.ts"
 ﻿// ── Multi-provider LLM layer ──────────────────────────────────────────────────
 // Supports Anthropic (Claude), OpenRouter, and Google Gemini. The provider is
 // auto-detected from the API-key prefix, and calls are routed by TASK TIER:
@@ -303,6 +304,11 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
     const rest = keyed.filter(p => !lead.includes(p))
     order = [...lead, ...rest.filter(p => (downUntil.get(p) || 0) <= began), ...rest.filter(p => (downUntil.get(p) || 0) > began)]
   }
+  if (isSessionGeneration(purpose)) {
+    order = order.filter(provider => sessionProviderAllowed(purpose, provider,
+      named && opts.exactModel ? opts.exactModel : modelFor(provider, opts.tier)))
+    if (!order.length) throw new Error("No paid session model is configured. Enable OpenRouter, OpenAI, or Anthropic for this feature in Admin.")
+  }
   // A further provider is started only while the call is young. A refusal that will not clear comes back in under a second,
   // so the next provider is asked at once; after a slow failure (a timeout, a rate limit waited out) the caller has usually
   // given up already, and a new request would be paid for and thrown away.
@@ -317,6 +323,7 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
     const model = named && opts.exactModel ? opts.exactModel
       : (opts.model && provider === "anthropic" && /^claude/i.test(opts.model)) ? opts.model
       : modelFor(provider, opts.tier)
+    if (!sessionProviderAllowed(purpose, provider, model)) continue
     // The call's own usage is read back from the sink the provider function writes to: the caller's, or one made here.
     const sink = opts.usageSink ?? []
     const o = opts.usageSink ? opts : { ...opts, usageSink: sink }

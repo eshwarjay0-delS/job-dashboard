@@ -26,7 +26,7 @@ export default function DesktopSignIn() {
       const payload = JSON.stringify({ access_token: session.access_token, cookies })
       const b64 = btoa(unescape(encodeURIComponent(payload))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
       setNote("Chrome is signed in. Allow the browser to open Kompas.")
-      window.location.href = "kompas://auth?d=" + b64
+      window.location.href = "marketfit-kompas://auth?d=" + b64
     }).catch(() => {
       if (!gone) window.location.assign("/login?next=/auth/desktop")
     })

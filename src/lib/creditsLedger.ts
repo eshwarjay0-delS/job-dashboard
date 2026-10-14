@@ -28,13 +28,12 @@ const day = (at: number) => new Date(at).toISOString().slice(0, 10)
 type Balance = { points: number; updatedAt: number }
 
 async function readBalance(userHash: string): Promise<Balance> {
-  try {
-    const raw = await (await storage()).getText(`credits/balance/${userHash}.json`)
-    if (raw) {
-      const b = JSON.parse(raw) as Balance
-      if (Number.isFinite(b.points)) return { points: b.points, updatedAt: b.updatedAt || 0 }
-    }
-  } catch { /* first sighting — grant the starting points */ }
+  const raw = await (await storage()).getText(`credits/balance/${userHash}.json`)
+  if (raw) {
+    const b = JSON.parse(raw) as Balance
+    if (!Number.isFinite(b.points)) throw new Error("Invalid credit balance")
+    return { points: b.points, updatedAt: b.updatedAt || 0 }
+  }
   return { points: STARTING_POINTS, updatedAt: Date.now() }
 }
 
@@ -47,10 +46,10 @@ export async function getPoints(userHash: string): Promise<number> {
   try { return (await readBalance(userHash)).points } catch { return 0 }
 }
 
-/** What the header shows: whole interviews and whole resumes the points buy. */
+/** What the header shows: fractional hour sessions and whole resumes the points buy. */
 export function pointsToDisplay(points: number): { interviews: number; resumes: number } {
-  const p = Math.max(0, points)
-  return { interviews: Math.floor(p / POINTS_PER_INTERVIEW), resumes: Math.floor(p / POINTS_PER_RESUME) }
+  const p = Number.isFinite(points) ? Math.max(0, points) : 0
+  return { interviews: Math.round(p / POINTS_PER_INTERVIEW * 100) / 100, resumes: Math.floor(p / POINTS_PER_RESUME) }
 }
 
 /** Session cost by duration: 1 hour = 1 point, 30 min = 0.5 points, prorated. */

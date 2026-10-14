@@ -1,3 +1,4 @@
+import { sessionProviderAllowed } from "@/lib/sessionProviders"
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { callLLM, keysFor, modelFor, resolveKeys, type LlmKeys } from "@/lib/llm"
@@ -292,10 +293,10 @@ type AnswerJob = {
 // are skipped — a later request finds them cooled down.
 function jobLanes(job: AnswerJob): string[] {
   const lanes: string[] = []
-  if (job.liveModel.includes("/")) lanes.push(job.liveModel)
+  if (job.liveModel.includes("/") && sessionProviderAllowed("kompas:answer", "openrouter", job.liveModel)) lanes.push(job.liveModel)
   const primary = process.env.KOMPAS_ANSWER_MODEL || modelFor("openrouter", "heavy")
   const fallback = process.env.OPENROUTER_MODEL_FALLBACK || "anthropic/claude-3.5-sonnet"
-  for (const m of [primary, fallback]) if (m && !lanes.includes(m)) lanes.push(m)
+  for (const m of [primary, fallback]) if (m && sessionProviderAllowed("kompas:answer", "openrouter", m) && !lanes.includes(m)) lanes.push(m)
   return lanes
 }
 function openLanes(job: AnswerJob): { lanes: string[]; blockedNote: string } {
