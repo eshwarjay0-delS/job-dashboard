@@ -108,8 +108,9 @@ test('every place a resume is taken now takes a PDF, and the Word copy is what i
   assert.ok(hub.includes('} else if (res.ok && data.pdf && !data.converted) {'))
   assert.ok(hub.includes('same words, a plain layout. Read it once before you send it anywhere.'))
   // Its My files tab lists the PDFs; the list offered for tailoring is still Word files only.
-  assert.ok(hubPage.includes('pdfs.push({ id: fileId(full), filename: base.replace(/\\.pdf$/i, ""), filepath: full, kind: "pdf"'))
-  assert.ok(hubPage.includes('<ResumeClient initialFiles={files} initialFolders={folders} otherFiles={pdfs} />'))
+  assert.ok(read('src/lib/resume-library-scan.ts').includes('base.toLowerCase().endsWith(".pdf") ? "pdf" : null'))
+  assert.ok(hubPage.includes('const docx = files.filter(f => f.kind === "docx")') && hubPage.includes('f.kind === "pdf")'))
+  assert.ok(hubPage.includes('<ResumeClient initialFiles={docx} initialFolders={folders} otherFiles={pdfs} />'))
   assert.ok(hub.includes('initialFiles={[...initialFiles, ...otherFiles]}'))
   assert.ok(files.includes('A PDF is kept as it is, and a Word copy is made from its words so it can be tailored.'))
   // The bot tailors from a PDF's copy and keeps it as the resume; setup makes the copy too.

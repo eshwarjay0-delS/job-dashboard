@@ -79,14 +79,23 @@ test('the storage keeps one record inside each folder, and reads only that one t
   assert.ok(store.includes('else if (await sameBytes(abs, dest)) await deletePath(abs)') && store.includes('else await movePath(abs, await freeName(dest))'))
   // An email the bot remembered from before is cleaned the same way.
   assert.ok(bot.includes('else if (session.resumeEmail) session.resumeEmail = cleanEmail(session.resumeEmail)'))
-  // Files never lists a record as a resume.
-  assert.ok(read('src/app/dashboard/documents/page.tsx').includes('if (!kind) continue'))
-  // A folder that holds only its record is not shown as an empty folder, on either page.
+  // Both pages list the library with one scanner (14 Oct 2026), which never lists a record as a resume, and does not
+  // show a folder that holds only its record as an empty folder.
+  const scan = read('src/lib/resume-library-scan.ts')
+  assert.ok(scan.includes('if (!kind) continue'))
+  const skip = scan.indexOf('if (parts[parts.length - 1] === LIBRARY_FILE) continue'), add = scan.indexOf('folders.add(')
+  assert.ok(skip > 0 && skip < add, 'the record is skipped before its folder is counted')
   for (const page of ['src/app/dashboard/documents/page.tsx', 'src/app/dashboard/resume/page.tsx']) {
-    const src = read(page), skip = src.indexOf('if (parts[parts.length - 1] === LIBRARY_FILE) continue'), add = src.indexOf('folders.add(')
-    assert.ok(skip > 0 && skip < add, page + ': the record is skipped before its folder is counted')
-    assert.ok(src.includes('await mendLibrary(userDir)'), page + ': the library is put in order before it is listed')
+    const src = read(page)
+    assert.ok(src.includes('import { scanLibrary } from "@/lib/resume-library-scan"') && !src.includes('async function scanLibrary('), page + ': the shared scanner, not a copy')
+    assert.ok(src.indexOf('await mendLibrary(userDir)') > 0 && src.indexOf('await mendLibrary(userDir)') < src.indexOf('await scanLibrary(userDir)'), page + ': the library is put in order before it is listed')
   }
+  // Sizes and dates come with the one listing, never with a storage call per file (that made both pages take 3.7 and
+  // 4.6 seconds on 14 Oct 2026). R2 sends them in the listing; the disk reads them as it walks.
+  assert.ok(scan.includes('await listFilesInfo(dir, { includeHidden: true })') && !scan.includes('statPath'))
+  const storage = read('src/lib/storage.ts')
+  assert.ok(storage.includes('out.push({ key: o.Key, size: o.Size ?? 0, mtime: o.LastModified ?? new Date(0) })'))
+  assert.ok(storage.includes('return (await listFilesInfo(absDir, opts)).map(f => f.path)'), 'listFiles is the same listing without the details')
 })
 
 test('picking a resume no longer fetches every file: one named by its content is never read twice', () => {

@@ -265,7 +265,7 @@ test('Files takes PDFs: their words are read to file them, and a PDF is never ha
   // A broken PDF is kept and filed by its name: reading it gives no words and does not throw.
   assert.equal(await pdfText(Buffer.from('%PDF-1.4\nnot really a pdf at all')), '')
 
-  const upload = read('src/app/api/resumes/route.ts'), page = read('src/app/dashboard/documents/page.tsx'), client = read('src/app/dashboard/documents/DocumentsClient.tsx'), download = read('src/app/api/resumes/download/route.ts'), auth = read('src/lib/authBoundary.ts')
+  const upload = read('src/app/api/resumes/route.ts'), page = read('src/lib/resume-library-scan.ts'), client = read('src/app/dashboard/documents/DocumentsClient.tsx'), download = read('src/app/api/resumes/download/route.ts'), auth = read('src/lib/authBoundary.ts')
   assert.ok(upload.includes('if (file.name.toLowerCase().endsWith(".pdf")) {') && upload.includes('if (!isPdf(bytes)) return NextResponse.json({ error: "That file is named as a PDF but is not one." }, { status: 400 })'))
   assert.ok(upload.includes('const isPdfEntry = base.toLowerCase().endsWith(".pdf")'), 'a PDF inside a zip is taken too')
   // The list other pages pick a resume to tailor from is still Word files only.

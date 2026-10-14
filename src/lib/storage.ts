@@ -40,6 +40,8 @@ export interface Blob {
   deletePrefix(key: string): Promise<void>
   /** List keys under a prefix (recursive), relative to the store root. */
   list(prefix: string): Promise<string[]>
+  /** The same listing with each file's size and last change, from the one listing call (no call per file). */
+  listInfo(prefix: string): Promise<{ key: string; size: number; mtime: Date }[]>
 }
 
 // Convert an absolute path that lives under DATA_DIR into a storage key (POSIX,
@@ -101,13 +103,20 @@ export async function movePath(from: string, to: string): Promise<void> {
 // Recursively list ALL files under a directory → absolute paths (R2 has no dirs, so a
 // "folder" is just a key prefix). Skips Office lock files and dotfiles like readdir did.
 export async function listFiles(absDir: string, opts?: { includeHidden?: boolean }): Promise<string[]> {
+  return (await listFilesInfo(absDir, opts)).map(f => f.path)
+}
+
+// The same listing with each file's size and last change. Files and My Resume used to ask storage for these one file
+// at a time after listing (a round trip per resume, one after another: 3.7 and 4.6 seconds for those pages on 14 Oct
+// 2026); R2 sends them with the listing, so they are kept from it.
+export async function listFilesInfo(absDir: string, opts?: { includeHidden?: boolean }): Promise<{ path: string; size: number; mtime: Date }[]> {
   const keep = (b: string) => opts?.includeHidden ? !b.startsWith("~$") : (!b.startsWith("~$") && !b.startsWith("."))
   if (underData(absDir)) {
-    return (await blob.list(keyOf(absDir)))
-      .map(k => path.join(DATA_DIR, ...k.split("/")))
-      .filter(p => keep(path.basename(p)))
+    return (await blob.listInfo(keyOf(absDir)))
+      .map(f => ({ path: path.join(DATA_DIR, ...f.key.split("/")), size: f.size, mtime: f.mtime }))
+      .filter(f => keep(path.basename(f.path)))
   }
-  const out: string[] = []
+  const out: { path: string; size: number; mtime: Date }[] = []
   const walk = async (d: string) => {
     let es
     try { es = await readdir(d, { withFileTypes: true }) } catch { return }
@@ -115,7 +124,10 @@ export async function listFiles(absDir: string, opts?: { includeHidden?: boolean
       if (e.name.startsWith("~$") || (!opts?.includeHidden && e.name.startsWith("."))) continue
       const f = path.join(d, e.name)
       if (e.isDirectory()) await walk(f)
-      else out.push(f)
+      else {
+        const s = await stat(f).catch(() => null)
+        out.push({ path: f, size: s?.size ?? 0, mtime: s?.mtime ?? new Date(0) })
+      }
     }
   }
   await walk(absDir)
@@ -156,15 +168,21 @@ class FsStorage implements Blob {
     try { await rm(this.abs(key), { recursive: true, force: true }) } catch { /* ignore */ }
   }
   async list(prefix: string): Promise<string[]> {
+    return (await this.listInfo(prefix)).map(f => f.key)
+  }
+  async listInfo(prefix: string): Promise<{ key: string; size: number; mtime: Date }[]> {
     const base = this.abs(prefix)
-    const out: string[] = []
+    const out: { key: string; size: number; mtime: Date }[] = []
     const walk = async (dir: string, rel: string) => {
       let entries
       try { entries = await readdir(dir, { withFileTypes: true }) } catch { return }
       for (const e of entries) {
         const childRel = rel ? `${rel}/${e.name}` : e.name
         if (e.isDirectory()) await walk(path.join(dir, e.name), childRel)
-        else out.push(prefix ? `${prefix}/${childRel}` : childRel)
+        else {
+          const s = await stat(path.join(dir, e.name)).catch(() => null)
+          out.push({ key: prefix ? `${prefix}/${childRel}` : childRel, size: s?.size ?? 0, mtime: s?.mtime ?? new Date(0) })
+        }
       }
     }
     await walk(base, "")
@@ -224,16 +242,19 @@ class R2Storage implements Blob {
     await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: this.norm(key) }))
   }
   async list(prefix: string): Promise<string[]> {
+    return (await this.listInfo(prefix)).map(f => f.key)
+  }
+  async listInfo(prefix: string): Promise<{ key: string; size: number; mtime: Date }[]> {
     const p = this.norm(prefix)
     const Prefix = p ? p + "/" : undefined
-    const keys: string[] = []
+    const out: { key: string; size: number; mtime: Date }[] = []
     let token: string | undefined
     do {
       const r = await this.s3.send(new ListObjectsV2Command({ Bucket: this.bucket, Prefix, ContinuationToken: token }))
-      for (const o of r.Contents || []) if (o.Key) keys.push(o.Key)
+      for (const o of r.Contents || []) if (o.Key) out.push({ key: o.Key, size: o.Size ?? 0, mtime: o.LastModified ?? new Date(0) })
       token = r.IsTruncated ? r.NextContinuationToken : undefined
     } while (token)
-    return keys
+    return out
   }
   async deletePrefix(prefix: string): Promise<void> {
     if (!prefix) throw new Error("Cannot delete the storage root")
@@ -258,7 +279,7 @@ function makeBlob(): Blob {
     const unavailable = async (): Promise<never> => {
       throw new Error("Durable storage is not configured. Configure all R2 storage settings before saving data.")
     }
-    return { put: unavailable, get: unavailable, getText: unavailable, exists: unavailable, stat: unavailable, delete: unavailable, deletePrefix: unavailable, list: unavailable }
+    return { put: unavailable, get: unavailable, getText: unavailable, exists: unavailable, stat: unavailable, delete: unavailable, deletePrefix: unavailable, list: unavailable, listInfo: unavailable }
   }
   if (R2_BUCKET && R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY) {
     return new R2Storage(R2_BUCKET, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY)
