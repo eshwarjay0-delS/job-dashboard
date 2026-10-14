@@ -71,8 +71,8 @@ export function Card({ children, style, dark, id }: { children: ReactNode; style
 export function Meta({ children, style }: { children: ReactNode; style?: CSSProperties }) {
   return (
     <div style={{
-      fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 500, letterSpacing: ".16em",
-      textTransform: "uppercase", color: "var(--text-soft)", ...style,
+      fontFamily: "var(--font-body)", fontSize: 12.5, fontWeight: 600, letterSpacing: 0,
+      color: "var(--text-soft)", ...style,
     }}>
       {children}
     </div>
@@ -84,7 +84,7 @@ export function StagePill({ stage, label }: { stage: Stage; label?: string }) {
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
-      fontFamily: "var(--font-label)", fontSize: 11, fontWeight: 600,
+      fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 650,
       padding: "3px 10px", borderRadius: 100, background: s.bg, color: s.fg,
     }}>
       <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot }} />
@@ -97,13 +97,13 @@ export function Chip({ label, active, count, onClick, disabled }: { label: React
   return (
     <button type="button" onClick={onClick} disabled={disabled} aria-pressed={active}
       style={{
-        display: "inline-flex", alignItems: "center", gap: 7, minHeight: 40, padding: "0 16px", borderRadius: 100,
-        fontFamily: "var(--font-label)", fontSize: 14.5, fontWeight: active ? 600 : 500,
+        display: "inline-flex", alignItems: "center", gap: 7, minHeight: 36, padding: "0 14px", borderRadius: 100,
+        fontFamily: "var(--font-body)", fontSize: 14, fontWeight: active ? 650 : 550,
         cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.5 : 1,
-        border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-        background: active ? "var(--accent)" : "var(--surface)",
-        color: active ? "var(--bg)" : "var(--text-muted)",
-        transition: "all .3s ease",
+        border: `1px solid ${active ? "color-mix(in srgb, var(--accent) 45%, transparent)" : "var(--border)"}`,
+        background: active ? "color-mix(in srgb, var(--accent) 13%, var(--surface))" : "var(--surface)",
+        color: active ? "var(--text)" : "var(--text-muted)",
+        transition: "background .15s ease, border-color .15s ease, color .15s ease",
       }}>
       {label}
       {count !== undefined && <span style={{ fontFamily: "var(--font-num)", fontSize: 12, opacity: 0.7, fontVariantNumeric: "tabular-nums" }}>{count}</span>}
