@@ -17,6 +17,16 @@ export function mountKompasHtml(html: string): string {
   window.fetch = function (input, options) {
     const url = new URL(input instanceof Request ? input.url : String(input), location.href);
     if (url.origin === location.origin && url.pathname === '/api/transcribe') {
+      // The standalone Electron window has no access to a browser's MarketFit
+      // authentication cookies. Its mic/system-audio capture therefore uses the
+      // same working perfACT /api/transcribe endpoint as the original desktop,
+      // while signed-in browser tabs keep MarketFit's richer speech pipeline.
+      // next.config forwards /kompas/api/transcribe to perfACT.
+      if (window.kompasDesktop) {
+        url.pathname = '/kompas/api/transcribe';
+        input = input instanceof Request ? new Request(url, input) : url;
+        return nativeFetch(input, options);
+      }
       // Kompas session transcription runs through MarketFit's voice pipeline, not the
       // copilot backend: word timestamps, the hallucination guard, vocabulary hints and
       // the language lock. The app's x-whisper-prompt becomes the pipeline's hint, merged
