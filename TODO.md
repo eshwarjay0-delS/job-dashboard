@@ -1,3 +1,39 @@
+## 2026-10-14 (later) — Design system 2 parts 4 to 6, and zero lag: four slow paths found by measuring and fixed
+
+Commits 63ec5ac, f58f276, e03cf43 (design), 624b946, 6dab408, 2927277 (speed). Each pushed to production.
+
+**Design.** Asked: "carve it as a senior UI/UX Director left & right", "the chat ... engaging, not a dull bot".
+- Home: three cards you can press anywhere (fit a resume, job mail, interview practice), the other ways in, every
+  other tool in view. Inbox, Interviews and Gmail accounts open like every other page (the menu's name, one line).
+- Calm notices in place of red-bordered banners; real chevrons and a sun/moon icon in the menu.
+- Resume: "&lt;5 yrs exp" was printed on the page as written; emoji on the choices replaced by words and a check icon.
+- Files: whole column, one drop area, no jargon line until there is something to organise.
+- MFit Agent: "Ask MFit" launcher, a hello by first name, three starter questions that fit the page (only questions its
+  mail tools can answer), a typing bubble. A starter showing one real person's name to everyone is gone.
+- Bugs found on the way: Today greeted everyone as "Eshwar" (now the profile's first name, one shared reader).
+
+**Speed, measured.** Asked: "zero lags towards any place in the whole web app ... cache or live activities ... on point".
+| Path | Before | After |
+|---|---|---|
+| /dashboard/resume (production, signed out) | 3.0 to 3.1 s | 0.33 to 0.46 s |
+| /dashboard/documents (same) | 3.0 to 3.4 s | 0.42 to 1.26 s |
+| Every move between dashboard pages | blank "Checking account setup…" ~0.5 s | once per visit |
+| /api/credits/summary | 4.8 to 5.2 s, twice per load | once per load; app-wide part once a minute |
+| /api/admin/me | 5 asks in 9 s, Admin link blinking | only when the person changes |
+| Mail pages (Inbox, Today, Interviews, My Jobs, Follow-ups) | 8 requests on every page | one shared copy; nothing asked within 15 s |
+Causes: a storage call per file after a listing that already had sizes and dates; a setup check on every page; a slow
+summary asked twice; a session refresh treated as a new person.
+
+**Privacy fix:** the instant mail copy was one per browser and stayed after sign-out; now it is per person and goes at
+sign-out.
+
+**NOT verified yet:** the mail-page and gate fixes on his signed-in session after deploy (next step in the pane); the R2
+listing is proven only by the production timings above, not by a test against R2.
+
+**Red tests:** `kompas-shared-release.test.mjs` fails since another session's commit 633c4a9 (the Kompas.exe download
+script calls `document.querySelectorAll` in the test's sandbox). Not mine: it is the desktop download path I keep out of.
+`auth-boundaries.test.mjs:37` is the known Windows path check.
+
 ## 2026-10-14 — Never the same job twice; design system 2 (foundation, landing, sign-in, shared header)
 
 Commits 976aa41 (duplicates), a687197, 8864cb8, 312a74c (design), all deployed READY.
