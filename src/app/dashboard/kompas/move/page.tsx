@@ -133,7 +133,7 @@ export default function KompasMovePage() {
       }
       if (!server || (server.sessions as unknown[]).length !== expected)
         throw new Error("Not every server session arrived. The blend was not downloaded.")
-      ;(server.counts as Record<string, number>) = {
+      server.counts = {
         sessions: expected,
         qa: (server.sessions as Array<{ qa?: unknown[] }>).reduce((n, row) => n + (Array.isArray(row.qa) ? row.qa.length : 0), 0),
         fields: Object.keys((server.fields || {}) as Record<string, unknown>).length,
