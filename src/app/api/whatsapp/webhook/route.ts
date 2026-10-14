@@ -57,7 +57,7 @@ import { isPdf } from "@/lib/pdf-text"
 import { copyName, wordFromPdf } from "@/lib/pdf-to-word"
 import { plainFailure } from "@/lib/plain-failure"
 import { recoverLibraryResume } from "@/lib/resumeRecovery"
-import { extractText } from "@/lib/docx"
+import { extractText, extractZones } from "@/lib/docx"
 import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
 import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
@@ -436,10 +436,12 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     }
     if (cmd === "library" || cmd === "files") return library(from, who)
     if (cmd === "original") {
-      // The last job again, started from the resume as the person sent it and not from a saved one.
-      if (!session.resumePath) return sendText(from, "I do not have a resume from you yet. Send it once as a Word (.docx) file.")
-      if (!session.lastJd) return sendText(from, "Paste the job description and I will start from your resume as you sent it.")
-      return generate(from, { ...session, jd: session.lastJd }, who, TAILOR_BUDGET_MS, true)
+      // "Original" means the original document, never silently generating another tailored resume.
+      if (!session.resumePath) return sendText(from, "No original resume is kept for this number. Send *resumes* to retrieve one from your linked Files.")
+      const original = await readPath(session.resumePath)
+      if (!original) return sendText(from, "I could not open the original resume. Send *resumes* to retrieve one from your linked Files.")
+      const name = (session.resumeName || "Original_Resume").replace(/\.docx$/i, "") + ".docx"
+      return sendDocument(from, original, name, "Your original resume, unchanged. Paste a job description to tailor a new copy.")
     }
     if (cmd === "redo" || cmd === "again" || cmd === "make it again") {
       // The last job made afresh. Without this word a job that was made already is sent again as it is.
@@ -458,6 +460,24 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       session.ask = undefined
       await saveSession(from, session)
       return generate(from, session, who, TAILOR_BUDGET_MS, false, { email: answer, slots: waiting })
+    }
+    // An address or option sent after the bot already started the wrong email is a correction
+    // to the most recent job, not a new 1-character "job description".
+    if (!waiting && who.own && text.length <= 85 && (session.jd || session.lastJd)) {
+      const current = await libraryOf(userDirOf(userId))
+      const slots = (await numberedEmails(userId, current.counts, await keptEmailOf(session))).slots
+      const corrected = choiceIn(text, slots)
+      if (corrected) {
+        const jd = session.jd || session.lastJd
+        if (jd) {
+          session.jd = jd
+          session.email = corrected
+          session.ask = undefined
+          session.resumeFresh = false
+          await saveSession(from, session)
+          return generate(from, session, who, TAILOR_BUDGET_MS, false, { email: corrected, slots, redo: true })
+        }
+      }
     }
     if (replyTo) return refine(from, replyTo, text, who)
     // Anything else short while the question waits: it is asked again.
@@ -479,6 +499,15 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     // The same job description sent again (after a failure) keeps the email it was given.
     const again = session.jd && session.email && live(slots).includes(session.email) && jobKeyOf(session.jd) === jobKeyOf(said.rest) ? session.email : ""
     const email = said.email || again
+    // For every new job with multiple email libraries, ask FIRST. Do not start from the
+    // number's previous baseline resume while the user has yet to choose this job's email.
+    if (who.own && live(slots).length > 1 && !email) {
+      session.jd = said.rest
+      session.email = undefined
+      session.ask = slots
+      await saveSession(from, session)
+      return sendText(from, askWhichEmail(slots))
+    }
     // A job description that was still waiting for its email is given up for this one, and the person is told.
     const replaced = !!(session.ask?.length && session.jd && jobKeyOf(session.jd) !== jobKeyOf(said.rest))
     session.jd = said.rest
@@ -620,7 +649,7 @@ async function startFor(from: string, session: Session, who: Who, jd: string, or
   const keptEmail = own ? await keptEmailOf(session) : ""
   // A resume sent for this job is used as it is. The one exception: the person said the job is for another email than
   // the one written on that resume. Then what they said wins, and the resume waits for a job of its own email.
-  if (own && session.resumeFresh && !(choice.email && keptEmail && choice.email !== keptEmail)) return { source: { ...own, email: keptEmail || undefined } }
+  if (own && session.resumeFresh && (!choice.email || (keptEmail && choice.email === keptEmail))) return { source: { ...own, email: keptEmail || undefined } }
   // The default account every unjoined number shares holds other people's resumes: it is never looked through, not
   // even for the email on the resume this number sent (found in review: a resume carrying someone's email was enough
   // to be handed that person's saved resume).
@@ -792,6 +821,29 @@ async function generate(from: string, session: Session, who: Who, maxMs = TAILOR
 
   const file = await blob.get(`tailored/${result.token}.docx`)
   if (!file) { await clearFlight(from, mine); return sendText(from, "The resume generated but the file could not be read back. Please try again.") }
+  // Never deliver an altered identity: the name and contact email must remain those
+  // of the exact source document selected from the user's chosen email library.
+  const sourceBytes = await readPath(source.givenPath || result.matched.filepath)
+  if (!sourceBytes) {
+    await clearFlight(from, mine)
+    return sendText(from, "The original resume could not be verified, so I did not send the generated copy.")
+  }
+  const [beforeZones, afterZones, beforeText, afterText] = await Promise.all([
+    extractZones(sourceBytes), extractZones(file), extractText(sourceBytes), extractText(file),
+  ])
+  const sourceName = (beforeZones.header?.name || "").trim().replace(/\s+/g, " ")
+  const outputName = (afterZones.header?.name || "").trim().replace(/\s+/g, " ")
+  const baselineEmail = resumeEmails(beforeText)
+  const outputEmails = resumeEmails(afterText)
+  const identityChanged = !!sourceName && sourceName !== outputName
+  const emailChanged = baselineEmail.length === 1 &&
+    (outputEmails.length !== 1 || outputEmails[0] !== baselineEmail[0])
+  const wrongLibrary = !!source.email && (baselineEmail.length !== 1 || baselineEmail[0] !== source.email)
+  if (identityChanged || emailChanged || wrongLibrary) {
+    await clearFlight(from, mine)
+    console.error("[whatsapp] identity validation blocked generated resume", { identityChanged, emailChanged, wrongLibrary })
+    return sendText(from, "I stopped this resume because the name or contact email did not match the selected original. Your original was not changed. Please choose the email again.")
+  }
 
   // A newer run for this same job took over while this one worked (a resume arrived for it): this one stands down.
   // Nothing is sent and nothing is saved, so the person gets one resume for the job and Files gets one file.
