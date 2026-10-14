@@ -1,11 +1,31 @@
 import { authenticatedUser } from "@/lib/authBoundary"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { FileText, Mail, Mic, ArrowRight, MessageCircle, Puzzle } from "lucide-react"
+import { FileText, Mail, Mic, ArrowRight, MessageCircle, Puzzle, Sun, NotebookPen, Briefcase, CalendarDays, Repeat, Link2 } from "lucide-react"
 
-const features = [
-  { title: "Fix my resume", text: "Choose your resume. Paste a job post. Review what changed.", href: "/dashboard/resume", icon: FileText, note: "Your experience. Your original file kept safe.", links: [{ href: "/dashboard/documents", label: "My files" }, { href: "/dashboard/resume/builder", label: "Build a resume" }] },
-  { title: "Check job emails", text: "Connect Gmail and find the messages about your job search.", href: "/dashboard/mail", icon: Mail, note: "Start with your connected inbox.", links: [{ href: "/dashboard/connections", label: "Connect Gmail" }, { href: "/dashboard/tracker", label: "My applications" }] },
+// The look (design system 2, 14 Oct 2026): the start page people know from the apps they use. One warm line, the three
+// things MarketFit does as three cards you can press anywhere, then the other ways in and every other tool, all in view.
+const start = [
+  { title: "Fit my resume to a job", text: "Choose your resume, paste the job post, and see what changed before you send it.", href: "/dashboard/resume", icon: FileText,
+    links: [{ href: "/dashboard/documents", label: "My files" }, { href: "/dashboard/resume/builder", label: "Build a resume" }] },
+  { title: "Check my job mail", text: "Recruiter mail from your Gmail, sorted by who is waiting on whom.", href: "/dashboard/mail", icon: Mail,
+    links: [{ href: "/dashboard/connections", label: "Connect Gmail" }, { href: "/dashboard/tracker", label: "My applications" }] },
+  { title: "Practice an interview", text: "Speak or type your answers with Kompas, and hear how you come across.", href: "/dashboard/kompas", icon: Mic,
+    links: [{ href: "/dashboard/kompas/flow", label: "Speech to text" }] },
+]
+
+const elsewhere = [
+  { title: "WhatsApp", text: "Send a resume and a job post, get the fitted resume back", href: "/dashboard/whatsapp", icon: MessageCircle },
+  { title: "Chrome extension", text: "Use MarketFit on the page where you apply", href: "/dashboard/extension", icon: Puzzle },
+]
+
+const tools = [
+  { label: "Today", href: "/dashboard/today", icon: Sun },
+  { label: "Summary", href: "/dashboard/brief", icon: NotebookPen },
+  { label: "Find jobs", href: "/dashboard/jobs", icon: Briefcase },
+  { label: "Interviews", href: "/dashboard/calendar", icon: CalendarDays },
+  { label: "Follow-ups", href: "/dashboard/workflows", icon: Repeat },
+  { label: "Gmail accounts", href: "/dashboard/connections", icon: Link2 },
 ]
 
 export default async function DashboardPage() {
@@ -13,29 +33,36 @@ export default async function DashboardPage() {
   if (["janjiaarya@gmail.com","tryguessup@gmail.com"].includes(user?.email?.toLowerCase() || "")) redirect("/dashboard/resume")
   return <div className="mf-home">
     <header className="mf-home-heading">
-      <p className="mf-eyebrow">YOUR JOB SEARCH, ONE PLACE</p>
       <h1>What would you like to do?</h1>
-      <p>Pick one thing. We’ll help you take the next step.</p>
+      <p>Pick one to begin. Everything you make is kept in your files.</p>
     </header>
-    <section className="mf-feature-grid" aria-label="Your two main tools">
-      {features.map(({ title, text, href, icon: Icon, note, links }, i) => <article className="mf-feature" key={href}>
-        <div className={`mf-feature-icon mf-tone-${i}`}><Icon size={25} aria-hidden="true" /></div>
-        <h2>{title}</h2><p>{text}</p>
-        <a href={href} className="mf-primary-link">{title}<ArrowRight size={18} aria-hidden="true" /></a>
-        <p className="mf-feature-note">{note}</p>
-        <div className="mf-related">{links.map(link => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div>
+
+    <section className="mf-start" aria-label="Start here">
+      {start.map(({ title, text, href, icon: Icon, links }) => <article className="mf-start-card" key={href}>
+        <span className="mf-start-icon"><Icon size={22} aria-hidden="true" /></span>
+        <h2><Link href={href} className="mf-start-link">{title}</Link></h2>
+        <p>{text}</p>
+        <span className="mf-start-go" aria-hidden="true">Open <ArrowRight size={16} /></span>
+        <div className="mf-start-more">{links.map(link => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div>
       </article>)}
     </section>
-    <section className="mf-access"><div><h2>Preparing for an interview?</h2><p>Speak, type, and practice with Kompas.</p></div><a className="mf-primary-link" href="/dashboard/kompas"><Mic size={19} aria-hidden="true" />Practice an interview<ArrowRight size={18} aria-hidden="true" /></a></section>
-    <section className="mf-access" aria-labelledby="access-heading">
-      <div><h2 id="access-heading">Use MarketFit where you are</h2><p>The same tools, with another way to reach them.</p></div>
-      <div className="mf-access-links">
-        <Link href="/dashboard/whatsapp"><MessageCircle size={19} aria-hidden="true" /><span>WhatsApp<small>Send a resume and job post</small></span><ArrowRight size={16} aria-hidden="true" /></Link>
-        <Link href="/dashboard/extension"><Puzzle size={19} aria-hidden="true" /><span>Chrome extension<small>Use while applying for jobs</small></span><ArrowRight size={16} aria-hidden="true" /></Link>
+
+    <section className="mf-home-section" aria-labelledby="elsewhere-heading">
+      <h2 id="elsewhere-heading">Use MarketFit where you are</h2>
+      <div className="mf-row-links">
+        {elsewhere.map(({ title, text, href, icon: Icon }) => <Link key={href} href={href}>
+          <span className="mf-row-icon"><Icon size={18} aria-hidden="true" /></span>
+          <span className="mf-row-text"><strong>{title}</strong><small>{text}</small></span>
+          <ArrowRight size={16} aria-hidden="true" className="mf-row-arrow" />
+        </Link>)}
       </div>
     </section>
-    <details className="mf-more"><summary>Find another tool</summary>
-      <nav aria-label="All dashboard tools"><Link href="/dashboard/today">Today</Link><Link href="/dashboard/brief">My progress</Link><Link href="/dashboard/jobs">Find jobs</Link><Link href="/dashboard/calendar">Interview calendar · preview</Link><Link href="/dashboard/mail">Combined inbox · preview</Link><Link href="/dashboard/workflows">Email follow-ups · preview</Link><Link href="/dashboard/connections">Connected accounts</Link></nav>
-    </details>
+
+    <section className="mf-home-section" aria-labelledby="tools-heading">
+      <h2 id="tools-heading">More tools</h2>
+      <nav className="mf-tool-grid" aria-label="All dashboard tools">
+        {tools.map(({ label, href, icon: Icon }) => <Link key={href} href={href}><Icon size={17} aria-hidden="true" />{label}</Link>)}
+      </nav>
+    </section>
   </div>
 }

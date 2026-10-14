@@ -8,6 +8,7 @@ import { createPortal } from "react-dom"
 import { createClient } from "@/lib/supabase/client"
 import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV } from "./_components/nav"
 import { useTheme } from "../theme-provider"
+import { ChevronRight, Moon, Sun } from "lucide-react"
 
 const ALL_HREFS = [...NAV_ITEMS, ...ADMIN_NAV].map(i => i.href)
 
@@ -293,7 +294,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
         aria-label={dark ? "Switch to Paper theme" : "Switch to Night theme"}
         title={dark ? "Paper theme" : "Night theme"}
       >
-        <span aria-hidden="true">{dark ? "☀" : "☾"}</span>
+        {dark ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
       </button>
       <Link
         href={signedIn ? "/dashboard/connections" : "/login?next=/dashboard"}
@@ -332,7 +333,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
           aria-label={dark ? "Switch to Paper theme" : "Switch to Night theme"}
           title={dark ? "Paper theme" : "Night theme"}
         >
-          <span aria-hidden="true">{dark ? "☀" : "☾"}</span>
+          {dark ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
         </button>
       </div>
       {!resumeOnly && <CreditsPill />}
@@ -354,8 +355,8 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
                 {tab.items.length > 0 && (
                   <button type="button" onClick={() => toggleTab(tab.href)} aria-expanded={expanded}
                     aria-label={expanded ? `Hide ${tab.label} pages` : `Show ${tab.label} pages`}
-                    style={{ background: "transparent", border: 0, cursor: "pointer", color: "var(--muted)", padding: "8px 10px", fontSize: 12 }}>
-                    <span aria-hidden style={{ display: "inline-block", transform: expanded ? "rotate(90deg)" : "none", transition: "transform .15s" }}>▶</span>
+                    className="sb-chevron">
+                    <ChevronRight size={16} aria-hidden="true" style={{ transform: expanded ? "rotate(90deg)" : "none" }} />
                   </button>
                 )}
               </div>

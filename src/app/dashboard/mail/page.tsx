@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Check, Send, Shield, Archive, RotateCcw, ChevronRight, CalendarDays, Leaf, History, ArrowRight } from "lucide-react"
 import { Card, Meta, Chip, Btn, Toggle, useAnswered, useLeaving } from "../_suite/ui"
+import { navItem } from "../_components/nav"
 import SmartReply from "./_components/smart-reply"
 import MailRow from "./_components/mail-row"
 import ReadingPane from "./_components/reading-pane"
@@ -396,8 +397,7 @@ export default function MailPage() {
   return (
     <div className="mf-home" style={{ paddingBottom: 56 }}>
       <header className="mf-home-heading">
-        <p className="mf-eyebrow">INBOX</p>
-        <h1>Your job mail, organized.</h1>
+        <h1>{navItem("/dashboard/mail").label}</h1>
         <p>
           {!connected
             ? "Connect Gmail and your recruiter emails land here — grouped by role, fit-scored, with drafts and follow-ups in view."
@@ -410,10 +410,10 @@ export default function MailPage() {
       </header>
 
       {error && !loading && (
-        <div style={{ marginBottom: 20, padding: "14px 18px", borderRadius: 12, border: "1px solid var(--danger-border)", background: "var(--surface)", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 240, fontSize: 13.5, lineHeight: 1.55 }}>{error}</div>
-          <button className="btn-outline" style={{ minHeight: 38 }} onClick={refresh}>Refresh</button>
-          <Link href="/dashboard/connections" style={{ fontSize: 13, fontWeight: 700 }}>Check connections →</Link>
+        <div className="mf-notice" role="status">
+          <p>{error}</p>
+          <button className="btn-outline" onClick={refresh}>Refresh</button>
+          <Link href="/dashboard/connections">Check connections →</Link>
         </div>
       )}
 

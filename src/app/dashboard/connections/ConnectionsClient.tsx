@@ -8,6 +8,7 @@ import { connectGmail } from "@/lib/google-auth"
 import { checkGmailRead } from "@/lib/connectionCheck"
 import GoogleConsentExplainer from "./GoogleConsentExplainer"
 import ConnectedWrap from "./ConnectedWrap"
+import { navItem } from "../_components/nav"
 import "./connections.css"
 
 type GoogleAccount = {
@@ -298,8 +299,7 @@ export default function ConnectionsClient() {
   return (
     <div className="mf-home conn-redesign">
       <header className="mf-home-heading">
-        <p className="mf-eyebrow">CONNECTED ACCOUNTS</p>
-        <h1>Your inboxes, one place.</h1>
+        <h1>{navItem("/dashboard/connections").label}</h1>
         <p>
           {googleAccounts.length === 0
             ? "Connect your Gmail and MarketFit reads your job emails — RTRs, rates, interviews, follow-ups. Nothing else here works without it."

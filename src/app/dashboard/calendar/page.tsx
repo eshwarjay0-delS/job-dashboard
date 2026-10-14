@@ -5,6 +5,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Clock, User, Mic, ChevronLeft, ChevronRight, Eye } from "lucide-react"
 import { Card, Btn, Chip } from "../_suite/ui"
+import { navItem } from "../_components/nav"
 import { fmtHour, type Interview } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 import InterviewBoard from "./_components/interview-board"
@@ -289,8 +290,7 @@ export default function CalendarPage() {
   return (
     <div className="mf-home" style={{ paddingBottom: 56 }}>
       <header className="mf-home-heading">
-        <p className="mf-eyebrow">INTERVIEWS</p>
-        <h1>Every interview, past and future.</h1>
+        <h1>{navItem("/dashboard/calendar").label}</h1>
         <p>
           {loading ? "Reading your inboxes…" : !connected
             ? "Connect Gmail and your interviews — upcoming and past — will live here."
@@ -309,9 +309,9 @@ export default function CalendarPage() {
       {connected && <InterviewBoard />}
 
       {error && !loading && (
-        <div style={{ marginBottom: 20, padding: "14px 18px", borderRadius: 12, border: "1px solid var(--danger-border)", background: "var(--surface)", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 240, fontSize: 13.5, lineHeight: 1.55 }}>{error}</div>
-          <button className="btn-outline" style={{ minHeight: 38 }} onClick={() => refresh()}>Refresh</button>
+        <div className="mf-notice" role="status">
+          <p>{error}</p>
+          <button className="btn-outline" onClick={() => refresh()}>Refresh</button>
         </div>
       )}
 

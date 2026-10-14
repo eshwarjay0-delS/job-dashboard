@@ -159,7 +159,7 @@ export default function BriefPage() {
   return (
     <div className="mf-home">
       <header className="mf-home-heading">
-        <p className="mf-eyebrow">YOUR PROGRESS, TODAY</p>
+        <p className="mf-eyebrow">Summary</p>
         <h1>{greeting()}{name ? `, ${name}` : ""}.</h1>
         <p>{todayFull()}{totalAlerts > 0 ? ` — ${totalAlerts} thing${totalAlerts === 1 ? "" : "s"} need${totalAlerts === 1 ? "s" : ""} your attention.` : " — all clear."}</p>
       </header>
@@ -191,7 +191,7 @@ export default function BriefPage() {
       </section>
 
       {/* Stats */}
-      <section className="mf-feature-grid" aria-label="Your numbers" style={{ marginTop: 32 }}>
+      <section className="mf-feature-grid mf-stat-grid" aria-label="Your numbers" style={{ marginTop: 32 }}>
         {stats.map(s => (
           <article className="mf-feature" key={s.label} style={{ padding: "22px 24px" }}>
             <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.1 }}>{s.value}</div>

@@ -1,7 +1,7 @@
 "use client"
 import TypingDots from "../_components/typing-dots"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import Link from "next/link"
 import {
   ArrowRight, ArrowUpRight, Inbox, Briefcase, CalendarDays,
@@ -12,6 +12,16 @@ import { useGmailData } from "@/lib/use-gmail-data"
 import type { Mail, App } from "../_suite/sample"
 
 const WEEK_MS = 7 * 86_400_000
+
+// The first name from the profile kept on this device (Summary reads the same). Read after the page has drawn, so the
+// server's copy and the first draw agree; none when no profile is kept.
+const noChanges = () => () => {}
+function profileFirstName(): string {
+  try {
+    const profile = JSON.parse(localStorage.getItem("jd_profile") || "{}")
+    return profile.full_name?.split(" ")[0] || profile.name?.split(" ")[0] || ""
+  } catch { return "" }
+}
 
 function greeting(): string {
   const h = new Date().getHours()
@@ -116,6 +126,7 @@ interface Note { id: string; title: string; body: string; created_at: string; re
 export default function TodayPage() {
   const { mails, applications, interviews, drafts, radar, loading, connected, error, refresh } = useGmailData()
   const [notes, setNotes] = useState<Note[]>([])
+  const name = useSyncExternalStore(noChanges, profileFirstName, () => "")
 
   useEffect(() => {
     fetch("/api/agent/notifications", { cache: "no-store" })
@@ -161,17 +172,15 @@ export default function TodayPage() {
     <div className="mf-home" style={{ paddingBottom: 56 }}>
       <header className="mf-home-heading">
         <p className="mf-eyebrow">{dateLine()}</p>
-        <h1>{greeting()}, Eshwar.</h1>
+        <h1>{greeting()}{name ? `, ${name}` : ""}.</h1>
         <p>{loading ? "Reading your inboxes — gathering your story…" : connected ? unionLine : "Connect your Gmail and I'll keep the story of your hunt right here — so you never have to hold it all in your head."}</p>
       </header>
 
       {error && !loading && (
-        <div style={{ marginBottom: 20, padding: "16px 18px", borderRadius: 14, border: "1px solid var(--danger-border)", background: "var(--surface)", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 240, fontSize: 13.5, lineHeight: 1.6 }}>{error}</div>
-          <button className="btn-outline" style={{ minHeight: 38, display: "inline-flex", alignItems: "center", gap: 6 }} onClick={refresh}>
-            <RefreshCw size={13} /> Refresh
-          </button>
-          <Link href="/dashboard/connections" style={{ fontSize: 13, fontWeight: 700 }}>Check connections →</Link>
+        <div className="mf-notice" role="status">
+          <p>{error}</p>
+          <button className="btn-outline" onClick={refresh}><RefreshCw size={13} /> Refresh</button>
+          <Link href="/dashboard/connections">Check connections →</Link>
         </div>
       )}
 
