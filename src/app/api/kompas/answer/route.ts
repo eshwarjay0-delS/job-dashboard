@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const question = str(body.question, 500)
+  const question = str(body.derived, 500) || str(body.question, 500)
   if (!question) return NextResponse.json({ error: "Nothing to answer." }, { status: 400, headers: NO_STORE })
 
   const config = (body.config && typeof body.config === "object" ? body.config : {}) as Record<string, unknown>
