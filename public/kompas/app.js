@@ -566,6 +566,20 @@ async function buildBook(s) {
     await new Promise(r => setTimeout(r, 20000));                    // pacing: Groq's per-minute budget stays free for you
   }
 }
+// Auth: a 401 from /api/prep or /api/answer means nobody is signed in here.
+// Retrying is pointless — send the whole window to the login page once, with a
+// ?next= so sign-in lands back in Kompas. Other errors keep their retry behavior.
+let __authRedirected = false;
+function isAuthError(e) {
+  const m = String((e && e.message) || e || "");
+  return /\b401\b/.test(m) || /sign in/i.test(m);
+}
+function redirectToLogin() {
+  if (__authRedirected) return;
+  __authRedirected = true;
+  try { status("Not signed in — taking you to the login page…", "err"); } catch {}
+  window.location.href = "/login?next=" + encodeURIComponent(window.location.pathname + window.location.search);
+}
 async function preparePack(s) {
   if (location.protocol === "file:") { seedIdentity(s); status("Serve the deployed app for live prep + answers.", "live"); return; }
   if (s.prep && s.prep.v !== 2) { s.prep = null; saveSession(s); }   // pre-v2 prep had [blank]s: rebuild it
@@ -578,6 +592,7 @@ async function preparePack(s) {
       if (!res.ok || !Array.isArray(pack.questions)) throw new Error(pack.error || ("prep " + res.status));
       s.prep = pack; saveSession(s);
     } catch (e) {
+      if (isAuthError(e)) { redirectToLogin(); return; }               // 401: no point retrying — go sign in
       if (current !== s) return;
       const ph = cards.findIndex(c => c.question === "Preparing…");
       if (ph >= 0) { cards[ph] = { question: "Ready", answer: ["Prep is retrying in the background — you can Start now; answers still generate live."] }; if (ph === idx) renderCard(); }
@@ -1677,6 +1692,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     status(`Answered — first words in ${(first / 1000).toFixed(2)}s.`, "live");
   } catch (e) {
+    if (isAuthError(e)) { redirectToLogin(); return; }                 // 401: no point retrying — go sign in
     if (card.req !== ctl) return;                                      // aborted because this same card was re-asked
     card.streaming = false;
     if (e && e.name === "AbortError") {
