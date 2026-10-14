@@ -12,30 +12,30 @@ CRITICAL RULE: You are editing REAL TEXT from a REAL person's resume. Every sing
 Never remove lines, and never add lines except NEW experience bullets returned in "added" when an instruction below explicitly asks for them. Never change names, contact info, company names, job titles, or dates.
 You are given the resume's editable lines, each tagged with a stable [idx]. Return ONLY the lines you change.
 
-FOUNDATION (read first): this resume is ALREADY a ~70-80% match — it is the candidate's authentic, golden copy. Your job is to BRIDGE the final ~15-20%, NOT to rebuild from scratch. Aim for a 90-98% fit (never claim 99%+). Leave already-aligned sections exactly as they are; change only the lines that move the match toward the JD.
+FOUNDATION: Keep the original resume truthful. A job description expresses the employer's requirements, not the candidate's qualifications. Emphasize verifiable overlap and transferable experience, without manufacturing fit scores or unverified experience.
 
 Work in THIS order — recruiter trust first, ATS keywords LAST:
 
-0) SENIORITY IS FIXED. This candidate is an experienced senior professional. NEVER frame, describe, or re-title them as junior, entry-level, associate, early-career, trainee, or "aspiring" — even if the JD targets a junior role. Keep any "Sr."/"Senior"/"Lead" titles exactly. Never soften or downgrade seniority anywhere. There are NO junior roles in this resume; do not invent or imply one.
+0) SENIORITY IS FIXED TO THE SOURCE. Do not change any historical job title or add seniority, leadership tenure or certifications to make the candidate match the posting. Never reduce proven seniority either.
 
 0b) EXPERIENCE LENGTH IS FIXED. NEVER change, recompute, inflate, or reduce the candidate's years/duration of experience anywhere — not in the summary, not in bullets. Keep the exact experience-length wording the source resume already uses (e.g. if it says "8+ years", keep "8+ years"). If the source states no number, do NOT introduce one. Do not shorten role tenures or timelines. Retain existing content and ADD relevant depth; only replace lines that are fully irrelevant to the JD.
 
 1) IDENTITY. From the JD, decide the ONE primary identity (e.g. "Agentic AI Engineer", "Data Engineer", "Application Security Engineer") and at most one supporting identity. Everything you write must reinforce that identity. A recruiter must answer "what kind of engineer is this?" in 10 seconds.
 
-2) CREDIBILITY — absorption, not insertion. The JD's skills are the candidate's own (the resume and the JD together are their record). Every JD tool and skill the resume claims must be PROVEN in the work history: show where the candidate actually used it. The result must read "of course this person does this," never "they pasted the JD in."
+2) CREDIBILITY. The JD names requirements; it does NOT prove the candidate has them. You may emphasize a JD keyword ONLY where the original resume documents that skill or a genuinely equivalent responsibility. Do not invent client implementations, achievements, tool deployments, or role duties.
    ANTI-MIRRORING (critical): use the JD's exact tool and technology names (ATS matching is literal), but never copy its sentences. Rewrite what the work ACTUALLY involves. Hiring managers immediately flag word-for-word JD mirroring as AI-generated.
 
-3) EXPERIENCE — SPREAD THE JD ACROSS EVERY ROLE (non-negotiable). Keywords that sit only in the skills section prove nothing: recruiters and ATS parsers look for them in the work history. When the candidate lists a skill, the bullets must show where they used it. Weave the JD's tools, platforms, and responsibilities into the bullets of EVERY role, distributed evenly, so each role carries a similar share of the JD alignment instead of the current role alone. In EACH role, rewrite at least half of its bullets (all of them in a role with 4 or fewer), and make every central JD tool appear in the bullets of two or more roles. Vary the angle per role (different systems, scale, incidents, outcomes) so roles never read as copies of each other, and keep each claim plausible for that role's employer and dates.
+3) EXPERIENCE. Edit relevant bullets in roles where the original resume supports the experience. Do NOT repeat a JD tool across unrelated roles just to improve keyword overlap. Never imply AI, GenAI, AISPM, ONYX, ISO 42001 or other implementations at historical employers unless independently supported by the source resume. Preserve historical chronology.
 
 4) TOOL EVIDENCE — show OWNERSHIP, not exposure. Write what operational ownership of THAT tool actually looks like. Examples: ML/GenAI — model eval, RAG pipeline tuning, latency/cost tradeoffs, eval harnesses, agent orchestration, tool calling; BACKEND — API design, query tuning, idempotency, failure handling; DATA — pipeline orchestration, schema evolution, backfills, data quality; CLOUD — IaC modules, CI/CD gates, autoscaling, on-call; SECURITY — scanner rule tuning, alert triage, detection tuning, false-positive reduction, incident escalation. One or two related tools per bullet; never cram a list.
 
-5) OPERATIONAL FRICTION (non-negotiable). Include 1-2 bullets in the current role that show things going wrong: a pipeline that failed and had to be debugged, a model whose latency regressed and was investigated, a deployment that broke and required rollback, a flaky dependency upgrade, a production incident triaged. These raise hiring-manager trust more than any keyword.
+5) OPERATIONAL FRICTION. Describe actual debugging, outages or incidents only if documented in the source. Never fabricate production incidents to make a bullet seem credible.
 
-6) ATS / SKILLS — COVERAGE. Into the EXISTING skill lines, surface every required AND preferred qualification, tool, technology, framework and method from the JD — they are the candidate's own — using the JD's exact wording. Certifications only when the resume already has them. Be thorough: rewrite as many skill lines as needed to cover the JD comprehensively. Never create a duplicate skills section. The skills section never replaces experience: every JD tool you surface in a skill line must also appear in the bullets of at least one role (rule 3).
+6) ATS / SKILLS — VERIFIED COVERAGE. Use exact JD wording only for skills demonstrably present in the original resume, with genuine synonyms allowed. Missing requirements stay missing; never introduce a tool, certification or platform just because the JD requests it. Preserve the existing skills while reordering or tightening relevant ones.
    ONE LINE PER [idx] — NEVER MERGE: rewrite each skill line SEPARATELY at its own [idx], returning that same [idx]. NEVER collapse several skill lines into one mega-line, and never dump every keyword into a single line — that destroys the resume's structure. Return one skills entry per [idx] you change, and only use [idx] values that appear in the SKILL LINES block below.
    EXACT JD WORDING + ABBREVIATIONS: use the JD's precise terminology, including its abbreviations AND spellings. When the JD uses an acronym or short form (e.g. "S2S VPN", "IPsec", "Natting", "FSR", "CJI", "PAN-OS", "EOL"), include that EXACT token — pairing it with the expansion where natural ("site-to-site (S2S) VPN", "NAT/Natting", "end-of-life (EOL)"). ATS keyword matching is literal, so a synonym the candidate truly has but worded differently than the JD still misses — mirror the JD's exact form.
-   REPLACE IRRELEVANT LINES: skill lines about domains the JD does NOT care about (e.g. payment fraud, AML/financial-crime, unrelated tooling) should be REWRITTEN in place into JD-relevant skills — don't leave off-topic lines sitting there. On a resume with many skill lines, expect to rewrite MOST of them, not just one.
-   ADJACENT STACKS: when the resume centers on a stack adjacent to the JD's (e.g. resume is Azure-heavy but the JD wants AWS), ADD the JD's stack alongside the real one in the skills and in the bullets of every role ("Azure and AWS"), keeping the transferable concepts (IaC, CI/CD, Kubernetes, networking, Linux). Never delete the stack the candidate actually used.
+   RELEVANCE: Keep original skill lines accurate. You may condense or reorder relevant skills, but do not swap documented skills for an unverified stack.
+   ADJACENT STACKS: Explain transferable experience honestly. Azure expertise may support a cloud-security application requiring AWS, but do not claim AWS hands-on work without evidence in the source.
    JD-PREFERRED FIRST: lead the summary AND the skills section with the JD's most-wanted tools/skills first, so the match is obvious in the first 5 seconds.
 
 VOICE — write like the real senior engineer. Vary the rhythm. No buzzwords (spearheaded, leveraged, orchestrated, championed, utilized, synergy), no em-dash stuffing, no invented percentages, no hype.
@@ -46,9 +46,9 @@ HEADER — the candidate's NAME and contact details are ALWAYS kept exactly as-i
 
 SUMMARY — ONE coherent paragraph, 3-4 sentences, 60-80 words MAXIMUM. Specific and memorable. Start: "<Target role> with <the source's own experience-length wording> <doing the core thing>...". NEVER begin with the word "Having" (or "Having <N> years…") — that opener is the #1 recruiter-flagged AI fingerprint and is strictly banned. Copy the candidate's stated years/duration of experience EXACTLY from the source summary — never recompute, inflate, or reduce it; if the source states no number, do not add one. Name only the JD's 2-3 central tools. One clean paragraph — nothing more. NEVER repeat yourself or stack 10+ technologies. ALWAYS return a rewritten summary re-aimed at the target identity — returning an empty "summary" is a failure. If the source has several stacked summary paragraphs, CONSOLIDATE them into this one coherent paragraph.
 
-GOAL: Cover the whole JD (required + preferred qualifications) — 90-98% of its keywords — in skill lines AND in the bullets of EVERY role. Rewrite the headline, the summary, every relevant skill line, and at least half the bullets in EACH role, never just the current role.
+GOAL: Produce the most relevant truthful resume, not a forced keyword score. Preserve identity and career chronology. A lower authentic match is better than an invented qualification.
 
-NEVER REFUSE: even if the resume seems senior/junior-mismatched for the JD, or a USER PREFERENCE below looks like it's about picking a different resume rather than editing this one, you still tailor THIS resume to the JD — treat preferences as soft style/content hints, not instructions to abstain. Do not write prose, apologies, or explanations anywhere in the output. Always return the JSON object below, even if most fields are unchanged/empty.
+Return edits that the resume supports. If a JD requirement has no source evidence, leave it out rather than inventing it. Output the requested JSON structure, even if some editable fields remain unchanged.
 
 Return ONE minified JSON object, exactly:
 {"headline":{"title":"","tagline":""},"summary":"","skills":[{"idx":0,"text":""}],"bullets":[{"idx":0,"text":""}],"added":[{"role":0,"text":""}]}
@@ -226,7 +226,7 @@ export async function adapt(opts: {
   // A refinement gets no keyword list: it invites "absorbing" more terms, which is exactly the
   // churn a targeted change must avoid (the JD itself is still in the prompt).
   const kwLine = opts.jdKeywords?.length && !opts.refine
-    ? `\n\nTOOLS THE JD CENTERS ON (they are the candidate's own — the resume and the JD together are the record; ${part === "profile" ? "surface them in the skill lines" : "name them inside the bullets of every role, not just the skills section"}): ${opts.jdKeywords.join(", ")}`
+    ? `\n\nTOOLS THE JD CENTERS ON (requirements only, not proof of experience; ${part === "profile" ? "surface them only when documented in the source skills" : "use them only in roles whose original bullets support them"}): ${opts.jdKeywords.join(", ")}`
     : ""
   const pref = !opts.preferences ? ""
     : opts.refine ? `\n\nCHANGE REQUEST FROM THE CANDIDATE (apply exactly this, nothing else): ${opts.preferences}`
@@ -247,7 +247,7 @@ export async function adapt(opts: {
   const scopeLine = part === "profile"
     ? `\n\nTHIS PASS — PROFILE ONLY: rewrite the headline, the summary, and the skill lines. Return "bullets": [] (a parallel pass is rewriting the experience bullets against the same JD).`
     : part === "experience"
-    ? `\n\nTHIS PASS — EXPERIENCE BULLETS ONLY, for the roles shown with [idx] lines. Return "headline":{"title":"","tagline":""}, "summary":"", "skills":[]. Spread the JD's tools, platforms, and responsibilities evenly across EVERY one of these roles: in EACH role rewrite at least half of its bullets (all of them when it has 4 or fewer) and name the JD's exact tools inside them, so every role proves the skills the candidate lists. Never leave a role untouched. A bullet line that holds several "•" parts must keep every part, each rewritten in place in that same line.`
+    ? `\n\nTHIS PASS — EXPERIENCE BULLETS ONLY, for the roles shown with [idx] lines. Return "headline":{"title":"","tagline":""}, "summary":"", "skills":[]. Revise only roles whose original bullets support relevant JD duties. Do not insert requirements into unsupported roles. Leave unrelated roles unchanged. A bullet line that holds several "•" parts must keep every part, each rewritten in place in that same line.`
     : ""
   // The RESUME + the candidate's fixed experience-length are STABLE across every JD, so
   // they go in a cached block (cacheContext). Only the JD-derived hints + user prefs vary
