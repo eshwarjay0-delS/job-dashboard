@@ -93,6 +93,22 @@ export function mountKompasHtml(html: string): string {
     return nativeFetch(input, options);
   };
 
+  // Desktop installer: the copilot's own "Download Kompas.exe" link 404s because the
+  // executable was never published to /downloads. Route it to MarketFit's installer
+  // page instead: it tries the kompas:// protocol first and offers the published
+  // installer (KOMPAS_DESKTOP_URL) when one exists.
+  function fixDesktopDownload() {
+    document.querySelectorAll('a[href$="/downloads/Kompas.exe"], a[href$="Kompas.exe"]').forEach(function (a) {
+      if (a.getAttribute("data-mf-fixed")) return;
+      a.setAttribute("data-mf-fixed", "1");
+      a.removeAttribute("download");
+      a.setAttribute("href", "/downloads/kompas");
+    });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fixDesktopDownload);
+  else fixDesktopDownload();
+  new MutationObserver(fixDesktopDownload).observe(document.documentElement, { childList: true, subtree: true });
+
   // Gel points pill: right after the Kompas title, "X interviews · Y resumes left".
   // Refreshed when the header appears and every two minutes after.
   function paintCredits() {
