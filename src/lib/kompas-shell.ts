@@ -113,6 +113,11 @@ export function mountKompasHtml(html: string): string {
           // sunset: answer-level persistence and spoken-answer feedback.
           '/api/levels': '/api/kompas/levels',
           '/api/feedback': '/api/kompas/feedback',
+          '/api/pace': '/api/kompas/pace',
+          '/api/score': '/api/kompas/score',
+          '/api/review': '/api/kompas/review',
+          '/api/practice': '/api/kompas/practice',
+          '/api/lexicon': '/api/kompas/lexicon',
         }[url.pathname];
         if (native) {
           url.pathname = native;
