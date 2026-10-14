@@ -68,3 +68,19 @@ jobs:
           name: nextjs-build
           path: .next/
           retention-days: 1
+  whatsapp-email-regression:
+    name: WhatsApp email choice regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js 24 for native TypeScript stripping
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Test WhatsApp email selection and resume identity
+        run: node --test scripts/tests/library-pick.test.mjs
