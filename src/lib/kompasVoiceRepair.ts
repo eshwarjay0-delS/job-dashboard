@@ -11,7 +11,9 @@
      DELIVERY MARKUP (bold / italic / pause caps), A HABIT IS A CLAIM, VOICE (the scan words).
 
    MarketFit adaptation: perfACT used (pause); MarketFit uses [beat]/[breath].
-   All pause markers normalise to (pause) internally; output restores [breath].
+   Markers normalise to (beat) or (breath) internally, preserving the type;
+   output restores each to its original [beat]/[breath]. Plain (pause) input
+   defaults to (breath), matching the old single-marker behaviour.
 
    Exports
    - voiceState()             per-answer counters { italics, pauses, paragraphs }
@@ -29,7 +31,7 @@ const CAP = "\u0001";                                  // internal marker: "capi
 const MAX_WORDS = 25;                                  // FULL STOPS: past 25 words it becomes two
 const MAX_BOLD_WORDS = 6;
 const MAX_PAUSES_PER_ANSWER = 4;
-const PAUSE_OUT = "[breath]";                          // internal (pause) restores to this on output
+const PAUSE_OUT = "[breath]";                          // default output marker; (beat) restores to [beat]
 
 // Lower-case tool names that must never be capitalised at a sentence start.
 const LOWER_TOOLS = new Set(("npm pip git kubectl curl grep sudo ssh iptables systemd bash zsh yum apt nmap " +
@@ -54,27 +56,27 @@ function capWord(w: string): string { return w.charAt(0).toUpperCase() + w.slice
 function keepCase(src: string, rep: string): string { return /^[A-Z]/.test(src) ? capWord(rep) : rep; }
 
 function countWords(s: string): number {
-  return String(s).replace(/\(pause\)/gi, " ").replace(/\*/g, "").split(/\s+/)
+  return String(s).replace(/\((?:pause|beat|breath)\)/gi, " ").replace(/\*/g, "").split(/\s+/)
     .filter((t) => /[A-Za-z0-9]/.test(t)).length;
 }
 
 // True when `before` (the text preceding a position) ends at a sentence start.
 function atSentenceStart(before: string): boolean {
-  return /(?:^|[.!?]["”’')\]*]*\s+|\(pause\)\s+)$/.test(before) || /^\s*$/.test(before);
+  return /(?:^|[.!?]["”’')\]*]*\s+|\((?:pause|beat|breath)\)\s+)$/.test(before) || /^\s*$/.test(before);
 }
 
 // Resolve CAP markers: capitalise the following plain lower-case word, then drop the marker.
 function fixCaps(t: string): string {
   if (!t.includes(CAP)) return t;
   return t
-    .replace(new RegExp(`${CAP}+\\s*((?:\\(pause\\)\\s*)*(?:\\*\\*|\\*|["“‘(])?)([a-z][a-z'’-]*)(?![A-Za-z0-9])`, "g"),
+    .replace(new RegExp(`${CAP}+\\s*((?:\\((?:pause|beat|breath)\\)\\s*)*(?:\\*\\*|\\*|["“‘(])?)([a-z][a-z'’-]*)(?![A-Za-z0-9])`, "g"),
       (_m, pre: string, w: string) => pre + (LOWER_TOOLS.has(w) ? w : capWord(w)))
     .replace(new RegExp(`${CAP}+\\s*`, "g"), "");
 }
 
 // Capitalise the first plain lower-case word of a sentence (never a product like macOS or iPhone).
 function capFirst(s: string): string {
-  return s.replace(/^(\s*(?:\(pause\)\s*)*(?:\*\*|\*|["“‘(])?)([a-z][a-z'’-]*)(?![A-Za-z0-9])/,
+  return s.replace(/^(\s*(?:\((?:pause|beat|breath)\)\s*)*(?:\*\*|\*|["“‘(])?)([a-z][a-z'’-]*)(?![A-Za-z0-9])/,
     (_m, pre: string, w: string) => pre + (LOWER_TOOLS.has(w) ? w : capWord(w)));
 }
 
@@ -170,7 +172,7 @@ function dropFillers(t: string): string {
   t = t.replace(FILL_RE, (m: string, c1: string, f: string, ell: string, c2: string, idx: number, str: string) => {
     if (f.length > 1 && f === f.toUpperCase()) return m;           // ER, UM: acronyms, not fillers
     const before = str.slice(0, idx), after = str.slice(idx + m.length);
-    if (!c1 && /(?:^|[.!?]["”’')\]*]*|\(pause\))\s*$/.test(before)) return (before ? " " : "") + CAP;
+    if (!c1 && /(?:^|[.!?]["”’')\]*]*|\((?:pause|beat|breath)\))\s*$/.test(before)) return (before ? " " : "") + CAP;
     if (/^\s*(?:[.!?]|$)/.test(after)) return "";                    // "... the audit, um."
     if (c1 && c2) return " ";                                         // "I did, um, the rotation"
     if (c1 || c2) return ", ";
@@ -178,7 +180,7 @@ function dropFillers(t: string): string {
   });
   t = t.replace(YOUKNOW_RE, (m: string, c1: string, _yk: string, _c2: string, idx: number, str: string) => {
     const before = str.slice(0, idx);
-    if (!c1 && /(?:^|[.!?]["”’')\]*]*|\(pause\))\s*$/.test(before)) return (before ? " " : "") + CAP;
+    if (!c1 && /(?:^|[.!?]["”’')\]*]*|\((?:pause|beat|breath)\))\s*$/.test(before)) return (before ? " " : "") + CAP;
     if (c1 && !/\b(?:as|if|do|did|what|now)\s*$/i.test(before)) return " ";
     return m;                                                         // turn-final "you know" is a wanted marker
   });
@@ -272,7 +274,7 @@ function tokensOf(s: string, limit = 12): Tok[] {
   const out: Tok[] = [];
   for (const m of s.matchAll(/\S+/g)) {
     const clean = m[0].replace(/^[*“"'‘(]+|[*”"'’),.;:!?]+$/g, "");
-    if (/^\(pause\)$/i.test(m[0])) continue;
+    if (/^\((?:pause|beat|breath)\)$/i.test(m[0])) continue;
     out.push({ raw: m[0], w: clean, i: m.index ?? 0, end: (m.index ?? 0) + m[0].length });
     if (out.length >= limit) break;
   }
@@ -318,7 +320,7 @@ function allTheTime(s: string): string {
 /* ------------------------------------------------------------------ sentence-level drops */
 
 function sentenceLevel(seg: string): string {
-  const pre = (seg.match(/^(?:\(pause\)\s*)*/) || [""])[0];
+  const pre = (seg.match(/^(?:\((?:pause|beat|breath)\)\s*)*/) || [""])[0];
   let s = seg.slice(pre.length);
   const keep = () => (pre.trim() ? pre.trim() : "");
   for (let k = 0; k < 4; k++) {
@@ -339,13 +341,15 @@ function sentenceLevel(seg: string): string {
     if (s === before) break;
   }
   s = s.trim();
-  if (!countWords(s) && !/\(pause\)/.test(s)) return keep();
+  if (!countWords(s) && !/\((?:pause|beat|breath)\)/.test(s)) return keep();
   return (pre + s).trim();
 }
 
 /* ------------------------------------------------------------------ lexical pass (a, b, c) */
 
-function normPauses(t: string): string { return t.replace(PAUSE_ANY, "(pause)"); }
+function normPauses(t: string): string {
+  return t.replace(PAUSE_ANY, (m: string) => (/beat/i.test(m) ? "(beat)" : "(breath)"));
+}
 
 function lexical(t: string): string {
   let prev: string | null = null;
@@ -472,8 +476,8 @@ function splitLong(s: string, depth = 0): string[] {
     if (!best) continue;
     let left = s.slice(0, best.cut).replace(/\s+$/, "");
     let right = best.lead ? best.lead + (/^['’]/.test(best.rest) ? "" : " ") + best.rest.replace(/^\s+/, "") : capFirst(best.rest);
-    const pauseTail = left.match(/\s*\(pause\)$/);
-    if (pauseTail) { left = left.slice(0, pauseTail.index); right = "(pause) " + right; }
+    const pauseTail = left.match(/\s*\((beat|breath|pause)\)$/i);
+    if (pauseTail) { const kind = /beat/i.test(pauseTail[1]) ? "beat" : "breath"; left = left.slice(0, pauseTail.index); right = `(${kind}) ` + right; }
     if (!/[.!?]$/.test(left)) left += ".";
     return [...splitLong(left, depth + 1), ...splitLong(right.replace(/\s{2,}/g, " "), depth + 1)];
   }
@@ -520,11 +524,11 @@ function capItalic(body: string, state: VoiceState): string {
 }
 
 function capPauses(body: string, state: VoiceState): string {
-  if (!/\(pause\)/.test(body)) return body;
+  if (!/\((?:beat|breath|pause)\)/.test(body)) return body;
   const sentences = segment(body).filter((x) => countWords(x) > 0).length;
   const cap = sentences > 3 ? 2 : 1;
   let here = 0;
-  const out = body.replace(/\s*\(pause\)\s*/g, (m: string, idx: number, str: string) => {
+  const out = body.replace(/\s*\((?:beat|breath|pause)\)\s*/g, (m: string, idx: number, str: string) => {
     if (here < cap && state.pauses < MAX_PAUSES_PER_ANSWER) { here++; state.pauses++; return m; }
     return idx === 0 || idx + m.length >= str.length ? "" : " ";
   });
@@ -554,16 +558,17 @@ export function voiceLine(line: string, state: VoiceState = voiceState()): strin
   const bm = core.match(/^(?:[-•]|\*(?=\s)|\d{1,2}[.)])\s+/);
   const prefix = bm ? bm[0] : "";
   let body = normPauses(core.slice(prefix.length));
-  if (!countWords(body) && !/\(pause\)/.test(body)) return line;      // a bare marker or symbol: leave it
+  if (!countWords(body) && !/\((?:beat|breath|pause)\)/.test(body)) return line;      // a bare marker or symbol: leave it
 
-  if (/^\(pause\)$/.test(body.trim())) { if (state.pauses >= MAX_PAUSES_PER_ANSWER) return ""; state.pauses++; return lead + prefix + "(pause)" + trail; }
+  const barePause = body.trim().match(/^\((beat|breath|pause)\)$/i);
+  if (barePause) { if (state.pauses >= MAX_PAUSES_PER_ANSWER) return ""; state.pauses++; const kind = /beat/i.test(barePause[1]) ? "beat" : "breath"; return lead + prefix + `(${kind})` + trail; }
 
   // inline code, URLs and file paths are not prose: masked so no repair touches them (a *.log glob is not italics)
   const kept: string[] = [];
   body = body.replace(/`[^`]*`|\bhttps?:\/\/[^\s)]*[^\s).,;]|(?:\b[A-Za-z]:)?(?:[\w.-]*[\/\\][\w*?-]+(?:[.\/\\][\w*?-]+)*)|\*\.\w+/g, (m: string) => { kept.push(m); return `⟦${kept.length - 1}⟧`; });
   const unmask = (t: string) => t.replace(/⟦(\d+)⟧/g, (_: string, i: string) => kept[+i]);
   body = lexical(body);
-  if (!countWords(body) && !/\(pause\)/.test(body)) return "";       // the whole line was filler
+  if (!countWords(body) && !/\((?:beat|breath|pause)\)/.test(body)) return "";       // the whole line was filler
   state.paragraphs++;
   body = capBold(body);
   body = capItalic(body, state);
@@ -575,7 +580,7 @@ export function voiceLine(line: string, state: VoiceState = voiceState()): strin
 // Whole-answer pass after streaming: a multi-paragraph answer with no pause gets one.
 export function voiceFinish(text: string): string {
   const src = String(text ?? "");
-  if (/\(pause\)|\[beat\]|\[breath\]/i.test(src)) return restorePauses(src);
+  if (/\(pause\)|\((?:beat|breath)\)|\[beat\]|\[breath\]/i.test(src)) return restorePauses(src);
   const lines = src.split("\n");
   const prose: number[] = [];
   lines.forEach((l, i) => {
@@ -587,13 +592,15 @@ export function voiceFinish(text: string): string {
   const i = prose[0];
   const m = lines[i].match(/^([\s\S]*?)(\s*)$/);
   if (!m || !/[.!?]$/.test(m[1])) return restorePauses(src);
-  lines[i] = m[1] + " (pause)" + m[2];
+  lines[i] = m[1] + " (breath)" + m[2];
   return restorePauses(lines.join("\n"));
 }
 
-// Convert internal (pause) markers back to MarketFit [breath].
+// Convert internal (beat)/(breath) markers back to MarketFit [beat]/[breath].
 function restorePauses(t: string): string {
-  return t.replace(/\(pause\)/gi, PAUSE_OUT);
+  return t
+    .replace(/\(beat\)/gi, "[beat]")
+    .replace(/\((?:breath|pause)\)/gi, PAUSE_OUT);
 }
 
 /* ------------------------------------------------------------------ voiceCheck: port of engine.py validate() */

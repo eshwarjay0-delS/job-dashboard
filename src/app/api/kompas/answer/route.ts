@@ -241,6 +241,7 @@ const MODE_BLOCKS: Record<string, string> = {
 - If the JD names Amazon or its Leadership Principles, aim the story at the one principle the question points to and let the result prove it. Never say its name.
 - Never a student, lab or side-project story.`,
   technical: `TECHNICAL MODE: they score mechanism, judgement and evidence, never vocabulary.
+- Hold the 60/40 balance: 60% human narration of the reasoning, 40% crisp technical mechanism.
 - Take each part down the ladder: what it is, how it works in the order the data or the attacker moves, why it is built that way and what that costs, and where it breaks.
 - Show judgement: the option you rejected and why, the fact that decided it, and the condition that would flip your call. Commit; never end on "it depends".
 - Anchor once in work the background below represents: the platform, log source, rule logic, real release or integration.
@@ -666,7 +667,7 @@ export async function POST(request: NextRequest) {
     prep.identity ? `Candidate identity: ${str(prep.identity, 800)}` : "",
     prep.persona ? `Persona: ${str(prep.persona, 800)}` : "",
     prep.projects ? `Candidate's real projects: ${str(prep.projects, 2000)}` : "",
-    grounding ? `Real background (prefer over generic examples):\n${grounding.slice(0, 3000)}` : "",
+    grounding ? `Real background (prefer over generic examples):\n${grounding.slice(0, 4500)}` : "",
     resumeFacts ? `${resumeFacts}` : "",
     transcript ? `Conversation so far:\n${transcript}` : "",
     history ? `Earlier in this interview:\n${history}` : "",
