@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
   let profileMerged = false
   const pIn = body.profile
   if (pIn && typeof pIn === "object") {
-    const cur = (await getDossierProfile(uHash).catch(() => null)) || { skills: [], projects: [], keywords: [] }
+    const cur = (await getDossierProfile(uHash).catch(() => null)) || { skills: [], projects: [], keywords: [], fields: [] as string[] }
     const union = (a: string[], b: string[]) => [...new Set([...(a || []), ...(b || [])].map((x) => String(x).trim()).filter(Boolean))]
     const projUnion = [...(cur.projects || [])]
     for (const p of (pIn.projects || [])) {
