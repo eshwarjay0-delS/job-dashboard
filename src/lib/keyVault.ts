@@ -52,6 +52,11 @@ export const FEATURES: Feature[] = [
   { id: "kompas:humanize", app: "kompas", label: "Sessions: answer polish for the listener" },
   { id: "kompas:guide", app: "kompas", label: "Question Bank: answer guides" },
   { id: "kompas:questions", app: "kompas", label: "Question Bank: practice questions from a JD" },
+  { id: "kompas:capabilities", app: "kompas", label: "Kompas: version and policy info" },
+  { id: "kompas:persona", app: "kompas", label: "Dossier: persona file builder" },
+  { id: "kompas:prep", app: "kompas", label: "Sessions: prep pack (identity, projects, core Q&A)" },
+  { id: "kompas:screen", app: "kompas", label: "Sessions: screen analysis" },
+  { id: "kompas:section", app: "kompas", label: "Dossier: question-bank section builder" },
 ]
 const FEATURE_IDS = new Set(FEATURES.map(f => f.id))
 
@@ -69,6 +74,9 @@ export const FEATURE_DEFAULTS: Partial<Record<string, VaultProvider>> = {
   "kompas:answer-derive": "openrouter",
   "kompas:humanize": "openrouter",
   "kompas:transcribe": "groq", // speech-to-text: Groq Whisper is the only recogniser wired up
+  "kompas:persona": "openrouter",
+  "kompas:prep": "openrouter",
+  "kompas:section": "openrouter",
 }
 
 /**
