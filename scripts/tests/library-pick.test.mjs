@@ -65,6 +65,8 @@ test('an email keeps its number for good, however many resumes are saved after (
 test('the answer is read as he said it: "number one", "1", the address', () => {
   for (const said of ['1', ' 1 ', '1.', '#1', 'no 1', 'no. 1', 'number 1', 'number one', 'Number One', 'one', 'first', 'the first one', '1st', 'option 1', 'email 1', 'email one', 'use 1', 'for 1', 'use the first one', '(1)', A, 'dana05', 'use dana05']) assert.equal(choiceIn(said, TWO), A, said)
   for (const said of ['2', 'two', 'second', 'the second email', 'number two', '#2', B, 'DWHIT44@GMAIL.COM', 'dwhit44']) assert.equal(choiceIn(said, TWO), B, said)
+  for (const said of [`The email is ${B} in this case`, `For ${B}`, `use ${B}`, `the account is ${B}`]) assert.equal(choiceIn(said, TWO), B, said)
+  for (const said of [`The email is someone@else.com in this case`, 'For unknown@example.com']) assert.equal(choiceIn(said, TWO), '', said)
   // As people really answer: a polite word after it, a digit tapped from the emoji keyboard, a circled digit.
   for (const said of ['1 please', 'number 1 please', 'one, thanks', 'I want 1', '1️⃣', '①', `${A}.`]) assert.equal(choiceIn(said, TWO), A, said)
   for (const said of ['second one please', '2 pls', '2️⃣', 'go with 2', "it's 2"]) assert.equal(choiceIn(said, TWO), B, said)
@@ -157,12 +159,16 @@ test('whose a resume is comes from the email written in it, not from its folder 
 test('the bot asks before it tailors, takes the answer, and says the small message after every resume', () => {
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
   // 1. A resume sent for this job is used as it is; 2. the email is settled or asked; 3. the closest of that email.
-  assert.ok(bot.includes('if (own && original) return { source: own }'))
+  assert.ok(bot.includes('if (own && original && (!choice.email || (await keptEmailOf(session)) === choice.email)) return { source: own }'))
   assert.ok(bot.includes('if (emails.length > 1) return { ask: slots }'))
   assert.ok(bot.includes('const found = await closestFor(userDir, email, jd, kept_, resumes.index, choice.redo ? jobKeyOf(jd) : "")'))
   // The question waits with the job description.
   assert.ok(bot.includes('session.ask = start.ask\n    await saveSession(from, session)'))
   assert.ok(bot.includes('const said = numbered.sure ? readChoice(text, slots)') && bot.includes('session.jd = said.rest'))
+  assert.ok(bot.includes('const email = said.email') && !bot.includes('const email = said.email || again'), 'a new JD never silently inherits a previously chosen email')
+  assert.ok(bot.includes('if (session.ask?.length && !choice.email && !session.email) return sendText(from, askWhichEmail(session.ask))'))
+  assert.ok(bot.includes('baselineEmail[0] !== selectedEmail') && bot.includes('outputEmails[0] !== selectedEmail'), 'both original and output must match the selected account')
+  assert.ok(bot.includes('latest.email !== selectedEmail'), 'cancel an older generation when the account is corrected')
   // Found in review: an answer sent as a reply to the question went to "change a resume". It is read first.
   const answer = bot.indexOf('const answer = waiting ? choiceIn(text, waiting) : ""'), change = bot.indexOf('if (replyTo) return refine(from, replyTo, text, who)')
   assert.ok(answer > 0 && answer < change && change < bot.indexOf('That looks too short to be a job description'))
