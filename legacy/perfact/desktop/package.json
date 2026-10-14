@@ -1,0 +1,21 @@
+{
+  "name": "kompas",
+  "productName": "Kompas",
+  "version": "0.7.0",
+  "private": true,
+  "description": "Kompas",
+  "author": "Kompas",
+  "main": "main.js",
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "start:electron": "electron .",
+    "exe": "node scripts/build-exe.mjs",
+    "dist": "node scripts/package.mjs",
+    "check": "node --check main.js && node --check preload.js && node --check picker.js && node --check picker-preload.js && node --check scripts/runtime.mjs && node --check scripts/start.mjs && node --check scripts/build-exe.mjs && node --check scripts/package.mjs && node scripts/test-marketfit-protocol.mjs"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
+    "resedit": "^3.1.0"
+  }
+}
