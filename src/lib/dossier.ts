@@ -78,6 +78,40 @@ export async function appendDossierSession(userHash: string, session: Omit<Dossi
   } catch { return false }
 }
 
+/** Import several historical sessions with a single durable write.
+ * Unlike appending every row individually, this keeps migration time and
+ * storage requests bounded. Existing IDs and all original Q&A are preserved.
+ * Import should run while no live session is writing to this dossier, since
+ * the underlying blob interface provides no conditional append operation. */
+export async function appendDossierSessionsBatch(userHash: string, sessions: DossierSession[]): Promise<{ added: number; qaAdded: number; ids: string[] }> {
+  if (!sessions.length) return { added: 0, qaAdded: 0, ids: [] }
+  const sb = await storage()
+  const key = uKey(userHash, "sessions.jsonl")
+  const existing = (await sb.getText(key)) || ""
+  const ids = new Set<string>()
+  for (const line of existing.split("\n")) {
+    if (!line) continue
+    try {
+      const row = JSON.parse(line) as { id?: unknown }
+      if (typeof row.id === "string") ids.add(row.id)
+    } catch { /* a historical line should not block preserving newer records */ }
+  }
+  const addedIds: string[] = []
+  const lines: string[] = []
+  let qaAdded = 0
+  for (const session of sessions) {
+    if (!session || typeof session.id !== "string" || !session.id || ids.has(session.id)) continue
+    ids.add(session.id)
+    lines.push(JSON.stringify({ ...session, at: session.at || Date.now() }))
+    addedIds.push(session.id)
+    qaAdded += session.qa?.length || 0
+  }
+  if (!lines.length) return { added: 0, qaAdded: 0, ids: [] }
+  await sb.put(key, existing + (existing && !existing.endsWith("\n") ? "\n" : "") + lines.join("\n") + "\n")
+  await touchIndex(userHash, { lastUpdated: Date.now() })
+  return { added: addedIds.length, qaAdded, ids: addedIds }
+}
+
 /** Recent sessions (newest first), capped for prompt-size sanity. */
 export async function getDossierSessions(userHash: string, limit = 10): Promise<DossierSession[]> {
   try {
