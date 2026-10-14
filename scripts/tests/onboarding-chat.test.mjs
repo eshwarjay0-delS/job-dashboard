@@ -23,9 +23,9 @@ test('the questions come in one order: mobile, resume, may I use it, Gmail, kind
   assert.equal(nextStep({ consent: 'yes', gmailDone: true }, facts({ phoneVerified: true })), 'roles')
   assert.equal(nextStep({ consent: 'yes', gmailDone: true, domain: 'cybersecurity', branches: [] }, facts({ phoneVerified: true })), 'roles', 'a kind of work with nothing ticked is not an answer')
   assert.equal(nextStep({ consent: 'yes', gmailDone: true, domain: 'cybersecurity', branches: ['AWS Security'] }, facts({ phoneVerified: true })), 'done')
-  // A required number cannot be skipped, even by a previously saved phoneLater answer.
-  assert.equal(nextStep({ consent: 'yes', phoneLater: true, gmailDone: true, domain: 'cybersecurity', branches: ['AWS Security'] }, facts()), 'phone')
-  // Only an explicitly exempt account can carry on without a number.
+  // Later lets setup finish without changing the verified fact.
+  assert.equal(nextStep({ consent: 'yes', phoneLater: true, gmailDone: true, domain: 'cybersecurity', branches: ['AWS Security'] }, facts()), 'done')
+  // Exempt accounts can also defer.
   assert.equal(nextStep({ consent: 'yes' }, facts({ phoneRequired: false })), 'phone')
   assert.equal(nextStep({ consent: 'yes', phoneLater: true }, facts({ phoneRequired: false })), 'gmail')
   // Someone already set up is asked nothing, whatever is on file.
@@ -91,7 +91,7 @@ test('nothing from the resume reaches the profile before the person says yes, an
   assert.ok(api.includes('.upsert({ id: user.id, email: user.email, ...patch }, { onConflict: "id" })'))
   // Setup cannot be finished past an unanswered question, and the number cannot be skipped while a code can be sent.
   assert.ok(api.includes('if (step !== "done") return NextResponse.json({ ...answer(at), ok: false, error: "There is one more question to answer first." }, { status: 409'))
-  assert.ok(api.includes('if (facts.phoneRequired && !facts.phoneVerified) return NextResponse.json({ error: "Verify your mobile number to carry on." }, { status: 409'))
+  assert.ok(api.includes('setup = { ...setup, phoneLater: true }'))
   // The person's own dossier is written at the end: what the resume shows and the kinds of work chosen.
   assert.ok(api.includes('await saveDossierProfile(hash, {') && api.includes('fields: join(had?.fields, setup.branches)'))
   // The page asks one thing at a time and keeps no answers of its own.

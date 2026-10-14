@@ -45,66 +45,7 @@ const plain: CSSProperties = { minHeight: 46, padding: "0 18px", borderRadius: 1
 const field: CSSProperties = { minHeight: 46, padding: "0 14px", borderRadius: 12, border: `1px solid ${P.border}`, background: P.bg, color: P.text, fontSize: 16, minWidth: 0, flex: "1 1 180px" }
 
 function Bot({ children }: { children: ReactNode }) {
-  return <div style={{ display: "flex", justifyContent: "flex-start" }}><div style={{ ...bubble, background: P.surface, border: `1px solid ${P.border}`, color: P.text, borderBottomLeftRadius: 6 }}>{children}</div></div>
-}
-function Me({ children }: { children: ReactNode }) {
-  return <div style={{ display: "flex", justifyContent: "flex-end" }}><div style={{ ...bubble, background: "var(--accent-soft)", color: P.text, borderBottomRightRadius: 6 }}>{children}</div></div>
-}
-function Row({ children }: { children: ReactNode }) {
-  return <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", paddingLeft: 4 }}>{children}</div>
-}
-function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
-  return (
-    <button type="button" aria-pressed={on} onClick={onClick}
-      style={{ minHeight: 40, padding: "0 14px", borderRadius: 999, border: `1px solid ${on ? "var(--accent)" : P.border}`, background: on ? "var(--accent-soft)" : P.surface, color: on ? P.text : P.muted, fontSize: 14.5, fontWeight: on ? 700 : 500, cursor: "pointer" }}>
-      {on ? "✓ " : ""}{children}
-    </button>
-  )
-}
-
-export default function SetupPage() {
-  const router = useRouter()
-  const [s, setS] = useState<State | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [note, setNote] = useState("")
-  const [phone, setPhone] = useState("")
-  const [code, setCode] = useState("")
-  const [codeSent, setCodeSent] = useState(false)
-  const [domain, setDomain] = useState("")
-  const [ticked, setTicked] = useState<string[]>([])
-  const end = useRef<HTMLDivElement | null>(null)
-  const fileRef = useRef<HTMLInputElement | null>(null)
-
-  const take = useCallback((next: State) => {
-    setS(next)
-    setPhone(p => p || next.phone.suggested || "")
-    // The kind of work the resume points to is offered already chosen, with its branches ticked: the person only confirms.
-    const chosen = next.roles.domain || next.roles.suggested?.domain || ""
-    setDomain(d => d || chosen)
-    setTicked(t => (t.length ? t : next.roles.branches.length ? next.roles.branches : next.roles.suggested?.branches || []))
-  }, [])
-
-  const load = useCallback(async () => {
-    try {
-      const r = await fetch("/api/onboarding", { cache: "no-store" })
-      if (r.status === 401) { router.replace("/login?next=%2Fdashboard%2Fsetup"); return }
-      const j = await r.json()
-      if (j?.ok) take(j as State); else setNote("Setup could not be loaded. Reload the page in a moment.")
-    } catch { setNote("Setup could not be loaded. Check your connection and reload the page.") }
-  }, [router, take])
-
-  useEffect(() => { queueMicrotask(() => { void load() }) }, [load])
-  useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }) }, [s?.step, codeSent, domain, note])
-
-  async function send(action: string, more: Record<string, unknown> = {}) {
-    setBusy(true); setNote("")
-    try {
-      const r = await fetch("/api/onboarding", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...more }) })
-      const j = await r.json().catch(() => ({}))
-      if (j?.step) take(j as State)
-      if (!r.ok) setNote(j.error || "That did not go through. Try again in a moment.")
-      return r.ok
-    } catch { setNote("That did not go through. Check your connection and try again."); return false }
+  return <div style={{ display: "flex", justifyContent: "flex-start" }}><div style={{ ...bubble, background: P.surface, border: `1px solid ${P.border}`, color: P.text, borderBottomLeftRadius: 6 }}>{…837 tokens truncated…heck your connection and try again."); return false }
     finally { setBusy(false) }
   }
 
@@ -193,7 +134,7 @@ export default function SetupPage() {
         {(now("phone") || past("phone")) && (s.phone.required || s.phone.verified
           ? <Bot>First, which mobile number would you like to register? I will text you a code to verify it. Use your WhatsApp number so you can send MFit your resume and a job description.</Bot>
           : <Bot>{s.phone.note === "admin" ? "You run this site, so your mobile number is not needed to carry on." : "A code cannot be texted right now, so we will leave your mobile number for later."} You can connect WhatsApp at any time from the WhatsApp page, with one message.</Bot>)}
-        {now("phone") && s.phone.note === "unavailable" && <Bot>Text verification is temporarily unavailable. Please try again shortly; your setup will stay here.</Bot>}
+        {now("phone") && s.phone.note === "unavailable" && <Bot>Text verification is temporarily unavailable. Choose Later to continue. We will remind you at the start of your next visit.</Bot>}
         {now("phone") && s.phone.required && !codeSent && (
           <Row>
             <input style={field} type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 314 555 0100" aria-label="Mobile number" value={phone} onChange={e => setPhone(e.target.value)} onKeyDown={e => { if (e.key === "Enter") void textCode() }} />
@@ -211,7 +152,7 @@ export default function SetupPage() {
             </Row>
           </>
         )}
-        {now("phone") && !s.phone.required && <Row><button type="button" style={primary} disabled={busy} onClick={() => { void send("phone_later") }}>Carry on</button></Row>}
+        {now("phone") && <Row><button type="button" style={primary} disabled={busy} onClick={() => { void send("phone_later") }}>Later</button></Row>}
         {past("phone") && <Me>{s.phone.verified ? "Verified" : "Later"}</Me>}
 
         {s.phone.verified && <Bot>{s.phone.whatsappNumber

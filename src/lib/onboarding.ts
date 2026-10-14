@@ -106,8 +106,8 @@ export const STEPS: Step[] = ["phone", "resume", "confirm", "gmail", "roles", "d
 /** The one question to ask now. Each answer is kept on the server, so a reload or a trip to Google comes back here. */
 export function nextStep(setup: Setup, facts: Facts): Step {
   if (facts.complete) return "done"
-  // New accounts verify first; provider downtime never grants verification.
-  if (!facts.phoneVerified && (facts.phoneRequired || !setup.phoneLater)) return "phone"
+  // Ask for the phone first. Later defers setup without claiming verification.
+  if (!facts.phoneVerified && !setup.phoneLater) return "phone"
   if (!setup.consent) return setup.read && hasContact(setup.read) ? "confirm" : "resume"
   if (!setup.gmailDone) return "gmail"
   if (!setup.domain || !(setup.branches || []).length) return "roles"

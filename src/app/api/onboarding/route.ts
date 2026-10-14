@@ -26,6 +26,7 @@ function answer(at: Loaded, setup: Setup = at.setup, facts = at.facts) {
   const first = (at.profile?.full_name || at.user.name || "").trim().split(/\s+/)[0] || ""
   return {
     ok: true, step: nextStep(setup, facts), steps: STEPS, hello: first,
+    resumeOnly: ["janjiaarya@gmail.com", "tryguessup@gmail.com"].includes(at.user.email?.toLowerCase() || ""),
     // Set up already (before this conversation existed, or an admin): there is nothing to ask.
     already: facts.complete && !setup.consent,
     resumeName: setup.resumeName || "", read: setup.read || null, consent: setup.consent || "",
@@ -70,7 +71,6 @@ export async function POST(request: NextRequest) {
   } else if (action === "decline_resume") {
     setup = { ...setup, consent: "no" }
   } else if (action === "phone_later") {
-    if (facts.phoneRequired && !facts.phoneVerified) return NextResponse.json({ error: "Verify your mobile number to carry on." }, { status: 409, ...PRIVATE })
     setup = { ...setup, phoneLater: true }
   } else if (action === "gmail_done") {
     setup = { ...setup, gmailDone: true }

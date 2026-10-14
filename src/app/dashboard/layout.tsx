@@ -3,6 +3,7 @@ import "./dashboard-shell.css"
 import SidebarNav from "./sidebar-nav"
 import PageTransition from "./page-transition"
 import DeviceGuard from "./device-guard"
+import PhoneReminder from "./phone-reminder"
 import OnboardingGate from "./onboarding-gate"
 import FloatingAgent from "./_components/floating-agent"
 
@@ -24,6 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         minHeight: "100vh",
         padding: "40px 44px 80px",
       }}>
+        <PhoneReminder />
         {resumeOnly ? <DeviceGuard><PageTransition>{children}</PageTransition></DeviceGuard> : <OnboardingGate><DeviceGuard><PageTransition>{children}</PageTransition></DeviceGuard></OnboardingGate>}
       </main>
 
