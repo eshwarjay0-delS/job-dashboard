@@ -59,27 +59,28 @@ export function mountKompasHtml(html: string): string {
       return nativeFetch(url, Object.assign({}, options, { headers: headers }));
     }
     if (url.origin === location.origin && url.pathname === '/api/answer') {
-      // The copilot's answer, re-delivered for a human listener (2026-10-11):
-      // the technical substance stays exactly as the backend wrote it; only the
-      // delivery is re-paced so the interviewer can stay with the speaker.
-      // If the polish fails, the original answer goes through untouched.
-      var reqQuestion = '', reqRole = '';
-      try {
-        var reqBody = options && options.body ? options.body : (input instanceof Request ? null : null);
-        if (typeof reqBody === 'string') {
-          var parsed = JSON.parse(reqBody);
-          reqQuestion = (parsed.question || '').slice(0, 500);
-          reqRole = ((parsed.config && parsed.config.interviewer) || '').slice(0, 40);
-        }
-      } catch {}
-      url.pathname = '/kompas' + url.pathname;
+      // MarketFit's native session answer engine (2026-10-14): sessions run on
+      // OpenRouter, max priority — no more Groq free-tier rate limits mid-session.
+      // The engine generates the answer already balanced for a human listener
+      // and grounded in the speaker's dossier, so the humanize pass is skipped.
+      url.pathname = '/api/kompas/answer';
       const answered = input instanceof Request ? nativeFetch(new Request(url, input)) : nativeFetch(url, options);
       return answered.then(async (res) => {
         let data;
         try { data = await res.clone().json(); } catch { return res; }
+        if (data && (data.polished || (data.meta && data.meta.engine === 'marketfit'))) return res;
         const text = data && typeof data.text === 'string' ? data.text.trim() : '';
         if (!text || data.degraded || data.noQuestion || data.busy) return res;
         try {
+          var reqQuestion = '', reqRole = '';
+          try {
+            var reqBody = options && options.body ? options.body : null;
+            if (typeof reqBody === 'string') {
+              var parsed = JSON.parse(reqBody);
+              reqQuestion = (parsed.question || '').slice(0, 500);
+              reqRole = ((parsed.config && parsed.config.interviewer) || '').slice(0, 40);
+            }
+          } catch {}
           const hr = await nativeFetch('/api/kompas/humanize', {
             method: 'POST', headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ text, question: reqQuestion, role: reqRole }),

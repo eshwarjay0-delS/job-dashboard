@@ -5,7 +5,7 @@
 //   • "heavy"  (full resume tailoring)                  → quality first:    Anthropic → OpenRouter → Gemini
 // A UI preference can pin a specific provider per tier; "auto" uses the order above.
 
-import { OPENAI_DEFAULT, VAULT_PROVIDERS, allows, loadVault, readyVault, ticked, vaultKey } from "./keyVault.ts"
+import { OPENAI_DEFAULT, VAULT_PROVIDERS, allows, defaultProvider, loadVault, readyVault, ticked, vaultKey } from "./keyVault.ts"
 
 // The vault is asked for as soon as this file is loaded, so that by the time a route gathers its keys a key kept only on
 // the Admin page is usually already known to this server instance.
@@ -279,10 +279,15 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
   const purpose = opts.purpose || "other"
   const keys = applyVault(opts.keys, purpose)
   const first = pickProvider(keys, opts.tier, pref)
-  // OpenAI is in no automatic order (see tailorKeys). The one automatic call that asks it is for a feature outside the
-  // resume tailor that the admin ticked for OpenAI on the Admin page: that tick is the instruction to use it, so it is
-  // asked first and the free providers stand behind it.
-  const lead: Provider[] = pref === "auto" && keys.openai && ticked("openai", purpose) && !OPENAI_DEFAULT.includes(purpose) ? ["openai"] : []
+  // A feature's default AI (Admin page, else the built-in table) is asked first; the
+  // other ticked providers stand behind it. This is how "Sessions run on OpenRouter"
+  // is kept: the default leads, it does not fence the others out.
+  const lead: Provider[] = []
+  if (pref === "auto") {
+    const def = defaultProvider(purpose)
+    if (def && keys[def] && !lead.includes(def)) lead.push(def)
+    if (keys.openai && ticked("openai", purpose) && !OPENAI_DEFAULT.includes(purpose) && !lead.includes("openai")) lead.push("openai")
+  }
   if (!first && !lead.length) throw new Error("No API key configured. Add a Claude, OpenRouter, or Gemini key in Settings.")
   const named = pref !== "auto" && !!keys[pref]
   const began = Date.now()
@@ -295,7 +300,8 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
     const paidToo = process.env.LLM_AUTO_FALLBACK_PAID === "1" || process.env.LLM_AUTO_FALLBACK_PAID === "true"
     const free = (p: Provider) => p === "gemini" || p === "groq" || (p === "openrouter" && /:free$/i.test(modelFor(p, opts.tier)))
     const keyed = AUTO_ORDER[opts.tier].filter(p => !!keys[p]).filter((p, i) => i === 0 || paidToo || free(p))
-    order = [...lead, ...keyed.filter(p => (downUntil.get(p) || 0) <= began), ...keyed.filter(p => (downUntil.get(p) || 0) > began)]
+    const rest = keyed.filter(p => !lead.includes(p))
+    order = [...lead, ...rest.filter(p => (downUntil.get(p) || 0) <= began), ...rest.filter(p => (downUntil.get(p) || 0) > began)]
   }
   // A further provider is started only while the call is young. A refusal that will not clear comes back in under a second,
   // so the next provider is asked at once; after a slow failure (a timeout, a rate limit waited out) the caller has usually

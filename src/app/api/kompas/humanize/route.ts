@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
       keys,
       purpose: "kompas:humanize",
       tier: "light",
+      // No pref: the feature's default AI governs (OpenRouter unless the admin changes it).
       system: SYSTEM + (grounding ? `\n\nGROUNDING — the speaker's real background. Prefer their actual projects and prior answers over generic examples:\n${grounding.slice(0, 3000)}` : ""),
       user: `${role ? `The person asking is a ${role} — pitch the technical depth to them, but sound human.\n` : ""}${question ? `The interviewer asked: "${question}"\n\n` : ""}The answer to polish:\n${text}`,
       maxTokens: 1200,

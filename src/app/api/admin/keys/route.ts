@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { adminOf } from "@/lib/adminAccess"
-import { FEATURES, cleanKey, cleanUse, isVaultProvider, loadVault, saveVault, sealedWith, vaultRows, vaultSecret, type VaultChange } from "@/lib/keyVault"
+import { FEATURES, cleanDefaults, cleanKey, cleanUse, effectiveDefaults, isVaultProvider, loadVault, saveVault, sealedWith, vaultRows, vaultSecret, type VaultChange } from "@/lib/keyVault"
 import { envKey, forgetProviderFailures } from "@/lib/llm"
 import { forgetLlmStatus } from "@/lib/llmStatus"
 import { checkRateLimit, clientIp } from "@/lib/rateLimit"
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic"
 const NO_STORE = { "Cache-Control": "no-store" }
 
 function view() {
-  return { canStore: vaultSecret() !== null, sealedWith: sealedWith(), providers: vaultRows(p => !!envKey(p)), features: FEATURES }
+  return { canStore: vaultSecret() !== null, sealedWith: sealedWith(), providers: vaultRows(p => !!envKey(p)), features: FEATURES, defaults: effectiveDefaults() }
 }
 
 export async function GET(request: NextRequest) {
@@ -43,9 +43,26 @@ export async function POST(request: NextRequest) {
 
   const text = await request.text()
   if (text.length > 8192) return NextResponse.json({ error: "Too much was sent." }, { status: 413, headers: NO_STORE })
-  let body: { provider?: unknown; key?: unknown; remove?: unknown; use?: unknown }
+  let body: { provider?: unknown; key?: unknown; remove?: unknown; use?: unknown; defaults?: unknown }
   try { body = JSON.parse(text) } catch { return NextResponse.json({ error: "That could not be read." }, { status: 400, headers: NO_STORE }) }
-  if (!body || !isVaultProvider(body.provider)) return NextResponse.json({ error: "Choose a provider." }, { status: 400, headers: NO_STORE })
+  if (!body) return NextResponse.json({ error: "That could not be read." }, { status: 400, headers: NO_STORE })
+
+  // The per-feature AI choice is a document-wide change, not tied to one provider.
+  if (body.defaults !== undefined) {
+    const defaults = cleanDefaults(body.defaults)
+    if (!defaults) return NextResponse.json({ error: "The AI choices could not be read." }, { status: 400, headers: NO_STORE })
+    try {
+      await saveVault({ defaults })
+    } catch {
+      return NextResponse.json({ error: "The change could not be saved just now. Nothing was changed. Try again." }, { status: 503, headers: NO_STORE })
+    }
+    forgetProviderFailures()
+    forgetLlmStatus()
+    console.info(`[key-vault] feature AI defaults changed`)
+    return NextResponse.json({ ok: true, ...view() }, { headers: NO_STORE })
+  }
+
+  if (!isVaultProvider(body.provider)) return NextResponse.json({ error: "Choose a provider." }, { status: 400, headers: NO_STORE })
 
   const change: VaultChange = { provider: body.provider }
   if (body.key !== undefined && body.key !== "") {
