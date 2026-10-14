@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { guardText, needsGuard } from '../../src/lib/kompasGuards.ts'
 import { audienceGuidance } from '../../src/lib/kompasAudience.ts'
 
@@ -30,4 +31,15 @@ test('explicit mixed audience overrides architect detail, and directors receive 
   assert.match(audienceGuidance('director', 'Would you delay launch?'), /evidence would change the decision/)
   assert.match(audienceGuidance('technical_hr', 'What is authorization?'), /everyday language/)
   assert.match(audienceGuidance('engineer', 'How would you test this?'), /trust boundary/)
+  assert.match(audienceGuidance('engineer', 'How would you test this?'), /first sentence answers the question/)
+  assert.match(audienceGuidance('director', 'Would you delay launch?'), /tradeoff, or how the result is checked/)
+})
+
+test('the live page says a problem before the session and does not leave a failure on the card', () => {
+  const page = readFileSync(new URL('../../public/kompas/app.js', import.meta.url), 'utf8')
+  assert.match(page, /function beforeSessionNotice/)
+  assert.match(page, /Session has not started\. The answer service is not ready/)
+  assert.match(page, /isUnavailableAnswer\(\{ degraded: true \}, t\)/)
+  assert.doesNotMatch(page, /Answer service needs attention/)
+  assert.doesNotMatch(page, /Answer engine unavailable\. Showing a prepared answer/)
 })

@@ -932,6 +932,15 @@ renderDepth();
 let running = false;
 $("startBtn").onclick = () => running ? stop() : start();
 
+function isUnavailableAnswer(meta, text) {
+  return !!meta.degraded && /answer engine is busy|answer engine hit an error|answer engine is at its limit|press AI Answer again|paid answer service returned|engine unavailable|groq's free/i.test(String(text || ""));
+}
+function beforeSessionNotice(message) {
+  const m = String(message || "");
+  if (/credit|402|quota|allowance/i.test(m)) return "Session has not started. The answer service has no credit left.";
+  if (/sign in|401|403|not signed/i.test(m)) return "Session has not started. Sign in again, then check again.";
+  return "Session has not started. The answer service is not ready. Check again before starting.";
+}
 let sessionReadyUntil = 0;
 let sessionCheckPending = false;
 async function checkSessionReadiness() {
@@ -954,7 +963,7 @@ async function checkSessionReadiness() {
   } catch (error) {
     sessionReadyUntil = 0;
     button.textContent = "Check again";
-    status("Session has not started. " + String(error.message || "Please check your connection and try again."), "err");
+    status(beforeSessionNotice(error.message), "err");
   } finally { button.disabled = false; sessionCheckPending = false; }
 }
 
@@ -1635,16 +1644,16 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const ctx = nextContext(card, writeAnchor);
   const retrieved = retrieve(derivedQ || plainHeard, consolidated ? 5 : 4);
   const prep = { ...slimPrep(), questions: retrieved.length ? [] : ((current && current.prep && current.prep.questions) || []).slice(0, 30) };
-  const show = (t) => { if (card.req !== ctl) return; card.answer = t.trim() ? t : ["…"]; if (cards[idx] === card) renderCard(); };
+  const show = (t) => { if (card.req !== ctl || isUnavailableAnswer({ degraded: true }, t)) return; card.answer = t.trim() ? t : ["…"]; if (cards[idx] === card) renderCard(); };
   const recoverAnswer = (code = "", retryAfterMs = 1000) => {
     card.streaming = false;
     card.answer = keepOld ? prevAnswer : [];
+    card.meta = keepOld ? (prevMeta || "") : "";
     const permanent = /AUTH|CREDITS|FORBIDDEN|NOT_CONFIGURED/.test(code);
     const tries = (opts.retries || 0) + 1;
     const retry = !permanent && tries <= 2 && retryAfterMs <= 15000;
-    card.meta = keepOld ? "Previous answer" : "Question saved";
     if (cards[idx] === card) renderCard();
-    status(retry ? "Reconnecting… Your question is saved." : "Answer service needs attention. Your question is saved.", "live");
+    status("Reconnecting.", "live");
     logAnswer({ failed: code || "provider_unavailable", retrying: retry });
     sessionReadyUntil = 0;
     if (retry) setTimeout(() => {
@@ -1674,13 +1683,13 @@ async function generateAnswerRequest(question, card, opts = {}) {
           if (ev.type === "meta") { meta = { ...meta, ...ev }; if (consolidated && ev.derived && card.req === ctl) { card.question = ev.derived; if (cards[idx] === card) renderCard(); } }
           else if (ev.type === "delta") { if (!first) first = performance.now() - t0; text += ev.text; show(text); }
           else if (ev.type === "replace") { if (!first) first = performance.now() - t0; text = ev.text; show(text); }
-          else if (ev.type === "wait") { if (card.req === ctl) { status(`The answer lane is at its per-minute limit — continuing in ${Math.ceil(ev.ms / 1000)}s…`, "live"); card.meta = `waiting ${Math.ceil(ev.ms / 1000)}s for answer capacity…`; if (cards[idx] === card) renderCard(); } }
+          else if (ev.type === "wait") { if (card.req === ctl) status("Reconnecting.", "live"); }
           else if (ev.type === "done") meta = { ...meta, ...ev };
         }
       }
     }
     if (card.req !== ctl) return;                                      // a newer request took this card over
-    if (meta.error || meta.unavailable || meta.busy || (meta.degraded && /^\s*(?:[-*]\s*)?The answer engine (?:is busy|is at its limit|hit an error)/i.test(String(text || "")))) {
+    if (meta.error || meta.unavailable || meta.busy || isUnavailableAnswer(meta, text)) {
       recoverAnswer(meta.code || (meta.daily ? "CREDITS" : ""), meta.retryAfterMs || 1000);
       return;
     }
@@ -1699,7 +1708,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     const kind = ({ 0: "intro", 1: "story", 2: "reasoning", 3: "drill-down", 4: "your experience" }[meta.tier] || "") + (meta.length && ["closed", "which", "theirq", "logistics"].includes(meta.length.kind) ? " · short form" : "") + (meta.derived ? " · from everything heard" : "") + (meta.voice ? ` · voice ${meta.voice.passed}/${meta.voice.total}` : "");
     const spoken = (s) => s >= 90 ? `${Math.round(s / 60)} min` : `${s}s`;
     const len = meta.length && meta.length.secs ? ` · ~${spoken(meta.length.secs[0])}–${spoken(meta.length.secs[1])} spoken` : "";
-    card.meta = `⚡ ${(first / 1000).toFixed(2)}s · ${((performance.now() - t0) / 1000).toFixed(2)}s${kind ? " · " + kind : ""}${len}${retrieved.length ? " · dossier" : ""}${meta.degraded ? " · prepared" : ""}${meta.timing && /qwen-backup/.test(meta.timing.lane || "") && !/groq:gpt/.test((meta.timing.lane || "").split(">").pop()) ? " · backup model" : ""}${meta.checked ? " · ✓ fact-checked" : ""}`;
+    card.meta = `⚡ ${(first / 1000).toFixed(2)}s · ${((performance.now() - t0) / 1000).toFixed(2)}s${kind ? " · " + kind : ""}${len}${retrieved.length ? " · dossier" : ""}${meta.checked ? " · ✓ fact-checked" : ""}`;
     if (cards[idx] === card) renderCard();
     logAnswer({ derived: meta.derived || derivedQ || "", derivedBy: derivedBy || "", kind: meta.length && meta.length.kind, tier: meta.tier, lane: meta.timing && meta.timing.lane, voice: meta.voice && `${meta.voice.passed}/${meta.voice.total}`, ms: Math.round(performance.now() - t0), depthKey });
     if (!meta.degraded && !/backup model/.test(card.meta)) { card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta }; }
