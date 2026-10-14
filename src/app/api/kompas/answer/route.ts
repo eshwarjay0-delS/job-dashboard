@@ -3,6 +3,7 @@ import { authenticatedUser } from "@/lib/authBoundary"
 import { callLLM, keysFor, modelFor, resolveKeys, type LlmKeys } from "@/lib/llm"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { dossierContext } from "@/lib/dossier"
+import { resumeRoles, resumeDigest, employerAliases } from "@/lib/kompasResume"
 import { hashUserId } from "@/lib/sttLedger"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
@@ -176,6 +177,17 @@ DELIVERY (this is the balance — hold it on every answer):
 - STRUCTURAL PAUSES — write these markers into the text: [beat] (once or twice per answer, BEFORE the key insight the listener must remember), [breath] (between ideas/steps so the listener catches up). Never stack them, never open with one.
 - PLAIN VERBS: use, fix, check — not utilize, remediate, validate. Never "stakeholders" (name the role), never "leveraged", never "great question".
 
+CLARITY (the standard for every answer — nothing abstract, unfinished or unclear, ever):
+- MIRROR, LIKE CLEAR RIVER WATER: reflect this interviewer's own world back to them — their vocabulary, their priorities, the question behind their question — clean, still and easy to see through. One clear line of thought per paragraph, in a natural order. No tangents, no needless hedging, no stacked qualifiers. State a real uncertainty plainly; confidence never turns an assumption into an observation.
+- THE QUESTION'S OWN SUBJECT FIRST: if it names a thing (an alert, a playbook, a control, an outage), the first two sentences deal with that thing. Never swap in a nearby topic you know better.
+- EVERY PART ANSWERED: when the question asks two things, answer each one by name. "Who do you tell" is answered with a role (the incident commander, my director), not "the stakeholders".
+- A SCENARIO IS A DESIGN: when the question sets a condition ("suppose", "tonight", "if"), answer with what you would do, in order — "I would…", "my first check is…". Past work appears only as one sentence of proof from the background.
+- A REQUIREMENT IS A CONSTRAINT, not a trade-off: if the question says a path must stay rare or controlled, keep that requirement in every sentence.
+- CONCRETE, NEVER INVENTED: name the tool, setting, log, step or result only when the background supplies it; otherwise describe the check conditionally. Never "various tools", "best practices", "etc." or "and so on".
+- NARRATED: connect situation, action, reason and consequence in the order the listener needs. Vary natural connecting words instead of a First/Then/Finally script.
+- FINISHED: every point you open, you close. End on a complete, deliberate final sentence — never trail off, never stop mid-thought.
+- CANDIDATE VOICE: "I"/"my"/"we" for supported experience, "I would" for a proposed approach. Never describe the answer, the candidate or the interviewer in the third person; never add notes about the answer.
+
 SUBSTANCE:
 - Ground EVERYTHING in the speaker's real background given below (identity, projects, prior answers). Prefer their actual projects and real outcomes over generic examples.
 - EVIDENCE BEFORE STORYTELLING: the background establishes only the experience it states — never upgrade a resume bullet into an incident, a metric, an error message or a date it does not contain. Never invent employers, tools, or metrics.
@@ -183,6 +195,42 @@ SUBSTANCE:
 - HIT THE LENGTH TARGET below — a quick factual ask gets a short answer, a deep dive gets room. Length is the most audible quality signal.
 
 Return only the answer, no preamble, no commentary.`
+
+// ---- perfACT MODE_BLOCKS: interview mode detected per question, not per wizard ----
+// coding beats everything (the question asks for code); a final-round interviewer
+// (architect/director/lead/supervisor) gets the final block; tier 1 experience
+// questions get behavioural; everything else gets technical.
+const CODE_ASK_Q =
+  /\b(write|implement|code (up|this|it)|coding|function|algorithm|big.?o|time complexity|leetcode|two.?sum|palindrome|fibonacci|linked list|binary (search|tree)|hash ?map|array|substring|reverse (a|the) (string|list)|sql (query|to)|query (to|that)|regex (to|for|that)|script (to|that)|class (that|to)|refactor|debug (this|the)|unit test|endpoint)\b/i
+const FINAL_INTERVIEWERS = new Set(["architect", "director", "lead", "supervisor"])
+
+const MODE_BLOCKS: Record<string, string> = {
+  behavioural: `BEHAVIOURAL MODE: they score evidence about you, not systems. Each answer is one real moment, told as what you did.
+- Tell the PROJECT from the background below, at its employer: one project and one employer per answer.
+- A failure, conflict or feedback story is built on a prepared answer below or a bottleneck from your background, with roles, never names.
+- Most of the answer is your own moves, in order: "I" for your decisions, "we" only for shared execution, the other role named.
+- Answer the follow-up before it comes: the call that was yours, one detail a layer down, how you knew it worked, what you changed afterwards.
+- Own a miss early, say the cost flatly, blame nobody, and give the other side's reason fairly.
+- The result is a change of state: what changed, what is still running, who it helped. Figures from the background only, and no adjective grading it.
+- If the JD names Amazon or its Leadership Principles, aim the story at the one principle the question points to and let the result prove it. Never say its name.
+- Never a student, lab or side-project story.`,
+  technical: `TECHNICAL MODE: they score mechanism, judgement and evidence, never vocabulary.
+- Take each part down the ladder: what it is, how it works in the order the data or the attacker moves, why it is built that way and what that costs, and where it breaks.
+- Show judgement: the option you rejected and why, the fact that decided it, and the condition that would flip your call. Commit; never end on "it depends".
+- Anchor once in work the background below represents: the platform, log source, rule logic, real release or integration.
+- A tool the background does not name: one clause says it was not yours and names the product you ran for that job, then the full answer in the present tense.
+- Every control gets its limit. A fix or an incident closes on how you proved it held and what stops a repeat.
+- Stay inside what was asked: a question about one product is answered from inside it, and the wider stack only if they ask.`,
+  coding: `CODING INTERVIEW. When they ask you to write, fix, optimise or design code: (1) one sentence on your approach and its time and space complexity; (2) the code in ONE fenced block with the language tag (\`\`\`python) — complete and runnable, idiomatic, edge cases handled, meaningful names, no "..." or placeholder comments; (3) then say it like you would to the interviewer: how it works in 3-5 short sentences, the complexity, one edge case and how the code handles it, and one trade-off or alternative you would mention. Use the language they name; otherwise the one the background shows most. For a concept question with no code asked, answer in speech with a tiny snippet only if it clearly helps. Never invent an API, library function or flag — if unsure it exists, use plain language constructs. Talk about THIS code: never claim you wrote it before or tie it to a project, test suite, pipeline or tool unless the background shows exactly that.`,
+  final: `FINAL ROUND (Architect, Director, Lead, Supervisor). Answer the question word for word: sentence one is the answer to exactly what they asked, in their terms. Then only what that question needs — the decision, the reason, the one fact that proves it. No preamble, no background they did not ask for, no second topic, no recap, no pitch. Every sentence must earn its place; stop when the question is answered.`,
+}
+
+function modeBlock(tier: number, question: string, interviewer: string): string {
+  if (CODE_ASK_Q.test(question)) return MODE_BLOCKS.coding
+  if (FINAL_INTERVIEWERS.has(interviewer)) return MODE_BLOCKS.final
+  if (tier === 1) return MODE_BLOCKS.behavioural
+  return MODE_BLOCKS.technical
+}
 
 function str(v: unknown, max: number): string {
   return typeof v === "string" ? v.trim().slice(0, max) : ""
@@ -510,9 +558,36 @@ export async function POST(request: NextRequest) {
     .map((k) => ledgerProjects.find((p) => p.id === k)?.title || k)
     .filter(Boolean)
 
+  // perfACT's resume intelligence: the resume is where the specifics live
+  // (employer, tools, platforms). TF-IDF digest fitted to THIS question so
+  // the model sees the right experience — a naive head-cut of a long resume
+  // holds only the summary and skills, never the experience section.
+  // Complements the dossier (the growing store); this is the fitted excerpt.
+  const resumeText = str(config.resume, 12000)
+  let resumeFacts = ""
+  if (resumeText && resumeText.length > 200) {
+    const rr = resumeRoles(resumeText)
+    const aliasLines = employerAliases(
+      rr.employers,
+      `${question}\n${transcript}`,
+    ).map(
+      (a) => `SAME EMPLOYER: "${a.said}" (as said in this interview) is the resume's "${a.resume}" — you work there. Say "${a.said}".`,
+    )
+    const askForDigest = `${question}\n${transcript.slice(-600)}`
+    const digest = resumeDigest(resumeText, askForDigest, plan.kind === "short" ? 1600 : 4600)
+    resumeFacts = [
+      rr.current ? `CURRENT ROLE (from the resume — use this exact title): ${rr.current}` : "",
+      ...aliasLines,
+      `RESUME (fitted to this question — every role, then the lines that match it):\n${digest}`,
+    ]
+      .filter(Boolean)
+      .join("\n")
+  }
+
   const context = [
     `The interviewer is a ${interviewer} — pitch the technical depth to them.`,
     `QUESTION TYPE: ${why} (tier ${tier}). ${rule}`,
+    `INTERVIEW MODE: ${modeBlock(tier, question, interviewer)}`,
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
     `LENGTH TARGET: about ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Hit it — a quick factual ask gets a short answer, a deep dive gets room.`,
     tier !== 0 && routedProject
@@ -527,6 +602,7 @@ export async function POST(request: NextRequest) {
     prep.persona ? `Persona: ${str(prep.persona, 800)}` : "",
     prep.projects ? `Candidate's real projects: ${str(prep.projects, 2000)}` : "",
     grounding ? `Real background (prefer over generic examples):\n${grounding.slice(0, 3000)}` : "",
+    resumeFacts ? `${resumeFacts}` : "",
     transcript ? `Conversation so far:\n${transcript}` : "",
     history ? `Earlier in this interview:\n${history}` : "",
     retrieved ? `Retrieved notes:\n${retrieved}` : "",
