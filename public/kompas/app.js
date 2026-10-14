@@ -931,13 +931,42 @@ renderDepth();
 /* ---- start / stop ---- */
 let running = false;
 $("startBtn").onclick = () => running ? stop() : start();
+
+let sessionReadyUntil = 0;
+let sessionCheckPending = false;
+async function checkSessionReadiness() {
+  if (sessionCheckPending) return;
+  sessionCheckPending = true;
+  const button = $("startBtn");
+  button.disabled = true;
+  button.textContent = "Checking…";
+  status("Checking the paid answer service before your session…", "live");
+  try {
+    const response = await fetch("/api/answer", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ preflight: true }), signal: AbortSignal.timeout(50000),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.ready !== true) throw new Error(result.error || "The answer service is not ready. Please check again before starting.");
+    sessionReadyUntil = Date.now() + 30000;
+    button.textContent = "Start session";
+    status("Answer service ready. Press Start session to connect your audio.", "live");
+  } catch (error) {
+    sessionReadyUntil = 0;
+    button.textContent = "Check again";
+    status("Session has not started. " + String(error.message || "Please check your connection and try again."), "err");
+  } finally { button.disabled = false; sessionCheckPending = false; }
+}
+
 async function start() {
+  if (Date.now() >= sessionReadyUntil) { await checkSessionReadiness(); return; }
+  sessionReadyUntil = 0;
   const generation = sourceGeneration.You;
   primeAudio();                       // inside the click, so the browser lets audio run
   if (!srcOn.mic && !srcOn.sys) { srcOn.mic = srcOn.sys = true; syncSrc(); }
   running = true;
   $("startBtn").textContent = "Stop"; $("startBtn").classList.add("on");
-  document.querySelector(".rec").classList.add("live"); startClock();
+  document.querySelector(".rec").classList.add("live");
   status("Starting capture…", "live");
   captureErrors = [];
   const opening = [];
@@ -946,6 +975,7 @@ async function start() {
   await Promise.allSettled(opening);
   if (!running || generation !== sourceGeneration.You) return;
   if (!captures.length) { status(captureErrors.join(" · ") || "Nothing to capture.", "err"); stop(false); return; }
+  startClock();
   markRun();
   reportSources();
 }
@@ -1606,12 +1636,28 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const retrieved = retrieve(derivedQ || plainHeard, consolidated ? 5 : 4);
   const prep = { ...slimPrep(), questions: retrieved.length ? [] : ((current && current.prep && current.prep.questions) || []).slice(0, 30) };
   const show = (t) => { if (card.req !== ctl) return; card.answer = t.trim() ? t : ["…"]; if (cards[idx] === card) renderCard(); };
+  const recoverAnswer = (code = "", retryAfterMs = 1000) => {
+    card.streaming = false;
+    card.answer = keepOld ? prevAnswer : [];
+    const permanent = /AUTH|CREDITS|FORBIDDEN|NOT_CONFIGURED/.test(code);
+    const tries = (opts.retries || 0) + 1;
+    const retry = !permanent && tries <= 2 && retryAfterMs <= 15000;
+    card.meta = keepOld ? "Previous answer" : "Question saved";
+    if (cards[idx] === card) renderCard();
+    status(retry ? "Reconnecting… Your question is saved." : "Answer service needs attention. Your question is saved.", "live");
+    logAnswer({ failed: code || "provider_unavailable", retrying: retry });
+    sessionReadyUntil = 0;
+    if (retry) setTimeout(() => {
+      if (answerEpoch === epoch && card.req === ctl)
+        generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, retries: tries, regen: opts.regen || keepOld });
+    }, Math.max(500, retryAfterMs));
+  };
   try {
     const res = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
       body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
     if (!res.ok || !res.body) {
       const failure = await res.json().catch(() => ({}));
-      throw Object.assign(new Error(failure.error || "Paid answer service returned " + res.status), { providerFailure: true });
+      throw Object.assign(new Error(failure.error || "Paid answer service returned " + res.status), { providerFailure: true, code: failure.code || (res.status === 401 || res.status === 403 ? "AUTH" : ""), retryAfterMs: failure.retryAfterMs });
     }
     if (!(res.headers.get("content-type") || "").includes("event-stream")) {
       const data = await res.json(); text = data.text || ""; first = performance.now() - t0; meta = data;
@@ -1634,40 +1680,12 @@ async function generateAnswerRequest(question, card, opts = {}) {
       }
     }
     if (card.req !== ctl) return;                                      // a newer request took this card over
-    if (meta.error || meta.unavailable) {
-      card.streaming = false;
-      card.answer = keepOld ? prevAnswer : [meta.error || "The paid provider could not complete this answer. Your question is saved."];
-      card.meta = keepOld ? "previous answer kept" : "answer unavailable";
-      if (cards[idx] === card) renderCard();
-      logAnswer({ failed: meta.code || "provider_unavailable" });
-      status(meta.error || "The paid provider is unavailable. Your question is saved.", "err");
+    if (meta.error || meta.unavailable || meta.busy || (meta.degraded && /^\s*(?:[-*]\s*)?The answer engine (?:is busy|is at its limit|hit an error)/i.test(String(text || "")))) {
+      recoverAnswer(meta.code || (meta.daily ? "CREDITS" : ""), meta.retryAfterMs || 1000);
       return;
     }
     if (meta.ledger) ledger = meta.ledger;
     card.streaming = false;
-    if (meta.busy) {                                                    // the answer lane's quota: wait it out, then answer by itself
-      const tries = (opts.retries || 0) + 1, wait = meta.retryAfterMs || 8000, secs = Math.ceil(wait / 1000);
-      if (meta.daily) {                                                 // a daily cap: retrying every minute won't help — say so plainly
-        const mins = Math.max(1, Math.round((meta.waitMs || wait) / 60000));
-        if (keepOld) card.answer = prevAnswer; else card.answer = [`The answer lane's daily allowance is used up right now — it frees up in about ${mins} min. Type the question or press AI Answer then.`];
-        card.meta = `Answer-lane daily limit — about ${mins} min`; if (cards[idx] === card) renderCard();
-        logAnswer({ busy: true, retryAfterMs: meta.waitMs || wait });
-        status(`The answer lane's daily allowance is used up — about ${mins} min until it frees up.`, "err");
-        return;
-      }
-      if (keepOld) card.answer = prevAnswer;
-      else card.answer = [`The answer lane is at its per-minute limit — this answer starts by itself in ${secs}s.`];
-      card.meta = tries <= 3 ? `waiting for answer capacity — automatic retry in ${secs}s` : "The answer lane is still at its limit — press AI Answer or ↓ to try again";
-      if (cards[idx] === card) renderCard();
-      logAnswer({ busy: true, retryAfterMs: wait });
-      status(tries <= 3 ? `The answer lane is at its per-minute limit — ${keepOld ? "regenerating" : "answering"} automatically in ${secs}s.` : "The answer lane is still at its limit.", "err");
-      if (tries <= 3) setTimeout(() => {
-        if (answerEpoch === epoch && card.req === ctl) return generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, retries: tries, regen: opts.regen || keepOld });
-        if (!keepOld) card.answer = ["Not answered — a newer question took over. Press ↓ or ↑ to answer this one."];   // a newer answer started: this retry stands down
-        card.meta = keepOld ? "regeneration skipped — a newer question came in" : ""; if (cards[idx] === card) renderCard();
-      }, wait);
-      return;
-    }
     if (meta.noQuestion) {                                              // nothing heard was a question
       card.question = "No question yet";
       card.answer = ["Nothing said since your last answer was a question for you. Keep listening — press AI Answer once they ask, or type the question."];
@@ -1713,14 +1731,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
       if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.split("\n").pop().slice(0, 200);
       card.meta = "superseded by the next question"; if (cards[idx] === card) renderCard(); return;
     }
-    const fb = e && e.providerFailure ? null : retrieved[0];
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.split("\n").pop().slice(0, 200);
-    if (keepOld) { card.answer = prevAnswer; card.meta = "couldn't regenerate — press ↓/↑ again"; if (cards[idx] === card) renderCard(); status("Couldn't reach the answer engine — kept the previous answer.", "err"); return; }
-    card.answer = fb ? fb.a : ["Couldn't reach the answer engine — " + (e && e.message || e)];
-    card.meta = fb ? "prepared answer (engine unreachable)" : "";
-    if (cards[idx] === card) renderCard();
-    logAnswer({ failed: String(e && e.message || e) });
-    status(fb ? "Answer engine unavailable. Showing a prepared answer." : String(e && e.message || "Paid provider unavailable. Your question is saved."), "err");
+    recoverAnswer(e && e.code || "", e && e.retryAfterMs || 1000);
   } finally { release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
 }
 

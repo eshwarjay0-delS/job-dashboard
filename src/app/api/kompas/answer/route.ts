@@ -530,6 +530,15 @@ export async function POST(request: NextRequest) {
   const vaultKeys = await keysFor("kompas:answer", () => resolveKeys({}))
   const paidKey = vaultKeys.openrouter || resolveKeys({}).openrouter
   if (!paidKey) return NextResponse.json({ error: "Paid OpenRouter is not configured.", code: "OPENROUTER_NOT_CONFIGURED" }, { status: 503, headers: NO_STORE })
+  if (body.preflight === true) {
+    try {
+      await fetchOpenRouter(paidKey, PAID_MODEL, "Reply with READY only.", "Check answer service readiness.", 256, AbortSignal.any([request.signal, AbortSignal.timeout(20000)]))
+      return NextResponse.json({ ready: true, provider: "openrouter", model: PAID_MODEL, checkedAt: Date.now() }, { headers: NO_STORE })
+    } catch (e) {
+      const failure = answerFailure(String((e as Error)?.message || e))
+      return NextResponse.json({ ready: false, ...failure }, { status: failure.status, headers: NO_STORE })
+    }
+  }
   const rawKeys: LlmKeys = { openrouter: paidKey }
   const uHash = hashUserId(user.id)
   let grounding = ""
