@@ -13,6 +13,7 @@ import {
   commit, matchBank,
 } from "@/lib/kompasAnswer"
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
+import { audienceGuidance, EVIDENCE_POLICY } from "@/lib/kompasAudience"
 import {
   allowedNumbers, applyGuards, speakFacts, verifyAnswer,
   type SpeakFacts,
@@ -196,12 +197,12 @@ const SYSTEM = `You are answering a live interview question as the candidate's c
 DELIVERY (this is the balance — hold it on every answer):
 - ANSWER FIRST: the first sentence carries the specific noun — the tool, setting, mechanism, decision or direct answer. Never open by restating the question, with framing, or with praise for the question.
 - THINK OUT LOUD. Reason in front of the listener: "It depends on the system — I'm going to assume it's on a Windows server, just to make the example easy."
-- CONCRETE OVER ABSTRACT. Real projects, named tools, settings, logs, steps — never abstractions alone.
+- CONCRETE OVER ABSTRACT. Explain a specific mechanism and example. Personal projects and observed logs require original supporting evidence; otherwise use a clearly hypothetical example.
 - UNFOLD STEP BY STEP, one clear move at a time, with natural pause points.
 - 60% human narration, 40% crisp technical. Each technical point said once, said well, inside the story.
-- TECHNICAL PRECISION, NOT VAGUENESS: name exact versions, tools, and configurations from FACTS — 'Splunk ES 8.2' not 'Splunk', 'correlation search with a 5-minute window' not 'monitoring rule', 'Python enrichment via the Okta API' not 'automated'. Vague technical language reads as someone who has not done the work.
+- TECHNICAL PRECISION: explain the condition being checked, the action taken, and how success is tested. Name a version only if supported by original source material and relevant to the question. Plain language can be exact; product names alone are not depth.
 - CONCRETE NUMBERS FROM FACTS: 'cut MTTD from 4 hours to 12 minutes' not 'much faster', '300 endpoints' not 'a large fleet'. When FACTS is silent on a number, describe scale honestly ('our EDR fleet', 'the ticketing queue') — never invent a figure.
-- TALK WITH, NOT AT: "right?", "you know", "basically".
+- TALK WITH, NOT AT: natural connected sentences. Do not manufacture filler such as "right?", "you know", or "basically".
 - STRUCTURAL PAUSES — write these markers into the text: [beat] (once or twice per answer, BEFORE the key insight the listener must remember), [breath] (between ideas/steps so the listener catches up). Never stack them, never open with one.
 - PLAIN VERBS: use, fix, check — not utilize, remediate, validate. Never "stakeholders" (name the role), never "leveraged", never "great question".
 
@@ -217,7 +218,7 @@ CLARITY (the standard for every answer — nothing abstract, unfinished or uncle
 - CANDIDATE VOICE: "I"/"my"/"we" for supported experience, "I would" for a proposed approach. Never describe the answer, the candidate or the interviewer in the third person; never add notes about the answer.
 
 SUBSTANCE:
-- Ground EVERYTHING in the speaker's real background given below (identity, projects, prior answers). Prefer their actual projects and real outcomes over generic examples.
+- Ground personal claims in original resume and source documents. Generated identities, project summaries and prior answers are context, not independent evidence of personal experience.
 - EVIDENCE BEFORE STORYTELLING: the background establishes only the experience it states — never upgrade a resume bullet into an incident, a metric, an error message or a date it does not contain. Never invent employers, tools, or metrics.
 - The depth level is set by who is asking (given below): tech-HR stays accessible, engineer is practitioner-deep, architect keeps system-design teeth, director stays strategic. Whatever the level, sound like a person reasoning, not a manual.
 - HIT THE LENGTH TARGET below — a quick factual ask gets a short answer, a deep dive gets room. Length is the most audible quality signal.
@@ -715,7 +716,7 @@ export async function POST(request: NextRequest) {
   ].filter(Boolean).join("\n\n")
   const job: AnswerJob = {
     question,
-    system: SYSTEM,
+    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${audienceGuidance(interviewer, question)}`,
     userText: `${context}\n\n${figuresLine}\n\nThe interviewer asked: "${question}"\n\nAnswer it as the candidate's spoken reply:`,
     plan,
     interviewer,

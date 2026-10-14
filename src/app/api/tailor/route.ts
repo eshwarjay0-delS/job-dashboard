@@ -4,6 +4,7 @@ import path from "path"
 import { runTailor } from "@/lib/tailor"
 import { recordTailor } from "@/lib/tailorLedger"
 import { deductPoints, POINTS_PER_RESUME } from "@/lib/creditsLedger"
+import { hasUnlimitedResumeTestAccess } from "@/lib/resumeTestAccess"
 import { hashUserId } from "@/lib/sttLedger"
 import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { authenticatedUser, signInRequired, ownedResumePath } from "@/lib/authBoundary"
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Server-side weekly usage cap (prevents unlimited calls by localStorage clearing or different browsers)
-    if (TAILOR_WEEKLY_LIMIT > 0) {
+    if (TAILOR_WEEKLY_LIMIT > 0 && !hasUnlimitedResumeTestAccess(user.email)) {
       const rl = checkRateLimit(`tailor:${userId}`, { max: TAILOR_WEEKLY_LIMIT, windowMs: WEEK_MS })
       if (!rl.ok) {
         const daysLeft = rl.retryAfterSec ? Math.ceil(rl.retryAfterSec / 86400) : 7
@@ -95,7 +96,9 @@ export async function POST(request: NextRequest) {
     // interview session). Idempotent per generation — retries cost nothing extra.
     const resumeId = (result as { id?: unknown }).id
     if (typeof resumeId === "string" && resumeId) {
-      after(() => deductPoints(hashUserId(userId), POINTS_PER_RESUME, `resume:${resumeId}`, "resume"))
+      if (!hasUnlimitedResumeTestAccess(user.email)) {
+        after(() => deductPoints(hashUserId(userId), POINTS_PER_RESUME, `resume:${resumeId}`, "resume"))
+      }
     }
     return NextResponse.json(result)
   } catch (e: unknown) {
