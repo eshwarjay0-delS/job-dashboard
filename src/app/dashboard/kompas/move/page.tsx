@@ -42,7 +42,7 @@ function gatherBrowserPros(): BlendFile["browser"] {
     if (row.t && row.t !== "answer") return
     const q = String(row.q ?? row.question ?? row.derived ?? "").trim()
     const raw = row.a ?? row.answer ?? row.text
-    const a = (Array.isArray(raw) ? raw.filter((v): v is string => typeof v === "string").join("\\n") : typeof raw === "string" ? raw : "").trim()
+    const a = (Array.isArray(raw) ? raw.filter((v): v is string => typeof v === "string").join("\n") : typeof raw === "string" ? raw : "").trim()
     if (q && a.length > 20) out.qa.push({ q: q.slice(0, 500), a: a.slice(0, 4000) })
   }
   try {
@@ -87,12 +87,12 @@ function gatherBrowserPros(): BlendFile["browser"] {
     // question may be more natural, and the original should still survive.
     const seen = new Set<string>()
     out.qa = out.qa.filter((t) => {
-      const k = t.q.toLowerCase().replace(/\\s+/g, " ") + "\\u0000" + t.a.toLowerCase().replace(/\\s+/g, " ")
+      const k = t.q.toLowerCase().replace(/\s+/g, " ") + "\u0000" + t.a.toLowerCase().replace(/\s+/g, " ")
       if (seen.has(k)) return false
       seen.add(k)
       return true
     })
-    out.qbank = [...new Set(out.qbank.map(q => q.replace(/\\s+/g, " ").trim()))]
+    out.qbank = [...new Set(out.qbank.map(q => q.replace(/\s+/g, " ").trim()))]
   } catch { /* a broken store exports nothing rather than breaking the page */ }
   return out
 }
