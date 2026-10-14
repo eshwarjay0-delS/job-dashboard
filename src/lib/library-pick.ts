@@ -83,6 +83,11 @@ export function choiceIn(line: string, slots: string[]): string {
   const rest = afterVerb.replace(NOUN, "").replace(/^the\s+/, "").replace(/\s+(?:one|email|e-mail|mail|library|folder|account|option)$/, "").trim()
   const named = byName(said) || byName(rest)
   if (named) return named
+  // Recognize natural selections, without extracting a recruiter email from a pasted JD.
+  if (said.length <= 160 && /^(?:the\s+)?(?:email|e-mail|account|address|library)\s+(?:is|should be|will be|for|to use)\b|^(?:for|use|choose|pick|select|switch to|change to|please use|i want|i choose)\b/.test(said)) {
+    const mentioned = [...new Set((said.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/g) || []).map(lower))]
+    if (mentioned.length === 1 && emails.includes(mentioned[0])) return mentioned[0]
+  }
   // A digit or "second" is an answer wherever it stands. "one", "two" as words are an answer alone or after a word
   // like "number" or "email": "pick one", "the one", "no one" are sentences, and the question is asked again.
   const n = /^[1-9]\d?$/.test(rest) ? Number(rest) : /^0[1-9]$/.test(rest) && said === rest ? Number(rest) : ORDINALS[rest] || (noun || said === rest ? CARDINALS[rest] || 0 : 0)
