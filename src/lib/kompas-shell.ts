@@ -58,6 +58,10 @@ export function mountKompasHtml(html: string): string {
       url.pathname = '/api/kompas/answer';
       const answered = input instanceof Request ? nativeFetch(new Request(url, input)) : nativeFetch(url, options);
       return answered.then(async (res) => {
+        // SSE answers stream straight through — never clone/buffer them, or the
+        // first words would wait for the whole answer (2026-10-14).
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('event-stream')) return res;
         let data;
         try { data = await res.clone().json(); } catch { return res; }
         if (data && (data.polished || (data.meta && data.meta.engine === 'marketfit'))) return res;

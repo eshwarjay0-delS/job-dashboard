@@ -1521,7 +1521,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   }
   // Regenerating (depth change) or retrying: the answer on screen stays until the new one starts arriving.
   const prevAnswer = card.answer, prevMeta = card.meta;
-  const keepOld = !!(opts.regen || opts.retries) && !(Array.isArray(prevAnswer) && /^(…|Groq)/.test(String(prevAnswer[0] || "")));
+  const keepOld = !!(opts.regen || opts.retries) && !(Array.isArray(prevAnswer) && /^(…|Groq|The answer lane)/.test(String(prevAnswer[0] || "")));
   if (!keepOld) card.answer = ["…"];
   card.streaming = true; card.meta = keepOld ? `regenerating at ${depthLabel()} depth…` : ""; if (cards[idx] === card) renderCard();
   status(consolidated ? "Deriving the question and answering…" : "Answering…", "live");
@@ -1608,7 +1608,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
           if (ev.type === "meta") { meta = { ...meta, ...ev }; if (consolidated && ev.derived && card.req === ctl) { card.question = ev.derived; if (cards[idx] === card) renderCard(); } }
           else if (ev.type === "delta") { if (!first) first = performance.now() - t0; text += ev.text; show(text); }
           else if (ev.type === "replace") { if (!first) first = performance.now() - t0; text = ev.text; show(text); }
-          else if (ev.type === "wait") { if (card.req === ctl) { status(`Groq's free tier is at its per-minute limit — continuing in ${Math.ceil(ev.ms / 1000)}s…`, "live"); card.meta = `waiting ${Math.ceil(ev.ms / 1000)}s for Groq capacity…`; if (cards[idx] === card) renderCard(); } }
+          else if (ev.type === "wait") { if (card.req === ctl) { status(`The answer lane is at its per-minute limit — continuing in ${Math.ceil(ev.ms / 1000)}s…`, "live"); card.meta = `waiting ${Math.ceil(ev.ms / 1000)}s for answer capacity…`; if (cards[idx] === card) renderCard(); } }
           else if (ev.type === "done") meta = { ...meta, ...ev };
         }
       }
@@ -1616,22 +1616,22 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (card.req !== ctl) return;                                      // a newer request took this card over
     if (meta.ledger) ledger = meta.ledger;
     card.streaming = false;
-    if (meta.busy) {                                                    // Groq's per-minute quota: wait it out, then answer by itself
+    if (meta.busy) {                                                    // the answer lane's quota: wait it out, then answer by itself
       const tries = (opts.retries || 0) + 1, wait = meta.retryAfterMs || 8000, secs = Math.ceil(wait / 1000);
       if (meta.daily) {                                                 // a daily cap: retrying every minute won't help — say so plainly
         const mins = Math.max(1, Math.round((meta.waitMs || wait) / 60000));
-        if (keepOld) card.answer = prevAnswer; else card.answer = [`Groq's free daily allowance is used up on both models right now — it frees up in about ${mins} min. Type the question or press AI Answer then.`];
-        card.meta = `Groq daily limit — about ${mins} min`; if (cards[idx] === card) renderCard();
+        if (keepOld) card.answer = prevAnswer; else card.answer = [`The answer lane's daily allowance is used up right now — it frees up in about ${mins} min. Type the question or press AI Answer then.`];
+        card.meta = `Answer-lane daily limit — about ${mins} min`; if (cards[idx] === card) renderCard();
         logAnswer({ busy: true, retryAfterMs: meta.waitMs || wait });
-        status(`Groq's free daily allowance is used up — about ${mins} min until it frees up.`, "err");
+        status(`The answer lane's daily allowance is used up — about ${mins} min until it frees up.`, "err");
         return;
       }
       if (keepOld) card.answer = prevAnswer;
-      else card.answer = [`Groq's free tier is at its per-minute limit — this answer starts by itself in ${secs}s.`];
-      card.meta = tries <= 3 ? `waiting for Groq capacity — automatic retry in ${secs}s` : "Groq is still at its limit — press AI Answer or ↓ to try again";
+      else card.answer = [`The answer lane is at its per-minute limit — this answer starts by itself in ${secs}s.`];
+      card.meta = tries <= 3 ? `waiting for answer capacity — automatic retry in ${secs}s` : "The answer lane is still at its limit — press AI Answer or ↓ to try again";
       if (cards[idx] === card) renderCard();
       logAnswer({ busy: true, retryAfterMs: wait });
-      status(tries <= 3 ? `Groq's free tier is at its per-minute limit — ${keepOld ? "regenerating" : "answering"} automatically in ${secs}s.` : "Groq is still at its per-minute limit.", "err");
+      status(tries <= 3 ? `The answer lane is at its per-minute limit — ${keepOld ? "regenerating" : "answering"} automatically in ${secs}s.` : "The answer lane is still at its limit.", "err");
       if (tries <= 3) setTimeout(() => {
         if (answerEpoch === epoch && card.req === ctl) return generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, retries: tries, regen: opts.regen || keepOld });
         if (!keepOld) card.answer = ["Not answered — a newer question took over. Press ↓ or ↑ to answer this one."];   // a newer answer started: this retry stands down
@@ -2140,7 +2140,7 @@ function transcriptText(s, log) {
     if (e.t === "line") { out.push(`[${tm(e.at)}] ${e.who === "Them" ? "Them (interviewer)" : e.who}`, e.text, ""); continue; }
     const head = `[${tm(e.at)}] AI${e.depth ? " — " + e.depth : ""}${e.regen ? " (regenerated)" : ""}${e.typed ? " (typed question)" : ""}`;
     if (e.noQuestion) { out.push(head, "No question detected in what was heard.", ""); continue; }
-    if (e.busy) { out.push(head, `Groq per-minute limit — retried automatically after ${Math.ceil((e.retryAfterMs || 0) / 1000)}s.`, ""); continue; }
+    if (e.busy) { out.push(head, `Answer-lane rate limit — retried automatically after ${Math.ceil((e.retryAfterMs || 0) / 1000)}s.`, ""); continue; }
     out.push(head, `💬 Question: ${e.derived || e.question}`, "", "---", "", `⭐️ Answer: ${String(e.text || "").trim()}`);
     if (e.failed) out.push("", `(engine unreachable: ${e.failed})`);
     out.push("");

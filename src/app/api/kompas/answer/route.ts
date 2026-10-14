@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
-import { callLLM, resolveKeys } from "@/lib/llm"
+import { callLLM, keysFor, modelFor, resolveKeys, type LlmKeys } from "@/lib/llm"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { dossierContext } from "@/lib/dossier"
 import { hashUserId } from "@/lib/sttLedger"
+import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
   classify, lengthPlan, plainlyNoQuestion, cleanQuestion, resolveFollowUp,
-  tierRule, pickShape, DERIVE_SYSTEM,
+  tierRule, pickShape, DERIVE_SYSTEM, type LengthPlan,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
   commit, matchBank,
 } from "@/lib/kompasAnswer"
@@ -30,8 +31,138 @@ export const maxDuration = 60
 // Parakeet-calibrated length planning, code-level follow-up resolution, and
 // the three code gates for question detection — pivoted onto MarketFit's
 // provider, dossier grounding and [beat]/[breath] pause architecture.
+//
+// Streaming (2026-10-14, perfACT sunset): with {stream:true} the route answers
+// as Server-Sent Events so the first words land in a few hundred ms — the same
+// event contract perfACT's frontend speaks (meta / delta / replace / wait /
+// done). Multi-lane fallback: OpenRouter primary → OpenRouter fallback model →
+// retry-with-exact-wait (the provider's own "try again in Xs") → a prepared
+// answer. Never a 5xx on a live turn: every failure degrades to something the
+// candidate can still say.
 
 const NO_STORE = { "Cache-Control": "no-store" }
+const OR_URL = "https://openrouter.ai/api/v1/chat/completions"
+// OpenRouter holds the requested ceiling against the balance — keep it modest,
+// mirroring src/lib/llm.ts.
+const orCap = (maxTokens: number) => Math.min(maxTokens, Number(process.env.OPENROUTER_MAX_TOKENS) || 2048)
+// A model on a long rate-limit block is skipped by later requests on this
+// warm instance instead of re-hitting the wall (perfACT's groqBlockedUntil).
+const blockedUntil = new Map<string, number>()
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+
+// "try again in 2.4s" / "577ms" / "11m19.2s" / "1h2m3s" → milliseconds.
+// Ported from perfACT copilot-api/answer.js (retryMs).
+function retryMs(t: string): number {
+  const m = String(t || "").match(/try again in ((?:\d+h)?(?:\d+m(?!s))?(?:[\d.]+(?:ms|s))?)/i)
+  if (!m || !m[1]) return 0
+  const g = (re: RegExp) => { const x = m[1].match(re); return x ? parseFloat(x[1]) : 0 }
+  return g(/(\d+)h/) * 3600e3 + g(/(\d+)m(?!s)/) * 60e3 + (/ms$/i.test(m[1]) ? g(/([\d.]+)ms$/i) : g(/([\d.]+)s$/i) * 1000)
+}
+function isRateLimit(msg: string): boolean {
+  return /\b429\b|rate.?limit|try again in|tokens per minute/i.test(msg || "")
+}
+const statusOf = (msg: string): number | undefined => {
+  const m = /openrouter (\d{3})/.exec(msg || "")
+  return m ? Number(m[1]) : undefined
+}
+const shortModel = (m: string) => m.split("/").pop() || m
+
+// One lane's deadline: the client's own abort (a superseded card) plus a hard
+// ceiling, so a hung provider can never eat the whole serverless budget.
+function laneSignal(req: NextRequest, ms: number): { signal: AbortSignal; cleanup: () => void } {
+  const c = new AbortController()
+  const t = setTimeout(() => { try { c.abort(new Error("lane timeout")) } catch {} }, ms)
+  const onAbort = () => { clearTimeout(t); try { c.abort() } catch {} }
+  req.signal.addEventListener("abort", onAbort, { once: true })
+  return { signal: c.signal, cleanup: () => { clearTimeout(t); req.signal.removeEventListener("abort", onAbort) } }
+}
+
+function reasoningFor(model: string): Record<string, unknown> {
+  // Measured 2026-10-05 on nemotron-3-super: with reasoning on, a short rewrite
+  // spent most of its tokens reasoning and took 6.5s; with it off, 0.6s.
+  // Everything else gets reasoning_effort low — first words fast.
+  return /nemotron/i.test(model) ? { reasoning: { enabled: false } } : { reasoning: { effort: "low" } }
+}
+
+function orError(res: Response, bodyText: string, model: string): Error {
+  const retryAfter = Number(res.headers.get("retry-after") || "")
+  const ms = retryMs(bodyText) || (retryAfter > 0 ? retryAfter * 1000 : 0)
+  if (res.status === 429 && ms > 15000) blockedUntil.set(model, Date.now() + ms)
+  return new Error(`openrouter ${res.status}${ms ? ` try again in ${Math.round(ms)}ms` : ""} ${bodyText.slice(0, 160)}`)
+}
+
+// Pump an OpenRouter SSE body into deltas (perfACT's readSSE, ported).
+async function pumpSSE(body: ReadableStream<Uint8Array>, onData: (j: { choices?: Array<{ delta?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } }) => void): Promise<void> {
+  const reader = body.getReader()
+  const dec = new TextDecoder()
+  let buf = ""
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buf += dec.decode(value, { stream: true })
+    let i: number
+    while ((i = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, i).trim()
+      buf = buf.slice(i + 1)
+      if (!line.startsWith("data:")) continue
+      const data = line.slice(5).trim()
+      if (data === "[DONE]") return
+      try { onData(JSON.parse(data)) } catch { /* a partial frame: the next chunk completes it */ }
+    }
+  }
+}
+
+async function streamOpenRouter(
+  key: string, model: string, system: string, user: string, maxTokens: number,
+  onDelta: (d: string) => void, signal: AbortSignal,
+): Promise<{ input: number; output: number }> {
+  if ((blockedUntil.get(model) || 0) > Date.now())
+    throw new Error(`openrouter 429 try again in ${blockedUntil.get(model)! - Date.now()}ms (blocked)`)
+  const res = await fetch(OR_URL, {
+    method: "POST", signal,
+    headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
+    body: JSON.stringify({
+      model, max_tokens: orCap(maxTokens), stream: true,
+      stream_options: { include_usage: true },
+      ...reasoningFor(model),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    }),
+  })
+  if (!res.ok || !res.body) throw orError(res, await res.text().catch(() => ""), model)
+  let input = 0, output = 0
+  await pumpSSE(res.body, (j) => {
+    const d = j.choices?.[0]?.delta?.content
+    if (typeof d === "string" && d) onDelta(d)
+    if (j.usage) { input = j.usage.prompt_tokens || 0; output = j.usage.completion_tokens || 0 }
+  })
+  return { input, output }
+}
+
+async function fetchOpenRouter(
+  key: string, model: string, system: string, user: string, maxTokens: number, signal: AbortSignal,
+): Promise<{ text: string; usage: { input: number; output: number } }> {
+  if ((blockedUntil.get(model) || 0) > Date.now())
+    throw new Error(`openrouter 429 try again in ${blockedUntil.get(model)! - Date.now()}ms (blocked)`)
+  const res = await fetch(OR_URL, {
+    method: "POST", signal,
+    headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
+    body: JSON.stringify({
+      model, max_tokens: orCap(maxTokens),
+      ...reasoningFor(model),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    }),
+  })
+  if (!res.ok) throw orError(res, await res.text().catch(() => ""), model)
+  const data = await res.json()
+  const u = data.usage || {}
+  return { text: data.choices?.[0]?.message?.content || "", usage: { input: u.prompt_tokens || 0, output: u.completion_tokens || 0 } }
+}
 
 const SYSTEM = `You are answering a live interview question as the candidate's copilot. The candidate will speak your answer out loud, so write it the way a sharp practitioner talks — thinking out loud with the listener, never reciting a spec sheet.
 
@@ -57,6 +188,232 @@ function str(v: unknown, max: number): string {
   return typeof v === "string" ? v.trim().slice(0, max) : ""
 }
 
+type AnswerJob = {
+  question: string
+  system: string
+  userText: string
+  plan: LengthPlan
+  interviewer: string
+  tier: number
+  fallbackText: string
+  orKey: string | undefined
+  keys: LlmKeys
+  liveModel: string
+  ledger: ReturnType<typeof normLedger>
+  projectId: string | null
+  startedAt: number
+}
+
+// The lanes, in order: an explicit OpenRouter pick from the live screen first,
+// then the primary, then the fallback model. Models on a long rate-limit block
+// are skipped — a later request finds them cooled down.
+function jobLanes(job: AnswerJob): string[] {
+  const lanes: string[] = []
+  if (job.liveModel.includes("/")) lanes.push(job.liveModel)
+  const primary = process.env.KOMPAS_ANSWER_MODEL || modelFor("openrouter", "heavy")
+  const fallback = process.env.OPENROUTER_MODEL_FALLBACK || "nvidia/nemotron-3-super-120b-a12b:free"
+  for (const m of [primary, fallback]) if (m && !lanes.includes(m)) lanes.push(m)
+  return lanes
+}
+function openLanes(job: AnswerJob): { lanes: string[]; blockedNote: string } {
+  const lanes = jobLanes(job).filter((m) => (blockedUntil.get(m) || 0) <= Date.now())
+  let blockedNote = ""
+  if (!lanes.length) {
+    const soonest = Math.min(...jobLanes(job).map((m) => blockedUntil.get(m) || 0))
+    if (Number.isFinite(soonest) && soonest > Date.now())
+      blockedNote = `openrouter 429 try again in ${soonest - Date.now()}ms (all lanes cooling down)`
+  }
+  return { lanes, blockedNote }
+}
+
+function recordLane(model: string, ok: boolean, usage: { input: number; output: number } | undefined, began: number, status?: number) {
+  scheduleLlmRecord({
+    at: Date.now(), app: "kompas", purpose: "answer", provider: "openrouter", model, ok,
+    ...(status ? { status } : {}),
+    input: usage?.input || 0, output: usage?.output || 0, cacheRead: 0, cacheWrite: 0, ms: Date.now() - began,
+  })
+}
+
+// SSE answer: meta → deltas → (wait) → replace → done. The exact event contract
+// perfACT's frontend speaks, so the self-hosted app.js needs no changes.
+async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response> {
+  const encoder = new TextEncoder()
+  const startedAt = job.startedAt
+  const metaBase = {
+    engine: "marketfit",
+    interviewer: job.interviewer,
+    tier: job.tier,
+    length: { kind: job.plan.kind, secs: job.plan.secs },
+    derived: job.question,
+    words: job.plan.words,
+  }
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const { signal, cleanup } = laneSignal(req, 55000)
+      const emit = (o: Record<string, unknown>) => {
+        try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(o)}\n\n`)) } catch { /* client went away */ }
+      }
+      const timing = { first_ms: 0, lane: "", total_ms: 0 }
+      let raw = ""
+      let lastErr = ""
+      let servedModel = ""
+      let servedProvider = "openrouter"
+      const onDelta = (d: string) => {
+        if (!raw && d) timing.first_ms = Date.now() - startedAt
+        raw += d
+        emit({ type: "delta", text: d })
+      }
+      try {
+        emit({ type: "meta", ...metaBase })
+        if (job.orKey) {
+          const runLane = async (model: string, tag: string) => {
+            const began = Date.now()
+            timing.lane += (timing.lane ? ">" : "") + `openrouter:${shortModel(model)}${tag}`
+            try {
+              const usage = await streamOpenRouter(job.orKey as string, model, job.system, job.userText, job.plan.maxTokens, onDelta, signal)
+              servedModel = model
+              recordLane(model, true, usage, began)
+            } catch (e) {
+              lastErr = String((e as Error)?.message || e).slice(0, 200)
+              recordLane(model, false, undefined, began, statusOf(lastErr))
+            }
+          }
+          const attempt = async (tag: string) => {
+            const { lanes, blockedNote } = openLanes(job)
+            if (blockedNote && !lastErr) lastErr = blockedNote
+            for (const m of lanes) { if (raw || signal.aborted) break; await runLane(m, tag) }
+          }
+          await attempt("")
+          // Every lane rate-limited: wait exactly what the provider said (≤15s)
+          // and retry the lanes once — the client shows a countdown meanwhile.
+          if (!raw.trim() && isRateLimit(lastErr)) {
+            const wait = retryMs(lastErr)
+            if (wait > 0 && wait <= 15000) {
+              emit({ type: "wait", ms: Math.round(wait + 300) })
+              await sleep(wait + 300)
+              await attempt(":retry")
+            }
+          }
+        } else {
+          // The admin routed this feature away from OpenRouter: one
+          // vault-honoring call, delivered as SSE so the contract holds.
+          const began = Date.now()
+          timing.lane = "vault"
+          try {
+            const { text, provider, model } = await callLLM({
+              keys: job.keys, purpose: "kompas:answer", tier: "heavy",
+              system: job.system, user: job.userText, maxTokens: job.plan.maxTokens,
+            })
+            servedProvider = provider
+            servedModel = model
+            if (text) onDelta(text)
+            void began
+          } catch (e) { lastErr = String((e as Error)?.message || e).slice(0, 200) }
+        }
+        // Still rate-limited with nothing streamed: never a 5xx on a live turn —
+        // hand the client an exact wait; it regenerates by itself.
+        if (!raw.trim() && isRateLimit(lastErr)) {
+          const wait = retryMs(lastErr)
+          emit({
+            type: "done", busy: true,
+            retryAfterMs: Math.min(60000, Math.ceil(wait || 0) + 500),
+            daily: /per day/i.test(lastErr) || (wait || 0) > 60000,
+            ledger: job.ledger,
+            ...metaBase, provider: servedProvider, model: servedModel,
+            timing: { ...timing, total_ms: Date.now() - startedAt },
+          })
+          return
+        }
+        // Degrade, never fail: stream the best prepared material as the answer.
+        let degraded = false
+        if (!raw.trim()) { degraded = true; onDelta(job.fallbackText) }
+        // Voice repair runs once on the complete text — the client's `replace`
+        // event swaps the streamed draft for the finished answer.
+        const finalText = voiceRepair(raw.trim()) || raw
+        if (finalText !== raw) emit({ type: "replace", text: finalText })
+        emit({
+          type: "done", degraded,
+          ledger: job.ledger,
+          ...metaBase, provider: servedProvider, model: servedModel,
+          timing: { ...timing, total_ms: Date.now() - startedAt },
+        })
+      } finally {
+        cleanup()
+        try { controller.close() } catch { /* already closed */ }
+      }
+    },
+  })
+  return new Response(stream, {
+    headers: {
+      "content-type": "text/event-stream; charset=utf-8",
+      "cache-control": "no-cache, no-transform",
+      "x-accel-buffering": "no",
+      "Cache-Control": "no-store",
+    },
+  })
+}
+
+// Non-streaming answer: same lanes, one JSON body. Kept for non-browser callers.
+async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextResponse> {
+  const { signal, cleanup } = laneSignal(req, 55000)
+  let raw = ""
+  let lastErr = ""
+  let servedModel = ""
+  let servedProvider = "openrouter"
+  try {
+    if (job.orKey) {
+      const runLane = async (model: string) => {
+        const began = Date.now()
+        try {
+          const r = await fetchOpenRouter(job.orKey as string, model, job.system, job.userText, job.plan.maxTokens, signal)
+          raw = r.text
+          servedModel = model
+          recordLane(model, true, r.usage, began)
+        } catch (e) {
+          lastErr = String((e as Error)?.message || e).slice(0, 200)
+          recordLane(model, false, undefined, began, statusOf(lastErr))
+        }
+      }
+      const attempt = async () => {
+        const { lanes, blockedNote } = openLanes(job)
+        if (blockedNote && !lastErr) lastErr = blockedNote
+        for (const m of lanes) { if (raw || signal.aborted) break; await runLane(m) }
+      }
+      await attempt()
+      if (!raw.trim() && isRateLimit(lastErr)) {
+        const wait = retryMs(lastErr)
+        if (wait > 0 && wait <= 15000) { await sleep(wait + 300); await attempt() }
+      }
+    } else {
+      try {
+        const { text, provider, model } = await callLLM({
+          keys: job.keys, purpose: "kompas:answer", tier: "heavy",
+          system: job.system, user: job.userText, maxTokens: job.plan.maxTokens,
+        })
+        raw = text
+        servedProvider = provider
+        servedModel = model
+      } catch (e) { lastErr = String((e as Error)?.message || e).slice(0, 200) }
+    }
+  } finally { cleanup() }
+  const degraded = !raw.trim()
+  if (degraded) raw = job.fallbackText
+  const out = voiceRepair(raw.trim()) || raw
+  if (!out.trim()) return NextResponse.json({ error: "Nothing to answer." }, { status: 400, headers: NO_STORE })
+  void lastErr
+  return NextResponse.json({
+    text: out,
+    polished: true,
+    degraded,
+    ledger: job.ledger,
+    meta: {
+      engine: "marketfit", provider: servedProvider, model: servedModel,
+      interviewer: job.interviewer, tier: job.tier, kind: job.plan.kind, words: job.plan.words,
+      routed: job.projectId,
+    },
+  }, { headers: NO_STORE })
+}
+
 export async function POST(request: NextRequest) {
   const user = await authenticatedUser(request)
   if (!user) return NextResponse.json({ error: "Sign in again to use this." }, { status: 401, headers: NO_STORE })
@@ -68,7 +425,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Nothing to answer." }, { status: 400, headers: NO_STORE })
   }
 
-  const keys = resolveKeys({})
+  const rawKeys = resolveKeys({})
   const uHash = hashUserId(user.id)
   let grounding = ""
   try { grounding = await dossierContext(uHash, "general") } catch { /* ungrounded answer is still an answer */ }
@@ -85,7 +442,7 @@ export async function POST(request: NextRequest) {
     if (clean) return NextResponse.json({ derived: clean }, { headers: NO_STORE })
     try {
       const { text } = await callLLM({
-        keys, purpose: "kompas:answer-derive", tier: "light",
+        keys: rawKeys, purpose: "kompas:answer-derive", tier: "light",
         system: DERIVE_SYSTEM,
         user: `HEARD (everything said since the last answer):\n${transcript}`,
         maxTokens: 150,
@@ -110,7 +467,10 @@ export async function POST(request: NextRequest) {
     const o = (h && typeof h === "object" ? h : {}) as Record<string, unknown>
     return `Q: ${str(o.q ?? o.question, 200)}\nA: ${str(o.a ?? o.answer ?? o.text, 400)}`
   }).filter(Boolean).join("\n\n")
-  const retrieved = Array.isArray(body.retrieved) ? body.retrieved.slice(0, 4).map((r) => str(r, 300)).filter(Boolean).join("\n") : ""
+  const retrievedList = Array.isArray(body.retrieved)
+    ? body.retrieved.map((r) => str(r, 500)).filter(Boolean)
+    : []
+  const retrieved = retrievedList.slice(0, 4).join("\n")
 
   // perfACT's answering intelligence: classify → tier rule → length plan.
   // A topic-less follow-up ("go deeper") is glued to the previous question in code.
@@ -172,23 +532,28 @@ export async function POST(request: NextRequest) {
     retrieved ? `Retrieved notes:\n${retrieved}` : "",
   ].filter(Boolean).join("\n\n")
 
-  try {
-    const { text, provider, model } = await callLLM({
-      keys, purpose: "kompas:answer", tier: "heavy",
-      system: SYSTEM,
-      user: `${context}\n\nThe interviewer asked: "${question}"\n\nAnswer it as the candidate's spoken reply:`,
-      maxTokens: plan.maxTokens,
-    })
-    const out = voiceRepair(text.trim())
-    if (!out) throw new Error("empty answer")
-    return NextResponse.json({
-      text: out,
-      polished: true,
-      ledger,
-      meta: { engine: "marketfit", provider, model, interviewer, tier, kind: plan.kind, words: plan.words, routed: projectId },
-    }, { headers: NO_STORE })
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "answer failed"
-    return NextResponse.json({ error: "The answer engine is unavailable right now. Try again in a moment.", detail: msg, meta: { engine: "marketfit", failed: true } }, { status: 503, headers: NO_STORE })
+  // The vault decides which providers this feature may use (Admin → "Which AI
+  // each feature uses"). OpenRouter lanes run only when the vault leaves the
+  // key in; otherwise one vault-honoring call is made and delivered as SSE.
+  const keys = await keysFor("kompas:answer", () => rawKeys)
+  const fallbackText = retrievedList[0]
+    || (prep.identity ? str(prep.identity, 600) : "")
+    || "The answer engine is at its limit right now — press AI Answer again in a moment."
+  const job: AnswerJob = {
+    question,
+    system: SYSTEM,
+    userText: `${context}\n\nThe interviewer asked: "${question}"\n\nAnswer it as the candidate's spoken reply:`,
+    plan,
+    interviewer,
+    tier,
+    fallbackText,
+    orKey: keys.openrouter || undefined,
+    keys,
+    liveModel: str(body.liveModel, 120),
+    ledger,
+    projectId,
+    startedAt: Date.now(),
   }
+  if (body.stream) return streamAnswer(request, job)
+  return jsonAnswer(request, job)
 }
