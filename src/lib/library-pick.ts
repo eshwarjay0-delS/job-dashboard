@@ -88,6 +88,11 @@ export function choiceIn(line: string, slots: string[]): string {
   const rest = afterVerb.replace(NOUN, "").replace(/^the\s+/, "").replace(/\s+(?:one|email|e-mail|mail|library|folder|account|option)$/, "").trim()
   const named = byName(said) || byName(rest)
   if (named) return named
+  // A person answering a question writes a sentence, not always just an address:
+  // "The email is x@gmail.com in this case", "For x@gmail.com".
+  // Require an explicit email-selection phrase so arbitrary JD prose is never a choice.
+  const naturalEmail = said.match(/^(?:(?:the\s+)?(?:email|e-mail|account|library)(?:\s+address)?(?:\s+(?:is|should\s+be|for))?|for|use|choose|select|go\s+with)\s+([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})(?:\s+in\s+this\s+case)?$/i)
+  if (naturalEmail && emails.includes(naturalEmail[1])) return naturalEmail[1]
   // A digit or "second" is an answer wherever it stands. "one", "two" as words are an answer alone or after a word
   // like "number" or "email": "pick one", "the one", "no one" are sentences, and the question is asked again.
   const n = /^[1-9]\d?$/.test(rest) ? Number(rest) : /^0[1-9]$/.test(rest) && said === rest ? Number(rest) : ORDINALS[rest] || (noun || said === rest ? CARDINALS[rest] || 0 : 0)
