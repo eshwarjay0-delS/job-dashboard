@@ -39,27 +39,31 @@ export default function KompasDesktopDownload() {
         >
           <h2 style={{ fontSize: 16, margin: "0 0 8px" }}>Already installed?</h2>
           <p style={{ color: "var(--text-muted, #8a8578)", margin: "0 0 16px", lineHeight: 1.6, fontSize: 14 }}>
-            This tries the <code>kompas://</code> launcher. If the app opens, you are done —
-            go back to Kompas, pick <b>Desktop app</b>, and press <b>Connect &amp; start</b>
-            to hand it your session.
+            Open the MarketFit desktop app directly. Your browser may ask once for
+            permission to open Kompas. Approve it and, when offered, select
+            <b> Always allow</b> for this website. Then use <b>Desktop app</b>
+            and <b>Connect &amp; start</b> inside your interview to open that exact session.
           </p>
-          <button
+          <a
+            href="marketfit-kompas://open"
             id="mfOpenDesktop"
             style={{
               fontSize: 15,
               fontWeight: 700,
               padding: "12px 22px",
               borderRadius: 999,
-              border: "none",
+              textDecoration: "none",
+              display: "inline-block",
               cursor: "pointer",
               background: "var(--accent, #e8b33c)",
               color: "#1a1408",
             }}
           >
             Open Kompas desktop
-          </button>
-          <p id="mfOpenMiss" style={{ display: "none", color: "#e07856", fontSize: 14, marginTop: 12 }}>
-            Kompas did not open — it is probably not installed yet. Install it below, then try again.
+          </a>
+          <p style={{ color: "var(--text-muted, #8a8578)", fontSize: 13, marginTop: 12, lineHeight: 1.5 }}>
+            If nothing happens, install or update the desktop app below and retry.
+            A website cannot bypass your browser's first external application approval.
           </p>
         </div>
 
@@ -115,30 +119,6 @@ export default function KompasDesktopDownload() {
         </div>
       </div>
 
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `(function(){
-            var btn = document.getElementById('mfOpenDesktop');
-            var miss = document.getElementById('mfOpenMiss');
-            if (!btn) return;
-            btn.addEventListener('click', function(){
-              miss.style.display = 'none';
-              var left = false;
-              var mark = function(){ left = true; };
-              window.addEventListener('blur', mark);
-              var f = document.createElement('iframe');
-              f.style.display = 'none';
-              f.src = 'kompas://open';
-              document.body.appendChild(f);
-              setTimeout(function(){
-                f.remove();
-                window.removeEventListener('blur', mark);
-                if (!left && !document.hidden) miss.style.display = 'block';
-              }, 1500);
-            });
-          })();`,
-        }}
-      />
     </main>
   );
 }
