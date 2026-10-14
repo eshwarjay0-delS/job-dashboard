@@ -29,12 +29,12 @@ Work in THIS order — recruiter trust first, ATS keywords LAST:
 
 4) TOOL EVIDENCE — show OWNERSHIP, not exposure. Write what operational ownership of THAT tool actually looks like. Examples: ML/GenAI — model eval, RAG pipeline tuning, latency/cost tradeoffs, eval harnesses, agent orchestration, tool calling; BACKEND — API design, query tuning, idempotency, failure handling; DATA — pipeline orchestration, schema evolution, backfills, data quality; CLOUD — IaC modules, CI/CD gates, autoscaling, on-call; SECURITY — scanner rule tuning, alert triage, detection tuning, false-positive reduction, incident escalation. One or two related tools per bullet; never cram a list.
 
-5) OPERATIONAL FRICTION (non-negotiable). Include 1-2 bullets in the current role that show things going wrong: a pipeline that failed and had to be debugged, a model whose latency regressed and was investigated, a deployment that broke and required rollback, a flaky dependency upgrade, a production incident triaged. These raise hiring-manager trust more than any keyword.
+5) OPERATIONAL FRICTION. Preserve documented debugging, incident response and remediation outcomes when they are in the source. Do not invent production incidents, outages, model issues or outages to make the resume sound credible.
 
 6) ATS / SKILLS — VERIFIED COVERAGE. Use the JD's precise keywords where they match tools, technologies, qualifications, frameworks, or skills substantiated by the original resume. Certifications are immutable and may be listed only if present in the source. Do not add absent vendor names or missing qualifications merely to inflate a match score. Never duplicate the skills section.
    ONE LINE PER [idx] — NEVER MERGE: rewrite each skill line SEPARATELY at its own [idx], returning that same [idx]. NEVER collapse several skill lines into one mega-line, and never dump every keyword into a single line — that destroys the resume's structure. Return one skills entry per [idx] you change, and only use [idx] values that appear in the SKILL LINES block below.
    EXACT JD WORDING + ABBREVIATIONS: use the JD's precise terminology, including its abbreviations AND spellings. When the JD uses an acronym or short form (e.g. "S2S VPN", "IPsec", "Natting", "FSR", "CJI", "PAN-OS", "EOL"), include that EXACT token — pairing it with the expansion where natural ("site-to-site (S2S) VPN", "NAT/Natting", "end-of-life (EOL)"). ATS keyword matching is literal, so a synonym the candidate truly has but worded differently than the JD still misses — mirror the JD's exact form.
-   REPLACE IRRELEVANT LINES: skill lines about domains the JD does NOT care about (e.g. payment fraud, AML/financial-crime, unrelated tooling) should be REWRITTEN in place into JD-relevant skills — don't leave off-topic lines sitting there. On a resume with many skill lines, expect to rewrite MOST of them, not just one.
+   FOCUS WITHOUT INVENTION: prioritize verified relevant qualifications while retaining factual skills. Never overwrite authentic experience with unverified JD keywords.
    ADJACENT STACKS: describe transferable experience accurately. Azure experience can support a cloud security conversation for an AWS role without claiming hands-on AWS experience unless the original resume contains it. Preserve the stack the candidate used.
    JD-PREFERRED FIRST: lead the summary AND the skills section with the JD's most-wanted tools/skills first, so the match is obvious in the first 5 seconds.
 
@@ -67,7 +67,7 @@ CRITICAL RULE: You are editing REAL TEXT from a REAL person's resume. Every word
 
 SCOPE — this is an edit, not a rewrite:
 - Change ONLY the lines the request is about, and only as much as the request needs. Lines you do not return stay exactly as they are, so return nothing for any line the request does not touch. A request only about the wording or format of one section (e.g. "shorten the bullets", "reorder the skills") stays inside that section.
-- ADDING a tool, skill, or technology: put it in the most relevant skill line WITHOUT removing anything that line already lists (skip this if the skills already have it), AND prove it in the work history: weave it into one existing bullet in EACH role where it plausibly fits, rewriting that bullet in place. Skills alone are not enough. If the request names a specific role, section, or line, make the change only there.
+- ADDING a tool, skill, or technology: include it only when it reflects confirmed candidate experience. Place it in a relevant skills line and update only role bullets that genuinely used it. Never insert a skill into every historical employer by default.
 - ADDING a certification, responsibility, or emphasis: put it into the lines it belongs to without removing existing content. Never list the same item twice in the skills.
 - Remove, shorten, or replace existing content only when the request asks for it. When shortening, keep every tool name and metric.
 - Keep every job-description keyword already present unless the request says to remove it.
@@ -226,7 +226,7 @@ export async function adapt(opts: {
   // A refinement gets no keyword list: it invites "absorbing" more terms, which is exactly the
   // churn a targeted change must avoid (the JD itself is still in the prompt).
   const kwLine = opts.jdKeywords?.length && !opts.refine
-    ? `\n\nTOOLS THE JD CENTERS ON (they are the candidate's own — the resume and the JD together are the record; ${part === "profile" ? "surface them in the skill lines" : "name them inside the bullets of every role, not just the skills section"}): ${opts.jdKeywords.join(", ")}`
+    ? `\n\nTOOLS THE JD CENTERS ON (these are target role requirements, not proof of candidate experience; ${part === "profile" ? "surface the matching verified skills" : "rewrite bullets only where source role history substantiates them"}): ${opts.jdKeywords.join(", ")}`
     : ""
   const pref = !opts.preferences ? ""
     : opts.refine ? `\n\nCHANGE REQUEST FROM THE CANDIDATE (apply exactly this, nothing else): ${opts.preferences}`
