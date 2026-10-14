@@ -95,10 +95,18 @@ test('nothing from the resume reaches the profile before the person says yes, an
   // The person's own dossier is written at the end: what the resume shows and the kinds of work chosen.
   assert.ok(api.includes('await saveDossierProfile(hash, {') && api.includes('fields: join(had?.fields, setup.branches)'))
   // The page asks one thing at a time and keeps no answers of its own.
-  assert.ok(page.includes('fetch("/api/onboarding", { cache: "no-store" })') && page.includes('fetch("/api/onboarding/resume", { method: "POST", body: fd })'))
+  assert.ok(page.includes('fetch(remind ? "/api/onboarding?remind=1" : "/api/onboarding", { cache: "no-store" })') && page.includes('fetch("/api/onboarding/resume", { method: "POST", body: fd })'))
   assert.ok(page.includes('role="log" aria-live="polite"'))
   assert.ok(page.includes('accept=".docx,.pdf,'), 'a Word file or a PDF')
   for (const said of ['Next, your resume: a Word file or a PDF.', 'Shall I fill your profile with this?', 'No, I will fill it in myself', 'First, which mobile number would you like to register?', 'You can add more than one inbox.', 'Which parts of {chosen.label.toLowerCase()}? Tick every one that fits.', 'LinkedIn search comes later and needs nothing from you now.']) assert.ok(page.includes(said), said)
   // The old form's fields are gone: nothing asks for a salary, a list of cities or a work authorization.
   for (const gone of ['minSalary', 'targetLocs', 'yearsExp', 'Set Up Your Workspace']) assert.ok(!page.includes(gone), gone)
 })
+
+ test('refresh reminds about an unverified phone without discarding saved answers', () => {
+  const setup = { phoneLater: true, consent: 'yes', gmailDone: true, domain: 'software', branches: ['Backend Engineering'] }
+  assert.equal(nextStep(setup, facts()), 'done')
+  assert.equal(nextStep({ ...setup, phoneLater: false }, facts()), 'phone')
+  assert.equal(nextStep(setup, facts({ phoneVerified: true })), 'done')
+  assert.equal(setup.branches[0], 'Backend Engineering')
+ })
