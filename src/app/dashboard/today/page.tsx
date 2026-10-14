@@ -1,7 +1,7 @@
 "use client"
 import TypingDots from "../_components/typing-dots"
 
-import { useEffect, useState, useSyncExternalStore } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import {
   ArrowRight, ArrowUpRight, Inbox, Briefcase, CalendarDays,
@@ -9,19 +9,10 @@ import {
   Send, History, ShieldAlert, RefreshCw, Sparkles, TrendingUp,
 } from "lucide-react"
 import { useGmailData } from "@/lib/use-gmail-data"
+import { useFirstName } from "@/lib/use-first-name"
 import type { Mail, App } from "../_suite/sample"
 
 const WEEK_MS = 7 * 86_400_000
-
-// The first name from the profile kept on this device (Summary reads the same). Read after the page has drawn, so the
-// server's copy and the first draw agree; none when no profile is kept.
-const noChanges = () => () => {}
-function profileFirstName(): string {
-  try {
-    const profile = JSON.parse(localStorage.getItem("jd_profile") || "{}")
-    return profile.full_name?.split(" ")[0] || profile.name?.split(" ")[0] || ""
-  } catch { return "" }
-}
 
 function greeting(): string {
   const h = new Date().getHours()
@@ -126,7 +117,7 @@ interface Note { id: string; title: string; body: string; created_at: string; re
 export default function TodayPage() {
   const { mails, applications, interviews, drafts, radar, loading, connected, error, refresh } = useGmailData()
   const [notes, setNotes] = useState<Note[]>([])
-  const name = useSyncExternalStore(noChanges, profileFirstName, () => "")
+  const name = useFirstName()
 
   useEffect(() => {
     fetch("/api/agent/notifications", { cache: "no-store" })

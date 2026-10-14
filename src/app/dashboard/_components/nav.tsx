@@ -50,7 +50,7 @@ export const NAV_TABS: NavTab[] = [
   },
   {
     href: "/dashboard/mail", label: "Jobs", icon: ICON.mail,
-    what: "Inbox, applications, interviews, follow-ups — the hunt itself. The agent floats everywhere: tap the robot.",
+    what: "Inbox, applications, interviews, follow-ups — the hunt itself. Ask MFit, bottom right on every page, answers from your mail.",
     items: [
       { href: "/dashboard/tracker",     label: "My Jobs",       icon: ICON.list,   what: "Every job you applied to, and where each one stands right now." },
       { href: "/dashboard/calendar",    label: "Interviews",    icon: ICON.calendar, what: "Your upcoming interviews. Don't miss any." },

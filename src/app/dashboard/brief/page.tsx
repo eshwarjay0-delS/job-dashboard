@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useFirstName } from "@/lib/use-first-name"
 import {
   ClipboardList, Landmark, Award, Target, History, Zap,
   ArrowRight, Sparkles, Lightbulb,
@@ -82,7 +83,7 @@ function EmptyState({ text, linkHref, linkText }: { text: string; linkHref?: str
    MAIN PAGE
    ═══════════════════════════════════════════════════════════════════ */
 export default function BriefPage() {
-  const [name, setName]       = useState("")
+  const name                  = useFirstName()
   const [apps, setApps]       = useState<Application[]>([])
   const [visas, setVisas]     = useState<VisaEntry[]>([])
   const [certs, setCerts]     = useState<CertEntry[]>([])
@@ -95,8 +96,6 @@ export default function BriefPage() {
   /* load data */
   useEffect(() => {
     try {
-      const profile = JSON.parse(localStorage.getItem("jd_profile") || "{}")
-      setName(profile.full_name?.split(" ")[0] || profile.name?.split(" ")[0] || "")
       setApps(JSON.parse(localStorage.getItem("jd_applications_v2") || "[]"))
       setVisas(JSON.parse(localStorage.getItem("jd_visas") || "[]"))
       setCerts(JSON.parse(localStorage.getItem("jd_certs_v1") || "[]"))

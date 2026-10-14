@@ -1,24 +1,41 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Bot, X, Mic, MicOff, Send, Volume2, VolumeX } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { Sparkles, X, Mic, MicOff, ArrowUp, Volume2, VolumeX } from "lucide-react"
 import { tapBuzz, sendBuzz, arriveBuzz } from "@/lib/haptics"
 import { speak, stopSpeaking, canSpeak, isSpeaking } from "@/lib/speak"
 import { Markdown } from "@/lib/markdown"
+import { useFirstName } from "@/lib/use-first-name"
+import TypingDots from "./typing-dots"
 
 interface Msg { role: "user" | "assistant"; content: string }
 
-const SUGGESTIONS = [
-  "Anything wrong I should know about?",
-  "Find me Amit Singh's number",
-  "Which submissions need a follow-up?",
+// What to ask first, by the page the person is on. The agent reads job mail, submissions and contacts (its tools in
+// src/app/api/agent/_tools.ts), so every starter is a question it can answer from those. No real person's name is
+// shown here: a starter once read "Find me Amit Singh's number" for everyone.
+const STARTERS: { on: string[]; ask: string[] }[] = [
+  { on: ["/dashboard/mail", "/dashboard/tracker", "/dashboard/workflows", "/dashboard/connections"],
+    ask: ["Who is waiting on a reply from me?", "Which submissions need a follow-up?", "Any duplicate submissions on one role?"] },
+  { on: ["/dashboard/calendar", "/dashboard/kompas"],
+    ask: ["When is my next interview?", "Which interviews have no follow-up yet?", "What did the recruiter say about my next interview?"] },
+  { on: ["/dashboard/resume", "/dashboard/documents"],
+    ask: ["Which roles am I sent for most?", "Which companies replied this week?", "Anything wrong I should know about?"] },
 ]
+const FIRST = ["What should I do first today?", "Anything wrong I should know about?", "Which submissions need a follow-up?"]
+
+function startersFor(path: string): string[] {
+  return STARTERS.find(s => s.on.some(p => path === p || path.startsWith(p + "/")))?.ask ?? FIRST
+}
 
 /* ── Floating agent: the strategist, everywhere ───────────────────────────
-   A chat bubble on every dashboard page — as interactive as a real
-   conversation, with voice input and haptic taps. Same brain as /dashboard/agent. */
+   A chat on every dashboard page, as live as a real conversation: it says hello by name, offers questions that fit the
+   page, shows it is writing, and can listen and read aloud. Same brain as /dashboard/agent.
+   The look (design system 2, 14 Oct 2026): "the chat should be engaging, not a dull bot". */
 
 export default function FloatingAgent() {
+  const path = usePathname() || ""
+  const name = useFirstName()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState("")
@@ -27,10 +44,12 @@ export default function FloatingAgent() {
   const [unread, setUnread] = useState(0)
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const recogRef = useRef<any>(null)
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages, busy, open])
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }) }, [messages, busy, open])
   useEffect(() => () => { try { recogRef.current?.stop() } catch { /* noop */ } stopSpeaking() }, [])
+  useEffect(() => { if (open) inputRef.current?.focus() }, [open])
 
   // Unread watchdog alerts nudge the bubble.
   useEffect(() => {
@@ -39,6 +58,14 @@ export default function FloatingAgent() {
       .then(j => { if (j.ok && j.unread > 0) { setUnread(j.unread); arriveBuzz() } })
       .catch(() => {})
   }, [])
+
+  // Escape closes the chat, as every pop-up window does.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") toggle() }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  })
 
   function toggle() {
     tapBuzz()
@@ -83,10 +110,10 @@ export default function FloatingAgent() {
         body: JSON.stringify({ messages: next }),
       })
       const j = await r.json()
-      setMessages([...next, { role: "assistant" as const, content: j.reply || j.error || "Something went wrong." }])
+      setMessages([...next, { role: "assistant" as const, content: j.reply || j.error || "Something went wrong on my side. Ask me again in a moment." }])
       arriveBuzz()
     } catch {
-      setMessages([...next, { role: "assistant" as const, content: "Couldn't reach the agent. Try again." }])
+      setMessages([...next, { role: "assistant" as const, content: "I couldn't reach my side of the app just now. Check your connection and ask again." }])
     } finally {
       setBusy(false)
     }
@@ -136,159 +163,83 @@ export default function FloatingAgent() {
     } catch { setListening(false) }
   }
 
+  const status = listening ? "Listening, speak now" : busy ? "Writing…" : "Reads your job mail"
+
   return (
     <>
-      {/* Bubble */}
+      {/* Launcher */}
       {!open && (
-        <button
-          onClick={toggle}
-          aria-label="Open the MFit Agent"
-          style={{
-            position: "fixed", right: 18, bottom: 18, zIndex: 60,
-            width: 58, height: 58, borderRadius: 999, border: "none", cursor: "pointer",
-            background: "var(--accent)", color: "#fff",
-            display: "grid", placeItems: "center",
-            boxShadow: "0 8px 28px rgba(0,0,0,0.28)",
-          }}
-        >
-          <Bot size={26} />
-          {unread > 0 && (
-            <span style={{
-              position: "absolute", top: -4, right: -4, minWidth: 22, height: 22,
-              borderRadius: 999, background: "#b3541e", color: "#fff",
-              fontSize: 11.5, fontWeight: 800, display: "grid", placeItems: "center", padding: "0 5px",
-            }}>
-              {unread}
-            </span>
-          )}
+        <button type="button" onClick={toggle} className="mf-agent-launch" aria-label="Ask MFit">
+          <Sparkles size={20} aria-hidden="true" />
+          <span className="mf-agent-launch-text">Ask MFit</span>
+          {unread > 0 && <span className="mf-agent-badge" aria-label={`${unread} new`}>{unread}</span>}
         </button>
       )}
 
       {/* Panel */}
       {open && (
-        <section
-          aria-label="MFit Agent chat"
-          style={{
-            position: "fixed", right: 16, bottom: 16, zIndex: 60,
-            width: "min(384px, calc(100vw - 32px))",
-            height: "min(600px, calc(100dvh - 110px))",
-            background: "var(--surface)", border: "1px solid var(--border-strong)",
-            borderRadius: 20, boxShadow: "0 18px 60px rgba(0,0,0,0.32)",
-            display: "flex", flexDirection: "column", overflow: "hidden",
-          }}
-        >
-          <header style={{
-            display: "flex", alignItems: "center", gap: 10, padding: "13px 16px",
-            borderBottom: "1px solid var(--border)", flex: "none",
-          }}>
-            <span style={{
-              width: 34, height: 34, borderRadius: 999, background: "var(--accent)",
-              color: "#fff", display: "grid", placeItems: "center", flex: "none",
-            }}>
-              <Bot size={18} />
-            </span>
+        <section aria-label="MFit Agent chat" className="mf-agent-panel">
+          <header className="mf-agent-head">
+            <span className="mf-agent-avatar"><Sparkles size={17} aria-hidden="true" /></span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14.5, fontWeight: 750 }}>MFit Agent</div>
-              <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
-                {listening ? "Listening — speak now" : "Your job-hunt strategist"}
-              </div>
+              <div className="mf-agent-name">MFit Agent</div>
+              <div className="mf-agent-status"><span className={`mf-agent-dot${listening ? " is-listening" : ""}`} aria-hidden="true" />{status}</div>
             </div>
-            <button onClick={toggle} aria-label="Close chat"
-              style={{ border: "none", background: "transparent", cursor: "pointer", padding: 8, color: "var(--text-muted)" }}>
-              <X size={18} />
+            <button type="button" onClick={toggle} aria-label="Close chat" className="mf-agent-icon-btn">
+              <X size={18} aria-hidden="true" />
             </button>
           </header>
 
-          <div style={{ flex: 1, overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="mf-agent-body" aria-live="polite">
+            <div className="mf-agent-msg is-agent">
+              <p style={{ margin: 0 }}>
+                Hi{name ? ` ${name}` : ""}! I read your job mail, so I can tell you who is waiting on you, what needs a
+                follow-up and when your next interview is.
+              </p>
+            </div>
             {messages.length === 0 && (
-              <div>
-                <p style={{ color: "var(--text-muted)", fontSize: 13.5, margin: "0 0 10px", lineHeight: 1.55 }}>
-                  Ask me anything about your hunt — roles, vendors, interviews. I read your inbox to answer.
-                </p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {SUGGESTIONS.map(s => (
-                    <button key={s} onClick={() => void send(s)} disabled={busy}
-                      style={{
-                        border: "1px solid var(--border-strong)", background: "var(--surface-2)",
-                        borderRadius: 999, padding: "8px 14px", fontSize: 12.5, fontWeight: 650,
-                        cursor: "pointer", color: "var(--text)",
-                      }}>
-                      {s}
-                    </button>
-                  ))}
-                </div>
+              <div className="mf-agent-starters">
+                <span>Try asking</span>
+                {startersFor(path).map(s => (
+                  <button type="button" key={s} onClick={() => void send(s)} disabled={busy}>{s}</button>
+                ))}
               </div>
             )}
             {messages.map((m, i) => (
-              <div key={i} style={{
-                alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                maxWidth: "88%", padding: "9px 13px", borderRadius: 14,
-                background: m.role === "user" ? "#2f6f6a" : "var(--surface-2)",
-                color: m.role === "user" ? "#fff" : "var(--text)",
-                fontSize: 13.5, lineHeight: 1.55, whiteSpace: "pre-line",
-              }}>
+              <div key={i} className={`mf-agent-msg ${m.role === "user" ? "is-user" : "is-agent"}`}>
                 {/* A reply is Markdown: a table is drawn as a table, a list as a list (src/lib/markdown.ts). What the person
                     typed themselves is shown as they typed it. */}
                 {m.role === "assistant" ? <Markdown text={m.content} /> : m.content}
                 {m.role === "assistant" && canSpeak() && (
-                  <button
-                    onClick={() => toggleSpeak(i, m.content)}
-                    aria-label={speakingIdx === i ? "Stop reading aloud" : "Read this aloud"}
-                    title="Read aloud"
-                    style={{
-                      display: "inline-grid", placeItems: "center", verticalAlign: "middle",
-                      marginLeft: 8, width: 26, height: 26, borderRadius: 999,
-                      border: "1px solid var(--border)", background: "var(--surface)",
-                      color: speakingIdx === i ? "var(--accent)" : "var(--text-muted)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {speakingIdx === i ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                  <button type="button" onClick={() => toggleSpeak(i, m.content)} className="mf-agent-speak"
+                    aria-label={speakingIdx === i ? "Stop reading aloud" : "Read this aloud"} title="Read aloud">
+                    {speakingIdx === i ? <VolumeX size={13} aria-hidden="true" /> : <Volume2 size={13} aria-hidden="true" />}
                   </button>
                 )}
               </div>
             ))}
-            {busy && <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Thinking through your threads…</div>}
+            {busy && <div className="mf-agent-msg is-agent is-typing" role="status" aria-label="MFit Agent is writing"><TypingDots size={6} /></div>}
             <div ref={bottomRef} />
           </div>
 
-          <div style={{ display: "flex", gap: 8, padding: 12, borderTop: "1px solid var(--border)", flex: "none", alignItems: "center" }}>
+          <form className="mf-agent-compose" onSubmit={e => { e.preventDefault(); void send() }}>
             {speechSupported() && (
-              <button
-                onClick={toggleListening}
-                aria-label={listening ? "Stop listening" : "Speak instead of typing"}
-                title="Speak"
-                style={{
-                  width: 44, height: 44, borderRadius: 999, border: "1px solid var(--border-strong)",
-                  background: listening ? "#b3541e" : "var(--surface-2)", color: listening ? "#fff" : "var(--text)",
-                  display: "grid", placeItems: "center", cursor: "pointer", flex: "none",
-                  animation: listening ? "agent-pulse 1.4s ease-in-out infinite" : "none",
-                }}
-              >
-                {listening ? <MicOff size={18} /> : <Mic size={18} />}
+              <button type="button" onClick={toggleListening} className={`mf-agent-icon-btn mf-agent-mic${listening ? " is-on" : ""}`}
+                aria-label={listening ? "Stop listening" : "Speak instead of typing"} title="Speak">
+                {listening ? <MicOff size={18} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}
               </button>
             )}
             <input
+              ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") void send() }}
-              placeholder={listening ? "Listening…" : "Ask anything…"}
+              placeholder={listening ? "Listening…" : "Ask about your job search…"}
               aria-label="Message the agent"
-              style={{
-                flex: 1, minHeight: 44, borderRadius: 999, border: "1px solid var(--border-strong)",
-                padding: "0 16px", fontSize: 14, background: "var(--surface)", color: "var(--text)", minWidth: 0,
-              }}
             />
-            <button onClick={() => void send()} disabled={busy || !input.trim()} aria-label="Send"
-              style={{
-                width: 44, height: 44, borderRadius: 999, border: "none", cursor: "pointer", flex: "none",
-                background: "var(--accent)", color: "#fff", display: "grid", placeItems: "center",
-                opacity: busy || !input.trim() ? 0.45 : 1,
-              }}>
-              <Send size={17} />
+            <button type="submit" disabled={busy || !input.trim()} aria-label="Send" className="mf-agent-send">
+              <ArrowUp size={18} aria-hidden="true" />
             </button>
-          </div>
-          <style>{`@keyframes agent-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }`}</style>
+          </form>
         </section>
       )}
     </>
