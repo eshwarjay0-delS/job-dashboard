@@ -1,12 +1,8 @@
 "use client"
 
-// Setup as a conversation: one question at a time, the resume first.
+// Setup as a conversation: one question at a time, phone verification first.
 //
-// Asked on 13 Oct 2026: "instead of putting up a screen which asks them the details, put it in a way like chatbots,
-// asking each of the question in order ... primarily ask for their resume first ... ask their consent to add the
-// profile from the resume ... the only details that we are needed from the user: mobile number verification, so we can
-// connect their WhatsApp, and we need Gmails ... be more specialized about the domains ... They would just tick it."
-//
+// Updated 14 Oct 2026: verify the mobile number first, then offer resume-based profile setup.
 // The page holds no answers of its own. Every answer goes to /api/onboarding and the page draws what comes back, so a
 // reload, or the trip to Google and back, lands on the same question.
 
@@ -26,7 +22,7 @@ type Step = "resume" | "confirm" | "phone" | "gmail" | "roles" | "done"
 type State = {
   ok: boolean; step: Step; steps: Step[]; hello: string; already?: boolean
   resumeName: string; read: Contact | null; consent: "" | "yes" | "no"
-  phone: { verified: boolean; required: boolean; note: string; suggested: string }
+  phone: { verified: boolean; required: boolean; note: string; suggested: string; whatsappNumber: string }
   gmail: { inboxes: number; canAdd: boolean }
   roles: { domains: Domain[]; domain: string; branches: string[]; suggested: { domain: string; branches: string[] } | null }
 }
@@ -182,7 +178,7 @@ export default function SetupPage() {
   const now = (step: Step) => s.step === step
   const chosen = s.roles.domains.find(d => d.id === domain)
   const suggested = s.roles.suggested && s.roles.suggested.domain === domain ? s.roles.suggested.branches : []
-  const asked = ["resume", "phone", "gmail", "roles"] as Step[]
+  const asked = ["phone", "resume", "gmail", "roles"] as Step[]
   const question = Math.min(asked.length, asked.filter(q => s.steps.indexOf(q) <= at).length)
   const details: [string, string][] = s.read ? ([["Name", s.read.name], ["Title", s.read.title], ["Email", s.read.email], ["Mobile", s.read.phone], ["Location", s.read.location], ["LinkedIn", s.read.linkedin]] as [string, string][]).filter(([, v]) => !!v) : []
 
@@ -193,7 +189,36 @@ export default function SetupPage() {
       <div role="log" aria-live="polite" aria-label="Setting up your account" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {/* 1. The resume */}
         <Bot>Welcome{s.hello ? `, ${s.hello}` : ""}. I will set you up in about two minutes, and I will only ask what I need.</Bot>
-        <Bot>First, your resume: a Word file or a PDF. I read your details from it, so you do not have to type them.</Bot>
+        {/* 3. The mobile number, which connects WhatsApp */}
+        {(now("phone") || past("phone")) && (s.phone.required || s.phone.verified
+          ? <Bot>First, which mobile number would you like to register? I will text you a code to verify it. Use your WhatsApp number so you can send MFit your resume and a job description.</Bot>
+          : <Bot>{s.phone.note === "admin" ? "You run this site, so your mobile number is not needed to carry on." : "A code cannot be texted right now, so we will leave your mobile number for later."} You can connect WhatsApp at any time from the WhatsApp page, with one message.</Bot>)}
+        {now("phone") && s.phone.note === "unavailable" && <Bot>Text verification is temporarily unavailable. Please try again shortly; your setup will stay here.</Bot>}
+        {now("phone") && s.phone.required && !codeSent && (
+          <Row>
+            <input style={field} type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 314 555 0100" aria-label="Mobile number" value={phone} onChange={e => setPhone(e.target.value)} onKeyDown={e => { if (e.key === "Enter") void textCode() }} />
+            <button type="button" style={primary} disabled={busy || !phone.trim()} onClick={() => { void textCode() }}>{busy ? "Sending…" : "Text me a code"}</button>
+          </Row>
+        )}
+        {now("phone") && s.phone.required && codeSent && (
+          <>
+            <Me>{phone}</Me>
+            <Bot>Sent. Type the code from the text message.</Bot>
+            <Row>
+              <input style={{ ...field, flex: "0 1 160px", letterSpacing: 3 }} inputMode="numeric" autoComplete="one-time-code" placeholder="Code" aria-label="Code from the text message" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))} onKeyDown={e => { if (e.key === "Enter" && code.length >= 4) void checkCode() }} />
+              <button type="button" style={primary} disabled={busy || code.length < 4} onClick={() => { void checkCode() }}>{busy ? "Checking…" : "Verify"}</button>
+              <button type="button" style={plain} disabled={busy} onClick={() => { setCodeSent(false); setCode("") }}>Change the number</button>
+            </Row>
+          </>
+        )}
+        {now("phone") && !s.phone.required && <Row><button type="button" style={primary} disabled={busy} onClick={() => { void send("phone_later") }}>Carry on</button></Row>}
+        {past("phone") && <Me>{s.phone.verified ? "Verified" : "Later"}</Me>}
+
+        {s.phone.verified && <Bot>{s.phone.whatsappNumber
+          ? <>Your number is verified. Message MFit at <a href={`https://wa.me/${s.phone.whatsappNumber.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>+{s.phone.whatsappNumber.replace(/\D/g, "")}</a> from your registered number. Send your resume as a PDF or Word file and the job description; MFit will send back a tailored resume.</>
+          : <>Your number is verified. The MFit WhatsApp contact is temporarily unavailable. Check the WhatsApp page later.</>}</Bot>}
+
+        {(now("resume") || past("resume")) && <Bot>Next, your resume: a Word file or a PDF. I read your details from it, so you do not have to type them.</Bot>}
         {now("resume") && (
           <Row>
             <input ref={fileRef} id="setup-resume" type="file" className="sr-only" accept=".docx,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf"
@@ -202,7 +227,7 @@ export default function SetupPage() {
             <button type="button" style={plain} disabled={busy} onClick={() => { void send("decline_resume") }}>I do not have it with me</button>
           </Row>
         )}
-        {!now("resume") && <Me>{s.resumeName || "I do not have it with me"}</Me>}
+        {past("resume") && <Me>{s.resumeName || "I do not have it with me"}</Me>}
 
         {/* 2. May the profile be filled from it? */}
         {s.read && details.length > 0 && (now("confirm") || past("confirm")) && (
@@ -224,30 +249,6 @@ export default function SetupPage() {
         )}
         {past("confirm") && s.read && details.length > 0 && <Me>{s.consent === "yes" ? "Yes, use it" : "No, I will fill it in myself"}</Me>}
         {past("confirm") && s.consent === "no" && <Bot>No problem. Your <a href="/dashboard/profile" style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: 3 }}>Profile page</a> is there whenever you want to fill it in.</Bot>}
-
-        {/* 3. The mobile number, which connects WhatsApp */}
-        {(now("phone") || past("phone")) && (s.phone.required || s.phone.verified
-          ? <Bot>Your mobile number next. It connects WhatsApp: you send a job post there and your resume comes back fitted to it. I will text you a code.</Bot>
-          : <Bot>{s.phone.note === "admin" ? "You run this site, so your mobile number is not needed to carry on." : "A code cannot be texted right now, so we will leave your mobile number for later."} You can connect WhatsApp at any time from the WhatsApp page, with one message.</Bot>)}
-        {now("phone") && s.phone.required && !codeSent && (
-          <Row>
-            <input style={field} type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 314 555 0100" aria-label="Mobile number" value={phone} onChange={e => setPhone(e.target.value)} onKeyDown={e => { if (e.key === "Enter") void textCode() }} />
-            <button type="button" style={primary} disabled={busy || !phone.trim()} onClick={() => { void textCode() }}>{busy ? "Sending…" : "Text me a code"}</button>
-          </Row>
-        )}
-        {now("phone") && s.phone.required && codeSent && (
-          <>
-            <Me>{phone}</Me>
-            <Bot>Sent. Type the code from the text message.</Bot>
-            <Row>
-              <input style={{ ...field, flex: "0 1 160px", letterSpacing: 3 }} inputMode="numeric" autoComplete="one-time-code" placeholder="Code" aria-label="Code from the text message" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))} onKeyDown={e => { if (e.key === "Enter" && code.length >= 4) void checkCode() }} />
-              <button type="button" style={primary} disabled={busy || code.length < 4} onClick={() => { void checkCode() }}>{busy ? "Checking…" : "Verify"}</button>
-              <button type="button" style={plain} disabled={busy} onClick={() => { setCodeSent(false); setCode("") }}>Change the number</button>
-            </Row>
-          </>
-        )}
-        {now("phone") && !s.phone.required && <Row><button type="button" style={primary} disabled={busy} onClick={() => { void send("phone_later") }}>Carry on</button></Row>}
-        {past("phone") && <Me>{s.phone.verified ? "Verified" : "Later"}</Me>}
 
         {/* 4. Gmail: every inbox in one place */}
         {(now("gmail") || past("gmail")) && <Bot>Now Gmail. Connect it and your job mail is in one place here. You can add more than one inbox.</Bot>}

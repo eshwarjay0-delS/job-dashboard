@@ -6,7 +6,7 @@
 //   POST { action } -> the same answer, after:
 //           "use_resume"      fill the profile with what was read from the resume (the person said yes)
 //           "decline_resume"  they will fill the profile in themselves (also: no resume to hand)
-//           "phone_later"     only while a code cannot be sent: carry on without a verified number
+//           "phone_later"     only for exempt accounts: carry on without a verified number
 //           "gmail_done"      move past Gmail (inboxes are connected through Google, or left for later)
 //           "roles"           { domain, branches } the kind of work and its branches
 //           "finish"          setup is complete
@@ -30,7 +30,7 @@ function answer(at: Loaded, setup: Setup = at.setup, facts = at.facts) {
     already: facts.complete && !setup.consent,
     resumeName: setup.resumeName || "", read: setup.read || null, consent: setup.consent || "",
     // The number read from the resume is offered only after the person said the resume may be used.
-    phone: { verified: facts.phoneVerified, required: facts.phoneRequired, note: at.phoneNote, suggested: setup.consent === "yes" ? setup.read?.phone || "" : "" },
+    phone: { verified: facts.phoneVerified, required: facts.phoneRequired, note: at.phoneNote, whatsappNumber: at.whatsappNumber, suggested: setup.consent === "yes" ? setup.read?.phone || "" : "" },
     gmail: { inboxes: facts.inboxes, canAdd: facts.inboxes < 4 },
     roles: { domains: DOMAINS, domain: setup.domain || "", branches: setup.branches || [], suggested: setup.suggested || null },
   }

@@ -41,10 +41,10 @@ export async function GET() {
   const missing: string[] = []
   if (!profile?.full_name?.trim()) missing.push("full_name")
   if (!profile?.title?.trim()) missing.push("title")
-  const admin = isAdminEmail(user.email)
+  const admin = !!user.email_confirmed_at && isAdminEmail(user.email)
   // Asked only when it matters: someone already verified never triggers the probe.
   const available = profile?.phone_verified || admin ? true : await phoneStepAvailable()
-  const phoneRequired = !admin && available
+  const phoneRequired = !admin
   if (!profile?.phone_verified && phoneRequired) missing.push("phone_verification")
   if (!Array.isArray(profile?.open_to_roles) || profile.open_to_roles.length === 0) missing.push("target_roles")
 
@@ -53,8 +53,7 @@ export async function GET() {
     missing,
     resumeTo: "/dashboard/setup",
     durable: false,
-    // false for an admin named in ADMIN_EMAILS, and for everyone while codes cannot be texted or numbers cannot be linked:
-    // setup then lets the person continue and verify later. phoneNote says which.
+    // New regular users must verify even when the provider is temporarily unavailable.
     phoneRequired,
     phoneNote: admin ? "admin" : available ? "" : "unavailable",
   })

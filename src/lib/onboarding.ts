@@ -1,12 +1,6 @@
 // Setting a new person up as a conversation, one question at a time.
 //
-// Asked on 13 Oct 2026: "instead of putting up a screen which asks them the details, put it in a way like chatbots,
-// asking each of the question in order ... primarily ask for their resume first ... ask their consent to add the profile
-// from the resume ... If they are not willing to do that, then they can do the manual profile update by going to the
-// profile page themselves ... the only details that we are needed from the user: mobile number verification, so we can
-// connect their WhatsApp, and we need Gmails ... what are the roles that you are interested in ... be more specialized
-// about the domains ... give them a bunch of ... options. They would just tick it."
-//
+// Updated 14 Oct 2026: verify the mobile number first, then offer resume-based profile setup.
 // This file is the rules only (no storage, no network, no model): which question comes next, the kinds of work and
 // their branches, what a resume points to, and reading contact details from the plain words of a PDF.
 
@@ -107,14 +101,14 @@ export type Setup = {
 }
 export type Facts = { phoneVerified: boolean; phoneRequired: boolean; inboxes: number; complete: boolean }
 export type Step = "resume" | "confirm" | "phone" | "gmail" | "roles" | "done"
-export const STEPS: Step[] = ["resume", "confirm", "phone", "gmail", "roles", "done"]
+export const STEPS: Step[] = ["phone", "resume", "confirm", "gmail", "roles", "done"]
 
 /** The one question to ask now. Each answer is kept on the server, so a reload or a trip to Google comes back here. */
 export function nextStep(setup: Setup, facts: Facts): Step {
   if (facts.complete) return "done"
-  if (!setup.consent) return setup.read && hasContact(setup.read) ? "confirm" : "resume"
-  // The mobile number is asked while a code can be sent. When it cannot, the person is told once and carries on.
+  // New accounts verify first; provider downtime never grants verification.
   if (!facts.phoneVerified && (facts.phoneRequired || !setup.phoneLater)) return "phone"
+  if (!setup.consent) return setup.read && hasContact(setup.read) ? "confirm" : "resume"
   if (!setup.gmailDone) return "gmail"
   if (!setup.domain || !(setup.branches || []).length) return "roles"
   return "done"
