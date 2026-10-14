@@ -1,4 +1,5 @@
 import { authenticatedUser } from "@/lib/authBoundary"
+import { isResumeOnlyAccount } from "@/lib/resumeOnlyEntitlement"
 import "./dashboard-shell.css"
 import SidebarNav from "./sidebar-nav"
 import PageTransition from "./page-transition"
@@ -11,7 +12,7 @@ import FloatingAgent from "./_components/floating-agent"
 // This ensures the sidebar renders on FIRST PAINT, not after Supabase auth resolves.
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await authenticatedUser()
-  const resumeOnly = ["janjiaarya@gmail.com", "tryguessup@gmail.com"].includes(user?.email?.toLowerCase() || "")
+  const resumeOnly = await isResumeOnlyAccount(user)
   return (
     <div className="mf-dashboard-shell" style={{ minHeight: "100vh", backgroundColor: "var(--bg)", color: "var(--text)" }}>
 
