@@ -1,3 +1,21 @@
+## 2026-10-13 (pricing) — How to charge for MarketFit with nothing out of the owner's pocket: analysis only, no code changed
+
+**Asked:** "I need the best pricing methods for my web app. Fully without me spending anything out of pocket." "Run all 20 skills in one go and also deduce the price metrics." He installed the founder skill pack that day and supplied four talks and two transcripts as sources.
+
+**Done:** all eleven founder skills run on MarketFit. The output is in `founder/` at the top of this repository. It is kept out of git on this machine through `.git/info/exclude`, so it is NOT in the repository: read it there. Start with `founder/pricing.md`, `founder/cfo.md` and `founder/business-plan.md`.
+
+**What it recommends (he has not said yes yet):** a prepaid pack of 30 tailored resumes for $15, paid once, nothing renews, nothing expires, after one free resume. No unlimited plan, no subscription that renews by itself, no trial that needs a card.
+
+**Facts found, each with its source in `founder/cfo-sources.md`:**
+- One tailored resume costs $0.008657 of AI (this app's `/api/admin/usage`: 98 resumes, $0.848). A pack costs $1.66 to deliver and leaves $13.34.
+- The hosting account is on the free plan, and the host's fair-use page forbids taking payment on it. The paid plan is $20 a month: 2 packs a month cover it.
+- The cost of one interview session is not measured.
+- 20 simulated buyers: 5 bought at first, 14 once the first resume was free. Simulated, and too few to be proof.
+
+**NOT verified:** any real buyer; Google's review rules for the Gmail features; payout delays of the payment companies.
+
+**Where to pick up, if he says go:** one free resume instead of the 20 starting points (`src/lib/creditsLedger.ts`, `STARTING_POINTS`); packs counted in whole resumes; payment in test mode with a signed webhook; a low-balance message; "who sent you?" after the first resume. He opens the payment account himself.
+
 ## 2026-10-13 (WhatsApp, which email) — WhatsApp asks which email a job is for, starts from the closest resume of that email, and answers registered numbers only
 
 Commits f0a4ca4, 6f16918, 7a6c602, all deployed READY.
