@@ -88,6 +88,7 @@ export default function KompasMovePage() {
   const [msg, setMsg] = useState("")
   const [busy, setBusy] = useState(false)
   const [plan, setPlan] = useState("")
+  const [selectedFile, setSelectedFile] = useState<BlendFile | null>(null)
 
   async function doExport() {
     setBusy(true); setMsg("")
@@ -107,7 +108,7 @@ export default function KompasMovePage() {
       a.href = URL.createObjectURL(blob)
       a.download = `kompas-blend-${new Date().toISOString().slice(0, 10)}.json`
       a.click()
-      URL.revokeObjectURL(a.href)
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000)
       const n = browser.qa.length + browser.prepared.length
       setMsg(`Exported ${n} answers, ${browser.qbank.length} bank questions, ${browser.vocab.length} learned words${server ? " + the server dossier" : ""} — pros only.`)
     } catch {
@@ -116,11 +117,12 @@ export default function KompasMovePage() {
   }
 
   async function onFile(f: File | undefined) {
-    setPlan(""); setMsg("")
+    setPlan(""); setMsg(""); setSelectedFile(null)
     if (!f) return
+    if (f.size > 20 * 1024 * 1024) { setPlan("That file is too large for the blend import. Use the full local archive port instead."); return }
     try {
       const file = JSON.parse(await f.text()) as BlendFile
-      if (!file || file.kind !== "kompas-blend") { setPlan("This is not a Kompas blend file."); return }
+      if (!file || file.kind !== "kompas-blend" || file.version !== 1) { setPlan("This is not a supported Kompas blend file. For a full original archive, use the browser data port below."); return }
       const b = file.browser || ({} as BlendFile["browser"])
       const s = (file.server || {}) as Record<string, unknown>
       const sCounts = (s.counts || {}) as Record<string, number>
@@ -130,35 +132,71 @@ export default function KompasMovePage() {
         `and ${sCounts.qa || 0} answers in ${sCounts.sessions || 0} server sessions. ` +
         `Importing adds what's new — nothing here is replaced.`
       )
-      ;(onFile as unknown as { file: BlendFile }).file = file
+      setSelectedFile(file)
     } catch { setPlan("This file couldn't be read.") }
   }
 
   async function doImport() {
-    const file = (onFile as unknown as { file?: BlendFile }).file
+    const file = selectedFile
     if (!file) return
     setBusy(true); setMsg("")
     try {
-      // Server part → the dossier.
-      let serverMsg = ""
-      if (file.server) {
-        const r = await fetch("/api/kompas/blend/import", {
-          method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify(file.server),
-        })
-        const d = await r.json().catch(() => ({}))
-        if (r.ok) serverMsg = `dossier gained ${d.qaAdded || 0} answers in ${d.sessionsAdded || 0} sessions`
-        else serverMsg = `server import: ${d.error || "failed"}`
+      // The authenticated import takes the file as a whole, including
+      // historical browser Q&A and prepared answers. None is silently discarded.
+      let serverMsg = "server dossier was not updated"
+      const r = await fetch("/api/kompas/blend/import", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify(file),
+      }).catch(() => null)
+      if (r) {
+        const d = await r.json().catch(() => ({})) as Record<string, unknown>
+        if (r.ok) serverMsg = `server dossier gained ${d.qaAdded || 0} Q&A across ${d.sessionsAdded || 0} sessions; ${d.preparedAdded || 0} prepared examples`
+        else serverMsg = `server import not completed: ${String(d.error || (r.status === 401 ? "sign in to MarketFit" : "retry later"))}`
       }
-      // Browser part → merge the learned vocabulary (the portable pro).
-      const vocab = file.browser?.vocab || []
-      if (vocab.length) {
+      // The local merge is independent of server authentication and always
+      // keeps existing sessions/questions. It never replaces existing IDs.
+      const b = file.browser
+      let sessionsAdded = 0, questionsAdded = 0, wordsAdded = 0
+      if (b && Array.isArray(b.sessions)) {
+        const prior = safeJson(localStorage.getItem("perfact.sessions"))
+        const sessions = Array.isArray(prior) ? [...prior] : []
+        const ids = new Set(sessions.map(x => String((x as Record<string, unknown>)?.id || "")).filter(Boolean))
+        for (const row of b.sessions.slice(0, 2000)) {
+          if (!row || typeof row !== "object" || Array.isArray(row)) continue
+          const id = String((row as Record<string, unknown>).id || "")
+          if (!id || id.length > 100 || ids.has(id)) continue
+          sessions.push(row); ids.add(id); sessionsAdded++
+        }
+        if (sessionsAdded) localStorage.setItem("perfact.sessions", JSON.stringify(sessions))
+      }
+      if (b && Array.isArray(b.qbank)) {
+        const prior = safeJson(localStorage.getItem("perfact.qbank"))
+        const bank = prior && typeof prior === "object" && !Array.isArray(prior)
+          ? prior as Record<string, unknown> : { items: [] as unknown[] }
+        const items = Array.isArray(bank.items) ? [...bank.items] : []
+        const normalized = (x: string) => x.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\\s+/g, " ").trim()
+        const have = new Set(items.map(x => normalized(String((x as Record<string, unknown>)?.text || ""))))
+        for (const q of b.qbank.slice(0, 3000)) {
+          if (typeof q !== "string" || q.length < 8 || q.length > 500) continue
+          const key = normalized(q)
+          if (!key || have.has(key)) continue
+          items.push({ id: `blend-${Date.now()}-${questionsAdded}`, text: q.slice(0, 300), category: "Technical",
+            company: "", role: "", source: "Kompas blend", createdAt: Date.now(), practiced: 0, answer: "" })
+          have.add(key); questionsAdded++
+        }
+        if (questionsAdded) localStorage.setItem("perfact.qbank", JSON.stringify({ ...bank, items }))
+      }
+      if (b && Array.isArray(b.vocab)) {
         const cur = safeJson(localStorage.getItem("mf_flow_learned"))
         const have = new Set(Array.isArray(cur) ? cur.map(String) : [])
-        for (const w of vocab) have.add(String(w))
-        localStorage.setItem("mf_flow_learned", JSON.stringify([...have].slice(0, 500)))
+        for (const w of b.vocab.slice(0, 500)) {
+          if (typeof w !== "string" || !w.trim() || w.length > 120) continue
+          if (!have.has(w.trim())) { have.add(w.trim()); wordsAdded++ }
+        }
+        if (wordsAdded) localStorage.setItem("mf_flow_learned", JSON.stringify([...have].slice(0, 1000)))
       }
-      setMsg(`Imported. ${serverMsg}${vocab.length ? `; ${vocab.length} learned words merged here` : ""}. The next session draws on all of it.`)
+      setMsg(`Browser merged ${sessionsAdded} sessions, ${questionsAdded} bank questions and ${wordsAdded} learned words; ${serverMsg}. Original documents, transcripts and IndexedDB pages require the complete browser transfer below.`)
+      setSelectedFile(null)
       setPlan("")
     } catch {
       setMsg("Import failed. Try again.")
@@ -169,10 +207,11 @@ export default function KompasMovePage() {
     <main style={{ maxWidth: 680, margin: "0 auto", padding: "40px 20px 64px" }}>
       <h1 style={{ fontSize: 28, margin: "0 0 10px" }}>Blend your Kompas data</h1>
       <p style={{ color: "var(--muted, #666)", margin: "0 0 12px" }}>
-        Everything usable from both Kompas copies — sessions, answers, prepared
-        answers, the question bank, learned words — travels in one file. Only
-        the pros are exported: real answers with their pauses, never the
-        failed or empty turns. Nothing is sent anywhere; the file goes through you.
+        This curated blend holds useful interview answers, prepared examples,
+        question-bank entries and learned vocabulary. The export combines data
+        from this browser with your signed-in MarketFit dossier, and importing
+        sends the approved blend back to your account. Keep the original
+        full-fidelity archive separately, including transcripts and documents.
       </p>
 
       <section style={{ border: "1px solid #ddd", borderRadius: 12, padding: "18px 20px", margin: "18px 0" }}>
@@ -189,18 +228,28 @@ export default function KompasMovePage() {
       <section style={{ border: "1px solid #ddd", borderRadius: 12, padding: "18px 20px", margin: "18px 0" }}>
         <h2 style={{ fontSize: 18, margin: "0 0 6px" }}>2. Import a blend file</h2>
         <p style={{ color: "var(--muted, #666)", margin: "0 0 12px" }}>
-          Choose the file. You are told what it holds before anything is added. Nothing here is replaced.
+          Choose a curated blend file. The server adds new grounded examples only when you are signed in; the local session and question-bank merge never replaces existing entries.
         </p>
         <input type="file" accept="application/json,.json" aria-label="The Kompas blend file"
           onChange={(e) => onFile(e.target.files?.[0])} style={{ display: "block", margin: "10px 0 12px" }} />
         {plan && <p style={{ minHeight: "1.2em" }}>{plan}</p>}
-        <button onClick={doImport} disabled={busy || !plan || plan.startsWith("This is not")}
+        <button onClick={doImport} disabled={busy || !selectedFile}
           style={{ padding: "10px 18px", borderRadius: 8, border: "none", background: "#111", color: "#fff", cursor: "pointer", opacity: busy || !plan ? 0.45 : 1 }}>
           {busy ? "Working…" : "Add it here"}
         </button>
       </section>
 
       {msg && <p role="status" style={{ fontWeight: 600 }}>{msg}</p>}
+      <section style={{ border: "1px solid var(--border, #ddd)", borderRadius: 12, padding: "18px 20px", margin: "18px 0" }}>
+        <h2 style={{ fontSize: 18, margin: "0 0 6px" }}>Preserve every original record first</h2>
+        <p style={{ color: "var(--muted, #666)", marginBottom: 10 }}>
+          The full browser transfer preserves all original Kompas sessions, transcripts, Question Bank data,
+          prepared pages, resumes and documents, including IndexedDB files. Export on the old perfACT
+          address, then import on this MarketFit address. Keep both download files as a backup.
+        </p>
+        <p><a href="https://perfact-ten.vercel.app/move.html" target="_blank" rel="noopener noreferrer" style={{ color: "inherit" }}>1. Export originals from perfACT</a></p>
+        <p><a href="/kompas/move.html" style={{ color: "inherit" }}>2. Import originals into MarketFit</a></p>
+      </section>
       <p><a href="/dashboard/kompas" style={{ color: "inherit" }}>Back to Kompas</a></p>
     </main>
   )
