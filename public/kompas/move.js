@@ -8,6 +8,93 @@
 
   const readLocal = () => { const out = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (M.wanted(k)) out[k] = localStorage.getItem(k); } return out; };
 
+  // MarketFit has a SECOND data family that perfACT's original export cannot
+  // see: corrected dictation, learned words, language, and full transcripts.
+  // These exact keys are the only MarketFit browser preferences we carry.
+  // Never export arbitrary localStorage: it may contain credentials or tokens.
+  const MF_KEYS = new Set(["mf_flow_history", "mf_flow_hint", "mf_flow_learned", "mf_flow_lang"]);
+  const MF_DB = "mf_kompas_transcripts", MF_STORE = "sessions";
+  const readMfLocal = () => {
+    const out = {};
+    for (const key of MF_KEYS) { const value = localStorage.getItem(key); if (value !== null) out[key] = value; }
+    return out;
+  };
+  const mfWrong = (file) => {
+    if (!file.marketfit) return "";
+    const mf = file.marketfit;
+    if (!mf || typeof mf !== "object" || Array.isArray(mf)) return "Invalid MarketFit records.";
+    if (!mf.localStorage || typeof mf.localStorage !== "object" || Array.isArray(mf.localStorage)) return "Invalid MarketFit preferences.";
+    for (const [key, value] of Object.entries(mf.localStorage)) {
+      if (!MF_KEYS.has(key) || typeof value !== "string") return "The archive contains an unsupported preference.";
+    }
+    if (mf.databases && (typeof mf.databases !== "object" || Array.isArray(mf.databases))) return "Invalid MarketFit database.";
+    for (const [name, stores] of Object.entries(mf.databases || {})) {
+      if (name !== MF_DB || !stores || typeof stores !== "object" || Array.isArray(stores) ||
+        Object.keys(stores).some(k => k !== MF_STORE)) return "Unsupported MarketFit data store.";
+      for (const row of stores[MF_STORE] || []) {
+        if (!row || typeof row !== "object" || !row.value || typeof row.value !== "object" ||
+          typeof row.value.id !== "string" || row.value.id.length > 150) return "Invalid transcript record.";
+      }
+    }
+    return "";
+  };
+  function openMf() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(MF_DB, 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains(MF_STORE))
+          req.result.createObjectStore(MF_STORE, { keyPath: "id" });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function readMarketFit() {
+    const localStorage = readMfLocal(), databases = {};
+    if (!indexedDB.databases) return { localStorage, databases, incomplete: "IndexedDB listing unsupported: MarketFit transcripts could not be included." };
+    const names = new Set((await indexedDB.databases()).map(row => row.name));
+    if (names.has(MF_DB)) {
+      const db = await openMf();
+      try {
+        if (!db.objectStoreNames.contains(MF_STORE)) return { localStorage, databases, incomplete: "Transcript table missing." };
+        const store = db.transaction(MF_STORE, "readonly").objectStore(MF_STORE);
+        const [keys, values] = await Promise.all([done(store.getAllKeys()), done(store.getAll())]);
+        databases[MF_DB] = { [MF_STORE]: await Promise.all(values.map(async (v, i) => ({ key: keys[i], value: await pack(v) }))) };
+      } finally { db.close(); }
+    }
+    return { localStorage, databases };
+  }
+  async function importMarketFit(file) {
+    const mf = file.marketfit;
+    if (!mf) return { preferences: 0, transcripts: 0, full: 0 };
+    let preferences = 0, transcripts = 0, full = 0;
+    for (const [key, value] of Object.entries(mf.localStorage || {})) {
+      const merged = M.mergeValue(localStorage.getItem(key), value);
+      if (merged.action === "added" || merged.action === "merged") {
+        try { localStorage.setItem(key, merged.value); preferences++; } catch { full++; }
+      }
+    }
+    for (const [name, stores] of Object.entries(mf.databases || {})) {
+      if (name !== MF_DB) continue;
+      const list = stores[MF_STORE] || [];
+      if (!list.length) continue;
+      const db = await openMf();
+      try {
+        const tx = db.transaction(MF_STORE, "readwrite");
+        const store = tx.objectStore(MF_STORE);
+        const have = new Set((await done(store.getAllKeys())).map(String));
+        for (const row of list) if (!have.has(String(row.key))) {
+          const value = unpack(row.value);
+          if (!value || value.id !== row.key) { full++; continue; }
+          store.add(value); transcripts++;
+        }
+        await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error); });
+      } finally { db.close(); }
+    }
+    return { preferences, transcripts, full };
+  }
+
+
   // A stored value as text for the file, and back. A recording or an uploaded document is bytes, so it is carried as such.
   async function pack(v) {
     if (v instanceof Blob) return { $blob: M.toB64(new Uint8Array(await v.arrayBuffer())), type: v.type, name: v.name || "" };
@@ -64,13 +151,17 @@
   /* Everything Kompas keeps in this browser, on this address. */
   async function exportAll() {
     const { databases, unread } = await readDatabases();
-    return { kind: M.KIND, version: M.VERSION, made: new Date().toISOString(), from: location.origin, localStorage: readLocal(), databases, ...(unread ? { note: "This browser could not list its databases, so prepared answers and uploaded files are not in this file." } : {}) };
+    const marketfit = await readMarketFit();
+    return { kind: M.KIND, version: M.VERSION, made: new Date().toISOString(), from: location.origin,
+      localStorage: readLocal(), databases, marketfit,
+      ...(unread ? { note: "The browser could not list perfACT databases. The original prepared pages or documents may be absent." } : {}),
+      ...(marketfit.incomplete ? { marketfitNote: marketfit.incomplete } : {}) };
   }
   const rowsIn = (file) => Object.values(file.databases || {}).reduce((n, db) => n + Object.values(db).reduce((m, rows) => m + rows.length, 0), 0);
 
   /* Bring a file's data in beside what is here. Nothing here is replaced (move-core.js). Returns what was done. */
   async function importAll(file) {
-    const wrong = M.refuse(file); if (wrong) throw new Error(wrong);
+    const wrong = M.refuse(file) || mfWrong(file); if (wrong) throw new Error(wrong);
     const plan = M.plan(file, readLocal());
     // A browser gives each address a few megabytes. When that runs out the rest is counted and said, never dropped in silence.
     let full = 0;
@@ -87,7 +178,9 @@
       }
       db.close();
     }
-    return { added: plan.added, merged: plan.merged, same: plan.same, kept: plan.kept, rows, full };
+    const mf = await importMarketFit(file);
+    return { added: plan.added, merged: plan.merged, same: plan.same, kept: plan.kept,
+      rows, full: full + mf.full, mfPreferences: mf.preferences, mfTranscripts: mf.transcripts };
   }
 
   function download(name, object) {
@@ -107,7 +200,7 @@
   $("mvHere").textContent = location.host;
   $("mvHas").textContent = words(M.count(readLocal()));
   $("mvOut").addEventListener("click", async () => {
-    try { const file = await exportAll(); download(`kompas-data-${location.hostname}-${stamp()}.json`, file); say(`Downloaded: ${words(M.count(file.localStorage))}${rowsIn(file) ? ", and " + rowsIn(file) + " prepared pages and files" : ""}. Now open this page on the address you are keeping and choose that file there.` + (file.note ? " " + file.note : "")); }
+    try { const file = await exportAll(); download(`kompas-data-${location.hostname}-${stamp()}.json`, file); say(`Downloaded: ${words(M.count(file.localStorage))}${rowsIn(file) ? ", and " + rowsIn(file) + " prepared pages and files" : ""}, ${Object.keys(file.marketfit.localStorage).length} MarketFit preferences and ${(file.marketfit.databases[MF_DB]?.[MF_STORE] || []).length} complete MarketFit transcripts. Keep this original archive as a backup.` + (file.note ? " " + file.note : "") + (file.marketfitNote ? " " + file.marketfitNote : "")); }
     catch (e) { say("Could not read the data here: " + String((e && e.message) || e), true); }
   });
   $("mvFile").addEventListener("change", async (e) => {
@@ -116,6 +209,7 @@
     try {
       const file = JSON.parse(await picked.text()), wrong = M.refuse(file);
       if (wrong) return say(wrong, true);
+      const extra = mfWrong(file); if (extra) return say(extra, true);
       if (file.from === location.origin) return say("This file was made on this same address. Open this page on the other address to bring it in there.", true);
       const plan = M.plan(file, readLocal());
       chosen = file; $("mvIn").disabled = false;
@@ -131,7 +225,7 @@
       download(`kompas-here-before-${location.hostname}-${stamp()}.json`, await exportAll());   // what is here now, kept in a file first
       const did = await importAll(chosen);
       $("mvHas").textContent = words(M.count(readLocal()));
-      say(`Done. ${did.added + did.merged - did.full} saved things were added${did.rows ? ", with " + did.rows + " prepared pages and files" : ""}. A copy of what was here before is in your downloads. Open Kompas to see them.` +
+      say(`Done. ${did.added + did.merged} perfACT items merged${did.rows ? ", with " + did.rows + " prepared pages and files" : ""}; ${did.mfPreferences} MarketFit settings and ${did.mfTranscripts} transcripts imported. A copy of what was here before is in your downloads. Open Kompas to see them.` +
         (did.full ? ` ${did.full} could not be saved: this browser's store for this address is full. Delete old transcripts here and bring the file in again; what is already in is not added twice.` : ""), !!did.full);
       chosen = null; $("mvFile").value = ""; $("mvPlan").textContent = "";
     } catch (e) { say("Nothing more was changed. " + String((e && e.message) || e), true); $("mvIn").disabled = false; }
