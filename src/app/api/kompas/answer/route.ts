@@ -172,7 +172,7 @@ async function fetchOpenRouter(
 // A light non-streaming call for the post-generation fact-check (perfACT's
 // verifyAnswer). JSON-forced, low effort, never streamed to the client.
 async function verifyGenerate(key: string, system: string, user: string, signal: AbortSignal): Promise<string> {
-  const model = process.env.KOMPAS_VERIFY_MODEL || "nvidia/nemotron-3-super-120b-a12b:free"
+  const model = process.env.KOMPAS_VERIFY_MODEL || "anthropic/claude-3.5-haiku"
   const res = await fetch(OR_URL, {
     method: "POST", signal,
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
@@ -294,7 +294,7 @@ function jobLanes(job: AnswerJob): string[] {
   const lanes: string[] = []
   if (job.liveModel.includes("/")) lanes.push(job.liveModel)
   const primary = process.env.KOMPAS_ANSWER_MODEL || modelFor("openrouter", "heavy")
-  const fallback = process.env.OPENROUTER_MODEL_FALLBACK || "nvidia/nemotron-3-super-120b-a12b:free"
+  const fallback = process.env.OPENROUTER_MODEL_FALLBACK || "anthropic/claude-3.5-sonnet"
   for (const m of [primary, fallback]) if (m && !lanes.includes(m)) lanes.push(m)
   return lanes
 }
