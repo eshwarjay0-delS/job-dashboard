@@ -113,6 +113,9 @@ export function readChoice(text: string, slots: string[]): { email: string; rest
     if (spot.line.length > 60 || !PLAIN_LINE.test(spot.line)) continue
     if (spot === first && !/\p{L}/u.test(spot.line)) continue
     if (/^0/.test(spot.line)) continue
+    // Pasted JDs often end with a recruiter's email, e.g. "Reply to x@y.com".
+    // That is not the candidate selecting their own resume library.
+    if (spot.line.includes("@") && !(/^[^\\s@]+@[^\\s@]+$/u.test(spot.line) || /^(?:for|use|choose|select|email(?:\\s+is)?|the\\s+email\\s+is)\\s+/i.test(spot.line))) continue
     const email = choiceIn(spot.line, slots)
     if (email) return { email, rest: lines.filter((_, at) => at !== spot.at).join("\n").trim() }
   }
