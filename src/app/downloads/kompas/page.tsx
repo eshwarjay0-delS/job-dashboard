@@ -75,8 +75,10 @@ export default function KompasDesktopDownload() {
           {desktopUrl ? (
             <>
               <p style={{ color: "var(--text-muted, #8a8578)", margin: "0 0 16px", lineHeight: 1.6, fontSize: 14 }}>
-                Download the executable, run it once, and the <code>kompas://</code> launcher
-                registers itself. After that, Kompas opens straight from the browser.
+                Download the latest executable and open it once to register both desktop launchers.
+                MarketFit uses <code>marketfit-kompas://</code>, independently of the standalone
+                perfACT app. You can keep the standalone app installed. Return to MarketFit,
+                select Desktop app, and press Connect &amp; start.
               </p>
               <a
                 href={desktopUrl}
@@ -95,9 +97,10 @@ export default function KompasDesktopDownload() {
               </a>
               {privateRelease && (
                 <p style={{ color: "var(--text-muted, #8a8578)", fontSize: 13, marginTop: 12, lineHeight: 1.5 }}>
-                  The current release is in your private perfACT GitHub repository.
-                  Sign in to GitHub with an account that has repository access.
-                  Once a public installer is hosted, the same button will use KOMPAS_DESKTOP_URL.
+                  The download is hosted in your private perfACT GitHub repository.
+                  Sign in to GitHub with repository access. If clicking the button
+                  opens a GitHub sign-in or 404 page, the executable is not publicly
+                  downloadable yet. Public hosting can be configured through KOMPAS_DESKTOP_URL.
                 </p>
               )}
             </>
