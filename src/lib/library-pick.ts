@@ -78,7 +78,7 @@ export function choiceIn(line: string, slots: string[]): string {
   // A natural reply such as "The email is jayeshwar44@gmail.com in this case" is an
   // account selection, not a new job description. Require exactly one address in the
   // message and an exact match to one of this account's numbered email libraries.
-  const mentioned = [...new Set(said.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}/g) || [])]
+  const mentioned = [...new Set(said.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/g) || [])]
   if (mentioned.length === 1 && emails.includes(mentioned[0])) return mentioned[0]
   // The address itself, or the part before the @ when only one address is written that way.
   const byName = (s: string): string => { const hit = emails.filter(e => e === s || e.split("@")[0] === s); return hit.length === 1 ? hit[0] : "" }
