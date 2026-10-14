@@ -505,9 +505,9 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     const slots = numbered.slots
     // A number is read with the job description only when the numbering is the one this account has always had.
     const said = numbered.sure ? readChoice(text, slots) : { email: "", rest: text.trim() }
-    // The same job description sent again (after a failure) keeps the email it was given.
-    const again = session.jd && session.email && live(slots).includes(session.email) && jobKeyOf(session.jd) === jobKeyOf(said.rest) ? session.email : ""
-    const email = said.email || again
+    // Every pasted JD is a new request for a resume identity. A prior choice
+    // cannot silently carry over, even when the JD text was pasted again.
+    const email = said.email
     // For every new job with multiple email libraries, ask FIRST. Do not start from the
     // number's previous baseline resume while the user has yet to choose this job's email.
     if (who.own && live(slots).length > 1 && !email) {
@@ -654,7 +654,7 @@ async function keptSource(from: string, session: Session, who: Who): Promise<Sou
 async function startFor(from: string, session: Session, who: Who, jd: string, original: boolean, choice: Choice): Promise<Start> {
   const userDir = userDirOf(who.userId)
   const own = await keptSource(from, session, who)
-  if (own && original) return { source: own }
+  if (own && original && (!choice.email || (await keptEmailOf(session)) === choice.email)) return { source: own }
   const keptEmail = own ? await keptEmailOf(session) : ""
   // The default account every unjoined number shares holds other people's resumes: it is never looked through, not
   // even for the email on the resume this number sent (found in review: a resume carrying someone's email was enough
@@ -722,7 +722,7 @@ async function clearFlight(from: string, token: string): Promise<void> {
 async function putAway(from: string, session: Session, usedKept: boolean, email?: string): Promise<void> {
   const loaded = await loadSession(from)
   const now = loaded.seen?.length ? loaded : session
-  const another = !!now.jd && jobKeyOf(now.jd) !== jobKeyOf(session.jd || "")
+  const another = !!now.jd && (jobKeyOf(now.jd) !== jobKeyOf(session.jd || "") || (!!now.email && !!email && now.email !== email))
   const sameResume = (now.resumeAt || 0) <= (session.resumeAt || 0)
   await saveSession(from, {
     ...(another ? now : kept(now)),
@@ -765,8 +765,10 @@ async function generate(from: string, session: Session, who: Who, maxMs = TAILOR
   const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
   if (!hasAnyKey(keys)) return sendText(from, "I cannot tailor yet: no AI service is switched on for this. The owner of this site can switch one on from the Admin page.")
   if (!session.jd) return sendText(from, HELP)
+  if (session.ask?.length && !choice.email && !session.email) return sendText(from, askWhichEmail(session.ask))
   const lookedAt = Date.now()
-  const start = await startFor(from, session, who, session.jd, original, choice)
+  const selectedEmail = choice.email || session.email || ""
+  const start = await startFor(from, session, who, session.jd, original, { ...choice, email: selectedEmail })
   if ("ask" in start) {
     // Asked once for this job description. It waits in the session; the answer is a number or the address.
     session.ask = start.ask
@@ -781,7 +783,7 @@ async function generate(from: string, session: Session, who: Who, maxMs = TAILOR
 
   // The same job is never made twice at once. A run that brings a newer resume takes over; anything else is told the
   // job is on its way and starts nothing.
-  const job = jobKeyOf(session.jd), mine = randomBytes(6).toString("hex")
+  const job = `${jobKeyOf(session.jd)}:${source.email || selectedEmail}`, mine = randomBytes(6).toString("hex")
   const flight = await inFlight(from)
   if (flight && flight.job === job && flight.email === (source.email || "") && Date.now() - flight.at < IN_FLIGHT_MS && !((session.resumeAt || 0) > flight.at)) {
     return sendText(from, "I am already making the resume for this job. It will be with you within a minute.")
@@ -847,7 +849,10 @@ async function generate(from: string, session: Session, who: Who, maxMs = TAILOR
   const identityChanged = !!sourceName && sourceName !== outputName
   const emailChanged = baselineEmail.length === 1 &&
     (outputEmails.length !== 1 || outputEmails[0] !== baselineEmail[0])
-  const wrongLibrary = !!source.email && (baselineEmail.length !== 1 || baselineEmail[0] !== source.email)
+  const wrongLibrary = !!selectedEmail && (
+    baselineEmail.length !== 1 || baselineEmail[0] !== selectedEmail ||
+    outputEmails.length !== 1 || outputEmails[0] !== selectedEmail
+  )
   if (identityChanged || emailChanged || wrongLibrary) {
     await clearFlight(from, mine)
     console.error("[whatsapp] identity validation blocked generated resume", { identityChanged, emailChanged, wrongLibrary })
@@ -858,6 +863,13 @@ async function generate(from: string, session: Session, who: Who, maxMs = TAILOR
   // Nothing is sent and nothing is saved, so the person gets one resume for the job and Files gets one file.
   const still = await inFlight(from)
   if (still && still.job === job && still.token !== mine) { console.error("[whatsapp] stood down: a newer run for the same job took over"); return }
+  const latest = await loadSession(from)
+  if (latest.jd && jobKeyOf(latest.jd) === jobKeyOf(session.jd) &&
+      latest.email && selectedEmail && latest.email !== selectedEmail) {
+    await clearFlight(from, mine)
+    console.error("[whatsapp] cancelled older run after email selection changed")
+    return
+  }
 
   const meta = await metaPromise
   const name = await outputNameFor(file)
