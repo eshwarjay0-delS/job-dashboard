@@ -9,6 +9,7 @@ import ResumeBuilder from "./ResumeBuilder"
 import DocumentsClient from "../documents/DocumentsClient"
 import { IllustLibrary, IllustBuilder } from "@/components/Illustrations"
 import PageIntro from "../_components/page-intro"
+import { Check } from "lucide-react"
 import { tailoredFilename, extractRoleCompany } from "@/lib/filename"
 
 // ── Recent tailored resumes (persisted to localStorage) ───────────────────────
@@ -669,11 +670,11 @@ export default function ResumeClient({ initialFiles, initialFolders = [], otherF
 
               {/* Tailoring depth */}
               <div className="rounded-xl border px-4 py-3" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: "var(--text-soft)" }}>Tailoring Depth</p>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: "var(--text-soft)" }}>Tailoring depth</p>
                 <div className="flex gap-2">
                   {([
-                    ["quick", "⚡ Quick", "Headline, summary & top bullets"],
-                    ["full",  "✦ Full",  "Every relevant line — most thorough"],
+                    ["quick", "Quick", "Headline, summary & top bullets"],
+                    ["full",  "Full",  "Every relevant line — most thorough"],
                   ] as const).map(([key, label, desc]) => {
                     const on = mode === key
                     return (
@@ -765,7 +766,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [], otherF
                 <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
                   <div className="px-4 py-2.5 border-b flex items-center justify-between gap-2"
                     style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
-                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-soft)" }}>Resume Folders</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-soft)" }}>Resume folders</p>
                     <button onClick={() => setActiveTab("docs")} className="text-xs font-medium flex items-center gap-1"
                       style={{ color: "var(--accent-txt)", background: "none", border: "none", cursor: "pointer" }}>
                       Manage
@@ -789,7 +790,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [], otherF
                   </div>
                 </div>
               ) : (
-                <div className="rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 py-8 text-center"
+                <div className="rounded-2xl border flex flex-col items-center justify-center gap-3 py-8 text-center"
                   style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                   <IllustLibrary style={{ width: 180, height: 135, borderRadius: 12 }}/>
                   <div>
@@ -837,10 +838,10 @@ export default function ResumeClient({ initialFiles, initialFolders = [], otherF
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold" style={{ color: onePage ? "#fff" : "var(--text)" }}>
-                      One-Page Resume
+                      One-page resume
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: onePage ? "rgba(255,255,255,.75)" : "var(--text-soft)" }}>
-                      {onePage ? "Active — AI will condense to a single page" : "Condense to one page · ideal for &lt;5 yrs exp"}
+                      {onePage ? "Active — AI will condense to a single page" : "Condense to one page · best under 5 years of experience"}
                     </p>
                   </div>
                   <div className="flex-shrink-0">
@@ -855,12 +856,12 @@ export default function ResumeClient({ initialFiles, initialFolders = [], otherF
 
               {/* Sections to enhance */}
               <div className="rounded-xl border px-4 py-3" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: "var(--text-soft)" }}>Sections to Rewrite</p>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: "var(--text-soft)" }}>Sections to rewrite</p>
                 <div className="flex flex-wrap gap-2">
                   {([
-                    ["summary", "📝 Summary"],
-                    ["skills",  "🛠 Skills"],
-                    ["experience", "💼 Experience"],
+                    ["summary", "Summary"],
+                    ["skills",  "Skills"],
+                    ["experience", "Experience"],
                   ] as const).map(([key, label]) => {
                     const on = sections[key]
                     return (
@@ -873,7 +874,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [], otherF
                           ? { background: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--accent-txt)", boxShadow: "0 0 0 1px var(--accent)" }
                           : { background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text-soft)" }}
                       >
-                        <span>{on ? "✓ " : ""}</span>{label}
+                        {on && <Check size={13} aria-hidden="true" style={{ color: "currentColor" }} />}{label}
                       </button>
                     )
                   })}
@@ -884,7 +885,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [], otherF
               <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
                 <div className="px-4 py-2.5 border-b flex items-center justify-between"
                   style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
-                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-soft)" }}>Recent Tailored</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-soft)" }}>Recently tailored</p>
                   <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
                     style={{ background: "var(--accent-soft)", color: "var(--accent-txt)" }}>last 3</span>
                 </div>

@@ -370,7 +370,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto" }} className="space-y-5">
+    <div className="space-y-5">
 
       {/* Header */}
       <div className="anim-fade-up d-0 flex items-center justify-between gap-4 flex-wrap">
@@ -388,12 +388,12 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
 
       <WhatsAppClaim onMoved={broughtIn} />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button type="button" className="btn-outline" onClick={organizeLibrary} disabled={organizing || !allFiles.length}>
+      {allFiles.length > 0 && <div className="flex flex-wrap items-center gap-3">
+        <button type="button" className="btn-outline" onClick={organizeLibrary} disabled={organizing}>
           {organizing ? "Organizing resumes…" : "Organize by email and remove duplicates"}
         </button>
-        <p className="text-sm" style={{color:"var(--text-muted)"}}>25 category folders per email · up to 50 selected resumes · strongest two per category</p>
-      </div>
+        <p className="text-sm" style={{color:"var(--text-muted)"}}>Puts each resume under the email written in it, in folders by kind of job, and removes copies.</p>
+      </div>}
       {discoveredEmails.length > 0 && <label className="block text-sm">Show email library
         <select className="block mt-2 w-full rounded-lg border p-3" value={selectedEmail} onChange={e => { setSelectedEmail(e.target.value); setChecked(new Set()) }}>
           <option value="">All email libraries</option>
@@ -402,7 +402,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
       </label>}
       {/* Discover email identities from actual tenant-owned resumes; never hardcode an owner. */}
       {libraryIndexError && <p role="alert" className="text-sm" style={{color:"var(--text-muted)"}}>Resume indexing is temporarily unavailable. Your uploaded files are not affected.</p>}
-      {discoveredEmails.length === 0 && <div className="rounded-xl border p-4 text-sm" style={{borderColor:"var(--border)",background:"var(--surface)"}}><strong>No indexed email libraries yet.</strong><p className="mt-2">Import your existing resume ZIP using Choose files below. Each resume is grouped by the contact email inside the document. You can maintain multiple email libraries in one account.</p></div>}
+      {discoveredEmails.length === 0 && allFiles.length > 0 && <div className="rounded-xl border p-4 text-sm" style={{borderColor:"var(--border)",background:"var(--surface)"}}><strong>Not sorted by email yet.</strong><p className="mt-2">Press Organize and each resume goes under the email written in it. One account can keep resumes for more than one email.</p></div>}
       <div className="grid gap-3 sm:grid-cols-2" aria-label="Resume libraries by email">
         {discoveredEmails.map(email => (
           <div key={email} className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
@@ -540,21 +540,6 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
       )}
 
       {/* Empty state (no files at all) */}
-      {allFiles.length === 0 && initialFolders.length === 0 && uploaded.filter(u => u.status === "scanning").length === 0 && (
-        <div className="rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 py-16 text-center anim-fade-up d-3"
-          style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-            style={{ background: "var(--accent-soft)" }}>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" style={{ color: "var(--accent-txt)" }}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-base font-semibold" style={{ color: "var(--text)" }}>No resumes yet</p>
-            <p className="text-sm mt-1" style={{ color: "var(--text-soft)" }}>Drop a .docx or .zip above to get started</p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

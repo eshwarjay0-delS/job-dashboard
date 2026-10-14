@@ -81,7 +81,7 @@ export default async function DocumentsPage() {
   const { files, folders } = await scanLibrary(userDir)
 
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div>
       <PageIntro page="/dashboard/documents" action={{ label: "Add a resume file", htmlFor: "doc-upload" }} />
       <DocumentsClient initialFiles={files} initialFolders={folders} />
     </div>
