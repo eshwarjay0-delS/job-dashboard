@@ -243,7 +243,7 @@ export async function runTailor(opts: {
       ]
     : [
         "More specific, less generic — concrete tools, systems, and outcomes, never vague filler",
-        "KNOWN JD CONTRACT: the user supplied/approved this JD as knowledge they possess. Incorporate every meaningful ATS keyword and requirement from it naturally across summary, skills, and relevant experience.",
+        "Use only JD requirements that the source resume substantiates. Never claim unverified AI governance frameworks, vendor products, or certifications.",
         "More technical detail — name the exact technologies, protocols, and methods used",
       ]
   const explicit = [...immediatePrefs, ...storedFeedback.filter(f => !immediatePrefs.includes(f))]
@@ -580,7 +580,8 @@ export async function runTailor(opts: {
   // left untouched. Roles short of that get a bullets-only pass each, built on the draft's own text and merged by [idx];
   // when a role's bullets can't carry all its skills (about 3 per bullet) the pass ADDS bullets to it. Repeats while it
   // keeps helping and time allows (TAILOR_FILL_ROUNDS, default 3).
-  const FILL_ROUNDS = Math.max(0, Number(E.TAILOR_FILL_ROUNDS ?? 3))
+  // Unverified gap filling manufactured JD claims in historical roles. Disabled until evidence-grounded.
+  const FILL_ROUNDS = 0
   const SKILLS_PER_BULLET = 3
   const MAX_ADD_PER_ROUND = Number(E.TAILOR_MAX_ADD_PER_ROUND) || 25
   const fillGaps = async (start: Pass): Promise<Pass> => {
@@ -635,7 +636,7 @@ export async function runTailor(opts: {
   let best: Pass | null = null
   let usedModel = ""
   let draftErr: unknown = null   // why the last draft that failed did, for the message below
-  const firstAsk = refine ? [] : injectFor(beforeKw)
+  const firstAsk = refine ? [] : ["Use exact JD wording for demonstrated experience only. Missing qualifications must not be invented."]
   // A split draft already uses every lane in one pass, so it is made once and then gap-filled per role. A single-call
   // draft (quick mode, a refinement) goes down the lanes until one answers, skipping any that already showed it cannot.
   for (const lane of splitDraft ? lanes.slice(0, 1) : lanes) {
@@ -663,12 +664,12 @@ export async function runTailor(opts: {
       // Stop only for the hard request deadline or the 98% completion threshold.
       for (let repair = 1; repair <= 3 && current.cov < TARGET_COVERAGE; repair++) {
         if (deadline - Date.now() < 5000) break
-        const missing = jdKws.filter(k => !current.afterKw.has(k))
+        const missing = jdKws.filter(k => !current.afterKw.has(k) && text.toLowerCase().includes(k.toLowerCase()))
         if (!missing.length) break
         const repairPrefs: string[] = [
           `COVERAGE REPAIR PASS ${repair}: current rendered JD coverage is ${Math.round(current.cov * 100)}%. The default completion target is at least ${Math.round(TARGET_COVERAGE * 100)}%.`,
-          `The JD is a KNOWN JD supplied/approved by the user. Incorporate ALL of these still-missing ATS terms naturally and contextually: ${missing.join(", ")}.`,
-          "Do not omit a JD term merely because it was absent from the baseline. Preserve immutable historical facts such as employer names, dates, education, and certifications.",
+          `Consider these source-documented terms only: ${missing.join(", ")}. Do not add JD-only skills or qualifications.`,
+          "Do not claim a term absent from the original resume. Preserve all career facts and evidence boundaries.",
           "Distribute terms across the summary, skills, and relevant experience instead of keyword stuffing.",
         ]
         const candidate: Pass | null = await draftPass(lane, repairPrefs).catch(err => {
@@ -701,7 +702,22 @@ export async function runTailor(opts: {
       : "Tailoring failed — every model errored (check API keys / quota).")
   }
   const { edits, buffer, notes, tailoredText, afterKw, claimedKw, roleKw, required, provenKw } = best
-  notes.push("Known JD contract: this user supplied/approved JD is treated as declared knowledge for tailoring. The default completion threshold is 98% literal JD keyword coverage; the score is still keyword overlap, not hiring probability.")
+  // Fail closed on identity drift and fabricated sensitive qualifications, in every channel.
+  const originalName = zones.header?.name?.trim() || ""
+  const renderedName = (await extractZones(buffer)).header?.name?.trim() || ""
+  if (originalName && originalName.toLowerCase() !== renderedName.toLowerCase()) {
+    throw new Error("Tailoring blocked: candidate name changed from the selected resume.")
+  }
+  const guardedClaims = [
+    /\bCISSP\b/i, /\bCISM\b/i, /\bCCSP\b/i, /\bONYX(?:\s+Security)?\b/i,
+    /\bAISPM\b/i, /\bISO\s*42001\b/i, /\bNIST\s+AI\s+RMF\b/i,
+  ]
+  for (const claim of guardedClaims) {
+    if (!claim.test(text) && claim.test(tailoredText)) {
+      throw new Error("Tailoring blocked: an unverified certification or specialized platform was inserted.")
+    }
+  }
+  notes.push("The JD is a role specification, not proof of experience. Only source-supported qualifications may be added. Keyword overlap is not hiring probability.")
   notes.push(`Tailored with ${usedModel} · JD keyword coverage ${Math.round(best.cov * 100)}%`)
   const finalRewrites = rewrites(edits)
   const finalAdded = addedFor(edits)
