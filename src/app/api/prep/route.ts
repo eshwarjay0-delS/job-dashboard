@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClientFromRequest } from "@/lib/supabase/server"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { runInterviewPrepWorkflow } from "@/lib/workflows/interview-prep"
 import { WorkflowGateError } from "@/lib/workflows/runtime"
@@ -7,7 +7,9 @@ import { WorkflowGateError } from "@/lib/workflows/runtime"
 export const runtime = "nodejs"
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
+  // Accepts Authorization: Bearer <supabase access token> (desktop app handoff)
+  // as well as the normal cookie session.
+  const supabase = await createClientFromRequest(req)
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ ok: false, error: "Authentication required." }, { status: 401 })

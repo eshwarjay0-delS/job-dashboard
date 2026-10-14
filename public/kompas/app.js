@@ -2821,6 +2821,43 @@ function renderConnect(s) {
   $("copilotTip").classList.add("hidden");
 }
 document.querySelectorAll(".cn-app").forEach(b => b.onclick = () => { LS.set("connectApp", b.dataset.app); renderConnect(); });
+// The desktop app runs in its own Electron process and never sees the browser's
+// cookies, so its API calls 401. Pass the Supabase access token (a JWT) along with
+// the session handoff; the desktop injects it as Authorization: Bearer on its
+// proxied /api/* requests, which the server accepts via createClientFromRequest.
+function supabaseAccessToken() {
+  try {
+    const jar = {};
+    String(document.cookie || "").split(";").forEach(c => {
+      const i = c.indexOf("=");
+      if (i > 0) jar[c.slice(0, i).trim()] = decodeURIComponent(c.slice(i + 1).trim());
+    });
+    // @supabase/ssr persists the session in cookies as base64-<base64url(JSON)>,
+    // chunked as sb-<ref>-auth-token.0, .1, ... when large.
+    const chunks = Object.keys(jar).filter(k => /^sb-[A-Za-z0-9]+-auth-token\.\d+$/.test(k))
+      .sort((a, b) => parseInt(a.split(".").pop(), 10) - parseInt(b.split(".").pop(), 10));
+    const single = Object.keys(jar).find(k => /^sb-[A-Za-z0-9]+-auth-token$/.test(k));
+    let raw = chunks.length ? chunks.map(k => jar[k]).join("") : (single ? jar[single] : "");
+    if (raw.startsWith("base64-")) raw = raw.slice(7);
+    let json = raw;
+    if (!/^\s*\{/.test(raw)) {
+      json = decodeURIComponent(escape(atob(raw.replace(/-/g, "+").replace(/_/g, "/"))));
+    }
+    const sess = JSON.parse(json);
+    if (sess && sess.access_token) return sess.access_token;
+  } catch (e) {}
+  try {
+    // Fallback: older supabase-js persisted plain JSON in localStorage.
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (/^sb-[A-Za-z0-9]+-auth-token$/.test(k || "")) {
+        const sess = JSON.parse(localStorage.getItem(k));
+        if (sess && sess.access_token) return sess.access_token;
+      }
+    }
+  } catch (e) {}
+  return "";
+}
 function packSession(s) {
   const slim = {
     id: s.id, type: s.type || "live", role: s.role || "", company: s.company || "",
@@ -2830,6 +2867,7 @@ function packSession(s) {
     tone: s.tone || "professional", mode: s.mode || "technical", length: s.length || "balanced",
     autoAnswer: !!s.autoAnswer, autoMode: s.autoMode === true, saveTranscript: s.saveTranscript !== false,
     createdAt: s.createdAt || Date.now(),
+    token: supabaseAccessToken(), // handed to the desktop app so its API calls are authenticated
     // The same native Kompas shell opens the MarketFit session in MarketFit, not the standalone perfACT site.
     site: (location.pathname === "/kompas" || location.pathname.startsWith("/kompas/") || location.pathname.startsWith("/dashboard/kompas")) ? "marketfit" : "perfact",
   };
