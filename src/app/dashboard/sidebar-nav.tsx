@@ -10,6 +10,7 @@ import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV } from "./_components/nav"
 import { useTheme } from "../theme-provider"
 import { ChevronRight, Moon, Sun } from "lucide-react"
 import { forgetGmailData } from "@/lib/use-gmail-data"
+import { forgetSetupDone } from "./onboarding-gate"
 
 const ALL_HREFS = [...NAV_ITEMS, ...ADMIN_NAV].map(i => i.href)
 
@@ -29,13 +30,22 @@ function isActive(href: string, pathname: string) {
 
 type CreditSummary = { resumesLeft: number; sessionsLeft: number; calibrated: boolean; remainingUsd: number }
 
+let creditAsk: Promise<CreditSummary | null> | null = null
+function askCredits(): Promise<CreditSummary | null> {
+  creditAsk ??= fetch("/api/credits/summary", { cache: "no-store" })
+    .then(r => (r.ok ? r.json() : null))
+    .then(j => (j && j.ok ? (j as CreditSummary) : null))
+    .catch(() => null)
+    .finally(() => { setTimeout(() => { creditAsk = null }, 60_000) })
+  return creditAsk
+}
+
 function useCreditSummary() {
   const [s, setS] = useState<null | CreditSummary>(null)
   useEffect(() => {
-    fetch("/api/credits/summary", { cache: "no-store" })
-      .then(r => (r.ok ? r.json() : null))
-      .then(j => { if (j && j.ok) setS(j) })
-      .catch(() => {})
+    let active = true
+    void askCredits().then(j => { if (active && j) setS(j) })
+    return () => { active = false }
   }, [])
   return s
 }
@@ -180,8 +190,9 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     setSigningOut(true)
     try {
       const supabase = createClient()
-      // The mail kept for instant pages belongs to this person: it goes when they sign out.
+      // The mail kept for instant pages, and that their setup is done, belong to this person: they go at sign-out.
       forgetGmailData()
+      forgetSetupDone()
       await supabase.auth.signOut()
       setAccountOpen(false)
       router.replace("/login")
@@ -225,6 +236,10 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     const supabase = createClient()
     let active = true
     let authRevision = 0
+    // Who is signed in, as last seen. Supabase also reports a refreshed session (on tab focus, on token refresh) for the
+    // same person; that is not a change, so the Admin link is not hidden and re-asked for it (it was: five asks in nine
+    // seconds on the owner's account, 14 Oct 2026, the link blinking each time).
+    let knownUserId: string | null | undefined = undefined
 
     function updateAccount(user: User | null) {
       if (!active) return
@@ -240,6 +255,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       // A later sign-out or account switch must win over this initial request.
       if (!active || authRevision !== initialRevision) return
+      knownUserId = user && !user.is_anonymous ? user.id : null
       updateAccount(user)
       if (!user || user.is_anonymous) return
       // An admin is never sent to setup (owner, 2026-10-07: "skip onboarding for this user"), so the answer is needed before
@@ -258,7 +274,9 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
 
     // The existing extension bridge also receives sign-out and account switches.
     const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event !== "INITIAL_SESSION") {
+      const id = session?.user && !session.user.is_anonymous ? session.user.id : null
+      if (event !== "INITIAL_SESSION" && id !== knownUserId) {
+        knownUserId = id
         authRevision += 1
         // Another account, or none: the link goes at once and comes back only if the server says this one is an admin too.
         const revision = authRevision
