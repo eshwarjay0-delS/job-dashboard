@@ -453,14 +453,12 @@ export default function ConnectionsClient() {
                 ? "Status couldn't be loaded."
                 : wa.connected
                   ? `Verified ${wa.label || ""} · opted in`
-                  : "Verify your number and choose WhatsApp during setup to link it."}
+                  : "Link your WhatsApp number to tailor resumes and save them in Files."}
             </small>
           </div>
-          {!wa.connected && !loadError && (
-            <Link href="/dashboard/setup" className="btn-outline" style={{ minHeight: 40, display: "inline-flex", alignItems: "center", textDecoration: "none", whiteSpace: "nowrap" }}>
-              Open setup
-            </Link>
-          )}
+          <Link href="/dashboard/whatsapp" className="btn-outline" style={{ minHeight: 40, display: "inline-flex", alignItems: "center", textDecoration: "none", whiteSpace: "nowrap" }}>
+            {wa.connected ? "Manage WhatsApp" : "Link WhatsApp"}
+          </Link>
         </div>
         <div className="conn-channel" style={{ opacity: 0.75 }}>
           <div className="conn-avatar" aria-hidden="true">in</div>
