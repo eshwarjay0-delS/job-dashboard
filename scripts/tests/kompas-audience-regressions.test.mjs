@@ -42,4 +42,8 @@ test('the live page says a problem before the session and does not leave a failu
   assert.match(page, /isUnavailableAnswer\(\{ degraded: true \}, t\)/)
   assert.doesNotMatch(page, /Answer service needs attention/)
   assert.doesNotMatch(page, /Answer engine unavailable\. Showing a prepared answer/)
+  assert.match(page, /function heardAsQuestion/)
+  assert.doesNotMatch(page, /transcript\.length > 500/)
+  assert.match(page, /flushHeard\(1500\)/)
+  assert.match(page, /derived: said/)
 })

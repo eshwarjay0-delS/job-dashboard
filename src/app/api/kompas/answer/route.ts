@@ -553,8 +553,10 @@ export async function POST(request: NextRequest) {
     // Deriving from the earlier text is what answered "No question yet" while the question was the new speech.
     const heard = str(body.question, 5000)
     const earlier = str(body.transcript, 900)
-    if (!heard || plainlyNoQuestion(heard))
-      return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
+    const heardQuestion = () => heard.split("\n").map((l) => l.replace(/^(?:You|Them):\s*/, "").trim()).filter(Boolean).join(" ").replace(/\s+/g, " ").trim().slice(0, 2000)
+    if (!heard) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
+    if (plainlyNoQuestion(heard))
+      return NextResponse.json({ derived: heardQuestion(), derivedBy: "heard" }, { headers: NO_STORE })
     const clean = cleanQuestion(heard)
     if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
     try {
@@ -562,14 +564,17 @@ export async function POST(request: NextRequest) {
         `${earlier ? `EARLIER (already answered — context only):\n${earlier}\n\n` : ""}HEARD:\n${heard}`,
         500, AbortSignal.any([request.signal, AbortSignal.timeout(15000)]))
       const derived = text.trim()
-      if (!derived || /^NO_QUESTION/i.test(derived)) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
+      if (!derived || /^NO_QUESTION/i.test(derived))
+        return NextResponse.json({ derived: heard.split("\n").map((l) => l.replace(/^(?:You|Them):\s*/, "").trim()).filter(Boolean).join(" ").replace(/\s+/g, " ").trim().slice(0, 2000), derivedBy: "heard" }, { headers: NO_STORE })
       return NextResponse.json({ derived }, { headers: NO_STORE })
-    } catch (e) {
-      return NextResponse.json({ error: "The paid provider could not identify the question. Please retry.", code: "OPENROUTER_DERIVE_FAILED" }, { status: 502, headers: NO_STORE })
+    } catch {
+      const said = heardQuestion()
+      if (said) return NextResponse.json({ derived: said, derivedBy: "heard" }, { headers: NO_STORE })
+      return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
     }
   }
 
-  let question = str(body.derived, 500) || str(body.question, 500)
+  let question = str(body.derived, 4000) || str(body.question, 4000)
   if (!question) return NextResponse.json({ error: "Nothing to answer." }, { status: 400, headers: NO_STORE })
 
   const config = (body.config && typeof body.config === "object" ? body.config : {}) as Record<string, unknown>

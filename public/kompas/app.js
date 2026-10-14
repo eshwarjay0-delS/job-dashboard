@@ -1426,7 +1426,7 @@ function fixTerms(text) {
 function onTranscript(who, text) {
   text = fixTerms(text);
   if (who === "You" && follow.on && !follow.sr) followHear(text, true);   // Follow along without live recognition
-  transcript.push({ who, text, at: Date.now(), seq: ++heardSeq }); if (transcript.length > 500) transcript.shift();
+  transcript.push({ who, text, at: Date.now(), seq: ++heardSeq });
   logEvent({ t: "line", who, text });
   appendDrawer(who, text);
   showCaption(who, text, false);
@@ -1438,7 +1438,8 @@ function onTranscript(who, text) {
 let answerCtl = null;
 let answerEpoch = 0;            // bumps on every answer request: an automatic retry only fires if nothing newer started
 function slimPrep() { const p = current && current.prep; return p ? { identity: p.identity, persona: p.persona, projects: p.projects } : {}; }
-function buildTranscript() { return transcript.slice(-12).map(t => `${t.who}: ${t.text}`).join("\n"); }
+function buildTranscript() { return transcript.slice(-80).map(t => `${t.who}: ${t.text}`).join("\n"); }
+function heardAsQuestion(lines) { return lines.map(t => t.text).join(" ").replace(/\s+/g, " ").trim().slice(0, 2000); }
 // The last two answered questions before this card (owner, 2026-09-30): the next question may follow up on them.
 function recentQA(card) {
   const i = cards.indexOf(card), prev = (i < 0 ? cards : cards.slice(0, i)).filter(c => c && c.question && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(c.question) && typeof c.answer === "string" && c.answer.trim().length > 40);
@@ -1592,11 +1593,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
       const dj = await dr.json();
       if (card.req !== ctl) return;
       if (dj.noQuestion) {
-        card.streaming = false; card.question = "No question yet";
-        card.answer = ["Nothing said since your last answer was a question for you. Keep listening — press AI Answer once they ask, or type the question."];
-        card.meta = ""; if (cards[idx] === card) renderCard(); status("No question heard yet.", "live");
-        logAnswer({ noQuestion: true });
-        if (answerCtl === ctl) answerCtl = null; return;
+        derivedQ = heardAsQuestion([{ text: plainHeard }]) || String(question || "").slice(0, 2000);
+        if (derivedQ) { card.question = derivedQ; if (cards[idx] === card) renderCard(); }
       }
       if (dj.derived) { derivedQ = dj.derived; card.question = derivedQ; if (cards[idx] === card) renderCard(); }
       derivedBy = dj.derivedBy || "ai";
@@ -1695,12 +1693,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     if (meta.ledger) ledger = meta.ledger;
     card.streaming = false;
-    if (meta.noQuestion) {                                              // nothing heard was a question
-      card.question = "No question yet";
-      card.answer = ["Nothing said since your last answer was a question for you. Keep listening — press AI Answer once they ask, or type the question."];
-      card.meta = ""; if (cards[idx] === card) renderCard();
-      logAnswer({ noQuestion: true });
-      status("No question heard yet.", "live"); return;
+    if (meta.noQuestion && !opts.answeredHeard) {
+      const raw = heardAsQuestion([{ text: plainHeard || question }]);
+      if (raw) return generateAnswer(raw, card, { ...opts, derived: raw, answeredHeard: true, consolidated: false });
     }
     if (!text.trim()) throw new Error("The answer engine returned an empty response. Please retry.");
     show(text);
@@ -1771,24 +1766,24 @@ async function aiAnswer(fromAuto) {
     const sessionEpoch = transcriptionEpoch;
     if ((running && captures.length) || finals.size) {
       flushing = true; if (!fromAuto) status("Catching your last words…", "live");
-      try { await flushHeard(); } finally { flushing = false; }
+      try { await flushHeard(1500); } catch { /* words already written still get answered */ }
+      finally { flushing = false; }
     }
     if (sessionEpoch !== transcriptionEpoch) return;
-    if (transcriptionFailedEpoch === sessionEpoch) {
+    const pending = pendingHeard();
+    if (transcriptionFailedEpoch === sessionEpoch && !pending.length) {
       setChat(true);
       status("The last phrase could not be transcribed. Please repeat it or type it here.", "err");
       return;
     }
-    const pending = pendingHeard();
-    // Only the interviewer starts a new card. The candidate's own lines stay in the transcript; they are not a new question.
-    const asked = pending.filter(t => t.who === questionSource());
-    if (asked.length) {
+    if (pending.length) {
       answeredSeq = heardSeq; updatePending();
       const heard = pending.map(t => `${t.who}: ${t.text}`).join("\n");
-      const earlier = transcript.filter(t => t.seq <= pending[0].seq - 1).slice(-10).map(t => `${t.who}: ${t.text}`).join("\n");
-      const card = addCard("Deriving the question from everything heard…", ["…"]);
+      const said = heardAsQuestion(pending);
+      const earlier = transcript.filter(t => t.seq <= pending[0].seq - 1).slice(-40).map(t => `${t.who}: ${t.text}`).join("\n");
+      const card = addCard(said || "Answering what was just heard…", ["…"]);
       card.heard = heard; card.earlier = earlier;
-      return await generateAnswer(heard, card, { consolidated: true, earlier });
+      return await generateAnswer(heard, card, { consolidated: true, earlier, derived: said });
     }
     if (fromAuto) return;
     const c = cards[idx];
