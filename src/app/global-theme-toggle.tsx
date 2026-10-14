@@ -7,7 +7,8 @@ export default function GlobalThemeToggle() {
   const pathname = usePathname()
   const { mode, setMode } = useTheme()
 
-  if (pathname.startsWith("/dashboard")) return null
+  // The dashboard and the landing page carry their own switch in their own bar.
+  if (pathname.startsWith("/dashboard") || pathname === "/") return null
 
   const dark = mode === "dark"
   return (

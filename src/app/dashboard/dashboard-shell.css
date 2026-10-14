@@ -52,8 +52,8 @@
   display:flex!important;
   flex-direction:column;
   overflow:hidden!important;
-  background:var(--bg);
-  border-right:.8px solid var(--border-strong)!important;
+  background:var(--surface);
+  border-right:1px solid var(--border)!important;
   border-bottom:0!important;
   z-index:400!important;
   transform:none!important;

@@ -304,25 +304,25 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     </header>
     {menuOpen && <button type="button" className="mf-nav-scrim" aria-label="Close navigation" tabIndex={-1} onClick={closeMenu} />}
     <aside ref={drawerRef} suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
-      background: "var(--bg)",
+      background: "var(--surface)",
       display: "flex",
       flexDirection: "column",
-      borderRight: "0.8px solid var(--border-strong)",
+      borderRight: "1px solid var(--border)",
     }}>
 
       {/* ── Wordmark ──────────────────────────────────────────────── */}
-      <div className="mf-sidebar-brand-row" style={{ padding: "18px 14px 16px 18px", flexShrink: 0, borderBottom: "0.8px solid var(--border-strong)" }}>
+      <div className="mf-sidebar-brand-row" style={{ padding: "18px 14px 14px 18px", flexShrink: 0 }}>
         <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <div style={{
-            width: 30, height: 30, borderRadius: 6, background: "var(--accent)", color: "var(--bg)",
-            display: "flex", alignItems: "center", justifyContent: "center",
+            width: 32, height: 32, borderRadius: 9, background: "var(--accent)", color: "var(--bg)",
+            display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 2px rgba(25,20,10,.18)",
             fontFamily: "var(--font-display)", fontSize: 13, fontWeight: 700, letterSpacing: "-0.01em", flexShrink: 0,
           }}>MF</div>
           <div>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.01em", lineHeight: 1 }}>
               MarketFit
             </div>
-            <div className="ink-label" style={{ fontSize: 11, letterSpacing: ".1em", marginTop: 5 }}>Own your next role</div>
+            <div className="ink-label" style={{ fontSize: 12, marginTop: 4 }}>Own your next role</div>
           </div>
         </Link>
         <button
@@ -378,7 +378,7 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
             </div>
           )
         })}
-        <div style={{ borderTop: "0.8px solid var(--border-strong)", margin: "10px 4px" }} />
+        <div style={{ borderTop: "1px solid var(--border)", margin: "10px 4px" }} />
         {!resumeOnly && admin && ADMIN_NAV.map(item => {
           const active = isActive(item.href, pathname)
           return (
@@ -398,12 +398,12 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
       </nav>
 
       {/* ── Account ────────────────────────────────────────── */}
-      <div ref={accountRef} style={{ padding: "12px 14px 16px", flexShrink: 0, borderTop: "0.8px solid var(--border-strong)", position: "relative" }}>
+      <div ref={accountRef} style={{ padding: "12px 14px 16px", flexShrink: 0, borderTop: "1px solid var(--border)", position: "relative" }}>
         {signedIn && accountOpen && (
           <div role="menu" aria-label="Account menu" style={{
             position: "absolute", left: 12, right: 12, bottom: "calc(100% + 8px)", zIndex: 80,
-            background: "var(--surface)", border: "0.8px solid var(--border-strong)", borderRadius: 12,
-            boxShadow: "0 14px 36px rgba(0,0,0,.16)", padding: 10,
+            background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14,
+            boxShadow: "var(--shadow-pop)", padding: 8,
           }}>
             <div style={{ padding: "6px 8px 10px", borderBottom: "0.8px solid var(--border-strong)" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -425,10 +425,9 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
           aria-expanded={signedIn ? accountOpen : undefined} aria-haspopup={signedIn ? "menu" : undefined}
           style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: 0, border: 0, background: "transparent", textAlign: "left", cursor: "pointer" }}>
           <div style={{
-            width: 28, height: 28, flexShrink: 0, background: "var(--surface-2)", color: "var(--text)",
-            border: "0.8px solid var(--border-strong)",
+            width: 32, height: 32, flexShrink: 0, borderRadius: 999, background: "color-mix(in srgb, var(--accent) 16%, var(--surface))", color: "var(--text)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontFamily: "var(--font-label)", fontSize: 11, fontWeight: 600,
+            fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 700,
           }}>{initials}</div>
           <div style={{ overflow: "hidden", flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
