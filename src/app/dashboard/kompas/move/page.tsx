@@ -32,6 +32,19 @@ const safeJson = (s: string | null): unknown => {
 /** The browser-side pros: sessions, Q&A, prepared answers, question bank, learned vocab. */
 function gatherBrowserPros(): BlendFile["browser"] {
   const out: BlendFile["browser"] = { sessions: [], qa: [], prepared: [], qbank: [], vocab: [] }
+  // perfACT stores completed replies as session-log events (t:"answer"),
+  // not necessarily on the session object itself. Keep alternative replies
+  // to the same question as separate examples, preserving their pause markers.
+  const collectAnswer = (item: unknown) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return
+    const row = item as Record<string, unknown>
+    if (row.noQuestion || row.busy || row.degraded || row.state === "mis-heard" || row.state === "both-sides") return
+    if (row.t && row.t !== "answer") return
+    const q = String(row.q ?? row.question ?? row.derived ?? "").trim()
+    const raw = row.a ?? row.answer ?? row.text
+    const a = (Array.isArray(raw) ? raw.filter((v): v is string => typeof v === "string").join("\\n") : typeof raw === "string" ? raw : "").trim()
+    if (q && a.length > 20) out.qa.push({ q: q.slice(0, 500), a: a.slice(0, 4000) })
+  }
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
@@ -42,44 +55,44 @@ function gatherBrowserPros(): BlendFile["browser"] {
         out.sessions = v
         for (const s of v) {
           const o = (s || {}) as Record<string, unknown>
-          const qa = Array.isArray(o.qa) ? o.qa : Array.isArray(o.turns) ? o.turns : []
-          for (const t of qa) {
-            const tt = (t || {}) as Record<string, unknown>
-            const q = String(tt.q ?? tt.question ?? "").trim()
-            const a = String(tt.a ?? tt.answer ?? tt.text ?? "").trim()
-            if (q && a.length > 20) out.qa.push({ q: q.slice(0, 500), a: a.slice(0, 4000) })
+          for (const slot of [o.qa, o.turns, o.answers]) {
+            if (Array.isArray(slot)) for (const entry of slot) collectAnswer(entry)
           }
         }
       } else if (key.startsWith("perfact.log.") && v && typeof v === "object") {
-        const o = v as Record<string, unknown>
-        const q = String(o.q ?? o.question ?? "").trim()
-        const a = String(o.a ?? o.answer ?? o.text ?? "").trim()
-        if (q && a.length > 20) out.qa.push({ q: q.slice(0, 500), a: a.slice(0, 4000) })
+        if (Array.isArray(v)) for (const event of v) collectAnswer(event)
+        else collectAnswer(v)
       } else if (/^perfact\.(dossier|levels)\./.test(key) && v && typeof v === "object") {
         const o = v as Record<string, unknown>
-        const q = String(o.q ?? o.question ?? o.title ?? "").trim()
-        const a = String(o.a ?? o.answer ?? o.text ?? "").trim()
-        if (q && a.length > 20) out.prepared.push({ q: q.slice(0, 500), a: a.slice(0, 4000) })
-        else if (a.length > 20) out.prepared.push({ q: "", a: a.slice(0, 4000) })
+        const q = String(o.q ?? o.question ?? o.title ?? ("Prepared material from " + key)).trim()
+        const engineer = o.engineer && typeof o.engineer === "object" ? (o.engineer as Record<string, unknown>).prose : ""
+        const director = o.director && typeof o.director === "object" ? (o.director as Record<string, unknown>).prose : ""
+        for (const draft of [o.a, o.answer, o.text, o.md, o.content, engineer, director]) {
+          if (typeof draft === "string" && draft.trim().length > 20)
+            out.prepared.push({ q: q.slice(0, 500), a: draft.trim().slice(0, 4000) })
+        }
       } else if (key === "perfact.qbank" && v && typeof v === "object") {
         const items = (v as Record<string, unknown>).items
         if (Array.isArray(items)) for (const it of items) {
-          const t = String((it as Record<string, unknown>)?.q ?? it ?? "").trim()
-          if (t) out.qbank.push(t.slice(0, 300))
+          const row = it && typeof it === "object" && !Array.isArray(it) ? it as Record<string, unknown> : null
+          const t = String(row ? (row.text ?? row.question ?? row.q ?? "") : typeof it === "string" ? it : "").trim()
+          if (t && t.length >= 8) out.qbank.push(t.slice(0, 300))
         }
       }
     }
     // MarketFit's learned vocabulary — a pro: words the engine learned to hear.
     const learned = safeJson(localStorage.getItem("mf_flow_learned"))
     if (Array.isArray(learned)) out.vocab = learned.map(String).filter(Boolean).slice(0, 200)
-    // Dedupe Q&A by question.
+    // Dedupe exact answer pairs only. A regenerated answer to the same
+    // question may be more natural, and the original should still survive.
     const seen = new Set<string>()
     out.qa = out.qa.filter((t) => {
-      const k = t.q.toLowerCase()
+      const k = t.q.toLowerCase().replace(/\\s+/g, " ") + "\\u0000" + t.a.toLowerCase().replace(/\\s+/g, " ")
       if (seen.has(k)) return false
       seen.add(k)
       return true
     })
+    out.qbank = [...new Set(out.qbank.map(q => q.replace(/\\s+/g, " ").trim()))]
   } catch { /* a broken store exports nothing rather than breaking the page */ }
   return out
 }
