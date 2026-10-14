@@ -65,6 +65,11 @@ test('an email keeps its number for good, however many resumes are saved after (
 test('the answer is read as he said it: "number one", "1", the address', () => {
   for (const said of ['1', ' 1 ', '1.', '#1', 'no 1', 'no. 1', 'number 1', 'number one', 'Number One', 'one', 'first', 'the first one', '1st', 'option 1', 'email 1', 'email one', 'use 1', 'for 1', 'use the first one', '(1)', A, 'dana05', 'use dana05']) assert.equal(choiceIn(said, TWO), A, said)
   for (const said of ['2', 'two', 'second', 'the second email', 'number two', '#2', B, 'DWHIT44@GMAIL.COM', 'dwhit44']) assert.equal(choiceIn(said, TWO), B, said)
+  // Natural WhatsApp replies must select the right profile without another JD paste.
+  assert.equal(choiceIn('The email is dwhit44@gmail.com in this case', TWO), B)
+  assert.equal(choiceIn('For dwhit44@gmail.com', TWO), B)
+  assert.equal(choiceIn('The email is dana05@gmail.com in this case', TWO), A)
+  assert.equal(choiceIn('I have both dana05@gmail.com and dwhit44@gmail.com', TWO), '')
   // As people really answer: a polite word after it, a digit tapped from the emoji keyboard, a circled digit.
   for (const said of ['1 please', 'number 1 please', 'one, thanks', 'I want 1', '1️⃣', '①', `${A}.`]) assert.equal(choiceIn(said, TWO), A, said)
   for (const said of ['second one please', '2 pls', '2️⃣', 'go with 2', "it's 2"]) assert.equal(choiceIn(said, TWO), B, said)
@@ -172,7 +177,8 @@ test('the bot asks before it tailors, takes the answer, and says the small messa
   assert.ok(bot.includes('const resumes = who.own ? await libraryOf(userDirOf(userId)) : null') && bot.includes('if (!who.saves || !who.own) return sendText(from, `Nothing is saved in Files for this number yet.'))
   // Found in review: a resume marked "sent for the next job" never stopped being so, and won over an email the person
   // said. It ends with the job made from it, a quiet day, or "reset"; and an email said for the job wins over it.
-  assert.ok(bot.includes('if (own && session.resumeFresh && !(choice.email && keptEmail && choice.email !== keptEmail)) return { source: { ...own, email: keptEmail || undefined } }'))
+  assert.ok(bot.includes('if (own && session.resumeFresh && keptEmail === email) return { source: { ...own, email } }'))
+  assert.ok(bot.includes('if (who.own && live(slots).length > 1 && !email)'))
   assert.ok(bot.includes('if (s.updatedAt && Date.now() - s.updatedAt > ttl) return { ...kept(s), resumeFresh: false }') && bot.includes('await saveSession(from, { ...kept(session), resumeFresh: false })'))
   assert.ok(bot.includes('resumeFresh: sameResume && usedKept ? false : now.resumeFresh,'))
   // Found in review: a resume with no email that can be read was taken to be the only email's. It is used as it
@@ -185,6 +191,9 @@ test('the bot asks before it tailors, takes the answer, and says the small messa
   assert.ok(bot.includes('...(another ? now : kept(now)),'))
   // A job description that takes the place of one still waiting for its email says so.
   assert.ok(bot.includes('This job description takes the place of the one that was waiting for its email.'))
+  // The final file must match the name/email of its source or it is blocked.
+  assert.ok(bot.includes('const identityChanged = !!sourceName && sourceName !== outputName'))
+  assert.ok(bot.includes('if (identityChanged || emailChanged || wrongLibrary)'))
   // The small message, after every new resume.
   assert.equal(DIFFERENT_RESUME, '_To start from a different resume, send me that resume first, then the job description._')
   assert.ok(bot.includes('try { await sendText(from, DIFFERENT_RESUME) } catch { /* ignore */ }'))
