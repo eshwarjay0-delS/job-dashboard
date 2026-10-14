@@ -243,7 +243,7 @@ export async function runTailor(opts: {
       ]
     : [
         "More specific, less generic — concrete tools, systems, and outcomes, never vague filler",
-        "KNOWN JD CONTRACT: the user supplied/approved this JD as knowledge they possess. Incorporate every meaningful ATS keyword and requirement from it naturally across summary, skills, and relevant experience.",
+        "SOURCE FACT CONTRACT: the baseline resume supplies employment and qualification facts; the JD supplies target requirements only. Use exact JD terms where supported by the baseline. Never invent certifications, experience years, job titles, platforms, employers, project implementations, or dates.",
         "More technical detail — name the exact technologies, protocols, and methods used",
       ]
   const explicit = [...immediatePrefs, ...storedFeedback.filter(f => !immediatePrefs.includes(f))]
@@ -612,7 +612,7 @@ export async function runTailor(opts: {
             t.skills.length ? `its bullets must show ${t.skills.join(", ")}` : "",
             t.add ? `return EXACTLY ${t.add} new bullet${t.add === 1 ? "" : "s"} for it in "added" (role ${t.role}), covering the skills its existing bullets can't carry` : "",
           ].filter(Boolean)
-          const ask = `GAP FILL: this resume is already tailored to the JD. The resume and the JD together are the candidate's record, so this role must show every listed skill named below. Keep every JD term its bullets already carry. Rewrite bullets that don't carry a JD skill yet so each shows two or three related skills and what the candidate did with them at this client (never a bare list), and write the NEW bullets the same way, specific to this client's work. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
+          const ask = `GAP FILL: this resume is already tailored to the JD. The baseline resume is the candidate's factual record; the JD is a target, not proof of experience. Include listed skills in this role ONLY where the original role already substantiates them. Keep every JD term its bullets already carry. Rewrite bullets that don't carry a JD skill yet so each shows two or three related skills and what the candidate did with them at this client (never a bare list), and write the NEW bullets the same way, specific to this client's work. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
           return adapt({ keys: opts.keys, jd, zones: view, preferences: [...allPrefs, ask].join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, part: "experience", roles: [t.role], allowAdd: !opts.onePage, ...laneCall(lane) })
         },
         startBy: deadline - MIN_CLIMB_MS,
@@ -668,7 +668,7 @@ export async function runTailor(opts: {
         const repairPrefs: string[] = [
           `COVERAGE REPAIR PASS ${repair}: current rendered JD coverage is ${Math.round(current.cov * 100)}%. The default completion target is at least ${Math.round(TARGET_COVERAGE * 100)}%.`,
           `The JD is a KNOWN JD supplied/approved by the user. Incorporate ALL of these still-missing ATS terms naturally and contextually: ${missing.join(", ")}.`,
-          "Do not omit a JD term merely because it was absent from the baseline. Preserve immutable historical facts such as employer names, dates, education, and certifications.",
+          "Do not claim a JD qualification that the baseline does not substantiate. Preserve immutable identity, experience length, employers, dates, education, and certifications.",
           "Distribute terms across the summary, skills, and relevant experience instead of keyword stuffing.",
         ]
         const candidate: Pass | null = await draftPass(lane, repairPrefs).catch(err => {
