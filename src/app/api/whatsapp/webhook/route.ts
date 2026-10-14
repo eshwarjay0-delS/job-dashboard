@@ -436,6 +436,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     }
     if (cmd === "library" || cmd === "files") return library(from, who)
     if (cmd === "original") {
+      if (session.jd && session.ask?.length) return sendText(from, askWhichEmail(session.ask))
       // "Original" means the original document, never silently generating another tailored resume.
       if (!session.resumePath) return sendText(from, "No original resume is kept for this number. Send *resumes* to retrieve one from your linked Files.")
       const original = await readPath(session.resumePath)
@@ -453,6 +454,14 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     const replyTo = (msg.context as { id?: string } | undefined)?.id
     // The answer to "Which email is this job for?": its number, or the address. It is read first, because people
     // answer a question by replying to it, and a reply would otherwise be taken for a change to a resume.
+    // A previously asked question may have been persisted after this webhook began.
+    // Read it again before classifying a brief answer as a job description.
+    const newest = await loadSession(from)
+    if (newest.ask?.length && newest.jd) {
+      session.jd = newest.jd
+      session.ask = newest.ask
+      session.email = newest.email
+    }
     const waiting = session.ask?.length && session.jd ? session.ask : null
     const answer = waiting ? choiceIn(text, waiting) : ""
     if (waiting && answer) {
@@ -475,7 +484,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
           session.ask = undefined
           session.resumeFresh = false
           await saveSession(from, session)
-          return generate(from, session, who, TAILOR_BUDGET_MS, false, { email: corrected, slots, redo: true })
+          return generate(from, session, who, TAILOR_BUDGET_MS, false, { email: corrected, slots })
         }
       }
     }
@@ -647,9 +656,6 @@ async function startFor(from: string, session: Session, who: Who, jd: string, or
   const own = await keptSource(from, session, who)
   if (own && original) return { source: own }
   const keptEmail = own ? await keptEmailOf(session) : ""
-  // A resume sent for this job is used as it is. The one exception: the person said the job is for another email than
-  // the one written on that resume. Then what they said wins, and the resume waits for a job of its own email.
-  if (own && session.resumeFresh && (!choice.email || (keptEmail && choice.email === keptEmail))) return { source: { ...own, email: keptEmail || undefined } }
   // The default account every unjoined number shares holds other people's resumes: it is never looked through, not
   // even for the email on the resume this number sent (found in review: a resume carrying someone's email was enough
   // to be handed that person's saved resume).
@@ -670,8 +676,11 @@ async function startFor(from: string, session: Session, who: Who, jd: string, or
     // No resume in Files carries an email that can be read, and none came from this number: whatever Files hold (the tailor picks).
     return Object.keys(resumes.index).length ? { source: { dir: userDir, depth: 1, said: "the closest resume in your Files" } } : { say: NO_RESUME }
   }
-  // A resume with no email that can be read cannot be said to be this email's. With one email in all it is used as it
-  // always was; it is never put among another email's resumes.
+  // A newly sent baseline is eligible only for its own verified email, never for a
+  // different identity. Require selection before choosing a baseline for the job.
+  if (own && session.resumeFresh && keptEmail === email) return { source: { ...own, email } }
+  // A resume with no email that can be read cannot be said to be this email's. With one email in all it is
+  // used as it always was; it is never put among another email's resumes.
   if (own && !keptEmail && emails.length === 1) return (await already("")) || { source: own }
   const made = await already(email)
   if (made) return made
@@ -694,7 +703,7 @@ async function startFor(from: string, session: Session, who: Who, jd: string, or
 }
 
 // A job being made right now, for one number: which job, since when, and by which run.
-type Flight = { job: string; at: number; token: string }
+type Flight = { job: string; email?: string; at: number; token: string }
 const IN_FLIGHT_MS = 75_000
 const flightKey = (from: string) => `whatsapp/making/${digits(from)}.json`
 async function inFlight(from: string): Promise<Flight | null> {
@@ -774,10 +783,10 @@ async function generate(from: string, session: Session, who: Who, maxMs = TAILOR
   // job is on its way and starts nothing.
   const job = jobKeyOf(session.jd), mine = randomBytes(6).toString("hex")
   const flight = await inFlight(from)
-  if (flight && flight.job === job && Date.now() - flight.at < IN_FLIGHT_MS && !((session.resumeAt || 0) > flight.at)) {
+  if (flight && flight.job === job && flight.email === (source.email || "") && Date.now() - flight.at < IN_FLIGHT_MS && !((session.resumeAt || 0) > flight.at)) {
     return sendText(from, "I am already making the resume for this job. It will be with you within a minute.")
   }
-  await blob.put(flightKey(from), JSON.stringify({ job, at: Date.now(), token: mine })).catch(() => {})
+  await blob.put(flightKey(from), JSON.stringify({ job, email: source.email || "", at: Date.now(), token: mine })).catch(() => {})
 
   await sendText(from, `${source.email ? `For *${source.email}*. ` : ""}Tailoring from ${source.said}… every client role gets its own pass, so this takes up to a minute.`)
 
