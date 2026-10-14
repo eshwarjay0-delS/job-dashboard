@@ -1,4 +1,5 @@
 import { authenticatedUser } from "@/lib/authBoundary"
+import { isResumeOnlyAccount } from "@/lib/resumeOnlyEntitlement"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { FileText, Mail, Mic, ArrowRight, MessageCircle, Puzzle, Sun, NotebookPen, Briefcase, CalendarDays, Repeat, Link2 } from "lucide-react"
@@ -30,7 +31,7 @@ const tools = [
 
 export default async function DashboardPage() {
   const user = await authenticatedUser()
-  if (["janjiaarya@gmail.com","tryguessup@gmail.com"].includes(user?.email?.toLowerCase() || "")) redirect("/dashboard/resume")
+  if (await isResumeOnlyAccount(user)) redirect("/dashboard/resume")
   return <div className="mf-home">
     <header className="mf-home-heading">
       <h1>What would you like to do?</h1>
