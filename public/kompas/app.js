@@ -828,7 +828,7 @@ function applyLook() {
   document.documentElement.classList.toggle("theme-dark", theme === "dark");
   const font = LOOK_FONTS[LS.get("font", "times")] ? LS.get("font", "times") : "times";
   document.documentElement.style.setProperty("--serif", LOOK_FONTS[font]);
-  const text = Math.min(22, Math.max(14, Number(LS.get("textSize", 16)) || 16));
+  const text = Math.min(28, Math.max(12, Number(LS.get("textSize", 16)) || 16));
   document.documentElement.style.setProperty("--text-size", text + "px");
   const tab = [2, 4, 8].includes(Number(LS.get("tabSize", 4))) ? Number(LS.get("tabSize", 4)) : 4;
   document.documentElement.style.setProperty("--tab-size", String(tab));
@@ -849,6 +849,15 @@ applyLook();
 $("lookFade")?.addEventListener("input", (e) => { const a = Number(e.target.value) / 100; LS.set("opacity", a); applyLook(); });
 $("lookFont")?.addEventListener("change", (e) => { LS.set("font", e.target.value); applyLook(); });
 $("lookText")?.addEventListener("input", (e) => { LS.set("textSize", Number(e.target.value)); applyLook(); });
+function stepText(dir) {
+  const next = Math.min(28, Math.max(12, (Number(LS.get("textSize", 16)) || 16) + dir));
+  LS.set("textSize", next); applyLook();
+}
+$("textMinus")?.addEventListener("click", () => stepText(-1));
+$("textPlus")?.addEventListener("click", () => stepText(1));
+const answerPane = $("answer");
+function syncQuestion() { const card = $("card"); if (card && answerPane) card.classList.toggle("q-away", answerPane.scrollTop > 2); }
+answerPane?.addEventListener("scroll", syncQuestion, { passive: true });
 $("lookTab")?.addEventListener("change", (e) => { LS.set("tabSize", Number(e.target.value)); applyLook(); });
 // The model that writes answers. Empty is the server's own lanes; the server ignores anything not on its list.
 const LIVE_MODELS = ["", "gpt-5.6-luna"];
