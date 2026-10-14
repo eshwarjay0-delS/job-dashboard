@@ -174,7 +174,7 @@ export default function KompasMovePage() {
         const bank = prior && typeof prior === "object" && !Array.isArray(prior)
           ? prior as Record<string, unknown> : { items: [] as unknown[] }
         const items = Array.isArray(bank.items) ? [...bank.items] : []
-        const normalized = (x: string) => x.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\\s+/g, " ").trim()
+        const normalized = (x: string) => x.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim()
         const have = new Set(items.map(x => normalized(String((x as Record<string, unknown>)?.text || ""))))
         for (const q of b.qbank.slice(0, 3000)) {
           if (typeof q !== "string" || q.length < 8 || q.length > 500) continue
