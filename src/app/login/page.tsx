@@ -5,8 +5,9 @@ import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import FeatureTour from "./feature-tour"
-import "./login.css"
+import { Check } from "lucide-react"
+
+const field = "h-11 w-full rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 text-[15px] text-[var(--text)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--text-soft)] focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_20%,transparent)]"
 
 function GoogleIcon() {
   return (
@@ -26,6 +27,7 @@ function LoginContent() {
   const [email,setEmail]=useState("")
   const [password,setPassword]=useState("")
   const [resetMode,setResetMode]=useState(false)
+  const [emailOpen,setEmailOpen]=useState(false)
   const [error,setError]=useState<string|null>(null)
 
   async function signIn() {
@@ -82,85 +84,79 @@ function LoginContent() {
     finally { setLoading(false) }
   }
 
+  // The look (design system 2, 14 Oct 2026): the sign-in page people already know. A calm brand panel on one side; on the
+  // other one card, with Google first (how almost everyone signs in), and email and password one tap away for the
+  // accounts that have it. How signing in works is unchanged.
   return (
-    <main className="mf-login-shell">
-      <section className="mf-login-preview" aria-label="MarketFit product preview">
-        <Link href="/" className="mf-login-brand">
-          <span className="mf-login-brand-mark">MF</span>
-          <span>MarketFit</span>
+    <main className="grid min-h-dvh bg-[var(--bg)] lg:grid-cols-[1fr_1fr]">
+      <section className="relative hidden overflow-hidden border-r border-[var(--border)] bg-[var(--surface-2)] lg:flex lg:flex-col lg:justify-between lg:p-12" aria-label="About MarketFit">
+        <div aria-hidden className="pointer-events-none absolute -left-32 -top-32 size-[520px] rounded-full bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--accent)_16%,transparent),transparent)]" />
+        <Link href="/" className="relative flex items-center gap-2.5">
+          <span className="grid size-9 place-items-center rounded-[10px] bg-[var(--accent)] font-display text-[13px] font-bold text-[var(--bg)] shadow-[0_1px_2px_rgba(25,20,10,.18)]">MF</span>
+          <span className="font-display text-[20px] font-bold tracking-[-0.01em] text-[var(--text)]">MarketFit</span>
         </Link>
-
-        <div className="mf-login-preview-head">
-          <div className="ink-eyebrow">See the mechanics before you sign in</div>
-          <h1>Know what MarketFit is doing before you give it your workflow.</h1>
-          <p>
-            Preview the core loops first. Then sign in once, add the essentials, and use the same
-            account across Resume, Kompas, Gmail + Calendar, WhatsApp and the extension.
-          </p>
+        <div className="relative max-w-md">
+          <h1 className="font-display text-[40px] font-semibold leading-[1.12] tracking-[-0.02em] text-[var(--text)]">A calmer job search starts here.</h1>
+          <ul className="mt-8 space-y-4">
+            {[
+              "Your own resume, fitted to each job in about a minute",
+              "Your years and titles kept exactly as you wrote them",
+              "Recruiter mail and interviews, in one place",
+            ].map(line => (
+              <li key={line} className="flex items-start gap-3 text-[16px] leading-[1.55] text-[var(--text-muted)]">
+                <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent)_16%,var(--surface))]"><Check size={14} className="text-[var(--accent)]" /></span>
+                {line}
+              </li>
+            ))}
+          </ul>
         </div>
-
-        <div className="mf-login-grid">
-          <article className="mf-login-card">
-            <div className="mf-login-card-anim mf-login-card--resume"><i/><i/><i/></div>
-            <h3>Resume</h3>
-            <p>Job description in, evidence matched, tailored document and fit score out.</p>
-          </article>
-
-          <article className="mf-login-card">
-            <div className="mf-login-card-anim mf-login-card--kompas">
-              {Array.from({length:9}).map((_,i)=><i key={i}/>)}
-            </div>
-            <h3>Kompas</h3>
-            <p>Question recognition, evidence retrieval, answer generation and session history in one loop.</p>
-          </article>
-
-          <article className="mf-login-card">
-            <div className="mf-login-card-anim mf-login-card--channels"><i/><i/><i/></div>
-            <h3>Connected channels</h3>
-            <p>Gmail, Calendar, WhatsApp and the extension resolve back to one MarketFit identity.</p>
-          </article>
-
-          <article className="mf-login-card">
-            <div className="mf-login-card-anim mf-login-card--usage"><i/><i/></div>
-            <h3>Usage + access</h3>
-            <p>Usage follows the subscription and verified channels, with two active device slots.</p>
-          </article>
-        </div>
+        <p className="relative text-[13px] text-[var(--text-soft)]">© 2026 MarketFit · <Link href="/privacy" className="hover:text-[var(--text)]">Privacy</Link> · <Link href="/terms" className="hover:text-[var(--text)]">Terms</Link></p>
       </section>
 
-      <aside className="mf-login-panel">
-        <section className="mf-login-card-main">
-          <div className="ink-eyebrow">Member login</div>
-          <h2>One account. Every MarketFit surface.</h2>
-          <p>
-            Email login is available to approved members. Other members can continue using Google.
-          </p>
+      <section className="flex items-center justify-center px-5 py-12">
+        <div className="w-full max-w-[420px]">
+          <Link href="/" className="mb-8 flex items-center gap-2.5 lg:hidden">
+            <span className="grid size-9 place-items-center rounded-[10px] bg-[var(--accent)] font-display text-[13px] font-bold text-[var(--bg)]">MF</span>
+            <span className="font-display text-[20px] font-bold text-[var(--text)]">MarketFit</span>
+          </Link>
+          <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-8 shadow-[var(--shadow-card)]">
+            <h2 className="text-[26px] font-bold tracking-[-0.02em] text-[var(--text)]">Sign in</h2>
+            <p className="mt-2 text-[15px] leading-[1.6] text-[var(--text-muted)]">New here? The same button creates your account. Your first tailored resume is free.</p>
 
-          {error && <div className="mf-login-error">{error}</div>}
+            {error && <div role="alert" className="mt-5 rounded-[10px] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3.5 py-2.5 text-[14px] text-[var(--danger)]">{error}</div>}
 
-          <form onSubmit={e=>{e.preventDefault();void (resetMode?sendPasswordSetup():emailSignIn())}} style={{display:"grid",gap:12,marginBottom:20}}>
-            <label htmlFor="mf-email">Email address</label>
-            <input id="mf-email" type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@gmail.com" style={{padding:12,borderRadius:8,border:"1px solid var(--border)",background:"var(--bg)",color:"var(--text)"}}/>
-            {!resetMode && <>
-              <label htmlFor="mf-password">Password</label>
-              <input id="mf-password" type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} style={{padding:12,borderRadius:8,border:"1px solid var(--border)",background:"var(--bg)",color:"var(--text)"}}/>
-            </>}
-            <button type="submit" disabled={loading} className="mf-google-button">{loading?"Please wait…":resetMode?"Send password setup link":"Sign in with email"}</button>
-            <button type="button" onClick={()=>{setResetMode(!resetMode);setError(null)}} style={{background:"transparent",border:0,color:"var(--accent)",cursor:"pointer"}}>{resetMode?"Back to sign in":"Set or reset password"}</button>
-          </form>
-          <p style={{textAlign:"center",margin:"12px 0"}}>New to MarketFit? Register with Google</p>
-          <button onClick={signIn} disabled={loading} className="mf-google-button">
-            <GoogleIcon /> {loading ? "Redirecting to Google…" : "Sign up or continue with Google"}
-          </button>
+            <button type="button" onClick={signIn} disabled={loading}
+              className="mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-[12px] border border-[var(--border-strong)] bg-[var(--surface)] text-[15.5px] font-semibold text-[var(--text)] shadow-[0_1px_2px_rgba(25,20,10,.06)] transition-[border-color,box-shadow,transform] hover:border-[var(--text-soft)] hover:shadow-[var(--shadow-card-hover)] active:scale-[.99] disabled:cursor-wait disabled:opacity-60">
+              <GoogleIcon /> {loading ? "Opening Google…" : "Continue with Google"}
+            </button>
 
-          <div className="mf-login-note">
-            Your subscription, verified mobile number, WhatsApp identity, optional Google Workspace
-            connection and extension all attach to the same MarketFit account.
+            <div className="my-6 flex items-center gap-3 text-[13px] text-[var(--text-soft)]"><span className="h-px flex-1 bg-[var(--border)]" />or<span className="h-px flex-1 bg-[var(--border)]" /></div>
+
+            {!emailOpen ? (
+              <button type="button" onClick={() => setEmailOpen(true)} className="flex h-11 w-full cursor-pointer items-center justify-center rounded-[10px] text-[15px] font-semibold text-[var(--accent)] transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]">
+                Sign in with email and password
+              </button>
+            ) : (
+              <form onSubmit={e => { e.preventDefault(); void (resetMode ? sendPasswordSetup() : emailSignIn()) }} className="grid gap-3">
+                <label htmlFor="mf-email" className="text-[14px] font-semibold text-[var(--text)]">Email</label>
+                <input id="mf-email" type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" className={field} />
+                {!resetMode && <>
+                  <label htmlFor="mf-password" className="mt-1 text-[14px] font-semibold text-[var(--text)]">Password</label>
+                  <input id="mf-password" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} className={field} />
+                </>}
+                <button type="submit" disabled={loading} className="mt-2 flex h-11 w-full cursor-pointer items-center justify-center rounded-[10px] bg-[var(--accent)] text-[15px] font-semibold text-[var(--bg)] shadow-[0_1px_2px_rgba(25,20,10,.14)] transition-colors hover:bg-[var(--accent-h)] disabled:cursor-wait disabled:opacity-60">
+                  {loading ? "Please wait…" : resetMode ? "Send a link to set a password" : "Sign in"}
+                </button>
+                <button type="button" onClick={() => { setResetMode(!resetMode); setError(null) }} className="cursor-pointer text-[14px] font-semibold text-[var(--accent)] hover:underline">
+                  {resetMode ? "Back to sign in" : "Set or reset a password"}
+                </button>
+                <p className="text-[13px] leading-[1.5] text-[var(--text-soft)]">Email and password is open to accounts that have it turned on. Everyone else continues with Google.</p>
+              </form>
+            )}
           </div>
-
-          <FeatureTour onContinue={signIn} />
-        </section>
-      </aside>
+          <p className="mt-6 text-center text-[13px] leading-[1.6] text-[var(--text-soft)]">By continuing you agree to the <Link href="/terms" className="underline-offset-2 hover:underline">Terms</Link> and the <Link href="/privacy" className="underline-offset-2 hover:underline">Privacy policy</Link>.</p>
+        </div>
+      </section>
     </main>
   )
 }
