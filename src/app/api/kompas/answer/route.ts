@@ -6,7 +6,9 @@ import { dossierContext } from "@/lib/dossier"
 import { hashUserId } from "@/lib/sttLedger"
 import {
   classify, lengthPlan, plainlyNoQuestion, cleanQuestion, resolveFollowUp,
-  tierRule, usedProjects, pickShape, DERIVE_SYSTEM,
+  tierRule, pickShape, DERIVE_SYSTEM,
+  normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
+  commit, matchBank,
 } from "@/lib/kompasAnswer"
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
 
@@ -124,14 +126,43 @@ export async function POST(request: NextRequest) {
   const rule = tierRule(tier, interviewer)
   // 27 question archetypes (perfACT _shapes.js): first-win structural instruction.
   const shape = pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
-  const rotated = usedProjects(historyArr)
+  // perfACT's rotation ledger (client-carried): the frontend sends its ledger
+  // with every turn and stores the one returned, so a session never retells
+  // the same story, bottleneck or angle. Route this question to a project by
+  // term overlap + least-recently-used, preferring an untold story for STAR.
+  const ledger = normLedger(body.ledger)
+  const ledgerProjects = toLedgerProjects(prep.projects)
+  const banked = matchBank(question, prep.questions)
+  let projectId: string | null = null
+  let bott = ""
+  let angle = ""
+  if (tier !== 0 && ledgerProjects.length) {
+    const routed = pickProject(question, tier, ledger, ledgerProjects, banked?.projectId)
+    projectId = routed.id
+    const project = ledgerProjects.find((p) => p.id === routed.id) || null
+    bott = pickBottleneck(project, ledger)
+    angle = pickAngle(ledger)
+    commit(ledger, routed.id, angle, bott, tier)
+  }
+  const routedProject = projectId ? ledgerProjects.find((p) => p.id === projectId) || null : null
+  const toldNames = Object.keys(ledger.story)
+    .filter((k) => k !== projectId)
+    .map((k) => ledgerProjects.find((p) => p.id === k)?.title || k)
+    .filter(Boolean)
 
   const context = [
     `The interviewer is a ${interviewer} — pitch the technical depth to them.`,
     `QUESTION TYPE: ${why} (tier ${tier}). ${rule}`,
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
     `LENGTH TARGET: about ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Hit it — a quick factual ask gets a short answer, a deep dive gets room.`,
-    rotated.length ? `Already told this session — reach for a FRESH project/angle, do not retell these: ${rotated.join("; ")}.` : "",
+    tier !== 0 && routedProject
+      ? `Tell this answer from inside THIS project: ${routedProject.title}${routedProject.employer ? ` (${routedProject.employer})` : ""}. Do not switch projects mid-answer.`
+      : "",
+    bott ? `Center the story on this concrete bottleneck: ${bott}.` : "",
+    angle && tier !== 0 && plan.kind !== "code" ? `Fresh angle for this telling: ${angle}.` : "",
+    tier !== 0 && tier !== 3 && toldNames.length
+      ? `Stories already told this session — do not retell them: ${toldNames.join("; ")}.`
+      : "",
     prep.identity ? `Candidate identity: ${str(prep.identity, 800)}` : "",
     prep.persona ? `Persona: ${str(prep.persona, 800)}` : "",
     prep.projects ? `Candidate's real projects: ${str(prep.projects, 2000)}` : "",
@@ -153,7 +184,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       text: out,
       polished: true,
-      meta: { engine: "marketfit", provider, model, interviewer, tier, kind: plan.kind, words: plan.words },
+      ledger,
+      meta: { engine: "marketfit", provider, model, interviewer, tier, kind: plan.kind, words: plan.words, routed: projectId },
     }, { headers: NO_STORE })
   } catch (e) {
     const msg = e instanceof Error ? e.message : "answer failed"

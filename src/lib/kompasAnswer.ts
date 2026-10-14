@@ -207,20 +207,169 @@ export function tierRule(tier: Tier, interviewer: string): string {
   }
 }
 
-// Story rotation: which employers/projects already appeared in this session's
-// answers, so the model reaches for a fresh one instead of retelling CodeQL.
-export function usedProjects(history: Array<{ a?: string; answer?: string; text?: string }>): string[] {
-  const found = new Set<string>()
-  for (const h of history) {
-    const a = String(h?.a ?? h?.answer ?? h?.text ?? "")
-    // crude but effective: capitalized multi-word org/product names the model already said
-    for (const m of a.matchAll(/\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,2})\b/g)) {
-      const name = m[1]
-      if (name.split(" ").length > 1 && name.length < 40 && !/^(The|This|That|With|From|And|For|You|Your)$/.test(name))
-        found.add(name)
+// ---- Project rotation ledger (perfACT answer.js): anti-repetition ----
+// Client-carried rotation state: the frontend sends its ledger with every
+// answer request and stores the ledger the server returns, so turns in one
+// session never retell the same story, bottleneck or angle. This is what kept
+// perfACT from telling the same CodeQL story three times in thirty minutes.
+
+export interface LedgerProject {
+  id: string
+  title: string
+  terms: string
+  bottlenecks: string[]
+  employer?: string
+}
+
+export interface Ledger {
+  story: Record<string, number>
+  projects: Record<string, number>
+  recent: string[]
+  bottlenecks: string[]
+  angles: string[]
+  last_project: string | null
+}
+
+/** Normalize a client-carried ledger — null/foreign shapes become empty. */
+export function normLedger(l: unknown): Ledger {
+  const o = (l && typeof l === "object" ? l : {}) as Record<string, unknown>
+  return {
+    story: (o.story && typeof o.story === "object" ? o.story : {}) as Record<string, number>,
+    projects: (o.projects && typeof o.projects === "object" ? o.projects : {}) as Record<string, number>,
+    recent: Array.isArray(o.recent) ? (o.recent as unknown[]).map(String) : [],
+    bottlenecks: Array.isArray(o.bottlenecks) ? (o.bottlenecks as unknown[]).map(String) : [],
+    angles: Array.isArray(o.angles) ? (o.angles as unknown[]).map(String) : [],
+    last_project: typeof o.last_project === "string" ? o.last_project : null,
+  }
+}
+
+export const ANGLES: string[] = [
+  "tooling and the evidence it produced", "ownership and accountability",
+  "what failed on the first attempt", "a specific person and the disagreement",
+  "testing and validation", "rollout and change management",
+  "monitoring afterward", "the exception and its expiry",
+  "user or business impact", "how it looked to audit",
+  "what we stopped doing by hand", "the decision I would reverse today",
+]
+
+const ledgerWords = (s: string): string[] =>
+  String(s || "").toLowerCase().match(/[a-z0-9]{3,}/g) || []
+
+/** Adapt MarketFit prep projects ({id,name,role,impact}) to ledger atoms. */
+export function toLedgerProjects(prepProjects: unknown): LedgerProject[] {
+  if (!Array.isArray(prepProjects)) return []
+  const out: LedgerProject[] = []
+  for (const raw of prepProjects) {
+    const p = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
+    const id = String(p.id ?? "").trim()
+    if (!id) continue
+    const name = String(p.name ?? p.title ?? "").trim()
+    out.push({
+      id,
+      title: name || id,
+      terms: String(p.terms ?? `${name} ${p.role ?? ""} ${p.impact ?? ""}`),
+      bottlenecks: Array.isArray(p.bottlenecks) ? (p.bottlenecks as unknown[]).map(String).filter(Boolean) : [],
+      employer: typeof p.employer === "string" ? p.employer : undefined,
+    })
+  }
+  return out
+}
+
+function scoreProjects(q: string, projects: LedgerProject[]): Array<{ id: string; score: number }> {
+  const qt = new Set(ledgerWords(q))
+  return projects
+    .map((p) => {
+      const pt = new Set(ledgerWords(`${p.terms} ${p.title}`))
+      let overlap = 0
+      for (const t of qt) if (pt.has(t)) overlap++
+      return { id: p.id, score: overlap }
+    })
+    .sort((a, b) => b.score - a.score)
+}
+
+/** Higher = less recently used (999 = never). */
+function recency(ledger: Ledger, pid: string): number {
+  const i = ledger.recent.lastIndexOf(pid)
+  return i === -1 ? 999 : ledger.recent.length - i
+}
+
+/**
+ * Route the question to a project: term overlap first, then least-recently-used.
+ * Tier 1 (STAR) prefers a story never told before. Tier 3 (drill-down) holds the
+ * previous project. A prepared answer's project wins as a hint — except a tier 1
+ * never retells an already-told story.
+ */
+export function pickProject(
+  q: string, tier: Tier, ledger: Ledger, projects: LedgerProject[], hint?: string | null,
+): { id: string | null; reason: string } {
+  if (!projects.length) return { id: null, reason: "no project atoms" }
+  if (tier === 3 && ledger.last_project) return { id: ledger.last_project, reason: "drill-down: holding previous project" }
+  if (hint && projects.some((p) => p.id === hint) && !(tier === 1 && ledger.story[hint]))
+    return { id: hint, reason: "prepared answer's project" }
+  const ranked = scoreProjects(q, projects)
+  const top = ranked[0].score
+  if (tier === 1) for (const r of ranked) {
+    if (r.score === 0) break
+    if (!ledger.story[r.id]) return { id: r.id, reason: "unused story" }
+  }
+  if (top > 0) {
+    const near = ranked.filter((r) => r.score >= Math.max(top - 1, 1))
+    near.sort((a, b) => recency(ledger, b.id) - recency(ledger, a.id))
+    return { id: near[0].id, reason: "term overlap, least recently used" }
+  }
+  const least = projects
+    .slice()
+    .sort((a, b) => (ledger.story[a.id] || 0) - (ledger.story[b.id] || 0) || (ledger.projects[a.id] || 0) - (ledger.projects[b.id] || 0))[0]
+  return { id: least.id, reason: "least-told story" }
+}
+
+/** Rotate concrete bottlenecks per project — never repeats until the pool is spent. */
+export function pickBottleneck(project: LedgerProject | null, ledger: Ledger): string {
+  const pool = (project && project.bottlenecks) || []
+  for (const b of pool) if (!ledger.bottlenecks.includes(b)) return b
+  return pool[0] || ""
+}
+
+/** 12 angles, never repeats until all 12 are used. */
+export function pickAngle(ledger: Ledger): string {
+  for (const a of ANGLES) if (!ledger.angles.includes(a)) return a
+  return ANGLES[0]
+}
+
+/** Record what this turn used, so the next turn routes around it. */
+export function commit(ledger: Ledger, pid: string | null, angle: string, bott: string, tier: Tier): void {
+  if (!pid) return
+  ledger.projects[pid] = (ledger.projects[pid] || 0) + 1
+  if (tier === 1) ledger.story[pid] = (ledger.story[pid] || 0) + 1
+  if (tier === 1 || tier === 2 || tier === 4) {
+    ledger.last_project = pid
+    ledger.recent.push(pid)
+    if (ledger.recent.length > 40) ledger.recent.shift()
+  }
+  if (angle && !ledger.angles.includes(angle)) ledger.angles.push(angle)
+  if (bott && !ledger.bottlenecks.includes(bott)) ledger.bottlenecks.push(bott)
+}
+
+/** Best-matching prep question by word overlap (needs 2+) — its projectId is the routing hint. */
+export function matchBank(
+  q: string, questions: unknown,
+): { q: string; projectId?: string } | null {
+  if (!Array.isArray(questions) || !questions.length) return null
+  const qt = new Set(ledgerWords(q))
+  let best: { q: string; projectId?: string } | null = null
+  let bestScore = 0
+  for (const raw of questions) {
+    const item = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
+    const iq = String(item.q ?? "")
+    if (!iq) continue
+    let ov = 0
+    for (const t of new Set(ledgerWords(iq))) if (qt.has(t)) ov++
+    if (ov > bestScore) {
+      bestScore = ov
+      best = { q: iq, projectId: typeof item.projectId === "string" ? item.projectId : undefined }
     }
   }
-  return [...found].slice(0, 12)
+  return bestScore >= 2 ? best : null
 }
 
 export const DERIVE_SYSTEM = `You read a live interview transcript and pull out the interviewer's most recent question.
