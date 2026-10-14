@@ -20,6 +20,11 @@
     return out;
   };
   const mfWrong = (file) => {
+    // Rule files in the export are descriptive references. Import must never
+    // eval code or overwrite an installed engine configuration.
+    if (file.enginePolicy && (typeof file.enginePolicy !== "object" ||
+      file.enginePolicy.kind !== "kompas-engine-policy" ||
+      Number(file.enginePolicy.version) !== 2)) return "Unsupported engine contract.";
     if (!file.marketfit) return "";
     const mf = file.marketfit;
     if (!mf || typeof mf !== "object" || Array.isArray(mf)) return "Invalid MarketFit records.";
@@ -154,6 +159,7 @@
     const marketfit = await readMarketFit();
     return { kind: M.KIND, version: M.VERSION, made: new Date().toISOString(), from: location.origin,
       localStorage: readLocal(), databases, marketfit,
+      enginePolicy: window.KompasEnginePolicy || null,
       ...(unread ? { note: "The browser could not list perfACT databases. The original prepared pages or documents may be absent." } : {}),
       ...(marketfit.incomplete ? { marketfitNote: marketfit.incomplete } : {}) };
   }
