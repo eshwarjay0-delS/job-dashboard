@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client"
 import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV } from "./_components/nav"
 import { useTheme } from "../theme-provider"
 import { ChevronRight, Moon, Sun } from "lucide-react"
+import { forgetGmailData } from "@/lib/use-gmail-data"
 
 const ALL_HREFS = [...NAV_ITEMS, ...ADMIN_NAV].map(i => i.href)
 
@@ -179,6 +180,8 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
     setSigningOut(true)
     try {
       const supabase = createClient()
+      // The mail kept for instant pages belongs to this person: it goes when they sign out.
+      forgetGmailData()
       await supabase.auth.signOut()
       setAccountOpen(false)
       router.replace("/login")
