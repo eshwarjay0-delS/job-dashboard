@@ -79,9 +79,8 @@ export function speak(text: string): boolean {
   if (!canSpeak()) return false
   // Split on pause markers so each becomes a timed silence.
   const segments: { text: string; pauseAfter: number }[] = []
-  let remaining = text
   const markerRe = /(\[beat\]|\[breath\])/gi
-  let last = 0, m: RegExpExecArray | null
+  let m: RegExpExecArray | null
   const pauses: { index: number; ms: number }[] = []
   while ((m = markerRe.exec(text)) !== null) {
     pauses.push({ index: m.index, ms: /beat/i.test(m[1]) ? 900 : 450 })
