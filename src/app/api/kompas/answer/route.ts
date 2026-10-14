@@ -13,6 +13,10 @@ import {
   commit, matchBank,
 } from "@/lib/kompasAnswer"
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
+import {
+  allowedNumbers, applyGuards, speakFacts, verifyAnswer,
+  type SpeakFacts,
+} from "@/lib/kompasGuards"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -165,6 +169,28 @@ async function fetchOpenRouter(
   return { text: data.choices?.[0]?.message?.content || "", usage: { input: u.prompt_tokens || 0, output: u.completion_tokens || 0 } }
 }
 
+// A light non-streaming call for the post-generation fact-check (perfACT's
+// verifyAnswer). JSON-forced, low effort, never streamed to the client.
+async function verifyGenerate(key: string, system: string, user: string, signal: AbortSignal): Promise<string> {
+  const model = process.env.KOMPAS_VERIFY_MODEL || "nvidia/nemotron-3-super-120b-a12b:free"
+  const res = await fetch(OR_URL, {
+    method: "POST", signal,
+    headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
+    body: JSON.stringify({
+      model, max_tokens: 1600, temperature: 0,
+      response_format: { type: "json_object" },
+      ...reasoningFor(model),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    }),
+  })
+  if (!res.ok) throw new Error(`verify ${res.status}`)
+  const data = await res.json()
+  return data.choices?.[0]?.message?.content || ""
+}
+
 const SYSTEM = `You are answering a live interview question as the candidate's copilot. The candidate will speak your answer out loud, so write it the way a sharp practitioner talks — thinking out loud with the listener, never reciting a spec sheet.
 
 DELIVERY (this is the balance — hold it on every answer):
@@ -250,6 +276,12 @@ type AnswerJob = {
   ledger: ReturnType<typeof normLedger>
   projectId: string | null
   startedAt: number
+  // Grounding guards (perfACT anti-hallucination): the facts a claim may be
+  // filled from, the figures the answer may state, and the full source text
+  // for the optional post-generation fact-check.
+  guardFacts: SpeakFacts
+  allowed: Set<string>
+  factsText: string
 }
 
 // The lanes, in order: an explicit OpenRouter pick from the live screen first,
@@ -375,12 +407,30 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         // Degrade, never fail: stream the best prepared material as the answer.
         let degraded = false
         if (!raw.trim()) { degraded = true; onDelta(job.fallbackText) }
-        // Voice repair runs once on the complete text — the client's `replace`
-        // event swaps the streamed draft for the finished answer.
-        const finalText = voiceRepair(raw.trim()) || raw
+        // Grounding guards (perfACT anti-hallucination) run on the complete
+        // text: unbracket → place/prestige/title/version fixes → figures
+        // allowlist. Voice repair runs after — the client's `replace` event
+        // swaps the streamed draft for the finished answer.
+        const g = applyGuards(raw.trim(), job.guardFacts, job.allowed)
+        const guardedText = g.text
+        let finalText = voiceRepair(guardedText) || guardedText
+        // Optional post-generation fact-check: the model only POINTS at
+        // unsupported claims; code does the replacement, so the fix is
+        // guaranteed. Env-gated (costs one light call) like perfACT's
+        // PERFACT_VERIFY.
+        let verified = 0
+        if (process.env.KOMPAS_VERIFY === "1" && !degraded && job.factsText && job.orKey) {
+          try {
+            const v = await verifyAnswer(
+              (s, u) => verifyGenerate(job.orKey as string, s, u, signal),
+              job.factsText, finalText,
+            )
+            if (v?.text) { verified = v.fixed; finalText = v.text }
+          } catch { /* the guarded answer stands */ }
+        }
         if (finalText !== raw) emit({ type: "replace", text: finalText })
         emit({
-          type: "done", degraded,
+          type: "done", degraded, guarded: g.guarded, verified,
           ledger: job.ledger,
           ...metaBase, provider: servedProvider, model: servedModel,
           timing: { ...timing, total_ms: Date.now() - startedAt },
@@ -446,13 +496,28 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   } finally { cleanup() }
   const degraded = !raw.trim()
   if (degraded) raw = job.fallbackText
-  const out = voiceRepair(raw.trim()) || raw
+  // Grounding guards before voice repair: unbracket → place/prestige/title/
+  // version fixes → figures allowlist. Then the optional fact-check.
+  const g = applyGuards(raw.trim(), job.guardFacts, job.allowed)
+  let out = voiceRepair(g.text) || g.text
+  let verified = 0
+  if (process.env.KOMPAS_VERIFY === "1" && !degraded && job.factsText && job.orKey) {
+    try {
+      const v = await verifyAnswer(
+        (s, u) => verifyGenerate(job.orKey as string, s, u, signal),
+        job.factsText, out,
+      )
+      if (v?.text) { verified = v.fixed; out = v.text }
+    } catch { /* the guarded answer stands */ }
+  }
   if (!out.trim()) return NextResponse.json({ error: "Nothing to answer." }, { status: 400, headers: NO_STORE })
   void lastErr
   return NextResponse.json({
     text: out,
     polished: true,
     degraded,
+    guarded: g.guarded,
+    verified,
     ledger: job.ledger,
     meta: {
       engine: "marketfit", provider: servedProvider, model: servedModel,
@@ -615,10 +680,34 @@ export async function POST(request: NextRequest) {
   const fallbackText = retrievedList[0]
     || (prep.identity ? str(prep.identity, 600) : "")
     || "The answer engine is at its limit right now — press AI Answer again in a moment."
+  // Grounding guards (perfACT anti-hallucination): the facts a claim may be
+  // filled from (employer/title/known), the figures the answer may state, and
+  // the source text for the optional post-generation fact-check.
+  const resumeSrc = str(config.resume, 8000)
+  const jdSrc = str(config.jd, 4000)
+  const docsSrc = str(config.documents, 4000)
+  const heardSrc = `${question}\n${transcript}`
+  const guardFacts = speakFacts({
+    resume: resumeSrc,
+    jd: jdSrc,
+    documents: docsSrc,
+    heard: heardSrc,
+    identity: str(prep.identity, 800),
+    projects: str(prep.projects, 2000),
+  })
+  const allowed = allowedNumbers(resumeSrc, jdSrc, docsSrc, heardSrc, grounding)
+  const figuresList = [...allowed].slice(0, 30)
+  const figuresLine = `FIGURES: the ONLY result numbers you may state are these, from the candidate's own material: ${figuresList.length ? figuresList.join(", ") : "(none)"}. Never invent a count, percentage, duration or before/after figure — describe the change in words ("cut the queue to something the team could clear by lunch"). Technical constants (ports, versions, thresholds in a rule) are fine.`
+  const factsText = [
+    resumeSrc && `RESUME:\n${resumeSrc}`,
+    jdSrc && `JOB DESCRIPTION:\n${jdSrc}`,
+    docsSrc && `DOCUMENTS:\n${docsSrc}`,
+    grounding && `BACKGROUND:\n${grounding.slice(0, 4000)}`,
+  ].filter(Boolean).join("\n\n")
   const job: AnswerJob = {
     question,
     system: SYSTEM,
-    userText: `${context}\n\nThe interviewer asked: "${question}"\n\nAnswer it as the candidate's spoken reply:`,
+    userText: `${context}\n\n${figuresLine}\n\nThe interviewer asked: "${question}"\n\nAnswer it as the candidate's spoken reply:`,
     plan,
     interviewer,
     tier,
@@ -629,6 +718,9 @@ export async function POST(request: NextRequest) {
     ledger,
     projectId,
     startedAt: Date.now(),
+    guardFacts,
+    allowed,
+    factsText,
   }
   if (body.stream) return streamAnswer(request, job)
   return jsonAnswer(request, job)
