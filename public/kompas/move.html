@@ -44,9 +44,22 @@
     <button class="btn primary" id="mvIn" type="button" disabled>Add it here</button>
   </section>
 
+  <section class="card">
+    <h2>3. Engine, dictation and API workflow contract</h2>
+    <p>The complete original data archive also records the MarketFit engine contract:
+      question extraction, answer formation, microphone and shared-audio dictation,
+      measured pauses, learned vocabulary, model selection and reviewed API routes.
+      These rules are shipped as application code, not imported as executable user data.
+      No sign-in credentials or model API keys are exported.</p>
+    <p><a href="engine-policy.json" download="kompas-engine-policy.json">Download the portable engine contract</a>
+      · <a href="/api/kompas/migration/manifest">Check actual runtime files and checksums</a></p>
+    <p><a href="/dashboard/kompas/move">Blend selected interview knowledge into the signed-in dossier</a>.
+      The full original archive above keeps the raw transcripts and documents intact.</p>
+  </section>
   <p class="msg" id="mvMsg" role="status" aria-live="polite"></p>
   <p><a href="./">Back to Kompas</a></p>
 </main>
+<script src="engine-policy.js"></script>
 <script src="move-core.js"></script>
 <script src="move.js"></script>
 </body>
