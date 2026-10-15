@@ -113,8 +113,8 @@ test('every place a resume is taken now takes a PDF, and the Word copy is what i
   assert.ok(hubPage.includes('<ResumeClient initialFiles={docx} initialFolders={folders} otherFiles={pdfs} />'))
   assert.ok(hub.includes('initialFiles={[...initialFiles, ...otherFiles]}'))
   assert.ok(files.includes('A PDF is kept as it is, and a Word copy is made from its words so it can be tailored.'))
-  // The bot tailors from a PDF's copy and keeps it as the resume; setup makes the copy too.
-  assert.ok(bot.includes('const word = await wordFromPdf(bytes)') && bot.includes('resume = word.docx'))
-  assert.ok(bot.includes('"1. Send your *resume* once, as a Word (.docx) file or a PDF. I keep it."'))
+  // The rollback's WhatsApp workflow intentionally accepts DOCX only, while web setup still supports PDF.
+  assert.ok(bot.includes('I can only read *.docx* resumes. Please export from Word and resend.'))
+  assert.ok(!bot.includes('wordFromPdf(') && !bot.includes('saveTailored('))
   assert.ok(setup.includes('if (word) { await saveUpload({ userDir, bytes: word.docx, filename: copyName(file.name), kind: "docx" }); tailorable = true }'))
 })
