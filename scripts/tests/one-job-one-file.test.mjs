@@ -77,24 +77,16 @@ test('the storage keeps one file a job, sends back what was made, and tidies whe
   assert.ok(store.includes('await removeDuplicates(userDir, now)'))
 })
 
-test('the bot never makes the same job twice', () => {
+test('stable WhatsApp tailoring starts fresh rather than archiving or replaying old jobs', () => {
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
-  // 1. Made already: sent again from Files. No AI call, nothing saved again.
-  assert.ok(bot.includes('const had = await existingForJob(userDir, mail, jd).catch(() => null)') && bot.includes('if ("have" in start) return sendAgain(from, session, who, start.have)'))
-  const again = bot.slice(bot.indexOf('async function sendAgain('), bot.indexOf('// ── Tailor + reply ──'))
-  assert.ok(again.includes('Nothing was made again.') && !again.includes('runTailor(') && !again.includes('saveTailored('))
-  assert.ok(again.includes('saved: have.abs'), 'a reply to the file sent again still changes the one in Files')
-  // "redo" is the one word that makes it afresh, from a resume that is not the earlier result of the same job.
-  assert.ok(bot.includes('if (choice.redo) return null') && bot.includes('noCache: !!choice.redo,') && bot.includes('choice.redo ? jobKeyOf(jd) : ""'))
-  assert.ok(bot.includes('if (cmd === "redo" || cmd === "again" || cmd === "make it again") {'))
-  // 2. Never two runs of one job at once: the second is told it is on its way, unless it brings a newer resume.
-  assert.ok(bot.includes('if (flight && flight.job === job && Date.now() - flight.at < IN_FLIGHT_MS && !((session.resumeAt || 0) > flight.at)) {'))
-  assert.ok(bot.includes('I am already making the resume for this job.'))
-  // The run that was overtaken stands down BEFORE it sends or saves.
-  const stood = bot.indexOf('if (still && still.job === job && still.token !== mine)'), sent = bot.indexOf('await deliver(from, file, name, captionFor(name, meta, result, undefined')
-  assert.ok(stood > 0 && stood < sent)
-  // A run that failed lets go, so the same job can be tried again at once.
-  assert.ok((bot.match(/await clearFlight\(from, mine\)/g) || []).length >= 4)
-  // The session is put away the same way after a new resume and after one sent again.
-  assert.ok(bot.includes('await putAway(from, session, !!source.givenPath && source.givenPath === session.resumePath, source.email)') && bot.includes('await putAway(from, session, false, have.email)'))
+  assert.ok(bot.includes('if (!session.jd || !session.resumePath) return sendText(from, HELP)'))
+  assert.ok(bot.includes('userResumeDir: path.join(INBOX_DIR, digits(from))'))
+  assert.ok(bot.includes('await saveSession(from, { seen: session.seen })'))
+  assert.ok(bot.includes('await deletePath(session.resumePath).catch(() => {})'))
+  assert.ok(!bot.includes('existingForJob('))
+  assert.ok(!bot.includes('sendAgain('))
+  assert.ok(!bot.includes('saveTailored('))
+  assert.ok(!bot.includes('resume_documents'))
+  assert.ok(bot.includes('const replyTo = (msg.context as { id?: string } | undefined)?.id'))
+  assert.ok(bot.includes('if (replyTo) return refine(from, replyTo, text, userId)'))
 })
