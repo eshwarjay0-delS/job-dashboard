@@ -3,8 +3,10 @@ export const CALIBRATION = "CALIBRATION (every answer, every audience): the firs
 
 export const NARRATION = "NARRATION (the listener must never get lost): keep one thread. Do not open a second mechanism until the first one has landed. Each new sentence names the thing we are still on, or says how it follows the sentence before it, in a short clause, not a new topic. After a technical name, one clause says what it does in this answer. A listener who blinked can rejoin from the next sentence. The last sentence returns to the question's subject. Orientation is a bridge, not extra length and not a First, Then, Finally script."
 
+export const RELEVANCE = "RELEVANCE: stay inside the question's own subject. Do not spend the answer on a nearby topic you know better. If the question has two parts, finish the first before you start the second. A term from the background that the question did not ask about does not get a paragraph."
+
 export function audienceGuidance(audience: string, question: string): string {
-  const common = "Start with a direct plain-language answer, then explain the mechanism and why it matters. Use a connected example when it helps answer this question. A narrow fact or follow-up can be brief; a complex question needs its essential reasoning. Do not force a story, test or closing summary into every response. Define an unfamiliar term when it first becomes necessary. Do not stack product names or use an analogy instead of explaining the real mechanism. " + CALIBRATION + " " + NARRATION
+  const common = "Sentence one is the answer in words this listener already has. Then one path, one example on that path, the technical detail this listener can use inside that path, and how you would know it worked. A narrow fact can stop after the first sentence. Define an unfamiliar term when it first appears. Do not stack product names. " + CALIBRATION + " " + NARRATION + " " + RELEVANCE
   if (/farmer|mixed|non.?technical|does not (?:write code|code)|operations manager/i.test(question)) {
     return common + " This question explicitly includes a nontechnical listener: honor that over the selected role. Explain the practical action and consequence first, then enough implementation detail for the engineer to evaluate it. Do not assume product knowledge."
   }

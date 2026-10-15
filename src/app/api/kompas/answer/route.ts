@@ -201,7 +201,7 @@ async function verifyGenerate(key: string, system: string, user: string, signal:
 const SYSTEM = `You are answering a live interview question as the candidate's copilot. The candidate will speak your answer out loud, so write it the way a sharp practitioner talks — thinking out loud with the listener, never reciting a spec sheet.
 
 DELIVERY (this is the balance — hold it on every answer):
-- ANSWER FIRST: the first sentence carries the specific noun — the tool, setting, mechanism, decision or direct answer. Never open by restating the question, with framing, or with praise for the question.
+- ANSWER FIRST: sentence one is the answer in words this listener already has — the decision, the difference, or the check. A product name belongs there only when the question used it. The precise name comes next, in the same breath as what it does. Never open by restating the question, with framing, or with praise for the question.
 - THINK OUT LOUD. Reason in front of the listener: "It depends on the system — I'm going to assume it's on a Windows server, just to make the example easy."
 - CONCRETE OVER ABSTRACT. Explain a specific mechanism and example. Personal projects and observed logs require original supporting evidence; otherwise use a clearly hypothetical example.
 - UNFOLD STEP BY STEP, one clear move at a time, with natural pause points.
@@ -214,7 +214,7 @@ DELIVERY (this is the balance — hold it on every answer):
 
 CLARITY (the standard for every answer — nothing abstract, unfinished or unclear, ever):
 - MIRROR, LIKE CLEAR RIVER WATER: reflect this interviewer's own world back to them — their vocabulary, their priorities, the question behind their question — clean, still and easy to see through. One clear line of thought per paragraph, in a natural order. No tangents, no needless hedging, no stacked qualifiers. State a real uncertainty plainly; confidence never turns an assumption into an observation.
-- THE QUESTION'S OWN SUBJECT FIRST: if it names a thing (an alert, a playbook, a control, an outage), the first two sentences deal with that thing. Never swap in a nearby topic you know better.
+- THE QUESTION'S OWN SUBJECT FIRST: if it names a thing (an alert, a playbook, a control, an outage), every paragraph deals with that thing. Never swap in a nearby topic you know better. Two parts are finished one after the other, not woven.
 - EVERY PART ANSWERED: when the question asks two things, answer each one by name. "Who do you tell" is answered with a role (the incident commander, my director), not "the stakeholders".
 - A SCENARIO IS A DESIGN: when the question sets a condition ("suppose", "tonight", "if"), answer with what you would do, in order — "I would…", "my first check is…". Past work appears only as one sentence of proof from the background.
 - A REQUIREMENT IS A CONSTRAINT, not a trade-off: if the question says a path must stay rare or controlled, keep that requirement in every sentence.
@@ -574,7 +574,11 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  let question = str(body.derived, 4000) || str(body.question, 4000)
+  const heardAll = str(body.question, 4000)
+  const asked = str(body.derived, 900)
+  // The page sends the last thing asked as `derived` and everything just heard as `question`.
+  // Answering the whole ramble is how a nearby topic takes the answer.
+  let question = asked && heardAll && asked.length + 40 < heardAll.length ? asked : (asked || heardAll)
   if (!question) return NextResponse.json({ error: "Nothing to answer." }, { status: 400, headers: NO_STORE })
 
   const config = (body.config && typeof body.config === "object" ? body.config : {}) as Record<string, unknown>
@@ -659,7 +663,7 @@ export async function POST(request: NextRequest) {
   }
 
   const context = [
-    `The interviewer is a ${interviewer} — pitch the technical depth to them.`,
+    `The interviewer is a ${interviewer}. Match the depth to them: do not leave them behind, and do not leave the mechanism out.`,
     `QUESTION TYPE: ${why} (tier ${tier}). ${rule}`,
     `INTERVIEW MODE: ${modeBlock(tier, question, interviewer)}`,
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
@@ -716,7 +720,7 @@ export async function POST(request: NextRequest) {
   const job: AnswerJob = {
     question,
     system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${audienceGuidance(interviewer, question)}`,
-    userText: `${context}\n\n${figuresLine}\n\nThe interviewer asked: "${question}"\n\nAnswer it as the candidate's spoken reply:`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\nSpeak it. Sentence one is the answer in words this listener already understands. Then one path, one example on that path, the detail this listener can use, and how you would know it worked. If a second topic starts, stop.`,
     plan,
     interviewer,
     tier,

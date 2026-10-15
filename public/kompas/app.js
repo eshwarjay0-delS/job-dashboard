@@ -1450,6 +1450,11 @@ let answerEpoch = 0;            // bumps on every answer request: an automatic r
 function slimPrep() { const p = current && current.prep; return p ? { identity: p.identity, persona: p.persona, projects: p.projects } : {}; }
 function buildTranscript() { return transcript.slice(-80).map(t => `${t.who}: ${t.text}`).join("\n"); }
 function heardAsQuestion(lines) { return lines.map(t => t.text).join(" ").replace(/\s+/g, " ").trim().slice(0, 2000); }
+function lastAsk(lines) {
+  const them = lines.filter(t => t.who === "Them" || t.who === "You (typed)");
+  const src = them.length ? them : lines;
+  return String((src[src.length - 1] && src[src.length - 1].text) || "").replace(/\s+/g, " ").trim().slice(0, 600);
+}
 // The last two answered questions before this card (owner, 2026-09-30): the next question may follow up on them.
 function recentQA(card) {
   const i = cards.indexOf(card), prev = (i < 0 ? cards : cards.slice(0, i)).filter(c => c && c.question && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(c.question) && typeof c.answer === "string" && c.answer.trim().length > 40);
@@ -1789,7 +1794,7 @@ async function aiAnswer(fromAuto) {
     if (pending.length) {
       answeredSeq = heardSeq; updatePending();
       const heard = pending.map(t => `${t.who}: ${t.text}`).join("\n");
-      const said = heardAsQuestion(pending);
+      const said = lastAsk(pending) || heardAsQuestion(pending);
       const earlier = transcript.filter(t => t.seq <= pending[0].seq - 1).slice(-40).map(t => `${t.who}: ${t.text}`).join("\n");
       const card = addCard(said || "Answering what was just heard…", ["…"]);
       card.heard = heard; card.earlier = earlier;
