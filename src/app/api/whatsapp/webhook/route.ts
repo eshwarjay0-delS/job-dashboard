@@ -237,7 +237,7 @@ const HELP = [
   "",
   "After the first time, just send each new job description. I always use the resume you uploaded until you send a replacement, and save each tailored copy in your *Files*.",
   "",
-  "*A different email?* Upload the resume with that email before sending the job description.",
+  "*Multiple resume emails?* Choose the email I ask for by replying with its number, or put the number under the job description. I use a verified resume from that email only.",
   "",
   "*A different resume?* Send me that resume first, then the job description.",
   "",
@@ -355,7 +355,7 @@ async function moveEarlierIntoFiles(from: string, who: Who, until: number, again
 // because a reply of "2" must not switch to another identity as library sizes change.
 async function emailSlotsFor(who: Who, session: Session): Promise<string[]> {
   const baseline = await keptEmailOf(session)
-  if (!who.saves || !UUID.test(who.userId) || !serviceClientAvailable()) return baseline ? [baseline] : []
+  if (!who.own || !UUID.test(who.userId) || !serviceClientAvailable()) return baseline ? [baseline] : []
   const { data, error } = await createServiceClient().from("resume_email_libraries")
     .select("email").eq("user_id", who.userId).limit(50)
   if (error) throw error
@@ -376,7 +376,7 @@ async function selectedEmailSource(from: string, session: Session, who: Who, ema
   if (original && (await keptEmailOf(session)) === email) {
     return { ...original, email }
   }
-  if (!who.saves || !UUID.test(who.userId) || !serviceClientAvailable()) return null
+  if (!who.own || !UUID.test(who.userId) || !serviceClientAvailable()) return null
   const db = createServiceClient()
   const { data: library, error: libError } = await db.from("resume_email_libraries")
     .select("id").eq("user_id", who.userId).eq("email", email).maybeSingle()
@@ -511,6 +511,11 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       session.ask = undefined
       await saveSession(from, session)
       return sendText(from, `Using *${selection}* for your next job description. Send the job description whenever you're ready.`)
+    }
+
+    // A request to change to an unknown identity is not a job description.
+    if (text.length < 100 && /(?:^|\\s)(?:for|email(?:\\s+is)?|use|choose)\\s+[^\\s]+@[^\\s]+/i.test(text)) {
+      return sendText(from, "That email is not in your linked account's resume libraries. Import a resume for it into Files, or send that resume here first.")
     }
 
     // Too short to be a JD — most likely a stray message, so guide instead of guessing.
