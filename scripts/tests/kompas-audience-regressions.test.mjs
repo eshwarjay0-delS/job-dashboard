@@ -70,4 +70,5 @@ test('the question is cut out of the ramble, and a definition stays a storytelle
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /measure they already trust/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /cannot tell apart are one thing/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /one comparison of the same thing in two conditions/)
+  assert.match(audienceGuidance('engineer', 'What is a certificate?'), /explained the seeing away/)
 })
