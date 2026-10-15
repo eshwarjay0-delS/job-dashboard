@@ -387,7 +387,7 @@ async function selectedEmailSource(from: string, session: Session, who: Who, ema
     .eq("library_id", library.id).order("created_at", { ascending: false }).limit(100)
   if (error) throw error
   const wanted = new Set(extractKeywords(session.jd || "").map(x => x.toLowerCase()))
-  const sorted = (data || []).map(doc => {
+  const sorted = (data || []).filter(doc => doc.source !== "whatsapp").map(doc => {
     const words = Array.isArray(doc.keywords) ? doc.keywords : []
     const score = words.filter((w: string) => wanted.has(String(w).toLowerCase())).length
     return { doc, score }
