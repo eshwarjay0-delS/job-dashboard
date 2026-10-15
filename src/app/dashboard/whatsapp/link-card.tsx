@@ -1,9 +1,8 @@
 "use client"
 
-// Join this account to a WhatsApp number, so every resume the bot makes is saved in Files.
+// Join this account to a WhatsApp number for private resume tailoring. The bot does not file resumes in MarketFit Files.
 // One button gives a code; the person sends it to the bot from their own WhatsApp; this card sees it arrive.
 import { useCallback, useEffect, useState } from "react"
-import WhatsAppClaim from "../_components/whatsapp-claim"
 
 type Linked = { ending: string; at: number }
 type Code = { code: string; send: string; minutes: number; expiresAt: number }
@@ -32,7 +31,7 @@ export default function LinkCard({ bot }: { bot: string }) {
     const timer = setInterval(async () => {
       if (Date.now() > code.expiresAt) { setCode(null); setNote("That code ran out. Press the button for a new one."); return }
       const now = await read()
-      if (now.length > before || now.some(n => n.at > code.expiresAt - code.minutes * 60_000)) { setCode(null); setNote("Linked. Every resume made on WhatsApp is now saved in your Files.") }
+      if (now.length > before || now.some(n => n.at > code.expiresAt - code.minutes * 60_000)) { setCode(null); setNote("Linked. Send a Word resume and a job description to tailor it.") }
     }, 4000)
     return () => clearInterval(timer)
   }, [code, numbers, read])
@@ -53,7 +52,7 @@ export default function LinkCard({ bot }: { bot: string }) {
     try {
       await fetch("/api/whatsapp/link", { method: "DELETE" })
       setCode(null); await read()
-      setNote("Unlinked. The resumes already in your Files stay there.")
+      setNote("Unlinked. Your existing MarketFit Files were not changed.")
     } catch { setNote("That did not go through. Try again in a moment.") }
     finally { setBusy(false) }
   }
@@ -63,14 +62,12 @@ export default function LinkCard({ bot }: { bot: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
-      {/* The owner's own number: joined with nothing to press when it is named in settings, or with one press here. */}
-      <WhatsAppClaim onMoved={() => { void read() }} />
       {linked ? (
         <p style={{ ...soft, color: "var(--text)" }}>
-          Linked to the number ending <strong>{(numbers || []).map(n => n.ending).join(", ")}</strong>. Every resume made there is saved in <a href="/dashboard/documents" style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: 3 }}>Files</a>, in a folder for its kind of job.
+          Linked to the number ending <strong>{(numbers || []).map(n => n.ending).join(", ")}</strong>. Send a Word resume and a job description for each tailoring request. The finished document comes back through WhatsApp.
         </p>
       ) : (
-        <p style={soft}>Resumes made on WhatsApp are saved in your Files once your number is linked to this account. It takes one message.</p>
+        <p style={soft}>Link your WhatsApp number to tailor resumes. Files are not automatically stored in MarketFit.</p>
       )}
 
       {code && (
