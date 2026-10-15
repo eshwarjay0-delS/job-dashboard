@@ -65,4 +65,5 @@ test('the question is cut out of the ramble, and a definition stays a storytelle
   assert.match(audienceGuidance('engineer', 'Tell me about yourself'), /path you were set on/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /picture that remains once the dust has settled/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /scene the listener already recognizes/)
+  assert.match(audienceGuidance('engineer', 'What is a certificate?'), /sees the change before they hear the name/)
 })
