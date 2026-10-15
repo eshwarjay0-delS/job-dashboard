@@ -125,7 +125,7 @@ test('inside the chosen email the closest resume wins, and never one of another 
   assert.deepEqual(rankFor(all, 'nobody@x.com', asked), { ranked: [], builtOnAlready: 0 })
   // Said to the person before the work starts. The email is said first by the bot, on its own.
   assert.equal(saidOf(ranked[0]), 'your saved *SIEM and Incident Response* resume (SOC Analyst - Kestrel), which already shows 3 of the 4 things this job asks for')
-  assert.ok(read('src/app/api/whatsapp/webhook/route.ts').includes('`${source.email ? `For *${source.email}*. ` : ""}Tailoring from ${source.said}'))
+  assert.ok(!read('src/app/api/whatsapp/webhook/route.ts').includes('selectedEmailSource('))
 })
 
 test('a resume built on a saved resume is never built on again; ties go to the one the person wrote, then the newest', () => {
@@ -232,11 +232,11 @@ test('a number that IS registered is never told it is not, when the store does n
 test('the bot asks who a number is before anything else, and its replies to a stranger are counted', () => {
   const bot = read('src/app/api/whatsapp/webhook/route.ts'), who = read('src/lib/whatsapp-who.ts')
   assert.ok(bot.includes('const kind = sender.checked ? "unregistered" : "unchecked"') && bot.includes('if (await claimNotice(from, kind)) {'))
-  assert.ok(bot.indexOf('if (!who && !linking) {') < bot.indexOf('const session = await loadSession(from)'), 'nothing of an unregistered number is loaded or kept')
+  assert.ok(bot.indexOf('if (!sender.who) {') < bot.indexOf('const session = await loadSession(from)'), 'nothing of an unregistered number is loaded or kept')
   // "link <code>" is how a number registers itself, so it is still read from a number that is not registered yet.
-  assert.ok(bot.includes('if (linking) who = await link(from, linking[1], who)'))
+  assert.ok(bot.includes('if (linking) {') && bot.includes('const claim = await claimLinkCode(from, linking[1])'))
   // Found in review: after five wrong codes every further one got a reply. The limit is said once an hour.
-  assert.ok(bot.includes('if (await claimNotice(from, "link_limit")) await sendText(from, "That is five codes in an hour'))
+  assert.ok(bot.includes('claim.why === "too_many"') && bot.includes('Too many incorrect link codes. Try again in an hour.'))
   assert.equal(NOTICE_EVERY_MS.link_limit, 60 * 60 * 1000)
   // Registered: it sent a code, the owner named it, or its mobile code was confirmed. Nothing else.
   assert.ok(who.includes('by: "code"') && who.includes('by: "owner"') && who.includes('by: "verified"'))
