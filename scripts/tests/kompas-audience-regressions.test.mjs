@@ -60,4 +60,5 @@ test('the question is cut out of the ramble, and a definition stays a storytelle
   const code = 'if n <= 3:\n    return True\nif n % 2 == 0:\n    return False'
   assert.match(applyGuards(code, null, new Set()).text, /n <= 3/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /name the mechanism once/)
+  assert.match(audienceGuidance('engineer', 'What is a certificate?'), /why it matters before any apparatus/)
 })
