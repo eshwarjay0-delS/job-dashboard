@@ -163,6 +163,12 @@ test('introductions present the supported career with room for substance and no 
     assert.match(prompt, /major career stages in the resume/)
     assert.match(prompt, /first person, with direct statements of work and ownership/)
     assert.match(prompt, /Never close with a job application pitch/)
+    assert.match(prompt, /named clients or employers, signature projects, documented achievements, and the impact/)
+    assert.match(prompt, /a client is a client and an employer is an employer/)
+    assert.match(prompt, /candidate's own actions and decisions, and the documented result or impact/)
+    assert.match(prompt, /Be a little bold and humble/)
+    assert.match(prompt, /acknowledge the team's role/)
+    assert.match(prompt, /rather than inventing an achievement/)
     assert.doesNotMatch(prompt, /why this role fits|FINAL ROUND|If a second topic starts, stop/)
     assert.doesNotMatch(system, /About 75 words holds attention/)
   }
