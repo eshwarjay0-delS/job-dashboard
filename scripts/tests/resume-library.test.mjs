@@ -131,70 +131,27 @@ test('a record read back from storage cannot point outside the library', () => {
   assert.equal(shelfKey('', ''), `${NO_EMAIL} / ${NO_CATEGORY}`)
 })
 
-test('the bot keeps the resume, saves what it makes in Files, and searches no one else\'s', () => {
+test('WhatsApp rollback processes a JD and resume with private temporary files and does not archive', () => {
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
-  // The resume outlives a finished job and a quiet day. Only "forget resume" drops it.
-  // The job that ends puts away its own job description only: the session is read again first (a minute has passed).
-  assert.ok(bot.includes('...(another ? now : kept(now)),') && bot.includes('    lastJd: session.jd,\n    lastEmail: email || undefined,\n  })'))
-  assert.ok(bot.includes('if (s.updatedAt && Date.now() - s.updatedAt > ttl) return { ...kept(s), resumeFresh: false }'))
-  assert.equal((bot.match(/saveSession\(from, \{ seen: session\.seen \}\)/g) || []).length, 1, 'the one place the resume is dropped is "forget resume"')
-  assert.ok(bot.indexOf('cmd === "forget resume"') < bot.indexOf('saveSession(from, { seen: session.seen })'))
-  // It is kept for this number alone, outside the shared library folder.
-  assert.ok(bot.includes('const dest = path.join(BASELINE_DIR, digits(from), safe)'))
-  // Every resume sent is also saved in Files while it is being sent, and taken back out if it never reached the person.
-  assert.ok(bot.includes('saveTailored({') && bot.includes('if (filed && keep) await forgetTailored(keep.userDir, filed.abs)'))
-  assert.ok(bot.includes('const keep: Keep | undefined = who.saves ?'))
-  // A changed resume takes the place of the one it changed only after it was really sent; the record a swipe-reply
-  // needs is written before the saving in Files is waited for.
-  assert.ok(bot.includes('if (keep.replaces && keep.replaces !== filed.abs) await forgetTailored(keep.userDir, keep.replaces)'))
-  assert.ok(bot.indexOf('if (kept_) await saveGen(from, wamid,') < bot.indexOf('const filed = await filing\n  // The caption said'))
-  // "link building roles ..." is a job description, not a code: only the shape of a code is taken as one.
-  const linkShape = /^link[\s:#-]+([A-Za-z0-9]{4}[\s-]?[A-Za-z0-9]{4})$/i
-  assert.ok(bot.includes('const linking = typed.match(' + String(linkShape) + ')'))
-  assert.ok(linkShape.test('link K7QM-2XHD') && linkShape.test('LINK k7qm2xhd') && linkShape.test('link: K7QM 2XHD'))
-  assert.ok(!linkShape.test('link building job') && !linkShape.test('linkedin K7QM-2XHD') && !linkShape.test('link K7QM-2XHD please') && !linkShape.test('link'))
-  // A JD from a linked account may choose only that account's verified resume library.
-  assert.ok(bot.includes('const original = await keptSource(from, session, who)'))
-  assert.ok(bot.includes('const sorted = (data || []).filter(doc => doc.source !== "whatsapp").map(doc =>'))
-  assert.ok(bot.includes('await recoverLibraryResume(who.userId, doc.id)'))
-  assert.ok(bot.includes('if (!who.own || !UUID.test(who.userId) || !serviceClientAvailable()) return null'))
-  assert.ok(bot.includes('.eq("user_id", who.userId).eq("email", email).maybeSingle()'))
-  assert.ok(bot.includes('return { dir, givenPath: file, depth: 1, email, said:'))
-  // Matching records may be chosen, but a generated version never replaces the uploaded baseline.
-  assert.ok(bot.includes('const dest = path.join(BASELINE_DIR, digits(from), safe)'))
-  assert.ok(bot.includes('const dir = path.join(DATA_DIR, "whatsapp", "selected", digits(from))'))
-  // The number that joined itself with a code is asked first; the shared default is never "own".
-  const whoIs = read('src/lib/whatsapp-who.ts')
-  assert.ok(whoIs.indexOf('const linked = await linkedUserIdChecked(from)') > 0 && whoIs.indexOf('const linked = await linkedUserIdChecked(from)') < whoIs.indexOf('const owner = ownerWhatsAppUserId(from, FALLBACK_USER_ID)'))
-  assert.ok(whoIs.includes('return { who: who(FALLBACK_USER_ID, false), by: "open", checked }'))
-  // A new job adds to the person's dossier (the kind of work, and what jobs of that kind keep asking for); it removes nothing.
-  assert.ok(bot.includes('if (filed.counted && UUID.test(gen.userId)) await feedDossier(gen.userId, filed)'))
-  assert.ok(bot.includes('skills: had?.skills || [], projects: had?.projects || [], keywords: join(had?.keywords, filed.learned.common.map(c => c.word)), fields: join(had?.fields, [filed.category])'))
-  // The owner's number needs no step: it writes as the one account that signs in with the owner's own address, so his
-  // resumes reach his Files (13 Oct 2026: they did not, his Files held 0). With no such account, or two, it is not guessed.
-  assert.ok(whoIs.includes('const account = await ownerAccountId()\n    return { who: account ? who(account, true) : who(owner, false), by: "owner", checked: true }'))
-  assert.ok(whoIs.includes('.from("profiles").select("id,email").in("email", emails).limit(3)') && whoIs.includes('if (rows.length === 1) id = String(rows[0].id)'))
-  // Resumes made before the number had an account are moved into Files once, and he is told when that happens.
-  assert.ok(bot.includes('I made for you earlier into your Files in MarketFit, each in the folder for its kind of job.'))
-  // The dashboard asks for them itself: for the owner's own numbers, joined to nobody, when Files or the WhatsApp page
-  // opens. The bot and the dashboard move them with the same code.
-  const collect = read('src/app/api/whatsapp/collect/route.ts'), mover = read('src/lib/whatsapp-collect.ts')
-  assert.ok(collect.includes('if (!isAdminEmail(user.email)) return NextResponse.json({ ok: true, owner: false') && collect.includes('ownerEntries().filter(e => !e.userId || e.userId === user.id)'))
-  assert.ok(collect.includes('const state = await joinIfFree(digits, user.id)') && collect.includes('moved += await collectHeld(digits, user.id, began + 40_000)'))
-  // No number named in settings: the numbers that used the bot are offered to the owner by their last four digits, and
-  // one is taken only when exactly one ends that way. A page is never given a whole number.
-  assert.ok(collect.includes('const claimed = claim.length === 4 ? loose.filter(n => n.digits.endsWith(claim)) : []') && collect.includes('if (claim && claimed.length !== 1)'))
-  assert.ok(collect.includes('.map(n => ({ ending: n.digits.slice(-4), held: n.held }))'))
-  const claimUi = read('src/app/dashboard/_components/whatsapp-claim.tsx')
-  assert.ok(claimUi.includes('It is mine') && claimUi.includes('Not mine') && claimUi.includes('JSON.stringify(claim ? { claim } : {})'))
-  assert.ok(bot.includes('return collectHeld(from, who.userId, until, again)') && mover.includes('saveTailored({ userDir, bytes, jd: gen.jd'))
-  // The held resumes are listed with a key the storage accepts (one ending in a slash is refused, and read as none).
-  assert.ok(mover.includes('blob.list("whatsapp/gens")') && !mover.includes('blob.list("whatsapp/gens/")'))
-  assert.ok(read('src/app/dashboard/documents/DocumentsClient.tsx').includes('<WhatsAppClaim onMoved={broughtIn} />') && read('src/app/dashboard/whatsapp/link-card.tsx').includes('<WhatsAppClaim onMoved='))
-  // A PDF is kept, never tailored.
-  assert.ok(bot.includes('saveUpload({ userDir: userDirOf(userId), bytes, filename, kind: "pdf" })'))
-  // The tidy-up of Files leaves the resumes made for jobs alone (it keeps two per kind and removes the rest).
-  assert.ok(read('src/app/api/resumes/organize/route.ts').includes('p.toLowerCase().endsWith(".docx") && !isTailoredName(path.basename(p))'))
+  assert.ok(bot.includes('const INBOX_DIR = path.join(DATA_DIR, "whatsapp", "inbox")'))
+  assert.ok(bot.includes('const dest = path.join(INBOX_DIR, digits(from), safe)'))
+  assert.ok(bot.includes('userResumeDir: path.join(INBOX_DIR, digits(from))'))
+  assert.ok(bot.includes('session.jd = text') && bot.includes('session.resumePath = dest'))
+  assert.ok(bot.includes('await saveSession(from, { seen: session.seen })'))
+  assert.ok(bot.includes('await deletePath(session.resumePath).catch(() => {})'))
+  assert.ok(bot.includes('if (s.version !== 2) return { version: 2, seen: s.seen?.slice(-40) }'))
+  assert.ok(!bot.includes('saveTailored('))
+  assert.ok(!bot.includes('archiveGeneratedResume('))
+  assert.ok(!bot.includes('collectHeld('))
+  assert.ok(!bot.includes('recoverLibraryResume('))
+  assert.ok(!bot.includes('resume_email_libraries'))
+  assert.ok(!bot.includes('resume_documents'))
+  assert.ok(bot.includes('const sender = await resolveWhatsAppUser(from)'))
+  assert.ok(bot.includes('const claim = await claimLinkCode(from, linking[1])'))
+  assert.ok(bot.includes('const gen = await loadGen(from, replyTo)'))
+  assert.ok(bot.includes('if (gen.userId !== userId) return sendText(from'))
+  assert.ok(bot.includes('await sendDocument(from, file, `${name}.docx`, caption)'))
+  assert.ok(bot.includes('await sendText(from, plainFailure(e, "do that", true))'))
 })
 
 test('a number joins an account with a code that works once, for fifteen minutes, five tries an hour', async () => {
