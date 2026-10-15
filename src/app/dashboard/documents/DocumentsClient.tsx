@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useDialogs } from "@/components/ui/dialog-provider"
-import WhatsAppClaim from "../_components/whatsapp-claim"
 
 // Resume-library entry shape. This view was folded into the resume hub, so its
 // sibling ./page is now a redirect and no longer exports this type — keep it local.
@@ -213,14 +212,6 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [err, setErr] = useState("")
   const [notice, setNotice] = useState("")
-  // The resumes the WhatsApp bot made are brought in when this page opens (see WhatsAppClaim below): 13 Oct 2026,
-  // eighteen had been made that day and this page held none.
-  const broughtIn = useCallback((moved: number) => {
-    if (moved) setNotice(`I brought in ${moved} resume${moved === 1 ? "" : "s"} made on WhatsApp. Each one is in the folder for its kind of job.`)
-    router.refresh()
-    setIndexRevision(v => v + 1)
-  }, [router])
-
   function toggleCheck(key: string) {
     setChecked(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n })
   }
@@ -385,8 +376,6 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
           </button>
         )}
       </div>
-
-      <WhatsAppClaim onMoved={broughtIn} />
 
       {allFiles.length > 0 && <div className="flex flex-wrap items-center gap-3">
         <button type="button" className="btn-outline" onClick={organizeLibrary} disabled={organizing}>
