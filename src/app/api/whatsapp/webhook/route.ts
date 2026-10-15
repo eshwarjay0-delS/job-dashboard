@@ -29,6 +29,7 @@ import { resolveWhatsAppUser, claimNotice, textCodesWork } from "@/lib/whatsapp-
 import { claimLinkCode } from "@/lib/whatsapp-link"
 import { notRegisteredMessage, NOT_CHECKED_MESSAGE, siteOf } from "@/lib/whatsapp-who-core"
 import { extractProfile } from "@/lib/profile"
+import { plainFailure } from "@/lib/plain-failure"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
 export const runtime = "nodejs"
@@ -230,7 +231,7 @@ export async function POST(request: NextRequest) {
   try {
     await handle(from, msg, session, userId)
   } catch (e) {
-    try { await sendText(from, `Something went wrong: ${String(e).slice(0, 300)}`) } catch { /* ignore */ }
+    try { await sendText(from, plainFailure(e, "do that", true)) } catch { /* ignore */ }
   }
   return ok()
 }
