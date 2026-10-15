@@ -153,11 +153,16 @@ test('the bot keeps the resume, saves what it makes in Files, and searches no on
   assert.ok(bot.includes('const linking = typed.match(' + String(linkShape) + ')'))
   assert.ok(linkShape.test('link K7QM-2XHD') && linkShape.test('LINK k7qm2xhd') && linkShape.test('link: K7QM 2XHD'))
   assert.ok(!linkShape.test('link building job') && !linkShape.test('linkedin K7QM-2XHD') && !linkShape.test('link K7QM-2XHD please') && !linkShape.test('link'))
-  // A job description alone is enough once a resume is held; with none, only an account of the number's own is searched.
-  assert.ok(bot.includes('const resumes = who.own ? await libraryOf(userDirOf(userId)) : null'))
-  assert.ok(bot.includes('return Object.keys(resumes.index).length ? { source: { dir: userDir, depth: 1, said: "the closest resume in your Files" } } : { say: NO_RESUME }'))
-  // What is made from a saved resume that was made for a job is marked so, and never built on again.
-  assert.ok(bot.includes('depth: c.depth === 0 ? 1 : 2, from: relOf(userDir, c.path), email, said'))
+  // A JD from a linked account may choose only that account's verified resume library.
+  assert.ok(bot.includes('const original = await keptSource(from, session, who)'))
+  assert.ok(bot.includes('const sorted = (data || []).map(doc =>'))
+  assert.ok(bot.includes('await recoverLibraryResume(who.userId, doc.id)'))
+  assert.ok(bot.includes('if (!who.own || !UUID.test(who.userId) || !serviceClientAvailable()) return null'))
+  assert.ok(bot.includes('.eq("user_id", who.userId).eq("email", email).maybeSingle()'))
+  assert.ok(bot.includes('return { dir, givenPath: file, depth: 1, email, said:'))
+  // Matching records may be chosen, but a generated version never replaces the uploaded baseline.
+  assert.ok(bot.includes('const dest = path.join(BASELINE_DIR, digits(from), safe)'))
+  assert.ok(bot.includes('const dir = path.join(DATA_DIR, "whatsapp", "selected", digits(from))'))
   // The number that joined itself with a code is asked first; the shared default is never "own".
   const whoIs = read('src/lib/whatsapp-who.ts')
   assert.ok(whoIs.indexOf('const linked = await linkedUserIdChecked(from)') > 0 && whoIs.indexOf('const linked = await linkedUserIdChecked(from)') < whoIs.indexOf('const owner = ownerWhatsAppUserId(from, FALLBACK_USER_ID)'))
