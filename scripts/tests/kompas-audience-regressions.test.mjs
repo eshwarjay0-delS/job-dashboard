@@ -77,6 +77,7 @@ test('the question is cut out of the ramble, and a definition stays a storytelle
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /explained the seeing away/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /feels the idea personally/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /funny, charismatic, and inviting/)
-  assert.match(audienceGuidance('hr', 'Tell me about a time you led'), /finish on every answer, for every audience/)
+  assert.match(audienceGuidance('hr', 'Tell me about a time you led'), /diamond in the rough/)
+  assert.match(audienceGuidance('director', 'Should we launch?'), /most important thing/)
   assert.match(audienceGuidance('director', 'Should we launch?'), /interview still decides the question and the layer/)
 })
