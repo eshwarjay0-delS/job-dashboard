@@ -277,8 +277,18 @@ export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolea
       setAdmin(isAdmin)
       if (isAdmin || window.location.pathname.startsWith("/dashboard/setup")) return
       try {
+        const ownerResponse = await fetch("/api/admin/owner", { cache: "no-store" })
+        const ownerState = ownerResponse.ok ? await ownerResponse.json() : null
+        if (!active || authRevision !== initialRevision) return
+        if (ownerState?.owner === true) {
+          setOwner(true)
+          if (window.location.pathname.startsWith("/dashboard/setup")) router.replace("/dashboard/admin")
+          return
+        }
+        setOwner(false)
+        if (window.location.pathname.startsWith("/dashboard/setup")) return
         const { data } = await supabase.from("profiles").select("profile_complete").eq("id", user.id).maybeSingle()
-        if (active && authRevision === initialRevision && data?.profile_complete === false && !window.location.pathname.startsWith("/dashboard/setup")) {
+        if (active && authRevision === initialRevision && data?.profile_complete === false) {
           router.replace("/dashboard/setup")
         }
       } catch { /* Account setup checks must not block navigation. */ }
