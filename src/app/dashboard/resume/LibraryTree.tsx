@@ -70,6 +70,16 @@ function Check({ on, onClick }: { on: boolean; onClick: (e: React.MouseEvent) =>
   )
 }
 
+// The name as a person reads it, and where a resume can be looked at before it is used (owner, 13 Oct 2026: "Give the
+// preview with view button right next to all resumes"). A Word resume opens as a page; a PDF opens as itself.
+const plainName = (name: string) => name.replace(/__[a-f0-9]{16}$/i, "")
+const viewHref = (file: { filepath: string; filename: string; kind?: string }) => file.kind === "pdf"
+  ? `/api/resumes/download?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(plainName(file.filename))}&inline=1`
+  : `/api/resumes/pdf?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(plainName(file.filename))}&autoprint=0`
+// A top folder that is a person's email is a title, with that person's folders under it ("I need to see separate with
+// email as titles and Organized folders").
+const isEmailFolder = (name: string) => name.includes("@") || name === "Needs email review"
+
 function FileRow({ file, depth, active, ctx }: { file: ResumeFile; depth: number; active: boolean; ctx: Ctx }) {
   const key = "f:" + file.filepath
   return (
@@ -89,7 +99,7 @@ function FileRow({ file, depth, active, ctx }: { file: ResumeFile; depth: number
         <FileIcon active={active} />
         <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13,
           fontWeight: active ? 600 : 400, color: active ? "var(--accent-txt)" : "var(--text-muted)" }}>
-          {file.filename}
+          {plainName(file.filename)}
         </span>
         {active && (
           <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", padding: "1px 6px",
@@ -98,6 +108,12 @@ function FileRow({ file, depth, active, ctx }: { file: ResumeFile; depth: number
           </span>
         )}
       </div>
+      {file.filepath && (
+        <a href={viewHref(file)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} title="Look at this resume"
+          style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 99, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", textDecoration: "none", whiteSpace: "nowrap" }}>
+          View
+        </a>
+      )}
     </div>
   )
 }
@@ -162,7 +178,16 @@ export default function LibraryTree({
   const ctx: Ctx = { activeId, onSelect, checked, onToggle }
   return (
     <div className="space-y-0.5">
-      {[...root.folders.values()].map(c => <FolderRow key={c.name} node={c} depth={0} relpath={c.name} ctx={ctx} />)}
+      {[...root.folders.values()].filter(c => isEmailFolder(c.name)).map(person => (
+        <section key={person.name} aria-label={person.name} style={{ marginBottom: 10 }}>
+          <h4 style={{ margin: "6px 0 4px", padding: "0 8px", fontSize: 13.5, fontWeight: 700, color: "var(--text)", overflowWrap: "anywhere" }}>
+            {person.name} <span style={{ fontWeight: 500, color: "var(--text-soft)" }}>· {countFiles(person)}</span>
+          </h4>
+          {[...person.folders.values()].map(c => <FolderRow key={c.name} node={c} depth={0} relpath={`${person.name}/${c.name}`} ctx={ctx} />)}
+          {person.files.map(f => <FileRow key={f.filepath || f.id} file={f} depth={0} active={activeId === f.id} ctx={ctx} />)}
+        </section>
+      ))}
+      {[...root.folders.values()].filter(c => !isEmailFolder(c.name)).map(c => <FolderRow key={c.name} node={c} depth={0} relpath={c.name} ctx={ctx} />)}
       {root.files.map(f => <FileRow key={f.filepath || f.id} file={f} depth={0} active={activeId === f.id} ctx={ctx} />)}
     </div>
   )

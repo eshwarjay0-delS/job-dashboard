@@ -9,6 +9,7 @@ import ResumeBuilder from "./ResumeBuilder"
 import DocumentsClient from "../documents/DocumentsClient"
 import { IllustLibrary, IllustBuilder } from "@/components/Illustrations"
 import PageIntro from "../_components/page-intro"
+import { Check } from "lucide-react"
 import { tailoredFilename, extractRoleCompany } from "@/lib/filename"
 
 // ── Recent tailored resumes (persisted to localStorage) ───────────────────────
@@ -122,7 +123,7 @@ function StepBadge({ n, done, active }: { n: number; done: boolean; active: bool
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function ResumeClient({ initialFiles, initialFolders = [] }: { initialFiles: ResumeFile[]; initialFolders?: string[] }) {
+export default function ResumeClient({ initialFiles, initialFolders = [], otherFiles = [] }: { initialFiles: ResumeFile[]; initialFolders?: string[]; otherFiles?: (ResumeFile & { kind?: "docx" | "pdf" })[] }) {
   const router = useRouter()
   const { confirm, prompt } = useDialogs()
   const [activeTab, setActiveTab] = useState<"tailor" | "build" | "docs">(() => {
@@ -133,6 +134,17 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
   })
 
   const [preloaded, setPreloaded] = useState<ResumeFile[]>(initialFiles)
+  const [emailLibraries, setEmailLibraries] = useState<{email:string; count:number}[]>([])
+  useEffect(() => {
+    fetch("/api/resumes/library-index").then(response => response.ok ? response.json() : Promise.reject()).then(data => {
+      const counts: Record<string,number> = {}
+      for (const entry of data.entries || []) {
+        const email = entry.identity || "Unassigned"
+        counts[email] = (counts[email] || 0) + 1
+      }
+      setEmailLibraries(Object.entries(counts).map(([email,count]) => ({email,count})))
+    }).catch(() => {})
+  }, [preloaded])
   useEffect(() => { setPreloaded(initialFiles) }, [initialFiles])
   const [uploaded, setUploaded]   = useState<UploadedEntry[]>([])
   const [dragging, setDragging]   = useState(false)
@@ -145,6 +157,10 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
   // summary is left as the candidate wrote it unless they explicitly opt in.
   const [sections, setSections]   = useState<{ summary: boolean; skills: boolean; experience: boolean }>({ summary: false, skills: true, experience: true })
   const [mode, setMode]           = useState<"quick" | "full">("full")
+  const [budget, setBudget] = useState<null | { loadedUsd: number; spentUsd: number; remainingUsd: number; perResumeUsd: number; resumesLeft: number | null; calibrated: boolean; note: string }>(null)
+  useEffect(() => {
+    fetch("/api/tailor/budget", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { if (j && j.ok) setBudget(j) }).catch(() => {})
+  }, [])
 
   const [jd, setJd]               = useState(() => {
     // Pre-fill from any source: job card "Tailor Resume" or dashboard quick-tailor
@@ -249,15 +265,15 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return
-    const accepted = [...files].filter(f => /\.(docx|zip)$/i.test(f.name))
-    if (!accepted.length) { setErr("Upload a .docx resume or a .zip of resumes."); return }
+    const accepted = [...files].filter(f => /\.(docx|pdf|zip)$/i.test(f.name))
+    if (!accepted.length) { setErr("Add a Word file (.docx), a PDF, or a .zip of them."); return }
     setErr(""); setNotice("")
 
     for (const file of accepted) {
       if (/\.zip$/i.test(file.name)) { await uploadZip(file); continue }
       const tempId = `tmp_${Date.now()}_${Math.random()}`
       const tempEntry: UploadedEntry = {
-        file: { id: tempId, filename: file.name.replace(/\.docx$/i, ""), filepath: "", category: "Uploaded", size: `${(file.size/1024).toFixed(0)} KB`, uploadedAt: new Date().toISOString() },
+        file: { id: tempId, filename: file.name.replace(/\.(docx|pdf)$/i, ""), filepath: "", category: "Uploaded", size: `${(file.size/1024).toFixed(0)} KB`, uploadedAt: new Date().toISOString() },
         status: "scanning",
       }
       setUploaded(prev => [tempEntry, ...prev])
@@ -287,9 +303,16 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
             setSelected(data.file.id)
             setErr(data2.error ?? "Could not replace the existing file — kept the current one.")
           }
+        } else if (res.ok && data.pdf && !data.converted) {
+          // A PDF whose words could not be read (a scan) is kept in My files, and cannot be fitted to a job.
+          setUploaded(prev => prev.filter(u => u.file.id !== tempId))
+          setErr(`"${file.name}" is kept in My files, but its words could not be read (it may be a scan), so it cannot be fitted to a job. Add it as a Word file.`)
+          router.refresh()
         } else if (res.ok && data.file) {
           setUploaded(prev => prev.map(u => u.file.id === tempId ? { file: data.file, status: "ready" } : u))
           setSelected(data.file.id)
+          // A PDF is kept as it is, and a Word copy made from its words is what gets fitted to a job.
+          if (data.pdf) setNotice(`Your PDF is kept in My files. I made a Word copy from its words to fit to jobs: same words, a plain layout. Read it once before you send it anywhere.`)
           router.refresh()
         } else {
           setUploaded(prev => prev.map(u => u.file.id === tempId ? { ...u, status: "error", errorMsg: data.error ?? `HTTP ${res.status}` } : u))
@@ -487,10 +510,20 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
         ))}
       </div>
 
+      {/* What just happened, said on the page. These two were set all over this file and never drawn (found 13 Oct 2026):
+          a file that was refused, or a tailoring that could not start, simply did nothing. */}
+      {activeTab === "tailor" && err && (
+        <p role="alert" className="text-sm rounded-xl px-4 py-2.5" style={{ color: "var(--text)", background: "var(--surface)", border: "1px solid var(--border-strong)" }}>{err}</p>
+      )}
+      {activeTab === "tailor" && notice && (
+        <p role="status" className="text-sm rounded-xl px-4 py-2.5" style={{ color: "var(--success)", background: "var(--success-soft)" }}>{notice}</p>
+      )}
+
       {/* ── Documents tab ── */}
       {activeTab === "docs" && (
         <DocumentsClient
-          initialFiles={initialFiles}
+          // My files shows everything kept: the Word resumes and the PDFs. Only the Word ones are offered for tailoring.
+          initialFiles={[...initialFiles, ...otherFiles]}
           initialFolders={initialFolders}
           onDone={() => setActiveTab("tailor")}
         />
@@ -502,6 +535,21 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
       {/* ── Tailor tab ── */}
       {activeTab === "tailor" && (
         <div className="space-y-5">
+          {budget && budget.loadedUsd > 0 && (
+            <div className="rounded-2xl border px-5 py-4 flex items-center gap-4 flex-wrap"
+              style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+              <div className="text-2xl font-bold" style={{ color: "var(--text)", fontFamily: "var(--font-display)" }}>
+                {budget.resumesLeft !== null ? budget.resumesLeft : "–"}
+              </div>
+              <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+                <div className="font-semibold" style={{ color: "var(--text)" }}>resumes left on your key</div>
+                <div>${budget.remainingUsd.toFixed(2)} of ${budget.loadedUsd.toFixed(2)} remaining · ~${budget.perResumeUsd.toFixed(4)} each</div>
+              </div>
+              <div className="text-xs ml-auto" style={{ color: "var(--text-soft)" }}>
+                {budget.calibrated ? "Measured from your real generations." : "Estimate — your first resume calibrates it."}
+              </div>
+            </div>
+          )}
 
           {/* Step progress bar */}
           <div className="anim-fade-up d-1 flex items-center gap-0 rounded-2xl border overflow-hidden"
@@ -574,7 +622,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                     </div>
                   ) : (
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: "#6b6858" }}>No resume selected</p>
+                      <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>No resume selected</p>
                       <p className="text-xs" style={{ color: "var(--text-soft)" }}>Pick one in the library →, or turn Auto-match back on.</p>
                     </div>
                   )}
@@ -622,11 +670,11 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
 
               {/* Tailoring depth */}
               <div className="rounded-xl border px-4 py-3" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: "var(--text-soft)" }}>Tailoring Depth</p>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: "var(--text-soft)" }}>Tailoring depth</p>
                 <div className="flex gap-2">
                   {([
-                    ["quick", "⚡ Quick", "Headline, summary & top bullets"],
-                    ["full",  "✦ Full",  "Every relevant line — most thorough"],
+                    ["quick", "Quick", "Headline, summary & top bullets"],
+                    ["full",  "Full",  "Every relevant line — most thorough"],
                   ] as const).map(([key, label, desc]) => {
                     const on = mode === key
                     return (
@@ -656,6 +704,12 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                   : <><SparkIcon size={5} /> Make my resume fit this job →</>
                 }
               </button>
+              {jd.trim() && !tailoring && budget && (
+                <p className="text-xs text-center" style={{ color: "var(--text-soft)" }}>
+                  Estimated cost: ~${(((jd.trim().length / 4 + 2100) * 0.15 + 1200 * 0.60) / 1e6).toFixed(4)}
+                  {" "}· exact receipt after generation
+                </p>
+              )}
 
             </div>
 
@@ -680,12 +734,12 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>Upload a new resume</p>
                     <p className="text-xs" style={{ color: "var(--text-soft)" }}>
-                      Drop or browse a .docx (or .zip) — it&apos;s added here and selected for tailoring.
+                      Drop or browse a Word file, a PDF or a .zip. It is added here and selected for tailoring.
                     </p>
                   </div>
                   <input
                     type="file"
-                    accept=".docx,.zip"
+                    accept=".docx,.pdf,.zip"
                     multiple
                     className="hidden"
                     onChange={e => { handleFiles(e.target.files); e.currentTarget.value = "" }}
@@ -712,7 +766,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                 <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
                   <div className="px-4 py-2.5 border-b flex items-center justify-between gap-2"
                     style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
-                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-soft)" }}>Resume Folders</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-soft)" }}>Resume folders</p>
                     <button onClick={() => setActiveTab("docs")} className="text-xs font-medium flex items-center gap-1"
                       style={{ color: "var(--accent-txt)", background: "none", border: "none", cursor: "pointer" }}>
                       Manage
@@ -720,6 +774,9 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
                       </svg>
                     </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 px-3 pb-3" aria-label="Resume libraries by email">
+                    {emailLibraries.map(group => <div key={group.email} className="rounded-xl border px-3 py-2 text-xs"><strong className="block">Associated with {group.email}</strong><span className="opacity-70">{group.count} indexed resumes</span></div>)}
                   </div>
                   <div className="overflow-y-auto p-2" style={{ maxHeight: 320 }}>
                     <LibraryTree
@@ -733,12 +790,12 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                   </div>
                 </div>
               ) : (
-                <div className="rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 py-8 text-center"
+                <div className="rounded-2xl border flex flex-col items-center justify-center gap-3 py-8 text-center"
                   style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                   <IllustLibrary style={{ width: 180, height: 135, borderRadius: 12 }}/>
                   <div>
                     <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>No resumes yet</p>
-                    <p className="text-xs mt-1" style={{ color: "var(--text-soft)" }}>Add a Word (.docx) resume first</p>
+                    <p className="text-xs mt-1" style={{ color: "var(--text-soft)" }}>Add a resume first: a Word file or a PDF</p>
                   </div>
                   <button type="button" onClick={() => setActiveTab("docs")} className="btn-accent"
                     style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>
@@ -781,10 +838,10 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold" style={{ color: onePage ? "#fff" : "var(--text)" }}>
-                      One-Page Resume
+                      One-page resume
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: onePage ? "rgba(255,255,255,.75)" : "var(--text-soft)" }}>
-                      {onePage ? "Active — AI will condense to a single page" : "Condense to one page · ideal for &lt;5 yrs exp"}
+                      {onePage ? "Active — AI will condense to a single page" : "Condense to one page · best under 5 years of experience"}
                     </p>
                   </div>
                   <div className="flex-shrink-0">
@@ -799,12 +856,12 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
 
               {/* Sections to enhance */}
               <div className="rounded-xl border px-4 py-3" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: "var(--text-soft)" }}>Sections to Rewrite</p>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: "var(--text-soft)" }}>Sections to rewrite</p>
                 <div className="flex flex-wrap gap-2">
                   {([
-                    ["summary", "📝 Summary"],
-                    ["skills",  "🛠 Skills"],
-                    ["experience", "💼 Experience"],
+                    ["summary", "Summary"],
+                    ["skills",  "Skills"],
+                    ["experience", "Experience"],
                   ] as const).map(([key, label]) => {
                     const on = sections[key]
                     return (
@@ -817,7 +874,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
                           ? { background: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--accent-txt)", boxShadow: "0 0 0 1px var(--accent)" }
                           : { background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text-soft)" }}
                       >
-                        <span>{on ? "✓ " : ""}</span>{label}
+                        {on && <Check size={13} aria-hidden="true" style={{ color: "currentColor" }} />}{label}
                       </button>
                     )
                   })}
@@ -828,7 +885,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [] }: { in
               <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
                 <div className="px-4 py-2.5 border-b flex items-center justify-between"
                   style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
-                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-soft)" }}>Recent Tailored</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-soft)" }}>Recently tailored</p>
                   <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
                     style={{ background: "var(--accent-soft)", color: "var(--accent-txt)" }}>last 3</span>
                 </div>

@@ -216,7 +216,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}))
     // Cap inputs — prevent a user from triggering thousands of Gmail API calls
-    const days = Math.min(Math.max(Number(body.days) || 90, 1), 365)
+    const days = Math.min(Math.max(Number(body.days) || 45, 1), 45)
     const max  = Math.min(Math.max(Number(body.max)  || 50, 1), 100)
 
     const supabase = await createClient()

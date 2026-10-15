@@ -1,0 +1,121 @@
+/* Kompas desktop: the copilot page as one native panel. Injected by main.js into the copilot page only.
+   Prevents the window from reading as a website in a frame: the page root never scrolls (no bar on the window
+   edge), there is one title bar, and the live screen fills the window with only the answer scrolling inside.
+   Colours are the copilot's own paper variables; nothing here adds a theme. */
+html.kd,html.kd body{height:100%;overflow:hidden}
+html.kd body{background:var(--bg)}
+
+/* ---- one title bar: drag it to move the window ---- */
+.kd-bar{position:fixed;left:0;right:0;top:0;height:42px;z-index:100;display:flex;align-items:center;gap:8px;padding:0 6px 0 10px;
+  background:var(--surface);border-bottom:1px solid var(--line);-webkit-app-region:drag;user-select:none;overflow:hidden}
+.kd-bar button,.kd-bar input,.kd-bar label,.kd-bar select,.kd-bar .more-wrap,.kd-bar .more-menu{-webkit-app-region:no-drag}
+.kd-left{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;overflow:hidden}
+.kd-left .brand-dot{width:12px;height:12px;flex:0 0 auto}
+.kd-word{font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:-.03em;white-space:nowrap;flex:0 0 auto}
+.kd-left #exitCopilot{flex:0 0 auto}
+.kd-left .persona-chip{flex:1 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kd-livetools{display:flex;align-items:center;gap:4px;flex:0 0 auto;overflow:visible}
+.kd-bar:not(.kd-live) #exitCopilot,.kd-bar:not(.kd-live) .persona-chip{display:none}
+.kd-bar:not(.kd-live) .kd-livetools > :not(#micBtn):not(#sysBtn){display:none}
+html.kd .bar-actions #micBtn,html.kd .bar-actions #sysBtn{display:inline-flex !important;flex:0 0 36px;width:36px;height:36px;visibility:visible !important}
+html.kd .bar-actions #micBtn svg,html.kd .bar-actions #sysBtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.kd-bar .icon-btn{width:32px;height:32px}
+.kd-bar .rec{font-size:12.5px}
+.kd-spacer{flex:0 0 8px}
+.kd-right{display:flex;align-items:center;gap:2px;flex:0 0 auto;justify-content:flex-end}
+.kd-private{display:inline-flex;align-items:center;gap:8px;margin-right:6px;font:500 13px/1 var(--label);color:var(--muted);cursor:pointer}
+.kd-private .tgl{width:34px;height:20px}
+.kd-private .tgl::after{width:14px;height:14px}
+.kd-private .tgl:checked::after{transform:translateX(14px)}
+.kd-ico{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border:1px solid transparent;border-radius:999px;
+  background:transparent;color:#9a7636;cursor:pointer}
+.kd-ico:hover{background:var(--surface-2);color:#6e5221}
+html.kd .bar-actions #micBtn:not(.on),html.kd .bar-actions #sysBtn:not(.on){color:#9a7636}
+.kd-ico.on{color:#0a0908}
+.kd-ico.on svg{fill:currentColor;stroke:currentColor;stroke-width:1.8}
+.kd-ico svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.kd-close:hover{background:#f0dcd6;color:var(--red)}
+.kd-fade{display:inline-flex;align-items:center;gap:6px;margin-right:4px;font:500 12px/1 var(--label);color:var(--muted);cursor:pointer;flex:0 0 auto;position:relative}
+.kd-fade span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.kd-fade input{width:72px;min-width:72px;height:18px;accent-color:#15140f;cursor:pointer}
+.kd-private,.kd-ico{flex-shrink:0}
+
+/* The paper and the chrome fade. Letters, bold words and buttons stay fully dark. */
+html.kd{--panel-a:1}
+html.kd,html.kd body{opacity:1;background-color:transparent !important;
+  background-image:linear-gradient(180deg,rgba(255,252,248,var(--panel-a)) 0%,rgba(248,246,241,var(--panel-a)) 42%,rgba(244,220,192,var(--panel-a)) 100%) !important;
+  background-attachment:fixed !important;transition:background-color .18s ease-out}
+html.kd .kd-bar,html.kd .session-card,html.kd .gs,
+html.kd .bar,html.kd .doc-item,html.kd .cn-card,html.kd .modal-card,html.kd .more-menu,
+html.kd .manual,html.kd .statusline,html.kd .drawer,html.kd .tip,html.kd .kd-mark,html.kd .empty-sessions,html.kd .empty-docs,
+html.kd .persona-chip{
+  background-color:rgba(253,252,249,var(--panel-a)) !important;border-color:rgba(211,206,193,var(--panel-a)) !important}
+html.kd .view,html.kd .overlay,html.kd .card{background-color:transparent !important;background-image:none !important}
+html.kd .kd-word,html.kd .q,html.kd .a,html.kd .card,html.kd #answer,html.kd #answer li,html.kd #answer strong,html.kd #answer b,html.kd #answer .w,
+html.kd .btn,html.kd .pill,html.kd .icon-btn,html.kd .kd-ico,html.kd .mini,html.kd .linklike,html.kd strong,html.kd b{opacity:1 !important}
+html.kd #answer,html.kd #answer li,html.kd #answer .w,html.kd #answer strong,html.kd #answer b{color:#15140f}
+
+/* ---- every screen sits under the bar and scrolls inside itself, never the window ---- */
+html.kd .view{position:fixed;top:42px;left:0;right:0;bottom:0;min-height:0;overflow-x:hidden;overflow-y:auto}
+html.kd #sideNav{display:none !important}
+html.kd .with-side{padding-left:0;padding-bottom:0}
+html.kd .view,html.kd .drawer-body,html.kd #answer{scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent}
+html.kd ::-webkit-scrollbar{width:6px;height:0}
+html.kd ::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px}
+html.kd ::-webkit-scrollbar-track{background:transparent}
+
+/* ---- the live screen is the panel: no card, no second header, the answer takes the height ---- */
+html.kd #view-copilot{padding:0;display:flex;flex-direction:column;align-items:stretch;overflow:hidden;min-height:0}
+html.kd .overlay{flex:1 1 auto;min-height:0;min-width:0;max-width:none;width:100%;height:auto;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;overflow:hidden}
+html.kd .overlay .bar-top{display:none}
+html.kd .overlay>*{flex-shrink:0}
+html.kd .live-mid{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;min-width:0;overflow:hidden}
+html.kd #barAsk,html.kd #status{flex:0 0 auto}
+html.kd .overlay .content{flex:1 1 auto;min-height:0;min-width:0;overflow:hidden;display:flex;flex-direction:column;padding:12px 42px 8px}
+html.kd .overlay .card{flex:1 1 auto;min-height:0;min-width:0;overflow:hidden;display:flex;flex-direction:column}
+html.kd .overlay .q{flex:0 0 auto;max-height:6.2em;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent}
+html.kd .overlay .a{flex:1 1 auto;min-height:0;min-width:0;overflow:hidden;display:flex;flex-direction:column}
+html.kd .overlay #answer{flex:1 1 auto;min-height:0;min-width:0;max-height:none;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+html.kd .overlay #answer>li{flex-shrink:0;min-width:0;overflow-wrap:anywhere}
+html.kd .overlay .drawer{max-height:30%}
+
+/* ---- every control on one row, each as small as it can go; AI Answer stays the largest (owner, 5 Oct 2026).
+   A second row of buttons took answer height in a narrow window. The Asking label is hidden from sight only. ---- */
+html.kd .overlay .bar-actions{flex-wrap:nowrap;align-items:center;gap:4px;padding:6px 8px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+html.kd .overlay .bar-actions>*{flex:0 0 auto}
+html.kd .bar-actions #micBtn,html.kd .bar-actions #sysBtn{flex:0 0 26px;width:26px;min-width:0;height:26px;padding:0}
+html.kd .bar-actions #micBtn svg,html.kd .bar-actions #sysBtn svg{width:13px;height:13px}
+html.kd .bar-actions .src-btn .lvl{left:4px;right:4px;bottom:2px;height:2px}
+html.kd .bar-actions .pill{height:26px;padding:0 9px;font-size:12px;gap:4px}
+html.kd .bar-actions #startBtn{min-width:0;padding:0 11px}
+html.kd .bar-actions #answerBtn{height:30px;padding:0 12px;font-size:13px}
+html.kd .bar-actions .pend{min-width:15px;height:15px;padding:0 4px;font-size:10px}
+html.kd .bar-actions #autoState{display:none}
+html.kd .bar-actions .pill.toggle .sw{width:20px;height:12px;vertical-align:-1px}
+html.kd .bar-actions .pill.toggle .sw i{top:2px;left:2px;width:8px;height:8px}
+html.kd .bar-actions .pill.toggle.on .sw i{transform:translateX(8px)}
+html.kd .bar-actions .asking{margin-left:auto;gap:0;flex:0 1 auto;min-width:0;position:relative}
+html.kd .bar-actions .asking>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+html.kd .bar-actions .live-select{height:26px;padding:0 6px;font-size:12px;min-width:0;max-width:112px}
+html.kd .overlay.collapsed .content{display:none}
+
+/* ---- resize grips on every edge and corner ---- */
+.kd-grip{position:fixed;z-index:200;-webkit-app-region:no-drag}
+.kd-grip-n{top:0;left:10px;right:10px;height:5px;cursor:ns-resize}
+.kd-grip-s{bottom:0;left:10px;right:10px;height:6px;cursor:ns-resize}
+.kd-grip-e{right:0;top:10px;bottom:10px;width:6px;cursor:ew-resize}
+.kd-grip-w{left:0;top:10px;bottom:10px;width:6px;cursor:ew-resize}
+.kd-grip-ne{top:0;right:0;width:12px;height:12px;cursor:nesw-resize}
+.kd-grip-nw{top:0;left:0;width:12px;height:12px;cursor:nwse-resize}
+.kd-grip-se{bottom:0;right:0;width:14px;height:14px;cursor:nwse-resize}
+.kd-grip-sw{bottom:0;left:0;width:14px;height:14px;cursor:nesw-resize}
+
+/* ---- Hide: only the mark shows; the call keeps running underneath ---- */
+.kd-mark{display:none}
+html.kd-collapsed body>*:not(#kdMark){display:none !important}
+html.kd-collapsed .kd-mark{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--surface);
+  border:1px solid var(--line-strong);border-radius:6px;-webkit-app-region:drag}
+.kd-mark button{display:flex;align-items:center;gap:8px;height:28px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:var(--ink);
+  cursor:pointer;-webkit-app-region:no-drag}
+.kd-mark button:hover{background:var(--surface-2)}
+

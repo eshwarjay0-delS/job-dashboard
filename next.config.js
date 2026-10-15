@@ -31,6 +31,12 @@ const nextConfig = {
 
   // ── Experimental ────────────────────────────────────────────────────────
   experimental: {
+    // Turbopack's on-disk cache for `next build`, off. Vercel restores .next from the previous
+    // deployment; on 8 Oct 2026 a build that restored it compiled in 4.5 s and shipped the
+    // stylesheet of 5 Oct, although globals.css had changed in that commit (the new HTML and
+    // the new manifest were live beside the old CSS chunk, under its old name). A full compile
+    // is about 20 s. scripts/tests/theme-palette.test.mjs holds this line.
+    turbopackFileSystemCacheForBuild: false,
     optimizePackageImports: [
       "@supabase/supabase-js",
       "@supabase/ssr",
@@ -87,6 +93,26 @@ const nextConfig = {
       },
     ];
 
+    // Kompas Flow and Kompas Transcribe (src/app/dashboard/kompas/flow, .../transcribe) are ordinary MarketFit pages that
+    // listen through the microphone and play a recording back. They get the microphone and blob media, and nothing else:
+    // no tab or screen capture, which only the copilot above is given.
+    const speechHeaders = [
+      { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
+      {
+        key: "Content-Security-Policy",
+        value: [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+          "style-src 'self' 'unsafe-inline' https://api.fontshare.com",
+          "img-src 'self' data: blob: https: http:",
+          "font-src 'self' https://api.fontshare.com https://cdn.fontshare.com",
+          "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+          "media-src 'self' blob:",
+          "frame-ancestors 'none'",
+        ].join("; "),
+      },
+    ];
+
     // NOTE: an immutable Cache-Control on /_next/static breaks dev — the browser
     // caches HMR chunks forever and never picks up edits. Only apply it in
     // production builds, where Next.js content-hashes those filenames so a
@@ -97,6 +123,7 @@ const nextConfig = {
       { source: "/(.*)", headers: securityHeaders },
       { source: "/dashboard/kompas", headers: kompasHeaders },
       { source: "/kompas/:path*", headers: kompasHeaders },
+      { source: "/dashboard/kompas/:page(flow|transcribe)", headers: speechHeaders },
       // Long-lived cache for static assets (production only — see note above)
       ...(isProd
         ? [{
@@ -121,7 +148,18 @@ const nextConfig = {
   // auth gate exists; logged-in users still land on /dashboard normally via
   // the login flow's own redirect.
   async redirects() {
-    return [];
+    return [
+      // Transcribe is part of the Kompas Flow page since 8 Oct 2026. Sent on here, as a real redirect, so the browser
+      // loads the Flow page as its own document (with the microphone header) and a bookmark is not a dead end.
+      // src/app/dashboard/kompas/transcribe/page.tsx is the net under this line.
+      { source: "/dashboard/kompas/transcribe", destination: "/dashboard/kompas/flow?mode=transcribe", permanent: false },
+      // Dummy pages, removed 2026-10-11 (owner: "get rid of dummy pages"). /dashboard/email showed made-up sample
+      // emails when Gmail was not linked — the real inbox is /dashboard/mail. /dashboard/prep showed made-up sample
+      // interviews and questions. The Kompas app's "Back to MarketFit" button points at /dashboard/prep, so it
+      // must land on MarketFit home — NOT /dashboard/kompas, which loops straight back into the app.
+      { source: "/dashboard/email", destination: "/dashboard/mail", permanent: false },
+      { source: "/dashboard/prep", destination: "/dashboard", permanent: false },
+    ];
   },
 
   // Kompas is served from MarketFit's own origin so the microphone belongs to this site. Its engine
@@ -129,11 +167,19 @@ const nextConfig = {
   // The default is the live copilot, perfact-ten; its frontend must match public/kompas (re-run
   // scripts/sync-kompas.mjs when it is redeployed). KOMPAS_API_ORIGIN points at another deployment.
   async rewrites() {
-    const kompasApi = (process.env.KOMPAS_API_ORIGIN || "https://perfact-ten.vercel.app").replace(/\/+$/, "");
-    return [
-      { source: "/dashboard/kompas", destination: "/kompas/index.html" },
-      { source: "/kompas/api/:path*", destination: `${kompasApi}/api/:path*` },
-    ];
+    return {
+      beforeFiles: [
+        { source: "/dashboard/kompas", destination: "/api/kompas/shell" },
+        { source: "/kompas/index.html", destination: "/api/kompas/shell" },
+        { source: "/kompas", destination: "/api/kompas/shell" },
+        // Self-hosted since 2026-10-14 (perfACT sunset): /kompas/:path+ now
+        // serves from public/kompas/ (copied from the copilot release).
+        // The /api/* calls are intercepted by the shell shim and routed to
+        // MarketFit's native endpoints — nothing proxies to perfact-ten.
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
   },
 };
 

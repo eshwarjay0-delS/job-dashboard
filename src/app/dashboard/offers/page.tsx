@@ -1,14 +1,15 @@
 "use client"
+import { jewel } from "@/lib/jewel"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
 
 const P = {
-  surface: "#ffffff",
-  text:    "#161510",
-  muted:   "#6e6b5b",
-  hint:    "#9d9884",
-  border:  "#e6e2d9",
+  surface: "var(--surface)",
+  text:    "var(--text)",
+  muted:   "var(--text-muted)",
+  hint:    "var(--text-soft)",
+  border:  "var(--border)",
   bg:      "var(--surface)",
 }
 
@@ -39,10 +40,10 @@ function fmt(n: number) {
 function tc(o: Offer) { return o.base + o.bonus + o.equity }
 
 const STATUS = {
-  pending:     { label: "Pending Decision", color: "#6b6858", bg: "#f7f5f0", border: "#e4e0d6" },
-  negotiating: { label: "Negotiating",      color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
-  accepted:    { label: "Accepted ✓",       color: "#42413c", bg: "#f4f2ed", border: "#ddd8cd" },
-  declined:    { label: "Declined",         color: "#706c5c", bg: "#f8f6f2", border: "#e8e4db" },
+  pending:     { label: "Pending Decision", color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border)" },
+  negotiating: { label: "Negotiating",      color: "var(--text)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+  accepted:    { label: "Accepted ✓",       color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+  declined:    { label: "Declined",         color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border)" },
 }
 
 const DEFAULTS: Offer[] = [
@@ -69,14 +70,13 @@ const DEFAULTS: Offer[] = [
 function CompanyLogo({ domain, name, size = 42 }: { domain: string; name: string; size?: number }) {
   const [err, setErr] = useState(false)
   const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-  const colors = ["#1c1b16","#4d4b44","#6b6858","#13120d","#7c7866"]
-  const bg = colors[name.charCodeAt(0) % colors.length]
+  const tile = jewel(name)
   if (err) return (
-    <div style={{ width: size, height: size, borderRadius: size * 0.26, background: bg, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: size * 0.38 }}>{initials}</div>
+    <div style={{ width: size, height: size, borderRadius: size * 0.26, background: tile.background, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: tile.color, fontWeight: 800, fontSize: size * 0.38 }}>{initials}</div>
   )
   return (
     <img src={`https://logo.clearbit.com/${domain}`} alt={name} onError={() => setErr(true)}
-      style={{ width: size, height: size, borderRadius: size * 0.26, objectFit: "contain", background: "var(--surface)", border: "1px solid #e6e2d9", flexShrink: 0, padding: 4 }}/>
+      style={{ width: size, height: size, borderRadius: size * 0.26, objectFit: "contain", background: "var(--surface)", border: "1px solid var(--border)", flexShrink: 0, padding: 4 }}/>
   )
 }
 
@@ -175,7 +175,7 @@ export default function OffersPage() {
 
       {/* ── Add form ── */}
       {showAddForm && (
-        <div style={{ background: P.surface, border: "1.5px solid #d9d4c8", borderRadius: 16, padding: "22px 24px", marginBottom: 24 }}>
+        <div style={{ background: P.surface, border: "1.5px solid var(--border-strong)", borderRadius: 16, padding: "22px 24px", marginBottom: 24 }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: P.text, marginBottom: 16 }}>Add New Offer</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[
@@ -208,9 +208,9 @@ export default function OffersPage() {
         const d = daysLeft(o.deadline)
         if (!o.deadline || d > 7) return null
         return (
-          <div key={o.id} style={{ background: "#f7f5f0", border: "1px solid #e4e0d6", borderRadius: 12, padding: "12px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
+          <div key={o.id} style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 18 }}>⏰</span>
-            <p style={{ fontSize: 13, color: "#58564c", fontWeight: 600 }}>
+            <p style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 600 }}>
               <strong>{o.company}</strong> offer deadline in <strong>{d} day{d !== 1 ? "s" : ""}</strong> — {d <= 2 ? "respond now!" : "don't forget to follow up."}
             </p>
           </div>
@@ -243,7 +243,7 @@ export default function OffersPage() {
                 </div>
                 {d !== null && d <= 7 && (
                   <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ fontSize: 12, color: d <= 2 ? "#13120d" : "#6b6858", fontWeight: 700 }}>⏰ {d}d left to respond</span>
+                    <span style={{ fontSize: 12, color: d <= 2 ? "var(--text)" : "var(--text-muted)", fontWeight: 700 }}>⏰ {d}d left to respond</span>
                   </div>
                 )}
               </div>
@@ -252,8 +252,8 @@ export default function OffersPage() {
 
           {/* Compare all CTA */}
           {offers.length >= 2 && (
-            <div style={{ background: "#f2f0ea", border: "1px solid #d9d4c8", borderRadius: 12, padding: "14px 16px" }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#11100c", marginBottom: 8 }}>Compare All Offers</p>
+            <div style={{ background: "var(--surface-2)", border: "1px solid var(--border-strong)", borderRadius: 12, padding: "14px 16px" }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>Compare All Offers</p>
               <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(offers.length, 3)}, 1fr)`, gap: 8 }}>
                 {offers.slice(0, 3).map(o => (
                   <div key={o.id} style={{ textAlign: "center" }}>
@@ -282,10 +282,10 @@ export default function OffersPage() {
               <p style={{ fontSize: 12, fontWeight: 700, color: P.hint, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 12 }}>Compensation</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
                 {[
-                  { label: "Base Salary",   value: fmt(selectedOffer.base),   color: "#11100c" },
-                  { label: "Annual Bonus",  value: fmt(selectedOffer.bonus),  color: "#4d4b44" },
-                  { label: "Annual Equity", value: fmt(selectedOffer.equity), color: "#42413c" },
-                  { label: "RSU Grant",     value: fmt(selectedOffer.rsu),    color: "#6b6858" },
+                  { label: "Base Salary",   value: fmt(selectedOffer.base),   color: "var(--text)" },
+                  { label: "Annual Bonus",  value: fmt(selectedOffer.bonus),  color: "var(--text-muted)" },
+                  { label: "Annual Equity", value: fmt(selectedOffer.equity), color: "var(--text-muted)" },
+                  { label: "RSU Grant",     value: fmt(selectedOffer.rsu),    color: "var(--text-muted)" },
                 ].map(c => (
                   <div key={c.label} style={{ background: P.surface, borderRadius: 10, padding: "12px 14px", border: `1px solid ${P.border}` }}>
                     <p style={{ fontSize: 11, color: P.hint, marginBottom: 4 }}>{c.label}</p>
@@ -302,9 +302,9 @@ export default function OffersPage() {
             {/* ── Details ── */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
               {[
-                { label: "Visa Sponsorship", value: selectedOffer.visaSponsor ? `✓ ${selectedOffer.visaType}` : "Not sponsored", color: selectedOffer.visaSponsor ? "#42413c" : "#13120d" },
+                { label: "Visa Sponsorship", value: selectedOffer.visaSponsor ? `✓ ${selectedOffer.visaType}` : "Not sponsored", color: selectedOffer.visaSponsor ? "var(--text-muted)" : "var(--text)" },
                 { label: "Start Date",        value: selectedOffer.startDate || "TBD",       color: P.text },
-                { label: "Response Deadline", value: selectedOffer.deadline || "TBD",        color: selectedOffer.deadline && daysLeft(selectedOffer.deadline) <= 3 ? "#13120d" : P.text },
+                { label: "Response Deadline", value: selectedOffer.deadline || "TBD",        color: selectedOffer.deadline && daysLeft(selectedOffer.deadline) <= 3 ? "var(--danger)" : P.text },
                 { label: "Location",          value: selectedOffer.remote ? "Remote ✓" : selectedOffer.location, color: P.text },
               ].map(d => (
                 <div key={d.label} style={{ background: P.bg, borderRadius: 9, padding: "10px 13px" }}>
@@ -316,9 +316,9 @@ export default function OffersPage() {
 
             {/* ── Notes ── */}
             {selectedOffer.notes && (
-              <div style={{ background: "#f7f5f0", border: "1px solid #e4e0d6", borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
-                <p style={{ fontSize: 12, fontWeight: 700, color: "#58564c", marginBottom: 4 }}>📝 Notes</p>
-                <p style={{ fontSize: 13, color: "#494841", lineHeight: 1.55 }}>{selectedOffer.notes}</p>
+              <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", marginBottom: 4 }}>📝 Notes</p>
+                <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.55 }}>{selectedOffer.notes}</p>
               </div>
             )}
 
@@ -326,16 +326,16 @@ export default function OffersPage() {
             <div style={{ marginBottom: 20 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                 <p style={{ fontSize: 13.5, fontWeight: 700, color: P.text }}>✨ AI Negotiation Coaching</p>
-                <button onClick={() => loadNegotiationTips(selectedOffer)} disabled={loadingTips} style={{ padding: "6px 14px", borderRadius: 8, background: "#f2f0ea", color: "#11100c", border: "1px solid #d9d4c8", fontSize: 12, fontWeight: 700, cursor: loadingTips ? "not-allowed" : "pointer", opacity: loadingTips ? 0.7 : 1 }}>
+                <button onClick={() => loadNegotiationTips(selectedOffer)} disabled={loadingTips} style={{ padding: "6px 14px", borderRadius: 8, background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border-strong)", fontSize: 12, fontWeight: 700, cursor: loadingTips ? "not-allowed" : "pointer", opacity: loadingTips ? 0.7 : 1 }}>
                   {loadingTips ? "Loading…" : tips.length ? "Refresh" : "Get Tips"}
                 </button>
               </div>
               {tips.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {tips.map((tip, i) => (
-                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#f6f4ef", border: "1px solid #e0dcd2", borderRadius: 10, padding: "10px 13px" }}>
+                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "var(--surface-2)", border: "1px solid var(--border-strong)", borderRadius: 10, padding: "10px 13px" }}>
                       <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>💡</span>
-                      <p style={{ fontSize: 13, color: "#3c3c37", lineHeight: 1.5 }}>{tip}</p>
+                      <p style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5 }}>{tip}</p>
                     </div>
                   ))}
                 </div>
@@ -351,15 +351,15 @@ export default function OffersPage() {
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", paddingTop: 18, borderTop: `1px solid ${P.border}` }}>
               {selectedOffer.status !== "accepted" && selectedOffer.status !== "declined" && (
                 <>
-                  <button onClick={() => updateStatus(selectedOffer.id, "negotiating")} style={{ padding: "8px 18px", borderRadius: 9, background: "#f2f0ea", color: "#11100c", border: "1px solid #d9d4c8", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Counter Offer</button>
-                  <button onClick={() => updateStatus(selectedOffer.id, "accepted")} style={{ padding: "8px 18px", borderRadius: 9, background: "#f4f2ed", color: "#42413c", border: "1px solid #ddd8cd", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>✓ Accept</button>
-                  <button onClick={() => updateStatus(selectedOffer.id, "declined")} style={{ padding: "8px 16px", borderRadius: 9, background: "var(--surface)", color: "#13120d", border: "1px solid #ddd8cd", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Decline</button>
+                  <button onClick={() => updateStatus(selectedOffer.id, "negotiating")} style={{ padding: "8px 18px", borderRadius: 9, background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border-strong)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Counter Offer</button>
+                  <button onClick={() => updateStatus(selectedOffer.id, "accepted")} style={{ padding: "8px 18px", borderRadius: 9, background: "var(--surface-2)", color: "var(--text-muted)", border: "1px solid var(--border-strong)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>✓ Accept</button>
+                  <button onClick={() => updateStatus(selectedOffer.id, "declined")} style={{ padding: "8px 16px", borderRadius: 9, background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border-strong)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Decline</button>
                 </>
               )}
               {(selectedOffer.status === "accepted" || selectedOffer.status === "declined") && (
                 <button onClick={() => updateStatus(selectedOffer.id, "pending")} style={{ padding: "8px 16px", borderRadius: 9, border: `1px solid ${P.border}`, background: "transparent", color: P.muted, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Reopen</button>
               )}
-              <Link href="/dashboard/ai-tools" style={{ marginLeft: "auto", padding: "8px 16px", borderRadius: 9, background: "#f6f4ef", color: "#4d4b44", border: "1px solid #e0dcd2", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>✨ Draft Counter Email</Link>
+              <Link href="/dashboard/ai-tools" style={{ marginLeft: "auto", padding: "8px 16px", borderRadius: 9, background: "var(--surface-2)", color: "var(--text-muted)", border: "1px solid var(--border-strong)", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>✨ Draft Counter Email</Link>
             </div>
           </div>
         ) : (

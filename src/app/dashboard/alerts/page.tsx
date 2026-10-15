@@ -4,11 +4,11 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 
 const P = {
-  surface: "#ffffff",
-  text:    "#161510",
-  muted:   "#6e6b5b",
-  hint:    "#9d9884",
-  border:  "#e6e2d9",
+  surface: "var(--surface)",
+  text:    "var(--text)",
+  muted:   "var(--text-muted)",
+  hint:    "var(--text-soft)",
+  border:  "var(--border)",
   bg:      "var(--surface)",
 }
 
@@ -36,9 +36,9 @@ const VISA_OPTIONS = [
 ]
 
 const FREQ_META = {
-  realtime: { label: "Real-time",  desc: "As jobs post", color: "#42413c", bg: "#f4f2ed", border: "#ddd8cd" },
-  daily:    { label: "Daily",      desc: "9 AM digest",  color: "#11100c", bg: "#f2f0ea", border: "#d9d4c8" },
-  weekly:   { label: "Weekly",     desc: "Monday digest",color: "#4d4b44", bg: "#f6f4ef", border: "#e0dcd2" },
+  realtime: { label: "Real-time",  desc: "As jobs post", color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+  daily:    { label: "Daily",      desc: "9 AM digest",  color: "var(--text)", bg: "var(--surface-2)", border: "var(--border-strong)" },
+  weekly:   { label: "Weekly",     desc: "Monday digest",color: "var(--text-muted)", bg: "var(--surface-2)", border: "var(--border-strong)" },
 }
 
 const DEFAULT_ALERTS: Alert[] = [
@@ -151,9 +151,9 @@ export default function AlertsPage() {
       {/* ── Stats ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
         {[
-          { label: "Active Alerts",   value: active.length,                               icon: "🔔", color: "#11100c", bg: "#f2f0ea" },
-          { label: "Jobs Found Today", value: active.reduce((n, a) => n + (a.matchCount || 0), 0), icon: "✦",  color: "#4d4b44", bg: "#f6f4ef" },
-          { label: "Last Triggered",   value: timeAgo(active.sort((a,b) => new Date(b.lastTriggered||0).getTime() - new Date(a.lastTriggered||0).getTime())[0]?.lastTriggered), icon: "⏱", color: "#42413c", bg: "#f4f2ed" },
+          { label: "Active Alerts",   value: active.length,                               icon: "🔔", color: "var(--text)", bg: "var(--surface-2)" },
+          { label: "Jobs Found Today", value: active.reduce((n, a) => n + (a.matchCount || 0), 0), icon: "✦",  color: "var(--text-muted)", bg: "var(--surface-2)" },
+          { label: "Last Triggered",   value: timeAgo(active.sort((a,b) => new Date(b.lastTriggered||0).getTime() - new Date(a.lastTriggered||0).getTime())[0]?.lastTriggered), icon: "⏱", color: "var(--text-muted)", bg: "var(--surface-2)" },
         ].map(s => (
           <div key={s.label} style={{ background: P.surface, border: `1px solid ${P.border}`, borderRadius: 14, padding: "16px 18px", display: "flex", gap: 12, alignItems: "center" }}>
             <div style={{ width: 40, height: 40, borderRadius: 10, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{s.icon}</div>
@@ -167,7 +167,7 @@ export default function AlertsPage() {
 
       {/* ── New Alert Form ── */}
       {showNewForm && (
-        <div style={{ background: P.surface, border: "1.5px solid #d9d4c8", borderRadius: 16, padding: "22px 24px", marginBottom: 24 }}>
+        <div style={{ background: P.surface, border: "1.5px solid var(--border-strong)", borderRadius: 16, padding: "22px 24px", marginBottom: 24 }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: P.text, marginBottom: 18 }}>Create New Alert</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <div style={{ gridColumn: "1/-1" }}>
@@ -186,7 +186,7 @@ export default function AlertsPage() {
                 {VISA_OPTIONS.map(v => {
                   const sel = (newAlert.visaTypes || []).includes(v.key)
                   return (
-                    <button key={v.key} onClick={() => toggleVisa(v.key)} style={{ padding: "4px 12px", borderRadius: 20, border: `1.5px solid ${sel ? "var(--accent)" : P.border}`, background: sel ? "#f2f0ea" : "transparent", color: sel ? "var(--accent)" : P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    <button key={v.key} onClick={() => toggleVisa(v.key)} style={{ padding: "4px 12px", borderRadius: 20, border: `1.5px solid ${sel ? "var(--accent)" : P.border}`, background: sel ? "var(--surface-2)" : "transparent", color: sel ? "var(--accent)" : P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                       {v.label}
                     </button>
                   )
@@ -233,7 +233,7 @@ export default function AlertsPage() {
                       <p style={{ fontSize: 14.5, fontWeight: 700, color: P.text }}>{a.name}</p>
                       <span style={{ padding: "2px 9px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: f.bg, color: f.color, border: `1px solid ${f.border}` }}>{f.label}</span>
                       {a.matchCount > 0 && (
-                        <span style={{ padding: "2px 9px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: "#f4f2ed", color: "#42413c", border: "1px solid #ddd8cd" }}>
+                        <span style={{ padding: "2px 9px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: "var(--surface-2)", color: "var(--text-muted)", border: "1px solid var(--border-strong)" }}>
                           {a.matchCount} matches
                         </span>
                       )}
@@ -247,11 +247,11 @@ export default function AlertsPage() {
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
                     {a.matchCount > 0 && (
-                      <Link href="/dashboard/jobs" style={{ padding: "6px 13px", borderRadius: 8, background: "#f2f0ea", color: "#11100c", fontSize: 12, fontWeight: 700, textDecoration: "none", border: "1px solid #d9d4c8" }}>
+                      <Link href="/dashboard/jobs" style={{ padding: "6px 13px", borderRadius: 8, background: "var(--surface-2)", color: "var(--text)", fontSize: 12, fontWeight: 700, textDecoration: "none", border: "1px solid var(--border-strong)" }}>
                         View Jobs →
                       </Link>
                     )}
-                    <button onClick={() => toggle(a.id)} style={{ padding: "6px 13px", borderRadius: 8, background: "var(--surface)", color: "#13120d", fontSize: 12, fontWeight: 600, border: "1px solid #ddd8cd", cursor: "pointer" }}>Pause</button>
+                    <button onClick={() => toggle(a.id)} style={{ padding: "6px 13px", borderRadius: 8, background: "var(--surface)", color: "var(--text)", fontSize: 12, fontWeight: 600, border: "1px solid var(--border-strong)", cursor: "pointer" }}>Pause</button>
                     <button onClick={() => deleteAlert(a.id)} style={{ padding: "5px 8px", borderRadius: 7, border: "none", background: "transparent", color: P.hint, fontSize: 12, cursor: "pointer" }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#13120d" }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = P.hint }}

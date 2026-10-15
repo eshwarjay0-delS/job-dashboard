@@ -154,8 +154,8 @@ function Card({ app, onMove, onEdit, onDelete }: {
       {app.followUpDate && (
         <span style={{
           fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, alignSelf: "flex-start",
-          background: overdue ? "var(--surface)" : dueSoon ? "#f7f5f0" : "#f6f4f0",
-          color: overdue ? "#13120d" : dueSoon ? "#6b6858" : "#58564c",
+          background: overdue ? "var(--surface)" : dueSoon ? "var(--surface-2)" : "var(--surface-2)",
+          color: overdue ? "var(--text)" : dueSoon ? "var(--text-muted)" : "var(--text-muted)",
           border: `1px solid ${overdue ? "#ddd8cd" : dueSoon ? "#e4e0d6" : "#e2ded4"}`,
         }}>🔔 {overdue ? "Overdue " : dueSoon ? "Soon " : ""}{new Date(app.followUpDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
       )}
@@ -169,7 +169,7 @@ function Card({ app, onMove, onEdit, onDelete }: {
           <a href={app.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, color: "var(--text-soft)", textDecoration: "none" }}>Open ↗</a>
         )}
         <button onClick={onEdit} style={{ marginLeft: "auto", fontSize: 11.5, background: "none", border: "none", cursor: "pointer", color: "var(--text-soft)", fontWeight: 600 }}>Edit</button>
-        <button onClick={() => { if (confirm("Delete this application?")) onDelete(app.id) }} style={{ fontSize: 11.5, background: "none", border: "none", cursor: "pointer", color: "#2e2d27", fontWeight: 600 }}>Delete</button>
+        <button onClick={() => { if (confirm("Delete this application?")) onDelete(app.id) }} style={{ fontSize: 11.5, background: "none", border: "none", cursor: "pointer", color: "var(--text)", fontWeight: 600 }}>Delete</button>
       </div>
     </div>
   )

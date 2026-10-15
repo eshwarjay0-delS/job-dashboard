@@ -1,0 +1,405 @@
+"use client"
+
+// Dictate, one of the two things Kompas Flow does (the other is ../transcribe/panel.tsx; page.tsx holds them both).
+// Owner, 2026-10-07: "Kompas flow and transcribe in the kompas section in job dashboard"; 2026-10-08: "Combine kompas flow
+// and transcribe to be in one page."
+//
+// Press one button, speak, press it again, and get clean text to paste anywhere. The person can always see their own words
+// exactly as said beside the tidied version: the tidied one is shown first only when the server's guard found it still says
+// what they said (src/lib/kompasTranscript.ts).
+//
+// What this page takes care not to do: leave the microphone on (every way out of a recording stops the tracks, so the
+// browser's microphone light goes off), let a slow answer from an earlier recording land in a newer one, or keep anything a
+// person said anywhere but their own browser. The recording itself is dropped the moment its text arrives.
+
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
+import PageIntro from "../../_components/page-intro"
+import { Card, Chip, Meta } from "../../_suite/ui"
+import RevisionEditor from "./revision-editor"
+import { flowResult, manualRewrite, type TranscriptRevision, type Layer } from "@/lib/kompasTranscript"
+import { learnedWords, learnFromCorrection, buildVocabHint, readStoredLang, writeStored, KOMPAS_HINT_KEY, KOMPAS_LANG_KEY } from "@/lib/kompasVocab"
+import { sessionHeaders } from "@/lib/kompasSession"
+
+type Result = { raw: string; clean: string | null; kept: Layer; rewrite?: string; revisions?: TranscriptRevision[] }
+type Past = Result & { id: string; at: number }
+
+const MAX_SECONDS = 90
+// Kompas Flow for Android (owner, 2026-10-08: "Just like how we would get a desktop version. while starting kompas flow it
+// download apk version of the app", and then: "an button that hovers over ... tapping once it goes into listen mode ...
+// Once clicked on right it would instantly paste the audio into text"). Built from android-flow/ in the Kompas repository
+// by its own workflow and copied here; small enough to live in git, unlike the desktop app. It is a button that stays on
+// the phone's screen over every app: tap, speak, tick, and the words go into the text box the person was in. It is its own
+// app with the phone's own speech service; it does not use this page or this site's speech routes.
+const FLOW_APK = "/apps/Kompas-Flow.apk"
+const HISTORY_KEY = "mf_flow_history"
+const HINT_KEY = KOMPAS_HINT_KEY
+const TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]
+
+const SMALL: CSSProperties = { fontSize: 14.5, lineHeight: 1.55, color: "var(--text-muted)", margin: 0 }
+const SAID: CSSProperties = { fontSize: 19, lineHeight: 1.6, color: "var(--text)", margin: "14px 0 0", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }
+const FIELD: CSSProperties = {
+  width: "100%", minHeight: 44, padding: "0 12px", fontSize: 15, color: "var(--text)",
+  background: "var(--bg)", border: "1px solid var(--border-strong)", borderRadius: "var(--radius-lg)",
+}
+const QUIET: CSSProperties = { minHeight: 44, padding: "0 16px", fontSize: 15 }
+
+const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
+const read = <T,>(key: string, otherwise: T): T => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) as T : otherwise } catch { return otherwise } }
+const write = (key: string, value: unknown) => { try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* storage is blocked: the page works without it */ } }
+
+function problem(code: string | undefined, retryAfter: string | null): string {
+  if (code === "signed-out") return "You have been signed out. Sign in again, then come back here."
+  if (code === "too-large") return "That was too long to send in one piece. Try a shorter stretch."
+  if (code === "empty") return "I did not hear anything. Try again, a little closer to the microphone."
+  if (code === "bad-audio") return "That recording could not be read. Try again."
+  if (code === "busy") return `Too many at once. Try again in ${Math.max(1, Number(retryAfter) || 30)} seconds.`
+  return "Speech to text is not available right now. Try again in a minute."
+}
+
+async function copy(text: string): Promise<boolean> {
+  try { await navigator.clipboard.writeText(text); return true } catch { return false }
+}
+
+// `active`: this is the mode on screen. `onBusy`: tells the page a dictation is being recorded or written down, so the
+// other mode cannot be opened (and a second microphone started) in the middle of it.
+export default function Dictate({ active, onBusy }: { active: boolean; onBusy: (busy: boolean) => void }) {
+  const [phase, setPhase] = useState<"idle" | "recording" | "working">("idle")
+  const [seconds, setSeconds] = useState(0)
+  const [level, setLevel] = useState(0)
+  // Signal quality monitor: is the mic actually hearing speech, or air?
+  const [speaking, setSpeaking] = useState(false)
+  const [signalNote, setSignalNote] = useState("")
+  const sigRef = useRef({ quietMs: 0, loudHits: 0, last: 0 })
+  const [result, setResult] = useState<Result | null>(null)
+  const [layer, setLayer] = useState<Layer>("raw")
+  const [note, setNote] = useState("")
+  const [cut, setCut] = useState(false)
+  const [status, setStatus] = useState("")
+  const [error, setError] = useState("")
+  const [copied, setCopied] = useState("")
+  const [hint, setHint] = useState("")
+  const [past, setPast] = useState<Past[]>([])
+  const resultId = useRef("")
+  const [search, setSearch] = useState("")
+  const [open, setOpen] = useState<string | null>(null)
+  const [onAndroid, setOnAndroid] = useState(false)
+  // An iPhone or iPad that has not yet put this page on its Home Screen. (An iPad says it is a Mac; a Mac has no touch.)
+  const [onIphone, setOnIphone] = useState(false)
+
+  // What a recording holds while it runs. Kept in refs: stopping must work from a timer, a key press and an unmount alike.
+  const live = useRef<{ stream: MediaStream; recorder: MediaRecorder; context: AudioContext | null; frame: number; tick: number } | null>(null)
+  const starting = useRef(false)
+  const run = useRef(0)          // which dictation an answer belongs to: a later Start makes earlier answers stale
+  const hintRef = useRef("")
+  const [lang, setLang] = useState("")
+  const langRef = useRef("")
+  const LANG_KEY = KOMPAS_LANG_KEY
+
+  useEffect(() => { onBusy(phase !== "idle") }, [phase, onBusy])
+  useEffect(() => { const h = read<string>(HINT_KEY, ""); setHint(h); hintRef.current = h; const l = readStoredLang(); setLang(l); langRef.current = l; setPast(read<Past[]>(HISTORY_KEY, [])); setOnAndroid(/Android/i.test(navigator.userAgent))
+    const apple = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+    const installed = window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
+    setOnIphone(apple && !installed)
+  }, [])
+
+  // Every way out of a recording goes through here, so the microphone is always let go.
+  const release = useCallback(() => {
+    const now = live.current
+    live.current = null
+    if (!now) return
+    window.clearInterval(now.tick)
+    cancelAnimationFrame(now.frame)
+    now.stream.getTracks().forEach(track => track.stop())
+    void now.context?.close().catch(() => {})
+    setLevel(0)
+  }, [])
+
+  const toText = useCallback(async (blob: Blob, mine: number) => {
+    setPhase("working"); setStatus("Writing down what you said…")
+    try {
+      // Contextual vocabulary: their typed hint words plus every word they ever corrected,
+      // so the recogniser learns their names and terms. The spoken language locks it in.
+      const vocab = buildVocabHint(hintRef.current)
+      const headers: Record<string, string> = {
+        "content-type": "application/octet-stream",
+        "x-audio-mime": blob.type || "audio/webm",
+        "x-speech-for": "flow",
+        "x-speech-lang": langRef.current,
+      }
+      if (vocab) headers["x-speech-hint"] = encodeURIComponent(vocab)
+      Object.assign(headers, sessionHeaders("mic"))
+      const heard = await fetch("/api/kompas/speech", { method: "POST", body: blob, headers })
+      if (run.current !== mine) return
+      const body = await heard.json().catch(() => ({}))
+      if (run.current !== mine) return
+      if (!heard.ok) { setError(problem(body.code, heard.headers.get("retry-after"))); setStatus(""); setPhase("idle"); return }
+      const raw = String(body.text || "").trim()
+      if (!raw) { setError(problem("empty", null)); setStatus(""); setPhase("idle"); return }
+
+      // Their own words are on the screen at once; the tidied wording joins them when it arrives.
+      setResult({ raw, clean: null, kept: "raw" }); setLayer("raw"); setStatus("Tidying…")
+      let clean: string | null = null, said = ""
+      try {
+        const tidied = await fetch("/api/kompas/tidy", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: raw, for: "flow" }) })
+        const answer = await tidied.json().catch(() => ({}))
+        if (tidied.ok && answer.kept === "clean" && typeof answer.tidy === "string") clean = answer.tidy
+        else said = typeof answer.note === "string" ? answer.note : "Tidying is not available right now, so your own words are shown."
+      } catch { said = "Tidying is not available right now, so your own words are shown." }
+      if (run.current !== mine) return
+      const made = flowResult(raw, clean)
+      setResult(made); setLayer(made.kept); setNote(made.kept === "raw" ? said || "The tidied text changed what was said, so your own words are shown." : "")
+      resultId.current = `${Date.now()}-${mine}`
+      setPast(before => { const next = [{ id: resultId.current, at: Date.now(), ...made }, ...before].slice(0, 20); write(HISTORY_KEY, next); return next })
+      setStatus(""); setPhase("idle")
+    } catch {
+      if (run.current !== mine) return
+      setError("That could not be sent. Check your connection and try again."); setStatus(""); setPhase("idle")
+    }
+  }, [])
+
+  const stop = useCallback(() => {
+    const now = live.current
+    if (!now || now.recorder.state === "inactive") return
+    now.recorder.stop()            // its onstop sends what was recorded and lets the microphone go
+  }, [])
+
+  const start = useCallback(async () => {
+    if (starting.current || live.current) return
+    starting.current = true
+    const mine = ++run.current
+    setError(""); setNote(""); setCut(false); setCopied(""); setResult(null); setSeconds(0); setSignalNote(""); sigRef.current = { quietMs: 0, loudHits: 0, last: 0 }
+    // Made here, inside the person's tap. Safari on an iPhone leaves an audio context that is made later, after the wait for
+    // the microphone, switched off, and the bars would then never move. It is closed below if the recording does not start.
+    let context: AudioContext | null = null
+    try { context = new AudioContext() } catch { context = null }
+    let handedOver = false
+    try {
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") { setError("This browser cannot record sound. Try a current version of Chrome, Edge, Safari or Firefox."); return }
+      let stream: MediaStream
+      try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }) }
+      catch (e) {
+        const name = (e as DOMException)?.name
+        setError(name === "NotFoundError" ? "No microphone was found. Plug one in, or check that it is turned on." : "The microphone is blocked for this site. Allow it from the lock icon in the address bar, then press Start speaking again.")
+        return
+      }
+      if (run.current !== mine) { stream.getTracks().forEach(t => t.stop()); return }
+      const type = TYPES.find(t => MediaRecorder.isTypeSupported(t))
+      const recorder = new MediaRecorder(stream, { ...(type ? { mimeType: type } : {}), audioBitsPerSecond: 128000 })
+      const parts: Blob[] = []
+      recorder.ondataavailable = e => { if (e.data.size) parts.push(e.data) }
+      recorder.onstop = () => {
+        release()
+        const blob = new Blob(parts, { type: recorder.mimeType || type || "audio/webm" })
+        parts.length = 0
+        if (run.current === mine) void toText(blob, mine)
+      }
+      recorder.onerror = () => { release(); if (run.current === mine) { setError("The recording stopped unexpectedly. Try again."); setPhase("idle") } }
+
+      // A small picture of the voice, so the person can see they are being heard. It is optional: no meter is not an error.
+      let frame = 0
+      try {
+        if (!context) throw new Error("no meter")
+        void context.resume().catch(() => {})
+        const analyser = context.createAnalyser(); analyser.fftSize = 512
+        context.createMediaStreamSource(stream).connect(analyser)
+        const samples = new Uint8Array(analyser.fftSize)
+        const draw = () => {
+          analyser.getByteTimeDomainData(samples)
+          let peak = 0
+          for (const v of samples) peak = Math.max(peak, Math.abs(v - 128))
+          const norm = Math.min(1, peak / 64)
+          setLevel(norm)
+          // Speech activity detection, energy edition: speech is loud-and-varying, silence is flat.
+          const heard = norm > 0.08
+          setSpeaking(h => (h === heard ? h : heard))
+          const nowMs = Date.now()
+          const dt = nowMs - (sigRef.current.last || nowMs)
+          sigRef.current.last = nowMs
+          if (heard) { sigRef.current.quietMs = 0 } else { sigRef.current.quietMs += dt }
+          if (norm > 0.92) sigRef.current.loudHits++
+          // Nondestructive advice only: the audio itself is never altered.
+          const s = Math.floor((Date.now() - began) / 1000)
+          if (s > 3 && sigRef.current.quietMs > 5000) setSignalNote("Very quiet. Move closer to the microphone.")
+          else if (sigRef.current.loudHits > 40) { setSignalNote("Too loud. Move back from the microphone a little."); sigRef.current.loudHits = 0 }
+          else setSignalNote(n => (n ? "" : n))
+          if (live.current) live.current.frame = requestAnimationFrame(draw)
+        }
+        frame = requestAnimationFrame(draw)
+      } catch { void context?.close().catch(() => {}); context = null }
+
+      const began = Date.now()
+      const tick = window.setInterval(() => {
+        const s = Math.floor((Date.now() - began) / 1000)
+        setSeconds(s)
+        if (s >= MAX_SECONDS) { setCut(true); stop() }
+      }, 250)
+      live.current = { stream, recorder, context, frame, tick }
+      handedOver = true
+      recorder.start()
+      setPhase("recording"); setStatus("")
+    } finally {
+      starting.current = false
+      if (!handedOver) void context?.close().catch(() => {})
+    }
+  }, [release, stop, toText])
+
+  // Leaving the page lets the microphone go and makes any answer still on its way stale.
+  useEffect(() => () => { run.current++; const now = live.current; if (now && now.recorder.state !== "inactive") { now.recorder.onstop = null; try { now.recorder.stop() } catch { /* already stopped */ } } release() }, [release])
+
+  const press = useCallback(() => { if (phase === "recording") stop(); else if (phase === "idle") void start() }, [phase, start, stop])
+  useEffect(() => {
+    // Only while this mode is the one on screen: with Transcribe showing, the space bar must not start a dictation
+    // nobody can see.
+    if (!active) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
+      const el = e.target as HTMLElement | null
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT", "BUTTON", "A", "SUMMARY"].includes(el.tagName))) return
+      e.preventDefault(); press()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [press, active])
+
+  const matchingPast = past.filter(p => [p.raw, p.clean, p.rewrite, ...(p.revisions || []).map(r => r.reason)].join(" ").toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
+  const shown = result ? (layer === "rewrite" && result.rewrite ? result.rewrite : layer === "clean" && result.clean ? result.clean : result.raw) : ""
+  const doCopy = async (text: string, id: string) => { setCopied((await copy(text)) ? id : `${id}:failed`); window.setTimeout(() => setCopied(c => (c.startsWith(id) ? "" : c)), 2200) }
+  const forget = (id: string) => setPast(before => { const next = before.filter(p => p.id !== id); write(HISTORY_KEY, next); return next })
+
+  // The offer of the Android app. On an Android phone it sits at the top, where a person starting Flow sees it; anywhere
+  // else it is a quiet card further down, for someone who wants to send the file to their phone.
+  const app = (
+    <Card style={{ marginBottom: 16 }}>
+      <Meta>Kompas Flow for Android</Meta>
+      <p style={{ ...SMALL, fontSize: 15.5, marginTop: 8 }}>{onAndroid ? "A small button that appears beside your keyboard, in every app. Tap it, speak, tap the tick, and your words go into the text box you were in." : "On an Android phone? The app is a small button that appears beside the keyboard in every app. Tap it, speak, tap the tick, and your words go into the text box you were in."}</p>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+        <a href={FLOW_APK} download="Kompas-Flow.apk" className="btn-outline" style={{ ...QUIET, display: "inline-flex", alignItems: "center", textDecoration: "none" }} title="Download Kompas-Flow.apk, the Android app">Download for Android</a>
+      </div>
+      <p style={{ ...SMALL, marginTop: 10 }}>It is not in the Play Store yet, so your phone will ask you to allow installing from your browser. It needs Android 8 or later. The app asks for the microphone and to show over other apps, and tells you what each is for. Turning it on under Accessibility is what makes it appear at the keyboard and put the words in for you; without that it stays on screen and copies your words. If you had an earlier copy, remove it before installing this one. It is an early build: if something does not work on your phone, the page here still does.</p>
+    </Card>
+  )
+
+  // On an iPhone there is no app to download and there cannot be a floating button: Apple allows neither. What it allows
+  // is this page on the Home Screen, and the card says how, and says plainly what is different from Android.
+  const iphone = (
+    <Card style={{ marginBottom: 16 }}>
+      <Meta>Kompas Flow on iPhone</Meta>
+      <p style={{ ...SMALL, fontSize: 15.5, marginTop: 8 }}>Put Kompas Flow on your Home Screen: tap the Share button in Safari, then <strong style={{ color: "var(--text)" }}>Add to Home Screen</strong>. It opens like an app, ready to speak.</p>
+      <p style={{ ...SMALL, marginTop: 10 }}>An iPhone does not let any app keep a button over other apps or type into them, so there is no floating button here. You speak, tap Copy, and paste where you were.</p>
+    </Card>
+  )
+
+  return (
+    <div style={{ maxWidth: 760 }}>
+      <PageIntro page="/dashboard/kompas/flow"
+        action={{ label: phase === "recording" ? "Stop" : phase === "working" ? "Working…" : "Start speaking", onClick: press }}
+        sample="Or press the space bar to start and stop." />
+
+      {onAndroid && phase === "idle" && !result && app}
+      {onIphone && phase === "idle" && !result && iphone}
+
+      {phase === "recording" && (
+        <Card style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <span aria-hidden style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--danger)", flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", display: "flex", alignItems: "center", gap: 8 }}>Listening <span style={{ fontFamily: "var(--font-num)", fontVariantNumeric: "tabular-nums", color: "var(--text-muted)", fontWeight: 500 }}>{clock(seconds)}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: speaking ? "var(--accent)" : "var(--text-soft)" }}>{speaking ? "● hearing you" : "○ quiet"}</span>
+              </div>
+              {signalNote && <div style={{ fontSize: 13.5, color: "var(--text-muted)", marginTop: 6 }}>{signalNote}</div>}
+              <div aria-hidden style={{ height: 8, marginTop: 8, borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", overflow: "hidden" }}>
+                <div style={{ width: `${Math.round(level * 100)}%`, height: "100%", background: "var(--accent)", transition: "width 80ms linear" }} />
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <p role="status" aria-live="polite" style={{ ...SMALL, minHeight: status ? 24 : 0, marginBottom: status ? 12 : 0 }}>{status}</p>
+      {error && <div role="alert" style={{ marginBottom: 16, padding: "14px 18px", borderRadius: "var(--radius-lg)", background: "var(--danger-soft)", border: "1px solid var(--danger-border)", color: "var(--text)", fontSize: 15, lineHeight: 1.55 }}>{error}</div>}
+
+      {result ? (
+        <Card>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Chip label="Rewritten by you" active={layer === "rewrite"} disabled={!result.rewrite} onClick={() => setLayer("rewrite")} />
+            <Chip label="Tidied" active={layer === "clean"} disabled={!result.clean} onClick={() => setLayer("clean")} />
+            <Chip label="As you said it" active={layer === "raw"} onClick={() => setLayer("raw")} />
+          </div>
+          <p style={SAID}>{shown}</p>
+          <RevisionEditor key={result.raw} text={result.rewrite || result.clean || result.raw} revisions={result.revisions} disabled={phase !== "idle"}
+            onSave={(text, reason) => {
+              learnFromCorrection(result.rewrite || result.clean || result.raw, text)
+              const next = { ...manualRewrite(result, text, reason, Date.now()), kept: "rewrite" as const }
+              setResult(next); setLayer("rewrite")
+              setPast(before => { const history = before.map(p => p.id === resultId.current ? { ...p, ...next } : p); write(HISTORY_KEY, history); return history })
+            }} />
+          {note && <p style={{ ...SMALL, marginTop: 12 }}>{note}</p>}
+          {cut && <p style={{ ...SMALL, marginTop: 12 }}>Stopped at {MAX_SECONDS} seconds, the longest one dictation can be. Press Speak again to go on.</p>}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
+            <button type="button" className="btn-outline" style={QUIET} onClick={() => void doCopy(shown, "now")}>{copied === "now" ? "Copied" : "Copy"}</button>
+            <button type="button" className="btn-ghost" style={QUIET} disabled={phase !== "idle"} onClick={() => void start()}>Speak again</button>
+            {copied === "now:failed" && <span role="alert" style={{ ...SMALL, color: "var(--danger)" }}>The browser would not copy it. Select the text and copy it yourself.</span>}
+          </div>
+        </Card>
+      ) : phase === "idle" && !error ? (
+        <Card><p style={{ ...SMALL, fontSize: 16 }}>Press <strong style={{ color: "var(--text)" }}>Start speaking</strong>, say what you want written, and press <strong style={{ color: "var(--text)" }}>Stop</strong>. Your words appear here, tidied, ready to copy.</p></Card>
+      ) : null}
+
+      <section style={{ marginTop: 32 }}>
+        <label htmlFor="flow-hint"><Meta>Words to listen for</Meta></label>
+        <input id="flow-hint" value={hint} maxLength={400} placeholder="Names and unusual words, like Kubernetes, Priyanka, Terraform"
+          onChange={e => { const v = e.target.value.slice(0, 400); setHint(v); hintRef.current = v; write(HINT_KEY, v) }}
+          style={{ ...FIELD, marginTop: 8 }} />
+        <p style={{ ...SMALL, marginTop: 8 }}>Optional. It helps unusual names and technical words come out right. Words you correct are remembered here automatically.</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
+          <label htmlFor="flow-lang" style={{ ...SMALL, fontWeight: 600 }}>Spoken language</label>
+          <select id="flow-lang" value={lang} onChange={e => { setLang(e.target.value); langRef.current = e.target.value; write(LANG_KEY, e.target.value) }}
+            style={{ ...FIELD, width: "auto", minWidth: 140 }}>
+            <option value="">Auto-detect</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+        <p style={{ ...SMALL, marginTop: 8 }}>English locks the recogniser to English: best when you speak English with any accent. Auto-detect guesses each time.</p>
+      </section>
+
+      {!onAndroid && !onIphone && <section style={{ marginTop: 32 }}>{app}<p style={{ ...SMALL, marginTop: -6 }}>On an iPhone: open this page in Safari, tap Share, then Add to Home Screen.</p></section>}
+
+      <section style={{ marginTop: 36 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 700, letterSpacing: "-0.01em", color: "var(--text)", margin: 0 }}>Earlier</h2>
+          {past.length > 0 && <button type="button" className="btn-ghost" style={QUIET} onClick={() => { if (window.confirm("Remove everything you dictated earlier from this browser?")) { setPast([]); write(HISTORY_KEY, []) } }}>Remove all</button>}
+        </div>
+        <p style={{ ...SMALL, margin: "4px 0 16px" }}>Kept only in this browser. MarketFit keeps nothing you say.</p>
+        <label htmlFor="dictation-search">Search earlier dictations</label>
+        <input id="dictation-search" type="search" value={search} onChange={e => setSearch(e.target.value)} style={{ ...FIELD, marginBottom: 12 }} />
+        {past.length > 0 && <p role="status" style={SMALL}>{matchingPast.length} matching dictations</p>}
+        {past.length === 0 ? <Card><p style={SMALL}>Nothing yet. What you dictate will be listed here.</p></Card> : (
+          <div style={{ display: "grid", gap: 12 }}>
+            {matchingPast.map(p => {
+              const text = p.kept === "rewrite" && p.rewrite ? p.rewrite : p.kept === "clean" && p.clean ? p.clean : p.raw
+              const wide = open === p.id
+              return (
+                <Card key={p.id} style={{ padding: 16 }}>
+                  <Meta>{new Date(p.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} · {p.kept === "rewrite" ? "rewritten by you" : p.kept === "clean" ? "tidied" : "as said"}</Meta>
+                  <p style={{ fontSize: 15.5, lineHeight: 1.55, color: "var(--text)", margin: "8px 0 0", overflowWrap: "anywhere", whiteSpace: wide ? "pre-wrap" : "normal", ...(wide ? {} : { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }) }}>{text}</p>
+                  {wide && <><p style={SMALL}>Original: {p.raw}</p>{p.clean && <p style={SMALL}>Tidied: {p.clean}</p>}
+                    <RevisionEditor text={p.rewrite || p.clean || p.raw} revisions={p.revisions} onSave={(value, reason) => {
+                      learnFromCorrection(p.rewrite || p.clean || p.raw, value)
+                      const next = { ...manualRewrite(p, value, reason, Date.now()), kept: "rewrite" as const }
+                      setPast(before => { const history = before.map(item => item.id === p.id ? next : item); write(HISTORY_KEY, history); return history })
+                      if (resultId.current === p.id) { setResult(next); setLayer("rewrite") }
+                    }} /></>}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                    <button type="button" className="btn-outline" style={QUIET} onClick={() => void doCopy(text, p.id)}>{copied === p.id ? "Copied" : "Copy"}</button>
+                    <button type="button" className="btn-ghost" style={QUIET} aria-expanded={wide} onClick={() => setOpen(wide ? null : p.id)}>{wide ? "Show less" : "Show all"}</button>
+                    <button type="button" className="btn-ghost" style={QUIET} onClick={() => forget(p.id)}>Remove</button>
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}

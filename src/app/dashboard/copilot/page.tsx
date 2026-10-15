@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import ChatIntegrationsCard from "./ChatIntegrationsCard"
 
 /* ═══════════════════════════════════════════════════════════════════
    TYPES
@@ -117,6 +118,7 @@ export default function CopilotPage() {
   const [loading, setLoading]       = useState(false)
   const [ctx, setCtx]               = useState<UserContext>({})
   const [activeGroup, setActiveGroup] = useState(0)
+  const [showIntegrations, setShowIntegrations] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef  = useRef<HTMLTextAreaElement>(null)
 
@@ -231,12 +233,12 @@ export default function CopilotPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #1c1b16, #605d51)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>⚡</div>
             <div>
-              <h1 style={{ fontSize: 18, fontWeight: 800, color: "#161510", letterSpacing: "-0.3px", margin: 0 }}>Career Copilot</h1>
-              <p style={{ fontSize: 12, color: "#6e6b5b", margin: 0 }}>AI advisor · knows your profile, apps & skills</p>
+              <h1 style={{ fontSize: 18, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.3px", margin: 0 }}>Career Copilot</h1>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>AI advisor · knows your profile, apps & skills</p>
             </div>
           </div>
           {messages.length > 0 && (
-            <button onClick={clearHistory} style={{ fontSize: 12, color: "#6e6b5b", background: "transparent", border: "1px solid #e6e2d9", borderRadius: 7, padding: "5px 12px", cursor: "pointer" }}>
+            <button onClick={clearHistory} style={{ fontSize: 12, color: "var(--text-muted)", background: "transparent", border: "1px solid var(--border)", borderRadius: 7, padding: "5px 12px", cursor: "pointer" }}>
               Clear chat
             </button>
           )}
@@ -261,10 +263,10 @@ export default function CopilotPage() {
         {messages.length === 0 && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "24px 0 8px" }}>
             <div style={{ fontSize: 52, marginBottom: 14 }}>⚡</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#161510", marginBottom: 6, letterSpacing: "-0.3px" }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text)", marginBottom: 6, letterSpacing: "-0.3px" }}>
               Hey {firstName}, what can I help with?
             </div>
-            <div style={{ fontSize: 14, color: "#6e6b5b", maxWidth: 440, lineHeight: 1.6, marginBottom: 28 }}>
+            <div style={{ fontSize: 14, color: "var(--text-muted)", maxWidth: 440, lineHeight: 1.6, marginBottom: 28 }}>
               I know your profile, skills, and application history.
               Ask me anything about your job search, interviews, salary, or visa status.
             </div>
@@ -275,8 +277,8 @@ export default function CopilotPage() {
                 {CHIP_GROUPS.map((g, i) => (
                   <button key={g.label} onClick={() => setActiveGroup(i)}
                     style={{ padding: "5px 14px", borderRadius: 100, fontSize: 12.5, fontWeight: 600, border: "1.5px solid",
-                      borderColor: activeGroup === i ? "var(--accent)" : "#e6e2d9",
-                      background: activeGroup === i ? "rgba(107,104,88,0.07)" : "#fff",
+                      borderColor: activeGroup === i ? "var(--accent)" : "var(--border)",
+                      background: activeGroup === i ? "rgba(107,104,88,0.07)" : "var(--surface)",
                       color: activeGroup === i ? "var(--accent)" : "#6e6b5b", cursor: "pointer" }}>
                     {g.label}
                   </button>
@@ -285,7 +287,7 @@ export default function CopilotPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {CHIP_GROUPS[activeGroup].chips.map(chip => (
                   <button key={chip} onClick={() => send(chip)}
-                    style={{ padding: "10px 14px", background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 10, fontSize: 13, color: "#161510", cursor: "pointer", textAlign: "left", lineHeight: 1.4, transition: "border-color .15s, box-shadow .15s" }}
+                    style={{ padding: "10px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 13, color: "var(--text)", cursor: "pointer", textAlign: "left", lineHeight: 1.4, transition: "border-color .15s, box-shadow .15s" }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(107,104,88,0.1)" }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#e6e2d9"; (e.currentTarget as HTMLElement).style.boxShadow = "none" }}>
                     {chip}
@@ -313,10 +315,10 @@ export default function CopilotPage() {
             <div style={{
               maxWidth: "74%", padding: "12px 16px", borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
               background: msg.role === "user" ? "linear-gradient(135deg, #1c1b16, #6e6b5b)" : "#fff",
-              color: msg.role === "user" ? "#fff" : "#161510",
+              color: msg.role === "user" ? "#fff" : "var(--text)",
               fontSize: 14, lineHeight: 1.65,
               boxShadow: msg.role === "assistant" ? "0 1px 4px rgba(12,11,8,0.07)" : "0 2px 10px rgba(107,104,88,0.25)",
-              border: msg.role === "assistant" ? "1px solid #e6e2d9" : "none",
+              border: msg.role === "assistant" ? "1px solid var(--border)" : "none",
               whiteSpace: "pre-wrap",
             }}>
               {msg.content}
@@ -331,7 +333,7 @@ export default function CopilotPage() {
         {loading && (
           <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
             <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg, #1c1b16, #605d51)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>⚡</div>
-            <div style={{ padding: "12px 16px", background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: "18px 18px 18px 4px", boxShadow: "0 1px 4px rgba(12,11,8,0.07)" }}>
+            <div style={{ padding: "12px 16px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "18px 18px 18px 4px", boxShadow: "0 1px 4px rgba(12,11,8,0.07)" }}>
               <ThinkingDots/>
             </div>
           </div>
@@ -346,7 +348,7 @@ export default function CopilotPage() {
           <div style={{ display: "flex", gap: 6, paddingBottom: 4 }}>
             {["What's my next step?", "Help me prep for interviews", "Review my job search strategy", "Salary negotiation tips", "H-1B timeline"].map(chip => (
               <button key={chip} onClick={() => send(chip)} disabled={loading}
-                style={{ padding: "5px 12px", borderRadius: 100, fontSize: 12, fontWeight: 600, border: "1px solid #e6e2d9", background: "var(--surface)", color: "#6e6b5b", cursor: loading ? "default" : "pointer", whiteSpace: "nowrap", flexShrink: 0, transition: "border-color .15s" }}
+                style={{ padding: "5px 12px", borderRadius: 100, fontSize: 12, fontWeight: 600, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-muted)", cursor: loading ? "default" : "pointer", whiteSpace: "nowrap", flexShrink: 0, transition: "border-color .15s" }}
                 onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)" }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#e6e2d9" }}>
                 {chip}
@@ -358,7 +360,7 @@ export default function CopilotPage() {
 
       {/* Input area */}
       <div style={{ padding: "12px 24px 20px", flexShrink: 0, background: "var(--surface)" }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-end", background: "var(--surface)", border: "1.5px solid #e6e2d9", borderRadius: 14, padding: "10px 14px", boxShadow: "0 2px 12px rgba(12,11,8,0.06)", transition: "border-color .2s" }}
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-end", background: "var(--surface)", border: "1.5px solid var(--border)", borderRadius: 14, padding: "10px 14px", boxShadow: "0 2px 12px rgba(12,11,8,0.06)", transition: "border-color .2s" }}
           onFocusCapture={e => e.currentTarget.style.borderColor = "var(--accent)"}
           onBlurCapture={e => e.currentTarget.style.borderColor = "#e6e2d9"}>
           <textarea
@@ -369,7 +371,7 @@ export default function CopilotPage() {
             placeholder="Ask anything about your job search, salary, interviews, or visa…"
             rows={1}
             disabled={loading}
-            style={{ flex: 1, border: "none", outline: "none", resize: "none", fontSize: 14, color: "#161510", background: "transparent", lineHeight: 1.5, maxHeight: 120, overflowY: "auto", fontFamily: "inherit" }}
+            style={{ flex: 1, border: "none", outline: "none", resize: "none", fontSize: 14, color: "var(--text)", background: "transparent", lineHeight: 1.5, maxHeight: 120, overflowY: "auto", fontFamily: "inherit" }}
             onInput={e => {
               const t = e.currentTarget
               t.style.height = "auto"
@@ -385,7 +387,7 @@ export default function CopilotPage() {
             ↑
           </button>
         </div>
-        <div style={{ fontSize: 11, color: "#aaa492", textAlign: "center", marginTop: 6 }}>
+        <div style={{ fontSize: 11, color: "var(--text-soft)", textAlign: "center", marginTop: 6 }}>
           Shift+Enter for new line · Enter to send · Powered by Claude
         </div>
       </div>

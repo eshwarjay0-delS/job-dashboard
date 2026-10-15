@@ -34,7 +34,7 @@ export default function DashboardError({
       {/* Icon */}
       <div style={{
         width: 56, height: 56, borderRadius: 16,
-        background: "var(--surface)", border: "1.5px solid #ddd8cd",
+        background: "var(--surface)", border: "1.5px solid var(--border-strong)",
         display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: 24,
       }}>
@@ -44,12 +44,12 @@ export default function DashboardError({
       {/* Heading */}
       <div>
         <h2 style={{
-          fontSize: 18, fontWeight: 800, color: "#161510",
+          fontSize: 18, fontWeight: 800, color: "var(--text)",
           marginBottom: 6, letterSpacing: "-0.3px",
         }}>
           Something went wrong
         </h2>
-        <p style={{ fontSize: 13.5, color: "#6e6b5b", maxWidth: 380, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 13.5, color: "var(--text-muted)", maxWidth: 380, lineHeight: 1.6 }}>
           This page ran into an error. Your data is safe — click Retry to reload
           it, or navigate to another page using the sidebar.
         </p>
@@ -85,9 +85,9 @@ export default function DashboardError({
           href="/dashboard"
           style={{
             padding: "9px 20px", borderRadius: 9,
-            background: "transparent", color: "#6e6b5b",
+            background: "transparent", color: "var(--text-muted)",
             fontSize: 13.5, fontWeight: 600,
-            border: "1px solid #e6e2d9", textDecoration: "none",
+            border: "1px solid var(--border)", textDecoration: "none",
             display: "inline-flex", alignItems: "center",
           }}
         >

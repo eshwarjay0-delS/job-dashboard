@@ -33,8 +33,8 @@ function RangeBar({ low, mid, high, color }: { low: number; mid: number; high: n
   const highPct = ((high - mid) / total) * 100
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div style={{ flex: 1, height: 6, borderRadius: 4, overflow: "hidden", background: "#f4f2ed", display: "flex" }}>
-        <div style={{ width: `${lowPct}%`, background: "#e6e2d9" }} />
+      <div style={{ flex: 1, height: 6, borderRadius: 4, overflow: "hidden", background: "var(--surface-2)", display: "flex" }}>
+        <div style={{ width: `${lowPct}%`, background: "var(--surface-3)" }} />
         <div style={{ width: `${midPct}%`, background: color, opacity: 0.7 }} />
         <div style={{ width: `${highPct}%`, background: color }} />
       </div>
@@ -77,7 +77,7 @@ export default function SalaryInsights({
   }
 
   return (
-    <div style={{ borderRadius: 12, border: "1px solid #e6e2d9", overflow: "hidden", background: "var(--surface)" }}>
+    <div style={{ borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden", background: "var(--surface)" }}>
       <button
         onClick={handleToggle}
         style={{
@@ -89,8 +89,8 @@ export default function SalaryInsights({
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 16 }}>💰</span>
           <div>
-            <p style={{ fontSize: 13, fontWeight: 700, color: "#161510", lineHeight: 1.2 }}>Salary Intelligence</p>
-            <p style={{ fontSize: 11, color: "#6e6b5b", lineHeight: 1.2 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}>Salary Intelligence</p>
+            <p style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.2 }}>
               {data ? `${fmt(data.tc.low)} – ${fmt(data.tc.high)} TC` : "Market range for this role"}
             </p>
           </div>
@@ -102,9 +102,9 @@ export default function SalaryInsights({
       </button>
 
       {open && (
-        <div style={{ borderTop: "1px solid #f4f2ed", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ borderTop: "1px solid var(--border)", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
           {loading ? (
-            <div style={{ textAlign: "center", padding: "16px 0", color: "#9d9884", fontSize: 12 }}>
+            <div style={{ textAlign: "center", padding: "16px 0", color: "var(--text-soft)", fontSize: 12 }}>
               <div style={{ animation: "spin 1s linear infinite", display: "inline-block", marginBottom: 6 }}>⟳</div>
               <p>Loading salary data…</p>
               <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
@@ -116,14 +116,14 @@ export default function SalaryInsights({
                 display: "flex", alignItems: "center", justifyContent: "space-between",
                 padding: "10px 12px", borderRadius: 10,
                 background: "linear-gradient(135deg,#f2f0ea,#f6f4ef)",
-                border: "1px solid #d9d4c8",
+                border: "1px solid var(--border-strong)",
               }}>
                 <div>
-                  <p style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "#6e6b5b" }}>Total Comp</p>
+                  <p style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "var(--text-muted)" }}>Total Comp</p>
                   <p style={{ fontSize: 20, fontWeight: 900, color: "var(--accent)", letterSpacing: "-1px" }}>
-                    {fmt(data.tc.mid)} <span style={{ fontSize: 11, fontWeight: 500, color: "#6e6b5b" }}>/ yr</span>
+                    {fmt(data.tc.mid)} <span style={{ fontSize: 11, fontWeight: 500, color: "var(--text-muted)" }}>/ yr</span>
                   </p>
-                  <p style={{ fontSize: 11, color: "#9d9884" }}>{fmt(data.tc.low)} – {fmt(data.tc.high)} range</p>
+                  <p style={{ fontSize: 11, color: "var(--text-soft)" }}>{fmt(data.tc.low)} – {fmt(data.tc.high)} range</p>
                 </div>
                 {data.level_note && (
                   <div style={{ textAlign: "right" }}>
@@ -137,12 +137,12 @@ export default function SalaryInsights({
               {/* Breakdown */}
               {[
                 { label: "Base Salary",    d: data.base,          color: "var(--accent)" },
-                { label: "Annual Bonus",   d: data.bonus,         color: "#4d4b44" },
-                { label: "Equity (Annual)",d: data.equity_annual, color: "#4d4b44" },
+                { label: "Annual Bonus",   d: data.bonus,         color: "var(--text-muted)" },
+                { label: "Equity (Annual)",d: data.equity_annual, color: "var(--text-muted)" },
               ].map(row => (
                 <div key={row.label}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: "#40403a" }}>{row.label}</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--text-muted)" }}>{row.label}</span>
                     <span style={{ fontSize: 11.5, color: row.color, fontWeight: 700 }}>
                       {fmt(row.d.low)} – {fmt(row.d.high)}
                     </span>
@@ -161,11 +161,11 @@ export default function SalaryInsights({
               {/* Negotiation tips */}
               {data.negotiation_tips?.length > 0 && (
                 <div>
-                  <p style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "#9d9884", marginBottom: 6 }}>Negotiation Tips</p>
+                  <p style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "var(--text-soft)", marginBottom: 6 }}>Negotiation Tips</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     {data.negotiation_tips.map((tip, i) => (
-                      <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start", fontSize: 11.5, color: "#40403a" }}>
-                        <span style={{ color: "#4d4b44", flexShrink: 0, marginTop: 1 }}>✓</span>
+                      <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start", fontSize: 11.5, color: "var(--text-muted)" }}>
+                        <span style={{ color: "var(--text-muted)", flexShrink: 0, marginTop: 1 }}>✓</span>
                         <span>{tip}</span>
                       </div>
                     ))}
@@ -175,21 +175,21 @@ export default function SalaryInsights({
 
               {/* Market note */}
               {data.market_note && (
-                <p style={{ fontSize: 11, color: "#6e6b5b", borderTop: "1px solid #f4f2ed", paddingTop: 8 }}>
+                <p style={{ fontSize: 11, color: "var(--text-muted)", borderTop: "1px solid var(--border)", paddingTop: 8 }}>
                   📈 {data.market_note}
                 </p>
               )}
 
               {/* Sources */}
               {data.data_sources?.length > 0 && (
-                <p style={{ fontSize: 10, color: "#9d9884" }}>
+                <p style={{ fontSize: 10, color: "var(--text-soft)" }}>
                   Sources: {data.data_sources.join(", ")}
                   {data.fallback ? " · Estimated ranges" : ""}
                 </p>
               )}
             </>
           ) : (
-            <p style={{ fontSize: 12, color: "#9d9884", textAlign: "center", padding: "8px 0" }}>
+            <p style={{ fontSize: 12, color: "var(--text-soft)", textAlign: "center", padding: "8px 0" }}>
               Could not load salary data. Add an API key in Settings.
             </p>
           )}

@@ -5,8 +5,8 @@ import { DollarSign, TriangleAlert, TrendingUp, TrendingDown, Check, Target, Lig
 import PageHeader from "@/components/layout/PageHeader"
 
 const P = {
-  surface: "#ffffff", text: "#161510", muted: "#6e6b5b",
-  hint: "#9d9884", border: "#e6e2d9", bg: "var(--surface)",
+  surface: "var(--surface)", text: "var(--text)", muted: "var(--text-muted)",
+  hint: "var(--text-soft)", border: "var(--border)", bg: "var(--surface)",
 }
 
 interface SalaryData {
@@ -225,7 +225,7 @@ export default function SalaryPage() {
             </select>
           </div>
         </div>
-        {error && <p style={{ fontSize: 12.5, color: "#13120d", marginBottom: 10, display: "flex", alignItems: "center", gap: 5 }}><TriangleAlert size={12}/> {error}</p>}
+        {error && <p style={{ fontSize: 12.5, color: "var(--text)", marginBottom: 10, display: "flex", alignItems: "center", gap: 5 }}><TriangleAlert size={12}/> {error}</p>}
         <button onClick={lookup} disabled={loading} style={{ width: "100%", padding: "11px 20px", borderRadius: 10, background: "var(--accent)", color: "#fff", fontSize: 14, fontWeight: 800, border: "none", cursor: loading ? "wait" : "pointer", opacity: loading ? 0.75 : 1 }}>
           {loading ? "Fetching comp data…" : "Get Salary Data"}
         </button>
@@ -281,7 +281,7 @@ export default function SalaryPage() {
                   <span style={{ fontSize: 12.5, fontWeight: 600, color: P.muted }}>Equity (RSU/year)</span>
                   <span style={{ fontSize: 12.5, fontWeight: 700, color: P.text }}>{data.equity_range}</span>
                 </div>
-                <div style={{ height: 8, borderRadius: 9, background: "#f6f4ef", overflow: "hidden" }}>
+                <div style={{ height: 8, borderRadius: 9, background: "var(--surface-2)", overflow: "hidden" }}>
                   <div style={{ width: "55%", height: "100%", borderRadius: 9, background: "#4d4b44" }}/>
                 </div>
               </div>
@@ -311,8 +311,8 @@ export default function SalaryPage() {
                 </div>
               ))}
 
-              <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 10, background: data.market_rate === "above" ? "#f4f2ed" : data.market_rate === "below" ? "var(--surface)" : "#f7f5f0", border: `1px solid ${data.market_rate === "above" ? "#ddd8cd" : data.market_rate === "below" ? "#ddd8cd" : "#e4e0d6"}` }}>
-                <p style={{ fontSize: 12.5, fontWeight: 700, color: data.market_rate === "above" ? "#42413c" : data.market_rate === "below" ? "#13120d" : "#6b6858", display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 10, background: data.market_rate === "above" ? "var(--surface-2)" : data.market_rate === "below" ? "var(--surface)" : "var(--surface-2)", border: `1px solid ${data.market_rate === "above" ? "#ddd8cd" : data.market_rate === "below" ? "#ddd8cd" : "#e4e0d6"}` }}>
+                <p style={{ fontSize: 12.5, fontWeight: 700, color: data.market_rate === "above" ? "var(--text-muted)" : data.market_rate === "below" ? "var(--text)" : "var(--text-muted)", display: "flex", alignItems: "center", gap: 5 }}>
                   {data.market_rate === "above" ? <><TrendingUp size={12}/> Above market rate</> : data.market_rate === "below" ? <><TrendingDown size={12}/> Below market rate</> : <><Check size={12}/> At market rate</>}
                 </p>
               </div>
@@ -329,7 +329,7 @@ export default function SalaryPage() {
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 11.5, fontWeight: 600, color: P.hint, display: "block", marginBottom: 4 }}>YOUR CURRENT / OFFERED COMP</label>
                 <input value={compInput} onChange={e => setCompInput(e.target.value)} placeholder="e.g. $130,000 or $150K total"
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: 9, border: "1.5px solid #e4e0d6", fontSize: 13, color: P.text, background: "var(--surface)", outline: "none", boxSizing: "border-box" as const }}/>
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: 9, border: "1.5px solid var(--border)", fontSize: 13, color: P.text, background: "var(--surface)", outline: "none", boxSizing: "border-box" as const }}/>
               </div>
               <button onClick={getNegotiationTip} disabled={loadingNeg} style={{ padding: "9px 18px", borderRadius: 9, background: "#7e7a68", color: "#fff", fontSize: 13, fontWeight: 700, border: "none", cursor: loadingNeg ? "wait" : "pointer", opacity: loadingNeg ? 0.7 : 1, flexShrink: 0 }}>
                 {loadingNeg ? "…" : "Get Tips"}
@@ -340,8 +340,8 @@ export default function SalaryPage() {
             {data.tips.length > 0 && !negotiationTip && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {data.tips.map((t, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, padding: "9px 12px", borderRadius: 9, background: "var(--surface)", border: "1px solid #e4e0d6" }}>
-                    <span style={{ color: "#7e7a68", flexShrink: 0, display: "flex" }}><Lightbulb size={13}/></span>
+                  <div key={i} style={{ display: "flex", gap: 8, padding: "9px 12px", borderRadius: 9, background: "var(--surface)", border: "1px solid var(--border)" }}>
+                    <span style={{ color: "var(--text-soft)", flexShrink: 0, display: "flex" }}><Lightbulb size={13}/></span>
                     <p style={{ fontSize: 12.5, color: P.text, lineHeight: 1.6 }}>{t}</p>
                   </div>
                 ))}
@@ -350,7 +350,7 @@ export default function SalaryPage() {
 
             {/* AI-generated personalized tips */}
             {negotiationTip && (
-              <div style={{ background: "var(--surface)", border: "1.5px solid #e4e0d6", borderRadius: 12, padding: "14px 16px", fontSize: 13.5, color: P.text, lineHeight: 1.7 }}>
+              <div style={{ background: "var(--surface)", border: "1.5px solid var(--border)", borderRadius: 12, padding: "14px 16px", fontSize: 13.5, color: P.text, lineHeight: 1.7 }}>
                 {negotiationTip.split("\n").filter(Boolean).map((line, i) => (
                   <p key={i} style={{ marginBottom: 6 }}>{line}</p>
                 ))}

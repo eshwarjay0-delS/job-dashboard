@@ -337,6 +337,7 @@ function ResultContent() {
   const [rankedCandidates, setRankedCandidates] = useState<RankedCandidate[]>([])
   const [breakdown, setBreakdown] = useState<ScoreBreakdown | null>(null)
   const [kwAnalysis, setKwAnalysis] = useState<KeywordAnalysis | null>(null)
+  const [receipt, setReceipt] = useState<null | { calls: number; inputTokens: number; outputTokens: number; estCostUSD: number; byModel: { provider: string; model: string }[] }>(null)
   const [selKw, setSelKw] = useState<string[]>([])   // missing keywords the user chose to add
   const [diff, setDiff] = useState<DiffEntry[]>([])
   const [showDiff, setShowDiff] = useState(false)
@@ -391,6 +392,7 @@ function ResultContent() {
         if (Array.isArray(r.ranked_candidates)) setRankedCandidates(r.ranked_candidates)
         if (r.score_breakdown) setBreakdown(r.score_breakdown)
         if (r.keyword_analysis) setKwAnalysis(r.keyword_analysis)
+        if (r.usage && typeof r.usage.estCostUSD === "number") setReceipt(r.usage)
         if (Array.isArray(r.diff)) setDiff(r.diff)
       }
     } catch { /* ignore */ }
@@ -496,6 +498,22 @@ function ResultContent() {
       >
         <BackIcon /> Back to resumes
       </button>
+
+      {receipt && (
+        <div className="mb-3 rounded-2xl border px-5 py-3 flex items-center gap-4 flex-wrap"
+          style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="text-lg font-bold" style={{ color: "var(--text)", fontFamily: "var(--font-display)" }}>
+            ${receipt.estCostUSD.toFixed(4)}
+          </div>
+          <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+            <span className="font-semibold" style={{ color: "var(--text)" }}>This resume cost</span>
+            {" "}· {receipt.inputTokens.toLocaleString()} in / {receipt.outputTokens.toLocaleString()} out tokens
+            {receipt.byModel?.[0] && <> · {receipt.byModel[0].model}</>}
+            {" "}· {receipt.calls} call{receipt.calls === 1 ? "" : "s"}
+          </div>
+          <div className="text-xs ml-auto" style={{ color: "var(--text-soft)" }}>Measured, not estimated.</div>
+        </div>
+      )}
 
       {/* Panel container */}
       <div className="rounded-2xl p-3" style={{ background: "#e6e2d9", boxShadow: "inset 0 2px 8px rgba(32,31,25,.08)" }}>
@@ -892,8 +910,8 @@ function ResultContent() {
                 {diff.map((d, i) => (
                   <div key={i}>
                     <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--accent-txt)", marginBottom: 6 }}>{d.section}</p>
-                    <p style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text-soft)", textDecoration: "line-through", background: "var(--cat-reply-bg, #f5f3ee)", borderLeft: "3px solid var(--cat-reply, #13120d)", padding: "6px 10px", borderRadius: 6, marginBottom: 4 }}>{d.before || "(was empty)"}</p>
-                    <p style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text)", background: "var(--cat-int-bg, #f2f0ea)", borderLeft: "3px solid var(--cat-int, #1c1b16)", padding: "6px 10px", borderRadius: 6 }}>{d.after}</p>
+                    <p style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text-soft)", textDecoration: "line-through", background: "var(--cat-saved-bg, #f5f3ee)", borderLeft: "3px solid var(--cat-saved, #13120d)", padding: "6px 10px", borderRadius: 6, marginBottom: 4 }}>{d.before || "(was empty)"}</p>
+                    <p style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text)", background: "var(--cat-out-bg, #f2f0ea)", borderLeft: "3px solid var(--cat-out, #1c1b16)", padding: "6px 10px", borderRadius: 6 }}>{d.after}</p>
                   </div>
                 ))}
                 <p style={{ fontSize: 11, color: "var(--text-soft)", marginTop: 2 }}>Only the text changed — your original fonts, spacing, and layout are untouched.</p>

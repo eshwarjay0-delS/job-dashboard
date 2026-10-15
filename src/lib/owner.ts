@@ -11,8 +11,17 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   if (mine === PRODUCT_OWNER_EMAIL) return true
   return items(process.env.ADMIN_EMAILS).some(e => e.toLowerCase() === mine)
 }
-export function isOwnerEmail(email: string | null | undefined): boolean {
-  return String(email || "").trim().toLowerCase() === PRODUCT_OWNER_EMAIL
+
+/** The owner's own sign-in addresses, as listed in settings (lower case). */
+export const adminEmails = (): string[] => items(process.env.ADMIN_EMAILS).map(e => e.toLowerCase())
+
+/** The owner numbers as listed in settings: the digits, and the account named beside one, when there is one. */
+export const ownerEntries = (): { digits: string; userId: string }[] =>
+  items(process.env.WHATSAPP_OWNER_NUMBERS).map(entry => { const [number, userId] = entry.split("=").map(s => s.trim()); return { digits: digits(number || ""), userId: userId || "" } }).filter(e => e.digits.length >= 8)
+
+/** Is this WhatsApp sender one of the listed owner numbers? */
+export function isOwnerWhatsApp(from: string): boolean {
+  return ownerWhatsAppUserId(from, "-") !== null
 }
 export function ownerRole(email: string | null | undefined): "owner" | "user" { return isOwnerEmail(email) ? "owner" : "user" }
 export function isOwnerWhatsApp(from: string): boolean { return ownerWhatsAppUserId(from, "-") !== null }

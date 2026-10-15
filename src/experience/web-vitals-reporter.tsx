@@ -4,11 +4,17 @@ import { usePathname } from "next/navigation"
 import { useReportWebVitals } from "next/web-vitals"
 import { useExperience } from "./experience-provider"
 
+// The six the server keeps (src/app/api/telemetry/web-vitals/route.ts). Next.js also reports its own timings on every
+// page move; the server dropped them, and sending them was most of the 31 requests counted in 10 seconds on the
+// owner's session (14 Oct 2026).
+const KEPT = new Set(["TTFB", "FCP", "LCP", "FID", "CLS", "INP"])
+
 export function WebVitalsReporter() {
   const pathname = usePathname()
   const { tier, reducedMotion, saveData } = useExperience()
 
   useReportWebVitals(metric => {
+    if (!KEPT.has(metric.name)) return
     const payload = JSON.stringify({
       name: metric.name,
       value: metric.value,

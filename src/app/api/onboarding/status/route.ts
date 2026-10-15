@@ -28,14 +28,30 @@ export async function GET() {
     return NextResponse.json({ complete: true, missing: [], resumeTo: null, durable: true, role: "user" })
   }
 
+  // An admin is never sent through setup (owner, 2026-10-07: "skip onboarding for this user as well"). The address must be one
+  // the identity provider has confirmed, the same test every admin route applies (src/lib/adminAccess.ts): an unconfirmed
+  // address proves nothing about who is signed in. Not durable: the profile is left as it is, so removing the address from
+  // ADMIN_EMAILS puts the account back on the ordinary path. Setup stays open to an admin who wants to fill it in.
+  if (user.email_confirmed_at && isAdminEmail(user.email)) {
+    return NextResponse.json({ complete: true, missing: [], resumeTo: null, durable: false, admin: true })
+  }
+
   const missing: string[] = []
   if (!profile?.full_name?.trim()) missing.push("full_name")
   if (!profile?.title?.trim()) missing.push("title")
-  const available = profile?.phone_verified ? true : await phoneStepAvailable()
-  if (!profile?.phone_verified && available) missing.push("phone_verification")
+  const admin = !!user.email_confirmed_at && isAdminEmail(user.email)
+  // Asked only when it matters: someone already verified never triggers the probe.
+  const available = profile?.phone_verified || admin ? true : await phoneStepAvailable()
+  const phoneRequired = !admin
+  if (!profile?.phone_verified && phoneRequired) missing.push("phone_verification")
   if (!Array.isArray(profile?.open_to_roles) || profile.open_to_roles.length === 0) missing.push("target_roles")
   return NextResponse.json({
-    complete: false, missing, resumeTo: "/dashboard/setup", durable: false,
-    role: "user", phoneRequired: available, phoneNote: available ? "" : "unavailable",
+    complete: false,
+    missing,
+    resumeTo: "/dashboard/setup",
+    durable: false,
+    // New regular users must verify even when the provider is temporarily unavailable.
+    phoneRequired,
+    phoneNote: admin ? "admin" : available ? "" : "unavailable",
   })
 }

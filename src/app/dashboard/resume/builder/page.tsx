@@ -63,17 +63,17 @@ function EditField({ value, onChange, section, jd, multiline, placeholder }: {
         )}
         <button type="button" onClick={() => setOpen(o => !o)} title="AI assist"
           className="flex-shrink-0 text-xs font-semibold rounded-lg px-2.5 py-2 border transition-colors"
-          style={{ borderColor: "var(--border,#e8e4db)", color: open ? "#5c5a4e" : "var(--text-soft,#706c5c)" }}>
+          style={{ borderColor: "var(--border,#e8e4db)", color: open ? "var(--text-muted)" : "var(--text-soft,#706c5c)" }}>
           ✨ AI
         </button>
       </div>
       {open && (
-        <div className="mt-2 rounded-lg border p-2.5" style={{ borderColor: "#dedacf", background: "#f6f4ef" }}>
+        <div className="mt-2 rounded-lg border p-2.5" style={{ borderColor: "var(--border-strong)", background: "var(--surface-2)" }}>
           <div className="flex gap-2">
             <input autoFocus value={instr} onChange={e => setInstr(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") run() }}
               placeholder={`Tell the AI how to change this ${section}…  (e.g. "add Kubernetes and make it tighter")`}
-              className="flex-1 text-sm rounded-md border px-2.5 py-1.5" style={{ borderColor: "#d5cfc2" }} />
+              className="flex-1 text-sm rounded-md border px-2.5 py-1.5" style={{ borderColor: "var(--border-strong)" }} />
             <button type="button" onClick={run} disabled={busy}
               className="text-xs font-semibold rounded-md px-3 py-1.5 text-white" style={{ background: "#5c5a4e", opacity: busy ? 0.6 : 1 }}>
               {busy ? "…" : "Apply"}

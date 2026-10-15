@@ -30,7 +30,7 @@ const TABS: { id: AITab; label: string; Icon: typeof Sparkles; desc: string }[] 
 // ── Skeleton loader ───────────────────────────────────────────────────────────
 function PanelSkeleton({ label }: { label: string }) {
   return (
-    <div style={{ padding: "40px 20px", textAlign: "center", color: "#9d9884" }}>
+    <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-soft)" }}>
       <div style={{
         width: 48, height: 48, borderRadius: 14, background: "var(--surface-2)",
         margin: "0 auto 12px", animation: "sk-pulse 1.5s ease-in-out infinite",
@@ -298,7 +298,7 @@ function ScoreTab() {
               transition: "border-color .15s",
             }}
           />
-          <div style={{ fontSize: 11, color: "#9d9884", marginTop: 4 }}>
+          <div style={{ fontSize: 11, color: "var(--text-soft)", marginTop: 4 }}>
             Tip: In Word or Google Docs, press Ctrl+A → Ctrl+C, then paste here
           </div>
         </div>
@@ -306,7 +306,7 @@ function ScoreTab() {
         {/* Optional JD */}
         <div style={{ marginBottom: 16 }}>
           <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted, #6e6b5b)", letterSpacing: ".4px", display: "block", marginBottom: 6 }}>
-            JOB DESCRIPTION <span style={{ fontWeight: 400, color: "#9d9884" }}>(optional — improves keyword scoring)</span>
+            JOB DESCRIPTION <span style={{ fontWeight: 400, color: "var(--text-soft)" }}>(optional — improves keyword scoring)</span>
           </label>
           <textarea
             value={jd}
@@ -330,7 +330,7 @@ function ScoreTab() {
           style={{
             width: "100%", padding: "12px", borderRadius: 12, border: "none",
             background: resumeText.trim() && !loading ? "linear-gradient(135deg, var(--accent) 0%, var(--accent-h) 100%)" : "var(--border)",
-            color: resumeText.trim() && !loading ? "#fff" : "#9d9884", fontSize: 14, fontWeight: 700,
+            color: resumeText.trim() && !loading ? "#fff" : "var(--text-soft)", fontSize: 14, fontWeight: 700,
             cursor: resumeText.trim() && !loading ? "pointer" : "not-allowed", transition: "all .15s",
           }}
         >
@@ -338,7 +338,7 @@ function ScoreTab() {
         </button>
 
         {error && (
-          <div style={{ marginTop: 14, padding: "10px 14px", background: "rgba(112,108,92,.08)", border: "1px solid rgba(112,108,92,.2)", borderRadius: 10, fontSize: 13, color: "#13120d" }}>
+          <div style={{ marginTop: 14, padding: "10px 14px", background: "rgba(112,108,92,.08)", border: "1px solid rgba(112,108,92,.2)", borderRadius: 10, fontSize: 13, color: "var(--text)" }}>
             {error}
           </div>
         )}
@@ -359,7 +359,7 @@ function ScoreTab() {
                   </svg>
                   <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                     <span style={{ fontSize: 26, fontWeight: 900, color: scoreColor, lineHeight: 1 }}>{score}</span>
-                    <span style={{ fontSize: 10, color: "#9d9884", fontWeight: 600 }}>/100</span>
+                    <span style={{ fontSize: 10, color: "var(--text-soft)", fontWeight: 600 }}>/100</span>
                   </div>
                 </div>
                 <div style={{
@@ -378,8 +378,8 @@ function ScoreTab() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {strengths.map((s, i) => (
                     <div key={i} style={{
-                      padding: "8px 12px", background: "#f2f0ea", border: "1px solid #d9d4c8",
-                      borderRadius: 8, fontSize: 13, color: "#393935", lineHeight: 1.5,
+                      padding: "8px 12px", background: "var(--surface-2)", border: "1px solid var(--border-strong)",
+                      borderRadius: 8, fontSize: 13, color: "var(--text)", lineHeight: 1.5,
                     }}>{s}</div>
                   ))}
                 </div>
@@ -403,7 +403,7 @@ function ScoreTab() {
                         <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: severityColor(issue.severity) }}>{issue.severity}</span>
                       </div>
                       <div style={{ color: "var(--text, #161510)", lineHeight: 1.5, marginBottom: 4 }}>{issue.problem}</div>
-                      <div style={{ color: "#6e6b5b", fontSize: 12 }}>→ {issue.fix}</div>
+                      <div style={{ color: "var(--text-muted)", fontSize: 12 }}>→ {issue.fix}</div>
                     </div>
                   ))}
                 </div>

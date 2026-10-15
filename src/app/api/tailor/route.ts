@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
+import { after } from "next/server"
 import path from "path"
 import { runTailor } from "@/lib/tailor"
-import { resolveKeys, hasAnyKey, tailorKeys } from "@/lib/llm"
+import { recordTailor } from "@/lib/tailorLedger"
+import { deductPoints, POINTS_PER_RESUME } from "@/lib/creditsLedger"
+import { hasUnlimitedResumeTestAccess } from "@/lib/resumeTestAccess"
+import { hashUserId } from "@/lib/sttLedger"
+import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { authenticatedUser, signInRequired, ownedResumePath } from "@/lib/authBoundary"
 import { isAdminEmail } from "@/lib/owner"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
@@ -38,7 +43,8 @@ export async function POST(request: NextRequest) {
 
     if (body.filepath && !ownedResumePath(USER_RESUMES_BASE, userId, body.filepath)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     // The OpenAI key (GPT Luna) is handed over for an admin's tailoring only: see tailorKeys.
-    const keys = tailorKeys(resolveKeys(body), { owner: isAdminEmail(user.email) })
+    // Then the admin's checklist of which features may use which provider's key (src/lib/keyVault.ts).
+    const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys(body), { owner: isAdminEmail(user.email) }))
     if (!hasAnyKey(keys)) {
       return NextResponse.json(
         { error: "No API key found. Add a Claude, OpenRouter, or Gemini key in Settings or .env.local." },
@@ -59,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Server-side weekly usage cap (prevents unlimited calls by localStorage clearing or different browsers)
-    if (TAILOR_WEEKLY_LIMIT > 0) {
+    if (TAILOR_WEEKLY_LIMIT > 0 && !hasUnlimitedResumeTestAccess(user.email)) {
       const rl = checkRateLimit(`tailor:${userId}`, { max: TAILOR_WEEKLY_LIMIT, windowMs: WEEK_MS })
       if (!rl.ok) {
         const daysLeft = rl.retryAfterSec ? Math.ceil(rl.retryAfterSec / 86400) : 7
@@ -71,6 +77,8 @@ export async function POST(request: NextRequest) {
     }
 
     const userResumeDir = path.join(USER_RESUMES_BASE, userId)
+    // Every generation is written down as it ends, failed ones included: the admin page counts them (src/lib/tailorLedger.ts).
+    const began = Date.now()
     const result = await runTailor({
       jd, keys, pref: body.llmHeavy, userResumeDir,
       givenPath: body.filepath || undefined,
@@ -79,7 +87,19 @@ export async function POST(request: NextRequest) {
       onePage: !!body.onePage,
       sections: body.sections,
       mode: body.mode === "quick" ? "quick" : "full",
+    }).catch(async (e: unknown) => {
+      await recordTailor({ channel: "web", kind: "tailor", personId: userId, startedAt: began, error: e })
+      throw e
     })
+    await recordTailor({ channel: "web", kind: "tailor", personId: userId, startedAt: began, result })
+    // Gel points: one resume preparation costs 0.25 points (four resumes = one
+    // interview session). Idempotent per generation — retries cost nothing extra.
+    const resumeId = (result as { id?: unknown }).id
+    if (typeof resumeId === "string" && resumeId) {
+      if (!hasUnlimitedResumeTestAccess(user.email)) {
+        after(() => deductPoints(hashUserId(userId), POINTS_PER_RESUME, `resume:${resumeId}`, "resume"))
+      }
+    }
     return NextResponse.json(result)
   } catch (e: unknown) {
     return NextResponse.json({ error: `Tailoring failed: ${String(e)}` }, { status: 500 })

@@ -130,7 +130,7 @@ export default function InterviewSection() {
                   padding: "8px 13px", borderRadius: 9, cursor: "pointer", fontSize: 12, fontWeight: 700,
                   border: `1.5px solid ${on ? "#4d4b44" : "var(--border, #e6e2d9)"}`,
                   background: on ? "rgba(101,98,84,.07)" : "var(--surface-2, #f6f4f0)",
-                  color: on ? "#41403b" : "var(--text-muted, #6e6b5b)", transition: "all .15s",
+                  color: on ? "var(--text-muted)" : "var(--text-muted, #6e6b5b)", transition: "all .15s",
                 }}>{icon} {label}</button>
               )
             })}

@@ -40,3 +40,12 @@ export function ownedResumePath(base: string, userId: string, candidate: unknown
   const resolved = path.resolve(candidate)
   return resolved.startsWith(root + path.sep) && resolved.toLowerCase().endsWith(".docx") ? resolved : null
 }
+
+// A PDF kept in the person's own Files (13 Oct 2026). It is its own check, so nothing that edits a resume (and asks
+// `ownedResumePath` for a Word file) can ever be handed a PDF.
+export function ownedPdfPath(base: string, userId: string, candidate: unknown): string | null {
+  if (typeof candidate !== "string" || !candidate || candidate.includes("\0")) return null
+  const root = path.resolve(base, userId)
+  const resolved = path.resolve(candidate)
+  return resolved.startsWith(root + path.sep) && resolved.toLowerCase().endsWith(".pdf") ? resolved : null
+}

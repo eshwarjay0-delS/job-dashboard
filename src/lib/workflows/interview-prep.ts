@@ -187,6 +187,7 @@ export async function runInterviewPrepWorkflow(args: {
       maxTokens: 1000,
       temperature: 0.2,
       usageSink: usage,
+      purpose: "interview-prep",
     })
 
     const parsed = exactStringArrayObject(

@@ -1,0 +1,6068 @@
+{
+  "sourceRepo": "eshwarjay0-delS/parfAct",
+  "targetRepo": "eshwarjay0-delS/job-dashboard",
+  "sourceTree": "e9ecf0d6c551a49a10a9135ab4d547ccc6ff16fa",
+  "destTree": "18950b946d8a65a4b9b8987de07749568bd4fc4c",
+  "createdAt": "2026-10-14",
+  "warning": "Inventory is NOT a complete backup. Do not delete source repository while any entries remain not_archived or diverged and unreviewed.",
+  "count": 752,
+  "states": {
+    "identical": 22,
+    "diverged": 4,
+    "not_archived": 726
+  },
+  "categories": {
+    ".claude": 37,
+    ".editorconfig": 1,
+    ".env.example": 1,
+    ".githooks": 1,
+    ".github": 6,
+    ".gitignore": 1,
+    ".nvmrc": 1,
+    "CLAUDE.md": 1,
+    "CONTRIBUTING.md": 1,
+    "ChatGPT.md": 1,
+    "HANDOFF.md": 1,
+    "LICENSE": 1,
+    "NOTICE.md": 1,
+    "README.md": 1,
+    "SECURITY.md": 1,
+    "apps": 117,
+    "blueprint": 169,
+    "config": 2,
+    "copilot": 82,
+    "desktop": 18,
+    "docs": 63,
+    "handoff": 17,
+    "package-lock.json": 1,
+    "package.json": 1,
+    "packages": 56,
+    "prototypes": 2,
+    "render.mjs": 1,
+    "scripts": 31,
+    "services": 58,
+    "skills-lock.json": 1,
+    "suite": 48,
+    "tsconfig.base.json": 1,
+    "worker": 27,
+    "wrangler.toml": 1
+  },
+  "entries": [
+    {
+      "path": ".claude/hooks/session-start.sh",
+      "sha": "ea6537385cf34a8fe6e3f0c6bb7b4f16c7594baf",
+      "size": 3285,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/settings.json",
+      "sha": "6c8a6ebfc84e5f06b2a89ca817ddaf34deee2de4",
+      "size": 955,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/SKILL.md",
+      "sha": "528e29d340bd82847397ae2f047ef72121800faa",
+      "size": 17673,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/assets/batch-triage.json",
+      "sha": "7d41f33995aaa4e6b7a7cd5b80b8d1f5fa33ecd5",
+      "size": 5705,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/assets/browser-route.json",
+      "sha": "b94c50e4f5875b063a1a12c75f27b84796bea2d4",
+      "size": 1226,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/assets/checkpoint.json",
+      "sha": "c983a8feec77be645dbaf636fb9ed887d871265a",
+      "size": 1317,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/assets/completion.json",
+      "sha": "445e5f716fead60f8f965d6b986845cad38bc48f",
+      "size": 1076,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/assets/context.json",
+      "sha": "7ee203272fea2e9b1aa2bcc27fa3bce829950db0",
+      "size": 1437,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/assets/document-block.json",
+      "sha": "c859db22608ae778e2523dafdf82764460d456e2",
+      "size": 1577,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/assets/routing.json",
+      "sha": "46f83e198911d726675ae547d6a7be9fa6495a17",
+      "size": 1014,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/assets/rubric.json",
+      "sha": "738cc5a956970b7aec0dd9fa8b74fe9fd88385bd",
+      "size": 1085,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/assets/semantic-rules.json",
+      "sha": "86b9b3c58f8c00b3f761167dc504dcd7bf82afb3",
+      "size": 1484,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/assets/span-selection.json",
+      "sha": "59c9538709ec5d835d2e481a2f4ee1e8284d2075",
+      "size": 1154,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/assets/support-labels.json",
+      "sha": "a8a3529a3c97652d39d9f4990ca33415fcf5a194",
+      "size": 253,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/assets/triage.json",
+      "sha": "dd68d048396e9ceeac876fb7be5cee250db542b4",
+      "size": 1131,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/assets/voice-style.json",
+      "sha": "142aaa482aa50d39f4d5c33a8a32905cda66fbec",
+      "size": 1322,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/agent-recipes.md",
+      "sha": "14730ad526818e54e7c2cf525880bd28dbf04e22",
+      "size": 16274,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/api.md",
+      "sha": "298f8f1b54ad9ef6bb59ba9371c8d3c26616b1bb",
+      "size": 8961,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/calibration.md",
+      "sha": "eeedeb75bb7f542b1d0ac0770e1ff7a686252ad1",
+      "size": 8993,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/community.md",
+      "sha": "6624b9115b0210863f2441cc240ed1f03238018b",
+      "size": 31716,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/context-and-throughput.md",
+      "sha": "09d5f889908a25e501788cfd472f212718ed0946",
+      "size": 5764,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/context.md",
+      "sha": "52bc8d6fba48b49f45913000d62be15984670614",
+      "size": 2524,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/customization.md",
+      "sha": "c31d9df1be3a4d9a299eb2e13373d4f25d441818",
+      "size": 8812,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/decision-datasets.md",
+      "sha": "fe2bade03e66cdecd08b6ef2e641aba4d2bbe8c2",
+      "size": 7720,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/ecosystem.md",
+      "sha": "8e4aaf95045e5615e9ed6f5eb6fe0fcd721ee698",
+      "size": 10501,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/human-recipes.md",
+      "sha": "1f3d760a8cf0e0450e57f4c31086848af709500f",
+      "size": 15496,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/implementation-patterns.md",
+      "sha": "f6f89486168483ebd2b3aac9b15f3c6a2ee8dd01",
+      "size": 18772,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/index.md",
+      "sha": "89d69141c9527cf120088f16b286652998dd9625",
+      "size": 5181,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/intake-2026-09-21.md",
+      "sha": "a999ee77558bab4a9afec550179c673d3e02a0ce",
+      "size": 20971,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/pitfalls.md",
+      "sha": "201c205b06158599fc238ef78b3b6b2ab2b481a6",
+      "size": 10520,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/question-design.md",
+      "sha": "7c972ccce2d85b9a17d0e215ea259d7486884da2",
+      "size": 9739,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/routing.md",
+      "sha": "88515de113d8e4cb72bf24f4d22d14a5c693291a",
+      "size": 2411,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/setup.md",
+      "sha": "03b2dc729700e79cecc84b0144344160755876e3",
+      "size": 6839,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/simulation.md",
+      "sha": "fe0986fcb64999fbf235c259b755a5c63d858bc2",
+      "size": 2159,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/twitter-workflows.md",
+      "sha": "a9352ce9e98a842b36c0c2710b8432780a47a447",
+      "size": 7884,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/skills/jev/references/x-intake-2026-09-20.md",
+      "sha": "d8e8fe9019f8a031cfffa195a80595905b897afb",
+      "size": 15880,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".claude/workflows/kompas-criticism.js",
+      "sha": "c7ad12f0c9c9072a41efeda308e77210cd233921",
+      "size": 26496,
+      "category": ".claude",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".editorconfig",
+      "sha": "8c52ff9378d3af25a3cbe171ea37c8c3d56d5203",
+      "size": 188,
+      "category": ".editorconfig",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".env.example",
+      "sha": "6ff36a879dde5c53bbd7717f4b81819e9934c93b",
+      "size": 3930,
+      "category": ".env.example",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".githooks/pre-commit",
+      "sha": "d4b3067be5fbbeb753784dc00b46d9dc048d457a",
+      "size": 234,
+      "category": ".githooks",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug.yml",
+      "sha": "c83720ac53c38d8a255f85aca57d6706c1f173c6",
+      "size": 1127,
+      "category": ".github",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/feature.yml",
+      "sha": "7c4c636c2dd6ad3085cfdc799d19f010954e458a",
+      "size": 1109,
+      "category": ".github",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".github/pull_request_template.md",
+      "sha": "fd502b3f1fb8a2163c1a65562456a73189bd3ed4",
+      "size": 663,
+      "category": ".github",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".github/scripts/check-kompas-windows-protocol.ps1",
+      "sha": "1159995c94b383119d018e5a6662ac0e87f7fd70",
+      "size": 3819,
+      "category": ".github",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha": "3be72372c3b98e537ae1ccf363c01ce4c65b6f9c",
+      "size": 3712,
+      "category": ".github",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".github/workflows/kompas-desktop-release.yml",
+      "sha": "13130b09d28544a95375aef56fe16f22e38dd6d6",
+      "size": 2699,
+      "category": ".github",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".gitignore",
+      "sha": "c2bba148cb7eefb06832acd3eec7d109942a52d7",
+      "size": 1051,
+      "category": ".gitignore",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": ".nvmrc",
+      "sha": "2bd5a0a98a36cc08ada88b804d3be047e6aa5b8a",
+      "size": 3,
+      "category": ".nvmrc",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha": "6d1ef4567a7e78efb5be18073d656e423da7766c",
+      "size": 11460,
+      "category": "CLAUDE.md",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "sha": "9918881f957abd69ec4abd743d4839dbc295b40f",
+      "size": 2125,
+      "category": "CONTRIBUTING.md",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "ChatGPT.md",
+      "sha": "173f7d599396765fb4cc672dfaea82784da9618f",
+      "size": 32679,
+      "category": "ChatGPT.md",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "HANDOFF.md",
+      "sha": "830a28958e1b3c0892052d4d320f038d1e85a475",
+      "size": 144635,
+      "category": "HANDOFF.md",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "LICENSE",
+      "sha": "aaf22d2c741c65692e2ab635d1faa22a8845edd3",
+      "size": 1264,
+      "category": "LICENSE",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "NOTICE.md",
+      "sha": "b52d28980b7e0d46e8690bb1e86d875ec8f104ef",
+      "size": 1125,
+      "category": "NOTICE.md",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "README.md",
+      "sha": "026c3fcba6561235c4ed96d286b8babb227197ea",
+      "size": 5864,
+      "category": "README.md",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "SECURITY.md",
+      "sha": "709a0c3ca46ad0c6f5d6079abcf86c9f12c62ff4",
+      "size": 2519,
+      "category": "SECURITY.md",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/cli/bin/kompas.js",
+      "sha": "7824d51998d14a05fc3f1721f9b3996a5ae9c0b4",
+      "size": 193,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/cli/package.json",
+      "sha": "6e313936d660bf940d4b4f307df925cf1c71dd88",
+      "size": 582,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/cli/src/client.ts",
+      "sha": "974b337f7f264e1d0eac95130a6c2d4505fad882",
+      "size": 5392,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/cli/src/config.ts",
+      "sha": "95e0cc95a2464e067330b795db8849127e4093f4",
+      "size": 1776,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/cli/src/handlers.ts",
+      "sha": "a13e3993d926031e265d23e4248e82ac8215237b",
+      "size": 16761,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/cli/src/main.test.ts",
+      "sha": "2e5d4130e799d1160d68296e8dc6f3d8e106c253",
+      "size": 11483,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/cli/src/main.ts",
+      "sha": "bb331e666d03900a13e504dc237574f7cbe91a12",
+      "size": 2963,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/cli/src/render.ts",
+      "sha": "679ec984831712562f49875948ff81631f012853",
+      "size": 3268,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/cli/src/repl.ts",
+      "sha": "654602a75a4e8463b448c3fa7cdad65ec2d1a4c6",
+      "size": 1776,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/cli/tsconfig.json",
+      "sha": "c81edeeeaea830bd97518c00071cbc16b756ecf4",
+      "size": 292,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/dictate.html",
+      "sha": "4b2ffaf3cc3c99cc39312ef2861b67da4de3508d",
+      "size": 1415,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/icons/apple-touch-icon.png",
+      "sha": "2d55137216c80637d25ca7a967656899214a83a1",
+      "size": 5784,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/icons/icon-192.png",
+      "sha": "bc14c840293b1631eeb8e683b0b21c1943d1ecf5",
+      "size": 6766,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/icons/icon-512.png",
+      "sha": "9add6176f6a65d5acf8d5bcdeef7e44bbc26ca92",
+      "size": 20234,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/icons/icon-maskable-512.png",
+      "sha": "659814f31e83869aed30614ee5b6c6058a0b0b07",
+      "size": 13848,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/index.html",
+      "sha": "987342c457fc7915a16016418eeed09efec5a2ef",
+      "size": 14828,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/manifest.webmanifest",
+      "sha": "fcff48c03faa324cd050110b633bbd68faedcda3",
+      "size": 827,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/package.json",
+      "sha": "2ab0a440206ebe07319c317f17bb8cb00d8c0633",
+      "size": 555,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/announce.test.ts",
+      "sha": "a0d35ecd3fc9fce78653de22a88d8fc63d4c6265",
+      "size": 5990,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/announce.ts",
+      "sha": "3d66a541a70df9e4aa280233deec666a3017a25c",
+      "size": 7537,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/api.test.ts",
+      "sha": "f5192d28edeaed81772165ac2fa15ce1f7766227",
+      "size": 8855,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/api.ts",
+      "sha": "6771bce2f7f0b99386c6cc1ce32076c37e19e2d9",
+      "size": 11469,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/app.ts",
+      "sha": "d5ad8a274bbdc079a097d09b0cfa1ff1a54cf4b1",
+      "size": 260939,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/audible.test.ts",
+      "sha": "4fa60d52e447e4d8a5b17c9003e357160468af3e",
+      "size": 3954,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/audible.ts",
+      "sha": "989fd4d3af2b50d192566f733350cee23bbea91f",
+      "size": 5251,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/awake.test.ts",
+      "sha": "89a15de5e6358c813c29325f91113a60ffb379a1",
+      "size": 6717,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/awake.ts",
+      "sha": "e731ad2dae1938a2fedc3684f51b4009d488cad9",
+      "size": 7888,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/bargein.test.ts",
+      "sha": "f077de47ead84897120c36b6414e46f1c2328c61",
+      "size": 3392,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/bargein.ts",
+      "sha": "1918f459247fd994c48787c33f5dc82a519b5875",
+      "size": 5921,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/checked-dates.generated.ts",
+      "sha": "b47cecb5414869596f0e789ed78c0ff855881291",
+      "size": 603,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/consent-copy.test.ts",
+      "sha": "d9005f98e61bc0c9bcfe13c877fc2ac63280b3fe",
+      "size": 2159,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/cost-ledger.test.ts",
+      "sha": "3f90f9765137ad69935edbbf91415322d85c4c89",
+      "size": 3464,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/cost-ledger.ts",
+      "sha": "78b2509f7807c54ecc17585169fbb06cb256cb9d",
+      "size": 3839,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/cues.test.ts",
+      "sha": "551298e608c2de466070d052e46552a6d2729524",
+      "size": 32737,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/cues.ts",
+      "sha": "20b9c8b52a1170e2eef466725c54db793fc35744",
+      "size": 39906,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/demo.test.ts",
+      "sha": "7e68b764490a77653a9a46573d870286ef8071c6",
+      "size": 19784,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/demo.ts",
+      "sha": "88efb42ac07256e5a7c55cb528412b75e5b96616",
+      "size": 31638,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/devices.test.ts",
+      "sha": "c820334446e82b5fa6e96e7a26fabc7a863a6725",
+      "size": 23927,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/devices.ts",
+      "sha": "718ec398fea0dd500cdcd37c9d40f23df3ee58cf",
+      "size": 32184,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/diagnosis.test.ts",
+      "sha": "ca21dd91d9d9123a051c278cb03dd939c613aadf",
+      "size": 13191,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/diagnosis.ts",
+      "sha": "dde02db83ba3820b04bbab9b5928ea9bd582bcd3",
+      "size": 19313,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/dictate-main.ts",
+      "sha": "f3ae7a45931c7ea0b03cdbb285b2d2280aeba8bd",
+      "size": 153,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/dictate.css",
+      "sha": "72b70887e44c27d27bd40b082cd6b47f7d279b77",
+      "size": 21375,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/dictate.test.ts",
+      "sha": "10e0b68407a4a60511f843295a2835266e76d876",
+      "size": 40082,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/dictate.ts",
+      "sha": "9e52c513caff1bc0d7eb8f1b2966f7bd577f72a5",
+      "size": 83847,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/dictation-text.ts",
+      "sha": "4db988ba9fac9bd29c74b7940e61bb22c7f6a119",
+      "size": 12065,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/dictation-voice.test.ts",
+      "sha": "32e5a4482c73a67c520c0d2dbca24b643217ecff",
+      "size": 4258,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/dictation-voice.ts",
+      "sha": "5cd8e792f45bc86840d495e36a58fb8221c91a20",
+      "size": 10019,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/disclosure-view.test.ts",
+      "sha": "cded97fc7a2cd53764ea24f95a816a0ef04b898d",
+      "size": 7391,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/disclosure-view.ts",
+      "sha": "6783312aabb9459a842c4dbc66a335f23a928b97",
+      "size": 11218,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/dom.ts",
+      "sha": "4a0badc6b6245b49a8ec94de98750d2c2d897ace",
+      "size": 1807,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/draft.test.ts",
+      "sha": "84488f99c29ee19b47c0d592f50282bcb62588c0",
+      "size": 6261,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/draft.ts",
+      "sha": "b66aaae5b734ddc2464e779afbfffa8991cd82c4",
+      "size": 3784,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/errors.test.ts",
+      "sha": "98381557ba290150e66e251da69ffab4a0fdd8f6",
+      "size": 20424,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/errors.ts",
+      "sha": "196c2c27e57ca04838f0b205c8325d9567bf3050",
+      "size": 29929,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/handoff.test.ts",
+      "sha": "a6cf107a0b08bbfae16ee5d179ebb84fb7a06f84",
+      "size": 30283,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/handoff.ts",
+      "sha": "afb6285aeb7642dc49637b33bf78ef40f068acbf",
+      "size": 33636,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/identity.test.ts",
+      "sha": "a1c3b47697b3f4d6f18b5cd00b0b675e10449b06",
+      "size": 13761,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/identity.ts",
+      "sha": "e23814b526527fb4ef06d5d21674bd442af84a66",
+      "size": 11938,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/installable.test.ts",
+      "sha": "3e105c35a2f4a274c667a54107c5469101abea06",
+      "size": 11944,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/invariants.test.ts",
+      "sha": "2140b7409d024c2ea7ef032904a52e95a210578d",
+      "size": 21079,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/journal.test.ts",
+      "sha": "381a2f79cb39380001f0be42e7b0b8956b419f53",
+      "size": 32940,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/journal.ts",
+      "sha": "27f4fa7caab850c8b1cf93988aeb4da3f69bb223",
+      "size": 40117,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/keepalive.test.ts",
+      "sha": "06881152309b9c415d9649882670182c5a529d5c",
+      "size": 5483,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/keepalive.ts",
+      "sha": "928a11e0a5511fd92c7fa601902508ccd3132b6d",
+      "size": 7758,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/level.test.ts",
+      "sha": "af6002502b71a4b378d9b420d5477fd471a5f1f7",
+      "size": 60192,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/level.ts",
+      "sha": "43b47105c38c5d6abe5f01de34cca177250ac24d",
+      "size": 79756,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/live-diagnostics.test.ts",
+      "sha": "055f593dad068c806047086beba823c46fa3291a",
+      "size": 10790,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/live-diagnostics.ts",
+      "sha": "673622d0271e789cc3dee99eeb7975284538e9a5",
+      "size": 11393,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/live-region.test.ts",
+      "sha": "579bf859b02c48190746df36d397089c775670ba",
+      "size": 8740,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/main.ts",
+      "sha": "41a2333a0ab83889f1aa5457fdd6c3f53342cee9",
+      "size": 248,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/memory-edit.test.ts",
+      "sha": "91ba82f07840b0484b1636dec619aaf86056be21",
+      "size": 5044,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/memory-edit.ts",
+      "sha": "2727d3cb1d4872fe591e9465c5ea7471a3c2fb63",
+      "size": 3327,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/mic-policy.test.ts",
+      "sha": "e1b20a70c87963826014715364ceedde625dded0",
+      "size": 18139,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/mic-policy.ts",
+      "sha": "c7ba162e5bd33727bdb498ca4955e425f893ac1d",
+      "size": 14496,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/onboarding.test.ts",
+      "sha": "b7d28617dbf996f36ac558bf0f5daeb672a0ee87",
+      "size": 4369,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/onboarding.ts",
+      "sha": "f678514b9572d4d98a3e798f5cb43a762c6c8735",
+      "size": 4922,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/pcm.test.ts",
+      "sha": "f33e19cc83bec890970c7c0f4028296e3e0ca6f9",
+      "size": 18078,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/pcm.ts",
+      "sha": "bafc2be80865b28b9f523d6ae4f40ec368956c19",
+      "size": 21160,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/persistence.test.ts",
+      "sha": "33534265fff3a78b1d88bf83293886961f968c4e",
+      "size": 4548,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/persistence.ts",
+      "sha": "4dbe5e9341c6c0c9b7c867f427f8080426366099",
+      "size": 6207,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/privacy-view.test.ts",
+      "sha": "1b31473eec1a017ad3c855d9b6e9cf12c57a6710",
+      "size": 6774,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/privacy-view.ts",
+      "sha": "7485e076388ad519bc19fd58fef1f6fb10a993db",
+      "size": 8329,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/privacy.test.ts",
+      "sha": "070b953ca88bb0258cfc6fc9d297339b7bcbec5d",
+      "size": 33940,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/privacy.ts",
+      "sha": "4d347f8dab32c6ad1a3998fa2498d1e912f9f473",
+      "size": 41308,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/private-mode.test.ts",
+      "sha": "1310a346145cf36549f16b126ed1b00d396bdd70",
+      "size": 5433,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/private-mode.ts",
+      "sha": "7040b3bbfe491e62d38ca3e304eb18fe9ba1622f",
+      "size": 4661,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/probes.test.ts",
+      "sha": "8a7ae9d3165de4566d6c48db4195a5662c335a4f",
+      "size": 12232,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/probes.ts",
+      "sha": "9f933303be223e5bcf82603beeaad75c1e10d42d",
+      "size": 18007,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/pwa.ts",
+      "sha": "9766486ed327f5cfd72706d8a71b617b68046d4d",
+      "size": 6223,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/recorder.test.ts",
+      "sha": "9bae0ef64f90f7a6e3710bff4fc264d2d8f96020",
+      "size": 74593,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/recorder.ts",
+      "sha": "2c66fc89abf0a49fad6b5343aa30559dbe8883a7",
+      "size": 86818,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/recursion.test.ts",
+      "sha": "8e55f9b619ad4e0f5df7afdbeab2db7adb2e191e",
+      "size": 7806,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/selftest.test.ts",
+      "sha": "9184a59733b8bfb631762b9b975521cdef439240",
+      "size": 19866,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/selftest.ts",
+      "sha": "03fdc9bdc9fc7c9384e1b0acd94eedd169a78225",
+      "size": 30076,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/speech.test.ts",
+      "sha": "58dc65fdaae8b2b8ba4039336009db1e410710ce",
+      "size": 59938,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/speech.ts",
+      "sha": "d5ec3e7684a15782620d858e0c8fbc350e91b08b",
+      "size": 57239,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/status.test.ts",
+      "sha": "e1f6e2bc65323792349d786ac8d4030645ffd73a",
+      "size": 8587,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/status.ts",
+      "sha": "fdf3f925b84cc830e54e47de973d074fa5241347",
+      "size": 5271,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/styles.css",
+      "sha": "14623215a089d690a3fb00309610cbb3c62247d0",
+      "size": 80144,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/subtag.test.ts",
+      "sha": "24a68d54b772f8f724301f3771a70870da5f88e2",
+      "size": 1180,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/subtag.ts",
+      "sha": "5060d4a19461ef1e1df0e6fd3bbc10aa5348558c",
+      "size": 1613,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/talk.test.ts",
+      "sha": "514a10fe476f1f81f77009c03f3ee617d835341d",
+      "size": 4880,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/talk.ts",
+      "sha": "3ee47a4a0c7ee8435e9bdb10cb3252f88119eab3",
+      "size": 4850,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/trouble.test.ts",
+      "sha": "5dc550f5c42a39d12e742dc4fa0ec46f7af76216",
+      "size": 2020,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/trouble.ts",
+      "sha": "76c06d5d133ed1d7b8d41c8a3f87a568dbcffb04",
+      "size": 2875,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/turn-log.test.ts",
+      "sha": "a674329f0d243c21a0775db3ccf26fc94ac721be",
+      "size": 4404,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/turn-log.ts",
+      "sha": "c328b065bf1a4c5883c546878cb9e422bdd730ea",
+      "size": 7535,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/vocabulary.test.ts",
+      "sha": "ccedb749e7d1cff71cd3aa0733f7d9e573fb421b",
+      "size": 4430,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/vocabulary.ts",
+      "sha": "485e8a7b3a6985a7aa44b3ac4a98e30148618591",
+      "size": 6504,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/voice.test.ts",
+      "sha": "497bdec381fc95fe81c22e42e713827810e44b99",
+      "size": 26638,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/voice.ts",
+      "sha": "5513e648a89ed306411cc569c96c696d8fc08284",
+      "size": 41919,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/why-silent.test.ts",
+      "sha": "27f69070965017d0435c8c824a23a71556277419",
+      "size": 5372,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/src/why-silent.ts",
+      "sha": "c7277a55e3ca7ebbd9ec044f0e0d6a8f9c6eef5f",
+      "size": 5839,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/sw.js",
+      "sha": "f2c9e5233caddf98327973bd52925fe1c512ecb1",
+      "size": 3837,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/tsconfig.json",
+      "sha": "b5b3774490fd8e722b8941e9bdbde334ca5fc9c8",
+      "size": 346,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "apps/web/tsconfig.test.json",
+      "sha": "27d9e1b086c89951aab5ad6cded53dd01d18e6e4",
+      "size": 573,
+      "category": "apps",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/ARCHITECTURE.md",
+      "sha": "e5145ec785cc5018d00de5b6a53d858b27db0f42",
+      "size": 16300,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/BLUEPRINT.md",
+      "sha": "f915c020429e04777e47e7da70a7426b7bcb81ff",
+      "size": 75446,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/DESKTOP.md",
+      "sha": "6a378064db8f913ebbf0f3af706fd207f3e745f1",
+      "size": 5307,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/build-blueprint.js",
+      "sha": "7eae6f8db179533240c4f2ef09f4c3f2464f0d27",
+      "size": 16328,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_buyCredits_tab_credits__1-credit-for-19.00-38.00.html",
+      "sha": "57e7e52a348e3e22f7501e385010040c74f37a0d",
+      "size": 4837,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_buyCredits_tab_credits__How-do-credits-work_-See-video.html",
+      "sha": "0ae6959d3dbbc109785d43e77d1d93c6eee84a38",
+      "size": 1946,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_buyCredits_tab_credits__Plan-options.html",
+      "sha": "154aa3c8c802133ac3c3495e032249aeaa70c46a",
+      "size": 2983,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_buyCredits_tab_credits__Referral-Code.html",
+      "sha": "5a56752c2c68c622b04170271b0f5c3d7a1d3aa3",
+      "size": 12846,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_buyCredits_tab_credits__Refund-policy-Learn-more.html",
+      "sha": "25c7a5820f006e0aeebf4b1dcc6bea3c27da536b",
+      "size": 3202,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_buyCredits_tab_subscription__How-do-credits-work_-See-video.html",
+      "sha": "a3a7095163f1e147d43c9a8f0a1a9ec246685677",
+      "size": 1946,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_buyCredits_tab_subscription__Referral-code.html",
+      "sha": "c264d433f988de95d0387ee48bdb6d77033d0480",
+      "size": 12846,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_buyCredits_tab_subscription__Refund-policy-Learn-more.html",
+      "sha": "25c7a5820f006e0aeebf4b1dcc6bea3c27da536b",
+      "size": 3202,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_buyCredits_tab_subscription__Weekly-plan-for-39.00-_-week-78.00.html",
+      "sha": "959aa29201919c492873e9fe89b1dbadac563b06",
+      "size": 4847,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_callSessions__Plan-options.html",
+      "sha": "154aa3c8c802133ac3c3495e032249aeaa70c46a",
+      "size": 2983,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_callSessions__Referral-Code.html",
+      "sha": "5a56752c2c68c622b04170271b0f5c3d7a1d3aa3",
+      "size": 12846,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_callSessions__Session-actions.html",
+      "sha": "1c61c555289cb80cfa34ea2e032251c2e2266591",
+      "size": 3739,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_callSessions__Sort-sessions.html",
+      "sha": "ea66b60c9105cf112b1f04ca0634b1fc56e1cd7a",
+      "size": 4029,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_callSessions__View-Transcript.html",
+      "sha": "b665003d413ee3effd94c7f6a264b9d9318425cb",
+      "size": 60485,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_callSessions_mode_mock__Plan-options.html",
+      "sha": "154aa3c8c802133ac3c3495e032249aeaa70c46a",
+      "size": 2983,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_callSessions_mode_mock__Referral-Code.html",
+      "sha": "5a56752c2c68c622b04170271b0f5c3d7a1d3aa3",
+      "size": 12846,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_documents__Open-document-menu.html",
+      "sha": "2b69e1567b7c013f2201b7f15a72e612168ac439",
+      "size": 3747,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_documents__Plan-options.html",
+      "sha": "154aa3c8c802133ac3c3495e032249aeaa70c46a",
+      "size": 2983,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_documents__Referral-Code.html",
+      "sha": "5a56752c2c68c622b04170271b0f5c3d7a1d3aa3",
+      "size": 12846,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_documents__Sort-documents.html",
+      "sha": "420683e4a77d92acc972c439c0e2cdbfd4dddc0d",
+      "size": 4023,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_headshots__-English.html",
+      "sha": "1f5422bdcebf360ad172c170e2c46fe92021a91b",
+      "size": 4969,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_headshots__Referral-code.html",
+      "sha": "c264d433f988de95d0387ee48bdb6d77033d0480",
+      "size": 12846,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_mockInterviews__How-a-mock-interview-works.html",
+      "sha": "492c24886272332c41fc2f3d41e76ef6bab80689",
+      "size": 4398,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_mockInterviews__Referral-code.html",
+      "sha": "c264d433f988de95d0387ee48bdb6d77033d0480",
+      "size": 12846,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_profile__Referral-code.html",
+      "sha": "c264d433f988de95d0387ee48bdb6d77033d0480",
+      "size": 12846,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_resumeMaker__-English.html",
+      "sha": "2280f62225ac662e0c7f3b98579a048aec3d1472",
+      "size": 4970,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_resumeMaker__Open-resume-menu.html",
+      "sha": "e88bcb88bf6e8d7405a8cf4bfada101d59c37332",
+      "size": 3772,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_resumeMaker__Plan-options.html",
+      "sha": "154aa3c8c802133ac3c3495e032249aeaa70c46a",
+      "size": 2983,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_resumeMaker__Referral-Code.html",
+      "sha": "5a56752c2c68c622b04170271b0f5c3d7a1d3aa3",
+      "size": 12846,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_resumes__Open-resume-menu.html",
+      "sha": "965ea9b37e35696e577b3b0c4d8c3b0b813ddfbe",
+      "size": 3897,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_resumes__Referral-code.html",
+      "sha": "c264d433f988de95d0387ee48bdb6d77033d0480",
+      "size": 12846,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/overlays/dashboard_resumes__Sort-resumes.html",
+      "sha": "93daa928fe428b2046c717477bdadf554e984500",
+      "size": 4021,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/compare.md",
+      "sha": "415455c9d1d3768744a682e7bee3ec6d184e6139",
+      "size": 10397,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/compare_parakeet-ai-vs-aiapply.md",
+      "sha": "155868e6d74be084b91012f9d39986b9a6e53ae2",
+      "size": 16138,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/compare_parakeet-ai-vs-cluely.md",
+      "sha": "2cf8fe31f64a7cb012e95b8a3c036d857d264bc0",
+      "size": 16202,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/compare_parakeet-ai-vs-final-round-ai.md",
+      "sha": "69c8bd5926cf9de99c5ca4e7ec6e7ccc4ee6232a",
+      "size": 16340,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/compare_parakeet-ai-vs-interview-coder.md",
+      "sha": "5a1cc383ad3ab946b1dc77d8514aa25d394da0ee",
+      "size": 16320,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/compare_parakeet-ai-vs-lockedin-ai.md",
+      "sha": "6be83d4298f55d5d0cc6d84f344462501d94014d",
+      "size": 16297,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/dashboard_buyCredits_tab_credits.md",
+      "sha": "6ed9290960fd90d4011221e8db3502566c8505aa",
+      "size": 21527,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/dashboard_buyCredits_tab_subscription.md",
+      "sha": "40a1aec626aa5c65026f4bc07afc086319a4417b",
+      "size": 20669,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/dashboard_callSessions.md",
+      "sha": "867264b2b422a7603551069c58172c79a1ed16c9",
+      "size": 28018,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/dashboard_callSessions_mode_mock.md",
+      "sha": "56a225c9b1a83ed0481f8386d3570142c4ff372f",
+      "size": 20055,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/dashboard_documents.md",
+      "sha": "e333c378c3f0e2d902d95a3e8d0a4d172fd07cb4",
+      "size": 25710,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/dashboard_headshots.md",
+      "sha": "c657889e69b59fe101468fab4d068ff71c66b22e",
+      "size": 18159,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/dashboard_mockInterviews.md",
+      "sha": "cabd2ce6e07ecc628f8a81343e50218ffec71a15",
+      "size": 11272,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/dashboard_profile.md",
+      "sha": "944e7a6dd4335b797df3d96bff7bff8db2b439ee",
+      "size": 10104,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/dashboard_resumeMaker.md",
+      "sha": "20632b8855ebbcef9221d9f2404dd7358f10da99",
+      "size": 13384,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/dashboard_resumes.md",
+      "sha": "3d701b8af97369c1e6534b3d98aea1bd92d723f1",
+      "size": 22583,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/headshots.md",
+      "sha": "e2668cba3b41f130f18549dadf614234382f42d5",
+      "size": 29030,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/home.md",
+      "sha": "8c3b7c8ab0609f097295d33dad73400e332089a6",
+      "size": 60227,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/mock-interview.md",
+      "sha": "5a6d5e80141ccabf0070d7dcf2ce5838ff8f73fe",
+      "size": 30704,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/pricing.md",
+      "sha": "2023cc59a54af1bc5ecfc102ed00e9e3e2e01094",
+      "size": 60235,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/privacy-policy.md",
+      "sha": "75e0fd7015831562c3fc48f8ac72033572c66820",
+      "size": 16779,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/question-bank.md",
+      "sha": "c42eff56997eb898113d82b1cf6859683f40dc9f",
+      "size": 28759,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/resume-maker.md",
+      "sha": "d18bd1f1ea9c9b99dc898a7cbf79b8a2d281e8f0",
+      "size": 33503,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/pages/terms-and-conditions.md",
+      "sha": "27cfc42e292724b7adaf794ac0c772dbc635725b",
+      "size": 15798,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/css/0q_ixmfrxhtdq.css",
+      "sha": "bfde3c84a17e3a61f8359b93a9bdc25eaa01c40e",
+      "size": 1061,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/css/2c9a0o62r7fq8.css",
+      "sha": "55480ef445c76b6ba8f4e013dbbcc72508337dce",
+      "size": 24382,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/css/2lf2zoys8puqa.css",
+      "sha": "f9a77fa544ef5770fb0edae74b1ce9f2c483d3be",
+      "size": 7648,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/css/43xxrfnd6m8wh.css",
+      "sha": "066e1df8ff25660540cbed668cde34e0d987b779",
+      "size": 371679,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/deep-states.zip",
+      "sha": "821cde3570b98ef7f34a4d8b0042a5f635cc8c50",
+      "size": 94929,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/007_o1ci0tjj6.js",
+      "sha": "cab00910668a65219b8ecf99aa3c18e82da6d943",
+      "size": 45010,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/075bbjijw82mz.js",
+      "sha": "fab3256c2f75c50d54e840d5bfa8ad999a606540",
+      "size": 37719,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/09syck5q2himv.js",
+      "sha": "6cc49cfb54b29cb3f42c9f5bbea0b1b0c644bcdc",
+      "size": 5250,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0_vx_cr2xte2_.js",
+      "sha": "71f0d2f08085ec3c9b7746f40d6e4314d7a2cb05",
+      "size": 38635,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0aj2prnx77_xj.js",
+      "sha": "cbf34df6defe5866076bfcad8ebab51df21be59c",
+      "size": 59584,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0c0hxoamwjsbw.js",
+      "sha": "ab422b94a4fbe76275d31c0bf7ef334768b39cae",
+      "size": 112594,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0e4azzvbmunj5.js",
+      "sha": "61cdbef4a77602ef0aff51a1557b1f2b63e43a9e",
+      "size": 61715,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0gh-bcn17wzwb.js",
+      "sha": "9c27dcc427f0ab30a8aa52f5b8975d959a53c723",
+      "size": 36739,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0gopmbltbg1e3.js",
+      "sha": "66852d9c74e5d730b8a186137487cfcaac357cca",
+      "size": 31141,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0h94bct_rl2_n.js",
+      "sha": "553d5172752b3a9dea4c335cef07a7b16ed054f7",
+      "size": 11550,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0irditbwp_5wq.js",
+      "sha": "e611468972ec438dc95bf74a9a10edf7cf13b9ab",
+      "size": 4114,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0k53gsf95u-36.js",
+      "sha": "30c094828b7c69c6e856e59de78704672b1c8443",
+      "size": 101238,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0klecstxcsp4n.js",
+      "sha": "15b71e78ac86b723ce864dee6053c9d6eab20043",
+      "size": 21071,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0myt-a7ujacvd.js",
+      "sha": "5d0f2182f4289491d350967f88252f85bd3dfe44",
+      "size": 63944,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0pautb9swgfjm.js",
+      "sha": "4bc6f498b3150bc35d6e0bdbe3e2ae418b498d53",
+      "size": 14241,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0q0_yryqz8lbo.js",
+      "sha": "d88ac44812f17b7e74b5e6e936b461be00935065",
+      "size": 37548,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0r0k9ffeny50k.js",
+      "sha": "748641f3b6eec7f2a974df70c1fbf5674f5ca9f3",
+      "size": 8905,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0ss_dfxyci259.js",
+      "sha": "e17373b205ed3ed9938aa9df26c78c2a0b888903",
+      "size": 280252,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0w3m8ej78o3as.js",
+      "sha": "728d487d2ff938f99eadcd11474165486cf76a6f",
+      "size": 7556,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/0zdwx76f0vtwd.js",
+      "sha": "c03eae9a4e2f07573b023b0bbd444a5deb22f90a",
+      "size": 120395,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/1eg-7wud-r21z.js",
+      "sha": "9a52244ec0b5fb63713b201ccef7cd4d503f998b",
+      "size": 14109,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/1jj99of_nknnq.js",
+      "sha": "9acfbe1a5ea5a3937280f1fe01cc1b81e3ccb43c",
+      "size": 56635,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/1k83ibaytaxi0.js",
+      "sha": "28a1843d602bec1902a83506aeaf42748585e1c3",
+      "size": 32220,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/1kvc17wdzh_j5.js",
+      "sha": "08d5a569ba9d5dcd77d27eaa3dfcf32d0d21ae9d",
+      "size": 37749,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/1mnnxogom11w8.js",
+      "sha": "9225318142d92fd611fcbf57d8804ae664b2cc6a",
+      "size": 50700,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/1p0vomx78m2ya.js",
+      "sha": "1e41fcc98efba0362823338a82c47281fd0dfdbf",
+      "size": 16863,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/1qnfnm4h-dqcs.js",
+      "sha": "afb2ebe0b584122d4ec60e5d1847909f5944a257",
+      "size": 45801,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/1s-bc0jdsn5ji.js",
+      "sha": "0b6dcd57c73821592e778b01be19abca9f4286b4",
+      "size": 21997,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/1xmw2mrqsqewj.js",
+      "sha": "9a75cea54ccfe88b3d5aca1da9f5b9b37ab58ea4",
+      "size": 2478,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/1yznl95s5xgo6.js",
+      "sha": "b8d61d9c6a641657c78c39971a89043a1bdc1275",
+      "size": 46293,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2-rw5y7n0ydlw.js",
+      "sha": "83ff980a55a11a3114b43458bbe4b067f750a73a",
+      "size": 40889,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2-wmukxkkbv6b.js",
+      "sha": "7f794cef40a973665c437969509d91d2cdb76ad7",
+      "size": 31744,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/209o63wrzft86.js",
+      "sha": "bbef9a89a476869eea10297fadc2cd5aa4732680",
+      "size": 275629,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/22ejfvhpxhb3h.js",
+      "sha": "db33efd6dbe364650262ad2e315f0c6c794e00ea",
+      "size": 20270,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/24x2smdhg98ek.js",
+      "sha": "3c9b148341aa0e7d52a471444e490177d5099200",
+      "size": 80275,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/25qnckfj4zgx6.js",
+      "sha": "21075b7b4ee3849983d46dad3b75bbb03c28abf8",
+      "size": 22213,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/27-c131vitv4z.js",
+      "sha": "eadf17d2e440cb67d8451392bd343beea5ea635c",
+      "size": 55376,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2a6vc8fyoqgs-.js",
+      "sha": "b753e68dc2000e95c861b25767cb5780ad01b030",
+      "size": 5021,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2artivrm7obyb.js",
+      "sha": "146359a86b6dc45e34895ea3bd188431ed1bce66",
+      "size": 20412,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2cx_digo5r7xw.js",
+      "sha": "037ac33077f20ffd8a354b956941f277a1b8e0d6",
+      "size": 2664,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2d9fiv_nzozrw.js",
+      "sha": "088d0a5badf14427973dd05150f08bdd6fd3b963",
+      "size": 12164,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2g96j2t_3ql2g.js",
+      "sha": "88148717cf11a0a2dde7a08d00f700373bd5e712",
+      "size": 32413,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2gh-v7lql314e.js",
+      "sha": "d6c09a2b8cbe46ef8097240425946ccb1b181e77",
+      "size": 1111597,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2hr3hboyjfm2p.js",
+      "sha": "a44c0caf01878d54822307d939fc1b939cce91f1",
+      "size": 25904,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2if274r5y84f6.js",
+      "sha": "06b50a88bba4650b11398757e873521b12ebd99e",
+      "size": 19952,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2jtgognepedcn.js",
+      "sha": "e1166fd8a70406cf477f7a49f090a025d65e37b8",
+      "size": 124527,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2ncv8tkdxu79e.js",
+      "sha": "de717341b3833620d20ac0570a7f9e4852650d8d",
+      "size": 663931,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2s2r16j35j6mt.js",
+      "sha": "727ae0fb3c1272f6ac937abb353b67797c4220bf",
+      "size": 15443,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2u3-w7l5krx3d.js",
+      "sha": "c792997ce63a63b9fbc7ee5c970c1d7a3d7d6e33",
+      "size": 64302,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2x-a2tyjcibze.js",
+      "sha": "b782fa71d1ac429dc7422abd50eb1d8d71528a24",
+      "size": 55769,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2y1lujpy4-1e5.js",
+      "sha": "fac50cd52ac2eaa45a969c92a96c45f9cf008c5a",
+      "size": 21294,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2yc_1rjtu1i29.js",
+      "sha": "b97d9cec2e778db3b0d8345b8ebfb2de143bb51e",
+      "size": 824697,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2z0u3g5jk6jdb.js",
+      "sha": "9715b51e3bf1a25e454874163e9e6309d2607fcc",
+      "size": 47719,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/2zz_4k4mlme7l.js",
+      "sha": "39d4844c6bdf79ee0d1d5e2cb46deeb281762c3e",
+      "size": 4803,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/340s_5y5t8y8o.js",
+      "sha": "41bb408072df96e576481496720b6b732d6aa21e",
+      "size": 120932,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/34zc9gtn6wqbg.js",
+      "sha": "c26a87b0127eaf559ed6b9515f952e895612e4b1",
+      "size": 35377,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/3c0or_ii28cmi.js",
+      "sha": "350ec075577106ab101eff898798779c7367b530",
+      "size": 35880,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/3ehpqhfsla9cq.js",
+      "sha": "f658a55c8289a6f1698c8859ddaf8894a8761695",
+      "size": 230555,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/3f0r2b7e9xj4w.js",
+      "sha": "4092687f9fc9570734f627d944bbc8c9b285dcef",
+      "size": 25558,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/3gtd63b3q4784.js",
+      "sha": "0904037aa4db25f4ab7c143e86c57c438dbb5beb",
+      "size": 10767,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/3hy5lfv498fbs.js",
+      "sha": "086c24cc8115a07f26da6fe203bf8619d2f986be",
+      "size": 6416,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/3iaalxitts_51.js",
+      "sha": "ce853885c7777f53056f0123ac78b394068b19dd",
+      "size": 421282,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/3k-8_377387co.js",
+      "sha": "90d2bd60f3b59e5643dc641787656b69482264b0",
+      "size": 154386,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/3tivf0rkov7tj.js",
+      "sha": "ff3e0ac4b7a0d147bfb83b300547019a389a4654",
+      "size": 40474,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/3twrq69cgrs9u.js",
+      "sha": "c6d373b4a97d248095427234bd4991861e135c1f",
+      "size": 4346,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/3vw9fzdsaj-w0.js",
+      "sha": "887a3b3fe516a4fe3e5d1bd05718d4c716b7418c",
+      "size": 16997,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/3xf8iqjpcqtum.js",
+      "sha": "97d735c86efba3c70f095adb23c902d047c5678e",
+      "size": 42079,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/3xu06s7ghdx9s.js",
+      "sha": "2d20b6e832d679c791f6fa51d7d414ca065e8546",
+      "size": 27788,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/3y9qfwocwqnm0.js",
+      "sha": "3925efd8800b1b849cb4927218d0a5caac573f56",
+      "size": 165294,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/4343i6m_rrsxg.js",
+      "sha": "18c74f90689e4689ad8028a338c322e8165f1eb6",
+      "size": 14711,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/43zknuezw2qq6.js",
+      "sha": "a830ed21bd6dc5439843c1d80d8a5fdd01b0842a",
+      "size": 5442,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/js/turbopack-2e9q1dxwzp87_.js",
+      "sha": "7be774b7b39e4f877ddbb43edd84db450760cbf4",
+      "size": 11296,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/parakeet-deep-states.json",
+      "sha": "7560ad87abedbd487bbf149c6fe2ddee5a2da607",
+      "size": 986321,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/parakeet-site-blueprint.json",
+      "sha": "ed9178fcde7f389ad48137ef0604d09472a4efbe",
+      "size": 3468354,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/parakeet-site-blueprint.zip",
+      "sha": "0f5d9fd5ae4f7f6a7c24c73cfdf17ecc36d82471",
+      "size": 444944,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/parakeet-site-interactions.json",
+      "sha": "4aa06c882e5e91c371b68b541d6eff6ed09ec115",
+      "size": 963604,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/raw/tokens-extracted.json",
+      "sha": "79a70edd3201f54d8e642798a6c847a2fa9bdfc9",
+      "size": 25615,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/compare.html",
+      "sha": "19925090267eabb6aeb44b2295f992c654753ae0",
+      "size": 27120,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/compare_parakeet-ai-vs-aiapply.html",
+      "sha": "2091e78aed0e9b4e7c43e7086d38071227c6ceaf",
+      "size": 45843,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/compare_parakeet-ai-vs-cluely.html",
+      "sha": "1f8cb58b698cbf90278bacb1a1f402ce80890238",
+      "size": 46088,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/compare_parakeet-ai-vs-final-round-ai.html",
+      "sha": "e721670e63fc1248428f9ebd3172721267faad93",
+      "size": 46311,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/compare_parakeet-ai-vs-interview-coder.html",
+      "sha": "2a07abb4e7990a45c289cdce64f4111ad935bb4d",
+      "size": 47278,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/compare_parakeet-ai-vs-lockedin-ai.html",
+      "sha": "49d862e0206dfbc244b457648456bed732de3b59",
+      "size": 46642,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/dashboard_buyCredits_tab_credits.html",
+      "sha": "07330c1bd28c3c760f9a680f678412bef62aba64",
+      "size": 77156,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/dashboard_buyCredits_tab_subscription.html",
+      "sha": "be70b1fcbdabca2e3001a9fb715c359956dc49e8",
+      "size": 77116,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/dashboard_callSessions.html",
+      "sha": "220ff0fa8c0a5510b797795fdcbc8ca888d3f827",
+      "size": 167217,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/dashboard_callSessions_mode_mock.html",
+      "sha": "e6178e714ac0d671a354f7905565e1a0a5a7fe1e",
+      "size": 52005,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/dashboard_documents.html",
+      "sha": "238ac1451dd2d13442b169ccfd266406df815b9f",
+      "size": 101115,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/dashboard_headshots.html",
+      "sha": "4992adfda31b1e70174db59765426e6a72b0ffbb",
+      "size": 53476,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/dashboard_mockInterviews.html",
+      "sha": "76714d665548a5aa444a7b9d75dfa58e53499352",
+      "size": 37964,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/dashboard_profile.html",
+      "sha": "71a2f785ffdc533b876b989d5217a284657af4ce",
+      "size": 45495,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/dashboard_resumeMaker.html",
+      "sha": "66836031dcc316c04c3d991b675354b47ce0a9c3",
+      "size": 36314,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/dashboard_resumes.html",
+      "sha": "3703dd62c9b07b365f5c93a907e13bb2e21398db",
+      "size": 116226,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/headshots.html",
+      "sha": "3dc0a42e0402ecd0f832e61e541c1b94b7761831",
+      "size": 117770,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/home.html",
+      "sha": "dca9768512b5d3c1e9e68ccefb6ec722aa305f73",
+      "size": 250423,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/mock-interview.html",
+      "sha": "9882fc1d4caddfb8e7ba6610eaba9029ed9de1a6",
+      "size": 116434,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/pricing.html",
+      "sha": "fb28958008fe91ab5d4a67d6028e884dc319d036",
+      "size": 250423,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/privacy-policy.html",
+      "sha": "d6d4740a942dc4bda888f2d52a9340671361f0aa",
+      "size": 75417,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/question-bank.html",
+      "sha": "3715f7c14b54f983ded61cb7de777c186808ea4a",
+      "size": 106186,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/resume-maker.html",
+      "sha": "a2a58cf9550f7d739a021145ff8e2a6b26065a65",
+      "size": 167984,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/snapshots/terms-and-conditions.html",
+      "sha": "f8a5315ddde140a7be387e7167f5201d3f0a99f2",
+      "size": 70365,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/tokens/parakeet-tokens.css",
+      "sha": "39a6c6c37af6018fe30170b638badc3084de2c09",
+      "size": 32233,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/tokens/parakeet-tokens.json",
+      "sha": "44c0696b53ac8cb4412e79c4b9c3872217290e60",
+      "size": 27393,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "blueprint/tools/deep-explore.js",
+      "sha": "3d827e61cc74d50abc55a2c75db0407357ac5e26",
+      "size": 12791,
+      "category": "blueprint",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "config/facts.json",
+      "sha": "b0984561e01b959728c949873a79cb7e681a9fd7",
+      "size": 15698,
+      "category": "config",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "config/prices.json",
+      "sha": "3e2ef2aeaa2bca3dcbd9e4713eb03f42376af8c7",
+      "size": 2052,
+      "category": "config",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/.env.example",
+      "sha": "18dbaebe0c29b51f63632a09206937a56344a52a",
+      "size": 587,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/.vercelignore",
+      "sha": "206ad33b8de97cb9217ff7b1bc0f970d1536c728",
+      "size": 113,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/README.md",
+      "sha": "bf50c640cdf6fd74ef10fd4422a614fff17277e6",
+      "size": 2181,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/anchor-flight.js",
+      "sha": "15130e3ff8aa7b43693b8129f2d7c0e5a79f5b7a",
+      "size": 3411,
+      "category": "copilot",
+      "target": "public/kompas/anchor-flight.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/anchors.js",
+      "sha": "56e1197e04b39be4415827928b38f5ce55531a20",
+      "size": 3931,
+      "category": "copilot",
+      "target": "public/kompas/anchors.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/api/[feature].js",
+      "sha": "b02fd37321064208fef4b1e8ef95c738bd0ad9cc",
+      "size": 2867,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_ask.js",
+      "sha": "dc541cd9924a1006fd86b4914ebacea3540e6b59",
+      "size": 6921,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_audiences.js",
+      "sha": "ffc663338907ab5bfe23e1d09e7dafcc4319c1c6",
+      "size": 16802,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_examples.js",
+      "sha": "9b132a69a035864b8af787f6945c83bc4afa36dc",
+      "size": 18867,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_feedback.js",
+      "sha": "d82419e344e1944bb75a18114b5bb8781d1ab38b",
+      "size": 21298,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_guard.js",
+      "sha": "206b36348f41a6a8f127be2be658846e49591262",
+      "size": 25840,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_guard.test.mjs",
+      "sha": "cf2032c59e2bce347da9c961f90dc801014fda26",
+      "size": 1552,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_guide.js",
+      "sha": "bc82e17c028da49a8f314426cd8c59c1a1a08949",
+      "size": 14253,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_jev.js",
+      "sha": "1f8930514fba1b259a42b5a96b4b3802b7af94fe",
+      "size": 15857,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_lexicon.js",
+      "sha": "985ac1b1049639cd85c3bd7219fef55142edbad8",
+      "size": 4342,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_llm.js",
+      "sha": "326ce1732b78d9f8ee16698b04e04a2bbdd4c09d",
+      "size": 5535,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_pace.js",
+      "sha": "4844b91eba22d614630ca87a1c2bff169d855b4e",
+      "size": 2966,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_parakeet_examples.js",
+      "sha": "cd04e46b575ca3a128872d77ef5e5abe92a4d743",
+      "size": 15498,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_practice.js",
+      "sha": "5e26de64c4ae3888600c0ba2c3709dade0a9cce6",
+      "size": 2232,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_question_arsenal.js",
+      "sha": "143c6d0b5ca9b12bf2aee9b69ce57e49b733d05c",
+      "size": 170282,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_questions.js",
+      "sha": "8310c078c0ae076bc37afdfff4e1afb6ee50d6a3",
+      "size": 7372,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_review.js",
+      "sha": "1d87150f3092edbc329e25b61c38023040e67042",
+      "size": 5544,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_score.js",
+      "sha": "ad286761353fd488e3b1e7b18354542645d092d5",
+      "size": 4840,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_shapes.js",
+      "sha": "143a151255f254ca3085f37280c4026ba591e395",
+      "size": 17692,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_store.js",
+      "sha": "3398e306cf0be92030606314b12c9ee2969c45e2",
+      "size": 2325,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_trial.test.mjs",
+      "sha": "04763f9cf4c746c639186776779adbf08010fa78",
+      "size": 12892,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_usage.js",
+      "sha": "5f1fa3d0d81a6e4bcf77f51024bcae24077d274b",
+      "size": 6067,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_usage.test.mjs",
+      "sha": "cbb2cbc8a8e3c8db292c5378158246e7a46a3330",
+      "size": 5485,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/_voice.js",
+      "sha": "5180c6db51fc730c39c79f827a46019d91d519e4",
+      "size": 35663,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/answer.js",
+      "sha": "d943e06b37ff1e63fe9dff1705416137a09c7b55",
+      "size": 110644,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/answer.length.test.mjs",
+      "sha": "90dfc091626b547213ec566becd4f43295ee23b0",
+      "size": 4033,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/capabilities.js",
+      "sha": "2db6a6e85959ab304186164799a1c2a6bca74b0b",
+      "size": 705,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/diamond.test.mjs",
+      "sha": "6d11ef2d3839902779861d57cad039a2f34d124c",
+      "size": 6570,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/levels.cache.test.mjs",
+      "sha": "461bc2ea95dbd159d472b66bb13383e92232623d",
+      "size": 24276,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/levels.js",
+      "sha": "f37229623f30d0c8caa12ebd35575ef85cad7e1b",
+      "size": 7787,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/maturity.js",
+      "sha": "4452066ea68ec3fe255cb65f29749b4fbb3f897e",
+      "size": 3670,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/persona.js",
+      "sha": "032f9f28b91dbdcb129c6afcbb174ade32f262c7",
+      "size": 16709,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/prep.js",
+      "sha": "33e7eede0aac67f6e94c19a8cbfe514a915bb18e",
+      "size": 10357,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/screen.js",
+      "sha": "b7fb21e0a6c456856e03b32b25a50a761084e2b0",
+      "size": 3436,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/section.js",
+      "sha": "e7b1899231c1194c9623439cca03217e2f0f3b2e",
+      "size": 8821,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/transcribe.js",
+      "sha": "9a3b6d333aa8f0eb43a68dfbb40b9723205e1b56",
+      "size": 4091,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/transcribe.test.mjs",
+      "sha": "f3163aaec1a998e8527d44033e00f4e6f38aaf3f",
+      "size": 2908,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/api/voice-reliability.test.mjs",
+      "sha": "b452def9e48140d993c281dd60f251188d247aea",
+      "size": 8858,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/app.js",
+      "sha": "6397f7b5c517450f129d36eeef6ca4c1f09f9154",
+      "size": 194905,
+      "category": "copilot",
+      "target": "public/kompas/app.js",
+      "state": "diverged"
+    },
+    {
+      "path": "copilot/correct.js",
+      "sha": "f728647e39d9db4089ec2b13d6f2670df023c33f",
+      "size": 14293,
+      "category": "copilot",
+      "target": "public/kompas/correct.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/diamond.js",
+      "sha": "101cc1dfb2d0f2294212fa7d5b058725380e1c80",
+      "size": 7927,
+      "category": "copilot",
+      "target": "public/kompas/diamond.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/docs/PLAN.md",
+      "sha": "6f4539193375db0577427fff75cc172ec84f2a4c",
+      "size": 59233,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/docs/WATER-ALGORITHM.md",
+      "sha": "c837cf44611eb11fc0f6298dc46c1ae39e1747c1",
+      "size": 5686,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/docs/maturity-notes.md",
+      "sha": "6ce6cb4ce630991b77b029d150a003be490ddf1c",
+      "size": 2465,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/dossier-md.js",
+      "sha": "91c3025aed88a57540297dfd8b273448ed71af9c",
+      "size": 1262,
+      "category": "copilot",
+      "target": "public/kompas/dossier-md.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/dossier-template.md",
+      "sha": "1fce4afe9052ecbdc3e46ac2cc1041976d359dc1",
+      "size": 630,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/feedback.js",
+      "sha": "668a0cb63300236d75fd1dc710ae51f708d37f72",
+      "size": 27522,
+      "category": "copilot",
+      "target": "public/kompas/feedback.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/index.html",
+      "sha": "b19643c6d2c2c9b4219be124b56b144d6e864836",
+      "size": 42912,
+      "category": "copilot",
+      "target": "public/kompas/index.html",
+      "state": "diverged"
+    },
+    {
+      "path": "copilot/jev-prep.js",
+      "sha": "26c3f4e7404ec33bef4af1f0d425a21dc2de5482",
+      "size": 28252,
+      "category": "copilot",
+      "target": "public/kompas/jev-prep.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/jev.js",
+      "sha": "4341dc5af161a04fb9720fbcf3198d57aeb6384a",
+      "size": 35509,
+      "category": "copilot",
+      "target": "public/kompas/jev.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/levels-core.js",
+      "sha": "09a5e45231825a604d50f57f91cb2d0eb2e82e46",
+      "size": 17928,
+      "category": "copilot",
+      "target": "public/kompas/levels-core.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/lexicon-core.js",
+      "sha": "07bf324f78318e6daf769e890e2dad8f7d27146b",
+      "size": 25693,
+      "category": "copilot",
+      "target": "public/kompas/lexicon-core.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/lexicon-data.js",
+      "sha": "5ed2f06767356d1ff0eb69b88c1c7e99d2365a02",
+      "size": 500263,
+      "category": "copilot",
+      "target": "public/kompas/lexicon-data.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/mf-night.css",
+      "sha": "d0d3901de7e1821e7ad32dd116bfa1a13c6be47a",
+      "size": 3500,
+      "category": "copilot",
+      "target": "public/kompas/mf-night.css",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/move-core.js",
+      "sha": "79dd7325ae37113830393866d4367215bf75858c",
+      "size": 7143,
+      "category": "copilot",
+      "target": "public/kompas/move-core.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/move.html",
+      "sha": "a621525a176dccce39557e844f5fdac8228e39ab",
+      "size": 2730,
+      "category": "copilot",
+      "target": "public/kompas/move.html",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/move.js",
+      "sha": "fbead36626498e4952604742e76bb4059b6278a5",
+      "size": 9438,
+      "category": "copilot",
+      "target": "public/kompas/move.js",
+      "state": "diverged"
+    },
+    {
+      "path": "copilot/move.test.mjs",
+      "sha": "adf43ffeb30e33951fcdfd00bec06bc0f98fe732",
+      "size": 7690,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/pace-core.js",
+      "sha": "34b742c4fd19f9155b9788f13782c26d2f1f93a5",
+      "size": 14789,
+      "category": "copilot",
+      "target": "public/kompas/pace-core.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/pace-core.test.mjs",
+      "sha": "6d2b8d9cc7d98140efb371ffa4da99672a51e5db",
+      "size": 11453,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/package.json",
+      "sha": "6b480a3e1151549a1c0ed0816694d527ccb07e9b",
+      "size": 409,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/qbank-library.js",
+      "sha": "62309cd7ecd8231f358c8a2c1fcc1d612dd4c7d0",
+      "size": 32005,
+      "category": "copilot",
+      "target": "public/kompas/qbank-library.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/qbank-library.test.mjs",
+      "sha": "38bf20e56add4905193addd9186d7878e2e3eaa9",
+      "size": 6121,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/qbank-problems.js",
+      "sha": "e6f7a9c50a3af096eb8e2394d5735e072878a9b3",
+      "size": 19388,
+      "category": "copilot",
+      "target": "public/kompas/qbank-problems.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/qbank.js",
+      "sha": "b23c9cd53cf8afa105412ddcc47621bb45a9709f",
+      "size": 54145,
+      "category": "copilot",
+      "target": "public/kompas/qbank.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/review-core.js",
+      "sha": "7b54dfde2e43b38cda5257bc2864efecbf89b630",
+      "size": 46381,
+      "category": "copilot",
+      "target": "public/kompas/review-core.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/review-rules.test.mjs",
+      "sha": "d8de4d219916013ec8798f1743c8ed37fd006ef7",
+      "size": 7137,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/score-core.js",
+      "sha": "c76794996cd66aca128bfef23ac017ec6e1c0dfe",
+      "size": 28053,
+      "category": "copilot",
+      "target": "public/kompas/score-core.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/score-core.test.mjs",
+      "sha": "e45afc4c73724e4e61a06e4b3a8661c13673f049",
+      "size": 23278,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/scripts/mf-night.mjs",
+      "sha": "bea063985f43d40505c6c6ed20f92aee4e76891c",
+      "size": 7735,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/scripts/stamp-release.mjs",
+      "sha": "180f7b2ef2a5612edbba5f1bf5d08ad8a0701070",
+      "size": 1617,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/server.mjs",
+      "sha": "95bba36f300ee987f85f599324bc762e093e0cfb",
+      "size": 4636,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/styles.css",
+      "sha": "c9048036ead555f2e2d153208638e6721c8ce620",
+      "size": 69477,
+      "category": "copilot",
+      "target": "public/kompas/styles.css",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/theme-follow.js",
+      "sha": "753fb56047fd11c07b6bff0e0baabcb538c07410",
+      "size": 7428,
+      "category": "copilot",
+      "target": "public/kompas/theme-follow.js",
+      "state": "identical"
+    },
+    {
+      "path": "copilot/theme-follow.test.mjs",
+      "sha": "242b63d413129c6205493ae7777270d969208e52",
+      "size": 7851,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/vercel.json",
+      "sha": "6f05b5643a43f3955f0f3fee338762829db4736a",
+      "size": 205,
+      "category": "copilot",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "copilot/version.json",
+      "sha": "57787688c3acd100ae757fdd66921eb8f70003dc",
+      "size": 29,
+      "category": "copilot",
+      "target": "public/kompas/version.json",
+      "state": "diverged"
+    },
+    {
+      "path": "desktop/.gitignore",
+      "sha": "43ec35a77a594ce79dd9a91844cbee57c487c293",
+      "size": 50,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/PARAKEET-CONTROLS.md",
+      "sha": "6d19f84fdfe8c2d606d81962eea10fa415e71646",
+      "size": 2049,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/README.md",
+      "sha": "ed0cd92b9d7673f2259537932f7c2751f97c89fa",
+      "size": 3290,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/icon-256.png",
+      "sha": "6b7c55563c4a904ff5a5d3427f161f23804d07f1",
+      "size": 16040,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/main.js",
+      "sha": "018a105be00d73230fe31af14e0cc26b974ea967",
+      "size": 29163,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/package-lock.json",
+      "sha": "40ed117925908a61ca86585a70d55fc2d613fa66",
+      "size": 128415,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/package.json",
+      "sha": "a23b37eefd148c39746b1ea896497e69fb2d5e1d",
+      "size": 763,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/panel.css",
+      "sha": "5d9858415ea7d68cff7672743a6fe691fac4f5fc",
+      "size": 9803,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/picker-preload.js",
+      "sha": "60a1283d327168294775f372c56ea59c7168f85e",
+      "size": 348,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/picker.html",
+      "sha": "c2188c3fc97a65c284209c3306bddd5c1403c5c0",
+      "size": 1664,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/picker.js",
+      "sha": "97d4b1c20499006ca97075ebf98c7b4d925896a6",
+      "size": 1091,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/preload.js",
+      "sha": "ee86abb6ea7bd792ef697f598c10bb863510bc9c",
+      "size": 7986,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/scripts/build-exe.mjs",
+      "sha": "4c204d8ffd84b7751b9e32abc61cb8382be3c93e",
+      "size": 570,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/scripts/package.mjs",
+      "sha": "f08f802f752f0fbfbc250d7995a537fe5e9203c5",
+      "size": 4491,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/scripts/runtime.mjs",
+      "sha": "de5796aadbf1ae6c747fb5c29b1e49ddc0d5a367",
+      "size": 6201,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/scripts/sfx.cs",
+      "sha": "6540b35676d60171b5e82d5031f97c16dbb877ad",
+      "size": 3070,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/scripts/start.mjs",
+      "sha": "bf2a0f4c7dc89756146f6ee58acc6828f72e5dfb",
+      "size": 1015,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "desktop/scripts/test-marketfit-protocol.mjs",
+      "sha": "baad21cfc301b7be510483377aa61434ebd2918a",
+      "size": 3781,
+      "category": "desktop",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/DEPTH-PLAN.md",
+      "sha": "3292698db8034ba54e12b342435b5dd54bfca62a",
+      "size": 18180,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/FEATURE-BASE.md",
+      "sha": "513261a050055e36a30d3c933610fd71e4f39669",
+      "size": 12154,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/KOMPAS_JOB_DASHBOARD_SYNC.md",
+      "sha": "366d941b25ae406aa8f514341024931adb341b38",
+      "size": 11149,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/KOMPAS_SEED_HANDOFF.md",
+      "sha": "d87e9387a7f87c45d5ea6c09bc8a8e5ca124fac4",
+      "size": 6109,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/Kompas-Blueprint-Spoken-Edition.pdf",
+      "sha": "2a467a9467e0e3584e759c013b13f910dde40eca",
+      "size": 4058233,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/MANDATES.md",
+      "sha": "40ed3ed556625e0e6504be042fea703a37484b9d",
+      "size": 27179,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/MODEL-STRATEGY.md",
+      "sha": "3eca18cb9de0a9c52bd88242a1bc73db5c60aff1",
+      "size": 15754,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/OWNER-BRIEF.md",
+      "sha": "657d90ba55a92c8689b6cc794e939fc4d588340e",
+      "size": 70263,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/PRODUCT-STRATEGY.md",
+      "sha": "cd9e0b6c489ac92429df52695dfbdf44b79ee153",
+      "size": 18573,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/REGULATIONS.md",
+      "sha": "85de75ad9459f43faab798b9ec2097837e7f668b",
+      "size": 3487,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/VISION.md",
+      "sha": "988d0ee84cddd1d8536b62074b03bbdd63c718fa",
+      "size": 4227,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/adr/0001-record-architecture-decisions.md",
+      "sha": "78d713cd6f85e725462c74b15af0c856ebac4fba",
+      "size": 1186,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/adr/0002-web-prototype-first.md",
+      "sha": "2dcf9a751aee81e93c933440d2bf0d21e77df515",
+      "size": 1988,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/adr/0003-thin-backend-service.md",
+      "sha": "8b9770fbb92a24f2de75b3dcd175dd64a462649c",
+      "size": 1726,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/adr/0004-consent-as-a-data-structure.md",
+      "sha": "d04745c6e214b0cd9c6e3a0d6131c59229385bce",
+      "size": 1976,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/adr/0005-no-runtime-dependencies.md",
+      "sha": "1cd739405cfa2cfdeced91a7812328f79a1fa620",
+      "size": 2537,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/adr/0006-where-this-runs.md",
+      "sha": "344ca23e6dd881c842446ca9e603576b6ec3bda7",
+      "size": 4976,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/adr/0007-installable-rather-than-hosted.md",
+      "sha": "3d4141a2f5fe2e83c1df78e25ea00811dcbdead2",
+      "size": 4702,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/adr/0008-cloudflare-pages-for-the-doorway.md",
+      "sha": "12780c44e6b7e188feb6738272bc93bbcafdd966",
+      "size": 4956,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/adr/0009-noticing-a-pattern.md",
+      "sha": "f7b40e27da19689a66c5254a60cea4423870f014",
+      "size": 26802,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/adr/0010-three-taps-to-remember.md",
+      "sha": "34e50bc1f24349bb81654e8fd6dbaf953663e51b",
+      "size": 23476,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/adr/0011-what-the-voice-costs.md",
+      "sha": "2b5513b80d389f07e10a342af950838642f450d1",
+      "size": 20651,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/architecture.md",
+      "sha": "c07fb36bc03ede725b7bae93511bc07a0f4153e3",
+      "size": 5732,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/critique/01-what-people-hate.md",
+      "sha": "fec4029779a6c37e9a3e0093bb94054a9af66af8",
+      "size": 54814,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/critique/02-what-actually-helps.md",
+      "sha": "517b4ea267107924f25bd90ef385083f0ae15eaf",
+      "size": 48859,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/critique/03-saying-the-thing.md",
+      "sha": "d0902f9bf783b0c772aed6eff64c1bfac0cccaeb",
+      "size": 66724,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/critique/04-having-a-view.md",
+      "sha": "bb3f477c0958164d3fbf26c010123a326a9831e2",
+      "size": 80260,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/critique/05-where-directness-stops.md",
+      "sha": "87682a30fdbce2c1dc2fcbc5a4399f7cbee9c50b",
+      "size": 63725,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/critique/06-how-it-sounds.md",
+      "sha": "9775edfcd71cdf130d1b027fbb782a30a0c77630",
+      "size": 68727,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/critique/07-verification.md",
+      "sha": "ff32dc3e4d1a1ecd4db76d4dec8f1e9205f2ff1f",
+      "size": 34955,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/critique/08-verification-safety.md",
+      "sha": "513d094e88f052a15dcf10babcabcea02bde9e47",
+      "size": 33055,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/critique/09-the-translation-tax.md",
+      "sha": "7f99b726b434bbace129e4abee255fede29fef96",
+      "size": 43857,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/critique/10-manuals-versus-evidence.md",
+      "sha": "2431d16ded60d899557b28792889e99392996311",
+      "size": 67735,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/decision-log.md",
+      "sha": "79c8058decfe6cf96a55641de6a9e002dc9511ba",
+      "size": 3570,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/field-manuals/README.md",
+      "sha": "26776c7e269418261212f56294e438bbc0072c3a",
+      "size": 1976,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/ip-and-company-notes.md",
+      "sha": "b3c10472a411750d3eb041893767782470b60a35",
+      "size": 3148,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/manual-plain-language.json",
+      "sha": "55d8b3061d070b619222e67df4e7d53fd07989ce",
+      "size": 68756,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/product-brief.md",
+      "sha": "f129456a9e62224dc06f6c2e3c57a0bbbd130b99",
+      "size": 3804,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/criticism-2026-08-31-second.md",
+      "sha": "ec20aee8bdd2c45aad2bd38b1f4fbd507ba57616",
+      "size": 32794,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/criticism-2026-08-31.md",
+      "sha": "ac3ebd245a157ef2c5ebff16bf901eb4102f3253",
+      "size": 28248,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/gaps-functionality.md",
+      "sha": "d7285864d295f483219a2159ff96e471b778639f",
+      "size": 44345,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/gaps-operations.md",
+      "sha": "e9bf7296c0e85595d3b6b58ed86bba3ed5728f78",
+      "size": 42871,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/gemini-audio.md",
+      "sha": "7b39ce6005574111d128c59a238373e65622d6f9",
+      "size": 35329,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/gemini-caching.md",
+      "sha": "136e870358cf78c6d07e81aefa90f69c64690fd8",
+      "size": 20283,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/gemini-surface.md",
+      "sha": "7df800d3a2ecfd27aace53cf1576f87c660f20c2",
+      "size": 28585,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/indic-asr.md",
+      "sha": "0a1820f29811a7d4221404ddb5e4ee3c86b0b1b5",
+      "size": 32417,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/mic-01-permission.md",
+      "sha": "adc332ad052880c564891e86f7d1e50f8e701551",
+      "size": 25081,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/mic-02-leaks.md",
+      "sha": "45a0a8d95025b738293bdfc99e9f7a4022f96d95",
+      "size": 26144,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/mic-03-endpointer.md",
+      "sha": "a7189244309a1e8463a679c0e37d07cef090304e",
+      "size": 31919,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/mic-04-handsfree.md",
+      "sha": "e27ae784ff13d5439c0d8766d23b0108b8c4a5e2",
+      "size": 28721,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/mic-05-platforms.md",
+      "sha": "babdd9eefb5192d18bb8bf26c0db01d4c7c2ff91",
+      "size": 39791,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/mic-06-tests.md",
+      "sha": "3228a949454306bfee4e36bbd97148cf67804d6f",
+      "size": 27933,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/mic-07-recorded.md",
+      "sha": "b5600f99db00ca169e821523b134046f2cd2e726",
+      "size": 32036,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/mic-08-ux.md",
+      "sha": "c5b3657ae24d61859c9eb1a399b490d947b38145",
+      "size": 33752,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/mic-09-echo.md",
+      "sha": "ff5e2c707838e0fb9177cc8221c7139ad393bb04",
+      "size": 28787,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/research/mic-10-adversarial.md",
+      "sha": "848801cf1215d625a82a77564e49b4ca1ac8209d",
+      "size": 24625,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/roadmap.md",
+      "sha": "b9c54d8076019ed5cae1b9666ca018d2e5ce1cfc",
+      "size": 2384,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/telugu-eval/README.md",
+      "sha": "5cfb6239203765a5384a4db35e5ee52246e96911",
+      "size": 12516,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/telugu-eval/audio/README.md",
+      "sha": "703d94d4176585d7174c42810d9c69c6853a91fd",
+      "size": 1228,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/telugu-eval/prompts.json",
+      "sha": "634ecb456baffa381608b13699da5d24d176b6e7",
+      "size": 20563,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/telugu-eval/results/README.md",
+      "sha": "a8ebca1b01fd19011eb963c8971afc5b874e0a03",
+      "size": 743,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/telugu-eval/script.json",
+      "sha": "1427a59b1d13d1150ec117f32b954136034e68b3",
+      "size": 8718,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "docs/trust-and-safety.md",
+      "sha": "0fd27c7e442f5e1e7a4327dc568b05ed60a52d83",
+      "size": 4124,
+      "category": "docs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/CONTEXT.md",
+      "sha": "6b4119b27ccd6cfff560dd7549dc7e9cc175b0cd",
+      "size": 11493,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/CRITICISM.md",
+      "sha": "d04a7f5de830cdbaa423a68812cd32915d28e181",
+      "size": 42042,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/CRITICISM.progress.md",
+      "sha": "584cd33aeceee289547c65853adb4f0136957434",
+      "size": 166034,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/NEXT.md",
+      "sha": "10ca7045871732271a06b4c6b53e058df5544432",
+      "size": 31565,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/PUBLISH.md",
+      "sha": "3aa2672e7298ff43b6ccd2a9e97318b9e3f1ae61",
+      "size": 3238,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/RESUME.md",
+      "sha": "c74af44c744fe8d42ffda5735b381c52b04484be",
+      "size": 4737,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/SESSION-2026-09-05.md",
+      "sha": "94352f54a9d96154c5167a27573ae0991579b61e",
+      "size": 19857,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/STATE.md",
+      "sha": "a39013389f7cc2eec1782a44e087bc65ab4946d2",
+      "size": 14378,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/STATUS.md",
+      "sha": "0f618c9948a2fdff1a8a1ff59c8bf063d49367e6",
+      "size": 5965,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/VERIFIED.md",
+      "sha": "d8ec5e88315dffbec594558a8c72292a4d1a92f9",
+      "size": 11048,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/accounts.html",
+      "sha": "f205ba8a307a0ab6846ed5f81154dd4224bc76c6",
+      "size": 50600,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/connections.html",
+      "sha": "810a9e07b7f6e7eeb72d7ec1fa0751d189aa9e11",
+      "size": 34706,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/research/01-core-api-signups.md",
+      "sha": "d2ecd5185d32aa45c30f91e4a83c543c2d306b5c",
+      "size": 33525,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/research/02-india-stack.md",
+      "sha": "46ad894aa6fc46b264ace9eb999314a78ceb653b",
+      "size": 7147,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/research/03-gpu-hosting.md",
+      "sha": "4f9dd2447a712e66e0095a41be9ab13f0bbcb8d7",
+      "size": 20524,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/research/04-store-and-compliance.md",
+      "sha": "6874339517954a64a34434381f40fb603ae4a437",
+      "size": 35680,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "handoff/status.html",
+      "sha": "6384d658b7fa452dde597c23d7b403569c2039f6",
+      "size": 12875,
+      "category": "handoff",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "package-lock.json",
+      "sha": "de761645afe3f5a8e3203e6d2c32960fbc9f6638",
+      "size": 2503,
+      "category": "package-lock.json",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "package.json",
+      "sha": "32d49d19d23d4a122fe21a030e161ef93360f86a",
+      "size": 1530,
+      "category": "package.json",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/package.json",
+      "sha": "c565f3b1e954ae1b817e18ac5dd2169e2388f57a",
+      "size": 653,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/capture.test.ts",
+      "sha": "73ec3a533a455631310bcf9d66755f04d0c06f3e",
+      "size": 11404,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/capture.ts",
+      "sha": "e9e7b6c572aeb6f4ca6ecf81d8a59aa9ca069591",
+      "size": 18542,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/chambers/errand-disclosure.test.ts",
+      "sha": "aa0157ac5175b7dba0423bdecda82cdc4750ba82",
+      "size": 11217,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/chambers/errand-disclosure.ts",
+      "sha": "5b429f702b181f53315332b75e2df0e6715b182e",
+      "size": 27206,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/chambers/memory-disclosure.test.ts",
+      "sha": "b48d4a36ce665ef7192ba3d6a27579ec7f920f2c",
+      "size": 15256,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/chambers/memory-disclosure.ts",
+      "sha": "5d57efa2b0284b023c99ed3179c94bf42fb715b5",
+      "size": 26269,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/chambers/proposal.test.ts",
+      "sha": "ae986aa511f22c6900828e4f2c58366917f9736c",
+      "size": 26914,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/chambers/proposal.ts",
+      "sha": "f7894def685aeefb2b9ff8c050d72f8e42bee7ff",
+      "size": 28876,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/cleanup-guard-script.test.ts",
+      "sha": "58826d3f34aa0ea7af860024225c2e9cb744525d",
+      "size": 2302,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/cleanup-guard.test.ts",
+      "sha": "039dbb92162d97fe1d97e8e1734c07e6ae47882b",
+      "size": 4032,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/cleanup-guard.ts",
+      "sha": "0536837487c5a413da3c4c953be2f3c3a1233dd7",
+      "size": 11944,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/commands.test.ts",
+      "sha": "802027947242cdae13be3db7c262506809630023",
+      "size": 13655,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/commands.ts",
+      "sha": "21196fa3728601a3ef9d9ab7fa1f252b9204a375",
+      "size": 25248,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/consent.test.ts",
+      "sha": "fb60b31e3647c5f9820be5c190d4971bcd063926",
+      "size": 1967,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/consent.ts",
+      "sha": "3fd106f00d3f8b311533781b2c9de40b6bb213a1",
+      "size": 3091,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/corrections.test.ts",
+      "sha": "1e9fb8501262f09ad481ae984a0c32a95a8de763",
+      "size": 7090,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/corrections.ts",
+      "sha": "d3212427a5eeb2763286853e51bae20d309b2098",
+      "size": 11161,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/crisis.test.ts",
+      "sha": "b6cae6202a19de383bc52a8dc122d17cdbefed65",
+      "size": 4705,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/crisis.ts",
+      "sha": "11dac39f37f9c784ed8c3210e11d37ead31e2388",
+      "size": 5364,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/degenerate.test.ts",
+      "sha": "4fa9bd1e50e91027cedf1f449048ae53cdb8b2f2",
+      "size": 2957,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/degenerate.ts",
+      "sha": "5e8d7e78b3f4dccda234fa2b26812d4fddf8651a",
+      "size": 4916,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/deposit.test.ts",
+      "sha": "fb99156150e0ebc7a35c23145cee8e86fb383f5e",
+      "size": 12894,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/deposit.ts",
+      "sha": "2db40929d2b960f27eb57967004eecc1b5ab9ac1",
+      "size": 11593,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/gestures.test.ts",
+      "sha": "5226fed4945a13c557598014dab7fff7be483162",
+      "size": 8915,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/gestures.ts",
+      "sha": "68cccbaa7cd8af3e03a1027dae31cbbaedfb54f8",
+      "size": 14022,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "sha": "1ad4541d2725a6a0eb268b61e182c0632dabc6fa",
+      "size": 2095,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/internal.ts",
+      "sha": "0f526e2d8b3f17626943105a961fb4dd27200c16",
+      "size": 4180,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/interview-knowledge.test.ts",
+      "sha": "700256c497be086390559caa2bda85d5ef16c403",
+      "size": 1166,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/interview-knowledge.ts",
+      "sha": "28ccecb4fcee539ba326a97c8ef02d4f598a0b5b",
+      "size": 2388,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/joystick.test.ts",
+      "sha": "8bb53a656ce4f94d8d43d1e33dad2ae43ce3ecb5",
+      "size": 5594,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/joystick.ts",
+      "sha": "cd0a242654298cefb31d2805f4d25e76b081e005",
+      "size": 5619,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/language.test.ts",
+      "sha": "1dabe71cc60f3625c32ec61a3975ec3ee11fb92b",
+      "size": 4036,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/language.ts",
+      "sha": "912f4b7600bdc7b866c5a8471e01a1e691b19196",
+      "size": 10448,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/listening.test.ts",
+      "sha": "b24bea7705adc0887c7b60d9b8f2724202dac1b0",
+      "size": 5966,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/listening.ts",
+      "sha": "d542cbd92ead5b00e492e9f52e767c79b210d74d",
+      "size": 8692,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/memory.test.ts",
+      "sha": "1c0a4be719d284c21d80463c5dcc38cf28cf6d99",
+      "size": 45888,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/memory.ts",
+      "sha": "cc8256fb1587aca9e753be52963d5a35d7fb5209",
+      "size": 48235,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/patterns.test.ts",
+      "sha": "3567eade2c5c9cf0b64f58888f408400f47a7dd4",
+      "size": 21832,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/patterns.ts",
+      "sha": "dcd8c976b216ba49138ccaa09190c01342ba8400",
+      "size": 32793,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/protocol.test.ts",
+      "sha": "c8a4b485c046f959ffca3c9e880ff16894914b4a",
+      "size": 2892,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/protocol.ts",
+      "sha": "ed57f10d9908e3303fd166b67a05f86ec80b8a91",
+      "size": 7224,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/ranking.test.ts",
+      "sha": "1dee8f14f6c52483d1adb8b6c3b551792ec14529",
+      "size": 7502,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/ranking.ts",
+      "sha": "66023d5295528beefcfb020708710c5a57eab4d8",
+      "size": 7315,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/romanized.test.ts",
+      "sha": "e41fc597ce894db03f248f311a2525ae27b2e372",
+      "size": 4814,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/romanized.ts",
+      "sha": "8bc2b30b6a5f5ce56782233b0d4bcc919fd693af",
+      "size": 6995,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/scan.test.ts",
+      "sha": "21e4513626e4b558c8e3c1f2dd56ea0e17b26cd5",
+      "size": 6648,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/scan.ts",
+      "sha": "b091dbcddb1f5acf3d23732dcb5b578355358b3d",
+      "size": 12701,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/sensitive.test.ts",
+      "sha": "c9afe420e74bd87386414b8fcc4dd3d5a5544463",
+      "size": 30659,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/sensitive.ts",
+      "sha": "79c18c8fd40d244a386578fb8f7918e3a7b60af7",
+      "size": 30241,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/speech.test.ts",
+      "sha": "146e05ca5484fe6f67f5b91951f52c85f9bb589c",
+      "size": 11502,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/speech.ts",
+      "sha": "2490682b703aa8d78e34151a8490cb10ce4ec63c",
+      "size": 13259,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/temporal-memory.test.ts",
+      "sha": "5dd92da224a3bd291f3ca09741b56e876357ec3d",
+      "size": 2336,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/temporal-memory.ts",
+      "sha": "c7cd9f4b2853c6bbe35b9d069a2d7844ffeb8477",
+      "size": 5312,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "sha": "668fff3e67821f30023a9faad832dfa0e7a1c78e",
+      "size": 2938,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "packages/core/tsconfig.json",
+      "sha": "123eafbdc10efbf1f28cd10470ef9bc7d309369f",
+      "size": 184,
+      "category": "packages",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "prototypes/README.md",
+      "sha": "95f9a13eb874f6eb42937fb40fc2aab5850b1602",
+      "size": 2259,
+      "category": "prototypes",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "prototypes/mobile/index.html",
+      "sha": "ac600512534d97b0eaefb19ac8318f0b5365ca65",
+      "size": 28168,
+      "category": "prototypes",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "render.mjs",
+      "sha": "d5488427ddf61b46e21f01d1caee28ffb5f3ce76",
+      "size": 476,
+      "category": "render.mjs",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/asr-eval.mjs",
+      "sha": "914708b6c06e78f56c9f241256e75c121e4fabfa",
+      "size": 82879,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/asr-eval.test.mjs",
+      "sha": "26be41bdd84efc1e542cdfd2f71365ae32dd12a8",
+      "size": 52498,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/audio-token-rate.mjs",
+      "sha": "47465aacdc1999305daedbc075470b8b86fa7bda",
+      "size": 8631,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/build-graph-page.mjs",
+      "sha": "11bae674bbde303d97c088e8413e0b9d30e66f70",
+      "size": 44626,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/build-map-page.mjs",
+      "sha": "3ef816b3fddcf1a215b771999c88e01c5bb1ceac",
+      "size": 2374,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/build-mindmap-page.mjs",
+      "sha": "ea4dee47eb9608c0c4db77c88a29f9c89df8f5ac",
+      "size": 20741,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/bundle-web.mjs",
+      "sha": "5c9c334325c4686eeedfdc53ab8580fdcad36ece",
+      "size": 26231,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/check-secrets.mjs",
+      "sha": "61689d42d60db373b0836f3e9262f617f6c68f53",
+      "size": 8359,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/collect-plain-language.mjs",
+      "sha": "1a1c8b095088f5ff7afcecf271f455f110757f48",
+      "size": 2930,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/compressed-stable-prompt.txt",
+      "sha": "1913a1f39bf1276f7aebf4a5636ba8af823217f1",
+      "size": 5869,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/cost-model.mjs",
+      "sha": "8ea19a6d766c581cf6d4dc9485705dbe27cada65",
+      "size": 10495,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/dev-server.mjs",
+      "sha": "96ffc262e240ac8f686df8757e2b37ef7cbd8da2",
+      "size": 2035,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/eval/compare.mjs",
+      "sha": "5865ddd3c75dc726a1e924ad86986f13fdba067b",
+      "size": 10373,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/eval/compare.test.mjs",
+      "sha": "6938687920ddc1d0d0018e86a7e3bc325d839488",
+      "size": 7784,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/eval/prompts.mjs",
+      "sha": "2ab6d66f716fb3dc0149339860619be0ac67024e",
+      "size": 12909,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/eval/prompts.test.mjs",
+      "sha": "f9d4caa6a9cfda3c9843a397a959a327a3ed2571",
+      "size": 14701,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/eval/results.mjs",
+      "sha": "168a52464e5fa1ee2bcd468336602b4a84708b74",
+      "size": 6026,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/eval/results.test.mjs",
+      "sha": "27c588b67b4cc0509b39da3c38a7b69b451ee013",
+      "size": 8699,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/eval/retry.mjs",
+      "sha": "32a37b1bd4007dffabf84a2df66e7f4f3603b965",
+      "size": 2889,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/eval/retry.test.mjs",
+      "sha": "fd1bfa68c73ca1d0a62adae53d504757ff410fb1",
+      "size": 4005,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/eval/voice-check.e2e.test.mjs",
+      "sha": "d20296ea2d18b83fed83ca7ac1a7a96bc95291f2",
+      "size": 10134,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/export-handoff.mjs",
+      "sha": "3a7526bf59e2bc24632b25c8cc0151efec03f752",
+      "size": 12716,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/facts.mjs",
+      "sha": "cc4470f281de41d4516a391284a7a3a52b22f65f",
+      "size": 4813,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/graph-page.template.html",
+      "sha": "d76027a3d3655b07143d6d3e56af10b6f74917da",
+      "size": 17047,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/latency-bench.ts",
+      "sha": "be861f9b32bdc54b8758192915a71fd820b4a693",
+      "size": 14300,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/make-icons.mjs",
+      "sha": "37d44b17bcaaf16ac1e4da4c1f267931991144dc",
+      "size": 3565,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/map-page.template.html",
+      "sha": "5f8d251b3763fc5ce9b42a650169097a45ba755c",
+      "size": 58080,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/mindmap-page.template.html",
+      "sha": "58941975900d8f60185031ae59286a6511be3fac",
+      "size": 19508,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/probe-providers.ts",
+      "sha": "d2aac6dd6e2a53778055e7df36d80f1b9113f735",
+      "size": 4586,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/project-map.mjs",
+      "sha": "44742d87be0aea93fc9cd5b19566b65f426499ce",
+      "size": 18455,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "scripts/voice-check.mjs",
+      "sha": "2ff6c6622f83313d75ec2dbb0b9a7e1e6ae49570",
+      "size": 44820,
+      "category": "scripts",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/package.json",
+      "sha": "07e49fc1bb0b4579222285e043f99082c04ff7a2",
+      "size": 596,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/budget.test.ts",
+      "sha": "fe5097c3d7ba91a2bdd82018594d07da6c77e39a",
+      "size": 5176,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/budget.ts",
+      "sha": "8c5039fcf1513448c76a154ea42e8b25b5d38e2e",
+      "size": 7099,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/config.ts",
+      "sha": "020a99eabb001da575589e349cf890ebd3b96e65",
+      "size": 7089,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/corrections.test.ts",
+      "sha": "cffe7fb38e39584e8fac557ad921ece6a60843be",
+      "size": 11042,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/corrections.ts",
+      "sha": "d4ea65d95c4f027d064e3e9698c12e5d51a05ab6",
+      "size": 6280,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/cost.test.ts",
+      "sha": "42f50a5066cd5045f4b21fb2ea0c5f2d4cbf48ce",
+      "size": 13606,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/crypto.ts",
+      "sha": "828ad2e78567b890f4690a04bda48fd65e5d03b2",
+      "size": 4163,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/db.ts",
+      "sha": "ffe00f4d3615a64328e23071d456be23aec77c8d",
+      "size": 13807,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/latency.test.ts",
+      "sha": "27fb4469db2e068d7e6b691e64f908f6cfe87dd3",
+      "size": 23336,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/latency.ts",
+      "sha": "3656e9881bb1a7fd15c4788346650c5b9e39f059",
+      "size": 36134,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/meter.ts",
+      "sha": "415e14463ff8762c7921ab6be5ee30bc2de72eda",
+      "size": 14522,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/prompt.test.ts",
+      "sha": "838cb443a3c4ae1c4b785905a472e270bab3d7ba",
+      "size": 26469,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/prompt.ts",
+      "sha": "cbe694fc013bb743e5cf4ea250d6480ce3a5d1ed",
+      "size": 42104,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/anthropic.ts",
+      "sha": "e39ade087d75cc9340e91034fff2735c6dc9ad33",
+      "size": 3272,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/bhashini.ts",
+      "sha": "59907954f4fff5e954d3daa0d34d96d97883b534",
+      "size": 10536,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/ears-wiring.test.ts",
+      "sha": "51ba22b6cbdf00b05bdc8ef89608934c26f3bd16",
+      "size": 3423,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/ears.test.ts",
+      "sha": "fe3e16421e0a103bd4f06a8e757dd21a69d8e1b2",
+      "size": 3541,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/ears.ts",
+      "sha": "b106cf057e56547f099a134760314bf00b4a8c2e",
+      "size": 4396,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/gemini-ears.test.ts",
+      "sha": "9ff31e35d90608517cc4831b0d94dd461393bce0",
+      "size": 23407,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/gemini-ears.ts",
+      "sha": "ae4f1785b7a17f138791170caed09aa321c4e9c9",
+      "size": 22477,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/gemini.test.ts",
+      "sha": "ce0f23568b0c978495cd5e085a29f8b77b39278c",
+      "size": 8188,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/gemini.ts",
+      "sha": "8db3945bc7501446ad8fa545cbddc9ae46048389",
+      "size": 8246,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/groq.test.ts",
+      "sha": "befb73bfd21cab5ebdc95d747e7d01060f465c26",
+      "size": 7583,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/groq.ts",
+      "sha": "cb0b61f33a010d168907cb2a1170cc28e748f902",
+      "size": 5621,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/index.ts",
+      "sha": "73b6a3a8f568c20fcaff09ae998578e76f8844ea",
+      "size": 6779,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/interface.test.ts",
+      "sha": "fa8c0b71fcb1f02eece72cea7f6090ea9f3fc7f4",
+      "size": 8892,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/learning-ears.test.ts",
+      "sha": "51a0971545985d55baa3bc9d2be468ef2026521b",
+      "size": 9290,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/learning-ears.ts",
+      "sha": "01d8e0a3a36b23d632d4c5fb16485942482cbd29",
+      "size": 4500,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/mock.test.ts",
+      "sha": "0d415042262d06b81ad47492de4be59c2a2d969b",
+      "size": 4620,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/mock.ts",
+      "sha": "7d782ed3370a468960582b49fa8173bd62046088",
+      "size": 7054,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/search.test.ts",
+      "sha": "cb2357e1c1ecd4e98b82dc50f686c42a313c540c",
+      "size": 4889,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/search.ts",
+      "sha": "d944352833952e8410d106c953fd7c6b22fa9187",
+      "size": 8421,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/sse.ts",
+      "sha": "8dd10bd2f6b85e926a1b9bfcba4a9dba9a0dbd7e",
+      "size": 3022,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/transcription.ts",
+      "sha": "9a1d0a3ae2b2bc8db29595813d2b444e854cb982",
+      "size": 4977,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/types.ts",
+      "sha": "dd36f91dc338458074010245ccf8bf439b30c01b",
+      "size": 6196,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/whisper.test.ts",
+      "sha": "faf53fce813c97e97b4d2e20d55b96e124d451e7",
+      "size": 8187,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/providers/whisper.ts",
+      "sha": "32fadae46e2ccd2c29e9fe1c35505f0db35698b8",
+      "size": 4668,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/rate-limit.ts",
+      "sha": "9ff7c04defad2d5ee3bda234ae91ea4fe67598ff",
+      "size": 1448,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/route.test.ts",
+      "sha": "037552ee61ffa191c2e8a634c69f6579765375e0",
+      "size": 7022,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/route.ts",
+      "sha": "8d6c77fbdf395f519394b56b99128da21d6a156c",
+      "size": 7681,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/router.ts",
+      "sha": "9979d9589c13e26e2b13db096745555537471f93",
+      "size": 3871,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/routes.test.ts",
+      "sha": "328809d003d84ae64bd33e2e5165372b89a6300c",
+      "size": 18642,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/routes.ts",
+      "sha": "292b118778446a6f9fafadb9ded5d497c57bafa5",
+      "size": 17530,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/server.test.ts",
+      "sha": "00a8385aca83a3fee9231ad981a305ce8806c879",
+      "size": 30315,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/server.ts",
+      "sha": "b3deb1ba18ceb778e997211e97628242093f457c",
+      "size": 45331,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/store.test.ts",
+      "sha": "b895f159803e0b5542297160ac5babacb204d489",
+      "size": 38658,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/store.ts",
+      "sha": "c762ea85d6b3d592e38087c42df298546d1b278f",
+      "size": 51016,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/transcribe.test.ts",
+      "sha": "6b65e130f139359a7980f26ce54e38d93bbccb7c",
+      "size": 9749,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/transcribe.ts",
+      "sha": "0d7384d286f0e4636a4c4615d060930ecd77e206",
+      "size": 7827,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/validate.test.ts",
+      "sha": "16f536bbf80633f687f01eba8a4d7a0323b1cc57",
+      "size": 11828,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/validate.ts",
+      "sha": "63fa78fe0817e0a2b8abcefec549532d771b0ff1",
+      "size": 18976,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/voice-cache.test.ts",
+      "sha": "ae1ef53e813bba68390e0628acd33d067e520c4c",
+      "size": 5281,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/voice-cache.ts",
+      "sha": "f21060bdb92a3ee316072ad14a3dc4f8ad80a856",
+      "size": 6295,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/voice-eval.test.ts",
+      "sha": "314318a9f71b2be45b4029eb2db7889a603cfe10",
+      "size": 60878,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/voice-eval.ts",
+      "sha": "d00e3bb0deb3bc89e5aaca06ca17392f055088ba",
+      "size": 141397,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/src/wire.test.ts",
+      "sha": "c1e40f6fae6c1a6dc4c3ee24e4bda995e52c55ee",
+      "size": 10098,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "services/api/tsconfig.json",
+      "sha": "c81edeeeaea830bd97518c00071cbc16b756ecf4",
+      "size": 292,
+      "category": "services",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "skills-lock.json",
+      "sha": "2a14d14abcb105b86938a16ddf70cb4ddd50f55e",
+      "size": 275,
+      "category": "skills-lock.json",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/.gitignore",
+      "sha": "9ceb010fa765afb98c4fc934d740a062e38c9716",
+      "size": 27,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/.npmrc",
+      "sha": "521a9f7c0773588848ad5fa8a074ceca964a6b41",
+      "size": 22,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/app/globals.css",
+      "sha": "539715a2429b0f0594399311b3e70194e57d9a96",
+      "size": 1819,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/app/interview/live/page.tsx",
+      "sha": "1f60aa83688643837fb4e4c048fcaa148a61df4d",
+      "size": 207,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/app/interview/page.tsx",
+      "sha": "1950018926378f1e92fd354f273aa40c4ed4ac50",
+      "size": 204,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/app/layout.tsx",
+      "sha": "ec6ee0f5aa901df444bdfb5f0842b0d4195a948a",
+      "size": 1196,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/app/mail/calendar/page.tsx",
+      "sha": "abae2007d3b9dad584d3878173e0d6dc27e21c8a",
+      "size": 215,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/app/mail/leads/page.tsx",
+      "sha": "165ab28c3efc84544cd10cddf2d1176efc4c894a",
+      "size": 210,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/app/mail/outreach/page.tsx",
+      "sha": "8166e47cf5792207dfa3eab46d6e40acee847cb5",
+      "size": 213,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/app/mail/page.tsx",
+      "sha": "7e55998712275175d6e9b328c931822a686766a5",
+      "size": 202,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/app/mail/tracker/page.tsx",
+      "sha": "551fbfc099e3574f4eba87ad7f7bc9627d78350c",
+      "size": 209,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/app/mail/workflows/page.tsx",
+      "sha": "75a7ace5b99cc69d5a8bd1e61864055ffcfafa64",
+      "size": 217,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/app/page.tsx",
+      "sha": "b8aec4d977700785b3fa2a7f264589113cd50ffc",
+      "size": 219,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/app/resume/page.tsx",
+      "sha": "7e43908c237b2d43e92f3e864994c3129d1df75a",
+      "size": 227,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/next-env.d.ts",
+      "sha": "830fb594ca2970a827555c28a253b097367e08d8",
+      "size": 262,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/next.config.mjs",
+      "sha": "bebca45016556311e4889014573c7347b5db54f0",
+      "size": 1081,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/package-lock.json",
+      "sha": "068be271f6d578a814db97d8c2dc7f5db5c1a4db",
+      "size": 47897,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/package.json",
+      "sha": "5470acd6883f103dc1fb144ca53878ffa3df9df1",
+      "size": 539,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/data/sample.ts",
+      "sha": "81f1cb0dee5ec514c3b7a475d2ce148be3a50d95",
+      "size": 19484,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/screens/Calendar.tsx",
+      "sha": "6d088c03285a18716a97dd256151cb744bc49e5f",
+      "size": 12088,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/screens/Inbox.tsx",
+      "sha": "f590638725f8ff08d8067d687811fcca77954be6",
+      "size": 17275,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/screens/Leads.tsx",
+      "sha": "474ce4216f9e127ebb879cd1fa2b9567e8ffc559",
+      "size": 7233,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/screens/Live.tsx",
+      "sha": "3049a30681923ed98a05a06a0de54ded83e67db2",
+      "size": 6848,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/screens/Outreach.tsx",
+      "sha": "e763395960a3fb087bfc253a933bf52fc5c6df1a",
+      "size": 12484,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/screens/Prep.tsx",
+      "sha": "fd8385642e2215c460754344ed98c47abfc744d5",
+      "size": 9573,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/screens/ResumeStudio.tsx",
+      "sha": "5970a1b02910707c1d015b9b53e8407891393c10",
+      "size": 12890,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/screens/Today.tsx",
+      "sha": "557304af782d376f73442f8317e8ea4626aad1c3",
+      "size": 7488,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/screens/Tracker.tsx",
+      "sha": "8f46be55d6f26a0b0ddaacac68addd4280548337",
+      "size": 10347,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/screens/Workflows.tsx",
+      "sha": "7d075df9d356e74ba80edb59610658c71d58ea9a",
+      "size": 13078,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/shell/ClientFrame.tsx",
+      "sha": "29fc00eee690b101fc48d53a0173885aed060656",
+      "size": 543,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/shell/Frame.tsx",
+      "sha": "62255d1f6f01744021be617af29c544db5e146ac",
+      "size": 1842,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/shell/NavContext.tsx",
+      "sha": "961d3808e05e159a07d907943eaee5d64ec59eed",
+      "size": 444,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/shell/PageHeader.tsx",
+      "sha": "9838a9f696ec146a5ed32ec5a42225e76d4a4b5e",
+      "size": 1550,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/shell/Shell.tsx",
+      "sha": "39f7e476c04a4a75b99616c55cbf181555c598fb",
+      "size": 11076,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/shell/nav.ts",
+      "sha": "e0a6c9413e1142a0b6e83bf8545764303cdc05eb",
+      "size": 1835,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/shims/assets-registry.ts",
+      "sha": "3a7da90be0f219316210a0562d501e0dc4b0e0d1",
+      "size": 343,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/types/rn.d.ts",
+      "sha": "97ccead5f2c6236296d7d83c08d8e9a30bac75e2",
+      "size": 198,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/ui/Controls.tsx",
+      "sha": "4bbd34f1f0923135f7dad6a68b6320294177a132",
+      "size": 16620,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/ui/Evidence.tsx",
+      "sha": "cf985d5cebd82d1354318656cc40d49a4c5c362c",
+      "size": 1049,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/ui/Icon.tsx",
+      "sha": "ba5784a6f55e1bf1c1300d5fb6edb146bbe37c9b",
+      "size": 6059,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/ui/ReorderList.tsx",
+      "sha": "1e3d3470e3db69c6aa14b7b71a3d9cc6c6997839",
+      "size": 4915,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/ui/Reveal.tsx",
+      "sha": "347bfa5e40e6a2d53bdb678b3770a3ac4bb05a5b",
+      "size": 5905,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/ui/Rows.tsx",
+      "sha": "0d4f78eb568fe2e073664f81c6ebeea4ab739256",
+      "size": 7906,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/ui/Surface.tsx",
+      "sha": "a483d15e0ea002d607590cf6aec0a509370a47c3",
+      "size": 2195,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/ui/Text.tsx",
+      "sha": "979a764a40b56b5a91c25ad3a3870898fb3884ff",
+      "size": 2445,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/ui/index.ts",
+      "sha": "f66eb819f96c7c20611b0f54be21444da374692a",
+      "size": 430,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/src/ui/tokens.ts",
+      "sha": "5dc10790ef76ae2ea06e6c5224cda75fd8d2f605",
+      "size": 4681,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "suite/tsconfig.json",
+      "sha": "08a136873524876a1fabbb1f17da04f8df910dbe",
+      "size": 577,
+      "category": "suite",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "tsconfig.base.json",
+      "sha": "2801e60d86febc111993471e67226fdddd8a9fdc",
+      "size": 822,
+      "category": "tsconfig.base.json",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/answering.test.ts",
+      "sha": "b23792dc17cfb6d40879e3d1754694aa800cb704",
+      "size": 13447,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/ceiling.test.ts",
+      "sha": "97b876f62e7d7675023d96c8de49113a690faad6",
+      "size": 12478,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/ceiling.ts",
+      "sha": "7525f3092dce22018e9039164a957f44c01a4448",
+      "size": 22295,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/cleanup.test.ts",
+      "sha": "af4b1f5c8c61b7492a8b3a1489e9fc373f8002c0",
+      "size": 4383,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/cleanup.ts",
+      "sha": "5bc0eece0258db8f68385e284933801bc82fb8d3",
+      "size": 10135,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/groq-chat.test.ts",
+      "sha": "0323a6c414f77c1eeedbea31f223b99e48405e03",
+      "size": 5579,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/groq-chat.ts",
+      "sha": "2a5f5da8c027bd0b7c0e4bc35813815cb50b8004",
+      "size": 11388,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/grounding.test.ts",
+      "sha": "54a7147935567f449d8361afd6caee046e451bc0",
+      "size": 18528,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/identity.test.ts",
+      "sha": "884cc2fe21419998f1666a51ef36220a7e30db9f",
+      "size": 31146,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/identity.ts",
+      "sha": "dfe1020f59d7b316164c6acd128a758ad198110b",
+      "size": 28528,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/index.ts",
+      "sha": "d9e92fa47eee99bfca36f8dbe0f46a7db7a6eadf",
+      "size": 63764,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/indic.test.ts",
+      "sha": "eddadbfa229579595b37d6852e5be69ca567029e",
+      "size": 4012,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/limit.test.ts",
+      "sha": "d38048e88adbf9d5d54cc3630ba7f9f463caa274",
+      "size": 3003,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/limit.ts",
+      "sha": "84bbd8a5106ddcc1a98a924b4399930fe4ef5da6",
+      "size": 3627,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/meter.test.ts",
+      "sha": "02629468ffadf7c237db961f73e2ea421ff82175",
+      "size": 9102,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/meter.ts",
+      "sha": "a9b46b051bc362c8585fb7144b6cab7ad58bf5be",
+      "size": 21099,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/proposal.test.ts",
+      "sha": "d5faf398aa63f81ab375655b3b1bf58254f8b5a3",
+      "size": 3666,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/store.test.ts",
+      "sha": "505965b70fbc62094bf1e3fa0f6ed9aeb67a6589",
+      "size": 16878,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/store.ts",
+      "sha": "2d010dcad76c6146d22af44f6af088631ca887b8",
+      "size": 19905,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/training.test.ts",
+      "sha": "750882f6f350c84cbf2917c5258b42697361ee4c",
+      "size": 26706,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/training.ts",
+      "sha": "ec079407b371734581063a635c64794cf50b182b",
+      "size": 12979,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/transcribe.test.ts",
+      "sha": "8b798b827ed936f61994333907837500d60a6430",
+      "size": 36349,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/transcribe.ts",
+      "sha": "76da74ad54efc14e4ef7cc0430fa04e51dc7d349",
+      "size": 41395,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/tsconfig.json",
+      "sha": "9627d84686398c6d7bf8bd7e7a20d90047080756",
+      "size": 2028,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/turn.test.ts",
+      "sha": "2d16bb8bb618baf6560a029fbb6eca311183fc00",
+      "size": 21763,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/whisper.test.ts",
+      "sha": "d75918c319db8c15a10c06dec70fdb9d6d8b6f8b",
+      "size": 21434,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "worker/whisper.ts",
+      "sha": "55d306062ef27dbd14928c2ff833dd6ea4e8f79e",
+      "size": 29914,
+      "category": "worker",
+      "target": null,
+      "state": "not_archived"
+    },
+    {
+      "path": "wrangler.toml",
+      "sha": "559ca99331b568162dbead0824f30bf854538ccf",
+      "size": 12518,
+      "category": "wrangler.toml",
+      "target": null,
+      "state": "not_archived"
+    }
+  ]
+}

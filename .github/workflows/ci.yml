@@ -39,6 +39,9 @@ jobs:
         run: npx tsc --noEmit --skipLibCheck
         continue-on-error: false
 
+      - name: Verify Kompas migration asset closure and lossless import
+        run: node --test scripts/tests/kompas-migration-assets.test.mjs scripts/tests/kompas-review-parity.test.mjs scripts/tests/kompas-blend-harvest.test.mjs
+
       - name: Build
         run: npm run build
         env:

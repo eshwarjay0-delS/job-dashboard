@@ -33,5 +33,15 @@
       "source": "/health",
       "destination": "/api/health"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/agent/watchdog",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/gmail/crawl",
+      "schedule": "0 12 * * *"
+    }
   ]
 }

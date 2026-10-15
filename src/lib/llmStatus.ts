@@ -8,7 +8,8 @@
  * retry rule) and the refusal, if any, is sorted into a state. Each probe asks for a handful of output tokens; the answers are
  * kept for five minutes per server instance, and callers that arrive together share one probe. No key or reply text is returned.
  */
-import { callLLM, resolveKeys, tailorKeys, tailorScope, type Provider } from "@/lib/llm"
+import { callLLM, keysFor, resolveKeys, tailorKeys, tailorScope, type Provider } from "@/lib/llm"
+import { vaultKnown } from "@/lib/keyVault"
 
 export type ProviderState = "ok" | "rate_limited" | "key_rejected" | "no_credit" | "model_not_found" | "slow_or_down" | "refused"
 export type LlmStatus = {
@@ -18,6 +19,12 @@ export type LlmStatus = {
   /** In the order the tailoring tries them. `limit` names the limit when the provider said which; `model` is the model that
    *  answered; `scope` says when a provider is not used for everything. */
   providers: { provider: Provider; state: ProviderState; limit?: string; model?: string; scope?: string }[]
+  /**
+   * Whether this server instance has read the admin's checklist of which features may use which key (src/lib/keyVault.ts).
+   * "not read" means storage did not answer: the providers that cost money are held back until it does, so a tailor on this
+   * instance runs on the free ones. It says nothing about what the checklist holds.
+   */
+  checklist?: "read" | "not read"
 }
 
 const ORDER: Provider[] = ["openai", "gemini", "groq", "anthropic", "openrouter"]   // the tailoring ladder's order (src/lib/tailor.ts)
@@ -39,6 +46,13 @@ function sort(message: string): { state: ProviderState; limit?: string } {
 
 let kept: { at: number; status: LlmStatus } | null = null
 let inflight: Promise<LlmStatus> | null = null
+/** Forget the last answer, so the next question probes again. Called when the admin changes a key. */
+export function forgetLlmStatus(): void { kept = null }
+
+/** Read existing probe evidence without triggering a paid model request. Cache is per instance. */
+export function cachedLlmStatus(): { checkedAt: string; status: LlmStatus } | null {
+  return kept ? { checkedAt: new Date(kept.at).toISOString(), status: kept.status } : null
+}
 
 export async function llmStatus(): Promise<LlmStatus> {
   if (kept && Date.now() - kept.at < 5 * 60_000) return kept.status
@@ -47,12 +61,13 @@ export async function llmStatus(): Promise<LlmStatus> {
 }
 
 async function probe(): Promise<LlmStatus> {
-  const keys = tailorKeys(resolveKeys({}), { owner: true })
+  // The health check looks at every key in use, a key the admin stored from the Admin page included (keyVault.ts).
+  const keys = await keysFor("status-check", () => tailorKeys(resolveKeys({}), { owner: true }))
   const have = ORDER.filter(p => !!keys[p])
   if (!have.length) return { state: "not_configured", providers: [], fix: "No AI provider key is set on the deployment. Set at least one of GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, ANTHROPIC_API_KEY, then redeploy." }
   const providers = await Promise.all(have.map(async (provider): Promise<LlmStatus["providers"][number]> => {
     try {
-      const answer = await callLLM({ keys, tier: "heavy", pref: provider, system: "Reply with the single word OK.", user: "OK?", maxTokens: 16, temperature: 0 })
+      const answer = await callLLM({ keys, tier: "heavy", pref: provider, system: "Reply with the single word OK.", user: "OK?", maxTokens: 16, temperature: 0, purpose: "status-check" })
       return { provider, state: "ok" as ProviderState, model: answer.model, ...scopeOf(provider) }
     } catch (e) {
       return { provider, ...sort(String((e as Error)?.message || e)), ...scopeOf(provider) }
@@ -66,6 +81,8 @@ async function probe(): Promise<LlmStatus> {
     : up === 0
       ? { state: "down", providers, fix: `No AI provider is answering, so nothing can be tailored: ${bad}. A provider on a free allowance comes back when its limit resets; one with credit added or a corrected key comes back at once.` }
       : { state: "degraded", providers, fix: `Tailoring works but leans on fewer providers than it has: ${bad}. A full resume is drafted as several calls at once, so with one provider left some of them can be refused.` }
+  status.checklist = vaultKnown() ? "read" : "not read"
+  if (status.checklist === "not read") status.fix = `${status.fix}${status.fix ? " " : ""}This server has not been able to read the admin's key checklist from storage, so OpenAI, Anthropic and OpenRouter are held back until it can.`
   kept = { at: Date.now(), status }
   return status
 }

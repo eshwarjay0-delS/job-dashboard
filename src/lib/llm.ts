@@ -5,6 +5,17 @@
 //   • "heavy"  (full resume tailoring)                  → quality first:    Anthropic → OpenRouter → Gemini
 // A UI preference can pin a specific provider per tier; "auto" uses the order above.
 
+import { OPENAI_DEFAULT, VAULT_PROVIDERS, allows, defaultProvider, loadVault, readyVault, ticked, vaultKey } from "./keyVault.ts"
+
+// The vault is asked for as soon as this file is loaded, so that by the time a route gathers its keys a key kept only on
+// the Admin page is usually already known to this server instance.
+void loadVault()
+
+// A person's own keys (from their Settings), remembered beside the set of keys they were gathered into. resolveKeys() puts
+// the deployment's key first, so where both exist the person's own would otherwise be lost: it is needed again when the
+// admin's checklist takes the deployment's key away from a feature (applyVault).
+const personal = new WeakMap<object, LlmKeys>()
+
 export type Provider = "anthropic" | "openrouter" | "gemini" | "groq" | "openai"
 export type ProviderPref = Provider | "auto"
 export type Tier = "heavy" | "light"
@@ -44,21 +55,34 @@ export function modelFor(provider: Provider, tier: Tier): string {
                           : (e.GEMINI_MODEL_LIGHT || e.GEMINI_MODEL || "gemini-3.5-flash-lite")
 }
 
+// The deployment's own key for a provider, from its settings.
+export function envKey(p: Provider): string {
+  const e = process.env
+  return ((p === "anthropic" ? e.ANTHROPIC_API_KEY : p === "openrouter" ? e.OPENROUTER_API_KEY : p === "groq" ? e.GROQ_API_KEY
+    : p === "gemini" ? (e.GEMINI_API_KEY || e.GOOGLE_API_KEY || e.GOOGLE_GENAI_API_KEY) : (e.OPENAI_API_KEY || e.OPEN_API_KEY)) || "").trim()
+}
+// The key this deployment uses for a provider: the one the admin stored from the Admin page (src/lib/keyVault.ts) when this
+// server instance has read one, otherwise the one in the deployment's settings.
+const deploymentKey = (p: Provider): string => vaultKey(p) || envKey(p)
+
 // Gather every available key (env + the client-provided body). Keys are classified by
 // their SOURCE (env var / body field name) — NOT by prefix — so newer key formats work.
 // (Google now issues Gemini keys as "AQ.…", not just "AIza…"; prefix-sniffing missed them.)
 export function resolveKeys(body?: { claudeKey?: string; openrouterKey?: string; geminiKey?: string; groqKey?: string }): LlmKeys {
   const out: LlmKeys = {}
   const set = (p: Provider, raw?: string) => { const v = (raw || "").trim(); if (v && !out[p]) out[p] = v }
-  const e = process.env
-  set("anthropic", e.ANTHROPIC_API_KEY)
-  set("openrouter", e.OPENROUTER_API_KEY)
-  set("gemini", e.GEMINI_API_KEY || e.GOOGLE_API_KEY || e.GOOGLE_GENAI_API_KEY)
-  set("groq", e.GROQ_API_KEY)
+  set("anthropic", deploymentKey("anthropic"))
+  set("openrouter", deploymentKey("openrouter"))
+  set("gemini", deploymentKey("gemini"))
+  set("groq", deploymentKey("groq"))
   set("anthropic", body?.claudeKey)
   set("openrouter", body?.openrouterKey)
   set("gemini", body?.geminiKey)
   set("groq", body?.groqKey)
+  const own: LlmKeys = {}
+  const mine = (p: Provider, raw?: string) => { const v = (raw || "").trim(); if (v) own[p] = v }
+  mine("anthropic", body?.claudeKey); mine("openrouter", body?.openrouterKey); mine("gemini", body?.geminiKey); mine("groq", body?.groqKey)
+  if (own.anthropic || own.openrouter || own.gemini || own.groq) personal.set(out, own)
   return out
 }
 
@@ -74,10 +98,14 @@ export function hasAnyKey(keys: LlmKeys): boolean { return !!(keys.anthropic || 
 // The setting is OPENAI_API_KEY. OPEN_API_KEY is read as well because that is the name the owner saved it under on Vercel
 // (2026-10-05, 09:20), and sending a busy person back to rename a setting would have been the worse fix.
 export function tailorKeys(keys: LlmKeys, who: { owner: boolean }): LlmKeys {
-  const key = (process.env.OPENAI_API_KEY || process.env.OPEN_API_KEY || "").trim()
+  const key = deploymentKey("openai")
   if (!key || keys.openai) return keys
   const scope = tailorScope()
-  return scope === "all" || (scope === "owner" && who.owner) ? { ...keys, openai: key } : keys
+  if (!(scope === "all" || (scope === "owner" && who.owner))) return keys
+  const next = { ...keys, openai: key }
+  const own = personal.get(keys)
+  if (own) personal.set(next, own)
+  return next
 }
 /**
  * Whose resume tailoring the OpenAI key is used for. One definition, read by the status page too.
@@ -93,6 +121,42 @@ export function tailorScope(): "all" | "owner" | "off" {
   if (!said || ["all", "everyone", "any", "on", "true", "1", "yes"].includes(said)) return "all"
   if (["owner", "owners", "owner-only", "owner only", "admin", "admins", "admin-only", "me"].includes(said)) return "owner"
   return "off"
+}
+
+/**
+ * The admin's checklist applied to a set of keys, for one feature (src/lib/keyVault.ts).
+ *
+ * A provider whose key is not ticked for this feature is taken out, exactly as if it had no key, so the other providers
+ * serve the feature. A key the admin stored replaces the deployment's own. A person's own key (from their Settings) is
+ * theirs: it is neither replaced nor taken out. Applying this twice gives the same keys as applying it once.
+ *
+ * OpenAI is added here, for a caller that was not handed it, only when the admin ticked a feature outside the resume
+ * tailor for it. For the tailor itself tailorKeys() still decides who is handed the key.
+ */
+export function applyVault(keys: LlmKeys, purpose: string): LlmKeys {
+  const out: LlmKeys = { ...keys }
+  const theirs = personal.get(keys)
+  if (theirs) personal.set(out, theirs)
+  for (const p of VAULT_PROVIDERS) {
+    const own = envKey(p), stored = vaultKey(p), held = out[p]
+    if (held && held !== own && held !== stored) continue
+    // Not ticked: exactly as if the deployment had no key for this provider, which means the person's own key, when they
+    // have one, is the key in use (found in review, 2026-10-08: it used to be dropped along with the deployment's).
+    if (!allows(p, purpose)) { if (theirs?.[p]) out[p] = theirs[p]; else delete out[p]; continue }
+    if (held) { if (stored) out[p] = stored; continue }
+    if (p === "openai") { if (ticked(p, purpose) && !OPENAI_DEFAULT.includes(purpose) && (stored || own)) out[p] = stored || own }
+    else if (stored) out[p] = stored
+  }
+  return out
+}
+/**
+ * The keys a feature may use, with the vault read first. For callers that choose providers before they call callLLM.
+ * Hand it a function when the keys are gathered with tailorKeys(): a key the admin stored for OpenAI is only seen by
+ * tailorKeys() once this server instance has read the vault, so the gathering has to wait for that.
+ */
+export async function keysFor(purpose: string, keys: LlmKeys | (() => LlmKeys)): Promise<LlmKeys> {
+  await readyVault(4000)
+  return applyVault(typeof keys === "function" ? keys() : keys, purpose)
 }
 
 // The order an automatic call asks the providers in. OpenAI is deliberately in neither list: see tailorKeys().
@@ -113,7 +177,9 @@ export type ChatMessage = { role: "user" | "assistant"; content: string }
 
 // Token accounting for one call. cacheRead tokens bill at ~10% of input, so a high
 // cacheRead share on repeat tailors of the same resume is the main cost win.
-export type TokenUsage = { input: number; output: number; cacheRead: number; cacheWrite: number }
+// `provider` and `model` say who served the call. Without them a tailor's tokens could only be priced at one model's rate
+// whatever had answered (src/lib/llmPrices.ts): a resume written on a free allowance was shown as money spent.
+export type TokenUsage = { input: number; output: number; cacheRead: number; cacheWrite: number; provider?: Provider; model?: string }
 
 interface CallOpts {
   keys: LlmKeys; tier: Tier; pref?: ProviderPref; system: string; maxTokens: number
@@ -140,6 +206,24 @@ interface CallOpts {
   // Optional sink: each call pushes its token usage here so the caller can total the
   // real cost of a whole tailor (and prove the cache is working).
   usageSink?: TokenUsage[]
+  // What the call is for, as a short label ("resume-tailor", "field-edit"). It is what the admin page groups cost by; a
+  // call that does not say is filed under "other".
+  purpose?: string
+}
+
+// Every call is written down after the response has gone (src/lib/llmLedger.ts): provider, model, purpose, tokens, whether
+// it answered. No words. The module is loaded on first use and by a relative path, so this file still has no import a
+// plain Node test cannot resolve; where it cannot be loaded (those tests), nothing is recorded and nothing fails.
+function recordCall(call: { purpose?: string; provider: Provider; model: string; ok: boolean; status?: number; usage?: TokenUsage; began: number }): void {
+  const at = Date.now()
+  // A call made for a Kompas feature ("kompas:flow") is filed under Kompas, whichever deployment made it.
+  const forKompas = (call.purpose || "").startsWith("kompas:")
+  void import("./llmLedger").then(m => m.scheduleLlmRecord({
+    at, app: forKompas ? "kompas" : "marketfit", purpose: (forKompas ? call.purpose!.slice(7) : call.purpose) || "other", provider: call.provider, model: call.model, ok: call.ok,
+    ...(call.status ? { status: call.status } : {}),
+    input: call.usage?.input || 0, output: call.usage?.output || 0, cacheRead: call.usage?.cacheRead || 0, cacheWrite: call.usage?.cacheWrite || 0,
+    ms: at - call.began,
+  })).catch(() => { /* no ledger here: a test, or a build without one */ })
 }
 
 // Hard per-call timeout. Without it, a throttled/hung provider request has no
@@ -191,11 +275,23 @@ async function fetchRetry(url: string, init: RequestInit): Promise<Response> {
 // single-field edit), although Groq was answering the whole time.
 export async function callLLM(opts: CallOpts): Promise<{ text: string; provider: Provider; model: string }> {
   const pref = opts.pref || "auto"
-  const first = pickProvider(opts.keys, opts.tier, pref)
-  if (!first) throw new Error("No API key configured. Add a Claude, OpenRouter, or Gemini key in Settings.")
-  const named = pref !== "auto" && !!opts.keys[pref]
+  await readyVault()
+  const purpose = opts.purpose || "other"
+  const keys = applyVault(opts.keys, purpose)
+  const first = pickProvider(keys, opts.tier, pref)
+  // A feature's default AI (Admin page, else the built-in table) is asked first; the
+  // other ticked providers stand behind it. This is how "Sessions run on OpenRouter"
+  // is kept: the default leads, it does not fence the others out.
+  const lead: Provider[] = []
+  if (pref === "auto") {
+    const def = defaultProvider(purpose)
+    if (def && keys[def] && !lead.includes(def)) lead.push(def)
+    if (keys.openai && ticked("openai", purpose) && !OPENAI_DEFAULT.includes(purpose) && !lead.includes("openai")) lead.push("openai")
+  }
+  if (!first && !lead.length) throw new Error("No API key configured. Add a Claude, OpenRouter, or Gemini key in Settings.")
+  const named = pref !== "auto" && !!keys[pref]
   const began = Date.now()
-  let order: Provider[] = [first.provider]
+  let order: Provider[] = first ? [first.provider] : []
   if (!named) {
     // Falling through is for the providers that cost nothing. The first provider with a key is asked as it always was;
     // after it, only a free one: Gemini, Groq, or OpenRouter on a ":free" model. Several routes that make automatic calls
@@ -203,8 +299,9 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
     // review, 2026-10-05). LLM_AUTO_FALLBACK_PAID=1 lifts the limit.
     const paidToo = process.env.LLM_AUTO_FALLBACK_PAID === "1" || process.env.LLM_AUTO_FALLBACK_PAID === "true"
     const free = (p: Provider) => p === "gemini" || p === "groq" || (p === "openrouter" && /:free$/i.test(modelFor(p, opts.tier)))
-    const keyed = AUTO_ORDER[opts.tier].filter(p => !!opts.keys[p]).filter((p, i) => i === 0 || paidToo || free(p))
-    order = [...keyed.filter(p => (downUntil.get(p) || 0) <= began), ...keyed.filter(p => (downUntil.get(p) || 0) > began)]
+    const keyed = AUTO_ORDER[opts.tier].filter(p => !!keys[p]).filter((p, i) => i === 0 || paidToo || free(p))
+    const rest = keyed.filter(p => !lead.includes(p))
+    order = [...lead, ...rest.filter(p => (downUntil.get(p) || 0) <= began), ...rest.filter(p => (downUntil.get(p) || 0) > began)]
   }
   // A further provider is started only while the call is young. A refusal that will not clear comes back in under a second,
   // so the next provider is asked at once; after a slow failure (a timeout, a rate limit waited out) the caller has usually
@@ -213,26 +310,40 @@ export async function callLLM(opts: CallOpts): Promise<{ text: string; provider:
   // Normalise to a messages array so providers always get structured turns.
   const msgs: ChatMessage[] = opts.messages ?? [{ role: "user", content: opts.user ?? "" }]
   let lastErr: unknown = null
+  const tried: string[] = []
   for (const provider of order) {
     if (lastErr && Date.now() - began > window) break
-    const key = opts.keys[provider]!
+    const key = keys[provider]!
     const model = named && opts.exactModel ? opts.exactModel
       : (opts.model && provider === "anthropic" && /^claude/i.test(opts.model)) ? opts.model
       : modelFor(provider, opts.tier)
+    // The call's own usage is read back from the sink the provider function writes to: the caller's, or one made here.
+    const sink = opts.usageSink ?? []
+    const o = opts.usageSink ? opts : { ...opts, usageSink: sink }
+    const before = sink.length, calledAt = Date.now()
     try {
-      const text = provider === "anthropic" ? await callAnthropic(key, model, opts, msgs)
-        : provider === "openrouter" ? await callOpenRouter(key, model, opts, msgs)
-        : provider === "groq" ? await callGroq(key, model, opts, msgs)
-        : provider === "openai" ? await callOpenAI(key, model, opts, msgs)
-        : await callGemini(key, model, opts, msgs)
+      const text = provider === "anthropic" ? await callAnthropic(key, model, o, msgs)
+        : provider === "openrouter" ? await callOpenRouter(key, model, o, msgs)
+        : provider === "groq" ? await callGroq(key, model, o, msgs)
+        : provider === "openai" ? await callOpenAI(key, model, o, msgs)
+        : await callGemini(key, model, o, msgs)
       downUntil.delete(provider)
       // For OpenAI, report the id that answered: it may be the account's own name for the model that was asked for.
-      return { text, provider, model: provider === "openai" ? openaiAlias.get(model) || model : model }
+      const answered = provider === "openai" ? openaiAlias.get(model) || model : model
+      recordCall({ purpose: opts.purpose, provider, model: answered, ok: true, usage: sink.length > before ? sink[sink.length - 1] : undefined, began: calledAt })
+      return { text, provider, model: answered }
     } catch (e) {
       lastErr = e
+      const status = Number((/API (\d{3})\b/.exec(String((e as Error)?.message || e)) || [])[1]) || undefined
+      recordCall({ purpose: opts.purpose, provider, model, ok: false, status, began: calledAt })
+      tried.push(`${provider} ${status ?? "failed"}`)
       if (wontClear(String((e as Error)?.message || e), !!(named && opts.exactModel))) downUntil.set(provider, Date.now() + 5 * 60_000)
     }
   }
+  // What is thrown is the last provider's refusal. Which providers were asked, and the status each answered with, goes
+  // with it (no text of theirs, nothing of a key): on 13 Oct 2026 the agent chat failed and the last refusal alone did
+  // not say why, because an earlier provider's was the one that mattered. See src/lib/plain-failure.ts.
+  if (lastErr && typeof lastErr === "object") { try { (lastErr as { tried?: string[] }).tried = tried } catch { /* a frozen error keeps what it has */ } }
   throw lastErr
 }
 
@@ -280,6 +391,7 @@ async function callAnthropic(key: string, model: string, o: CallOpts, msgs: Chat
     output: u.output_tokens || 0,
     cacheRead: u.cache_read_input_tokens || 0,
     cacheWrite: u.cache_creation_input_tokens || 0,
+    provider: "anthropic", model,
   })
   return (data.content || []).map((b: { text?: string }) => b.text || "").join("")
 }
@@ -305,7 +417,7 @@ async function callOpenRouter(key: string, model: string, o: CallOpts, msgs: Cha
   if (!res.ok) throw new Error(`OpenRouter API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
   const u = data.usage || {}
-  o.usageSink?.push({ input: u.prompt_tokens || 0, output: u.completion_tokens || 0, cacheRead: 0, cacheWrite: 0 })
+  o.usageSink?.push({ input: u.prompt_tokens || 0, output: u.completion_tokens || 0, cacheRead: 0, cacheWrite: 0, provider: "openrouter", model })
   return data.choices?.[0]?.message?.content || ""
 }
 
@@ -341,8 +453,32 @@ async function callGroq(key: string, model: string, o: CallOpts, msgs: ChatMessa
   if (!res.ok) throw new Error(`Groq API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
   const u = data.usage || {}
-  o.usageSink?.push({ input: u.prompt_tokens || 0, output: u.completion_tokens || 0, cacheRead: 0, cacheWrite: 0 })
+  o.usageSink?.push({ input: u.prompt_tokens || 0, output: u.completion_tokens || 0, cacheRead: 0, cacheWrite: 0, provider: "groq", model })
+  noteGroqAllowance(model, res.headers)
   return data.choices?.[0]?.message?.content || ""
+}
+
+// What Groq says is left, per model, as of the last answer this server instance got from it.
+//
+// "How much usage is left" (owner, 2026-10-07) has one honest source on a free allowance: the provider's own headers. Every
+// Groq answer carries the day's request allowance and the minute's token allowance with what remains of each. They are kept
+// here as they arrive, so the admin page reads what Groq last said and never an estimate of ours. `at` is when it was said: a
+// figure from an instance that has been idle for an hour is an hour old, and the page shows that.
+export type GroqAllowance = { model: string; at: number; requestsLimit: number | null; requestsLeft: number | null; tokensLimit: number | null; tokensLeft: number | null }
+const groqLeft = new Map<string, GroqAllowance>()
+function noteGroqAllowance(model: string, headers: Headers | undefined): void {
+  if (!headers || typeof headers.get !== "function") return
+  const n = (name: string) => { const v = headers.get(name); return v !== null && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null }
+  const seen: GroqAllowance = {
+    model, at: Date.now(),
+    requestsLimit: n("x-ratelimit-limit-requests"), requestsLeft: n("x-ratelimit-remaining-requests"),
+    tokensLimit: n("x-ratelimit-limit-tokens"), tokensLeft: n("x-ratelimit-remaining-tokens"),
+  }
+  if (seen.requestsLimit !== null || seen.tokensLimit !== null) groqLeft.set(model, seen)
+}
+/** Newest first. Empty until this instance has had an answer from Groq. */
+export function groqAllowances(): GroqAllowance[] {
+  return [...groqLeft.values()].sort((a, b) => b.at - a.at)
 }
 
 // OpenAI (resume tailoring only: see tailorKeys).
@@ -392,7 +528,7 @@ async function callOpenAI(key: string, wanted: string, o: CallOpts, msgs: ChatMe
       const data = await res.json()
       const u = data.usage || {}
       const cached = u.prompt_tokens_details?.cached_tokens || 0
-      o.usageSink?.push({ input: Math.max(0, (u.prompt_tokens || 0) - cached), output: u.completion_tokens || 0, cacheRead: cached, cacheWrite: 0 })
+      o.usageSink?.push({ input: Math.max(0, (u.prompt_tokens || 0) - cached), output: u.completion_tokens || 0, cacheRead: cached, cacheWrite: 0, provider: "openai", model })
       return data.choices?.[0]?.message?.content || ""
     }
     const raw = await res.text()
@@ -439,7 +575,7 @@ async function callGemini(key: string, model: string, o: CallOpts, msgs: ChatMes
   if (!res.ok) throw new Error(`Gemini API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
   const m = data.usageMetadata || {}
-  o.usageSink?.push({ input: m.promptTokenCount || 0, output: m.candidatesTokenCount || 0, cacheRead: m.cachedContentTokenCount || 0, cacheWrite: 0 })
+  o.usageSink?.push({ input: m.promptTokenCount || 0, output: m.candidatesTokenCount || 0, cacheRead: m.cachedContentTokenCount || 0, cacheWrite: 0, provider: "gemini", model })
   const parts = data.candidates?.[0]?.content?.parts || []
   return parts.map((p: { text?: string }) => p.text || "").join("")
 }
