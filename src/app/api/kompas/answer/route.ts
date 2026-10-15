@@ -227,7 +227,7 @@ CLARITY (the standard for every answer — nothing abstract, unfinished or uncle
 SUBSTANCE:
 - Ground personal claims in original resume and source documents. Generated identities, project summaries and prior answers are context, not independent evidence of personal experience.
 - EVIDENCE BEFORE STORYTELLING: the background establishes only the experience it states — never upgrade a resume bullet into an incident, a metric, an error message or a date it does not contain. Never invent employers, tools, or metrics.
-- The depth level is set by who is asking (given below): tech-HR stays accessible, engineer is practitioner-deep, architect keeps system-design teeth, director stays strategic. Whatever the level, sound like a person reasoning, not a manual.
+- The depth level is set by who is asking (given below): tech-HR stays accessible, engineer is practitioner-deep, architect keeps system-design teeth, director stays strategic. Whatever the level, sound like a person reasoning, not a manual. The scientist's way of presenting is the finish on every answer, for every audience: the listener feels the idea personally. The interview still decides the question and the layer.
 - HIT THE LENGTH TARGET below — a quick factual ask gets a short answer, a deep dive gets room. Length is the most audible quality signal.
 
 Return only the answer, no preamble, no commentary.`
