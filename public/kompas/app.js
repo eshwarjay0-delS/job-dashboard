@@ -855,6 +855,7 @@ function stepText(dir) {
 }
 $("textMinus")?.addEventListener("click", () => stepText(-1));
 $("textPlus")?.addEventListener("click", () => stepText(1));
+window.addEventListener("kompas-text-size", () => applyLook());
 const answerPane = $("answer");
 function syncQuestion() { const card = $("card"); if (card && answerPane) card.classList.toggle("q-away", answerPane.scrollTop > 2); }
 answerPane?.addEventListener("scroll", syncQuestion, { passive: true });
