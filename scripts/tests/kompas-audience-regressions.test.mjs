@@ -54,6 +54,9 @@ test('the live page says a problem before the session and does not leave a failu
   assert.doesNotMatch(page, /transcript\.length > 500/)
   assert.match(page, /flushHeard\(1500\)/)
   assert.match(page, /derived: said/)
+  assert.match(page, /async function wrapSession/)
+  assert.match(page, /running \? wrapSession\(\) : start\(\)/)
+  assert.match(page, /textSizeN/)
 })
 
 test('the question is cut out of the ramble, and a definition stays a storyteller explanation', () => {

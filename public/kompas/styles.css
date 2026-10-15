@@ -968,3 +968,28 @@ html.theme-dark{--gold:#c9a45c;--gold-deep:#e2c27f}
 .icon-btn,.si-ico,.side-item.on .si-ico,.mi-ico,.send,.nav,.step{color:var(--gold)}
 .icon-btn:hover,.send:hover,.nav:hover,.step:hover,.side-item:hover .si-ico{color:var(--gold-deep)}
 .si-ico,.side-item.on .si-ico{opacity:1}
+
+/* The text size is the live session, not only the spoken answer. Stop closes into the sessions list. */
+html .view-copilot .caption,
+html .view-copilot .cap-text,
+html .view-copilot .statusline,
+html .view-copilot .tip,
+html .view-copilot .drawer,
+html .view-copilot .drawer-body,
+html .view-copilot .manual,
+html .view-copilot .a-head,
+html .view-dash .session-card .sc-role,
+html .view-dash .session-card .sc-co,
+html .view-dash .dash-head h2,
+html .view-dash .dash-head p{font-size:var(--text-size)}
+.type-n{min-width:1.6em;text-align:center;font:600 13px/26px var(--sans);color:var(--ink)}
+#view-copilot{transition:opacity .55s var(--ease),transform .55s var(--ease)}
+#view-copilot.wrapping{opacity:0;transform:translateY(18px) scale(.985);pointer-events:none}
+#view-dashboard.arriving{animation:sessionArrive .55s var(--ease) both}
+@keyframes sessionArrive{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+html .q,html .q span,html .q b,html #question,
+html #answer,html #answer li,html #answer li.passage,
+html .cap-text,html .drawer-body,html .statusline,
+html.kd .overlay .q,html.kd .overlay .q span,html.kd .overlay .q b,
+html.kd #question,html.kd #answer,html.kd #answer li,html.kd #answer li.passage,
+html.kd .cap-text,html.kd .drawer-body,html.kd .statusline{font-size:var(--text-size)}

@@ -642,6 +642,27 @@ async function leaveLive() {
     beat(false); dossierAbort = true; resetLiveState(); openDashboard();
   } finally { leaving = false; }
 }
+let wrapping = false;
+async function wrapSession() {
+  if (leaving || wrapping) return;
+  wrapping = true;
+  const view = $("view-copilot");
+  const button = $("startBtn");
+  button.disabled = true;
+  button.textContent = "Wrapping up";
+  view?.classList.add("wrapping");
+  status("Session wrapped up.", "live");
+  await new Promise((r) => setTimeout(r, 680));
+  try { await leaveLive(); }
+  finally {
+    wrapping = false;
+    view?.classList.remove("wrapping");
+    const dash = $("view-dashboard");
+    dash?.classList.add("arriving");
+    setTimeout(() => dash?.classList.remove("arriving"), 700);
+    button.disabled = false;
+  }
+}
 // The shared tab or screen is let go when the box closes, so the browser stops showing that it is being shared.
 function dropScreen() { if (displayVideo) { try { displayVideo.stop(); } catch {} displayVideo = null; } }
 $("exitCopilot").onclick = leaveLive;
@@ -828,7 +849,7 @@ function applyLook() {
   document.documentElement.classList.toggle("theme-dark", theme === "dark");
   const font = LOOK_FONTS[LS.get("font", "times")] ? LS.get("font", "times") : "times";
   document.documentElement.style.setProperty("--serif", LOOK_FONTS[font]);
-  const text = Math.min(28, Math.max(12, Number(LS.get("textSize", 16)) || 16));
+  const text = Math.min(40, Math.max(12, Number(LS.get("textSize", 16)) || 16));
   document.documentElement.style.setProperty("--text-size", text + "px");
   const tab = [2, 4, 8].includes(Number(LS.get("tabSize", 4))) ? Number(LS.get("tabSize", 4)) : 4;
   document.documentElement.style.setProperty("--tab-size", String(tab));
@@ -841,6 +862,7 @@ function applyLook() {
   }
   const fontSel = $("lookFont"); if (fontSel) fontSel.value = font;
   const textSel = $("lookText"); if (textSel && document.activeElement !== textSel) textSel.value = String(text);
+  const textN = $("textSizeN"); if (textN) textN.textContent = String(text);
   const tabSel = $("lookTab"); if (tabSel) tabSel.value = String(tab);
   $("themeLight")?.classList.toggle("on", theme === "light");
   $("themeDark")?.classList.toggle("on", theme === "dark");
@@ -850,11 +872,11 @@ $("lookFade")?.addEventListener("input", (e) => { const a = Number(e.target.valu
 $("lookFont")?.addEventListener("change", (e) => { LS.set("font", e.target.value); applyLook(); });
 $("lookText")?.addEventListener("input", (e) => { LS.set("textSize", Number(e.target.value)); applyLook(); });
 function stepText(dir) {
-  const next = Math.min(28, Math.max(12, (Number(LS.get("textSize", 16)) || 16) + dir));
+  const next = Math.min(40, Math.max(12, (Number(LS.get("textSize", 16)) || 16) + dir));
   LS.set("textSize", next); applyLook();
 }
-$("textMinus")?.addEventListener("click", () => stepText(-1));
-$("textPlus")?.addEventListener("click", () => stepText(1));
+$("textMinus")?.addEventListener("click", () => stepText(-2));
+$("textPlus")?.addEventListener("click", () => stepText(2));
 window.addEventListener("kompas-text-size", () => applyLook());
 const answerPane = $("answer");
 function syncQuestion() { const card = $("card"); if (card && answerPane) card.classList.toggle("q-away", answerPane.scrollTop > 2); }
@@ -940,7 +962,7 @@ renderDepth();
 
 /* ---- start / stop ---- */
 let running = false;
-$("startBtn").onclick = () => running ? stop() : start();
+$("startBtn").onclick = () => running ? wrapSession() : start();
 
 function isUnavailableAnswer(meta, text) {
   return !!meta.degraded && /answer engine is busy|answer engine hit an error|answer engine is at its limit|press AI Answer again|paid answer service returned|engine unavailable|groq's free/i.test(String(text || ""));
