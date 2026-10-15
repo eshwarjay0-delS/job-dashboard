@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic"
 export const metadata: Metadata = { title: "WhatsApp" }
 
 const STEPS = [
-  "Send your resume once, as a Word file (.docx). MarketFit keeps it.",
-  "Send a job post as a message. After the first time, that is all it needs.",
-  "MarketFit sends your resume back, fitted to that job, and saves it in your Files in a folder for that kind of job.",
+  "Send a Word resume (.docx) and a job description for each tailoring request.",
+  "Send them in either order. MarketFit tailors the document when it has both.",
+  "MarketFit replies with the tailored Word document. New WhatsApp resumes are not filed in your MarketFit Files.",
   "Want a change? Swipe to reply to that resume and say what to change.",
 ]
 
@@ -48,7 +48,7 @@ export default async function WhatsAppPage() {
       </Card>
 
       <Card id="files" style={{ scrollMarginTop: 24, display: "flex", flexDirection: "column" }}>
-        <Meta>Save them in your Files</Meta>
+        <Meta>Link your WhatsApp number</Meta>
         <LinkCard bot={live ? digits : ""} />
       </Card>
     </div>
