@@ -169,6 +169,8 @@ test('WhatsApp keeps the JD while selecting an email and never crosses account i
   assert.ok(bot.includes('session.jd = inline.rest') && bot.includes('session.ask = slots'))
   assert.ok(bot.includes('return sendText(from, askWhichEmail(slots))'))
   assert.ok(bot.includes('readChoice(text, slots)'))
+  assert.ok(bot.includes('jd: session.jd, ask: session.ask, email: session.email'))
+  assert.ok(bot.includes('latestSelection.email && latestSelection.email !== (source.email || "")'))
   assert.ok(bot.includes('if (!who.own || !UUID.test(who.userId) || !serviceClientAvailable()) return null'))
   assert.ok(bot.includes('.eq("user_id", who.userId).eq("email", email).maybeSingle()'))
   assert.ok(bot.includes('.eq("library_id", library.id)'))

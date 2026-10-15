@@ -510,6 +510,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       session.email = selection
       session.ask = undefined
       await saveSession(from, session)
+      if (session.jd) return generate(from, session, who)
       return sendText(from, `Using *${selection}* for your next job description. Send the job description whenever you're ready.`)
     }
 
@@ -542,7 +543,8 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       await new Promise(r => setTimeout(r, RESUME_GRACE_MS))
       const now = await loadSession(from)
       if ((now.resumeAt || 0) > askedAt) return
-      return generate(from, { ...now, jd: text.trim(), ask: undefined, email: undefined }, who)
+      // Keep the parsed job and selected identity after the resume upload grace period.
+      return generate(from, { ...now, jd: session.jd, ask: session.ask, email: session.email }, who)
     }
     return generate(from, session, who)
   }
@@ -819,6 +821,13 @@ async function generate(from: string, session: Session, who: Who, maxMs = TAILOR
   const still = await inFlight(from)
   if (still && still.job === job && still.token !== mine) { console.error("[whatsapp] stood down: a newer run for the same job took over"); return }
 
+  // A user can correct the email while the earlier resume is still generating.
+  // Do not deliver an old draft from an identity they have since changed.
+  const latestSelection = await loadSession(from)
+  if (latestSelection.email && latestSelection.email !== (source.email || "")) {
+    await clearFlight(from, mine)
+    return
+  }
   const meta = await metaPromise
   const name = await outputNameFor(file)
   // A resume the tailor picked from Files may itself have been made for a job: what is made from it is never started from again.
