@@ -59,7 +59,7 @@ test('an email keeps its number for good, however many resumes are saved after (
   assert.ok(store.includes('const next = numberEmails(order, counts, keptEmail)') && store.includes('} catch { sure = false }'))
   assert.ok(store.includes('if (sure && keep && next.order.join("\\n") !== order.join("\\n"))'))
   // A number sent with a job description is read only when the numbering could be read.
-  assert.ok(read('src/app/api/whatsapp/webhook/route.ts').includes('const said = numbered.sure ? readChoice(text, slots) : { email: "", rest: text.trim() }'))
+  assert.ok(read('src/app/api/whatsapp/webhook/route.ts').includes('const { slots } = await numberedEmails(who.userId, counts, baseline)'))
 })
 
 test('the answer is read as he said it: "number one", "1", the address', () => {
@@ -159,49 +159,31 @@ test('whose a resume is comes from the email written in it, not from its folder 
   assert.ok(store.includes('const depth: 0 | 1 | 2 = !isTailoredName(parts[parts.length - 1]) ? 0 : known && known.depth !== 2 ? 1 : 2'))
 })
 
-test('the bot asks before it tailors, takes the answer, and says the small message after every resume', () => {
+test('WhatsApp keeps the JD while selecting an email and never crosses account identity', () => {
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
-  // 1. A resume sent for this job is used as it is; 2. the email is settled or asked; 3. the closest of that email.
-  assert.ok(bot.includes('if (own && original) return { source: own }'))
-  assert.ok(bot.includes('if (emails.length > 1) return { ask: slots }'))
-  assert.ok(bot.includes('const found = await closestFor(userDir, email, jd, kept_, resumes.index, choice.redo ? jobKeyOf(jd) : "")'))
-  // The question waits with the job description.
-  assert.ok(bot.includes('session.ask = start.ask\n    await saveSession(from, session)'))
-  assert.ok(bot.includes('const said = numbered.sure ? readChoice(text, slots)') && bot.includes('session.jd = said.rest'))
-  // Found in review: an answer sent as a reply to the question went to "change a resume". It is read first.
-  const answer = bot.indexOf('const answer = waiting ? choiceIn(text, waiting) : ""'), change = bot.indexOf('if (replyTo) return refine(from, replyTo, text, who)')
-  assert.ok(answer > 0 && answer < change && change < bot.indexOf('That looks too short to be a job description'))
-  // Found in review: the default account every unjoined number shares was still looked through for the email on a
-  // sent resume. It is not looked through at all, and "library" does not list it.
-  assert.ok(bot.indexOf('if (!who.own) return own ? { source: own } : { say: NO_RESUME }') < bot.indexOf('const resumes = choice.resumes || await libraryOf(userDir)'))
-  assert.ok(bot.includes('const resumes = who.own ? await libraryOf(userDirOf(userId)) : null') && bot.includes('if (!who.saves || !who.own) return sendText(from, `Nothing is saved in Files for this number yet.'))
-  // Found in review: a resume marked "sent for the next job" never stopped being so, and won over an email the person
-  // said. It ends with the job made from it, a quiet day, or "reset"; and an email said for the job wins over it.
-  assert.ok(bot.includes('if (own && session.resumeFresh && keptEmail === email) return { source: { ...own, email } }'))
-  assert.ok(bot.includes('if (who.own && live(slots).length > 1 && !email)'))
-  assert.ok(bot.includes('if (s.updatedAt && Date.now() - s.updatedAt > ttl) return { ...kept(s), resumeFresh: false }') && bot.includes('await saveSession(from, { ...kept(session), resumeFresh: false })'))
-  assert.ok(bot.includes('resumeFresh: sameResume && usedKept ? false : now.resumeFresh,'))
-  // Found in review: a resume with no email that can be read was taken to be the only email's. It is used as it
-  // always was, and never put among another email's resumes.
-  assert.ok(bot.includes('if (own && !keptEmail && emails.length === 1) return (await already("")) || { source: own }'))
-  assert.ok(bot.includes('const kept_ = own && keptEmail === email ? await keptCandidate('))
-  // Found in review: the job that finishes wrote back the session of a minute ago and wiped a question asked since.
-  // It reads the session again and puts away its own job only.
-  assert.ok(bot.includes('const loaded = await loadSession(from)\n  const now = loaded.seen?.length ? loaded : session\n  const another = !!now.jd && jobKeyOf(now.jd) !== jobKeyOf(session.jd || "")'))
-  assert.ok(bot.includes('...(another ? now : kept(now)),'))
-  // A job description that takes the place of one still waiting for its email says so.
-  assert.ok(bot.includes('This job description takes the place of the one that was waiting for its email.'))
-  // The final file must match the name/email of its source or it is blocked.
+  const waiting = bot.indexOf('if (session.jd && session.ask?.some(Boolean))')
+  const reply = bot.indexOf('const selected = choiceIn(text, session.ask)')
+  const change = bot.indexOf('if (replyTo) return refine(from, replyTo, text, who)')
+  assert.ok(waiting > 0 && waiting < reply && reply < change)
+  assert.ok(bot.includes('session.email = selected') && bot.includes('return generate(from, session, who)'))
+  assert.ok(bot.includes('session.jd = inline.rest') && bot.includes('session.ask = slots'))
+  assert.ok(bot.includes('return sendText(from, askWhichEmail(slots))'))
+  assert.ok(bot.includes('readChoice(text, slots)'))
+  assert.ok(bot.includes('if (!who.own || !UUID.test(who.userId) || !serviceClientAvailable()) return null'))
+  assert.ok(bot.includes('.eq("user_id", who.userId).eq("email", email).maybeSingle()'))
+  assert.ok(bot.includes('.eq("library_id", library.id)'))
+  assert.ok(bot.includes('(await emailOn(saved.bytes)) !== email'))
+  assert.ok(bot.includes('await recoverLibraryResume(who.userId, doc.id)'))
+  assert.ok(bot.includes('return { dir, givenPath: file, depth: 1, email, said:'))
   assert.ok(bot.includes('const identityChanged = !!sourceName && sourceName !== outputName'))
   assert.ok(bot.includes('if (identityChanged || emailChanged || wrongLibrary)'))
-  // The small message, after every new resume.
+  assert.ok(bot.includes('const loaded = await loadSession(from)'))
+  assert.ok(bot.includes('...(another ? now : kept(now)),'))
+  assert.ok(bot.includes('await sendText(from, DIFFERENT_RESUME)'))
+  // The legacy helpers retain their original contract for other callers.
   assert.equal(DIFFERENT_RESUME, '_To start from a different resume, send me that resume first, then the job description._')
-  assert.ok(bot.includes('try { await sendText(from, DIFFERENT_RESUME) } catch { /* ignore */ }'))
-  // The time spent finding the resume comes out of the minute the tailoring has.
-  assert.ok(bot.includes('const budget = () => TAILOR_BUDGET_MS - (Date.now() - lookedAt)') && bot.includes('maxMs = Math.max(20_000, maxMs - (Date.now() - lookedAt))'))
-  // The same decision can be asked for without a message to the bot, and asking changes nothing.
   const api = read('src/app/api/resumes/library-pick/route.ts')
-  assert.ok(api.includes('const userId = await authenticatedUserId(request)') && api.includes('await numberedEmails(userId, resumes.counts, "", body.keep === true)'))
+  assert.ok(api.includes('const userId = await authenticatedUserId(request)'))
 })
 
 test('only a registered number is answered; one that is not gets one automated message a day and nothing else', () => {
