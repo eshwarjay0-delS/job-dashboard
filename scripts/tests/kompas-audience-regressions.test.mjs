@@ -10,6 +10,9 @@ test('HTTP responses, versions and example invoice identifiers survive the figur
     'The service returns 403 if the owner differs.',
     'The suite expects a 403.',
     'Every unauthorized API call receives a 403.',
+    'expecting a "403 Forbidden" for the latter.',
+    'logs any 200 responses for a mismatched owner.',
+    'asserts a 403 response, confirming the bug is closed.',
     'For example, use Kubernetes 1.27 and Istio 1.18 with NGINX 1.25.',
     'Request /invoices/123 with invoice_id=456.',
   ]) {
@@ -40,6 +43,8 @@ test('explicit mixed audience overrides architect detail, and directors receive 
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /surface or bottom/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /surface question never receives a bottom scenario/)
   assert.match(audienceGuidance('engineer', 'How would you test this?'), /100% relevant to this question/)
+  assert.match(audienceGuidance('hr', 'Tell me about a time you led'), /general scenario/)
+  assert.match(audienceGuidance('engineer', 'How would you investigate this?'), /technical question/)
   assert.match(audienceGuidance('director', 'Would you delay launch?'), /tradeoff, or how the result is checked/)
 })
 

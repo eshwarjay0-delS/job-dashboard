@@ -729,8 +729,8 @@ export async function POST(request: NextRequest) {
     question,
     system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${audienceGuidance(interviewer, question)}`,
     userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\nSpeak it. Sentence one is the answer in words this listener already understands. Then one path. On every sentence, ask whether you are 100% on this question, at this layer. A sentence that is not, is not said.
-Surface — a definition, a difference, a brief what-is: the general explanation. One sentence may sound like experience and stays on the surface — what it was and what it changed, not an investigation. A surface question never receives a bottom scenario. Do not invent an incident, an outage, a fraud case, or a tool the background does not name.
-Bottom — only when they ask how, for a time, a failure, a bottleneck, or to go deeper: one technical scenario at that depth. The impact, what succeeded or failed, the bottleneck, and what you learned come only from the background. If the background does not contain that incident, give the method as what you would do.
+A general scenario — a time, a would-you, a launch, or a people question: the decision or the moment, in plain words, and one picture. Do not open a mechanism they did not ask for. If the background has no such incident, say what you would do.
+A technical question — a what-is, a how, an investigate, a fix, or a test: the check, then the mechanism. Leave a status code as a status code. One example at most. Do not invent an incident, an outage, a fraud case, or a tool the background does not name.
 If a second topic starts, stop.`,
     plan,
     interviewer,
