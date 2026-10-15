@@ -69,6 +69,7 @@ test('the question is cut out of the ramble, and a definition stays a storytelle
   const ramble = 'Okay. Yes so I start by troubleshooting. Okay, so how do you configure certificate discovery in Venafi?'
   assert.match(cutQuestion(ramble), /how do you configure certificate discovery in Venafi/i)
   assert.equal(cutQuestion('Okay.'), '')
+  assert.match(cutQuestion('do you know about routing tables?'), /routing tables/i)
   assert.equal(cutQuestion('Intro'), 'Tell me about yourself')
   const code = 'if n <= 3:\n    return True\nif n % 2 == 0:\n    return False'
   assert.match(applyGuards(code, null, new Set()).text, /n <= 3/)
