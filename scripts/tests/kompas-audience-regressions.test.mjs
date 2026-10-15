@@ -1,8 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { guardText, needsGuard } from '../../src/lib/kompasGuards.ts'
+import { guardText, needsGuard, applyGuards } from '../../src/lib/kompasGuards.ts'
 import { audienceGuidance } from '../../src/lib/kompasAudience.ts'
+import { cutQuestion } from '../../src/lib/kompasAnswer.ts'
 
 test('HTTP responses, versions and example invoice identifiers survive the figures guard', () => {
   for (const text of [
@@ -49,4 +50,14 @@ test('the live page says a problem before the session and does not leave a failu
   assert.doesNotMatch(page, /transcript\.length > 500/)
   assert.match(page, /flushHeard\(1500\)/)
   assert.match(page, /derived: said/)
+})
+
+test('the question is cut out of the ramble, and a definition stays a storyteller explanation', () => {
+  const ramble = 'Okay. Yes so I start by troubleshooting. Okay, so how do you configure certificate discovery in Venafi?'
+  assert.match(cutQuestion(ramble), /how do you configure certificate discovery in Venafi/i)
+  assert.equal(cutQuestion('Okay.'), '')
+  assert.equal(cutQuestion('Intro'), 'Tell me about yourself')
+  const code = 'if n <= 3:\n    return True\nif n % 2 == 0:\n    return False'
+  assert.match(applyGuards(code, null, new Set()).text, /n <= 3/)
+  assert.match(audienceGuidance('engineer', 'What is a certificate?'), /name the mechanism once/)
 })

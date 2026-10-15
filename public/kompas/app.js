@@ -1708,9 +1708,13 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     if (meta.ledger) ledger = meta.ledger;
     card.streaming = false;
-    if (meta.noQuestion && !opts.answeredHeard) {
-      const raw = heardAsQuestion([{ text: plainHeard || question }]);
-      if (raw) return generateAnswer(raw, card, { ...opts, derived: raw, answeredHeard: true, consolidated: false });
+    if (meta.noQuestion) {
+      card.streaming = false;
+      card.answer = keepOld ? prevAnswer : [];
+      card.meta = "";
+      if (cards[idx] === card) renderCard();
+      status("Still listening.", "live");
+      return;
     }
     if (!text.trim()) throw new Error("The answer engine returned an empty response. Please retry.");
     show(text);
@@ -2205,7 +2209,9 @@ function transcriptText(s, log) {
     const head = `[${tm(e.at)}] AI${e.depth ? " — " + e.depth : ""}${e.regen ? " (regenerated)" : ""}${e.typed ? " (typed question)" : ""}`;
     if (e.noQuestion) { out.push(head, "No question detected in what was heard.", ""); continue; }
     if (e.busy) { out.push(head, `Answer-lane rate limit — retried automatically after ${Math.ceil((e.retryAfterMs || 0) / 1000)}s.`, ""); continue; }
-    out.push(head, `💬 Question: ${e.derived || e.question}`, "", "---", "", `⭐️ Answer: ${String(e.text || "").trim()}`);
+    const q = [e.derived, e.question].find(x => typeof x === "string" && x && x !== "undefined") || "";
+    if (!q && !String(e.text || "").trim()) continue;
+    out.push(head, `💬 Question: ${q}`, "", "---", "", `⭐️ Answer: ${String(e.text || "").trim()}`);
     if (e.failed) out.push("", `(engine unreachable: ${e.failed})`);
     out.push("");
   }

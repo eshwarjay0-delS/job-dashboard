@@ -37,7 +37,8 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   const before = line.slice(Math.max(0, at - 28), at)
   const after = line.slice(at + fig.length, at + fig.length + 14)
   const value = fig.replace(/[.,]+$/, "")
-  if (/\b(port|ports|version|v\.?|cve[-\s]?|event\s*id|error|code|rule|threshold|severity|p[0-4]|build|ticket|case|change)\s*$/i.test(before)) return true
+  if (/\b(port|ports|version|v\.?|cve[-\s]?|event(?:\s*id)?|error|code|rule|threshold|severity|p[0-4]|build|ticket|case|change)\s*$/i.test(before)) return true
+  if (/^x[0-9a-f]/i.test(after)) return true
   if (/^\s*(port|ports)\b/i.test(after)) return true
   // HTTP responses and product versions describe a mechanism, not a result
   // claimed from the candidate's career. Do not turn `returns 403` into
@@ -340,6 +341,7 @@ export function applyGuards(
     let line = rawLine
     const fence = /^\s*```/.test(line)
     if (fence) return line // code is shown exactly as written
+    if (/^\s*(?:def |class |import |from |return\b|if |elif |else:|for |while |print\()/.test(line) || /\b(?:<=|>=|==|%)\b/.test(line)) return line
     if (line.includes("[")) line = unbracket(line, facts)
     line = cleanOrphans(fixTitle(dropUnsourcedPrestige(fixVersions(dropUnsourcedPlace(line, facts), facts), facts), facts))
     if (!line.trim() || !needsGuard(line, allowed)) return line

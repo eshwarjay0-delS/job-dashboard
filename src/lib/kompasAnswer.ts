@@ -158,6 +158,29 @@ export function plainlyNoQuestion(heard: string): boolean {
   })
 }
 
+/**
+ * The last real question inside a messy turn. The microphone hears the interviewer,
+ * the candidate reading the previous answer, and noise. The answer follows the ask,
+ * not the ramble. "Okay" alone is not a question.
+ */
+export function cutQuestion(heard: string): string {
+  const text = String(heard || "")
+    .replace(/^(?:You(?: \(typed\))?|Them):\s*/gim, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (/^(?:self\s+)?intro(?:duction)?\.?$/i.test(text)) return "Tell me about yourself"
+  const re = /((?:how|what|why|when|where|which|who)\b[^?.!]{6,180}\??|(?:can|could|would|will)\s+you\b[^?.!]{4,180}\??|(?:tell me|walk me|give me|explain|describe|define|compare)\b[^?.!]{4,180}\??)/gi
+  const found: string[] = []
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text))) {
+    const q = m[1].replace(/^(?:ok(?:ay)?|so|and|also|yes|yeah|uh|um)[, ]+/i, "").trim()
+    if (q.split(/\s+/).length >= 4) found.push(q)
+  }
+  if (!found.length) return ""
+  const q = found[found.length - 1].replace(/\s+/g, " ").trim()
+  return q.charAt(0).toUpperCase() + q.slice(1)
+}
+
 /** Verbatim extraction when the transcript reduces to exactly one clean question. */
 export function cleanQuestion(heard: string): string {
   const lines = String(heard || "").split("\n").filter((l) => l.trim())

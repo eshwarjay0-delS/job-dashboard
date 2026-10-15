@@ -7,7 +7,7 @@ import { resumeRoles, resumeDigest, employerAliases } from "@/lib/kompasResume"
 import { hashUserId } from "@/lib/sttLedger"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
-  classify, canonicalQuestion, lengthPlan, plainlyNoQuestion, cleanQuestion, resolveFollowUp,
+  classify, canonicalQuestion, lengthPlan, plainlyNoQuestion, cleanQuestion, cutQuestion, resolveFollowUp,
   tierRule, pickShape, DERIVE_SYSTEM, type LengthPlan,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
   commit, matchBank,
@@ -576,10 +576,17 @@ export async function POST(request: NextRequest) {
 
   const heardAll = str(body.question, 4000)
   const asked = str(body.derived, 900)
-  // The page sends the last thing asked as `derived` and everything just heard as `question`.
-  // Answering the whole ramble is how a nearby topic takes the answer.
-  let question = asked && heardAll && asked.length + 40 < heardAll.length ? asked : (asked || heardAll)
-  if (!question) return NextResponse.json({ error: "Nothing to answer." }, { status: 400, headers: NO_STORE })
+  // Cut the question out of the ramble. "Okay", the candidate reading the last answer,
+  // and noise are not the question. The last real ask is.
+  const cut = cutQuestion([heardAll, asked].filter(Boolean).join("\n"))
+  let question = cut
+  if (!question) {
+    const quiet = `data: ${JSON.stringify({ type: "meta", noQuestion: true })}\n\ndata: ${JSON.stringify({ type: "done", noQuestion: true })}\n\n`
+    if (body.stream) {
+      return new Response(quiet, { headers: { "content-type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } })
+    }
+    return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
+  }
 
   const config = (body.config && typeof body.config === "object" ? body.config : {}) as Record<string, unknown>
   const interviewer = str(config.interviewer, 40) || "engineer"
@@ -720,7 +727,11 @@ export async function POST(request: NextRequest) {
   const job: AnswerJob = {
     question,
     system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${audienceGuidance(interviewer, question)}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\nSpeak it. Sentence one is the answer in words this listener already understands. Then one path, one example on that path, the detail this listener can use, and how you would know it worked. If a second topic starts, stop.`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\nSpeak it. Sentence one is the answer in words this listener already understands. Then one path.
+A definition, a difference, or a brief what-is: the general explanation. One sentence may sound like experience and stays on the surface — the impact, not an investigation. Do not open a scenario they did not ask for. Do not invent an incident, an outage, a fraud case, or a tool the background does not name.
+A how-do-you method: the steps, generalized. One surface example at most.
+A story they asked for — a time, a failure, a bottleneck: the impact, what succeeded or failed, the bottleneck, and what you learned. Only from the background. If the background does not contain that incident, give the method as what you would do.
+If a second topic starts, stop.`,
     plan,
     interviewer,
     tier,
