@@ -237,7 +237,7 @@ Return only the answer, no preamble, no commentary.`
 // (architect/director/lead/supervisor) gets the final block; tier 1 experience
 // questions get behavioural; everything else gets technical.
 const CODE_ASK_Q =
-  /\b(write|implement|code (up|this|it)|coding|function|algorithm|big.?o|time complexity|leetcode|two.?sum|palindrome|fibonacci|linked list|binary (search|tree)|hash ?map|array|substring|reverse (a|the) (string|list)|sql (query|to)|query (to|that)|regex (to|for|that)|script (to|that)|class (that|to)|refactor|debug (this|the)|unit test|endpoint)\b/i
+  /\b(write|implement|code (up|this|it)|coding|program|function|algorithm|big.?o|time complexity|leetcode|two.?sum|palindrome|fibonacci|linked list|binary (search|tree)|hash ?map|array|substring|reverse (a|the) (string|list)|sql (query|to)|query (to|that)|regex (to|for|that)|script (to|that)|class (that|to)|refactor|debug (this|the)|unit test|endpoint)\b/i
 const FINAL_INTERVIEWERS = new Set(["architect", "director", "lead", "supervisor"])
 
 const MODE_BLOCKS: Record<string, string> = {
@@ -337,11 +337,11 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       const emit = (o: Record<string, unknown>) => {
         try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(o)}\n\n`)) } catch { /* client went away */ }
       }
-      const timing = { first_ms: 0, lane: "", total_ms: 0 }
+      const timing = { preparation_ms: Date.now() - startedAt, first_ms: 0, lane: "", total_ms: 0 }
       let raw = ""
       let lastErr = ""
       let servedModel = ""
-      let servedProvider = "openrouter"
+      const servedProvider = "openrouter"
       const onDelta = (d: string) => {
         if (!raw && d) timing.first_ms = Date.now() - startedAt
         raw += d
@@ -396,7 +396,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           return
         }
         // Degrade, never fail: stream the best prepared material as the answer.
-        let degraded = false
+        const degraded = false
         if (!raw.trim() || lastErr) {
           const failure = answerFailure(lastErr)
           emit({ type: "replace", text: "" })
@@ -453,7 +453,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   let raw = ""
   let lastErr = ""
   let servedModel = ""
-  let servedProvider = "openrouter"
+  const servedProvider = "openrouter"
   try {
     if (job.orKey) {
       const runLane = async (model: string) => {
@@ -513,11 +513,13 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
       engine: "marketfit", provider: servedProvider, model: servedModel,
       interviewer: job.interviewer, tier: job.tier, kind: job.plan.kind, words: job.plan.words,
       routed: job.projectId,
+      timing: { total_ms: Date.now() - job.startedAt },
     },
   }, { headers: NO_STORE })
 }
 
 export async function POST(request: NextRequest) {
+  const startedAt = Date.now()
   const user = await authenticatedUser(request)
   if (!user) return NextResponse.json({ error: "Sign in again to use this." }, { status: 401, headers: NO_STORE })
   const limited = checkRateLimit(`kompas-answer:${user.id}`, { max: 60, windowMs: 60_000 })
@@ -526,6 +528,14 @@ export async function POST(request: NextRequest) {
   let body: Record<string, unknown>
   try { body = await request.json() } catch {
     return NextResponse.json({ error: "Nothing to answer." }, { status: 400, headers: NO_STORE })
+  }
+
+  // Deterministic question detection needs neither storage nor a provider call.
+  if (body.deriveOnly) {
+    const heard = str(body.question, 5000)
+    if (!heard || plainlyNoQuestion(heard)) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
+    const clean = cleanQuestion(heard) || cutQuestion(heard)
+    if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
   }
 
   const vaultKeys = await keysFor("kompas:answer", () => resolveKeys({}))
@@ -541,9 +551,6 @@ export async function POST(request: NextRequest) {
     }
   }
   const rawKeys: LlmKeys = { openrouter: paidKey }
-  const uHash = hashUserId(user.id)
-  let grounding = ""
-  try { grounding = await dossierContext(uHash, "general") } catch { /* ungrounded answer is still an answer */ }
 
   // deriveOnly: the frontend asking "was that a question?" — cheapest first.
   // Gate 1 (code): speaker-aware — no Them: line and no ask pattern = no question.
@@ -554,11 +561,10 @@ export async function POST(request: NextRequest) {
     // Deriving from the earlier text is what answered "No question yet" while the question was the new speech.
     const heard = str(body.question, 5000)
     const earlier = str(body.transcript, 900)
-    const heardQuestion = () => heard.split("\n").map((l) => l.replace(/^(?:You|Them):\s*/, "").trim()).filter(Boolean).join(" ").replace(/\s+/g, " ").trim().slice(0, 2000)
     if (!heard) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
     if (plainlyNoQuestion(heard))
-      return NextResponse.json({ derived: heardQuestion(), derivedBy: "heard" }, { headers: NO_STORE })
-    const clean = cleanQuestion(heard)
+      return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
+    const clean = cleanQuestion(heard) || cutQuestion(heard)
     if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
     try {
       const { text } = await fetchOpenRouter(paidKey, PAID_MODEL, DERIVE_SYSTEM,
@@ -566,11 +572,9 @@ export async function POST(request: NextRequest) {
         500, AbortSignal.any([request.signal, AbortSignal.timeout(15000)]))
       const derived = text.trim()
       if (!derived || /^NO_QUESTION/i.test(derived))
-        return NextResponse.json({ derived: heard.split("\n").map((l) => l.replace(/^(?:You|Them):\s*/, "").trim()).filter(Boolean).join(" ").replace(/\s+/g, " ").trim().slice(0, 2000), derivedBy: "heard" }, { headers: NO_STORE })
+        return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
       return NextResponse.json({ derived }, { headers: NO_STORE })
     } catch {
-      const said = heardQuestion()
-      if (said) return NextResponse.json({ derived: said, derivedBy: "heard" }, { headers: NO_STORE })
       return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
     }
   }
@@ -590,6 +594,22 @@ export async function POST(request: NextRequest) {
   }
 
   const config = (body.config && typeof body.config === "object" ? body.config : {}) as Record<string, unknown>
+  // The active sources take precedence over an older profile or generated Q&A.
+  // Never make a grounded live turn wait for three remote dossier reads.
+  const resumeSrc = str(config.resume, 60000)
+  const jdSrc = str(config.jd, 8000)
+  const docsSrc = str(config.documents, 8000)
+  let grounding = ""
+  if (!resumeSrc && !docsSrc) {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      grounding = await Promise.race([
+        dossierContext(hashUserId(user.id), "general"),
+        new Promise<string>((resolve) => { timer = setTimeout(() => resolve(""), 300) }),
+      ])
+    } catch { /* optional historical context must not block a live turn */ }
+    finally { if (timer) clearTimeout(timer) }
+  }
   const interviewer = str(config.interviewer, 40) || "engineer"
   const prep = (body.prep && typeof body.prep === "object" ? body.prep : {}) as Record<string, unknown>
   const transcript = str(body.transcript, 4000)
@@ -649,7 +669,7 @@ export async function POST(request: NextRequest) {
   // the model sees the right experience — a naive head-cut of a long resume
   // holds only the summary and skills, never the experience section.
   // Complements the dossier (the growing store); this is the fitted excerpt.
-  const resumeText = str(config.resume, 12000)
+  const resumeText = resumeSrc
   let resumeFacts = ""
   if (resumeText && resumeText.length > 200) {
     const rr = resumeRoles(resumeText)
@@ -677,18 +697,22 @@ export async function POST(request: NextRequest) {
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
     `LENGTH TARGET: about ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Hit it — a quick factual ask gets a short answer, a deep dive gets room.`,
     tier !== 0 && routedProject
-      ? `Tell this answer from inside THIS project: ${routedProject.title}${routedProject.employer ? ` (${routedProject.employer})` : ""}. Do not switch projects mid-answer.`
+      ? `Only if the original sources corroborate it, anchor this answer in this generated project summary: ${routedProject.title}${routedProject.employer ? ` (${routedProject.employer})` : ""}. Do not switch projects mid-answer.`
       : "",
-    bott ? `Center the story on this concrete bottleneck: ${bott}.` : "",
+    bott ? `Unverified generated bottleneck; use only if corroborated by original sources: ${bott}.` : "",
     angle && tier !== 0 && plan.kind !== "code" ? `Fresh angle for this telling: ${angle}.` : "",
     tier !== 0 && tier !== 3 && toldNames.length
       ? `Stories already told this session — do not retell them: ${toldNames.join("; ")}.`
       : "",
-    prep.identity ? `Candidate identity: ${str(prep.identity, 800)}` : "",
+    prep.identity ? `UNVERIFIED generated identity: ${str(prep.identity, 800)}` : "",
     prep.persona ? `Persona: ${str(prep.persona, 800)}` : "",
-    prep.projects ? `Candidate's real projects: ${str(prep.projects, 2000)}` : "",
-    grounding ? `Real background (prefer over generic examples):\n${grounding.slice(0, 4500)}` : "",
+    prep.projects ? `UNVERIFIED generated project summaries: ${str(prep.projects, 2000)}` : "",
+    grounding ? `Historical context (personal claims require original source corroboration):\n${grounding.slice(0, 4500)}` : "",
     resumeFacts ? `${resumeFacts}` : "",
+    jdSrc ? `JOB DESCRIPTION (requirements and priorities, never evidence of personal history):\n${jdSrc}` : "",
+    docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
+    str(config.instructions, 2000) ? `SESSION PREFERENCES (delivery only; do not override source evidence): ${str(config.instructions, 2000)}` : "",
+    `SOURCE PRIORITY: the current resume and original documents establish personal history. The JD sets relevance. Generated prep, prior answers and transcript are unverified. A resume bullet does not establish a specific incident, root cause, HSM vendor or measured outcome. If no incident is documented, explain the proposed approach conditionally.`,
     transcript ? `Conversation so far:\n${transcript}` : "",
     history ? `Earlier in this interview:\n${history}` : "",
     retrieved ? `Retrieved notes:\n${retrieved}` : "",
@@ -704,19 +728,15 @@ export async function POST(request: NextRequest) {
   // Grounding guards (perfACT anti-hallucination): the facts a claim may be
   // filled from (employer/title/known), the figures the answer may state, and
   // the source text for the optional post-generation fact-check.
-  const resumeSrc = str(config.resume, 8000)
-  const jdSrc = str(config.jd, 4000)
-  const docsSrc = str(config.documents, 4000)
-  const heardSrc = `${question}\n${transcript}`
   const guardFacts = speakFacts({
     resume: resumeSrc,
-    jd: jdSrc,
+    jd: "",
     documents: docsSrc,
-    heard: heardSrc,
-    identity: str(prep.identity, 800),
-    projects: str(prep.projects, 2000),
+    heard: "",
+    identity: "",
+    projects: "",
   })
-  const allowed = allowedNumbers(resumeSrc, jdSrc, docsSrc, heardSrc, grounding)
+  const allowed = allowedNumbers(resumeSrc, docsSrc)
   const figuresList = [...allowed].slice(0, 30)
   const figuresLine = `FIGURES: the ONLY result numbers you may state are these, from the candidate's own material: ${figuresList.length ? figuresList.join(", ") : "(none)"}. Never invent a count, percentage, duration or before/after figure — describe the change in words ("cut the queue to something the team could clear by lunch"). Technical constants (ports, versions, thresholds in a rule) are fine.`
   const factsText = [
@@ -741,7 +761,7 @@ If a second topic starts, stop.`,
     liveModel: str(body.liveModel, 120),
     ledger,
     projectId,
-    startedAt: Date.now(),
+    startedAt,
     guardFacts,
     allowed,
     factsText,

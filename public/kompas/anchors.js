@@ -45,7 +45,7 @@
     return sessionId ? L.sessionLevelsKey(sessionId, question, resume) : L.maturityKey(question, resume);
   }
 
-  async function load(question, role, resume, sessionId) {
+  async function lookup(question, role, resume, sessionId) {
     const key = keyOf(question, role, resume, sessionId);
     if (!key) return { key: "", anchors: null, source: "miss" };
     const local = await db.get(key);
@@ -56,12 +56,24 @@
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ lookup: true, question, role, resume, sessionId: sessionId || "" }),
+        signal: AbortSignal.timeout(250),
       });
       remote = await r.json();
     } catch {}
     const anchors = (remote && remote.anchors) || local || null;
     if (anchors && (anchors.engineer || anchors.director)) await db.put(key, anchors);
     return { key, anchors, source: remote && remote.anchors ? (remote.source || "maturity") : (local ? "session" : "miss") };
+  }
+
+  // A blocked IndexedDB upgrade or remote cache must never hold up first words.
+  async function load(question, role, resume, sessionId) {
+    let timer;
+    try {
+      return await Promise.race([
+        lookup(question, role, resume, sessionId),
+        new Promise(resolve => { timer = setTimeout(() => resolve({ key: keyOf(question, role, resume, sessionId), anchors: null, source: "miss" }), 250); }),
+      ]);
+    } finally { clearTimeout(timer); }
   }
 
   async function save(question, role, resume, anchors, sessionId) {

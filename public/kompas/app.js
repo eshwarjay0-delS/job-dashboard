@@ -1490,7 +1490,7 @@ function askingLevel() {
 }
 function anchorFacts() {
   const s = current || {};
-  return { role: s.role || (s.prep && s.prep.persona && s.prep.persona.role) || "", resume: s.resume || "" };
+  return { role: s.role || (s.prep && s.prep.persona && s.prep.persona.role) || "", resume: ["answer-policy:2026-10-15-grounded", s.resume || "", s.jd || "", s.instructions || ""].join("\n") };
 }
 function paintFromAnchors(card) {
   if (!card || !card.anchors || !window.KompasLevels || !window.KompasDiamond) return false;
@@ -1630,8 +1630,13 @@ async function generateAnswerRequest(question, card, opts = {}) {
       const dj = await dr.json();
       if (card.req !== ctl) return;
       if (dj.noQuestion) {
-        derivedQ = heardAsQuestion([{ text: plainHeard }]) || String(question || "").slice(0, 2000);
-        if (derivedQ) { card.question = derivedQ; if (cards[idx] === card) renderCard(); }
+        card.streaming = false;
+        card.answer = [];
+        card.question = "No question yet";
+        if (answerCtl === ctl) answerCtl = null;
+        if (cards[idx] === card) renderCard();
+        status("Listening for the next question.", "live");
+        return;
       }
       if (dj.derived) { derivedQ = dj.derived; card.question = derivedQ; if (cards[idx] === card) renderCard(); }
       derivedBy = dj.derivedBy || "ai";

@@ -84,7 +84,8 @@ const SIMPLE =
   /^(what|which)\s+(?:[\w-]+\s+){0,2}(tool|tools|version|language|vendor|platform|protocol|port|cloud|siem|edr|scanner|framework|stack)s?\b|^(what|which)\s+(?:[\w-]+\s+){0,3}do you (use|have|prefer|run)\b|^(do|did|have|are|is|can) you (ever )?(know|use|used|familiar|work(ed)? with|comfortable|have|heard of|touched)\b/i
 const CONFLICT =
   /\b(conflict|disagree|disagreement|push(ed)? back|difficult (person|stakeholder|colleague|manager)|under pressure|tight deadline|mistake|fail(ed|ure)?|went wrong)\b/i
-const CODE_ASK = /\b(write|implement|code|refactor|debug|function|query|script)\b/i
+const CODE_REQUEST = /\b(?:write|give|show|create)\b[^?]*\b(?:code|program|script|function|query)\b|\b(?:coding|program for|code for|implement (?:a|an|the) (?:function|algorithm))\b/i
+const CODE_ASK = /\b(write|implement|code|coding|program|refactor|debug|function|query|script)\b/i
 
 function shortKind(q: string): string {
   const s = q.replace(FILLER, "").trim()
@@ -121,7 +122,7 @@ export function lengthPlan(
       : tier === 4 && brief && (/\bwhich\b|\bwhat (tools|components|platforms|modules)\b/i.test(q)) ? "which"
       : tier === 4 && brief ? "closed" : "")
   const kind =
-    special ||
+    (CODE_REQUEST.test(q) ? "code" : "") || special ||
     (tier === 0 ? (/\b(career|journey|background|walk me through|how you got)\b/i.test(q) ? "career" : "intro")
       : tier === 1 || (tier !== 3 && CONFLICT.test(q) && pastAsk) ? "story"
       : tier === 3 ? "drill"
@@ -174,7 +175,7 @@ export function cutQuestion(heard: string): string {
   let m: RegExpExecArray | null
   while ((m = re.exec(text))) {
     const q = m[1].replace(/^(?:ok(?:ay)?|so|and|also|yes|yeah|uh|um)[, ]+/i, "").trim()
-    if (q.split(/\s+/).length >= 4) found.push(q)
+    if (q.split(/\s+/).length >= 3) found.push(q)
   }
   if (!found.length) return ""
   const q = found[found.length - 1].replace(/\s+/g, " ").trim()
