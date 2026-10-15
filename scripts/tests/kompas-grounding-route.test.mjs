@@ -181,3 +181,27 @@ test('an explicit brief introduction still receives a shorter budget', async () 
   assert.equal(result.meta.tier, 0)
   assert.ok(result.meta.words < 180)
 })
+
+
+test('personal questions use evidence to make an impression without replaying the introduction', async () => {
+  for (const question of ['What is your strongest achievement?', 'Tell me about a project you are proud of.', 'What was your biggest bottleneck?']) {
+    const h = harness()
+    const response = await h.post({ question, config: { resume: 'I maintained PKI at Example Bank and automated certificate renewal. '.repeat(5) } })
+    assert.equal(response.status, 200)
+    const system = h.calls[0].messages[0].content
+    assert.match(system, /PERSONAL EVIDENCE OPPORTUNITY/)
+    assert.match(system, /strongest relevant example supported by the resume/)
+    assert.match(system, /candidate's own actions and decisions/)
+    assert.match(system, /never disguise failure as success/)
+    assert.match(system, /A narrow fact, yes or no, title or years question stays concise/)
+  }
+})
+
+test('a general technical question does not receive a personal achievement pitch', async () => {
+  const h = harness()
+  const response = await h.post({ question: 'What is an OCSP responder?', config: { resume: 'I maintained PKI.' } })
+  assert.equal(response.status, 200)
+  const system = h.calls[0].messages[0].content
+  assert.match(system, /TECHNICAL ANSWER BOUNDARY/)
+  assert.doesNotMatch(system, /PERSONAL EVIDENCE OPPORTUNITY/)
+})

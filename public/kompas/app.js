@@ -540,11 +540,11 @@ async function readAnswerStream(res) {
 }
 async function buildBook(s) {
   if (location.protocol === "file:" || !s.prep) return;
-  const key = s.id + ":book:intro-impact-v1";
+  const key = s.id + ":book:personal-evidence-v1";
   let saved = await DossierDB.get(key);
   if (!(saved && saved.items && saved.items.length)) {                // same factors + interviewer: reuse that book
     const twin = twinSession(s, x => (x.interviewer || "engineer") === (s.interviewer || "engineer"));
-    const theirs = twin && await DossierDB.get(twin.id + ":book:intro-impact-v1");
+    const theirs = twin && await DossierDB.get(twin.id + ":book:personal-evidence-v1");
     if (theirs && theirs.items && theirs.items.length) { saved = { ...theirs }; await DossierDB.put(key, saved); }
   }
   book = { sid: s.id, items: (saved && saved.items) || [] };
@@ -1490,7 +1490,7 @@ function askingLevel() {
 }
 function anchorFacts() {
   const s = current || {};
-  return { role: s.role || (s.prep && s.prep.persona && s.prep.persona.role) || "", resume: ["answer-policy:2026-10-15-intro-impact", s.resume || "", s.jd || "", s.instructions || ""].join("\n") };
+  return { role: s.role || (s.prep && s.prep.persona && s.prep.persona.role) || "", resume: ["answer-policy:2026-10-15-personal-evidence", s.resume || "", s.jd || "", s.instructions || ""].join("\n") };
 }
 function paintFromAnchors(card) {
   if (!card || !card.anchors || !window.KompasLevels || !window.KompasDiamond) return false;
