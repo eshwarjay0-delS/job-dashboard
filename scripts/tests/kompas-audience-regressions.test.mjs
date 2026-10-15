@@ -44,7 +44,8 @@ test('explicit mixed audience overrides architect detail, and directors receive 
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /surface question never receives a bottom scenario/)
   assert.match(audienceGuidance('engineer', 'How would you test this?'), /100% relevant to this question/)
   assert.match(audienceGuidance('hr', 'Tell me about a time you led'), /general scenario/)
-  assert.match(audienceGuidance('engineer', 'How would you investigate this?'), /technical question/)
+  assert.match(audienceGuidance('engineer', 'What is a certificate?'), /Presenting, articulation, and narration are the story/)
+  assert.match(audienceGuidance('engineer', 'What is a certificate?'), /bold word is the one idea/)
   assert.match(audienceGuidance('director', 'Would you delay launch?'), /tradeoff, or how the result is checked/)
 })
 
