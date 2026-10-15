@@ -730,7 +730,7 @@ export async function POST(request: NextRequest) {
     system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${audienceGuidance(interviewer, question)}`,
     userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\nSpeak it. Sentence one is the answer in words this listener already understands. Then one path. On every sentence, ask whether you are 100% on this question, at this layer. A sentence that is not, is not said.
 A general scenario — a time, a would-you, a launch, or a people question: the decision or the moment, in plain words, and one picture. Do not open a mechanism they did not ask for. If the background has no such incident, say what you would do.
-A technical question — a what-is, a how, an investigate, a fix, or a test: the check, then the mechanism. Leave a status code as a status code. One example at most. Do not invent an incident, an outage, a fraud case, or a tool the background does not name.
+A technical question — a what-is, a how, an investigate, a fix, or a test: the check, the query or the claim, and the test that proves it. Leave a status code as a status code. Do not turn it into a career story.
 If a second topic starts, stop.`,
     plan,
     interviewer,
