@@ -62,4 +62,5 @@ test('the question is cut out of the ramble, and a definition stays a storytelle
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /name the mechanism once/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /why it matters before any apparatus/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /question ordinary life already asks/)
+  assert.match(audienceGuidance('engineer', 'Tell me about yourself'), /path you were set on/)
 })
