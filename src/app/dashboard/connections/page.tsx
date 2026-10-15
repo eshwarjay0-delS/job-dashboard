@@ -30,8 +30,8 @@ export default async function ConnectionsPage() {
       }}>
         <h2 style={{ fontSize: 21, margin: 0 }}>WhatsApp</h2>
         <p style={{ margin: 0, color: "var(--text-muted)", lineHeight: 1.6 }}>
-          Link your number to this MarketFit account, send your resume once, then send job descriptions whenever you need a tailored copy.
-          The bot saves generated resumes in your Files.
+          Link your number to this MarketFit account. For each request, send a Word resume and a job description in either order.
+          The tailored document is sent back over WhatsApp without being added to your Files.
         </p>
         {live ? (
           <a href={`https://wa.me/${digits}`} target="_blank" rel="noopener noreferrer" className="btn-accent"
