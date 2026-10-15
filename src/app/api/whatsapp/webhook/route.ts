@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
 
   // Preserve verified account linking from the newer release.
   const typed = String(msg.type || "") === "text" ? String((msg.text as { body?: string })?.body || "").trim() : ""
-  const linking = typed.match(/^link[\\s:#-]+([A-Za-z0-9]{4}[\\s-]?[A-Za-z0-9]{4})$/i)
+  const linking = typed.match(/^link[\s:#-]+([A-Za-z0-9]{4}[\s-]?[A-Za-z0-9]{4})$/i)
   if (linking) {
     try {
       const claim = await claimLinkCode(from, linking[1])
