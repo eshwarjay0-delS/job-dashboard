@@ -155,7 +155,7 @@ test('the bot keeps the resume, saves what it makes in Files, and searches no on
   assert.ok(!linkShape.test('link building job') && !linkShape.test('linkedin K7QM-2XHD') && !linkShape.test('link K7QM-2XHD please') && !linkShape.test('link'))
   // A JD from a linked account may choose only that account's verified resume library.
   assert.ok(bot.includes('const original = await keptSource(from, session, who)'))
-  assert.ok(bot.includes('const sorted = (data || []).map(doc =>'))
+  assert.ok(bot.includes('const sorted = (data || []).filter(doc => doc.source !== "whatsapp").map(doc =>'))
   assert.ok(bot.includes('await recoverLibraryResume(who.userId, doc.id)'))
   assert.ok(bot.includes('if (!who.own || !UUID.test(who.userId) || !serviceClientAvailable()) return null'))
   assert.ok(bot.includes('.eq("user_id", who.userId).eq("email", email).maybeSingle()'))
