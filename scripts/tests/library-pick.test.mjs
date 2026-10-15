@@ -59,7 +59,7 @@ test('an email keeps its number for good, however many resumes are saved after (
   assert.ok(store.includes('const next = numberEmails(order, counts, keptEmail)') && store.includes('} catch { sure = false }'))
   assert.ok(store.includes('if (sure && keep && next.order.join("\\n") !== order.join("\\n"))'))
   // A number sent with a job description is read only when the numbering could be read.
-  assert.ok(read('src/app/api/whatsapp/webhook/route.ts').includes('const { slots } = await numberedEmails(who.userId, counts, baseline)'))
+  assert.ok(read('src/lib/library-pick-store.ts').includes('const next = numberEmails(order, counts, keptEmail)'))
 })
 
 test('the answer is read as he said it: "number one", "1", the address', () => {
@@ -159,33 +159,23 @@ test('whose a resume is comes from the email written in it, not from its folder 
   assert.ok(store.includes('const depth: 0 | 1 | 2 = !isTailoredName(parts[parts.length - 1]) ? 0 : known && known.depth !== 2 ? 1 : 2'))
 })
 
-test('WhatsApp keeps the JD while selecting an email and never crosses account identity', () => {
+test('stable WhatsApp bot requires a fresh DOCX and JD per request without automatic library selection', () => {
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
-  const waiting = bot.indexOf('if (session.jd && session.ask?.some(Boolean))')
-  const reply = bot.indexOf('const selected = choiceIn(text, session.ask)')
-  const change = bot.indexOf('if (replyTo) return refine(from, replyTo, text, who)')
-  assert.ok(waiting > 0 && waiting < reply && reply < change)
-  assert.ok(bot.includes('session.email = selected') && bot.includes('return generate(from, session, who)'))
-  assert.ok(bot.includes('session.jd = inline.rest') && bot.includes('session.ask = slots'))
-  assert.ok(bot.includes('return sendText(from, askWhichEmail(slots))'))
-  assert.ok(bot.includes('readChoice(text, slots)'))
-  assert.ok(bot.includes('jd: session.jd, ask: session.ask, email: session.email'))
-  assert.ok(bot.includes('latestSelection.email && latestSelection.email !== (source.email || "")'))
-  assert.ok(bot.includes('if (!who.own || !UUID.test(who.userId) || !serviceClientAvailable()) return null'))
-  assert.ok(bot.includes('.eq("user_id", who.userId).eq("email", email).maybeSingle()'))
-  assert.ok(bot.includes('.eq("library_id", library.id)'))
-  assert.ok(bot.includes('(await emailOn(saved.bytes)) !== email'))
-  assert.ok(bot.includes('await recoverLibraryResume(who.userId, doc.id)'))
-  assert.ok(bot.includes('return { dir, givenPath: file, depth: 1, email, said:'))
-  assert.ok(bot.includes('const identityChanged = !!sourceName && sourceName !== outputName'))
-  assert.ok(bot.includes('if (identityChanged || emailChanged || wrongLibrary)'))
-  assert.ok(bot.includes('const loaded = await loadSession(from)'))
-  assert.ok(bot.includes('...(another ? now : kept(now)),'))
-  assert.ok(bot.includes('await sendText(from, DIFFERENT_RESUME)'))
-  // The legacy helpers retain their original contract for other callers.
-  assert.equal(DIFFERENT_RESUME, '_To start from a different resume, send me that resume first, then the job description._')
-  const api = read('src/app/api/resumes/library-pick/route.ts')
-  assert.ok(api.includes('const userId = await authenticatedUserId(request)'))
+  assert.ok(bot.includes('session.jd = text'))
+  assert.ok(bot.includes('if (!session.resumePath) return sendText(from, "Got the job description. Now send your resume'))
+  assert.ok(bot.includes('if (!session.jd) return sendText(from, `Saved *${session.resumeName}*. Now paste the job description.`)'))
+  assert.ok(bot.includes('await saveSession(from, { seen: session.seen })'))
+  assert.ok(bot.includes('const dest = path.join(INBOX_DIR, digits(from), safe)'))
+  assert.ok(bot.includes('userResumeDir: path.join(INBOX_DIR, digits(from))'))
+  assert.ok(bot.includes('await deletePath(session.resumePath).catch(() => {})'))
+  assert.ok(bot.includes('const sender = await resolveWhatsAppUser(from)'))
+  assert.ok(bot.includes('const claim = await claimLinkCode(from, linking[1])'))
+  assert.ok(!bot.includes('askWhichEmail('))
+  assert.ok(!bot.includes('selectedEmailSource('))
+  assert.ok(!bot.includes('saveTailored('))
+  assert.ok(!bot.includes('archiveGeneratedResume('))
+  assert.ok(!bot.includes('resume_documents'))
+  assert.ok(bot.includes('return refine(from, replyTo, text, userId)'))
 })
 
 test('only a registered number is answered; one that is not gets one automated message a day and nothing else', () => {
