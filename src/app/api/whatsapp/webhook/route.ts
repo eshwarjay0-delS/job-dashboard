@@ -27,7 +27,9 @@ import { blob, writePath, existsPath, deletePath, readPath } from "@/lib/storage
 import { resumeEmails, cleanEmail } from "@/lib/resumeOrganization"
 import { categoryForJob, isTailoredName, jobKeyOf, learnedAll, pointsOf, COMMON_AT, NO_EMAIL, type SavedFile } from "@/lib/resume-library"
 import { forgetTailored, readLibraryChecked, saveTailored, saveUpload, type SavedTailored } from "@/lib/resume-library-store"
-import { askWhichEmail, DIFFERENT_RESUME } from "@/lib/library-pick"
+import { askWhichEmail, choiceIn, readChoice, DIFFERENT_RESUME } from "@/lib/library-pick"
+import { numberedEmails } from "@/lib/library-pick-store"
+import { extractKeywords } from "@/lib/keywords"
 import { type Resumes } from "@/lib/library-pick-store"
 import { getDossierProfile, saveDossierProfile } from "@/lib/dossier"
 import { hashUserId } from "@/lib/sttLedger"
@@ -349,6 +351,59 @@ async function moveEarlierIntoFiles(from: string, who: Who, until: number, again
   return collectHeld(from, who.userId, until, again)
 }
 
+// The available identities are always drawn from THIS linked account. Persist the numbers
+// because a reply of "2" must not switch to another identity as library sizes change.
+async function emailSlotsFor(who: Who, session: Session): Promise<string[]> {
+  const baseline = await keptEmailOf(session)
+  if (!who.saves || !UUID.test(who.userId) || !serviceClientAvailable()) return baseline ? [baseline] : []
+  const { data, error } = await createServiceClient().from("resume_email_libraries")
+    .select("email").eq("user_id", who.userId).limit(50)
+  if (error) throw error
+  const counts: Record<string, number> = {}
+  for (const row of data || []) {
+    const email = cleanEmail(String(row.email || ""))
+    if (email) counts[email] = 1
+  }
+  const { slots } = await numberedEmails(who.userId, counts, baseline)
+  return slots
+}
+
+// Never use the first account's resume when someone explicitly selects another.
+// Select a verified original from the chosen identity, including Supabase-backed
+// libraries that have not yet appeared in the legacy filesystem index.
+async function selectedEmailSource(from: string, session: Session, who: Who, email: string): Promise<Source | null> {
+  const original = await keptSource(from, session, who)
+  if (original && (await keptEmailOf(session)) === email) {
+    return { ...original, email }
+  }
+  if (!who.saves || !UUID.test(who.userId) || !serviceClientAvailable()) return null
+  const db = createServiceClient()
+  const { data: library, error: libError } = await db.from("resume_email_libraries")
+    .select("id").eq("user_id", who.userId).eq("email", email).maybeSingle()
+  if (libError) throw libError
+  if (!library) return null
+  const { data, error } = await db.from("resume_documents")
+    .select("id,keywords,source,created_at").eq("user_id", who.userId)
+    .eq("library_id", library.id).order("created_at", { ascending: false }).limit(100)
+  if (error) throw error
+  const wanted = new Set(extractKeywords(session.jd || "").map(x => x.toLowerCase()))
+  const sorted = (data || []).map(doc => {
+    const words = Array.isArray(doc.keywords) ? doc.keywords : []
+    const score = words.filter((w: string) => wanted.has(String(w).toLowerCase())).length
+    return { doc, score }
+  }).sort((a, b) => b.score - a.score ||
+    (a.doc.source === "whatsapp" ? 1 : 0) - (b.doc.source === "whatsapp" ? 1 : 0))
+  for (const { doc } of sorted.slice(0, 20)) {
+    const saved = await recoverLibraryResume(who.userId, doc.id).catch(() => null)
+    if (!saved || (await emailOn(saved.bytes)) !== email) continue
+    const dir = path.join(DATA_DIR, "whatsapp", "selected", digits(from))
+    const file = path.join(dir, doc.id + ".docx")
+    await writePath(file, saved.bytes)
+    return { dir, givenPath: file, depth: 1, email, said: `your saved *${email}* resume` }
+  }
+  return null
+}
+
 async function handle(from: string, msg: Record<string, unknown>, session: Session, who: Who) {
   const type = String(msg.type || "")
   const userId = who.userId
@@ -357,6 +412,21 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
   if (type === "text") {
     const text = String((msg.text as { body?: string })?.body || "").trim()
     const cmd = text.toLowerCase()
+
+    // A selected email/number is a reply to the waiting JD, NOT a new JD.
+    // The old bot incorrectly called "2" a one-character job description.
+    if (session.jd && session.ask?.some(Boolean)) {
+      const selected = choiceIn(text, session.ask)
+      if (selected) {
+        session.email = selected
+        session.ask = undefined
+        await saveSession(from, session)
+        return generate(from, session, who)
+      }
+      if (text.length < 60 && !["original", "status", "reset", "clear", "help", "redo", "again"].includes(cmd)) {
+        return sendText(from, `I still have your job description. ${askWhichEmail(session.ask)}`)
+      }
+    }
 
     if (cmd === "resumes" || cmd === "recover resume" || cmd.startsWith("resumes ")) {
       const service = createServiceClient()
@@ -418,7 +488,6 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     }
     if (cmd === "library" || cmd === "files") return library(from, who)
     if (cmd === "original") {
-      if (session.jd && session.ask?.length) return sendText(from, askWhichEmail(session.ask))
       // "Original" means the original document, never silently generating another tailored resume.
       if (!session.resumePath) return sendText(from, "No original resume is kept for this number. Send *resumes* to retrieve one from your linked Files.")
       const original = await readPath(session.resumePath)
@@ -434,13 +503,14 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     // A swipe-reply is a change request for the resume being replied to. Checked before
     // the JD path: a reply is never a new JD (new JDs are always pasted as their own message).
     const replyTo = (msg.context as { id?: string } | undefined)?.id
-    // Discard stale email prompts left by the previous automatic selection flow.
-    session.ask = undefined
-    session.email = undefined
-    await saveSession(from, session)
     if (replyTo) return refine(from, replyTo, text, who)
-    if (text.length < 85 && (/^[12]$/.test(text.trim()) || /^[^\n]*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}[^\n]*$/i.test(text))) {
-      return sendText(from, "To change the email, upload the resume with that email. I use your uploaded resume for every job description until you replace it.")
+    const slots = await emailSlotsFor(who, session)
+    const selection = choiceIn(text, slots)
+    if (selection && text.length < 85) {
+      session.email = selection
+      session.ask = undefined
+      await saveSession(from, session)
+      return sendText(from, `Using *${selection}* for your next job description. Send the job description whenever you're ready.`)
     }
 
     // Too short to be a JD — most likely a stray message, so guide instead of guessing.
@@ -448,9 +518,18 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       return sendText(from, `That looks too short to be a job description (${text.length} characters).\n\n${HELP}`)
     }
 
-    session.jd = text.trim()
+    const inline = readChoice(text, slots)
+    session.jd = inline.rest
+    session.email = inline.email || session.email
+    if (slots.filter(Boolean).length > 1 && !session.email) {
+      session.ask = slots
+      await saveSession(from, session)
+      return sendText(from, askWhichEmail(slots))
+    }
+    if (slots.filter(Boolean).length === 1 && !session.resumePath) session.email = slots.find(Boolean)
+    session.ask = undefined
     await saveSession(from, session)
-    if (!session.resumePath) {
+    if (!session.resumePath && !session.email) {
       return sendText(from, "Got the job description. Now send your resume as a Word (*.docx*) file or PDF. I keep it, so you only send it once.")
     }
     const askedAt = Date.now()
@@ -566,6 +645,12 @@ async function keptSource(from: string, session: Session, who: Who): Promise<Sou
 // Always use the explicitly uploaded/recovered baseline, including after earlier jobs.
 // Never reuse a cached result from a different baseline or search the email libraries.
 async function startFor(from: string, session: Session, who: Who): Promise<Start> {
+  if (session.email) {
+    const selected = await selectedEmailSource(from, session, who, session.email)
+    return selected
+      ? { source: selected }
+      : { say: `I couldn't find a verified resume in *${session.email}*. Please upload that account's original resume, or send *resumes* to check your saved files. Your job description is still kept.` }
+  }
   const own = await keptSource(from, session, who)
   if (!own) return { say: NO_RESUME }
   const email = await keptEmailOf(session)
