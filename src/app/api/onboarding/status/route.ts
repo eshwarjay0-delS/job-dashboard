@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { isOwnerEmail } from "@/lib/owner"
+import { isAdminEmail, isOwnerEmail } from "@/lib/owner"
 import { phoneStepAvailable } from "@/lib/identityStatus"
 
 export const runtime = "nodejs"
