@@ -12,6 +12,10 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   return items(process.env.ADMIN_EMAILS).some(e => e.toLowerCase() === mine)
 }
 
+export function isOwnerEmail(email: string | null | undefined): boolean {
+  return String(email || "").trim().toLowerCase() === PRODUCT_OWNER_EMAIL
+}
+
 /** The owner's own sign-in addresses, as listed in settings (lower case). */
 export const adminEmails = (): string[] => items(process.env.ADMIN_EMAILS).map(e => e.toLowerCase())
 
@@ -24,7 +28,6 @@ export function isOwnerWhatsApp(from: string): boolean {
   return ownerWhatsAppUserId(from, "-") !== null
 }
 export function ownerRole(email: string | null | undefined): "owner" | "user" { return isOwnerEmail(email) ? "owner" : "user" }
-export function isOwnerWhatsApp(from: string): boolean { return ownerWhatsAppUserId(from, "-") !== null }
 export function ownerWhatsAppUserId(from: string, fallbackUserId: string): string | null {
   if (!(process.env.WHATSAPP_APP_SECRET || "").trim()) return null
   const sender = digits(String(from || ""))
