@@ -22,33 +22,33 @@ export function LandingNav() {
   const links = [["#product", "Product"], ["#how", "How it works"], ["#pricing", "Pricing"], ["#faq", "Questions"]]
   return (
     <header className={`fixed inset-x-0 top-0 z-50 transition-[background,box-shadow,border-color] duration-200 ${scrolled ? "border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_86%,transparent)] shadow-[0_1px_0_rgba(25,20,10,.03)] backdrop-blur-md" : "border-b border-transparent"}`}>
-      <nav aria-label="Main" className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-        <Link href="/" className="flex items-center gap-2.5" aria-label="MarketFit home">
+      <nav aria-label="Main" className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
+        <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="MarketFit home">
           <span className="grid size-8 place-items-center rounded-[9px] bg-[var(--accent)] font-[family-name:var(--font-display)] text-[13px] font-bold text-[var(--bg)] shadow-[0_1px_2px_rgba(25,20,10,.18)]">MF</span>
-          <span className="font-[family-name:var(--font-display)] text-[19px] font-bold tracking-[-0.01em] text-[var(--text)]">MarketFit</span>
+          <span className="whitespace-nowrap font-[family-name:var(--font-display)] text-[19px] font-bold tracking-[-0.01em] text-[var(--text)]">MarketFit</span>
         </Link>
-        <div className="hidden items-center gap-7 md:flex">
+        <div className="hidden items-center gap-7 lg:flex">
           {links.map(([href, label]) => (
-            <a key={href} href={href} className="text-[14.5px] font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text)]">{label}</a>
+            <a key={href} href={href} className="whitespace-nowrap text-[14.5px] font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text)]">{label}</a>
           ))}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <button type="button" onClick={() => setMode(dark ? "light" : "dark")} aria-label={dark ? "Switch to the paper theme" : "Switch to the night theme"}
             className="grid size-9 cursor-pointer place-items-center rounded-[10px] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]">
             {dark ? <Sun size={18} className="text-[var(--text-muted)]" /> : <Moon size={18} className="text-[var(--text-muted)]" />}
           </button>
-          <Link href="/login" className="hidden h-9 items-center rounded-[10px] px-3.5 text-[14.5px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface-2)] sm:inline-flex">Sign in</Link>
-          <Link href="/signup" className="hidden h-9 items-center gap-1.5 rounded-[10px] bg-[var(--accent)] px-4 text-[14.5px] font-semibold text-[var(--bg)] shadow-[0_1px_2px_rgba(25,20,10,.14)] transition-[background,box-shadow] hover:bg-[var(--accent-h)] hover:shadow-[0_6px_16px_-6px_rgba(25,20,10,.3)] sm:inline-flex">
+          <Link href="/login" className="hidden h-9 items-center whitespace-nowrap rounded-[10px] px-3.5 text-[14.5px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface-2)] lg:inline-flex">Sign in</Link>
+          <Link href="/signup" className="hidden h-9 items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--accent)] px-4 text-[14.5px] font-semibold text-[var(--bg)] shadow-[0_1px_2px_rgba(25,20,10,.14)] transition-[background,box-shadow] hover:bg-[var(--accent-h)] hover:shadow-[0_6px_16px_-6px_rgba(25,20,10,.3)] lg:inline-flex">
             Get started <ArrowRight size={16} className="text-[var(--bg)]" />
           </Link>
           <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-label={open ? "Close menu" : "Open menu"}
-            className="grid size-9 cursor-pointer place-items-center rounded-[10px] text-[var(--text)] hover:bg-[var(--surface-2)] md:hidden">
+            className="grid size-9 cursor-pointer place-items-center rounded-[10px] text-[var(--text)] hover:bg-[var(--surface-2)] lg:hidden">
             {open ? <X size={20} className="text-[var(--text)]" /> : <Menu size={20} className="text-[var(--text)]" />}
           </button>
         </div>
       </nav>
       {open && (
-        <div className="border-t border-[var(--border)] bg-[var(--bg)] px-5 pb-5 pt-2 md:hidden">
+        <div className="border-t border-[var(--border)] bg-[var(--bg)] px-5 pb-5 pt-2 lg:hidden">
           {links.map(([href, label]) => (
             <a key={href} href={href} onClick={() => setOpen(false)} className="flex min-h-11 items-center text-[16px] font-medium text-[var(--text)]">{label}</a>
           ))}
