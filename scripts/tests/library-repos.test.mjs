@@ -77,8 +77,8 @@ test('the storage keeps one record inside each folder, and reads only that one t
   assert.ok(store.includes('async function mendEmailFolders(') && store.includes('await movePath(abs, dest)'))
   // Tidying never loses a file: only a true copy is dropped, a different file of the same name is kept beside it.
   assert.ok(store.includes('else if (await sameBytes(abs, dest)) await deletePath(abs)') && store.includes('else await movePath(abs, await freeName(dest))'))
-  // An email the bot remembered from before is cleaned the same way.
-  assert.ok(bot.includes('else if (session.resumeEmail) session.resumeEmail = cleanEmail(session.resumeEmail)'))
+  // The stable WhatsApp bot does not choose or cache an email library.
+  assert.ok(!bot.includes('session.resumeEmail') && !bot.includes('selectedEmailSource('))
   // Both pages list the library with one scanner (14 Oct 2026), which never lists a record as a resume, and does not
   // show a folder that holds only its record as an empty folder.
   const scan = read('src/lib/resume-library-scan.ts')
