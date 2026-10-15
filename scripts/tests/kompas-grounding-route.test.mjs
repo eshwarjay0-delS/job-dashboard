@@ -145,3 +145,33 @@ test('asking about a protocol status code does not become a coding exercise', as
   const response = await h.post({ question: 'What is HTTP status code 403?', config: { resume: 'API security.' } })
   assert.notEqual((await response.json()).meta.kind, 'code')
 })
+
+
+test('introductions present the supported career with room for substance and no JD fit pitch', async () => {
+  for (const interviewer of ['engineer', 'director']) {
+    const h = harness()
+    const response = await h.post({ question: 'Tell me about yourself.', config: {
+      interviewer, resume: 'I maintain PKI at Example Bank. Previously I investigated security incidents at Example Systems. '.repeat(5),
+      jd: 'TCS seeks a PKI Architect.',
+    } })
+    const result = await response.json()
+    assert.equal(result.meta.tier, 0)
+    assert.ok(result.meta.words >= 240)
+    const system = h.calls[0].messages[0].content
+    const prompt = h.calls[0].messages[1].content
+    assert.match(system, /PERSONAL INTRODUCTION/)
+    assert.match(prompt, /major career stages in the resume/)
+    assert.match(prompt, /first person, with direct statements of work and ownership/)
+    assert.match(prompt, /Never close with a job application pitch/)
+    assert.doesNotMatch(prompt, /why this role fits|FINAL ROUND|If a second topic starts, stop/)
+    assert.doesNotMatch(system, /About 75 words holds attention/)
+  }
+})
+
+test('an explicit brief introduction still receives a shorter budget', async () => {
+  const h = harness()
+  const response = await h.post({ question: 'Give me a brief introduction about yourself.', config: { resume: 'I maintain PKI.' } })
+  const result = await response.json()
+  assert.equal(result.meta.tier, 0)
+  assert.ok(result.meta.words < 180)
+})

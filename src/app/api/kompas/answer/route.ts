@@ -8,7 +8,7 @@ import { hashUserId } from "@/lib/sttLedger"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
   classify, canonicalQuestion, lengthPlan, plainlyNoQuestion, cleanQuestion, cutQuestion, resolveFollowUp,
-  tierRule, pickShape, DERIVE_SYSTEM, type LengthPlan,
+  tierRule, pickShape, DERIVE_SYSTEM, INTRODUCTION_POLICY, type LengthPlan,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
   commit, matchBank,
 } from "@/lib/kompasAnswer"
@@ -263,6 +263,7 @@ const MODE_BLOCKS: Record<string, string> = {
 }
 
 function modeBlock(tier: number, question: string, interviewer: string): string {
+  if (tier === 0) return INTRODUCTION_POLICY
   if (CODE_ASK_Q.test(question)) return MODE_BLOCKS.coding
   if (FINAL_INTERVIEWERS.has(interviewer)) return MODE_BLOCKS.final
   if (tier === 1) return MODE_BLOCKS.behavioural
@@ -680,7 +681,7 @@ export async function POST(request: NextRequest) {
       (a) => `SAME EMPLOYER: "${a.said}" (as said in this interview) is the resume's "${a.resume}" — you work there. Say "${a.said}".`,
     )
     const askForDigest = `${question}\n${transcript.slice(-600)}`
-    const digest = resumeDigest(resumeText, askForDigest, plan.kind === "short" ? 1600 : 4600)
+    const digest = resumeDigest(resumeText, askForDigest, tier === 0 ? 14000 : plan.kind === "short" ? 1600 : 4600)
     resumeFacts = [
       rr.current ? `CURRENT ROLE (from the resume — use this exact title): ${rr.current}` : "",
       ...aliasLines,
@@ -747,11 +748,11 @@ export async function POST(request: NextRequest) {
   ].filter(Boolean).join("\n\n")
   const job: AnswerJob = {
     question,
-    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${audienceGuidance(interviewer, question)}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\nSpeak it. Sentence one is the answer in words this listener already understands. Then one path. On every sentence, ask whether you are 100% on this question, at this layer. A sentence that is not, is not said.
+    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : audienceGuidance(interviewer, question)}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${tier === 0 ? INTRODUCTION_POLICY : `Speak it. Sentence one is the answer in words this listener already understands. Then one path. On every sentence, ask whether you are 100% on this question, at this layer. A sentence that is not, is not said.
 A general scenario — a time, a would-you, a launch, or a people question: the decision or the moment, in plain words, and one picture. Do not open a mechanism they did not ask for. If the background has no such incident, say what you would do.
 A technical question — a what-is, a how, an investigate, a fix, or a test: specialist, spoken the way a person talks in the meeting. Simple words, or one abstract sentence that carries the meaning. Do not recite a query, a parameter, a claim name, or a stack. Inside a program, write the real numbers. A status code, a port, and a literal in code stay written as themselves. Mark the one word the listener should keep with double-underscores, like __owner__. That word is the picture, or the mechanism once, in words they already have.
-If a second topic starts, stop.`,
+If a second topic starts, stop.`}`,
     plan,
     interviewer,
     tier,

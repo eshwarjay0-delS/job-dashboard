@@ -55,8 +55,8 @@ export function canonicalQuestion(q: string, tier: Tier): string {
 // by difficulty, length preference, question complexity and audience depth.
 // Spoken ≈ 2.5 words/sec.
 const PK_WORDS: Record<string, number> = {
-  technical: 144, simple: 100, intro: 139, recruiter: 139, story: 182,
-  career: 200, drill: 123, closed: 50, which: 70, theirq: 35, logistics: 35,
+  technical: 144, simple: 100, intro: 240, recruiter: 139, story: 182,
+  career: 280, drill: 123, closed: 50, which: 70, theirq: 35, logistics: 35,
   code: 170, smalltalk: 20, define: 55, preference: 45,
 }
 const PK_DIFF: Record<string, number> = { easy: 0.85, standard: 1, hard: 1.2, expert: 1.4 }
@@ -129,8 +129,9 @@ export function lengthPlan(
       : brief && SIMPLE.test(q.replace(FILLER, "")) && q.split(/\s+/).length < 16 ? "simple"
       : ["hr", "technical_hr"].includes(interviewer) && !/\b(how would you|design|architect|troubleshoot|configure)\b/i.test(q) ? "recruiter"
       : "technical")
+  const briefIntro = tier === 0 && /\b(brief|briefly|quick|short|30 seconds|one minute)\b/i.test(q)
   const words = Math.round(
-    (PK_WORDS[kind] || 144) *
+    (briefIntro ? 0.5 : 1) * (PK_WORDS[kind] || 144) *
     (PK_DIFF[opts.difficulty || "standard"] || 1) *
     (LEN_MULT[opts.length || "balanced"] || 1) *
     (AUDIENCE_DEPTH[interviewer] || 1) *
@@ -218,23 +219,25 @@ export function resolveFollowUp(d: string, history: Array<{ q?: string }>): stri
 // ---- Per-tier answer rules (perfACT TIER_RULES, pivoted to MarketFit's delivery) ----
 
 export const INTRO_FOCUS: Record<string, string> = {
-  hr: "who you are and why you do this work, how you work with people, and the impact you care about — at most one tool name; warm, calm and friendly",
-  technical_hr: "your role, core stack and scope stated with confidence, the environments you've worked in, and what you're looking for next — friendly and technically fluent",
+  hr: "your supported career progression, present responsibilities, collaboration and working approach — warm, calm and friendly",
+  technical_hr: "your role, core stack and scope stated with confidence, the environments you've worked in, and how your responsibilities developed — friendly and technically fluent",
   developer: "what you build and maintain, the languages, APIs and pipelines you actually use, and how you work with engineering teams",
-  engineer: "your hands-on specialty, the systems you run end to end, one concrete problem you solved, and how you work with stakeholders",
+  engineer: "your hands-on specialty, the systems you run end to end, your supported responsibilities and how you work with application, infrastructure and security teams",
   architect: "your supported contribution to system design, how you reason about relevant trade-offs and failure domains, and the people affected by the design",
   analyst: "the investigations and evidence you work from, what you measure and report, and one finding that changed a decision",
   peer: "whatever this interviewer's own framing leads with — technical, people or business — in their register: what your work actually is, what you're good at, how you like to work",
   lead: "the work you lead and the people you support, how you prioritise and unblock, and your leadership presence — calm and authoritative, titles only as the resume states",
-  supervisor: "where you take projects and why, how you keep people, process and design aligned, and your follow-through",
-  director: "the business risk you reduce, the outcomes you own, the decisions you've made and their payoff, and why you fit this company — confident and relaxed",
+  supervisor: "where you take projects and why, how you coordinate people, process and design, and your follow-through",
+  director: "the business risk you reduce, the outcomes you own, the decisions you've made and their payoff, and how you carry decisions through delivery — confident and relaxed",
 }
+
+export const INTRODUCTION_POLICY = `PERSONAL INTRODUCTION: present the person through their supported career, in first person, with direct statements of work and ownership. Open with the current professional identity and scope. Connect the major career stages in the resume, explaining how responsibilities developed, then describe the current work from design or investigation through implementation, collaboration, delivery and ongoing operation, where the resume supports those stages. Show agency through accurate verbs such as I design, I maintain, I investigate, I automate and I work with. Do not inflate ownership from contributed to led. Use technologies inside actions, never as a detached skills catalogue. Include earlier work that explains the person's breadth, not only the work resembling the JD. End on the person's present responsibilities or working approach. Never close with a job application pitch, enthusiasm for this opening, or claims of alignment, matching the JD, being a perfect fit, or what the company is seeking. The JD may orient vocabulary, but the introduction is about the person. Allow a substantial connected introduction when the resume has the material; a short technical question budget or 75 word rule must not cut it down. Do not invent incidents, metrics, motivations, a personal origin story or transitions the resume does not establish. Do not volunteer education unless the question asks for it. Include certifications only when they help explain the work; never recite a list. An explicit request for a brief introduction still takes precedence.`
 
 export function tierRule(tier: Tier, interviewer: string): string {
   const focus = INTRO_FOCUS[interviewer] || INTRO_FOCUS.engineer
   switch (tier) {
     case 0:
-      return `INTRODUCTION. Deliver the candidate's identity from FACTS, spoken naturally for this audience. Lead with: ${focus}. Include grounded highlights from FACTS and why this role fits. Never answer an intro with a technical deep-dive.`
+      return `${INTRODUCTION_POLICY} Audience emphasis: ${focus}. Preserve the complete career narrative while adjusting the language to the listener.`
     case 1:
       return `EXPERIENCE — STAR. Situation: where it happened and what triggered it. Task: what was theirs to solve. Action (the heart of it): what they personally did, in order, including the bottleneck as a concrete image and how they got past it. Result: what changed, then one human takeaway. Use the real specifics in FACTS — employer, tools, platforms, systems, projects the background names. Where FACTS is silent on a detail, say it naturally at the level FACTS supports ("our EDR platform", "the ticketing queue") so every sentence is complete.`
     case 4:
