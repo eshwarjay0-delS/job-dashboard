@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth, isAuthContext, fetchClassifiedThreads, threadsToApps } from "../_lib"
+import { requireAuth, isAuthContext, fetchClassifiedThreads, threadsToApps, TRACKING_DAYS } from "../_lib"
 import { checkRateLimit } from "@/lib/rateLimit"
 
 // GET /api/gmail/tracker — applications derived from classified threads, shaped as App[]
@@ -16,9 +16,9 @@ export async function GET(req: Request) {
     }
 
     const url = new URL(req.url)
-    const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 60, 1), 90)
+    const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 60, 1), TRACKING_DAYS)
 
-    const threads = await fetchClassifiedThreads(ctx.userId, { days, max: 100 })
+    const { threads } = await fetchClassifiedThreads(ctx.userId, { days, max: 100 })
     const applications = threadsToApps(threads)
 
     return NextResponse.json({ ok: true, count: applications.length, applications })

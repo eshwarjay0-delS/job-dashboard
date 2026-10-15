@@ -55,16 +55,16 @@ const DEMAND_ROLES: { role: string; skills: string[] }[] = [
 ]
 
 const PROFICIENCY_INFO: Record<Proficiency, { label: string; color: string; bg: string; pct: number }> = {
-  beginner:     { label: "Beginner",     color: "#7e7a68", bg: "rgba(176,170,153,0.1)",  pct: 25  },
-  intermediate: { label: "Intermediate", color: "#6e6b5b", bg: "rgba(133,129,110,0.1)",  pct: 50  },
-  advanced:     { label: "Advanced",     color: "#605d51", bg: "rgba(122,118,100,0.1)",  pct: 75  },
-  expert:       { label: "Expert",       color: "#58564c", bg: "rgba(163,158,139,0.1)",  pct: 100 },
+  beginner:     { label: "Beginner",     color: "var(--text-soft)", bg: "rgba(176,170,153,0.1)",  pct: 25  },
+  intermediate: { label: "Intermediate", color: "var(--text-muted)", bg: "rgba(133,129,110,0.1)",  pct: 50  },
+  advanced:     { label: "Advanced",     color: "var(--text-muted)", bg: "rgba(122,118,100,0.1)",  pct: 75  },
+  expert:       { label: "Expert",       color: "var(--text-muted)", bg: "rgba(163,158,139,0.1)",  pct: 100 },
 }
 
 const CERT_STATUS_INFO: Record<CertStatus, { label: string; color: string; bg: string; icon: string }> = {
-  planned:     { label: "Planned",     color: "#6e6b5b", bg: "rgba(121,117,100,0.1)", icon: "○" },
-  in_progress: { label: "In Progress", color: "#7e7a68", bg: "rgba(176,170,153,0.1)",  icon: "◐" },
-  completed:   { label: "Completed",   color: "#58564c", bg: "rgba(163,158,139,0.1)",  icon: "✓" },
+  planned:     { label: "Planned",     color: "var(--text-muted)", bg: "rgba(121,117,100,0.1)", icon: "○" },
+  in_progress: { label: "In Progress", color: "var(--text-soft)", bg: "rgba(176,170,153,0.1)",  icon: "◐" },
+  completed:   { label: "Completed",   color: "var(--text-muted)", bg: "rgba(163,158,139,0.1)",  icon: "✓" },
 }
 
 function newId() { return Math.random().toString(36).slice(2, 9) }
@@ -198,10 +198,10 @@ export default function SkillsPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 16 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#161510", letterSpacing: "-0.4px", marginBottom: 4 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.4px", marginBottom: 4 }}>
             Skills & Learning
           </h1>
-          <p style={{ fontSize: 13.5, color: "#6e6b5b" }}>Track proficiency, certifications, and career goals</p>
+          <p style={{ fontSize: 13.5, color: "var(--text-muted)" }}>Track proficiency, certifications, and career goals</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           {view === "skills" && (
@@ -233,21 +233,21 @@ export default function SkillsPage() {
           { label: "Avg Market Demand",value: `${avgDemand}%`,  sub: "across your stack",          color: "#605d51" },
           { label: "Open Goals",       value: pendingGoals,     sub: `${goals.length} total`,      color: "#7e7a68" },
         ].map(s => (
-          <div key={s.label} style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "16px 20px" }}>
+          <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 20px" }}>
             <div style={{ fontSize: 26, fontWeight: 800, color: s.color, letterSpacing: "-0.5px", lineHeight: 1.1 }}>{s.value}</div>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#161510", marginTop: 4 }}>{s.label}</div>
-            <div style={{ fontSize: 11.5, color: "#6e6b5b", marginTop: 2 }}>{s.sub}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)", marginTop: 4 }}>{s.label}</div>
+            <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>{s.sub}</div>
           </div>
         ))}
       </div>
 
       {/* View tabs */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "#f2f0ea", borderRadius: 10, padding: 4, width: "fit-content" }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "var(--surface-2)", borderRadius: 10, padding: 4, width: "fit-content" }}>
         {(["skills", "certs", "goals", "market"] as const).map(v => (
           <button key={v} onClick={() => setView(v)}
             style={{ padding: "7px 18px", borderRadius: 7, fontSize: 13.5, fontWeight: 600, border: "none", cursor: "pointer",
-              background: view === v ? "#fff" : "transparent",
-              color: view === v ? "var(--accent)" : "#6e6b5b",
+              background: view === v ? "var(--surface)" : "transparent",
+              color: view === v ? "var(--accent)" : "var(--text-muted)",
               boxShadow: view === v ? "0 1px 4px rgba(12,11,8,0.1)" : "none",
               transition: "all .15s" }}>
             {v === "skills" ? "Skill Inventory" : v === "certs" ? "Certifications" : v === "goals" ? "Learning Goals" : "Market Fit"}
@@ -264,8 +264,8 @@ export default function SkillsPage() {
               {categories.map(c => (
                 <button key={c} onClick={() => setCatFilter(c)}
                   style={{ padding: "5px 14px", borderRadius: 100, fontSize: 12.5, fontWeight: 500, border: "1.5px solid",
-                    borderColor: catFilter === c ? "var(--accent)" : "#e6e2d9",
-                    background: catFilter === c ? "rgba(107,104,88,0.07)" : "#fff",
+                    borderColor: catFilter === c ? "var(--accent)" : "var(--border)",
+                    background: catFilter === c ? "rgba(107,104,88,0.07)" : "var(--surface)",
                     color: catFilter === c ? "var(--accent)" : "#6e6b5b", cursor: "pointer" }}>
                   {c}
                 </button>
@@ -274,10 +274,10 @@ export default function SkillsPage() {
           )}
 
           {filtered.length === 0 ? (
-            <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 14, padding: "56px 32px", textAlign: "center" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "56px 32px", textAlign: "center" }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🎯</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "#161510", marginBottom: 6 }}>No skills yet</div>
-              <div style={{ fontSize: 13.5, color: "#6e6b5b", marginBottom: 20 }}>Add your first skill to start tracking your tech stack and proficiency</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>No skills yet</div>
+              <div style={{ fontSize: 13.5, color: "var(--text-muted)", marginBottom: 20 }}>Add your first skill to start tracking your tech stack and proficiency</div>
               <button onClick={() => setShowSkillForm(true)}
                 style={{ padding: "10px 24px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
                 + Add First Skill
@@ -288,16 +288,16 @@ export default function SkillsPage() {
               {filtered.map(sk => {
                 const pi = PROFICIENCY_INFO[sk.proficiency]
                 return (
-                  <div key={sk.id} style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "18px 20px", position: "relative" }}>
+                  <div key={sk.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "18px 20px", position: "relative" }}>
                     {/* Top row */}
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
                       <div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: "#161510", marginBottom: 3 }}>{sk.name}</div>
-                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 100, background: "#f2f0ea", color: "#6e6b5b", fontWeight: 500 }}>{sk.category}</span>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", marginBottom: 3 }}>{sk.name}</div>
+                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 100, background: "var(--surface-2)", color: "var(--text-muted)", fontWeight: 500 }}>{sk.category}</span>
                       </div>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => openEditSkill(sk)} style={{ background: "none", border: "none", cursor: "pointer", color: "#6e6b5b", fontSize: 13 }}>✎</button>
-                        <button onClick={() => deleteSkill(sk.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#2e2d27", fontSize: 14 }}>✕</button>
+                        <button onClick={() => openEditSkill(sk)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 13 }}>✎</button>
+                        <button onClick={() => deleteSkill(sk.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text)", fontSize: 14 }}>✕</button>
                       </div>
                     </div>
 
@@ -305,9 +305,9 @@ export default function SkillsPage() {
                     <div style={{ marginBottom: 10 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
                         <span style={{ fontSize: 11.5, fontWeight: 600, color: pi.color, background: pi.bg, padding: "2px 8px", borderRadius: 100 }}>{pi.label}</span>
-                        <span style={{ fontSize: 11.5, color: "#6e6b5b" }}>{sk.yearsExp}yr exp</span>
+                        <span style={{ fontSize: 11.5, color: "var(--text-muted)" }}>{sk.yearsExp}yr exp</span>
                       </div>
-                      <div style={{ height: 5, background: "#f2f0ea", borderRadius: 10, overflow: "hidden" }}>
+                      <div style={{ height: 5, background: "var(--surface-2)", borderRadius: 10, overflow: "hidden" }}>
                         <div style={{ height: "100%", width: `${pi.pct}%`, background: pi.color, borderRadius: 10, transition: "width .6s ease" }}/>
                       </div>
                     </div>
@@ -315,17 +315,17 @@ export default function SkillsPage() {
                     {/* Market demand */}
                     <div style={{ marginBottom: 8 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                        <span style={{ fontSize: 11.5, color: "#6e6b5b" }}>Market demand</span>
-                        <span style={{ fontSize: 11.5, fontWeight: 600, color: sk.marketDemand >= 70 ? "#58564c" : sk.marketDemand >= 40 ? "#7e7a68" : "#2e2d27" }}>{sk.marketDemand}%</span>
+                        <span style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Market demand</span>
+                        <span style={{ fontSize: 11.5, fontWeight: 600, color: sk.marketDemand >= 70 ? "var(--text-muted)" : sk.marketDemand >= 40 ? "var(--text-soft)" : "var(--text)" }}>{sk.marketDemand}%</span>
                       </div>
-                      <div style={{ height: 4, background: "#f2f0ea", borderRadius: 10, overflow: "hidden" }}>
+                      <div style={{ height: 4, background: "var(--surface-2)", borderRadius: 10, overflow: "hidden" }}>
                         <div style={{ height: "100%", width: `${sk.marketDemand}%`, borderRadius: 10, transition: "width .6s ease",
                           background: sk.marketDemand >= 70 ? "#58564c" : sk.marketDemand >= 40 ? "#7e7a68" : "#2e2d27" }}/>
                       </div>
                     </div>
 
-                    <div style={{ fontSize: 11.5, color: "#aaa492" }}>Last used: {fmtDate(sk.lastUsed)}</div>
-                    {sk.note && <div style={{ fontSize: 12, color: "#6e6b5b", marginTop: 6, fontStyle: "italic" }}>{sk.note}</div>}
+                    <div style={{ fontSize: 11.5, color: "var(--text-soft)" }}>Last used: {fmtDate(sk.lastUsed)}</div>
+                    {sk.note && <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6, fontStyle: "italic" }}>{sk.note}</div>}
                   </div>
                 )
               })}
@@ -338,10 +338,10 @@ export default function SkillsPage() {
       {view === "certs" && (
         <div>
           {certs.length === 0 ? (
-            <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 14, padding: "56px 32px", textAlign: "center" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "56px 32px", textAlign: "center" }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🏅</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "#161510", marginBottom: 6 }}>No certifications yet</div>
-              <div style={{ fontSize: 13.5, color: "#6e6b5b", marginBottom: 20 }}>Track certifications you've earned, are studying for, or plan to pursue</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>No certifications yet</div>
+              <div style={{ fontSize: 13.5, color: "var(--text-muted)", marginBottom: 20 }}>Track certifications you've earned, are studying for, or plan to pursue</div>
               <button onClick={() => setShowCertForm(true)}
                 style={{ padding: "10px 24px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
                 + Add First Cert
@@ -365,21 +365,21 @@ export default function SkillsPage() {
                           <div key={c.id} style={{ background: "var(--surface)", border: `1.5px solid ${daysLeft !== null && daysLeft < 14 ? "#ddd8cd" : "#e6e2d9"}`, borderRadius: 12, padding: "16px 18px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                               <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 14.5, fontWeight: 700, color: "#161510", marginBottom: 2 }}>{c.name}</div>
-                                <div style={{ fontSize: 12, color: "#6e6b5b" }}>{c.provider}</div>
+                                <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--text)", marginBottom: 2 }}>{c.name}</div>
+                                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{c.provider}</div>
                               </div>
                               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 <span style={{ fontSize: 11.5, padding: "3px 9px", borderRadius: 100, background: si.bg, color: si.color, fontWeight: 600 }}>{si.label}</span>
-                                <button onClick={() => openEditCert(c)} style={{ background: "none", border: "none", cursor: "pointer", color: "#6e6b5b", fontSize: 12 }}>✎</button>
-                                <button onClick={() => deleteCert(c.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#2e2d27", fontSize: 13 }}>✕</button>
+                                <button onClick={() => openEditCert(c)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 12 }}>✎</button>
+                                <button onClick={() => deleteCert(c.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text)", fontSize: 13 }}>✕</button>
                               </div>
                             </div>
                             <div style={{ marginTop: 10, display: "flex", gap: 12, flexWrap: "wrap" }}>
                               {c.status === "completed" && c.completedDate && (
-                                <span style={{ fontSize: 11.5, color: "#6e6b5b" }}>Earned: {fmtDate(c.completedDate)}</span>
+                                <span style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Earned: {fmtDate(c.completedDate)}</span>
                               )}
                               {c.targetDate && c.status !== "completed" && (
-                                <span style={{ fontSize: 11.5, color: daysLeft !== null && daysLeft < 14 ? "#2e2d27" : "#6e6b5b", fontWeight: daysLeft !== null && daysLeft < 14 ? 700 : 400 }}>
+                                <span style={{ fontSize: 11.5, color: daysLeft !== null && daysLeft < 14 ? "var(--text)" : "var(--text-muted)", fontWeight: daysLeft !== null && daysLeft < 14 ? 700 : 400 }}>
                                   {daysLeft !== null && daysLeft < 0 ? "⚠ Overdue" : daysLeft !== null && daysLeft < 14 ? `⚠ ${daysLeft}d left` : `Target: ${fmtDate(c.targetDate)}`}
                                 </span>
                               )}
@@ -403,24 +403,24 @@ export default function SkillsPage() {
       {view === "goals" && (
         <div>
           {showGoalForm && (
-            <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "20px 24px", marginBottom: 16 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#161510", marginBottom: 14 }}>New Learning Goal</div>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "20px 24px", marginBottom: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 14 }}>New Learning Goal</div>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <input value={goalText} onChange={e => setGoalText(e.target.value)} placeholder="e.g., Complete AWS Solutions Architect course"
-                  style={{ flex: 2, minWidth: 200, padding: "9px 12px", border: "1.5px solid #e6e2d9", borderRadius: 8, fontSize: 13.5, outline: "none", color: "#161510" }}/>
+                  style={{ flex: 2, minWidth: 200, padding: "9px 12px", border: "1.5px solid var(--border)", borderRadius: 8, fontSize: 13.5, outline: "none", color: "var(--text)" }}/>
                 <input type="date" value={goalDate} onChange={e => setGoalDate(e.target.value)}
-                  style={{ flex: 1, minWidth: 140, padding: "9px 12px", border: "1.5px solid #e6e2d9", borderRadius: 8, fontSize: 13.5, outline: "none", color: "#161510" }}/>
+                  style={{ flex: 1, minWidth: 140, padding: "9px 12px", border: "1.5px solid var(--border)", borderRadius: 8, fontSize: 13.5, outline: "none", color: "var(--text)" }}/>
                 <button onClick={addGoal} style={{ padding: "9px 18px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 13.5 }}>Add</button>
-                <button onClick={() => setShowGoalForm(false)} style={{ padding: "9px 14px", background: "transparent", color: "#6e6b5b", border: "1px solid #e6e2d9", borderRadius: 8, cursor: "pointer", fontSize: 13.5 }}>Cancel</button>
+                <button onClick={() => setShowGoalForm(false)} style={{ padding: "9px 14px", background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: 8, cursor: "pointer", fontSize: 13.5 }}>Cancel</button>
               </div>
             </div>
           )}
 
           {goals.length === 0 ? (
-            <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 14, padding: "56px 32px", textAlign: "center" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "56px 32px", textAlign: "center" }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>📚</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "#161510", marginBottom: 6 }}>No goals yet</div>
-              <div style={{ fontSize: 13.5, color: "#6e6b5b", marginBottom: 20 }}>Set learning goals with target dates to stay on track</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>No goals yet</div>
+              <div style={{ fontSize: 13.5, color: "var(--text-muted)", marginBottom: 20 }}>Set learning goals with target dates to stay on track</div>
               <button onClick={() => setShowGoalForm(true)}
                 style={{ padding: "10px 24px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
                 + Add First Goal
@@ -438,12 +438,12 @@ export default function SkillsPage() {
                       {g.done ? "✓" : ""}
                     </button>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: g.done ? "#6e6b5b" : "#161510", textDecoration: g.done ? "line-through" : "none" }}>{g.title}</div>
-                      <div style={{ fontSize: 12, color: overdue ? "#2e2d27" : "#6e6b5b", marginTop: 2 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: g.done ? "var(--text-muted)" : "var(--text)", textDecoration: g.done ? "line-through" : "none" }}>{g.title}</div>
+                      <div style={{ fontSize: 12, color: overdue ? "var(--text)" : "var(--text-muted)", marginTop: 2 }}>
                         {g.done ? "Completed" : overdue ? `⚠ Overdue — was due ${fmtDate(g.targetDate)}` : `Due ${fmtDate(g.targetDate)}${days !== null ? ` (${days}d)` : ""}`}
                       </div>
                     </div>
-                    <button onClick={() => deleteGoal(g.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#2e2d27", fontSize: 14 }}>✕</button>
+                    <button onClick={() => deleteGoal(g.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text)", fontSize: 14 }}>✕</button>
                   </div>
                 )
               })}
@@ -456,12 +456,12 @@ export default function SkillsPage() {
       {view === "market" && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           {/* Role match card */}
-          <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 14, padding: "24px" }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#161510", marginBottom: 16 }}>Role Match Analysis</div>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "24px" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 16 }}>Role Match Analysis</div>
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12.5, fontWeight: 600, color: "#6e6b5b", display: "block", marginBottom: 6 }}>Target Role</label>
+              <label style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>Target Role</label>
               <select value={roleTarget} onChange={e => { setRoleTarget(e.target.value); setAiAdvice("") }}
-                style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #e6e2d9", borderRadius: 8, fontSize: 13.5, outline: "none", color: "#161510", background: "var(--surface)" }}>
+                style={{ width: "100%", padding: "9px 12px", border: "1.5px solid var(--border)", borderRadius: 8, fontSize: 13.5, outline: "none", color: "var(--text)", background: "var(--surface)" }}>
                 {DEMAND_ROLES.map(r => <option key={r.role} value={r.role}>{r.role}</option>)}
               </select>
             </div>
@@ -480,7 +480,7 @@ export default function SkillsPage() {
                   <text x="60" y="72" textAnchor="middle" style={{ fontSize: 10, fill: "#6e6b5b" }}>MATCH</text>
                 </svg>
               </div>
-              <div style={{ fontSize: 13, color: "#6e6b5b", marginTop: 8 }}>
+              <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 8 }}>
                 {matchedSkills.length}/{targetRoleSkills.length} required skills covered
               </div>
             </div>
@@ -491,9 +491,9 @@ export default function SkillsPage() {
                 const have = mySkillNames.some(m => m.includes(t.toLowerCase()))
                 return (
                   <div key={t} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 13, color: have ? "#58564c" : "#2e2d27" }}>{have ? "✓" : "✗"}</span>
-                    <span style={{ fontSize: 13.5, color: have ? "#161510" : "#6e6b5b" }}>{t}</span>
-                    {!have && <span style={{ marginLeft: "auto", fontSize: 11, color: "#2e2d27", background: "rgba(132,128,109,0.08)", padding: "2px 7px", borderRadius: 100, fontWeight: 600 }}>Missing</span>}
+                    <span style={{ fontSize: 13, color: have ? "var(--text-muted)" : "var(--text)" }}>{have ? "✓" : "✗"}</span>
+                    <span style={{ fontSize: 13.5, color: have ? "var(--text)" : "var(--text-muted)" }}>{t}</span>
+                    {!have && <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text)", background: "rgba(132,128,109,0.08)", padding: "2px 7px", borderRadius: 100, fontWeight: 600 }}>Missing</span>}
                   </div>
                 )
               })}
@@ -501,35 +501,35 @@ export default function SkillsPage() {
           </div>
 
           {/* AI gap analysis */}
-          <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 14, padding: "24px" }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#161510", marginBottom: 8 }}>AI Skills Gap Analysis</div>
-            <div style={{ fontSize: 13, color: "#6e6b5b", marginBottom: 16 }}>Get personalized advice on what to learn next to land your target role faster.</div>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "24px" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>AI Skills Gap Analysis</div>
+            <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>Get personalized advice on what to learn next to land your target role faster.</div>
             <button onClick={runGapAnalysis} disabled={aiLoading}
-              style={{ width: "100%", padding: "11px", background: aiLoading ? "#f2f0ea" : "var(--accent)", color: aiLoading ? "#6e6b5b" : "#fff", border: "none", borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: aiLoading ? "default" : "pointer", marginBottom: 16 }}>
+              style={{ width: "100%", padding: "11px", background: aiLoading ? "var(--surface-2)" : "var(--accent)", color: aiLoading ? "var(--text-muted)" : "#fff", border: "none", borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: aiLoading ? "default" : "pointer", marginBottom: 16 }}>
               {aiLoading ? "Analyzing…" : "⚡ Run Gap Analysis"}
             </button>
 
             {aiAdvice ? (
-              <div style={{ background: "rgba(107,104,88,0.04)", border: "1px solid rgba(107,104,88,0.12)", borderRadius: 10, padding: "16px", fontSize: 13.5, color: "#161510", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
+              <div style={{ background: "rgba(107,104,88,0.04)", border: "1px solid rgba(107,104,88,0.12)", borderRadius: 10, padding: "16px", fontSize: 13.5, color: "var(--text)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
                 {aiAdvice}
               </div>
             ) : (
-              <div style={{ background: "#f7f5f0", borderRadius: 10, padding: "20px", textAlign: "center" }}>
+              <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: "20px", textAlign: "center" }}>
                 <div style={{ fontSize: 28, marginBottom: 8 }}>🤖</div>
-                <div style={{ fontSize: 13, color: "#6e6b5b" }}>Claude will analyze the gap between your current skills and the target role requirements</div>
+                <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Claude will analyze the gap between your current skills and the target role requirements</div>
               </div>
             )}
 
             {/* Top in-demand skills */}
             <div style={{ marginTop: 20 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: "#161510", marginBottom: 10 }}>🔥 Trending in {roleTarget}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)", marginBottom: 10 }}>🔥 Trending in {roleTarget}</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {targetRoleSkills.map(t => {
                   const have = mySkillNames.some(m => m.includes(t.toLowerCase()))
                   return (
                     <span key={t} style={{ padding: "4px 10px", borderRadius: 100, fontSize: 12, fontWeight: 600,
                       background: have ? "rgba(163,158,139,0.1)" : "rgba(132,128,109,0.07)",
-                      color: have ? "#58564c" : "#2e2d27",
+                      color: have ? "var(--text-muted)" : "var(--text)",
                       border: `1px solid ${have ? "rgba(163,158,139,0.2)" : "rgba(132,128,109,0.15)"}` }}>
                       {t} {have ? "✓" : "+"}
                     </span>
@@ -546,7 +546,7 @@ export default function SkillsPage() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(12,11,8,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
           onClick={e => { if (e.target === e.currentTarget) { setShowSkillForm(false); setEditSkill(null) } }}>
           <div style={{ background: "var(--surface)", borderRadius: 16, padding: "28px 32px", width: "100%", maxWidth: 520, boxShadow: "0 20px 60px rgba(12,11,8,0.2)" }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#161510", marginBottom: 20 }}>{editSkill ? "Edit Skill" : "Add Skill"}</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)", marginBottom: 20 }}>{editSkill ? "Edit Skill" : "Add Skill"}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label style={labelStyle}>Skill Name *</label>
@@ -593,7 +593,7 @@ export default function SkillsPage() {
               <button onClick={saveSkill} style={{ flex: 1, padding: "11px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
                 {editSkill ? "Save Changes" : "Add Skill"}
               </button>
-              <button onClick={() => { setShowSkillForm(false); setEditSkill(null) }} style={{ padding: "11px 20px", background: "transparent", color: "#6e6b5b", border: "1.5px solid #e6e2d9", borderRadius: 9, cursor: "pointer", fontSize: 14 }}>
+              <button onClick={() => { setShowSkillForm(false); setEditSkill(null) }} style={{ padding: "11px 20px", background: "transparent", color: "var(--text-muted)", border: "1.5px solid var(--border)", borderRadius: 9, cursor: "pointer", fontSize: 14 }}>
                 Cancel
               </button>
             </div>
@@ -606,7 +606,7 @@ export default function SkillsPage() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(12,11,8,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
           onClick={e => { if (e.target === e.currentTarget) { setShowCertForm(false); setEditCert(null) } }}>
           <div style={{ background: "var(--surface)", borderRadius: 16, padding: "28px 32px", width: "100%", maxWidth: 500, boxShadow: "0 20px 60px rgba(12,11,8,0.2)" }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#161510", marginBottom: 20 }}>{editCert ? "Edit Certification" : "Add Certification"}</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)", marginBottom: 20 }}>{editCert ? "Edit Certification" : "Add Certification"}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label style={labelStyle}>Certification Name *</label>
@@ -648,7 +648,7 @@ export default function SkillsPage() {
               <button onClick={saveCert} style={{ flex: 1, padding: "11px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
                 {editCert ? "Save Changes" : "Add Certification"}
               </button>
-              <button onClick={() => { setShowCertForm(false); setEditCert(null) }} style={{ padding: "11px 20px", background: "transparent", color: "#6e6b5b", border: "1.5px solid #e6e2d9", borderRadius: 9, cursor: "pointer", fontSize: 14 }}>
+              <button onClick={() => { setShowCertForm(false); setEditCert(null) }} style={{ padding: "11px 20px", background: "transparent", color: "var(--text-muted)", border: "1.5px solid var(--border)", borderRadius: 9, cursor: "pointer", fontSize: 14 }}>
                 Cancel
               </button>
             </div>
@@ -661,10 +661,10 @@ export default function SkillsPage() {
 
 /* ── Shared form styles ─────────────────────────────────────────── */
 const labelStyle: React.CSSProperties = {
-  fontSize: 12.5, fontWeight: 600, color: "#6e6b5b", display: "block", marginBottom: 5,
+  fontSize: 12.5, fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 5,
 }
 const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "9px 12px", border: "1.5px solid #e6e2d9",
-  borderRadius: 8, fontSize: 13.5, outline: "none", color: "#161510",
+  width: "100%", padding: "9px 12px", border: "1.5px solid var(--border)",
+  borderRadius: 8, fontSize: 13.5, outline: "none", color: "var(--text)",
   background: "var(--surface)", boxSizing: "border-box",
 }

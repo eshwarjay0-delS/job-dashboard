@@ -179,7 +179,7 @@ export default function ResumeScoreCard({ token, resumeName, jd, autoRun = false
 
       {/* Error */}
       {error && (
-        <div className="px-5 py-3 text-xs" style={{ color: "#13120d", background: "var(--surface)" }}>
+        <div className="px-5 py-3 text-xs" style={{ color: "var(--text)", background: "var(--surface)" }}>
           {error} — <button onClick={runScore} style={{ textDecoration: "underline" }}>Try again</button>
         </div>
       )}

@@ -24,14 +24,32 @@ type Usage = {
   today: string
   resumes: TailorOverview
   calls: { today: CallSummary; week: CallSummary; month: CallSummary }
+  speech: {
+    today: SttSummary; week: SttSummary; month: SttSummary
+    sessions: { session: string; minutes: number; chunks: number; costUsd: number; at: number }[]
+    sessionCount: number
+    avgSessionCostUsd: number
+    avgSessionMinutes: number
+    cost30minUsd: number
+    cost60minUsd: number
+    budgetUsd: number | null
+    sessionsLeft: number | null
+  }
+  audioPrices: { model: string; perMinute: number; source: string; read: string }[]
   left: {
     openai: { budgetUsd: number | null; spentMonthUsd: number; unpricedCalls: number; leftUsd: number | null; resumesLeft: number | null }
     groq: GroqAllowance[]
     providers: LlmStatus["providers"]
+    providersCheckedAt: string | null
     perPersonWeeklyLimit: number | null
   }
   prices: { model: string; in: number; out: number; source: string; read: string }[]
   gaps: { unreadable: number; truncated: boolean; kompasReporting: boolean; recordingSince: string | null; empty: boolean }
+}
+
+type SttSummary = {
+  calls: number; minutes: number; costUsd: number; freeCalls: number; unpricedCalls: number
+  byModel: { model: string; provider: string; calls: number; minutes: number; costUsd: number; kind: string }[]
 }
 
 type Span = "today" | "week" | "month"
@@ -145,11 +163,79 @@ function Bar({ part, whole }: { part: number; whole: number }) {
   )
 }
 
+function TopUp({ provider, onDone }: { provider: string; onDone: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [amount, setAmount] = useState("10")
+  const [busy, setBusy] = useState(false)
+  if (!open) return <button className="text-xs mt-2 underline" style={{ color: "var(--text-muted)" }} onClick={() => setOpen(true)}>+ Top up</button>
+  return (
+    <div className="flex items-center gap-2 mt-2">
+      <span className="text-xs" style={{ color: "var(--text-muted)" }}>$</span>
+      <input value={amount} onChange={e => setAmount(e.target.value)} inputMode="decimal"
+        className="w-20 text-xs rounded-lg border px-2 py-1" style={{ borderColor: "var(--border)", background: "var(--surface)" }} />
+      <button disabled={busy} className="text-xs font-semibold rounded-lg px-2 py-1"
+        style={{ background: "var(--text)", color: "var(--surface)" }}
+        onClick={async () => {
+          setBusy(true)
+          try {
+            const r = await fetch("/api/budget/topup", { method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ provider, amountUsd: Number(amount) }) })
+            if (r.ok) onDone()
+          } finally { setBusy(false); setOpen(false) }
+        }}>Add</button>
+      <button className="text-xs" style={{ color: "var(--text-soft)" }} onClick={() => setOpen(false)}>Cancel</button>
+    </div>
+  )
+}
+
+function BudgetBoard({ tick, setBudgetTick }: { tick: number; setBudgetTick: (f: (t: number) => number) => void }) {
+  const [b, setB] = useState<any>(null)
+  useEffect(() => {
+    fetch("/api/budget", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { if (j && j.ok) setB(j) }).catch(() => {})
+  }, [tick])
+  if (!b) return <Card><p className="text-sm" style={{ color: "var(--text-muted)" }}>Loading budget…</p></Card>
+  const u = b.unitEconomics
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+        {b.keys.map((k: any) => (
+          <Card key={k.provider}>
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-soft)" }}>{k.label} key</p>
+            <p className="text-2xl font-bold mt-1" style={{ color: "var(--text)", fontFamily: "var(--font-display)" }}>${k.remainingUsd.toFixed(2)}</p>
+            <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>left of ${k.loadedUsd.toFixed(2)} · spent ${k.spentUsd.toFixed(4)}</p>
+            {k.loadedUsd > 0 && k.spentUsd >= k.loadedUsd * 0.9 && (
+              <p className="text-xs mt-1 font-semibold" style={{ color: "var(--warning)" }}>
+                {k.spentUsd >= k.loadedUsd ? "Depleted — top up before the next run." : "Nearly depleted — top up soon."}
+              </p>
+            )}
+            <TopUp provider={k.provider} onDone={() => setBudgetTick(t => t + 1)} />
+            <div className="mt-3 space-y-1 text-sm">
+              {k.buys.resumes !== null && <p style={{ color: "var(--text)" }}><b>{k.buys.resumes.toLocaleString()}</b> <span style={{ color: "var(--text-muted)" }}>resumes</span></p>}
+              {k.buys.sessionMinutes !== undefined && <p style={{ color: "var(--text)" }}><b>{k.buys.sessionMinutes.toLocaleString()}</b> <span style={{ color: "var(--text-muted)" }}>STT minutes</span></p>}
+              <p className="text-xs" style={{ color: "var(--text-soft)" }}>{k.buys.unit}</p>
+            </div>
+          </Card>
+        ))}
+        <Card>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-soft)" }}>Unit economics</p>
+          <div className="mt-2 space-y-1 text-sm" style={{ color: "var(--text-muted)" }}>
+            <p><b style={{ color: "var(--text)" }}>${u.perResumeUsd.toFixed(4)}</b> per resume {u.perResumeCalibrated ? <Tag tone="good">measured</Tag> : <Tag tone="warn">estimate</Tag>}</p>
+            <p><b style={{ color: "var(--text)" }}>${u.perSession60MinUsd.toFixed(4)}</b> per 1-hour session (STT)</p>
+            <p><b style={{ color: "var(--text)" }}>${u.freePlanMonthlyCostUsd.toFixed(4)}</b> <span>free plan cost / user / month</span></p>
+            <p className="text-xs" style={{ color: "var(--text-soft)" }}>{u.note}</p>
+          </div>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const [data, setData] = useState<Usage | null>(null)
   const [state, setState] = useState<"loading" | "ready" | "not-admin" | "failed">("loading")
   const [busy, setBusy] = useState(false)
   const [span, setSpan] = useState<Span>("week")
+  const [budgetTick, setBudgetTick] = useState(0)
   const loadedAt = useRef(0)
 
   const load = useCallback(async () => {
@@ -196,7 +282,8 @@ export default function AdminPage() {
   })
   const dayName = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" })
 
-  const notes: string[] = []
+  const notes: string[] = ["UNRECONCILED: costs are estimates from reported tokens, not provider invoices. Historical calls without recorded usage are missing."]
+  if (c.failedWithoutUsage > 0) notes.push(`${count(c.failedWithoutUsage)} failed calls have no recorded tokens. Their billing is unknown until provider reconciliation.`)
   if (!gaps.kompasReporting) notes.push("Kompas has not reported a model call this month. Its numbers are missing from this page; they are not zero.")
   if (gaps.empty) notes.push("Nothing has been recorded yet. Counting began when this page went live; the next resume or model call will show here.")
   else if (gaps.recordingSince) notes.push(`Counting began ${time(gaps.recordingSince)}. Nothing before that is in these numbers.`)
@@ -293,10 +380,11 @@ export default function AdminPage() {
           </Card>
 
           <Card>
-            <Meta>Every provider, right now</Meta>
+            <Meta>Last provider check</Meta>
+            {left.providersCheckedAt && <p style={SMALL}>Checked {time(left.providersCheckedAt)}. This page does not run paid probes.</p>}
             <div style={{ marginTop: 12 }}>
               {left.providers.length === 0
-                ? <p style={SMALL}>The providers could not be checked just now.</p>
+                ? <p style={SMALL}>No provider check is cached on this server. Health is unknown; configured keys alone do not prove connectivity.</p>
                 : left.providers.map(p => (
                   <div key={p.provider} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "8px 0", borderTop: "1px solid var(--border)" }}>
                     <span style={{ fontSize: 14.5, color: "var(--text)" }}>
@@ -312,11 +400,11 @@ export default function AdminPage() {
         </div>
       </Section>
 
-      <Section title="Model calls and cost" lede="Every call either app made to a model: how many, how many tokens went in and came out, and what it cost."
+      <Section title="Model calls and cost" lede="Recorded model calls from both apps, token usage, and estimated cost. Failed calls with reported usage are included."
         aside={SPANS.map(s => <Chip key={s.id} label={s.label} active={span === s.id} onClick={() => setSpan(s.id)} />)}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
           {([
-            ["Cost", money(c.costUsd), c.unpricedCalls > 0 ? "or more: some calls have no known price" : ""],
+            ["Estimated cost", money(c.costUsd), c.unpricedCalls > 0 ? "or more: some calls have no known price" : ""],
             ["Calls", count(c.calls), c.failed > 0 ? `${count(c.failed)} of them failed` : "none failed"],
             ["Time to answer", c.meanMs > 0 ? `${(c.meanMs / 1000).toFixed(1)} s` : "–", "on average, for calls that answered"],
             ["Tokens in", tokens(c.input), "what was sent to the models"],
@@ -353,6 +441,73 @@ export default function AdminPage() {
               count(m.calls), tokens(m.input), tokens(m.output), m.kind === "unpriced" ? "–" : money(m.costUsd),
             ])} />
         </Card>
+      </Section>
+
+      <Section title="API budget — what your keys buy" lede="Declared balances minus measured spend. Resumes left, session minutes left, and the unit economics underneath."
+        aside={<Chip label="Refresh" active={false} onClick={() => setBudgetTick(t => t + 1)} />}>
+        <BudgetBoard tick={budgetTick} setBudgetTick={setBudgetTick} />
+      </Section>
+
+      <Section title="Voice sessions and cost" lede="Every live Kompas session's speech-to-text: audio minutes, what each session cost, and what the next ones will cost. The business-model numbers."
+        aside={SPANS.map(s => <Chip key={s.id} label={s.label} active={span === s.id} onClick={() => setSpan(s.id)} />)}>
+        {(() => {
+          const s = data.speech[span]
+          const mins = (m: number) => (m < 60 ? `${m.toFixed(1)} min` : `${(m / 60).toFixed(1)} hr`)
+          return (<>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+              {([
+                ["Speech cost", money(s.costUsd), s.unpricedCalls > 0 ? "or more: some audio has no known price" : s.freeCalls > 0 ? "on the free tier — billed $0" : ""],
+                ["Audio transcribed", mins(s.minutes), `${count(s.calls)} chunks`],
+                ["Sessions", count(data.speech.sessionCount), data.speech.avgSessionMinutes > 0 ? `avg ${mins(data.speech.avgSessionMinutes)} each` : "no sessions yet"],
+                ["Avg session cost", money(data.speech.avgSessionCostUsd), "what one live run costs"],
+                ["30-minute session", money(data.speech.cost30minUsd), "at this month's rate"],
+                ["One-hour session", money(data.speech.cost60minUsd), "at this month's rate"],
+              ] as const).map(([label, value, under]) => (
+                <Card key={label} style={{ padding: 16 }}>
+                  <Meta>{label}</Meta>
+                  <div style={{ ...NUM, fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 700, color: "var(--text)", marginTop: 8 }}>{value}</div>
+                  <div style={{ fontSize: 13.5, color: "var(--text-soft)", marginTop: 2, minHeight: 20 }}>{under}</div>
+                </Card>
+              ))}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16, marginTop: 16 }}>
+              <Card>
+                <Meta style={{ marginBottom: 14 }}>Budget</Meta>
+                {data.speech.budgetUsd !== null ? (<>
+                  <div style={{ ...NUM, fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 700 }}>{money(data.speech.budgetUsd - s.costUsd)}</div>
+                  <div style={{ fontSize: 13.5, color: "var(--text-soft)", marginTop: 4 }}>
+                    left of {money(data.speech.budgetUsd)} this month
+                    {data.speech.sessionsLeft !== null ? ` — about ${count(data.speech.sessionsLeft)} sessions at the average cost` : ""}
+                  </div>
+                </>) : (
+                  <div style={{ fontSize: 13.5, color: "var(--text-soft)" }}>
+                    Set GROQ_MONTHLY_BUDGET_USD to see what's left and how many sessions it buys.
+                  </div>
+                )}
+              </Card>
+              <Card>
+                <Meta style={{ marginBottom: 14 }}>By model</Meta>
+                <Table head={["Provider", "Model", "Chunks", "Audio", "Cost"]} empty="No speech in this time."
+                  rows={s.byModel.map(m => [
+                    provider(m.provider),
+                    <span key="m">{m.model} {m.kind === "free" ? <Tag tone="good">Free</Tag> : m.kind === "unpriced" ? <Tag tone="warn">No price known</Tag> : null}</span>,
+                    count(m.calls), mins(m.minutes), m.kind === "unpriced" ? "–" : money(m.costUsd),
+                  ])} />
+              </Card>
+            </div>
+
+            <Card style={{ marginTop: 16 }}>
+              <Meta style={{ marginBottom: 14 }}>Sessions this month — what each live run cost</Meta>
+              <Table left={1} head={["Session", "Date", "Chunks", "Audio", "Cost"]} empty="No sessions yet."
+                rows={data.speech.sessions.map(x => [
+                  <span key="s" style={{ ...NUM }}>{x.session}</span>,
+                  new Date(x.at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                  count(x.chunks), mins(x.minutes), money(x.costUsd),
+                ])} />
+            </Card>
+          </>)
+        })()}
       </Section>
 
       <Section title="API keys" lede="Add or replace any provider's key here, and tick what may use it. A key is sealed before it is stored and is never shown again; a change takes effect within half a minute, with no redeploy.">

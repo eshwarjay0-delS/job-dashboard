@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/service"
-import { waConfigured, waDisplayNumber } from "@/lib/whatsapp"
+import { waConfigured, waDisplayNumber, waStatus } from "@/lib/whatsapp"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -12,7 +12,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 })
 
   const service = createServiceClient()
-  const [{ data: profile }, { data: accounts, error: accountsError }, { data: services }] = await Promise.all([
+  const [{ data: profile, error: profileError }, { data: accounts, error: accountsError }, { data: services, error: servicesError }] = await Promise.all([
     supabase
       .from("profiles")
       .select("phone_verified,phone_last4,whatsapp_opt_in")
@@ -27,10 +27,14 @@ export async function GET() {
 
   if (accountsError) return NextResponse.json({ error: accountsError.message }, { status: 500 })
 
+  if (profileError || servicesError) return NextResponse.json({ error: "Could not verify your saved connections. Please retry." }, { status: 503 })
+
   const whatsappRow = (services || []).find((row: any) => row.service === "whatsapp")
   const phoneVerified = Boolean(profile?.phone_verified)
   const optedIn = Boolean(profile?.whatsapp_opt_in)
-  const systemReady = waConfigured()
+  const provider = await waStatus()
+  const systemConfigured = waConfigured()
+  const systemReady = provider.state === "ok" && provider.hasNumber
   // The number to message is only handed to someone whose own number is verified and linked: the bot answers nobody else.
   const number = phoneVerified && optedIn && systemReady ? await waDisplayNumber() : ""
 
@@ -45,9 +49,12 @@ export async function GET() {
       phoneLast4: profile?.phone_last4 || null,
       optedIn,
       systemReady,
+      systemConfigured,
+      providerState: provider.state,
+      webhookState: "unverified",
       connected: Boolean(phoneVerified && optedIn && systemReady && whatsappRow?.status === "connected"),
       label: whatsappRow?.connected_account_label || (profile?.phone_last4 ? `••••${profile.phone_last4}` : null),
       number: number || null,
     },
-  })
+  }, { headers: { "Cache-Control": "no-store" } })
 }

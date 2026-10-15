@@ -3,10 +3,26 @@
 import Link from "next/link"
 import type { User } from "@supabase/supabase-js"
 import { usePathname, useRouter } from "next/navigation"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { createClient } from "@/lib/supabase/client"
-import { ADMIN_NAV, NAV_SECTIONS, NAV_ITEMS, PRIMARY_NAV } from "./_components/nav"
+import { ADMIN_NAV, NAV_TABS, NAV_ITEMS, SETTINGS_NAV, navItem } from "./_components/nav"
 import { useTheme } from "../theme-provider"
+import { ChevronRight, Moon, Sun } from "lucide-react"
+import { forgetGmailData } from "@/lib/use-gmail-data"
+import { forgetSetupDone } from "./onboarding-gate"
+
+// Resume-only accounts retain Resume and Connections (WhatsApp only); never expose Jobs, Gmail or Kompas navigation.
+const RESUME_ONLY_TABS = [
+  ...NAV_TABS.filter(tab => tab.href === "/dashboard/resume"),
+  {
+    href: "/dashboard/connections",
+    label: "Connections",
+    icon: navItem("/dashboard/connections").icon,
+    what: "Link your WhatsApp number for resume tailoring.",
+    items: [navItem("/dashboard/whatsapp")],
+  },
+]
 
 const ALL_HREFS = [...NAV_ITEMS, ...ADMIN_NAV].map(i => i.href)
 
@@ -24,7 +40,125 @@ function isActive(href: string, pathname: string) {
   return !ALL_HREFS.some(h => h !== href && h.length > href.length && matches(h))
 }
 
-export default function SidebarNav() {
+type CreditSummary = { resumesLeft: number; sessionsLeft: number; calibrated: boolean; remainingUsd: number }
+
+let creditAsk: Promise<CreditSummary | null> | null = null
+function askCredits(): Promise<CreditSummary | null> {
+  creditAsk ??= fetch("/api/credits/summary", { cache: "no-store" })
+    .then(r => (r.ok ? r.json() : null))
+    .then(j => (j && j.ok ? (j as CreditSummary) : null))
+    .catch(() => null)
+    .finally(() => { setTimeout(() => { creditAsk = null }, 60_000) })
+  return creditAsk
+}
+
+function useCreditSummary() {
+  const [s, setS] = useState<null | CreditSummary>(null)
+  useEffect(() => {
+    let active = true
+    void askCredits().then(j => { if (active && j) setS(j) })
+    return () => { active = false }
+  }, [])
+  return s
+}
+
+/** Pinned overlay: renders into document.body via portal so no ancestor
+ *  stacking context can trap or clip it. Anchored under the pill button,
+ *  clamped inside the viewport. Backdrop tap or Escape closes it. */
+function ExplainerPanel({ s, onClose, anchor, align = "left" }: {
+  s: CreditSummary; onClose: () => void; anchor: HTMLElement | null; align?: "left" | "right"
+}) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  useEffect(() => {
+    const place = () => {
+      if (!anchor) return
+      const r = anchor.getBoundingClientRect()
+      const w = Math.min(300, window.innerWidth - 24)
+      let left = align === "right" ? r.right - w : r.left
+      left = Math.max(12, Math.min(left, window.innerWidth - w - 12))
+      setPos({ top: Math.min(r.bottom + 8, window.innerHeight - 40), left })
+    }
+    place()
+    window.addEventListener("resize", place)
+    window.addEventListener("scroll", place, true)
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+    window.addEventListener("keydown", esc)
+    return () => {
+      window.removeEventListener("resize", place)
+      window.removeEventListener("scroll", place, true)
+      window.removeEventListener("keydown", esc)
+    }
+  }, [anchor, align, onClose])
+  if (typeof document === "undefined" || !pos) return null
+  return createPortal(
+    <>
+      <div onClick={onClose} aria-hidden="true"
+        style={{ position: "fixed", inset: 0, zIndex: 9990, background: "transparent", cursor: "default" }} />
+      <div role="dialog" aria-label="What these numbers mean" onClick={e => e.stopPropagation()}
+        style={{
+          position: "fixed", top: pos.top, left: pos.left, zIndex: 9991,
+          width: 300, maxWidth: "calc(100vw - 24px)",
+          borderRadius: 14, border: "1px solid var(--border)", background: "var(--surface)",
+          boxShadow: "0 16px 48px rgba(32,31,25,.25)", padding: "14px 16px", textAlign: "left",
+        }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", margin: "0 0 8px" }}>What this means</p>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
+          <b style={{ color: "var(--text)" }}>{s.resumesLeft.toLocaleString()} resumes</b> — generations your API balances buy (${s.remainingUsd.toFixed(2)} left across keys).
+        </p>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
+          <b style={{ color: "var(--text)" }}>{s.sessionsLeft} sessions</b> — 1-hour interview sessions left on your gel points (1 hour = 1 session · 30 min = 0.5 session; listening is free).
+        </p>
+        <p style={{ fontSize: 11, color: "var(--text-soft)", margin: "0 0 10px" }}>
+          {s.calibrated ? "Measured from your real generations." : "Estimate — your first generation calibrates it."}
+        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Link href="/dashboard/admin" onClick={onClose} style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)" }}>Full breakdown →</Link>
+          <button onClick={onClose} style={{ fontSize: 12, color: "var(--text-soft)", background: "none", border: "none", cursor: "pointer" }}>Close</button>
+        </div>
+      </div>
+    </>,
+    document.body
+  )
+}
+
+function CreditsPill() {
+  const s = useCreditSummary()
+  const [open, setOpen] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  if (!s) return null
+  return (
+    <div style={{ margin: "10px 14px 0" }}>
+      <button ref={btnRef} onClick={() => setOpen(o => !o)} title="What do these numbers mean?"
+        style={{
+          display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px",
+          borderRadius: 999, border: "1px solid var(--border)", background: "var(--surface)",
+          fontSize: 12, fontWeight: 700, color: "var(--text)", whiteSpace: "nowrap", cursor: "pointer",
+        }}>
+        <span aria-hidden="true">◉</span>
+        <span>{s.resumesLeft.toLocaleString()} resumes · {s.sessionsLeft} sessions left</span>
+      </button>
+      {open && <ExplainerPanel s={s} onClose={() => setOpen(false)} anchor={btnRef.current} align="left" />}
+    </div>
+  )
+}
+
+function CreditsPillCompact() {
+  const s = useCreditSummary()
+  const [open, setOpen] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  if (!s) return <span />
+  return (
+    <div>
+      <button ref={btnRef} onClick={() => setOpen(o => !o)} title="What do these numbers mean?"
+        style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", background: "none", border: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer", padding: 0 }}>
+        ◉ {s.resumesLeft > 999 ? `${(s.resumesLeft / 1000).toFixed(1)}k` : s.resumesLeft}r · {s.sessionsLeft}s
+      </button>
+      {open && <ExplainerPanel s={s} onClose={() => setOpen(false)} anchor={btnRef.current} align="right" />}
+    </div>
+  )
+}
+
+export default function SidebarNav({ resumeOnly = false }: { resumeOnly?: boolean }) {
   const pathname = usePathname()
   const router = useRouter()
   const [initials, setInitials] = useState("MF")
@@ -33,8 +167,12 @@ export default function SidebarNav() {
   const [admin, setAdmin] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [openTabs, setOpenTabs] = useState<string[]>([])
+  const toggleTab = (href: string) => setOpenTabs(open => open.includes(href) ? open.filter(h => h !== href) : [...open, href])
   const [signingOut, setSigningOut] = useState(false)
   const accountRef = useRef<HTMLDivElement>(null)
+  const toggleRef = useRef<HTMLButtonElement>(null)   // the menu button on a narrow window
+  const drawerRef = useRef<HTMLElement>(null)         // the menu itself, a drawer on a narrow window
   const { mode, setMode } = useTheme()
   const dark = mode === "dark"
 
@@ -64,6 +202,9 @@ export default function SidebarNav() {
     setSigningOut(true)
     try {
       const supabase = createClient()
+      // The mail kept for instant pages, and that their setup is done, belong to this person: they go at sign-out.
+      forgetGmailData()
+      forgetSetupDone()
       await supabase.auth.signOut()
       setAccountOpen(false)
       router.replace("/login")
@@ -73,19 +214,44 @@ export default function SidebarNav() {
     }
   }
 
+  // Closing the drawer from inside it (Escape, or the dimmed page) puts the keyboard back on the menu button. Left alone,
+  // the link that had it is hidden with the drawer and the keyboard is dropped at the top of the document.
+  const closeMenu = useCallback(() => {
+    const el = document.activeElement as HTMLElement | null
+    const inside = !!el && (!!drawerRef.current?.contains(el) || el.classList.contains("mf-nav-scrim"))
+    setMenuOpen(false)
+    if (inside) toggleRef.current?.focus()
+  }, [])
+
   useEffect(() => {
     if (!menuOpen) return
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenuOpen(false)
+      if (event.key === "Escape") closeMenu()
     }
+    // While the drawer is open the page under the dimming cannot be reached with Tab or read out by a screen reader.
+    const page = document.getElementById("dashboard-content")
+    page?.setAttribute("inert", "")
+    // The drawer exists only on a narrow window. Widened past it, the menu is the fixed rail again: the drawer is closed,
+    // so the page is never left unreachable behind a drawer that is no longer one.
+    const wide = window.matchMedia("(min-width: 1025px)")
+    const onWide = () => { if (wide.matches) setMenuOpen(false) }
+    wide.addEventListener("change", onWide)
     window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [menuOpen])
+    return () => {
+      page?.removeAttribute("inert")
+      wide.removeEventListener("change", onWide)
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [menuOpen, closeMenu])
 
   useEffect(() => {
     const supabase = createClient()
     let active = true
     let authRevision = 0
+    // Who is signed in, as last seen. Supabase also reports a refreshed session (on tab focus, on token refresh) for the
+    // same person; that is not a change, so the Admin link is not hidden and re-asked for it (it was: five asks in nine
+    // seconds on the owner's account, 14 Oct 2026, the link blinking each time).
+    let knownUserId: string | null | undefined = undefined
 
     function updateAccount(user: User | null) {
       if (!active) return
@@ -101,6 +267,7 @@ export default function SidebarNav() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       // A later sign-out or account switch must win over this initial request.
       if (!active || authRevision !== initialRevision) return
+      knownUserId = user && !user.is_anonymous ? user.id : null
       updateAccount(user)
       if (!user || user.is_anonymous) return
       // An admin is never sent to setup (owner, 2026-10-07: "skip onboarding for this user"), so the answer is needed before
@@ -110,8 +277,18 @@ export default function SidebarNav() {
       setAdmin(isAdmin)
       if (isAdmin || window.location.pathname.startsWith("/dashboard/setup")) return
       try {
+        const ownerResponse = await fetch("/api/admin/owner", { cache: "no-store" })
+        const ownerState = ownerResponse.ok ? await ownerResponse.json() : null
+        if (!active || authRevision !== initialRevision) return
+        if (ownerState?.owner === true) {
+          setOwner(true)
+          if (window.location.pathname.startsWith("/dashboard/setup")) router.replace("/dashboard/admin")
+          return
+        }
+        setOwner(false)
+        if (window.location.pathname.startsWith("/dashboard/setup")) return
         const { data } = await supabase.from("profiles").select("profile_complete").eq("id", user.id).maybeSingle()
-        if (active && authRevision === initialRevision && data?.profile_complete === false && !window.location.pathname.startsWith("/dashboard/setup")) {
+        if (active && authRevision === initialRevision && data?.profile_complete === false) {
           router.replace("/dashboard/setup")
         }
       } catch { /* Account setup checks must not block navigation. */ }
@@ -119,7 +296,9 @@ export default function SidebarNav() {
 
     // The existing extension bridge also receives sign-out and account switches.
     const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event !== "INITIAL_SESSION") {
+      const id = session?.user && !session.user.is_anonymous ? session.user.id : null
+      if (event !== "INITIAL_SESSION" && id !== knownUserId) {
+        knownUserId = id
         authRevision += 1
         // Another account, or none: the link goes at once and comes back only if the server says this one is an admin too.
         const revision = authRevision
@@ -139,6 +318,7 @@ export default function SidebarNav() {
     <>
     <header className="mf-mobile-home">
       <button
+        ref={toggleRef}
         type="button"
         className={`mf-menu-toggle${menuOpen ? " is-open" : ""}`}
         aria-label={menuOpen ? "Close navigation" : "Open navigation"}
@@ -149,6 +329,7 @@ export default function SidebarNav() {
         <span /><span /><span />
       </button>
       <Link href="/dashboard" className="mf-mobile-brand">MarketFit</Link>
+      <CreditsPillCompact />
       <button
         type="button"
         className="mf-theme-toggle"
@@ -156,7 +337,7 @@ export default function SidebarNav() {
         aria-label={dark ? "Switch to Paper theme" : "Switch to Night theme"}
         title={dark ? "Paper theme" : "Night theme"}
       >
-        <span aria-hidden="true">{dark ? "☀" : "☾"}</span>
+        {dark ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
       </button>
       <Link
         href={signedIn ? "/dashboard/connections" : "/login?next=/dashboard"}
@@ -165,26 +346,27 @@ export default function SidebarNav() {
         {signedIn ? initials : "Sign in"}
       </Link>
     </header>
-    <aside suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
-      background: "var(--bg)",
+    {menuOpen && <button type="button" className="mf-nav-scrim" aria-label="Close navigation" tabIndex={-1} onClick={closeMenu} />}
+    <aside ref={drawerRef} suppressHydrationWarning className={`dash-sidebar${menuOpen ? " is-open" : ""}`} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false) }} style={{
+      background: "var(--surface)",
       display: "flex",
       flexDirection: "column",
-      borderRight: "0.8px solid var(--border-strong)",
+      borderRight: "1px solid var(--border)",
     }}>
 
       {/* ── Wordmark ──────────────────────────────────────────────── */}
-      <div className="mf-sidebar-brand-row" style={{ padding: "18px 14px 16px 18px", flexShrink: 0, borderBottom: "0.8px solid var(--border-strong)" }}>
+      <div className="mf-sidebar-brand-row" style={{ padding: "18px 14px 14px 18px", flexShrink: 0 }}>
         <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <div style={{
-            width: 30, height: 30, borderRadius: 6, background: "var(--accent)", color: "var(--bg)",
-            display: "flex", alignItems: "center", justifyContent: "center",
+            width: 32, height: 32, borderRadius: 9, background: "var(--accent)", color: "var(--bg)",
+            display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 2px rgba(25,20,10,.18)",
             fontFamily: "var(--font-display)", fontSize: 13, fontWeight: 700, letterSpacing: "-0.01em", flexShrink: 0,
           }}>MF</div>
           <div>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.01em", lineHeight: 1 }}>
               MarketFit
             </div>
-            <div className="ink-label" style={{ fontSize: 11, letterSpacing: ".1em", marginTop: 5 }}>Own your next role</div>
+            <div className="ink-label" style={{ fontSize: 12, marginTop: 4 }}>Own your next role</div>
           </div>
         </Link>
         <button
@@ -194,20 +376,54 @@ export default function SidebarNav() {
           aria-label={dark ? "Switch to Paper theme" : "Switch to Night theme"}
           title={dark ? "Paper theme" : "Night theme"}
         >
-          <span aria-hidden="true">{dark ? "☀" : "☾"}</span>
+          {dark ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
         </button>
       </div>
+      {!resumeOnly && <CreditsPill />}
 
       {/* ── Main Nav ──────────────────────────────────────────────── */}
       <nav id="marketfit-navigation" aria-label="Pages" style={{ flex: 1, padding: "10px 10px", overflowY: "auto", overflowX: "hidden" }}>
-        {PRIMARY_NAV.map(item => {
-          const active = isActive(item.href, pathname)
-          const content = <><span className="sb-icon">{item.icon}</span><span>{item.label}</span></>
-          return item.href.startsWith("/dashboard/kompas")
-            ? <a key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>{content}</a>
-            : <Link key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>{content}</Link>
+        {(resumeOnly ? RESUME_ONLY_TABS : NAV_TABS).map(tab => {
+          const inTab = (h: string) => h === tab.href ? pathname === h : pathname === h || pathname.startsWith(h + "/")
+          const tabActive = inTab(tab.href) || tab.items.some(i => inTab(i.href))
+          const expanded = tabActive || openTabs.includes(tab.href)
+          const TabLink = tab.href.startsWith("/dashboard/kompas") ? "a" : Link
+          return (
+            <div key={tab.href} style={{ marginBottom: 2 }}>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <TabLink href={tab.href} className={`sb-link${tabActive ? " active" : ""}`} aria-current={tabActive ? "page" : undefined}
+                  title={tab.what} style={{ flex: 1 }}>
+                  <span className="sb-icon">{tab.icon}</span><span>{tab.label}</span>
+                </TabLink>
+                {tab.items.length > 0 && (
+                  <button type="button" onClick={() => toggleTab(tab.href)} aria-expanded={expanded}
+                    aria-label={expanded ? `Hide ${tab.label} pages` : `Show ${tab.label} pages`}
+                    className="sb-chevron">
+                    <ChevronRight size={16} aria-hidden="true" style={{ transform: expanded ? "rotate(90deg)" : "none" }} />
+                  </button>
+                )}
+              </div>
+              {expanded && tab.items.length > 0 && (
+                <div style={{ marginLeft: 18, borderLeft: "1px solid var(--border)", paddingLeft: 8 }}>
+                  {tab.items.map(item => {
+                    const active = isActive(item.href, pathname)
+                    const NavigationLink = item.href.startsWith("/dashboard/kompas") ? "a" : Link
+                    return (
+                      <NavigationLink key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`}
+                        aria-current={active ? "page" : undefined} title={item.what}>
+                        <span className="sb-icon">{item.icon}</span>
+                        <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
+                        {active && <span className="sb-here">Here</span>}
+                      </NavigationLink>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
         })}
-        {admin && ADMIN_NAV.map(item => {
+        <div style={{ borderTop: "1px solid var(--border)", margin: "10px 4px" }} />
+        {!resumeOnly && admin && ADMIN_NAV.map(item => {
           const active = isActive(item.href, pathname)
           return (
             <Link key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined} title={item.what}>
@@ -215,36 +431,23 @@ export default function SidebarNav() {
             </Link>
           )
         })}
-        <details className="mf-nav-more"><summary>All tools & accounts</summary>
-        {NAV_SECTIONS.map((section, si) => (
-          <div key={si} style={{ marginBottom: section.label ? 8 : 4 }}>
-            {section.label && <div className="sb-label">{section.label}</div>}
-
-            {section.items.map(item => {
-              const active = isActive(item.href, pathname)
-              const NavigationLink = item.href.startsWith("/dashboard/kompas") ? "a" : Link
-              return (
-                <NavigationLink key={item.href} href={item.href} className={`sb-link${active ? " active" : ""}`}
-                  aria-current={active ? "page" : undefined} title={item.what}>
-                  <span className="sb-icon">{item.icon}</span>
-                  <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
-                  {active && <span className="sb-here">Here</span>}
-                </NavigationLink>
-              )
-            })}
-          </div>
-        ))}
-        </details>
-
+        {!resumeOnly && (() => {
+          const active = isActive(SETTINGS_NAV.href, pathname)
+          return (
+            <Link href={SETTINGS_NAV.href} className={`sb-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined} title={SETTINGS_NAV.what}>
+              <span className="sb-icon">{SETTINGS_NAV.icon}</span><span>{SETTINGS_NAV.label}</span>
+            </Link>
+          )
+        })()}
       </nav>
 
       {/* ── Account ────────────────────────────────────────── */}
-      <div ref={accountRef} style={{ padding: "12px 14px 16px", flexShrink: 0, borderTop: "0.8px solid var(--border-strong)", position: "relative" }}>
+      <div ref={accountRef} style={{ padding: "12px 14px 16px", flexShrink: 0, borderTop: "1px solid var(--border)", position: "relative" }}>
         {signedIn && accountOpen && (
           <div role="menu" aria-label="Account menu" style={{
             position: "absolute", left: 12, right: 12, bottom: "calc(100% + 8px)", zIndex: 80,
-            background: "var(--surface)", border: "0.8px solid var(--border-strong)", borderRadius: 12,
-            boxShadow: "0 14px 36px rgba(0,0,0,.16)", padding: 10,
+            background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14,
+            boxShadow: "var(--shadow-pop)", padding: 8,
           }}>
             <div style={{ padding: "6px 8px 10px", borderBottom: "0.8px solid var(--border-strong)" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -266,10 +469,9 @@ export default function SidebarNav() {
           aria-expanded={signedIn ? accountOpen : undefined} aria-haspopup={signedIn ? "menu" : undefined}
           style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: 0, border: 0, background: "transparent", textAlign: "left", cursor: "pointer" }}>
           <div style={{
-            width: 28, height: 28, flexShrink: 0, background: "var(--surface-2)", color: "var(--text)",
-            border: "0.8px solid var(--border-strong)",
+            width: 32, height: 32, flexShrink: 0, borderRadius: 999, background: "color-mix(in srgb, var(--accent) 16%, var(--surface))", color: "var(--text)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontFamily: "var(--font-label)", fontSize: 11, fontWeight: 600,
+            fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 700,
           }}>{initials}</div>
           <div style={{ overflow: "hidden", flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>

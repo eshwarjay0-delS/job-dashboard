@@ -1,4 +1,5 @@
 "use client"
+import TypingDots from "../_components/typing-dots"
 
 import { useState } from "react"
 import { Check, ChevronUp, ChevronDown, Pause, Play, Plus } from "lucide-react"
@@ -7,6 +8,7 @@ import PageIntro from "../_components/page-intro"
 import MetricHero from "../_components/metric-hero"
 import { type Step } from "../_suite/sample"
 import { useGmailData } from "@/lib/use-gmail-data"
+import Habits from "./_components/habits"
 
 const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -75,7 +77,7 @@ export default function WorkflowsPage() {
   // Derive approval queue from mails that need replies
   const approvalFor: Record<string, { step: string; detail: string }> = {}
   for (const m of mails) {
-    if (!m.needsReply) continue
+    if (!m.needsReply || m.yourTurn === false) continue   // already answered: nothing left to approve
     if (m.needsReply === "availability") {
       approvalFor[m.id] = { step: "Share availability", detail: `${m.role} · ${m.company}` }
     } else if (m.needsReply === "rtr") {
@@ -122,9 +124,13 @@ export default function WorkflowsPage() {
       )}
       {loading && (
         <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: 13 }}>
-          ⟳ Loading workflows…
+          <TypingDots label="Loading workflows…" />
         </div>
       )}
+
+      {/* What the person's own mail shows they keep doing, and what they have handed over. Read from real mail; the
+          workflow below it is still the preview it says it is. */}
+      {connected && <Habits />}
 
       <Card dark style={{ padding: 28, marginBottom: 20 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(255,255,255,.55)" }}>Workflow</div>
@@ -144,7 +150,7 @@ export default function WorkflowsPage() {
               <button key={v} type="button" aria-pressed={tab === v} onClick={() => setTab(v)}
                 style={{
                   height: 30, padding: "0 14px", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 650,
-                  background: tab === v ? "#fff" : "transparent", color: tab === v ? "var(--accent)" : "rgba(255,255,255,.75)",
+                  background: tab === v ? "var(--surface)" : "transparent", color: tab === v ? "var(--accent)" : "rgba(255,255,255,.75)",
                 }}>{label}</button>
             ))}
           </div>

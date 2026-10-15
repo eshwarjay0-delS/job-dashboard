@@ -28,12 +28,13 @@
 
 /** The two answers to "Who is speaking?". "others-told" is the name the second answer had before 8 Oct; kept transcripts carry it. */
 export type Consent = "only-me" | "others" | "others-told"
-export type Layer = "raw" | "clean"
+export type Layer = "raw" | "clean" | "rewrite"
+export type TranscriptRevision = { before: string; after: string; reason: string; at: number; source: "user" }
 /**
  * `speaker` is who said it: "you", or "s1", "s2"... for the other voices in the order they were first heard. `by` says who
  * decided that: absent when it was worked out from the sound, "you" when the person set it.
  */
-export type Segment = { id: string; startMs: number; endMs: number; raw: string; clean?: string; failed?: true; speaker?: string; by?: "you" }
+export type Segment = { id: string; startMs: number; endMs: number; raw: string; clean?: string; rewrite?: string; revisions?: TranscriptRevision[]; failed?: true; speaker?: string; by?: "you" }
 export type Session = { v: 1; id: string; title: string; startedAt: string; consent: Consent; segments: Segment[]; names?: Record<string, string> }
 
 // ─────────────────────────────────────────── the guard on tidying ────────────────────────────────────────────
@@ -254,7 +255,7 @@ export function withClean(session: Session, segmentId: string, clean: string): S
 
 /** A part's words in the asked wording: the tidied one when asked for and present, otherwise what was said. */
 export function segmentText(segment: Segment, layer: Layer): string {
-  return layer === "clean" && segment.clean ? segment.clean : segment.raw
+  return layer === "rewrite" ? segment.rewrite || segment.clean || segment.raw : layer === "clean" && segment.clean ? segment.clean : segment.raw
 }
 
 /** `m:ss` from the start, or `h:mm:ss` past an hour. */
@@ -286,10 +287,30 @@ const GAP = "[This part could not be read]"
 
 export function asPlainText(session: Session, layer: Layer): string {
   const lines = transcriptLines(session, layer).map(l => `${l.clock}  ${l.failed ? GAP : `${l.who ? `${l.who}: ` : ""}${l.text}`}`)
-  return [session.title, `${session.startedAt.slice(0, 10)}, ${clockAt(lengthMs(session))} long, ${layer === "clean" ? "tidied" : "as said"}`, "", ...lines, ""].join("\n")
+  return [session.title, `${session.startedAt.slice(0, 10)}, ${clockAt(lengthMs(session))} long, ${layer === "rewrite" ? "rewritten by you (unedited parts retain prior wording)" : layer === "clean" ? "tidied" : "as said"}`, "", ...lines, ""].join("\n")
 }
 
 export function asMarkdown(session: Session, layer: Layer): string {
   const lines = transcriptLines(session, layer).map(l => `**${l.clock}** ${l.failed ? `_${GAP}_` : `${l.who ? `**${l.who}:** ` : ""}${l.text}`}`)
-  return [`# ${session.title}`, "", `${session.startedAt.slice(0, 10)} · ${clockAt(lengthMs(session))} long · ${wordCount(session, layer)} words · ${layer === "clean" ? "tidied" : "as said"}`, "", lines.join("\n\n"), ""].join("\n")
+  return [`# ${session.title}`, "", `${session.startedAt.slice(0, 10)} · ${clockAt(lengthMs(session))} long · ${wordCount(session, layer)} words · ${layer === "rewrite" ? "rewritten by you (unedited parts retain prior wording)" : layer === "clean" ? "tidied" : "as said"}`, "", lines.join("\n\n"), ""].join("\n")
+}
+
+/** Explicit user edits are evidence, never a replacement for recognition or validated training truth. */
+export function manualRewrite<T extends { raw: string; clean?: string | null; rewrite?: string; revisions?: TranscriptRevision[] }>(value: T, text: string, reason: string, at: number): T {
+  const after = text.trim(), why = reason.trim()
+  if (!after || after.length > 20000 || !why || !Number.isFinite(at)) return value
+  const before = value.rewrite || value.clean || value.raw
+  if (before === after) return value
+  return { ...value, rewrite: after, revisions: [...(value.revisions || []), { before, after, reason: why.slice(0, 500), at, source: "user" }] }
+}
+
+export function withManualRewrite(session: Session, segmentId: string, text: string, reason: string, at: number): Session {
+  return { ...session, segments: session.segments.map(s => s.id === segmentId && !s.failed ? manualRewrite(s, text, reason, at) : s) }
+}
+
+/** Search all preserved layers, speaker names and correction evidence, including older sessions. */
+export function transcriptMatches(session: Session, query: string): boolean {
+  const terms = query.normalize("NFC").toLocaleLowerCase().trim().split(/\s+/).filter(Boolean)
+  const haystack = [session.title, ...Object.values(session.names || {}), ...session.segments.flatMap(s => [s.raw, s.clean || "", s.rewrite || "", ...(s.revisions || []).flatMap(r => [r.before, r.after, r.reason])])].join(" ").normalize("NFC").toLocaleLowerCase()
+  return terms.every(t => haystack.includes(t))
 }

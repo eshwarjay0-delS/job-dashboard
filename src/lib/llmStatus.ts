@@ -49,6 +49,11 @@ let inflight: Promise<LlmStatus> | null = null
 /** Forget the last answer, so the next question probes again. Called when the admin changes a key. */
 export function forgetLlmStatus(): void { kept = null }
 
+/** Read existing probe evidence without triggering a paid model request. Cache is per instance. */
+export function cachedLlmStatus(): { checkedAt: string; status: LlmStatus } | null {
+  return kept ? { checkedAt: new Date(kept.at).toISOString(), status: kept.status } : null
+}
+
 export async function llmStatus(): Promise<LlmStatus> {
   if (kept && Date.now() - kept.at < 5 * 60_000) return kept.status
   inflight ??= probe().finally(() => { inflight = null })

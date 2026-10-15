@@ -1,11 +1,14 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
+import { Mail, CalendarDays, Link2, Plus, ArrowRight } from "lucide-react"
 import { connectGmail } from "@/lib/google-auth"
-import PageIntro from "../_components/page-intro"
-import MetricHero from "../_components/metric-hero"
+import { checkGmailRead } from "@/lib/connectionCheck"
+import GoogleConsentExplainer from "./GoogleConsentExplainer"
+import ConnectedWrap from "./ConnectedWrap"
+import { navItem } from "../_components/nav"
 import "./connections.css"
 
 type GoogleAccount = {
@@ -29,6 +32,9 @@ type ConnectionStatus = {
     phoneLast4: string | null
     optedIn: boolean
     systemReady: boolean
+    systemConfigured?: boolean
+    providerState?: string
+    webhookState?: string
     connected: boolean
     label: string | null
   }
@@ -41,7 +47,7 @@ const EMPTY: ConnectionStatus = {
 
 function googleErrorMessage(code: string | null) {
   if (!code) return null
-  const messages: Record<string,string> = {
+  const messages: Record<string, string> = {
     access_denied: "Google did not grant access. If this OAuth app is still in Testing, this Google address must be added as a test user.",
     redirect_uri_mismatch: "Google rejected the callback URL. Add the MarketFit callback URL to this OAuth client in Google Cloud.",
     limit_reached: "This MarketFit account already has four Google accounts connected.",
@@ -57,21 +63,157 @@ function googleErrorMessage(code: string | null) {
   return messages[code] || `Google connection failed: ${decodeURIComponent(code)}`
 }
 
+const PROFILE_FIELDS: { key: string; label: string }[] = [
+  { key: "full_name", label: "Full name" },
+  { key: "phone", label: "Phone" },
+  { key: "email", label: "Email" },
+  { key: "city", label: "City" },
+  { key: "state", label: "State" },
+  { key: "zip", label: "ZIP" },
+  { key: "linkedin", label: "LinkedIn URL" },
+  { key: "work_auth", label: "Work authorization" },
+  { key: "availability", label: "Availability" },
+  { key: "interview_availability", label: "Interview availability" },
+  { key: "education", label: "Education" },
+  { key: "total_experience", label: "Total experience" },
+  { key: "relevant_experience", label: "Relevant experience" },
+  { key: "employer_name", label: "Employer name" },
+  { key: "employer_contact_name", label: "Employer contact name" },
+  { key: "employer_contact_phone", label: "Employer contact phone" },
+  { key: "rate_default", label: "Default rate" },
+  { key: "notes", label: "Notes" },
+]
+
+const PRIVATE_FIELDS: { key: string; label: string }[] = [
+  { key: "ssn_last4", label: "SSN (last 4)" },
+  { key: "dob", label: "Date of birth" },
+  { key: "passport_no", label: "Passport number" },
+  { key: "dl_number", label: "Driver's license number" },
+  { key: "dl_state", label: "DL state" },
+]
+
+/** Per-account Smart Reply profile editor, living inside the account card. */
+function ReplyProfileEditor({ email }: { email: string }) {
+  const [open, setOpen] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState("")
+
+  async function toggle() {
+    if (open) { setOpen(false); return }
+    setOpen(true)
+    if (loaded) return
+    try {
+      const res = await fetch(`/api/candidate-profiles?account=${encodeURIComponent(email)}`, { cache: "no-store" })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error || "Could not load profile.")
+      const p = (body.profile || {}) as Record<string, unknown>
+      const v: Record<string, string> = {}
+      for (const f of [...PROFILE_FIELDS, ...PRIVATE_FIELDS]) {
+        v[f.key] = typeof p[f.key] === "string" ? (p[f.key] as string) : ""
+      }
+      setValues(v)
+      setLoaded(true)
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  async function save() {
+    setSaving(true)
+    setMessage("")
+    try {
+      const res = await fetch("/api/candidate-profiles", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ google_email: email, ...values }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || "Could not save profile.")
+      setMessage("Saved — inbox suggestion chips will use these details.")
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="conn-profile">
+      <button
+        type="button"
+        onClick={() => void toggle()}
+        className="btn-outline"
+        style={{ minHeight: 38, padding: "0 14px", borderRadius: 10, fontSize: 12.5, fontWeight: 700 }}
+      >
+        {open ? "Hide reply profile" : "Reply profile"}
+      </button>
+      {open && (
+        <div>
+          <p style={{ margin: "10px 0 0", fontSize: 12.5, color: "var(--text-muted)", lineHeight: 1.6 }}>
+            Smart Reply fills inbox suggestion chips from this profile. You always approve the draft before anything sends.
+          </p>
+          <div className="conn-profile-grid">
+            {[...PROFILE_FIELDS, ...PRIVATE_FIELDS].map(f => (
+              <label key={f.key}>
+                {f.label}
+                <input
+                  value={values[f.key] || ""}
+                  onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
+                />
+              </label>
+            ))}
+          </div>
+          {message && <div style={{ marginTop: 10, fontSize: 12.5, color: "var(--text-muted)" }}>{message}</div>}
+          <div style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              onClick={() => void save()}
+              disabled={saving}
+              className="btn-accent"
+              style={{ minHeight: 42, padding: "0 18px", borderRadius: 999, fontWeight: 700 }}
+            >
+              {saving ? "Saving…" : "Save reply profile"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function initials(email: string) {
+  const name = email.split("@")[0].replace(/[._-]+/g, " ").trim()
+  const parts = name.split(" ").filter(Boolean)
+  return ((parts[0]?.[0] || "G") + (parts[1]?.[0] || "")).toUpperCase()
+}
+
+function connectedDate(iso: string) {
+  const d = new Date(iso)
+  return Number.isFinite(d.getTime())
+    ? d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : ""
+}
+
 export default function ConnectionsClient() {
   const params = useSearchParams()
   const [status, setStatus] = useState<ConnectionStatus>(EMPTY)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [busy, setBusy] = useState("")
   const [message, setMessage] = useState("")
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(false)
     try {
       const res = await fetch("/api/connections/status", { cache: "no-store" })
       const body = await res.json()
       if (!res.ok) throw new Error(body.error || "Could not load connections.")
       setStatus(body)
     } catch (e) {
+      setLoadError(true)
       setMessage(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
@@ -80,31 +222,32 @@ export default function ConnectionsClient() {
 
   useEffect(() => { void load() }, [load])
 
-  // Auto-sync Gmail right after a successful OAuth connection so the demo
-  // flows straight from "connected" into live data with visible progress.
   const [syncing, setSyncing] = useState(false)
   const [syncDone, setSyncDone] = useState(false)
-  useEffect(() => {
-    if (params.get("google") !== "connected" || syncing || syncDone) return
+  const [syncError, setSyncError] = useState("")
+  const [showConsentModal, setShowConsentModal] = useState(false)
+  const attemptedSync = useRef(false)
+  const checkGmail = useCallback(async () => {
     setSyncing(true)
-    fetch("/api/gmail-sync", { method: "POST", cache: "no-store" })
-      .then(r => r.json())
-      .then(() => setSyncDone(true))
-      .catch(() => {})
-      .finally(() => setSyncing(false))
-  }, [params, syncing, syncDone])
-
-  const syncMessage = syncing
-    ? "Syncing your emails — this takes about 30 seconds…"
-    : syncDone
-      ? "Sync complete! Your mail, tracker, calendar and workflows are now live."
-      : null
+    setSyncError("")
+    setSyncDone(false)
+    try {
+      if (!(await checkGmailRead())) throw new Error("Gmail could not be read.")
+      setSyncDone(true)
+    } catch {
+      setSyncError("Gmail could not be read. Retry, or reconnect the account if Google access was revoked.")
+    } finally {
+      setSyncing(false)
+    }
+  }, [])
+  useEffect(() => {
+    if (params.get("google") !== "connected" || attemptedSync.current) return
+    attemptedSync.current = true
+    void checkGmail()
+  }, [params, checkGmail])
 
   const callbackMessage = useMemo(() => {
-    if (params.get("google") === "connected") {
-      const email = params.get("email")
-      return email ? `${email} is now connected.` : "Google account connected."
-    }
+    if (params.get("google") === "connected") return null
     return googleErrorMessage(params.get("google_error"))
   }, [params])
 
@@ -151,148 +294,187 @@ export default function ConnectionsClient() {
 
   const googleAccounts = status.google.accounts
   const wa = status.whatsapp
+  const justConnected = params.get("google") === "connected"
 
   return (
-    <div className="conn-page">
-      <PageIntro
-        page="/dashboard/connections"
-        action={{ label: googleAccounts.length < status.google.maxAccounts ? "Add Google account" : "Review accounts", href: "#google-accounts" }}
-        sample={loading ? "Checking your connected accounts…" : `${googleAccounts.length} Google account${googleAccounts.length === 1 ? "" : "s"} connected · WhatsApp ${wa.connected ? "connected" : "not connected"}.`}
-      />
+    <div className="mf-home conn-redesign">
+      <header className="mf-home-heading">
+        <h1>{navItem("/dashboard/connections").label}</h1>
+        <p>
+          {googleAccounts.length === 0
+            ? "Connect your Gmail and MarketFit reads your job emails — RTRs, rates, interviews, follow-ups. Nothing else here works without it."
+            : `${googleAccounts.length} of ${status.google.maxAccounts} Google accounts connected. Sends and drafts use your primary account unless you pick another.`}
+        </p>
+      </header>
 
-      {!loading && (
-        <MetricHero
-          why={
-            googleAccounts.length === 0
-              ? "This is where you connect your Gmail. Without it, MarketFit can't read your job emails — nothing else here works."
-              : googleAccounts.length >= status.google.maxAccounts
-                ? "This is where you connect your Gmail. You're at the max — 4 accounts connected, everything is live."
-                : `This is where you connect your Gmail. ${googleAccounts.length} connected — you can add ${status.google.maxAccounts - googleAccounts.length} more.`
-          }
-          metrics={[
-            { value: `${googleAccounts.length} / ${status.google.maxAccounts}`, label: "Gmail accounts connected", hot: googleAccounts.length === 0 },
-            { value: wa.connected ? "Yes" : "No", label: "WhatsApp connected" },
-          ]}
+      {justConnected && (
+        <ConnectedWrap
+          email={params.get("email")}
+          canAddMore={status.google.canAdd}
+          onAddAnother={() => setShowConsentModal(true)}
         />
       )}
 
-      {(callbackMessage || message || syncMessage) && (
-        <div className="conn-banner" role="status">
-          {callbackMessage || message}
-          {syncMessage && (
-            <div style={{ marginTop: 8, fontWeight: 600 }}>
-              {syncing ? "⏳ " : "✅ "}{syncMessage}
-              {syncDone && (
-                <div style={{ marginTop: 8 }}>
-                  <a href="/dashboard/mail" style={{ marginRight: 16, fontWeight: 700 }}>View your inbox →</a>
-                  {status.google.canAdd && <span>Add another account above to connect more.</span>}
-                </div>
-              )}
+      {/* Status pipeline */}
+      {!loading && !loadError && googleAccounts.length > 0 && !justConnected && (
+        <div className="conn-status-strip" role="status">
+          <div className="conn-status-step done">
+            <span className="conn-status-dot">✓</span>
+            <div><strong>Connected</strong><small>{googleAccounts.length} Google grant{googleAccounts.length === 1 ? "" : "s"} saved</small></div>
+          </div>
+          <span className="conn-status-link">→</span>
+          <div className={`conn-status-step ${syncing ? "active" : syncDone ? "done" : ""}`}>
+            <span className="conn-status-dot">{syncDone ? "✓" : "2"}</span>
+            <div>
+              <strong>Gmail access</strong>
+              <small>{syncing ? "Checking…" : syncDone ? "Verified — your mail is readable" : syncError ? "Couldn't be verified" : "Checked when you open your inbox"}</small>
             </div>
-          )}
+          </div>
+          <span className="conn-status-link">→</span>
+          <div className="conn-status-step">
+            <span className="conn-status-dot">3</span>
+            <div><strong>Your inbox</strong><small>Sorted into RTRs, rates, interviews</small></div>
+          </div>
+          <div className="conn-status-actions">
+            {syncError
+              ? <button className="btn-outline" style={{ minHeight: 40 }} onClick={() => void checkGmail()}>Retry check</button>
+              : <Link href="/dashboard/mail" className="btn-outline" style={{ minHeight: 40, display: "inline-flex", alignItems: "center", textDecoration: "none" }}>
+                  Open inbox <ArrowRight size={15} style={{ marginLeft: 6 }} />
+                </Link>}
+          </div>
         </div>
       )}
 
-      <section id="google-accounts" className="conn-section">
-        <div className="conn-heading">
-          <div>
-            <div className="ink-label">Google</div>
-            <h2>Gmail + Calendar accounts</h2>
-            <p>Connect up to four Google accounts. Each one keeps its own encrypted offline grant while MarketFit stays signed in as the same user.</p>
+      {(callbackMessage || message) && (
+        <div className="conn-status-strip" role="alert" style={{ borderLeft: "3px solid var(--danger)" }}>
+          <div style={{ fontSize: 13.5, lineHeight: 1.6 }}>
+            {message || callbackMessage}
+            {loadError && (
+              <div style={{ marginTop: 8 }}>
+                <button className="btn-outline" style={{ minHeight: 38 }} onClick={() => void load()}>Retry status check</button>
+              </div>
+            )}
           </div>
-          <div className="conn-count">{googleAccounts.length} / {status.google.maxAccounts}</div>
+        </div>
+      )}
+
+      {/* Accounts */}
+      <section aria-label="Google accounts" style={{ marginTop: 8 }}>
+        <div className="conn-section-title">
+          <div>
+            <h2>Google accounts</h2>
+            <p>Each card is one Gmail + Calendar grant. The reply profile inside powers Smart Reply for that inbox.</p>
+          </div>
+          <span className="conn-count-pill">{googleAccounts.length} / {status.google.maxAccounts}</span>
         </div>
 
-        <div className="conn-account-list">
+        <div className="conn-grid">
           {loading ? (
-            <div className="conn-empty">Checking Google connections…</div>
-          ) : googleAccounts.length === 0 ? (
-            <div className="conn-empty">
-              <strong>No Google mailbox is connected yet.</strong>
-              <span>Connect one Gmail account first. You can add three more afterward.</span>
+            <div className="conn-card" style={{ padding: 24, color: "var(--text-muted)", fontSize: 13.5 }}>
+              Checking your Google connections…
             </div>
-          ) : googleAccounts.map(account => (
-            <article className="conn-account" key={account.id}>
-              <div className="conn-account-main">
-                <div className="conn-account-avatar">G</div>
-                <div>
-                  <div className="conn-email">{account.google_email}</div>
-                  <div className="conn-badges">
-                    {account.is_primary && <span className="conn-badge primary">Primary</span>}
-                    {account.gmail_enabled && <span className="conn-badge">Gmail</span>}
-                    {account.calendar_enabled && <span className="conn-badge">Calendar</span>}
+          ) : loadError ? (
+            <div className="conn-card" style={{ padding: 24, fontSize: 13.5 }}>
+              Saved accounts couldn&apos;t be loaded.
+              <div style={{ marginTop: 10 }}>
+                <button className="btn-outline" style={{ minHeight: 38 }} onClick={() => void load()}>Retry</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {googleAccounts.map(account => (
+                <article key={account.id} className={`conn-card${account.is_primary ? " is-primary" : ""}`}>
+                  <div className="conn-card-top">
+                    <div className="conn-avatar" aria-hidden="true">{initials(account.google_email)}</div>
+                    <div className="conn-card-id">
+                      <div className="conn-email">{account.google_email}</div>
+                      <div className="conn-since">Connected {connectedDate(account.connected_at)}</div>
+                      <div className="conn-badges">
+                        {account.is_primary && <span className="conn-badge primary">Primary</span>}
+                        <span className={`conn-badge${account.gmail_enabled ? " on" : ""}`}>
+                          <Mail size={11} style={{ verticalAlign: -1, marginRight: 4 }} />Gmail
+                        </span>
+                        <span className={`conn-badge${account.calendar_enabled ? " on" : ""}`}>
+                          <CalendarDays size={11} style={{ verticalAlign: -1, marginRight: 4 }} />Calendar
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div className="conn-actions">
-                {!account.is_primary && (
-                  <button disabled={busy === account.id} onClick={() => void setPrimary(account.id)} className="btn-outline">
-                    Make primary
-                  </button>
-                )}
-                <button disabled={busy === account.id} onClick={() => void disconnect(account.id)} className="conn-danger">
-                  Disconnect
+                  <div className="conn-card-actions">
+                    {!account.is_primary && (
+                      <button disabled={busy === account.id} onClick={() => void setPrimary(account.id)} className="btn-outline">
+                        Make primary
+                      </button>
+                    )}
+                    <button disabled={busy === account.id} onClick={() => void disconnect(account.id)} className="conn-danger">
+                      Disconnect
+                    </button>
+                  </div>
+                  <ReplyProfileEditor email={account.google_email} />
+                </article>
+              ))}
+              {status.google.canAdd && (
+                <button
+                  className="conn-add-card"
+                  disabled={loading || loadError}
+                  onClick={() => setShowConsentModal(true)}
+                >
+                  <span className="plus"><Plus size={22} /></span>
+                  Add Google account
+                  <small>{googleAccounts.length === 0
+                    ? "Connect your first Gmail — everything else unlocks after this."
+                    : `${status.google.maxAccounts - googleAccounts.length} slot${status.google.maxAccounts - googleAccounts.length === 1 ? "" : "s"} left`}</small>
                 </button>
-              </div>
-            </article>
-          ))}
+              )}
+            </>
+          )}
         </div>
 
-        <div className="conn-footer">
-          <div>
-            <strong>Primary account</strong>
-            <span>Poke and other send actions use the primary account unless you explicitly choose another sender.</span>
-          </div>
-          <button
-            className="btn-accent"
-            disabled={!status.google.canAdd || loading}
-            onClick={() => void connectGmail("/dashboard/connections")}
-          >
-            {status.google.canAdd ? "Add Google account" : "4 accounts connected"}
-          </button>
-        </div>
-
-        <div className="conn-permissions">
-          <div><span>Gmail read</span><small>Find job mail and application updates.</small></div>
-          <div><span>Gmail send</span><small>Send only when a MarketFit feature explicitly performs a send action.</small></div>
-          <div><span>Calendar read</span><small>Read interview and recruiting events.</small></div>
+        <div className="conn-perms">
+          <div><strong>Gmail read</strong><span>Finds your job emails, recruiter replies, and interview invites.</span></div>
+          <div><strong>Gmail send</strong><span>Only ever used when you tap approve on a reply — nothing sends on its own.</span></div>
+          <div><strong>Calendar read</strong><span>Spots interview and recruiting events.</span></div>
         </div>
       </section>
 
-      <section className="conn-section">
-        <div className="conn-heading">
+      {/* Other channels */}
+      <section className="conn-channels" aria-label="Other channels">
+        <div className="conn-section-title" style={{ marginBottom: 12 }}>
           <div>
-            <div className="ink-label">WhatsApp</div>
-            <h2>Your verified mobile channel</h2>
-            <p>The WhatsApp channel is tied to the same MarketFit user and subscription, not to a separate account.</p>
+            <h2>Other channels</h2>
           </div>
-          <div className={`conn-state ${wa.connected ? "ok" : ""}`}>{wa.connected ? "Connected" : "Needs setup"}</div>
         </div>
-
-        <div className="conn-steps">
-          <div className={wa.phoneVerified ? "done" : ""}><b>1</b><span><strong>Verify mobile number</strong><small>{wa.phoneVerified ? `Verified ${wa.label || ""}` : "Required before WhatsApp can be linked."}</small></span></div>
-          <div className={wa.optedIn ? "done" : ""}><b>2</b><span><strong>Enable WhatsApp</strong><small>{wa.optedIn ? "This number is opted in for the MarketFit WhatsApp channel." : "Choose WhatsApp during mobile verification/setup."}</small></span></div>
-          <div className={wa.systemReady ? "done" : ""}><b>3</b><span><strong>Bot transport ready</strong><small>{wa.systemReady ? "MarketFit's WhatsApp transport is configured." : "The server transport still needs configuration."}</small></span></div>
-        </div>
-
-        {!wa.connected && (
-          <div className="conn-footer">
-            <div><strong>Next step</strong><span>Finish the missing step above, then this page will show the channel as connected.</span></div>
-            <Link className="btn-outline conn-link-button" href="/dashboard/setup">Open setup</Link>
+        <div className="conn-channel">
+          <div className="conn-avatar" aria-hidden="true"><Link2 size={17} /></div>
+          <div className="conn-channel-info">
+            <strong>WhatsApp — {loadError ? "unknown" : wa.connected ? "linked" : "needs setup"}</strong>
+            <small>
+              {loadError
+                ? "Status couldn't be loaded."
+                : wa.connected
+                  ? `Verified ${wa.label || ""} · opted in`
+                  : "Link your WhatsApp number to tailor resumes and save them in Files."}
+            </small>
           </div>
-        )}
+          <Link href="/dashboard/whatsapp" className="btn-outline" style={{ minHeight: 40, display: "inline-flex", alignItems: "center", textDecoration: "none", whiteSpace: "nowrap" }}>
+            {wa.connected ? "Manage WhatsApp" : "Link WhatsApp"}
+          </Link>
+        </div>
+        <div className="conn-channel" style={{ opacity: 0.75 }}>
+          <div className="conn-avatar" aria-hidden="true">in</div>
+          <div className="conn-channel-info">
+            <strong>LinkedIn — coming soon</strong>
+            <small>MarketFit won&apos;t pretend it&apos;s connected until there&apos;s a real integration.</small>
+          </div>
+        </div>
       </section>
 
-      <section className="conn-section muted">
-        <div className="conn-heading">
-          <div>
-            <div className="ink-label">LinkedIn</div>
-            <h2>Not connected</h2>
-            <p>LinkedIn access remains unavailable. MarketFit will not pretend it is connected until there is a real provider integration.</p>
-          </div>
-          <div className="conn-state">Coming soon</div>
-        </div>
-      </section>
+      {showConsentModal && (
+        <GoogleConsentExplainer
+          onContinue={() => { setShowConsentModal(false); void connectGmail("/dashboard/connections") }}
+          onCancel={() => setShowConsentModal(false)}
+        />
+      )}
     </div>
   )
 }

@@ -117,13 +117,13 @@ function CallbackHandler() {
           boxShadow: "0 4px 24px rgba(32,31,25,.1)", maxWidth: 440, width: "100%", textAlign: "center",
         }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>🔗</div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: "#161510", marginBottom: 10 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: "var(--text)", marginBottom: 10 }}>
             Sign-in link failed
           </h2>
-          <p style={{ fontSize: 13, color: "#6e6b5b", lineHeight: 1.65, marginBottom: 20 }}>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.65, marginBottom: 20 }}>
             {error}
           </p>
-          <p style={{ fontSize: 12, color: "#9d9884", lineHeight: 1.5, marginBottom: 24 }}>
+          <p style={{ fontSize: 12, color: "var(--text-soft)", lineHeight: 1.5, marginBottom: 24 }}>
             If Google already completed successfully, opening the dashboard again will reuse the active session.
           </p>
           <a href="/login" style={{
@@ -155,10 +155,10 @@ function CallbackHandler() {
           <path fill="#1c1b16" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
         </svg>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        <p style={{ fontSize: 16, fontWeight: 700, color: "#161510", margin: 0 }}>
+        <p style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", margin: 0 }}>
           Signing you in…
         </p>
-        <p style={{ fontSize: 13, color: "#9d9884", marginTop: 8 }}>
+        <p style={{ fontSize: 13, color: "var(--text-soft)", marginTop: 8 }}>
           You&apos;ll be redirected automatically.
         </p>
       </div>
@@ -199,7 +199,7 @@ export default function AuthCallbackPage() {
         alignItems: "center", justifyContent: "center",
         fontFamily: "system-ui, sans-serif",
       }}>
-        <p style={{ color: "#9d9884" }}>Verifying…</p>
+        <p style={{ color: "var(--text-soft)" }}>Verifying…</p>
       </div>
     }>
       <CallbackHandler />

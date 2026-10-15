@@ -9,9 +9,12 @@
 
 import { useCallback, useEffect, useState, type CSSProperties } from "react"
 import { Card, Meta } from "../_suite/ui"
-import type { Feature, VaultRow } from "@/lib/keyVault"
+import type { Feature, VaultProvider, VaultRow } from "@/lib/keyVault"
 
-type View = { canStore: boolean; sealedWith?: "own" | "storage" | "none"; providers: VaultRow[]; features: Feature[] }
+type View = { canStore: boolean; sealedWith?: "own" | "storage" | "none"; providers: VaultRow[]; features: Feature[]; defaults: Record<string, VaultProvider> }
+
+const PROVIDER_LABEL: Record<VaultProvider, string> = { openai: "OpenAI", groq: "Groq", openrouter: "OpenRouter", anthropic: "Anthropic", gemini: "Gemini" }
+const PROVIDER_ORDER: VaultProvider[] = ["openrouter", "openai", "groq", "anthropic", "gemini"]
 
 const SMALL: CSSProperties = { fontSize: 14, lineHeight: 1.55, color: "var(--text-muted)", margin: 0 }
 const FIELD: CSSProperties = {
@@ -113,6 +116,63 @@ function ProviderCard({ row, features, canStore, locked, onSaving, onSaved }: { 
   )
 }
 
+// Which AI each feature uses (owner, 2026-10-14: "set what AI needed to use for what feature directly...
+// It should be default choice!!"). One dropdown per feature; a feature asks its default first and falls back to the
+// other ticked providers when that fails.
+function DefaultsCard({ features, defaults, locked, onSaving, onSaved }: { features: Feature[]; defaults: Record<string, VaultProvider>; locked: boolean; onSaving: (on: boolean) => void; onSaved: (v: View) => void }) {
+  const [pick, setPick] = useState<Record<string, VaultProvider>>(defaults)
+  const [mine, setMine] = useState(false)
+  const [said, setSaid] = useState<{ ok: boolean; text: string } | null>(null)
+  const busy = mine || locked
+  useEffect(() => { setPick(defaults) }, [defaults])
+  const changed = Object.keys(pick).some(id => pick[id] !== defaults[id]) || Object.keys(defaults).some(id => pick[id] !== defaults[id])
+
+  const save = async () => {
+    if (locked || !changed) return
+    setMine(true); onSaving(true); setSaid(null)
+    try {
+      const response = await fetch("/api/admin/keys", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ defaults: pick }) })
+      const answer = await response.json().catch(() => ({}))
+      if (!response.ok) { setSaid({ ok: false, text: answer.error || "That could not be saved. Nothing was changed." }); return }
+      onSaved(answer as View)
+      setSaid({ ok: true, text: "Saved. Each feature now asks its chosen AI first." })
+    } catch {
+      setSaid({ ok: false, text: "That could not be sent. Check your connection and try again. Nothing was changed." })
+    } finally { setMine(false); onSaving(false) }
+  }
+
+  return (
+    <Card>
+      <h3 style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 700, color: "var(--text)", margin: "0 0 6px" }}>Which AI each feature uses</h3>
+      <p style={{ ...SMALL, marginBottom: 14, maxWidth: 760 }}>
+        The default AI for each feature. A feature asks its default first; when that fails it falls back to the other providers ticked for it below.
+      </p>
+      {(["marketfit", "kompas"] as const).filter(app => features.some(f => f.app === app)).map(app => (
+        <div key={app} style={{ marginBottom: 12 }}>
+          <Meta>{GROUP[app]}</Meta>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "8px 28px", marginTop: 6 }}>
+            {features.filter(f => f.app === app).map(f => (
+              <label key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, fontSize: 14.5, color: "var(--text)" }}>
+                <span style={{ lineHeight: 1.4 }}>{f.label}</span>
+                <select value={pick[f.id] ?? "openrouter"} disabled={busy}
+                  onChange={e => setPick(now => ({ ...now, [f.id]: e.target.value as VaultProvider }))}
+                  style={{ minHeight: 40, padding: "0 10px", fontSize: 14.5, color: "var(--text)", background: "var(--bg)", border: "1px solid var(--border-strong)", borderRadius: "var(--radius-lg)", flexShrink: 0 }}>
+                  {PROVIDER_ORDER.map(p => <option key={p} value={p}>{PROVIDER_LABEL[p]}</option>)}
+                </select>
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 6 }}>
+        <button type="button" className="btn-outline" disabled={busy || !changed} onClick={() => void save()}
+          style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>{mine ? "Saving…" : "Save AI choices"}</button>
+        <p role={said && !said.ok ? "alert" : "status"} aria-live="polite" style={{ ...SMALL, margin: 0, color: said ? (said.ok ? "var(--success)" : "var(--danger)") : "var(--text-muted)" }}>{said?.text ?? ""}</p>
+      </div>
+    </Card>
+  )
+}
+
 export default function KeysPanel() {
   const [view, setView] = useState<View | null>(null)
   const [failed, setFailed] = useState(false)
@@ -137,6 +197,7 @@ export default function KeysPanel() {
         </div>
       )}
       <div style={{ display: "grid", gap: 16 }}>
+        <DefaultsCard features={view.features} defaults={view.defaults} locked={saving} onSaving={setSaving} onSaved={setView} />
         {view.providers.map(row => <ProviderCard key={row.provider} row={row} features={view.features} canStore={view.canStore} locked={saving} onSaving={setSaving} onSaved={setView} />)}
       </div>
       {view.canStore && view.sealedWith === "storage" && (

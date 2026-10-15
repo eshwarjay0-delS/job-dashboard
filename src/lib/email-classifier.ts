@@ -102,7 +102,7 @@ const RULES: Rule[] = [
     category: "Interview Request",
     confidence: "high",
     test: t =>
-      /interview (invitation|invite|request|scheduled|slot)|screening call|technical (round|interview|screen)|client interview|panel interview|video interview|teams (meeting|invite).*interview|interview.*teams|schedule.*interview/i.test(t),
+      /interview (invitation|invite|request|scheduled|slot)|screening call|technical (round|interview|screen)|client interview|panel interview|video interview|teams (meeting|invite).*interview|interview.*teams|\b(teams|zoom|webex|google meet|goto)\s+(interview|meeting)\b|schedule.*interview/i.test(t),
   },
   {
     category: "RTR Request",

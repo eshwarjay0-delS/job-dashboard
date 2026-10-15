@@ -153,6 +153,12 @@ const nextConfig = {
       // loads the Flow page as its own document (with the microphone header) and a bookmark is not a dead end.
       // src/app/dashboard/kompas/transcribe/page.tsx is the net under this line.
       { source: "/dashboard/kompas/transcribe", destination: "/dashboard/kompas/flow?mode=transcribe", permanent: false },
+      // Dummy pages, removed 2026-10-11 (owner: "get rid of dummy pages"). /dashboard/email showed made-up sample
+      // emails when Gmail was not linked — the real inbox is /dashboard/mail. /dashboard/prep showed made-up sample
+      // interviews and questions. The Kompas app's "Back to MarketFit" button points at /dashboard/prep, so it
+      // must land on MarketFit home — NOT /dashboard/kompas, which loops straight back into the app.
+      { source: "/dashboard/email", destination: "/dashboard/mail", permanent: false },
+      { source: "/dashboard/prep", destination: "/dashboard", permanent: false },
     ];
   },
 
@@ -161,11 +167,19 @@ const nextConfig = {
   // The default is the live copilot, perfact-ten; its frontend must match public/kompas (re-run
   // scripts/sync-kompas.mjs when it is redeployed). KOMPAS_API_ORIGIN points at another deployment.
   async rewrites() {
-    const kompasApi = (process.env.KOMPAS_API_ORIGIN || "https://perfact-ten.vercel.app").replace(/\/+$/, "");
-    return [
-      { source: "/dashboard/kompas", destination: "/kompas/index.html" },
-      { source: "/kompas/api/:path*", destination: `${kompasApi}/api/:path*` },
-    ];
+    return {
+      beforeFiles: [
+        { source: "/dashboard/kompas", destination: "/api/kompas/shell" },
+        { source: "/kompas/index.html", destination: "/api/kompas/shell" },
+        { source: "/kompas", destination: "/api/kompas/shell" },
+        // Self-hosted since 2026-10-14 (perfACT sunset): /kompas/:path+ now
+        // serves from public/kompas/ (copied from the copilot release).
+        // The /api/* calls are intercepted by the shell shim and routed to
+        // MarketFit's native endpoints — nothing proxies to perfact-ten.
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
   },
 };
 

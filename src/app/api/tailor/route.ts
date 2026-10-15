@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
+import { after } from "next/server"
 import path from "path"
 import { runTailor } from "@/lib/tailor"
 import { recordTailor } from "@/lib/tailorLedger"
+import { deductPoints, POINTS_PER_RESUME } from "@/lib/creditsLedger"
+import { hasUnlimitedResumeTestAccess } from "@/lib/resumeTestAccess"
+import { hashUserId } from "@/lib/sttLedger"
 import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { authenticatedUser, signInRequired, ownedResumePath } from "@/lib/authBoundary"
 import { isAdminEmail } from "@/lib/owner"
@@ -61,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Server-side weekly usage cap (prevents unlimited calls by localStorage clearing or different browsers)
-    if (TAILOR_WEEKLY_LIMIT > 0) {
+    if (TAILOR_WEEKLY_LIMIT > 0 && !hasUnlimitedResumeTestAccess(user.email)) {
       const rl = checkRateLimit(`tailor:${userId}`, { max: TAILOR_WEEKLY_LIMIT, windowMs: WEEK_MS })
       if (!rl.ok) {
         const daysLeft = rl.retryAfterSec ? Math.ceil(rl.retryAfterSec / 86400) : 7
@@ -88,6 +92,14 @@ export async function POST(request: NextRequest) {
       throw e
     })
     await recordTailor({ channel: "web", kind: "tailor", personId: userId, startedAt: began, result })
+    // Gel points: one resume preparation costs 0.25 points (four resumes = one
+    // interview session). Idempotent per generation — retries cost nothing extra.
+    const resumeId = (result as { id?: unknown }).id
+    if (typeof resumeId === "string" && resumeId) {
+      if (!hasUnlimitedResumeTestAccess(user.email)) {
+        after(() => deductPoints(hashUserId(userId), POINTS_PER_RESUME, `resume:${resumeId}`, "resume"))
+      }
+    }
     return NextResponse.json(result)
   } catch (e: unknown) {
     return NextResponse.json({ error: `Tailoring failed: ${String(e)}` }, { status: 500 })

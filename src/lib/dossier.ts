@@ -1,0 +1,181 @@
+/**
+ * The Dossier — Kompas's persistent bible per user.
+ *
+ * Why (2026-10-12): the owner asked for a dossier that "keeps on building":
+ * every resume, every keyword, every session's Q&A transcript goes in, and the
+ * dossier makes each future session smarter while using fewer tokens (the model
+ * reads the user's real project context instead of regenerating it).
+ *
+ * Layout in blob storage (per userHash — no identity in storage):
+ *   dossier/{userHash}/profile.json        parsed resume: skills, projects, keywords
+ *   dossier/{userHash}/sessions.jsonl      one line per session: id, date, field, qa[]
+ *   dossier/{userHash}/index.json          { sessions: n, lastUpdated, fields: [] }
+ *
+ * Field knowledge (shared across users — specializations, not people):
+ *   dossier/fields/{field}.json           { scenarios[], systemDesign[], loopRounds[], updatedAt }
+ *
+ * The dossier is append-only for sessions: history is never rewritten, only
+ * added to. Profile is replaced when a new resume is parsed.
+ */
+
+const storage = () => import("./storage").then(m => m.blob)
+
+export type DossierProfile = {
+  skills: string[]
+  projects: { name: string; role: string; impact: string; keywords: string[] }[]
+  keywords: string[]
+  /** The kinds of work the person said they are after when they were set up (13 Oct 2026), e.g. "SIEM and Incident Response". */
+  fields?: string[]
+  updatedAt: number
+}
+
+export type DossierQA = { q: string; a: string }
+export type DossierSession = {
+  id: string
+  at: number
+  field: string
+  qa: DossierQA[]
+}
+
+export type FieldKnowledge = {
+  field: string
+  scenarios: { title: string; context: string; whatWentRight: string; impact: string }[]
+  systemDesign: { topic: string; keyPoints: string[] }[]
+  loopRounds: { round: string; focus: string; sampleQuestions: string[] }[]
+  updatedAt: number
+}
+
+const uKey = (userHash: string, name: string) => `dossier/${userHash}/${name}`
+const fKey = (field: string) => `dossier/fields/${field.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.json`
+
+/** The user's profile: skills, projects, keywords. Null when nothing parsed yet. */
+export async function getDossierProfile(userHash: string): Promise<DossierProfile | null> {
+  try {
+    const raw = await (await storage()).getText(uKey(userHash, "profile.json"))
+    return raw ? (JSON.parse(raw) as DossierProfile) : null
+  } catch { return null }
+}
+
+/** Store/replace the parsed resume profile. */
+export async function saveDossierProfile(userHash: string, profile: Omit<DossierProfile, "updatedAt">): Promise<void> {
+  const sb = await storage()
+  await sb.put(uKey(userHash, "profile.json"), JSON.stringify({ ...profile, updatedAt: Date.now() }))
+  await touchIndex(userHash, { lastUpdated: Date.now() })
+}
+
+/** Append one session's Q&A to the dossier. Idempotent per session id. */
+export async function appendDossierSession(userHash: string, session: Omit<DossierSession, "at"> & { at?: number }): Promise<boolean> {
+  try {
+    const sb = await storage()
+    const key = uKey(userHash, "sessions.jsonl")
+    const existing = (await sb.getText(key).catch(() => "")) || ""
+    if (existing.includes(`"id":"${session.id}"`)) return false // already recorded
+    const line = JSON.stringify({ ...session, at: session.at || Date.now() }) + "\n"
+    // sessions.jsonl is append-only; storage has no append, so read-modify-write
+    await sb.put(key, existing + line)
+    await touchIndex(userHash, { lastUpdated: Date.now() })
+    return true
+  } catch { return false }
+}
+
+/** Import several historical sessions with a single durable write.
+ * Unlike appending every row individually, this keeps migration time and
+ * storage requests bounded. Existing IDs and all original Q&A are preserved.
+ * Import should run while no live session is writing to this dossier, since
+ * the underlying blob interface provides no conditional append operation. */
+export async function appendDossierSessionsBatch(userHash: string, sessions: DossierSession[]): Promise<{ added: number; qaAdded: number; ids: string[] }> {
+  if (!sessions.length) return { added: 0, qaAdded: 0, ids: [] }
+  const sb = await storage()
+  const key = uKey(userHash, "sessions.jsonl")
+  const existing = (await sb.getText(key)) || ""
+  const ids = new Set<string>()
+  for (const line of existing.split("\n")) {
+    if (!line) continue
+    try {
+      const row = JSON.parse(line) as { id?: unknown }
+      if (typeof row.id === "string") ids.add(row.id)
+    } catch { /* a historical line should not block preserving newer records */ }
+  }
+  const addedIds: string[] = []
+  const lines: string[] = []
+  let qaAdded = 0
+  for (const session of sessions) {
+    if (!session || typeof session.id !== "string" || !session.id || ids.has(session.id)) continue
+    ids.add(session.id)
+    lines.push(JSON.stringify({ ...session, at: session.at || Date.now() }))
+    addedIds.push(session.id)
+    qaAdded += session.qa?.length || 0
+  }
+  if (!lines.length) return { added: 0, qaAdded: 0, ids: [] }
+  await sb.put(key, existing + (existing && !existing.endsWith("\n") ? "\n" : "") + lines.join("\n") + "\n")
+  await touchIndex(userHash, { lastUpdated: Date.now() })
+  return { added: addedIds.length, qaAdded, ids: addedIds }
+}
+
+/** Recent sessions (newest first), capped for prompt-size sanity. */
+export async function getDossierSessions(userHash: string, limit = 10): Promise<DossierSession[]> {
+  try {
+    const raw = (await (await storage()).getText(uKey(userHash, "sessions.jsonl")).catch(() => "")) || ""
+    const all = raw.split("\n").filter(Boolean).map(l => { try { return JSON.parse(l) as DossierSession } catch { return null } }).filter(Boolean) as DossierSession[]
+    return all.slice(-limit).reverse()
+  } catch { return [] }
+}
+
+/** Field knowledge: the background-researched specialization bible. Null when unresearched. */
+export async function getFieldKnowledge(field: string): Promise<FieldKnowledge | null> {
+  try {
+    const raw = await (await storage()).getText(fKey(field))
+    return raw ? (JSON.parse(raw) as FieldKnowledge) : null
+  } catch { return null }
+}
+
+/** Store background research for a specialization. */
+export async function saveFieldKnowledge(k: Omit<FieldKnowledge, "updatedAt">): Promise<void> {
+  await (await storage()).put(fKey(k.field), JSON.stringify({ ...k, updatedAt: Date.now() }))
+}
+
+/** Compact context for answer generation: profile + relevant field + recent Q&A.
+ *  Token-efficient by design: only the slices the question needs. */
+export async function dossierContext(userHash: string, field: string, maxSessions = 3): Promise<string> {
+  const parts: string[] = []
+  const [profile, fieldK, sessions] = await Promise.all([
+    getDossierProfile(userHash),
+    getFieldKnowledge(field),
+    getDossierSessions(userHash, maxSessions),
+  ])
+  if (profile) {
+    parts.push(`CANDIDATE PROFILE — skills: ${profile.skills.slice(0, 20).join(", ")}.`)
+    for (const p of profile.projects.slice(0, 4)) {
+      parts.push(`PROJECT "${p.name}" (${p.role}): ${p.impact} Keywords: ${p.keywords.slice(0, 8).join(", ")}.`)
+    }
+  }
+  if (fieldK && fieldK.scenarios.length) {
+    parts.push(`FIELD REALISM BANK (${fieldK.field}):`)
+    for (const s of fieldK.scenarios.slice(0, 3)) {
+      parts.push(`- ${s.title}: ${s.context} What went right: ${s.whatWentRight} Impact: ${s.impact}`)
+    }
+  }
+  if (sessions.length) {
+    for (const sess of sessions) {
+      // A prepared answer is a rehearsal, never evidence the candidate did
+      // those things. A historical browser import is unverified until reviewed.
+      if (sess.field === "prepared") parts.push("USER-PREPARED EXAMPLE (illustrative only; never claim it happened):")
+      else if (sess.field === "imported-answer") parts.push("IMPORTED USER ANSWER (voice reference; factual claims require resume corroboration):")
+      else parts.push("PRIOR SESSION (what the candidate answered before, not proof of every underlying claim):")
+      for (const qa of sess.qa.slice(0, 4)) {
+        parts.push(`Q: ${qa.q.slice(0, 200)}\nA: ${qa.a.slice(0, 400)}`)
+      }
+    }
+  }
+  return parts.join("\n")
+}
+
+async function touchIndex(userHash: string, patch: Record<string, unknown>): Promise<void> {
+  try {
+    const sb = await storage()
+    const key = uKey(userHash, "index.json")
+    const raw = (await sb.getText(key).catch(() => "")) || "{}"
+    const idx = { ...JSON.parse(raw), ...patch }
+    await sb.put(key, JSON.stringify(idx))
+  } catch { /* index is best-effort */ }
+}

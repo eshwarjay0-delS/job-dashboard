@@ -47,8 +47,37 @@ export const FEATURES: Feature[] = [
   { id: "other", app: "marketfit", label: "Everything else (cover letters, scores, chat)" },
   { id: "kompas:flow", app: "kompas", label: "Flow: speaking to write" },
   { id: "kompas:transcribe", app: "kompas", label: "Transcribe: a talk or a recording into text" },
+  { id: "kompas:answer", app: "kompas", label: "Sessions: answering in a live interview" },
+  { id: "kompas:answer-derive", app: "kompas", label: "Sessions: hearing the interviewer's question" },
+  { id: "kompas:humanize", app: "kompas", label: "Sessions: answer polish for the listener" },
+  { id: "kompas:guide", app: "kompas", label: "Question Bank: answer guides" },
+  { id: "kompas:questions", app: "kompas", label: "Question Bank: practice questions from a JD" },
+  { id: "kompas:capabilities", app: "kompas", label: "Kompas: version and policy info" },
+  { id: "kompas:persona", app: "kompas", label: "Dossier: persona file builder" },
+  { id: "kompas:prep", app: "kompas", label: "Sessions: prep pack (identity, projects, core Q&A)" },
+  { id: "kompas:screen", app: "kompas", label: "Sessions: screen analysis" },
+  { id: "kompas:section", app: "kompas", label: "Dossier: question-bank section builder" },
 ]
 const FEATURE_IDS = new Set(FEATURES.map(f => f.id))
+
+/**
+ * The default AI for a feature (owner, 2026-10-14: "It should be default choice!!").
+ * A feature tries its default first; when that fails it falls back to the other
+ * ticked providers. The admin can change any of these from the Admin page, which
+ * is stored in the document and wins over this table.
+ */
+export const FEATURE_DEFAULTS: Partial<Record<string, VaultProvider>> = {
+  "resume-tailor": "openai",
+  "resume-change": "openai",
+  "resume-keywords": "openai",
+  "kompas:answer": "openrouter",
+  "kompas:answer-derive": "openrouter",
+  "kompas:humanize": "openrouter",
+  "kompas:transcribe": "groq", // speech-to-text: Groq Whisper is the only recogniser wired up
+  "kompas:persona": "openrouter",
+  "kompas:prep": "openrouter",
+  "kompas:section": "openrouter",
+}
 
 /**
  * What a provider's key may be used for until the admin says otherwise.
@@ -63,8 +92,8 @@ export function defaultUse(provider: VaultProvider): string[] {
 }
 
 type StoredKey = { sealed: string; last4: string; setAt: string }
-export type VaultDoc = { v: 1; keys: Partial<Record<VaultProvider, StoredKey>>; use: Partial<Record<VaultProvider, string[]>>; updatedAt: string }
-const EMPTY: VaultDoc = { v: 1, keys: {}, use: {}, updatedAt: "" }
+export type VaultDoc = { v: 1; keys: Partial<Record<VaultProvider, StoredKey>>; use: Partial<Record<VaultProvider, string[]>>; defaults: Partial<Record<string, VaultProvider>>; updatedAt: string }
+const EMPTY: VaultDoc = { v: 1, keys: {}, use: {}, defaults: {}, updatedAt: "" }
 const PATH = "admin/key-vault.json"
 const TTL_MS = 30_000
 
@@ -146,13 +175,15 @@ function take(next: VaultDoc): void {
 function readDoc(text: string | null): VaultDoc {
   if (!text) return EMPTY
   const raw = JSON.parse(text) as Partial<VaultDoc>
-  const out: VaultDoc = { v: 1, keys: {}, use: {}, updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : "" }
+  const out: VaultDoc = { v: 1, keys: {}, use: {}, defaults: {}, updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : "" }
   for (const p of VAULT_PROVIDERS) {
     const k = raw.keys?.[p]
     if (k && typeof k.sealed === "string" && typeof k.last4 === "string" && typeof k.setAt === "string") out.keys[p] = { sealed: k.sealed, last4: k.last4.slice(-4), setAt: k.setAt }
     const use = cleanUse(raw.use?.[p])
     if (use) out.use[p] = use
   }
+  const defaults = cleanDefaults(raw.defaults)
+  if (defaults) out.defaults = defaults
   return out
 }
 
@@ -211,6 +242,20 @@ export function allows(provider: VaultProvider, feature: string): boolean {
   if (!known && HELD_BACK_UNREAD.has(provider)) return false
   return (doc.use[provider] ?? defaultUse(provider)).includes(FEATURE_IDS.has(feature) ? feature : "other")
 }
+/** The admin's per-feature AI choice: known features only, known providers only. */
+export function cleanDefaults(raw: unknown): Record<string, VaultProvider> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null
+  const out: Record<string, VaultProvider> = {}
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (FEATURE_IDS.has(k) && isVaultProvider(v)) out[k] = v
+  }
+  return out
+}
+
+/** Which AI a feature tries first: the admin's choice when set, else the built-in default, else none (cheapest-first ladder). */
+export function defaultProvider(feature: string): VaultProvider | null {
+  return doc.defaults[feature] ?? FEATURE_DEFAULTS[feature] ?? null
+}
 /** Did the admin tick this feature for this provider, as opposed to it being allowed by default? */
 export function ticked(provider: VaultProvider, feature: string): boolean {
   return !!doc.use[provider] && doc.use[provider]!.includes(feature)
@@ -218,17 +263,20 @@ export function ticked(provider: VaultProvider, feature: string): boolean {
 
 // ─────────────────────────────────────────── the admin's changes ────────────────────────────────────────────
 
-export type VaultChange = { provider: VaultProvider; key?: string; remove?: boolean; use?: string[] }
+export type VaultChange = { provider?: VaultProvider; key?: string; remove?: boolean; use?: string[]; defaults?: Record<string, VaultProvider> }
 
 /** Apply one change to a document. Pure: the secret and the time are handed in. */
 export function changed(before: VaultDoc, change: VaultChange, secret: Buffer | null, now: number): VaultDoc {
-  const next: VaultDoc = { v: 1, keys: { ...before.keys }, use: { ...before.use }, updatedAt: new Date(now).toISOString() }
-  if (change.remove) delete next.keys[change.provider]
-  if (change.key !== undefined) {
-    if (!secret) throw new Error("no-secret")
-    next.keys[change.provider] = { sealed: sealKey(change.provider, change.key, secret), last4: change.key.slice(-4), setAt: new Date(now).toISOString() }
+  const next: VaultDoc = { v: 1, keys: { ...before.keys }, use: { ...before.use }, defaults: { ...before.defaults }, updatedAt: new Date(now).toISOString() }
+  if (change.provider) {
+    if (change.remove) delete next.keys[change.provider]
+    if (change.key !== undefined) {
+      if (!secret) throw new Error("no-secret")
+      next.keys[change.provider] = { sealed: sealKey(change.provider, change.key, secret), last4: change.key.slice(-4), setAt: new Date(now).toISOString() }
+    }
+    if (change.use) next.use[change.provider] = change.use
   }
-  if (change.use) next.use[change.provider] = change.use
+  if (change.defaults) next.defaults = { ...next.defaults, ...change.defaults }
   return next
 }
 
@@ -286,6 +334,13 @@ export function vaultRows(deploymentHas: (p: VaultProvider) => boolean): VaultRo
       usingDefault: !doc.use[p],
     }
   })
+}
+
+/** The admin's per-feature AI choices merged over the built-in defaults: what the page shows and what the ladder uses. */
+export function effectiveDefaults(): Record<string, VaultProvider> {
+  const out: Record<string, VaultProvider> = { ...FEATURE_DEFAULTS } as Record<string, VaultProvider>
+  for (const [k, v] of Object.entries(doc.defaults)) if (v) out[k] = v
+  return out
 }
 
 /** For tests: put a document in use as if it had been read from storage. */

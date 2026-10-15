@@ -32,46 +32,60 @@ const ICON = {
 export type NavItem = { href: string; label: string; what: string; icon: ReactNode }
 export type NavSection = { label: string; items: NavItem[] }
 
-export const NAV_SECTIONS: NavSection[] = [
+// The sidebar shows exactly four tabs, then Admin (for admins) and Settings. Every other page
+// lives under the tab it belongs to, ordered by how much it matters to the job hunt.
+// (Owner, 2026-10-11: "only 4 tabs and Admin and Settings on the left ... organize rest acc to relevancy.")
+// Dummy pages are gone: /dashboard/email (made-up sample inbox) now redirects to /dashboard/mail,
+// and /dashboard/prep (made-up sample interview prep) now redirects to /dashboard/kompas (next.config.js).
+export type NavTab = { href: string; label: string; icon: ReactNode; what: string; items: NavItem[] }
+
+export const NAV_TABS: NavTab[] = [
   {
-    label: "",
+    href: "/dashboard", label: "Home", icon: ICON.home,
+    what: "Your day at a glance, and how the hunt is going.",
     items: [
-      { href: "/dashboard",       label: "Home",    icon: ICON.home, what: "Your resume, job emails, and interview practice." },
       { href: "/dashboard/today", label: "Today",   icon: ICON.sun,  what: "See what needs you today." },
       { href: "/dashboard/brief", label: "Summary", icon: ICON.note, what: "A short note on how your job hunt is going." },
     ],
   },
   {
-    label: "Jobs and interviews",
+    href: "/dashboard/mail", label: "Jobs", icon: ICON.mail,
+    what: "Inbox, applications, interviews, follow-ups — the hunt itself. Ask MFit, bottom right on every page, answers from your mail.",
     items: [
-      { href: "/dashboard/mail",        label: "Inbox",       icon: ICON.mail,     what: "Emails from recruiters. The ones at the top need you to reply." },
-      { href: "/dashboard/tracker",     label: "My Jobs",    icon: ICON.list,     what: "Every job you applied to, and where each one stands right now." },
-      { href: "/dashboard/calendar",    label: "Interviews",   icon: ICON.calendar, what: "Your upcoming interviews. Don't miss any." },
-      { href: "/dashboard/workflows",   label: "Follow-ups", icon: ICON.repeat,   what: "Automatic follow-ups that run on their own. Some wait for your OK." },
-      { href: "/dashboard/connections", label: "Gmail accounts",   icon: ICON.link,     what: "Connect your Gmail so MarketFit can read your job emails." },
-      { href: "/dashboard/kompas", label: "Interview practice", what: "Practice with Kompas using your own resume.", icon: ICON.chat },
-      // One page for both since 8 Oct 2026 (the owner: "Combine kompas flow and transcribe to be in one page"). The old
-      // address, /dashboard/kompas/transcribe, sends people to this page with Transcribe showing.
-      { href: "/dashboard/kompas/flow", label: "Kompas Flow", icon: ICON.mic, what: "Speak, and get clean text you can paste anywhere." },
-      { href: "/dashboard/prep",        label: "Practice",   icon: ICON.chat,     what: "Get ready for your next interview." },
+      { href: "/dashboard/tracker",     label: "My Jobs",       icon: ICON.list,   what: "Every job you applied to, and where each one stands right now." },
+      { href: "/dashboard/calendar",    label: "Interviews",    icon: ICON.calendar, what: "Your upcoming interviews. Don't miss any." },
+      { href: "/dashboard/workflows",   label: "Follow-ups",   icon: ICON.repeat, what: "Automatic follow-ups that run on their own. Some wait for your OK." },
+      { href: "/dashboard/connections", label: "Gmail accounts", icon: ICON.link,  what: "Connect your Gmail so MarketFit can read your job emails." },
+      { href: "/dashboard/whatsapp",    label: "WhatsApp",      icon: ICON.phone,  what: "Send a job post and your resume. Get your resume back, fitted to that job." },
+      { href: "/dashboard/extension",   label: "Extension",     icon: ICON.puzzle, what: "Add MarketFit to Chrome. It fills job application forms for you." },
     ],
   },
   {
-    label: "Resume and email",
+    href: "/dashboard/kompas", label: "Kompas", icon: ICON.mic,
+    what: "Interview practice and voice — Kompas listens, you talk.",
     items: [
-      { href: "/dashboard/resume",         label: "My Resume",   icon: ICON.resume, what: "Make your resume fit one job." },
+      // One page for both since 8 Oct 2026 (the owner: "Combine kompas flow and transcribe to be in one page"). The old
+      // address, /dashboard/kompas/transcribe, sends people to this page with Transcribe showing.
+      { href: "/dashboard/kompas/flow", label: "Kompas Flow", icon: ICON.mic, what: "Speak, and get clean text you can paste anywhere." },
+    ],
+  },
+  {
+    href: "/dashboard/overview", label: "Overview", icon: ICON.gauge,
+    what: "Every submission as a mind map and a progress bar — who touched your profile, where it stands, what is next.",
+    items: [],
+  },
+  {
+    href: "/dashboard/resume", label: "Resume", icon: ICON.resume,
+    what: "Your resume, fitted and filed.",
+    items: [
       { href: "/dashboard/resume/format",  label: "Resume Formatting", icon: ICON.pencil, what: "Turn your existing resume into an approved professional format." },
-      { href: "/dashboard/documents",      label: "Files",       icon: ICON.folder, what: "Keep your resume files in one place." },
-      { href: "/dashboard/resume/builder", label: "Make Resume", icon: ICON.pencil, what: "Build a resume one part at a time." },
-      { href: "/dashboard/email",          label: "Job emails",  icon: ICON.inbox,  what: "Read job emails from your Gmail." },
-      { href: "/dashboard/whatsapp",       label: "WhatsApp",    icon: ICON.phone,  what: "Send a job post and your resume. Get your resume back, fitted to that job." },
-      { href: "/dashboard/extension",      label: "Extension",   icon: ICON.puzzle, what: "Add MarketFit to Chrome. It fills job application forms for you." },
+      { href: "/dashboard/resume/builder", label: "Make Resume",       icon: ICON.pencil, what: "Build a resume one part at a time." },
+      { href: "/dashboard/documents",     label: "Files",             icon: ICON.folder, what: "Keep your resume files in one place." },
     ],
   },
 ]
 
-export const NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap(s => s.items)
-
+export const NAV_ITEMS: NavItem[] = NAV_TABS.flatMap(t => [{ href: t.href, label: t.label, icon: t.icon, what: t.what }, ...t.items])
 // Shown only to an admin (the sidebar asks /api/admin/me), so it is kept out of NAV_SECTIONS and NAV_ITEMS: everything that
 // lists the pages for everyone, the Home tiles included, reads those. Hiding the link guards nothing; the page's data does
 // its own check on the server.
@@ -86,9 +100,6 @@ export function navItem(href: string): NavItem {
 }
 
 
-export const PRIMARY_NAV: NavItem[] = [
-  navItem("/dashboard"),
-  { ...navItem("/dashboard/resume"), label: "My resume" },
-  navItem("/dashboard/resume/format"),
-  { ...navItem("/dashboard/email"), label: "Job emails" },
-]
+// Settings stands alone at the bottom of the sidebar, next to Admin.
+export const SETTINGS_NAV: NavItem =
+  { href: "/dashboard/settings", label: "Settings", icon: ICON.lines, what: "Your account, appearance, and keys." }

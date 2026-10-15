@@ -34,7 +34,14 @@ export default function FlowPage() {
 
   useOwnDocument()
   // The old Transcribe address, and a reload while Transcribe is showing, open Transcribe.
-  useEffect(() => { if (new URLSearchParams(window.location.search).get("mode") === "transcribe") setMode("transcribe") }, [])
+  // A past interview can link here with ?company=&role=: shown as reflection context.
+  const [reflectCtx, setReflectCtx] = useState<{ company: string; role: string } | null>(null)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    if (q.get("mode") === "transcribe") setMode("transcribe")
+    const company = q.get("company"), role = q.get("role")
+    if (company || role) setReflectCtx({ company: company || "", role: role || "" })
+  }, [])
 
   const dictating = useCallback((on: boolean) => setBusy(now => (on ? "dictate" : now === "dictate" ? null : now)), [])
   const transcribing = useCallback((on: boolean) => setBusy(now => (on ? "transcribe" : now === "transcribe" ? null : now)), [])
@@ -48,6 +55,19 @@ export default function FlowPage() {
 
   return (
     <div style={{ maxWidth: 820 }}>
+      {reflectCtx && (
+        <div style={{ marginBottom: 16, padding: "14px 18px", borderRadius: 14, background: "var(--surface)", border: "1px solid var(--border-strong)" }}>
+          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-muted)" }}>
+            Reflecting on a past interview
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>
+            {[reflectCtx.company, reflectCtx.role].filter(Boolean).join(" \u2014 ")}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 6, lineHeight: 1.55 }}>
+            Upload the transcript or recording below, then open <strong>What went wrong</strong> to walk through it and take the lesson into your next interview.
+          </div>
+        </div>
+      )}
       <div role="tablist" aria-label="What do you want to do?" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginBottom: held ? 8 : 28 }}>
         {MODES.map(option => {
           const on = mode === option.id

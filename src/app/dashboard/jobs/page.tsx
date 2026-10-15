@@ -1,4 +1,5 @@
 "use client"
+import { jewel } from "@/lib/jewel"
 
 import { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react"
 import Link from "next/link"
@@ -134,13 +135,11 @@ function CompanyAvatar({ name, size = 44 }: { name: string; size?: number }) {
   const [err, setErr] = useState(false)
   const domain = name.toLowerCase().replace(/[^a-z0-9]/g, "") + ".com"
   const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-  const colors = ["#1c1b16","#4d4b44","#1c1b16","#6b6858","#13120d","#7c7866","#757261","#888471"]
-  const bg = colors[name.charCodeAt(0) % colors.length]
+  const tile = jewel(name)
   if (err) return (
-    <div style={{ width: size, height: size, borderRadius: Math.round(size * 0.26), background: bg,
+    <div style={{ width: size, height: size, borderRadius: Math.round(size * 0.26), background: tile.background,
       display:"flex", alignItems:"center", justifyContent:"center",
-      color:"#fff", fontWeight:800, fontSize:size*0.38, flexShrink:0,
-      boxShadow:`0 3px 10px ${bg}55`,
+      color: tile.color, fontWeight:800, fontSize:size*0.38, flexShrink:0,
     }}>{initials}</div>
   )
   return (
@@ -169,7 +168,7 @@ function MatchRing({ pct, size = 52 }: { pct: number; size?: number }) {
       </svg>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         <span style={{ fontSize: size * 0.25, fontWeight: 800, color, lineHeight: 1 }}>{pct}</span>
-        <span style={{ fontSize: size * 0.18, color: "#a29d89", lineHeight: 1, marginTop: 1 }}>%</span>
+        <span style={{ fontSize: size * 0.18, color: "var(--text-soft)", lineHeight: 1, marginTop: 1 }}>%</span>
       </div>
     </div>
   )
@@ -309,7 +308,7 @@ function JobDetailPanel({
             {job.salary && <span style={{ color:"var(--accent)", fontWeight:700 }}>{job.salary}</span>}
             <span>{timeAgo(job.posted)}</span>
             <span style={{ fontSize:10, padding:"2px 7px", borderRadius:20,
-              background: job.source === "sample" ? "#f8f6f2" : "#f2f0ea",
+              background: job.source === "sample" ? "var(--surface-2)" : "var(--surface-2)",
               border:`1px solid ${job.source === "sample" ? "#e8e4db" : "#d9d4c8"}`,
               color: job.source === "sample" ? "var(--text-soft)" : "var(--accent)", fontWeight:700,
             }}>{job.source === "sample" ? "Sample" : "Live"}</span>
@@ -334,7 +333,7 @@ function JobDetailPanel({
         {/* Tab nav */}
         <div style={{
           display:"flex", borderBottom:"1px solid var(--border)", flexShrink:0,
-          background:"#f6f4f0",
+          background:"var(--surface-2)",
         }}>
           {DETAIL_TABS.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
@@ -342,7 +341,7 @@ function JobDetailPanel({
                 flex:1, padding:"10px 8px", border:"none", cursor:"pointer",
                 fontSize:12, fontWeight: activeTab === tab.id ? 700 : 600,
                 color: activeTab === tab.id ? "var(--accent)" : "var(--text-muted)",
-                background: activeTab === tab.id ? "#fff" : "transparent",
+                background: activeTab === tab.id ? "var(--surface)" : "transparent",
                 borderBottom: activeTab === tab.id ? "2px solid var(--accent)" : "2px solid transparent",
                 transition:"all .15s", display:"flex", alignItems:"center", justifyContent:"center", gap:5,
               }}>
@@ -406,7 +405,7 @@ function JobDetailPanel({
                 <p style={{ fontSize:11, fontWeight:700, color: h1bResult.color, marginBottom:2, display:"flex", alignItems:"center", gap:5 }}>
                   <span style={{ width:6, height:6, borderRadius:"50%", background:"currentColor", flexShrink:0 }}/> {h1bResult.label}
                 </p>
-                <p style={{ fontSize:11, color:"#40403a", lineHeight:1.5 }}>{h1bResult.reason}</p>
+                <p style={{ fontSize:11, color:"var(--text-muted)", lineHeight:1.5 }}>{h1bResult.reason}</p>
               </div>
 
               {/* Description */}
@@ -419,7 +418,7 @@ function JobDetailPanel({
                     Job Description
                   </h3>
                   {job.description ? (
-                    <p style={{ fontSize:13, color:"#545249", lineHeight:1.75, whiteSpace:"pre-wrap" }}>
+                    <p style={{ fontSize:13, color:"var(--text-muted)", lineHeight:1.75, whiteSpace:"pre-wrap" }}>
                       {job.description}
                     </p>
                   ) : (
@@ -460,7 +459,7 @@ function JobDetailPanel({
         {/* Footer CTAs */}
         <div style={{
           padding:"14px 20px", borderTop:"1px solid var(--border)",
-          background:"#f6f4f0", display:"flex", gap:8, alignItems:"center", flexShrink:0,
+          background:"var(--surface-2)", display:"flex", gap:8, alignItems:"center", flexShrink:0,
         }}>
           {job.url && job.url !== "#" ? (
             <a href={job.url} target="_blank" rel="noopener noreferrer"
@@ -485,7 +484,7 @@ function JobDetailPanel({
           <button onClick={onSave} style={{
             padding:"10px 14px", borderRadius:9, cursor:"pointer",
             color: isSaved ? "var(--accent)" : "var(--text-muted)",
-            background: isSaved ? "#f2f0ea" : "#fff",
+            background: isSaved ? "var(--surface-2)" : "var(--surface)",
             border: `1px solid ${isSaved ? "#d9d4c8" : "var(--border)"}`,
             transition:"all .15s", fontSize:12, fontWeight:700,
             display:"flex", alignItems:"center", gap:5,
@@ -531,8 +530,6 @@ const APP_PRIORITY = {
   mid:  { label: "Mid",  color: "#7e7a68" },
   low:  { label: "Low",  color: "#706c5c" },
 }
-const APP_COLORS = ["bg-blue-600","bg-violet-600","bg-emerald-600","bg-orange-500","bg-teal-600","bg-rose-500","bg-indigo-600","bg-amber-500"]
-function appCo(name: string) { return APP_COLORS[(name||"A").charCodeAt(0) % APP_COLORS.length] }
 function appUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2) }
 function appIsOverdue(d?: string) { return !!d && new Date(d) < new Date(new Date().toDateString()) }
 function appIsDueSoon(d?: string) {
@@ -647,7 +644,7 @@ function AppCard({ app, onMove, onDelete, onEdit }: { app:AppItem; onMove:(id:st
       onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="";(e.currentTarget as HTMLElement).style.transform=""}}
       onClick={()=>setExpanded(!expanded)}>
       <div className="flex items-start gap-2">
-        <div className={`w-8 h-8 rounded-lg ${appCo(app.company)} flex-shrink-0 flex items-center justify-center text-white font-bold text-sm select-none`}>{app.company[0]}</div>
+        <div className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center font-bold text-sm select-none" style={jewel(app.company)}>{app.company[0]}</div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold leading-tight truncate" style={{color:"var(--text)"}}>{app.role}</p>
           <p className="text-xs truncate" style={{color:"var(--text-muted)"}}>{app.company}</p>
@@ -656,14 +653,14 @@ function AppCard({ app, onMove, onDelete, onEdit }: { app:AppItem; onMove:(id:st
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs" style={{color:"var(--text-soft)"}}>
         {app.location&&<span className="inline-flex items-center gap-1">{app.remote?<Globe size={11}/>:<MapPin size={11}/>} {app.location}</span>}
-        {app.salary&&<span className="font-semibold" style={{color:"#6e6b5b"}}>{app.salary}</span>}
+        {app.salary&&<span className="font-semibold" style={{color:"var(--text-muted)"}}>{app.salary}</span>}
         <span className="ml-auto">{appDaysSince(app.appliedDate)}</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {app.visa&&<span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{background:"var(--accent-soft)",color:"var(--accent-txt)"}}>{app.visa}</span>}
-        {app.followUpDate&&appIsOverdue(app.followUpDate)&&<span className="text-xs px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1" style={{background:"var(--surface)",color:"#13120d",border:"1px solid #ddd8cd"}}><Bell size={10}/> Overdue: {new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>}
-        {app.followUpDate&&appIsDueSoon(app.followUpDate)&&!appIsOverdue(app.followUpDate)&&<span className="text-xs px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1" style={{background:"#f7f5f0",color:"#6b6858",border:"1px solid #e4e0d6"}}><Bell size={10}/> Soon: {new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>}
-        {app.followUpDate&&!appIsOverdue(app.followUpDate)&&!appIsDueSoon(app.followUpDate)&&<span className="text-xs px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1" style={{background:"#f6f4f0",color:"#58564c",border:"1px solid #e2ded4"}}><Bell size={10}/> {new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>}
+        {app.followUpDate&&appIsOverdue(app.followUpDate)&&<span className="text-xs px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1" style={{background:"var(--surface)",color:"var(--text)",border:"1px solid var(--border-strong)"}}><Bell size={10}/> Overdue: {new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>}
+        {app.followUpDate&&appIsDueSoon(app.followUpDate)&&!appIsOverdue(app.followUpDate)&&<span className="text-xs px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1" style={{background:"var(--surface-2)",color:"var(--text-muted)",border:"1px solid var(--border)"}}><Bell size={10}/> Soon: {new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>}
+        {app.followUpDate&&!appIsOverdue(app.followUpDate)&&!appIsDueSoon(app.followUpDate)&&<span className="text-xs px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1" style={{background:"var(--surface-2)",color:"var(--text-muted)",border:"1px solid var(--border-strong)"}}><Bell size={10}/> {new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>}
       </div>
       {expanded&&(
         <div className="pt-1 space-y-2 border-t" style={{borderColor:"var(--border)"}}>
@@ -674,11 +671,11 @@ function AppCard({ app, onMove, onDelete, onEdit }: { app:AppItem; onMove:(id:st
               {nextStages.map(s=>(
                 <button key={s.id} onClick={e=>{e.stopPropagation();onMove(app.id,s.id)}} className="text-xs px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1" style={{background:`rgba(${s.rgb},.12)`,color:s.color,border:`1px solid rgba(${s.rgb},.25)`}}><s.Icon size={11}/> {s.label}</button>
               ))}
-              <button onClick={e=>{e.stopPropagation();onMove(app.id,"rejected")}} className="text-xs px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1" style={{background:"rgba(132,128,109,.1)",color:"#2e2d27",border:"1px solid rgba(132,128,109,.2)"}}><X size={11}/> Reject</button>
+              <button onClick={e=>{e.stopPropagation();onMove(app.id,"rejected")}} className="text-xs px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1" style={{background:"rgba(132,128,109,.1)",color:"var(--text)",border:"1px solid rgba(132,128,109,.2)"}}><X size={11}/> Reject</button>
             </div>
           </div>
           <div className="flex gap-2">
-            <a href="/dashboard/ai-tools#interviews" onClick={e=>e.stopPropagation()} className="text-xs px-2 py-1 rounded-lg font-semibold inline-flex items-center gap-1" style={{background:"rgba(101,98,84,.1)",color:"#4d4b44",textDecoration:"none"}}><Mic size={11}/> Prep</a>
+            <a href="/dashboard/ai-tools#interviews" onClick={e=>e.stopPropagation()} className="text-xs px-2 py-1 rounded-lg font-semibold inline-flex items-center gap-1" style={{background:"rgba(101,98,84,.1)",color:"var(--text-muted)",textDecoration:"none"}}><Mic size={11}/> Prep</a>
             <a href="/dashboard/ai-tools#cover" onClick={e=>e.stopPropagation()} className="text-xs px-2 py-1 rounded-lg font-semibold inline-flex items-center gap-1" style={{background:"color-mix(in srgb, var(--accent) 10%, transparent)",color:"var(--accent)",textDecoration:"none"}}><Mail size={11}/> Cover</a>
           </div>
           <div className="flex gap-2 pt-1">
@@ -855,15 +852,15 @@ function PipelineView() {
                     onMouseLeave={e=>((e.currentTarget as HTMLElement).style.background="")}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg ${appCo(app.company)} flex-shrink-0 flex items-center justify-center text-white font-bold text-sm`}>{app.company[0]}</div>
+                        <div className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center font-bold text-sm" style={jewel(app.company)}>{app.company[0]}</div>
                         <div><p className="text-sm font-semibold" style={{color:"var(--text)"}}>{app.role}</p><p className="text-xs" style={{color:"var(--text-muted)"}}>{app.company}</p></div>
                       </div>
                     </td>
                     <td className="px-4 py-3"><span className="text-xs px-2.5 py-1 rounded-full font-semibold inline-flex items-center gap-1" style={{background:`rgba(${s.rgb},.12)`,color:s.color}}><s.Icon size={11}/> {s.label}</span></td>
-                    <td className="px-4 py-3 text-sm font-medium" style={{color:"#6e6b5b"}}>{app.salary||"—"}</td>
+                    <td className="px-4 py-3 text-sm font-medium" style={{color:"var(--text-muted)"}}>{app.salary||"—"}</td>
                     <td className="px-4 py-3 text-xs">
                       {app.followUpDate
-                        ?<span className="inline-flex items-center gap-1" style={{color:appIsOverdue(app.followUpDate)?"#13120d":appIsDueSoon(app.followUpDate)?"#6b6858":"var(--text-soft)",fontWeight:appIsOverdue(app.followUpDate)?700:400}}>
+                        ?<span className="inline-flex items-center gap-1" style={{color:appIsOverdue(app.followUpDate)?"var(--text)":appIsDueSoon(app.followUpDate)?"var(--text-muted)":"var(--text-soft)",fontWeight:appIsOverdue(app.followUpDate)?700:400}}>
                           {appIsOverdue(app.followUpDate)?<TriangleAlert size={10}/>:appIsDueSoon(app.followUpDate)?<Clock3 size={10}/>:null}{new Date(app.followUpDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}
                          </span>
                         :<span style={{color:"var(--text-soft)"}}>—</span>}
@@ -875,7 +872,7 @@ function PipelineView() {
                           {APP_STAGES.map(st=><option key={st.id} value={st.id}>{st.label}</option>)}
                         </select>
                         <button onClick={()=>setEditing(app)} className="btn-ghost px-2 py-1 text-xs flex items-center"><Pencil size={12}/></button>
-                        <button onClick={()=>deleteApp(app.id)} className="btn-ghost px-2 py-1 text-xs flex items-center" style={{color:"#2e2d27"}}><X size={12}/></button>
+                        <button onClick={()=>deleteApp(app.id)} className="btn-ghost px-2 py-1 text-xs flex items-center" style={{color:"var(--text)"}}><X size={12}/></button>
                       </div>
                     </td>
                   </tr>
@@ -1388,8 +1385,8 @@ export default function JobsPage() {
                 const live = !sourceLabel.toLowerCase().startsWith("sample")
                 return (
                   <span style={{ display:"inline-flex", alignItems:"center", gap:5, marginRight:10,
-                    background: live ? "#f2f0ea" : "rgba(112,108,92,.08)",
-                    border: live ? "1px solid #d9d4c8" : "1px solid rgba(112,108,92,.2)",
+                    background: live ? "var(--surface-2)" : "rgba(112,108,92,.08)",
+                    border: live ? "1px solid var(--border-strong)" : "1px solid rgba(112,108,92,.2)",
                     color: live ? "var(--accent)" : "var(--text-soft)",
                     fontSize:11, fontWeight:700, padding:"2px 9px", borderRadius:20,
                   }}>
@@ -1509,7 +1506,7 @@ export default function JobsPage() {
           <label style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 12px", borderRadius:9, cursor:"pointer", whiteSpace:"nowrap" as const,
             background: hideAgencies ? "var(--surface)" : "var(--surface-2)",
             border: `1.5px solid ${hideAgencies ? "#bbb5a5" : "var(--border)"}`,
-            fontSize:12.5, fontWeight:600, color: hideAgencies ? "#13120d" : "var(--text-soft)",
+            fontSize:12.5, fontWeight:600, color: hideAgencies ? "var(--text)" : "var(--text-soft)",
           }}>
             <input type="checkbox" checked={hideAgencies} onChange={e => setHideAgencies(e.target.checked)} style={{ accentColor:"#13120d", width:13, height:13 }} />
             <Ban size={12}/> No agencies
@@ -1544,7 +1541,7 @@ export default function JobsPage() {
 
           <select value={expLevel} onChange={e => setExpLevel(e.target.value as ExperienceLevel)}
             style={{ padding:"7px 10px", borderRadius:9, fontSize:12.5, fontWeight:600, cursor:"pointer", outline:"none",
-              background:"var(--surface-2)", color: expLevel !== "all" ? "#6c6959" : "var(--text-soft)",
+              background:"var(--surface-2)", color: expLevel !== "all" ? "var(--text-muted)" : "var(--text-soft)",
               border: `1.5px solid ${expLevel !== "all" ? "#e9e5dd" : "var(--border)"}` }}>
             <option value="all">Experience</option>
             {EXPERIENCE_LEVELS.filter(l => l.key !== "all").map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
@@ -1552,7 +1549,7 @@ export default function JobsPage() {
 
           <select value={String(salaryMin)} onChange={e => setSalaryMin(Number(e.target.value))}
             style={{ padding:"7px 10px", borderRadius:9, fontSize:12.5, fontWeight:600, cursor:"pointer", outline:"none",
-              background:"var(--surface-2)", color: salaryMin > 0 ? "#58564c" : "var(--text-soft)",
+              background:"var(--surface-2)", color: salaryMin > 0 ? "var(--text-muted)" : "var(--text-soft)",
               border: `1.5px solid ${salaryMin > 0 ? "#e4e0d6" : "var(--border)"}` }}>
             <option value="0">Min Salary</option>
             {[80000,100000,120000,140000,160000,180000,200000].map(v => <option key={v} value={String(v)}>${(v/1000).toFixed(0)}k+</option>)}
@@ -1561,7 +1558,7 @@ export default function JobsPage() {
           {skillOptions.length > 0 && (
             <select value={skillFilter[0] || ""} onChange={e => { const v = e.target.value; setSkillFilter(v ? [v] : []) }}
               style={{ padding:"7px 10px", borderRadius:9, fontSize:12.5, fontWeight:600, cursor:"pointer", outline:"none",
-                background:"var(--surface-2)", color: skillFilter.length ? "#4d4b44" : "var(--text-soft)",
+                background:"var(--surface-2)", color: skillFilter.length ? "var(--text-muted)" : "var(--text-soft)",
                 border: `1.5px solid ${skillFilter.length ? "#e0dcd2" : "var(--border)"}` }}>
               <option value="">Skill</option>
               {skillOptions.map(({ skill, count }) => <option key={skill} value={skill}>{skill} ({count})</option>)}
@@ -1640,7 +1637,7 @@ export default function JobsPage() {
                   setDateFilter("any"); setExpLevel("all"); setSalaryMin(0); setHideAgencies(false)
                   setCompanyFilter([]); setOriginCity(""); setDistanceFilter("any"); setSkillFilter([]); setVisaFilter([])
                 }}
-                style={{ padding:"3px 8px", borderRadius:7, border:"none", background:"#e6e2d9", color:"#13120d", fontSize:11, fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:4 }}>
+                style={{ padding:"3px 8px", borderRadius:7, border:"none", background:"var(--surface-3)", color:"var(--text)", fontSize:11, fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:4 }}>
                 <X size={10}/> Reset filters
               </button>
             </span>
@@ -1710,7 +1707,7 @@ export default function JobsPage() {
             return (
               <div key={job.id}
                 style={{
-                  background: isHidden ? "#f8f6f2" : "var(--surface)",
+                  background: isHidden ? "var(--surface-2)" : "var(--surface)",
                   border:`1px solid ${isHidden ? "#e8e4db" : "var(--border)"}`,
                   borderRadius:16, overflow:"hidden",
                   transition:"box-shadow .2s, border-color .2s, opacity .2s",
@@ -1730,14 +1727,14 @@ export default function JobsPage() {
                           <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
                             <h3
                               onClick={() => !isHidden && setDetailJob(job)}
-                              style={{ fontWeight:700, fontSize:15, color: isHidden ? "#a29d89" : "var(--text)",
+                              style={{ fontWeight:700, fontSize:15, color: isHidden ? "var(--text-soft)" : "var(--text)",
                                 lineHeight:1.3, margin:0, cursor: isHidden ? "default" : "pointer" }}
                               onMouseEnter={e => { if (!isHidden) (e.currentTarget as HTMLElement).style.color="var(--accent)" }}
                               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color=isHidden ? "#a29d89" : "var(--text)" }}
                             >{job.title}</h3>
                             {isNew && (
                               <span style={{ fontSize:9, fontWeight:800, padding:"2px 6px", borderRadius:20,
-                                background:"#e8e4db", color:"#6c6959", border:"1px solid #e9e5dd",
+                                background:"var(--surface-3)", color:"var(--text-muted)", border:"1px solid var(--border)",
                                 letterSpacing:".3px", textTransform:"uppercase", flexShrink:0,
                               }}>New</span>
                             )}
@@ -1774,7 +1771,7 @@ export default function JobsPage() {
                         {job.salary && <span style={{ color:"var(--accent)", fontWeight:700 }}>{job.salary}</span>}
                         <span>{timeAgo(job.posted)}</span>
                         <span style={{ fontSize:10, padding:"2px 7px", borderRadius:20,
-                          background:job.source === "sample" ? "#f8f6f2" : "#f2f0ea",
+                          background:job.source === "sample" ? "var(--surface-2)" : "var(--surface-2)",
                           border:`1px solid ${job.source === "sample" ? "#e8e4db" : "#d9d4c8"}`,
                           color: job.source === "sample" ? "var(--text-soft)" : "var(--accent)", fontWeight:700,
                         }}>{job.source === "sample" ? "Sample" : "Live"}</span>
@@ -1874,7 +1871,7 @@ export default function JobsPage() {
                         marginLeft:"auto", padding:"6px 10px", borderRadius:9, border:"none",
                         fontSize:11, fontWeight:600, cursor:"pointer", transition:"all .15s",
                         color: isHidden ? "var(--text-soft)" : "#c9c3b4",
-                        background: isHidden ? "#f4f2ed" : "transparent",
+                        background: isHidden ? "var(--surface-2)" : "transparent",
                       }}
                       onMouseEnter={e => { if (!isHidden) (e.currentTarget as HTMLElement).style.color="#13120d" }}
                       onMouseLeave={e => { if (!isHidden) (e.currentTarget as HTMLElement).style.color="#c9c3b4" }}

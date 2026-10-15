@@ -29,10 +29,10 @@ interface MatchBreakdownProps {
 }
 
 const CATEGORIES = [
-  { key: "skills",     label: "Skills Match",   weight: "45%", color: "#1c1b16", rgb: "29,111,196" },
-  { key: "experience", label: "Experience",      weight: "30%", color: "#4d4b44", rgb: "124,58,237" },
-  { key: "education",  label: "Education",       weight: "15%", color: "#5c5a4e", rgb: "13,148,136" },
-  { key: "location",   label: "Location",        weight: "10%", color: "#6b6858", rgb: "217,119,6"  },
+  { key: "skills",     label: "Skills Match",   weight: "45%", color: "var(--text)", rgb: "29,111,196" },
+  { key: "experience", label: "Experience",      weight: "30%", color: "var(--text-muted)", rgb: "124,58,237" },
+  { key: "education",  label: "Education",       weight: "15%", color: "var(--text-muted)", rgb: "13,148,136" },
+  { key: "location",   label: "Location",        weight: "10%", color: "var(--text-muted)", rgb: "217,119,6"  },
 ] as const
 
 function DonutChart({ total, breakdown }: { total: number; breakdown: Record<string, number> }) {
@@ -77,7 +77,7 @@ function DonutChart({ total, breakdown }: { total: number; breakdown: Record<str
         alignItems: "center", justifyContent: "center",
       }}>
         <span style={{ fontSize: 26, fontWeight: 900, color: gradeColor, lineHeight: 1, letterSpacing: "-1px" }}>{total}</span>
-        <span style={{ fontSize: 10, color: "#9d9884", lineHeight: 1, marginTop: 1 }}>/ 100</span>
+        <span style={{ fontSize: 10, color: "var(--text-soft)", lineHeight: 1, marginTop: 1 }}>/ 100</span>
         <span style={{ fontSize: 13, fontWeight: 800, color: gradeColor, marginTop: 2 }}>{grade}</span>
       </div>
     </div>
@@ -142,9 +142,9 @@ export default function MatchBreakdown({ jd, profile, preloaded }: MatchBreakdow
   }, [jd])
 
   if (loading) return (
-    <div style={{ padding: "40px 20px", textAlign: "center", color: "#9d9884" }}>
+    <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-soft)" }}>
       <div style={{ fontSize: 24, marginBottom: 8, animation: "spin 1s linear infinite", display: "inline-block" }}>⟳</div>
-      <p style={{ fontSize: 13, fontWeight: 600, color: "#6e6b5b" }}>Analyzing your fit…</p>
+      <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)" }}>Analyzing your fit…</p>
       <p style={{ fontSize: 11.5, marginTop: 4 }}>Extracting JD requirements · Comparing to your profile</p>
       <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
     </div>
@@ -152,13 +152,13 @@ export default function MatchBreakdown({ jd, profile, preloaded }: MatchBreakdow
 
   if (error) return (
     <div style={{ padding: "24px 20px", textAlign: "center" }}>
-      <p style={{ fontSize: 13, color: "#13120d" }}>Could not compute breakdown.</p>
-      <p style={{ fontSize: 11.5, color: "#9d9884", marginTop: 4 }}>Add an API key in Settings to enable AI scoring.</p>
+      <p style={{ fontSize: 13, color: "var(--text)" }}>Could not compute breakdown.</p>
+      <p style={{ fontSize: 11.5, color: "var(--text-soft)", marginTop: 4 }}>Add an API key in Settings to enable AI scoring.</p>
     </div>
   )
 
   if (!data) return (
-    <div style={{ padding: "24px 20px", textAlign: "center", color: "#9d9884", fontSize: 13 }}>
+    <div style={{ padding: "24px 20px", textAlign: "center", color: "var(--text-soft)", fontSize: 13 }}>
       No job description available for analysis.
     </div>
   )
@@ -172,15 +172,15 @@ export default function MatchBreakdown({ jd, profile, preloaded }: MatchBreakdow
       <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
         <DonutChart total={total} breakdown={breakdown} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "#9d9884", marginBottom: 10 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "var(--text-soft)", marginBottom: 10 }}>
             Score Breakdown
           </p>
           {CATEGORIES.map(cat => (
             <div key={cat.key} style={{ marginBottom: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 600, color: "#40403a" }}>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--text-muted)" }}>
                   {cat.label}
-                  <span style={{ fontSize: 10, color: "#9d9884", marginLeft: 5 }}>({cat.weight})</span>
+                  <span style={{ fontSize: 10, color: "var(--text-soft)", marginLeft: 5 }}>({cat.weight})</span>
                 </span>
                 <span style={{ fontSize: 11.5, fontWeight: 800, color: cat.color }}>{breakdown[cat.key]}%</span>
               </div>
@@ -195,7 +195,7 @@ export default function MatchBreakdown({ jd, profile, preloaded }: MatchBreakdow
         <div style={{
           display: "flex", gap: 8, flexWrap: "wrap",
           padding: "10px 12px", borderRadius: 10,
-          background: "#f6f4f0", border: "1px solid #e6e2d9",
+          background: "var(--surface-2)", border: "1px solid var(--border)",
         }}>
           {[
             { label: "Seniority", value: meta.seniority || "Not specified" },
@@ -204,8 +204,8 @@ export default function MatchBreakdown({ jd, profile, preloaded }: MatchBreakdow
             { label: "Location", value: meta.locationRequired || "Flexible" },
           ].map(item => (
             <div key={item.label} style={{ textAlign: "center", flex: "1 1 70px" }}>
-              <p style={{ fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "#9d9884" }}>{item.label}</p>
-              <p style={{ fontSize: 11.5, fontWeight: 700, color: "#40403a", marginTop: 1, textTransform: "capitalize" }}>{item.value}</p>
+              <p style={{ fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "var(--text-soft)" }}>{item.label}</p>
+              <p style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text-muted)", marginTop: 1, textTransform: "capitalize" }}>{item.value}</p>
             </div>
           ))}
         </div>
@@ -228,14 +228,14 @@ export default function MatchBreakdown({ jd, profile, preloaded }: MatchBreakdow
       {/* Matched skills */}
       {matchedSkills.length > 0 && (
         <div>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "#42413c", marginBottom: 8 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "var(--text-muted)", marginBottom: 8 }}>
             ✓ {matchedSkills.length} Skills Matched
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
             {matchedSkills.map(s => (
               <span key={s} style={{
                 padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 600,
-                background: "#f8f6f2", border: "1px solid #e9e5dd", color: "#6c6959",
+                background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-muted)",
               }}>{s}</span>
             ))}
           </div>
@@ -245,18 +245,18 @@ export default function MatchBreakdown({ jd, profile, preloaded }: MatchBreakdow
       {/* Missing skills */}
       {missingSkills.length > 0 && (
         <div>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "#13120d", marginBottom: 8 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "var(--text)", marginBottom: 8 }}>
             ✗ {missingSkills.length} Skills Missing
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
             {missingSkills.map(s => (
               <span key={s} style={{
                 padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 600,
-                background: "var(--surface)", border: "1px solid #ddd8cd", color: "#13120d",
+                background: "var(--surface)", border: "1px solid var(--border-strong)", color: "var(--text)",
               }}>{s}</span>
             ))}
           </div>
-          <p style={{ fontSize: 11, color: "#9d9884", marginTop: 8 }}>
+          <p style={{ fontSize: 11, color: "var(--text-soft)", marginTop: 8 }}>
             💡 Ask Nexus AI to suggest how to address these gaps.
           </p>
         </div>

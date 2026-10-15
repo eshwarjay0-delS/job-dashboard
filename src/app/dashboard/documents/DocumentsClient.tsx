@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useDialogs } from "@/components/ui/dialog-provider"
+import WhatsAppClaim from "../_components/whatsapp-claim"
 
 // Resume-library entry shape. This view was folded into the resume hub, so its
 // sibling ./page is now a redirect and no longer exports this type — keep it local.
@@ -13,7 +14,21 @@ interface ResumeFile {
   category: string
   size: string
   uploadedAt: string
+  /** A PDF is kept and can be downloaded; only a Word file can be tailored. */
+  kind?: "docx" | "pdf"
 }
+
+// The name as a person reads it: without the hash the library adds so two files of one name can live side by side.
+const shownName = (name: string) => name.replace(/__[a-f0-9]{16}$/i, "")
+// The name as a person reads it, and where a resume can be looked at before it is used (owner, 13 Oct 2026: "Give the
+// preview with view button right next to all resumes"). A Word resume opens as a page; a PDF opens as itself.
+const plainName = shownName
+const viewHref = (file: { filepath: string; filename: string; kind?: string }) => file.kind === "pdf"
+  ? `/api/resumes/download?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(plainName(file.filename))}&inline=1`
+  : `/api/resumes/pdf?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(plainName(file.filename))}&autoprint=0`
+// A top folder that is a person's email is a title, with that person's folders under it ("I need to see separate with
+// email as titles and Organized folders").
+const isEmailFolder = (name: string) => name.includes("@") || name === "Needs email review"
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 function CloudIcon() {
@@ -55,7 +70,7 @@ function Chevron({ open }: { open: boolean }) {
   return <svg className="w-3 h-3 transition-transform" style={{ transform: open ? "rotate(90deg)" : "" }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
 }
 function FolderIcon() {
-  return <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: "#7e7a68" }}><path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" /></svg>
+  return <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: "var(--text-soft)" }}><path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" /></svg>
 }
 function FileIcon() {
   return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24" style={{ color: "var(--accent)" }}><path strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path strokeLinejoin="round" d="M14 2v6h6" /></svg>
@@ -86,11 +101,17 @@ function FileRow({ file, depth, ctx }: { file: ResumeFile; depth: number; ctx: T
       <CheckBox checked={on} onToggle={() => ctx.onToggle(key)} />
       <FileIcon />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{file.filename}</p>
-        <p className="text-xs" style={{ color: "var(--text-soft)" }}>{file.category} · {file.size} · {fmt}</p>
+        <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{shownName(file.filename)}</p>
+        <p className="text-xs" style={{ color: "var(--text-soft)" }}>{file.kind === "pdf" ? "PDF · " : ""}{file.category} · {file.size} · {fmt}</p>
       </div>
+      {file.filepath && (
+        <a href={viewHref(file)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} title="Look at this resume"
+          className="text-xs px-2 py-1 rounded-lg border" style={{ color: "var(--text)", borderColor: "var(--border)", background: "var(--surface)", textDecoration: "none", fontWeight: 600 }}>
+          View
+        </a>
+      )}
       <a
-        href={`/api/resumes/download?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(file.filename)}`}
+        href={`/api/resumes/download?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(shownName(file.filename))}`}
         download
         onClick={e => e.stopPropagation()}
         className="text-xs px-2 py-1 rounded-lg border transition-colors"
@@ -135,7 +156,16 @@ function LibraryTree({ files, folders, checked, onToggle }: { files: ResumeFile[
   if (files.length === 0 && folders.length === 0) return null
   return (
     <div className="space-y-0.5">
-      {[...root.folders.values()].map(c => <FolderRow key={c.name} node={c} depth={0} relpath={c.name} ctx={ctx} />)}
+      {[...root.folders.values()].filter(c => isEmailFolder(c.name)).map(person => (
+        <section key={person.name} aria-label={person.name} style={{ marginBottom: 14 }}>
+          <h3 style={{ margin: "8px 0 6px", padding: "0 8px", fontSize: 16, fontWeight: 700, color: "var(--text)", overflowWrap: "anywhere" }}>
+            {person.name} <span style={{ fontWeight: 500, fontSize: 13, color: "var(--text-soft)" }}>· {countFiles(person)} {countFiles(person) === 1 ? "file" : "files"}</span>
+          </h3>
+          {[...person.folders.values()].map(c => <FolderRow key={c.name} node={c} depth={0} relpath={`${person.name}/${c.name}`} ctx={ctx} />)}
+          {person.files.map(f => <FileRow key={f.id} file={f} depth={0} ctx={ctx} />)}
+        </section>
+      ))}
+      {[...root.folders.values()].filter(c => !isEmailFolder(c.name)).map(c => <FolderRow key={c.name} node={c} depth={0} relpath={c.name} ctx={ctx} />)}
       {root.files.map(f => <FileRow key={f.id} file={f} depth={0} ctx={ctx} />)}
     </div>
   )
@@ -156,6 +186,25 @@ interface UploadedEntry {
 export default function DocumentsClient({ initialFiles, initialFolders = [], onDone }: { initialFiles: ResumeFile[]; initialFolders?: string[]; onDone?: () => void }) {
   const router = useRouter()
   const { confirm, prompt } = useDialogs()
+  const [selectedEmail, setSelectedEmail] = useState("")
+  const [organizing, setOrganizing] = useState(false)
+  const [indexRevision, setIndexRevision] = useState(0)
+  const [emailCounts, setEmailCounts] = useState<Record<string, number>>({})
+  const [discoveredEmails, setDiscoveredEmails] = useState<string[]>([])
+  const [libraryIndexError, setLibraryIndexError] = useState(false)
+  useEffect(() => {
+    fetch("/api/resumes/library-index", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("Index unavailable")))
+      .then(data => {
+        const counts: Record<string, number> = {}
+        for (const entry of data.entries || []) {
+          if (entry.identity) counts[entry.identity] = (counts[entry.identity] || 0) + 1
+        }
+        setLibraryIndexError(Boolean(data.errors?.length))
+        setEmailCounts(counts)
+        setDiscoveredEmails((data.libraries || []).map((lib: {email:string}) => lib.email).filter((email: string) => email !== "Unverified"))
+      }).catch(() => setLibraryIndexError(true))
+  }, [initialFiles, indexRevision])
   const [preloaded, setPreloaded] = useState<ResumeFile[]>(initialFiles)
   useEffect(() => { setPreloaded(initialFiles) }, [initialFiles])
 
@@ -164,6 +213,13 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [err, setErr] = useState("")
   const [notice, setNotice] = useState("")
+  // The resumes the WhatsApp bot made are brought in when this page opens (see WhatsAppClaim below): 13 Oct 2026,
+  // eighteen had been made that day and this page held none.
+  const broughtIn = useCallback((moved: number) => {
+    if (moved) setNotice(`I brought in ${moved} resume${moved === 1 ? "" : "s"} made on WhatsApp. Each one is in the folder for its kind of job.`)
+    router.refresh()
+    setIndexRevision(v => v + 1)
+  }, [router])
 
   function toggleCheck(key: string) {
     setChecked(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n })
@@ -173,6 +229,24 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
     ...preloaded,
     ...uploaded.filter(u => u.status === "ready").map(u => u.file),
   ]
+
+  async function organizeLibrary() {
+    setOrganizing(true)
+    setErr("")
+    try {
+      const response = await fetch("/api/resumes/organize", { method: "POST" })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || "Organization failed")
+      setNotice(`Organized ${result.kept} resumes into ${result.foldersPerEmail} folders per email. Removed ${result.removed} duplicate or lower matching versions.${result.unassigned ? ` ${result.unassigned} need an email review.` : ""}`)
+      setUploaded([])
+      setChecked(new Set())
+      router.refresh()
+      setIndexRevision(v => v + 1)
+    } catch (error) { setErr(error instanceof Error ? error.message : "Organization failed") }
+    finally { setOrganizing(false) }
+  }
+  const visibleFiles = selectedEmail ? allFiles.filter(file => file.category.split("/")[0].trim() === selectedEmail) : allFiles
+  const visibleFolders = selectedEmail ? initialFolders.filter(folder => folder.split("/")[0].trim() === selectedEmail) : initialFolders
 
   // ── Upload ─────────────────────────────────────────────────────────────────
   async function uploadZip(file: File) {
@@ -185,7 +259,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
       setUploaded(prev => prev.filter(u => u.file.id !== tempId))
       if (res.ok && data.zip) {
         setNotice(`Imported ${data.added} resume${data.added === 1 ? "" : "s"} from ${file.name}${data.skipped ? ` · skipped ${data.skipped} duplicate${data.skipped === 1 ? "" : "s"}` : ""}.`)
-        router.refresh()
+        await organizeLibrary()
       } else {
         setErr(data.error ?? "Zip import failed.")
       }
@@ -197,15 +271,15 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return
-    const accepted = [...files].filter(f => /\.(docx|zip)$/i.test(f.name))
-    if (!accepted.length) { setErr("Upload a .docx resume or a .zip of resumes."); return }
+    const accepted = [...files].filter(f => /\.(docx|pdf|zip)$/i.test(f.name))
+    if (!accepted.length) { setErr("Add a Word file (.docx), a PDF, or a .zip of them."); return }
     setErr(""); setNotice("")
 
     for (const file of accepted) {
       if (/\.zip$/i.test(file.name)) { await uploadZip(file); continue }
       const tempId = `tmp_${Date.now()}_${Math.random()}`
       const tempEntry: UploadedEntry = {
-        file: { id: tempId, filename: file.name.replace(/\.docx$/i, ""), filepath: "", category: "Uploaded", size: `${(file.size/1024).toFixed(0)} KB`, uploadedAt: new Date().toISOString() },
+        file: { id: tempId, filename: file.name.replace(/\.(docx|pdf)$/i, ""), filepath: "", category: "Uploaded", size: `${(file.size/1024).toFixed(0)} KB`, uploadedAt: new Date().toISOString(), kind: /\.pdf$/i.test(file.name) ? "pdf" : "docx" },
         status: "scanning",
       }
       setUploaded(prev => [tempEntry, ...prev])
@@ -230,7 +304,10 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
             setUploaded(prev => prev.map(u => u.file.id === tempId ? { file: data.file, status: "ready" } : u))
           }
         } else if (res.ok && data.file) {
-          setUploaded(prev => prev.map(u => u.file.id === tempId ? { file: data.file, status: "ready" } : u))
+          // A PDF: the PDF itself is listed, and so is the Word copy made from its words when they could be read.
+          const added: UploadedEntry[] = data.pdf && data.converted && data.pdfFile ? [{ file: data.pdfFile, status: "ready" }, { file: data.file, status: "ready" }] : [{ file: data.file, status: "ready" }]
+          setUploaded(prev => prev.flatMap(u => (u.file.id === tempId ? added : [u])))
+          if (data.pdf) setNotice(data.converted ? "Your PDF is kept, and a Word copy was made from its words so it can be tailored: same words, a plain layout." : "Your PDF is kept. Its words could not be read (it may be a scan), so it cannot be tailored; add a Word file for that.")
           router.refresh()
         } else {
           setUploaded(prev => prev.map(u => u.file.id === tempId ? { ...u, status: "error", errorMsg: data.error ?? `HTTP ${res.status}` } : u))
@@ -293,7 +370,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto" }} className="space-y-5">
+    <div className="space-y-5">
 
       {/* Header */}
       <div className="anim-fade-up d-0 flex items-center justify-between gap-4 flex-wrap">
@@ -307,6 +384,33 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
             Back to tailoring
           </button>
         )}
+      </div>
+
+      <WhatsAppClaim onMoved={broughtIn} />
+
+      {allFiles.length > 0 && <div className="flex flex-wrap items-center gap-3">
+        <button type="button" className="btn-outline" onClick={organizeLibrary} disabled={organizing}>
+          {organizing ? "Organizing resumes…" : "Organize by email and remove duplicates"}
+        </button>
+        <p className="text-sm" style={{color:"var(--text-muted)"}}>Puts each resume under the email written in it, in folders by kind of job, and removes copies.</p>
+      </div>}
+      {discoveredEmails.length > 0 && <label className="block text-sm">Show email library
+        <select className="block mt-2 w-full rounded-lg border p-3" value={selectedEmail} onChange={e => { setSelectedEmail(e.target.value); setChecked(new Set()) }}>
+          <option value="">All email libraries</option>
+          {discoveredEmails.map(email => <option key={email} value={email}>{email}</option>)}
+        </select>
+      </label>}
+      {/* Discover email identities from actual tenant-owned resumes; never hardcode an owner. */}
+      {libraryIndexError && <p role="alert" className="text-sm" style={{color:"var(--text-muted)"}}>Resume indexing is temporarily unavailable. Your uploaded files are not affected.</p>}
+      {discoveredEmails.length === 0 && allFiles.length > 0 && <div className="rounded-xl border p-4 text-sm" style={{borderColor:"var(--border)",background:"var(--surface)"}}><strong>Not sorted by email yet.</strong><p className="mt-2">Press Organize and each resume goes under the email written in it. One account can keep resumes for more than one email.</p></div>}
+      <div className="grid gap-3 sm:grid-cols-2" aria-label="Resume libraries by email">
+        {discoveredEmails.map(email => (
+          <div key={email} className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+            <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>Associated with {email}</p>
+            <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>{emailCounts[email] || 0} indexed resumes</p>
+            <p className="text-xs mt-1" style={{ color: "var(--text-soft)" }}>25 category folders after organization. Empty folders remain available for future resumes.</p>
+          </div>
+        ))}
       </div>
 
       {/* Upload zone */}
@@ -325,7 +429,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
           <input
             id="doc-upload"
             type="file"
-            accept=".docx,.zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip"
+            accept=".docx,.pdf,.zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,application/zip"
             multiple
             className="sr-only"
             onChange={e => { handleFiles(e.target.files); e.target.value = "" }}
@@ -338,7 +442,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
               {dragging ? "Let go to add it" : "Drop your resume files here"}
             </p>
             <p className="text-sm mt-1" style={{ color: "var(--text-soft)" }}>
-              Word files (.docx), or a .zip with folders inside
+              Word files (.docx), PDFs, or a .zip with folders inside. A PDF is kept as it is, and a Word copy is made from its words so it can be tailored.
             </p>
           </div>
           <span className="btn-outline" style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>
@@ -349,7 +453,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
 
       {/* Status messages */}
       {err && (
-        <p className="text-sm rounded-xl px-4 py-2.5" style={{ color: "#13120d", background: "rgba(112,108,92,0.08)" }}>
+        <p className="text-sm rounded-xl px-4 py-2.5" style={{ color: "var(--text)", background: "rgba(112,108,92,0.08)" }}>
           ✗ {err}
         </p>
       )}
@@ -364,8 +468,8 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
         <div className="rounded-2xl border overflow-hidden anim-fade-up" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
           {uploaded.filter(u => u.status !== "ready").map(u => {
             const statusStyle = u.status === "scanning"
-              ? { bg: "rgba(144,140,119,0.12)", color: "#6b6858" }
-              : { bg: "rgba(112,108,92,0.12)", color: "#13120d" }
+              ? { bg: "rgba(144,140,119,0.12)", color: "var(--text-muted)" }
+              : { bg: "rgba(112,108,92,0.12)", color: "var(--text)" }
             return (
               <div key={u.file.id} className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0"
                 style={{ borderColor: "var(--border)" }}>
@@ -390,7 +494,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
           <div className="px-4 py-3 border-b flex items-center justify-between gap-2 flex-wrap"
             style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-soft)" }}>
-              Resume Library · {allFiles.length} file{allFiles.length !== 1 ? "s" : ""}
+              Resume Library · {visibleFiles.length} file{visibleFiles.length !== 1 ? "s" : ""}
             </p>
             <div className="flex items-center gap-1.5">
               {checked.size > 0 && (
@@ -403,7 +507,7 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
                   </button>
                   <button onClick={deleteChecked}
                     className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
-                    style={{ background: "rgba(112,108,92,0.1)", color: "#13120d" }}>
+                    style={{ background: "rgba(112,108,92,0.1)", color: "var(--text)" }}>
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     Delete ({checked.size})
                   </button>
@@ -426,8 +530,8 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
           {/* Tree */}
           <div className="p-3">
             <LibraryTree
-              files={allFiles}
-              folders={initialFolders}
+              files={visibleFiles}
+              folders={visibleFolders}
               checked={checked}
               onToggle={toggleCheck}
             />
@@ -436,21 +540,6 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
       )}
 
       {/* Empty state (no files at all) */}
-      {allFiles.length === 0 && initialFolders.length === 0 && uploaded.filter(u => u.status === "scanning").length === 0 && (
-        <div className="rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 py-16 text-center anim-fade-up d-3"
-          style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-            style={{ background: "var(--accent-soft)" }}>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" style={{ color: "var(--accent-txt)" }}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-base font-semibold" style={{ color: "var(--text)" }}>No resumes yet</p>
-            <p className="text-sm mt-1" style={{ color: "var(--text-soft)" }}>Drop a .docx or .zip above to get started</p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

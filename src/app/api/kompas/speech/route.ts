@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
+import { after } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { SpeechError, audioType, transcribeAudio, type SpeechCode } from "@/lib/kompasSpeech"
+import { archiveSessionChunk } from "@/lib/kompasSessionArchive"
+import { hashUserId } from "@/lib/sttLedger"
+import { deductPoints, POINTS_PER_INTERVIEW } from "@/lib/creditsLedger"
 import { checkRateLimit } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
@@ -51,12 +55,33 @@ export async function POST(request: NextRequest) {
   if (audio.byteLength < MIN_BYTES) return refuse("empty")
 
   const language = (request.headers.get("x-speech-lang") || "").trim().toLowerCase()
+  // Session archive: when the client tags a live session, its microphone and
+  // computer audio are saved for maturation and accuracy training.
+  const sessionId = (request.headers.get("x-session-id") || "").replace(/[^a-zA-Z0-9-]/g, "").slice(0, 64)
+  const audioSource = request.headers.get("x-audio-source") === "system" ? "system" : "mic"
   try {
     const heard = await transcribeAudio({
       audio, mime: mime!, purpose,
       hint: decoded(request.headers.get("x-speech-hint"), 400) || undefined,
       language: /^[a-z]{2}$/.test(language) ? language : undefined,
+      sessionId: sessionId || undefined,
+      userHash: hashUserId(user.id),
     })
+    if (sessionId) {
+      const bytes = audio
+      const text = typeof heard === "object" && heard ? String((heard as { text?: unknown }).text || "") : ""
+      const uHash = hashUserId(user.id)
+      // Gel points: a Kompas app interview session costs 1 point, deducted once
+      // per session (idempotent — retries cost nothing extra).
+      const isKompasApp = request.headers.get("x-kompas-app") === "1"
+      after(() => archiveSessionChunk({
+        userId: user.id, sessionId, source: audioSource,
+        audio: bytes, mime: mime!, transcript: text,
+        language: /^[a-z]{2}$/.test(language) ? language : undefined,
+        at: Date.now(),
+      }))
+      if (isKompasApp) after(() => deductPoints(uHash, POINTS_PER_INTERVIEW, `session:${sessionId}`, "interview"))
+    }
     return NextResponse.json(heard, { headers: NO_STORE })
   } catch (e) {
     if (e instanceof SpeechError) return refuse(e.code, e.retryAfterSec)

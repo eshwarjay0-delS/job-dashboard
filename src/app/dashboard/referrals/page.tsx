@@ -170,12 +170,12 @@ export default function ReferralsPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#161510", letterSpacing: "-0.4px", marginBottom: 4 }}>Referral Tracker</h1>
-          <p style={{ fontSize: 13.5, color: "#6e6b5b" }}>Warm introductions land 4× more interviews — track every connection</p>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.4px", marginBottom: 4 }}>Referral Tracker</h1>
+          <p style={{ fontSize: 13.5, color: "var(--text-muted)" }}>Warm introductions land 4× more interviews — track every connection</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => setShowTemplate(true)}
-            style={{ padding: "9px 16px", borderRadius: 9, background: "var(--surface)", color: "#161510", fontSize: 13.5, fontWeight: 600, border: "1.5px solid #e6e2d9", cursor: "pointer" }}>
+            style={{ padding: "9px 16px", borderRadius: 9, background: "var(--surface)", color: "var(--text)", fontSize: 13.5, fontWeight: 600, border: "1.5px solid var(--border)", cursor: "pointer" }}>
             📝 Message Templates
           </button>
           <button onClick={openAdd}
@@ -193,10 +193,10 @@ export default function ReferralsPage() {
           { label: "Referred",         value: referred,        color: "#58564c", sub: "success!" },
           { label: "Follow Up Soon",   value: followUpSoon.length, color: "#2e2d27", sub: "in ≤2 days" },
         ].map(s => (
-          <div key={s.label} style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "14px 18px" }}>
+          <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 18px" }}>
             <div style={{ fontSize: 26, fontWeight: 900, color: s.color, letterSpacing: "-0.5px", lineHeight: 1.1 }}>{s.value}</div>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#161510", marginTop: 3 }}>{s.label}</div>
-            <div style={{ fontSize: 11.5, color: "#6e6b5b" }}>{s.sub}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)", marginTop: 3 }}>{s.label}</div>
+            <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>{s.sub}</div>
           </div>
         ))}
       </div>
@@ -205,10 +205,10 @@ export default function ReferralsPage() {
       {followUpSoon.length > 0 && (
         <div style={{ background: "rgba(132,128,109,0.04)", border: "1px solid rgba(132,128,109,0.2)", borderRadius: 10, padding: "12px 16px", marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <span style={{ fontSize: 16 }}>⏰</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#2e2d27" }}>Follow-up due:</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>Follow-up due:</span>
           {followUpSoon.map(c => (
             <button key={c.id} onClick={() => setSelected(c)}
-              style={{ fontSize: 12.5, fontWeight: 600, color: "#2e2d27", background: "rgba(132,128,109,0.08)", border: "1px solid rgba(132,128,109,0.2)", borderRadius: 100, padding: "3px 10px", cursor: "pointer" }}>
+              style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)", background: "rgba(132,128,109,0.08)", border: "1px solid rgba(132,128,109,0.2)", borderRadius: 100, padding: "3px 10px", cursor: "pointer" }}>
               {c.name} @ {c.company} ({daysUntil(c.followUpDate!)}d)
             </button>
           ))}
@@ -218,11 +218,11 @@ export default function ReferralsPage() {
       {/* Controls */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or company…"
-          style={{ padding: "8px 12px", border: "1.5px solid #e6e2d9", borderRadius: 8, fontSize: 13.5, outline: "none", color: "#161510", minWidth: 220, background: "var(--surface)" }}/>
-        <div style={{ display: "flex", gap: 4, background: "#f2f0ea", borderRadius: 8, padding: 3 }}>
+          style={{ padding: "8px 12px", border: "1.5px solid var(--border)", borderRadius: 8, fontSize: 13.5, outline: "none", color: "var(--text)", minWidth: 220, background: "var(--surface)" }}/>
+        <div style={{ display: "flex", gap: 4, background: "var(--surface-2)", borderRadius: 8, padding: 3 }}>
           {(["board", "list"] as const).map(v => (
             <button key={v} onClick={() => setView(v)}
-              style={{ padding: "5px 14px", borderRadius: 6, fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer", background: view === v ? "#fff" : "transparent", color: view === v ? "var(--accent)" : "#6e6b5b", boxShadow: view === v ? "0 1px 3px rgba(12,11,8,0.1)" : "none" }}>
+              style={{ padding: "5px 14px", borderRadius: 6, fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer", background: view === v ? "var(--surface)" : "transparent", color: view === v ? "var(--accent)" : "var(--text-muted)", boxShadow: view === v ? "0 1px 3px rgba(12,11,8,0.1)" : "none" }}>
               {v === "board" ? "🗂 Board" : "☰ List"}
             </button>
           ))}
@@ -231,8 +231,8 @@ export default function ReferralsPage() {
           {(["all", ...STATUS_FLOW.slice(0, 5)] as const).map(s => (
             <button key={s} onClick={() => setFilterStatus(s as Status | "all")}
               style={{ padding: "5px 11px", borderRadius: 100, fontSize: 12, fontWeight: 600, border: "1px solid",
-                borderColor: filterStatus === s ? "var(--accent)" : "#e6e2d9",
-                background: filterStatus === s ? "rgba(107,104,88,0.07)" : "#fff",
+                borderColor: filterStatus === s ? "var(--accent)" : "var(--border)",
+                background: filterStatus === s ? "rgba(107,104,88,0.07)" : "var(--surface)",
                 color: filterStatus === s ? "var(--accent)" : "#6e6b5b", cursor: "pointer" }}>
               {s === "all" ? "All" : STATUS_INFO[s as Status].label}
             </button>
@@ -255,23 +255,23 @@ export default function ReferralsPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, minHeight: 80 }}>
                   {colContacts.map(c => (
                     <div key={c.id} onClick={() => setSelected(c)}
-                      style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 10, padding: "12px 13px", cursor: "pointer", transition: "border-color .15s, box-shadow .15s" }}
+                      style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 13px", cursor: "pointer", transition: "border-color .15s, box-shadow .15s" }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(107,104,88,0.1)" }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#e6e2d9"; (e.currentTarget as HTMLElement).style.boxShadow = "none" }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#161510", marginBottom: 2 }}>{c.name}</div>
-                      <div style={{ fontSize: 11.5, color: "#6e6b5b", marginBottom: 6 }}>{c.company}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 2 }}>{c.name}</div>
+                      <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginBottom: 6 }}>{c.company}</div>
                       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                         <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 100, background: RELATIONSHIP_INFO[c.relationship].bg, color: RELATIONSHIP_INFO[c.relationship].color, fontWeight: 600 }}>
                           {RELATIONSHIP_INFO[c.relationship].icon} {RELATIONSHIP_INFO[c.relationship].label}
                         </span>
                       </div>
                       {c.followUpDate && daysUntil(c.followUpDate) <= 3 && daysUntil(c.followUpDate) >= 0 && (
-                        <div style={{ fontSize: 10.5, color: "#2e2d27", marginTop: 4, fontWeight: 700 }}>⏰ Follow up {daysUntil(c.followUpDate) === 0 ? "today" : `in ${daysUntil(c.followUpDate)}d`}</div>
+                        <div style={{ fontSize: 10.5, color: "var(--text)", marginTop: 4, fontWeight: 700 }}>⏰ Follow up {daysUntil(c.followUpDate) === 0 ? "today" : `in ${daysUntil(c.followUpDate)}d`}</div>
                       )}
                     </div>
                   ))}
                   {colContacts.length === 0 && (
-                    <div style={{ textAlign: "center", padding: "16px 8px", color: "#aaa492", fontSize: 12, borderRadius: 8, border: "1.5px dashed #e6e2d9" }}>
+                    <div style={{ textAlign: "center", padding: "16px 8px", color: "var(--text-soft)", fontSize: 12, borderRadius: 8, border: "1.5px dashed var(--border)" }}>
                       Drop a contact here
                     </div>
                   )}
@@ -286,10 +286,10 @@ export default function ReferralsPage() {
       {view === "list" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {filtered.length === 0 ? (
-            <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 14, padding: "48px 32px", textAlign: "center" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "48px 32px", textAlign: "center" }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>🤝</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#161510", marginBottom: 6 }}>No contacts yet</div>
-              <div style={{ fontSize: 13.5, color: "#6e6b5b", marginBottom: 20 }}>Add a warm contact to track your referral pipeline</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>No contacts yet</div>
+              <div style={{ fontSize: 13.5, color: "var(--text-muted)", marginBottom: 20 }}>Add a warm contact to track your referral pipeline</div>
               <button onClick={openAdd} style={{ padding: "10px 24px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontSize: 14 }}>+ Add First Contact</button>
             </div>
           ) : filtered.map(c => {
@@ -297,7 +297,7 @@ export default function ReferralsPage() {
             const ri = RELATIONSHIP_INFO[c.relationship]
             return (
               <div key={c.id} onClick={() => setSelected(c)}
-                style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 14, transition: "border-color .15s" }}
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 14, transition: "border-color .15s" }}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = "#e6e2d9"}>
                 {/* Avatar */}
@@ -305,12 +305,12 @@ export default function ReferralsPage() {
                   {ri.icon}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 700, color: "#161510" }}>{c.name}</div>
-                  <div style={{ fontSize: 12.5, color: "#6e6b5b" }}>{c.title} · {c.company}</div>
+                  <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--text)" }}>{c.name}</div>
+                  <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>{c.title} · {c.company}</div>
                 </div>
-                {c.targetRole && <div style={{ fontSize: 12, color: "#6e6b5b", background: "#f2f0ea", padding: "3px 9px", borderRadius: 100 }}>{c.targetRole}</div>}
+                {c.targetRole && <div style={{ fontSize: 12, color: "var(--text-muted)", background: "var(--surface-2)", padding: "3px 9px", borderRadius: 100 }}>{c.targetRole}</div>}
                 <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 100, background: si.bg, color: si.color, whiteSpace: "nowrap" }}>{si.label}</span>
-                {c.lastContactDate && <span style={{ fontSize: 11.5, color: "#aaa492", whiteSpace: "nowrap", flexShrink: 0 }}>{fmtDate(c.lastContactDate)}</span>}
+                {c.lastContactDate && <span style={{ fontSize: 11.5, color: "var(--text-soft)", whiteSpace: "nowrap", flexShrink: 0 }}>{fmtDate(c.lastContactDate)}</span>}
               </div>
             )
           })}
@@ -321,21 +321,21 @@ export default function ReferralsPage() {
       {selected && (
         <>
           <div onClick={() => setSelected(null)} style={{ position: "fixed", inset: 0, background: "rgba(12,11,8,0.35)", zIndex: 300 }}/>
-          <div style={{ position: "fixed", right: 0, top: 0, bottom: 0, width: "min(440px, 95vw)", background: "var(--surface)", borderLeft: "1px solid #e6e2d9", zIndex: 400, overflowY: "auto", padding: "24px" }}>
-            <button onClick={() => setSelected(null)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6e6b5b" }}>✕</button>
+          <div style={{ position: "fixed", right: 0, top: 0, bottom: 0, width: "min(440px, 95vw)", background: "var(--surface)", borderLeft: "1px solid var(--border)", zIndex: 400, overflowY: "auto", padding: "24px" }}>
+            <button onClick={() => setSelected(null)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--text-muted)" }}>✕</button>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
               <div style={{ width: 52, height: 52, borderRadius: 14, background: RELATIONSHIP_INFO[selected.relationship].bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, border: `1.5px solid ${RELATIONSHIP_INFO[selected.relationship].color}33` }}>
                 {RELATIONSHIP_INFO[selected.relationship].icon}
               </div>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: "#161510" }}>{selected.name}</div>
-                <div style={{ fontSize: 13, color: "#6e6b5b" }}>{selected.title} · {selected.company}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text)" }}>{selected.name}</div>
+                <div style={{ fontSize: 13, color: "var(--text-muted)" }}>{selected.title} · {selected.company}</div>
               </div>
             </div>
 
             {/* Status pipeline */}
-            <div style={{ background: "#f7f5f0", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: "#6e6b5b", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Pipeline Status</div>
+            <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Pipeline Status</div>
               <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                 {STATUS_FLOW.slice(0, 5).map((s, i) => {
                   const si = STATUS_INFO[s]
@@ -344,8 +344,8 @@ export default function ReferralsPage() {
                   return (
                     <div key={s} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <span style={{ fontSize: 11.5, fontWeight: 700, padding: "3px 9px", borderRadius: 100,
-                        background: isCurrent ? si.bg : isPast ? "rgba(163,158,139,0.08)" : "#f2f0ea",
-                        color: isCurrent ? si.color : isPast ? "#58564c" : "#aaa492",
+                        background: isCurrent ? si.bg : isPast ? "rgba(163,158,139,0.08)" : "var(--surface-2)",
+                        color: isCurrent ? si.color : isPast ? "var(--text-muted)" : "var(--text-soft)",
                         border: `1px solid ${isCurrent ? si.color + "44" : "transparent"}` }}>
                         {isPast ? "✓" : si.icon} {si.label}
                       </span>
@@ -370,9 +370,9 @@ export default function ReferralsPage() {
                 { label: "Last Contact",   value: selected.lastContactDate ? fmtDate(selected.lastContactDate) : "—" },
                 { label: "Follow Up",      value: selected.followUpDate ? fmtDate(selected.followUpDate) : "—" },
               ].map(({ label, value }) => (
-                <div key={label} style={{ background: "#f7f5f0", borderRadius: 8, padding: "10px 12px" }}>
-                  <div style={{ fontSize: 11, color: "#6e6b5b", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 3 }}>{label}</div>
-                  <div style={{ fontSize: 13.5, color: "#161510", fontWeight: 600 }}>{value}</div>
+                <div key={label} style={{ background: "var(--surface-2)", borderRadius: 8, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 3 }}>{label}</div>
+                  <div style={{ fontSize: 13.5, color: "var(--text)", fontWeight: 600 }}>{value}</div>
                 </div>
               ))}
             </div>
@@ -387,7 +387,7 @@ export default function ReferralsPage() {
               )}
               {selected.email && (
                 <a href={`mailto:${selected.email}`}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 14px", background: "#f7f5f0", border: "1px solid #e6e2d9", borderRadius: 8, fontSize: 13, color: "#161510", fontWeight: 600, textDecoration: "none" }}>
+                  style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 14px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 13, color: "var(--text)", fontWeight: 600, textDecoration: "none" }}>
                   ✉ Email
                 </a>
               )}
@@ -395,15 +395,15 @@ export default function ReferralsPage() {
 
             {/* Notes */}
             {selected.notes && (
-              <div style={{ background: "#f7f5f0", borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#6e6b5b", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 6 }}>Notes</div>
-                <div style={{ fontSize: 13.5, color: "#161510", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{selected.notes}</div>
+              <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 6 }}>Notes</div>
+                <div style={{ fontSize: 13.5, color: "var(--text)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{selected.notes}</div>
               </div>
             )}
 
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => openEdit(selected)} style={{ flex: 1, padding: "10px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontSize: 13.5 }}>Edit Contact</button>
-              <button onClick={() => del(selected.id)} style={{ padding: "10px 14px", background: "transparent", color: "#2e2d27", border: "1px solid #ddd8cd", borderRadius: 9, cursor: "pointer", fontSize: 13.5 }}>Delete</button>
+              <button onClick={() => del(selected.id)} style={{ padding: "10px 14px", background: "transparent", color: "var(--text)", border: "1px solid var(--border-strong)", borderRadius: 9, cursor: "pointer", fontSize: 13.5 }}>Delete</button>
             </div>
           </div>
         </>
@@ -414,7 +414,7 @@ export default function ReferralsPage() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(12,11,8,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
           onClick={e => { if (e.target === e.currentTarget) setShowForm(false) }}>
           <div style={{ background: "var(--surface)", borderRadius: 16, padding: "28px 32px", width: "100%", maxWidth: 560, boxShadow: "0 20px 60px rgba(12,11,8,0.2)", maxHeight: "90vh", overflowY: "auto" }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#161510", marginBottom: 20 }}>{editing ? "Edit Contact" : "Add Contact"}</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)", marginBottom: 20 }}>{editing ? "Edit Contact" : "Add Contact"}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div><label style={LS}>Name *</label><input value={f.name} onChange={e => setF(p => ({ ...p, name: e.target.value }))} placeholder="Full name" style={IS}/></div>
@@ -454,7 +454,7 @@ export default function ReferralsPage() {
               <button onClick={save} style={{ flex: 1, padding: "11px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
                 {editing ? "Save Changes" : "Add Contact"}
               </button>
-              <button onClick={() => setShowForm(false)} style={{ padding: "11px 18px", background: "transparent", color: "#6e6b5b", border: "1.5px solid #e6e2d9", borderRadius: 9, cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => setShowForm(false)} style={{ padding: "11px 18px", background: "transparent", color: "var(--text-muted)", border: "1.5px solid var(--border)", borderRadius: 9, cursor: "pointer" }}>Cancel</button>
             </div>
           </div>
         </div>
@@ -466,8 +466,8 @@ export default function ReferralsPage() {
           onClick={e => { if (e.target === e.currentTarget) setShowTemplate(false) }}>
           <div style={{ background: "var(--surface)", borderRadius: 16, padding: "28px 32px", width: "100%", maxWidth: 600, boxShadow: "0 20px 60px rgba(12,11,8,0.2)", maxHeight: "85vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "#161510" }}>📝 Outreach Templates</div>
-              <button onClick={() => setShowTemplate(false)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#6e6b5b" }}>✕</button>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)" }}>📝 Outreach Templates</div>
+              <button onClick={() => setShowTemplate(false)} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "var(--text-muted)" }}>✕</button>
             </div>
             <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
               {Object.entries(RELATIONSHIP_INFO).map(([k, v]) => (
@@ -478,10 +478,10 @@ export default function ReferralsPage() {
                 </button>
               ))}
             </div>
-            <div style={{ background: "#f7f5f0", borderRadius: 10, padding: "16px", fontSize: 13.5, color: "#161510", lineHeight: 1.7, whiteSpace: "pre-wrap", fontFamily: "inherit", border: "1px solid #e6e2d9" }}>
+            <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: "16px", fontSize: 13.5, color: "var(--text)", lineHeight: 1.7, whiteSpace: "pre-wrap", fontFamily: "inherit", border: "1px solid var(--border)" }}>
               {TEMPLATE_MESSAGES[templateRel]}
             </div>
-            <p style={{ fontSize: 12, color: "#6e6b5b", marginTop: 10 }}>Replace [Name], [Company], [role], [domain] with actual details before sending.</p>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 10 }}>Replace [Name], [Company], [role], [domain] with actual details before sending.</p>
             <button onClick={() => { navigator.clipboard?.writeText(TEMPLATE_MESSAGES[templateRel]).catch(() => {}) }}
               style={{ marginTop: 10, padding: "9px 20px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
               📋 Copy Template

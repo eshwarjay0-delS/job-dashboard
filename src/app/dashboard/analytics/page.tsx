@@ -59,10 +59,10 @@ export default function AnalyticsPage() {
 
   // Funnel: applied → responded → interviewed → offer
   const funnel = [
-    { label: "Applied",     n: m.total,       color: "#1c1b16" },
-    { label: "Responded",   n: m.responded,   color: "#6b6858" },
-    { label: "Interviewed", n: m.interviewed, color: "#4d4b44" },
-    { label: "Offer",       n: m.offers,      color: "#42413c" },
+    { label: "Applied",     n: m.total,       color: "var(--text)" },
+    { label: "Responded",   n: m.responded,   color: "var(--text-muted)" },
+    { label: "Interviewed", n: m.interviewed, color: "var(--text-muted)" },
+    { label: "Offer",       n: m.offers,      color: "var(--text-muted)" },
   ]
   const funnelMax = Math.max(1, m.total)
 

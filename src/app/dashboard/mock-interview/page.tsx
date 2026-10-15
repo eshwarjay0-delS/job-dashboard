@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { speak, stopSpeaking, canSpeak } from "@/lib/speak"
 
 /* ═══════════════════════════════════════════════════════════════════
    TYPES
@@ -141,6 +142,7 @@ export default function MockInterviewPage() {
     setShowTip(false)
     setTimer(0)
     setTimerRunning(true)
+    stopSpeaking()
   }
 
   function handleAnswerChange(v: string) {
@@ -251,14 +253,14 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#161510", letterSpacing: "-0.4px", marginBottom: 4 }}>AI Mock Interview</h1>
-          <p style={{ fontSize: 13.5, color: "#6e6b5b" }}>Practice STAR answers · Get instant AI scoring · Track readiness</p>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.4px", marginBottom: 4 }}>AI Mock Interview</h1>
+          <p style={{ fontSize: 13.5, color: "var(--text-muted)" }}>Practice STAR answers · Get instant AI scoring · Track readiness</p>
         </div>
-        <div style={{ display: "flex", gap: 4, background: "#f2f0ea", borderRadius: 10, padding: 4 }}>
+        <div style={{ display: "flex", gap: 4, background: "var(--surface-2)", borderRadius: 10, padding: 4 }}>
           {(["practice", "history"] as const).map(v => (
             <button key={v} onClick={() => setView(v)}
               style={{ padding: "6px 16px", borderRadius: 7, fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer",
-                background: view === v ? "#fff" : "transparent", color: view === v ? "var(--accent)" : "#6e6b5b",
+                background: view === v ? "var(--surface)" : "transparent", color: view === v ? "var(--accent)" : "var(--text-muted)",
                 boxShadow: view === v ? "0 1px 3px rgba(12,11,8,0.1)" : "none" }}>
               {v === "practice" ? "🎤 Practice" : `📋 History (${session.length})`}
             </button>
@@ -272,37 +274,37 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
 
           {/* Readiness bar (shown after first answer) */}
           {session.length > 0 && (
-            <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "14px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
               <div>
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: "#6e6b5b", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>Session Readiness</div>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>Session Readiness</div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                   <span style={{ fontSize: 28, fontWeight: 900, color: readiness.color, letterSpacing: "-1px" }}>{avgScore}</span>
-                  <span style={{ fontSize: 13, color: "#6e6b5b" }}>/ 100 avg · {session.length} answered</span>
+                  <span style={{ fontSize: 13, color: "var(--text-muted)" }}>/ 100 avg · {session.length} answered</span>
                 </div>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ height: 8, background: "#f2f0ea", borderRadius: 100, overflow: "hidden", marginBottom: 4 }}>
+                <div style={{ height: 8, background: "var(--surface-2)", borderRadius: 100, overflow: "hidden", marginBottom: 4 }}>
                   <div style={{ height: "100%", width: avgScore + "%", background: readiness.color, borderRadius: 100, transition: "width .6s ease" }}/>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ fontSize: 12.5, fontWeight: 700, color: readiness.color }}>{readiness.label}</span>
-                  <span style={{ fontSize: 12, color: "#aaa492" }}>{readiness.desc}</span>
+                  <span style={{ fontSize: 12, color: "var(--text-soft)" }}>{readiness.desc}</span>
                 </div>
               </div>
             </div>
           )}
 
           {/* Filters */}
-          <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "16px 20px" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 20px" }}>
             <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#6e6b5b", marginBottom: 6 }}>Category</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6 }}>Category</div>
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                   {CATEGORIES.map(c => (
                     <button key={c} onClick={() => setCategory(c)}
                       style={{ padding: "5px 11px", borderRadius: 100, fontSize: 12.5, fontWeight: 600, border: "1.5px solid",
-                        borderColor: category === c ? "var(--accent)" : "#e6e2d9",
-                        background: category === c ? "rgba(107,104,88,0.07)" : "#fff",
+                        borderColor: category === c ? "var(--accent)" : "var(--border)",
+                        background: category === c ? "rgba(107,104,88,0.07)" : "var(--surface)",
                         color: category === c ? "var(--accent)" : "#6e6b5b", cursor: "pointer" }}>
                       {c}
                     </button>
@@ -310,13 +312,13 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#6e6b5b", marginBottom: 6 }}>Difficulty</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6 }}>Difficulty</div>
                 <div style={{ display: "flex", gap: 4 }}>
                   {(["all", "easy", "medium", "hard"] as const).map(d => (
                     <button key={d} onClick={() => setDifficulty(d)}
                       style={{ padding: "5px 11px", borderRadius: 100, fontSize: 12.5, fontWeight: 600, border: "1.5px solid",
-                        borderColor: difficulty === d ? (d === "all" ? "var(--accent)" : DIFFICULTY_COLOR[d as keyof typeof DIFFICULTY_COLOR]) : "#e6e2d9",
-                        background: difficulty === d ? (d === "all" ? "rgba(107,104,88,0.07)" : DIFFICULTY_COLOR[d as keyof typeof DIFFICULTY_COLOR] + "15") : "#fff",
+                        borderColor: difficulty === d ? (d === "all" ? "var(--accent)" : DIFFICULTY_COLOR[d as keyof typeof DIFFICULTY_COLOR]) : "var(--border)",
+                        background: difficulty === d ? (d === "all" ? "rgba(107,104,88,0.07)" : DIFFICULTY_COLOR[d as keyof typeof DIFFICULTY_COLOR] + "15") : "var(--surface)",
                         color: difficulty === d ? (d === "all" ? "var(--accent)" : DIFFICULTY_COLOR[d as keyof typeof DIFFICULTY_COLOR]) : "#6e6b5b", cursor: "pointer" }}>
                       {d === "all" ? "All" : d.charAt(0).toUpperCase() + d.slice(1)}
                     </button>
@@ -345,22 +347,29 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   {/* Timer */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13.5, fontWeight: 700, color: timer > 120 ? "#2e2d27" : "#6e6b5b", background: "#f7f5f0", padding: "5px 12px", borderRadius: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13.5, fontWeight: 700, color: timer > 120 ? "var(--text)" : "var(--text-muted)", background: "#f7f5f0", padding: "5px 12px", borderRadius: 8 }}>
                     ⏱ {fmtTimer(timer)}
                   </div>
                   <button onClick={() => setShowTip(!showTip)}
-                    style={{ padding: "5px 12px", fontSize: 12.5, fontWeight: 600, color: "#7e7a68", background: "rgba(176,170,153,0.08)", border: "1px solid rgba(176,170,153,0.2)", borderRadius: 8, cursor: "pointer" }}>
+                    style={{ padding: "5px 12px", fontSize: 12.5, fontWeight: 600, color: "var(--text-soft)", background: "rgba(176,170,153,0.08)", border: "1px solid rgba(176,170,153,0.2)", borderRadius: 8, cursor: "pointer" }}>
                     💡 {showTip ? "Hide" : "Show"} Tip
                   </button>
+                  {canSpeak() && (
+                    <button onClick={() => speak(current.text)}
+                      style={{ padding: "5px 12px", fontSize: 12.5, fontWeight: 600, color: "var(--text-soft)", background: "rgba(176,170,153,0.08)", border: "1px solid rgba(176,170,153,0.2)", borderRadius: 8, cursor: "pointer" }}
+                      aria-label="Hear the question read aloud">
+                      🔊 Hear it
+                    </button>
+                  )}
                 </div>
               </div>
 
-              <div style={{ fontSize: 18, fontWeight: 700, color: "#161510", lineHeight: 1.5, marginBottom: showTip ? 12 : 20 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", lineHeight: 1.5, marginBottom: showTip ? 12 : 20 }}>
                 "{current.text}"
               </div>
 
               {showTip && (
-                <div style={{ background: "rgba(176,170,153,0.05)", border: "1px solid rgba(176,170,153,0.2)", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13.5, color: "#58564c", lineHeight: 1.6 }}>
+                <div style={{ background: "rgba(176,170,153,0.05)", border: "1px solid rgba(176,170,153,0.2)", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13.5, color: "var(--text-muted)", lineHeight: 1.6 }}>
                   💡 <strong>Coach tip:</strong> {current.tip}
                 </div>
               )}
@@ -373,10 +382,10 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
                   { letter: "A", label: "Action",    desc: "What YOU did (not 'we')" },
                   { letter: "R", label: "Result",    desc: "Measurable outcome" },
                 ].map(s => (
-                  <div key={s.letter} style={{ background: "#f7f5f0", borderRadius: 8, padding: "8px 10px", textAlign: "center" }}>
+                  <div key={s.letter} style={{ background: "var(--surface-2)", borderRadius: 8, padding: "8px 10px", textAlign: "center" }}>
                     <div style={{ fontSize: 16, fontWeight: 900, color: "var(--accent)", marginBottom: 2 }}>{s.letter}</div>
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: "#161510" }}>{s.label}</div>
-                    <div style={{ fontSize: 10.5, color: "#6e6b5b" }}>{s.desc}</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text)" }}>{s.label}</div>
+                    <div style={{ fontSize: 10.5, color: "var(--text-muted)" }}>{s.desc}</div>
                   </div>
                 ))}
               </div>
@@ -388,14 +397,14 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
                   onChange={e => handleAnswerChange(e.target.value)}
                   placeholder="Type your answer here… Start with the situation: when was this, at which company, what was the context? Then describe your specific task, the actions you personally took (use 'I', not 'we'), and finally a quantified result."
                   rows={8}
-                  style={{ width: "100%", padding: "14px 16px", border: "1.5px solid #e6e2d9", borderRadius: 10, fontSize: 14, color: "#161510", lineHeight: 1.7, resize: "vertical", outline: "none", fontFamily: "inherit", boxSizing: "border-box", minHeight: 160 }}
+                  style={{ width: "100%", padding: "14px 16px", border: "1.5px solid var(--border)", borderRadius: 10, fontSize: 14, color: "var(--text)", lineHeight: 1.7, resize: "vertical", outline: "none", fontFamily: "inherit", boxSizing: "border-box", minHeight: 160 }}
                 />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-                  <span style={{ fontSize: 12, color: wordCount < 50 ? "#aaa492" : wordCount < 80 ? "#7e7a68" : "#58564c" }}>
+                  <span style={{ fontSize: 12, color: wordCount < 50 ? "var(--text-soft)" : wordCount < 80 ? "var(--text-soft)" : "var(--text-muted)" }}>
                     {wordCount} words {wordCount < 50 ? "· aim for 80–150" : wordCount < 80 ? "· almost there" : "· good length"}
                   </span>
                   <button onClick={submitAnswer} disabled={scoring || wordCount < 20}
-                    style={{ padding: "10px 24px", background: wordCount >= 20 ? "var(--accent)" : "#e6e2d9", color: wordCount >= 20 ? "#fff" : "#aaa492", border: "none", borderRadius: 9, fontWeight: 700, cursor: wordCount >= 20 ? "pointer" : "default", fontSize: 14, transition: "all .15s" }}>
+                    style={{ padding: "10px 24px", background: wordCount >= 20 ? "var(--accent)" : "var(--surface-3)", color: wordCount >= 20 ? "#fff" : "var(--text-soft)", border: "none", borderRadius: 9, fontWeight: 700, cursor: wordCount >= 20 ? "pointer" : "default", fontSize: 14, transition: "all .15s" }}>
                     {scoring ? "Scoring…" : "✨ Get AI Score"}
                   </button>
                 </div>
@@ -405,10 +414,10 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
 
           {/* Score card */}
           {score && !scoring && (
-            <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 14, padding: "24px 28px", animation: "fadeIn .3s ease" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "24px 28px", animation: "fadeIn .3s ease" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
                 <div>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: "#6e6b5b", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Your Score</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Your Score</div>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
                     <span style={{ fontSize: 52, fontWeight: 900, color: GRADE_COLOR[score.grade], letterSpacing: "-2px", lineHeight: 1 }}>{score.grade}</span>
                     <span style={{ fontSize: 22, fontWeight: 800, color: GRADE_COLOR[score.grade] }}>{score.total}/100</span>
@@ -434,33 +443,33 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
                   const color = pct >= 80 ? "#58564c" : pct >= 56 ? "#6e6b5b" : pct >= 40 ? "#7e7a68" : "#2e2d27"
                   return (
                     <div key={label} style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 20, fontWeight: 900, color, marginBottom: 4 }}>{value}<span style={{ fontSize: 13, fontWeight: 600, color: "#aaa492" }}>/25</span></div>
-                      <div style={{ height: 6, background: "#f2f0ea", borderRadius: 100, overflow: "hidden", marginBottom: 4 }}>
+                      <div style={{ fontSize: 20, fontWeight: 900, color, marginBottom: 4 }}>{value}<span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-soft)" }}>/25</span></div>
+                      <div style={{ height: 6, background: "var(--surface-2)", borderRadius: 100, overflow: "hidden", marginBottom: 4 }}>
                         <div style={{ height: "100%", width: pct + "%", background: color, borderRadius: 100, transition: "width .6s ease" }}/>
                       </div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "#6e6b5b" }}>{label}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>{label}</div>
                     </div>
                   )
                 })}
               </div>
 
               {/* Feedback */}
-              <div style={{ background: "#f7f5f0", borderRadius: 10, padding: "14px 16px", marginBottom: 14 }}>
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: "#6e6b5b", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>AI Feedback</div>
-                <div style={{ fontSize: 13.5, color: "#161510", lineHeight: 1.65 }}>{score.feedback}</div>
+              <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: "14px 16px", marginBottom: 14 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>AI Feedback</div>
+                <div style={{ fontSize: 13.5, color: "var(--text)", lineHeight: 1.65 }}>{score.feedback}</div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 {score.strengths.length > 0 && (
                   <div style={{ background: "rgba(163,158,139,0.04)", border: "1px solid rgba(163,158,139,0.15)", borderRadius: 10, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#58564c", marginBottom: 8 }}>✓ Strengths</div>
-                    {score.strengths.map((s, i) => <div key={i} style={{ fontSize: 13, color: "#535149", lineHeight: 1.55, marginBottom: 4 }}>• {s}</div>)}
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", marginBottom: 8 }}>✓ Strengths</div>
+                    {score.strengths.map((s, i) => <div key={i} style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.55, marginBottom: 4 }}>• {s}</div>)}
                   </div>
                 )}
                 {score.improvements.length > 0 && (
                   <div style={{ background: "rgba(132,128,109,0.04)", border: "1px solid rgba(132,128,109,0.15)", borderRadius: 10, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#2e2d27", marginBottom: 8 }}>↑ Improvements</div>
-                    {score.improvements.map((s, i) => <div key={i} style={{ fontSize: 13, color: "#42413c", lineHeight: 1.55, marginBottom: 4 }}>• {s}</div>)}
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>↑ Improvements</div>
+                    {score.improvements.map((s, i) => <div key={i} style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.55, marginBottom: 4 }}>• {s}</div>)}
                   </div>
                 )}
               </div>
@@ -469,10 +478,10 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
 
           {/* Empty state */}
           {!current && (
-            <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 14, padding: "56px 32px", textAlign: "center" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "56px 32px", textAlign: "center" }}>
               <div style={{ fontSize: 44, marginBottom: 14 }}>🎤</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "#161510", marginBottom: 6 }}>Ready to practice?</div>
-              <div style={{ fontSize: 13.5, color: "#6e6b5b", marginBottom: 8, maxWidth: 420, margin: "0 auto 24px" }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>Ready to practice?</div>
+              <div style={{ fontSize: 13.5, color: "var(--text-muted)", marginBottom: 8, maxWidth: 420, margin: "0 auto 24px" }}>
                 Pick a category and difficulty, then hit "Start Practice." Answer the question using the STAR format and get instant AI scoring with specific feedback.
               </div>
               <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 24 }}>
@@ -492,10 +501,10 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
       {view === "history" && (
         <div>
           {session.length === 0 ? (
-            <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 14, padding: "48px 32px", textAlign: "center" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "48px 32px", textAlign: "center" }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>📋</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#161510", marginBottom: 6 }}>No practice sessions yet</div>
-              <div style={{ fontSize: 13.5, color: "#6e6b5b" }}>Answer your first question to see your history here</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>No practice sessions yet</div>
+              <div style={{ fontSize: 13.5, color: "var(--text-muted)" }}>Answer your first question to see your history here</div>
             </div>
           ) : (
             <>
@@ -507,16 +516,16 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
                   { label: "Best Score", value: Math.max(...session.map(e => e.score.total)) + "/100", color: "#58564c" },
                   { label: "Readiness", value: readiness.label, color: readiness.color },
                 ].map(s => (
-                  <div key={s.label} style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 10, padding: "12px 16px" }}>
+                  <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 16px" }}>
                     <div style={{ fontSize: s.label === "Readiness" ? 13 : 20, fontWeight: 900, color: s.color, letterSpacing: s.label === "Readiness" ? 0 : "-0.5px" }}>{s.value}</div>
-                    <div style={{ fontSize: 11.5, color: "#6e6b5b", marginTop: 2, fontWeight: 600 }}>{s.label}</div>
+                    <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2, fontWeight: 600 }}>{s.label}</div>
                   </div>
                 ))}
               </div>
 
               {/* Score trend by category */}
-              <div style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "16px 20px", marginBottom: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#161510", marginBottom: 12 }}>Score by Category</div>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 20px", marginBottom: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>Score by Category</div>
                 {Array.from(new Set(session.map(e => e.category))).map(cat => {
                   const catEntries = session.filter(e => e.category === cat)
                   const catAvg = Math.round(catEntries.reduce((a, e) => a + e.score.total, 0) / catEntries.length)
@@ -524,10 +533,10 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
                   return (
                     <div key={cat} style={{ marginBottom: 10 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "#161510" }}>{cat}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{cat}</span>
                         <span style={{ fontSize: 13, fontWeight: 700, color }}>{catAvg}/100 ({catEntries.length} answers)</span>
                       </div>
-                      <div style={{ height: 8, background: "#f2f0ea", borderRadius: 100, overflow: "hidden" }}>
+                      <div style={{ height: 8, background: "var(--surface-2)", borderRadius: 100, overflow: "hidden" }}>
                         <div style={{ height: "100%", width: catAvg + "%", background: color, borderRadius: 100 }}/>
                       </div>
                     </div>
@@ -540,25 +549,25 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
                 {session.map((entry, i) => {
                   const color = GRADE_COLOR[entry.score.grade]
                   return (
-                    <div key={i} style={{ background: "var(--surface)", border: "1px solid #e6e2d9", borderRadius: 12, padding: "14px 18px" }}>
+                    <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 18px" }}>
                       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13.5, fontWeight: 700, color: "#161510", marginBottom: 4, lineHeight: 1.4 }}>{entry.questionText}</div>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--text)", marginBottom: 4, lineHeight: 1.4 }}>{entry.questionText}</div>
                           <div style={{ display: "flex", gap: 6 }}>
                             <span style={{ fontSize: 11.5, padding: "2px 8px", borderRadius: 100, background: "rgba(107,104,88,0.07)", color: "var(--accent)", fontWeight: 600 }}>{entry.category}</span>
-                            <span style={{ fontSize: 11.5, color: "#aaa492" }}>{new Date(entry.ts).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                            <span style={{ fontSize: 11.5, color: "var(--text-soft)" }}>{new Date(entry.ts).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                           </div>
                         </div>
                         <div style={{ textAlign: "center", flexShrink: 0 }}>
                           <div style={{ fontSize: 22, fontWeight: 900, color }}>{entry.score.grade}</div>
-                          <div style={{ fontSize: 11.5, color: "#aaa492" }}>{entry.score.total}/100</div>
+                          <div style={{ fontSize: 11.5, color: "var(--text-soft)" }}>{entry.score.total}/100</div>
                         </div>
                       </div>
                       <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
                         {[["S", entry.score.situation], ["T", entry.score.task], ["A", entry.score.action], ["R", entry.score.result]].map(([l, v]) => (
-                          <div key={l as string} style={{ textAlign: "center", background: "#f7f5f0", borderRadius: 6, padding: "4px 0" }}>
-                            <div style={{ fontSize: 10, color: "#aaa492", fontWeight: 700 }}>{l as string}</div>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: "#161510" }}>{v as number}</div>
+                          <div key={l as string} style={{ textAlign: "center", background: "var(--surface-2)", borderRadius: 6, padding: "4px 0" }}>
+                            <div style={{ fontSize: 10, color: "var(--text-soft)", fontWeight: 700 }}>{l as string}</div>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text)" }}>{v as number}</div>
                           </div>
                         ))}
                       </div>
@@ -568,7 +577,7 @@ Be honest and specific. Vague answers with no metrics should score 8-14 on resul
               </div>
 
               <button onClick={() => { setSession([]); localStorage.removeItem("jd_mock_interview_v1") }}
-                style={{ marginTop: 12, padding: "8px 16px", background: "transparent", color: "#2e2d27", border: "1px solid #ddd8cd", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                style={{ marginTop: 12, padding: "8px 16px", background: "transparent", color: "var(--text)", border: "1px solid var(--border-strong)", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
                 Clear History
               </button>
             </>

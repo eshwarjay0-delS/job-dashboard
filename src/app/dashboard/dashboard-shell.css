@@ -1,43 +1,90 @@
 /* Dashboard shell
    Desktop: persistent 240px rail.
    Mobile/tablet: ordinary top bar; navigation is completely hidden until the
-   hamburger is pressed, then opens as a normal-flow panel below the header. */
+   hamburger is pressed, then opens as a drawer floating over the page. */
 
+/* Pages that open with a greeting or a short line (Home, Inbox, Interviews, Today, Summary, Gmail accounts): the same
+   header as every other page (PageIntro): the page's name, one line under it, nothing shouted above it. */
 .mf-home{max-width:1160px;margin:0 auto}
-.mf-home-heading{padding:12px 0 36px}
-.mf-eyebrow{font-size:11px;font-weight:700;letter-spacing:.13em;color:var(--text-muted)}
-.mf-home h1{font-size:clamp(28px,3.2vw,42px);line-height:1.15;letter-spacing:-.035em;margin:14px 0}
-.mf-home-heading>p:last-child{color:var(--text-muted);font-size:17px;line-height:1.6}
-.mf-feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
-.mf-feature{display:flex;flex-direction:column;min-width:0;padding:28px 24px;background:var(--surface);border:1px solid var(--border);border-radius:18px}
-.mf-feature-icon{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;margin-bottom:25px;background:var(--surface-2);color:var(--text)}
-.mf-feature h2{font-size:22px;line-height:1.25;letter-spacing:-.02em;margin:0 0 12px}
-.mf-feature>p{font-size:15px;line-height:1.7;color:var(--text-muted);margin:0 0 24px}
-.mf-primary-link{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:50px;padding:12px 15px;background:var(--text);color:var(--bg);border-radius:10px;text-decoration:none;font-size:14px;font-weight:650;margin-top:auto}
-.mf-feature>p.mf-feature-note{font-size:12px;line-height:1.6;margin:14px 0 18px}
-.mf-related{display:flex;flex-wrap:wrap;gap:15px;padding-top:16px;border-top:1px solid var(--border)}
-.mf-related a,.mf-more a{font-size:13px;color:var(--text-muted);text-underline-offset:4px}
-.mf-access{margin-top:32px;padding:26px 0;display:flex;gap:28px;justify-content:space-between;border-bottom:1px solid var(--border)}
-.mf-access h2{font-size:18px;margin:0 0 8px}
-.mf-access p{font-size:14px;color:var(--text-muted);line-height:1.6}
+.mf-home-heading{padding:4px 0 28px}
+.mf-eyebrow{font-size:13.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--text-soft);margin:0 0 6px}
+.mf-home h1{font-size:30px;font-weight:700;line-height:1.15;letter-spacing:-.025em;margin:0}
+.mf-home-heading>p:last-child{color:var(--text-muted);font-size:15.5px;line-height:1.55;margin:6px 0 0;max-width:680px}
+
+/* Home: three things to start, each a card you can press anywhere (the title's link covers the card); the card's own
+   smaller links sit above that cover. */
+.mf-start{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.mf-start-card{position:relative;display:flex;flex-direction:column;min-width:0;padding:22px 22px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);transition:box-shadow .2s var(--ease-out),border-color .2s var(--ease-out),translate .2s var(--ease-out)}
+.mf-start-card:hover{box-shadow:var(--shadow-card-hover);border-color:var(--border-strong);translate:0 -1px}
+.mf-start-card:has(.mf-start-link:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
+.mf-start-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;margin-bottom:18px;background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.mf-home .mf-start-card h2{font-size:18px;font-weight:700;line-height:1.3;letter-spacing:-.015em;margin:0 0 6px}
+.mf-home .mf-start-link{color:var(--text);text-decoration:none;outline:none}
+.mf-start-link::after{content:"";position:absolute;inset:0;border-radius:inherit}
+.mf-start-card>p{font-size:14.5px;line-height:1.6;color:var(--text-muted);margin:0 0 18px}
+.mf-start-go{display:inline-flex;align-items:center;gap:6px;margin-top:auto;font-size:14px;font-weight:650;color:var(--accent)}
+.mf-start-go svg{color:currentColor;transition:translate .2s var(--ease-out)}
+.mf-start-card:hover .mf-start-go svg{translate:3px 0}
+.mf-start-more{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:0 18px;margin-top:14px;padding-top:6px;border-top:1px solid var(--border)}
+.mf-start-more a{display:inline-flex;align-items:center;min-height:40px;font-size:13.5px;font-weight:500;color:var(--text-muted);text-decoration:none;transition:color .15s}
+.mf-start-more a:hover{color:var(--accent)}
+.mf-home-section{margin-top:36px}
+.mf-home .mf-home-section>h2{font-size:15px;font-weight:700;letter-spacing:-.005em;margin:0 0 12px}
+.mf-row-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.mf-row-links>a{display:flex;align-items:center;gap:14px;min-height:64px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);text-decoration:none;transition:border-color .15s,box-shadow .2s var(--ease-out)}
+.mf-row-links>a:hover{border-color:var(--border-strong);box-shadow:var(--shadow-card)}
+.mf-row-icon{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:10px;background:var(--surface-2)}
+.mf-row-text{display:flex;flex-direction:column;flex:1;min-width:0}
+.mf-row-text strong{font-size:14.5px;font-weight:650}
+.mf-row-text small{font-size:13px;line-height:1.45;color:var(--text-muted);margin-top:2px}
+.mf-row-links .mf-row-arrow{flex:none;color:var(--text-soft);transition:translate .2s var(--ease-out),color .15s}
+.mf-row-links>a:hover .mf-row-arrow{translate:3px 0;color:var(--accent)}
+.mf-tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.mf-tool-grid>a{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;font-weight:600;text-decoration:none;transition:border-color .15s,background-color .15s}
+.mf-tool-grid>a:hover{border-color:var(--border-strong);background:var(--surface-2)}
+
+/* Cards and links shared by Summary and others: soft cards, and a quiet outlined button in place of the old black bar. */
+.mf-feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.mf-feature{display:flex;flex-direction:column;min-width:0;padding:22px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card)}
+.mf-feature-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;margin-bottom:18px;background:color-mix(in srgb,var(--accent) 12%,var(--surface));color:var(--text)}
+.mf-feature h2{font-size:18px;font-weight:700;line-height:1.3;letter-spacing:-.015em;margin:0 0 8px}
+.mf-feature>p{font-size:14.5px;line-height:1.6;color:var(--text-muted);margin:0 0 18px}
+.mf-primary-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;align-self:flex-start;min-height:38px;padding:0 14px;background:var(--surface);color:var(--text);border:1px solid var(--border-strong);border-radius:var(--radius);text-decoration:none;font-size:14px;font-weight:650;margin-top:auto;transition:border-color .15s,color .15s,background-color .15s}
+.mf-primary-link:hover{border-color:var(--accent);color:var(--accent)}
+.mf-access{margin-top:28px;padding:22px 0;display:flex;gap:28px;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.mf-access h2{font-size:17px;font-weight:700;margin:0 0 6px}
+.mf-access p{font-size:14.5px;color:var(--text-muted);line-height:1.6}
 .mf-access-links{display:flex;gap:12px;flex-wrap:wrap}
-.mf-access-links>a{display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:12px;padding:14px;text-decoration:none;color:var(--text);min-height:60px}
+.mf-access-links>a{display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-decoration:none;color:var(--text);min-height:56px;background:var(--surface)}
 .mf-access-links span{font-size:14px;font-weight:600}
-.mf-access-links small{display:block;font-size:11px;font-weight:400;color:var(--text-muted);margin-top:4px}
-.mf-more{margin-top:24px}
-.mf-more summary{cursor:pointer;font-size:14px;padding:12px 0;min-height:44px}
-.mf-more nav{display:flex;gap:20px;flex-wrap:wrap;padding:12px 0}
+.mf-access-links small{display:block;font-size:12.5px;font-weight:400;color:var(--text-muted);margin-top:2px}
+.mf-stat-grid{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+
+/* The menu's open/close mark: a quiet control, not one of the gold page icons. */
+.dash-sidebar .sb-chevron{width:32px;height:36px;border-radius:var(--radius-sm);transition:background-color .15s}
+.dash-sidebar .sb-chevron:hover{background:var(--surface-2)}
+.dash-sidebar .sb-chevron svg{color:var(--text-soft);transition:transform .2s var(--ease-out)}
+
+/* A page's notice (signed out, Gmail could not be read): calm and readable, never an alarm. The words say what happened;
+   the buttons beside them are the way out. */
+.mf-notice{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;margin:0 0 20px;padding:12px 14px 12px 16px;background:var(--warning-soft);border:1px solid color-mix(in srgb,var(--warning-border) 35%,transparent);border-radius:var(--radius);color:var(--text)}
+.mf-notice>p{flex:1 1 260px;margin:0;font-size:14px;line-height:1.55}
+.mf-notice>button{display:inline-flex;align-items:center;gap:6px}
+.mf-notice>a{font-size:14px;font-weight:650;color:var(--accent);text-decoration:none}
+.mf-notice>a:hover{text-decoration:underline;text-underline-offset:3px}
 .mf-nav-more{margin-top:20px}
 .mf-nav-more>summary{padding:12px;cursor:pointer;color:var(--text-muted);font-size:13px;min-height:44px}
 .mf-home a:focus-visible,.mf-home summary:focus-visible,.mf-nav-more summary:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
-.mf-related a,.mf-more nav a{display:inline-flex;align-items:center;min-height:44px}
 .mf-skip-link{position:fixed;left:16px;top:-100px;z-index:1000;padding:14px 20px;background:var(--text);color:var(--bg);border-radius:8px}
 .mf-skip-link:focus{top:16px}
 .mf-mobile-home a:focus-visible,.dash-sidebar a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 
 /* Desktop shell */
+:root{--mf-topbar-h:64px}
+@keyframes mf-drawer-in{from{translate:-16px 0}to{translate:0 0}}
 .mf-mobile-home{display:none}
 .mf-menu-toggle{display:none}
+.mf-nav-scrim{display:none}
 .dash-sidebar{
   position:fixed!important;
   top:0!important;
@@ -49,8 +96,8 @@
   display:flex!important;
   flex-direction:column;
   overflow:hidden!important;
-  background:var(--bg);
-  border-right:.8px solid var(--border-strong)!important;
+  background:var(--surface);
+  border-right:1px solid var(--border)!important;
   border-bottom:0!important;
   z-index:400!important;
   transform:none!important;
@@ -83,16 +130,23 @@
    Internet, Chrome custom tabs, folded devices and tablets behave the same. */
 @media (max-width:1024px){
   html,body{width:100%;max-width:100%;overflow-x:hidden}
+  /* overflow-x:hidden on body makes body the box that "sticky" holds to, and body itself never scrolls: so the top bar
+     scrolled away with the page and took the menu button with it (measured 12 Oct 2026: 300px down the page the bar
+     stood at -300). "clip" cuts the same overflow without that. A browser that does not know it keeps the line above.
+     The drawer and the dimmed page below start where the bar ends, so the bar has to stay where it is. */
+  body{overflow-x:clip}
+  /* Now that the bar stays, what a link or a button scrolls to must stop below it, not under it. */
+  html{scroll-padding-top:calc(var(--mf-topbar-h) + 12px)}
 
   .mf-mobile-home{
     position:sticky;
     top:0;
     z-index:500;
     display:grid;
-    grid-template-columns:44px minmax(0,1fr) 40px 44px;
+    grid-template-columns:44px minmax(0,1fr) auto 40px 44px;
     align-items:center;
     gap:8px;
-    min-height:64px;
+    min-height:var(--mf-topbar-h);
     padding:8px 12px;
     background:color-mix(in srgb,var(--bg) 96%,transparent);
     border-bottom:1px solid var(--border);
@@ -150,28 +204,44 @@
   .mf-menu-toggle.is-open span:nth-child(2){opacity:0}
   .mf-menu-toggle.is-open span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
 
-  /* Closed means completely absent. No miniature desktop rail. */
-  .dash-sidebar{
-    position:relative!important;
-    inset:auto!important;
-    width:100%!important;
-    max-width:100%!important;
+  /* Closed means completely absent. Open is a drawer that floats over the page, under the top bar; the page does not move.
+     The selectors carry ".mf-dashboard-shell" on purpose: the visibility guard at the end of globals.css
+     ("html body aside.dash-sidebar") forces display:flex and width:240px, and that is what left the opened menu as a
+     240px block in the page with blank space beside it (owner, 12 Oct 2026). These must out-rank it. */
+  html body .mf-dashboard-shell aside.dash-sidebar{
+    position:fixed!important;
+    inset:var(--mf-topbar-h) auto 0 0!important;
+    width:min(300px,calc(100vw - 48px))!important;
+    max-width:none!important;
     height:auto!important;
-    max-height:0!important;
+    max-height:none!important;
     display:none!important;
     overflow:hidden!important;
-    border-right:0!important;
-    border-bottom:1px solid var(--border-strong)!important;
-    transform:none!important;
-    box-shadow:none!important;
+    border-right:.8px solid var(--border-strong)!important;
+    border-bottom:0!important;
     z-index:450!important;
   }
-  .dash-sidebar.is-open{
+  html body .mf-dashboard-shell aside.dash-sidebar.is-open{
     display:flex!important;
-    max-height:min(72dvh,720px)!important;
-    overflow:auto!important;
     overscroll-behavior:contain;
     background:var(--bg);
+    box-shadow:0 18px 44px rgba(12,11,8,.28)!important;
+    animation:mf-drawer-in .18s ease-out;
+  }
+  /* The rest of the page, dimmed. Pressing it closes the menu. */
+  .mf-nav-scrim{
+    display:block;
+    position:fixed;
+    inset:var(--mf-topbar-h) 0 0 0;
+    /* Said outright as well: a button with nothing in it need not stretch between its edges in every browser. */
+    width:100%;
+    height:calc(100% - var(--mf-topbar-h));
+    z-index:440;
+    padding:0;
+    border:0;
+    background:rgba(12,11,8,.45);
+    touch-action:none;
+    cursor:default;
   }
   .dash-sidebar .mf-sidebar-brand-row{display:none!important}
   .dash-sidebar nav{padding:12px 14px 4px!important}
@@ -196,7 +266,8 @@
   .mf-access{flex-direction:column}
   .mf-access-links{flex-direction:column}
   .mf-access-links>a{justify-content:space-between}
-  .mf-home h1{max-width:440px}
+  .mf-start-more a{min-height:44px}
+  .mf-row-links,.mf-tool-grid{grid-template-columns:1fr}
   input,select,textarea,button{max-width:100%}
   img,svg,canvas,video,iframe{max-width:100%;height:auto}
 }
@@ -206,8 +277,74 @@
   .mf-dashboard-main{padding:18px 14px 44px!important}
   .mf-feature{padding:20px 18px}
   .mf-home-heading>p:last-child{font-size:15px}
+  .mf-home h1{font-size:26px}
 }
 
 @media (prefers-reduced-motion:reduce){
   .mf-home *{scroll-behavior:auto!important;transition:none!important}
+}
+
+/* ── Design system 2: rules for every dashboard page (14 Oct 2026) ─────────────────────────────────────────────────
+   One column for every page, centred, so pages line up with each other and lines stay readable on wide screens. */
+.mf-dashboard-main > .page-transition{max-width:1200px;margin-inline:auto}
+
+/* Labels are words, never stamped capitals. Page code still asks for capitals in about 220 places; this one rule turns
+   them all into the way people write, in one place, without touching each file. */
+.mf-dashboard-main [style*="text-transform:uppercase"],
+.mf-dashboard-main [style*="text-transform: uppercase"],
+.mf-dashboard-main .uppercase{text-transform:none!important;letter-spacing:0!important}
+
+/* A dropdown a page left plain looks like the product's own, not the browser's. */
+.mf-dashboard-main select:not([class]){
+  height:36px;padding:0 34px 0 12px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);
+  background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23667d9d' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
+  color:var(--text);font:inherit;font-size:14px;appearance:none;-webkit-appearance:none;cursor:pointer;
+  transition:border-color var(--t-fast),box-shadow var(--t-fast)
+}
+.mf-dashboard-main select:not([class]):hover{border-color:var(--text-soft)}
+.mf-dashboard-main select:not([class]):focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+
+/* MFit Agent, the chat on every page (design system 2, 14 Oct 2026: "engaging, not a dull bot"). A labelled launcher
+   ("Ask MFit") instead of a bare robot; a window that opens from where it was pressed; the agent's bubbles on the left,
+   yours on the right in the accent; a typing bubble while it writes. Motion stays short and stops for reduced motion. */
+.mf-agent-launch{position:fixed;right:20px;bottom:20px;z-index:60;display:inline-flex;align-items:center;gap:8px;height:48px;padding:0 18px 0 15px;border:0;border-radius:999px;background:var(--accent);color:#fff;font:inherit;font-size:15px;font-weight:650;cursor:pointer;box-shadow:var(--shadow-pop);transition:transform .2s var(--ease-out),background-color .15s}
+.mf-agent-launch:hover{background:var(--accent-h);transform:translateY(-1px)}
+.mf-agent-launch:active{transform:scale(.97)}
+.mf-agent-launch svg,.mf-agent-avatar svg,.mf-agent-icon-btn svg,.mf-agent-speak svg,.mf-agent-send svg{color:currentColor}
+.mf-agent-badge{position:absolute;top:-5px;right:-5px;display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--danger);color:#fff;font-size:11.5px;font-weight:750;box-shadow:0 0 0 2px var(--bg)}
+.mf-agent-panel{position:fixed;right:16px;bottom:16px;z-index:60;display:flex;flex-direction:column;overflow:hidden;width:min(400px,calc(100vw - 32px));height:min(620px,calc(100dvh - 96px));background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-pop);transform-origin:bottom right;animation:mf-agent-open .22s var(--ease-out)}
+@keyframes mf-agent-open{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+.mf-agent-head{display:flex;align-items:center;gap:11px;flex:none;padding:12px 10px 12px 16px;border-bottom:1px solid var(--border)}
+.mf-agent-avatar{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--accent);color:#fff}
+.mf-agent-name{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.mf-agent-status{display:flex;align-items:center;gap:6px;margin-top:1px;font-size:12.5px;color:var(--text-muted)}
+.mf-agent-dot{width:7px;height:7px;border-radius:999px;background:var(--success)}
+.mf-agent-dot.is-listening{background:var(--danger);animation:mf-agent-pulse 1.4s ease-in-out infinite}
+@keyframes mf-agent-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.mf-agent-icon-btn{display:grid;place-items:center;flex:none;width:40px;height:40px;border:0;border-radius:999px;background:transparent;color:var(--text-muted);cursor:pointer;transition:background-color .15s,color .15s}
+.mf-agent-icon-btn:hover{background:var(--surface-2);color:var(--text)}
+.mf-agent-body{flex:1;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding:16px}
+.mf-agent-msg{max-width:86%;padding:10px 14px;font-size:14px;line-height:1.55;animation:mf-agent-in .2s var(--ease-out)}
+.mf-agent-msg.is-agent{align-self:flex-start;background:var(--surface-2);color:var(--text);border-radius:16px 16px 16px 4px}
+.mf-agent-msg.is-user{align-self:flex-end;background:var(--accent);color:#fff;border-radius:16px 16px 4px 16px;white-space:pre-line}
+.mf-agent-msg.is-typing{padding:14px 16px;line-height:0}
+@keyframes mf-agent-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.mf-agent-speak{display:inline-grid;place-items:center;vertical-align:middle;width:26px;height:26px;margin-left:8px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text-muted);cursor:pointer}
+.mf-agent-starters{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:2px}
+.mf-agent-starters>span{margin-top:4px;font-size:12.5px;font-weight:600;color:var(--text-soft)}
+.mf-agent-starters button{max-width:100%;padding:8px 14px;border:1px solid var(--border-strong);border-radius:999px;background:var(--surface);color:var(--text);font:inherit;font-size:13.5px;font-weight:600;text-align:left;cursor:pointer;transition:border-color .15s,color .15s}
+.mf-agent-starters button:hover{border-color:var(--accent);color:var(--accent)}
+.mf-agent-compose{display:flex;align-items:center;gap:6px;flex:none;margin:0;padding:10px 12px 12px;border-top:1px solid var(--border)}
+.mf-agent-compose input{flex:1;min-width:0;height:44px;padding:0 16px;border:1px solid var(--border-strong);border-radius:999px;background:var(--surface);color:var(--text);font:inherit;font-size:14px;transition:border-color .15s,box-shadow .15s}
+.mf-agent-compose input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.mf-agent-mic.is-on{background:var(--danger);color:#fff}
+.mf-agent-send{display:grid;place-items:center;flex:none;width:44px;height:44px;border:0;border-radius:999px;background:var(--accent);color:#fff;cursor:pointer;transition:background-color .15s,opacity .15s}
+.mf-agent-send:hover:not(:disabled){background:var(--accent-h)}
+.mf-agent-send:disabled{opacity:.4;cursor:default}
+@media (max-width:640px){
+  .mf-agent-launch{width:54px;height:54px;padding:0;justify-content:center}
+  .mf-agent-launch-text{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .mf-agent-panel,.mf-agent-msg{animation:none}
 }

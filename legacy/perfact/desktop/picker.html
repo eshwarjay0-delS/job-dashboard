@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'unsafe-inline'" />
+<title>Place Kompas</title>
+<!-- Six sections over the work area, two rows of three. Click one to put Kompas there; Escape, a click outside
+     the grid, or the section Kompas is already in closes this without moving anything. -->
+<style>
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden;user-select:none;font-family:"Segoe UI",system-ui,sans-serif}
+  body{background:rgba(248,246,241,.42);backdrop-filter:blur(18px)}
+  .grid{position:fixed;inset:14px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:14px}
+  .cell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:2px dashed rgba(21,20,15,.35);
+    border-radius:14px;background:rgba(253,252,249,.5);color:#15140f;cursor:pointer;transition:background .12s ease,border-color .12s ease}
+  .cell:hover{background:rgba(253,252,249,.85);border-color:#15140f;border-style:solid}
+  .cell.current{border-style:solid;border-color:#15140f;background:rgba(21,20,15,.08)}
+  .cell b{font-size:18px;font-weight:600}
+  .cell span{font-size:13px;color:#55534a}
+  .hint{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);padding:7px 14px;border-radius:999px;background:#fdfcf9;
+    border:1px solid #d3cec1;font-size:13px;color:#55534a}
+</style>
+</head>
+<body>
+<div class="grid" id="grid"></div>
+<div class="hint">Click a section to place Kompas there · Esc to cancel</div>
+<script src="picker.js"></script>
+</body>
+</html>
