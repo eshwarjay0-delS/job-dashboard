@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
 
-function harness() {
+function harness(reply) {
   const calls = []
   const cache = new Map()
   function load(file) {
@@ -16,7 +16,7 @@ function harness() {
       require: id => {
         if (id === './llm') return { callLLM: async opts => {
           calls.push(opts)
-          return { text: JSON.stringify({ summary: '', skills: [{ idx: 2, text: 'Microsoft Sentinel, Python' }], bullets: [{ idx: 10, text: 'Tuned Microsoft Sentinel detections.' }, { idx: 20, text: 'Automated log analysis with Python.' }] }) }
+          return { text: JSON.stringify(reply || { summary: '', skills: [{ idx: 2, text: 'Microsoft Sentinel, Python' }], bullets: [{ idx: 10, text: 'Tuned Microsoft Sentinel detections.' }, { idx: 20, text: 'Automated log analysis with Python.' }] }) }
         } }
         if (id === './ai/jev') return {}
         return load(id.replace(/^\.\//, ''))
@@ -49,4 +49,15 @@ test('an earlier-role pass retains its own edits and cannot change the current r
   assert.equal(result.bullets.length, 1)
   assert.equal(result.bullets[0].idx, 20)
   assert.equal(result.skills.length, 0)
+})
+
+
+test('locked summary and headline are excluded from both prompt scope and returned edits', async () => {
+  const h = harness({ summary: 'Changed summary', headline: { title: 'Changed title' }, skills: [{ idx: 2, text: 'Microsoft Sentinel, Python' }] })
+  const result = await h.adapt({ ...base, part: 'profile', sections: { summary: false, headline: false } })
+  assert.match(h.calls[0].user, /Summary is LOCKED/)
+  assert.match(h.calls[0].user, /Headline is LOCKED/)
+  assert.equal(result.summary, '')
+  assert.equal(result.headline.title, '')
+  assert.match(h.calls[0].system, /retain every existing technical expertise category/)
 })

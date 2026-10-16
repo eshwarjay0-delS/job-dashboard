@@ -32,6 +32,7 @@ Work in THIS order — recruiter trust first, ATS keywords LAST:
 5) OPERATIONAL FRICTION. Preserve documented debugging, incident response and remediation outcomes when they are in the source. Do not invent production incidents, outages, model issues or outages to make the resume sound credible.
 
 6) ATS / SKILLS — VERIFIED COVERAGE. Use the JD's precise keywords where they match tools, technologies, qualifications, frameworks, or skills substantiated by the original resume. Certifications are immutable and may be listed only if present in the source. Do not add absent vendor names or missing qualifications merely to inflate a match score. Never duplicate the skills section.
+   CATEGORY STRUCTURE: retain every existing technical expertise category and its heading exactly. Put each relevant skill under its existing appropriate category; never replace category labels with tools, create a second skills section, or combine unrelated categories. Preserve factual skills already present.
    ONE LINE PER [idx] — NEVER MERGE: rewrite each skill line SEPARATELY at its own [idx], returning that same [idx]. NEVER collapse several skill lines into one mega-line, and never dump every keyword into a single line — that destroys the resume's structure. Return one skills entry per [idx] you change, and only use [idx] values that appear in the SKILL LINES block below.
    EXACT JD WORDING + ABBREVIATIONS: use the JD's precise terminology, including its abbreviations AND spellings. When the JD uses an acronym or short form (e.g. "S2S VPN", "IPsec", "Natting", "FSR", "CJI", "PAN-OS", "EOL"), include that EXACT token — pairing it with the expansion where natural ("site-to-site (S2S) VPN", "NAT/Natting", "end-of-life (EOL)"). ATS keyword matching is literal, so a synonym the candidate truly has but worded differently than the JD still misses — mirror the JD's exact form.
    FOCUS WITHOUT INVENTION: prioritize verified relevant qualifications while retaining factual skills. Never overwrite authentic experience with unverified JD keywords.
@@ -163,6 +164,7 @@ export async function adapt(opts: {
   // summary, and skill lines; "experience" rewrites only the bullets of zones.roles[i] for each
   // i in `roles`. One call doing everything put the JD into the skills and the current role and
   // left the older roles untouched.
+  sections?: { summary?: boolean; headline?: boolean; skills?: boolean; experience?: boolean }
   part?: "profile" | "experience"
   roles?: number[]
   // May this call append NEW bullets ("added")? Gap-fill passes, which ask for a specific number,
@@ -176,7 +178,7 @@ export async function adapt(opts: {
   const part = opts.refine ? undefined : opts.part
   const roleSet = part === "experience" && opts.roles ? new Set(opts.roles) : null
   const editRoles = roleSet ? opts.zones.roles.filter((_, i) => roleSet.has(i)) : opts.zones.roles
-  const cap = opts.refine ? 8192 : part === "experience" ? 6144 : 4096
+  const cap = opts.refine ? 8192 : part === "experience" ? 8192 : 4096
   // Build the editable-lines block from the resume's zones. Only lines tagged [idx] can come
   // back as edits, so each split pass shows the other sections as plain context.
   let lines = ""
@@ -244,8 +246,9 @@ export async function adapt(opts: {
     ? `\n\nQUICK MODE: do a fast, focused pass — rewrite the headline, summary, the top 2-3 skill lines, and the 5-6 strongest bullets in the CURRENT role only. Skip marginal edits; speed over exhaustiveness.`
     : ""
   // Split passes: say exactly which fields this call owns (see `part` above).
+  const sectionScope = `\n\nSECTION PERMISSIONS (override general rewrite instructions): ${opts.sections?.summary === false ? 'Summary is LOCKED. Return "summary":""; do not spend output on rewriting it.' : 'Summary may be edited.'} ${(opts.sections?.headline ?? opts.sections?.summary) === false ? 'Headline is LOCKED. Return empty headline fields.' : 'Headline may be edited.'} Preserve existing paragraph structure and technical expertise headings. Elaborate actual work using action, supported technology and purpose/result; keyword lists alone are not experience.`
   const scopeLine = part === "profile"
-    ? `\n\nTHIS PASS — PROFILE ONLY: rewrite the headline, the summary, and the skill lines. Return "bullets": [] (a parallel pass is rewriting the experience bullets against the same JD).`
+    ? `\n\nTHIS PASS — PROFILE ONLY: rewrite only enabled profile sections. Preserve technical expertise headings and update each existing skill line under its correct category. Return "bullets": [] (a parallel pass is rewriting the experience bullets against the same JD).`
     : part === "experience"
     ? `\n\nTHIS PASS — EXPERIENCE BULLETS ONLY, for the roles shown with [idx] lines. Return "headline":{"title":"","tagline":""}, "summary":"", "skills":[]. Spread the JD's tools, platforms, and responsibilities evenly across EVERY one of these roles: in EACH role rewrite at least half of its bullets (all of them when it has 4 or fewer) and name the JD's exact tools inside them, so every role proves the skills the candidate lists. Never leave a role untouched. A bullet line that holds several "•" parts must keep every part, each rewritten in place in that same line.`
     : ""
@@ -258,7 +261,7 @@ export async function adapt(opts: {
   const cacheContext =
     `RESUME LINES TO EDIT (each [idx] is stable — return only what you change):\n${lines.slice(0, 40000)}${yoeLine}`
   const user =
-    `JOB DESCRIPTION:\n${opts.jd.slice(0, 12000)}${idLine}${kwLine}${onePageLine}${quickLine}${pref}${scopeLine}\n\n` +
+    `JOB DESCRIPTION:\n${opts.jd.slice(0, 12000)}${idLine}${kwLine}${onePageLine}${quickLine}${pref}${scopeLine}${sectionScope}\n\n` +
     `Using the resume lines provided, return the rewrite JSON (only the [idx] lines you change).`
 
   // Try twice: a one-off malformed reply no longer fails the whole tailoring.
@@ -333,6 +336,8 @@ export async function adapt(opts: {
           80,
         )
       }
+      if (opts.sections?.summary === false) edits.summary = ""
+      if ((opts.sections?.headline ?? opts.sections?.summary) === false) edits.headline = { title: "", tagline: "" }
       return constrainResumeEdits(edits, opts.zones)
     } catch (e) { lastErr = e }
   }

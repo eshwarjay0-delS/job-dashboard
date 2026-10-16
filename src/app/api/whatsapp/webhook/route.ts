@@ -35,11 +35,11 @@ import { plainFailure } from "@/lib/plain-failure"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
 export const runtime = "nodejs"
-export const maxDuration = 60
+export const maxDuration = 180
 export const dynamic = "force-dynamic"
 
 const INBOX_DIR = path.join(DATA_DIR, "whatsapp", "inbox")
-const TAILOR_BUDGET_MS = 52_000
+const TAILOR_BUDGET_MS = 165_000
 
 // The file a person gets back is named after them: "Eshwar_Resume.docx". (Owner, 2026-10-05: first "The name should always be
 // Eshwar's_Resume", then, on seeing "ESHWAR's_Resume.docx" arrive, "Eshwar_Resume Title is fine actually".) The first name is

@@ -1,3 +1,4 @@
+import { preserveSkillHeadings } from "./resume-format"
 import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, resumeQuality } from "./resume-quality"
 import { J1_VERSION, constrainResumeEdits } from "./ai/j1"
 import path from "path"
@@ -85,27 +86,6 @@ function whatChanged(edits: Edits): string[] {
 
 // Split the work history into contiguous groups of roughly equal bullet count (about `maxPerCall`
 // bullets each), so every experience call stays small enough to answer quickly and completely.
-function groupRoles(zones: Zones, maxPerCall: number): number[][] {
-  const sizes = zones.roles.map(r => r.bullets.length)
-  const total = sizes.reduce((a, b) => a + b, 0)
-  const n = Math.max(1, Math.min(sizes.length, Math.ceil(total / Math.max(1, maxPerCall))))
-  const target = total / n
-  const groups: number[][] = [[]]
-  let size = 0
-  sizes.forEach((s, i) => {
-    const g = groups[groups.length - 1]
-    // Start a new group before this role when stopping here lands closer to the target size.
-    if (g.length && groups.length < n && size + s > target && target - size <= size + s - target) {
-      groups.push([i])
-      size = s
-    } else {
-      g.push(i)
-      size += s
-    }
-  })
-  return groups
-}
-
 // A skill fragment already inside a longer listed skill ("att" and "ck" in "mitre att&ck",
 // "directory" in "active directory") is not counted or asked for on its own.
 const padTerm = (s: string) => ` ${s.toLowerCase().replace(/[^a-z0-9+#.]+/g, " ").trim()} `
@@ -130,7 +110,7 @@ function normJD(jd: string): string {
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
-const CACHE_GENERATION = "7"
+const CACHE_GENERATION = "8"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -250,7 +230,7 @@ export async function runTailor(opts: {
 
   // 2) Cache check — instant return for an identical re-run. One-page vs full are
   // distinct outputs, so the mode is folded into the cache key.
-  const _sec = opts.sections || {}
+  const _sec = { summary: false, headline: false, ...opts.sections }
   const _secSig = `sec:${_sec.summary === false ? 0 : 1}${_sec.skills === false ? 0 : 1}${_sec.experience === false ? 0 : 1}${_sec.headline === undefined ? "" : _sec.headline ? "h1" : "h0"}`
   const _modeSig = `mode:${opts.mode === "quick" ? "q" : "f"}`
   const key = cacheKeyOf(jd, matched.filepath, sourceHash, [...allPrefs, opts.onePage ? "1page" : "full", _secSig, _modeSig])
@@ -368,7 +348,7 @@ export async function runTailor(opts: {
   // An exact lane IS its model; a Claude lane passes its model the old way (callLLM honours a claude-* id for Anthropic).
   const laneCall = (lane: Lane) => ({ pref: lane.pref, model: lane.model, exactModel: lane.exact ? lane.model : undefined })
 
-  const sec = opts.sections || {}
+  const sec = { summary: false, headline: false, ...opts.sections }
   const scopeEdits = (raw: Edits): Edits => ({
     // Section scope: only enhance the sections the user chose (default = all).
     headline: (sec.headline ?? sec.summary) === false ? { title: "", tagline: "" } : raw.headline,
@@ -383,7 +363,7 @@ export async function runTailor(opts: {
   // rewritten bullets, so skills the candidate lists never showed up in their client experience. Drafts are split per
   // section, ranked on every role, and each role's measured gap is filled.
   const splitDraft = !refine && opts.mode !== "quick" && sec.experience !== false && zones.roles.length > 0
-  const roleGroups = splitDraft ? groupRoles(zones, Number(E.TAILOR_BULLETS_PER_CALL) || 45) : []
+  const roleGroups = splitDraft ? zones.roles.map((_, i) => [i]) : []
   const bulletBefore = new Map<number, string>()
   for (const r of zones.roles) for (const b of r.bullets) bulletBefore.set(b.idx, b.text)
   // Some source paragraphs hold several bullets glued together ("• A.• B.• C."). A rewrite that
@@ -465,7 +445,8 @@ export async function runTailor(opts: {
   // dropIdx), so a user's own edits are never silently trimmed.
   const applyEdits = async (edits: Edits): Promise<Pass> => {
     edits = constrainResumeEdits(edits, zones)
-    edits = { ...edits, bullets: (edits.bullets || []).filter(b => keepsParts(b.idx, b.text || "")), added: opts.onePage ? [] : edits.added || [] }
+    edits.skills = preserveSkillHeadings(zones.skills, edits.skills || [])
+    edits = { ...edits, bullets: (edits.bullets || []).filter(b => keepsParts(b.idx, b.text || "")), added: [] }
     // FORMAT-PRESERVING by default: never delete paragraphs, so the tailored resume
     // keeps the EXACT layout, bullet count, and structure of the source — we only
     // rewrite existing lines in place. Bullet trimming (capRoleBullets) is allowed
@@ -499,7 +480,7 @@ export async function runTailor(opts: {
   // refinements stay one call. On escalation we pass the exact JD terms still missing.
   const draftPass = async (step: Lane, extraPrefs: string[]): Promise<Pass> => {
     const prefs = [...allPrefs, ...extraPrefs].filter(Boolean)
-    const call = { keys: opts.keys, jd, zones, preferences: prefs.join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, refine: !!refine }
+    const call = { keys: opts.keys, jd, zones, sections: sec, preferences: prefs.join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, refine: !!refine }
     let raw: Edits
     let partsFailed = 0, partsTotal = 0
     let via = step.label ?? step.model ?? String(step.pref)
@@ -525,8 +506,8 @@ export async function runTailor(opts: {
           }).join("\n")
           return adapt({ ...call, preferences: [call.preferences, rolePlan].filter(Boolean).join("\n"), ...laneCall(lane), part: part.kind, roles: part.roles })
         },
-        startBy: deadline - 9000,     // a call started later than this would not be back in time
-        assembleBy: deadline - 3000,  // what is still running then is left behind; the draft is made of what came back
+        startBy: deadline - repairReserve - 6000,     // a call started later than this would not be back in time
+        assembleBy: deadline - repairReserve,  // what is still running then is left behind; the draft is made of what came back
       })
       const done = worked.filter(w => w.e)
       const total = worked.length, failed = total - done.length
@@ -553,7 +534,8 @@ export async function runTailor(opts: {
   const usageSink: TokenUsage[] = []
   const MIN_KEYWORD_COVERAGE = RESUME_MIN_COVERAGE
   const TARGET_COVERAGE = Math.max(MIN_KEYWORD_COVERAGE, Math.min(1, Number(E.TAILOR_TARGET_COVERAGE) || RESUME_TARGET_COVERAGE))
-  const TAILOR_MAX_MS = Math.max(1000, Math.min(Number(E.TAILOR_MAX_MS) || 52000, 55000, opts.maxMs || Infinity))
+  const TAILOR_MAX_MS = Math.max(1000, Math.min(opts.maxMs || Number(E.TAILOR_MAX_MS) || 52000, 175000))
+  const repairReserve = Math.min(45000, Math.floor(TAILOR_MAX_MS / 3))
   const deadline = started + TAILOR_MAX_MS
   const MIN_CLIMB_MS = Number(E.TAILOR_MIN_CLIMB_MS) || 9000
   const summaryWanted = sec.summary !== false
@@ -581,15 +563,12 @@ export async function runTailor(opts: {
   // when a role's bullets can't carry all its skills (about 3 per bullet) the pass ADDS bullets to it. Repeats while it
   // keeps helping and time allows (TAILOR_FILL_ROUNDS, default 3).
   const FILL_ROUNDS = Math.max(0, Number(E.TAILOR_FILL_ROUNDS ?? 3))
-  const SKILLS_PER_BULLET = 3
-  const MAX_ADD_PER_ROUND = Number(E.TAILOR_MAX_ADD_PER_ROUND) || 25
   const fillGaps = async (start: Pass): Promise<Pass> => {
     let cur = start
     for (let round = 0; round < FILL_ROUNDS; round++) {
       if (deadline - Date.now() < MIN_CLIMB_MS) break
       const lacking = new Set(lackingRoles(cur.edits))
       const view = zonesAfter(cur.edits)
-      const rw = rewrites(cur.edits)
       const todo: { role: number; skills: string[]; add: number }[] = []
       // Repair every relevant role using the full JD set, not just skills already
       // listed in the generated skills section. Only the source establishes evidence.
@@ -600,9 +579,7 @@ export async function runTailor(opts: {
         const supportedMissing = [...sourceTerms].filter(k => !currentTerms.has(k))
         const missing = [...new Set([...cur.required[i].filter(k => !cur.roleKw[i].has(k)), ...supportedMissing, ...(i === countedRoles[0] ? unseen : [])])]
         if (!missing.length && !lacking.has(i)) continue
-        const roleLines = [...zones.roles[i].bullets.map(b => rw.get(b.idx) ?? b.text), ...(view.roles[i].added || [])]
-        const spare = roleLines.reduce((n, l) => n + Math.max(0, SKILLS_PER_BULLET - coveredJdKeywords(l, cur.required[i]).size), 0)
-        const add = opts.onePage ? 0 : Math.min(MAX_ADD_PER_ROUND, Math.ceil(Math.max(0, missing.length - spare) / SKILLS_PER_BULLET))
+        const add = 0 // Preserve the original paragraph count and format.
         todo.push({ role: i, skills: missing, add })
       }
       if (!todo.length) break
@@ -616,8 +593,9 @@ export async function runTailor(opts: {
             t.skills.length ? `its bullets must show ${t.skills.join(", ")}` : "",
             t.add ? `return EXACTLY ${t.add} new bullet${t.add === 1 ? "" : "s"} for it in "added" (role ${t.role}), covering the skills its existing bullets can't carry` : "",
           ].filter(Boolean)
-          const ask = `GAP FILL: this resume is already tailored to the JD. The baseline resume is the candidate's factual record; the JD is a target, not proof of experience. Include listed skills in this role ONLY where the original role already substantiates them. Keep every JD term its bullets already carry. Rewrite bullets that don't carry a JD skill yet so each shows two or three related skills and what the candidate did with them at this client (never a bare list), and write the NEW bullets the same way, specific to this client's work. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
-          return adapt({ keys: opts.keys, jd, zones: view, preferences: [...allPrefs, ask].join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, part: "experience", roles: [t.role], allowAdd: !opts.onePage, ...laneCall(lane) })
+          const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join("\n")
+          const ask = `ORIGINAL ROLE EVIDENCE (use this to recover relevant facts that the first pass missed):\n${originalEvidence}\nGAP FILL: this resume is already tailored to the JD. The baseline resume is the candidate's factual record; the JD is a target, not proof of experience. Include listed skills in this role ONLY where the original role already substantiates them. Keep every JD term its bullets already carry. Rewrite bullets that don't carry a JD skill yet so each shows two or three related skills and what the candidate did with them at this client (never a bare list), preserving this client's original paragraph structure. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
+          return adapt({ keys: opts.keys, jd, zones: view, sections: sec, preferences: [...allPrefs, ask].join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, part: "experience", roles: [t.role], allowAdd: false, ...laneCall(lane) })
         },
         startBy: deadline - MIN_CLIMB_MS,
         assembleBy: deadline - 2000,
@@ -629,7 +607,8 @@ export async function runTailor(opts: {
       const next = await applyEdits({ ...cur.edits, bullets: [...(cur.edits.bullets || []).filter(b => !replaced.has(b.idx)), ...fresh], added: [...(cur.edits.added || []), ...freshAdded] })
       next.via = cur.via
       next.partial = cur.partial
-      if (quality(next) <= quality(cur) + 0.005) break
+      // Never trade total JD coverage for a better score on the smaller listed-skill subset.
+      if (next.cov < cur.cov || (next.cov === cur.cov && quality(next) <= quality(cur) + 0.005)) break
       cur = next
       if (cur.cov >= TARGET_COVERAGE && !countedRoles.some(i => cur.required[i].some(k => !cur.roleKw[i].has(k)))) break
     }
