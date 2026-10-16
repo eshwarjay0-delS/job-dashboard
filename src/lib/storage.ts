@@ -26,6 +26,8 @@ import { storageSegments, storageMode } from "@/lib/storagePolicy"
 export interface Blob {
   /** Write bytes (or a string) at `key`, creating any parent structure. */
   put(key: string, data: Buffer | string): Promise<void>
+  /** Atomically create a key; false when another caller already created it. */
+  putIfAbsent(key: string, data: Buffer | string): Promise<boolean>
   /** Read raw bytes, or null if the key doesn't exist. */
   get(key: string): Promise<Buffer | null>
   /** Read as UTF-8 text, or null if absent. */
@@ -148,6 +150,12 @@ class FsStorage implements Blob {
     await mkdir(path.dirname(p), { recursive: true })
     await writeFile(p, data)
   }
+  async putIfAbsent(key: string, data: Buffer | string): Promise<boolean> {
+    const p = this.abs(key)
+    await mkdir(path.dirname(p), { recursive: true })
+    try { await writeFile(p, data, { flag: "wx" }); return true }
+    catch (e) { if ((e as NodeJS.ErrnoException).code === "EEXIST") return false; throw e }
+  }
   async get(key: string): Promise<Buffer | null> {
     try { return await readFile(this.abs(key)) } catch { return null }
   }
@@ -218,6 +226,16 @@ class R2Storage implements Blob {
       Body: typeof data === "string" ? Buffer.from(data) : data,
     }))
   }
+  async putIfAbsent(key: string, data: Buffer | string): Promise<boolean> {
+    try {
+      await this.s3.send(new PutObjectCommand({ Bucket: this.bucket, Key: this.norm(key), Body: data, IfNoneMatch: "*" }))
+      return true
+    } catch (e) {
+      const status = (e as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
+      if (status === 412 || status === 409) return false
+      throw e
+    }
+  }
   async get(key: string): Promise<Buffer | null> {
     try {
       const r = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: this.norm(key) }))
@@ -279,7 +297,7 @@ function makeBlob(): Blob {
     const unavailable = async (): Promise<never> => {
       throw new Error("Durable storage is not configured. Configure all R2 storage settings before saving data.")
     }
-    return { put: unavailable, get: unavailable, getText: unavailable, exists: unavailable, stat: unavailable, delete: unavailable, deletePrefix: unavailable, list: unavailable, listInfo: unavailable }
+    return { putIfAbsent: unavailable, put: unavailable, get: unavailable, getText: unavailable, exists: unavailable, stat: unavailable, delete: unavailable, deletePrefix: unavailable, list: unavailable, listInfo: unavailable }
   }
   if (R2_BUCKET && R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY) {
     return new R2Storage(R2_BUCKET, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY)

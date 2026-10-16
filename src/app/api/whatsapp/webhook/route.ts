@@ -18,7 +18,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import path from "path"
 import { createHash, randomBytes } from "crypto"
-import { blob, writePath, existsPath, deletePath } from "@/lib/storage"
+import { blob, readPath, writePath, existsPath, deletePath } from "@/lib/storage"
 import { DATA_DIR } from "@/lib/paths"
 import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
@@ -28,6 +28,8 @@ import { isOwnerWhatsApp } from "@/lib/owner"
 import { resolveWhatsAppUser, claimNotice, textCodesWork } from "@/lib/whatsapp-who"
 import { claimLinkCode } from "@/lib/whatsapp-link"
 import { notRegisteredMessage, NOT_CHECKED_MESSAGE, siteOf } from "@/lib/whatsapp-who-core"
+import { sameResumeIdentity } from "@/lib/resume-identity"
+import { extractText } from "@/lib/docx"
 import { extractProfile } from "@/lib/profile"
 import { plainFailure } from "@/lib/plain-failure"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
@@ -37,8 +39,6 @@ export const maxDuration = 60
 export const dynamic = "force-dynamic"
 
 const INBOX_DIR = path.join(DATA_DIR, "whatsapp", "inbox")
-const STALE_RESUME_MS = 90_000
-const RESUME_GRACE_MS = 8_000
 const TAILOR_BUDGET_MS = 52_000
 
 // The file a person gets back is named after them: "Eshwar_Resume.docx". (Owner, 2026-10-05: first "The name should always be
@@ -66,7 +66,7 @@ const digits = (from: string) => from.replace(/\D/g, "")
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 
 type Meta = { role: string; company: string; location: string }
-type Session = { version?: 2; jd?: string; resumePath?: string; resumeName?: string; resumeAt?: number; seen?: string[]; updatedAt?: number }
+type Session = { version?: 3; jd?: string; jdId?: string; resumePath?: string; resumeName?: string; resumeAt?: number; seen?: string[]; updatedAt?: number }
 const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
 
 async function loadSession(from: string): Promise<Session> {
@@ -75,19 +75,19 @@ async function loadSession(from: string): Promise<Session> {
     if (!raw) return {}
     const s = JSON.parse(raw) as Session
     // Old versions kept resumes indefinitely. Do not reuse them after the rollback.
-    if (s.version !== 2) return { version: 2, seen: s.seen?.slice(-40) }
+    if (s.version !== 3) return { version: 3, seen: s.seen?.slice(-40) }
     const ttl = Number(process.env.WHATSAPP_SESSION_TTL_MS) || 24 * 60 * 60 * 1000
     if (s.updatedAt && Date.now() - s.updatedAt > ttl) {
       if (s.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
         await deletePath(s.resumePath).catch(() => {})
-      return { version: 2, seen: s.seen?.slice(-40) }
+      return { version: 3, seen: s.seen?.slice(-40) }
     }
     return s
   } catch { return {} }
 }
 
 async function saveSession(from: string, s: Session): Promise<void> {
-  try { await blob.put(sessionKey(from), JSON.stringify({ ...s, version: 2, updatedAt: Date.now() })) } catch { /* non-fatal */ }
+  await blob.put(sessionKey(from), JSON.stringify({ ...s, version: 3, updatedAt: Date.now() }))
 }
 
 // One resume the bot sent, stored under the id of that WhatsApp message — the id a
@@ -221,12 +221,14 @@ export async function POST(request: NextRequest) {
   }
   const userId = sender.who.userId
 
+  if (!msgId) return ok()
+  const receipt = createHash("sha256").update(`${from}:${msgId}`).digest("hex")
+  if (!await blob.putIfAbsent(`whatsapp/receipts/${receipt}`, "1")) return ok()
   const session = await loadSession(from)
   // De-dupe: Meta re-delivers a webhook it thinks failed, and a duplicate here would
   // mean a second (slow) generation and a second document sent.
   if (msgId && session.seen?.includes(msgId)) return ok()
   session.seen = [...(session.seen || []), msgId].slice(-40)
-  await saveSession(from, session)
 
   try {
     await handle(from, msg, session, userId)
@@ -267,19 +269,11 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       return sendText(from, `That looks too short to be a job description (${text.length} characters).\n\n${HELP}`)
     }
 
+    session = await loadSession(from)
     session.jd = text
+    session.jdId = String(msg.id)
     await saveSession(from, session)
     if (!session.resumePath) return sendText(from, "Got the job description. Now send your resume as a *.docx* file.")
-    // The stored resume is from an earlier attempt and a new one is usually right behind the JD: tailoring at once ran two
-    // tailors side by side (2026-10-05, 13:07), the old resume and the new one, on the same allowance. Wait briefly; if a
-    // new resume lands, its own message tailors it.
-    const askedAt = Date.now()
-    if (askedAt - (session.resumeAt || 0) > STALE_RESUME_MS) {
-      await new Promise(r => setTimeout(r, RESUME_GRACE_MS))
-      const now = await loadSession(from)
-      if ((now.resumeAt || 0) > askedAt) return
-      return generate(from, { ...now, jd: text }, userId, TAILOR_BUDGET_MS - RESUME_GRACE_MS)
-    }
     return generate(from, session, userId)
   }
 
@@ -293,9 +287,10 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     const bytes = await downloadMedia(doc.id)
     // Temporary inbox only. Do not write originals into MarketFit Files or its resume libraries.
     const safe = filename.replace(/[^A-Za-z0-9._\- ()]/g, "_").replace(/\.docx$/i, "") + ".docx"
-    const dest = path.join(INBOX_DIR, digits(from), safe)
+    const dest = path.join(INBOX_DIR, digits(from), `${randomBytes(8).toString("hex")}-${safe}`)
     await writePath(dest, bytes)
 
+    session = await loadSession(from)
     session.resumePath = dest
     session.resumeName = safe.replace(/\.docx$/i, "")
     session.resumeAt = Date.now()
@@ -313,7 +308,13 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
   if (!session.jd || !session.resumePath) return sendText(from, HELP)
 
-  await sendText(from, "Tailoring your resume… every client role gets its own pass, so this takes up to a minute.")
+  // One claim per JD, across all workers and either input order. Claim before any AI call.
+  const job = createHash("sha256").update(`${from}:${session.jdId || session.jd}`).digest("hex")
+  if (!await blob.putIfAbsent(`whatsapp/jobs/${job}`, "1")) return
+  // Consume this pair now. Completion must not erase a newer request arriving meanwhile.
+  await saveSession(from, { seen: session.seen })
+
+  await sendText(from, "Updating your resume. I’ll send one Word file when this run finishes.")
 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd })
@@ -331,35 +332,32 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       sections: { summary: false, skills: true, experience: true },
     })
   } catch (e) {
-    // The job description and the resume stay in the session, so sending either again retries without starting over.
+    // The pair was consumed before generation; a retry supplies a new pair.
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
-    return sendText(from, "I could not tailor your resume just now: the AI services that write it are busy or out of their allowance. Nothing was changed. Send the job description again in a few minutes.")
+    return sendText(from, "I could not tailor your resume just now: the AI services that write it are busy or out of their allowance. Please resend the job description and resume to retry.")
   }
 
   // Nothing came back different: the same file with "Match 28% -> 28%" on it is not a tailored resume, so it is not sent as one.
-  // (The job description and the resume stay in the session, as above.)
+  // A retry supplies a fresh JD and resume pair.
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
-    return sendText(from, "I read the job description against your resume and no line came back changed, so I am not sending you the same file. This usually means the AI services were short of capacity. Send the job description again in a few minutes.")
+    return sendText(from, "I read the job description against your resume and no line came back changed, so I am not sending you the same file. This usually means the AI services were short of capacity. Please resend the job description and resume to retry.")
   }
 
   const file = await blob.get(`tailored/${result.token}.docx`)
   if (!file) return sendText(from, "The resume generated but the file could not be read back. Please try again.")
 
+  const source = await readPath(session.resumePath)
+  if (!source || !sameResumeIdentity(await extractText(source), await extractText(file))) {
+    return sendText(from, "The generated file changed the resume’s contact email, so I stopped delivery. Please resend your JD and resume to retry.")
+  }
   const meta = await metaPromise
   const name = await outputNameFor(file)
   await deliver(from, file, name, captionFor(name, meta, result), { userId, jd: session.jd, meta, changes: [], source: session.resumeName })
   await recordWhatsAppUsage(userId, "resume_tailor", result)
 
-  if (result.quality?.status === "needs_review") {
-    await saveSession(from, { ...session, jd: undefined })
-    return
-  }
-
-  // Delete the original temporary upload and reset the job. Nothing is filed in Files.
   if (session.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
     await deletePath(session.resumePath).catch(() => {})
-  await saveSession(from, { seen: session.seen })
 }
 
 // ── Swipe-reply: change a resume the bot already sent ─────────────────────────
@@ -415,6 +413,10 @@ async function refine(from: string, replyTo: string, request: string, userId: st
   if (!file) return sendText(from, "The update generated but the file could not be read back. Please try again.")
 
   const meta = await metaPromise
+  const source = await readPath(gen.file)
+  if (!source || !sameResumeIdentity(await extractText(source), await extractText(file))) {
+    return sendText(from, "The update changed the resume’s contact email, so I stopped delivery. Reply to the original file to retry.")
+  }
   const changes = [...(gen.changes || []), request]
   const name = await outputNameFor(file)
   await deliver(from, file, name, captionFor(name, meta, result, { request, number: changes.length, lines }), {
@@ -441,53 +443,13 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
   else await deletePath(vfile)
 }
 
-// "Experience: 41 bullets rewritten across 4/4 roles" + the listed JD skills each role's bullets
-// show: proof the JD reached every client role, not only the skills section.
-function experienceLine(result: TailorResult): string[] {
-  const roles = (result.role_alignment || []).filter(r => r.bullets >= 2)
-  const bullets = roles.reduce((n, r) => n + r.rewritten, 0)
-  const added = roles.reduce((n, r) => n + (r.added || 0), 0)
-  if (!roles.length || (!bullets && !added)) return []
-  const es = result.experience_skills
-  return [
-    `Experience: ${bullets} bullet${bullets === 1 ? "" : "s"} rewritten${added ? `, ${added} new bullet${added === 1 ? "" : "s"} added` : ""} across ${roles.filter(r => r.rewritten || r.added).length}/${roles.length} roles`,
-    `Listed JD skills shown per role: ${roles.map(r => (r.required ? `${r.skills}/${r.required}` : `${r.skills}`)).join(" · ")}`,
-    ...(es?.listed ? [`Listed JD skills shown in your experience: ${es.shown}/${es.listed}`] : []),
-  ]
-}
-
 function captionFor(name: string, meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }): string {
-  // Measured coverage of the document being sent (older cached results lack it).
-  const cov = result.coverage ?? result.keyword_analysis.coverage_after
-  const added = result.keyword_analysis.added.length
-  const stats = update
-    ? [
-        `Change: ${clip(update.request, 200)}`,
-        `Keywords: ${cov}% covered`,
-        `${update.lines} line${update.lines === 1 ? "" : "s"} changed`,
-        ...experienceLine(result),
-      ]
-    : [
-        `Match: ${result.score_before}% -> *${result.score}%*`,
-        `Keywords: ${cov}% covered${added ? ` (+${added} added)` : ""}`,
-        `${result.diff.length} lines rewritten`,
-        ...experienceLine(result),
-      ]
+  const coverage = result.coverage ?? result.score
   return [
-    update ? `*${name}* (update ${update.number})` : `*${name}*`,
-    ...(result.quality?.status === "needs_review" ? [
-      `*Draft: quality review required. Minimum coverage: ${result.quality.minimum}%.*`,
-      `JD terms covered: ${result.quality.matched}/${result.quality.total}.`,
-      ...(result.quality.missing.length ? [`Still missing (${result.quality.missing.length}): ${clip(result.quality.missing.slice(0, 10).join(", "), 180)}${result.quality.missing.length > 10 ? ", …" : ""}`] : []),
-    ] : []),
-    // Said first, before any number: part of the draft was refused by the AI services and left as it was.
-    ...(result.partial ? [`_${result.partial.failed} of ${result.partial.total} parts could not be rewritten (the AI services were busy) and are unchanged. Send the job description again in a few minutes for a full pass._`] : []),
-    ...(meta.role ? [`Role: ${meta.role}`] : []),
-    ...(meta.company ? [`Company: ${meta.company}`] : []),
-    ...(meta.location ? [`Location: ${meta.location}`] : []),
-    "",
-    ...stats,
-    "",
-    "_Swipe-reply to this file with any changes and I'll update it._",
+    `*${name}*${update ? ` (update ${update.number})` : ""}`,
+    ...(meta.role ? [`${meta.role}${meta.company ? ` · ${meta.company}` : ""}`] : []),
+    `JD keyword coverage: ${coverage}%.`,
+    ...(result.quality?.status === "needs_review" ? ["Below your 95% target; this result is incomplete."] : []),
+    "Reply to this file to request changes.",
   ].join("\n")
 }
