@@ -66,7 +66,7 @@ test('the page sets the title in weight and the dates at the right edge, in ever
   for (const t of RESUME_FORMATS) {
     const html = renderResumeHtml(RESUME, t.id)
     assert.ok(html.includes('<div class="entry"><span class="what"><b>Senior DevOps Engineer</b> | Comcast</span><span class="when">Jan 2021 - Present</span></div>'), t.id)
-    assert.ok(html.includes('<p class="skill"><b>Languages:</b> Python, Go, Bash</p>'), t.id)
+    assert.ok(html.includes(t.id === 'kristopher-master' ? '<p class="subheading">Languages:</p><ul><li>Python, Go, Bash</li>' : '<p class="skill"><b>Languages:</b> Python, Go, Bash</p>'), t.id)
     assert.ok(/\.entry\{display:flex;justify-content:space-between/.test(html) && /\.entry \.when\{flex:none;white-space:nowrap/.test(html), t.id)
   }
 })
@@ -88,4 +88,14 @@ test('nothing typed into a resume can become markup, in an entry or a skill line
   const html = renderResumeHtml('Name\nSKILLS\nTools: <img src=x onerror=1>\nEXPERIENCE\n<b>Boss</b> | <script>x</script> | 2020', 'jakes')
   assert.ok(!html.includes('<img') && !html.includes('<script>') && !html.includes('<b>Boss</b>'))
   assert.ok(html.includes('&lt;b&gt;Boss&lt;/b&gt;'))
+})
+
+ test('Kristopher master uses reference typography without importing candidate content', async () => {
+  const html = renderResumeHtml(RESUME, 'kristopher-master')
+  assert.ok(html.includes('font-size:20pt'))
+  assert.ok(html.includes('color:#1F4E79'))
+  assert.ok(html.includes('margin:0.5in 0.625in'))
+  const xml = await (await JSZip.loadAsync(await renderResumeDocx(RESUME, 'kristopher-master'))).file('word/document.xml').async('string')
+  assert.ok(xml.includes('w:top="720" w:right="900" w:bottom="720" w:left="900"'))
+  assert.ok(!xml.includes('Kristopher') && !xml.includes('eshwarjay05'))
 })

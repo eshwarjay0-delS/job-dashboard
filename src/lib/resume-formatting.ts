@@ -1,6 +1,7 @@
 import JSZip from "jszip"
 
 export const RESUME_FORMATS = [
+  { id: "kristopher-master", label: "Kristopher Master", family: "Experienced", description: "Centered serif header, blue section rules, grouped technical skills, and complete work history" },
   { id: "jakes", label: "Jake's Resume", family: "Technical", description: "Compact serif type, centered identity, and ruled sections" },
   { id: "harvard", label: "Harvard College", family: "Professional", description: "Traditional serif layout with centered section titles" },
   { id: "yale-tech", label: "Yale Technical", family: "Technical", description: "Modern sans serif with blue section bars and a left aligned header" },
@@ -14,8 +15,9 @@ export const RESUME_FORMATS = [
 ] as const
 
 export type FormatId = typeof RESUME_FORMATS[number]["id"]
-type Style = { font: string; size: number; nameSize: number; margin: number; line: number; gap: number; accent: string; align: "left" | "center"; headingAlign: "left" | "center"; heading: "rule" | "band" | "plain"; caps: boolean; bullets: boolean }
+type Style = { marginY?: number; nameAccent?: string; headingSize?: number; font: string; size: number; nameSize: number; margin: number; line: number; gap: number; accent: string; align: "left" | "center"; headingAlign: "left" | "center"; heading: "rule" | "band" | "plain"; caps: boolean; bullets: boolean }
 export const FORMAT_STYLES: Record<FormatId, Style> = {
+  "kristopher-master": { font: "Times New Roman", size: 10, nameSize: 20, margin: .625, marginY: .5, line: 1, gap: 13, accent: "1F4E79", nameAccent: "222222", headingSize: 11, align: "center", headingAlign: "left", heading: "rule", caps: true, bullets: true },
   jakes: { font: "Times New Roman", size: 10.5, nameSize: 23, margin: .55, line: 1.15, gap: 9, accent: "202020", align: "center", headingAlign: "left", heading: "rule", caps: true, bullets: true },
   harvard: { font: "Times New Roman", size: 11, nameSize: 20, margin: .75, line: 1.2, gap: 12, accent: "202020", align: "center", headingAlign: "center", heading: "plain", caps: true, bullets: true },
   "yale-tech": { font: "Arial", size: 10.5, nameSize: 25, margin: .65, line: 1.2, gap: 10, accent: "193F66", align: "left", headingAlign: "left", heading: "band", caps: true, bullets: true },
@@ -30,7 +32,7 @@ export const FORMAT_STYLES: Record<FormatId, Style> = {
 export function validFormat(id: string): id is FormatId { return RESUME_FORMATS.some(t => t.id === id) }
 // Never silently truncate a career history during formatting.
 export function resumeLines(text: string): string[] { return text.replace(/\r/g, "").split("\n").map(s => s.trim()).filter(Boolean) }
-const headings = /^(experience|professional experience|work experience|employment history|education|skills|technical skills|projects|selected projects|certifications|summary|professional summary|professional profile|leadership|awards|publications|additional information|core competencies|career highlights|selected achievements|volunteer experience|research|languages)$/i
+const headings = /^(experience|professional experience|work experience|employment history|education|skills|technical skills|core technical skills|security engineering expertise|it experience|additional experience|selected projects & achievements|keywords|certification|projects|selected projects|certifications|summary|professional summary|professional profile|leadership|awards|publications|additional information|core competencies|career highlights|selected achievements|volunteer experience|research|languages)$/i
 export function isHeading(line: string) { return headings.test(line.trim().replace(/:$/, "")) }
 export function xmlEscape(s: string) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;") }
 // What one line of a resume is. The formatter used to know four things (a name, a heading, a bullet, "the rest"), so a
@@ -40,7 +42,7 @@ export function xmlEscape(s: string) { return s.replace(/&/g, "&amp;").replace(/
 // and a "Languages: Python, Go" line under a skills heading is a "skill" (its label carries weight).
 // Nothing here rewrites a word: a line is only placed, never changed.
 export type Block =
-  | { kind: "name" | "contact" | "heading" | "bullet" | "body"; text: string }
+  | { kind: "name" | "contact" | "heading" | "bullet" | "body" | "subheading" | "tagline"; text: string }
   | { kind: "entry"; text: string; lead: string; rest: string; when: string }
   | { kind: "skill"; text: string; label: string; rest: string }
 
@@ -89,11 +91,41 @@ export function resumeBlocks(text: string): Block[] {
     return { kind: "body", text: line }
   })
 }
+/** Reference-style hierarchy; never imports content from the example candidate. */
+export function formatBlocks(text: string, template: FormatId): Block[] {
+  const original = resumeBlocks(text)
+  if (template !== "kristopher-master") return original
+  const out: Block[] = []
+  let section = "", started = false
+  for (const b of original) {
+    // A source may place an all-caps professional title above an unlabelled summary.
+    if (!started && b.kind === "heading" && /engineer|analyst|administrator|specialist|consultant|developer|architect/i.test(b.text)) {
+      out.push({ kind: "tagline", text: b.text }); continue
+    }
+    if (b.kind === "heading") { section = b.text; started = true; out.push(b); continue }
+    if (!started && b.kind === "contact" && !/@|\d{3}|linkedin|https?:/i.test(b.text) && b.text.length < 140) {
+      out.push({ kind: "tagline", text: b.text }); continue
+    }
+    if (!started && b.kind === "body") { out.push({ kind: "heading", text: "PROFESSIONAL SUMMARY" }); section = "summary"; started = true }
+    if (b.kind === "skill") {
+      out.push({ kind: "subheading", text: b.label + ":" }, { kind: "bullet", text: b.rest }); continue
+    }
+    if (/skills|expertise|competencies/i.test(section) && b.kind === "body" && b.text.includes(":")) {
+      const at = b.text.indexOf(":")
+      if (at < 100) { out.push({ kind: "subheading", text: b.text.slice(0, at + 1) }, { kind: "bullet", text: b.text.slice(at + 1).trim() }); continue }
+    }
+    if (/experience/i.test(section) && b.kind === "body" && !/^[^:]{2,70}:/.test(b.text)) {
+      out.push({ kind: "bullet", text: b.text }); continue
+    }
+    out.push(b)
+  }
+  return out
+}
 export function renderResumeHtml(text: string, template: FormatId) {
   const s = FORMAT_STYLES[template]
   let list = false
   let body = ""
-  for (const block of resumeBlocks(text)) {
+  for (const block of formatBlocks(text, template)) {
     if (block.kind === "bullet" && s.bullets) {
       if (!list) { body += "<ul>"; list = true }
       body += `<li>${xmlEscape(block.text)}</li>`; continue
@@ -109,7 +141,7 @@ export function renderResumeHtml(text: string, template: FormatId) {
   }
   if (list) body += "</ul>"
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Resume</title><style>
-@page{size:letter;margin:${s.margin}in}*{box-sizing:border-box}html{background:#fff;color:#202020}body{font-family:'${s.font}',${s.font === "Arial" || s.font === "Calibri" ? "sans-serif" : "serif"};line-height:${s.line};font-size:${s.size}pt;width:8.5in;min-height:11in;padding:${s.margin}in;margin:0;background:white}h1{text-align:${s.align};font-size:${s.nameSize}pt;line-height:1.1;margin:0 0 7pt;color:#${s.accent};overflow-wrap:anywhere}h2{text-align:${s.headingAlign};text-transform:${s.caps ? "uppercase" : "none"};font-size:${s.size + .5}pt;line-height:1.2;color:#${s.accent};${s.heading === "rule" ? `border-bottom:1px solid #${s.accent};padding-bottom:3pt;` : s.heading === "band" ? "background:#EDF1F5;padding:4pt 6pt;" : ""}margin:${s.gap}pt 0 5pt;break-after:avoid}p{margin:0 0 5pt;white-space:pre-wrap;overflow-wrap:anywhere;orphans:2;widows:2}.contact{text-align:${s.align};font-size:${s.size - .5}pt}ul{margin:0 0 5pt;padding-left:14pt}li{padding-left:0;margin:0 0 4pt;overflow-wrap:anywhere;orphans:2;widows:2}.entry{display:flex;justify-content:space-between;align-items:baseline;gap:14pt;margin:5pt 0 2pt;break-after:avoid;break-inside:avoid}.entry .what{min-width:0;overflow-wrap:anywhere}.entry .when{flex:none;white-space:nowrap;text-align:right}.skill{margin:0 0 3pt}h2+.entry{margin-top:2pt}@media print{body{width:auto;min-height:0;padding:0}h1,h2{break-inside:avoid}}
+@page{size:letter;margin:${s.marginY ?? s.margin}in ${s.margin}in}*{box-sizing:border-box}html{background:#fff;color:#202020}body{font-family:'${s.font}',${s.font === "Arial" || s.font === "Calibri" ? "sans-serif" : "serif"};line-height:${s.line};font-size:${s.size}pt;width:8.5in;min-height:11in;padding:${s.marginY ?? s.margin}in ${s.margin}in;margin:0;background:white}h1{text-align:${s.align};font-size:${s.nameSize}pt;line-height:1.1;margin:0 0 7pt;color:#${s.nameAccent || s.accent};overflow-wrap:anywhere}h2{text-align:${s.headingAlign};text-transform:${s.caps ? "uppercase" : "none"};font-size:${s.headingSize ?? s.size + .5}pt;line-height:1.2;color:#${s.accent};${s.heading === "rule" ? `border-bottom:1px solid #${s.accent};padding-bottom:3pt;` : s.heading === "band" ? "background:#EDF1F5;padding:4pt 6pt;" : ""}margin:${s.gap}pt 0 5pt;break-after:avoid}p{margin:0 0 5pt;white-space:pre-wrap;overflow-wrap:anywhere;orphans:2;widows:2}.contact{text-align:${s.align};font-size:${s.size - .5}pt}ul{margin:0 0 5pt;padding-left:14pt}li{padding-left:0;margin:0 0 4pt;overflow-wrap:anywhere;orphans:2;widows:2}.entry{display:flex;justify-content:space-between;align-items:baseline;gap:14pt;margin:5pt 0 2pt;break-after:avoid;break-inside:avoid}.entry .what{min-width:0;overflow-wrap:anywhere}.entry .when{flex:none;white-space:nowrap;text-align:right}.subheading{font-weight:bold;color:#${s.accent};margin:10pt 0 4pt;break-after:avoid}.tagline{text-align:${s.align};font-weight:bold;color:#${s.accent};break-after:avoid}.skill{margin:0 0 3pt}h2+.entry{margin-top:2pt}@media print{body{width:auto;min-height:0;padding:0}h1,h2{break-inside:avoid}}
 </style></head><body data-template="${template}">${body}</body></html>`
 }
 export async function renderResumeDocx(text: string, template: FormatId): Promise<Buffer> {
@@ -117,24 +149,25 @@ export async function renderResumeDocx(text: string, template: FormatId): Promis
   const wide = 12240 - 2 * Math.round(s.margin * 1440)
   const run = (words: string, o: { bold?: boolean; colour?: string; size?: number } = {}) =>
     `<w:r><w:rPr><w:rFonts w:ascii="${s.font}" w:hAnsi="${s.font}"/>${o.bold ? "<w:b/>" : ""}<w:color w:val="${o.colour || "202020"}"/><w:sz w:val="${(o.size ?? s.size) * 2}"/></w:rPr><w:t xml:space="preserve">${xmlEscape(words)}</w:t></w:r>`
-  const paragraphs = resumeBlocks(text).map(block => {
+  const paragraphs = formatBlocks(text, template).map(block => {
     const heading = block.kind === "heading", name = block.kind === "name", contact = block.kind === "contact", entry = block.kind === "entry"
     const bullet = block.kind === "bullet" && s.bullets
-    const size = name ? s.nameSize : heading ? s.size + .5 : contact ? s.size - .5 : s.size
+    const size = name ? s.nameSize : heading ? (s.headingSize ?? s.size + .5) : contact ? (template === "kristopher-master" ? s.size : s.size - .5) : s.size
     const border = heading && s.heading === "rule" ? `<w:pBdr><w:bottom w:val="single" w:sz="6" w:color="${s.accent}"/></w:pBdr>` : ""
     const shade = heading && s.heading === "band" ? '<w:shd w:fill="EDF1F5"/>' : ""
-    const align = name || contact ? s.align : heading ? s.headingAlign : "left"
+    const align = name || contact || block.kind === "tagline" ? s.align : heading ? s.headingAlign : "left"
     // An entry keeps its dates at the right edge with a tab stop there, as the page does with a flexible row.
     const tabs = entry ? `<w:tabs><w:tab w:val="right" w:pos="${wide}"/></w:tabs>` : ""
     const runs = block.kind === "entry"
       ? run(block.lead, { bold: true }) + (block.rest ? run(block.rest) : "") + `<w:r><w:tab/></w:r>` + run(block.when)
       : block.kind === "skill"
         ? run(block.label + ":", { bold: true }) + run(" " + block.rest)
-        : run(heading && s.caps ? block.text.toUpperCase() : block.text, { bold: name || heading, colour: name || heading ? s.accent : undefined, size })
-    return `<w:p><w:pPr>${heading || name || entry ? "<w:keepNext/>" : ""}<w:widowControl/>${tabs}<w:spacing w:before="${heading ? s.gap * 20 : entry ? 80 : 0}" w:after="${name ? 140 : bullet ? 80 : entry ? 40 : 100}" w:line="${Math.round(s.line * 240)}" w:lineRule="auto"/>${border}${shade}<w:jc w:val="${align}"/>${bullet ? '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>' : ""}</w:pPr>${runs}</w:p>`
+        : run(heading && s.caps ? block.text.toUpperCase() : block.text, { bold: name || heading || block.kind === "subheading" || block.kind === "tagline", colour: name ? s.nameAccent || s.accent : heading || block.kind === "subheading" || block.kind === "tagline" ? s.accent : undefined, size })
+    return `<w:p><w:pPr>${heading || name || entry || block.kind === "subheading" || block.kind === "tagline" ? "<w:keepNext/>" : ""}<w:widowControl/>${tabs}<w:spacing w:before="${heading ? s.gap * 20 : block.kind === "subheading" ? 200 : entry ? 80 : 0}" w:after="${name ? 140 : bullet ? 80 : entry ? 40 : 100}" w:line="${Math.round(s.line * 240)}" w:lineRule="auto"/>${border}${shade}<w:jc w:val="${align}"/>${bullet ? '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>' : ""}</w:pPr>${runs}</w:p>`
   }).join("")
   const margin = Math.round(s.margin * 1440)
-  const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paragraphs}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="${margin}" w:right="${margin}" w:bottom="${margin}" w:left="${margin}"/></w:sectPr></w:body></w:document>`
+  const marginY = Math.round((s.marginY ?? s.margin) * 1440)
+  const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paragraphs}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="${marginY}" w:right="${margin}" w:bottom="${marginY}" w:left="${margin}"/></w:sectPr></w:body></w:document>`
   const zip = new JSZip()
   zip.file("[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/></Types>')
   zip.file("_rels/.rels", '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>')
