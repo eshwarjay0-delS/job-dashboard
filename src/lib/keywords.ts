@@ -151,6 +151,12 @@ export function extractKeywords(text: string): string[] {
 // This is term coverage, not a semantic qualification or ATS hiring score.
 const TERM_ALIASES: string[][] = [
   ["osint", "open source intelligence"],
+  ["cdc", "change data capture"],
+  ["lwc", "lightning web components"],
+  ["cpq", "configure price quote", "configure price and quote"],
+  ["q2c", "quote to cash"],
+  ["sso", "single sign on"],
+  ["iga", "identity governance and administration"],
   ["ttp", "ttps", "tactics techniques and procedures", "tactics techniques procedures"],
   ["ioc", "iocs", "indicator of compromise", "indicators of compromise"],
   ["csoc", "cyber security operations center", "cybersecurity operations center"],
@@ -209,8 +215,19 @@ const META_LINE = /^\s*(?:(?:hello|hi|dear)\s[^\n]*|(?:[-•·*]\s*)?(?:location
 const NON_SKILL_DESCRIPTORS = new Set(["hands-on", "senior-level", "junior-level", "mid-level", "entry-level", "incident-related", "full-time", "part-time", "on-site", "on-premise-related", "non-technical", "and/or", "weekday/weekend", "weekday", "weekend"])
 const singularAcronym = (raw: string): string => /^[A-Z]{2,}s$/.test(raw) ? raw.slice(0, -1).toLowerCase() : raw.toLowerCase()
 
+/** Remove commentary about constructing a keyword bank, not actual job requirements. */
+export function requirementText(jd: string): string {
+  return jd.split(/^\s*(?:Tailored Professional Summary\b|Candidate Submission\s*&\s*Screening Template\b)/im)[0].split("\n").filter(line => {
+    const text = line.replace(/^[\s>*#•-]+/, "").trim()
+    if (/^(?:here(?:'s| is)|below is|i(?:'ve| have) (?:created|prepared))\b/i.test(text) && /keyword (?:bank|list)|ats optimi[sz]ation/i.test(text)) return false
+    if (/^(?:tip|note|recommendation|how to use|usage|for (?:best|maximum) results)\s*:/i.test(text) && /resume|linkedin|keyword|ats/i.test(text)) return false
+    if (/^(?:candidate must have |must have |please (?:include|provide) |include |provide )?(?:an? |active )*linkedin (?:profile|url|link)\b/i.test(text)) return false
+    return true
+  }).join("\n")
+}
+
 export function extractJdKeywords(jd: string): string[] {
-  jd = jd.replace(/^[ \t]*>[ \t]?/gm, "").replace(/\*{1,2}/g, "")
+  jd = requirementText(jd).replace(/^[ \t]*>[ \t]?/gm, "").replace(/\*{1,2}/g, "")
     .replace(/(?:^|\n)[ \t]*Work Schedule[ \t]*&[ \t]*Environment\b[\s\S]*?(?=\n[ \t]*(?:Note:|Required Qualifications|Preferred Qualifications|Key Responsibilities)\b|$)/gi, "\n")
     .replace(META_LINE, "")
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, " ")
@@ -233,7 +250,8 @@ export function extractJdKeywords(jd: string): string[] {
     const lowRaw = raw.toLowerCase()
     const hasSep = /[-./]/.test(raw)
     const low = hasSep ? lowRaw : singularAcronym(raw)
-    if (low.length >= 2 && !WORD_STOP.has(low)) out.add(low)
+    const slashAlternative = raw.includes("/") && !/^(ci\/cd|tcp\/ip|pl\/sql|i\/o|s\/4hana)$/i.test(raw)
+    if (low.length >= 2 && !WORD_STOP.has(low) && !slashAlternative) out.add(low)
     if (raw.includes("/")) {
       for (const part of lowRaw.split("/")) {
         if (part.length >= 2 && part.length <= 12 && !WORD_STOP.has(part) && !CAPS_STOP.has(part.toUpperCase())) out.add(part)

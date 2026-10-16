@@ -56,3 +56,23 @@ test('forwarded JD formatting and work schedules do not become technical require
   for (const term of ['osint', 'ttp', 'csoc', 'threat actors', 'threat intelligence reports', 'microsoft teams']) assert.ok(terms.includes(term), term)
   assert.ok(!terms.includes('ttps'), 'one concept must not count twice')
 })
+
+test('pasted keyword-bank commentary is not scored as a Salesforce requirement', () => {
+  const terms = extractJdKeywords(`Here is an expanded, high-density keyword bank specifically tailored for ATS optimization, candidate sourcing and LinkedIn.
+Salesforce Developer
+Develop Apex with Lightning Web Components (LWC), Salesforce CPQ/Revenue Cloud, SOQL/SOSL, CDC and event-driven integrations with SAP and NetSuite.
+Tip: Add these keywords to your LinkedIn profile for ATS optimization.
+Candidate must have active LinkedIn profile.`)
+  for (const noise of ['high-density','ats','linkedin','cpq/revenue','soql/sosl']) assert.ok(!terms.includes(noise), noise)
+  for (const required of ['apex','lwc','cpq','soql','sosl','cdc','sap','netsuite','event-driven']) assert.ok(terms.includes(required), required)
+})
+test('legitimate ATS and LinkedIn product integration work is retained', () => {
+  const terms = extractJdKeywords('Implement ATS integrations with LinkedIn Recruiter and Salesforce APIs.')
+  assert.ok(terms.includes('ats'))
+  assert.ok(terms.includes('linkedin'))
+})
+test('Salesforce expansions count without requiring acronym stuffing', () => {
+  const matched = coveredJdKeywords('Built Lightning Web Components and change data capture integrations; configured configure, price, quote and quote-to-cash workflows.', ['lwc','cdc','cpq','q2c'])
+  assert.equal(matched.size, 4)
+  assert.equal(present('Used Oracle integrations.', 'NetSuite'), false)
+})

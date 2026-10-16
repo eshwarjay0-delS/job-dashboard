@@ -8,7 +8,7 @@ import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, roleSpanMonths, type Edits, type Zones } from "./docx"
 import { adapt, expandJdKeywordsTwice } from "./claude"
 import { recentFeedback } from "./feedback"
-import { matchByKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
+import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 import { priceCalls, type PricedCall } from "./llmPrices"
@@ -111,7 +111,7 @@ function normJD(jd: string): string {
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
-const CACHE_GENERATION = "10"
+const CACHE_GENERATION = "11"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -143,7 +143,7 @@ export async function runTailor(opts: {
   refine?: string
 }): Promise<TailorResult> {
   const started = Date.now()
-  const jd = opts.jd.trim()
+  const jd = requirementText(opts.jd).trim()
   const immediatePrefs = (opts.immediatePrefs || []).filter(s => typeof s === "string" && s.trim())
   // Second prompt: ask the model for the ATS keywords a recruiter expects for this JD
   // (synonyms, acronym expansions, implied tooling) to concat with the literal extraction.
