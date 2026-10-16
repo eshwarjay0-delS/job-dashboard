@@ -1,3 +1,4 @@
+import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, resumeQuality } from "./resume-quality"
 import { J1_VERSION, constrainResumeEdits } from "./ai/j1"
 import path from "path"
 import { createHash } from "crypto"
@@ -11,6 +12,7 @@ import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./ta
 import { priceCalls, type PricedCall } from "./llmPrices"
 
 export interface TailorResult {
+  quality?: ReturnType<typeof resumeQuality>
   token: string
   score: number
   score_before: number
@@ -128,7 +130,7 @@ function normJD(jd: string): string {
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
-const CACHE_GENERATION = "5"
+const CACHE_GENERATION = "6"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -263,7 +265,7 @@ export async function runTailor(opts: {
       if (!cached.keyword_analysis || !cached.diff) throw new Error("stale cache shape")
       // Never replay a pre-contract low-coverage artifact. A known JD tailor is complete
       // only when the rendered DOCX itself clears the keyword quality gate.
-      if (!refine && (cached.coverage ?? cached.keyword_analysis.coverage_after ?? 0) < 90) throw new Error("cached result below keyword quality gate")
+      if (!refine && cached.quality?.status !== "coverage_met") throw new Error("cached result below keyword quality gate")
       return { ...cached, cached: true, elapsed_ms: Date.now() - started }
     } catch { /* miss → generate */ }
   }
@@ -515,7 +517,14 @@ export async function runTailor(opts: {
           || ((sec.headline ?? sec.summary) !== false && !!`${e.headline?.title || ""}${e.headline?.tagline || ""}`.trim())
       const worked = await workParts<Part, Edits>({
         parts, lanes, out: laneOut, says,
-        ask: (part, lane) => adapt({ ...call, ...laneCall(lane), part: part.kind, roles: part.roles }),
+        ask: (part, lane) => {
+          const rolePlan = (part.roles || []).map(i => {
+            const role = zones.roles[i]
+            const supported = [...coveredJdKeywords(role.bullets.map(b => b.text).join("\n"), jdKwsPrompt)]
+            return `ROLE #${i}: preserve and develop these source-supported JD skills into substantive action and purpose/result bullets: ${supported.join(", ") || "identify relevant transferable work in the source"}. Review every bullet, retaining its factual context. Use equivalent exact JD terminology where the meaning is supported. Do not turn bullets into skill lists or repeat identical points across clients.`
+          }).join("\n")
+          return adapt({ ...call, preferences: [call.preferences, rolePlan].filter(Boolean).join("\n"), ...laneCall(lane), part: part.kind, roles: part.roles })
+        },
         startBy: deadline - 9000,     // a call started later than this would not be back in time
         assembleBy: deadline - 3000,  // what is still running then is left behind; the draft is made of what came back
       })
@@ -542,8 +551,8 @@ export async function runTailor(opts: {
   // literal JD coverage is the target: the terms still missing are named to the first pass, and each role's gap is then
   // filled until the target or the deadline.
   const usageSink: TokenUsage[] = []
-  const MIN_KEYWORD_COVERAGE = 0.90
-  const TARGET_COVERAGE = Math.max(MIN_KEYWORD_COVERAGE, Math.min(1, Number(E.TAILOR_TARGET_COVERAGE) || 0.98))
+  const MIN_KEYWORD_COVERAGE = RESUME_MIN_COVERAGE
+  const TARGET_COVERAGE = Math.max(MIN_KEYWORD_COVERAGE, Math.min(1, Number(E.TAILOR_TARGET_COVERAGE) || RESUME_TARGET_COVERAGE))
   const TAILOR_MAX_MS = Math.max(1000, Math.min(Number(E.TAILOR_MAX_MS) || 52000, 55000, opts.maxMs || Infinity))
   const deadline = started + TAILOR_MAX_MS
   const MIN_CLIMB_MS = Number(E.TAILOR_MIN_CLIMB_MS) || 9000
@@ -562,7 +571,7 @@ export async function runTailor(opts: {
     - (summaryWanted && !(p.edits.summary || "").trim() ? 0.08 : 0)
   // The JD terms still missing, computed from the resume with no model call, so the pass targets the gap.
   const injectFor = (covered: Set<string>): string[] => {
-    const missing = jdKwsPrompt.filter(k => !covered.has(k)).slice(0, 40)
+    const missing = jdKwsPrompt.filter(k => !covered.has(k))
     if (!missing.length) return []
     return [`ATS COVERAGE (rewrite existing lines in place): ensure these JD terms appear, weaving EACH one into the experience bullets of the roles where it fits (and its matching skill line) using the JD's exact wording: ${missing.join(", ")}`]
   }
@@ -773,10 +782,12 @@ export async function runTailor(opts: {
   // (same inputs → same file). An incomplete or unchanged one gets another name: written over the key, it left an EARLIER
   // whole result in the cache pointing at this lesser file, so the next identical request was told "31 bullets rewritten"
   // and handed an untailored resume (found in review, 2026-10-05).
-  const token = !best.partial && diff.length ? key : `${key}x`
+  const qualityReport = resumeQuality({ matched: afterKw.size, total: jdKws.length, missing: kwMissing, partial: !!best.partial, unchanged: !diff.length })
+  const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
 
   const result: TailorResult = {
+    quality: qualityReport,
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,
     ranked_candidates: rankedCandidates, what_changed: whatChanged(edits), edits, notes,
     applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff,
@@ -789,6 +800,8 @@ export async function runTailor(opts: {
 
   // Only a whole draft that changed something is worth serving again: an incomplete or unchanged one should be redone
   // the next time it is asked for, when the providers may have room.
-  if (!result.partial && !result.unchanged) await blob.put(cacheKey, JSON.stringify(result)).catch(() => {})
+  if (!result.partial && !result.unchanged) {
+    if (result.quality?.status === "coverage_met") await blob.put(cacheKey, JSON.stringify(result)).catch(() => {})
+  }
   return result
 }

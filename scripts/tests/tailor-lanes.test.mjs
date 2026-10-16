@@ -314,7 +314,7 @@ test('a part every lane refused comes back with the reason, and a timeout does n
 // ── what the tailor and the bot promise, read from the source ────────────────
 test('an incomplete or unchanged draft is not stored, not sent as tailored, and old stored drafts are not served', () => {
   const tailor = read('src/lib/tailor.ts'), bot = read('src/app/api/whatsapp/webhook/route.ts'), claude = read('src/lib/claude.ts')
-  assert.match(tailor, /if \(!result\.partial && !result\.unchanged\) await blob\.put\(cacheKey/)
+  assert.match(tailor, /if \(!result\.partial && !result\.unchanged\) \{\s*if \(result\.quality\?\.status === "coverage_met"\) await blob\.put\(cacheKey/)
   assert.match(tailor, /\[J1_VERSION, CACHE_GENERATION, normJD\(jd\)/, 'drafts stored before the fix are not served again')
   assert.match(tailor, /\.\.\.\(diff\.length \? \{\} : \{ unchanged: true \}\)/)
   assert.match(tailor, /if \(failed \* 2 > total\) throw new Error\(`Tailoring incomplete/)
@@ -326,7 +326,7 @@ test('an incomplete or unchanged draft is not stored, not sent as tailored, and 
 
 test('the review\'s fixes in the tailor, read from the source', () => {
   const tailor = read('src/lib/tailor.ts')
-  assert.match(tailor, /const token = !best\.partial && diff\.length \? key : `\$\{key\}x`/, 'an incomplete or unchanged file never overwrites the one a cached result points at')
+  assert.match(tailor, /const token = !best\.partial && diff\.length && qualityReport\.status === "coverage_met" \? key : `\$\{key\}x/, 'an incomplete or unchanged file never overwrites the one a cached result points at')
   assert.ok(tailor.indexOf('const token = !best.partial') > tailor.indexOf('const diff: {'), 'and its name is decided after the diff is known')
   assert.match(tailor, /let kwExpandPromise: Promise<string\[\]> \| null = openaiOn && !opts\.noCache \? null : expandKeywords\(\)/, 'a paid keyword call waits for the cache to miss')
   assert.match(tailor, /await \(kwExpandPromise \?\?= expandKeywords\(\)\)/)

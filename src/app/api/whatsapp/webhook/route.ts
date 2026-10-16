@@ -351,6 +351,11 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   await deliver(from, file, name, captionFor(name, meta, result), { userId, jd: session.jd, meta, changes: [], source: session.resumeName })
   await recordWhatsAppUsage(userId, "resume_tailor", result)
 
+  if (result.quality?.status === "needs_review") {
+    await saveSession(from, { ...session, jd: undefined })
+    return
+  }
+
   // Delete the original temporary upload and reset the job. Nothing is filed in Files.
   if (session.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
     await deletePath(session.resumePath).catch(() => {})
@@ -470,6 +475,11 @@ function captionFor(name: string, meta: Meta, result: TailorResult, update?: { r
       ]
   return [
     update ? `*${name}* (update ${update.number})` : `*${name}*`,
+    ...(result.quality?.status === "needs_review" ? [
+      `*Draft: quality review required. Minimum coverage: ${result.quality.minimum}%.*`,
+      `JD terms covered: ${result.quality.matched}/${result.quality.total}.`,
+      ...(result.quality.missing.length ? [`Still missing (${result.quality.missing.length}): ${clip(result.quality.missing.slice(0, 10).join(", "), 180)}${result.quality.missing.length > 10 ? ", …" : ""}`] : []),
+    ] : []),
     // Said first, before any number: part of the draft was refused by the AI services and left as it was.
     ...(result.partial ? [`_${result.partial.failed} of ${result.partial.total} parts could not be rewritten (the AI services were busy) and are unchanged. Send the job description again in a few minutes for a full pass._`] : []),
     ...(meta.role ? [`Role: ${meta.role}`] : []),

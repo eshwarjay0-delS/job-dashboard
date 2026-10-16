@@ -336,6 +336,7 @@ function ResultContent() {
 
   const [rankedCandidates, setRankedCandidates] = useState<RankedCandidate[]>([])
   const [breakdown, setBreakdown] = useState<ScoreBreakdown | null>(null)
+  const [quality, setQuality] = useState<{ status: string; minimum: number; matched: number; total: number } | null>(null)
   const [kwAnalysis, setKwAnalysis] = useState<KeywordAnalysis | null>(null)
   const [receipt, setReceipt] = useState<null | { calls: number; inputTokens: number; outputTokens: number; estCostUSD: number; byModel: { provider: string; model: string }[] }>(null)
   const [selKw, setSelKw] = useState<string[]>([])   // missing keywords the user chose to add
@@ -392,6 +393,7 @@ function ResultContent() {
         if (Array.isArray(r.ranked_candidates)) setRankedCandidates(r.ranked_candidates)
         if (r.score_breakdown) setBreakdown(r.score_breakdown)
         if (r.keyword_analysis) setKwAnalysis(r.keyword_analysis)
+        setQuality(r.quality ?? null)
         if (r.usage && typeof r.usage.estCostUSD === "number") setReceipt(r.usage)
         if (Array.isArray(r.diff)) setDiff(r.diff)
       }
@@ -457,6 +459,7 @@ function ResultContent() {
       setContent(data.edits ?? null)
       setBreakdown(data.score_breakdown ?? null)
       setKwAnalysis(data.keyword_analysis ?? null)
+      setQuality(data.quality ?? null)
       setDiff(Array.isArray(data.diff) ? data.diff : [])
       if (data.matched?.filename) setResumeName(data.matched.filename)
       if (data.matched?.category) setCategory(data.matched.category)
@@ -745,6 +748,12 @@ function ResultContent() {
           )}
 
           {/* Keyword match — what the role asks vs. what the resume proves */}
+          {quality?.status === "needs_review" && (
+            <div role="status" className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}>
+              <p className="font-semibold">Draft: quality review required. Minimum coverage: {quality.minimum}%</p>
+              <p className="text-sm">{quality.matched}/{quality.total} JD terms covered. Review the missing terms below; unsupported qualifications need confirmation before inclusion.</p>
+            </div>
+          )}
           {(kwAnalysis || breakdown) && (
             <div className="px-6 py-5" style={{ borderTop: "1px solid var(--border)", background: "var(--surface)" }}>
               <h2 className="text-sm font-semibold mb-0.5" style={{ color: "var(--text)" }}>Keyword match</h2>
