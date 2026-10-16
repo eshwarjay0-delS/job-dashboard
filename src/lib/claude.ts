@@ -12,7 +12,7 @@ CRITICAL RULE: You are editing REAL TEXT from a REAL person's resume. Every sing
 Never remove lines, and never add lines except NEW experience bullets returned in "added" when an instruction below explicitly asks for them. Never change names, contact info, company names, job titles, or dates.
 You are given the resume's editable lines, each tagged with a stable [idx]. Return ONLY the lines you change.
 
-FOUNDATION (read first): this resume is ALREADY a ~70-80% match — it is the candidate's authentic, golden copy. Your job is to BRIDGE the final ~15-20%, NOT to rebuild from scratch. Aim for a 90-98% fit (never claim 99%+). Leave already-aligned sections exactly as they are; change only the lines that move the match toward the JD.
+FOUNDATION: perform a comprehensive alignment review of the source resume against the JD. Do not assume a starting match percentage or impose an edit quota. Review EVERY supplied experience role and every bullet for supported JD terminology. Preserve strong existing evidence, and rewrite relevant bullets to make the action, exact supported technology, and documented outcome clear. Target 95–98% keyword coverage where the source supports it; unsupported requirements remain gaps, never invented experience.
 
 Work in THIS order — recruiter trust first, ATS keywords LAST:
 
@@ -25,7 +25,7 @@ Work in THIS order — recruiter trust first, ATS keywords LAST:
 2) CREDIBILITY — evidence before keywords. The JD describes an employer's requirements, NOT the candidate's work history. State a specific tool, vendor platform, certification, years of experience, or project only when the source resume documents it or the candidate explicitly confirms it. Do not manufacture ONYX Security implementation, AISPM ownership, NIST AI RMF/ISO 42001 projects, CISSP, or seniority from this JD alone. Match supported transferable experience honestly.
    ANTI-MIRRORING (critical): use the JD's exact tool and technology names (ATS matching is literal), but never copy its sentences. Rewrite what the work ACTUALLY involves. Hiring managers immediately flag word-for-word JD mirroring as AI-generated.
 
-3) EXPERIENCE — HISTORICALLY ACCURATE. Preserve each role's actual tools, responsibilities, clients, outcomes, and dates. Focus applicable JD terms in roles where the source resume supports them. Do NOT spread new AI products, frameworks, or governance work retroactively into older jobs, and do not invent project ownership, incidents, metrics, or controls to raise keyword coverage. Leave other roles unchanged where the JD capability was not demonstrated.
+3) EXPERIENCE — HISTORICALLY ACCURATE. Preserve each role's actual tools, responsibilities, clients, outcomes, and dates. Focus applicable JD terms in roles where the source resume supports them. Do NOT spread new AI products, frameworks, or governance work retroactively into older jobs, and do not invent project ownership, incidents, metrics, or controls to raise keyword coverage. Review every role, including earlier clients. For each role with relevant evidence, strengthen all bullets that can express supported JD requirements more clearly, rather than concentrating edits in the current role. Show the exact supported technology, the candidate's action, and the documented purpose or result. When the same skill is supported in several roles, show it in each with distinct client context, never copied bullets. Leave unrelated facts intact; do not mistake different wording for missing experience.
 
 4) TOOL EVIDENCE — show OWNERSHIP, not exposure. Write what operational ownership of THAT tool actually looks like. Examples: ML/GenAI — model eval, RAG pipeline tuning, latency/cost tradeoffs, eval harnesses, agent orchestration, tool calling; BACKEND — API design, query tuning, idempotency, failure handling; DATA — pipeline orchestration, schema evolution, backfills, data quality; CLOUD — IaC modules, CI/CD gates, autoscaling, on-call; SECURITY — scanner rule tuning, alert triage, detection tuning, false-positive reduction, incident escalation. One or two related tools per bullet; never cram a list.
 
@@ -198,7 +198,7 @@ export async function adapt(opts: {
       : "SKILL LINES (focus on the role; keep honest, no keyword dumping; keep each [idx]):\n" + opts.zones.skills.map(s => `[${s.idx}] ${s.text}`).join("\n") + "\n\n"
   }
   if (part === "profile") {
-    if (opts.zones.roles.length) lines += "WORK HISTORY (context only; a parallel pass rewrites its bullets):\n" + opts.zones.roles.map(r => `- ${r.role.replace(/\s+/g, " ")}`).join("\n") + "\n"
+    if (opts.zones.roles.length) lines += "WORK HISTORY EVIDENCE (context only; a parallel pass rewrites these bullets):\n" + opts.zones.roles.map(r => `ROLE: ${r.role.replace(/\s+/g, " ")}\n${r.bullets.map(b => b.text).join("\n")}`).join("\n\n") + "\n"
   } else if (editRoles.length) {
     lines += (opts.refine || opts.mode === "quick")
       ? "EXPERIENCE BULLETS (keep each [idx]):\n"

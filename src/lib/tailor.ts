@@ -5,7 +5,7 @@ import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, roleSpanMonths, type Edits, type Zones } from "./docx"
 import { adapt, expandJdKeywords } from "./claude"
 import { recentFeedback } from "./feedback"
-import { matchByKeywords, extractKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
+import { matchByKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 import { priceCalls, type PricedCall } from "./llmPrices"
@@ -67,15 +67,6 @@ export interface TailorResult {
 }
 
 // ── helpers (moved out of the route so the background worker can reuse them) ───
-function matchPct(resumeText: string, jd: string): number {
-  const kws = extractKeywords(jd)
-  if (kws.length < 3) return 75
-  const rt = resumeText.toLowerCase()
-  const cov = kws.filter(k => rt.includes(k.toLowerCase())).length / kws.length
-  return Math.max(55, Math.min(99, Math.round(50 + cov * 52)))
-}
-
-
 function whatChanged(edits: Edits): string[] {
   const out: string[] = []
   if (edits.headline?.title?.trim()) out.push(`Set the header title to "${edits.headline.title.trim()}" (name & contact kept)`)
@@ -137,7 +128,7 @@ function normJD(jd: string): string {
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
-const CACHE_GENERATION = "4"
+const CACHE_GENERATION = "5"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -700,8 +691,8 @@ export async function runTailor(opts: {
       : /^Tailoring incomplete/.test(why) ? `${why} Please try again in a minute.`
       : "Tailoring failed — every model errored (check API keys / quota).")
   }
-  const { edits, buffer, notes, tailoredText, afterKw, claimedKw, roleKw, required, provenKw } = best
-  notes.push("Known JD contract: this user supplied/approved JD is treated as declared knowledge for tailoring. The default completion threshold is 98% literal JD keyword coverage; the score is still keyword overlap, not hiring probability.")
+  const { edits, buffer, notes, afterKw, claimedKw, roleKw, required, provenKw } = best
+  notes.push("The JD supplies target requirements; the source resume supplies experience evidence. The target is 98% keyword coverage where supported. Scores measure exported document keyword overlap, not hiring probability.")
   notes.push(`Tailored with ${usedModel} · JD keyword coverage ${Math.round(best.cov * 100)}%`)
   const finalRewrites = rewrites(edits)
   const finalAdded = addedFor(edits)
@@ -718,25 +709,19 @@ export async function runTailor(opts: {
   }
 
 
-  // Preserve the original MarketFit ATS match scale. This is deliberately distinct
-  // from literal keyword coverage, which is reported separately below. The pre-login
-  // product exposed a normalized ATS/JD alignment score in the 90-98 post-tailor band
-  // while keeping raw keyword coverage visible as its own auditable metric.
-  const rawBefore = matchPct(text, jd)
-  const rawAfter = Math.max(rawBefore + 4, matchPct(tailoredText, jd))
-  const afterBand = (raw: number) => Math.round(90 + (Math.min(99, Math.max(55, raw)) - 55) / 44 * 8)
-  const beforeBand = (raw: number) => Math.round(72 + (Math.min(99, Math.max(55, raw)) - 55) / 44 * 14)
-  const after = afterBand(rawAfter)
-  const before = Math.min(after - 5, beforeBand(rawBefore))
+  // Scores describe the exported document's measured JD keyword coverage.
+  // Never force a high band or an improvement that the document did not achieve.
+  const before = jdKws.length ? Math.round(beforeKw.size / jdKws.length * 100) : 0
+  const after = jdKws.length ? Math.round(afterKw.size / jdKws.length * 100) : 0
 
   // ── Match decomposition + keyword gap (reuses the coverage sets above) ──
   const kwAdded   = jdKws.filter(k => !beforeKw.has(k) && afterKw.has(k))
   const kwMissing = jdKws.filter(k => !afterKw.has(k))
   const pctOf = (n: number) => jdKws.length ? Math.round((n / jdKws.length) * 100) : 0
   const keyword_analysis = {
-    matched: kwMatched.slice(0, 24),
-    added: kwAdded.slice(0, 24),
-    missing: kwMissing.slice(0, 24),
+    matched: kwMatched,
+    added: kwAdded,
+    missing: kwMissing,
     coverage_before: pctOf(kwMatched.length),
     coverage_after: pctOf(afterKw.size),
   }
