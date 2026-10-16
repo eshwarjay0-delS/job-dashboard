@@ -365,16 +365,16 @@ RULES:
 - Output ONLY a minified JSON array of lowercase strings. No prose, no markdown, no keys.
 - Include: hard skills, tools, platforms, frameworks, certifications, methodologies, and domain phrases.
 - Include BOTH forms of an acronym when the role uses them (e.g. "iam" and "identity and access management").
-- Include standard tools/technologies clearly implied by the stack even if not named verbatim.
-- EXCLUDE soft skills, company names, benefits, locations, and generic words ("team", "strong", "experience").
-- Keep each entry 1-4 words. Max 60 entries.
+- PRECISION: extract requirements explicitly present in this JD and established acronym expansions only. Do not invent adjacent products or tools.
+- Include explicitly required analytical, communication and collaboration skills. EXCLUDE recruiter names, company names, emails, URLs, benefits, locations, schedules and generic words.
+- Keep each entry 1-8 words. Return every distinct relevant requirement; do not pad the list with duplicates or generic fragments.
 Example output: ["kubernetes","terraform","iam","identity and access management","siem"]`
   const user =
     `JOB DESCRIPTION:
 ${opts.jd.slice(0, 12000)}
 
 ` +
-    (opts.known?.length ? `ALREADY CAPTURED (return ADDITIONAL ones, do not repeat these): ${opts.known.slice(0, 60).join(", ")}
+    (opts.known?.length ? `ALREADY CAPTURED (return ADDITIONAL ones, do not repeat these): ${opts.known.join(", ")}
 
 ` : "") +
     `Return the JSON array of ATS keywords.`
@@ -382,7 +382,7 @@ ${opts.jd.slice(0, 12000)}
   const call = (async () => {
     const text = (await callLLM({
       keys: opts.keys, tier: "light", pref: opts.pref, system, user,
-      maxTokens: 700, model: opts.model, temperature: 0.2, usageSink: opts.usageSink, purpose: "resume-keywords",
+      maxTokens: 2400, model: opts.model, temperature: 0.2, usageSink: opts.usageSink, purpose: "resume-keywords",
     })).text
     let t = text.trim().replace(/^```[a-zA-Z]*\s*/, "").replace(/\s*```$/, "").trim()
     const a = t.indexOf("["), b = t.lastIndexOf("]")
@@ -394,12 +394,12 @@ ${opts.jd.slice(0, 12000)}
       if (typeof v !== "string") continue
       const k = v.toLowerCase().trim().replace(/[.,;:]+$/, "")
       // 2-40 chars, at most 4 words, no filler — same precision bar as the extractor.
-      if (k.length < 2 || k.length > 40) continue
-      if (k.split(/\s+/).length > 4) continue
+      if (k.length < 2 || k.length > 100) continue
+      if (k.split(/\s+/).length > 8) continue
       if (isFiller(k)) continue
       out.push(k)
     }
-    return [...new Set(out)].slice(0, 60)
+    return [...new Set(out)]
   })()
 
   // Hard cap: this is an ENHANCEMENT, never a reason for the tailor to wait.
@@ -408,6 +408,17 @@ ${opts.jd.slice(0, 12000)}
     call.catch(() => [] as string[]),
     new Promise<string[]>(r => setTimeout(() => r([]), ms)),
   ])
+}
+
+/** Two Gemini-only precision passes: the second explicitly searches for omissions. */
+export async function expandJdKeywordsTwice(opts: {
+  keys: LlmKeys; jd: string; known?: string[]; timeoutMs?: number; usageSink?: TokenUsage[]
+}): Promise<string[]> {
+  const known = opts.known || []
+  const call = { ...opts, keys: { gemini: opts.keys.gemini }, pref: "gemini" as const }
+  const first = await expandJdKeywords({ ...call, known })
+  const second = await expandJdKeywords({ ...call, known: [...new Set([...known, ...first])] })
+  return [...new Set([...first, ...second])]
 }
 
 // ── JD metadata (role / company / location) ───────────────────────────────────

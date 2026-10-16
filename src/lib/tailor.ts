@@ -5,7 +5,7 @@ import path from "path"
 import { createHash } from "crypto"
 import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, roleSpanMonths, type Edits, type Zones } from "./docx"
-import { adapt, expandJdKeywords } from "./claude"
+import { adapt, expandJdKeywordsTwice } from "./claude"
 import { recentFeedback } from "./feedback"
 import { matchByKeywords, extractJdKeywords, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
@@ -110,7 +110,7 @@ function normJD(jd: string): string {
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
-const CACHE_GENERATION = "8"
+const CACHE_GENERATION = "9"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -151,26 +151,14 @@ export async function runTailor(opts: {
   // stall or fail a tailor. TAILOR_KW_EXPAND=0 disables it.
   // Is GPT Luna in use for this tailor? One switch for the ladder below and for the keyword call here.
   const openaiOn = !!opts.keys.openai && process.env.TAILOR_USE_OPENAI !== "0" && process.env.TAILOR_USE_OPENAI !== "false"
+  const keywordUsage: TokenUsage[] = []
   const expandKeywords = async (): Promise<string[]> => {
-    // A refinement edits a resume the expansion keywords were already woven into, so the
-    // extra call would only add latency.
-    if (opts.refine || process.env.TAILOR_KW_EXPAND === "0" || process.env.TAILOR_KW_EXPAND === "false") return []
-    const ms = Number(process.env.TAILOR_KW_EXPAND_MS) || 8000
-    const began = Date.now()
-    const usual = opts.pref === "openai" ? "auto" : opts.pref
-    // Part of the tailoring, so with the OpenAI key it runs there. A provider named by `pref` is the only one asked, so
-    // when OpenAI gives nothing (a rejected key, a missing model, no quota) the usual order is asked with the time left.
-    if (openaiOn) {
-      const fromLuna = await expandJdKeywords({ keys: opts.keys, pref: "openai", jd, timeoutMs: ms })
-      const left = ms - (Date.now() - began)
-      if (fromLuna.length || left < 1500) return fromLuna
-      return expandJdKeywords({ keys: opts.keys, pref: usual, jd, timeoutMs: left })
-    }
-    return expandJdKeywords({ keys: opts.keys, pref: usual, jd, timeoutMs: ms })
+    if (opts.refine) return []
+    return expandJdKeywordsTwice({ keys: opts.keys, jd, known: extractJdKeywords(jd),
+      timeoutMs: Number(process.env.TAILOR_KW_EXPAND_MS) || 10000, usageSink: keywordUsage })
   }
-  // A free call starts at once, alongside the resume loading. A paid one waits until the cache has missed: found in review
-  // (2026-10-05), every cache hit was sending OpenAI a request whose answer was thrown away.
-  let kwExpandPromise: Promise<string[]> | null = openaiOn && !opts.noCache ? null : expandKeywords()
+  // Start only after a cache miss; both Gemini passes finish before generation.
+  let kwExpandPromise: Promise<string[]> | null = null
 
   // 1) Pick the resume (cheap — no LLM).
   let matched: { filepath: string; filename: string; category: string }
@@ -531,7 +519,7 @@ export async function runTailor(opts: {
   // MarketFit contract: a user supplied/approved JD is a KNOWN JD — the resume and the JD are one record (J1 v3). 98%
   // literal JD coverage is the target: the terms still missing are named to the first pass, and each role's gap is then
   // filled until the target or the deadline.
-  const usageSink: TokenUsage[] = []
+  const usageSink: TokenUsage[] = keywordUsage
   const MIN_KEYWORD_COVERAGE = RESUME_MIN_COVERAGE
   const TARGET_COVERAGE = Math.max(MIN_KEYWORD_COVERAGE, Math.min(1, Number(E.TAILOR_TARGET_COVERAGE) || RESUME_TARGET_COVERAGE))
   const TAILOR_MAX_MS = Math.max(1000, Math.min(opts.maxMs || Number(E.TAILOR_MAX_MS) || 52000, 175000))
@@ -684,6 +672,7 @@ export async function runTailor(opts: {
       : "Tailoring failed — every model errored (check API keys / quota).")
   }
   const { edits, buffer, notes, afterKw, claimedKw, roleKw, required, provenKw } = best
+  if (!opts.refine && !jdGenerated.length) notes.push("Gemini keyword review returned no additional terms; generation used the directly extracted JD requirements.")
   notes.push("The JD supplies target requirements; the source resume supplies experience evidence. The target is 98% keyword coverage where supported. Scores measure exported document keyword overlap, not hiring probability.")
   notes.push(`Tailored with ${usedModel} · JD keyword coverage ${Math.round(best.cov * 100)}%`)
   const finalRewrites = rewrites(edits)

@@ -11,3 +11,5 @@ Owner requirement, 16 October 2026: target 95–98% measured JD keyword coverage
 - Keep the summary and headline unchanged by default. Preserve technical expertise category headings, paragraph count, and document formatting; rewrite skills and experience in place.
 - Give each client role its own generation pass. Reserve time for repair, retaining original role evidence and never accepting lower total JD coverage for a higher subset score.
 - Validate the original resume, full JD, and returned Word file together before claiming the content meets this baseline. Build success and provider health alone are insufficient.
+
+- Before each uncached full generation, run two Gemini-only JD keyword reviews. Give the second review all previously captured terms, merge unique additions, and pass the combined list to skills and role rewriting. No paid-provider fallback for this keyword step.

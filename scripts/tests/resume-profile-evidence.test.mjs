@@ -12,7 +12,7 @@ function harness(reply) {
     const module = { exports: {} }
     const source = readFileSync(new URL('../../src/lib/' + file + '.ts', import.meta.url), 'utf8')
     const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
-    runInNewContext(js, { module, exports: module.exports, console, process,
+    runInNewContext(js, { module, exports: module.exports, console, process, setTimeout, clearTimeout,
       require: id => {
         if (id === './llm') return { callLLM: async opts => {
           calls.push(opts)
@@ -25,7 +25,7 @@ function harness(reply) {
     cache.set(file, module.exports)
     return module.exports
   }
-  return { adapt: load('claude').adapt, calls }
+  return { adapt: load('claude').adapt, expandTwice: load('claude').expandJdKeywordsTwice, calls }
 }
 const zones = { summaryText: '', skills: [{ idx: 2, text: 'Security operations' }], roles: [
   { role: 'Analyst at Current Client', current: true, bullets: [{ idx: 10, text: 'Tuned Microsoft Sentinel detections.' }] },
@@ -60,4 +60,18 @@ test('locked summary and headline are excluded from both prompt scope and return
   assert.equal(result.summary, '')
   assert.equal(result.headline.title, '')
   assert.match(h.calls[0].system, /retain every existing technical expertise category/)
+})
+
+
+test('keyword review calls Gemini twice and gives first-pass terms to the second pass', async () => {
+  const h = harness(['SIEM', 'Microsoft Sentinel', 'siem'])
+  const terms = await h.expandTwice({ keys: { gemini: 'test-key', openai: 'must-not-use' }, jd: 'Use Microsoft Sentinel for SIEM monitoring.', known: ['monitoring'], timeoutMs: 100 })
+  assert.equal(h.calls.length, 2)
+  for (const call of h.calls) {
+    assert.equal(call.pref, 'gemini')
+    assert.equal(call.keys.openai, undefined)
+    assert.match(call.system, /PRECISION/)
+  }
+  assert.match(h.calls[1].user, /ALREADY CAPTURED.*monitoring, siem, microsoft sentinel/)
+  assert.equal(terms.length, 2)
 })
