@@ -130,7 +130,7 @@ function normJD(jd: string): string {
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
-const CACHE_GENERATION = "6"
+const CACHE_GENERATION = "7"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -591,10 +591,14 @@ export async function runTailor(opts: {
       const view = zonesAfter(cur.edits)
       const rw = rewrites(cur.edits)
       const todo: { role: number; skills: string[]; add: number }[] = []
-      // JD terms missing from the whole resume (not only from the skill lines) go to the current role.
+      // Repair every relevant role using the full JD set, not just skills already
+      // listed in the generated skills section. Only the source establishes evidence.
       const unseen = jdKws.filter(k => !cur.afterKw.has(k))
       for (const i of countedRoles) {
-        const missing = [...new Set([...cur.required[i].filter(k => !cur.roleKw[i].has(k)), ...(i === countedRoles[0] ? unseen : [])])]
+        const sourceTerms = coveredJdKeywords(zones.roles[i].bullets.map(b => b.text).join("\n"), jdKwsPrompt)
+        const currentTerms = coveredJdKeywords(view.roles[i].bullets.map(b => b.text).concat(view.roles[i].added || []).join("\n"), jdKwsPrompt)
+        const supportedMissing = [...sourceTerms].filter(k => !currentTerms.has(k))
+        const missing = [...new Set([...cur.required[i].filter(k => !cur.roleKw[i].has(k)), ...supportedMissing, ...(i === countedRoles[0] ? unseen : [])])]
         if (!missing.length && !lacking.has(i)) continue
         const roleLines = [...zones.roles[i].bullets.map(b => rw.get(b.idx) ?? b.text), ...(view.roles[i].added || [])]
         const spare = roleLines.reduce((n, l) => n + Math.max(0, SKILLS_PER_BULLET - coveredJdKeywords(l, cur.required[i]).size), 0)

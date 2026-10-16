@@ -11,7 +11,7 @@ import { RESUMES_LIB as RESUMES_DIR, KEYWORDS_FILE as INDEX_FILE } from "@/lib/p
 export const TECH_TERMS: string[] = [
   // security operations
   "soc", "siem", "soar", "edr", "xdr", "incident response", "threat hunting", "threat detection",
-  "threat intelligence", "alert triage", "log analysis", "dfir", "forensics", "digital forensics",
+  "osint", "ttp", "ttps", "csoc", "microsoft teams", "threat actors", "threat actor analysis", "threat intelligence reports", "technical research", "security investigations", "threat intelligence", "alert triage", "log analysis", "dfir", "forensics", "digital forensics",
   "malware analysis", "phishing", "mitre att&ck", "detection engineering", "ueba", "continuous monitoring",
   // tools
   "splunk", "sentinel", "microsoft sentinel", "qradar", "crowdstrike", "carbon black", "defender",
@@ -128,7 +128,7 @@ export const BUSINESS_TERMS: string[] = [
 const VOCAB: string[] = Array.from(new Set([...TECH_TERMS, ...BUSINESS_TERMS]))
 
 function gramSet(text: string): Set<string> {
-  const words = text.toLowerCase().match(/[a-z0-9+#.&/-]+/g) || []
+  const words = (text.toLowerCase().match(/[a-z0-9+#.&/-]+/g) || []).map(word => word.replace(/^[./]+|[./]+$/g, "")).filter(Boolean)
   const grams = new Set<string>(words)
   for (let i = 0; i < words.length - 1; i++) grams.add(words[i] + " " + words[i + 1])
   for (let i = 0; i < words.length - 2; i++) grams.add(words[i] + " " + words[i + 1] + " " + words[i + 2])
@@ -147,16 +147,25 @@ export function extractKeywords(text: string): string[] {
   )
 }
 
-// Is `term` literally present in `text`? Word-boundary for single tokens (so "nat"
-// doesn't match "coordinate"), normalized substring for multi-word phrases. This is
-// the ATS reality: keyword matching is literal, so we measure literal presence.
+// Match equivalent spelling and established acronym expansions, with word boundaries.
+// This is term coverage, not a semantic qualification or ATS hiring score.
+const TERM_ALIASES: string[][] = [
+  ["osint", "open source intelligence"],
+  ["ttp", "ttps", "tactics techniques and procedures", "tactics techniques procedures"],
+  ["ioc", "iocs", "indicator of compromise", "indicators of compromise"],
+  ["csoc", "cyber security operations center", "cybersecurity operations center"],
+]
+const normalizeTerm = (text: string): string => text.toLowerCase()
+  .replace(/[‐‑‒–—-]/g, " ").replace(/[,;:()]/g, " ").replace(/\s+/g, " ").trim()
 export function present(text: string, term: string): boolean {
-  const t = term.trim().toLowerCase()
+  const t = normalizeTerm(term)
   if (!t) return false
-  const low = " " + text.toLowerCase().replace(/\s+/g, " ") + " "
-  if (t.includes(" ")) return low.includes(" " + t + " ") || low.includes(t)
-  const esc = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-  return new RegExp("(^|[^a-z0-9])" + esc + "([^a-z0-9]|$)").test(low)
+  const low = normalizeTerm(text)
+  const alternatives = TERM_ALIASES.find(group => group.includes(t)) || [t]
+  return alternatives.some(value => {
+    const esc = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    return new RegExp("(^|[^a-z0-9])" + esc + "([^a-z0-9]|$)").test(low)
+  })
 }
 
 // Common all-caps / short tokens that are NOT meaningful ATS keywords — filtered out
@@ -164,7 +173,7 @@ export function present(text: string, term: string): boolean {
 // never be matched would force needless model escalation = wasted tokens).
 const CAPS_STOP = new Set([
   "THE","AND","FOR","YOU","ARE","OUR","ETC","INC","LLC","LTD","USA","US","ID","IT","IS","OF","TO","IN","ON","OR","AS","AT","BY","BE","WE","AN","A",
-  "II","III","IV","VI","CO","CA","NY","TX","WA","DC","EST","PST","CST","AM","PM","EOD","ASAP","OK","NO","YES","MUST","WILL","SHALL","ALL","ANY","PER","VIA","NEW",
+  "II","III","IV","VI","CO","CA","NY","TX","WA","DC","IL","EST","PST","CST","AM","PM","EOD","ASAP","OK","NO","YES","MUST","WILL","SHALL","ALL","ANY","PER","VIA","NEW",
   "JOB","ROLE","TEAM","YEAR","YEARS","PLUS","DAY","DAYS","WEEK","MONTH","MONTHS","FT","PT","W2","C2C","GC","USC","EAD","CFR","N/A","NA","OT",
 ])
 const WORD_STOP = new Set([
@@ -194,10 +203,19 @@ const VERB_STOP = new Set([
 // A recruiter's header lines ("Location: Seattle, WA / Sunnyvale, CA (Local Candidates Only)", "Duration: Long Term
 // Contract") are logistics, not skills: scraped as keywords they put "sunnyvale", "only" and "contract" into the coverage a
 // resume is scored against, where no rewrite can or should cover them.
-const META_LINE = /^\s*(?:(?:hello|hi|dear)\s[^\n]*|(?:[-•·*]\s*)?(?:locations?|duration|hiring|job\s*title|position|title|job\s*type|employment(?:\s*type)?|work\s*(?:mode|type|authori[sz]ation)|visa|pay(?:\s*rate)?|rate|salary|compensation|start\s*date|(?:end\s*)?client|contact|email|phone|interview(?:\s*mode)?|openings?)\s*:[^\n]*)$/gim
+const META_LINE = /^\s*(?:(?:hello|hi|dear)\s[^\n]*|(?:[-•·*]\s*)?(?:locations?|duration|hiring|job\s*title|position|title|job\s*type|employment(?:\s*type)?|work\s*(?:mode|type|arrangement|authori[sz]ation)|visa|pay(?:\s*rate)?|rate|salary|compensation|start\s*date|(?:end\s*)?client|contact|email|phone|interview(?:\s*mode)?|schedule|note|openings?)\s*:[^\n]*)$/gim
+
+// Recruiting contact details and job-level adjectives are not resume qualifications.
+const NON_SKILL_DESCRIPTORS = new Set(["hands-on", "senior-level", "junior-level", "mid-level", "entry-level", "incident-related", "full-time", "part-time", "on-site", "on-premise-related", "non-technical", "and/or", "weekday/weekend", "weekday", "weekend"])
+const singularAcronym = (raw: string): string => /^[A-Z]{2,}s$/.test(raw) ? raw.slice(0, -1).toLowerCase() : raw.toLowerCase()
 
 export function extractJdKeywords(jd: string): string[] {
-  jd = jd.replace(META_LINE, "")
+  jd = jd.replace(/^[ \t]*>[ \t]?/gm, "").replace(/\*{1,2}/g, "")
+    .replace(/(?:^|\n)[ \t]*Work Schedule[ \t]*&[ \t]*Environment\b[\s\S]*?(?=\n[ \t]*(?:Note:|Required Qualifications|Preferred Qualifications|Key Responsibilities)\b|$)/gi, "\n")
+    .replace(META_LINE, "")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, " ")
+    .replace(/(?:https?:\/\/|www\.)[^\s<>]+/gi, " ")
+    .replace(/\b(?:[a-z0-9-]+\.)+(?:com|org|net|edu|gov|us|co\.uk)\b(?:\/[^\s<>]*)?/gi, " ")
   const out = new Set<string>()
   for (const k of extractKeywords(jd)) out.add(k)
 
@@ -208,13 +226,13 @@ export function extractJdKeywords(jd: string): string[] {
     const raw = m[1]
     if (raw.length < 2 || raw.length > 24) continue
     if (!(/[A-Z]{2,}/.test(raw) || /[a-z][A-Z]/.test(raw) || /[0-9]/.test(raw) || /[-./]/.test(raw))) continue
-    if (CAPS_STOP.has(raw.toUpperCase())) continue
+    if (CAPS_STOP.has(raw.toUpperCase()) || NON_SKILL_DESCRIPTORS.has(raw.toLowerCase())) continue
     // Only strip a plural "s" on a PLAIN token. On separator tokens it corrupted the
     // keyword ("EKS/AKS" → "eks/ak", "CI/CDs" → "ci/cd"), so leave those intact — and
     // for slash tokens also emit each side ("EKS/AKS" → eks, aks) since ATS matches both.
     const lowRaw = raw.toLowerCase()
     const hasSep = /[-./]/.test(raw)
-    const low = hasSep ? lowRaw : lowRaw.replace(/s$/, m => (raw.length > 3 ? "" : m))
+    const low = hasSep ? lowRaw : singularAcronym(raw)
     if (low.length >= 2 && !WORD_STOP.has(low)) out.add(low)
     if (raw.includes("/")) {
       for (const part of lowRaw.split("/")) {
@@ -225,10 +243,10 @@ export function extractJdKeywords(jd: string): string[] {
 
   // 3) parenthetical abbreviations — the JD author is literally telling us the acronym.
   for (const m of jd.matchAll(/\(([A-Za-z][A-Za-z0-9/&+ -]{1,14})\)/g)) {
-    const t = m[1].trim().toLowerCase()
-    // Same plural trap as layer 2: "(EKS/AKS)" must not become "eks/ak".
-    const low = /[-./]/.test(t) ? t : t.replace(/s$/, "")
-    if (low.length >= 2 && !WORD_STOP.has(low)) out.add(low)
+    const raw = m[1].trim()
+    if (!/^[A-Z][A-Z0-9/&+ -]*s?$/.test(raw) || CAPS_STOP.has(raw.toUpperCase())) continue
+    const low = singularAcronym(raw)
+    if (low.length >= 2 && !WORD_STOP.has(low) && !NON_SKILL_DESCRIPTORS.has(low)) out.add(low)
   }
 
   // 4) domain-noun phrases: a noun immediately followed by a domain suffix
@@ -259,7 +277,11 @@ export function extractJdKeywords(jd: string): string[] {
     out.add(low)
   }
 
-  return [...out]
+  // Collapse established acronym/expansion variants into one requirement, rather
+  // than penalizing the same capability twice for spelling differences.
+  return [...new Set([...out].filter(term => term !== "requirements").map(term =>
+    TERM_ALIASES.find(group => group.includes(normalizeTerm(term)))?.[0] || term,
+  ))]
 }
 
 // Capitalised words that are ordinary English (or JD boilerplate) rather than product
@@ -279,6 +301,8 @@ const TITLE_STOP = new Set([
   "part","time","note","please","apply","join","help","also","other","others","etc","including",
   "only","long","short","term","contract","contractor","permanent","local","overview","summary","description","details","about",
   "mandatory","duration","location","hiring","benefits","salary","hourly","responsibility","duties","opportunity","selected",
+  "resume","resumes","send","submit","recruiter","recruiting","regards","thanks","contact","linkedin","email","website",
+  "intelligence","security","operations","center","centre","threat","cyber","arrangement","schedule","environment","key","project",
 ])
 
 // Which of the JD's keywords are literally present in a resume's text.
