@@ -41,9 +41,9 @@ test('an edit lands only on a line of its own section, once, and a new bullet on
   assert.deepEqual(result.added,[{after:5,text:'Threat-modelled the AI agent integrations'}])
 })
 test('the resume and the job description are read as one record, and identity still comes only from the resume', () => {
-  assert.match(J1_HEADER,/RESUME AND THE JOB DESCRIPTION COMBINED/)
+  assert.match(J1_HEADER,/RESUME AND JOB DESCRIPTION WORK TOGETHER/)
   assert.match(J1_HEADER,/employers, job titles of past roles, dates, years of experience, seniority, certifications/)
-  assert.match(J1_HEADER,/never delete what the candidate actually used/)
+  assert.match(J1_HEADER,/A JD is NOT proof/)
 })
 
 test('provider retry backoff obeys one overall request deadline', async () => {

@@ -35,11 +35,11 @@ import { plainFailure } from "@/lib/plain-failure"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
 export const runtime = "nodejs"
-export const maxDuration = 180
+export const maxDuration = 300
 export const dynamic = "force-dynamic"
 
 const INBOX_DIR = path.join(DATA_DIR, "whatsapp", "inbox")
-const TAILOR_BUDGET_MS = 165_000
+const TAILOR_BUDGET_MS = 280_000
 
 // The file a person gets back is named after them: "Eshwar_Resume.docx". (Owner, 2026-10-05: first "The name should always be
 // Eshwar's_Resume", then, on seeing "ESHWAR's_Resume.docx" arrive, "Eshwar_Resume Title is fine actually".) The first name is
@@ -344,6 +344,10 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     return sendText(from, "I read the job description against your resume and no line came back changed, so I am not sending you the same file. This usually means the AI services were short of capacity. Please resend the job description and resume to retry.")
   }
 
+  if (result.quality?.status !== "coverage_met") {
+    await recordWhatsAppUsage(userId, "resume_tailor", result)
+    return sendText(from, `The rewrite did not reach your 98% coverage target after automatic repair. I have held the file. Remaining JD terms: ${(result.quality?.missing || []).slice(0, 12).join(", ") || "quality validation failed"}.`)
+  }
   const file = await blob.get(`tailored/${result.token}.docx`)
   if (!file) return sendText(from, "The resume generated but the file could not be read back. Please try again.")
 
@@ -449,7 +453,7 @@ function captionFor(name: string, meta: Meta, result: TailorResult, update?: { r
     `*${name}*${update ? ` (update ${update.number})` : ""}`,
     ...(meta.role ? [`${meta.role}${meta.company ? ` · ${meta.company}` : ""}`] : []),
     `JD keyword coverage: ${coverage}%.`,
-    ...(result.quality?.status === "needs_review" ? ["Below your 95% target; this result is incomplete."] : []),
+    ...(result.quality?.status === "needs_review" ? ["Below your 98% target; this result needs further review."] : []),
     "Reply to this file to request changes.",
   ].join("\n")
 }

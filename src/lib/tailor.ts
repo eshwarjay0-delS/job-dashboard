@@ -1,3 +1,4 @@
+import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
 import { preserveSkillHeadings } from "./resume-format"
 import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, resumeQuality } from "./resume-quality"
 import { J1_VERSION, constrainResumeEdits } from "./ai/j1"
@@ -50,7 +51,7 @@ export interface TailorResult {
   // JD skills the skills section lists, and how many of them at least one role's bullets show.
   experience_skills?: { listed: number; shown: number }
   // Set when some parts of the draft were refused by every model and left as they were (the rest is tailored).
-  partial?: { failed: number; total: number }
+  partial?: { failed: number; total: number; pendingRoles?: number[]; pendingProfile?: boolean }
   /** The document that came out has no line different from the one that went in. The caller should say so, not present it as tailored. */
   unchanged?: boolean
   // Real token accounting for this tailor (proof the cache is working). estCostUSD is
@@ -110,7 +111,7 @@ function normJD(jd: string): string {
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
-const CACHE_GENERATION = "9"
+const CACHE_GENERATION = "10"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -427,7 +428,7 @@ export async function runTailor(opts: {
   // claimedKw: JD skills the skill lines list. required[i]: the listed skills role i must show (years math). roleKw[i]: the
   // required ones its bullets (rewritten and added) do show. provenKw: the listed skills any bullet shows. A skill listed
   // but shown at no client reads as padding to a recruiter.
-  type Pass = { edits: Edits; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string>; claimedKw: Set<string>; roleKw: Set<string>[]; required: string[][]; provenKw: Set<string>; via?: string; partial?: { failed: number; total: number } }
+  type Pass = { edits: Edits; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string>; claimedKw: Set<string>; roleKw: Set<string>[]; required: string[][]; provenKw: Set<string>; via?: string; partial?: { failed: number; total: number; pendingRoles?: number[]; pendingProfile?: boolean } }
   // Apply a finished edit set to the docx and measure JD keyword coverage. Auto-tailoring
   // is the only path allowed to physically drop bullets (the manual builder never gets a
   // dropIdx), so a user's own edits are never silently trimmed.
@@ -471,6 +472,7 @@ export async function runTailor(opts: {
     const call = { keys: opts.keys, jd, zones, sections: sec, preferences: prefs.join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, refine: !!refine }
     let raw: Edits
     let partsFailed = 0, partsTotal = 0
+    let pendingRoles: number[] = [], pendingProfile = false
     let via = step.label ?? step.model ?? String(step.pref)
     if (splitDraft) {
       // The draft is a list of parts: the profile, then each group of roles (current role first). workParts hands them to the
@@ -503,6 +505,8 @@ export async function runTailor(opts: {
       // Most of it refused on every lane: that is not a draft. Failing here lets the caller say so.
       if (failed * 2 > total) throw new Error(`Tailoring incomplete: the AI providers refused ${failed} of ${total} parts of the draft.`)
       partsFailed = failed; partsTotal = total
+      pendingRoles = worked.filter(w => !w.e && w.part.kind === "experience").flatMap(w => w.part.roles || [])
+      pendingProfile = worked.some(w => !w.e && w.part.kind === "profile")
       const profile = worked.find(w => w.part.kind === "profile")?.e
       raw = { headline: profile?.headline, summary: profile?.summary || "", skills: profile?.skills || [], bullets: worked.filter(w => w.part.kind === "experience").flatMap(w => w.e?.bullets || []), extras: [] }
       via = [...new Set(done.map(w => w.via))].join(" + ")
@@ -510,7 +514,7 @@ export async function runTailor(opts: {
       raw = await adapt({ ...call, ...laneCall(step) })
     }
     const pass = await applyEdits(scopeEdits(raw))
-    if (partsFailed) pass.partial = { failed: partsFailed, total: partsTotal }
+    if (partsFailed) pass.partial = { failed: partsFailed, total: partsTotal, pendingRoles, pendingProfile }
     // Tag with the model(s) that actually produced this draft: when the parts were spread, the notes name every one.
     pass.via = via
     return pass
@@ -522,8 +526,8 @@ export async function runTailor(opts: {
   const usageSink: TokenUsage[] = keywordUsage
   const MIN_KEYWORD_COVERAGE = RESUME_MIN_COVERAGE
   const TARGET_COVERAGE = Math.max(MIN_KEYWORD_COVERAGE, Math.min(1, Number(E.TAILOR_TARGET_COVERAGE) || RESUME_TARGET_COVERAGE))
-  const TAILOR_MAX_MS = Math.max(1000, Math.min(opts.maxMs || Number(E.TAILOR_MAX_MS) || 52000, 175000))
-  const repairReserve = Math.min(45000, Math.floor(TAILOR_MAX_MS / 3))
+  const TAILOR_MAX_MS = Math.max(1000, Math.min(opts.maxMs || Number(E.TAILOR_MAX_MS) || 52000, 280000))
+  const repairReserve = Math.min(150000, Math.floor(TAILOR_MAX_MS * .6))
   const deadline = started + TAILOR_MAX_MS
   const MIN_CLIMB_MS = Number(E.TAILOR_MIN_CLIMB_MS) || 9000
   const summaryWanted = sec.summary !== false
@@ -538,7 +542,7 @@ export async function runTailor(opts: {
   const provenShare = (p: Pass) => (p.claimedKw.size ? p.provenKw.size / p.claimedKw.size : 1)
   const quality = (p: Pass) =>
     (splitDraft ? 0.4 * p.cov + 0.3 * roleReflect(p) + 0.3 * provenShare(p) - 0.25 * (1 - roleShare(p)) : p.cov)
-    - (summaryWanted && !(p.edits.summary || "").trim() ? 0.08 : 0)
+    - (summaryWanted && !(p.edits.summary || "").trim() ? 0.08 : 0) - .05 * (p.partial?.failed || 0)
   // The JD terms still missing, computed from the resume with no model call, so the pass targets the gap.
   const injectFor = (covered: Set<string>): string[] => {
     const missing = jdKwsPrompt.filter(k => !covered.has(k))
@@ -550,7 +554,7 @@ export async function runTailor(opts: {
   // left untouched. Roles short of that get a bullets-only pass each, built on the draft's own text and merged by [idx];
   // when a role's bullets can't carry all its skills (about 3 per bullet) the pass ADDS bullets to it. Repeats while it
   // keeps helping and time allows (TAILOR_FILL_ROUNDS, default 3).
-  const FILL_ROUNDS = Math.max(0, Number(E.TAILOR_FILL_ROUNDS ?? 3))
+  const FILL_ROUNDS = Math.max(0, Number(E.TAILOR_FILL_ROUNDS ?? 5))
   const fillGaps = async (start: Pass): Promise<Pass> => {
     let cur = start
     for (let round = 0; round < FILL_ROUNDS; round++) {
@@ -561,44 +565,57 @@ export async function runTailor(opts: {
       // Repair every relevant role using the full JD set, not just skills already
       // listed in the generated skills section. Only the source establishes evidence.
       const unseen = jdKws.filter(k => !cur.afterKw.has(k))
+      // Profile repair is essential: the first pass can omit an entire skill category.
+      if (sec.skills !== false && (unseen.length || cur.partial)) todo.push({ role: -1, skills: unseen, add: 0 })
       for (const i of countedRoles) {
         const sourceTerms = coveredJdKeywords(zones.roles[i].bullets.map(b => b.text).join("\n"), jdKwsPrompt)
         const currentTerms = coveredJdKeywords(view.roles[i].bullets.map(b => b.text).concat(view.roles[i].added || []).join("\n"), jdKwsPrompt)
         const supportedMissing = [...sourceTerms].filter(k => !currentTerms.has(k))
-        const missing = [...new Set([...cur.required[i].filter(k => !cur.roleKw[i].has(k)), ...supportedMissing, ...(i === countedRoles[0] ? unseen : [])])]
-        if (!missing.length && !lacking.has(i)) continue
+        const missing = [...new Set([...cur.required[i].filter(k => !cur.roleKw[i].has(k)), ...supportedMissing, ...unseen])]
+        if (!missing.length && !lacking.has(i) && !cur.partial?.pendingRoles?.includes(i)) continue
         const add = 0 // Preserve the original paragraph count and format.
         todo.push({ role: i, skills: missing, add })
       }
       if (!todo.length) break
       // One call per role that still has a gap: asked alongside other roles, a role tended to be skipped.
+      const roundDeadline = Math.min(deadline - 2000, Date.now() + Math.max(15000, Math.floor((deadline - Date.now() - 2000) / (FILL_ROUNDS - round))))
       const worked = await workParts<typeof todo[number], Edits>({
-        parts: todo, lanes, out: laneOut,
-        says: (_, e) => !!((e.bullets || []).length || (e.added || []).length),
+        parts: todo, lanes: [...lanes.slice(round % lanes.length), ...lanes.slice(0, round % lanes.length)], out: laneOut,
+        says: (t, e) => t.role < 0 ? !!e.skills?.length : !!e.bullets?.length,
         ask: (t, lane) => {
+          if (t.role < 0) return adapt({ keys: opts.keys, jd, zones: view, sections: sec,
+            preferences: [...allPrefs, `SKILLS REPAIR: preserve every already-covered JD term. Review ALL skill categories against the original evidence below. Incorporate missing exact JD terms and supported equivalent terminology under the correct existing category, without unsupported claims. Missing terms: ${t.skills.join(", ")}. Original evidence: ${text}`].join("\n"),
+            jdKeywords: jdKwsPrompt, mode: opts.mode, usageSink, part: "profile", ...laneCall(lane) })
           const parts = [
             lacking.has(t.role) ? "not tailored yet, so rewrite at least half of its bullets for this JD" : "",
             t.skills.length ? `its bullets must show ${t.skills.join(", ")}` : "",
             t.add ? `return EXACTLY ${t.add} new bullet${t.add === 1 ? "" : "s"} for it in "added" (role ${t.role}), covering the skills its existing bullets can't carry` : "",
           ].filter(Boolean)
           const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join("\n")
-          const ask = `ORIGINAL ROLE EVIDENCE (use this to recover relevant facts that the first pass missed):\n${originalEvidence}\nGAP FILL: this resume is already tailored to the JD. The baseline resume is the candidate's factual record; the JD is a target, not proof of experience. Include listed skills in this role ONLY where the original role already substantiates them. Keep every JD term its bullets already carry. Rewrite bullets that don't carry a JD skill yet so each shows two or three related skills and what the candidate did with them at this client (never a bare list), preserving this client's original paragraph structure. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
+          const ask = `ORIGINAL ROLE EVIDENCE (use this to recover relevant facts that the first pass missed):\n${originalEvidence}\nGAP FILL: this resume is already tailored to the JD. The baseline resume is the candidate's factual record; the JD is a target, not proof of experience. Map each missing requirement to specific original work, including synonymous and transferable responsibilities. The exact JD phrase need not already occur in the original: rewrite equivalent work using the target terminology. Named products still require source evidence. Include each supported term with the action performed, technical context and purpose or documented result. Keep every JD term its bullets already carry. Rewrite bullets that don't carry a JD skill yet so each shows two or three related skills and what the candidate did with them at this client (never a bare list), preserving this client's original paragraph structure. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
           return adapt({ keys: opts.keys, jd, zones: view, sections: sec, preferences: [...allPrefs, ask].join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, part: "experience", roles: [t.role], allowAdd: false, ...laneCall(lane) })
         },
-        startBy: deadline - MIN_CLIMB_MS,
-        assembleBy: deadline - 2000,
+        startBy: roundDeadline - 6000,
+        assembleBy: roundDeadline,
       })
-      const fresh = worked.flatMap(w => w.e?.bullets || [])
-      const freshAdded = worked.flatMap(w => w.e?.added || [])
-      if (!fresh.length && !freshAdded.length) break
-      const replaced = new Set(fresh.map(b => b.idx))
-      const next = await applyEdits({ ...cur.edits, bullets: [...(cur.edits.bullets || []).filter(b => !replaced.has(b.idx)), ...fresh], added: [...(cur.edits.added || []), ...freshAdded] })
-      next.via = cur.via
-      next.partial = cur.partial
-      // Never trade total JD coverage for a better score on the smaller listed-skill subset.
-      if (next.cov < cur.cov || (next.cov === cur.cov && quality(next) <= quality(cur) + 0.005)) break
-      cur = next
-      if (cur.cov >= TARGET_COVERAGE && !countedRoles.some(i => cur.required[i].some(k => !cur.roleKw[i].has(k)))) break
+      // Accept each successful section independently. One regressing role must not
+      // discard improvements in the skills section or another client role.
+      cur = await acceptImprovingRepairs(cur, worked.filter(w => w.e), async (current, w) => {
+        const next = await applyEdits({ ...current.edits,
+          skills: w.part.role < 0 ? mergeIndexedEdits(current.edits.skills || [], w.e!.skills || []) : current.edits.skills,
+          bullets: w.part.role >= 0 ? mergeIndexedEdits(current.edits.bullets || [], w.e!.bullets || []) : current.edits.bullets,
+        })
+        next.via = [current.via, w.via].filter(Boolean).join(" + ")
+        next.partial = current.partial
+        if (current.partial) {
+          const pendingRoles = (current.partial.pendingRoles || []).filter(i => i !== w.part.role)
+          const pendingProfile = !!current.partial.pendingProfile && w.part.role !== -1
+          const failed = pendingRoles.length + Number(pendingProfile)
+          next.partial = failed ? { ...current.partial, failed, pendingRoles, pendingProfile } : undefined
+        }
+        return next
+      }, quality)
+      if (!cur.partial && cur.cov >= TARGET_COVERAGE && !countedRoles.some(i => cur.required[i].some(k => !cur.roleKw[i].has(k)))) break
     }
     return cur
   }
@@ -624,7 +641,7 @@ export async function runTailor(opts: {
         best = first
         usedModel = first.via ?? lane.label ?? String(lane.pref)
       }
-      const current = best
+      let current = best
       // A refinement applies the person's change, not a coverage climb; a split draft climbs in fillGaps below.
       if (current.cov >= TARGET_COVERAGE || refine || splitDraft) break
 
@@ -649,6 +666,7 @@ export async function runTailor(opts: {
         if (!candidate) break
         if (candidate.cov > current.cov) {
           best = candidate
+          current = candidate
           usedModel = candidate.via ?? lane.label ?? String(lane.pref)
         } else {
           break
@@ -754,7 +772,7 @@ export async function runTailor(opts: {
   // (same inputs → same file). An incomplete or unchanged one gets another name: written over the key, it left an EARLIER
   // whole result in the cache pointing at this lesser file, so the next identical request was told "31 bullets rewritten"
   // and handed an untailored resume (found in review, 2026-10-05).
-  const qualityReport = resumeQuality({ matched: afterKw.size, total: jdKws.length, missing: kwMissing, partial: !!best.partial, unchanged: !diff.length })
+  const qualityReport = resumeQuality({ matched: afterKw.size, total: jdKws.length, missing: kwMissing, partial: !!best.partial || (splitDraft && (lackingRoles(best.edits).length > 0 || provenShare(best) < TARGET_COVERAGE)), unchanged: !diff.length })
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
 

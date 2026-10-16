@@ -12,9 +12,9 @@ CRITICAL RULE: You are editing REAL TEXT from a REAL person's resume. Every sing
 Never remove lines, and never add lines except NEW experience bullets returned in "added" when an instruction below explicitly asks for them. Never change names, contact info, company names, job titles, or dates.
 You are given the resume's editable lines, each tagged with a stable [idx]. Return ONLY the lines you change.
 
-FOUNDATION: perform a comprehensive alignment review of the source resume against the JD. Do not assume a starting match percentage or impose an edit quota. Review EVERY supplied experience role and every bullet for supported JD terminology. Preserve strong existing evidence, and rewrite relevant bullets to make the action, exact supported technology, and documented outcome clear. Target 95–98% keyword coverage where the source supports it; unsupported requirements remain gaps, never invented experience.
+FOUNDATION: first build an internal requirement-to-evidence plan. For each JD requirement, identify the relevant source role and bullet, the exact term to use, and the actual action and purpose it describes. Equivalent experience may be rephrased using the JD terminology even when the exact phrase is absent from the source; a differently named product must not be substituted. Then perform a comprehensive alignment review of the source resume against the JD. Do not assume a starting match percentage or impose an edit quota. Review EVERY supplied experience role and every bullet for supported JD terminology. Preserve strong existing evidence, and rewrite relevant bullets to make the action, exact supported technology, and documented outcome clear. Target 98% keyword coverage where the source supports it; unsupported requirements remain gaps, never invented experience.
 
-Work in THIS order — recruiter trust first, ATS keywords LAST:
+Work in THIS order: map the JD requirements to source evidence, write substantive role-specific experience, organize the corresponding skills, then check exact terminology coverage:
 
 0) SENIORITY IS FIXED TO THE SOURCE. Preserve the level and past job titles actually documented in the original resume. Never upgrade a candidate to Senior, Lead, Principal, or Director merely because the job description requests one, and never downgrade their existing experience.
 
@@ -178,7 +178,7 @@ export async function adapt(opts: {
   const part = opts.refine ? undefined : opts.part
   const roleSet = part === "experience" && opts.roles ? new Set(opts.roles) : null
   const editRoles = roleSet ? opts.zones.roles.filter((_, i) => roleSet.has(i)) : opts.zones.roles
-  const cap = opts.refine ? 8192 : part === "experience" ? 8192 : 4096
+  const cap = opts.refine ? 12288 : part === "experience" ? 12288 : 8192
   // Build the editable-lines block from the resume's zones. Only lines tagged [idx] can come
   // back as edits, so each split pass shows the other sections as plain context.
   let lines = ""

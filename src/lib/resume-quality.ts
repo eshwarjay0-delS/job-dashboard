@@ -1,5 +1,5 @@
 /** Shared acceptance baseline for web, WhatsApp, and cached generations. */
-export const RESUME_MIN_COVERAGE = 0.95
+export const RESUME_MIN_COVERAGE = 0.98
 export const RESUME_TARGET_COVERAGE = 0.98
 
 export function resumeQuality(input: {

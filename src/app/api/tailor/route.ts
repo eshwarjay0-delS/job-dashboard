@@ -14,8 +14,8 @@ import { checkRateLimit, clientIp } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
 // Tailoring runs the full model ladder in one request; give it the max window a
-// Vercel Hobby function allows (default is far shorter and would cut long runs off).
-export const maxDuration = 60
+// generation and repair window, reserving time for export and persistence.
+export const maxDuration = 300
 
 // Authenticated cookie and extension Bearer sessions only.
 // Unlimited by default (personal use). Set TAILOR_WEEKLY_LIMIT>0 in .env to cap.
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     // Every generation is written down as it ends, failed ones included: the admin page counts them (src/lib/tailorLedger.ts).
     const began = Date.now()
     const result = await runTailor({
-      jd, keys, pref: body.llmHeavy, userResumeDir,
+      jd, keys, pref: body.llmHeavy, userResumeDir, maxMs: 280_000,
       givenPath: body.filepath || undefined,
       immediatePrefs: Array.isArray(body.immediatePrefs) ? body.immediatePrefs : [],
       noCache: !!body.noCache,

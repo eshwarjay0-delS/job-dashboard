@@ -4,8 +4,11 @@
     "iad1"
   ],
   "functions": {
+    "src/app/api/tailor/route.ts": {
+      "maxDuration": 300
+    },
     "src/app/api/whatsapp/webhook/route.ts": {
-      "maxDuration": 180
+      "maxDuration": 300
     },
     "src/app/api/**": {
       "maxDuration": 60
