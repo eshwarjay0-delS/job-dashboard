@@ -329,7 +329,7 @@ test('the review\'s fixes in the tailor, read from the source', () => {
   assert.match(tailor, /const token = !best\.partial && diff\.length && qualityReport\.status === "coverage_met" \? key : `\$\{key\}x/, 'an incomplete or unchanged file never overwrites the one a cached result points at')
   assert.ok(tailor.indexOf('const token = !best.partial') > tailor.indexOf('const diff: {'), 'and its name is decided after the diff is known')
   assert.match(tailor, /let kwExpandPromise: Promise<string\[\]> \| null = null/, 'keyword reviews wait for the cache to miss')
-  assert.match(tailor, /await \(kwExpandPromise \?\?= expandKeywords\(\)\)/)
+  assert.match(tailor, /await \(kwExpandPromise \?\?= expandKeywords\(text, candidateInput\)\)/)
   assert.match(tailor, /return expandJdKeywordsTwice/, 'both Gemini reviews precede generation')
   assert.match(tailor, /if \(openaiOn\) LADDER\.unshift\(lunaStep\)/, 'TAILOR_USE_OPENAI controls the resume-writing ladder')
   assert.match(tailor, /modelFor\(s\.pref, opts\.mode === "quick" \? "light" : "heavy"\)/, 'a lane is named after the model it really calls')

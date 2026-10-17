@@ -9,8 +9,9 @@ export function resumeQuality(input: {
   partial?: boolean
   unchanged?: boolean
 }) {
-  const coverage = input.total > 0 ? input.matched / input.total : 0
-  const meetsBaseline = input.total > 0 && coverage >= RESUME_MIN_COVERAGE && !input.partial && !input.unchanged
+  const validCounts = Number.isInteger(input.total) && Number.isInteger(input.matched) && input.total > 0 && input.matched >= 0 && input.matched <= input.total
+  const coverage = validCounts ? input.matched / input.total : 0
+  const meetsBaseline = validCounts && coverage >= RESUME_MIN_COVERAGE && !input.partial && !input.unchanged
   return {
     status: meetsBaseline ? "coverage_met" as const : "needs_review" as const,
     minimum: RESUME_MIN_COVERAGE * 100,

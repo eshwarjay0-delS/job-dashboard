@@ -18,3 +18,15 @@ test('partial, unchanged and unscorable documents remain drafts despite high ove
   }
   assert.equal(resumeQuality({ matched: 0, total: 0, missing: [] }).status, 'needs_review')
 })
+
+test('invalid or inflated counters cannot manufacture a passing coverage score', () => {
+  for (const [matched, total] of [[101,100], [Infinity,100], [98.5,100], [-1,100], [98,NaN]]) {
+    assert.equal(resumeQuality({ matched, total, missing: [] }).status, 'needs_review')
+  }
+})
+
+for (const [matched, total] of [[17,40], [14,22], [63,260], [51,81], [38,81]]) {
+  test(`reported regression ${matched}/${total} cannot be labeled complete`, () => {
+    assert.equal(resumeQuality({ matched, total, missing: [] }).status, 'needs_review')
+  })
+}

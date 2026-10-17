@@ -75,3 +75,39 @@ test('keyword review calls Gemini twice and gives first-pass terms to the second
   assert.match(h.calls[1].user, /ALREADY CAPTURED.*monitoring, siem, microsoft sentinel/)
   assert.equal(terms.length, 2)
 })
+
+test('Gemini enrichment receives baseline and explicit confirmations on both passes', async () => {
+  const h = harness(['guided selling', 'quote templates', 'guided selling'])
+  const terms = await h.expandTwice({ keys: { gemini: 'test-key' }, jd: 'Salesforce CPQ developer',
+    sourceResume: 'Administrator configured approval processes.',
+    candidateInput: 'I used Salesforce CPQ guided selling and quote templates at Current Client.', timeoutMs: 100 })
+  assert.equal(h.calls.length, 2)
+  for (const call of h.calls) {
+    assert.match(call.user, /Administrator configured approval processes/)
+    assert.match(call.user, /I used Salesforce CPQ guided selling/)
+    assert.match(call.system, /suggestions, NOT new biographical facts/)
+  }
+  assert.deepEqual(Array.from(terms), ['guided selling', 'quote templates'])
+})
+
+test('explicit candidate confirmations remain evidence in profile, experience and repair passes', async () => {
+  for (const part of ['profile', 'experience']) {
+    const h = harness()
+    await h.adapt({ ...base, part, roles: [0], preferences: 'I used Python and Microsoft Sentinel at Current Client. Include this omitted experience.' })
+    assert.match(h.calls[0].system, /Candidate statements.*additional factual evidence/)
+    assert.match(h.calls[0].system, /Do not discard confirmed experience/)
+    assert.match(h.calls[0].system, /general skill experience does not establish which historical employer/)
+    assert.match(h.calls[0].user, /I used Python and Microsoft Sentinel at Current Client/)
+  }
+})
+
+test('missing Gemini credentials do not silently route enrichment to another provider', async () => {
+  const h = harness()
+  assert.equal((await h.expandTwice({ keys: { openai: 'test' }, jd: 'Salesforce' })).length, 0)
+  assert.equal(h.calls.length, 0)
+})
+
+test('non-array Gemini output yields no invented enrichment terms', async () => {
+  const h = harness({ explanation: 'Unable to extract' })
+  assert.equal((await h.expandTwice({ keys: { gemini: 'test' }, jd: 'Salesforce', timeoutMs: 100 })).length, 0)
+})

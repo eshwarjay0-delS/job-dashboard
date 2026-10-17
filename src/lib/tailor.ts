@@ -111,7 +111,7 @@ function normJD(jd: string): string {
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
-const CACHE_GENERATION = "11"
+const CACHE_GENERATION = "12"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -153,9 +153,9 @@ export async function runTailor(opts: {
   // Is GPT Luna in use for this tailor? One switch for the ladder below and for the keyword call here.
   const openaiOn = !!opts.keys.openai && process.env.TAILOR_USE_OPENAI !== "0" && process.env.TAILOR_USE_OPENAI !== "false"
   const keywordUsage: TokenUsage[] = []
-  const expandKeywords = async (): Promise<string[]> => {
+  const expandKeywords = async (sourceResume: string, candidateInput: string): Promise<string[]> => {
     if (opts.refine) return []
-    return expandJdKeywordsTwice({ keys: opts.keys, jd, known: extractJdKeywords(jd),
+    return expandJdKeywordsTwice({ keys: opts.keys, jd, known: extractJdKeywords(jd), sourceResume, candidateInput,
       timeoutMs: Number(process.env.TAILOR_KW_EXPAND_MS) || 10000, usageSink: keywordUsage })
   }
   // Start only after a cache miss; both Gemini passes finish before generation.
@@ -205,10 +205,11 @@ export async function runTailor(opts: {
       ]
     : [
         "More specific, less generic — concrete tools, systems, and outcomes, never vague filler",
-        "SOURCE FACT CONTRACT: the baseline resume supplies employment and qualification facts; the JD supplies target requirements only. Use exact JD terms where supported by the baseline. Never invent certifications, experience years, job titles, platforms, employers, project implementations, or dates.",
+        "SOURCE FACT CONTRACT: the baseline resume and explicit candidate confirmations supply experience facts; the JD supplies target requirements only. Incorporate confirmed skills even if absent from the older baseline. Use exact JD terms where supported by either source, respecting role-specific attribution. Never invent certifications, experience years, job titles, platforms, employers, project implementations, or dates.",
         "More technical detail — name the exact technologies, protocols, and methods used",
       ]
-  const explicit = [...immediatePrefs, ...storedFeedback.filter(f => !immediatePrefs.includes(f))]
+  const candidateInput = [opts.jd, ...immediatePrefs].join("\n")
+  const explicit = [`CANDIDATE-SUPPLIED INPUT (separate explicit first-person experience confirmations from employer requirements; the JD alone is not a confirmation):\n${candidateInput}`, ...immediatePrefs, ...storedFeedback.filter(f => !immediatePrefs.includes(f))]
   // A refinement carries ONLY the user's request. The default "more keywords / more detail"
   // prefs would make the model rewrite lines the user already accepted, so a small change
   // ("shorten the second bullet") would come back as a different resume.
@@ -253,7 +254,7 @@ export async function runTailor(opts: {
   //     woven into the resume, which is the part an ATS actually reads.
   // Result: richer keywords in the document, without the extra escalation or the delay.
   const jdExtracted = extractJdKeywords(jd)
-  const jdGenerated = (await (kwExpandPromise ??= expandKeywords())).filter(k => !jdExtracted.includes(k))
+  const jdGenerated = (await (kwExpandPromise ??= expandKeywords(text, candidateInput))).filter(k => !jdExtracted.includes(k))
   const jdKws = jdExtracted
   const jdKwsPrompt = [...new Set([...jdExtracted, ...jdGenerated])]
   const beforeKw = coveredJdKeywords(text, jdKws)
@@ -592,7 +593,7 @@ export async function runTailor(opts: {
             t.add ? `return EXACTLY ${t.add} new bullet${t.add === 1 ? "" : "s"} for it in "added" (role ${t.role}), covering the skills its existing bullets can't carry` : "",
           ].filter(Boolean)
           const originalEvidence = zones.roles[t.role].bullets.map(b => `[${b.idx}] ${b.text}`).join("\n")
-          const ask = `ORIGINAL ROLE EVIDENCE (use this to recover relevant facts that the first pass missed):\n${originalEvidence}\nGAP FILL: this resume is already tailored to the JD. The baseline resume is the candidate's factual record; the JD is a target, not proof of experience. Map each missing requirement to specific original work, including synonymous and transferable responsibilities. The exact JD phrase need not already occur in the original: rewrite equivalent work using the target terminology. Named products still require source evidence. Include each supported term with the action performed, technical context and purpose or documented result. Keep every JD term its bullets already carry. Rewrite bullets that don't carry a JD skill yet so each shows two or three related skills and what the candidate did with them at this client (never a bare list), preserving this client's original paragraph structure. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
+          const ask = `ORIGINAL ROLE EVIDENCE (use this to recover relevant facts that the first pass missed):\n${originalEvidence}\nGAP FILL: this resume is already tailored to the JD. The baseline resume AND explicit candidate confirmations in the supplied input are the factual record; the JD alone is a target, not proof of experience. Recover confirmed experience even when it was absent from the baseline, respecting the confirmed role scope. Map each missing requirement to specific original work, including synonymous and transferable responsibilities. The exact JD phrase need not already occur in the original: rewrite equivalent work using the target terminology. Named products still require source evidence. Include each supported term with the action performed, technical context and purpose or documented result. Keep every JD term its bullets already carry. Rewrite bullets that don't carry a JD skill yet so each shows two or three related skills and what the candidate did with them at this client (never a bare list), preserving this client's original paragraph structure. Certifications stay out of the bullets. ROLE #${t.role} (${zones.roles[t.role].role.replace(/\s+/g, " ").trim()}): ${parts.join("; ")}`
           return adapt({ keys: opts.keys, jd, zones: view, sections: sec, preferences: [...allPrefs, ask].join("; "), jdKeywords: jdKwsPrompt, onePage: opts.onePage, mode: opts.mode, usageSink, part: "experience", roles: [t.role], allowAdd: false, ...laneCall(lane) })
         },
         startBy: roundDeadline - 6000,
@@ -661,7 +662,7 @@ export async function runTailor(opts: {
         const repairPrefs: string[] = [
           `COVERAGE REPAIR PASS ${repair}: current rendered JD coverage is ${Math.round(current.cov * 100)}%. The default completion target is at least ${Math.round(TARGET_COVERAGE * 100)}%.`,
           `The JD is a KNOWN JD supplied/approved by the user. Incorporate ALL of these still-missing ATS terms naturally and contextually: ${missing.join(", ")}.`,
-          "Do not claim a JD qualification that the baseline does not substantiate. Preserve immutable identity, experience length, employers, dates, education, and certifications.",
+          "Do not claim a JD qualification unless the baseline or explicit candidate confirmation substantiates it. Preserve immutable identity, experience length, employers, dates, education, and certifications.",
           "Distribute terms across the summary, skills, and relevant experience instead of keyword stuffing.",
           ...(refine ? [`Preserve the user's requested change while restoring coverage — do not undo it: "${refine.slice(0, 500)}".`] : []),
         ]
@@ -697,7 +698,7 @@ export async function runTailor(opts: {
   }
   const { edits, buffer, notes, afterKw, claimedKw, roleKw, required, provenKw } = best
   if (!opts.refine && !jdGenerated.length) notes.push("Gemini keyword review returned no additional terms; generation used the directly extracted JD requirements.")
-  notes.push("The JD supplies target requirements; the source resume supplies experience evidence. The target is 98% keyword coverage where supported. Scores measure exported document keyword overlap, not hiring probability.")
+  notes.push("The JD supplies target requirements; the source resume and explicit candidate confirmations supply experience evidence. The target is 98% keyword coverage where supported. Scores measure exported document keyword overlap, not hiring probability.")
   notes.push(`Tailored with ${usedModel} · JD keyword coverage ${Math.round(best.cov * 100)}%`)
   const finalRewrites = rewrites(edits)
   const finalAdded = addedFor(edits)
