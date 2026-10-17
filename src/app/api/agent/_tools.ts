@@ -5,6 +5,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { listGoogleWorkspaceAccounts } from "@/lib/googleWorkspace"
+import { VENDOR_PORTALS } from "@/lib/vendorPortals"
 import {
   fetchClassifiedThreads,
   threadsToApps,
@@ -193,6 +194,35 @@ async function notify(ctx: ToolContext, args: Record<string, unknown>): Promise<
   return { ok: true, data: { id: data.id } }
 }
 
+// ── search_vendor_portals ─────────────────────────────────────────────────
+// The Apply tab's prime vendor directory (57 US IT contract staffing firms).
+// Lets the agent answer "which portals have a cyber practice", "firms in Texas", etc.
+async function searchVendorPortals(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
+  const q = str(args.query).trim().toLowerCase()
+  const cyberOnly = args.cyberOnly === true || str(args.cyberOnly).toLowerCase() === "true"
+  const withPortal = args.withPortal === true || str(args.withPortal).toLowerCase() === "true"
+  const max = Math.min(Math.max(num(args.max, 20), 1), 57)
+  const hits = VENDOR_PORTALS.filter(v => {
+    if (cyberOnly && !v.cyber) return false
+    if (withPortal && !v.url) return false
+    if (!q) return true
+    return [v.firm, v.hq, v.specialties, v.size, v.notes].join(" ").toLowerCase().includes(q)
+  }).slice(0, max)
+  return {
+    ok: true,
+    data: {
+      count: hits.length,
+      total: VENDOR_PORTALS.length,
+      portals: hits.map(v => ({
+        firm: v.firm, portal: v.url || null, hq: v.hq,
+        specialties: v.specialties, size: v.size,
+        cyberPractice: v.cyber, cyberOnly: v.cyberCore,
+        notes: v.notes,
+      })),
+    },
+  }
+}
+
 // ── Tool registry ─────────────────────────────────────────────────────────
 export const AGENT_TOOLS: Record<string, { description: string; fn: ToolFn }> = {
   inbox_search: {
@@ -224,6 +254,11 @@ export const AGENT_TOOLS: Record<string, { description: string; fn: ToolFn }> = 
     description:
       "Save an in-app notification for the user. Args: title, body (required), type (e.g. watchdog), link (optional app path). Use for watchdog findings.",
     fn: notify,
+  },
+  search_vendor_portals: {
+    description:
+      "Search the Apply tab's prime vendor portal directory (57 US IT contract staffing firms). Args: query (optional keyword — firm name, city, state, specialty), cyberOnly (optional boolean — only firms with a cybersecurity practice), withPortal (optional boolean — only firms with a verified direct portal link), max (1-57, default 20). Returns firm, portal URL, HQ, specialties, size, cyber flags.",
+    fn: searchVendorPortals,
   },
 }
 

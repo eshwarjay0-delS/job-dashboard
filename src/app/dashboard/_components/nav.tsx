@@ -61,6 +61,11 @@ export const NAV_TABS: NavTab[] = [
     ],
   },
   {
+    href: "/dashboard/apply", label: "Apply", icon: ICON.link,
+    what: "Every prime vendor portal in one place. Search, open a portal, and apply — sign in once and your browser remembers you.",
+    items: [],
+  },
+  {
     href: "/dashboard/kompas", label: "Kompas", icon: ICON.mic,
     what: "Interview practice and voice — Kompas listens, you talk.",
     items: [
