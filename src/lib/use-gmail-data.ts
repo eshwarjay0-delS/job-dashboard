@@ -49,7 +49,7 @@ async function getJSON<T>(url: string): Promise<{ data: T | null; error: string 
 const FRESH_MS = 15_000
 const PULSE_MS = 120_000
 
-type Loaded = Omit<GmailData, "loading" | "refresh">
+type Loaded = Omit<GmailData, "loading" | "refresh" | "updatedAt">
 const EMPTY: Loaded = {
   mails: [], applications: [], interviews: [], steps: [], unfollowed: [], drafts: [], radar: [], issues: [],
   connected: false, error: null,
