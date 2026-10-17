@@ -58,6 +58,13 @@ Everything the user does inside Apply is saved: searches, viewed jobs, saved job
 - **Auto-apply** (opt-in, per user): once the profile is strong, one "Auto Apply" button applies to matching jobs using the saved profile + auto-tailored resumes — the same flow as manual apply, minus the clicks.
 - This only works because everything happens inside our centralized place. The database of user behavior *is* the moat.
 
+## Crawler intelligence (reverse-engineered 2026-10-17)
+
+- **Collabera**: pagination is `?q=N` (server-rendered, ~49 pages), keyword/industry/location filters as query params. Adapter crawls 5 newest pages (50 jobs).
+- **Beacon Hill**: listings are AJAX-only (FacetWP); page-1 gives the 10 newest daily. Pagination not cracked — revisit with headless rendering.
+- **TEKsystems**: Phenom embedded JSON cracked (`"jobs":[...]` with title, jobId, city/state, postedDate, applyUrl, type) — but only ~4 jobs posted; recruiter-driven, adapter skipped.
+- **CyberSN**: JS shell — needs headless rendering, later phase.
+
 ## Data foundation
 
 - `src/lib/vendorPortals.ts` — 57 US IT contract staffing prime vendors (28 verified portal URLs, 39 with a cybersecurity practice, 3 cyber-only boutiques). Generated from `prime-vendor-portals.md`.
