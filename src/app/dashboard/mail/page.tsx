@@ -55,6 +55,34 @@ interface RoleGroup {
   latestAt: string
 }
 
+// Live inbox indicator: pulsing dot + how long ago the 2-minute pulse last checked.
+// This is the "lively inbox" — the user sees the inbox is being watched, not stale.
+function LiveIndicator({ updatedAt, connected }: { updatedAt: number | null; connected: boolean }) {
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 20000)
+    return () => clearInterval(id)
+  }, [])
+  if (!connected || !updatedAt) return null
+  const secs = Math.max(0, Math.floor((Date.now() - updatedAt) / 1000))
+  const label = secs < 45 ? "just now" : secs < 105 ? "1 min ago" : `${Math.floor(secs / 60)} min ago`
+  return (
+    <span
+      style={{
+        display: "inline-flex", alignItems: "center", fontSize: 12.5, fontWeight: 600,
+        color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: 999,
+        padding: "3px 11px", marginLeft: 10, verticalAlign: "middle", whiteSpace: "nowrap",
+      }}
+      role="status"
+      aria-label={`Inbox is live, last checked ${label}`}
+      title="The inbox re-checks itself every 2 minutes"
+    >
+      <span className="mf-live-dot" aria-hidden="true" />
+      Live · {label}
+    </span>
+  )
+}
+
 function domainOf(email: string): string {
   const m = (email || "").match(/@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/)
   return m ? m[1].toLowerCase() : (email || "").toLowerCase()
@@ -193,7 +221,7 @@ export default function MailPage() {
   const [leaving, leave] = useLeaving(answer)
 
   // ── Live Gmail data ────────────────────────────────────────────────────
-  const { mails, loading, connected, error, refresh, drafts, radar } = useGmailData()
+  const { mails, loading, connected, error, refresh, drafts, radar, updatedAt } = useGmailData()
   const [connectedEmails, setConnectedEmails] = useState<string[]>([])
   useEffect(() => {let active=true;fetch('/api/gmail-sync').then(r=>r.json()).then(j=>{if(active)setConnectedEmails((j.accounts||[]).filter((a:{gmail_enabled:boolean})=>a.gmail_enabled).map((a:{google_email:string})=>a.google_email))}).catch(()=>{});return()=>{active=false}},[])
   const accounts = buildAccounts([...connectedEmails,...mails.map(m => m.account)])
@@ -303,7 +331,7 @@ export default function MailPage() {
   return (
     <div className="mf-home" style={{ paddingBottom: 56 }}>
       <header className="mf-home-heading">
-        <h1>{navItem("/dashboard/mail").label}</h1>
+        <h1>{navItem("/dashboard/mail").label}<LiveIndicator updatedAt={updatedAt} connected={connected} /></h1>
         <p>
           {!connected
             ? "Connect Gmail and your recruiter emails land here — grouped by role, fit-scored, with drafts and follow-ups in view."

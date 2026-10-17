@@ -22,6 +22,8 @@ interface GmailData {
   connected: boolean
   error: string | null
   refresh: () => void
+  /** When the shared copy was last checked (Date.now()), null before the first load. Drives the "Live" indicator. */
+  updatedAt: number | null
 }
 
 async function getJSON<T>(url: string): Promise<{ data: T | null; error: string | null }> {
@@ -204,11 +206,12 @@ function loadShared(force: boolean): Promise<Loaded> {
 
 export function useGmailData(): GmailData {
   const [data, setData] = useState<Loaded>(() => shared?.data ?? EMPTY)
+  const [updatedAt, setUpdatedAt] = useState<number | null>(() => shared?.at ?? null)
   const [loading, setLoading] = useState(() => !shared)
 
   // Every page showing mail hears every load, whichever page started it.
   useEffect(() => {
-    const hear = (d: Loaded) => { setData(d); setLoading(false) }
+    const hear = (d: Loaded) => { setData(d); setUpdatedAt(shared?.at ?? Date.now()); setLoading(false) }
     listeners.add(hear)
     return () => { listeners.delete(hear) }
   }, [])
@@ -261,7 +264,7 @@ export function useGmailData(): GmailData {
     }
   }, [data.connected])
 
-  return { ...data, loading, refresh }
+  return { ...data, loading, refresh, updatedAt }
 }
 
 // ── Unfollowed domain helpers ───────────────────────────────────────────────

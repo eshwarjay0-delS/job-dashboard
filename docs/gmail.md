@@ -92,6 +92,19 @@ On the Home page, right *before* the Overview section, an **Important** section 
 - **Conversational automation bots.** Chatbots live on the automation side. The user talks to them like they talk to an assistant: *"track emails like this"*, *"after I submit an RTR, send a follow-up twice a week"*, *"if they reply, tell me"* — and the agent just does it.
 - **Inbox digest.** A dedicated section that always shows what's happening in Gmail: new important mail, follow-ups sent, replies received, what's waiting. The overview of the inbox, live.
 
+## Poke lessons (researched 2026-10-17, public sources)
+
+Poke (The Interaction Company) is the reference for proactive mail: multi-account OAuth connect, a background watcher polling every ~10–15 min, importance triage deciding notify-vs-quiet, proactive nudges the moment important mail lands, a morning briefing, plain-English "recipes", draft-on-behalf, and a learning brain.
+
+Rebuildable capabilities for Mfit Gmail:
+1. **Background watcher** — poll connected accounts on a short cadence; persist seen thread IDs; never reprocess.
+2. **Importance triage** — score new threads (human vs automated, known contact/VIP, urgency signals like deadline/interview/offer). Poke's documented failure mode is triage precision → ship conservative thresholds + per-sender always/never-notify controls from day one.
+3. **Proactive nudges** — one short message per thread when important mail lands: who, what, why it matters. Quiet hours respected. Every nudge carries its reason.
+4. **Morning briefing** — daily digest: calendar, overnight important mail, day's key updates. Skimmable, actionable.
+5. **Recipes** — "every Monday, summarize unread mail from X" in plain English; prebuilt library + user-defined.
+6. **Draft-on-behalf** — Gmail drafts in the user's voice; nothing sends without approval.
+7. **Brain** — every dismissed/acted-on nudge retunes triage. Fewer false nudges over time.
+
 ## What's new from this vision
 
 1. Compose parity audit — subject/CC/BCC/attachments/sender picker, all working.
