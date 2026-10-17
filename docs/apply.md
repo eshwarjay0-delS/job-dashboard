@@ -65,6 +65,14 @@ Everything the user does inside Apply is saved: searches, viewed jobs, saved job
 - **TEKsystems**: Phenom embedded JSON cracked (`"jobs":[...]` with title, jobId, city/state, postedDate, applyUrl, type) — but only ~4 jobs posted; recruiter-driven, adapter skipped.
 - **CyberSN**: JS shell — needs headless rendering, later phase.
 
+## Jobright lessons (researched 2026-10-17, public sources)
+
+- **Curate, don't flood.** Jobright scores every listing against the user's resume and surfaces 10–50 top matches/day. Discovery + matching is the product; raw search is the commodity. → Build: per-job match score + reasons against the filed resume.
+- **Freshness is the moat — and their #1 complaint** (stale/expired listings). Our `active` flag + per-crawl recheck is exactly the defense. → Build: show "posted X days ago" prominently on every card.
+- **Explain the match.** Their fit explanation ("where you line up and where you fall short") is the most praised feature. A score without reasons is noise.
+- **Own a niche filter.** Their H1B/visa filter won a segment; our contract-only W2/C2C/1099/C2H tagging is the same play.
+- **Close the loop in one workspace.** Find → tailor resume per JD → apply → track. The portal must not stop at search.
+
 ## Data foundation
 
 - `src/lib/vendorPortals.ts` — 57 US IT contract staffing prime vendors (28 verified portal URLs, 39 with a cybersecurity practice, 3 cyber-only boutiques). Generated from `prime-vendor-portals.md`.
