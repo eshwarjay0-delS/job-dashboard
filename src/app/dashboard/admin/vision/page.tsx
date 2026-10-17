@@ -41,8 +41,9 @@ export default function VisionHubPage() {
           Plan &amp; Vision
         </h1>
         <p style={{ fontSize: 15.5, lineHeight: 1.55, color: "var(--text-muted)", margin: "6px 0 0", maxWidth: 680 }}>
-          Developer notes: what each product is becoming and why. Every product gets three forms —
-          text, mind map, image — so the plan reads the same to everyone.
+          Developer notes: what each product is becoming and why. Every product gets four views —
+          text, mind map, image, and live status — so the plan reads the same to everyone, and the live view
+          always shows what's building, what's queued, and what just shipped.
         </p>
       </div>
 
