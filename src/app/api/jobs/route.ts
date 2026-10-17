@@ -160,11 +160,14 @@ async function fetchJobright(q: string, type: string): Promise<Job[]> {
     const buildId = await jobrightBuildIdCached()
     if (!buildId) return []
     const base = q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "cybersecurity"
+    // Jobright samples 16 jobs per slug (non-deterministic). For contract hunts,
+    // pull both the contract-suffixed slug and the raw query slug, then let the
+    // contractTypes filter keep only real contract roles — doubles the sample.
     const slugs = type === "contract"
-      ? [base.includes("contract") ? base : `${base}-contract`]
+      ? [...new Set([base.includes("contract") ? base : `${base}-contract`, base])]
       : [base]
     const jobs: Job[] = []
-    for (const slug of slugs.slice(0, 2)) {
+    for (const slug of slugs.slice(0, 3)) {
       const res = await fetch(`https://jobright.ai/_next/data/${buildId}/jobs/${slug}.json`, {
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Accept": "application/json" },
         signal: AbortSignal.timeout(15000),
