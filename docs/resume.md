@@ -34,7 +34,8 @@ The resume workshop inside MarketFit: build it, format it, fit it to each job de
 - **Kompas**: the dossier feeds on filed resumes — real project history grounds interview answers.
 - **Gmail**: the agent attaches the right resume version to submissions and drafts.
 
-## Non-goals
+## Standing rules (never break)
 
-- Inventing experience. Tailoring re-presents; it never fabricates.
-- One "perfect" resume. There is no single resume — there's the right resume per job.
+- **95–100% JD match, undoubtedly.** Every tailored resume reports its measured JD keyword coverage — WhatsApp caption, web result headline — and repair passes climb toward the 98% target. Below 95%, the result says so plainly.
+- **Tailoring re-presents; it never fabricates.** No invented metrics, platforms, certifications, or backdated experience. Honest gaps are listed (tap-to-add), never faked.
+- There is no single resume — there's the right resume per job.
