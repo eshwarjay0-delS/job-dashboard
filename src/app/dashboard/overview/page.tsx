@@ -16,6 +16,7 @@ import PageIntro from "../_components/page-intro"
 import TypingDots from "../_components/typing-dots"
 import { gmailEvidenceUrl } from "@/lib/application-evidence"
 import type { ApplicationChain, ChainStageKey, ChainEventKind } from "@/app/api/gmail/_lib"
+import ImportantMail from "../mail/_components/important-mail"
 import StandingSection from "./_components/standing"
 
 const STAGES: Array<{ key: ChainStageKey; label: string }> = [
@@ -482,6 +483,7 @@ function OverviewInner() {
 
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+      <ImportantMail />
       <PageIntro
         page="/dashboard/overview"
         action={{ label: "Open My Jobs", href: "/dashboard/tracker" }}

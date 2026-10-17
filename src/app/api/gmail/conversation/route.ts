@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     const rows = await ctx.supabase.from("mfit_gmail_threads").select("data, account_email").eq("user_id", ctx.userId).eq("thread_id", id).limit(8)
     const found = ((rows.data || []) as Array<{ data: ClassifiedThread; account_email: string }>)
       .filter(r => Array.isArray(r.data?.messages) && r.data.messages.length > 0 && enabled.has(String(r.account_email || "").toLowerCase()))
-    const row = found.find(r => !account || String(r.account_email || "").toLowerCase() === account) || found[0]
+    const row = found.find(r => !account || String(r.account_email || "").toLowerCase() === account)
     if (!row) return NextResponse.json({ ok: false, error: "That conversation is not among the mail MarketFit keeps." }, { status: 404 })
     const mail = threadsToMails([row.data])[0]
     return NextResponse.json({ ok: true, mail })

@@ -3,30 +3,22 @@ import TypingDots from "../_components/typing-dots"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Check, Send, Shield, Archive, RotateCcw, ChevronRight, CalendarDays, Leaf, History, ArrowRight } from "lucide-react"
-import { Card, Meta, Chip, Btn, Toggle, useAnswered, useLeaving } from "../_suite/ui"
+import { Check, Archive, RotateCcw, ChevronRight, Leaf, ArrowRight } from "lucide-react"
+import { Meta, Chip, Btn, useAnswered, useLeaving } from "../_suite/ui"
 import { navItem } from "../_components/nav"
-import SmartReply from "./_components/smart-reply"
 import MailRow from "./_components/mail-row"
-import ReadingPane from "./_components/reading-pane"
+import FoldedConversation from "./_components/folded-conversation"
+import ThreadActions, { useTrackedSenders } from "./_components/thread-actions"
+import "./folds.css"
 import MailSearchBar, { SearchSummary, useMailSearch } from "./_components/mail-search"
 import { Papers, PersonHistory } from "./_components/papers"
 import { useRecruiters } from "../_components/recruiter-button"
 import { isMyRecruiter } from "@/lib/my-recruiters"
-import { savedAvailability, type Mail } from "../_suite/sample"
+import { type Mail } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 
 import IgnoreControls from "./_components/ignore-controls"
 import { ignoreReason, type IgnoreRule } from "@/lib/gmail-ignore"
-
-type Filter = "needs" | "invite" | "rtr" | "rate" | "pending" | "all"
-const FILTERS: [Filter, string][] = [["needs", "Needs you"], ["invite", "Interview invites"], ["rtr", "RTR forms"], ["rate", "Pay rates"], ["pending", "Waiting"], ["all", "All"]]
-const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri"]
-const SLOTS = ["09:00", "10:00", "11:00", "11:30", "13:00", "14:00", "15:00", "15:30", "16:00"]
-const pretty = (t: string) => {
-  const [h, m] = t.split(":").map(Number)
-  return `${((h! + 11) % 12) + 1}${m ? ":" + String(m).padStart(2, "0") : ""}${h! < 12 ? "am" : "pm"}`
-}
 
 type AcctFn = (id: string) => { tint: string; email: string }
 
@@ -44,100 +36,6 @@ function JdFitPill({ score, why }: { score?: number; why?: string[] }) {
 
 // The row itself is _components/mail-row.tsx: one line each for who, what about, how it begins.
 const rowProps = (m: Mail, acct: AcctFn) => { const a = acct(m.account); return { tint: a.tint, inbox: a.email.split("@")[0] || a.email } }
-
-function AvailabilityReply({ m, onApprove, acct }: { m: Mail; onApprove: () => void; acct: AcctFn }) {
-  const [slots, setSlots] = useState<Record<string, string[]>>(savedAvailability)
-  const [auto, setAuto] = useState(false)
-  const toggle = (d: string, s: string) =>
-    setSlots(x => ({ ...x, [d]: x[d]?.includes(s) ? x[d]!.filter(y => y !== s) : [...(x[d] ?? []), s].sort() }))
-  const line = WEEK.filter(d => slots[d]?.length).map(d => `${d} ${slots[d]!.map(pretty).join(", ")}`).join(" · ")
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Your availability</h3>
-        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Pre-filled from last time — click to change</span>
-      </div>
-      <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
-        <div style={{ display: "flex", background: "var(--surface-2)" }}>
-          <div style={{ width: 64 }} />
-          {WEEK.map(d => <div key={d} style={{ flex: 1, textAlign: "center", padding: "8px 0", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--text-muted)" }}>{d.toUpperCase()}</div>)}
-        </div>
-        {SLOTS.map(s => (
-          <div key={s} style={{ display: "flex", alignItems: "center", height: 38, borderTop: "1px solid var(--border)" }}>
-            <div style={{ width: 64, paddingLeft: 12, fontSize: 11.5, color: "var(--text-muted)" }}>{pretty(s)}</div>
-            {WEEK.map(d => {
-              const on = !!slots[d]?.includes(s)
-              return (
-                <button key={d} type="button" role="checkbox" aria-checked={on} aria-label={`${d} ${pretty(s)}`} onClick={() => toggle(d, s)}
-                  style={{
-                    flex: 1, height: 30, margin: "0 2px", borderRadius: 10, border: "none", cursor: "pointer",
-                    background: on ? "var(--accent)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                  {on && <Check size={13} color="#fff" />}
-                </button>
-              )
-            })}
-          </div>
-        ))}
-      </div>
-      <div style={{ padding: 16, borderRadius: 10, background: "var(--surface-2)", borderLeft: "3px solid var(--accent)" }}>
-        <Meta style={{ marginBottom: 8 }}>Draft reply · from {acct(m.account).email}</Meta>
-        <div style={{ fontSize: 13.5, lineHeight: 1.6, whiteSpace: "pre-line" }}>
-          {`Hi ${m.from.split(" ")[0]},\n\nThank you — I'd be glad to meet the hiring manager. I'm available ${line || "(pick at least one slot)"} (ET). Happy to work around the panel if none of these suit.\n\nBest,\nEshwar`}
-        </div>
-      </div>
-      <Toggle value={auto} onChange={setAuto} label="Send availability replies automatically next time" />
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Btn onClick={onApprove} disabled={!line}><Send size={14} /> Try approving reply</Btn>
-      </div>
-    </div>
-  )
-}
-
-function RtrReply({ m, onApprove }: { m: Mail; onApprove: () => void }) {
-  const [rate, setRate] = useState("$62/hr C2C")
-  const field = (label: string, value: string, onChange?: (v: string) => void) => (
-    <label style={{ flex: "1 1 180px", display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>
-      {label}
-      <input value={value} readOnly={!onChange} onChange={e => onChange?.(e.target.value)}
-        style={{ height: 36, padding: "0 10px", borderRadius: 10, border: "1px solid var(--border-strong)", fontSize: 13.5, color: "var(--text)", background: onChange ? "var(--surface)" : "var(--surface-2)" }} />
-    </label>
-  )
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Right to Represent</h3>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>{field("Role", m.role)}{field("End client", m.company)}</div>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>{field("Your rate", rate, setRate)}{field("Exclusive for", "30 days")}</div>
-      <div style={{ display: "flex", gap: 10, padding: 12, borderRadius: 10, background: "var(--surface-2)", fontSize: 13, lineHeight: 1.5 }}>
-        <Shield size={17} style={{ flexShrink: 0 }} />
-        No other submission to {m.company} found in the last 90 days across your four inboxes.
-      </div>
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Btn variant="outline">Decline</Btn>
-        <Btn onClick={onApprove}><Check size={14} /> Preview RTR approval</Btn>
-      </div>
-    </div>
-  )
-}
-
-function RateReply({ m, onApprove }: { m: Mail; onApprove: () => void }) {
-  const [rate, setRate] = useState("$68/hr")
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Confirm the rate</h3>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {["$65/hr", "$68/hr", "$70/hr", "$72/hr"].map(r => <Chip key={r} label={`${r} C2C`} active={r === rate} onClick={() => setRate(r)} />)}
-      </div>
-      <div style={{ padding: 16, borderRadius: 10, background: "var(--surface-2)", borderLeft: "3px solid var(--accent)", fontSize: 13.5, lineHeight: 1.6 }}>
-        Hi {m.from.split(" ")[0]}, confirming {rate} on C2C for the {m.role} role. I can start in two weeks. Please go ahead and submit.
-      </div>
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Btn variant="outline">Counter</Btn>
-        <Btn onClick={onApprove}><Send size={14} /> Try approving reply</Btn>
-      </div>
-    </div>
-  )
-}
 
 /* ── Role aggregation: Gmail's essence, organized ───────────────────────────
    One role = one card. Every vendor chain touching the same posting lives
@@ -284,9 +182,11 @@ export default function MailPage() {
     if (!res.ok || !data.ok) throw new Error(data.error || "Could not save")
     setIgnoreRules(data.rules); setSelected([])
   }
+  const tracked = useTrackedSenders()
   const [account, setAccount] = useState("all")
   const [view, setView] = useState<View>("needs")
   const [sel, setSel] = useState<string | null>(null)
+  const [selectedInbox, setSelectedInbox] = useState("")
   const [showFiled, setShowFiled] = useState(false)
   const [restored, setRestored] = useState<string[]>([])
   const [answered, answer] = useAnswered()
@@ -294,7 +194,9 @@ export default function MailPage() {
 
   // ── Live Gmail data ────────────────────────────────────────────────────
   const { mails, loading, connected, error, refresh, drafts, radar } = useGmailData()
-  const accounts = buildAccounts(mails.map(m => m.account))
+  const [connectedEmails, setConnectedEmails] = useState<string[]>([])
+  useEffect(() => {let active=true;fetch('/api/gmail-sync').then(r=>r.json()).then(j=>{if(active)setConnectedEmails((j.accounts||[]).filter((a:{gmail_enabled:boolean})=>a.gmail_enabled).map((a:{google_email:string})=>a.google_email))}).catch(()=>{});return()=>{active=false}},[])
+  const accounts = buildAccounts([...connectedEmails,...mails.map(m => m.account)])
   const acct = makeAcct(accounts)
 
   // Whose turn it is, by what the server found: an ask they made after you last wrote (yourTurn). On the owner's own
@@ -330,7 +232,8 @@ export default function MailPage() {
   // old) is fetched by itself from the kept mail.
   const [fetched, setFetched] = useState<Mail | null>(null)
   const [openNote, setOpenNote] = useState("")
-  const m = shown.find(x => x.id === sel) ?? (sel && sel === opened ? mails.find(x => x.id === sel) ?? (fetched?.id === sel ? fetched : undefined) : undefined) ?? shown[0]
+  const selectedMail = (x: Mail) => x.id === sel && (!selectedInbox || x.account === selectedInbox)
+  const m = shown.find(selectedMail) ?? (sel && sel === opened ? mails.find(selectedMail) ?? (fetched && selectedMail(fetched) ? fetched : undefined) : undefined)
 
   // Three piles a person can hold in their head. The other three ways of looking wait behind "More".
   const VIEWS: [View, string, number][] = [
@@ -350,10 +253,13 @@ export default function MailPage() {
   // not have at all is left alone, so the wrong one is never opened in its place.
   const [wanted, setWanted] = useState<string | null>(null)
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("open")
+    const query = new URLSearchParams(window.location.search)
+    const id = query.get("open")
+    const inbox = query.get("account")
+    if (inbox) queueMicrotask(() => {setAccount(inbox);setSelectedInbox(inbox)})
     if (id) queueMicrotask(() => setWanted(id))
   }, [])
-  const wantedIsHere = !!wanted && mails.some(x => x.id === wanted)
+  const wantedIsHere = !!wanted && mails.some(x => x.id === wanted && (!selectedInbox || x.account === selectedInbox))
   useEffect(() => {
     if (!wanted || !wantedIsHere) return
     queueMicrotask(() => {
@@ -366,7 +272,7 @@ export default function MailPage() {
   useEffect(() => {
     if (!wanted || wantedIsHere || loading || !connected) return
     let active = true
-    fetch(`/api/gmail/conversation?id=${encodeURIComponent(wanted)}`)
+    fetch(`/api/gmail/conversation?id=${encodeURIComponent(wanted)}&account=${encodeURIComponent(selectedInbox)}`)
       .then(r => r.json())
       .then((j: { ok?: boolean; mail?: Mail }) => {
         if (!active) return
@@ -378,11 +284,11 @@ export default function MailPage() {
       })
       .catch(() => { if (active) { setOpenNote("The conversation you asked for could not be opened just now. The list below is your inbox as usual."); setWanted(null) } })
     return () => { active = false }
-  }, [wanted, wantedIsHere, loading, connected])
+  }, [wanted, wantedIsHere, loading, connected, selectedInbox])
 
   const approve = (id: string) => {
     const nextUp = shown.find(x => x.id !== id && !leaving.includes(x.id) && waiting(x))
-    if (nextUp) setSel(nextUp.id)
+    if (nextUp) {setSel(nextUp.id);setSelectedInbox(nextUp.account)}
     leave(id)
   }
 
@@ -525,21 +431,22 @@ export default function MailPage() {
               ))}
             </div>
           ) : (
-            <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
-              <div style={{ flex: "0 1 400px", minWidth: 300 }}>
+            <div className="mf-mail-folds">
+              <div className="mf-mail-fold mf-mail-list">
                 {shown.map(x => (
                   <div key={`${x.account}:${x.id}`} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                     {(tidying || showIgnored) && !search.active && (
                       <input type="checkbox" aria-label={`Select ${x.subject}`} checked={selected.includes(`${x.account}:${x.id}`)} onChange={e => setSelected(ids => e.target.checked ? [...ids, `${x.account}:${x.id}`] : ids.filter(id => id !== `${x.account}:${x.id}`))}
                         style={{ width: 18, height: 18, marginTop: 22, flex: "none", accentColor: "var(--accent)" }} />
                     )}
-                    <div style={{ flex: 1, minWidth: 0 }}><MailRow m={x} on={x.id === m?.id} restored={restored.includes(x.id)} leaving={leaving.includes(x.id)} onClick={() => setSel(x.id)} {...rowProps(x, acct)} found={search.active ? search.hits[`${x.account}:${x.id}`] : undefined} />
+                    <div style={{ flex: 1, minWidth: 0 }}><MailRow m={x} on={x.id === m?.id && x.account === m?.account} restored={restored.includes(x.id)} leaving={leaving.includes(x.id)} onClick={() => {setSel(x.id);setSelectedInbox(x.account)}} {...rowProps(x, acct)} found={search.active ? search.hits[`${x.account}:${x.id}`] : undefined} />
                     {showIgnored && !search.active && (
                       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "-2px 0 10px 4px", fontSize: 12.5, color: "var(--text-muted)" }}>
                         <span>{ignoreReason(x, ignoreRules)}</span>
                         <button type="button" className="btn-ghost" style={{ minHeight: 32, padding: "0 10px", fontSize: 13 }} onClick={() => saveIgnoreRules([...ignoreRules.filter(r => !(r.account === x.account && r.kind === "thread" && r.value === x.id)), { account: x.account.toLowerCase(), kind: "thread", value: x.id, action: "allow" }]).catch(e => setIgnoreError(String(e)))}>Bring it back</button>
                       </div>
                     )}</div>
+                    <ThreadActions mail={x} rules={tracked}/>
                   </div>
                 ))}
                 {!shown.length && (
@@ -583,34 +490,8 @@ export default function MailPage() {
                 </div>
               </div>
 
-              {m && (
-                <Card id="reply" style={{ flex: "1 1 420px", minWidth: 320, scrollMarginTop: 24 }}>
-                  {/* Read first: who, what about, what they wrote. Reply, the history and the contact details each wait behind
-                      one button (_components/reading-pane.tsx). The reply tools are the same ones as before; they were all on
-                      screen at once, under a snippet, with the email itself nowhere on the page. */}
-                  <ReadingPane key={`${m.account}:${m.id}`} m={m} myEmail={acct(m.account).email} tint={acct(m.account).tint} restored={restored.includes(m.id)}
-                    reply={
-                      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                        {(answered.includes(m.id) || leaving.includes(m.id) || restored.includes(m.id) || m.when) && (
-                          <div style={{ display: "flex", gap: 10, padding: 12, borderRadius: 10, background: "var(--surface-2)", fontSize: 13.5, lineHeight: 1.5 }}>
-                            {m.when && !answered.includes(m.id) && !leaving.includes(m.id) ? <CalendarDays size={16} style={{ flexShrink: 0 }} /> : <Check size={16} style={{ flexShrink: 0 }} />}
-                            {answered.includes(m.id) || leaving.includes(m.id)
-                              ? "Reply approved and sent. The follow-up workflow picks it up from here."
-                              : restored.includes(m.id)
-                                ? "Restored from Rejected. It stays in your inbox and the tracker until you file it again."
-                                : `${m.when} is on your interview calendar.`}
-                          </div>
-                        )}
-                        {!leaving.includes(m.id) && <SmartReply mail={m} onSent={() => approve(m.id)} />}
-                        {/* The three sample forms that used to sit here (AvailabilityReply, RtrReply, RateReply, still defined
-                            above) are no longer shown. They sent nothing ("Preview", "Try approving"), filled "End client"
-                            with the sender's own name, and said "No other submission found in the last 90 days across your
-                            four inboxes" without that check being made. The suggested replies above are the real ones: they
-                            cover availability, the RTR and the rate, and they send. */}
-                      </div>
-                    } />
-                </Card>
-              )}
+              {m && <FoldedConversation key={`${m.account}:${m.id}`} mail={m} tint={acct(m.account).tint} restored={restored.includes(m.id)} onSent={()=>approve(m.id)} />}
+
             </div>
           )}
         </>

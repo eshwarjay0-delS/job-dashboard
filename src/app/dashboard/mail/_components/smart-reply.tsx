@@ -34,16 +34,22 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
   // What the person handed over on the Follow-ups page (their usual reply, their usual nudge), in their own words.
   // It is offered first, and like every other choice here it only fills the box: it goes out on Approve & Send.
   const [usual, setUsual] = useState<ReplyChip[]>([])
+  const [savedExample, setSavedExample] = useState<ReplyChip[]>([])
+  useEffect(() => {let active=true;fetch("/api/gmail/automation-plans").then(r=>r.json()).then(j=>{if(active&&j.ok)setSavedExample(j.plans.filter((p:{account:string;thread:string;template:string})=>p.account===mail.account&&p.thread===mail.id&&p.template).map((p:{template:string})=>({label:"Your saved reply example",subject:/^re:/i.test(mail.subject)?mail.subject:`Re: ${mail.subject}`,body:p.template})))}).catch(()=>{});return()=>{active=false}},[mail.id,mail.account,mail.subject])
   const [accountId, setAccountId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState("")
   const [active, setActive] = useState<number | null>(null)
-  const [subject, setSubject] = useState("")
+  const [subject, setSubject] = useState(/^re:/i.test(mail.subject) ? mail.subject : `Re: ${mail.subject}`)
   const [body, setBody] = useState("")
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState("")
   // His own words: the box can be opened with nothing in it (owner, 13 Oct 2026: "give me an option to at least write an
   // email to them in my own words"). Before, it appeared only after one of the suggested replies was tapped.
-  const [own, setOwn] = useState(false)
+  const [own, setOwn] = useState(true)
+  const [to, setTo] = useState(bareEmail(mail.fromEmail))
+  const [cc, setCc] = useState("")
+  const [bcc, setBcc] = useState("")
+  const [files, setFiles] = useState<{name:string;type:string;data:string}[]>([])
   const [phrases, setPhrases] = useState<Phrase[]>([])
   useEffect(() => {
     let on = true
@@ -56,7 +62,6 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
   const [formOn, setFormOn] = useState(false)
   useEffect(() => {
     let on = true
-    setForm(null); setFormOn(false)
     fetch("/api/gmail/form-fill", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: mail.id, account: mail.account }) }).then(r => r.json())
       .then(j => { if (on && j?.ok && j.form && j.reply) setForm({ fields: j.form.fields, summary: j.form.summary, subject: j.reply.subject, body: j.reply.body }) }).catch(() => { /* the other replies are still there */ })
     return () => { on = false }
@@ -74,10 +79,6 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
 
   useEffect(() => {
     let cancelled = false
-    setChips(null)
-    setUsual([])
-    setLoadError("")
-    setActive(null)
     fetch("/api/gmail/habits?saved=1")
       .then(r => r.json())
       .then((j: { ok?: boolean; decisions?: Decision[] }) => {
@@ -117,9 +118,9 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
       })
       .catch(e => { if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e)) })
     return () => { cancelled = true }
-  }, [mail.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mail.id, mail.account]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const choices = [...usual, ...(chips || [])]
+  const choices = [...savedExample, ...usual, ...(chips || [])]
   const pick = (i: number) => {
     const c = choices[i]
     if (!c) return
@@ -139,7 +140,7 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
       const res = await fetch("/api/gmail-send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: bareEmail(mail.fromEmail), subject: subject.trim(), body: body.trim(), accountId }),
+        body: JSON.stringify({ to, cc, bcc, subject: subject.trim(), body: body.trim(), accountId, accountEmail: mail.account, threadId: mail.id, attachments: files }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || "Send failed.")
@@ -190,7 +191,10 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
       </div>
 
       {(own || formOn || active !== null) && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, order: -1 }}>
+          <p style={{fontSize:12, overflowWrap:"anywhere"}}>From: <strong>{mail.account}</strong></p>
+          {([["To",to,setTo],["CC",cc,setCc],["BCC",bcc,setBcc]] as const).map(([label,value,update]) => <label key={label} style={{display:"grid",gap:4,fontSize:12}}>{label}<input aria-label={label} value={value} onChange={e=>update(e.target.value)} placeholder={label === "To" ? "Recipient email" : "Optional email addresses"} style={{padding:8,border:"1px solid var(--border-strong)",borderRadius:8,background:"var(--surface)",color:"var(--text)",width:"100%"}} /></label>)}
+          <label style={{fontSize:12}}>Attachments (up to 2 MB combined)<input type="file" multiple onChange={async e=>{const selected=Array.from(e.target.files || []);if(selected.length>8 || selected.reduce((n,f)=>n+f.size,0)>2*1024*1024){setSendError("Choose up to eight files, at most 2 MB combined.");return}try{const loaded=await Promise.all(selected.map(file=>new Promise<{name:string;type:string;data:string}>((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve({name:file.name,type:file.type,data:String(r.result).split(",")[1]});r.onerror=()=>reject(new Error("Could not read attachment"));r.readAsDataURL(file)})));setFiles(loaded);setSendError("")}catch{setSendError("Could not read attachment")}}} />{files.map(f=><span key={f.name} style={{display:"block"}}>{f.name} <button type="button" onClick={()=>setFiles(xs=>xs.filter(x=>x!==f))}>Remove</button></span>)}</label>
           <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>
             Subject
             <input value={subject} onChange={e => setSubject(e.target.value)}

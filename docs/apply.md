@@ -61,13 +61,13 @@ Everything the user does inside Apply is saved: searches, viewed jobs, saved job
 ## Data foundation
 
 - `src/lib/vendorPortals.ts` — 57 US IT contract staffing prime vendors (28 verified portal URLs, 39 with a cybersecurity practice, 3 cyber-only boutiques). Generated from `prime-vendor-portals.md`.
-- The Apply tab (`/dashboard/apply`) is the directory today and becomes the search UI as the crawler comes online.
+- The Apply tab (`/dashboard/apply`) searches jobs. The directory is secondary at `/dashboard/apply/portals`.
 - The agent chatbot has the `search_vendor_portals` tool — Ask MFit answers portal questions from the same data.
 
 ## Build phases
 
 1. **Directory (done, 2026-10-17).** Apply tab + portal directory + smart search + chatbot tool.
-2. **Crawler v1 (shipped 2026-10-17, needs migration).** Jobs table (`mfit_crawl_jobs` + `mfit_crawl_runs`), adapter framework, verified adapters for Beacon Hill + Collabera, Jobs tab with contract-only default, daily cron 6am CDT. Run `supabase/migrations/20261017_crawl_jobs.sql` in the Mfit SQL editor, then trigger the first crawl.
+2. **Crawler v1 (shipped 2026-10-17, needs migration).** Jobs table (`mfit_crawl_jobs` + `mfit_crawl_runs`), adapter framework, verified adapters for Beacon Hill + Collabera, Jobs tab with contract-only default, daily cron 6am CDT. The active Mfit database was checked: both tables are absent. Two migration attempts through the Supabase connector failed with `Invalid or expired requestState`; migration remains blocked. Apply `supabase/migrations/20261017_crawl_jobs.sql`, then trigger and verify the first crawl.
 3. **Inclusive browser (desktop).** Electron `BrowserView` with persistent session; "Open portal" opens in-app; logins persist like Chrome.
 4. **Resume-at-apply.** Resume picker + per-JD tailoring wired into the Apply flow.
 5. **Pattern learning.** Event capture (search/view/save/apply/skip) → choice profiles → recommendations.
@@ -78,3 +78,37 @@ Everything the user does inside Apply is saved: searches, viewed jobs, saved job
 - Scraping or applying to sites in ways that violate their terms — adapters respect robots/ToS; if a portal blocks us, it stays a directory link.
 - Becoming a staffing firm. We never submit on the user's behalf without their action (until they explicitly opt into auto-apply).
 - Full-time perm roles. Contract-only is the brand.
+
+## Owner clarification — 17 October 2026
+
+MarketFit serves an individual job seeker. The first screen searches **jobs**, not staffing firms. The directory remains a secondary list of source portals. The product covers W2 contracts, C2C, 1099, contract-to-hire, temporary and long-term contracts. W2 payroll alone does not establish that a job is a contract.
+
+### Desktop journey
+
+1. Search a role and location across connected sources; filter contract type and remote preference.
+2. Compare real listings with employer, source, location, compensation when supplied, and the job description. Normalize duplicates without collapsing distinct locations.
+3. Select a job; choose a saved resume or tailor an explicitly chosen baseline to that JD.
+4. Apply on the source portal. On the web this opens a browser tab; in the planned desktop shell it opens a persistent, isolated browser session. Login belongs to the source site. MarketFit must never proxy passwords or claim that a cross-origin iframe is a complete browser.
+5. Record portal-open separately from application-submitted. A click is not proof of submission. Allow a user-reported submission; future automatic submissions require a portal receipt.
+6. Keep account-scoped activity so the user can revisit work. Build a transparent, editable preference profile from roles, locations, contract types and explicit saves/skips. Recommendations must explain why a role was selected.
+7. Offer auto-apply only after the user enables it and chooses scope, resume identity, limits and stop conditions. Every attempted submission needs a visible result and evidence. Portal login, CAPTCHA, missing answers and an ambiguous resume identity pause that attempt.
+
+### Source integration contract
+
+Each adapter declares its source, supported filters, pagination, refresh policy, employment evidence, last successful fetch and failure reason. Crawl only available public/authorized feeds and pages; a directory URL is not a working adapter. Store source URL and source identifier alongside normalized jobs, preserve full available JD, expire closed roles, and retain provenance. Do not claim LinkedIn or Jobright crawling parity without a verified adapter. Existing job aggregators are integrations, not evidence that all listed vendor portals are crawled.
+
+### Implementation checkpoint
+
+Implemented in the current change: job-first Apply UI; contract evidence filtering; real-only contract results; source links; saved resume download; baseline and JD handoff to Resume; account-scoped search/view/save/portal-open/self-reported-submission activity. The portal directory lives under `/dashboard/apply/portals`.
+
+Not implemented by this change: a crawler for every vendor, persistent embedded desktop browser, inferred choice profiles, cross-site autofill or automatic submission. Source availability still depends on the configured integrations. No live vacancy or submitted application may be fabricated to hide an unavailable source.
+
+### Acceptance checks
+
+- Search software developer and show jobs, not a list of firms.
+- A permanent W2 posting with no contract evidence does not qualify.
+- A source outage produces an honest empty/error state, never sample jobs.
+- Resume selection carries through tailoring without switching identity.
+- Portal open, saved job and submitted application have distinct activity records.
+- Credentials and browsing sessions never cross users or connected identities.
+- Auto-apply remains off until an actual executable, tested workflow exists.

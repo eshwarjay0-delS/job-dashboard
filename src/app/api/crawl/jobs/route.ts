@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import crypto from "crypto"
 import { adminOf } from "@/lib/adminAccess"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
@@ -22,7 +21,7 @@ export async function GET(req: NextRequest) {
 
   const service = createServiceClient()
   let query = service.from("mfit_crawl_jobs")
-    .select("id,portal,firm,title,location,work_type,engagement,pay_range,posted_at,url,last_seen_at")
+    .select("id,portal,firm,title,location,work_type,engagement,pay_range,posted_at,url,last_seen_at,description")
     .eq("active", true)
     .order("last_seen_at", { ascending: false })
     .limit(limit)
@@ -30,7 +29,7 @@ export async function GET(req: NextRequest) {
   if (workType !== "all") query = query.eq("work_type", workType)
   if (portal) query = query.eq("portal", portal)
   if (q) {
-    const like = `%${q.replace(/[%_]/g, "")}%`
+    const like = `%${q.replace(/[^a-zA-Z0-9 @+.-]/g, "")}%`
     query = query.or(`title.ilike.${like},location.ilike.${like},firm.ilike.${like}`)
   }
 

@@ -20,13 +20,14 @@ export async function GET(req: Request) {
     const url = new URL(req.url)
     const id = (url.searchParams.get("id") || "").trim().slice(0, 200)
     const account = (url.searchParams.get("account") || "").trim().toLowerCase().slice(0, 200)
+    if (account && !ctx.accounts.some(a => a.gmail_enabled && a.google_email.toLowerCase() === account)) return NextResponse.json({ok:false,error:"Inbox is not connected"},{status:403})
     if (!id) return NextResponse.json({ ok: false, error: "Say which conversation: ?id=" }, { status: 400 })
 
     let thread: ThreadLike | null = null
     try {
       const rows = await ctx.supabase.from("mfit_gmail_threads").select("data, account_email").eq("user_id", ctx.userId).eq("thread_id", id).limit(8)
       const found = (rows.data || []) as Array<{ data: ThreadLike; account_email: string }>
-      const row = found.find(r => !account || String(r.account_email || "").toLowerCase() === account) || found[0]
+      const row = found.find(r => !account || String(r.account_email || "").toLowerCase() === account)
       if (row?.data?.messages?.length) thread = row.data
     } catch { /* no kept copy to read: the fetch below is the same one the inbox list uses */ }
 

@@ -488,10 +488,10 @@ export async function fetchClassifiedThreads(
 
   let sb: Sb | null = null
   let useCache = false
-  if (!customQuery) {
+  {
     try {
       sb = await createClient()
-      useCache = await cacheAvailable(sb)
+      useCache = !customQuery && await cacheAvailable(sb)
     } catch {
       sb = null
       useCache = false
@@ -543,6 +543,7 @@ export async function fetchClassifiedThreads(
     try {
       const threads = await fetchAccountThreads(acct, token, query, max)
       allThreads.push(...threads)
+      if (opts.query && sb) await upsertCachedThreads(sb, userId, acct, threads)
       if (threads.partial) issues.push({ account: acct.google_email, reason: "History scan is partial. Counts are not a complete inbox inventory." })
     } catch (e) {
       issues.push(toIssue(acct, e))

@@ -1,3 +1,4 @@
+import ImportantMail from "./mail/_components/important-mail"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { isResumeOnlyAccount } from "@/lib/resumeOnlyEntitlement"
 import { redirect } from "next/navigation"
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
       <p>Pick one to begin. Everything you make is kept in your files.</p>
     </header>
 
+    <ImportantMail />
     <section className="mf-start" aria-label="Start here">
       {start.map(({ title, text, href, icon: Icon, links }) => <article className="mf-start-card" key={href}>
         <span className="mf-start-icon"><Icon size={22} aria-hidden="true" /></span>

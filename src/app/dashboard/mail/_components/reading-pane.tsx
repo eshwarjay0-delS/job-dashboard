@@ -37,13 +37,14 @@ const day = (ms: number) => (ms ? new Date(ms).toLocaleDateString("en-US", { mon
 const letter: CSSProperties = { fontSize: 15, lineHeight: 1.65, color: "var(--text)", whiteSpace: "pre-wrap", overflowWrap: "anywhere", maxWidth: "68ch", margin: 0 }
 const label: CSSProperties = { fontSize: 12, fontWeight: 600, color: "var(--text-muted)", margin: "0 0 6px" }
 
-export default function ReadingPane({ m, myEmail, tint, restored, reply }: {
+export default function ReadingPane({ m, myEmail, tint, restored, reply, onReply, unfolded }: {
   m: Mail; myEmail: string; tint: string; restored: boolean
+  onReply?: () => void; unfolded?: boolean
   reply: ReactNode   // the reply tools this conversation gets, shown only when Reply is pressed
 }) {
   const [reading, setReading] = useState<Reading | null>(null)
   const [failed, setFailed] = useState(false)
-  const [panel, setPanel] = useState<Panel>(null)
+  const [panel, setPanel] = useState<Panel>(unfolded ? "history" : null)
   const [opened, setOpened] = useState<string | null>(null)
 
   // The parent gives this component a new key for each conversation, so it starts empty each time and only fetches here.
@@ -63,7 +64,7 @@ export default function ReadingPane({ m, myEmail, tint, restored, reply }: {
   const contacts = reading ? contactsOf(reading) : { phones: [], emails: [] }
   const subject = reading?.subject || decodeEntities(m.subject).replace(/^(?:(?:re|fw|fwd)\s*:\s*)+/i, "")
   const tab = (id: Exclude<Panel, null>, icon: ReactNode, text: string) => (
-    <button type="button" onClick={() => setPanel(p => (p === id ? null : id))} aria-expanded={panel === id}
+    <button type="button" onClick={() => id === "reply" && onReply ? onReply() : setPanel(p => (p === id ? null : id))} aria-expanded={panel === id}
       className={panel === id ? "btn-accent" : "btn-outline"} style={{ minHeight: 44, padding: "0 18px", fontSize: 15, display: "inline-flex", alignItems: "center", gap: 8 }}>
       {icon}{text}
     </button>
@@ -107,14 +108,14 @@ export default function ReadingPane({ m, myEmail, tint, restored, reply }: {
       {theirs && formIn(theirs.text).length > 0 && (
         <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 12, border: "1px solid var(--border-strong)", background: "var(--surface)", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <span style={{ flex: "1 1 260px", fontSize: 14.5, lineHeight: 1.5 }}>{theirs.who.split(/[\s,]+/)[0]} sent a form with {formIn(theirs.text).length} details to fill in. I have filled in what you have sent before.</span>
-          <button type="button" className="btn-accent" onClick={() => setPanel("reply")} style={{ minHeight: 40, padding: "0 16px", fontSize: 14.5 }}>See it filled in</button>
+          <button type="button" className="btn-accent" onClick={() => onReply ? onReply() : setPanel("reply")} style={{ minHeight: 40, padding: "0 16px", fontSize: 14.5 }}>See it filled in</button>
         </div>
       )}
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
         {tab("reply", <Reply size={16} aria-hidden />, "Reply")}
         {tab("history", <History size={16} aria-hidden />, seq && seq.count > 1 ? `History (${seq.count})` : "History")}
-        {tab("details", <Phone size={16} aria-hidden />, "Contact and details")}
+        {!unfolded && tab("details", <Phone size={16} aria-hidden />, "Contact and details")}
       </div>
 
       {panel === "reply" && <div style={{ marginTop: 18 }}>{reply}</div>}

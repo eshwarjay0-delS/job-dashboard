@@ -1,3 +1,4 @@
+import { contractTypes, applicationUrl } from "@/lib/contract-jobs"
 import { NextRequest, NextResponse } from "next/server"
 
 // ─── Work-auth detection ──────────────────────────────────────────────────────
@@ -34,7 +35,7 @@ function matchesQuery(q: string, ...fields: string[]): boolean {
 interface Job {
   id: string; title: string; company: string; location: string; remote: boolean
   salary: string | null; posted: string; description: string
-  workAuth: string[]; url: string; source: string
+  workAuth: string[]; url: string; source: string; contractTypes?: string[]
 }
 
 // ─── Source 1: JSearch / RapidAPI ─────────────────────────────────────────────
@@ -51,6 +52,7 @@ async function fetchJSearch(q: string, loc: string, remote: boolean, type: strin
     const res = await fetch(url, {
       headers: { "x-rapidapi-host": "jsearch.p.rapidapi.com", "x-rapidapi-key": key },
       next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(15000),
     })
     if (!res.ok) return []
     const data = await res.json()
@@ -58,14 +60,15 @@ async function fetchJSearch(q: string, loc: string, remote: boolean, type: strin
       job_id: string; job_title: string; employer_name: string; job_city: string;
       job_state: string; job_is_remote: boolean; job_description: string;
       job_posted_at_datetime_utc: string; job_apply_link: string;
-      job_min_salary?: number; job_max_salary?: number; job_publisher?: string;
+      job_min_salary?: number; job_max_salary?: number; job_publisher?: string; job_employment_type?: string;
     }) => {
-      const desc = stripHtml(String(j.job_description || "")).slice(0, 700)
+      const desc = stripHtml(String(j.job_description || "")).slice(0, 30000)
       const loc2 = j.job_is_remote ? "Remote" : [j.job_city, j.job_state].filter(Boolean).join(", ") || "Remote"
       const sMin = j.job_min_salary, sMax = j.job_max_salary
       const pub = (j.job_publisher || "").toLowerCase()
       return {
         id: "js-" + j.job_id,
+        contractTypes: contractTypes(desc, j.job_employment_type || ""),
         title: j.job_title,
         company: j.employer_name || "Company",
         location: loc2,
@@ -91,6 +94,7 @@ async function fetchInfosecjobs(q: string): Promise<Job[]> {
     // Infosecjobs provides an RSS feed; parse it server-side
     const res = await fetch("https://infosecjobs.com/feed/", {
       next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(15000),
       headers: { "Accept": "application/rss+xml, application/xml, text/xml" },
     })
     if (!res.ok) return []
@@ -152,6 +156,7 @@ async function fetchUSAJobs(q: string, remote: boolean, key: string | null): Pro
         "Authorization-Key": key,
       },
       next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(15000),
     })
     if (!res.ok) return []
     const data = await res.json()
@@ -208,6 +213,7 @@ async function fetchHandshakeInterns(q: string, rapidKey: string | null): Promis
     const res = await fetch("https://app.joinhandshake.com/api/v1/jobs?employment_type_names[]=internship", {
       headers: { "Authorization": `Bearer ${token}` },
       next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(15000),
     })
     if (!res.ok) return []
     const data = await res.json()
@@ -239,6 +245,7 @@ async function fetchJSearchInterns(q: string, key: string | null): Promise<Job[]
     const res = await fetch(url, {
       headers: { "x-rapidapi-host": "jsearch.p.rapidapi.com", "x-rapidapi-key": key },
       next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(15000),
     })
     if (!res.ok) return []
     const data = await res.json()
@@ -622,7 +629,12 @@ export async function GET(request: NextRequest) {
   const merged: Job[] = []
   // Priority: JSearch (LinkedIn/Indeed/Glassdoor) → Infosecjobs → USAJobs → Handshake interns
   for (const j of [...jsearch, ...infosec, ...usajobs, ...interns]) {
-    const k = (j.company + "|" + j.title).toLowerCase().replace(/[^a-z0-9|]/g, "")
+    if (!applicationUrl(j.url)) continue
+    j.contractTypes ||= contractTypes(j.title + " " + j.description)
+    if (type === "contract" && !j.contractTypes.length) continue
+    if (remote && !j.remote) continue
+    if (loc && !j.location.toLowerCase().includes(loc.toLowerCase()) && !(j.remote && /remote/i.test(loc))) continue
+    const k = (j.company + "|" + j.title + "|" + j.location).toLowerCase().replace(/[^a-z0-9|]/g, "")
     if (seen.has(k)) continue
     seen.add(k)
     merged.push(j)
@@ -632,6 +644,8 @@ export async function GET(request: NextRequest) {
     const sources = [...new Set(merged.map(j => j.source))]
     return NextResponse.json({ jobs: merged.slice(0, 80), source: sources.join("+"), live: true, sources })
   }
+
+  if (type === "contract") return NextResponse.json({jobs:[],live:true,sources:[],source:"none",notice:rapidKey ? "No verified contract listings returned. Sources may be unavailable; try a broader role or location." : "Broad job search needs a configured JSearch connection. The public specialist feed returned no verified contract matches."})
 
   // Fallback: curated sample data (cyber + federal + intern roles)
   let filtered = [...SAMPLE]

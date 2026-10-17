@@ -86,13 +86,10 @@ export async function runCrawl(onlyPortals?: string[]): Promise<CrawlResult[]> {
         result.upserted = seen.size
         totalUpserted += seen.size
 
-        // Deactivate listings this portal no longer shows.
-        const { data: existing } = await service.from("mfit_crawl_jobs")
-          .select("id,url").eq("portal", adapter.portal).eq("active", true)
-        const gone = (existing ?? []).filter(r => !seen.has(r.url)).map(r => r.id)
-        for (let i = 0; i < gone.length; i += 100) {
-          await service.from("mfit_crawl_jobs").update({ active: false }).in("id", gone.slice(i, i + 100))
-        }
+        // v1 scans only the first listing page. Absence from it is not proof a job closed.
+        await service.from("mfit_crawl_jobs").update({active:false})
+          .eq("portal",adapter.portal).eq("active",true)
+          .lt("last_seen_at",new Date(Date.now()-14*86400000).toISOString());
       }
     } catch (err) {
       result.error = String(err).slice(0, 300)

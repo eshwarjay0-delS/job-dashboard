@@ -106,3 +106,35 @@ On the Home page, right *before* the Overview section, an **Important** section 
 - Rebuilding Gmail's entire settings surface. Parity covers daily workflows, not every toggle.
 - Hiding which account a thread belongs to, ever.
 - Inventing contact details. Empty beats wrong.
+
+## Owner clarification — 17 October 2026
+
+The product is a familiar personal email workspace with intelligence added to it. It must not force every person or email into a recruiter-specific identity. Every email uses the same contact skeleton, including when values are unknown.
+
+### Folding interaction contract
+
+| State | First pane | Second pane | Third pane | Fourth pane |
+|---|---|---|---|---|
+| Browse | Scrollable inbox list | Closed | Closed | Closed |
+| Read | Inbox list | Overview and full conversation | Contact details and interaction history | Closed |
+| Reply | Inbox list | Conversation remains visible | Composer, then suggested replies | Contact details and history |
+
+The account strip includes All inboxes and every connected account, including empty inboxes. Selecting a message must not silently change the All-inboxes filter. Account and thread together identify a conversation. The sending account is visible and verified server-side; no fallback to another inbox is allowed.
+
+Contact skeleton: full name, email, mobile number, receiving inbox, number of messages received, and chronological subject/date/time history with a clock symbol. Unknown values remain blank. Do not derive a person's name from their email local part or pretend a domain is their company name. History counts describe their actual bounded scan, not an exhaustive lifetime record.
+
+Composer requirements: To, CC, BCC, subject, attachments, editable message and visible From account. Suggested replies fill the composer for review. They do not send merely because they were suggested. A closing composer must not silently discard a person's work; saved-draft persistence remains a required follow-up to this checkpoint.
+
+### Important and automation have different meanings
+
+**Important** means track this sender in this receiving account, including future incoming threads. The Home Important section appears ahead of the other dashboard content; Overview also includes it. Removing the rule stops tracking without deleting mail.
+
+**Send to automation** captures a conversation, the user's instructions and their own reply example. Reuse those words as a suggestion scoped to the original account/conversation. The intended agent will turn instructions such as “after my RTR, follow up twice weekly until they reply” into an executable rule with trigger, schedule, recipient, sending account, template, approval mode, expiry and stop-on-reply condition. Show the interpreted rule before activation. Re-check live thread state before every send, deduplicate attempts, and never retry an uncertain send blindly. A reply, rejection, opt-out, expiry or paused account stops the sequence.
+
+An inbox digest should report incoming messages, replies awaiting review, upcoming follow-ups and completed/failed actions with thread links. The agent needs an audit log, not just a chat acknowledgment.
+
+### Implementation checkpoint
+
+Implemented in the current change: folding reader/composer/contact panels; account-aware selection and deep links; CC/BCC and bounded attachments; verified sender/thread on send; blank unknown contact fields; persisted important-sender rules and Home/Overview listing; persisted automation instructions and reply-example reuse.
+
+Still required: fully general Gmail inbox/folder coverage (existing data scan is job-oriented), Gmail draft autosave, full attachment parity, durable recurring send worker, conversational rule interpretation and digest of executed automation. Saved instructions are not advertised as an active automatic sender. Current follow-up suggestions remain manual review/send.

@@ -148,7 +148,10 @@ export default function ResumeClient({ initialFiles, initialFolders = [], otherF
   useEffect(() => { setPreloaded(initialFiles) }, [initialFiles])
   const [uploaded, setUploaded]   = useState<UploadedEntry[]>([])
   const [dragging, setDragging]   = useState(false)
-  const [selected, setSelected]   = useState<string | null>(null)
+  const [selected, setSelected]   = useState<string | null>(() => {
+    try { const path = sessionStorage.getItem("apply_resume_path"); const file = initialFiles.find(f => f.filepath === path); if (file) { sessionStorage.removeItem("apply_resume_path"); return file.id } } catch {}
+    return null
+  })
   // Auto-match OFF by default — the user picks the resume themselves rather than having
   // one chosen across the whole library.
   const [autoSelect, setAutoSelect] = useState(false)
