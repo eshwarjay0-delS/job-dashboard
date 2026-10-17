@@ -18,6 +18,13 @@ test('developers can switch every area and presentation and keep shareable URLs'
   const code = ts.transpileModule(readFileSync(new URL('../../src/app/dashboard/admin/plan-vision/plan-vision.tsx', import.meta.url), 'utf8'), { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText
   const module = { exports: {} }
   const scopedRequire = id => {
+    if (id.includes('/vision/_components/live')) {
+      const live = { exports: {} }
+      const source = readFileSync(new URL('../../src/app/dashboard/admin/vision/_components/live.tsx', import.meta.url), 'utf8')
+      const compiled = ts.transpileModule(source, { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText
+      vm.runInNewContext('(function(require,module,exports){' + compiled + '\n})')(scopedRequire, live, live.exports)
+      return live.exports
+    }
     if (id.includes('/vision/_components/md')) return { __esModule: true, default: () => null }
     if (id === 'next/navigation') return { useSearchParams: () => params, useRouter: () => ({ replace: url => { const parsed = new URL(url, 'https://mfit.test'); params = parsed.searchParams; const slug = parsed.pathname.split('/').pop(); area = slug === 'apply' ? 'applications' : slug; render() } }) }
     if (id === 'next/link') return { __esModule: true, default: ({children,...props}) => React.createElement('a',props,children) }
