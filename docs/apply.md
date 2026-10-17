@@ -75,7 +75,7 @@ Everything the user does inside Apply is saved: searches, viewed jobs, saved job
 
 ## Data foundation
 
-- `src/lib/vendorPortals.ts` — 57 US IT contract staffing prime vendors (28 verified portal URLs, 39 with a cybersecurity practice, 3 cyber-only boutiques). Generated from `prime-vendor-portals.md`.
+- `src/lib/vendorPortals.ts` — 57 US IT contract staffing prime vendors (27 verified portal URLs, 36 with a cybersecurity practice, 3 cyber-only boutiques). Generated from `prime-vendor-portals.md`. Counts corrected 2026-10-17 against the file itself (were misstated as 28/39).
 - The Apply tab (`/dashboard/apply`) searches jobs. The directory is secondary at `/dashboard/apply/portals`.
 - The agent chatbot has the `search_vendor_portals` tool — Ask MFit answers portal questions from the same data.
 
