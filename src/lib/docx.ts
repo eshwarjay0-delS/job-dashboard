@@ -392,6 +392,16 @@ export async function extractZones(buffer: Buffer): Promise<Zones> {
         startRole(t, true)
         continue
       }
+      // Stacked employer / dated title layouts keep employer and project metadata
+      // outside editable bullets, even when the employer line exceeds 25 characters.
+      // Look only to the next nonempty paragraph; prose and actual bullets stay editable.
+      if (!isBullet(t, p)) {
+        const next = paras.slice(idx + 1).find(q => paraText(q).trim())
+        const nextText = next ? paraText(next).trim() : ""
+        const beforeDatedTitle = next && !isBullet(nextText, next) &&
+          (looksLikeRoleTitle(nextText) || (HAS_DATE.test(nextText) && nextText.replace(/\s+/g, " ").length <= 120))
+        if (/^project\s*:/i.test(t) || (beforeDatedTitle && t.length <= 160 && !/[.!?]$/.test(t))) continue
+      }
       // Only fall back to an implicit role when there's an actual bullet-length line to
       // hang it on. Some resumes put the company name on its OWN short paragraph before
       // the "Title | Dates" line (e.g. "Mckesson" \n "Sr. Engineer | Sep 2024 – Present");

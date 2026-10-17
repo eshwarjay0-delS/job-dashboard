@@ -1,0 +1,991 @@
+{
+  "case": "user-salesforce-cpq-2026-10-17",
+  "evaluatedAt": "2026-10-17T23:08:21.682Z",
+  "artifactSha256": "1eca30bf96084dd7b4b8040bc5e9d78765dab08eb3a55d114b0dfa532890e7d0",
+  "method": "Real DOCX extraction; explicit requirement matrix + production keyword extractor. No live generation performed. No semantic truth or credential verification inferred.",
+  "required": {
+    "matched": 24,
+    "total": 24,
+    "percent": 100,
+    "missing": []
+  },
+  "preferred": {
+    "matched": 4,
+    "total": 6,
+    "percent": 66.67,
+    "missing": [
+      "Platform Developer I or II certification",
+      "Salesforce CPQ Specialist certification"
+    ]
+  },
+  "overall": {
+    "matched": 28,
+    "total": 30,
+    "percent": 93.33,
+    "missing": [
+      "Platform Developer I or II certification",
+      "Salesforce CPQ Specialist certification"
+    ]
+  },
+  "experience": {
+    "matched": 27,
+    "total": 27,
+    "missing": []
+  },
+  "productionKeywordCoverage": {
+    "matched": 31,
+    "total": 34,
+    "percent": 91.18,
+    "missing": [
+      "communication skills",
+      "certification",
+      "specialist"
+    ]
+  },
+  "roles": [
+    {
+      "index": 0,
+      "role": "Senior Salesforce Administrator | November 2024 \u2013 Present",
+      "bulletCount": 10,
+      "coveredRequirements": [
+        "apex",
+        "lwc",
+        "flows",
+        "apis",
+        "cpq-revenue",
+        "q2c",
+        "pricing",
+        "selling",
+        "approval",
+        "templates",
+        "enterprise-integration",
+        "source-control",
+        "ci-cd",
+        "testing",
+        "deployment",
+        "requirements",
+        "scalability",
+        "sales",
+        "finance",
+        "operations",
+        "it",
+        "ai",
+        "mulesoft",
+        "billing",
+        "agile"
+      ]
+    },
+    {
+      "index": 1,
+      "role": "Salesforce Administrator | March 2023 \u2013 October 2024",
+      "bulletCount": 10,
+      "coveredRequirements": [
+        "apex",
+        "lwc",
+        "flows",
+        "apis",
+        "cpq-revenue",
+        "q2c",
+        "pricing",
+        "configuration",
+        "selling",
+        "approval",
+        "templates",
+        "enterprise-integration",
+        "source-control",
+        "ci-cd",
+        "testing",
+        "deployment",
+        "requirements",
+        "maintainability",
+        "sales",
+        "finance",
+        "operations",
+        "it",
+        "ai",
+        "mulesoft",
+        "billing",
+        "agile"
+      ]
+    },
+    {
+      "index": 2,
+      "role": "Salesforce Developer | August 2021 \u2013 February 2023",
+      "bulletCount": 10,
+      "coveredRequirements": [
+        "apex",
+        "lwc",
+        "flows",
+        "apis",
+        "cpq-revenue",
+        "q2c",
+        "pricing",
+        "configuration",
+        "selling",
+        "approval",
+        "templates",
+        "enterprise-integration",
+        "source-control",
+        "ci-cd",
+        "testing",
+        "deployment",
+        "maintainability",
+        "scalability",
+        "sales",
+        "finance",
+        "operations",
+        "it",
+        "mulesoft",
+        "billing",
+        "agile"
+      ]
+    },
+    {
+      "index": 3,
+      "role": "Salesforce Administrator | February 2019 \u2013 July 2021",
+      "bulletCount": 10,
+      "coveredRequirements": [
+        "apex",
+        "lwc",
+        "flows",
+        "apis",
+        "cpq-revenue",
+        "q2c",
+        "pricing",
+        "configuration",
+        "selling",
+        "approval",
+        "templates",
+        "enterprise-integration",
+        "source-control",
+        "ci-cd",
+        "testing",
+        "deployment",
+        "maintainability",
+        "sales",
+        "finance",
+        "operations",
+        "it",
+        "mulesoft",
+        "agile"
+      ]
+    },
+    {
+      "index": 4,
+      "role": "Salesforce Administrator | April 2017 \u2013 January 2019",
+      "bulletCount": 10,
+      "coveredRequirements": [
+        "apex",
+        "flows",
+        "apis",
+        "cpq-revenue",
+        "q2c",
+        "pricing",
+        "configuration",
+        "selling",
+        "approval",
+        "templates",
+        "enterprise-integration",
+        "source-control",
+        "ci-cd",
+        "testing",
+        "deployment",
+        "requirements",
+        "maintainability",
+        "sales",
+        "finance",
+        "operations",
+        "it",
+        "mulesoft",
+        "agile"
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "id": "experience-years",
+      "label": "Eight years of IT experience",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": false,
+      "inExperience": false,
+      "roles": []
+    },
+    {
+      "id": "apex",
+      "label": "Apex development",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 2
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 2
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 2
+        }
+      ]
+    },
+    {
+      "id": "lwc",
+      "label": "Lightning Web Components",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 2
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 2
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "flows",
+      "label": "Salesforce Flows",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 2
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "apis",
+      "label": "APIs",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 2
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "cpq-revenue",
+      "label": "Revenue Cloud or Salesforce CPQ",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 2
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "q2c",
+      "label": "Quote-to-Cash",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "pricing",
+      "label": "Complex pricing",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "configuration",
+      "label": "Product configuration",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "selling",
+      "label": "Guided selling",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "approval",
+      "label": "Approval processes",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "templates",
+      "label": "Quote templates",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "enterprise-integration",
+      "label": "Enterprise integration",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "source-control",
+      "label": "Source control",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "ci-cd",
+      "label": "CI/CD",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "testing",
+      "label": "Testing",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 2
+        },
+        {
+          "index": 1,
+          "bullets": 2
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 2
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "deployment",
+      "label": "Deployment automation",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "requirements",
+      "label": "Business requirements",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "maintainability",
+      "label": "Maintainable solutions",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "scalability",
+      "label": "Scalable solutions",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "sales",
+      "label": "Sales stakeholder collaboration",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 3
+        },
+        {
+          "index": 4,
+          "bullets": 2
+        }
+      ]
+    },
+    {
+      "id": "finance",
+      "label": "Finance stakeholder collaboration",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 2
+        },
+        {
+          "index": 1,
+          "bullets": 2
+        },
+        {
+          "index": 2,
+          "bullets": 2
+        },
+        {
+          "index": 3,
+          "bullets": 3
+        },
+        {
+          "index": 4,
+          "bullets": 2
+        }
+      ]
+    },
+    {
+      "id": "operations",
+      "label": "Operations stakeholder collaboration",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 2
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "it",
+      "label": "IT stakeholder collaboration",
+      "section": "required",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "ai",
+      "label": "AI use",
+      "section": "preferred",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "mulesoft",
+      "label": "MuleSoft integration",
+      "section": "preferred",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "developer-cert",
+      "label": "Platform Developer I or II certification",
+      "section": "preferred",
+      "covered": false,
+      "experienceRequired": false,
+      "inExperience": false,
+      "roles": []
+    },
+    {
+      "id": "cpq-cert",
+      "label": "Salesforce CPQ Specialist certification",
+      "section": "preferred",
+      "covered": false,
+      "experienceRequired": false,
+      "inExperience": false,
+      "roles": []
+    },
+    {
+      "id": "billing",
+      "label": "Billing, Revenue Cloud Advanced or subscriptions",
+      "section": "preferred",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        }
+      ]
+    },
+    {
+      "id": "agile",
+      "label": "Agile development",
+      "section": "preferred",
+      "covered": true,
+      "experienceRequired": true,
+      "inExperience": true,
+      "roles": [
+        {
+          "index": 0,
+          "bullets": 1
+        },
+        {
+          "index": 1,
+          "bullets": 1
+        },
+        {
+          "index": 2,
+          "bullets": 1
+        },
+        {
+          "index": 3,
+          "bullets": 1
+        },
+        {
+          "index": 4,
+          "bullets": 1
+        }
+      ]
+    }
+  ]
+}

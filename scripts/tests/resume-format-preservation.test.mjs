@@ -9,7 +9,7 @@ import { preserveSkillHeadings } from '../../src/lib/resume-format.ts'
 const require = createRequire(import.meta.url)
 const module = { exports: {} }
 runInNewContext(ts.transpileModule(readFileSync(new URL('../../src/lib/docx.ts', import.meta.url), 'utf8'), { compilerOptions: { esModuleInterop: true, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { module, exports: module.exports, require, Buffer, console })
-const { applyRewrites } = module.exports
+const { applyRewrites, extractZones } = module.exports
 
 test('original expertise headings survive renamed or omitted model headings', () => {
   const source = [{ idx: 2, text: 'Cloud Security: AWS, Azure' }]
@@ -32,4 +32,24 @@ test('Word edits retain summary, paragraph properties, run formatting and ancill
   assert.ok(actual.includes('Cloud Security: Azure, Microsoft Defender for Cloud'))
   assert.equal(await out.file('word/styles.xml').async('string'), '<styles/>')
   assert.equal(await out.file('word/header1.xml').async('string'), '<header>same@email.com</header>')
+})
+
+
+test('stacked long employer headings and project labels are not editable role bullets', async () => {
+  const lines = ['PROFESSIONAL EXPERIENCE',
+    'Wipro — Michigan State University | East Lansing, Michigan | Remote',
+    'Senior Salesforce Administrator | November 2024 – Present',
+    'Project: Enterprise Salesforce Administration and Service Management',
+    '• Built Salesforce flows for case routing.',
+    'Wells Fargo | San Francisco, California',
+    'Salesforce Administrator | March 2023 – October 2024',
+    'Project: Enterprise CRM Administration',
+    '• Configured approval processes for service requests.']
+  const zip = new JSZip()
+  zip.file('word/document.xml', `<w:document><w:body>${lines.map(t => `<w:p><w:r><w:t>${t}</w:t></w:r></w:p>`).join('')}</w:body></w:document>`)
+  const zones = await extractZones(await zip.generateAsync({type:'nodebuffer'}))
+  assert.equal(zones.roles.length, 2)
+  assert.equal(zones.roles[0].current, true)
+  assert.equal(zones.roles[1].current, false)
+  assert.deepEqual(Array.from(zones.roles, r => Array.from(r.bullets, b => b.idx)), [[4], [8]])
 })
