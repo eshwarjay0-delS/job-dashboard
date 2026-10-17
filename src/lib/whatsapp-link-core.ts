@@ -68,7 +68,7 @@ export function linksOver(blob: LinkStore) {
     // A number belongs to one account at a time: joining it here takes it off the account it was on.
     const before = await readJson<{ userId?: string } | null>(linkKey(digits), null)
     if (before?.userId && before.userId !== held.userId) await dropNumber(before.userId, digits)
-    await blob.put(linkKey(digits), JSON.stringify({ userId: held.userId, at: now }))
+    await blob.put(linkKey(digits), JSON.stringify({ userId: held.userId, at: now, verified: true }))
     const own = await readJson<{ numbers: { digits: string; at: number }[]; code?: string }>(ownKey(held.userId), { numbers: [] })
     const numbers = [...own.numbers.filter(n => n.digits !== digits), { digits, at: now }].slice(-MOST_NUMBERS)
     for (const gone of own.numbers.filter(n => !numbers.some(k => k.digits === n.digits))) await blob.delete(linkKey(gone.digits)).catch(() => {})

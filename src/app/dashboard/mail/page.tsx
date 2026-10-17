@@ -10,6 +10,7 @@ import MailRow from "./_components/mail-row"
 import FoldedConversation from "./_components/folded-conversation"
 import ThreadActions, { useTrackedSenders } from "./_components/thread-actions"
 import "./folds.css"
+import InboxUpdates from "./_components/inbox-updates"
 import MailSearchBar, { SearchSummary, useMailSearch } from "./_components/mail-search"
 import { Papers, PersonHistory } from "./_components/papers"
 import { DigestBriefing } from "./_components/digest"
@@ -347,6 +348,8 @@ export default function MailPage() {
       {!loading && connected && (
         <DigestBriefing needs={needsList} theirs={theirsList} mails={live} radar={radar} onOpen={openMail} />
       )}
+
+      <InboxUpdates />
 
       {error && !loading && (
         <div className="mf-notice" role="status">

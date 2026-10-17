@@ -1,0 +1,7 @@
+import {NextRequest,NextResponse} from 'next/server'
+import {timingSafeEqual} from 'node:crypto'
+import {blob} from '@/lib/storage'
+import {collectInboxUpdates} from '@/lib/gmail-updates'
+import {deliverInboxUpdates} from '@/lib/mail-update-delivery'
+export const maxDuration=60
+export async function GET(req:NextRequest){const secret=process.env.CRON_SECRET||'',actual=req.headers.get('authorization')||'',expected=`Bearer ${secret}`;if(secret.length<16||Buffer.byteLength(actual)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))return NextResponse.json({error:'Unauthorized'},{status:401});const keys=(await blob.list('mail/updates/')).filter(k=>k.endsWith('/preferences.json')).sort();const count=keys.length;if(!count)return NextResponse.json({ok:true,users:0});const cursorKey='mail/updates-worker-cursor.json';const saved=Number(await blob.getText(cursorKey)||0);const cursor=Number.isSafeInteger(saved)&&saved>=0?saved%count:0;const outcomes=[];const start=Date.now();for(let n=0;n<Math.min(count,4)&&Date.now()-start<35000;n++){const idx=(cursor+n)%count,uid=keys[idx].split('/')[2];try{outcomes.push({user:uid,...await collectInboxUpdates(uid),delivery:await deliverInboxUpdates(uid)})}catch{outcomes.push({user:uid,error:'Sync failed; retained for retry'})}await blob.put(cursorKey,String((idx+1)%count))}return NextResponse.json({ok:true,users:outcomes.length,outcomes})}

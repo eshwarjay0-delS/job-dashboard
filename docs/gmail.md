@@ -151,3 +151,14 @@ An inbox digest should report incoming messages, replies awaiting review, upcomi
 Implemented in the current change: folding reader/composer/contact panels; account-aware selection and deep links; CC/BCC and bounded attachments; verified sender/thread on send; blank unknown contact fields; persisted important-sender rules and Home/Overview listing; persisted automation instructions and reply-example reuse.
 
 Still required: fully general Gmail inbox/folder coverage (existing data scan is job-oriented), Gmail draft autosave, full attachment parity, durable recurring send worker, conversational rule interpretation and digest of executed automation. Saved instructions are not advertised as an active automatic sender. Current follow-up suggestions remain manual review/send.
+
+
+## Inbox update feed checkpoint — 17 October 2026
+
+The Gmail page now includes an Inbox updates panel with saved account selection, enable/pause controls, refresh, and a recent message list with receiving account and thread links. Refresh runs every 30 seconds while the page is visible. The initial sync captures up to 25 existing inbox messages per selected account and labels them as existing history. Subsequent scans use Gmail history cursors; an expired cursor recovers with a fresh snapshot and suppresses historical phone alerts.
+
+WhatsApp alerts are optional and off by default. The user chooses a code-verified linked number and may restrict alerts to Important senders in each receiving account. The notification includes account, sender and subject, not the message body. Atomic reservations prevent repeated sends after an uncertain provider response. A provider acceptance receipt is not proof of phone delivery. No external messages were sent during tests.
+
+Deployment prerequisites for unattended operation: configure an approved Meta template through `WHATSAPP_GMAIL_UPDATE_TEMPLATE` (three body parameters: account, sender, subject), existing WhatsApp credentials, and `CRON_SECRET`. An external scheduler must invoke `/api/gmail/updates/tick` with the bearer secret. Set `GMAIL_UPDATES_SCHEDULER_ENABLED=true` only after scheduling is actually configured. The current worker processes up to four users per invocation and is not an unbounded real-time push service. No recurring schedule is enabled by this code change; the UI states when background refresh is unavailable.
+
+Remaining acceptance: connected-account browser verification, approved template configuration, scheduler setup/capacity validation, delivery receipt visibility and actual mobile delivery. General Gmail folders, draft autosave and executable follow-up automation remain separate unfinished work.
