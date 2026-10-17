@@ -341,6 +341,8 @@ function ResultContent() {
   // The honest measured JD keyword coverage (0-100) of the returned document.
   // This is the "JD Match %" the user sees — never the inflated estimate.
   const [coverage, setCoverage] = useState<number | null>(null)
+  // True when the tailor changed no line — the user must be told, not shown a "tailored" result.
+  const [unchanged, setUnchanged] = useState(false)
   const [receipt, setReceipt] = useState<null | { calls: number; inputTokens: number; outputTokens: number; estCostUSD: number; byModel: { provider: string; model: string }[] }>(null)
   const [selKw, setSelKw] = useState<string[]>([])   // missing keywords the user chose to add
   const [diff, setDiff] = useState<DiffEntry[]>([])
@@ -398,6 +400,7 @@ function ResultContent() {
         if (r.keyword_analysis) setKwAnalysis(r.keyword_analysis)
         if (typeof r.coverage === "number") setCoverage(r.coverage)
         else if (typeof r.keyword_analysis?.coverage_after === "number") setCoverage(r.keyword_analysis.coverage_after)
+        if (r.unchanged) setUnchanged(true)
         setQuality(r.quality ?? null)
         if (r.usage && typeof r.usage.estCostUSD === "number") setReceipt(r.usage)
         if (Array.isArray(r.diff)) setDiff(r.diff)
@@ -467,6 +470,7 @@ function ResultContent() {
       if (typeof data.coverage === "number") setCoverage(data.coverage)
       else if (typeof data.keyword_analysis?.coverage_after === "number") setCoverage(data.keyword_analysis.coverage_after)
       else setCoverage(null)
+      setUnchanged(!!data.unchanged)
       setQuality(data.quality ?? null)
       setDiff(Array.isArray(data.diff) ? data.diff : [])
       if (data.matched?.filename) setResumeName(data.matched.filename)
@@ -764,7 +768,15 @@ function ResultContent() {
           )}
           {(kwAnalysis || breakdown) && (
             <div className="px-6 py-5" style={{ borderTop: "1px solid var(--border)", background: "var(--surface)" }}>
-              {coverage !== null && (
+              {unchanged && (
+                <div role="status" className="rounded-xl border p-4 mb-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                  <p className="text-sm font-bold" style={{ color: "var(--text)" }}>No changes were made to your resume.</p>
+                  <p className="text-xs mt-1" style={{ color: "var(--text-soft)", lineHeight: 1.6 }}>
+                    The tailor couldn't improve on your resume for this job description — nothing was rewritten, so this file is identical to your original. Try a different JD, or tap missing keywords below and regenerate.
+                  </p>
+                </div>
+              )}
+              {coverage !== null && !unchanged && (
                 <div className="flex items-center gap-4 mb-4">
                   <div
                     className="flex items-center justify-center rounded-full font-bold"

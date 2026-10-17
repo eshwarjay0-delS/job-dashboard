@@ -449,6 +449,15 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
 
 function captionFor(name: string, meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }): string {
   const coverage = result.coverage ?? result.score
+  // Never present an unchanged resume as tailored — say so plainly.
+  if (result.unchanged) {
+    return [
+      `*${name}*${update ? ` (update ${update.number})` : ""}`,
+      ...(meta.role ? [`${meta.role}${meta.company ? ` · ${meta.company}` : ""}`] : []),
+      "No changes were made — the tailor couldn't improve on your resume for this JD, so this file is identical to your original.",
+      "Reply to this file to request changes.",
+    ].join("\n")
+  }
   return [
     `*${name}*${update ? ` (update ${update.number})` : ""}`,
     ...(meta.role ? [`${meta.role}${meta.company ? ` · ${meta.company}` : ""}`] : []),

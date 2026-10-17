@@ -642,8 +642,13 @@ export async function runTailor(opts: {
         usedModel = first.via ?? lane.label ?? String(lane.pref)
       }
       let current = best
-      // A refinement applies the person's change, not a coverage climb; a split draft climbs in fillGaps below.
-      if (current.cov >= TARGET_COVERAGE || refine || splitDraft) break
+      // A refinement applies the person's change, not a coverage climb — but the
+      // 95%+ match guarantee still holds: a refine that drops coverage below the
+      // floor gets repair passes that preserve the requested change (never silently
+      // handing back a low-match resume as "tailored"). A split draft climbs in fillGaps below.
+      const REFINE_COVERAGE_FLOOR = 0.95
+      if (current.cov >= TARGET_COVERAGE || splitDraft) break
+      if (refine && current.cov >= REFINE_COVERAGE_FLOOR) break
 
       // Coverage repair passes are deliberately targeted at the exact terms still absent
       // from the rendered DOCX. They regenerate from the canonical source so formatting
@@ -658,6 +663,7 @@ export async function runTailor(opts: {
           `The JD is a KNOWN JD supplied/approved by the user. Incorporate ALL of these still-missing ATS terms naturally and contextually: ${missing.join(", ")}.`,
           "Do not claim a JD qualification that the baseline does not substantiate. Preserve immutable identity, experience length, employers, dates, education, and certifications.",
           "Distribute terms across the summary, skills, and relevant experience instead of keyword stuffing.",
+          ...(refine ? [`Preserve the user's requested change while restoring coverage — do not undo it: "${refine.slice(0, 500)}".`] : []),
         ]
         const candidate: Pass | null = await draftPass(lane, repairPrefs).catch(err => {
           judgeLane(laneOut, lane, err)
