@@ -1,0 +1,136 @@
+{
+  "tool": "rea-agents@6.5.0",
+  "date": "2026-10-17",
+  "command": "analyze-javascript-application /tmp/mfit-rea-input --format json",
+  "selected_files": [
+    {
+      "path": "package.json",
+      "sha256": "22bd56d98ea1de7772fb0742445a7e6ef7810b5bcb7aa6c5073184e7547d31cb"
+    },
+    {
+      "path": "src/app/dashboard/apply/page.tsx",
+      "sha256": "3a7c6f25d5827f95e3638d4e2b646093418b5d2d49d2c0657fd217eabeaa37d5"
+    },
+    {
+      "path": "src/app/dashboard/mail/page.tsx",
+      "sha256": "d264b0352ff03950a1994f0070cb088a410003bf8c33b1dec1a001f0af872792"
+    },
+    {
+      "path": "src/app/dashboard/workflows/page.tsx",
+      "sha256": "9321f70c75cb9ce112e82e8714961593181ae183566032bc66e9455dbb870d83"
+    },
+    {
+      "path": "src/app/api/gmail-send/route.ts",
+      "sha256": "6384493c7b6119edcf8d2fe1e65e05e762b75cb588d0528c43aa6315dbcb1e3e"
+    },
+    {
+      "path": "src/app/api/gmail/important/route.ts",
+      "sha256": "13fe994115439224cf4628a7f307b87fb7e9e700acc909305295a7f19735f0b7"
+    },
+    {
+      "path": "src/app/api/gmail/automation-plans/route.ts",
+      "sha256": "a2b1462a1c4ed176439282db86acebc6fa9e024fbd9461680f3b1df64f5c5363"
+    },
+    {
+      "path": "src/app/api/apply/activity/route.ts",
+      "sha256": "952ff04f68c3b4d416baf9bdafd0dad52ba347ef49da1f0e042c1000d32874f1"
+    },
+    {
+      "path": "src/app/api/jobs/route.ts",
+      "sha256": "a9e08eccbcdfb47a4b901fb4a3db71cb14468ce3452aff012d4c45aa62c29496"
+    },
+    {
+      "path": "src/app/api/crawl/jobs/route.ts",
+      "sha256": "82bf6fd5262e4f5183eab0fd80b9365ef9063fda2269784761e5ea73ce43cccf"
+    },
+    {
+      "path": "src/lib/contract-jobs.ts",
+      "sha256": "59c4ef73fd41351366471ef087f3ef7523b3d0de8fa63b20a1f6c16b4e368cc2"
+    },
+    {
+      "path": "src/lib/gmail-message.ts",
+      "sha256": "a92e69b50a7e89f5e41eed9140adb3bae954713d2d97dc62ecc9198b8ab9e5b7"
+    },
+    {
+      "path": "src/lib/mail-important.ts",
+      "sha256": "0064b31f63bdc52a137f17972bd02e0735d5663675bca2791ace032a29b4b354"
+    },
+    {
+      "path": "src/lib/mail-important-store.ts",
+      "sha256": "bc9fc57986f6d35afe9d756c5c52503ef2416617a15dc8df1472be1086d2439f"
+    },
+    {
+      "path": "src/app/dashboard/mail/_components/mail-search.tsx",
+      "sha256": "cb61b11472cd8897e7535242c7bcad862758bfc3a4b9519afc16ef7740838686"
+    },
+    {
+      "path": "src/app/dashboard/mail/_components/smart-reply.tsx",
+      "sha256": "cc90c4c2743d6258167eb71daac71e9078ec3d744021529e013fd8b051af3655"
+    },
+    {
+      "path": "src/app/dashboard/mail/_components/reading-pane.tsx",
+      "sha256": "776776bdfa99c51b68511d187604bf0e585d22512e1328d072c713e5c9cb8966"
+    },
+    {
+      "path": "src/app/dashboard/mail/_components/contact-card.tsx",
+      "sha256": "76c6d4f297073216547217c9defa9038909b0708dc64a720c851dc0c61f25ae1"
+    },
+    {
+      "path": "src/app/dashboard/mail/_components/mail-row.tsx",
+      "sha256": "2eb9e10fc1c7ff77cf9a1a53220c7a6d599afe887da3f3c1157996a9dc35d151"
+    },
+    {
+      "path": "src/app/dashboard/mail/_components/ignore-controls.tsx",
+      "sha256": "7a1dfe42ef56d6b605638f307ee2a15ac66ad76b5c91c99d4d1021f3b8c8696f"
+    },
+    {
+      "path": "src/app/dashboard/mail/_components/thread-actions.tsx",
+      "sha256": "cc98d4c1f2994a63707741fe44c8b305fe4c6111a3115fa7adb35648ed820db0"
+    },
+    {
+      "path": "src/app/dashboard/mail/_components/important-mail.tsx",
+      "sha256": "8547c7295b378d5d1ed56f495b62e70023888f017f9b808232f12b8cfe99074f"
+    },
+    {
+      "path": "src/app/dashboard/mail/_components/papers.tsx",
+      "sha256": "490db1ccbead021d695786304422bb87dca41d7fbdf21672074d79083820b10c"
+    },
+    {
+      "path": "src/app/dashboard/mail/_components/smart-compose.tsx",
+      "sha256": "ffff3f1843c362c702f090de3469d539214e728b5797ad9015f979462dc83dc4"
+    },
+    {
+      "path": "src/app/dashboard/mail/_components/folded-conversation.tsx",
+      "sha256": "b4645b7be733ee31785181c17fd0a897fde41feccab453b208dab2bd5c5eed0f"
+    },
+    {
+      "path": "src/lib/crawl/runner.ts",
+      "sha256": "d61ea9a6a398645ac0b427c9788a978b5c043575f2e96f51c651ee8c8417413b"
+    },
+    {
+      "path": "src/lib/crawl/classify.ts",
+      "sha256": "84f2edb40274bbe36179d4277dd41385404d7655551554a8761ad83696ba899c"
+    },
+    {
+      "path": "src/lib/crawl/types.ts",
+      "sha256": "089f0d88014cf818ffcfde16630bcddbdfb6e9ea631264a5e0086372c0c76622"
+    },
+    {
+      "path": "src/lib/crawl/adapters.ts",
+      "sha256": "8ab675ed063beefba01a3ca89a98941a43a7497f0e88444fe3e0a11280042366"
+    }
+  ],
+  "status": "partial; source analysis unavailable",
+  "error": "Linux process ownership inspection requires a procps-compatible ps on REA's PATH before launching a child: Command failed: ps -axo pid=,ppid=,pgid=,uid=,stat=,command=\nfatal library error, lookup self\n",
+  "evidence_id": "ev_ba894f3727b1054e1863aa94f59b864d5babd90d472aabb0eaaca6088f1ab75f",
+  "artifact": {
+    "name": "mfit-rea-input",
+    "digest": {
+      "sha256": "ced43b05ab8b773f75c6057e18aa4be34f5943e9967990fbe584be0f804dc80d"
+    },
+    "local_path": "/tmp/mfit-rea-input",
+    "format": "directory",
+    "architecture": null
+  },
+  "limitation": "Inventory is not a completed feature or runtime analysis. Process ownership check failed; not bypassed."
+}

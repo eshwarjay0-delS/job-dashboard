@@ -15,3 +15,8 @@ Update the record when work starts, direction changes, tests finish, a commit sh
 ## Completion Watch: required active-work loop
 
 Read `docs/completion-watch.md` at the start of continuation work. Before ending a turn, reconcile the journal against what actually shipped, identify the next approved unblocked slice, and continue it within available execution capacity. If stopping at a wall, report the exact missing prerequisite and the action needed to unblock it. Do not restart from scratch, lose an approved request, or call a mocked test a successful live flow. The hourly scheduled task supplements this active-work loop; it does not grant new permissions, revive rejected work, bypass review gates or guarantee perpetual execution. Coordinate with existing developers and the separate Kompas voice task.
+
+
+## REA register is required for research work
+
+Owner instruction, 17 October 2026: record every REA bit by bit in the admin REA section, not only in chat. Update `src/lib/rea-register.ts`, the relevant `docs/research/` evidence file and Plan & Vision together. Each session must identify the original request, product, research method, exact sources, observed findings, implemented changes, test evidence, commits, deployment status, limitations and next action. Public reference review, source/artifact analysis and actual REA tool execution are distinct methods. Mark failed/partial tool runs as blocked; never relabel marketing claims or a documentation review as recovered proprietary internals. Backfill accessible historical studies without inventing missing evidence. Do not put credentials, private email content or personal documents in the register. The UI is versioned; it does not automatically ingest external conversations.

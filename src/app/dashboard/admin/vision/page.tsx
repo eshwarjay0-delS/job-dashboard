@@ -47,6 +47,7 @@ export default function VisionHubPage() {
         </p>
       </div>
 
+      <Link href="/dashboard/admin/vision/rea" style={{display:'block',padding:18,marginBottom:20,border:'1px solid var(--border)',borderRadius:12,color:'var(--text)',textDecoration:'none'}}><strong>REA · Research &amp; implementation →</strong><p style={{margin:'6px 0 0',fontSize:14}}>Poke, ParakeetAI, source audits and every retained experiment. Explore findings, evidence, tests, commits and pending work step by step.</p></Link>
       <VisionJournal />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
         {PRODUCTS.map(p => (

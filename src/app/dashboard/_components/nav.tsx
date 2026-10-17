@@ -96,6 +96,7 @@ export const NAV_ITEMS: NavItem[] = NAV_TABS.flatMap(t => [{ href: t.href, label
 // its own check on the server.
 export const ADMIN_NAV: NavItem[] = [
   { href: "/dashboard/admin/vision", label: "Plan and Vision", icon: ICON.note, what: "Shared developer plans for Gmail, Job Applications, Resume and Kompas." },
+  { href: "/dashboard/admin/vision/rea", label: "REA Research", icon: ICON.note, what: "Reference studies, evidence, implementation steps and open research gaps." },
   { href: "/dashboard/admin", label: "Admin", icon: ICON.gauge, what: "What MarketFit and Kompas did, what it cost, and how much is left." },
 ]
 
