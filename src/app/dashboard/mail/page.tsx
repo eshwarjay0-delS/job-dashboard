@@ -12,6 +12,7 @@ import ThreadActions, { useTrackedSenders } from "./_components/thread-actions"
 import "./folds.css"
 import MailSearchBar, { SearchSummary, useMailSearch } from "./_components/mail-search"
 import { Papers, PersonHistory } from "./_components/papers"
+import { DigestBriefing } from "./_components/digest"
 import { useRecruiters } from "../_components/recruiter-button"
 import { isMyRecruiter } from "@/lib/my-recruiters"
 import { type Mail } from "../_suite/sample"
@@ -342,6 +343,10 @@ export default function MailPage() {
                 : `${needsCount} ${needsCount === 1 ? "person is" : "people are"} waiting on you.${theirsList.length ? ` ${theirsList.length} ${theirsList.length === 1 ? "owes" : "owe"} you an answer.` : ""}`}
         </p>
       </header>
+
+      {!loading && connected && (
+        <DigestBriefing needs={needsList} theirs={theirsList} mails={live} radar={radar} onOpen={openMail} />
+      )}
 
       {error && !loading && (
         <div className="mf-notice" role="status">

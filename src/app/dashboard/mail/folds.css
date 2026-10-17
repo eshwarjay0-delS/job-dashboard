@@ -1,2 +1,15 @@
 .mf-mail-folds{display:flex;gap:12px;align-items:stretch;overflow-x:auto;padding-bottom:14px;min-height:65vh}.mf-mail-fold{border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:18px;max-height:calc(100vh - 245px);overflow-y:auto;flex-shrink:0;scroll-margin-top:16px}.mf-mail-list{width:290px;padding:6px;overflow-x:visible}.mf-mail-thread{width:clamp(340px,30vw,480px)}.mf-mail-context{width:330px}.mf-mail-contact{width:270px}.mf-mail-fold input,.mf-mail-fold textarea{max-width:100%;box-sizing:border-box}.mf-mail-fold details>div{max-width:100%}@media(max-width:800px){.mf-mail-folds{flex-wrap:wrap;overflow:visible}.mf-mail-fold{width:100%;max-height:70vh}.mf-mail-list{max-height:42vh}.mf-mail-context,.mf-mail-contact{max-height:none}}
 .mf-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success,#22a06b);margin-right:7px;animation:mf-live-pulse 2s ease-in-out infinite;vertical-align:1px}@keyframes mf-live-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+.mf-digest{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin:0 0 18px;box-shadow:var(--shadow-card)}
+.mf-digest-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.mf-digest-head h2{font-size:17px;margin:0;letter-spacing:-0.01em}
+.mf-digest-head p{font-size:13px;color:var(--text-muted);margin:0}
+.mf-digest-head strong{color:var(--text)}
+.mf-digest-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.mf-digest-col h3{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin:0 0 8px}
+.mf-digest-item{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;color:var(--text)}
+.mf-digest-item:hover{border-color:var(--accent)}
+.mf-digest-from{display:block;font-size:12.5px;font-weight:700}
+.mf-digest-subj{display:block;font-size:13px;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mf-digest-meta{display:block;font-size:11.5px;color:var(--text-muted)}
+.mf-digest-more{font-size:12px;color:var(--text-muted);margin:4px 0 0}
