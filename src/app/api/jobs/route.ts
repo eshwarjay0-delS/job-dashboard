@@ -136,6 +136,68 @@ async function fetchInfosecjobs(q: string): Promise<Job[]> {
   } catch { return [] }
 }
 
+// ─── Source: Jobright.ai (contract/cyber roles via Next.js data route) ───────
+// REA recon 2026-10-17: no public REST API, but the Next.js hydration endpoint
+// is publicly accessible with no auth. Polite use: buildId cached 1h, 1s gaps,
+// max 2 slugs per search, source attributed, links carry their utm_source.
+let jobrightBuildId = ""
+let jobrightBuildIdAt = 0
+async function jobrightBuildIdCached(): Promise<string> {
+  if (jobrightBuildId && Date.now() - jobrightBuildIdAt < 3600e3) return jobrightBuildId
+  try {
+    const res = await fetch("https://jobright.ai/", {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+      signal: AbortSignal.timeout(15000),
+    })
+    const html = await res.text()
+    const m = html.match(/"buildId":"([^"]+)"/)
+    if (m) { jobrightBuildId = m[1]; jobrightBuildIdAt = Date.now() }
+  } catch { /* keep previous buildId if any */ }
+  return jobrightBuildId
+}
+async function fetchJobright(q: string, type: string): Promise<Job[]> {
+  try {
+    const buildId = await jobrightBuildIdCached()
+    if (!buildId) return []
+    const base = q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "cybersecurity"
+    const slugs = type === "contract"
+      ? [base.includes("contract") ? base : `${base}-contract`]
+      : [base]
+    const jobs: Job[] = []
+    for (const slug of slugs.slice(0, 2)) {
+      const res = await fetch(`https://jobright.ai/_next/data/${buildId}/jobs/${slug}.json`, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Accept": "application/json" },
+        signal: AbortSignal.timeout(15000),
+      })
+      if (!res.ok) continue
+      const data = await res.json().catch(() => null)
+      const list = data?.pageProps?.jobList || []
+      for (const item of list) {
+        const jr = item?.jobResult || {}
+        const co = item?.companyResult || {}
+        if (!jr.jobTitle || !jr.jobId) continue
+        let posted = new Date().toISOString()
+        try { if (jr.publishTime) posted = new Date(String(jr.publishTime).replace(" ", "T")).toISOString() } catch { /* keep now */ }
+        jobs.push({
+          id: "jr-" + String(jr.jobId).slice(0, 16),
+          title: String(jr.jobTitle),
+          company: String(co.companyName || "Company"),
+          location: String(jr.jobLocation || (jr.isRemote ? "Remote" : "US")),
+          remote: !!jr.isRemote,
+          salary: null,
+          posted,
+          description: String(jr.jobSummary || "").slice(0, 1500),
+          workAuth: detectWorkAuth(String(jr.jobSummary || "")),
+          url: String(jr.url || jr.applyLink || "#"),
+          source: "jobright",
+        })
+      }
+      await new Promise(r => setTimeout(r, 1000)) // polite gap between slugs
+    }
+    return jobs
+  } catch { return [] }
+}
+
 // ─── Source 3: USA Jobs (Federal / Government roles) ─────────────────────────
 // Covers federal/DoD/DHS/CISA roles. NOTE: despite USAJobs' own docs implying
 // search works unauthenticated, live testing (2026-07-09) confirmed the API
@@ -617,18 +679,19 @@ export async function GET(request: NextRequest) {
   const usajobsKey = request.headers.get("x-usajobs-api-key") || process.env.USAJOBS_API_KEY || null
 
   // Pull all live sources in parallel
-  const [jsearch, infosec, usajobs, interns] = await Promise.all([
+  const [jsearch, infosec, usajobs, interns, jobright] = await Promise.all([
     fetchJSearch(q, loc, remote, type, rapidKey),    // LinkedIn + Indeed + Glassdoor
     fetchInfosecjobs(q),                              // Infosecjobs.com — cyber-specific
     fetchUSAJobs(q, remote, usajobsKey),              // USAJobs.gov — federal roles
     intern ? fetchHandshakeInterns(q, rapidKey) : Promise.resolve([] as Job[]),  // Handshake intern roles
+    fetchJobright(q, type),                           // Jobright.ai — contract/cyber via Next.js data route
   ])
 
   // Merge; de-dupe on normalized company+title
   const seen = new Set<string>()
   const merged: Job[] = []
-  // Priority: JSearch (LinkedIn/Indeed/Glassdoor) → Infosecjobs → USAJobs → Handshake interns
-  for (const j of [...jsearch, ...infosec, ...usajobs, ...interns]) {
+  // Priority: JSearch (LinkedIn/Indeed/Glassdoor) → Jobright → Infosecjobs → USAJobs → Handshake interns
+  for (const j of [...jsearch, ...jobright, ...infosec, ...usajobs, ...interns]) {
     if (!applicationUrl(j.url)) continue
     j.contractTypes ||= contractTypes(j.title + " " + j.description)
     if (type === "contract" && !j.contractTypes.length) continue
@@ -645,7 +708,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ jobs: merged.slice(0, 80), source: sources.join("+"), live: true, sources })
   }
 
-  if (type === "contract") return NextResponse.json({jobs:[],live:true,sources:[],source:"none",notice:rapidKey ? "No verified contract listings returned. Sources may be unavailable; try a broader role or location." : "Broad job search needs a configured JSearch connection. The public specialist feed returned no verified contract matches."})
+  if (type === "contract") return NextResponse.json({jobs:[],live:true,sources:[],source:"none",notice:rapidKey ? "No verified contract listings returned. Sources may be unavailable; try a broader role or location." : "No contract matches right now. Jobright and the public feeds returned nothing verified — try a broader role or location."})
 
   // Fallback: curated sample data (cyber + federal + intern roles)
   let filtered = [...SAMPLE]
