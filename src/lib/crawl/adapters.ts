@@ -1,0 +1,82 @@
+import type { PortalAdapter, RawJob } from "./types"
+
+// Verified 2026-10-17 against live portal HTML. Each parseList was tested
+// against a real listing page before shipping — never trust selectors blind.
+
+const stripTags = (s: string) => s.replace(/<[^>]+>/g, " ")
+const decodeEntities = (s: string) =>
+  s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
+const clean = (s: string) => decodeEntities(stripTags(s)).replace(/\s+/g, " ").trim()
+
+function splitCards(html: string, marker: RegExp): string[] {
+  const parts = html.split(marker)
+  parts.shift()
+  return parts
+}
+
+// ── Beacon Hill Technologies — WordPress + FacetWP, .job-card markup ─────────
+const beaconHill: PortalAdapter = {
+  portal: "beaconhill",
+  firm: "Beacon Hill Technologies",
+  listUrls: ["https://bhsg.com/jobs/"],
+  parseList(html) {
+    const jobs: RawJob[] = []
+    for (const card of splitCards(html, /<div class="job-card"/)) {
+      const href = card.match(/<a[^>]+href="([^"]+)"/)?.[1]
+      const titleRaw = card.match(/<a[^>]+href="[^"]+"[^>]*>([\s\S]*?)<\/a>/)?.[1]
+      if (!href || !titleRaw) continue
+      const title = clean(titleRaw)
+      if (!title) continue
+      const meta = [...card.matchAll(/job-card__metaItem[^>]*>([\s\S]*?)<\/span>/g)].map(m => clean(m[1]))
+      const location = meta[0] || undefined
+      const engagement = meta.find(m => /contract|permanent|full time|part time/i.test(m))
+      const pay = card.match(/\$\s?[\d,.]+\s?-\s?\$\s?[\d,.]+\s?per hour/i)?.[0]
+      const posted = card.match(/Posted\s+([A-Za-z]+\s+\d{1,2},?\s+\d{4})/)?.[1]
+      jobs.push({
+        title,
+        url: href.startsWith("http") ? href : `https://bhsg.com${href}`,
+        location,
+        engagement,
+        payRange: pay ? clean(pay) : undefined,
+        postedAt: posted,
+      })
+    }
+    return jobs
+  },
+}
+
+// ── Collabera — WordPress, .card markup with job-description/?post= links ────
+const collabera: PortalAdapter = {
+  portal: "collabera",
+  firm: "Collabera",
+  listUrls: ["https://collabera.com/job-search/"],
+  parseList(html) {
+    const jobs: RawJob[] = []
+    const re = /<a href="(https:\/\/www\.collabera\.com\/job-description\/\?post=\d+)">([\s\S]*?)<\/a>/g
+    let m: RegExpExecArray | null
+    while ((m = re.exec(html))) {
+      const [, url, body] = m
+      const title = clean(body.match(/<h5[^>]*>([\s\S]*?)<\/h5>/)?.[1] ?? "")
+      if (!title) continue
+      const engMatch = body.match(/<p class="p-secondary">\s*([^:<]+):\s*<span class="job-bold">\s*([^<]+)</)
+      const engagement = engMatch?.[1]?.trim()
+      const location = engMatch?.[2]?.trim()
+      const pay = body.match(/Salary Range:\s*<span class="job-bold">\s*([^<]+)</)?.[1]?.trim()
+      jobs.push({ title, url, location, engagement, payRange: pay })
+    }
+    return jobs
+  },
+}
+
+export const ADAPTERS: PortalAdapter[] = [beaconHill, collabera]
+
+// Portals verified server-renderable but awaiting adapter selectors (v1 = directory only):
+// Motion, Addison Group, Brooksource, INSPYR, KORE1, CSI, IDR, Vaco, IntelliPro,
+// Genesis10, CyberSN, Diverse Lynx, TEKsystems (Phenom), Kforce, Robert Half.
+// JS-shell portals (need headless rendering — later phase): Everforth, Insight Global, Eliassen.
+export const PENDING_PORTALS = [
+  "motion", "addison", "brooksource", "inspyr", "csi", "idr", "vaco",
+  "intellipro", "genesis10", "cybersn", "diverselynx", "teksystems", "kforce", "roberthalf",
+]
