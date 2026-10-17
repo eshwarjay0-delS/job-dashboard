@@ -1,7 +1,7 @@
 "use client"
 import TypingDots from "../../_components/typing-dots"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Send, Lock } from "lucide-react"
 import { Chip, Btn } from "../../_suite/ui"
 import SmartCompose from "./smart-compose"
@@ -10,6 +10,9 @@ import { readyFor, type Decision } from "@/lib/mail-habits"
 import { senderName } from "@/lib/mail-reading"
 import type { Phrase } from "@/lib/my-phrases"
 import type { Filled } from "@/lib/mail-forms"
+
+import { createClient } from "@/lib/supabase/client"
+import { readReplyDraft, replyDraftKey, saveReplyDraft } from "@/lib/mail-reply-draft"
 
 interface ReplyChip {
   label: string
@@ -29,7 +32,7 @@ function bareEmail(fromEmail: string): string {
   return (m ? m[1] : fromEmail).trim()
 }
 
-export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () => void }) {
+export default function SmartReply({ mail, onSent, onClose }: { mail: Mail; onSent: () => void; onClose?: () => void }) {
   const [chips, setChips] = useState<ReplyChip[] | null>(null)
   // What the person handed over on the Follow-ups page (their usual reply, their usual nudge), in their own words.
   // It is offered first, and like every other choice here it only fills the box: it goes out on Approve & Send.
@@ -50,6 +53,45 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
   const [cc, setCc] = useState("")
   const [bcc, setBcc] = useState("")
   const [files, setFiles] = useState<{name:string;type:string;data:string}[]>([])
+  const [draftKey, setDraftKey] = useState<string | null>(null)
+  const [draftReady, setDraftReady] = useState(false)
+  const [draftNotice, setDraftNotice] = useState("Loading saved reply…")
+  const sent = useRef(false)
+  const unsaved = useRef(false)
+  useEffect(() => {
+    let live = true
+    createClient().auth.getUser().then(({data,error}) => {
+      if (!live) return
+      if (error || !data.user) { setDraftNotice("Sign in to recover and save replies."); return }
+      try {
+        const key = replyDraftKey(data.user.id, mail.account, mail.id)
+        const draft = readReplyDraft(localStorage, key)
+        if (draft) { setTo(draft.to); setCc(draft.cc); setBcc(draft.bcc); setSubject(draft.subject); setBody(draft.body); setFiles(draft.files) }
+        setDraftKey(key); setDraftReady(true)
+        setDraftNotice(draft ? "Saved reply restored on this browser." : "Replies save on this browser only.")
+      } catch { setDraftNotice("Could not recover browser storage. Your saved reply has not been overwritten.") }
+    }).catch(() => { if (live) setDraftNotice("Sign in to recover and save replies.") })
+    return () => { live = false }
+  }, [mail.account, mail.id])
+  useEffect(() => {
+    if (!draftReady || !draftKey || sent.current) return
+    let live = true
+    let message = "Saved on this browser. Nothing has been sent."
+    try { saveReplyDraft(localStorage,draftKey,{to,cc,bcc,subject,body,files}); unsaved.current = false }
+    catch { unsaved.current = true; message = "Reply could not be saved. Keep this reply open and copy your text before leaving." }
+    queueMicrotask(() => { if (live) setDraftNotice(message) })
+    return () => { live = false }
+  }, [draftReady,draftKey,to,cc,bcc,subject,body,files])
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => { if (unsaved.current && !sent.current) { event.preventDefault(); event.returnValue = "" } }
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [])
+  function closeReply() {
+    if (!draftReady || !draftKey) { onClose?.(); return }
+    try { saveReplyDraft(localStorage,draftKey,{to,cc,bcc,subject,body,files}); onClose?.() }
+    catch { setDraftNotice("Reply could not be saved. Copy your text before leaving, or remove attachments to free space.") }
+  }
   const [phrases, setPhrases] = useState<Phrase[]>([])
   useEffect(() => {
     let on = true
@@ -74,7 +116,7 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
   const writeOwn = () => {
     setOwn(true); setFormOn(false); setActive(null); setSendError("")
     setSubject(s => s || (/^re:/i.test(mail.subject) ? mail.subject : `Re: ${mail.subject}`))
-    setBody("")
+    // Keep existing words when switching back to free-form writing.
   }
 
   useEffect(() => {
@@ -144,6 +186,8 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || "Send failed.")
+      sent.current = true
+      if (draftKey) { try { localStorage.removeItem(draftKey) } catch { /* Delivery succeeded; do not offer a second send. */ } }
       onSent()
     } catch (e) {
       setSendError(e instanceof Error ? e.message : String(e))
@@ -152,15 +196,18 @@ export default function SmartReply({ mail, onSent }: { mail: Mail; onSent: () =>
     }
   }
 
+  if (!draftReady) return <div><p role="status">{draftNotice}</p>{onClose ? <button className="btn-ghost" onClick={onClose}>Close reply</button> : null}</div>
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{display:'flex',justifyContent:'space-between',gap:12}}><p role="status" style={{fontSize:12}}>{draftNotice}</p>{onClose ? <button className="btn-ghost" onClick={closeReply}>Save and close</button> : null}</div>
       <div style={{ fontSize: 13.5, color: "var(--text-muted)", lineHeight: 1.5 }}>
         Write in your own words, or tap a suggested reply and edit it. Nothing is sent until you approve it.
       </div>
 
       {loadError && (
         <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
-          Suggestions aren't available right now — use the reply options below.
+          Suggestions aren&apos;t available right now — use the reply options below.
         </div>
       )}
 

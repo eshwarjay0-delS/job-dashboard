@@ -162,3 +162,8 @@ WhatsApp alerts are optional and off by default. The user chooses a code-verifie
 Deployment prerequisites for unattended operation: configure an approved Meta template through `WHATSAPP_GMAIL_UPDATE_TEMPLATE` (three body parameters: account, sender, subject), existing WhatsApp credentials, and `CRON_SECRET`. An external scheduler must invoke `/api/gmail/updates/tick` with the bearer secret. Set `GMAIL_UPDATES_SCHEDULER_ENABLED=true` only after scheduling is actually configured. The current worker processes up to four users per invocation and is not an unbounded real-time push service. No recurring schedule is enabled by this code change; the UI states when background refresh is unavailable.
 
 Remaining acceptance: connected-account browser verification, approved template configuration, scheduler setup/capacity validation, delivery receipt visibility and actual mobile delivery. General Gmail folders, draft autosave and executable follow-up automation remain separate unfinished work.
+
+
+### Browser reply recovery
+
+Reply recipients, subject, body and attachments are saved on the current browser, separated by authenticated user, receiving Gmail account and conversation. Save and close writes before closing; storage failure shows an actionable message instead of claiming success. Write my own preserves the current reply. Only a confirmed successful send clears its saved copy. Clearing browser data removes these drafts. This is browser recovery, not Gmail Drafts synchronization; cross-device saving remains unfinished.

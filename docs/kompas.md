@@ -45,3 +45,8 @@ A voice-first interview preparation app. The user speaks; Kompas listens, transc
 
 - Generic interview tips. If it's on the internet already, Kompas doesn't say it.
 - Replacing real interviews. Kompas prepares; the user performs.
+
+
+## ParakeetAI reference — 17 October 2026
+
+Owner requested Parakeet.ai as an additional reference. See `docs/research/parakeet-reference.md` for verified public observations, MFit mapping, approval distinctions and acceptance checks. Prioritize existing owner commitments to combined resume/JD grounding, natural answers, speaker-aware turn handling, reusable session history and practice. New implementation details remain proposals until scoped; marketing accuracy/invisibility claims are not acceptance evidence. This reference complements the ongoing Kompas voice and archive workstreams.
