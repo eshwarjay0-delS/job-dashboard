@@ -48,10 +48,16 @@ const beaconHill: PortalAdapter = {
 }
 
 // ── Collabera — WordPress, .card markup with job-description/?post= links ────
+// Reverse-engineered: pagination is ?q=N (server-rendered, ~49 pages), with
+// keyword/industry/location filters as query params. We crawl the 5 newest
+// pages (50 jobs) per run — the fresh listings, politely.
+const COLLABERA_PAGES = [1, 2, 3, 4, 5]
 const collabera: PortalAdapter = {
   portal: "collabera",
   firm: "Collabera",
-  listUrls: ["https://collabera.com/job-search/"],
+  listUrls: COLLABERA_PAGES.map(n =>
+    `https://www.collabera.com/job-search/?sort_by=&industry=&keyword=&location=&Posteddays=0${n > 1 ? `&q=${n}` : ""}`
+  ),
   parseList(html) {
     const jobs: RawJob[] = []
     const re = /<a href="(https:\/\/www\.collabera\.com\/job-description\/\?post=\d+)">([\s\S]*?)<\/a>/g
@@ -74,9 +80,11 @@ export const ADAPTERS: PortalAdapter[] = [beaconHill, collabera]
 
 // Portals verified server-renderable but awaiting adapter selectors (v1 = directory only):
 // Motion, Addison Group, Brooksource, INSPYR, KORE1, CSI, IDR, Vaco, IntelliPro,
-// Genesis10, CyberSN, Diverse Lynx, TEKsystems (Phenom), Kforce, Robert Half.
+// Genesis10, Diverse Lynx, Kforce, Robert Half.
+// Skipped: TEKsystems (Phenom JSON reverse-engineered, but only ~4 jobs posted —
+// recruiter-driven, not worth an adapter), CyberSN (JS shell).
 // JS-shell portals (need headless rendering — later phase): Everforth, Insight Global, Eliassen.
 export const PENDING_PORTALS = [
   "motion", "addison", "brooksource", "inspyr", "csi", "idr", "vaco",
-  "intellipro", "genesis10", "cybersn", "diverselynx", "teksystems", "kforce", "roberthalf",
+  "intellipro", "genesis10", "diverselynx", "kforce", "roberthalf",
 ]

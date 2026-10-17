@@ -70,6 +70,8 @@ export async function runCrawl(onlyPortals?: string[]): Promise<CrawlResult[]> {
           const row = toRow(adapter.portal, adapter.firm, raw)
           if (!seen.has(row.url)) seen.set(row.url, row)
         }
+        // Polite crawl: small gap between a portal's pages.
+        await new Promise(r => setTimeout(r, 600))
       }
       result.found = seen.size
       totalFound += seen.size
