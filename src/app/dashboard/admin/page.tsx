@@ -10,6 +10,7 @@
 // A figure that is missing is said to be missing. A blank is never shown as a zero: see the notes under the intro.
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
+import Link from "next/link"
 import PageIntro from "../_components/page-intro"
 import { Card, Chip, Meta } from "../_suite/ui"
 import KeysPanel from "./keys-panel"
@@ -311,6 +312,20 @@ export default function AdminPage() {
           </ul>
         </div>
       )}
+
+      <Section title="Plan & Vision" lede="Developer notes: what each product is becoming and why. Text, mind map, and image for Gmail, Apply, Resume, and Kompas.">
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+            <p style={{ fontSize: 14.5, color: "var(--text-muted)", margin: 0, maxWidth: 560, lineHeight: 1.6 }}>
+              The master plans every developer builds from. One hub, four products, three forms each.
+            </p>
+            <Link href="/dashboard/admin/vision"
+              style={{ fontSize: 14.5, fontWeight: 700, color: "var(--accent)", textDecoration: "none", whiteSpace: "nowrap" }}>
+              Open Plan &amp; Vision <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        </Card>
+      </Section>
 
       <Section title="Resumes" lede="How many resumes were written for a job, how many people asked, and what the writing cost.">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+<rect width="1200" height="760" rx="24" fill="#faf8f2"/>
+<rect x="1" y="1" width="1198" height="758" rx="23" fill="none" stroke="#e3ddd0" stroke-width="2"/>
+<text x="600" y="92" text-anchor="middle" font-family="Georgia, serif" font-size="54" font-weight="bold" fill="#1d1a13">Apply — Plan &amp; Vision</text>
+<text x="600" y="134" text-anchor="middle" font-family="Georgia, serif" font-size="22" font-style="italic" fill="#6b6455">One search across every prime vendor portal. Pick a contract job, apply</text>
+<text x="600" y="164" text-anchor="middle" font-family="Georgia, serif" font-size="22" font-style="italic" fill="#6b6455">without leaving.</text>
+<rect x="60" y="210" width="520" height="200" rx="16" fill="#ffffff" stroke="#e3ddd0" stroke-width="2"/>
+<rect x="60" y="210" width="8" height="200" rx="4" fill="#b3541e"/>
+<text x="88" y="258" font-family="Georgia, serif" font-size="26" font-weight="bold" fill="#1d1a13">Inclusive search</text>
+<text x="88" y="298" font-family="Verdana, sans-serif" font-size="17" fill="#4d483c">Crawler across 57 vendor portals — W2 / C2C / 1099 /</text>
+<text x="88" y="328" font-family="Verdana, sans-serif" font-size="17" fill="#4d483c">C2H only</text>
+<rect x="620" y="210" width="520" height="200" rx="16" fill="#ffffff" stroke="#e3ddd0" stroke-width="2"/>
+<rect x="620" y="210" width="8" height="200" rx="4" fill="#b3541e"/>
+<text x="648" y="258" font-family="Georgia, serif" font-size="26" font-weight="bold" fill="#1d1a13">Inclusive browser</text>
+<text x="648" y="298" font-family="Verdana, sans-serif" font-size="17" fill="#4d483c">Vendor sites open in-app; logins saved like Chrome</text>
+<rect x="60" y="438" width="520" height="200" rx="16" fill="#ffffff" stroke="#e3ddd0" stroke-width="2"/>
+<rect x="60" y="438" width="8" height="200" rx="4" fill="#b3541e"/>
+<text x="88" y="486" font-family="Georgia, serif" font-size="26" font-weight="bold" fill="#1d1a13">Resume at apply</text>
+<text x="88" y="526" font-family="Verdana, sans-serif" font-size="17" fill="#4d483c">Pick a filed resume or tailor one per JD, every time</text>
+<rect x="620" y="438" width="520" height="200" rx="16" fill="#ffffff" stroke="#e3ddd0" stroke-width="2"/>
+<rect x="620" y="438" width="8" height="200" rx="4" fill="#b3541e"/>
+<text x="648" y="486" font-family="Georgia, serif" font-size="26" font-weight="bold" fill="#1d1a13">Auto-apply + learning</text>
+<text x="648" y="526" font-family="Verdana, sans-serif" font-size="17" fill="#4d483c">Choice profiles from saved behavior; opt-in</text>
+<text x="648" y="556" font-family="Verdana, sans-serif" font-size="17" fill="#4d483c">automation</text>
+<text x="600" y="730" text-anchor="middle" font-family="Verdana, sans-serif" font-size="15" fill="#8a8271">MarketFit · Plan &amp; Vision · Apply</text>
+</svg>

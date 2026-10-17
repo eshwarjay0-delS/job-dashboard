@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+<rect width="1200" height="760" rx="24" fill="#faf8f2"/>
+<rect x="1" y="1" width="1198" height="758" rx="23" fill="none" stroke="#e3ddd0" stroke-width="2"/>
+<text x="600" y="92" text-anchor="middle" font-family="Georgia, serif" font-size="54" font-weight="bold" fill="#1d1a13">Gmail — Plan &amp; Vision</text>
+<text x="600" y="140" text-anchor="middle" font-family="Georgia, serif" font-size="22" font-style="italic" fill="#6b6455">Everything Gmail does, plus the intelligence Gmail never built.</text>
+<rect x="60" y="190" width="520" height="200" rx="16" fill="#ffffff" stroke="#e3ddd0" stroke-width="2"/>
+<rect x="60" y="190" width="8" height="200" rx="4" fill="#b3541e"/>
+<text x="88" y="238" font-family="Georgia, serif" font-size="26" font-weight="bold" fill="#1d1a13">Full Gmail parity</text>
+<text x="88" y="278" font-family="Verdana, sans-serif" font-size="17" fill="#4d483c">Search, filters, reply, compose with CC / BCC /</text>
+<text x="88" y="308" font-family="Verdana, sans-serif" font-size="17" fill="#4d483c">attachments</text>
+<rect x="620" y="190" width="520" height="200" rx="16" fill="#ffffff" stroke="#e3ddd0" stroke-width="2"/>
+<rect x="620" y="190" width="8" height="200" rx="4" fill="#b3541e"/>
+<text x="648" y="238" font-family="Georgia, serif" font-size="26" font-weight="bold" fill="#1d1a13">Intelligence layer</text>
+<text x="648" y="278" font-family="Verdana, sans-serif" font-size="17" fill="#4d483c">Classifier, follow-ups, watchdogs, smart triage</text>
+<rect x="60" y="418" width="520" height="200" rx="16" fill="#ffffff" stroke="#e3ddd0" stroke-width="2"/>
+<rect x="60" y="418" width="8" height="200" rx="4" fill="#b3541e"/>
+<text x="88" y="466" font-family="Georgia, serif" font-size="26" font-weight="bold" fill="#1d1a13">Multi-account, no mess</text>
+<text x="88" y="506" font-family="Verdana, sans-serif" font-size="17" fill="#4d483c">Unified inbox, always badged, per-account identity</text>
+<rect x="620" y="418" width="520" height="200" rx="16" fill="#ffffff" stroke="#e3ddd0" stroke-width="2"/>
+<rect x="620" y="418" width="8" height="200" rx="4" fill="#b3541e"/>
+<text x="648" y="466" font-family="Georgia, serif" font-size="26" font-weight="bold" fill="#1d1a13">Folding layout + automation</text>
+<text x="648" y="506" font-family="Verdana, sans-serif" font-size="17" fill="#4d483c">4-region desktop, important = tracked, agent bots</text>
+<text x="600" y="730" text-anchor="middle" font-family="Verdana, sans-serif" font-size="15" fill="#8a8271">MarketFit · Plan &amp; Vision · Gmail</text>
+</svg>
