@@ -1,41 +1,22 @@
 import { NextRequest } from "next/server"
 import { adminOf } from "@/lib/adminAccess"
+import { JOURNAL_UPDATED, PLAN_JOURNAL } from "@/lib/plan-vision-journal"
 import { execFile } from "child_process"
 import { promisify } from "util"
-import { readFile, stat } from "fs/promises"
+import { stat } from "fs/promises"
 import path from "path"
 
 const execFileAsync = promisify(execFile)
 
-// Live Plan & Vision status — read fresh on EVERY request, never cached.
-// Wishes come from docs/wishes.md (the ledger), commits from git log,
-// vision freshness from docs/*.md mtimes. This is what makes the hub "real time".
+// Live Plan & Vision status. The decision & delivery journal (PLAN_JOURNAL) is the
+// single source of truth for ideas, prompts, wishes, approvals, delivery state and
+// blockers — it ships with each deploy. The git log is read fresh on every request
+// (gracefully empty where git is unavailable, e.g. production serverless).
 export async function GET(request: NextRequest) {
   if (!await adminOf(request)) return new Response("Admin access required", { status: 403, headers: { "Cache-Control": "no-store" } })
 
   const repoRoot = path.resolve(process.cwd())
   const docsDir = path.join(repoRoot, "docs")
-
-  // ── Wishes ledger ──
-  type Wish = { product: string; status: string; title: string; date: string | null; note: string }
-  const wishes: Wish[] = []
-  try {
-    const raw = await readFile(path.join(docsDir, "wishes.md"), "utf8")
-    let product = "general"
-    for (const line of raw.split("\n")) {
-      const h = line.match(/^##\s+(.+)/)
-      if (h) { product = h[1].trim().toLowerCase(); continue }
-      const m = line.match(/^-\s*\[([a-z]+)\]\s*(.+)/)
-      if (!m) continue
-      const status = m[1].trim()
-      let rest = m[2].trim()
-      let date: string | null = null
-      const dm = rest.match(/\((\d{4}-\d{2}-\d{2})\)/)
-      if (dm) { date = dm[1]; rest = rest.replace(dm[0], "").trim() }
-      const parts = rest.split("—")
-      wishes.push({ product, status, title: parts[0].trim(), date, note: parts.slice(1).join("—").trim() })
-    }
-  } catch { /* ledger missing — hub shows empty state */ }
 
   // ── Recent commits (live git log) ──
   type Commit = { hash: string; date: string; message: string; product: string }
@@ -44,19 +25,18 @@ export async function GET(request: NextRequest) {
     const { stdout } = await execFileAsync("git", ["log", "--pretty=format:%h|%ad|%s", "--date=short", "-25"], { cwd: repoRoot, timeout: 8000 })
     const guess = (msg: string): string => {
       const m = msg.toLowerCase()
-      if (/crawl|portal|apply|job/i.test(m) && !/kompas/i.test(m)) return "apply"
+      if (/kompas/i.test(m)) return "kompas"
+      if (/crawl|portal|apply|job/i.test(m)) return "applications"
       if (/gmail|inbox|poke|watcher|mail/i.test(m)) return "gmail"
       if (/tailor|resume|whatsapp/i.test(m)) return "resume"
-      if (/kompas|voice|session/i.test(m)) return "kompas"
-      if (/vision|plan/i.test(m)) return "general"
-      return "general"
+      return "all"
     }
     commits = stdout.split("\n").filter(Boolean).map(l => {
       const [hash, date, ...msgParts] = l.split("|")
       const message = msgParts.join("|")
       return { hash, date, message, product: guess(message) }
     })
-  } catch { /* git unavailable — hub shows empty state */ }
+  } catch { /* git unavailable — hub shows the journal without the commit feed */ }
 
   // ── Vision doc freshness ──
   const docFiles: Record<string, string> = { gmail: "gmail.md", apply: "apply.md", resume: "resume.md", kompas: "kompas.md" }
@@ -69,7 +49,14 @@ export async function GET(request: NextRequest) {
   }
 
   return Response.json(
-    { ok: true, generatedAt: new Date().toISOString(), wishes, commits, visionUpdated },
+    {
+      ok: true,
+      generatedAt: new Date().toISOString(),
+      journalUpdated: JOURNAL_UPDATED,
+      journal: PLAN_JOURNAL,
+      commits,
+      visionUpdated,
+    },
     { headers: { "Cache-Control": "no-store" } },
   )
 }
