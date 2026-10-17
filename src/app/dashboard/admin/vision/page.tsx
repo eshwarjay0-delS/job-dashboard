@@ -4,6 +4,7 @@
 // text, mind map, image. Linked from the Admin page.
 
 import Link from "next/link"
+import VisionJournal from "./_components/journal"
 
 const PRODUCTS = [
   {
@@ -45,6 +46,7 @@ export default function VisionHubPage() {
         </p>
       </div>
 
+      <VisionJournal />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
         {PRODUCTS.map(p => (
           <Link

@@ -1,3 +1,4 @@
+import { journalMarkdown } from "./plan-vision-journal.ts"
 /** Canonical, versioned developer notes. Every presentation uses this model. */
 export type ProductPlan = { id: string; title: string; route: string; purpose: string; baseline: string; branches: { title: string; notes: string[] }[]; phases: string[]; acceptance: string[]; sources: string[] }
 export const PLAN_REVISION = "2026-10-17"
@@ -45,7 +46,7 @@ export const PRODUCT_PLANS: ProductPlan[] = [
 ]
 export function productPlan(id?: string | null) { return PRODUCT_PLANS.find(plan => plan.id === id) }
 export function planText(plan: ProductPlan): string {
- return [`# ${plan.title} — Plan and Vision`, `Revision: ${PLAN_REVISION}`, plan.purpose, `## Implementation baseline\n${plan.baseline}`, ...plan.branches.map(b => `## ${b.title}\n${b.notes.map(n => `- ${n}`).join("\n")}`), `## Build sequence\n${plan.phases.map((p,i) => `${i+1}. ${p}`).join("\n")}`, `## Acceptance checks\n${plan.acceptance.map(c => `- ${c}`).join("\n")}`, `## Source files\n${plan.sources.map(s => `- ${s}`).join("\n")}`, "## Developer handoff\nEdit src/lib/plan-vision.ts through a reviewed commit. All views and exports use this model. Include changed behavior, acceptance evidence, remaining gaps and release commit in the handoff. Phase order does not mean completed work. Owners and dates remain unassigned until agreed."].join("\n\n") + "\n"
+ return [`# ${plan.title} — Plan and Vision`, `Revision: ${PLAN_REVISION}`, plan.purpose, `## Implementation baseline\n${plan.baseline}`, ...plan.branches.map(b => `## ${b.title}\n${b.notes.map(n => `- ${n}`).join("\n")}`), `## Build sequence\n${plan.phases.map((p,i) => `${i+1}. ${p}`).join("\n")}`, `## Acceptance checks\n${plan.acceptance.map(c => `- ${c}`).join("\n")}`, journalMarkdown(plan.id), `## Source files\n${plan.sources.map(s => `- ${s}`).join("\n")}`, "## Developer handoff\nEdit src/lib/plan-vision.ts through a reviewed commit. All views and exports use this model. Include changed behavior, acceptance evidence, remaining gaps and release commit in the handoff. Phase order does not mean completed work. Owners and dates remain unassigned until agreed."].join("\n\n") + "\n"
 }
 const xml = (s: string) => s.replace(/[<>&"']/g, c => ({"<":"&lt;", ">":"&gt;", "&":"&amp;", '"':"&quot;", "'":"&apos;"})[c]!)
 function wrap(s: string, limit: number) { const lines: string[] = []; let line = ""; for (const w of s.split(/\s+/)) { if (line && (line+" "+w).length > limit) { lines.push(line); line=w } else line+=(line?" ":"")+w } if(line)lines.push(line); return lines }
