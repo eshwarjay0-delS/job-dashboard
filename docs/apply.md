@@ -67,7 +67,7 @@ Everything the user does inside Apply is saved: searches, viewed jobs, saved job
 ## Build phases
 
 1. **Directory (done, 2026-10-17).** Apply tab + portal directory + smart search + chatbot tool.
-2. **Crawler v1.** Scheduled crawl of the top ~10 portals by volume; normalized jobs table; contract-only search UI on the Apply tab.
+2. **Crawler v1 (shipped 2026-10-17, needs migration).** Jobs table (`mfit_crawl_jobs` + `mfit_crawl_runs`), adapter framework, verified adapters for Beacon Hill + Collabera, Jobs tab with contract-only default, daily cron 6am CDT. Run `supabase/migrations/20261017_crawl_jobs.sql` in the Mfit SQL editor, then trigger the first crawl.
 3. **Inclusive browser (desktop).** Electron `BrowserView` with persistent session; "Open portal" opens in-app; logins persist like Chrome.
 4. **Resume-at-apply.** Resume picker + per-JD tailoring wired into the Apply flow.
 5. **Pattern learning.** Event capture (search/view/save/apply/skip) → choice profiles → recommendations.
