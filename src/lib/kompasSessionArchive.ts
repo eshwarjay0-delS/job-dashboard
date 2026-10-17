@@ -53,6 +53,8 @@ export interface SessionChunk {
   language?: string
   at: number
   corrections?: number
+  /** Must come from a server-verified consent record, never a client header. */
+  archiveConsentVerified?: boolean
 }
 
 function extFor(mime: string): string {
@@ -64,6 +66,9 @@ function extFor(mime: string): string {
 
 /** Archive one transcribed chunk. Never throws. */
 export async function archiveSessionChunk(c: SessionChunk): Promise<void> {
+  // Fail closed until a trusted, user-scoped consent verification is wired in.
+  // A session ID or browser-provided consent header is not authorization to retain audio.
+  if (c.archiveConsentVerified !== true || process.env.KOMPAS_SESSION_ARCHIVE_ENABLED !== "true") return
   try {
     const sb = serviceClient()
     if (!sb) return
