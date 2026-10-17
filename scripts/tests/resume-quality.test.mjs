@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { resumeQuality } from '../../src/lib/resume-quality.ts'
+import { resumeQuality, requiredEvidenceTerms } from '../../src/lib/resume-quality.ts'
 
 test('a 41 percent draft cannot qualify even when all listed skills appear somewhere', () => {
   const report = resumeQuality({ matched: 41, total: 100, missing: ['risk treatment'] })
@@ -30,3 +30,19 @@ for (const [matched, total] of [[17,40], [14,22], [63,260], [51,81], [38,81]]) {
     assert.equal(resumeQuality({ matched, total, missing: [] }).status, 'needs_review')
   })
 }
+
+
+test('optional enrichment cannot lower experience completeness for satisfied original requirements', () => {
+  const original = ['apex', 'lwc', 'salesforce cpq']
+  const listed = [...original, 'mulesoft', 'guided selling', 'apex']
+  const evidenceTargets = requiredEvidenceTerms(original, listed)
+  assert.deepEqual(evidenceTargets, original)
+  const demonstrated = new Set(['apex', 'lwc', 'salesforce cpq'])
+  assert.equal(evidenceTargets.filter(t => demonstrated.has(t)).length / evidenceTargets.length, 1)
+  assert.equal(resumeQuality({ matched: 3, total: 3, missing: [] }).status, 'coverage_met')
+})
+test('a missing original requirement remains a gap despite many enrichment suggestions', () => {
+  const original = ['apex', 'lwc', 'salesforce cpq']
+  assert.deepEqual(requiredEvidenceTerms(original, ['apex', 'mulesoft', 'sap']), ['apex'])
+  assert.equal(resumeQuality({ matched: 1, total: original.length, missing: ['lwc', 'salesforce cpq'] }).status, 'needs_review')
+})

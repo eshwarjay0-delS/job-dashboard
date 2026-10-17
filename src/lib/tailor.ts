@@ -1,6 +1,6 @@
 import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
 import { preserveSkillHeadings } from "./resume-format"
-import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, resumeQuality } from "./resume-quality"
+import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, resumeQuality, requiredEvidenceTerms } from "./resume-quality"
 import { J1_VERSION, constrainResumeEdits } from "./ai/j1"
 import path from "path"
 import { createHash } from "crypto"
@@ -111,7 +111,7 @@ function normJD(jd: string): string {
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
-const CACHE_GENERATION = "12"
+const CACHE_GENERATION = "13"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -446,7 +446,8 @@ export async function runTailor(opts: {
     const tailoredText = await extractText(buffer)
     const afterKw = coveredJdKeywords(tailoredText, jdKws)
     const cov = jdKws.length ? afterKw.size / jdKws.length : 1
-    const listed = provableSkills([...coveredJdKeywords(skillsText(edits), jdKwsPrompt)])
+    // Optional enrichment helps writing, but never creates mandatory experience requirements.
+    const listed = provableSkills(requiredEvidenceTerms(jdKws, [...coveredJdKeywords(skillsText(edits), jdKwsPrompt)]))
     // Years claimed per listed skill: its own skill line's "N+ years", else the summary's.
     const sk = skillEdits(edits)
     const skillYears = new Map<string, number>()
@@ -546,7 +547,7 @@ export async function runTailor(opts: {
     - (summaryWanted && !(p.edits.summary || "").trim() ? 0.08 : 0) - .05 * (p.partial?.failed || 0)
   // The JD terms still missing, computed from the resume with no model call, so the pass targets the gap.
   const injectFor = (covered: Set<string>): string[] => {
-    const missing = jdKwsPrompt.filter(k => !covered.has(k))
+    const missing = jdKws.filter(k => !covered.has(k))
     if (!missing.length) return []
     return [`ATS COVERAGE (rewrite existing lines in place): ensure these JD terms appear, weaving EACH one into the experience bullets of the roles where it fits (and its matching skill line) using the JD's exact wording: ${missing.join(", ")}`]
   }
@@ -794,6 +795,14 @@ export async function runTailor(opts: {
     ...(diff.length ? {} : { unchanged: true }),
     usage: { calls: usageSink.length, inputTokens: uAgg.input, outputTokens: uAgg.output, cacheReadTokens: uAgg.cacheRead, cacheWriteTokens: uAgg.cacheWrite, estCostUSD, unpricedCalls: priced.unpricedCalls, byModel: priced.byModel },
   }
+
+  // Retain failed-run evidence privately; do not lose the input/output mapping when
+  // WhatsApp consumes its session. No route exposes this diagnostic object.
+  await blob.put(`tailor_runs/${createHash("sha256").update(opts.userResumeDir).digest("hex")}/${token}.json`, JSON.stringify({
+    version: 1, createdAt: new Date().toISOString(), sourceHash, sourcePath: matched.filepath,
+    input: { jd: opts.jd, confirmations: immediatePrefs, refine: opts.refine || null },
+    requirements: jdKws, enrichmentSuggestions: jdGenerated, result,
+  })).catch(() => { result.notes.push("Run diagnostic persistence failed; generated document storage is separate.") })
 
   // Only a whole draft that changed something is worth serving again: an incomplete or unchanged one should be redone
   // the next time it is asked for, when the providers may have room.

@@ -164,6 +164,10 @@ const TERM_ALIASES: string[][] = [
 const normalizeTerm = (text: string): string => text.toLowerCase()
   .replace(/[‐‑‒–—-]/g, " ").replace(/[,;:()]/g, " ").replace(/\s+/g, " ").trim()
 export function present(text: string, term: string): boolean {
+  // Explicit credential alternatives represent ONE requirement, not every credential.
+  if (/^(?:cissp|ccsp|cism|crisc|cisa|oscp|ceh)(?: or (?:cissp|ccsp|cism|crisc|cisa|oscp|ceh))+$/i.test(term)) {
+    return term.split(/ or /i).some(option => present(text, option))
+  }
   const t = normalizeTerm(term)
   if (!t) return false
   const low = normalizeTerm(text)
@@ -185,7 +189,7 @@ const CAPS_STOP = new Set([
 const WORD_STOP = new Set([
   "the","and","for","with","you","are","our","etc","will","must","shall","should","this","that","their","them","from","into","across","various","daily",
   "such","basic","strong","excellent","ability","experience","knowledge","proficiency","responsibilities","qualifications","required","preferred","scope",
-  "candidate","contractor","client","services","state","agencies","agency","local","valid","review","execution","ensure","perform","provide","support","maintain",
+  "specialty","specialties","attribute","attributes","candidate","contractor","client","services","state","agencies","agency","local","valid","review","execution","ensure","perform","provide","support","maintain",
 ])
 // Gerund/verb words that must NOT start a domain-noun phrase (else "implementing
 // security", "performing analysis" leak in as junk that can't match the resume).
@@ -297,16 +301,34 @@ export function extractJdKeywords(jd: string): string[] {
 
   // Collapse established acronym/expansion variants into one requirement, rather
   // than penalizing the same capability twice for spelling differences.
-  return [...new Set([...out].filter(term => term !== "requirements").map(term =>
+  const terms = [...new Set([...out].filter(term => term !== "requirements").map(term =>
     TERM_ALIASES.find(group => group.includes(normalizeTerm(term)))?.[0] || term,
   ))]
+  return collapseCredentialAlternatives(jd, terms)
+}
+
+/** Only explicit OR/one-of credential lists collapse; AND requirements stay separate. */
+function collapseCredentialAlternatives(jd: string, terms: string[]): string[] {
+  const cert = '(?:CISSP|CCSP|CISM|CRISC|CISA|OSCP|CEH)'
+  const pattern = new RegExp('\\b' + cert + '(?:\\s*(?:,\\s*(?:or\\s+)?|or\\s+)' + cert + ')+\\b', 'gi')
+  const groups: { start: number; end: number; options: string[] }[] = []
+  for (const match of jd.matchAll(pattern)) {
+    const prefix = jd.slice(Math.max(0, match.index! - 50), match.index)
+    if (!/\bor\b/i.test(match[0]) && !/\b(?:one of|any of|either)\s*[:(]?\s*$/i.test(prefix)) continue
+    groups.push({ start: match.index!, end: match.index! + match[0].length, options: [...new Set(match[0].match(new RegExp(cert, 'gi'))!.map(s => s.toLowerCase()))] })
+  }
+  if (!groups.length) return terms
+  // An independently stated credential remains independently required.
+  const outside = jd.split('').map((c, i) => groups.some(g => i >= g.start && i < g.end) ? ' ' : c).join('')
+  const grouped = new Set(groups.flatMap(g => g.options))
+  return [...terms.filter(term => !grouped.has(term) || new RegExp('\\b' + term + '\\b', 'i').test(outside)), ...groups.map(g => g.options.join(' or '))]
 }
 
 // Capitalised words that are ordinary English (or JD boilerplate) rather than product
 // names — these would otherwise slip through the mid-sentence proper-noun layer.
 const TITLE_STOP = new Set([
   "we","our","you","your","the","this","that","and","for","with","from","must","will","have","has",
-  "responsibilities","requirements","required","preferred","qualifications","experience","years",
+  "specialty","specialties","attribute","attributes","responsibilities","requirements","required","preferred","qualifications","experience","years",
   "role","team","teams","company","client","clients","candidate","candidates","position","job",
   "design","designing","implement","implementing","manage","managing","build","building","run",
   "running","operate","operating","enforce","ensure","ensuring","support","supporting","develop",

@@ -76,3 +76,27 @@ test('Salesforce expansions count without requiring acronym stuffing', () => {
   assert.equal(matched.size, 4)
   assert.equal(present('Used Oracle integrations.', 'NetSuite'), false)
 })
+
+test('explicit certification alternatives count once and accept any listed credential', () => {
+  const terms = extractJdKeywords('Certifications: CISSP, CCSP, CISM, CRISC or CISA preferred.\nUse AWS and Azure for cloud security.')
+  const group = terms.find(t => t === 'cissp or ccsp or cism or crisc or cisa')
+  assert.ok(group)
+  for (const term of ['cissp','ccsp','cism','crisc','cisa']) assert.ok(!terms.includes(term))
+  assert.equal(present('Certifications: CISSP', group), true)
+  assert.equal(present('Certifications: CISM', group), true)
+  assert.equal(present('Cloud engineer using AWS.', group), false)
+})
+
+test('AND credentials and independent required credentials cannot disappear behind OR lists', () => {
+  const both = extractJdKeywords('CISSP and CISA are required.')
+  assert.ok(both.includes('cissp') && both.includes('cisa'))
+  const separate = extractJdKeywords('CISSP is required.\nAdditional certification: CISSP or CCSP.')
+  assert.ok(separate.includes('cissp'))
+  assert.ok(separate.includes('cissp or ccsp'))
+})
+
+test('generic specialty and attributes headings are not technical gaps; named technologies remain', () => {
+  const terms = extractJdKeywords('Required Specialty Attributes\nSPECIALTY ATTRIBUTES\nExperience with Canton and SOL blockchain technologies, NIST, ISO 27001, CIS Controls and COBIT.')
+  for (const word of ['specialty','attributes']) assert.ok(!terms.includes(word), word)
+  for (const term of ['canton','sol','nist','iso 27001','cobit']) assert.ok(terms.includes(term), term)
+})

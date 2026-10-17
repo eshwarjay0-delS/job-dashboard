@@ -21,3 +21,9 @@ export function resumeQuality(input: {
     missing: input.missing,
   }
 }
+
+/** Enrichment is writing context, never a new acceptance obligation. */
+export function requiredEvidenceTerms(original: readonly string[], listed: readonly string[]): string[] {
+  const required = new Set(original)
+  return [...new Set(listed)].filter(term => required.has(term))
+}
