@@ -338,6 +338,9 @@ function ResultContent() {
   const [breakdown, setBreakdown] = useState<ScoreBreakdown | null>(null)
   const [quality, setQuality] = useState<{ status: string; minimum: number; matched: number; total: number } | null>(null)
   const [kwAnalysis, setKwAnalysis] = useState<KeywordAnalysis | null>(null)
+  // The honest measured JD keyword coverage (0-100) of the returned document.
+  // This is the "JD Match %" the user sees — never the inflated estimate.
+  const [coverage, setCoverage] = useState<number | null>(null)
   const [receipt, setReceipt] = useState<null | { calls: number; inputTokens: number; outputTokens: number; estCostUSD: number; byModel: { provider: string; model: string }[] }>(null)
   const [selKw, setSelKw] = useState<string[]>([])   // missing keywords the user chose to add
   const [diff, setDiff] = useState<DiffEntry[]>([])
@@ -393,6 +396,8 @@ function ResultContent() {
         if (Array.isArray(r.ranked_candidates)) setRankedCandidates(r.ranked_candidates)
         if (r.score_breakdown) setBreakdown(r.score_breakdown)
         if (r.keyword_analysis) setKwAnalysis(r.keyword_analysis)
+        if (typeof r.coverage === "number") setCoverage(r.coverage)
+        else if (typeof r.keyword_analysis?.coverage_after === "number") setCoverage(r.keyword_analysis.coverage_after)
         setQuality(r.quality ?? null)
         if (r.usage && typeof r.usage.estCostUSD === "number") setReceipt(r.usage)
         if (Array.isArray(r.diff)) setDiff(r.diff)
@@ -459,6 +464,9 @@ function ResultContent() {
       setContent(data.edits ?? null)
       setBreakdown(data.score_breakdown ?? null)
       setKwAnalysis(data.keyword_analysis ?? null)
+      if (typeof data.coverage === "number") setCoverage(data.coverage)
+      else if (typeof data.keyword_analysis?.coverage_after === "number") setCoverage(data.keyword_analysis.coverage_after)
+      else setCoverage(null)
       setQuality(data.quality ?? null)
       setDiff(Array.isArray(data.diff) ? data.diff : [])
       if (data.matched?.filename) setResumeName(data.matched.filename)
@@ -756,6 +764,30 @@ function ResultContent() {
           )}
           {(kwAnalysis || breakdown) && (
             <div className="px-6 py-5" style={{ borderTop: "1px solid var(--border)", background: "var(--surface)" }}>
+              {coverage !== null && (
+                <div className="flex items-center gap-4 mb-4">
+                  <div
+                    className="flex items-center justify-center rounded-full font-bold"
+                    style={{
+                      width: 64, height: 64, fontSize: 20,
+                      border: `3px solid ${coverage >= 95 ? "var(--success, #22a06b)" : coverage >= 80 ? "var(--warning, #b3541e)" : "var(--danger, #b3261e)"}`,
+                      color: "var(--text)",
+                    }}
+                    role="img"
+                    aria-label={`JD match ${Math.round(coverage)} percent`}
+                  >
+                    {Math.round(coverage)}%
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold" style={{ color: "var(--text)" }}>JD Match</p>
+                    <p className="text-xs" style={{ color: "var(--text-soft)", maxWidth: 420, lineHeight: 1.5 }}>
+                      {coverage >= 95
+                        ? "Measured keyword overlap with this job description. Nothing invented — gaps are listed below, never faked."
+                        : "Below the 95% bar. Review the missing terms below — only add what you can honestly prove, then regenerate."}
+                    </p>
+                  </div>
+                </div>
+              )}
               <h2 className="text-sm font-semibold mb-0.5" style={{ color: "var(--text)" }}>Keyword match</h2>
               <p className="text-xs mb-3.5" style={{ color: "var(--text-soft)" }}>
                 What this role asks for vs. what your resume proves. Pick any gaps to weave in — honestly, never invented.
