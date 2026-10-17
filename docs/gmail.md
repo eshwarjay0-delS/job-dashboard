@@ -55,11 +55,51 @@ Whenever you open an email, a contact card for the sender appears alongside it �
 - Smart Reply (3 chips, per-account reply profiles, approve-before-send).
 - Agent chat (`/dashboard/agent`) answering from mail.
 
+## Form factor (current assumption)
+
+Desktop-only for now. The mail experience is designed around a wide desktop canvas — described below as a folding layout (Samsung-trifold style). It collapses gracefully to fewer panels on narrow screens, but the desktop arrangement is the reference design.
+
+## Pillar 5 — The folding layout (4 regions)
+
+Think of the screen as folds that open as the user goes deeper:
+
+- **Region 1 — Inbox list.** Looks like a normal phone inbox: scrollable thread list. At the top, an account toggle bar: **All inboxes | Inbox 1 | Inbox 2 | Inbox 3 | Inbox 4** — one toggle per connected Gmail account. Tapping a thread opens Region 2.
+- **Region 2 — Thread view.** Scrollable: the email overview plus the whole thread and everything about it — attachments, labels, classification, follow-up state.
+- **Region 3 — Context panel.** By default: the sender's contact card (Pillar 4). When the user hits **Reply**, the reply composer appears *on top* in this region, with smart reply suggestions beneath it — Google-style suggestions generated from the thread's own data (what was asked, what's known, what the user usually says).
+- **Region 4 — Contact panel (reply mode).** Once reply is open, the contact details shift from Region 3 to Region 4, so the composer and the contact card are side by side.
+
+The reply composer is full Gmail parity: To, CC, BCC, subject, body, attachments — everything the normal Gmail app does.
+
+### Contact card spec (applies to every thread)
+
+- Full name, email address, mobile number.
+- **History of interactions**: how many times they've emailed, and the last message's subject line + date/time with a clock icon.
+- Skeleton rule still holds: missing fields render empty, never invented.
+
+### Per-thread "…" menu
+
+Every thread gets a three-dots menu: **Mark as important**, **Send to automation**, plus the standard actions. 
+
+**Definition (standing): important = tracked.** Marking a thread important means everything from that sender is actively tracked from then on. That is what "important" means in this app — always.
+
+## Pillar 6 — Important section on Home
+
+On the Home page, right *before* the Overview section, an **Important** section lists every email the user marked as important — the tracked set, at a glance.
+
+## Pillar 7 — Automation: the agent side of the inbox
+
+- **Send to automation.** The user selects messages and sends them to automation. Those messages keep feeding the agent: the agent learns *these are the replies, this is the data the user always wants sent* — and starts auto-replying on the user's behalf. The app tells the user this capability exists; it's presented, not hidden.
+- **Conversational automation bots.** Chatbots live on the automation side. The user talks to them like they talk to an assistant: *"track emails like this"*, *"after I submit an RTR, send a follow-up twice a week"*, *"if they reply, tell me"* — and the agent just does it.
+- **Inbox digest.** A dedicated section that always shows what's happening in Gmail: new important mail, follow-ups sent, replies received, what's waiting. The overview of the inbox, live.
+
 ## What's new from this vision
 
 1. Compose parity audit — subject/CC/BCC/attachments/sender picker, all working.
 2. Unified inbox redesign — multi-account without the Gmail mess.
 3. Contact card skeleton — designed once, applied everywhere, empty-by-default.
+4. Folding 4-region desktop layout with account toggle bar.
+5. Important = tracked: definition, per-thread marking, Home section.
+6. Send-to-automation + pattern-learned auto-replies + conversational automation bots + inbox digest.
 
 ## Non-goals
 
