@@ -131,7 +131,7 @@ export default function MindMap({ map }: { map: MindMap }) {
     const root: Placed = {
       node: { text: map.title, children: [] }, depth: 0, x: 40, y: totalH / 2 - h / 2, h, kids, collapsed: false,
     }
-    let maxX = 40 + 3 * X_STEP + NODE_W
+    const maxX = 40 + 3 * X_STEP + NODE_W
     return { root, totalH, totalW: maxX + 40 }
   }, [map, collapsed])
 

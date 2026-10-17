@@ -4,7 +4,6 @@
 // text, mind map, image. Linked from the Admin page.
 
 import Link from "next/link"
-import PageIntro from "../../_components/page-intro"
 
 const PRODUCTS = [
   {
@@ -57,8 +56,7 @@ export default function VisionHubPage() {
               overflow: "hidden",
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/vision/${p.slug}.svg`} alt={`${p.name} vision diagram`}
+            <img src={`/api/admin/plan-vision?area=${p.slug === "apply" ? "applications" : p.slug}&format=svg`} alt={`${p.name} vision diagram`}
               style={{ width: "100%", height: "auto", display: "block", borderBottom: "1px solid var(--border)" }} />
             <div style={{ padding: "16px 18px 18px" }}>
               <h2 style={{ fontSize: 19, fontWeight: 700, color: "var(--text)", margin: "0 0 4px" }}>{p.name}</h2>

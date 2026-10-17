@@ -6,6 +6,7 @@ import PageTransition from "./page-transition"
 import DeviceGuard from "./device-guard"
 import PhoneReminder from "./phone-reminder"
 import OnboardingGate from "./onboarding-gate"
+import PlanVisionLink from "./_components/plan-vision-link"
 import FloatingAgent from "./_components/floating-agent"
 
 // Layout is synchronous — SidebarNav fetches user data client-side.
@@ -27,6 +28,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         padding: "40px 44px 80px",
       }}>
         <PhoneReminder />
+        {!resumeOnly && <PlanVisionLink />}
         {resumeOnly ? <DeviceGuard><PageTransition>{children}</PageTransition></DeviceGuard> : <OnboardingGate><DeviceGuard><PageTransition>{children}</PageTransition></DeviceGuard></OnboardingGate>}
       </main>
 
