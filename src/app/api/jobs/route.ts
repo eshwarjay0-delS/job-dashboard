@@ -333,7 +333,7 @@ async function fetchRemoteOK(q: string, type: string): Promise<Job[]> {
       if (!j || !j.position) continue
       const title = String(j.position || "")
       const titleLower = title.toLowerCase()
-      const isContract = /contract|contractor|freelance/i.test(titleLower + " " + String(j.tags || []).join(" "))
+      const isContract = /contract|contractor|freelance/i.test(titleLower + " " + String(j.tags || ""))
       if (type === "contract" && !isContract) {
         // Still include security roles even without explicit contract tag
         if (!/secur|soc|vuln|pen.?test|incident|threat/i.test(title)) continue
