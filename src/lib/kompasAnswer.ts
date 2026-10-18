@@ -110,6 +110,38 @@ function complexity(q: string): number {
 
 export interface LengthPlan { kind: string; words: number; secs: [number, number]; maxTokens: number }
 
+/**
+ * Question specificity scorer — calibrates answer depth to the question's depth.
+ * A yes/no question ("Do you know Splunk?") gets a brief answer.
+ * A scoped technical question ("How did you tune Splunk correlation searches
+ * for low false positives in a 50k EPS environment?") gets a deep, focused answer.
+ * Returns 0.5 (surface) to 1.5 (deep).
+ */
+export function questionDepth(q: string): number {
+  const text = String(q || '').toLowerCase();
+  let depth = 1.0;
+
+  // How-questions go deeper than what-questions; what deeper than do-you
+  if (/\bhow (did|do|would|can|could) you\b/.test(text)) depth += 0.25;
+  else if (/\bwhat (was|were|did|is|are)\b/.test(text)) depth += 0.1;
+  if (/^(do|does|did|are|is|have|has|can|could|would) you\b/.test(text.trim())) depth -= 0.3;
+
+  // Scoping signals: numbers, environments, constraints → deeper
+  const scopes = (text.match(/\b\d+[kmb]?\b/g) || []).length; // 50k, 300, etc.
+  depth += Math.min(0.2, scopes * 0.05);
+  if (/\b(in|for|with|across)\s+(a|an|the)?\s*\w+\s+(environment|setup|deployment|pipeline|fleet|cluster|org)/.test(text)) depth += 0.15;
+  if (/\b(trade-?off|constraint|challenge|bottleneck|scale|performance|reliability)\b/.test(text)) depth += 0.15;
+
+  // Multi-part questions → broader but not necessarily deeper per part
+  const parts = (text.match(/\?/g) || []).length;
+  if (parts > 1) depth += 0.1;
+
+  // Very short questions are usually surface-level
+  if (text.split(/\s+/).length < 6) depth -= 0.15;
+
+  return Math.max(0.5, Math.min(1.5, depth));
+}
+
 export function lengthPlan(
   tier: Tier, q: string, interviewer: string,
   opts: { difficulty?: string; length?: string } = {},
@@ -136,7 +168,8 @@ export function lengthPlan(
     (PK_DIFF[opts.difficulty || "standard"] || 1) *
     (LEN_MULT[opts.length || "balanced"] || 1) *
     (AUDIENCE_DEPTH[interviewer] || 1) *
-    (SHORT_KINDS.includes(kind) ? 1 : complexity(q)),
+    (SHORT_KINDS.includes(kind) ? 1 : complexity(q)) *
+    (SHORT_KINDS.includes(kind) ? 1 : questionDepth(q)),
   )
   return {
     kind, words,

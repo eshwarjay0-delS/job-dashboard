@@ -7,7 +7,7 @@ import { resumeRoles, resumeDigest, employerAliases } from "@/lib/kompasResume"
 import { hashUserId } from "@/lib/sttLedger"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
-  classify, canonicalQuestion, lengthPlan, plainlyNoQuestion, cleanQuestion, cutQuestion, resolveFollowUp,
+  classify, canonicalQuestion, lengthPlan, questionDepth, plainlyNoQuestion, cleanQuestion, cutQuestion, resolveFollowUp,
   tierRule, pickShape, DERIVE_SYSTEM, INTRODUCTION_POLICY, PERSONAL_EXPERIENCE_POLICY, TECHNICAL_ANSWER_BOUNDARY, isPersonalEvidenceQuestion, type LengthPlan,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
   commit, matchBank,
@@ -638,6 +638,15 @@ export async function POST(request: NextRequest) {
     difficulty: str(config.difficulty, 20) || undefined,
     length: str(config.length, 20) || undefined,
   })
+  // Depth calibration: match the answer's focus to the question's depth.
+  // A surface question gets a direct answer; a deep scoped question gets
+  // a focused deep dive. Prevents the "expert answer to a simple question" mismatch.
+  const qDepth = questionDepth(question)
+  const depthGuidance = qDepth < 0.75
+    ? "ANSWER CALIBRATION: This is a surface-level question. Answer directly and briefly. Do not expand into a deep technical narrative — match the question's scope."
+    : qDepth > 1.25
+    ? "ANSWER CALIBRATION: This is a deep, scoped question. Go deep on the specific angle asked — concrete details, trade-offs, and real constraints. Stay focused on what was asked, don't broaden."
+    : ""
   const personalEvidence = isPersonalEvidenceQuestion(tier, question)
   const rule = tierRule(tier, interviewer)
   // 27 question archetypes (perfACT _shapes.js): first-win structural instruction.
@@ -698,6 +707,7 @@ export async function POST(request: NextRequest) {
     `INTERVIEW MODE: ${modeBlock(tier, question, interviewer)}`,
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
     `LENGTH TARGET: about ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Hit it — a quick factual ask gets a short answer, a deep dive gets room.`,
+    depthGuidance,
     tier !== 0 && routedProject
       ? `Only if the original sources corroborate it, anchor this answer in this generated project summary: ${routedProject.title}${routedProject.employer ? ` (${routedProject.employer})` : ""}. Do not switch projects mid-answer.`
       : "",
