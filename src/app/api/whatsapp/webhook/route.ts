@@ -344,10 +344,27 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     return sendText(from, "I read the job description against your resume and no line came back changed, so I am not sending you the same file. This usually means the AI services were short of capacity. Please resend the job description and resume to retry.")
   }
 
-  if (result.quality?.status !== "coverage_met") {
+  if (result.quality?.status === "needs_review") {
     await recordWhatsAppUsage(userId, "resume_tailor", result)
-    return sendText(from, `The rewrite did not reach your 98% coverage target after automatic repair. I have held the file. Remaining JD terms: ${(result.quality?.missing || []).slice(0, 12).join(", ") || "quality validation failed"}.`)
+    const missing = result.quality?.missing || []
+    // Categorize: which gaps are unfillable (certs/platforms the user doesn't have)
+    // vs fillable (poor keyword placement that better writing could fix).
+    const CERTS = /\b(ccsp|cism|crisc|cisa|cissp|oscp|ceh|gsec|gcfa|gcia|security\+|pmp|pmi|itil|cobit)\b/i
+    const unfillable = missing.filter(t => CERTS.test(t))
+    const fillable = missing.filter(t => !CERTS.test(t))
+    let msg = `The rewrite reached ${result.quality ? Math.round(result.quality.matched / result.quality.total * 100) : 0}% coverage, below the 95% floor. I have held the file.`
+    if (unfillable.length) {
+      msg += ` These JD requirements aren't on your resume and I can't invent them: ${unfillable.slice(0, 8).join(", ")}.`
+    }
+    if (fillable.length) {
+      msg += ` Wording gaps I should have closed: ${fillable.slice(0, 8).join(", ")}.`
+    }
+    return sendText(from, msg)
   }
+  // 95-97%: deliver with gaps noted so the user gets a usable resume, not nothing.
+  const gapsNote = result.quality?.status === "delivered_with_gaps"
+    ? ` Note: ${result.quality.matched}/${result.quality.total} JD terms covered. Missing: ${(result.quality.missing || []).slice(0, 8).join(", ")}.`
+    : ""
   const file = await blob.get(`tailored/${result.token}.docx`)
   if (!file) return sendText(from, "The resume generated but the file could not be read back. Please try again.")
 
@@ -462,7 +479,8 @@ function captionFor(name: string, meta: Meta, result: TailorResult, update?: { r
     `*${name}*${update ? ` (update ${update.number})` : ""}`,
     ...(meta.role ? [`${meta.role}${meta.company ? ` · ${meta.company}` : ""}`] : []),
     `JD keyword coverage: ${coverage}%.`,
-    ...(result.quality?.status === "needs_review" ? ["Below your 98% target; this result needs further review."] : []),
+    ...(result.quality?.status === "delivered_with_gaps" ? [`Below the 98% target — missing: ${(result.quality.missing || []).slice(0, 6).join(", ")}.`] : []),
+    ...(result.quality?.status === "needs_review" ? ["Below the 95% floor; this result needs further review."] : []),
     "Reply to this file to request changes.",
   ].join("\n")
 }
