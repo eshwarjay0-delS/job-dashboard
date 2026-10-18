@@ -223,7 +223,7 @@ export default function MailPage() {
   const [leaving, leave] = useLeaving(answer)
 
   // ── Live Gmail data ────────────────────────────────────────────────────
-  const { mails, loading, connected, error, refresh, drafts, radar, updatedAt } = useGmailData()
+  const { mails, loading, connected, error, refresh, drafts, radar, updatedAt, interviews } = useGmailData()
   const [connectedEmails, setConnectedEmails] = useState<string[]>([])
   useEffect(() => {let active=true;fetch('/api/gmail-sync').then(r=>r.json()).then(j=>{if(active)setConnectedEmails((j.accounts||[]).filter((a:{gmail_enabled:boolean})=>a.gmail_enabled).map((a:{google_email:string})=>a.google_email))}).catch(()=>{});return()=>{active=false}},[])
   const accounts = buildAccounts([...connectedEmails,...mails.map(m => m.account)])
@@ -346,7 +346,7 @@ export default function MailPage() {
       </header>
 
       {!loading && connected && (
-        <DigestBriefing needs={needsList} theirs={theirsList} mails={live} radar={radar} onOpen={openMail} />
+        <DigestBriefing needs={needsList} theirs={theirsList} mails={live} radar={radar} interviews={interviews} onOpen={openMail} />
       )}
 
       <InboxUpdates />

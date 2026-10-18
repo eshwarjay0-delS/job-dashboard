@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
-import type { Mail } from "@/app/dashboard/_suite/sample"
+import type { Mail, Interview } from "@/app/dashboard/_suite/sample"
 import type { NotifyRule } from "@/app/api/gmail/notify-rules/route"
 
 export type DigestRadar = {
@@ -9,12 +9,12 @@ export type DigestRadar = {
 }
 
 // Poke-style morning briefing, in-app: what needs him, what's waiting on them,
-// what's new — computed from the already-loaded mail, no extra fetch.
+// what's new, what's coming — computed from the already-loaded mail, no extra fetch.
 // Per-sender notify controls: mute a sender and the watcher never nudges about
 // them; unmute to bring them back.
-export function DigestBriefing({ needs, theirs, mails, radar, onOpen }: {
+export function DigestBriefing({ needs, theirs, mails, radar, interviews, onOpen }: {
   needs: Mail[]; theirs: Mail[]; mails: Mail[]
-  radar: DigestRadar[]; onOpen: (id: string) => void
+  radar: DigestRadar[]; interviews: Interview[]; onOpen: (id: string) => void
 }) {
   const [rules, setRules] = useState<NotifyRule[]>([])
   const [saving, setSaving] = useState("")
@@ -51,8 +51,12 @@ export function DigestBriefing({ needs, theirs, mails, radar, onOpen }: {
     .filter(x => x.days >= 7 && !isMuted(x.m))
     .sort((a, b) => b.days - a.days)
     .slice(0, 3)
+  const upcoming = (interviews || [])
+    .filter(iv => (iv.ts || iv.start || 0) > Date.now() - 36e5)
+    .sort((a, b) => (a.ts || a.start || 0) - (b.ts || b.start || 0))
+    .slice(0, 3)
 
-  if (!topNeeds.length && !waitingLong.length && !newToday.length && !mutedNeeds.length) return null
+  if (!topNeeds.length && !waitingLong.length && !newToday.length && !mutedNeeds.length && !upcoming.length) return null
 
   const ago = (ts?: number) => {
     if (!ts) return ""
@@ -68,10 +72,12 @@ export function DigestBriefing({ needs, theirs, mails, radar, onOpen }: {
         <h2>Today&rsquo;s briefing</h2>
         <p>
           {topNeeds.length > 0 && <><strong>{topNeeds.length}{needs.length > 3 ? ` of ${needs.length}` : ""}</strong> need your reply</>}
-          {topNeeds.length > 0 && (waitingLong.length > 0 || newToday.length > 0) && " · "}
+          {topNeeds.length > 0 && (waitingLong.length > 0 || newToday.length > 0 || upcoming.length > 0) && " · "}
           {waitingLong.length > 0 && <><strong>{waitingLong.length}</strong> waiting 7+ days</>}
-          {(topNeeds.length > 0 || waitingLong.length > 0) && newToday.length > 0 && " · "}
+          {(topNeeds.length > 0 || waitingLong.length > 0) && (newToday.length > 0 || upcoming.length > 0) && " · "}
           {newToday.length > 0 && <><strong>{newToday.length}</strong> new today</>}
+          {(topNeeds.length > 0 || waitingLong.length > 0 || newToday.length > 0) && upcoming.length > 0 && " · "}
+          {upcoming.length > 0 && <><strong>{upcoming.length}</strong> interview{upcoming.length === 1 ? "" : "s"} coming up</>}
         </p>
       </div>
       <div className="mf-digest-cols">
@@ -114,6 +120,22 @@ export function DigestBriefing({ needs, theirs, mails, radar, onOpen }: {
               </button>
             ))}
             {newToday.length > 3 && <p className="mf-digest-more">+{newToday.length - 3} more unread today</p>}
+          </div>
+        )}
+        {upcoming.length > 0 && (
+          <div className="mf-digest-col">
+            <h3>Coming up</h3>
+            {upcoming.map(iv => {
+              const ts = iv.ts || iv.start || 0
+              const when = ts > Date.now() ? new Date(ts).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Now"
+              return (
+                <div key={iv.id} className="mf-digest-item" style={{ cursor: "default" }}>
+                  <span className="mf-digest-from">{iv.company}{iv.role ? ` — ${iv.role}` : ""}</span>
+                  <span className="mf-digest-subj">{iv.kind} interview{iv.with ? ` with ${iv.with}` : ""}</span>
+                  <span className="mf-digest-meta">{when}</span>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
