@@ -317,6 +317,48 @@ async function fetchAshby(q: string, type: string): Promise<Job[]> {
   return jobs.slice(0, 30)
 }
 
+// ─── Source: RemoteOK (free, no key) ────────────────────────────────────
+// Direct remote-jobs API — original source for remote contract roles.
+async function fetchRemoteOK(q: string, type: string): Promise<Job[]> {
+  try {
+    const res = await fetch(`https://remoteok.com/api?tag=${encodeURIComponent(q.split(" ")[0] || "security")}`, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(10000),
+      headers: { "User-Agent": "MarketFit/1.0" },
+    })
+    if (!res.ok) return []
+    const data = await res.json()
+    const jobs: Job[] = []
+    for (const j of (Array.isArray(data) ? data.slice(1) : [])) {
+      if (!j || !j.position) continue
+      const title = String(j.position || "")
+      const titleLower = title.toLowerCase()
+      const isContract = /contract|contractor|freelance/i.test(titleLower + " " + String(j.tags || []).join(" "))
+      if (type === "contract" && !isContract) {
+        // Still include security roles even without explicit contract tag
+        if (!/secur|soc|vuln|pen.?test|incident|threat/i.test(title)) continue
+      }
+      if (!matchesQuery(q, title, "", "")) continue
+      jobs.push({
+        id: `remoteok-${j.id || j.slug}`,
+        title: title.slice(0, 200),
+        company: String(j.company || "").slice(0, 160),
+        location: "Remote",
+        remote: true,
+        salary: j.salary_min ? `$${j.salary_min}${j.salary_max ? `-$${j.salary_max}` : ""}` : null,
+        posted: String(j.date || ""),
+        description: String(j.description || "").slice(0, 500),
+        workAuth: [],
+        url: String(j.url || `https://remoteok.com${j.slug ? "/" + j.slug : ""}`),
+        source: "remoteok",
+        contractTypes: isContract ? ["Contract"] : [],
+      })
+      if (jobs.length >= 25) break
+    }
+    return jobs
+  } catch { return [] }
+}
+
 // ─── Source: Jobright.ai (TEMPORARY BRIDGE — not the product direction) ──────
 // Owner correction 2026-10-17: we build a Jobright competitor, not a Jobright
 // client. Jobright aggregates from original postings but their API only links
@@ -869,7 +911,7 @@ export async function GET(request: NextRequest) {
   const usajobsKey = request.headers.get("x-usajobs-api-key") || process.env.USAJOBS_API_KEY || null
 
   // Pull all live sources in parallel
-  const [jsearch, infosec, usajobs, interns, jobright, remotive, arbeitnow, greenhouse, ashby] = await Promise.all([
+  const [jsearch, infosec, usajobs, interns, jobright, remotive, arbeitnow, greenhouse, ashby, remoteok] = await Promise.all([
     fetchJSearch(q, loc, remote, type, rapidKey),    // LinkedIn + Indeed + Glassdoor
     fetchInfosecjobs(q),                              // Infosecjobs.com — cyber-specific
     fetchUSAJobs(q, remote, usajobsKey),              // USAJobs.gov — federal roles
@@ -879,13 +921,14 @@ export async function GET(request: NextRequest) {
     fetchArbeitnow(q, type),                          // Arbeitnow — free job-board API
     fetchGreenhouse(q, type),                         // Greenhouse ATS — direct company career pages (original source)
     fetchAshby(q, type),                              // Ashby ATS — direct company career pages (original source)
+    fetchRemoteOK(q, type),                           // RemoteOK — direct remote-jobs API (original source)
   ])
 
   // Merge; de-dupe on normalized company+title
   const seen = new Set<string>()
   const merged: Job[] = []
-  // Priority: JSearch (LinkedIn/Indeed/Glassdoor) → Jobright → Infosecjobs → USAJobs → Handshake interns → Greenhouse → Ashby → Remotive → Arbeitnow
-  for (const j of [...jsearch, ...jobright, ...infosec, ...usajobs, ...interns, ...greenhouse, ...ashby, ...remotive, ...arbeitnow]) {
+  // Priority: JSearch (LinkedIn/Indeed/Glassdoor) → Jobright → Infosecjobs → USAJobs → Handshake interns → Greenhouse → Ashby → RemoteOK → Remotive → Arbeitnow
+  for (const j of [...jsearch, ...jobright, ...infosec, ...usajobs, ...interns, ...greenhouse, ...ashby, ...remoteok, ...remotive, ...arbeitnow]) {
     if (!applicationUrl(j.url)) continue
     j.contractTypes ||= contractTypes(j.title + " " + j.description)
     if (type === "contract" && !j.contractTypes.length) continue
