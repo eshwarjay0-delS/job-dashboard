@@ -136,6 +136,79 @@ async function fetchInfosecjobs(q: string): Promise<Job[]> {
   } catch { return [] }
 }
 
+// ─── Source: Remotive (free remote-jobs API, no key) ─────────────────────────
+// Terms: attribute Remotive as source and link back to their URL (done via
+// source label + url). Contract roles filtered from job_type.
+async function fetchRemotive(q: string, type: string): Promise<Job[]> {
+  try {
+    const res = await fetch(`https://remotive.com/api/remote-jobs?search=${encodeURIComponent(q)}&limit=50`, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(15000),
+      headers: { "User-Agent": "MarketFit/1.0 (+https://job-dashboard-fawn.vercel.app)" },
+    })
+    if (!res.ok) return []
+    const data = await res.json()
+    const jobs: Job[] = []
+    for (const j of data.jobs || []) {
+      const jobType = String(j.job_type || "").toLowerCase()
+      const isContract = jobType.includes("contract") || jobType.includes("freelance")
+      // For contract searches, keep only contract roles; otherwise keep all
+      if (type === "contract" && !isContract) continue
+      if (!matchesQuery(q, j.title || "", j.description || "", j.company_name || "")) continue
+      jobs.push({
+        id: `remotive-${j.id}`,
+        title: String(j.title || "").slice(0, 200),
+        company: String(j.company_name || "").slice(0, 160),
+        location: String(j.candidate_required_location || "Remote").slice(0, 160),
+        remote: true,
+        salary: String(j.salary || "") || null,
+        posted: String(j.publication_date || ""),
+        description: stripHtml(String(j.description || "")).slice(0, 2000),
+        workAuth: [],
+        url: String(j.url || ""),
+        source: "remotive",
+        contractTypes: isContract ? ["Contract"] : [],
+      })
+    }
+    return jobs
+  } catch { return [] }
+}
+
+// ─── Source: Arbeitnow (free job-board API, no key) ────────────────────────
+async function fetchArbeitnow(q: string, type: string): Promise<Job[]> {
+  try {
+    const res = await fetch("https://www.arbeitnow.com/api/job-board-api", {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(15000),
+      headers: { "User-Agent": "MarketFit/1.0 (+https://job-dashboard-fawn.vercel.app)" },
+    })
+    if (!res.ok) return []
+    const data = await res.json()
+    const jobs: Job[] = []
+    for (const j of data.data || []) {
+      const types = (j.job_types || []).map((t: string) => String(t).toLowerCase())
+      const isContract = types.some((t: string) => t.includes("contract") || t.includes("freelance"))
+      if (type === "contract" && !isContract) continue
+      if (!matchesQuery(q, j.title || "", j.description || "", j.company_name || "")) continue
+      jobs.push({
+        id: `arbeitnow-${j.slug}`,
+        title: String(j.title || "").slice(0, 200),
+        company: String(j.company_name || "").slice(0, 160),
+        location: String(j.location || (j.remote ? "Remote" : "")).slice(0, 160),
+        remote: !!j.remote,
+        salary: null,
+        posted: j.created_at ? new Date(j.created_at * 1000).toISOString() : "",
+        description: stripHtml(String(j.description || "")).slice(0, 2000),
+        workAuth: [],
+        url: String(j.url || ""),
+        source: "arbeitnow",
+        contractTypes: isContract ? ["Contract"] : [],
+      })
+    }
+    return jobs
+  } catch { return [] }
+}
+
 // ─── Source: Jobright.ai (TEMPORARY BRIDGE — not the product direction) ──────
 // Owner correction 2026-10-17: we build a Jobright competitor, not a Jobright
 // client. Jobright aggregates from original postings but their API only links
@@ -694,6 +767,8 @@ export async function GET(request: NextRequest) {
     fetchUSAJobs(q, remote, usajobsKey),              // USAJobs.gov — federal roles
     intern ? fetchHandshakeInterns(q, rapidKey) : Promise.resolve([] as Job[]),  // Handshake intern roles
     fetchJobright(q, loc, type),                      // Jobright.ai — contract/cyber via Next.js data route
+    fetchRemotive(q, type),                           // Remotive — free remote-jobs API
+    fetchArbeitnow(q, type),                          // Arbeitnow — free job-board API
   ])
 
   // Merge; de-dupe on normalized company+title
