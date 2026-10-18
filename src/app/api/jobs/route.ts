@@ -155,17 +155,19 @@ async function jobrightBuildIdCached(): Promise<string> {
   } catch { /* keep previous buildId if any */ }
   return jobrightBuildId
 }
-async function fetchJobright(q: string, type: string): Promise<Job[]> {
+async function fetchJobright(q: string, loc: string, type: string): Promise<Job[]> {
   try {
     const buildId = await jobrightBuildIdCached()
     if (!buildId) return []
     const base = q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "cybersecurity"
+    const locSlug = loc.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30)
     // Jobright samples 16 jobs per slug (non-deterministic). For contract hunts,
-    // pull both the contract-suffixed slug and the raw query slug, then let the
-    // contractTypes filter keep only real contract roles — doubles the sample.
+    // pull the contract-suffixed slug, the raw query slug, and (when a location
+    // is given) a location-influenced slug — then the contractTypes filter keeps
+    // only real contract roles. Doubles/triples the sample of their index.
     const slugs = type === "contract"
-      ? [...new Set([base.includes("contract") ? base : `${base}-contract`, base])]
-      : [base]
+      ? [...new Set([base.includes("contract") ? base : `${base}-contract`, base, ...(locSlug ? [`${base}-jobs-in-${locSlug}`] : [])])]
+      : [base, ...(locSlug ? [`${base}-jobs-in-${locSlug}`] : [])]
     const jobs: Job[] = []
     for (const slug of slugs.slice(0, 3)) {
       const res = await fetch(`https://jobright.ai/_next/data/${buildId}/jobs/${slug}.json`, {
@@ -687,7 +689,7 @@ export async function GET(request: NextRequest) {
     fetchInfosecjobs(q),                              // Infosecjobs.com — cyber-specific
     fetchUSAJobs(q, remote, usajobsKey),              // USAJobs.gov — federal roles
     intern ? fetchHandshakeInterns(q, rapidKey) : Promise.resolve([] as Job[]),  // Handshake intern roles
-    fetchJobright(q, type),                           // Jobright.ai — contract/cyber via Next.js data route
+    fetchJobright(q, loc, type),                      // Jobright.ai — contract/cyber via Next.js data route
   ])
 
   // Merge; de-dupe on normalized company+title
