@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import PageIntro from "../../_components/page-intro"
 import { VENDOR_PORTALS } from "@/lib/vendorPortals"
+import { detectAts } from "@/lib/ats-fingerprints"
 
 type Filter = "all" | "cyber" | "core" | "portal" | "large"
 
@@ -156,6 +157,11 @@ export default function ApplyPage() {
               {v.cyber && !v.cyberCore && (
                 <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: "1px solid var(--border)", color: "var(--text-muted)" }}>
                   CYBER
+                </span>
+              )}
+              {v.url && detectAts(v.url) !== "custom" && detectAts(v.url) !== "unknown" && (
+                <span title="Job board platform — determines the apply automation path" style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text-soft)" }}>
+                  {detectAts(v.url).toUpperCase()}
                 </span>
               )}
             </div>
