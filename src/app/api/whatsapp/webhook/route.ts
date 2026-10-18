@@ -357,7 +357,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     // If the ONLY gaps are unfillable requirements (not poor writing), deliver the
     // best honest resume — the tailor did its job; the gap is in qualifications.
     // Only hold the file when the tailor itself failed to close wording gaps.
-    if (unfillable.length > 0 && fillable.length === 0 && pct >= 85) {
+    if (unfillable.length > 0 && fillable.length === 0) {
       // Fall through to delivery with a clear note about the qualification gap.
       result.quality = { ...q, status: "delivered_with_gaps" as const,
         missing: [`Qualification gaps (not on your resume): ${unfillable.slice(0, 6).join(", ")}`] }
