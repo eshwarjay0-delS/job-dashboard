@@ -115,7 +115,7 @@
   let profile = getProfile();
   if (!profile) {
     // First run: fetch from MarketFit API if logged in, else prompt
-    fetch('/api/user/profile', { credentials: 'same-origin' })
+    fetch('https://job-dashboard-fawn.vercel.app/api/profile', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data && data.profile) {
