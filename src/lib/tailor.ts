@@ -8,7 +8,7 @@ import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, roleSpanMonths, type Edits, type Zones } from "./docx"
 import { adapt, expandJdKeywordsTwice } from "./claude"
 import { recentFeedback } from "./feedback"
-import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
+import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords, weightedCoverage, detectJDLevel, estimateYears } from "./keywords"
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 import { priceCalls, type PricedCall } from "./llmPrices"
@@ -780,7 +780,10 @@ export async function runTailor(opts: {
   // (same inputs → same file). An incomplete or unchanged one gets another name: written over the key, it left an EARLIER
   // whole result in the cache pointing at this lesser file, so the next identical request was told "31 bullets rewritten"
   // and handed an untailored resume (found in review, 2026-10-05).
-  const qualityReport = resumeQuality({ matched: afterKw.size, total: jdKws.length, missing: kwMissing, partial: !!best.partial || (splitDraft && (lackingRoles(best.edits).length > 0 || provenShare(best) < TARGET_COVERAGE)), unchanged: !diff.length })
+  // Weighted coverage (Jobscan REA): hard skills count 3x, titles 2x, soft 1x, buzzwords 0.5x.
+  // A resume at 95% weighted has the terms that actually pass recruiter keyword searches.
+  const wc = weightedCoverage(best.tailoredText, jdKws)
+  const qualityReport = resumeQuality({ matched: Math.round(wc.coverage * jdKws.length), total: jdKws.length, missing: wc.missing, partial: !!best.partial || (splitDraft && (lackingRoles(best.edits).length > 0 || provenShare(best) < TARGET_COVERAGE)), unchanged: !diff.length })
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
 

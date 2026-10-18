@@ -350,6 +350,49 @@ export function coveredJdKeywords(text: string, jdKeywords: string[]): Set<strin
   return new Set(jdKeywords.filter(k => present(text, k)))
 }
 
+/**
+ * Weighted coverage (Jobscan REA, 2026-10-18): not all JD terms matter equally.
+ * Hard skills (tools, platforms, certs) carry 3x; job titles 2x; soft skills 1x;
+ * generic buzzwords 0.5x. A resume at 95% weighted coverage has the terms that
+ * actually get it past recruiter keyword searches, even if it misses low-weight filler.
+ */
+const HARD_SKILL = /\b([A-Z]{2,}[A-Za-z0-9]*|[A-Za-z]+[A-Z][A-Za-z0-9]*|\w*[0-9]\w*|\w+[-/]\w+)\b/
+const SOFT_SKILL = /^(communication|collaboration|teamwork|leadership|analytical|problem.solving|detail.oriented|self.motivated|adaptability|time.management|interpersonal|mentoring|stakeholder)\b/i
+
+export function keywordWeight(k: string): number {
+  const t = k.trim()
+  if (HARD_SKILL.test(t) && t.length <= 24) return 3
+  if (/\b(engineer|analyst|architect|administrator|consultant|specialist|manager|lead)\b/i.test(t)) return 2
+  if (SOFT_SKILL.test(t)) return 1
+  return 0.5
+}
+
+export function weightedCoverage(text: string, jdKeywords: string[]): {
+  coverage: number; matched: string[]; missing: string[]; byWeight: Record<string, { total: number; hit: number }>
+} {
+  const covered = coveredJdKeywords(text, jdKeywords)
+  let totalW = 0, hitW = 0
+  const byWeight: Record<string, { total: number; hit: number }> = {}
+  const matched: string[] = [], missing: string[] = []
+  for (const k of jdKeywords) {
+    const w = keywordWeight(k)
+    const bucket = w >= 3 ? "hard" : w >= 2 ? "title" : w >= 1 ? "soft" : "other"
+    byWeight[bucket] = byWeight[bucket] || { total: 0, hit: 0 }
+    byWeight[bucket].total += w
+    totalW += w
+    if (covered.has(k)) {
+      byWeight[bucket].hit += w
+      hitW += w
+      matched.push(k)
+    } else {
+      missing.push(k)
+    }
+  }
+  // Sort missing by weight descending — fix hard skills first
+  missing.sort((a, b) => keywordWeight(b) - keywordWeight(a))
+  return { coverage: totalW ? hitW / totalW : 0, matched, missing, byWeight }
+}
+
 // The resume's FOLDER name is the strongest signal of what role it targets.
 // Map each identity token to the distinctive phrases a matching JD would contain.
 // (Distinctive multi-word phrases only — avoid common words like "requirements".)
