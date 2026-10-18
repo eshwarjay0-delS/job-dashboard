@@ -24,6 +24,10 @@
     greenhouse: /greenhouse\.io/i,
     lever: /lever\.co/i,
     workday: /myworkdayjobs\.com|workday/i,
+    icims: /icims\.com/i,
+    taleo: /taleo\.net/i,
+    smartrecruiters: /smartrecruiters\.com/i,
+    ashby: /ashby\.hq/i,
   };
 
   function detectAts() {

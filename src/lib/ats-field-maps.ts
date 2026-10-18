@@ -3,7 +3,7 @@
 // Maps HTML field identifiers → canonical profile keys.
 // Usage: detect ATS from URL → look up field → find input by id/name/placeholder/aria-*/data-qa → inject via setNativeValue.
 
-export type AtsPlatform = 'greenhouse' | 'lever' | 'workday' | 'dover';
+export type AtsPlatform = 'greenhouse' | 'lever' | 'workday' | 'dover' | 'icims' | 'taleo' | 'smartrecruiters' | 'ashby';
 
 export const ATS_FIELD_MAPS: Record<string, Record<string, string | Record<string, string>>> = {
   "greenhouse": {
@@ -117,7 +117,16 @@ export const ATS_URL_PATTERNS: Record<AtsPlatform, RegExp[]> = {
   lever: [/lever.co/i],
   workday: [/myworkdayjobs.com/i, /workday/i],
   dover: [/dover.io/i, /app.dover/i],
+  icims: [/icims.com/i],
+  taleo: [/taleo.net/i],
+  smartrecruiters: [/smartrecruiters.com/i],
+  ashby: [/ashby.hq/i],
 };
+
+// Platforms with recovered per-field maps (from REA). Others fall back to
+// generic label matching in the bookmarklet — their specific maps await
+// live form capture (see docs/research/simplify-autofill-recon.md gaps).
+export const MAPPED_PLATFORMS: AtsPlatform[] = ['greenhouse', 'lever', 'workday', 'dover'];
 
 export function detectAts(url: string): AtsPlatform | null {
   for (const [platform, patterns] of Object.entries(ATS_URL_PATTERNS)) {
