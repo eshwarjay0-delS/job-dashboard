@@ -327,6 +327,20 @@ export default function AdminPage() {
         </Card>
       </Section>
 
+      <Section title="Job crawler" lede="Our own job index — the real product. Run the SQL once, then crawl.">
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+            <p style={{ fontSize: 14.5, color: "var(--text-muted)", margin: 0, maxWidth: 560, lineHeight: 1.6 }}>
+              The crawler builds our own contract-job database from vendor portals. No middlemen.
+            </p>
+            <Link href="/dashboard/admin/crawler"
+              style={{ fontSize: 14.5, fontWeight: 700, color: "var(--accent)", textDecoration: "none", whiteSpace: "nowrap" }}>
+              Set up crawler <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        </Card>
+      </Section>
+
       <Section title="Resumes" lede="How many resumes were written for a job, how many people asked, and what the writing cost.">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
           <ResumeCard label="Today" w={resumes.today} />
