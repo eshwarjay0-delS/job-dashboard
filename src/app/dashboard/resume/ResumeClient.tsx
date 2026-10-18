@@ -409,6 +409,24 @@ export default function ResumeClient({ initialFiles, initialFolders = [], otherF
         setRecentTailors(updated)
       } catch {}
 
+      // Round-trip: if this tailor was started from Apply, auto-save the tailored
+      // resume to the library so Apply can auto-select it on return.
+      try {
+        const fromApply = sessionStorage.getItem('jd_prefill')
+        if (fromApply) {
+          const dlParams = new URLSearchParams({ token: data.token, score: String(data.score ?? 80), scoreBefore: typeof data.score_before === "number" ? String(data.score_before) : "", resumeName: sourceName, category: data.matched?.category ?? "", filepath: data.matched?.filepath ?? "", role: targetRole, company: targetCompany })
+          fetch(`/api/resumes/download?${dlParams.toString()}`).then(r => r.ok ? r.blob() : null).then(async blob => {
+            if (!blob) return
+            const fd = new FormData()
+            fd.append('file', blob, downloadName)
+            const up = await fetch('/api/resumes', { method: 'POST', body: fd })
+            const uj = await up.json().catch(() => ({}))
+            const fp = uj.file?.filepath || uj.filepath
+            if (fp) sessionStorage.setItem('apply_tailored_path', fp)
+          }).catch(() => {})
+        }
+      } catch {}
+
       // Log this tailor for weekly usage tracking (Settings → Plan & Storage)
       try {
         const log: number[] = JSON.parse(localStorage.getItem("jd_tailor_log") || "[]")
