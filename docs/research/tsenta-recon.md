@@ -152,3 +152,81 @@ Free: 25 applications (no card). Starter $19/600, Pro $39/1,500, Power $99/4,500
 - Bundles + extraction scripts: `~/workspace/rea-recon/tsenta-bundle/`
 - Raw page captures: `/tmp/tsenta.html`, `/tmp/tsenta-mcp.html`, `/tmp/tsenta-privacy.html`, `/tmp/tsenta-ai.html`, `/tmp/tsenta-changelog.html`, `/tmp/tsenta-dash.html`
 - REA scenario attempts: `~/workspace/rea-recon/scenario1.json` (Playwright capture blocked by bot defenses — static analysis used instead)
+
+---
+
+## Actual Apply Procedure (added 2026-10-17 per owner: "we need to get actual procedure")
+
+This is the step-by-step of how a Tsenta auto-apply actually happens, recovered from
+their JS bundles (`ats.js` with 43 ATS URL patterns), API surface, privacy policy,
+changelog, and public docs. This is what we replicate.
+
+### Step 0: Prerequisites (one-time setup)
+1. User creates account, connects Gmail (optional `gmail.readonly` scope)
+2. User uploads baseline resume, fills profile (name, email, phone, location, work auth, EEO answers, etc.)
+3. These are stored server-side, reused across all applications
+
+### Step 1: Find (job → application record)
+1. User finds a job in Tsenta (or via MCP: `tsenta.apply(role: "sr-frontend@stripe")`)
+2. `POST /applications` creates an application record with status `found`
+3. Job matched against user's resume (their match %, not keyword)
+
+### Step 2: Prep (materials tailored)
+1. Resume rewritten for this specific JD (not generic)
+2. Cover letter generated in user's voice
+3. ATS parseability scored
+4. **User sees diff of every change** — approve or edit inline
+
+### Step 3: Apply (the browser worker procedure)
+1. **Worker assignment**: Server picks a warm browser from the pool (`GET /cloud-executions/running` shows live workers). Warm = browser already open, not cold-start. This is why "applies in seconds."
+2. **Navigate**: Worker loads the job's apply URL
+3. **ATS detection**: URL matched against 43 patterns in `ats.js` (e.g., `*.myworkdayjobs.com` → Workday, `boards.greenhouse.io` → Greenhouse). This tells the worker which form-filling strategy to use.
+4. **Session check**: Does the worker have a logged-in session for this ATS?
+   - YES → proceed to fill
+   - NO → **Account creation flow**:
+     a. Fill registration form (name, email, password generated)
+     b. Submit → ATS sends verification email
+     c. **Gmail OTP trick**: Worker reads the user's Gmail (via `gmail.readonly`) for the verification code
+     d. Worker enters the code → account created → session saved for reuse
+   - If ATS uses SSO/OAuth → user must connect once manually (worker can't bypass)
+5. **Form filling** (per ATS strategy):
+   a. Personal info: name, email, phone, location (from profile)
+   b. Work authorization: visa status, sponsorship needs (from profile)
+   c. EEO/demographic: uses stored answers (user pre-answered once)
+   d. **Resume upload**: the tailored resume file uploaded via the file input
+   e. **Cover letter upload**: if the ATS has a cover letter field
+   f. **Open-ended questions**: "Why do you want this role?" → answered from user's background (LLM generates from profile + JD, user pre-approved templates)
+   g. **Custom fields**: per-ATS field mapping (each of the 43 ATS types has a field map)
+6. **Review gate** (unless auto-approve mode):
+   - Worker PAUSES before the final submit button
+   - User sees: every filled field, the exact resume being uploaded, the cover letter
+   - User can edit any field inline
+   - User hits Approve → worker clicks submit
+   - (Auto-approve mode: worker submits without pausing)
+7. **Submit**: Worker clicks the final submit/apply button
+8. **Receipt**: `GET /applications/{id}/trace` — field-by-field record of what was filled, what was uploaded, timestamps. "Every action produces a receipt showing exactly what was sent."
+
+### Step 4: Track
+1. Confirmation email from ATS → routed to the application via Gmail integration
+2. Status auto-updates (applied → viewed → interview, etc.)
+3. Recruiter replies routed to the right application thread
+
+### What makes it work (the load-bearing pieces)
+1. **Warm browser pool** — not cold Playwright launches. Browsers stay open.
+2. **Persistent sessions** — once logged into Workday, that session is reused. No re-login.
+3. **Gmail OTP reading** — solves the account-creation wall that kills most auto-apply tools
+4. **43 ATS field maps** — not generic form filling; per-ATS strategies
+5. **Review gate** — user trust; not a black box
+6. **Receipts** — accountability; every submit is inspectable
+7. **Refund on failure** — only successful submits count against quota
+
+### What this means for our in-app browser
+Tsenta's "in-app browser" IS their server-side worker pool. There is no client-side
+browser involved in auto-apply. The user never sees a browser window.
+
+Our vision's "inclusive browser" has two modes:
+- **Manual mode** (now): user taps apply → portal opens (new tab / WebView / Custom Tabs) → user fills the form themselves. This works today.
+- **Auto mode** (future): user taps "auto-apply" → OUR server-side worker does the Tsenta procedure above. This needs the headless infrastructure decision.
+
+They are the same browser strategy at different levels of control. The headless
+renderer pick (Vercel vs VM) IS the in-app browser decision IS the auto-apply decision.
