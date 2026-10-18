@@ -30,7 +30,12 @@ async function answer(ctx: AuthContext) {
   const meta = (user?.user_metadata || {}) as { full_name?: string; name?: string }
   const myName = String(meta.full_name || meta.name || "").trim().split(/\s+/)[0] || ""
   const words: Record<string, { subject: string; body: string }> = {}
-  for (const t of out.active) if (t.phase === "waiting" && t.contact) words[t.id] = followUpWords(t, myName)
+  for (const t of out.active) {
+    if (t.phase !== "waiting" || !t.contact) continue
+    // Prefer user-edited words when present; fall back to the generated draft.
+    const hand = state.handed.find(h => h.id === t.id)
+    words[t.id] = hand?.subject && hand?.body ? { subject: hand.subject, body: hand.body } : followUpWords(t, myName)
+  }
   // Sending for the person needs the site's daily job to be running. Said, so the switch never promises what will not happen.
   const canSendForYou = (process.env.CRON_SECRET || "").length >= 16 || (process.env.WATCHDOG_CRON_SECRET || "").length >= 32
   return { ok: true, kept: kept.kept, ...out, words, canSendForYou }
@@ -53,14 +58,18 @@ export async function POST(req: Request) {
     const ctx = await requireAuth()
     if (!isAuthContext(ctx)) return NextResponse.json({ ok: false, error: ctx.error }, { status: ctx.status })
     if (!checkRateLimit(`interview-track:${ctx.userId}`, { max: 30, windowMs: 60_000 }).ok) return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 })
-    const body = (await req.json().catch(() => ({}))) as { id?: unknown; ids?: unknown; action?: unknown }
+    const body = (await req.json().catch(() => ({}))) as { id?: unknown; ids?: unknown; action?: unknown; subject?: unknown; body?: unknown }
     const action = String(body.action || "")
     // One interview, or several at once ("they are all over") for marking only.
     const ids = (Array.isArray(body.ids) ? body.ids : [body.id]).map(v => String(v || "").slice(0, 300)).filter(Boolean).slice(0, 60)
     if (!ids.length || !ACTIONS.has(action) || (ids.length > 1 && action !== "completed" && action !== "rejected")) return NextResponse.json({ ok: false, error: "Choose an interview and what to do with it." }, { status: 400 })
+    // Custom words for send_for_me (user-edited draft)
+    const customWords = action === "send_for_me" && typeof body.subject === "string" && typeof body.body === "string"
+      ? { subject: body.subject.slice(0, 200), body: body.body.slice(0, 2000) }
+      : undefined
     let state = await readTrackState(ctx.userId)
     const now = Date.now()
-    for (const id of ids) state = decide(state, id, action as Parameters<typeof decide>[2], now)
+    for (const id of ids) state = decide(state, id, action as Parameters<typeof decide>[2], now, customWords)
     await writeTrackState(ctx.userId, state)
     return NextResponse.json(await answer(ctx), PRIVATE)
   } catch (err) {

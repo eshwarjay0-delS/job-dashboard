@@ -41,7 +41,9 @@ export async function sendInterviewFollowUps(userId: string, myName: string, now
     const account = accounts.find(a => a.google_email.toLowerCase() === t.account && a.gmail_enabled)
     const token = account ? await getGoogleWorkspaceAccessToken(userId, account.id) : null
     if (!token || !t.contact) { failed++; continue }
-    const words = followUpWords(t, myName)
+    // Prefer user-edited words when present; fall back to the generated draft.
+    const hand = state.handed.find(h => h.id === t.id)
+    const words = hand?.subject && hand?.body ? { subject: hand.subject, body: hand.body } : followUpWords(t, myName)
     // Written down first: if the send then fails it is not tried again today, and it can never go twice.
     state = noteSent(state, t.id, now)
     await writeTrackState(userId, state)

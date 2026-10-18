@@ -31,6 +31,9 @@ export default function InterviewBoard() {
   const [error, setError] = useState("")
   const [busy, setBusy] = useState("")
   const [asking, setAsking] = useState("")       // the interview whose "send for me" words are being shown
+  const [editing, setEditing] = useState("")   // the interview whose draft is being edited
+  const [editSubject, setEditSubject] = useState("")
+  const [editBody, setEditBody] = useState("")
   const [showPast, setShowPast] = useState(false)
   const [showOld, setShowOld] = useState(false)
 
@@ -40,14 +43,23 @@ export default function InterviewBoard() {
   }, [])
   useEffect(() => { queueMicrotask(load) }, [load])
 
-  const choose = async (id: string | string[], action: "rejected" | "completed" | "reopen" | "send_for_me" | "stop_sending") => {
+  const choose = async (id: string | string[], action: "rejected" | "completed" | "reopen" | "send_for_me" | "stop_sending", customWords?: { subject: string; body: string }) => {
     if (busy) return
     setBusy(`${action}:${Array.isArray(id) ? "all" : id}`)
     try {
-      const r = await fetch("/api/gmail/interview-track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Array.isArray(id) ? { ids: id, action } : { id, action }) })
+      const payload: Record<string, unknown> = Array.isArray(id) ? { ids: id, action } : { id, action }
+      if (customWords && action === "send_for_me") { payload.subject = customWords.subject; payload.body = customWords.body }
+      const r = await fetch("/api/gmail/interview-track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
       take(await r.json())
       setAsking("")
+      setEditing("")
     } catch { setError("That could not be saved just now.") } finally { setBusy("") }
+  }
+
+  const startEdit = (id: string, subject: string, body: string) => {
+    setEditing(id)
+    setEditSubject(subject)
+    setEditBody(body)
   }
 
   if (error && !data) return <p role="status" style={{ fontSize: 14, color: "var(--text-muted)", margin: "0 0 20px" }}>{error}</p>
@@ -104,13 +116,37 @@ export default function InterviewBoard() {
               {asking === t.id && words && (
                 <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 12, border: "1px solid var(--border-strong)", background: "var(--surface-2)" }}>
                   <p style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 650 }}>This is what I will send to {name}, once a week, from {t.account}:</p>
-                  <p style={{ margin: "0 0 4px", ...muted }}>Subject: {words.subject}</p>
-                  <p style={{ margin: "0 0 10px", fontSize: 14.5, lineHeight: 1.6, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{words.body}</p>
+                  {editing === t.id ? (
+                    <>
+                      <label style={{ display: "block", margin: "0 0 8px", fontSize: 13, color: "var(--text-muted)" }}>Subject
+                        <input value={editSubject} onChange={e => setEditSubject(e.target.value)} maxLength={200}
+                          style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", fontSize: 14, borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)" }} />
+                      </label>
+                      <label style={{ display: "block", margin: "0 0 10px", fontSize: 13, color: "var(--text-muted)" }}>Message
+                        <textarea value={editBody} onChange={e => setEditBody(e.target.value)} maxLength={2000} rows={8}
+                          style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", fontSize: 14, lineHeight: 1.6, borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", resize: "vertical" }} />
+                      </label>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button type="button" className="btn-outline" onClick={() => setEditing("")} style={big}>Cancel edit</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ margin: "0 0 4px", ...muted }}>Subject: {words.subject}</p>
+                      <p style={{ margin: "0 0 10px", fontSize: 14.5, lineHeight: 1.6, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{words.body}</p>
+                    </>
+                  )}
                   <p style={{ ...muted, margin: "0 0 10px" }}>It stops by itself when {name} answers, when you mark this finished, or after four. You can stop it at any time.</p>
                   {data.canSendForYou ? (
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button type="button" className="btn-accent" disabled={!!busy} onClick={() => { void choose(t.id, "send_for_me") }} style={big}>{busy === `send_for_me:${t.id}` ? "Saving…" : "Yes, send it for me every week"}</button>
-                      <button type="button" className="btn-outline" onClick={() => setAsking("")} style={big}>No, I will do it myself</button>
+                      <button type="button" className="btn-accent" disabled={!!busy}
+                        onClick={() => { void choose(t.id, "send_for_me", editing === t.id ? { subject: editSubject, body: editBody } : undefined) }} style={big}>
+                        {busy === `send_for_me:${t.id}` ? "Saving…" : editing === t.id ? "Yes, send my edited version every week" : "Yes, send it for me every week"}
+                      </button>
+                      {editing !== t.id && (
+                        <button type="button" className="btn-outline" onClick={() => startEdit(t.id, words.subject, words.body)} style={big}>Edit</button>
+                      )}
+                      <button type="button" className="btn-outline" onClick={() => { setAsking(""); setEditing("") }} style={big}>No, I will do it myself</button>
                     </div>
                   ) : <p style={{ margin: 0, fontSize: 14 }}>I cannot send for you yet: this site&apos;s daily job is not switched on. You can still follow up yourself with the button above.</p>}
                 </div>

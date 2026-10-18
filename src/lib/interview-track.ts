@@ -33,7 +33,7 @@ export const OLD_AFTER_DAYS = 35
 
 export type Outcome = "rejected" | "completed"
 export type Mark = { id: string; outcome: Outcome; at: number }
-export type Handed = { id: string; on: boolean; at: number; sent: number[] }
+export type Handed = { id: string; on: boolean; at: number; sent: number[]; subject?: string; body?: string }
 export type TrackState = { marks: Mark[]; handed: Handed[] }
 export const emptyState = (): TrackState => ({ marks: [], handed: [] })
 
@@ -75,12 +75,12 @@ export function validState(raw: unknown): TrackState {
 }
 
 /** The state after one choice of the person's. Marking an outcome also ends anything being sent for them. */
-export function decide(state: TrackState, id: string, action: "rejected" | "completed" | "reopen" | "send_for_me" | "stop_sending", now: number): TrackState {
+export function decide(state: TrackState, id: string, action: "rejected" | "completed" | "reopen" | "send_for_me" | "stop_sending", now: number, words?: { subject: string; body: string }): TrackState {
   const marks = state.marks.filter(m => m.id !== id), handed = state.handed.filter(h => h.id !== id)
   const had = state.handed.find(h => h.id === id)
   if (action === "rejected" || action === "completed") return { marks: [...marks, { id, outcome: action, at: now }], handed: had ? [...handed, { ...had, on: false }] : handed }
   if (action === "reopen") return { marks, handed: state.handed }
-  if (action === "send_for_me") return { marks: state.marks, handed: [...handed, { id, on: true, at: now, sent: had?.sent || [] }] }
+  if (action === "send_for_me") return { marks: state.marks, handed: [...handed, { id, on: true, at: now, sent: had?.sent || [], ...(words ? { subject: words.subject.slice(0, 200), body: words.body.slice(0, 2000) } : {}) }] }
   return { marks: state.marks, handed: had ? [...handed, { ...had, on: false }] : handed }
 }
 export const noteSent = (state: TrackState, id: string, now: number): TrackState => ({ marks: state.marks, handed: state.handed.map(h => (h.id === id ? { ...h, sent: [...h.sent, now] } : h)) })
