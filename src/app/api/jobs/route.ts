@@ -209,6 +209,64 @@ async function fetchArbeitnow(q: string, type: string): Promise<Job[]> {
   } catch { return [] }
 }
 
+// ─── Source: Greenhouse ATS API (free, no key) ─────────────────────────────
+// This is an ORIGINAL source that Jobright/Tsenta aggregate from — company
+// career pages powered by Greenhouse. We query them directly instead of
+// going through a middleman. Board names are lowercase company slugs.
+const GREENHOUSE_BOARDS = [
+  "datadog", "airbnb", "lyft", "stripe", "coinbase", "robinhood",
+  "snowflake", "palantir", "crowdstrike", "sentinelone", "okta",
+  "cloudflare", "akamai", "proofpoint", "rapid7", "tenable",
+  "splunk", "elastic", "hashicorp", "gitlab", "github",
+  "atlassian", "slack", "zoom", "dropbox", "box",
+]
+
+async function fetchGreenhouse(q: string, type: string): Promise<Job[]> {
+  const jobs: Job[] = []
+  // Query a subset per search to stay fast; rotate through the list
+  const boards = GREENHOUSE_BOARDS.slice(0, 12)
+  const results = await Promise.all(boards.map(async (board) => {
+    try {
+      const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${board}/jobs?content=false`, {
+        next: { revalidate: 3600 },
+        signal: AbortSignal.timeout(10000),
+        headers: { "User-Agent": "MarketFit/1.0" },
+      })
+      if (!res.ok) return []
+      const data = await res.json()
+      const out: Job[] = []
+      for (const j of data.jobs || []) {
+        const title = String(j.title || "")
+        const loc = j.location ? String(j.location.name || "") : ""
+        // Filter for security roles and contract types
+        const isSecurity = /secur|soc|vuln|pen.?test|incident|threat|compliance|risk|privacy|iam|identity/i.test(title)
+        const titleLower = title.toLowerCase()
+        const isContract = /contract|contractor|temporary|temp\b/.test(titleLower)
+        if (type === "contract" && !isContract && !isSecurity) continue
+        if (!isSecurity && !matchesQuery(q, title, "", "")) continue
+        if (!matchesQuery(q, title, loc, "")) continue
+        out.push({
+          id: `gh-${board}-${j.id}`,
+          title: title.slice(0, 200),
+          company: String(j.company_name || board).slice(0, 160),
+          location: loc.slice(0, 160),
+          remote: /remote/i.test(loc),
+          salary: null,
+          posted: String(j.first_published || j.updated_at || ""),
+          description: "",
+          workAuth: [],
+          url: String(j.absolute_url || ""),
+          source: "greenhouse",
+          contractTypes: isContract ? ["Contract"] : [],
+        })
+      }
+      return out
+    } catch { return [] }
+  }))
+  for (const r of results) jobs.push(...r)
+  return jobs.slice(0, 40)
+}
+
 // ─── Source: Jobright.ai (TEMPORARY BRIDGE — not the product direction) ──────
 // Owner correction 2026-10-17: we build a Jobright competitor, not a Jobright
 // client. Jobright aggregates from original postings but their API only links
@@ -761,7 +819,7 @@ export async function GET(request: NextRequest) {
   const usajobsKey = request.headers.get("x-usajobs-api-key") || process.env.USAJOBS_API_KEY || null
 
   // Pull all live sources in parallel
-  const [jsearch, infosec, usajobs, interns, jobright] = await Promise.all([
+  const [jsearch, infosec, usajobs, interns, jobright, remotive, arbeitnow, greenhouse] = await Promise.all([
     fetchJSearch(q, loc, remote, type, rapidKey),    // LinkedIn + Indeed + Glassdoor
     fetchInfosecjobs(q),                              // Infosecjobs.com — cyber-specific
     fetchUSAJobs(q, remote, usajobsKey),              // USAJobs.gov — federal roles
@@ -769,13 +827,14 @@ export async function GET(request: NextRequest) {
     fetchJobright(q, loc, type),                      // Jobright.ai — contract/cyber via Next.js data route
     fetchRemotive(q, type),                           // Remotive — free remote-jobs API
     fetchArbeitnow(q, type),                          // Arbeitnow — free job-board API
+    fetchGreenhouse(q, type),                         // Greenhouse ATS — direct company career pages (original source)
   ])
 
   // Merge; de-dupe on normalized company+title
   const seen = new Set<string>()
   const merged: Job[] = []
-  // Priority: JSearch (LinkedIn/Indeed/Glassdoor) → Jobright → Infosecjobs → USAJobs → Handshake interns
-  for (const j of [...jsearch, ...jobright, ...infosec, ...usajobs, ...interns]) {
+  // Priority: JSearch (LinkedIn/Indeed/Glassdoor) → Jobright → Infosecjobs → USAJobs → Handshake interns → Greenhouse → Remotive → Arbeitnow
+  for (const j of [...jsearch, ...jobright, ...infosec, ...usajobs, ...interns, ...greenhouse, ...remotive, ...arbeitnow]) {
     if (!applicationUrl(j.url)) continue
     j.contractTypes ||= contractTypes(j.title + " " + j.description)
     if (type === "contract" && !j.contractTypes.length) continue
