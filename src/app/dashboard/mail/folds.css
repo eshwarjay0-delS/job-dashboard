@@ -39,3 +39,17 @@
 .mf-automation-confirm p { margin: 0 0 12px; font-size: 14px; color: var(--text); }
 .mf-automation-actions { display: flex; gap: 8px; }
 .mf-automation-message { margin-top: 10px; font-size: 13.5px; color: var(--text-muted); }
+
+/* ── Mobile: list → detail navigation ──────────────────────────────────── */
+@media(max-width:800px){
+  /* When a thread is open, hide the list; show only the detail */
+  .mf-mail-folds.mf-detail-open .mf-mail-list{display:none}
+  /* Back button (visible only on mobile when detail is open) */
+  .mf-mail-back{display:none}
+  .mf-mail-folds.mf-detail-open .mf-mail-back{
+    display:inline-flex;align-items:center;gap:6px;
+    margin-bottom:12px;padding:8px 14px;font-size:14px;
+    border:1px solid var(--border);border-radius:10px;
+    background:var(--surface);color:var(--text);cursor:pointer;
+  }
+}

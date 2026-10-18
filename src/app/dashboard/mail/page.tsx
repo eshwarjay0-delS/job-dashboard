@@ -472,7 +472,7 @@ export default function MailPage() {
               ))}
             </div>
           ) : (
-            <div className="mf-mail-folds">
+            <div className={`mf-mail-folds${m ? " mf-detail-open" : ""}`}>
               <div className="mf-mail-fold mf-mail-list">
                 {shown.map(x => (
                   <div key={`${x.account}:${x.id}`} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
@@ -531,6 +531,7 @@ export default function MailPage() {
                 </div>
               </div>
 
+              {m && <button type="button" className="mf-mail-back" onClick={() => { setSel(null); setSelectedInbox("") }} aria-label="Back to inbox">← Back</button>}
               {m && <FoldedConversation key={`${m.account}:${m.id}`} mail={m} tint={acct(m.account).tint} restored={restored.includes(m.id)} onSent={()=>approve(m.id)} />}
 
             </div>
