@@ -47,3 +47,10 @@ transcribes, detects questions, generates answers on a desktop overlay.
 - [ ] Design "meeting window" mode — dedicated session overlay during calls
 - [ ] Test mobile web Kompas session end-to-end
 - [ ] Voice dictation: continuous calibration from our 9/10 bar
+
+## Session-Timeout Audit (2026-10-18)
+**Result: PASS — no auto-timeout in Kompas.**
+- Session is a data structure (`startSession` in kompasTranscript.ts) with no expiry field
+- Credits route is balance-check only; "1 session = 1 pt, 1 hour" is accounting, not a cutoff
+- Recorder cleanup on unmount is component lifecycle, not session timeout
+- **Rule locked:** Kompas sessions stay alive until the USER stops them. No idle timeout, ever.

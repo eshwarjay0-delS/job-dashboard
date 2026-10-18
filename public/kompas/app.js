@@ -1684,7 +1684,16 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const ctx = nextContext(card, writeAnchor);
   const retrieved = retrieve(derivedQ || plainHeard, consolidated ? 5 : 4);
   const prep = { ...slimPrep(), questions: retrieved.length ? [] : ((current && current.prep && current.prep.questions) || []).slice(0, 30) };
-  const show = (t) => { if (card.req !== ctl || isUnavailableAnswer({ degraded: true }, t)) return; card.answer = t.trim() ? t : ["…"]; if (cards[idx] === card) renderCard(); };
+  // Smooth streaming: throttle renders to animation frames instead of
+  // re-rendering the full card DOM on every token (was causing visible jank).
+  let renderQueued = false;
+  const show = (t) => {
+    if (card.req !== ctl || isUnavailableAnswer({ degraded: true }, t)) return;
+    card.answer = t.trim() ? t : ["…"];
+    if (cards[idx] !== card || renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => { renderQueued = false; if (cards[idx] === card) renderCard(); });
+  };
   const recoverAnswer = (code = "", retryAfterMs = 1000) => {
     card.streaming = false;
     card.answer = keepOld ? prevAnswer : [];
