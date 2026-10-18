@@ -14,9 +14,10 @@ A centralized place where a normal user searches **contract jobs** across every 
 ## Core principles
 
 1. **Contract jobs only.** W2, C2C, 1099, C2H — any contract shape (temporary, long-term, contract-to-hire). No full-time perm roles. This focus is the product's identity.
-2. **Centralized search, decentralized apply.** We aggregate everything; the actual application happens on the vendor's own portal. We never fake an application.
-3. **The user owns every application.** Nothing applies, submits, or sends without the user's explicit action — until they opt into automation (pillar 4).
-4. **Double-submit guardrail everywhere.** Before any apply, check the user's submission tracker: two filings on one req = disqualification. Warn, don't block.
+2. **We ARE the aggregator, not a client of one.** Owner directive 2026-10-17: reverse-engineering Jobright/Tsenta means learning *how* they aggregate and apply — then doing it ourselves. We never link users to a middleman's job page; we host the listing and the apply flow on MarketFit. Third-party APIs are temporary scaffolding, never the product.
+3. **Centralized search, decentralized apply.** We aggregate everything; the actual application happens on the vendor's own portal. We never fake an application.
+4. **The user owns every application.** Nothing applies, submits, or sends without the user's explicit action — until they opt into automation (pillar 4).
+5. **Double-submit guardrail everywhere.** Before any apply, check the user's submission tracker: two filings on one req = disqualification. Warn, don't block.
 
 ## The four pillars
 

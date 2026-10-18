@@ -136,10 +136,14 @@ async function fetchInfosecjobs(q: string): Promise<Job[]> {
   } catch { return [] }
 }
 
-// ─── Source: Jobright.ai (contract/cyber roles via Next.js data route) ───────
-// REA recon 2026-10-17: no public REST API, but the Next.js hydration endpoint
-// is publicly accessible with no auth. Polite use: buildId cached 1h, 1s gaps,
-// max 2 slugs per search, source attributed, links carry their utm_source.
+// ─── Source: Jobright.ai (TEMPORARY BRIDGE — not the product direction) ──────
+// Owner correction 2026-10-17: we build a Jobright competitor, not a Jobright
+// client. Jobright aggregates from original postings but their API only links
+// back to jobright.ai (no original URLs verified). This unblocks the empty
+// Apply tab; the real product is our own crawler index + our own apply flow.
+// Do not deepen dependence here; invest in the crawler instead.
+// REA recon 2026-10-17: Next.js hydration endpoint, no auth. Polite: buildId
+// cached 1h, 1s gaps, max 3 slugs, source attributed.
 let jobrightBuildId = ""
 let jobrightBuildIdAt = 0
 async function jobrightBuildIdCached(): Promise<string> {
