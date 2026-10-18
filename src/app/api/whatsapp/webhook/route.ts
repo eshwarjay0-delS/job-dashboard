@@ -347,19 +347,30 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (result.quality?.status === "needs_review") {
     await recordWhatsAppUsage(userId, "resume_tailor", result)
     const missing = result.quality?.missing || []
-    // Categorize: which gaps are unfillable (certs/platforms the user doesn't have)
-    // vs fillable (poor keyword placement that better writing could fix).
-    const CERTS = /\b(ccsp|cism|crisc|cisa|cissp|oscp|ceh|gsec|gcfa|gcia|security\+|pmp|pmi|itil|cobit)\b/i
-    const unfillable = missing.filter(t => CERTS.test(t))
-    const fillable = missing.filter(t => !CERTS.test(t))
-    let msg = `The rewrite reached ${result.quality ? Math.round(result.quality.matched / result.quality.total * 100) : 0}% coverage, below the 95% floor. I have held the file.`
-    if (unfillable.length) {
-      msg += ` These JD requirements aren't on your resume and I can't invent them: ${unfillable.slice(0, 8).join(", ")}.`
+    const q = result.quality
+    const pct = q && q.total ? (q.matched / q.total * 100) : 0
+    // Categorize: unfillable = certs OR tech platforms/products the user doesn't have.
+    // These are JD requirements, not wording the tailor failed to write.
+    const UNFILLABLE = /\b(ccsp|cism|crisc|cisa|cissp|oscp|ceh|gsec|gcfa|gcia|security\+|pmp|pmi|itil|cobit|hyperledger|besu|canton|solana|ethereum|blockchain|solidity|web3|defi)\b/i
+    const unfillable = missing.filter(t => UNFILLABLE.test(t))
+    const fillable = missing.filter(t => !UNFILLABLE.test(t))
+    // If the ONLY gaps are unfillable requirements (not poor writing), deliver the
+    // best honest resume — the tailor did its job; the gap is in qualifications.
+    // Only hold the file when the tailor itself failed to close wording gaps.
+    if (unfillable.length > 0 && fillable.length === 0 && pct >= 85) {
+      // Fall through to delivery with a clear note about the qualification gap.
+      result.quality = { ...q, status: "delivered_with_gaps" as const,
+        missing: [`Qualification gaps (not on your resume): ${unfillable.slice(0, 6).join(", ")}`] }
+    } else {
+      let msg = `The rewrite reached ${pct.toFixed(1)}% coverage, below the 95% floor. I have held the file.`
+      if (unfillable.length) {
+        msg += ` These JD requirements aren't on your resume and I can't invent them: ${unfillable.slice(0, 8).join(", ")}.`
+      }
+      if (fillable.length) {
+        msg += ` Wording gaps I should have closed: ${fillable.slice(0, 8).join(", ")}.`
+      }
+      return sendText(from, msg)
     }
-    if (fillable.length) {
-      msg += ` Wording gaps I should have closed: ${fillable.slice(0, 8).join(", ")}.`
-    }
-    return sendText(from, msg)
   }
   // 95-97%: deliver with gaps noted so the user gets a usable resume, not nothing.
   const gapsNote = result.quality?.status === "delivered_with_gaps"
