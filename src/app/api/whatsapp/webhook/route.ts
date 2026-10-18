@@ -349,6 +349,11 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     const missing = result.quality?.missing || []
     const q = result.quality
     const pct = q && q.total ? (q.matched / q.total * 100) : 0
+    // If coverage is actually >= 95% but status is needs_review, the real reason
+    // is partial (incomplete draft) or unchanged — NOT coverage. Be honest.
+    if (pct >= 95) {
+      return sendText(from, `The rewrite hit ${pct.toFixed(1)}% keyword coverage but the draft came back incomplete (some sections didn't finish rewriting). I have held the file rather than send you a half-done resume. Please resend the JD and resume to retry.`)
+    }
     // Categorize: unfillable = certs OR tech platforms/products the user doesn't have.
     // These are JD requirements, not wording the tailor failed to write.
     const UNFILLABLE = /\b(ccsp|cism|crisc|cisa|cissp|oscp|ceh|gsec|gcfa|gcia|security\+|pmp|pmi|itil|cobit|hyperledger|besu|canton|solana|ethereum|blockchain|solidity|web3|defi)\b/i
