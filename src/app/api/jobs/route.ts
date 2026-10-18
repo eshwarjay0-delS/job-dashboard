@@ -216,9 +216,9 @@ async function fetchArbeitnow(q: string, type: string): Promise<Job[]> {
 const GREENHOUSE_BOARDS = [
   "datadog", "airbnb", "lyft", "stripe", "coinbase", "robinhood",
   "snowflake", "palantir", "crowdstrike", "sentinelone", "okta",
-  "cloudflare", "akamai", "proofpoint", "rapid7", "tenable",
-  "splunk", "elastic", "hashicorp", "gitlab", "github",
-  "atlassian", "slack", "zoom", "dropbox", "box",
+  "cloudflare", "zscaler", "elastic", "twilio", "newrelic",
+  "pagerduty", "fastly", "onetrust", "pingidentity", "knowbe4",
+  "hashicorp", "gitlab", "atlassian", "dropbox", "box",
 ]
 
 async function fetchGreenhouse(q: string, type: string): Promise<Job[]> {
@@ -265,6 +265,56 @@ async function fetchGreenhouse(q: string, type: string): Promise<Job[]> {
   }))
   for (const r of results) jobs.push(...r)
   return jobs.slice(0, 40)
+}
+
+// ─── Source: Ashby ATS API (free, no key) ─────────────────────────────────
+// Another ORIGINAL source — company career pages powered by Ashby. Same
+// principle as Greenhouse: query them directly, not through a middleman.
+const ASHBY_BOARDS = [
+  "ashby", "linear", "notion", "figma", "ramp", "deel",
+  "brex", "retention", "calendly", "webflow", "zapier",
+]
+
+async function fetchAshby(q: string, type: string): Promise<Job[]> {
+  const jobs: Job[] = []
+  const results = await Promise.all(ASHBY_BOARDS.slice(0, 8).map(async (board) => {
+    try {
+      const res = await fetch(`https://api.ashbyhq.com/posting-api/job-board/${board}`, {
+        next: { revalidate: 3600 },
+        signal: AbortSignal.timeout(10000),
+        headers: { "User-Agent": "MarketFit/1.0" },
+      })
+      if (!res.ok) return []
+      const data = await res.json()
+      const out: Job[] = []
+      for (const j of data.jobs || []) {
+        const title = String(j.title || "")
+        const loc = String(j.locationName || "")
+        const isSecurity = /secur|soc|vuln|pen.?test|incident|threat|compliance|risk|privacy|iam|identity/i.test(title)
+        const titleLower = title.toLowerCase()
+        const isContract = /contract|contractor|temporary|temp\b/.test(titleLower)
+        if (type === "contract" && !isContract && !isSecurity) continue
+        if (!matchesQuery(q, title, loc, "")) continue
+        out.push({
+          id: `ashby-${board}-${j.id}`,
+          title: title.slice(0, 200),
+          company: String(j.companyName || board).slice(0, 160),
+          location: loc.slice(0, 160),
+          remote: /remote/i.test(loc),
+          salary: j.compensationTierSummary ? String(j.compensationTierSummary).slice(0, 80) : null,
+          posted: String(j.publishedAt || ""),
+          description: "",
+          workAuth: [],
+          url: String(j.jobUrl || ""),
+          source: "ashby",
+          contractTypes: isContract ? ["Contract"] : [],
+        })
+      }
+      return out
+    } catch { return [] }
+  }))
+  for (const r of results) jobs.push(...r)
+  return jobs.slice(0, 30)
 }
 
 // ─── Source: Jobright.ai (TEMPORARY BRIDGE — not the product direction) ──────
@@ -819,7 +869,7 @@ export async function GET(request: NextRequest) {
   const usajobsKey = request.headers.get("x-usajobs-api-key") || process.env.USAJOBS_API_KEY || null
 
   // Pull all live sources in parallel
-  const [jsearch, infosec, usajobs, interns, jobright, remotive, arbeitnow, greenhouse] = await Promise.all([
+  const [jsearch, infosec, usajobs, interns, jobright, remotive, arbeitnow, greenhouse, ashby] = await Promise.all([
     fetchJSearch(q, loc, remote, type, rapidKey),    // LinkedIn + Indeed + Glassdoor
     fetchInfosecjobs(q),                              // Infosecjobs.com — cyber-specific
     fetchUSAJobs(q, remote, usajobsKey),              // USAJobs.gov — federal roles
@@ -828,13 +878,14 @@ export async function GET(request: NextRequest) {
     fetchRemotive(q, type),                           // Remotive — free remote-jobs API
     fetchArbeitnow(q, type),                          // Arbeitnow — free job-board API
     fetchGreenhouse(q, type),                         // Greenhouse ATS — direct company career pages (original source)
+    fetchAshby(q, type),                              // Ashby ATS — direct company career pages (original source)
   ])
 
   // Merge; de-dupe on normalized company+title
   const seen = new Set<string>()
   const merged: Job[] = []
-  // Priority: JSearch (LinkedIn/Indeed/Glassdoor) → Jobright → Infosecjobs → USAJobs → Handshake interns → Greenhouse → Remotive → Arbeitnow
-  for (const j of [...jsearch, ...jobright, ...infosec, ...usajobs, ...interns, ...greenhouse, ...remotive, ...arbeitnow]) {
+  // Priority: JSearch (LinkedIn/Indeed/Glassdoor) → Jobright → Infosecjobs → USAJobs → Handshake interns → Greenhouse → Ashby → Remotive → Arbeitnow
+  for (const j of [...jsearch, ...jobright, ...infosec, ...usajobs, ...interns, ...greenhouse, ...ashby, ...remotive, ...arbeitnow]) {
     if (!applicationUrl(j.url)) continue
     j.contractTypes ||= contractTypes(j.title + " " + j.description)
     if (type === "contract" && !j.contractTypes.length) continue
