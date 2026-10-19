@@ -11,7 +11,8 @@
 // mailto; a picture is shown as a link to it, never fetched. No file here uses JSX, so a test can run it as it is.
 
 import { createElement as h, Fragment, memo, useMemo, type CSSProperties, type ReactNode } from "react"
-import { marked, type Token } from "marked"
+import { marked } from "marked"
+import type { Token } from "marked"
 
 const SAFE_LINK = /^(?:https?:\/\/|mailto:)/i
 const MONO = "var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)"
