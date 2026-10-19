@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import PageIntro from "../../_components/page-intro"
 import { VENDOR_PORTALS } from "@/lib/vendorPortals"
-import { detectAts } from "@/lib/ats-fingerprints"
+import { detectAts, automationPath } from "@/lib/ats-fingerprints"
 
 type Filter = "all" | "cyber" | "core" | "portal" | "large"
 
@@ -164,6 +164,20 @@ export default function ApplyPage() {
                   {detectAts(v.url).toUpperCase()}
                 </span>
               )}
+              {v.url && (() => {
+                const path = automationPath(v.url)
+                const label = path === "ats-direct" ? "⚡ Auto-fill ready" : path === "portal-custom" ? "🔧 Custom form" : "✋ Manual apply"
+                const title = path === "ats-direct"
+                  ? "This portal runs on a known ATS — our bookmarklet can auto-fill your profile"
+                  : path === "portal-custom"
+                    ? "Custom portal form — bookmarklet may partially fill"
+                    : "Manual apply — open the portal and apply directly"
+                return (
+                  <span title={title} style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: path === "ats-direct" ? "var(--accent-soft)" : "var(--bg)", border: "1px solid var(--border)", color: path === "ats-direct" ? "var(--accent)" : "var(--text-muted)" }}>
+                    {label}
+                  </span>
+                )
+              })()}
             </div>
             <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>
               {v.hq}{v.hq && v.size ? " · " : ""}{v.size}
