@@ -770,3 +770,28 @@ export async function matchByKeywords(jd: string, gcRemoteOverride?: boolean, di
   ranked.sort((a, b) => (b.score - a.score) || (b.matchedOn.length - a.matchedOn.length))
   return { best: ranked[0], ranked, jdKeywords }
 }
+
+/** Named-credential extraction: pull the candidate's actual certifications from resume text.
+ *  Returns structured cert names (CISSP, OSCP, etc.) found in the resume. These are the
+ *  candidate's REAL credentials — used to distinguish "has cert" from "JD requires cert". */
+const KNOWN_CERTS = [
+  "CISSP", "CCSP", "CISM", "CRISC", "CISA", "OSCP", "CEH", "CPT", "Pentest+",
+  "CySA+", "Security+", "Network+", "CASP+", "CASP", "GSEC", "GCIH", "GCIA",
+  "Azure Security Engineer Associate", "AZ-500", "AWS Certified Security",
+  "CISSP-ISSAP", "CISSP-ISSEP", "SSCP", "CCSK", "CompTIA"
+]
+
+export function extractCredentials(resumeText: string): string[] {
+  const found = new Set<string>()
+  for (const cert of KNOWN_CERTS) {
+    // Match whole cert name with word boundaries; handle + in names like "Pentest+"
+    const escaped = cert.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    const pattern = new RegExp(`\\b${escaped}\\b`, "i")
+    if (pattern.test(resumeText)) {
+      // Normalize to canonical form
+      const canonical = KNOWN_CERTS.find(c => c.toLowerCase() === cert.toLowerCase()) || cert
+      found.add(canonical)
+    }
+  }
+  return [...found].sort()
+}
