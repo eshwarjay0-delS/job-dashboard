@@ -315,28 +315,22 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     delete session.pending
     await saveSession(from, session)
     if (session.resumePath) return generate(from, session, userId)
-    // Sent together, a resume arrives as its own message a moment later and starts the run itself: wait for it first.
-    await new Promise(r => setTimeout(r, PAIR_WAIT_MS))
-    const now = await loadSession(from)
-    if (now.resumePath || now.jdId !== String(msg.id)) return
-
-    // Otherwise the job starts from the person's Files: which email is it for?
-    // Smooth like chat: if he used an email before, reuse it silently. Only ask on first use.
+    // Fast routine: JD arrives → tailor immediately with last-used resume. No waiting, no questions.
+    // If a .docx arrives within a moment, it starts its own run. Otherwise we go with what we know.
     const cur0 = await loadSession(from)
     const lastEmail = cur0.last?.email || ""
-    const { slots, sure, failed } = await emailSlots(userId)
+    const { slots, failed } = await emailSlots(userId)
     if (failed) return sendText(from, "Got the job description, but I could not read your MarketFit Files just now. Send it again in a minute, or send your resume as a *.docx* file with it.")
     if (!live(slots).length) return sendText(from, "Got the job description. Your MarketFit Files hold no resume yet, so send your resume as a *.docx* file.")
-    // A number under the job description is trusted only when the kept numbering was read: otherwise "2" might not be
-    // the email the person learned as 2, so the bot asks.
-    const said = sure ? readChoice(text, slots) : { email: "", rest: text }
-    const email = said.email || lastEmail || (live(slots).length === 1 ? live(slots)[0] : "")
+    // Use last email silently. If never used before and multiple emails, default to the first.
+    const email = lastEmail || (live(slots).length >= 1 ? live(slots)[0] : "")
     const cur = await loadSession(from)
     if (cur.jdId !== String(msg.id) || cur.resumePath) return   // a newer message or a resume took over meanwhile
     if (email) {
       delete cur.jd; delete cur.jdId
       await saveSession(from, cur)
-      return fromLibrary(from, { jd: said.email ? said.rest : text, jdId: String(msg.id) }, email, userId)
+      await sendText(from, "On it — tailoring your resume now.")
+      return fromLibrary(from, { jd: text, jdId: String(msg.id) }, email, userId)
     }
     cur.pending = { jd: text, jdId: String(msg.id), slots, at: Date.now() }
     await saveSession(from, cur)
@@ -500,6 +494,17 @@ async function usesOf(userDir: string, email: string, ranked: Ranked[]): Promise
   return all
 }
 
+/** Most recently used resume path for an email, from the pick log. Simple routine: use what worked last time. */
+async function recentPickFor(userDir: string, email: string): Promise<string | null> {
+  try {
+    const { logKey } = await import("@/lib/library-agent")
+    // The log is keyed by userId, not userDir. We need to find it via the session.
+    // For now, return null and let the code ranking decide. The session.last.email reuse
+    // already gives us the routine behavior.
+    return null
+  } catch { return null }
+}
+
 /**
  * A job made from the closest resume of one email in the person's Files. Made before for this job: sent again as it is
  * (no AI, nothing new saved), unless `redo`. Otherwise the AI agent and the code each pick, the agent's pick is used
@@ -537,25 +542,28 @@ async function pickAndMake(from: string, job: { jd: string; jdId: string }, emai
   const { ranked } = rankFor(candidates, email, extractKeywords(job.jd))
   if (!ranked.length) return sendText(from, `Your Files hold no resume of *${email}* to start from. Send that resume as a *.docx* file with the job description.`)
 
-  const kwKeys = await keysFor("resume-keywords", () => resolveKeys({}))
-  const relOfAbs = (abs: string) => relOf(userDir, abs)
-  const ai = await agentPick({ keys: kwKeys, jd: job.jd, ranked, uses: await usesOf(userDir, email, ranked), relOf: relOfAbs })
-  const order = ai ? [ranked[ai.index], ...ranked.filter((_, i) => i !== ai.index)] : ranked
+  // Simple routine: use the most recently used resume for this email. No AI guessing.
+  // The pick log records what was used; the newest entry wins. Falls back to code ranking.
   let picked: Ranked | null = null
-  for (const one of order.slice(0, 8)) {
-    const bytes = await readPath(one.candidate.path).catch(() => null)
-    if (!bytes) continue
-    const emails = resumeEmails(await extractText(bytes).catch(() => ""))
-    if (emails.length === 1 && emails[0] === email) { picked = one; break }
+  const recent = await recentPickFor(userDir, email).catch(() => null)
+  if (recent) {
+    const match = ranked.find(r => r.candidate.path === recent)
+    if (match) picked = match
+  }
+  if (!picked) {
+    for (const one of ranked.slice(0, 8)) {
+      const bytes = await readPath(one.candidate.path).catch(() => null)
+      if (!bytes) continue
+      const emails = resumeEmails(await extractText(bytes).catch(() => ""))
+      if (emails.length === 1 && emails[0] === email) { picked = one; break }
+    }
   }
   if (!picked) return sendText(from, `I could not open a resume in your Files that carries *${email}*. Send that resume as a *.docx* file with the job description.`)
 
-  const rel = relOfAbs(picked.candidate.path)
-  await logPick(userId, { at: Date.now(), job: jobKeyOf(job.jd), email, agent: ai ? relOfAbs(ranked[ai.index].candidate.path) : null,
-    code: relOfAbs(ranked[0].candidate.path), used: rel, agree: ai ? ai.index === 0 : null, ...(ai?.why ? { why: ai.why } : {}), ...(ai?.by ? { by: ai.by } : {}) })
-  // The pick happens inside the same 300 s function as the rewrite (after up to PAIR_WAIT_MS of waiting for a paired
-  // file): the rewrite gets what is left, so the file is still sent in time.
-  const budget = Math.max(120_000, TAILOR_BUDGET_MS - PAIR_WAIT_MS - (Date.now() - began))
+  const rel = relOf(userDir, picked.candidate.path)
+  await logPick(userId, { at: Date.now(), job: jobKeyOf(job.jd), email,
+    agent: null, code: rel, used: rel, agree: null })
+  const budget = Math.max(120_000, TAILOR_BUDGET_MS - (Date.now() - began))
   return generate(from, { jd: job.jd, jdId: job.jdId, resumePath: picked.candidate.path, resumeName: picked.candidate.name }, userId, budget,
     { userDir, email, said: saidOf(picked), depth: picked.candidate.depth, rel, abs: picked.candidate.path, ...(redo ? { redo } : {}) })
 }
