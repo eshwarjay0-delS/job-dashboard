@@ -321,13 +321,16 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     if (now.resumePath || now.jdId !== String(msg.id)) return
 
     // Otherwise the job starts from the person's Files: which email is it for?
+    // Smooth like chat: if he used an email before, reuse it silently. Only ask on first use.
+    const cur0 = await loadSession(from)
+    const lastEmail = cur0.last?.email || ""
     const { slots, sure, failed } = await emailSlots(userId)
     if (failed) return sendText(from, "Got the job description, but I could not read your MarketFit Files just now. Send it again in a minute, or send your resume as a *.docx* file with it.")
     if (!live(slots).length) return sendText(from, "Got the job description. Your MarketFit Files hold no resume yet, so send your resume as a *.docx* file.")
     // A number under the job description is trusted only when the kept numbering was read: otherwise "2" might not be
     // the email the person learned as 2, so the bot asks.
     const said = sure ? readChoice(text, slots) : { email: "", rest: text }
-    const email = said.email || (live(slots).length === 1 ? live(slots)[0] : "")
+    const email = said.email || lastEmail || (live(slots).length === 1 ? live(slots)[0] : "")
     const cur = await loadSession(from)
     if (cur.jdId !== String(msg.id) || cur.resumePath) return   // a newer message or a resume took over meanwhile
     if (email) {
