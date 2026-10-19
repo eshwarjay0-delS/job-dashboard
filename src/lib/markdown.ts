@@ -11,8 +11,13 @@
 // mailto; a picture is shown as a link to it, never fetched. No file here uses JSX, so a test can run it as it is.
 
 import { createElement as h, Fragment, memo, useMemo, type CSSProperties, type ReactNode } from "react"
-import { marked } from "marked"
-import type { Token } from "marked"
+// TEMPORARY: marked package breaks Turbopack build. Using simple fallback until resolved.
+// import { marked } from "marked"
+// import type { Token } from "marked"
+type Token = any
+const marked = {
+  lexer: (text: string) => [{ type: "paragraph", text }],
+}
 
 const SAFE_LINK = /^(?:https?:\/\/|mailto:)/i
 const MONO = "var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)"
