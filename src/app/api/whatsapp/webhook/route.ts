@@ -346,37 +346,19 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     return sendText(from, "I read the job description against your resume and no line came back changed, so I am not sending you the same file. This usually means the AI services were short of capacity. Please resend the job description and resume to retry.")
   }
 
+  // A rewrite below the coverage target is still sent, with what is missing named in the caption. From 18 Oct 2026 the
+  // bot held every such file back ("below the 95% floor. I have held the file"), and nearly every real job post asks
+  // for something a resume cannot truthfully claim, so the resume almost never arrived (reported 19 Oct 2026: "Resume
+  // tailor on whatsapp isn't working at all"). The person decides; the caption tells them what is not covered.
   if (result.quality?.status === "needs_review") {
-    await recordWhatsAppUsage(userId, "resume_tailor", result)
-    const missing = result.quality?.missing || []
-    const q = result.quality
-    const pct = q && q.total ? (q.matched / q.total * 100) : 0
-    // If coverage is actually >= 95% but status is needs_review, the real reason
-    // is partial (incomplete draft) or unchanged — NOT coverage. Be honest.
-    if (pct >= 95) {
-      return sendText(from, `The rewrite hit ${pct.toFixed(1)}% keyword coverage but the draft came back incomplete (some sections didn't finish rewriting). I have held the file rather than send you a half-done resume. Please resend the JD and resume to retry.`)
-    }
-    // Categorize: unfillable = certs OR tech platforms/products the user doesn't have.
-    // These are JD requirements, not wording the tailor failed to write.
+    // Certificates and platforms the person does not have are qualification gaps, not wording the rewrite missed.
     const UNFILLABLE = /\b(ccsp|cism|crisc|cisa|cissp|oscp|ceh|gsec|gcfa|gcia|security\+|pmp|pmi|itil|cobit|hyperledger|besu|canton|solana|ethereum|blockchain|solidity|web3|defi)\b/i
+    const missing = result.quality.missing || []
     const unfillable = missing.filter(t => UNFILLABLE.test(t))
     const fillable = missing.filter(t => !UNFILLABLE.test(t))
-    // If the ONLY gaps are unfillable requirements (not poor writing), deliver the
-    // best honest resume — the tailor did its job; the gap is in qualifications.
-    // Only hold the file when the tailor itself failed to close wording gaps.
     if (unfillable.length > 0 && fillable.length === 0) {
-      // Fall through to delivery with a clear note about the qualification gap.
-      result.quality = { ...q, status: "delivered_with_gaps" as const,
+      result.quality = { ...result.quality, status: "delivered_with_gaps" as const,
         missing: [`Qualification gaps (not on your resume): ${unfillable.slice(0, 6).join(", ")}`] }
-    } else {
-      let msg = `The rewrite reached ${pct.toFixed(1)}% coverage, below the 95% floor. I have held the file.`
-      if (unfillable.length) {
-        msg += ` These JD requirements aren't on your resume and I can't invent them: ${unfillable.slice(0, 8).join(", ")}.`
-      }
-      if (fillable.length) {
-        msg += ` Wording gaps I should have closed: ${fillable.slice(0, 8).join(", ")}.`
-      }
-      return sendText(from, msg)
     }
   }
   // 95-97%: deliver with gaps noted so the user gets a usable resume, not nothing.
@@ -498,7 +480,7 @@ function captionFor(name: string, meta: Meta, result: TailorResult, update?: { r
     ...(meta.role ? [`${meta.role}${meta.company ? ` · ${meta.company}` : ""}`] : []),
     `JD keyword coverage: ${coverage}%.`,
     ...(result.quality?.status === "delivered_with_gaps" ? [`Below the 98% target — missing: ${(result.quality.missing || []).slice(0, 6).join(", ")}.`] : []),
-    ...(result.quality?.status === "needs_review" ? ["Below the 95% floor; this result needs further review."] : []),
+    ...(result.quality?.status === "needs_review" ? [`Coverage is incomplete${(result.quality.missing || []).length ? `; still missing: ${(result.quality.missing || []).slice(0, 6).join(", ")}` : ""}. Reply to this file to ask for them.`] : []),
     "Reply to this file to request changes.",
   ].join("\n")
 }
