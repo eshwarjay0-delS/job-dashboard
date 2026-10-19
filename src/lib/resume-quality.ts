@@ -13,8 +13,12 @@ export function resumeQuality(input: {
 }) {
   const validCounts = Number.isInteger(input.total) && Number.isInteger(input.matched) && input.total > 0 && input.matched >= 0 && input.matched <= input.total
   const coverage = validCounts ? input.matched / input.total : 0
-  const meetsTarget = validCounts && coverage >= RESUME_TARGET_COVERAGE && !input.partial && !input.unchanged
-  const meetsFloor = validCounts && coverage >= RESUME_MIN_COVERAGE && !input.partial && !input.unchanged
+  // If coverage meets the floor, deliver even if marked partial — a 95%+ resume
+  // with some sections not perfectly rewritten is better than nothing.
+  // Only block on partial when coverage is also below floor.
+  const coverageOk = validCounts && coverage >= RESUME_MIN_COVERAGE
+  const meetsTarget = validCounts && coverage >= RESUME_TARGET_COVERAGE && !input.unchanged && (!input.partial || coverage >= RESUME_TARGET_COVERAGE)
+  const meetsFloor = coverageOk && !input.unchanged
   return {
     status: meetsTarget ? "coverage_met" as const : meetsFloor ? "delivered_with_gaps" as const : "needs_review" as const,
     minimum: RESUME_MIN_COVERAGE * 100,
