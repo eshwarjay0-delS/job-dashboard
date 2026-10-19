@@ -39,7 +39,9 @@ export const maxDuration = 300
 export const dynamic = "force-dynamic"
 
 const INBOX_DIR = path.join(DATA_DIR, "whatsapp", "inbox")
-const TAILOR_BUDGET_MS = 280_000
+// The rewrite stops by 240 s so reading the result, checking it and sending the file (uploading it to WhatsApp) still fit
+// inside the 300 s function. At 280 s only 20 s were left, and a run cut off by the platform sends nothing at all.
+const TAILOR_BUDGET_MS = 240_000
 
 // The file a person gets back is named after them: "Eshwar_Resume.docx". (Owner, 2026-10-05: first "The name should always be
 // Eshwar's_Resume", then, on seeing "ESHWAR's_Resume.docx" arrive, "Eshwar_Resume Title is fine actually".) The first name is

@@ -351,12 +351,12 @@ export default function ResumeClient({ initialFiles, initialFolders = [], otherF
       // so the "background" generation never ran and the poll hung forever. The sync
       // route completes the whole tailor inside one request, which works on both
       // localhost and Vercel.
-      // Hard client timeout so the spinner can NEVER hang forever. The server budget is
-      // ~52s and Vercel 504s by 60s, so a real response always arrives by ~60s; abort
-      // just past that as a final safety net (a genuinely hung network fetch is the only
-      // way to reach here, and it must not spin indefinitely).
+      // Hard client timeout so the spinner can NEVER hang forever, set just past the longest the server may work:
+      // /api/tailor runs up to 280 s inside a 300 s function (maxDuration). It was 65 s from August, when the server
+      // stopped at ~52 s; after the server budget rose to 280 s (16 Oct 2026) the page gave up on every longer run
+      // and showed "timed out" while the server finished the resume (found 19 Oct 2026).
       const ctrl = new AbortController()
-      const timeout = setTimeout(() => ctrl.abort(), 65000)
+      const timeout = setTimeout(() => ctrl.abort(), 310_000)
       let res: Response
       try {
         res = await fetch("/api/tailor", {
@@ -721,7 +721,7 @@ export default function ResumeClient({ initialFiles, initialFolders = [], otherF
                 style={!jd.trim() ? { opacity: 0.45 } : { boxShadow: "0 4px 20px var(--accent-shadow, rgba(117,114,97,.35))" }}
               >
                 {tailoring
-                  ? <><SpinIcon /> Rewriting your resume. This can take up to a minute…</>
+                  ? <><SpinIcon /> Rewriting your resume. A full rewrite can take a few minutes; keep this page open…</>
                   : <><SparkIcon size={5} /> Make my resume fit this job →</>
                 }
               </button>
