@@ -59,6 +59,7 @@ test('same JD can start only one generation across concurrent input handlers', a
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) }, '@/lib/plain-failure': {},
     '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/docx': { extractText: async b => b.toString() },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
+    '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
   }
   const { generate, captionFor } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate, captionFor };')
   const session = { jdId: 'jd-message', jd: 'job description', resumePath: '/data/whatsapp/inbox/123/unique.docx' }

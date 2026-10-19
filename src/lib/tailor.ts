@@ -12,6 +12,7 @@ import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords,
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 import { priceCalls, type PricedCall } from "./llmPrices"
+import { targetKeywords, placeInSkills, isCertification } from "./keyword-targets"
 
 export interface TailorResult {
   quality?: ReturnType<typeof resumeQuality>
@@ -111,7 +112,7 @@ function normJD(jd: string): string {
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
-const CACHE_GENERATION = "13"
+const CACHE_GENERATION = "14"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -255,8 +256,12 @@ export async function runTailor(opts: {
   // Result: richer keywords in the document, without the extra escalation or the delay.
   const jdExtracted = extractJdKeywords(jd)
   const jdGenerated = (await (kwExpandPromise ??= expandKeywords(text, candidateInput))).filter(k => !jdExtracted.includes(k))
-  const jdKws = jdExtracted
-  const jdKwsPrompt = [...new Set([...jdExtracted, ...jdGenerated])]
+  // Since 19 Oct 2026 the target is the job post's own terms AND Gemini's skill-like suggestions, together, cleaned of
+  // generic words and fragments (owner: "give this to gemini free api for more keywords ... then concatenate both given
+  // user input and that results"). Every one of them ends up in the resume: what the rewrite leaves out is placed on
+  // the skills section at the end (placeRemaining below), so counting Gemini's terms no longer lengthens the run.
+  const jdKws = targetKeywords(jdExtracted, jdGenerated)
+  const jdKwsPrompt = [...new Set([...jdKws, ...jdGenerated])]
   const beforeKw = coveredJdKeywords(text, jdKws)
   const matchedOn = [...beforeKw]
   const kwMatched = [...beforeKw]
@@ -622,6 +627,24 @@ export async function runTailor(opts: {
     return cur
   }
 
+  // Every target term the rewrite left out goes onto the skills line it fits best, written as the job post writes it
+  // (owner, 19 Oct 2026, on a resume sent at 96%: "doesn't have the audacity to apply them all in anyway"). A
+  // certification is the one exception: listing it claims to hold it, so it is named to the person instead.
+  const placeRemaining = async (cur: Pass): Promise<Pass> => {
+    if (sec.skills === false || !zones.skills.length) return cur
+    const left = jdKws.filter(k => !cur.afterKw.has(k) && !isCertification(k))
+    if (!left.length) return cur
+    const sk = skillEdits(cur.edits)
+    const lines = zones.skills.map(s => ({ idx: s.idx, text: sk.get(s.idx) ?? s.text }))
+    const placed = placeInSkills(lines, left, jd)
+    if (!placed.length) return cur
+    const next = await applyEdits({ ...cur.edits, skills: mergeIndexedEdits(cur.edits.skills || [], placed) })
+    if (next.cov < cur.cov) return cur
+    next.via = cur.via
+    next.partial = cur.partial
+    return next
+  }
+
   let best: Pass | null = null
   let usedModel = ""
   let draftErr: unknown = null   // why the last draft that failed did, for the message below
@@ -687,6 +710,12 @@ export async function runTailor(opts: {
     const filled = await fillGaps(best)
     if (filled !== best) usedModel = `${usedModel} + gap fill`
     best = filled
+  }
+  // A change the person asked for (refine) is left as they asked: it may be the removal of a term.
+  if (best && !refine) {
+    const placed = await placeRemaining(best)
+    if (placed !== best) usedModel = `${usedModel} + every remaining keyword placed`
+    best = placed
   }
   if (!best) {
     // A split draft is put together a few seconds BEFORE the deadline, so "out of time" is judged with that margin and by

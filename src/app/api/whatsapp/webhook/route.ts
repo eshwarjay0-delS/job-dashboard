@@ -33,6 +33,7 @@ import { extractText } from "@/lib/docx"
 import { extractProfile } from "@/lib/profile"
 import { plainFailure } from "@/lib/plain-failure"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
+import { isCertification } from "@/lib/keyword-targets"
 
 export const runtime = "nodejs"
 export const maxDuration = 300
@@ -42,6 +43,8 @@ const INBOX_DIR = path.join(DATA_DIR, "whatsapp", "inbox")
 // The rewrite stops by 240 s so reading the result, checking it and sending the file (uploading it to WhatsApp) still fit
 // inside the 300 s function. At 280 s only 20 s were left, and a run cut off by the platform sends nothing at all.
 const TAILOR_BUDGET_MS = 240_000
+// How long the first of a job post and a resume sent together waits for the other before asking for it.
+const PAIR_WAIT_MS = 6_000
 
 // The file a person gets back is named after them: "Eshwar_Resume.docx". (Owner, 2026-10-05: first "The name should always be
 // Eshwar's_Resume", then, on seeing "ESHWAR's_Resume.docx" arrive, "Eshwar_Resume Title is fine actually".) The first name is
@@ -275,7 +278,14 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     session.jd = text
     session.jdId = String(msg.id)
     await saveSession(from, session)
-    if (!session.resumePath) return sendText(from, "Got the job description. Now send your resume as a *.docx* file.")
+    if (!session.resumePath) {
+      // Sent together, the resume arrives as its own message a moment later and starts the run itself: wait for it
+      // before asking for it.
+      await new Promise(r => setTimeout(r, PAIR_WAIT_MS))
+      const now = await loadSession(from)
+      if (now.resumePath || now.jdId !== String(msg.id)) return
+      return sendText(from, "Got the job description. Now send your resume as a *.docx* file.")
+    }
     return generate(from, session, userId)
   }
 
@@ -297,7 +307,12 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     session.resumeName = safe.replace(/\.docx$/i, "")
     session.resumeAt = Date.now()
     await saveSession(from, session)
-    if (!session.jd) return sendText(from, `Saved *${session.resumeName}*. Now paste the job description.`)
+    if (!session.jd) {
+      await new Promise(r => setTimeout(r, PAIR_WAIT_MS))
+      const now = await loadSession(from)
+      if (now.jd || now.resumePath !== dest) return
+      return sendText(from, `Saved *${now.resumeName || session.resumeName}*. Now paste the job description.`)
+    }
     return generate(from, session, userId)
   }
 
@@ -464,6 +479,21 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
   else await deletePath(vfile)
 }
 
+// What the resume does not carry, said plainly. Since 19 Oct 2026 every job-post keyword is written in; a certification is
+// the exception (listing one claims to hold it), and anything else left out means the run was cut short.
+function notAdded(result: TailorResult): string[] {
+  const missing = result.quality?.missing || []
+  const incomplete = result.quality?.status === "needs_review" && !missing.some(m => !isCertification(m))
+    ? ["This run is incomplete: some sections did not finish rewriting. Reply to this file to ask for another pass."] : []
+  if (!missing.length) return incomplete
+  const certs = missing.filter(isCertification), other = missing.filter(m => !isCertification(m))
+  return [
+    ...(certs.length ? [`Not added, as they are certifications you would need to hold: ${certs.slice(0, 6).join(", ")}.`] : []),
+    ...(other.length ? [`This run was cut short before it could add: ${other.slice(0, 6).join(", ")}. Reply to this file to ask for them.`] : []),
+    ...incomplete,
+  ]
+}
+
 function captionFor(name: string, meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }): string {
   const coverage = result.coverage ?? result.score
   // Never present an unchanged resume as tailored — say so plainly.
@@ -479,8 +509,7 @@ function captionFor(name: string, meta: Meta, result: TailorResult, update?: { r
     `*${name}*${update ? ` (update ${update.number})` : ""}`,
     ...(meta.role ? [`${meta.role}${meta.company ? ` · ${meta.company}` : ""}`] : []),
     `JD keyword coverage: ${coverage}%.`,
-    ...(result.quality?.status === "delivered_with_gaps" ? [`Below the 98% target — missing: ${(result.quality.missing || []).slice(0, 6).join(", ")}.`] : []),
-    ...(result.quality?.status === "needs_review" ? [`Coverage is incomplete${(result.quality.missing || []).length ? `; still missing: ${(result.quality.missing || []).slice(0, 6).join(", ")}` : ""}. Reply to this file to ask for them.`] : []),
+    ...notAdded(result),
     "Reply to this file to request changes.",
   ].join("\n")
 }
