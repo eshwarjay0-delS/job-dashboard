@@ -16,7 +16,7 @@ import { createElement as h, Fragment, memo, useMemo, type CSSProperties, type R
 // import type { Token } from "marked"
 type Token = any
 const marked = {
-  lexer: (text: string) => [{ type: "paragraph", text }],
+  lexer: (text: string, _opts?: any) => [{ type: "paragraph", text }],
 }
 
 const SAFE_LINK = /^(?:https?:\/\/|mailto:)/i
