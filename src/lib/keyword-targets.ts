@@ -6,8 +6,9 @@
 //
 // So the target is the job post's own terms PLUS Gemini's, cleaned of what is not a skill (generic words such as
 // "technology", fragments such as "palo" beside "palo alto", Gemini's task sentences and years), and every target the
-// rewrite still left out is written onto the best-fitting line of the resume's skills section. Certifications are the
-// one exception: listing one is a claim to hold it, so they are named to the person instead of being added.
+// rewrite still left out is written onto the best-fitting line of the resume's skills section. Certifications are
+// ignored altogether (owner, 19 Oct 2026: "Ignore certs always"): never a target, never added, and one the AI writer
+// slips into the skills section without the source resume listing it is taken out again.
 // No imports: the tests load this file directly.
 
 // Single words that describe a job post rather than a skill an ATS or a recruiter searches for.
@@ -62,7 +63,7 @@ export function targetKeywords(extracted: string[], generated: string[]): string
   const all = [...new Set([
     ...extracted.map(k => k.toLowerCase().trim()),
     ...generated.map(k => k.toLowerCase().trim()).filter(skillLike),
-  ])].filter(k => k && !(k.split(/\s+/).length === 1 && GENERIC.has(k)))
+  ])].filter(k => k && !(k.split(/\s+/).length === 1 && GENERIC.has(k)) && !isCertification(k))
   const multi = all.filter(k => /[\s\-/]/.test(k))
   return all.filter(k => {
     if (/[\s\-/]/.test(k)) return true
@@ -80,6 +81,26 @@ export function jdSpelling(term: string, jd: string): string {
 
 const contains = (text: string, term: string) =>
   new RegExp(`(?<![A-Za-z0-9])${escapeRe(term)}(?![A-Za-z0-9])`, "i").test(text)
+
+/**
+ * Skills lines with every certification the source resume does not list taken out (the AI writer adds them now and
+ * then: PCNSE appeared in a test on 19 Oct 2026). Returns only the lines that changed. A heading ("Governance,
+ * Compliance: ") is kept as it is; only the listed items are looked at.
+ */
+export function withoutAddedCerts(lines: { idx: number; text: string }[], sourceText: string): { idx: number; text: string }[] {
+  const out: { idx: number; text: string }[] = []
+  for (const l of lines) {
+    const heading = l.text.match(/^([^:\n]{2,70}:)\s*/)?.[0] || ""
+    const body = l.text.slice(heading.length)
+    const sep = separatorOf(body)
+    const end = /[.;]\s*$/.test(body) ? body.trim().slice(-1) : ""
+    const items = (end ? body.trim().slice(0, -1) : body).split(sep.trim() === "," ? /\s*,\s*/ : new RegExp(`\\s*${escapeRe(sep.trim())}\\s*`))
+    const kept = items.filter(item => !(isCertification(item) && !contains(sourceText, item.trim())))
+    if (kept.length === items.length) continue
+    out.push({ idx: l.idx, text: `${heading}${kept.join(sep)}${end}` })
+  }
+  return out
+}
 
 function separatorOf(line: string): string {
   if (line.includes(" | ")) return " | "

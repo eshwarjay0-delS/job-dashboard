@@ -2,7 +2,7 @@
 // micro-segmentation job of 19 Oct 2026: the job post's literal extraction and Gemini's two passes, as measured.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { targetKeywords, skillLike, placeInSkills, isCertification, jdSpelling } from '../../src/lib/keyword-targets.ts'
+import { targetKeywords, skillLike, placeInSkills, isCertification, jdSpelling, withoutAddedCerts } from '../../src/lib/keyword-targets.ts'
 
 const literal = ['siem', 'splunk', 'ansible', 'aws', 'azure', 'zero trust', 'firewall', 'vpn', 'tcp/ip', 'dns', 'routing', 'network security',
   'compliance', 'nist', 'pci', 'python', 'policy', 'palo alto', 'ipsec', 'micro-segmentation', 'vpc', 'vnet', 'tcp', 'ip', 'globalprotect',
@@ -31,9 +31,21 @@ test('Gemini suggestions are kept only when they read as a skill', () => {
   assert.ok(!skillLike('7+ years') && !skillLike('deploy and operate') && !skillLike('cloud teams') && !skillLike('technology'))
 })
 
-test('a certification is never written in: listing it claims to hold it', () => {
+test('certifications are ignored always: never a target, and one the writer slipped in is taken out', () => {
   assert.ok(isCertification('pcnse') && isCertification('CISSP') && isCertification('AWS Certified Security') && isCertification('az-500'))
-  assert.ok(!isCertification('palo alto') && !isCertification('illumio') && !isCertification('zero trust'))
+  assert.ok(!isCertification('palo alto') && !isCertification('illumio') && !isCertification('zero trust') && !isCertification('PCI DSS'))
+  assert.ok(!targetKeywords(literal, gemini).includes('pcnse'))
+  // The line the writer returned in the 19 Oct test run, against a source resume that lists no PCNSE.
+  const source = 'Governance, Compliance, and Collaboration: NIST 800-53, ISO 27001, HIPAA, ITIL. CISSP certified.'
+  const lines = [
+    { idx: 7, text: 'Governance, Compliance, and Collaboration: PCNSE, PCI DSS, NIST 800-53, NIST Cybersecurity Framework, CIS Controls, ISO 27001, HIPAA, ITIL, ServiceNow GRC' },
+    { idx: 8, text: 'Network Security: Palo Alto PAN-OS, Panorama, Illumio' },
+    { idx: 9, text: 'Credentials: CISSP | CCNA.' },
+  ]
+  const out = withoutAddedCerts(lines, source)
+  assert.equal(out.find(l => l.idx === 7)?.text, 'Governance, Compliance, and Collaboration: PCI DSS, NIST 800-53, NIST Cybersecurity Framework, CIS Controls, ISO 27001, HIPAA, ITIL, ServiceNow GRC')
+  assert.equal(out.find(l => l.idx === 9)?.text, 'Credentials: CISSP.', 'a certification the source does list stays')
+  assert.ok(!out.some(l => l.idx === 8), 'a line with no added certification is untouched')
 })
 
 test('each missing term goes onto the skills line it fits, in the job post\'s spelling, keeping the line\'s heading and separator', () => {

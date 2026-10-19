@@ -479,19 +479,13 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
   else await deletePath(vfile)
 }
 
-// What the resume does not carry, said plainly. Since 19 Oct 2026 every job-post keyword is written in; a certification is
-// the exception (listing one claims to hold it), and anything else left out means the run was cut short.
+// What the resume does not carry, said plainly. Since 19 Oct 2026 every job-post keyword is written in and certifications
+// are ignored ("Ignore certs always"), so anything left out means the run was cut short.
 function notAdded(result: TailorResult): string[] {
-  const missing = result.quality?.missing || []
-  const incomplete = result.quality?.status === "needs_review" && !missing.some(m => !isCertification(m))
+  const missing = (result.quality?.missing || []).filter(m => !isCertification(m))
+  if (missing.length) return [`This run was cut short before it could add: ${missing.slice(0, 6).join(", ")}. Reply to this file to ask for them.`]
+  return result.quality?.status === "needs_review"
     ? ["This run is incomplete: some sections did not finish rewriting. Reply to this file to ask for another pass."] : []
-  if (!missing.length) return incomplete
-  const certs = missing.filter(isCertification), other = missing.filter(m => !isCertification(m))
-  return [
-    ...(certs.length ? [`Not added, as they are certifications you would need to hold: ${certs.slice(0, 6).join(", ")}.`] : []),
-    ...(other.length ? [`This run was cut short before it could add: ${other.slice(0, 6).join(", ")}. Reply to this file to ask for them.`] : []),
-    ...incomplete,
-  ]
 }
 
 function captionFor(name: string, meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }): string {

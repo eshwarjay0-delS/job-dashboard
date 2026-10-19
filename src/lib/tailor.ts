@@ -12,7 +12,7 @@ import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords,
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 import { priceCalls, type PricedCall } from "./llmPrices"
-import { targetKeywords, placeInSkills, isCertification } from "./keyword-targets"
+import { targetKeywords, placeInSkills, isCertification, withoutAddedCerts } from "./keyword-targets"
 
 export interface TailorResult {
   quality?: ReturnType<typeof resumeQuality>
@@ -645,6 +645,19 @@ export async function runTailor(opts: {
     return next
   }
 
+  // Certifications are ignored (owner, 19 Oct 2026: "Ignore certs always"): one the writer put on a skills line that the
+  // source resume does not list is taken out again.
+  const stripAddedCerts = async (cur: Pass): Promise<Pass> => {
+    if (!zones.skills.length) return cur
+    const sk = skillEdits(cur.edits)
+    const cleaned = withoutAddedCerts(zones.skills.map(s => ({ idx: s.idx, text: sk.get(s.idx) ?? s.text })), text)
+    if (!cleaned.length) return cur
+    const next = await applyEdits({ ...cur.edits, skills: mergeIndexedEdits(cur.edits.skills || [], cleaned) })
+    next.via = cur.via
+    next.partial = cur.partial
+    return next
+  }
+
   let best: Pass | null = null
   let usedModel = ""
   let draftErr: unknown = null   // why the last draft that failed did, for the message below
@@ -717,6 +730,7 @@ export async function runTailor(opts: {
     if (placed !== best) usedModel = `${usedModel} + every remaining keyword placed`
     best = placed
   }
+  if (best) best = await stripAddedCerts(best)
   if (!best) {
     // A split draft is put together a few seconds BEFORE the deadline, so "out of time" is judged with that margin and by
     // what the draft itself said: otherwise slow providers were reported as "check API keys".
