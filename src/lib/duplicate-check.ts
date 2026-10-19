@@ -8,6 +8,7 @@ export type SubmittedEvent = {
   url: string
   at: number
   resume?: string
+  location?: string
 }
 
 // Normalize company names for comparison: lowercase, strip suffixes/punctuation
@@ -45,6 +46,26 @@ function titlesMatch(a: string, b: string): boolean {
   return overlap >= 2 && overlap / minSize >= 0.5
 }
 
+// V2: location matching for cross-vendor same-req detection.
+// Ace vs Vyze filing the same Richmond VA req have different company names
+// but the same role + same city. Normalize: lowercase, strip state/zip.
+function normLocation(s: string): string {
+  return s.toLowerCase()
+    .replace(/\b\d{5}(-\d{4})?\b/g, "")  // zip codes
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter(w => w.length > 2)
+    .sort()
+    .join(" ")
+}
+
+function locationsMatch(a?: string, b?: string): boolean {
+  if (!a || !b) return false
+  const na = normLocation(a), nb = normLocation(b)
+  if (!na || !nb) return false
+  return na === nb
+}
+
 export type DuplicateHit = {
   event: SubmittedEvent
   reason: string
@@ -52,7 +73,7 @@ export type DuplicateHit = {
 
 // Check a job against past submissions. Returns hits (usually 0 or 1).
 export function findDuplicates(
-  job: { title: string; company: string },
+  job: { title: string; company: string; location?: string },
   submitted: SubmittedEvent[]
 ): DuplicateHit[] {
   const hits: DuplicateHit[] = []
@@ -65,6 +86,13 @@ export function findDuplicates(
       hits.push({
         event: ev,
         reason: `Submitted "${ev.title}" at ${ev.company} on ${date}${ev.resume ? ` with ${ev.resume}` : ""}`,
+      })
+    } else if (sameRole && locationsMatch(job.location, ev.location)) {
+      // V2: same role + same location, different vendor = likely same end-client req
+      const date = new Date(ev.at).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })
+      hits.push({
+        event: ev,
+        reason: `Possible same req via different vendor: "${ev.title}" in ${ev.location} via ${ev.company} on ${date} — verify end client before submitting`,
       })
     }
   }
