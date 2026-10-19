@@ -4,7 +4,7 @@ import { authenticatedUserId, signInRequired } from "@/lib/authBoundary"
 import { USER_RESUMES_DIR } from "@/lib/paths"
 import { readPath } from "@/lib/storage"
 import { extractText } from "@/lib/docx"
-import { extractJdKeywords, coveredJdKeywords } from "@/lib/keywords"
+import { extractJdKeywords, coveredJdKeywords, extractCredentials } from "@/lib/keywords"
 
 // Jobright-style match scoring: every job card gets a 0–100% match against the
 // user's chosen resume, plus the why (matched keywords) and the gap (missing).
@@ -34,17 +34,24 @@ export async function POST(request: NextRequest) {
   try { resumeText = await extractText(buf) } catch { return NextResponse.json({ error: "Could not read resume." }, { status: 422 }) }
   if (resumeText.trim().length < 50) return NextResponse.json({ error: "Resume text too short to score." }, { status: 422 })
 
+  // Candidate's real certifications — used to distinguish cert matches from skill gaps
+  const candidateCerts = extractCredentials(resumeText)
+
   const scores = jobs.map(j => {
     const jd = `${j.title || ""}\n${j.description || ""}`.slice(0, 20000)
     const kws = extractJdKeywords(jd)
-    if (!kws.length) return { id: j.id, score: null as number | null, matched: [] as string[], missing: [] as string[] }
+    if (!kws.length) return { id: j.id, score: null as number | null, matched: [] as string[], missing: [] as string[], certs: [] as string[] }
     const covered = coveredJdKeywords(resumeText, kws)
     const missing = kws.filter(k => !covered.has(k))
+    // Which JD cert requirements does the candidate actually hold?
+    const jdCerts = extractCredentials(jd)
+    const matchedCerts = jdCerts.filter(c => candidateCerts.includes(c))
     return {
       id: j.id,
       score: Math.round((covered.size / kws.length) * 100),
       matched: [...covered].slice(0, 10),
       missing: missing.slice(0, 10),
+      certs: matchedCerts,
     }
   })
 
