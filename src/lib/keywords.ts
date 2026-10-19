@@ -183,13 +183,19 @@ export function present(text: string, term: string): boolean {
 // never be matched would force needless model escalation = wasted tokens).
 const CAPS_STOP = new Set([
   "THE","AND","FOR","YOU","ARE","OUR","ETC","INC","LLC","LTD","USA","US","ID","IT","IS","OF","TO","IN","ON","OR","AS","AT","BY","BE","WE","AN","A",
-  "II","III","IV","VI","CO","CA","NY","TX","WA","DC","IL","EST","PST","CST","AM","PM","EOD","ASAP","OK","NO","YES","MUST","WILL","SHALL","ALL","ANY","PER","VIA","NEW",
+  "II","III","IV","VI","CO","CA","NY","TX","WA","DC","IL","VA","MA","MD","NJ","PA","OH","MI","FL","GA","NC","SC","TN","AZ","CO","MN","WI","MO","EST","PST","CST","AM","PM","EOD","ASAP","OK","NO","YES","MUST","WILL","SHALL","ALL","ANY","PER","VIA","NEW",
   "JOB","ROLE","TEAM","YEAR","YEARS","PLUS","DAY","DAYS","WEEK","MONTH","MONTHS","FT","PT","W2","C2C","GC","USC","EAD","CFR","N/A","NA","OT",
+  // Employer acronyms that are not skills (State Corporation Commission, etc.)
+  "SCC",
 ])
 const WORD_STOP = new Set([
   "the","and","for","with","you","are","our","etc","will","must","shall","should","this","that","their","them","from","into","across","various","daily",
   "such","basic","strong","excellent","ability","experience","knowledge","proficiency","responsibilities","qualifications","required","preferred","scope",
   "specialty","specialties","attribute","attributes","candidate","contractor","client","services","state","agencies","agency","local","valid","review","execution","ensure","perform","provide","support","maintain",
+  // JD section headers and metadata (not skills)
+  "about","replacing","replacement","overview","summary","description","short",
+  // Abbreviation fragments (use full form instead)
+  "mgmt","corp","corporation","commission","inc","dept","div","annual","cam",
 ])
 // Gerund/verb words that must NOT start a domain-noun phrase (else "implementing
 // security", "performing analysis" leak in as junk that can't match the resume).
