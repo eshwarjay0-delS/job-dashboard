@@ -77,16 +77,21 @@ test('the storage keeps one file a job, sends back what was made, and tidies whe
   assert.ok(store.includes('await removeDuplicates(userDir, now)'))
 })
 
-test('stable WhatsApp tailoring starts fresh rather than archiving or replaying old jobs', () => {
+// The 15 Oct 2026 rollback made every WhatsApp job start fresh from a sent resume, kept nothing and replayed nothing. On
+// 19 Oct the owner asked for the library again ("it should go to the my file section ... grab that resume, then apply
+// those changes ... and do not have a duplicate resumes"): a job starts from the closest resume of the chosen email in
+// Files, is filed back there one job one file, and a job made before is sent again. A resume sent with the job still wins.
+test('WhatsApp starts from the person\'s Files, files the result there once, and sends a job made before again', () => {
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
   assert.ok(bot.includes('if (!session.jd || !session.resumePath) return sendText(from, HELP)'))
-  assert.ok(bot.includes('userResumeDir: path.join(INBOX_DIR, digits(from))'))
-  assert.ok(bot.includes('await saveSession(from, { seen: session.seen })'))
+  // A sent resume: the temporary inbox, as before. From Files: the person's own folder.
+  assert.ok(bot.includes('userResumeDir: files ? files.userDir : path.join(INBOX_DIR, digits(from))'))
+  // Consuming a job clears only what belongs to it: a newer message saved meanwhile is kept (found in review, 19 Oct).
+  assert.ok(bot.includes('if (cur.jdId === session.jdId) { delete cur.jd; delete cur.jdId }') && bot.includes('if (cur.resumePath === session.resumePath) { delete cur.resumePath; delete cur.resumeName; delete cur.resumeAt }'))
   assert.ok(bot.includes('await deletePath(session.resumePath).catch(() => {})'))
-  assert.ok(!bot.includes('existingForJob('))
-  assert.ok(!bot.includes('sendAgain('))
-  assert.ok(!bot.includes('saveTailored('))
-  assert.ok(!bot.includes('resume_documents'))
+  assert.ok(bot.includes('const have = await existingForJob(userDir, email, job.jd).catch(() => null)') && bot.includes('if (have) return sendSaved(from, have, job.jd, email, userId)'))
+  assert.ok(bot.includes('filed = await saveTailored({ userDir: files.userDir'))
+  assert.ok(!bot.includes('resume_documents'), 'the library is Files itself, not a second copy in the database')
   assert.ok(bot.includes('const replyTo = (msg.context as { id?: string } | undefined)?.id'))
   assert.ok(bot.includes('if (replyTo) return refine(from, replyTo, text, userId)'))
 })

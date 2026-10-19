@@ -1,11 +1,13 @@
 /**
  * WhatsApp chatbot webhook.
  *
- * Conversation: send a JD and a .docx resume in EITHER order. As soon as the bot has
- * both, it tailors and sends the result back as "Eshwar Resume.docx", captioned with
- * the Role / Location / Company it was built for. The session then clears, so every
- * generation starts fresh with a new JD + resume. This is the Oct 5 stable tailor flow,
- * intentionally without filing originals or generated resumes in MarketFit Files.
+ * Conversation (owner, 19 Oct 2026, restoring what the library was built for): send a job description. The bot asks
+ * which email it is for ("1 = …05, 2 = …44", numbers kept for good; with one email it does not ask; a number on its
+ * own line under the job description answers it), then starts from the closest resume of that email in the person's
+ * MarketFit Files: an AI agent (Gemini) picks it from the folders, their keyword records and how often each was
+ * picked, with the code's pick beside it and the two logged (src/lib/library-agent.ts). The result is sent back and
+ * filed in Files in the folder for its kind of job, one job one file; a job made before is sent again as it is
+ * ("redo" makes it afresh). A .docx resume sent with the job description is used instead, as before (the Oct 5 flow).
  *
  * Changes: swipe-reply to any resume the bot sent and say what to change. The bot edits
  * THAT exact version (so replying to the newest file stacks changes) and sends the update,
@@ -19,7 +21,7 @@ import { NextRequest, NextResponse } from "next/server"
 import path from "path"
 import { createHash, randomBytes } from "crypto"
 import { blob, readPath, writePath, existsPath, deletePath } from "@/lib/storage"
-import { DATA_DIR } from "@/lib/paths"
+import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
 import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
 import { extractJdMeta } from "@/lib/claude"
@@ -34,6 +36,13 @@ import { extractProfile } from "@/lib/profile"
 import { plainFailure } from "@/lib/plain-failure"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 import { isCertification } from "@/lib/keyword-targets"
+import { libraryOf, numberedEmails, candidatesFor } from "@/lib/library-pick-store"
+import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME, type Ranked } from "@/lib/library-pick"
+import { existingForJob, saveTailored, markUsed, readShelf, relOf } from "@/lib/resume-library-store"
+import { jobKeyOf, type SavedFile, type Uses } from "@/lib/resume-library"
+import { agentPick, logPick } from "@/lib/library-agent"
+import { extractKeywords } from "@/lib/keywords"
+import { resumeEmails } from "@/lib/resumeOrganization"
 
 export const runtime = "nodejs"
 export const maxDuration = 300
@@ -44,7 +53,9 @@ const INBOX_DIR = path.join(DATA_DIR, "whatsapp", "inbox")
 // inside the 300 s function. At 280 s only 20 s were left, and a run cut off by the platform sends nothing at all.
 const TAILOR_BUDGET_MS = 240_000
 // How long the first of a job post and a resume sent together waits for the other before asking for it.
-const PAIR_WAIT_MS = 6_000
+// How long a job from Files holds its claim against being made twice: the function's own limit.
+const IN_FLIGHT_MS = 300_000
+const PAIR_WAIT_MS = process.env.WHATSAPP_PAIR_WAIT_MS !== undefined ? Number(process.env.WHATSAPP_PAIR_WAIT_MS) || 0 : 6_000
 
 // The file a person gets back is named after them: "Eshwar_Resume.docx". (Owner, 2026-10-05: first "The name should always be
 // Eshwar's_Resume", then, on seeing "ESHWAR's_Resume.docx" arrive, "Eshwar_Resume Title is fine actually".) The first name is
@@ -71,7 +82,13 @@ const digits = (from: string) => from.replace(/\D/g, "")
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 
 type Meta = { role: string; company: string; location: string }
-type Session = { version?: 3; jd?: string; jdId?: string; resumePath?: string; resumeName?: string; resumeAt?: number; seen?: string[]; updatedAt?: number }
+type Session = {
+  version?: 3; jd?: string; jdId?: string; resumePath?: string; resumeName?: string; resumeAt?: number; seen?: string[]; updatedAt?: number
+  /** A job description waiting for "which email is this job for?". `slots[n - 1]` is email number n. */
+  pending?: { jd: string; jdId: string; slots: string[]; at: number }
+  /** The last job made from Files, for "redo". */
+  last?: { jd: string; email: string; at: number }
+}
 const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
 
 async function loadSession(from: string): Promise<Session> {
@@ -105,6 +122,8 @@ type Gen = {
   changes: string[]     // change requests applied so far, oldest first
   source?: string       // the uploaded resume the chain started from
   createdAt: number
+  saved?: string        // where it was filed in the person's Files (whatsapp-collect.ts skips it then)
+  depth?: number
 }
 const genDir = (from: string) => `whatsapp/gens/${digits(from)}`
 
@@ -156,15 +175,13 @@ async function saveGen(from: string, wamid: string, gen: Gen): Promise<void> {
 const HELP = [
   "*Resume Tailor Bot*",
   "",
-  "Send me two things, in any order:",
-  "1. The *job description* (paste it as a message)",
-  "2. Your *resume* as a .docx file",
+  "Paste a *job description*. I ask which of your emails it is for (reply *1*, *2* …), start from the closest resume of that email in your MarketFit Files, send it back fitted to the job, and file it there.",
   "",
-  "As soon as I have both, I'll tailor it and send it back as a Word file named after you.",
+  "To start from a different resume, send it as a .docx file with the job description.",
   "",
   "*Want changes?* Swipe right on a resume I sent (or long-press → Reply) and type what to change, e.g. _add more Terraform_ or _make the bullets shorter_. Each update builds on the version you replied to, so you can keep refining.",
   "",
-  "Commands: *reset* · *status* · *help*",
+  "Commands: *redo* · *reset* · *status* · *help*",
 ].join("\n")
 
 // ── Meta webhook verification (GET) ───────────────────────────────────────────
@@ -207,7 +224,7 @@ export async function POST(request: NextRequest) {
   if (linking) {
     try {
       const claim = await claimLinkCode(from, linking[1])
-      if (claim.ok) await sendText(from, "Linked to MarketFit. Send a job description and a Word (.docx) resume to tailor it. Each request starts fresh, and documents are not added to your Files.")
+      if (claim.ok) await sendText(from, "Linked to MarketFit. Paste a job description: I start from the closest resume in your Files and save the result there.")
       else await sendText(from, claim.why === "too_many"
         ? "Too many incorrect link codes. Try again in an hour."
         : "That link code did not match or has expired. Open Connections in MarketFit to create another one.")
@@ -258,15 +275,33 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       await saveSession(from, { seen: session.seen })
       return sendText(from, "Cleared. Send a new job description and resume.")
     }
+    if (cmd === "redo") {
+      if (!session.last) return sendText(from, "There is no job made from your Files to make again. Paste a job description.")
+      return fromLibrary(from, { jd: session.last.jd, jdId: `redo-${Date.now()}` }, session.last.email, userId, true)
+    }
     if (cmd === "status") {
-      return sendText(from, [
-        `JD: ${session.jd ? "received" : "waiting"}`,
-        `Resume: ${session.resumeName ? session.resumeName : "waiting"}`,
-      ].join("\n"))
+      return sendText(from, session.pending
+        ? `A job description is waiting for its email. ${askWhichEmail(session.pending.slots)}`
+        : [`JD: ${session.jd ? "received" : "waiting"}`, `Resume: ${session.resumeName ? session.resumeName : "from your Files"}`].join("\n"))
+    }
+    const replyTo = (msg.context as { id?: string } | undefined)?.id
+
+    // The answer to "Which email is this job for?": a number or an email, typed or swipe-replied to the question. The job
+    // description is cleared with the question, so a resume sent later is never fitted to it (found in review).
+    if (session.pending && text.length < 60) {
+      const email = choiceIn(text, session.pending.slots)
+      if (email) {
+        const job = { jd: session.pending.jd, jdId: session.pending.jdId }
+        const cur = await loadSession(from)
+        if (cur.pending?.jdId === job.jdId) delete cur.pending
+        if (cur.jdId === job.jdId) { delete cur.jd; delete cur.jdId }
+        await saveSession(from, cur)
+        return fromLibrary(from, job, email, userId)
+      }
+      if (!replyTo) return sendText(from, askWhichEmail(session.pending.slots))
     }
     // A swipe-reply is a change request for the resume being replied to. Checked before
     // the JD path: a reply is never a new JD (new JDs are always pasted as their own message).
-    const replyTo = (msg.context as { id?: string } | undefined)?.id
     if (replyTo) return refine(from, replyTo, text, userId)
 
     // Too short to be a JD — most likely a stray message, so guide instead of guessing.
@@ -277,16 +312,32 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     session = await loadSession(from)
     session.jd = text
     session.jdId = String(msg.id)
+    delete session.pending
     await saveSession(from, session)
-    if (!session.resumePath) {
-      // Sent together, the resume arrives as its own message a moment later and starts the run itself: wait for it
-      // before asking for it.
-      await new Promise(r => setTimeout(r, PAIR_WAIT_MS))
-      const now = await loadSession(from)
-      if (now.resumePath || now.jdId !== String(msg.id)) return
-      return sendText(from, "Got the job description. Now send your resume as a *.docx* file.")
+    if (session.resumePath) return generate(from, session, userId)
+    // Sent together, a resume arrives as its own message a moment later and starts the run itself: wait for it first.
+    await new Promise(r => setTimeout(r, PAIR_WAIT_MS))
+    const now = await loadSession(from)
+    if (now.resumePath || now.jdId !== String(msg.id)) return
+
+    // Otherwise the job starts from the person's Files: which email is it for?
+    const { slots, sure, failed } = await emailSlots(userId)
+    if (failed) return sendText(from, "Got the job description, but I could not read your MarketFit Files just now. Send it again in a minute, or send your resume as a *.docx* file with it.")
+    if (!live(slots).length) return sendText(from, "Got the job description. Your MarketFit Files hold no resume yet, so send your resume as a *.docx* file.")
+    // A number under the job description is trusted only when the kept numbering was read: otherwise "2" might not be
+    // the email the person learned as 2, so the bot asks.
+    const said = sure ? readChoice(text, slots) : { email: "", rest: text }
+    const email = said.email || (live(slots).length === 1 ? live(slots)[0] : "")
+    const cur = await loadSession(from)
+    if (cur.jdId !== String(msg.id) || cur.resumePath) return   // a newer message or a resume took over meanwhile
+    if (email) {
+      delete cur.jd; delete cur.jdId
+      await saveSession(from, cur)
+      return fromLibrary(from, { jd: said.email ? said.rest : text, jdId: String(msg.id) }, email, userId)
     }
-    return generate(from, session, userId)
+    cur.pending = { jd: text, jdId: String(msg.id), slots, at: Date.now() }
+    await saveSession(from, cur)
+    return sendText(from, askWhichEmail(slots))
   }
 
   // ── Resume upload ───────────────────────────────────────────────────────────
@@ -320,18 +371,31 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 }
 
 // ── Tailor + reply ────────────────────────────────────────────────────────────
-async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS) {
+// Where a run starts when it starts from the person's Files: their folder, the email, and what was picked.
+type FromFiles = { userDir: string; email: string; said: string; depth: number; rel: string; abs: string; redo?: boolean }
+
+async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS, files?: FromFiles) {
   const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
   if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
   if (!session.jd || !session.resumePath) return sendText(from, HELP)
+  const retry = files ? "Send *redo* to try again." : "Please resend the job description and resume to retry."
 
   // One claim per JD, across all workers and either input order. Claim before any AI call.
   const job = createHash("sha256").update(`${from}:${session.jdId || session.jd}`).digest("hex")
   if (!await blob.putIfAbsent(`whatsapp/jobs/${job}`, "1")) return
-  // Consume this pair now. Completion must not erase a newer request arriving meanwhile.
-  await saveSession(from, { seen: session.seen })
+  // Consume this pair now. Completion must not erase a newer request arriving meanwhile: the session is read again and
+  // only what belongs to this job is cleared (a job from Files spends seconds picking before this; found in review).
+  const cur = await loadSession(from)
+  if (cur.jdId === session.jdId) { delete cur.jd; delete cur.jdId }
+  if (cur.resumePath === session.resumePath) { delete cur.resumePath; delete cur.resumeName; delete cur.resumeAt }
+  if (cur.pending?.jdId === session.jdId) delete cur.pending
+  cur.seen = [...new Set([...(cur.seen || []), ...(session.seen || [])])].slice(-40)
+  if (files) cur.last = { jd: session.jd, email: files.email, at: Date.now() }
+  await saveSession(from, cur)
 
-  await sendText(from, "Updating your resume. I’ll send one Word file when this run finishes.")
+  await sendText(from, files
+    ? `Updating ${files.said}. I’ll send one Word file when this run finishes.`
+    : "Updating your resume. I’ll send one Word file when this run finishes.")
 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd })
@@ -341,24 +405,26 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     result = await runTailor({
       jd: session.jd,
       keys,
-      userResumeDir: path.join(INBOX_DIR, digits(from)),
+      userResumeDir: files ? files.userDir : path.join(INBOX_DIR, digits(from)),
       givenPath: session.resumePath,
       mode: "full",
       maxMs,
+      // "redo" asks for a fresh rewrite, not the one kept for the same inputs.
+      ...(files?.redo ? { noCache: true } : {}),
       // Match the dashboard defaults: summary left as written, skills + experience retargeted.
       sections: { summary: false, skills: true, experience: true },
     })
   } catch (e) {
     // The pair was consumed before generation; a retry supplies a new pair.
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
-    return sendText(from, "I could not tailor your resume just now: the AI services that write it are busy or out of their allowance. Please resend the job description and resume to retry.")
+    return sendText(from, `I could not tailor your resume just now: the AI services that write it are busy or out of their allowance. ${retry}`)
   }
 
   // Nothing came back different: the same file with "Match 28% -> 28%" on it is not a tailored resume, so it is not sent as one.
   // A retry supplies a fresh JD and resume pair.
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
-    return sendText(from, "I read the job description against your resume and no line came back changed, so I am not sending you the same file. This usually means the AI services were short of capacity. Please resend the job description and resume to retry.")
+    return sendText(from, `I read the job description against your resume and no line came back changed, so I am not sending you the same file. This usually means the AI services were short of capacity. ${retry}`)
   }
 
   // A rewrite below the coverage target is still sent, with what is missing named in the caption. From 18 Oct 2026 the
@@ -389,11 +455,125 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   }
   const meta = await metaPromise
   const name = await outputNameFor(file)
-  await deliver(from, file, name, captionFor(name, meta, result), { userId, jd: session.jd, meta, changes: [], source: session.resumeName })
+  // Made from Files: filed back there, in the folder for its kind of job, one job one file (saveTailored).
+  const more: string[] = []
+  let filed: Awaited<ReturnType<typeof saveTailored>> | null = null
+  if (files) {
+    filed = await saveTailored({ userDir: files.userDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company,
+      depth: files.depth === 0 ? 1 : 2, from: files.rel, asked: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || []), ...(result.keyword_analysis?.missing || [])], covers: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || [])] })
+      .catch(e => { console.error("[whatsapp] not filed", String(e).slice(0, 200)); return null })
+    more.push(`Started from ${files.said}.`)
+    if (filed) more.push(`Saved in your Files: ${filed.email} / ${filed.category}`)
+    more.push(DIFFERENT_RESUME)
+  }
+  await deliver(from, file, name, captionFor(name, meta, result, undefined, more), { userId, jd: session.jd, meta, changes: [], source: session.resumeName,
+    ...(filed ? { saved: filed.abs, depth: files?.depth === 0 ? 1 : 2 } : {}) })
   await recordWhatsAppUsage(userId, "resume_tailor", result)
+  // Counted once the resume it started is delivered, so a failed run never makes a resume look more used.
+  if (files) await markUsed(files.userDir, files.abs).catch(() => {})
 
   if (session.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
     await deletePath(session.resumePath).catch(() => {})
+}
+
+// ── From the person's Files ─────────────────────────────────────────────────────
+// The emails a person's resumes carry, numbered for good (library-pick-store.ts).
+async function emailSlots(userId: string): Promise<{ slots: string[]; sure: boolean; failed: boolean }> {
+  try {
+    const { counts } = await libraryOf(path.join(USER_RESUMES_DIR, userId))
+    const { slots, sure } = await numberedEmails(userId, counts)
+    return { slots, sure, failed: false }
+  } catch (e) {
+    console.error("[whatsapp] library not read", String(e).slice(0, 200))
+    return { slots: [], sure: false, failed: true }
+  }
+}
+
+// How often each resume of these folders was picked, from the folders' records.
+async function usesOf(userDir: string, email: string, ranked: Ranked[]): Promise<Uses> {
+  const folders = [...new Set(ranked.map(r => r.candidate.folder).filter(f => f && !f.includes(" / ")))]
+  const all: Uses = {}
+  await Promise.all(folders.map(async folder => Object.assign(all, (await readShelf(userDir, email, folder).catch(() => null))?.uses || {})))
+  return all
+}
+
+/**
+ * A job made from the closest resume of one email in the person's Files. Made before for this job: sent again as it is
+ * (no AI, nothing new saved), unless `redo`. Otherwise the AI agent and the code each pick, the agent's pick is used
+ * when it names a real resume, the file is opened and its email read once more before it is used, and the pick is
+ * logged and counted.
+ */
+async function fromLibrary(from: string, job: { jd: string; jdId: string }, email: string, userId: string, redo = false) {
+  const began = Date.now()
+  const userDir = path.join(USER_RESUMES_DIR, userId)
+  if (!redo) {
+    const have = await existingForJob(userDir, email, job.jd).catch(() => null)
+    if (have) return sendSaved(from, have, job.jd, email, userId)
+  }
+  // One run of a job at a time for a number: a job description pasted again, or a second "redo", while it is being made
+  // would pay for the pick and the rewrite twice. The claim outlives the longest run (the function's 300 s).
+  const flightKey = `whatsapp/making/${digits(from)}-${jobKeyOf(job.jd)}`
+  const token = randomBytes(6).toString("hex")
+  if (!(await blob.putIfAbsent(flightKey, JSON.stringify({ at: Date.now(), token })))) {
+    const held = JSON.parse((await blob.getText(flightKey).catch(() => null)) || "{}") as { at?: number }
+    if (held.at && Date.now() - held.at < IN_FLIGHT_MS) return sendText(from, "I am already making the resume for this job. It will arrive in this chat.")
+    await blob.put(flightKey, JSON.stringify({ at: Date.now(), token }))
+  }
+  try {
+    return await pickAndMake(from, job, email, userId, userDir, redo, began)
+  } finally {
+    const now = JSON.parse((await blob.getText(flightKey).catch(() => null)) || "{}") as { token?: string }
+    if (now.token === token) await blob.delete(flightKey).catch(() => {})
+  }
+}
+
+async function pickAndMake(from: string, job: { jd: string; jdId: string }, email: string, userId: string, userDir: string, redo: boolean, began: number) {
+  const { index } = await libraryOf(userDir)
+  // "redo" starts again from what the person wrote, never from the resume made for this same job (a copy of a copy).
+  const candidates = (await candidatesFor(userDir, email, index)).filter(c => !redo || c.job !== jobKeyOf(job.jd))
+  const { ranked } = rankFor(candidates, email, extractKeywords(job.jd))
+  if (!ranked.length) return sendText(from, `Your Files hold no resume of *${email}* to start from. Send that resume as a *.docx* file with the job description.`)
+
+  const kwKeys = await keysFor("resume-keywords", () => resolveKeys({}))
+  const relOfAbs = (abs: string) => relOf(userDir, abs)
+  const ai = await agentPick({ keys: kwKeys, jd: job.jd, ranked, uses: await usesOf(userDir, email, ranked), relOf: relOfAbs })
+  const order = ai ? [ranked[ai.index], ...ranked.filter((_, i) => i !== ai.index)] : ranked
+  let picked: Ranked | null = null
+  for (const one of order.slice(0, 8)) {
+    const bytes = await readPath(one.candidate.path).catch(() => null)
+    if (!bytes) continue
+    const emails = resumeEmails(await extractText(bytes).catch(() => ""))
+    if (emails.length === 1 && emails[0] === email) { picked = one; break }
+  }
+  if (!picked) return sendText(from, `I could not open a resume in your Files that carries *${email}*. Send that resume as a *.docx* file with the job description.`)
+
+  const rel = relOfAbs(picked.candidate.path)
+  await logPick(userId, { at: Date.now(), job: jobKeyOf(job.jd), email, agent: ai ? relOfAbs(ranked[ai.index].candidate.path) : null,
+    code: relOfAbs(ranked[0].candidate.path), used: rel, agree: ai ? ai.index === 0 : null, ...(ai?.why ? { why: ai.why } : {}), ...(ai?.by ? { by: ai.by } : {}) })
+  // The pick happens inside the same 300 s function as the rewrite (after up to PAIR_WAIT_MS of waiting for a paired
+  // file): the rewrite gets what is left, so the file is still sent in time.
+  const budget = Math.max(120_000, TAILOR_BUDGET_MS - PAIR_WAIT_MS - (Date.now() - began))
+  return generate(from, { jd: job.jd, jdId: job.jdId, resumePath: picked.candidate.path, resumeName: picked.candidate.name }, userId, budget,
+    { userDir, email, said: saidOf(picked), depth: picked.candidate.depth, rel, abs: picked.candidate.path, ...(redo ? { redo } : {}) })
+}
+
+// The resume made for this job before, sent again as it is: the outcome is already known (owner, 13 Oct 2026).
+async function sendSaved(from: string, have: { abs: string; file: SavedFile }, jd: string, email: string, userId: string) {
+  const file = await readPath(have.abs).catch(() => null)
+  if (!file) return sendText(from, "I made this one before, but its file could not be opened just now. Send *redo* and I will make it again.")
+  const name = await outputNameFor(file)
+  const when = new Date(have.file.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+  const caption = [
+    `*${name}*`,
+    ...(have.file.role ? [`${have.file.role}${have.file.company ? ` · ${have.file.company}` : ""}`] : []),
+    `You already have this one: I made it for this job on ${when}, so nothing was made again.`,
+    `In your Files: ${email} / ${have.file.category}`,
+    "Send *redo* to make it afresh, or reply to this file with changes.",
+  ].join("\n")
+  const cur = await loadSession(from)
+  cur.last = { jd, email, at: Date.now() }
+  await saveSession(from, cur)
+  await deliver(from, file, name, caption, { userId, jd, meta: { role: have.file.role, company: have.file.company, location: "" }, changes: [], source: have.file.path, saved: have.abs, depth: have.file.depth })
 }
 
 // ── Swipe-reply: change a resume the bot already sent ─────────────────────────
@@ -488,7 +668,7 @@ function notAdded(result: TailorResult): string[] {
     ? ["This run is incomplete: some sections did not finish rewriting. Reply to this file to ask for another pass."] : []
 }
 
-function captionFor(name: string, meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }): string {
+function captionFor(name: string, meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }, more: string[] = []): string {
   const coverage = result.coverage ?? result.score
   // Never present an unchanged resume as tailored — say so plainly.
   if (result.unchanged) {
@@ -504,6 +684,7 @@ function captionFor(name: string, meta: Meta, result: TailorResult, update?: { r
     ...(meta.role ? [`${meta.role}${meta.company ? ` · ${meta.company}` : ""}`] : []),
     `JD keyword coverage: ${coverage}%.`,
     ...notAdded(result),
+    ...more,
     "Reply to this file to request changes.",
   ].join("\n")
 }

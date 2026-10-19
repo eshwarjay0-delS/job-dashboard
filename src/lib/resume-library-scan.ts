@@ -4,7 +4,7 @@
 // listing: the pages used to ask storage for them one file at a time, which made both pages slow (14 Oct 2026).
 import path from "path"
 import { listFilesInfo } from "@/lib/storage"
-import { LIBRARY_FILE } from "@/lib/resume-library-store"
+import { LIBRARY_FILE, LIBRARY_MD } from "@/lib/resume-library-store"
 
 export interface LibraryFile {
   id: string
@@ -44,7 +44,7 @@ export async function scanLibrary(dir: string): Promise<{ files: LibraryFile[]; 
     const parts = path.relative(dir, full).split(path.sep)
     // A folder's own record is kept out of sight, and a folder that holds nothing but its record is not shown at all
     // (found live on 13 Oct 2026: two email titles with 0 files, each holding only what a removed resume had taught).
-    if (parts[parts.length - 1] === LIBRARY_FILE) continue
+    if (parts[parts.length - 1] === LIBRARY_FILE || parts[parts.length - 1] === LIBRARY_MD) continue
     // Every ancestor directory of this key is a folder.
     for (let i = 1; i < parts.length; i++) folders.add(parts.slice(0, i).join(" / "))
     const base = parts[parts.length - 1]

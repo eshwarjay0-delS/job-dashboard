@@ -57,7 +57,10 @@ export type SavedFile = { path: string; email: string; category: string; role: s
 export type Point = { text: string; words: string[]; jobs: string[]; first: number; last: number }
 /** What is known about one kind of job for one person: the jobs seen, what they asked for, the lines that answered them. */
 export type Shelf = { email: string; category: string; jobs: string[]; words: Record<string, { n: number; last: number }>; points: Point[] }
-export type Library = { version: 1; files: SavedFile[]; shelves: Record<string, Shelf> }
+/** How often a resume was picked to start a job from, by its path in the library (owner, 19 Oct 2026: "every time those
+ * kind of resume frequency ... returns up high, you can just go to that MD file"). Kept in the record of its folder. */
+export type Uses = Record<string, { n: number; last: number }>
+export type Library = { version: 1; files: SavedFile[]; shelves: Record<string, Shelf>; uses?: Uses }
 
 export const emptyLibrary = (): Library => ({ version: 1, files: [], shelves: {} })
 export const shelfKey = (email: string, category: string): string => `${email || NO_EMAIL} / ${category || NO_CATEGORY}`
@@ -264,7 +267,12 @@ export function validLibrary(raw: unknown): Library {
     const email = text(s.email, 120), category = text(s.category, 80)
     shelves[shelfKey(email, category)] = { email, category, jobs: (Array.isArray(s.jobs) ? s.jobs : []).filter(j => typeof j === "string").slice(-MOST_JOBS), words, points }
   }
-  return { version: 1, files, shelves }
+  const uses: Uses = {}
+  for (const [rel, u] of Object.entries(src.uses && typeof src.uses === "object" ? src.uses : {}).slice(0, MOST_FILES)) {
+    if (!rel || rel.length > 400 || rel.includes("..") || /^[\\/]|^[a-z]:/i.test(rel) || !u || num(u.n) <= 0) continue
+    uses[rel] = { n: Math.floor(num(u.n)), last: num(u.last) }
+  }
+  return { version: 1, files, shelves, ...(Object.keys(uses).length ? { uses } : {}) }
 }
 
 /** The one line the bot adds under a resume once a kind of job has been seen often enough to say something true. */
@@ -282,11 +290,59 @@ export function learnedLine(learned: Learned): string {
 export function shelfOnly(library: Library, email: string, category: string): Library {
   const key = shelfKey(email, category)
   const shelf = library.shelves[key]
+  const under = `${folderFor(email, category).join("/")}/`
+  const uses = Object.fromEntries(Object.entries(library.uses || {}).filter(([rel]) => rel.startsWith(under)))
   return {
     version: 1,
     files: library.files.filter(f => shelfKey(f.email, f.category) === key),
     shelves: shelf ? { [key]: shelf } : {},
+    ...(Object.keys(uses).length ? { uses } : {}),
   }
+}
+
+/** The library after the resume at `rel` was picked once more to start a job from. Nothing handed in is changed. */
+export function usedNow(library: Library, rel: string, now: number): Library {
+  const had = library.uses?.[rel]
+  return { ...library, uses: { ...(library.uses || {}), [rel]: { n: (had?.n || 0) + 1, last: now } } }
+}
+
+const mdCell = (s: string) => String(s || "").replace(/\|/g, "/").replace(/\s+/g, " ").trim()
+const mdDate = (ms: number) => (ms ? new Date(ms).toISOString().slice(0, 10) : "")
+
+/**
+ * The record of one folder written for people to read (`_library.md` beside `_library.json`): the resumes in it with
+ * the keywords each covers and how often each was picked, then what this kind of job keeps asking for. Rewritten from
+ * the record every time the record is written, so the two always say the same.
+ */
+export function libraryMarkdown(library: Library, email: string, category: string): string {
+  const under = `${folderFor(email, category).join("/")}/`
+  const files = library.files.filter(f => f.path.startsWith(under))
+  const uses = library.uses || {}
+  const used = Object.entries(uses).filter(([rel]) => rel.startsWith(under) && !files.some(f => f.path === rel))
+  const learned = learnedOf(library, folderFor(email, category)[0], folderFor(email, category)[1])
+  const lines = [
+    `# ${folderFor(email, category)[1]}`,
+    "",
+    `Email: ${folderFor(email, category)[0]}`,
+    `Jobs seen: ${learned.jobs}`,
+    "",
+    "## Resumes in this folder",
+    "",
+    "| Resume | Made for | Saved | Picked | Last picked | Keywords it covers |",
+    "|---|---|---|---|---|---|",
+    ...files.sort((a, b) => (uses[b.path]?.n || 0) - (uses[a.path]?.n || 0) || b.at - a.at).map(f => {
+      const u = uses[f.path]
+      return `| ${mdCell(f.path.slice(under.length))} | ${mdCell([f.role, f.company].filter(Boolean).join(", "))} | ${mdDate(f.at)} | ${u?.n || 0} | ${mdDate(u?.last || 0)} | ${mdCell(f.covers.slice(0, 40).join(", "))} |`
+    }),
+    ...used.sort((a, b) => b[1].n - a[1].n).map(([rel, u]) => `| ${mdCell(rel.slice(under.length))} | your own resume | | ${u.n} | ${mdDate(u.last)} | |`),
+    "",
+    "## What this kind of job asks for",
+    "",
+    ...(learned.common.length ? learned.common.slice(0, 40).map(c => `- ${c.word} (${c.jobs} jobs)`) : ["- Not enough jobs of this kind yet."]),
+    ...(learned.recent.length ? ["", `Newest asks: ${learned.recent.join(", ")}`] : []),
+    "",
+  ]
+  return lines.join("\n")
 }
 
 /** Every folder a library holds something for, as [email, kind of job]. */
@@ -323,7 +379,10 @@ export function mergeLibraries(a: Library, b: Library): Library {
   for (const f of [...a.files, ...b.files]) { const had = files.get(f.path); if (!had || f.at >= had.at) files.set(f.path, f) }
   const shelves: Record<string, Shelf> = { ...a.shelves }
   for (const [key, shelf] of Object.entries(b.shelves)) shelves[key] = shelves[key] ? joinShelves(shelves[key], shelf) : shelf
-  return { version: 1, files: [...files.values()].sort((x, y) => x.at - y.at).slice(-MOST_FILES), shelves }
+  // A resume picked in both records counts the larger number: the two may be copies of the same record.
+  const uses: Uses = { ...(a.uses || {}) }
+  for (const [rel, u] of Object.entries(b.uses || {})) { const had = uses[rel]; uses[rel] = had ? { n: Math.max(had.n, u.n), last: Math.max(had.last, u.last) } : u }
+  return { version: 1, files: [...files.values()].sort((x, y) => x.at - y.at).slice(-MOST_FILES), shelves, ...(Object.keys(uses).length ? { uses } : {}) }
 }
 
 /**
@@ -346,5 +405,7 @@ export function relabelEmail(library: Library, from: string, to: string): Librar
     target.shelves[key] = target.shelves[key] ? joinShelves(target.shelves[key], renamed) : renamed
   }
   // What was under the old name is joined to what the right name already holds.
-  return mergeLibraries({ version: 1, files: [], shelves: rest.shelves }, moved)
+  const merged = mergeLibraries({ version: 1, files: [], shelves: rest.shelves }, moved)
+  const uses = Object.fromEntries(Object.entries(library.uses || {}).map(([rel, u]) => [path(rel), u]))
+  return Object.keys(uses).length ? { ...merged, uses } : merged
 }

@@ -19,9 +19,12 @@ import { extractText } from "@/lib/docx"
 import { resumeEmails, rankResumeCategories, cleanEmail } from "@/lib/resumeOrganization"
 import { extractJdKeywords, coveredJdKeywords } from "@/lib/keywords"
 import { pdfText } from "@/lib/pdf-text"
-import { categoryForJob, duplicatesIn, emptyLibrary, folderFor, isTailoredName, learnedOf, madeFor, mergeLibraries, recordRun, relabelEmail, shelfOnly, shelvesIn, supersededBy, tailoredFileName, validLibrary, NO_CATEGORY, type Learned, type Library, type SavedFile } from "@/lib/resume-library"
+import { categoryForJob, duplicatesIn, emptyLibrary, folderFor, isTailoredName, learnedOf, libraryMarkdown, madeFor, mergeLibraries, recordRun, relabelEmail, shelfOnly, usedNow, shelvesIn, supersededBy, tailoredFileName, validLibrary, NO_CATEGORY, type Learned, type Library, type SavedFile } from "@/lib/resume-library"
 
 export const LIBRARY_FILE = "_library.json"
+/** The same record written for people to read, beside it (owner, 19 Oct 2026: "also have a MD file which basically
+ * tracks all the keywords"). Never read back: the JSON is the record. */
+export const LIBRARY_MD = "_library.md"
 
 /** A path inside the person's library, as it is kept in the record: relative, with "/" between its parts. */
 export const relOf = (userDir: string, abs: string): string => path.relative(userDir, abs).split(path.sep).join("/")
@@ -57,7 +60,21 @@ export async function readShelf(userDir: string, email: string, category: string
   return (await splitOldRecord(userDir)) ? parse(await readPathText(recordOf(userDir, email, category)).catch(() => null)) : emptyLibrary()
 }
 async function writeShelf(userDir: string, library: Library, email: string, category: string): Promise<void> {
-  await writePath(recordOf(userDir, email, category), JSON.stringify(shelfOnly(library, email, category)))
+  const own = shelfOnly(library, email, category)
+  await writePath(recordOf(userDir, email, category), JSON.stringify(own))
+  await writePath(path.join(userDir, ...folderFor(email, category), LIBRARY_MD), libraryMarkdown(own, email, category)).catch(() => {})
+}
+
+/**
+ * The resume at `abs` was picked to start a job from: counted in its folder's record (and the readable copy beside it).
+ * Only a resume inside an email's kind-of-job folder has a record; any other is left as it is.
+ */
+export async function markUsed(userDir: string, abs: string, now = Date.now()): Promise<void> {
+  if (!inside(userDir, abs)) return
+  const rel = relOf(userDir, abs), parts = rel.split("/")
+  if (parts.length !== 3) return
+  const [email, category] = parts
+  await writeShelf(userDir, usedNow(await readShelf(userDir, email, category), rel, now), email, category)
 }
 
 /**

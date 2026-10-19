@@ -83,7 +83,8 @@ test('the storage keeps one record inside each folder, and reads only that one t
   // show a folder that holds only its record as an empty folder.
   const scan = read('src/lib/resume-library-scan.ts')
   assert.ok(scan.includes('if (!kind) continue'))
-  const skip = scan.indexOf('if (parts[parts.length - 1] === LIBRARY_FILE) continue'), add = scan.indexOf('folders.add(')
+  // The record and its readable copy (_library.md, 19 Oct 2026) are both skipped before their folder is counted.
+  const skip = scan.indexOf('if (parts[parts.length - 1] === LIBRARY_FILE || parts[parts.length - 1] === LIBRARY_MD) continue'), add = scan.indexOf('folders.add(')
   assert.ok(skip > 0 && skip < add, 'the record is skipped before its folder is counted')
   for (const page of ['src/app/dashboard/documents/page.tsx', 'src/app/dashboard/resume/page.tsx']) {
     const src = read(page)

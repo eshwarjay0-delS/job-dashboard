@@ -1,3 +1,44 @@
+## 2026-10-19 — Resume tailor works again (web and WhatsApp), every keyword goes in, and WhatsApp starts from Files again
+
+Commits 4ad86ca, 1117cd3, 5fb70ff, efc609f (live), and the library flow commit below. Each deployed and checked READY.
+
+**Reported:** "Resume tailor on whatsapp isn't working at all" (it replied, then no resume), "at least the mfit website
+thing has to work", then on a resume sent at 96%: "doesn't have the audacity to apply them all in anyway ... give this to
+gemini free api for more keywords ... concatenate both ... resume tailor for best match", "Ignore certs always", and the
+library as first built: ask which email, go to that email's folder in Files, grab the closest resume, apply the job, file
+it back, an AI agent picking first and code later, a readable keyword .md per folder with how often each was used, no
+duplicates.
+
+**Causes found (proof in code and measured):**
+- Website: the page gave up after 65 s (set 18 Aug); since 16 Oct (c6a2e3d) a full rewrite takes ~4.5 min (measured 272 s).
+- WhatsApp: since 18 Oct a "95% floor" held every file under 95% coverage back; whatsapp-single-request.test.mjs had been
+  red since then. The library bot of 15 Oct morning gave the rewrite 52 s, then was rolled back (fbe5506) to a bot that
+  needs a resume with every job.
+- Keywords: Gemini's two passes returned 26-28 terms in 1-2 s but only as suggestions; coverage used the post's literal
+  terms alone (with junk like "technology", "palo", "alto"), and nothing placed the leftovers.
+
+**Built:** page waits 310 s; WhatsApp always sends, budget 240 s; target = post terms + Gemini's skill-like terms
+(src/lib/keyword-targets.ts), every leftover placed on the best skills line, certifications ignored (and removed when the
+writer adds one the source lacks); WhatsApp asks which email, an AI agent (Gemini, Groq after 4 s) and the code each pick,
+the email is re-read from the file, picks logged (library/picks/<user>.json) with agreement, counted in the folder
+record, `_library.md` beside `_library.json`, result filed one job one file, a job made before resent, "redo".
+
+**Reviewed before shipping:** an adversarial review (19 agents) confirmed 14 defects in the first version, all fixed with
+regression tests: session saves that could drop a newer message, a stale job description fitted to a later resume, a
+swipe-reply answer taken as a change request, an unread email numbering trusted, "redo" building on a copy, no guard
+against making a job twice at once, counts and agreement inflated. Two claims were refuted.
+
+**Measured:** micro-segmentation job, 240 s budget: 45% -> 100% (38/38), 235 s. Agent on a copy of a real 81-resume
+library: answers in ~4.5 s (Groq while Gemini was slow); agreed on GRC, chose SOC/CSOC over Threat Response for a SOC job,
+DevOps over Cyber Security Analyst for AppSec (no AppSec folder there).
+
+**NOT verified:** a run on his account (the browser pane is signed out; I don't sign in for him); production Gemini key
+checklist ("Finding the keywords in a job post" must allow Gemini for the extra keywords and the agent).
+
+**Red tests:** 33 fail on master before any of this (other work since 14 Oct); none added by these changes.
+
+**Next:** the REA register (src/lib/rea-register.ts, /dashboard/admin/vision/rea), Apply side first.
+
 ## 2026-10-14 (later) — Design system 2 parts 4 to 6, and zero lag: four slow paths found by measuring and fixed
 
 Commits 63ec5ac, f58f276, e03cf43 (design), 624b946, 6dab408, 2927277 (speed). Each pushed to production.
