@@ -69,3 +69,19 @@ test('each missing term goes onto the skills line it fits, in the job post\'s sp
   assert.equal(bare[0].text, 'Tools: Illumio')
   assert.equal(jdSpelling('palo alto', jd), 'Palo Alto')
 })
+
+test('punctuated and named Salesforce credentials never become skills targets', () => {
+  const credentials = ['Security+', 'Network+', 'CySA+', 'CASP+', 'Pentest+', 'A+',
+    'Salesforce Platform Developer I', 'Salesforce Platform Developer II', 'Salesforce CPQ Specialist']
+  for (const term of credentials) {
+    assert.equal(isCertification(term), true, term)
+    assert.equal(isCertification(`${term},`), true, term + ' followed by punctuation')
+  }
+  assert.deepEqual(targetKeywords(credentials, ['Apex', 'LWC', 'Salesforce CPQ']), ['apex', 'lwc', 'salesforce cpq'])
+  const cleaned = withoutAddedCerts([{idx: 4, text: 'Skills: Security+, Salesforce CPQ Specialist, Apex, LWC'}], 'Built Apex and LWC components.')
+  assert.equal(cleaned[0].text, 'Skills: Apex, LWC')
+  assert.deepEqual(withoutAddedCerts([{idx: 4, text: 'Credentials: Security+'}], 'Credentials: Security+'), [])
+  for (const term of ['security', 'network', 'C++', 'Salesforce CPQ', 'Salesforce development', 'security+automation']) {
+    assert.equal(isCertification(term), false, term)
+  }
+})

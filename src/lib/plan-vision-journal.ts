@@ -15,6 +15,7 @@ export type PlanJournalEntry = {
 
 export const JOURNAL_UPDATED = '2026-10-18T14:30:00Z'
 export const PLAN_JOURNAL: PlanJournalEntry[] = [
+  {"id": "credential-target-boundaries", "area": "resume", "updated": "2026-10-20T07:18:00Z", "title": "Credential names cannot slip into ordinary skills targets", "approval": "approved", "delivery": "in progress", "detail": "Completion Watch continued the existing owner rule recorded on 19 October: ignore certifications as tailoring targets and never add unsupported credentials. Reproduced Security+ being classified as a skill because a trailing regex word boundary fails after +; Salesforce Platform Developer I/II and CPQ Specialist names were also missed. Fixed token endings and explicit Salesforce names without changing coverage floors or other developers' target policy.", "evidence": "34 tests passed: keyword extraction, targets, WhatsApp library/single-request behavior and REA register. Typecheck, scoped lint and full production build passed. New test failed on Security+ before the fix and passes after it. Master 6cf9f3a has a successful Vercel commit status; this change is not yet deployed. No real messages sent.", "next": "Publish the validated isolated fix and verify deployment. Exact 17:28 run artifacts and authenticated fresh output remain unavailable; no live 98% claim."},
   
   
   
