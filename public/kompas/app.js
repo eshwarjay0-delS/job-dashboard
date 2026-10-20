@@ -139,13 +139,14 @@ function openTranscripts() {
   }
   show("transcripts");
 }
-/* ---- a session's life: Start → Stop (Continue for 30 minutes) → ended, by the End button or by the clock ----
-   Owner, 2026-10-01: Stop ends the run and closes the live box. The card then offers Continue for 30 minutes; after that the
+/* ---- a session's life: Start → Stop → Continue, until explicitly Ended ----
+   Historical policy (superseded 2026-10-20), owner 2026-10-01: Continue for 30 minutes; after that the
    session ends by itself. A stopped session can also be ended from its card. The transcript is kept either way. An ended session
    is over (his second decision the same day: "Clicking on end doesn't continue anymore. Only view transcript would be visible"):
    its card offers its transcript and nothing to start. A session has one transcript, however often it was stopped and continued.
    On the session record: runAt (a run exists), pausedAt (when its live box closed), endedAt + endedBy ("you" | "clock"). */
-const CONTINUE_MS = 30 * 60000;
+// Superseded 2026-10-20: absence, Stop and a lost heartbeat never end a session.
+// Only the explicit End action finalizes it. Preserve historical clock-ended records.
 const liveKey = (id) => id + ":live";
 const sessionOpen = (s) => !!s.runAt && !s.endedAt;
 const liveOpenFor = (s) => !!current && current.id === s.id && !$("view-copilot").classList.contains("hidden");
@@ -189,24 +190,19 @@ function closeRun(s, at, by) {
     DossierDB.put(liveKey(s.id), null);
   }, 0);
 }
-let endTimer = 0;
-// Ends every stopped session whose 30 minutes are over, and wakes up again when the next one is due.
+// Discover interrupted runs without expiring their saved transcript or answers.
 function sweepSessions() {
-  const now = Date.now(); let changed = false, next = Infinity;
+  const now = Date.now(); let changed = false;
   for (const s of sessions) {
     if (!sessionOpen(s)) continue;
     if (!s.pausedAt) { if (liveOpenFor(s) || liveElsewhere(s)) continue; s.pausedAt = lastHeardAt(s.id) || now; changed = true; }   // the window went without a Stop: counted from the last thing heard
-    if (now - s.pausedAt >= CONTINUE_MS) { closeRun(s, s.pausedAt + CONTINUE_MS, "clock"); changed = true; }
-    else next = Math.min(next, s.pausedAt + CONTINUE_MS);
   }
   if (changed) LS.set("sessions", sessions);
-  clearTimeout(endTimer);
-  if (next < Infinity) endTimer = setTimeout(() => { sessions = LS.get("sessions", []); if ($("view-dashboard").classList.contains("hidden")) sweepSessions(); else renderSessions(); }, next - now + 500);
 }
 // A card can be older than the store (a save elsewhere, another window), so both buttons act on the record as it is stored now.
 function continueSession(s) {
   sessions = LS.get("sessions", []); const x = sessions.find(v => v.id === s.id);
-  if (!x || !sessionOpen(x) || liveElsewhere(x) || Date.now() - (x.pausedAt || 0) >= CONTINUE_MS) { renderSessions(); return; }   // its time ran out, or it was ended or opened elsewhere, while the card was on screen
+  if (!x || !sessionOpen(x) || liveElsewhere(x)) { renderSessions(); return; }   // Respect explicit End and another active window.
   x.pausedAt = null; LS.set("sessions", sessions);
   launchCopilot(x, { resume: true });
 }
@@ -248,10 +244,10 @@ function renderSessions() {
     if (sessionOpen(s) && !s.pausedAt && liveElsewhere(s)) {               // running in another window of Kompas: nothing to press here
       startBtn.classList.add("hidden"); card.querySelector(".sc-del").classList.add("hidden");
       state.textContent = "Open in another window."; state.classList.remove("hidden"); card.classList.add("open");
-    } else if (sessionOpen(s)) {                                           // stopped, and still inside its 30 minutes
+    } else if (sessionOpen(s)) {                                           // stopped; no automatic expiry
       const at = s.pausedAt || Date.now();
       startBtn.textContent = "Continue"; startBtn.onclick = () => continueSession(s);
-      state.textContent = `Stopped ${clockTime(at)}. Continue until ${clockTime(at + CONTINUE_MS)}.`; state.classList.remove("hidden");
+      state.textContent = `Stopped ${clockTime(at)}. Continue when ready, or End session.`; state.classList.remove("hidden");
       const end = card.querySelector(".sc-end"); end.classList.remove("hidden"); end.onclick = () => endSession(s);
       card.querySelector(".sc-del").classList.add("hidden");               // a session is ended before it is deleted
       card.classList.add("open");

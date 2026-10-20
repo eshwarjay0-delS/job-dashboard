@@ -50,3 +50,6 @@ A voice-first interview preparation app. The user speaks; Kompas listens, transc
 ## ParakeetAI reference — 17 October 2026
 
 Owner requested Parakeet.ai as an additional reference. See `docs/research/parakeet-reference.md` for verified public observations, MFit mapping, approval distinctions and acceptance checks. Prioritize existing owner commitments to combined resume/JD grounding, natural answers, speaker-aware turn handling, reusable session history and practice. New implementation details remain proposals until scoped; marketing accuracy/invisibility claims are not acceptance evidence. This reference complements the ongoing Kompas voice and archive workstreams.
+# Session continuity correction — 20 October 2026
+
+Owner now requires sessions to remain recoverable until explicit End, including 20–40 minutes of inactivity. The old 30-minute stopped/disconnected-session expiry is superseded. Historical ended records stay ended. The frontend fix and simulated-clock tests are recorded in `docs/research/desktop-session-continuity.md`; the reported native Windows disappearance is still unproven without its crash event/build evidence. Web deployment is not a desktop installer update or a completed Windows soak test. Preserve this correction when synchronizing upstream assets. This slice does not modify the separately owned voice/answer work.
