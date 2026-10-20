@@ -1,4 +1,5 @@
 import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
+import { candidateEvidenceInput } from "./resume-evidence"
 import { preserveSkillHeadings } from "./resume-format"
 import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, resumeQuality, requiredEvidenceTerms } from "./resume-quality"
 import { J1_VERSION, constrainResumeEdits } from "./ai/j1"
@@ -112,8 +113,8 @@ function normJD(jd: string): string {
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
-// Earlier classifications used synthetic counts derived from rounded weighted scores.
-const CACHE_GENERATION = "16"
+// Earlier contexts could truncate explicit confirmations behind a lengthy pasted JD.
+const CACHE_GENERATION = "17"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -210,7 +211,7 @@ export async function runTailor(opts: {
         "SOURCE FACT CONTRACT: the baseline resume and explicit candidate confirmations supply experience facts; the JD supplies target requirements only. Incorporate confirmed skills even if absent from the older baseline. Use exact JD terms where supported by either source, respecting role-specific attribution. Never invent certifications, experience years, job titles, platforms, employers, project implementations, or dates.",
         "More technical detail — name the exact technologies, protocols, and methods used",
       ]
-  const candidateInput = [opts.jd, ...immediatePrefs].join("\n")
+  const candidateInput = candidateEvidenceInput(opts.jd, immediatePrefs)
   const explicit = [`CANDIDATE-SUPPLIED INPUT (separate explicit first-person experience confirmations from employer requirements; the JD alone is not a confirmation):\n${candidateInput}`, ...immediatePrefs, ...storedFeedback.filter(f => !immediatePrefs.includes(f))]
   // A refinement carries ONLY the user's request. The default "more keywords / more detail"
   // prefs would make the model rewrite lines the user already accepted, so a small change

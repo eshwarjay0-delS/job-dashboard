@@ -51,3 +51,7 @@ High keyword overlap does not make unfinished role rewrites complete. Partial ou
 ## Actual counts and weighting — 20 October 2026
 
 Matched-term counts must come from the exported document, not a weighted percentage converted into an integer. Weighted coverage remains separate; both measures must meet the existing acceptance thresholds. Cache generation 16 supersedes generation 15 while retaining its incomplete-rewrite safeguard. Evidence: `docs/research/resume-score-counts.md`.
+
+## Confirmation priority — 20 October 2026
+
+Explicit candidate input precedes the pasted JD in bounded enrichment context. Long job descriptions must not crowd out confirmed experience or its employer restrictions. Cache generation 17 retains earlier safeguards and invalidates older context construction. Evidence: `docs/research/resume-confirmation-priority.md`.

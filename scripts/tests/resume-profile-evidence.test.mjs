@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
+import { candidateEvidenceInput } from '../../src/lib/resume-evidence.ts'
 
 function harness(reply) {
   const calls = []
@@ -90,6 +91,25 @@ test('Gemini enrichment receives baseline and explicit confirmations on both pas
     assert.match(call.system, /Never infer metrics, credentials, dates or employer assignments/)
   }
   assert.deepEqual(Array.from(terms), ['guided selling', 'quote templates'])
+})
+
+test('a long pasted JD cannot crowd explicit role confirmations out of either Gemini review', async () => {
+  const h = harness(['guided selling'])
+  const jd = 'Employer requirements. '.repeat(1000)
+  const confirmation = 'I used Salesforce CPQ guided selling at Current Client only, not Earlier Client.'
+  const before = harness(['guided selling'])
+  await before.expandTwice({ keys: { gemini: 'test-key' }, jd, sourceResume: 'Salesforce administrator.', candidateInput: [jd, confirmation].join('\n'), timeoutMs: 100 })
+  assert.equal(before.calls.length, 2)
+  assert.ok(before.calls.every(call => !call.user.includes(confirmation)), 'reproduces the previous JD-first truncation')
+  const input = candidateEvidenceInput(jd, [confirmation])
+  assert.ok(input.indexOf(confirmation) < input.indexOf(jd))
+  assert.ok(input.endsWith(jd), 'the original submission is retained without rewriting it')
+  await h.expandTwice({ keys: { gemini: 'test-key' }, jd, sourceResume: 'Salesforce administrator.', candidateInput: input, timeoutMs: 100 })
+  assert.equal(h.calls.length, 2)
+  for (const call of h.calls) {
+    assert.ok(call.user.includes(confirmation), 'role attribution and exclusion survive the input budget')
+    assert.match(call.user, /EXPLICIT CANDIDATE INPUT/)
+  }
 })
 
 test('explicit candidate confirmations remain evidence in profile, experience and repair passes', async () => {
