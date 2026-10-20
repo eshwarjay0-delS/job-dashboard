@@ -44,6 +44,7 @@ import { jobKeyOf, type SavedFile, type Uses } from "@/lib/resume-library"
 import { agentPick, logPick } from "@/lib/library-agent"
 import { extractKeywords } from "@/lib/keywords"
 import { resumeEmails } from "@/lib/resumeOrganization"
+import { getApprovalCard, saveApprovalCard, parseCardButton, deliverApprovalCard, sendGmailDraft, updateGmailDraft, deleteGmailDraft } from "@/lib/chief-approvals"
 
 export const runtime = "nodejs"
 export const maxDuration = 300
@@ -104,6 +105,8 @@ type Session = {
   pending?: { jd: string; jdId: string; slots: string[]; at: number }
   /** The last job made from Files, for "redo". */
   last?: { jd: string; email: string; at: number }
+  /** Approval card awaiting the owner's edited draft text (Phase 4, chief-approvals). */
+  awaitingEditCardId?: string
 }
 const sessionKey = (from: string) => `whatsapp/session-${digits(from)}.json`
 
@@ -289,6 +292,49 @@ export async function POST(request: NextRequest) {
 async function handle(from: string, msg: Record<string, unknown>, session: Session, userId: string) {
   const type = String(msg.type || "")
 
+  // ── Chief approval cards (Phase 4) ─────────────────────────────────────────
+  // Interactive button replies land here as type "interactive". Only ids with our
+  // appr: prefix are intercepted; anything else falls through to existing behavior.
+  if (type === "interactive") {
+    const reply = (msg.interactive as { button_reply?: { id?: string; title?: string } } | undefined)?.button_reply
+    const parsed = parseCardButton(reply?.id || "")
+    if (parsed) {
+      const card = await getApprovalCard(parsed.cardId)
+      if (!card || card.to !== digits(from) || card.status !== "pending") {
+        return sendText(from, "That approval is no longer pending — nothing to do.")
+      }
+      if (parsed.action === "send") {
+        const err = card.draftId && card.accountEmail
+          ? await sendGmailDraft(userId, card.accountEmail, card.draftId)
+          : null
+        if (err) return sendText(from, `⚠️ ${err}`)
+        card.status = "sent"; delete card.awaitingEdit
+        await saveApprovalCard(card)
+        return sendText(from, `✅ Sent to ${card.toEmail}.`)
+      }
+      if (parsed.action === "edit") {
+        card.awaitingEdit = true
+        await saveApprovalCard(card)
+        session = await loadSession(from)
+        session.awaitingEditCardId = card.id
+        await saveSession(from, session)
+        return sendText(from, "Reply with your edited version and I'll update the draft.")
+      }
+      // skip
+      const err = card.draftId && card.accountEmail
+        ? await deleteGmailDraft(userId, card.accountEmail, card.draftId)
+        : null
+      card.status = "skipped"; delete card.awaitingEdit
+      await saveApprovalCard(card)
+      session = await loadSession(from)
+      if (session.awaitingEditCardId === card.id) {
+        delete session.awaitingEditCardId
+        await saveSession(from, session)
+      }
+      return sendText(from, err ? `Skipped. ⚠️ ${err}` : "Skipped — the draft was discarded.")
+    }
+  }
+
   // ── Commands / change requests / JD text ────────────────────────────────────
   if (type === "text") {
     const text = String((msg.text as { body?: string })?.body || "").trim()
@@ -309,6 +355,27 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       return sendText(from, session.pending
         ? `A job description is waiting for its email. ${askWhichEmail(session.pending.slots)}`
         : [`JD: ${session.jd ? "received" : "waiting"}`, `Resume: ${session.resumeName ? session.resumeName : "from your Files"}`].join("\n"))
+    }
+    // The owner's edited draft text for a tapped Edit card: replaces the draft body,
+    // updates the Gmail draft, and re-sends the card. Commands above stay as escapes.
+    if (session.awaitingEditCardId && text.length > 0) {
+      const card = await getApprovalCard(session.awaitingEditCardId)
+      const cur = await loadSession(from)
+      delete cur.awaitingEditCardId
+      if (!card || card.to !== digits(from) || card.status !== "pending") {
+        await saveSession(from, cur)
+        return sendText(from, "That draft is no longer pending — nothing to edit.")
+      }
+      card.body = text
+      card.awaitingEdit = false
+      const err = card.draftId && card.accountEmail
+        ? await updateGmailDraft(userId, card.accountEmail, card.draftId, card.toEmail, card.subject, text)
+        : null
+      await saveApprovalCard(card)
+      await saveSession(from, cur)
+      if (err) return sendText(from, `⚠️ ${err}`)
+      await deliverApprovalCard(card)
+      return
     }
     const replyTo = (msg.context as { id?: string } | undefined)?.id
 

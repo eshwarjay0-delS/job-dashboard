@@ -439,6 +439,32 @@ function summarizeFindings(f: unknown): string {
   } catch { return "New activity detected." }
 }
 
+// ── chief_approval ─────────────────────────────────────────────────────────
+// Phase 4: send the owner a WhatsApp approval card (Send / Edit / Skip buttons)
+// for a sensitive draft. Nothing sends without his tap.
+async function chiefApproval(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
+  const { createApprovalCard, deliverApprovalCard, ownerWhatsAppDigits } = await import("@/lib/chief-approvals")
+  const to = str(args.to).replace(/[\\r\\n]/g, " ").trim()
+  const subject = str(args.subject).replace(/[\\r\\n]/g, " ").trim()
+  const body = str(args.body).trim()
+  const draftId = str(args.draftId).trim() || undefined
+  const accountEmail = str(args.accountEmail).toLowerCase() || undefined
+  if (!to || !subject || !body) return { ok: false, error: "to, subject, and body are required." }
+  if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(to)) return { ok: false, error: "to must be a single valid email address" }
+  const waDigits = ownerWhatsAppDigits()
+  if (!waDigits) return { ok: false, error: "No WhatsApp number configured (WHATSAPP_ALLOWED_FROM is empty)." }
+  const card = await createApprovalCard({
+    userId: ctx.userId, to: waDigits, kind: "followup-draft", toEmail: to,
+    subject, body, draftId, accountEmail,
+  })
+  try {
+    const waId = await deliverApprovalCard(card)
+    return { ok: true, data: { cardId: card.id, waMessageId: waId, note: "Approval card sent to WhatsApp. The owner taps Send / Edit / Skip." } }
+  } catch (e) {
+    return { ok: false, error: `Card created (${card.id}) but WhatsApp delivery failed: ${String(e).slice(0, 200)}` }
+  }
+}
+
 // ── Tool registry ─────────────────────────────────────────────────────────
 export const AGENT_TOOLS: Record<string, { description: string; fn: ToolFn }> = {
   inbox_search: {
@@ -490,6 +516,11 @@ export const AGENT_TOOLS: Record<string, { description: string; fn: ToolFn }> = 
     description:
       "The briefable Chief: create a persistent watch from a plain-words goal. The Chief decomposes it into sub-checks, runs them on schedule, nudges only on change. Args: action ('create'|'list'|'cancel', default create); goal (required for create, e.g. 'watch the Richmond 814050 req'); subject (optional req/client/vendor keyword); sub_checks (optional string[] — your own decomposition; default provided); check_every_minutes (1440-10080, default 1440 — daily; runner is daily on current hosting plan); deadline (optional ISO date); id (required for cancel).",
     fn: chiefWatch,
+  },
+  chief_approval: {
+    description:
+      "Send the owner a WhatsApp approval card with Send / Edit / Skip quick-reply buttons for a sensitive draft. Args: to, subject, body (required — the draft), draftId (optional Gmail draft id, so Send actually sends it and Skip discards it), accountEmail (optional Gmail account). Nothing ever sends without his tap.",
+    fn: chiefApproval,
   },
 }
 

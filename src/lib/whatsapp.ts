@@ -160,3 +160,40 @@ export async function downloadMedia(mediaId: string): Promise<Buffer> {
   if (!bin.ok) throw new Error(`WA media fetch ${bin.status}`)
   return Buffer.from(await bin.arrayBuffer())
 }
+
+export type WhatsAppButton = { id: string; title: string }
+
+/**
+ * Interactive quick-reply buttons (max 3): the Phase 4 approval card — Send / Edit / Skip.
+ * Meta caps: body 1024 chars, button title 20 chars, button id 256 chars, footer 60 chars.
+ */
+export async function sendInteractiveButtons(
+  to: string,
+  body: string,
+  footer: string,
+  buttons: WhatsAppButton[],
+): Promise<string> {
+  const btns = buttons.slice(0, 3).map(b => ({
+    type: "reply",
+    reply: { id: String(b.id).slice(0, 256), title: String(b.title).slice(0, 20) },
+  }))
+  const res = await fetch(`${GRAPH}/${phoneId()}/messages`, {
+    method: "POST",
+    headers: { ...auth(), "content-type": "application/json" },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: { text: body.length > 1024 ? body.slice(0, 1020) + "…" : body },
+        ...(footer ? { footer: { text: footer.slice(0, 60) } } : {}),
+        action: { buttons: btns },
+      },
+    }),
+    signal: AbortSignal.timeout(20000),
+  })
+  if (!res.ok) throw new Error(`WA sendInteractive ${res.status}: ${(await res.text()).slice(0, 200)}`)
+  const sent = await res.json().catch(() => ({})) as { messages?: { id?: string }[] }
+  return sent.messages?.[0]?.id || ""
+}
