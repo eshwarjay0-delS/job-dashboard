@@ -39,8 +39,18 @@ export function resumeQuality(input: {
     matched: input.matched,
     total: input.total,
     missing: input.missing,
+    incomplete: !!input.partial,
     ...(input.weightedCoverage === undefined ? {} : { weightedCoverage: input.weightedCoverage }),
   }
+}
+
+/** Completion and keyword overlap are independent; support older saved reports. */
+export function resumeQualityNotice(report: { status: string; incomplete?: boolean } | null): string | null {
+  if (!report) return null
+  if (report.incomplete) return "Some requested rewrites or experience checks are unfinished. Keyword coverage alone does not mean this resume is complete. Review the experience sections and retry the rewrite."
+  if (report.status === "delivered_with_gaps") return "This result has remaining coverage or rewrite gaps. Review the experience sections and listed terms before using it."
+  if (report.status === "needs_review") return "This result needs review. Check the experience sections and missing terms; confirm unsupported qualifications before including them."
+  return null
 }
 
 /** Enrichment is writing context, never a new acceptance obligation. */

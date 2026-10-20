@@ -1,6 +1,25 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { resumeQuality, requiredEvidenceTerms } from '../../src/lib/resume-quality.ts'
+import { resumeQuality, requiredEvidenceTerms, resumeQualityNotice } from '../../src/lib/resume-quality.ts'
+import { readFileSync } from 'node:fs'
+
+test('result notice distinguishes incomplete work, coverage gaps and finished results', () => {
+  assert.match(resumeQualityNotice(resumeQuality({ matched: 100, total: 100, missing: [], partial: true })), /unfinished/)
+  assert.match(resumeQualityNotice({ status: 'delivered_with_gaps' }), /coverage or rewrite gaps/)
+  assert.match(resumeQualityNotice({ status: 'needs_review' }), /needs review/)
+  assert.equal(resumeQualityNotice({ status: 'coverage_met', incomplete: false }), null)
+  assert.equal(resumeQualityNotice(null), null)
+  const page = readFileSync(new URL('../../src/app/dashboard/resume/result/page.tsx', import.meta.url), 'utf8')
+  assert.match(page, /const qualityNotice = resumeQualityNotice\(quality\)/)
+  assert.match(page, /quality && qualityNotice/)
+})
+
+test('quality report retains unfinished work even when no keywords are missing', () => {
+  const report = resumeQuality({ matched: 100, total: 100, missing: [], partial: true })
+  assert.equal(report.incomplete, true)
+  assert.equal(report.status, 'delivered_with_gaps')
+  assert.equal(resumeQuality({ matched: 96, total: 100, missing: ['AWS'] }).incomplete, false)
+})
 
 test('weighted coverage stays separate from actual counts and cannot override either threshold', () => {
   const report = resumeQuality({ matched: 20, total: 21, missing: ['collaboration'], weightedCoverage: 60 / 61 })

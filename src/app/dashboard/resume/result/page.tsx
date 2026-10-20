@@ -7,6 +7,7 @@ import ResumeScoreCard from "@/components/ResumeScoreCard"
 import CoverLetterModal from "@/components/CoverLetterModal"
 import { toast } from "sonner"
 import { tailoredFilename } from "@/lib/filename"
+import { resumeQualityNotice } from "@/lib/resume-quality"
 
 const FB_CHIPS = [
   "Make bullets shorter", "More specific, less generic", "Add more keywords from the JD",
@@ -336,7 +337,8 @@ function ResultContent() {
 
   const [rankedCandidates, setRankedCandidates] = useState<RankedCandidate[]>([])
   const [breakdown, setBreakdown] = useState<ScoreBreakdown | null>(null)
-  const [quality, setQuality] = useState<{ status: string; minimum: number; matched: number; total: number } | null>(null)
+  const [quality, setQuality] = useState<{ status: string; minimum: number; matched: number; total: number; incomplete?: boolean } | null>(null)
+  const qualityNotice = resumeQualityNotice(quality)
   const [kwAnalysis, setKwAnalysis] = useState<KeywordAnalysis | null>(null)
   // The honest measured JD keyword coverage (0-100) of the returned document.
   // This is the "JD Match %" the user sees — never the inflated estimate.
@@ -760,10 +762,10 @@ function ResultContent() {
           )}
 
           {/* Keyword match — what the role asks vs. what the resume proves */}
-          {quality?.status === "needs_review" && (
+          {quality && qualityNotice && (
             <div role="status" className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}>
-              <p className="font-semibold">Draft: quality review required. Minimum coverage: {quality.minimum}%</p>
-              <p className="text-sm">{quality.matched}/{quality.total} JD terms covered. Review the missing terms below; unsupported qualifications need confirmation before inclusion.</p>
+              <p className="font-semibold">{quality.incomplete ? "Rewrite unfinished" : "Review remaining gaps"}</p>
+              <p className="text-sm">{quality.matched}/{quality.total} JD terms covered. {qualityNotice}</p>
             </div>
           )}
           {(kwAnalysis || breakdown) && (
