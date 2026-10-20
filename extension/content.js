@@ -147,7 +147,7 @@ function fillGreenhouse(profile, filled) {
     ['#last_name,  input[name="job_application[last_name]"]',               last],
     ['#email,      input[name="job_application[email]"]',                   profile.email],
     ['#phone,      input[name="job_application[phone_number]"]',            profile.phone],
-    ['#job_application_location, input[name="job_application[location]"]',  profile.location],
+    ['#job_application_location, input[name="job_application[location]"], #candidate-location, input[id*="candidate-location"]', profile.location],
     ['input[id*="linkedin"], input[name*="linkedin"]',                      profile.linkedin],
     ['input[id*="github"],   input[name*="github"]',                        profile.github],
     ['input[id*="website"],  input[id*="portfolio"], input[name*="website"], input[name*="portfolio"]', profile.portfolio],
@@ -167,7 +167,8 @@ function fillLever(profile, filled) {
     ['input[name="phone"]',                                                    profile.phone],
     ['input[name="urls[LinkedIn]"], input[name="urls[Linkedin]"]',             profile.linkedin],
     ['input[name="urls[GitHub]"],   input[name="urls[Github]"]',               profile.github],
-    ['input[name="urls[Portfolio]"],input[name="urls[Website]"]',              profile.portfolio],
+    ['input[name="urls[Portfolio]"],input[name="urls[Website]"], input[name="urls[Link to portfolio]"]', profile.portfolio],
+    ['input[name="location"]',                                                 profile.location],
   ].reduce((acc, [sel, val]) => acc + fillOne(sel, val, filled), 0)
   const cl = document.querySelector(
     'textarea[name="comments"], textarea[id*="additional"], textarea[id*="cover"]'
