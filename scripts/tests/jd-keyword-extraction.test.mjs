@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
+import { resumeQuality } from '../../src/lib/resume-quality.ts'
 const require = createRequire(import.meta.url)
 const module = { exports: {} }
 const source = readFileSync(new URL('../../src/lib/keywords.ts', import.meta.url), 'utf8')
@@ -12,6 +13,18 @@ runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.Modul
   require: id => id === 'path' || id === 'crypto' ? require(id) : {},
 })
 const { extractJdKeywords, coveredJdKeywords, present } = module.exports
+
+test('actual keyword sets remain consistent when weighted overlap would round to all terms', () => {
+  const terms = ['ci/cd', 'tcp/ip', 'pl/sql', 'pan-os', 'iso 27001', 'nist 800-53', 'tls 1.2', 'tls 1.3', 'oauth2', 'saml2',
+    'ipv4', 'ipv6', 'sha256', 'sha512', 'aes256', 's3', 'ec2', 's4hana', 'http2', 'x509', 'collaboration']
+  const result = module.exports.weightedCoverage(terms.slice(0, -1).join(', '), terms)
+  assert.equal(Math.round(result.coverage * terms.length), 21, 'old conversion invents a match')
+  assert.equal(result.matched.length, 20)
+  assert.equal(result.missing.length, 1)
+  const report = resumeQuality({ matched: result.matched.length, total: terms.length, missing: result.missing, weightedCoverage: result.coverage })
+  assert.equal(report.matched + report.missing.length, report.total)
+  assert.equal(report.status, 'delivered_with_gaps')
+})
 
 test('recruiter contact details and job descriptors are not missing qualifications', () => {
   const terms = extractJdKeywords(`Role: Threat Intelligence Analyst IV

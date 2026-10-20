@@ -47,3 +47,7 @@ The 19 October instruction to ignore certifications as tailoring targets is reta
 ## Rewrite completeness — 20 October 2026
 
 High keyword overlap does not make unfinished role rewrites complete. Partial outputs can retain the existing 95% delivery-floor behavior, but never receive completed status or enter the completed-result cache. Cache generation 15 invalidates older completion classifications without deleting resumes. Evidence: `docs/research/resume-completeness-cache.md`.
+
+## Actual counts and weighting — 20 October 2026
+
+Matched-term counts must come from the exported document, not a weighted percentage converted into an integer. Weighted coverage remains separate; both measures must meet the existing acceptance thresholds. Cache generation 16 supersedes generation 15 while retaining its incomplete-rewrite safeguard. Evidence: `docs/research/resume-score-counts.md`.

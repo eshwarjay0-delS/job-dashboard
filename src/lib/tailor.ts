@@ -112,8 +112,8 @@ function normJD(jd: string): string {
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
-// Previous results could be marked complete despite unfinished role/evidence checks.
-const CACHE_GENERATION = "15"
+// Earlier classifications used synthetic counts derived from rounded weighted scores.
+const CACHE_GENERATION = "16"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -825,9 +825,9 @@ export async function runTailor(opts: {
   // whole result in the cache pointing at this lesser file, so the next identical request was told "31 bullets rewritten"
   // and handed an untailored resume (found in review, 2026-10-05).
   // Weighted coverage (Jobscan REA): hard skills count 3x, titles 2x, soft 1x, buzzwords 0.5x.
-  // A resume at 95% weighted has the terms that actually pass recruiter keyword searches.
+  // Preserve actual counts; weighting is a separate signal, not proof of recruiter acceptance.
   const wc = weightedCoverage(best.tailoredText, jdKws)
-  const qualityReport = resumeQuality({ matched: Math.round(wc.coverage * jdKws.length), total: jdKws.length, missing: wc.missing, partial: !!best.partial || (splitDraft && (lackingRoles(best.edits).length > 0 || provenShare(best) < TARGET_COVERAGE)), unchanged: !diff.length })
+  const qualityReport = resumeQuality({ matched: wc.matched.length, total: jdKws.length, missing: wc.missing, weightedCoverage: wc.coverage, partial: !!best.partial || (splitDraft && (lackingRoles(best.edits).length > 0 || provenShare(best) < TARGET_COVERAGE)), unchanged: !diff.length })
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
 

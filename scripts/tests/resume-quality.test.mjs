@@ -2,6 +2,20 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { resumeQuality, requiredEvidenceTerms } from '../../src/lib/resume-quality.ts'
 
+test('weighted coverage stays separate from actual counts and cannot override either threshold', () => {
+  const report = resumeQuality({ matched: 20, total: 21, missing: ['collaboration'], weightedCoverage: 60 / 61 })
+  assert.equal(report.matched, 20)
+  assert.equal(report.total, 21)
+  assert.equal(report.weightedCoverage, 60 / 61)
+  assert.equal(report.status, 'delivered_with_gaps')
+  assert.equal(resumeQuality({ matched: 99, total: 100, missing: ['AWS'], weightedCoverage: .949 }).status, 'needs_review')
+  assert.equal(resumeQuality({ matched: 99, total: 100, missing: ['AWS'], weightedCoverage: .979 }).status, 'delivered_with_gaps')
+  assert.equal(resumeQuality({ matched: 99, total: 100, missing: ['AWS'], weightedCoverage: .98 }).status, 'coverage_met')
+  for (const weightedCoverage of [NaN, Infinity, -1, 1.01]) {
+    assert.equal(resumeQuality({ matched: 100, total: 100, missing: [], weightedCoverage }).status, 'needs_review')
+  }
+})
+
 // Since 18 Oct 2026 (8f0c9c4, owner: "we should deliver 95 to 100% match resumes") 95% is the floor and 98% the target;
 // 95-97% is "delivered_with_gaps", not "coverage_met".
 test('a 41 percent draft cannot qualify even when all listed skills appear somewhere', () => {

@@ -8,11 +8,15 @@ export function resumeQuality(input: {
   matched: number
   total: number
   missing: string[]
+  /** Optional weighted ratio (0–1); never a substitute for the actual term count. */
+  weightedCoverage?: number
   partial?: boolean
   unchanged?: boolean
 }) {
   const validCounts = Number.isInteger(input.total) && Number.isInteger(input.matched) && input.total > 0 && input.matched >= 0 && input.matched <= input.total
-  const coverage = validCounts ? input.matched / input.total : 0
+  const rawCoverage = validCounts ? input.matched / input.total : 0
+  const validWeight = input.weightedCoverage === undefined || (Number.isFinite(input.weightedCoverage) && input.weightedCoverage >= 0 && input.weightedCoverage <= 1)
+  const coverage = validWeight ? Math.min(rawCoverage, input.weightedCoverage ?? rawCoverage) : 0
   // If coverage meets the floor, deliver even if marked partial — a 95%+ resume
   // with some sections not perfectly rewritten is better than nothing.
   // Only block on partial when coverage is also below floor.
@@ -28,6 +32,7 @@ export function resumeQuality(input: {
     matched: input.matched,
     total: input.total,
     missing: input.missing,
+    ...(input.weightedCoverage === undefined ? {} : { weightedCoverage: input.weightedCoverage }),
   }
 }
 
