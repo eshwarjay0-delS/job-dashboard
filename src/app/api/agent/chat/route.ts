@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { callLLM, resolveKeys, hasAnyKey } from "@/lib/llm"
-import { AGENT_SYSTEM_PROMPT } from "@/lib/agent/system-prompt"
+import { chiefSystemPrompt } from "@/lib/agent/system-prompt"
 import { runTool, toolPromptBlock } from "../_tools"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { plainFailure, failureKind, failureTag, worthAnotherTry } from "@/lib/plain-failure"
@@ -63,7 +63,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const system = `${AGENT_SYSTEM_PROMPT}\n\n${toolPromptBlock()}\n\n${WHEN_A_TOOL_FAILS}`
+    // The appointed rules for everyone; the owner's own brief only on his account (chief-rules.ts).
+    const system = `${chiefSystemPrompt(owner)}\n\n${toolPromptBlock()}\n\n${WHEN_A_TOOL_FAILS}`
     const convo: ChatMsg[] = messages.slice(-12) // keep the turn bounded
     const ctx = { userId: user.id }
 

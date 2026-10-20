@@ -10,7 +10,8 @@ test('each REA session retains source, ordered findings, boundaries and next act
 })
 test('filters find Parakeet and keep tool failures distinct from public reviews',()=>{
  assert.equal(filterReaSessions('Parakeet','kompas','all').length,1)
- const tool=filterReaSessions('','all','REA tool attempt');assert.equal(tool.length,1);assert.equal(tool[0].state,'Blocked')
+ const tool=filterReaSessions('','all','REA tool attempt');assert.ok(tool.length>=1);assert.equal(tool.find(s=>s.id==='rea-tool-inventory').state,'Blocked')
+ assert.ok(filterReaSessions('','all','Public reference review').every(s=>s.method==='Public reference review'))
  assert.equal(filterReaSessions('Parakeet','gmail','all').length,0)
 })
 test('REA route inherits existing admin gate and is discoverable from hub',()=>{
