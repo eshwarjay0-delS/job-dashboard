@@ -1,5 +1,7 @@
 # Gmail missing-message sync — 20 October 2026
 
+Release blocker: implementation `ff23ef6fd411cb3589a602841411bfb2c39c916b` was published; Vercel GitHub status reports failure at https://vercel.com/qu4ntum-s-projects/job-dashboard/9T9taAtrgUuewVvyP8i3LN9AQK7w. Local build passed. Vercel get_deployment under qu4ntum-s-projects returned 403, and no Vercel CLI is installed. Do not infer the deployment failure cause or claim this fix is live. Unblock: authorized access to that team/deployment logs, diagnosis and validated redeployment. This supersedes the release-pending note below.
+
 Request: continue approved Poke-inspired reliable Gmail updates while keeping account isolation, consent and delivery evidence intact.
 
 Method: source analysis and mocked provider regressions, not recovered Poke internals. Source: `src/lib/gmail-updates.ts`; official Gmail errors https://developers.google.com/workspace/gmail/api/guides/handle-errors and message retrieval https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/get. Google documents 404 as a resource not found. A message can disappear between list/history retrieval and its metadata request; the old collector treats that as an account-level failure and retains the same history cursor.
