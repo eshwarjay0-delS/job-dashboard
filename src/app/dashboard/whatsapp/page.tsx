@@ -3,15 +3,18 @@ import { waStatus, waDisplayNumber } from "@/lib/whatsapp"
 import { Card, Meta } from "../_suite/ui"
 import PageIntro from "../_components/page-intro"
 import LinkCard from "./link-card"
+import ConversationCard from "./conversation-card"
 
 // Credentials alone do not establish provider access. Probe the sender before offering chat.
 export const dynamic = "force-dynamic"
 export const metadata: Metadata = { title: "WhatsApp" }
 
+// As the bot works since 19 Oct 2026: a job description alone starts from the person's Files; a resume sent with it is
+// used instead; both the resume sent and the one made are saved in Files.
 const STEPS = [
-  "Send a Word resume (.docx) and a job description for each tailoring request.",
-  "Send them in either order. MarketFit tailors the document when it has both.",
-  "MarketFit replies with the tailored Word document. New WhatsApp resumes are not filed in your MarketFit Files.",
+  "Paste a job description. MarketFit starts from your closest saved resume in Files.",
+  "To start from a particular resume instead, send it as a Word file (.docx) with the job description.",
+  "You get the tailored Word file back in a few minutes. It is saved in your Files, with the resume you sent.",
   "Want a change? Swipe to reply to that resume and say what to change.",
 ]
 
@@ -51,6 +54,8 @@ export default async function WhatsAppPage() {
         <Meta>Link your WhatsApp number</Meta>
         <LinkCard bot={live ? digits : ""} />
       </Card>
+
+      <ConversationCard />
     </div>
   )
 }
