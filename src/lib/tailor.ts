@@ -1,7 +1,7 @@
 import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
 import { candidateEvidenceInput } from "./resume-evidence"
 import { preserveSkillHeadings } from "./resume-format"
-import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, resumeQuality, requiredEvidenceTerms } from "./resume-quality"
+import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, resumeQuality, requiredEvidenceTerms, coveragePercent } from "./resume-quality"
 import { J1_VERSION, constrainResumeEdits } from "./ai/j1"
 import path from "path"
 import { createHash } from "crypto"
@@ -114,7 +114,8 @@ function normJD(jd: string): string {
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
 // Earlier contexts could truncate explicit confirmations behind a lengthy pasted JD.
-const CACHE_GENERATION = "17"
+// Version 18 preserves subthreshold fractional coverage in every result field.
+const CACHE_GENERATION = "18"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -699,7 +700,7 @@ export async function runTailor(opts: {
         const missing = jdKws.filter(k => !current.afterKw.has(k))
         if (!missing.length) break
         const repairPrefs: string[] = [
-          `COVERAGE REPAIR PASS ${repair}: current rendered JD coverage is ${Math.round(current.cov * 100)}%. The default completion target is at least ${Math.round(TARGET_COVERAGE * 100)}%.`,
+          `COVERAGE REPAIR PASS ${repair}: current rendered JD coverage is ${coveragePercent(current.cov)}%. The default completion target is at least ${Math.round(TARGET_COVERAGE * 100)}%.`,
           `The JD is a KNOWN JD supplied/approved by the user. Incorporate ALL of these still-missing ATS terms naturally and contextually: ${missing.join(", ")}.`,
           "Do not claim a JD qualification unless the baseline or explicit candidate confirmation substantiates it. Preserve immutable identity, experience length, employers, dates, education, and certifications.",
           "Distribute terms across the summary, skills, and relevant experience instead of keyword stuffing.",
@@ -745,7 +746,7 @@ export async function runTailor(opts: {
   const { edits, buffer, notes, afterKw, claimedKw, roleKw, required, provenKw } = best
   if (!opts.refine && !jdGenerated.length) notes.push("Gemini keyword review returned no additional terms; generation used the directly extracted JD requirements.")
   notes.push("The JD supplies target requirements; the source resume and explicit candidate confirmations supply experience evidence. The target is 98% keyword coverage where supported. Scores measure exported document keyword overlap, not hiring probability.")
-  notes.push(`Tailored with ${usedModel} · JD keyword coverage ${Math.round(best.cov * 100)}%`)
+  notes.push(`Tailored with ${usedModel} · JD keyword coverage ${coveragePercent(best.cov)}%`)
   const finalRewrites = rewrites(edits)
   const finalAdded = addedFor(edits)
   const role_alignment = zones.roles.map((r, i) => ({
@@ -763,13 +764,13 @@ export async function runTailor(opts: {
 
   // Scores describe the exported document's measured JD keyword coverage.
   // Never force a high band or an improvement that the document did not achieve.
-  const before = jdKws.length ? Math.round(beforeKw.size / jdKws.length * 100) : 0
-  const after = jdKws.length ? Math.round(afterKw.size / jdKws.length * 100) : 0
+  const before = jdKws.length ? coveragePercent(beforeKw.size / jdKws.length) : 0
+  const after = jdKws.length ? coveragePercent(afterKw.size / jdKws.length) : 0
 
   // ── Match decomposition + keyword gap (reuses the coverage sets above) ──
   const kwAdded   = jdKws.filter(k => !beforeKw.has(k) && afterKw.has(k))
   const kwMissing = jdKws.filter(k => !afterKw.has(k))
-  const pctOf = (n: number) => jdKws.length ? Math.round((n / jdKws.length) * 100) : 0
+  const pctOf = (n: number) => jdKws.length ? coveragePercent(n / jdKws.length) : 0
   const keyword_analysis = {
     matched: kwMatched,
     added: kwAdded,
@@ -837,7 +838,7 @@ export async function runTailor(opts: {
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,
     ranked_candidates: rankedCandidates, what_changed: whatChanged(edits), edits, notes,
     applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff,
-    cached: false, elapsed_ms: Date.now() - started, coverage: Math.round(best.cov * 100), role_alignment,
+    cached: false, elapsed_ms: Date.now() - started, coverage: coveragePercent(best.cov), role_alignment,
     experience_skills: { listed: claimedKw.size, shown: provenKw.size },
     ...(best.partial ? { partial: best.partial } : {}),
     ...(diff.length ? {} : { unchanged: true }),

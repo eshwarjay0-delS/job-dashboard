@@ -786,9 +786,9 @@ function ResultContent() {
                       color: "var(--text)",
                     }}
                     role="img"
-                    aria-label={`JD match ${Math.round(coverage)} percent`}
+                    aria-label={`JD match ${coverage} percent`}
                   >
-                    {Math.round(coverage)}%
+                    {coverage}%
                   </div>
                   <div>
                     <p className="text-sm font-bold" style={{ color: "var(--text)" }}>JD Match</p>

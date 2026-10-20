@@ -55,3 +55,7 @@ Matched-term counts must come from the exported document, not a weighted percent
 ## Confirmation priority — 20 October 2026
 
 Explicit candidate input precedes the pasted JD in bounded enrichment context. Long job descriptions must not crowd out confirmed experience or its employer restrictions. Cache generation 17 retains earlier safeguards and invalidates older context construction. Evidence: `docs/research/resume-confirmation-priority.md`.
+
+## Display precision — 20 October 2026
+
+Shared result scores, keyword analysis, notes and the web match ring retain one decimal, truncated rather than rounded into a threshold. 94.9% must not appear as 95%; 97.9% must not appear as 98%; a noncomplete match must not appear as 100%. Acceptance still uses unrounded ratios. Cache generation 18 supersedes 17 so new requests do not reuse rounded result fields. Existing saved documents are not rewritten. Evidence: `docs/research/resume-display-precision.md`.

@@ -4,6 +4,13 @@
 export const RESUME_MIN_COVERAGE = 0.95
 export const RESUME_TARGET_COVERAGE = 0.98
 
+/** Display-only percent, truncated to one decimal so it never crosses a quality
+ * threshold by rounding. Acceptance continues to use the original ratios. */
+export function coveragePercent(ratio: number): number {
+  return Number.isFinite(ratio) && ratio >= 0 && ratio <= 1
+    ? Math.floor(ratio * 1000) / 10 : 0
+}
+
 export function resumeQuality(input: {
   matched: number
   total: number
