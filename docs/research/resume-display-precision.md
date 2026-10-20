@@ -1,5 +1,9 @@
 # Resume display precision — 20 October 2026
 
+## Release reconciliation
+
+The earlier release blocker below is historical and resolved. The Chief workstream changed its cron to daily in `16ff1356d715c2ba1b2203e09ea99d7963e7ea45`; this checkout contains the precision fix. On 20 October, GitHub returned Vercel success for that commit: https://vercel.com/qu4ntum-s-projects/job-dashboard/Tv3bm67pL38nAjS5UQn4PR991imB. Re-ran 17 focused precision, quality and REA checks: all passed. Public production `/api/health` returned HTTP 200. No runtime logs, authenticated generation, artifact download or real messaging were tested. Cadence changes belong to the Chief workstream; no further scheduler changes made here. The next acceptance step remains a fresh authorized baseline/JD/confirmation/export pair, plus the original failed-run evidence. Deployment success does not establish 98% resume quality.
+
 ## Request and method
 
 Continue the owner's approved resume-quality work and accurate reporting. Source analysis, not a live provider test or proprietary reverse engineering. Read current master 8ec8180, AGENTS.md, completion-watch.md, resume plans and the current journal. Other developers' crawler and Chief changes are outside this slice.
