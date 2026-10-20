@@ -1,0 +1,2 @@
+/* The part of Kforce's app.min.js that names its public job search and the query key every visitor's browser sends. The key here is a stand-in. */
+kforceProdSearchEnvironment?this.client=i({url:"https://kforcewebeast.search.windows.net",key:"0123456789ABCDEF0123456789ABCDEF"}):this.client=i({url:"https://kforcewebredesign2.search.windows.net",key:"FEDCBA9876543210FEDCBA9876543210",version:"2016-09-01"})

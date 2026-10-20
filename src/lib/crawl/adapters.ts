@@ -1,5 +1,11 @@
 import type { PortalAdapter, RawJob } from "./types"
 import { clean, splitCards } from "./text.ts"
+import { teksystems } from "./portals/teksystems.ts"
+import { kforce } from "./portals/kforce.ts"
+import { motion } from "./portals/motion.ts"
+import { everforth } from "./portals/everforth.ts"
+import { oxford } from "./portals/oxford.ts"
+import { insightglobal } from "./portals/insightglobal.ts"
 
 // Verified 2026-10-17 against live portal HTML. Each parseList was tested
 // against a real listing page before shipping — never trust selectors blind.
@@ -64,15 +70,15 @@ const collabera: PortalAdapter = {
   },
 }
 
-export const ADAPTERS: PortalAdapter[] = [beaconHill, collabera]
+// Beacon Hill and Collabera read listing pages; the others read the source their own page reads (src/lib/crawl/portals):
+// a JSON search, the data a page hands to React, or a server-rendered table. Each has a saved sample and an offline test
+// (scripts/tests/crawl-*.test.mjs) and was run once against the live portal on 2026-10-20.
+export const ADAPTERS: PortalAdapter[] = [beaconHill, collabera, teksystems, kforce, motion, everforth, oxford, insightglobal]
 
-// Portals verified server-renderable but awaiting adapter selectors (v1 = directory only):
-// Motion, Addison Group, Brooksource, INSPYR, KORE1, CSI, IDR, Vaco, IntelliPro,
-// Genesis10, Diverse Lynx, Kforce, Robert Half.
-// Skipped: TEKsystems (Phenom JSON reverse-engineered, but only ~4 jobs posted —
-// recruiter-driven, not worth an adapter), CyberSN (JS shell).
-// JS-shell portals (need headless rendering — later phase): Everforth, Insight Global, Eliassen.
+// Still to be read (a probe for each is in the REA board): Addison Group, Brooksource, INSPYR, KORE1, CSI, IDR, Vaco, IntelliPro,
+// Genesis10, Diverse Lynx, Robert Half, Eliassen, CyberSN and the firms whose portal address is not yet known.
+// Not read on purpose: Experis (its robots.txt disallows every crawler).
 export const PENDING_PORTALS = [
-  "motion", "addison", "brooksource", "inspyr", "csi", "idr", "vaco",
-  "intellipro", "genesis10", "diverselynx", "kforce", "roberthalf",
+  "addison", "brooksource", "inspyr", "kore1", "csi", "idr", "vaco", "intellipro",
+  "genesis10", "diverselynx", "roberthalf", "eliassen", "cybersn",
 ]

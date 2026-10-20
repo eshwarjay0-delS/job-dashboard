@@ -1,0 +1,219 @@
+{
+ "jobs": [
+  {
+   "requisitionId": "3c346722-9596-410a-92a9-84f3ce8f828a",
+   "jobTitle": "Epic Radiant Analyst",
+   "workAddress": {
+    "administrativeArea": "WA",
+    "locality": "Bellevue"
+   },
+   "postedDate": "2026-10-19T23:58:22.1Z",
+   "workRemote": false,
+   "jobType": "Contract",
+   "payRate": {
+    "min": 85,
+    "currency": "USD",
+    "type": "Hourly"
+   },
+   "jobStatus": "active"
+  },
+  {
+   "requisitionId": "26e1d48e-2aff-4c2a-a62b-86b806631e9a",
+   "jobTitle": "Civil Engineer",
+   "workAddress": {
+    "administrativeArea": "CA",
+    "locality": "Stockton"
+   },
+   "postedDate": "2026-10-19T23:38:41.1Z",
+   "workRemote": false,
+   "jobType": "Perm",
+   "payRate": {
+    "min": 108500,
+    "max": 148500,
+    "currency": "USD",
+    "type": "Annually"
+   },
+   "jobStatus": "active"
+  },
+  {
+   "requisitionId": "0c1beea5-3f4c-43cd-a4c9-ff6faaecad2f",
+   "jobTitle": "Manager of Mobility & Customer Experience",
+   "workAddress": {
+    "administrativeArea": "CA",
+    "locality": "Stockton"
+   },
+   "postedDate": "2026-10-19T23:31:46.1Z",
+   "workRemote": false,
+   "jobType": "Perm",
+   "payRate": {
+    "min": 126000,
+    "max": 177000,
+    "currency": "USD",
+    "type": "Annually"
+   },
+   "jobStatus": "active"
+  },
+  {
+   "requisitionId": "f0cf4fca-e0fa-4015-9416-418e6ee387c2",
+   "jobTitle": "AP Clerk",
+   "workAddress": {
+    "administrativeArea": "CA",
+    "locality": "Los Angeles"
+   },
+   "postedDate": "2026-10-19T23:19:43.1Z",
+   "workRemote": false,
+   "jobType": "Contract To Perm",
+   "payRate": {
+    "min": 34,
+    "currency": "USD",
+    "type": "Hourly"
+   },
+   "jobStatus": "active"
+  },
+  {
+   "requisitionId": "b5a2178a-422f-49a7-9040-b8a9447041f3",
+   "jobTitle": "Manual QA - Remote - INTL Colombia",
+   "workAddress": {
+    "administrativeArea": "Distrito Capital",
+    "locality": "Bogotá"
+   },
+   "postedDate": "2026-10-19T23:18:22.1Z",
+   "workRemote": true,
+   "jobType": "Contract",
+   "payRate": {
+    "min": 28,
+    "currency": "USD",
+    "type": "Hourly"
+   },
+   "jobStatus": "active"
+  },
+  {
+   "requisitionId": "49a26879-1d02-48c2-83a7-580ff765e351",
+   "jobTitle": "Remote Analyst",
+   "workAddress": {
+    "administrativeArea": "PA",
+    "locality": "West Chester"
+   },
+   "postedDate": "2026-10-19T23:16:00.1Z",
+   "workRemote": true,
+   "jobType": "Contract",
+   "payRate": {
+    "min": 36,
+    "currency": "USD",
+    "type": "Hourly"
+   },
+   "jobStatus": "active"
+  },
+  {
+   "requisitionId": "870f15fe-f42f-478f-8d27-f2c493e51bdc",
+   "jobTitle": "Senior Product Manager - Data Platform & AI Enablement",
+   "workAddress": {
+    "administrativeArea": "OR",
+    "locality": "Portland"
+   },
+   "postedDate": "2026-10-19T23:02:18.1Z",
+   "workRemote": false,
+   "jobType": "Perm",
+   "payRate": {
+    "min": 150000,
+    "max": 170000,
+    "currency": "USD",
+    "type": "Annually"
+   },
+   "jobStatus": "active"
+  },
+  {
+   "requisitionId": "db723ad1-a159-45be-ab04-9d985535dcbd",
+   "jobTitle": "Network Engineer",
+   "workAddress": {
+    "administrativeArea": "WI",
+    "locality": "Wauwatosa"
+   },
+   "postedDate": "2026-10-19T22:22:58.1Z",
+   "workRemote": true,
+   "jobType": "Contract To Perm",
+   "payRate": {
+    "min": 51,
+    "currency": "USD",
+    "type": "Hourly"
+   },
+   "jobStatus": "active"
+  },
+  {
+   "requisitionId": "8ef910d2-48be-4539-b019-c4d1bcdd3735",
+   "jobTitle": "Security Department Manager",
+   "workAddress": {
+    "administrativeArea": "TX",
+    "locality": "Addison"
+   },
+   "postedDate": "2026-10-19T22:10:05.1Z",
+   "workRemote": false,
+   "jobType": "Perm",
+   "payRate": {
+    "min": 125000,
+    "max": 145000,
+    "currency": "USD",
+    "type": "Annually"
+   },
+   "jobStatus": "active"
+  },
+  {
+   "requisitionId": "8ebf5aa7-4e48-4e11-bd89-b2e8dca91e04",
+   "jobTitle": "IT Application Engineer",
+   "workAddress": {
+    "administrativeArea": "AZ",
+    "locality": "Scottsdale"
+   },
+   "postedDate": "2026-10-19T22:05:47.1Z",
+   "workRemote": true,
+   "jobType": "Contract",
+   "payRate": {
+    "min": 71,
+    "currency": "USD",
+    "type": "Hourly"
+   },
+   "jobStatus": "active"
+  },
+  {
+   "requisitionId": "0e7150ec-342c-4780-85a6-249f2efb0a0c",
+   "jobTitle": "Business Intelligence Architect",
+   "workAddress": {
+    "administrativeArea": "TX",
+    "locality": "Austin"
+   },
+   "postedDate": "2026-10-19T22:01:57.1Z",
+   "workRemote": false,
+   "jobType": "Contract",
+   "payRate": {
+    "min": 40,
+    "currency": "USD",
+    "type": "Hourly"
+   },
+   "jobStatus": "active"
+  },
+  {
+   "requisitionId": "7b67ca08-986d-4ba1-bb25-766536b62835",
+   "jobTitle": "Data Engineer",
+   "workAddress": {
+    "administrativeArea": "CA",
+    "locality": "Irvine"
+   },
+   "postedDate": "2026-10-19T21:58:14.1Z",
+   "workRemote": false,
+   "jobType": "Perm",
+   "payRate": {
+    "min": 115000,
+    "max": 131000,
+    "currency": "USD",
+    "type": "Hourly"
+   },
+   "jobStatus": "active"
+  }
+ ],
+ "pageMetadata": {
+  "size": 50,
+  "number": 1,
+  "totalElements": 5229,
+  "totalPages": 105
+ }
+}

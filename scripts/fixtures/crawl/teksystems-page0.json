@@ -1,0 +1,227 @@
+{
+ "refineSearch": {
+  "status": 200,
+  "hits": 12,
+  "totalHits": 1054,
+  "data": {
+   "jobs": [
+    {
+     "title": "Analyst - Facilities",
+     "jobSeqNo": "TESYUSJP006334643ENUS",
+     "location": "Saint Louis, Missouri, USA",
+     "type": "Contractor",
+     "postedDate": "2026-10-07T18:30:55.701+0000",
+     "descriptionTeaser": "Join us as an Analyst - Facilities, providing Level 3 product support leadership for healthcare system technologies within the facilities domain. Collaborate with Facilities, IT, and Engineering teams to drive efficiency and compliance. Ideal for candidates with strong facilities solutions expertise and experience in servers, network connectivity, and IT systems fundamentals.",
+     "ml_job_parser": {
+      "descriptionTeaser": "Join us as an Analyst - Facilities, providing Level 3 product support leadership for healthcare system technologies within the facilities domain. Collaborate with Facilities, IT, and Engineering teams to drive efficiency and compliance. Ideal for candidates with strong facilities solutions expertise and experience in servers, network connectivity, and IT systems fundamentals.",
+      "descriptionTeaser_first200": "Description. Provide Level 3 product support leadership for a large healthcare system's technologies applications and platforms within the facilities domain. This role demands extensive knowledge o...",
+      "descriptionTeaser_keyword": "Description. Provide Level 3 product support leadership for a large healthcare system's technologies applications and platforms within the facilities domain. This role demands extensive knowledge of F...",
+      "descriptionTeaser_ats": "DescriptionProvide Level 3 product support leadership for a large healthcare system's technologies applications and platforms within the facilities domain. This role demands extensive knowledge of Fac"
+     },
+     "category": "Systems Administrator/Engineer",
+     "city": "Saint Louis",
+     "state": "Missouri",
+     "country": "USA"
+    },
+    {
+     "title": "Desktop Technical Analyst",
+     "jobSeqNo": "TESYUSJP006308869ENUS",
+     "location": "Chesterfield, Missouri, USA",
+     "type": "Contractor",
+     "postedDate": "2026-09-25T13:17:46.784+0000",
+     "descriptionTeaser": "Become part of our team as a Desktop Technical Analyst, supporting enterprise environments and providing technical assistance. You will troubleshoot issues, resolve tickets, and collaborate with global teams. Ideal for candidates with at least 3 years of technical support experience and familiarity with ServiceNow, Office 365, and Windows systems.",
+     "ml_job_parser": {
+      "descriptionTeaser": "Become part of our team as a Desktop Technical Analyst, supporting enterprise environments and providing technical assistance. You will troubleshoot issues, resolve tickets, and collaborate with global teams. Ideal for candidates with at least 3 years of technical support experience and familiarity with ServiceNow, Office 365, and Windows systems.",
+      "descriptionTeaser_first200": "Description. A leading Consumer Products/Goods client is looking for a Desktop Analyst to join their team. The ideal candidate has a minimum of 3 years experience providing technical support in an ...",
+      "descriptionTeaser_keyword": "Description. A leading Consumer Products/Goods client is looking for a Desktop Analyst to join their team. The ideal candidate has a minimum of 3 years experience providing technical support in an ent...",
+      "descriptionTeaser_ats": "DescriptionA leading Consumer Products/Goods client is looking for a Desktop Analyst to join their team.The ideal candidate has a minimum of 3 years experience providing technical support in an enterp"
+     },
+     "category": "Helpdesk/Desktop",
+     "city": "Chesterfield",
+     "state": "Missouri",
+     "country": "USA"
+    },
+    {
+     "title": "Implementations Network Engineer II",
+     "jobSeqNo": "TESYUSJP006317266ENUS",
+     "location": "Scott Air Force Base, Illinois, USA",
+     "type": "Contractor",
+     "postedDate": "2026-09-29T17:27:36.882+0000",
+     "descriptionTeaser": "Join our team as an Implementations Network Engineer II, where you will coordinate customer needs, execute IT&A activities, and ensure new network equipment is implemented to DISA standards. Utilize your expertise in Cisco routers, WAN, and network engineering to support service activations. Ideal for candidates with significant networking experience and a Secret clearance.",
+     "ml_job_parser": {
+      "descriptionTeaser": "Join our team as an Implementations Network Engineer II, where you will coordinate customer needs, execute IT&A activities, and ensure new network equipment is implemented to DISA standards. Utilize your expertise in Cisco routers, WAN, and network engineering to support service activations. Ideal for candidates with significant networking experience and a Secret clearance.",
+      "descriptionTeaser_first200": "Top Skills - Must Haves. Network engineering. Router. Cisco routers. Wan. Cisco switches. Top Skills' Details. 1. Secret clearance. 2. Sec+. 3. 4-8 years of networking, mainly circuits. Description...",
+      "descriptionTeaser_keyword": "Top Skills - Must Haves. Network engineering. Router. Cisco routers. Wan. Cisco switches. Top Skills' Details. 1. Secret clearance. 2. Sec+. 3. 4-8 years of networking, mainly circuits. Description. R...",
+      "descriptionTeaser_ats": "Top Skills - Must HavesNetwork engineeringRouterCisco routersWanCisco switchesTop Skills' Details1. Secret clearance2. Sec+3. 4-8 years of networking, mainly circuitsDescriptionResponsible for perform"
+     },
+     "category": "Network Engineer",
+     "city": "Scott Air Force Base",
+     "state": "Illinois",
+     "country": "USA"
+    },
+    {
+     "title": "IT Support Admin",
+     "jobSeqNo": "TESYUSJP006357993ENUS",
+     "location": "Pacific, Missouri, USA",
+     "type": "Contractor",
+     "postedDate": "2026-10-16T19:06:28.299+0000",
+     "descriptionTeaser": "We are looking for an IT Support Admin to provide end-user support and maintain hardware and software systems. Key responsibilities include supporting and maintaining end-user-facing systems, and ensuring service levels are met. Ideal candidates will have experience in IT support and a strong understanding of Windows environments.",
+     "ml_job_parser": {
+      "descriptionTeaser": "We are looking for an IT Support Admin to provide end-user support and maintain hardware and software systems. Key responsibilities include supporting and maintaining end-user-facing systems, and ensuring service levels are met. Ideal candidates will have experience in IT support and a strong understanding of Windows environments.",
+      "descriptionTeaser_first200": "Description. Job Description. Responsible for end-user support and provisioning, installation, configuration, and maintenance of end-user systems hardware and software, as well as related infrastru...",
+      "descriptionTeaser_keyword": "Description. Job Description. Responsible for end-user support and provisioning, installation, configuration, and maintenance of end-user systems hardware and software, as well as related infrastructu...",
+      "descriptionTeaser_ats": "DescriptionJob DescriptionResponsible for end-user support and provisioning, installation, configuration, and maintenance of end-user systems hardware and software, as well as related infrastructure a"
+     },
+     "category": "Helpdesk/Desktop",
+     "city": "Pacific",
+     "state": "Missouri",
+     "country": "USA"
+    },
+    {
+     "title": "Systems Analyst III",
+     "jobSeqNo": "TESYUSJP006319534ENUS",
+     "location": "Bloomington, Illinois, USA",
+     "type": "Contractor",
+     "postedDate": "2026-09-30T15:21:53.886+0000",
+     "descriptionTeaser": "We are expanding our team: As a Systems Analyst III, you will lead production support and service delivery for Salesforce CRM, focusing on incident and problem management. You will analyze ticket trends and coordinate major incidents. Ideal for candidates with expert-level experience in Salesforce and Agile/Scrum certification.",
+     "ml_job_parser": {
+      "descriptionTeaser": "We are expanding our team: As a Systems Analyst III, you will lead production support and service delivery for Salesforce CRM, focusing on incident and problem management. You will analyze ticket trends and coordinate major incidents. Ideal for candidates with expert-level experience in Salesforce and Agile/Scrum certification.",
+      "descriptionTeaser_first200": "Description. Lead production support and service delivery for CRM Salesforce through a Scrum or Kanban team. Developing and publishing status reports for CRM Production Incident and Problem Managem...",
+      "descriptionTeaser_keyword": "Description. Lead production support and service delivery for CRM Salesforce through a Scrum or Kanban team. Developing and publishing status reports for CRM Production Incident and Problem Management...",
+      "descriptionTeaser_ats": "Description Lead production support and service delivery for CRM Salesforce through a Scrum or Kanban team. Developing and publishing status reports for CRM Production Incident and Problem Management"
+     },
+     "category": "Business/Systems Analyst",
+     "city": "Bloomington",
+     "state": "Illinois",
+     "country": "USA"
+    },
+    {
+     "title": "Spanish Speaking Operations Support Specialist",
+     "jobSeqNo": "TESYUSJP006315717ENUS",
+     "location": "Peoria, Illinois, USA",
+     "type": "Contractor",
+     "postedDate": "2026-09-28T22:52:54.419+0000",
+     "descriptionTeaser": "We are expanding our team: As a Spanish Speaking Operations Support Specialist, you will provide frontline technical support to customers and dealers, diagnosing and resolving machine and digital technology issues. This role requires strong troubleshooting skills and hands-on experience with heavy equipment systems, ideal for candidates fluent in English and Spanish.",
+     "ml_job_parser": {
+      "descriptionTeaser": "We are expanding our team: As a Spanish Speaking Operations Support Specialist, you will provide frontline technical support to customers and dealers, diagnosing and resolving machine and digital technology issues. This role requires strong troubleshooting skills and hands-on experience with heavy equipment systems, ideal for candidates fluent in English and Spanish.",
+      "descriptionTeaser_first200": "Description. The Technology Support Specialist serves as a frontline technical resource supporting customers and dealers with both machine-related and digital technology solutions. This role is res...",
+      "descriptionTeaser_keyword": "Description. The Technology Support Specialist serves as a frontline technical resource supporting customers and dealers with both machine-related and digital technology solutions. This role is respon...",
+      "descriptionTeaser_ats": "DescriptionThe Technology Support Specialist serves as a frontline technical resource supporting customers and dealers with both machine-related and digital technology solutions. This role is responsi"
+     },
+     "category": "Helpdesk/Desktop",
+     "city": "Peoria",
+     "state": "Illinois",
+     "country": "USA"
+    },
+    {
+     "title": "Bilingual Operations Support Specialist",
+     "jobSeqNo": "TESYUSJP006328914ENUS",
+     "location": "Peoria, Illinois, USA",
+     "type": "Contractor",
+     "postedDate": "2026-10-05T16:18:17.634+0000",
+     "descriptionTeaser": "Join our team as a Bilingual Operations Support Specialist, providing frontline technical support to clients and dealers. Diagnose and resolve machine and digital technology issues, supporting digital solutions and heavy equipment systems. Ideal for bilingual candidates with strong troubleshooting skills and experience in electrical diagnostics and customer service.",
+     "ml_job_parser": {
+      "descriptionTeaser": "Join our team as a Bilingual Operations Support Specialist, providing frontline technical support to clients and dealers. Diagnose and resolve machine and digital technology issues, supporting digital solutions and heavy equipment systems. Ideal for bilingual candidates with strong troubleshooting skills and experience in electrical diagnostics and customer service.",
+      "descriptionTeaser_first200": "**Must be bilingual- Spanish**. Description. The Technology Support Specialist serves as a frontline technical resource supporting the clients customers and dealers with both machine-related and di...",
+      "descriptionTeaser_keyword": "Must be bilingual- Spanish**. Description. The Technology Support Specialist serves as a frontline technical resource supporting the clients customers and dealers with both machine-related and digit...",
+      "descriptionTeaser_ats": "**Must be bilingual- Spanish**DescriptionThe Technology Support Specialist serves as a frontline technical resource supporting the clients customers and dealers with both machine-related and digital t"
+     },
+     "category": "Helpdesk/Desktop",
+     "city": "Peoria",
+     "state": "Illinois",
+     "country": "USA"
+    },
+    {
+     "title": "Project Manager",
+     "jobSeqNo": "TESYUSJP006348800ENUS",
+     "location": "Peoria, Illinois, USA",
+     "type": "Contractor",
+     "postedDate": "2026-10-13T16:15:09.025+0000",
+     "descriptionTeaser": "Seeking a Project Manager to coordinate across technology and analytics teams, supporting dashboards and reporting for business leaders. Manage project intake, prioritization, and cross-functional collaboration. Ideal for candidates with project management experience and strong technology knowledge.",
+     "ml_job_parser": {
+      "descriptionTeaser": "Seeking a Project Manager to coordinate across technology and analytics teams, supporting dashboards and reporting for business leaders. Manage project intake, prioritization, and cross-functional collaboration. Ideal for candidates with project management experience and strong technology knowledge.",
+      "descriptionTeaser_first200": "Description. *This role will be on-site as needed. Manager is open to Peoria, IL or Chicago, IL but there is a strong preference for Peoria. This Project/Program Manager will serve as the central p...",
+      "descriptionTeaser_keyword": "Description. * This role will be on-site as needed. Manager is open to Peoria, IL or Chicago, IL but there is a strong preference for Peoria. This Project/Program Manager will serve as the central poi...",
+      "descriptionTeaser_ats": "Description *This role will be on-site as needed. Manager is open to Peoria, IL or Chicago, IL but there is a strong preference for Peoria. This Project/Program Manager will serve as the central point"
+     },
+     "category": "Project Manager",
+     "city": "Peoria",
+     "state": "Illinois",
+     "country": "USA"
+    },
+    {
+     "title": "Product Owner",
+     "jobSeqNo": "TESYUSJP006330050ENUS",
+     "location": "Chillicothe, Illinois, USA",
+     "type": "Contractor",
+     "postedDate": "2026-10-05T21:03:08.526+0000",
+     "descriptionTeaser": "We are expanding our team: As a Product Owner, you will partner with business stakeholders to design and deliver digital supply and capacity planning solutions. You will support the implementation of new procurement tools and ensure operational continuity. Ideal candidates bring expert product management experience and strong analytical skills.",
+     "ml_job_parser": {
+      "descriptionTeaser": "We are expanding our team: As a Product Owner, you will partner with business stakeholders to design and deliver digital supply and capacity planning solutions. You will support the implementation of new procurement tools and ensure operational continuity. Ideal candidates bring expert product management experience and strong analytical skills.",
+      "descriptionTeaser_first200": "Description. His team partners closely with the business to design, deliver, and support the digital products that drive procurement and supply chain operations. His portfolio is focused on supply ...",
+      "descriptionTeaser_keyword": "Description. His team partners closely with the business to design, deliver, and support the digital products that drive procurement and supply chain operations. His portfolio is focused on supply and...",
+      "descriptionTeaser_ats": "DescriptionHis team partners closely with the business to design, deliver, and support the digital products that drive procurement and supply chain operations.His portfolio is focused on supply and ca"
+     },
+     "category": "Project Manager",
+     "city": "Chillicothe",
+     "state": "Illinois",
+     "country": "USA"
+    },
+    {
+     "title": "Desktop Support Technician",
+     "jobSeqNo": "TESYUSJP006331175ENUS",
+     "location": "Springfield, Missouri, USA",
+     "type": "Contractor",
+     "postedDate": "2026-10-06T14:13:15.742+0000",
+     "descriptionTeaser": "Exciting opportunity for a Desktop Support Technician to support large-scale laptop migration and workstation deployment. Key responsibilities include deploying and configuring Windows laptops, assisting users during device transitions, and managing asset inventory. Ideal for candidates with experience in Microsoft 365, Windows 11, and customer-facing technical support.",
+     "ml_job_parser": {
+      "descriptionTeaser": "Exciting opportunity for a Desktop Support Technician to support large-scale laptop migration and workstation deployment. Key responsibilities include deploying and configuring Windows laptops, assisting users during device transitions, and managing asset inventory. Ideal for candidates with experience in Microsoft 365, Windows 11, and customer-facing technical support.",
+      "descriptionTeaser_first200": "Description. Seeking technicians to support a large-scale laptop migration and workstation deployment program. Candidates will deploy Windows laptops, assist users during device transitions, valida...",
+      "descriptionTeaser_keyword": "Description. Seeking technicians to support a large-scale laptop migration and workstation deployment program. Candidates will deploy Windows laptops, assist users during device transitions, validate...",
+      "descriptionTeaser_ats": "Description Seeking technicians to support a large-scale laptop migration and workstation deployment program. Candidates will deploy Windows laptops, assist users during device transitions, validate a"
+     },
+     "category": "Helpdesk/Desktop",
+     "city": "Springfield",
+     "state": "Missouri",
+     "country": "USA"
+    },
+    {
+     "title": "Servicenow Architect",
+     "jobSeqNo": "TESYUSJP006335136ENUS",
+     "location": "Davenport, Iowa, USA",
+     "type": "Contractor",
+     "postedDate": "2026-10-07T20:47:47.423+0000",
+     "descriptionTeaser": "We are recruiting a ServiceNow Platform Architect to lead the strategic direction and governance of a large-scale ServiceNow environment. You will guide architecture decisions and ensure best practices are adopted. Ideal candidates bring deep ServiceNow expertise and experience in enterprise platform management.",
+     "ml_job_parser": {
+      "descriptionTeaser": "We are recruiting a ServiceNow Platform Architect to lead the strategic direction and governance of a large-scale ServiceNow environment. You will guide architecture decisions and ensure best practices are adopted. Ideal candidates bring deep ServiceNow expertise and experience in enterprise platform management.",
+      "descriptionTeaser_first200": "Description. TEKsystems is seeking an experienced ServiceNow Platform Architect to join our clients ServiceNow practice and help drive the strategic evolution of a large-scale, enterprise ServiceNo...",
+      "descriptionTeaser_keyword": "Description. TEKsystems is seeking an experienced ServiceNow Platform Architect to join our clients ServiceNow practice and help drive the strategic evolution of a large-scale, enterprise ServiceNow e...",
+      "descriptionTeaser_ats": "DescriptionTEKsystems is seeking an experienced ServiceNow Platform Architect to join our clients ServiceNow practice and help drive the strategic evolution of a large-scale, enterprise ServiceNow env"
+     },
+     "category": "Architect",
+     "city": "Davenport",
+     "state": "Iowa",
+     "country": "USA"
+    },
+    {
+     "title": "ISP Technician",
+     "jobSeqNo": "TESYUSJP006359771ENUS",
+     "location": "Davenport, Iowa, USA",
+     "type": "Contractor",
+     "postedDate": "2026-10-19T01:57:14.400+0000",
+     "descriptionTeaser": "Join our team as an ISP Technician, providing technical support for internet, phone, and cable services. Handle inbound calls, troubleshoot connectivity issues, and support a dynamic rural cooperative. Ideal for candidates with a background in IT support or networking, seeking hands-on experience in a fast-paced, remote environment.",
+     "ml_job_parser": {
+      "descriptionTeaser": "Join our team as an ISP Technician, providing technical support for internet, phone, and cable services. Handle inbound calls, troubleshoot connectivity issues, and support a dynamic rural cooperative. Ideal for candidates with a background in IT support or networking, seeking hands-on experience in a fast-paced, remote environment.",
+      "descriptionTeaser_first200": "ISP TECHNICIAN. REMOTE-*must reside within 90 miles of: Raleigh, NC, -- Davenport, IA -- or -- Huntsville, AL. Cable, Modem, Internet. Phone, Email & Web Chat Support. Networking & Telecommunicatio...",
+      "descriptionTeaser_keyword": "ISP TECHNICIAN. REMOTE-*must reside within 90 miles of: Raleigh, NC, -- Davenport, IA -- or -- Huntsville, AL. Cable, Modem, Internet. Phone, Email & Web Chat Support. Networking & Telecommunications....",
+      "descriptionTeaser_ats": "ISP TECHNICIANREMOTE-*must reside within 90 miles of .  Raleigh, NC, -- Davenport, IA -- or -- Huntsville, ALCable, Modem, InternetPhone, Email & Web Chat SupportNetworking & TelecommunicationsT"
+     },
+     "category": "Helpdesk/Desktop",
+     "city": "Davenport",
+     "state": "Iowa",
+     "country": "USA"
+    }
+   ]
+  }
+ }
+}

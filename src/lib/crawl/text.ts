@@ -76,3 +76,8 @@ export function sitemapUrls(xml: string, keep?: RegExp): string[] {
   const urls = [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map(m => decodeEntities(m[1]))
   return keep ? urls.filter(u => keep.test(u)) : urls
 }
+
+const IT_TITLE = /\b(?:engineer|engineering|developer|analyst|architect|administrator|admin|security|cyber|cloud|network|devops|data|software|sql|java|python|\.net|sap|salesforce|servicenow|workday|oracle|infrastructure|database|dba|qa|tester|testing|help ?desk|desktop|technician|scrum|product owner|project manager|program manager|systems?|it|ai|ml|tableau|power bi|api|web|mobile|full ?stack|front ?end|back ?end|ux|ui)\b/i
+
+/** Does a job title name technology work? For portals that list every kind of job and give no category. */
+export const isTechTitle = (title: string): boolean => IT_TITLE.test(String(title || ""))
