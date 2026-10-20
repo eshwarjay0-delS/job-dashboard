@@ -166,6 +166,8 @@ Remaining acceptance: connected-account browser verification, approved template 
 
 ### Missing-message sync recovery — 20 October 2026
 
+Deployment confirmed through follow-up commit `da202203` (Vercel success, 20 October); this supersedes the initial failed-release status for `ff23ef6`. Public health is HTTP 200, not evidence of authenticated Gmail or mobile acceptance. Runtime-log access and connected-account/device validation remain outstanding.
+
 If a listed message returns 404 during metadata retrieval, skip that absent message and finish storing the remaining messages before advancing the cursor. Do not treat authentication failures, rate limits, transport failures or server errors as deletions: those keep the old cursor for retry. This applies to initial snapshots and incremental history; it does not enable phone notifications or change consent. Evidence: `docs/research/gmail-missing-message-sync.md`.
 
 ### Browser reply recovery

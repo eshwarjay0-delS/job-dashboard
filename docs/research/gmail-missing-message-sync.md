@@ -1,5 +1,7 @@
 # Gmail missing-message sync — 20 October 2026
 
+Release reconciliation: the follow-up commit `da202203b9cab1d9c7a689dbd5b9e726add1e2e7`, containing `ff23ef6`, received Vercel success at https://vercel.com/qu4ntum-s-projects/job-dashboard/9cZnLkxaZ4QB2hsGdXEydJjQ1Bs6 (checked 20 October). Public production `/api/health` returned HTTP 200. This clears the release blocker below, but does not explain the first failure or restore team runtime-log access. Connected-account recovery and mobile delivery remain unverified. No real messages sent.
+
 Release blocker: implementation `ff23ef6fd411cb3589a602841411bfb2c39c916b` was published; Vercel GitHub status reports failure at https://vercel.com/qu4ntum-s-projects/job-dashboard/9T9taAtrgUuewVvyP8i3LN9AQK7w. Local build passed. Vercel get_deployment under qu4ntum-s-projects returned 403, and no Vercel CLI is installed. Do not infer the deployment failure cause or claim this fix is live. Unblock: authorized access to that team/deployment logs, diagnosis and validated redeployment. This supersedes the release-pending note below.
 
 Request: continue approved Poke-inspired reliable Gmail updates while keeping account isolation, consent and delivery evidence intact.
