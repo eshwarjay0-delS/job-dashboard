@@ -112,7 +112,8 @@ function normJD(jd: string): string {
 // Raised when results made before a fix must not be served again. "2": until 2026-10-05 a draft most providers had refused, or
 // one with no line changed, was stored like any other, so sending the same job description again returned the same file.
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
-const CACHE_GENERATION = "14"
+// Previous results could be marked complete despite unfinished role/evidence checks.
+const CACHE_GENERATION = "15"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))

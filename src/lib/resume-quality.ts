@@ -17,7 +17,9 @@ export function resumeQuality(input: {
   // with some sections not perfectly rewritten is better than nothing.
   // Only block on partial when coverage is also below floor.
   const coverageOk = validCounts && coverage >= RESUME_MIN_COVERAGE
-  const meetsTarget = validCounts && coverage >= RESUME_TARGET_COVERAGE && !input.unchanged && (!input.partial || coverage >= RESUME_TARGET_COVERAGE)
+  // Keyword overlap cannot establish that every requested role finished rewriting.
+  // Partial results may still meet the delivery floor, but are never completed/cacheable.
+  const meetsTarget = validCounts && coverage >= RESUME_TARGET_COVERAGE && !input.unchanged && !input.partial
   const meetsFloor = coverageOk && !input.unchanged
   return {
     status: meetsTarget ? "coverage_met" as const : meetsFloor ? "delivered_with_gaps" as const : "needs_review" as const,

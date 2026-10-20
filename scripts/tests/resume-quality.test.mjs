@@ -17,13 +17,15 @@ test('rounding up the displayed percentage never admits a below-baseline draft',
   assert.equal(resumeQuality({ matched: 979, total: 1000, missing: [] }).status, 'delivered_with_gaps')
   assert.equal(resumeQuality({ matched: 980, total: 1000, missing: [] }).status, 'coverage_met')
 })
-// Since 18 Oct 2026 (94f99c7) a partial draft is held only below the 95% floor; an unchanged one is always held.
-test('unchanged and unscorable documents remain drafts despite high overlap; a partial one is held below the floor', () => {
+// Preserve the delivery floor, but incomplete experience must never qualify as a completed cached result.
+test('unfinished rewrites never receive completed status even at full keyword overlap', () => {
   assert.equal(resumeQuality({ matched: 100, total: 100, missing: [], unchanged: true }).status, 'needs_review')
   assert.equal(resumeQuality({ matched: 0, total: 0, missing: [] }).status, 'needs_review')
   assert.equal(resumeQuality({ matched: 94, total: 100, missing: [], partial: true }).status, 'needs_review')
   assert.equal(resumeQuality({ matched: 96, total: 100, missing: [], partial: true }).status, 'delivered_with_gaps')
-  assert.equal(resumeQuality({ matched: 100, total: 100, missing: [], partial: true }).status, 'coverage_met')
+  assert.equal(resumeQuality({ matched: 98, total: 100, missing: [], partial: true }).status, 'delivered_with_gaps')
+  assert.equal(resumeQuality({ matched: 100, total: 100, missing: [], partial: true }).status, 'delivered_with_gaps')
+  assert.equal(resumeQuality({ matched: 100, total: 100, missing: [], partial: false }).status, 'coverage_met')
 })
 
 test('invalid or inflated counters cannot manufacture a passing coverage score', () => {

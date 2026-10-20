@@ -43,3 +43,7 @@ The resume workshop inside MarketFit: build it, format it, fit it to each job de
 ## Credential-target regression — 20 October 2026
 
 The 19 October instruction to ignore certifications as tailoring targets is retained. The classifier now recognizes terminal-plus credential names and Salesforce Platform Developer I/II and CPQ Specialist without a Certified prefix. Unsupported credentials are removed from rewritten skills; original credentials remain. Evidence: `docs/research/credential-target-boundaries.md`. Live generation acceptance remains pending.
+
+## Rewrite completeness — 20 October 2026
+
+High keyword overlap does not make unfinished role rewrites complete. Partial outputs can retain the existing 95% delivery-floor behavior, but never receive completed status or enter the completed-result cache. Cache generation 15 invalidates older completion classifications without deleting resumes. Evidence: `docs/research/resume-completeness-cache.md`.
