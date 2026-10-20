@@ -63,3 +63,8 @@ Explicit candidate input precedes the pasted JD in bounded enrichment context. L
 Deployment confirmed through Vercel success for `16ff135`, after the Chief workstream corrected the incompatible cron cadence. The earlier blocked release status is superseded; fresh authenticated generation and download acceptance remain pending.
 
 Shared result scores, keyword analysis, notes and the web match ring retain one decimal, truncated rather than rounded into a threshold. 94.9% must not appear as 95%; 97.9% must not appear as 98%; a noncomplete match must not appear as 100%. Acceptance still uses unrounded ratios. Cache generation 18 supersedes 17 so new requests do not reuse rounded result fields. Existing saved documents are not rewritten. Evidence: `docs/research/resume-display-precision.md`.
+
+
+## Release reconciliation — 20 October 2026
+
+Release verified 20 October: Vercel success for e78f4ed at https://vercel.com/qu4ntum-s-projects/job-dashboard/37h42KSxgw9JYgHk6z1QTyLLT2M6 and follow-up 7cf73fc. Execution environment unavailable in this check; no tests rerun or new runtime implementation. Restore a usable coding environment for further changes; authenticated browser/output acceptance remains pending.
