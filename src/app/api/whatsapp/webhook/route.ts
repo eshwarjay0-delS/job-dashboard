@@ -37,7 +37,6 @@ import { plainFailure } from "@/lib/plain-failure"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 import { isCertification } from "@/lib/keyword-targets"
 import { libraryOf, numberedEmails, candidatesFor } from "@/lib/library-pick-store"
-import { classifyIntent, agentReplyFor, type WaAgentContext } from "@/lib/whatsapp-agent"
 import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME, type Ranked } from "@/lib/library-pick"
 import { existingForJob, saveTailored, markUsed, readShelf, relOf } from "@/lib/resume-library-store"
 import { jobKeyOf, type SavedFile, type Uses } from "@/lib/resume-library"
@@ -305,51 +304,9 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     // the JD path: a reply is never a new JD (new JDs are always pasted as their own message).
     if (replyTo) return refine(from, replyTo, text, userId)
 
-    // Agent routing: classify intent conversationally instead of rigid length checks.
-    // Short messages get natural responses (greeting, help, switch profile, etc.)
-    {
-      const agentCtx: WaAgentContext = {
-        userId,
-        from,
-        lastEmail: session.last?.email || "",
-        recentTurns: [],
-      }
-      const { intent, extracted } = await classifyIntent(null, text, agentCtx)
-
-      if (intent === "greeting" || intent === "help" || intent === "unknown") {
-        const reply = agentReplyFor(intent, agentCtx)
-        if (reply) return sendText(from, reply)
-      }
-      if (intent === "switch_profile") {
-        const profile = extracted?.profile || "other"
-        // Map profile mention to email; store as last for future tailors
-        const { slots } = await emailSlots(userId).catch(() => ({ slots: [] as any[] }))
-        const liveEmails = live(slots)
-        let targetEmail = ""
-        if (profile === "houston") targetEmail = liveEmails.find(e => e.includes("05")) || liveEmails[0] || ""
-        else if (profile === "stlouis") targetEmail = liveEmails.find(e => e.includes("44")) || liveEmails[0] || ""
-        if (targetEmail) {
-          session = await loadSession(from)
-          session.last = { ...(session.last || {}), email: targetEmail, jd: "", jdId: "" } as any
-          await saveSession(from, session)
-          return sendText(from, `Got it — I'll use your *${targetEmail}* resume from now on. Send a job description when ready.`)
-        }
-        return sendText(from, "Which profile should I use? Say *Houston* or *St Louis*.")
-      }
-      if (intent === "list_resumes") {
-        const { slots } = await emailSlots(userId).catch(() => ({ slots: [] as any[] }))
-        const liveEmails = live(slots)
-        if (!liveEmails.length) return sendText(from, "Your MarketFit Files hold no resumes yet. Send one as a *.docx* file.")
-        return sendText(from, `I have resumes for: ${liveEmails.map(e => `*${e}*`).join(", ")}. Currently using *${agentCtx.lastEmail || liveEmails[0]}*.`)
-      }
-      if (intent === "status") {
-        return sendText(from, "Nothing in progress right now. Send a job description and I'll tailor your resume.")
-      }
-      // "tailor_new" and "redo" fall through to the JD handling below
-      if (intent !== "tailor_new" && intent !== "redo" && text.length < 60) {
-        const reply = agentReplyFor(intent, agentCtx)
-        if (reply) return sendText(from, reply)
-      }
+    // Too short to be a JD — most likely a stray message, so guide instead of guessing.
+    if (text.length < 60) {
+      return sendText(from, `That looks too short to be a job description (${text.length} characters).\n\n${HELP}`)
     }
 
     session = await loadSession(from)

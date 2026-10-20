@@ -63,6 +63,15 @@ export const REA_SESSIONS: ReaSession[] = [
  {label:'The uncomfortable truth',finding:'Jobscan admits the ATS does not score resumes; match rate is a visualization tool. Recruiters do keyword searches.',status:'Observed',evidence:'Jobscan scanner page.'},
  {label:'Implement weighted coverage',finding:'weightedCoverage(): hard skills 3x, titles 2x, soft 1x, buzzwords 0.5x. Missing sorted by weight.',status:'Implemented',evidence:'src/lib/keywords.ts; src/lib/tailor.ts.'},
  ],limits:'Exact coefficients proprietary; ours are reasoned approximations.',next:'REA Teal/Rezi for rewrite procedures.',commits:['ed65152']},
+ {id:'chief-of-staff-viktor',title:'Viktor AI Chief of Staff → procedure for "Chief in my absence"',area:'platform',method:'Public reference review',state:'Research mapped',updated:'2026-10-19',request:'Owner pasted Argona0x "AI Chief of Staff" thread; directive: "Update this to REA — a Chief who takes care of the whole work in my absence".',sources:[{label:'Viktor product docs',url:'https://viktor.com/'},{label:'AI employee guide',url:'https://viktor.com/blog/what-is-an-ai-employee'},{label:'Procedure doc',path:'docs/research/chief-of-staff-rea.md'}],steps:[
+ 'Recovered onboarding procedure: add to chat → OAuth tools → 4-line plain-words brief becomes system prompt.',
+ 'Recovered job loop: @mention task → agent picks tools → works on cloud computer → posts finished file in thread.',
+ 'Recovered Heartbeat: 2x daily scan of workspace activity → follow up on blockers → propose new recurring tasks.',
+ 'Recovered approval architecture: sensitive action → draft + Approve/Reject card → waits for human click.',
+ 'Mapped to MarketFit: watcher=heartbeat, drafts=approvals, MEMORY.md=personal skill, journal=team skill. All pieces exist; missing the unified conversational Chief identity.',
+ 'Build plan: Phase 1 WhatsApp agent (in progress), Phase 2 "while you were out" report, Phase 3 briefable Chief, Phase 4 WhatsApp approval cards.',
+ ],limits:'Marketing claims not relabeled as internals; procedure reconstructed from public docs, not source access.'},
+
 ]
 export function filterReaSessions(query:string,area:string,method:string) {
  const q=query.trim().toLowerCase()
