@@ -51,7 +51,7 @@
     },
     {
       "path": "/api/chief/watch/run",
-      "schedule": "17 */2 * * *"
+      "schedule": "17 12 * * *"
     },
     {
       "path": "/api/crawl/run",

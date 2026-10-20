@@ -356,7 +356,7 @@ async function chiefWatch(ctx: ToolContext, args: Record<string, unknown>): Prom
   const subChecks = Array.isArray(args.sub_checks)
     ? (args.sub_checks as unknown[]).map(x => String(x)).filter(Boolean).slice(0, 8)
     : defaultSubChecks(goal, subject)
-  const everyMin = Math.min(Math.max(num(args.check_every_minutes, 120), 30), 1440)
+  const everyMin = Math.min(Math.max(num(args.check_every_minutes, 1440), 1440), 10080)
   const deadline = str(args.deadline).trim() || null
 
   const { data, error } = await sb.from("mfit_chief_watches").insert({
@@ -488,7 +488,7 @@ export const AGENT_TOOLS: Record<string, { description: string; fn: ToolFn }> = 
   },
   chief_watch: {
     description:
-      "The briefable Chief: create a persistent watch from a plain-words goal. The Chief decomposes it into sub-checks, runs them on schedule, nudges only on change. Args: action ('create'|'list'|'cancel', default create); goal (required for create, e.g. 'watch the Richmond 814050 req'); subject (optional req/client/vendor keyword); sub_checks (optional string[] — your own decomposition; default provided); check_every_minutes (30-1440, default 120); deadline (optional ISO date); id (required for cancel).",
+      "The briefable Chief: create a persistent watch from a plain-words goal. The Chief decomposes it into sub-checks, runs them on schedule, nudges only on change. Args: action ('create'|'list'|'cancel', default create); goal (required for create, e.g. 'watch the Richmond 814050 req'); subject (optional req/client/vendor keyword); sub_checks (optional string[] — your own decomposition; default provided); check_every_minutes (1440-10080, default 1440 — daily; runner is daily on current hosting plan); deadline (optional ISO date); id (required for cancel).",
     fn: chiefWatch,
   },
 }
