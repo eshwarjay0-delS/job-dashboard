@@ -11,3 +11,5 @@ Regression uses a long JD and a role-specific confirmation including an explicit
 Build, full regression and deployment checks pending. Fresh authenticated output/download evidence and the exact 17:28 failed-run trace remain unavailable. No Kompas code or separate task was modified.
 
 Validation checkpoint: 62 regression tests passed, including profile/role evidence, both Gemini passes, quality, repair, formatting, structure, provider-lane/cache contracts and REA register. TypeScript, scoped lint, whitespace checks and full production build passed. Deployment verification remains pending.
+
+Release checkpoint: commit `b204ebb1b58d3f418a41d802e3760e9837e19399` received Vercel GitHub status success on 20 October 2026. Deployment: https://vercel.com/qu4ntum-s-projects/job-dashboard/HJNHrd2swbjC5s9EQYYKm3JapmHh. This supersedes the pending deployment checkpoint; authenticated output/download acceptance remains outstanding. Runtime logs remain unavailable under the previously recorded Vercel team-access restriction; no unchanged access retries were made.
