@@ -10,6 +10,7 @@ function fixture(ageMinutes, { live = false, elsewhere = false, ended = false, i
   const record = { id: 'meeting', runAt: 1, pausedAt: interrupted ? null : now - ageMinutes * 60000, endedAt: ended ? 2 : null };
   const calls = { launched: 0, closed: 0, writes: 0 };
   const context = vm.createContext({ sessions: [record], Date: { now: () => now },
+    CONTINUE_MS: 30 * 60000, endTimer: 0, clearTimeout() {}, setTimeout() { return 1; },
     sessionOpen: s => !!s.runAt && !s.endedAt, liveOpenFor: () => live, liveElsewhere: () => elsewhere,
     lastHeardAt: () => now - ageMinutes * 60000,
     LS: { get: () => [record], set: () => calls.writes++ }, renderSessions: () => {},
