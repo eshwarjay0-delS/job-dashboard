@@ -46,6 +46,8 @@ The 19 October instruction to ignore certifications as tailoring targets is reta
 
 ## Rewrite completeness — 20 October 2026
 
+Overall keyword overlap cannot hide thin experience coverage. Every substantive role with supported requirements must reach the shared target before the result is complete or cacheable; roles with no supported requirement are not padded. Evidence: `docs/research/resume-per-role-completion.md`.
+
 The web result shows unfinished rewrite status separately from keyword counts, including when all terms appear. The shared quality report preserves its incomplete flag. Older saved delivered-with-gaps reports receive a general review notice without inventing a specific failure reason. No scoring or delivery threshold changes. Evidence: `docs/research/resume-incomplete-notice.md`.
 
 High keyword overlap does not make unfinished role rewrites complete. Partial outputs can retain the existing 95% delivery-floor behavior, but never receive completed status or enter the completed-result cache. Cache generation 15 invalidates older completion classifications without deleting resumes. Evidence: `docs/research/resume-completeness-cache.md`.

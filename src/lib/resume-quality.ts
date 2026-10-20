@@ -4,6 +4,24 @@
 export const RESUME_MIN_COVERAGE = 0.95
 export const RESUME_TARGET_COVERAGE = 0.98
 
+export type RoleAlignment = {
+  role: string
+  bullets: number
+  rewritten: number
+  added: number
+  skills: number
+  required: number
+}
+
+/** Overall overlap is not enough: every substantive role that has supported
+ * requirements must carry the requested experience coverage itself. */
+export function experienceCoverageComplete(roles: readonly RoleAlignment[], target = RESUME_TARGET_COVERAGE): boolean {
+  if (!Number.isFinite(target) || target < 0 || target > 1) return false
+  return roles.filter(role => role.bullets >= 2 && role.required > 0)
+    .every(role => Number.isInteger(role.skills) && Number.isInteger(role.required)
+      && role.skills >= 0 && role.skills <= role.required && role.skills / role.required >= target)
+}
+
 /** Display-only percent, truncated to one decimal so it never crosses a quality
  * threshold by rounding. Acceptance continues to use the original ratios. */
 export function coveragePercent(ratio: number): number {

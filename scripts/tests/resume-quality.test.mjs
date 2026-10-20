@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { resumeQuality, requiredEvidenceTerms, resumeQualityNotice } from '../../src/lib/resume-quality.ts'
+import { experienceCoverageComplete, resumeQuality, requiredEvidenceTerms, resumeQualityNotice } from '../../src/lib/resume-quality.ts'
 import { readFileSync } from 'node:fs'
 
 test('result notice distinguishes incomplete work, coverage gaps and finished results', () => {
@@ -19,6 +19,16 @@ test('quality report retains unfinished work even when no keywords are missing',
   assert.equal(report.incomplete, true)
   assert.equal(report.status, 'delivered_with_gaps')
   assert.equal(resumeQuality({ matched: 96, total: 100, missing: ['AWS'] }).incomplete, false)
+})
+
+test('overall keyword overlap cannot hide an experience role with thin JD coverage', () => {
+  const uneven = [
+    { role: 'Current Client', bullets: 10, rewritten: 8, added: 0, skills: 10, required: 10 },
+    { role: 'Earlier Client', bullets: 10, rewritten: 8, added: 0, skills: 1, required: 10 },
+  ]
+  assert.equal(experienceCoverageComplete(uneven), false)
+  assert.equal(experienceCoverageComplete(uneven.map(r => ({ ...r, skills: 10 }))), true)
+  assert.equal(experienceCoverageComplete([{ ...uneven[1], required: 0, skills: 0 }]), true, 'a role with no supported requirement is not padded')
 })
 
 test('weighted coverage stays separate from actual counts and cannot override either threshold', () => {

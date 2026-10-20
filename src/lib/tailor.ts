@@ -1,7 +1,7 @@
 import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
 import { candidateEvidenceInput } from "./resume-evidence"
 import { preserveSkillHeadings } from "./resume-format"
-import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, resumeQuality, requiredEvidenceTerms, coveragePercent } from "./resume-quality"
+import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, experienceCoverageComplete, resumeQuality, requiredEvidenceTerms, coveragePercent } from "./resume-quality"
 import { J1_VERSION, constrainResumeEdits } from "./ai/j1"
 import path from "path"
 import { createHash } from "crypto"
@@ -115,7 +115,8 @@ function normJD(jd: string): string {
 // "4": results made before the resume and the JD were read as one record (J1 v3) stopped near the first draft.
 // Earlier contexts could truncate explicit confirmations behind a lengthy pasted JD.
 // Version 18 preserves subthreshold fractional coverage in every result field.
-const CACHE_GENERATION = "18"
+// Version 19 prevents a high-overlap resume with thin per-role experience coverage from being served as complete.
+const CACHE_GENERATION = "19"
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -829,7 +830,7 @@ export async function runTailor(opts: {
   // Weighted coverage (Jobscan REA): hard skills count 3x, titles 2x, soft 1x, buzzwords 0.5x.
   // Preserve actual counts; weighting is a separate signal, not proof of recruiter acceptance.
   const wc = weightedCoverage(best.tailoredText, jdKws)
-  const qualityReport = resumeQuality({ matched: wc.matched.length, total: jdKws.length, missing: wc.missing, weightedCoverage: wc.coverage, partial: !!best.partial || (splitDraft && (lackingRoles(best.edits).length > 0 || provenShare(best) < TARGET_COVERAGE)), unchanged: !diff.length })
+  const qualityReport = resumeQuality({ matched: wc.matched.length, total: jdKws.length, missing: wc.missing, weightedCoverage: wc.coverage, partial: !!best.partial || (splitDraft && (lackingRoles(best.edits).length > 0 || provenShare(best) < TARGET_COVERAGE || !experienceCoverageComplete(role_alignment, TARGET_COVERAGE))), unchanged: !diff.length })
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
 
