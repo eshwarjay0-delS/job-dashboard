@@ -21,6 +21,8 @@ export type Candidate = {
   /** The folder it sits in ("SIEM and Incident Response"), or "" for the resume the person sent. */
   folder: string
   name: string
+  /** The headline written in the resume itself ("Cyber Security Analyst"), when it has one (the keyword index keeps it). */
+  title?: string
   depth: 0 | 1 | 2
   keywords: string[]
   at: number
@@ -152,11 +154,17 @@ export function rankFor(candidates: Candidate[], email: string, asked: string[])
   return { ranked, builtOnAlready: mine.length - ranked.length }
 }
 
-/** Said to the person before the work starts: what it starts from and why. */
-export function saidOf(pick: Ranked): string {
+/**
+ * Said to the person before the work starts: what it starts from and why. `why` is how it was chosen ("its title is the
+ * job's: Security Analyst", "you asked for it"): until 20 Oct 2026 only the folder was named, so a resume titled
+ * "Cyber Security Analyst" was announced as an "Identity and Access Management" one and the choice looked random.
+ */
+export function saidOf(pick: Ranked, why = ""): string {
   const c = pick.candidate
-  const what = c.kept ? `your resume *${c.name || "as sent"}*` : `your saved ${c.folder ? `*${c.folder}* ` : ""}resume${c.name ? ` (${c.name})` : ""}`
-  return pick.of && pick.shows ? `${what}, which already shows ${pick.shows} of the ${pick.of} things this job asks for` : what
+  const own = (c.title || c.name || "").trim()
+  const what = c.kept ? `your resume *${c.name || "as sent"}*` : own ? `your *${own}* resume${c.folder ? ` (in ${c.folder})` : ""}` : `your saved ${c.folder ? `*${c.folder}* ` : ""}resume`
+  const lead = why ? `${what}. I chose it ${why}` : what
+  return pick.of && pick.shows ? `${lead}${why ? ". It" : ", which"} already shows ${pick.shows} of the ${pick.of} things this job asks for` : lead
 }
 
 /** The small message after every resume (asked for in these words: "after every completion of a resume"). */

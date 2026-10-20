@@ -8,7 +8,8 @@
 //     jd     the job description. It may carry the choice on a line of its own ("1", "number one"), as on WhatsApp.
 //     email  only this email (otherwise every email the person's resumes carry).
 //     say    a reply to "Which email is this job for?", to see how it is read.
-//   -> { ok, emails: [{ number, email, resumes }], asks, choice, question, picks: [{ email, usable, builtOnAlready, wrongEmail, unread, pick }] }
+//   -> { ok, role, emails: [{ number, email, resumes }], asks, choice, question, picks: [{ email, usable, builtOnAlready, wrongEmail, unread, pick }] }
+//        role      the role the post asks for ("Security Analyst"); every resume titled for it is looked at first, then the niche
 //        number    the number that email keeps for good
 //        asks      true when the bot would ask which email (more than one, and none said)
 //        pick      { folder, name, written, shows, of }: the closest resume of that email, or null
@@ -19,6 +20,7 @@ import { checkRateLimit } from "@/lib/rateLimit"
 import { USER_RESUMES_DIR } from "@/lib/paths"
 import { askWhichEmail, choiceIn, live, readChoice } from "@/lib/library-pick"
 import { closestFor, libraryOf, numberedEmails } from "@/lib/library-pick-store"
+import { roleOfJob } from "@/lib/role-match"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -55,6 +57,7 @@ export async function POST(request: NextRequest) {
   }
   return NextResponse.json({
     ok: true,
+    role: roleOfJob(withJd.rest),
     emails: slots.map((email, i) => ({ number: i + 1, email, resumes: resumes.counts[email] || 0 })).filter(e => e.email),
     asks, choice, question: asks ? askWhichEmail(slots) : "", picks,
   }, PRIVATE)

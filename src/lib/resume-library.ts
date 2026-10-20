@@ -11,6 +11,7 @@
 // picks the saved resume to start the next one from. `resume-library-store.ts` reads and writes what this decides.
 
 import { rankResumeCategories } from "./resumeOrganization.ts"
+import { isGenericSecurityRole, roleOfJob } from "./role-match.ts"
 
 /** A file made for one job carries this in its name, so nothing mistakes it for a resume the person wrote. */
 export const TAILORED_MARK = "(tailored)"
@@ -41,12 +42,31 @@ export function tailoredFileName(job: { role?: string; company?: string }, hash1
   return `${title} ${TAILORED_MARK}__${hash}.docx`
 }
 
-/** The folder a job's resume goes in: the kind of job, read from its title first and then the description. */
-export function categoryForJob(jd: string, role = ""): string {
+/** Folders for kinds of work that are not security: a plain security role never goes in one of these. */
+const NOT_SECURITY = new Set(["Data and Software Engineering", "DevOps and Platform Engineering", "Software Validation and Quality"])
+
+/** The folder as it was read from the words alone (until 20 Oct 2026 the only way). Kept to find what was filed before. */
+export function legacyCategoryForJob(jd: string, role = ""): string {
   // The title is said twice and put first: the words at the top of a text count for more, and a description is full of
   // words from other kinds of work ("you will work with the cloud team").
   const top = rankResumeCategories(`${role}\n${role}\n${jd}`, role)[0]
   return top && top.score ? top.category : NO_CATEGORY
+}
+
+/**
+ * The folder a job's resume goes in: the kind of job, read from its title first and then the description. A plain
+ * "Security Analyst" post whose skills read like software work (Java, Kotlin, React) went in "Data and Software
+ * Engineering" until 20 Oct 2026: a security role with no speciality is General Security, whatever tools it lists.
+ */
+export function categoryForJob(jd: string, role = ""): string {
+  const found = legacyCategoryForJob(jd, role)
+  const title = role || roleOfJob(jd)
+  return NOT_SECURITY.has(found) && isGenericSecurityRole(title) ? NO_CATEGORY : found
+}
+
+/** Every folder this job's resume may have been filed in: where it goes now, and where it went before the rule above. */
+export function categoriesForJob(jd: string, role = ""): string[] {
+  return [...new Set([categoryForJob(jd, role), legacyCategoryForJob(jd, role)])]
 }
 
 export const folderFor = (email: string, category: string): string[] => [email || NO_EMAIL, category || NO_CATEGORY]

@@ -70,8 +70,9 @@ test('the storage keeps one file a job, sends back what was made, and tidies whe
   const store = read('src/lib/resume-library-store.ts')
   // Saving: the earlier file of the same job is deleted as the new one goes in (only a file made for a job, only inside this library).
   assert.ok(store.includes('for (const rel of supersededBy(before, run)) {') && store.includes('if (old !== abs && inside(opts.userDir, old) && isTailoredName(path.basename(old))) await deletePath(old)'))
-  // Asking "was this made already" is one small read of one folder's record, and the file must still be there.
-  assert.ok(store.includes('const file = madeFor(await readShelf(userDir, email_, category), { email: email_, category, jd })') && store.includes('return inside(userDir, abs) && (await existsPath(abs)) ? { abs, file } : null'))
+  // Asking "was this made already" is one small read of a folder's record (two folders only when a plain security role was
+  // filed under another folder before 20 Oct 2026: categoriesForJob), and the file must still be there.
+  assert.ok(store.includes('for (const category of categoriesForJob(jd)) {') && store.includes('const file = madeFor(await readShelf(userDir, email_, category), { email: email_, category, jd })') && store.includes('if (inside(userDir, abs) && (await existsPath(abs))) return { abs, file }'))
   // Tidying costs nothing when there is nothing to tidy: records are read only for a folder that shows one name twice.
   assert.ok(store.includes('if ((seen.get(shown) || 0) > 1 &&') && store.includes('const gone = duplicatesIn(library, email, category)'))
   assert.ok(store.includes('await removeDuplicates(userDir, now)'))

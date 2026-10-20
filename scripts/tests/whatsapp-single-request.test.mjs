@@ -61,7 +61,7 @@ test('same JD can start only one generation across concurrent input handlers', a
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
     '@/lib/whatsapp-trace': { trace: () => {} },
-    '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/resume-library-store': {}, '@/lib/resume-library': {},
+    '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/role-match': {}, '@/lib/chief-approvals': {}, '@/lib/resume-library-store': {}, '@/lib/resume-library': {},
     '@/lib/library-agent': {}, '@/lib/keywords': {}, '@/lib/resumeOrganization': {},
   }
   const { generate, captionFor } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate, captionFor };')

@@ -124,7 +124,8 @@ test('inside the chosen email the closest resume wins, and never one of another 
   assert.equal(rankFor(all, B, asked).ranked[0].shows, 4)
   assert.deepEqual(rankFor(all, 'nobody@x.com', asked), { ranked: [], builtOnAlready: 0 })
   // Said to the person before the work starts. The email is said first by the bot, on its own.
-  assert.equal(saidOf(ranked[0]), 'your saved *SIEM and Incident Response* resume (SOC Analyst - Kestrel), which already shows 3 of the 4 things this job asks for')
+  assert.equal(saidOf(ranked[0]), 'your *SOC Analyst - Kestrel* resume (in SIEM and Incident Response), which already shows 3 of the 4 things this job asks for')
+  assert.equal(saidOf(ranked[0], "because its title is the job's: SOC Analyst"), "your *SOC Analyst - Kestrel* resume (in SIEM and Incident Response). I chose it because its title is the job's: SOC Analyst. It already shows 3 of the 4 things this job asks for")
   assert.ok(!read('src/app/api/whatsapp/webhook/route.ts').includes('selectedEmailSource('))
 })
 
@@ -164,7 +165,7 @@ test('whose a resume is comes from the email written in it, not from its folder 
 // today's design; the behaviour itself is tested in whatsapp-library.test.mjs.
 test('WhatsApp bot: a resume sent wins, otherwise the email is asked once and remembered, and results go to Files', () => {
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
-  assert.ok(bot.includes('session.jd = text'))
+  assert.ok(bot.includes('session.jd = post'))
   assert.ok(bot.includes('if (session.resumePath) return generate(from, session, userId)'), 'a resume sent with the job is used')
   assert.ok(bot.includes('await new Promise(r => setTimeout(r, PAIR_WAIT_MS))'), 'a resume arriving a moment after the job still wins')
   assert.ok(bot.includes('const email = said.email || remembered(cur, slots) || (live(slots).length === 1 ? live(slots)[0] : "")'))

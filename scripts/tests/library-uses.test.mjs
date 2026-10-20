@@ -73,8 +73,9 @@ test('the agent must name one of the listed resumes, or its answer is not used',
     { candidate: { path: '/u/a@x.com/SOC Analyst/s.docx', folder: 'SOC Analyst', name: 'SOC', keywords: ['splunk'], depth: 0, at: 2, email: 'a@x.com' }, shows: 0, of: 2 },
   ]
   const { user } = agentPrompt('AppSec role', ranked, { 'a@x.com/AppSec Engineer/a.docx': { n: 5, last: 1 } }, abs => abs.replace('/u/', ''))
-  assert.match(user, /1\. folder: AppSec Engineer \| file: AppSec \| picked: 5 times \| shows 1 of 2 job keywords \| keywords: burp suite/)
-  assert.match(user, /2\. folder: SOC Analyst/)
+  assert.match(user, /1\. title: AppSec \| file: AppSec \| folder: AppSec Engineer \| picked: 5 times \| shows 1 of 2 job keywords \| keywords: burp suite/)
+  assert.match(user, /2\. title: SOC \| file: SOC \| folder: SOC Analyst/)
+  assert.match(user, /^JOB TITLE: \(not stated\)/)
 })
 
 test('with one resume there is nothing to choose: no model is asked and no agreement is recorded', async () => {

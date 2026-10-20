@@ -19,7 +19,7 @@ import { extractText } from "@/lib/docx"
 import { resumeEmails, rankResumeCategories, cleanEmail } from "@/lib/resumeOrganization"
 import { extractJdKeywords, coveredJdKeywords } from "@/lib/keywords"
 import { pdfText } from "@/lib/pdf-text"
-import { categoryForJob, duplicatesIn, emptyLibrary, folderFor, isTailoredName, learnedOf, libraryMarkdown, madeFor, mergeLibraries, recordRun, relabelEmail, shelfOnly, usedNow, shelvesIn, supersededBy, tailoredFileName, validLibrary, NO_CATEGORY, type Learned, type Library, type SavedFile } from "@/lib/resume-library"
+import { categoryForJob, categoriesForJob, legacyCategoryForJob, duplicatesIn, emptyLibrary, folderFor, isTailoredName, learnedOf, libraryMarkdown, madeFor, mergeLibraries, recordRun, relabelEmail, shelfOnly, usedNow, shelvesIn, supersededBy, tailoredFileName, validLibrary, NO_CATEGORY, type Learned, type Library, type SavedFile } from "@/lib/resume-library"
 
 export const LIBRARY_FILE = "_library.json"
 /** The same record written for people to read, beside it (owner, 19 Oct 2026: "also have a MD file which basically
@@ -208,6 +208,20 @@ export async function saveTailored(opts: {
   }
   const library = recordRun(before, run, opts.now ?? Date.now())
   await writeShelf(opts.userDir, library, email_, category)
+  // The same job filed under the folder it used to be given (before a plain security role was kept out of the software
+  // folders) is taken out as this one goes in: one job, one file, in one folder.
+  const old = legacyCategoryForJob(opts.jd)
+  if (old !== category) {
+    const was = await readShelf(opts.userDir, email_, old)
+    const same = supersededBy(was, { ...run, category: old })
+    if (same.length) {
+      for (const rel of same) {
+        const f = absOf(opts.userDir, rel)
+        if (f !== abs && inside(opts.userDir, f) && isTailoredName(path.basename(f))) await deletePath(f).catch(() => {})
+      }
+      await writeShelf(opts.userDir, { ...was, files: was.files.filter(f => !same.includes(f.path)) }, email_, old).catch(() => {})
+    }
+  }
   const learned = learnedOf(library, email_, category)
   return { abs, rel: relOf(opts.userDir, abs), email: email_, category, learned, counted: learned.jobs > learnedOf(before, email_, category).jobs }
 }
@@ -217,11 +231,15 @@ export async function saveTailored(opts: {
  * it again instead of making it again (owner, 13 Oct 2026: "you already know the outcome from the last time").
  */
 export async function existingForJob(userDir: string, email: string, jd: string): Promise<{ abs: string; file: SavedFile } | null> {
-  const category = categoryForJob(jd), email_ = folderFor(email, category)[0]
-  const file = madeFor(await readShelf(userDir, email_, category), { email: email_, category, jd })
-  if (!file) return null
-  const abs = absOf(userDir, file.path)
-  return inside(userDir, abs) && (await existsPath(abs)) ? { abs, file } : null
+  // Where it goes now, and where a job of this kind was filed before 20 Oct 2026 (categoriesForJob).
+  for (const category of categoriesForJob(jd)) {
+    const email_ = folderFor(email, category)[0]
+    const file = madeFor(await readShelf(userDir, email_, category), { email: email_, category, jd })
+    if (!file) continue
+    const abs = absOf(userDir, file.path)
+    if (inside(userDir, abs) && (await existsPath(abs))) return { abs, file }
+  }
+  return null
 }
 
 /**

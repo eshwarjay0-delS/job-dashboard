@@ -22,6 +22,7 @@ function load(file, mocks = {}, extra = '') {
 }
 
 const pick = load('src/lib/library-pick.ts')
+const roles = load('src/lib/role-match.ts')
 const USERS = path.join('/data', 'user-resumes')
 const USER_DIR = path.join(USERS, 'user1')
 const SOC = path.join(USER_DIR, 'a@x.com', 'SOC Analyst', 'SOC.docx')
@@ -39,7 +40,7 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
   }
   const mocks = {
     'next/server': {},
-    '@/lib/storage': { blob, readPath: async p => (p === SOC || p === APPSEC || String(p).includes('inbox') ? Buffer.from(`resume of a@x.com at ${p}`) : null), writePath: async () => {}, existsPath: async () => true, deletePath: async () => {} },
+    '@/lib/storage': { blob, readPath: async p => (p === SOC || p === APPSEC || extra.some(e => e.path === p) || String(p).includes('inbox') ? Buffer.from(`resume of a@x.com at ${p}`) : null), writePath: async () => {}, existsPath: async () => true, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: USERS },
     '@/lib/llm': { resolveKeys: () => ({}), hasAnyKey: () => true, keysFor: async () => ({ gemini: 'g' }), tailorKeys: k => k },
     '@/lib/tailor': { runTailor: async o => { runs.push(o); return { token: 't1', score: 100, coverage: 100, quality: { status: 'coverage_met', matched: 3, total: 3, missing: [] }, keyword_analysis: { matched: ['owasp'], added: ['burp suite', 'threat modeling'], missing: [] } } } },
@@ -61,6 +62,8 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
       ],
     },
     '@/lib/library-pick': pick,
+    '@/lib/role-match': roles,
+    '@/lib/chief-approvals': {},
     '@/lib/resume-library-store': {
       existingForJob: async () => have,
       saveTailored: async o => { saved.push(o); return { email: 'a@x.com', category: 'AppSec Engineer', abs: path.join(o.userDir, 'a@x.com', 'AppSec Engineer', 'made.docx') } },
@@ -89,14 +92,14 @@ test('a job description asks which email; "1" starts from the agent\'s pick in F
   assert.equal(b.runs.length, 1)
   assert.equal(b.runs[0].givenPath, APPSEC, 'the code ranks AppSec first and the agent agreed')
   assert.equal(b.runs[0].userResumeDir, USER_DIR)
-  assert.match(b.said.at(-1), /Updating your saved \*AppSec Engineer\* resume/)
+  assert.match(b.said.at(-1), /Updating your \*AppSec\* resume \(in AppSec Engineer\)\. I chose it because its title is the job's: Application Security Engineer/)
   assert.equal(b.saved.length, 1)
   assert.equal(b.saved[0].userDir, USER_DIR)
   assert.equal(b.saved[0].depth, 1, 'made from a resume the person wrote')
   assert.equal(b.saved[0].from, 'a@x.com/AppSec Engineer/AppSec.docx')
   assert.deepEqual([...b.saved[0].asked].sort(), ['burp suite', 'owasp', 'threat modeling'])
   assert.match(b.docs.at(-1), /Saved in your Files: a@x\.com \/ AppSec Engineer/)
-  assert.match(b.docs.at(-1), /Started from your saved \*AppSec Engineer\* resume/)
+  assert.match(b.docs.at(-1), /Started from your \*AppSec\* resume \(in AppSec Engineer\)/)
   assert.deepEqual(b.used, [APPSEC], 'the pick is counted in its folder record')
   assert.equal(b.logs.length, 1)
   assert.equal(b.logs[0].agree, true)
@@ -106,13 +109,93 @@ test('a job description asks which email; "1" starts from the agent\'s pick in F
   assert.equal(b.runs.length, 2, 'redo makes it again')
 })
 
+// Two resumes titled for the job: the niche between them is the agent's to choose (the title came first).
+const AS1 = path.join(USER_DIR, 'a@x.com', 'AppSec Engineer', 'AppSec Web.docx')
+const AS2 = path.join(USER_DIR, 'a@x.com', 'AppSec Engineer', 'AppSec Cloud.docx')
+const titled = (p, name, keywords, at) => ({ path: p, email: 'a@x.com', folder: 'AppSec Engineer', name, title: 'Application Security Engineer', depth: 0, keywords, at })
+
 test('the agent\'s pick is used when it differs from the code\'s, and the disagreement is logged', async () => {
-  const b = bot({ agent: { index: 1, why: 'the SOC folder' } })
+  const b = bot({ agent: { index: 1, why: 'the cloud one' }, extra: [titled(AS1, 'AppSec Web', ['burp suite', 'owasp'], 3), titled(AS2, 'AppSec Cloud', ['aws'], 4)] })
   await b.wa.handle('15550002', { type: 'text', id: 'm1', text: { body: `${JD}\n1` } }, {}, 'user1')
-  assert.equal(b.runs[0].givenPath, SOC, 'a number under the job description answers the question')
+  assert.equal(b.runs[0].givenPath, AS2, 'a number under the job description answers the question; the agent chose between the two titled for it')
   assert.equal(b.logs[0].agree, false)
-  assert.equal(b.logs[0].agent, 'a@x.com/SOC Analyst/SOC.docx')
-  assert.equal(b.logs[0].code, 'a@x.com/AppSec Engineer/AppSec.docx')
+  assert.equal(b.logs[0].agent, 'a@x.com/AppSec Engineer/AppSec Cloud.docx')
+  assert.equal(b.logs[0].code, 'a@x.com/AppSec Engineer/AppSec Web.docx')
+  assert.equal(b.logs[0].titled, 2)
+})
+
+// The post from the screenshot of 20 Oct 2026: a recruiter's mail for a "Security Analyst" whose skills read like a
+// software job. It started from an AI/AppSec resume, then (asked again) from one in the Identity folder.
+const POST = `Hi,
+
+I'm an I.T. recruiter at InfoPeople Corp.
+
+The client is looking for a extremely skilled Security Analyst. The position is located in New York, NY.
+
+Role: Security Analyst
+Location: New York, NY (Hybrid)
+Duration: 12 Months
+
+Technical skills
+- Must possess basic knowledge of EC2, Elastic Beanstalk, CloudWatch, Docker, ActiveMQ, RDS/Postgres, Firebase and Sentry.
+- Must possess knowledge of languages including Java, Kotlin and SQL.`
+const CYBER = path.join(USER_DIR, 'a@x.com', 'Identity and Access Management', 'Cyber Security Analyst.docx')
+const AI_APPSEC = path.join(USER_DIR, 'a@x.com', 'AI Security and Governance', 'AI plus AppSec.docx')
+const library = () => [
+  { path: AI_APPSEC, email: 'a@x.com', folder: 'AI Security and Governance', name: 'AI plus AppSec', title: 'AI Security Engineer', depth: 0, keywords: ['burp suite', 'owasp'], at: 9 },
+  { path: CYBER, email: 'a@x.com', folder: 'Identity and Access Management', name: 'Cyber Security Analyst', depth: 0, keywords: ['splunk'], at: 5 },
+]
+
+test('a "Security Analyst" post starts from the resume titled for it, not the one with the most keywords or the right folder', async () => {
+  const b = bot({ agent: null, extra: library() })
+  await b.wa.handle('15550010', { type: 'text', id: 'm1', text: { body: `${POST}\n1` } }, {}, 'user1')
+  assert.equal(b.runs[0].givenPath, CYBER, 'the AI/AppSec resume shows more of the keywords and was picked before; its title is not the role')
+  assert.match(b.said.at(-1), /Updating your \*Cyber Security Analyst\* resume \(in Identity and Access Management\)\. I chose it because its title is the job's: Security Analyst/)
+  assert.equal(b.logs[0].role, 'Security Analyst')
+  assert.equal(b.logs[0].titled, 1)
+})
+
+test('"Make another one with selecting Cybersecurity Analyst resume" is an instruction about the last job, not a new job post', async () => {
+  const b = bot({ agent: null, extra: library() })
+  const N = '15550011'
+  // First go: no resume is titled for it, so the post starts from the one with the most keywords, as before.
+  await b.wa.handle(N, { type: 'text', id: 'm1', text: { body: `${JD}\n1` } }, {}, 'user1')
+  const first = b.runs.length
+  const said = 'Make another one with selecting Cybersecurity Analyst resume'
+  assert.equal(said.length, 60)
+  await b.wa.handle(N, { type: 'text', id: 'm2', text: { body: said } }, await b.wa.loadSession(N), 'user1')
+  assert.equal(b.runs.length, first + 1, 'one more resume')
+  assert.equal(b.runs.at(-1).givenPath, CYBER, 'from the resume named')
+  assert.equal(b.runs.at(-1).jd, JD, 'for the job post, never for the instruction')
+  assert.equal(b.runs.at(-1).noCache, true)
+  assert.match(b.said.join('\n'), /I chose it because you asked for it/)
+  assert.ok(!b.said.some(t => /Got the job description|which email/i.test(t)))
+  assert.equal((await b.wa.loadSession(N)).jd, undefined, 'the instruction did not replace the post')
+  assert.equal(b.logs.at(-1).hint, 'Cybersecurity Analyst')
+
+  // "Another one" with no name: not the resume the last go started from.
+  await b.wa.handle(N, { type: 'text', id: 'm3', text: { body: 'make another one' } }, await b.wa.loadSession(N), 'user1')
+  assert.equal(b.runs.length, first + 2)
+  assert.notEqual(b.runs.at(-1).givenPath, CYBER)
+  assert.match(b.said.join('\n'), /as another one, because you asked for a different resume|I chose it because its title/)
+
+  // A name that matches nothing: said, with what there is; nothing is made.
+  const before = b.runs.length
+  await b.wa.handle(N, { type: 'text', id: 'm4', text: { body: 'use the Kubernetes Platform resume' } }, await b.wa.loadSession(N), 'user1')
+  assert.equal(b.runs.length, before)
+  assert.match(b.said.at(-1), /I could not find a resume called \*Kubernetes Platform\* under a@x\.com\. Your resumes there: .*\*Cyber Security Analyst\*/)
+})
+
+test('before any job, an instruction asks for the job post; a post that ends with "use the X resume" carries the name', async () => {
+  const b = bot({ agent: null, extra: library() })
+  await b.wa.handle('15550012', { type: 'text', id: 'm1', text: { body: 'Make another one with selecting Cybersecurity Analyst resume' } }, {}, 'user1')
+  assert.match(b.said.at(-1), /Send me the job description first/)
+  assert.equal(b.runs.length, 0)
+
+  await b.wa.handle('15550013', { type: 'text', id: 'm1', text: { body: `${POST}\n1\nuse the AI Security Engineer resume` } }, {}, 'user1')
+  // The last line is read first (the name), then "1" under the post is the email.
+  assert.equal(b.runs[0].givenPath, AI_APPSEC)
+  assert.equal(b.runs[0].jd, POST)
 })
 
 test('no agent answer: the code\'s pick stands', async () => {

@@ -15,7 +15,7 @@ const STEPS = [
   "Paste a job description. The first time, MarketFit asks which of your emails it is for and remembers the answer (reply “use 2” any time to switch). It starts from that email’s closest saved resume in Files.",
   "To start from a particular resume instead, send it as a Word file (.docx) with the job description.",
   "You get the tailored Word file back in a few minutes. It is saved in your Files, with the resume you sent.",
-  "Want a change? Swipe to reply to that resume and say what to change.",
+  "Want a change? Swipe to reply to that resume and say what to change. Want it from another resume? Say, for example, “make another one with the Cybersecurity Analyst resume”.",
 ]
 
 export default async function WhatsAppPage() {

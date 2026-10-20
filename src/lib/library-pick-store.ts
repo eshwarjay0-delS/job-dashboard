@@ -14,6 +14,7 @@ import { resumeEmails } from "@/lib/resumeOrganization"
 import { isTailoredName } from "@/lib/resume-library"
 import { readShelf, relOf } from "@/lib/resume-library-store"
 import { numberEmails, rankFor, type Candidate, type Ranked } from "@/lib/library-pick"
+import { narrowByRole, roleOfJob } from "@/lib/role-match"
 
 type Index = Awaited<ReturnType<typeof ensureIndex>>
 export type Resumes = { index: Index; counts: Record<string, number> }
@@ -70,7 +71,7 @@ export async function candidatesFor(userDir: string, email: string, index: Index
     const depth: 0 | 1 | 2 = !isTailoredName(parts[parts.length - 1]) ? 0 : known && known.depth !== 2 ? 1 : 2
     // The folder as a person would say it: the kind of job, without the email in front of it.
     const folder = parts.slice(parts[0].includes("@") ? 1 : 0, -1).join(" / ")
-    return { path: abs, email, folder, name: sayName(entry.filename || parts[parts.length - 1]), depth, keywords: entry.keywords || [], at: known?.at || Date.parse(entry.updatedAt || "") || 0, ...(known?.job ? { job: known.job } : {}) }
+    return { path: abs, email, folder, name: sayName(entry.filename || parts[parts.length - 1]), depth, keywords: entry.keywords || [], at: known?.at || Date.parse(entry.updatedAt || "") || 0, ...(entry.title ? { title: entry.title } : {}), ...(known?.job ? { job: known.job } : {}) }
   })
 }
 
@@ -103,7 +104,10 @@ export async function closestFor(userDir: string, email: string, jd: string, kep
   // `notJob`: when a job is being made afresh, the resume made for that same job before is not what it starts from.
   const candidates = (await candidatesFor(userDir, email, index)).filter(c => !notJob || c.job !== notJob)
   if (kept && kept.email === email) candidates.push(kept)
-  const { ranked, builtOnAlready } = rankFor(candidates, email, extractKeywords(jd))
+  const all = rankFor(candidates, email, extractKeywords(jd))
+  const { builtOnAlready } = all
+  // Every resume titled for this job's role first; the closest by keywords inside them (same as the bot).
+  const ranked = [...narrowByRole(all.ranked, roleOfJob(jd)).pool]
   let wrongEmail = 0, unread = 0
   for (const one of ranked) {
     if (one.candidate.kept) return { pick: one, usable: ranked.length, builtOnAlready, wrongEmail, unread }

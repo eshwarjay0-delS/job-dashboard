@@ -138,7 +138,7 @@ test('WhatsApp works on a private temporary copy of a resume sent, and files it 
   assert.ok(bot.includes('const INBOX_DIR = path.join(DATA_DIR, "whatsapp", "inbox")'))
   assert.ok(bot.includes('const dest = path.join(INBOX_DIR, digits(from), `${randomBytes(8).toString("hex")}-${safe}`)'))
   assert.ok(bot.includes('userResumeDir: files ? files.userDir : path.join(INBOX_DIR, digits(from))'))
-  assert.ok(bot.includes('session.jd = text') && bot.includes('session.resumePath = dest'))
+  assert.ok(bot.includes('session.jd = post') && bot.includes('session.resumePath = dest'))
   assert.ok(bot.includes('await saveSession(from, { seen: session.seen })'))
   assert.ok(bot.includes('await deletePath(session.resumePath).catch(() => {})'))
   assert.ok(bot.includes('if (s.version !== 3) return { version: 3, seen: s.seen?.slice(-40) }'))

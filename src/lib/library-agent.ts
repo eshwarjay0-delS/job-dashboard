@@ -25,14 +25,14 @@ const SECOND_AFTER_MS = 4_000
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 
 /** What the agent is shown: the job, then each resume with its folder, keywords and how often it was picked. */
-export function agentPrompt(jd: string, ranked: Ranked[], uses: Uses = {}, relOf: (abs: string) => string = a => a): { system: string; user: string } {
+export function agentPrompt(jd: string, ranked: Ranked[], uses: Uses = {}, relOf: (abs: string) => string = a => a, role = "", titled = false): { system: string; user: string } {
   const system = `You pick which saved resume a job application should start from. Output ONLY minified JSON: {"pick":<number>,"why":"<one short sentence>"}.
-Choose the resume whose kind of job (its folder) and keywords are closest to the job description. Prefer the folder that names the same kind of role. When two are equally close, prefer the one picked more often, then the newer one. The number must be one of the listed numbers.`
+The kind of role comes first: the resume whose own title is the job's role. ${titled ? "Every resume listed already has the job's title, so choose by niche: the one whose skills and keywords are closest to what this job asks for." : "Choose the resume whose own title and keywords are closest to the job; the folder is only a rough sort and can be wrong (an analyst resume can sit in an identity folder)."} When two are equally close, prefer the one picked more often, then the newer one. The number must be one of the listed numbers.`
   const list = ranked.slice(0, MOST_SHOWN).map((r, i) => {
     const c = r.candidate, u = uses[relOf(c.path)]
-    return `${i + 1}. folder: ${c.folder || "(the resume the person sent)"} | file: ${clip(c.name, 70)} | picked: ${u?.n || 0} times | shows ${r.shows} of ${r.of} job keywords | keywords: ${clip(c.keywords.slice(0, KEYWORDS_SHOWN).join(", "), 240)}`
+    return `${i + 1}. title: ${clip(c.title || c.name || "(none)", 60)} | file: ${clip(c.name, 70)} | folder: ${c.folder || "(the resume the person sent)"} | picked: ${u?.n || 0} times | shows ${r.shows} of ${r.of} job keywords | keywords: ${clip(c.keywords.slice(0, KEYWORDS_SHOWN).join(", "), 240)}`
   }).join("\n")
-  return { system, user: `JOB DESCRIPTION:\n${jd.slice(0, 4000)}\n\nSAVED RESUMES:\n${list}\n\nReturn the JSON.` }
+  return { system, user: `JOB TITLE: ${role || "(not stated)"}\n\nJOB DESCRIPTION:\n${jd.slice(0, 4000)}\n\nSAVED RESUMES:\n${list}\n\nReturn the JSON.` }
 }
 
 /** The agent's answer read back: a number that is one of those listed, or null. */
@@ -50,11 +50,11 @@ export function parseAgentPick(text: string, count: number): AgentPick | null {
 }
 
 /** Ask the agent. Resolves to null on any failure or after `timeoutMs`: the code's pick then stands. */
-export async function agentPick(opts: { keys: LlmKeys; jd: string; ranked: Ranked[]; uses?: Uses; relOf?: (abs: string) => string; timeoutMs?: number; usageSink?: TokenUsage[] }): Promise<AgentPick | null> {
+export async function agentPick(opts: { keys: LlmKeys; jd: string; ranked: Ranked[]; uses?: Uses; relOf?: (abs: string) => string; role?: string; titled?: boolean; timeoutMs?: number; usageSink?: TokenUsage[] }): Promise<AgentPick | null> {
   // One resume: there is nothing to choose, so no model is asked and no agreement is recorded (found in review).
   const models = (["gemini", "groq"] as const).filter(p => !!opts.keys[p])
   if (opts.ranked.length < 2 || !models.length) return null
-  const { system, user } = agentPrompt(opts.jd, opts.ranked, opts.uses, opts.relOf)
+  const { system, user } = agentPrompt(opts.jd, opts.ranked, opts.uses, opts.relOf, opts.role, opts.titled)
   const ask = (p: "gemini" | "groq") => callLLM({ keys: { [p]: opts.keys[p] }, pref: p, tier: "light", system, user, maxTokens: 200, temperature: 0, usageSink: opts.usageSink, purpose: "resume-keywords" })
     .then(r => { const pick = parseAgentPick(r.text, opts.ranked.length); return pick ? { ...pick, by: r.model } : null }).catch(() => null)
   return new Promise<AgentPick | null>(resolve => {
@@ -68,7 +68,8 @@ export async function agentPick(opts: { keys: LlmKeys; jd: string; ranked: Ranke
   })
 }
 
-export type PickLog = { at: number; job: string; email: string; agent: string | null; code: string | null; used: string; agree: boolean | null; why?: string; by?: string }
+/** `role`: the job's role as read from the post; `titled`: how many resumes had that title (0 = none, so all were open); `hint`: a resume the person named. */
+export type PickLog = { at: number; job: string; email: string; agent: string | null; code: string | null; used: string; agree: boolean | null; why?: string; by?: string; role?: string; titled?: number; hint?: string }
 const logKey = (userId: string) => `library/picks/${String(userId).replace(/[^A-Za-z0-9_-]/g, "_")}.json`
 const MOST_LOGGED = 300
 
