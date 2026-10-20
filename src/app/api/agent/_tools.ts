@@ -223,6 +223,91 @@ async function searchVendorPortals(ctx: ToolContext, args: Record<string, unknow
   }
 }
 
+
+// ── chief_briefing ────────────────────────────────────────────────────────
+// The unified "while you were out" report: submissions by stage, threads
+// needing action, interview invites, double-submit risks. One call = the
+// whole picture. This is the Heartbeat equivalent for a solo user.
+async function chiefBriefing(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
+  const days = Math.min(Math.max(num(args.days, 2), 1), 14)
+  const { threads } = await fetchClassifiedThreads(ctx.userId, { days, max: 100 })
+  const byStage: Record<string, number> = {}
+  const needsAction: Array<{ from: string; subject: string; why: string; threadId: string }> = []
+  const interviews: Array<{ from: string; subject: string; when: string }> = []
+  const rateConfirmations: Array<{ from: string; role: string; rate: string }> = []
+
+  for (const t of threads) {
+    const latest = t.messages[t.messages.length - 1]
+    const cats = new Set(t.messages.map(m => m.category))
+    const stage = latest.category || "unclassified"
+    byStage[stage] = (byStage[stage] || 0) + 1
+    const title = latest.jobTitle || t.messages.find(m => m.jobTitle)?.jobTitle || ""
+    const vendor = latest.vendor || t.messages.find(m => m.vendor)?.vendor || ""
+
+    if (cats.has("Interview Request")) {
+      interviews.push({ from: latest.from || "", subject: latest.subject || "", when: latest.internalDate || "" })
+    }
+    if (cats.has("Rate Confirmation") && latest.rate) {
+      rateConfirmations.push({ from: latest.from || "", role: title, rate: latest.rate })
+    }
+    // Threads gone quiet 7+ days that were active = follow-up candidates
+    const lastDate = new Date(latest.internalDate || 0).getTime()
+    const daysQuiet = (Date.now() - lastDate) / 86400000
+    if (daysQuiet >= 7 && (cats.has("RTR Request") || cats.has("Submission Confirmation") || cats.has("Interview Request"))) {
+      needsAction.push({
+        from: latest.from || "", subject: latest.subject || "",
+        why: `Quiet ${Math.floor(daysQuiet)} days after ${stage}`,
+        threadId: t.threadId,
+      })
+    }
+    // Double-submit risk: same role from 2+ vendors
+    void vendor
+  }
+
+  return {
+    ok: true,
+    data: {
+      windowDays: days,
+      threadCount: threads.length,
+      byStage,
+      interviews: interviews.slice(0, 10),
+      rateConfirmations: rateConfirmations.slice(0, 10),
+      followUpCandidates: needsAction.slice(0, 15),
+    },
+  }
+}
+
+// ── kompas_prep ───────────────────────────────────────────────────────────
+// Interview prep status from Kompas: recent sessions and what was practiced.
+// Lets the Chief answer "am I ready for tomorrow's interview" by combining
+// this with interview invites from chief_briefing.
+async function kompasPrep(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
+  try {
+    const sb = await supabase()
+    const { data, error } = await sb
+      .from("kompas_sessions")
+      .select("id, created_at, role, company, questions_asked, duration_sec")
+      .eq("user_id", ctx.userId)
+      .order("created_at", { ascending: false })
+      .limit(Math.min(Math.max(num(args.limit, 5), 1), 20))
+    if (error) return { ok: false, error: `Could not read Kompas sessions: ${error.message}` }
+    type SessionRow = { id: string; created_at: string; role: string | null; company: string | null; questions_asked: number | null; duration_sec: number | null }
+    const rows = (data || []) as SessionRow[]
+    return {
+      ok: true,
+      data: {
+        sessions: rows.map(s => ({
+          id: s.id, at: s.created_at, role: s.role, company: s.company,
+          questions: s.questions_asked, durationMin: s.duration_sec ? Math.round(s.duration_sec / 60) : null,
+        })),
+        count: rows.length,
+      },
+    }
+  } catch (e) {
+    return { ok: false, error: String(e).slice(0, 200) }
+  }
+}
+
 // ── Tool registry ─────────────────────────────────────────────────────────
 export const AGENT_TOOLS: Record<string, { description: string; fn: ToolFn }> = {
   inbox_search: {
@@ -259,6 +344,16 @@ export const AGENT_TOOLS: Record<string, { description: string; fn: ToolFn }> = 
     description:
       "Search the Apply tab's prime vendor portal directory (57 US IT contract staffing firms). Args: query (optional keyword — firm name, city, state, specialty), cyberOnly (optional boolean — only firms with a cybersecurity practice), withPortal (optional boolean — only firms with a verified direct portal link), max (1-57, default 20). Returns firm, portal URL, HQ, specialties, size, cyber flags.",
     fn: searchVendorPortals,
+  },
+  chief_briefing: {
+    description:
+      "The unified status report: thread counts by stage, interview invites, rate confirmations, and follow-up candidates (threads quiet 7+ days). Args: days (1-14, default 2). One call gives the whole picture — use for 'what's pending' and morning briefings.",
+    fn: chiefBriefing,
+  },
+  kompas_prep: {
+    description:
+      "Interview prep status from Kompas: recent practice sessions with role, company, questions asked, duration. Args: limit (1-20, default 5). Combine with chief_briefing interview invites to answer readiness questions.",
+    fn: kompasPrep,
   },
 }
 
