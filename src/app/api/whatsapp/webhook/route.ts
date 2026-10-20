@@ -41,8 +41,8 @@ import { libraryOf, numberedEmails, candidatesFor } from "@/lib/library-pick-sto
 import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME, type Ranked } from "@/lib/library-pick"
 import { existingForJob, saveTailored, saveUpload, markUsed, readShelf, relOf } from "@/lib/resume-library-store"
 import { jobKeyOf, type SavedFile, type Uses } from "@/lib/resume-library"
-import { agentPick, logPick } from "@/lib/library-agent"
-import { roleOfJob, narrowByRole, matchHint, titlesOf, parseInstruction, splitTailInstruction, type Instruction } from "@/lib/role-match"
+import { agentPick, logPick, readPicks } from "@/lib/library-agent"
+import { roleOfJob, narrowByRole, matchHint, titlesOf, parseInstruction, parseQuestion, splitTailInstruction, type Instruction } from "@/lib/role-match"
 import { extractKeywords } from "@/lib/keywords"
 import { resumeEmails } from "@/lib/resumeOrganization"
 import { getApprovalCard, saveApprovalCard, parseCardButton, deliverApprovalCard, sendGmailDraft, updateGmailDraft, deleteGmailDraft } from "@/lib/chief-approvals"
@@ -203,7 +203,7 @@ const HELP = [
   "",
   "I ask once which email a job is for and remember it. Reply *use 1* or *use 2* any time to switch.",
   "",
-  "I start from the resume whose title is the job's. To choose another, say _make another one with the Cybersecurity Analyst resume_, or end the job description with a line such as _use the SOC resume_.",
+  "I start from the resume whose title is the job's. To choose another, say _make another one with the Cybersecurity Analyst resume_, or end the job description with a line such as _use the SOC resume_. Ask _why did you pick that resume?_ or _what resumes do I have?_ any time.",
   "",
   "Commands: *redo* · *reset* · *status*",
 ].join("\n")
@@ -422,6 +422,10 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
         if (session.last?.jd) return again(from, told, userId)
         return sendText(from, "Send me the job description first, then tell me which resume to start from, for example _use the Cybersecurity Analyst resume_.")
       }
+      // "Why did you pick that resume?", "What resumes do I have?": answered from what was done.
+      const asking = parseQuestion(text)
+      if (asking === "why") return explainPick(from, userId, session)
+      if (asking === "list") return listResumes(from, userId, session)
       // Natural profile switching: "use my Houston resume", "switch to st louis", etc.
       if (/houston/.test(lower) && /resume|profile|use|switch/.test(lower)) {
         const { slots } = await emailSlots(userId)
@@ -457,6 +461,9 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       if (session.last?.jd) return again(from, asked, userId)
       return sendText(from, "Send me the job description first, then tell me which resume to start from, for example _use the Cybersecurity Analyst resume_.")
     }
+    const asking = parseQuestion(text)
+    if (asking === "why") return explainPick(from, userId, session)
+    if (asking === "list") return listResumes(from, userId, session)
     // A post that ends with a line naming the resume ("use the SOC resume") is the post, and the name.
     const tail = splitTailInstruction(text)
     const post = tail.jd
@@ -720,6 +727,39 @@ async function fromLibrary(from: string, job: { jd: string; jdId: string }, emai
     const now = JSON.parse((await blob.getText(flightKey).catch(() => null)) || "{}") as { token?: string }
     if (now.token === token) await blob.delete(flightKey).catch(() => {})
   }
+}
+
+/** "Why did you pick that resume?": the last pick, and the reason, from the pick log (not from a model). */
+async function explainPick(from: string, userId: string, session: Session) {
+  const [last] = await readPicks(userId, 1)
+  if (!last) return sendText(from, "I have not started a resume for you yet. Send a job description and I will say which resume I start from, and why.")
+  const rel = String(last.used || session.last?.used || "")
+  const name = rel.split("/").pop()?.replace(/__[a-f0-9]{16}(?=\.docx$)/i, "").replace(/\.docx$/i, "").replace(/\s*\(tailored\)$/i, "") || "your resume"
+  const folder = rel.split("/").length >= 3 ? rel.split("/")[1] : ""
+  const reason = last.hint ? "You asked for it by name."
+    : last.titled && last.titled > 1 ? `Its title matches the job's role${last.role ? ` (${last.role})` : ""}. ${last.titled} of your resumes do, so I chose between them by the skills the job asks for.`
+    : last.titled === 1 ? `It is the one resume whose title matches the job's role${last.role ? ` (${last.role})` : ""}.`
+    : `None of your resumes carries the job's title${last.role ? ` (${last.role})` : ""}, so I chose by the skills the job asks for.`
+  return sendText(from, [
+    `For your last job I started from your *${name}* resume${folder ? ` (in ${folder})` : ""}.`,
+    reason,
+    ...(last.why ? [`The AI agent's note: ${last.why}`] : []),
+    "To start from another, say _make another one with the Cybersecurity Analyst resume_ (or whichever you want).",
+  ].join("\n"))
+}
+
+/** "What resumes do I have?": the titles of the resumes of the email in use. */
+async function listResumes(from: string, userId: string, session: Session) {
+  const { slots, failed } = await emailSlots(userId)
+  if (failed) return sendText(from, "I could not read your MarketFit Files just now. Ask again in a minute.")
+  const email = remembered(session, slots) || (live(slots).length === 1 ? live(slots)[0] : "")
+  if (!email) return sendText(from, live(slots).length ? askWhichEmail(slots) : "Your MarketFit Files hold no resume yet, so send your resume as a *.docx* file.")
+  const userDir = path.join(USER_RESUMES_DIR, userId)
+  const { index } = await libraryOf(userDir)
+  const { ranked } = rankFor(await candidatesFor(userDir, email, index), email, [])
+  if (!ranked.length) return sendText(from, `Your Files hold no resume of *${email}* to start from.`)
+  const titles = titlesOf(ranked, 12)
+  return sendText(from, [`Your *${email}* resumes (${ranked.length}): ${titles.map(t => `*${t}*`).join(", ")}.`, "Say _make another one with the SOC resume_ (or any title) to start a job from one of them."].join("\n"))
 }
 
 /** What the person asked for beyond the job: a resume by name, or "not the one it started from last time". */

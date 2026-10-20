@@ -218,6 +218,21 @@ export function parseInstruction(text: string): Instruction | null {
   return { hint, again: again && !hint }
 }
 
+export type Question = "why" | "list"
+
+/**
+ * A short question about the bot's own work: "Why did you pick that resume?" or "What resumes do I have?". Answered from
+ * what it did, not by a model, so the answer is the true one. Anything longer than a line or two is not one.
+ */
+export function parseQuestion(text: string): Question | null {
+  const t = String(text || "").trim()
+  if (!t || t.length > 120 || t.split(/\r?\n/).filter(l => l.trim()).length > 2) return null
+  if (/^(?:why|how come|how did you)\b.{0,50}\b(?:pick|picked|choose|chose|chosen|use|used|start|started|select|selected|go with|went with)\b/i.test(t) ||
+      /^(?:which|what) (?:resume|one)\b.{0,25}\b(?:did you|was)\b.{0,25}\b(?:use|pick|choose|start|select)/i.test(t)) return "why"
+  if (/^(?:what|which|show|list|see)\b.{0,25}\bresumes?\b/i.test(t) && /\b(?:have|saved|available|got|my|keep|are there)\b/i.test(t)) return "list"
+  return null
+}
+
 /** A job post that ends with a line naming the resume to start from ("use the SOC resume"): the post, and the name. */
 export function splitTailInstruction(text: string): { jd: string; hint: string } {
   const lines = String(text || "").replace(/\r/g, "").split("\n")

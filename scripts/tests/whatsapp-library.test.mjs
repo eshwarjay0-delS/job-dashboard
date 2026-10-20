@@ -73,7 +73,7 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
       relOf: (dir, abs) => path.relative(dir, abs).split(path.sep).join('/'),
     },
     '@/lib/resume-library': { jobKeyOf: jd => (jd === JD ? 'job-1' : `job-${String(jd).length}`) },
-    '@/lib/library-agent': { agentPick: async () => { if (hold) await hold; return agent }, logPick: async (u, e) => { logs.push(e) } },
+    '@/lib/library-agent': { agentPick: async () => { if (hold) await hold; return agent }, logPick: async (u, e) => { logs.push(e) }, readPicks: async (u, n = 50) => logs.slice(-n).reverse() },
     '@/lib/keywords': { extractKeywords: () => ['burp suite', 'owasp'] },
     '@/lib/resumeOrganization': { resumeEmails: t => [...new Set(t.match(/[\w.]+@[\w.]+\.\w+/g) || [])] },
   }
@@ -334,4 +334,27 @@ test('the shared default bot user files nothing', async () => {
   await b.wa.handle(SESSION, { type: 'text', id: 'm1', text: { body: JD } }, {}, 'demo')
   await b.wa.handle(SESSION, { type: 'document', id: 'm2', document: { id: 'd1', filename: 'Mine.docx' } }, await b.wa.loadSession(SESSION), 'demo')
   assert.equal(b.uploads.length, 0)
+})
+
+test('"Why did you pick that resume?" and "What resumes do I have?" are answered from what was done', async () => {
+  const b = bot({ agent: null, extra: library() })
+  const N = '15550014'
+  await b.wa.handle(N, { type: 'text', id: 'm0', text: { body: 'why did you pick that resume?' } }, {}, 'user1')
+  assert.match(b.said.at(-1), /I have not started a resume for you yet/)
+  await b.wa.handle(N, { type: 'text', id: 'm1', text: { body: `${POST}
+1` } }, {}, 'user1')
+  await b.wa.handle(N, { type: 'text', id: 'm2', text: { body: 'Why did you pick that resume?' } }, await b.wa.loadSession(N), 'user1')
+  assert.match(b.said.at(-1), /For your last job I started from your \*Cyber Security Analyst\* resume \(in Identity and Access Management\)/)
+  assert.match(b.said.at(-1), /It is the one resume whose title matches the job's role \(Security Analyst\)/)
+  assert.match(b.said.at(-1), /make another one with the Cybersecurity Analyst resume/)
+  await b.wa.handle(N, { type: 'text', id: 'm3', text: { body: 'what resumes do I have?' } }, await b.wa.loadSession(N), 'user1')
+  assert.match(b.said.at(-1), /Your \*a@x\.com\* resumes \(\d+\): /)
+  assert.ok(b.said.at(-1).includes('*Cyber Security Analyst*') && b.said.at(-1).includes('*AI Security Engineer*'))
+  const made = b.runs.length
+  assert.equal(made, 1, 'questions make nothing')
+  // After a resume was named, the reason says so.
+  await b.wa.handle(N, { type: 'text', id: 'm4', text: { body: 'use the AI Security Engineer resume' } }, await b.wa.loadSession(N), 'user1')
+  await b.wa.handle(N, { type: 'text', id: 'm5', text: { body: 'which resume did you use?' } }, await b.wa.loadSession(N), 'user1')
+  assert.match(b.said.at(-1), /your \*AI plus AppSec\* resume/)
+  assert.match(b.said.at(-1), /You asked for it by name/)
 })

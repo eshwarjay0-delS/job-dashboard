@@ -105,3 +105,9 @@ test('a job post that ends with "use the X resume" is the post and the name', ()
   assert.deepEqual(R.splitTailInstruction(`${post}\n1`), { jd: `${post}\n1`, hint: '' })
   assert.deepEqual(R.splitTailInstruction(post), { jd: post, hint: '' })
 })
+
+test('a short question about the bot\'s own work is read as one; a job post or an instruction is not', () => {
+  for (const q of ['Why did you pick that resume?', 'why did you choose the IAM one', 'how come you used the AppSec resume', 'Which resume did you use?', 'what resume did you pick for that one']) assert.equal(R.parseQuestion(q), 'why', q)
+  for (const q of ['What resumes do I have?', 'show me my resumes', 'which resumes are saved', 'list my resumes']) assert.equal(R.parseQuestion(q), 'list', q)
+  for (const no of ['Thanks', 'use the SOC resume', 'show me the SOC resume', 'Why would a Security Analyst need Kotlin? Looking for someone with Java, Kotlin and SQL experience for a 12 month contract in New York']) assert.equal(R.parseQuestion(no), null, no)
+})
