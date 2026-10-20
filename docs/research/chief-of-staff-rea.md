@@ -190,3 +190,49 @@ Not a state machine. An agent that:
 **Our version:** The pieces exist (watcher, tailor, drafts, memory). The work is unifying them behind a conversational WhatsApp agent that he can brief like a Chief, that acts in his absence within his rules, and reports back plainly.
 
 **Owner's words:** "a Chief who takes care of the whole work in my absence"
+
+---
+
+## 8. Second Post: The Overnight Run (Owner-provided, 19 Oct)
+
+A second thread from the same author documents a single overnight execution:
+
+```
+Goal given (one rule): "find me $50,000 a month of new business.
+                         public data only. contact nobody without my yes"
+
+9:00 PM  Chief breaks the goal into 4 sub-jobs, assigns each a day/time.
+         (User wrote none of the sub-jobs.)
+11:00 PM Pulls 240 dental clinics in Austin from Google Maps; cuts every chain.
+1:00 AM  Reads every remaining site; keeps 25. Each kept clinic has:
+         one specific thing noticed + where he saw it.
+2:00 AM  Writes an opener for each of the 25. Sends ZERO.
+3:00 AM  Builds the one-page offer. No invented results.
+         PRICE LEFT BLANK — the human fills it.
+8:00 AM  User wakes up, types $2,000/mo → 25 × $2,000 = $50,000/mo on the table.
+Then: repeats every Monday. 100 new clinics/month. Never forgets to start.
+```
+
+**Funnel:** 240 → 25 worth it → 1 offer → $50,000/mo on table → 0 sent without approval.
+
+### Recovered principles (not in the first post)
+
+1. **Goal decomposition by the agent.** The human gave ONE goal and ONE rule. The Chief created the 4 sub-jobs and their schedules itself. The human wrote none of them.
+2. **The blank-price guardrail.** The agent prepares everything up to the decision point, then stops. It does not guess the price. The author's words: "an AI that guesses your price loses you the deal." This is the SAME rule as MarketFit's J1 guardrail (never invent metrics/certs/prices) applied to sales.
+3. **Overnight autonomy.** Work happens while the owner sleeps, on the agent's own cloud computer, with the owner's laptop shut. Deliverable is waiting in the morning.
+4. **Self-perpetuating schedule.** The run ends by installing its own recurrence ("every Monday"). The agent doesn't just do the job once — it makes the job repeat.
+5. **Funnel transparency.** Every stage is countable: 240 pulled, 25 kept, 1 offer, $50K on table, 0 sent. The owner can audit the funnel, not just admire the output.
+
+### Mapping to MarketFit
+
+| Overnight run stage | MarketFit equivalent |
+|---|---|
+| Goal + one rule | His standing directives (e.g. "watch for double-submits, never email marketing firms") |
+| Agent decomposes into sub-jobs | Bible-keeper / journal next-steps (partial — still human-shaped) |
+| Filter 240 → 25 with reasons | Apply match scoring with cert overlap + freshness (shipped) |
+| Openers written, zero sent | Follow-up drafts, never auto-send (shipped, hard rule) |
+| Offer with blank price | Tailor output with honest gaps named, not filled (shipped — gaps listed, never invented) |
+| Repeats every Monday | Cron automations (shipped) |
+| Funnel numbers on the desk | Daily briefing digest (shipped) |
+
+**The one stage we do NOT have:** the agent decomposing a fresh goal into its own sub-jobs. Our crons run fixed jobs he (or I) designed. The Chief designs the jobs from the goal. That is the Phase 3 "briefable Chief" work in §5.
