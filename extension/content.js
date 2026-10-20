@@ -30,6 +30,51 @@ function fillText(el, value) {
   return true
 }
 
+/** Empty a text box the way a person would, so the page's own state empties too. */
+function clearText(el) {
+  if (!el || el.readOnly || el.disabled || el.value === "") return false
+  const proto = el.tagName === "TEXTAREA" ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype
+  const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set
+  if (setter) setter.call(el, "")
+  else el.value = ""
+  el.dispatchEvent(new Event("input", { bubbles: true }))
+  el.dispatchEvent(new Event("change", { bubbles: true }))
+  return true
+}
+
+/** A typeahead or custom dropdown: Greenhouse's job boards draw Country, Location and every Yes/No question this way. */
+function isCombobox(el) {
+  return el?.tagName === "INPUT" && (el.getAttribute("role") === "combobox" || el.getAttribute("aria-autocomplete") === "list" ||
+    /(^|\s)select__input(\s|$)/.test(el.className || ""))
+}
+
+/**
+ * Choose in a typeahead: type, read the option list, click the option that matches. Typing alone is not choosing, and
+ * until 20 Oct 2026 the text was typed and left there (found on Cloudflare's Greenhouse form: the Country box was
+ * given the first name). When no option matches, the typed text is taken back out, so the box never looks answered.
+ * `accept(optionText, typed)` decides a loose match; an exact one always wins. Both are compared without punctuation
+ * ("St Louis" is "St. Louis"). `waitMs`: how long the list may take to come (a place search asks a server).
+ */
+async function fillCombobox(el, value, accept = (text, typed) => text.startsWith(typed), waitMs = 1200) {
+  if (!value || !el || el.disabled || el.readOnly) return false
+  const plain = (s) => String(s || "").toLowerCase().replace(/[^\p{L}\p{N} ]+/gu, " ").replace(/\s+/g, " ").trim()
+  const typed = plain(value)
+  el.focus?.()
+  fillText(el, String(value))
+  el.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "ArrowDown" }))
+  for (let waited = 0; waited <= waitMs; waited += 150) {
+    // Read every time: a list's id is often set only once it opens.
+    const listId = el.getAttribute("aria-controls") || el.getAttribute("aria-owns")
+    const box = listId ? document.getElementById(listId) : null
+    const options = [...(box || document).querySelectorAll('[role="option"]')].map(o => ({ o, text: plain(o.textContent) }))
+    const pick = options.find(x => x.text === typed) || options.find(x => accept(x.text, typed))
+    if (pick) { pick.o.click(); return true }
+    await new Promise(r => setTimeout(r, 150))
+  }
+  clearText(el)
+  return false
+}
+
 /** Fill a <select> — matches by option text or value (case-insensitive) */
 function fillSelect(el, searchText) {
   if (!searchText || !el || el.disabled) return false
@@ -57,6 +102,8 @@ function fillRadio(labelKeyword, yesNo) {
       const legend = fieldset.querySelector("legend, label, h3, h4, .question-label, [class*='label']")
       if (legend) parts.push(legend.innerText)
     }
+    // The group's own question, when its first label is an answer ("Yes"): Lever wraps each option in its label.
+    parts.push(wrapperLabel(r))
     const ctx = parts.join(" ").toLowerCase()
     if (!ctx.includes(labelKeyword.toLowerCase())) continue
     const val      = (r.value || "").toLowerCase()
@@ -86,6 +133,7 @@ function fillOne(selector, value, filledSet) {
   if (!value) return 0
   let n = 0
   for (const el of [...document.querySelectorAll(selector)].slice(0, 1)) {
+    if ((filledSet && filledSet.has(el)) || isCombobox(el)) continue
     if (fillText(el, value)) { n++; if (filledSet) filledSet.add(el) }
   }
   return n
@@ -139,9 +187,19 @@ function isApplicationPage() {
 // Each receives a `filled` Set to track what it touches → generic won't double-fill
 // ────────────────────────────────────────────────────────────────────────────
 
-function fillGreenhouse(profile, filled) {
+async function fillGreenhouse(profile, filled) {
   const { first, last } = splitName(profile)
   let n = 0
+  // Country and Location (City) are typeaheads on job-boards.greenhouse.io: chosen from their lists, never typed into.
+  const country = document.querySelector("input#country")
+  if (country && isCombobox(country) && !filled.has(country) && !country.value) {
+    if (await fillCombobox(country, profile.country || "United States")) { n++; filled.add(country) }
+  }
+  const where = document.querySelector("input#candidate-location")
+  if (where && isCombobox(where) && !filled.has(where) && !where.value) {
+    const city = String(profile.location || "").split(",")[0].trim()
+    if (await fillCombobox(where, city, undefined, 3000)) { n++; filled.add(where) }
+  }
   const map = [
     ['#first_name, input[name="job_application[first_name]"]',              first],
     ['#last_name,  input[name="job_application[last_name]"]',               last],
@@ -565,36 +623,75 @@ function buildSalary(profile) {
   return ""
 }
 
+const squash = (s) => String(s || "").replace(/\s+/g, " ").trim()
+const CONTROL_SEL = "input:not([type='hidden']):not([aria-hidden='true']), select, textarea"
+
+/** The label that belongs to this field: label[for], aria-labelledby, aria-label, or a label wrapped around it. With
+ *  `first`, only the first of these (to name the field to a person: "First Name", not "First Name* First Name"). */
+function ownLabel(el, first = false) {
+  const parts = []
+  if (el.id) {
+    const lbl = document.querySelector(`label[for="${CSS.escape(el.id)}"]`)
+    if (lbl) parts.push(squash(lbl.innerText))
+  }
+  for (const id of (el.getAttribute("aria-labelledby") || "").split(/\s+/).filter(Boolean)) {
+    const node = document.getElementById(id)
+    if (node) parts.push(squash(node.innerText))
+  }
+  if (el.getAttribute("aria-label")) parts.push(squash(el.getAttribute("aria-label")))
+  const wrap = el.closest("label")
+  if (wrap) parts.push(squash(wrap.innerText))
+  const found = [...new Set(parts.filter(Boolean))]
+  return first ? found[0] || "" : found.join(" ")
+}
+
+/**
+ * The question written beside a field that has no label of its own, read from the nearest wrapper that holds this
+ * field and no other (a radio group counts as one field). Until 20 Oct 2026 the first label of any wrapper whose class
+ * held "form" or "field" was read, which on real Greenhouse and Lever forms is often the whole form: the Country box
+ * read "First Name" and was given the first name.
+ */
+function wrapperLabel(el) {
+  let node = el.parentElement
+  for (let depth = 0; node && depth < 6; depth++, node = node.parentElement) {
+    const others = [...node.querySelectorAll(CONTROL_SEL)]
+      .filter(c => c !== el && !(el.type === "radio" && c.type === "radio" && c.name === el.name))
+    if (others.length) return ""
+    const lbl = [...node.querySelectorAll("legend, label, .label, [class*='label'], [class*='Label'], h3, h4, [class*='question']")]
+      .find(c => !c.querySelector(CONTROL_SEL) && !c.htmlFor)
+    if (lbl) return squash(lbl.innerText)
+  }
+  return ""
+}
+
+/** What a field asks, in its own words only. */
+const questionOf = (el) => ownLabel(el) || wrapperLabel(el) || squash(el.placeholder)
+
 function getFieldHint(el) {
   const parts = [
     el.name        || "",
     el.id          || "",
     el.placeholder || "",
-    el.getAttribute("aria-label")     || "",
     el.getAttribute("autocomplete")   || "",
     el.getAttribute("data-field")     || "",
     el.getAttribute("data-label")     || "",
     el.getAttribute("data-testid")    || "",
     el.getAttribute("data-cy")        || "",
     el.getAttribute("data-field-id")  || "",
+    ownLabel(el),
+    wrapperLabel(el),
   ]
-  if (el.id) {
-    const lbl = document.querySelector(`label[for="${CSS.escape(el.id)}"]`)
-    if (lbl) parts.push(lbl.innerText)
-  }
-  const parent = el.closest(
-    ".field, .form-group, .input-group, [class*='field'], [class*='form'], [class*='Field'], " +
-    ".form-control, .MuiFormControl-root, [class*='question'], [class*='Question'], " +
-    ".jobs-easy-apply-form-element, [data-test-form-element]"
-  )
-  if (parent) {
-    const lbl = parent.querySelector("label, .label, [class*='label'], [class*='Label']")
-    if (lbl) parts.push(lbl.innerText)
-    const legend = parent.querySelector("legend, h3, h4, .question, [class*='question']")
-    if (legend) parts.push(legend.innerText)
-  }
   return parts.join(" ").toLowerCase()
 }
+
+// Never filled from the profile, on any page: self-identification (race, ethnicity, gender, veteran, disability, and
+// the signature on those forms), sponsorship, and a follow-up that only applies to a "yes" ("If yes, please identify
+// the person you are related to" was being given the person's own name on Okta's form).
+const PROTECTED_RE = /\b(sponsor|sponsorship|veteran|disability|race|racial|ethnicity|hispanic|latino|latinx|gender|sexual orientation|transgender|pronouns?|self[- ]identif\w*|eeo)\b/i
+const FOLLOW_UP_RE = /^\s*(if (yes|so|applicable|you answered|other|selected)|please (describe|explain|elaborate))\b|\bif different (than|from)\b/i
+// The full name goes only where the label is a name ("Name", "Your full name", "Legal name"), never "Name Pronunciation |
+// How do you pronounce your name?" (Palantir's Lever form, 20 Oct 2026).
+const JUST_A_NAME_RE = /^(your |full |legal |candidate'?s? |applicant'?s? )*name$/i
 
 function fillGeneric(profile, alreadyFilled = new Set()) {
   const { first, last } = splitName(profile)
@@ -627,8 +724,19 @@ function fillGeneric(profile, alreadyFilled = new Set()) {
   let n = 0
   for (const el of inputs) {
     if (el.readOnly || el.disabled || alreadyFilled.has(el)) continue
+    // A typeahead is chosen from its list (see fillCombobox), never typed into here.
+    if (isCombobox(el)) continue
     const hint = getFieldHint(el)
+    const question = questionOf(el)
+    if (PROTECTED_RE.test(hint) || FOLLOW_UP_RE.test(question)) continue
+    // "name" alone matches any question that mentions a name; it fills only a label that is just a name.
+    const bare = question.replace(/[*✱:]+/g, " ").replace(/\s+/g, " ").trim()
     for (const { keys, field } of FIELD_MAP) {
+      if (field === "full_name" && bare && !JUST_A_NAME_RE.test(bare) &&
+          !(/\b(full|legal) name\b/i.test(bare) && !/\?/.test(bare) && bare.split(" ").length <= 6)) continue
+      // A link already given in another box is not given again ("Other website" after "Portfolio URL").
+      if (["linkedin", "github", "portfolio"].includes(field) && values[field] &&
+          [...alreadyFilled].some(o => o !== el && o.value === values[field])) continue
       if (keys.some(k => hint.includes(k))) {
         const val = values[field]
         // No data for this interpretation (e.g. hint matched "github" but the
@@ -646,12 +754,14 @@ function fillGeneric(profile, alreadyFilled = new Set()) {
     }
   }
 
-  // Select dropdowns — country, state
+  // Select dropdowns — country, and a "location" whose options are countries (Spotify's Lever form)
   for (const sel of [...document.querySelectorAll("select:not([disabled])")]) {
     if (alreadyFilled.has(sel)) continue
     const hint = getFieldHint(sel)
-    if (/country/i.test(hint)) {
-      if (fillSelect(sel, "United States") || fillSelect(sel, "US")) { n++; alreadyFilled.add(sel) }
+    if (PROTECTED_RE.test(hint)) continue
+    const countryList = [...sel.options].some(o => /^united states( of america)?$/i.test(o.text.trim()))
+    if (/country/i.test(hint) || (countryList && /\blocation\b|where .*(live|based|located)/i.test(hint))) {
+      if (fillSelect(sel, profile.country || "United States") || fillSelect(sel, "US")) { n++; alreadyFilled.add(sel) }
     }
   }
 
@@ -754,8 +864,9 @@ function detectAttentionFields(alreadyFilled) {
     seenNames.add(r.name)
     const group = [...document.querySelectorAll(`input[type="radio"][name="${CSS.escape(r.name)}"]`)]
     if (group.some(g => g.checked)) continue
-    const hint = getFieldHint(r) + " " + radioGroupLabel(group)
-    if (ATTENTION_RE.test(hint)) flagged.push(radioGroupLabel(group) || "Work authorization / EEO question")
+    const asked = wrapperLabel(r)
+    const hint = getFieldHint(r) + " " + asked + " " + radioGroupLabel(group)
+    if (ATTENTION_RE.test(hint)) flagged.push((asked || radioGroupLabel(group)).slice(0, 60) || "Work authorization / EEO question")
   }
   // Selects still at their placeholder/default option
   for (const sel of document.querySelectorAll("select:not([disabled])")) {
@@ -763,6 +874,11 @@ function detectAttentionFields(alreadyFilled) {
     if (sel.selectedIndex > 0 && sel.value) continue  // already has a real value
     const hint = getFieldHint(sel)
     if (ATTENTION_RE.test(hint)) flagged.push(inferFieldName(sel) || "Sponsorship / EEO question")
+  }
+  // Typeaheads still empty (Greenhouse's job boards draw sponsorship and EEO questions this way)
+  for (const box of document.querySelectorAll("input:not([disabled])")) {
+    if (!isCombobox(box) || box.value || (alreadyFilled && alreadyFilled.has(box))) continue
+    if (ATTENTION_RE.test(getFieldHint(box))) flagged.push(questionOf(box).slice(0, 60) || "Sponsorship / EEO question")
   }
   return flagged.filter((v, i, a) => v && a.indexOf(v) === i).slice(0, 6)
 }
@@ -779,18 +895,7 @@ function inferFieldName(el) {
     el.name,
     el.id,
   ].filter(Boolean)
-  const label = (() => {
-    if (el.id) {
-      const lbl = document.querySelector(`label[for="${CSS.escape(el.id)}"]`)
-      if (lbl) return lbl.innerText.trim()
-    }
-    const parent = el.closest(".field, .form-group, [class*='field'], [class*='Field'], [data-automation-id]")
-    if (parent) {
-      const lbl = parent.querySelector("label, [class*='label'], [class*='Label']")
-      if (lbl) return lbl.innerText.trim()
-    }
-    return null
-  })()
+  const label = ownLabel(el, true) || wrapperLabel(el) || null
   if (label) return label.replace(/\s*\*\s*$/, "").slice(0, 30)
   const raw = (candidates[0] || "").replace(/[-_]/g, " ")
   return raw.charAt(0).toUpperCase() + raw.slice(1, 30)
