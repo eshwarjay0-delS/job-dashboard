@@ -18,6 +18,8 @@ Regression coverage exercises 94.9, 94.999, 95, 97.9, 97.999, 98, 99.999, 100, z
 
 ## Next
 
+Release blocker: implementation commit `9bb90f2a2b8f517fd05e5ed3b2ce5d6a10336983` published on master. Its Vercel GitHub status is failure with target `https://vercel.link/3Fpeeb1`, redirecting to https://vercel.com/docs/cron-jobs/usage-and-pricing. Parent `1e8df2613fa3ce008b07306a397c2f5fdcca44da` has the same failure and added `/api/chief/watch/run` with `17 */2 * * *`. Official documentation says Hobby rejects more-than-daily cron schedules. This strongly indicates a plan/cadence conflict; direct team logs remain inaccessible, so no more specific runtime cause is asserted. The resume change is NOT deployed. The Chief work owner must select a supported cadence or the owner must authorize a hosting upgrade; neither was silently changed here. Preserve this evidence for the active Chief/Bible-Keeper workstream.
+
 Validation: 64 regressions passed; TypeScript and the full production build passed on the combined tree with concurrent master 1e8df26. Scoped lint: zero errors, five existing warnings. No real provider or messaging calls. Deployment verification pending.
 
 Inspect a fresh authenticated baseline/JD/confirmation/export pair and its download. The original failure still requires its full JD, source Word file, returned artifact and execution trace. Authorized runtime logs and an authenticated test session are not available in this execution environment. No email or WhatsApp messages sent.
