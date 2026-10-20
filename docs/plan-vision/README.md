@@ -8,6 +8,8 @@ Each of Gmail, Job Applications, Resume and Kompas has developer notes, a precis
 
 ## Updating the shared brain
 
+Journal-only edits are production code: run `node --test scripts/tests/plan-journal-schema.test.mjs` as well as typecheck/build. Keep all evidence in the supported `evidence` field; extra keys such as `evidence2` both fail TypeScript and disappear from the existing Markdown export. Regression and release evidence: `docs/research/journal-schema-build-repair.md`.
+
 1. Read the relevant existing source document and current implementation.
 2. Edit the product entry in `src/lib/plan-vision.ts`; update `PLAN_REVISION` when the plan changes. Keep the referenced source documents aligned.
 3. Distinguish intent, repository implementation and live verification. Do not convert a roadmap phase into a completion claim without evidence.
