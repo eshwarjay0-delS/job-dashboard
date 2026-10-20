@@ -1,5 +1,11 @@
 # Kompas — Master Vision
 
+## Desktop response focus — 20 October 2026
+
+Approved owner correction: reduce the crowded desktop controls and persistent setup information; make the response the dominant reading surface while preserving reliability. Default desktop-only Focus view uses an opaque answer surface, restrained typography and secondary controls behind Details. Start/Stop, AI Answer, mic/system audio, Chat, status and native window controls remain available. Enabled Auto and Follow Along remain visible. Details restores audience, captions, dossier progress and auxiliary controls. Focus can be switched off, with the preference saved; the ordinary web interface stays unchanged. No session/audio/answer handlers are replaced, no programmatic answer scrolling is introduced, and no Windows-wide dimming is claimed.
+
+Evidence: four DOM/CSS interaction checks plus ten session-continuity checks pass. Native Windows rendering and a long-session soak are pending. Browser visual inspection was blocked because no Chromium binary was installed and its download failed; do not describe this as visually verified. The abrupt native process exit remains the separate investigation in `docs/research/desktop-session-continuity.md`.
+
 *Draft captured 2026-10-17 from the owner's existing product. Owner to review and correct — this is the starting point, not the final word.*
 
 ## The one-liner
