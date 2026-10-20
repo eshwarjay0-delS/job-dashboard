@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MarketFit — AI Resume Tailor",
   "short_name": "MarketFit",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Quick Fill any ATS form from your MarketFit profile. Tailor resumes with AI in under 20 seconds.",
   "action": {
     "default_popup": "popup.html",

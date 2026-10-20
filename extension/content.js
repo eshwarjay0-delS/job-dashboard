@@ -90,22 +90,36 @@ function fillSelect(el, searchText) {
 }
 
 /** Click a radio button — finds radio group by label keyword, then selects yes/no */
-function fillRadio(labelKeyword, yesNo) {
+/** The question a radio group asks, without the note after it: "Are you a U.S. citizen? (Note: ... security clearance
+ *  mandates)" asks about citizenship, and the word in the note answered the clearance question on a Recruitee form. */
+function groupQuestion(r) {
+  const own = wrapperLabel(r) || squash(r.closest("fieldset")?.querySelector("legend")?.innerText)
+  return own.replace(/\(.*$/, "").replace(/\bnote\s*:.*$/i, "").trim()
+}
+
+function fillRadio(labelKeyword, yesNo, accept) {
   const radios = [...document.querySelectorAll("input[type='radio']")]
   for (const r of radios) {
     if (r.checked || r.disabled) continue
-    const parts = [r.value, r.name]
-    const lbl = document.querySelector(`label[for="${CSS.escape(r.id)}"]`)
-    if (lbl) parts.push(lbl.innerText)
-    const fieldset = r.closest("fieldset, .field, .form-group, [class*='question'], [class*='field']")
-    if (fieldset) {
-      const legend = fieldset.querySelector("legend, label, h3, h4, .question-label, [class*='label']")
-      if (legend) parts.push(legend.innerText)
+    const asked = groupQuestion(r)
+    let ctx
+    if (asked) {
+      // "Authorized to work without sponsorship?" is the one protected-sounding question the profile answers (Yes, for a status that needs none).
+      if (isProtectedText(asked) && labelKeyword !== "authorized") continue
+      ctx = `${asked} ${r.name}`.toLowerCase()
+    } else {
+      const parts = [r.value, r.name]
+      const lbl = document.querySelector(`label[for="${CSS.escape(r.id)}"]`)
+      if (lbl) parts.push(lbl.innerText)
+      const fieldset = r.closest("fieldset, .field, .form-group, [class*='question'], [class*='field']")
+      if (fieldset) {
+        const legend = fieldset.querySelector("legend, label, h3, h4, .question-label, [class*='label']")
+        if (legend) parts.push(legend.innerText)
+      }
+      ctx = parts.join(" ").toLowerCase()
     }
-    // The group's own question, when its first label is an answer ("Yes"): Lever wraps each option in its label.
-    parts.push(wrapperLabel(r))
-    const ctx = parts.join(" ").toLowerCase()
     if (!ctx.includes(labelKeyword.toLowerCase())) continue
+    if (accept && !accept(asked || ctx)) continue
     const val      = (r.value || "").toLowerCase()
     const labelTxt = (document.querySelector(`label[for="${CSS.escape(r.id)}"]`)?.innerText || "").toLowerCase()
     if (val === yesNo.toLowerCase() || labelTxt === yesNo.toLowerCase()
@@ -143,6 +157,20 @@ function fillOne(selector, value, filledSet) {
 // ATS DETECTION
 // ────────────────────────────────────────────────────────────────────────────
 
+// State abbreviation → full name map (most common)
+const US_STATE_NAMES = {
+  AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",
+  CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",
+  IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",
+  ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",
+  MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",
+  NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",
+  OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",
+  SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",
+  WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming",DC:"District of Columbia",
+}
+
+
 function getATS() {
   const url  = window.location.href
   if (/greenhouse\.io|grnh\.se|boards\.greenhouse/i.test(url))   return "greenhouse"
@@ -160,12 +188,14 @@ function getATS() {
   if (/workable\.com/i.test(url))                                 return "workable"
   if (/eightfold\.ai/i.test(url))                                 return "eightfold"
   if (/gusto\.com\/careers/i.test(url))                           return "gusto"
+  if (/applytojob\.com|jazzhr\.com|jazz\.co|resumator/i.test(url)) return "jazzhr"
   // DOM-based fallback for embedded/white-label ATS
   if (document.querySelector("[data-qa='submit-app-button'], form#application_form, #greenhouse-form")) return "greenhouse"
   if (document.querySelector(".lever-job-posting, [data-form-type='lever']"))                          return "lever"
   if (document.querySelector("[data-automation-id], [data-uxi-element-id]"))                           return "workday"
   if (document.querySelector("[data-qa='jvAts'], .jv-form-control"))                                  return "jobvite"
   if (document.querySelector(".iCIMS_InfoMsg, [class*='iCIMS'], #iCIMS_Content"))                     return "icims"
+  if (document.querySelector("[id^='resumator-']"))                                                    return "jazzhr"
   return "generic"
 }
 
@@ -316,21 +346,9 @@ async function fillWorkday(profile, filled) {
     city = loc
   }
 
-  // State abbreviation → full name map (most common)
-  const STATE_NAMES = {
-    AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",
-    CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",
-    IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",
-    ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",
-    MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",
-    NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",
-    OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",
-    SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",
-    WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming",DC:"District of Columbia",
-  }
   // Normalise state: if we got "MO" → "Missouri", if already "Missouri" leave it
   const stateKey = state.toUpperCase()
-  const stateFull = STATE_NAMES[stateKey] || state  // use full if already full
+  const stateFull = US_STATE_NAMES[stateKey] || state  // use full if already full
 
   // ── 1. Text fields (order matters — fill name before phone so focus sequence is natural) ──
   const textMap = /** @type {[string, string][]} */ ([
@@ -626,13 +644,20 @@ function buildSalary(profile) {
 const squash = (s) => String(s || "").replace(/\s+/g, " ").trim()
 const CONTROL_SEL = "input:not([type='hidden']):not([aria-hidden='true']), select, textarea"
 
+/** A label's own words: JazzHR wraps the select in its label, and the options' text is not part of the question. */
+function labelText(node) {
+  const copy = node.cloneNode(true)
+  copy.querySelectorAll("select, input, textarea, option, button").forEach(n => n.remove())
+  return squash(copy.textContent)
+}
+
 /** The label that belongs to this field: label[for], aria-labelledby, aria-label, or a label wrapped around it. With
  *  `first`, only the first of these (to name the field to a person: "First Name", not "First Name* First Name"). */
 function ownLabel(el, first = false) {
   const parts = []
   if (el.id) {
     const lbl = document.querySelector(`label[for="${CSS.escape(el.id)}"]`)
-    if (lbl) parts.push(squash(lbl.innerText))
+    if (lbl) parts.push(labelText(lbl))
   }
   for (const id of (el.getAttribute("aria-labelledby") || "").split(/\s+/).filter(Boolean)) {
     const node = document.getElementById(id)
@@ -640,7 +665,7 @@ function ownLabel(el, first = false) {
   }
   if (el.getAttribute("aria-label")) parts.push(squash(el.getAttribute("aria-label")))
   const wrap = el.closest("label")
-  if (wrap) parts.push(squash(wrap.innerText))
+  if (wrap) parts.push(labelText(wrap))
   const found = [...new Set(parts.filter(Boolean))]
   return first ? found[0] || "" : found.join(" ")
 }
@@ -687,11 +712,28 @@ function getFieldHint(el) {
 // Never filled from the profile, on any page: self-identification (race, ethnicity, gender, veteran, disability, and
 // the signature on those forms), sponsorship, and a follow-up that only applies to a "yes" ("If yes, please identify
 // the person you are related to" was being given the person's own name on Okta's form).
-const PROTECTED_RE = /\b(sponsor|sponsorship|veteran|disability|race|racial|ethnicity|hispanic|latino|latinx|gender|sexual orientation|transgender|pronouns?|self[- ]identif\w*|eeo)\b/i
-const FOLLOW_UP_RE = /^\s*(if (yes|so|applicable|you answered|other|selected)|please (describe|explain|elaborate))\b|\bif different (than|from)\b/i
+const PROTECTED_RE = /\b(sponsor|sponsorship|citizen|citizenship|veteran|disability|race|racial|ethnicity|hispanic|latino|latinx|gender|sexual orientation|transgender|pronouns?|self[- ]identif\w*|eeo|eeoc)\b/i
+/** Is this field, or the question it asks, one that is never answered from the profile? Underscores and brackets in a
+ *  field's name do not hide a word: "resumator-eeoc_disability_signature-value" is the disability form's signature. */
+const isProtectedText = (text) => PROTECTED_RE.test(String(text || "").replace(/[_[\].-]+/g, " "))
+const FOLLOW_UP_RE = /^\s*(if (yes|so|applicable|you answered|other|selected)|please (describe|explain|elaborate))\b|\bif (?:different (?:than|from)|yes|applicable)\b/i
 // The full name goes only where the label is a name ("Name", "Your full name", "Legal name"), never "Name Pronunciation |
 // How do you pronounce your name?" (Palantir's Lever form, 20 Oct 2026).
 const JUST_A_NAME_RE = /^(your |full |legal |candidate'?s? |applicant'?s? )*name$/i
+
+const CITY_ONLY_RE = /^(?:city|town|city\s*\/\s*town)$/i
+const STATE_ONLY_RE = /^(?:state|province|state\s*\/\s*province|state or province|region)$/i
+
+/** The parts of "St. Louis, MO": the city, and the state as its letters and as its name. */
+function placeOf(profile) {
+  const raw = String(profile.location || "")
+  const [cityPart, statePart = ""] = raw.split(",").map(x => x.trim())
+  const city = String(profile.city || cityPart || "").trim()
+  const given = String(profile.state || statePart.split(/\s+/)[0] || "").trim()
+  const abbr = given.length === 2 ? given.toUpperCase() : Object.keys(US_STATE_NAMES).find(k => US_STATE_NAMES[k].toLowerCase() === given.toLowerCase()) || ""
+  const full = US_STATE_NAMES[abbr] || (given.length > 2 ? given : "")
+  return { city, abbr, full }
+}
 
 function fillGeneric(profile, alreadyFilled = new Set()) {
   const { first, last } = splitName(profile)
@@ -712,6 +754,9 @@ function fillGeneric(profile, alreadyFilled = new Set()) {
     years_experience: String(profile.years_experience || profile.yearsExperience || ""),
   }
 
+  const place = placeOf(profile)
+  // With a box of its own for the state, the city box gets the city alone; with none, it gets the whole "City, ST".
+  const hasStateBox = [...document.querySelectorAll("input, select")].some(x => STATE_ONLY_RE.test(squash(questionOf(x)).replace(/[*✱:]+/g, " ").trim()))
   const inputs = [
     ...document.querySelectorAll(
       "input:not([type='hidden']):not([type='submit']):not([type='button'])" +
@@ -728,9 +773,21 @@ function fillGeneric(profile, alreadyFilled = new Set()) {
     if (isCombobox(el)) continue
     const hint = getFieldHint(el)
     const question = questionOf(el)
-    if (PROTECTED_RE.test(hint) || FOLLOW_UP_RE.test(question)) continue
+    if (isProtectedText(hint) || FOLLOW_UP_RE.test(question)) continue
     // "name" alone matches any question that mentions a name; it fills only a label that is just a name.
     const bare = question.replace(/[*✱:]+/g, " ").replace(/\s+/g, " ").trim()
+    // A box that asks only for the city, or only for the state, gets that part of the location, not all of it
+    // (JazzHR's address boxes were given "St. Louis, MO" in City and nothing in State, 20 Oct 2026).
+    if (CITY_ONLY_RE.test(bare)) {
+      const text = hasStateBox ? place.city : values.location
+      if (text && fillText(el, text)) { n++; alreadyFilled.add(el) }
+      continue
+    }
+    if (STATE_ONLY_RE.test(bare)) {
+      const text = el.maxLength > 0 && el.maxLength <= 3 ? place.abbr : place.full
+      if (text && fillText(el, text)) { n++; alreadyFilled.add(el) }
+      continue
+    }
     for (const { keys, field } of FIELD_MAP) {
       if (field === "full_name" && bare && !JUST_A_NAME_RE.test(bare) &&
           !(/\b(full|legal) name\b/i.test(bare) && !/\?/.test(bare) && bare.split(" ").length <= 6)) continue
@@ -758,7 +815,11 @@ function fillGeneric(profile, alreadyFilled = new Set()) {
   for (const sel of [...document.querySelectorAll("select:not([disabled])")]) {
     if (alreadyFilled.has(sel)) continue
     const hint = getFieldHint(sel)
-    if (PROTECTED_RE.test(hint)) continue
+    if (isProtectedText(hint)) continue
+    if (STATE_ONLY_RE.test(squash(questionOf(sel)).replace(/[*✱:]+/g, " ").trim()) && (place.full || place.abbr)) {
+      if (fillSelect(sel, place.full) || fillSelect(sel, place.abbr)) { n++; alreadyFilled.add(sel) }
+      continue
+    }
     const countryList = [...sel.options].some(o => /^united states( of america)?$/i.test(o.text.trim()))
     if (/country/i.test(hint) || (countryList && /\blocation\b|where .*(live|based|located)/i.test(hint))) {
       if (fillSelect(sel, profile.country || "United States") || fillSelect(sel, "US")) { n++; alreadyFilled.add(sel) }
@@ -809,14 +870,35 @@ function fillWorkAuthRadio(profile) {
 // guess — same trust level as work_auth above. Still opt-in per field: a
 // value of null/undefined ("not answered yet" — see /api/profile's tri-state
 // handling) skips the question entirely rather than defaulting to "No".
-function fillPreferenceRadio(labelKeyword, value) {
+// "Do you hold an active clearance?" is the profile's fact; "Have you ever had a clearance denied or revoked?" and "Are
+// you eligible to obtain one?" are other questions with the same word in them, and are the person's to answer.
+const HOLDS_CLEARANCE = (q) => /clearance/i.test(q) && /\b(?:hold|have|possess|active|current\w*|level|status)\b/i.test(q) &&
+  !/denied|revoked|suspend|obtain|eligib|willing|able to|apply for|sponsor|investigat/i.test(q)
+
+function fillPreferenceRadio(labelKeyword, value, accept) {
   if (value === null || value === undefined) return 0
-  return fillRadio(labelKeyword, value ? "Yes" : "No") ? 1 : 0
+  return fillRadio(labelKeyword, value ? "Yes" : "No", accept) ? 1 : 0
 }
-function fillRelocateRadio(profile)         { return fillPreferenceRadio("relocat", profile?.relo_ok) }
-function fillStartImmediatelyRadio(profile) { return fillPreferenceRadio("immediately", profile?.start_immediately) }
-function fillTransportationRadio(profile)   { return fillPreferenceRadio("transportation", profile?.has_transportation) }
-function fillClearanceRadio(profile)        { return fillPreferenceRadio("clearance", profile?.has_clearance) }
+
+/** The same questions drawn as a select (JazzHR): the Yes or No option, or "No Clearance" for a clearance level list. */
+function fillPreferenceSelect(labelKeyword, value, accept) {
+  if (value === null || value === undefined) return 0
+  let n = 0
+  for (const sel of document.querySelectorAll("select:not([disabled])")) {
+    if (sel.selectedIndex > 0 && sel.value) continue
+    const asked = (squash(ownLabel(sel, true)) || wrapperLabel(sel)).replace(/\(.*$/, "").replace(/\bnote\s*:.*$/i, "").trim()
+    if (!asked || isProtectedText(asked) || !asked.toLowerCase().includes(labelKeyword.toLowerCase())) continue
+    if (accept && !accept(asked)) continue
+    const want = value ? /^yes\b/i : /^no\b|^no clearance\b|^none\b/i
+    const opt = [...sel.options].find(o => want.test(o.text.trim()))
+    if (opt && fillSelect(sel, opt.text.trim())) n++
+  }
+  return n
+}
+function fillRelocateRadio(profile)         { return fillPreferenceRadio("relocat", profile?.relo_ok) + fillPreferenceSelect("relocat", profile?.relo_ok) }
+function fillStartImmediatelyRadio(profile) { return fillPreferenceRadio("immediately", profile?.start_immediately) + fillPreferenceSelect("immediately", profile?.start_immediately) }
+function fillTransportationRadio(profile)   { return fillPreferenceRadio("transportation", profile?.has_transportation) + fillPreferenceSelect("transportation", profile?.has_transportation) }
+function fillClearanceRadio(profile)        { return fillPreferenceRadio("clearance", profile?.has_clearance, HOLDS_CLEARANCE) + fillPreferenceSelect("clearance", profile?.has_clearance, HOLDS_CLEARANCE) }
 
 // ── Required-attestation checkboxes ("I certify the above is true", etc.) ───
 // Safe to auto-check: this is a factual attestation about the application
@@ -846,41 +928,81 @@ function fillCertificationCheckboxes(alreadyFilled) {
 // full-time seeking opportunities"). Our safe Yes/No fill correctly finds no
 // match there and does nothing — but the user could easily miss that the
 // question exists at all if nothing points it out.
-const ATTENTION_RE = /\b(sponsor|sponsorship|visa|veteran|disability|race|ethnicity|hispanic|latino|gender( identity)?|sexual orientation|legally authorized|work authoriz)/i
+const ATTENTION_RE = /\b(sponsor|sponsorship|visa|citizen|citizenship|veteran|disability|race|ethnicity|hispanic|latino|gender( identity)?|sexual orientation|legally authorized|work authoriz)/i
 
-function radioGroupLabel(radios) {
-  const first = radios[0]
-  const fieldset = first.closest("fieldset, .field, .form-group, [class*='question'], [class*='field']")
-  const legend = fieldset?.querySelector("legend, label, h3, h4, .question-label, [class*='label']")
-  return (legend?.innerText || first.name || "").trim().replace(/\s+/g, " ").slice(0, 60)
+/** What a field asks, as a person would say it, for the list of what is still theirs to answer. */
+const askedName = (el) => (questionOf(el) || inferFieldName(el)).replace(/[*✱]+/g, " ").replace(/^required\.?\s*/i, "").replace(/\s*\brequired$/i, "").replace(/\s+/g, " ").trim().slice(0, 70)
+
+const GENERIC_HEADING = /^(?:please|check|select|choose|pick)\b/i
+
+/** The question a set of radios, or of boxes sharing one name, answers together. */
+function radioGroupLabel(inputs) {
+  const first = inputs[0]
+  const asked = wrapperLabel(first)
+  if (asked && !GENERIC_HEADING.test(asked)) return asked.slice(0, 70)
+  // Another box (JazzHR's signature name and date) sits in the same wrapper: look up for the group's heading, never for
+  // a label wrapped around the first answer.
+  for (let node = first.parentElement, depth = 0; node && depth < 6; node = node.parentElement, depth++) {
+    const heading = [...node.querySelectorAll("legend, h3, h4, .question-label, [class*='question'], [class*='label'], label")]
+      .find(c => !c.querySelector("input, select, textarea") && !(c.htmlFor && inputs.some(r => r.id === c.htmlFor)) && !GENERIC_HEADING.test(squash(c.innerText)))
+    if (heading) return squash(heading.innerText).slice(0, 70)
+  }
+  // "Please check one of the boxes below:" says nothing of the question: the field's own name does better.
+  const plainName = String(first.name || "").replace(/^(?:resumator|candidate|input)[-_.]?/i, "").replace(/[-_.[\]]+/g, " ").replace(/\b(?:value|flag|answers?)\b/gi, "").replace(/\s+/g, " ").trim()
+  return (plainName.charAt(0).toUpperCase() + plainName.slice(1)).slice(0, 70)
+}
+
+/** Is this field required? By its attribute, or by the asterisk in its label (JazzHR sets no attribute). */
+function isRequiredField(el) {
+  return el.required || el.getAttribute("aria-required") === "true" || /[*✱]/.test(ownLabel(el) || wrapperLabel(el))
+}
+
+/** Is it still empty: nothing typed, the placeholder option chosen, no radio or box ticked. */
+function isEmptyField(el) {
+  if (el.type === "radio") return ![...document.querySelectorAll(`input[type="radio"][name="${CSS.escape(el.name)}"]`)].some(r => r.checked)
+  if (el.type === "checkbox") return !el.checked
+  if (el.tagName === "SELECT") return el.selectedIndex <= 0 || !el.value || /^(?:--|select|choose|please)/i.test(el.options[el.selectedIndex]?.text.trim() || "")
+  return !String(el.value || "").trim()
 }
 
 function detectAttentionFields(alreadyFilled) {
-  const flagged = []
-  // Radio groups (by name attribute) with no option checked
+  const flagged = []   // protected questions: sponsorship, citizenship, self-identification, work authorization
+  const required = []  // anything else required and still empty
+  const filledHere = (el) => !!alreadyFilled && alreadyFilled.has(el)
   const seenNames = new Set()
+  // Radio groups (by name attribute) with no option checked
   for (const r of document.querySelectorAll("input[type='radio']")) {
-    if (!r.name || seenNames.has(r.name)) continue
+    if (!r.name || seenNames.has(r.name) || r.disabled) continue
     seenNames.add(r.name)
     const group = [...document.querySelectorAll(`input[type="radio"][name="${CSS.escape(r.name)}"]`)]
     if (group.some(g => g.checked)) continue
-    const asked = wrapperLabel(r)
-    const hint = getFieldHint(r) + " " + asked + " " + radioGroupLabel(group)
-    if (ATTENTION_RE.test(hint)) flagged.push((asked || radioGroupLabel(group)).slice(0, 60) || "Work authorization / EEO question")
+    const asked = radioGroupLabel(group)
+    const hint = getFieldHint(r) + " " + asked
+    if (ATTENTION_RE.test(hint)) flagged.push(asked || "Work authorization / EEO question")
+    else if (group.some(isRequiredField)) required.push(asked)
   }
-  // Selects still at their placeholder/default option
-  for (const sel of document.querySelectorAll("select:not([disabled])")) {
-    if (alreadyFilled && alreadyFilled.has(sel)) continue
-    if (sel.selectedIndex > 0 && sel.value) continue  // already has a real value
-    const hint = getFieldHint(sel)
-    if (ATTENTION_RE.test(hint)) flagged.push(inferFieldName(sel) || "Sponsorship / EEO question")
+  // Boxes that share one name answer one question together ("Yes" and "No" boxes): asked once, by that question.
+  const boxes = new Map(), grouped = new Set()
+  for (const el of document.querySelectorAll("input[type='checkbox']:not([disabled])")) if (el.name) boxes.set(el.name, [...(boxes.get(el.name) || []), el])
+  for (const group of boxes.values()) {
+    if (group.length < 2) continue
+    group.forEach(g => grouped.add(g))
+    if (group.some(g => g.checked)) continue
+    const asked = radioGroupLabel(group)
+    if (ATTENTION_RE.test(getFieldHint(group[0]) + " " + asked)) flagged.push(asked)
+    else if (group.some(isRequiredField)) required.push(asked)
   }
-  // Typeaheads still empty (Greenhouse's job boards draw sponsorship and EEO questions this way)
-  for (const box of document.querySelectorAll("input:not([disabled])")) {
-    if (!isCombobox(box) || box.value || (alreadyFilled && alreadyFilled.has(box))) continue
-    if (ATTENTION_RE.test(getFieldHint(box))) flagged.push(questionOf(box).slice(0, 60) || "Sponsorship / EEO question")
+  // Selects, boxes and areas still empty
+  for (const el of document.querySelectorAll("select:not([disabled]), input:not([disabled]), textarea:not([disabled])")) {
+    if (el.type === "radio" || el.type === "hidden" || el.type === "submit" || el.type === "button" || el.type === "file" || el.type === "search" || grouped.has(el)) continue
+    if (el.getAttribute("aria-hidden") === "true" || filledHere(el) || !isEmptyField(el)) continue
+    const name = askedName(el)
+    if (ATTENTION_RE.test(getFieldHint(el))) flagged.push(name || "Sponsorship / EEO question")
+    else if (isRequiredField(el)) required.push(name)
   }
-  return flagged.filter((v, i, a) => v && a.indexOf(v) === i).slice(0, 6)
+  const unique = (list) => list.filter((v, i, a) => v && a.indexOf(v) === i)
+  const first = unique(flagged)
+  return [...first, ...unique(required).filter(v => !first.includes(v))].slice(0, 12)
 }
 
 // ────────────────────────────────────────────────────────────────────────────
