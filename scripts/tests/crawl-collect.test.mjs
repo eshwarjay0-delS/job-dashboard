@@ -57,3 +57,24 @@ test('sitemaps, links and text', () => {
   assert.equal(absolute('/a?x=1&amp;y=2', 'https://f.test/list/'), 'https://f.test/a?x=1&y=2')
   assert.equal(clean('<h5> Data&nbsp;Engineer&#39;s  role </h5>'), "Data Engineer's role")
 })
+
+test('portals run several at a time, the order turns with the offset, nothing starts after the deadline, a slow one times out', async () => {
+  const { crawlEach } = await import('../../src/lib/crawl/collect.ts')
+  const adapters = ['a', 'b', 'c', 'd', 'e'].map(portal => ({ portal, firm: portal.toUpperCase() }))
+  let running = 0, most = 0
+  const begun = []
+  const work = async (a) => { begun.push(a.portal); running++; most = Math.max(most, running); await new Promise(r => setTimeout(r, 10)); running--; return a.portal + '!' }
+  const all = await crawlEach(adapters, work, { concurrency: 2, deadline: Date.now() + 60_000, perPortalMs: 5_000, offset: 3 })
+  assert.equal(most, 2)
+  assert.deepEqual(begun.slice(0, 2), ['d', 'e'], 'offset 3 starts at the fourth portal')
+  assert.deepEqual(all.map(o => o.value), ['a!', 'b!', 'c!', 'd!', 'e!'], 'outcomes in the portals\' own order')
+
+  let clock = 0
+  const late = await crawlEach(adapters, async (a) => { clock += 10; return a.portal }, { concurrency: 1, deadline: 25, perPortalMs: 5_000, now: () => clock })
+  assert.deepEqual(late.map(o => o.skipped ? 'skipped' : o.value), ['a', 'b', 'c', 'skipped', 'skipped'])
+
+  const slow = await crawlEach([adapters[0]], () => new Promise(r => setTimeout(r, 200)), { concurrency: 3, deadline: Date.now() + 60_000, perPortalMs: 20 })
+  assert.match(slow[0].error, /timed out/)
+  const failing = await crawlEach([adapters[1]], async () => { throw new Error('HTTP 503 from b.test') }, { concurrency: 1, deadline: Date.now() + 60_000, perPortalMs: 1_000 })
+  assert.equal(failing[0].error, 'HTTP 503 from b.test')
+})

@@ -1,8 +1,8 @@
 import { createServiceClient } from "@/lib/supabase/service"
 import { ADAPTERS } from "./adapters"
 import { classifyWorkType, normalizeDate } from "./classify"
-import { collectJobs, politeFetcher } from "./collect"
-import type { CrawlResult, RawJob } from "./types"
+import { collectJobs, crawlEach, politeFetcher } from "./collect"
+import type { CrawlResult, PortalAdapter, RawJob } from "./types"
 
 type JobRow = {
   portal: string; firm: string; title: string; url: string
@@ -43,43 +43,19 @@ export async function runCrawl(onlyPortals?: string[]): Promise<CrawlResult[]> {
     portals: adapters.map(a => a.portal),
   }).select("id").single()).data?.id ?? ""
 
-  const results: CrawlResult[] = []
-  let totalFound = 0
-  let totalUpserted = 0
-  const errors: { portal: string; error: string }[] = []
-
-  for (const adapter of adapters) {
-    const result: CrawlResult = { portal: adapter.portal, firm: adapter.firm, found: 0, upserted: 0 }
-    try {
-      // Listing pages, a JSON API or a sitemap, whichever the portal has; one request at a time, 600 ms apart.
-      const seen = new Map<string, JobRow>()
-      for (const raw of await collectJobs(adapter, politeFetcher(600))) seen.set(raw.url, toRow(adapter.portal, adapter.firm, raw))
-      result.found = seen.size
-      totalFound += seen.size
-
-      if (seen.size > 0) {
-        const rows = [...seen.values()]
-        // Upsert in batches of 100.
-        for (let i = 0; i < rows.length; i += 100) {
-          const batch = rows.slice(i, i + 100)
-          const { error } = await service.from("mfit_crawl_jobs")
-            .upsert(batch, { onConflict: "portal,url" })
-          if (error) throw new Error(`upsert: ${error.message}`)
-        }
-        result.upserted = seen.size
-        totalUpserted += seen.size
-
-        // v1 scans only the first listing page. Absence from it is not proof a job closed.
-        await service.from("mfit_crawl_jobs").update({active:false})
-          .eq("portal",adapter.portal).eq("active",true)
-          .lt("last_seen_at",new Date(Date.now()-14*86400000).toISOString());
-      }
-    } catch (err) {
-      result.error = String(err).slice(0, 300)
-      errors.push({ portal: adapter.portal, error: result.error })
-    }
-    results.push(result)
-  }
+  // Several firms at once (each firm still one request at a time, 600 ms apart), the order turning by the day, and
+  // nothing started after 230 s nor running past 60 s, so the run ends inside the function's 300 s.
+  const started = Date.now()
+  const outcomes = await crawlEach(adapters, adapter => crawlOne(service, adapter), {
+    concurrency: 6, deadline: started + 230_000, perPortalMs: 60_000, offset: Math.floor(started / 86_400_000),
+  })
+  const results: CrawlResult[] = outcomes.map(o => o.value ?? {
+    portal: o.adapter.portal, firm: o.adapter.firm, found: 0, upserted: 0,
+    error: o.skipped ? "not reached in this run's time (the order turns daily)" : o.error || "failed",
+  })
+  const totalFound = results.reduce((n, r) => n + r.found, 0)
+  const totalUpserted = results.reduce((n, r) => n + r.upserted, 0)
+  const errors = results.filter(r => r.error).map(r => ({ portal: r.portal, error: r.error as string }))
 
   if (runId) {
     await service.from("mfit_crawl_runs").update({
@@ -90,4 +66,27 @@ export async function runCrawl(onlyPortals?: string[]): Promise<CrawlResult[]> {
     }).eq("id", runId)
   }
   return results
+}
+
+/** One portal: read its jobs, store them, and retire those not seen for 14 days. Throws on a storage failure. */
+async function crawlOne(service: ReturnType<typeof createServiceClient>, adapter: PortalAdapter): Promise<CrawlResult> {
+  const result: CrawlResult = { portal: adapter.portal, firm: adapter.firm, found: 0, upserted: 0 }
+  // Listing pages, a JSON API or a sitemap, whichever the portal has; one request at a time, 600 ms apart.
+  const seen = new Map<string, JobRow>()
+  for (const raw of await collectJobs(adapter, politeFetcher(600))) seen.set(raw.url, toRow(adapter.portal, adapter.firm, raw))
+  result.found = seen.size
+  if (seen.size > 0) {
+    const rows = [...seen.values()]
+    // Upsert in batches of 100.
+    for (let i = 0; i < rows.length; i += 100) {
+      const { error } = await service.from("mfit_crawl_jobs").upsert(rows.slice(i, i + 100), { onConflict: "portal,url" })
+      if (error) throw new Error(`upsert: ${error.message}`)
+    }
+    result.upserted = seen.size
+    // A run reads the newest listings only. Absence from them is not proof a job closed: retire after 14 days unseen.
+    await service.from("mfit_crawl_jobs").update({ active: false })
+      .eq("portal", adapter.portal).eq("active", true)
+      .lt("last_seen_at", new Date(Date.now() - 14 * 86400000).toISOString())
+  }
+  return result
 }

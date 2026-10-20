@@ -41,3 +41,43 @@ export async function collectJobs(adapter: PortalAdapter, get: Fetcher): Promise
   }
   return [...seen.values()]
 }
+
+export type PortalOutcome<T> = { adapter: PortalAdapter; value?: T; error?: string; skipped?: boolean }
+
+/**
+ * `work` for every portal, `concurrency` at a time (different firms, so one firm still gets one request at a time),
+ * starting at `offset` so the order turns day by day and the same portals are not always the ones time runs out on.
+ * A portal not started by `deadline` is reported skipped, never half-done; one that runs past `perPortalMs` is
+ * reported as timed out. Outcomes come back in the portals' own order. Until 20 Oct 2026 portals were crawled one
+ * after another inside a 60 s function: fine for two portals, cut off partway for thirty.
+ */
+export async function crawlEach<T>(
+  adapters: PortalAdapter[],
+  work: (adapter: PortalAdapter) => Promise<T>,
+  opts: { concurrency: number; deadline: number; perPortalMs: number; offset?: number; now?: () => number },
+): Promise<PortalOutcome<T>[]> {
+  const now = opts.now || Date.now
+  const n = adapters.length
+  const start = n ? (((opts.offset || 0) % n) + n) % n : 0
+  const order = adapters.map((_, i) => (start + i) % n)
+  const out: PortalOutcome<T>[] = adapters.map(adapter => ({ adapter, skipped: true }))
+  let next = 0
+  const worker = async () => {
+    while (next < order.length) {
+      const i = order[next++]
+      const adapter = adapters[i]
+      if (now() >= opts.deadline) { out[i] = { adapter, skipped: true }; continue }
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${Math.round(opts.perPortalMs / 1000)} s`)), opts.perPortalMs) })
+        out[i] = { adapter, value: await Promise.race([work(adapter), late]) }
+      } catch (e) {
+        out[i] = { adapter, error: String(e instanceof Error ? e.message : e).slice(0, 300) }
+      } finally {
+        clearTimeout(timer)
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(opts.concurrency, n)) }, worker))
+  return out
+}

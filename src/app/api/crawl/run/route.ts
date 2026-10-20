@@ -4,7 +4,7 @@ import { serviceClientAvailable } from "@/lib/supabase/service"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
-export const maxDuration = 60
+export const maxDuration = 300  // thirty portals, six at a time (runner.ts)
 
 // GET /api/crawl/run — daily portal crawl. Vercel cron (see vercel.json),
 // same secret pattern as the other crons.
