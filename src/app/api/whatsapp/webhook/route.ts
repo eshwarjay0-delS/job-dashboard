@@ -17,7 +17,7 @@
  * deferred — it runs inline and we answer 200 at the end. Meta retries a webhook it
  * considers failed, so every message id is de-duplicated before doing any work.
  */
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse, after } from "next/server"
 import path from "path"
 import { createHash, randomBytes } from "crypto"
 import { blob, readPath, writePath, existsPath, deletePath } from "@/lib/storage"
@@ -25,7 +25,8 @@ import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
 import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
 import { extractJdMeta } from "@/lib/claude"
-import { sendText, sendDocument, downloadMedia, verifySignature, senderAllowed, waConfigured } from "@/lib/whatsapp"
+import { sendText as sendTextRaw, sendDocument as sendDocumentRaw, downloadMedia, verifySignature, senderAllowed, waConfigured } from "@/lib/whatsapp"
+import { trace } from "@/lib/whatsapp-trace"
 import { isOwnerWhatsApp } from "@/lib/owner"
 import { resolveWhatsAppUser, claimNotice, textCodesWork } from "@/lib/whatsapp-who"
 import { claimLinkCode } from "@/lib/whatsapp-link"
@@ -48,6 +49,16 @@ export const runtime = "nodejs"
 export const maxDuration = 300
 export const dynamic = "force-dynamic"
 
+// Every reply goes through these two, so the conversation trace (src/lib/whatsapp-trace.ts) holds all of it.
+async function sendText(to: string, text: string) {
+  trace(to, { dir: "out", kind: "text", text })
+  return sendTextRaw(to, text)
+}
+async function sendDocument(to: string, file: Buffer, filename: string, caption: string) {
+  trace(to, { dir: "out", kind: "document", file: filename, text: caption })
+  return sendDocumentRaw(to, file, filename, caption)
+}
+
 const INBOX_DIR = path.join(DATA_DIR, "whatsapp", "inbox")
 // The rewrite stops by 240 s so reading the result, checking it and sending the file (uploading it to WhatsApp) still fit
 // inside the 300 s function. At 280 s only 20 s were left, and a run cut off by the platform sends nothing at all.
@@ -55,7 +66,7 @@ const TAILOR_BUDGET_MS = 240_000
 // How long the first of a job post and a resume sent together waits for the other before asking for it.
 // How long a job from Files holds its claim against being made twice: the function's own limit.
 const IN_FLIGHT_MS = 300_000
-const PAIR_WAIT_MS = process.env.WHATSAPP_PAIR_WAIT_MS !== undefined ? Number(process.env.WHATSAPP_PAIR_WAIT_MS) || 0 : 6_000
+const PAIR_WAIT_MS = process.env.WHATSAPP_PAIR_WAIT_MS !== undefined ? Number(process.env.WHATSAPP_PAIR_WAIT_MS) || 0 : 2_000
 
 // The file a person gets back is named after them: "Eshwar_Resume.docx". (Owner, 2026-10-05: first "The name should always be
 // Eshwar's_Resume", then, on seeing "ESHWAR's_Resume.docx" arrive, "Eshwar_Resume Title is fine actually".) The first name is
@@ -254,11 +265,19 @@ export async function POST(request: NextRequest) {
   if (msgId && session.seen?.includes(msgId)) return ok()
   session.seen = [...(session.seen || []), msgId].slice(-40)
 
-  try {
-    await handle(from, msg, session, userId)
-  } catch (e) {
-    try { await sendText(from, plainFailure(e, "do that", true)) } catch { /* ignore */ }
+  const doc = msg.document as { filename?: string } | undefined
+  trace(from, { dir: "in", kind: String(msg.type || "unknown"), ...(typed ? { text: typed } : {}), ...(doc?.filename ? { file: doc.filename } : {}) })
+  // WhatsApp is answered at once and the work goes on after it (Next's after(), kept alive up to maxDuration on Vercel).
+  // Until 19 Oct 2026 the answer waited for the whole resume, minutes, and Meta re-sent what it took for a failure.
+  const work = async () => {
+    try {
+      await handle(from, msg, session, userId)
+    } catch (e) {
+      try { await sendText(from, plainFailure(e, "do that", true)) } catch { /* ignore */ }
+    }
   }
+  if (typeof after === "function") after(work)
+  else await work()
   return ok()
 }
 
@@ -343,6 +362,11 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     delete session.pending
     await saveSession(from, session)
     if (session.resumePath) return generate(from, session, userId)
+    // A resume sent with the job description arrives as its own message a second or two later, and it wins: without
+    // this short wait the run from Files claimed the job first and the resume was ignored without a word (found 19 Oct
+    // 2026, his ask: "if the user had decided to send a resume ... just prepare the resume the usual way").
+    await new Promise(r => setTimeout(r, PAIR_WAIT_MS))
+    if ((await loadSession(from)).jdId !== String(msg.id)) return
     // Fast routine: JD arrives → tailor immediately with last-used resume. No waiting, no questions.
     // If a .docx arrives within a moment, it starts its own run. Otherwise we go with what we know.
     const cur0 = await loadSession(from)

@@ -60,6 +60,7 @@ test('same JD can start only one generation across concurrent input handlers', a
     '@/lib/resume-identity': { sameResumeIdentity }, '@/lib/docx': { extractText: async b => b.toString() },
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
+    '@/lib/whatsapp-trace': { trace: () => {} },
     '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/resume-library-store': {}, '@/lib/resume-library': {},
     '@/lib/library-agent': {}, '@/lib/keywords': {}, '@/lib/resumeOrganization': {},
   }
