@@ -6,7 +6,7 @@ const nextConfig = {
   turbopack: { root: __dirname },
 
   // mammoth uses dynamic requires — keep external so bundler doesn't break it
-  serverExternalPackages: ["mammoth", "marked"],
+  serverExternalPackages: ["mammoth"],
 
   // ── Image optimisation ──────────────────────────────────────────────────
   images: {

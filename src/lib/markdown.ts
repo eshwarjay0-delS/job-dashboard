@@ -1,6 +1,4 @@
 // A reply written in Markdown, drawn as what it means: a table as a table, a list as a list, bold as bold.
-// TEMPORARY STUB — marked package breaks Turbopack. Full rendering disabled until build fixed.
-// @ts-nocheck
 //
 // Reported on 13 Oct 2026: the MFit Agent answered with a Markdown table and the chat showed the pipes and dashes as
 // they were typed, because a reply was put on the page as plain text. The suggestion was to use `marked`
@@ -13,13 +11,8 @@
 // mailto; a picture is shown as a link to it, never fetched. No file here uses JSX, so a test can run it as it is.
 
 import { createElement as h, Fragment, memo, useMemo, type CSSProperties, type ReactNode } from "react"
-// TEMPORARY: marked package breaks Turbopack build. Using simple fallback until resolved.
-// import { marked } from "marked"
-// import type { Token } from "marked"
-type Token = any
-const marked = {
-  lexer: (text: string, _opts?: any) => [{ type: "paragraph", text }],
-}
+import { marked } from "marked"
+import type { Token } from "marked"
 
 const SAFE_LINK = /^(?:https?:\/\/|mailto:)/i
 const MONO = "var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)"
