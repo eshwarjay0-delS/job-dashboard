@@ -31,7 +31,7 @@ const JD = 'Application Security Engineer. You will run threat modeling, Burp Su
 function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, have = null, sure = true, extra = [], hold = null } = {}) {
   process.env.WHATSAPP_PAIR_WAIT_MS = '0'
   const store = new Map()
-  const said = [], docs = [], saved = [], used = [], logs = [], runs = [], events = []
+  const said = [], docs = [], saved = [], used = [], logs = [], runs = [], events = [], uploads = []
   const blob = {
     getText: async k => store.get(k) ?? null, put: async (k, v) => { store.set(k, v) }, delete: async k => { store.delete(k) },
     putIfAbsent: async (k, v) => { if (store.has(k)) return false; store.set(k, v); return true },
@@ -39,7 +39,7 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
   }
   const mocks = {
     'next/server': {},
-    '@/lib/storage': { blob, readPath: async p => (p === SOC || p === APPSEC ? Buffer.from(`resume of a@x.com at ${p}`) : null), writePath: async () => {}, existsPath: async () => true, deletePath: async () => {} },
+    '@/lib/storage': { blob, readPath: async p => (p === SOC || p === APPSEC || String(p).includes('inbox') ? Buffer.from(`resume of a@x.com at ${p}`) : null), writePath: async () => {}, existsPath: async () => true, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: USERS },
     '@/lib/llm': { resolveKeys: () => ({}), hasAnyKey: () => true, keysFor: async () => ({ gemini: 'g' }), tailorKeys: k => k },
     '@/lib/tailor': { runTailor: async o => { runs.push(o); return { token: 't1', score: 100, coverage: 100, quality: { status: 'coverage_met', matched: 3, total: 3, missing: [] }, keyword_analysis: { matched: ['owasp'], added: ['burp suite', 'threat modeling'], missing: [] } } } },
@@ -63,7 +63,8 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     '@/lib/library-pick': pick,
     '@/lib/resume-library-store': {
       existingForJob: async () => have,
-      saveTailored: async o => { saved.push(o); return { email: 'a@x.com', category: 'AppSec Engineer' } },
+      saveTailored: async o => { saved.push(o); return { email: 'a@x.com', category: 'AppSec Engineer', abs: path.join(o.userDir, 'a@x.com', 'AppSec Engineer', 'made.docx') } },
+      saveUpload: async o => { uploads.push(o); return { abs: path.join(o.userDir, 'a@x.com', 'AppSec Engineer', 'Mine__0123456789abcdef.docx'), folder: 'a@x.com / AppSec Engineer', name: 'Mine', read: true, existed: false } },
       markUsed: async (dir, abs) => { used.push(abs); events.push('counted') },
       readShelf: async () => ({ uses: {} }),
       relOf: (dir, abs) => path.relative(dir, abs).split(path.sep).join('/'),
@@ -74,7 +75,7 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     '@/lib/resumeOrganization': { resumeEmails: t => [...new Set(t.match(/[\w.]+@[\w.]+\.\w+/g) || [])] },
   }
   const wa = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { handle, loadSession };')
-  return { wa, store, said, docs, saved, used, logs, runs, events }
+  return { wa, store, said, docs, saved, used, logs, runs, events, uploads }
 }
 
 test('a job description asks which email; "1" starts from the agent\'s pick in Files and files the result there', async () => {
@@ -192,4 +193,27 @@ test('a message that arrives while a job is being picked is kept, and the same j
   const now = await b.wa.loadSession(SESSION)
   assert.equal(now.pending?.jdId, 'm3', 'the waiting question survived the first job starting')
   assert.deepEqual(b.events.slice(-2), ['delivered', 'counted'], 'a pick is counted once its resume is delivered')
+})
+
+test('a resume sent with the job post is filed in Files once, and what is made from it is filed beside it', async () => {
+  const ACCOUNT = '0f8fad5b-d9cb-469f-a165-70867728950e'
+  const b = bot()
+  await b.wa.handle(SESSION, { type: 'document', id: 'm1', document: { id: 'd1', filename: 'Mine.docx' } }, {}, ACCOUNT)
+  await b.wa.handle(SESSION, { type: 'text', id: 'm2', text: { body: JD } }, await b.wa.loadSession(SESSION), ACCOUNT)
+  const MY_FILES = path.join(USERS, ACCOUNT)
+  assert.equal(b.uploads.length, 1)
+  assert.equal(b.uploads[0].userDir, MY_FILES)
+  assert.equal(b.runs.at(-1).userResumeDir.includes('inbox'), true, 'the run itself uses the inbox copy')
+  const made = b.saved.at(-1)
+  assert.equal(made.userDir, MY_FILES)
+  assert.equal(made.depth, 1)
+  assert.equal(made.from, 'a@x.com/AppSec Engineer/Mine__0123456789abcdef.docx')
+  assert.match(b.docs.at(-1), /Saved in your Files: a@x\.com \/ AppSec Engineer/)
+})
+
+test('the shared default bot user files nothing', async () => {
+  const b = bot()
+  await b.wa.handle(SESSION, { type: 'text', id: 'm1', text: { body: JD } }, {}, 'demo')
+  await b.wa.handle(SESSION, { type: 'document', id: 'm2', document: { id: 'd1', filename: 'Mine.docx' } }, await b.wa.loadSession(SESSION), 'demo')
+  assert.equal(b.uploads.length, 0)
 })

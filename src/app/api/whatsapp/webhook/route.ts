@@ -39,7 +39,7 @@ import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/serv
 import { isCertification } from "@/lib/keyword-targets"
 import { libraryOf, numberedEmails, candidatesFor } from "@/lib/library-pick-store"
 import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME, type Ranked } from "@/lib/library-pick"
-import { existingForJob, saveTailored, markUsed, readShelf, relOf } from "@/lib/resume-library-store"
+import { existingForJob, saveTailored, saveUpload, markUsed, readShelf, relOf } from "@/lib/resume-library-store"
 import { jobKeyOf, type SavedFile, type Uses } from "@/lib/resume-library"
 import { agentPick, logPick } from "@/lib/library-agent"
 import { extractKeywords } from "@/lib/keywords"
@@ -60,6 +60,9 @@ async function sendDocument(to: string, file: Buffer, filename: string, caption:
 }
 
 const INBOX_DIR = path.join(DATA_DIR, "whatsapp", "inbox")
+// A real account (a registered number), as opposed to the shared default bot user: only its resumes go to Files.
+const ACCOUNT_ID = /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i
+const filesOf = (userId: string): string => (ACCOUNT_ID.test(userId) ? path.join(USER_RESUMES_DIR, userId) : "")
 // The rewrite stops by 240 s so reading the result, checking it and sending the file (uploading it to WhatsApp) still fit
 // inside the 300 s function. At 280 s only 20 s were left, and a run cut off by the platform sends nothing at all.
 const TAILOR_BUDGET_MS = 240_000
@@ -95,6 +98,8 @@ const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…`
 type Meta = { role: string; company: string; location: string }
 type Session = {
   version?: 3; jd?: string; jdId?: string; resumePath?: string; resumeName?: string; resumeAt?: number; seen?: string[]; updatedAt?: number
+  /** Where the resume sent here was filed in the person's Files (the run itself uses the inbox copy). */
+  resumeFiled?: string
   /** A job description waiting for "which email is this job for?". `slots[n - 1]` is email number n. */
   pending?: { jd: string; jdId: string; slots: string[]; at: number }
   /** The last job made from Files, for "redo". */
@@ -401,9 +406,16 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     const safe = filename.replace(/[^A-Za-z0-9._\- ()]/g, "_").replace(/\.docx$/i, "") + ".docx"
     const dest = path.join(INBOX_DIR, digits(from), `${randomBytes(8).toString("hex")}-${safe}`)
     await writePath(dest, bytes)
+    // Filed in the person's Files too, once (the same file sent again is the same path), under the email written in it
+    // and its kind of work, so a later job can start from it. Until 19 Oct 2026 a resume sent with a job description
+    // never reached Files, nor did what was made from it (owner: "Files weren't saved and mapped properly").
+    const filesDir = filesOf(userId)
+    const kept = filesDir ? await saveUpload({ userDir: filesDir, bytes, filename: safe, kind: "docx" })
+      .catch(e => { console.error("[whatsapp] resume not filed", String(e).slice(0, 200)); return null }) : null
 
     session = await loadSession(from)
     session.resumePath = dest
+    if (kept) session.resumeFiled = kept.abs; else delete session.resumeFiled
     session.resumeName = safe.replace(/\.docx$/i, "")
     session.resumeAt = Date.now()
     await saveSession(from, session)
@@ -507,6 +519,18 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // Made from Files: filed back there, in the folder for its kind of job, one job one file (saveTailored).
   const more: string[] = []
   let filed: Awaited<ReturnType<typeof saveTailored>> | null = null
+  // Every resume made goes to Files: from Files, back beside where it started; from a resume sent here, beside that
+  // resume's filed copy. One job, one file (saveTailored).
+  const filesDir = files ? files.userDir : filesOf(userId)
+  if (!files && filesDir) {
+    const fromRel = session.resumeFiled ? relOf(filesDir, session.resumeFiled) : undefined
+    filed = await saveTailored({ userDir: filesDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company, depth: 1,
+      ...(fromRel && !fromRel.startsWith("..") ? { from: fromRel } : {}),
+      asked: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || []), ...(result.keyword_analysis?.missing || [])],
+      covers: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || [])] })
+      .catch(e => { console.error("[whatsapp] not filed", String(e).slice(0, 200)); return null })
+    if (filed) more.push(`Saved in your Files: ${filed.email} / ${filed.category}`)
+  }
   if (files) {
     filed = await saveTailored({ userDir: files.userDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company,
       depth: files.depth === 0 ? 1 : 2, from: files.rel, asked: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || []), ...(result.keyword_analysis?.missing || [])], covers: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || [])] })
@@ -516,7 +540,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     more.push(DIFFERENT_RESUME)
   }
   await deliver(from, file, name, captionFor(name, meta, result, undefined, more), { userId, jd: session.jd, meta, changes: [], source: session.resumeName,
-    ...(filed ? { saved: filed.abs, depth: files?.depth === 0 ? 1 : 2 } : {}) })
+    ...(filed ? { saved: filed.abs, depth: !files || files.depth === 0 ? 1 : 2 } : {}) })
   await recordWhatsAppUsage(userId, "resume_tailor", result)
   // Counted once the resume it started is delivered, so a failed run never makes a resume look more used.
   if (files) await markUsed(files.userDir, files.abs).catch(() => {})
