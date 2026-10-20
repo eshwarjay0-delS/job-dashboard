@@ -496,13 +496,9 @@ async function usesOf(userDir: string, email: string, ranked: Ranked[]): Promise
 
 /** Most recently used resume path for an email, from the pick log. Simple routine: use what worked last time. */
 async function recentPickFor(userDir: string, email: string): Promise<string | null> {
-  try {
-    const { logKey } = await import("@/lib/library-agent")
-    // The log is keyed by userId, not userDir. We need to find it via the session.
-    // For now, return null and let the code ranking decide. The session.last.email reuse
-    // already gives us the routine behavior.
-    return null
-  } catch { return null }
+  // The pick log is keyed by userId, not userDir. Session.last.email reuse
+  // already gives us the routine behavior, so code ranking decides.
+  return null
 }
 
 /**
