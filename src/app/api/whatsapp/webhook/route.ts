@@ -173,15 +173,17 @@ async function saveGen(from: string, wamid: string, gen: Gen): Promise<void> {
 }
 
 const HELP = [
-  "*Resume Tailor Bot*",
+  "Here's what I do:",
   "",
-  "Paste a *job description*. I ask which of your emails it is for (reply *1*, *2* …), start from the closest resume of that email in your MarketFit Files, send it back fitted to the job, and file it there.",
+  "Paste a *job description* — I tailor your resume to it and send the file back. That's the whole loop.",
   "",
-  "To start from a different resume, send it as a .docx file with the job description.",
+  "Send a *.docx* with the job description to start from that resume instead of your Files.",
   "",
-  "*Want changes?* Swipe right on a resume I sent (or long-press → Reply) and type what to change, e.g. _add more Terraform_ or _make the bullets shorter_. Each update builds on the version you replied to, so you can keep refining.",
+  "*Want changes?* Reply to a resume I sent and type what to change, e.g. _add more Terraform_. Each update builds on the last.",
   "",
-  "Commands: *redo* · *reset* · *status* · *help*",
+  "Say _use my Houston resume_ or _use my St. Louis resume_ to switch profiles.",
+  "",
+  "Commands: *redo* · *reset* · *status*",
 ].join("\n")
 
 // ── Meta webhook verification (GET) ───────────────────────────────────────────
@@ -304,9 +306,35 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     // the JD path: a reply is never a new JD (new JDs are always pasted as their own message).
     if (replyTo) return refine(from, replyTo, text, userId)
 
-    // Too short to be a JD — most likely a stray message, so guide instead of guessing.
+    // Short message that's not a command — reply conversationally, not robotically.
     if (text.length < 60) {
-      return sendText(from, `That looks too short to be a job description (${text.length} characters).\n\n${HELP}`)
+      const lower = text.toLowerCase()
+      // Natural profile switching: "use my Houston resume", "switch to st louis", etc.
+      if (/houston/.test(lower) && /resume|profile|use|switch/.test(lower)) {
+        const { slots } = await emailSlots(userId)
+        const houston = slots.find(s => s.includes('eshwarjay05'))
+        if (houston) {
+          if (session.last) session.last.email = houston
+          else session.last = { jd: '', email: houston, at: Date.now() }
+          await saveSession(from, session)
+          return sendText(from, "Got it — I'll use your Houston resume (eshwarjay05) from now on. Send a job description whenever you're ready.")
+        }
+      }
+      if (/st\.?\s*louis|saint louis/.test(lower) && /resume|profile|use|switch/.test(lower)) {
+        const { slots } = await emailSlots(userId)
+        const stl = slots.find(s => s.includes('jayeshwar44'))
+        if (stl) {
+          if (session.last) session.last.email = stl
+          else session.last = { jd: '', email: stl, at: Date.now() }
+          await saveSession(from, session)
+          return sendText(from, "Got it — I'll use your St. Louis resume (jayeshwar44) from now on. Send a job description whenever you're ready.")
+        }
+      }
+      if (/thank|thanks/.test(lower)) {
+        return sendText(from, "Anytime. Send the next job description when you're ready.")
+      }
+      // Anything else short: friendly nudge, not a character count.
+      return sendText(from, "Send me a job description and I'll tailor your resume to it. Or type *help* to see what I can do.")
     }
 
     session = await loadSession(from)
