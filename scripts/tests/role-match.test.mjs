@@ -8,6 +8,17 @@ const R = await import('../../src/lib/role-match.ts')
 
 const cand = (name, extra = {}) => ({ candidate: { path: `/u/${name}.docx`, email: 'a@x.com', folder: '', name, depth: 0, keywords: [], at: 1, ...extra }, shows: 0, of: 10 })
 
+test('Salesforce roles use title-first selection without confusing administrators or unrelated developers', () => {
+  assert.equal(R.titleFit('Salesforce Developer', 'Senior Salesforce Developer'), 5)
+  assert.equal(R.titleFit('Salesforce Developer', 'SFDC Developer'), 5)
+  const ranked = [cand('Software Developer'), cand('Salesforce Administrator'), cand('SFDC Developer'), cand('Salesforce Developer (CPQ / Revenue Cloud)')]
+  assert.deepEqual(R.narrowByRole(ranked, 'Salesforce Developer').pool.map(r => r.candidate.name), ['SFDC Developer', 'Salesforce Developer (CPQ / Revenue Cloud)'])
+  assert.deepEqual(R.narrowByRole(ranked, 'Salesforce Administrator').pool.map(r => r.candidate.name), ['Salesforce Administrator'])
+  assert.ok(R.titleFit('Salesforce Developer', 'Software Developer') < 4)
+  assert.ok(R.titleFit('Salesforce Developer', 'Salesforce Administrator') < 4)
+  assert.equal(R.narrowByRole([cand('Software Developer'), cand('Salesforce Administrator')], 'Salesforce Developer').narrowed, false, 'no matching title retains the fallback pool')
+})
+
 test('titles are compared as kinds of role, not as words', () => {
   const fit = R.titleFit
   assert.equal(fit('Security Analyst', 'Cyber Security Analyst'), 5)

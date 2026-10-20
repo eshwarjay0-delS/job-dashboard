@@ -25,6 +25,7 @@ const NEIGHBOURS = new Set(["analyst|engineer", "engineer|developer", "engineer|
 
 // The fields of work a title names. Several can hold at once ("Cloud Security Engineer"); a speciality implies security.
 const DOMAINS: [string, RegExp][] = [
+  ["salesforce", /\b(?:salesforce|sfdc)\b/],
   ["security", /\b(?:cyber\s?security|cybersecurity|cyber|information security|infosec|it security|security|secops)\b/],
   ["soc", /\b(?:soc|security operations|siem|incident response|incident handler|threat (?:hunt\w*|detection|intelligence|analyst)|detection|dfir|forensics?|csirt|blue team|cyber defen[cs]e|splunk|sentinel)\b/],
   ["appsec", /\b(?:appsec|application security|product security|software security|secure (?:code|sdlc)|api security|devsecops)\b/],
