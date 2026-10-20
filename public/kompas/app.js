@@ -562,14 +562,39 @@ async function buildBook(s) {
     await new Promise(r => setTimeout(r, 20000));                    // pacing: Groq's per-minute budget stays free for you
   }
 }
-// Auth: a 401 from /api/prep or /api/answer means nobody is signed in here.
-// Retrying is pointless — send the whole window to the login page once, with a
-// ?next= so sign-in lands back in Kompas. Other errors keep their retry behavior.
+// Auth: a 401 from /api/prep or /api/answer used to mean instant ejection to
+// the login page. That was the "works for a while, then authentication gets
+// in the way" bug: sessions lapse quietly while the app sits idle, and the
+// first action afterwards met a dead token. Now the client first asks the
+// server to renew the session (the refresh cookie does the work), retries
+// once, and only sends the window to login when renewal truly fails.
 let __authRedirected = false;
+let __lastAuthRefresh = 0;
 function isAuthError(e) {
   const m = String((e && e.message) || e || "");
   return /\b401\b/.test(m) || /sign in/i.test(m);
 }
+async function tryRefreshAuth() {
+  try {
+    const res = await fetch("/api/auth/refresh", { method: "POST" });
+    if (res.ok) { __lastAuthRefresh = Date.now(); return true; }
+  } catch {}
+  return false;
+}
+// Idle is where sessions used to die: renew quietly whenever the user comes
+// back to this window, and every 20 minutes while it stays open, so the next
+// action never meets an expired token.
+function keepAuthAlive() {
+  if (document.hidden) return;
+  if (Date.now() - __lastAuthRefresh < 10 * 60 * 1000) return;
+  __lastAuthRefresh = Date.now();
+  try { fetch("/api/auth/refresh", { method: "POST" }).catch(() => {}); } catch {}
+}
+try {
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) keepAuthAlive(); });
+  window.addEventListener("focus", keepAuthAlive);
+  setInterval(keepAuthAlive, 20 * 60 * 1000);
+} catch {}
 function redirectToLogin() {
   if (__authRedirected) return;
   __authRedirected = true;
@@ -586,9 +611,12 @@ async function preparePack(s) {
       const res = await fetch("/api/prep", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ config: cfgOf(s) }) });
       const pack = await res.json();
       if (!res.ok || !Array.isArray(pack.questions)) throw new Error(pack.error || ("prep " + res.status));
-      s.prep = pack; saveSession(s);
+      s.prep = pack; s.__authRetried = false; saveSession(s);
     } catch (e) {
-      if (isAuthError(e)) { redirectToLogin(); return; }               // 401: no point retrying — go sign in
+      if (isAuthError(e)) {                                            // 401: renew the session silently and retry once — eject only if renewal fails
+        if (!s.__authRetried && await tryRefreshAuth()) { s.__authRetried = true; preparePack(s); return; }
+        redirectToLogin(); return;
+      }
       if (current !== s) return;
       const ph = cards.findIndex(c => c.question === "Preparing…");
       if (ph >= 0) { cards[ph] = { question: "Ready", answer: ["Prep is retrying in the background — you can Start now; answers still generate live."] }; if (ph === idx) renderCard(); }
@@ -1779,7 +1807,10 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     status(`Answered — first words in ${(first / 1000).toFixed(2)}s.`, "live");
   } catch (e) {
-    if (isAuthError(e)) { redirectToLogin(); return; }                 // 401: no point retrying — go sign in
+    if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — eject only if renewal fails
+      if (await tryRefreshAuth()) { recoverAnswer("", 800); return; }
+      redirectToLogin(); return;
+    }
     if (card.req !== ctl) return;                                      // aborted because this same card was re-asked
     card.streaming = false;
     if (e && e.name === "AbortError") {
@@ -2927,7 +2958,7 @@ document.querySelectorAll(".cn-app").forEach(b => b.onclick = () => { LS.set("co
 // cookies, so its API calls 401. Pass the Supabase access token (a JWT) along with
 // the session handoff; the desktop injects it as Authorization: Bearer on its
 // proxied /api/* requests, which the server accepts via createClientFromRequest.
-function supabaseAccessToken() {
+function supabaseSession() {
   try {
     const jar = {};
     String(document.cookie || "").split(";").forEach(c => {
@@ -2946,7 +2977,7 @@ function supabaseAccessToken() {
       json = decodeURIComponent(escape(atob(raw.replace(/-/g, "+").replace(/_/g, "/"))));
     }
     const sess = JSON.parse(json);
-    if (sess && sess.access_token) return sess.access_token;
+    if (sess && sess.access_token) return sess;
   } catch (e) {}
   try {
     // Fallback: older supabase-js persisted plain JSON in localStorage.
@@ -2954,11 +2985,15 @@ function supabaseAccessToken() {
       const k = localStorage.key(i);
       if (/^sb-[A-Za-z0-9]+-auth-token$/.test(k || "")) {
         const sess = JSON.parse(localStorage.getItem(k));
-        if (sess && sess.access_token) return sess.access_token;
+        if (sess && sess.access_token) return sess;
       }
     }
   } catch (e) {}
-  return "";
+  return null;
+}
+function supabaseAccessToken() {
+  const sess = supabaseSession();
+  return (sess && sess.access_token) || "";
 }
 function packSession(s) {
   const slim = {
@@ -2970,6 +3005,10 @@ function packSession(s) {
     autoAnswer: !!s.autoAnswer, autoMode: s.autoMode === true, saveTranscript: s.saveTranscript !== false,
     createdAt: s.createdAt || Date.now(),
     token: supabaseAccessToken(), // handed to the desktop app so its API calls are authenticated
+    // The refresh token + expiry ride along so the desktop can renew the
+    // access token itself instead of pinning a JWT that dies after an hour.
+    refreshToken: (supabaseSession() || {}).refresh_token || "",
+    tokenExp: (supabaseSession() || {}).expires_at || 0,
     // The same native Kompas shell opens the MarketFit session in MarketFit, not the standalone perfACT site.
     site: (location.pathname === "/kompas" || location.pathname.startsWith("/kompas/") || location.pathname.startsWith("/dashboard/kompas")) ? "marketfit" : "perfact",
   };

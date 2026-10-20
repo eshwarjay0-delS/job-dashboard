@@ -57,6 +57,18 @@ export async function createClient(): Promise<ServerClient> {
 // authenticate via an `Authorization: Bearer <supabase access token>` header
 // instead. Falls back to the normal cookie session when no header is present,
 // so every existing (browser-tab) caller is unaffected.
+// Expiry check only — the signature is never trusted here; Supabase still
+// validates any token that is actually used. This exists to recognise a
+// credential that is already dead on arrival.
+function isExpiredJwt(token: string): boolean {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return false;
+    const payload = JSON.parse(Buffer.from(part.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"));
+    return typeof payload.exp === "number" && payload.exp * 1000 <= Date.now();
+  } catch { return false; }
+}
+
 export async function createClientFromRequest(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -64,6 +76,14 @@ export async function createClientFromRequest(request: NextRequest) {
 
   const bearer = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!bearer) return createClient();
+  // An already-expired bearer carries no authority: treat it as absent and
+  // let the cookie session speak. The desktop shell used to pin the single
+  // JWT it was handed at launch and inject it on every /api/* call; an hour
+  // later that dead token was overriding perfectly good cookies and 401-ing
+  // everything — the app "worked when checked" and failed later, worst
+  // after idle. Dropping only EXPIRED tokens changes nothing for a live
+  // credential, and an expired one could never authenticate anything anyway.
+  if (isExpiredJwt(bearer)) return createClient();
 
   return createSupabaseClient(url, key, {
     global: { headers: { Authorization: `Bearer ${bearer}` } },
