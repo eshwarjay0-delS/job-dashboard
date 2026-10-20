@@ -151,9 +151,13 @@ test('the inbox is three piles by whose turn it is, and the number in the headin
   assert.match(page, /\["roles", "By role", roles\.length\],\s*\["drafts", "Drafts", drafts\.length\],\s*\["waiting", "No answer yet", radar\.length\],/, 'the other three ways of looking wait behind "More"')
   assert.ok(/\{more \? "Less" : "More"\}/.test(page) && /waiting on you\./.test(page) && !/emails need"\} your reply/.test(page))
   assert.ok(/aboutOf\(m\.role\) \|\| decodeEntities\(m\.role\)/.test(row) && /m\.lastMine \? `You wrote last/.test(row), 'a row names the job, and says when the last word was yours')
-  // The two other pages that list what needs a reply use the same answer.
+  // The other page that lists what needs a reply uses the same answer.
   assert.match(read('src/app/dashboard/today/page.tsx'), /mails\.filter\(m => m\.needsReply && m\.yourTurn !== false\)/)
-  assert.match(read('src/app/dashboard/workflows/page.tsx'), /if \(!m\.needsReply \|\| m\.yourTurn === false\) continue/)
+  // Since 8ec5de6 (17 Oct, the owner's "Send to automation" design) Follow-ups lists no replies of its own: it keeps reply
+  // instructions and lists the conversations waiting on an answer, so it holds no second answer to whose turn it is.
+  const followUps = read('src/app/dashboard/workflows/page.tsx')
+  assert.doesNotMatch(followUps, /needsReply/)
+  assert.match(followUps, /<h2>Waiting for a response<\/h2>.*\{radar\.map\(r=>/)
 })
 
 test('the page reads first: the title comes before any control, and a row is one line each', () => {
@@ -164,7 +168,9 @@ test('the page reads first: the title comes before any control, and a row is one
   assert.match(page, /\{\(tidying \|\| showIgnored\) && !search\.active && \(\s*<>\s*<IgnoreControls/, 'the ignore controls wait behind "Tidy up"')
   assert.match(page, /\{\(tidying \|\| showIgnored\) && !search\.active && \(\s*<input type="checkbox"/, 'and so do the tick boxes')
   assert.match(page, /\{showIgnored && !search\.active && \(/, 'no "Bring it back" on a search result that is not hidden')
-  assert.match(page, /<ReadingPane key=\{`\$\{m\.account\}:\$\{m\.id\}`\}/, 'the conversation is read in the reading pane')
+  // Since 8ec5de6 (17 Oct, the owner's folding panes) the reading pane sits inside FoldedConversation, keyed the same way.
+  assert.match(page, /<FoldedConversation key=\{`\$\{m\.account\}:\$\{m\.id\}`\}/, 'one conversation, by its inbox and its thread')
+  assert.match(read('src/app/dashboard/mail/_components/folded-conversation.tsx'), /<ReadingPane m=\{mail\}/, 'the conversation is read in the reading pane')
   assert.ok(!/<p [^>]*>\{m\.preview\}<\/p>/.test(page) && !/\{m\.from\} · \{m\.fromEmail\}/.test(page), 'no bare snippet and no raw "Name <address>" header in the pane')
   // The three sample forms said things nobody had checked. They are not shown.
   assert.ok(!/<RtrReply m=|<AvailabilityReply m=|<RateReply m=/.test(page.slice(page.indexOf('export default function MailPage'))))
@@ -266,15 +272,20 @@ test('a search with one inbox chosen is counted in that inbox, and a conversatio
   // While still looking, with nothing on the page itself, no number is said.
   assert.match(bar, /\{!\(n === 0 && search\.pending\) && \(/)
   // ?open=<conversation>: brought into view, and shown even when the list does not hold it (filed, or its sender hidden).
-  assert.match(page, /const wantedIsHere = !!wanted && mails\.some\(x => x\.id === wanted\)/)
+  // Since 8ec5de6 (17 Oct, the owner's "account and thread together identify a conversation") ?account= goes with it,
+  // and nothing is open until one is chosen (the folding panes start as the list alone), so no `?? shown[0]`.
+  assert.match(page, /const wantedIsHere = !!wanted && mails\.some\(x => x\.id === wanted && \(!selectedInbox \|\| x\.account === selectedInbox\)\)/)
   assert.match(page, /setSel\(wanted\); setOpened\(wanted\); setView\("all"\); setWanted\(null\)\s*setTimeout\(\(\) => document\.getElementById\("reply"\)\?\.scrollIntoView/)
-  assert.ok(page.includes('const m = shown.find(x => x.id === sel) ?? (sel && sel === opened ? mails.find(x => x.id === sel) ?? (fetched?.id === sel ? fetched : undefined) : undefined) ?? shown[0]'))
+  assert.ok(page.includes('const selectedMail = (x: Mail) => x.id === sel && (!selectedInbox || x.account === selectedInbox)'))
+  assert.ok(page.includes('const m = shown.find(selectedMail) ?? (sel && sel === opened ? mails.find(selectedMail) ?? (fetched && selectedMail(fetched) ? fetched : undefined) : undefined)'))
+  assert.ok(!page.includes('?? shown[0]'), 'the first conversation in the list is never opened in place of the one asked for')
   // One the page does not hold at all (older than its 30 days) is read by itself from the kept mail, and when it is
   // not kept either that is said: the first conversation in the list is never shown in its place without a word.
-  assert.ok(page.includes('fetch(`/api/gmail/conversation?id=${encodeURIComponent(wanted)}`)'))
+  assert.ok(page.includes('fetch(`/api/gmail/conversation?id=${encodeURIComponent(wanted)}&account=${encodeURIComponent(selectedInbox)}`)'))
   assert.ok(page.includes('if (!wanted || wantedIsHere || loading || !connected) return'))
   assert.ok(page.includes('The conversation you asked for is not among the mail MarketFit keeps'))
   const one = read('src/app/api/gmail/conversation/route.ts')
   assert.ok(one.includes('requireAuth()') && one.includes('.eq("user_id", ctx.userId).eq("thread_id", id)') && one.includes('threadsToMails([row.data])[0]'))
+  assert.ok(one.includes('found.find(r => !account || String(r.account_email || "").toLowerCase() === account)'), 'the same thread in another inbox is not opened in its place')
   assert.ok(!/fetchClassifiedThreads|googleapis|updateUser/.test(one), 'one kept row; no call to Gmail and nothing changed')
 })

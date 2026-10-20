@@ -2,21 +2,28 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { resumeQuality, requiredEvidenceTerms } from '../../src/lib/resume-quality.ts'
 
+// Since 18 Oct 2026 (8f0c9c4, owner: "we should deliver 95 to 100% match resumes") 95% is the floor and 98% the target;
+// 95-97% is "delivered_with_gaps", not "coverage_met".
 test('a 41 percent draft cannot qualify even when all listed skills appear somewhere', () => {
   const report = resumeQuality({ matched: 41, total: 100, missing: ['risk treatment'] })
   assert.equal(report.status, 'needs_review')
-  assert.equal(report.minimum, 98)
+  assert.equal(report.minimum, 95)
+  assert.equal(report.target, 98)
   assert.deepEqual(report.missing, ['risk treatment'])
 })
 test('rounding up the displayed percentage never admits a below-baseline draft', () => {
-  assert.equal(resumeQuality({ matched: 979, total: 1000, missing: [] }).status, 'needs_review')
+  assert.equal(resumeQuality({ matched: 949, total: 1000, missing: [] }).status, 'needs_review')
+  assert.equal(resumeQuality({ matched: 950, total: 1000, missing: [] }).status, 'delivered_with_gaps')
+  assert.equal(resumeQuality({ matched: 979, total: 1000, missing: [] }).status, 'delivered_with_gaps')
   assert.equal(resumeQuality({ matched: 980, total: 1000, missing: [] }).status, 'coverage_met')
 })
-test('partial, unchanged and unscorable documents remain drafts despite high overlap', () => {
-  for (const options of [{ partial: true }, { unchanged: true }]) {
-    assert.equal(resumeQuality({ matched: 100, total: 100, missing: [], ...options }).status, 'needs_review')
-  }
+// Since 18 Oct 2026 (94f99c7) a partial draft is held only below the 95% floor; an unchanged one is always held.
+test('unchanged and unscorable documents remain drafts despite high overlap; a partial one is held below the floor', () => {
+  assert.equal(resumeQuality({ matched: 100, total: 100, missing: [], unchanged: true }).status, 'needs_review')
   assert.equal(resumeQuality({ matched: 0, total: 0, missing: [] }).status, 'needs_review')
+  assert.equal(resumeQuality({ matched: 94, total: 100, missing: [], partial: true }).status, 'needs_review')
+  assert.equal(resumeQuality({ matched: 96, total: 100, missing: [], partial: true }).status, 'delivered_with_gaps')
+  assert.equal(resumeQuality({ matched: 100, total: 100, missing: [], partial: true }).status, 'coverage_met')
 })
 
 test('invalid or inflated counters cannot manufacture a passing coverage score', () => {

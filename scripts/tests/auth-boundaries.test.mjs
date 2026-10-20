@@ -11,7 +11,9 @@ const source = stripTypeScriptTypes(readFileSync(new URL('../../src/lib/authBoun
 function boundary(result, throws = false) {
   let calls = 0
   const client = async () => { calls++; if (throws) throw new Error('offline'); return { auth: { getUser: async () => result } } }
-  const context = vm.createContext({ path, Response, createClient: client, createClientFromRequest: client })
+  // POSIX paths, as on the Linux servers the app runs on: the paths below are POSIX, and Windows' own path.resolve turned
+  // the owned one into C:\data\..., so the one allowed path failed the match on Windows only.
+  const context = vm.createContext({ path: path.posix, Response, createClient: client, createClientFromRequest: client })
   vm.runInContext(source, context)
   return { context, calls: () => calls }
 }

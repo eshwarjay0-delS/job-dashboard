@@ -4,7 +4,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
-const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8')
+// Line endings are made LF, as the repo stores them: a Windows checkout (core.autocrlf) has CRLF, and the source checks
+// below look for "\n" after a call, so they failed on Windows only.
+const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 const V = await import('../../src/lib/keyVault.ts')
 const L = await import('../../src/lib/llm.ts?vault')
 

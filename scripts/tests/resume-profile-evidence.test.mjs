@@ -85,7 +85,9 @@ test('Gemini enrichment receives baseline and explicit confirmations on both pas
   for (const call of h.calls) {
     assert.match(call.user, /Administrator configured approval processes/)
     assert.match(call.user, /I used Salesforce CPQ guided selling/)
-    assert.match(call.system, /suggestions, NOT new biographical facts/)
+    // Reworded 18 Oct 2026 (48f675b, owner's relational-expansion vision): expansions stay vocabulary, never facts or credentials.
+    assert.match(call.system, /vocabulary expansions around CONFIRMED experience, NOT new biographical facts/)
+    assert.match(call.system, /Never infer metrics, credentials, dates or employer assignments/)
   }
   assert.deepEqual(Array.from(terms), ['guided selling', 'quote templates'])
 })

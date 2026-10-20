@@ -69,5 +69,6 @@ test('what the routes and the engine promise, read from the source', () => {
   assert.match(tailor, /if \(failed \* 2 > total\) throw new Error\(`Tailoring incomplete/, 'a draft most providers refused is not delivered as a draft')
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
   assert.match(bot, /first\.slice\(1\)\.toLowerCase\(\)\}_Resume`/, 'the file is named after the person, written as a name: Eshwar_Resume'); assert.match(bot, /sendDocument\(from, file, `\$\{name\}\.docx`/)
-  assert.ok(!/Something went wrong: \$\{String\(e\)[^`]*`\)[^\n]*runTailor/.test(bot) && /Nothing was changed/.test(bot), 'a failed tailor is said plainly')
+  // Since 16 Oct 2026 (7b5c71b) the pair is used up before generation, so "Nothing was changed" gave way to how to retry.
+  assert.ok(!/Something went wrong: \$\{String\(e\)[^`]*`\)[^\n]*runTailor/.test(bot) && /I could not tailor your resume just now: the AI services that write it are busy or out of their allowance\. \$\{retry\}/.test(bot), 'a failed tailor is said plainly')
 })
