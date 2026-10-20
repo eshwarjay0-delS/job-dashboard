@@ -1,6 +1,7 @@
 // Portal crawler — the Apply tab's inclusive search.
-// Each adapter knows one vendor portal: where its listings live and how to
-// read a job card. Adding a portal = one entry in ADAPTERS with verified selectors.
+// Each adapter knows one vendor portal: where its listings live and how to read them. A portal whose page is drawn by
+// its own script still fetches its jobs from somewhere (a JSON API, a sitemap of job pages, the job pages' JobPosting
+// records): such an adapter reads that source with `fetchJobs` instead of `listUrls` + `parseList`.
 
 export type WorkType = "contract" | "permanent" | "unknown"
 
@@ -14,15 +15,26 @@ export type RawJob = {
   description?: string
 }
 
+/** The runner's fetch: its own user agent, a time limit, and a gap between calls. Returns the body; throws on non-2xx. */
+export type Fetcher = (url: string, init?: {
+  method?: "GET" | "POST"
+  body?: string
+  headers?: Record<string, string>
+  /** The Accept header; HTML unless said otherwise. */
+  accept?: string
+}) => Promise<string>
+
 export type PortalAdapter = {
   /** stable key, also the `portal` column value */
   portal: string
   /** display name, also the `firm` column value */
   firm: string
   /** listing pages to crawl (page 1 of each is enough for v1) */
-  listUrls: string[]
+  listUrls?: string[]
   /** extract job cards from a listing page's HTML */
-  parseList: (html: string) => RawJob[]
+  parseList?: (html: string) => RawJob[]
+  /** for a portal read from an API or a sitemap: every job it lists now, fetched only through `get` */
+  fetchJobs?: (get: Fetcher) => Promise<RawJob[]>
 }
 
 export type CrawlResult = {

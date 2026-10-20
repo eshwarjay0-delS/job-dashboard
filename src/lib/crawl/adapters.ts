@@ -1,20 +1,8 @@
 import type { PortalAdapter, RawJob } from "./types"
+import { clean, splitCards } from "./text.ts"
 
 // Verified 2026-10-17 against live portal HTML. Each parseList was tested
 // against a real listing page before shipping — never trust selectors blind.
-
-const stripTags = (s: string) => s.replace(/<[^>]+>/g, " ")
-const decodeEntities = (s: string) =>
-  s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
-const clean = (s: string) => decodeEntities(stripTags(s)).replace(/\s+/g, " ").trim()
-
-function splitCards(html: string, marker: RegExp): string[] {
-  const parts = html.split(marker)
-  parts.shift()
-  return parts
-}
 
 // ── Beacon Hill Technologies — WordPress + FacetWP, .job-card markup ─────────
 const beaconHill: PortalAdapter = {

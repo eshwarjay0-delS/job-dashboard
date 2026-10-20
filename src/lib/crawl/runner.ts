@@ -1,26 +1,13 @@
 import { createServiceClient } from "@/lib/supabase/service"
 import { ADAPTERS } from "./adapters"
 import { classifyWorkType, normalizeDate } from "./classify"
+import { collectJobs, politeFetcher } from "./collect"
 import type { CrawlResult, RawJob } from "./types"
-
-const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (MarketFit job aggregator; contact via site)"
-
-async function fetchHtml(url: string): Promise<string> {
-  const ctrl = new AbortController()
-  const t = setTimeout(() => ctrl.abort(), 25000)
-  try {
-    const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "text/html" }, signal: ctrl.signal })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    return await res.text()
-  } finally {
-    clearTimeout(t)
-  }
-}
 
 type JobRow = {
   portal: string; firm: string; title: string; url: string
   location: string | null; work_type: string; engagement: string | null
-  pay_range: string | null; posted_at: string | null
+  pay_range: string | null; posted_at: string | null; description: string | null
   last_seen_at: string; active: boolean
 }
 
@@ -34,6 +21,8 @@ function toRow(portal: string, firm: string, j: RawJob): JobRow {
     engagement: j.engagement?.slice(0, 200) ?? null,
     pay_range: j.payRange?.slice(0, 120) ?? null,
     posted_at: normalizeDate(j.postedAt),
+    // Kept for matching and tailoring (the table always had the column; until 20 Oct 2026 nothing filled it).
+    description: j.description?.slice(0, 8000) ?? null,
     last_seen_at: new Date().toISOString(),
     active: true,
   }
@@ -62,17 +51,9 @@ export async function runCrawl(onlyPortals?: string[]): Promise<CrawlResult[]> {
   for (const adapter of adapters) {
     const result: CrawlResult = { portal: adapter.portal, firm: adapter.firm, found: 0, upserted: 0 }
     try {
+      // Listing pages, a JSON API or a sitemap, whichever the portal has; one request at a time, 600 ms apart.
       const seen = new Map<string, JobRow>()
-      for (const listUrl of adapter.listUrls) {
-        const html = await fetchHtml(listUrl)
-        for (const raw of adapter.parseList(html)) {
-          if (!raw.url || !raw.title) continue
-          const row = toRow(adapter.portal, adapter.firm, raw)
-          if (!seen.has(row.url)) seen.set(row.url, row)
-        }
-        // Polite crawl: small gap between a portal's pages.
-        await new Promise(r => setTimeout(r, 600))
-      }
+      for (const raw of await collectJobs(adapter, politeFetcher(600))) seen.set(raw.url, toRow(adapter.portal, adapter.firm, raw))
       result.found = seen.size
       totalFound += seen.size
 
