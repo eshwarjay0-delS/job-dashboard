@@ -164,6 +164,10 @@ Deployment prerequisites for unattended operation: configure an approved Meta te
 Remaining acceptance: connected-account browser verification, approved template configuration, scheduler setup/capacity validation, delivery receipt visibility and actual mobile delivery. General Gmail folders, draft autosave and executable follow-up automation remain separate unfinished work.
 
 
+### Missing-message sync recovery — 20 October 2026
+
+If a listed message returns 404 during metadata retrieval, skip that absent message and finish storing the remaining messages before advancing the cursor. Do not treat authentication failures, rate limits, transport failures or server errors as deletions: those keep the old cursor for retry. This applies to initial snapshots and incremental history; it does not enable phone notifications or change consent. Evidence: `docs/research/gmail-missing-message-sync.md`.
+
 ### Browser reply recovery
 
 Reply recipients, subject, body and attachments are saved on the current browser, separated by authenticated user, receiving Gmail account and conversation. Save and close writes before closing; storage failure shows an actionable message instead of claiming success. Write my own preserves the current reply. Only a confirmed successful send clears its saved copy. Clearing browser data removes these drafts. This is browser recovery, not Gmail Drafts synchronization; cross-device saving remains unfinished.

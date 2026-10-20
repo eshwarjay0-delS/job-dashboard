@@ -59,17 +59,18 @@ test('concurrent delivery calls reserve each event only once',async()=>{
   const h=deliveryHarness();await Promise.all([h.mod.deliverInboxUpdates('user'),h.mod.deliverInboxUpdates('user')]);assert.equal(h.calls(),8)
 })
 
-function collectorHarness({expired=false,metadataFail=false}={}) {
+function collectorHarness({expired=false,metadataFail=false,metadataStatus=0,incremental=false}={}) {
   const rows=new Map();const events=[];const paths=[]
-  if(expired)rows.set('updates/cursors/key.json',JSON.stringify({history:'old',checkedAt:0}))
+  if(expired||incremental)rows.set('updates/cursors/key.json',JSON.stringify({history:'old',checkedAt:0}))
   const mod=load('gmail-updates',{
     '@/lib/googleWorkspace':{listGoogleWorkspaceAccounts:async()=>[{id:'a',google_email:'a@example.com',gmail_enabled:true},{id:'b',google_email:'b@example.com',gmail_enabled:true}],getGoogleWorkspaceAccessToken:async(_,id)=>{assert.equal(id,'a');return 'token'}},
     '@/lib/storage':{blob:{getText:async k=>rows.get(k)||null,put:async(k,v)=>rows.set(k,v)}},
     '@/lib/mail-update-store':{accountKey:()=> 'key',updateRoot:()=> 'updates/',updatePreferences:async()=>prefs,storeUpdate:async(_,e)=>{events.push(e)}},
   },{fetch:async url=>{paths.push(url);let data
-    if(url.includes('history?'))return {ok:false,status:404,json:async()=>({})}
+    if(url.includes('history?'))return incremental?{ok:true,json:async()=>({historyId:'100',history:[{messagesAdded:[{message:{id:'gone',labelIds:['INBOX']}},{message:{id:'m',labelIds:['INBOX']}}]}]})}:{ok:false,status:404,json:async()=>({})}
     if(url.endsWith('profile'))data={historyId:'100'}
-    else if(url.includes('messages?'))data={messages:[{id:'m'}]}
+    else if(url.includes('messages?'))data={messages:metadataStatus?[{id:'gone'},{id:'m'}]:[{id:'m'}]}
+    else if(url.includes('/gone?')&&metadataStatus)return {ok:false,status:metadataStatus,json:async()=>({})}
     else {if(metadataFail)throw Error('metadata failed');data={id:'m',threadId:'t',labelIds:['INBOX'],internalDate:String(now),payload:{headers:[{name:'Subject',value:'Hi'}]}}}
     return {ok:true,json:async()=>data}
   }})
@@ -84,6 +85,24 @@ test('expired Gmail history recovers without blasting old messages to mobile',as
 })
 test('failed metadata fetch does not advance durable Gmail cursor',async()=>{
   const h=collectorHarness({metadataFail:true});const result=await h.mod.collectInboxUpdates('user');assert.equal(result.issues.length,1);assert.equal(h.rows.has('updates/cursors/key.json'),false)
+})
+
+test('a vanished message cannot pin initial or incremental sync to the same cursor',async()=>{
+  for(const incremental of [false,true]){
+    const h=collectorHarness({metadataStatus:404,incremental});const result=await h.mod.collectInboxUpdates('user')
+    assert.equal(result.issues.length,0)
+    assert.equal(h.events.length,1)
+    assert.equal(h.events[0].message,'m')
+    assert.equal(h.events[0].initial,!incremental)
+    assert.equal(JSON.parse(h.rows.get('updates/cursors/key.json')).history,'100')
+  }
+})
+test('authentication, rate limits and server errors retain the original cursor for retry',async()=>{
+  for(const metadataStatus of [401,403,429,500,503]){
+    const h=collectorHarness({metadataStatus,incremental:true});const result=await h.mod.collectInboxUpdates('user')
+    assert.equal(result.issues.length,1)
+    assert.equal(JSON.parse(h.rows.get('updates/cursors/key.json')).history,'old')
+  }
 })
 
 test('sender mute and disconnected inbox prevent mobile sends',async()=>{
