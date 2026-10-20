@@ -85,3 +85,15 @@ test('with one resume there is nothing to choose: no model is asked and no agree
   assert.equal(await agentPick({ keys: { gemini: 'g' }, jd: 'x', ranked: one }), null)
   assert.equal(asked, 0)
 })
+
+test('the picks are read back newest first, with the role and what was named', async () => {
+  const store = new Map()
+  const blob = { getText: async k => store.get(k) ?? null, put: async (k, v) => { store.set(k, v) } }
+  const { logPick, readPicks, pickAgreement } = load('src/lib/library-agent.ts', { '@/lib/storage': { blob }, '@/lib/llm': {} })
+  assert.equal((await readPicks('u1')).length, 0)
+  for (let i = 1; i <= 3; i++) await logPick('u1', { at: i, job: `j${i}`, email: 'a@x.com', agent: null, code: 'c', used: `u${i}`, agree: null, role: 'Security Analyst', titled: i, ...(i === 3 ? { hint: 'Cybersecurity Analyst' } : {}) })
+  const got = await readPicks('u1', 2)
+  assert.equal(got.map(p => p.job).join(','), 'j3,j2')
+  assert.equal(got[0].hint, 'Cybersecurity Analyst'); assert.equal(got[0].role, 'Security Analyst'); assert.equal(got[1].titled, 2)
+  assert.equal((await pickAgreement('u1')).picks, 3)
+})

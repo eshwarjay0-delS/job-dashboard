@@ -82,6 +82,15 @@ export async function logPick(userId: string, entry: PickLog): Promise<void> {
   } catch { /* the log is for deciding later; the resume still goes out */ }
 }
 
+/** The newest `most` picks, newest first. */
+export async function readPicks(userId: string, most = 50): Promise<PickLog[]> {
+  try {
+    const raw = await blob.getText(logKey(userId))
+    const all = raw ? (JSON.parse(raw) as PickLog[]) : []
+    return (Array.isArray(all) ? all : []).slice(-Math.max(1, most)).reverse()
+  } catch { return [] }
+}
+
 /** How often the agent and the code chose the same resume, over the picks where both chose. */
 export async function pickAgreement(userId: string): Promise<{ picks: number; compared: number; agreed: number }> {
   try {
