@@ -69,7 +69,7 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
       readShelf: async () => ({ uses: {} }),
       relOf: (dir, abs) => path.relative(dir, abs).split(path.sep).join('/'),
     },
-    '@/lib/resume-library': { jobKeyOf: () => 'job-1' },
+    '@/lib/resume-library': { jobKeyOf: jd => (jd === JD ? 'job-1' : `job-${String(jd).length}`) },
     '@/lib/library-agent': { agentPick: async () => { if (hold) await hold; return agent }, logPick: async (u, e) => { logs.push(e) } },
     '@/lib/keywords': { extractKeywords: () => ['burp suite', 'owasp'] },
     '@/lib/resumeOrganization': { resumeEmails: t => [...new Set(t.match(/[\w.]+@[\w.]+\.\w+/g) || [])] },
@@ -184,15 +184,50 @@ test('a message that arrives while a job is being picked is kept, and the same j
   await b.wa.handle(SESSION, { type: 'text', id: 'm2', text: { body: `${JD}
 1` } }, await b.wa.loadSession(SESSION), 'user1')
   assert.match(b.said.at(-1), /already making the resume for this job/)
-  // Another job description waiting for its email meanwhile.
+  // Another job description meanwhile, with no number: it starts from the email just chosen, without asking again
+  // (19 Oct 2026: asked once, then remembered).
   const other = 'Cloud Security Engineer for AWS guardrails, IAM reviews, GuardDuty triage and Terraform policy as code.'
-  await b.wa.handle(SESSION, { type: 'text', id: 'm3', text: { body: other } }, await b.wa.loadSession(SESSION), 'user1')
+  const third = b.wa.handle(SESSION, { type: 'text', id: 'm3', text: { body: other } }, await b.wa.loadSession(SESSION), 'user1')
+  await new Promise(r => setTimeout(r, 20))
+  assert.equal(b.said.filter(t => /^On it: starting from your \*a@x\.com\* resumes\.\n_Wrong email\? Reply \*use 2\* for b@y\.com\._$/.test(t)).length, 2,
+    'each job taken says its email and how to switch; the copy already being made says nothing of the kind')
   gate.release()
   await first
-  assert.equal(b.runs.length, 1)
+  await third
+  assert.equal(b.runs.length, 2, 'two different jobs, each made once')
   const now = await b.wa.loadSession(SESSION)
-  assert.equal(now.pending?.jdId, 'm3', 'the waiting question survived the first job starting')
-  assert.deepEqual(b.events.slice(-2), ['delivered', 'counted'], 'a pick is counted once its resume is delivered')
+  assert.equal(now.pending, undefined, 'nothing was asked: the email was remembered')
+  assert.equal(now.last?.email, 'a@x.com')
+  // The two runs interleave; each pick is counted only after a resume went out, never before.
+  assert.deepEqual([...b.events].sort(), ['counted', 'counted', 'delivered', 'delivered'])
+  assert.equal(b.events[0], 'delivered', 'a pick is counted once its resume is delivered')
+})
+
+test('asked once, then remembered: the next job starts at once from that email, and "use 2" switches it', async () => {
+  const b = bot()
+  const N = '15550007'
+  await b.wa.handle(N, { type: 'text', id: 'm1', text: { body: JD } }, {}, 'user1')
+  assert.match(b.said.at(-1), /Which email is this job for\?/, 'never picked: asked, not the first email silently')
+  await b.wa.handle(N, { type: 'text', id: 'm2', text: { body: '1' } }, await b.wa.loadSession(N), 'user1')
+  assert.equal(b.runs.length, 1)
+  const other = 'Cloud Security Engineer for AWS guardrails, IAM reviews, GuardDuty triage and Terraform policy as code.'
+  await b.wa.handle(N, { type: 'text', id: 'm3', text: { body: other } }, await b.wa.loadSession(N), 'user1')
+  assert.equal(b.runs.length, 2, 'the second job is not asked about')
+  assert.ok(b.said.some(t => t.startsWith('On it: starting from your *a@x.com* resumes.')))
+
+  await b.wa.handle(N, { type: 'text', id: 'm4', text: { body: 'use 2' } }, await b.wa.loadSession(N), 'user1')
+  assert.match(b.said.at(-1), /every job now starts from your \*b@y\.com\* resumes/)
+  assert.equal((await b.wa.loadSession(N)).last?.email, 'b@y.com')
+  // The next job goes to b@y.com: it holds no resume in this stand-in, which the bot says plainly.
+  await b.wa.handle(N, { type: 'text', id: 'm5', text: { body: `${other} Also Wiz and Prisma Cloud.` } }, await b.wa.loadSession(N), 'user1')
+  assert.ok(b.said.some(t => t.startsWith('On it: starting from your *b@y.com* resumes.')))
+  assert.match(b.said.at(-1), /no resume of \*b@y\.com\*/)
+  assert.equal(b.runs.length, 2)
+
+  // A number under the job description wins for that job and is remembered.
+  await b.wa.handle(N, { type: 'text', id: 'm6', text: { body: `${other} Kubernetes too.\n1` } }, await b.wa.loadSession(N), 'user1')
+  assert.equal(b.runs.length, 3)
+  assert.equal((await b.wa.loadSession(N)).last?.email, 'a@x.com')
 })
 
 test('a resume sent with the job post is filed in Files once, and what is made from it is filed beside it', async () => {

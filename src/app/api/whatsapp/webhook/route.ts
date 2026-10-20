@@ -197,7 +197,7 @@ const HELP = [
   "",
   "*Want changes?* Reply to a resume I sent and type what to change, e.g. _add more Terraform_. Each update builds on the last.",
   "",
-  "Say _use my Houston resume_ or _use my St. Louis resume_ to switch profiles.",
+  "I ask once which email a job is for and remember it. Reply *use 1* or *use 2* any time to switch.",
   "",
   "Commands: *redo* · *reset* · *status*",
 ].join("\n")
@@ -302,7 +302,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       return sendText(from, "Cleared. Send a new job description and resume.")
     }
     if (cmd === "redo") {
-      if (!session.last) return sendText(from, "There is no job made from your Files to make again. Paste a job description.")
+      if (!session.last?.jd) return sendText(from, "There is no job made from your Files to make again. Paste a job description.")
       return fromLibrary(from, { jd: session.last.jd, jdId: `redo-${Date.now()}` }, session.last.email, userId, true)
     }
     if (cmd === "status") {
@@ -321,8 +321,9 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
         const cur = await loadSession(from)
         if (cur.pending?.jdId === job.jdId) delete cur.pending
         if (cur.jdId === job.jdId) { delete cur.jd; delete cur.jdId }
+        remember(cur, email)
         await saveSession(from, cur)
-        return fromLibrary(from, job, email, userId)
+        return fromLibrary(from, job, email, userId, false, session.pending.slots)
       }
       if (!replyTo) return sendText(from, askWhichEmail(session.pending.slots))
     }
@@ -333,6 +334,17 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     // Short message that's not a command — reply conversationally, not robotically.
     if (text.length < 60) {
       const lower = text.toLowerCase()
+      // "use 2", "use jayeshwar44@gmail.com", "switch to 1": the email every next job starts from.
+      if (/^(?:use|switch|profile|email)\b/.test(lower)) {
+        const { slots } = await emailSlots(userId)
+        const email = choiceIn(text.replace(/^(?:switch(?:\s+to)?|profile|email)\s+/i, ""), slots)
+        if (email) {
+          const cur = await loadSession(from)
+          remember(cur, email)
+          await saveSession(from, cur)
+          return sendText(from, `Got it: every job now starts from your *${email}* resumes. Send a job description whenever you're ready.`)
+        }
+      }
       // Natural profile switching: "use my Houston resume", "switch to st louis", etc.
       if (/houston/.test(lower) && /resume|profile|use|switch/.test(lower)) {
         const { slots } = await emailSlots(userId)
@@ -372,22 +384,24 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     // 2026, his ask: "if the user had decided to send a resume ... just prepare the resume the usual way").
     await new Promise(r => setTimeout(r, PAIR_WAIT_MS))
     if ((await loadSession(from)).jdId !== String(msg.id)) return
-    // Fast routine: JD arrives → tailor immediately with last-used resume. No waiting, no questions.
-    // If a .docx arrives within a moment, it starts its own run. Otherwise we go with what we know.
-    const cur0 = await loadSession(from)
-    const lastEmail = cur0.last?.email || ""
-    const { slots, failed } = await emailSlots(userId)
+    // Which email (profile) the job is for: a number under the job description; else the one this number used last,
+    // when it still holds resumes; else the only one. Otherwise asked at once, and the answer is remembered. Every
+    // start names the email and how to switch. Until 19 Oct 2026 someone who had never picked got the first email
+    // silently (owner: "resume picking ... wasn't mapped correctly").
+    const { slots, sure, failed } = await emailSlots(userId)
     if (failed) return sendText(from, "Got the job description, but I could not read your MarketFit Files just now. Send it again in a minute, or send your resume as a *.docx* file with it.")
     if (!live(slots).length) return sendText(from, "Got the job description. Your MarketFit Files hold no resume yet, so send your resume as a *.docx* file.")
-    // Use last email silently. If never used before and multiple emails, default to the first.
-    const email = lastEmail || (live(slots).length >= 1 ? live(slots)[0] : "")
+    // A number under the job description is trusted only when the kept numbering was read: otherwise "2" might not be
+    // the email the person learned as 2, so the bot asks.
+    const said = sure ? readChoice(text, slots) : { email: "", rest: text }
     const cur = await loadSession(from)
     if (cur.jdId !== String(msg.id) || cur.resumePath) return   // a newer message or a resume took over meanwhile
+    const email = said.email || remembered(cur, slots) || (live(slots).length === 1 ? live(slots)[0] : "")
     if (email) {
       delete cur.jd; delete cur.jdId
+      remember(cur, email)
       await saveSession(from, cur)
-      await sendText(from, "On it — tailoring your resume now.")
-      return fromLibrary(from, { jd: text, jdId: String(msg.id) }, email, userId)
+      return fromLibrary(from, { jd: said.email ? said.rest : text, jdId: String(msg.id) }, email, userId, false, slots)
     }
     cur.pending = { jd: text, jdId: String(msg.id), slots, at: Date.now() }
     await saveSession(from, cur)
@@ -550,6 +564,24 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
 }
 
 // ── From the person's Files ─────────────────────────────────────────────────────
+/** The email this number used last, while it still holds resumes. */
+function remembered(session: Session, slots: string[]): string {
+  const was = String(session.last?.email || "").toLowerCase()
+  return was && live(slots).includes(was) ? was : ""
+}
+
+/** Every next job starts from this email until the person says otherwise. A job made before stays redo-able. */
+function remember(session: Session, email: string) {
+  session.last = { jd: session.last?.jd || "", email, at: Date.now() }
+}
+
+/** Said the moment a job is taken: which email it starts from, and how to switch when there is more than one. */
+function startLine(email: string, slots: string[]): string {
+  const others = slots.map((e, i) => ({ e, n: i + 1 })).filter(o => o.e && o.e !== email)
+  return [`On it: starting from your *${email}* resumes.`,
+    ...(others.length ? [`_Wrong email? Reply ${others.slice(0, 3).map(o => `*use ${o.n}* for ${o.e}`).join(", ")}._`] : [])].join("\n")
+}
+
 // The emails a person's resumes carry, numbered for good (library-pick-store.ts).
 async function emailSlots(userId: string): Promise<{ slots: string[]; sure: boolean; failed: boolean }> {
   try {
@@ -570,20 +602,13 @@ async function usesOf(userDir: string, email: string, ranked: Ranked[]): Promise
   return all
 }
 
-/** Most recently used resume path for an email, from the pick log. Simple routine: use what worked last time. */
-async function recentPickFor(userDir: string, email: string): Promise<string | null> {
-  // The pick log is keyed by userId, not userDir. Session.last.email reuse
-  // already gives us the routine behavior, so code ranking decides.
-  return null
-}
-
 /**
  * A job made from the closest resume of one email in the person's Files. Made before for this job: sent again as it is
  * (no AI, nothing new saved), unless `redo`. Otherwise the AI agent and the code each pick, the agent's pick is used
  * when it names a real resume, the file is opened and its email read once more before it is used, and the pick is
  * logged and counted.
  */
-async function fromLibrary(from: string, job: { jd: string; jdId: string }, email: string, userId: string, redo = false) {
+async function fromLibrary(from: string, job: { jd: string; jdId: string }, email: string, userId: string, redo = false, slots?: string[]) {
   const began = Date.now()
   const userDir = path.join(USER_RESUMES_DIR, userId)
   if (!redo) {
@@ -599,6 +624,8 @@ async function fromLibrary(from: string, job: { jd: string; jdId: string }, emai
     if (held.at && Date.now() - held.at < IN_FLIGHT_MS) return sendText(from, "I am already making the resume for this job. It will arrive in this chat.")
     await blob.put(flightKey, JSON.stringify({ at: Date.now(), token }))
   }
+  // Said the moment the job is taken, before the pick and the rewrite: which email, and how to switch.
+  if (slots) await sendText(from, startLine(email, slots))
   try {
     return await pickAndMake(from, job, email, userId, userDir, redo, began)
   } finally {
@@ -614,28 +641,28 @@ async function pickAndMake(from: string, job: { jd: string; jdId: string }, emai
   const { ranked } = rankFor(candidates, email, extractKeywords(job.jd))
   if (!ranked.length) return sendText(from, `Your Files hold no resume of *${email}* to start from. Send that resume as a *.docx* file with the job description.`)
 
-  // Simple routine: use the most recently used resume for this email. No AI guessing.
-  // The pick log records what was used; the newest entry wins. Falls back to code ranking.
+  // The AI agent picks from the closest few, the code's ranking stands beside it, and the agent's pick is used when it
+  // names a real resume of this email. Turned off in the 19 Oct "simple routine" and back the same day (owner: "I was
+  // expecting agent always working internally with that WhatsApp chat for everyone").
+  const kwKeys = await keysFor("resume-keywords", () => resolveKeys({}))
+  const relOfAbs = (abs: string) => relOf(userDir, abs)
+  const ai = await agentPick({ keys: kwKeys, jd: job.jd, ranked, uses: await usesOf(userDir, email, ranked), relOf: relOfAbs }).catch(() => null)
+  const order = ai ? [ranked[ai.index], ...ranked.filter((_, i) => i !== ai.index)] : ranked
   let picked: Ranked | null = null
-  const recent = await recentPickFor(userDir, email).catch(() => null)
-  if (recent) {
-    const match = ranked.find(r => r.candidate.path === recent)
-    if (match) picked = match
-  }
-  if (!picked) {
-    for (const one of ranked.slice(0, 8)) {
-      const bytes = await readPath(one.candidate.path).catch(() => null)
-      if (!bytes) continue
-      const emails = resumeEmails(await extractText(bytes).catch(() => ""))
-      if (emails.length === 1 && emails[0] === email) { picked = one; break }
-    }
+  for (const one of order.slice(0, 8)) {
+    const bytes = await readPath(one.candidate.path).catch(() => null)
+    if (!bytes) continue
+    const emails = resumeEmails(await extractText(bytes).catch(() => ""))
+    if (emails.length === 1 && emails[0] === email) { picked = one; break }
   }
   if (!picked) return sendText(from, `I could not open a resume in your Files that carries *${email}*. Send that resume as a *.docx* file with the job description.`)
 
-  const rel = relOf(userDir, picked.candidate.path)
-  await logPick(userId, { at: Date.now(), job: jobKeyOf(job.jd), email,
-    agent: null, code: rel, used: rel, agree: null })
-  const budget = Math.max(120_000, TAILOR_BUDGET_MS - (Date.now() - began))
+  const rel = relOfAbs(picked.candidate.path)
+  await logPick(userId, { at: Date.now(), job: jobKeyOf(job.jd), email, agent: ai ? relOfAbs(ranked[ai.index].candidate.path) : null,
+    code: relOfAbs(ranked[0].candidate.path), used: rel, agree: ai ? ai.index === 0 : null, ...(ai?.why ? { why: ai.why } : {}), ...(ai?.by ? { by: ai.by } : {}) })
+  // The pick happens inside the same 300 s function as the rewrite (after up to PAIR_WAIT_MS of waiting for a paired
+  // file): the rewrite gets what is left, so the file is still sent in time.
+  const budget = Math.max(120_000, TAILOR_BUDGET_MS - PAIR_WAIT_MS - (Date.now() - began))
   return generate(from, { jd: job.jd, jdId: job.jdId, resumePath: picked.candidate.path, resumeName: picked.candidate.name }, userId, budget,
     { userDir, email, said: saidOf(picked), depth: picked.candidate.depth, rel, abs: picked.candidate.path, ...(redo ? { redo } : {}) })
 }

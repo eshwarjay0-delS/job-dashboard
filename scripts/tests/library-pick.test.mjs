@@ -159,20 +159,24 @@ test('whose a resume is comes from the email written in it, not from its folder 
   assert.ok(store.includes('const depth: 0 | 1 | 2 = !isTailoredName(parts[parts.length - 1]) ? 0 : known && known.depth !== 2 ? 1 : 2'))
 })
 
-test('stable WhatsApp bot requires a fresh DOCX and JD per request without automatic library selection', () => {
+// Until 19 Oct 2026 this pinned the 15 Oct "fresh DOCX every time, never from Files" bot. The owner reversed that
+// (13-19 Oct: a job starts from the right email's library, and "Files weren't saved and mapped properly"), so it pins
+// today's design; the behaviour itself is tested in whatsapp-library.test.mjs.
+test('WhatsApp bot: a resume sent wins, otherwise the email is asked once and remembered, and results go to Files', () => {
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
   assert.ok(bot.includes('session.jd = text'))
-  assert.ok(bot.includes('if (!session.resumePath) return sendText(from, "Got the job description. Now send your resume'))
-  assert.ok(bot.includes('if (!session.jd) return sendText(from, `Saved *${session.resumeName}*. Now paste the job description.`)'))
+  assert.ok(bot.includes('if (session.resumePath) return generate(from, session, userId)'), 'a resume sent with the job is used')
+  assert.ok(bot.includes('await new Promise(r => setTimeout(r, PAIR_WAIT_MS))'), 'a resume arriving a moment after the job still wins')
+  assert.ok(bot.includes('const email = said.email || remembered(cur, slots) || (live(slots).length === 1 ? live(slots)[0] : "")'))
+  assert.ok(bot.includes('return sendText(from, askWhichEmail(slots))'), 'never picked and more than one email: asked')
+  assert.ok(!/default to the first/i.test(bot), 'the first email is never used silently')
   assert.ok(bot.includes('await saveSession(from, { seen: session.seen })'))
-  assert.ok(bot.includes('const dest = path.join(INBOX_DIR, digits(from), safe)'))
-  assert.ok(bot.includes('userResumeDir: path.join(INBOX_DIR, digits(from))'))
+  assert.ok(bot.includes('userResumeDir: files ? files.userDir : path.join(INBOX_DIR, digits(from))'))
   assert.ok(bot.includes('await deletePath(session.resumePath).catch(() => {})'))
   assert.ok(bot.includes('const sender = await resolveWhatsAppUser(from)'))
   assert.ok(bot.includes('const claim = await claimLinkCode(from, linking[1])'))
-  assert.ok(!bot.includes('askWhichEmail('))
-  assert.ok(!bot.includes('selectedEmailSource('))
-  assert.ok(!bot.includes('saveTailored('))
+  assert.ok(bot.includes('saveTailored('), 'every resume made is filed in Files')
+  assert.ok(bot.includes('agentPick('), 'the AI agent picks the resume inside the email')
   assert.ok(!bot.includes('archiveGeneratedResume('))
   assert.ok(!bot.includes('resume_documents'))
   assert.ok(bot.includes('return refine(from, replyTo, text, userId)'))

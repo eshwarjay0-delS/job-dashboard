@@ -131,16 +131,19 @@ test('a record read back from storage cannot point outside the library', () => {
   assert.equal(shelfKey('', ''), `${NO_EMAIL} / ${NO_CATEGORY}`)
 })
 
-test('WhatsApp rollback processes a JD and resume with private temporary files and does not archive', () => {
+// Until 19 Oct 2026 this also said the bot files nothing; it now files every resume sent and made in the person's Files
+// (owner, 19 Oct: "Files weren't saved and mapped properly"). The working copy stays private and temporary.
+test('WhatsApp works on a private temporary copy of a resume sent, and files it and its result in Files once', () => {
   const bot = read('src/app/api/whatsapp/webhook/route.ts')
   assert.ok(bot.includes('const INBOX_DIR = path.join(DATA_DIR, "whatsapp", "inbox")'))
   assert.ok(bot.includes('const dest = path.join(INBOX_DIR, digits(from), `${randomBytes(8).toString("hex")}-${safe}`)'))
-  assert.ok(bot.includes('userResumeDir: path.join(INBOX_DIR, digits(from))'))
+  assert.ok(bot.includes('userResumeDir: files ? files.userDir : path.join(INBOX_DIR, digits(from))'))
   assert.ok(bot.includes('session.jd = text') && bot.includes('session.resumePath = dest'))
   assert.ok(bot.includes('await saveSession(from, { seen: session.seen })'))
   assert.ok(bot.includes('await deletePath(session.resumePath).catch(() => {})'))
   assert.ok(bot.includes('if (s.version !== 3) return { version: 3, seen: s.seen?.slice(-40) }'))
-  assert.ok(!bot.includes('saveTailored('))
+  assert.ok(bot.includes('saveUpload({ userDir: filesDir, bytes, filename: safe, kind: "docx" })'), 'the resume sent is filed once')
+  assert.ok(bot.includes('saveTailored('), 'what is made is filed beside it')
   assert.ok(!bot.includes('archiveGeneratedResume('))
   assert.ok(!bot.includes('collectHeld('))
   assert.ok(!bot.includes('recoverLibraryResume('))
