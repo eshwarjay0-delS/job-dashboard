@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useDialogs } from "@/components/ui/dialog-provider"
+import FolderBrowser from "@/components/FolderBrowser"
 
 // Resume-library entry shape. This view was folded into the resume hub, so its
 // sibling ./page is now a redirect and no longer exports this type — keep it local.
@@ -150,24 +151,10 @@ function FolderRow({ node, depth, relpath, ctx }: { node: TreeNode; depth: numbe
 }
 
 function LibraryTree({ files, folders, checked, onToggle }: { files: ResumeFile[]; folders: string[]; checked: Set<string>; onToggle: (k: string) => void }) {
-  const root = buildTree(files, folders)
-  const ctx: TreeCtx = { checked, onToggle }
+  // Windows-Explorer navigation (owner, 20 Oct 2026): top-level folders, click to
+  // go in, breadcrumb to come back — not an expanding tree.
   if (files.length === 0 && folders.length === 0) return null
-  return (
-    <div className="space-y-0.5">
-      {[...root.folders.values()].filter(c => isEmailFolder(c.name)).map(person => (
-        <section key={person.name} aria-label={person.name} style={{ marginBottom: 14 }}>
-          <h3 style={{ margin: "8px 0 6px", padding: "0 8px", fontSize: 16, fontWeight: 700, color: "var(--text)", overflowWrap: "anywhere" }}>
-            {person.name} <span style={{ fontWeight: 500, fontSize: 13, color: "var(--text-soft)" }}>· {countFiles(person)} {countFiles(person) === 1 ? "file" : "files"}</span>
-          </h3>
-          {[...person.folders.values()].map(c => <FolderRow key={c.name} node={c} depth={0} relpath={`${person.name}/${c.name}`} ctx={ctx} />)}
-          {person.files.map(f => <FileRow key={f.id} file={f} depth={0} ctx={ctx} />)}
-        </section>
-      ))}
-      {[...root.folders.values()].filter(c => !isEmailFolder(c.name)).map(c => <FolderRow key={c.name} node={c} depth={0} relpath={c.name} ctx={ctx} />)}
-      {root.files.map(f => <FileRow key={f.id} file={f} depth={0} ctx={ctx} />)}
-    </div>
-  )
+  return <FolderBrowser files={files} folders={folders} mode="browse" checked={checked} onToggle={onToggle} />
 }
 
 // ── Upload entry ───────────────────────────────────────────────────────────────
