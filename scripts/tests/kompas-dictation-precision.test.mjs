@@ -63,6 +63,63 @@ test("whisper prompt carries the previous line and the security lexicon, within 
 
 test("VAD guards are in the shipped source", () => {
   assert.ok(src.includes("rms < threshold * 0.7"), "noise floor adapts only to clear background");
-  assert.ok(src.includes("cap.speechMs >= 60"), "partial speech is rescued at the idle recycle");
+  assert.ok(src.includes("speechMs >= 60"), "partial speech is rescued at the idle recycle");
   assert.ok(src.includes("fixTerms(fixPhrases(text))"), "phrase fixes run ahead of fixTerms on every final line");
+});
+
+vm.runInContext(
+  extract("function dictateStep", "function vadStep") +
+  extract("function dictationRetry", "// Speech activity gates") +
+  extract("function heardDraft", "function onTranscript") +
+  "\nthis.dictateStep = dictateStep; this.dictationRetry = dictationRetry; this.heardDraft = heardDraft;",
+  ctx
+);
+
+test("level 1: a scream is speech immediately and pulls a climbed noise floor down", () => {
+  const climbed = { noise: 0.05, speechMs: 0, voiced: false, lastVoice: 0, lastTick: 0, segStart: 1000 };
+  const step = ctx.dictateStep(climbed, 0.2, 1020, { SILENCE_MS: 1100, MAX_SEG_MS: 28000, IDLE_RECYCLE_MS: 6000 });
+  assert.equal(step.scream, true);
+  assert.equal(step.voiced, true);
+  assert.ok(step.noise < 0.05, `floor stayed high: ${step.noise}`);
+});
+
+test("level 2: a short start is kept at the idle recycle", () => {
+  const soft = { noise: 0.001, speechMs: 70, voiced: false, lastVoice: 1000, lastTick: 7000, segStart: 0 };
+  const step = ctx.dictateStep(soft, 0.001, 7000, { SILENCE_MS: 1100, MAX_SEG_MS: 28000, IDLE_RECYCLE_MS: 6000 });
+  assert.equal(step.action, "rescue");
+  const quiet = ctx.dictateStep({ noise: 0.001, speechMs: 0, voiced: false, lastVoice: 0, lastTick: 7000, segStart: 0 }, 0.0004, 7000, { SILENCE_MS: 1100, MAX_SEG_MS: 28000, IDLE_RECYCLE_MS: 6000 });
+  assert.equal(quiet.action, "drop");
+});
+
+test("level 3: PKI phrases are repaired and the lexicon names them", () => {
+  assert.ok(ctx.fixPhrases("how does v cert differ from calling venafi tpp").includes("V-Cert"));
+  assert.ok(ctx.fixPhrases("how does v cert differ from calling venafi tpp").includes("Venafi TPP"));
+  assert.ok(ctx.fixPhrases("the luna hsm partition rejected the pkcs 10").includes("Luna HSM"));
+  assert.ok(ctx.fixPhrases("the luna hsm partition rejected the pkcs 10").includes("PKCS#10"));
+  assert.equal(ctx.fixPhrases("please control her access to the staging domain"), "please control her access to the staging domain");
+  const p = ctx.whisperPrompt();
+  assert.ok(p.includes("V-Cert") && p.includes("Venafi TPP") && p.includes("Luna HSM"), p);
+});
+
+test("level 4: real speech with no words is decoded once more, and a bare prompt drops the previous line", () => {
+  assert.equal(ctx.dictationRetry("", 400, 0), true);
+  assert.equal(ctx.dictationRetry("how does V-Cert work", 400, 0), false);
+  assert.equal(ctx.dictationRetry("", 400, 1), false);
+  assert.equal(ctx.dictationRetry("", 40, 0), false);
+  const bare = ctx.whisperPrompt({ bare: true });
+  assert.equal(bare.includes("Kerberos authentication works"), false);
+  assert.ok(bare.includes("V-Cert"));
+});
+
+test("level 5: a greeting is not the question, and a fragment stays on the question already showing", () => {
+  assert.equal(ctx.heardDraft([{ who: "Them", text: "Hello." }], "How do you discover certificates?"), "");
+  assert.equal(ctx.heardDraft([{ who: "You", text: "I would start by checking the chain" }], "How do you discover certificates?"), "");
+  assert.equal(
+    ctx.heardDraft([{ who: "Them", text: "Venafi" }], "How do you discover certificates?"),
+    "How do you discover certificates — Venafi",
+  );
+  assert.equal(
+    ctx.heardDraft([{ who: "Them", text: "How does V-Cert differ from the direct API?" }], "How do you discover certificates?"),
+    "How does V-Cert differ from the direct API?",
+  );
 });

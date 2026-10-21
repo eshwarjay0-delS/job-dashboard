@@ -1102,6 +1102,7 @@ function primeAudio() {
   try {
     if (!audioCtx || audioCtx.state === "closed") audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+    window.__kompasAudio = audioCtx;
   } catch {}
 }
 document.addEventListener("visibilitychange", () => {
@@ -1265,7 +1266,7 @@ function endSegment(cap, keep, restart = true, force = false) {
   rec.onstop = () => {
     if (!keep || (speech < VAD.MIN_SPEECH_MS && !force)) return settle();
     const blob = new Blob(chunks, { type: rec.mimeType || MIME || "audio/webm" });
-    if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt }).then(settle, settle); else settle();
+    if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech }).then(settle, settle); else settle();
   };
   try { rec.stop(); } catch { settle(); }
   const watchdog = setTimeout(() => {
@@ -1292,24 +1293,43 @@ async function flushHeard(maxMs = 43000) {
     if (results.some(result => result === false)) throw new Error("Some speech could not be transcribed. Please repeat it or type it before requesting an answer.");
   } finally { clearTimeout(timer); }
 }
+// Five dictation levels, each one decided before the next is trusted.
+// 1. A scream is speech on the first sample, and it pulls a climbed floor back down.
+// 2. A short start (a question word, a soft onset) is transcribed at the idle recycle, not dropped.
+// 3. Phrase repair and the security lexicon live in fixPhrases and whisperPrompt.
+// 4. An empty decode of real speech is sent once more with a bare prompt.
+// 5. heardDraft shows what landed, and a greeting does not become the question.
+function dictateStep(cap, rms, now, vad) {
+  const V = vad || { SILENCE_MS: 1100, MAX_SEG_MS: 28000, IDLE_RECYCLE_MS: 6000 };
+  let noise = Number(cap.noise) || 0.001, speechMs = cap.speechMs || 0, voiced = !!cap.voiced;
+  let lastVoice = cap.lastVoice || 0, lastTick = cap.lastTick || 0;
+  const scream = rms >= 0.08 || (noise > 0.008 && rms > noise * 6);
+  if (scream && noise > rms * 0.2) noise = Math.max(0.001, rms * 0.12);
+  const threshold = Math.max(0.003, noise * 2.5);
+  const speaking = scream || rms > threshold;
+  if (!speaking && rms < threshold * 0.7) noise = noise * 0.995 + rms * 0.005;
+  const dt = lastTick ? Math.min(100, now - lastTick) : 20;
+  lastTick = now;
+  if (speaking) { lastVoice = now; speechMs += dt; if (scream || speechMs > 120) voiced = true; }
+  const segLen = now - (cap.segStart == null ? now : cap.segStart);
+  let action = "listen";
+  if (voiced && now - lastVoice > V.SILENCE_MS) action = "end";
+  else if (segLen > V.MAX_SEG_MS) action = voiced ? "end" : "drop";
+  else if (!voiced && segLen > V.IDLE_RECYCLE_MS) action = speechMs >= 60 ? "rescue" : "drop";
+  return { noise, speechMs, voiced, lastVoice, lastTick, speaking, scream, action };
+}
 function vadStep(cap, rms) {
   if (cap.stopped || !running) return;
   const now = performance.now();
   cap.lastVadAt = now;
   if (rms > 0.004) { cap.lastAudibleAt = now; cap.zeroWarned = false; }
-  const dt = cap.lastTick ? Math.min(100, now - cap.lastTick) : 20; cap.lastTick = now;
-  const threshold = Math.max(0.003, cap.noise * 2.5);
-  const speaking = rms > threshold;
-  // Never learn quiet speech as background noise and then erase it: the floor
-  // adapts only to sound that is clearly background (well under the threshold),
-  // so a soft-spoken question can no longer raise the bar against itself.
-  if (!speaking && rms < threshold * 0.7) cap.noise = cap.noise * 0.995 + rms * 0.005;
-  meter(cap.who, rms, speaking);
-  if (speaking) { cap.lastVoice = now; cap.speechMs += dt; if (cap.speechMs > 120) cap.voiced = true; }
-  const segLen = now - cap.segStart;
-  if (cap.voiced && now - cap.lastVoice > VAD.SILENCE_MS) return endSegment(cap, true);   // speaker paused → send the phrase
-  if (segLen > VAD.MAX_SEG_MS) return endSegment(cap, cap.voiced);                      // long monologue → flush a piece
-  if (!cap.voiced && segLen > VAD.IDLE_RECYCLE_MS) return endSegment(cap, cap.speechMs >= 60, true, cap.speechMs >= 60);   // silence → recycle; partial speech (a short question word, a soft start) is transcribed, never silently dropped
+  const step = dictateStep(cap, rms, now, VAD);
+  cap.noise = step.noise; cap.speechMs = step.speechMs; cap.voiced = step.voiced;
+  cap.lastVoice = step.lastVoice; cap.lastTick = step.lastTick;
+  meter(cap.who, rms, step.speaking);
+  if (step.action === "end") return endSegment(cap, true);
+  if (step.action === "rescue") return endSegment(cap, true, true, true);
+  if (step.action === "drop") return endSegment(cap, false);
   if (cap.voiced && cap.who === questionSource() && cap.speechMs > 1200 && now - cap.interimAt > VAD.INTERIM_MS && !cap.inflight && now > interimOffUntil) {
     cap.interimAt = now; startCaptions(cap);                                             // live caption while still talking (in-page, no Whisper call)
   }
@@ -1324,17 +1344,22 @@ function meter(who, rms, speaking) {
 /* ---- transcription ---- */
 let interimOffUntil = 0;
 let transcriptionFailedEpoch = -1;
-function whisperPrompt() {
-  const SPEECH_LEXICON = ["SIEM", "SOAR", "EDR", "XDR", "MITRE ATT&CK", "Kerberos", "Active Directory", "domain controller", "DNS hijacking", "Group Policy", "lateral movement", "privilege escalation", "threat hunting", "incident response", "vulnerability management", "zero trust", "SAML", "OAuth", "PKI", "firewall", "WAF", "Splunk", "CrowdStrike", "Microsoft Sentinel", "Microsoft Defender", "Okta", "CyberArk", "Venafi", "Nessus", "Qualys", "SOC analyst", "phishing", "ransomware", "malware", "endpoint security", "Azure"];
+function whisperPrompt(opt) {
+  const SPEECH_LEXICON = ["V-Cert", "Venafi TPP", "Luna HSM", "PKCS#10", "SIEM", "SOAR", "EDR", "XDR", "MITRE ATT&CK", "Kerberos", "Active Directory", "domain controller", "DNS hijacking", "Group Policy", "lateral movement", "privilege escalation", "threat hunting", "incident response", "vulnerability management", "zero trust", "SAML", "OAuth", "PKI", "firewall", "WAF", "Splunk", "CrowdStrike", "Microsoft Sentinel", "Microsoft Defender", "Okta", "CyberArk", "Venafi", "Nessus", "Qualys", "SOC analyst", "phishing", "ransomware", "malware", "endpoint security", "Azure"];
   const s = current || {};
   const learned = (s.voiceVocabulary || []).filter(t => typeof t === "string").slice(-40);
   const terms = [...new Set((`${s.role || ""} ${s.jd || ""} ${(s.resume || "").slice(0, 3000)}`.match(/\b[A-Z][A-Za-z0-9+#./-]{1,}\b/g) || []))].slice(0, 45);
   // Whisper reads the prompt as the transcript so far: the previous heard line
   // (topic, names, phrasing) first, then the vocabulary — his terms, then the
   // security lexicon — so the next phrase is decoded in context, not cold.
-  const prev = (typeof transcript !== "undefined" && transcript.length ? String(transcript[transcript.length - 1].text || "") : "").replace(/\s+/g, " ").trim().slice(-110);
+  const bare = !!(opt && opt.bare);
+  const prev = bare ? "" : (typeof transcript !== "undefined" && transcript.length ? String(transcript[transcript.length - 1].text || "") : "").replace(/\s+/g, " ").trim().slice(-110);
   const vocab = [...new Set([...learned, ...terms, ...SPEECH_LEXICON])].join(", ");
   return `${prev ? prev + " " : ""}Vocabulary: ${vocab}.`.slice(0, 550);
+}
+// Level 4: a phrase with real speech and no words is decoded once more, without the previous line in the prompt.
+function dictationRetry(clean, speechMs, attempt) {
+  return !String(clean || "").trim() && Number(speechMs) >= 160 && attempt === 0;
 }
 // Speech activity gates silence before upload; short replies are meaningful speech.
 const HALLU = /^(thanks for watching|thank you for watching)[.!?,]*$/i;
@@ -1396,15 +1421,23 @@ async function transcribe(blob, who, opt) {
           failure = `Transcription unavailable (${res.status}). This phrase was not transcribed; please repeat it or type it.`;
         } else {
           clean = cleanTranscript((await res.json()).text);
-          failure = clean ? "" : "No clear words were recognized in that phrase. Please repeat it or type it.";
-          break;
+          if (!clean && dictationRetry(clean, opt.speechMs || 0, attempt)) {
+            opt.prompt = whisperPrompt({ bare: true });
+            retry = true;
+            delay = 250;
+            failure = "";
+            if (epoch === transcriptionEpoch) status("Hearing the phrase again…", "live");
+          } else {
+            failure = clean ? "" : "No clear words were recognized in that phrase. Please repeat it or type it.";
+            break;
+          }
         }
       } catch (error) {
         retry = true;
         failure = error.name === "AbortError" ? "Transcription timed out. Please repeat the phrase or type it." : "Could not transcribe audio. Check your connection, then repeat the phrase.";
       } finally { clearTimeout(timeout); }
       if (!retry || attempt || !opt.final) break;
-      if (epoch === transcriptionEpoch) status("Connection interrupted. Retrying the captured phrase…", "live");
+      if (failure && epoch === transcriptionEpoch) status("Connection interrupted. Retrying the captured phrase…", "live");
       await new Promise(resolve => setTimeout(resolve, delay));
     }
     if (opt.final) await previous;
@@ -1527,6 +1560,10 @@ const PHRASE_FIXES = [
   [/\blatteral movement\b/gi, "lateral movement"],
   [/\bprivilege excalation\b/gi, "privilege escalation"],
   [/\bactive directory\b/gi, "Active Directory"],
+  [/\bv[-\s]?cert\b/gi, "V-Cert"],
+  [/\bvenaf(?:i|ee|y)(?:\s+tpp)?\b/gi, (m) => /tpp/i.test(m) ? "Venafi TPP" : "Venafi"],
+  [/\bluna hsm\b/gi, "Luna HSM"],
+  [/\bpkcs\s*#?\s*10\b/gi, "PKCS#10"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");
@@ -1562,10 +1599,29 @@ function fixTerms(text) {
   }
   return toks.join("").replace(/\s{2,}/g, " ");
 }
+function heardDraft(lines, screen) {
+  const noise = /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+)[.!?]*$/i;
+  const bits = [];
+  for (const t of lines || []) {
+    if (!t || t.who === "You") continue;
+    const text = String(t.text || "").replace(/\s+/g, " ").trim();
+    if (!text || noise.test(text)) continue;
+    bits.push(text);
+  }
+  let q = bits.join(" ").trim();
+  const lane = String(screen || "").trim();
+  const real = lane && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving|Waiting)/.test(lane);
+  if (q && real && q.split(/\s+/).length < 8 && !/[?]/.test(q) && !/^(what|how|why|when|where|who|tell|walk|describe|explain)\b/i.test(q)) q = lane.replace(/[?.!\s]+$/, "") + " — " + q;
+  return q;
+}
 function onTranscript(who, text) {
   text = fixTerms(fixPhrases(text));
   if (who === "You" && follow.on && !follow.sr) followHear(text, true);   // Follow along without live recognition
   transcript.push({ who, text, at: Date.now(), seq: ++heardSeq });
+  if (!answerCtl) {
+    const draft = heardDraft(pendingHeard(), cards[idx] && cards[idx].question);
+    if (draft) status("Heard: " + draft, "live");
+  }
   logEvent({ t: "line", who, text });
   appendDrawer(who, text);
   showCaption(who, text, false);
