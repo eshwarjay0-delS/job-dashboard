@@ -14,7 +14,7 @@
 import { callLLM, keysFor, resolveKeys } from "@/lib/llm"
 import { scheduleSttRecord } from "@/lib/sttLedger"
 import { cleanupAllowed, restoreSpelling } from "@/lib/kompasTranscript"
-import { guardHallucinations, deLooped as guardDeLooped } from "@/lib/kompasGuard"
+import { guardHallucinations, deLooped as guardDeLooped, decodeStats, needsSecondChance } from "@/lib/kompasGuard"
 
 export type SpeechPurpose = "flow" | "transcribe"
 export type SpeechCode = "too-large" | "empty" | "bad-audio" | "busy" | "unavailable"
@@ -323,7 +323,9 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
   // A little randomness (temp 0.2) breaks the loop. Bounded to one extra request.
   // The retry is kept only if it is BETTER (not degenerate).
   const firstCheck = guardHallucinations(rawText)
+  let secondChanceSpent = false
   if (guardDeLooped(firstCheck)) {
+    secondChanceSpent = true
     const retryTimer = setTimeout(() => stop.abort(), SPEECH_TIMEOUT_MS)
     try {
       const retryResponse = await sendRequest("0.2", responseFormat)
@@ -339,6 +341,31 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
       }
     } catch {
       // Retry failed — keep the original text
+    } finally { clearTimeout(retryTimer) }
+  }
+
+  // Second chance on a weak decode (owner dictation-precision directive,
+  // 21 Oct 2026): the decoder's own confidence says the greedy pass was
+  // unsure (low mean logprob) — or it returned nothing for audio whose
+  // segments say speech was present. One retry at temperature 0.2, kept
+  // only when it decodes more confidently (or says something at all), and
+  // never when the de-loop retry already spent the one extra request.
+  const firstStats = decodeStats(body)
+  if (!secondChanceSpent && needsSecondChance(rawText, provSeconds, firstStats)) {
+    const retryTimer = setTimeout(() => stop.abort(), SPEECH_TIMEOUT_MS)
+    try {
+      const retryResponse = await sendRequest("0.2", responseFormat)
+      if (retryResponse.ok) {
+        const retryBody = await retryResponse.json().catch(() => null) as { text?: unknown; duration?: unknown; language?: unknown; segments?: unknown; words?: unknown } | null
+        const retryText = typeof retryBody?.text === "string" ? retryBody.text.trim() : ""
+        if (retryBody && retryText && !guardDeLooped(guardHallucinations(retryText))) {
+          const retryStats = decodeStats(retryBody)
+          const better = !rawText || firstStats.meanLogprob === null || retryStats.meanLogprob === null || retryStats.meanLogprob > firstStats.meanLogprob
+          if (better) { rawText = retryText; body = retryBody }
+        }
+      }
+    } catch {
+      // Retry failed — keep the original decode
     } finally { clearTimeout(retryTimer) }
   }
 

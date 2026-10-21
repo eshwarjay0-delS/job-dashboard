@@ -144,3 +144,24 @@ export function guardHallucinations(raw: string): GuardResult {
 export function deLooped(result: GuardResult): boolean {
   return result.removed.length > 0
 }
+
+/** ── decode confidence (21 Oct 2026) ──────────────────────────────────────
+ * Whisper's verbose_json segments carry the decoder's own confidence:
+ * avg_logprob (closer to 0 = surer) and no_speech_prob. Summarised here so
+ * the caller can apply the standard temperature-fallback rule: a weak or
+ * empty decode of plainly-audible speech earns exactly one second chance. */
+export interface DecodeStats { meanLogprob: number | null; maxNoSpeech: number | null }
+export function decodeStats(body: { segments?: unknown } | null | undefined): DecodeStats {
+  const segs = Array.isArray(body?.segments) ? body.segments : []
+  let lpSum = 0, lpN = 0, maxNoSpeech: number | null = null
+  for (const seg of segs) {
+    const row = seg as { avg_logprob?: unknown; no_speech_prob?: unknown } | null
+    if (typeof row?.avg_logprob === "number" && Number.isFinite(row.avg_logprob)) { lpSum += row.avg_logprob; lpN++ }
+    if (typeof row?.no_speech_prob === "number" && Number.isFinite(row.no_speech_prob)) maxNoSpeech = maxNoSpeech === null ? row.no_speech_prob : Math.max(maxNoSpeech, row.no_speech_prob)
+  }
+  return { meanLogprob: lpN ? lpSum / lpN : null, maxNoSpeech }
+}
+export function needsSecondChance(text: string, seconds: number | null, stats: DecodeStats): boolean {
+  if (text) return stats.meanLogprob !== null && stats.meanLogprob < -1.0
+  return (seconds ?? 0) >= 1 && stats.maxNoSpeech !== null && stats.maxNoSpeech < 0.6
+}

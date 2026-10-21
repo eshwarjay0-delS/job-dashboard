@@ -8,6 +8,7 @@ const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8')
 const T = await import('../../src/lib/kompasTranscript.ts')
 const V = await import('../../src/lib/keyVault.ts')
 const K = await import('../../src/lib/kompasVoice.ts')
+const G = await import('../../src/lib/kompasGuard.ts')
 
 const NOW = Date.UTC(2026, 9, 7, 18)
 const open = (consent = 'only-me', title) => T.startSession({ id: 's1', title, startedAt: NOW, consent })
@@ -492,4 +493,24 @@ test('the microphone check is made once, by the page, and both modes say one pag
   for (const file of pages) assert.ok(!/useOwnDocument/.test(read(file)), file)
   for (const file of pages) assert.ok(/<PageIntro page="\/dashboard\/kompas\/flow"/.test(read(file)), file + ': the heading is Kompas Flow in both')
   assert.ok(/\{what \?\? item\.what\}/.test(read('src/app/dashboard/_components/page-intro.tsx')), 'the second mode says what it is for under the same name')
+})
+
+// ── decode confidence: the second-chance rule (21 Oct 2026) ─────────────────
+test('decodeStats summarises segment confidence and tolerates missing stats', () => {
+  const st = G.decodeStats({ segments: [{ avg_logprob: -0.4, no_speech_prob: 0.1 }, { avg_logprob: -1.8, no_speech_prob: 0.3 }] })
+  assert.equal(Math.round(st.meanLogprob * 100) / 100, -1.1)
+  assert.equal(st.maxNoSpeech, 0.3)
+  assert.deepEqual(G.decodeStats({}), { meanLogprob: null, maxNoSpeech: null })
+  assert.deepEqual(G.decodeStats(null), { meanLogprob: null, maxNoSpeech: null })
+  assert.deepEqual(G.decodeStats({ segments: [{ text: 'hi' }] }), { meanLogprob: null, maxNoSpeech: null })
+})
+
+test('needsSecondChance fires on a weak decode or missed speech, and only then', () => {
+  assert.equal(G.needsSecondChance('some words', 5, { meanLogprob: -1.2, maxNoSpeech: 0.1 }), true)
+  assert.equal(G.needsSecondChance('some words', 5, { meanLogprob: -0.5, maxNoSpeech: 0.1 }), false)
+  assert.equal(G.needsSecondChance('some words', 5, { meanLogprob: null, maxNoSpeech: 0.1 }), false)
+  assert.equal(G.needsSecondChance('', 3, { meanLogprob: null, maxNoSpeech: 0.2 }), true)
+  assert.equal(G.needsSecondChance('', 3, { meanLogprob: null, maxNoSpeech: 0.9 }), false)
+  assert.equal(G.needsSecondChance('', 0.5, { meanLogprob: null, maxNoSpeech: 0.1 }), false)
+  assert.equal(G.needsSecondChance('', 3, { meanLogprob: null, maxNoSpeech: null }), false)
 })
