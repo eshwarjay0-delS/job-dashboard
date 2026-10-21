@@ -1098,10 +1098,11 @@ const VAD = { SILENCE_MS: 1100, MIN_SPEECH_MS: 160, MAX_SEG_MS: 28000, IDLE_RECY
 const LEVEL_WORKLET = "class L extends AudioWorkletProcessor{constructor(){super();this.a=0;this.n=0}process(i){const c=i[0]&&i[0][0];if(c){let s=0;for(let k=0;k<c.length;k++)s+=c[k]*c[k];this.a+=s;this.n+=c.length;if(this.n>=1024){this.port.postMessage(Math.sqrt(this.a/this.n));this.a=0;this.n=0}}return true}}registerProcessor('perfact-level',L);";
 function pickMime() { for (const m of ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]) { try { if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; } catch {} } return ""; }
 const MIME = pickMime();
+function audioNeedsResume(state) { return state === "suspended" || state === "interrupted"; }
 function primeAudio() {
   try {
     if (!audioCtx || audioCtx.state === "closed") audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+    if (audioNeedsResume(audioCtx.state)) audioCtx.resume().catch(() => {});
     window.__kompasAudio = audioCtx;
   } catch {}
 }
@@ -1111,7 +1112,7 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("focus", () => { if (running) primeAudio(); });
 async function getCtx() {
   primeAudio();
-  if (audioCtx.state === "suspended") { try { await audioCtx.resume(); } catch {} }
+  if (audioNeedsResume(audioCtx.state)) { try { await audioCtx.resume(); } catch {} }
   if (!audioCtx._lvl) {
     try { const url = URL.createObjectURL(new Blob([LEVEL_WORKLET], { type: "text/javascript" })); await audioCtx.audioWorklet.addModule(url); URL.revokeObjectURL(url); audioCtx._lvl = "worklet"; }
     catch { audioCtx._lvl = "analyser"; }
@@ -1183,7 +1184,7 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
   // microphone itself is delivering silence.
   cap.watchdog = setInterval(() => {
     if (cap.stopped || !running) return;
-    if (audioCtx && audioCtx.state === "suspended") primeAudio();
+    if (audioCtx && audioNeedsResume(audioCtx.state)) primeAudio();
     const now = performance.now();
     if (now - (cap.lastVadAt || 0) > 3000 && !cap.timer && cap.an) {
       const buf = new Float32Array(cap.an.fftSize);
@@ -1247,6 +1248,16 @@ function startSegment(cap) {
   cap.rec = rec;
 }
 const finals = new Set();              // final transcriptions still in flight (AI Answer waits for them)
+function segmentKept(speech, keep, force) {
+  return !!(keep && (Number(speech) >= 160 || !!force));
+}
+function flushAction(cap, now) {
+  if ((cap.speechMs || 0) >= 60) return "keep";
+  const segStart = cap.segStart == null ? now : cap.segStart;
+  const lastVad = cap.lastVadAt == null ? now : cap.lastVadAt;
+  if (cap.rec && now - segStart > 1500 && now - lastVad > 3000) return "rescue";
+  return "wait";
+}
 function endSegment(cap, keep, restart = true, force = false) {
   const rec = cap.rec, chunks = cap.chunks, speech = cap.speechMs;
   const epoch = transcriptionEpoch;
@@ -1264,7 +1275,7 @@ function endSegment(cap, keep, restart = true, force = false) {
   const done = new Promise(r => { settle = r; });
   finals.add(done); done.then(() => finals.delete(done));
   rec.onstop = () => {
-    if (!keep || (speech < VAD.MIN_SPEECH_MS && !force)) return settle();
+    if (!segmentKept(speech, keep, force)) return settle();
     const blob = new Blob(chunks, { type: rec.mimeType || MIME || "audio/webm" });
     if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech }).then(settle, settle); else settle();
   };
@@ -1279,9 +1290,9 @@ function endSegment(cap, keep, restart = true, force = false) {
 // AI Answer pressed mid-sentence: cut every open phrase now and wait (briefly) for its words.
 async function flushHeard(maxMs = 43000) {
   for (const cap of captures) {
-    if (cap.voiced && cap.speechMs >= VAD.MIN_SPEECH_MS) endSegment(cap, true);
-    // VAD stalled (meter silent for seconds): rescue the recorded audio anyway — one transcription attempt beats a silent discard.
-    else if (cap.rec && performance.now() - cap.segStart > 1500 && performance.now() - (cap.lastVadAt || 0) > 3000) endSegment(cap, true, true, true);
+    const act = flushAction(cap, performance.now());
+    if (act === "keep") endSegment(cap, true, true, cap.speechMs < VAD.MIN_SPEECH_MS);
+    else if (act === "rescue") endSegment(cap, true, true, true);
   }
   const wait = [...finals];
   if (!wait.length) return;
@@ -1308,7 +1319,7 @@ function dictateStep(cap, rms, now, vad) {
   const threshold = Math.max(0.003, noise * 2.5);
   const speaking = scream || rms > threshold;
   if (!speaking && rms < threshold * 0.7) noise = noise * 0.995 + rms * 0.005;
-  const dt = lastTick ? Math.min(100, now - lastTick) : 20;
+  const dt = lastTick ? Math.min(speaking ? 400 : 100, Math.max(0, now - lastTick)) : 20;
   lastTick = now;
   if (speaking) { lastVoice = now; speechMs += dt; if (scream || speechMs > 120) voiced = true; }
   const segLen = now - (cap.segStart == null ? now : cap.segStart);
@@ -1327,7 +1338,7 @@ function vadStep(cap, rms) {
   cap.noise = step.noise; cap.speechMs = step.speechMs; cap.voiced = step.voiced;
   cap.lastVoice = step.lastVoice; cap.lastTick = step.lastTick;
   meter(cap.who, rms, step.speaking);
-  if (step.action === "end") return endSegment(cap, true);
+  if (step.action === "end") return endSegment(cap, true, true, step.scream || step.speechMs >= 60);
   if (step.action === "rescue") return endSegment(cap, true, true, true);
   if (step.action === "drop") return endSegment(cap, false);
   if (cap.voiced && cap.who === questionSource() && cap.speechMs > 1200 && now - cap.interimAt > VAD.INTERIM_MS && !cap.inflight && now > interimOffUntil) {
@@ -1354,12 +1365,12 @@ function whisperPrompt(opt) {
   // security lexicon — so the next phrase is decoded in context, not cold.
   const bare = !!(opt && opt.bare);
   const prev = bare ? "" : (typeof transcript !== "undefined" && transcript.length ? String(transcript[transcript.length - 1].text || "") : "").replace(/\s+/g, " ").trim().slice(-110);
-  const vocab = [...new Set([...learned, ...terms, ...SPEECH_LEXICON])].join(", ");
+  const vocab = [...new Set([...SPEECH_LEXICON, ...learned, ...terms])].join(", ");
   return `${prev ? prev + " " : ""}Vocabulary: ${vocab}.`.slice(0, 550);
 }
 // Level 4: a phrase with real speech and no words is decoded once more, without the previous line in the prompt.
 function dictationRetry(clean, speechMs, attempt) {
-  return !String(clean || "").trim() && Number(speechMs) >= 160 && attempt === 0;
+  return !String(clean || "").trim() && Number(speechMs) >= 60 && attempt === 0;
 }
 // Speech activity gates silence before upload; short replies are meaningful speech.
 const HALLU = /^(thanks for watching|thank you for watching)[.!?,]*$/i;
@@ -1599,13 +1610,18 @@ function fixTerms(text) {
   }
   return toks.join("").replace(/\s{2,}/g, " ");
 }
-function heardDraft(lines, screen) {
+function heardDraft(lines, screen, answerText) {
   const noise = /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+)[.!?]*$/i;
+  const bag = new Set(String(answerText || "").toLowerCase().split(/[^a-z0-9+#]+/).filter(w => w.length >= 3));
   const bits = [];
   for (const t of lines || []) {
-    if (!t || t.who === "You") continue;
+    if (!t) continue;
     const text = String(t.text || "").replace(/\s+/g, " ").trim();
     if (!text || noise.test(text)) continue;
+    if (t.who === "You" && bag.size) {
+      const words = text.toLowerCase().split(/[^a-z0-9+#]+/).filter(w => w.length >= 3);
+      if (words.length && words.filter(w => bag.has(w)).length / words.length >= 0.5) continue;
+    }
     bits.push(text);
   }
   let q = bits.join(" ").trim();
@@ -1619,7 +1635,8 @@ function onTranscript(who, text) {
   if (who === "You" && follow.on && !follow.sr) followHear(text, true);   // Follow along without live recognition
   transcript.push({ who, text, at: Date.now(), seq: ++heardSeq });
   if (!answerCtl) {
-    const draft = heardDraft(pendingHeard(), cards[idx] && cards[idx].question);
+    const shown = cards[idx] && (typeof cards[idx].answer === "string" ? cards[idx].answer : "");
+    const draft = heardDraft(pendingHeard(), cards[idx] && cards[idx].question, shown);
     if (draft) status("Heard: " + draft, "live");
   }
   logEvent({ t: "line", who, text });
@@ -1842,7 +1859,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const consolidated = !!opts.consolidated;
   const epoch = ++answerEpoch;
   const depthKey = `${$("liveInterviewer").value}|${liveConfig().mode}|${liveConfig().length || ""}`;
-  if (!opts.reask && !opts.regen && !consolidatedNeedsDerive(opts) && book.sid === (current && current.id)) {   // opening book: typed / known questions
+  if (!opts.reask && !opts.pinned && !opts.regen && !consolidatedNeedsDerive(opts) && book.sid === (current && current.id)) {   // opening book: typed / known questions. A pinned press is a live ask.
     const hit = bookMatch(question, depthKey);
     if (hit) { serveBook(card, hit, depthKey); return; }
   }
@@ -2070,7 +2087,13 @@ $("manualInput").addEventListener("keydown", (e) => {
 function sendManual() { void aiAnswer(false); }   // the typed box joins the AI Answer intake (box + mic + computer audio concatenated)
 $("manualInput").addEventListener("input", () => { if (cards[idx]) renderCard(); });
 function pressQuestion(typed, intake, screen) {
-  const bits = [typed, intake && intake.derived].map(s => String(s || "").replace(/\s+/g, " ").trim()).filter(s => s && !isNoiseLine(s));
+  const clean = (s) => String(s || "").replace(/\s+/g, " ").trim();
+  let typedClean = clean(typed), derived = clean(intake && intake.derived);
+  if (typedClean && isNoiseLine(typedClean)) typedClean = "";
+  if (derived && isNoiseLine(derived)) derived = "";
+  const low = (s) => s.toLowerCase();
+  if (typedClean && derived && (low(derived) === low(typedClean) || low(derived).includes(low(typedClean)) || low(typedClean).includes(low(derived)))) derived = "";
+  const bits = [typedClean, derived].filter(Boolean);
   let q = bits.join(" ").trim();
   const lane = String(screen || "").trim();
   if (q && lane && q.split(/\s+/).length < 8 && !Q_CUE.test(q)) q = lane.replace(/[?.!\s]+$/, "") + " — " + q;
@@ -2116,7 +2139,7 @@ async function aiAnswer(fromAuto) {
       // question already on screen, let the engine form the question from the
       // whole, and answer that. Frequency of pressing is the miss signal.
       const answeredText = typeof cur.answer === "string" ? cur.answer : (cur && cur.answer || []).join("\n");
-      const isRepress = !fromAuto && !!cur && answeredText.trim().length > 40 && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
+      const isRepress = !fromAuto && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
       if (isRepress) {
         const previous = transcript.filter(t => t.seq <= answeredSeq).slice(-40);
         const combined = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You", previous, currentQuestion: cur.question });

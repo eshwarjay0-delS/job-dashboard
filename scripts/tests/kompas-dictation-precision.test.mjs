@@ -113,7 +113,8 @@ test("level 4: real speech with no words is decoded once more, and a bare prompt
 
 test("level 5: a greeting is not the question, and a fragment stays on the question already showing", () => {
   assert.equal(ctx.heardDraft([{ who: "Them", text: "Hello." }], "How do you discover certificates?"), "");
-  assert.equal(ctx.heardDraft([{ who: "You", text: "I would start by checking the chain" }], "How do you discover certificates?"), "");
+  assert.equal(ctx.heardDraft([{ who: "You", text: "I would start by checking the chain" }], "How do you discover certificates?", "I would start by checking the chain and the host"), "");
+  assert.equal(ctx.heardDraft([{ who: "You", text: "How does V-Cert differ from the direct API?" }], ""), "How does V-Cert differ from the direct API?");
   assert.equal(
     ctx.heardDraft([{ who: "Them", text: "Venafi" }], "How do you discover certificates?"),
     "How do you discover certificates — Venafi",
@@ -122,4 +123,104 @@ test("level 5: a greeting is not the question, and a fragment stays on the quest
     ctx.heardDraft([{ who: "Them", text: "How does V-Cert differ from the direct API?" }], "How do you discover certificates?"),
     "How does V-Cert differ from the direct API?",
   );
+});
+
+function extractLine(from, end) {
+  const a = src.indexOf(from);
+  const b = src.indexOf(end, a + from.length);
+  assert.ok(a >= 0 && b > a, `extractLine ${from}`);
+  return src.slice(a, b);
+}
+let roundLoad = "";
+try {
+  vm.runInContext(
+    extract("function segmentKept", "function flushAction") +
+    extract("function flushAction", "function endSegment") +
+    extract("function audioNeedsResume", "function primeAudio") +
+    extract("const NOISE_WORDS", "function isNoiseLine") +
+    extract("function isNoiseLine", "function composeIntake") +
+    extractLine("const Q_CUE =", "/i;") + "/i;\n" +
+    extract("function pressQuestion", "function showPressed") +
+    "\nthis.segmentKept = segmentKept; this.flushAction = flushAction; this.audioNeedsResume = audioNeedsResume; this.pressQuestion = pressQuestion;",
+    ctx
+  );
+} catch (error) {
+  roundLoad = String(error && error.message || error);
+}
+test("the ten rounds load the shipped functions", () => {
+  assert.equal(roundLoad, "");
+});
+
+const VAD = { SILENCE_MS: 1100, MAX_SEG_MS: 28000, IDLE_RECYCLE_MS: 6000 };
+function step(cap, rms, now) {
+  const next = ctx.dictateStep(cap, rms, now, VAD);
+  return Object.assign(cap, next, { segStart: cap.segStart });
+}
+
+test("round 1: a shout shorter than 160 ms is still sent to be transcribed", () => {
+  assert.equal(ctx.segmentKept(80, true, true), true);
+  assert.equal(ctx.segmentKept(80, true, false), false);
+  assert.equal(ctx.segmentKept(200, true, false), true);
+  assert.ok(src.includes("step.scream || step.speechMs >= 60"), "the end path forces a short shout through");
+});
+
+test("round 2: a stalled meter still counts the shout", () => {
+  const cap = { noise: 0.001, speechMs: 0, voiced: false, lastVoice: 0, lastTick: 1000, segStart: 1000 };
+  const next = ctx.dictateStep(cap, 0.2, 1500, VAD);
+  assert.ok(next.speechMs >= 400, `speech counted ${next.speechMs}`);
+  assert.equal(next.voiced, true);
+});
+
+test("round 3: AI Answer keeps a short start and still rescues a stalled recorder", () => {
+  assert.equal(ctx.flushAction({ speechMs: 80, rec: {} }, 5000), "keep");
+  assert.equal(ctx.flushAction({ speechMs: 0, rec: {}, segStart: 0, lastVadAt: 0 }, 5000), "rescue");
+  assert.equal(ctx.flushAction({ speechMs: 0, rec: {}, segStart: 4000, lastVadAt: 4000 }, 5000), "wait");
+});
+
+test("round 4: an empty decode of a short start is tried once more", () => {
+  assert.equal(ctx.dictationRetry("", 80, 0), true);
+  assert.equal(ctx.dictationRetry("", 40, 0), false);
+});
+
+test("round 5: a long resume cannot push V-Cert out of the hint", () => {
+  const saved = ctx.current;
+  ctx.current = { role: "Senior SOC Analyst", jd: "Splunk CrowdStrike", resume: Array.from({ length: 40 }, (_, i) => "Term" + i).join(" "), voiceVocabulary: [] };
+  const p = ctx.whisperPrompt();
+  ctx.current = saved;
+  assert.ok(p.includes("V-Cert") && p.includes("Venafi TPP") && p.includes("PKCS#10"), p);
+  assert.ok(p.length <= 550, `prompt length ${p.length}`);
+});
+
+test("round 6: the microphone question is shown, and reading the answer aloud is not", () => {
+  assert.equal(ctx.heardDraft([{ who: "You", text: "How do you discover certificates in Venafi?" }], "Ready"), "How do you discover certificates in Venafi?");
+  assert.equal(ctx.heardDraft([{ who: "You", text: "the partition mismatch on the Luna HSM" }], "How do you discover certificates?", "the partition mismatch on the Luna HSM was the incident"), "");
+});
+
+test("round 7: the typed line is not pasted twice onto itself", () => {
+  const same = "How does V-Cert differ from the direct API?";
+  assert.equal(ctx.pressQuestion(same, { derived: same }, ""), same);
+  assert.equal(ctx.pressQuestion("PKCS#10", { derived: "How do you submit a request?" }, ""), "PKCS#10 How do you submit a request?");
+});
+
+test("round 8: a short answer still counts as a miss, and a pinned press skips the stored book", () => {
+  assert.ok(src.includes("answeredText.trim().length > 8"));
+  assert.ok(src.includes("!opts.pinned"));
+});
+
+test("round 9: an interrupted audio context is resumed, in the page and in the shell", () => {
+  assert.equal(ctx.audioNeedsResume("interrupted"), true);
+  assert.equal(ctx.audioNeedsResume("suspended"), true);
+  assert.equal(ctx.audioNeedsResume("running"), false);
+  assert.ok(src.includes("state === \"interrupted\""));
+});
+
+test("round 10: ten quiet samples never become speech, and the eleventh shout does", () => {
+  let cap = { noise: 0.02, speechMs: 0, voiced: false, lastVoice: 0, lastTick: 0, segStart: 0 };
+  for (let i = 1; i <= 10; i++) cap = Object.assign(cap, ctx.dictateStep(cap, 0.001, i * 20, VAD));
+  assert.equal(cap.voiced, false);
+  assert.equal(cap.action, "listen");
+  cap = Object.assign(cap, ctx.dictateStep(cap, 0.2, 1000, VAD));
+  assert.equal(cap.scream, true);
+  assert.equal(cap.voiced, true);
+  assert.ok(cap.noise < 0.02, `floor stayed high: ${cap.noise}`);
 });
