@@ -1527,6 +1527,73 @@ function lastAsk(lines) {
   const src = them.length ? them : lines;
   return String((src[src.length - 1] && src[src.length - 1].text) || "").replace(/\s+/g, " ").trim().slice(0, 600);
 }
+// ── Question intake ────────────────────────────────────────────────────
+// Owner, 2026-10-21: the question that gets answered is a CONCATENATION of
+// every source — the typed box, the computer audio (Them) and the mic —
+// composed at AI Answer time. (Auto fires that same button path; it never
+// answers on its own.) Three rules ride on top:
+//  1. With computer audio captured, your mic lines are you SPELLING OUT
+//     the answer on screen. They never form a question — at most a few
+//     keywords ride along as context. (Mic-only sessions differ: there
+//     the mic IS the question source, minus the same echo drop.)
+//  2. A greeting or stray fragment ("HELLO") is not a question from any
+//     source. Noise never becomes a card.
+//  3. When no source produced a real question but the fragments carry
+//     real keywords, the caller tackles them into the lane — the
+//     question already on screen — instead of answering the noise raw.
+const INTAKE_STOP = new Set("the a an and or of to in on for with you your yours we our it its is are was were do does did have has had can could would should will shall may might i me my he she they them his her their this that these those as at by from be been being am yeah okay ok yes no so well just like really very".split(" "));
+function intakeWords(text) { return String(text || "").toLowerCase().replace(/[^a-z0-9+#&'-]+/g, " ").split(/\s+/).filter(w => w.length >= 3 && !INTAKE_STOP.has(w)); }
+function intakeTerms(text) {
+  const out = [];
+  for (const raw of String(text || "").split(/\s+/)) {
+    const w = raw.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, "");
+    if (w.length < 3 || INTAKE_STOP.has(w.toLowerCase())) continue;
+    if (w.length >= 5 || /^[A-Z0-9&]{3,6}$/.test(w) || /[a-z][A-Z]/.test(w) || /\d/.test(w)) out.push(w);
+  }
+  return [...new Set(out)].slice(0, 8);
+}
+function echoShare(text, answerText) {
+  const words = intakeWords(text); if (!words.length || !answerText) return 0;
+  const bag = new Set(intakeWords(answerText));
+  return words.filter(w => bag.has(w)).length / words.length;
+}
+const NOISE_WORDS = new Set("hi hello hey ok okay yeah yes no uh um hmm thanks thank you right alright sure good great nice bye there everyone all guys".split(" "));
+function isNoiseLine(text) { const ws = String(text || "").toLowerCase().replace(/[^a-z\s]+/g, " ").split(/\s+/).filter(Boolean); return ws.length >= 1 && ws.length <= 4 && ws.every(w => NOISE_WORDS.has(w)); }
+function composeIntake(lines, opts = {}) {
+  const answerText = opts.answerText || "";
+  const micIsSource = !!opts.micIsSource;
+  const typed = String(opts.typedText || "").trim();
+  const primary = [], micContext = [], keywords = [];
+  const dropped = { echo: 0, noise: 0 };
+  const pushKw = (text) => { for (const k of intakeTerms(text)) if (!keywords.includes(k) && keywords.length < 8) keywords.push(k); };
+  for (const t of lines || []) {
+    const text = String(t.text || "").trim(); if (!text) continue;
+    if (t.who === "Them") { if (isNoiseLine(text)) { dropped.noise++; continue; } primary.push({ who: "Them", text }); pushKw(text); continue; }
+    if (t.who === "You (typed)") { primary.push({ who: "You (typed)", text }); pushKw(text); continue; }
+    // Mic ("You") from here on.
+    if (echoShare(text, answerText) >= 0.5) { dropped.echo++; pushKw(text); continue; }   // spelling out the on-screen answer
+    if (isNoiseLine(text)) { dropped.noise++; continue; }
+    if (micIsSource && (Q_CUE.test(text) || intakeWords(text).length >= 4)) { primary.push({ who: "You", text }); pushKw(text); continue; }
+    micContext.push(text); pushKw(text);   // his own words: context/keywords only, never the question
+  }
+  if (typed) { primary.unshift({ who: "You (typed)", text: typed }); pushKw(typed); }
+  const primaryText = primary.map(p => p.text).join(" ");
+  const contentWords = intakeWords(primaryText).length;
+  const hasCue = Q_CUE.test(primaryText);
+  const longestLineWords = primary.reduce((m, p) => Math.max(m, intakeWords(p.text).length), 0);
+  const typedStrong = primary.some(p => p.who === "You (typed)" && (Q_CUE.test(p.text) || intakeWords(p.text).length >= 3));
+  const worthy = primary.length > 0 && (hasCue || typedStrong || longestLineWords >= 6);
+  const heardLines = primary.map(p => `${p.who}: ${p.text}`);
+  if (micContext.length) heardLines.push(`You (context keywords): ${micContext.join(" ").slice(0, 300)}`);
+  return {
+    worthy, hasCue, contentWords, keywords, dropped,
+    heard: heardLines.join("\n"),
+    derived: primary.length ? primary[primary.length - 1].text.slice(0, 600) : "",
+    primaryCount: primary.length, micContextCount: micContext.length,
+    noiseOnly: primary.length === 0 && micContext.length === 0 && keywords.length === 0,
+  };
+}
+// ── end question intake ──
 // The last two answered questions before this card (owner, 2026-09-30): the next question may follow up on them.
 function recentQA(card) {
   const i = cards.indexOf(card), prev = (i < 0 ? cards : cards.slice(0, i)).filter(c => c && c.question && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(c.question) && typeof c.answer === "string" && c.answer.trim().length > 40);
@@ -1865,7 +1932,7 @@ $("manualInput").addEventListener("keydown", (e) => {
   e.preventDefault();
   sendManual();
 });
-function sendManual() { const v = $("manualInput").value.trim(); if (!v) return; $("manualInput").value = ""; logEvent({ t: "line", who: "You (typed)", text: v }); generateAnswer(v, addCard(v, ["…"])); }
+function sendManual() { void aiAnswer(false); }   // the typed box joins the AI Answer intake (box + mic + computer audio concatenated)
 $("answerBtn").onclick = () => aiAnswer(false);
 let aiBusy = false;
 async function aiAnswer(fromAuto) {
@@ -1884,11 +1951,32 @@ async function aiAnswer(fromAuto) {
       status("The last phrase could not be transcribed. Please repeat it or type it here.", "err");
       return;
     }
-    if (pending.length) {
+    const box = $("manualInput");
+    const typedText = box ? box.value.trim() : "";
+    if (pending.length || typedText) {
+      const cur = cards[idx];
+      const answerText = [cur, cards[idx - 1]].filter(Boolean).map(c => typeof c.answer === "string" ? plainAnswer(c.answer) : "").join(" ");
+      const intake = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You" });
+      if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
       answeredSeq = heardSeq; updatePending();
-      const heard = pending.map(t => `${t.who}: ${t.text}`).join("\n");
-      const said = lastAsk(pending) || heardAsQuestion(pending);
-      const earlier = transcript.filter(t => t.seq <= pending[0].seq - 1).slice(-40).map(t => `${t.who}: ${t.text}`).join("\n");
+      if (intake.noiseOnly) {
+        if (!fromAuto) status("Nothing question-like in that — still listening.", "live");
+        return;
+      }
+      const cutSeq = pending.length ? pending[0].seq : heardSeq + 1;
+      const earlier = transcript.filter(t => t.seq < cutSeq).slice(-40).map(t => `${t.who}: ${t.text}`).join("\n");
+      if (!intake.worthy) {
+        // No real question from any source, but the fragments carry real
+        // keywords: tackle them into the lane instead of answering noise.
+        if (fromAuto) return;
+        const lane = (cur && cur.question) || "";
+        const heard = intake.heard + (lane ? `\nLane (the question already on screen — stay on it): ${lane}` : "");
+        const card = addCard("From what was heard: " + intake.keywords.join(", "), ["…"]);
+        card.heard = heard; card.earlier = earlier;
+        return await generateAnswer(heard, card, { consolidated: true, earlier, derived: "" });
+      }
+      const heard = intake.heard;
+      const said = intake.derived || heardAsQuestion(pending);
       const card = addCard(said || "Answering what was just heard…", ["…"]);
       card.heard = heard; card.earlier = earlier;
       return await generateAnswer(heard, card, { consolidated: true, earlier, derived: said });
