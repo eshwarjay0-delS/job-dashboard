@@ -90,4 +90,15 @@ test('the question is cut out of the ramble, and a definition stays a storytelle
   assert.match(audienceGuidance('hr', 'Tell me about a time you led'), /diamond in the rough/)
   assert.match(audienceGuidance('director', 'Should we launch?'), /most important thing/)
   assert.match(audienceGuidance('director', 'Should we launch?'), /interview still decides the question and the layer/)
+  assert.match(audienceGuidance('engineer', 'How would you investigate this?'), /most important reference for how a desktop answer moves/)
+  assert.match(audienceGuidance('engineer', 'How would you investigate this?'), /where you look, what you filter, and what the finding means/)
+  assert.match(audienceGuidance('engineer', 'How would you investigate this?'), /apart from that/)
+  assert.match(audienceGuidance('engineer', 'What is a certificate?'), /One tool, or one check/)
+  assert.match(audienceGuidance('engineer', 'What is a certificate?'), /storyteller picture still opens the answer/)
+})
+
+test('the desktop answer route keeps the interview sequence in the words the model hears last', () => {
+  const route = readFileSync(new URL('../../src/app/api/kompas/answer/route.ts', import.meta.url), 'utf8')
+  assert.match(route, /INTERVIEW/)
+  assert.match(route, /\$\{INTERVIEW\}/)
 })
