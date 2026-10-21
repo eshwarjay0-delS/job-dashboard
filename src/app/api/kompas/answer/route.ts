@@ -13,6 +13,7 @@ import {
   commit, matchBank,
 } from "@/lib/kompasAnswer"
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
+import { blendPrompt, blendSpoken } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
 import {
   allowedNumbers, applyGuards, speakFacts, verifyAnswer,
@@ -410,7 +411,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         // swaps the streamed draft for the finished answer.
         const g = applyGuards(raw.trim(), job.guardFacts, job.allowed)
         const guardedText = g.text
-        let finalText = voiceRepair(guardedText) || guardedText
+        let finalText = blendSpoken(voiceRepair(guardedText) || guardedText) || guardedText
         // Optional post-generation fact-check: the model only POINTS at
         // unsupported claims; code does the replacement, so the fix is
         // guaranteed. Env-gated (costs one light call) like perfACT's
@@ -490,7 +491,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   // Grounding guards before voice repair: unbracket → place/prestige/title/
   // version fixes → figures allowlist. Then the optional fact-check.
   const g = applyGuards(raw.trim(), job.guardFacts, job.allowed)
-  let out = voiceRepair(g.text) || g.text
+  let out = blendSpoken(voiceRepair(g.text) || g.text) || g.text
   let verified = 0
   if (process.env.KOMPAS_VERIFY === "1" && !degraded && job.factsText && job.orKey) {
     try {
@@ -760,7 +761,7 @@ export async function POST(request: NextRequest) {
   ].filter(Boolean).join("\n\n")
   const job: AnswerJob = {
     question,
-    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : audienceGuidance(interviewer, question)}\n\n${personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${RESPONSE_CRAFT_POLICY}`,
+    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : audienceGuidance(interviewer, question)}\n\n${personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}`,
     userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? "The previous answer to this question was wrong. Answer it again. Do not reuse that answer's opening, its example, or its order of points.\n\n" : ""}${tier === 0 ? INTRODUCTION_POLICY : `Speak it. Sentence one is the answer in words this listener already understands. Then one path. On every sentence, ask whether you are 100% on this question, at this layer. A sentence that is not, is not said.
 A general scenario — a time, a would-you, a launch, or a people question: the decision or the moment, in plain words, and one picture. Do not open a mechanism they did not ask for. If the background has no such incident, say what you would do.
 A technical question — a what-is, a how, an investigate, a fix, or a test: specialist, spoken the way a person talks in the meeting. Simple words, or one abstract sentence that carries the meaning. Do not recite a query, a parameter, a claim name, or a stack. Inside a program, write the real numbers. A status code, a port, and a literal in code stay written as themselves. Mark the one word the listener should keep with double-underscores, like __owner__. That word is the picture, or the mechanism once, in words they already have.
