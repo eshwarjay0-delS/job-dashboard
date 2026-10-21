@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
   try {
     const heard = await transcribeAudio({
       audio, mime: mime!, purpose,
-      hint: decoded(request.headers.get("x-speech-hint"), 400) || undefined,
+      hint: decoded(request.headers.get("x-speech-hint"), 560) || undefined,
       language: /^[a-z]{2}$/.test(language) ? language : undefined,
       sessionId: sessionId || undefined,
       userHash: hashUserId(user.id),

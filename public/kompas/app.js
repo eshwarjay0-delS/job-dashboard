@@ -1093,7 +1093,7 @@ let captures = [];           // { who, stream, owner, rec, chunks, ... }
 let captureErrors = [];
 let audioCtx = null;
 let displayVideo = null;     // kept from the call-audio share, reused by Analyse Screen
-const VAD = { SILENCE_MS: 850, MIN_SPEECH_MS: 160, MAX_SEG_MS: 14000, IDLE_RECYCLE_MS: 6000, INTERIM_MS: 3000 };
+const VAD = { SILENCE_MS: 1100, MIN_SPEECH_MS: 160, MAX_SEG_MS: 28000, IDLE_RECYCLE_MS: 6000, INTERIM_MS: 3000 };
 const LEVEL_WORKLET = "class L extends AudioWorkletProcessor{constructor(){super();this.a=0;this.n=0}process(i){const c=i[0]&&i[0][0];if(c){let s=0;for(let k=0;k<c.length;k++)s+=c[k]*c[k];this.a+=s;this.n+=c.length;if(this.n>=1024){this.port.postMessage(Math.sqrt(this.a/this.n));this.a=0;this.n=0}}return true}}registerProcessor('perfact-level',L);";
 function pickMime() { for (const m of ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]) { try { if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; } catch {} } return ""; }
 const MIME = pickMime();
@@ -1348,7 +1348,7 @@ async function transcribe(blob, who, opt) {
       let retry = false, delay = 500;
       try {
         const res = await fetch("/api/transcribe", { method: "POST", signal: ctl.signal,
-          headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-whisper-prompt": encodeURIComponent(opt.prompt ?? whisperPrompt()) }, body: blob });
+          headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-whisper-prompt": encodeURIComponent(opt.prompt ?? whisperPrompt()), "x-speech-lang": String((typeof current !== "undefined" && current && current.language) || "en").slice(0, 2).toLowerCase() }, body: blob });
         if (!res.ok) {
           retry = res.status === 429 || res.status >= 500;
           const retrySeconds = Number(res.headers?.get("retry-after"));
@@ -1563,12 +1563,17 @@ function composeIntake(lines, opts = {}) {
   const answerText = opts.answerText || "";
   const micIsSource = !!opts.micIsSource;
   const typed = String(opts.typedText || "").trim();
+  const currentQ = String(opts.currentQuestion || "").trim();
+  const anchorQ = currentQ && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(currentQ) ? currentQ : "";
   const primary = [], micContext = [], keywords = [];
   const dropped = { echo: 0, noise: 0 };
+  const seen = new Set();
   const pushKw = (text) => { for (const k of intakeTerms(text)) if (!keywords.includes(k) && keywords.length < 8) keywords.push(k); };
-  for (const t of lines || []) {
+  const allLines = [...(opts.previous || []).map(t => ({ ...t, who: t.who === "Them" ? "Them (earlier)" : t.who })), ...(lines || [])];
+  for (const t of allLines) {
     const text = String(t.text || "").trim(); if (!text) continue;
-    if (t.who === "Them") { if (isNoiseLine(text)) { dropped.noise++; continue; } primary.push({ who: "Them", text }); pushKw(text); continue; }
+    const dedupeKey = text.toLowerCase(); if (seen.has(dedupeKey)) continue; seen.add(dedupeKey);
+    if (t.who === "Them" || t.who === "Them (earlier)") { if (isNoiseLine(text)) { dropped.noise++; continue; } primary.push({ who: t.who, text }); pushKw(text); continue; }
     if (t.who === "You (typed)") { primary.push({ who: "You (typed)", text }); pushKw(text); continue; }
     // Mic ("You") from here on.
     if (echoShare(text, answerText) >= 0.5) { dropped.echo++; pushKw(text); continue; }   // spelling out the on-screen answer
@@ -1582,11 +1587,13 @@ function composeIntake(lines, opts = {}) {
   const hasCue = Q_CUE.test(primaryText);
   const longestLineWords = primary.reduce((m, p) => Math.max(m, intakeWords(p.text).length), 0);
   const typedStrong = primary.some(p => p.who === "You (typed)" && (Q_CUE.test(p.text) || intakeWords(p.text).length >= 3));
-  const worthy = primary.length > 0 && (hasCue || typedStrong || longestLineWords >= 6);
+  if (anchorQ) pushKw(anchorQ);
+  const worthy = primary.length > 0 && (hasCue || typedStrong || longestLineWords >= 6 || !!anchorQ);
   const heardLines = primary.map(p => `${p.who}: ${p.text}`);
   if (micContext.length) heardLines.push(`You (context keywords): ${micContext.join(" ").slice(0, 300)}`);
+  if (anchorQ) heardLines.push(`Current question (on screen): ${anchorQ}`);
   return {
-    worthy, hasCue, contentWords, keywords, dropped,
+    worthy, hasCue, contentWords, keywords, dropped, anchorQ,
     heard: heardLines.join("\n"),
     derived: primary.length ? primary[primary.length - 1].text.slice(0, 600) : "",
     primaryCount: primary.length, micContextCount: micContext.length,
@@ -1956,6 +1963,21 @@ async function aiAnswer(fromAuto) {
     if (pending.length || typedText) {
       const cur = cards[idx];
       const answerText = [cur, cards[idx - 1]].filter(Boolean).map(c => typeof c.answer === "string" ? plainAnswer(c.answer) : "").join(" ");
+      // Re-press rule (owner, 21 Oct 2026): pressing AI Answer again after an
+      // answer exists means that answer missed. Combine EVERYTHING heard —
+      // previous lines, mic words, the newest computer audio — with the
+      // question already on screen, let the engine form the question from the
+      // whole, and answer that. Frequency of pressing is the miss signal.
+      const isRepress = !fromAuto && !!cur && typeof cur.answer === "string" && cur.answer.trim().length > 0 && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
+      if (isRepress) {
+        const previous = transcript.filter(t => t.seq <= answeredSeq).slice(-40);
+        const combined = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You", previous, currentQuestion: cur.question });
+        if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
+        answeredSeq = heardSeq; updatePending();
+        const heard = combined.noiseOnly ? [cur.earlier, cur.heard].filter(Boolean).join("\n") : combined.heard;
+        if (!heard) { status("Nothing heard yet — press Start, or type a question.", "live"); return; }
+        return await generateAnswer(heard, cur, { consolidated: true, earlier: "", derived: "" });
+      }
       const intake = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You" });
       if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
       answeredSeq = heardSeq; updatePending();
@@ -1984,8 +2006,15 @@ async function aiAnswer(fromAuto) {
     if (fromAuto) return;
     const c = cards[idx];
     if (c && /^(Your introduction)$/.test(c.question)) return await generateAnswer("Tell me about yourself", c);
-    // Pressing AI Answer again answers the question already on screen. Re-deriving the old heard text is what showed "No question yet".
-    if (c && c.question && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(c.question)) return await generateAnswer(c.question, c);
+    // Pressing AI Answer again re-forms the question from everything heard
+    // for this card plus its earlier context, and answers that — the press
+    // itself says the last answer missed (owner, 21 Oct 2026). Re-deriving
+    // the old heard text alone is what showed "No question yet".
+    if (c && c.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(c.question)) {
+      const combined = [c.earlier, c.heard].filter(Boolean).join("\n");
+      if (combined) return await generateAnswer(combined, c, { consolidated: true, earlier: "", derived: "" });
+      return await generateAnswer(c.question, c);
+    }
     if (c && c.heard) return await generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "" });
     status("Nothing heard yet — press Start, or type a question.", "live");
     setChat(true);

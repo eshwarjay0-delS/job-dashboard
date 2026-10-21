@@ -118,18 +118,19 @@ function mentionsResponseFormat(detail: string): boolean {
 // surface as a hallucinated sentence.
 // ---------------------------------------------------------------------------
 
-/** Languages where the careful (bigger, slower) model earns its 2.8x price. Prefix-matched so te, te-IN land together. */
-const CAREFUL_LANGUAGES = ['te', 'hi', 'ta', 'kn', 'ml', 'bn', 'pa', 'mr', 'gu', 'or', 'as']
-
-/** Cheap default: $0.04/audio-hour. English keeps turbo — the accuracy gap there is small and the saving is real. */
-const TURBO_MODEL = 'whisper-large-v3-turbo'
 /** Careful model: $0.111/audio-hour. Turbo degrades further than large-v3 on low-resource languages (OpenAI's own note). */
 const CAREFUL_MODEL = 'whisper-large-v3'
 
-/** Which Whisper model to use for a language. Env override (GROQ_TRANSCRIBE_MODEL) wins when set. */
-export function modelForLanguage(language: string | undefined): string {
-  const base = (language ?? '').trim().toLowerCase().split('-')[0]!
-  return CAREFUL_LANGUAGES.includes(base) ? CAREFUL_MODEL : TURBO_MODEL
+/**
+ * Which Whisper model to use. Owner directive, 21 Oct 2026: dictation and
+ * question capture must be as precise as the microphone allows — accuracy
+ * outranks the 2.8x saving, so EVERY language gets the careful model,
+ * English included (turbo's small average gap lands exactly on accented
+ * speech and technical terms, which is where interview questions live).
+ * Env override (GROQ_TRANSCRIBE_MODEL) still wins when set.
+ */
+export function modelForLanguage(_language: string | undefined): string {
+  return CAREFUL_MODEL
 }
 
 const PRIMING_BY_LANGUAGE: Readonly<Record<string, string>> = {
@@ -218,9 +219,9 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
   if (!key) throw new SpeechError("unavailable")
 
   const envModel = (process.env.GROQ_TRANSCRIBE_MODEL || "").trim()
-  // Per-language model selection (perfACT): turbo for English (2.8x cheaper,
-  // small accuracy gap), the careful large-v3 for Indic languages where turbo
-  // degrades. An explicit env model always wins.
+  // Model selection: the careful large-v3 for every language (owner
+  // directive, 21 Oct 2026 — dictation precision outranks the saving).
+  // An explicit env model always wins.
   const model = envModel || modelForLanguage(input.language)
 
   // Container sniffing (perfACT): bytes first, MIME second. The filename is

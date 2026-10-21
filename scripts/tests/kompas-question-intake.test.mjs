@@ -99,3 +99,20 @@ test("a call of pure greetings from both sides stays noise-only", () => {
   assert.equal(r.noiseOnly, true);
   assert.equal(r.worthy, false);
 });
+
+test("re-press combining: previous lines + new fragment + on-screen question compose as one", () => {
+  const prev = [{ who: "Them", text: "We are migrating the firewalls next quarter and the audit is in March." }];
+  const frag = [{ who: "Them", text: "So how would you handle the rule cleanup?" }];
+  const r = composeIntake(frag, { previous: prev, currentQuestion: "How do you handle firewall rule cleanup?" });
+  assert.equal(r.worthy, true);
+  assert.match(r.heard, /Them \(earlier\): We are migrating/);
+  assert.match(r.heard, /Them: So how would you handle/);
+  assert.match(r.heard, /Current question \(on screen\): How do you handle firewall rule cleanup\?/);
+  assert.equal(r.anchorQ, "How do you handle firewall rule cleanup?");
+});
+
+test("re-press combining: an earlier line repeated in the new lines is only heard once", () => {
+  const line = { who: "Them", text: "What is your approach to vulnerability scanning?" };
+  const r = composeIntake([line], { previous: [line] });
+  assert.equal((r.heard.match(/vulnerability scanning/g) || []).length, 1);
+});
