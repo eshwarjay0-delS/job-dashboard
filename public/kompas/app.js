@@ -1159,7 +1159,8 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
   if (stale()) { releaseTracks(); return; }
   if (who === "Them") displayVideo = owner?.getVideoTracks()[0] || null;
   const src = ctx.createMediaStreamSource(stream);
-  const cap = { who, stream, owner, src, stopped: false, rec: null, chunks: [], segStart: 0, speechMs: 0, lastVoice: 0, lastTick: 0, voiced: false, noise: 0.001, interimAt: 0, inflight: 0 };
+  const cap = { who, stream, owner, src, stopped: false, rec: null, chunks: [], segStart: 0, speechMs: 0, lastVoice: 0, lastTick: 0, voiced: false, noise: 0.001, interimAt: 0, inflight: 0, lastVadAt: performance.now(), lastAudibleAt: performance.now(), zeroWarned: false, watchdog: null, an: null };
+  const an = ctx.createAnalyser(); an.fftSize = 1024; src.connect(an); cap.an = an;
   if (ctx._lvl === "worklet") {
     const node = new AudioWorkletNode(ctx, "perfact-level");
     node.port.onmessage = (e) => vadStep(cap, e.data);
@@ -1167,11 +1168,30 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
     src.connect(node); node.connect(sink); sink.connect(ctx.destination);
     cap.node = node; cap.sink = sink;
   } else {
-    const an = ctx.createAnalyser(); an.fftSize = 1024; src.connect(an);
     const buf = new Float32Array(an.fftSize);
     cap.timer = setInterval(() => { an.getFloatTimeDomainData(buf); let s = 0; for (let k = 0; k < buf.length; k++) s += buf[k] * buf[k]; vadStep(cap, Math.sqrt(s / buf.length)); }, 30);
     cap.node = an;
   }
+  // Capture watchdog (owner report, 21 Oct 2026: "sometimes it picks up
+  // nothing even when I scream into the microphone"): if the level meter
+  // stalls or the audio context suspends mid-session, vadStep never runs,
+  // no phrase is ever marked as speech, and everything is silently
+  // discarded. The watchdog revives the context, falls back to the analyser
+  // meter when the worklet stops reporting, and says so on screen when the
+  // microphone itself is delivering silence.
+  cap.watchdog = setInterval(() => {
+    if (cap.stopped || !running) return;
+    if (audioCtx && audioCtx.state === "suspended") primeAudio();
+    const now = performance.now();
+    if (now - (cap.lastVadAt || 0) > 3000 && !cap.timer && cap.an) {
+      const buf = new Float32Array(cap.an.fftSize);
+      cap.timer = setInterval(() => { cap.an.getFloatTimeDomainData(buf); let s = 0; for (let k = 0; k < buf.length; k++) s += buf[k] * buf[k]; vadStep(cap, Math.sqrt(s / buf.length)); }, 30);
+    }
+    if (cap.who === "You" && !cap.zeroWarned && now - (cap.lastAudibleAt || now) > 20000) {
+      cap.zeroWarned = true;
+      status("Kompas is hearing silence from the microphone. Check the input device in your system sound settings, then keep talking.", "err");
+    }
+  }, 1000);
   const tracks = owner ? owner.getTracks() : stream.getAudioTracks();
   for (const track of tracks) {
     track.addEventListener("ended", () => {
@@ -1198,6 +1218,7 @@ function stopSource(who) {
     finishing.push(endSegment(cap, cap.voiced, false));
     try { cap.src.disconnect(); cap.node && cap.node.disconnect(); cap.sink && cap.sink.disconnect(); } catch {}
     if (cap.timer) clearInterval(cap.timer);
+    if (cap.watchdog) clearInterval(cap.watchdog);
     try { cap.stream.getTracks().forEach(t => t.stop()); } catch {}
     try { cap.owner && cap.owner.getTracks().forEach(t => t.stop()); } catch {}
     meter(who, 0, false);
@@ -1224,7 +1245,7 @@ function startSegment(cap) {
   cap.rec = rec;
 }
 const finals = new Set();              // final transcriptions still in flight (AI Answer waits for them)
-function endSegment(cap, keep, restart = true) {
+function endSegment(cap, keep, restart = true, force = false) {
   const rec = cap.rec, chunks = cap.chunks, speech = cap.speechMs;
   const epoch = transcriptionEpoch;
   const prompt = whisperPrompt();
@@ -1241,7 +1262,7 @@ function endSegment(cap, keep, restart = true) {
   const done = new Promise(r => { settle = r; });
   finals.add(done); done.then(() => finals.delete(done));
   rec.onstop = () => {
-    if (!keep || speech < VAD.MIN_SPEECH_MS) return settle();
+    if (!keep || (speech < VAD.MIN_SPEECH_MS && !force)) return settle();
     const blob = new Blob(chunks, { type: rec.mimeType || MIME || "audio/webm" });
     if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt }).then(settle, settle); else settle();
   };
@@ -1255,7 +1276,11 @@ function endSegment(cap, keep, restart = true) {
 }
 // AI Answer pressed mid-sentence: cut every open phrase now and wait (briefly) for its words.
 async function flushHeard(maxMs = 43000) {
-  for (const cap of captures) if (cap.voiced && cap.speechMs >= VAD.MIN_SPEECH_MS) endSegment(cap, true);
+  for (const cap of captures) {
+    if (cap.voiced && cap.speechMs >= VAD.MIN_SPEECH_MS) endSegment(cap, true);
+    // VAD stalled (meter silent for seconds): rescue the recorded audio anyway — one transcription attempt beats a silent discard.
+    else if (cap.rec && performance.now() - cap.segStart > 1500 && performance.now() - (cap.lastVadAt || 0) > 3000) endSegment(cap, true, true, true);
+  }
   const wait = [...finals];
   if (!wait.length) return;
   let timer;
@@ -1269,6 +1294,8 @@ async function flushHeard(maxMs = 43000) {
 function vadStep(cap, rms) {
   if (cap.stopped || !running) return;
   const now = performance.now();
+  cap.lastVadAt = now;
+  if (rms > 0.004) { cap.lastAudibleAt = now; cap.zeroWarned = false; }
   const dt = cap.lastTick ? Math.min(100, now - cap.lastTick) : 20; cap.lastTick = now;
   const threshold = Math.max(0.003, cap.noise * 2.5);
   const speaking = rms > threshold;
