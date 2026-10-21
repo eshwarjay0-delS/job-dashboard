@@ -110,13 +110,16 @@ test('picking a resume no longer fetches every file: one named by its content is
 
 test('Files shows each email as a title with its folders, a View beside every resume, and not the learned list', () => {
   const files = read('src/app/dashboard/documents/DocumentsClient.tsx'), tree = read('src/app/dashboard/resume/LibraryTree.tsx'), download = read('src/app/api/resumes/download/route.ts'), bot = read('src/app/api/whatsapp/webhook/route.ts')
-  for (const src of [files, tree]) {
-    assert.ok(src.includes('const isEmailFolder = (name: string) => name.includes("@") || name === "Needs email review"'))
-    assert.ok(src.includes('filter(c => isEmailFolder(c.name)).map(person => ('))
-    assert.ok(src.includes('href={viewHref(file)} target="_blank" rel="noopener noreferrer"') && src.includes('>\n          View\n        </a>'))
-  }
+  // The resume hub's tab keeps its own tree; the Files page is the folder window (FolderBrowser.tsx): the top level is each
+  // email, its kind-of-job folders under it, a View beside every resume (owner, 20 Oct 2026: Windows-style folders).
+  assert.ok(tree.includes('const isEmailFolder = (name: string) => name.includes("@") || name === "Needs email review"'))
+  assert.ok(tree.includes('filter(c => isEmailFolder(c.name)).map(person => ('))
+  assert.ok(tree.includes('href={viewHref(file)} target="_blank" rel="noopener noreferrer"') && tree.includes('>\n          View\n        </a>'))
+  const window_ = read('src/components/FolderBrowser.tsx')
+  assert.ok(files.includes('<FolderBrowser') && files.includes('mode="browse"'))
+  assert.ok(window_.includes('title="Look at this resume"') && window_.includes('segments(f.category)'), 'a View beside every resume; each email is a top-level folder')
   // A Word resume opens as a page; a PDF opens as itself in the browser.
-  assert.ok(files.includes('/api/resumes/pdf?filepath=') && files.includes('&inline=1'))
+  assert.ok(window_.includes('/api/resumes/pdf?filepath=') && window_.includes('&inline=1'))
   assert.ok(download.includes('pdf && searchParams.get("inline") === "1" ? "inline" : "attachment"'))
   // What each kind of job keeps asking for is kept for the tailoring and not put in front of the person.
   assert.ok(!files.includes('Learned') && !existsSync(new URL('../../src/app/dashboard/documents/learned.tsx', import.meta.url)))

@@ -39,13 +39,13 @@ test('Apply merges real index results, excludes sample jobs and carries JD into 
  // What the page took on after this test was written (17-19 Oct): the real duplicate check; stand-ins for saved searches
  // and receipts, which fetch their own data and are not what this test checks; and document, for the "Back from the
  // portal?" listener. The search on page open (e487275) waits on setTimeout, which this sandbox leaves out on purpose.
- vm.runInNewContext('(function(require,module,exports){'+code+'\n})',{URLSearchParams,fetch:(...args)=>globalThis.fetch(...args),sessionStorage:dom.window.sessionStorage,document:dom.window.document})(id=>id==='next/navigation'?{useRouter:()=>({push:p=>navigation.push(p)})}:id==='next/link'?wrapped(({children,...p})=>React.createElement('a',p,children)):id==='@/lib/contract-jobs'?{applicationUrl,contractTypes}:id==='@/lib/duplicate-check'?{findDuplicates}:id==='./_components/saved-searches'?{SavedSearches:()=>null}:id==='./_components/receipts'?{ApplyReceipts:()=>null}:id.endsWith('.css')?{}:require(id),module,module.exports)
+ vm.runInNewContext('(function(require,module,exports){'+code+'\n})',{URLSearchParams,fetch:(...args)=>globalThis.fetch(...args),sessionStorage:dom.window.sessionStorage,document:dom.window.document})(id=>id==='next/navigation'?{useRouter:()=>({push:p=>navigation.push(p)})}:id==='next/link'?wrapped(({children,...p})=>React.createElement('a',p,children)):id==='@/lib/contract-jobs'?{applicationUrl,contractTypes}:id==='@/lib/duplicate-check'?{findDuplicates}:id==='./_components/saved-searches'?{SavedSearches:()=>null}:id==='./_components/receipts'?{ApplyReceipts:()=>null}:id==='@/components/FolderBrowser'?(({files,onPick})=>React.createElement('div',{className:'folder-stand-in'},files.map(f=>React.createElement('button',{key:f.id,type:'button','data-pick':f.filepath,onClick:()=>onPick(f)},f.filename)))):id.endsWith('.css')?{}:require(id),module,module.exports)
  await act(async()=>root.render(React.createElement(module.exports.default)))
  await act(async()=>document.querySelector('form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true})))
  assert.equal(document.querySelectorAll('.mf-apply-job').length,1)
  assert.ok(!document.body.textContent.includes('Sample job'))
  await act(async()=>document.querySelector('.mf-apply-job').click())
- const select=document.querySelector('select');await act(async()=>{select.value='/owned/resume.docx';select.dispatchEvent(new dom.window.Event('change',{bubbles:true}))})
+ await act(async()=>document.querySelector('[data-pick="/owned/resume.docx"]').click())  // the resume is picked in the folder window (FolderBrowser), not a select
  await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Tailor to this job').click())
  assert.equal(dom.window.sessionStorage.getItem('jd_prefill'),'Build APIs with TypeScript.')
  assert.equal(dom.window.sessionStorage.getItem('apply_resume_path'),'/owned/resume.docx')

@@ -11,6 +11,7 @@ import { authenticatedUser, signInRequired, ownedResumePath } from "@/lib/authBo
 import { isAdminEmail } from "@/lib/owner"
 import { USER_RESUMES_DIR as USER_RESUMES_BASE } from "@/lib/paths"
 import { checkRateLimit, clientIp } from "@/lib/rateLimit"
+import { fileTailored } from "@/lib/tailor-file"
 
 export const runtime = "nodejs"
 // Tailoring runs the full model ladder in one request; give it the max window a
@@ -30,6 +31,10 @@ const HOUR_MS = 60 * 60 * 1000
 // Synchronous tailor — generates (or returns the cached result for an identical
 // JD + resume + feedback) and responds with the full result. The background flow
 // (/api/tailor/start + /api/tailor/status) shares the same runTailor core.
+//
+// `save: { role, company }` (with `filepath`, the resume it starts from) also files the result in the person's Files,
+// in the folder of its email and kind of job, one job one file, and answers `saved: { rel, filepath, email, category, name }`
+// (src/lib/tailor-file.ts). Apply on the website uses it; without `save` nothing is filed here.
 export async function POST(request: NextRequest) {
   const user = await authenticatedUser(request)
   if (!user) return signInRequired()
@@ -100,7 +105,11 @@ export async function POST(request: NextRequest) {
         after(() => deductPoints(hashUserId(userId), POINTS_PER_RESUME, `resume:${resumeId}`, "resume"))
       }
     }
-    return NextResponse.json(result)
+    const save = body.save && typeof body.save === "object" && !Array.isArray(body.save) ? body.save as { role?: unknown; company?: unknown } : null
+    const saved = save && body.filepath
+      ? await fileTailored({ userDir: userResumeDir, base: body.filepath, jd, result, role: typeof save.role === "string" ? save.role : "", company: typeof save.company === "string" ? save.company : "" })
+      : null
+    return NextResponse.json(saved ? { ...result, saved } : result)
   } catch (e: unknown) {
     return NextResponse.json({ error: `Tailoring failed: ${String(e)}` }, { status: 500 })
   }

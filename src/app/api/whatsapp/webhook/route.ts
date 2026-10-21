@@ -38,13 +38,12 @@ import { plainFailure } from "@/lib/plain-failure"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 import { isCertification } from "@/lib/keyword-targets"
 import { libraryOf, numberedEmails, candidatesFor } from "@/lib/library-pick-store"
-import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME, type Ranked } from "@/lib/library-pick"
-import { existingForJob, saveTailored, saveUpload, markUsed, readShelf, relOf } from "@/lib/resume-library-store"
-import { jobKeyOf, type SavedFile, type Uses } from "@/lib/resume-library"
-import { agentPick, logPick, readPicks } from "@/lib/library-agent"
-import { roleOfJob, narrowByRole, matchHint, titlesOf, parseInstruction, parseQuestion, splitTailInstruction, type Instruction } from "@/lib/role-match"
-import { extractKeywords } from "@/lib/keywords"
-import { resumeEmails } from "@/lib/resumeOrganization"
+import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME } from "@/lib/library-pick"
+import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
+import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
+import { readPicks } from "@/lib/library-agent"
+import { chooseResume, type Prefer } from "@/lib/library-choose"
+import { titlesOf, parseInstruction, parseQuestion, splitTailInstruction, type Instruction } from "@/lib/role-match"
 import { getApprovalCard, saveApprovalCard, parseCardButton, deliverApprovalCard, sendGmailDraft, updateGmailDraft, deleteGmailDraft } from "@/lib/chief-approvals"
 
 export const runtime = "nodejs"
@@ -689,14 +688,6 @@ async function emailSlots(userId: string): Promise<{ slots: string[]; sure: bool
   }
 }
 
-// How often each resume of these folders was picked, from the folders' records.
-async function usesOf(userDir: string, email: string, ranked: Ranked[]): Promise<Uses> {
-  const folders = [...new Set(ranked.map(r => r.candidate.folder).filter(f => f && !f.includes(" / ")))]
-  const all: Uses = {}
-  await Promise.all(folders.map(async folder => Object.assign(all, (await readShelf(userDir, email, folder).catch(() => null))?.uses || {})))
-  return all
-}
-
 /**
  * A job made from the closest resume of one email in the person's Files. Made before for this job: sent again as it is
  * (no AI, nothing new saved), unless `redo`. Otherwise the AI agent and the code each pick, the agent's pick is used
@@ -762,9 +753,6 @@ async function listResumes(from: string, userId: string, session: Session) {
   return sendText(from, [`Your *${email}* resumes (${ranked.length}): ${titles.map(t => `*${t}*`).join(", ")}.`, "Say _make another one with the SOC resume_ (or any title) to start a job from one of them."].join("\n"))
 }
 
-/** What the person asked for beyond the job: a resume by name, or "not the one it started from last time". */
-type Prefer = { hint?: string; avoid?: string }
-
 /** "Make another one with the Cybersecurity Analyst resume": the last job again, from the resume named, or from another. */
 async function again(from: string, said: Instruction, userId: string) {
   const last = (await loadSession(from)).last
@@ -774,59 +762,12 @@ async function again(from: string, said: Instruction, userId: string) {
 }
 
 async function pickAndMake(from: string, job: { jd: string; jdId: string }, email: string, userId: string, userDir: string, redo: boolean, began: number, prefer: Prefer = {}) {
-  const { index } = await libraryOf(userDir)
-  // "redo" starts again from what the person wrote, never from the resume made for this same job (a copy of a copy).
-  const candidates = (await candidatesFor(userDir, email, index)).filter(c => !redo || c.job !== jobKeyOf(job.jd))
-  const { ranked: all } = rankFor(candidates, email, extractKeywords(job.jd))
-  if (!all.length) return sendText(from, `Your Files hold no resume of *${email}* to start from. Send that resume as a *.docx* file with the job description.`)
-  const relOfAbs = (abs: string) => relOf(userDir, abs)
-
-  // Step one is the kind of role: every resume whose own title is the job's role (or the one the person named), all of
-  // them. Step two, inside them, is the niche: the closest by keywords and the AI agent's pick. Until 20 Oct 2026 the pick
-  // looked only at keywords and at the folder a resume had been sorted into (owner: "always start by picking that all").
-  const role = roleOfJob(job.jd)
-  let pool = all, why = "", titled = 0
-  if (prefer.hint) {
-    const named = matchHint(all, prefer.hint)
-    if (!named.length) {
-      const have = titlesOf(all)
-      return sendText(from, `I could not find a resume called *${prefer.hint}* under ${email}. Your resumes there: ${have.map(t => `*${t}*`).join(", ")}. Say _use the ${have[0]} resume_ and I will start from it.`)
-    }
-    pool = named
-    why = "because you asked for it"
-  } else {
-    const n = narrowByRole(all, role)
-    pool = n.pool
-    if (n.fit >= 4) { why = `because its title is the job's: ${role}`; titled = n.pool.length }
-    // "Make another one": not the resume the last go started from, when there is any other.
-    if (prefer.avoid) {
-      const rest = pool.filter(r => relOfAbs(r.candidate.path) !== prefer.avoid)
-      const other = all.filter(r => relOfAbs(r.candidate.path) !== prefer.avoid)
-      if (rest.length) pool = rest
-      else if (other.length) { pool = other; why = "as another one, because you asked for a different resume" }
-    }
-  }
-
-  // The AI agent picks from the pool, the code's ranking stands beside it, and the agent's pick is used when it names a
-  // real resume of this email (owner: "I was expecting agent always working internally with that WhatsApp chat").
-  const kwKeys = await keysFor("resume-keywords", () => resolveKeys({}))
-  const ai = await agentPick({ keys: kwKeys, jd: job.jd, ranked: pool, uses: await usesOf(userDir, email, pool), relOf: relOfAbs, role, titled: !!titled || !!prefer.hint }).catch(() => null)
-  const first = ai ? [pool[ai.index], ...pool.filter((_, i) => i !== ai.index)] : pool
-  const order = [...first, ...all.filter(r => !pool.includes(r))]
-  let picked: Ranked | null = null
-  for (const one of order.slice(0, 8)) {
-    const bytes = await readPath(one.candidate.path).catch(() => null)
-    if (!bytes) continue
-    const emails = resumeEmails(await extractText(bytes).catch(() => ""))
-    if (emails.length === 1 && emails[0] === email) { picked = one; break }
-  }
-  if (!picked) return sendText(from, `I could not open a resume in your Files that carries *${email}*. Send that resume as a *.docx* file with the job description.`)
-  if (!pool.includes(picked)) why = ""
-
-  const rel = relOfAbs(picked.candidate.path)
-  await logPick(userId, { at: Date.now(), job: jobKeyOf(job.jd), email, agent: ai ? relOfAbs(pool[ai.index].candidate.path) : null,
-    code: relOfAbs(pool[0].candidate.path), used: rel, agree: ai ? ai.index === 0 : null, ...(ai?.why ? { why: ai.why } : {}), ...(ai?.by ? { by: ai.by } : {}),
-    ...(role ? { role } : {}), titled, ...(prefer.hint ? { hint: prefer.hint } : {}) })
+  // Which resume: the same choice Apply makes on the website (src/lib/library-choose.ts).
+  const choice = await chooseResume({ userDir, userId, email, jd: job.jd, redo, prefer })
+  if (choice.kind === "none") return sendText(from, `Your Files hold no resume of *${email}* to start from. Send that resume as a *.docx* file with the job description.`)
+  if (choice.kind === "unnamed") return sendText(from, `I could not find a resume called *${choice.hint}* under ${email}. Your resumes there: ${choice.have.map(t => `*${t}*`).join(", ")}. Say _use the ${choice.have[0]} resume_ and I will start from it.`)
+  if (choice.kind === "unreadable") return sendText(from, `I could not open a resume in your Files that carries *${email}*. Send that resume as a *.docx* file with the job description.`)
+  const { picked, rel, why } = choice
   // The pick happens inside the same 300 s function as the rewrite (after up to PAIR_WAIT_MS of waiting for a paired
   // file): the rewrite gets what is left, so the file is still sent in time.
   const budget = Math.max(120_000, TAILOR_BUDGET_MS - PAIR_WAIT_MS - (Date.now() - began))

@@ -18,143 +18,9 @@ interface ResumeFile {
   kind?: "docx" | "pdf"
 }
 
-// The name as a person reads it: without the hash the library adds so two files of one name can live side by side.
-const shownName = (name: string) => name.replace(/__[a-f0-9]{16}$/i, "")
-// The name as a person reads it, and where a resume can be looked at before it is used (owner, 13 Oct 2026: "Give the
-// preview with view button right next to all resumes"). A Word resume opens as a page; a PDF opens as itself.
-const plainName = shownName
-const viewHref = (file: { filepath: string; filename: string; kind?: string }) => file.kind === "pdf"
-  ? `/api/resumes/download?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(plainName(file.filename))}&inline=1`
-  : `/api/resumes/pdf?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(plainName(file.filename))}&autoprint=0`
-// A top folder that is a person's email is a title, with that person's folders under it ("I need to see separate with
-// email as titles and Organized folders").
-const isEmailFolder = (name: string) => name.includes("@") || name === "Needs email review"
 
-// ── Icons ──────────────────────────────────────────────────────────────────────
-function CloudIcon() {
-  return (
-    <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={1.4} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.338-2.32 5.75 5.75 0 011.344 11.095"/>
-    </svg>
-  )
-}
 function SpinIcon() {
   return <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-}
-
-// ── Tree components ────────────────────────────────────────────────────────────
-interface TreeNode { name: string; folders: Map<string, TreeNode>; files: ResumeFile[] }
-
-function ensurePath(root: TreeNode, parts: string[]): TreeNode {
-  let node = root
-  for (const p of parts) {
-    let child = node.folders.get(p)
-    if (!child) { child = { name: p, folders: new Map(), files: [] }; node.folders.set(p, child) }
-    node = child
-  }
-  return node
-}
-
-function buildTree(files: ResumeFile[], folders: string[]): TreeNode {
-  const root: TreeNode = { name: "", folders: new Map(), files: [] }
-  for (const f of folders) ensurePath(root, f.split("/").map(s => s.trim()).filter(Boolean))
-  for (const f of files) ensurePath(root, (f.category || "General").split("/").map(s => s.trim()).filter(Boolean)).files.push(f)
-  return root
-}
-
-function countFiles(n: TreeNode): number {
-  let c = n.files.length; n.folders.forEach(f => { c += countFiles(f) }); return c
-}
-
-function Chevron({ open }: { open: boolean }) {
-  return <svg className="w-3 h-3 transition-transform" style={{ transform: open ? "rotate(90deg)" : "" }} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
-}
-function FolderIcon() {
-  return <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style={{ color: "var(--text-soft)" }}><path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z" /></svg>
-}
-function FileIcon() {
-  return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24" style={{ color: "var(--accent)" }}><path strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path strokeLinejoin="round" d="M14 2v6h6" /></svg>
-}
-
-interface TreeCtx {
-  checked: Set<string>
-  onToggle: (key: string) => void
-}
-
-function CheckBox({ checked, onToggle }: { checked: boolean; onToggle: () => void }) {
-  return (
-    <button type="button" onClick={e => { e.stopPropagation(); onToggle() }}
-      className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-all"
-      style={{ borderColor: checked ? "var(--accent)" : "var(--border)", background: checked ? "var(--accent)" : "var(--surface)" }}>
-      {checked && <svg className="w-2.5 h-2.5" fill="none" stroke="#fff" strokeWidth={3.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-    </button>
-  )
-}
-
-function FileRow({ file, depth, ctx }: { file: ResumeFile; depth: number; ctx: TreeCtx }) {
-  const key = "f:" + file.filepath
-  const on = ctx.checked.has(key)
-  const fmt = new Date(file.uploadedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  return (
-    <div className="flex items-center gap-2.5 rounded-lg py-2 pr-2 transition-colors"
-      style={{ paddingLeft: 8 + depth * 16, background: on ? "var(--accent-soft)" : undefined }}>
-      <CheckBox checked={on} onToggle={() => ctx.onToggle(key)} />
-      <FileIcon />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{shownName(file.filename)}</p>
-        <p className="text-xs" style={{ color: "var(--text-soft)" }}>{file.kind === "pdf" ? "PDF · " : ""}{file.category} · {file.size} · {fmt}</p>
-      </div>
-      {file.filepath && (
-        <a href={viewHref(file)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} title="Look at this resume"
-          className="text-xs px-2 py-1 rounded-lg border" style={{ color: "var(--text)", borderColor: "var(--border)", background: "var(--surface)", textDecoration: "none", fontWeight: 600 }}>
-          View
-        </a>
-      )}
-      <a
-        href={`/api/resumes/download?filepath=${encodeURIComponent(file.filepath)}&name=${encodeURIComponent(shownName(file.filename))}`}
-        download
-        onClick={e => e.stopPropagation()}
-        className="text-xs px-2 py-1 rounded-lg border transition-colors"
-        style={{ color: "var(--accent-txt)", borderColor: "var(--border)", background: "var(--surface)" }}
-      >
-        ↓
-      </a>
-    </div>
-  )
-}
-
-function FolderRow({ node, depth, relpath, ctx }: { node: TreeNode; depth: number; relpath: string; ctx: TreeCtx }) {
-  const [open, setOpen] = useState(true)
-  const key = "d:" + relpath
-  return (
-    <div>
-      <div className="flex items-center gap-2.5 rounded-lg py-2 pr-2 transition-colors hover:bg-gray-50"
-        style={{ paddingLeft: 8 + depth * 16 }}>
-        <CheckBox checked={ctx.checked.has(key)} onToggle={() => ctx.onToggle(key)} />
-        <button onClick={() => setOpen(o => !o)} className="flex flex-1 items-center gap-2 min-w-0 text-left">
-          <span style={{ color: "var(--text-soft)" }}><Chevron open={open} /></span>
-          <FolderIcon />
-          <span className="flex-1 truncate text-sm font-semibold" style={{ color: "var(--text)" }}>{node.name}</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-2)", color: "var(--text-soft)" }}>
-            {countFiles(node)}
-          </span>
-        </button>
-      </div>
-      {open && (
-        <div>
-          {[...node.folders.values()].map(c => <FolderRow key={c.name} node={c} depth={depth + 1} relpath={`${relpath}/${c.name}`} ctx={ctx} />)}
-          {node.files.map(f => <FileRow key={f.id} file={f} depth={depth + 1} ctx={ctx} />)}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function LibraryTree({ files, folders, checked, onToggle }: { files: ResumeFile[]; folders: string[]; checked: Set<string>; onToggle: (k: string) => void }) {
-  // Windows-Explorer navigation (owner, 20 Oct 2026): top-level folders, click to
-  // go in, breadcrumb to come back — not an expanding tree.
-  if (files.length === 0 && folders.length === 0) return null
-  return <FolderBrowser files={files} folders={folders} mode="browse" checked={checked} onToggle={onToggle} />
 }
 
 // ── Upload entry ───────────────────────────────────────────────────────────────
@@ -172,30 +38,12 @@ interface UploadedEntry {
 export default function DocumentsClient({ initialFiles, initialFolders = [], onDone }: { initialFiles: ResumeFile[]; initialFolders?: string[]; onDone?: () => void }) {
   const router = useRouter()
   const { confirm, prompt } = useDialogs()
-  const [selectedEmail, setSelectedEmail] = useState("")
   const [organizing, setOrganizing] = useState(false)
-  const [indexRevision, setIndexRevision] = useState(0)
-  const [emailCounts, setEmailCounts] = useState<Record<string, number>>({})
-  const [discoveredEmails, setDiscoveredEmails] = useState<string[]>([])
-  const [libraryIndexError, setLibraryIndexError] = useState(false)
-  useEffect(() => {
-    fetch("/api/resumes/library-index", { cache: "no-store" })
-      .then(r => r.ok ? r.json() : Promise.reject(new Error("Index unavailable")))
-      .then(data => {
-        const counts: Record<string, number> = {}
-        for (const entry of data.entries || []) {
-          if (entry.identity) counts[entry.identity] = (counts[entry.identity] || 0) + 1
-        }
-        setLibraryIndexError(Boolean(data.errors?.length))
-        setEmailCounts(counts)
-        setDiscoveredEmails((data.libraries || []).map((lib: {email:string}) => lib.email).filter((email: string) => email !== "Unverified"))
-      }).catch(() => setLibraryIndexError(true))
-  }, [initialFiles, indexRevision])
   const [preloaded, setPreloaded] = useState<ResumeFile[]>(initialFiles)
   useEffect(() => { setPreloaded(initialFiles) }, [initialFiles])
 
   const [uploaded, setUploaded] = useState<UploadedEntry[]>([])
-  const [dragging, setDragging] = useState(false)
+
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [err, setErr] = useState("")
   const [notice, setNotice] = useState("")
@@ -219,13 +67,9 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
       setUploaded([])
       setChecked(new Set())
       router.refresh()
-      setIndexRevision(v => v + 1)
     } catch (error) { setErr(error instanceof Error ? error.message : "Organization failed") }
     finally { setOrganizing(false) }
   }
-  const visibleFiles = selectedEmail ? allFiles.filter(file => file.category.split("/")[0].trim() === selectedEmail) : allFiles
-  const visibleFolders = selectedEmail ? initialFolders.filter(folder => folder.split("/")[0].trim() === selectedEmail) : initialFolders
-
   // ── Upload ─────────────────────────────────────────────────────────────────
   async function uploadZip(file: File) {
     const tempId = `zip_${Date.now()}`
@@ -347,175 +191,71 @@ export default function DocumentsClient({ initialFiles, initialFolders = [], onD
     } catch (e) { setErr(`Folder error: ${String(e)}`) }
   }
 
+  // The window is the page: Back, Forward, Up and an address bar, the folders on the left, the resumes on the right, and
+  // what can be done here in the command bar above it (owner, 20 Oct 2026: "more of how our folders system is designed in windows").
+  const hasAny = allFiles.length > 0 || initialFolders.length > 0
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+      <input id="doc-upload" type="file" multiple className="sr-only" aria-label="Add resume files"
+        accept=".docx,.pdf,.zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,application/zip"
+        onChange={e => { handleFiles(e.target.files); e.target.value = "" }} />
 
-      {/* Header */}
-      <div className="anim-fade-up d-0 flex items-center justify-between gap-4 flex-wrap">
-        <p style={{ fontSize: 15, color: "var(--text-muted)", margin: 0 }}>
-          {allFiles.length > 0
-            ? `You have ${allFiles.length} resume file${allFiles.length !== 1 ? "s" : ""} here.`
-            : "No resume files yet. Add one to get started."}
-        </p>
-        {onDone && (
-          <button type="button" onClick={onDone} className="btn-outline" style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>
-            Back to tailoring
-          </button>
-        )}
-      </div>
-
-      {allFiles.length > 0 && <div className="flex flex-wrap items-center gap-3">
-        <button type="button" className="btn-outline" onClick={organizeLibrary} disabled={organizing}>
-          {organizing ? "Organizing resumes…" : "Organize by email and remove duplicates"}
-        </button>
-        <p className="text-sm" style={{color:"var(--text-muted)"}}>Puts each resume under the email written in it, in folders by kind of job, and removes copies.</p>
-      </div>}
-      {discoveredEmails.length > 0 && <label className="block text-sm">Show email library
-        <select className="block mt-2 w-full rounded-lg border p-3" value={selectedEmail} onChange={e => { setSelectedEmail(e.target.value); setChecked(new Set()) }}>
-          <option value="">All email libraries</option>
-          {discoveredEmails.map(email => <option key={email} value={email}>{email}</option>)}
-        </select>
-      </label>}
-      {/* Discover email identities from actual tenant-owned resumes; never hardcode an owner. */}
-      {libraryIndexError && <p role="alert" className="text-sm" style={{color:"var(--text-muted)"}}>Resume indexing is temporarily unavailable. Your uploaded files are not affected.</p>}
-      {discoveredEmails.length === 0 && allFiles.length > 0 && <div className="rounded-xl border p-4 text-sm" style={{borderColor:"var(--border)",background:"var(--surface)"}}><strong>Not sorted by email yet.</strong><p className="mt-2">Press Organize and each resume goes under the email written in it. One account can keep resumes for more than one email.</p></div>}
-      <div className="grid gap-3 sm:grid-cols-2" aria-label="Resume libraries by email">
-        {discoveredEmails.map(email => (
-          <div key={email} className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-            <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>Associated with {email}</p>
-            <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>{emailCounts[email] || 0} indexed resumes</p>
-            <p className="text-xs mt-1" style={{ color: "var(--text-soft)" }}>25 category folders after organization. Empty folders remain available for future resumes.</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Upload zone */}
-      <div className="anim-fade-up d-1">
-        <label
-          htmlFor="doc-upload"
-          onDragOver={e => { e.preventDefault(); setDragging(true) }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={e => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }}
-          className="flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-10 text-center cursor-pointer select-none transition-all"
-          style={{
-            borderColor: dragging ? "var(--accent)" : "var(--border)",
-            background: dragging ? "var(--accent-soft)" : "var(--surface)",
-          }}
-        >
-          <input
-            id="doc-upload"
-            type="file"
-            accept=".docx,.pdf,.zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,application/zip"
-            multiple
-            className="sr-only"
-            onChange={e => { handleFiles(e.target.files); e.target.value = "" }}
-          />
-          <span style={{ color: dragging ? "var(--accent)" : "var(--text-soft)" }}>
-            <CloudIcon />
-          </span>
-          <div>
-            <p className="text-base font-semibold" style={{ color: "var(--text)" }}>
-              {dragging ? "Let go to add it" : "Drop your resume files here"}
-            </p>
-            <p className="text-sm mt-1" style={{ color: "var(--text-soft)" }}>
-              Word files (.docx), PDFs, or a .zip with folders inside. A PDF is kept as it is, and a Word copy is made from its words so it can be tailored.
-            </p>
-          </div>
-          <span className="btn-outline" style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>
-            Choose files
-          </span>
-        </label>
-      </div>
-
-      {/* Status messages */}
-      {err && (
-        <p className="text-sm rounded-xl px-4 py-2.5" style={{ color: "var(--text)", background: "rgba(112,108,92,0.08)" }}>
-          ✗ {err}
-        </p>
-      )}
-      {notice && (
-        <p className="text-sm rounded-xl px-4 py-2.5" style={{ color: "var(--success)", background: "var(--success-soft)" }}>
-          ✓ {notice}
-        </p>
+      {onDone && (
+        <div className="flex justify-end">
+          <button type="button" onClick={onDone} className="btn-outline" style={{ minHeight: 44, padding: "0 18px", fontSize: 15 }}>Back to tailoring</button>
+        </div>
       )}
 
-      {/* In-progress uploads */}
+      {err && <p className="text-sm rounded-xl px-4 py-2.5" role="alert" style={{ color: "var(--text)", background: "var(--danger-soft)" }}>{err}</p>}
+      {notice && <p className="text-sm rounded-xl px-4 py-2.5" role="status" style={{ color: "var(--success)", background: "var(--success-soft)" }}>{notice}</p>}
+
+      {/* Uploads in progress */}
       {uploaded.filter(u => u.status !== "ready").length > 0 && (
-        <div className="rounded-2xl border overflow-hidden anim-fade-up" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-          {uploaded.filter(u => u.status !== "ready").map(u => {
-            const statusStyle = u.status === "scanning"
-              ? { bg: "rgba(144,140,119,0.12)", color: "var(--text-muted)" }
-              : { bg: "rgba(112,108,92,0.12)", color: "var(--text)" }
-            return (
-              <div key={u.file.id} className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0"
-                style={{ borderColor: "var(--border)" }}>
-                <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background: statusStyle.bg, color: statusStyle.color }}>
-                  {u.status === "scanning" ? <SpinIcon /> : <span className="text-[10px]">✗</span>}
-                </div>
-                <p className="flex-1 text-sm font-medium truncate" style={{ color: "var(--text)" }}>{u.file.filename}</p>
-                <span className="text-xs" style={{ color: "var(--text-soft)" }}>
-                  {u.status === "scanning" ? "Uploading…" : (u.errorMsg ?? "Error")}
-                </span>
+        <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          {uploaded.filter(u => u.status !== "ready").map(u => (
+            <div key={u.file.id} className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0" style={{ borderColor: "var(--border)" }}>
+              <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+                {u.status === "scanning" ? <SpinIcon /> : <span className="text-[10px]">✗</span>}
               </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Library */}
-      {(allFiles.length > 0 || initialFolders.length > 0) && (
-        <div className="rounded-2xl border overflow-hidden anim-fade-up d-2" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-          {/* Library toolbar */}
-          <div className="px-4 py-3 border-b flex items-center justify-between gap-2 flex-wrap"
-            style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-soft)" }}>
-              Resume Library · {visibleFiles.length} file{visibleFiles.length !== 1 ? "s" : ""}
-            </p>
-            <div className="flex items-center gap-1.5">
-              {checked.size > 0 && (
-                <>
-                  <button onClick={moveChecked}
-                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
-                    style={{ background: "var(--accent-soft)", color: "var(--accent-txt)" }}>
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" /><path strokeLinecap="round" strokeLinejoin="round" d="M11 14h4m0 0l-2-2m2 2l-2 2" /></svg>
-                    Move
-                  </button>
-                  <button onClick={deleteChecked}
-                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
-                    style={{ background: "rgba(112,108,92,0.1)", color: "var(--text)" }}>
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    Delete ({checked.size})
-                  </button>
-                </>
-              )}
-              <button onClick={createFolder}
-                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
-                style={{ color: "var(--text-soft)", background: "var(--surface)" }}>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM12 11v4M10 13h4" /></svg>
-                New Folder
-              </button>
-              <button onClick={() => router.refresh()} title="Refresh"
-                className="rounded-lg p-1.5 transition-colors"
-                style={{ color: "var(--text-soft)", background: "var(--surface)" }}>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-              </button>
+              <p className="flex-1 text-sm font-medium truncate" style={{ color: "var(--text)" }}>{u.file.filename}</p>
+              <span className="text-xs" style={{ color: "var(--text-soft)" }}>{u.status === "scanning" ? "Uploading…" : (u.errorMsg ?? "Error")}</span>
             </div>
-          </div>
-
-          {/* Tree */}
-          <div className="p-3">
-            <LibraryTree
-              files={visibleFiles}
-              folders={visibleFolders}
-              checked={checked}
-              onToggle={toggleCheck}
-            />
-          </div>
+          ))}
         </div>
       )}
 
-      {/* Empty state (no files at all) */}
+      <FolderBrowser
+        files={allFiles}
+        folders={initialFolders}
+        mode="browse"
+        checked={checked}
+        onToggle={toggleCheck}
+        onDropFiles={handleFiles}
+        empty={hasAny ? undefined : (
+          <div className="space-y-2">
+            <p style={{ fontSize: 15, color: "var(--text)", margin: 0, fontWeight: 600 }}>No resume files yet.</p>
+            <p style={{ margin: 0 }}>Drop Word files, PDFs or a .zip with folders inside here, or press Add a resume file at the top. A PDF is kept as it is, and a Word copy is made from its words so it can be tailored.</p>
+          </div>
+        )}
+        toolbar={
+          <>
+            <button type="button" className="btn-outline" onClick={createFolder}>New folder</button>
+            {allFiles.length > 0 && (
+              <button type="button" className="btn-outline" onClick={organizeLibrary} disabled={organizing}
+                title="Puts each resume under the email written in it, in folders by kind of job, and removes copies.">
+                {organizing ? "Organizing…" : "Organize by email"}
+              </button>
+            )}
+            {checked.size > 0 && (
+              <>
+                <button type="button" className="btn-outline" onClick={moveChecked}>Move</button>
+                <button type="button" className="btn-outline" onClick={deleteChecked} style={{ color: "var(--danger)" }}>Delete ({checked.size})</button>
+              </>
+            )}
+            <button type="button" className="btn-ghost" onClick={() => router.refresh()} style={{ marginLeft: "auto" }}>Refresh</button>
+          </>
+        }
+      />
     </div>
   )
 }

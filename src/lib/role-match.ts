@@ -243,3 +243,8 @@ export function splitTailInstruction(text: string): { jd: string; hint: string }
   const hint = m ? hintIn(m[1]) : ""
   return hint ? { jd: lines.slice(0, -1).join("\n").trim(), hint } : { jd: String(text || "").trim(), hint: "" }
 }
+
+/** How close the closest resume's title is to the job's role, 0 to 5 (see titleFit): for choosing between emails. */
+export function roleFitOf(ranked: Ranked[], role: string): number {
+  return role ? Math.max(0, ...ranked.map(r => bestFit(role, [r.candidate.title, r.candidate.name]))) : 0
+}

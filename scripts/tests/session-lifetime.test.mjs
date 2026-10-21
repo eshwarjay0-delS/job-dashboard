@@ -44,7 +44,7 @@ test('session-clock: 3-day TTL, reauth due exactly at 48h', async () => {
 });
 
 // ── public/kompas/app.js login-clock block ────────────────────────────────
-const appSrc = readFileSync(new URL('../../public/kompas/app.js', import.meta.url), 'utf8');
+const appSrc = readFileSync(new URL('../../public/kompas/app.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');  // a Windows checkout has CRLF; the repo stores LF
 const block = appSrc.slice(appSrc.indexOf('// ── Login clock'), appSrc.indexOf('// ── end login clock ──'));
 
 function kompasFixture({ session = true, stampAgeH = null } = {}) {

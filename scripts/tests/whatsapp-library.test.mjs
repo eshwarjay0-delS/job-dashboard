@@ -77,6 +77,8 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     '@/lib/keywords': { extractKeywords: () => ['burp suite', 'owasp'] },
     '@/lib/resumeOrganization': { resumeEmails: t => [...new Set(t.match(/[\w.]+@[\w.]+\.\w+/g) || [])] },
   }
+  // The choice of resume is its own module, shared with Apply on the website: it runs for real over the same stand-ins.
+  mocks['@/lib/library-choose'] = load('src/lib/library-choose.ts', mocks)
   const wa = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { handle, loadSession };')
   return { wa, store, said, docs, saved, used, logs, runs, events, uploads }
 }

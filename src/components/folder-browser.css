@@ -1,0 +1,79 @@
+/* The resume library as a Windows folder window (FolderBrowser.tsx). The product's own tokens only. */
+.mf-fx { container-type: inline-size; border: 1px solid var(--border-strong); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; display: flex; flex-direction: column; min-width: 0; box-shadow: var(--shadow-card); }
+.mf-fx.is-over { outline: 2px dashed var(--accent); outline-offset: -4px; }
+
+/* Command bar: what can be done here (New folder, Move, Delete, Add resumes) */
+.mf-fx-command { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.mf-fx-command .btn-outline, .mf-fx-command .btn-surface, .mf-fx-command .btn-ghost, .mf-fx-command .btn-accent { min-height: 34px; padding: 0 14px; font-size: 13.5px; }
+
+/* Back, Forward, Up, the address bar and the search */
+.mf-fx-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.mf-fx-navbtns { display: flex; gap: 2px; }
+.mf-fx-navbtn { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer; }
+.mf-fx-navbtn:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+.mf-fx-navbtn:disabled { opacity: .35; cursor: default; }
+.mf-fx-address { flex: 1 1 220px; min-width: 0; display: flex; align-items: center; gap: 2px; min-height: 36px; padding: 2px 6px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--bg); overflow: hidden; }
+.mf-fx-crumbs { display: inline-flex; align-items: center; min-width: 0; }
+.mf-fx-crumb { display: inline-flex; align-items: center; gap: 6px; max-width: 240px; padding: 4px 8px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); font: inherit; font-size: 13.5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mf-fx-crumb:hover { background: var(--surface-2); color: var(--text); }
+.mf-fx-crumb.is-last { color: var(--text); font-weight: 600; }
+.mf-fx-sep { color: var(--text-soft); padding: 0 1px; }
+.mf-fx-search { flex: 0 1 220px; min-width: 140px; height: 36px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font: inherit; font-size: 13.5px; }
+.mf-fx-search::placeholder { color: var(--text-soft); }
+
+/* Folder pane on the left, details list on the right */
+.mf-fx-body { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: 300px; }
+.mf-fx.is-compact .mf-fx-body { grid-template-columns: minmax(0, 1fr); min-height: 200px; }
+.mf-fx-tree { list-style: none; margin: 0; padding: 8px 6px; border-right: 1px solid var(--border); background: var(--bg); overflow: auto; max-height: 560px; }
+.mf-fx-tree ul { list-style: none; margin: 0; padding: 0; }
+.mf-fx-treeitem { display: flex; align-items: center; gap: 2px; border-radius: var(--radius-sm); }
+.mf-fx-treeitem:hover { background: var(--surface-2); }
+.mf-fx-treeitem.is-here { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.mf-fx-chev { display: grid; place-items: center; width: 20px; height: 24px; border: 0; background: transparent; color: var(--text-soft); cursor: pointer; flex: none; padding: 0; }
+.mf-fx-treename { flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; padding: 5px 6px 5px 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
+.mf-fx-treename span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mf-fx-treename small { color: var(--text-soft); font-size: 11.5px; }
+
+.mf-fx-list { overflow: auto; max-height: 560px; min-width: 0; outline: none; }
+.mf-fx-list:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.mf-fx-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.mf-fx-table th { position: sticky; top: 0; z-index: 1; background: var(--surface); border-bottom: 1px solid var(--border-strong); text-align: left; font-weight: 600; color: var(--text-soft); font-size: 12.5px; padding: 0; white-space: nowrap; }
+.mf-fx-table th button { width: 100%; padding: 8px 10px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.mf-fx-table th button:hover { color: var(--text); background: var(--surface-2); }
+.mf-fx-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text-muted); white-space: nowrap; vertical-align: middle; }
+.mf-fx-table tbody tr { cursor: default; }
+.mf-fx-table tbody tr:hover { background: var(--surface-2); }
+.mf-fx-table tbody tr.is-active { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.mf-fx-table tbody tr.is-chosen { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.mf-fx-table tbody tr.is-checked { background: var(--accent-soft); }
+.mf-fx-check { width: 36px; text-align: center; padding-left: 8px !important; padding-right: 0 !important; }
+.mf-fx-check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+.mf-fx-name { display: flex; align-items: center; gap: 9px; min-width: 0; width: 100%; color: var(--text) !important; }
+.mf-fx-label { overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+tr:has(.mf-fx-folder) .mf-fx-label { font-weight: 600; }
+.mf-fx-where { color: var(--text-soft); font-size: 12px; margin-left: 6px; overflow: hidden; text-overflow: ellipsis; }
+.mf-fx-icon { width: 20px; height: 20px; flex: none; }
+.mf-fx-folder { color: var(--palette-ochre); }
+.mf-fx-file { color: var(--accent); }
+.mf-fx-file.is-pdf { color: var(--signal-ember); }
+.mf-fx-badge { flex: none; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-muted); font-size: 11px; font-weight: 600; }
+.mf-fx-badge.is-chosen { border-color: var(--accent); background: var(--accent); color: #fff; }
+.mf-fx-col-date, .mf-fx-col-type, .mf-fx-col-size { color: var(--text-soft) !important; font-size: 12.5px !important; }
+.mf-fx-col-size { text-align: right; }
+.mf-fx-col-act { width: 1%; text-align: right; }
+.mf-fx-col-act a { display: inline-block; margin-left: 6px; padding: 3px 9px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 12.5px; font-weight: 600; text-decoration: none; }
+.mf-fx-col-act a:hover { background: var(--surface-2); }
+.mf-fx-empty { padding: 36px 16px; text-align: center; color: var(--text-soft); font-size: 14px; }
+.mf-fx-status { display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-top: 1px solid var(--border); background: var(--surface-2); color: var(--text-soft); font-size: 12.5px; }
+.mf-fx-hint { margin-left: auto; }
+
+/* The window answers to its own width, not the screen's: Apply puts it in a narrow panel. */
+@container (max-width: 700px) {
+  .mf-fx-body { grid-template-columns: minmax(0, 1fr); }
+  .mf-fx-tree { display: none; }
+  .mf-fx-col-type, .mf-fx-col-size { display: none; }
+  .mf-fx-hint { display: none; }
+  .mf-fx-search { flex-basis: 100%; }
+}
+@container (max-width: 480px) { .mf-fx-col-date { display: none; } }
+@media (pointer: coarse) { .mf-fx-table td { padding-top: 11px; padding-bottom: 11px; } }
