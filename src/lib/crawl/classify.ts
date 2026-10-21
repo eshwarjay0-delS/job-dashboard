@@ -5,7 +5,7 @@ import type { WorkType } from "./types"
 // anything ambiguous stays 'unknown' rather than guessing wrong.
 
 const CONTRACT = [/contract/i, /\bC2C\b/i, /temp/i, /\b1099\b/i]
-const PERMANENT = [/permanent/i, /direct hire/i, /full-?time(?!.*contract)/i]
+const PERMANENT = [/permanent/i, /direct hire/i, /direct placement/i, /full-?time(?!.*contract)/i]
 
 export function classifyWorkType(engagement?: string, title?: string): WorkType {
   const s = `${engagement ?? ""} ${title ?? ""}`

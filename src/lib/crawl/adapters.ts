@@ -6,6 +6,11 @@ import { motion } from "./portals/motion.ts"
 import { everforth } from "./portals/everforth.ts"
 import { oxford } from "./portals/oxford.ts"
 import { insightglobal } from "./portals/insightglobal.ts"
+import { inspyr } from "./portals/inspyr.ts"
+import { brooksource } from "./portals/brooksource.ts"
+import { eteam } from "./portals/eteam.ts"
+import { eliassen } from "./portals/eliassen.ts"
+import { systemone } from "./portals/systemone.ts"
 
 // Verified 2026-10-17 against live portal HTML. Each parseList was tested
 // against a real listing page before shipping — never trust selectors blind.
@@ -73,12 +78,15 @@ const collabera: PortalAdapter = {
 // Beacon Hill and Collabera read listing pages; the others read the source their own page reads (src/lib/crawl/portals):
 // a JSON search, the data a page hands to React, or a server-rendered table. Each has a saved sample and an offline test
 // (scripts/tests/crawl-*.test.mjs) and was run once against the live portal on 2026-10-20.
-export const ADAPTERS: PortalAdapter[] = [beaconHill, collabera, teksystems, kforce, motion, everforth, oxford, insightglobal]
+export const ADAPTERS: PortalAdapter[] = [
+  beaconHill, collabera, teksystems, kforce, motion, everforth, oxford, insightglobal,
+  inspyr, brooksource, eteam, eliassen, systemone,
+]
 
-// Still to be read (a probe for each is in the REA board): Addison Group, Brooksource, INSPYR, KORE1, CSI, IDR, Vaco, IntelliPro,
-// Genesis10, Diverse Lynx, Robert Half, Eliassen, CyberSN and the firms whose portal address is not yet known.
+// Still to be read (a probe for each is in the REA board): Addison Group, KORE1, CSI, IDR, Vaco, IntelliPro, Genesis10,
+// Diverse Lynx, Robert Half, CyberSN and the firms whose portal address is not yet known.
 // Not read on purpose: Experis (its robots.txt disallows every crawler).
 export const PENDING_PORTALS = [
-  "addison", "brooksource", "inspyr", "kore1", "csi", "idr", "vaco", "intellipro",
-  "genesis10", "diverselynx", "roberthalf", "eliassen", "cybersn",
+  "addison", "kore1", "csi", "idr", "vaco", "intellipro",
+  "genesis10", "diverselynx", "roberthalf", "cybersn",
 ]

@@ -35,6 +35,8 @@ export type PortalAdapter = {
   parseList?: (html: string) => RawJob[]
   /** for a portal read from an API or a sitemap: every job it lists now, fetched only through `get` */
   fetchJobs?: (get: Fetcher) => Promise<RawJob[]>
+  /** pause between this portal's requests, in ms; the runner's own 600 unless a portal asks for slower */
+  gapMs?: number
 }
 
 export type CrawlResult = {

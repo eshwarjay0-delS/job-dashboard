@@ -71,9 +71,9 @@ export async function runCrawl(onlyPortals?: string[]): Promise<CrawlResult[]> {
 /** One portal: read its jobs, store them, and retire those not seen for 14 days. Throws on a storage failure. */
 async function crawlOne(service: ReturnType<typeof createServiceClient>, adapter: PortalAdapter): Promise<CrawlResult> {
   const result: CrawlResult = { portal: adapter.portal, firm: adapter.firm, found: 0, upserted: 0 }
-  // Listing pages, a JSON API or a sitemap, whichever the portal has; one request at a time, 600 ms apart.
+  // Listing pages, a JSON API or a sitemap, whichever the portal has; one request at a time, 600 ms apart unless the portal asks for slower.
   const seen = new Map<string, JobRow>()
-  for (const raw of await collectJobs(adapter, politeFetcher(600))) seen.set(raw.url, toRow(adapter.portal, adapter.firm, raw))
+  for (const raw of await collectJobs(adapter, politeFetcher(adapter.gapMs ?? 600))) seen.set(raw.url, toRow(adapter.portal, adapter.firm, raw))
   result.found = seen.size
   if (seen.size > 0) {
     const rows = [...seen.values()]

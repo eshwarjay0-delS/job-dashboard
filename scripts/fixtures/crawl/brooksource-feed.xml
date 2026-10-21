@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+	xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	xmlns:job_listing="https://jobs.brooksource.com/jobs"
+>
+
+<channel>
+	<title>Brooksource</title>
+	<atom:link href="https://jobs.brooksource.com/jobs/?feed=job_feed&#038;posts_per_page=200" rel="self" type="application/rss+xml" />
+	<link>https://jobs.brooksource.com/jobs/</link>
+	<description></description>
+	<lastBuildDate>Tue, 20 Oct 2026 21:08:49 +0000</lastBuildDate>
+	<language>en-US</language>
+	<sy:updatePeriod>
+	hourly	</sy:updatePeriod>
+	<sy:updateFrequency>
+	1	</sy:updateFrequency>
+	<generator>https://wordpress.org/?v=7.1.3</generator>
+
+<image>
+	<url>https://jobs.brooksource.com/jobs/wp-content/uploads/2024/12/cropped-Brooksource-ico-32x32.png</url>
+	<title>Brooksource</title>
+	<link>https://jobs.brooksource.com/jobs/</link>
+	<width>32</width>
+	<height>32</height>
+</image> 
+	<item>
+		<title>UI/UX Designer</title>
+		<link>https://jobs.brooksource.com/jobs/job/a1wcv0000017xh7eaa-ui-ux-designer-franklin-tennessee/</link>
+		
+		<dc:creator><![CDATA[]]></dc:creator>
+		<pubDate>Tue, 20 Oct 2026 21:08:48 +0000</pubDate>
+				<guid isPermaLink="false">https://jobs.brooksource.com/jobs/job/a1wcv0000017xh7eaa-ui-ux-designer-franklin-tennessee/</guid>
+
+					<description><![CDATA[Senior UI/UX Designer / Engineer (6-Month Contract) Nashville, TN Hybrid role (local candidates preferred) Compensation: $65 &#8211; $75 per hour Duration: 6 months, with possible extension ABOUT THE ROLE Our client is seeking a Senior UI/UX Designer / Engineer for a 6-month contract based in Nashville, TN, with a preference for local candidates in a&#8230;]]></description>
+										<content:encoded><![CDATA[<p>Senior UI/UX Designer / Engineer (6-Month Contract)</p>
+<p> Nashville, TN</p>
+<p> Hybrid role (local candidates preferred)</p>
+<p> Compensation: $65 &#8211; $75 per hour</p>
+<p> Duration: 6 months, with possible extension</p>
+<h3>ABOUT THE ROLE</h3>
+<p>Our client is seeking a Senior UI/UX Designer / Engineer for a 6-month contract based in Nashville, TN, with a preference for local candidates in a hybrid work setting. In this role, you will design and build user experiences for a mobile-first product, working closely with marketing stakeholders to translate their needs into polished, intuitive interfaces. You will take designs from concept through to working front-end implementation, collaborating with engineering and data teams to ensure feasibility and alignment with technical capabilities. The ideal candidate will have senior-level experience in UI/UX design, particularly for Android mobile apps, strong front-end development skills, and proficiency in design tools such as Figma. Experience with design systems, web accessibility, and data-driven products is a plus.</p>
+<h3>WHAT YOU&#39;LL DO</h3>
+<ul>
+<li>Design intuitive, visually polished user interfaces and end-to-end user flows for Android and web experiences</li>
+<li>Create wireframes, prototypes, and design specifications; refine designs through feedback and usability testing</li>
+<li>Build or collaborate on front-end implementation in React or Angular to ensure designs are accurately shipped</li>
+<li>]]></content:encoded>
+					
+		
+		
+		<job_listing:location><![CDATA[Franklin, Tennessee]]></job_listing:location>
+<job_listing:job_type><![CDATA[Contract]]></job_listing:job_type>
+<job_listing:company><![CDATA[Brooksource]]></job_listing:company>
+	</item>
+		<item>
+		<title>Field Engineer</title>
+		<link>https://jobs.brooksource.com/jobs/job/a1wcv0000018lpteae-field-engineer-new-york-new-york/</link>
+		
+		<dc:creator><![CDATA[]]></dc:creator>
+		<pubDate>Tue, 20 Oct 2026 21:08:48 +0000</pubDate>
+				<guid isPermaLink="false">https://jobs.brooksource.com/jobs/job/a1wcv0000018lpteae-field-engineer-new-york-new-york/</guid>
+
+					<description><![CDATA[Field Engineer New York City, NY On-Site Role (5 days per week) Contract: November 2026 – May 2027 Compensation: $70 &#8211; $75 per hour ABOUT THE ROLE Our client is seeking a hands-on Field Engineer to serve as the Engineering representative at a leading Media &#38; Entertainment organization in New York City. This onsite contract&#8230;]]></description>
+										<content:encoded><![CDATA[<p>Field Engineer</p>
+<p> New York City, NY</p>
+<p> On-Site Role (5 days per week)</p>
+<p> Contract: November 2026 – May 2027</p>
+<p> Compensation: $70 &#8211; $75 per hour</p>
+<h3>ABOUT THE ROLE</h3>
+<p>Our client is seeking a hands-on Field Engineer to serve as the Engineering representative at a leading Media &amp; Entertainment organization in New York City. This onsite contract role, running from November 2026 to May 2027, is responsible for managing site projects and providing systems support for physical security functions, including enterprise access control and video platforms. You will deliver end-user support, training, and troubleshooting for security applications such as Lenel OnGuard, Genetec Security Center, and HID SAFE, while maintaining system health and responding to incidents both remotely and on-premises. The ideal candidate is comfortable juggling multiple projects, communicating effectively with stakeholders at all levels, and taking ownership of enterprise security systems. This is an opportunity to work on large-scale infrastructure projects, gain visibility with executive and IT leadership, and make a direct impact on the security posture of a major media organization.</p>
+<h3>WHAT YOU&#39;LL DO</h3>
+<ul>
+<li>Provide end-user support, training, and troubleshooting for physical security applications, including Lenel OnGuard, Genetec Security Center, and HID SAFE.</li>
+<li>]]></content:encoded>
+					
+		
+		
+		<job_listing:location><![CDATA[New York, New York]]></job_listing:location>
+<job_listing:job_type><![CDATA[Contract]]></job_listing:job_type>
+<job_listing:company><![CDATA[Brooksource]]></job_listing:company>
+	</item>
+		<item>
+		<title>Assistant Project Controls Specialist</title>
+		<link>https://jobs.brooksource.com/jobs/job/a1wcv0000018iwreae-assistant-project-controls-specialist-akron-ohio/</link>
+		
+		<dc:creator><![CDATA[]]></dc:creator>
+		<pubDate>Tue, 20 Oct 2026 21:08:48 +0000</pubDate>
+				<guid isPermaLink="false">https://jobs.brooksource.com/jobs/job/a1wcv0000018iwreae-assistant-project-controls-specialist-akron-ohio/</guid>
+
+					<description><![CDATA[Assistant Project Controls Specialist Location: Akron, Ohio (Onsite 5 days/week) Contract-to-Hire (12 Months) Our client, a leading engineering and construction firm supporting projects in the electric utility industry, is seeking an Assistant Project Controls Specialist. You will support project planning, scheduling, cost control, progress tracking, and reporting. This role will work closely with project teams&#8230;]]></description>
+										<content:encoded><![CDATA[<p><strong>Assistant Project Controls Specialist</strong></p>
+<p><strong>Location: Akron, Ohio (Onsite 5 days/week)</strong></p>
+<p><strong>Contract-to-Hire (12 Months)</strong></p>
+<p></p>
+<p>Our client, a leading engineering and construction firm supporting projects in the electric utility industry, is seeking an Assistant Project Controls Specialist. You will support project planning, scheduling, cost control, progress tracking, and reporting. This role will work closely with project teams to help maintain accurate project data, monitor performance, and ensure project controls processes are followed throughout the project lifecycle.</p>
+<p></p>
+<p><span style="font-family: Aptos, sans-serif;">This is a great opportunity for someone with a background in engineering, construction management, or project controls who is looking to grow their experience supporting complex projects.</span></p>
+<p></p>
+<p><strong>Responsibilities</strong></p>
+<p><span style="font-family: Symbol;">·</span><span style="font-size: 7pt;">     </span>Support project controls activities, including cost management, schedule development, progress measurement, change management, and project reporting.</p>
+<p><span style="font-family: Symbol;">·</span><span style="font-size: 7pt;">     </span>Assist with project setup and maintain project data, logs, and reports within enterprise planning and controls software.</p>
+<p><span style="font-family: Symbol;">·</span><span style="font-size: 7pt;">     </span>]]></content:encoded>
+					
+		
+		
+		<job_listing:location><![CDATA[Akron, Ohio]]></job_listing:location>
+<job_listing:job_type><![CDATA[Contract-to-Hire]]></job_listing:job_type>
+<job_listing:company><![CDATA[Brooksource]]></job_listing:company>
+	</item>
+		<item>
+		<title>Sr. DevOps Engineer</title>
+		<link>https://jobs.brooksource.com/jobs/job/a1wcv0000017zvpeaa-sr-devops-engineer-indianapolis-indiana/</link>
+		
+		<dc:creator><![CDATA[]]></dc:creator>
+		<pubDate>Tue, 20 Oct 2026 21:08:48 +0000</pubDate>
+				<guid isPermaLink="false">https://jobs.brooksource.com/jobs/job/a1wcv0000017zvpeaa-sr-devops-engineer-greenwood-village-colorado/</guid>
+
+					<description><![CDATA[DevOps Engineer needed for Eight Eleven Group, LLC located in Indianapolis, IN. Design and manage multi-account AWS environments leveraging EC2, Lambda, S3, IAM, CloudFormation, CloudWatch, EKS, and VPC for high scalability, reliability, and security across broadband workloads. Engage in container-based deployments using Docker, Kubernetes, and Helm to orchestrate microservices architecture Perform Version Control with GIT&#8230;]]></description>
+										<content:encoded><![CDATA[<p><strong style="font-size: 11pt;"><em>DevOps Engineer needed for Eight Eleven Group, LLC located in Indianapolis, IN. Design and manage multi-account AWS environments leveraging EC2, Lambda, S3, IAM, CloudFormation, CloudWatch, EKS, and VPC for high scalability, reliability, and security across broadband workloads. Engage in container-based deployments using Docker, Kubernetes, and Helm to orchestrate microservices architecture Perform Version Control with GIT and GitLab. Successfully integrated GIT with Harness for automated code checkout initiated by Git hooks. Implement secure AWS S3 integrations with KMS for device logs and artifacts, with automated lifecycle policies, IAM key rotation. Will provide services to clients located throughout the US. Master’s degree in Computer Science and 3 years of experience performing the job duties listed above. Must be willing to travel and relocate.</em></strong></p>
+<p><strong style="font-size: 11pt;"><em> </em></strong></p>
+<p><strong style="font-size: 11pt;"><em>Send resumes to: </em></strong><a href="mailto:mdroese@eightelevengroup.com" rel="noopener noreferrer" target="_blank" style="font-size: 11pt;"><strong><em><u>mdroese@eightelevengroup.com</u></em></strong></a><strong style="font-size: 11pt;"><em><u> </u></em></strong></p>
+<p><strong style="font-size: 11pt;"><em><u> </u></em></strong></p>
+]]></content:encoded>
+					
+		
+		
+		<job_listing:location><![CDATA[Indianapolis, Indiana]]></job_listing:location>
+<job_listing:job_type><![CDATA[Contract]]></job_listing:job_type>
+<job_listing:company><![CDATA[Brooksource]]></job_listing:company>
+	</item>
+		<item>
+		<title>Software Developer III</title>
+		<link>https://jobs.brooksource.com/jobs/job/a1wcv0000017zzfeay-software-developer-iii-englewood-colorado/</link>
+		
+		<dc:creator><![CDATA[]]></dc:creator>
+		<pubDate>Tue, 20 Oct 2026 21:08:48 +0000</pubDate>
+				<guid isPermaLink="false">https://jobs.brooksource.com/jobs/job/a1wcv0000017zzfeay-software-developer-iii-englewood-colorado/</guid>
+
+					<description><![CDATA[Company: Telecommunications Client Position: Software Developer Work Model: Hybrid (Greenwood Village, CO.) Engagement: Long-term W2 Contract (Potential extension and/or FTE) Rate: $100,000-$120,000 (DOE) As a Brooksource consultant working directly with our client, you will be a W2 employee with full-time 40-hour work week. Comprehensive benefits (health, vision, dental), paid holidays, &#38; sick time accrual is&#8230;]]></description>
+										<content:encoded><![CDATA[<p><strong style="">Company: </strong><span style="">Telecommunications Client</span></p>
+<p><strong style="">Position: </strong><span style="">Software Developer</span></p>
+<p><strong style="">Work Model:</strong><span style=""> Hybrid (Greenwood Village, CO.)</span></p>
+<p><strong style="">Engagement:</strong><span style=""> Long-term W2 Contract (Potential extension and/or FTE)</span></p>
+<p><strong style="">Rate:</strong><span style=""> $100,000-$120,000 (DOE)</span></p>
+<p></p>
+<p><span style="">As a Brooksource consultant working directly with our client, you will be a W2 employee with full-time 40-hour work week. </span><strong style="">Comprehensive benefits </strong><span style="">(health, vision, dental), </span><strong style="">paid holidays</strong><span style="">, &amp; </span><strong style="">sick time accrual</strong><span style=""> is available to all employees on contract. Upon (in case of) </span><strong style="">FTE conversion</strong><span style="">, the client&#39;s benefits package will take over.</span></p>
+<p><span style=""> </span></p>
+<p><strong style="">Onboarding Requirements:</strong></p>
+<ul>
+<li><span style="">Authorized to work in U.S.; sponsorship not available</span></li>
+<li><span style="">Month/Day of birth</span></li>
+<li><span style="">Background check</span></li>
+</ul>
+<p><strong style=""> </strong></p>
+<p><strong style="">Software Developer Description</strong></p>
+<p><span style="">]]></content:encoded>
+					
+		
+		
+		<job_listing:location><![CDATA[Englewood, Colorado]]></job_listing:location>
+<job_listing:job_type><![CDATA[Contract-to-Hire]]></job_listing:job_type>
+<job_listing:company><![CDATA[Brooksource]]></job_listing:company>
+	</item>
+		<item>
+		<title>Project Manager</title>
+		<link>https://jobs.brooksource.com/jobs/job/a1wcv0000017xudeay-project-manager-nashville-tennessee/</link>
+		
+		<dc:creator><![CDATA[]]></dc:creator>
+		<pubDate>Tue, 20 Oct 2026 21:08:48 +0000</pubDate>
+				<guid isPermaLink="false">https://jobs.brooksource.com/jobs/job/a1wcv0000017xudeay-project-manager-nashville-tennessee/</guid>
+
+					<description><![CDATA[Sr. Project/Program Manager    Project Overview  We are seeking a Senior Program Manager to lead a complex carrier network implementation within a healthcare administration environment. This role will be responsible for driving the onboarding and integration of a major national carrier network into existing claims, eligibility, enrollment, and operational platforms.    This is not a&#8230;]]></description>
+										<content:encoded><![CDATA[<p style="text-align: center;"><strong style="font-size: 11pt;">Sr. Project/Program Manager</strong><span style="font-size: 11pt;"> </span></p>
+<p><span style="font-size: 11pt;"> </span></p>
+<p><strong style="font-size: 11pt;"><u>Project Overview</u></strong><span style="font-size: 11pt;"> </span></p>
+<p><span style="font-size: 11pt;">We are seeking a Senior Program Manager to lead a complex carrier network implementation within a healthcare administration environment. This role will be responsible for driving the onboarding and integration of a major national carrier network into existing claims, eligibility, enrollment, and operational platforms. </span></p>
+<p><span style="font-size: 11pt;"> </span></p>
+<p><span style="font-size: 11pt;">This is not a project coordination role. We are looking for a hands-on implementation leader who has successfully delivered large-scale payer, carrier, or network onboarding initiatives and can navigate the operational, technical, and business challenges that accompany them. </span></p>
+<p><span style="font-size: 11pt;"> </span></p>
+<p><span style="font-size: 11pt;">The ideal candidate brings experience working within a TPA, health plan, benefits administration organization, or similar healthcare environment where they have led carrier integrations from planning through production go-live. </span></p>
+<p><span style="font-size: 11pt;"> </span></p>
+<p><strong style="font-size: 11pt;"><u>What You&#39;ll Do</u></strong>]]></content:encoded>
+					
+		
+		
+		<job_listing:location><![CDATA[Nashville, Tennessee]]></job_listing:location>
+<job_listing:job_type><![CDATA[Contract]]></job_listing:job_type>
+<job_listing:company><![CDATA[Brooksource]]></job_listing:company>
+	</item>
+		<item>
+		<title>Business Analyst IV</title>
+		<link>https://jobs.brooksource.com/jobs/job/a1wcv0000017ugdeay-business-analyst-iv-charlotte-north-carolina/</link>
+		
+		<dc:creator><![CDATA[]]></dc:creator>
+		<pubDate>Tue, 20 Oct 2026 21:08:48 +0000</pubDate>
+				<guid isPermaLink="false">https://jobs.brooksource.com/jobs/job/a1wcv0000017ugdeay-business-analyst-iv-charlotte-north-carolina/</guid>
+
+					<description><![CDATA[Business Systems Analyst Charlotte, NC Hybrid Role (3 days per week onsite) Compensation: $49 &#8211; $53 per hour Multi-year contract through mid-2029 ABOUT THE ROLE Our client is seeking an experienced Business Systems Analyst to drive the improvement and optimization of computer-based business applications and processes. In this role, you will play a critical part&#8230;]]></description>
+										<content:encoded><![CDATA[<p>Business Systems Analyst</p>
+<p>Charlotte, NC</p>
+<p>Hybrid Role (3 days per week onsite)</p>
+<p>Compensation: $49 &#8211; $53 per hour</p>
+<p>Multi-year contract through mid-2029</p>
+<p></p>
+<h3>ABOUT THE ROLE</h3>
+<p>Our client is seeking an experienced Business Systems Analyst to drive the improvement and optimization of computer-based business applications and processes. In this role, you will play a critical part in verifying equipment change requests, ensuring accurate GIS updates, managing asset automation and work order completion, and maintaining facilities databases. You will collaborate closely with engineering, permitting, and third-party vendors to ensure efficient project closeout activities. The position also involves conducting in-depth analysis of company functions, processes, and systems, recommending business solutions, and designing improvements for computer-based systems. The ideal candidate will have over 10 years of experience, strong analytical skills, and the ability to work closely with senior management to identify and resolve complex business system challenges. Please note: Candidates may be required to participate in onsite skill assessments. While Charlotte-based candidates are preferred, exceptional candidates from other locations may be considered.</p>
+<p></p>
+<h3>WHAT YOU&#39;LL DO</h3>
+<ul>
+<li>Verify all Equipment Change Requests (ECRs) are submitted and consult with Engineering to ensure accuracy and completeness.</li>
+<li>]]></content:encoded>
+					
+		
+		
+		<job_listing:location><![CDATA[Charlotte, North Carolina]]></job_listing:location>
+<job_listing:job_type><![CDATA[Contract]]></job_listing:job_type>
+<job_listing:company><![CDATA[Brooksource]]></job_listing:company>
+	</item>
+		<item>
+		<title>Senior Project Manager</title>
+		<link>https://jobs.brooksource.com/jobs/job/a1wcv0000017mg9eam-senior-project-manager-maitland-florida/</link>
+		
+		<dc:creator><![CDATA[]]></dc:creator>
+		<pubDate>Tue, 20 Oct 2026 21:08:46 +0000</pubDate>
+				<guid isPermaLink="false">https://jobs.brooksource.com/jobs/job/a1wcv0000017mg9eam-senior-project-manager-maitland-florida/</guid>
+
+					<description><![CDATA[Senior Project Manager – Transmission &#38; DistributionMaitland, FLOn-Site Role$110,000 &#8211; $140,000 per year ABOUT THE ROLE Join a top 10, 100% employee-owned engineering and construction firm as a Senior Project Manager supporting its Transmission &#38; Distribution (T&#38;D) practice in Maitland, FL. In this direct-hire, on-site role, you will lead utility infrastructure projects involving transmission lines,&#8230;]]></description>
+										<content:encoded><![CDATA[<div>
+<p>Senior Project Manager – Transmission &amp; Distribution<br />Maitland, FL<br />On-Site Role<br />$110,000 &#8211; $140,000 per year</p>
+<h3>ABOUT THE ROLE</h3>
+<p>
+Join a top 10, 100% employee-owned engineering and construction firm as a Senior Project Manager supporting its Transmission &amp; Distribution (T&amp;D) practice in Maitland, FL. In this direct-hire, on-site role, you will lead utility infrastructure projects involving transmission lines, substations, switching stations, collector stations, and related infrastructure from initial proposals and planning through engineering, project delivery, and closeout. You will oversee project execution, financial performance, schedules, and client relationships while coordinating multidisciplinary engineering teams and other project stakeholders. This position also supports business development and client growth initiatives as the T&amp;D practice continues to expand and pursue larger engineering, procurement, and construction (EPC) projects. The role offers a competitive compensation and benefits package, a 9/80 work schedule, and significant opportunities for professional growth and advancement within a nationally recognized, employee-owned firm.
+</p>
+<h3>WHAT YOU&#39;LL DO</h3>
+</p>
+<ul>
+<li>Lead and coordinate utility infrastructure projects involving transmission lines, substations, switching stations, collector stations, and related T&amp;D infrastructure.</li>
+<li>]]></content:encoded>
+					
+		
+		
+		<job_listing:location><![CDATA[Maitland, Florida]]></job_listing:location>
+<job_listing:job_type><![CDATA[Direct Hire]]></job_listing:job_type>
+<job_listing:company><![CDATA[Brooksource]]></job_listing:company>
+	</item>
+		<item>
+		<title>Sr Manager of Mechanical Reliability</title>
+		<link>https://jobs.brooksource.com/jobs/job/a1wcv0000017jb7eai-sr-manager-of-mechanical-reliability-apollo-beach-florida/</link>
+		
+		<dc:creator><![CDATA[]]></dc:creator>
+		<pubDate>Tue, 20 Oct 2026 21:08:46 +0000</pubDate>
+				<guid isPermaLink="false">https://jobs.brooksource.com/jobs/job/a1wcv0000017jb7eai-sr-manager-of-mechanical-reliability-apollo-beach-florida/</guid>
+
+					<description><![CDATA[Senior Manager of Mechanical ReliabilityTampa, FLOn-Site Role$170,000 &#8211; $180,000 per year ABOUT THE ROLE Our client, a leading utility provider, is seeking a Senior Manager of Mechanical Reliability to lead the development and execution of standardized fleet maintenance strategies for mechanical system assets within the Energy Supply division. Based in Tampa, FL, this role works&#8230;]]></description>
+										<content:encoded><![CDATA[<div>
+<p>Senior Manager of Mechanical Reliability<br />Tampa, FL<br />On-Site Role<br />$170,000 &#8211; $180,000 per year</p>
+<h3>ABOUT THE ROLE</h3>
+<p>
+Our client, a leading utility provider, is seeking a Senior Manager of Mechanical Reliability to lead the development and execution of standardized fleet maintenance strategies for mechanical system assets within the Energy Supply division. Based in Tampa, FL, this role works closely with the Director of Asset Management and the AM Program Manager to develop and implement common approaches to mechanical system asset maintenance, ensuring effective operations, performance monitoring, and risk mitigation. The Senior Manager will oversee the Mechanical Reliability team, direct predictive monitoring and risk-based inspection programs, and facilitate efficiency initiatives such as the Unit Heat Rate and Efficiency Program. This position requires strong leadership, technical expertise, and the ability to foster collaborative relationships with both internal stakeholders and external partners, including regulators, consultants, and vendors. The ideal candidate will thrive in a power plant environment, managing both direct reports and cross-functional project teams, while championing safety, innovation, and continuous improvement.
+</p>
+<h3>WHAT YOU&#39;LL DO</h3>
+</p>
+<ul>
+<li>]]></content:encoded>
+					
+		
+		
+		<job_listing:location><![CDATA[Apollo Beach, Florida]]></job_listing:location>
+<job_listing:job_type><![CDATA[Direct Hire]]></job_listing:job_type>
+<job_listing:company><![CDATA[Brooksource]]></job_listing:company>
+	</item>
+		<item>
+		<title>Entry-Level Data Center Technician</title>
+		<link>https://jobs.brooksource.com/jobs/job/a1wcv0000017nopeay-entry-level-data-center-technician-herndon-virginia/</link>
+		
+		<dc:creator><![CDATA[]]></dc:creator>
+		<pubDate>Tue, 20 Oct 2026 21:08:46 +0000</pubDate>
+				<guid isPermaLink="false">https://jobs.brooksource.com/jobs/job/a1wcv0000017nopeay-entry-level-data-center-technician-herndon-virginia/</guid>
+
+					<description><![CDATA[Entry-Level Data Center Engineering Operations Technician Onsite in one of the following areas: Manassas, Chantilly, Ashburn, Sterling 12-month Contract-to-Hire $25 &#8211; $30/hr (DOE) Position Summary: We are hiring motivated, entry-level individuals to begin their hands-on technical career as Engineering Operations Technicians (EOTs) through our Data Center Talent Accelerator (DCTA) Elevate Program, a paid training and&#8230;]]></description>
+										<content:encoded><![CDATA[<p><strong>Entry-Level Data Center Engineering Operations Technician</strong></p>
+<p><strong>Onsite in one of the following areas: Manassas, Chantilly, Ashburn, Sterling</strong></p>
+<p><strong>12-month Contract-to-Hire</strong></p>
+<p><strong>$25 &#8211; $30/hr (DOE)</strong></p>
+<p></p>
+<p><strong>Position Summary:</strong></p>
+<p>We are hiring motivated, entry-level individuals to begin their hands-on technical career as Engineering Operations Technicians (EOTs) through our Data Center Talent Accelerator (DCTA) Elevate Program, a paid training and development pathway. Through our DCTA Elevate Program, candidates who may not yet have direct data center or technical experience will receive structured training followed by on-the-job learning in a data center environment.</p>
+<p></p>
+<p>As a member of the Engineering and Facilities team, you will support the operation and maintenance of critical electrical and mechanical infrastructure, follow detailed safety and operating procedures, and help maintain world-class facility reliability. This opportunity is ideal for individuals with curiosity for technology, a strong work ethic, and interest in electrical, mechanical, or facilities systems.</p>
+<p></p>
+<p><strong>Basic Qualifications:</strong></p>
+<ul>
+<li>Highly proficient in written and spoken English</li>
+<li>Lifting and moving up to 39 pounds independently on a normal basis. 40+ pounds for group lifts.</li>
+<li>Working and performing construction tasks from ladders.</li>]]></content:encoded>
+					
+		
+		
+		<job_listing:location><![CDATA[Herndon, Virginia]]></job_listing:location>
+<job_listing:job_type><![CDATA[Contract-to-Hire]]></job_listing:job_type>
+<job_listing:company><![CDATA[Brooksource]]></job_listing:company>
+	</item>
+		</channel></rss>
