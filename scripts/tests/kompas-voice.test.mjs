@@ -11,7 +11,7 @@ function env(extra = {}) {
  state.onTranscript = (who, text) => state.entries.push({ who, text });
  state.showCaption = () => {};
  vm.createContext(state);
- vm.runInContext(section('function whisperPrompt()', '// Owner, 2026-09-30'), state);
+ vm.runInContext(section('function whisperPrompt(', '// Owner, 2026-09-30'), state);
  vm.runInContext(section('async function transcribe(', '/* ---- what was heard'), state);
  return state;
 }
@@ -48,6 +48,7 @@ test('failed request does not block the next phrase and reports the loss', async
 test('stop flushes final recorder data without restarting it', async () => {
  const s=env({VAD:{MIN_SPEECH_MS:280}, finals:new Set(), startSegment:()=>{throw Error('must not restart');}, transcribe:undefined});
  const sent=[]; s.transcribe=async(blob,who)=>sent.push({size:blob.size,who});
+ vm.runInContext(section('function segmentKept(', 'function endSegment('),s);
  vm.runInContext(section('function endSegment(', '// AI Answer pressed'),s);
  const chunks=[];
  const rec={mimeType:'audio/webm',stop(){chunks.push(new Blob(['tail']));this.onstop();}};
@@ -104,6 +105,7 @@ test('failed phrase prevents generating an answer from an incomplete flush',asyn
 });
 test('quiet speech crosses the gate without being absorbed into the noise floor',()=>{
  let now=0;const s=env({performance:{now:()=>now},VAD:{SILENCE_MS:850,MAX_SEG_MS:14000,IDLE_RECYCLE_MS:6000,INTERIM_MS:3000},meter:()=>{},questionSource:()=> 'Them',endSegment:()=>{throw Error('not ending yet');}});
+ vm.runInContext(section('function dictateStep(', 'function vadStep('),s);
  vm.runInContext(section('function vadStep(', 'let meterFrame'),s);
  const cap={stopped:false,noise:0.001,lastTick:0,lastVoice:0,speechMs:0,voiced:false,segStart:0,who:'You'};
  for(let i=0;i<10;i++){now+=30;s.vadStep(cap,0.005);}
@@ -113,6 +115,7 @@ test('web sharing prompt starts in the click before microphone permission resolv
  const order=[];let mic;
  const node={textContent:'',classList:{add(){}}};
  const s=env({sourceGeneration:{You:0},srcOn:{mic:true,sys:true},primeAudio:()=>{},$:()=>node,document:{querySelector:()=>node},startClock:()=>{},captureErrors:[],captures:[{}],startMic:()=>{order.push('mic');return new Promise(r=>mic=r);},startSys:async()=>{order.push('share');},reportSources:()=>{},markRun:()=>{}});
+ s.sessionReadyUntil = Date.now() + 60000; // session fresh: skip the readiness gate so this test measures prompt order, not session renewal
  vm.runInContext(section('async function start()', 'async function stop('),s);
  const starting=s.start();assert.deepEqual(order,['share','mic']);mic();await starting;
 });
