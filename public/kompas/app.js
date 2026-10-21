@@ -807,8 +807,9 @@ function proseLines(text) {
 }
 function renderCard() {
   const c = cards[idx]; if (!c) return;
-  $("question").textContent = c.question;
-  $("question").title = c.heard || "";
+  const draft = ($("manualInput") && $("manualInput").value || "").trim();
+  $("question").textContent = draft || c.question;
+  $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const ul = $("answer"), keep = ul.scrollTop;
   const lines = answerLines(c.answer);
   const spoken = lines.map(l => l.t).join("\n");
@@ -849,7 +850,7 @@ function wrapWords(root) {
   }
 }
 function animateCard() { const card = $("card"); card.style.animation = "none"; void card.offsetWidth; card.style.animation = ""; }
-const toTop = () => { const ul = $("answer"); if (ul) ul.scrollTop = 0; };   // a different card opens at its start
+const toTop = () => { const ul = $("answer"); if (ul) ul.scrollTop = 0; if (typeof syncQuestion === "function") syncQuestion(); };   // a new question opens at the top, where the question line is visible
 $("prevBtn").onclick = () => { if (idx > 0) { idx--; renderCard(); toTop(); animateCard(); } };
 $("nextBtn").onclick = () => { if (idx < cards.length - 1) { idx++; renderCard(); toTop(); animateCard(); } };
 function addCard(question, answer) { const c = { question, answer }; cards.push(c); idx = cards.length - 1; renderCard(); toTop(); animateCard(); return c; }
@@ -1812,13 +1813,18 @@ async function generateAnswerRequest(question, card, opts = {}) {
       const dj = await dr.json(); clearTimeout(deriveTimer);
       if (card.req !== ctl) return;
       if (dj.noQuestion) {
-        card.streaming = false;
-        card.answer = [];
-        card.question = "No question yet";
-        if (answerCtl === ctl) answerCtl = null;
-        if (cards[idx] === card) renderCard();
-        status("Listening for the next question.", "live");
-        return;
+        const kept = String(card.question || "").trim();
+        if (kept && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving|Answering what|From what was heard)/.test(kept)) {
+          derivedQ = kept;
+        } else {
+          card.streaming = false;
+          card.answer = [];
+          card.question = "No question yet";
+          if (answerCtl === ctl) answerCtl = null;
+          if (cards[idx] === card) renderCard();
+          status("Listening for the next question.", "live");
+          return;
+        }
       }
       if (dj.derived) { derivedQ = dj.derived; card.question = derivedQ; if (cards[idx] === card) renderCard(); }
       derivedBy = dj.derivedBy || "ai";
@@ -1894,7 +1900,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   };
   try {
     const res = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
-      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
+      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, pinned: !!opts.pinned, again: !!opts.reask, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
     if (!res.ok || !res.body) {
       const failure = await res.json().catch(() => ({}));
       throw Object.assign(new Error(failure.error || "Paid answer service returned " + res.status), { providerFailure: true, code: failure.code || (res.status === 401 || res.status === 403 ? "AUTH" : ""), retryAfterMs: failure.retryAfterMs });
@@ -1918,7 +1924,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
           const frame = buf.slice(0, i).trim(); buf = buf.slice(i + 2);
           if (!frame.startsWith("data:")) continue;
           let ev; try { ev = JSON.parse(frame.slice(5)); } catch { continue; }
-          if (ev.type === "meta") { meta = { ...meta, ...ev }; if (consolidated && ev.derived && card.req === ctl) { card.question = ev.derived; if (cards[idx] === card) renderCard(); } }
+          if (ev.type === "meta") { meta = { ...meta, ...ev }; if (ev.derived && card.req === ctl && (consolidated || opts.pinned)) { card.question = ev.derived; if (cards[idx] === card) { renderCard(); status("Answering: " + ev.derived, "live"); } } }
           else if (ev.type === "delta") { if (!first) first = performance.now() - t0; text += ev.text; show(text); }
           else if (ev.type === "replace") { if (!first) first = performance.now() - t0; text = ev.text; show(text); }
           else if (ev.type === "wait") { if (card.req === ctl) status("Reconnecting.", "live"); }
@@ -2005,6 +2011,21 @@ $("manualInput").addEventListener("keydown", (e) => {
   sendManual();
 });
 function sendManual() { void aiAnswer(false); }   // the typed box joins the AI Answer intake (box + mic + computer audio concatenated)
+$("manualInput").addEventListener("input", () => { if (cards[idx]) renderCard(); });
+function pressQuestion(typed, intake, screen) {
+  const bits = [typed, intake && intake.derived].map(s => String(s || "").replace(/\s+/g, " ").trim()).filter(s => s && !isNoiseLine(s));
+  let q = bits.join(" ").trim();
+  const lane = String(screen || "").trim();
+  if (q && lane && q.split(/\s+/).length < 8 && !Q_CUE.test(q)) q = lane.replace(/[?.!\s]+$/, "") + " — " + q;
+  if (!q && intake && intake.keywords && intake.keywords.length && lane && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(lane)) q = lane.replace(/[?.!\s]+$/, "") + " — " + intake.keywords.slice(0, 6).join(" ");
+  return q || "";
+}
+function showPressed(card, q) {
+  if (card && q) card.question = q;
+  if (card && cards[idx] === card) renderCard();
+  toTop();
+  if (q) status("Answering: " + q, "live");
+}
 $("answerBtn").onclick = () => aiAnswer(false);
 let aiBusy = false, aiBusySince = 0;
 async function aiAnswer(fromAuto) {
@@ -2022,13 +2043,13 @@ async function aiAnswer(fromAuto) {
     }
     if (sessionEpoch !== transcriptionEpoch) return;
     const pending = pendingHeard();
-    if (transcriptionFailedEpoch === sessionEpoch && !pending.length) {
+    const box = $("manualInput");
+    const typedText = box ? box.value.trim() : "";
+    if (transcriptionFailedEpoch === sessionEpoch && !pending.length && !typedText) {
       setChat(true);
       status("The last phrase could not be transcribed. Please repeat it or type it here.", "err");
       return;
     }
-    const box = $("manualInput");
-    const typedText = box ? box.value.trim() : "";
     if (pending.length || typedText) {
       const cur = cards[idx];
       const answerText = [cur, cards[idx - 1]].filter(Boolean).map(c => typeof c.answer === "string" ? plainAnswer(c.answer) : "").join(" ");
@@ -2037,15 +2058,17 @@ async function aiAnswer(fromAuto) {
       // previous lines, mic words, the newest computer audio — with the
       // question already on screen, let the engine form the question from the
       // whole, and answer that. Frequency of pressing is the miss signal.
-      const isRepress = !fromAuto && !!cur && typeof cur.answer === "string" && cur.answer.trim().length > 0 && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
+      const answeredText = typeof cur.answer === "string" ? cur.answer : (cur && cur.answer || []).join("\n");
+      const isRepress = !fromAuto && !!cur && answeredText.trim().length > 40 && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
       if (isRepress) {
         const previous = transcript.filter(t => t.seq <= answeredSeq).slice(-40);
         const combined = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You", previous, currentQuestion: cur.question });
         if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
         answeredSeq = heardSeq; updatePending();
-        const heard = combined.noiseOnly ? [cur.earlier, cur.heard].filter(Boolean).join("\n") : combined.heard;
-        if (!heard) { status("Nothing heard yet — press Start, or type a question.", "live"); return; }
-        return await generateAnswer(heard, cur, { consolidated: true, earlier: "", derived: "", reask: true });
+        const q = pressQuestion(typedText, combined, cur.question) || cur.question;
+        const heard = combined.noiseOnly ? [cur.earlier, cur.heard, q].filter(Boolean).join("\n") : (combined.heard || q);
+        showPressed(cur, q);
+        return await generateAnswer(heard, cur, { consolidated: true, earlier: "", derived: q, reask: true, pinned: true });
       }
       const intake = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You" });
       if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
@@ -2060,17 +2083,20 @@ async function aiAnswer(fromAuto) {
         // No real question from any source, but the fragments carry real
         // keywords: tackle them into the lane instead of answering noise.
         if (fromAuto) return;
-        const lane = (cur && cur.question) || "";
+        const lane = (cur && cur.question && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question)) ? cur.question : "";
+        const q = pressQuestion("", intake, lane) || ("From what was heard: " + intake.keywords.join(", "));
         const heard = intake.heard + (lane ? `\nLane (the question already on screen — stay on it): ${lane}` : "");
-        const card = addCard("From what was heard: " + intake.keywords.join(", "), ["…"]);
+        const card = addCard(q, ["…"]);
         card.heard = heard; card.earlier = earlier;
-        return await generateAnswer(heard, card, { consolidated: true, earlier, derived: "" });
+        showPressed(card, q);
+        return await generateAnswer(heard, card, { consolidated: true, earlier, derived: q, pinned: true });
       }
       const heard = intake.heard;
-      const said = intake.derived || heardAsQuestion(pending);
+      const said = pressQuestion(typedText, intake, "") || intake.derived || heardAsQuestion(pending);
       const card = addCard(said || "Answering what was just heard…", ["…"]);
       card.heard = heard; card.earlier = earlier;
-      return await generateAnswer(heard, card, { consolidated: true, earlier, derived: said });
+      showPressed(card, card.question);
+      return await generateAnswer(heard, card, { consolidated: true, earlier, derived: said, pinned: true });
     }
     if (fromAuto) return;
     const c = cards[idx];
@@ -2080,9 +2106,8 @@ async function aiAnswer(fromAuto) {
     // itself says the last answer missed (owner, 21 Oct 2026). Re-deriving
     // the old heard text alone is what showed "No question yet".
     if (c && c.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(c.question)) {
-      const combined = [c.earlier, c.heard].filter(Boolean).join("\n");
-      if (combined) return await generateAnswer(combined, c, { consolidated: true, earlier: "", derived: "", reask: true });
-      return await generateAnswer(c.question, c);
+      showPressed(c, c.question);
+      return await generateAnswer(c.question, c, { reask: true, pinned: true, derived: c.question });
     }
     if (c && c.heard) return await generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "" });
     status("Nothing heard yet — press Start, or type a question.", "live");
@@ -2549,6 +2574,16 @@ document.addEventListener("keydown", (e) => {
   }
   else if (e.ctrlKey && e.shiftKey && (e.key === "S" || e.key === "s")) { e.preventDefault(); analyseScreen(); }
   else if (typing) return;
+  else if (window.kompasDesktop && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    e.preventDefault();
+    setChat(true);
+    const inp = $("manualInput");
+    inp.value += e.key;
+    inp.focus();
+    const end = inp.value.length;
+    try { inp.setSelectionRange(end, end); } catch {}
+    inp.dispatchEvent(new Event("input", { bubbles: true }));
+  }
   else if (e.key === "/") { e.preventDefault(); setChat(true); }
   else if (e.key === "t" || e.key === "T") $("drawer").classList.toggle("hidden");
   else if (e.key === "f" || e.key === "F") setFollow(!follow.on);

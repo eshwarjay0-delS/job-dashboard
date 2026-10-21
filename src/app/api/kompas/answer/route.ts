@@ -7,7 +7,7 @@ import { resumeRoles, resumeDigest, employerAliases } from "@/lib/kompasResume"
 import { hashUserId } from "@/lib/sttLedger"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
-  classify, canonicalQuestion, lengthPlan, questionDepth, plainlyNoQuestion, cleanQuestion, cutQuestion, resolveFollowUp,
+  classify, canonicalQuestion, lengthPlan, questionDepth, plainlyNoQuestion, cleanQuestion, cutQuestion, questionToAnswer, resolveFollowUp,
   tierRule, pickShape, DERIVE_SYSTEM, INTRODUCTION_POLICY, PERSONAL_EXPERIENCE_POLICY, TECHNICAL_ANSWER_BOUNDARY, RESPONSE_CRAFT_POLICY, isPersonalEvidenceQuestion, type LengthPlan,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
   commit, matchBank,
@@ -582,10 +582,11 @@ export async function POST(request: NextRequest) {
 
   const heardAll = str(body.question, 4000)
   const asked = str(body.derived, 900)
-  // Cut the question out of the ramble. "Okay", the candidate reading the last answer,
-  // and noise are not the question. The last real ask is.
-  const cut = cutQuestion([heardAll, asked].filter(Boolean).join("\n"))
-  let question = cut
+  // The card already shows the question when the client pins it. A ramble still
+  // yields to the ask inside that line. "Okay" stays unanswered. Anything else
+  // typed or heard is the question — dropping it left the card on the previous answer.
+  const again = body.again === true
+  let question = questionToAnswer(heardAll, asked, body.pinned === true)
   if (!question) {
     const quiet = `data: ${JSON.stringify({ type: "meta", noQuestion: true })}\n\ndata: ${JSON.stringify({ type: "done", noQuestion: true })}\n\n`
     if (body.stream) {
@@ -760,7 +761,7 @@ export async function POST(request: NextRequest) {
   const job: AnswerJob = {
     question,
     system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : audienceGuidance(interviewer, question)}\n\n${personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${RESPONSE_CRAFT_POLICY}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${tier === 0 ? INTRODUCTION_POLICY : `Speak it. Sentence one is the answer in words this listener already understands. Then one path. On every sentence, ask whether you are 100% on this question, at this layer. A sentence that is not, is not said.
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? "The previous answer to this question was wrong. Answer it again. Do not reuse that answer's opening, its example, or its order of points.\n\n" : ""}${tier === 0 ? INTRODUCTION_POLICY : `Speak it. Sentence one is the answer in words this listener already understands. Then one path. On every sentence, ask whether you are 100% on this question, at this layer. A sentence that is not, is not said.
 A general scenario — a time, a would-you, a launch, or a people question: the decision or the moment, in plain words, and one picture. Do not open a mechanism they did not ask for. If the background has no such incident, say what you would do.
 A technical question — a what-is, a how, an investigate, a fix, or a test: specialist, spoken the way a person talks in the meeting. Simple words, or one abstract sentence that carries the meaning. Do not recite a query, a parameter, a claim name, or a stack. Inside a program, write the real numbers. A status code, a port, and a literal in code stay written as themselves. Mark the one word the listener should keep with double-underscores, like __owner__. That word is the picture, or the mechanism once, in words they already have.
 If a second topic starts, stop.

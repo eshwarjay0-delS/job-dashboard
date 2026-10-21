@@ -217,6 +217,42 @@ export function cutQuestion(heard: string): string {
   return q.charAt(0).toUpperCase() + q.slice(1)
 }
 
+const SPOKEN_NOISE =
+  /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|bye|goodbye|good morning|good afternoon|good evening|how are you|what'?s up|cool|sure|right|alright|all right|got it|sounds good)[.!?]*$/i
+
+/** A greeting or a filler is not a question. A short technical fragment is. */
+export function noiseOnly(text: string): boolean {
+  const t = String(text || "")
+    .replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (!t) return true
+  return SPOKEN_NOISE.test(t)
+}
+
+/**
+ * The question the answer must follow. A pinned line is the one already on
+ * screen. A ramble still loses to the ask inside it. A greeting stays
+ * unanswered. Anything else typed or heard is kept — dropping it is what
+ * left the card on the previous answer.
+ */
+export function questionToAnswer(heard: string, explicit: string, pinned = false): string {
+  const asked = String(explicit || "").replace(/\s+/g, " ").trim()
+  if (pinned && asked && !noiseOnly(asked)) {
+    const inner = cutQuestion(asked)
+    return (inner || asked).slice(0, 900)
+  }
+  const cut = cutQuestion([heard, asked].filter(Boolean).join("\n"))
+  if (cut) return cut
+  if (asked && !noiseOnly(asked)) return asked.slice(0, 900)
+  const bare = String(heard || "")
+    .replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (bare && !noiseOnly(bare) && bare.split(/\s+/).filter(Boolean).length >= 3) return bare.slice(0, 900)
+  return ""
+}
+
 /** Verbatim extraction when the transcript reduces to exactly one clean question. */
 export function cleanQuestion(heard: string): string {
   const lines = String(heard || "").split("\n").filter((l) => l.trim())

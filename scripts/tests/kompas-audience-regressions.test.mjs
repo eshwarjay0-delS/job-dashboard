@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { guardText, needsGuard, applyGuards } from '../../src/lib/kompasGuards.ts'
 import { audienceGuidance } from '../../src/lib/kompasAudience.ts'
-import { cutQuestion } from '../../src/lib/kompasAnswer.ts'
+import { cutQuestion, questionToAnswer } from '../../src/lib/kompasAnswer.ts'
 
 test('HTTP responses, versions and example invoice identifiers survive the figures guard', () => {
   for (const text of [
@@ -60,6 +60,8 @@ test('the live page says a problem before the session and does not leave a failu
   assert.doesNotMatch(page, /transcript\.length > 500/)
   assert.match(page, /flushHeard\(1500\)/)
   assert.match(page, /derived: said/)
+  assert.match(page, /Answering: /)
+  assert.match(page, /pinned: true/)
   assert.match(page, /async function wrapSession/)
   assert.match(page, /running \? wrapSession\(\) : start\(\)/)
   assert.match(page, /textSizeN/)
@@ -71,6 +73,10 @@ test('the question is cut out of the ramble, and a definition stays a storytelle
   assert.equal(cutQuestion('Okay.'), '')
   assert.match(cutQuestion('do you know about routing tables?'), /routing tables/i)
   assert.equal(cutQuestion('Intro'), 'Tell me about yourself')
+  assert.equal(questionToAnswer('Okay.', '', false), '')
+  assert.equal(questionToAnswer('Venafi certificate discovery', 'Venafi certificate discovery', true), 'Venafi certificate discovery')
+  assert.match(questionToAnswer('Okay. how do you configure certificate discovery in Venafi?', 'Okay. how do you configure certificate discovery in Venafi?', true), /how do you configure certificate discovery in Venafi/i)
+  assert.equal(questionToAnswer('Hello.', 'Hello.', true), '')
   const code = 'if n <= 3:\n    return True\nif n % 2 == 0:\n    return False'
   assert.match(applyGuards(code, null, new Set()).text, /n <= 3/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /name the mechanism once/)
