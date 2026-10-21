@@ -1748,6 +1748,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   if (location.protocol === "file:") { card.answer = ["(Preview) Serve the deployed app for grounded answers."]; renderCard(); return; }
   if (answerCtl) { try { answerCtl.abort(); } catch {} }          // the newest question always wins
   const ctl = new AbortController(); answerCtl = ctl; card.req = ctl;   // card.req: which request owns this card now
+  const hardTimer = setTimeout(() => { try { ctl.abort(); } catch {} }, 120000);   // no request may run past 2 min — a silent hang here used to wedge the answer latch and mute every later press and typed Enter
   if (card === follow.card) { follow.pos = 0; follow.livePos = 0; }
   const t0 = performance.now(); let first = 0, text = "", meta = {};
   const depthLabel = () => { const o = $("liveInterviewer").selectedOptions[0]; return o ? o.textContent : ""; };
@@ -1776,9 +1777,10 @@ async function generateAnswerRequest(question, card, opts = {}) {
   let derivedQ = opts.derived || "", derivedBy = opts.derived ? "kept" : "";                 // regenerating: the question is already known
   if (consolidated && !derivedQ) {
     try {
+      const deriveTimer = setTimeout(() => { try { ctl.abort(); } catch {} }, 30000);
       const dr = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
         body: JSON.stringify({ deriveOnly: true, client: BUILD, question, transcript: opts.earlier || "", history: recentQA(card) }) });
-      const dj = await dr.json();
+      const dj = await dr.json(); clearTimeout(deriveTimer);
       if (card.req !== ctl) return;
       if (dj.noQuestion) {
         card.streaming = false;
@@ -1871,9 +1873,16 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (!(res.headers.get("content-type") || "").includes("event-stream")) {
       const data = await res.json(); text = data.text || ""; first = performance.now() - t0; meta = data;
     } else {
-      const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "";
+      const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "", lastChunkAt = Date.now(), pendingRead = reader.read();
       while (true) {
-        const { done, value } = await reader.read(); if (done) break;
+        const chunk = await Promise.race([pendingRead, new Promise(res2 => setTimeout(() => res2("idle"), 4000))]);
+        if (chunk === "idle") {   // stream inactivity watchdog: a silently stalled connection must fail loudly and retry, never hang the session
+          if (Date.now() - lastChunkAt > 25000) throw Object.assign(new Error("The answer stream stalled — no data for 25 seconds."), { code: "STALL", retryAfterMs: 800 });
+          continue;
+        }
+        pendingRead = reader.read();
+        const { done, value } = chunk; if (done) break;
+        lastChunkAt = Date.now();
         buf += dec.decode(value, { stream: true });
         let i;
         while ((i = buf.indexOf("\n\n")) >= 0) {
@@ -1946,7 +1955,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.split("\n").pop().slice(0, 200);
     recoverAnswer(e && e.code || "", e && e.retryAfterMs || 1000);
-  } finally { release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
+  } finally { clearTimeout(hardTimer); release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
 }
 
 /* ---- manual, AI Answer, screen, copy, export, shortcuts ---- */
@@ -1968,9 +1977,13 @@ $("manualInput").addEventListener("keydown", (e) => {
 });
 function sendManual() { void aiAnswer(false); }   // the typed box joins the AI Answer intake (box + mic + computer audio concatenated)
 $("answerBtn").onclick = () => aiAnswer(false);
-let aiBusy = false;
+let aiBusy = false, aiBusySince = 0;
 async function aiAnswer(fromAuto) {
-  if (aiBusy) return; aiBusy = true; clearTimeout(autoTimer);
+  if (aiBusy) {
+    if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
+    else { status("Still working on the last answer — one moment.", "live"); return; }
+  }
+  aiBusy = true; aiBusySince = Date.now(); clearTimeout(autoTimer);
   try {
     const sessionEpoch = transcriptionEpoch;
     if ((running && captures.length) || finals.size) {
