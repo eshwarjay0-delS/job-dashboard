@@ -19,3 +19,5 @@ export const tapBuzz = () => buzz(10)
 export const sendBuzz = () => buzz([12, 40, 18])
 /** Gentle nudge when something new arrives. */
 export const arriveBuzz = () => buzz([8, 60, 8])
+/** Strong triple-tap when an interview or deadline lands — impossible to miss. */
+export const alertBuzz = () => buzz([30, 60, 30, 60, 60])

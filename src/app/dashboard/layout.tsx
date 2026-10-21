@@ -6,6 +6,7 @@ import PageTransition from "./page-transition"
 import DeviceGuard from "./device-guard"
 import PhoneReminder from "./phone-reminder"
 import SessionLifetimeGuard from "./session-lifetime-guard"
+import InboxAlertWatcher from "./inbox-alert-watcher"
 import OnboardingGate from "./onboarding-gate"
 import PlanVisionLink from "./_components/plan-vision-link"
 import FloatingAgent from "./_components/floating-agent"
@@ -30,6 +31,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       }}>
         <PhoneReminder />
         <SessionLifetimeGuard />
+        {!resumeOnly && <InboxAlertWatcher />}
         {!resumeOnly && <PlanVisionLink />}
         {resumeOnly ? <DeviceGuard><PageTransition>{children}</PageTransition></DeviceGuard> : <OnboardingGate><DeviceGuard><PageTransition>{children}</PageTransition></DeviceGuard></OnboardingGate>}
       </main>

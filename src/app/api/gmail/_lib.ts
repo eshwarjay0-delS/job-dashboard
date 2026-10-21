@@ -73,7 +73,7 @@ function extractDomain(from: string): string {
   return m ? m[1].toLowerCase() : ""
 }
 
-function companyFromDomain(domain: string, from: string): string {
+export function companyFromDomain(domain: string, from: string): string {
   // Prefer display name if it looks like a company
   const nameMatch = from.match(/^"?([^"<@]+?)"?\s*</)
   if (nameMatch) {

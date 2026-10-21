@@ -173,3 +173,13 @@ If a listed message returns 404 during metadata retrieval, skip that absent mess
 ### Browser reply recovery
 
 Reply recipients, subject, body and attachments are saved on the current browser, separated by authenticated user, receiving Gmail account and conversation. Save and close writes before closing; storage failure shows an actionable message instead of claiming success. Write my own preserves the current reply. Only a confirmed successful send clears its saved copy. Clearing browser data removes these drafts. This is browser recovery, not Gmail Drafts synchronization; cross-device saving remains unfinished.
+
+### In-app inbox alerts: haptics + chain connection — 21 October 2026
+
+Owner directive (chat, 21 October): the verified-alert behavior he gets on his phone — urgent mail noticed, checked against reality, and connected to its submission chain — belongs inside the app itself, not only in the chat watcher.
+
+What shipped: `InboxAlertWatcher`, mounted across the dashboard, polls `/api/gmail/alerts` every 2 minutes and on focus. The route reuses the classified-thread cache, the confirmed-invite evidence standard (`inviteEvidence` — request-only asks never alert), and `buildApplicationChains`. The pure shaping logic lives in `src/lib/inbox-alerts.ts` with unit tests (`scripts/tests/inbox-alerts.test.mjs`).
+
+When an urgent item lands (confirmed interview invite, RTR request, rate confirmation, document request, offer), the user feels it and sees it: a vibration (`alertBuzz` for interviews, `arriveBuzz` otherwise, via `src/lib/haptics.ts`), a browser notification when permission is granted, and a card that names the chain connection — part of an existing chain with its current holder; a possible second chain on the same client + role arriving on a different thread (the double-submit pattern, flagged to confirm before replying); or genuinely new. A first-run watermark baselines at "now" so history never storms in; each item alerts once and dismissals persist.
+
+Limits, stated plainly: this alerts while the app is open in a browser (the background phone watcher remains the out-of-app channel). Signed-in acceptance — an urgent email landing while the app is open producing the buzz, notification and connected card — is the owner's real-path check and is not claimed here.
