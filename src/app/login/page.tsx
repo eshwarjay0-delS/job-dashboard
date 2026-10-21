@@ -1,6 +1,7 @@
 "use client"
 
 import { safeAuthNext } from "@/lib/authRedirect"
+import { stampLoginClock } from "@/lib/session-clock"
 import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -63,6 +64,7 @@ function LoginContent() {
       const supabase=createClient()
       const { error }=await supabase.auth.signInWithPassword({email:email.trim().toLowerCase(),password})
       if (error) throw error
+      stampLoginClock()
       window.location.assign(["janjiaarya@gmail.com","tryguessup@gmail.com"].includes(email.trim().toLowerCase()) ? "/dashboard/resume" : next)
     } catch(e) { setError(e instanceof Error?e.message:"Unable to sign in") }
     finally { setLoading(false) }

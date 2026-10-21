@@ -585,6 +585,7 @@ async function tryRefreshAuth() {
 // back to this window, and every 20 minutes while it stays open, so the next
 // action never meets an expired token.
 function keepAuthAlive() {
+  checkLoginClock();
   if (document.hidden) return;
   if (Date.now() - __lastAuthRefresh < 10 * 60 * 1000) return;
   __lastAuthRefresh = Date.now();
@@ -595,12 +596,37 @@ try {
   window.addEventListener("focus", keepAuthAlive);
   setInterval(keepAuthAlive, 20 * 60 * 1000);
 } catch {}
-function redirectToLogin() {
+function redirectToLogin(message) {
   if (__authRedirected) return;
   __authRedirected = true;
-  try { status("Not signed in — taking you to the login page…", "err"); } catch {}
+  try { status(message || "Not signed in — taking you to the login page…", "err"); } catch {}
   window.location.href = "/login?next=" + encodeURIComponent(window.location.pathname + window.location.search);
 }
+// ── Login clock (owner rule, 20 Oct 2026): a sign-in lasts 3 days. ──
+// The stamp (mf_login_at, shared with the web dashboard on this origin) is
+// written when a sign-in completes. Inside the first 2 days the silent
+// refresh above keeps everything alive; when the app is opened during the
+// final 24 hours, the user is sent to login to authenticate again and start
+// a fresh 3 days — the session never lapses mid-use.
+const LOGIN_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+const REAUTH_AFTER_MS = LOGIN_TTL_MS - 24 * 60 * 60 * 1000;
+function loginClockStart() {
+  try { const v = parseInt(localStorage.getItem("mf_login_at") || "", 10); return isFinite(v) && v > 0 ? v : 0; } catch { return 0; }
+}
+function checkLoginClock() {
+  try {
+    if (location.protocol === "file:") return;
+    if (!supabaseSession()) return; // signed out: the normal flow handles it
+    const start = loginClockStart();
+    if (!start) { try { localStorage.setItem("mf_login_at", String(Date.now())); } catch {} return; }
+    if (Date.now() - start >= REAUTH_AFTER_MS) {
+      try { localStorage.removeItem("mf_login_at"); } catch {}
+      redirectToLogin("Your 3-day sign-in is nearly up — sign in again to start a fresh 3 days.");
+    }
+  } catch {}
+}
+try { checkLoginClock(); } catch {}
+// ── end login clock ──
 async function preparePack(s) {
   if (location.protocol === "file:") { seedIdentity(s); status("Serve the deployed app for live prep + answers.", "live"); return; }
   if (s.prep && s.prep.v !== 2) { s.prep = null; saveSession(s); }   // pre-v2 prep had [blank]s: rebuild it

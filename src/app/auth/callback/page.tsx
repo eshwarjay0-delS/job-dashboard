@@ -17,6 +17,7 @@
 // server route (only ?code=) cannot. Also upserts the profile row after auth.
 
 import { safeAuthNext } from "@/lib/authRedirect"
+import { stampLoginClock } from "@/lib/session-clock"
 import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -36,7 +37,11 @@ function CallbackHandler() {
                          "email" | "recovery" | "invite" | "magiclink"
       const next       = safeAuthNext(searchParams.get("next"))
 
-      async function finish(session: { user: { id: string; email?: string | null } }) {
+      async function finish(session: { user: { id: string; email?: string | null } }, fresh = true) {
+        // A completed sign-in starts the 3-day login clock (owner rule,
+        // 20 Oct 2026). Recovered sessions (flow 4) are not fresh logins and
+        // must not reset it.
+        if (fresh) stampLoginClock()
         const complete = await afterAuth(supabase, session.user.id, session.user.email ?? undefined)
         if (!cancelled) window.location.replace(complete ? next : "/dashboard/setup")
       }
@@ -90,7 +95,7 @@ function CallbackHandler() {
       // success instead of showing a false "sign-in link failed" message.
       const { data: existing, error: sessionError } = await supabase.auth.getSession()
       if (!sessionError && existing.session) {
-        await finish(existing.session)
+        await finish(existing.session, false)
         return
       }
 
