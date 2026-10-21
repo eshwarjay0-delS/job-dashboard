@@ -1299,14 +1299,16 @@ function vadStep(cap, rms) {
   const dt = cap.lastTick ? Math.min(100, now - cap.lastTick) : 20; cap.lastTick = now;
   const threshold = Math.max(0.003, cap.noise * 2.5);
   const speaking = rms > threshold;
-  // Never learn quiet speech as background noise and then erase it.
-  if (!speaking) cap.noise = cap.noise * 0.995 + rms * 0.005;
+  // Never learn quiet speech as background noise and then erase it: the floor
+  // adapts only to sound that is clearly background (well under the threshold),
+  // so a soft-spoken question can no longer raise the bar against itself.
+  if (!speaking && rms < threshold * 0.7) cap.noise = cap.noise * 0.995 + rms * 0.005;
   meter(cap.who, rms, speaking);
   if (speaking) { cap.lastVoice = now; cap.speechMs += dt; if (cap.speechMs > 120) cap.voiced = true; }
   const segLen = now - cap.segStart;
   if (cap.voiced && now - cap.lastVoice > VAD.SILENCE_MS) return endSegment(cap, true);   // speaker paused → send the phrase
   if (segLen > VAD.MAX_SEG_MS) return endSegment(cap, cap.voiced);                      // long monologue → flush a piece
-  if (!cap.voiced && segLen > VAD.IDLE_RECYCLE_MS) return endSegment(cap, false);       // silence → recycle, send nothing
+  if (!cap.voiced && segLen > VAD.IDLE_RECYCLE_MS) return endSegment(cap, cap.speechMs >= 60, true, cap.speechMs >= 60);   // silence → recycle; partial speech (a short question word, a soft start) is transcribed, never silently dropped
   if (cap.voiced && cap.who === questionSource() && cap.speechMs > 1200 && now - cap.interimAt > VAD.INTERIM_MS && !cap.inflight && now > interimOffUntil) {
     cap.interimAt = now; startCaptions(cap);                                             // live caption while still talking (in-page, no Whisper call)
   }
@@ -1322,10 +1324,16 @@ function meter(who, rms, speaking) {
 let interimOffUntil = 0;
 let transcriptionFailedEpoch = -1;
 function whisperPrompt() {
+  const SPEECH_LEXICON = ["SIEM", "SOAR", "EDR", "XDR", "MITRE ATT&CK", "Kerberos", "Active Directory", "domain controller", "DNS hijacking", "Group Policy", "lateral movement", "privilege escalation", "threat hunting", "incident response", "vulnerability management", "zero trust", "SAML", "OAuth", "PKI", "firewall", "WAF", "Splunk", "CrowdStrike", "Microsoft Sentinel", "Microsoft Defender", "Okta", "CyberArk", "Venafi", "Nessus", "Qualys", "SOC analyst", "phishing", "ransomware", "malware", "endpoint security", "Azure"];
   const s = current || {};
   const learned = (s.voiceVocabulary || []).filter(t => typeof t === "string").slice(-40);
   const terms = [...new Set((`${s.role || ""} ${s.jd || ""} ${(s.resume || "").slice(0, 3000)}`.match(/\b[A-Z][A-Za-z0-9+#./-]{1,}\b/g) || []))].slice(0, 45);
-  return `Vocabulary: ${[...learned, ...terms].join(", ")}.`.slice(0, 550);
+  // Whisper reads the prompt as the transcript so far: the previous heard line
+  // (topic, names, phrasing) first, then the vocabulary — his terms, then the
+  // security lexicon — so the next phrase is decoded in context, not cold.
+  const prev = (typeof transcript !== "undefined" && transcript.length ? String(transcript[transcript.length - 1].text || "") : "").replace(/\s+/g, " ").trim().slice(-110);
+  const vocab = [...new Set([...learned, ...terms, ...SPEECH_LEXICON])].join(", ");
+  return `${prev ? prev + " " : ""}Vocabulary: ${vocab}.`.slice(0, 550);
 }
 // Speech activity gates silence before upload; short replies are meaningful speech.
 const HALLU = /^(thanks for watching|thank you for watching)[.!?,]*$/i;
@@ -1503,6 +1511,27 @@ function edits1(a, b) {                                  // true when a and b di
   while (i < a.length && j < b.length) { if (a[i] === b[j]) { i++; j++; continue; } if (++e > 1) return false; if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; } }
   return e + (a.length - i) + (b.length - j) <= 1;
 }
+// Phrase-level rescue for the multi-word garbles Whisper repeats on security
+// vocabulary — token-level fixTerms cannot see across words ("domain control
+// her"). Deliberately narrow: every pattern is anchored to a domain phrase,
+// so ordinary sentences pass through untouched.
+const PHRASE_FIXES = [
+  [/\bdomain control(?:ler|er| her| a)\b/gi, "domain controller"],
+  [/\b(?:mitre|miter|myter) attack\b/gi, "MITRE ATT&CK"],
+  [/\b(?:kerberose|curberos|kerbraus)\b/gi, "Kerberos"],
+  [/\bsock (analyst|team|center|centre|manager|lead)\b/gi, "SOC $1"],
+  [/\b(?:seam|sim) (tool|platform|solution|system|logs?)\b/gi, "SIEM $1"],
+  [/\boh auth\b/gi, "OAuth"],
+  [/\bcrowd strike\b/gi, "CrowdStrike"],
+  [/\blatteral movement\b/gi, "lateral movement"],
+  [/\bprivilege excalation\b/gi, "privilege escalation"],
+  [/\bactive directory\b/gi, "Active Directory"],
+];
+function fixPhrases(text) {
+  let t = String(text || "");
+  for (const [re, rep] of PHRASE_FIXES) t = t.replace(re, rep);
+  return t;
+}
 function fixTerms(text) {
   const vocab = termVocab(); if (!vocab.length) return text;
   const lower = new Map(vocab.map(t => [t.toLowerCase(), t]));
@@ -1533,7 +1562,7 @@ function fixTerms(text) {
   return toks.join("").replace(/\s{2,}/g, " ");
 }
 function onTranscript(who, text) {
-  text = fixTerms(text);
+  text = fixTerms(fixPhrases(text));
   if (who === "You" && follow.on && !follow.sr) followHear(text, true);   // Follow along without live recognition
   transcript.push({ who, text, at: Date.now(), seq: ++heardSeq });
   logEvent({ t: "line", who, text });
