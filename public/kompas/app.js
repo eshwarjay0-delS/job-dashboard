@@ -1755,7 +1755,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const consolidated = !!opts.consolidated;
   const epoch = ++answerEpoch;
   const depthKey = `${$("liveInterviewer").value}|${liveConfig().mode}|${liveConfig().length || ""}`;
-  if (!opts.regen && !consolidatedNeedsDerive(opts) && book.sid === (current && current.id)) {   // opening book: typed / known questions
+  if (!opts.reask && !opts.regen && !consolidatedNeedsDerive(opts) && book.sid === (current && current.id)) {   // opening book: typed / known questions
     const hit = bookMatch(question, depthKey);
     if (hit) { serveBook(card, hit, depthKey); return; }
   }
@@ -1810,7 +1810,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       }
     } catch {}
     if (card.req !== ctl) return;
-    if (paintFromAnchors(card)) {
+    if (!opts.reask && paintFromAnchors(card)) {
       if (answerCtl === ctl) answerCtl = null;
       status("Shown from the two anchors — no model call.", "live");
       return;
@@ -1828,7 +1828,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     status("Preparing that answer…", "live");
     try { await already; } catch {}
     if (ctl.signal.aborted || card.req !== ctl) return;
-    if (paintFromAnchors(card)) { if (answerCtl === ctl) answerCtl = null; status("Shown from the two anchors — no model call.", "live"); return; }
+    if (!opts.reask && paintFromAnchors(card)) { if (answerCtl === ctl) answerCtl = null; status("Shown from the two anchors — no model call.", "live"); return; }
   }
   card.anchorFlight = writeAnchor;
   const release = window.KompasFlight ? window.KompasFlight.hold(card, writeAnchor) : () => {};
@@ -2003,7 +2003,7 @@ async function aiAnswer(fromAuto) {
         answeredSeq = heardSeq; updatePending();
         const heard = combined.noiseOnly ? [cur.earlier, cur.heard].filter(Boolean).join("\n") : combined.heard;
         if (!heard) { status("Nothing heard yet — press Start, or type a question.", "live"); return; }
-        return await generateAnswer(heard, cur, { consolidated: true, earlier: "", derived: "" });
+        return await generateAnswer(heard, cur, { consolidated: true, earlier: "", derived: "", reask: true });
       }
       const intake = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You" });
       if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
@@ -2039,7 +2039,7 @@ async function aiAnswer(fromAuto) {
     // the old heard text alone is what showed "No question yet".
     if (c && c.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(c.question)) {
       const combined = [c.earlier, c.heard].filter(Boolean).join("\n");
-      if (combined) return await generateAnswer(combined, c, { consolidated: true, earlier: "", derived: "" });
+      if (combined) return await generateAnswer(combined, c, { consolidated: true, earlier: "", derived: "", reask: true });
       return await generateAnswer(c.question, c);
     }
     if (c && c.heard) return await generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "" });
