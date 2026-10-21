@@ -15,6 +15,7 @@ import { callLLM, keysFor, resolveKeys } from "@/lib/llm"
 import { scheduleSttRecord } from "@/lib/sttLedger"
 import { cleanupAllowed, restoreSpelling } from "@/lib/kompasTranscript"
 import { guardHallucinations, deLooped as guardDeLooped, decodeStats, needsSecondChance } from "@/lib/kompasGuard"
+import { accuracyPrompt, repairDictation } from "@/lib/kompasDictation"
 
 export type SpeechPurpose = "flow" | "transcribe"
 export type SpeechCode = "too-large" | "empty" | "bad-audio" | "busy" | "unavailable"
@@ -155,39 +156,13 @@ export function primingFor(language: string | undefined): string {
  * returns 400 and the sentence is gone. Overestimating costs a word of priming;
  * underestimating costs the whole turn.
  */
-const PROMPT_TOKEN_BUDGET = 200
-const PROMPT_CHAR_BUDGET = 700
-
-/** Cheap and deliberately pessimistic: ASCII is thirds, everything else is charged at two. */
-function estimateTokens(text: string): number {
-  let tokens = 0
-  for (const character of text) tokens += character.charCodeAt(0) < 128 ? 0.34 : 2
-  return Math.ceil(tokens)
-}
-
 /**
  * The words this clip is likely to contain, as Whisper's priming prompt.
- * The language seed goes FIRST — it anchors the script, and if anything has
- * to be dropped for budget it should be the twentieth vocabulary term, not the
- * thing telling Whisper which alphabet this is.
+ * The language seed goes FIRST — it anchors the script. Interview terms are
+ * ranked ahead of a long previous line so the budget cannot drop them.
  */
 export function primingPrompt(vocabulary: readonly string[] | undefined, seed = ''): string {
-  const kept: string[] = []
-  let used = 0
-  if (seed.trim() !== '') {
-    kept.push(seed.trim())
-    used = estimateTokens(seed)
-  }
-  for (const term of vocabulary ?? []) {
-    const trimmed = term.trim()
-    if (!trimmed) continue
-    const cost = estimateTokens(trimmed) + (kept.length > 0 ? 1 : 0)
-    if (used + cost > PROMPT_TOKEN_BUDGET) break
-    if (trimmed.length > PROMPT_CHAR_BUDGET) break
-    kept.push(trimmed)
-    used += cost
-  }
-  return kept.join(', ')
+  return accuracyPrompt(vocabulary ?? [], seed)
 }
 
 /** Split a client hint string into vocabulary terms (comma/semicolon separated). */
@@ -371,7 +346,8 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
 
   // Selective secondary verification, cheap edition: the recogniser's own text is
   // checked for its signature failure (looping) before anyone sees it.
-  const { text, collapsed } = collapseRepeats(rawText)
+  const { text: guarded, collapsed } = collapseRepeats(rawText)
+  const text = repairDictation(guarded)
   const words: SpokenWord[] = (Array.isArray(body.words) ? body.words : []).slice(0, 2000).flatMap((w): SpokenWord[] => {
     const row = w as { start?: unknown; end?: unknown; word?: unknown }
     const start = Number(row?.start), end = Number(row?.end), word = typeof row?.word === "string" ? row.word : ""

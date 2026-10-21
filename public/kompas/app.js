@@ -1360,13 +1360,14 @@ function whisperPrompt(opt) {
   const s = current || {};
   const learned = (s.voiceVocabulary || []).filter(t => typeof t === "string").slice(-40);
   const terms = [...new Set((`${s.role || ""} ${s.jd || ""} ${(s.resume || "").slice(0, 3000)}`.match(/\b[A-Z][A-Za-z0-9+#./-]{1,}\b/g) || []))].slice(0, 45);
-  // Whisper reads the prompt as the transcript so far: the previous heard line
-  // (topic, names, phrasing) first, then the vocabulary — his terms, then the
-  // security lexicon — so the next phrase is decoded in context, not cold.
+  // The terms Whisper must be able to hear lead. The previous line follows,
+  // with its commas turned into spaces so it cannot swallow the first term.
+  // The word "Vocabulary" is not sent: Whisper echoes a prompt label back as speech.
   const bare = !!(opt && opt.bare);
-  const prev = bare ? "" : (typeof transcript !== "undefined" && transcript.length ? String(transcript[transcript.length - 1].text || "") : "").replace(/\s+/g, " ").trim().slice(-110);
-  const vocab = [...new Set([...SPEECH_LEXICON, ...learned, ...terms])].join(", ");
-  return `${prev ? prev + " " : ""}Vocabulary: ${vocab}.`.slice(0, 550);
+  const prev = bare ? "" : (typeof transcript !== "undefined" && transcript.length ? String(transcript[transcript.length - 1].text || "") : "").replace(/\s+/g, " ").replace(/[,;]/g, " ").trim().slice(-110);
+  const core = ["V-Cert", "Venafi TPP", "Luna HSM", "PKCS#10", "Gemalto", "Fifth Third", "CyberArk", "PowerShell", "Kerberos", "SIEM", "domain controller", "MITRE ATT&CK"];
+  const rest = SPEECH_LEXICON.filter(t => !core.includes(t));
+  return [...new Set([...core, ...(prev ? [prev] : []), ...learned, ...terms, ...rest])].join(", ").slice(0, 550);
 }
 // Level 4: a phrase with real speech and no words is decoded once more, without the previous line in the prompt.
 function dictationRetry(clean, speechMs, attempt) {
@@ -1571,10 +1572,30 @@ const PHRASE_FIXES = [
   [/\blatteral movement\b/gi, "lateral movement"],
   [/\bprivilege excalation\b/gi, "privilege escalation"],
   [/\bactive directory\b/gi, "Active Directory"],
+  [/\bvee\s+cert\b/gi, "V-Cert"],
+  [/\bwe\s+cert\b/gi, "V-Cert"],
   [/\bv[-\s]?cert\b/gi, "V-Cert"],
   [/\bvenaf(?:i|ee|y)(?:\s+tpp)?\b/gi, (m) => /tpp/i.test(m) ? "Venafi TPP" : "Venafi"],
   [/\bluna hsm\b/gi, "Luna HSM"],
+  [/\bpkcs\s*(?:number|no\.?|#)?\s*ten\b/gi, "PKCS#10"],
+  [/\bpkcs\s+(?:number|no\.?)\s+10\b/gi, "PKCS#10"],
   [/\bpkcs\s*#?\s*10\b/gi, "PKCS#10"],
+  [/\bgemalto\b/gi, "Gemalto"],
+  [/\bpower\s*shell\b/gi, "PowerShell"],
+  [/\bbase\s+64\b(?!\s*-?\s*bits?\b)/gi, "Base64"],
+  [/\brest\s+api\b/gi, "REST API"],
+  [/\bgroup\s+policy\b/gi, "Group Policy"],
+  [/\bsingle\s+sign[\s-]?on\b/gi, "single sign-on"],
+  [/\bmulti[\s-]factor\b/gi, "multi-factor"],
+  [/\bticket\s+granting\b/gi, "ticket-granting"],
+  [/\bpass\s+the\s+hash\b(?!\s+brown\b)/gi, "pass-the-hash"],
+  [/\bpass\s+the\s+ticket\b/gi, "pass-the-ticket"],
+  [/\bcyber\s+ark\b/gi, "CyberArk"],
+  [/\bmicro\s+soft\s+sentinel\b/gi, "Microsoft Sentinel"],
+  [/\bqualys\b/gi, "Qualys"],
+  [/\bnessus\b/gi, "Nessus"],
+  [/\bsplunk\b/gi, "Splunk"],
+  [/\bfifth\s+third\b/gi, "Fifth Third"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");
