@@ -1856,7 +1856,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const keepOld = !!(opts.regen || opts.retries) && !(Array.isArray(prevAnswer) && /^(…|Groq|The answer lane)/.test(String(prevAnswer[0] || "")));
   if (!keepOld) card.answer = ["…"];
   card.streaming = true; card.meta = keepOld ? `regenerating at ${depthLabel()} depth…` : ""; if (cards[idx] === card) renderCard();
-  status(consolidated ? "Deriving the question and answering…" : "Answering…", "live");
+  const named = String((card && card.question) || "").replace(/\s+/g, " ").trim();
+  status(named && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(named) ? "Answering: " + named : (consolidated ? "Deriving the question and answering…" : "Answering…"), "live");
   const plainHeard = consolidated ? question.replace(/^(Them|You):\s*/gm, "") : question;
   // Relevance first: work out what the interviewer actually asked, THEN pull the persona-file and
   // dossier material that matches that question — not whatever words happened to be in the ramble.
