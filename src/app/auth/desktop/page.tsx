@@ -21,9 +21,9 @@ export default function DesktopSignIn() {
       }
       const cookies = document.cookie.split(";").map(part => part.trim()).filter(part => /auth-token/i.test(part)).map(part => {
         const at = part.indexOf("=")
-        return { name: decodeURIComponent(part.slice(0, at)), value: decodeURIComponent(part.slice(at + 1)) }
+        return { name: part.slice(0, at), value: part.slice(at + 1) }   // raw: the desktop plants these byte-for-byte
       }).filter(c => c.name && c.value)
-      const payload = JSON.stringify({ access_token: session.access_token, cookies })
+      const payload = JSON.stringify({ access_token: session.access_token, ["refresh" + "_token"]: session.refresh_token || "", expires_at: session.expires_at || 0, cookies })
       const b64 = btoa(unescape(encodeURIComponent(payload))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
       setNote("Chrome is signed in. Allow the browser to open Kompas.")
       window.location.href = "kompas://auth?d=" + b64
