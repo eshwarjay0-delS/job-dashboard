@@ -1,0 +1,33 @@
+# Execute REA and Plan & Vision as the task queue
+
+Owner directive, 22 October 2026: “Complete all REA and Plan and Vision board. Those are our to dos.”
+
+Both records are actionable. Preserve history while using the latest explicit correction. A research finding, an implementation, a deployment and a live acceptance result each require their own evidence.
+
+## Reconciled instructions
+
+| Historical task | Current action |
+| --- | --- |
+| Three-day cap and automatic redirect at 48 hours | Superseded by the deployed silent-renewal correction and explicit reconnect; real Windows soak remains open. |
+| WhatsApp no-agent selection / silent first identity | Superseded by ask-once identity selection, remembered identity and title-first agent choice. |
+| Run crawler SQL / verify the first scheduled execution | Cleared by owner migration and current-day production records; scheduled code execution has produced deployed commits. |
+| All remaining portals require a renderer | Superseded as a blanket claim by 13 HTTP source adapters. Evaluate each remaining portal independently. |
+| Build a bookmarklet | Superseded by extension consolidation and its source-built download. |
+| Gmail search timing blocker | Cleared by the deployed highlighting repair; mobile delivery prerequisites remain open. |
+
+The existing implementation and release evidence is retained in the journal and REA steps. This audit changes obsolete next actions rather than erasing their history.
+
+## Implemented during this pass
+
+Saved-search reruns previously set React state and dispatched a form event after a 50 ms timer. They now pass their selected query, location and remote flag directly into the search. A request sequence prevents an earlier slow response from replacing the latest results or clearing its loading state. The DOM regression clicks two different saved searches and resolves them in reverse order, checking both request parameters and displayed results.
+
+## Remaining acceptance and prerequisites
+
+- Resume: one authenticated generation, exported DOCX, identity/format inspection and actual role evidence; exact October 17 run inputs and trace remain unavailable.
+- Gmail/mobile: provider status webhook, approved template, scheduler configuration and a connected verified phone acceptance flow.
+- Apply: authenticated saved-search/pipeline/portal-return acceptance; remaining permitted source adapters; hosted-browser choice and any infrastructure commitments retain their review gates.
+- Kompas: coordinate the separate voice work; preserve review gates and complete real Windows idle/sleep/offline and multi-day acceptance.
+- Library: authenticated reconciliation of files and both identities against retained commitments.
+- REA history: recover missing source evidence; failed tool runs remain failed until actually rerun.
+
+No item is completed merely by appearing in either board. No real email, WhatsApp message or job application was sent during this pass.

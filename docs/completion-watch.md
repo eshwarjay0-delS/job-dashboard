@@ -10,6 +10,8 @@ The task reads GitHub and the plan journal, reconciles unfinished work against e
 
 ## Active development loop
 
+Owner clarification, 22 October 2026: all REA and Plan & Vision entries form the task queue. Reconcile replaced next actions against later evidence before executing them; see `docs/research/board-todo-reconciliation.md`. Keep work moving through approved implementation, release and acceptance rather than treating the boards as documentation alone.
+
 1. Read AGENTS.md, the current plan journal and relevant product docs. Retrieve accessible earlier instructions when necessary; record missing history rather than invent it.
 2. Reconcile latest owner corrections, explicit approvals, rejected/superseded requests and task-specific review gates.
 3. Check current branch, other developers' commits, deployment evidence and unresolved failures. Claim one concrete slice in the journal before editing.
