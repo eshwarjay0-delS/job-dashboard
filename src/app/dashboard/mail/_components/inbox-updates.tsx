@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { InboxUpdate, UpdatePreferences } from '@/lib/mail-update-policy'
+import type { MobileDeliveryReceipt } from '@/lib/mail-update-store'
 import './inbox-updates.css'
 
-type Snapshot = { preferences: UpdatePreferences; events: InboxUpdate[]; accounts: string[]; numbers: string[]; mobileReady: boolean; backgroundReady: boolean }
+type Snapshot = { preferences: UpdatePreferences; events: InboxUpdate[]; deliveries: Record<string,MobileDeliveryReceipt>; accounts: string[]; numbers: string[]; mobileReady: boolean; backgroundReady: boolean }
+const deliveryLabel=(receipt?:MobileDeliveryReceipt)=>receipt?.status==='accepted'?'WhatsApp accepted the alert for delivery':receipt?.status==='needs_review'?'WhatsApp alert needs review; it will not retry automatically':receipt?.status==='cancelled'?'WhatsApp alert cancelled after settings changed':receipt?.status==='sending'?'WhatsApp delivery result is uncertain; it will not retry automatically':''
 async function request(method = 'GET', body?: UpdatePreferences) {
   const response = await fetch('/api/gmail/updates', { method, cache: 'no-store', headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined })
   const result = await response.json()
@@ -36,7 +38,7 @@ export default function InboxUpdates() {
     setBusy(true)
     try {
       const result = await request('POST')
-      setData(old => old ? { ...old, events: result.events } : old)
+      setData(old => old ? { ...old, events: result.events, deliveries: result.deliveries || {} } : old)
       setChecked(Date.now())
       const issues = (result.issues || []).map((issue: {account: string; reason: string}) => `${issue.account}: ${issue.reason}`)
       if (result.delivery?.reason) issues.push(result.delivery.reason)
@@ -83,6 +85,7 @@ export default function InboxUpdates() {
       <a href={`/dashboard/mail?open=${encodeURIComponent(event.thread)}&account=${encodeURIComponent(event.account)}`}><strong>{event.subject || '(No subject)'}</strong></a>
       <span>{event.from || 'Unknown sender'} · {event.account}</span><time dateTime={new Date(event.at).toISOString()}>{new Date(event.at).toLocaleString()}</time>
       {event.initial ? <small>Existing inbox message</small> : null}
+      {data.deliveries?.[event.id] ? <small title={data.deliveries[event.id].reason || undefined}>{deliveryLabel(data.deliveries[event.id])}</small> : null}
     </li>)}</ul> : null}
     {enabled && !data?.events.length ? <p>No messages collected yet. Use Refresh updates to start.</p> : null}
   </section>

@@ -113,3 +113,22 @@ test('sender notification rules are scoped by receiving inbox and never wins con
  assert.equal(policy.senderNotifyMode(rules,'a@example.com','sender@example.com'),'never')
  assert.equal(policy.senderNotifyMode(rules,'b@example.com','sender@example.com'),null)
 })
+
+test('delivery receipts expose status without leaking provider identifiers',async()=>{
+  const id='a'.repeat(64),other='b'.repeat(64),prefix='mail/updates/user/deliveries/'
+  const rows=new Map([
+    [prefix+id+'.json',JSON.stringify({status:'accepted',providerId:'private-provider-id',at:now})],
+    [prefix+other+'.json',JSON.stringify({status:'needs_review',reason:'Delivery uncertain',at:now})],
+    [prefix+'bad.json',JSON.stringify({status:'accepted',at:now})],
+  ])
+  const store=load('mail-update-store',{
+    '@/lib/storage':{blob:{list:async()=>[...rows.keys()],getText:async key=>rows.get(key)||null}},
+    '@/lib/mail-update-policy':policy,
+  })
+  const receipts=await store.updateDeliveryReceipts('user',[id,other,'../../another-user'])
+  assert.deepEqual(JSON.parse(JSON.stringify(receipts)),{
+    [id]:{status:'accepted',at:now},
+    [other]:{status:'needs_review',at:now,reason:'Delivery uncertain'},
+  })
+  assert.equal(JSON.stringify(receipts).includes('private-provider-id'),false)
+})

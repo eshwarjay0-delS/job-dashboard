@@ -163,6 +163,10 @@ Deployment prerequisites for unattended operation: configure an approved Meta te
 
 Remaining acceptance: connected-account browser verification, approved template configuration, scheduler setup/capacity validation, delivery receipt visibility and actual mobile delivery. General Gmail folders, draft autosave and executable follow-up automation remain separate unfinished work.
 
+### Mobile delivery evidence — 22 October 2026
+
+Each inbox update can now show its saved WhatsApp delivery state: accepted by the provider, cancelled after settings changed, still uncertain, or held for review. Provider message identifiers remain server-side. “Accepted” is deliberately described as accepted for delivery, never as delivered to the phone; actual handset delivery still requires provider webhook evidence and owner-device acceptance. This makes uncertain sends visible without weakening the no-blind-retry rule.
+
 
 ### Missing-message sync recovery — 20 October 2026
 
