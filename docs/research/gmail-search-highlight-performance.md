@@ -11,3 +11,7 @@ The long/hostile-query regression exceeded its 500 ms budget after the mobile-de
 ## Boundary
 
 This is a local performance and denial-of-service resistance repair for already-kept mail. It makes no Gmail API call, sends no message, changes no account data and does not establish mobile-delivery acceptance.
+
+## Release evidence
+
+Three isolated timing runs completed in 279–394 ms and the same broader Gmail group that previously failed passed 89/89. TypeScript, scoped lint and the production build passed. Commit `3821e69c8d36e4ba3cf0fa2258457044f15962ba` received Vercel success at https://vercel.com/qu4ntum-s-projects/job-dashboard/9PgtQu1mYeW3MsrhATFgHFoyVstG. Authenticated real-mail responsiveness remains an owner acceptance step.
