@@ -39,7 +39,7 @@ Platform mapping:
 | Platform | In-app browser | Cookie/login persistence |
 |---|---|---|
 | **Web app (now)** | New tab (job sites block iframes — no way around it) | User's own browser saves logins automatically |
-| **Desktop app (Electron, exists)** | Embedded `BrowserView` / webview | Persistent session partition = app-level cookie jar, survives restarts |
+| **Desktop app (Electron, exists)** | Embedded `WebContentsView` (BrowserView deprecated since Electron 30) | Persistent session partition = app-level cookie jar, survives restarts |
 | **Mobile app (future)** | Chrome Custom Tabs / SFSafariViewController | Shares the *system* browser's cookies — logins saved with zero extra work |
 
 The Apply page's "Open portal" links are the seam: today they open a tab; on desktop/mobile they open the inclusive browser. Same component, platform-aware behavior.
@@ -84,7 +84,8 @@ Everything the user does inside Apply is saved: searches, viewed jobs, saved job
 
 1. **Directory (done, 2026-10-17).** Apply tab + portal directory + smart search + chatbot tool.
 2. **Crawler v1 (shipped 2026-10-17, needs migration).** Jobs table (`mfit_crawl_jobs` + `mfit_crawl_runs`), adapter framework, verified adapters for Beacon Hill + Collabera, Jobs tab with contract-only default, daily cron 6am CDT. The active Mfit database was checked: both tables are absent. Two migration attempts through the Supabase connector failed with `Invalid or expired requestState`; migration remains blocked. Apply `supabase/migrations/20261017_crawl_jobs.sql`, then trigger and verify the first crawl.
-3. **Inclusive browser (desktop).** Electron `BrowserView` with persistent session; "Open portal" opens in-app; logins persist like Chrome.
+3. **Inclusive browser (desktop).** Electron `WebContentsView` with persistent session; "Open portal" opens in-app; logins persist like Chrome.
+   *Horizons explored 2026-10-21 (`docs/research/apply-horizons.md`): the inclusive browser is five surfaces, not one — (H1) desktop WebContentsView, (H2) hosted cloud live-view whose same session the apply worker can drive (inclusive browser and auto-apply become one infrastructure), (H3) our shipped autofill extension productized as the Chrome companion, (H4) mobile Custom Tabs / hosted fallback, (H5) a self-hosted open-source browser fleet (Steel) behind the same session seam. Recommended order: H3, H2 pilot, H1 in the next desktop rebuild, H5 at volume. Builds are proposed until the owner picks one.*
 4. **Resume-at-apply.** Resume picker + per-JD tailoring wired into the Apply flow.
 5. **Pattern learning.** Event capture (search/view/save/apply/skip) → choice profiles → recommendations.
 6. **Auto-apply (opt-in).** One-click apply against the choice profile, with full user-visible log of everything it did.
