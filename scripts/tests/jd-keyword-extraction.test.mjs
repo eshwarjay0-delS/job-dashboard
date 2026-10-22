@@ -108,6 +108,19 @@ test('AND credentials and independent required credentials cannot disappear behi
   assert.ok(separate.includes('cissp or ccsp'))
 })
 
+test('work-authorization boilerplate caps are not skills (Oct 22 owner screenshot)', () => {
+  // The exact failure: a tailored resume's skills line ended "…, VMware ESXi, VITA,
+  // GC-EAD, H4, JD, NEED, CANDIDATES, OVERALL, PREFFERED" — JD eligibility/header
+  // boilerplate extracted as required keywords, then woven into the skills line by
+  // the tailor's coverage passes. Every one of those tokens must be filtered here.
+  const terms = extractJdKeywords(`Senior Cloud Security Engineer - VDOT
+Agency: VITA
+Eligibility: GC-EAD, H4 EAD, H1B accepted. JD NEED CANDIDATES local to Richmond. OVERALL PREFFERED: prior state experience.
+Responsibilities: PowerShell automation, Microsoft GraphAPI integrations, Python and Bash scripting, Terraform and Ansible configuration, Windows Server and VMware ESXi hardening, Azure security monitoring in a SIEM. Certifications: AZ-500, SC-300.`)
+  for (const junk of ['vita', 'vdot', 'gc-ead', 'h4', 'h1b', 'ead', 'jd', 'need', 'candidates', 'candidate', 'overall', 'preffered', 'preferred']) assert.ok(!terms.includes(junk), junk)
+  for (const real of ['powershell', 'graphapi', 'python', 'bash', 'terraform', 'ansible', 'windows', 'vmware', 'esxi', 'azure', 'siem', 'az-500', 'sc-300']) assert.ok(terms.includes(real), real)
+})
+
 test('generic specialty and attributes headings are not technical gaps; named technologies remain', () => {
   const terms = extractJdKeywords('Required Specialty Attributes\nSPECIALTY ATTRIBUTES\nExperience with Canton and SOL blockchain technologies, NIST, ISO 27001, CIS Controls and COBIT.')
   for (const word of ['specialty','attributes']) assert.ok(!terms.includes(word), word)

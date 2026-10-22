@@ -184,9 +184,10 @@ export function present(text: string, term: string): boolean {
 const CAPS_STOP = new Set([
   "THE","AND","FOR","YOU","ARE","OUR","ETC","INC","LLC","LTD","USA","US","ID","IT","IS","OF","TO","IN","ON","OR","AS","AT","BY","BE","WE","AN","A",
   "II","III","IV","VI","CO","CA","NY","TX","WA","DC","IL","VA","MA","MD","NJ","PA","OH","MI","FL","GA","NC","SC","TN","AZ","CO","MN","WI","MO","EST","PST","CST","AM","PM","EOD","ASAP","OK","NO","YES","MUST","WILL","SHALL","ALL","ANY","PER","VIA","NEW",
-  "JOB","ROLE","TEAM","YEAR","YEARS","PLUS","DAY","DAYS","WEEK","MONTH","MONTHS","FT","PT","W2","C2C","GC","USC","EAD","CFR","N/A","NA","OT",
-  // Employer acronyms that are not skills (State Corporation Commission, etc.)
-  "SCC",
+  "JOB","JD","ROLE","TEAM","YEAR","YEARS","PLUS","DAY","DAYS","WEEK","MONTH","MONTHS","FT","PT","W2","C2C","GC","USC","EAD","CFR","N/A","NA","OT","NEED",
+  // Employer / client-agency acronyms that are not skills (State Corporation
+  // Commission; Virginia Information Technologies Agency; VA Dept. of Transportation)
+  "SCC","VITA","VDOT",
 ])
 const WORD_STOP = new Set([
   "the","and","for","with","you","are","our","etc","will","must","shall","should","this","that","their","them","from","into","across","various","daily",
@@ -225,6 +226,64 @@ const META_LINE = /^\s*(?:(?:hello|hi|dear)\s[^\n]*|(?:[-•·*]\s*)?(?:location
 const NON_SKILL_DESCRIPTORS = new Set(["hands-on", "senior-level", "junior-level", "mid-level", "entry-level", "incident-related", "full-time", "part-time", "on-site", "on-premise-related", "non-technical", "and/or", "weekday/weekend", "weekday", "weekend"])
 const singularAcronym = (raw: string): string => /^[A-Z]{2,}s$/.test(raw) ? raw.slice(0, -1).toLowerCase() : raw.toLowerCase()
 
+// Immigration / work-authorization tokens: JD eligibility boilerplate, never skills.
+// A JD listing "GC-EAD, H4 EAD, H1B" is saying who may apply, not what the job needs.
+const AUTH_STOP = new Set(["h1b", "h4", "l1", "l2", "f1", "j1", "tn", "opt", "cpt", "citizen", "citizenship", "sponsorship", "visa"])
+
+// Every stop list the raw-token scrape must respect, lowercased into one set. The
+// Oct 19 fix fed CAPS_STOP/WORD_STOP one sighting at a time (va, scc, mgmt…) and the
+// next JD's boilerplate (vita, gc-ead, h4, preffered) walked straight past it. The
+// scrape now consults ALL stop lists through tokenVetoed, so the whole class of
+// JD-metadata tokens is filtered, not just the instances already seen.
+const SCRAPE_STOP = new Set([
+  ...[...CAPS_STOP].map(s => s.toLowerCase()),
+  ...WORD_STOP, ...VERB_STOP, ...AUTH_STOP, ...NON_SKILL_DESCRIPTORS,
+])
+
+function editDistance(a: string, b: string): number {
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j)
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i]
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+    }
+    prev = cur
+  }
+  return prev[b.length]
+}
+
+// A token a hair away from a stop word is the stop word in disguise — JD typos
+// ("PREFFERED" for preferred) must not resurrect filtered boilerplate.
+function nearStopWord(low: string): boolean {
+  const maxDist = low.length >= 8 ? 2 : 1
+  for (const w of SCRAPE_STOP) {
+    if (Math.abs(w.length - low.length) <= maxDist && editDistance(low, w) <= maxDist) return true
+  }
+  return false
+}
+
+// True when a raw scraped token is JD metadata rather than a skill:
+//   • the token itself, or its singular form ("candidates" → "candidate"), is stopped
+//   • ANY part of a hyphen/slash/dot compound is stopped — "GC-EAD" dies on gc + ead
+//     even though the compound was never listed (cert/SKU codes like AZ-500 / SC-300
+//     are exempt: a letters-then-digit shape is a product code, not boilerplate)
+//   • it is a near-miss spelling of a stop word ("PREFFERED")
+export function tokenVetoed(raw: string): boolean {
+  const low = raw.toLowerCase()
+  if (SCRAPE_STOP.has(low)) return true
+  const singular = low.length > 3 && low.endsWith("s") ? low.slice(0, -1) : low
+  if (singular !== low && SCRAPE_STOP.has(singular)) return true
+  if (/[-./]/.test(low) && !/^[a-z]{1,3}-[0-9]/.test(low)) {
+    for (const part of low.split(/[-./]/)) {
+      if (!part) continue
+      if (SCRAPE_STOP.has(part)) return true
+      if (part.length > 3 && part.endsWith("s") && SCRAPE_STOP.has(part.slice(0, -1))) return true
+    }
+  }
+  if (low.length >= 5 && (nearStopWord(low) || (singular !== low && nearStopWord(singular)))) return true
+  return false
+}
+
 /** Remove commentary about constructing a keyword bank, not actual job requirements. */
 export function requirementText(jd: string): string {
   return jd.split(/^\s*(?:Tailored Professional Summary\b|Candidate Submission\s*&\s*Screening Template\b)/im)[0].split("\n").filter(line => {
@@ -253,7 +312,7 @@ export function extractJdKeywords(jd: string): string[] {
     const raw = m[1]
     if (raw.length < 2 || raw.length > 24) continue
     if (!(/[A-Z]{2,}/.test(raw) || /[a-z][A-Z]/.test(raw) || /[0-9]/.test(raw) || /[-./]/.test(raw))) continue
-    if (CAPS_STOP.has(raw.toUpperCase()) || NON_SKILL_DESCRIPTORS.has(raw.toLowerCase())) continue
+    if (tokenVetoed(raw)) continue
     // Only strip a plural "s" on a PLAIN token. On separator tokens it corrupted the
     // keyword ("EKS/AKS" → "eks/ak", "CI/CDs" → "ci/cd"), so leave those intact — and
     // for slash tokens also emit each side ("EKS/AKS" → eks, aks) since ATS matches both.
@@ -264,7 +323,7 @@ export function extractJdKeywords(jd: string): string[] {
     if (low.length >= 2 && !WORD_STOP.has(low) && !slashAlternative) out.add(low)
     if (raw.includes("/")) {
       for (const part of lowRaw.split("/")) {
-        if (part.length >= 2 && part.length <= 12 && !WORD_STOP.has(part) && !CAPS_STOP.has(part.toUpperCase())) out.add(part)
+        if (part.length >= 2 && part.length <= 12 && !tokenVetoed(part)) out.add(part)
       }
     }
   }
@@ -272,9 +331,9 @@ export function extractJdKeywords(jd: string): string[] {
   // 3) parenthetical abbreviations — the JD author is literally telling us the acronym.
   for (const m of jd.matchAll(/\(([A-Za-z][A-Za-z0-9/&+ -]{1,14})\)/g)) {
     const raw = m[1].trim()
-    if (!/^[A-Z][A-Z0-9/&+ -]*s?$/.test(raw) || CAPS_STOP.has(raw.toUpperCase())) continue
+    if (!/^[A-Z][A-Z0-9/&+ -]*s?$/.test(raw) || tokenVetoed(raw)) continue
     const low = singularAcronym(raw)
-    if (low.length >= 2 && !WORD_STOP.has(low) && !NON_SKILL_DESCRIPTORS.has(low)) out.add(low)
+    if (low.length >= 2 && !tokenVetoed(low)) out.add(low)
   }
 
   // 4) domain-noun phrases: a noun immediately followed by a domain suffix
@@ -301,7 +360,7 @@ export function extractJdKeywords(jd: string): string[] {
     const raw = m[1]
     if (/^[A-Z]+$/.test(raw)) continue              // ALL-CAPS already handled above
     const low = raw.toLowerCase()
-    if (WORD_STOP.has(low) || CAPS_STOP.has(raw.toUpperCase()) || TITLE_STOP.has(low) || (low.endsWith("s") && TITLE_STOP.has(low.slice(0, -1)))) continue
+    if (tokenVetoed(raw) || WORD_STOP.has(low) || CAPS_STOP.has(raw.toUpperCase()) || TITLE_STOP.has(low) || (low.endsWith("s") && TITLE_STOP.has(low.slice(0, -1)))) continue
     out.add(low)
   }
 

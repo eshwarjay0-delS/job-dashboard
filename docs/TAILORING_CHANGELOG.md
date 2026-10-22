@@ -149,3 +149,8 @@ what was missing, and the fix. Bump the version when the *method* changes (not p
   allowances: 94% in 48 s with a thinner current role. GPT Luna (owner number) is not on that allowance.
 
 <!-- Add each new run below: date · domain · resume · coverage · model · gaps · fix -->
+
+### 2026-10-22 — JD boilerplate woven into the skills line (owner screenshot)
+- Reported: a tailored resume's skills line ended "…, VMware ESXi, VITA, GC-EAD, H4, JD, NEED, CANDIDATES, OVERALL, PREFFERED".
+- Root cause: extractJdKeywords' acronym scrape treated JD work-authorization/header caps as required keywords; the tailor's coverage passes then inserted every missing keyword into the skill lines. The Oct 19 stop-list fix was instance-by-instance, so new forms slipped past: the GC-EAD compound (never listed whole), plural CANDIDATES vs the singular stop, OVERALL (VERB_STOP never consulted by the scrape), the JD's own misspelling PREFFERED, and a new agency acronym (VITA).
+- Fix: structural tokenVetoed() in src/lib/keywords.ts — a scraped token is vetoed when the token, its singular form, or any part of a hyphen/slash/dot compound is a stop word (cert codes like AZ-500/SC-300 exempt), when a work-authorization set matches, or when it is a near-miss spelling of a stop word. The layer-5 proper-noun scrape applies the same veto (it was re-adding H1B after commas). Regression test in jd-keyword-extraction.test.mjs carries the exact screenshot tokens; real skills (PowerShell, Terraform, Ansible, ESXi, AZ-500, SC-300…) still extract.
