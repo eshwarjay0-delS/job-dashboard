@@ -23,6 +23,15 @@ function fresh(values = {}) {
 const ask = (extra) => L.callLLM({ tier: 'heavy', system: 'S', user: 'U', maxTokens: 4096, temperature: 0.2, ...extra })
 const host = (c) => new URL(c.url).host
 
+test('skills placement happens before the final experience gap repair', () => {
+  const source = read('src/lib/tailor.ts')
+  const pipeline = source.slice(source.indexOf('if (best && !refine) {'), source.indexOf('if (best) best = await stripAddedCerts(best)'))
+  const place = pipeline.indexOf('await placeRemaining(best)')
+  const fill = pipeline.indexOf('await fillGaps(best)')
+  assert.ok(place >= 0 && fill > place,
+    'terms added to Skills must become role requirements before the final experience repair runs')
+})
+
 // ── who gets the OpenAI key ──────────────────────────────────────────────────
 test('the OpenAI key is handed over for resume tailoring only (everyone\'s since 13:06 on 2026-10-05, unless narrowed), and never by the general key lookup', () => {
   fresh({ OPENAI_API_KEY: 'k-openai', GROQ_API_KEY: 'k-groq' })

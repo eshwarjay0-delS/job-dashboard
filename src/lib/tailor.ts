@@ -723,16 +723,21 @@ export async function runTailor(opts: {
       if (best && best.cov >= TARGET_COVERAGE) break
     } finally { if (timer) clearTimeout(timer) }
   }
-  if (best && splitDraft && !refine) {
-    const filled = await fillGaps(best)
-    if (filled !== best) usedModel = `${usedModel} + gap fill`
-    best = filled
-  }
+  // Put the supported target vocabulary into the profile BEFORE experience repair. Previously this
+  // happened after fillGaps, so applyEdits could create new listed-skill requirements after the last
+  // role pass. The exported file could consequently show a high whole-document score while those
+  // same terms had no substantive client bullets. Ordering profile placement first makes the role
+  // requirements visible to fillGaps and keeps skills + experience as one acceptance unit.
   // A change the person asked for (refine) is left as they asked: it may be the removal of a term.
   if (best && !refine) {
     const placed = await placeRemaining(best)
     if (placed !== best) usedModel = `${usedModel} + every remaining keyword placed`
     best = placed
+  }
+  if (best && splitDraft && !refine) {
+    const filled = await fillGaps(best)
+    if (filled !== best) usedModel = `${usedModel} + gap fill`
+    best = filled
   }
   if (best) best = await stripAddedCerts(best)
   if (!best) {
