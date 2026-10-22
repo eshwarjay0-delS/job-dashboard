@@ -40,19 +40,19 @@ test('concurrent storage claims produce exactly one winner and propagate storage
     await assert.rejects(r2.putIfAbsent('jobs/request', '1'), /storage offline/)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
-test('same JD can start only one generation across concurrent input handlers', async () => {
+test('same JD starts once concurrently and its lease releases for a deliberate retry', async () => {
   const entries = new Map()
-  let runs = 0, deliveries = 0
+  let runs = 0, deliveries = 0, failNext = false
   const blob = {
     putIfAbsent: async (key, value) => { if (entries.has(key)) return false; entries.set(key, value); return true },
     put: async (key, value) => entries.set(key, value),
-    get: async () => Buffer.from('same@email.com'), getText: async () => null, delete: async () => {},
+    get: async () => Buffer.from('same@email.com'), getText: async key => entries.get(key) ?? null, delete: async key => { entries.delete(key) },
   }
   const mocks = {
     'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('same@email.com'), writePath: async () => {}, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
-    '@/lib/tailor': { runTailor: async () => { runs++; return { token: 'result', score: 63, coverage: 63, quality: { status: 'needs_review' } } } },
+    '@/lib/tailor': { runTailor: async () => { runs++; if (failNext) { failNext = false; throw new Error('provider timeout') } return { token: 'result', score: 63, coverage: 63, quality: { status: 'needs_review' } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': { sendText: async () => {}, sendDocument: async () => { deliveries++; return 'sent' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
@@ -69,6 +69,18 @@ test('same JD can start only one generation across concurrent input handlers', a
   await Promise.all([generate('123', session, 'user'), generate('123', session, 'user')])
   assert.equal(runs, 1)
   assert.equal(deliveries, 1)
+  assert.equal([...entries.keys()].some(key => key.startsWith('whatsapp/jobs/')), false, 'completed work must not leave a permanent claim')
+  await generate('123', session, 'user')
+  assert.equal(runs, 2, 'resending the same pair deliberately can retry instead of disappearing')
+  assert.equal(deliveries, 2)
+  failNext = true
+  await generate('123', session, 'user')
+  assert.equal(runs, 3)
+  assert.equal(deliveries, 2, 'a failed rewrite is not delivered')
+  assert.equal([...entries.keys()].some(key => key.startsWith('whatsapp/jobs/')), false, 'a failed rewrite also releases its claim')
+  await generate('123', session, 'user')
+  assert.equal(runs, 4, 'the same request can recover immediately after provider failure')
+  assert.equal(deliveries, 3)
   const saved = JSON.parse(entries.get('whatsapp/session-123.json'))
   assert.equal(saved.resumePath, undefined)
   assert.equal(saved.jd, undefined)

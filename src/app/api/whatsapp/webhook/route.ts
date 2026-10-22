@@ -551,7 +551,17 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
 
   // One claim per JD, across all workers and either input order. Claim before any AI call.
   const job = createHash("sha256").update(`${from}:${session.jdId || session.jd}`).digest("hex")
-  if (!await blob.putIfAbsent(`whatsapp/jobs/${job}`, "1")) return
+  const claimKey = `whatsapp/jobs/${job}`
+  const claimToken = randomBytes(6).toString("hex")
+  if (!await blob.putIfAbsent(claimKey, JSON.stringify({ at: Date.now(), token: claimToken }))) {
+    const held = JSON.parse((await blob.getText(claimKey).catch(() => null)) || "{}") as { at?: number }
+    if (held.at && Date.now() - held.at < IN_FLIGHT_MS)
+      return sendText(from, "I am already making the resume for this job. It will arrive in this chat.")
+    // A prior function was interrupted, or this is a legacy permanent claim. Replace it so a manual retry is never
+    // ignored forever. The six-minute lease outlives the platform's five-minute function ceiling.
+    await blob.put(claimKey, JSON.stringify({ at: Date.now(), token: claimToken }))
+  }
+  try {
   // Consume this pair now. Completion must not erase a newer request arriving meanwhile: the session is read again and
   // only what belongs to this job is cleared (a job from Files spends seconds picking before this; found in review).
   const cur = await loadSession(from)
@@ -655,6 +665,10 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
 
   if (session.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
     await deletePath(session.resumePath).catch(() => {})
+  } finally {
+    const held = JSON.parse((await blob.getText(claimKey).catch(() => null)) || "{}") as { token?: string }
+    if (held.token === claimToken) await blob.delete(claimKey).catch(() => {})
+  }
 }
 
 // ── From the person's Files ─────────────────────────────────────────────────────
