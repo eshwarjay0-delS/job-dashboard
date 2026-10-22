@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { listGoogleWorkspaceAccounts } from "@/lib/googleWorkspace"
+import { validNotifyRule, type NotifyRule } from "@/lib/notify-rules"
 
-export type NotifyRule = { account: string; email: string; mode: "always" | "never" }
+// Kept so existing `import type { NotifyRule } from "@/app/api/gmail/notify-rules/route"` keeps working.
+export type { NotifyRule }
 
-function validNotifyRule(r: unknown): r is NotifyRule {
-  if (!r || typeof r !== "object") return false
-  const { account, email, mode } = r as Record<string, unknown>
-  return typeof account === "string" && account.includes("@")
-    && typeof email === "string" && email.includes("@")
-    && (mode === "always" || mode === "never")
-}
 
 // Poke parity: per-sender always/never-notify controls. The inbox watcher reads
 // these and respects them — a "never" sender is never nudged, an "always"
