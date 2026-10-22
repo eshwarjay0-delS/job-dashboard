@@ -1,40 +1,41 @@
 "use client"
 
 import { useEffect } from "react"
-import { usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { clearLoginClock, ensureLoginClock, reauthDue } from "@/lib/session-clock"
+import { ensureLoginClock } from "@/lib/session-clock"
 
-// Owner rule, 20 Oct 2026: a login lasts 3 days. On every dashboard open,
-// if the login clock is inside its final 24 hours, send the user to the
-// login page to authenticate again and start a fresh 3 days — never let
-// the session lapse mid-use. Silent refresh handles everything before
-// that window, so this fires at most once per 3-day cycle.
+// Keep a valid browser session renewed while the dashboard is open. Never
+// navigate away merely because time passed; only an explicitly revoked or
+// unrenewable session may require the normal sign-in flow.
 export default function SessionLifetimeGuard() {
-  const pathname = usePathname()
-
   useEffect(() => {
     let active = true
+    let supabase: ReturnType<typeof createClient>
     try {
-      createClient()
-        .auth.getSession()
-        .then(({ data }) => {
-          if (!active || !data.session) return
-          ensureLoginClock()
-          if (reauthDue()) {
-            clearLoginClock()
-            const next = window.location.pathname + window.location.search
-            window.location.assign(`/login?next=${encodeURIComponent(next)}`)
-          }
-        })
-        .catch(() => {})
+      supabase = createClient()
     } catch {
-      // Supabase unconfigured (demo mode): no session, nothing to guard.
+      // Supabase unconfigured (demo mode): no session, nothing to renew.
+      return
     }
+    const renew = () => {
+      if (document.hidden) return
+      supabase.auth.getSession().then(({ data }) => {
+        if (!active || !data.session) return
+        ensureLoginClock()
+        void supabase.auth.refreshSession()
+      }).catch(() => {})
+    }
+    renew()
+    window.addEventListener("focus", renew)
+    document.addEventListener("visibilitychange", renew)
+    const timer = window.setInterval(renew, 20 * 60 * 1000)
     return () => {
       active = false
+      window.clearInterval(timer)
+      window.removeEventListener("focus", renew)
+      document.removeEventListener("visibilitychange", renew)
     }
-  }, [pathname])
+  }, [])
 
   return null
 }

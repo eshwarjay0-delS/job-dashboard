@@ -8,7 +8,7 @@
 
 const $ = (id) => document.getElementById(id);
 
-/* ---- self-update: a tab left open across a deploy reloads itself (never mid-answer) ----
+/* ---- self-update: deploys are offered; only the user can reload ----
    The deploy stamps window.PERFACT_BUILD into index.html and writes /version.json. */
 const BUILD = window.PERFACT_BUILD || "dev";
 if ($("releaseBuild")) $("releaseBuild").textContent = "Release " + BUILD.replace(/^kompas-/, "");
@@ -17,14 +17,11 @@ async function checkForUpdate() {
   try {
     const v = await (await fetch("/version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (!v || !v.build || v.build === BUILD) return;
-    // In the live copilot a reload would drop the mic/screen share and the answers on screen:
-    // offer it instead. Anywhere else, just reload.
-    const live = $("view-copilot") && !$("view-copilot").classList.contains("hidden");
-    if (!live) return location.reload();
+    // Inactivity, a hidden screen or a deploy is never consent to discard work.
     if ($("updatePill")) return;
     const b = document.createElement("button");
     b.id = "updatePill"; b.className = "update-pill"; b.textContent = "⟳ Update ready — reload";
-    b.title = "A new version of Kompas is live. Reloading stops listening; your session settings are kept.";
+    b.title = "Update when your session is finished. Reloading stops listening.";
     b.onclick = () => location.reload();
     document.body.append(b);
   } catch {}
@@ -576,6 +573,11 @@ function isAuthError(e) {
 }
 async function tryRefreshAuth() {
   try {
+    if (window.kompasDesktop && typeof window.kompasDesktop.refreshAuth === "function") {
+      const renewed = await window.kompasDesktop.refreshAuth();
+      if (renewed) { __lastAuthRefresh = Date.now(); return true; }
+      return false;
+    }
     const res = await fetch("/api/auth/refresh", { method: "POST" });
     if (res.ok) { __lastAuthRefresh = Date.now(); return true; }
   } catch {}
@@ -585,11 +587,10 @@ async function tryRefreshAuth() {
 // back to this window, and every 20 minutes while it stays open, so the next
 // action never meets an expired token.
 function keepAuthAlive() {
-  checkLoginClock();
   if (document.hidden) return;
   if (Date.now() - __lastAuthRefresh < 10 * 60 * 1000) return;
   __lastAuthRefresh = Date.now();
-  try { fetch("/api/auth/refresh", { method: "POST" }).catch(() => {}); } catch {}
+  void tryRefreshAuth();
 }
 try {
   document.addEventListener("visibilitychange", () => { if (!document.hidden) keepAuthAlive(); });
@@ -599,34 +600,18 @@ try {
 function redirectToLogin(message) {
   if (__authRedirected) return;
   __authRedirected = true;
-  try { status(message || "Not signed in — taking you to the login page…", "err"); } catch {}
-  window.location.href = "/login?next=" + encodeURIComponent(window.location.pathname + window.location.search);
+  try { status(message || "Sign-in expired. Your session stays open; reconnect, then retry.", "err"); } catch {}
+  if ($("sessionReconnect")) return;
+  const link = document.createElement("button");
+  link.id = "sessionReconnect"; link.className = "update-pill"; link.textContent = "Reconnect sign-in";
+  link.style.bottom = "54px";
+  link.onclick = () => {
+    __authRedirected = false;
+    if (window.kompasDesktop && typeof window.kompasDesktop.openSignIn === "function") window.kompasDesktop.openSignIn();
+    else window.open("/login?next=" + encodeURIComponent(window.location.pathname + window.location.search), "_blank", "noopener,noreferrer");
+  };
+  document.body.append(link);
 }
-// ── Login clock (owner rule, 20 Oct 2026): a sign-in lasts 3 days. ──
-// The stamp (mf_login_at, shared with the web dashboard on this origin) is
-// written when a sign-in completes. Inside the first 2 days the silent
-// refresh above keeps everything alive; when the app is opened during the
-// final 24 hours, the user is sent to login to authenticate again and start
-// a fresh 3 days — the session never lapses mid-use.
-const LOGIN_TTL_MS = 3 * 24 * 60 * 60 * 1000;
-const REAUTH_AFTER_MS = LOGIN_TTL_MS - 24 * 60 * 60 * 1000;
-function loginClockStart() {
-  try { const v = parseInt(localStorage.getItem("mf_login_at") || "", 10); return isFinite(v) && v > 0 ? v : 0; } catch { return 0; }
-}
-function checkLoginClock() {
-  try {
-    if (location.protocol === "file:") return;
-    if (!supabaseSession()) return; // signed out: the normal flow handles it
-    const start = loginClockStart();
-    if (!start) { try { localStorage.setItem("mf_login_at", String(Date.now())); } catch {} return; }
-    if (Date.now() - start >= REAUTH_AFTER_MS) {
-      try { localStorage.removeItem("mf_login_at"); } catch {}
-      redirectToLogin("Your 3-day sign-in is nearly up — sign in again to start a fresh 3 days.");
-    }
-  } catch {}
-}
-try { checkLoginClock(); } catch {}
-// ── end login clock ──
 async function preparePack(s) {
   if (location.protocol === "file:") { seedIdentity(s); status("Serve the deployed app for live prep + answers.", "live"); return; }
   if (s.prep && s.prep.v !== 2) { s.prep = null; saveSession(s); }   // pre-v2 prep had [blank]s: rebuild it
@@ -2075,7 +2060,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   } catch (e) {
     if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — eject only if renewal fails
       if (await tryRefreshAuth()) { recoverAnswer("", 800); return; }
-      redirectToLogin(); return;
+      recoverAnswer("AUTH"); redirectToLogin(); return;
     }
     if (card.req !== ctl) return;                                      // aborted because this same card was re-asked
     card.streaming = false;

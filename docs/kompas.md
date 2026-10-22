@@ -1,5 +1,13 @@
 # Kompas — Master Vision
 
+## Authentication continuity correction — 22 October 2026
+
+Latest owner rule: a valid sign-in must last at least two to three days and should renew silently beyond that while the server continues to accept the session family. This supersedes the earlier client-side rule that forced a new login at 48 hours. Elapsed time, inactivity, a hidden window, wake from sleep, or a new deployment must never eject an active meeting.
+
+The web dashboard and Kompas now renew on open, focus, visibility return and a 20-minute visible pulse. If the server ultimately rejects renewal because the user logged out, credentials were revoked, or an administrator time-box ended, the current screen stays intact and presents **Reconnect sign-in**; it does not navigate away automatically. A newly available build also presents an update button instead of reloading itself. `mf_login_at` remains only diagnostic evidence and no longer decides access.
+
+This is a reliability boundary, not a promise that authentication can never expire. The server remains authoritative. Passing a 1,000-cycle policy test is not a three-day live soak, and a deployed web client is not a rebuilt Windows executable. Canonical native refresh-token rotation, installer publication and Windows sleep/network/multi-day acceptance remain separate until recorded with their own evidence.
+
 ## Desktop response focus — 20 October 2026
 
 Approved owner correction: reduce the crowded desktop controls and persistent setup information; make the response the dominant reading surface while preserving reliability. Default desktop-only Focus view uses an opaque answer surface, restrained typography and secondary controls behind Details. Start/Stop, AI Answer, mic/system audio, Chat, status and native window controls remain available. Enabled Auto and Follow Along remain visible. Details restores audience, captions, dossier progress and auxiliary controls. Focus can be switched off, with the preference saved; the ordinary web interface stays unchanged. No session/audio/answer handlers are replaced, no programmatic answer scrolling is introduced, and no Windows-wide dimming is claimed.

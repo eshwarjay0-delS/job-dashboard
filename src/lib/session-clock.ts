@@ -1,15 +1,9 @@
-// The login clock — owner rule, 20 Oct 2026: a sign-in lasts 3 days.
-// Silent token refresh keeps the session alive inside that window, but when
-// the app is opened during the FINAL 24 hours the user is sent to the login
-// page to authenticate again and start a fresh 3 days, instead of the
-// session lapsing mid-use later. The stamp lives in localStorage so the web
-// dashboard and the Kompas client (same origin) read the same clock; the
-// Supabase project time-box set in the dashboard is the server-side cap
-// behind it.
+// Login timestamp retained for diagnostics. It is not an expiry policy: the
+// browser and desktop rotate their refresh session silently until the server
+// says that session was revoked or can no longer be renewed.
 
 export const LOGIN_CLOCK_KEY = "mf_login_at";
-export const LOGIN_TTL_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
-export const REAUTH_AFTER_MS = LOGIN_TTL_MS - 24 * 60 * 60 * 1000; // final 24h
+export const MINIMUM_EXPECTED_SESSION_MS = 3 * 24 * 60 * 60 * 1000;
 
 export function stampLoginClock(now: number = Date.now()): void {
   try {
@@ -44,9 +38,4 @@ export function ensureLoginClock(now: number = Date.now()): number {
   if (start) return start;
   stampLoginClock(now);
   return now;
-}
-
-export function reauthDue(now: number = Date.now()): boolean {
-  const start = loginClockStart();
-  return start > 0 && now - start >= REAUTH_AFTER_MS;
 }
