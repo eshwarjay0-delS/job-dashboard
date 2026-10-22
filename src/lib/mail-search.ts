@@ -227,19 +227,23 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 /** The place in a text where a searched word stands, with a few words either side. Null when it is not in this text. */
 export function findIn(text: string, words: string[], width = 90): Found | null {
   const clean = decodeEntities(String(text || "")).replace(/\s+/g, " ").trim()
-  let best: { at: number; len: number } | null = null
+  const patterns: string[] = []
+  const seen = new Set<string>()
   for (const word of words) {
     // The same reading of a word as the search itself: "c++" is looked for as c++, ".net" as .net.
     const typed = String(word || "").trim()
     const parts = (typed.replace(/^\./, "").match(/[\p{L}\p{N}]+[+#]*/gu) || []).map(escapeRe)
     if (!parts.length) continue
     const lead = typed.startsWith(".") ? "\\." : ""
-    const m = new RegExp(`(^|[^\\p{L}\\p{N}])(${lead}${parts.join("[^\\p{L}\\p{N}]+")})`, "iu").exec(clean)
-    if (!m) continue
-    const at = m.index + m[1]!.length
-    if (!best || at < best.at) best = { at, len: m[2]!.length }
+    const pattern = `${lead}${parts.join("[^\\p{L}\\p{N}]+")}`
+    if (!seen.has(pattern)) { seen.add(pattern); patterns.push(pattern) }
   }
-  if (!best) return null
+  if (!patterns.length) return null
+  // Search the message once. Previously every OR/highlight term rescanned the full body and
+  // a bounded 500-character query could still trigger dozens of long regex passes.
+  const match = new RegExp(`(^|[^\\p{L}\\p{N}])(${patterns.join("|")})`, "iu").exec(clean)
+  if (!match) return null
+  const best = { at: match.index + match[1]!.length, len: match[2]!.length }
   // A few words before it, starting on a whole word.
   let start = Math.max(0, best.at - Math.floor(width / 3))
   if (start > 0) { const space = clean.indexOf(" ", start); if (space !== -1 && space < best.at) start = space + 1 }

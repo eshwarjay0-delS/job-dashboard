@@ -118,6 +118,8 @@ test('the bold words are what was asked for, and the place they stand is shown w
   assert.ok(cut.before.startsWith('…') && cut.after.endsWith('…') && cut.before.length < 40 && cut.after.length < 100)
   assert.equal(findIn('a.b*c (d) [e]', ['(d', '[e', '*']).hit, 'd')  // marks in a search are not a pattern: "(d" is the word d
   assert.equal(findIn('abc', ['*', '(', '[', '.+']), null)
+  assert.equal(findIn('second first', ['first', 'second']).hit, 'second') // earliest text wins, not term order
+  assert.equal(findIn('C++ then C++', ['c++', 'c++']).hit, 'C++')         // duplicates do not rescan the body
 })
 
 test('people are offered while a name is typed, and picking one writes from: for the person', () => {
