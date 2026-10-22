@@ -12,9 +12,41 @@
 import { useCallback, useEffect, useState, type CSSProperties } from "react"
 import Link from "next/link"
 import RecruiterButton from "../../_components/recruiter-button"
+import { createClient } from "@/lib/supabase/client"
 import type { Tracked } from "@/lib/interview-track"
 
 type Answer = { ok: boolean; error?: string; active: Tracked[]; past: Tracked[]; due: number; canSendForYou: boolean; words: Record<string, { subject: string; body: string }> }
+
+// ── Instant copy on this device ─────────────────────────────────────────────
+// The last good board lives in memory and in localStorage (under the signed-in
+// person's id), so opening Interviews paints what was there last time at once
+// and only the quiet refresh behind it can change it (owner, 22 Oct 2026: the
+// page reloaded from scratch every visit). New interviews append when the
+// refresh lands; nothing already shown is ever taken away by a slow load.
+const BOARD_KEY_PREFIX = "mfit:interview-board:v1:"
+let boardMemory: Answer | null = null
+let boardKeyCache: string | null | undefined
+async function boardKey(): Promise<string | null> {
+  if (boardKeyCache !== undefined) return boardKeyCache
+  try {
+    const { data } = await createClient().auth.getSession()
+    const id = data.session?.user?.id
+    boardKeyCache = id ? `${BOARD_KEY_PREFIX}${id}` : null
+  } catch { boardKeyCache = null }
+  return boardKeyCache
+}
+function readBoardSnapshot(key: string): Answer | null {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const j = JSON.parse(raw) as Answer
+    return j && j.ok && Array.isArray(j.active) && Array.isArray(j.past) ? j : null
+  } catch { return null }
+}
+function keepBoard(j: Answer): void {
+  boardMemory = j
+  void boardKey().then(key => { if (key) { try { localStorage.setItem(key, JSON.stringify(j)) } catch { /* storage full: the live board still works */ } } })
+}
 const PHASE: Record<string, string> = { coming: "Coming up", today: "Today", waiting: "Waiting for news", past: "Past" }
 const card: CSSProperties = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "16px 18px" }
 const tag: CSSProperties = { display: "inline-flex", alignItems: "center", minHeight: 24, padding: "0 10px", borderRadius: 12, fontSize: 12, fontWeight: 700, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)", whiteSpace: "nowrap" }
@@ -27,7 +59,7 @@ const mailto = (email: string) => { const at = email.lastIndexOf("@"); return at
 const openHref = (threadId: string) => `/dashboard/mail?open=${encodeURIComponent(threadId)}`
 
 export default function InterviewBoard() {
-  const [data, setData] = useState<Answer | null>(null)
+  const [data, setData] = useState<Answer | null>(() => boardMemory)
   const [error, setError] = useState("")
   const [busy, setBusy] = useState("")
   const [asking, setAsking] = useState("")       // the interview whose "send for me" words are being shown
@@ -37,11 +69,23 @@ export default function InterviewBoard() {
   const [showPast, setShowPast] = useState(false)
   const [showOld, setShowOld] = useState(false)
 
-  const take = (j: Answer) => { if (j?.ok) { setData(j); setError("") } else setError(j?.error || "Your interviews could not be read just now.") }
+  const take = (j: Answer) => { if (j?.ok) { setData(j); setError(""); keepBoard(j) } else setError(j?.error || "Your interviews could not be read just now.") }
   const load = useCallback(() => {
     fetch("/api/gmail/interview-track", { cache: "no-store" }).then(r => r.json()).then(take).catch(() => setError("Your interviews could not be read just now."))
   }, [])
-  useEffect(() => { queueMicrotask(load) }, [load])
+  // Paint the saved copy first, then refresh quietly behind it.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      if (!boardMemory) {
+        const key = await boardKey()
+        const snap = key ? readBoardSnapshot(key) : null
+        if (!cancelled && snap) { boardMemory = snap; setData(snap) }
+      }
+      if (!cancelled) load()
+    })()
+    return () => { cancelled = true }
+  }, [load])
 
   const choose = async (id: string | string[], action: "rejected" | "completed" | "reopen" | "send_for_me" | "stop_sending", customWords?: { subject: string; body: string }) => {
     if (busy) return

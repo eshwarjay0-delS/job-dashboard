@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
-import { getKeyBalance } from "@/lib/keyBalance"
+import { getKeyBalance, RESUME_FALLBACK_USD, RESUME_FALLBACK_CHEAP_USD } from "@/lib/keyBalance"
 import { readLlmCalls, summarizeCalls } from "@/lib/llmLedger"
 import { getPoints, pointsToDisplay } from "@/lib/creditsLedger"
 import { hashUserId } from "@/lib/sttLedger"
@@ -11,9 +11,10 @@ export const dynamic = "force-dynamic"
 
 const NO_STORE = { "Cache-Control": "no-store" }
 
-// Cheapest-route resume costs (deterministic; replaced by measured once data exists).
-const OR_RESUME_USD = (3900 * 0.037 + 1200 * 0.17) / 1e6   // gpt-oss-120b cheapest route
-const OAI_RESUME_USD = (3900 * 0.10 + 1200 * 0.50) / 1e6   // gpt-6-luna
+// Pre-calibration resume costs come from the one shared source (keyBalance.ts);
+// measured cost replaces them once the first resumes calibrate it.
+const OR_RESUME_USD = RESUME_FALLBACK_CHEAP_USD   // gpt-oss-120b cheapest route
+const OAI_RESUME_USD = RESUME_FALLBACK_USD        // gpt-6-luna, the route resumes run on
 
 type AppWide = { resumesLeft: number; calibrated: boolean; remainingUsd: number }
 
@@ -59,7 +60,13 @@ export async function GET(request: NextRequest) {
   const user = await authenticatedUser(request)
   if (!user) return NextResponse.json({ error: "Sign in again." }, { status: 401, headers: NO_STORE })
   const [wide, pts] = await Promise.all([appWideNumbers(), getPoints(hashUserId(user.id))])
-  const sessionsLeft = pointsToDisplay(pts).interviews
+  const display = pointsToDisplay(pts)
 
-  return NextResponse.json({ ok: true, ...wide, sessionsLeft }, { headers: NO_STORE })
+  // One meaning per number on every surface (owner, 22 Oct 2026: the pill
+  // showed ~1,400 resumes while the Kompas header showed 80 for the same
+  // moment). "Resumes left" and "sessions left" here are gel points — the
+  // same numbers the Kompas header shows. The API keys' dollar view rides
+  // along under `usd` for the explainer and the budget board; it is never
+  // swapped into the pill itself.
+  return NextResponse.json({ ok: true, points: pts, resumesLeft: display.resumes, sessionsLeft: display.interviews, usd: wide }, { headers: NO_STORE })
 }

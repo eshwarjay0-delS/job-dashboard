@@ -9,7 +9,7 @@
 // "send_for_me" is the person's standing word that a short follow-up may be sent for them once a week until there is
 // news (the daily job sends it: src/lib/interview-followups.ts). The exact words are in `words`, shown before they say yes.
 import { NextResponse } from "next/server"
-import { requireAuth, isAuthContext, threadsToInterviews, enrichInterviewEvidence, TRACKING_DAYS, type AuthContext } from "../_lib"
+import { requireAuth, isAuthContext, threadsToInterviews, enrichInterviewEvidence, scheduleInterviewDiscovery, TRACKING_DAYS, type AuthContext } from "../_lib"
 import { keptThreads } from "../_kept"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { decide, followUpWords, trackInterviews } from "@/lib/interview-track"
@@ -25,6 +25,8 @@ async function answer(ctx: AuthContext) {
   const { data: { user } } = await ctx.supabase.auth.getUser()
   const [kept, recruiters, state] = await Promise.all([keptThreads(ctx, TRACKING_DAYS, { fetchWhenEmpty: true }), readRecruiters(ctx.userId), readTrackState(ctx.userId)])
   const threads = await enrichInterviewEvidence(ctx.userId, kept.threads).catch(() => kept.threads)
+  // Discovery for interviews the kept copy missed runs behind this answer, never inside it.
+  scheduleInterviewDiscovery(ctx.userId, threads)
   const mine = [...ctx.accounts.map(a => a.google_email), user?.email || ""].filter(Boolean)
   const out = trackInterviews(threadsToInterviews(threads), threads, mine, Date.now(), { state, recruiter: email => isMyRecruiter(recruiters, email) })
   const meta = (user?.user_metadata || {}) as { full_name?: string; name?: string }

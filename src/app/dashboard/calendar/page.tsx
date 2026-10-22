@@ -78,7 +78,8 @@ function Event({ iv, selected, onPick }: { iv: Interview; selected: boolean; onP
 
 function Week({ sel, onPick, interviews }: { sel: string | null; onPick: (id: string) => void; interviews: Interview[] }) {
   const hours = Array.from({ length: END - START }, (_, i) => START + i)
-  const nowY = (10.6 - START) * HOUR
+  const clock = new Date()
+  const nowY = (clock.getHours() + clock.getMinutes() / 60 - START) * HOUR
   return (
     <Card style={{ padding: 0, overflowX: "auto" }}>
       <div style={{ minWidth: GUTTER + COL_MIN * 7 }}>
@@ -134,7 +135,7 @@ function Detail({ iv, acct }: { iv: Interview; acct: (id: string) => { tint: str
       <h2 style={{ margin: "12px 0 0", fontSize: 19, fontWeight: 750 }}>{iv.company}</h2>
       <div style={{ fontSize: 13.5, color: "var(--text-muted)", marginTop: 2 }}>{iv.role}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16, fontSize: 13.5 }}>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}><Clock size={15} color="var(--text-soft)" />{WEEK_DAYS[iv.day]} {WEEK_DATES[iv.day]} {iv.day < 3 ? "Sep" : "Oct"} · {fmtHour(iv.start)} – {fmtHour(iv.end)} ET</div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}><Clock size={15} color="var(--text-soft)" />{WEEK_DAYS[iv.day]} {WEEK_DATES[iv.day]} {iv.ts ? new Date(iv.ts).toLocaleDateString("en-US", { month: "short" }) : ""} · {fmtHour(iv.start)} – {fmtHour(iv.end)} ET</div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}><User size={15} color="var(--text-soft)" />{iv.with}</div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <span style={{ width: 15, display: "flex", justifyContent: "center" }}><span style={{ width: 9, height: 9, borderRadius: 5, background: acct(iv.account).tint }} /></span>

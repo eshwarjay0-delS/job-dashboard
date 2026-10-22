@@ -49,3 +49,16 @@ export async function setKeyBalance(provider: string, loadedUsd: number): Promis
   await (await storage()).put(`key-balances/${provider}.json`, JSON.stringify(b))
   return b
 }
+
+/**
+ * One resume's typical token shape (keyword expansion + main generation) and
+ * its price-table cost before a measured cost exists. THE source every
+ * surface uses (owner, 22 Oct 2026: the same resume was priced differently
+ * on different pages): the sidebar, the resume page and the budget board all
+ * take their pre-calibration fallback from here, never from a local copy.
+ *   RESUME_FALLBACK_USD       — the OpenAI route resumes actually run on (gpt-6-luna prices)
+ *   RESUME_FALLBACK_CHEAP_USD — the cheapest route (gpt-oss-120b prices)
+ */
+export const RESUME_TOKENS = { in: 3900, out: 1200 }
+export const RESUME_FALLBACK_USD = (RESUME_TOKENS.in * 0.10 + RESUME_TOKENS.out * 0.50) / 1e6
+export const RESUME_FALLBACK_CHEAP_USD = (RESUME_TOKENS.in * 0.037 + RESUME_TOKENS.out * 0.17) / 1e6

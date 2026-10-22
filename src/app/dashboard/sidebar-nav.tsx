@@ -40,7 +40,7 @@ function isActive(href: string, pathname: string) {
   return !ALL_HREFS.some(h => h !== href && h.length > href.length && matches(h))
 }
 
-type CreditSummary = { resumesLeft: number; sessionsLeft: number; calibrated: boolean; remainingUsd: number }
+type CreditSummary = { resumesLeft: number; sessionsLeft: number; points: number; usd: { resumesLeft: number; calibrated: boolean; remainingUsd: number } }
 
 let creditAsk: Promise<CreditSummary | null> | null = null
 function askCredits(): Promise<CreditSummary | null> {
@@ -103,13 +103,13 @@ function ExplainerPanel({ s, onClose, anchor, align = "left" }: {
         }}>
         <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", margin: "0 0 8px" }}>What this means</p>
         <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
-          <b style={{ color: "var(--text)" }}>{s.resumesLeft.toLocaleString()} resumes</b> — generations your API balances buy (${s.remainingUsd.toFixed(2)} left across keys).
+          <b style={{ color: "var(--text)" }}>{s.resumesLeft.toLocaleString()} resumes</b> — generations left on your gel points (1 point = 4 resumes, or 1 full interview session).
         </p>
         <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
-          <b style={{ color: "var(--text)" }}>{s.sessionsLeft} sessions</b> — 1-hour interview sessions left on your gel points (1 hour = 1 session · 30 min = 0.5 session; listening is free).
+          <b style={{ color: "var(--text)" }}>{s.sessionsLeft} sessions</b> — 1-hour interview sessions left on the same gel points (30 min = 0.5 session; listening is free).
         </p>
         <p style={{ fontSize: 11, color: "var(--text-soft)", margin: "0 0 10px" }}>
-          {s.calibrated ? "Measured from your real generations." : "Estimate — your first generation calibrates it."}
+          Your API keys separately hold ${s.usd.remainingUsd.toFixed(2)} — about {s.usd.resumesLeft.toLocaleString()} more generations at the {s.usd.calibrated ? "measured" : "estimated"} cost per resume.
         </p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Link href="/dashboard/admin" onClick={onClose} style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)" }}>Full breakdown →</Link>

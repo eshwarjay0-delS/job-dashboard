@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { isAdminEmail } from "@/lib/owner"
-import { getKeyBalance } from "@/lib/keyBalance"
+import { getKeyBalance, RESUME_TOKENS, RESUME_FALLBACK_USD } from "@/lib/keyBalance"
 import { readLlmCalls, summarizeCalls } from "@/lib/llmLedger"
 import { readTailorEvents, overviewOf } from "@/lib/tailorLedger"
 import { readSttCalls } from "@/lib/sttLedger"
@@ -16,9 +16,7 @@ const r6 = (n: number) => Math.round(n * 1e6) / 1e6
  * Verified provider prices (read 2026-10-11). Sources live in llmPrices.ts.
  * Kept here so the board shows the same numbers the ledgers meter with.
  */
-const RESUME_TOKENS = { in: 3900, out: 1200 } // keyword expansion + main generation, typical
 const GROQ_120B = { in: 0.15, out: 0.60 }     // $/M — groq.com/pricing via 3 trackers, Oct 2026
-const OPENAI_LUNA = { in: 0.10, out: 0.50 }   // $/M — OpenRouter list, NOT OpenAI's own page
 const WHISPER_TURBO_PER_MIN = 0.04 / 60       // $/min — Groq docs, verified Oct 11
 
 const resumeCost = (p: { in: number; out: number }) =>
@@ -50,8 +48,9 @@ export async function GET(request: NextRequest) {
   const resumes = overviewOf(tailors.events, now, "America/Chicago")
   const measuredPerResume = resumes.month.costPerResumeUsd || resumes.week.costPerResumeUsd || 0
   const measuredCount = resumes.month.generated || resumes.week.generated || 0
-  // Measured when available; otherwise the Groq 120B price-table figure, labeled.
-  const perResume = measuredPerResume > 0 ? measuredPerResume : resumeCost(GROQ_120B)
+  // Measured when available; otherwise the shared price-table fallback for the
+  // route resumes actually run on — the same figure every other surface uses.
+  const perResume = measuredPerResume > 0 ? measuredPerResume : RESUME_FALLBACK_USD
 
   const sttSeconds = stt.calls.reduce((n, e) => n + (e.seconds || 0), 0)
   const sttCost = sttSeconds * WHISPER_TURBO_PER_MIN * 60

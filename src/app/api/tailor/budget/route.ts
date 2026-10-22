@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
-import { getKeyBalance, setKeyBalance } from "@/lib/keyBalance"
+import { getKeyBalance, setKeyBalance, RESUME_FALLBACK_USD } from "@/lib/keyBalance"
 import { readLlmCalls, summarizeCalls } from "@/lib/llmLedger"
 import { readTailorEvents, overviewOf } from "@/lib/tailorLedger"
 import { isAdminEmail } from "@/lib/owner"
@@ -36,11 +36,9 @@ export async function GET(request: NextRequest) {
   const measuredCostPerResume = resumes.month.costPerResumeUsd || resumes.week.costPerResumeUsd || 0
   const measuredResumes = resumes.month.generated || resumes.week.generated || 0
 
-  // Fallback before calibration: price-table estimate for one gpt-6-luna run
-  // (keyword expansion + main generation at typical token counts).
-  // ~900 in/100 out for expansion, ~3000 in/1100 out for generation.
-  const FALLBACK_PER_RESUME_USD = (900 * 0.10 + 100 * 0.50 + 3000 * 0.10 + 1100 * 0.50) / 1e6
-  const perResume = measuredCostPerResume > 0 ? measuredCostPerResume : FALLBACK_PER_RESUME_USD
+  // Fallback before calibration: the shared price-table figure from
+  // keyBalance.ts — the same one the sidebar and the budget board use.
+  const perResume = measuredCostPerResume > 0 ? measuredCostPerResume : RESUME_FALLBACK_USD
   const remaining = Math.max(0, balance.loadedUsd - openaiSpent)
 
   return NextResponse.json({

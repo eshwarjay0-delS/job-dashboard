@@ -785,15 +785,33 @@ export async function enrichInterviewEvidence(
     }
   }
 
-  const merged = threads.map(t => updated.get(t.threadId) || t)
+  return threads.map(t => updated.get(t.threadId) || t)
+}
 
-  // ── Live discovery: interview threads the cache fill missed ────────────
-  // The cache keeps only the N most recent threads, so a real interview from
-  // weeks ago may never have been cached. Search Gmail live for interview
-  // subjects AND calendar invites (.ics) — the .ics query catches confirmed
-  // interviews whose subject never says "interview" (e.g. "Screening call
-  // with Eshwar", "Eshwar Janjirala - IT Security Analyst_USA"). Bounded and
-  // batched (rate-limit safe): at most 30 missing threads per call.
+// ── Live discovery: interview threads the cache fill missed ────────────────
+// The cache keeps only the N most recent threads, so a real interview from
+// weeks ago may never have been cached. Search Gmail live for interview
+// subjects AND calendar invites (.ics) — the .ics query catches confirmed
+// interviews whose subject never says "interview" (e.g. "Screening call
+// with Eshwar", "Eshwar Janjirala - IT Security Analyst_USA"). Bounded and
+// batched (rate-limit safe): at most 30 missing threads per call.
+//
+// This used to run inside the read path: every Interviews page load paid
+// for the searches and thread fetches before it could show anything
+// (owner, 22 Oct 2026: the page loaded over and over, every visit, from
+// scratch). It now runs in the background via scheduleInterviewDiscovery
+// and only fills the kept copy — reads answer from the kept copy at once,
+// and a discovered interview appears on the next quiet refresh.
+export async function discoverInterviewThreads(userId: string, known: ClassifiedThread[]): Promise<void> {
+  let sb: Sb | null = null
+  try {
+    sb = await createClient()
+    if (!(await cacheAvailable(sb))) return
+  } catch {
+    return
+  }
+  const accounts = (await listGoogleWorkspaceAccounts(userId).catch(() => [])).filter(a => a.gmail_enabled)
+  const merged = [...known]
   try {
     const have = new Set(merged.map(t => t.threadId))
     const missing: Array<{ acct: GwAccount; token: string; threadId: string }> = []
@@ -864,7 +882,28 @@ export async function enrichInterviewEvidence(
     /* live discovery is best-effort — cached results still stand */
   }
 
-  return merged
+}
+
+// At most one background discovery per person per 15 minutes, however many
+// pages ask. The throttle lives in this server process; a cold start simply
+// allows one discovery, which is the safe direction.
+const discoveryAt = new Map<string, number>()
+const DISCOVERY_EVERY_MS = 15 * 60 * 1000
+
+/** Ask for a background discovery pass without ever slowing the answer down. */
+export function scheduleInterviewDiscovery(userId: string, threads: ClassifiedThread[]): void {
+  const now = Date.now()
+  if (now - (discoveryAt.get(userId) || 0) < DISCOVERY_EVERY_MS) return
+  discoveryAt.set(userId, now)
+  const run = () => discoverInterviewThreads(userId, threads).catch(() => {})
+  void (async () => {
+    try {
+      const { after } = await import("next/server")
+      after(run)
+    } catch {
+      void run()
+    }
+  })()
 }
 
 
