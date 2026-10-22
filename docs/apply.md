@@ -83,7 +83,7 @@ Everything the user does inside Apply is saved: searches, viewed jobs, saved job
 ## Build phases
 
 1. **Directory (done, 2026-10-17).** Apply tab + portal directory + smart search + chatbot tool.
-2. **Crawler v1 (shipped 2026-10-17, needs migration).** Jobs table (`mfit_crawl_jobs` + `mfit_crawl_runs`), adapter framework, verified adapters for Beacon Hill + Collabera, Jobs tab with contract-only default, daily cron 6am CDT. The active Mfit database was checked: both tables are absent. Two migration attempts through the Supabase connector failed with `Invalid or expired requestState`; migration remains blocked. Apply `supabase/migrations/20261017_crawl_jobs.sql`, then trigger and verify the first crawl.
+2. **Crawler v1 (shipped; migration completed 2026-10-20).** Jobs table (`mfit_crawl_jobs` + `mfit_crawl_runs`), adapter framework, 13 registered portal adapters, Jobs tab with contract-only default, and daily cron at 6am CDT. The owner applied `supabase/migrations/20261017_crawl_jobs.sql`; the live route then confirmed the tables existed but returned an empty index. The next acceptance step is to verify a completed crawl, fresh stored jobs and live search results. Indexed search was aligned on 2026-10-22 so a bounded set of query terms can match title, location, firm or description instead of requiring one literal phrase.
 3. **Inclusive browser (desktop).** Electron `WebContentsView` with persistent session; "Open portal" opens in-app; logins persist like Chrome.
    *Horizons explored 2026-10-21 (`docs/research/apply-horizons.md`): the inclusive browser is five surfaces, not one — (H1) desktop WebContentsView, (H2) hosted cloud live-view whose same session the apply worker can drive (inclusive browser and auto-apply become one infrastructure), (H3) our shipped autofill extension productized as the Chrome companion, (H4) mobile Custom Tabs / hosted fallback, (H5) a self-hosted open-source browser fleet (Steel) behind the same session seam. Recommended order: H3, H2 pilot, H1 in the next desktop rebuild, H5 at volume. Builds are proposed until the owner picks one.*
 4. **Resume-at-apply.** Resume picker + per-JD tailoring wired into the Apply flow.
@@ -123,6 +123,7 @@ Not implemented by this change: a crawler for every vendor, persistent embedded 
 ### Acceptance checks
 
 - Search software developer and show jobs, not a list of firms.
+- A multi-word role/skill search can find a listing when the title and description carry different query terms.
 - A permanent W2 posting with no contract evidence does not qualify.
 - A source outage produces an honest empty/error state, never sample jobs.
 - Resume selection carries through tailoring without switching identity.

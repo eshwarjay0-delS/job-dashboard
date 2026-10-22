@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { adminOf } from "@/lib/adminAccess"
+import { crawlSearchOrFilter } from "@/lib/crawl/search"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
 export const runtime = "nodejs"
@@ -28,10 +29,8 @@ export async function GET(req: NextRequest) {
 
   if (workType !== "all") query = query.eq("work_type", workType)
   if (portal) query = query.eq("portal", portal)
-  if (q) {
-    const like = `%${q.replace(/[^a-zA-Z0-9 @+.-]/g, "")}%`
-    query = query.or(`title.ilike.${like},location.ilike.${like},firm.ilike.${like}`)
-  }
+  const searchFilter = crawlSearchOrFilter(q)
+  if (searchFilter) query = query.or(searchFilter)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ ok: false, jobs: [], reason: error.message })
