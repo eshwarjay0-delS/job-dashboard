@@ -31,3 +31,7 @@ Saved-search reruns previously set React state and dispatched a form event after
 - REA history: recover missing source evidence; failed tool runs remain failed until actually rerun.
 
 No item is completed merely by appearing in either board. No real email, WhatsApp message or job application was sent during this pass.
+
+## Release evidence
+
+Eight focused DOM and journal/REA checks, TypeScript and the production build passed. Scoped lint reports eight warnings and zero errors. Implementation `4962dba63c36a2f8f17b03310284d0fb04f6b52f` reported Vercel success. Authenticated saved-search acceptance and the broader product queue remain open.
