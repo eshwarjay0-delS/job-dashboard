@@ -1,5 +1,5 @@
 import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
-import { candidateEvidenceInput } from "./resume-evidence"
+import { candidateEvidenceInput, explicitlyConfirmsAllRequirements } from "./resume-evidence"
 import { preserveSkillHeadings } from "./resume-format"
 import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, experienceCoverageComplete, resumeQuality, requiredEvidenceTerms, coveragePercent } from "./resume-quality"
 import { J1_VERSION, constrainResumeEdits } from "./ai/j1"
@@ -262,10 +262,14 @@ export async function runTailor(opts: {
   const jdGenerated = (await (kwExpandPromise ??= expandKeywords(text, candidateInput))).filter(k => !jdExtracted.includes(k))
   // Since 19 Oct 2026 the target is the job post's own terms AND Gemini's skill-like suggestions, together, cleaned of
   // generic words and fragments (owner: "give this to gemini free api for more keywords ... then concatenate both given
-  // user input and that results"). Every one of them ends up in the resume: what the rewrite leaves out is placed on
-  // the skills section at the end (placeRemaining below), so counting Gemini's terms no longer lengthens the run.
+  // user input and that results"). The full set is scored and shown to the model, but deterministic placement and
+  // mandatory repair apply only where the baseline or the candidate's own statement supplies evidence.
   const jdKws = targetKeywords(jdExtracted, jdGenerated)
   const jdKwsPrompt = [...new Set([...jdKws, ...jdGenerated])]
+  const candidateStatements = [...immediatePrefs, ...storedFeedback]
+  const forcedJdKws = explicitlyConfirmsAllRequirements(candidateStatements)
+    ? jdKws
+    : [...coveredJdKeywords([text, ...candidateStatements].join("\n"), jdKws)].filter(k => jdKws.includes(k))
   const beforeKw = coveredJdKeywords(text, jdKws)
   const matchedOn = [...beforeKw]
   const kwMatched = [...beforeKw]
@@ -556,7 +560,7 @@ export async function runTailor(opts: {
     - (summaryWanted && !(p.edits.summary || "").trim() ? 0.08 : 0) - .05 * (p.partial?.failed || 0)
   // The JD terms still missing, computed from the resume with no model call, so the pass targets the gap.
   const injectFor = (covered: Set<string>): string[] => {
-    const missing = jdKws.filter(k => !covered.has(k))
+    const missing = forcedJdKws.filter(k => !covered.has(k))
     if (!missing.length) return []
     return [`ATS COVERAGE (rewrite existing lines in place): ensure these JD terms appear, weaving EACH one into the experience bullets of the roles where it fits (and its matching skill line) using the JD's exact wording: ${missing.join(", ")}`]
   }
@@ -575,7 +579,7 @@ export async function runTailor(opts: {
       const todo: { role: number; skills: string[]; add: number }[] = []
       // Repair every relevant role using the full JD set, not just skills already
       // listed in the generated skills section. Only the source establishes evidence.
-      const unseen = jdKws.filter(k => !cur.afterKw.has(k))
+      const unseen = forcedJdKws.filter(k => !cur.afterKw.has(k))
       // Profile repair is essential: the first pass can omit an entire skill category.
       if (sec.skills !== false && (unseen.length || cur.partial)) todo.push({ role: -1, skills: unseen, add: 0 })
       for (const i of countedRoles) {
@@ -631,12 +635,12 @@ export async function runTailor(opts: {
     return cur
   }
 
-  // Every target term the rewrite left out goes onto the skills line it fits best, written as the job post writes it
-  // (owner, 19 Oct 2026, on a resume sent at 96%: "doesn't have the audacity to apply them all in anyway"). A
-  // certification is the one exception: listing it claims to hold it, so it is named to the person instead.
+  // Every evidence-supported target term the rewrite left out goes onto the skills line it fits best, written as the
+  // job post writes it. A term from the JD alone remains a visible gap; adding it would turn a score into fabricated
+  // biography. A narrow explicit blanket confirmation ("I have experience with all required skills") supports all.
   const placeRemaining = async (cur: Pass): Promise<Pass> => {
     if (sec.skills === false || !zones.skills.length) return cur
-    const left = jdKws.filter(k => !cur.afterKw.has(k) && !isCertification(k))
+    const left = forcedJdKws.filter(k => !cur.afterKw.has(k) && !isCertification(k))
     if (!left.length) return cur
     const sk = skillEdits(cur.edits)
     const lines = zones.skills.map(s => ({ idx: s.idx, text: sk.get(s.idx) ?? s.text }))

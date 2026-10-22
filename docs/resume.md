@@ -56,6 +56,10 @@ High keyword overlap does not make unfinished role rewrites complete. Partial ou
 
 The final generation stage must be experience repair, not Skills keyword placement. A source audit found that leftover terms were appended to Skills after `fillGaps` had finished, creating new per-role requirements with no later opportunity to write the corresponding client bullets. The shared web/WhatsApp pipeline now places the supported target vocabulary first, then repairs each relevant role against that complete set. This preserves the standing rule that keywords must be developed into action, context, and purpose/result—not merely listed. It does not convert a JD into evidence or permit invented qualifications. Evidence: `docs/research/resume-skills-experience-ordering.md`.
 
+## Confirmed-keyword boundary — 22 October 2026
+
+The complete cleaned JD plus Gemini set remains the measured target, but deterministic keyword placement and mandatory role repair cannot use the JD as proof of experience. They may force a term only when it appears in the baseline, an explicit candidate statement, or the candidate explicitly confirms experience with every listed requirement. “Add every keyword” is an editing instruction; “I have experience with every required skill” is evidence. Unsupported requirements stay visible as gaps rather than fabricated biography. Evidence: `docs/research/resume-confirmed-keyword-boundary.md`.
+
 ## Actual counts and weighting — 20 October 2026
 
 Matched-term counts must come from the exported document, not a weighted percentage converted into an integer. Weighted coverage remains separate; both measures must meet the existing acceptance thresholds. Cache generation 16 supersedes generation 15 while retaining its incomplete-rewrite safeguard. Evidence: `docs/research/resume-score-counts.md`.

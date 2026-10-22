@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
-import { candidateEvidenceInput } from '../../src/lib/resume-evidence.ts'
+import { candidateEvidenceInput, explicitlyConfirmsAllRequirements } from '../../src/lib/resume-evidence.ts'
 
 function harness(reply) {
   const calls = []
@@ -33,6 +33,29 @@ const zones = { summaryText: '', skills: [{ idx: 2, text: 'Security operations' 
   { role: 'Analyst at Earlier Client', current: false, bullets: [{ idx: 20, text: 'Automated log analysis with Python.' }] },
 ] }
 const base = { keys: {}, jd: 'Security Analyst\nMicrosoft Sentinel and Python', zones, jdKeywords: ['Microsoft Sentinel', 'Python'], preferences: '', mode: 'full' }
+
+test('only an explicit candidate experience statement confirms the complete JD set', () => {
+  for (const statement of [
+    'I have experience with all required and preferred skills in this JD.',
+    'You have experience with all of them evenly.',
+    'My experience covers every listed technology.',
+    'I possess all required skills.',
+  ]) assert.equal(explicitlyConfirmsAllRequirements([statement]), true, statement)
+  for (const statement of [
+    'Add all keywords to my resume.',
+    'Spread every keyword evenly.',
+    'The ideal candidate must have experience with all requirements.',
+    'Make the score 98%.',
+  ]) assert.equal(explicitlyConfirmsAllRequirements([statement]), false, statement)
+})
+
+test('forced keyword placement and role repair use candidate evidence, not the JD alone', () => {
+  const source = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
+  assert.match(source, /const forcedJdKws = explicitlyConfirmsAllRequirements\(candidateStatements\)/)
+  assert.match(source, /const missing = forcedJdKws\.filter\(k => !covered\.has\(k\)\)/)
+  assert.match(source, /const unseen = forcedJdKws\.filter\(k => !cur\.afterKw\.has\(k\)\)/)
+  assert.match(source, /const left = forcedJdKws\.filter\(k => !cur\.afterKw\.has\(k\)/)
+})
 
 test('profile generation receives evidence from current and earlier roles without gaining permission to rewrite their bullets', async () => {
   const h = harness()
