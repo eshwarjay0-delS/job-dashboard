@@ -18,4 +18,4 @@ The owner approved an inclusive contract-job search across the MarketFit crawler
 
 ## Verification and limits
 
-The focused regression covers broad multi-word matching, description inclusion, technical punctuation, delimiter removal, deduplication and the term cap. TypeScript, lint and production build must also pass before release. These checks do not prove that the database currently contains fresh jobs or that every vendor portal is covered. Live authenticated Apply acceptance remains separate.
+The focused regression covers broad multi-word matching, description inclusion, technical punctuation, delimiter removal, deduplication and the term cap. The 32 focused crawler/search checks and 37 checks including Plan & Vision and REA passed; TypeScript, scoped lint and production build passed. Implementation commit `3e2cbd35ed5fed89163c3dc5712d8996e17eb8ee` reported Vercel success. These checks do not prove that the database currently contains fresh jobs or that every vendor portal is covered. Live authenticated Apply acceptance remains separate.
