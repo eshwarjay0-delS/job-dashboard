@@ -576,7 +576,8 @@ async function tryRefreshAuth() {
     if (window.kompasDesktop && typeof window.kompasDesktop.refreshAuth === "function") {
       const renewed = await window.kompasDesktop.refreshAuth();
       if (renewed) { __lastAuthRefresh = Date.now(); return true; }
-      return false;
+      // An upgraded shell may have a valid cookie session but no encrypted
+      // refresh family yet. Let the same-origin cookie path try next.
     }
     const res = await fetch("/api/auth/refresh", { method: "POST" });
     if (res.ok) { __lastAuthRefresh = Date.now(); return true; }
