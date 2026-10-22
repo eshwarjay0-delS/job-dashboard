@@ -86,6 +86,16 @@ export const ADAPTERS: PortalAdapter[] = [
 // Still to be read (a probe for each is in the REA board): Addison Group, KORE1, CSI, IDR, Vaco, IntelliPro, Genesis10,
 // Diverse Lynx, Robert Half, CyberSN and the firms whose portal address is not yet known.
 // Not read on purpose: Experis (its robots.txt disallows every crawler).
+//
+// Directory expansion (2026-10-21, owner-approved merge of prime-vendor-portals-expanded.md, firms #58-94 in
+// src/lib/vendorPortals.ts) — crawler-config hints, no adapters claimed yet:
+// - Peraton is the cheapest next adapter: its board is a standard iCIMS JSON feed
+//   (careers-peraton.icims.com). One shared iCIMS adapter would also fit other iCIMS-hosted firms.
+// - The government-contracting primes (SAIC, CACI, Booz Allen, Leidos, GDIT, Deloitte, ASRC Federal,
+//   eSimplicity, Global Alliant) mostly sit on iCIMS / Phenom / Workday-class boards — they ride the
+//   shared-adapter and headless-renderer decisions rather than one-off adapters.
+// - Recruiter-driven additions (Aerotek, Actalent, Kelly Services, Spherion, Express) post thin public
+//   boards: low crawl value, directory links only until a feed is verified live.
 export const PENDING_PORTALS = [
   "addison", "kore1", "csi", "idr", "vaco", "intellipro",
   "genesis10", "diverselynx", "roberthalf", "cybersn",

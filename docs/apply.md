@@ -76,7 +76,7 @@ Everything the user does inside Apply is saved: searches, viewed jobs, saved job
 
 ## Data foundation
 
-- `src/lib/vendorPortals.ts` — 57 US IT contract staffing prime vendors (27 verified portal URLs, 36 with a cybersecurity practice, 3 cyber-only boutiques). Generated from `prime-vendor-portals.md`. Counts corrected 2026-10-17 against the file itself (were misstated as 28/39).
+- `src/lib/vendorPortals.ts` — 94 US IT contract staffing prime vendors (34 verified portal URLs, 56 flagged with a cybersecurity practice in the data, 6 cyber-only boutiques). Generated from `prime-vendor-portals.md` (57 firms, 2026-10-17; counts corrected that day against the file itself, were misstated as 28/39) plus the expanded edition `prime-vendor-portals-expanded.md` (37 firms #58–94: tier-1 nationals, cyber boutiques, regionals, government-contracting primes), merged 2026-10-21 with owner approval. Crawler-config hints from the expanded edition (Peraton iCIMS feed = cheapest shared adapter; gov primes ride shared iCIMS/Phenom/Workday adapters; recruiter-driven nationals are low crawl value) are recorded in `src/lib/crawl/adapters.ts`. No new adapters are claimed by the merge — a directory URL is not a working adapter.
 - The Apply tab (`/dashboard/apply`) searches jobs. The directory is secondary at `/dashboard/apply/portals`.
 - The agent chatbot has the `search_vendor_portals` tool — Ask MFit answers portal questions from the same data.
 
