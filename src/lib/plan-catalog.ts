@@ -91,7 +91,7 @@ export function priceLabel(plan: CatalogPlan): string {
   if (!isPaid(plan)) return "Free"
   if (!isPriced(plan)) return PRICE_BLANK
   const { amount, currency } = plan.price
-  const text = new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(amount)
+  const text = new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", { style: "currency", currency, minimumFractionDigits: Number.isInteger(amount) ? 0 : 2, maximumFractionDigits: 2 }).format(amount)
   return `${text} ${PER_WORD[plan.per]}`
 }
 

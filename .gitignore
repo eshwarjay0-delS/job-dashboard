@@ -78,3 +78,6 @@ setup.log
 
 # Kompas desktop app (perfACT/desktop: npm run dist -- --copy-to public/downloads). ~95 MB binary, never committed.
 /public/downloads/
+
+# Local development copy of the extension (scripts/build-extension-dev.mjs)
+/extension-dev/
