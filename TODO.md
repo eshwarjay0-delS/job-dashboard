@@ -1,3 +1,19 @@
+## 2026-10-23 (second REA session) — Outside sites still blocked; vendor pages read through search; our own apps next
+
+**Asked:** one REA capture per reference app (Parakeet, Jobright, Simplify, Tsenta, Poke, Jobscan, Viktor, Sauna,
+Granola), then the competitors, then our own four apps. "The network allowlist has been updated. Check that each host
+is reachable first."
+
+**Step 1, reachability (done):** all 41 outside hosts and google.com are still refused (CONNECT 403, 09:53 UTC). The
+setting he changed (claude.ai Settings → Capabilities → network egress) is for chat code runs. This session runs in the
+Claude Code environment "Default", whose own Network access was not changed. Record:
+`docs/research/rea-reachability-2026-10-23.md`; REA `reference-apps-rebuild` updated; journal `rea-reference-apps-network`.
+
+**Unblock:** Claude Code → environment menu in the title bar → Edit → Network access → wider level, or add the hosts
+under Allowed domains → new session.
+
+**No UI change.** Records only (Admin → REA and Plan & Vision show them once merged and deployed).
+
 ## 2026-10-23 (night, last) — Kompas answers are said, not shown; short and readable
 
 **Asked:** answers "formatted in ways users can read ... verbally and vocally right. No one would read commands, signs,
