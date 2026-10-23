@@ -9,3 +9,7 @@ Desktop now offers three options, migrates old values, generates each audience d
 Concurrent workstream 6f16111 already shipped three labels, questionRegister, levelGuidance and per-request config.level. This change was rebased onto that release and preserves it. The additional desktop path fixes immediate cancellation and audience-cache reuse; the existing web/prep behavior is retained.
 
 Focused validation: 34 audience, three-level policy, desktop, focus, continuity and journal/REA checks passed; TypeScript and the production build passed; lint has one existing unused-argument warning and zero errors. Three broader answer-format source tests fail on historical renderer/style assertions: the original app already lacks the expected measurable-improvement placeholder phrase and head tag; styles are unchanged. These failures are retained separately. Deployment is pending. Real Windows UI and live provider output acceptance remain separate.
+
+## Release evidence
+
+Commit `c6559b93cf8a2f8e4d2f9e35a7131111e45e7265` reported Vercel success. Production `/kompas/version.json` returns `kompas-20261022-desktop-three-levels`. The cloud browser refused direct viewing of the JavaScript asset with ERR_BLOCKED_BY_CLIENT; no Windows UI or live model-output acceptance is claimed. The installed MarketFit desktop loads these hosted assets, so this response change does not require a native executable rebuild.
