@@ -1,3 +1,11 @@
+## 2026-10-23 — Kompas Desktop does not draw a code block
+
+**Asked:** the answer is spoken. No code on the card.
+
+**Done:** on the desktop, a fenced block is left out of the card, and a word in backticks is shown as words. The web page still shows a code block. Build stamp `kompas-20261023-say`. Tests: the new desktop check plus the three-level and release-stamp checks, 8/8.
+
+**Not on the live page.** The desktop shows this after that stamp is live and Kompas is quit and opened again.
+
 ## 2026-10-23 — Confirmed resume keywords, and the related words for that same work
 
 **Asked:** a phrase in the inbox, WhatsApp, or Resume Tailor should come back as a 95–100% keyword match. Gemini should add the related tools and phrases for the skills the person confirmed, and those go into the resume.

@@ -33,6 +33,23 @@ test('definitions and comparisons stay concise across all three audiences while 
  assert.match(desktopResponsePolicy('director','How would you integrate authorization?').guidance,/business and operational level/)
 })
 
+test('the desktop does not draw a fenced code block',()=>{
+ const source=readFileSync(new URL('../../public/kompas/app.js',import.meta.url),'utf8')
+ const start=source.indexOf('function answerLines'), end=source.indexOf('function renderCard', start)
+ const window={}
+ const context={window, PAUSE_MARK:'(?:\\((?:pause|beat|breath)\\)|\\[(?:pause|beat|breath)\\])'}
+ vm.runInNewContext(source.slice(start, end), context)
+ window.kompasDesktop={}
+ const spoken=context.answerLines('The call is direct.\n```\nconn.retrieve()\n```\nThat brings the chain back.')
+ assert.equal(spoken.some(line=>line.kind==='code'), false)
+ assert.match(spoken.map(line=>line.t).join(' '), /The call is direct/)
+ assert.match(spoken.map(line=>line.t).join(' '), /That brings the chain back/)
+ assert.doesNotMatch(spoken.map(line=>line.t).join(' '), /retrieve/)
+ delete window.kompasDesktop
+ const web=context.answerLines('The call is direct.\n```\nconn.retrieve()\n```\nThat brings the chain back.')
+ assert.equal(web.some(line=>line.kind==='code'), true)
+})
+
 test('desktop offers exactly three levels and switches a pending response immediately with isolated cached answers',()=>{
  const source=readFileSync(new URL('../../public/kompas/app.js',import.meta.url),'utf8')
  const options='<option value="engineer">Technical HR + Engineer</option><option value="architect" selected>Architect + Developer</option><option value="director">Director</option>'

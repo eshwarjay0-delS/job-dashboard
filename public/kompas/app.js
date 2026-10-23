@@ -741,7 +741,11 @@ function inline(li, text) {
   for (const part of unbracket(text).split(new RegExp("(`[^`\\n]{1,120}`|__[^_\\n]{1,80}__|\\*\\*[^*\\n]{1,80}\\*\\*|\\*[^*\\s][^*\\n]{0,80}\\*|==[^=\\n]{1,80}==|" + PAUSE_MARK + ")", "i"))) {
     if (!part) continue;
     let el = null;
-    if (/^`[^`]+`$/.test(part)) { el = document.createElement("code"); el.textContent = part.slice(1, -1); }
+    if (/^`[^`]+`$/.test(part)) {
+      const words = part.slice(1, -1);
+      if (window.kompasDesktop) el = document.createTextNode(words);
+      else { el = document.createElement("code"); el.textContent = words; }
+    }
     else if (/^__[^_].*__$/.test(part) || /^\*\*[^*]+\*\*$/.test(part)) {
       el = document.createElement("strong");
       el.textContent = part.replace(/^__|__$/g, "").replace(/^\*\*|\*\*$/g, "");
@@ -765,19 +769,21 @@ function answerLines(answer) {
   if (window.KompasCorrect && window.KompasCorrect.asSpeaker) answer = window.KompasCorrect.asSpeaker(String(answer || ""), window.__speakerName);
   if (window.KompasCorrect) answer = sayAnswer(answer);
   if (Array.isArray(answer)) return answer.map(t => ({ t: String(t).trim().replace(/^(?:[-•]|\*(?!\*))\s*/, "").trim(), kind: "bullet" })).filter(x => x.t);
-  // ``` fences hold code: kept whole (blank lines and indentation intact), even while still streaming
+  // On the desktop the answer is spoken. A fenced block is not read out, so it is not drawn.
+  const spoken = !!window.kompasDesktop;
   const out = []; let code = null, prose = [];
   const flush = () => { if (prose.length) out.push(...proseLines(prose.join("\n"))); prose = []; };
   for (const raw of String(answer || "").split("\n")) {
     if (/^\s*```/.test(raw)) {
-      if (code) { out.push({ t: code.lines.join("\n"), kind: "code", lang: code.lang }); code = null; }
+      if (code) { if (!spoken) out.push({ t: code.lines.join("\n"), kind: "code", lang: code.lang }); code = null; }
       else { flush(); code = { lang: raw.replace(/^\s*```/, "").trim(), lines: [] }; }
       continue;
     }
-    if (code) code.lines.push(raw); else prose.push(raw);
+    if (code) { if (!spoken) code.lines.push(raw); }
+    else prose.push(raw);
   }
   flush();
-  if (code) out.push({ t: code.lines.join("\n"), kind: "code", lang: code.lang });
+  if (code && !spoken) out.push({ t: code.lines.join("\n"), kind: "code", lang: code.lang });
   return out;
 }
 function proseLines(text) {
