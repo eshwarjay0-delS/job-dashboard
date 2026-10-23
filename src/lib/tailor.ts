@@ -7,13 +7,13 @@ import path from "path"
 import { createHash } from "crypto"
 import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, roleSpanMonths, type Edits, type Zones } from "./docx"
-import { adapt, expandJdKeywordsTwice } from "./claude"
+import { adapt, expandConfirmedVocabulary, expandJdKeywordsTwice, type ConfirmedVocabulary } from "./claude"
 import { recentFeedback } from "./feedback"
 import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords, weightedCoverage, detectJDLevel, estimateYears } from "./keywords"
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 import { priceCalls, type PricedCall } from "./llmPrices"
-import { targetKeywords, placeInSkills, isCertification, withoutAddedCerts } from "./keyword-targets"
+import { targetKeywords, placeInSkills, isCertification, withoutAddedCerts, weaveConfirmedVocabulary, type RelationalPair } from "./keyword-targets"
 
 export interface TailorResult {
   quality?: ReturnType<typeof resumeQuality>
@@ -158,13 +158,17 @@ export async function runTailor(opts: {
   // Is GPT Luna in use for this tailor? One switch for the ladder below and for the keyword call here.
   const openaiOn = !!opts.keys.openai && process.env.TAILOR_USE_OPENAI !== "0" && process.env.TAILOR_USE_OPENAI !== "false"
   const keywordUsage: TokenUsage[] = []
-  const expandKeywords = async (sourceResume: string, candidateInput: string): Promise<string[]> => {
-    if (opts.refine) return []
-    return expandJdKeywordsTwice({ keys: opts.keys, jd, known: extractJdKeywords(jd), sourceResume, candidateInput,
-      timeoutMs: Number(process.env.TAILOR_KW_EXPAND_MS) || 10000, usageSink: keywordUsage })
+  const expandKeywords = async (sourceResume: string, candidateInput: string): Promise<{ generated: string[]; pairs: ConfirmedVocabulary[] }> => {
+    if (opts.refine) return { generated: [], pairs: [] }
+    const timeoutMs = Number(process.env.TAILOR_KW_EXPAND_MS) || 10000
+    const [generated, pairs] = await Promise.all([
+      expandJdKeywordsTwice({ keys: opts.keys, jd, known: extractJdKeywords(jd), sourceResume, candidateInput, timeoutMs, usageSink: keywordUsage }),
+      expandConfirmedVocabulary({ keys: opts.keys, confirmed: immediatePrefs, sourceResume, timeoutMs, usageSink: keywordUsage }),
+    ])
+    return { generated, pairs }
   }
   // Start only after a cache miss; both Gemini passes finish before generation.
-  let kwExpandPromise: Promise<string[]> | null = null
+  let kwExpandPromise: Promise<{ generated: string[]; pairs: ConfirmedVocabulary[] }> | null = null
 
   // 1) Pick the resume (cheap — no LLM).
   let matched: { filepath: string; filename: string; category: string }
@@ -259,7 +263,9 @@ export async function runTailor(opts: {
   //     woven into the resume, which is the part an ATS actually reads.
   // Result: richer keywords in the document, without the extra escalation or the delay.
   const jdExtracted = extractJdKeywords(jd)
-  const jdGenerated = (await (kwExpandPromise ??= expandKeywords(text, candidateInput))).filter(k => !jdExtracted.includes(k))
+  const expanded = await (kwExpandPromise ??= expandKeywords(text, candidateInput))
+  const jdGenerated = expanded.generated.filter(k => !jdExtracted.includes(k))
+  const relationalPairs: RelationalPair[] = expanded.pairs
   // Since 19 Oct 2026 the target is the job post's own terms AND Gemini's skill-like suggestions, together, cleaned of
   // generic words and fragments (owner: "give this to gemini free api for more keywords ... then concatenate both given
   // user input and that results"). The full set is scored and shown to the model, but deterministic placement and
@@ -641,12 +647,21 @@ export async function runTailor(opts: {
   const placeRemaining = async (cur: Pass): Promise<Pass> => {
     if (sec.skills === false || !zones.skills.length) return cur
     const left = forcedJdKws.filter(k => !cur.afterKw.has(k) && !isCertification(k))
-    if (!left.length) return cur
+    if (!left.length && !relationalPairs.length) return cur
     const sk = skillEdits(cur.edits)
     const lines = zones.skills.map(s => ({ idx: s.idx, text: sk.get(s.idx) ?? s.text }))
     const placed = placeInSkills(lines, left, jd)
-    if (!placed.length) return cur
-    const next = await applyEdits({ ...cur.edits, skills: mergeIndexedEdits(cur.edits.skills || [], placed) })
+    const afterPlace = lines.map(l => ({ idx: l.idx, text: placed.find(p => p.idx === l.idx)?.text || l.text }))
+    const woven = weaveConfirmedVocabulary({
+      skills: afterPlace, jd,
+      bullets: zones.roles.flatMap(r => r.bullets.map(b => ({ idx: b.idx, role: r.role, text: (cur.edits.bullets || []).find(x => x.idx === b.idx)?.text || b.text }))),
+      pairs: relationalPairs,
+      evidence: [text, ...candidateStatements].join("\n"),
+    })
+    const addedSkills = mergeIndexedEdits(placed, woven.skills)
+    const bulletEdits = woven.bullets
+    if (!addedSkills.length && !bulletEdits.length) return cur
+    const next = await applyEdits({ ...cur.edits, skills: mergeIndexedEdits(cur.edits.skills || [], addedSkills), bullets: mergeIndexedEdits(cur.edits.bullets || [], bulletEdits) })
     if (next.cov < cur.cov) return cur
     next.via = cur.via
     next.partial = cur.partial

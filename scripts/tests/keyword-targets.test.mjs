@@ -2,7 +2,7 @@
 // micro-segmentation job of 19 Oct 2026: the job post's literal extraction and Gemini's two passes, as measured.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { targetKeywords, skillLike, placeInSkills, isCertification, jdSpelling, withoutAddedCerts } from '../../src/lib/keyword-targets.ts'
+import { targetKeywords, skillLike, placeInSkills, isCertification, jdSpelling, withoutAddedCerts, weaveConfirmedVocabulary, parseConfirmedVocabulary } from '../../src/lib/keyword-targets.ts'
 
 const literal = ['siem', 'splunk', 'ansible', 'aws', 'azure', 'zero trust', 'firewall', 'vpn', 'tcp/ip', 'dns', 'routing', 'network security',
   'compliance', 'nist', 'pci', 'python', 'policy', 'palo alto', 'ipsec', 'micro-segmentation', 'vpc', 'vnet', 'tcp', 'ip', 'globalprotect',
@@ -84,4 +84,36 @@ test('punctuated and named Salesforce credentials never become skills targets', 
   for (const term of ['security', 'network', 'C++', 'Salesforce CPQ', 'Salesforce development', 'security+automation']) {
     assert.equal(isCertification(term), false, term)
   }
+})
+
+test('confirmed keywords and their related terms reach the resume, and an unconfirmed tool does not', () => {
+  const jd = `Salesforce Developer
+Develop Apex with Lightning Web Components (LWC), Salesforce CPQ, SOQL, SOSL, and integrations with SAP and NetSuite.`
+  const confirmation = 'I used Apex, Lightning Web Components, Salesforce CPQ, SOQL, SOSL, and SAP integrations at Current Client.'
+  const baseline = 'CRM: Salesforce administration\nConfigured approval processes and user access for the sales organization.'
+  const parsed = parseConfirmedVocabulary(JSON.stringify([
+    { parent: 'Apex', terms: ['Apex'] },
+    { parent: 'Lightning Web Components', terms: ['LWC'] },
+    { parent: 'Salesforce CPQ', terms: ['guided selling', 'quote templates'] },
+    { parent: 'SOQL', terms: ['SOQL'] },
+    { parent: 'SOSL', terms: ['SOSL'] },
+    { parent: 'SAP', terms: ['SAP'] },
+    { parent: 'NetSuite', terms: ['saved searches'] },
+  ]), `${baseline}\n${confirmation}`)
+  assert.equal(parsed.some(p => p.parent === 'netsuite'), false)
+  const woven = weaveConfirmedVocabulary({
+    skills: [{ idx: 1, text: 'CRM: Salesforce administration' }],
+    bullets: [{ idx: 10, role: 'Current Client — Salesforce Administrator', text: 'Configured approval processes and user access for the sales organization.' }],
+    pairs: parsed,
+    evidence: `${baseline}\n${confirmation}`,
+    jd,
+  })
+  const confirmed = ['apex', 'lwc', 'salesforce cpq', 'soql', 'sosl', 'sap', 'guided selling', 'quote templates']
+  const has = (term) => new RegExp(`(?<![A-Za-z0-9])${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9])`, 'i').test(woven.text)
+  const hit = confirmed.filter(has)
+  const ratio = hit.length / confirmed.length
+  assert.equal(ratio, 1, `confirmed keyword coverage ${ratio}; missing ${confirmed.filter(t => !has(t)).join(', ')}`)
+  assert.match(woven.text, /Configured approval processes/)
+  assert.equal(has('netsuite'), false)
+  assert.equal(has('saved searches'), false)
 })
