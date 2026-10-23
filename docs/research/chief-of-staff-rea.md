@@ -278,11 +278,11 @@ redirect target is not on this environment's allowlist), so nothing below was ob
 | Cost per run visible | Usage ledgers exist (stt, usage ingest) | No per-job cost shown to the owner |
 | Pause a job, cut an app | Settings per watcher | No one place listing every job with Pause |
 
-### Owner sizing, 23 Oct
+### Owner, 23 Oct: money is a metaphor
 
-"actually 50 to 100$ a month..": the Chief is sized at $50 to $100 a month, not $50,000. Not yet settled: whether
-that is the running cost to stay under or the price MFit charges. Either way, every job's cost must be visible (gap
-above) so the month stays inside it.
+He first wrote "actually 50 to 100$ a month..", then "Okay forget money all of that was is for metaphor." So neither
+the article's $50,000 nor $50 to $100 is a target or a budget. The point is a Chief who does the whole work while he is
+away. Showing each job's cost stays useful for control, not as a money goal.
 
 ### Proposed next slices (not approved yet)
 
