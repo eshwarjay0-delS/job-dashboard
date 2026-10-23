@@ -1,3 +1,17 @@
+## 2026-10-23 (late) — Live REA of the reference apps
+
+**Asked:** REA every reference app in depth, and take what users already like (UI, features, marketing, pricing).
+
+**Done (each with its own REA entry and research file, public pages only, nothing copied):** ParakeetAI, Jobright
+(part 1), Simplify, Tsenta, Poke. The Chief of Staff study was updated with the full Viktor course; the Chief is sized
+at $50 to $100 a month (his words), with one question open.
+
+**Blocked:** extension packages (download host `clients2.googleusercontent.com`), Jobright's code (`*.jobright.ai`),
+Viktor, Sauna and Granola (their `www.` or new addresses), Jobscan (403 to automated visits, not bypassed), and most
+competitors' `www.` addresses.
+
+**Not visible in the app:** this is research only, shown in Admin → REA once merged.
+
 ## 2026-10-23 (second REA session) — Outside sites still blocked; vendor pages read through search; our own apps next
 
 **Asked:** one REA capture per reference app (Parakeet, Jobright, Simplify, Tsenta, Poke, Jobscan, Viktor, Sauna,
