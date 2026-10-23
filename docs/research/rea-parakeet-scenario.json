@@ -1,0 +1,41 @@
+{
+  "browser": {
+    "headless": true,
+    "executable_path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "mode": "launch"
+  },
+  "actions": [
+    {
+      "destination": {
+        "query": [],
+        "url": "https://www.parakeet-ai.com/"
+      },
+      "timeout_ms": 30000,
+      "step_id": "open-home",
+      "wait_until": "domcontentloaded",
+      "action": "goto"
+    },
+    {
+      "step_id": "settle",
+      "duration_ms": 2500,
+      "action": "wait_for_timeout"
+    }
+  ],
+  "start_url": {
+    "query": [],
+    "url": "https://www.parakeet-ai.com/"
+  },
+  "capture": {
+    "after_each_step": [],
+    "events": [],
+    "network": {
+      "response_body": false,
+      "header_values": false,
+      "request_body": false
+    },
+    "at_end": [
+      "url",
+      "accessibility"
+    ]
+  }
+}

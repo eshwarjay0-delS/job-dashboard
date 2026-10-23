@@ -8,11 +8,22 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
 import { cleanEmail, resumeEmails } from '../../src/lib/resumeOrganization.ts'
-import { recordRun, emptyLibrary, shelfOnly, shelvesIn, mergeLibraries, relabelEmail, learnedOf, shelfKey } from '../../src/lib/resume-library.ts'
+import { recordRun, emptyLibrary, shelfOnly, shelvesIn, mergeLibraries, relabelEmail, learnedOf, shelfKey, importedOriginalFileName } from '../../src/lib/resume-library.ts'
 
 const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 const GOOD = 'dana@gmail.com', BAD = 'dana@gmail.comlinkedin', SIEM = 'SIEM and Incident Response', DEVOPS = 'DevOps and Platform Engineering'
 const run = (n, email, category, more = {}) => ({ path: `${email}/${category}/Job ${n} (tailored)__${String(n).padStart(16, '0')}.docx`, email, category, role: `Role ${n}`, company: 'Co', depth: 1, jd: `job description number ${n}`, asked: ['splunk', 'siem'], covers: ['splunk'], ...more })
+
+test('archive imports preserve different originals that share a visible filename', () => {
+  const a = 'a'.repeat(64), b = 'b'.repeat(64)
+  assert.equal(importedOriginalFileName('Eshwar Resume.docx', a), 'Eshwar Resume__aaaaaaaaaaaaaaaa.docx')
+  assert.equal(importedOriginalFileName('Eshwar Resume.docx', a), importedOriginalFileName('Eshwar Resume.docx', a), 'an identical retry is idempotent')
+  assert.notEqual(importedOriginalFileName('Eshwar Resume.docx', a), importedOriginalFileName('Eshwar Resume.docx', b), 'different bytes cannot overwrite each other')
+  assert.equal(importedOriginalFileName('../Unsafe/Resume__cccccccccccccccc.docx', a), 'Resume__aaaaaaaaaaaaaaaa.docx')
+  const route = read('src/app/api/resumes/import-job/route.ts')
+  assert.match(route, /importedOriginalFileName\(file\.filename, file\.sha256\)/)
+  assert.ok(route.indexOf('importedOriginalFileName(file.filename, file.sha256)') < route.indexOf('writePath(target, file.bytes)'))
+})
 
 test('an email is the address and nothing else, however the resume runs it into the next word', () => {
   // The line of his own resume: the address straight into "LinkedIn".

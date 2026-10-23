@@ -98,6 +98,22 @@ export function speakableWords(input: string): string {
     .replace(/[ \t]{2,}/g, " ")
 }
 
+/** A card someone reads aloud. Code, commands, and sums come out. One sentence a line. */
+export function readAloud(input: string): string {
+  let text = speakableWords(String(input || ""))
+  text = text.replace(/```[\s\S]*?```/g, " ")
+  const kept = text.split(/\n/).filter((line) => {
+    const s = line.trim()
+    if (!s) return false
+    if (/^(?:\$ |npm |pnpm |yarn |curl |pip3? |python3? |node |import |from |const |let |var |function |class |if \(|for \(|while \(|SELECT |POST |GET |PUT )/i.test(s)) return false
+    if (/[{}];?\s*$/.test(s) && /[=(){}]/.test(s)) return false
+    return true
+  })
+  text = kept.join(" ").replace(/\s+/g, " ").trim()
+  const parts = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length > 1)
+  return parts.join("\n")
+}
+
 /** Shape a finished answer. Idempotent. Does not invent a fact or change a number. */
 export function blendSpoken(input: string): string {
   const original = String(input || "")

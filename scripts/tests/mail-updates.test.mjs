@@ -15,6 +15,24 @@ const policy = load('mail-update-policy')
 const now = Date.now()
 const prefs = {enabled:true,mobile:true,ending:'1234',accounts:['a@example.com'],onlyImportant:true,since:now-5000}
 const event = {id:'one',account:'a@example.com',thread:'thread',message:'message',from:'sender@example.com',subject:'Hello',preview:'',at:now-1000,observedAt:now,initial:false}
+test('a damaged saved event does not hide valid inbox updates',async()=>{
+ const prefix='mail/updates/user/events/',id='a'.repeat(64),older='b'.repeat(64)
+ const rows=new Map([
+  [prefix+`100-${id}.json`,JSON.stringify({...event,id})],
+  [prefix+`099-${older}.json`,JSON.stringify({...event,id:older,at:now-2000})],
+  [prefix+'105-broken.json','{'],[prefix+'104-null.json','null'],
+  [prefix+'103-shape.json',JSON.stringify({id,at:now})],
+  [prefix+`102-${'c'.repeat(64)}.json`,JSON.stringify({...event,id})],
+  ['mail/updates/other/events/106-'+id+'.json',JSON.stringify({...event,id})],
+ ])
+ const store=load('mail-update-store',{'@/lib/storage':{blob:{list:async()=>[...rows.keys()],getText:async key=>rows.get(key)||null}},'@/lib/mail-update-policy':policy})
+ assert.deepEqual(Array.from(await store.updateFeed('user'),e=>e.id),[id,older])
+ assert.equal(rows.size,7,'invalid records are retained for diagnosis')
+})
+test('inbox storage outages remain failures rather than an apparently empty feed',async()=>{
+ const store=load('mail-update-store',{'@/lib/storage':{blob:{list:async()=>['mail/updates/user/events/100-'+ 'a'.repeat(64)+'.json'],getText:async()=>{throw Error('storage unavailable')}}},'@/lib/mail-update-policy':policy})
+ await assert.rejects(store.updateFeed('user'),/storage unavailable/)
+})
 test('mobile eligibility respects consent, account, first sync, age and Important scope', () => {
   assert.equal(policy.eligibleMobile(event,prefs,true,now),true)
   for(const e of [{...event,initial:true},{...event,account:'b@example.com'},{...event,at:now-6000},{...event,at:now+1000}])assert.equal(policy.eligibleMobile(e,prefs,true,now),false)
@@ -157,4 +175,6 @@ test('WhatsApp webhook records status callbacks instead of discarding them',()=>
   const source=readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts',import.meta.url),'utf8')
   assert.match(source,/recordUpdateProviderStatus\(id, state/)
   assert.ok(source.indexOf('if (statuses.length)')<source.indexOf('if (!msg) return ok()'))
+  assert.match(source,/if \(!waSignatureConfigured\(\)\) return ok\(\)/)
+  assert.ok(source.indexOf('if (!waSignatureConfigured()) return ok()')<source.lastIndexOf('recordUpdateProviderStatus(id, state,'))
 })

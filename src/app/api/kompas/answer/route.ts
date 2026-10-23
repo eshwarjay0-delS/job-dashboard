@@ -14,7 +14,7 @@ import {
   commit, matchBank,
 } from "@/lib/kompasAnswer"
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
-import { blendPrompt, blendSpoken } from "@/lib/kompasBlend"
+import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
 import { desktopCraft, desktopResponsePolicy } from "@/lib/kompasDesktopResponse"
 import {
@@ -423,7 +423,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         // swaps the streamed draft for the finished answer.
         const g = applyGuards(raw.trim(), job.guardFacts, job.allowed)
         const guardedText = g.text
-        let finalText = blendSpoken(voiceRepair(guardedText) || guardedText) || guardedText
+        let finalText = readAloud(blendSpoken(voiceRepair(guardedText) || guardedText) || guardedText) || guardedText
         // Optional post-generation fact-check: the model only POINTS at
         // unsupported claims; code does the replacement, so the fix is
         // guaranteed. Env-gated (costs one light call) like perfACT's
@@ -503,7 +503,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   // Grounding guards before voice repair: unbracket → place/prestige/title/
   // version fixes → figures allowlist. Then the optional fact-check.
   const g = applyGuards(raw.trim(), job.guardFacts, job.allowed)
-  let out = blendSpoken(voiceRepair(g.text) || g.text) || g.text
+  let out = readAloud(blendSpoken(voiceRepair(g.text) || g.text) || g.text) || g.text
   let verified = 0
   if (process.env.KOMPAS_VERIFY === "1" && !degraded && job.factsText && job.orKey) {
     try {

@@ -29,7 +29,20 @@ export async function recordUpdateProviderStatus(providerId:string,status:Provid
 }
 export async function updatePreferences(uid:string){const raw=await blob.getText(updateRoot(uid)+'preferences.json');const p=raw?JSON.parse(raw):null;return validUpdatePreferences(p)?p:{...defaultUpdatePreferences}}
 export async function saveUpdatePreferences(uid:string,p:UpdatePreferences){await blob.put(updateRoot(uid)+'preferences.json',JSON.stringify(p))}
-export async function updateFeed(uid:string):Promise<InboxUpdate[]>{const prefix=updateRoot(uid)+'events/';const keys=(await blob.list(prefix)).filter(k=>k.endsWith('.json')).sort().reverse().slice(0,150);const rows=await Promise.all(keys.map(async k=>JSON.parse(await blob.getText(k)||'null')));return rows.filter(Boolean).sort((a,b)=>b.at-a.at)}
+export async function updateFeed(uid:string):Promise<InboxUpdate[]>{
+ const prefix=updateRoot(uid)+'events/'
+ const keys=(await blob.list(prefix)).filter(k=>k.startsWith(prefix)&&k.endsWith('.json')).sort().reverse().slice(0,150)
+ const rows=await Promise.all(keys.map(async key=>{
+  // Storage failures still propagate for retry; only malformed persisted content is skipped.
+  const raw=await blob.getText(key)
+  let row:Record<string,unknown>|null
+  try{row=JSON.parse(raw||'null')}catch{return null}
+  if(!row||typeof row!=='object'||!['id','account','thread','message','from','subject','preview'].every(field=>typeof row[field]==='string')||!Number.isFinite(row.at)||!Number.isFinite(row.observedAt)||typeof row.initial!=='boolean')return null
+  if(!/^[a-f0-9]{64}$/.test(row.id as string)||!key.endsWith(`-${row.id}.json`))return null
+  return row as InboxUpdate
+ }))
+ return rows.filter((row):row is InboxUpdate=>row!==null).sort((a,b)=>b.at-a.at)
+}
 /** Read only display-safe delivery evidence. Provider message IDs remain server-side. */
 export async function updateDeliveryReceipts(uid:string,eventIds:string[]):Promise<Record<string,MobileDeliveryReceipt>>{const wanted=new Set(eventIds.filter(id=>/^[a-f0-9]{64}$/.test(id)));if(!wanted.size)return {};const root=updateRoot(uid),prefix=root+'deliveries/';const keys=(await blob.list(prefix)).filter(key=>key.endsWith('.json')&&wanted.has(key.slice(prefix.length,-5)));const pairs=await Promise.all(keys.map(async key=>{const id=key.slice(prefix.length,-5);try{const row=JSON.parse(await blob.getText(key)||'null') as Record<string,unknown>|null;if(!row||!['sending','accepted','needs_review','cancelled'].includes(String(row.status))||!Number.isFinite(row.at))return null;const receipt:MobileDeliveryReceipt={status:row.status as MobileDeliveryReceipt['status'],at:Number(row.at)};if(receipt.status==='needs_review'&&typeof row.reason==='string')receipt.reason=row.reason.slice(0,160);return [id,receipt] as const}catch{return null}}));const receipts=Object.fromEntries(pairs.filter((pair):pair is readonly [string,MobileDeliveryReceipt]=>!!pair))
  const statusPrefix=root+'delivery-status/';const statusKeys=(await blob.list(statusPrefix)).filter(key=>key.endsWith('.json'));const ranked:Record<string,{rank:number;receipt:MobileDeliveryReceipt}>={}

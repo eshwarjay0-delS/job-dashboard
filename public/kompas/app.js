@@ -244,7 +244,7 @@ function renderSessions() {
     } else if (sessionOpen(s)) {                                           // stopped; no automatic expiry
       const at = s.pausedAt || Date.now();
       startBtn.textContent = "Continue"; startBtn.onclick = () => continueSession(s);
-      state.textContent = `Stopped ${clockTime(at)}. Continue when ready, or End session.`; state.classList.remove("hidden");
+      state.textContent = `Stopped ${clockTime(at)}. Continue when ready, or End session.` + (s.note ? ` ${s.note.split("\n").length} answers kept from the call.` : ""); state.classList.remove("hidden");
       const end = card.querySelector(".sc-end"); end.classList.remove("hidden"); end.onclick = () => endSession(s);
       card.querySelector(".sc-del").classList.add("hidden");               // a session is ended before it is deleted
       card.classList.add("open");
@@ -667,12 +667,26 @@ function seedIdentity(s) {
 }
 // Stop, ← and the Connect dialog's Back all leave the same way: capture off, the transcript saved, the run kept for Continue, the box closed.
 let leaving = false;
+function sessionRecap(list) {
+  const rows = (list || []).filter((c) => {
+    const q = String(c && c.question || "").replace(/\s+/g, " ").trim();
+    const a = typeof (c && c.answer) === "string" ? c.answer.trim() : "";
+    return q.length > 0 && a.length > 40 && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(q);
+  });
+  return rows.slice(-6).map((c) => {
+    const q = String(c.question).replace(/\s+/g, " ").trim();
+    const first = String(c.answer).split(/\n/)[0].replace(/\s+/g, " ").trim();
+    return q + " — " + first;
+  }).join("\n");
+}
 async function leaveLive() {
   if (leaving) return; leaving = true;                                     // a second click while the run is being stored does nothing
   try {
     if (follow.on) setFollow(false);                                       // Follow along holds its own microphone: it goes off with the box
     if (running && captures.length) { status("Saving the last words…", "live"); try { await flushHeard(2000); } catch {} }   // a phrase still being written down lands in the transcript
     if (running) await stop(false);
+    const note = sessionRecap(cards);
+    if (note && current) { current.note = note; saveSession(current, true); }
     dropScreen();
     await saveRunTranscript(); await pauseRun();
     beat(false); dossierAbort = true; resetLiveState(); openDashboard();
@@ -984,6 +998,25 @@ function showCachedLevel(card) {
   if (cards[idx] === card) renderCard();
   return true;
 }
+function sayAloud(s) {
+  return String(s || "")
+    .replace(/&amp;/gi, " and ")
+    .replace(/\bx-amp\b/gi, "and")
+    .replace(/&gt;=/gi, " at least ")
+    .replace(/&lt;=/gi, " at most ")
+    .replace(/&gt;/gi, " greater than ")
+    .replace(/&lt;/gi, " less than ")
+    .replace(/&quot;|&#39;|&apos;/gi, "")
+    .replace(/>=\s*(\d+)/g, "at least $1")
+    .replace(/<=\s*(\d+)/g, "at most $1")
+    .replace(/>\s*(\d+)/g, "greater than $1")
+    .replace(/<\s*(\d+)/g, "less than $1")
+    .replace(/\s+&\s+/g, " and ")
+    .replace(/[ \t]*;[ \t]*/g, " ")
+    .replace(/\band\s+and\b/gi, "and")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/[ \t]{2,}/g, " ");
+}
 function regenerateForAudience() {
   if (typeof logAction === "function") logAction("regen", { to: $("liveInterviewer").value });
   const c = cards[idx], label = $("liveInterviewer").selectedOptions[0].textContent;
@@ -1058,7 +1091,7 @@ function warmDesktopLevels(card, question) {
       .then((data) => {
         const text = data && data.text;
         if (!text || !String(text).trim()) return;
-        card.desktopByDepth[key] = { answer: sayAnswer(text), meta: "warm" };
+        card.desktopByDepth[key] = { answer: sayAnswer(sayAloud(text)), meta: "warm" };   // symbols as words, then his corrections
         if (cards[idx] === card && desktopResponseKey(card) === key) {
           card.answer = card.desktopByDepth[key].answer;
           card.streaming = false;
@@ -2040,15 +2073,17 @@ async function generateAnswerRequest(question, card, opts = {}) {
   let renderQueued = false;
   const show = (t) => {
     if (card.req !== ctl || isUnavailableAnswer({ degraded: true }, t)) return;
-    card.answer = t.trim() ? t : ["…"];
+    const spoken = sayAloud(t).trim();
+    card.answer = spoken ? spoken : ["…"];
     if (cards[idx] !== card || renderQueued) return;
     renderQueued = true;
     requestAnimationFrame(() => { renderQueued = false; if (cards[idx] === card) renderCard(); });
   };
   const recoverAnswer = (code = "", retryAfterMs = 1000) => {
+    const partial = typeof card.answer === "string" && card.answer.trim().length > 8 && card.answer.trim() !== "…";
     card.streaming = false;
-    card.answer = keepOld ? prevAnswer : [];
-    card.meta = keepOld ? (prevMeta || "") : "";
+    if (!partial) card.answer = keepOld ? prevAnswer : card.answer;
+    card.meta = partial || keepOld ? (card.meta || prevMeta || "") : "";
     const permanent = /AUTH|CREDITS|FORBIDDEN|NOT_CONFIGURED/.test(code);
     const tries = (opts.retries || 0) + 1;
     const retry = !permanent && tries <= 2 && retryAfterMs <= 15000;
@@ -2120,7 +2155,11 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (cards[idx] === card) renderCard();
     logAnswer({ derived: meta.derived || derivedQ || "", derivedBy: derivedBy || "", kind: meta.length && meta.length.kind, tier: meta.tier, lane: meta.timing && meta.timing.lane, voice: meta.voice && `${meta.voice.passed}/${meta.voice.total}`, ms: Math.round(performance.now() - t0), depthKey });
     if (!meta.degraded && !/backup model/.test(card.meta)) { card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta }; }
-    if (directDesktop && !meta.degraded) { card.desktopByDepth = card.desktopByDepth || {}; card.desktopByDepth[responseKey] = { answer: card.answer, meta: card.meta }; warmDesktopLevels(card, card.anchorQ || qText); }
+    if (directDesktop && !meta.degraded) {
+      card.desktopByDepth = card.desktopByDepth || {};
+      card.desktopByDepth[responseKey] = { answer: sayAloud(typeof card.answer === "string" ? card.answer : text), meta: card.meta };
+      warmDesktopLevels(card, card.anchorQ || qText);
+    }
     if (!directDesktop && window.KompasLevels && text && !meta.degraded) {
       const fixed = criticise(card, writeAnchor, text);
       const shaped = window.KompasLevels.fromProse(fixed, writeAnchor);

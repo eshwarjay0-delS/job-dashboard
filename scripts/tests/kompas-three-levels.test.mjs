@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import fs from "node:fs"
 import { questionRegister } from "../../src/lib/kompasAnswer.ts"
 import { desktopQuestionKind, desktopResponsePolicy, levelMetrics, metricsApart } from "../../src/lib/kompasDesktopResponse.ts"
-import { blendSpoken } from "../../src/lib/kompasBlend.ts"
+import { blendSpoken, readAloud } from "../../src/lib/kompasBlend.ts"
 
 const page = fs.readFileSync(new URL("../../public/kompas/index.html", import.meta.url), "utf8")
 const app = fs.readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8")
@@ -16,6 +16,8 @@ test("the desktop offers exactly three asking levels", () => {
   assert.doesNotMatch(live, /value="technical_hr"/)
   assert.doesNotMatch(live, /value="developer"/)
   assert.match(app, /three-level-v4/)
+  assert.match(app, /function sayAloud/)
+  assert.match(app, /warmDesktopLevels\(/)
   assert.match(app, /regenerateForAudience\(\)/)
 })
 
@@ -63,9 +65,12 @@ test("the three levels differ on at least half of the spoken measures", () => {
   assert.equal(architect.relevance, director.relevance)
 })
 
-test("a printed answer says the symbol instead of leaving it as code", () => {
-  assert.equal(blendSpoken("Keep it x-amp; and score >=9."), "Keep it and score at least 9.")
-  assert.equal(blendSpoken("Use &amp; when the floor is &gt;=9."), "Use and when the floor is at least 9.")
+test("a printed answer is one sentence a line and does not keep a code block", () => {
+  const out = readAloud("The name failed.\n```\nconn.retrieve_cert(request)\n```\nThe chain came back. Score >=9.")
+  assert.match(out, /The name failed\./)
+  assert.match(out, /The chain came back\./)
+  assert.match(out, /at least 9/)
+  assert.doesNotMatch(out, /```|retrieve_cert|>=/)
 })
 
 test("switching level on the desktop does not wait on the anchor cache", () => {

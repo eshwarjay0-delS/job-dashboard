@@ -1,0 +1,305 @@
+- document:
+  - main:
+    - navigation:
+      - link "ParakeetAI":
+        - /url: "#top"
+        - img "ParakeetAI"
+      - link "Interview Assistant":
+        - /url: "#top"
+      - link "Features":
+        - /url: "#features"
+      - link "Reviews":
+        - /url: "#reviews"
+      - link "Privacy":
+        - /url: "#privacy"
+      - link "Pricing":
+        - /url: "#pricing"
+      - button "Prepare"
+      - menu:
+        - menuitem "All Prepare tools"
+        - menuitem "Question Bank Browse the questions real candidates were asked, company by company, ranked by how often they come up."
+        - menuitem "Mock Interviews Practice out loud against an AI interviewer that answers back, then read the transcript. Your first mock is free."
+        - menuitem "Resume Maker Build a resume tailored to the role you're chasing, so the call starts from the right story."
+        - menuitem "Headshots Turn one photo into studio-quality headshots for LinkedIn and your resume. Same face, your pick of look."
+      - link "Sign in":
+        - /url: /auth/signin?callbackUrl=/dashboard
+      - link "Try for Free":
+        - /url: /auth/signin?callbackUrl=/dashboard
+    - text: No. 1 Viral App in United States 🇺🇸 Trusted by 1.5M+ people 4.86 - from 340K+ reviews
+    - img "SimilarWeb"
+    - text: "#1 AI Interview Assistant on SimilarWeb"
+    - heading "Your Real-Time AI Interview Assistant" [level=1]
+    - paragraph: Get the right answer while you're still talking, through interviews, sales calls, client meetings, or any conversation where freezing up isn't an option.
+    - link "Try for Free":
+      - /url: /auth/signin?callbackUrl=/dashboard
+    - button "Demo Video"
+    - link "Question Bank Browse the questions real candidates were asked, company by company, ranked by how often they come up. Learn more":
+      - /url: /question-bank
+      - heading "Question Bank" [level=3]
+      - paragraph: Browse the questions real candidates were asked, company by company, ranked by how often they come up.
+      - text: Learn more
+    - link "Mock Interviews Practice out loud against an AI interviewer that answers back, then read the transcript. Your first mock is free. Learn more":
+      - /url: /mock-interview
+      - heading "Mock Interviews" [level=3]
+      - paragraph: Practice out loud against an AI interviewer that answers back, then read the transcript. Your first mock is free.
+      - text: Learn more
+    - link "Resume Maker Build a resume tailored to the role you're chasing, so the call starts from the right story. Learn more":
+      - /url: /resume-maker
+      - heading "Resume Maker" [level=3]
+      - paragraph: Build a resume tailored to the role you're chasing, so the call starts from the right story.
+      - text: Learn more
+    - link "Headshots Turn one photo into studio-quality headshots for LinkedIn and your resume. Same face, your pick of look. Learn more":
+      - /url: /headshots
+      - heading "Headshots" [level=3]
+      - paragraph: Turn one photo into studio-quality headshots for LinkedIn and your resume. Same face, your pick of look.
+      - text: Learn more
+    - heading "Everything You Need, Mid-Conversation" [level=2]
+    - paragraph: Code, speech, and answers, handled live while the call is still happening.
+    - text: Programming
+    - heading "Full Coding Support" [level=2]
+    - paragraph: You can use ParakeetAI for technical calls. It listens for coding questions and reads code shared on your screen, then talks the approach through with you while the call is still going.
+    - button "Learn More"
+    - text: Speech Recognition
+    - heading "Blazing Fast Transcription" [level=3]
+    - paragraph: We use a state-of-the-art transcription model that provides a highly accurate model in recent breaking speed.
+    - text: AI Answers
+    - heading "100% Accurate Responses" [level=3]
+    - paragraph: We chose between the best LLMs available to provide the most accurate answers.
+    - link "Try for Free":
+      - /url: /auth/signin?callbackUrl=/dashboard
+    - text: No credit card required
+    - heading "Your 100% Private Advantage" [level=2]
+    - paragraph: Get real-time answers without distraction or judgment. Completely undetectable, completely yours.
+    - text: 01 Invisible on Screen Share
+    - paragraph: Share your screen while ParakeetAI stays completely invisible to others.
+    - button "See Video"
+    - text: 02 Invisible in Dock
+    - paragraph: The app stays hidden from the Dock, with no icon or activity indicator.
+    - button "See Video"
+    - text: 03 Invisible in Activity Monitor
+    - paragraph: The process has no visible name or icon in Activity Monitor.
+    - button "See Video"
+    - text: 04 Invisible to Tab Switching
+    - paragraph: Switch tabs or windows without platforms detecting that you moved away.
+    - button "See Video"
+    - text: 05 Cursor Undetectability
+    - paragraph: Your cursor stays unchanged when hovering, clicking, or adjusting settings.
+    - button "See Video"
+    - button "See Privacy Tutorial"
+    - heading "We check it stays invisible on every one of these" [level=3]
+    - text: Checked 64 days ago
+    - button "Watch the Zoom invisibility test":
+      - img "Zoom"
+      - text: Zoom Verified
+    - button "Watch the Microsoft Teams invisibility test":
+      - img "Microsoft Teams"
+      - text: Microsoft Teams Verified
+    - button "Watch the Google Meet invisibility test":
+      - img "Google Meet"
+      - text: Google Meet Verified
+    - button "Watch the Webex invisibility test":
+      - img "Webex"
+      - text: Webex Verified
+    - button "Watch the Lark invisibility test":
+      - img "Lark/Feishu"
+      - text: Lark Verified
+    - button "Watch the Amazon Chime invisibility test":
+      - img "Amazon Chime"
+      - text: Amazon Chime Verified
+    - button "Watch the CoderPad invisibility test":
+      - img "Coderpad.io"
+      - text: CoderPad Verified
+    - button "Watch the HackerRank invisibility test":
+      - img "HackerRank"
+      - text: HackerRank Verified
+    - paragraph: Open one to watch that test yourself.
+    - heading "People Trust & Love ParakeetAI" [level=2]
+    - paragraph: Real people. Real conversations. Real confidence.
+    - button "Play customer video"
+    - text: JD Jane D. Jan 17, 2025
+    - paragraph: If I'm honest, there were absolutely zero faults. It is really a game changer. I've already recommended it to all my friends and family. Thank you for creating such an amazing app!
+    - button "Play customer video"
+    - button "Play customer video"
+    - text: RS Rahul S. Apr 29, 2025
+    - paragraph: I had no issues during the call. The app was straightforward and easy to use. It is well-designed, and there is no need to make any changes to it.
+    - button "Play customer video"
+    - button "Play customer video"
+    - text: JD Jane D. Jan 17, 2025
+    - paragraph: If I'm honest, there were absolutely zero faults. It is really a game changer. I've already recommended it to all my friends and family. Thank you for creating such an amazing app!
+    - button "Play customer video"
+    - button "Play customer video"
+    - text: RS Rahul S. Apr 29, 2025
+    - paragraph: I had no issues during the call. The app was straightforward and easy to use. It is well-designed, and there is no need to make any changes to it.
+    - button "Play customer video"
+    - heading "Before, During, And After The Call." [level=2]
+    - paragraph: ParakeetAI runs in the background, knows your material, and handles the call from start to notes.
+    - text: Language English Auto Answer Edit session 01
+    - heading "Auto Answer" [level=3]
+    - paragraph: Detects questions live and suggests answers, so you're never caught blank.
+    - text: Meeting Started? Google Meet Start Session Meeting Started? Microsoft Teams Start Session 02
+    - heading "Auto-detect meetings" [level=3]
+    - paragraph: Spots meetings as they start and asks if you want to join, with no setup mid-call.
+    - text: Feb 02, 2026 System Design Notes Uploaded DOCX 680 KB Jan 21, 2026 Sales Bible Uploaded PDF 2.4 MB Mar 14, 2026 React TLDR Uploaded PDF 1.1 MB 03
+    - heading "Documents" [level=3]
+    - paragraph: Upload briefs, notes, or playbooks to reference live during your call.
+    - text: "04"
+    - heading "AI Notes" [level=3]
+    - paragraph: Key points, action items, and decisions, summarized after every call.
+    - text: Real Session
+    - paragraph: Connect to your actual call by sharing the call tab.
+    - text: Select Real Mock Session
+    - paragraph: Practice against an AI interviewer instead of a Real Session.
+    - text: Select Mock 05
+    - heading "Mock Interview" [level=3]
+    - paragraph: Join a real call, or practice against an AI interviewer. Your first mock interview is free.
+    - link "Try for Free":
+      - /url: /auth/signin?callbackUrl=/dashboard
+    - text: No credit card required
+    - heading "Transparent Pricing Options" [level=2]
+    - paragraph: Subscribe for unlimited peace of mind, pick just the Prepare tools you need, or buy credits and use them whenever.
+    - group "Pricing options":
+      - button "Unlimited" [pressed]
+      - button "Credits"
+      - button "Custom"
+    - heading "Unlimited" [level=3]
+    - text: Recommended
+    - paragraph: Stop counting. Everything covered, for as long as you need it.
+    - group "Show subscription prices as":
+      - button "Total"
+      - button "Per month" [pressed]
+      - button "Per call"
+    - group "Unlimited plans":
+      - button "Monthly Most popular $149.90 / Month" [pressed]
+      - button "Yearly Best value $49.99 / Month $599.90 / Year"
+    - list:
+      - listitem: Unlimited call sessions (& mock)
+      - listitem: Full privacy mode
+      - listitem: Unlimited resume PDF downloads
+      - listitem: Unlimited headshots
+      - listitem: Full Question Bank access
+    - link "Go Unlimited · Monthly $149.90":
+      - /url: /auth/signin?callbackUrl=/dashboard
+    - text: or, only need a week?
+    - link "Weekly plan for $78.00 / week":
+      - /url: /auth/signin?callbackUrl=/dashboard
+    - text: Top Models From OpenAI, Anthropic & Google
+    - button "Refund policy Learn more"
+    - button "How do credits work? See video"
+    - text: Pay with
+    - img "Visa": VISA
+    - img "Mastercard"
+    - img "American Express": AMEX
+    - img "Apple Pay": Pay
+    - img "Google Pay": Pay
+    - img "UPI"
+    - img "PhonePe"
+    - heading "Your Advantage, Anywhere" [level=2]
+    - paragraph: Desktop app, web, or mobile. Same powerful answers, wherever you are.
+    - heading "Native Desktop App" [level=3]
+    - paragraph: The desktop app runs quietly in the background, listening to your call and surfacing the best answers in real time. No switching windows.
+    - link "Download for Desktop":
+      - /url: /auth/desktop
+    - heading "Works directly on Your Browser" [level=3]
+    - paragraph: Access ParakeetAI instantly from your browser. Same answers, zero setup.
+    - link "Try for Free":
+      - /url: /auth/signin?callbackUrl=/dashboard
+    - button "Web vs App"
+    - img "ParakeetAI running in a browser"
+    - heading "Works on Your Phone" [level=3]
+    - paragraph: Same web app, works just as well on iOS and Android.
+    - link "Try for Free":
+      - /url: /auth/signin?callbackUrl=/dashboard
+    - button "Mobile vs App"
+    - img "ParakeetAI running on a phone"
+    - heading "Frequently Asked Questions" [level=2]
+    - button "Features 8" [pressed]
+    - button "Privacy 5"
+    - button "Billing 4"
+    - paragraph:
+      - text: Couldn't find what you were looking for?
+      - button "Talk to us here"
+    - button "What languages does ParakeetAI support?":
+      - heading "What languages does ParakeetAI support?" [level=3]
+    - paragraph: ParakeetAI supports 50+ languages — you'll find the full list in the language dropdown when you start a session. It listens for one language at a time, so if you switch languages mid-call, update the session language to match.
+    - button "Does ParakeetAI support coding calls?":
+      - heading "Does ParakeetAI support coding calls?" [level=3]
+    - paragraph: Yes. ParakeetAI offers full coding support, including code suggestions and explanations, and it works in both interviews and regular calls.
+    - button "Can I give ParakeetAI instructions to follow during the call?":
+      - heading "Can I give ParakeetAI instructions to follow during the call?" [level=3]
+    - paragraph: ParakeetAI uses your uploaded CV or resume, any documents you've added, and anything you type into the Instructions field when you create a session. It holds up to 20,000 characters — a whole job description fits; longer material belongs in a document. You can also send ParakeetAI messages during the call itself.
+    - button "Can I use ParakeetAI for a phone call?":
+      - heading "Can I use ParakeetAI for a phone call?" [level=3]
+    - paragraph: Yes. ParakeetAI supports phone calls over Google Voice. Start a session in the browser and click the phone icon for setup instructions.
+    - button "Does ParakeetAI have a mobile app?":
+      - heading "Does ParakeetAI have a mobile app?" [level=3]
+    - paragraph: "A native ParakeetAI mobile app is on its way to the App Store and Google Play, but it isn't available to download just yet. In the meantime, use the mobile-optimized version directly in your browser: no download needed. Visit parakeet-ai.com on your phone and sign in."
+    - button "What operating systems does the ParakeetAI desktop app support?":
+      - heading "What operating systems does the ParakeetAI desktop app support?" [level=3]
+    - paragraph: The desktop app runs on Windows and macOS; in a browser, ParakeetAI needs desktop Chrome, which is also the way to use it on Linux. Other browsers aren't supported for live sessions, and the desktop app works whatever your default browser is.
+    - button "Which AI model does ParakeetAI use?":
+      - heading "Which AI model does ParakeetAI use?" [level=3]
+    - paragraph: You can choose the AI model when you create or edit a session, from the model dropdown. Options include several Gemini, GPT, and Claude models, with a fast default selected for you. Lighter models respond faster; larger models can give more detailed answers. If your remembered model ever changes on its own, an app update either reset it to the current default or moved a retired model to its replacement (Claude 4.5 Sonnet now runs as Claude Sonnet 5, and GPT-5.6 Sol as GPT-5.6 Terra) — just pick your model again.
+    - button "Can I use ParakeetAI for meetings or online exams, not just interviews?":
+      - heading "Can I use ParakeetAI for meetings or online exams, not just interviews?" [level=3]
+    - paragraph: Yes. When you create a session you choose the mode — interview, or regular call for meetings and other conversations. It also works during online exams. Interview mode additionally uses your uploaded CV or resume; regular call mode doesn't, since it's built for conversations where that isn't relevant. Everything else — documents, instructions, transcripts, notes — works the same in both.
+    - paragraph: ParakeetAI is built for conversations where AI assistance is permitted. Sales calls, internal meetings, mock calls, language practice, self-study. Check the rules first. If your company, school, or caller says no, respect it. And if an employer wants us gone, we enforce it for them.
+    - paragraph:
+      - text: We honor blocklist requests from any employer. Send us your domain or hiring process to
+      - link "compliance@parakeet-ai.com":
+        - /url: mailto:compliance@parakeet-ai.com
+      - text: and we will blacklist it.
+    - link "Request a blocklist":
+      - /url: mailto:compliance@parakeet-ai.com?subject=Blocklist%20request
+    - heading "Ready To Answer Every Question?" [level=2]
+    - paragraph: Join 1.5M+ users. No credit card required.
+    - link "Try for Free":
+      - /url: /auth/signin?callbackUrl=/dashboard
+    - link "ParakeetAI":
+      - /url: "#top"
+      - img "ParakeetAI"
+    - text: Our other projects
+    - link "Kismo":
+      - /url: https://kismo.app/
+    - link "Tarko AI":
+      - /url: https://www.tarko-ai.com/
+    - paragraph: © 2026, ParakeetAI d.o.o. All rights reserved.
+    - link "Features":
+      - /url: "#features"
+    - link "Privacy":
+      - /url: "#privacy"
+    - link "Pricing":
+      - /url: "#pricing"
+    - button "Support"
+    - link "Creator Program":
+      - /url: https://www.megasheet.app/parakeet-ai
+    - link "Comparisons":
+      - /url: /compare
+    - link "Blog":
+      - /url: https://blog.parakeet-ai.com/
+    - link "Privacy Policy":
+      - /url: /privacy-policy
+    - link "Terms of Service":
+      - /url: /terms-and-conditions
+    - link "Refund Policy":
+      - /url: /refund-policy
+    - button "Cookie Settings"
+    - link "X (Twitter)":
+      - /url: https://x.com/parakeet_ai
+      - img
+    - link "TikTok":
+      - /url: https://www.tiktok.com/@parakeetai
+      - img
+    - link "YouTube":
+      - /url: https://www.youtube.com/@parakeetai
+      - img
+    - link "Facebook":
+      - /url: https://www.facebook.com/profile.php?id=61564378573523
+      - img
+    - link "Instagram":
+      - /url: https://www.instagram.com/parakeetai
+      - img
+    - link "LinkedIn":
+      - /url: https://www.linkedin.com/company/parakeetai
+      - img
+    - region "Notifications alt+T"
+  - alert

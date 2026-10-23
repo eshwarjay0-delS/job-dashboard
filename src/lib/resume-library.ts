@@ -42,6 +42,19 @@ export function tailoredFileName(job: { role?: string; company?: string }, hash1
   return `${title} ${TAILORED_MARK}__${hash}.docx`
 }
 
+/** Content-address an imported original without discarding its recognizable name.
+ * Two different source resumes can legitimately share a filename; the digest keeps
+ * both originals while making an identical retry idempotent. */
+export function importedOriginalFileName(filename: string, sha256: string): string {
+  const visible = pathlessName(filename).replace(/\.docx$/i, "")
+    .replace(/[^A-Za-z0-9._ ()-]/g, "_").replace(/^[. ]+/, "").slice(0, 150) || "Resume"
+  const stem = visible.replace(/__[a-f0-9]{16}$/i, "")
+  const digest = /^[a-f0-9]{64}$/i.test(sha256) ? sha256.slice(0, 16).toLowerCase() : "0".repeat(16)
+  return `${stem}__${digest}.docx`
+}
+
+const pathlessName = (filename: string): string => String(filename || "").replace(/\\/g, "/").split("/").pop() || ""
+
 /** Folders for kinds of work that are not security: a plain security role never goes in one of these. */
 const NOT_SECURITY = new Set(["Data and Software Engineering", "DevOps and Platform Engineering", "Software Validation and Quality"])
 
