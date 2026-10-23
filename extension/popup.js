@@ -16,13 +16,15 @@ let renderedResumes = []    // the exact list currently shown (app + local, merg
 // ────────────────────────────────────────────────────────────────────────────
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const stored = await chrome.storage.sync.get(["appUrl", "claudeKey"])
+  const stored = await chrome.storage.sync.get(["appUrl"])
   appUrl = stored.appUrl || DEFAULT_URL
+  let savedKey = ""
+  try { savedKey = await globalThis.MarketFitClaudeKey.readClaudeKey(chrome.storage) } catch {}
 
   // Sync URL fields
   setEl("setup-url-input", appUrl)
   setEl("sett-url", appUrl)
-  setEl("sett-key", stored.claudeKey || "", "value")
+  setEl("sett-key", savedKey, "value")
   setHref("open-app-link", appUrl)
   setHref("open-app-t", appUrl + "/dashboard")
   setHref("jobs-link", appUrl + "/dashboard/jobs")
@@ -772,8 +774,9 @@ async function saveSettings() {
   const key = ge("sett-key")?.value.trim() || ""
   appUrl = url
   const toSave = { appUrl: url }
-  if (key) toSave.claudeKey = key
   await chrome.storage.sync.set(toSave)
+  // The AI key stays on this computer (claude-key.js), never in synced storage.
+  try { await globalThis.MarketFitClaudeKey.saveClaudeKey(chrome.storage, key) } catch {}
   setHref("open-app-link", appUrl)
   setHref("open-app-t", appUrl + "/dashboard")
   setHref("jobs-link", appUrl + "/dashboard/jobs")
@@ -858,7 +861,7 @@ async function doTailor() {
   const timers = steps.map(([d, p, m]) => setTimeout(() => setTailorProgress(p, m), d))
 
   let claudeKey = ""
-  try { const s = await chrome.storage.sync.get(["claudeKey"]); claudeKey = s.claudeKey || "" } catch {}
+  try { claudeKey = await globalThis.MarketFitClaudeKey.readClaudeKey(chrome.storage) } catch {}
 
   try {
     const res = await fetch(appUrl + "/api/tailor", {
