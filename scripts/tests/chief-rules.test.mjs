@@ -27,8 +27,12 @@ test('every user\'s Chief works under the appointed rules', () => {
     const prompt = chiefSystemPrompt(owner)
     assert.match(prompt, /CHIEF RULES \(appointed by the owner/)
     for (const r of rules.CHIEF_RULES) assert.ok(prompt.includes(r.rule), r.id)
+    assert.match(prompt, /You do the whole job while the user is away/)
+    assert.match(prompt, /chief_watch/)
+    assert.ok(!prompt.includes('$50 a month') && !prompt.includes('$50,000'), 'the article money is not an instruction')
   }
   assert.ok(rules.CHIEF_RULES.some(r => r.id === 'nothing-without-yes') && rules.CHIEF_RULES.some(r => r.id === 'blank-price'))
+  assert.equal(rules.CHIEF_RULES[0].id, 'whole-work-away')
 })
 
 test('the owner\'s own facts reach only his own Chief', () => {
@@ -39,5 +43,6 @@ test('the owner\'s own facts reach only his own Chief', () => {
   }
   const his = chiefSystemPrompt(true)
   for (const fact of ['646-820-3671', 'eshwarjay05@gmail.com', 'jayeshwar44@gmail.com', 'TekBlu', 'Regards, Eshwar']) assert.ok(his.includes(fact), fact)
+  assert.match(someone, /You do the whole job while the user is away/)
   assert.match(readFileSync(new URL('../../src/app/api/agent/chat/route.ts', import.meta.url), 'utf8'), /chiefSystemPrompt\(owner\)/)
 })

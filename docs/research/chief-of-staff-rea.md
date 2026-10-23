@@ -284,11 +284,18 @@ He first wrote "actually 50 to 100$ a month..", then "Okay forget money all of t
 the article's $50,000 nor $50 to $100 is a target or a budget. The point is a Chief who does the whole work while he is
 away. Showing each job's cost stays useful for control, not as a money goal.
 
-### Proposed next slices (not approved yet)
+### Standing order, same day
 
-1. **Goal to jobs:** the owner states a goal on WhatsApp; the Chief proposes the jobs with day and time; the owner
-   says yes; they run.
-2. **The brief:** one "Me / candidates / voice / Never" card the Chief reads before every job.
-3. **Blank-for-owner fields:** any rate, price or commitment is left blank and asked for, never filled.
-4. **Friday one-page report** and the pending morning report.
-5. **A jobs page:** every scheduled job, its last run, its cost and a Pause button.
+He said to take the rest seriously. The money stays a metaphor. The work does not.
+
+Every user's Chief now has the rule. While the user is away, the Chief does the whole job. The Chief writes each job with a day and a time, and that job starts without being asked again. A lasting goal is set with the watch that already exists. In the same turn the Chief searches, reads, and drafts. A sensitive draft waits on an approval card. Nothing goes out until the user taps. When the user is back, the desk is the finished work and the decisions. A plan or a reminder is not finished work.
+
+### Still to build
+
+1. **Goal to jobs:** the owner states a goal on WhatsApp; the Chief proposes the jobs with day and time; the owner says yes; they run.
+2. **The brief:** one card the Chief reads before every job: who he is, who the work is for, his voice, and what never happens without his yes.
+3. **Blank fields:** a rate or a commitment is left blank for him. It is not filled in.
+4. **Friday one-page report** and the morning report.
+5. **A jobs page:** every scheduled job, its last run, and a Pause button.
+
+Do not copy the article's list, drafts, promo code, or wording into MarketFit. A live watch was not run in this session.
