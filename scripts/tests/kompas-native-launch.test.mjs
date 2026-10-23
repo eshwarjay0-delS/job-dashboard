@@ -20,8 +20,12 @@ test("MarketFit mounted Kompas preserves the existing voice and answer pipeline"
   assert.match(shell, /\/api\/kompas\/speech/);
   assert.match(shell, /\/api\/kompas\/humanize/);
   assert.match(shell, /\/api\/kompas\/credits/);
-  assert.match(shell, /window\.kompasDesktop/);
-  assert.match(shell, /\/kompas\/api\/transcribe/);
+  // Since 14 Oct (67f59869) speech is MarketFit's own: the page's /api/transcribe becomes /api/kompas/speech, and
+  // answers go to /api/kompas/answer. The desktop bridge is the native shell's preload, not this mount.
+  const heard = shell.indexOf("url.pathname === '/api/transcribe'"), speech = shell.indexOf("url.pathname = '/api/kompas/speech'");
+  assert.ok(heard > 0 && speech > heard && shell.indexOf("url.pathname ===", heard + 1) > speech, '/api/transcribe is answered by /api/kompas/speech');
+  assert.match(shell, /headers\.set\('x-speech-for', 'transcribe'\)/);
+  assert.match(shell, /url\.pathname = '\/api\/kompas\/answer'/);
   assert.match(shell, /mountKompasHtml/);
 });
 
@@ -31,5 +35,7 @@ test("the dynamic MarketFit Kompas route mounts the canonical perfACT release", 
   assert.match(route, /mountKompasHtml/);
   assert.match(next, /source: "\/kompas"/);
   assert.match(next, /destination: "\/api\/kompas\/shell"/);
-  assert.match(next, /source: "\/kompas\/:path\+"/);
+  // Self-hosted: no Kompas path is forwarded to the old copilot deployment any more.
+  assert.doesNotMatch(next, /source: "\/kompas\/:path\+"/);
+  assert.doesNotMatch(next, /destination: `?\$\{?[A-Z_]*KOMPAS_API_ORIGIN/);
 });

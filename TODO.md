@@ -1,3 +1,17 @@
+## 2026-10-23 (night, later) — Kompas showed "Update ready" forever; release tests rewritten; 739 of 742
+
+**Found:** Kompas compares its build with `/version.json`. That was a hand-kept root copy; this morning's `05fb5622`
+updated `public/kompas/version.json` but not the root, so every Kompas session on master shows "⟳ Update ready — reload",
+and reloading never clears it. **Visible**: the pill. Fixed in `src/lib/kompas-shell.ts` (the check now reads
+`/kompas/version.json`, written beside `index.html`) and the root copy re-synced. Production is not reachable from this
+environment, so not observed live.
+
+**Tests:** the four release tests that described the proxy removed on 14 Oct now check the self-hosted Kompas (one also
+requires the page's build and `version.json` to agree, and fails on the old shim). The speech privacy check is exact now
+(one provider reply is read, only to test it) and still fails if that text is logged or put in an error (tried both).
+Full suite **739 of 742**; typecheck clean; lint 0 errors. The 3 left are the answer-format tests: his two 4 Oct fixes
+lost on 14 Oct, and the heading test tied to them — his decision.
+
 ## 2026-10-23 (night) — The real test list: 30 red, now 8, and CI's lint error gone
 
 **Asked:** "Run all the agents you got!" One agent installed the project's own packages (`npm ci`, lockfile only) and

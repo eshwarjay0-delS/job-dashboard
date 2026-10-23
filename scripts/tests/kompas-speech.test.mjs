@@ -153,7 +153,13 @@ test('nothing a person said is stored or logged by the server, and a refusal nev
     assert.ok(!/blob\.|storage|writeFile|\.put\(/.test(code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')), file + ': nothing is written anywhere')
   }
   const lib = read('src/lib/kompasSpeech.ts')
-  assert.ok(!/response\.text\(\)|\.message\b/.test(lib), 'the provider\'s message is never read into an error')
+  // The provider's message is never read into an error. Since fbdd8df7 (14 Oct) one 400 reply is read, only to ask
+  // whether it names the response format; the text goes nowhere else.
+  assert.ok(!/\.message\b/.test(lib), 'no provider message is read')
+  assert.equal(lib.match(/response\.text\(\)/g)?.length, 1, 'one reply body is read, no more')
+  assert.match(lib, /const detail = await response\.text\(\)\.catch\(\(\) => ''\)\n\s*if \(mentionsResponseFormat\(detail\)\) \{/, 'and only to test it')
+  assert.equal(lib.match(/\bdetail\b/g)?.length, 4, 'detail: the parameter, its lowercase copy, the read and the one test, nowhere else')
+  assert.match(lib, /function mentionsResponseFormat\(detail: string\): boolean \{\n\s*const lower = detail\.toLowerCase\(\)\n\s*return lower\.includes\('response_format'\) \|\| lower\.includes\('verbose_json'\)\n\}/, 'the test answers yes or no')
   assert.ok(/scheduleSttRecord\(\{/.test(lib) && /seconds: seconds \?\? estSeconds/.test(lib) && /app: "kompas"/.test(lib) && /ms: Date\.now\(\) - began/.test(lib), 'the ledger gets the seconds of sound and the time taken, under Kompas')
   assert.ok(/keysFor\(`kompas:\$\{input\.purpose\}`/.test(lib), 'the key comes through the admin\'s checklist')
   assert.ok(/if \(!cleanupAllowed\(text, tidy\)\) return \{ tidy: text, kept: "raw"/.test(lib), 'a tidied text that fails the guard is answered with the person\'s own words')

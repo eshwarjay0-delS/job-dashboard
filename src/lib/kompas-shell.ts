@@ -98,6 +98,14 @@ export function mountKompasHtml(html: string): string {
       input = input instanceof Request ? new Request(url, input) : url;
       return nativeFetch(input, options);
     }
+    // The build check reads Kompas's own stamp, written beside index.html in the same change. The root
+    // /version.json was a second copy kept by hand; on 23 Oct it lagged a release, so every session showed
+    // "Update ready" and a reload never cleared it.
+    if (url.origin === location.origin && url.pathname === '/version.json') {
+      url.pathname = '/kompas/version.json';
+      input = input instanceof Request ? new Request(url, input) : url;
+      return nativeFetch(input, options);
+    }
     if (url.origin === location.origin && (url.pathname.startsWith('/api/') || url.pathname === '/version.json' || url.pathname === '/release.json')) {
       if (!url.pathname.startsWith('/api/kompas/')) {
         // Self-hosted since 2026-10-14 (perfACT sunset): the remaining /api/*
