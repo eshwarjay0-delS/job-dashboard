@@ -26,7 +26,10 @@ The private run record, review API, accepted-edit reducer, and reviewed-DOCX bui
 - Focused resume set: 42/42 across keyword targets, candidate evidence, repair preservation, quality/precision, and review approval.
 - TypeScript: pass.
 - Scoped ESLint: 0 errors; four warnings already present in the result page before this slice.
-- Production build and deployment evidence are pending at the time this note was created.
+- Production build: 157 routes, pass, with the same nine existing dynamic-filesystem tracing warnings.
+- PR #51 preview: success — `6g7LeriMXF463s77CZcF6GeGJHzn`.
+- Merge commit: `8cf1e75ef1b530d1a2fc6bec9458db4bcf2cc3c4`.
+- Exact merge commit production deployment: success — `CLiCAJHaWa8PK2tkzoVRqsENZ6mU`.
 
 ## Limits and next acceptance
 
