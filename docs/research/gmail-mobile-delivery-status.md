@@ -21,3 +21,7 @@ Nineteen focused checks cover consent, account isolation, cursor recovery, no-bl
 ## Limits and next action
 
 No real Gmail account was read and no WhatsApp message was sent. This code does not configure an approved Meta template, enable the scheduler, subscribe the production WhatsApp app to status callbacks or prove handset delivery. After deployment, configure those prerequisites and run one controlled opted-in device acceptance, recording accepted, delivered and read independently.
+
+## Release evidence
+
+Commit `538d77d35f4bcaad03e990a74aad6a23612f5c28` reached `master` and Vercel reported a successful deployment. The broader Gmail regression set passed 122 of 122 checks. Local production compilation reached the font-resolution step, where this runner could not resolve Next's Google Font module; the hosted build completed successfully. Live handset delivery remains unverified and is not inferred from either unit tests or deployment success.
