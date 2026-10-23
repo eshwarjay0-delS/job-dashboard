@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { adminOf } from "@/lib/adminAccess"
 import { crawlSearchOrFilter } from "@/lib/crawl/search"
+import { requiresSecurityClearance } from "@/lib/contract-jobs"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 
 export const runtime = "nodejs"
@@ -19,13 +20,15 @@ export async function GET(req: NextRequest) {
   const workType = searchParams.get("work_type") ?? "contract"
   const portal = (searchParams.get("portal") ?? "").trim().slice(0, 40)
   const limit = Math.min(Math.max(Number(searchParams.get("limit")) || 20, 1), 100)
+  const excludeClearance = searchParams.get("clearance") !== "include"
+  const fetchLimit = excludeClearance ? Math.min(limit * 4, 100) : limit
 
   const service = createServiceClient()
   let query = service.from("mfit_crawl_jobs")
     .select("id,portal,firm,title,location,work_type,engagement,pay_range,posted_at,url,last_seen_at,description")
     .eq("active", true)
     .order("last_seen_at", { ascending: false })
-    .limit(limit)
+    .limit(fetchLimit)
 
   if (workType !== "all") query = query.eq("work_type", workType)
   if (portal) query = query.eq("portal", portal)
@@ -34,7 +37,18 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ ok: false, jobs: [], reason: error.message })
-  return NextResponse.json({ ok: true, jobs: data ?? [], work_type: workType })
+  const rows = data ?? []
+  const allowedJobs = excludeClearance
+    ? rows.filter(job => !requiresSecurityClearance(`${job.title || ""} ${job.description || ""}`))
+    : rows
+  const jobs = allowedJobs.slice(0, limit)
+  return NextResponse.json({
+    ok: true,
+    jobs,
+    work_type: workType,
+    clearance: excludeClearance ? "excluded" : "included",
+    excluded_clearance: excludeClearance ? rows.length - allowedJobs.length : 0,
+  })
 }
 
 // POST /api/crawl/jobs — admin-only manual crawl trigger (body: { portals?: string[] }).

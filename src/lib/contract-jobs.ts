@@ -12,3 +12,31 @@ export function contractTypes(text:string, employmentType=''):ContractType[]{
  return out
 }
 export function applicationUrl(value:string):string|null{try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password?u.href:null}catch{return null}}
+
+/**
+ * The owner's standing search preference excludes clearance roles. Match only
+ * explicit job requirements, not ordinary prose about secure systems or a
+ * candidate saying they have no clearance. “Not required initially” is still
+ * a clearance role because the qualification is merely deferred.
+ */
+export function requiresSecurityClearance(text:string):boolean{
+ const t=(text||'').toLowerCase().replace(/[‐‑‒–—]/g,'-').replace(/\s+/g,' ')
+ if(!/clearance|public trust|ts\s*[\/-]\s*sci|top secret|\bsc[- ]cleared\b|\bdv[- ]cleared\b/.test(t))return false
+
+ // Remove only complete, unconditional no-clearance statements. Any separate
+ // requirement in the same posting remains available to the checks below.
+ const scan=t
+  .replace(/\bno (?:active |current )?(?:security )?clearance (?:is )?(?:required|needed)\b/g,' ')
+  .replace(/\b(?:security )?clearance (?:is )?not (?:required|needed)(?!\s+(?:initially|at first|at the start))\b/g,' ')
+  .replace(/\bdoes not require\b.{0,30}\bclearance\b/g,' ')
+
+ const required=[
+  /\b(?:active|current|existing)\b.{0,35}\b(?:security )?clearance\b/,
+  /\b(?:must|required|mandatory|need(?:ed)?|preferred|eligible|eligibility|ability|able|willing)\b.{0,70}\b(?:security )?(?:clearance|public trust)\b/,
+  /\b(?:clearance|public trust)\b.{0,70}\b(?:required|mandatory|must|needed|preferred|eligible|eligibility|obtain|maintain|sponsor(?:ship)?)\b/,
+  /\b(?:obtain|maintain|hold|possess)\b.{0,40}\b(?:security )?(?:clearance|public trust)\b/,
+  /\bclearance sponsorship\b|\b(?:secret|top secret|dod|doe) clearance\b|\bts\s*[\/-]\s*sci\b|\btop secret\b|\bsc[- ]cleared\b|\bdv[- ]cleared\b|\bpublic trust\b/,
+ ]
+ if(required.some(re=>re.test(scan)))return true
+ return false
+}
