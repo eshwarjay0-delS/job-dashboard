@@ -210,9 +210,7 @@ body{
 .send:hover{background:var(--surface-2)}
 
 .content{position:relative;padding:16px 42px 10px}
-.nav{position:absolute;top:14px;width:28px;height:28px;border-radius:50%;border:1px solid var(--line-strong);background:var(--surface);color:var(--muted);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .18s var(--ease)}
-.nav:hover{box-shadow:var(--shadow-sm);color:var(--ink);transform:translateY(-1px)}
-.nav-prev{left:10px}.nav-next{right:10px}
+/* Prev/Next response toggles live on the action bar as pills (owner, 23 Oct 2026) — no absolute-positioned corner buttons. */
 .card{animation:cardIn .26s var(--ease) both}
 @keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .q{display:flex;gap:9px;font-size:16px;line-height:1.55;margin-bottom:14px;max-height:7.75em;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;transition:opacity .12s linear}
@@ -665,8 +663,7 @@ h1 em,h2 em{font-family:var(--accent-serif);font-style:italic;font-weight:600;co
 .manual{border-radius:999px;padding:0 16px;background:var(--bg)}
 .manual:focus{border-color:var(--ink);box-shadow:0 0 0 2px rgba(163,18,28,.18)}
 .send{font-family:var(--strong)}
-.nav{background:var(--surface);border-color:var(--line-strong)}
-.nav:hover{transform:none;box-shadow:none;border-color:var(--ink)}
+
 .caption{background:var(--bg)}
 .cap-who,.a-meta,.statusline,.dossier-text{font-family:var(--mono);letter-spacing:.04em}
 .cap-who{font-size:10px;letter-spacing:.14em}
@@ -965,7 +962,7 @@ html:not(.kd) .view.view-auth .auth-card{box-shadow:0 30px 80px -30px rgba(0,0,0
 /* Icons are antique gold. An on-state keeps its own colour so you can still tell what is on. */
 :root{--gold:#9a7636;--gold-deep:#6e5221}
 html.theme-dark{--gold:#c9a45c;--gold-deep:#e2c27f}
-.icon-btn,.si-ico,.side-item.on .si-ico,.mi-ico,.send,.nav,.step{color:var(--gold)}
+.icon-btn,.si-ico,.side-item.on .si-ico,.mi-ico,.send,.step{color:var(--gold)}
 .icon-btn:hover,.send:hover,.nav:hover,.step:hover,.side-item:hover .si-ico{color:var(--gold-deep)}
 .si-ico,.side-item.on .si-ico{opacity:1}
 

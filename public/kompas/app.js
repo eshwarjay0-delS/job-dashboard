@@ -817,10 +817,7 @@ function renderCard() {
   $("question").textContent = draft || c.question;
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const ul = $("answer"), keep = ul.scrollTop;
-  const lines = answerLines(c.answer);
-  const spoken = lines.map(l => l.t).join("\n");
-  const raw = Array.isArray(c.answer) ? c.answer.join("\n") : String(c.answer || "");
-  if (spoken && spoken !== raw) c.answer = spoken;
+  const lines = answerLines(c.answer);   // rendering is read-only (book rule, 23 Oct): showing a card never rewrites its stored answer, so flipping back and forth cannot lose or flatten a generated response
   ul.innerHTML = "";
   lines.forEach(({ t, kind, lang }) => {
     const li = document.createElement("li");
@@ -988,6 +985,11 @@ function stashShown(card) {
   if (text.length < 40) return;
   card.byDepth = card.byDepth || {};
   card.byDepth[`${shownLevel}|${liveConfig().mode}|${liveConfig().length || ""}`] = { answer: card.answer, meta: card.meta || "" };
+  if (desktopResponses()) {   // the desktop store too, keyed by the level being left — without this, a level switch on desktop could strand the answer that was on screen (book rule, 23 Oct)
+    card.desktopByDepth = card.desktopByDepth || {};
+    const q = String(card.anchorQ || card.question || "").trim();
+    card.desktopByDepth[`three-level-v4|${shownLevel}|${liveConfig().mode}|${liveConfig().length || ""}|${q}`] = { answer: card.answer, meta: card.meta || "" };
+  }
 }
 function showCachedLevel(card) {
   const hit = card && card.byDepth && card.byDepth[levelKey()];
@@ -2082,7 +2084,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const recoverAnswer = (code = "", retryAfterMs = 1000) => {
     const partial = typeof card.answer === "string" && card.answer.trim().length > 8 && card.answer.trim() !== "…";
     card.streaming = false;
-    if (!partial) card.answer = keepOld ? prevAnswer : card.answer;
+    const prevReal = (typeof prevAnswer === "string" && prevAnswer.trim().length > 8 && prevAnswer.trim() !== "…") || (Array.isArray(prevAnswer) && prevAnswer.join("\n").trim().length > 8 && !/^(…|Preparing…)$/.test(String(prevAnswer[0] || "").trim()));
+    if (!partial && prevReal) card.answer = prevAnswer;   // a failed (re)generation never takes the last good answer with it (book rule, 23 Oct)
+    else if (!partial && keepOld) card.answer = prevAnswer;
     card.meta = partial || keepOld ? (card.meta || prevMeta || "") : "";
     const permanent = /AUTH|CREDITS|FORBIDDEN|NOT_CONFIGURED/.test(code);
     const tries = (opts.retries || 0) + 1;

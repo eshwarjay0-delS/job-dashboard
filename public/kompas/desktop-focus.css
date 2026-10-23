@@ -1,5 +1,4 @@
 /* Higher specificity than the installed Electron panel stylesheet. */
-#desktopDetailsBtn[hidden] { display:none!important; }
 html.desktop-focus { --focus-paper:#faf9f6; --focus-ink:#202630; --focus-muted:#55616e; --focus-line:#dbe0e3; }
 html.desktop-focus.theme-dark { --focus-paper:#17212b; --focus-ink:#eef2f6; --focus-muted:#b5c0cc; --focus-line:#354350; }
 html.desktop-focus #view-copilot #overlay {
@@ -19,22 +18,13 @@ html.desktop-focus #view-copilot #answer { line-height:1.75; padding-right:14px;
 html.desktop-focus #view-copilot .q { color:var(--focus-muted); border-bottom:1px solid var(--focus-line); padding-bottom:14px; margin-bottom:14px; }
 html.desktop-focus #view-copilot .q-ico, html.desktop-focus #view-copilot .a-head>.star { display:none; }
 html.desktop-focus #view-copilot .a-head { color:var(--focus-muted); font:600 12px/1.5 var(--sans); letter-spacing:.08em; text-transform:uppercase; margin-bottom:12px; }
-html.desktop-focus #view-copilot .bar-actions { gap:6px; padding:8px 12px; border-bottom:1px solid var(--focus-line); }
+html.desktop-focus #view-copilot .bar-actions { gap:6px; padding:8px 12px; border-bottom:1px solid var(--focus-line); flex-wrap:wrap; }
 html.desktop-focus #view-copilot .bar-actions .pill { min-height:32px; font-size:12px; }
 html.desktop-focus #view-copilot #answerBtn { background:#254e64; color:white; border-color:#254e64; font-weight:700; }
 html.desktop-focus #view-copilot #desktopFocusBtn { border-color:var(--focus-muted); }
 html.desktop-focus #view-copilot #status { font:500 12px/1.5 var(--sans); padding:7px 14px; white-space:normal; }
 html.desktop-focus #view-copilot button:focus-visible { outline:2px solid #368db6; outline-offset:3px; }
-html.desktop-focus:not(.desktop-details) #autoBtn[aria-pressed="false"],
-html.desktop-focus:not(.desktop-details) #follow:not(:has([aria-pressed="true"])),
-html.desktop-focus:not(.desktop-details) .asking,
-html.desktop-focus:not(.desktop-details) #caption,
-html.desktop-focus:not(.desktop-details) #copilotTip,
-html.desktop-focus:not(.desktop-details) #dossier,
-html.desktop-focus:not(.desktop-details) #personaChip,
-html.desktop-focus:not(.desktop-details) .kd-fade,
-html.desktop-focus:not(.desktop-details) #textSizeN { display:none!important; }
-html.desktop-focus.desktop-details #view-copilot .bar-actions { flex-wrap:wrap; }
+/* Every control stays on the action bar (owner, 23 Oct 2026): focus mode hides nothing. */
 @media(max-width:560px) {
   html.desktop-focus #view-copilot .content { padding:12px 24px 8px; }
   html.desktop-focus #view-copilot .bar-actions { gap:3px; padding:6px; }
