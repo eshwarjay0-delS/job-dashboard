@@ -1,3 +1,11 @@
+## 2026-10-23 — Kompas Desktop: the question sets the depth, the level sets the angle
+
+**Asked:** stop answering every question at the same technical depth. A definition or a comparison stays on the idea. A deep example gets the bottleneck and the impact. Three levels, and a switch changes the answer at once. Technical HR + Engineer. Architect + Developer. Director.
+
+**In the desktop answer:** the shape of the question wins over the old investigation outline. The other two levels are prepared in the background. A switch shows the stored answer, or Preparing, at once. Build stamp `kompas-20261023-depth`.
+
+**Not checked live.** The desktop shows this only after the live page has that stamp. Session branch only.
+
 ## 2026-10-23 — The Chief does the whole job while he is away
 
 **Asked:** a Chief who takes care of the whole work in his absence. The money in the story is a metaphor. Then: take the rest seriously.
