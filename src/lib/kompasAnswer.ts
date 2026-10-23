@@ -144,7 +144,7 @@ export function questionDepth(q: string): number {
 
 // ---- The three answering levels (owner directive, 22 Oct 2026) ----
 // Exactly three levels replace the old nine-listener ladder:
-//   Level 1 "engineer"  — Technical Recruiter + Engineer
+//   Level 1 "engineer"  — Technical HR + Engineer
 //   Level 2 "architect" — Architect + Developer
 //   Level 3 "director"  — Director
 // The level keys stay the anchor-era keys so the client level map, the
@@ -153,7 +153,7 @@ export function questionDepth(q: string): number {
 export type AnswerLevel = "engineer" | "architect" | "director"
 
 export const ANSWER_LEVEL_NAME: Record<AnswerLevel, string> = {
-  engineer: "Level 1 — Technical Recruiter + Engineer",
+  engineer: "Level 1 — Technical HR + Engineer",
   architect: "Level 2 — Architect + Developer",
   director: "Level 3 — Director",
 }
@@ -206,7 +206,7 @@ export function levelGuidance(level: AnswerLevel, register: QuestionRegister): s
       ? "Level shading (Architect + Developer): the mechanism may be named precisely — the check that fails, the boundary that is missing — in a sentence or two. Still no procedure and no tooling steps."
       : level === "director"
         ? "Level shading (Director): after the plain meaning, one line on why it matters — the risk it creates, the exposure it opens — and stop. No procedure."
-        : "Level shading (Technical Recruiter + Engineer): plain words a recruiter can repeat back, one picture, and no acronym without its meaning attached."
+        : "Level shading (Technical HR + Engineer): foundational JD fluency: define the relevant term, its use, why the requirement matters and its operational context. Explain acronyms once; assume technical screening familiarity without assuming implementation expertise."
     return `QUESTION REGISTER — CONCEPT (this overrides the level's normal depth): this question asks what something IS — a definition, a comparison, a concept — not what the candidate did and not how they would run it. Answer ABSTRACTLY: the plain meaning first, the one distinction that matters, and one small concrete example the listener can picture. Touch the technical aspects — name the mechanism in principle — and stop there. Do NOT turn it into a procedure: no log sources, no queries or keywords to search, no tool steps, no integration or aggregation walkthrough, no "how I would hunt for it", no war story. A definition that becomes a tutorial is a wrong answer at every level. ${shade}`
   }
   switch (level) {
@@ -215,7 +215,7 @@ export function levelGuidance(level: AnswerLevel, register: QuestionRegister): s
     case "director":
       return `ANSWER LEVEL — ${ANSWER_LEVEL_NAME[level]}: architect-and-developer understanding, spoken as business. Lead with the decision, or the stakes of the situation. Then what was achieved — the outcomes and the metrics that prove them: name the measures he actually tracks (coverage, detection or response time, false-positive rate, audit results, cost or hours saved) using only figures the background supports. The mechanism is compressed to the one line that shows he knows it cold — no step-by-step procedure, no settings, no tool walkthrough. Every technical point lands on a business consequence: risk reduced, operations protected, money or time saved.`
     default:
-      return `ANSWER LEVEL — ${ANSWER_LEVEL_NAME[level]}: a strong engineer talking to a technical recruiter. Clear, confident, in plain order: what it is or what he did, the tools named only as his stack ("we run that in Splunk"), and the result it produced. Compress the doing to the few moves that matter — no settings, no queries, no log fields, no step-by-step configuration. If this listener wants the deep version they will ask; do not volunteer the manual.`
+      return `ANSWER LEVEL — ${ANSWER_LEVEL_NAME[level]}: adapt to the current question. For Technical HR screening, explain the relevant JD keywords, their uses, requirement rationale and operational significance. For engineering problem-solving, explain hypotheses, evidence, research, alternatives and pivots, dependencies, troubleshooting, remediation, testing and monitoring as relevant. Include ownership, on-call decisions, peer communication and mentoring when asked. Allow technical specifics needed to solve the problem; do not turn every question into a complete runbook. Use supplied metrics or label proposed measures; never invent results.`
   }
 }
 

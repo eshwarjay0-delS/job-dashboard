@@ -61,8 +61,8 @@ test('levelGuidance: practice register carries each level its own depth', () => 
   assert.match(levelGuidance('director', 'practice'), /metrics that prove them/)
   assert.match(levelGuidance('director', 'practice'), /business consequence/)
   assert.match(levelGuidance('director', 'practice'), /no step-by-step procedure/)
-  assert.match(levelGuidance('engineer', 'practice'), /technical recruiter/)
-  assert.match(levelGuidance('engineer', 'practice'), /do not volunteer the manual/)
+  assert.match(levelGuidance('engineer', 'practice'), /Technical HR screening/)
+  assert.match(levelGuidance('engineer', 'practice'), /hypotheses, evidence, research, alternatives and pivots/)
 })
 
 test('lengthPlan: director is not the longest level anymore; concept is capped', () => {

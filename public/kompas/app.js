@@ -937,7 +937,7 @@ $("clearBtn").onclick = () => { cards = [{ question: "Cleared.", answer: ["Ask s
 // Coding adds Developer between Engineer and Architect (owner, 5 Oct 2026: "Developer + Architect for Coding").
 const DESKTOP_RESPONSE_LEVELS = ["engineer", "architect", "director"];
 const desktopResponses = () => !!window.kompasDesktop;
-const desktopResponseKey = (card) => `three-level-v1|${askingLevel()}|${liveConfig().mode}|${liveConfig().length || ""}|${String(card && (card.anchorQ || card.question) || "").trim()}`;
+const desktopResponseKey = (card) => `three-level-v2|${askingLevel()}|${liveConfig().mode}|${liveConfig().length || ""}|${String(card && (card.anchorQ || card.question) || "").trim()}`;
 const LADDER_THREE = ["engineer", "architect", "director"];
 const ladderFor = () => LADDER_THREE;
 let LADDER = LADDER_THREE;

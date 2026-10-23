@@ -13,3 +13,10 @@ Focused validation: 34 audience, three-level policy, desktop, focus, continuity 
 ## Release evidence
 
 Commit `c6559b93cf8a2f8e4d2f9e35a7131111e45e7265` reported Vercel success. Production `/kompas/version.json` returns `kompas-20261022-desktop-three-levels`. The cloud browser refused direct viewing of the JavaScript asset with ERR_BLOCKED_BY_CLIENT; no Windows UI or live model-output acceptance is claimed. The installed MarketFit desktop loads these hosted assets, so this response change does not require a native executable rebuild.
+
+
+## Technical HR and engineering clarification — 22 October 2026
+
+Owner correction: the first of the three levels is Technical HR + Engineer. Technical HR knows the foundational JD keywords, their uses, operational context and why each requirement matters, without necessarily understanding implementation internals. Engineering questions require methodical problem solving, hypotheses, research, alternatives and pivots, system dependencies, troubleshooting, patching, testing, monitoring, accountable on-call ownership, peer communication and mentoring where relevant. Select the emphasis from the question; do not flatten engineers into recruiter answers or force every topic through the same checklist. Definitions and comparisons stay concise; focused practical questions receive the reasoning they need. Levels two and three remain Architect + Developer and Director. Metrics and personal achievements require source evidence.
+
+This supersedes the earlier generic recruiter wording and historical two-depth default for the current desktop selector. Every task must update Plan & Vision in the same change; source/research work also updates its REA session and evidence document. Retain superseded decisions as history. Runtime guidance, visible labels and the desktop response cache revision are updated together. Automated checks verify policy and switching; real Windows/model-output acceptance remains pending.
