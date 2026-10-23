@@ -187,13 +187,14 @@ const PRACTICE_ASK =
   /\bhow (?:would|do|did|can|could) you\b|\bdesign (?:a|an|the|me)\b|\bsuppose\b|\bif you (?:were|had|found|saw|got)\b|\binvestigat\w*\b|\btroubleshoot\w*\b|\byou (?:discovered|found|built|faced|handled|implemented|configured|deployed|led|ran|owned)\b/i
 
 export function questionRegister(q: string, tier: Tier): QuestionRegister {
-  // Personal, story, drill-down and identity questions are always practice:
-  // they ask about the candidate's own work, where depth is the point.
-  if (tier !== 2) return "practice"
   const text = String(q || "")
-  if (EXP_Q.test(text) || EXP_Q2.test(text) || PERSONAL_ASK.test(text)) return "practice"
+  const personal = tier === 0 || tier === 1 || tier === 3 || EXP_Q.test(text) || EXP_Q2.test(text) || PERSONAL_ASK.test(text)
+  const concept = (DEFINE.test(text) || DEFINE_ANY.test(text) || CONCEPT_ASK.test(text)) && !PRACTICE_ASK.test(text)
+  if (concept && !personal) return "concept"
+  if (personal) return "practice"
   if (PRACTICE_ASK.test(text)) return "practice"
-  if (DEFINE.test(text) || DEFINE_ANY.test(text) || CONCEPT_ASK.test(text)) return "concept"
+  if (concept) return "concept"
+  if (tier !== 2) return "practice"
   return "practice"
 }
 

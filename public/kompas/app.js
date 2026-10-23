@@ -931,20 +931,19 @@ $("hideBtn").onclick = () => $("overlay").classList.toggle("collapsed");
 $("transcriptBtn").onclick = () => $("drawer").classList.toggle("hidden");
 $("personaBtn").onclick = () => openPersonaFile();
 $("clearBtn").onclick = () => { cards = [{ question: "Cleared.", answer: ["Ask something, or let the call fill this in."] }]; idx = 0; transcript = []; answeredSeq = heardSeq; updatePending(); renderDrawer(); renderCard(); status("Cleared."); };
-// Who is asking = the DEPTH LADDER, cut to four by the owner (5 Oct 2026): Technical HR → Engineer → Architect →
-// Director. Engineer and Director are the two anchors; the other two are derived from the anchor already stored,
-// so a level change is instant. The closed level map still holds all nine; only these four are offered.
-// Coding adds Developer between Engineer and Architect (owner, 5 Oct 2026: "Developer + Architect for Coding").
+// Three asking levels. On the desktop, each level keeps its own answer for the
+// question on screen, and a switch shows that answer or starts it at once.
+// v3 drops answers stored before the question-depth correction.
 const DESKTOP_RESPONSE_LEVELS = ["engineer", "architect", "director"];
 const desktopResponses = () => !!window.kompasDesktop;
-const desktopResponseKey = (card) => `three-level-v2|${askingLevel()}|${liveConfig().mode}|${liveConfig().length || ""}|${String(card && (card.anchorQ || card.question) || "").trim()}`;
+const desktopResponseKey = (card) => `three-level-v3|${askingLevel()}|${liveConfig().mode}|${liveConfig().length || ""}|${String(card && (card.anchorQ || card.question) || "").trim()}`;
 const LADDER_THREE = ["engineer", "architect", "director"];
 const ladderFor = () => LADDER_THREE;
 let LADDER = LADDER_THREE;
 function showCodingLevels(sel, mode) {
   if (!sel) return;
   sel.querySelectorAll("option[data-coding]").forEach(o => { o.hidden = mode !== "coding"; o.disabled = mode !== "coding"; });
-  if (sel.id === "liveInterviewer") LADDER = ladderFor(mode);
+  void mode;
 }
 // A session saved on a level that is no longer offered opens on the nearest one kept, never on a blank list.
 function keptLevel(v, mode) {
@@ -961,9 +960,30 @@ function renderDepth() {
   $("whoUp").disabled = i === 0; $("whoDown").disabled = i === LADDER.length - 1;
 }
 let regenTimer = null;
+let shownLevel = "engineer";
+function levelKey() { return `${askingLevel()}|${liveConfig().mode}|${liveConfig().length || ""}`; }
+function stashShown(card) {
+  if (!card || !shownLevel || card.streaming) return;
+  const text = typeof card.answer === "string" ? card.answer.trim() : "";
+  if (text.length < 40) return;
+  card.byDepth = card.byDepth || {};
+  card.byDepth[`${shownLevel}|${liveConfig().mode}|${liveConfig().length || ""}`] = { answer: card.answer, meta: card.meta || "" };
+}
+function showCachedLevel(card) {
+  const hit = card && card.byDepth && card.byDepth[levelKey()];
+  if (!hit || !hit.answer) return false;
+  card.answer = hit.answer;
+  card.meta = hit.meta || "cached";
+  card.streaming = false;
+  if (cards[idx] === card) renderCard();
+  return true;
+}
 function regenerateForAudience() {
   if (typeof logAction === "function") logAction("regen", { to: $("liveInterviewer").value });
   const c = cards[idx], label = $("liveInterviewer").selectedOptions[0].textContent;
+  if (c && c.req) { const previous = c.req; c.req = null; try { previous.abort(); } catch {} }
+  if (typeof answerCtl !== "undefined" && answerCtl) { try { answerCtl.abort(); } catch {} answerCtl = null; }
+  if (c) c.streaming = false;
   if (!c || /^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(c.question) || !String(c.question).trim()) { status("Now answering for: " + label, "live"); return; }
   if (desktopResponses()) {
     const hit = c.desktopByDepth && c.desktopByDepth[desktopResponseKey(c)];
@@ -974,6 +994,7 @@ function regenerateForAudience() {
     else generateAnswer(c.question, c, { regen: true });
     return;
   }
+  if (showCachedLevel(c)) { status("Shown for " + label + " — no model call.", "live"); return; }
   if (paintFromAnchors(c)) { status("Shown for " + label + " — no model call.", "live"); return; }
   const need = window.KompasDiamond && window.KompasDiamond.plan(askingLevel(), c.anchors || {}, window.__peerOf);
   const out = window.KompasFlight && need && window.KompasFlight.pending(c, need.from);
@@ -987,14 +1008,15 @@ function regenerateForAudience() {
   if (c.heard) generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "", derived: c.question, regen: true });
   else if (!/^🖥/.test(c.question)) generateAnswer(c.question, c, { regen: true });
 }
-function audienceChanged(immediate) {
-  if (current) { current.interviewer = $("liveInterviewer").value; saveSession(current); }
+function audienceChanged() {
+  stashShown(cards[idx]);
+  shownLevel = $("liveInterviewer").value;
+  if (current) { current.interviewer = shownLevel; saveSession(current); }
   renderDepth();
   clearTimeout(regenTimer);
-  if (desktopResponses()) regenerateForAudience();
-  else regenTimer = setTimeout(regenerateForAudience, immediate ? 0 : 450);   // several quick ↓ presses = one regeneration
+  regenerateForAudience();
 }
-$("liveInterviewer").onchange = () => audienceChanged(false);   // arrows inside the focused dropdown fire per step: debounce those too
+$("liveInterviewer").onchange = () => audienceChanged();
 function stepInterviewer(dir) {
   const sel = $("liveInterviewer");
   let i = LADDER.indexOf(sel.value);
@@ -1003,7 +1025,7 @@ function stepInterviewer(dir) {
   if (LADDER[next] === sel.value) return;
   sel.value = LADDER[next];
   status(`Depth ${next + 1}/${LADDER.length}: ${sel.selectedOptions[0].textContent}${dir > 0 ? " — deeper" : " — lighter"}`, "live");
-  audienceChanged(false);
+  audienceChanged();
 }
 $("whoUp").onclick = () => stepInterviewer(-1);
 $("whoDown").onclick = () => stepInterviewer(1);
@@ -1890,7 +1912,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   }
   // Regenerating (depth change) or retrying: the answer on screen stays until the new one starts arriving.
   const prevAnswer = card.answer, prevMeta = card.meta;
-  const keepOld = !!(opts.regen || opts.retries) && !(Array.isArray(prevAnswer) && /^(…|Groq|The answer lane)/.test(String(prevAnswer[0] || "")));
+  const keepOld = !!opts.retries && !opts.regen && !(Array.isArray(prevAnswer) && /^(…|Groq|The answer lane)/.test(String(prevAnswer[0] || "")));
   if (!keepOld) card.answer = ["…"];
   card.streaming = true; card.meta = keepOld ? `regenerating at ${depthLabel()} depth…` : ""; if (cards[idx] === card) renderCard();
   const named = String((card && card.question) || "").replace(/\s+/g, " ").trim();
