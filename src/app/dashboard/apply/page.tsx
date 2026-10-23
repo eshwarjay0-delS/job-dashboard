@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Search, ArrowUpRight, FileText } from 'lucide-react'
@@ -16,23 +16,11 @@ function timeAgo(iso?:string){if(!iso)return'';const d=(Date.now()-new Date(iso)
 type Activity={id:string;at:number;kind:string;title:string;company:string;query:string;url:string;location?:string}
 export default function ApplyPage(){
  const router=useRouter(),[query,setQuery]=useState(''),[location,setLocation]=useState(''),[remote,setRemote]=useState(false),[type,setType]=useState('All contracts'),[jobs,setJobs]=useState<Job[]>([]),[job,setJob]=useState<Job|null>(null),[busy,setBusy]=useState(false),[note,setNote]=useState('Search contract roles across connected job sources.'),[error,setError]=useState(''),[files,setFiles]=useState<ResumeFile[]>([]),[resume,setResume]=useState(''),[events,setEvents]=useState<Activity[]>([]),[scores,setScores]=useState<Record<string,{score:number|null;matched:string[];missing:string[]}>>({}),[scoring,setScoring]=useState(false),[dupWarn,setDupWarn]=useState<null|{hits:{event:{title:string;company:string;url:string;at:number;resume?:string};reason:string}[];proceed:()=>void}>(null),[portalReturn,setPortalReturn]=useState<null|{title:string;company:string;at:number}>(null),[profile,setProfile]=useState(''),[autoTailor,setAutoTailor]=useState(true),[tailorNote,setTailorNote]=useState(''),[choice,setChoice]=useState<null|{email:string;made:{filepath:string;name:string}|null;pick:{filepath:string;name:string;title:string;why:string}|null;notice:string}>(null),tailoredFor=useRef(new Set<string>()),searchRun=useRef(0)
- useEffect(()=>{let active=true;fetch('/api/resumes').then(r=>r.json()).then(j=>{if(active){setFiles(j.files||[]);
-// Auto-search: show relevant jobs on page open without user searching.
-// Uses last saved search, or defaults to security roles from profile.
-try{
-  const lastSearch = localStorage.getItem('mf_last_search');
-  if(lastSearch){
-    const s = JSON.parse(lastSearch);
-    if(s.query){ setQuery(s.query); setLocation(s.location||''); setRemote(!!s.remote); }
-  } else {
-    setQuery('security engineer');
-  }
-  // Trigger search after state settles
-  setTimeout(()=>{
-    const f=document.querySelector(".mf-apply-search");
-    if(f) f.dispatchEvent(new Event("submit",{cancelable:true,bubbles:true}));
-  }, 300);
-}catch{};try{const tp=sessionStorage.getItem('apply_tailored_path');if(tp&&(j.files||[]).some((f:ResumeFile)=>f.filepath===tp)){setResume(tp);sessionStorage.removeItem('apply_tailored_path')}}catch{}}}).catch(()=>{});fetch('/api/apply/activity').then(r=>r.json()).then(j=>{if(active)setEvents(j.events||[])}).catch(()=>{});return()=>{active=false}},[])
+ const runInitialSearch=useEffectEvent((input:{query:string;location:string;remote:boolean})=>{void search(undefined,input)})
+ useEffect(()=>{let active=true;fetch('/api/resumes').then(r=>r.json()).then(j=>{if(active){setFiles(j.files||[]);try{const tp=sessionStorage.getItem('apply_tailored_path');if(tp&&(j.files||[]).some((f:ResumeFile)=>f.filepath===tp)){setResume(tp);sessionStorage.removeItem('apply_tailored_path')}}catch{}}}).catch(()=>{});fetch('/api/apply/activity').then(r=>r.json()).then(j=>{if(active)setEvents(j.events||[])}).catch(()=>{});return()=>{active=false}},[])
+ // Show useful contract roles exactly once on open. Pass the resolved values directly
+ // instead of dispatching a delayed synthetic submit against possibly stale React state.
+ useEffect(()=>{let initial={query:'security engineer',location:'',remote:false};try{const raw=localStorage.getItem('mf_last_search');if(raw){const saved=JSON.parse(raw);if(typeof saved?.query==='string'&&saved.query.trim())initial={query:saved.query.trim().slice(0,200),location:typeof saved.location==='string'?saved.location.slice(0,160):'',remote:saved.remote===true}}}catch{}void Promise.resolve().then(()=>{setQuery(initial.query);setLocation(initial.location);setRemote(initial.remote);runInitialSearch(initial)})},[])
 // Portal return: when the user comes back to this tab after opening a portal,
 // ask if they submitted. Keeps the apply flow inclusive — the app walks with
 // them to the portal and back.

@@ -32,6 +32,7 @@ test('saved search uses its own filters immediately and older results cannot rep
   if(id==='@/lib/contract-jobs')return {applicationUrl,contractTypes}
   if(id==='@/lib/duplicate-check')return {findDuplicates:()=>[]}
   if(id==='./_components/saved-searches')return {SavedSearches:({onRun})=>React.createElement('div',null,...['first','second'].map(query=>React.createElement('button',{key:query,onClick:()=>onRun({query,location:'Chicago',remote:true,type:'C2C'})},query)))}
+  if(id==='./_components/desktop-portal')return {DesktopPortal:()=>null}
   if(id==='./_components/receipts')return {ApplyReceipts:()=>null}
   if(id==='@/components/FolderBrowser')return ()=>null
   if(id.endsWith('.css'))return {}
@@ -41,7 +42,7 @@ test('saved search uses its own filters immediately and older results cannot rep
   await act(async()=>root.render(React.createElement(module.exports.default)))
   const click=async text=>act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent===text).click())
   await click('first');await click('second')
-  const urls=requests.filter(u=>u.startsWith('/api/jobs')).map(u=>new URL(u,'https://mfit.test'))
+  const urls=requests.filter(u=>u.startsWith('/api/jobs')).slice(-2).map(u=>new URL(u,'https://mfit.test'))
   assert.deepEqual(urls.map(u=>u.searchParams.get('q')),['first','second'])
   for(const u of urls){assert.equal(u.searchParams.get('location'),'Chicago');assert.equal(u.searchParams.get('remote'),'true')}
   await act(async()=>pending.get('second')())
@@ -49,5 +50,50 @@ test('saved search uses its own filters immediately and older results cannot rep
   await act(async()=>pending.get('first')())
   assert.equal(document.querySelector('.mf-apply-job h2').textContent,'second')
   assert.equal(document.querySelector('input[placeholder="Software developer"]').value,'second')
+ }finally{await act(async()=>root.unmount());Object.assign(globalThis,previous);dom.window.close()}
+})
+
+test('opening Apply runs one search with the last filters and no synthetic form timing',async()=>{
+ const dom=new JSDOM('<div id="root"></div>',{url:'https://mfit.test/dashboard/apply'})
+ const previous={window:globalThis.window,document:globalThis.document,IS_REACT_ACT_ENVIRONMENT:globalThis.IS_REACT_ACT_ENVIRONMENT}
+ Object.assign(globalThis,{window:dom.window,document:dom.window.document,IS_REACT_ACT_ENVIRONMENT:true})
+ dom.window.localStorage.setItem('mf_last_search',JSON.stringify({query:'Salesforce CPQ developer',location:'Savannah',remote:true}))
+ const root=createRoot(document.getElementById('root')),requests=[]
+ const fetch=async(url,options)=>{
+  if(url==='/api/resumes')return {ok:true,json:async()=>({files:[]})}
+  if(url==='/api/apply/activity')return {ok:true,json:async()=>options?{event:{id:'event',...JSON.parse(options.body)}}:{events:[]}}
+  if(url==='/api/apply/searches')return {ok:true,json:async()=>({searches:[]})}
+  requests.push(url)
+  if(url.startsWith('/api/crawl/jobs'))return {ok:true,json:async()=>({ok:true,jobs:[]})}
+  return {ok:true,json:async()=>({live:true,jobs:[]})}
+ }
+ const source=readFileSync(new URL('../../src/app/dashboard/apply/page.tsx',import.meta.url),'utf8')
+ assert.doesNotMatch(source,/dispatchEvent\(new Event\("submit"/)
+ const code=ts.transpileModule(source,{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText
+ const module={exports:{}}
+ vm.runInNewContext('(function(require,module,exports){'+code+'\n})',{URLSearchParams,fetch,document:dom.window.document,sessionStorage:dom.window.sessionStorage,localStorage:dom.window.localStorage})(id=>{
+  if(id==='next/navigation')return {useRouter:()=>({push:()=>{}})}
+  if(id==='next/link')return wrapped(({children,...props})=>React.createElement('a',props,children))
+  if(id==='@/lib/contract-jobs')return {applicationUrl,contractTypes}
+  if(id==='@/lib/duplicate-check')return {findDuplicates:()=>[]}
+  if(id==='./_components/saved-searches')return {SavedSearches:()=>null}
+  if(id==='./_components/desktop-portal')return {DesktopPortal:()=>null}
+  if(id==='./_components/receipts')return {ApplyReceipts:()=>null}
+  if(id==='@/components/FolderBrowser')return ()=>null
+  if(id.endsWith('.css'))return {}
+  return require(id)
+ },module,module.exports)
+ try{
+  await act(async()=>root.render(React.createElement(module.exports.default)))
+  const aggregate=requests.filter(url=>url.startsWith('/api/jobs'))
+  const indexed=requests.filter(url=>url.startsWith('/api/crawl/jobs'))
+  assert.equal(aggregate.length,1)
+  assert.equal(indexed.length,1)
+  const params=new URL(aggregate[0],'https://mfit.test').searchParams
+  assert.equal(params.get('q'),'Salesforce CPQ developer')
+  assert.equal(params.get('location'),'Savannah')
+  assert.equal(params.get('remote'),'true')
+  assert.equal(document.querySelector('input[placeholder="Software developer"]').value,'Salesforce CPQ developer')
+  assert.equal(document.querySelector('input[placeholder="City, state, or leave blank"]').value,'Savannah')
  }finally{await act(async()=>root.unmount());Object.assign(globalThis,previous);dom.window.close()}
 })
