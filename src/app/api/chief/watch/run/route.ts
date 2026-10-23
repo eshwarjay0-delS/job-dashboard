@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const secret = (process.env.CRON_SECRET || "").trim()
   const auth = req.headers.get("authorization") || ""
-  if (secret && auth !== `Bearer ${secret}`) {
+  // Fails closed: without a secret on the deployment nobody may start a run for every account.
+  if (secret.length < 16 || auth !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 })
   }
 

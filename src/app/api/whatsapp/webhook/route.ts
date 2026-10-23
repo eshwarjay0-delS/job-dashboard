@@ -343,6 +343,8 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
         return sendText(from, "Skipped — no job was scheduled.")
       }
       if (parsed.action === "send") {
+        // A real email leaves only on a tap Meta signed: without the app secret any request could claim his number.
+        if (!waSignatureConfigured()) return sendText(from, "Not sent: this deployment cannot check that the tap came from WhatsApp. Send it from Gmail.")
         // Nothing the Chief left for him goes out unanswered: a [flag] still in the draft keeps Send locked (chief-guard.ts).
         const open = sendLocked(card)
         if (open.length) return sendText(from, `Not sent: the draft still has ${open.length === 1 ? "a flag" : `${open.length} flags`} only you can answer: ${open.slice(0, 3).join(" ")}. Tap Edit and reply with the full text.`)

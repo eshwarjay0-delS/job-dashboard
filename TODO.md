@@ -1,3 +1,9 @@
+## 2026-10-23 — Chief: the live WhatsApp Chief path reviewed and tightened
+
+**Done:** reviewed the Chief code that went live in 88b6018a without an end-to-end review. Four fixes on the card list, the overnight run, the Send tap and the draft headers. Details are kept out of this public repo. Tests: chief-approvals 7/7.
+
+**No visible change.** Backend only. Session branch until the next release.
+
 ## 2026-10-23 — The Chief session took over; checks on the handed-over branch
 
 **Done:** attached followup-hq and gmail-watcher and created the session branch in both. Attaching parfAct and kompas was refused by the session's permission check, so the private briefing and its "Next, in order" list were not read.

@@ -20,7 +20,8 @@ export async function GET() {
   const { user } = await authedUser()
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 })
   const { listPendingCards, ownerWhatsAppDigits } = await import("@/lib/chief-approvals")
-  const cards = await listPendingCards(ownerWhatsAppDigits())
+  // Only this account's own cards: every card goes to the owner's number, so the number alone does not say whose it is.
+  const cards = (await listPendingCards(ownerWhatsAppDigits())).filter(c => c.userId === user.id)
   return NextResponse.json({ ok: true, cards })
 }
 

@@ -250,6 +250,9 @@ async function gmailToken(userId: string, accountEmail: string): Promise<string 
 }
 
 function draftRaw(to: string, subject: string, body: string): string {
+  // A line break in a header would start a new header (a hidden Bcc), so headers are kept to one line.
+  const oneLine = (v: string) => v.replace(/[\r\n]+/g, " ").trim()
+  to = oneLine(to); subject = oneLine(subject)
   return Buffer.from(
     `To: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset="UTF-8"\r\n\r\n${body}`,
   ).toString("base64url")
