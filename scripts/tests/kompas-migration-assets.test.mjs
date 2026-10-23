@@ -15,7 +15,7 @@ test("self-hosted Kompas includes every local JavaScript asset referenced by the
     .filter(src => !/^(https?:)?\/\//i.test(src))
   assert.ok(scripts.length >= 12, "check the complete canonical script graph, not just app.js")
   for (const script of scripts) {
-    const local = script.replace(/^\/kompas\//, "").replace(/^\.\//, "")
+    const local = script.replace(/[?#].*$/, "").replace(/^\/kompas\//, "").replace(/^\.\//, "")   // a ?v= cache-buster (2a3d85b8) names the same file
     assert.ok(!local.startsWith("/") && !local.includes(".."), "script must remain inside Kompas")
     assert.ok(existsSync(path.join(dir, local)), `Missing Kompas asset: ${local}`)
   }

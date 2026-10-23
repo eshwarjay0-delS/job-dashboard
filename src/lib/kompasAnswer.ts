@@ -247,7 +247,9 @@ export function lengthPlan(
     (LEN_MULT[opts.length || "balanced"] || 1) *
     (AUDIENCE_DEPTH[interviewer] || 1) *
     (SHORT_KINDS.includes(kind) ? 1 : complexity(q)) *
-    (SHORT_KINDS.includes(kind) ? 1 : questionDepth(q)),
+    // An introduction keeps its full budget: "Tell me about yourself." is short, but INTRODUCTION_POLICY says a short
+    // question must not cut it down (questionDepth gave it 0.85, so 204 words where 240 are planned).
+    (SHORT_KINDS.includes(kind) || tier === 0 ? 1 : questionDepth(q)),
   )
   // A concept question (a definition, a comparison) is answered abstractly at
   // every level — its word budget is capped no matter who is asking, so a

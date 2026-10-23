@@ -61,6 +61,8 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: t => /pcnse|cissp/i.test(t) },
     '@/lib/whatsapp-trace': { trace: () => {} },
+    // Delivery callbacks for inbox alerts (538d77d3, 22 Oct); no status callback is sent here.
+    '@/lib/mail-update-store': { recordUpdateProviderStatus: async () => true },
     '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/role-match': {}, '@/lib/library-choose': {}, '@/lib/chief-approvals': {}, '@/lib/resume-library-store': {}, '@/lib/resume-library': {},
     '@/lib/library-agent': {}, '@/lib/keywords': {}, '@/lib/resumeOrganization': {},
   }

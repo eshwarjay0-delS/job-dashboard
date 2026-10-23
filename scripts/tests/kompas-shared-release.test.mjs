@@ -17,8 +17,9 @@ test('mount keeps all canonical scripts and loads them under the dashboard origi
   // live page: no Kompas call was routed to the engine from the dashboard address, and a session there could not start.
   const shim = html.match(/<script>([\s\S]*?)<\/script>/)[1]
   assert.doesNotThrow(() => new vm.Script(shim), 'the mount script is valid JavaScript')
-  // It also paints the credits pill, so it needs a page to look at. A bare one is enough here.
-  const document = { readyState: 'complete', getElementById: () => null, documentElement: {}, addEventListener() {} }
+  // It also paints the credits pill, so it needs a page to look at. A bare one is enough here. Since 633c4a9d (13 Oct)
+  // it also re-points the old Kompas.exe download links, so the page answers querySelectorAll with none.
+  const document = { readyState: 'complete', getElementById: () => null, querySelectorAll: () => [], documentElement: {}, addEventListener() {} }
   vm.runInNewContext(shim, { window, URL, Request, document, MutationObserver: class { observe() {} }, setInterval() {}, location: { origin: 'https://dashboard.test', href: 'https://dashboard.test/dashboard/kompas' } })
   window.fetch('/api/answer', { method: 'POST', body: 'question' })
   window.fetch('/version.json?t=1')

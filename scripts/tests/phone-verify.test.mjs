@@ -167,6 +167,8 @@ test('an owner named in settings is let through, and nobody else is', async () =
   assert.equal(O.ownerWhatsAppUserId('919876543210', 'demo'), 'user-uuid-1')
   for (const no of ['3145550100', '113145550100', '1314555010', '', '99913145550100']) assert.equal(O.ownerWhatsAppUserId(no, 'demo'), null, no)
   const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8')
-  assert.match(read('src/app/api/whatsapp/webhook/route.ts'), /verifySignature\(raw[\s\S]{0,1600}resolveWhatsAppUser\(from\)/, 'the signature is checked before the sender is trusted')
+  // Order, not distance: the delivery-status block (538d77d3) sits between the two and keeps growing.
+  { const hook = read('src/app/api/whatsapp/webhook/route.ts'), a = hook.indexOf('verifySignature(raw'), b = hook.indexOf('resolveWhatsAppUser(from)')
+    assert.ok(a > 0 && b > a, 'the signature is checked before the sender is trusted') }
   delete process.env.ADMIN_EMAILS; delete process.env.WHATSAPP_OWNER_NUMBERS; delete process.env.WHATSAPP_APP_SECRET
 })

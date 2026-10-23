@@ -52,6 +52,8 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     '@/lib/supabase/service': { serviceClientAvailable: () => false },
     '@/lib/keyword-targets': { isCertification: () => false },
     '@/lib/whatsapp-trace': { trace: () => {} },
+    // Delivery callbacks for inbox alerts (538d77d3, 22 Oct); no status callback is sent here.
+    '@/lib/mail-update-store': { recordUpdateProviderStatus: async () => true },
     '@/lib/library-pick-store': {
       libraryOf: async () => ({ index: {}, counts: { 'a@x.com': 2, 'b@y.com': 1 } }),
       numberedEmails: async () => ({ slots: ['a@x.com', 'b@y.com'], sure }),

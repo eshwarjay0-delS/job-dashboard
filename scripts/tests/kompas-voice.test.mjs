@@ -121,7 +121,16 @@ test('web sharing prompt starts in the click before microphone permission resolv
 });
 test('repeated AI Answer clicks do not abort an answer already in progress',async()=>{
  let done,calls=0;
- const s=env({aiBusy:false,autoTimer:null,flushing:false,heardSeq:1,answeredSeq:0,finals:new Set(),captures:[],pendingHeard:()=>[{seq:1,who:'Them',text:'Explain OAuth'}],updatePending:()=>{},transcript:[],addCard:()=>({}),generateAnswer:()=>{calls++;return new Promise(r=>done=r);}});
+ // Since cb10e34b (21 Oct, question intake) aiAnswer reads the typed box through $, composes the question from
+ // every source with the intake helpers, and names it with pressQuestion/showPressed. Without those in the sandbox
+ // the press threw inside its own try and generateAnswer was never reached (0 !== 1). Same slices and the same
+ // kind of stand-ins as scripts/tests/kompas-typed-question.test.mjs; a session always holds a placeholder card.
+ const box={value:''},node={classList:{add(){},remove(){},toggle(){},contains:()=>false}};
+ const s=env({aiBusy:false,aiBusySince:0,autoTimer:null,flushing:false,heardSeq:1,answeredSeq:0,finals:new Set(),captures:[],pendingHeard:()=>[{seq:1,who:'Them',text:'Explain OAuth'}],updatePending:()=>{},transcript:[],cards:[{question:'Ready',answer:['…']}],idx:0,$:id=>id==='manualInput'?box:node,setChat:()=>{},logEvent:()=>{},renderCard:()=>{},toTop:()=>{},plainAnswer:a=>String(a),questionSource:()=>'Them',addCard:()=>({}),generateAnswer:()=>{calls++;return new Promise(r=>done=r);}});
+ vm.runInContext(source.slice(source.indexOf('const Q_CUE ='), source.indexOf(';', source.indexOf('const Q_CUE =')) + 1),s);
+ vm.runInContext(section('// ── Question intake', '// ── end question intake ──'),s);
+ vm.runInContext(section('function heardAsQuestion(', '\n'),s);
+ vm.runInContext(section('function pressQuestion(', '$("answerBtn")'),s);
  vm.runInContext(section('async function aiAnswer(', '$("screenBtn")'),s);
  const first=s.aiAnswer(false);await s.aiAnswer(false);assert.equal(calls,1);assert.equal(s.aiBusy,true);done();await first;assert.equal(s.aiBusy,false);
 });

@@ -1,3 +1,24 @@
+## 2026-10-23 (night) — The real test list: 30 red, now 8, and CI's lint error gone
+
+**Asked:** "Run all the agents you got!" One agent installed the project's own packages (`npm ci`, lockfile only) and
+ran everything; the fixes were reviewed and re-run here.
+
+**Found:** 30 of 731 tests were red, not 33, and none was Windows-only. `npm run lint` had 1 error (CI red since
+21 Oct). `npm run test:hardening` could not start on Node 20 or 22 (`--test-isolation=none` needs Node 23.6).
+
+**Fixed:** 19 tests whose sandboxes lacked imports added later (no assertion changed); `kompasBlend.ts` `let` → `const`;
+the test script runs on any Node now; two stale tests kept to their intent; and one real bug: "Tell me about yourself"
+got 204 words where 240 are planned (`questionDepth` penalised the short question, against INTRODUCTION_POLICY).
+
+**Now:** typecheck clean, lint 0 errors (246 warnings, unchanged), tests 734 of 742.
+
+**Still red, on purpose (8), for him:** two of his 4 Oct Kompas fixes were overwritten on 14 Oct by the canonical copy
+(bold shown as a tinted box again; placeholder wording) — restore them in perfACT `copilot/` or accept; one heading test
+describes a deliberate change; four release tests describe the proxy removed on 14 Oct; one speech privacy test checks
+more broadly than the code does. None is weakened or skipped.
+
+**Visible:** only the longer self-introduction in Kompas. Everything else is tests and lint. Not deployed.
+
 ## 2026-10-23 (late) — The desktop accepts only a sign-in it started (step 1 of the REA security fix)
 
 **Asked:** "Continue with everything to the end of the project" and "Run all the agents you got!", after the fix was

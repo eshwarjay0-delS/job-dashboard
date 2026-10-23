@@ -101,7 +101,7 @@ export function blendSpoken(input: string): string {
     const first = text.match(/^[\s\S]*?[.!?]/)
     text = first ? `${first[0]} ${opener[1]}${text.slice(first[0].length)}` : `${text} ${opener[1]}`
   }
-  let parts = sentencesOf(text.replace(/[ \t]{2,}/g, " ").trim())
+  const parts = sentencesOf(text.replace(/[ \t]{2,}/g, " ").trim())
   if (parts.length >= 2 && normSentence(parts[0]) === normSentence(parts[parts.length - 1])) parts.pop()
   if (parts.length && /^(?:on a separate note|another thing|switching topics|in a different area)\b/i.test(parts[parts.length - 1])) parts.pop()
   if (parts.length >= 3 && !parts.some((p) => /\[breath\]/i.test(p))) {
