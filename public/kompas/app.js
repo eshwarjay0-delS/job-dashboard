@@ -244,7 +244,7 @@ function renderSessions() {
     } else if (sessionOpen(s)) {                                           // stopped; no automatic expiry
       const at = s.pausedAt || Date.now();
       startBtn.textContent = "Continue"; startBtn.onclick = () => continueSession(s);
-      state.textContent = `Stopped ${clockTime(at)}. Continue when ready, or End session.`; state.classList.remove("hidden");
+      state.textContent = `Stopped ${clockTime(at)}. Continue when ready, or End session.` + (s.note ? ` ${s.note.split("\n").length} answers kept from the call.` : ""); state.classList.remove("hidden");
       const end = card.querySelector(".sc-end"); end.classList.remove("hidden"); end.onclick = () => endSession(s);
       card.querySelector(".sc-del").classList.add("hidden");               // a session is ended before it is deleted
       card.classList.add("open");
@@ -667,12 +667,26 @@ function seedIdentity(s) {
 }
 // Stop, ← and the Connect dialog's Back all leave the same way: capture off, the transcript saved, the run kept for Continue, the box closed.
 let leaving = false;
+function sessionRecap(list) {
+  const rows = (list || []).filter((c) => {
+    const q = String(c && c.question || "").replace(/\s+/g, " ").trim();
+    const a = typeof (c && c.answer) === "string" ? c.answer.trim() : "";
+    return q.length > 0 && a.length > 40 && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(q);
+  });
+  return rows.slice(-6).map((c) => {
+    const q = String(c.question).replace(/\s+/g, " ").trim();
+    const first = String(c.answer).split(/\n/)[0].replace(/\s+/g, " ").trim();
+    return q + " — " + first;
+  }).join("\n");
+}
 async function leaveLive() {
   if (leaving) return; leaving = true;                                     // a second click while the run is being stored does nothing
   try {
     if (follow.on) setFollow(false);                                       // Follow along holds its own microphone: it goes off with the box
     if (running && captures.length) { status("Saving the last words…", "live"); try { await flushHeard(2000); } catch {} }   // a phrase still being written down lands in the transcript
     if (running) await stop(false);
+    const note = sessionRecap(cards);
+    if (note && current) { current.note = note; saveSession(current, true); }
     dropScreen();
     await saveRunTranscript(); await pauseRun();
     beat(false); dossierAbort = true; resetLiveState(); openDashboard();
