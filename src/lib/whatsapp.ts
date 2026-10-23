@@ -20,6 +20,11 @@ export function waConfigured(): boolean {
   return !!(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID)
 }
 
+/** Delivery/read callbacks are evidence only when Meta can be authenticated. */
+export function waSignatureConfigured(): boolean {
+  return !!(process.env.WHATSAPP_APP_SECRET || "").trim()
+}
+
 function auth(): Record<string, string> {
   return { Authorization: `Bearer ${(process.env.WHATSAPP_TOKEN || "").trim()}` }
 }

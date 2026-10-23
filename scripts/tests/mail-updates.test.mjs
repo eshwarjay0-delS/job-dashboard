@@ -175,4 +175,6 @@ test('WhatsApp webhook records status callbacks instead of discarding them',()=>
   const source=readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts',import.meta.url),'utf8')
   assert.match(source,/recordUpdateProviderStatus\(id, state/)
   assert.ok(source.indexOf('if (statuses.length)')<source.indexOf('if (!msg) return ok()'))
+  assert.match(source,/if \(!waSignatureConfigured\(\)\) return ok\(\)/)
+  assert.ok(source.indexOf('if (!waSignatureConfigured()) return ok()')<source.lastIndexOf('recordUpdateProviderStatus(id, state,'))
 })
