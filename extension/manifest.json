@@ -15,8 +15,6 @@
   "content_scripts": [
     {
       "matches": [
-        "http://localhost:3000/*",
-        "http://localhost:3001/*",
         "https://job-dashboard-fawn.vercel.app/*"
       ],
       "js": ["web-bridge.js"],
@@ -69,8 +67,6 @@
     "notifications"
   ],
   "host_permissions": [
-    "http://localhost:3000/*",
-    "http://localhost:3001/*",
     "https://job-dashboard-fawn.vercel.app/*",
     "*://*.linkedin.com/*",
     "*://*.indeed.com/*",

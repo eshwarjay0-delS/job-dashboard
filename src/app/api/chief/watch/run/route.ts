@@ -8,7 +8,15 @@ export const runtime = "nodejs"
 // POST /api/chief/watch/run — execute due Chief watch tasks.
 // Called by the scheduler (vercel.json cron). Bearer-protected with CRON_SECRET.
 // Runs each due watch's sub-checks, hashes findings, notifies only on change.
+//
+// GET is what the scheduler sends: a Vercel cron calls its path with GET. Until 23 Oct 2026 only POST was here, so the
+// daily run answered 405 and no watch ever ran on its own. The owner list is read with the service client when it is
+// set up: the scheduler has no browser session.
 // ─────────────────────────────────────────────────────────────────────────────
+
+export async function GET(req: NextRequest) {
+  return POST(req)
+}
 
 export async function POST(req: NextRequest) {
   const secret = (process.env.CRON_SECRET || "").trim()
@@ -17,7 +25,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 })
   }
 
-  const supabase = await createClient()
+  const { serviceClientAvailable, createServiceClient } = await import("@/lib/supabase/service")
+  const supabase = serviceClientAvailable() ? createServiceClient() : await createClient()
   // Runner needs a user id per watch owner; watches carry their own user_id.
   const { data: owners, error } = await supabase
     .from("mfit_chief_watches")

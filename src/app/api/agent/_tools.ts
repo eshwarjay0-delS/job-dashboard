@@ -430,8 +430,18 @@ function defaultSubChecks(goal: string, subject: string | null): string[] {
 // ── runDueWatches ───────────────────────────────────────────────────────
 // Executed by /api/chief/watch/run (cron). Runs every due active watch:
 // chief_briefing filtered by subject, hash the findings, notify on change.
+/**
+ * The scheduler's database: the service client when it is set up. The runner has no browser session, and
+ * mfit_notifications only lets a signed-in person write their own rows, so until 23 Oct 2026 every finding the runner
+ * tried to report was refused without a word.
+ */
+async function unattended(): Promise<Awaited<ReturnType<typeof supabase>>> {
+  const { serviceClientAvailable, createServiceClient } = await import("@/lib/supabase/service")
+  return serviceClientAvailable() ? (createServiceClient() as unknown as Awaited<ReturnType<typeof supabase>>) : supabase()
+}
+
 export async function runDueWatches(userId: string): Promise<{ ran: number; changed: number; errors: string[] }> {
-  const sb = await supabase()
+  const sb = await unattended()
   const out = { ran: 0, changed: 0, errors: [] as string[] }
   if (!(await watchesTable(sb))) { out.errors.push("mfit_chief_watches table missing"); return out }
   const { data: watches, error } = await sb.from("mfit_chief_watches")
@@ -471,11 +481,12 @@ export async function runDueWatches(userId: string): Promise<{ ran: number; chan
       }).eq("id", w.id)
       if (report) {
         out.changed++
-        await runTool(ctx, "notify", {
-          title: step ? `Chief job: ${STEPS[step].does}` : `Chief watch: ${w.subject || w.goal}`,
-          body: report,
-          type: "chief-watch",
+        const { error: nerr } = await sb.from("mfit_notifications").insert({
+          user_id: userId, type: "chief-watch", read: false, link: null,
+          title: (step ? `Chief job: ${STEPS[step].does}` : `Chief watch: ${w.subject || w.goal}`).slice(0, 200),
+          body: report.slice(0, 2000),
         })
+        if (nerr) out.errors.push(`${w.id}: notification not saved: ${String(nerr.message).slice(0, 120)}`)
       }
     } catch (e) {
       out.errors.push(`${w.id}: ${String(e).slice(0, 150)}`)
