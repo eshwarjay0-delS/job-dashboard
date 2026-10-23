@@ -1,0 +1,84 @@
+// Typed questions (owner, 21 Oct 2026): "Still if type something that didn't
+// appear", "the questions isn't updating", "it kept on giving the same answer".
+// After one answer was on screen, every typed Enter counted as a re-press: the
+// typed words were glued in front of the old question, painted over the old
+// card, and answered as the old topic. Runs the REAL press path sliced out of
+// public/kompas/app.js so the shipped code is what is tested.
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import vm from "node:vm";
+
+const src = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8");
+function slice(start, end) {
+  const a = src.indexOf(start), b = src.indexOf(end, a);
+  assert.ok(a > 0 && b > a, `${start} must exist in app.js`);
+  return src.slice(a, b);
+}
+const code = [
+  src.slice(src.indexOf("const Q_CUE ="), src.indexOf(";", src.indexOf("const Q_CUE =")) + 1),
+  slice("// ── Question intake", "// ── end question intake ──"),
+  slice("function pressQuestion(", "$(\"answerBtn\")"),
+  slice("async function aiAnswer(", "$(\"screenBtn\")"),
+].join("\n");
+
+const OLD_Q = "Tell me about a security incident you handled end to end";
+const OLD_A = "At Cigna I contained a phishing-led credential theft across 40 hosts within four hours.";
+
+function session(typed) {
+  const box = { value: typed };
+  const asked = [];
+  const s = {
+    aiBusy: false, aiBusySince: 0, autoTimer: null, transcriptionEpoch: 0, transcriptionFailedEpoch: -1,
+    running: false, captures: [], finals: new Set(), flushing: false, heardSeq: 1, answeredSeq: 1,
+    transcript: [{ seq: 1, who: "Them", text: OLD_Q }],
+    cards: [{ question: OLD_Q, answer: OLD_A }], idx: 0,
+    $: (id) => (id === "manualInput" ? box : { classList: { add() {}, remove() {}, toggle() {}, contains: () => false } }),
+    pendingHeard: () => [], updatePending() {}, flushHeard: async () => {}, setChat() {}, status() {},
+    logEvent() {}, renderCard() {}, toTop() {}, clearTimeout() {}, plainAnswer: (a) => String(a),
+    questionSource: () => "Them",
+    generateAnswer: async (heard, card, opts) => { asked.push({ heard, card, opts }); },
+  };
+  s.addCard = (q, answer) => { const card = { question: q, answer }; s.cards.push(card); s.idx = s.cards.length - 1; return card; };
+  vm.createContext(s);
+  vm.runInContext(code, s);
+  return { s, box, asked };
+}
+
+test("a typed question after an answer gets its own card, and the earlier question stays", async () => {
+  const { s, box, asked } = session("What is Kerberos?");
+  await s.aiAnswer(false);
+  assert.equal(s.cards.length, 2, "a new card, not the old one painted over");
+  assert.equal(s.cards[0].question, OLD_Q);
+  assert.equal(s.cards[0].answer, OLD_A);
+  assert.equal(s.cards[1].question, "What is Kerberos?");
+  assert.equal(asked.length, 1);
+  assert.equal(asked[0].card, s.cards[1]);
+  assert.equal(asked[0].opts.derived, "What is Kerberos?");
+  assert.doesNotMatch(asked[0].opts.derived, /security incident/, "the old question is not glued onto the new one");
+  assert.equal(box.value, "", "the box empties only once the question is on its card");
+});
+
+test("a typed question with no question mark still stands on its own", async () => {
+  const { s, asked } = session("explain zero trust network access");
+  await s.aiAnswer(false);
+  assert.equal(s.cards.length, 2);
+  assert.equal(asked[0].opts.derived, "explain zero trust network access");
+});
+
+test("a lone typed keyword still refines the question on screen, without a second copy of it", async () => {
+  const { s, asked } = session("Kerberos");
+  await s.aiAnswer(false);
+  assert.equal(s.cards.length, 1, "a keyword is a re-press of the question on screen");
+  assert.equal(s.cards[0].question, `${OLD_Q} — Kerberos`);
+  assert.equal(asked[0].opts.reask, true);
+  assert.equal(s.cards[0].question.split(OLD_Q).length - 1, 1, "the old question appears once");
+});
+
+test("pressing AI Answer again with nothing typed is still a re-press of the same card", async () => {
+  const { s, asked } = session("");
+  await s.aiAnswer(false);
+  assert.equal(s.cards.length, 1);
+  assert.equal(asked[0].card, s.cards[0]);
+  assert.equal(asked[0].opts.reask, true);
+});

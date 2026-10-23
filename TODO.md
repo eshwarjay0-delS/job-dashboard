@@ -1,3 +1,30 @@
+## 2026-10-23 — Kompas: a question typed after an answer gets its own card
+
+**Reported (21 Oct 11:16 CDT, in the Muse chat he re-sent today with "Continue"):** "Still if type something that didn't
+appear", "the questions isn't updating ... how do we confirm is based on the question that it picked up", "It kept on
+giving the same answer with the current session."
+
+**Cause (shown with the real code, not guessed):** once a card had an answer, every typed Enter counted as a re-press of
+that card. The typed words were glued in front of the old question, the old card was painted over, and the answer was
+asked as a retry of the old topic. Typing "What is Kerberos?" after the incident question produced the header
+"What is Kerberos? Tell me about a security incident you handled end to end", answered as the incident question. The
+21 Oct 12:20 fix (show the microphone question, no stored answer for a pinned press) covered the microphone path only.
+
+**Built:** `public/kompas/app.js`: `typedStandsAlone()` in the intake block; a typed line with a question cue or 3+
+content words opens its own card and the earlier question and answer stay; a lone keyword ("Kerberos") still refines
+the question on screen ("<old question> — Kerberos"), and `pressQuestion` no longer puts the old question in front of
+itself. Visible: yes, in the Kompas session, but only after typing following an answer.
+
+**Verified:** `scripts/tests/kompas-typed-question.test.mjs` runs the real `aiAnswer` press path: 4/4, and 3 of the 4
+fail on the old code. Every other Kompas test file gives the same result with and without the change.
+
+**NOT verified:** pushed to `claude/beautiful-shannon-t6tam9` only, not merged to `master`, so not deployed and not in
+the desktop app yet. No live session was run. Pre-existing reds in this container (missing `jsdom` and other
+node_modules; the voice-harness repeated-click case) are unchanged.
+
+**Next:** merge, confirm the Vercel deployment for the SHA, then in the desktop app: answer one question, type a
+different one, and check that a new card appears with that question as its header and the old card is still there.
+
 ## 2026-10-19 — Resume tailor works again (web and WhatsApp), every keyword goes in, and WhatsApp starts from Files again
 
 Commits 4ad86ca, 1117cd3, 5fb70ff, efc609f (live), and the library flow commit below. Each deployed and checked READY.

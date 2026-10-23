@@ -1692,6 +1692,11 @@ function lastAsk(lines) {
 //     question already on screen — instead of answering the noise raw.
 const INTAKE_STOP = new Set("the a an and or of to in on for with you your yours we our it its is are was were do does did have has had can could would should will shall may might i me my he she they them his her their this that these those as at by from be been being am yeah okay ok yes no so well just like really very".split(" "));
 function intakeWords(text) { return String(text || "").toLowerCase().replace(/[^a-z0-9+#&'-]+/g, " ").split(/\s+/).filter(w => w.length >= 3 && !INTAKE_STOP.has(w)); }
+// A typed line that stands on its own is a new question, not a re-press of the one on screen.
+// Gluing it onto the old question overwrote that card and kept answering the old topic
+// (owner, 21 Oct 2026: "the questions isn't updating", "kept on giving the same answer").
+// A lone keyword ("Kerberos") still refines the question already on screen.
+function typedStandsAlone(text) { const t = String(text || "").trim(); return !!t && !isNoiseLine(t) && (Q_CUE.test(t) || intakeWords(t).length >= 3); }
 function intakeTerms(text) {
   const out = [];
   for (const raw of String(text || "").split(/\s+/)) {
@@ -2115,9 +2120,10 @@ function pressQuestion(typed, intake, screen) {
   if (derived && isNoiseLine(derived)) derived = "";
   const low = (s) => s.toLowerCase();
   if (typedClean && derived && (low(derived) === low(typedClean) || low(derived).includes(low(typedClean)) || low(typedClean).includes(low(derived)))) derived = "";
+  const lane = String(screen || "").trim();
+  if (derived && lane && low(lane).includes(low(derived))) derived = "";   // the old question is the lane, never a second copy in front of it
   const bits = [typedClean, derived].filter(Boolean);
   let q = bits.join(" ").trim();
-  const lane = String(screen || "").trim();
   if (q && lane && q.split(/\s+/).length < 8 && !Q_CUE.test(q)) q = lane.replace(/[?.!\s]+$/, "") + " — " + q;
   if (!q && intake && intake.keywords && intake.keywords.length && lane && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(lane)) q = lane.replace(/[?.!\s]+$/, "") + " — " + intake.keywords.slice(0, 6).join(" ");
   return q || "";
@@ -2161,7 +2167,8 @@ async function aiAnswer(fromAuto) {
       // question already on screen, let the engine form the question from the
       // whole, and answer that. Frequency of pressing is the miss signal.
       const answeredText = typeof cur.answer === "string" ? cur.answer : (cur && cur.answer || []).join("\n");
-      const isRepress = !fromAuto && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
+      const typedOwn = !!typedText && typedStandsAlone(typedText);   // a typed question of its own gets its own card
+      const isRepress = !fromAuto && !typedOwn && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
       if (isRepress) {
         const previous = transcript.filter(t => t.seq <= answeredSeq).slice(-40);
         const combined = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You", previous, currentQuestion: cur.question });
