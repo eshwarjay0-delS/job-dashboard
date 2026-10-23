@@ -1,3 +1,22 @@
+## 2026-10-23 (later) — REA: the first run that executed, and one private desktop security finding
+
+**Asked:** "Continue with rest of REA perfectly to the depth with each context ... as if we reconstructing those exact
+apps from zero. get REA plugin, install it and use it." He installed the Reverse Engineering plugin.
+
+**Done:** its tools (toolbox check, triage, endpoint extraction) ran on the Kompas desktop shell (his 21 Oct upload and
+the current `parfAct/desktop/main.js`) and on MFit (`src/`, `public/`, `extension/`). Written up in
+`docs/research/rea-tool-run-2026-10-23.md`: a part-by-part rebuild map of the desktop shell, MFit's outside services, and
+two REA entries (`rea-tool-run-2026-10-23`, `reference-apps-rebuild`, the second Blocked).
+
+**Found:** one high-severity weakness in the desktop sign-in handoff, reproduced against the real desktop code. Details and
+the proposed fix are in the private parfAct repo (`docs/security/2026-10-23-desktop-signin-handoff.md`), not here: this
+repo is public. Not built; it waits for his yes.
+
+**NOT done:** the outside apps (Jobright, Simplify, Tsenta, Parakeet, Poke, Jobscan, Viktor, Sauna, Granola, Chrome Web
+Store) are refused by this environment's network policy; nothing about them was re-observed. `rea-agents` was not
+installed (the session safety check refused it). No UI change: this is records only (Admin → REA shows the two entries
+once merged and deployed).
+
 ## 2026-10-23 — Kompas: a question typed after an answer gets its own card
 
 **Reported (21 Oct 11:16 CDT, in the Muse chat he re-sent today with "Continue"):** "Still if type something that didn't
