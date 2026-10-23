@@ -236,3 +236,53 @@ Then: repeats every Monday. 100 new clinics/month. Never forgets to start.
 | Funnel numbers on the desk | Daily briefing digest (shipped) |
 
 **The one stage we do NOT have:** the agent decomposing a fresh goal into its own sub-jobs. Our crons run fixed jobs he (or I) designed. The Chief designs the jobs from the goal. That is the Phase 3 "briefable Chief" work in §5.
+
+---
+
+## 23 Oct 2026: the full course, and what it adds
+
+The owner pasted the complete Argona0x course (X, 16 Oct 2026, "How to Build an AI Chief of Staff With Opus 5.5")
+with the same directive: "Update this to REA — a Chief who takes care of the whole work in my absence".
+**Method: public reference review of an owner-supplied article.** It is a creator's tutorial with an affiliate sign-up
+code. Its numbers are claims, not checked: the "$50,000 a month" story, "5 million views", Asana's "60% of the day on
+work about work" and Deloitte's "more than 30% of a CEO's time". viktor.com could not be opened from here today (the
+redirect target is not on this environment's allowlist), so nothing below was observed in the product.
+
+### What the course adds to the 19 Oct study
+
+1. **Goal first, steps by the Chief.** One rule in plain words ("find me $50,000 a month of new business, public data
+   only, contact nobody without my yes"). The Chief split it into four jobs, each with a day and a time, overnight.
+2. **The four-line brief** at the top of the first message: Me, My customers, My voice (two lines I wrote), Never
+   (contact anyone, post or pay without my yes).
+3. **Every row says what was noticed and where.** 240 clinics found, chains cut, 25 kept, each with one fact and its
+   source.
+4. **Drafts, never sends.** 25 openers written, zero sent.
+5. **Leaves the price blank.** The one-page offer had "no invented results" and an empty price for the owner. The
+   author calls this the part worth paying for.
+6. **Repeats on a schedule.** "Every Monday at 9:00" refills the list; "every Friday at 16:00" writes the week's
+   one-page report (what moved, what did not, next week in three lines), built only from the data given.
+7. **Cost you can see.** Credits per job; "Usage" shows what every run cost. Free start with credits, no card.
+8. **Easy to stop.** Pause any job from its menu; cut access to any app in one click.
+9. **Roll out one job a week** over four weeks.
+
+### Against MFit's Chief today
+
+| Course | MFit Chief now (journal) | Gap |
+| --- | --- | --- |
+| Goal → jobs with a day and time | chief_watch + scheduled runner (phase 3), fixed watchers | The Chief does not yet turn one goal into its own scheduled jobs |
+| Four-line brief | Profiles, memory, WhatsApp briefs | No single "Me / customers / voice / Never" brief that every job starts from |
+| Every row cites where it was seen | Mail-based items carry their thread | Lead and job lists do not always say where each fact came from |
+| Drafts only, owner says yes | Approval cards Send / Edit / Skip (phase 4) | Live loop not yet tested on the phone |
+| Leaves the price blank | Resume and mail rules forbid invented facts | **Rates and bill rates**: the Chief must leave a rate blank for the owner, never guess it (*inferred*, high value for C2C) |
+| Weekly report from given data | Morning "while you were out" report pending (phase 2 remainder) | Not built |
+| Cost per run visible | Usage ledgers exist (stt, usage ingest) | No per-job cost shown to the owner |
+| Pause a job, cut an app | Settings per watcher | No one place listing every job with Pause |
+
+### Proposed next slices (not approved yet)
+
+1. **Goal to jobs:** the owner states a goal on WhatsApp; the Chief proposes the jobs with day and time; the owner
+   says yes; they run.
+2. **The brief:** one "Me / candidates / voice / Never" card the Chief reads before every job.
+3. **Blank-for-owner fields:** any rate, price or commitment is left blank and asked for, never filled.
+4. **Friday one-page report** and the pending morning report.
+5. **A jobs page:** every scheduled job, its last run, its cost and a Pause button.
