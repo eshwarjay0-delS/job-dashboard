@@ -1,3 +1,47 @@
+## 2026-10-23 — NEXT: every open to-do, by who does it
+
+The single list of what comes next. The Chief session runs all the work (owner: "Chief touches everything", "I said
+cheif runs them all"). Live on master: 88b6018a (Vercel success; not fully green, see below).
+
+### Only the owner can do these
+1. **URGENT: make gmail-watcher private.** It publishes about 730 recruiter emails and 345 phone numbers every 15
+   minutes (details private in parfAct `docs/security/`).
+2. Make job-dashboard private if vendor and people names should live in it.
+3. Switch on the paused scheduled task "Chief: keep working, never stop" (hourly wake-up for the Chief), or tell the
+   Chief to schedule its own check-in. The safety check would not let it be switched on without him.
+4. Let the Chief session attach parfAct and kompas (it was refused; it got the briefing by message instead).
+5. Rebuild the desktop (`npm run dist` in parfAct) and sign in once through Chrome; a link it did not ask for must be refused.
+6. Install extension 2.0.5 and sign in once on the dashboard.
+7. Open Kompas: no "Update ready" pill on a fresh load; type a question after an answer and see a new card.
+8. Run any new SQL migrations (apply receipts if not yet run; any the Chief adds).
+9. Decide: the two lost Kompas answer-format fixes (bold as a tinted box, placeholder wording) — this turns the last
+   3 red tests green; the CLAUDE.md "plausible estimated metrics" rule versus blanks; a "show code" view for live
+   coding rounds; morning report every day or weekdays only.
+10. Set plan prices (blank on /plans); add a Razorpay account if UPI and PhonePe checkout should go live.
+11. Network for REA: add viktor.com, www.sauna.ai, www.granola.ai, *.jobright.ai, clients2.googleusercontent.com and
+    the competitors' www. addresses to the environment's allowed domains.
+
+### The Chief does these, in order
+1. Phase 1: gather every to-do (Plan & Vision and TODO; REA register and research; Kompas repos and mandates; code
+   health and owner actions; wider market search) into one ranked backlog, `docs/chief/backlog.md`.
+2. Finish the Chief: one goal turned into scheduled jobs end to end on WhatsApp; the 7am report with the funnel
+   (inbox, submissions, Apply); a jobs page with last run and Pause.
+3. Apply: make `/api/apply/profile` actually save (it is a stub: nothing is stored); saved screening answers (idea 8);
+   excluded companies (9); "Needs you" (1); "already applied on <date>" on results (10).
+4. Resume: show the text the AI read (14); finish the change review before download (2).
+5. Build and CI on every push, same Node as Vercel; the Kompas no-drop audio audit.
+6. Wave 2 ideas: 4 replies attached to applications, 6 match score in the form, 7 one-click good-fit answer,
+   11 meeting auto-start, 12 after-call notes, 13 session report, 18 shareable recipes, 20 group view for many candidates.
+7. Security: steps 2 and 3 of the desktop sign-in fix (one-time code; launch links); MCP security review before it is
+   switched on; the two low extension findings.
+8. REA: the apps still blocked (Viktor, Sauna, Granola, Jobscan, extension packages), kompas and followup-hq REA,
+   competitor prices checked on their own pages.
+9. Release each finished slice: typecheck, lint, full suite, build, then master and the Vercel check; record it here
+   and in Plan & Vision.
+
+**Live but not fully checked (88b6018a):** 3 answer-format tests red (waiting on item 9 above); the WhatsApp Chief
+commands went out unit-tested only, since reviewed and tightened by the Chief (70094bad, not yet released).
+
 ## 2026-10-23 — Chief: the live WhatsApp Chief path reviewed and tightened
 
 **Done:** reviewed the Chief code that went live in 88b6018a without an end-to-end review. Four fixes on the card list, the overnight run, the Send tap and the draft headers. Details are kept out of this public repo. Tests: chief-approvals 7/7.
