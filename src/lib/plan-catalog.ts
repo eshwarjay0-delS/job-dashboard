@@ -10,7 +10,7 @@
 //   - weekly and monthly plans for a longer search;
 //   - every plan is the whole product. Plans differ by volume (how much practice time), never by which features open.
 //
-// To set a price, replace `price: null` with `price: { amount: 499, currency: "INR" }`. UPI and PhonePe only take rupees,
+// To set a price, replace `price: null` with `price: { amount: <the price>, currency: "INR" }`. UPI and PhonePe only take rupees,
 // so a plan priced in dollars is paid by card. The checkout (src/lib/checkout.ts) refuses a plan whose price is still null.
 //
 // Note for the owner: the landing page's pricing section reads a different, older list (src/lib/plans.ts) with launch

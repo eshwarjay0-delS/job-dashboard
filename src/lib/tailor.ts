@@ -14,6 +14,8 @@ import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./ll
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 import { priceCalls, type PricedCall } from "./llmPrices"
 import { targetKeywords, placeInSkills, isCertification, withoutAddedCerts, weaveConfirmedVocabulary, type RelationalPair } from "./keyword-targets"
+import { tailorReview, type TailorReview } from "./resume-changes"
+import { tailorRunKey } from "./tailor-review"
 
 export interface TailorResult {
   quality?: ReturnType<typeof resumeQuality>
@@ -41,6 +43,10 @@ export interface TailorResult {
   score_breakdown: { skills: number; identity: number; experience: number }
   // Before→after for every line tailoring changed — powers "See your difference".
   diff: { section: string; before: string; after: string }[]
+  // What the person checks before download (src/lib/resume-changes.ts): the original as the parser read it, and every
+  // added, changed or removed line, role by role, with the JD term it answers. Absent on results made before 23 Oct 2026;
+  // /api/tailor/review rebuilds it from the run record.
+  review?: TailorReview
   cached?: boolean
   elapsed_ms?: number
   // MEASURED JD keyword coverage (0-100) of the document actually returned.
@@ -448,7 +454,8 @@ export async function runTailor(opts: {
   // claimedKw: JD skills the skill lines list. required[i]: the listed skills role i must show (years math). roleKw[i]: the
   // required ones its bullets (rewritten and added) do show. provenKw: the listed skills any bullet shows. A skill listed
   // but shown at no client reads as padding to a recruiter.
-  type Pass = { edits: Edits; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string>; claimedKw: Set<string>; roleKw: Set<string>[]; required: string[][]; provenKw: Set<string>; via?: string; partial?: { failed: number; total: number; pendingRoles?: number[]; pendingProfile?: boolean } }
+  // `dropped`: paragraphs a one-page condense removed, kept so the change list can show them and the person can undo them.
+  type Pass = { edits: Edits; dropped: number[]; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string>; claimedKw: Set<string>; roleKw: Set<string>[]; required: string[][]; provenKw: Set<string>; via?: string; partial?: { failed: number; total: number; pendingRoles?: number[]; pendingProfile?: boolean } }
   // Apply a finished edit set to the docx and measure JD keyword coverage. Auto-tailoring
   // is the only path allowed to physically drop bullets (the manual builder never gets a
   // dropIdx), so a user's own edits are never silently trimmed.
@@ -482,7 +489,7 @@ export async function runTailor(opts: {
     const roleText = zones.roles.map((r, i) => [...r.bullets.map(b => rw.get(b.idx) ?? b.text), ...added[i]].join("\n"))
     const roleKw = zones.roles.map((_, i) => coveredJdKeywords(roleText[i], required[i]))
     const provenKw = coveredJdKeywords(roleText.join("\n"), listed)
-    return { edits, buffer, notes, tailoredText, cov, afterKw, claimedKw: new Set(listed), roleKw, required, provenKw }
+    return { edits, dropped: [...dropIdx], buffer, notes, tailoredText, cov, afterKw, claimedKw: new Set(listed), roleKw, required, provenKw }
   }
   // A generation pass on a given model. A full retarget runs as parallel calls: one for the
   // profile (headline, summary, skills) and one per role group for the bullets, so every role
@@ -834,6 +841,11 @@ export async function runTailor(opts: {
     if (changed(bl.text || "", b)) diff.push({ section: "Experience", before: b, after: bl.text.trim() })
   }
   for (const a of edits.added || []) if ((a.text || "").trim()) diff.push({ section: "Experience (new bullet)", before: "", after: a.text.trim() })
+  // The change list the person keeps or undoes before download, and the reading it was made from. No model call.
+  const review = tailorReview({
+    zones, text, edits, dropped: best.dropped, requirements: jdKws, jd,
+    evidence: candidateStatements.join("\n"), covers: coveredJdKeywords, spanOf: r => roleSpanMonths(r),
+  })
 
   // Total the real token usage across every model call this tailor made. Anthropic
   // reports cached prefix tokens under cacheRead (~1/10th the price of fresh input),
@@ -862,7 +874,7 @@ export async function runTailor(opts: {
     quality: qualityReport,
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,
     ranked_candidates: rankedCandidates, what_changed: whatChanged(edits), edits, notes,
-    applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff,
+    applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff, review,
     cached: false, elapsed_ms: Date.now() - started, coverage: coveragePercent(best.cov), role_alignment,
     experience_skills: { listed: claimedKw.size, shown: provenKw.size },
     ...(best.partial ? { partial: best.partial } : {}),
@@ -872,7 +884,8 @@ export async function runTailor(opts: {
 
   // Retain failed-run evidence privately; do not lose the input/output mapping when
   // WhatsApp consumes its session. No route exposes this diagnostic object.
-  await blob.put(`tailor_runs/${createHash("sha256").update(opts.userResumeDir).digest("hex")}/${token}.json`, JSON.stringify({
+  // The same record is what /api/tailor/review rebuilds the person's accepted version from (src/lib/tailor-review.ts).
+  await blob.put(tailorRunKey(opts.userResumeDir, token), JSON.stringify({
     version: 1, createdAt: new Date().toISOString(), sourceHash, sourcePath: matched.filepath,
     input: { jd: opts.jd, confirmations: immediatePrefs, refine: opts.refine || null },
     requirements: jdKws, enrichmentSuggestions: jdGenerated, result,

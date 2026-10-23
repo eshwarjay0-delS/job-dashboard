@@ -41,7 +41,8 @@ export async function proxy(request: NextRequest) {
     const isLoginPage = path === "/login"
     const isSignupPage = path === "/signup"
     const isApi = path.startsWith("/api/")
-    const isPublicPage = isLoginPage
+    // Plans and responsible use stay open to everyone: an employer asking to be blocklisted has no account here.
+    const isPublicPage = isLoginPage || path === "/plans" || path === "/responsible-use"
     const requireAuth = process.env.REQUIRE_AUTH === "1"
     const googleOnly = process.env.AUTH_GOOGLE_ONLY === "1"
     const protectedPage = !isPublicPage && !isApi

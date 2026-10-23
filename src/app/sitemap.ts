@@ -4,7 +4,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()
-  const paths = ["/", "/login", "/privacy", "/terms"]
+  const paths = ["/", "/login", "/plans", "/responsible-use", "/privacy", "/terms"]
   return paths.map((path) => ({
     url: `${SITE_URL}${path}`,
     lastModified: now,

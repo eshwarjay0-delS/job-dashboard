@@ -138,3 +138,20 @@ export function getH1BScore(companyName: string): H1BResult {
     reason: `No H1B sponsorship data found for ${companyName}. Research directly on their careers page or ask during screening.`,
   }
 }
+
+// Whether a company is on the hand-kept list above by its name, not by a fragment of it. getH1BScore matches either
+// way round ("ey" is inside "Kelley", "visa" inside "Visa Solutions Staffing"), which is fine for a soft hint on the
+// Jobs page but would put a false "known H1B filer" badge on an Apply listing, where a visa candidate decides on it.
+// The list is MFit's own, written from DOL LCA patterns; it is not DOL records, and the badge says so.
+const LEGAL_SUFFIX = /\b(?:inc|llc|ltd|plc|llp|lp|corp|corporation|co|company|the)\b/g
+const plainName = (s: string) => s.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").replace(LEGAL_SUFFIX, " ").replace(/\s+/g, " ").trim()
+export function listedSponsor(companyName: string): boolean {
+  const name = plainName(companyName || "")
+  if (!name) return false
+  for (const sponsor of LIKELY_SPONSORS) {
+    const s = plainName(sponsor)
+    // A one-word sponsor only when it is the whole name ("Cigna", not "Elastic Staffing"); a longer one may lead it.
+    if (name === s || (s.includes(" ") && name.startsWith(s + " "))) return true
+  }
+  return false
+}
