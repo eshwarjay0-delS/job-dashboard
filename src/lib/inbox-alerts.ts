@@ -36,6 +36,7 @@ export interface AlertThreadInput {
 }
 
 export interface ChainSummary {
+  accountEmail: string // Gmail thread IDs are scoped to this receiving account
   threadIds: string[] // the chain's own thread plus any linked source threads
   company: string
   role: string
@@ -111,8 +112,14 @@ export function shapeInboxAlerts(
   chains: ChainSummary[],
   sinceMs: number,
 ): InboxAlert[] {
+  const conversationKey = (accountEmail: string, threadId: string) =>
+    `${accountEmail.trim().toLowerCase()}:${threadId}`
   const chainByThread = new Map<string, ChainSummary>()
-  for (const c of chains) for (const id of c.threadIds) chainByThread.set(id, c)
+  for (const c of chains) {
+    for (const id of c.threadIds) {
+      chainByThread.set(conversationKey(c.accountEmail, id), c)
+    }
+  }
 
   const best = new Map<string, InboxAlert>()
   for (const t of threads) {
@@ -125,7 +132,7 @@ export function shapeInboxAlerts(
 
       const role = m.jobTitle || m.subject
       const company = m.company || ""
-      const own = chainByThread.get(t.threadId)
+      const own = chainByThread.get(conversationKey(t.accountEmail, t.threadId))
       let connect: InboxAlert["connect"]
       if (own && own.threadIds.length > 1) {
         // The thread is linked into a wider chain — this alert is that
@@ -142,11 +149,14 @@ export function shapeInboxAlerts(
         )
         if (match) {
           const via = match.people.length ? ` (${match.people.slice(0, 3).join(", ")})` : ""
+          const inbox = match.accountEmail.toLowerCase() !== t.accountEmail.toLowerCase()
+            ? ` in ${match.accountEmail}`
+            : ""
           connect = {
             state: "check-chain",
             company: match.company,
             role: match.role,
-            note: `Looks like your existing ${match.company} chain${via} — but it arrived on a different thread. Confirm it is the same chain before replying.`,
+            note: `Looks like your existing ${match.company} chain${via}${inbox} — but it arrived on a different thread. Confirm it is the same chain before replying.`,
           }
         } else {
           connect = { state: "new", note: "No existing chain matches this — a new thread." }
@@ -154,7 +164,7 @@ export function shapeInboxAlerts(
       }
 
       const alert: InboxAlert = {
-        id: `${t.threadId}:${m.id}`,
+        id: `${t.accountEmail.toLowerCase()}:${t.threadId}:${m.id}`,
         kind,
         at: m.at,
         threadId: t.threadId,
@@ -164,7 +174,7 @@ export function shapeInboxAlerts(
         meetingStart: kind === "interview" ? m.meetingStart : undefined,
         connect,
       }
-      const key = `${t.threadId}:${kind}`
+      const key = `${conversationKey(t.accountEmail, t.threadId)}:${kind}`
       const prev = best.get(key)
       if (!prev || alert.at > prev.at) best.set(key, alert)
     }

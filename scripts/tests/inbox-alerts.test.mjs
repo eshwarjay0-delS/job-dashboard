@@ -56,6 +56,7 @@ test("an invite on a different thread matching an existing chain by client + rol
   // different req trail. The alert must name the existing chain's people.
   const chains = [
     {
+      accountEmail: ME,
       threadIds: ["t-chain"],
       company: "Northpier",
       role: "Senior Cybersecurity and Compliance Engineer",
@@ -66,7 +67,7 @@ test("an invite on a different thread matching an existing chain by client + rol
   const inviteThread = thread("t-invite", [
     msg({ id: "inv", confirmedInvite: true, meetingStart: NOW + 60 * MIN }),
   ])
-  const ownChain = { threadIds: ["t-invite"], company: "Northpier", role: "Senior Cybersecurity and Compliance Engineer", holder: "Rita Vale", people: ["Rita Vale"] }
+  const ownChain = { accountEmail: ME, threadIds: ["t-invite"], company: "Northpier", role: "Senior Cybersecurity and Compliance Engineer", holder: "Rita Vale", people: ["Rita Vale"] }
   const out = shapeInboxAlerts([inviteThread], [...chains, ownChain], NOW - MIN)
   assert.equal(out.length, 1)
   assert.equal(out[0].connect.state, "check-chain")
@@ -77,6 +78,7 @@ test("an invite on a different thread matching an existing chain by client + rol
 test("an alert inside a linked multi-thread chain names the chain and its holder", () => {
   const chains = [
     {
+      accountEmail: ME,
       threadIds: ["t-old", "t-new"],
       company: "Northpier",
       role: "Security Engineer",
@@ -96,7 +98,7 @@ test("an alert inside a linked multi-thread chain names the chain and its holder
 
 test("same client but a different role does not trip the second-chain flag", () => {
   const chains = [
-    { threadIds: ["t-chain"], company: "Northpier", role: "Network Engineer", holder: "Vendor", people: ["Sam"] },
+    { accountEmail: ME, threadIds: ["t-chain"], company: "Northpier", role: "Network Engineer", holder: "Vendor", people: ["Sam"] },
   ]
   const out = shapeInboxAlerts(
     [thread("t-invite", [msg({ id: "inv", confirmedInvite: true })])],
@@ -114,5 +116,42 @@ test("two urgent messages in one thread collapse to one alert per kind, the late
     NOW - 10 * MIN,
   )
   assert.equal(out.length, 1)
-  assert.equal(out[0].id, "t1:new")
+  assert.equal(out[0].id, `${ME}:t1:new`)
+})
+
+test("same Gmail thread id in two connected accounts cannot cross-wire or suppress alerts", () => {
+  const other = "other@example.com"
+  const chains = [
+    { accountEmail: ME, threadIds: ["same-id", "older"], company: "Northpier", role: "Security Engineer", holder: "Holder A", people: ["Alex"] },
+    { accountEmail: other, threadIds: ["same-id", "older"], company: "Southbank", role: "Platform Engineer", holder: "Holder B", people: ["Blair"] },
+  ]
+  const out = shapeInboxAlerts(
+    [
+      thread("same-id", [msg({ id: "same-message", category: "Rate Confirmation", company: "Northpier", jobTitle: "Security Engineer" })], ME),
+      thread("same-id", [msg({ id: "same-message", category: "Rate Confirmation", company: "Southbank", jobTitle: "Platform Engineer" })], other),
+    ],
+    chains,
+    NOW - MIN,
+  )
+
+  assert.equal(out.length, 2, "each receiving account keeps its own alert")
+  assert.equal(out.find(a => a.accountEmail === ME)?.connect.company, "Northpier")
+  assert.equal(out.find(a => a.accountEmail === other)?.connect.company, "Southbank")
+  assert.notEqual(out[0].id, out[1].id, "persisted alert ids include the account boundary")
+})
+
+test("a possible chain in another inbox names that inbox instead of silently merging", () => {
+  const other = "other@example.com"
+  const chains = [
+    { accountEmail: other, threadIds: ["prior"], company: "Northpier", role: "Senior Cybersecurity and Compliance Engineer", holder: "Holder B", people: ["Blair"] },
+  ]
+  const out = shapeInboxAlerts(
+    [thread("incoming", [msg({ id: "cross", confirmedInvite: true })], ME)],
+    chains,
+    NOW - MIN,
+  )
+
+  assert.equal(out[0].connect.state, "check-chain")
+  assert.match(out[0].connect.note, new RegExp(`in ${other}`))
+  assert.match(out[0].connect.note, /Confirm it is the same chain/)
 })

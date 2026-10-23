@@ -40,6 +40,7 @@ export async function GET(req: Request) {
     const chains = buildApplicationChains(enriched)
 
     const chainSummaries: ChainSummary[] = chains.map(c => ({
+      accountEmail: c.accountEmail,
       threadIds: [c.threadId, ...(c.sourceThreadIds || [])],
       company: c.company,
       role: c.role,
