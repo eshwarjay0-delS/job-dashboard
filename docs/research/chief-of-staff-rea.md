@@ -278,6 +278,12 @@ redirect target is not on this environment's allowlist), so nothing below was ob
 | Cost per run visible | Usage ledgers exist (stt, usage ingest) | No per-job cost shown to the owner |
 | Pause a job, cut an app | Settings per watcher | No one place listing every job with Pause |
 
+### Owner sizing, 23 Oct
+
+"actually 50 to 100$ a month..": the Chief is sized at $50 to $100 a month, not $50,000. Not yet settled: whether
+that is the running cost to stay under or the price MFit charges. Either way, every job's cost must be visible (gap
+above) so the month stays inside it.
+
 ### Proposed next slices (not approved yet)
 
 1. **Goal to jobs:** the owner states a goal on WhatsApp; the Chief proposes the jobs with day and time; the owner
