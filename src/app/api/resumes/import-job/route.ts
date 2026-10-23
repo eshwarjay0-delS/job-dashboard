@@ -9,6 +9,7 @@ import { recoverLibraryResume } from "@/lib/resumeRecovery"
 import { extractText } from "@/lib/docx"
 import { extractKeywords } from "@/lib/keywords"
 import { CATEGORY_FOLDERS, resumeEmails } from "@/lib/resumeOrganization"
+import { importedOriginalFileName } from "@/lib/resume-library"
 
 export const runtime = "nodejs"
 export const maxDuration = 300
@@ -62,7 +63,9 @@ export async function POST(request: NextRequest) {
     }
     const verified: { filename: string; email: string; category: string; sha256: string; bytes: number }[] = []
     for (const file of files) {
-      const filename = file.filename.replace(/[^a-z0-9._ ()-]/gi, "_")
+      // Preserve distinct originals that arrived with the same visible filename.
+      // An identical retry resolves to the same path; different bytes never overwrite it.
+      const filename = importedOriginalFileName(file.filename, file.sha256)
       const target = path.join(root, file.email, file.category, filename)
       await writePath(target, file.bytes)
       const saved = await readPath(target)
