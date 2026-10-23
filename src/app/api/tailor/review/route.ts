@@ -53,16 +53,17 @@ export async function POST(request: NextRequest) {
   try {
     const built = await buildAccepted(run, body.accepted as string[])
     if ("error" in built) return NextResponse.json({ error: built.error }, { status: 409 })
+    const keywordAnalysis = await keptKeywords(run, built.buffer)
     const save = body.save && typeof body.save === "object" && !Array.isArray(body.save) ? body.save as { role?: unknown; company?: unknown } : null
     const saved = save
       ? await fileTailored({
           userDir, base: run.sourcePath, jd: run.input?.jd || "",
-          result: { ...run.result, token: built.token, keyword_analysis: await keptKeywords(run, built.buffer) },
+          result: { ...run.result, token: built.token, keyword_analysis: keywordAnalysis },
           role: typeof save.role === "string" ? save.role : "", company: typeof save.company === "string" ? save.company : "",
         })
       : null
     if (save && !saved) return NextResponse.json({ token: built.token, kept: built.kept, total: built.total, error: "The file was built but could not be saved in Files." }, { status: 500 })
-    return NextResponse.json({ token: built.token, kept: built.kept, total: built.total, ...(saved ? { saved } : {}) })
+    return NextResponse.json({ token: built.token, kept: built.kept, total: built.total, keyword_analysis: keywordAnalysis, ...(saved ? { saved } : {}) })
   } catch (e: unknown) {
     return NextResponse.json({ error: `Could not build your reviewed resume: ${String(e).slice(0, 200)}` }, { status: 500 })
   }

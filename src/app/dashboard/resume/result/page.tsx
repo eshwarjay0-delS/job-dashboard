@@ -311,6 +311,18 @@ function KwRow({ label, color, bg, border, items }: { label: string; color: stri
 interface KeywordAnalysis { matched: string[]; added: string[]; missing: string[]; coverage_before: number; coverage_after: number }
 interface ScoreBreakdown { skills: number; identity: number; experience: number }
 interface DiffEntry { section: string; before: string; after: string }
+interface ReviewChange {
+  id: string
+  kind: "added" | "changed" | "removed"
+  area: "title" | "tagline" | "summary" | "skills" | "role"
+  role?: string
+  before: string
+  after: string
+  answers: { term: string; jd?: string }[]
+  notInOriginal: string[]
+  newNumbers: string[]
+}
+interface TailorReview { changes: ReviewChange[]; source: { warnings: string[] }; dropped: number[] }
 
 function ResultContent() {
   const params = useSearchParams()
@@ -349,6 +361,12 @@ function ResultContent() {
   const [selKw, setSelKw] = useState<string[]>([])   // missing keywords the user chose to add
   const [diff, setDiff] = useState<DiffEntry[]>([])
   const [showDiff, setShowDiff] = useState(false)
+  const [review, setReview] = useState<TailorReview | null>(null)
+  const [acceptedIds, setAcceptedIds] = useState<string[]>([])
+  const [reviewedToken, setReviewedToken] = useState("")
+  const [reviewLoading, setReviewLoading] = useState(true)
+  const [reviewBuilding, setReviewBuilding] = useState(false)
+  const [reviewError, setReviewError] = useState("")
 
   const [previewHtml, setPreviewHtml]       = useState("")
   const [previewLoading, setPreviewLoading] = useState(true)
@@ -383,7 +401,44 @@ function ResultContent() {
     finally { setPreviewLoading(false) }
   }, [resumeName])
 
-  useEffect(() => { loadPreview(token) }, [token, loadPreview])
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      // Cross an async boundary before resetting state: this effect synchronizes a server-owned review record.
+      await Promise.resolve()
+      if (cancelled) return
+      setReview(null); setAcceptedIds([]); setReviewedToken(""); setReviewError(""); setPreviewHtml("")
+      if (!token) { setReviewLoading(false); return }
+      setReviewLoading(true)
+      try {
+        const res = await fetch(`/api/tailor/review?token=${encodeURIComponent(token)}`, { cache: "no-store", signal: AbortSignal.timeout(30000) })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || !data.review) throw new Error(data.error || "Could not load the change review.")
+        const next = data.review as TailorReview
+        // Confirmed experience is included in the server-side evidence set, so it is not flagged here. Anything that
+        // introduces an unconfirmed JD term or a new number starts unchecked and cannot slip into the download silently.
+        const safe = next.changes.filter(c => !c.notInOriginal.length && !c.newNumbers.length).map(c => c.id)
+        if (cancelled) return
+        setReview(next); setAcceptedIds(safe)
+        const built = await fetch("/api/tailor/review", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, accepted: safe }), signal: AbortSignal.timeout(60000),
+        })
+        const result = await built.json().catch(() => ({}))
+        if (!built.ok || !result.token) throw new Error(result.error || "Could not build the reviewed preview.")
+        if (!cancelled) setReviewedToken(result.token)
+      } catch (e) {
+        if (!cancelled) setReviewError(e instanceof Error ? e.message : "Could not load the change review.")
+      } finally {
+        if (!cancelled) setReviewLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [token])
+
+  useEffect(() => {
+    if (reviewedToken) void Promise.resolve().then(() => loadPreview(reviewedToken))
+  }, [reviewedToken, loadPreview])
 
   useEffect(() => {
     try {
@@ -411,12 +466,36 @@ function ResultContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function download(fmt: "docx" | "pdf") {
+  async function buildReviewedFile() {
+    if (!token || !review) throw new Error(reviewError || "The change review is not ready yet.")
+    setReviewBuilding(true)
+    try {
+      const res = await fetch("/api/tailor/review", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, accepted: acceptedIds }), signal: AbortSignal.timeout(60000),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.token) throw new Error(data.error || "Could not build your reviewed resume.")
+      setReviewedToken(data.token)
+      if (data.keyword_analysis) {
+        setKwAnalysis(data.keyword_analysis)
+        if (typeof data.keyword_analysis.coverage_after === "number") setCoverage(data.keyword_analysis.coverage_after)
+      }
+      return data.token as string
+    } finally { setReviewBuilding(false) }
+  }
+
+  async function download(fmt: "docx" | "pdf") {
     if (!token) { toast.error("Tailor a resume first."); return }
+    if (reviewLoading || reviewBuilding) { toast.error("Your reviewed resume is still being prepared."); return }
+    if (!review || reviewError) { toast.error(reviewError || "Review the changes before downloading."); return }
+    let downloadToken = ""
+    try { downloadToken = await buildReviewedFile() }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Could not build your reviewed resume."); return }
     // Name the file after the TARGET role/company + today's date. Falls back to
     // candidate-only (from the source name) when no role/company is known.
     const safeName = tailoredFilename({ sourceName: resumeName, role: targetRole, company: targetCompany }) || "Resume"
-    const url = `/api/tailor/file?token=${encodeURIComponent(token)}&fmt=${fmt}&name=${encodeURIComponent(safeName)}`
+    const url = `/api/tailor/file?token=${encodeURIComponent(downloadToken)}&fmt=${fmt}&name=${encodeURIComponent(safeName)}`
     if (fmt === "docx") {
       const a = document.createElement("a")
       a.href = url; a.download = `${safeName}.docx`
@@ -683,17 +762,77 @@ function ResultContent() {
             </div>
           )}
 
+          {/* Approval gate: the download is rebuilt from the original with only these checked changes. */}
+          <div className="px-6 py-5" style={{ borderTop: "1px solid var(--border)", background: "var(--surface)" }}>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <h2 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Review every change</h2>
+                <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "var(--text-soft)" }}>
+                  Only checked changes go into the file. New claims and numbers stay unchecked until you confirm them.
+                </p>
+              </div>
+              {review && <span className="text-[11px] font-semibold rounded-full px-2 py-1 flex-shrink-0" style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>{acceptedIds.length}/{review.changes.length} kept</span>}
+            </div>
+            {reviewLoading ? (
+              <p className="text-xs flex items-center gap-2" style={{ color: "var(--text-soft)" }}><Spin /> Reading the original and checking every rewrite…</p>
+            ) : reviewError ? (
+              <div role="alert" className="rounded-xl border p-3 text-xs leading-relaxed" style={{ borderColor: "#d9b4ae", background: "#fbf1ef", color: "#7a3027" }}>{reviewError} Tailor again before downloading.</div>
+            ) : review ? (
+              <>
+                {review.source.warnings.length > 0 && (
+                  <div className="rounded-xl border p-3 mb-3" style={{ borderColor: "#d9d4c8", background: "#f7f5f0" }}>
+                    <p className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: "#5b594e" }}>Check what the parser read</p>
+                    {review.source.warnings.slice(0, 3).map((warning, i) => <p key={i} className="text-[11px] leading-relaxed" style={{ color: "var(--text-muted)" }}>• {warning}</p>)}
+                  </div>
+                )}
+                <div className="flex gap-2 mb-3">
+                  <button type="button" className="btn-surface px-3 py-1.5 text-xs" onClick={() => { setAcceptedIds(review.changes.map(c => c.id)); setReviewedToken(""); setPreviewHtml("") }}>Keep all</button>
+                  <button type="button" className="btn-surface px-3 py-1.5 text-xs" onClick={() => { setAcceptedIds([]); setReviewedToken(""); setPreviewHtml("") }}>Undo all</button>
+                </div>
+                <div className="space-y-2 max-h-[430px] overflow-y-auto pr-1">
+                  {review.changes.map(change => {
+                    const checked = acceptedIds.includes(change.id)
+                    const risky = change.notInOriginal.length > 0 || change.newNumbers.length > 0
+                    return (
+                      <label key={change.id} className="block rounded-xl border p-3 cursor-pointer" style={{ borderColor: checked ? "var(--accent-border)" : "var(--border)", background: checked ? "var(--accent-soft)" : "var(--surface-2)" }}>
+                        <div className="flex items-start gap-2.5">
+                          <input type="checkbox" className="mt-0.5" checked={checked} onChange={() => {
+                            setAcceptedIds(ids => checked ? ids.filter(id => id !== change.id) : [...ids, change.id])
+                            setReviewedToken(""); setPreviewHtml("")
+                          }} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-soft)" }}>{change.role || change.area} · {change.kind}</span>
+                              {risky && <span className="text-[10px] font-bold rounded-full px-2 py-0.5" style={{ color: "#7a3027", background: "#f6ded9" }}>Confirm this claim</span>}
+                            </div>
+                            {change.before && <p className="text-[11px] leading-relaxed line-through mb-1" style={{ color: "var(--text-soft)" }}>{change.before}</p>}
+                            {change.after && <p className="text-xs leading-relaxed" style={{ color: "var(--text)" }}>{change.after}</p>}
+                            {change.notInOriginal.length > 0 && <p className="text-[11px] mt-1.5" style={{ color: "#7a3027" }}>Not found in your resume or confirmed experience: {change.notInOriginal.join(", ")}</p>}
+                            {change.newNumbers.length > 0 && <p className="text-[11px] mt-1" style={{ color: "#7a3027" }}>New number not found in your evidence: {change.newNumbers.join(", ")}</p>}
+                          </div>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+                <button type="button" disabled={reviewBuilding} onClick={async () => { try { await buildReviewedFile(); toast.success("Preview updated with only the changes you kept") } catch (e) { toast.error(e instanceof Error ? e.message : "Could not update the preview.") } }} className="btn-surface w-full mt-3 py-2.5 text-xs flex items-center justify-center gap-2 disabled:opacity-50">
+                  {reviewBuilding ? <><Spin /> Rebuilding…</> : "Update preview with my choices"}
+                </button>
+              </>
+            ) : null}
+          </div>
+
           {/* Download + Cover Letter */}
           <div className="px-6 py-5 space-y-2" style={{ borderTop: "1px solid var(--border)", background: "var(--surface)" }}>
             <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-soft)" }}>Download</p>
-            <button onClick={() => download("docx")} className="btn-accent w-full flex items-center justify-between px-4 py-3 rounded-xl">
+            <button disabled={reviewLoading || reviewBuilding || !!reviewError} onClick={() => download("docx")} className="btn-accent w-full flex items-center justify-between px-4 py-3 rounded-xl disabled:opacity-50">
               <div className="text-left">
                 <p className="font-semibold text-sm">Word (.docx) · Recommended</p>
                 <p className="text-xs opacity-80">Your exact fonts &amp; layout — ready to send</p>
               </div>
               <DownloadIcon />
             </button>
-            <button onClick={() => download("pdf")} className="btn-surface w-full flex items-center justify-between px-4 py-3">
+            <button disabled={reviewLoading || reviewBuilding || !!reviewError} onClick={() => download("pdf")} className="btn-surface w-full flex items-center justify-between px-4 py-3 disabled:opacity-50">
               <div className="text-left">
                 <p className="font-semibold text-sm">PDF — simplified copy</p>
                 <p className="text-xs" style={{ color: "var(--text-soft)" }}>Text-only layout · for exact format, Save as PDF from the Word file</p>
