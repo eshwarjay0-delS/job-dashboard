@@ -1,3 +1,13 @@
+## 2026-10-23 — The Chief session took over; checks on the handed-over branch
+
+**Done:** attached followup-hq and gmail-watcher and created the session branch in both. Attaching parfAct and kompas was refused by the session's permission check, so the private briefing and its "Next, in order" list were not read.
+
+**Checks (session branch, WIP included):** typecheck pass, lint 0 errors, autofill 133/133, applications 15/15, build pass, hardening 777/780. Fixed two: the extension zip now includes `claude-key.js`; a whole plan price shows as ₹1,234, not ₹1,234.00.
+
+**Still failing:** 3 Kompas answer-format tests. They fail on master too. The test and the renderer disagree (headings dropped on purpose vs. wanted). His call; not changed.
+
+**No visible change.** A rebuilt download zip and a price label on a page that is not released. Nothing went to master.
+
 ## 2026-10-23 — Kompas Desktop does not draw a code block
 
 **Asked:** the answer is spoken. No code on the card.
