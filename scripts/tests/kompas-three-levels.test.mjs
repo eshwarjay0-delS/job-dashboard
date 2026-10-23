@@ -16,6 +16,8 @@ test("the desktop offers exactly three asking levels", () => {
   assert.doesNotMatch(live, /value="technical_hr"/)
   assert.doesNotMatch(live, /value="developer"/)
   assert.match(app, /three-level-v3/)
+  assert.match(app, /function sayAloud/)
+  assert.match(app, /warmDesktopLevels\(/)
   assert.match(app, /regenerateForAudience\(\)/)
 })
 

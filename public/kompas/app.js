@@ -978,6 +978,55 @@ function showCachedLevel(card) {
   if (cards[idx] === card) renderCard();
   return true;
 }
+function sayAloud(s) {
+  return String(s || "")
+    .replace(/&amp;/gi, " and ")
+    .replace(/\bx-amp\b/gi, "and")
+    .replace(/&gt;=/gi, " at least ")
+    .replace(/&lt;=/gi, " at most ")
+    .replace(/&gt;/gi, " greater than ")
+    .replace(/&lt;/gi, " less than ")
+    .replace(/&quot;|&#39;|&apos;/gi, "")
+    .replace(/>=\s*(\d+)/g, "at least $1")
+    .replace(/<=\s*(\d+)/g, "at most $1")
+    .replace(/>\s*(\d+)/g, "greater than $1")
+    .replace(/<\s*(\d+)/g, "less than $1")
+    .replace(/\s+&\s+/g, " and ")
+    .replace(/[ \t]*;[ \t]*/g, " ")
+    .replace(/\band\s+and\b/gi, "and")
+    .replace(/[ \t]{2,}/g, " ");
+}
+function warmDesktopLevels(card, question) {
+  if (!desktopResponses() || !card) return;
+  const q = String(question || card.anchorQ || card.question || "").trim();
+  if (q.length < 8 || /^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(q)) return;
+  card.desktopWarm = card.desktopWarm || {};
+  for (const level of LADDER) {
+    const key = `three-level-v3|${level}|${liveConfig().mode}|${liveConfig().length || ""}|${q}`;
+    if ((card.desktopByDepth && card.desktopByDepth[key]) || card.desktopWarm[level]) continue;
+    card.desktopWarm[level] = true;
+    fetch("/api/answer", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        stream: false, client: BUILD, question: q, derived: q, pinned: true,
+        config: { ...liveConfig(), interviewer: level, level, responseCalibration: "three-level-v1" },
+        prep: typeof slimPrep === "function" ? slimPrep() : {}, transcript: "", ledger, history: typeof recentQA === "function" ? recentQA(card) : [],
+      }),
+    }).then((r) => r.ok ? r.json() : null).then((data) => {
+      const text = data && sayAloud(data.text || "");
+      if (!text.trim()) return;
+      card.desktopByDepth = card.desktopByDepth || {};
+      if (!card.desktopByDepth[key]) card.desktopByDepth[key] = { answer: text.trim(), meta: "ready" };
+      if (cards[idx] === card && askingLevel() === level && card.streaming) {
+        card.answer = text.trim();
+        card.streaming = false;
+        card.meta = "ready";
+        renderCard();
+        status("Shown for " + ( $("liveInterviewer").selectedOptions[0] || {} ).textContent, "live");
+      }
+    }).catch(() => {}).finally(() => { if (card.desktopWarm) card.desktopWarm[level] = false; });
+  }
+}
 function regenerateForAudience() {
   if (typeof logAction === "function") logAction("regen", { to: $("liveInterviewer").value });
   const c = cards[idx], label = $("liveInterviewer").selectedOptions[0].textContent;
@@ -989,6 +1038,9 @@ function regenerateForAudience() {
     const hit = c.desktopByDepth && c.desktopByDepth[desktopResponseKey(c)];
     if (c.req) { const previous = c.req; c.req = null; previous.abort(); }
     if (hit) { c.answer = hit.answer; c.streaming = false; c.meta = hit.meta; renderCard(); status("Shown for " + label, "live"); return; }
+    if (c.desktopWarm && c.desktopWarm[askingLevel()]) {
+      c.answer = ["…"]; c.streaming = true; renderCard(); status("Preparing " + label + "…", "live"); return;
+    }
     c.anchorFlight = "";
     if (c.heard) generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "", derived: c.anchorQ || c.question, regen: true });
     else generateAnswer(c.question, c, { regen: true });
@@ -1994,7 +2046,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
   let renderQueued = false;
   const show = (t) => {
     if (card.req !== ctl || isUnavailableAnswer({ degraded: true }, t)) return;
-    card.answer = t.trim() ? t : ["…"];
+    const spoken = sayAloud(t).trim();
+    card.answer = spoken ? spoken : ["…"];
     if (cards[idx] !== card || renderQueued) return;
     renderQueued = true;
     requestAnimationFrame(() => { renderQueued = false; if (cards[idx] === card) renderCard(); });
@@ -2074,7 +2127,11 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (cards[idx] === card) renderCard();
     logAnswer({ derived: meta.derived || derivedQ || "", derivedBy: derivedBy || "", kind: meta.length && meta.length.kind, tier: meta.tier, lane: meta.timing && meta.timing.lane, voice: meta.voice && `${meta.voice.passed}/${meta.voice.total}`, ms: Math.round(performance.now() - t0), depthKey });
     if (!meta.degraded && !/backup model/.test(card.meta)) { card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta }; }
-    if (directDesktop && !meta.degraded) { card.desktopByDepth = card.desktopByDepth || {}; card.desktopByDepth[responseKey] = { answer: card.answer, meta: card.meta }; }
+    if (directDesktop && !meta.degraded) {
+      card.desktopByDepth = card.desktopByDepth || {};
+      card.desktopByDepth[responseKey] = { answer: sayAloud(typeof card.answer === "string" ? card.answer : text), meta: card.meta };
+      warmDesktopLevels(card, card.anchorQ || qText);
+    }
     if (!directDesktop && window.KompasLevels && text && !meta.degraded) {
       const fixed = criticise(card, writeAnchor, text);
       const shaped = window.KompasLevels.fromProse(fixed, writeAnchor);
