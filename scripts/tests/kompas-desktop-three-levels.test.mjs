@@ -45,7 +45,7 @@ test('desktop offers exactly three levels and switches a pending response immedi
  assert.equal(context.keptLevel('developer'),'architect','legacy developer migrates to the combined second level')
  context.$('liveInterviewer').value='engineer';context.audienceChanged(false)
  assert.equal(calls[0],'aborted');assert.deepEqual(calls[1],{q:'Compare IDOR and CSRF',regen:true,level:'engineer'})
- card.desktopByDepth={'three-level-v2|director|technical|balanced|Compare IDOR and CSRF':{answer:'Business view',meta:'cached'}}
+ card.desktopByDepth={'three-level-v3|director|technical|balanced|Compare IDOR and CSRF':{answer:'Business view',meta:'cached'}}
  context.$('liveInterviewer').value='director';context.audienceChanged(false)
  assert.equal(card.answer,'Business view');assert.equal(card.streaming,false)
  assert.equal(calls.filter(x=>typeof x==='object').length,1,'cached director answer does not generate again')

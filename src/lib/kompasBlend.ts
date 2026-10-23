@@ -51,12 +51,39 @@ function normSentence(s: string): string {
   return s.toLowerCase().replace(/\[(?:beat|breath)\]/gi, "").replace(/[^a-z0-9]+/g, " ").trim()
 }
 
+/** Turn symbols and entity codes into words a person can say. */
+export function speakableWords(input: string): string {
+  return String(input || "")
+    .replace(/&amp;/gi, " and ")
+    .replace(/\bx-amp\b/gi, "and")
+    .replace(/&gt;=/gi, " at least ")
+    .replace(/&lt;=/gi, " at most ")
+    .replace(/&gt;/gi, " greater than ")
+    .replace(/&lt;/gi, " less than ")
+    .replace(/&quot;|&#39;|&apos;/gi, "")
+    .replace(/&#(\d+);/g, (_m, n) => {
+      const ch = String.fromCharCode(Number(n))
+      if (ch === ">") return " greater than "
+      if (ch === "<") return " less than "
+      if (ch === "&") return " and "
+      return " "
+    })
+    .replace(/>=\s*(\d+)/g, "at least $1")
+    .replace(/<=\s*(\d+)/g, "at most $1")
+    .replace(/>\s*(\d+)/g, "greater than $1")
+    .replace(/<\s*(\d+)/g, "less than $1")
+    .replace(/\s+&\s+/g, " and ")
+    .replace(/[ \t]*;[ \t]*/g, " ")
+    .replace(/\band\s+and\b/gi, "and")
+    .replace(/[ \t]{2,}/g, " ")
+}
+
 /** Shape a finished answer. Idempotent. Does not invent a fact or change a number. */
 export function blendSpoken(input: string): string {
   const original = String(input || "")
   if (!original.trim()) return original
   const fences: string[] = []
-  let text = original.replace(/\r\n/g, "\n").replace(/```[\s\S]*?```/g, (block) => {
+  let text = speakableWords(original).replace(/\r\n/g, "\n").replace(/```[\s\S]*?```/g, (block) => {
     fences.push(block)
     return `\u0000F${fences.length - 1}\u0000`
   })
