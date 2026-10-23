@@ -102,3 +102,12 @@ interface ApplyReceipt {
 1. Scaffold `mfit_apply_receipts` table migration
 2. Define `ApplyProfile` API (`/api/apply/profile`)
 3. Wire receipt generation into "Mark as submitted" flow
+
+
+## Desktop inclusive browser implementation — 22 October 2026
+
+Owner renewed: Continue with rest of REA, in-app inclusive browser. Continue the approved desktop phase without selecting a paid cloud-browser provider. The Apply detail panel now has Open in desktop behind the existing duplicate-submission warning. It resolves an opaque authenticated account ID and launches marketfit-kompas://browse; no token or password is carried in that link. The native shell independently verifies the same account before opening a separate MarketFit portal window using WebContentsView. Navigation controls, isolated persistent cookies, HTTPS navigation, popup containment, cleanup and confirmed Forget logins are implemented. Closing the portal does not mark an application submitted. Manual upload uses the selected resume downloaded from Apply.
+
+This supersedes BrowserView and bookmarklet instructions in the historical design. Native source is canonical in eshwarjay0-delS/parfAct/desktop, not the legacy snapshot. The packager explicitly includes the new browser assets. Portal sessions can persist; this is not Chrome password-manager synchronization and a provider can expire or refuse a session. Web-only users retain their normal browser path. Hosted live-view, automatic filling inside the native view, mobile and automated submission are separate unfinished phases.
+
+Verification: six simulated Electron lifecycle/isolation/navigation checks, eight existing native auth checks, native protocol/source checks, two account-context API checks, TypeScript and the full web production build passed. Windows packaging, actual portal navigation/SSO, file upload and restart/login persistence still need release and device evidence. Source REA: docs/research/inclusive-browser-desktop.md.
