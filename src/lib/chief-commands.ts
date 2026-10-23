@@ -9,9 +9,10 @@ import { readBrief, writeBrief, parseBriefText, screenBrief, mergeBrief, briefSh
 import { proposeJobs, saveApprovedJobs, listJobsText, planCardText, type JobsPlan, type JobDay, type Ask } from "@/lib/chief-goal"
 import { createApprovalCard, deliverApprovalCard, saveApprovalCard, type ApprovalCard } from "@/lib/chief-approvals"
 import { blob } from "@/lib/storage"
+import { MORNING_WORDS, runMorningReport, setMorning } from "@/lib/chief-morning"
 
 /** A first word the webhook hands here before it treats a long message as a job description. */
-export const CHIEF_WORDS = /^(?:my\s+|new\s+)?(?:brief|goal|jobs|never[\s-]+contact|chief\s*[,:])/i
+export const CHIEF_WORDS = /^(?:my\s+|new\s+)?(?:brief|goal|jobs|never[\s-]+contact|chief\s*[,:]|morning(?:\s+report)?(?:\s+(?:on|off))?\s*[.!?]?$)/i
 
 const NOT_LINKED = "Link this number to your MarketFit account first (Connections, then WhatsApp), so your brief and your jobs are kept with you and nobody else."
 
@@ -51,6 +52,15 @@ export async function chiefCommand(input: Input): Promise<string | null> {
     if (screened) return `${screened} Nothing was saved.`
     const saved = await writeBrief(input.userId, mergeBrief(brief, { neverContact: [...brief.neverContact, ...add] }, now))
     return `Saved. Never contact: ${saved.neverContact.join(", ")}. No draft or card is ever made for them.`
+  }
+  const morning = MORNING_WORDS.exec(text)
+  if (morning) {
+    if (!input.account) return NOT_LINKED
+    const want = morning[1]?.toLowerCase()
+    if (want === "on") { await setMorning(input.userId, true); return "Morning report on. It comes here at about 7am Chicago time. Send _morning off_ to stop it." }
+    if (want === "off") { await setMorning(input.userId, false); return "Morning report off. Send _morning_ any time for it now." }
+    const r = await runMorningReport(input.userId, { now })
+    return r.sent ? "" : `I could not put the report here (${r.why || "unknown"}).${r.saved ? " It is in your MarketFit notifications." : ""}`
   }
   if (/^(?:my\s+)?jobs\s*\??$/i.test(text)) {
     if (!input.account) return NOT_LINKED

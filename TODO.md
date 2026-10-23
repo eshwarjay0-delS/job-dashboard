@@ -1,3 +1,11 @@
+## 2026-10-23 — Chief: the 7am report on WhatsApp
+
+**Built:** `src/lib/chief-morning.ts` and the `/api/chief/morning` cron (7:13am Chicago in summer time). It lists what needs his call, double-submit risks, threads quiet 7+ days, and waiting drafts. The funnel always says "0 sent without you". The Apply line says plainly that it is not wired in yet.
+
+**Off until he says so:** "morning on" / "morning off" / "morning" (now) on WhatsApp. It is also saved in the app.
+
+**Not verified live:** no WhatsApp send from this session. Outside the 24-hour window Meta needs an approved template. Tests: chief-morning 6/6.
+
 ## 2026-10-23 — Chief: the live WhatsApp Chief path reviewed and tightened
 
 **Done:** reviewed the Chief code that went live in 88b6018a without an end-to-end review. Four fixes on the card list, the overnight run, the Send tap and the draft headers. Details are kept out of this public repo. Tests: chief-approvals 7/7.

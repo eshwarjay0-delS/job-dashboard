@@ -47,7 +47,7 @@ import { chooseResume, type Prefer } from "@/lib/library-choose"
 import { titlesOf, parseInstruction, parseQuestion, splitTailInstruction, type Instruction } from "@/lib/role-match"
 import { getApprovalCard, saveApprovalCard, parseCardButton, deliverApprovalCard, sendGmailDraft, updateGmailDraft, deleteGmailDraft, sendLocked, keepOpenFlags } from "@/lib/chief-approvals"
 // The first words the Chief answers; the module itself is loaded only when one is sent.
-const CHIEF_WORDS = /^(?:my\s+|new\s+)?(?:brief|goal|jobs|never[\s-]+contact|chief\s*[,:])/i
+const CHIEF_WORDS = /^(?:my\s+|new\s+)?(?:brief|goal|jobs|never[\s-]+contact|chief\s*[,:]|morning(?:\s+report)?(?:\s+(?:on|off))?\s*[.!?]?$)/i
 
 export const runtime = "nodejs"
 export const maxDuration = 300
@@ -209,7 +209,7 @@ const HELP = [
   "",
   "Commands: *redo* · *reset* · *status*",
   "",
-  "*Your Chief:* *brief* shows the brief I read before every job · *goal:* _watch my submissions tonight_ and I propose the jobs for your yes · *jobs* lists what is scheduled · *never contact:* _a name or a domain_.",
+  "*Your Chief:* *brief* shows the brief I read before every job · *goal:* _watch my submissions tonight_ and I propose the jobs for your yes · *jobs* lists what is scheduled · *never contact:* _a name or a domain_ · *morning on* sends last night's report at 7am, *morning* sends it now.",
 ].join("\n")
 
 // ── Meta webhook verification (GET) ───────────────────────────────────────────
