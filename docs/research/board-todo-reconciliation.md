@@ -14,6 +14,7 @@ Both records are actionable. Preserve history while using the latest explicit co
 | All remaining portals require a renderer | Superseded as a blanket claim by 13 HTTP source adapters. Evaluate each remaining portal independently. |
 | Build a bookmarklet | Superseded by extension consolidation and its source-built download. |
 | Gmail search timing blocker | Cleared by the deployed highlighting repair; mobile delivery prerequisites remain open. |
+| Resume role-parser next step: force named credentials into gap repair | Superseded by the later approved non-fabrication boundary. The parser repair is deployed; credentials are extracted separately for held-cert evidence and excluded from ordinary skill targets. Missing certifications remain honest gaps. |
 
 The existing implementation and release evidence is retained in the journal and REA steps. This audit changes obsolete next actions rather than erasing their history.
 
