@@ -994,6 +994,7 @@ function sayAloud(s) {
     .replace(/\s+&\s+/g, " and ")
     .replace(/[ \t]*;[ \t]*/g, " ")
     .replace(/\band\s+and\b/gi, "and")
+    .replace(/```[\s\S]*?```/g, " ")
     .replace(/[ \t]{2,}/g, " ");
 }
 function warmDesktopLevels(card, question) {
@@ -2053,9 +2054,10 @@ async function generateAnswerRequest(question, card, opts = {}) {
     requestAnimationFrame(() => { renderQueued = false; if (cards[idx] === card) renderCard(); });
   };
   const recoverAnswer = (code = "", retryAfterMs = 1000) => {
+    const partial = typeof card.answer === "string" && card.answer.trim().length > 8 && card.answer.trim() !== "…";
     card.streaming = false;
-    card.answer = keepOld ? prevAnswer : [];
-    card.meta = keepOld ? (prevMeta || "") : "";
+    if (!partial) card.answer = keepOld ? prevAnswer : card.answer;
+    card.meta = partial || keepOld ? (card.meta || prevMeta || "") : "";
     const permanent = /AUTH|CREDITS|FORBIDDEN|NOT_CONFIGURED/.test(code);
     const tries = (opts.retries || 0) + 1;
     const retry = !permanent && tries <= 2 && retryAfterMs <= 15000;
