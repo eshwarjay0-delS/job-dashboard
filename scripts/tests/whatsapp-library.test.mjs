@@ -12,13 +12,13 @@ import ts from 'typescript'
 
 const require = createRequire(import.meta.url)
 function load(file, mocks = {}, extra = '') {
-  const module = { exports: {} }
+  const testModule = { exports: {} }
   const src = readFileSync(new URL('../../' + file, import.meta.url), 'utf8') + extra
   runInNewContext(ts.transpileModule(src, { compilerOptions: { esModuleInterop: true, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, {
-    module, exports: module.exports, process, console, Buffer, setTimeout,
+    module: testModule, exports: testModule.exports, process, console, Buffer, setTimeout,
     require: id => id in mocks ? mocks[id] : require(id),
   })
-  return module.exports
+  return testModule.exports
 }
 
 const pick = load('src/lib/library-pick.ts')
