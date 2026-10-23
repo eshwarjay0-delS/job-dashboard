@@ -323,17 +323,24 @@ export function noiseOnly(text: string): boolean {
 export function questionToAnswer(heard: string, explicit: string, pinned = false): string {
   const asked = String(explicit || "").replace(/\s+/g, " ").trim()
   if (pinned && asked && !noiseOnly(asked)) {
+    // A compound ask stays whole (owner, 23 Oct 2026): when the formed
+    // question carries more than one ask, answer all of it, in order —
+    // never only the last clause. A single ask keeps the cut form.
+    const isAsk = (s: string) => { const t = s.replace(/^(?:and|so|also|but|ok(?:ay)?|yes|yeah)[, ]+/i, ""); return t.split(/\s+/).length >= 3 && /^(?:how|what|why|when|where|which|who)\b|^(?:can|could|would|will|do|did|are|have)\s+you\b|^(?:tell me|walk me|give me|explain|describe|define|compare)\b/i.test(t) }
+    const clauses = (asked.match(/[^?.!]+[?.!]+/g) || []).map((s) => s.trim()).filter(Boolean)
+    const asks = clauses.filter(isAsk)
+    if (asks.length >= 2) return asks.join(" ").slice(0, 2000)
     const inner = cutQuestion(asked)
-    return (inner || asked).slice(0, 900)
+    return (inner || asked).slice(0, 2000)
   }
   const cut = cutQuestion([heard, asked].filter(Boolean).join("\n"))
   if (cut) return cut
-  if (asked && !noiseOnly(asked)) return asked.slice(0, 900)
+  if (asked && !noiseOnly(asked)) return asked.slice(0, 2000)
   const bare = String(heard || "")
     .replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ")
     .replace(/\s+/g, " ")
     .trim()
-  if (bare && !noiseOnly(bare) && bare.split(/\s+/).filter(Boolean).length >= 3) return bare.slice(0, 900)
+  if (bare && !noiseOnly(bare) && bare.split(/\s+/).filter(Boolean).length >= 3) return bare.slice(0, 2000)
   return ""
 }
 

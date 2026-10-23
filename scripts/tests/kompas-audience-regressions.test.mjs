@@ -77,6 +77,11 @@ test('the question is cut out of the ramble, and a definition stays a storytelle
   assert.equal(questionToAnswer('Venafi certificate discovery', 'Venafi certificate discovery', true), 'Venafi certificate discovery')
   assert.match(questionToAnswer('Okay. how do you configure certificate discovery in Venafi?', 'Okay. how do you configure certificate discovery in Venafi?', true), /how do you configure certificate discovery in Venafi/i)
   assert.equal(questionToAnswer('Hello.', 'Hello.', true), '')
+  // A compound ask stays whole (owner, 23 Oct 2026): both asks answered, in order — never only the last clause.
+  const compound = questionToAnswer('', 'How do you onboard a new application into SailPoint? And what would you do when a certification campaign stalls halfway?', true)
+  assert.match(compound, /How do you onboard a new application into SailPoint\?/)
+  assert.match(compound, /what would you do when a certification campaign stalls halfway\?/i)
+  assert.ok(compound.indexOf('onboard') < compound.indexOf('certification campaign stalls'), 'the asks keep their order')
   const code = 'if n <= 3:\n    return True\nif n % 2 == 0:\n    return False'
   assert.match(applyGuards(code, null, new Set()).text, /n <= 3/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /name the mechanism once/)

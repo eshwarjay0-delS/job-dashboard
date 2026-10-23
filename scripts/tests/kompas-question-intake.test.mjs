@@ -34,6 +34,19 @@ test("a real interviewer question is worthy and becomes the derived question", (
   assert.match(r.heard, /^Them: /);
 });
 
+test("a long question heard in pieces forms the WHOLE question, never just its last line (owner, 23 Oct)", () => {
+  const pieces = [
+    { who: "Them", text: "We run SailPoint in a pretty complex setup with three regions and a legacy connector that nobody wants to touch." },
+    { who: "Them", text: "Last quarter a certification campaign stalled halfway and access reviews piled up for two hundred managers." },
+    { who: "Them", text: "How would you redesign the campaign so it finishes on time?" },
+  ];
+  const r = composeIntake(pieces, {});
+  assert.equal(r.worthy, true);
+  assert.equal(r.derived, pieces.map(p => p.text).join(" "));
+  assert.ok(r.derived.startsWith("We run SailPoint"), "the opening context survives question-forming");
+  assert.ok(r.derived.endsWith("How would you redesign the campaign so it finishes on time?"));
+});
+
 test("a lone greeting is noise: never worthy, never a card", () => {
   const r = composeIntake([{ who: "Them", text: "Hello." }], {});
   assert.equal(r.worthy, false);

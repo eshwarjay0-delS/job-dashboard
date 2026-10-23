@@ -1847,7 +1847,7 @@ function composeIntake(lines, opts = {}) {
   return {
     worthy, hasCue, contentWords, keywords, dropped, anchorQ,
     heard: heardLines.join("\n"),
-    derived: primary.length ? primary[primary.length - 1].text.slice(0, 600) : "",
+    derived: primary.length ? primary.filter(p => !anchorQ || p.text !== anchorQ).map(p => p.text).join(" ").replace(/\s+/g, " ").trim().slice(0, 2000) : "",   // the formed question is the WHOLE of what was asked, every line in order — never just the last line (owner, 23 Oct: a 100-word question collapsed to its last 10 words on the card). The question already on screen is the lane, not new material, so it is not copied into the formed question a second time.
     primaryCount: primary.length, micContextCount: micContext.length,
     noiseOnly: primary.length === 0 && micContext.length === 0 && keywords.length === 0,
   };
@@ -2151,7 +2151,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     if (!text.trim()) throw new Error("The answer engine returned an empty response. Please retry.");
     show(text);
-    if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.split("\n").pop().slice(0, 200);
+    if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 2000);   // the full heard question, never its last line (owner, 23 Oct)
     const kind = ({ 0: "intro", 1: "story", 2: "reasoning", 3: "drill-down", 4: "your experience" }[meta.tier] || "") + (meta.length && ["closed", "which", "theirq", "logistics"].includes(meta.length.kind) ? " · short form" : "") + (meta.derived ? " · from everything heard" : "") + (meta.voice ? ` · voice ${meta.voice.passed}/${meta.voice.total}` : "");
     const spoken = (s) => s >= 90 ? `${Math.round(s / 60)} min` : `${s}s`;
     const len = meta.length && meta.length.secs ? ` · ~${spoken(meta.length.secs[0])}–${spoken(meta.length.secs[1])} spoken` : "";
@@ -2192,10 +2192,10 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (card.req !== ctl) return;                                      // aborted because this same card was re-asked
     card.streaming = false;
     if (e && e.name === "AbortError") {
-      if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.split("\n").pop().slice(0, 200);
+      if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 2000);
       card.meta = "superseded by the next question"; if (cards[idx] === card) renderCard(); return;
     }
-    if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.split("\n").pop().slice(0, 200);
+    if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 2000);
     recoverAnswer(e && e.code || "", e && e.retryAfterMs || 1000);
   } finally { clearTimeout(hardTimer); release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
 }
@@ -2225,7 +2225,8 @@ function pressQuestion(typed, intake, screen) {
   if (typedClean && isNoiseLine(typedClean)) typedClean = "";
   if (derived && isNoiseLine(derived)) derived = "";
   const low = (s) => s.toLowerCase();
-  if (typedClean && derived && (low(derived) === low(typedClean) || low(derived).includes(low(typedClean)) || low(typedClean).includes(low(derived)))) derived = "";
+  if (typedClean && derived && low(derived).includes(low(typedClean))) typedClean = "";   // the formed question already carries the typed words — keep the whole, never the fragment (owner, 23 Oct)
+  else if (typedClean && derived && low(typedClean).includes(low(derived))) derived = "";
   const lane = String(screen || "").trim();
   if (derived && lane && low(lane).includes(low(derived))) derived = "";   // the old question is the lane, never a second copy in front of it
   const bits = [typedClean, derived].filter(Boolean);
