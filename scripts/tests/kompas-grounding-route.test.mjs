@@ -95,11 +95,17 @@ test('streaming carries the same grounding and measures preparation and first co
   assert.equal(h.dossiers, 0)
 })
 
-test('coding requests receive runnable code instructions rather than a narrative-only plan', async () => {
+// Owner, 23 Oct 2026: answers are read and spoken, so a coding request is talked through in order, with no code shown.
+// This replaced "coding requests receive runnable code instructions" (one fenced, runnable block).
+test('coding requests are talked through step by step, with no code shown', async () => {
   const h = harness()
   const response = await h.post({ question: 'Give me a Python program for prime numbers.', config: { resume: 'Python automation.' } })
   assert.equal((await response.json()).meta.kind, 'code')
-  assert.match(h.calls[0].messages[1].content, /complete and runnable/)
+  const prompt = h.calls[0].messages[1].content
+  assert.match(prompt, /say the solution the way you would talk it through/)
+  assert.match(prompt, /the steps in the order the code runs/)
+  assert.match(prompt, /No code blocks, no inline code, no symbols/)
+  assert.doesNotMatch(prompt, /complete and runnable|ONE fenced block/)
 })
 
 

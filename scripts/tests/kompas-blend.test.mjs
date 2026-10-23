@@ -5,8 +5,10 @@ import { BLEND_MOVES, blendPrompt, blendSpoken } from "../../src/lib/kompasBlend
 
 const route = fs.readFileSync(new URL("../../src/app/api/kompas/answer/route.ts", import.meta.url), "utf8")
 
-test("twenty blend moves are in the prompt the answer hears", () => {
-  assert.equal(BLEND_MOVES.length, 20)
+test("twenty-one blend moves are in the prompt the answer hears", () => {
+  // 21st (owner, 23 Oct 2026): short sentences, plain meaning first, then the exact term.
+  assert.equal(BLEND_MOVES.length, 21)
+  assert.match(BLEND_MOVES[20], /Short sentences, one idea each/)
   const prompt = blendPrompt()
   for (const move of BLEND_MOVES) assert.ok(prompt.includes(move), move)
   assert.match(route, /blendPrompt\(\)/)
@@ -113,9 +115,25 @@ test("18 one thread is not given a second mechanism", () => {
   assert.equal(out, "The proxy checks the name.")
 })
 
-test("19 a code sample is not rewritten", () => {
+// Owner, 23 Oct 2026: "No one would read commands, signs, symbols, math or calculations or code". This replaced
+// "a code sample is not rewritten" (code blocks used to pass through untouched).
+test("19 a code sample is said, not shown", () => {
   const raw = "The call is direct.\n```\nconn.retrieve_cert(request)\n```\nThat brings the chain back."
-  assert.match(blendSpoken(raw), /```\nconn\.retrieve_cert\(request\)\n```/)
+  const out = blendSpoken(raw)
+  assert.doesNotMatch(out, /```|retrieve_cert\(/)
+  assert.match(out, /^The call is direct\. .*That brings the chain back\.$/)
+})
+
+test("19b symbols and shorthand become the words a person says", () => {
+  const out = blendSpoken("Alerts dropped ~40% after the change, e.g. on the proxy tier. Run `nslookup` first -> then the cache. Latency was 3x lower when hits = misses, etc. Use TCP/IP vs. UDP.")
+  for (const gone of [/~/, /%/, /`/, /->/, / = /, /\be\.g\./, /\betc\./, /\bvs\./]) assert.doesNotMatch(out, gone)
+  for (const said of [/about 40 percent/, /for example on the proxy tier/, /Run nslookup first then the cache/, /3 times lower/, /hits equals misses/, /and so on\./, /TCP\/IP versus UDP/]) assert.match(out, said)
+})
+
+test("19c numbers, versions and names are kept exactly while their symbols are said", () => {
+  const out = blendSpoken("TLS 1.3 cut the handshake to 1 round trip, and CI/CD runs on port 8443 for 99.9% of builds.")
+  assert.match(out, /TLS 1\.3/); assert.match(out, /CI\/CD/); assert.match(out, /8443/); assert.match(out, /99\.9 percent/)
+  assert.equal(blendSpoken(out), out, "said once, said the same the second time")
 })
 
 test("20 the same answer blended twice does not move again", () => {

@@ -1,3 +1,23 @@
+## 2026-10-23 (night, last) — Kompas answers are said, not shown; short and readable
+
+**Asked:** answers "formatted in ways users can read ... verbally and vocally right. No one would read commands, signs,
+symbols, math or calculations or code", still at the promised technical level; then "as if you're introducing it to
+5 yr old to read".
+
+**Built:** a coding question is talked through step by step in the order the code runs, with no code shown (this
+replaces the old rule of one runnable code block; it is in git history). Every answer is told: no code, command, file
+path, formula or symbol; a calculation is given as its result; short sentences, one idea each, the plain meaning first
+and then the exact technical name. After the answer is written, code blocks are removed and symbols become words
+(~40% → about 40 percent, -> → then, = → equals, e.g. → for example). Numbers, versions and names stay exact (TLS 1.3,
+CI/CD, 8443). **Visible:** in every Kompas answer once merged.
+
+**Verified:** kompas-blend 23/23, grounding-route 12/12, typecheck clean. **Not verified:** no live model run.
+
+**Open for him:** a live coding round where code must be typed would need the code in a separate view. Say if wanted.
+
+**Also measured:** kept mail habits at the caps add about 8.5 KB to the sign-in cookie (inferred from the Supabase
+library: the data rides twice, encoded). Proposed: keep them in their own table (needs his migration run).
+
 ## 2026-10-23 (night, later) — Kompas showed "Update ready" forever; release tests rewritten; 739 of 742
 
 **Found:** Kompas compares its build with `/version.json`. That was a hand-kept root copy; this morning's `05fb5622`

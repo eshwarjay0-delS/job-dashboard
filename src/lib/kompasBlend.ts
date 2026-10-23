@@ -21,8 +21,13 @@ export const BLEND_MOVES: readonly string[] = [
   "Where knowledge ends, mark that edge in one breath instead of inventing the rest.",
   "A short self-correction is fine. Losing the thread is not.",
   "One thread. The second mechanism waits until the first one has landed.",
-  "A code sample stays untouched. The blend is for the words around it.",
+  // Owner, 23 Oct 2026: "No one would read commands, signs, symbols, math or calculations or code, integration code
+  // logics". Replaces "A code sample stays untouched" for every spoken answer.
+  "Show no code, command, file path, formula or symbol. Say what the code or command does, in words, in the order it runs, and give a calculation as its result. A tool, function or protocol name stays as a word.",
   "Say it the way a person continues out loud in a technical interview, not the way a document lists bullets.",
+  // Owner, 23 Oct 2026: "Format things in a readable ways as if you're introducing it to 5 yr old to read", while
+  // "still fulfilling the technical jargon level as promised".
+  "Short sentences, one idea each, about fifteen words. Say what a thing does in plain words first, then its exact technical name, so a first-time reader follows and an expert still hears the right term.",
 ]
 
 export function blendPrompt(): string {
@@ -54,6 +59,21 @@ function normSentence(s: string): string {
 /** Turn symbols and entity codes into words a person can say. */
 export function speakableWords(input: string): string {
   return String(input || "")
+    // Inline code keeps its words and loses the marks; arrows, comparisons and shorthand become what is said.
+    .replace(/`([^`\n]+)`/g, "$1")
+    .replace(/\s*(?:->|=>|\u2192)\s*(?:then\s+)?/gi, " then ")
+    .replace(/\s+!==?\s+/g, " is not ")
+    .replace(/\s+={2,3}\s+/g, " equals ")
+    .replace(/\s+=\s+/g, " equals ")
+    .replace(/(\d)\s*%/g, "$1 percent")
+    .replace(/~\s*(\d)/g, "about $1")
+    .replace(/\b(\d+)x\b/g, "$1 times")
+    .replace(/\s+\+\s+/g, " plus ")
+    .replace(/\s+\/\s+/g, " or ")
+    .replace(/\be\.g\.,?/gi, "for example")
+    .replace(/\bi\.e\.,?/gi, "that is")
+    .replace(/\betc\.(,?)/gi, (_m, comma) => (comma ? "and so on," : "and so on."))
+    .replace(/\bvs\.?(?=\s)/gi, "versus")
     .replace(/&amp;/gi, " and ")
     .replace(/\bx-amp\b/gi, "and")
     .replace(/&gt;=/gi, " at least ")
@@ -82,11 +102,8 @@ export function speakableWords(input: string): string {
 export function blendSpoken(input: string): string {
   const original = String(input || "")
   if (!original.trim()) return original
-  const fences: string[] = []
-  let text = speakableWords(original).replace(/\r\n/g, "\n").replace(/```[\s\S]*?```/g, (block) => {
-    fences.push(block)
-    return `\u0000F${fences.length - 1}\u0000`
-  })
+  // A code block is never read out (owner, 23 Oct 2026). The words around it already say what it does.
+  let text = speakableWords(original.replace(/\r\n/g, "\n").replace(/\n?```[\s\S]*?```\n?/g, " "))
   text = text.replace(/^(?:(?:great question|that's a great question|that is a great question|certainly|absolutely|of course)[,.!]+\s+)+/i, "")
   text = text.replace(/\byou know\b[, ]*/gi, "")
   text = text.replace(/\bbasically\b[, ]*/gi, "")
@@ -112,6 +129,5 @@ export function blendSpoken(input: string): string {
   }
   text = parts.join(" ").replace(/[ \t]{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim()
   text = text.replace(/^([a-z])/, (ch) => ch.toUpperCase())
-  text = text.replace(/\u0000F(\d+)\u0000/g, (_m, n) => fences[Number(n)] || "")
   return text || original.trim()
 }
