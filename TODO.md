@@ -1,3 +1,11 @@
+## 2026-10-23 — The Chief does the whole job while he is away
+
+**Asked:** a Chief who takes care of the whole work in his absence. The money in the story is a metaphor. Then: take the rest seriously.
+
+**In the prompt now:** every user's Chief does the whole job while the user is away. It writes each job with a day and a time. That job starts without being asked again. A lasting goal goes on the watch. The same turn searches, reads, and drafts. A sensitive draft waits on an approval card. The morning desk is finished work and the decisions. The article's numbers are not in the prompt.
+
+**Not built:** the outreach from the article. A live watch was not run in this session.
+
 ## 2026-10-23 (night) — More REA: 9 competitors, 2 own apps, one urgent action
 
 **Competitors recorded** (each its own REA entry and `docs/research/*-rea-2026-10-23.md`, public pages only):
@@ -19,8 +27,8 @@ jobs). **Still to REA:** kompas, followup-hq, and the refused hosts.
 **Asked:** REA every reference app in depth, and take what users already like (UI, features, marketing, pricing).
 
 **Done (each with its own REA entry and research file, public pages only, nothing copied):** ParakeetAI, Jobright
-(part 1), Simplify, Tsenta, Poke. The Chief of Staff study was updated with the full Viktor course; the Chief is sized
-at $50 to $100 a month (his words), with one question open.
+(part 1), Simplify, Tsenta, Poke. The Chief of Staff study was updated with the full Viktor course. The dollar figures
+in that course are a metaphor, not a size for the Chief.
 
 **Blocked:** extension packages (download host `clients2.googleusercontent.com`), Jobright's code (`*.jobright.ai`),
 Viktor, Sauna and Granola (their `www.` or new addresses), Jobscan (403 to automated visits, not bypassed), and most
