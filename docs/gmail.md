@@ -193,3 +193,7 @@ Limits, stated plainly: this alerts while the app is open in a browser (the back
 Inbox alerts now retain Meta's signed sent, delivered, read and failed callbacks. The server maps a provider message ID through a one-way hash to the authenticated user's inbox-update event; provider IDs never enter the authenticated feed or UI. Callback evidence is append-only and the feed selects the furthest known state, so a late delivered callback cannot replace read. Provider acceptance remains distinct from device delivery.
 
 This does not activate messaging. The approved WhatsApp template, scheduler and opted-in verified device still require configuration and controlled acceptance.
+
+### Damaged event recovery — 23 October 2026
+
+The update feed validates saved records before display or mobile delivery. Malformed JSON, missing fields and mismatched event identifiers are skipped without deleting the stored record; valid updates remain in chronological order. Storage access failures still surface for retry. This recovery is implemented on a review branch; production deployment and authenticated acceptance remain pending. See `docs/research/gmail-feed-record-recovery.md`.
