@@ -18,6 +18,8 @@ Imported originals now keep a recognizable filename plus the first 16 characters
 
 The focused library and board suite passed 32/32. TypeScript and scoped lint passed. The complete production build generated 154 pages successfully, with nine existing dynamic-filesystem tracing warnings. The wider `whatsapp-library` harness currently fails while loading a new master dependency that it does not mock; none of its scenarios reached the modified import code, so it is recorded as a separate harness gap rather than product evidence.
 
+Delivery: PR #46 merged as `1554622120662fcdd0624387b419ae95c570c70b`. Vercel reported successful production deployment at <https://vercel.com/qu4ntum-s-projects/job-dashboard/4wNBaLWTE53MGeyUwAfXGzQVid7a>. Deployment does not establish authenticated import or UI acceptance.
+
 ## Verification limits
 
 The regression proves deterministic collision separation and route wiring. No authenticated import job, private archive, My Files screen, WhatsApp message, deployment, or cross-device acceptance is claimed here. Production import acceptance still requires a service-created expiring job containing two controlled same-name fixtures, followed by checksum recovery and authenticated UI verification.
