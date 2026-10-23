@@ -1,0 +1,11 @@
+# Desktop answer depth and real-time audience switching
+
+Owner request: three levels for Kompas desktop responses. Recruiter + Engineer communicates accessible technical substance; Architect + Developer explains requested construction and integration; Director communicates technical reasoning through business/operational decisions. A definition of CSRF or comparison with IDOR must not automatically become an incident walkthrough. Deep personal examples use actual supplied experience, bottlenecks and impact.
+
+Source audit found two concrete causes: the live UI offered four levels (five in coding), and the answer generator mapped Architect to a Director anchor. Cached derived prose could therefore remain the same explanation. The audience handler also deferred switches and waited behind an existing anchor flight.
+
+Desktop now offers three options, migrates old values, generates each audience directly, uses a separate versioned per-card cache and cancels the previous request immediately on a level switch. The server applies a desktop-specific question-shape policy and matching length budget to that marked request. Desktop definitions/comparisons receive direct guidance without the old mandatory narrative sequence. Introductions and explicitly requested code retain their established handling. Source history, identity and numerical-evidence guards remain authoritative.
+
+Concurrent workstream 6f16111 already shipped three labels, questionRegister, levelGuidance and per-request config.level. This change was rebased onto that release and preserves it. The additional desktop path fixes immediate cancellation and audience-cache reuse; the existing web/prep behavior is retained.
+
+Focused validation: 34 audience, three-level policy, desktop, focus, continuity and journal/REA checks passed; TypeScript and the production build passed; lint has one existing unused-argument warning and zero errors. Three broader answer-format source tests fail on historical renderer/style assertions: the original app already lacks the expected measurable-improvement placeholder phrase and head tag; styles are unchanged. These failures are retained separately. Deployment is pending. Real Windows UI and live provider output acceptance remain separate.

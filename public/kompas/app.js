@@ -339,7 +339,7 @@ document.querySelectorAll(".choice").forEach(c => c.onclick = () => {
 });
 function segSet(id, val) { const box = $(id); if (!box) return; [...box.children].forEach(b => b.classList.toggle("on", b.dataset.v === val)); }
 ["lengthSeg", "toneSeg", "modeSeg"].forEach(id => { const box = $(id); if (box) box.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; [...box.children].forEach(x => x.classList.remove("on")); b.classList.add("on"); draft[{ lengthSeg: "length", toneSeg: "tone", modeSeg: "mode" }[id]] = b.dataset.v;
-  // the interview type suggests the answering level: Behavioural/Technical -> Recruiter + Engineer, Coding -> Architect + Developer, Final -> Director
+  // the interview type suggests who is asking: Behavioural -> Technical HR, Technical -> Engineer, Coding -> Architect (Developer offered beside it)
   if (id === "modeSeg" && $("interviewerSelect")) { showCodingLevels($("interviewerSelect"), b.dataset.v); const who = { behavioural: "engineer", technical: "engineer", coding: "architect", final: "director" }[b.dataset.v]; if (who) $("interviewerSelect").value = who; } saveWizardDraft(); }; });
 // The typed fields and dropdowns autosave as they change; the segmented controls and resume/document pickers
 // call saveWizardDraft from their own handlers (clicks, not input events).
@@ -931,11 +931,13 @@ $("hideBtn").onclick = () => $("overlay").classList.toggle("collapsed");
 $("transcriptBtn").onclick = () => $("drawer").classList.toggle("hidden");
 $("personaBtn").onclick = () => openPersonaFile();
 $("clearBtn").onclick = () => { cards = [{ question: "Cleared.", answer: ["Ask something, or let the call fill this in."] }]; idx = 0; transcript = []; answeredSeq = heardSeq; updatePending(); renderDrawer(); renderCard(); status("Cleared."); };
-// Who is asking = the three answering LEVELS (owner, 22 Oct 2026): Recruiter + Engineer → Architect + Developer →
-// Director. One ladder for every mode. Engineer and Director are still the two anchors underneath; the level
-// map still holds all nine legacy listeners, and a session saved on an old level opens on the nearest of the
-// three (keptLevel). The selected level is sent with every answer request, so a switch changes the next
-// answer's register — not just its length.
+// Who is asking = the DEPTH LADDER, cut to four by the owner (5 Oct 2026): Technical HR → Engineer → Architect →
+// Director. Engineer and Director are the two anchors; the other two are derived from the anchor already stored,
+// so a level change is instant. The closed level map still holds all nine; only these four are offered.
+// Coding adds Developer between Engineer and Architect (owner, 5 Oct 2026: "Developer + Architect for Coding").
+const DESKTOP_RESPONSE_LEVELS = ["engineer", "architect", "director"];
+const desktopResponses = () => !!window.kompasDesktop;
+const desktopResponseKey = (card) => `three-level-v1|${askingLevel()}|${liveConfig().mode}|${liveConfig().length || ""}|${String(card && (card.anchorQ || card.question) || "").trim()}`;
 const LADDER_THREE = ["engineer", "architect", "director"];
 const ladderFor = () => LADDER_THREE;
 let LADDER = LADDER_THREE;
@@ -963,6 +965,15 @@ function regenerateForAudience() {
   if (typeof logAction === "function") logAction("regen", { to: $("liveInterviewer").value });
   const c = cards[idx], label = $("liveInterviewer").selectedOptions[0].textContent;
   if (!c || /^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(c.question) || !String(c.question).trim()) { status("Now answering for: " + label, "live"); return; }
+  if (desktopResponses()) {
+    const hit = c.desktopByDepth && c.desktopByDepth[desktopResponseKey(c)];
+    if (c.req) { const previous = c.req; c.req = null; previous.abort(); }
+    if (hit) { c.answer = hit.answer; c.streaming = false; c.meta = hit.meta; renderCard(); status("Shown for " + label, "live"); return; }
+    c.anchorFlight = "";
+    if (c.heard) generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "", derived: c.anchorQ || c.question, regen: true });
+    else generateAnswer(c.question, c, { regen: true });
+    return;
+  }
   if (paintFromAnchors(c)) { status("Shown for " + label + " — no model call.", "live"); return; }
   const need = window.KompasDiamond && window.KompasDiamond.plan(askingLevel(), c.anchors || {}, window.__peerOf);
   const out = window.KompasFlight && need && window.KompasFlight.pending(c, need.from);
@@ -980,7 +991,8 @@ function audienceChanged(immediate) {
   if (current) { current.interviewer = $("liveInterviewer").value; saveSession(current); }
   renderDepth();
   clearTimeout(regenTimer);
-  regenTimer = setTimeout(regenerateForAudience, immediate ? 0 : 450);   // several quick ↓ presses = one regeneration
+  if (desktopResponses()) regenerateForAudience();
+  else regenTimer = setTimeout(regenerateForAudience, immediate ? 0 : 450);   // several quick ↓ presses = one regeneration
 }
 $("liveInterviewer").onchange = () => audienceChanged(false);   // arrows inside the focused dropdown fire per step: debounce those too
 function stepInterviewer(dir) {
@@ -1754,7 +1766,7 @@ function anchorFacts() {
   return { role: s.role || (s.prep && s.prep.persona && s.prep.persona.role) || "", resume: ["answer-policy:2026-10-15-personal-evidence", s.resume || "", s.jd || "", s.instructions || ""].join("\n") };
 }
 function paintFromAnchors(card) {
-  if (!card || !card.anchors || !window.KompasLevels || !window.KompasDiamond) return false;
+  if (desktopResponses() || !card || !card.anchors || !window.KompasLevels || !window.KompasDiamond) return false;
   const level = askingLevel();
   const plan = window.KompasDiamond.plan(level, card.anchors, window.__peerOf);
   if (!plan.ready) return false;
@@ -1792,7 +1804,7 @@ function nextContext(card, anchor) {
   return { ledger: F.ledgerFor(card, question, ledger), history: F.siblingHistory(card, anchor, recentQA(card), note) };
 }
 function fillAnchor(card, anchor) {
-  if (!card || !window.KompasAnchors || !window.KompasLevels || !window.KompasDiamond) return null;
+  if (desktopResponses() || !card || !window.KompasAnchors || !window.KompasLevels || !window.KompasDiamond) return null;
   if (!window.KompasDiamond.ANCHORS.includes(anchor)) return null;
   if (card.anchors && card.anchors[anchor] && card.anchors[anchor].prose) return null;
   const write = async () => {
@@ -1865,8 +1877,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const logAnswer = (extra) => logEvent({ t: "answer", question: card.question, derived: derivedQ || meta.derived || "", typed: !consolidated, regen: !!opts.derived, depth: depthLabel(), text: typeof card.answer === "string" ? card.answer : (card.answer || []).join("\n"), meta: card.meta || "", ...extra });
   const consolidated = !!opts.consolidated;
   const epoch = ++answerEpoch;
+  const directDesktop = desktopResponses(); let responseKey = "";
   const depthKey = `${$("liveInterviewer").value}|${liveConfig().mode}|${liveConfig().length || ""}`;
-  if (!opts.reask && !opts.pinned && !opts.regen && !consolidatedNeedsDerive(opts) && book.sid === (current && current.id)) {   // opening book: typed / known questions. A pinned press is a live ask.
+  if (!directDesktop && !opts.reask && !opts.pinned && !opts.regen && !consolidatedNeedsDerive(opts) && book.sid === (current && current.id)) {   // opening book: typed / known questions. A pinned press is a live ask.
     const hit = bookMatch(question, depthKey);
     if (hit) { serveBook(card, hit, depthKey); return; }
   }
@@ -1909,7 +1922,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       }
       if (dj.derived) { derivedQ = dj.derived; card.question = derivedQ; if (cards[idx] === card) renderCard(); }
       derivedBy = dj.derivedBy || "ai";
-      const hit = book.sid === (current && current.id) && bookMatch(derivedQ, depthKey);
+      const hit = !directDesktop && book.sid === (current && current.id) && bookMatch(derivedQ, depthKey);
       if (hit) { if (answerCtl === ctl) answerCtl = null; serveBook(card, hit, depthKey); return; }
     } catch (e) {
       if (e && e.name === "AbortError") { if (card.req === ctl) { card.streaming = false; card.meta = "superseded by the next question"; if (cards[idx] === card) renderCard(); } return; }
@@ -1917,8 +1930,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
   }
   const qText = String(derivedQ || question).trim();
   card.anchorQ = qText;
+  if (directDesktop) responseKey = desktopResponseKey(card);
   let writeAnchor = askingLevel();
-  if (window.KompasAnchors && qText.length >= 8) {
+  if (!directDesktop && window.KompasAnchors && qText.length >= 8) {
     const facts = anchorFacts();
     try {
       const pack = await window.KompasAnchors.load(qText, facts.role, facts.resume, current && current.id);
@@ -1936,12 +1950,12 @@ async function generateAnswerRequest(question, card, opts = {}) {
     const planNow = window.KompasDiamond && window.KompasDiamond.plan(askingLevel(), card.anchors || {}, window.__peerOf);
     if (planNow) writeAnchor = planNow.from;
   }
-  if (window.KompasJev && !window.KompasJev.allowModel(writeAnchor, { hit: false, model: true })) {
+  if (!directDesktop && window.KompasJev && !window.KompasJev.allowModel(writeAnchor, { hit: false, model: true })) {
     if (answerCtl === ctl) answerCtl = null;
     status("That level is derived. No model call.", "live");
     return;
   }
-  const already = window.KompasFlight && window.KompasFlight.pending(card, writeAnchor);
+  const already = !directDesktop && window.KompasFlight && window.KompasFlight.pending(card, writeAnchor);
   if (already) {                                                      // the background write of this anchor is still out: it is the answer
     status("Preparing that answer…", "live");
     try { await already; } catch {}
@@ -1949,8 +1963,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (!opts.reask && paintFromAnchors(card)) { if (answerCtl === ctl) answerCtl = null; status("Shown from the two anchors — no model call.", "live"); return; }
   }
   card.anchorFlight = writeAnchor;
-  const release = window.KompasFlight ? window.KompasFlight.hold(card, writeAnchor) : () => {};
-  const ctx = nextContext(card, writeAnchor);
+  const release = !directDesktop && window.KompasFlight ? window.KompasFlight.hold(card, writeAnchor) : () => {};
+  const ctx = directDesktop ? { ledger, history: recentQA(card) } : nextContext(card, writeAnchor);
   const retrieved = retrieve(derivedQ || plainHeard, consolidated ? 5 : 4);
   const prep = { ...slimPrep(), questions: retrieved.length ? [] : ((current && current.prep && current.prep.questions) || []).slice(0, 30) };
   // Smooth streaming: throttle renders to animation frames instead of
@@ -1981,7 +1995,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   };
   try {
     const res = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
-      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, pinned: !!opts.pinned, again: !!opts.reask, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel() }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
+      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, pinned: !!opts.pinned, again: !!opts.reask, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel(), ...(directDesktop ? { responseCalibration: "three-level-v1" } : {}) }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
     if (!res.ok || !res.body) {
       const failure = await res.json().catch(() => ({}));
       throw Object.assign(new Error(failure.error || "Paid answer service returned " + res.status), { providerFailure: true, code: failure.code || (res.status === 401 || res.status === 403 ? "AUTH" : ""), retryAfterMs: failure.retryAfterMs });
@@ -2038,7 +2052,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (cards[idx] === card) renderCard();
     logAnswer({ derived: meta.derived || derivedQ || "", derivedBy: derivedBy || "", kind: meta.length && meta.length.kind, tier: meta.tier, lane: meta.timing && meta.timing.lane, voice: meta.voice && `${meta.voice.passed}/${meta.voice.total}`, ms: Math.round(performance.now() - t0), depthKey });
     if (!meta.degraded && !/backup model/.test(card.meta)) { card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta }; }
-    if (window.KompasLevels && text && !meta.degraded) {
+    if (directDesktop && !meta.degraded) { card.desktopByDepth = card.desktopByDepth || {}; card.desktopByDepth[responseKey] = { answer: card.answer, meta: card.meta }; }
+    if (!directDesktop && window.KompasLevels && text && !meta.degraded) {
       const fixed = criticise(card, writeAnchor, text);
       const shaped = window.KompasLevels.fromProse(fixed, writeAnchor);
       if (shaped) {
@@ -2691,7 +2706,7 @@ const DossierDB = {
   async get(id) { try { const db = await this.open(); return await new Promise(res => { const rq = db.transaction("d", "readonly").objectStore("d").get(id); rq.onsuccess = () => res(rq.result || null); rq.onerror = () => res(null); }); } catch { return null; } },
   async put(id, v) { try { const db = await this.open(); await new Promise(res => { const tx = db.transaction("d", "readwrite"); tx.objectStore("d").put(v, id); tx.oncomplete = res; tx.onerror = res; }); } catch {} },
 };
-const INTERVIEWER_KEYS = ["engineer", "architect", "director"];   // the three answering levels (owner, 22 Oct 2026)
+const INTERVIEWER_KEYS = ["engineer", "architect", "director"];   // the four levels offered (owner, 5 Oct 2026)
 const CATEGORIES = ["identity & background", "behavioral (STAR)", "technical deep-dive", "scenario & troubleshooting", "system & architecture design", "tools & stack specifics", "failure & lessons", "conflict & collaboration", "leadership & ownership", "gaps & weaknesses", "motivation & culture fit", "closing & questions to ask"];
 const PAGES_BY_DIFFICULTY = { easy: 100, standard: 250, hard: 500, expert: 1000 };
 const WORDS_PER_PAGE = 500;

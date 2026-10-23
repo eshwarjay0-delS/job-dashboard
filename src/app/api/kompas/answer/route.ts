@@ -16,6 +16,7 @@ import {
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
 import { blendPrompt, blendSpoken } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
+import { desktopResponsePolicy } from "@/lib/kompasDesktopResponse"
 import {
   allowedNumbers, applyGuards, speakFacts, verifyAnswer,
   type SpeakFacts,
@@ -660,6 +661,12 @@ export async function POST(request: NextRequest) {
     length: str(config.length, 20) || undefined,
     register,
   })
+  const desktopPolicy = config.responseCalibration === "three-level-v1" ? desktopResponsePolicy(level, question) : null
+  if (desktopPolicy && tier !== 0 && plan.kind !== "code") {
+    plan.words = desktopPolicy.words
+    plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
+    plan.maxTokens = Math.min(4000, Math.max(600, Math.round(plan.words * 2.6) + 300))
+  }
   // Depth calibration inside the practice register: match the answer's focus
   // to the question's depth. A surface question gets a direct answer; a deep
   // scoped question gets a focused deep dive. (Concept questions are governed
@@ -784,8 +791,8 @@ export async function POST(request: NextRequest) {
   ].filter(Boolean).join("\n\n")
   const job: AnswerJob = {
     question,
-    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : audienceGuidance(level, question)}\n\n${personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? "The previous answer to this question was wrong. Answer it again. Do not reuse that answer's opening, its example, or its order of points.\n\n" : ""}${tier === 0 ? INTRODUCTION_POLICY : `Speak it. Sentence one is the answer in words this listener already understands. Then one path. On every sentence, ask whether you are 100% on this question, at this layer. A sentence that is not, is not said.
+    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? "The previous answer to this question was wrong. Answer it again. Do not reuse that answer's opening, its example, or its order of points.\n\n" : ""}${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy ? desktopPolicy.guidance : `Speak it. Sentence one is the answer in words this listener already understands. Then one path. On every sentence, ask whether you are 100% on this question, at this layer. A sentence that is not, is not said.
 A general scenario — a time, a would-you, a launch, or a people question: the decision or the moment, in plain words, and one picture. Do not open a mechanism they did not ask for. If the background has no such incident, say what you would do.
 A technical question — a what-is, a how, an investigate, a fix, or a test: specialist, spoken the way a person talks in the meeting. Simple words, or one abstract sentence that carries the meaning. Do not recite a query, a parameter, a claim name, or a stack. Inside a program, write the real numbers. A status code, a port, and a literal in code stay written as themselves. Mark the one word the listener should keep with double-underscores, like __owner__. That word is the picture, or the mechanism once, in words they already have.
 If a second topic starts, stop.

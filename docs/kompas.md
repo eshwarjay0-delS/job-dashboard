@@ -1,5 +1,14 @@
 # Kompas — Master Vision
 
+## Desktop response calibration — 22 October 2026
+
+Owner confirms authentication is fixed and scopes this change to desktop responses. Exactly three audiences: **Recruiter + Engineer**, **Architect + Developer**, **Director**. The audience determines explanation style; the current question determines depth. Definitions and comparisons remain concise at every level. A requested real vulnerability example explains supported actions, bottlenecks, validation and business consequence. Architect/developer implementation questions can cover setup and integration step by step. Director answers retain technical reasoning at the operational/business level, with supported achievements and clearly proposed measurement choices.
+
+Desktop audience changes immediately cancel the old response and use a separate cache per audience, mode and answer length. A missing answer is generated directly for that audience. Desktop bypasses the historical two-anchor derivation and opening-book path, which could shorten a Director answer for Architect rather than generating the requested explanation. Existing web levels remain unchanged. The response calibration marker is sent only by the desktop bridge path. Release version: `kompas-20261022-desktop-three-levels`.
+
+Validation: tests exercise all three question/audience combinations, legacy selection migration, exactly three displayed options, switching during a pending answer, isolated cached answers and shared continuity/focus regressions. No live model quality or real Windows rendering acceptance is claimed from these checks.
+
+
 ## Authentication continuity correction — 22 October 2026
 
 Latest owner rule: a valid sign-in must last at least two to three days and should renew silently beyond that while the server continues to accept the session family. This supersedes the earlier client-side rule that forced a new login at 48 hours. Elapsed time, inactivity, a hidden window, wake from sleep, or a new deployment must never eject an active meeting.
