@@ -33,6 +33,8 @@ A regression creates two connected accounts with identical thread and message ID
 
 Automated tests, type checking, lint, build, deployment, and authenticated live acceptance are recorded separately in Plan & Vision and the REA register. A unit regression does not prove that a real recruiter reply was received or attached correctly in production.
 
+Release evidence: PR #53 preview succeeded for commit `7591155c4f86211a0e30dcad2edd2f273a17b21d`. The PR merged as `2987143ab07a6574a1048df91851c020d2c5ee7d`, and Vercel reported a successful production deployment for that exact merge commit. This is deployment evidence, not authenticated inbox acceptance.
+
 ## Remaining acceptance
 
 After deployment, use two connected test inboxes: create separate application chains, deliver an urgent message to each, and confirm the cards open the correct receiving account and application. No real-message acceptance was performed in this run.
