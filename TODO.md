@@ -1,3 +1,22 @@
+## 2026-10-23 (late) — The desktop accepts only a sign-in it started (step 1 of the REA security fix)
+
+**Asked:** "Continue with everything to the end of the project" and "Run all the agents you got!", after the fix was
+proposed.
+
+**Built (one agent, reviewed and re-tested here):** the desktop issues a one-time state when it opens Chrome for sign-in
+and accepts the link back only with that state, once, within ten minutes; anything else changes nothing and the sign-in
+screen says so (parfAct `f296e4b`). The site's `/auth/desktop` page sends the state back, and `src/lib/authRedirect.ts`
+now keeps it through `/login` (it was dropped there, which would have broken the fix).
+
+**Verified:** desktop `auth-handoff.test.cjs` 8/8, and its 5 new tests fail on the old `main.js`; `test-auth-continuity`
+5/5; `apply-browser` 6/6. Site `desktop-signin-state.test.mjs` 4/4; `auth-boundaries` 6/6.
+
+**NOT verified:** no Electron or Windows run; not merged or deployed; the installed desktop is unchanged until he rebuilds
+(`npm run dist`). Visible only as one line on the desktop sign-in screen when a link is refused.
+
+**Next:** merge the site half first (old desktops ignore the state), then rebuild the desktop. Steps 2 and 3 of the fix,
+plus one more weakness found on the way, are in the private parfAct note.
+
 ## 2026-10-23 (later) — REA: the first run that executed, and one private desktop security finding
 
 **Asked:** "Continue with rest of REA perfectly to the depth with each context ... as if we reconstructing those exact
