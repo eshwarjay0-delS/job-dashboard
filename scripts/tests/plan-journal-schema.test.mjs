@@ -18,3 +18,12 @@ test('all journal evidence survives the text export', () => {
   const chief = PLAN_JOURNAL.find(e => e.id === 'chief-phase3-briefable')
   assert.ok(chief.evidence.includes('READY for 16ff135'), 'retain the existing release evidence')
 })
+
+
+test('released work is not left in an implementation-only board state', () => {
+  for (const id of ['inclusive-browser-desktop', 'jd-keyword-filter']) {
+    const entry = PLAN_JOURNAL.find(item => item.id === id)
+    assert.ok(entry, `${id}: missing journal entry`)
+    assert.equal(entry.delivery, 'deployed', `${id}: release evidence exists but delivery is stale`)
+  }
+})

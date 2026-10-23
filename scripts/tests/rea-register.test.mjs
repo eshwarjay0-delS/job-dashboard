@@ -18,3 +18,10 @@ test('REA route inherits existing admin gate and is discoverable from hub',()=>{
  assert.match(readFileSync(path.join(root,'src/app/dashboard/admin/vision/layout.tsx'),'utf8'),/await requireVisionAdmin\(\)/)
  assert.match(readFileSync(path.join(root,'src/app/dashboard/admin/vision/page.tsx'),'utf8'),/href="\/dashboard\/admin\/vision\/rea"/)
 })
+
+test('released desktop browser remains deployed with acceptance still explicit',()=>{
+ const entry=REA_SESSIONS.find(s=>s.id==='inclusive-browser-desktop')
+ assert.ok(entry)
+ assert.equal(entry.state,'Deployed, verification pending')
+ assert.match(entry.limits,/real portal\/SSO\/upload\/restart acceptance pending/)
+})

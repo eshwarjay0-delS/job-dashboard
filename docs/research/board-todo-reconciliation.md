@@ -18,6 +18,12 @@ Both records are actionable. Preserve history while using the latest explicit co
 
 The existing implementation and release evidence is retained in the journal and REA steps. This audit changes obsolete next actions rather than erasing their history.
 
+## Delivery-state reconciliation — 22 October 2026
+
+The desktop inclusive browser and the structural JD-boilerplate filter both had exact production release evidence while their journal entries still said `in progress`. The browser REA also said `Implemented, verification pending` after both the web deployment and Windows executable had shipped. Their delivery states now say deployed. Their real-user acceptance steps remain open and unchanged: a Windows portal/SSO/upload/restart check for the browser, and an authenticated regenerated DOCX inspection for the keyword filter.
+
+Two regressions now preserve this distinction. They fail if either released journal item falls back to an implementation-only state, or if the browser REA loses either its deployed state or its explicit acceptance boundary.
+
 ## Implemented during this pass
 
 Saved-search reruns previously set React state and dispatched a form event after a 50 ms timer. They now pass their selected query, location and remote flag directly into the search. A request sequence prevents an earlier slow response from replacing the latest results or clearing its loading state. The DOM regression clicks two different saved searches and resolves them in reverse order, checking both request parameters and displayed results.
