@@ -38,3 +38,11 @@ test('updates route returns display-safe delivery evidence after reads and refre
   assert.match(route,/updateDeliveryReceipts\(ctx\.userId,events\.map\(event=>event\.id\)\)/)
   assert.match(route,/deliveries:await updateDeliveryReceipts/)
 })
+
+test('mobile status copy distinguishes provider acceptance, device delivery and reading',()=>{
+  const source=readFileSync(new URL('../../src/app/dashboard/mail/_components/inbox-updates.tsx',import.meta.url),'utf8')
+  assert.match(source,/WhatsApp accepted the alert for delivery/)
+  assert.match(source,/WhatsApp alert delivered to the linked device/)
+  assert.match(source,/WhatsApp alert read/)
+  assert.match(source,/WhatsApp could not deliver the alert/)
+})

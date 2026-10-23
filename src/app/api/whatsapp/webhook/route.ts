@@ -26,6 +26,7 @@ import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
 import { extractJdMeta } from "@/lib/claude"
 import { sendText as sendTextRaw, sendDocument as sendDocumentRaw, downloadMedia, verifySignature, senderAllowed, waConfigured } from "@/lib/whatsapp"
+import { recordUpdateProviderStatus } from "@/lib/mail-update-store"
 import { trace } from "@/lib/whatsapp-trace"
 import { isOwnerWhatsApp } from "@/lib/owner"
 import { resolveWhatsAppUser, claimNotice, textCodesWork } from "@/lib/whatsapp-who"
@@ -234,8 +235,20 @@ export async function POST(request: NextRequest) {
 
   const value = (body as { entry?: { changes?: { value?: Record<string, unknown> }[] }[] })
     ?.entry?.[0]?.changes?.[0]?.value
+  const statuses = (value?.statuses as Record<string, unknown>[] | undefined) || []
+  if (statuses.length) {
+    await Promise.all(statuses.slice(0, 20).map(status => {
+      const id = String(status.id || "")
+      const state = String(status.status || "") as "sent" | "delivered" | "read" | "failed"
+      const seconds = Number(status.timestamp)
+      const firstError = (status.errors as { code?: number; title?: string }[] | undefined)?.[0]
+      const reason = state === "failed" ? [firstError?.code, firstError?.title].filter(Boolean).join(": ") : ""
+      return recordUpdateProviderStatus(id, state, Number.isFinite(seconds) ? seconds * 1000 : Date.now(), reason)
+    }))
+    return ok()
+  }
   const msg = (value?.messages as Record<string, unknown>[] | undefined)?.[0]
-  if (!msg) return ok()                       // status callbacks (delivered/read) — ignore
+  if (!msg) return ok()
 
   const from = String(msg.from || "")
   const msgId = String(msg.id || "")

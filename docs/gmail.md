@@ -187,3 +187,9 @@ What shipped: `InboxAlertWatcher`, mounted across the dashboard, polls `/api/gma
 When an urgent item lands (confirmed interview invite, RTR request, rate confirmation, document request, offer), the user feels it and sees it: a vibration (`alertBuzz` for interviews, `arriveBuzz` otherwise, via `src/lib/haptics.ts`), a browser notification when permission is granted, and a card that names the chain connection — part of an existing chain with its current holder; a possible second chain on the same client + role arriving on a different thread (the double-submit pattern, flagged to confirm before replying); or genuinely new. A first-run watermark baselines at "now" so history never storms in; each item alerts once and dismissals persist.
 
 Limits, stated plainly: this alerts while the app is open in a browser (the background phone watcher remains the out-of-app channel). Signed-in acceptance — an urgent email landing while the app is open producing the buzz, notification and connected card — is the owner's real-path check and is not claimed here.
+
+### WhatsApp delivery-status evidence — 22 October 2026
+
+Inbox alerts now retain Meta's signed sent, delivered, read and failed callbacks. The server maps a provider message ID through a one-way hash to the authenticated user's inbox-update event; provider IDs never enter the authenticated feed or UI. Callback evidence is append-only and the feed selects the furthest known state, so a late delivered callback cannot replace read. Provider acceptance remains distinct from device delivery.
+
+This does not activate messaging. The approved WhatsApp template, scheduler and opted-in verified device still require configuration and controlled acceptance.

@@ -33,7 +33,7 @@ function deliveryHarness({previous=0,fail=false,change=false,muted=false,disconn
     '@/lib/storage':{blob},'@/lib/mail-update-policy':policy,
     '@/lib/supabase/service':{createServiceClient:()=>({auth:{admin:{getUserById:async()=>({data:{user:{user_metadata:{gmail_notify_rules:muted?[{account:'a@example.com',email:'sender@example.com',mode:'never'}]:[]}}},error:null})}}})},
     '@/lib/googleWorkspace':{listGoogleWorkspaceAccounts:async()=>disconnected?[]:[{google_email:'a@example.com',gmail_enabled:true}]},
-    '@/lib/mail-update-store':{updateRoot:()=> 'updates/',updatePreferences:async()=>++reads>1&&change?{...prefs,accounts:[]}:prefs,updateFeed:async()=>feed},
+    '@/lib/mail-update-store':{registerUpdateProviderReceipt:async()=>true,updateRoot:()=> 'updates/',updatePreferences:async()=>++reads>1&&change?{...prefs,accounts:[]}:prefs,updateFeed:async()=>feed},
     '@/lib/mail-important-store':{trackedSenders:async()=>[]},'@/lib/mail-important':{trackedBy:()=>true},'@/lib/mail-reading':{senderEmail:s=>s},'@/lib/whatsapp':{waConfigured:()=>true},
   },{fetch:async()=>{calls++;if(fail)throw Error('timeout');return {ok:true,json:async()=>({messages:[{id:'receipt'}]})}}})
   return {mod,rows,calls:()=>calls}
@@ -131,4 +131,30 @@ test('delivery receipts expose status without leaking provider identifiers',asyn
     [other]:{status:'needs_review',at:now,reason:'Delivery uncertain'},
   })
   assert.equal(JSON.stringify(receipts).includes('private-provider-id'),false)
+})
+
+test('provider callbacks are privately indexed and resolve to the furthest delivery state',async()=>{
+  const id='c'.repeat(64),rows=new Map()
+  const blob={
+    getText:async key=>rows.get(key)||null,
+    put:async(key,value)=>rows.set(key,value),
+    putIfAbsent:async(key,value)=>{if(rows.has(key))return false;rows.set(key,value);return true},
+    list:async prefix=>[...rows.keys()].filter(key=>key.startsWith(prefix)),
+  }
+  const store=load('mail-update-store',{'@/lib/storage':{blob},'@/lib/mail-update-policy':policy})
+  assert.equal(await store.registerUpdateProviderReceipt('wamid.private','user',id),true)
+  assert.equal([...rows.keys()].some(key=>key.includes('wamid.private')),false)
+  await store.recordUpdateProviderStatus('wamid.private','delivered',now+1000)
+  await store.recordUpdateProviderStatus('wamid.private','read',now+2000)
+  await store.recordUpdateProviderStatus('wamid.private','delivered',now+3000)
+  const receipts=await store.updateDeliveryReceipts('user',[id])
+  assert.deepEqual(JSON.parse(JSON.stringify(receipts[id])),{status:'read',at:now+2000})
+  assert.equal(JSON.stringify(receipts).includes('wamid.private'),false)
+  assert.equal(await store.recordUpdateProviderStatus('unknown','read',now),false)
+})
+
+test('WhatsApp webhook records status callbacks instead of discarding them',()=>{
+  const source=readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts',import.meta.url),'utf8')
+  assert.match(source,/recordUpdateProviderStatus\(id, state/)
+  assert.ok(source.indexOf('if (statuses.length)')<source.indexOf('if (!msg) return ok()'))
 })

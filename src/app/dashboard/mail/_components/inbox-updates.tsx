@@ -6,7 +6,7 @@ import type { MobileDeliveryReceipt } from '@/lib/mail-update-store'
 import './inbox-updates.css'
 
 type Snapshot = { preferences: UpdatePreferences; events: InboxUpdate[]; deliveries: Record<string,MobileDeliveryReceipt>; accounts: string[]; numbers: string[]; mobileReady: boolean; backgroundReady: boolean }
-const deliveryLabel=(receipt?:MobileDeliveryReceipt)=>receipt?.status==='accepted'?'WhatsApp accepted the alert for delivery':receipt?.status==='needs_review'?'WhatsApp alert needs review; it will not retry automatically':receipt?.status==='cancelled'?'WhatsApp alert cancelled after settings changed':receipt?.status==='sending'?'WhatsApp delivery result is uncertain; it will not retry automatically':''
+const deliveryLabel=(receipt?:MobileDeliveryReceipt)=>receipt?.status==='read'?'WhatsApp alert read':receipt?.status==='delivered'?'WhatsApp alert delivered to the linked device':receipt?.status==='failed'?'WhatsApp could not deliver the alert':receipt?.status==='accepted'?'WhatsApp accepted the alert for delivery':receipt?.status==='needs_review'?'WhatsApp alert needs review; it will not retry automatically':receipt?.status==='cancelled'?'WhatsApp alert cancelled after settings changed':receipt?.status==='sending'?'WhatsApp delivery result is uncertain; it will not retry automatically':''
 async function request(method = 'GET', body?: UpdatePreferences) {
   const response = await fetch('/api/gmail/updates', { method, cache: 'no-store', headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined })
   const result = await response.json()
