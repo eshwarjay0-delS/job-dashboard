@@ -936,7 +936,7 @@ $("clearBtn").onclick = () => { cards = [{ question: "Cleared.", answer: ["Ask s
 // v3 drops answers stored before the question-depth correction.
 const DESKTOP_RESPONSE_LEVELS = ["engineer", "architect", "director"];
 const desktopResponses = () => !!window.kompasDesktop;
-const desktopResponseKey = (card) => `three-level-v3|${askingLevel()}|${liveConfig().mode}|${liveConfig().length || ""}|${String(card && (card.anchorQ || card.question) || "").trim()}`;
+const desktopResponseKey = (card) => `three-level-v4|${askingLevel()}|${liveConfig().mode}|${liveConfig().length || ""}|${String(card && (card.anchorQ || card.question) || "").trim()}`;
 const LADDER_THREE = ["engineer", "architect", "director"];
 const ladderFor = () => LADDER_THREE;
 let LADDER = LADDER_THREE;
@@ -989,6 +989,8 @@ function regenerateForAudience() {
     const hit = c.desktopByDepth && c.desktopByDepth[desktopResponseKey(c)];
     if (c.req) { const previous = c.req; c.req = null; previous.abort(); }
     if (hit) { c.answer = hit.answer; c.streaming = false; c.meta = hit.meta; renderCard(); status("Shown for " + label, "live"); return; }
+    if (c.desktopWarm && c.desktopWarm[desktopResponseKey(c)]) { c.answer = ["Preparing…"]; c.streaming = true; renderCard(); status("Preparing " + label, "live"); return; }
+    c.answer = ["Preparing…"];
     c.anchorFlight = "";
     if (c.heard) generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "", derived: c.anchorQ || c.question, regen: true });
     else generateAnswer(c.question, c, { regen: true });
@@ -1031,6 +1033,39 @@ $("whoUp").onclick = () => stepInterviewer(-1);
 $("whoDown").onclick = () => stepInterviewer(1);
 renderDepth();
 
+function warmDesktopLevels(card, question) {
+  if (!desktopResponses() || !card) return;
+  const mode = liveConfig().mode, length = liveConfig().length || "";
+  const q = String(question || card.anchorQ || card.question || "").trim();
+  if (q.length < 8) return;
+  card.desktopByDepth = card.desktopByDepth || {};
+  card.desktopWarm = card.desktopWarm || {};
+  for (const level of DESKTOP_RESPONSE_LEVELS) {
+    if (level === askingLevel()) continue;
+    const key = `three-level-v4|${level}|${mode}|${length}|${q}`;
+    if (card.desktopByDepth[key] || card.desktopWarm[key]) continue;
+    const ctl = new AbortController();
+    card.desktopWarm[key] = ctl;
+    fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
+      body: JSON.stringify({ stream: false, client: BUILD, question: q, config: { ...liveConfig(), interviewer: level, level, responseCalibration: "three-level-v1" }, prep: slimPrep(), history: recentQA(card) }) })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        const text = data && data.text;
+        if (!text || !String(text).trim()) return;
+        card.desktopByDepth[key] = { answer: sayAnswer(text), meta: "warm" };
+        if (cards[idx] === card && desktopResponseKey(card) === key) {
+          card.answer = card.desktopByDepth[key].answer;
+          card.streaming = false;
+          card.meta = "warm";
+          renderCard();
+          const label = $("liveInterviewer").selectedOptions[0];
+          status("Shown for " + (label ? label.textContent : level), "live");
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (card.desktopWarm) delete card.desktopWarm[key]; });
+  }
+}
 /* ---- start / stop ---- */
 let running = false;
 $("startBtn").onclick = () => running ? wrapSession() : start();
@@ -2079,7 +2114,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (cards[idx] === card) renderCard();
     logAnswer({ derived: meta.derived || derivedQ || "", derivedBy: derivedBy || "", kind: meta.length && meta.length.kind, tier: meta.tier, lane: meta.timing && meta.timing.lane, voice: meta.voice && `${meta.voice.passed}/${meta.voice.total}`, ms: Math.round(performance.now() - t0), depthKey });
     if (!meta.degraded && !/backup model/.test(card.meta)) { card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta }; }
-    if (directDesktop && !meta.degraded) { card.desktopByDepth = card.desktopByDepth || {}; card.desktopByDepth[responseKey] = { answer: card.answer, meta: card.meta }; }
+    if (directDesktop && !meta.degraded) { card.desktopByDepth = card.desktopByDepth || {}; card.desktopByDepth[responseKey] = { answer: card.answer, meta: card.meta }; warmDesktopLevels(card, card.anchorQ || qText); }
     if (!directDesktop && window.KompasLevels && text && !meta.degraded) {
       const fixed = criticise(card, writeAnchor, text);
       const shaped = window.KompasLevels.fromProse(fixed, writeAnchor);

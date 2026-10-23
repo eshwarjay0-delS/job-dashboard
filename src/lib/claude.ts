@@ -3,6 +3,7 @@ import { routeFieldEdit } from "./ai/jev"
 import type { Edits, Zones } from "./docx"
 import { callLLM, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { fixHavingOpener, clampSummary } from "./resume/rules"
+import { parseConfirmedVocabulary, type RelationalPair } from "./keyword-targets"
 
 const RULES = `${J1_HEADER}
 
@@ -424,6 +425,41 @@ export async function expandJdKeywordsTwice(opts: {
   const first = await expandJdKeywords({ ...call, known })
   const second = await expandJdKeywords({ ...call, known: [...new Set([...known, ...first])] })
   return [...new Set([...first, ...second])]
+}
+
+export type ConfirmedVocabulary = RelationalPair
+
+/** Related tools and phrases for skills the candidate already confirmed. A parent they did not state is dropped. */
+export async function expandConfirmedVocabulary(opts: {
+  keys: LlmKeys
+  confirmed: string[]
+  sourceResume?: string
+  timeoutMs?: number
+  usageSink?: TokenUsage[]
+}): Promise<ConfirmedVocabulary[]> {
+  const confirmed = opts.confirmed.map(s => s.trim()).filter(Boolean)
+  if (!opts.keys.gemini || !confirmed.length) return []
+  const system = `You expand skills a candidate has already confirmed into the related vocabulary an applicant tracking system also scans for.
+RULES:
+- Output ONLY a minified JSON array. No prose.
+- Each item is {"parent":"<one confirmed skill>","terms":["related tool","phrase"]}.
+- parent must be copied from the confirmed list. Do not add a skill they did not confirm.
+- terms are tools, components, and short phrases used to do that parent skill. 1-4 words each. At most 6 terms.
+- These are names for work they already confirmed. Never infer a metric, a certification, an employer, or a date.
+Example: [{"parent":"splunk","terms":["spl","correlation searches","splunk enterprise security"]}]`
+  const user = `CONFIRMED SKILLS:\n${confirmed.join("\n").slice(0, 8000)}\n\nBASELINE (context only):\n${(opts.sourceResume || "").slice(0, 8000)}\n\nReturn the JSON array.`
+  const call = (async () => {
+    const text = (await callLLM({
+      keys: { gemini: opts.keys.gemini }, pref: "gemini", tier: "light", system, user,
+      maxTokens: 1200, temperature: 0, usageSink: opts.usageSink, purpose: "resume-keywords",
+    })).text
+    return parseConfirmedVocabulary(text, confirmed.join("\n"))
+  })()
+  const ms = opts.timeoutMs ?? 8000
+  return Promise.race([
+    call.catch(() => [] as ConfirmedVocabulary[]),
+    new Promise<ConfirmedVocabulary[]>(r => setTimeout(() => r([]), ms)),
+  ])
 }
 
 // ── JD metadata (role / company / location) ───────────────────────────────────

@@ -33,24 +33,59 @@ export function desktopQuestionKind(question: string): DesktopQuestionKind {
   return 'general'
 }
 
+const SURFACE_STOP = "Do not pull logs, list search keywords, open a tool chain, or aggregate Splunk. Do not add a personal incident, project lifecycle, implementation walkthrough, log collection, Splunk queries, integration plan, bottlenecks or achievement metrics to a definition or comparison."
+
+/** The craft block for a desktop answer. A definition does not inherit the investigation outline. */
+export function desktopCraft(kind: DesktopQuestionKind): string {
+  if (kind === "definition" || kind === "comparison" || kind === "general") {
+    return "RESPONSE CRAFT: Sentence one answers the question. A few more sentences may name the idea. Then stop. Do not open an investigation, a tool list, a log hunt, or a project story."
+  }
+  if (kind === "experience") {
+    return "RESPONSE CRAFT: One real example. The bottleneck, what was done, and the impact. This is not the outline used for a definition."
+  }
+  return "RESPONSE CRAFT: Follow only the path this question asked, in spoken order. Do not add a log hunt that was not asked."
+}
+
 export function desktopResponsePolicy(audience: string, question: string) {
   const kind = desktopQuestionKind(question)
-  const level = audience === 'director' ? 'director' : /architect|developer/.test(audience) ? 'architect' : 'engineer'
-  const surface = kind === 'definition' || kind === 'comparison'
-  const words = surface ? (kind === 'comparison' ? 110 : 80) : kind === 'experience' ? (level === 'engineer' ? 250 : 390) : kind === 'implementation' ? (level === 'engineer' ? 180 : level === 'architect' ? 420 : 260) : 90
+  const level = audience === "director" ? "director" : /architect|developer/.test(audience) ? "architect" : "engineer"
+  const surface = kind === "definition" || kind === "comparison" || kind === "general"
+  const words = kind === "definition"
+    ? (level === "architect" ? 100 : level === "director" ? 90 : 80)
+    : kind === "comparison"
+    ? (level === "architect" ? 120 : level === "director" ? 110 : 100)
+    : kind === "experience"
+    ? (level === "engineer" ? 250 : level === "architect" ? 420 : 320)
+    : kind === "implementation"
+    ? (level === "engineer" ? 180 : level === "architect" ? 420 : 260)
+    : (level === "architect" ? 90 : 70)
+  const angle = surface
+    ? (level === "architect"
+      ? "Name the mechanism in one precise sentence: the check that fails, or the boundary that is missing. Then stop. Do not build it, set it up, or integrate it."
+      : level === "director"
+      ? "Open on the risk and what it costs the operation. One line. Do not recite how it was built."
+      : "This is not a general recruiter. Technical HR screens foundational JD readiness: say what it is, what it is used for, and why the job description asks for it. One everyday picture. Then stop.")
+    : kind === "experience"
+    ? (level === "architect"
+      ? "Walk how it was built, set up, and integrated, bit by bit. Include the bottleneck in the system and what changed."
+      : level === "director"
+      ? "Open on the operational effect and the supported business result. Keep the architect's understanding, spoken at the business and operational level. A metric is named only when it was supplied."
+      : "This is not a general recruiter. Give the method, the pivot, and who was accountable. Use hypotheses, evidence, research, alternatives, pivots. Show on-call accountability. Use metrics only when supplied. Do not give the build manual.")
+    : kind === "implementation"
+    ? (level === "architect"
+      ? "Explain how it was built, configured, and integrated, bit by bit, including the interface, the tradeoff, and the test."
+      : level === "director"
+      ? "Keep that understanding and speak it at the business and operational level: the decision, the risk, and the result the operation can use. Do not recite the build steps."
+      : "This is not a general recruiter. For this engineering problem, give methodical reasoning: hypotheses, evidence, research, alternatives, pivots. Show on-call accountability. Use metrics only when supplied. Do not give the build, the setup, and the integration unless this question asked how it was built.")
+    : ""
   const scope = surface
-    ? 'Explain the concept directly, with its mechanism, the essential distinction and at most one short example. Stop once the question is answered. Do not add a personal incident, project lifecycle, implementation walkthrough, log collection, Splunk queries, integration plan, bottlenecks or achievement metrics to a definition or comparison.'
-    : kind === 'experience'
-    ? 'Use one supported real example. Explain what you discovered or built, your own actions, the actual bottleneck, how you resolved it, validation and the business consequence. A request for a deep example deserves a detailed causal account. Use only supplied facts and metrics; if the incident is absent, state that plainly and give a hypothetical approach.'
-    : kind === 'implementation'
-    ? 'Follow the precise technical path asked about. Explain setup, boundaries, integration, failure modes and validation where relevant. A focused follow-up stays on its requested component; do not restart the entire story.'
-    : 'This is an ordinary question. Answer it in a few sentences. Do not pull logs, list search keywords, open a tool chain, or aggregate Splunk. That procedure was not asked.'
+    ? `This is a ${kind}. Touch the technical idea in the abstract and stop. ${angle} ${SURFACE_STOP}`
+    : kind === "experience"
+    ? `Use one supported real example. Explain what was discovered or built, the candidate's own actions, the actual bottleneck, how it was resolved, and the impact on the work. A deep example gets that account. Use only supplied facts and metrics. If the incident is absent, say so and give the approach as a hypothesis. ${angle}`
+    : kind === "implementation"
+    ? `Follow the precise path the question asked. ${angle} A follow-up stays on the piece that was asked. Do not restart the whole story. Do not pull logs or aggregate Splunk unless the question asked for that hunt.`
+    : `This is an ordinary question. Answer it in a few sentences. ${angle} ${SURFACE_STOP}`
   const shape = levelMetrics(level)
-  const listener = level === 'engineer'
-    ? 'LEVEL 1 — Technical HR + Engineer. This is not a general recruiter. Technical HR screens foundational JD readiness: the keyword, what it is used for, and why the requirement matters, without the machinery. For engineering problems, give methodical reasoning: hypotheses, evidence, research, alternatives, pivots. Show on-call accountability. Use metrics only when supplied. Do not give the build, the setup, and the integration unless this question asked how it was built.'
-    : level === 'architect'
-    ? 'LEVEL 2 — Architect + Developer: for implementation and design questions, explain how it was built, configured and integrated, bit by bit, including interfaces, tradeoffs, failure handling and tests. Definitions and comparisons still stay concise.'
-    : 'LEVEL 3 — Director: retain the architect/developer reasoning but express it at the business and operational level. Explain ownership, risk, delivery tradeoffs, operational effect and supported business achievements. Say which metrics you would measure; never turn proposed metrics into past results. Definitions and comparisons still stay concise. Do not recite the build steps.'
   const spoken = `SPOKEN MEASURES for this level only: depth ${shape.depth}, distinction ${shape.distinction}, integration ${shape.integration}, relevance ${shape.relevance}, confidence ${shape.confidence}. These are not the same as the other two levels. Say every word so it can be read aloud. Write at least nine, never >=9. Write and, never an ampersand and never x-amp.`
-  return {kind, level, words, metrics: shape, guidance: `DESKTOP THREE-LEVEL RESPONSE CONTRACT — use this scope over any earlier generic depth or storytelling template.\n${listener}\n${spoken}\nQUESTION SHAPE: ${kind}. ${scope}\nAim for about ${words} words, using fewer when sufficient. Selected audience changes the explanation, while the current question determines how far to go. No fixed rhythm, mandatory tool sequence, forced metaphor or invented personal achievement.`}
+  return { kind, level, words, metrics: shape, guidance: `DESKTOP THREE-LEVEL RESPONSE CONTRACT — this shape wins over any earlier template that treats every question as an investigation.\nQUESTION SHAPE: ${kind}. ${scope}\n${spoken}\nAim for about ${words} words. The level changes the angle. The question decides how far to go. A definition is not a deep example. A deep example is not a definition.` }
 }

@@ -145,3 +145,80 @@ export function placeInSkills(lines: { idx: number; text: string }[], terms: str
   }
   return cur.filter(l => changed.has(l.idx))
 }
+
+export type RelationalPair = { parent: string; terms: string[] }
+
+/** Keep Gemini's related terms only when the parent skill is in what the candidate confirmed. */
+export function parseConfirmedVocabulary(text: string, evidence: string): RelationalPair[] {
+  let t = text.trim().replace(/^```[a-zA-Z]*\s*/, "").replace(/\s*```$/, "").trim()
+  const a = t.indexOf("["), b = t.lastIndexOf("]")
+  if (a >= 0 && b > a) t = t.slice(a, b + 1)
+  let arr: unknown
+  try { arr = JSON.parse(t) } catch { return [] }
+  if (!Array.isArray(arr)) return []
+  const out: RelationalPair[] = []
+  for (const item of arr) {
+    if (!item || typeof item !== "object") continue
+    const rec = item as { parent?: unknown; terms?: unknown }
+    const parent = typeof rec.parent === "string" ? rec.parent.toLowerCase().trim() : ""
+    if (parent.length < 2 || !contains(evidence, parent)) continue
+    const terms = Array.isArray(rec.terms) ? rec.terms.flatMap(v => typeof v === "string" ? [v.toLowerCase().trim()] : []) : []
+    if (terms.length) out.push({ parent, terms: [...new Set(terms)].slice(0, 6) })
+  }
+  return out
+}
+export type ResumeBullet = { idx: number; role: string; text: string }
+
+/** A related term is allowed only when the candidate already stated the parent skill, or the baseline already shows it. */
+export function groundedPairs(pairs: RelationalPair[], evidence: string): RelationalPair[] {
+  const out: RelationalPair[] = []
+  for (const pair of pairs) {
+    const parent = pair.parent.toLowerCase().trim()
+    if (parent.length < 2 || !contains(evidence, parent)) continue
+    const terms = [...new Set(pair.terms.map(t => t.toLowerCase().trim()).filter(t => t !== parent && skillLike(t) && !isCertification(t)))]
+    out.push({ parent, terms })
+  }
+  return out
+}
+
+function clause(terms: string[]): string {
+  return terms.length === 1 ? terms[0] : `${terms.slice(0, -1).join(", ")} and ${terms[terms.length - 1]}`
+}
+
+/**
+ * Write confirmed skills and their related vocabulary into the skills list and into a bullet for the role the
+ * candidate named. A parent the evidence does not contain is dropped, so a job-post tool they never confirmed stays out.
+ */
+export function weaveConfirmedVocabulary(input: {
+  skills: { idx: number; text: string }[]
+  bullets: ResumeBullet[]
+  pairs: RelationalPair[]
+  evidence: string
+  jd: string
+}): { skills: { idx: number; text: string }[]; bullets: { idx: number; text: string }[]; text: string } {
+  const pairs = groundedPairs(input.pairs, input.evidence)
+  const wanted = pairs.flatMap(p => [p.parent, ...p.terms])
+  const skillEdits = placeInSkills(input.skills, wanted, input.jd)
+  const skillText = new Map(input.skills.map(s => [s.idx, s.text]))
+  for (const edit of skillEdits) skillText.set(edit.idx, edit.text)
+  const bulletText = input.bullets.map(b => ({ ...b }))
+  const evidence = input.evidence.toLowerCase()
+  for (const pair of pairs) {
+    const shown = pair.terms.map(t => jdSpelling(t, input.jd))
+    const named = bulletText.filter(b => {
+      const roleWord = b.role.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 4)
+      return contains(b.text, pair.parent) || roleWord.some(w => evidence.includes(w) && evidence.includes(pair.parent))
+    })
+    const home = named[0]
+    if (!home) continue
+    const missing = shown.filter(t => !contains(home.text, t))
+    if (!missing.length) continue
+    const text = home.text.replace(/\s+$/, "")
+    const end = /[.]$/.test(text) ? "." : ""
+    const body = end ? text.slice(0, -1) : text
+    home.text = `${body}, including ${clause(missing)}${end}`
+  }
+  const skills = [...skillText.entries()].map(([idx, text]) => ({ idx, text }))
+  const text = [...skills.map(s => s.text), ...bulletText.map(b => b.text)].join("\n")
+  return { skills: skillEdits, bullets: bulletText.filter(b => !input.bullets.some(o => o.idx === b.idx && o.text === b.text)).map(b => ({ idx: b.idx, text: b.text })), text }
+}
