@@ -1,3 +1,19 @@
+## 2026-10-23 (night) — More REA: 9 competitors, 2 own apps, one urgent action
+
+**Competitors recorded** (each its own REA entry and `docs/research/*-rea-2026-10-23.md`, public pages only):
+Enhancv, Huntr, Superhuman, LazyApply, AIApply, JobCopilot, CoPilot Interview, Interview Sidekick, LastRound AI.
+
+**Own apps:** the MFit Chrome extension (one medium, two low findings) and gmail-watcher (one high finding). Details
+are in the private parfAct repo, `docs/security/`, because job-dashboard and gmail-watcher are public.
+
+**URGENT for him:** make the gmail-watcher repository private (see the private note). Only he can do it.
+
+**Raised for him:** CLAUDE.md tells the resume builder to generate "plausible" metrics when none are given; Enhancv
+leaves a placeholder instead, and MFit rules elsewhere forbid invented metrics. His call.
+
+**Running:** the CI/build agent, the Kompas no-drop audit, and the Chief build (brief, blanks for rates, goal to
+jobs). **Still to REA:** kompas, followup-hq, and the refused hosts.
+
 ## 2026-10-23 (late) — Live REA of the reference apps
 
 **Asked:** REA every reference app in depth, and take what users already like (UI, features, marketing, pricing).
