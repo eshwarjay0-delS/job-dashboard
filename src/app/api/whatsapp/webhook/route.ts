@@ -25,7 +25,7 @@ import { DATA_DIR, USER_RESUMES_DIR } from "@/lib/paths"
 import { resolveKeys, hasAnyKey, keysFor, tailorKeys } from "@/lib/llm"
 import { runTailor, type TailorResult } from "@/lib/tailor"
 import { extractJdMeta } from "@/lib/claude"
-import { sendText as sendTextRaw, sendDocument as sendDocumentRaw, downloadMedia, verifySignature, senderAllowed, waConfigured } from "@/lib/whatsapp"
+import { sendText as sendTextRaw, sendDocument as sendDocumentRaw, downloadMedia, verifySignature, senderAllowed, waConfigured, waSignatureConfigured } from "@/lib/whatsapp"
 import { recordUpdateProviderStatus } from "@/lib/mail-update-store"
 import { trace } from "@/lib/whatsapp-trace"
 import { isOwnerWhatsApp } from "@/lib/owner"
@@ -237,6 +237,8 @@ export async function POST(request: NextRequest) {
     ?.entry?.[0]?.changes?.[0]?.value
   const statuses = (value?.statuses as Record<string, unknown>[] | undefined) || []
   if (statuses.length) {
+    // Never turn an unsigned public request into delivered/read evidence.
+    if (!waSignatureConfigured()) return ok()
     await Promise.all(statuses.slice(0, 20).map(status => {
       const id = String(status.id || "")
       const state = String(status.status || "") as "sent" | "delivered" | "read" | "failed"

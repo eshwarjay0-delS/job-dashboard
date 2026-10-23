@@ -194,6 +194,10 @@ Inbox alerts now retain Meta's signed sent, delivered, read and failed callbacks
 
 This does not activate messaging. The approved WhatsApp template, scheduler and opted-in verified device still require configuration and controlled acceptance.
 
+### Signed delivery evidence — 23 October 2026
+
+Provider acceptance is not handset delivery. A public callback can only upgrade an alert to delivered or read when `WHATSAPP_APP_SECRET` is configured and the request passes Meta's `X-Hub-Signature-256` check. When the secret is absent, outbound alerts keep their accepted state but status payloads are ignored; the Inbox settings explain that signed delivery evidence is still waiting for setup. This preserves the existing bot path while preventing unsigned requests from becoming delivery proof.
+
 ### Damaged event recovery — 23 October 2026
 
-The update feed validates saved records before display or mobile delivery. Malformed JSON, missing fields and mismatched event identifiers are skipped without deleting the stored record; valid updates remain in chronological order. Storage access failures still surface for retry. This recovery is implemented on a review branch; production deployment and authenticated acceptance remain pending. See `docs/research/gmail-feed-record-recovery.md`.
+The update feed validates saved records before display or mobile delivery. Malformed JSON, missing fields and mismatched event identifiers are skipped without deleting the stored record; valid updates remain in chronological order. Storage access failures still surface for retry. This recovery is deployed; authenticated acceptance remains pending. See `docs/research/gmail-feed-record-recovery.md`.
