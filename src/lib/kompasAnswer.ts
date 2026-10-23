@@ -63,8 +63,8 @@ const PK_WORDS: Record<string, number> = {
 const PK_DIFF: Record<string, number> = { easy: 0.85, standard: 1, hard: 1.2, expert: 1.4 }
 const LEN_MULT: Record<string, number> = { short: 0.7, balanced: 1, long: 1.3 }
 export const AUDIENCE_DEPTH: Record<string, number> = {
-  hr: 0.9, technical_hr: 1.0, analyst: 1.06, engineer: 1.12, developer: 1.18,
-  supervisor: 1.24, architect: 1.3, lead: 1.36, director: 1.42, peer: 1.0,
+  hr: 0.9, technical_hr: 1.0, analyst: 1.06, engineer: 1.0, developer: 1.18,
+  supervisor: 1.24, architect: 1.2, lead: 1.36, director: 1.05, peer: 1.0,
 }
 
 const FILLER = /^(?:(?:um+|uh+|so|and|okay|ok|right|well|about \w+)[,.]?\s+)+/i
@@ -142,9 +142,86 @@ export function questionDepth(q: string): number {
   return Math.max(0.5, Math.min(1.5, depth));
 }
 
+// ---- The three answering levels (owner directive, 22 Oct 2026) ----
+// Exactly three levels replace the old nine-listener ladder:
+//   Level 1 "engineer"  — Technical Recruiter + Engineer
+//   Level 2 "architect" — Architect + Developer
+//   Level 3 "director"  — Director
+// The level keys stay the anchor-era keys so the client level map, the
+// session stores and the prep fan-out keep working untouched. Any legacy
+// listener key maps onto the level it now belongs to.
+export type AnswerLevel = "engineer" | "architect" | "director"
+
+export const ANSWER_LEVEL_NAME: Record<AnswerLevel, string> = {
+  engineer: "Level 1 — Technical Recruiter + Engineer",
+  architect: "Level 2 — Architect + Developer",
+  director: "Level 3 — Director",
+}
+
+const LEVEL_OF: Record<string, AnswerLevel> = {
+  hr: "engineer", technical_hr: "engineer", analyst: "engineer", engineer: "engineer", peer: "engineer",
+  developer: "architect", architect: "architect",
+  supervisor: "director", lead: "director", director: "director",
+}
+
+/** The answering level for a request: an explicit level wins; otherwise the
+ *  interviewer/anchor key the client sent maps onto its level. */
+export function answerLevel(raw: unknown, fallbackInterviewer?: string): AnswerLevel {
+  const fromRaw = typeof raw === "string" ? LEVEL_OF[raw.trim().toLowerCase()] : undefined
+  if (fromRaw) return fromRaw
+  const fromFallback = typeof fallbackInterviewer === "string" ? LEVEL_OF[fallbackInterviewer.trim().toLowerCase()] : undefined
+  return fromFallback || "engineer"
+}
+
+// ---- Question register: what kind of depth the QUESTION itself asks for ----
+// "concept" — the question asks what something IS: a definition, a comparison,
+// a concept explained. It is answered ABSTRACTLY at every level: the technical
+// aspects are touched, never turned into a procedure.
+// "practice" — the question asks about the candidate's work, a scenario, a
+// design, an investigation, a deep example. The level's full depth applies.
+export type QuestionRegister = "concept" | "practice"
+
+const CONCEPT_ASK =
+  /\b(define|what (?:is|are|does|do|was|were) (?:a |an |the )?|what'?s the difference|difference between|compare|versus|\bvs\.?\b|how does (?:a |an |the )?[\w-]+(?: [\w-]+){0,3} (?:work|works)|explain (?:the|how a|how an|how the)|meaning of|stands? for|meant by)\b/i
+const PRACTICE_ASK =
+  /\bhow (?:would|do|did|can|could) you\b|\bdesign (?:a|an|the|me)\b|\bsuppose\b|\bif you (?:were|had|found|saw|got)\b|\binvestigat\w*\b|\btroubleshoot\w*\b|\byou (?:discovered|found|built|faced|handled|implemented|configured|deployed|led|ran|owned)\b/i
+
+export function questionRegister(q: string, tier: Tier): QuestionRegister {
+  // Personal, story, drill-down and identity questions are always practice:
+  // they ask about the candidate's own work, where depth is the point.
+  if (tier !== 2) return "practice"
+  const text = String(q || "")
+  if (EXP_Q.test(text) || EXP_Q2.test(text) || PERSONAL_ASK.test(text)) return "practice"
+  if (PRACTICE_ASK.test(text)) return "practice"
+  if (DEFINE.test(text) || DEFINE_ANY.test(text) || CONCEPT_ASK.test(text)) return "concept"
+  return "practice"
+}
+
+/** The controlling depth spec for one answer: the level's register, capped by
+ *  the question's own register. Placed in the per-turn context, after the
+ *  craft policies, so it is the last word on HOW DEEP the answer goes. */
+export function levelGuidance(level: AnswerLevel, register: QuestionRegister): string {
+  if (register === "concept") {
+    const shade = level === "architect"
+      ? "Level shading (Architect + Developer): the mechanism may be named precisely — the check that fails, the boundary that is missing — in a sentence or two. Still no procedure and no tooling steps."
+      : level === "director"
+        ? "Level shading (Director): after the plain meaning, one line on why it matters — the risk it creates, the exposure it opens — and stop. No procedure."
+        : "Level shading (Technical Recruiter + Engineer): plain words a recruiter can repeat back, one picture, and no acronym without its meaning attached."
+    return `QUESTION REGISTER — CONCEPT (this overrides the level's normal depth): this question asks what something IS — a definition, a comparison, a concept — not what the candidate did and not how they would run it. Answer ABSTRACTLY: the plain meaning first, the one distinction that matters, and one small concrete example the listener can picture. Touch the technical aspects — name the mechanism in principle — and stop there. Do NOT turn it into a procedure: no log sources, no queries or keywords to search, no tool steps, no integration or aggregation walkthrough, no "how I would hunt for it", no war story. A definition that becomes a tutorial is a wrong answer at every level. ${shade}`
+  }
+  switch (level) {
+    case "architect":
+      return `ANSWER LEVEL — ${ANSWER_LEVEL_NAME[level]}: full build depth. How it was built, set up and integrated, step by step in the order it happens — the components, the settings, queries or code where they ARE the answer, the alternatives weighed and what each costs, the failure modes and how each was handled. This listener builds systems: leave nothing at "we configured it", and ground every step in the background's real stack.`
+    case "director":
+      return `ANSWER LEVEL — ${ANSWER_LEVEL_NAME[level]}: architect-and-developer understanding, spoken as business. Lead with the decision, or the stakes of the situation. Then what was achieved — the outcomes and the metrics that prove them: name the measures he actually tracks (coverage, detection or response time, false-positive rate, audit results, cost or hours saved) using only figures the background supports. The mechanism is compressed to the one line that shows he knows it cold — no step-by-step procedure, no settings, no tool walkthrough. Every technical point lands on a business consequence: risk reduced, operations protected, money or time saved.`
+    default:
+      return `ANSWER LEVEL — ${ANSWER_LEVEL_NAME[level]}: a strong engineer talking to a technical recruiter. Clear, confident, in plain order: what it is or what he did, the tools named only as his stack ("we run that in Splunk"), and the result it produced. Compress the doing to the few moves that matter — no settings, no queries, no log fields, no step-by-step configuration. If this listener wants the deep version they will ask; do not volunteer the manual.`
+  }
+}
+
 export function lengthPlan(
   tier: Tier, q: string, interviewer: string,
-  opts: { difficulty?: string; length?: string } = {},
+  opts: { difficulty?: string; length?: string; register?: QuestionRegister } = {},
 ): LengthPlan {
   const pastAsk = /\b(tell me about|describe|walk me through|give me an example|share|a time|when you|have you ever)\b/i.test(q)
   const brief = ["hr", "technical_hr"].includes(interviewer)
@@ -163,7 +240,7 @@ export function lengthPlan(
       : ["hr", "technical_hr"].includes(interviewer) && !/\b(how would you|design|architect|troubleshoot|configure)\b/i.test(q) ? "recruiter"
       : "technical")
   const briefIntro = tier === 0 && /\b(brief|briefly|quick|short|30 seconds|one minute)\b/i.test(q)
-  const words = Math.round(
+  const rawWords = Math.round(
     (briefIntro ? 0.5 : 1) * (PK_WORDS[kind] || 144) *
     (PK_DIFF[opts.difficulty || "standard"] || 1) *
     (LEN_MULT[opts.length || "balanced"] || 1) *
@@ -171,6 +248,10 @@ export function lengthPlan(
     (SHORT_KINDS.includes(kind) ? 1 : complexity(q)) *
     (SHORT_KINDS.includes(kind) ? 1 : questionDepth(q)),
   )
+  // A concept question (a definition, a comparison) is answered abstractly at
+  // every level — its word budget is capped no matter who is asking, so a
+  // bigger level can never inflate it back into a tutorial.
+  const words = opts.register === "concept" ? Math.min(rawWords, 170) : rawWords
   return {
     kind, words,
     secs: [Math.round(words * 0.8 / 2.5), Math.round(words * 1.25 / 2.5)],

@@ -9,6 +9,7 @@ import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
   classify, canonicalQuestion, lengthPlan, questionDepth, plainlyNoQuestion, cleanQuestion, cutQuestion, questionToAnswer, resolveFollowUp,
   tierRule, pickShape, DERIVE_SYSTEM, INTRODUCTION_POLICY, PERSONAL_EXPERIENCE_POLICY, TECHNICAL_ANSWER_BOUNDARY, RESPONSE_CRAFT_POLICY, isPersonalEvidenceQuestion, type LengthPlan,
+  answerLevel, questionRegister, levelGuidance, ANSWER_LEVEL_NAME,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
   commit, matchBank,
 } from "@/lib/kompasAnswer"
@@ -228,7 +229,7 @@ CLARITY (the standard for every answer — nothing abstract, unfinished or uncle
 SUBSTANCE:
 - Ground personal claims in original resume and source documents. Generated identities, project summaries and prior answers are context, not independent evidence of personal experience.
 - EVIDENCE BEFORE STORYTELLING: the background establishes only the experience it states — never upgrade a resume bullet into an incident, a metric, an error message or a date it does not contain. Never invent employers, tools, or metrics.
-- The depth level is set by who is asking (given below): tech-HR stays accessible, engineer is practitioner-deep, architect keeps system-design teeth, director stays strategic. Whatever the level, sound like a person reasoning, not a manual. The most important thing is the diamond in the rough: a living edge, not a speech sanded smooth, clear enough that anyone in the room feels it. The interview still decides the question and the layer.
+- The answering level is one of three (given below): Level 1 Technical Recruiter + Engineer stays clear and compressed, Level 2 Architect + Developer takes the full build depth, Level 3 Director carries the same understanding abstracted to decisions, metrics and business outcomes. The question's own register caps every level: a concept question (a definition, a comparison) is answered abstractly at all three. Whatever the level, sound like a person reasoning, not a manual. The most important thing is the diamond in the rough: a living edge, not a speech sanded smooth, clear enough that anyone in the room feels it. The interview still decides the question and the layer.
 - HIT THE LENGTH TARGET below — a quick factual ask gets a short answer, a deep dive gets room. Length is the most audible quality signal.
 
 Return only the answer, no preamble, no commentary.`
@@ -239,7 +240,8 @@ Return only the answer, no preamble, no commentary.`
 // questions get behavioural; everything else gets technical.
 const CODE_ASK_Q =
   /\b(write|implement|code (up|this|it)|coding|program|function|algorithm|big.?o|time complexity|leetcode|two.?sum|palindrome|fibonacci|linked list|binary (search|tree)|hash ?map|array|substring|reverse (a|the) (string|list)|sql (query|to)|query (to|that)|regex (to|for|that)|script (to|that)|class (that|to)|refactor|debug (this|the)|unit test|endpoint)\b/i
-const FINAL_INTERVIEWERS = new Set(["architect", "director", "lead", "supervisor"])
+// (The final-round mode is keyed to the Director answering level in
+// modeBlock below — owner directive, 22 Oct 2026: three levels.)
 
 const MODE_BLOCKS: Record<string, string> = {
   behavioural: `BEHAVIOURAL MODE: they score evidence about you, not systems. Each answer is one real moment, told as what you did.
@@ -263,10 +265,13 @@ const MODE_BLOCKS: Record<string, string> = {
   final: `FINAL ROUND (Architect, Director, Lead, Supervisor). Answer the question word for word: sentence one is the answer to exactly what they asked, in their terms. Then only what that question needs — the decision, the reason, the one fact that proves it. No preamble, no background they did not ask for, no second topic, no recap, no pitch. Every sentence must earn its place; stop when the question is answered.`,
 }
 
-function modeBlock(tier: number, question: string, interviewer: string): string {
+function modeBlock(tier: number, question: string, level: string): string {
   if (tier === 0) return INTRODUCTION_POLICY
   if (CODE_ASK_Q.test(question)) return MODE_BLOCKS.coding
-  if (FINAL_INTERVIEWERS.has(interviewer)) return MODE_BLOCKS.final
+  // The final-round block belongs to the Director LEVEL (owner, 22 Oct 2026:
+  // three levels) — not to whichever anchor happens to be writing, so an
+  // Architect + Developer answer keeps its full build depth.
+  if (level === "director") return MODE_BLOCKS.final
   if (tier === 1) return MODE_BLOCKS.behavioural
   return MODE_BLOCKS.technical
 }
@@ -281,6 +286,8 @@ type AnswerJob = {
   userText: string
   plan: LengthPlan
   interviewer: string
+  level: string
+  register: string
   tier: number
   fallbackText: string
   orKey: string | undefined
@@ -328,6 +335,8 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
   const metaBase = {
     engine: "marketfit",
     interviewer: job.interviewer,
+    level: job.level,
+    register: job.register,
     tier: job.tier,
     length: { kind: job.plan.kind, secs: job.plan.secs },
     derived: job.question,
@@ -614,6 +623,12 @@ export async function POST(request: NextRequest) {
     finally { if (timer) clearTimeout(timer) }
   }
   const interviewer = str(config.interviewer, 40) || "engineer"
+  // The answering LEVEL (owner, 22 Oct 2026: exactly three levels). The client
+  // sends the level the user has selected RIGHT NOW on every request, so a
+  // level switch changes the very next answer — nothing is pinned at session
+  // start. `interviewer` above stays the anchor voice (engineer/director) the
+  // prose is written under; the level controls register and depth.
+  const level = answerLevel(config.level, interviewer)
   const prep = (body.prep && typeof body.prep === "object" ? body.prep : {}) as Record<string, unknown>
   const transcript = str(body.transcript, 4000)
   const historyArr = Array.isArray(body.history) ? body.history : []
@@ -636,21 +651,28 @@ export async function POST(request: NextRequest) {
   // Minimal intro triggers ("intro") get a canonical question so the model
   // generates a spoken self-introduction instead of echoing the trigger.
   question = canonicalQuestion(question, tier)
-  const plan = lengthPlan(tier, question, interviewer, {
+  // The question's own register decides how deep ANY level may go: a concept
+  // question (define / compare / what-is) is answered abstractly, a practice
+  // question (his work, a scenario, a deep example) takes the level's depth.
+  const register = questionRegister(question, tier)
+  const plan = lengthPlan(tier, question, level, {
     difficulty: str(config.difficulty, 20) || undefined,
     length: str(config.length, 20) || undefined,
+    register,
   })
-  // Depth calibration: match the answer's focus to the question's depth.
-  // A surface question gets a direct answer; a deep scoped question gets
-  // a focused deep dive. Prevents the "expert answer to a simple question" mismatch.
+  // Depth calibration inside the practice register: match the answer's focus
+  // to the question's depth. A surface question gets a direct answer; a deep
+  // scoped question gets a focused deep dive. (Concept questions are governed
+  // by the level block below, which caps them abstract at every level.)
   const qDepth = questionDepth(question)
-  const depthGuidance = qDepth < 0.75
+  const depthGuidance = register === "concept" ? ""
+    : qDepth < 0.75
     ? "ANSWER CALIBRATION: This is a surface-level question. Answer directly and briefly. Do not expand into a deep technical narrative — match the question's scope."
     : qDepth > 1.25
     ? "ANSWER CALIBRATION: This is a deep, scoped question. Go deep on the specific angle asked — concrete details, trade-offs, and real constraints. Stay focused on what was asked, don't broaden."
     : ""
   const personalEvidence = isPersonalEvidenceQuestion(tier, question)
-  const rule = tierRule(tier, interviewer)
+  const rule = tierRule(tier, level)
   // 27 question archetypes (perfACT _shapes.js): first-win structural instruction.
   const shape = pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
   // perfACT's rotation ledger (client-carried): the frontend sends its ledger
@@ -704,9 +726,10 @@ export async function POST(request: NextRequest) {
   }
 
   const context = [
-    `The interviewer is a ${interviewer}. Match the depth to them: do not leave them behind, and do not leave the mechanism out.`,
+    `The listener is at ${ANSWER_LEVEL_NAME[level]}. The level block below is the controlling spec for this answer's depth and register.`,
+    levelGuidance(level, register),
     `QUESTION TYPE: ${why} (tier ${tier}). ${rule}`,
-    `INTERVIEW MODE: ${modeBlock(tier, question, interviewer)}`,
+    `INTERVIEW MODE: ${modeBlock(tier, question, level)}`,
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
     `LENGTH TARGET: about ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Hit it — a quick factual ask gets a short answer, a deep dive gets room.`,
     depthGuidance,
@@ -761,7 +784,7 @@ export async function POST(request: NextRequest) {
   ].filter(Boolean).join("\n\n")
   const job: AnswerJob = {
     question,
-    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : audienceGuidance(interviewer, question)}\n\n${personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}`,
+    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : audienceGuidance(level, question)}\n\n${personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}`,
     userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? "The previous answer to this question was wrong. Answer it again. Do not reuse that answer's opening, its example, or its order of points.\n\n" : ""}${tier === 0 ? INTRODUCTION_POLICY : `Speak it. Sentence one is the answer in words this listener already understands. Then one path. On every sentence, ask whether you are 100% on this question, at this layer. A sentence that is not, is not said.
 A general scenario — a time, a would-you, a launch, or a people question: the decision or the moment, in plain words, and one picture. Do not open a mechanism they did not ask for. If the background has no such incident, say what you would do.
 A technical question — a what-is, a how, an investigate, a fix, or a test: specialist, spoken the way a person talks in the meeting. Simple words, or one abstract sentence that carries the meaning. Do not recite a query, a parameter, a claim name, or a stack. Inside a program, write the real numbers. A status code, a port, and a literal in code stay written as themselves. Mark the one word the listener should keep with double-underscores, like __owner__. That word is the picture, or the mechanism once, in words they already have.
@@ -770,6 +793,8 @@ If a second topic starts, stop.
 ${INTERVIEW}`}`,
     plan,
     interviewer,
+    level,
+    register,
     tier,
     fallbackText,
     orKey: keys.openrouter || undefined,

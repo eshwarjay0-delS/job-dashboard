@@ -45,8 +45,8 @@
       listensFor: "Whether you understand how it is really built: the exact function, query or pipeline, and the edge case you guarded." },
     supervisor: { name: "Supervisor", from: "director", wording: "say", max: 7, kinds: ["direction", "people", "design", "risk", "decision", "outcome"],
       listensFor: "Where the work is heading, and how you keep people, process and design moving together." },
-    architect: { name: "Architect", from: "director", wording: "say", max: 8, kinds: ["design", "risk", "decision", "why", "how", "cost"],
-      listensFor: "Design from first principles: the constraints, the alternatives you weighed, and where it would break." },
+    architect: { name: "Architect + Developer", from: "director", wording: "say", max: 9, kinds: ["design", "code", "how", "tool", "check", "risk", "decision", "why", "cost"],
+      listensFor: "How it is really built: the design from first principles, the implementation, the alternatives weighed, and where it would break. (Level 2 of the owner's three levels, 22 Oct 2026: Architect + Developer.)" },
     lead: { name: "Lead", from: "director", wording: "say", max: 7, kinds: ["decision", "people", "risk", "outcome", "direction", "how"],
       listensFor: "How you prioritise, unblock and support people, and that you can still do the work yourself." },
     director: { name: "Director", from: "director", wording: "say", max: 10, kinds: null,
@@ -86,7 +86,7 @@
   const same = (x, y) => { const a = bag(x), b = bag(y); if (!a.size || !b.size) return false; let n = 0; a.forEach(w => { if (b.has(w)) n++; }); return n / Math.min(a.size, b.size) >= 0.8; };
 
   // How much of the anchor's body each listener hears after the opening. 1 = all of it.
-  const DEPTH = { hr: 0.25, technical_hr: 0.35, analyst: 0.5, engineer: 1, developer: 0.6, supervisor: 0.45, architect: 0.6, lead: 0.5, director: 1 };
+  const DEPTH = { hr: 0.25, technical_hr: 0.35, analyst: 0.5, engineer: 1, developer: 0.6, supervisor: 0.45, architect: 0.85, lead: 0.5, director: 1 };
   const SHORT_WORDS = 140;                                                   // an answer this short is already at its lightest depth
   const sentencesOf = (t) => String(t || "").split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => count(s) >= 3);
   const LEANS_BACK = /^(?:this|that|these|those|it|they|which)\b/i;          // a sentence that only makes sense after the one before it

@@ -385,12 +385,10 @@
               <button data-v="coding" title="Developer and Architect, full stack end to end: working code plus the spoken walkthrough">Coding</button>
               <button data-v="final" title="Architect, Director, Lead, Supervisor: straight to the point, answers exactly what was asked, no wasted words">Final</button>
             </div></div>
-          <div class="pref-row"><div class="pref-t"><b>Who's interviewing you?</b><span>Sets how deep answers go</span></div>
+          <div class="pref-row"><div class="pref-t"><b>Answering level</b><span>Three levels — switch any time, the next answer follows it</span></div>
             <select id="interviewerSelect">
-              <option value="technical_hr">Technical HR</option>
-              <option value="engineer" selected>Engineer</option>
-              <option value="developer" data-coding hidden>Developer</option>
-              <option value="architect">Architect</option>
+              <option value="engineer" selected>Recruiter + Engineer</option>
+              <option value="architect">Architect + Developer</option>
               <option value="director">Director</option>
             </select></div>
           <div class="pref-row"><div class="pref-t"><b>Difficulty</b><span>How hard the questions will be</span></div>
@@ -522,12 +520,10 @@
       <button class="pill action toggle" id="autoBtn" aria-pressed="false" title="Auto-answer is OFF: keeps gathering what's said — press AI Answer to turn all of it into one question and answer it"><span class="sw" aria-hidden="true"><i></i></span> Auto <b id="autoState">OFF</b></button>
       <span class="follow" id="follow"><button class="pill action toggle follow-btn" id="followBtn" aria-pressed="false" title="Follow along: highlights the answer as you speak it and keeps your place in view (F)">▶ Follow along</button></span>
       <button class="pill action toggle" id="chatBtn" aria-pressed="false" title="Type a question. Click again to hide it.">Chat</button>
-      <label class="asking" title="Who is asking right now — changing it regenerates the current answer for this audience"><span>Asking</span>
+      <label class="asking" title="Answering level right now — changing it re-answers the current question at the new level"><span>Level</span>
       <select id="liveInterviewer" class="live-select">
-        <option value="technical_hr">Technical HR</option>
-        <option value="engineer" selected>Engineer</option>
-        <option value="developer" data-coding hidden>Developer</option>
-        <option value="architect">Architect</option>
+        <option value="engineer" selected>Recruiter + Engineer</option>
+        <option value="architect">Architect + Developer</option>
         <option value="director">Director</option>
       </select></label>
     </div>

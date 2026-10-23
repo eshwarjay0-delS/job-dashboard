@@ -292,7 +292,7 @@ function applyWizardDraft() {
   if (s.length) { draft.length = s.length; segSet("lengthSeg", s.length); }
   if (s.tone) { draft.tone = s.tone; segSet("toneSeg", s.tone); }
   if (s.mode) { draft.mode = s.mode; segSet("modeSeg", s.mode); if ($("interviewerSelect")) showCodingLevels($("interviewerSelect"), s.mode); }
-  if (s.interviewer && $("interviewerSelect")) $("interviewerSelect").value = s.interviewer;
+  if (s.interviewer && $("interviewerSelect")) $("interviewerSelect").value = keptLevel(s.interviewer, s.mode);
   if (s.difficulty && $("difficultySelect")) $("difficultySelect").value = s.difficulty;
   if (s.dossierSize && $("dossierSize")) $("dossierSize").value = s.dossierSize;
   if (typeof s.autoAnswer === "boolean") { draft.autoAnswer = s.autoAnswer; $("autoAnswer").checked = s.autoAnswer; }
@@ -339,8 +339,8 @@ document.querySelectorAll(".choice").forEach(c => c.onclick = () => {
 });
 function segSet(id, val) { const box = $(id); if (!box) return; [...box.children].forEach(b => b.classList.toggle("on", b.dataset.v === val)); }
 ["lengthSeg", "toneSeg", "modeSeg"].forEach(id => { const box = $(id); if (box) box.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; [...box.children].forEach(x => x.classList.remove("on")); b.classList.add("on"); draft[{ lengthSeg: "length", toneSeg: "tone", modeSeg: "mode" }[id]] = b.dataset.v;
-  // the interview type suggests who is asking: Behavioural -> Technical HR, Technical -> Engineer, Coding -> Architect (Developer offered beside it)
-  if (id === "modeSeg" && $("interviewerSelect")) { showCodingLevels($("interviewerSelect"), b.dataset.v); const who = { behavioural: "technical_hr", technical: "engineer", coding: "architect", final: "architect" }[b.dataset.v]; if (who) $("interviewerSelect").value = who; } saveWizardDraft(); }; });
+  // the interview type suggests the answering level: Behavioural/Technical -> Recruiter + Engineer, Coding -> Architect + Developer, Final -> Director
+  if (id === "modeSeg" && $("interviewerSelect")) { showCodingLevels($("interviewerSelect"), b.dataset.v); const who = { behavioural: "engineer", technical: "engineer", coding: "architect", final: "director" }[b.dataset.v]; if (who) $("interviewerSelect").value = who; } saveWizardDraft(); }; });
 // The typed fields and dropdowns autosave as they change; the segmented controls and resume/document pickers
 // call saveWizardDraft from their own handlers (clicks, not input events).
 ["input", "change"].forEach(ev => document.querySelectorAll(".wiz-pane").forEach(p => p.addEventListener(ev, saveWizardDraft)));
@@ -931,14 +931,14 @@ $("hideBtn").onclick = () => $("overlay").classList.toggle("collapsed");
 $("transcriptBtn").onclick = () => $("drawer").classList.toggle("hidden");
 $("personaBtn").onclick = () => openPersonaFile();
 $("clearBtn").onclick = () => { cards = [{ question: "Cleared.", answer: ["Ask something, or let the call fill this in."] }]; idx = 0; transcript = []; answeredSeq = heardSeq; updatePending(); renderDrawer(); renderCard(); status("Cleared."); };
-// Who is asking = the DEPTH LADDER, cut to four by the owner (5 Oct 2026): Technical HR → Engineer → Architect →
-// Director. Engineer and Director are the two anchors; the other two are derived from the anchor already stored,
-// so a level change is instant. The closed level map still holds all nine; only these four are offered.
-// Coding adds Developer between Engineer and Architect (owner, 5 Oct 2026: "Developer + Architect for Coding").
-const LADDER_FOUR = ["technical_hr", "engineer", "architect", "director"];
-const LADDER_CODING = ["technical_hr", "engineer", "developer", "architect", "director"];
-const ladderFor = (mode) => mode === "coding" ? LADDER_CODING : LADDER_FOUR;
-let LADDER = LADDER_FOUR;
+// Who is asking = the three answering LEVELS (owner, 22 Oct 2026): Recruiter + Engineer → Architect + Developer →
+// Director. One ladder for every mode. Engineer and Director are still the two anchors underneath; the level
+// map still holds all nine legacy listeners, and a session saved on an old level opens on the nearest of the
+// three (keptLevel). The selected level is sent with every answer request, so a switch changes the next
+// answer's register — not just its length.
+const LADDER_THREE = ["engineer", "architect", "director"];
+const ladderFor = () => LADDER_THREE;
+let LADDER = LADDER_THREE;
 function showCodingLevels(sel, mode) {
   if (!sel) return;
   sel.querySelectorAll("option[data-coding]").forEach(o => { o.hidden = mode !== "coding"; o.disabled = mode !== "coding"; });
@@ -946,7 +946,7 @@ function showCodingLevels(sel, mode) {
 }
 // A session saved on a level that is no longer offered opens on the nearest one kept, never on a blank list.
 function keptLevel(v, mode) {
-  const near = { hr: "technical_hr", analyst: "engineer", developer: "engineer", peer: "engineer", supervisor: "architect", lead: "director" };
+  const near = { hr: "engineer", technical_hr: "engineer", analyst: "engineer", developer: "architect", peer: "engineer", supervisor: "director", lead: "director" };
   return ladderFor(mode).includes(v) ? v : near[v] || "engineer";
 }
 function renderDepth() {
@@ -1800,7 +1800,7 @@ function fillAnchor(card, anchor) {
       const question = card.anchorQ || card.question;
       const ctx = nextContext(card, anchor);
       const text = await window.KompasAnchors.fetchProse(question, anchor, {
-        client: BUILD, config: liveConfig(), prep: { ...slimPrep(), questions: [] },
+        client: BUILD, config: { ...liveConfig(), level: askingLevel() }, prep: { ...slimPrep(), questions: [] },
         retrieved: retrieve(question, 4), ledger: ctx.ledger, history: ctx.history,
       });
       if (!text) return;
@@ -1981,7 +1981,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   };
   try {
     const res = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
-      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, pinned: !!opts.pinned, again: !!opts.reask, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
+      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, pinned: !!opts.pinned, again: !!opts.reask, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel() }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
     if (!res.ok || !res.body) {
       const failure = await res.json().catch(() => ({}));
       throw Object.assign(new Error(failure.error || "Paid answer service returned " + res.status), { providerFailure: true, code: failure.code || (res.status === 401 || res.status === 403 ? "AUTH" : ""), retryAfterMs: failure.retryAfterMs });
@@ -2691,7 +2691,7 @@ const DossierDB = {
   async get(id) { try { const db = await this.open(); return await new Promise(res => { const rq = db.transaction("d", "readonly").objectStore("d").get(id); rq.onsuccess = () => res(rq.result || null); rq.onerror = () => res(null); }); } catch { return null; } },
   async put(id, v) { try { const db = await this.open(); await new Promise(res => { const tx = db.transaction("d", "readwrite"); tx.objectStore("d").put(v, id); tx.oncomplete = res; tx.onerror = res; }); } catch {} },
 };
-const INTERVIEWER_KEYS = ["technical_hr", "engineer", "architect", "director"];   // the four levels offered (owner, 5 Oct 2026)
+const INTERVIEWER_KEYS = ["engineer", "architect", "director"];   // the three answering levels (owner, 22 Oct 2026)
 const CATEGORIES = ["identity & background", "behavioral (STAR)", "technical deep-dive", "scenario & troubleshooting", "system & architecture design", "tools & stack specifics", "failure & lessons", "conflict & collaboration", "leadership & ownership", "gaps & weaknesses", "motivation & culture fit", "closing & questions to ask"];
 const PAGES_BY_DIFFICULTY = { easy: 100, standard: 250, hard: 500, expert: 1000 };
 const WORDS_PER_PAGE = 500;
