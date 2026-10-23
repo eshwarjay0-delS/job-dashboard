@@ -23,9 +23,13 @@ The harnesses continue to execute real webhook code for job-description handling
 - Resume-library conversation suite: 16/16 passed.
 - Combined WhatsApp, resume library, Apply chooser, mail-update, Plan & Vision, and REA regression set: 90/90 passed.
 - TypeScript and scoped ESLint passed.
-- The full production build generated 154 pages; its nine dynamic-filesystem tracing warnings pre-existed this change.
+- The full production build generated 157 pages; its nine dynamic-filesystem tracing warnings pre-existed this change.
 - The deliberate provider-timeout scenario confirms that no file is delivered, the lease is released, and the next retry succeeds.
 
 ## Limitations and next action
 
 No live WhatsApp message or private resume was used. The original 17 October 17:28 Chicago incident still lacks its exact JD, generated DOCX, and server trace, so this evidence cannot establish live content alignment or a 95–100% match. The harness gap is closed; the exact artifact review remains a separate acceptance item.
+
+## Release
+
+PR #49 merged as `0f0a8716e368879aa7e960e4ab1b7effbc2ff22a` after its preview passed. Vercel reported the exact merge commit successfully deployed to production: <https://vercel.com/qu4ntum-s-projects/job-dashboard/85Xy1wUmrqHr9TPqPdHFE4jBjTMV>. Deployment is not live WhatsApp or resume-quality acceptance.
