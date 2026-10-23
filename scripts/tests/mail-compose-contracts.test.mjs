@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { recipients, attachments, encodeGmailMessage } from '../../src/lib/gmail-message.ts'
-import { contractTypes, applicationUrl } from '../../src/lib/contract-jobs.ts'
+import { contractTypes, applicationUrl, requiresSecurityClearance } from '../../src/lib/contract-jobs.ts'
 import { validTracked, trackedBy } from '../../src/lib/mail-important.ts'
 test('recipients and attachments reject header injection and excessive payloads',()=>{
  assert.deepEqual(recipients('one@example.com; two@example.com,one@example.com'),['one@example.com','two@example.com'])
@@ -30,6 +30,17 @@ test('contract filters distinguish payroll from contractual employment and rejec
  assert.deepEqual(contractTypes('Temporary role'),['Temporary'])
  for(const url of ['javascript:alert(1)','http://example.com','https://user:pass@example.com','#'])assert.equal(applicationUrl(url),null)
  assert.equal(applicationUrl('https://example.com/job/1'),'https://example.com/job/1')
+})
+test('clearance roles are excluded while explicit no-clearance wording survives',()=>{
+ assert.equal(requiresSecurityClearance('Active TS/SCI clearance required.'),true)
+ assert.equal(requiresSecurityClearance('Must be able to obtain and maintain a DoD security clearance.'),true)
+ assert.equal(requiresSecurityClearance('Public Trust eligibility; clearance sponsorship is available.'),true)
+ assert.equal(requiresSecurityClearance('SC-cleared DevSecOps lead.'),true)
+ assert.equal(requiresSecurityClearance('No security clearance required for this commercial role.'),false)
+ assert.equal(requiresSecurityClearance('Security clearance is not needed.'),false)
+ assert.equal(requiresSecurityClearance('No security clearance required, but Public Trust eligibility is mandatory.'),true)
+ assert.equal(requiresSecurityClearance('Clearance is not required initially; must obtain it after hire.'),true)
+ assert.equal(requiresSecurityClearance('Build secure APIs and manage secrets in Azure Key Vault.'),false)
 })
 test('tracking rules bind sender and receiving inbox, reject query syntax',()=>{
  const rule={account:'one@example.com',email:'sender@example.com',name:'Sender',at:123}

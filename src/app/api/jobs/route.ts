@@ -1,4 +1,4 @@
-import { contractTypes, applicationUrl } from "@/lib/contract-jobs"
+import { contractTypes, applicationUrl, requiresSecurityClearance } from "@/lib/contract-jobs"
 import { NextRequest, NextResponse } from "next/server"
 
 // ─── Work-auth detection ──────────────────────────────────────────────────────
@@ -930,6 +930,7 @@ export async function GET(request: NextRequest) {
   // Priority: JSearch (LinkedIn/Indeed/Glassdoor) → Jobright → Infosecjobs → USAJobs → Handshake interns → Greenhouse → Ashby → RemoteOK → Remotive → Arbeitnow
   for (const j of [...jsearch, ...jobright, ...infosec, ...usajobs, ...interns, ...greenhouse, ...ashby, ...remoteok, ...remotive, ...arbeitnow]) {
     if (!applicationUrl(j.url)) continue
+    if (requiresSecurityClearance(`${j.title} ${j.description}`)) continue
     j.contractTypes ||= contractTypes(j.title + " " + j.description)
     if (type === "contract" && !j.contractTypes.length) continue
     if (remote && !j.remote) continue
@@ -958,6 +959,7 @@ export async function GET(request: NextRequest) {
   }
   if (remote) filtered = filtered.filter(j => j.remote)
   if (intern) filtered = filtered.filter(j => /intern/i.test(j.title))
+  filtered = filtered.filter(j => !requiresSecurityClearance(`${j.title} ${j.description}`))
   if (type === "contract") {
     filtered = filtered.filter(j =>
       j.workAuth.includes("w2") || j.workAuth.includes("c2c") ||
