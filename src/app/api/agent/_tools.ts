@@ -3,6 +3,7 @@
 // signed-in user's own Gmail data through the existing identity layer.
 // Nothing here ever sends email — drafts only, and notifications only.
 
+import { createHash } from "crypto"
 import { createClient } from "@/lib/supabase/server"
 import { listGoogleWorkspaceAccounts } from "@/lib/googleWorkspace"
 import { VENDOR_PORTALS } from "@/lib/vendorPortals"
@@ -12,9 +13,17 @@ import {
   type ClassifiedThread,
   type AccountIssue,
 } from "@/app/api/gmail/_lib"
+import { readBrief, writeBrief, mergeBrief, parseBriefText, screenBrief, briefWords, briefShowText, contactList, type ChiefBrief } from "@/lib/chief-brief"
+import { guardDraft, neverContactHit } from "@/lib/chief-guard"
+import { proposeJobs, planCardText, stepOf, stepFindings, findingsText, nextRunAfter, STEPS } from "@/lib/chief-goal"
 
 export interface ToolContext {
   userId: string
+  /**
+   * What the person wrote to the Chief in this conversation. A figure, a claim or a commitment in a draft stands only
+   * when it is in these words or in their brief (chief-guard.ts); without them, every one is flagged for the person.
+   */
+  ownerWords?: string[]
 }
 
 export interface ToolResult {
@@ -149,6 +158,11 @@ async function createDraft(ctx: ToolContext, args: Record<string, unknown>): Pro
   const accountEmail = str(args.accountEmail).toLowerCase()
   if (!to || !subject || !body) return { ok: false, error: "to, subject, and body are required" }
   if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(to)) return { ok: false, error: "to must be a single valid email address" }
+  // Nobody on the never-contact list is drafted for, and the draft holds nothing the person did not give (chief-guard.ts).
+  const brief = await readBrief(ctx.userId)
+  const barred = neverContactHit(brief.neverContact, to, str(args.toName))
+  if (barred) return { ok: false, error: `${barred} is on the user's never-contact list: no draft is made for them. Tell the user, and do not try another address of theirs.` }
+  const guarded = guardDraft({ subject, body, to, toName: str(args.toName), ownWords: [...(ctx.ownerWords || []), briefWords(brief)], resumeText: await resumeTextOf(ctx.userId) })
 
   const accounts = await listGoogleWorkspaceAccounts(ctx.userId)
   const acct = accounts.find(
@@ -161,7 +175,7 @@ async function createDraft(ctx: ToolContext, args: Record<string, unknown>): Pro
   if (!token) return { ok: false, error: "Could not get Gmail access for that account." }
 
   const raw = Buffer.from(
-    `To: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset="UTF-8"\r\n\r\n${body}`,
+    `To: ${to}\r\nSubject: ${guarded.subject}\r\nContent-Type: text/plain; charset="UTF-8"\r\n\r\n${guarded.body}`,
   ).toString("base64url")
 
   const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/drafts", {
@@ -174,7 +188,33 @@ async function createDraft(ctx: ToolContext, args: Record<string, unknown>): Pro
     return { ok: false, error: `Gmail drafts.create failed (${res.status}): ${txt.slice(0, 200)}` }
   }
   const json = (await res.json()) as { id?: string }
-  return { ok: true, data: { draftId: json.id, account: acct.google_email, to, subject } }
+  return { ok: true, data: { draftId: json.id, account: acct.google_email, to, subject: guarded.subject, ...(guarded.flags.length ? { flags: guarded.flags.map(f => f.note), note: "The draft holds [flags] the user must answer: list them for him in plain words; never fill them yourself." } : {}) } }
+}
+
+/**
+ * The text of the person's own resumes (not the tailored copies, which carry every job post's words): what a skill
+ * claim in a draft is checked against. Null when none could be read, so the claim is flagged as unchecked.
+ */
+async function resumeTextOf(userId: string): Promise<string | null> {
+  try {
+    const path = await import("path")
+    const { USER_RESUMES_DIR } = await import("@/lib/paths")
+    const { libraryOf, candidatesFor } = await import("@/lib/library-pick-store")
+    const { readPath } = await import("@/lib/storage")
+    const { extractText } = await import("@/lib/docx")
+    const userDir = path.join(USER_RESUMES_DIR, userId)
+    const { index, counts } = await libraryOf(userDir)
+    const texts: string[] = []
+    for (const email of Object.keys(counts)) {
+      for (const c of (await candidatesFor(userDir, email, index)).filter(c => c.depth === 0).slice(0, 6)) {
+        const buf = await readPath(c.path).catch(() => null)
+        if (buf) texts.push(await extractText(buf).catch(() => ""))
+      }
+      if (texts.length >= 12) break
+    }
+    const all = texts.filter(Boolean).join("\n")
+    return all ? all : null
+  } catch { return null }
 }
 
 // ── notify ────────────────────────────────────────────────────────────────
@@ -235,6 +275,8 @@ async function chiefBriefing(ctx: ToolContext, args: Record<string, unknown>): P
   const needsAction: Array<{ from: string; subject: string; why: string; threadId: string }> = []
   const interviews: Array<{ from: string; subject: string; when: string }> = []
   const rateConfirmations: Array<{ from: string; role: string; rate: string }> = []
+  const documentRequests: Array<{ from: string; subject: string }> = []
+  const rtrRequests: Array<{ from: string; subject: string }> = []
 
   for (const t of threads) {
     const latest = t.messages[t.messages.length - 1]
@@ -250,8 +292,13 @@ async function chiefBriefing(ctx: ToolContext, args: Record<string, unknown>): P
     if (cats.has("Rate Confirmation") && latest.rate) {
       rateConfirmations.push({ from: latest.from || "", role: title, rate: latest.rate })
     }
+    // The owner's triage (23 Oct 2026) names document requests and RTRs beside invites and rates.
+    if (cats.has("Document Request")) documentRequests.push({ from: latest.from || "", subject: latest.subject || "" })
+    if (cats.has("RTR Request")) rtrRequests.push({ from: latest.from || "", subject: latest.subject || "" })
     // Threads gone quiet 7+ days that were active = follow-up candidates
-    const lastDate = new Date(latest.internalDate || 0).getTime()
+    // internalDate is milliseconds written as text: new Date("1700000000000") is Invalid Date, so until 23 Oct 2026 no
+    // thread was ever counted quiet and the follow-up list was always empty.
+    const lastDate = Number(latest.internalDate) || 0
     const daysQuiet = (Date.now() - lastDate) / 86400000
     if (daysQuiet >= 7 && (cats.has("RTR Request") || cats.has("Submission Confirmation") || cats.has("Interview Request"))) {
       needsAction.push({
@@ -272,6 +319,8 @@ async function chiefBriefing(ctx: ToolContext, args: Record<string, unknown>): P
       byStage,
       interviews: interviews.slice(0, 10),
       rateConfirmations: rateConfirmations.slice(0, 10),
+      documentRequests: documentRequests.slice(0, 10),
+      rtrRequests: rtrRequests.slice(0, 10),
       followUpCandidates: needsAction.slice(0, 15),
     },
   }
@@ -387,27 +436,44 @@ export async function runDueWatches(userId: string): Promise<{ ran: number; chan
   if (!(await watchesTable(sb))) { out.errors.push("mfit_chief_watches table missing"); return out }
   const { data: watches, error } = await sb.from("mfit_chief_watches")
     .select("*").eq("user_id", userId).eq("status", "active")
-    .lte("next_run_at", new Date().toISOString()).limit(10)
+    .lte("next_run_at", new Date().toISOString()).order("created_at", { ascending: true }).limit(10)
   if (error) { out.errors.push(error.message); return out }
   const ctx: ToolContext = { userId }
+  // A goal's jobs (chief-goal.ts) read the same mail: fetched once for all of this person's jobs in this run.
+  let threads: ClassifiedThread[] | null = null
+  let brief: ChiefBrief | null = null
   for (const w of (watches || []) as (WatchRow & { last_findings_hash: string | null })[]) {
     out.ran++
     try {
-      const brief = await runTool(ctx, "chief_briefing", { days: 2 })
-      const findings = brief.ok ? filterFindings(brief.data, w.subject) : { error: brief.error }
-      const hash = JSON.stringify(findings).length + ":" + JSON.stringify(findings).slice(0, 200)
-      const changed = w.last_findings_hash !== hash
-      const nextRun = new Date(Date.now() + w.check_every_minutes * 60000).toISOString()
+      const step = stepOf(w.sub_checks)
+      let findings: unknown
+      let hash: string
+      let report = ""
+      if (step) {
+        threads ??= (await fetchClassifiedThreads(userId, { days: 21, max: 100 })).threads
+        brief ??= await readBrief(userId)
+        const f = stepFindings(step, threads, { now: Date.now(), subject: w.subject, neverContact: brief.neverContact })
+        findings = f
+        hash = createHash("sha1").update(JSON.stringify(f.items)).digest("hex")
+        // A goal's job reports what it found on its first run too: he asked for the work, not for a baseline.
+        if (f.items.length && w.last_findings_hash !== hash) report = findingsText(step, f)
+      } else {
+        const brief0 = await runTool(ctx, "chief_briefing", { days: 2 })
+        findings = brief0.ok ? filterFindings(brief0.data, w.subject) : { error: brief0.error }
+        hash = JSON.stringify(findings).length + ":" + JSON.stringify(findings).slice(0, 200)
+        if (w.last_findings_hash && w.last_findings_hash !== hash) report = `Something changed on your watch "${w.goal}". ${summarizeFindings(findings)}`
+      }
+      const nextRun = new Date(nextRunAfter(Date.now(), w.check_every_minutes)).toISOString()
       await sb.from("mfit_chief_watches").update({
         last_findings: findings, last_findings_hash: hash,
         last_run_at: new Date().toISOString(), next_run_at: nextRun,
         status: w.deadline_at && new Date(w.deadline_at) < new Date() ? "done" : "active",
       }).eq("id", w.id)
-      if (changed && w.last_findings_hash) {
+      if (report) {
         out.changed++
         await runTool(ctx, "notify", {
-          title: `Chief watch: ${w.subject || w.goal}`,
-          body: `Something changed on your watch "${w.goal}". ${summarizeFindings(findings)}`,
+          title: step ? `Chief job: ${STEPS[step].does}` : `Chief watch: ${w.subject || w.goal}`,
+          body: report,
           type: "chief-watch",
         })
       }
@@ -441,28 +507,95 @@ function summarizeFindings(f: unknown): string {
 
 // ── chief_approval ─────────────────────────────────────────────────────────
 // Phase 4: send the owner a WhatsApp approval card (Send / Edit / Skip buttons)
-// for a sensitive draft. Nothing sends without his tap.
+// for a sensitive draft. Nothing sends without his tap. Since 23 Oct 2026 the draft is
+// guarded first (never-contact list, rates, resume gaps, filings, employer claims:
+// chief-guard.ts), and the card goes only to a number that answers as this account.
 async function chiefApproval(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
-  const { createApprovalCard, deliverApprovalCard, ownerWhatsAppDigits } = await import("@/lib/chief-approvals")
-  const to = str(args.to).replace(/[\\r\\n]/g, " ").trim()
-  const subject = str(args.subject).replace(/[\\r\\n]/g, " ").trim()
+  const { createApprovalCard, deliverApprovalCard, cardRecipientFor, updateGmailDraft, NeverContactError } = await import("@/lib/chief-approvals")
+  // Line breaks only. Until 23 Oct 2026 this read /[\\r\\n]/, which also took every "r" and "n" out of the address
+  // and the subject ("Senior role" became "Se io  ole"), and the address then failed the check below.
+  const to = str(args.to).replace(/[\r\n]/g, " ").trim()
+  const subject = str(args.subject).replace(/[\r\n]/g, " ").trim()
   const body = str(args.body).trim()
   const draftId = str(args.draftId).trim() || undefined
   const accountEmail = str(args.accountEmail).toLowerCase() || undefined
+  const threadId = str(args.threadId).trim()
   if (!to || !subject || !body) return { ok: false, error: "to, subject, and body are required." }
   if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(to)) return { ok: false, error: "to must be a single valid email address" }
-  const waDigits = ownerWhatsAppDigits()
-  if (!waDigits) return { ok: false, error: "No WhatsApp number configured (WHATSAPP_ALLOWED_FROM is empty)." }
-  const card = await createApprovalCard({
-    userId: ctx.userId, to: waDigits, kind: "followup-draft", toEmail: to,
-    subject, body, draftId, accountEmail,
-  })
+  const waDigits = await cardRecipientFor(ctx.userId)
+  if (!waDigits) return { ok: false, error: "No WhatsApp number answers as this account, so there is nowhere to send the card. The user links his number in Connections." }
+  const brief = await readBrief(ctx.userId)
+  // What the thread itself shows: whether the submission was confirmed, and what the recruiter asked for.
+  let filed = false
+  let context = ""
+  if (threadId) {
+    const { threads } = await fetchClassifiedThreads(ctx.userId, { days: 90, max: 100 })
+    const t = threads.find(x => x.threadId === threadId)
+    if (t) {
+      filed = t.messages.some(m => m.category === "Submission Confirmation")
+      context = t.messages.filter(m => !m.from.toLowerCase().includes(t.accountEmail.toLowerCase())).map(m => m.snippet).join("\n")
+    }
+  }
+  let card
+  try {
+    card = await createApprovalCard({
+      userId: ctx.userId, to: waDigits, kind: "followup-draft", toEmail: to, toName: str(args.toName),
+      subject, body, draftId, accountEmail, neverContact: brief.neverContact,
+      ownWords: [...(ctx.ownerWords || []), briefWords(brief)], resumeText: await resumeTextOf(ctx.userId), filed, context,
+    })
+  } catch (e) {
+    if (e instanceof NeverContactError) return { ok: false, error: `${e.entry} is on the user's never-contact list: no card is made. Tell the user plainly.` }
+    throw e
+  }
+  // The Gmail draft says what the card says, so the draft in Gmail never carries what the guard took out.
+  if (draftId && accountEmail && (card.body !== body || card.subject !== subject)) {
+    await updateGmailDraft(ctx.userId, accountEmail, draftId, to, card.subject, card.body)
+  }
+  const flags = (card.flags || []).map(f => f.note)
   try {
     const waId = await deliverApprovalCard(card)
-    return { ok: true, data: { cardId: card.id, waMessageId: waId, note: "Approval card sent to WhatsApp. The owner taps Send / Edit / Skip." } }
+    return { ok: true, data: { cardId: card.id, waMessageId: waId, ...(flags.length ? { flags } : {}), note: "Approval card sent to WhatsApp. The owner taps Send / Edit / Skip." + (flags.length ? " The card lists what he must answer; Send stays locked until he edits those [flags]." : "") } }
   } catch (e) {
     return { ok: false, error: `Card created (${card.id}) but WhatsApp delivery failed: ${String(e).slice(0, 200)}` }
   }
+}
+
+// ── chief_brief ─────────────────────────────────────────────────────────────
+// The person's brief (chief-brief.ts): read before every job. Set in their words.
+async function chiefBrief(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
+  const action = str(args.action, "show").toLowerCase()
+  const current = await readBrief(ctx.userId)
+  if (action === "show") return { ok: true, data: { brief: current, text: briefShowText(current) } }
+  const patch: Partial<ChiefBrief> = str(args.text) ? parseBriefText(str(args.text)).patch : {}
+  for (const k of ["rule", "me", "people", "voice", "never"] as const) if (typeof args[k] === "string") patch[k] = String(args[k])
+  if (args.neverContact !== undefined) patch.neverContact = contactList(args.neverContact)
+  if (Array.isArray(args.addNeverContact) || typeof args.addNeverContact === "string") patch.neverContact = [...(patch.neverContact || current.neverContact), ...contactList(args.addNeverContact)]
+  if (!Object.keys(patch).length) return { ok: false, error: "Nothing to set: give me, people, voice, never, neverContact, addNeverContact or text." }
+  const why = screenBrief(patch)
+  if (why) return { ok: false, error: why }
+  const saved = await writeBrief(ctx.userId, mergeBrief(current, patch))
+  return { ok: true, data: { brief: saved, text: briefShowText(saved) } }
+}
+
+// ── chief_goal ──────────────────────────────────────────────────────────────
+// One goal in plain words → the Chief's proposed jobs, as one approval card on the
+// user's WhatsApp. Nothing is scheduled until the user taps Yes (chief-commands.ts).
+async function chiefGoal(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
+  const goal = str(args.goal).trim()
+  if (goal.length < 6) return { ok: false, error: "goal is required, in plain words (e.g. 'watch my submissions tonight')." }
+  const { createApprovalCard, deliverApprovalCard, cardRecipientFor } = await import("@/lib/chief-approvals")
+  const plan = await proposeJobs({ goal, brief: await readBrief(ctx.userId) })
+  const preview = { goal: plan.goal, jobs: plan.jobs, notBuilt: plan.notBuilt.map(j => ({ ...j, why: STEPS[j.step].why })) }
+  if (!plan.jobs.length) return { ok: true, data: { ...preview, note: "Nothing in this goal can be scheduled yet; nothing was saved. Tell the user which parts are not built." } }
+  const to = await cardRecipientFor(ctx.userId)
+  if (!to) return { ok: false, error: "No WhatsApp number answers as this account, so the jobs cannot be put to the user for a yes and nothing was saved. He can send the goal on WhatsApp as 'goal: …' once his number is linked." }
+  const card = await createApprovalCard({ userId: ctx.userId, to, kind: "jobs-plan", toEmail: "", subject: plan.goal, body: planCardText(plan, Date.now()), plan })
+  try {
+    await deliverApprovalCard(card)
+  } catch (e) {
+    return { ok: false, error: `The jobs card could not be sent to WhatsApp (${String(e).slice(0, 120)}); nothing was scheduled.` }
+  }
+  return { ok: true, data: { ...preview, cardId: card.id, note: "Proposed on WhatsApp for his Yes. Nothing is scheduled until he taps it." } }
 }
 
 // ── Tool registry ─────────────────────────────────────────────────────────
@@ -514,13 +647,23 @@ export const AGENT_TOOLS: Record<string, { description: string; fn: ToolFn }> = 
   },
   chief_watch: {
     description:
-      "The briefable Chief: create a persistent watch from a plain-words goal. The Chief decomposes it into sub-checks, runs them on schedule, nudges only on change. Args: action ('create'|'list'|'cancel', default create); goal (required for create, e.g. 'watch the Richmond 814050 req'); subject (optional req/client/vendor keyword); sub_checks (optional string[] — your own decomposition; default provided); check_every_minutes (1440-10080, default 1440 — daily; runner is daily on current hosting plan); deadline (optional ISO date); id (required for cancel).",
+      "The briefable Chief: create a persistent watch from a plain-words goal. The Chief decomposes it into sub-checks, runs them on schedule, nudges only on change. Args: action ('create'|'list'|'cancel', default create); goal (required for create, e.g. 'watch the Richmond 814050 req'); subject (optional req/client/vendor keyword); sub_checks (optional string[] — your own decomposition; default provided); check_every_minutes (1440-10080, default 1440 — daily; runner is daily on current hosting plan); deadline (optional ISO date); id (required for cancel). For a whole goal rather than one named thing, use chief_goal, which asks his yes first.",
     fn: chiefWatch,
   },
   chief_approval: {
     description:
-      "Send the owner a WhatsApp approval card with Send / Edit / Skip quick-reply buttons for a sensitive draft. Args: to, subject, body (required — the draft), draftId (optional Gmail draft id, so Send actually sends it and Skip discards it), accountEmail (optional Gmail account). Nothing ever sends without his tap.",
+      "Send the owner a WhatsApp approval card with Send / Edit / Skip quick-reply buttons for a sensitive draft. Args: to, subject, body (required — the draft), toName (optional recipient name), draftId (optional Gmail draft id, so Send actually sends it and Skip discards it), accountEmail (optional Gmail account), threadId (optional — the thread it answers, so a confirmed submission and the recruiter's own asks are read from it). Nothing ever sends without his tap. The draft is checked first: nobody on the never-contact list; any rate he did not give, skill not on his resume, submission not confirmed, employer claim or commitment becomes a [flag] he must answer.",
     fn: chiefApproval,
+  },
+  chief_brief: {
+    description:
+      "The user's brief, read before every job: the one rule, Me, My candidates, My voice (two lines), Never, and the never-contact list. Args: action ('show'|'set', default show); for set any of me, people, voice, never, rule (strings), neverContact (replaces the list), addNeverContact (adds names or domains), or text (lines like 'Me: …'). Never put identity numbers or passwords in it.",
+    fn: chiefBrief,
+  },
+  chief_goal: {
+    description:
+      "Turn one goal in plain words into the Chief's own scheduled jobs (1-5, each with a day and its run time), proposed to the user as ONE WhatsApp approval card. Args: goal (required, e.g. 'watch my submissions tonight'). Nothing is scheduled until he taps Yes. Use this for a goal; use chief_watch only when he names one thing to watch himself.",
+    fn: chiefGoal,
   },
 }
 

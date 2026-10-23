@@ -26,6 +26,8 @@ const A = load('src/lib/chief-approvals.ts', {
   '@/lib/storage': { blob: blobMock },
   '@/lib/whatsapp': { sendInteractiveButtons: async () => 'wamid.1', waConfigured: () => true },
   '@/lib/whatsapp-trace': { trace: () => {} },
+  // Every draft goes through the guard before a card exists (23 Oct 2026): the real one, not a stand-in.
+  '@/lib/chief-guard': load('src/lib/chief-guard.ts'),
 })
 
 test('button ids parse back exactly', () => {

@@ -6,6 +6,7 @@ import { runTool, toolPromptBlock } from "../_tools"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { plainFailure, failureKind, failureTag, worthAnotherTry } from "@/lib/plain-failure"
 import { isAdminEmail } from "@/lib/owner"
+import { readBrief, startFromBrief } from "@/lib/chief-brief"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -63,10 +64,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // The appointed rules for everyone; the owner's own brief only on his account (chief-rules.ts).
-    const system = `${chiefSystemPrompt(owner)}\n\n${toolPromptBlock()}\n\n${WHEN_A_TOOL_FAILS}`
+    // The appointed rules for everyone; the owner's own brief only on his account (chief-rules.ts). Since 23 Oct 2026
+    // the prompt starts from the person's own brief (chief-brief.ts): the one rule, Me, candidates, voice, Never and the
+    // never-contact list, read before every job.
+    const system = startFromBrief(await readBrief(user.id), `${chiefSystemPrompt(owner)}\n\n${toolPromptBlock()}\n\n${WHEN_A_TOOL_FAILS}`)
     const convo: ChatMsg[] = messages.slice(-12) // keep the turn bounded
-    const ctx = { userId: user.id }
+    // What he wrote himself: a rate or a claim in a draft stands only when it is in these words (chief-guard.ts).
+    const ctx = { userId: user.id, ownerWords: messages.filter(m => m.role === "user").map(m => String(m.content || "")).slice(-12) }
 
     // One more try, once in a message, when the services refused for a reason that clears by itself in a moment. Seen on
     // 13 Oct 2026: "updates" failed in 1.2 seconds, and the same message nine seconds later was answered.

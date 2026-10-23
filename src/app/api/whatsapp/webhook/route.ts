@@ -45,7 +45,9 @@ import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
 import { chooseResume, type Prefer } from "@/lib/library-choose"
 import { titlesOf, parseInstruction, parseQuestion, splitTailInstruction, type Instruction } from "@/lib/role-match"
-import { getApprovalCard, saveApprovalCard, parseCardButton, deliverApprovalCard, sendGmailDraft, updateGmailDraft, deleteGmailDraft } from "@/lib/chief-approvals"
+import { getApprovalCard, saveApprovalCard, parseCardButton, deliverApprovalCard, sendGmailDraft, updateGmailDraft, deleteGmailDraft, sendLocked, keepOpenFlags } from "@/lib/chief-approvals"
+// The first words the Chief answers; the module itself is loaded only when one is sent.
+const CHIEF_WORDS = /^(?:my\s+|new\s+)?(?:brief|goal|jobs|never[\s-]+contact|chief\s*[,:])/i
 
 export const runtime = "nodejs"
 export const maxDuration = 300
@@ -206,6 +208,8 @@ const HELP = [
   "I start from the resume whose title is the job's. To choose another, say _make another one with the Cybersecurity Analyst resume_, or end the job description with a line such as _use the SOC resume_. Ask _why did you pick that resume?_ or _what resumes do I have?_ any time.",
   "",
   "Commands: *redo* · *reset* · *status*",
+  "",
+  "*Your Chief:* *brief* shows the brief I read before every job · *goal:* _watch my submissions tonight_ and I propose the jobs for your yes · *jobs* lists what is scheduled · *never contact:* _a name or a domain_.",
 ].join("\n")
 
 // ── Meta webhook verification (GET) ───────────────────────────────────────────
@@ -318,7 +322,33 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       if (!card || card.to !== digits(from) || card.status !== "pending") {
         return sendText(from, "That approval is no longer pending — nothing to do.")
       }
+      // A tap acts as the account this number answers as: a card made for another account is never acted on here.
+      if (card.userId !== userId) return sendText(from, "That card belongs to another MarketFit account, so nothing was done.")
+      // A jobs card (chief-goal.ts): Yes schedules the jobs, Edit takes the change in words, Skip saves nothing.
+      if (card.kind === "jobs-plan") {
+        const chief = await import("@/lib/chief-commands")
+        if (parsed.action === "send") return sendText(from, await chief.approvePlan(card))
+        if (parsed.action === "edit") {
+          card.awaitingEdit = true
+          await saveApprovalCard(card)
+          session = await loadSession(from)
+          session.awaitingEditCardId = card.id
+          await saveSession(from, session)
+          return sendText(from, "Reply with what to change, for example _drop 2_, _only Mondays_, _every night_ or _tonight only_.")
+        }
+        card.status = "skipped"; delete card.awaitingEdit
+        await saveApprovalCard(card)
+        return sendText(from, "Skipped — no job was scheduled.")
+      }
       if (parsed.action === "send") {
+        // Nothing the Chief left for him goes out unanswered: a [flag] still in the draft keeps Send locked (chief-guard.ts).
+        const open = sendLocked(card)
+        if (open.length) return sendText(from, `Not sent: the draft still has ${open.length === 1 ? "a flag" : `${open.length} flags`} only you can answer: ${open.slice(0, 3).join(" ")}. Tap Edit and reply with the full text.`)
+        // The list may have grown since the card was made.
+        const { readBrief } = await import("@/lib/chief-brief")
+        const { neverContactHit } = await import("@/lib/chief-guard")
+        const barred = neverContactHit((await readBrief(userId)).neverContact, card.toEmail)
+        if (barred) return sendText(from, `Not sent: ${barred} is on your never-contact list.`)
         const err = card.draftId && card.accountEmail
           ? await sendGmailDraft(userId, card.accountEmail, card.draftId)
           : null
@@ -381,7 +411,15 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
         await saveSession(from, cur)
         return sendText(from, "That draft is no longer pending — nothing to edit.")
       }
+      if (card.kind === "jobs-plan") {
+        await saveSession(from, cur)
+        const { revisePlan } = await import("@/lib/chief-commands")
+        const said = await revisePlan(card, text)
+        return said ? sendText(from, said) : undefined
+      }
+      // His own words are his: nothing in them is flagged again, and a [flag] he left in stays open.
       card.body = text
+      keepOpenFlags(card)
       card.awaitingEdit = false
       const err = card.draftId && card.accountEmail
         ? await updateGmailDraft(userId, card.accountEmail, card.draftId, card.toEmail, card.subject, text)
@@ -391,6 +429,13 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       if (err) return sendText(from, `⚠️ ${err}`)
       await deliverApprovalCard(card)
       return
+    }
+    // The Chief's own words (chief-commands.ts): a brief, a never-contact list, a goal, the jobs. Checked before a long
+    // message is taken for a job description; anything else that starts the same way goes on as before.
+    if (CHIEF_WORDS.test(text)) {
+      const { chiefCommand } = await import("@/lib/chief-commands")
+      const said = await chiefCommand({ from: digits(from), text, userId, account: ACCOUNT_ID.test(userId) })
+      if (said !== null) return said ? sendText(from, said) : undefined
     }
     const replyTo = (msg.context as { id?: string } | undefined)?.id
 
