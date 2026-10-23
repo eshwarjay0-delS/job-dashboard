@@ -8,6 +8,6 @@ The reader now parses and validates each record separately, checks its event ID 
 
 Validation: 21 inbox-update and UI tests passed, including mixed valid/damaged records, missing fields, mismatched IDs, cross-user keys and a storage read failure. TypeScript passed. Test data is synthetic; no Gmail request or WhatsApp message was sent.
 
-Delivery: implemented for review. The earlier default-branch publication rejection remains respected; no production release is claimed. Remaining prerequisites: review/merge, deployment verification, authenticated feed acceptance, and separately the approved mobile template, scheduler and verified handset acceptance.
+Delivery: PR #42 was rebuilt on the current master to preserve independent Kompas work, then merged as `286acdf1138ed89941b33182cff91264907c5c5d`. Vercel reports production success: <https://vercel.com/qu4ntum-s-projects/job-dashboard/3dRW5FysiWQS4wBDGvYwyWFEjztw>. Authenticated feed acceptance and, separately, the approved mobile template, scheduler and verified handset acceptance remain pending.
 
 Release gates: seven additional journal/REA checks passed (28 checks total across these runs), scoped lint passed, and the production build generated all 154 pages. The build retains nine existing filesystem-tracing warnings. This change is stacked on the evidence reconciliation branch from PR #41 so concurrent master work is preserved.
