@@ -7,7 +7,7 @@ on:
     branches: [master, main]
 
 env:
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
 
 jobs:
   ci:
@@ -40,7 +40,10 @@ jobs:
         continue-on-error: false
 
       - name: Verify Kompas migration asset closure and lossless import
-        run: node --test scripts/tests/kompas-migration-assets.test.mjs scripts/tests/kompas-review-parity.test.mjs scripts/tests/kompas-blend-harvest.test.mjs scripts/tests/kompas-three-levels.test.mjs scripts/tests/kompas-desktop-three-levels.test.mjs scripts/tests/kompas-blend.test.mjs scripts/tests/kompas-session-recap.test.mjs
+        run: node --experimental-strip-types --test scripts/tests/kompas-migration-assets.test.mjs scripts/tests/kompas-review-parity.test.mjs scripts/tests/kompas-blend-harvest.test.mjs scripts/tests/kompas-three-levels.test.mjs scripts/tests/kompas-desktop-three-levels.test.mjs scripts/tests/kompas-blend.test.mjs scripts/tests/kompas-session-recap.test.mjs
+
+      - name: Verify consented voice benchmark metrics
+        run: node --test scripts/tests/kompas-voice-metrics.test.mjs
 
       - name: Build
         run: npm run build
