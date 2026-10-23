@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 
-export function DesktopPortal({ url, beforeOpen }: { url: string; beforeOpen: (proceed: () => void) => void }) {
+export function DesktopPortal({ url, beforeOpen, onLaunch }: { url: string; beforeOpen: (proceed: () => void) => void; onLaunch: () => void }) {
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
   async function open() {
@@ -16,6 +16,9 @@ export function DesktopPortal({ url, beforeOpen }: { url: string; beforeOpen: (p
       const launch = new URL('marketfit-kompas://browse')
       launch.searchParams.set('url', target.href)
       launch.searchParams.set('account', data.account)
+      // Keep native browsing in the same account-scoped Apply history as the
+      // ordinary web portal path. This is an open event, never a submission.
+      onLaunch()
       window.location.assign(launch.href)
       setNote('Open the updated Kompas desktop when your browser asks. Sign in there with the same MarketFit account. If it is not installed, use Apply on portal.')
     } catch (error) {

@@ -27,3 +27,13 @@ test('context is stable per account, distinct across accounts and never exposes 
  assert.match(a.account,/^[a-f0-9]{64}$/);assert.equal(a.account,b.account);assert.notEqual(a.account,c.account)
  assert.deepEqual(Object.keys(a),['account']);assert.ok(!JSON.stringify(a).includes('user-one'))
 })
+test('desktop portal launch records an account-scoped open, never a submission',()=>{
+ const component=readFileSync(new URL('../../src/app/dashboard/apply/_components/desktop-portal.tsx',import.meta.url),'utf8')
+ const page=readFileSync(new URL('../../src/app/dashboard/apply/page.tsx',import.meta.url),'utf8')
+ const activity=readFileSync(new URL('../../src/app/api/apply/activity/route.ts',import.meta.url),'utf8')
+ assert.match(component,/onLaunch\(\)[\s\S]*window\.location\.assign\(launch\.href\)/)
+ assert.match(page,/onLaunch=\{\(\)=>void record\('open_portal',job,'desktop'\)\}/)
+ assert.match(page,/record\('open_portal',job,'web'\)/)
+ assert.match(activity,/b\.kind==='open_portal'&&\['web','desktop'\]\.includes\(b\.surface\)/)
+ assert.doesNotMatch(component,/submitted/)
+})
