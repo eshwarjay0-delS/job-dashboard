@@ -135,6 +135,10 @@ Not implemented by this change: a crawler for every vendor, persistent embedded 
 
 ## Desktop inclusive browser implementation — 22 October 2026
 
+### Portal-return identity repair — 23 October 2026, local validation
+
+Return confirmation now retains the original posting ID, URL, title, company, source, location, query and selected resume. Changing the selected job or resume while a portal is open must not change the subsequent self-reported submission or receipt identity. Both web and desktop capture this snapshot. Old title-only snapshots cannot safely identify a posting and are ignored. Expired, future, malformed and non-HTTPS snapshots are ignored. Failed activity saves retain the confirmation; concurrent confirmation clicks are locked. Six focused checks and TypeScript pass. Deployment and authenticated browser acceptance are pending.
+
 Owner renewed: Continue with rest of REA, in-app inclusive browser. Continue the approved desktop phase without selecting a paid cloud-browser provider. The Apply detail panel now has Open in desktop behind the existing duplicate-submission warning. It resolves an opaque authenticated account ID and launches marketfit-kompas://browse; no token or password is carried in that link. The native shell independently verifies the same account before opening a separate MarketFit portal window using WebContentsView. Navigation controls, isolated persistent cookies, HTTPS navigation, popup containment, cleanup and confirmed Forget logins are implemented. Closing the portal does not mark an application submitted. Manual upload uses the selected resume downloaded from Apply.
 
 Activity parity was repaired on 2026-10-23: a validated desktop handoff now records the same account-scoped `open_portal` milestone as the web path and labels its surface `desktop`. It never records `submitted`; that still requires the user's explicit confirmation or later verifiable receipt.
