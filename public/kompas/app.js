@@ -2126,7 +2126,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
           const frame = buf.slice(0, i).trim(); buf = buf.slice(i + 2);
           if (!frame.startsWith("data:")) continue;
           let ev; try { ev = JSON.parse(frame.slice(5)); } catch { continue; }
-          if (ev.type === "meta") { meta = { ...meta, ...ev }; if (ev.derived && card.req === ctl && (consolidated || opts.pinned)) { card.question = ev.derived; if (cards[idx] === card) { renderCard(); status("Answering: " + ev.derived, "live"); } } }
+          if (ev.type === "meta") { meta = { ...meta, ...ev }; if (ev.derived && card.req === ctl && (consolidated || opts.pinned) && !opts.derived) { card.question = ev.derived; if (cards[idx] === card) { renderCard(); status("Answering: " + ev.derived, "live"); } } }
           else if (ev.type === "delta") { if (!first) first = performance.now() - t0; text += ev.text; show(text); }
           else if (ev.type === "replace") { if (!first) first = performance.now() - t0; text = ev.text; show(text); }
           else if (ev.type === "wait") { if (card.req === ctl) status("Reconnecting.", "live"); }
