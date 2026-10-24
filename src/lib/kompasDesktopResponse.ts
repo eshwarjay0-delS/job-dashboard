@@ -24,7 +24,7 @@ export function metricsApart(a: LevelMetrics, b: LevelMetrics): number {
 }
 
 export function desktopQuestionKind(question: string): DesktopQuestionKind {
-  const q = question.toLowerCase()
+  const q = question.toLowerCase().replace(/\s+/g, ' ').trim()
   const askedForDepth = /\b(have you ever|tell me about a time|step.by.step|deep example|in detail|bottleneck|how (?:did|would|do) you)\b/.test(q)
   if (/\b(have you ever|how have you|tell me about a time|your experience|you discovered|you found|you faced|you built|you implemented)\b/.test(q)
     || /\bwalk me through\b[\s\S]*\byou (?:handled|managed|led|built|implemented|resolved|investigated)\b/.test(q)) return 'experience'
