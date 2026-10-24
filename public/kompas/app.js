@@ -745,7 +745,7 @@ function unbracket(s) {
     return t.split(/\s+/).length >= 2 && !/^(how|what|when|why|where)\b/i.test(t) ? t : "";
   });
   if (!hit) return out;
-  return out.replace(/\bby\s*%/g, "significantly").replace(/(^|\s)%/g, "$1")
+  return out.replace(/\bby\s*%/g, "").replace(/(^|\s)%/g, "$1")
     .replace(/[,;]\s*([.!?;:])/g, "$1").replace(/ +([,.;:!?])(?=\s|$)/g, "$1").replace(/ {2,}/g, " ");
 }
 // `__keyword__` = main keyword · *italic* = the word to stress out loud · (pause), [beat] and [breath] = stop and breathe
