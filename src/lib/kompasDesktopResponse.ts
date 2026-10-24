@@ -25,9 +25,14 @@ export function metricsApart(a: LevelMetrics, b: LevelMetrics): number {
 
 export function desktopQuestionKind(question: string): DesktopQuestionKind {
   const q = question.toLowerCase().replace(/\s+/g, ' ').trim()
+  // Explicit practical asks outrank incidental concept/comparison vocabulary.
+  const practical = /\b(go deeper|in depth|in detail|step.by.step|same incident|that failure|first mitigation|falsifiable test|exit criterion)\b/.test(q)
+    || /(?:^|[.?!]\s+)(?:please\s+)?(?:design|build|implement|configure|integrate|debug|troubleshoot)\b/.test(q)
+  if (/\bhave you ever heard of\b/.test(q) && /\b(define|definition|briefly)\b/.test(q) && !practical) return 'definition'
   const askedForDepth = /\b(have you ever|tell me about a time|step.by.step|deep example|in detail|bottleneck|how (?:did|would|do) you)\b/.test(q)
-  if (/\b(have you ever|how have you|tell me about a time|your experience|you discovered|you found|you faced|you built|you implemented)\b/.test(q)
+  if (/\b(what did you do|have you ever|how have you|tell me about a time|your experience|you discovered|you found|you faced|you built|you implemented)\b/.test(q)
     || /\bwalk me through\b[\s\S]*\byou (?:handled|managed|led|built|implemented|resolved|investigated)\b/.test(q)) return 'experience'
+  if (practical) return 'implementation'
   if (!askedForDepth && /\b(compare|versus|vs\.?|difference|distinguish)\b/.test(q)) return 'comparison'
   if (!askedForDepth && /\b(define|definition|what (?:is|are)|meaning of)\b/.test(q)) return 'definition'
   if (/\b(step.by.step|in.depth|deep|granular|implement|configure|integrate|debug|troubleshoot|design|build|how (?:did|would|do) you)\b/.test(q)) return 'implementation'

@@ -4,6 +4,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 const [sourcesFile, outputDir, round = '1'] = process.argv.slice(2)
 if (!sourcesFile || !outputDir) throw Error('Usage: node scripts/kompas-live-evaluate.mjs SOURCES.json PRIVATE_OUTPUT_DIR ROUND')
+if (!/^[1-9]\d*$/.test(round)) throw Error('Round must be a positive integer')
 const token = process.env.KOMPAS_API_TOKEN
 if (!token) throw Error('KOMPAS_API_TOKEN is not configured; zero model calls made.')
 const origin = new URL(process.env.KOMPAS_BASE_URL || 'https://job-dashboard-fawn.vercel.app')
@@ -11,7 +12,7 @@ if (origin.protocol !== 'https:') throw Error('HTTPS required')
 const cases = JSON.parse(await readFile(new URL('./fixtures/kompas-evaluation/interview-50.json', import.meta.url)))
 const sources = JSON.parse(await readFile(sourcesFile, 'utf8'))
 for (const c of cases) {
- if (!sources[c.chain]?.resume || !sources[c.chain]?.jd) throw Error(`Missing approved resume/JD bundle for ${c.chain}; zero model calls made.`)
+ if (!['resume', 'jd'].every(key => typeof sources[c.chain]?.[key] === 'string' && sources[c.chain][key].trim())) throw Error(`Missing approved resume/JD bundle for ${c.chain}; zero model calls made.`)
 }
 await mkdir(outputDir, { recursive: true, mode: 0o700 })
 const destination = path.join(outputDir, `round-${round}.json`)
@@ -26,8 +27,13 @@ const request = async body => {
  if (!res.ok) throw Error(`Answer API HTTP ${res.status}`)
  return res.json()
 }
-const ready = await request({ preflight: true })
-if (!ready.ready) throw Error('Preflight not ready; zero interview answers generated.')
+try {
+ const ready = await request({ preflight: true })
+ if (!ready.ready) throw Error('Preflight not ready; zero interview answers generated.')
+} catch (error) {
+ await writeFile(destination, JSON.stringify([{ round, stage: 'preflight', status: 'failed', error: error.message }], null, 2)+'\n', { mode: 0o600 })
+ throw error
+}
 for (const c of cases) {
  const state = states.get(c.chain) || { history: [], ledger: undefined }
  const began = Date.now()

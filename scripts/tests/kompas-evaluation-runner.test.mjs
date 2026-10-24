@@ -36,3 +36,20 @@ test('evaluation captures 50 answers, preserves chain context and requires revie
   assert.equal(JSON.parse(await readFile(path.join(out,'round-1.json'))).length,50)
  } finally {await rm(dir,{recursive:true,force:true})}
 })
+
+test('rejected preflight leaves explicit failure evidence and makes no answer calls', async () => {
+ const dir=await mkdtemp(path.join(tmpdir(),'kompas-preflight-'))
+ try {
+  const cases=JSON.parse(await readFile(new URL('../fixtures/kompas-evaluation/interview-50.json',import.meta.url)))
+  const sources=Object.fromEntries(cases.map(c=>[c.chain,{resume:'Synthetic',jd:'Synthetic'}]))
+  await writeFile(path.join(dir,'sources.json'),JSON.stringify(sources))
+  await writeFile(path.join(dir,'mock.mjs'),`globalThis.fetch=async (_url,opts)=>{if(!JSON.parse(opts.body).preflight) throw Error('Unexpected generation');return {ok:false,status:401}}`)
+  const r=spawnSync(process.execPath,['--import',pathToFileURL(path.join(dir,'mock.mjs')).href,'scripts/kompas-live-evaluate.mjs',path.join(dir,'sources.json'),path.join(dir,'out'),'1'],{env:{...process.env,KOMPAS_API_TOKEN:'synthetic'},encoding:'utf8'})
+  assert.notEqual(r.status,0)
+  const records=JSON.parse(await readFile(path.join(dir,'out','round-1.json')))
+  assert.equal(records.length,1)
+  assert.equal(records[0].stage,'preflight')
+  assert.equal(records[0].status,'failed')
+  assert.equal(records[0].error,'Answer API HTTP 401')
+ } finally {await rm(dir,{recursive:true,force:true})}
+})
