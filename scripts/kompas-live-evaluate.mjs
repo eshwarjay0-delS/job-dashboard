@@ -2,6 +2,7 @@
 // Private source bundles and outputs must stay outside the repository.
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
+import { saveCheckpoint } from './lib/evaluation-checkpoint.mjs'
 const [sourcesFile, outputDir, round = '1'] = process.argv.slice(2)
 if (!sourcesFile || !outputDir) throw Error('Usage: node scripts/kompas-live-evaluate.mjs SOURCES.json PRIVATE_OUTPUT_DIR ROUND')
 if (!/^[1-9]\d*$/.test(round)) throw Error('Round must be a positive integer')
@@ -31,7 +32,7 @@ try {
  const ready = await request({ preflight: true })
  if (!ready.ready) throw Error('Preflight not ready; zero interview answers generated.')
 } catch (error) {
- await writeFile(destination, JSON.stringify([{ round, stage: 'preflight', status: 'failed', error: error.message }], null, 2)+'\n', { mode: 0o600 })
+ await saveCheckpoint(destination, [{ round, stage: 'preflight', status: 'failed', error: error.message }])
  throw error
 }
 for (const c of cases) {
@@ -50,9 +51,9 @@ for (const c of cases) {
   states.set(c.chain, state)
  } catch (error) {
   records.push({ id: c.id, round, status: 'failed', error: error.message, elapsedMs: Date.now()-began })
-  await writeFile(destination, JSON.stringify(records, null, 2)+'\n', { mode: 0o600 })
+  await saveCheckpoint(destination, records)
   throw error
  }
- await writeFile(destination, JSON.stringify(records, null, 2)+'\n', { mode: 0o600 })
+ await saveCheckpoint(destination, records)
  console.log(`Captured ${records.length}/${cases.length}; quality review pending`)
 }

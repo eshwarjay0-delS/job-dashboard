@@ -34,3 +34,12 @@ Depth-routing repair: 48 new boundary/fixture checks reproduced 25 failures, inc
 Both new regressions failed before repair. After twelve unique angles, the old selector repeatedly returned the first angle. Recording now moves each valid angle to the end of a bounded recency list, including re-asks and turns without a project. A drilldown retains its project only while that project exists in current sources. Two focused tests pass, including sixty sequential selections; full suite 935/935, TypeScript pass. This establishes routing behavior only, not generated-answer variety.
 
 PR #64 merged as bd6fd241fbd2541c989c216cf57d696d3970b22e. GitHub reports production Vercel success: https://vercel.com/qu4ntum-s-projects/job-dashboard/GY6H3AGTQLxGX4my3DHFuHRijwun . It includes preflight failure evidence, input validation and depth routing. Live generated-answer rounds remain zero; authorized API access and approved source bundles remain missing.
+
+
+## Atomic evidence checkpoints
+
+Evaluation updates now write a private, same-directory temporary file, sync and close it, then rename over the prior checkpoint. Failure before rename preserves prior evidence. Cleanup errors do not mask the original write failure. Seven focused checks pass: partial-write, sync, rename and cleanup failures, an actual SIGKILL before rename, and two runner subprocess scenarios. Temporary files left by interruption are not round files. This is process-interruption protection, not certified host/power-loss durability. Explicit completion manifests, source/code hashes, resumability and actual answer review remain pending.
+
+Ledger repair PR #65 merged as bcac120d114ef72f842e6119a9d3789965d4718f after preview success. Production confirmation is separate. Zero live model rounds have executed.
+
+Final checkpoint validation: full hardening 940/940; TypeScript and diff checks pass. PR #65 production status succeeded: https://vercel.com/qu4ntum-s-projects/job-dashboard/GjdaTLMm8xQMfq8tRqGsSTb8Ug1Y . Native Windows and live answer acceptance remain pending.
