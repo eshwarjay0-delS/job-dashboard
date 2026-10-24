@@ -11,7 +11,7 @@ import {
   tierRule, pickShape, DERIVE_SYSTEM, INTRODUCTION_POLICY, PERSONAL_EXPERIENCE_POLICY, TECHNICAL_ANSWER_BOUNDARY, RESPONSE_CRAFT_POLICY, isPersonalEvidenceQuestion, type LengthPlan,
   answerLevel, questionRegister, levelGuidance, ANSWER_LEVEL_NAME,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
-  commit, matchBank,
+  commit, recordAngle, matchBank,
 } from "@/lib/kompasAnswer"
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
@@ -716,7 +716,7 @@ export async function POST(request: NextRequest) {
   let againAngle = ""
   if (again && tier !== 0 && register === "practice") {
     againAngle = pickAngle(ledger)
-    if (againAngle && !ledger.angles.includes(againAngle)) ledger.angles.push(againAngle)
+    recordAngle(ledger, againAngle)
     plan.words = Math.round(plan.words * 1.3)
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
     plan.maxTokens = Math.min(4000, Math.max(600, Math.round(plan.words * 2.6) + 300))

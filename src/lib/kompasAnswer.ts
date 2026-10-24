@@ -528,7 +528,7 @@ export function pickProject(
   q: string, tier: Tier, ledger: Ledger, projects: LedgerProject[], hint?: string | null,
 ): { id: string | null; reason: string } {
   if (!projects.length) return { id: null, reason: "no project atoms" }
-  if (tier === 3 && ledger.last_project) return { id: ledger.last_project, reason: "drill-down: holding previous project" }
+  if (tier === 3 && ledger.last_project && projects.some(p => p.id === ledger.last_project)) return { id: ledger.last_project, reason: "drill-down: holding previous project" }
   if (hint && projects.some((p) => p.id === hint) && !(tier === 1 && ledger.story[hint]))
     return { id: hint, reason: "prepared answer's project" }
   const ranked = scoreProjects(q, projects)
@@ -558,11 +558,18 @@ export function pickBottleneck(project: LedgerProject | null, ledger: Ledger): s
 /** 12 angles, never repeats until all 12 are used. */
 export function pickAngle(ledger: Ledger): string {
   for (const a of ANGLES) if (!ledger.angles.includes(a)) return a
-  return ANGLES[0]
+  return ledger.angles.find(a => ANGLES.includes(a)) || ANGLES[0]
+}
+
+export function recordAngle(ledger: Ledger, angle: string): void {
+  if (!ANGLES.includes(angle)) return
+  ledger.angles = ledger.angles.filter(a => a !== angle && ANGLES.includes(a))
+  ledger.angles.push(angle)
 }
 
 /** Record what this turn used, so the next turn routes around it. */
 export function commit(ledger: Ledger, pid: string | null, angle: string, bott: string, tier: Tier): void {
+  recordAngle(ledger, angle)
   if (!pid) return
   ledger.projects[pid] = (ledger.projects[pid] || 0) + 1
   if (tier === 1) ledger.story[pid] = (ledger.story[pid] || 0) + 1
@@ -571,7 +578,6 @@ export function commit(ledger: Ledger, pid: string | null, angle: string, bott: 
     ledger.recent.push(pid)
     if (ledger.recent.length > 40) ledger.recent.shift()
   }
-  if (angle && !ledger.angles.includes(angle)) ledger.angles.push(angle)
   if (bott && !ledger.bottlenecks.includes(bott)) ledger.bottlenecks.push(bott)
 }
 
