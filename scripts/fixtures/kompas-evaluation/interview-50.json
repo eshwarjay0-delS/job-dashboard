@@ -1,0 +1,722 @@
+[
+  {
+    "id": "hitachi-grc-1",
+    "chain": "hitachi-grc",
+    "step": 1,
+    "question": "Define NIST CSF risk assessments. Keep it suitable for technical HR.",
+    "kind": "definition",
+    "level": "engineer",
+    "criteria": [
+      "Direct definition",
+      "Why it matters",
+      "No invented project or implementation dump"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "hitachi-grc-2",
+    "chain": "hitachi-grc",
+    "step": 2,
+    "question": "Design multi-cloud controls mapped to NIST 800-53. Explain trust boundaries, data flow, failure isolation, rollout and validation.",
+    "kind": "design",
+    "level": "architect",
+    "criteria": [
+      "Concrete boundaries",
+      "Rejected alternative",
+      "Observable acceptance tests"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "hitachi-grc-3",
+    "chain": "hitachi-grc",
+    "step": 3,
+    "question": "In that design, audit evidence disagrees with live configuration. Walk through diagnosis, competing hypotheses, safe containment and rollback.",
+    "kind": "followup",
+    "level": "architect",
+    "criteria": [
+      "Preserve prior topology",
+      "Discriminating evidence",
+      "Safe reversible action"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "hitachi-grc-4",
+    "chain": "hitachi-grc",
+    "step": 4,
+    "question": "Go deeper on that failure. What if the first mitigation fails and telemetry is incomplete? Give a falsifiable test and an exit criterion.",
+    "kind": "recursive-followup",
+    "level": "architect",
+    "criteria": [
+      "Carry incident forward",
+      "Do not invent evidence",
+      "Test distinguishes hypotheses",
+      "Explicit stop condition"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "hitachi-grc-5",
+    "chain": "hitachi-grc",
+    "step": 5,
+    "question": "Now explain the same incident to a director: risk acceptance versus remediation. State decision owner, business exposure and measures you would track, without inventing achieved numbers.",
+    "kind": "business-followup",
+    "level": "director",
+    "criteria": [
+      "Same technical facts",
+      "Business decision",
+      "Proposed versus achieved metrics",
+      "Ownership"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "azure-security-1",
+    "chain": "azure-security",
+    "step": 1,
+    "question": "Define OAuth audience validation. Keep it suitable for technical HR.",
+    "kind": "definition",
+    "level": "engineer",
+    "criteria": [
+      "Direct definition",
+      "Why it matters",
+      "No invented project or implementation dump"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "azure-security-2",
+    "chain": "azure-security",
+    "step": 2,
+    "question": "Design Front Door, APIM and private backend trust boundaries. Explain trust boundaries, data flow, failure isolation, rollout and validation.",
+    "kind": "design",
+    "level": "architect",
+    "criteria": [
+      "Concrete boundaries",
+      "Rejected alternative",
+      "Observable acceptance tests"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "azure-security-3",
+    "chain": "azure-security",
+    "step": 3,
+    "question": "In that design, rotating a signing key breaks one region. Walk through diagnosis, competing hypotheses, safe containment and rollback.",
+    "kind": "followup",
+    "level": "architect",
+    "criteria": [
+      "Preserve prior topology",
+      "Discriminating evidence",
+      "Safe reversible action"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "azure-security-4",
+    "chain": "azure-security",
+    "step": 4,
+    "question": "Go deeper on that failure. What if the first mitigation fails and telemetry is incomplete? Give a falsifiable test and an exit criterion.",
+    "kind": "recursive-followup",
+    "level": "architect",
+    "criteria": [
+      "Carry incident forward",
+      "Do not invent evidence",
+      "Test distinguishes hypotheses",
+      "Explicit stop condition"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "azure-security-5",
+    "chain": "azure-security",
+    "step": 5,
+    "question": "Now explain the same incident to a director: availability versus token trust. State decision owner, business exposure and measures you would track, without inventing achieved numbers.",
+    "kind": "business-followup",
+    "level": "director",
+    "criteria": [
+      "Same technical facts",
+      "Business decision",
+      "Proposed versus achieved metrics",
+      "Ownership"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "appsec-api-1",
+    "chain": "appsec-api",
+    "step": 1,
+    "question": "Define IDOR versus CSRF. Keep it suitable for technical HR.",
+    "kind": "definition",
+    "level": "engineer",
+    "criteria": [
+      "Direct definition",
+      "Why it matters",
+      "No invented project or implementation dump"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "appsec-api-2",
+    "chain": "appsec-api",
+    "step": 2,
+    "question": "Design tenant isolation across API, cache and asynchronous workers. Explain trust boundaries, data flow, failure isolation, rollout and validation.",
+    "kind": "design",
+    "level": "architect",
+    "criteria": [
+      "Concrete boundaries",
+      "Rejected alternative",
+      "Observable acceptance tests"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "appsec-api-3",
+    "chain": "appsec-api",
+    "step": 3,
+    "question": "In that design, a worker processes an object after its ownership changes. Walk through diagnosis, competing hypotheses, safe containment and rollback.",
+    "kind": "followup",
+    "level": "architect",
+    "criteria": [
+      "Preserve prior topology",
+      "Discriminating evidence",
+      "Safe reversible action"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "appsec-api-4",
+    "chain": "appsec-api",
+    "step": 4,
+    "question": "Go deeper on that failure. What if the first mitigation fails and telemetry is incomplete? Give a falsifiable test and an exit criterion.",
+    "kind": "recursive-followup",
+    "level": "architect",
+    "criteria": [
+      "Carry incident forward",
+      "Do not invent evidence",
+      "Test distinguishes hypotheses",
+      "Explicit stop condition"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "appsec-api-5",
+    "chain": "appsec-api",
+    "step": 5,
+    "question": "Now explain the same incident to a director: containment versus customer access. State decision owner, business exposure and measures you would track, without inventing achieved numbers.",
+    "kind": "business-followup",
+    "level": "director",
+    "criteria": [
+      "Same technical facts",
+      "Business decision",
+      "Proposed versus achieved metrics",
+      "Ownership"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "endpoint-epm-1",
+    "chain": "endpoint-epm",
+    "step": 1,
+    "question": "Define least privilege versus application allowlisting. Keep it suitable for technical HR.",
+    "kind": "definition",
+    "level": "engineer",
+    "criteria": [
+      "Direct definition",
+      "Why it matters",
+      "No invented project or implementation dump"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "endpoint-epm-2",
+    "chain": "endpoint-epm",
+    "step": 2,
+    "question": "Design CyberArk EPM rollout across Windows endpoints. Explain trust boundaries, data flow, failure isolation, rollout and validation.",
+    "kind": "design",
+    "level": "architect",
+    "criteria": [
+      "Concrete boundaries",
+      "Rejected alternative",
+      "Observable acceptance tests"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "endpoint-epm-3",
+    "chain": "endpoint-epm",
+    "step": 3,
+    "question": "In that design, a signed updater launches an unsigned child used by a critical service. Walk through diagnosis, competing hypotheses, safe containment and rollback.",
+    "kind": "followup",
+    "level": "architect",
+    "criteria": [
+      "Preserve prior topology",
+      "Discriminating evidence",
+      "Safe reversible action"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "endpoint-epm-4",
+    "chain": "endpoint-epm",
+    "step": 4,
+    "question": "Go deeper on that failure. What if the first mitigation fails and telemetry is incomplete? Give a falsifiable test and an exit criterion.",
+    "kind": "recursive-followup",
+    "level": "architect",
+    "criteria": [
+      "Carry incident forward",
+      "Do not invent evidence",
+      "Test distinguishes hypotheses",
+      "Explicit stop condition"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "endpoint-epm-5",
+    "chain": "endpoint-epm",
+    "step": 5,
+    "question": "Now explain the same incident to a director: exception expiry versus business continuity. State decision owner, business exposure and measures you would track, without inventing achieved numbers.",
+    "kind": "business-followup",
+    "level": "director",
+    "criteria": [
+      "Same technical facts",
+      "Business decision",
+      "Proposed versus achieved metrics",
+      "Ownership"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "microsegmentation-1",
+    "chain": "microsegmentation",
+    "step": 1,
+    "question": "Define network segmentation versus micro-segmentation. Keep it suitable for technical HR.",
+    "kind": "definition",
+    "level": "engineer",
+    "criteria": [
+      "Direct definition",
+      "Why it matters",
+      "No invented project or implementation dump"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "microsegmentation-2",
+    "chain": "microsegmentation",
+    "step": 2,
+    "question": "Design Palo Alto and Illumio enforcement across cloud and data centers. Explain trust boundaries, data flow, failure isolation, rollout and validation.",
+    "kind": "design",
+    "level": "architect",
+    "criteria": [
+      "Concrete boundaries",
+      "Rejected alternative",
+      "Observable acceptance tests"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "microsegmentation-3",
+    "chain": "microsegmentation",
+    "step": 3,
+    "question": "In that design, an undocumented dependency fails during enforcement. Walk through diagnosis, competing hypotheses, safe containment and rollback.",
+    "kind": "followup",
+    "level": "architect",
+    "criteria": [
+      "Preserve prior topology",
+      "Discriminating evidence",
+      "Safe reversible action"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "microsegmentation-4",
+    "chain": "microsegmentation",
+    "step": 4,
+    "question": "Go deeper on that failure. What if the first mitigation fails and telemetry is incomplete? Give a falsifiable test and an exit criterion.",
+    "kind": "recursive-followup",
+    "level": "architect",
+    "criteria": [
+      "Carry incident forward",
+      "Do not invent evidence",
+      "Test distinguishes hypotheses",
+      "Explicit stop condition"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "microsegmentation-5",
+    "chain": "microsegmentation",
+    "step": 5,
+    "question": "Now explain the same incident to a director: rollback scope versus lateral movement risk. State decision owner, business exposure and measures you would track, without inventing achieved numbers.",
+    "kind": "business-followup",
+    "level": "director",
+    "criteria": [
+      "Same technical facts",
+      "Business decision",
+      "Proposed versus achieved metrics",
+      "Ownership"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "soc-detection-1",
+    "chain": "soc-detection",
+    "step": 1,
+    "question": "Define detection precision versus recall. Keep it suitable for technical HR.",
+    "kind": "definition",
+    "level": "engineer",
+    "criteria": [
+      "Direct definition",
+      "Why it matters",
+      "No invented project or implementation dump"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "soc-detection-2",
+    "chain": "soc-detection",
+    "step": 2,
+    "question": "Design Splunk and Sentinel ingestion with identity correlation. Explain trust boundaries, data flow, failure isolation, rollout and validation.",
+    "kind": "design",
+    "level": "architect",
+    "criteria": [
+      "Concrete boundaries",
+      "Rejected alternative",
+      "Observable acceptance tests"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "soc-detection-3",
+    "chain": "soc-detection",
+    "step": 3,
+    "question": "In that design, clock drift and duplicate events create false incident chains. Walk through diagnosis, competing hypotheses, safe containment and rollback.",
+    "kind": "followup",
+    "level": "architect",
+    "criteria": [
+      "Preserve prior topology",
+      "Discriminating evidence",
+      "Safe reversible action"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "soc-detection-4",
+    "chain": "soc-detection",
+    "step": 4,
+    "question": "Go deeper on that failure. What if the first mitigation fails and telemetry is incomplete? Give a falsifiable test and an exit criterion.",
+    "kind": "recursive-followup",
+    "level": "architect",
+    "criteria": [
+      "Carry incident forward",
+      "Do not invent evidence",
+      "Test distinguishes hypotheses",
+      "Explicit stop condition"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "soc-detection-5",
+    "chain": "soc-detection",
+    "step": 5,
+    "question": "Now explain the same incident to a director: telemetry cost versus coverage. State decision owner, business exposure and measures you would track, without inventing achieved numbers.",
+    "kind": "business-followup",
+    "level": "director",
+    "criteria": [
+      "Same technical facts",
+      "Business decision",
+      "Proposed versus achieved metrics",
+      "Ownership"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "incident-response-1",
+    "chain": "incident-response",
+    "step": 1,
+    "question": "Define containment versus eradication. Keep it suitable for technical HR.",
+    "kind": "definition",
+    "level": "engineer",
+    "criteria": [
+      "Direct definition",
+      "Why it matters",
+      "No invented project or implementation dump"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "incident-response-2",
+    "chain": "incident-response",
+    "step": 2,
+    "question": "Design ransomware response across identity, endpoints and backups. Explain trust boundaries, data flow, failure isolation, rollout and validation.",
+    "kind": "design",
+    "level": "architect",
+    "criteria": [
+      "Concrete boundaries",
+      "Rejected alternative",
+      "Observable acceptance tests"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "incident-response-3",
+    "chain": "incident-response",
+    "step": 3,
+    "question": "In that design, the attacker retains access through a service account after isolation. Walk through diagnosis, competing hypotheses, safe containment and rollback.",
+    "kind": "followup",
+    "level": "architect",
+    "criteria": [
+      "Preserve prior topology",
+      "Discriminating evidence",
+      "Safe reversible action"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "incident-response-4",
+    "chain": "incident-response",
+    "step": 4,
+    "question": "Go deeper on that failure. What if the first mitigation fails and telemetry is incomplete? Give a falsifiable test and an exit criterion.",
+    "kind": "recursive-followup",
+    "level": "architect",
+    "criteria": [
+      "Carry incident forward",
+      "Do not invent evidence",
+      "Test distinguishes hypotheses",
+      "Explicit stop condition"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "incident-response-5",
+    "chain": "incident-response",
+    "step": 5,
+    "question": "Now explain the same incident to a director: restoration speed versus reinfection risk. State decision owner, business exposure and measures you would track, without inventing achieved numbers.",
+    "kind": "business-followup",
+    "level": "director",
+    "criteria": [
+      "Same technical facts",
+      "Business decision",
+      "Proposed versus achieved metrics",
+      "Ownership"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "iam-1",
+    "chain": "iam",
+    "step": 1,
+    "question": "Define authentication versus authorization. Keep it suitable for technical HR.",
+    "kind": "definition",
+    "level": "engineer",
+    "criteria": [
+      "Direct definition",
+      "Why it matters",
+      "No invented project or implementation dump"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "iam-2",
+    "chain": "iam",
+    "step": 2,
+    "question": "Design OIDC federation with short-lived service identities. Explain trust boundaries, data flow, failure isolation, rollout and validation.",
+    "kind": "design",
+    "level": "architect",
+    "criteria": [
+      "Concrete boundaries",
+      "Rejected alternative",
+      "Observable acceptance tests"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "iam-3",
+    "chain": "iam",
+    "step": 3,
+    "question": "In that design, revocation does not propagate into cached authorization decisions. Walk through diagnosis, competing hypotheses, safe containment and rollback.",
+    "kind": "followup",
+    "level": "architect",
+    "criteria": [
+      "Preserve prior topology",
+      "Discriminating evidence",
+      "Safe reversible action"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "iam-4",
+    "chain": "iam",
+    "step": 4,
+    "question": "Go deeper on that failure. What if the first mitigation fails and telemetry is incomplete? Give a falsifiable test and an exit criterion.",
+    "kind": "recursive-followup",
+    "level": "architect",
+    "criteria": [
+      "Carry incident forward",
+      "Do not invent evidence",
+      "Test distinguishes hypotheses",
+      "Explicit stop condition"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "iam-5",
+    "chain": "iam",
+    "step": 5,
+    "question": "Now explain the same incident to a director: session continuity versus revocation guarantees. State decision owner, business exposure and measures you would track, without inventing achieved numbers.",
+    "kind": "business-followup",
+    "level": "director",
+    "criteria": [
+      "Same technical facts",
+      "Business decision",
+      "Proposed versus achieved metrics",
+      "Ownership"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "ai-security-1",
+    "chain": "ai-security",
+    "step": 1,
+    "question": "Define prompt injection versus ordinary user instruction. Keep it suitable for technical HR.",
+    "kind": "definition",
+    "level": "engineer",
+    "criteria": [
+      "Direct definition",
+      "Why it matters",
+      "No invented project or implementation dump"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "ai-security-2",
+    "chain": "ai-security",
+    "step": 2,
+    "question": "Design an enterprise agent with scoped tools and retrieval. Explain trust boundaries, data flow, failure isolation, rollout and validation.",
+    "kind": "design",
+    "level": "architect",
+    "criteria": [
+      "Concrete boundaries",
+      "Rejected alternative",
+      "Observable acceptance tests"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "ai-security-3",
+    "chain": "ai-security",
+    "step": 3,
+    "question": "In that design, an untrusted document asks the agent to exfiltrate a private record. Walk through diagnosis, competing hypotheses, safe containment and rollback.",
+    "kind": "followup",
+    "level": "architect",
+    "criteria": [
+      "Preserve prior topology",
+      "Discriminating evidence",
+      "Safe reversible action"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "ai-security-4",
+    "chain": "ai-security",
+    "step": 4,
+    "question": "Go deeper on that failure. What if the first mitigation fails and telemetry is incomplete? Give a falsifiable test and an exit criterion.",
+    "kind": "recursive-followup",
+    "level": "architect",
+    "criteria": [
+      "Carry incident forward",
+      "Do not invent evidence",
+      "Test distinguishes hypotheses",
+      "Explicit stop condition"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "ai-security-5",
+    "chain": "ai-security",
+    "step": 5,
+    "question": "Now explain the same incident to a director: automation capability versus approval boundaries. State decision owner, business exposure and measures you would track, without inventing achieved numbers.",
+    "kind": "business-followup",
+    "level": "director",
+    "criteria": [
+      "Same technical facts",
+      "Business decision",
+      "Proposed versus achieved metrics",
+      "Ownership"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "network-public-health-1",
+    "chain": "network-public-health",
+    "step": 1,
+    "question": "Define confidentiality versus availability. Keep it suitable for technical HR.",
+    "kind": "definition",
+    "level": "engineer",
+    "criteria": [
+      "Direct definition",
+      "Why it matters",
+      "No invented project or implementation dump"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "network-public-health-2",
+    "chain": "network-public-health",
+    "step": 2,
+    "question": "Design a hybrid healthcare network under HIPAA and NIST RMF. Explain trust boundaries, data flow, failure isolation, rollout and validation.",
+    "kind": "design",
+    "level": "architect",
+    "criteria": [
+      "Concrete boundaries",
+      "Rejected alternative",
+      "Observable acceptance tests"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "network-public-health-3",
+    "chain": "network-public-health",
+    "step": 3,
+    "question": "In that design, DNS failure blocks clinical services while fallback bypasses inspection. Walk through diagnosis, competing hypotheses, safe containment and rollback.",
+    "kind": "followup",
+    "level": "architect",
+    "criteria": [
+      "Preserve prior topology",
+      "Discriminating evidence",
+      "Safe reversible action"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "network-public-health-4",
+    "chain": "network-public-health",
+    "step": 4,
+    "question": "Go deeper on that failure. What if the first mitigation fails and telemetry is incomplete? Give a falsifiable test and an exit criterion.",
+    "kind": "recursive-followup",
+    "level": "architect",
+    "criteria": [
+      "Carry incident forward",
+      "Do not invent evidence",
+      "Test distinguishes hypotheses",
+      "Explicit stop condition"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  },
+  {
+    "id": "network-public-health-5",
+    "chain": "network-public-health",
+    "step": 5,
+    "question": "Now explain the same incident to a director: patient-service continuity versus compensating controls. State decision owner, business exposure and measures you would track, without inventing achieved numbers.",
+    "kind": "business-followup",
+    "level": "director",
+    "criteria": [
+      "Same technical facts",
+      "Business decision",
+      "Proposed versus achieved metrics",
+      "Ownership"
+    ],
+    "source": "Derived from role requirements available in conversation; not a complete original JD"
+  }
+]
