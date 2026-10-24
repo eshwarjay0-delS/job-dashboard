@@ -32,7 +32,7 @@ test('desktop portal launch records an account-scoped open, never a submission',
  const page=readFileSync(new URL('../../src/app/dashboard/apply/page.tsx',import.meta.url),'utf8')
  const activity=readFileSync(new URL('../../src/app/api/apply/activity/route.ts',import.meta.url),'utf8')
  assert.match(component,/onLaunch\(\)[\s\S]*window\.location\.assign\(launch\.href\)/)
- assert.match(page,/onLaunch=\{\(\)=>void record\('open_portal',job,'desktop'\)\}/)
+ assert.match(page,/onLaunch=\{\(\)=>\{rememberPortal\(job\);void record\('open_portal',job,'desktop'\)\}\}/)
  assert.match(page,/record\('open_portal',job,'web'\)/)
  assert.match(activity,/b\.kind==='open_portal'&&\['web','desktop'\]\.includes\(b\.surface\)/)
  assert.doesNotMatch(component,/submitted/)

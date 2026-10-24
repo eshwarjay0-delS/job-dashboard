@@ -8,6 +8,7 @@ import {JSDOM} from 'jsdom'
 import React,{act} from 'react'
 import {createRoot} from 'react-dom/client'
 import {applicationUrl,contractTypes} from '../../src/lib/contract-jobs.ts'
+import * as portalReturn from '../../src/lib/portal-return.ts'
 const require=createRequire(import.meta.url)
 const wrapped=fn=>({__esModule:true,default:fn})
 
@@ -30,6 +31,7 @@ test('saved search uses its own filters immediately and older results cannot rep
   if(id==='next/navigation')return {useRouter:()=>({push:()=>{}})}
   if(id==='next/link')return wrapped(({children,...props})=>React.createElement('a',props,children))
   if(id==='@/lib/contract-jobs')return {applicationUrl,contractTypes}
+  if(id==='@/lib/portal-return')return portalReturn
   if(id==='@/lib/duplicate-check')return {findDuplicates:()=>[]}
   if(id==='./_components/saved-searches')return {SavedSearches:({onRun})=>React.createElement('div',null,...['first','second'].map(query=>React.createElement('button',{key:query,onClick:()=>onRun({query,location:'Chicago',remote:true,type:'C2C'})},query)))}
   if(id==='./_components/desktop-portal')return {DesktopPortal:()=>null}
@@ -75,6 +77,7 @@ test('opening Apply runs one search with the last filters and no synthetic form 
   if(id==='next/navigation')return {useRouter:()=>({push:()=>{}})}
   if(id==='next/link')return wrapped(({children,...props})=>React.createElement('a',props,children))
   if(id==='@/lib/contract-jobs')return {applicationUrl,contractTypes}
+  if(id==='@/lib/portal-return')return portalReturn
   if(id==='@/lib/duplicate-check')return {findDuplicates:()=>[]}
   if(id==='./_components/saved-searches')return {SavedSearches:()=>null}
   if(id==='./_components/desktop-portal')return {DesktopPortal:()=>null}
