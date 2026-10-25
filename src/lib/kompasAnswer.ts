@@ -27,8 +27,16 @@ const EXP_Q2 =
 const PERSONAL_ASK = /\byour (?:own |biggest |greatest |strongest |most significant |recent |current )?(?:experience|achievements?|accomplishments?|contributions?|career|strengths?|weaknesses?|background|projects?|clients?|responsibilities|role|mistakes?|failures?|successes?)\b|\byou (?:are |were )?(?:proud of|personally|responsible for)\b/i
 const HYPOTHETICAL_GUARD = /\b(how would you|what would you|suppose|if you were)\b/i
 
+/** Keep personal introductions distinct from "introduction to OAuth" or a
+ * requested technical overview. One word must not override the subject. */
+export function isCareerIntroduction(question: string): boolean {
+  const q = String(question || '').trim()
+  if (/\bintro(?:duction)?\s+(?:to|of|on|about)\s+(?!(?:my|your|me|you|myself|yourself|career|background)\b)/i.test(q)) return false
+  return IDENTITY.test(q)
+}
+
 export function classify(q: string): { tier: Tier; why: string } {
-  if (IDENTITY.test(q)) return { tier: 0, why: "identity" }
+  if (isCareerIntroduction(q)) return { tier: 0, why: "identity" }
   if (T3.test(q)) return { tier: 3, why: "drill-down" }
   if ((EXP_Q.test(q) || EXP_Q2.test(q) || PERSONAL_ASK.test(q)) && !HYPOTHETICAL_GUARD.test(q))
     return { tier: 4, why: "own experience" }
@@ -264,6 +272,8 @@ export function lengthPlan(
 
 // ---- Question detection: three code gates before any model call ----
 
+const BARE_INTRO = /^(?:(?:big|brief|short|quick|full|personal|detailed|self)\s+)?intro(?:duction)?[.?!]*$/i
+
 const ASKS =
   /\?\s*$|^(so,? |and,? |also,? )?(what|how|why|when|where|which|who|can|could|would|will|should|do|does|did|are|is|have|has|tell|walk|describe|explain|give|share|talk|imagine|suppose|pick|choose|name|list|select|design|compare|outline|rank|identify|recommend|propose)\b|\b(tell me|walk me|show me|how would you|what would you|can you|could you|would you|have you|do you)\b/i
 
@@ -274,7 +284,7 @@ export function plainlyNoQuestion(heard: string): boolean {
   if (lines.some((l) => /^Them:/.test(l))) return false
   return !lines.some((l) => {
     const t = l.replace(/^(You|Them):\s*/, "")
-    return /\?/.test(t) || ASKS.test(t) || LOGISTICS.test(t) || THEIRQ.test(t)
+    return BARE_INTRO.test(t.trim()) || /\?/.test(t) || ASKS.test(t) || LOGISTICS.test(t) || THEIRQ.test(t)
   })
 }
 
@@ -288,7 +298,7 @@ export function cutQuestion(heard: string): string {
     .replace(/^(?:You(?: \(typed\))?|Them):\s*/gim, " ")
     .replace(/\s+/g, " ")
     .trim()
-  if (/^(?:self\s+)?intro(?:duction)?\.?$/i.test(text)) return "Tell me about yourself"
+  if (BARE_INTRO.test(text)) return "Tell me about yourself"
   const re = /((?:how|what|why|when|where|which|who)\b[^?.!]{6,180}\??|(?:can|could|would|will|do|did|are|have)\s+you\b[^?.!]{4,180}\??|(?:tell me|walk me|give me|explain|describe|define|compare)\b[^?.!]{4,180}\??)/gi
   const found: string[] = []
   let m: RegExpExecArray | null
@@ -391,6 +401,10 @@ export const INTRO_FOCUS: Record<string, string> = {
   supervisor: "where you take projects and why, how you coordinate people, process and design, and your follow-through",
   director: "the business risk you reduce, the outcomes you own, the decisions you've made and their payoff, and how you carry decisions through delivery — confident and relaxed",
 }
+
+export const INTENT_BOUNDARY = `INTENT FIRST: Before choosing a story, name the exact request internally: personal career overview, single project/experience, definition, implementation, design, or follow-up. A broad introduction covers the person's supported career breadth; it is never a single-tool case study. A question about one project stays on that project; a definition stays on the definition; a follow-up continues the same subject and answers only the new ask. Never pull an example merely because it is available, salient in cached context, or shares keywords with the JD. Every sentence must serve the original question and move the same thought forward. A new tool or employer requires an explicit relationship to the requested scope. If there is no evidence, state the limit rather than fill it with a polished but invented story.`
+
+export const INTRO_CAREER_SPINE = `CAREER-WIDE INTRODUCTION CONTRACT: The answer's subject is the PERSON across the resume, not a favourite project, vendor or an invented success metric. Give a clear current professional identity and total experience only if supported by dates or an explicit source. Connect the distinct supported career stages and broad specialities in a coherent progression, moving from the earlier work toward current responsibilities. Preserve relevant clients/employers, their roles and differences without inventing chronology. Make one or two well-chosen examples prove abilities, but no single example dominates or becomes a deep implementation walkthrough. No isolated CodeQL, CyberArk, SIEM or other tool excursion unless the question specifically narrows to it. Explain why each experience follows the previous one, and make natural human transitions rather than [beat], [breath], (pause), stock catchphrases or sudden topic changes. Do not announce job-description fit. If only one career stage is documented, describe only that stage; do not manufacture breadth. If asked for a brief introduction, compress the same truthful career arc instead of changing its subject.`
 
 export const INTRODUCTION_POLICY = `PERSONAL INTRODUCTION: present the person through their supported career, in first person, with direct statements of work and ownership. Open with the current professional identity and scope. Connect the major career stages in the resume, explaining how responsibilities developed, then describe the current work from design or investigation through implementation, collaboration, delivery and ongoing operation, where the resume supports those stages. Show agency through accurate verbs such as I design, I maintain, I investigate, I automate and I work with. Do not inflate ownership from contributed to led. Use technologies inside actions, never as a detached skills catalogue. Include earlier work that explains the person's breadth, not only the work resembling the JD. Make the introduction memorable through named clients or employers, signature projects, documented achievements, and the impact of the work. Preserve each relationship accurately: a client is a client and an employer is an employer; never relabel one as the other. For the strongest supported projects, connect the client or business context, the candidate's own actions and decisions, and the documented result or impact. Prefer evidence of accomplishment over a list of duties, but when the resume supplies only responsibilities, state those plainly rather than inventing an achievement, project name, incident or result. Use figures only when the original source supports them. Be a little bold and humble: state supported ownership and accomplishments confidently, make the candidate's contribution specific, and acknowledge the team's role where the source does. Let the work demonstrate ability instead of calling the person exceptional, a visionary, or a perfect fit. End on the person's present responsibilities, a supported achievement, or working approach. Never close with a job application pitch, enthusiasm for this opening, or claims of alignment, matching the JD, being a perfect fit, or what the company is seeking. The JD may orient vocabulary, but the introduction is about the person. Allow a substantial connected introduction when the resume has the material; a short technical question budget or 75 word rule must not cut it down. Do not invent incidents, metrics, motivations, a personal origin story or transitions the resume does not establish. Do not volunteer education unless the question asks for it. Include certifications only when they help explain the work; never recite a list. An explicit request for a brief introduction still takes precedence.`
 
