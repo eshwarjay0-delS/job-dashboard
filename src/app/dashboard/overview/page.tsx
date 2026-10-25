@@ -16,7 +16,6 @@ import PageIntro from "../_components/page-intro"
 import TypingDots from "../_components/typing-dots"
 import { gmailEvidenceUrl } from "@/lib/application-evidence"
 import type { ApplicationChain, ChainStageKey, ChainEventKind } from "@/app/api/gmail/_lib"
-import ImportantMail from "../mail/_components/important-mail"
 import StandingSection from "./_components/standing"
 
 const STAGES: Array<{ key: ChainStageKey; label: string }> = [
@@ -284,6 +283,10 @@ function MindMap({ chain, onClose }: { chain: ApplicationChain; onClose: () => v
 
 
 function ChainRow({ chain, onView }: { chain: ApplicationChain; onView: () => void }) {
+  // Declutter, Oct 2026: a row shows only company, role, quiet warning, and the
+  // progress bar. The latest quote, journey numbers, and contact pills — the
+  // detail that made every row a wall — wait behind one tap, per row.
+  const [details, setDetails] = useState(false)
   return (
     <div style={{ padding: "14px 0", borderTop: "1px solid var(--border)" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
@@ -293,24 +296,23 @@ function ChainRow({ chain, onView }: { chain: ApplicationChain; onView: () => vo
           <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 1 }}>
             {chain.role}{chain.rate ? ` · ${chain.rate}` : ""}
           </div>
-          {chain.latestProgress && <div style={{ fontSize: 13, marginTop: 8, padding: 10, background: "var(--surface-2)", borderRadius: 8 }}>
-            <strong>{chain.latestProgress.label}</strong> · {fmtDate(chain.latestProgress.at)}
-            <div>{chain.latestProgress.quote}</div>
-            <div>Reported destination: {chain.holder} · <a href={gmailEvidenceUrl(chain.accountEmail, chain.latestProgress.messageId)} target="_blank" rel="noreferrer">Source email</a></div>
-          </div>}
           {chain.stalledDays >= 7 && !chain.terminal && (
             <div style={{ fontSize: 12, color: "var(--warning)", marginTop: 3, fontWeight: 600 }}>
               Quiet {chain.stalledDays}d — recipient: {chain.holder}
             </div>
           )}
-          {/* The pattern at a glance: numbers + who, no tap needed */}
-          {chain.journey && (
+          {details && chain.latestProgress && <div style={{ fontSize: 13, marginTop: 8, padding: 10, background: "var(--surface-2)", borderRadius: 8 }}>
+            <strong>{chain.latestProgress.label}</strong> · {fmtDate(chain.latestProgress.at)}
+            <div>{chain.latestProgress.quote}</div>
+            <div>Reported destination: {chain.holder} · <a href={gmailEvidenceUrl(chain.accountEmail, chain.latestProgress.messageId)} target="_blank" rel="noreferrer">Source email</a></div>
+          </div>}
+          {details && chain.journey && (
             <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
               {chain.journey.emails} emails · {chain.journey.people} {chain.journey.people === 1 ? "person" : "people"}
               {chain.journey.daysToInterview !== undefined ? ` · ${chain.journey.daysToInterview}d to interview` : ""}
             </div>
           )}
-          {chain.contacts.length > 0 && (
+          {details && chain.contacts.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 7 }}>
               {chain.contacts.slice(0, 4).map(ct => (
                 <span key={ct.email || ct.name} title={ct.email || ct.name} style={{
@@ -338,6 +340,12 @@ function ChainRow({ chain, onView }: { chain: ApplicationChain; onView: () => vo
               )}
             </div>
           )}
+          <button
+            type="button" onClick={() => setDetails(v => !v)} aria-expanded={details}
+            style={{ marginTop: 8, minHeight: 36, padding: "0 12px", fontSize: 13, fontWeight: 650, cursor: "pointer", background: "transparent", border: "1px solid var(--border-strong)", borderRadius: 999, color: "var(--text)" }}
+          >
+            {details ? "Hide the full chain" : "Show the full chain"}
+          </button>
         </div>
         <button
           type="button" onClick={onView}
@@ -381,6 +389,9 @@ function OverviewInner() {
   const [scanStatus, setScanStatus] = useState("")
   const [error, setError] = useState("")
   const [viewId, setViewId] = useState<string | null>(null)
+  // Declutter, Oct 2026: "What matters now" used to sit above everything and
+  // repeat the tables below it. It now waits behind one tap, after the tables.
+  const [showStanding, setShowStanding] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -478,20 +489,17 @@ function OverviewInner() {
 
   const viewing = viewId ? chains.find(c => (c.threadId === viewId || c.sourceThreadIds?.includes(viewId)) && (!account || c.accountEmail === account)) || null : null
   const interviews = chains.filter(c => c.stops.some(s => s.key === "interview" && s.reached)).length
+  // Summary first, from data already on this page only: no invented dates.
+  const nextInterview = [...chains].filter(c => c.current === "interview").sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0))[0] || null
 
   if (viewing && !loading) return <><p role="status">{scanStatus}</p>{issues.map(issue => <p key={issue} role="alert">{issue}</p>)}<MindMap chain={viewing} onClose={() => router.push(filter ? `/dashboard/overview?account=${encodeURIComponent(filter)}` : "/dashboard/overview")} /></>
 
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-      <ImportantMail />
       <PageIntro
         page="/dashboard/overview"
         action={{ label: "Open My Jobs", href: "/dashboard/tracker" }}
       />
-
-      {/* What matters now: every started application by whose turn it is, a contact box for everyone, and the hidden
-          list. It reads the kept mail, so it is on screen at once; the evidence map below still reads Gmail's history. */}
-      <StandingSection account={filter} />
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <label>Inbox <select aria-label="Filter inbox" value={filter} onChange={e => router.push(`/dashboard/overview?account=${encodeURIComponent(e.target.value)}`)}><option value="">All connected inboxes</option>{accounts.map(a => <option key={a} value={a}>{a}</option>)}</select></label>
@@ -507,19 +515,24 @@ function OverviewInner() {
         <Card style={{ padding: 24 }}><p style={{ color: "var(--danger)" }}>{error}</p></Card>
       ) : (
         <>
-          {/* Big numbers */}
-          <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+          {/* Summary first: one number set, then what needs you, what is waiting, and the next interview — all from the chains already on this page. */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 12 }}>
             {[
               { n: rails.length, label: "with progress evidence" },
               { n: waiting.length, label: "awaiting submission evidence" },
               { n: interviews, label: "invite evidence" },
             ].map(s => (
-              <Card key={s.label} style={{ flex: 1, padding: "14px 16px", textAlign: "center" }}>
+              <Card key={s.label} style={{ flex: "1 1 140px", padding: "14px 16px", textAlign: "center" }}>
                 <div style={{ fontSize: 28, fontWeight: 800 }}>{s.n}</div>
                 <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{s.label}</div>
               </Card>
             ))}
           </div>
+          <p style={{ fontSize: 14, lineHeight: 1.55, margin: "0 0 20px" }}>
+            {nextInterview
+              ? <>Next interview: <strong>{nextInterview.company}</strong> — {nextInterview.role} — {nextInterview.nextAction}</>
+              : "No interview evidence in this scan."}
+          </p>
 
           {/* Submission progress */}
           <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
@@ -536,8 +549,8 @@ function OverviewInner() {
             ))}
           </Card>
 
-          {/* RTR and rate discussions */}
-          <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 4px" }}>RTR and rate discussions</h2>
+          {/* Waiting to board */}
+          <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 4px" }}>Waiting to board</h2>
           <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 6px" }}>
             RTRs and rate discussions without submission evidence in the scanned emails.
           </p>
@@ -548,6 +561,16 @@ function OverviewInner() {
               <ChainRow key={`${c.accountEmail}:${c.threadId}`} chain={c} onView={() => router.push(`/dashboard/overview?chain=${encodeURIComponent(c.threadId)}&account=${encodeURIComponent(c.accountEmail)}`)} />
             ))}
           </Card>
+
+          <div style={{ marginTop: 26 }}>
+            <button
+              type="button" onClick={() => setShowStanding(v => !v)} aria-expanded={showStanding}
+              style={{ minHeight: 44, padding: "0 18px", fontSize: 14.5, fontWeight: 700, cursor: "pointer", background: "var(--surface)", border: "1px solid var(--border-strong)", borderRadius: 999, color: "var(--text)" }}
+            >
+              {showStanding ? "Hide what matters now" : "Show what matters now"}
+            </button>
+            {showStanding && <div style={{ marginTop: 16 }}><StandingSection account={filter} /></div>}
+          </div>
 
           <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 18, textAlign: "center" }}>
             Every View opens the mind map: who touched your profile, in order, with dates and evidence.{" "}

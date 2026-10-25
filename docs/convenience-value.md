@@ -70,6 +70,12 @@ The user does nothing; the product reads, sorts and drafts.
   numbers: what's new, what's due, what needs you.
 - **State:** shipped (Today's briefing digest, Overview RTR tables, per-vendor
   mind maps, interview deep-links). **Gap:** none open.
+- **Declutter 25 Oct 2026:** Overview now opens with one summary (progress,
+  waiting, and invite counts plus the next interview from data already on the
+  page), then Submission progress, then Waiting to board, with What matters
+  now and per-row detail behind one tap each, and no duplicate mail strip.
+  Audit note: most main pages already open with a plain heading, so the
+  PageIntro component was not duplicated onto them.
 
 ### Files / Library — "Your resumes organize themselves."
 - Every tailored resume files itself under its email and kind of job; the next
