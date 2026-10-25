@@ -1,4 +1,4 @@
-.mf-mail-folds{display:flex;gap:12px;align-items:stretch;overflow-x:auto;padding-bottom:14px;min-height:65vh}.mf-mail-fold{border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:18px;max-height:calc(100vh - 245px);overflow-y:auto;flex-shrink:0;scroll-margin-top:16px}.mf-mail-list{width:290px;padding:6px;overflow-x:visible}.mf-mail-thread{width:clamp(340px,30vw,480px)}.mf-mail-context{width:330px}.mf-mail-contact{width:270px}.mf-mail-fold input,.mf-mail-fold textarea{max-width:100%;box-sizing:border-box}.mf-mail-fold details>div{max-width:100%}@media(max-width:800px){.mf-mail-folds{flex-wrap:wrap;overflow:visible}.mf-mail-fold{width:100%;max-height:70vh}.mf-mail-list{width:100%;max-height:42vh}.mf-mail-context,.mf-mail-contact{max-height:none}}
+.mf-mail-folds{display:flex;gap:12px;align-items:stretch;overflow-x:auto;padding-bottom:14px;min-height:65vh}.mf-mail-fold{box-sizing:border-box;min-width:0;border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:18px;max-height:calc(100vh - 245px);overflow-y:auto;flex-shrink:0;scroll-margin-top:16px}.mf-mail-list{width:290px;padding:6px;overflow-x:visible}.mf-mail-thread{width:clamp(340px,30vw,480px)}.mf-mail-context{width:330px}.mf-mail-contact{width:270px}.mf-mail-fold input,.mf-mail-fold textarea{max-width:100%;box-sizing:border-box}.mf-mail-fold details>div{max-width:100%}@media(max-width:800px){.mf-mail-folds{flex-wrap:wrap;overflow:visible}.mf-mail-fold{width:100%;max-height:70vh}.mf-mail-list{width:100%;max-height:42vh}.mf-mail-context,.mf-mail-contact{max-height:none}}
 .mf-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success,#22a06b);margin-right:7px;animation:mf-live-pulse 2s ease-in-out infinite;vertical-align:1px}@keyframes mf-live-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
 .mf-digest{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin:0 0 18px;box-shadow:var(--shadow-card)}
 .mf-digest-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:12px}
@@ -39,6 +39,20 @@
 .mf-automation-confirm p { margin: 0 0 12px; font-size: 14px; color: var(--text); }
 .mf-automation-actions { display: flex; gap: 8px; }
 .mf-automation-message { margin-top: 10px; font-size: 13.5px; color: var(--text-muted); }
+
+/* ── Narrow viewport, thread open: stack, do not squeeze ─────────────────
+   At desktop-mode widths on a phone (about 801-1100 CSS px) the old rules
+   kept all three folds side by side (290 + up to 480 + 330, plus padding
+   on top of those widths), so the right column was cut off and the page
+   scrolled sideways in strips. With a thread open the list now steps
+   aside and the thread and contact stack at full width, up to 1100px. */
+@media(max-width:1100px){
+  .mf-mail-folds.mf-detail-open{flex-wrap:wrap;overflow:visible}
+  .mf-mail-folds.mf-detail-open .mf-mail-list{display:none}
+  .mf-mail-folds.mf-detail-open .mf-mail-fold{width:100%}
+  .mf-mail-folds.mf-detail-open .mf-mail-thread{max-height:70vh}
+  .mf-mail-folds.mf-detail-open .mf-mail-context,.mf-mail-folds.mf-detail-open .mf-mail-contact{max-height:none}
+}
 
 /* ── Mobile: list → detail navigation ──────────────────────────────────── */
 @media(max-width:800px){

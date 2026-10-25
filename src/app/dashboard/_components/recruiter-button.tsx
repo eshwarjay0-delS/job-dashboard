@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 import { companyDomainOf, recruiterRuleFor, type RecruiterRule } from "@/lib/my-recruiters"
+import { clampMenuPosition } from "@/lib/menu-position"
 
 let known: RecruiterRule[] | null = null
 let asking: Promise<void> | null = null
@@ -38,21 +39,34 @@ export async function changeRecruiter(method: "POST" | "DELETE", rule: { kind: "
 
 const pill: CSSProperties = { display: "inline-flex", alignItems: "center", minHeight: 36, padding: "0 12px", borderRadius: 18, fontSize: 13.5, fontWeight: 600, border: "1px solid var(--border-strong)", background: "var(--surface)", color: "var(--text)", cursor: "pointer", whiteSpace: "nowrap" }
 
-const item: CSSProperties = { display: "block", width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 8, border: 0, background: "transparent", color: "var(--text)", fontSize: 14, fontWeight: 500, cursor: "pointer", whiteSpace: "normal", overflowWrap: "anywhere" }
+const item: CSSProperties = { display: "flex", alignItems: "center", width: "100%", minHeight: 44, boxSizing: "border-box", textAlign: "left", padding: "12px 14px", borderRadius: 8, border: 0, background: "transparent", color: "var(--text)", fontSize: 14, fontWeight: 500, cursor: "pointer", whiteSpace: "normal", overflowWrap: "anywhere" }
 
 export default function RecruiterButton({ email, name = "", onChanged }: { email: string; name?: string; onChanged?: () => void }) {
   const rules = useRecruiters()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ left: number; top: number; width: number } | null>(null)
   const box = useRef<HTMLSpanElement | null>(null)
+  // The menu is positioned against the viewport, not the fold: it used to
+  // be absolute right:0 inside a scrollable fold, so on a phone it
+  // stretched past the fold and the fold clipped it to a blank card.
+  // Measuring the button and clamping to the viewport keeps every item
+  // visible, and re-measuring on scroll or resize keeps it anchored.
+  const measure = () => {
+    const el = box.current
+    if (!el || typeof window === "undefined") return
+    const r = el.getBoundingClientRect()
+    setPos(clampMenuPosition({ left: r.left, top: r.top, bottom: r.bottom, width: r.width }, { width: window.innerWidth, height: window.innerHeight }, { width: 320, height: 220 }))
+  }
   // The menu closes on a press anywhere else, and on Escape.
   useEffect(() => {
     if (!open) return
     const away = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false) }
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false) }
     document.addEventListener("mousedown", away); document.addEventListener("keydown", esc)
-    return () => { document.removeEventListener("mousedown", away); document.removeEventListener("keydown", esc) }
+    window.addEventListener("resize", measure); window.addEventListener("scroll", measure, true)
+    return () => { document.removeEventListener("mousedown", away); document.removeEventListener("keydown", esc); window.removeEventListener("resize", measure); window.removeEventListener("scroll", measure, true) }
   }, [open])
   const address = String(email || "").trim().toLowerCase()
   if (!address.includes("@")) return null
@@ -74,11 +88,11 @@ export default function RecruiterButton({ email, name = "", onChanged }: { email
           ✓ Your recruiter
         </span>
       )}
-      <button type="button" aria-haspopup="menu" aria-expanded={open} aria-label={`More about ${name || address}`} title="More" onClick={() => setOpen(v => !v)}
+      <button type="button" aria-haspopup="menu" aria-expanded={open} aria-label={`More about ${name || address}`} title="More" onClick={() => { if (!open) measure(); setOpen(v => !v) }}
         style={{ ...pill, width: 36, padding: 0, justifyContent: "center", fontSize: 18, lineHeight: 1, letterSpacing: 1 }}>⋯</button>
       {open && (
         <span role="menu" aria-label={`Options for ${name || address}`}
-          style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 40, minWidth: 230, maxWidth: "min(320px, 86vw)", padding: 6, borderRadius: 12, border: "1px solid var(--border-strong)", background: "var(--bg)", boxShadow: "0 14px 34px rgba(12,11,8,.22)", display: "flex", flexDirection: "column", gap: 2 }}>
+          style={{ position: "fixed", left: pos?.left ?? 12, top: pos?.top ?? 120, width: pos?.width ?? 320, maxWidth: "min(320px, calc(100vw - 24px))", zIndex: 9999, padding: 6, borderRadius: 12, border: "1px solid var(--border-strong)", background: "var(--bg)", boxShadow: "0 14px 34px rgba(12,11,8,.22)", display: "flex", flexDirection: "column", gap: 2 }}>
           {rule ? (
             <>
               <span style={{ ...item, cursor: "default", color: "var(--text-muted)" }}>✓ Your recruiter{rule.kind === "company" ? `: everyone at ${rule.value}` : ""}</span>

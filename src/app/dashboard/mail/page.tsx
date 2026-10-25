@@ -14,6 +14,7 @@ import InboxUpdates from "./_components/inbox-updates"
 import MailSearchBar, { SearchSummary, useMailSearch } from "./_components/mail-search"
 import { Papers, PersonHistory } from "./_components/papers"
 import { DigestBriefing } from "./_components/digest"
+import NewShipments from "./_components/new-shipments"
 import { AutomationInput } from "./_components/automation-input"
 import { useRecruiters } from "../_components/recruiter-button"
 import { isMyRecruiter } from "@/lib/my-recruiters"
@@ -349,6 +350,8 @@ export default function MailPage() {
       {!loading && connected && (
         <DigestBriefing needs={needsList} theirs={theirsList} mails={live} radar={radar} interviews={interviews} onOpen={openMail} />
       )}
+
+      {!loading && connected && <NewShipments />}
 
       {!loading && connected && live.length > 0 && (
         <AutomationInput mails={live} account={account} onRulesChanged={() => {}} />
