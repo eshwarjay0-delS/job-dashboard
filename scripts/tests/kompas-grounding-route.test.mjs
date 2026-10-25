@@ -235,7 +235,8 @@ test('an open-ended intro traverses the supported career, not a cached tool or t
     history: [{ q: 'Old irrelevant project', a: 'INVENTED_HISTORY_RESULT' }],
   })
   const result = await response.json()
-  assert.equal(result.meta.tier, 0)
+  assert.equal(response.status, 200, JSON.stringify(result))
+  assert.equal(result.meta?.tier, 0, JSON.stringify(result))
   const system = h.calls[0].messages[0].content
   const prompt = h.calls[0].messages[1].content
   assert.match(system, /INTENT FIRST/)
