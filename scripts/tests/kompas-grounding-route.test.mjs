@@ -275,3 +275,20 @@ test('a specific experience question must not turn into the full-career introduc
   assert.notEqual(result.meta.tier, 0)
   assert.doesNotMatch(h.calls[0].messages[1].content, /CAREER-WIDE INTRODUCTION CONTRACT/)
 })
+
+
+test('definitions exclude unrelated generated project stories and stay on the technical question', async () => {
+  const h = harness()
+  const response = await h.post({
+    question: 'What is CSRF?',
+    config: { resume: 'Example Labs — Application Security Tester | Jan 2022 – Jan 2023\n- Tested API authorization.' },
+    prep: { identity: 'UNRELATED_IDENTITY_STORY', persona: 'UNRELATED_PERSONA_STORY', projects: 'UNRELATED_PROJECT_STORY' },
+  })
+  assert.equal(response.status, 200)
+  const result = await response.json()
+  assert.notEqual(result.meta.tier, 0)
+  const prompt = h.calls[0].messages[1].content
+  assert.doesNotMatch(prompt, /UNRELATED_IDENTITY_STORY|UNRELATED_PERSONA_STORY|UNRELATED_PROJECT_STORY/)
+  assert.match(h.calls[0].messages[0].content, /INTENT FIRST/)
+  assert.match(h.calls[0].messages[0].content, /TECHNICAL ANSWER BOUNDARY/)
+})
