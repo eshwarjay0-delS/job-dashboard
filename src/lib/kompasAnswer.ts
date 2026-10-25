@@ -272,6 +272,8 @@ export function lengthPlan(
 
 // ---- Question detection: three code gates before any model call ----
 
+const BARE_INTRO = /^(?:(?:big|brief|short|quick|full|personal|detailed|self)\s+)?intro(?:duction)?[.?!]*$/i
+
 const ASKS =
   /\?\s*$|^(so,? |and,? |also,? )?(what|how|why|when|where|which|who|can|could|would|will|should|do|does|did|are|is|have|has|tell|walk|describe|explain|give|share|talk|imagine|suppose|pick|choose|name|list|select|design|compare|outline|rank|identify|recommend|propose)\b|\b(tell me|walk me|show me|how would you|what would you|can you|could you|would you|have you|do you)\b/i
 
@@ -282,7 +284,7 @@ export function plainlyNoQuestion(heard: string): boolean {
   if (lines.some((l) => /^Them:/.test(l))) return false
   return !lines.some((l) => {
     const t = l.replace(/^(You|Them):\s*/, "")
-    return /\?/.test(t) || ASKS.test(t) || LOGISTICS.test(t) || THEIRQ.test(t)
+    return BARE_INTRO.test(t.trim()) || /\?/.test(t) || ASKS.test(t) || LOGISTICS.test(t) || THEIRQ.test(t)
   })
 }
 
@@ -296,7 +298,7 @@ export function cutQuestion(heard: string): string {
     .replace(/^(?:You(?: \(typed\))?|Them):\s*/gim, " ")
     .replace(/\s+/g, " ")
     .trim()
-  if (/^(?:self\s+)?intro(?:duction)?\.?$/i.test(text)) return "Tell me about yourself"
+  if (BARE_INTRO.test(text)) return "Tell me about yourself"
   const re = /((?:how|what|why|when|where|which|who)\b[^?.!]{6,180}\??|(?:can|could|would|will|do|did|are|have)\s+you\b[^?.!]{4,180}\??|(?:tell me|walk me|give me|explain|describe|define|compare)\b[^?.!]{4,180}\??)/gi
   const found: string[] = []
   let m: RegExpExecArray | null
