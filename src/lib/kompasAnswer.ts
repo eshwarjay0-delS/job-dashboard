@@ -31,7 +31,7 @@ const HYPOTHETICAL_GUARD = /\b(how would you|what would you|suppose|if you were)
  * requested technical overview. One word must not override the subject. */
 export function isCareerIntroduction(question: string): boolean {
   const q = String(question || '').trim()
-  if (/\\bintro(?:duction)?\\s+(?:to|of|on|about)\\s+(?!(?:my|your|me|you|myself|yourself|career|background)\\b)/i.test(q)) return false
+  if (/\bintro(?:duction)?\s+(?:to|of|on|about)\s+(?!(?:my|your|me|you|myself|yourself|career|background)\b)/i.test(q)) return false
   return IDENTITY.test(q)
 }
 
