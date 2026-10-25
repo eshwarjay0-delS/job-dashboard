@@ -8,7 +8,7 @@ import { hashUserId } from "@/lib/sttLedger"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
   classify, canonicalQuestion, lengthPlan, questionDepth, plainlyNoQuestion, cleanQuestion, cutQuestion, questionToAnswer, resolveFollowUp,
-  tierRule, pickShape, DERIVE_SYSTEM, INTRODUCTION_POLICY, PERSONAL_EXPERIENCE_POLICY, TECHNICAL_ANSWER_BOUNDARY, RESPONSE_CRAFT_POLICY, isPersonalEvidenceQuestion, type LengthPlan,
+  tierRule, pickShape, DERIVE_SYSTEM, INTRODUCTION_POLICY, INTRO_CAREER_SPINE, INTENT_BOUNDARY, PERSONAL_EXPERIENCE_POLICY, TECHNICAL_ANSWER_BOUNDARY, RESPONSE_CRAFT_POLICY, isPersonalEvidenceQuestion, type LengthPlan,
   answerLevel, questionRegister, levelGuidance, ANSWER_LEVEL_NAME,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
   commit, recordAngle, matchBank,
@@ -424,7 +424,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         // swaps the streamed draft for the finished answer.
         const g = applyGuards(raw.trim(), job.guardFacts, job.allowed)
         const guardedText = g.text
-        let finalText = readAloud(blendSpoken(voiceRepair(guardedText) || guardedText) || guardedText) || guardedText
+        let finalText = readAloud(job.tier === 0 ? (voiceRepair(guardedText) || guardedText).replace(/\[(?:beat|breath)\]|\(pause\)/gi, ' ') : blendSpoken(voiceRepair(guardedText) || guardedText) || guardedText) || guardedText
         // Optional post-generation fact-check: the model only POINTS at
         // unsupported claims; code does the replacement, so the fix is
         // guaranteed. Env-gated (costs one light call) like perfACT's
@@ -504,7 +504,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   // Grounding guards before voice repair: unbracket → place/prestige/title/
   // version fixes → figures allowlist. Then the optional fact-check.
   const g = applyGuards(raw.trim(), job.guardFacts, job.allowed)
-  let out = readAloud(blendSpoken(voiceRepair(g.text) || g.text) || g.text) || g.text
+  let out = readAloud(job.tier === 0 ? (voiceRepair(g.text) || g.text).replace(/\[(?:beat|breath)\]|\(pause\)/gi, ' ') : blendSpoken(voiceRepair(g.text) || g.text) || g.text) || g.text
   let verified = 0
   if (process.env.KOMPAS_VERIFY === "1" && !degraded && job.factsText && job.orKey) {
     try {
@@ -682,7 +682,7 @@ export async function POST(request: NextRequest) {
   const personalEvidence = isPersonalEvidenceQuestion(tier, question)
   const rule = tierRule(tier, level)
   // 27 question archetypes (perfACT _shapes.js): first-win structural instruction.
-  const shape = pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
+  const shape = tier === 0 ? "" : pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
   // perfACT's rotation ledger (client-carried): the frontend sends its ledger
   // with every turn and stores the one returned, so a session never retells
   // the same story, bottleneck or angle. Route this question to a project by
@@ -736,11 +736,11 @@ export async function POST(request: NextRequest) {
       (a) => `SAME EMPLOYER: "${a.said}" (as said in this interview) is the resume's "${a.resume}" — you work there. Say "${a.said}".`,
     )
     const askForDigest = `${question}\n${transcript.slice(-600)}`
-    const digest = resumeDigest(resumeText, askForDigest, tier === 0 ? 14000 : plan.kind === "short" ? 1600 : 4600)
+    const digest = resumeDigest(resumeText, askForDigest, tier === 0 ? 14000 : plan.kind === "short" ? 1600 : 4600, tier === 0 ? "career" : "focused")
     resumeFacts = [
       rr.current ? `CURRENT ROLE (from the resume — use this exact title): ${rr.current}` : "",
       ...aliasLines,
-      `RESUME (fitted to this question — every role, then the lines that match it):\n${digest}`,
+      `RESUME (${tier === 0 ? "career-wide evidence across supported roles" : "fitted to this question"}):\n${digest}`,
     ]
       .filter(Boolean)
       .join("\n")
@@ -748,7 +748,7 @@ export async function POST(request: NextRequest) {
 
   const context = [
     `The listener is at ${ANSWER_LEVEL_NAME[level]}. The level block below is the controlling spec for this answer's depth and register.`,
-    levelGuidance(level, register),
+    tier === 0 ? `INTRODUCTION AUDIENCE: ${level}. Audience adjusts language and emphasis, not the career-wide scope. No step-by-step project reconstruction.` : levelGuidance(level, register),
     `QUESTION TYPE: ${why} (tier ${tier}). ${rule}`,
     `INTERVIEW MODE: ${modeBlock(tier, question, level)}`,
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
@@ -763,25 +763,25 @@ export async function POST(request: NextRequest) {
     tier !== 0 && tier !== 3 && toldNames.length
       ? `Stories already told this session — do not retell them: ${toldNames.join("; ")}.`
       : "",
-    prep.identity ? `UNVERIFIED generated identity: ${str(prep.identity, 800)}` : "",
-    prep.persona ? `Persona: ${str(prep.persona, 800)}` : "",
-    prep.projects ? `UNVERIFIED generated project summaries: ${str(prep.projects, 2000)}` : "",
-    grounding ? `Historical context (personal claims require original source corroboration):\n${grounding.slice(0, 4500)}` : "",
+    tier !== 0 && prep.identity ? `UNVERIFIED generated identity: ${str(prep.identity, 800)}` : "",
+    tier !== 0 && prep.persona ? `Persona: ${str(prep.persona, 800)}` : "",
+    tier !== 0 && prep.projects ? `UNVERIFIED generated project summaries: ${str(prep.projects, 2000)}` : "",
+    tier !== 0 && grounding ? `Historical context (personal claims require original source corroboration):\n${grounding.slice(0, 4500)}` : "",
     resumeFacts ? `${resumeFacts}` : "",
-    jdSrc ? `JOB DESCRIPTION (requirements and priorities, never evidence of personal history):\n${jdSrc}` : "",
+    tier !== 0 && jdSrc ? `JOB DESCRIPTION (requirements and priorities, never evidence of personal history):\n${jdSrc}` : "",
     docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
     str(config.instructions, 2000) ? `SESSION PREFERENCES (delivery only; do not override source evidence): ${str(config.instructions, 2000)}` : "",
     `SOURCE PRIORITY: the current resume and original documents establish personal history. The JD sets relevance. Generated prep, prior answers and transcript are unverified. A resume bullet does not establish a specific incident, root cause, HSM vendor or measured outcome. If no incident is documented, explain the proposed approach conditionally.`,
-    transcript ? `Conversation so far:\n${transcript}` : "",
-    history ? `Earlier in this interview:\n${history}` : "",
-    retrieved ? `Retrieved notes:\n${retrieved}` : "",
+    tier !== 0 && transcript ? `Conversation so far:\n${transcript}` : "",
+    tier !== 0 && history ? `Earlier in this interview:\n${history}` : "",
+    tier !== 0 && retrieved ? `Retrieved notes:\n${retrieved}` : "",
   ].filter(Boolean).join("\n\n")
 
   // The vault decides which providers this feature may use (Admin → "Which AI
   // each feature uses"). OpenRouter lanes run only when the vault leaves the
   // key in; otherwise one vault-honoring call is made and delivered as SSE.
   const keys = rawKeys
-  const fallbackText = retrievedList[0]
+  const fallbackText = tier === 0 ? "I need the current resume evidence to give a reliable career overview. Please retry the introduction." : retrievedList[0]
     || (prep.identity ? str(prep.identity, 600) : "")
     || "The answer engine is at its limit right now — press AI Answer again in a moment."
   // Grounding guards (perfACT anti-hallucination): the facts a claim may be
@@ -815,8 +815,8 @@ If a second topic starts, stop.
 ${INTERVIEW}`
   const job: AnswerJob = {
     question,
-    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? "This question was already answered once in this session — the earlier telling is in the conversation above. Do NOT repeat it, paraphrase it, or reuse its opening, its example, its scenario, its bottleneck or its order of points. Give the SAME truth from a different view: a different scenario or moment, a different bottleneck, a different order, different proof. The substance must hold; the telling must be new — the way a strong pitch lands the same point from every angle until it convinces.\n\n" : ""}${tier === 0 ? INTRODUCTION_POLICY : desktopCloser || spokenCloser}`,
+    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? "This question was already answered once in this session — the earlier telling is in the conversation above. Do NOT repeat it, paraphrase it, or reuse its opening, its example, its scenario, its bottleneck or its order of points. Give the SAME truth from a different view: a different scenario or moment, a different bottleneck, a different order, different proof. The substance must hold; the telling must be new — the way a strong pitch lands the same point from every angle until it convinces.\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : desktopCloser || spokenCloser}`,
     plan,
     interviewer,
     level,
