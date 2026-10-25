@@ -14,6 +14,7 @@ import {
   commit, recordAngle, matchBank,
 } from "@/lib/kompasAnswer"
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
+import { formatInterviewHistory } from "@/lib/kompasHistory"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
 import { desktopCraft, desktopResponsePolicy } from "@/lib/kompasDesktopResponse"
@@ -635,10 +636,7 @@ export async function POST(request: NextRequest) {
   const prep = (body.prep && typeof body.prep === "object" ? body.prep : {}) as Record<string, unknown>
   const transcript = str(body.transcript, 4000)
   const historyArr = Array.isArray(body.history) ? body.history : []
-  const history = historyArr.slice(-4).map((h) => {
-    const o = (h && typeof h === "object" ? h : {}) as Record<string, unknown>
-    return `Q: ${str(o.q ?? o.question, 200)}\nA: ${str(o.a ?? o.answer ?? o.text, 400)}`
-  }).filter(Boolean).join("\n\n")
+  const history = formatInterviewHistory(historyArr)
   const retrievedList = Array.isArray(body.retrieved)
     ? body.retrieved.map((r) => str(r, 500)).filter(Boolean)
     : []
