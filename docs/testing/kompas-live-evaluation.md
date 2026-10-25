@@ -43,3 +43,9 @@ Evaluation updates now write a private, same-directory temporary file, sync and 
 Ledger repair PR #65 merged as bcac120d114ef72f842e6119a9d3789965d4718f after preview success. Production confirmation is separate. Zero live model rounds have executed.
 
 Final checkpoint validation: full hardening 940/940; TypeScript and diff checks pass. PR #65 production status succeeded: https://vercel.com/qu4ntum-s-projects/job-dashboard/GjdaTLMm8xQMfq8tRqGsSTb8Ug1Y . Native Windows and live answer acceptance remain pending.
+
+## Fixture coverage audit, 25 October 2026
+
+Computed directly from interview-50.json: 50 cases, 41 unique question texts. All ten fourth turns share the same recursive follow-up wording; their prior-answer context differs, so this is not ten independent unique prompts. Kind counts are ten each for definition, design, followup, recursive-followup and business-followup. There are no dedicated introduction cases. This fixture cannot establish the reported career-introduction repair or isolate audience calibration because question type and audience change together.
+
+Keep this fixture immutable once paired rounds begin. Before running the requested baseline, version an additional acceptance set covering career introductions and re-asks, bare abbreviations, compound requests, topic switches, same-topic drilldowns, unsupported experience and the same question across all three audiences. Preserve original source bundles and prompt versions. Report both case count and unique prompt count; never describe repeated harness checks as generated-answer evaluation. This audit made zero model calls and changed no runtime behavior.
