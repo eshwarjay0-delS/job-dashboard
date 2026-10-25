@@ -20,6 +20,8 @@ export async function sendGmailMessage(args: {
   subject: string
   body: string
   workflowRunId?: string
+  /** Keep the send on its Gmail thread, so a pattern reply never starts a stray thread. */
+  threadId?: string | null
 }) {
   const token = await getGoogleWorkspaceAccessToken(args.userId, args.accountId || null)
   if (!token) throw new Error("Gmail is not connected.")
@@ -32,6 +34,7 @@ export async function sendGmailMessage(args: {
     },
     body: JSON.stringify({
       raw: encodeMessage(args.to, args.subject, args.body, args.workflowRunId),
+      ...(args.threadId ? { threadId: args.threadId } : {}),
     }),
     signal: AbortSignal.timeout(20000),
   })
