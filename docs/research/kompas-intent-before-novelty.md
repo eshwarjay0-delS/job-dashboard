@@ -18,4 +18,6 @@ Current answer route still adds NEW VIEW REQUIRED for practice re-asks at every 
 
 Correction implemented locally: removed the extra re-ask angle override and plan scaling. Normal question routing remains. Updated the source guard to reject both conflicting mechanisms. Regression validation pending; no live comparison claimed.
 
-Release: PR #71 preview succeeded and merged on 25 October 2026 as bb3408e7d354b9fa58bd1a4a2e182a3fb9ab6df2. 974 regression tests and TypeScript passed. Production rollout pending; no authenticated live answer or Windows acceptance claimed.
+Release: PR #71 preview succeeded and merged on 25 October 2026 as bb3408e7d354b9fa58bd1a4a2e182a3fb9ab6df2. 974 regression tests and TypeScript passed. Production verified READY on 25 October 2026: deployment dpl_EAUsMofNRbvDy2J5fPSxe5GbZafe, commit a5de3cf8a35ce11a9f5e816110d8fcb942d29468, job-dashboard-fawn.vercel.app alias assigned, aliasError null. Includes PR #71. Live generated-answer and Windows acceptance remain pending.
+
+Production verified READY on 25 October 2026: deployment dpl_EAUsMofNRbvDy2J5fPSxe5GbZafe, commit a5de3cf8a35ce11a9f5e816110d8fcb942d29468, job-dashboard-fawn.vercel.app alias assigned, aliasError null. Includes PR #71. Live generated-answer and Windows acceptance remain pending.
