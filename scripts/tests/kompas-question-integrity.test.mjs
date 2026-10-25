@@ -30,7 +30,8 @@ test("the server takes the formed question at full length and rotates re-asks to
   assert.match(route, /str\(body\.derived, 2000\)/);
   assert.match(route, /againAngle = pickAngle\(ledger\)/);
   assert.match(route, /NEW VIEW REQUIRED/);
-  assert.match(route, /SAME truth from a different view/);
+  // Owner correction: relevance and continuity override mandatory novelty.
+  assert.match(route, /repeatQuestionGuidance\(tier\)/);
 });
 
 test("questionToAnswer keeps compound asks whole and caps at 2000, never 900", () => {
