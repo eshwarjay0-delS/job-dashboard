@@ -26,10 +26,11 @@ test("a client-formed question is never overwritten by the stream meta abstracti
   assert.match(appJs, /opts\.pinned\) && !opts\.derived\) \{ card\.question = ev\.derived/);
 });
 
-test("the server takes the formed question at full length and rotates re-asks to a fresh angle", () => {
+test("the server takes the formed question at full length and keeps re-asks question calibrated", () => {
   assert.match(route, /str\(body\.derived, 2000\)/);
-  assert.match(route, /againAngle = pickAngle\(ledger\)/);
-  assert.match(route, /NEW VIEW REQUIRED/);
+  assert.ok(!route.includes("againAngle"));
+  assert.ok(!route.includes("NEW VIEW REQUIRED"));
+  assert.ok(!route.includes("plan.words * 1.3"));
   // Owner correction: relevance and continuity override mandatory novelty.
   assert.match(route, /repeatQuestionGuidance\(tier\)/);
 });

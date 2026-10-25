@@ -708,18 +708,7 @@ export async function POST(request: NextRequest) {
     .map((k) => ledgerProjects.find((p) => p.id === k)?.title || k)
     .filter(Boolean)
 
-  // A re-ask asks for another VIEW of the same truth, not a repeat (owner,
-  // 23 Oct 2026): rotate to a fresh angle from the ledger, record it so the
-  // next press rotates again, and give this telling a different length than
-  // the last one. Concept answers stay capped abstract — no scaling there.
-  let againAngle = ""
-  if (again && tier !== 0 && register === "practice") {
-    againAngle = pickAngle(ledger)
-    recordAngle(ledger, againAngle)
-    plan.words = Math.round(plan.words * 1.3)
-    plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
-    plan.maxTokens = Math.min(4000, Math.max(600, Math.round(plan.words * 2.6) + 300))
-  }
+  // Re-asks retain the question-calibrated plan; repeatQuestionGuidance preserves scope.
 
   // perfACT's resume intelligence: the resume is where the specifics live
   // (employer, tools, platforms). TF-IDF digest fitted to THIS question so
@@ -760,7 +749,6 @@ export async function POST(request: NextRequest) {
       : "",
     bott ? `Unverified generated bottleneck; use only if corroborated by original sources: ${bott}.` : "",
     angle && tier !== 0 && plan.kind !== "code" ? `Fresh angle for this telling: ${angle}.` : "",
-    againAngle ? `NEW VIEW REQUIRED: the previous telling of this answer used another facet. Open THIS facet instead and stay on it: ${againAngle}.` : "",
     tier !== 0 && tier !== 3 && toldNames.length
       ? `Stories already told this session — do not retell them: ${toldNames.join("; ")}.`
       : "",
