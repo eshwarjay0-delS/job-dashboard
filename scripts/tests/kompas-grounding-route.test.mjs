@@ -34,9 +34,9 @@ function harness(options = {}) {
         const body = JSON.parse(options.body)
         calls.push(body)
         if (body.stream) {
-          return new Response('data: ' + JSON.stringify({ choices: [{ delta: { content: 'I check the certificate chain.' }, finish_reason: 'stop' }] }) + '\n\ndata: [DONE]\n\n')
+          return new Response('data: ' + JSON.stringify({ choices: [{ delta: { content: options.modelAnswer || 'I check the certificate chain.' }, finish_reason: 'stop' }] }) + '\n\ndata: [DONE]\n\n')
         }
-        return Response.json({ choices: [{ message: { content: 'I check the certificate chain.' } }] })
+        return Response.json({ choices: [{ message: { content: options.modelAnswer || 'I check the certificate chain.' } }] })
       },
       require: (id) => mocks[id] || (id.startsWith('@/') ? load('src/' + id.slice(2) + '.ts') : require(id)),
     }, { filename: file })
@@ -210,4 +210,67 @@ test('a general technical question does not receive a personal achievement pitch
   const system = h.calls[0].messages[0].content
   assert.match(system, /TECHNICAL ANSWER BOUNDARY/)
   assert.doesNotMatch(system, /PERSONAL EVIDENCE OPPORTUNITY/)
+})
+
+
+test('an open-ended intro traverses the supported career, not a cached tool or the target JD', async () => {
+  const h = harness({ modelAnswer: 'I work in security operations. [beat] I also assess applications. [breath] My focus is making controls operational.' })
+  const resume = [
+    'EXPERIENCE',
+    'Example Bank — Endpoint Security Engineer | Jan 2025 – Present',
+    '- Designed endpoint privilege policies with staged rollout and rollback.',
+    '- Reviewed unsigned utility exceptions and their expiry.',
+    'Example Health — Security Analyst | Feb 2023 – Dec 2024',
+    '- Correlated SIEM alerts and investigated identity misuse.',
+    '- Reviewed access permissions and reported remediation ownership.',
+    'Example Labs — Application Security Tester | Jan 2022 – Jan 2023',
+    '- Tested API authorization with separate users and tenants.',
+    '- Documented verified vulnerabilities and retest outcomes.',
+  ].join('\n')
+  const response = await h.post({
+    question: 'Big Intro',
+    config: { interviewer: 'architect', resume, jd: 'Role urgently requires ONLY CodeQL SAST.', responseCalibration: 'three-level-v1' },
+    prep: { identity: 'INVENTED_PERSONA', projects: 'INVENTED_PROJECT_SUPERHERO' },
+    transcript: 'Old unrelated prompt: Give me only a CodeQL implementation story.',
+    history: [{ q: 'Old irrelevant project', a: 'INVENTED_HISTORY_RESULT' }],
+  })
+  const result = await response.json()
+  assert.equal(result.meta.tier, 0)
+  const system = h.calls[0].messages[0].content
+  const prompt = h.calls[0].messages[1].content
+  assert.match(system, /INTENT FIRST/)
+  assert.match(system, /CAREER-WIDE INTRODUCTION CONTRACT/)
+  assert.match(prompt, /RESUME \(career-wide evidence across supported roles\)/)
+  assert.match(prompt, /Endpoint privilege policies|endpoint privilege policies/)
+  assert.match(prompt, /Correlated SIEM alerts/)
+  assert.match(prompt, /Tested API authorization/)
+  assert.match(prompt, /Example Bank/)
+  assert.match(prompt, /Example Health/)
+  assert.match(prompt, /Example Labs/)
+  assert.doesNotMatch(prompt, /INVENTED_PERSONA|INVENTED_PROJECT_SUPERHERO|INVENTED_HISTORY_RESULT/)
+  assert.doesNotMatch(prompt, /Role urgently requires ONLY CodeQL SAST/)
+  assert.doesNotMatch(prompt, /Old unrelated prompt/)
+  assert.doesNotMatch(prompt, /ANSWER LEVEL .*full build depth/)
+  assert.doesNotMatch(result.text, /\[(?:beat|breath)\]|\(pause\)/i)
+})
+
+test('introduction to a technical topic is not classified as the candidate career introduction', async () => {
+  const h = harness()
+  const response = await h.post({ question: 'Give me an introduction to OAuth', config: {
+    resume: 'Example Bank — Endpoint Security Engineer | Jan 2025 – Present',
+  } })
+  const result = await response.json()
+  assert.notEqual(result.meta.tier, 0)
+  const prompt = h.calls[0].messages[1].content
+  assert.doesNotMatch(prompt, /CAREER-WIDE INTRODUCTION CONTRACT/)
+})
+
+test('a specific experience question must not turn into the full-career introduction', async () => {
+  const h = harness()
+  const response = await h.post({ question: 'Tell me about your experience with CyberArk EPM', config: {
+    resume: 'Example Bank — Security Engineer | Jan 2025 – Present\n- Worked on CyberArk EPM.',
+  } })
+  const result = await response.json()
+  assert.notEqual(result.meta.tier, 0)
+  assert.doesNotMatch(h.calls[0].messages[1].content, /CAREER-WIDE INTRODUCTION CONTRACT/)
 })
