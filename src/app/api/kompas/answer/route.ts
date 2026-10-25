@@ -680,6 +680,7 @@ export async function POST(request: NextRequest) {
     ? "ANSWER CALIBRATION: This is a deep, scoped question. Go deep on the specific angle asked — concrete details, trade-offs, and real constraints. Stay focused on what was asked, don't broaden."
     : ""
   const personalEvidence = isPersonalEvidenceQuestion(tier, question)
+  const includeStoryContext = personalEvidence && tier !== 0
   const rule = tierRule(tier, level)
   // 27 question archetypes (perfACT _shapes.js): first-win structural instruction.
   const shape = tier === 0 ? "" : pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
@@ -760,21 +761,21 @@ export async function POST(request: NextRequest) {
     bott ? `Unverified generated bottleneck; use only if corroborated by original sources: ${bott}.` : "",
     angle && tier !== 0 && plan.kind !== "code" ? `Fresh angle for this telling: ${angle}.` : "",
     againAngle ? `NEW VIEW REQUIRED: the previous telling of this answer used another facet. Open THIS facet instead and stay on it: ${againAngle}.` : "",
-    tier !== 0 && tier !== 3 && toldNames.length
+    includeStoryContext && tier !== 3 && toldNames.length
       ? `Stories already told this session — do not retell them: ${toldNames.join("; ")}.`
       : "",
-    tier !== 0 && prep.identity ? `UNVERIFIED generated identity: ${str(prep.identity, 800)}` : "",
-    tier !== 0 && prep.persona ? `Persona: ${str(prep.persona, 800)}` : "",
-    tier !== 0 && prep.projects ? `UNVERIFIED generated project summaries: ${str(prep.projects, 2000)}` : "",
-    tier !== 0 && grounding ? `Historical context (personal claims require original source corroboration):\n${grounding.slice(0, 4500)}` : "",
+    includeStoryContext && prep.identity ? `UNVERIFIED generated identity: ${str(prep.identity, 800)}` : "",
+    includeStoryContext && prep.persona ? `Persona: ${str(prep.persona, 800)}` : "",
+    includeStoryContext && prep.projects ? `UNVERIFIED generated project summaries: ${str(prep.projects, 2000)}` : "",
+    includeStoryContext && grounding ? `Historical context (personal claims require original source corroboration):\n${grounding.slice(0, 4500)}` : "",
     resumeFacts ? `${resumeFacts}` : "",
     tier !== 0 && jdSrc ? `JOB DESCRIPTION (requirements and priorities, never evidence of personal history):\n${jdSrc}` : "",
     docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
     str(config.instructions, 2000) ? `SESSION PREFERENCES (delivery only; do not override source evidence): ${str(config.instructions, 2000)}` : "",
     `SOURCE PRIORITY: the current resume and original documents establish personal history. The JD sets relevance. Generated prep, prior answers and transcript are unverified. A resume bullet does not establish a specific incident, root cause, HSM vendor or measured outcome. If no incident is documented, explain the proposed approach conditionally.`,
     tier !== 0 && transcript ? `Conversation so far:\n${transcript}` : "",
-    tier !== 0 && history ? `Earlier in this interview:\n${history}` : "",
-    tier !== 0 && retrieved ? `Retrieved notes:\n${retrieved}` : "",
+    tier !== 0 && history && tier !== 0 ? `Earlier conversation (only to resolve explicit references, never to supply an unrelated project or topic):\n${history}` : "",
+    includeStoryContext && retrieved ? `Retrieved notes:\n${retrieved}` : "",
   ].filter(Boolean).join("\n\n")
 
   // The vault decides which providers this feature may use (Admin → "Which AI
