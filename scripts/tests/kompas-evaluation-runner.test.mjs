@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, writeFile, readFile, rm, stat } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { buildManifest } from '../lib/evaluation-manifest.mjs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -29,7 +31,23 @@ test('evaluation captures 50 answers, preserves chain context and requires revie
   assert.equal(r.status,0,r.stderr)
   const rows=JSON.parse(await readFile(path.join(out,'round-1.json')))
   assert.equal(rows.length,50)
-  assert.ok(rows.every(r=>r.fixture==='interview-50' && r.historyMode==='chain' && r.review.status==='pending' && r.review.scores===null))
+  assert.ok(rows.every(r=>r.fixture==='interview-50' && r.historyMode==='chain' && r.review.status==='pending' && r.review.scores===null && r.captureId))
+  const manifest=JSON.parse(await readFile(path.join(out,'round-1.manifest.json')))
+  assert.equal(manifest.status,'complete')
+  assert.equal(manifest.capturedCount,50)
+  assert.equal(manifest.caseCount,50)
+  assert.equal(manifest.sourcesSha256,createHash('sha256').update(await readFile(sourceFile)).digest('hex'))
+  assert.equal(manifest.fixtureSha256,createHash('sha256').update(await readFile(new URL('../fixtures/kompas-evaluation/interview-50.json',import.meta.url))).digest('hex'))
+  assert.equal(manifest.runnerSha256,createHash('sha256').update(await readFile(new URL('../kompas-live-evaluate.mjs',import.meta.url))).digest('hex'))
+  assert.match(manifest.codeVersion,/^[0-9a-f]{40}$/)
+  assert.equal(manifest.promptVersion,null)
+  assert.equal(manifest.cases.length,50)
+  assert.ok(manifest.cases.every((row,i)=>row.id===rows[i].id && row.captureId===rows[i].captureId && row.model==='mock-only' && row.providerRequestId===null && row.reviewStatus==='pending'))
+  const dumped=JSON.stringify(manifest)
+  assert.equal(dumped.includes('Synthetic test candidate'),false)
+  assert.equal(dumped.includes('Synthetic answer'),false)
+  assert.equal(dumped.includes('synthetic-test-only'),false)
+  assert.equal((await stat(path.join(out,'round-1.manifest.json'))).mode & 0o777,0o600)
   const retry=spawnSync(process.execPath,args,{env,encoding:'utf8'})
   assert.notEqual(retry.status,0)
   assert.match(retry.stderr,/EEXIST/)
@@ -52,7 +70,25 @@ test('rejected preflight leaves explicit failure evidence and makes no answer ca
   assert.equal(records[0].stage,'preflight')
   assert.equal(records[0].status,'failed')
   assert.equal(records[0].error,'Answer API HTTP 401')
+  const manifest=JSON.parse(await readFile(path.join(dir,'out','round-1.manifest.json')))
+  assert.equal(manifest.status,'failed')
+  assert.equal(manifest.stage,'preflight')
+  assert.equal(manifest.capturedCount,0)
+  assert.equal(manifest.cases.length,0)
  } finally {await rm(dir,{recursive:true,force:true})}
+})
+
+test('completion manifest keeps case ids and drops answer text', () => {
+ const manifest = buildManifest({
+  status: 'complete', stage: 'answers', round: 1, fixture: 'interview-50', caseCount: 1,
+  records: [{ id: 'case-1', captureId: 'cap-1', text: 'private answer', meta: { model: 'mock-only' }, elapsedMs: 4, review: { status: 'pending' } }],
+  hashes: { sourcesSha256: 'a', fixtureSha256: 'b', runnerSha256: 'c' },
+  code: { codeVersion: null, codeVersionStatus: 'unavailable' },
+  completedAt: '2026-10-25T00:00:00.000Z',
+ })
+ assert.equal(JSON.stringify(manifest).includes('private answer'), false)
+ assert.equal(manifest.cases[0].model, 'mock-only')
+ assert.equal(manifest.capturedCount, 1)
 })
 
 test('baseline stays 50 cases and the supplemental set crosses 12 prompts over three audiences', async () => {
@@ -105,6 +141,7 @@ test('unknown fixture and missing or leaked history stop before any model call',
   assert.match(blankHistory.stderr, /Missing explicit reviewed history for intent-drilldown-director/)
   assert.doesNotMatch(blankHistory.stderr, /Error: model call/)
   await assert.rejects(readFile(path.join(dir, 'out', 'round-1.json')))
+  await assert.rejects(readFile(path.join(dir, 'out', 'round-1.manifest.json')))
  } finally { await rm(dir, { recursive: true, force: true }) }
 })
 
@@ -136,6 +173,11 @@ test('intent fixture sends reviewed history only for dependent cases and isolate
   const sent = JSON.parse(await readFile(seen))
   assert.equal(rows.length, 36)
   assert.equal(sent.length, 36)
+  const manifest = JSON.parse(await readFile(path.join(out, 'round-1.manifest.json')))
+  assert.equal(manifest.status, 'complete')
+  assert.equal(manifest.fixture, 'intent-acceptance-v1')
+  assert.equal(manifest.capturedCount, 36)
+  assert.equal(JSON.stringify(manifest).includes('Reviewed answer'), false)
   assert.ok(rows.every(row => row.fixture === 'intent-acceptance-v1' && row.review.status === 'pending'))
   for (const c of cases) {
    const got = sent.find(row => row.question === c.question && row.level === c.level)
@@ -151,5 +193,35 @@ test('intent fixture sends reviewed history only for dependent cases and isolate
     assert.equal(rows.find(row => row.id === c.id).historyMode, 'isolated')
    }
   }
+ } finally { await rm(dir, { recursive: true, force: true }) }
+})
+
+test('a failed answer writes an incomplete manifest and keeps the captured case', async () => {
+ const dir = await mkdtemp(path.join(tmpdir(), 'kompas-manifest-fail-'))
+ try {
+  const cases = JSON.parse(await readFile(new URL('../fixtures/kompas-evaluation/interview-50.json', import.meta.url)))
+  const sources = Object.fromEntries(cases.map(c => [c.chain, { resume: 'Synthetic', jd: 'Synthetic' }]))
+  await writeFile(path.join(dir, 'sources.json'), JSON.stringify(sources))
+  await writeFile(path.join(dir, 'mock.mjs'), `let calls=0; globalThis.fetch=async (_url, opts)=>{
+   const body=JSON.parse(opts.body);
+   if(body.preflight) return {ok:true,json:async()=>({ready:true})};
+   calls++;
+   if(calls===2) return {ok:false,status:500};
+   return {ok:true,json:async()=>({text:'Synthetic answer '+calls,meta:{model:'mock-only',provider:'synthetic'},ledger:{step:1}})};
+  }`)
+  const r = spawnSync(process.execPath, ['--import', pathToFileURL(path.join(dir, 'mock.mjs')).href, 'scripts/kompas-live-evaluate.mjs', path.join(dir, 'sources.json'), path.join(dir, 'out'), '1'], { env: { ...process.env, KOMPAS_API_TOKEN: 'synthetic' }, encoding: 'utf8' })
+  assert.notEqual(r.status, 0)
+  assert.match(r.stderr, /Answer API HTTP 500/)
+  const rows = JSON.parse(await readFile(path.join(dir, 'out', 'round-1.json')))
+  const manifest = JSON.parse(await readFile(path.join(dir, 'out', 'round-1.manifest.json')))
+  assert.equal(rows.length, 2)
+  assert.equal(rows[0].review.status, 'pending')
+  assert.equal(rows[1].status, 'failed')
+  assert.equal(manifest.status, 'failed')
+  assert.equal(manifest.stage, 'answer')
+  assert.equal(manifest.capturedCount, 1)
+  assert.equal(manifest.cases[1].status, 'failed')
+  assert.equal(manifest.cases[1].model, null)
+  assert.equal(JSON.stringify(manifest).includes('Synthetic answer'), false)
  } finally { await rm(dir, { recursive: true, force: true }) }
 })

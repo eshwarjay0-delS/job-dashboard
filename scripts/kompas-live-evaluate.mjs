@@ -1,8 +1,12 @@
 // Run one reviewed evaluation round against the real authenticated Kompas API.
 // Private source bundles and outputs must stay outside the repository.
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { createHash, randomUUID } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { saveCheckpoint } from './lib/evaluation-checkpoint.mjs'
+import { buildManifest } from './lib/evaluation-manifest.mjs'
 const FIXTURES = {
  'interview-50': new URL('./fixtures/kompas-evaluation/interview-50.json', import.meta.url),
  'intent-acceptance-v1': new URL('./fixtures/kompas-evaluation/intent-acceptance-v1.json', import.meta.url),
@@ -16,8 +20,21 @@ const token = process.env.KOMPAS_API_TOKEN
 if (!token) throw Error('KOMPAS_API_TOKEN is not configured; zero model calls made.')
 const origin = new URL(process.env.KOMPAS_BASE_URL || 'https://job-dashboard-fawn.vercel.app')
 if (origin.protocol !== 'https:') throw Error('HTTPS required')
-const cases = JSON.parse(await readFile(FIXTURES[fixtureName]))
-const sources = JSON.parse(await readFile(sourcesFile, 'utf8'))
+const fixtureBytes = await readFile(FIXTURES[fixtureName])
+const sourceBytes = await readFile(sourcesFile)
+const runnerBytes = await readFile(fileURLToPath(import.meta.url))
+const cases = JSON.parse(fixtureBytes.toString())
+const sources = JSON.parse(sourceBytes.toString())
+const hashes = {
+ sourcesSha256: createHash('sha256').update(sourceBytes).digest('hex'),
+ fixtureSha256: createHash('sha256').update(fixtureBytes).digest('hex'),
+ runnerSha256: createHash('sha256').update(runnerBytes).digest('hex'),
+}
+let code = { codeVersion: null, codeVersionStatus: 'unavailable' }
+try {
+ const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: path.dirname(fileURLToPath(import.meta.url)), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+ if (/^[0-9a-f]{40}$/.test(sha)) code = { codeVersion: sha, codeVersionStatus: 'git' }
+} catch { /* missing git is recorded as unavailable */ }
 for (const c of cases) {
  const supplemental = fixtureName === 'intent-acceptance-v1'
  if (supplemental && (!c.category || c.chain)) throw Error(`Intent case ${c.id} must be category-scoped and chain-free; zero model calls made.`)
@@ -35,9 +52,13 @@ for (const c of cases) {
 }
 await mkdir(outputDir, { recursive: true, mode: 0o700 })
 const destination = path.join(outputDir, `round-${round}.json`)
+const manifestPath = path.join(outputDir, `round-${round}.manifest.json`)
 // Exclusive creation prevents an accidental rerun from overwriting evaluation evidence.
 await writeFile(destination, '[]\n', { flag: 'wx', mode: 0o600 })
 const records = [], states = new Map()
+const writeManifest = (status, stage) => saveCheckpoint(manifestPath, buildManifest({
+ status, stage, round: Number(round), fixture: fixtureName, caseCount: cases.length, records, hashes, code, completedAt: new Date().toISOString(),
+}))
 const request = async body => {
  const res = await fetch(new URL('/api/kompas/answer', origin), {
   method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
@@ -51,6 +72,7 @@ try {
  if (!ready.ready) throw Error('Preflight not ready; zero interview answers generated.')
 } catch (error) {
  await saveCheckpoint(destination, [{ round, fixture: fixtureName, stage: 'preflight', status: 'failed', error: error.message }])
+ await writeManifest('failed', 'preflight')
  throw error
 }
 for (const c of cases) {
@@ -61,13 +83,14 @@ for (const c of cases) {
  const history = supplemental ? (REVIEWED_HISTORY.has(c.category) ? reviewedHistory : []) : state.history
  const ledger = supplemental ? (REVIEWED_HISTORY.has(c.category) ? reviewedLedger : undefined) : state.ledger
  const began = Date.now()
+ const captureId = randomUUID()
  try {
   const answer = await request({ question: c.question, stream: false, pinned: true,
    config: { ...grounding, level: c.level, interviewer: c.level, responseCalibration: 'three-level-v1' },
    history, ledger,
   })
   if (!answer.text?.trim() || answer.degraded || !answer.meta?.model) throw Error('Missing actual model answer or degraded response')
-  records.push({ id: c.id, round, fixture: fixtureName, category: c.category, question: c.question, level: c.level, criteria: c.criteria,
+  records.push({ id: c.id, captureId, round, fixture: fixtureName, category: c.category, question: c.question, level: c.level, criteria: c.criteria,
    historyMode: supplemental ? (REVIEWED_HISTORY.has(c.category) ? 'reviewed' : 'isolated') : 'chain', historyTurns: history.length,
    text: answer.text, meta: answer.meta, elapsedMs: Date.now()-began,
    words: answer.text.trim().split(/\s+/).length, review: { status: 'pending', scores: null, evidence: [] } })
@@ -76,10 +99,12 @@ for (const c of cases) {
    states.set(c.chain, state)
   }
  } catch (error) {
-  records.push({ id: c.id, round, fixture: fixtureName, status: 'failed', error: error.message, elapsedMs: Date.now()-began })
+  records.push({ id: c.id, captureId, round, fixture: fixtureName, status: 'failed', error: error.message, elapsedMs: Date.now()-began })
   await saveCheckpoint(destination, records)
+  await writeManifest('failed', 'answer')
   throw error
  }
  await saveCheckpoint(destination, records)
  console.log(`Captured ${records.length}/${cases.length}; quality review pending`)
 }
+await writeManifest('complete', 'answers')
