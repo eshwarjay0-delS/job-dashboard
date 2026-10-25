@@ -141,7 +141,7 @@ const ASK_STOP = new Set(
  * summary. A general question matches almost nothing — never leave the model
  * without the work itself: the current role's first bullets fill the gap.
  */
-export function resumeDigest(resume: string, ask: string, budget = 4600): string {
+export function resumeDigest(resume: string, ask: string, budget = 4600, mode: 'focused' | 'career' = 'focused'): string {
   const lines = cleanLines(resume)
   const roles = parseRoles(lines).map((r) => ({ ...r, bullets: [] as string[] }))
   if (!roles.length) return String(resume).slice(0, budget)
@@ -166,6 +166,29 @@ export function resumeDigest(resume: string, ask: string, budget = 4600): string
     .replace(/\b(email|phone|mobile)\s*:\s*/gi, "")
     .replace(/\s{2,}/g, " ")
     .trim()
+  // A full-career introduction is not a keyword lookup. Keyword ranking can
+  // promote one tool/project and quietly omit earlier roles, even though the
+  // question asked for the person. Give each supported career stage source
+  // space in resume order; keep fine-grained TF-IDF for scoped questions only.
+  if (mode === 'career') {
+    const roleMap = `ROLES (resume order, not inferred chronology): ${roles.map((r) =>
+      `${r.org} — ${r.title} — ${r.dates}`).join('; ')}`
+    const out = [roleMap]
+    let used = roleMap.length + 900 // reserve room for the career summary
+    const perRole = Math.max(1, Math.min(3, Math.floor((budget - 900) / Math.max(1, roles.length) / 260)))
+    for (const r of roles) {
+      const head = `${r.org} — ${r.title} (${r.dates}):`
+      const bullets: string[] = []
+      for (const b of r.bullets.slice(0, perRole)) {
+        if (used + head.length + b.length + 20 > budget) break
+        bullets.push(b)
+        used += b.length + 20
+      }
+      if (bullets.length) out.push(`${head}\n- ${bullets.join('\n- ')}`)
+    }
+    out.push(`CAREER SUMMARY (source only): ${pre.slice(0, Math.max(0, Math.min(900, budget - out.join('\n').length - 40)))}`)
+    return out.join('\n').slice(0, budget)
+  }
   // 6-char stems: "cyberark" ≠ "cyber risk"; "upgrade" = "upgrades"
   const words = [...new Set(String(ask || "").toLowerCase().match(/[a-z][a-z0-9+#./-]{2,}/g) || [])]
     .filter((w) => !ASK_STOP.has(w))
