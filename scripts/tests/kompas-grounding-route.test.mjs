@@ -292,3 +292,84 @@ test('definitions exclude unrelated generated project stories and stay on the te
   assert.match(h.calls[0].messages[0].content, /INTENT FIRST/)
   assert.match(h.calls[0].messages[0].content, /TECHNICAL ANSWER BOUNDARY/)
 })
+
+
+// Fresh 30-fold source-aware answer-routing regression. These assertions inspect
+// real answer-route decisions and prompts with a mocked model, not live answer
+// quality. Every fold changes the input form and rotates the introduction ask,
+// while checking all three audience levels against unrelated cached stories.
+const foldForms = [
+  s => s,
+  s => s.toUpperCase(),
+  s => '  ' + s + '  ',
+  s => s.replaceAll(' ', '  '),
+  s => s.replaceAll(' ', '\n'),
+  s => s.replaceAll(' ', '\t'),
+]
+const foldIntroductions = [
+  'Big Intro',
+  'Tell me about yourself.',
+  'Walk me through your career.',
+  'Give me a brief introduction about yourself.',
+  'Summarize your background.',
+]
+const foldResume = [
+  'EXPERIENCE',
+  'Example Bank — Endpoint Security Engineer | Jan 2025 – Present',
+  '- Designed endpoint privilege policies with staged rollout and rollback.',
+  '- Reviewed unsigned utilities, policy exceptions and expirations.',
+  'Example Health — Security Analyst | Feb 2023 – Dec 2024',
+  '- Correlated SIEM alerts and investigated identity activity.',
+  '- Validated remediations and reviewed access permissions.',
+  'Example Labs — Application Security Tester | Jan 2022 – Jan 2023',
+  '- Tested API authorization with distinct users and tenants.',
+  '- Reported confirmed authorization vulnerabilities and retested corrections.',
+].join('\n')
+
+for (let fold = 0; fold < 30; fold++) {
+  test('fresh 30-fold intent regression ' + String(fold + 1).padStart(2, '0'), async () => {
+    const form = foldForms[Math.floor(fold / 5)]
+    const intro = foldIntroductions[fold % 5]
+    for (const level of ['engineer', 'architect', 'director']) {
+      for (const [name, original, expectedTier] of [
+        ['career-intro', intro, 0],
+        ['technical-intro', 'Give me an introduction to OAuth.', 2],
+        ['scoped-experience', 'Tell me about your experience with CyberArk EPM.', 4],
+        ['concept-definition', 'What is CSRF?', 2],
+        ['engineering-implementation', 'How would you configure endpoint controls?', 2],
+        ['personal-incident', 'Walk me through an incident you handled.', 1],
+      ]) {
+        const h = harness({modelAnswer:'I explain the supported context. [beat] I keep the decision connected to the question.'})
+        const question = form(original)
+        const response = await h.post({
+          question,
+          config: {
+            level, interviewer: level, responseCalibration: 'three-level-v1',
+            resume: foldResume,
+            jd: 'SECRET_JOB_DESCRIPTION_FOCUS_ONLY_ON_CODEQL',
+          },
+          prep: {identity:'UNRELATED_GENERATED_IDENTITY', projects:'UNRELATED_GENERATED_PROJECT', persona:'UNRELATED_GENERATED_PERSONA'},
+          transcript:'PREVIOUS_QUESTION_RANDOM_TOOL_CASE_STUDY',
+          history:[{q:'Old unrelated incident',a:'OLD_UNRELATED_ACHIEVEMENT'}],
+        })
+        const payload = await response.json()
+        assert.equal(response.status,200, 'fold '+fold+' '+name+' '+level+': '+JSON.stringify(payload))
+        assert.equal(payload.meta?.tier,expectedTier,'fold '+fold+' '+name+' '+level+' classified incorrectly')
+        const prompt=h.calls[0].messages[1].content
+        const system=h.calls[0].messages[0].content
+        assert.match(system,/INTENT FIRST/,'missing intent policy')
+        if (name==='career-intro') {
+          assert.match(prompt,/CAREER-WIDE INTRODUCTION CONTRACT/,'missing full-career policy')
+          for(const employer of ['Example Bank','Example Health','Example Labs']) assert.ok(prompt.includes(employer),'missing career role '+employer)
+          for(const evidence of ['Designed endpoint privilege policies','Correlated SIEM alerts','Tested API authorization']) assert.ok(prompt.includes(evidence),'missing breadth evidence '+evidence)
+          assert.doesNotMatch(prompt,/UNRELATED_GENERATED_|OLD_UNRELATED_ACHIEVEMENT|PREVIOUS_QUESTION_RANDOM_TOOL_CASE_STUDY|SECRET_JOB_DESCRIPTION_FOCUS_ONLY_ON_CODEQL/)
+          assert.doesNotMatch(payload.text||'',/\[(?:beat|breath)\]|\(pause\)/i)
+        } else {
+          assert.doesNotMatch(prompt,/CAREER-WIDE INTRODUCTION CONTRACT/)
+          if (['technical-intro','concept-definition','engineering-implementation'].includes(name))
+            assert.doesNotMatch(prompt,/UNRELATED_GENERATED_IDENTITY|UNRELATED_GENERATED_PROJECT|UNRELATED_GENERATED_PERSONA/)
+        }
+      }
+    }
+  })
+}
