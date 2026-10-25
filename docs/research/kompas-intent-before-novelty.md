@@ -15,3 +15,5 @@ Next: authenticated paired evaluation requires a valid application session and a
 ## Remaining conflict audit, 25 October 2026
 
 Current answer route still adds NEW VIEW REQUIRED for practice re-asks at every non-introduction tier, including tier 3. The same block increases the word target by 30 percent merely because again is true. This is a residual conflict with the newer continuity and question-granularity policy, not a measured live failure. Next implementation slice: make alternate angles optional, exclude drilldowns from forced rotation, and preserve question-calibrated length on repeats. Add behavior tests before release. No code change or new live evaluation performed in this audit.
+
+Correction implemented locally: removed the extra re-ask angle override and plan scaling. Normal question routing remains. Updated the source guard to reject both conflicting mechanisms. Regression validation pending; no live comparison claimed.
