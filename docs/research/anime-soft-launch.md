@@ -14,3 +14,8 @@ Requested 35-second vertical film: morning desk, job-description concept, resume
 
 ## Verification
 TypeScript and production build passed; 159 routes generated. Nine build warnings concern filesystem tracing in unchanged API routes. git diff --check passed. Browser preview and production deployment not yet verified.
+
+## Completed draft and release boundary
+Descript get_project confirms video composition fad096a9-b230-4103-8f3d-98eb0ae9bbe7, 35 seconds. Agent Underlord reports six scenes after splitting the end card, slow zooms and crossfades, checked caption margins and corrected overlap. Uses four independently generated stills; character consistency varies. Stock audio muted because marketing licence could not be verified. Export was started, but no completed MP4 download link is exposed. Review in Descript; no public publication.
+
+App source saved as da70f098906897ae2978e1b8f4df25771b76add9 in draft PR #68. GitHub Vercel status pending when checked. Vercel deployment inspection returned 403 for qu4ntum-s-projects; team access is required. No production merge or deployment performed. Next: authorize team access, inspect preview visually, then finish release; obtain finished MP4 from Descript export panel and choose cleared audio.
