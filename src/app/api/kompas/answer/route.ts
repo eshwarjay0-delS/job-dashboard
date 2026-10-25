@@ -13,6 +13,7 @@ import {
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
   commit, recordAngle, matchBank,
 } from "@/lib/kompasAnswer"
+import { QUESTION_FIRST_POLICY, repeatQuestionGuidance } from "@/lib/kompasIntent"
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
 import { formatInterviewHistory } from "@/lib/kompasHistory"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
@@ -815,8 +816,8 @@ If a second topic starts, stop.
 ${INTERVIEW}`
   const job: AnswerJob = {
     question,
-    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? "This question was already answered once in this session — the earlier telling is in the conversation above. Do NOT repeat it, paraphrase it, or reuse its opening, its example, its scenario, its bottleneck or its order of points. Give the SAME truth from a different view: a different scenario or moment, a different bottleneck, a different order, different proof. The substance must hold; the telling must be new — the way a strong pitch lands the same point from every angle until it convinces.\n\n" : ""}${tier === 0 ? INTRODUCTION_POLICY : desktopCloser || spokenCloser}`,
+    system: `${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? INTRODUCTION_POLICY : desktopCloser || spokenCloser}`,
     plan,
     interviewer,
     level,
