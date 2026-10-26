@@ -13,7 +13,7 @@ import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords,
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 import { priceCalls, type PricedCall } from "./llmPrices"
-import { targetKeywords, placeInSkills, isCertification, jdSpelling, withoutAddedCerts, weaveConfirmedVocabulary, SOFT_SKILL, type RelationalPair } from "./keyword-targets"
+import { targetKeywords, placeInSkills, isCertification, isQualificationOrJunk, floorTerms, jdSpelling, withoutAddedCerts, weaveConfirmedVocabulary, SOFT_SKILL, type RelationalPair } from "./keyword-targets"
 import { tailorReview, type TailorReview } from "./resume-changes"
 import { tailorRunKey } from "./tailor-review"
 
@@ -64,6 +64,8 @@ export interface TailorResult {
   unchanged?: boolean
   /** Job-post terms the floor wrote onto the skills section because no pass had put them in (see THE FLOOR in runTailor). */
   placed_from_jd?: string[]
+  /** Soft skills the floor wrote into an open summary as one "Strengths:" sentence. */
+  placed_in_summary?: string[]
   /** No AI writer answered in time: the file is the source resume with only its skills section brought up to the floor. */
   skills_only?: boolean
   // Real token accounting for this tailor (proof the cache is working). estCostUSD is
@@ -280,7 +282,14 @@ export async function runTailor(opts: {
   // generic words and fragments (owner: "give this to gemini free api for more keywords ... then concatenate both given
   // user input and that results"). The full set is scored and shown to the model, but deterministic placement and
   // mandatory repair apply only where the baseline or the candidate's own statement supplies evidence.
-  const jdKws = targetKeywords(jdExtracted, jdGenerated)
+  // Since 26 Oct 2026 the MATCH is scored on the post's own terms only (scoreKws), with qualifications and words that
+  // are not skills left out (a clearance, a degree, a rank, a benefit, a place: isQualificationOrJunk), so the floor at
+  // the end can meet it honestly and a resume made earlier is checked against the same set (made-floor.ts). Gemini's
+  // suggestions stay targets for the writer (jdKws, jdKwsPrompt), never for the score or the floor.
+  const scoreKws = floorTerms(jd, targetKeywords(jdExtracted, [], jd))
+  const jdKws = [...new Set([...targetKeywords(jdExtracted, jdGenerated, jd).filter(k => !isQualificationOrJunk(k)), ...scoreKws])]
+  const floorKws = new Set(floorTerms(jd, scoreKws))
+  const shareOf = (shown: Set<string>) => (scoreKws.length ? scoreKws.filter(k => shown.has(k)).length / scoreKws.length : 1)
   const jdKwsPrompt = [...new Set([...jdKws, ...jdGenerated])]
   const candidateStatements = [...immediatePrefs, ...storedFeedback]
   const forcedJdKws = explicitlyConfirmsAllRequirements(candidateStatements)
@@ -288,7 +297,7 @@ export async function runTailor(opts: {
     : [...coveredJdKeywords([text, ...candidateStatements].join("\n"), jdKws)].filter(k => jdKws.includes(k))
   const beforeKw = coveredJdKeywords(text, jdKws)
   const matchedOn = [...beforeKw]
-  const kwMatched = [...beforeKw]
+  const kwMatched = scoreKws.filter(k => beforeKw.has(k))
   const tier: "light" | "heavy" = estimateYears(text) >= 7 ? "heavy" : "light"
 
   // COST-ORDERED MODEL LADDER (cheapest capable model first; escalate ONLY for the
@@ -459,7 +468,7 @@ export async function runTailor(opts: {
   // required ones its bullets (rewritten and added) do show. provenKw: the listed skills any bullet shows. A skill listed
   // but shown at no client reads as padding to a recruiter.
   // `dropped`: paragraphs a one-page condense removed, kept so the change list can show them and the person can undo them.
-  type Pass = { edits: Edits; dropped: number[]; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string>; claimedKw: Set<string>; roleKw: Set<string>[]; required: string[][]; provenKw: Set<string>; via?: string; partial?: { failed: number; total: number; pendingRoles?: number[]; pendingProfile?: boolean }; floor?: string[] }
+  type Pass = { edits: Edits; dropped: number[]; buffer: Buffer; notes: string[]; tailoredText: string; cov: number; afterKw: Set<string>; claimedKw: Set<string>; roleKw: Set<string>[]; required: string[][]; provenKw: Set<string>; via?: string; partial?: { failed: number; total: number; pendingRoles?: number[]; pendingProfile?: boolean }; floor?: string[]; floorSummary?: string[] }
   // Apply a finished edit set to the docx and measure JD keyword coverage. Auto-tailoring
   // is the only path allowed to physically drop bullets (the manual builder never gets a
   // dropIdx), so a user's own edits are never silently trimmed.
@@ -475,7 +484,7 @@ export async function runTailor(opts: {
     const { buffer, notes } = await applyRewrites(buf, edits, zones, { dropIdx })
     const tailoredText = await extractText(buffer)
     const afterKw = coveredJdKeywords(tailoredText, jdKws)
-    const cov = jdKws.length ? afterKw.size / jdKws.length : 1
+    const cov = shareOf(afterKw)
     // Optional enrichment helps writing, but never creates mandatory experience requirements.
     const listed = provableSkills(requiredEvidenceTerms(jdKws, [...coveredJdKeywords(skillsText(edits), jdKwsPrompt)]))
     // Years claimed per listed skill: its own skill line's "N+ years", else the summary's.
@@ -683,11 +692,14 @@ export async function runTailor(opts: {
   // fits best. Kept only if the measured coverage rose. With no skills section it changes nothing (and says so in the
   // result's missing terms).
   const placeEverything = async (cur: Pass): Promise<Pass> => {
-    const left = jdKws.filter(k => !cur.afterKw.has(k) && !isCertification(k))
+    // Only the post's own skills, written in a sentence about the work (floorTerms): never a Gemini suggestion (it would
+    // be named to the person as "from the job post"), a credential, a clearance, a rank, a place or a recruiter's name.
+    const left = scoreKws.filter(k => floorKws.has(k) && !cur.afterKw.has(k) && !isCertification(k))
     if (!left.length) return cur
     // A soft skill ("problem solving", "communication skills") reads as a strength, not a tool: it goes into the summary
-    // as one short sentence when the summary is a single paragraph, else onto the skills lines with the rest.
-    const oneSummary = zones.summaryIdx !== null && !(zones.summaryOverflowIdx || []).length
+    // as one short sentence when the summary is a single paragraph the person left open to rewriting; a summary they
+    // locked (WhatsApp's default: "summary left as written") is never touched, and the strength goes with the rest.
+    const oneSummary = sec.summary !== false && zones.summaryIdx !== null && !(zones.summaryOverflowIdx || []).length
     const soft = oneSummary ? left.filter(k => SOFT_SKILL.test(k)) : []
     const hard = left.filter(k => !soft.includes(k))
     const summaryBase = (cur.edits.summary || zones.summaryText || "").trim()
@@ -703,7 +715,8 @@ export async function runTailor(opts: {
     if (next.cov <= cur.cov) return cur
     next.via = cur.via
     next.partial = cur.partial
-    next.floor = left.filter(k => next.afterKw.has(k))
+    next.floor = hard.filter(k => next.afterKw.has(k))
+    next.floorSummary = soft.filter(k => next.afterKw.has(k))
     return next
   }
 
@@ -834,6 +847,10 @@ export async function runTailor(opts: {
   const { claimedKw, roleKw, required, provenKw } = evidencePass
   if (skillsOnly) notes.push("No AI writer answered in time: only the skills section was brought up to the job post. Ask again for the full rewrite.")
   if (best.floor?.length) notes.push(`Written onto the skills section from the job post (not shown in the source resume): ${best.floor.join(", ")}`)
+  if (best.floorSummary?.length) notes.push(`Written into the summary as strengths, from the job post: ${best.floorSummary.join(", ")}`)
+  // A run the floor, not the rewrite, carried to the target is never kept as complete or served again from the cache: the
+  // next identical request gets another rewrite (26 Oct 2026 review).
+  const floorCarried = !!floorFrom && floorFrom.cov < TARGET_COVERAGE
   if (!opts.refine && !jdGenerated.length) notes.push("Gemini keyword review returned no additional terms; generation used the directly extracted JD requirements.")
   notes.push("The JD supplies target requirements; the source resume and explicit candidate confirmations supply experience evidence. The target is 98% keyword coverage where supported. Scores measure exported document keyword overlap, not hiring probability.")
   notes.push(`Tailored with ${usedModel} · JD keyword coverage ${coveragePercent(best.cov)}%`)
@@ -854,13 +871,13 @@ export async function runTailor(opts: {
 
   // Scores describe the exported document's measured JD keyword coverage.
   // Never force a high band or an improvement that the document did not achieve.
-  const before = jdKws.length ? coveragePercent(beforeKw.size / jdKws.length) : 0
-  const after = jdKws.length ? coveragePercent(afterKw.size / jdKws.length) : 0
+  const before = coveragePercent(shareOf(beforeKw))
+  const after = coveragePercent(shareOf(afterKw))
 
   // ── Match decomposition + keyword gap (reuses the coverage sets above) ──
-  const kwAdded   = jdKws.filter(k => !beforeKw.has(k) && afterKw.has(k))
-  const kwMissing = jdKws.filter(k => !afterKw.has(k))
-  const pctOf = (n: number) => jdKws.length ? coveragePercent(n / jdKws.length) : 0
+  const kwAdded   = scoreKws.filter(k => !beforeKw.has(k) && afterKw.has(k))
+  const kwMissing = scoreKws.filter(k => !afterKw.has(k))
+  const pctOf = (n: number) => scoreKws.length ? coveragePercent(n / scoreKws.length) : 0
   const keyword_analysis = {
     matched: kwMatched,
     added: kwAdded,
@@ -901,7 +918,7 @@ export async function runTailor(opts: {
   for (const a of edits.added || []) if ((a.text || "").trim()) diff.push({ section: "Experience (new bullet)", before: "", after: a.text.trim() })
   // The change list the person keeps or undoes before download, and the reading it was made from. No model call.
   const review = tailorReview({
-    zones, text, edits, dropped: best.dropped, requirements: jdKws, jd,
+    zones, text, edits, dropped: best.dropped, requirements: scoreKws, jd,
     evidence: candidateStatements.join("\n"), covers: coveredJdKeywords, spanOf: r => roleSpanMonths(r),
   })
 
@@ -923,8 +940,8 @@ export async function runTailor(opts: {
   // and handed an untailored resume (found in review, 2026-10-05).
   // Weighted coverage (Jobscan REA): hard skills count 3x, titles 2x, soft 1x, buzzwords 0.5x.
   // Preserve actual counts; weighting is a separate signal, not proof of recruiter acceptance.
-  const wc = weightedCoverage(best.tailoredText, jdKws)
-  const qualityReport = resumeQuality({ matched: wc.matched.length, total: jdKws.length, missing: wc.missing, weightedCoverage: wc.coverage, partial: skillsOnly || !!best.partial || (splitDraft && (lackingRoles(best.edits).length > 0 || provenShare(evidencePass) < TARGET_COVERAGE || !experienceCoverageComplete(role_alignment, TARGET_COVERAGE))), unchanged: !diff.length })
+  const wc = weightedCoverage(best.tailoredText, scoreKws)
+  const qualityReport = resumeQuality({ matched: wc.matched.length, total: scoreKws.length, missing: wc.missing, weightedCoverage: wc.coverage, partial: skillsOnly || floorCarried || !!best.partial || (splitDraft && (lackingRoles(best.edits).length > 0 || provenShare(evidencePass) < TARGET_COVERAGE || !experienceCoverageComplete(role_alignment, TARGET_COVERAGE))), unchanged: !diff.length })
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
 
@@ -938,6 +955,7 @@ export async function runTailor(opts: {
     ...(best.partial ? { partial: best.partial } : {}),
     ...(diff.length ? {} : { unchanged: true }),
     ...(best.floor?.length ? { placed_from_jd: best.floor.map(k => jdSpelling(k, jd)) } : {}),
+    ...(best.floorSummary?.length ? { placed_in_summary: best.floorSummary.map(k => jdSpelling(k, jd)) } : {}),
     ...(skillsOnly ? { skills_only: true } : {}),
     usage: { calls: usageSink.length, inputTokens: uAgg.input, outputTokens: uAgg.output, cacheReadTokens: uAgg.cacheRead, cacheWriteTokens: uAgg.cacheWrite, estCostUSD, unpricedCalls: priced.unpricedCalls, byModel: priced.byModel },
   }
@@ -948,7 +966,7 @@ export async function runTailor(opts: {
   await blob.put(tailorRunKey(opts.userResumeDir, token), JSON.stringify({
     version: 1, createdAt: new Date().toISOString(), sourceHash, sourcePath: matched.filepath,
     input: { jd: opts.jd, confirmations: immediatePrefs, refine: opts.refine || null },
-    requirements: jdKws, enrichmentSuggestions: jdGenerated, result,
+    requirements: scoreKws, enrichmentSuggestions: jdGenerated, result,
   })).catch(() => { result.notes.push("Run diagnostic persistence failed; generated document storage is separate.") })
 
   // Only a whole draft that changed something is worth serving again: an incomplete or unchanged one should be redone

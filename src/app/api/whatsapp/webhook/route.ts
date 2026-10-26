@@ -701,9 +701,14 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // Every resume made goes to Files: from Files, back beside where it started; from a resume sent here, beside that
   // resume's filed copy. One job, one file (saveTailored).
   const filesDir = files ? files.userDir : filesOf(userId)
-  if (!files && filesDir) {
+  // A resume the floor wrote job-post terms onto is filed as a copy (depth 2): never the start of another job, where those
+  // terms would count as the person's own record (26 Oct 2026 review). One made with no AI writer answering (skills
+  // only) is not filed at all, so the next time the job is sent it is written in full.
+  const floorMade = !!(result.placed_from_jd?.length || result.placed_in_summary?.length)
+  if (result.skills_only) more.push("Not saved in Files: send *redo* once the writers are back for the full rewrite.")
+  if (!files && filesDir && !result.skills_only) {
     const fromRel = session.resumeFiled ? relOf(filesDir, session.resumeFiled) : undefined
-    filed = await saveTailored({ userDir: filesDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company, depth: 1,
+    filed = await saveTailored({ userDir: filesDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company, depth: floorMade ? 2 : 1,
       ...(fromRel && !fromRel.startsWith("..") ? { from: fromRel } : {}),
       asked: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || []), ...(result.keyword_analysis?.missing || [])],
       covers: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || [])] })
@@ -711,15 +716,15 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (filed) more.push(`Saved in your Files: ${filed.email} / ${filed.category}`)
   }
   if (files) {
-    filed = await saveTailored({ userDir: files.userDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company,
-      depth: files.depth === 0 ? 1 : 2, from: files.rel, asked: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || []), ...(result.keyword_analysis?.missing || [])], covers: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || [])] })
+    filed = result.skills_only ? null : await saveTailored({ userDir: files.userDir, bytes: file, jd: session.jd, role: meta.role, company: meta.company,
+      depth: files.depth === 0 && !floorMade ? 1 : 2, from: files.rel, asked: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || []), ...(result.keyword_analysis?.missing || [])], covers: [...(result.keyword_analysis?.matched || []), ...(result.keyword_analysis?.added || [])] })
       .catch(e => { console.error("[whatsapp] not filed", String(e).slice(0, 200)); return null })
     more.push(`Started from ${files.said}.`)
     if (filed) more.push(`Saved in your Files: ${filed.email} / ${filed.category}`)
     more.push(DIFFERENT_RESUME)
   }
   await deliver(from, file, name, captionFor(name, meta, result, undefined, more), { userId, jd: session.jd, meta, changes: [], source: session.resumeName,
-    ...(filed ? { saved: filed.abs, depth: !files || files.depth === 0 ? 1 : 2 } : {}) })
+    ...(filed ? { saved: filed.abs, depth: !floorMade && (!files || files.depth === 0) ? 1 : 2 } : {}) })
   await recordWhatsAppUsage(userId, "resume_tailor", result)
   // Counted once the resume it started is delivered, so a failed run never makes a resume look more used.
   if (files) await markUsed(files.userDir, files.abs).catch(() => {})
@@ -773,9 +778,11 @@ async function fromLibrary(from: string, job: { jd: string; jdId: string }, emai
   const began = Date.now()
   const userDir = path.join(USER_RESUMES_DIR, userId)
   if (!redo) {
-    // Sent again as it is only while it meets the 90% floor; one made below it (22-26 Oct 2026) is made again.
+    // Sent again as it is only while it meets the 90% floor; one made below it (22-26 Oct 2026) is made again, and
+    // not from itself: like a redo, the new run starts from what the person wrote (26 Oct 2026 review).
     const have = await existingForJob(userDir, email, job.jd).catch(() => null)
-    if (have && await madeMeetsFloor(have.abs, job.jd)) return sendSaved(from, have, job.jd, email, userId)
+    if (have && await madeMeetsFloor(have.abs, job.jd, have.file.at)) return sendSaved(from, have, job.jd, email, userId)
+    if (have) redo = true
   }
   // One run of a job at a time for a number: a job description pasted again, or a second "redo", while it is being made
   // would pay for the pick and the rewrite twice. The claim outlives the longest run (the function's 300 s).
@@ -959,12 +966,14 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
 // them. Missing terms do not establish a timeout (PR #79, 26 Oct): what is still not covered is named as a gap.
 function notAdded(result: TailorResult): string[] {
   const out: string[] = []
-  if (result.skills_only) out.push("The AI writers did not answer in time, so only your skills section was brought up to this job. Send *redo* for the full rewrite.")
+  if (result.skills_only) out.push("The AI writers did not answer in time, so this file only adds the job post's keywords; your experience is as you wrote it. Send *redo* for the full rewrite.")
   const placed = result.placed_from_jd || []
-  if (placed.length) out.push(`Added to your skills from the job post: ${placed.slice(0, 8).join(", ")}${placed.length > 8 ? ` and ${placed.length - 8} more` : ""}.`)
+  if (placed.length) out.push(`Added to your skills from the job post: ${placed.slice(0, 8).join(", ")}${placed.length > 8 ? ` and ${placed.length - 8} more` : ""}. Check you can speak to each.`)
+  if (result.placed_in_summary?.length) out.push(`Added to your summary as strengths: ${result.placed_in_summary.join(", ")}.`)
   const missing = (result.quality?.missing || []).filter(m => !isCertification(m))
   if (missing.length) out.push(`Not covered in this file: ${missing.slice(0, 6).join(", ")}. These gaps need review against your actual experience.`)
-  else if (!out.length && result.quality?.status === "needs_review") out.push("This result is incomplete and needs review. Reply to this file to request changes.")
+  // Some parts of the rewrite never came back: said whatever else the file shows.
+  if ((result.partial && !result.skills_only) || (!out.length && result.quality?.status === "needs_review")) out.push("This result is incomplete and needs review. Reply to this file to request changes.")
   return out
 }
 

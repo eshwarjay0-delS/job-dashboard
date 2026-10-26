@@ -91,8 +91,8 @@ test('WhatsApp starts from the person\'s Files, files the result there once, and
   assert.ok(bot.includes('if (cur.jdId === session.jdId) { delete cur.jd; delete cur.jdId }') && bot.includes('if (cur.resumePath === session.resumePath) { delete cur.resumePath; delete cur.resumeName; delete cur.resumeAt }'))
   assert.ok(bot.includes('await deletePath(session.resumePath).catch(() => {})'))
   // Sent again only while it meets the 90% floor (26 Oct 2026); below it the job is made again (src/lib/made-floor.ts).
-  assert.ok(bot.includes('const have = await existingForJob(userDir, email, job.jd).catch(() => null)') && bot.includes('if (have && await madeMeetsFloor(have.abs, job.jd)) return sendSaved(from, have, job.jd, email, userId)'))
-  assert.ok(bot.includes('filed = await saveTailored({ userDir: files.userDir'))
+  assert.ok(bot.includes('const have = await existingForJob(userDir, email, job.jd).catch(() => null)') && bot.includes('if (have && await madeMeetsFloor(have.abs, job.jd, have.file.at)) return sendSaved(from, have, job.jd, email, userId)'))
+  assert.ok(bot.includes('filed = result.skills_only ? null : await saveTailored({ userDir: files.userDir'))
   assert.ok(!bot.includes('resume_documents'), 'the library is Files itself, not a second copy in the database')
   assert.ok(bot.includes('const replyTo = (msg.context as { id?: string } | undefined)?.id'))
   assert.ok(bot.includes('if (replyTo) return refine(from, replyTo, text, userId)'))

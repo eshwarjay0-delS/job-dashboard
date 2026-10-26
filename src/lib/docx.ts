@@ -121,6 +121,10 @@ type Section = "summary" | "skills" | "experience" | "projects" | "other"
 function sectionHead(t: string, p: string): Section | null {
   if (t.length > 45) return null
   if (/<w:numPr\b/.test(p) || BULLET_RE.test(t)) return null // a bullet is never a heading
+  // "Languages: Java, SQL" is a line of a skills section, not the start of a Languages section: a heading with items
+  // after its colon is content. Read as a heading, it ended the skills section and the tailor could place nothing
+  // after it (26 Oct 2026 review).
+  if (/^[^:]{2,40}:\s*\S{2,}/.test(t.trim())) return null
   const low = t.toLowerCase()
   if (matchesHead(low, SUMMARY_HEADS)) return "summary"
   if (matchesHead(low, SKILLS_HEADS)) return "skills"
@@ -496,20 +500,27 @@ function rewriteParaText(p: string, newText: string): string {
   // A line that only grows at its end (a term added to a skills line, a sentence added to the summary) keeps every run
   // as it was and has the new words added to its last run: rewriting it into one run lost the bold of a heading such as
   // "Identity & Access Management:" (26 Oct 2026). Up to two closing characters (a final "." or ";") may move after them.
+  // Compared as written once spaces are evened out (a double space after a full stop must not hide that only the end
+  // changed). The words go into the last run with visible text, and only when no tab or line break follows it: written
+  // into a spacer after a tab they would land after the tab stop or on the next line (26 Oct 2026 review).
+  const origN = prefix + normalizeEditText(orig.slice(prefix.length))
   let shared = 0
-  while (shared < orig.length && shared < full.length && orig[shared] === full[shared]) shared++
-  const tail = orig.slice(shared)
-  if (shared > 0 && tail.length <= 2 && full.length > orig.length) {
+  while (shared < origN.length && shared < full.length && origN[shared] === full[shared]) shared++
+  const tail = origN.slice(shared).trim()
+  if (shared > 0 && tail.length <= 2 && full.length > origN.length) {
     let last = -1
-    for (let k = 0; k < tMatches.length; k++) if (decodeXml(tMatches[k][2]).length) last = k
-    const lastText = last >= 0 ? decodeXml(tMatches[last][2]) : ""
-    if (last >= 0 && lastText.endsWith(tail)) {
-      let at = -1
-      return p.replace(/(<w:t(?:\s[^>]*)?>)([\s\S]*?)(<\/w:t>)/g, (whole, open, _c, close) => {
-        if (++at !== last) return whole
-        const openTag = /xml:space=/.test(open) ? open : open.replace("<w:t", '<w:t xml:space="preserve"')
-        return `${openTag}${encodeXml(lastText.slice(0, lastText.length - tail.length) + full.slice(shared))}${close}`
-      })
+    for (let k = 0; k < tMatches.length; k++) if (decodeXml(tMatches[k][2]).trim().length) last = k
+    if (last >= 0) {
+      const lastText = decodeXml(tMatches[last][2]).replace(/\s+$/, "")
+      const after = p.slice(tMatches[last].index! + tMatches[last][0].length)
+      if (lastText.endsWith(tail) && !/<w:(?:tab|br|cr)\b/.test(after)) {
+        let at = -1
+        return p.replace(/(<w:t(?:\s[^>]*)?>)([\s\S]*?)(<\/w:t>)/g, (whole, open, _c, close) => {
+          if (++at !== last) return whole
+          const openTag = /xml:space=/.test(open) ? open : open.replace("<w:t", '<w:t xml:space="preserve"')
+          return `${openTag}${encodeXml(lastText.slice(0, lastText.length - tail.length) + full.slice(shared))}${close}`
+        })
+      }
     }
   }
 

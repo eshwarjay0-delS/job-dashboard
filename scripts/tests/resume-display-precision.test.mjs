@@ -16,7 +16,8 @@ test('shared result fields and web ring retain fractional precision', () => {
   const tailor = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
   const page = readFileSync(new URL('../../src/app/dashboard/resume/result/page.tsx', import.meta.url), 'utf8')
   assert.match(tailor, /coverage: coveragePercent\(best\.cov\)/)
-  assert.match(tailor, /coveragePercent\(afterKw\.size \/ jdKws\.length\)/)
+  // The share of the post's own skill terms (shareOf, 26 Oct 2026), still kept to one decimal place.
+  assert.match(tailor, /coveragePercent\(shareOf\(afterKw\)\)/)
   assert.doesNotMatch(page, /Math\.round\(coverage\)/)
   assert.match(page, /aria-label=\{`JD match \$\{coverage\} percent`\}/)
 })

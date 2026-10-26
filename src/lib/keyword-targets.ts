@@ -22,6 +22,9 @@ const GENERIC = new Set([
   // sentences, not skills a recruiter searches for.
   "page", "pages", "public", "private", "approval", "approvals", "manager", "managers", "level", "user", "users", "report",
   "reports", "request", "requests", "task", "tasks", "quality", "role", "roles", "close-out", "closeout", "access",
+  "engineering", "foundation", "employer", "benefits",
+  // 26 Oct 2026 (a cloud security post): "long-term" was listed as a missing keyword.
+  "long-term", "short-term", "full-time", "part-time", "contract", "duration", "hybrid", "onsite", "on-site", "remote",
 ])
 
 // The first word of a task sentence, not of a skill ("remove shadowed rules", "deploy and operate").
@@ -34,7 +37,7 @@ const TASK_VERBS = new Set([
 ])
 
 /** A soft skill: a strength the summary states, not a tool for a skills line. */
-export const SOFT_SKILL = /\b(?:problem[- ]solving|communication|adaptab\w*|teamwork|team player|collaborat\w*|leadership|attention to detail|critical thinking|time management|interpersonal|self[- ]starter|organi[sz]ational|analytical skills|customer service)\b/i
+export const SOFT_SKILL = /\b(?:problem[- ]solving|communication|adaptab\w*|teamwork|team player|collaborat\w*|(?<!(?:technical|people|executive|team) )leadership|attention to detail|critical thinking|time management|interpersonal|self[- ]starter|self[- ]motivated|organi[sz]ational|analytical|cross[- ]functional|detail[- ]oriented|customer service)\b/i
 
 // A hyphenated modifier ("row-level", "role-based", "real-time"): a target only when no longer target holds it.
 const MODIFIER = /^[a-z0-9]+(?:-[a-z0-9]+)*-(?:level|based|time|side|wide|grained|driven|facing|end|out)$/
@@ -46,8 +49,57 @@ const NON_SKILL_TAIL = /\b(teams?|environments?|issues|records|groups of people|
 // Use a token-end assertion, and recognize Salesforce credential names without a Certified prefix.
 const CERT = /\b(certified|certification|certificate|cissp|ccsp|cism|cisa|crisc|cgeit|oscp|osce|oswe|ceh|gsec|gcih|gcia|gcfa|gpen|gwapt|giac|security\+|network\+|a\+|cysa\+|casp\+|pentest\+|comptia|isc2|\(isc\)2|isc\u00b2|ccna|ccnp|ccie|pcnse|pcnsa|pccse|nse ?[1-8]|jncia|jncis|jncip|cka|ckad|cks|pmp|capm|csm|cspo|safe agilist|cipp(?:\/[a-z]+)?|cipm|cdpse|ccsk|az-\d{3}|sc-\d{3}|ai-\d{3}|dp-\d{3}|ms-\d{3}|aws certified|cpa|cfa|frm|salesforce platform developer (?:ii|i)|salesforce cpq specialist)(?![a-z0-9_+])/i
 
+// More credentials, and the pieces the extractor leaves of them ("cysa" from "CySA+", "isc" from "(ISC)2", "azure az"
+// from "Azure AZ-500", "solutions architect associate"): found by the 26 Oct 2026 review, which watched the floor write them.
+const CERT_MORE = /(?:\b(?:sscp|csslp|cgrc|rhcsa|rhce|mcsa|mcse|itil|prince2|six sigma|(?:green|black|yellow) belt|cysa|casp|scrummaster|scrum master certified|isc)\b|\(isc\)\s*2|\bazure az\b|\b(?:architect|engineer|developer|administrator|practitioner|analyst)\s+(?:associate|professional|specialty|expert)\b|\b(?:aws|azure|google|microsoft|cisco|oracle|salesforce|comptia|red hat)\b.*\b(?:associate|professional|specialty|expert|foundational)\b)/i
+
 export function isCertification(term: string): boolean {
-  return CERT.test(term)
+  return CERT.test(term) || CERT_MORE.test(term)
+}
+
+// What a job post asks for that is not a skill to write onto a resume: a clearance, citizenship or tax status, a degree, a
+// rank or title, a benefit or the employer's own words, a place, a year or a bare number. Owner rules: certifications are
+// never added, seniority never changed; the 26 Oct 2026 review watched the floor write "Top Secret", "CISO", "Dental",
+// "FY2027" and "Reston" onto a skills line. These are neither written nor counted in the match.
+const CLEARANCE_TERM = /^(?:ts|sci|ts\/sci|ts sci|top secret|secret|poly|w-?2|c2c|1099|iat(?: level)?(?: [iv]+| \d)?|iam level(?: [iv]+| \d)?|8570|8140)$/i
+const CLEARANCE_WORD = /\b(?:clearance|polygraph|public trust|citizen\w*|green card|visa|sponsorship)\b/i
+const DEGREE_TERM = /^(?:bs|ba|bsc|ms|ma|msc|mba|phd|ph\.d|bachelor'?s?(?: degree)?|master'?s?(?: degree)?|degree|diploma|associate'?s degree|ged)$|\bdegree\b/i
+const RANK = new Set(["senior", "sr", "junior", "jr", "lead", "principal", "staff", "chief", "head", "vp", "vice", "president", "director", "manager", "officer", "ciso", "cio", "cto", "cso", "coo", "ceo", "supervisor", "intern", "executive"])
+const RANK_COMPANY = new Set([...RANK, "security", "information", "engineering", "engineer", "analyst", "architect", "technology", "it", "of", "the", "and", "cyber", "cybersecurity", "level", "i", "ii", "iii", "iv", "global", "technical"])
+const BENEFIT_OR_EMPLOYER = /\b(?:medical|dental|vision|401\s*\(?k\)?|pto|paid time off|holidays?|wellness|tuition|equal opportunity|affirmative action|talent acquisition|fortune \d+|inc|llc|ltd|corp|corporation|staffing)\b/i
+const US_STATE_WORDS = new Set(["alabama", "alaska", "arizona", "arkansas", "california", "colorado", "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho", "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana", "maine", "maryland", "massachusetts", "michigan", "minnesota", "mississippi", "missouri", "montana", "nebraska", "nevada", "new hampshire", "new jersey", "new mexico", "new york", "north carolina", "north dakota", "ohio", "oklahoma", "oregon", "pennsylvania", "rhode island", "south carolina", "south dakota", "tennessee", "texas", "utah", "vermont", "virginia", "washington", "west virginia", "wisconsin", "wyoming", "district of columbia", "united states", "usa", "us", "remote", "hybrid", "onsite", "on-site"])
+
+/** A qualification or a word of the post that is not a skill: never written onto a resume, never counted in the match. */
+export function isQualificationOrJunk(term: string): boolean {
+  const t = String(term || "").toLowerCase().trim()
+  if (!t) return true
+  if (isCertification(t) || CLEARANCE_TERM.test(t) || CLEARANCE_WORD.test(t) || DEGREE_TERM.test(t) || BENEFIT_OR_EMPLOYER.test(t)) return true
+  if (/^(?:fy\s?)?\d/.test(t) || /^v\d+(?:\.\d+)*$/.test(t)) return true
+  if (US_STATE_WORDS.has(t)) return true
+  const w = t.split(/[\s/-]+/).filter(Boolean)
+  return w.length > 0 && w.every(x => RANK_COMPANY.has(x)) && w.some(x => RANK.has(x))
+}
+
+// Lines and sentences of a post that are not about the work: benefits, the equal-opportunity line, the company's story,
+// how to apply or whom to call, pay and place. A recruiter's name lives here ("reach out to Jane Smith on our Talent
+// Acquisition team", 26 Oct 2026 review).
+const NOT_THE_WORK = /\b(?:benefits?|medical|dental|vision|401\s*\(?k|pto|paid time|equal opportunity|eeo|affirmative action|about (?:us|the company|our)|who we are|our client is|we are an? |to apply|apply (?:now|via|at|online|today)|contact|reach out|recruiter|talent acquisition|regards|thank you|salary|compensation|pay rate|pay range|hourly rate|location\s*:|address|reasonable accommodation|e-?verify|background check|drug (?:test|screen))\b/i
+const CREDENTIAL_CLAUSE = /\b(?:certif\w*|credential\w*|licen[cs]\w*|designation)\b/i
+
+/**
+ * Of `terms`, the ones the floor may write onto a resume: skills the post itself names in a sentence about the work, not
+ * only in a credential clause ("SAFe Agilist certification preferred"), and not a place ("Reston, VA").
+ */
+export function floorTerms(jd: string, terms: string[]): string[] {
+  const clauses = String(jd || "").split(/\r?\n|(?<=[.;!?])\s+/).map(c => c.trim()).filter(Boolean)
+  const work = clauses.filter(c => !NOT_THE_WORK.test(c))
+  // The term in any letter case, followed by a state written as two capitals: "Reston, VA" is a place.
+  const anyCase = (s: string) => escapeRe(s).replace(/[a-z]/gi, ch => `[${ch.toLowerCase()}${ch.toUpperCase()}]`)
+  return terms.filter(t => {
+    if (isQualificationOrJunk(t)) return false
+    if (new RegExp(`(?<![A-Za-z0-9])${anyCase(t)},\\s*[A-Z]{2}\\b`).test(jd)) return false
+    return work.some(c => contains(c, t) && !CREDENTIAL_CLAUSE.test(c))
+  })
 }
 
 const words = (s: string) => s.toLowerCase().split(/[^a-z0-9+#.]+/).filter(Boolean)
@@ -71,18 +123,26 @@ export function skillLike(term: string): boolean {
  * skill-like suggestions, together. Generic single words go, and so does a single word that only appears inside a
  * longer target ("palo" beside "palo alto", "micro" beside "micro-segmentation"): the longer term is what is checked.
  */
-export function targetKeywords(extracted: string[], generated: string[]): string[] {
+export function targetKeywords(extracted: string[], generated: string[], jd?: string): string[] {
   const all = [...new Set([
     ...extracted.map(k => k.toLowerCase().trim()),
     ...generated.map(k => k.toLowerCase().trim()).filter(skillLike),
   ])].filter(k => k && !(k.split(/\s+/).length === 1 && GENERIC.has(k)) && !isCertification(k))
   const multi = all.filter(k => /[\s\-/]/.test(k))
+  // With the post at hand, a word it also uses on its own stays a target ("Splunk" beside "Splunk Enterprise Security":
+  // a resume that shows Splunk shows what the post asked; 26 Oct 2026 review).
+  const alone = (k: string) => {
+    if (!jd) return false
+    let rest = jd
+    for (const m of multi) if (m !== k && words(m).includes(k)) rest = rest.replace(new RegExp(`(?<![A-Za-z0-9])${escapeRe(m)}(?![A-Za-z0-9])`, "gi"), " ")
+    return contains(rest, k)
+  }
   return all.filter(k => {
     // A hyphenated modifier that is only a piece of a longer target ("row-level" beside "row-level security", 26 Oct
     // 2026) is not a target of its own. A product name inside a longer phrase ("palo alto" in "palo alto firewalls") is.
     if (MODIFIER.test(k)) return !multi.some(m => m !== k && m.length > k.length && contains(m, k))
     if (/[\s\-/]/.test(k)) return true
-    return !multi.some(m => m !== k && words(m).includes(k))
+    return !multi.some(m => m !== k && words(m).includes(k)) || alone(k)
   })
 }
 
@@ -129,10 +189,12 @@ function separatorOf(line: string): string {
 const FAMILIES: { line: RegExp; term: RegExp }[] = [
   { line: /network|firewall|infrastructure|perimeter|routing|operations/, term: /\b(?:cisco|juniper|arista|palo alto|panorama|fortinet|fortigate|checkpoint|check point|f5|bgp|ospf|eigrp|sd-wan|routing|switching|firewalls?|vpn|ipsec|zscaler|ztna|sase|ise|illumio|guardicore|segmentation|zero trust|load balanc\w*|dns|dhcp|tcp\/ip|wan|lan|wi-?fi|nac|802\.1x|network\w*)\b/i },
   { line: /identity|access|iam|pam|directory/, term: /\b(?:active directory|azure ad|entra|ldap|sso|single sign-on|saml|oauth|oidc|okta|ping|sailpoint|saviynt|cyberark|beyondtrust|provisioning|deprovisioning|rbac|role-based|row-level|permission lists?|user profiles?|access\w*|identity|privileged|mfa|kerberos|peoplesoft security)\b/i },
-  { line: /cloud|aws|azure|gcp|devops|container/, term: /\b(?:aws|azure|gcp|google cloud|cloud\w*|kubernetes|docker|terraform|ansible|eks|aks|gke|lambda|iam roles|cspm|cnapp)\b/i },
+  { line: /cloud|aws|azure|gcp|container/, term: /\b(?:aws|azure|gcp|google cloud|cloud\w*|kubernetes|docker|terraform|ansible|eks|aks|gke|lambda|iam roles|cspm|cnapp|ec2|s3|vpc|privatelink|transit gateway|macie|guardduty|cloudtrail|security hub|inspector|glue|emr|cloudformation|cloudwatch|route 53|terragrunt)\b/i },
+  { line: /devops|ci\/cd|automation|pipeline|sre|tooling/, term: /\b(?:jenkins|gitlab|github actions|helm|prometheus|grafana|openshift|argo\w*|ci\/cd|terraform|ansible|docker|kubernetes)\b/i },
   { line: /governance|compliance|risk|audit|grc|framework|regulat/, term: /\b(?:sox|nist|iso 27001|iso|audit\w*|compliance|risk|change management|policy|policies|hipaa|pci|gdpr|fedramp|cmmc|controls?|soc 2|itgc|segregation of duties|sod)\b/i },
-  { line: /operations|siem|soc|monitoring|detection|incident|threat|endpoint/, term: /\b(?:splunk|sentinel|qradar|siem|soar|soc|incident\w*|threat\w*|edr|xdr|crowdstrike|defender|vulnerab\w*|forensics|malware|detection)\b/i },
-  { line: /data|database|sql|scripting|programming|languages|development|query/, term: /\b(?:sql|oracle|database|db2|postgres\w*|mysql|python|powershell|bash|java|javascript|scripting|query\w*|peopletools|data mover|application designer|etl)\b/i },
+  { line: /operations|siem|soc|monitoring|detection|incident|threat|endpoint/, term: /\b(?:splunk|sentinel|qradar|siem|soar|soc|incident\w*|threat\w*|edr|xdr|crowdstrike|defender|vulnerab\w*|forensics|malware|detection|kql|spl|wiz)\b/i },
+  { line: /database|\bdbs?\b|sql|data store|data\b|query/, term: /\b(?:sql|oracle|database|db2|postgres\w*|mysql|redis|mongodb|couchbase|snowflake|dynamodb|sql server|query\w*|data mover|etl)\b/i },
+  { line: /language|programming|scripting|development|coding/, term: /\b(?:python|powershell|bash|java|javascript|typescript|go|golang|c#|ruby|scala|kotlin|scripting|peopletools|application designer)\b/i },
   { line: /application|erp|enterprise|platform|software|tools|technolog/, term: /\b(?:peoplesoft|hcm|financials|sap|workday|servicenow|salesforce|oracle ebs|ebs|process scheduler|scheduler|component interfaces?|jira|confluence)\b/i },
 ]
 
@@ -145,11 +207,23 @@ const FAMILIES: { line: RegExp; term: RegExp }[] = [
 export function placeInSkills(lines: { idx: number; text: string }[], terms: string[], jd: string): { idx: number; text: string }[] {
   if (!lines.length || !terms.length) return []
   const cur = lines.map(l => ({ idx: l.idx, text: l.text }))
-  const listy = cur.filter(l => /[,|•;]/.test(l.text) || /^[^:\n]{2,70}:/.test(l.text))
-  const pool = listy.length ? listy : cur
+  // Never an achievement written as a bullet or a sentence: a resume whose summary has no heading hands its highlight
+  // bullets over as "skills" lines (docx.ts), and a term appended to one reads as part of the record (26 Oct 2026 review).
+  const prose = (t: string) => /^\s*[•\-–‣▪*·◦●○■]/.test(t) || (t.split(/\s+/).length > 14 && (t.match(/,/g) || []).length < 2)
+  const listy = cur.filter(l => !prose(l.text) && (/[,|•;]/.test(l.text) || /^[^:\n]{2,70}:/.test(l.text)))
+  const pool = listy.length ? listy : cur.filter(l => !prose(l.text))
+  if (!pool.length) return []
   const items = (t: string) => (t.match(/[,|•;]/g) || []).length
   const changed = new Set<number>()
   const given = new Map<number, number>(), home = new Map<number, number>()
+  // Lines are judged by what they said before this placement: a term placed a moment ago ("PeopleSoft" on the Languages
+  // line) must not pull the next one ("PeopleSoft Security") after it.
+  const original = new Map(cur.map(l => [l.idx, l.text]))
+  const headOf = (t: string) => (t.match(/^([^:\n]{2,70}):/)?.[1] || t).toLowerCase()
+  // A kind of skill no line is about goes, all together, to a line for tools or technologies when there is one, else to
+  // the longest list.
+  const catchAll = pool.find(l => /tools|technolog|platform|software|other|additional|misc/.test(headOf(original.get(l.idx) || ""))) ||
+    [...pool].sort((a, b) => items(original.get(b.idx) || "") - items(original.get(a.idx) || ""))[0]
   for (const term of terms) {
     if (cur.some(l => contains(l.text, term))) continue
     const shown = jdSpelling(term, jd)
@@ -157,10 +231,11 @@ export function placeInSkills(lines: { idx: number; text: string }[], terms: str
     // because that line's heading says "Security".
     const tw = words(term).filter(w => w.length >= 3 && !GENERIC.has(w))
     const fam = FAMILIES.findIndex(f => f.term.test(term))
+    if (fam >= 0 && !home.has(fam) && !pool.some(l => FAMILIES[fam].line.test(headOf(original.get(l.idx) || "")))) home.set(fam, catchAll.idx)
     let best = pool[0], bestScore = -Infinity
     for (const l of pool) {
-      const lw = new Set(words(l.text))
-      const head = (l.text.match(/^([^:\n]{2,70}):/)?.[1] || l.text).toLowerCase()
+      const lw = new Set(words(original.get(l.idx) || l.text))
+      const head = headOf(original.get(l.idx) || l.text)
       const kin = FAMILIES.some(f => f.line.test(head) && f.term.test(term)) ? 1 : 0
       // Shared words first, then the kind of skill the line is about, then the line its kind already went to (so a
       // resume with no network line still keeps Cisco, F5 and BGP together), then the line given least so far: a term

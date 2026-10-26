@@ -34,7 +34,9 @@ export const RESUME = [
   'TECHNICAL SKILLS',
   'Identity & Access Management: Okta, SailPoint IdentityIQ, Azure AD, RBAC, SSO, MFA, access reviews',
   'Security Operations: Splunk, Microsoft Sentinel, CrowdStrike, incident response, vulnerability management',
-  'Cloud & Scripting: AWS, Azure, Python, PowerShell, SQL',
+  // A "Languages:" line must stay a skills line, not start a section (26 Oct 2026 review).
+  'Languages: Python, PowerShell, SQL',
+  'Cloud & Scripting: AWS, Azure, Terraform',
   'Governance & Compliance: NIST 800-53, SOX controls, SOC 2, audit evidence',
   'PROFESSIONAL EXPERIENCE',
   'Cyber Security Analyst, Acme Bank, Dallas, TX | Jan 2022 – Present',
@@ -57,6 +59,25 @@ export const RESUME = [
   'EDUCATION',
   'B.S. Computer Science, University of Texas at Dallas',
 ]
+
+// Posts the 26 Oct 2026 review used to catch the first floor writing what is not a skill: a clearance, a rank, a year
+// and a place; benefits, the equal-opportunity line and a recruiter's name; credentials in every spelling.
+export const JUNK_JOBS = {
+  clearance: `Senior Security Engineer (Level III)
+Location: Reston, VA
+We need 10+ years of experience and an active Top Secret clearance; TS/SCI preferred.
+You will brief the CISO and the VP of Engineering on the FY2027 roadmap.
+Responsibilities:
+- Run threat modeling and vulnerability management for cloud workloads with Splunk and CrowdStrike.
+- Automate detections in Python.`,
+  benefits: `Cloud Security Engineer
+Responsibilities:
+- Harden AWS accounts with Wiz, GuardDuty and Security Hub.
+- Build detections in KQL and maintain Terragrunt modules.
+Certifications: CySA+, Certified ScrumMaster, SAFe Agilist certification, AWS Solutions Architect Associate, Azure AZ-500 or (ISC)2 CISSP preferred.
+Benefits: Medical, Dental, Vision and 401(k). Health Partners is an Equal Opportunity Employer.
+To apply, reach out to Jane Smith on our Talent Acquisition team.`,
+}
 
 export const JOBS = {
   peoplesoft: `Job Title: Senior PeopleSoft Security Analyst
@@ -93,22 +114,29 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const { runTailor } = await import(src('lib/tailor.ts'))
   const { extractText } = await import(src('lib/docx.ts'))
   const { extractJdKeywords, coveredJdKeywords } = await import(src('lib/keywords.ts'))
-  const { targetKeywords } = await import(src('lib/keyword-targets.ts'))
+  const { targetKeywords, floorTerms } = await import(src('lib/keyword-targets.ts'))
   const out = {}
-  for (const [name, jd] of Object.entries(JOBS)) {
-    const r = await runTailor({ jd, keys: {}, userResumeDir: userDir, givenPath: file, mode: 'full', maxMs: 15000, noCache: true, sections: { summary: false, skills: true, experience: true } })
+  const runs = [
+    ...Object.entries(JOBS).map(([name, jd]) => ({ name, jd, summary: false })),
+    ...Object.entries(JUNK_JOBS).map(([name, jd]) => ({ name, jd, summary: false })),
+    // The person left the summary open to rewriting: strengths may go into it.
+    { name: 'peoplesoftOpenSummary', jd: JOBS.peoplesoft, summary: true },
+  ]
+  for (const { name, jd, summary } of runs) {
+    const r = await runTailor({ jd, keys: {}, userResumeDir: userDir, givenPath: file, mode: 'full', maxMs: 15000, noCache: true, sections: { summary, skills: true, experience: true } })
     const bytes = readFileSync(path.join('data', 'tailored', `${r.token}.docx`))
     const text = await extractText(bytes)
     const xml = await (await JSZip.loadAsync(bytes)).file('word/document.xml').async('string')
     // Every skills heading is still its own bold run after the floor added terms to its line.
     const boldHeads = [...xml.matchAll(/<w:r><w:rPr><w:b\/><\/w:rPr><w:t[^>]*>([^<]*)<\/w:t><\/w:r>/g)].map(m => m[1].replace(/&amp;/g, '&'))
-    const targets = targetKeywords(extractJdKeywords(jd), [])
+    // The set the tailor scores and the floor fills: the post's own skill terms (made-floor.ts measures the same).
+    const targets = floorTerms(jd, targetKeywords(extractJdKeywords(jd), [], jd))
     const shown = coveredJdKeywords(text, targets)
     out[name] = {
-      coverage: r.coverage, status: r.quality?.status, skillsOnly: !!r.skills_only, placed: r.placed_from_jd || [],
+      coverage: r.coverage, status: r.quality?.status, skillsOnly: !!r.skills_only, placed: r.placed_from_jd || [], placedSummary: r.placed_in_summary || [], text,
       targets, shown: [...shown], measured: shown.size / targets.length,
       summary: text.split('\n').find(l => l.startsWith('Cyber Security Analyst with')) || '',
-      skills: text.split('\n').filter(l => /^(Identity|Security Operations|Cloud|Governance)/.test(l)),
+      skills: text.split('\n').filter(l => /^(Identity|Security Operations|Languages|Cloud|Governance)/.test(l)),
       email: (text.match(/[\w.]+@[\w.]+/) || [''])[0],
       bullets: text.split('\n').filter(l => l.startsWith('•')),
       boldHeads,

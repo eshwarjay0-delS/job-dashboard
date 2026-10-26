@@ -349,7 +349,9 @@ export function extractJdKeywords(jd: string): string[] {
   // the pair forms a known term with its first word ("zero trust"), the three are one term ("zero trust architecture",
   // not "trust architecture").
   for (const phrase of jd.split(/[.,;:!?()\[\]\n•]+/)) {
-    const w = phrase.toLowerCase().split(/\s+/).filter(Boolean)
+    // A slash joins two words, it does not make one ("IAM/identity governance" holds "identity governance"); quotes and
+    // stray punctuation around a word are not part of it.
+    const w = phrase.toLowerCase().split(/[\s/]+/).map(t => t.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "")).filter(Boolean)
     for (let i = 0; i + 1 < w.length; i++) {
       const a = w[i], b = w[i + 1]
       if (!/^[a-z][a-z-]{2,}$/.test(a) || !/^[a-z][a-z-]+$/.test(b) || !SUFFIX.test(b)) continue
@@ -373,11 +375,16 @@ export function extractJdKeywords(jd: string): string[] {
   for (const m of jd.matchAll(/(?<=[^\s.!?;:•\-–—\n])[ \t]+([A-Z][a-zA-Z0-9]{1,15}(?:[ \t]+[A-Z][a-zA-Z0-9]{1,15}){0,3})\b/g)) {
     // A line written all in capitalised words is a title ("Senior Enterprise Network Zero Trust Security Engineer"), not a
     // sentence: its words are not product names.
+    // Only a short line with no list in it is a title: "Tools: Wiz, Trivy, Vault" and "Must Have Skills: ..." are lists of
+    // products, and their names are kept (26 Oct 2026 review).
     const start = jd.lastIndexOf("\n", m.index!) + 1, end = jd.indexOf("\n", m.index!)
-    const line = jd.slice(start, end < 0 ? undefined : end).trim().split(/\s+/).filter(t => /^[A-Za-z]{2,}/.test(t))
-    if (line.length >= 3 && line.every(t => /^[A-Z]/.test(t))) continue
+    const lineText = jd.slice(start, end < 0 ? undefined : end).trim()
+    const line = lineText.split(/\s+/).filter(t => /^[A-Za-z]{2,}/.test(t))
+    if (line.length >= 3 && line.length <= 10 && !/[,:/|(]/.test(lineText) && line.every(t => /^[A-Z]/.test(t))) continue
     const run = m[1].split(/[ \t]+/)
-    while (run.length > 1 && titleStopped(run[0])) run.shift()
+    // Only a word of the sentence ("Our", "The") comes off the front: "Security Hub", "Service Control Policies" and
+    // "Great Expectations" are names whole, and were cut to "hub", "control policies" and "expectations".
+    while (run.length > 1 && (WORD_STOP.has(run[0].toLowerCase()) || /^(?:senior|sr|junior|jr|lead|principal|staff|chief|head)$/i.test(run[0]))) run.shift()
     while (run.length > 1 && ROLE_WORD.test(run[run.length - 1])) run.pop()
     if (run.length > 1 && run.some(t => !titleStopped(t))) { out.add(run.join(" ").toLowerCase()); continue }
     const raw = run[0]
