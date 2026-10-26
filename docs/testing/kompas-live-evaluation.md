@@ -77,3 +77,5 @@ Runner integration on 26 October: write an atomic round manifest only after all 
 Validation follow-up 26 October: TypeScript passes; full regression invocation has not returned a completion summary, so no full-suite pass is claimed. Eight focused checks previously passed. Publication remains pending completed regression evidence or diagnosis of the stalled run.
 
 Full regression completed: 1020/1020 pass, zero failures, duration 58.8 seconds; TypeScript passes. Supersedes prior pending completion status. Publication prepared on 26 October 2026; live comparisons remain zero.
+
+PR #78 preview passed and merged on 26 October 2026 as 557212dca659c6d5fe65a566052eab518892f19c. Full regression 1020/1020 and TypeScript passed. Production rollout pending confirmation; manifests certify capture coverage only, not answer quality. Zero live comparison rounds.
