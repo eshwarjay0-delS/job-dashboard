@@ -951,13 +951,12 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
   else await deletePath(vfile)
 }
 
-// What the resume does not carry, said plainly. Since 19 Oct 2026 every job-post keyword is written in and certifications
-// are ignored ("Ignore certs always"), so anything left out means the run was cut short.
+// Missing terms do not establish a timeout or permission to invent experience.
 function notAdded(result: TailorResult): string[] {
   const missing = (result.quality?.missing || []).filter(m => !isCertification(m))
-  if (missing.length) return [`This run was cut short before it could add: ${missing.slice(0, 6).join(", ")}. Reply to this file to ask for them.`]
+  if (missing.length) return [`Not covered in this file: ${missing.slice(0, 6).join(", ")}. These gaps need review against your actual experience.`]
   return result.quality?.status === "needs_review"
-    ? ["This run is incomplete: some sections did not finish rewriting. Reply to this file to ask for another pass."] : []
+    ? ["This result is incomplete and needs review. Reply to this file to request changes."] : []
 }
 
 function captionFor(name: string, meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }, more: string[] = []): string {
