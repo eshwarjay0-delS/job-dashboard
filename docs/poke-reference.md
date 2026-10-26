@@ -65,3 +65,5 @@ The existing client hook has a two-minute refresh pulse. A refresh timer alone i
 ## Local eligibility implementation, 26 October
 
 Local follow-up eligibility helper implemented on 26 October: exact account/thread scope, stop on inbound reply, invalid/future evidence rejection, disabled/ignored checks and completed-occurrence suppression. Four eligibility tests and 21 focused checks pass. Full regression: 1050/1050 pass; TypeScript passes on 26 October 2026 after rebasing onto 66c8fd3. Pure review logic only: no scheduler, send permission, atomic claim or route integration. Next integrate with verified account-scoped observations and atomic occurrence claims before execution.
+
+ PR #81 preview passed and merged on 26 October 2026 as 4829bb27e90a4ea9f0c17b85a7bbfaffe670bca3. Regression 1050/1050 and TypeScript passed. Production confirmation remains pending; no route integration, scheduler, sending or atomic claim is enabled.
