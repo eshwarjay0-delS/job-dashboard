@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { callLLM, resolveKeys } from "@/lib/llm"
+import { parsePrepPack } from "@/lib/kompasPrepPack"
 import { checkRateLimit } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
@@ -57,8 +58,9 @@ Rules: 10-14 questions covering intro (tier 0), experience/STAR (tier 1), design
       user: `${facts}\n\nBuild the prep pack.`,
       maxTokens: 4000,
     })
-    const pack = JSON.parse(text) as Record<string, unknown>
-    if (!Array.isArray(pack.questions)) throw new Error("bad pack")
+    const read = parsePrepPack(text)
+    if (!read.ok) throw new Error(read.reason)
+    const pack = read.pack
     const questions = (pack.questions as unknown[]).slice(0, 20).map((q) => {
       const o = (q || {}) as Record<string, unknown>
       return {
@@ -80,7 +82,9 @@ Rules: 10-14 questions covering intro (tier 0), experience/STAR (tier 1), design
       projects,
       questions,
     }, { headers: NO_STORE })
-  } catch {
+  } catch (e) {
+    // The reason goes to the log (no resume text): a cut-off reply and a refused provider look the same to the page.
+    console.warn("[kompas:prep] failed:", String((e as Error)?.message || e).slice(0, 200))
     return NextResponse.json({ error: "Prep failed. The page retries automatically." }, { status: 502, headers: NO_STORE })
   }
 }

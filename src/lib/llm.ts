@@ -408,6 +408,10 @@ async function callOpenRouter(key: string, model: string, o: CallOpts, msgs: Cha
       // Measured 2026-10-05 on nvidia/nemotron-3-super-120b-a12b:free: with reasoning on, a two-bullet rewrite spent 228 of its
       // 312 output tokens reasoning and took 6.5 s; with it off, 76 tokens and 0.6 s, the same JSON.
       ...(/nemotron/i.test(model) ? { reasoning: { enabled: false } } : {}),
+      // gpt-oss reasons before it answers and the reasoning is paid from the same ceiling as the answer, as on Groq below.
+      // Measured 26 Oct 2026 on the Kompas prep pack: every reply that answered stopped at exactly 2,048 tokens, the JSON
+      // cut in half, and the session went without its identity and projects (prep failed 170 of 257 calls that month).
+      ...(/gpt-oss/i.test(model) ? { reasoning: { effort: "low" } } : {}),
       messages: [
         { role: "system", content: o.cacheContext ? `${o.system}\n\n${o.cacheContext}` : o.system },
         ...msgs.map(m => ({ role: m.role, content: m.content })),

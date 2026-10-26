@@ -144,6 +144,23 @@ test('a call that names its provider asks only that one, and that is where an ex
   assert.equal(calls[1].body.model, 'openai/gpt-oss-120b', 'an automatic call keeps each provider\'s own model')
 })
 
+// ── OpenRouter: the reasoning is paid from the 2,048 ceiling ─────────────────
+test('on OpenRouter gpt-oss is told to reason little, nemotron not at all, and other models are not asked', async () => {
+  fresh({ OPENROUTER_MODEL_HEAVY: 'openai/gpt-oss-120b' })
+  script = () => chat('{}')
+  await ask({ keys: { openrouter: 'k' }, pref: 'openrouter' })
+  assert.deepEqual(calls[0].body.reasoning, { effort: 'low' }, 'the Kompas prep pack was cut at 2,048 tokens by default reasoning')
+  assert.equal(calls[0].body.max_tokens, 2048, 'the ceiling itself is unchanged')
+  fresh({ OPENROUTER_MODEL_HEAVY: 'nvidia/nemotron-3-super-120b-a12b:free' })
+  script = () => chat('{}')
+  await ask({ keys: { openrouter: 'k' }, pref: 'openrouter' })
+  assert.deepEqual(calls[0].body.reasoning, { enabled: false })
+  fresh({ OPENROUTER_MODEL_HEAVY: 'anthropic/claude-3.5-haiku' })
+  script = () => chat('{}')
+  await ask({ keys: { openrouter: 'k' }, pref: 'openrouter' })
+  assert.ok(!('reasoning' in calls[0].body))
+})
+
 // ── Groq: the reply ceiling and the reasoning ────────────────────────────────
 test('on Groq the reply ceiling is what the per-minute allowance has left after the prompt, and gpt-oss is told to reason little', async () => {
   fresh()
