@@ -31,3 +31,9 @@ Keep source requests and approval state distinct from assumptions. Do not collec
 The 17:28 Chicago WhatsApp resume run was held after repair. The screenshot is available, but this agent has not inspected its complete JD, original Word file, generated artifact or execution trace. Obtain that exact evidence through authorized storage or user-provided inputs. Do not declare the 98% output goal achieved from the 84 passing regression tests.
 
 Other independently trackable work includes Poke-inspired Gmail/mobile updates, crawler schema access, contract search acceptance, resume library reconciliation and Kompas review/voice verification.
+
+## Reconciled validation, 26 October
+
+26 October independent broader validation: isolated checkout e789b19 completed 1045/1045 regression tests with zero failures (58.7 seconds), and TypeScript passed. This supersedes the earlier reported non-green suite for this checked revision only. No code fix was needed. Offline checks do not establish live resume quality, WhatsApp delivery or native Windows acceptance.
+
+Historical held-resume reports above remain incident evidence. The later owner-approved 90 percent fallback is recorded in docs/research/resume-confirmed-keyword-boundary.md; exact-run acceptance remains open.
