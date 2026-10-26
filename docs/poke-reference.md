@@ -57,3 +57,7 @@ The existing client hook has a two-minute refresh pulse. A refresh timer alone i
 7. https://poke.com/docs/api
 8. https://poke.com/docs/usage-and-resets
 9. https://developers.google.com/workspace/gmail/api/guides/push
+
+## Execution audit, 26 October
+
+26 October execution audit: automation-plans persists mode review and stopOnReply true, but that flag is saved intent, not a running response detector or twice-weekly scheduler. followup-engine explicitly drafts only. Ten reply-pattern guardrail tests pass offline; no real sends or schedules enabled. Next implementation must add account-scoped due/stop evaluation and idempotency before any executor; separate live consent acceptance remains required.
