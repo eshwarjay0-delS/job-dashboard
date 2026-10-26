@@ -61,3 +61,7 @@ The existing client hook has a two-minute refresh pulse. A refresh timer alone i
 ## Execution audit, 26 October
 
 26 October execution audit: automation-plans persists mode review and stopOnReply true, but that flag is saved intent, not a running response detector or twice-weekly scheduler. followup-engine explicitly drafts only. Ten reply-pattern guardrail tests pass offline; no real sends or schedules enabled. Next implementation must add account-scoped due/stop evaluation and idempotency before any executor; separate live consent acceptance remains required.
+
+## Local eligibility implementation, 26 October
+
+Local follow-up eligibility helper implemented on 26 October: exact account/thread scope, stop on inbound reply, invalid/future evidence rejection, disabled/ignored checks and completed-occurrence suppression. Four eligibility tests and 21 focused checks pass. Full regression: 1050/1050 pass; TypeScript passes on 26 October 2026 after rebasing onto 66c8fd3. Pure review logic only: no scheduler, send permission, atomic claim or route integration. Next integrate with verified account-scoped observations and atomic occurrence claims before execution.
