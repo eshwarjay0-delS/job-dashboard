@@ -493,6 +493,26 @@ function rewriteParaText(p: string, newText: string): string {
   const tMatches = [...p.matchAll(/(<w:t(?:\s[^>]*)?>)([\s\S]*?)(<\/w:t>)/g)]
   if (!tMatches.length) return p
 
+  // A line that only grows at its end (a term added to a skills line, a sentence added to the summary) keeps every run
+  // as it was and has the new words added to its last run: rewriting it into one run lost the bold of a heading such as
+  // "Identity & Access Management:" (26 Oct 2026). Up to two closing characters (a final "." or ";") may move after them.
+  let shared = 0
+  while (shared < orig.length && shared < full.length && orig[shared] === full[shared]) shared++
+  const tail = orig.slice(shared)
+  if (shared > 0 && tail.length <= 2 && full.length > orig.length) {
+    let last = -1
+    for (let k = 0; k < tMatches.length; k++) if (decodeXml(tMatches[k][2]).length) last = k
+    const lastText = last >= 0 ? decodeXml(tMatches[last][2]) : ""
+    if (last >= 0 && lastText.endsWith(tail)) {
+      let at = -1
+      return p.replace(/(<w:t(?:\s[^>]*)?>)([\s\S]*?)(<\/w:t>)/g, (whole, open, _c, close) => {
+        if (++at !== last) return whole
+        const openTag = /xml:space=/.test(open) ? open : open.replace("<w:t", '<w:t xml:space="preserve"')
+        return `${openTag}${encodeXml(lastText.slice(0, lastText.length - tail.length) + full.slice(shared))}${close}`
+      })
+    }
+  }
+
   // Write the line into the LAST run that actually carries visible text — skipping any
   // trailing empty or whitespace-only "spacer" runs. Those spacers usually sit right
   // after a <w:tab/>; dumping the whole line into one is what shoved text out of place

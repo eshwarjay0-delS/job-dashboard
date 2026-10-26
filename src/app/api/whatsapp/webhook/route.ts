@@ -41,6 +41,7 @@ import { isCertification } from "@/lib/keyword-targets"
 import { libraryOf, numberedEmails, candidatesFor } from "@/lib/library-pick-store"
 import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME } from "@/lib/library-pick"
 import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
+import { madeMeetsFloor } from "@/lib/made-floor"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
 import { chooseResume, type Prefer } from "@/lib/library-choose"
@@ -772,8 +773,9 @@ async function fromLibrary(from: string, job: { jd: string; jdId: string }, emai
   const began = Date.now()
   const userDir = path.join(USER_RESUMES_DIR, userId)
   if (!redo) {
+    // Sent again as it is only while it meets the 90% floor; one made below it (22-26 Oct 2026) is made again.
     const have = await existingForJob(userDir, email, job.jd).catch(() => null)
-    if (have) return sendSaved(from, have, job.jd, email, userId)
+    if (have && await madeMeetsFloor(have.abs, job.jd)) return sendSaved(from, have, job.jd, email, userId)
   }
   // One run of a job at a time for a number: a job description pasted again, or a second "redo", while it is being made
   // would pay for the pick and the rewrite twice. The claim outlives the longest run (the function's 300 s).
@@ -951,12 +953,19 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
   else await deletePath(vfile)
 }
 
-// Missing terms do not establish a timeout or permission to invent experience.
+// What the reply says about the keywords, plainly. Every job-post keyword goes in (19 Oct 2026; certifications never) and
+// the tailor's floor writes what the rewrite left out onto the skills section (26 Oct 2026, "the baseline is serve at
+// least 90% match"), so those terms are named: they came from the job post, not from the resume, and the person checks
+// them. Missing terms do not establish a timeout (PR #79, 26 Oct): what is still not covered is named as a gap.
 function notAdded(result: TailorResult): string[] {
+  const out: string[] = []
+  if (result.skills_only) out.push("The AI writers did not answer in time, so only your skills section was brought up to this job. Send *redo* for the full rewrite.")
+  const placed = result.placed_from_jd || []
+  if (placed.length) out.push(`Added to your skills from the job post: ${placed.slice(0, 8).join(", ")}${placed.length > 8 ? ` and ${placed.length - 8} more` : ""}.`)
   const missing = (result.quality?.missing || []).filter(m => !isCertification(m))
-  if (missing.length) return [`Not covered in this file: ${missing.slice(0, 6).join(", ")}. These gaps need review against your actual experience.`]
-  return result.quality?.status === "needs_review"
-    ? ["This result is incomplete and needs review. Reply to this file to request changes."] : []
+  if (missing.length) out.push(`Not covered in this file: ${missing.slice(0, 6).join(", ")}. These gaps need review against your actual experience.`)
+  else if (!out.length && result.quality?.status === "needs_review") out.push("This result is incomplete and needs review. Reply to this file to request changes.")
+  return out
 }
 
 function captionFor(name: string, meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }, more: string[] = []): string {

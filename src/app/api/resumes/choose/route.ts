@@ -20,6 +20,7 @@ import { live } from "@/lib/library-pick"
 import { libraryOf, numberedEmails } from "@/lib/library-pick-store"
 import { bestEmailFor, chooseResume, logChoice, type Choice } from "@/lib/library-choose"
 import { existingForJob, relOf } from "@/lib/resume-library-store"
+import { madeMeetsFloor } from "@/lib/made-floor"
 import { titlesOf } from "@/lib/role-match"
 import { jobKeyOf } from "@/lib/resume-library"
 
@@ -51,8 +52,10 @@ export async function POST(request: NextRequest) {
   const email = asked && emails.includes(asked) ? asked : await bestEmailFor(userDir, emails, jd)
   const hint = typeof body.hint === "string" ? body.hint.trim().slice(0, 80) : ""
 
-  // Made before for this job: the outcome is known (one job, one file); it is offered, not made again.
-  const have = hint ? null : await existingForJob(userDir, email, jd).catch(() => null)
+  // Made before for this job: the outcome is known (one job, one file); it is offered, not made again, as long as it
+  // still meets the 90% floor (made-floor.ts). Below it, the job is made again.
+  const found = hint ? null : await existingForJob(userDir, email, jd).catch(() => null)
+  const have = found && await madeMeetsFloor(found.abs, jd) ? found : null
   const made = have ? { filepath: have.abs, rel: relOf(userDir, have.abs), name: path.basename(have.abs).replace(/\.docx$/i, "").replace(/__[a-f0-9]{16}$/i, ""), role: have.file.role, company: have.file.company, at: have.file.at, category: have.file.category } : null
 
   const key = `${userId}\n${email}\n${jobKeyOf(jd)}\n${hint}`

@@ -63,7 +63,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/whatsapp-trace': { trace: () => {} },
     // Delivery callbacks for inbox alerts (538d77d3, 22 Oct); no status callback is sent here.
     '@/lib/mail-update-store': { recordUpdateProviderStatus: async () => true },
-    '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/role-match': {}, '@/lib/library-choose': {}, '@/lib/chief-approvals': {}, '@/lib/resume-library-store': {}, '@/lib/resume-library': {},
+    '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/role-match': {}, '@/lib/library-choose': {}, '@/lib/chief-approvals': {}, '@/lib/resume-library-store': {}, '@/lib/resume-library': {}, '@/lib/made-floor': {},
     '@/lib/library-agent': {}, '@/lib/keywords': {}, '@/lib/resumeOrganization': {},
   }
   const { generate, captionFor } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate, captionFor };')

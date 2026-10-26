@@ -18,6 +18,10 @@ const GENERIC = new Set([
   "standard", "standards", "service", "services", "application", "applications", "operations", "requirements",
   "experience", "knowledge", "skills", "ability", "issues", "support", "management", "data", "security", "solutioning",
   "projects", "project", "business", "stakeholders", "documentation", "enterprise", "infrastructure", "networks",
+  // Seen as targets on 26 Oct 2026 (a PeopleSoft security post and a zero trust network post): words of the post's
+  // sentences, not skills a recruiter searches for.
+  "page", "pages", "public", "private", "approval", "approvals", "manager", "managers", "level", "user", "users", "report",
+  "reports", "request", "requests", "task", "tasks", "quality", "role", "roles", "close-out", "closeout", "access",
 ])
 
 // The first word of a task sentence, not of a skill ("remove shadowed rules", "deploy and operate").
@@ -29,12 +33,18 @@ const TASK_VERBS = new Set([
   "track", "respond", "investigate", "assess", "evaluate", "identify", "mentor", "communicate", "participate", "write",
 ])
 
+/** A soft skill: a strength the summary states, not a tool for a skills line. */
+export const SOFT_SKILL = /\b(?:problem[- ]solving|communication|adaptab\w*|teamwork|team player|collaborat\w*|leadership|attention to detail|critical thinking|time management|interpersonal|self[- ]starter|organi[sz]ational|analytical skills|customer service)\b/i
+
+// A hyphenated modifier ("row-level", "role-based", "real-time"): a target only when no longer target holds it.
+const MODIFIER = /^[a-z0-9]+(?:-[a-z0-9]+)*-(?:level|based|time|side|wide|grained|driven|facing|end|out)$/
+
 // Endings that make a phrase about people, places or paperwork rather than a skill.
-const NON_SKILL_TAIL = /\b(teams?|environments?|issues|records|groups of people|stakeholders|candidates?|customers?|clients?|years?|yrs)$/
+const NON_SKILL_TAIL = /\b(teams?|environments?|issues|records|groups of people|stakeholders|candidates?|customers?|clients?|years?|yrs|approvals?)$/
 
 // A word boundary after a terminal + does not match end-of-string or punctuation.
 // Use a token-end assertion, and recognize Salesforce credential names without a Certified prefix.
-const CERT = /\b(certified|certification|certificate|cissp|ccsp|cism|cisa|crisc|cgeit|oscp|osce|oswe|ceh|gsec|gcih|gcia|gcfa|gpen|gwapt|giac|security\+|network\+|a\+|cysa\+|casp\+|pentest\+|comptia|ccna|ccnp|ccie|pcnse|pcnsa|pccse|nse ?[1-8]|jncia|jncis|jncip|cka|ckad|cks|pmp|capm|csm|cspo|safe agilist|cipp(?:\/[a-z]+)?|cipm|cdpse|ccsk|az-\d{3}|sc-\d{3}|ai-\d{3}|dp-\d{3}|ms-\d{3}|aws certified|cpa|cfa|frm|salesforce platform developer (?:ii|i)|salesforce cpq specialist)(?![a-z0-9_+])/i
+const CERT = /\b(certified|certification|certificate|cissp|ccsp|cism|cisa|crisc|cgeit|oscp|osce|oswe|ceh|gsec|gcih|gcia|gcfa|gpen|gwapt|giac|security\+|network\+|a\+|cysa\+|casp\+|pentest\+|comptia|isc2|\(isc\)2|isc\u00b2|ccna|ccnp|ccie|pcnse|pcnsa|pccse|nse ?[1-8]|jncia|jncis|jncip|cka|ckad|cks|pmp|capm|csm|cspo|safe agilist|cipp(?:\/[a-z]+)?|cipm|cdpse|ccsk|az-\d{3}|sc-\d{3}|ai-\d{3}|dp-\d{3}|ms-\d{3}|aws certified|cpa|cfa|frm|salesforce platform developer (?:ii|i)|salesforce cpq specialist)(?![a-z0-9_+])/i
 
 export function isCertification(term: string): boolean {
   return CERT.test(term)
@@ -68,6 +78,9 @@ export function targetKeywords(extracted: string[], generated: string[]): string
   ])].filter(k => k && !(k.split(/\s+/).length === 1 && GENERIC.has(k)) && !isCertification(k))
   const multi = all.filter(k => /[\s\-/]/.test(k))
   return all.filter(k => {
+    // A hyphenated modifier that is only a piece of a longer target ("row-level" beside "row-level security", 26 Oct
+    // 2026) is not a target of its own. A product name inside a longer phrase ("palo alto" in "palo alto firewalls") is.
+    if (MODIFIER.test(k)) return !multi.some(m => m !== k && m.length > k.length && contains(m, k))
     if (/[\s\-/]/.test(k)) return true
     return !multi.some(m => m !== k && words(m).includes(k))
   })
@@ -111,8 +124,21 @@ function separatorOf(line: string): string {
   return ", "
 }
 
+// The kinds of skill a resume's skills lines are usually grouped by: what such a line's heading says, and the terms that
+// belong under it. Only used to choose between lines; a term that fits none goes to the line given least so far.
+const FAMILIES: { line: RegExp; term: RegExp }[] = [
+  { line: /network|firewall|infrastructure|perimeter|routing|operations/, term: /\b(?:cisco|juniper|arista|palo alto|panorama|fortinet|fortigate|checkpoint|check point|f5|bgp|ospf|eigrp|sd-wan|routing|switching|firewalls?|vpn|ipsec|zscaler|ztna|sase|ise|illumio|guardicore|segmentation|zero trust|load balanc\w*|dns|dhcp|tcp\/ip|wan|lan|wi-?fi|nac|802\.1x|network\w*)\b/i },
+  { line: /identity|access|iam|pam|directory/, term: /\b(?:active directory|azure ad|entra|ldap|sso|single sign-on|saml|oauth|oidc|okta|ping|sailpoint|saviynt|cyberark|beyondtrust|provisioning|deprovisioning|rbac|role-based|row-level|permission lists?|user profiles?|access\w*|identity|privileged|mfa|kerberos|peoplesoft security)\b/i },
+  { line: /cloud|aws|azure|gcp|devops|container/, term: /\b(?:aws|azure|gcp|google cloud|cloud\w*|kubernetes|docker|terraform|ansible|eks|aks|gke|lambda|iam roles|cspm|cnapp)\b/i },
+  { line: /governance|compliance|risk|audit|grc|framework|regulat/, term: /\b(?:sox|nist|iso 27001|iso|audit\w*|compliance|risk|change management|policy|policies|hipaa|pci|gdpr|fedramp|cmmc|controls?|soc 2|itgc|segregation of duties|sod)\b/i },
+  { line: /operations|siem|soc|monitoring|detection|incident|threat|endpoint/, term: /\b(?:splunk|sentinel|qradar|siem|soar|soc|incident\w*|threat\w*|edr|xdr|crowdstrike|defender|vulnerab\w*|forensics|malware|detection)\b/i },
+  { line: /data|database|sql|scripting|programming|languages|development|query/, term: /\b(?:sql|oracle|database|db2|postgres\w*|mysql|python|powershell|bash|java|javascript|scripting|query\w*|peopletools|data mover|application designer|etl)\b/i },
+  { line: /application|erp|enterprise|platform|software|tools|technolog/, term: /\b(?:peoplesoft|hcm|financials|sap|workday|servicenow|salesforce|oracle ebs|ebs|process scheduler|scheduler|component interfaces?|jira|confluence)\b/i },
+]
+
 /**
- * Put each term on the skills line it fits best (the line sharing the most words with it, else the longest list),
+ * Put each term on the skills line it fits best (the line sharing the most words with it, else the line of its kind,
+ * else the line given least so far),
  * keeping the line's own separator and any "Heading:" in front. Returns only the lines that changed. A term already
  * on some line is left alone.
  */
@@ -123,16 +149,29 @@ export function placeInSkills(lines: { idx: number; text: string }[], terms: str
   const pool = listy.length ? listy : cur
   const items = (t: string) => (t.match(/[,|•;]/g) || []).length
   const changed = new Set<number>()
+  const given = new Map<number, number>(), home = new Map<number, number>()
   for (const term of terms) {
     if (cur.some(l => contains(l.text, term))) continue
     const shown = jdSpelling(term, jd)
-    const tw = words(term).filter(w => w.length >= 3)
-    let best = pool[0], bestScore = -1
+    // Words shared with a line count, but not generic ones: "row-level security" is not a security-operations skill
+    // because that line's heading says "Security".
+    const tw = words(term).filter(w => w.length >= 3 && !GENERIC.has(w))
+    const fam = FAMILIES.findIndex(f => f.term.test(term))
+    let best = pool[0], bestScore = -Infinity
     for (const l of pool) {
       const lw = new Set(words(l.text))
-      const score = tw.filter(w => lw.has(w)).length * 10 + Math.min(items(l.text), 9)
+      const head = (l.text.match(/^([^:\n]{2,70}):/)?.[1] || l.text).toLowerCase()
+      const kin = FAMILIES.some(f => f.line.test(head) && f.term.test(term)) ? 1 : 0
+      // Shared words first, then the kind of skill the line is about, then the line its kind already went to (so a
+      // resume with no network line still keeps Cisco, F5 and BGP together), then the line given least so far: a term
+      // with no home spreads out instead of piling onto one line (26 Oct 2026: they all landed under "Identity & Access
+      // Management", the longest line).
+      const together = fam >= 0 && home.get(fam) === l.idx ? 3 : 0
+      const score = tw.filter(w => lw.has(w)).length * 10 + kin * 6 + together - (given.get(l.idx) || 0) * 0.5 + Math.min(items(l.text), 9) * 0.05
       if (score > bestScore) { best = l; bestScore = score }
     }
+    given.set(best.idx, (given.get(best.idx) || 0) + 1)
+    if (fam >= 0 && !home.has(fam)) home.set(fam, best.idx)
     const text = best.text.replace(/\s+$/, "")
     const heading = text.match(/^([^:\n]{2,70}:)\s*$/)
     if (heading) best.text = `${heading[1]} ${shown}`
