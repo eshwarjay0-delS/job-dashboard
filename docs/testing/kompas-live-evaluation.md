@@ -65,3 +65,5 @@ Production verified READY on 25 October 2026: dpl_4Cj4CUszyE6RfTfgzuH2St6Yw8kr, 
 Provenance enhancement prepared locally: SHA256 identifies exact fixture, source bundle and runner bytes plus target origin on every success/failure record. Hashes stay with private outputs; no credentials or source text are added to the repository. This does not identify deployment code, helper modules or independently verify source truth; deployment provenance and completion manifests remain pending.
 
 Validation update: focused capture/preflight tests assert persisted digest fields; three tests pass and TypeScript passes. Full suite completion remains pending; no live model call performed.
+
+PR #77 preview passed and merged on 26 October 2026 as 1d198d2c8479aadde2501f12bfdde0f8e8115d4e. Regression 1017/1017 and TypeScript passed. Production confirmation pending. Artifact hashes identify supplied bytes, not source truth or deployment code. Zero live comparison rounds; application authentication and approved private source/history bundles remain required.
