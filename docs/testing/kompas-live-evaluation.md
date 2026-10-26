@@ -61,3 +61,7 @@ Validation on 25 October: full suite 981/982, one mail-overview.test.mjs source 
 PR #76 preview passed and merged on 25 October 2026 as c28c1424bdbf463cf25d2df4b7f63eaf866a91b6. Full regression 1016/1016 and TypeScript pass. Production rollout pending. No live model comparison executed; authenticated application access and approved private source/history bundles remain required.
 
 Production verified READY on 25 October 2026: dpl_4Cj4CUszyE6RfTfgzuH2St6Yw8kr, commit 47a66626a881054c755be81fe290700a9dde60d7 includes PR #76, production alias job-dashboard-fawn.vercel.app assigned, aliasError null. The CLI runner is repository tooling; deployment does not execute evaluation rounds.
+
+Provenance enhancement prepared locally: SHA256 identifies exact fixture, source bundle and runner bytes plus target origin on every success/failure record. Hashes stay with private outputs; no credentials or source text are added to the repository. This does not identify deployment code, helper modules or independently verify source truth; deployment provenance and completion manifests remain pending.
+
+Validation update: focused capture/preflight tests assert persisted digest fields; three tests pass and TypeScript passes. Full suite completion remains pending; no live model call performed.
