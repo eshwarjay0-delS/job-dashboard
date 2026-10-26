@@ -20,3 +20,15 @@ export function parsePrepPack(text: string): PrepPackResult {
   if (!Array.isArray((pack as Record<string, unknown>).questions)) return { ok: false, reason: "reply has no questions list" }
   return { ok: true, pack: pack as Record<string, unknown> }
 }
+
+// What the route may say about a failure: a parse reason as written above, or a provider's name and HTTP status cut from
+// its error ("OpenRouter API 429"). Never the provider's message body, which can echo the prompt.
+export function prepFailureReason(e: unknown): string {
+  const m = String((e as Error)?.message || e || "")
+  const api = m.match(/^([A-Za-z]+ API \d{3})/)
+  if (api) return api[1]
+  if (/abort|timeout/i.test(m)) return "provider timed out"
+  if (/^(empty reply|no JSON object|reply )/.test(m)) return m.slice(0, 120)
+  if (/No API key/i.test(m)) return "no provider key"
+  return "unexpected error"
+}

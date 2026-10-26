@@ -24,6 +24,14 @@ test('a cut-off or empty reply says why instead of a bare failure', () => {
   assert.match(parsePrepPack('[1,2]').reason, /no JSON object|not an object/)
 })
 
+test('a failure reason names the provider and status, never the provider\'s message body', async () => {
+  const { prepFailureReason } = await import('../../src/lib/kompasPrepPack.ts')
+  assert.equal(prepFailureReason(new Error('OpenRouter API 429: {"error":"Rate limited for prompt: Resume: Jane Doe"}')), 'OpenRouter API 429')
+  assert.equal(prepFailureReason(new Error('reply is not complete JSON (6100 characters, likely cut off)')), 'reply is not complete JSON (6100 characters, likely cut off)')
+  assert.equal(prepFailureReason(new Error('The operation was aborted due to timeout')), 'provider timed out')
+  assert.equal(prepFailureReason(new Error('something with Jane Doe in it')), 'unexpected error')
+})
+
 test('the prep route reads the pack through parsePrepPack and logs the reason it failed', () => {
   const route = readFileSync(new URL('../../src/app/api/kompas/prep/route.ts', import.meta.url), 'utf8')
   assert.match(route, /parsePrepPack\(text\)/)

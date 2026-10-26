@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { callLLM, resolveKeys } from "@/lib/llm"
-import { parsePrepPack } from "@/lib/kompasPrepPack"
+import { parsePrepPack, prepFailureReason } from "@/lib/kompasPrepPack"
 import { checkRateLimit } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
@@ -83,8 +83,10 @@ Rules: 10-14 questions covering intro (tier 0), experience/STAR (tier 1), design
       questions,
     }, { headers: NO_STORE })
   } catch (e) {
-    // The reason goes to the log (no resume text): a cut-off reply and a refused provider look the same to the page.
-    console.warn("[kompas:prep] failed:", String((e as Error)?.message || e).slice(0, 200))
-    return NextResponse.json({ error: "Prep failed. The page retries automatically." }, { status: 502, headers: NO_STORE })
+    // The reason goes to the log and to the caller (no resume text, and of a provider's refusal only its name and status):
+    // a cut-off reply and a refused provider looked the same before, "Prep failed" and nothing else.
+    const reason = prepFailureReason(e)
+    console.warn("[kompas:prep] failed:", reason)
+    return NextResponse.json({ error: "Prep failed. The page retries automatically.", reason }, { status: 502, headers: NO_STORE })
   }
 }
