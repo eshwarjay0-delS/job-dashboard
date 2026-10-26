@@ -11,6 +11,14 @@ import { brooksource } from "./portals/brooksource.ts"
 import { eteam } from "./portals/eteam.ts"
 import { eliassen } from "./portals/eliassen.ts"
 import { systemone } from "./portals/systemone.ts"
+import { kore1 } from "./portals/kore1.ts"
+import { kavaliro } from "./portals/kavaliro.ts"
+import { mitchellmartin } from "./portals/mitchellmartin.ts"
+import { judge } from "./portals/judge.ts"
+import { genesis10 } from "./portals/genesis10.ts"
+import { pyramid } from "./portals/pyramid.ts"
+import { addison } from "./portals/addison.ts"
+import { csi } from "./portals/csi.ts"
 
 // Verified 2026-10-17 against live portal HTML. Each parseList was tested
 // against a real listing page before shipping — never trust selectors blind.
@@ -81,11 +89,13 @@ const collabera: PortalAdapter = {
 export const ADAPTERS: PortalAdapter[] = [
   beaconHill, collabera, teksystems, kforce, motion, everforth, oxford, insightglobal,
   inspyr, brooksource, eteam, eliassen, systemone,
+  kore1, kavaliro, mitchellmartin, judge, genesis10, pyramid, addison, csi,
 ]
 
-// Still to be read (a probe for each is in the REA board): Addison Group, KORE1, CSI, IDR, Vaco, IntelliPro, Genesis10,
-// Diverse Lynx, Robert Half, CyberSN and the firms whose portal address is not yet known.
-// Not read on purpose: Experis (its robots.txt disallows every crawler).
+// Still to be read (a probe for each is in the REA board): IDR, Vaco, IntelliPro, Diverse Lynx, Robert Half, CyberSN,
+// Akkodis, SNI and The Fountain Group: their probes stopped on the session limit and resume when it allows.
+// Not read on purpose: Experis (its robots.txt disallows every crawler) and Randstad Digital (labor-certification
+// postings with no address, date or contract kind of their own).
 //
 // Directory expansion (2026-10-21, owner-approved merge of prime-vendor-portals-expanded.md, firms #58-94 in
 // src/lib/vendorPortals.ts) — crawler-config hints, no adapters claimed yet:
@@ -97,6 +107,5 @@ export const ADAPTERS: PortalAdapter[] = [
 // - Recruiter-driven additions (Aerotek, Actalent, Kelly Services, Spherion, Express) post thin public
 //   boards: low crawl value, directory links only until a feed is verified live.
 export const PENDING_PORTALS = [
-  "addison", "kore1", "csi", "idr", "vaco", "intellipro",
-  "genesis10", "diverselynx", "roberthalf", "cybersn",
+  "idr", "vaco", "intellipro", "diverselynx", "roberthalf", "cybersn", "akkodis", "sni", "fountain",
 ]

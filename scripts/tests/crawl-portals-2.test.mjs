@@ -60,7 +60,10 @@ test('Insight Global: jobs, newest contract first, 50 a page up to 20 pages; pla
   assert.ok(!jobs.some(j => /Mobility & Customer Experience/.test(j.title)))
   assert.ok(clean(jobs))
   assert.deepEqual(jobs[0], { title: 'Epic Radiant Analyst', url: 'https://insightglobal.com/jobs/3c346722-9596-410a-92a9-84f3ce8f828a', location: 'Bellevue, WA', engagement: 'Contract', payRange: '$85 per hour', postedAt: '2026-10-19T23:58:22.1Z' })
-  assert.equal(jobs[1].payRange, '$108,500 - $148,500 per year')
+  // A civil engineer and an AP clerk are not technology work (21 Oct 2026; they used to pass the title filter).
+  assert.ok(!jobs.some(j => /Civil Engineer|AP Clerk/.test(j.title)))
+  const yearly = igPage(JSON.stringify({ jobs: [{ requisitionId: 'y1', jobTitle: 'Cloud Engineer', jobType: 'Contract', payRate: { min: 108500, max: 148500, type: 'Annually' } }], pageMetadata: { totalPages: 1 } })).jobs[0]
+  assert.equal(yearly.payRange, '$108,500 - $148,500 per year')
   const asked = []
   const all = await collectJobs(insightglobal, async (url) => { asked.push(url); return fixture('insightglobal-p1.json').replace(/"requisitionId": "([^"]+)"/g, `"requisitionId": "$1-${asked.length}"`) })
   assert.equal(asked.length, 20, 'never more than 20 pages, however many the board has')

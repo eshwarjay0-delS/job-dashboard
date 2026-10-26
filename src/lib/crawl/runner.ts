@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/service"
 import { ADAPTERS } from "./adapters"
 import { classifyWorkType, normalizeDate } from "./classify"
 import { collectJobs, crawlEach, politeFetcher } from "./collect"
+import { scrubContacts } from "./text"
 import type { CrawlResult, PortalAdapter, RawJob } from "./types"
 
 type JobRow = {
@@ -22,7 +23,8 @@ function toRow(portal: string, firm: string, j: RawJob): JobRow {
     pay_range: j.payRange?.slice(0, 120) ?? null,
     posted_at: normalizeDate(j.postedAt),
     // Kept for matching and tailoring (the table always had the column; until 20 Oct 2026 nothing filled it).
-    description: j.description?.slice(0, 8000) ?? null,
+    // A recruiter's address or number written into the text is taken out before anything is stored.
+    description: j.description ? scrubContacts(j.description).slice(0, 8000) : null,
     last_seen_at: new Date().toISOString(),
     active: true,
   }
