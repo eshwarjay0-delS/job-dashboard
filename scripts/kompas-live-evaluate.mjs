@@ -3,6 +3,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { saveCheckpoint } from './lib/evaluation-checkpoint.mjs'
+import { captureSummary } from './lib/evaluation-completeness.mjs'
 import { evidenceDigest } from './lib/evaluation-provenance.mjs'
 import { fixtureName, caseInput } from './lib/evaluation-fixtures.mjs'
 const [sourcesFile, outputDir, round = '1', selectedFixture] = process.argv.slice(2)
@@ -62,3 +63,7 @@ for (const c of cases) {
  await saveCheckpoint(destination, records)
  console.log(`Captured ${records.length}/${cases.length}; quality review pending`)
 }
+
+const summary = captureSummary(cases, records)
+if (summary.status !== 'capture-complete') throw Error('Incomplete capture; no completion manifest written')
+await saveCheckpoint(path.join(outputDir, `round-${round}.manifest.json`), { round, fixture, provenance, ...summary })
