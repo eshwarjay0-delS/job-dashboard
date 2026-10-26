@@ -5,3 +5,5 @@
 Validation: 19 WhatsApp regression tests pass, including mocked caption assertions for 28.5 percent, missing terms and absence of unsupported timeout/addition claims. Journal schema checks and TypeScript pass. No real messages sent.
 
 The tailor persists private run diagnostics keyed by user resume directory and output token, containing original JD, selected source path/hash, requirements, output result and elapsed time. Recover that authorized record and corresponding documents before assigning the low coverage a cause. The selected 9/15 count and final percentage cannot be assumed to use the same denominator.
+
+PR #79 preview passed and merged on 26 October 2026 as dfffa2e2d96c6c9c15cba3896e9b0fc86135e9b6. Full regression 1020/1020 passes; TypeScript passes. Production rollout pending verification. Exact-run artifact investigation remains open.
