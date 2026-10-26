@@ -171,10 +171,13 @@ test('nothing typed by him and nothing read here can be mistaken: empty and odd 
   assert.equal(overviewOf(ALL, [], NOW).needsYou.every(s => s.stage !== 'answered' && s.stage !== 'came_back'), true, 'with no inbox of his own named, nothing is "answered"')
 })
 
-test('Overview shows it first, reads kept mail only, and hiding is the inbox\'s own ignore list', () => {
+test('Overview discloses detail on demand, reads kept mail only, and hiding is the inbox\'s own ignore list', () => {
   const page = read('src/app/dashboard/overview/page.tsx'), section = read('src/app/dashboard/overview/_components/standing.tsx'), route = read('src/app/api/gmail/overview/route.ts')
-  // Above the evidence map, and not behind its slow read of Gmail's history.
-  assert.ok(page.indexOf('<StandingSection account={filter} />') > 0 && page.indexOf('<StandingSection account={filter} />') < page.indexOf('Filter inbox'))
+  // be41815 intentionally moved detail behind one tap; preserve that declutter decision.
+  assert.match(page, /aria-expanded=\{showStanding\}/)
+  assert.match(page, /setShowStanding\(v => !v\)/)
+  assert.match(page, /showStanding && <div[^>]*><StandingSection account=\{filter\} \/>/)
+  assert.ok(page.indexOf('<StandingSection account={filter} />') > page.indexOf('Filter inbox'))
   assert.match(section, /fetch\(`\/api\/gmail\/overview\$\{account \? `\?account=\$\{encodeURIComponent\(account\)\}` : ""\}`/)
   assert.match(route, /requireAuth\(\)/)
   assert.match(route, /keptThreads\(ctx, TRACKING_DAYS/)
