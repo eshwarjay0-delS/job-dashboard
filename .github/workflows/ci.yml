@@ -45,6 +45,9 @@ jobs:
       - name: Verify consented voice benchmark metrics
         run: node --test scripts/tests/kompas-voice-metrics.test.mjs
 
+      - name: Verify speech container MIME parity
+        run: node --experimental-strip-types --test scripts/tests/kompas-audio-upload-mime.test.mjs
+
       - name: Build
         run: npm run build
         env:
