@@ -161,6 +161,19 @@ test('on OpenRouter gpt-oss is told to reason little, nemotron not at all, and o
   assert.ok(!('reasoning' in calls[0].body))
 })
 
+test('a call can carry its own deadline, which the provider request is aborted at', async () => {
+  fresh({ OPENROUTER_MODEL_HEAVY: 'openai/gpt-oss-120b' })
+  script = (c) => new Promise((resolve, reject) => {
+    const t = setTimeout(() => resolve(chat('{}')), 80)
+    c.init.signal?.addEventListener('abort', () => { clearTimeout(t); reject(c.init.signal.reason) }, { once: true })
+  })
+  await assert.rejects(ask({ keys: { openrouter: 'k' }, pref: 'openrouter', timeoutMs: 20 }), /abort|timeout/i)
+  assert.equal((await ask({ keys: { openrouter: 'k' }, pref: 'openrouter', timeoutMs: 2000 })).text, '{}')
+  const route = read('src/app/api/kompas/prep/route.ts')
+  assert.match(route, /timeoutMs: 50_000/)
+  assert.ok(50_000 < Number(route.match(/maxDuration = (\d+)/)[1]) * 1000, 'the prep deadline sits inside the route\'s own limit')
+})
+
 // ── Groq: the reply ceiling and the reasoning ────────────────────────────────
 test('on Groq the reply ceiling is what the per-minute allowance has left after the prompt, and gpt-oss is told to reason little', async () => {
   fresh()

@@ -47,6 +47,9 @@ export async function POST(request: NextRequest) {
     const keys = resolveKeys({})
     const { text } = await callLLM({
       keys, purpose: "kompas:prep", tier: "heavy",
+      // Built while the person sets up, so it may take longer than a live answer: measured 26 Oct, the shared per-call
+      // deadline cut prep off ("provider timed out") on half the evaluation chains. Under this route's 60 s maxDuration.
+      timeoutMs: 50_000,
       system: `You build an interview prep pack for a candidate, from their resume and the job description. Return ONLY valid JSON, no markdown fences, no commentary. Shape:
 {
   "identity": "2-3 sentence spoken identity: who they are, years, current focus",

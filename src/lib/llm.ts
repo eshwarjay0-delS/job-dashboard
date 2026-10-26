@@ -183,6 +183,9 @@ export type TokenUsage = { input: number; output: number; cacheRead: number; cac
 
 interface CallOpts {
   keys: LlmKeys; tier: Tier; pref?: ProviderPref; system: string; maxTokens: number
+  // This call's own deadline in milliseconds, for work done off the clock (the Kompas prep pack, built while the person
+  // sets up). Left out, LLM_CALL_TIMEOUT_MS applies. A route keeps it under its own maxDuration.
+  timeoutMs?: number
   // Either a plain user string OR a multi-turn messages array. Prefer `messages` for chat.
   user?: string
   messages?: ChatMessage[]
@@ -231,8 +234,8 @@ function recordCall(call: { purpose?: string; provider: Provider; model: string;
 // whole request at 60s → the user gets nothing). Aborting a single slow call lets
 // best-of pick a surviving draw and the ladder fall through, instead of hanging.
 const LLM_CALL_TIMEOUT_MS = Number(process.env.LLM_CALL_TIMEOUT_MS) || 35000
-function callSignal(): AbortSignal {
-  return AbortSignal.timeout(LLM_CALL_TIMEOUT_MS)
+function callSignal(ms?: number): AbortSignal {
+  return AbortSignal.timeout(ms && ms > 0 ? ms : LLM_CALL_TIMEOUT_MS)
 }
 
 // POST with automatic retry on rate-limit / overload. Concurrent use of the app (many
@@ -240,7 +243,7 @@ function callSignal(): AbortSignal {
 // provider's per-minute rate limit → 429 (or 529 "overloaded"). Instead of failing the
 // tailor, wait a short backoff (honoring Retry-After when present) and retry a couple
 // times. 429/529 responses come back fast, so this adds only a few seconds under load.
-async function fetchRetry(url: string, init: RequestInit): Promise<Response> {
+async function fetchRetry(url: string, init: RequestInit, timeoutMs?: number): Promise<Response> {
   const RETRIABLE = new Set([429, 529, 503])
   // Total time one call may spend WAITING between retries. A short blip (a burst of concurrent
   // tailors) clears in a second or two. A long rate-limit window, like Groq's free-tier
@@ -249,7 +252,7 @@ async function fetchRetry(url: string, init: RequestInit): Promise<Response> {
   // another provider.
   const RETRY_BUDGET_MS = Number(process.env.LLM_RETRY_BUDGET_MS) || 5000
   let waited = 0
-  const signal = callSignal() // One deadline across retries, not a fresh timeout per attempt.
+  const signal = callSignal(timeoutMs) // One deadline across retries, not a fresh timeout per attempt.
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(url, { ...init, signal })
     if (res.ok || attempt >= 3 || !RETRIABLE.has(res.status)) return res
@@ -382,7 +385,7 @@ async function callAnthropic(key: string, model: string, o: CallOpts, msgs: Chat
       system,
       messages: msgs.map(m => ({ role: m.role, content: m.content })),
     }),
-  })
+  }, o.timeoutMs)
   if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
   const u = data.usage || {}
@@ -417,7 +420,7 @@ async function callOpenRouter(key: string, model: string, o: CallOpts, msgs: Cha
         ...msgs.map(m => ({ role: m.role, content: m.content })),
       ],
     }),
-  })
+  }, o.timeoutMs)
   if (!res.ok) throw new Error(`OpenRouter API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
   const u = data.usage || {}
@@ -453,7 +456,7 @@ async function callGroq(key: string, model: string, o: CallOpts, msgs: ChatMessa
         ...msgs.map(m => ({ role: m.role, content: m.content })),
       ],
     }),
-  })
+  }, o.timeoutMs)
   if (!res.ok) throw new Error(`Groq API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
   const u = data.usage || {}
@@ -575,7 +578,7 @@ async function callGemini(key: string, model: string, o: CallOpts, msgs: ChatMes
       contents,
       generationConfig: { maxOutputTokens: o.maxTokens, temperature: o.temperature ?? 0.7 },
     }),
-  })
+  }, o.timeoutMs)
   if (!res.ok) throw new Error(`Gemini API ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
   const m = data.usageMetadata || {}
