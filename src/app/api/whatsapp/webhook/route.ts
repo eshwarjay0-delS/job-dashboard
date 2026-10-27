@@ -620,9 +620,23 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 // Where a run starts when it starts from the person's Files: their folder, the email, and what was picked.
 type FromFiles = { userDir: string; email: string; said: string; depth: number; rel: string; abs: string; redo?: boolean }
 
+// A provider outage must not strand someone who already has a resume in Files.
+// This is the ORIGINAL selected resume, explicitly not a tailored result.
+async function sendLibraryFallback(from: string, files: FromFiles, reason: string) {
+  const original = await readPath(files.abs).catch(() => null)
+  if (!original) return sendText(from, "Resume tailoring is unavailable and I could not open the selected original resume. Please try again later.")
+  const name = await outputNameFor(original)
+  await sendDocument(from, original, `${name}.docx`, [
+    "*Temporary fallback — original resume, NOT tailored*",
+    `Closest available library match: ${files.said}.`,
+    "The AI rewrite could not complete (" + reason + "). This document is unchanged and has not been checked against the job description.",
+    "Send *redo* when AI tailoring is available to generate an updated version."
+  ].join("\n"))
+}
+
 async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS, files?: FromFiles) {
   const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
-  if (!hasAnyKey(keys)) return sendText(from, "No AI provider key is configured on the server.")
+  if (!hasAnyKey(keys)) return files ? sendLibraryFallback(from, files, "provider unavailable") : sendText(from, "Resume tailoring is temporarily unavailable. Your original resume has not been modified.")
   if (!session.jd || !session.resumePath) return sendText(from, HELP)
   const retry = files ? "Send *redo* to try again." : "Please resend the job description and resume to retry."
 
@@ -673,14 +687,14 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   } catch (e) {
     // The pair was consumed before generation; a retry supplies a new pair.
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
-    return sendText(from, `I could not tailor your resume just now: the AI services that write it are busy or out of their allowance. ${retry}`)
+    return files ? sendLibraryFallback(from, files, "provider request failed") : sendText(from, `I could not tailor your resume just now. ${retry}`)
   }
 
   // Nothing came back different: the same file with "Match 28% -> 28%" on it is not a tailored resume, so it is not sent as one.
   // A retry supplies a fresh JD and resume pair.
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
-    return sendText(from, `I read the job description against your resume and no line came back changed, so I am not sending you the same file. This usually means the AI services were short of capacity. ${retry}`)
+    return files ? sendLibraryFallback(from, files, "rewrite produced no changes") : sendText(from, `The rewrite produced no changes. ${retry}`)
   }
 
   // A rewrite below the coverage target is still sent, with what is missing named in the caption. From 18 Oct 2026 the
