@@ -379,9 +379,9 @@ export function cutQuestion(heard: string): string {
 // The openers of an interviewer's ask or instruction. Before 26 Oct 2026 only how/what/why..., can/would you, tell me,
 // walk me, give me, explain, describe, define and compare counted, so any other imperative ("Design", "Walk through",
 // "State", "Give a", "Keep it") was not part of the question at all.
-const ASK_OPENER = /^(?:how|what|why|when|where|which|who|whom|whose)\b|^(?:can|could|would|will|should|do|does|did|are|have|has)\s+(?:you|we)\b|^(?:tell|walk|take|talk|show|give|explain|describe|define|compare|contrast|differentiate|distinguish|design|build|implement|configure|architect|plan|outline|list|name|state|share|write|draft|map|diagnose|troubleshoot|debug|identify|recommend|propose|justify|estimate|summari[sz]e|discuss|evaluate|assess|analy[sz]e|elaborate|expand|go|dig|introduce|imagine|suppose|pick|choose|select|rank|prioriti[sz]e|break|weigh|defend|verify|validate|test|measure|quantify|detail|clarify|demonstrate|illustrate|cover|include|keep|focus|assume|consider|avoid|limit|stay|mention|start|end|finish|continue)\b/i
+const ASK_OPENER = /^(?:how|what|why|when|where|which|who|whom|whose)\b(?!\s+to\b)|^(?:can|could|would|will|should|do|does|did|are|have|has)\s+(?:you|we)\b|^(?:tell|walk|take|talk|show|give|explain|describe|define|compare|contrast|differentiate|distinguish|design|build|implement|configure|architect|plan|outline|list|name|state|share|write|draft|map|diagnose|troubleshoot|debug|identify|recommend|propose|justify|estimate|summari[sz]e|discuss|evaluate|assess|analy[sz]e|elaborate|expand|go|dig|introduce|imagine|suppose|pick|choose|select|rank|prioriti[sz]e|break|weigh|defend|verify|validate|test|measure|quantify|detail|clarify|demonstrate|illustrate|cover|include|keep|focus|assume|consider|avoid|limit|stay|mention|start|end|finish|continue)\b/i
 // Somewhere inside a sentence that does not open as one (speech-to-text often has no full stops): the ask starts here.
-const ASK_INSIDE = /\b(?:how|what|why|when|where|which|who)\b|\b(?:can|could|would|will|do|did|are|have)\s+you\b|\b(?:tell me|walk me|give me|explain|describe|define|compare|design|build|implement|configure)\b/i
+const ASK_INSIDE = /\b(?:how|what|why|when|where|which|who)\b(?!\s+to\b)|\b(?:can|could|would|will|do|did|are|have)\s+you\b|\b(?:tell me|walk me|give me|explain|describe|define|compare|design|build|implement|configure)\b/i
 const LEAD_FILLER = /^(?:(?:ok(?:ay)?|so|and|also|now|then|next|finally|right|alright|all right|well|yes|yeah|uh+|um+|please|great|perfect|cool|sure)[,.!]?\s+)+/i
 const PLEASANTRY = /^(?:(?:that'?s|that is)\s+(?:great|good|interesting|fair|helpful|clear|right|true)|thanks?\b|thank you\b|(?:great|perfect|nice|good|interesting|excellent|awesome|wonderful|got it|makes sense|i see|understood)[.!]*$)/i
 const OWN_WORDS = /^(?:i|i'm|i've|i'd|i'll|we|we're|we've|we'd|my|our|me)\b/i
@@ -390,10 +390,24 @@ type AskPart = { kind: "ask" | "context" | "noise" | "own"; text: string }
 
 /** Each sentence, read as an ask, setup for one, a filler, or the candidate's own words. */
 function askSentences(text: string): AskPart[] {
-  return String(text || "").split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean).map((sentence): AskPart => {
-    const bare = sentence.replace(LEAD_FILLER, "").trim()
+  const sentences = String(text || "").split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean)
+  // The words after a fragment the transcriber cut off ("captured... how to use the Gemalto app") are that fragment's
+  // tail: setup there is noise too, and only a clear ask survives it.
+  return sentences.map(classifyAskSentence).map((part, i) =>
+    i > 0 && /(?:\.{2,}|…)$/.test(sentences[i - 1]) && part.kind === "context" ? { kind: "noise", text: part.text } : part)
+}
+
+function classifyAskSentence(sentence: string): AskPart {
+  {
+    const bare = sentence.replace(/^(?:\.{2,}|…)\s*/, "").replace(LEAD_FILLER, "").trim()
     if (!bare || noiseOnly(bare) || PLEASANTRY.test(bare)) return { kind: "noise", text: bare }
-    if (ASK_OPENER.test(bare) || (/\?$/.test(bare) && !OWN_WORDS.test(bare))) return { kind: "ask", text: bare }
+    // Measured 27 Oct 2026 on his live card: "Why I have it. ...requirements. 11. Explain the concept of session
+    // recording..." kept all of it. A why/how/what straight into "I" is the candidate talking; a short fragment with no
+    // ask in it, or one the transcriber cut off with an ellipsis, is not part of the question.
+    const asked = /\?$/.test(bare)
+    if (!asked && /^(?:why|how|what|when|where|which|who)\s+(?:i|we|my|our|i'm|i've|we're)\b/i.test(bare)) return { kind: "own", text: bare }
+    if (!asked && !ASK_OPENER.test(bare) && (bare.split(/\s+/).length < 4 || /\.{2,}|…/.test(bare))) return { kind: "noise", text: bare }
+    if (ASK_OPENER.test(bare) || (asked && !OWN_WORDS.test(bare))) return { kind: "ask", text: bare }
     const inside = bare.search(ASK_INSIDE)
     if (inside > 0 && bare.slice(inside).split(/\s+/).length >= 3) {
       const tail = bare.slice(inside)
@@ -401,7 +415,7 @@ function askSentences(text: string): AskPart[] {
       return { kind: "ask", text: OWN_WORDS.test(bare) ? tail.slice(0, 400) : bare }
     }
     return { kind: OWN_WORDS.test(bare) ? "own" : "context", text: bare }
-  })
+  }
 }
 
 const SPOKEN_NOISE =

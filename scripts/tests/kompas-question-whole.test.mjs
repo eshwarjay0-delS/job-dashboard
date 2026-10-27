@@ -57,6 +57,18 @@ test('a ramble still yields to the ask, and the candidate\'s own words are not p
   assert.equal(pinnedRamble, 'how do you configure certificate discovery in Venafi?')
 })
 
+test('his live cards strip to the actual ask (27 Oct 2026 screenshots)', () => {
+  const junkLead = 'Why I have it. ...requirements. 11. Explain the concept of session recording in CyberArk and its importance in cybersecurity.'
+  for (const out of [questionToAnswer('', junkLead, true), questionToAnswer(junkLead, '', false)])
+    assert.equal(out.replace(/^./, (c) => c.toUpperCase()), 'Explain the concept of session recording in CyberArk and its importance in cybersecurity.')
+  const garbled = 'Explain the concept of session recording in CyberArk and its importance in cybersecurity. Session recording in CyberArk captured... how to use the Gemalto app. How does CyberArk contribute to the management and protection of SSH keys?'
+  const out = questionToAnswer(garbled, '', false)
+  assert.match(out, /How does CyberArk contribute to the management and protection of SSH keys\?$/)
+  assert.doesNotMatch(out, /Gemalto|captured\.\.\./, 'the transcriber\'s cut-off fragment is not part of the question')
+  assert.equal(cutQuestion('11. Design a SIEM pipeline for identity correlation.'), 'Design a SIEM pipeline for identity correlation.')
+  assert.equal(cutQuestion('How I handled it was through the vault. What does PSM record?'), 'What does PSM record?')
+})
+
 test('a bare term or abbreviation that was typed stays the question', () => {
   assert.equal(questionToAnswer('', 'IDOR', true), 'IDOR')
   assert.equal(questionToAnswer('', 'Venafi certificate discovery', true), 'Venafi certificate discovery')

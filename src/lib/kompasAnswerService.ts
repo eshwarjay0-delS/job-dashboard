@@ -49,6 +49,10 @@ import {
 
 const NO_STORE = { "Cache-Control": "no-store" }
 const PAID_MODEL = "openai/gpt-oss-120b"
+// Every live answer goes to the OpenRouter host with the lowest latency for this model (owner, 27 Oct 2026: "processed
+// super duper quick with almost no latency or lag all the time"). Measured the day before over 86 live answers with
+// OpenRouter's default host choice: first words 2.7 s typical, 7.6 s for the slowest tenth, 15.4 s at worst.
+const LIVE_ROUTING = { allow_fallbacks: true, sort: "latency" }
 const OR_URL = "https://openrouter.ai/api/v1/chat/completions"
 // OpenRouter holds the requested ceiling against the balance — keep it modest,
 // mirroring src/lib/llm.ts.
@@ -130,7 +134,7 @@ async function streamOpenRouter(
     method: "POST", signal,
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
     body: JSON.stringify({
-      model: PAID_MODEL, provider: { allow_fallbacks: true }, max_tokens: orCap(maxTokens), stream: true,
+      model: PAID_MODEL, provider: LIVE_ROUTING, max_tokens: orCap(maxTokens), stream: true,
       stream_options: { include_usage: true },
       ...reasoningFor(model),
       messages: [
@@ -161,7 +165,7 @@ async function fetchOpenRouter(
     method: "POST", signal,
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
     body: JSON.stringify({
-      model: PAID_MODEL, provider: { allow_fallbacks: true }, max_tokens: orCap(maxTokens),
+      model: PAID_MODEL, provider: LIVE_ROUTING, max_tokens: orCap(maxTokens),
       ...reasoningFor(model),
       messages: [
         { role: "system", content: system },
@@ -185,7 +189,7 @@ async function verifyGenerate(key: string, system: string, user: string, signal:
     method: "POST", signal,
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
     body: JSON.stringify({
-      model: PAID_MODEL, provider: { allow_fallbacks: true }, max_tokens: 1600, temperature: 0,
+      model: PAID_MODEL, provider: LIVE_ROUTING, max_tokens: 1600, temperature: 0,
       response_format: { type: "json_object" },
       ...reasoningFor(model),
       messages: [

@@ -813,11 +813,15 @@ function proseLines(text) {
 }
 function renderCard() {
   const c = cards[idx]; if (!c) return;
+  // Where you are in the book, and ends that look like ends (owner, 27 Oct 2026: Prev/Next "aren't working" at the first
+  // and last card, where they did nothing and showed nothing).
+  if ($("cardCount")) $("cardCount").textContent = cards.length > 1 ? `${idx + 1} of ${cards.length}` : "";
+  if ($("prevBtn")) $("prevBtn").disabled = idx <= 0;
+  if ($("nextBtn")) $("nextBtn").disabled = idx >= cards.length - 1;
   const draft = ($("manualInput") && $("manualInput").value || "").trim();
   $("question").textContent = draft || c.question;
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const ul = $("answer"), keep = ul.scrollTop;
-  const nearBottom = ul.scrollHeight - keep - ul.clientHeight < 120;
   const lines = answerLines(c.answer);   // rendering is read-only (book rule, 23 Oct): showing a card never rewrites its stored answer, so flipping back and forth cannot lose or flatten a generated response
   ul.innerHTML = "";
   lines.forEach(({ t, kind, lang }) => {
@@ -834,8 +838,7 @@ function renderCard() {
   });
   $("card").classList.toggle("streaming", !!c.streaming);
   wrapWords(ul);                                     // every word is addressable, for Follow along
-  ul.scrollTop = keep;
-  if (c.streaming && nearBottom) ul.scrollTop = ul.scrollHeight;   // a streaming answer follows its tail while you are already near it; reading higher up is never yanked
+  ul.scrollTop = keep;   // rendering never moves the pane (owner, 27 Oct 2026: while it generates "the screen should just stay on top")
   if (typeof followRendered === "function") followRendered(c);
 }
 // Wrap each word of the answer in <span class="w"> (skipping the pause pills) so Follow along can mark
@@ -1048,8 +1051,11 @@ function regenerateForAudience() {
     if (c.desktopWarm && c.desktopWarm[desktopResponseKey(c)]) { c.answer = ["Preparing…"]; c.streaming = true; renderCard(); status("Preparing " + label, "live"); return; }
     c.answer = ["Preparing…"];
     c.anchorFlight = "";
-    if (c.heard) generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "", derived: c.anchorQ || c.question, regen: true });
-    else generateAnswer(c.question, c, { regen: true });
+    // A level change answers the question already on the card, whole, at the new level (owner, 27 Oct 2026: "Changing
+    // the mode or level just gave me introduction"). Unpinned, the server re-cut a question out of everything heard,
+    // which opened with the introduction, and answered that instead.
+    if (c.heard) generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "", derived: c.anchorQ || c.question, regen: true, pinned: true });
+    else generateAnswer(c.question, c, { regen: true, derived: c.question, pinned: true });
     return;
   }
   if (showCachedLevel(c)) { status("Shown for " + label + " — no model call.", "live"); return; }
@@ -1063,8 +1069,8 @@ function regenerateForAudience() {
   }
   if (c.anchorFlight) { status("Preparing that answer…", "live"); return; }
   status("Preparing the matching answer…", "live");
-  if (c.heard) generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "", derived: c.question, regen: true });
-  else if (!/^🖥/.test(c.question)) generateAnswer(c.question, c, { regen: true });
+  if (c.heard) generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "", derived: c.question, regen: true, pinned: true });
+  else if (!/^🖥/.test(c.question)) generateAnswer(c.question, c, { regen: true, derived: c.question, pinned: true });
 }
 function audienceChanged() {
   stashShown(cards[idx]);
@@ -1582,14 +1588,27 @@ function showCaption(who, text, isInterim) {
   $("capWho").textContent = who === "You" ? "You" : "Them"; $("capText").textContent = text;
   clearTimeout(capTimer); capTimer = setTimeout(() => el.classList.add("hidden"), 9000);
 }
-function appendDrawer(who, text) {
+// A chat, not a log (owner, 27 Oct 2026: "make it more like chat modes like back and forth real time clarity"): Them
+// on the left, You on the right. A speaker's lines run on in one bubble until the other side speaks or 20 s pass, and a
+// lone filler ("and", "um") joins the bubble before it instead of standing on its own row. The stored transcript is
+// unchanged: this is only how the drawer shows it.
+const DRAWER_FILLER = /^(?:and|so|but|or|um+|uh+|er|erm|okay|ok|yeah|yes|right|hmm+|like)[.,!?]*$/i;
+function appendDrawer(who, text, at) {
   const body = $("drawerBody"); if (!body) return;
   const first = body.firstElementChild; if (first && first.classList.contains("muted")) body.innerHTML = "";
-  const d = document.createElement("div"); d.className = "tl " + (who === "You" ? "you" : "them");
-  d.innerHTML = "<b></b><span></span>"; d.querySelector("b").textContent = who; d.querySelector("span").textContent = text;
-  body.append(d); body.scrollTop = body.scrollHeight;
+  const words = String(text || "").replace(/\s+/g, " ").trim(); if (!words) return;
+  const side = who === "You" ? "you" : "them", when = Number(at) || Date.now(), last = body.lastElementChild;
+  if (last && last.classList.contains("tl") && last.classList.contains(side) && (DRAWER_FILLER.test(words) || when - Number(last.dataset.at || 0) < 20000)) {
+    const span = last.querySelector("span"); span.textContent = span.textContent + " " + words;
+    last.dataset.at = String(when);
+  } else {
+    const d = document.createElement("div"); d.className = "tl " + side; d.dataset.at = String(when);
+    d.innerHTML = "<b></b><span></span>"; d.querySelector("b").textContent = side === "you" ? "You" : "Them"; d.querySelector("span").textContent = words;
+    body.append(d);
+  }
+  body.scrollTop = body.scrollHeight;
 }
-function renderDrawer() { const body = $("drawerBody"); if (!body) return; body.innerHTML = '<div class="muted small">Nothing heard yet.</div>'; transcript.forEach(t => appendDrawer(t.who, t.text)); }
+function renderDrawer() { const body = $("drawerBody"); if (!body) return; body.innerHTML = '<div class="muted small">Nothing heard yet.</div>'; transcript.forEach(t => appendDrawer(t.who, t.text, t.at)); }
 // Nothing is answered phrase-by-phrase. Everything heard piles up; AI Answer (or Auto, once the
 // speaker goes quiet) merges it, derives ONE big question from all of it, and answers that in full.
 let heardSeq = 0, answeredSeq = 0, flushing = false, autoOn = false, autoTimer = null;
@@ -1701,7 +1720,9 @@ const PHRASE_FIXES = [
   [/\bticket\s+granting\b/gi, "ticket-granting"],
   [/\bpass\s+the\s+hash\b(?!\s+brown\b)/gi, "pass-the-hash"],
   [/\bpass\s+the\s+ticket\b/gi, "pass-the-ticket"],
-  [/\bcyber\s+ark\b/gi, "CyberArk"],
+  [/\bcyber[\s-]+ar[ck]\b/gi, "CyberArk"],                                           // "cyber-arc" on his 27 Oct card
+  [/\b(?:shkivs|shkives|sh\s+keys|s\s+h\s+keys|ssh\s+keys)\b/gi, "SSH keys"],      // "Shkivs" reached his question and the answer, 27 Oct
+  [/\b(?:shkiv|sh\s+key|s\s+h\s+key|ssh\s+key)\b/gi, "SSH key"],
   [/\bmicro\s+soft\s+sentinel\b/gi, "Microsoft Sentinel"],
   [/\bqualys\b/gi, "Qualys"],
   [/\bnessus\b/gi, "Nessus"],
@@ -1773,7 +1794,7 @@ function onTranscript(who, text) {
     if (draft) status("Heard: " + draft, "live");
   }
   logEvent({ t: "line", who, text });
-  appendDrawer(who, text);
+  appendDrawer(who, text, Date.now());
   showCaption(who, text, false);
   updatePending();
   if (!flushing) scheduleAuto();

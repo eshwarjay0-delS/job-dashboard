@@ -25,9 +25,10 @@ test('focus is the desktop default: applied with the live view, and there is no 
   assert.equal(d.documentElement.classList.contains('desktop-focus'), false);
   dom.window.close();
 });
-test('web has no focus presentation and no injected buttons', () => {
+// Owner, 27 Oct 2026: "just like kompas desktop focus style everything in mfit kompas" - web gets the same focus view.
+test('web gets the same focus presentation with the live view, and no injected buttons', () => {
   const dom = setup(false); const d = dom.window.document;
-  assert.equal(d.documentElement.classList.contains('desktop-focus'), false);
+  assert.equal(d.documentElement.classList.contains('desktop-focus'), true);
   assert.equal(d.getElementById('desktopFocusBtn'), null);
   assert.equal(d.getElementById('desktopDetailsBtn'), null);
   dom.window.close();
