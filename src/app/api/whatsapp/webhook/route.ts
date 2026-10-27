@@ -210,7 +210,11 @@ const HELP = [
   "",
   "I start from the resume whose title is the job's. To choose another, say _make another one with the Cybersecurity Analyst resume_, or end the job description with a line such as _use the SOC resume_. Ask _why did you pick that resume?_ or _what resumes do I have?_ any time.",
   "",
-  "Commands: *redo* · *reset* · *status*",
+  "🎙️ *Voice:* Send a WhatsApp voice note to dictate a message or job description. It is transcribed after you send. For instant phone-side transcription, use the keyboard microphone instead.",
+  "",
+  "*Kompas interview mode:* Type or say *kompas*, send resume and JD in either order, then type or speak interview questions. Type or say *revert* to go back to resume tailoring.",
+  "",
+  "Commands: *redo* · *reset* · *status* · *kompas* · *revert*",
   "",
   "*Your Chief:* *brief* shows the brief I read before every job · *goal:* _watch my submissions tonight_ and I propose the jobs for your yes · *jobs* lists what is scheduled · *never contact:* _a name or a domain_.",
 ].join("\n")
