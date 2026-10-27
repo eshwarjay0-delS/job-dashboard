@@ -9,7 +9,7 @@ import { pdfText } from "@/lib/pdf-text"
 import { downloadMedia } from "@/lib/whatsapp"
 import { sharedKompasStore } from "@/lib/kompas-session-store"
 import { sharedKompasTurn } from "@/lib/kompas-shared-turn"
-import { kompasTransition, type KompasInput } from "@/lib/whatsapp-kompas"
+import { classifyKompasPastedSource, kompasTransition, type KompasInput } from "@/lib/whatsapp-kompas"
 
 type Message = Record<string, unknown>
 type Channel = { revision: number; sessionId?: string }
@@ -168,15 +168,38 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
       await send("This Kompas session is unavailable. Send revert, then kompas, to restart.")
       return true
     }
+    // Recovery for sessions written by the old resume-first reducer: a pasted
+    // structured JD must not permanently occupy the resume slot.
+    const prior = original.sources
+    const legacy = !prior.jd && prior.resume &&
+      classifyKompasPastedSource({ ...prior, resume: undefined }, prior.resume) === "jd"
+    const sources = legacy
+      ? { ...prior, resume: undefined, jd: prior.resume }
+      : prior
+
     let input: KompasInput
-    if (type === "text") input = { kind: "text", text }
-    else {
-      const caption = String((msg.document as { caption?: string } | undefined)?.caption || "").trim().toLowerCase()
+    if (type === "text") {
+      const role = classifyKompasPastedSource(sources, text)
+      input = role ? { kind: "document", role, name: role === "jd" ? "Pasted job description" : "Pasted resume", text }
+        : { kind: "text", text }
+    } else {
+      const doc = msg.document as { caption?: string; filename?: string } | undefined
+      const caption = String(doc?.caption || "").trim().toLowerCase()
+      const filename = String(doc?.filename || "").toLowerCase()
       const explicit = /^(?:resume|cv)\s*[:\-]/.test(caption) ? "resume" :
         /^(?:jd|job description)\s*[:\-]/.test(caption) ? "jd" :
         /^(?:support|notes|attachment)\s*[:\-]/.test(caption) ? "support" : null
-      const role = explicit || (!original.sources.resume ? "resume" : !original.sources.jd ? "jd" : "support")
-      const attachment = await readDocument(msg, role)
+      const named = /(?:^|[._\s-])(?:resume|curriculum|cv)(?:[._\s-]|$)/i.test(filename) ? "resume" :
+        /(?:^|[._\s-])(?:jd|job[_ -]?description|job[_ -]?posting)(?:[._\s-]|$)/i.test(filename) ? "jd" : null
+      const role = explicit || named || (!sources.resume ? "resume" : !sources.jd ? "jd" : "support")
+      let attachment: KompasInput | null
+      try {
+        attachment = await readDocument(msg, role)
+      } catch (error) {
+        console.error("[whatsapp-kompas] attachment retrieval failed", (error as Error)?.name || "error")
+        await send("I couldn't download that document from WhatsApp. Please resend the DOCX, PDF or TXT attachment.")
+        return true
+      }
       if (!attachment) {
         await send("Please send a readable DOCX, PDF or TXT document smaller than 5 MB.")
         return true
@@ -184,7 +207,7 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
       input = attachment
     }
 
-    const transitioned = kompasTransition(original.sources, input)
+    const transitioned = kompasTransition(sources, input)
     if (transitioned.action === "reject") {
       await send(transitioned.prompt || "That input cannot be used in this session.")
       return true
