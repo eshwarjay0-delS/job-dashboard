@@ -35,6 +35,7 @@ import { notRegisteredMessage, NOT_CHECKED_MESSAGE, siteOf } from "@/lib/whatsap
 import { sameResumeIdentity } from "@/lib/resume-identity"
 import { extractText } from "@/lib/docx"
 import { handleWhatsAppKompas } from "@/lib/whatsapp-kompas-channel"
+import { speechToWhatsAppText } from "@/lib/whatsapp-voice"
 import { extractProfile } from "@/lib/profile"
 import { plainFailure } from "@/lib/plain-failure"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
@@ -303,7 +304,24 @@ export async function POST(request: NextRequest) {
   // Until 19 Oct 2026 the answer waited for the whole resume, minutes, and Meta re-sent what it took for a failure.
   const work = async () => {
     try {
-      await handle(from, msg, session, userId, verifiedKompasAccount)
+      // Voice messages arrive as completed media after Send, never as WhatsApp
+      // live microphone streams or ready-to-use client-side transcripts.
+      // Recognize once and dispatch the result as normal text. This preserves
+      // kompas/revert, source intake, resume tailoring, account verification,
+      // original wamid deduplication, and all source/answer revision safeguards.
+      let input = msg
+      if (String(msg.type || "") === "audio") {
+        const voice = await speechToWhatsAppText(msg, userId)
+        if (!voice.ok) {
+          await sendText(from, voice.reply)
+          return
+        }
+        input = voice.message
+        // Metrics only: never put raw speech or transcript into server logs.
+        console.log("[whatsapp-voice] transcription", JSON.stringify({ ms: voice.elapsedMs, chars: voice.characters }))
+        trace(from, { dir: "in", kind: "voice-transcribed", note: "Voice recognized" })
+      }
+      await handle(from, input, session, userId, verifiedKompasAccount)
     } catch (e) {
       // Most errors here are session/database/storage faults, not LLM requests.
       // A bare storage 403 used to tell customers "no AI service is on" even for
