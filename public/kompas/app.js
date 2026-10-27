@@ -1856,7 +1856,16 @@ function composeIntake(lines, opts = {}) {
 // The last two answered questions before this card (owner, 2026-09-30): the next question may follow up on them.
 function recentQA(card) {
   const i = cards.indexOf(card), prev = (i < 0 ? cards : cards.slice(0, i)).filter(c => c && c.question && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(c.question) && typeof c.answer === "string" && c.answer.trim().length > 40);
-  return prev.slice(-2).map(c => ({ q: String(c.question).slice(0, 240), a: plainAnswer(c.answer).slice(0, 900) }));
+  return prev.slice(-2).map(c => ({ q: String(c.question).slice(0, 240), a: headAndTail(plainAnswer(c.answer), 2400) }));
+}
+// An earlier answer's conclusion is at its end. Measured 26 Oct 2026 (evaluation round 2): with only the first 900
+// characters sent, the next follow-up never saw the root cause the previous turn reached and changed it. The server
+// keeps up to 6000 characters of a prior answer the same way (src/lib/kompasHistory.ts).
+function headAndTail(text, limit) {
+  const t = String(text || "").trim();
+  if (t.length <= limit) return t;
+  const half = Math.floor((limit - 5) / 2);
+  return t.slice(0, half) + " […] " + t.slice(-half);
 }
 const consolidatedNeedsDerive = (opts) => !!opts.consolidated && !opts.derived;   // AI Answer: match after the question is derived
 function askingLevel() {
