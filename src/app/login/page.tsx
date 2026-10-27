@@ -92,13 +92,13 @@ function LoginContent() {
   // accounts that have it. How signing in works is unchanged.
   return (
     <main className="grid min-h-dvh bg-[var(--bg)] lg:grid-cols-[1fr_1fr]">
-      <section className="relative hidden overflow-hidden border-r border-[var(--border)] bg-[var(--surface-2)] lg:flex lg:flex-col lg:justify-between lg:p-12" aria-label="About MarketFit">
+      <section className="relative hidden overflow-hidden border-r border-[var(--border)] bg-[var(--surface-2)] lg:grid lg:grid-rows-[auto_minmax(300px,1fr)_auto_auto] lg:gap-y-4 lg:p-8 xl:p-12" aria-label="About MarketFit">
         <div aria-hidden className="pointer-events-none absolute -left-32 -top-32 size-[520px] rounded-full bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--accent)_16%,transparent),transparent)]" />
         <Link href="/" className="relative flex items-center gap-2.5">
           <span className="grid size-9 place-items-center rounded-[10px] bg-[var(--accent)] font-display text-[13px] font-bold text-[var(--bg)] shadow-[0_1px_2px_rgba(25,20,10,.18)]">MF</span>
           <span className="font-display text-[20px] font-bold tracking-[-0.01em] text-[var(--text)]">MarketFit</span>
         </Link>
-        <div className="relative flex min-h-0 flex-1 items-center justify-center py-5"><MarketFitLoginStory /></div>
+        <div className="relative flex min-h-[300px] w-full items-stretch justify-stretch py-2"><MarketFitLoginStory /></div>
         <div className="relative max-w-md pb-4">
           <h1 className="font-display text-[40px] font-semibold leading-[1.12] tracking-[-0.02em] text-[var(--text)]">A calmer job search starts here.</h1>
           <ul className="mt-8 space-y-4">
