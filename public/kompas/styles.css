@@ -990,3 +990,14 @@ html .cap-text,html .drawer-body,html .statusline,
 html.kd .overlay .q,html.kd .overlay .q span,html.kd .overlay .q b,
 html.kd #question,html.kd #answer,html.kd #answer li,html.kd #answer li.passage,
 html.kd .cap-text,html.kd .drawer-body,html.kd .statusline{font-size:var(--text-size)}
+
+/* Customer question-region review, not an evaluation/debug panel. */
+.screen-review{box-sizing:border-box;width:min(760px,94vw);max-height:90vh;overflow:auto;border:1px solid #788695;border-radius:18px;padding:24px;background:var(--bg,#17212b);color:var(--text,#f1f5f9)}
+.screen-review::backdrop{background:rgba(0,0,0,.7)}
+.screen-review section{padding:16px 0;border-top:1px solid #788695}
+.screen-review label{display:block;margin:12px 0;cursor:pointer}
+.screen-review input{margin-right:8px}
+.screen-review img{display:block;max-width:100%;max-height:280px;object-fit:contain;margin:12px 0}
+.screen-review pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.5}
+.screen-review-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.screen-review-actions button{min-height:44px}

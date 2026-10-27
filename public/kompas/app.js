@@ -962,7 +962,7 @@ $("collapseBtn").onclick = () => $("overlay").classList.toggle("collapsed");
 $("hideBtn").onclick = () => $("overlay").classList.toggle("collapsed");
 $("transcriptBtn").onclick = () => $("drawer").classList.toggle("hidden");
 $("personaBtn").onclick = () => openPersonaFile();
-$("clearBtn").onclick = () => { cards = [{ question: "Cleared.", answer: ["Ask something, or let the call fill this in."] }]; idx = 0; transcript = []; answeredSeq = heardSeq; updatePending(); renderDrawer(); renderCard(); status("Cleared."); };
+$("clearBtn").onclick = () => { if (window.KompasScreenReset) window.KompasScreenReset(); cards = [{ question: "Cleared.", answer: ["Ask something, or let the call fill this in."] }]; idx = 0; transcript = []; answeredSeq = heardSeq; updatePending(); renderDrawer(); renderCard(); status("Cleared."); };
 // Three asking levels. On the desktop, each level keeps its own answer for the
 // question on screen, and a switch shows that answer or starts it at once.
 // v3 drops answers stored before the question-depth correction.
@@ -1969,6 +1969,7 @@ function serveBook(card, hit, depthKey) {
   }
 }
 async function generateAnswer(question, card, opts = {}) {
+  if (card && card.screenTask) opts = { ...opts, source: "screen" };
   card = card || addCard(question, ["…"]);
   let timer;
   const request = generateAnswerRequest(question, card, opts);
@@ -2398,23 +2399,58 @@ async function grabFrame() {
   let track = displayVideo && displayVideo.readyState === "live" ? displayVideo : null;
   if (!track) { const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }); track = s.getVideoTracks()[0]; displayVideo = track; }
   const video = document.createElement("video"); video.muted = true; video.playsInline = true;
-  video.srcObject = new MediaStream([track]); await video.play();
-  if (video.readyState < 2) await new Promise(r => { video.onloadeddata = r; setTimeout(r, 1500); });
-  const w = video.videoWidth || 1280, h = video.videoHeight || 720, k = Math.min(1, 1600 / w);
-  const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
-  c.getContext("2d").drawImage(video, 0, 0, c.width, c.height);
-  video.pause(); video.srcObject = null;
-  return c.toDataURL("image/jpeg", 0.72);
+  try {
+    video.srcObject = new MediaStream([track]); await video.play();
+    if (video.readyState < 2) await new Promise(r => { video.onloadeddata = r; setTimeout(r, 1500); });
+    if (track.readyState !== "live" || video.readyState < 2 || !video.videoWidth || !video.videoHeight) throw new Error("No readable screen frame yet. Please retry.");
+    const w = video.videoWidth, h = video.videoHeight, k = Math.min(1, 1600 / w);
+    const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+    const context = c.getContext("2d");
+    if (!context) throw new Error("Screen capture is unavailable in this browser.");
+    context.drawImage(video, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.72);
+  } finally { video.onloadeddata = null; video.pause(); video.srcObject = null; }
 }
 async function analyseScreen() {
+  if (aiBusy) { status("Still working on the last answer.", "live"); return; }
+  aiBusy = true; aiBusySince = Date.now();
+  const screenSession = current && current.id;
+  let screenOwnsAnswer = true;
   const card = addCard("🖥 Reading the screen…", ["…"]); card.streaming = true; renderCard();
   const t0 = performance.now();
   try {
     const image = await grabFrame();
-    const res = await fetch("/api/screen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ image, prep: slimPrep(), config: liveConfig() }) });
+    const res = await fetch("/api/screen", { signal: AbortSignal.timeout(30000), method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ image, prep: slimPrep(), config: liveConfig() }) });
     const data = await res.json();
-    card.question = "🖥 " + (data.question || "On screen"); card.answer = data.text || "- Nothing readable came back from the screen — try Analyse Screen again.";
-  } catch (e) { card.question = "🖥 Screen"; card.answer = ["Couldn't capture the screen — " + (e && e.name === "NotAllowedError" ? "share was cancelled" : (e && e.message || e))]; }
+    if ((current && current.id) !== screenSession || !cards.includes(card)) throw new Error("Session changed. Capture the screen again in the active session.");
+    if (!res.ok) throw new Error(data.error || "Screen analysis failed. Please retry.");
+    if (data.needsReview === true) {
+      if (!Array.isArray(data.tasks) || !data.tasks.length || !window.KompasScreenReview) throw new Error("Screen review could not open. Please reload and retry.");
+      aiBusy = false; screenOwnsAnswer = false;
+      const selection = await window.KompasScreenReview({ image, tasks: data.tasks, sessionId: screenSession });
+      if ((current && current.id) !== screenSession || !cards.includes(card)) throw new Error("Session changed. Capture again in the active session.");
+      if (selection.action !== "answer") {
+        card.question = "Screen sections";
+        card.answer = selection.action === "collect" ? "Sections kept. Scroll the shared window and choose Analyse screen again. No answer generated yet." : "Screen review cancelled. No answer generated.";
+      } else {
+        card.question = selection.question; card.screenTask = true;
+        if (aiBusy) throw new Error("An answer is still running. Wait for it, then press AI Answer for this question.");
+        aiBusy = true; aiBusySince = Date.now(); screenOwnsAnswer = true;
+        await generateAnswer(card.question, card, { pinned: true, derived: card.question, source: "screen" });
+        return;
+      }
+    } else if (data.needsAnswer === true) {
+      if (typeof data.question !== "string" || !data.question.trim()) throw new Error("No screen question was returned. Please retry.");
+      card.question = data.question.trim(); card.screenTask = true;
+      await generateAnswer(card.question, card, { pinned: true, derived: card.question, source: "screen" });
+      return;
+    }
+    if (!data.needsReview) {
+      if (typeof data.text !== "string" || !data.text.trim()) throw new Error("No screen answer was returned. Please retry.");
+      card.question = "🖥 " + (data.question || "On screen"); card.answer = data.text;
+    }
+  } catch (e) { if (!card.screenTask) card.question = "🖥 Screen"; card.answer = ["Couldn't capture the screen — " + (e && e.name === "NotAllowedError" ? "share was cancelled" : (e && e.message || e))]; }
+  finally { if (screenOwnsAnswer) aiBusy = false; }
   card.streaming = false; card.meta = ((performance.now() - t0) / 1000).toFixed(1) + "s · vision";
   if (cards[idx] === card) renderCard();
 }
