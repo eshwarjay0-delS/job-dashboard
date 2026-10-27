@@ -404,9 +404,18 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     if (["help", "hi", "hello", "menu"].includes(command)) return sendText(from, HELP)
   }
 
+  // A deliberate profile-selection command is part of resume tailoring, not
+  // an interview question. Route it through the existing verified library
+  // selection even if the optional Kompas state store is unavailable.
+  // This specifically protects "Use 2", which was failing before selection.
+  const profileCommand = type === "text" &&
+    /^(?:use|switch(?:\s+to)?|profile|email)\s+[1-9]\d{0,2}$/i.test(
+      String((msg.text as { body?: string } | undefined)?.body || "").trim(),
+    )
+
   // Kompas has an explicit opt-in command and an independent, account-owned session.
   // All other WhatsApp traffic continues through the original MFit resume workflow.
-  if (type === "text" || type === "document") {
+  if (!profileCommand && (type === "text" || type === "document")) {
     const consumed = await handleWhatsAppKompas({
       from, owner: userId, verified, requestId: String(msg.id || ""), msg,
       send: async message => {
