@@ -41,6 +41,13 @@ test('sentence-final source figures allow the bare figure', () => {
   assert.equal(guardText('enforces NIST 800\u201153 controls.', allowed).text, 'enforces NIST 800\u201153 controls.')
 })
 
+test('guarded figures do not orphan an attached unit', () => {
+  const allowed = allowedNumbers('')
+  assert.equal(guardText('wal_sender_timeout=30s and max_replication_lag=45s.', allowed).text, 'wal_sender_timeout=several and max_replication_lag=several.')
+  assert.equal(guardText('within 30ms of the window.', allowed).text, 'within several of the window.')
+  assert.equal(guardText('within 30 ms of the window.', allowed).text, 'within several ms of the window.')
+})
+
 test('guard output stays grammatical: percentages and trailing periods', () => {
   assert.equal(kept('Route 10% of traffic via a service mesh.'), 'Route a share of traffic via a service mesh.')
   assert.equal(kept('Then gradually increase to 10%.'), 'Then gradually increase to a higher share.')

@@ -136,6 +136,7 @@ export function guardText(line: string, allowed: Set<string>): { text: string; r
     if (hasArticle) plain = plain.replace(/^(a|an|the)\s+/i, "")
     return plain + suffix
   })
+  text = text.replace(/several(milliseconds?|seconds?|minutes?|hours?|ms|secs?|mins?|hrs?|kb|mb|gb|tb|s)\b/gi, "several")
   text = text.replace(/\bin a few years ago/gi, "back then")
   return { text, removed }
 }
