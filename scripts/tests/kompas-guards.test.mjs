@@ -35,6 +35,12 @@ test('plus-qualified source figures allow the bare figure', () => {
   assert.equal(guardText('I have 8 years of experience.', allowed).text, 'I have 8 years of experience.')
 })
 
+test('sentence-final source figures allow the bare figure', () => {
+  const allowed = allowedNumbers('Design controls mapped to NIST 800-53.')
+  assert.equal(guardText('enforces NIST 800-53 controls.', allowed).text, 'enforces NIST 800-53 controls.')
+  assert.equal(guardText('enforces NIST 800\u201153 controls.', allowed).text, 'enforces NIST 800\u201153 controls.')
+})
+
 test('guard output stays grammatical: percentages and trailing periods', () => {
   assert.equal(kept('Route 10% of traffic via a service mesh.'), 'Route a share of traffic via a service mesh.')
   assert.equal(kept('Then gradually increase to 10%.'), 'Then gradually increase to a higher share.')
@@ -47,4 +53,6 @@ test('guard output stays grammatical: percentages and trailing periods', () => {
   assert.equal(kept('For 5 years we ran checks.'), 'For several years we ran checks.')
   assert.equal(kept('Built around NIST 800\u201353 controls.'), 'Built around NIST 800\u201353 controls.')
   assert.equal(kept('Map required AC\u20132 and SC\u20137 families.'), 'Map required AC\u20132 and SC\u20137 families.')
+  assert.equal(kept('Component 1: define a trust boundary.'), 'Component 1: define a trust boundary.')
+  assert.equal(kept('Indicators: (1) attempts, (2) alerts, (3) gaps.'), 'Indicators: (1) attempts, (2) alerts, (3) gaps.')
 })

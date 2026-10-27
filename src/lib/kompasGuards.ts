@@ -19,7 +19,7 @@ export interface SpeakFacts {
 // The ONLY result numbers the answer may state are these, from the
 // candidate's own material. Same extraction perfACT feeds its FIGURES prompt.
 const FIGURE_RE = /\b\d[\d,.]*\+?(?:\s*(?:%|x\b|years?|yrs?|months?|k\b|M\b))?/g
-const normFigure = (f: string) => f.toLowerCase().replace(/\+/g, "").replace(/\s+/g, " ").trim()
+const normFigure = (f: string) => f.toLowerCase().replace(/\+/g, "").replace(/[.,]+$/, "").replace(/\s+/g, " ").trim()
 
 export function allowedNumbers(...sources: Array<string | undefined>): Set<string> {
   const out = new Set<string>()
@@ -46,7 +46,11 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   // 40%", "5 rules created") still has no label word before it, so it stays
   // guarded; only a number that IS the label, the time, the id or the
   // threshold passes through.
-  if (/\b(?:hypothes(?:is|es)|options?|steps?|phases?|tiers?|rules?|controls?|requirements?|items?|cases?)\s*:?\s*$/i.test(before)) return true
+  if (/\b(?:hypothes(?:is|es)|options?|steps?|phases?|tiers?|rules?|controls?|requirements?|items?|cases?|components?)\s*:?\s*$/i.test(before)) return true
+  // A parenthesized ordinal like (1) is an enumeration label, not a claim.
+  // Kept narrow: (5 rules has no closing paren after the figure, so a
+  // result claim in parens still guards.
+  if (/\(\s*$/.test(before) && /^\)/.test(after)) return true
   // A bare ordinal back-reference ("For 1 I check the event log") points at
   // a hypothesis by its number, exactly like "For Hypothesis 1" does; the
   // label word is absent only because the sentence is elliptical. Kept
@@ -63,7 +67,7 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   if (/^[1-5]\d{2}$/.test(value) && (/\b(?:forbidden|unauthorized|responses?|status|http)\b/i.test(after) || /(?:expect\w*|return\w*|respond\w*|receiv\w*|status|http)[^.\n]{0,20}$/i.test(before))) return true
   if (/^\d+\.\d+(?:\.\d+)?$/.test(value) && /\b(?:kubernetes|istio|nginx|splunk(?: es)?|python|node(?:\.js)?|java|postgres(?:ql)?|kong|tls)\s*$/i.test(before)) return true
   if (/\b(?:invoice_id|customer_id|tenant_id|owner_id)\s*=\s*$/i.test(before) || /\/invoices\/\s*$/i.test(before)) return true
-  if (/[-_\u2013\u2014\u2212#]$/.test(before) || /^[-_\u2013\u2014\u2212]/.test(after)) return true
+  if (/[-_\u2010\u2011\u2013\u2014\u2212#]$/.test(before) || /^[-_\u2010\u2011\u2013\u2014\u2212]/.test(after)) return true
   return false
 }
 
