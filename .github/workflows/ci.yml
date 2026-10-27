@@ -54,6 +54,9 @@ jobs:
       - name: Verify speech container MIME parity
         run: node --experimental-strip-types --test scripts/tests/kompas-audio-upload-mime.test.mjs
 
+      - name: Verify MarketFit login visual story and media asset
+        run: node --test scripts/tests/login-journey-animation.test.mjs scripts/tests/login-35s-story.test.mjs
+
       - name: Build
         run: npm run build
         env:

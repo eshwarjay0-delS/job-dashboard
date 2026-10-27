@@ -1,0 +1,80 @@
+.stage {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 470px);
+  height: clamp(285px, 33vh, 360px);
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: 18px;
+}
+.introVisible,
+.introHidden {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transition: opacity 700ms ease;
+}
+.introVisible { opacity: 1; }
+.introHidden { opacity: 0; pointer-events: none; }
+.filmWaiting,
+.filmPlaying {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: contain;
+  background: color-mix(in srgb, var(--surface-2) 90%, var(--surface));
+  transition: opacity 700ms ease;
+}
+.filmWaiting { opacity: 0; pointer-events: none; }
+.filmPlaying { opacity: 1; }
+.soundControl {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.soundControl:focus-visible,
+.mobileSummary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.mobile { display: grid; gap: 8px; }
+.mobileDetails {
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.mobileSummary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.mobileSummary span { color: var(--accent); font-weight: 500; }
+.mobileVideo {
+  display: block;
+  width: 100%;
+  max-height: 310px;
+  background: var(--surface-2);
+  object-fit: contain;
+}
+@media (prefers-reduced-motion: reduce) {
+  .introVisible, .introHidden, .filmWaiting, .filmPlaying { transition: none; }
+}

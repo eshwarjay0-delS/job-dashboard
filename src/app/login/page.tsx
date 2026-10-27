@@ -7,7 +7,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Check } from "lucide-react"
-import MarketFitJourney from "./marketfit-journey"
+import MarketFitLoginStory from "./marketfit-login-story"
 
 const field = "h-11 w-full rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 text-[15px] text-[var(--text)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--text-soft)] focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_20%,transparent)]"
 
@@ -98,7 +98,7 @@ function LoginContent() {
           <span className="grid size-9 place-items-center rounded-[10px] bg-[var(--accent)] font-display text-[13px] font-bold text-[var(--bg)] shadow-[0_1px_2px_rgba(25,20,10,.18)]">MF</span>
           <span className="font-display text-[20px] font-bold tracking-[-0.01em] text-[var(--text)]">MarketFit</span>
         </Link>
-        <div className="relative flex min-h-0 flex-1 items-center justify-center py-5"><MarketFitJourney /></div>
+        <div className="relative flex min-h-0 flex-1 items-center justify-center py-5"><MarketFitLoginStory /></div>
         <div className="relative max-w-md pb-4">
           <h1 className="font-display text-[40px] font-semibold leading-[1.12] tracking-[-0.02em] text-[var(--text)]">A calmer job search starts here.</h1>
           <ul className="mt-8 space-y-4">
@@ -123,7 +123,7 @@ function LoginContent() {
             <span className="grid size-9 place-items-center rounded-[10px] bg-[var(--accent)] font-display text-[13px] font-bold text-[var(--bg)]">MF</span>
             <span className="font-display text-[20px] font-bold text-[var(--text)]">MarketFit</span>
           </Link>
-          <div className="mb-5 lg:hidden"><MarketFitJourney compact /></div>
+          <div className="mb-5 lg:hidden"><MarketFitLoginStory compact /></div>
           <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-8 shadow-[var(--shadow-card)]">
             <h2 className="text-[26px] font-bold tracking-[-0.02em] text-[var(--text)]">Sign in</h2>
             <p className="mt-2 text-[15px] leading-[1.6] text-[var(--text-muted)]">New here? The same button creates your account. Your first tailored resume is free.</p>
