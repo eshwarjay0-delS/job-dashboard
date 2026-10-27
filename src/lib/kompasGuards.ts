@@ -1,3 +1,4 @@
+import { isLocationSeg } from "@/lib/kompasResume"
 // Kompas grounding guards — anti-hallucination code ported from perfACT's
 // interview engine (copilot/api/answer.js). Prompt rules are wishes; these are
 // guarantees: figures, employers, titles, dates and places in a spoken answer
@@ -290,7 +291,6 @@ const ROLE_DATES = new RegExp(
 const TITLE_WORDS = /\b(engineer|analyst|developer|manager|architect|lead|consultant|specialist|administrator|admin|intern|director|officer|associate|scientist|designer|tester|responsibilities|experience|summary|education)\b/i
 const HEADER_LINE = /^[A-Z0-9 &/,.()'-]{4,}$/
 const EDU_LINE = /\b(university|college|institute|school|academy|b\.?\s?tech|b\.?\s?e\.?\b|m\.?\s?s\.?\b|m\.?\s?tech|bachelor|master'?s?|ph\.?\s?d|degree|diploma)\b/i
-const LOCATION_SEG = /^(remote|hybrid|on-?site|onsite|[A-Z][A-Za-z.]+(?:\s[A-Z][A-Za-z.]+)?(?:,\s*[A-Z][A-Za-z.]{1,})?)$/
 
 interface ParsedRole { at: number; headAt: number; org: string; title: string; dates: string; current: boolean }
 
@@ -305,7 +305,7 @@ function parseRoles(lines: string[]): ParsedRole[] {
     const prev = p >= 0 ? lines[p] : ""
     const dates = (bare.match(ROLE_DATES) || [""])[0]
     let segs = bare.replace(ROLE_DATES, "").split(/\s*[|•·]\s*/).map((x) => x.replace(/^[\s,–—-]+|[\s,–—-]+$/g, "").trim()).filter(Boolean)
-    segs = segs.filter((x, k) => !(k > 0 && LOCATION_SEG.test(x) && !TITLE_WORDS.test(x)))
+    segs = segs.filter((x, k) => !(k > 0 && isLocationSeg(x) && !TITLE_WORDS.test(x)))
     const first = segs[0] || ""
     const dash = first.split(/\s+[—–]\s+|\s+-\s+/)
     let org = ""

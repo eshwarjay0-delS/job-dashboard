@@ -38,8 +38,23 @@ const TITLE_WORDS =
 const HEADER_LINE = /^[A-Z0-9 &/,.()'-]{4,}$/
 const EDU_LINE =
   /\b(university|college|institute|school|academy|b\.?\s?tech|b\.?\s?e\.?\b|m\.?\s?s\.?\b|m\.?\s?tech|bachelor|master'?s?|ph\.?\s?d|degree|diploma)\b/i
-const LOCATION_SEG =
-  /^(remote|hybrid|on-?site|onsite|[A-Z][A-Za-z.]+(?:\s[A-Z][A-Za-z.]+)?(?:,\s*[A-Z][A-Za-z.]{1,})?)$/
+
+// A place, not an employer. Measured 26 Oct 2026 (evaluation, every introduction scrambled the career): the old LOCATION_SEG
+// matched any one or two capitalised words, so in "Senior Cybersecurity Engineer | Citi Bank | New York, NY" the
+// employer "Citi Bank" was dropped as a location (and "CVS Health", "Charter Communications", "Accenture" with it), and
+// the previous role's last bullet was taken as the employer. Only a real place shape counts: "City, ST", a state, a
+// country, a well-known city, or remote/hybrid/onsite.
+const US_STATES = "alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming|district of columbia"
+const COUNTRIES = "india|usa|u\\.s\\.a?|united states|united kingdom|uk|canada|australia|germany|singapore|uae|united arab emirates|ireland|netherlands|mexico|philippines|remote|hybrid|on-?site|onsite"
+const CITIES = "new york city|nyc|boston|chicago|seattle|austin|dallas|houston|atlanta|denver|phoenix|san francisco|los angeles|san diego|san jose|miami|charlotte|raleigh|philadelphia|pittsburgh|detroit|minneapolis|portland|nashville|columbus|indianapolis|bangalore|bengaluru|hyderabad|chennai|pune|mumbai|delhi|new delhi|noida|gurgaon|gurugram|kolkata|london|toronto|sydney|dubai"
+const PLACE = new RegExp(`^(?:${US_STATES}|${COUNTRIES}|${CITIES})$`, "i")
+export function isLocationSeg(seg: string): boolean {
+  const s = String(seg || "").trim().replace(/\.$/, "")
+  if (!s || /\d/.test(s)) return false
+  if (PLACE.test(s)) return true
+  const m = s.match(/^([A-Z][A-Za-z.'-]+(?:\s[A-Z][A-Za-z.'-]+){0,2}),\s*([A-Za-z. ]{2,})$/)   // "Irving, TX", "Austin, Texas"
+  return !!m && (/^[A-Z]{2}$/.test(m[2].trim()) || PLACE.test(m[2].trim()))
+}
 
 function cleanLines(resume: string): string[] {
   return String(resume || "")
@@ -63,7 +78,7 @@ export function parseRoles(lines: string[]): ResumeRole[] {
       .split(/\s*[|•·]\s*/)
       .map((x) => x.replace(/^[\s,–—-]+|[\s,–—-]+$/g, "").trim())
       .filter(Boolean)
-    segs = segs.filter((x, k) => !(k > 0 && LOCATION_SEG.test(x) && !TITLE_WORDS.test(x)))
+    segs = segs.filter((x, k) => !(k > 0 && isLocationSeg(x) && !TITLE_WORDS.test(x)))
     const first = segs[0] || ""
     const dash = first.split(/\s+[—–]\s+|\s+-\s+/)
     let org = ""
