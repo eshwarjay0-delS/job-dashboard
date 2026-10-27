@@ -21,7 +21,8 @@ export async function fileTailored(o: { userDir: string; base: string; jd: strin
     const saved = await saveTailored({
       userDir: o.userDir, bytes, jd: o.jd, role: String(o.role || "").slice(0, 120), company: String(o.company || "").slice(0, 80),
       // A resume the person wrote is built on at depth 1; one made for another job is already a copy (depth 2, never built on again).
-      depth: isTailoredName(path.basename(o.base)) ? 2 : 1,
+      // One the floor wrote job-post terms onto is a copy too (26 Oct 2026): those terms are not the person's own record.
+      depth: isTailoredName(path.basename(o.base)) || o.result.placed_from_jd?.length || o.result.placed_in_summary?.length || o.result.skills_only ? 2 : 1,
       ...(from && !from.startsWith("..") ? { from } : {}),
       asked: [...(k?.matched || []), ...(k?.added || []), ...(k?.missing || [])],
       covers: [...(k?.matched || []), ...(k?.added || [])],

@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import fs from "node:fs"
 import { BLEND_MOVES, blendPrompt, blendSpoken } from "../../src/lib/kompasBlend.ts"
 
-const route = fs.readFileSync(new URL("../../src/app/api/kompas/answer/route.ts", import.meta.url), "utf8")
+const route = fs.readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8")
 
 test("twenty-one blend moves are in the prompt the answer hears", () => {
   // 21st (owner, 23 Oct 2026): short sentences, plain meaning first, then the exact term.

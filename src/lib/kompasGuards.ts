@@ -1,3 +1,4 @@
+import { isLocationSeg } from "../../src/lib/kompasResume.ts"
 // Kompas grounding guards — anti-hallucination code ported from perfACT's
 // interview engine (copilot/api/answer.js). Prompt rules are wishes; these are
 // guarantees: figures, employers, titles, dates and places in a spoken answer
@@ -19,7 +20,7 @@ export interface SpeakFacts {
 // The ONLY result numbers the answer may state are these, from the
 // candidate's own material. Same extraction perfACT feeds its FIGURES prompt.
 const FIGURE_RE = /\b\d[\d,.]*\+?(?:\s*(?:%|x\b|years?|yrs?|months?|k\b|M\b))?/g
-const normFigure = (f: string) => f.toLowerCase().replace(/\s+/g, " ").trim()
+const normFigure = (f: string) => f.toLowerCase().replace(/\+/g, "").replace(/[.,]+$/, "").replace(/\s+/g, " ").trim()
 
 export function allowedNumbers(...sources: Array<string | undefined>): Set<string> {
   const out = new Set<string>()
@@ -40,6 +41,26 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   if (/\b(port|ports|version|v\.?|cve[-\s]?|event(?:\s*id)?|error|code|rule|threshold|severity|p[0-4]|build|ticket|case|change)\s*$/i.test(before)) return true
   if (/^x[0-9a-f]/i.test(after)) return true
   if (/^\s*(port|ports)\b/i.test(after)) return true
+  // Structural numbers are labels, not result claims — the guard rewrote them
+  // all to "several" (26 Oct 2026 live rounds: "Hypothesis several", "Tier
+  // several", "several:several UTC", "id=several"). A result claim ("cut by
+  // 40%", "5 rules created") still has no label word before it, so it stays
+  // guarded; only a number that IS the label, the time, the id or the
+  // threshold passes through.
+  if (/\b(?:hypothes(?:is|es)|options?|steps?|phases?|tiers?|rules?|controls?|requirements?|items?|cases?|components?)\s*:?\s*$/i.test(before)) return true
+  // A parenthesized ordinal like (1) is an enumeration label, not a claim.
+  // Kept narrow: (5 rules has no closing paren after the figure, so a
+  // result claim in parens still guards.
+  if (/\(\s*$/.test(before) && /^\)/.test(after)) return true
+  // A bare ordinal back-reference ("For 1 I check the event log") points at
+  // a hypothesis by its number, exactly like "For Hypothesis 1" does; the
+  // label word is absent only because the sentence is elliptical. Kept
+  // narrow on purpose: "For 5 years" has a unit after the figure, not a
+  // first-person test verb, so durations still guard.
+  if (/\bfor\s*$/i.test(before) && /^,?\s+i\s+(check|query|inspect|review|test|verify|examine|rule)\b/i.test(after)) return true
+  if (/\d:$/.test(before) || /^:\d/.test(after)) return true
+  if (/\bid\s*[=#:]\s*$/i.test(before)) return true
+  if (/[\u2265\u2264<>]\s*$/.test(before)) return true
   // HTTP responses and product versions describe a mechanism, not a result
   // claimed from the candidate's career. Do not turn `returns 403` into
   // `returns several` while guarding unsupported achievement metrics.
@@ -47,7 +68,7 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   if (/^[1-5]\d{2}$/.test(value) && (/\b(?:forbidden|unauthorized|responses?|status|http)\b/i.test(after) || /(?:expect\w*|return\w*|respond\w*|receiv\w*|status|http)[^.\n]{0,20}$/i.test(before))) return true
   if (/^\d+\.\d+(?:\.\d+)?$/.test(value) && /\b(?:kubernetes|istio|nginx|splunk(?: es)?|python|node(?:\.js)?|java|postgres(?:ql)?|kong|tls)\s*$/i.test(before)) return true
   if (/\b(?:invoice_id|customer_id|tenant_id|owner_id)\s*=\s*$/i.test(before) || /\/invoices\/\s*$/i.test(before)) return true
-  if (/[-_#]$/.test(before) || /^[-_]/.test(after)) return true
+  if (/[-_\u2010\u2011\u2013\u2014\u2212#]$/.test(before) || /^[-_\u2010\u2011\u2013\u2014\u2212]/.test(after)) return true
   return false
 }
 
@@ -85,16 +106,38 @@ export function guardText(line: string, allowed: Set<string>): { text: string; r
   let removed = 0
   const re = new RegExp(FIGURE_RE.source, "g")
   let text = String(line || "").replace(re, (fig: string, offset: number, full: string) => {
-    const n = normFigure(fig)
-    if (allowed.has(n)) return fig
+    // A trailing period that ends a sentence is punctuation, not part of the
+    // figure: "3." at a sentence end must not lose its period when the
+    // figure is rewritten ("3. Hypothesis 1" must never become "several
+    // Hypothesis 1"). Decimals ("3.5") never end in a period, so they are
+    // untouched by this split.
+    let core = fig
+    let suffix = ""
+    if (/\.$/.test(fig) && !/\d/.test(full[offset + fig.length] || "")) {
+      core = fig.slice(0, -1)
+      suffix = "."
+    }
+    const n = normFigure(core)
+    if (allowed.has(n) || allowed.has(normFigure(fig))) return fig
     if (isTechnicalConstant(full, fig, offset)) return fig
     removed++
     const before = full.slice(0, offset)
+    const after = full.slice(offset + fig.length)
     const hasArticle = /\b(a|an|the)\s+$/i.test(before)
-    let plain = plainFor(fig, hasArticle)
+    let plain: string
+    if (/%$/.test(core)) {
+      // A percentage replacement must fit its sentence: "route 10% of
+      // traffic" becomes "route a share of traffic", not "route noticeably
+      // of traffic"; "increase to 10%" becomes "increase to a higher
+      // share", not "increase to noticeably".
+      if (/^\s+of\b/.test(after)) plain = "a share"
+      else if (/\bto\s+(a|an|the\s+)?$/.test(before)) plain = "a higher share"
+      else plain = plainFor(core, hasArticle)
+    } else plain = plainFor(core, hasArticle)
     if (hasArticle) plain = plain.replace(/^(a|an|the)\s+/i, "")
-    return plain
+    return plain + suffix
   })
+  text = text.replace(/several(milliseconds?|seconds?|minutes?|hours?|ms|secs?|mins?|hrs?|kb|mb|gb|tb|s)\b/gi, "several")
   text = text.replace(/\bin a few years ago/gi, "back then")
   return { text, removed }
 }
@@ -134,6 +177,7 @@ export function unbracket(s: string, facts?: SpeakFacts | null): string {
 // Never leave markup or a dangling word behind: "at ****", "** **", "at ,".
 export function cleanOrphans(line: string): string {
   return String(line)
+    .replace(/\bseveral\s+(?=Hypothesis \d+:)/gi, "")
     .replace(/\*{4,}/g, "")
     .replace(/\*\*\s+\*\*/g, " ")
     .replace(/(^|[^*])\*\s*\*(?!\*)/g, "$1")
@@ -247,7 +291,6 @@ const ROLE_DATES = new RegExp(
 const TITLE_WORDS = /\b(engineer|analyst|developer|manager|architect|lead|consultant|specialist|administrator|admin|intern|director|officer|associate|scientist|designer|tester|responsibilities|experience|summary|education)\b/i
 const HEADER_LINE = /^[A-Z0-9 &/,.()'-]{4,}$/
 const EDU_LINE = /\b(university|college|institute|school|academy|b\.?\s?tech|b\.?\s?e\.?\b|m\.?\s?s\.?\b|m\.?\s?tech|bachelor|master'?s?|ph\.?\s?d|degree|diploma)\b/i
-const LOCATION_SEG = /^(remote|hybrid|on-?site|onsite|[A-Z][A-Za-z.]+(?:\s[A-Z][A-Za-z.]+)?(?:,\s*[A-Z][A-Za-z.]{1,})?)$/
 
 interface ParsedRole { at: number; headAt: number; org: string; title: string; dates: string; current: boolean }
 
@@ -262,7 +305,7 @@ function parseRoles(lines: string[]): ParsedRole[] {
     const prev = p >= 0 ? lines[p] : ""
     const dates = (bare.match(ROLE_DATES) || [""])[0]
     let segs = bare.replace(ROLE_DATES, "").split(/\s*[|•·]\s*/).map((x) => x.replace(/^[\s,–—-]+|[\s,–—-]+$/g, "").trim()).filter(Boolean)
-    segs = segs.filter((x, k) => !(k > 0 && LOCATION_SEG.test(x) && !TITLE_WORDS.test(x)))
+    segs = segs.filter((x, k) => !(k > 0 && isLocationSeg(x) && !TITLE_WORDS.test(x)))
     const first = segs[0] || ""
     const dash = first.split(/\s+[—–]\s+|\s+-\s+/)
     let org = ""
@@ -346,10 +389,36 @@ export function applyGuards(
     if (line.includes("[")) line = unbracket(line, facts)
     line = cleanOrphans(fixTitle(dropUnsourcedPrestige(fixVersions(dropUnsourcedPlace(line, facts), facts), facts), facts))
     if (!line.trim() || !needsGuard(line, allowed)) return line
+    // Only a sentence that claims a result guards its figures; the rest of the line keeps its numbers.
+    const parts = line.split(/(?<=[.!?])(\s+)/)
+    let changed = false
+    const kept = parts.map((part) => {
+      if (!part.trim() || !claimsResult(part) || !needsGuard(part, allowed)) return part
+      changed = true
+      return guardText(part, allowed).text
+    })
+    if (!changed) return line
     guarded++
-    return guardText(line, allowed).text
+    return kept.join("")
   })
   return { text: out.join("\n"), guarded }
+}
+
+// Measured 26 Oct 2026 (evaluation rounds 1-3): the figures guard turned thresholds, timeouts, counts in a test and
+// shares of traffic into "several", "a share" and "noticeably" in 16 of 50 answers ("wal_sender_timeout=several",
+// "at least a share of the expected event count"), so the technical answers came out garbled. An invented figure is a
+// claim about results: the candidate's own past work, a percentage something was cut or raised by, money, or years.
+// A number in a plan, a test or a design ("would", "if", a threshold) is the mechanism and stays as written.
+const CLAIMANT = /\b(?:i|we|my|our|me|us|i've|we've|i'm|we're)\b/i
+const RESULT = /\b(?:reduc|cut|sav|improv|increas|decreas|achiev|deliver|lower|rais|boost|grew|grow|shrank|shrink|eliminat|resolv|handl|process|manag|led|built|onboard|migrat|deploy|automat|secur|protect|block|detect|prevent|accelerat|sped|speed|shorten|drop|halv|doubl|tripl|scal|support|own|oversaw|mentor|train|serv|complet|clos|fix|remediat|patch)\w*/i
+const PLAN = /\b(?:would|will|could|should|can|might|may|if|i'd|we'd|i'll|we'll|plan|propose|expect|target|threshold|set|configure|alert when|at least|at most|within|every|per)\b/i
+export function claimsResult(sentence: string): boolean {
+  const s = String(sentence || "")
+  if (/\$\s?\d|\b\d[\d,.]*\s*(?:k|m|million|billion)?\s*(?:usd|dollars)\b/i.test(s)) return true
+  if (/\b\d+\+?\s*(?:years?|yrs?)\b/i.test(s) && CLAIMANT.test(s)) return true
+  if (PLAN.test(s)) return false
+  if (/\d\s*%|\bpercent\b|\b\d[\d,.]*\s*(?:x|times)\b/i.test(s) && RESULT.test(s)) return true
+  return CLAIMANT.test(s) && RESULT.test(s)
 }
 
 // ------------------------------------------------- post-generation fact check ---

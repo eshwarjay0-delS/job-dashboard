@@ -46,7 +46,15 @@ const FILES = [
 ]
 const names = () => [...document.querySelectorAll('.mf-fx-table tbody .mf-fx-label')].map(n => n.textContent)
 const crumbs = () => [...document.querySelectorAll('.mf-fx-address .mf-fx-crumb')].map(n => n.textContent)
-const typeInto = (el, text) => act(async () => { Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(el, text); el.dispatchEvent(new window.InputEvent('input', { bubbles: true, data: text })) })
+// In the full suite another test (apply-search-race) loads React before any page exists; React then watches typing
+// through focus and key events instead of "input" (it decides once, at load), so the box is focused, typed into and a
+// key is let go. React reports one change either way.
+const typeInto = (el, text) => act(async () => {
+  el.dispatchEvent(new window.FocusEvent('focusin', { bubbles: true }))
+  Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(el, text)
+  el.dispatchEvent(new window.InputEvent('input', { bubbles: true, data: text }))
+  el.dispatchEvent(new window.KeyboardEvent('keyup', { bubbles: true, key: text.slice(-1) || 'Backspace' }))
+})
 const click = (el) => act(async () => el.click())
 const dbl = (el) => act(async () => el.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true })))
 const row = (label) => [...document.querySelectorAll('.mf-fx-table tbody tr')].find(r => r.querySelector('.mf-fx-label')?.textContent === label)

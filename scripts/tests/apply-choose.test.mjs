@@ -56,7 +56,7 @@ test('the resume is the one titled for the job, whatever the keywords or the fol
   assert.equal(c.kind, 'ok')
   assert.equal(c.picked.candidate.path, CYBER)
   assert.equal(c.rel, 'a@x.com/Identity and Access Management/Cyber Security Analyst.docx')
-  assert.equal(c.why, "because its title is the job's: Security Analyst")
+  assert.equal(c.why, "because its title matches the job's role: Security Analyst")
   assert.equal(c.titled, 1); assert.equal(c.role, 'Security Analyst')
   assert.equal(logs.length, 0, 'looking at a posting is not using the resume')
   await choose.logChoice({ userDir: USER_DIR, userId: 'u1', email: 'a@x.com', jd: POST, choice: c })

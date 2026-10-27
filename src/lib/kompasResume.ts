@@ -38,8 +38,23 @@ const TITLE_WORDS =
 const HEADER_LINE = /^[A-Z0-9 &/,.()'-]{4,}$/
 const EDU_LINE =
   /\b(university|college|institute|school|academy|b\.?\s?tech|b\.?\s?e\.?\b|m\.?\s?s\.?\b|m\.?\s?tech|bachelor|master'?s?|ph\.?\s?d|degree|diploma)\b/i
-const LOCATION_SEG =
-  /^(remote|hybrid|on-?site|onsite|[A-Z][A-Za-z.]+(?:\s[A-Z][A-Za-z.]+)?(?:,\s*[A-Z][A-Za-z.]{1,})?)$/
+
+// A place, not an employer. Measured 26 Oct 2026 (evaluation, every introduction scrambled the career): the old LOCATION_SEG
+// matched any one or two capitalised words, so in "Senior Cybersecurity Engineer | Citi Bank | New York, NY" the
+// employer "Citi Bank" was dropped as a location (and "CVS Health", "Charter Communications", "Accenture" with it), and
+// the previous role's last bullet was taken as the employer. Only a real place shape counts: "City, ST", a state, a
+// country, a well-known city, or remote/hybrid/onsite.
+const US_STATES = "alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming|district of columbia"
+const COUNTRIES = "india|usa|u\\.s\\.a?|united states|united kingdom|uk|canada|australia|germany|singapore|uae|united arab emirates|ireland|netherlands|mexico|philippines|remote|hybrid|on-?site|onsite"
+const CITIES = "new york city|nyc|boston|chicago|seattle|austin|dallas|houston|atlanta|denver|phoenix|san francisco|los angeles|san diego|san jose|miami|charlotte|raleigh|philadelphia|pittsburgh|detroit|minneapolis|portland|nashville|columbus|indianapolis|bangalore|bengaluru|hyderabad|chennai|pune|mumbai|delhi|new delhi|noida|gurgaon|gurugram|kolkata|london|toronto|sydney|dubai"
+const PLACE = new RegExp(`^(?:${US_STATES}|${COUNTRIES}|${CITIES})$`, "i")
+export function isLocationSeg(seg: string): boolean {
+  const s = String(seg || "").trim().replace(/\.$/, "")
+  if (!s || /\d/.test(s)) return false
+  if (PLACE.test(s)) return true
+  const m = s.match(/^([A-Z][A-Za-z.'-]+(?:\s[A-Z][A-Za-z.'-]+){0,2}),\s*([A-Za-z. ]{2,})$/)   // "Irving, TX", "Austin, Texas"
+  return !!m && (/^[A-Z]{2}$/.test(m[2].trim()) || PLACE.test(m[2].trim()))
+}
 
 function cleanLines(resume: string): string[] {
   return String(resume || "")
@@ -63,7 +78,7 @@ export function parseRoles(lines: string[]): ResumeRole[] {
       .split(/\s*[|•·]\s*/)
       .map((x) => x.replace(/^[\s,–—-]+|[\s,–—-]+$/g, "").trim())
       .filter(Boolean)
-    segs = segs.filter((x, k) => !(k > 0 && LOCATION_SEG.test(x) && !TITLE_WORDS.test(x)))
+    segs = segs.filter((x, k) => !(k > 0 && isLocationSeg(x) && !TITLE_WORDS.test(x)))
     const first = segs[0] || ""
     const dash = first.split(/\s+[—–]\s+|\s+-\s+/)
     let org = ""
@@ -141,7 +156,7 @@ const ASK_STOP = new Set(
  * summary. A general question matches almost nothing — never leave the model
  * without the work itself: the current role's first bullets fill the gap.
  */
-export function resumeDigest(resume: string, ask: string, budget = 4600): string {
+export function resumeDigest(resume: string, ask: string, budget = 4600, mode: 'focused' | 'career' = 'focused'): string {
   const lines = cleanLines(resume)
   const roles = parseRoles(lines).map((r) => ({ ...r, bullets: [] as string[] }))
   if (!roles.length) return String(resume).slice(0, budget)
@@ -166,6 +181,29 @@ export function resumeDigest(resume: string, ask: string, budget = 4600): string
     .replace(/\b(email|phone|mobile)\s*:\s*/gi, "")
     .replace(/\s{2,}/g, " ")
     .trim()
+  // A full-career introduction is not a keyword lookup. Keyword ranking can
+  // promote one tool/project and quietly omit earlier roles, even though the
+  // question asked for the person. Give each supported career stage source
+  // space in resume order; keep fine-grained TF-IDF for scoped questions only.
+  if (mode === 'career') {
+    const roleMap = `ROLES (resume order, not inferred chronology): ${roles.map((r) =>
+      `${r.org} — ${r.title} — ${r.dates}`).join('; ')}`
+    const out = [roleMap]
+    let used = roleMap.length + 900 // reserve room for the career summary
+    const perRole = Math.max(1, Math.min(3, Math.floor((budget - 900) / Math.max(1, roles.length) / 260)))
+    for (const r of roles) {
+      const head = `${r.org} — ${r.title} (${r.dates}):`
+      const bullets: string[] = []
+      for (const b of r.bullets.slice(0, perRole)) {
+        if (used + head.length + b.length + 20 > budget) break
+        bullets.push(b)
+        used += b.length + 20
+      }
+      if (bullets.length) out.push(`${head}\n- ${bullets.join('\n- ')}`)
+    }
+    out.push(`CAREER SUMMARY (source only): ${pre.slice(0, Math.max(0, Math.min(900, budget - out.join('\n').length - 40)))}`)
+    return out.join('\n').slice(0, budget)
+  }
   // 6-char stems: "cyberark" ≠ "cyber risk"; "upgrade" = "upgrades"
   const words = [...new Set(String(ask || "").toLowerCase().match(/[a-z][a-z0-9+#./-]{2,}/g) || [])]
     .filter((w) => !ASK_STOP.has(w))

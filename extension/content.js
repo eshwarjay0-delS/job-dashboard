@@ -93,7 +93,7 @@ function fillSelect(el, searchText) {
 /** The question a radio group asks, without the note after it: "Are you a U.S. citizen? (Note: ... security clearance
  *  mandates)" asks about citizenship, and the word in the note answered the clearance question on a Recruitee form. */
 function groupQuestion(r) {
-  const own = wrapperLabel(r) || squash(r.closest("fieldset")?.querySelector("legend")?.innerText)
+  const own = groupHeading(r) || wrapperLabel(r) || squash(r.closest("fieldset")?.querySelector("legend")?.innerText)
   return own.replace(/\(.*$/, "").replace(/\bnote\s*:.*$/i, "").trim()
 }
 
@@ -603,7 +603,7 @@ const FIELD_MAP = [
   { keys: ["portfolio", "website", "personal website", "portfolio url", "personal url",
             "your website", "personal site", "website url"],                                                  field: "portfolio"  },
   { keys: ["title", "job title", "current title", "current role", "position title",
-            "professional title", "your title"],                                                              field: "title"      },
+            "professional title", "your title", "headline"],                                                  field: "title"      },
   // Visa-candidate fields — the questions almost every application asks. These fill
   // TEXT inputs only (the user's own stated data); Yes/No sponsorship radios are
   // intentionally NOT auto-answered here (a wrong legal answer would hurt the user).
@@ -611,7 +611,8 @@ const FIELD_MAP = [
             "authorization status", "work status", "eligible to work"],                                       field: "work_auth"       },
   { keys: ["visa status", "visa type", "current visa", "immigration status", "visa"],                         field: "visa_status"     },
   { keys: ["salary expectation", "expected salary", "desired salary", "salary requirement",
-            "compensation expectation", "desired compensation", "expected compensation"],                     field: "salary"          },
+            "compensation expectation", "desired compensation", "expected compensation",
+            "desired pay", "desiredpay", "pay expectation"],                                                  field: "salary"          },
   { keys: ["years of experience", "years experience", "total experience", "total years",
             "experience (years)", "yrs of experience", "yrs experience"],                                     field: "years_experience" },
   // Separate first/last name fields — MUST come before the "name" catch-all below,
@@ -655,10 +656,11 @@ function labelText(node) {
  *  `first`, only the first of these (to name the field to a person: "First Name", not "First Name* First Name"). */
 function ownLabel(el, first = false) {
   const parts = []
-  if (el.id) {
-    const lbl = document.querySelector(`label[for="${CSS.escape(el.id)}"]`)
-    if (lbl) parts.push(labelText(lbl))
-  }
+  // A label names its field by id; some name it by the field's name instead (jobs.net: for="custom_questions[...]"
+  // beside id="custom_questions_...", 21 Oct 2026, which left First Name, Last Name and Email empty).
+  const byFor = (key) => key && document.querySelector(`label[for="${CSS.escape(key)}"]`)
+  const lbl = byFor(el.id) || (el.name && !document.getElementById(el.name) ? byFor(el.name) : null)
+  if (lbl) parts.push(labelText(lbl))
   for (const id of (el.getAttribute("aria-labelledby") || "").split(/\s+/).filter(Boolean)) {
     const node = document.getElementById(id)
     if (node) parts.push(squash(node.innerText))
@@ -682,8 +684,9 @@ function wrapperLabel(el) {
     const others = [...node.querySelectorAll(CONTROL_SEL)]
       .filter(c => c !== el && !(el.type === "radio" && c.type === "radio" && c.name === el.name))
     if (others.length) return ""
+    // A label for another field is not this one's question; a label whose "for" names no element on the page is.
     const lbl = [...node.querySelectorAll("legend, label, .label, [class*='label'], [class*='Label'], h3, h4, [class*='question']")]
-      .find(c => !c.querySelector(CONTROL_SEL) && !c.htmlFor)
+      .find(c => !c.querySelector(CONTROL_SEL) && (!c.htmlFor || !document.getElementById(c.htmlFor)))
     if (lbl) return squash(lbl.innerText)
   }
   return ""
@@ -691,6 +694,25 @@ function wrapperLabel(el) {
 
 /** What a field asks, in its own words only. */
 const questionOf = (el) => ownLabel(el) || wrapperLabel(el) || squash(el.placeholder)
+
+/**
+ * The question a group of options asks, from the group itself: a fieldset's legend, or a radiogroup's aria-labelledby or
+ * aria-label. Workable and BambooHR draw each option as a label around a hidden native radio, so the nearest label read
+ * "Yes" and every Yes/No question on the form was listed as one "Yes" (21 Oct 2026).
+ */
+function groupHeading(el) {
+  const group = el.closest("fieldset, [role='radiogroup'], [role='group']")
+  if (!group) return ""
+  // Only a group that holds this question's options and nothing else: a fieldset around a whole form ("Application")
+  // is not the question of a radio inside it.
+  const controls = [...group.querySelectorAll("input, select, textarea")].filter(c => c.type !== "hidden")
+  if (!controls.length || controls.some(c => c.type !== el.type) || (el.type === "radio" && controls.some(c => c.name !== el.name))) return ""
+  const by = (group.getAttribute("aria-labelledby") || "").split(/\s+/).filter(Boolean).map(id => document.getElementById(id)).filter(Boolean)
+  if (by.length) return squash(by.map(n => labelText(n)).join(" "))
+  const legend = [...group.children].find(c => c.tagName === "LEGEND") || group.querySelector("legend")
+  if (legend) return labelText(legend)
+  return squash(group.getAttribute("aria-label"))
+}
 
 function getFieldHint(el) {
   const parts = [
@@ -759,7 +781,9 @@ function fillGeneric(profile, alreadyFilled = new Set()) {
   const hasStateBox = [...document.querySelectorAll("input, select")].some(x => STATE_ONLY_RE.test(squash(questionOf(x)).replace(/[*✱:]+/g, " ").trim()))
   const inputs = [
     ...document.querySelectorAll(
-      "input:not([type='hidden']):not([type='submit']):not([type='button'])" +
+      // Not a box hidden from people: Workable keeps a 1px aria-hidden "city" box to catch the browser's own autofill and
+      // adds what lands there to the Address (21 Oct 2026: "St. Louis, MO" went into it).
+      "input:not([type='hidden']):not([type='submit']):not([type='button']):not([aria-hidden='true'])" +
       ":not([type='file']):not([type='checkbox']):not([type='radio'])" +
       ":not([type='search']):not([type='range']):not([type='color']), " +
       "textarea:not([aria-hidden='true'])"
@@ -786,6 +810,12 @@ function fillGeneric(profile, alreadyFilled = new Set()) {
     if (STATE_ONLY_RE.test(bare)) {
       const text = el.maxLength > 0 && el.maxLength <= 3 ? place.abbr : place.full
       if (text && fillText(el, text)) { n++; alreadyFilled.add(el) }
+      continue
+    }
+    // A box that asks only for a summary of the person (Workable's optional "Summary") gets the short profile they
+    // wrote, when there is one; a question that merely mentions a summary is not this.
+    if (/^(?:summary|professional summary|profile summary|about (?:you|me))(?: \(optional\))?$/i.test(bare)) {
+      if (profile.bio && fillText(el, String(profile.bio))) { n++; alreadyFilled.add(el) }
       continue
     }
     for (const { keys, field } of FIELD_MAP) {
@@ -856,12 +886,32 @@ function fillGeneric(profile, alreadyFilled = new Set()) {
 // matches "citizen"/"green card"/etc by coincidence. "C2C" is deliberately NOT
 // treated as authorized — it describes a contracting arrangement, not an
 // immigration status, so it tells us nothing about legal work authorization.
-function fillWorkAuthRadio(profile) {
+/** Is the person authorized to work without sponsorship, by their own stated status? Unset or unclear is not yes. */
+function authorizedToWork(profile) {
   const status = (profile?.work_auth || "").toLowerCase().replace(/[_.]/g, " ").replace(/\s+/g, " ").trim()
-  if (!status || /sponsor/.test(status)) return 0 // unset, or explicitly needs sponsorship → leave for the user
-  const authorized = /citizen|green ?card|\bh-?1b\b|\bopt\b|\bcpt\b|tn visa|\b[lo]-?1\b|\bj-?1\b/.test(status)
-  if (!authorized) return 0 // unrecognized/ambiguous (e.g. "C2C") → leave for the user, never guess
+  if (!status || /sponsor/.test(status)) return false // unset, or explicitly needs sponsorship → leave for the user
+  return /citizen|green ?card|\bh-?1b\b|\bopt\b|\bcpt\b|tn visa|\b[lo]-?1\b|\bj-?1\b/.test(status)
+}
+
+function fillWorkAuthRadio(profile) {
+  if (!authorizedToWork(profile)) return 0 // unrecognized/ambiguous (e.g. "C2C") → leave for the user, never guess
   return fillRadio("authorized", "Yes") ? 1 : 0
+}
+
+// The same question as one box to tick ("I am eligible to work in the United States", jobs.net, 21 Oct 2026): ticked for
+// a status that needs no sponsorship, otherwise left and listed (ATTENTION_RE).
+const ELIGIBLE_BOX_RE = /\b(?:i am |i'm )?(?:eligible|legally authori[sz]ed|authori[sz]ed) to work\b/i
+function fillWorkAuthCheckbox(profile, alreadyFilled) {
+  if (!authorizedToWork(profile)) return 0
+  let n = 0
+  for (const cb of document.querySelectorAll('input[type="checkbox"]:not([disabled]):not(:checked)')) {
+    const asked = squash(ownLabel(cb) || wrapperLabel(cb))
+    if (!ELIGIBLE_BOX_RE.test(asked) || /sponsor|citizen|require|need|future|not\b/i.test(asked)) continue
+    cb.click()
+    cb.dispatchEvent(new Event("change", { bubbles: true }))
+    if (cb.checked) { n++; if (alreadyFilled) alreadyFilled.add(cb) }
+  }
+  return n
 }
 
 // ── Application-preference radios — relocate / start date / transportation /
@@ -877,7 +927,11 @@ const HOLDS_CLEARANCE = (q) => /clearance/i.test(q) && /\b(?:hold|have|possess|a
 
 function fillPreferenceRadio(labelKeyword, value, accept) {
   if (value === null || value === undefined) return 0
-  return fillRadio(labelKeyword, value ? "Yes" : "No", accept) ? 1 : 0
+  // Every group that asks it, not only the first: one form asked "Do you hold an active TS/SCI Clearance?" twice
+  // (Workable, 21 Oct 2026), and the second was left. fillRadio passes over a group already answered.
+  let n = 0
+  while (n < 6 && fillRadio(labelKeyword, value ? "Yes" : "No", accept)) n++
+  return n
 }
 
 /** The same questions drawn as a select (JazzHR): the Yes or No option, or "No Clearance" for a clearance level list. */
@@ -912,6 +966,11 @@ function fillCertificationCheckboxes(alreadyFilled) {
     if (alreadyFilled && alreadyFilled.has(cb)) continue
     const hint = getFieldHint(cb)
     if (!ATTEST_RE.test(hint)) continue
+    // Agreeing to terms is consent, not a statement that the application is true: "I acknowledge that I have opened, read,
+    // and understood the Arbitration Agreement" was being ticked on OpenAI's Ashby form (21 Oct 2026 sample). Only a box
+    // that certifies the information is true is ticked.
+    if (/\b(?:arbitration|agreement|agree|consent|terms|policy|privacy|notice|marketing|newsletter|text messages?|sms|read the above|have read|reviewed)\b/i.test(hint) &&
+        !/\b(?:true|accurate|complete and correct|truthful)\b/i.test(hint)) continue
     cb.click()
     cb.dispatchEvent(new Event("change", { bubbles: true }))
     if (cb.checked) { n++; if (alreadyFilled) alreadyFilled.add(cb) }
@@ -928,7 +987,18 @@ function fillCertificationCheckboxes(alreadyFilled) {
 // full-time seeking opportunities"). Our safe Yes/No fill correctly finds no
 // match there and does nothing — but the user could easily miss that the
 // question exists at all if nothing points it out.
-const ATTENTION_RE = /\b(sponsor|sponsorship|visa|citizen|citizenship|veteran|disability|race|ethnicity|hispanic|latino|gender( identity)?|sexual orientation|legally authorized|work authoriz)/i
+const ATTENTION_RE = /\b(sponsor|sponsorship|visa|citizen|citizenship|veteran|disability|race|ethnicity|hispanic|latino|gender( identity)?|sexual orientation|legally authorized|work authoriz|eligible to work)/i
+// A box that proves a person is not a program ("I am not a bot"): never ticked, always pointed out (jobs.net, 21 Oct 2026).
+const BOT_CHECK_RE = /\b(?:not a (?:ro)?bot|i'?m not a robot|captcha|human verification|verify (?:that )?you(?:'re| are) (?:a )?human)\b/i
+// A required control drawn by script (a Workable dropdown, a BambooHR Fabric select) keeps its "required" on a hidden
+// input beside it; the question is the visible control's.
+function visibleTwin(el) {
+  for (let node = el.parentElement, depth = 0; node && depth < 4; node = node.parentElement, depth++) {
+    const twin = node.querySelector("[role='combobox']:not([aria-hidden='true']), button[aria-haspopup]")
+    if (twin && twin !== el) return twin
+  }
+  return null
+}
 
 /** What a field asks, as a person would say it, for the list of what is still theirs to answer. */
 const askedName = (el) => (questionOf(el) || inferFieldName(el)).replace(/[*✱]+/g, " ").replace(/^required\.?\s*/i, "").replace(/\s*\brequired$/i, "").replace(/\s+/g, " ").trim().slice(0, 70)
@@ -938,6 +1008,8 @@ const GENERIC_HEADING = /^(?:please|check|select|choose|pick)\b/i
 /** The question a set of radios, or of boxes sharing one name, answers together. */
 function radioGroupLabel(inputs) {
   const first = inputs[0]
+  const heading = groupHeading(first).replace(/[*✱]+/g, " ").replace(/\s+/g, " ").trim()
+  if (heading && !GENERIC_HEADING.test(heading)) return heading.slice(0, 70)
   const asked = wrapperLabel(first)
   if (asked && !GENERIC_HEADING.test(asked)) return asked.slice(0, 70)
   // Another box (JazzHR's signature name and date) sits in the same wrapper: look up for the group's heading, never for
@@ -954,7 +1026,13 @@ function radioGroupLabel(inputs) {
 
 /** Is this field required? By its attribute, or by the asterisk in its label (JazzHR sets no attribute). */
 function isRequiredField(el) {
-  return el.required || el.getAttribute("aria-required") === "true" || /[*✱]/.test(ownLabel(el) || wrapperLabel(el))
+  if (el.required || el.getAttribute("aria-required") === "true" || /[*✱]/.test(ownLabel(el) || wrapperLabel(el))) return true
+  // An option of a group the group itself marks required (BambooHR: fieldset role=radiogroup aria-required, "*" in its legend).
+  if (el.type === "radio" || el.type === "checkbox") {
+    const group = el.closest("fieldset, [role='radiogroup'], [role='group']")
+    return !!group && (group.getAttribute("aria-required") === "true" || /[*✱]/.test(groupHeading(el)))
+  }
+  return false
 }
 
 /** Is it still empty: nothing typed, the placeholder option chosen, no radio or box ticked. */
@@ -981,9 +1059,15 @@ function detectAttentionFields(alreadyFilled) {
     if (ATTENTION_RE.test(hint)) flagged.push(asked || "Work authorization / EEO question")
     else if (group.some(isRequiredField)) required.push(asked)
   }
-  // Boxes that share one name answer one question together ("Yes" and "No" boxes): asked once, by that question.
+  // Boxes that share one name answer one question together ("Yes" and "No" boxes): asked once, by that question. Boxes
+  // named one by one but drawn as one group (Workable names each by its option id: "Which cloud platforms ...?") are
+  // one question too.
   const boxes = new Map(), grouped = new Set()
-  for (const el of document.querySelectorAll("input[type='checkbox']:not([disabled])")) if (el.name) boxes.set(el.name, [...(boxes.get(el.name) || []), el])
+  for (const el of document.querySelectorAll("input[type='checkbox']:not([disabled])")) {
+    const container = el.closest("fieldset, [role='group']")
+    const key = container && container.querySelectorAll("input[type='checkbox']").length > 1 ? container : el.name
+    if (key) boxes.set(key, [...(boxes.get(key) || []), el])
+  }
   for (const group of boxes.values()) {
     if (group.length < 2) continue
     group.forEach(g => grouped.add(g))
@@ -994,13 +1078,46 @@ function detectAttentionFields(alreadyFilled) {
   }
   // Selects, boxes and areas still empty
   for (const el of document.querySelectorAll("select:not([disabled]), input:not([disabled]), textarea:not([disabled])")) {
-    if (el.type === "radio" || el.type === "hidden" || el.type === "submit" || el.type === "button" || el.type === "file" || el.type === "search" || grouped.has(el)) continue
-    if (el.getAttribute("aria-hidden") === "true" || filledHere(el) || !isEmptyField(el)) continue
+    if (el.type === "radio" || el.type === "hidden" || el.type === "submit" || el.type === "button" || el.type === "search" || grouped.has(el)) continue
+    // A required upload with no file chosen (jobs.net's "Upload Resume *"): the person's to attach. jobs.net marks it on
+    // the wrapper ("*Upload Resume", data-is-optional="false"), not on the file box, whose own label is "From device ...".
+    if (el.type === "file") {
+      if (el.files && el.files.length) continue
+      let marked = ""
+      for (let node = el.parentElement, depth = 0; node && depth < 5 && !marked; node = node.parentElement, depth++) {
+        const lbl = [...node.querySelectorAll("label, legend")].find(l => /[*✱]/.test(l.textContent) && /resume|cv\b|upload|attach/i.test(l.textContent))
+        if (lbl || node.getAttribute("data-is-optional") === "false") marked = squash(lbl?.textContent || "").replace(/[*✱]+/g, " ").trim() || "Resume upload"
+      }
+      if (isRequiredField(el) || marked) {
+        const own = askedName(el)
+        // Named plainly: a short marked label as it is ("Upload Resume"); anything about a resume or cv, an id, or a widget's
+        // own text ("Resume/CV ATTACH RESUME/CVCouldn't auto-read resume...") is "Resume upload".
+        const said = marked && marked.length <= 30 ? marked : own
+        required.push(said === marked && marked ? marked : (!said || /^[\w.-]+$/.test(said) || /^from device/i.test(said) || /resume|\bcv\b/i.test(said) ? "Resume upload" : said.split(/\s{2,}/)[0].slice(0, 40)))
+      }
+      continue
+    }
+    if (filledHere(el) || !isEmptyField(el)) continue
+    if (el.getAttribute("aria-hidden") === "true") {
+      // Hidden from people: only the required value of a control drawn by script, named by that control.
+      const twin = el.required ? visibleTwin(el) : null
+      if (!twin) continue
+      // The visible control already shows a choice (BambooHR's Country toggle reads "Country United States"): not empty.
+      const shown = squash(twin.getAttribute("aria-label") || twin.textContent)
+      if (twin.tagName === "INPUT" ? !!twin.value.trim() : !/[–-]\s*select\s*[–-]?|^select\b|choose/i.test(shown)) continue
+      const name = askedName(twin).replace(/[–-]+\s*select\s*[–-]*/gi, " ").replace(/\s+/g, " ").trim()
+      if (ATTENTION_RE.test(name)) flagged.push(name)
+      else if (name) required.push(name)
+      continue
+    }
     const name = askedName(el)
+    // "I am not a bot" is never ticked, and the form cannot go on without it.
+    if (el.type === "checkbox" && BOT_CHECK_RE.test(name)) { required.push(name); continue }
     if (ATTENTION_RE.test(getFieldHint(el))) flagged.push(name || "Sponsorship / EEO question")
     else if (isRequiredField(el)) required.push(name)
   }
-  const unique = (list) => list.filter((v, i, a) => v && a.indexOf(v) === i)
+  // The same question twice ("... employment visa" and "... employment visa " cut at 70 characters) is listed once.
+  const unique = (list) => list.map(v => String(v || "").trim()).filter((v, i, a) => v && a.indexOf(v) === i)
   const first = unique(flagged)
   return [...first, ...unique(required).filter(v => !first.includes(v))].slice(0, 12)
 }
@@ -1058,6 +1175,7 @@ async function autoFillForm(profile) {
   // Safe on every ATS, not just Workday — same "authorized to work = Yes" only
   // policy (sponsorship / EEO radios are never touched).
   n += await safePass("workAuthRadio", () => fillWorkAuthRadio(profile))
+  n += await safePass("workAuthCheckbox", () => fillWorkAuthCheckbox(profile, filled))
   n += await safePass("relocateRadio", () => fillRelocateRadio(profile))
   n += await safePass("startImmediatelyRadio", () => fillStartImmediatelyRadio(profile))
   n += await safePass("transportationRadio", () => fillTransportationRadio(profile))

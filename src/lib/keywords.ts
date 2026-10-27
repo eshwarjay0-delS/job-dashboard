@@ -344,11 +344,21 @@ export function extractJdKeywords(jd: string): string[] {
   //    Two words only, and the preceding word can't be a stopword or a gerund verb
   //    (so "implementing security" / "performing analysis" never leak in).
   const SUFFIX = /^(management|security|governance|testing|controls?|compliance|analysis|response|services|provisioning|deprovisioning|training|protocols?|assessment|monitoring|administration|remediation|authentication|authorization|architecture|mitigation|hardening|onboarding|scanning|reporting|engineering|operations|modeling|modelling|segmentation|privilege|detection|hunting|orchestration|migration|integration|optimization|automation|validation|encryption|recovery|continuity|discovery|enrichment|triage|forensics|resilience|pipelines?|reviews?|policies|policy)$/
-  for (const m of jd.matchAll(/\b([a-z][a-z-]{2,})\s+([a-z][a-z-]+)\b/gi)) {
-    const a = m[1].toLowerCase(), b = m[2].toLowerCase()
-    if (!SUFFIX.test(b)) continue
-    if (WORD_STOP.has(a) || VERB_STOP.has(a)) continue
-    out.add(a + " " + b)
+  // Word pairs are read overlapping, phrase by phrase: a regex match used to swallow the word before it, so "lists and
+  // row-level security" gave "and row-level" (dropped) and never "row-level security" (26 Oct 2026). When the word before
+  // the pair forms a known term with its first word ("zero trust"), the three are one term ("zero trust architecture",
+  // not "trust architecture").
+  for (const phrase of jd.split(/[.,;:!?()\[\]\n•]+/)) {
+    // A slash joins two words, it does not make one ("IAM/identity governance" holds "identity governance"); quotes and
+    // stray punctuation around a word are not part of it.
+    const w = phrase.toLowerCase().split(/[\s/]+/).map(t => t.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "")).filter(Boolean)
+    for (let i = 0; i + 1 < w.length; i++) {
+      const a = w[i], b = w[i + 1]
+      if (!/^[a-z][a-z-]{2,}$/.test(a) || !/^[a-z][a-z-]+$/.test(b) || !SUFFIX.test(b)) continue
+      if (WORD_STOP.has(a) || VERB_STOP.has(a)) continue
+      const lead = i > 0 ? `${w[i - 1]} ${a}` : ""
+      out.add(lead && out.has(lead) ? `${lead} ${b}` : a + " " + b)
+    }
   }
 
   // 5) PRODUCT / TOOL proper nouns. Vendor names carry no acronym caps and aren't in the
@@ -356,12 +366,31 @@ export function extractJdKeywords(jd: string): string[] {
   //    entirely — exactly the keywords an ATS looks for. High precision comes from taking
   //    Title-Case tokens ONLY mid-sentence: a capitalised word that is NOT the first word
   //    of a sentence/line/bullet is almost always a proper noun, not sentence casing.
-  for (const m of jd.matchAll(/(?<=[^\s.!?;:•\-–—\n])[ \t]+([A-Z][a-zA-Z0-9]{2,15})\b/g)) {
-    const raw = m[1]
-    if (/^[A-Z]+$/.test(raw)) continue              // ALL-CAPS already handled above
+  //    A product name of several capitalised words is one term: "PeopleSoft Query Manager", "Data Mover", "Process
+  //    Scheduler" were read as "query", "mover" and "scheduler" and written onto a resume that way (26 Oct 2026).
+  const titleStopped = (raw: string) => {
     const low = raw.toLowerCase()
-    if (tokenVetoed(raw) || WORD_STOP.has(low) || CAPS_STOP.has(raw.toUpperCase()) || TITLE_STOP.has(low) || (low.endsWith("s") && TITLE_STOP.has(low.slice(0, -1)))) continue
-    out.add(low)
+    return tokenVetoed(raw) || WORD_STOP.has(low) || CAPS_STOP.has(raw.toUpperCase()) || TITLE_STOP.has(low) || (low.endsWith("s") && TITLE_STOP.has(low.slice(0, -1)))
+  }
+  for (const m of jd.matchAll(/(?<=[^\s.!?;:•\-–—\n])[ \t]+([A-Z][a-zA-Z0-9]{1,15}(?:[ \t]+[A-Z][a-zA-Z0-9]{1,15}){0,3})\b/g)) {
+    // A line written all in capitalised words is a title ("Senior Enterprise Network Zero Trust Security Engineer"), not a
+    // sentence: its words are not product names.
+    // Only a short line with no list in it is a title: "Tools: Wiz, Trivy, Vault" and "Must Have Skills: ..." are lists of
+    // products, and their names are kept (26 Oct 2026 review).
+    const start = jd.lastIndexOf("\n", m.index!) + 1, end = jd.indexOf("\n", m.index!)
+    const lineText = jd.slice(start, end < 0 ? undefined : end).trim()
+    const line = lineText.split(/\s+/).filter(t => /^[A-Za-z]{2,}/.test(t))
+    if (line.length >= 3 && line.length <= 10 && !/[,:/|(]/.test(lineText) && line.every(t => /^[A-Z]/.test(t))) continue
+    const run = m[1].split(/[ \t]+/)
+    // Only a word of the sentence ("Our", "The") comes off the front: "Security Hub", "Service Control Policies" and
+    // "Great Expectations" are names whole, and were cut to "hub", "control policies" and "expectations".
+    while (run.length > 1 && (WORD_STOP.has(run[0].toLowerCase()) || /^(?:senior|sr|junior|jr|lead|principal|staff|chief|head)$/i.test(run[0]))) run.shift()
+    while (run.length > 1 && ROLE_WORD.test(run[run.length - 1])) run.pop()
+    if (run.length > 1 && run.some(t => !titleStopped(t))) { out.add(run.join(" ").toLowerCase()); continue }
+    const raw = run[0]
+    if (raw.length < 3 || /^[A-Z]+$/.test(raw)) continue  // ALL-CAPS already handled above
+    if (titleStopped(raw)) continue
+    out.add(raw.toLowerCase())
   }
 
   // Collapse established acronym/expansion variants into one requirement, rather
@@ -388,6 +417,9 @@ function collapseCredentialAlternatives(jd: string, terms: string[]): string[] {
   const grouped = new Set(groups.flatMap(g => g.options))
   return [...terms.filter(term => !grouped.has(term) || new RegExp('\\b' + term + '\\b', 'i').test(outside)), ...groups.map(g => g.options.join(' or '))]
 }
+
+// The job title a run of capitalised words can end in ("Zero Trust Security Engineer"): not part of a product name.
+const ROLE_WORD = /^(?:engineers?|analysts?|developers?|architects?|consultants?|specialists?|administrators?)$/i
 
 // Capitalised words that are ordinary English (or JD boilerplate) rather than product
 // names — these would otherwise slip through the mid-sentence proper-noun layer.

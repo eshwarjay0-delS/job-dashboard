@@ -101,3 +101,18 @@ test('a job made under the old folder is still found, and is taken out of it whe
   await store.saveTailored({ userDir: USER, bytes: Buffer.from(`${E} newer`), jd: POST, role: 'Security Analyst', company: 'InfoPeople', depth: 1, asked: ['java'], covers: ['java'] })
   assert.equal(files.has(path.join(USER, other)), true)
 })
+
+// Owner, 26 Oct 2026, two WhatsApp screenshots: a Senior PeopleSoft Security Analyst post filed under "Application and
+// API Security" and then "Data Protection and Privacy". Its work is access control inside an application (user profiles,
+// roles, permission lists, row-level security), which is Identity and Access Management.
+test('a PeopleSoft security post is filed under Identity and Access Management, not AppSec or Data Protection', () => {
+  const post = `Senior PeopleSoft Security Analyst
+PeopleTools & Module Security (Core Focus)
+* PeopleSoft Enterprise Modules: PeopleSoft HCM, FSCM, EPM, Campus Solutions.
+* PeopleTools Security Infrastructure: User Profiles, Roles, Permission Lists, Component-Level Security, Page-Level Security, Field-Level Security, Row-Level Security.
+* Data protection: encryption of sensitive fields, application security reviews.`
+  assert.equal(RL.categoryForJob(post), 'Identity and Access Management')
+  // The other kinds stay where they were.
+  assert.equal(RL.categoryForJob('Senior Network Security Engineer\nPalo Alto firewalls, Cisco, VPN and zero trust.'), 'Network Security')
+  assert.equal(RL.categoryForJob('Application Security Engineer\nOWASP Top 10, SAST, DAST and Burp Suite testing.'), 'Application and API Security')
+})

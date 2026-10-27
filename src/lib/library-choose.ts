@@ -57,7 +57,7 @@ export async function chooseResume(opts: { userDir: string; userId: string; emai
   } else {
     const n = narrowByRole(all, role)
     pool = n.pool
-    if (n.fit >= 4) { why = `because its title is the job's: ${role}`; titled = n.pool.length }
+    if (n.fit >= 4) { why = `because its title matches the job's role: ${role}`; titled = n.pool.length }
     // "Make another one": not the resume the last go started from, when there is any other.
     if (prefer.avoid) {
       const rest = pool.filter(r => relOfAbs(r.candidate.path) !== prefer.avoid)

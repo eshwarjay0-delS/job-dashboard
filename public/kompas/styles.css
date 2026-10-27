@@ -213,8 +213,8 @@ body{
 /* Prev/Next response toggles live on the action bar as pills (owner, 23 Oct 2026) — no absolute-positioned corner buttons. */
 .card{animation:cardIn .26s var(--ease) both}
 @keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.q{display:flex;gap:9px;font-size:16px;line-height:1.55;margin-bottom:14px;max-height:7.75em;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;transition:opacity .12s linear}
-.card.q-away .q{opacity:0;pointer-events:none}
+.q{display:flex;gap:9px;font-size:16px;line-height:1.55;margin-bottom:14px;max-height:3.1em;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;transition:max-height .5s cubic-bezier(.22,1,.36,1),margin-bottom .5s cubic-bezier(.22,1,.36,1),opacity .3s linear}
+.card.q-away .q{opacity:0;max-height:0;margin-bottom:0;overflow:hidden;pointer-events:none}
 .q b{font-weight:700}
 .a-head{font-size:14.5px;font-weight:700;margin:2px 0 9px}
 .a ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px}
@@ -990,3 +990,14 @@ html .cap-text,html .drawer-body,html .statusline,
 html.kd .overlay .q,html.kd .overlay .q span,html.kd .overlay .q b,
 html.kd #question,html.kd #answer,html.kd #answer li,html.kd #answer li.passage,
 html.kd .cap-text,html.kd .drawer-body,html.kd .statusline{font-size:var(--text-size)}
+
+/* Customer question-region review, not an evaluation/debug panel. */
+.screen-review{box-sizing:border-box;width:min(760px,94vw);max-height:90vh;overflow:auto;border:1px solid #788695;border-radius:18px;padding:24px;background:var(--bg,#17212b);color:var(--text,#f1f5f9)}
+.screen-review::backdrop{background:rgba(0,0,0,.7)}
+.screen-review section{padding:16px 0;border-top:1px solid #788695}
+.screen-review label{display:block;margin:12px 0;cursor:pointer}
+.screen-review input{margin-right:8px}
+.screen-review img{display:block;max-width:100%;max-height:280px;object-fit:contain;margin:12px 0}
+.screen-review pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.5}
+.screen-review-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.screen-review-actions button{min-height:44px}

@@ -6,50 +6,24 @@ import { execFileSync } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { saveCheckpoint } from './lib/evaluation-checkpoint.mjs'
-import { buildManifest } from './lib/evaluation-manifest.mjs'
-const FIXTURES = {
- 'interview-50': new URL('./fixtures/kompas-evaluation/interview-50.json', import.meta.url),
- 'intent-acceptance-v1': new URL('./fixtures/kompas-evaluation/intent-acceptance-v1.json', import.meta.url),
-}
-const REVIEWED_HISTORY = new Set(['intro-repeat', 'drilldown'])
-const [sourcesFile, outputDir, round = '1', fixtureName = 'interview-50'] = process.argv.slice(2)
-if (!sourcesFile || !outputDir) throw Error('Usage: node scripts/kompas-live-evaluate.mjs SOURCES.json PRIVATE_OUTPUT_DIR ROUND [interview-50|intent-acceptance-v1]')
+import { captureSummary } from './lib/evaluation-completeness.mjs'
+import { evidenceDigest } from './lib/evaluation-provenance.mjs'
+import { fixtureName, caseInput } from './lib/evaluation-fixtures.mjs'
+const [sourcesFile, outputDir, round = '1', selectedFixture] = process.argv.slice(2)
+if (!sourcesFile || !outputDir) throw Error('Usage: node scripts/kompas-live-evaluate.mjs SOURCES.json PRIVATE_OUTPUT_DIR ROUND')
 if (!/^[1-9]\d*$/.test(round)) throw Error('Round must be a positive integer')
 if (!Object.hasOwn(FIXTURES, fixtureName)) throw Error(`Unknown evaluation fixture ${fixtureName}; zero model calls made.`)
 const token = process.env.KOMPAS_API_TOKEN
 if (!token) throw Error('KOMPAS_API_TOKEN is not configured; zero model calls made.')
 const origin = new URL(process.env.KOMPAS_BASE_URL || 'https://job-dashboard-fawn.vercel.app')
 if (origin.protocol !== 'https:') throw Error('HTTPS required')
-const fixtureBytes = await readFile(FIXTURES[fixtureName])
+const fixture = fixtureName(selectedFixture)
+const fixtureBytes = await readFile(new URL(`./fixtures/kompas-evaluation/${fixture}.json`, import.meta.url))
 const sourceBytes = await readFile(sourcesFile)
-const runnerBytes = await readFile(fileURLToPath(import.meta.url))
-const cases = JSON.parse(fixtureBytes.toString())
-const sources = JSON.parse(sourceBytes.toString())
-const hashes = {
- sourcesSha256: createHash('sha256').update(sourceBytes).digest('hex'),
- fixtureSha256: createHash('sha256').update(fixtureBytes).digest('hex'),
- runnerSha256: createHash('sha256').update(runnerBytes).digest('hex'),
-}
-let code = { codeVersion: null, codeVersionStatus: 'unavailable' }
-try {
- const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: path.dirname(fileURLToPath(import.meta.url)), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
- if (/^[0-9a-f]{40}$/.test(sha)) code = { codeVersion: sha, codeVersionStatus: 'git' }
-} catch { /* missing git is recorded as unavailable */ }
-for (const c of cases) {
- const supplemental = fixtureName === 'intent-acceptance-v1'
- if (supplemental && (!c.category || c.chain)) throw Error(`Intent case ${c.id} must be category-scoped and chain-free; zero model calls made.`)
- if (!supplemental && (c.category || !c.chain)) throw Error(`Baseline case ${c.id} must stay on its chain; zero model calls made.`)
- const bundle = sources?.[supplemental ? c.id : c.chain]
- const label = supplemental ? c.id : c.chain
- if (!['resume', 'jd'].every(key => typeof bundle?.[key] === 'string' && bundle[key].trim())) throw Error(`Missing approved resume/JD bundle for ${label}; zero model calls made.`)
- if (!supplemental) continue
- const reviewed = REVIEWED_HISTORY.has(c.category)
- if (reviewed) {
-  const turns = bundle.history
-  if (!Array.isArray(turns) || turns.length === 0 || turns.some(turn => typeof turn?.q !== 'string' || !turn.q.trim() || typeof turn?.a !== 'string' || !turn.a.trim())) throw Error(`Missing explicit reviewed history for ${c.id}; zero model calls made.`)
-  if (bundle.ledger != null && (typeof bundle.ledger !== 'object' || Array.isArray(bundle.ledger))) throw Error(`Reviewed ledger for ${c.id} must be an object; zero model calls made.`)
- } else if (bundle.history != null || bundle.ledger != null) throw Error(`Isolated case ${c.id} must not include prior history; zero model calls made.`)
-}
+const cases = JSON.parse(fixtureBytes)
+const sources = JSON.parse(sourceBytes)
+const provenance = { fixtureSha256: evidenceDigest(fixtureBytes), sourcesSha256: evidenceDigest(sourceBytes), origin: origin.origin, runnerSha256: evidenceDigest(await readFile(new URL(import.meta.url))) }
+const inputs = new Map(cases.map(c => [c.id, caseInput(c, sources, fixture)]))
 await mkdir(outputDir, { recursive: true, mode: 0o700 })
 const destination = path.join(outputDir, `round-${round}.json`)
 const manifestPath = path.join(outputDir, `round-${round}.manifest.json`)
@@ -71,35 +45,27 @@ try {
  const ready = await request({ preflight: true })
  if (!ready.ready) throw Error('Preflight not ready; zero interview answers generated.')
 } catch (error) {
- await saveCheckpoint(destination, [{ round, fixture: fixtureName, stage: 'preflight', status: 'failed', error: error.message }])
- await writeManifest('failed', 'preflight')
+ await saveCheckpoint(destination, [{ round, provenance, stage: 'preflight', status: 'failed', error: error.message }])
  throw error
 }
 for (const c of cases) {
- const supplemental = Boolean(c.category)
- const bundle = sources[supplemental ? c.id : c.chain]
- const { history: reviewedHistory, ledger: reviewedLedger, ...grounding } = bundle
- const state = states.get(c.chain) || { history: [], ledger: undefined }
- const history = supplemental ? (REVIEWED_HISTORY.has(c.category) ? reviewedHistory : []) : state.history
- const ledger = supplemental ? (REVIEWED_HISTORY.has(c.category) ? reviewedLedger : undefined) : state.ledger
+ const input = inputs.get(c.id)
+ const state = states.get(input.key) || { history: input.history, ledger: undefined }
  const began = Date.now()
  const captureId = randomUUID()
  try {
   const answer = await request({ question: c.question, stream: false, pinned: true,
-   config: { ...grounding, level: c.level, interviewer: c.level, responseCalibration: 'three-level-v1' },
-   history, ledger,
+   config: { ...input.config, level: c.level, interviewer: c.level, responseCalibration: 'three-level-v1' },
+   history: state.history, ledger: state.ledger,
   })
   if (!answer.text?.trim() || answer.degraded || !answer.meta?.model) throw Error('Missing actual model answer or degraded response')
-  records.push({ id: c.id, captureId, round, fixture: fixtureName, category: c.category, question: c.question, level: c.level, criteria: c.criteria,
-   historyMode: supplemental ? (REVIEWED_HISTORY.has(c.category) ? 'reviewed' : 'isolated') : 'chain', historyTurns: history.length,
+  records.push({ id: c.id, round, provenance, fixture, question: c.question, level: c.level, criteria: c.criteria,
    text: answer.text, meta: answer.meta, elapsedMs: Date.now()-began,
    words: answer.text.trim().split(/\s+/).length, review: { status: 'pending', scores: null, evidence: [] } })
-  if (!supplemental) {
-   state.history.push({ q: c.question, a: answer.text }); state.ledger = answer.ledger
-   states.set(c.chain, state)
-  }
+  state.history.push({ q: c.question, a: answer.text }); state.ledger = answer.ledger
+  states.set(input.key, state)
  } catch (error) {
-  records.push({ id: c.id, captureId, round, fixture: fixtureName, status: 'failed', error: error.message, elapsedMs: Date.now()-began })
+  records.push({ id: c.id, round, provenance, status: 'failed', error: error.message, elapsedMs: Date.now()-began })
   await saveCheckpoint(destination, records)
   await writeManifest('failed', 'answer')
   throw error
@@ -107,4 +73,7 @@ for (const c of cases) {
  await saveCheckpoint(destination, records)
  console.log(`Captured ${records.length}/${cases.length}; quality review pending`)
 }
-await writeManifest('complete', 'answers')
+
+const summary = captureSummary(cases, records)
+if (summary.status !== 'capture-complete') throw Error('Incomplete capture; no completion manifest written')
+await saveCheckpoint(path.join(outputDir, `round-${round}.manifest.json`), { round, fixture, provenance, ...summary })

@@ -1,0 +1,25 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+import {JSDOM} from 'jsdom'
+const task=(overrides={})=>({question:'Explain the diagram',kind:'diagram',options:[],choiceMode:'unknown',complete:true,bounds:[0,0,1000,1000],...overrides})
+async function setup(){
+ const dom=new JSDOM('<button id="origin">Analyse</button>',{runScripts:'outside-only'}),w=dom.window
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false}
+ w.HTMLCanvasElement.prototype.getContext=()=>({drawImage:()=>{}});w.HTMLCanvasElement.prototype.toDataURL=()=> 'data:image/jpeg;base64,fixture'
+ w.Image=class{naturalWidth=100;naturalHeight=100;decode(){return Promise.resolve()}}
+ for(const file of ['screen-core.js','screen-review.js'])w.eval(readFileSync('public/kompas/'+file,'utf8'))
+ const click=text=>{const b=[...w.document.querySelectorAll('button')].find(n=>n.textContent===text);assert.ok(b,text);b.click()}
+ const open=(tasks=[task()],sessionId='a')=>w.KompasScreenReview({image:'fixture',tasks,sessionId})
+ return {dom,w,click,open}
+}
+test('review does not answer until user chooses Answer selected',async()=>{const {dom,w,click,open}=await setup();let done=false;const p=open().then(r=>{done=true;return r});await Promise.resolve();assert.equal(done,false);assert.equal(w.document.querySelectorAll('section').length,1);click('Answer selected');assert.equal((await p).action,'answer');assert.equal(w.document.querySelector('dialog'),null);dom.window.close()})
+test('three MCQs can be individually selected, preserving labels and excluding the rest',async()=>{const {dom,w,click,open}=await setup();const p=open([1,2,3].map(n=>task({kind:'mcq',question:'Question '+n,options:[{label:'B',text:'Choice '+n}]})));w.document.querySelectorAll('section input')[1].checked=false;click('Answer selected');const r=await p;assert.match(r.question,/Choice 1/);assert.match(r.question,/Choice 3/);assert.doesNotMatch(r.question,/Choice 2/);dom.window.close()})
+test('collecting pages generates no answer and allows explicit continuation',async()=>{const {dom,w,click,open}=await setup();let p=open([task({question:'First part',complete:false})]);click('Keep sections; capture more');assert.equal((await p).action,'collect');p=open([task({question:'Second part'})]);const boxes=[...w.document.querySelectorAll('input')];boxes[1].checked=true;click('Answer selected');assert.match(w.document.querySelector('[role="alert"]').textContent,/missing sections/);boxes[2].checked=true;click('Answer selected');const result=await p;assert.match(result.question,/First part/);assert.match(result.question,/Second part/);dom.window.close()})
+test('changing sessions clears collected question text',async()=>{const {dom,click,open}=await setup();let p=open([task({question:'Session A private task'})]);click('Keep sections; capture more');await p;p=open([task({question:'Session B task'})],'b');click('Answer selected');const r=await p;assert.doesNotMatch(r.question,/Session A/);dom.window.close()})
+test('empty selection stays in review with a useful message',async()=>{const {dom,w,click,open}=await setup();const p=open();w.document.querySelector('section input').checked=false;click('Answer selected');assert.match(w.document.querySelector('[role="alert"]').textContent,/Select at least one/);click('Cancel');assert.equal((await p).action,'cancel');dom.window.close()})
+test('escape cancels without generating an answer',async()=>{const {dom,w,open}=await setup();const p=open();w.document.querySelector('dialog').dispatchEvent(new w.Event('cancel',{cancelable:true}));assert.equal((await p).action,'cancel');dom.window.close()})
+test('untrusted question markup renders as text',async()=>{const {dom,w,click,open}=await setup();const p=open([task({question:'<img src=x onerror=alert(1)> Which output?'})]);assert.equal(w.document.querySelectorAll('img').length,1);assert.match(w.document.querySelector('pre').textContent,/<img/);click('Cancel');await p;dom.window.close()})
+test('discard removes earlier pages',async()=>{const {dom,click,open}=await setup();let p=open([task({question:'Old task'})]);click('Keep sections; capture more');await p;p=open();click('Discard collected sections');await p;p=open([task({question:'New task'})]);click('Answer selected');assert.doesNotMatch((await p).question,/Old task/);dom.window.close()})
+test('focus returns to the triggering control',async()=>{const {dom,w,click,open}=await setup();const origin=w.document.getElementById('origin');origin.focus();const p=open();click('Cancel');await p;assert.equal(w.document.activeElement,origin);dom.window.close()})
+test('clear action removes draft even in the same session',async()=>{const {dom,w,click,open}=await setup();let p=open([task({question:'Discard this draft'})]);click('Keep sections; capture more');await p;w.KompasScreenReset();p=open([task({question:'Fresh task'})]);click('Answer selected');assert.doesNotMatch((await p).question,/Discard this draft/);dom.window.close()})

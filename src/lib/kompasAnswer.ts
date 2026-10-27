@@ -27,8 +27,16 @@ const EXP_Q2 =
 const PERSONAL_ASK = /\byour (?:own |biggest |greatest |strongest |most significant |recent |current )?(?:experience|achievements?|accomplishments?|contributions?|career|strengths?|weaknesses?|background|projects?|clients?|responsibilities|role|mistakes?|failures?|successes?)\b|\byou (?:are |were )?(?:proud of|personally|responsible for)\b/i
 const HYPOTHETICAL_GUARD = /\b(how would you|what would you|suppose|if you were)\b/i
 
+/** Keep personal introductions distinct from "introduction to OAuth" or a
+ * requested technical overview. One word must not override the subject. */
+export function isCareerIntroduction(question: string): boolean {
+  const q = String(question || '').trim()
+  if (/\bintro(?:duction)?\s+(?:to|of|on|about)\s+(?!(?:my|your|me|you|myself|yourself|career|background)\b)/i.test(q)) return false
+  return IDENTITY.test(q)
+}
+
 export function classify(q: string): { tier: Tier; why: string } {
-  if (IDENTITY.test(q)) return { tier: 0, why: "identity" }
+  if (isCareerIntroduction(q)) return { tier: 0, why: "identity" }
   if (T3.test(q)) return { tier: 3, why: "drill-down" }
   if ((EXP_Q.test(q) || EXP_Q2.test(q) || PERSONAL_ASK.test(q)) && !HYPOTHETICAL_GUARD.test(q))
     return { tier: 4, why: "own experience" }
@@ -49,7 +57,64 @@ export function canonicalQuestion(q: string, tier: Tier): string {
   if (tier === 0 && words.length > 0 && words.length < 4) {
     return "Tell me about yourself"
   }
+  // A bare term is a request to explain it (owner, 25 Oct 2026: "treating a question as abbreviation explain it"). The
+  // model was handed "IDOR" alone and left to guess what was wanted.
+  if (tier !== 0 && isBareTerm(q)) return `What is ${String(q).trim().replace(/[.?!]+$/, "")}? If it is an abbreviation, say what it stands for first.`
   return q
+}
+
+/**
+ * An answer the token ceiling cut off far short of its target. Measured 26 Oct 2026 (evaluation round 3, iam-4): the
+ * stream finished 42 ms after its first words, "I added a real‑time rev", and that was served as the answer. gpt-oss
+ * pays its reasoning from the same ceiling as the answer, so a hard follow-up can spend nearly all of it reasoning.
+ */
+export function cutShort(finish: string, text: string, targetWords: number): boolean {
+  if (finish !== "length") return false
+  const t = String(text || "").trim()
+  const words = t.split(/\s+/).filter(Boolean).length
+  // Also stopped mid-sentence: the intent baseline's comparison answers ended on "or same" with the mitigation missing.
+  return words < Math.max(25, Math.round(targetWords * 0.35)) || !/[.!?]["')\]]*$/.test(t)
+}
+
+const NOT_A_TERM =/^(?:next|continue|go on|go ahead|repeat|again|pause|stop|wait|done|skip|more|same|okay|ok|yes|no|thanks|thank you|hello|hi|hey)\b/i
+
+/** One to four words with no verb and no question: a term, a tool or an abbreviation the interviewer named. */
+export function isBareTerm(q: string): boolean {
+  const t = String(q || "").trim().replace(/[.!]+$/, "")
+  if (!t || /\?/.test(t) || NOT_A_TERM.test(t) || BARE_INTRO.test(t)) return false
+  const words = t.split(/\s+/)
+  if (words.length > 4 || !/^[A-Za-z0-9]/.test(t)) return false
+  return !ASK_OPENER.test(t) && !/\b(?:is|are|was|were|do|does|did|can|could|would|should|have|has|i|you|we|my|your)\b/i.test(t)
+}
+
+/**
+ * Every part the question asks for, in order, and the conditions it sets (owner, 25 Oct 2026: understand what each
+ * question demands and "make sure it completes to deliver everything that's expected"). Measured 26 Oct: "Explain trust
+ * boundaries, data flow, failure isolation, rollout and validation" lost parts, and "Define IDOR, explain why it
+ * matters, and give one mitigation" was answered as a definition. Setup sentences are context, not parts.
+ */
+export function requestedParts(question: string): { parts: string[]; constraints: string[] } {
+  const parts: string[] = [], constraints: string[] = []
+  // Not "compare": "Compare IDOR and CSRF" is one part, the comparison.
+  const LIST_VERB = /^((?:explain|state|cover|give|include|describe|list|name|walk through|walk me through|discuss|outline|address|show|identify)\b)\s+(.+)$/i
+  const CONDITION = /^(?:keep|make it|stay|limit|avoid|assume|use only|focus|without|don'?t|do not|never)\b/i
+  for (const sentence of String(question || "").split(/(?<=[.?!])\s+/)) {
+    let core = sentence.replace(LEAD_FILLER, "").replace(/[.!]+$/, "").trim()
+    if (!core) continue
+    if (CONDITION.test(core)) { constraints.push(core); continue }
+    const tail = core.match(/^(.*?),?\s+((?:without|but (?:do not|don't|never))\b.*)$/i)
+    if (tail && tail[1].split(/\s+/).length >= 3) { core = tail[1].trim(); constraints.push(tail[2].trim()) }
+    if (!/\?$/.test(core) && !ASK_OPENER.test(core)) continue   // the setup the ask stands on
+    const list = core.match(LIST_VERB)
+    if (list && /,|\band\b/.test(list[2]) && !/\b(?:why|how|what|when|where|whether|versus|vs)\b/i.test(list[2])) {
+      const items = list[2].split(/,\s*(?:and\s+)?|\s+and\s+/).map((x) => x.trim()).filter(Boolean)
+      if (items.length >= 2 && items.every((x) => x.split(/\s+/).length <= 8)) { for (const x of items) parts.push(`${list[1]} ${x}`); continue }
+    }
+    const clauses = core.split(/,\s*(?:and\s+)?|;\s*|\s+and\s+(?=(?:explain|give|describe|define|state|name|list|show|compare|walk|outline|discuss|recommend|propose|justify|why|how|what)\b)/i).map((x) => x.trim()).filter(Boolean)
+    if (clauses.length >= 2 && clauses.every((x) => ASK_OPENER.test(x))) { parts.push(...clauses); continue }
+    parts.push(core)
+  }
+  return { parts, constraints }
 }
 
 // Parakeet baseline: median length of 1,767 real answers of each kind, scaled
@@ -264,6 +329,8 @@ export function lengthPlan(
 
 // ---- Question detection: three code gates before any model call ----
 
+const BARE_INTRO = /^(?:(?:big|brief|short|quick|full|personal|detailed|self)\s+)?intro(?:duction)?[.?!]*$/i
+
 const ASKS =
   /\?\s*$|^(so,? |and,? |also,? )?(what|how|why|when|where|which|who|can|could|would|will|should|do|does|did|are|is|have|has|tell|walk|describe|explain|give|share|talk|imagine|suppose|pick|choose|name|list|select|design|compare|outline|rank|identify|recommend|propose)\b|\b(tell me|walk me|show me|how would you|what would you|can you|could you|would you|have you|do you)\b/i
 
@@ -274,7 +341,7 @@ export function plainlyNoQuestion(heard: string): boolean {
   if (lines.some((l) => /^Them:/.test(l))) return false
   return !lines.some((l) => {
     const t = l.replace(/^(You|Them):\s*/, "")
-    return /\?/.test(t) || ASKS.test(t) || LOGISTICS.test(t) || THEIRQ.test(t)
+    return BARE_INTRO.test(t.trim()) || /\?/.test(t) || ASKS.test(t) || LOGISTICS.test(t) || THEIRQ.test(t)
   })
 }
 
@@ -288,17 +355,53 @@ export function cutQuestion(heard: string): string {
     .replace(/^(?:You(?: \(typed\))?|Them):\s*/gim, " ")
     .replace(/\s+/g, " ")
     .trim()
-  if (/^(?:self\s+)?intro(?:duction)?\.?$/i.test(text)) return "Tell me about yourself"
-  const re = /((?:how|what|why|when|where|which|who)\b[^?.!]{6,180}\??|(?:can|could|would|will|do|did|are|have)\s+you\b[^?.!]{4,180}\??|(?:tell me|walk me|give me|explain|describe|define|compare)\b[^?.!]{4,180}\??)/gi
-  const found: string[] = []
-  let m: RegExpExecArray | null
-  while ((m = re.exec(text))) {
-    const q = m[1].replace(/^(?:ok(?:ay)?|so|and|also|yes|yeah|uh|um)[, ]+/i, "").trim()
-    if (q.split(/\s+/).length >= 3) found.push(q)
+  if (BARE_INTRO.test(text)) return "Tell me about yourself"
+  // The interviewer's whole ask, not its last clause (measured 26 Oct 2026: "Design X. Explain trust boundaries..."
+  // was answered as "Explain trust boundaries...", and "Give a falsifiable test and an exit criterion" was dropped).
+  // The last ask, the asks and the scenario just before it, and the instructions right after it, in order.
+  const parts = askSentences(text)
+  let last = -1
+  for (let i = parts.length - 1; i >= 0; i--) if (parts[i].kind === "ask") { last = i; break }
+  if (last < 0) return ""
+  let from = last, context = 0
+  while (from > 0 && (parts[from - 1].kind === "ask" || (parts[from - 1].kind === "context" && context < 2))) {
+    if (parts[from - 1].kind === "context") context++
+    from--
   }
-  if (!found.length) return ""
-  const q = found[found.length - 1].replace(/\s+/g, " ").trim()
-  return q.charAt(0).toUpperCase() + q.slice(1)
+  while (from < last && parts[from].kind === "context" && parts[from].text.split(/\s+/).length > 40) from++   // a long monologue is not setup
+  // Instructions after the ask ("Give a falsifiable test", "Keep it suitable for technical HR") are asks themselves, so
+  // the last ask is the end of the question.
+  const q = parts.slice(from, last + 1).map((p) => p.text).join(" ").replace(/\s+/g, " ").trim()
+  if (q.split(/\s+/).length < 3) return ""
+  return (q.charAt(0).toUpperCase() + q.slice(1)).slice(0, 2000)
+}
+
+// The openers of an interviewer's ask or instruction. Before 26 Oct 2026 only how/what/why..., can/would you, tell me,
+// walk me, give me, explain, describe, define and compare counted, so any other imperative ("Design", "Walk through",
+// "State", "Give a", "Keep it") was not part of the question at all.
+const ASK_OPENER = /^(?:how|what|why|when|where|which|who|whom|whose)\b|^(?:can|could|would|will|should|do|does|did|are|have|has)\s+(?:you|we)\b|^(?:tell|walk|take|talk|show|give|explain|describe|define|compare|contrast|differentiate|distinguish|design|build|implement|configure|architect|plan|outline|list|name|state|share|write|draft|map|diagnose|troubleshoot|debug|identify|recommend|propose|justify|estimate|summari[sz]e|discuss|evaluate|assess|analy[sz]e|elaborate|expand|go|dig|introduce|imagine|suppose|pick|choose|select|rank|prioriti[sz]e|break|weigh|defend|verify|validate|test|measure|quantify|detail|clarify|demonstrate|illustrate|cover|include|keep|focus|assume|consider|avoid|limit|stay|mention|start|end|finish|continue)\b/i
+// Somewhere inside a sentence that does not open as one (speech-to-text often has no full stops): the ask starts here.
+const ASK_INSIDE = /\b(?:how|what|why|when|where|which|who)\b|\b(?:can|could|would|will|do|did|are|have)\s+you\b|\b(?:tell me|walk me|give me|explain|describe|define|compare|design|build|implement|configure)\b/i
+const LEAD_FILLER = /^(?:(?:ok(?:ay)?|so|and|also|now|then|next|finally|right|alright|all right|well|yes|yeah|uh+|um+|please|great|perfect|cool|sure)[,.!]?\s+)+/i
+const PLEASANTRY = /^(?:(?:that'?s|that is)\s+(?:great|good|interesting|fair|helpful|clear|right|true)|thanks?\b|thank you\b|(?:great|perfect|nice|good|interesting|excellent|awesome|wonderful|got it|makes sense|i see|understood)[.!]*$)/i
+const OWN_WORDS = /^(?:i|i'm|i've|i'd|i'll|we|we're|we've|we'd|my|our|me)\b/i
+
+type AskPart = { kind: "ask" | "context" | "noise" | "own"; text: string }
+
+/** Each sentence, read as an ask, setup for one, a filler, or the candidate's own words. */
+function askSentences(text: string): AskPart[] {
+  return String(text || "").split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean).map((sentence): AskPart => {
+    const bare = sentence.replace(LEAD_FILLER, "").trim()
+    if (!bare || noiseOnly(bare) || PLEASANTRY.test(bare)) return { kind: "noise", text: bare }
+    if (ASK_OPENER.test(bare) || (/\?$/.test(bare) && !OWN_WORDS.test(bare))) return { kind: "ask", text: bare }
+    const inside = bare.search(ASK_INSIDE)
+    if (inside > 0 && bare.slice(inside).split(/\s+/).length >= 3) {
+      const tail = bare.slice(inside)
+      // "In your experience, how do you..." keeps its lead; a ramble before the ask does not.
+      return { kind: "ask", text: OWN_WORDS.test(bare) ? tail.slice(0, 400) : bare }
+    }
+    return { kind: OWN_WORDS.test(bare) ? "own" : "context", text: bare }
+  })
 }
 
 const SPOKEN_NOISE =
@@ -323,15 +426,14 @@ export function noiseOnly(text: string): boolean {
 export function questionToAnswer(heard: string, explicit: string, pinned = false): string {
   const asked = String(explicit || "").replace(/\s+/g, " ").trim()
   if (pinned && asked && !noiseOnly(asked)) {
-    // A compound ask stays whole (owner, 23 Oct 2026): when the formed
-    // question carries more than one ask, answer all of it, in order —
-    // never only the last clause. A single ask keeps the cut form.
-    const isAsk = (s: string) => { const t = s.replace(/^(?:and|so|also|but|ok(?:ay)?|yes|yeah)[, ]+/i, ""); return t.split(/\s+/).length >= 3 && /^(?:how|what|why|when|where|which|who)\b|^(?:can|could|would|will|do|did|are|have)\s+you\b|^(?:tell me|walk me|give me|explain|describe|define|compare)\b/i.test(t) }
-    const clauses = (asked.match(/[^?.!]+[?.!]+/g) || []).map((s) => s.trim()).filter(Boolean)
-    const asks = clauses.filter(isAsk)
-    if (asks.length >= 2) return asks.join(" ").slice(0, 2000)
-    const inner = cutQuestion(asked)
-    return (inner || asked).slice(0, 2000)
+    // The formed question on the card is the whole of what was asked (owner, 23 Oct 2026): every ask, the setup between
+    // them and every instruction, in order. Only leading filler and the candidate's own words before the first ask go.
+    // Before 26 Oct a single recognised ask was cut out of it, so "Design X. Explain Y." was answered as "Explain Y."
+    const parts = askSentences(asked)
+    let from = 0
+    while (from < parts.length - 1 && (parts[from].kind === "noise" || parts[from].kind === "own")) from++
+    const whole = parts.slice(from).map((p) => p.text).join(" ").replace(/\s+/g, " ").trim()
+    return (whole && !noiseOnly(whole) ? whole : asked).slice(0, 2000)
   }
   const cut = cutQuestion([heard, asked].filter(Boolean).join("\n"))
   if (cut) return cut
@@ -391,6 +493,10 @@ export const INTRO_FOCUS: Record<string, string> = {
   supervisor: "where you take projects and why, how you coordinate people, process and design, and your follow-through",
   director: "the business risk you reduce, the outcomes you own, the decisions you've made and their payoff, and how you carry decisions through delivery — confident and relaxed",
 }
+
+export const INTENT_BOUNDARY = `INTENT FIRST: Before choosing a story, name the exact request internally: personal career overview, single project/experience, definition, implementation, design, or follow-up. A broad introduction covers the person's supported career breadth; it is never a single-tool case study. A question about one project stays on that project; a definition stays on the definition; a follow-up continues the same subject and answers only the new ask. Never pull an example merely because it is available, salient in cached context, or shares keywords with the JD. Every sentence must serve the original question and move the same thought forward. A new tool or employer requires an explicit relationship to the requested scope. If there is no evidence, state the limit rather than fill it with a polished but invented story.`
+
+export const INTRO_CAREER_SPINE = `CAREER-WIDE INTRODUCTION CONTRACT: The answer's subject is the PERSON across the resume, not a favourite project, vendor or an invented success metric. Give a clear current professional identity and total experience only if supported by dates or an explicit source. Connect the distinct supported career stages and broad specialities in a coherent progression, moving from the earlier work toward current responsibilities. Preserve relevant clients/employers, their roles and differences without inventing chronology. Each tool, client and achievement belongs to the role it is listed under; never move one to another employer. Say employer names exactly as the resume writes them and never expand an abbreviation in a name (measured 26 Oct 2026: "City of San Diego (DOE)" became an invented "Department of Education"). Make one or two well-chosen examples prove abilities, but no single example dominates or becomes a deep implementation walkthrough. No isolated CodeQL, CyberArk, SIEM or other tool excursion unless the question specifically narrows to it. Explain why each experience follows the previous one, and make natural human transitions rather than [beat], [breath], (pause), stock catchphrases or sudden topic changes. Do not announce job-description fit. If only one career stage is documented, describe only that stage; do not manufacture breadth. If asked for a brief introduction, compress the same truthful career arc instead of changing its subject.`
 
 export const INTRODUCTION_POLICY = `PERSONAL INTRODUCTION: present the person through their supported career, in first person, with direct statements of work and ownership. Open with the current professional identity and scope. Connect the major career stages in the resume, explaining how responsibilities developed, then describe the current work from design or investigation through implementation, collaboration, delivery and ongoing operation, where the resume supports those stages. Show agency through accurate verbs such as I design, I maintain, I investigate, I automate and I work with. Do not inflate ownership from contributed to led. Use technologies inside actions, never as a detached skills catalogue. Include earlier work that explains the person's breadth, not only the work resembling the JD. Make the introduction memorable through named clients or employers, signature projects, documented achievements, and the impact of the work. Preserve each relationship accurately: a client is a client and an employer is an employer; never relabel one as the other. For the strongest supported projects, connect the client or business context, the candidate's own actions and decisions, and the documented result or impact. Prefer evidence of accomplishment over a list of duties, but when the resume supplies only responsibilities, state those plainly rather than inventing an achievement, project name, incident or result. Use figures only when the original source supports them. Be a little bold and humble: state supported ownership and accomplishments confidently, make the candidate's contribution specific, and acknowledge the team's role where the source does. Let the work demonstrate ability instead of calling the person exceptional, a visionary, or a perfect fit. End on the person's present responsibilities, a supported achievement, or working approach. Never close with a job application pitch, enthusiasm for this opening, or claims of alignment, matching the JD, being a perfect fit, or what the company is seeking. The JD may orient vocabulary, but the introduction is about the person. Allow a substantial connected introduction when the resume has the material; a short technical question budget or 75 word rule must not cut it down. Do not invent incidents, metrics, motivations, a personal origin story or transitions the resume does not establish. Do not volunteer education unless the question asks for it. Include certifications only when they help explain the work; never recite a list. An explicit request for a brief introduction still takes precedence.`
 
@@ -617,7 +723,7 @@ export interface ShapeDef {
 
 export const SHAPES: Record<string, ShapeDef[]> = {
   behavioural: [
-    { type: "failure / mistake / missed deadline", re: /\b(fail(ed|ure)?|mistake|went wrong|bad (call|decision)|misjudg\w*|missed (a|the) deadline|didn'?t go (as|to) plan|regret)\b/i, tier1: false, noYou: false, unknownProduct: false, shape: "Sentence one owns it: the decision that was yours and what it cost. A real miss, never a disguised win and never one that questions your core craft. One line of context. The cost said flatly, nobody blamed. Then half the answer: the real cause, the fix you drove, and the check you added so it could not repeat. Serious register; the last beat names who absorbed the cost." },
+    { type: "failure / mistake / missed deadline", re: /\b(fail(ed|ure)?(?!\s+(isolation|modes?)\b)|mistake|went wrong|bad (call|decision)|misjudg\w*|missed (a|the) deadline|didn'?t go (as|to) plan|regret)\b/i, tier1: false, noYou: false, unknownProduct: false, shape: "Sentence one owns it: the decision that was yours and what it cost. A real miss, never a disguised win and never one that questions your core craft. One line of context. The cost said flatly, nobody blamed. Then half the answer: the real cause, the fix you drove, and the check you added so it could not repeat. Serious register; the last beat names who absorbed the cost." },
     { type: "disagreed with manager / disagree and commit", re: /\b(disagree(d|ment)?|didn'?t agree|push(ed)? back on|challenged (a|the|your|my) (decision|manager|lead|boss))\b/i, tier1: false, noYou: false, unknownProduct: false, shape: "Sentence one: the call you disagreed on and how it landed. Their reason, stated fairly. Your evidence and how you raised it, directly and with an alternative. The decision, then what you did to make it work whichever way it went; committing gets as much time as pushing back. Close on the outcome and how you worked together afterwards. Never \"I was right\", never a split-the-difference ending." },
     { type: "difficult person / team resisted a control", re: /\b(difficult|challenging|tough) (stakeholder|colleague|person|customer|client|team ?mate|coworker|manager|owner)s?\b|\bconflict with\b|\b(team|owner|business|developers?) (refused|pushed back|resisted|ignored)\b/i, tier1: false, noYou: false, unknownProduct: false, shape: "Sentence one: the role you clashed with, over what, and how it ended. Their constraint and why it was reasonable. How you learned it, then the risk put in their terms. What you offered so they could keep working, and how the real fix landed. The working relationship afterwards, shown by what happened next rather than claimed." },
     { type: "influence without authority / convinced someone senior", re: /\b(convinc\w*|persuad\w*|buy-?in|without (formal )?authority|more senior than you|change (their|his|her) mind)\b/i, tier1: false, noYou: false, unknownProduct: false, shape: "Sentence one: who you had to move and what they decided in the end. Their objection in their own terms, and the condition they set. Meeting that condition became your work: the evidence you gathered, framed in their currency of cost, time, risk or audit. The changed decision and what it let the team do. Show the evidence; never say you convinced them." },
@@ -640,7 +746,8 @@ export const SHAPES: Record<string, ShapeDef[]> = {
     { type: "incident / alert scenario", re: /\b(what would you do|how would you (respond|investigate|triage|handle|contain)|a user reports|you (see|notice|get|receive)|suppose|what('?s| is) your first|walk me through (how you'?d|the response))\b/i, tier1: false, noYou: false, unknownProduct: false, shape: "Sentence one is your first move to prove it is real: the raw event, the process tree, the destination's reputation, a call to the user. Fork aloud: benign closes light; real widens scope first. Contain before root cause, preserving evidence. Eradicate, then recover from known-good. Close on the detection or control you change, and what containment alone did not fix." },
     { type: "false premise / is X secure / is this X", re: /\b(is (it|the incident|that|this) (over|done|enough|safe|secure)|isn'?t .{1,40} enough|why (do|would) (we|you) need .{1,40} if|so (it'?s|we'?re) (fine|safe|done)|can .{1,30} be (hacked|broken|trusted))\b|\bis .{1,30} (safe|secure|enough)\?|\bis (this|that|it) (a |an )?[\w-]+ (attack|incident|breach|false positive)\?/i, tier1: false, noYou: false, unknownProduct: false, shape: "The verdict in the first words, then the gap between the premise and reality. \"Is X secure\": the deciding conditions, the single point of failure, the control covering it. \"Why X if we have Y\": grant Y, then the job only X does. \"Is this X\": the baseline, the deviation, one corroborating signal, the verdict. Close on the risk the premise hid." },
     { type: "contrast: X vs Y", re: /\b(difference between|differs? from|vs\.?|versus|compared? (to|with)|which is better)\b|\bhow is .{1,40} different\b/i, tier1: false, noYou: false, unknownProduct: false, shape: "Sentence one names the axis that separates them: what each produces, where it inspects, whom it emulates, or whether it can be undone. Then each on that axis, in the order asked, with where it fits and, where FACTS shows it, where you ran it. \"Which is better\": pick one for their case first. Close on the condition that flips the choice." },
-    { type: "design / architecture trade-off", re: /\b(design|architect\w*|how would you (structure|secure|build|set up|segment)|trade-?offs?|at scale|high availability|fail (open|closed)|zero trust (model|architecture)|reference architecture)\b/i, tier1: false, noYou: false, unknownProduct: false, shape: "Sentence one commits to the design and its driving assumption: the threat model, the data class or the scale. Components in data-flow order, one line each. The alternative you rejected and its cost. The failure mode, fail open or closed, and why. Start simple; add scale only where a stated constraint demands it. Close on how you prove it holds." },
+    { type: "competing hypotheses / rival explanations", re: /\b(hypothes[ei]s|competing (explanations|theories)|rival explanations)\b/i, tier1: false, noYou: false, unknownProduct: false, shape: "Number each hypothesis in order: 1, 2, 3. Test each hypothesis by its number and rule it in or out before moving on — never refer to a hypothesis without its number, never write 'several' in place of a number. Once one hypothesis survives, contain on it and roll back to the audited state, then close on the guardrail that catches the next drift." },
+    { type: "design / architecture trade-off", re: /\b(design|architect\w*|how would you (structure|secure|build|set up|segment)|trade-?offs?|at scale|high availability|fail (open|closed)|zero trust (model|architecture)|reference architecture)\b/i, tier1: false, noYou: false, unknownProduct: false, shape: "Sentence one commits to the design and its driving assumption: the threat model, the data class or the scale. Sentence two names the one alternative you rejected and what it cost — this sentence is required, never skipped. Components in data-flow order, one line each. The failure mode, fail open or closed, and why. Start simple; add scale only where a stated constraint demands it. Close on how you prove it holds." },
     { type: "mechanism walk-through: how does X work", re: /\b(how does .{1,40} work|what happens (when|after|during)|walk (me )?through (how|what happens)|under the hood|step by step|explain the (handshake|flow|process|lifecycle))\b/i, tier1: false, noYou: true, unknownProduct: false, shape: "Follow one real request in the order it moves: each hop, the message, flag or field there, and what that step proves. Walk the first loop fully, then say it repeats and name the end condition. One level down: what a failure looks like in the logs or trace. Close on the security consequence of that mechanism." },
     { type: "definition / concept (priority 9, ahead of SIEM so \"What is a SIEM?\" gets a definition; tested)", re: /\byou(r)?\b/i, tier1: false, noYou: true, unknownProduct: false, shape: "Sentence one: what it is and its job in production, precise, no analogy. Then each part in standard order: what it guarantees, what breaks it, the control that delivers it. Where a common misreading exists, correct it and name the neighbour that really does that job. Close on where it stops protecting you." },
     { type: "SIEM / detection / tuning / hunting", re: /\b(siem|splunk|sentinel|qradar|elastic|kql|spl|edr|xdr|soar|correlation (rule|search)|use case|detection (rule|logic|engineering)|write a (rule|query)|log sources?|onboard\w*|tuning|tune (a|the|it)|false positives?|alert fatigue|retention|ingest\w*|threat hunt\w*)\b/i, tier1: false, noYou: false, unknownProduct: false, shape: "Answer from the platform FACTS holds. Follow the data: source, collection, parsing, index, query, alert, case. A detection gets its use case, proof the source arrives, and exact logic: match, count, window, grouping. Then one scoped exclusion and the check that no true positive was lost. Tuning is a scoped exception, never a blanket threshold raise. Close on the telemetry gap it closed." },
@@ -649,6 +756,34 @@ export const SHAPES: Record<string, ShapeDef[]> = {
 };
 
 const SHAPE_SKIP = new Set(["I", "Have", "Are", "Do", "What", "How", "Can", "Could", "Would", "Tell", "Why", "When", "Which"]);
+
+/** Code check for the two structural requirements prompt wording keeps
+ * dropping: the design shape's required alternative sentence, and the
+ * director practice opening naming the decision owner. Returns what is
+ * missing, so the route can repair it with one targeted rewrite instead of
+ * another prompt tweak. A heuristic gate, not a verdict: an answer that
+ * phrases the element unusually still counts as present when its marker
+ * words appear. */
+export function missingStructure(text: string, opts: { level: string; register: string; shape: string; tier: number }): string[] {
+  const missing: string[] = []
+  if (!text || !text.trim() || opts.tier === 0) return missing
+  const plain = text.replace(/\[(?:beat|breath)\]|\(pause\)/gi, " ")
+  if (/Sentence two names the one alternative/.test(opts.shape || "")) {
+    if (!/\b(alternative|rejected|ruled out|ruled against|passed on|passed over|instead of|instead\b|rather than|did not choose|didn't choose|chose .* over|opted against|opted for .* over|went with .* over|set aside|decided against)\b/i.test(plain)) missing.push("a sentence naming the one alternative you rejected and what it cost")
+  }
+  // Director means decision first in every register: a compare question
+  // ("risk acceptance versus remediation") registers as concept, and the
+  // practice-only gate let its owner requirement silently never fire in
+  // round 4. The register still shapes how the answer is built; it no longer
+  // excuses a missing owner.
+  if (opts.level === "director") {
+    const first = plain.split(/(?<=[.!?])\s/)[0] || plain
+    if (!/\b(owner|product manager|CISO|business (unit )?leader|vice president|risk manager|accountable)\b/i.test(first)) missing.push("the decision owner named in sentence one")
+  }
+  return missing
+}
+
+export const STRUCTURE_REPAIR_SYSTEM = `You repair one interview answer. Rewrite the SAME answer with minimal changes: keep every sentence, fact, example, and pause marker ([beat]/[breath]) unless a change is required by the missing element below. Do not shorten it, do not add new claims, do not invent numbers, and do not change the answer's level or voice. Add ONLY the missing element, in the place its instruction names. You MUST add the missing element even if that means adding a sentence: keeping the existing sentences does not mean leaving the answer unchanged.`
 
 /** First-win archetype match. Returns the shape instruction or null. */
 export function pickShape(question: string, tier: number, known = ""): string | null {
