@@ -30,17 +30,35 @@ const pathFor = (owner: string, from: string) => {
 const keyFor = (prefix: string, revision: number) =>
   prefix + String(revision).padStart(10, "0") + ".json"
 
-/** The latest immutable channel revision. A tombstone (no sessionId) means revert. */
+/** The latest immutable channel revision. A tombstone (no sessionId) means revert.
+ * IMPORTANT: Do NOT list R2 objects on the path of ordinary WhatsApp tailoring.
+ * That additional ListObjects permission/round trip made the optional Kompas
+ * adapter a single point of failure for every incoming job description.
+ * Revisions are contiguous; exponentially probe exact objects and binary-search
+ * the first missing revision using the same GetObject permission as resume reads.
+ */
 async function readChannel(owner: string, from: string): Promise<Channel> {
   const prefix = pathFor(owner, from)
-  const revisions = (await blob.list(prefix))
-    .filter(key => /^\d{10}\.json$/.test(key.slice(prefix.length))).sort()
-  if (!revisions.length) return { revision: -1 }
-  const raw = await blob.getText(revisions[revisions.length - 1])
+  const get = (revision: number) => blob.getText(keyFor(prefix, revision))
+  const first = await get(0)
+  if (!first) return { revision: -1 }
+  const MAX = 9999999998
+  let low = 0, high = 1
+  while (high <= MAX && await get(high) !== null) {
+    low = high
+    if (high >= Math.floor(MAX / 2)) { high = MAX + 1; break }
+    high *= 2
+  }
+  if (high > MAX) high = MAX + 1
+  while (high - low > 1) {
+    const mid = low + Math.floor((high - low) / 2)
+    if (await get(mid) !== null) low = mid
+    else high = mid
+  }
+  const raw = low === 0 ? first : await get(low)
   if (!raw) throw new Error("WhatsApp session state unavailable")
   const data = JSON.parse(raw) as Channel
-  const latest = Number(revisions[revisions.length - 1].slice(prefix.length, -5))
-  if (!Number.isSafeInteger(latest) || data.revision !== latest ||
+  if (!Number.isSafeInteger(data.revision) || data.revision !== low ||
       (data.sessionId !== undefined && !/^[a-f\d-]{36}$/.test(data.sessionId)))
     throw new Error("WhatsApp session state invalid")
   return data
@@ -90,7 +108,17 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
     return false
   }
   const sessions = sharedKompasStore()
-  let channel = await readChannel(owner, from)
+  let channel: Channel
+  try {
+    channel = await readChannel(owner, from)
+  } catch (error) {
+    // This is session storage, not an AI-provider configuration failure.
+    // Never route a potentially active Kompas question to the resume tailor
+    // when the mode cannot be verified; that could mix the two workflows.
+    console.error("[whatsapp-kompas] session state read failed", String(error).slice(0, 160))
+    await send("I couldn't check your Kompas WhatsApp session right now. Nothing was changed. Please resend your message.")
+    return true
+  }
   if (command === "revert") {
     for (let i = 0; i < 4; i++) {
       if (await changeChannel(owner, from, channel)) {
