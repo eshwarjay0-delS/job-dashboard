@@ -616,7 +616,7 @@ function redirectToLogin(message) {
 async function preparePack(s) {
   if (location.protocol === "file:") { seedIdentity(s); status("Serve the deployed app for live prep + answers.", "live"); return; }
   if (s.prep && s.prep.v !== 2) { s.prep = null; saveSession(s); }   // pre-v2 prep had [blank]s: rebuild it
-  if (!s.prep) { const twin = twinSession(s, x => x.prep && x.prep.v === 2); if (twin) { s.prep = twin.prep; saveSession(s); status("Prep reused from a session with the same resume, JD and documents — no AI call.", "live"); } }
+  if (!s.prep) { const twin = twinSession(s, x => x.prep && x.prep.v === 2); if (twin) { s.prep = twin.prep; saveSession(s); status("Prepared.", "live"); } }
   if (!s.prep) {
     status("Preparing — forming identity + persona from the four factors…", "live");
     try {
@@ -640,7 +640,7 @@ async function preparePack(s) {
   if (current !== s) return;
   setPersonaChip(s);
   seedIdentity(s);
-  status(`Prepared — ${(s.prep.projects || []).length} projects, ${(s.prep.questions || []).length} core Q&A. Building your dossier in the background…`, "live");
+  status("Prepared.", "live");
   buildPersonaFile(s).finally(() => { if (current === s) { buildDossier(s); buildBook(s); } });   // persona file first (highest value), then the dossier — both off the clock
 }
 // Fill the placeholder card with the intro — never wipe answers already on screen (prep can
@@ -1152,7 +1152,7 @@ async function checkSessionReadiness() {
   const button = $("startBtn");
   button.disabled = true;
   button.textContent = "Checking…";
-  status("Checking the paid answer service before your session…", "live");
+  status("Connecting…", "live");
   try {
     const response = await fetch("/api/answer", {
       method: "POST", headers: { "content-type": "application/json" },
@@ -1985,7 +1985,7 @@ function serveBook(card, hit, depthKey) {
   card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta };
   if (cards[idx] === card) renderCard();
   logEvent({ t: "answer", question: card.question, derived: card.question, book: true, depth: $("liveInterviewer").selectedOptions[0].textContent, text: hit.text, meta: card.meta, depthKey });
-  status("Answered from the opening book — no wait, no AI call. Press ↓ for a deeper live answer.", "live");
+  status("Answered.", "live");
   if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }
   if (window.KompasDiamond) {
     card.anchorQ = card.question;
@@ -2040,7 +2040,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   }
   if (opts.regen && paintFromAnchors(card)) {                              // the two anchors already hold this level
     if (answerCtl) { try { answerCtl.abort(); } catch {} answerCtl = null; }
-    status("Shown from the two anchors — no model call.", "live");
+    status("Answered.", "live");
     return;
   }
   // Regenerating (depth change) or retrying: the answer on screen stays until the new one starts arriving.
@@ -2113,7 +2113,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (card.req !== ctl) return;
     if (!opts.reask && paintFromAnchors(card)) {
       if (answerCtl === ctl) answerCtl = null;
-      status("Shown from the two anchors — no model call.", "live");
+      status("Answered.", "live");
       return;
     }
     const planNow = window.KompasDiamond && window.KompasDiamond.plan(askingLevel(), card.anchors || {}, window.__peerOf);
@@ -2121,7 +2121,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   }
   if (!directDesktop && window.KompasJev && !window.KompasJev.allowModel(writeAnchor, { hit: false, model: true })) {
     if (answerCtl === ctl) answerCtl = null;
-    status("That level is derived. No model call.", "live");
+    status("Answered.", "live");
     return;
   }
   const already = !directDesktop && window.KompasFlight && window.KompasFlight.pending(card, writeAnchor);
@@ -2129,7 +2129,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     status("Preparing that answer…", "live");
     try { await already; } catch {}
     if (ctl.signal.aborted || card.req !== ctl) return;
-    if (!opts.reask && paintFromAnchors(card)) { if (answerCtl === ctl) answerCtl = null; status("Shown from the two anchors — no model call.", "live"); return; }
+    if (!opts.reask && paintFromAnchors(card)) { if (answerCtl === ctl) answerCtl = null; status("Answered.", "live"); return; }
   }
   card.anchorFlight = writeAnchor;
   const release = !directDesktop && window.KompasFlight ? window.KompasFlight.hold(card, writeAnchor) : () => {};
@@ -2253,7 +2253,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
         if (!card.anchors[other]) fillAnchor(card, other);
       }
     }
-    status(`Answered — first words in ${(first / 1000).toFixed(2)}s.`, "live");
+    status("Answered.", "live");
     if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }   // generated: the question collapses away, only the response box stays
   } catch (e) {
     if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — eject only if renewal fails
@@ -2973,16 +2973,6 @@ function planSections(s) {
   return specs.map(sp => ({ ...sp, count: 10 }));
 }
 function qKey(q) { return String(q).toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 3).slice(0, 9).join(" "); }
-function showDossierProgress(finished) {
-  const el = $("dossier"); if (!el) return;
-  el.classList.remove("hidden");
-  const pages = dossier.words / WORDS_PER_PAGE, target = dossier.target || 1;
-  $("dossierFill").style.width = Math.min(100, pages / target * 100).toFixed(1) + "%";
-  const pf = persona.total ? `Persona file: ${persona.done}/${persona.total} parts${persona.done < persona.total ? " · writing" : ""} · ` : "";
-  const ds = dossierOff ? "Dossier: written by Claude when Kompas runs locally"
-    : dossier.target ? `Dossier: ${Math.round(pages)} / ${target} pages · ${dossier.items.length} answers${finished ? " · ready" : " · building"}` : "Dossier: starts after the persona file";
-  $("dossierText").textContent = pf + ds;
-}
 
 /* ===================== the PERSONA FILE (per session, Markdown) =====================
    Modelled on the owner's GRID FILE: who you are, the projects with arcs and spoken versions, the
@@ -3016,9 +3006,9 @@ async function loadPersonaUpload(file) {
   const md = (await file.text()).replace(/\r\n/g, "\n").trim();
   if (!md) return;
   persona = { v: 1, sid: s.id, parts: { uploaded: md }, done: 1, total: 1, items: [] };
-  persona.items = personaItems(md); indexDossier(); showDossierProgress();
+  persona.items = personaItems(md); indexDossier();
   await DossierDB.put(s.id + ":persona", { v: 1, parts: persona.parts, done: 1, total: 1 });
-  status(`Persona file loaded — ${persona.items.length} sections will be used first for answers.`, "live");
+  status("Persona file loaded.", "live");
   openPersonaFile();
 }
 // Split the Markdown into retrieval units: one per "### " heading, carrying its body text.
@@ -3060,10 +3050,10 @@ async function buildPersonaFile(s) {
   }
   persona = saved && saved.v === 1 && saved.parts ? { ...saved, sid: s.id } : { v: 1, sid: s.id, parts: {}, done: 0, total: 0, items: [] };
   if (persona.parts.uploaded) {                     // the owner loaded their own persona file: nothing to write
-    persona.done = persona.total = 1; persona.items = personaItems(persona.parts.uploaded); indexDossier(); showDossierProgress(); return;
+    persona.done = persona.total = 1; persona.items = personaItems(persona.parts.uploaded); indexDossier(); return;
   }
   persona.total = plan.length; persona.done = plan.filter(p => persona.parts[p.key]).length;
-  persona.items = personaItems(personaMarkdown(s)); indexDossier(); showDossierProgress();
+  persona.items = personaItems(personaMarkdown(s)); indexDossier();
   const queue = plan.filter(p => !persona.parts[p.key]).map(p => ({ ...p, tries: 0 }));
   let backoff = 0;
   const worker = async () => {
@@ -3084,7 +3074,7 @@ async function buildPersonaFile(s) {
           ok = true;
           if (data.md) persona.parts[job.key] = data.md;
           persona.done = plan.filter(p => persona.parts[p.key] || (p.key === job.key && data.done)).length;
-          if (current === s) { persona.items = personaItems(personaMarkdown(s)); indexDossier(); showDossierProgress(); }
+          if (current === s) { persona.items = personaItems(personaMarkdown(s)); indexDossier(); }
           await DossierDB.put(s.id + ":persona", { v: 1, parts: persona.parts, done: persona.done, total: persona.total });
         }
       } catch {}
@@ -3095,7 +3085,6 @@ async function buildPersonaFile(s) {
   const first = worker();
   while (!personaLane && queue.length && !dossierAbort && current === s) await sleep(300);
   await Promise.all([first, worker(), worker()]);
-  if (current === s) showDossierProgress();
 }
 function openPersonaFile() {
   const s = current; if (!s) return;
@@ -3134,7 +3123,7 @@ function renderMarkdown(md) {
 }
 async function buildDossier(s) {
   if (dossierRunningFor === s.id) return;
-  if (dossierOff) { showDossierProgress(); return; }   // the dossier is written by Claude locally; nothing to do on the hosted site
+  if (dossierOff) return;   // the dossier is written by Claude locally; nothing to do on the hosted site
   dossierRunningFor = s.id; dossierAbort = false;
   const size = s.dossierSize && s.dossierSize !== "auto" ? Number(s.dossierSize) : (PAGES_BY_DIFFICULTY[s.difficulty || "standard"] || 250);
   const saved = await DossierDB.get(s.id);
@@ -3146,7 +3135,7 @@ async function buildDossier(s) {
   }
   if (!dossier.md && dossier.items.length && window.KompasDossierMd) dossier.md = window.KompasDossierMd.dossierMarkdown({ interviewer: s.interviewer || "engineer", difficulty: s.difficulty || "standard", category: "core", items: dossier.items });
   dossier.words = dossier.items.reduce((n, it) => n + countWords(it), 0);
-  indexDossier(); showDossierProgress();
+  indexDossier();
   const plan = planSections(s);
   const queue = plan.map((sp, i) => ({ sp, i, tries: 0 })).filter(x => !dossier.done.includes(x.i));
   const seen = new Set(dossier.items.map(it => qKey(it.q)));
@@ -3170,7 +3159,7 @@ async function buildDossier(s) {
           else if (window.KompasDossierMd) dossier.md = window.KompasDossierMd.dossierMarkdown({ interviewer: job.sp.interviewer, difficulty: job.sp.difficulty, category: job.sp.category, items: fresh });
           dossier.done.push(job.i);
           dossier.sessionKey = (window.KompasLevels && window.KompasLevels.sessionDossierKey(s.id)) || ("perfact.dossier." + s.id);
-          indexDossier(); await DossierDB.put(s.id, dossier); showDossierProgress();
+          indexDossier(); await DossierDB.put(s.id, dossier);
         }
       } catch {}
       if (got) backoff = 0;
@@ -3179,7 +3168,6 @@ async function buildDossier(s) {
   };
   await Promise.all([worker(), worker(), worker(), worker()]);
   if (dossierRunningFor === s.id) dossierRunningFor = null;
-  if (current === s) showDossierProgress(true);
 }
 function slimPrepOf(s) { const p = s.prep || {}; return { identity: p.identity, persona: p.persona, projects: p.projects }; }
 

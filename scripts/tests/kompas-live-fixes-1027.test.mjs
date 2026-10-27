@@ -71,3 +71,14 @@ test('every live answer call is routed to the lowest-latency host', () => {
   assert.equal((route.match(/provider: LIVE_ROUTING/g) || []).length, 3)
   assert.doesNotMatch(route, /provider: \{ allow_fallbacks: true \}/)
 })
+
+// Owner, 27 Oct 2026: "never showcase any unnecessary things to user. Only show what was needed to him."
+test('the live screen shows only what he needs: no build-progress bar, no timings, no engine notes', () => {
+  const html = read('public/kompas/index.html')
+  assert.doesNotMatch(html, /id="dossier"|dossierText|dossierFill/)
+  assert.doesNotMatch(app, /showDossierProgress/)
+  const said = (app.match(/status\((?:"[^"]*"|`[^`]*`)/g) || []).join('\n')
+  for (const internal of [/no (?:AI|model) call/i, /first words in/, /two anchors/, /opening book/, /paid answer service/, /dossier/i, /sections will be used/, /core Q&A/])
+    assert.doesNotMatch(said, internal)
+  assert.match(said, /status\("Answered\."/)
+})

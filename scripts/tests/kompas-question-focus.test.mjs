@@ -63,7 +63,7 @@ test("scrolling to the top alone never reveals the question; only an overscroll 
 test("a generated answer collapses the question away on both answer paths", () => {
   const hits = src.match(/classList\.add\("q-away"\)/g) || [];
   assert.ok(hits.length >= 5, `hide sites: scroll, wheel, touch, generated, book (got ${hits.length})`);
-  assert.ok(src.includes('status(`Answered — first words in'), "generated path still reports first words");
+  assert.ok(!src.includes('first words in'), "no latency readout on the live screen (owner, 27 Oct: only show what he needs)");
 });
 
 test("heard-only re-presses go through the derive cut, never pinned", () => {
