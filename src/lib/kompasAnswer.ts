@@ -63,7 +63,17 @@ export function canonicalQuestion(q: string, tier: Tier): string {
   return q
 }
 
-const NOT_A_TERM = /^(?:next|continue|go on|go ahead|repeat|again|pause|stop|wait|done|skip|more|same|okay|ok|yes|no|thanks|thank you|hello|hi|hey)\b/i
+/**
+ * An answer the token ceiling cut off far short of its target. Measured 26 Oct 2026 (evaluation round 3, iam-4): the
+ * stream finished 42 ms after its first words, "I added a real‑time rev", and that was served as the answer. gpt-oss
+ * pays its reasoning from the same ceiling as the answer, so a hard follow-up can spend nearly all of it reasoning.
+ */
+export function cutShort(finish: string, text: string, targetWords: number): boolean {
+  const words = String(text || "").split(/\s+/).filter(Boolean).length
+  return finish === "length" && words < Math.max(25, Math.round(targetWords * 0.35))
+}
+
+const NOT_A_TERM =/^(?:next|continue|go on|go ahead|repeat|again|pause|stop|wait|done|skip|more|same|okay|ok|yes|no|thanks|thank you|hello|hi|hey)\b/i
 
 /** One to four words with no verb and no question: a term, a tool or an abbreviation the interviewer named. */
 export function isBareTerm(q: string): boolean {

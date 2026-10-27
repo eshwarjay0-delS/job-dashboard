@@ -7,7 +7,7 @@ import { resumeRoles, resumeDigest, employerAliases } from "@/lib/kompasResume"
 import { hashUserId } from "@/lib/sttLedger"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
-  classify, canonicalQuestion, requestedParts, lengthPlan, questionDepth, plainlyNoQuestion, cleanQuestion, cutQuestion, questionToAnswer, resolveFollowUp,
+  classify, canonicalQuestion, requestedParts, cutShort, lengthPlan, questionDepth, plainlyNoQuestion, cleanQuestion, cutQuestion, questionToAnswer, resolveFollowUp,
   tierRule, pickShape, DERIVE_SYSTEM, INTRODUCTION_POLICY, INTRO_CAREER_SPINE, INTENT_BOUNDARY, PERSONAL_EXPERIENCE_POLICY, TECHNICAL_ANSWER_BOUNDARY, RESPONSE_CRAFT_POLICY, isPersonalEvidenceQuestion, type LengthPlan,
   answerLevel, questionRegister, levelGuidance, ANSWER_LEVEL_NAME, missingStructure, STRUCTURE_REPAIR_SYSTEM,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
@@ -127,7 +127,7 @@ async function pumpSSE(body: ReadableStream<Uint8Array>, onData: (j: { error?: {
 async function streamOpenRouter(
   key: string, model: string, system: string, user: string, maxTokens: number,
   onDelta: (d: string) => void, signal: AbortSignal,
-): Promise<{ input: number; output: number }> {
+): Promise<{ input: number; output: number; finish: string }> {
   if ((blockedUntil.get(model) || 0) > Date.now())
     throw new Error(`openrouter 429 try again in ${blockedUntil.get(model)! - Date.now()}ms (blocked)`)
   const res = await fetch(OR_URL, {
@@ -144,16 +144,16 @@ async function streamOpenRouter(
     }),
   })
   if (!res.ok || !res.body) throw orError(res, await res.text().catch(() => ""), model)
-  let input = 0, output = 0, failure = 0, finished = false, received = false
+  let input = 0, output = 0, failure = 0, finished = false, received = false, finish = ""
   await pumpSSE(res.body, (j) => {
     if (j.error) failure = Number(j.error.code) || 502
-    if (j.choices?.[0]?.finish_reason) finished = true
+    if (j.choices?.[0]?.finish_reason) { finished = true; finish = String(j.choices[0].finish_reason) }
     const d = j.choices?.[0]?.delta?.content
     if (typeof d === "string" && d) { received = true; onDelta(d) }
     if (j.usage) { input = j.usage.prompt_tokens || 0; output = j.usage.completion_tokens || 0 }
   })
   if (failure || !received || !finished) throw new Error(`openrouter ${failure || 502} incomplete stream`)
-  return { input, output }
+  return { input, output, finish }
 }
 
 async function fetchOpenRouter(
@@ -400,23 +400,37 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       try {
         emit({ type: "meta", ...metaBase })
         if (job.orKey) {
-          const runLane = async (model: string, tag: string) => {
+          const runLane = async (model: string, tag: string): Promise<"ok" | "cut" | "fail"> => {
             const began = Date.now()
             timing.lane += (timing.lane ? ">" : "") + `openrouter:${shortModel(model)}${tag}`
             try {
               const usage = await streamOpenRouter(job.orKey as string, model, job.system, job.userText, job.plan.maxTokens, onDelta, signal)
+              if (cutShort(usage.finish, raw, job.plan.words)) {
+                // Cut off at the ceiling a few words in: clear the card and ask again rather than serve a fragment.
+                recordLane(model, false, usage, began, 502)
+                lastErr = "openrouter 502 answer cut short at the token ceiling"
+                raw = ""
+                emit({ type: "replace", text: "" })
+                return "cut"
+              }
               servedModel = model
               lastErr = ""
               recordLane(model, true, usage, began)
+              return "ok"
             } catch (e) {
               lastErr = String((e as Error)?.message || e).slice(0, 200)
               recordLane(model, false, undefined, began, statusOf(lastErr))
+              return "fail"
             }
           }
+          let askedAgain = false
           const attempt = async (tag: string) => {
             const { lanes, blockedNote } = openLanes(job)
             if (blockedNote && !lastErr) lastErr = blockedNote
-            for (const m of lanes) { if (raw || signal.aborted) break; await runLane(m, tag) }
+            for (const m of lanes) {
+              if (raw || signal.aborted) break
+              if (await runLane(m, tag) === "cut" && !askedAgain && !signal.aborted) { askedAgain = true; await runLane(m, tag + ":again") }
+            }
           }
           await attempt("")
           // Every lane rate-limited: wait exactly what the provider said (≤15s)
