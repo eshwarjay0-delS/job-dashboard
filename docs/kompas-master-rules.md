@@ -183,11 +183,11 @@ pending; **open** = not done.
 
 | Rule | Where in code | Status | Evidence / to-do |
 | --- | --- | --- | --- |
-| §1 intent, every part | `kompasIntent.ts` QUESTION_FIRST_POLICY, `kompasAnswer.ts` INTENT_BOUNDARY, requestedParts + listedParts | verified, improving | Endpoint Analyst r02: 44/45 understood, 193/205 parts. Listed items and the "without ...?" ask fix: 495731f; r03+ judged against it |
-| §1 correction updates reasoning | engine history (last two turns) | open | ea-14a correction case added from r04 |
+| §1 intent, every part | `kompasIntent.ts` QUESTION_FIRST_POLICY, `kompasAnswer.ts` INTENT_BOUNDARY, requestedParts + listedParts, cutQuestion | verified, improving | r02 44/45 understood, 193/205 parts; r03 242/248. Live session 27 Oct: every press after the first re-asked the old question; a new question heard since the last answer now opens a new page (29d2088), and the cut takes the ask from mixed mic lines (7c4dee1, checked on production with the session's lines) |
+| §1 correction updates reasoning | engine history (last two turns), desktopQuestionKind correction lane | in code | r04: the "hosts files were clean, only on VPN" correction updated the reasoning; it now takes the scenario lane (8116e7e) |
 | §2 tiers, scenario lane by default, T4 fact first | `kompasDesktopResponse.ts` desktopQuestionKind, directFact | in code | ef7b861; every §1 example unit-tested; ea-45..47 measured from r04 |
-| §3 speech, no announced conclusion | SPOKEN CARD, RESPONSE_CRAFT_POLICY | in code | "never announced" added ef7b861 (6 of 41 r03 answers said "The key takeaway is"); 60/40 not measured |
-| §4 levels, level change re-answers | desktopResponsePolicy levels, app.js regenerateForAudience (pinned) | verified (web) | cf5b13f; director case ea-48 from r04 |
+| §3 speech, no announced conclusion, complex flows narrated | SPOKEN CARD, RESPONSE_CRAFT_POLICY, NARRATE_FLOW v2, voiceRepair | verified (narration) | Narration v2 (b5e0737), 20 complex questions: easier to follow aloud 65 vs 58, expert specifics 70 vs 71 (v1 had lost them: 61). voiceRepair no longer cuts an open condition into a claim. 60/40 not measured |
+| §4 levels, level change re-answers | desktopResponsePolicy levels, app.js regenerateForAudience (pinned) | verified (web) | cf5b13f; a level change no longer aborts other pages' answers (9412f82). Director: the decision owner is a role, never an invented person, and the candidate keeps the resume's title (29d2088, after "as the CISO", "Alice Smith" in the live session) |
 | §5 depth ladder | implementation and experience angles | in code | judged as technical correctness each round |
 | §6 bottlenecks, eight EPM anchors | experience scope, EXACT_AND_PLACED | in code | anchors are not in resume (7) and must stay out of its answers |
 | §7 anti-repetition | ledger (toLedgerProjects), repeatQuestionGuidance | in code | not measured on this set |
@@ -195,6 +195,6 @@ pending; **open** = not done.
 | §9 real vs hypothetical, safe actions | desktopQuestionKind, SAFE_LOGIC (+ narrow-workaround clause), EXACT_AND_PLACED | in code | 495731f, ef7b861 |
 | §11 follow-ups continue the case | followUp scope, INTENT_BOUNDARY | in code | ea-19a, ea-19b from r04 |
 | §12 grounding, no invented metrics | resumeDigest, allowedNumbers guards, prep groundPrepProjects | verified | b1cbfdb: prep projects tied to employers, unstated figures cut |
-| §13 live inputs and screen | app.js cutQuestion, PHRASE_FIXES, quiet live screen; Screen Answer (PR #88) | partial | 7cf27df, cf5b13f, 167f95d verified by served files; Screen Answer installed-Windows acceptance open |
+| §13 live inputs and screen | app.js cutQuestion, PHRASE_FIXES, quiet live screen, one question section, echo filter, book pages; Screen Answer native capture (desktop 0.8.1) | partial | 167f95d quiet screen; 9412f82 one page per request and response (no half or blank pages); 4433d43 the live line inside the question box and the interviewer heard through speakers is not "You"; desktop 0.8.1 (perfACT c929aae) native capture, installed and shortcut repointed; his click test in 0.8.1 still open |
 | §14 one engine | `kompasAnswerService.ts` for web and desktop | verified | desktop loads the hosted page; cross-device sync not claimed |
 | §15 quality gates | live eval loop, judges, ChatGPT reference | running | 5-10 rounds on the Endpoint Analyst set |
