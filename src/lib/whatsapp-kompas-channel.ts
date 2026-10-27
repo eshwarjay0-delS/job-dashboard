@@ -163,7 +163,17 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
   if (!channel.sessionId) return false
 
   for (let tries = 0; tries < 4; tries++) {
-    const original = await sessions.read(owner, channel.sessionId)
+    let original: Awaited<ReturnType<typeof sessions.read>>
+    try {
+      original = await sessions.read(owner, channel.sessionId)
+    } catch (error) {
+      // Session-storage failures must never look like a missing AI provider,
+      // and must not silently fall through to normal resume tailoring.
+      const code = (error as { name?: string })?.name || "Error"
+      console.error("[whatsapp-kompas] session-read", code)
+      await send("I couldn't read your Kompas session. Your resume and job description were not changed. Please resend the last message.")
+      return true
+    }
     if (!original) {
       await send("This Kompas session is unavailable. Send revert, then kompas, to restart.")
       return true
