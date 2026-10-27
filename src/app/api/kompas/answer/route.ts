@@ -806,7 +806,7 @@ export async function POST(request: NextRequest) {
     `QUESTION TYPE: ${why} (tier ${tier}). ${rule}`,
     `INTERVIEW MODE: ${modeBlock(tier, question, level)}`,
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
-    level === "director" ? `DIRECTOR OPENING (this overrides the shape's opening sentence): sentence one states the decision — what you are doing — not a definition and not an axis. Name the decision owner in that sentence by role: the accountable business or risk owner (the service owner, the CISO, a risk committee), never yourself. You assess and recommend; they decide and accept the risk. Before closing, name the measures you will track, each as a named measure, never a vague promise to monitor.` : "",
+    level === "director" ? `DIRECTOR OPENING (this overrides the shape's opening sentence): sentence one states the decision — what you are doing — not a definition and not an axis. Name the decision owner in that sentence. Before closing, name the measures you will track, each as a named measure, never a vague promise to monitor.` : "",
     `LENGTH TARGET: about ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Hit it — a quick factual ask gets a short answer, a deep dive gets room.`,
     depthGuidance,
     tier !== 0 && routedProject
@@ -871,7 +871,7 @@ ${INTERVIEW}`
   // ask is answered part by part, not as its first or last clause.
   const asks = tier !== 0 ? requestedParts(question) : { parts: [] as string[], constraints: [] as string[] }
   const partsBlock = asks.parts.length >= 2 || asks.constraints.length
-    ? `THE QUESTION ASKS FOR, in this order (answer every one, explicitly, and nothing beside them):\n${asks.parts.map((p, i) => `${i + 1}. ${p}`).join("\n")}${asks.constraints.length ? `\nAND IT SETS THESE CONDITIONS: ${asks.constraints.join("; ")}` : ""}`
+    ? `THE QUESTION ASKS FOR, in this order (cover every one inside your natural spoken answer, the same voice and depth as always; this is not an outline to read out):\n${asks.parts.map((p, i) => `${i + 1}. ${p}`).join("\n")}${asks.constraints.length ? `\nAND IT SETS THESE CONDITIONS: ${asks.constraints.join("; ")}` : ""}`
     : ""
   const job: AnswerJob = {
     question,

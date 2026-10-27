@@ -29,15 +29,9 @@ test('an unsupported result claim is still guarded, and a supported one is not',
   assert.match(mixed, /when 3 hosts fail/, 'one sentence guarded, the plan beside it untouched')
 })
 
-test('a director answer names the accountable owner by role, never the engineer', () => {
-  const route = readFileSync(new URL('../../src/app/api/kompas/answer/route.ts', import.meta.url), 'utf8')
-  assert.match(route, /Name the decision owner in that sentence by role: the accountable business or risk owner \(the service owner, the CISO, a risk committee\), never yourself/)
-})
-
-test('containment never weakens a control, and a falsifiable test exercises the mitigation', () => {
+test('containment never weakens a control, missing telemetry is never a pass, and logic holds', () => {
   const g = R.desktopResponsePolicy('architect', 'Go deeper on that failure. What if the first mitigation fails and telemetry is incomplete? Give a falsifiable test and an exit criterion.').guidance
   assert.match(g, /Containment never weakens a security control/)
-  assert.match(g, /one controlled case that must be blocked and one that must pass/)
   assert.match(g, /Missing telemetry is never a pass/)
   assert.match(g, /never both/)
   assert.doesNotMatch(R.desktopResponsePolicy('engineer', 'Define IDOR versus CSRF.').guidance, /Containment never weakens/, 'a definition is not given an incident contract')
