@@ -37,3 +37,12 @@ test("desktop preserves muted inline autoplay, reduced motion and error fallback
   assert.match(story, /onError=\{\(\) => \{ setFilmPlaying\(false\); setFilmFailed\(true\); setFilmRequested\(false\) \}\}/)
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/)
 })
+
+test("desktop story uses the full flexible left panel without a 360px stage cap", () => {
+  assert.match(login, /lg:grid-rows-\[auto_minmax\(300px,1fr\)_auto_auto\]/)
+  assert.match(login, /min-h-\[300px\].*items-stretch/)
+  assert.match(styles, /\.stage\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;/s)
+  assert.doesNotMatch(styles, /width:\s*min\(100%,\s*470px\)|height:\s*clamp\(285px,\s*33vh,\s*360px\)/)
+  assert.match(styles, /object-fit:\s*contain/)
+  assert.match(styles, /object-position:\s*center/)
+})
