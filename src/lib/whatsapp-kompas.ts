@@ -28,7 +28,7 @@ export function kompasTransition(state: WhatsAppKompas | undefined, input: Kompa
 } {
  const text = input.kind === 'text' ? input.text.trim() : ''
  if(input.kind==='text' && text.toLowerCase()==='revert') return {action:'revert',prompt:'Back to MFit resume tailoring.'}
- if(input.kind==='text' && text.toLowerCase()==='kompas') return {state:state??{mode:'kompas',documents:[]},action:'setup',prompt:'Send your resume, then the job description. You can also attach supporting documents. Send start when ready.'}
+ if(input.kind==='text' && text.toLowerCase()==='kompas') return {state:state??{mode:'kompas',documents:[]},action:'setup',prompt:'Send your resume and the job description in either order. You can also attach supporting documents. Send start when ready.'}
  if(!state) return {action:'tailor'}
  const next={...state,documents:[...state.documents]}
  if(input.kind==='document'){
