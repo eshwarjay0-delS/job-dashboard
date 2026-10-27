@@ -166,12 +166,18 @@ test('a complex flow is narrated as a map and one traced thing, with depth and e
   for (const q of ['How would you design a log correlation query across Splunk, Sentinel and QRadar?', 'Tell me about a difficult EPM rollout.']) {
     const g = R.desktopResponsePolicy('engineer', q).guidance
     assert.match(g, /First give the map in one sentence/, q)
-    assert.match(g, /follow one concrete thing through it/, q)
-    assert.match(g, /keep at most two product names in a sentence/, q)
-    assert.match(g, /at the same top technical depth, and every part the question asks for is still answered/, q)
+    assert.match(g, /the exact evidence an expert reads there, the log or event ID, the command, the setting, the error/, q)
+    assert.match(g, /a long list of checks becomes several sentences, never fewer checks/, q)
+    assert.match(g, /never from fewer specifics\. Every part the question asks for is still answered, at the same top technical depth/, q)
     assert.match(g, /Containment never weakens a security control/, q)   // the baseline stays beside it
   }
   for (const q of ['What is IDOR?', 'IDOR vs CSRF', 'Have you configured CyberArk EPM?']) assert.doesNotMatch(R.desktopResponsePolicy('engineer', q).guidance, /NARRATING A COMPLEX FLOW/, q)
   const s = "I'd build a hypothesis matrix: 1 CA renewal breaks TLS inspection, 2 Intune policy mis-applies conditional access, and 3 EPM rule blocks the new binary."
   assert.equal(G.applyGuards(s, null, G.allowedNumbers('')).text, s)
+})
+
+test('voice repair never cuts a condition that is still open into a claim of its own', async () => {
+  const { voiceRepair } = await import('../../src/lib/kompasVoiceRepair.ts')
+  const s = 'I would abandon the leading hypothesis the moment the nslookup returns the correct IP, the route table shows no overlap, the HAR shows the correct Zscaler proxy, and the NAC status is compliant, because those combined evidences prove the problem lies elsewhere.'
+  assert.doesNotMatch(voiceRepair(s) || s, /proxy\. The NAC status is compliant/)
 })

@@ -413,6 +413,14 @@ function followsLikeVerb(verb: string, after: string): boolean {
 interface Joint { cut: number; lead: string; rest: string }
 
 // The split tiers, in the Master's order. Each returns candidate joints for a sentence.
+// A condition still open after the main verb: "I would abandon it the moment X, Y, Z, and the NAC status is compliant"
+// lists the conditions; cutting at ", and the NAC status is" made the last one a claim of its own and changed the
+// meaning (Endpoint Analyst round r06, 27 Oct 2026). Tiers 6 and 7 do not cut while such a clause is open.
+const OPEN_SUBORD = /\b(?:the moment|as soon as|once|when|whenever|if|unless|until|because|since|while|after|before|so that|in case|provided)\b/i;
+function insideCondition(s: string, idx: number, subj: Subj | null): boolean {
+  return OPEN_SUBORD.test(s.slice(subj ? subj.mainEnd : Math.min(idx, 12), idx));
+}
+
 function jointCandidates(s: string, tier: number, bad: Uint8Array, subj: Subj | null): Joint[] {
   const out: Joint[] = [];
   const safe = (a: number, b: number) => { for (let k = a; k < b; k++) if (bad[k]) return false; return true; };
@@ -434,10 +442,10 @@ function jointCandidates(s: string, tier: number, bad: Uint8Array, subj: Subj | 
     // Tiers 6-9 go past the Master's list, still at joints where both halves stand as sentences.
     // 6: ", and it / they / he / she / there / you ..." (a subject pronoun opens a new clause)
     case 6: for (const m of s.matchAll(/,\s+(and|but|so)\s+(?=(?:it|they|he|she|there|you)(?:['’][a-z]+)?\s)/g))
-      add(m, m[1] === "and" ? "" : capWord(m[1]), s.slice((m.index ?? 0) + m[0].length)); break;
+      if (!insideCondition(s, m.index ?? 0, subj)) add(m, m[1] === "and" ? "" : capWord(m[1]), s.slice((m.index ?? 0) + m[0].length)); break;
     // 7: ", and the analysts had ..." (a short noun phrase, then an auxiliary: a new clause, not a list item)
     case 7: for (const m of s.matchAll(/,\s+(and|but|so)\s+(?=(?:the|our|my|their|his|her|its|this|these|those|every|each|no|nobody|everyone|someone)\b(?:\s+[^\s,;]+){0,3}?\s+(?:had|has|have|was|were|is|are|did|could|would|will|can|couldn['’]t|wouldn['’]t|didn['’]t|wasn['’]t|weren['’]t|hadn['’]t|never|still)\b)/g))
-      add(m, m[1] === "and" ? "" : capWord(m[1]), s.slice((m.index ?? 0) + m[0].length)); break;
+      if (!insideCondition(s, m.index ?? 0, subj)) add(m, m[1] === "and" ? "" : capWord(m[1]), s.slice((m.index ?? 0) + m[0].length)); break;
     // 8 and 9: shared-subject verbs ("I pulled X, applied Y, and validated Z"). Only when the sentence's
     // own subject is I/we, its main verb is past tense, the next verb is past tense and takes a
     // determiner or number, and no other clause (he / which / "that the") sits in between.
