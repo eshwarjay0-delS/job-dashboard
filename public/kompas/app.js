@@ -2423,6 +2423,9 @@ $("screenBtn").onclick = analyseScreen;
 // capture → region review → grounded answer path as the existing menu/shortcut.
 if ($("screenCaptureAnswerBtn")) $("screenCaptureAnswerBtn").onclick = analyseScreen;
 async function grabFrame() {
+  // Windows Kompas 0.8+ returns a fresh, bounded in-memory JPEG. This avoids
+  // trying to extract the image from the system-audio loopback display track.
+  if (window.kompasDesktop?.captureScreen) return await window.kompasDesktop.captureScreen();
   let track = displayVideo && displayVideo.readyState === "live" ? displayVideo : null;
   if (!track) { const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }); track = s.getVideoTracks()[0]; displayVideo = track; }
   const video = document.createElement("video"); video.muted = true; video.playsInline = true;
