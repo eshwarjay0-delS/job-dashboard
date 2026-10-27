@@ -63,6 +63,7 @@ A voice-first interview preparation app. The user speaks; Kompas listens, transc
 - Sessions run on paid models only. Transcription stays on Groq Whisper (OpenRouter has no STT).
 - Nothing is "live" until verified. No remote-debugging promises that can't be kept.
 - The user's real history is the ceiling of every claim — Kompas never invents experience.
+- Every answer change is an upgrade on the owner's Kompas Master Rules ([kompas-master-rules.md](kompas-master-rules.md)), never a replacement (27 Oct 2026).
 
 ## Non-goals
 
