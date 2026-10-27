@@ -42,6 +42,9 @@ jobs:
       - name: Verify Kompas migration asset closure and lossless import
         run: node --experimental-strip-types --test scripts/tests/kompas-migration-assets.test.mjs scripts/tests/kompas-review-parity.test.mjs scripts/tests/kompas-blend-harvest.test.mjs scripts/tests/kompas-three-levels.test.mjs scripts/tests/kompas-desktop-three-levels.test.mjs scripts/tests/kompas-blend.test.mjs scripts/tests/kompas-session-recap.test.mjs scripts/tests/kompas-grounding-route.test.mjs
 
+      - name: Verify WhatsApp Kompas channel and shared-session safety
+        run: node --test scripts/tests/whatsapp-kompas*.test.mjs scripts/tests/kompas-shared-session.test.mjs scripts/tests/kompas-shared-turn.test.mjs
+
       - name: Verify consented voice benchmark metrics
         run: node --test scripts/tests/kompas-voice-metrics.test.mjs
 
