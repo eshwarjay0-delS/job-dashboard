@@ -1,4 +1,4 @@
-import { isLocationSeg } from "./kompasResume.ts"
+import { isLocationSeg } from "../../src/lib/kompasResume.ts"
 // Kompas grounding guards — anti-hallucination code ported from perfACT's
 // interview engine (copilot/api/answer.js). Prompt rules are wishes; these are
 // guarantees: figures, employers, titles, dates and places in a spoken answer
