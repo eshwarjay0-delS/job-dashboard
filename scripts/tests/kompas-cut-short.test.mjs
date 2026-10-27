@@ -16,7 +16,7 @@ test('a reply stopped by the ceiling far short of its target is cut; a finished 
 })
 
 test('the streaming lane clears the card and asks once more when the reply was cut short', () => {
-  const route = readFileSync(new URL('../../src/app/api/kompas/answer/route.ts', import.meta.url), 'utf8')
+  const route = readFileSync(new URL('../../src/lib/kompasAnswerService.ts', import.meta.url), 'utf8')
   assert.match(route, /if \(cutShort\(usage\.finish, raw, job\.plan\.words\)\)/)
   assert.ok(/emit\(\{ type: "replace", text: "" \}\)\r?\n\s+return "cut"/.test(route), 'the cut fragment is cleared from the card')
   assert.match(route, /=== "cut" && !askedAgain/)

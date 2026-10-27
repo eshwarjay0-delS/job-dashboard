@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { questionToAnswer } from "../../src/lib/kompasAnswer.ts";
 
 const appJs = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8");
-const route = readFileSync(new URL("../../src/app/api/kompas/answer/route.ts", import.meta.url), "utf8");
+const route = readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8");
 const answerLib = readFileSync(new URL("../../src/lib/kompasAnswer.ts", import.meta.url), "utf8");
 
 test("the formed question joins every heard line — the last-line form is gone", () => {
