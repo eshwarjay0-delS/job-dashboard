@@ -45,6 +45,8 @@ test('missingStructure flags a design answer with no alternative, passes one wit
   assert.deepEqual(missingStructure(without, opts), ["a sentence naming the one alternative you rejected and what it cost"])
   const withAlt = without + " We rejected a single shared database user because it would have erased the boundary between services, at the cost of one extra credential rotation."
   assert.deepEqual(missingStructure(withAlt, opts), [])
+  const withAltPhrased = without + " We went with per-service credentials over a single shared database user, accepting one extra credential rotation."
+  assert.deepEqual(missingStructure(withAltPhrased, opts), [])
 })
 
 test('missingStructure flags a director practice opening with no owner, passes a named one', () => {

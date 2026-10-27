@@ -340,20 +340,23 @@ function recordLane(model: string, ok: boolean, usage: { input: number; output: 
 // them and one targeted rewrite adds only what is missing. The original
 // stands on any failure, and a repair that fixes nothing is discarded —
 // never a worse answer, never a second rewrite.
-async function repairStructure(job: AnswerJob, guardedText: string, signal: AbortSignal): Promise<{ text: string; repaired: number }> {
+async function repairStructure(job: AnswerJob, guardedText: string, req: NextRequest): Promise<{ text: string; repaired: number }> {
   const opts = { level: job.level, register: job.register, shape: job.shape, tier: job.tier }
   const missing = missingStructure(guardedText, opts)
   if (!missing.length || !job.orKey) return { text: guardedText, repaired: 0 }
   // At most two attempts: the second names exactly what the first rewrite
   // still missed. A failed call is not retried; a rewrite that fixes nothing
-  // is discarded, never shipped.
+  // is discarded, never shipped. The abort signal is the request signal, not
+  // the 55s lane signal: a repair at settle time must not inherit only the
+  // lane budget left over after generation, or it aborts silently and the
+  // original stands no matter what the rewrite would have fixed.
   let stillMissing = missing
   for (let attempt = 0; attempt < 2; attempt++) {
     const extra = attempt === 0 ? "" : `\n\nYour previous rewrite still missed:\n${stillMissing.map((m) => `- ${m}`).join("\n")}\nThe rewritten answer MUST contain each item above.`
     try {
       const { text } = await fetchOpenRouter(job.orKey, PAID_MODEL, STRUCTURE_REPAIR_SYSTEM,
         `QUESTION: ${job.question}\n\nANSWER:\n${guardedText}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}${extra}\n\nReturn the full rewritten answer and nothing else.`,
-        1600, AbortSignal.any([signal, AbortSignal.timeout(30000)]))
+        1600, AbortSignal.any([req.signal, AbortSignal.timeout(60000)]))
       const repaired = text.trim()
       if (!repaired) return { text: guardedText, repaired: 0 }
       const rg = applyGuards(repaired, job.guardFacts, job.allowed)
@@ -458,7 +461,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         let guardedText = g.text
         let repaired = 0
         {
-          const r = await repairStructure(job, guardedText, signal)
+          const r = await repairStructure(job, guardedText, req)
           guardedText = r.text
           repaired = r.repaired
         }
@@ -545,7 +548,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   let guardedText = g.text
   let repaired = 0
   {
-    const r = await repairStructure(job, guardedText, signal)
+    const r = await repairStructure(job, guardedText, req)
     guardedText = r.text
     repaired = r.repaired
   }

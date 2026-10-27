@@ -712,7 +712,7 @@ export function missingStructure(text: string, opts: { level: string; register: 
   if (!text || !text.trim() || opts.tier === 0) return missing
   const plain = text.replace(/\[(?:beat|breath)\]|\(pause\)/gi, " ")
   if (/Sentence two names the one alternative/.test(opts.shape || "")) {
-    if (!/\b(alternative|rejected|ruled out|passed on|instead of|rather than|did not choose|didn't choose|chose .* over|opted against)\b/i.test(plain)) missing.push("a sentence naming the one alternative you rejected and what it cost")
+    if (!/\b(alternative|rejected|ruled out|ruled against|passed on|passed over|instead of|instead\b|rather than|did not choose|didn't choose|chose .* over|opted against|opted for .* over|went with .* over|set aside|decided against)\b/i.test(plain)) missing.push("a sentence naming the one alternative you rejected and what it cost")
   }
   // Director means decision first in every register: a compare question
   // ("risk acceptance versus remediation") registers as concept, and the
