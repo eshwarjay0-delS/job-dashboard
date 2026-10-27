@@ -134,7 +134,7 @@ async function streamOpenRouter(
     method: "POST", signal,
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
     body: JSON.stringify({
-      model: PAID_MODEL, provider: LIVE_ROUTING, max_tokens: orCap(maxTokens), stream: true,
+      model, provider: LIVE_ROUTING, max_tokens: orCap(maxTokens), stream: true,
       stream_options: { include_usage: true },
       ...reasoningFor(model),
       messages: [
@@ -165,7 +165,7 @@ async function fetchOpenRouter(
     method: "POST", signal,
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "x-title": "MarketFit" },
     body: JSON.stringify({
-      model: PAID_MODEL, provider: LIVE_ROUTING, max_tokens: orCap(maxTokens),
+      model, provider: LIVE_ROUTING, max_tokens: orCap(maxTokens),
       ...reasoningFor(model),
       messages: [
         { role: "system", content: system },
@@ -313,7 +313,15 @@ type AnswerJob = {
 // The lanes, in order: an explicit OpenRouter pick from the live screen first,
 // then the primary, then the fallback model. Models on a long rate-limit block
 // are skipped — a later request finds them cooled down.
-function jobLanes(_job: AnswerJob): string[] { return [PAID_MODEL] }
+// The live Model menu (public/kompas/app.js LIVE_MODELS) sends liveModel. From 14 Oct 2026, when answering moved here from
+// the perfACT engine, every lane was PAID_MODEL and the streams hard-coded it, so "GPT Luna" in the menu silently did
+// nothing (found 27 Oct). A chosen model answers first and the default stays behind it as the fallback; anything not on
+// this list is the default.
+const LIVE_MODEL_IDS: Record<string, string> = { "gpt-5.6-luna": "openai/gpt-5.6-luna" }
+function jobLanes(job: AnswerJob): string[] {
+  const chosen = LIVE_MODEL_IDS[job.liveModel || ""]
+  return chosen ? [chosen, PAID_MODEL] : [PAID_MODEL]
+}
 function openLanes(job: AnswerJob): { lanes: string[]; blockedNote: string } {
   const lanes = jobLanes(job).filter((m) => (blockedUntil.get(m) || 0) <= Date.now())
   let blockedNote = ""

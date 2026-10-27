@@ -40,6 +40,9 @@ export function desktopQuestionKind(question: string): DesktopQuestionKind {
   // general turn told not to add a personal incident.
   if (/\btell me about (?:a|an|one|your)\s+(?:[\w-]+\s+){0,3}?(?:rollout|project|incident|outage|migration|deployment|implementation|time|challenge|failure|investigation|situation)\b/.test(q)
     || /\bwhat happened (?:after|next|then)\b|\bafter that\b[^.?!]*\?|\bwhat (?:logs?|evidence|data|tools?|steps?|checks?) did you\b|\bwhat did you (?:check|see|find|try|do) (?:next|then|first)\b/.test(q)) return 'experience'
+  // Master Rules §1/§11: a correction updates the reasoning on the same case ("Actually, the hosts files were clean and it
+  // only fails on VPN. What changes in your reasoning?" took the 70-word general lane in r04).
+  if (/\b(?:what changes in your|does that change your|how does that change|what would you do differently|now that|given that)\b/.test(q)) return 'implementation'
   // "How does Kerberos authentication work?": the mechanism explained in order, kept concise like a definition.
   if (!askedForDepth && /^how (?:does|do|is|are)\b[^?]*\bwork(?:s|ing)?\b/.test(q)) return 'definition'
   if (wouldAsk && !pastAsk) {
@@ -69,7 +72,11 @@ export function desktopQuestionKind(question: string): DesktopQuestionKind {
 const SAFE_LOGIC = "Containment never weakens a security control to restore service: no bypassing authentication, token validation or inspection, no blanket allow, and no deny-all that takes the critical service down. Missing telemetry is never a pass. A hypothesis is confirmed or ruled out by the evidence named, never both."
   // Judged 27 Oct 2026 on the Endpoint Analyst set: a "workaround" opened a subnet-wide Zscaler allow, an incident story
   // bypassed inspection for a whole domain, and "block NTLM fallback" was offered as the fix. Added, the rule above kept.
-  + " A workaround or exception is the narrowest that restores the service: only the affected application, destination or group, with an owner, an expiry or review date and monitoring while it stands; never a subnet-wide allow, a disabled policy, or an inspection bypass beyond the named destination."
+  + " A workaround or exception is the narrowest that restores the service: only the affected application, destination or group, with an owner, an expiry or review date and monitoring while it stands; never a subnet-wide allow, a disabled policy, or an inspection bypass beyond the named destination. An alert or detection is never muted or silenced to buy time."
+
+// r03 judge: diagnosis answers opened by asserting the root cause and then went looking for it ("the root cause is the
+// proxy" before any evidence). Master Rules §9: constraints, first decision, evidence, then the conclusion.
+const DIAGNOSIS_OPEN = "In a diagnosis, the first sentence gives the first move and the leading hypothesis as a hypothesis; a root cause is stated only after the evidence that confirms it."
 
 // Same evaluation: confident but wrong specifics (Kerberos error codes, "whoami /f", AppEnforce.log as an EPM log), and
 // Palo Alto placed at CVS, whose resume section lists Check Point. Real specifics stay; they must be exact and in place.
@@ -131,7 +138,7 @@ export function desktopResponsePolicy(audience: string, question: string) {
     : kind === "experience"
     ? `Use one supported real example. Explain what was discovered or built, the candidate's own actions, the actual bottleneck, how it was resolved, and the impact on the work. A deep example gets that account. Use only supplied facts and metrics. If the incident is absent, say so and give the approach as a hypothesis. ${angle} ${SAFE_LOGIC} ${EXACT_AND_PLACED}`
     : kind === "implementation"
-    ? `Follow the precise path the question asked. ${angle} A follow-up stays on the piece that was asked. Do not restart the whole story. Do not pull logs or aggregate Splunk unless the question asked for that hunt. ${SAFE_LOGIC} ${EXACT_AND_PLACED}`
+    ? `Follow the precise path the question asked. ${angle} A follow-up stays on the piece that was asked. Do not restart the whole story. Do not pull logs or aggregate Splunk unless the question asked for that hunt. ${SAFE_LOGIC} ${EXACT_AND_PLACED} ${DIAGNOSIS_OPEN}`
     : directFact
     ? `This asks for a fact about the candidate. Answer it first, yes or no, from the resume, then one compact proof from the role whose section lists it. Do not define the tool, recite the introduction or open a story. ${EXACT_AND_PLACED}`
     : `This is an ordinary question. Answer it in a few sentences. ${angle} ${SURFACE_STOP}`

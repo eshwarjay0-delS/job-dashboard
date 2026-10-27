@@ -124,6 +124,7 @@ test('the Master Rules intent table holds: every example takes its lane', async 
   assert.equal(lane('How does Kerberos authentication work?'), 'definition')
   assert.equal(lane('Tell me about a difficult EPM rollout.'), 'experience')
   assert.equal(lane('How would you investigate lateral movement?'), 'implementation')
+  assert.equal(lane('Actually, the hosts files were clean, and it only fails when the laptops are on VPN. What changes in your reasoning?'), 'implementation')
   assert.equal(lane('CyberArk EPM blocks a signed business application after an update. Would you allow it? Explain your decision process.'), 'implementation')
   assert.equal(lane('Drawing on your experience with both platforms, how would you distinguish a detection difference from missing telemetry?'), 'implementation')
   assert.equal(lane('Choose a real Citi or CVS incident: what was your initial hypothesis, and how did you verify recovery?'), 'experience')
@@ -135,4 +136,24 @@ test('the Master Rules intent table holds: every example takes its lane', async 
     assert.match(p.guidance, /This continues the case from the previous turn/, q)
   }
   assert.match(R.desktopResponsePolicy('engineer', 'What is IDOR?').guidance, /never announced \(no "The key takeaway is", "In conclusion", "To sum up"\)/)
+})
+
+// 27 Oct 2026: the live Model menu's "GPT Luna" reached the engine as liveModel and was ignored (every lane and both
+// OpenRouter calls were the default model). A chosen model answers first, the default stays behind it.
+test('the live Model choice reaches OpenRouter, with the default behind it', () => {
+  const svc = readFileSync(new URL('../../src/lib/kompasAnswerService.ts', import.meta.url), 'utf8')
+  assert.match(svc, /const LIVE_MODEL_IDS: Record<string, string> = \{ "gpt-5\.6-luna": "openai\/gpt-5\.6-luna" \}/)
+  assert.match(svc, /return chosen \? \[chosen, PAID_MODEL\] : \[PAID_MODEL\]/)
+  assert.equal((svc.match(/model, provider: LIVE_ROUTING, max_tokens: orCap\(maxTokens\)/g) || []).length, 2)
+  const app = readFileSync(new URL('../../public/kompas/app.js', import.meta.url), 'utf8')
+  assert.match(app, /const LIVE_MODELS = \["", "gpt-5\.6-luna"\]/)
+})
+
+test('round r03 defects: 802.1X stays a name, alerts are never muted, a diagnosis opens on a hypothesis', async () => {
+  const R = await import('../../src/lib/kompasDesktopResponse.ts')
+  const s = 'I check whether the device used 802.1X machine authentication before the user signed in.'
+  assert.equal(G.applyGuards(s, null, G.allowedNumbers('')).text, s)
+  const g = R.desktopResponsePolicy('engineer', 'How would you prove that TLS inspection is causing an application failure?').guidance
+  assert.match(g, /An alert or detection is never muted or silenced to buy time\./)
+  assert.match(g, /a root cause is stated only after the evidence that confirms it/)
 })
