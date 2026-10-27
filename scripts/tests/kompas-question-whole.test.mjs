@@ -62,3 +62,24 @@ test('a bare term or abbreviation that was typed stays the question', () => {
   assert.equal(questionToAnswer('', 'Venafi certificate discovery', true), 'Venafi certificate discovery')
   assert.equal(questionToAnswer('Hello.', 'Hello.', true), '')
 })
+
+test('a dictated story plus the real question cuts to the question only (owner, 26 Oct screenshot)', () => {
+  const heard = [
+    'I lost my job when I was a kid.',
+    'I got nosebleeds when I was a kid.',
+    'I was like, oh, I am going to die.',
+    'My mom came and told me what I was crying about.',
+    'Did you go to the hospital?',
+    'I went to the hospital after my dad died.',
+    'I was in the hospital.',
+    'I am going to start with a quick question.',
+    'At Citi, you list Zscaler troubleshooting experience.',
+    'If a desktop application fails under TLS inspection while browser access works, how would you distinguish certificate pinning, mutual TLS, trust store differences, and protocol incompatibility without broadly bypassing inspection?',
+    'A server certificate has the correct hostname and valid dates, but only some Windows endpoints reject it.',
+    'How would you investigate that?',
+  ].join(' ')
+  const out = questionToAnswer(heard, '', false)
+  assert.ok(out.toLowerCase().includes('distinguish certificate pinning'), `keeps the ask, got: ${out}`)
+  assert.ok(out.toLowerCase().includes('how would you investigate that'), `keeps the last ask, got: ${out}`)
+  assert.ok(!/nosebleed|dad died|lost my job/i.test(out), `drops the story, got: ${out}`)
+})

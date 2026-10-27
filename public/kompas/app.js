@@ -1741,11 +1741,10 @@ function heardDraft(lines, screen, answerText) {
     }
     bits.push(text);
   }
-  let q = bits.join(" ").trim();
-  const lane = String(screen || "").trim();
-  const real = lane && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving|Waiting)/.test(lane);
-  if (q && real && q.split(/\s+/).length < 8 && !/[?]/.test(q) && !/^(what|how|why|when|where|who|tell|walk|describe|explain)\b/i.test(q)) q = lane.replace(/[?.!\s]+$/, "") + " — " + q;
-  return q;
+  // The Heard line is a live caption, not the record (the drawer holds every
+  // line): show only the freshest phrase, never the whole backlog.
+  const tail = bits.length ? bits[bits.length - 1] : "";
+  return tail.length > 200 ? "…" + tail.slice(-200) : tail;
 }
 function onTranscript(who, text) {
   text = fixTerms(fixPhrases(text));
@@ -2316,12 +2315,17 @@ async function aiAnswer(fromAuto) {
         showPressed(card, q);
         return await generateAnswer(heard, card, { consolidated: true, earlier, derived: q, pinned: true });
       }
-      const heard = intake.heard;
+      // Heard-only questions are messy transcripts, not clean questions: let
+      // the server cut the actual ask (derive step + unpinned cut) instead of
+      // pinning the whole concatenation to the card. Typed questions stay
+      // pinned whole — the typed words already are the question.
+      const heard = intake.heard.replace(/\nCurrent question \(on screen\):[^\n]*/g, "").trim();
       const said = pressQuestion(typedText, intake, "") || intake.derived || heardAsQuestion(pending);
-      const card = addCard(said || "Answering what was just heard…", ["…"]);
+      const heardOnly = !typedText;
+      const card = addCard(heardOnly ? "Deriving…" : (said || "Answering what was just heard…"), ["…"]);
       card.heard = heard; card.earlier = earlier;
       showPressed(card, card.question);
-      return await generateAnswer(heard, card, { consolidated: true, earlier, derived: said, pinned: true });
+      return await generateAnswer(heard, card, { consolidated: true, earlier, derived: heardOnly ? undefined : said, pinned: !heardOnly });
     }
     if (fromAuto) return;
     const c = cards[idx];
