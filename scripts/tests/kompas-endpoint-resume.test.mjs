@@ -66,3 +66,11 @@ test('prep reads every role through the digest and returns grounded projects', (
   const digest = K.resumeDigest(resume, 'Endpoint Analyst\nHAR files', 9000)
   for (const e of ['Citi Bank', 'CVS Health', 'City of San Diego (DOE)', 'Charter Communications', 'Accenture']) assert.ok(digest.includes(e), e)
 })
+
+test('an introduction opens with the total years when the resume states them, and prep keeps tools with their employer', async () => {
+  const A = await import('../../src/lib/kompasAnswer.ts')
+  assert.match(A.INTRO_CAREER_SPINE, /When the resume states the total years of experience, say that total in the opening sentence with the current identity/)
+  assert.match(A.INTRO_CAREER_SPINE, /Each tool, client and achievement belongs to the role it is listed under/)   // the baseline stays
+  const route = readFileSync(new URL('../../src/app/api/kompas/prep/route.ts', import.meta.url), 'utf8')
+  assert.match(route, /A tool, platform or client named together with an employer must be one that employer's section of the resume lists\./)
+})

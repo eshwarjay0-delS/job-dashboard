@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
   "projects": [ { "id": "p1", "name": "short name", "employer": "the employer exactly as the ROLES line writes it", "role": "their title there", "impact": "one-line outcome in the resume's own words" } ],
   "questions": [ { "q": "the question", "answer": ["bullet 1", "bullet 2"], "tier": 0-4, "group": "core", "projectId": "p1 or empty" } ]
 }
-Rules: 10-14 questions covering intro (tier 0), experience/STAR (tier 1), design/scenario (tier 2), drill-down (tier 3), own-experience (tier 4). Answers are short bullet skeletons grounded ONLY in the facts given — never invent employers, tools, or metrics. Projects come from the resume's roles, 2-4 of them, each from one employer on the ROLES line, preferring the work this job description asks about. Never write a number (percent, count, time saved) that the resume does not state.`,
+Rules: 10-14 questions covering intro (tier 0), experience/STAR (tier 1), design/scenario (tier 2), drill-down (tier 3), own-experience (tier 4). Answers are short bullet skeletons grounded ONLY in the facts given — never invent employers, tools, or metrics. Projects come from the resume's roles, 2-4 of them, each from one employer on the ROLES line, preferring the work this job description asks about. Never write a number (percent, count, time saved) that the resume does not state. A tool, platform or client named together with an employer must be one that employer's section of the resume lists.`,
       user: `${facts}\n\nBuild the prep pack.`,
       maxTokens: 4000,
     })
