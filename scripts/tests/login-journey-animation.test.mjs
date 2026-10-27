@@ -8,8 +8,8 @@ const illustration = readFileSync(new URL("src/app/login/marketfit-journey.tsx",
 const styles = readFileSync(new URL("src/app/login/marketfit-journey.module.css", root), "utf8")
 
 test("MarketFit login displays desktop illustration and compact mobile flow", () => {
-  assert.match(login, /<MarketFitJourney \/>/)
-  assert.match(login, /<MarketFitJourney compact \/>/)
+  assert.match(login, /<MarketFitLoginStory \/>/)
+  assert.match(login, /<MarketFitLoginStory compact \/>/)
   assert.match(login, /lg:hidden/)
   assert.match(login, /lg:flex/)
 })
