@@ -125,3 +125,22 @@ test("12: latency path has no extra LLM intent classification or artificial wait
   assert.doesNotMatch(source,/setTimeout|sleep\(|callLLM|classifyIntent|modelPrompt/)
   assert.match(webhook,/if \(typeof after === "function"\) after\(work\)/)
 })
+
+test("13: spoken Compass punctuation is normalized to the Kompas entry command",async()=>{
+  const r=await fn(audio(),"account",deps({transcribe:async()=>({text:"Compass."})}).instance)
+  assert.equal(r.ok,true)
+  assert.equal(r.message.text.body,"kompas")
+})
+test("14: spoken revert, start, help and use two normalize with no LLM",async()=>{
+  for(const [heard,want] of [["Revert.","revert"],["Start!","start"],["Help?","help"],["Use two.","use 2"],["Switch to three.","use 3"],["Menu","menu"]]){
+    const r=await fn(audio(),"account",deps({transcribe:async()=>({text:heard})}).instance)
+    assert.equal(r.message.text.body,want)
+  }
+})
+test("15: full sentences and job descriptions are never rewritten as commands",async()=>{
+  const texts=["Explain how a compass works.","My role involved Compass data security.","Title: Kompas Engineer. Responsibilities include maintaining software."]
+  for(const text of texts){
+    const r=await fn(audio(),"account",deps({transcribe:async()=>({text})}).instance)
+    assert.equal(r.message.text.body,text)
+  }
+})
