@@ -200,3 +200,33 @@ test("13. A storage failure cannot silently misroute a Kompas question as resume
     assert.doesNotMatch(outcome.sent[0], /no AI service/i)
   } finally { blob.getText = original }
 })
+
+test("14. Basic WhatsApp Help is routed before any optional Kompas storage call", () => {
+  const webhook = readFileSync("src/app/api/whatsapp/webhook/route.ts", "utf8")
+  const handleStart = webhook.indexOf("async function handle(from:")
+  const command = webhook.indexOf('["help", "hi", "hello", "menu"].includes(command)', handleStart)
+  const kompas = webhook.indexOf("const consumed = await handleWhatsAppKompas", handleStart)
+  assert.ok(handleStart > 0 && command > handleStart && kompas > command,
+    "Help/menu must not be blocked by the Kompas session lookup")
+  assert.match(webhook.slice(command, kompas), /return sendText\(from, HELP\)/)
+})
+test("15. Storage failures must not be reported as AI-provider configuration failures", () => {
+  const webhook = readFileSync("src/app/api/whatsapp/webhook/route.ts", "utf8")
+  const errorBoundary = webhook.slice(webhook.indexOf("const work = async () => {"), webhook.indexOf("if (typeof after ==="))
+  assert.match(errorBoundary, /const providerError =/)
+  assert.match(errorBoundary, /\? plainFailure\(e, "do that", true\)/)
+  assert.match(errorBoundary, /MarketFit service is unavailable/)
+  assert.doesNotMatch(errorBoundary, /sendText\(from, plainFailure\(e, "do that", true\)\)/)
+})
+
+test("16. Explicit Use 2 profile switching avoids the Kompas storage precondition", () => {
+  const webhook = readFileSync("src/app/api/whatsapp/webhook/route.ts", "utf8")
+  const handleStart = webhook.indexOf("async function handle(from:")
+  const profile = webhook.indexOf("const profileCommand =", handleStart)
+  const kompas = webhook.indexOf("const consumed = await handleWhatsAppKompas", handleStart)
+  assert.ok(handleStart > 0 && profile > handleStart && kompas > profile)
+  assert.match(webhook.slice(profile, kompas), /if \(!profileCommand && \(type === "text" \|\| type === "document"\)\)/)
+  assert.match(webhook.slice(profile, kompas), /\(\?:use\|switch/)
+  const select = webhook.indexOf("const email = choiceIn(text", kompas)
+  assert.ok(select > kompas, "Existing resume selection must remain behind the shortcut")
+})
