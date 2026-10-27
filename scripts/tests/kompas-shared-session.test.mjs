@@ -11,7 +11,7 @@ runInNewContext(ts.transpileModule(readFileSync('src/lib/kompas-session-store.ts
 })
 function setup(){
  const files=new Map()
- const storage={list:async prefix=>[...files.keys()].filter(k=>k.startsWith(prefix)),getText:async key=>files.get(key)??null,putIfAbsent:async(key,value)=>{if(files.has(key))return false;files.set(key,value);return true}}
+ const storage={list:async()=>{throw new Error('ListObjectsV2 forbidden')},getText:async key=>files.get(key)??null,putIfAbsent:async(key,value)=>{if(files.has(key))return false;files.set(key,value);return true}}
  return mod.exports.sharedKompasStore(storage)
 }
 for(let fold=1;fold<=10;fold++){
@@ -47,4 +47,17 @@ test('invalid owner, session paths and skipped revisions fail closed',async()=>{
  const s=await db.create('owner')
  await assert.rejects(db.commit('owner',0,{...s,revision:2}),/revision/)
  assert.equal(await db.commit('owner',5,{...s,revision:6}),false)
+})
+
+test('sessions support deep revision histories with no ListObjects access',async()=>{
+ const db=setup()
+ let curr=await db.create('verified')
+ for(let i=0;i<55;i++){
+   const next={...curr,revision:curr.revision+1,history:[...curr.history,{q:'Q'+i,a:'A'+i}]}
+   assert.equal(await db.commit(curr.owner,curr.revision,next),true)
+   curr=next
+ }
+ const again=await db.read(curr.owner,curr.id)
+ assert.equal(again.revision,55)
+ assert.equal(again.history.length,55)
 })
