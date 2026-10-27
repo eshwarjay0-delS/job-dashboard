@@ -76,6 +76,14 @@ const SAFE_LOGIC = "Containment never weakens a security control to restore serv
 
 // r03 judge: diagnosis answers opened by asserting the root cause and then went looking for it ("the root cause is the
 // proxy" before any evidence). Master Rules §9: constraints, first decision, evidence, then the conclusion.
+// Owner, 27 Oct 2026: "work on most super technical depth answers into better narrative ways so ... people can vocally
+// express gibberish types of integrations and complex workflows which seems impossible to follow along and still grab
+// audience full attention to the detail." Measured on the Endpoint Analyst rounds: the deepest answers stacked four
+// sources and five complications into two noun-heavy sentences, put three or four product names in one sentence, and
+// never followed one thing through the system, so a listener lost the thread. This changes the order and the pacing,
+// never the depth: every technical name and mechanism stays.
+export const NARRATE_FLOW = "NARRATING A COMPLEX FLOW (when the answer crosses several systems, sources or steps): First give the map in one sentence: how many pieces, in what order, and the one question they answer together. Then follow one concrete thing through it, one request, one alert, one laptop, hop by hop in the order it really travels; each hop is one sentence: where it is now, what happens there, what I look at. Introduce a system by its job before its name (the inspection proxy, Zscaler), and keep at most two product names in a sentence. Short spoken sentences, a verb doing the work, not a stack of nouns. After three or four hops, one line that says where we are. When the hard part arrives, flag it, here is where it breaks, and slow down on it. End on the one thing the listener should keep. Every technical name, check and mechanism stays in, at the same top technical depth, and every part the question asks for is still answered; only the order and the pacing change."
+
 const DIAGNOSIS_OPEN = "In a diagnosis, the first sentence gives the first move and the leading hypothesis as a hypothesis; a root cause is stated only after the evidence that confirms it."
 
 // Same evaluation: confident but wrong specifics (Kerberos error codes, "whoami /f", AppEnforce.log as an EPM log), and
@@ -136,9 +144,9 @@ export function desktopResponsePolicy(audience: string, question: string) {
     : followUp
     ? `This continues the case from the previous turn. Keep its project, employer, environment and facts; a short callback, then only the new detail asked, one level deeper. Do not retell the story or move to another project because a word like logs appeared. ${SAFE_LOGIC} ${EXACT_AND_PLACED}`
     : kind === "experience"
-    ? `Use one supported real example. Explain what was discovered or built, the candidate's own actions, the actual bottleneck, how it was resolved, and the impact on the work. A deep example gets that account. Use only supplied facts and metrics. If the incident is absent, say so and give the approach as a hypothesis. ${angle} ${SAFE_LOGIC} ${EXACT_AND_PLACED}`
+    ? `Use one supported real example. Explain what was discovered or built, the candidate's own actions, the actual bottleneck, how it was resolved, and the impact on the work. A deep example gets that account. Use only supplied facts and metrics. If the incident is absent, say so and give the approach as a hypothesis. ${angle} ${SAFE_LOGIC} ${EXACT_AND_PLACED} ${NARRATE_FLOW}`
     : kind === "implementation"
-    ? `Follow the precise path the question asked. ${angle} A follow-up stays on the piece that was asked. Do not restart the whole story. Do not pull logs or aggregate Splunk unless the question asked for that hunt. ${SAFE_LOGIC} ${EXACT_AND_PLACED} ${DIAGNOSIS_OPEN}`
+    ? `Follow the precise path the question asked. ${angle} A follow-up stays on the piece that was asked. Do not restart the whole story. Do not pull logs or aggregate Splunk unless the question asked for that hunt. ${SAFE_LOGIC} ${EXACT_AND_PLACED} ${DIAGNOSIS_OPEN} ${NARRATE_FLOW}`
     : directFact
     ? `This asks for a fact about the candidate. Answer it first, yes or no, from the resume, then one compact proof from the role whose section lists it. Do not define the tool, recite the introduction or open a story. ${EXACT_AND_PLACED}`
     : `This is an ordinary question. Answer it in a few sentences. ${angle} ${SURFACE_STOP}`

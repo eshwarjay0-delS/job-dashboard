@@ -157,3 +157,21 @@ test('round r03 defects: 802.1X stays a name, alerts are never muted, a diagnosi
   assert.match(g, /An alert or detection is never muted or silenced to buy time\./)
   assert.match(g, /a root cause is stated only after the evidence that confirms it/)
 })
+
+// Owner, 27 Oct 2026: "work on most super technical depth answers into better narrative ways ... complex workflows which
+// seems impossible to follow along and still grab audience full attention to the detail", then "Still Delivering that
+// top notch technical depth responses addressing everything from the questions."
+test('a complex flow is narrated as a map and one traced thing, with depth and every part kept', async () => {
+  const R = await import('../../src/lib/kompasDesktopResponse.ts')
+  for (const q of ['How would you design a log correlation query across Splunk, Sentinel and QRadar?', 'Tell me about a difficult EPM rollout.']) {
+    const g = R.desktopResponsePolicy('engineer', q).guidance
+    assert.match(g, /First give the map in one sentence/, q)
+    assert.match(g, /follow one concrete thing through it/, q)
+    assert.match(g, /keep at most two product names in a sentence/, q)
+    assert.match(g, /at the same top technical depth, and every part the question asks for is still answered/, q)
+    assert.match(g, /Containment never weakens a security control/, q)   // the baseline stays beside it
+  }
+  for (const q of ['What is IDOR?', 'IDOR vs CSRF', 'Have you configured CyberArk EPM?']) assert.doesNotMatch(R.desktopResponsePolicy('engineer', q).guidance, /NARRATING A COMPLEX FLOW/, q)
+  const s = "I'd build a hypothesis matrix: 1 CA renewal breaks TLS inspection, 2 Intune policy mis-applies conditional access, and 3 EPM rule blocks the new binary."
+  assert.equal(G.applyGuards(s, null, G.allowedNumbers('')).text, s)
+})

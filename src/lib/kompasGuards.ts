@@ -47,6 +47,9 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   // A number glued to letters that are not a unit is a name: "802.1X" came out "severalX" (r03, ea-21). "30s", "30ms" stay figures.
   if (/^[A-Za-z]/.test(after) && !/^(?:ms|s|secs?|mins?|m|h|hrs?|d|k|K|M|[KMGT]B|[kmgt]b)\b/.test(after)) return true
   if (/^[1-9]$/.test(value) && (/^\s*(?:[–—=:-]\s*[A-Za-z]|equals\b)/.test(after) || /\b(?:numbered|label(?:l?ed|l?ing)?|labels?)\s*$/i.test(before))) return true
+  // An item of a spoken numbered list: "a hypothesis matrix: 1 CA renewal breaks inspection, 2 Intune policy ..., and 3 EPM rule"
+  // came out "several CA renewal" (round r05, ea-20).
+  if (/^[1-9]$/.test(value) && /(?:[:,;]|\band)\s*$/.test(before) && /^\s+[A-Z][A-Za-z]/.test(after)) return true
   if (/^x[0-9a-f]/i.test(after)) return true
   if (/^\s*(port|ports)\b/i.test(after)) return true
   // Structural numbers are labels, not result claims — the guard rewrote them
