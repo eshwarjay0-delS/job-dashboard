@@ -389,10 +389,36 @@ export function applyGuards(
     if (line.includes("[")) line = unbracket(line, facts)
     line = cleanOrphans(fixTitle(dropUnsourcedPrestige(fixVersions(dropUnsourcedPlace(line, facts), facts), facts), facts))
     if (!line.trim() || !needsGuard(line, allowed)) return line
+    // Only a sentence that claims a result guards its figures; the rest of the line keeps its numbers.
+    const parts = line.split(/(?<=[.!?])(\s+)/)
+    let changed = false
+    const kept = parts.map((part) => {
+      if (!part.trim() || !claimsResult(part) || !needsGuard(part, allowed)) return part
+      changed = true
+      return guardText(part, allowed).text
+    })
+    if (!changed) return line
     guarded++
-    return guardText(line, allowed).text
+    return kept.join("")
   })
   return { text: out.join("\n"), guarded }
+}
+
+// Measured 26 Oct 2026 (evaluation rounds 1-3): the figures guard turned thresholds, timeouts, counts in a test and
+// shares of traffic into "several", "a share" and "noticeably" in 16 of 50 answers ("wal_sender_timeout=several",
+// "at least a share of the expected event count"), so the technical answers came out garbled. An invented figure is a
+// claim about results: the candidate's own past work, a percentage something was cut or raised by, money, or years.
+// A number in a plan, a test or a design ("would", "if", a threshold) is the mechanism and stays as written.
+const CLAIMANT = /\b(?:i|we|my|our|me|us|i've|we've|i'm|we're)\b/i
+const RESULT = /\b(?:reduc|cut|sav|improv|increas|decreas|achiev|deliver|lower|rais|boost|grew|grow|shrank|shrink|eliminat|resolv|handl|process|manag|led|built|onboard|migrat|deploy|automat|secur|protect|block|detect|prevent|accelerat|sped|speed|shorten|drop|halv|doubl|tripl|scal|support|own|oversaw|mentor|train|serv|complet|clos|fix|remediat|patch)\w*/i
+const PLAN = /\b(?:would|will|could|should|can|might|may|if|i'd|we'd|i'll|we'll|plan|propose|expect|target|threshold|set|configure|alert when|at least|at most|within|every|per)\b/i
+export function claimsResult(sentence: string): boolean {
+  const s = String(sentence || "")
+  if (/\$\s?\d|\b\d[\d,.]*\s*(?:k|m|million|billion)?\s*(?:usd|dollars)\b/i.test(s)) return true
+  if (/\b\d+\+?\s*(?:years?|yrs?)\b/i.test(s) && CLAIMANT.test(s)) return true
+  if (PLAN.test(s)) return false
+  if (/\d\s*%|\bpercent\b|\b\d[\d,.]*\s*(?:x|times)\b/i.test(s) && RESULT.test(s)) return true
+  return CLAIMANT.test(s) && RESULT.test(s)
 }
 
 // ------------------------------------------------- post-generation fact check ---
