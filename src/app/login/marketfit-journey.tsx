@@ -34,8 +34,8 @@ export default function MarketFitJourney({ compact = false }: { compact?: boolea
 
       <div className={styles.roleCard}>
         <div className={styles.cardTitle}><span className={styles.icon}><BriefcaseBusiness size={15} /></span> THE RIGHT ROLE</div>
-        <div className={styles.roleHeading}>Security Engineer</div>
-        <div className={styles.tagRow}><span>Cloud</span><span>IAM</span></div>
+        <div className={styles.roleHeading}>Your next opportunity</div>
+        <div className={styles.tagRow}><span>Skills</span><span>Experience</span></div>
         <div className={styles.roleLine} />
         <div className={styles.roleLineShort} />
       </div>
