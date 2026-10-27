@@ -42,6 +42,7 @@ test("01: actual OGG/Opus WhatsApp note becomes regular text without changing id
   assert.equal(r.message.type,"text")
   assert.equal(r.message.text.body,"Explain privilege escalation")
   assert.equal(r.message.id,original.id)
+  assert.equal(r.message.mfitVoiceNote,true)
   assert.equal(original.type,"audio")
   assert.equal(calls.transcripts,1)
   assert.equal(calls.owner,"hash:account-one")
