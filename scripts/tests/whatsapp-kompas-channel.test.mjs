@@ -13,7 +13,9 @@ let calls = 0
 let provider = async () => "The grounded answer"
 const texts = new Map([["resume", "Verified resume contents"], ["jd", "Job requirements"], ["support", "Supporting case study"]])
 const blob = {
-  list: async prefix => [...revisions.keys()].filter(k => k.startsWith(prefix)),
+  // A credentials policy that can GetObject/PutObject but denies ListObjects
+  // must still support both Kompas and ordinary WhatsApp tailoring.
+  list: async () => { throw new Error("ListObjectsV2 denied by storage policy") },
   getText: async key => revisions.get(key) ?? null,
   putIfAbsent: async (key, value) => {
     if (revisions.has(key)) return false
@@ -168,4 +170,33 @@ test("10. Concurrent Kompas commands cannot bind two sessions", async () => {
   reset()
   await Promise.all([execute(t("kompas")), execute(t("kompas"))])
   assert.equal([...revisions.values()].filter(x => JSON.parse(x).sessionId).length, 1)
+})
+
+test("11. A returned-to-tailoring channel never consumes a new JD", async () => {
+  reset()
+  await execute(t("kompas"))
+  await execute(t("revert"))
+  assert.equal((await execute(t("Network Security Engineer job description"))).consumed, false)
+})
+test("12. A large revision history is read with logarithmic point reads, never an object listing", async () => {
+  reset()
+  // Session switches create contiguous immutable revisions.
+  for (let i = 0; i < 24; i++) {
+    await execute(t("kompas"))
+    await execute(t("revert"))
+  }
+  assert.equal((await execute(t("Network Security Engineer job description"))).consumed, false)
+  assert.equal(revisions.size, 48)
+})
+test("13. A storage failure cannot silently misroute a Kompas question as resume tailoring", async () => {
+  reset()
+  await execute(t("kompas"))
+  const original = blob.getText
+  blob.getText = async () => { throw new Error("storage permission denied") }
+  try {
+    const outcome = await execute(t("Privileged access investigation"))
+    assert.equal(outcome.consumed, true)
+    assert.match(outcome.sent[0], /couldn't check your Kompas WhatsApp session/)
+    assert.doesNotMatch(outcome.sent[0], /no AI service/i)
+  } finally { blob.getText = original }
 })
