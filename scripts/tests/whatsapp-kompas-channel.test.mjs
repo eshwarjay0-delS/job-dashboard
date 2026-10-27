@@ -218,3 +218,15 @@ test("15. Storage failures must not be reported as AI-provider configuration fai
   assert.match(errorBoundary, /MarketFit service is unavailable/)
   assert.doesNotMatch(errorBoundary, /sendText\(from, plainFailure\(e, "do that", true\)\)/)
 })
+
+test("16. Explicit Use 2 profile switching avoids the Kompas storage precondition", () => {
+  const webhook = readFileSync("src/app/api/whatsapp/webhook/route.ts", "utf8")
+  const handleStart = webhook.indexOf("async function handle(from:")
+  const profile = webhook.indexOf("const profileCommand =", handleStart)
+  const kompas = webhook.indexOf("const consumed = await handleWhatsAppKompas", handleStart)
+  assert.ok(handleStart > 0 && profile > handleStart && kompas > profile)
+  assert.match(webhook.slice(profile, kompas), /if \(!profileCommand && \(type === "text" \|\| type === "document"\)\)/)
+  assert.match(webhook.slice(profile, kompas), /\(\?:use\|switch/)
+  const select = webhook.indexOf("const email = choiceIn(text", kompas)
+  assert.ok(select > kompas, "Existing resume selection must remain behind the shortcut")
+})
