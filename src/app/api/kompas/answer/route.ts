@@ -344,17 +344,25 @@ async function repairStructure(job: AnswerJob, guardedText: string, signal: Abor
   const opts = { level: job.level, register: job.register, shape: job.shape, tier: job.tier }
   const missing = missingStructure(guardedText, opts)
   if (!missing.length || !job.orKey) return { text: guardedText, repaired: 0 }
-  try {
-    const { text } = await fetchOpenRouter(job.orKey, PAID_MODEL, STRUCTURE_REPAIR_SYSTEM,
-      `QUESTION: ${job.question}\n\nANSWER:\n${guardedText}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}\n\nReturn the full rewritten answer and nothing else.`,
-      1600, AbortSignal.any([signal, AbortSignal.timeout(30000)]))
-    const repaired = text.trim()
-    if (!repaired) return { text: guardedText, repaired: 0 }
-    const rg = applyGuards(repaired, job.guardFacts, job.allowed)
-    if (!rg.text.trim()) return { text: guardedText, repaired: 0 }
-    if (missingStructure(rg.text, opts).length >= missing.length) return { text: guardedText, repaired: 0 }
-    return { text: rg.text, repaired: 1 }
-  } catch { return { text: guardedText, repaired: 0 } }
+  // At most two attempts: the second names exactly what the first rewrite
+  // still missed. A failed call is not retried; a rewrite that fixes nothing
+  // is discarded, never shipped.
+  let stillMissing = missing
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const extra = attempt === 0 ? "" : `\n\nYour previous rewrite still missed:\n${stillMissing.map((m) => `- ${m}`).join("\n")}\nThe rewritten answer MUST contain each item above.`
+    try {
+      const { text } = await fetchOpenRouter(job.orKey, PAID_MODEL, STRUCTURE_REPAIR_SYSTEM,
+        `QUESTION: ${job.question}\n\nANSWER:\n${guardedText}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}${extra}\n\nReturn the full rewritten answer and nothing else.`,
+        1600, AbortSignal.any([signal, AbortSignal.timeout(30000)]))
+      const repaired = text.trim()
+      if (!repaired) return { text: guardedText, repaired: 0 }
+      const rg = applyGuards(repaired, job.guardFacts, job.allowed)
+      if (!rg.text.trim()) return { text: guardedText, repaired: 0 }
+      stillMissing = missingStructure(rg.text, opts)
+      if (stillMissing.length < missing.length) return { text: rg.text, repaired: 1 }
+    } catch { return { text: guardedText, repaired: 0 } }
+  }
+  return { text: guardedText, repaired: 0 }
 }
 
 async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response> {
@@ -781,7 +789,7 @@ export async function POST(request: NextRequest) {
     `QUESTION TYPE: ${why} (tier ${tier}). ${rule}`,
     `INTERVIEW MODE: ${modeBlock(tier, question, level)}`,
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
-    level === "director" && register === "practice" ? `DIRECTOR OPENING (this overrides the shape's opening sentence): sentence one states the decision — what you are doing — not a definition and not an axis. Name the decision owner in that sentence. Before closing, name the measures you will track, each as a named measure, never a vague promise to monitor.` : "",
+    level === "director" ? `DIRECTOR OPENING (this overrides the shape's opening sentence): sentence one states the decision — what you are doing — not a definition and not an axis. Name the decision owner in that sentence. Before closing, name the measures you will track, each as a named measure, never a vague promise to monitor.` : "",
     `LENGTH TARGET: about ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Hit it — a quick factual ask gets a short answer, a deep dive gets room.`,
     depthGuidance,
     tier !== 0 && routedProject

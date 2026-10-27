@@ -679,14 +679,19 @@ export function missingStructure(text: string, opts: { level: string; register: 
   if (/Sentence two names the one alternative/.test(opts.shape || "")) {
     if (!/\b(alternative|rejected|ruled out|passed on|instead of|rather than|did not choose|didn't choose|chose .* over|opted against)\b/i.test(plain)) missing.push("a sentence naming the one alternative you rejected and what it cost")
   }
-  if (opts.level === "director" && opts.register === "practice") {
+  // Director means decision first in every register: a compare question
+  // ("risk acceptance versus remediation") registers as concept, and the
+  // practice-only gate let its owner requirement silently never fire in
+  // round 4. The register still shapes how the answer is built; it no longer
+  // excuses a missing owner.
+  if (opts.level === "director") {
     const first = plain.split(/(?<=[.!?])\s/)[0] || plain
     if (!/\b(owner|product manager|CISO|business (unit )?leader|vice president|risk manager|accountable)\b/i.test(first)) missing.push("the decision owner named in sentence one")
   }
   return missing
 }
 
-export const STRUCTURE_REPAIR_SYSTEM = `You repair one interview answer. Rewrite the SAME answer with minimal changes: keep every sentence, fact, example, and pause marker ([beat]/[breath]) unless a change is required by the missing element below. Do not shorten it, do not add new claims, do not invent numbers, and do not change the answer's level or voice. Add ONLY the missing element, in the place its instruction names.`
+export const STRUCTURE_REPAIR_SYSTEM = `You repair one interview answer. Rewrite the SAME answer with minimal changes: keep every sentence, fact, example, and pause marker ([beat]/[breath]) unless a change is required by the missing element below. Do not shorten it, do not add new claims, do not invent numbers, and do not change the answer's level or voice. Add ONLY the missing element, in the place its instruction names. You MUST add the missing element even if that means adding a sentence: keeping the existing sentences does not mean leaving the answer unchanged.`
 
 /** First-win archetype match. Returns the shape instruction or null. */
 export function pickShape(question: string, tier: number, known = ""): string | null {

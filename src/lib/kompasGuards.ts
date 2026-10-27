@@ -46,7 +46,13 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   // 40%", "5 rules created") still has no label word before it, so it stays
   // guarded; only a number that IS the label, the time, the id or the
   // threshold passes through.
-  if (/\b(?:hypothes(?:is|es)|options?|steps?|phases?|tiers?|rules?|controls?|requirements?|items?|cases?)\s*$/i.test(before)) return true
+  if (/\b(?:hypothes(?:is|es)|options?|steps?|phases?|tiers?|rules?|controls?|requirements?|items?|cases?)\s*:?\s*$/i.test(before)) return true
+  // A bare ordinal back-reference ("For 1 I check the event log") points at
+  // a hypothesis by its number, exactly like "For Hypothesis 1" does; the
+  // label word is absent only because the sentence is elliptical. Kept
+  // narrow on purpose: "For 5 years" has a unit after the figure, not a
+  // first-person test verb, so durations still guard.
+  if (/\bfor\s*$/i.test(before) && /^,?\s+i\s+(check|query|inspect|review|test|verify|examine|rule)\b/i.test(after)) return true
   if (/\d:$/.test(before) || /^:\d/.test(after)) return true
   if (/\bid\s*[=#:]\s*$/i.test(before)) return true
   if (/[\u2265\u2264<>]\s*$/.test(before)) return true

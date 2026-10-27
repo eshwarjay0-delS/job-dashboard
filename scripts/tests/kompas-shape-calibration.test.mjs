@@ -53,7 +53,9 @@ test('missingStructure flags a director practice opening with no owner, passes a
   assert.deepEqual(missingStructure(without, opts), ["the decision owner named in sentence one"])
   const withOwner = "The product manager decided to accept the risk and own the exception. Remediation was required elsewhere."
   assert.deepEqual(missingStructure(withOwner, opts), [])
-  // Intro answers and concept-register directors are out of scope.
+  // Intro answers are out of scope. A director compare question registers
+  // as concept, and round 4 proved the practice-only gate let its owner
+  // requirement never fire, so concept directors now flag too.
   assert.deepEqual(missingStructure(without, { ...opts, tier: 0 }), [])
-  assert.deepEqual(missingStructure(without, { ...opts, register: "concept" }), [])
+  assert.deepEqual(missingStructure(without, { ...opts, register: "concept" }), ["the decision owner named in sentence one"])
 })

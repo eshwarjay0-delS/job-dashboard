@@ -37,4 +37,7 @@ test('guard output stays grammatical: percentages and trailing periods', () => {
   assert.equal(kept('We did 3. Hypothesis 1: a manual change.'), 'We did several. Hypothesis 1: a manual change.')
   assert.equal(applyGuards('several Hypothesis 1: a manual change.', null, empty).text, 'Hypothesis 1: a manual change.')
   assert.equal(kept('Cut incidents by 40% in a quarter.'), 'Cut incidents by noticeably in a quarter.')
+  assert.equal(kept('From that diff I generate hypotheses: 3.'), 'From that diff I generate hypotheses: 3.')
+  assert.equal(kept('For 1 I check the event log for Update calls.'), 'For 1 I check the event log for Update calls.')
+  assert.equal(kept('For 5 years we ran checks.'), 'For several years we ran checks.')
 })
