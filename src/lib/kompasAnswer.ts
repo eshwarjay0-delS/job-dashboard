@@ -57,7 +57,51 @@ export function canonicalQuestion(q: string, tier: Tier): string {
   if (tier === 0 && words.length > 0 && words.length < 4) {
     return "Tell me about yourself"
   }
+  // A bare term is a request to explain it (owner, 25 Oct 2026: "treating a question as abbreviation explain it"). The
+  // model was handed "IDOR" alone and left to guess what was wanted.
+  if (tier !== 0 && isBareTerm(q)) return `What is ${String(q).trim().replace(/[.?!]+$/, "")}? If it is an abbreviation, say what it stands for first.`
   return q
+}
+
+const NOT_A_TERM = /^(?:next|continue|go on|go ahead|repeat|again|pause|stop|wait|done|skip|more|same|okay|ok|yes|no|thanks|thank you|hello|hi|hey)\b/i
+
+/** One to four words with no verb and no question: a term, a tool or an abbreviation the interviewer named. */
+export function isBareTerm(q: string): boolean {
+  const t = String(q || "").trim().replace(/[.!]+$/, "")
+  if (!t || /\?/.test(t) || NOT_A_TERM.test(t) || BARE_INTRO.test(t)) return false
+  const words = t.split(/\s+/)
+  if (words.length > 4 || !/^[A-Za-z0-9]/.test(t)) return false
+  return !ASK_OPENER.test(t) && !/\b(?:is|are|was|were|do|does|did|can|could|would|should|have|has|i|you|we|my|your)\b/i.test(t)
+}
+
+/**
+ * Every part the question asks for, in order, and the conditions it sets (owner, 25 Oct 2026: understand what each
+ * question demands and "make sure it completes to deliver everything that's expected"). Measured 26 Oct: "Explain trust
+ * boundaries, data flow, failure isolation, rollout and validation" lost parts, and "Define IDOR, explain why it
+ * matters, and give one mitigation" was answered as a definition. Setup sentences are context, not parts.
+ */
+export function requestedParts(question: string): { parts: string[]; constraints: string[] } {
+  const parts: string[] = [], constraints: string[] = []
+  // Not "compare": "Compare IDOR and CSRF" is one part, the comparison.
+  const LIST_VERB = /^((?:explain|state|cover|give|include|describe|list|name|walk through|walk me through|discuss|outline|address|show|identify)\b)\s+(.+)$/i
+  const CONDITION = /^(?:keep|make it|stay|limit|avoid|assume|use only|focus|without|don'?t|do not|never)\b/i
+  for (const sentence of String(question || "").split(/(?<=[.?!])\s+/)) {
+    let core = sentence.replace(LEAD_FILLER, "").replace(/[.!]+$/, "").trim()
+    if (!core) continue
+    if (CONDITION.test(core)) { constraints.push(core); continue }
+    const tail = core.match(/^(.*?),?\s+((?:without|but (?:do not|don't|never))\b.*)$/i)
+    if (tail && tail[1].split(/\s+/).length >= 3) { core = tail[1].trim(); constraints.push(tail[2].trim()) }
+    if (!/\?$/.test(core) && !ASK_OPENER.test(core)) continue   // the setup the ask stands on
+    const list = core.match(LIST_VERB)
+    if (list && /,|\band\b/.test(list[2]) && !/\b(?:why|how|what|when|where|whether|versus|vs)\b/i.test(list[2])) {
+      const items = list[2].split(/,\s*(?:and\s+)?|\s+and\s+/).map((x) => x.trim()).filter(Boolean)
+      if (items.length >= 2 && items.every((x) => x.split(/\s+/).length <= 8)) { for (const x of items) parts.push(`${list[1]} ${x}`); continue }
+    }
+    const clauses = core.split(/,\s*(?:and\s+)?|;\s*|\s+and\s+(?=(?:explain|give|describe|define|state|name|list|show|compare|walk|outline|discuss|recommend|propose|justify|why|how|what)\b)/i).map((x) => x.trim()).filter(Boolean)
+    if (clauses.length >= 2 && clauses.every((x) => ASK_OPENER.test(x))) { parts.push(...clauses); continue }
+    parts.push(core)
+  }
+  return { parts, constraints }
 }
 
 // Parakeet baseline: median length of 1,767 real answers of each kind, scaled
