@@ -18,3 +18,5 @@ test('completed occurrence is never due again and future slot waits', () => {
  assert.equal(followupEligibility({...base,completedOccurrences:['scheduled-slot-1']}), 'duplicate')
  assert.equal(followupEligibility({...base,dueAt:101}), 'waiting')
 })
+
+test('zero outbound evidence and inverted schedule are blocked',()=>{for(const patch of [{lastSentAt:0},{dueAt:49}])assert.equal(followupEligibility({...base,...patch}),'blocked');assert.equal(followupEligibility({...base,dueAt:50}),'due')})

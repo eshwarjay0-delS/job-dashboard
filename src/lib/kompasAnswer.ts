@@ -57,7 +57,64 @@ export function canonicalQuestion(q: string, tier: Tier): string {
   if (tier === 0 && words.length > 0 && words.length < 4) {
     return "Tell me about yourself"
   }
+  // A bare term is a request to explain it (owner, 25 Oct 2026: "treating a question as abbreviation explain it"). The
+  // model was handed "IDOR" alone and left to guess what was wanted.
+  if (tier !== 0 && isBareTerm(q)) return `What is ${String(q).trim().replace(/[.?!]+$/, "")}? If it is an abbreviation, say what it stands for first.`
   return q
+}
+
+/**
+ * An answer the token ceiling cut off far short of its target. Measured 26 Oct 2026 (evaluation round 3, iam-4): the
+ * stream finished 42 ms after its first words, "I added a real‑time rev", and that was served as the answer. gpt-oss
+ * pays its reasoning from the same ceiling as the answer, so a hard follow-up can spend nearly all of it reasoning.
+ */
+export function cutShort(finish: string, text: string, targetWords: number): boolean {
+  if (finish !== "length") return false
+  const t = String(text || "").trim()
+  const words = t.split(/\s+/).filter(Boolean).length
+  // Also stopped mid-sentence: the intent baseline's comparison answers ended on "or same" with the mitigation missing.
+  return words < Math.max(25, Math.round(targetWords * 0.35)) || !/[.!?]["')\]]*$/.test(t)
+}
+
+const NOT_A_TERM =/^(?:next|continue|go on|go ahead|repeat|again|pause|stop|wait|done|skip|more|same|okay|ok|yes|no|thanks|thank you|hello|hi|hey)\b/i
+
+/** One to four words with no verb and no question: a term, a tool or an abbreviation the interviewer named. */
+export function isBareTerm(q: string): boolean {
+  const t = String(q || "").trim().replace(/[.!]+$/, "")
+  if (!t || /\?/.test(t) || NOT_A_TERM.test(t) || BARE_INTRO.test(t)) return false
+  const words = t.split(/\s+/)
+  if (words.length > 4 || !/^[A-Za-z0-9]/.test(t)) return false
+  return !ASK_OPENER.test(t) && !/\b(?:is|are|was|were|do|does|did|can|could|would|should|have|has|i|you|we|my|your)\b/i.test(t)
+}
+
+/**
+ * Every part the question asks for, in order, and the conditions it sets (owner, 25 Oct 2026: understand what each
+ * question demands and "make sure it completes to deliver everything that's expected"). Measured 26 Oct: "Explain trust
+ * boundaries, data flow, failure isolation, rollout and validation" lost parts, and "Define IDOR, explain why it
+ * matters, and give one mitigation" was answered as a definition. Setup sentences are context, not parts.
+ */
+export function requestedParts(question: string): { parts: string[]; constraints: string[] } {
+  const parts: string[] = [], constraints: string[] = []
+  // Not "compare": "Compare IDOR and CSRF" is one part, the comparison.
+  const LIST_VERB = /^((?:explain|state|cover|give|include|describe|list|name|walk through|walk me through|discuss|outline|address|show|identify)\b)\s+(.+)$/i
+  const CONDITION = /^(?:keep|make it|stay|limit|avoid|assume|use only|focus|without|don'?t|do not|never)\b/i
+  for (const sentence of String(question || "").split(/(?<=[.?!])\s+/)) {
+    let core = sentence.replace(LEAD_FILLER, "").replace(/[.!]+$/, "").trim()
+    if (!core) continue
+    if (CONDITION.test(core)) { constraints.push(core); continue }
+    const tail = core.match(/^(.*?),?\s+((?:without|but (?:do not|don't|never))\b.*)$/i)
+    if (tail && tail[1].split(/\s+/).length >= 3) { core = tail[1].trim(); constraints.push(tail[2].trim()) }
+    if (!/\?$/.test(core) && !ASK_OPENER.test(core)) continue   // the setup the ask stands on
+    const list = core.match(LIST_VERB)
+    if (list && /,|\band\b/.test(list[2]) && !/\b(?:why|how|what|when|where|whether|versus|vs)\b/i.test(list[2])) {
+      const items = list[2].split(/,\s*(?:and\s+)?|\s+and\s+/).map((x) => x.trim()).filter(Boolean)
+      if (items.length >= 2 && items.every((x) => x.split(/\s+/).length <= 8)) { for (const x of items) parts.push(`${list[1]} ${x}`); continue }
+    }
+    const clauses = core.split(/,\s*(?:and\s+)?|;\s*|\s+and\s+(?=(?:explain|give|describe|define|state|name|list|show|compare|walk|outline|discuss|recommend|propose|justify|why|how|what)\b)/i).map((x) => x.trim()).filter(Boolean)
+    if (clauses.length >= 2 && clauses.every((x) => ASK_OPENER.test(x))) { parts.push(...clauses); continue }
+    parts.push(core)
+  }
+  return { parts, constraints }
 }
 
 // Parakeet baseline: median length of 1,767 real answers of each kind, scaled
@@ -299,16 +356,52 @@ export function cutQuestion(heard: string): string {
     .replace(/\s+/g, " ")
     .trim()
   if (BARE_INTRO.test(text)) return "Tell me about yourself"
-  const re = /((?:how|what|why|when|where|which|who)\b[^?.!]{6,180}\??|(?:can|could|would|will|do|did|are|have)\s+you\b[^?.!]{4,180}\??|(?:tell me|walk me|give me|explain|describe|define|compare)\b[^?.!]{4,180}\??)/gi
-  const found: string[] = []
-  let m: RegExpExecArray | null
-  while ((m = re.exec(text))) {
-    const q = m[1].replace(/^(?:ok(?:ay)?|so|and|also|yes|yeah|uh|um)[, ]+/i, "").trim()
-    if (q.split(/\s+/).length >= 3) found.push(q)
+  // The interviewer's whole ask, not its last clause (measured 26 Oct 2026: "Design X. Explain trust boundaries..."
+  // was answered as "Explain trust boundaries...", and "Give a falsifiable test and an exit criterion" was dropped).
+  // The last ask, the asks and the scenario just before it, and the instructions right after it, in order.
+  const parts = askSentences(text)
+  let last = -1
+  for (let i = parts.length - 1; i >= 0; i--) if (parts[i].kind === "ask") { last = i; break }
+  if (last < 0) return ""
+  let from = last, context = 0
+  while (from > 0 && (parts[from - 1].kind === "ask" || (parts[from - 1].kind === "context" && context < 2))) {
+    if (parts[from - 1].kind === "context") context++
+    from--
   }
-  if (!found.length) return ""
-  const q = found[found.length - 1].replace(/\s+/g, " ").trim()
-  return q.charAt(0).toUpperCase() + q.slice(1)
+  while (from < last && parts[from].kind === "context" && parts[from].text.split(/\s+/).length > 40) from++   // a long monologue is not setup
+  // Instructions after the ask ("Give a falsifiable test", "Keep it suitable for technical HR") are asks themselves, so
+  // the last ask is the end of the question.
+  const q = parts.slice(from, last + 1).map((p) => p.text).join(" ").replace(/\s+/g, " ").trim()
+  if (q.split(/\s+/).length < 3) return ""
+  return (q.charAt(0).toUpperCase() + q.slice(1)).slice(0, 2000)
+}
+
+// The openers of an interviewer's ask or instruction. Before 26 Oct 2026 only how/what/why..., can/would you, tell me,
+// walk me, give me, explain, describe, define and compare counted, so any other imperative ("Design", "Walk through",
+// "State", "Give a", "Keep it") was not part of the question at all.
+const ASK_OPENER = /^(?:how|what|why|when|where|which|who|whom|whose)\b|^(?:can|could|would|will|should|do|does|did|are|have|has)\s+(?:you|we)\b|^(?:tell|walk|take|talk|show|give|explain|describe|define|compare|contrast|differentiate|distinguish|design|build|implement|configure|architect|plan|outline|list|name|state|share|write|draft|map|diagnose|troubleshoot|debug|identify|recommend|propose|justify|estimate|summari[sz]e|discuss|evaluate|assess|analy[sz]e|elaborate|expand|go|dig|introduce|imagine|suppose|pick|choose|select|rank|prioriti[sz]e|break|weigh|defend|verify|validate|test|measure|quantify|detail|clarify|demonstrate|illustrate|cover|include|keep|focus|assume|consider|avoid|limit|stay|mention|start|end|finish|continue)\b/i
+// Somewhere inside a sentence that does not open as one (speech-to-text often has no full stops): the ask starts here.
+const ASK_INSIDE = /\b(?:how|what|why|when|where|which|who)\b|\b(?:can|could|would|will|do|did|are|have)\s+you\b|\b(?:tell me|walk me|give me|explain|describe|define|compare|design|build|implement|configure)\b/i
+const LEAD_FILLER = /^(?:(?:ok(?:ay)?|so|and|also|now|then|next|finally|right|alright|all right|well|yes|yeah|uh+|um+|please|great|perfect|cool|sure)[,.!]?\s+)+/i
+const PLEASANTRY = /^(?:(?:that'?s|that is)\s+(?:great|good|interesting|fair|helpful|clear|right|true)|thanks?\b|thank you\b|(?:great|perfect|nice|good|interesting|excellent|awesome|wonderful|got it|makes sense|i see|understood)[.!]*$)/i
+const OWN_WORDS = /^(?:i|i'm|i've|i'd|i'll|we|we're|we've|we'd|my|our|me)\b/i
+
+type AskPart = { kind: "ask" | "context" | "noise" | "own"; text: string }
+
+/** Each sentence, read as an ask, setup for one, a filler, or the candidate's own words. */
+function askSentences(text: string): AskPart[] {
+  return String(text || "").split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean).map((sentence): AskPart => {
+    const bare = sentence.replace(LEAD_FILLER, "").trim()
+    if (!bare || noiseOnly(bare) || PLEASANTRY.test(bare)) return { kind: "noise", text: bare }
+    if (ASK_OPENER.test(bare) || (/\?$/.test(bare) && !OWN_WORDS.test(bare))) return { kind: "ask", text: bare }
+    const inside = bare.search(ASK_INSIDE)
+    if (inside > 0 && bare.slice(inside).split(/\s+/).length >= 3) {
+      const tail = bare.slice(inside)
+      // "In your experience, how do you..." keeps its lead; a ramble before the ask does not.
+      return { kind: "ask", text: OWN_WORDS.test(bare) ? tail.slice(0, 400) : bare }
+    }
+    return { kind: OWN_WORDS.test(bare) ? "own" : "context", text: bare }
+  })
 }
 
 const SPOKEN_NOISE =
@@ -333,15 +426,14 @@ export function noiseOnly(text: string): boolean {
 export function questionToAnswer(heard: string, explicit: string, pinned = false): string {
   const asked = String(explicit || "").replace(/\s+/g, " ").trim()
   if (pinned && asked && !noiseOnly(asked)) {
-    // A compound ask stays whole (owner, 23 Oct 2026): when the formed
-    // question carries more than one ask, answer all of it, in order —
-    // never only the last clause. A single ask keeps the cut form.
-    const isAsk = (s: string) => { const t = s.replace(/^(?:and|so|also|but|ok(?:ay)?|yes|yeah)[, ]+/i, ""); return t.split(/\s+/).length >= 3 && /^(?:how|what|why|when|where|which|who)\b|^(?:can|could|would|will|do|did|are|have)\s+you\b|^(?:tell me|walk me|give me|explain|describe|define|compare)\b/i.test(t) }
-    const clauses = (asked.match(/[^?.!]+[?.!]+/g) || []).map((s) => s.trim()).filter(Boolean)
-    const asks = clauses.filter(isAsk)
-    if (asks.length >= 2) return asks.join(" ").slice(0, 2000)
-    const inner = cutQuestion(asked)
-    return (inner || asked).slice(0, 2000)
+    // The formed question on the card is the whole of what was asked (owner, 23 Oct 2026): every ask, the setup between
+    // them and every instruction, in order. Only leading filler and the candidate's own words before the first ask go.
+    // Before 26 Oct a single recognised ask was cut out of it, so "Design X. Explain Y." was answered as "Explain Y."
+    const parts = askSentences(asked)
+    let from = 0
+    while (from < parts.length - 1 && (parts[from].kind === "noise" || parts[from].kind === "own")) from++
+    const whole = parts.slice(from).map((p) => p.text).join(" ").replace(/\s+/g, " ").trim()
+    return (whole && !noiseOnly(whole) ? whole : asked).slice(0, 2000)
   }
   const cut = cutQuestion([heard, asked].filter(Boolean).join("\n"))
   if (cut) return cut
@@ -404,7 +496,7 @@ export const INTRO_FOCUS: Record<string, string> = {
 
 export const INTENT_BOUNDARY = `INTENT FIRST: Before choosing a story, name the exact request internally: personal career overview, single project/experience, definition, implementation, design, or follow-up. A broad introduction covers the person's supported career breadth; it is never a single-tool case study. A question about one project stays on that project; a definition stays on the definition; a follow-up continues the same subject and answers only the new ask. Never pull an example merely because it is available, salient in cached context, or shares keywords with the JD. Every sentence must serve the original question and move the same thought forward. A new tool or employer requires an explicit relationship to the requested scope. If there is no evidence, state the limit rather than fill it with a polished but invented story.`
 
-export const INTRO_CAREER_SPINE = `CAREER-WIDE INTRODUCTION CONTRACT: The answer's subject is the PERSON across the resume, not a favourite project, vendor or an invented success metric. Give a clear current professional identity and total experience only if supported by dates or an explicit source. Connect the distinct supported career stages and broad specialities in a coherent progression, moving from the earlier work toward current responsibilities. Preserve relevant clients/employers, their roles and differences without inventing chronology. Make one or two well-chosen examples prove abilities, but no single example dominates or becomes a deep implementation walkthrough. No isolated CodeQL, CyberArk, SIEM or other tool excursion unless the question specifically narrows to it. Explain why each experience follows the previous one, and make natural human transitions rather than [beat], [breath], (pause), stock catchphrases or sudden topic changes. Do not announce job-description fit. If only one career stage is documented, describe only that stage; do not manufacture breadth. If asked for a brief introduction, compress the same truthful career arc instead of changing its subject.`
+export const INTRO_CAREER_SPINE = `CAREER-WIDE INTRODUCTION CONTRACT: The answer's subject is the PERSON across the resume, not a favourite project, vendor or an invented success metric. Give a clear current professional identity and total experience only if supported by dates or an explicit source. Connect the distinct supported career stages and broad specialities in a coherent progression, moving from the earlier work toward current responsibilities. Preserve relevant clients/employers, their roles and differences without inventing chronology. Each tool, client and achievement belongs to the role it is listed under; never move one to another employer. Say employer names exactly as the resume writes them and never expand an abbreviation in a name (measured 26 Oct 2026: "City of San Diego (DOE)" became an invented "Department of Education"). Make one or two well-chosen examples prove abilities, but no single example dominates or becomes a deep implementation walkthrough. No isolated CodeQL, CyberArk, SIEM or other tool excursion unless the question specifically narrows to it. Explain why each experience follows the previous one, and make natural human transitions rather than [beat], [breath], (pause), stock catchphrases or sudden topic changes. Do not announce job-description fit. If only one career stage is documented, describe only that stage; do not manufacture breadth. If asked for a brief introduction, compress the same truthful career arc instead of changing its subject.`
 
 export const INTRODUCTION_POLICY = `PERSONAL INTRODUCTION: present the person through their supported career, in first person, with direct statements of work and ownership. Open with the current professional identity and scope. Connect the major career stages in the resume, explaining how responsibilities developed, then describe the current work from design or investigation through implementation, collaboration, delivery and ongoing operation, where the resume supports those stages. Show agency through accurate verbs such as I design, I maintain, I investigate, I automate and I work with. Do not inflate ownership from contributed to led. Use technologies inside actions, never as a detached skills catalogue. Include earlier work that explains the person's breadth, not only the work resembling the JD. Make the introduction memorable through named clients or employers, signature projects, documented achievements, and the impact of the work. Preserve each relationship accurately: a client is a client and an employer is an employer; never relabel one as the other. For the strongest supported projects, connect the client or business context, the candidate's own actions and decisions, and the documented result or impact. Prefer evidence of accomplishment over a list of duties, but when the resume supplies only responsibilities, state those plainly rather than inventing an achievement, project name, incident or result. Use figures only when the original source supports them. Be a little bold and humble: state supported ownership and accomplishments confidently, make the candidate's contribution specific, and acknowledge the team's role where the source does. Let the work demonstrate ability instead of calling the person exceptional, a visionary, or a perfect fit. End on the person's present responsibilities, a supported achievement, or working approach. Never close with a job application pitch, enthusiasm for this opening, or claims of alignment, matching the JD, being a perfect fit, or what the company is seeking. The JD may orient vocabulary, but the introduction is about the person. Allow a substantial connected introduction when the resume has the material; a short technical question budget or 75 word rule must not cut it down. Do not invent incidents, metrics, motivations, a personal origin story or transitions the resume does not establish. Do not volunteer education unless the question asks for it. Include certifications only when they help explain the work; never recite a list. An explicit request for a brief introduction still takes precedence.`
 
@@ -664,6 +756,34 @@ export const SHAPES: Record<string, ShapeDef[]> = {
 };
 
 const SHAPE_SKIP = new Set(["I", "Have", "Are", "Do", "What", "How", "Can", "Could", "Would", "Tell", "Why", "When", "Which"]);
+
+/** Code check for the two structural requirements prompt wording keeps
+ * dropping: the design shape's required alternative sentence, and the
+ * director practice opening naming the decision owner. Returns what is
+ * missing, so the route can repair it with one targeted rewrite instead of
+ * another prompt tweak. A heuristic gate, not a verdict: an answer that
+ * phrases the element unusually still counts as present when its marker
+ * words appear. */
+export function missingStructure(text: string, opts: { level: string; register: string; shape: string; tier: number }): string[] {
+  const missing: string[] = []
+  if (!text || !text.trim() || opts.tier === 0) return missing
+  const plain = text.replace(/\[(?:beat|breath)\]|\(pause\)/gi, " ")
+  if (/Sentence two names the one alternative/.test(opts.shape || "")) {
+    if (!/\b(alternative|rejected|ruled out|ruled against|passed on|passed over|instead of|instead\b|rather than|did not choose|didn't choose|chose .* over|opted against|opted for .* over|went with .* over|set aside|decided against)\b/i.test(plain)) missing.push("a sentence naming the one alternative you rejected and what it cost")
+  }
+  // Director means decision first in every register: a compare question
+  // ("risk acceptance versus remediation") registers as concept, and the
+  // practice-only gate let its owner requirement silently never fire in
+  // round 4. The register still shapes how the answer is built; it no longer
+  // excuses a missing owner.
+  if (opts.level === "director") {
+    const first = plain.split(/(?<=[.!?])\s/)[0] || plain
+    if (!/\b(owner|product manager|CISO|business (unit )?leader|vice president|risk manager|accountable)\b/i.test(first)) missing.push("the decision owner named in sentence one")
+  }
+  return missing
+}
+
+export const STRUCTURE_REPAIR_SYSTEM = `You repair one interview answer. Rewrite the SAME answer with minimal changes: keep every sentence, fact, example, and pause marker ([beat]/[breath]) unless a change is required by the missing element below. Do not shorten it, do not add new claims, do not invent numbers, and do not change the answer's level or voice. Add ONLY the missing element, in the place its instruction names. You MUST add the missing element even if that means adding a sentence: keeping the existing sentences does not mean leaving the answer unchanged.`
 
 /** First-win archetype match. Returns the shape instruction or null. */
 export function pickShape(question: string, tier: number, known = ""): string | null {

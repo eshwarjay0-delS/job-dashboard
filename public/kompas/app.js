@@ -817,6 +817,7 @@ function renderCard() {
   $("question").textContent = draft || c.question;
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const ul = $("answer"), keep = ul.scrollTop;
+  const nearBottom = ul.scrollHeight - keep - ul.clientHeight < 120;
   const lines = answerLines(c.answer);   // rendering is read-only (book rule, 23 Oct): showing a card never rewrites its stored answer, so flipping back and forth cannot lose or flatten a generated response
   ul.innerHTML = "";
   lines.forEach(({ t, kind, lang }) => {
@@ -834,6 +835,7 @@ function renderCard() {
   $("card").classList.toggle("streaming", !!c.streaming);
   wrapWords(ul);                                     // every word is addressable, for Follow along
   ul.scrollTop = keep;
+  if (c.streaming && nearBottom) ul.scrollTop = ul.scrollHeight;   // a streaming answer follows its tail while you are already near it; reading higher up is never yanked
   if (typeof followRendered === "function") followRendered(c);
 }
 // Wrap each word of the answer in <span class="w"> (skipping the pause pills) so Follow along can mark
@@ -853,7 +855,7 @@ function wrapWords(root) {
   }
 }
 function animateCard() { const card = $("card"); card.style.animation = "none"; void card.offsetWidth; card.style.animation = ""; }
-const toTop = () => { const ul = $("answer"); if (ul) ul.scrollTop = 0; if (typeof syncQuestion === "function") syncQuestion(); };   // a new question opens at the top, where the question line is visible
+const toTop = () => { const ul = $("answer"); if (ul) ul.scrollTop = 0; const c = $("card"); if (c) c.classList.remove("q-away"); };   // a new question opens at the top, where the question line is visible
 $("prevBtn").onclick = () => { if (idx > 0) { idx--; renderCard(); toTop(); animateCard(); } };
 $("nextBtn").onclick = () => { if (idx < cards.length - 1) { idx++; renderCard(); toTop(); animateCard(); } };
 function addCard(question, answer) { const c = { question, answer }; cards.push(c); idx = cards.length - 1; renderCard(); toTop(); animateCard(); return c; }
@@ -933,8 +935,21 @@ $("textMinus")?.addEventListener("click", () => stepText(-2));
 $("textPlus")?.addEventListener("click", () => stepText(2));
 window.addEventListener("kompas-text-size", () => applyLook());
 const answerPane = $("answer");
-function syncQuestion() { const card = $("card"); if (card && answerPane) card.classList.toggle("q-away", answerPane.scrollTop > 2); }
+function syncQuestion() { const card = $("card"); if (card && answerPane && answerPane.scrollTop > 2) card.classList.add("q-away"); }   // scrolling down hides the question; only an overscroll gesture brings it back
 answerPane?.addEventListener("scroll", syncQuestion, { passive: true });
+// Overscroll reveal (owner, 26 Oct): at the very top, one more scroll up shows the
+// question again — reaching the top alone never does. Wheel-up at the top reveals
+// at once (the arriving wheel event itself cannot, it sees the pane above the top).
+// Touch is two-phase (27 Oct): the drag must START at the top, so a drag that
+// arrives at the top mid-stroke never reveals, however far it pulls past it —
+// scrolling up to read must not pop the question back. Scrolling down anywhere on
+// the card hides it, smoothly, so only the response box stays in view.
+function touchReveal(startTop, top, pull) { return startTop <= 0 && top <= 0 && pull > 24; }
+// Touch reveal wiring ends here.
+$("card")?.addEventListener("wheel", (e) => { const card = $("card"); if (!card) return; if (e.deltaY > 0) card.classList.add("q-away"); else if (e.deltaY < 0 && answerPane && answerPane.scrollTop <= 0) card.classList.remove("q-away"); }, { passive: true });
+let touchStartY = 0, touchStartTop = 0;
+$("card")?.addEventListener("touchstart", (e) => { touchStartY = (e.touches[0] && e.touches[0].clientY) || 0; touchStartTop = answerPane ? answerPane.scrollTop : 0; }, { passive: true });
+$("card")?.addEventListener("touchmove", (e) => { const card = $("card"); if (!card) return; const y = (e.touches[0] && e.touches[0].clientY) || 0; if (answerPane && touchReveal(touchStartTop, answerPane.scrollTop, y - touchStartY)) card.classList.remove("q-away"); else if (touchStartY - y > 24) card.classList.add("q-away"); }, { passive: true });
 $("lookTab")?.addEventListener("change", (e) => { LS.set("tabSize", Number(e.target.value)); applyLook(); });
 // The model that writes answers. Empty is the server's own lanes; the server ignores anything not on its list.
 const LIVE_MODELS = ["", "gpt-5.6-luna"];
@@ -1627,7 +1642,7 @@ function resetLiveState() {           // a new or exited session starts clean: n
 //  - two words that together are one letter from a known long term become it ("cyber arc" -> CyberArk);
 //  - a long lowercase word one letter from a known long term becomes it ("sentinal" -> Sentinel);
 //  - a lowercased CamelCase term gets its real casing ("powershell" -> PowerShell). Short English words are never touched.
-const DOMAIN_TERMS = "CyberArk PAS PVWA CPM PSM PSMP PTA EPM AIM CCP PACLI PAReplicate PrivateArk Vault LDAP LDAPS SAML OAuth OIDC RADIUS Kerberos NTLM MFA SSO SIEM SOAR EDR XDR Splunk Sentinel QRadar ServiceNow PowerShell Python REST API SSH RDP WinRM Azure AWS GCP Entra IAM PAM IGA SailPoint Okta BeyondTrust Delinea Thycotic HashiCorp Terraform Ansible Jenkins Kubernetes AKS EKS Docker Linux Unix Windows SQL Oracle SAP NIST SOX PCI HIPAA ISO CIS MITRE STRIDE OWASP SAST DAST Fortify Qualys Wiz CrowdStrike Defender Syslog SNMP TLS PKI HSM KMS JSON YAML GitHub GitLab ServiceNow Jira Confluence VMware vCenter ESXi".split(" ");
+const DOMAIN_TERMS = "CyberArk PAS PVWA CPM PSM PSMP PTA EPM AIM CCP PACLI PAReplicate PrivateArk Vault LDAP LDAPS SAML OAuth OIDC RADIUS Kerberos NTLM MFA SSO SIEM SOAR EDR XDR Splunk Sentinel QRadar ServiceNow PowerShell Python REST API SSH RDP WinRM Azure AWS GCP Entra IAM PAM IGA SailPoint Okta BeyondTrust Delinea Thycotic HashiCorp Terraform Ansible Jenkins Kubernetes AKS EKS Docker Linux Unix Windows SQL Oracle SAP NIST SOX PCI HIPAA ISO CIS MITRE STRIDE OWASP SAST DAST Fortify Qualys Wiz CrowdStrike Defender Syslog SNMP TLS PKI HSM KMS JSON YAML GitHub GitLab ServiceNow Jira Confluence VMware vCenter ESXi Zscaler Venafi Saviynt".split(" ");
 // Real acronyms are already right: a heard "CSA" or "CSV" is never "corrected" into CSF (self-play false positives, 2026-09-30).
 const KNOWN_ACRONYMS = new Set("AAA ACL AD AES AI AKS ALB AMI API APT ARP ASA ASN AWS AZ BGP BIA BYOD CA CASB CCPA CCP CDN CI CD CIA CIDR CIS CISA CISM CISO CISSP CLI CMDB CMMC CPU CRL CSA CSF CSP CSPM CSR CSRF CSV CTI CVE CVSS CWPP DAST DDoS DHCP DKIM DLP DMARC DMZ DNS DNSSEC DoD DoS DR DRP EC2 ECS EDR EKS ELB EPM ERP ETL FIDO FIM FIPS GCP GDPR GPO GRC HA HIDS HIPAA HIPS HMAC HR HSM HTTP HTTPS IaaS IaC IAM ICS IDP IdP IDS IGA IOC IOT IoT IP IPS IPsec IR ISMS ISO IT ITGC ITIL ITSM JIT JML JSON JWT KMS KPI KQL LAN LAPS LDAP LDAPS LLM MAC MDM MDR MFA ML MSSP MTTD MTTR NAC NAT NDR NGFW NIST NOC NTLM NTP OIDC OKR OS OSI OSINT OT OTP OWASP PaaS PAM PCI PHI PII PIM PKI PLC POC PSM PTA QA RACI RADIUS RASP RBAC RCA RDP REST RPO RSA RTO SaaS SAML SAST SBOM SCA SCADA SCIM SDLC SIEM SLA SMB SMTP SNMP SOAR SOC SOP SOX SPF SPL SQL SSDLC SSH SSL SSO SSPM STIX STRIDE TCP TLS TPM TTP TTPs UBA UDP UEBA URL USB UTM VLAN VM VPC VPN WAF WAN XDR XML XSS YAML ZTNA ISE IRM DN IEC STP IPC QMS LIMS CUCM BSOD RAM ROM GPU SSD HDD PC MDE DPA EOL SME PMO POA&M SSP ATO FedRAMP".split(" ").map(x => x.toUpperCase()));
 const HEADER_WORDS = /^(SUMMARY|SKILLS|PROJECTS?|EXPERIENCE|EDUCATION|CERTIFICATIONS?|PROFILE|OBJECTIVE|RESPONSIBILITIES|ACHIEVEMENTS|PROFESSIONAL|TECHNICAL|CORE|COMPETENCIES|TOOLS|REFERENCES)$/;
@@ -1692,6 +1707,8 @@ const PHRASE_FIXES = [
   [/\bnessus\b/gi, "Nessus"],
   [/\bsplunk\b/gi, "Splunk"],
   [/\bfifth\s+third\b/gi, "Fifth Third"],
+  [/\b(?:zee|see)\s+scaler\b/gi, "Zscaler"],
+  [/\bven\s+a\s+fi\b/gi, "Venafi"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");
@@ -1741,11 +1758,10 @@ function heardDraft(lines, screen, answerText) {
     }
     bits.push(text);
   }
-  let q = bits.join(" ").trim();
-  const lane = String(screen || "").trim();
-  const real = lane && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving|Waiting)/.test(lane);
-  if (q && real && q.split(/\s+/).length < 8 && !/[?]/.test(q) && !/^(what|how|why|when|where|who|tell|walk|describe|explain)\b/i.test(q)) q = lane.replace(/[?.!\s]+$/, "") + " — " + q;
-  return q;
+  // The Heard line is a live caption, not the record (the drawer holds every
+  // line): show the last four phrases, rolling forward as new lines arrive.
+  const q = bits.slice(-4).join(" ");
+  return q.length > 600 ? "…" + q.slice(-600) : q;
 }
 function onTranscript(who, text) {
   text = fixTerms(fixPhrases(text));
@@ -1856,7 +1872,16 @@ function composeIntake(lines, opts = {}) {
 // The last two answered questions before this card (owner, 2026-09-30): the next question may follow up on them.
 function recentQA(card) {
   const i = cards.indexOf(card), prev = (i < 0 ? cards : cards.slice(0, i)).filter(c => c && c.question && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(c.question) && typeof c.answer === "string" && c.answer.trim().length > 40);
-  return prev.slice(-2).map(c => ({ q: String(c.question).slice(0, 240), a: plainAnswer(c.answer).slice(0, 900) }));
+  return prev.slice(-2).map(c => ({ q: String(c.question).slice(0, 240), a: headAndTail(plainAnswer(c.answer), 2400) }));
+}
+// An earlier answer's conclusion is at its end. Measured 26 Oct 2026 (evaluation round 2): with only the first 900
+// characters sent, the next follow-up never saw the root cause the previous turn reached and changed it. The server
+// keeps up to 6000 characters of a prior answer the same way (src/lib/kompasHistory.ts).
+function headAndTail(text, limit) {
+  const t = String(text || "").trim();
+  if (t.length <= limit) return t;
+  const half = Math.floor((limit - 5) / 2);
+  return t.slice(0, half) + " […] " + t.slice(-half);
 }
 const consolidatedNeedsDerive = (opts) => !!opts.consolidated && !opts.derived;   // AI Answer: match after the question is derived
 function askingLevel() {
@@ -1937,6 +1962,7 @@ function serveBook(card, hit, depthKey) {
   if (cards[idx] === card) renderCard();
   logEvent({ t: "answer", question: card.question, derived: card.question, book: true, depth: $("liveInterviewer").selectedOptions[0].textContent, text: hit.text, meta: card.meta, depthKey });
   status("Answered from the opening book — no wait, no AI call. Press ↓ for a deeper live answer.", "live");
+  if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }
   if (window.KompasDiamond) {
     card.anchorQ = card.question;
     for (const a of window.KompasDiamond.questionPlan(card.anchors || {}).levels) fillAnchor(card, a);
@@ -1968,6 +1994,7 @@ async function generateAnswer(question, card, opts = {}) {
     if (answerCtl === ctl) answerCtl = null;
   }
 }
+function nextStallTry(retries) { const tries = (retries || 0) + 1; return tries <= 2 ? tries : 0; }   // a stalled request retries twice, then says so plainly instead of sitting on "…" forever
 async function generateAnswerRequest(question, card, opts = {}) {
   question = String(question || "").trim(); if (!question) return;
   card = card || addCard(question, ["…"]);
@@ -1997,6 +2024,20 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const keepOld = !!opts.retries && !opts.regen && !(Array.isArray(prevAnswer) && /^(…|Groq|The answer lane)/.test(String(prevAnswer[0] || "")));
   if (!keepOld) card.answer = ["…"];
   card.streaming = true; card.meta = keepOld ? `regenerating at ${depthLabel()} depth…` : ""; if (cards[idx] === card) renderCard();
+  // A timer abort is not a supersede: the request died on our own watchdog, so
+  // retry it (twice) instead of leaving a "…" card with a stale status forever.
+  const stallRetry = () => {
+    const tries = nextStallTry(opts.retries);
+    if (!tries) {
+      const partial = typeof card.answer === "string" && card.answer.trim().length > 8 && card.answer.trim() !== "…";
+      const prevReal = (typeof prevAnswer === "string" && prevAnswer.trim().length > 8 && prevAnswer.trim() !== "…") || (Array.isArray(prevAnswer) && prevAnswer.join("\n").trim().length > 8 && !/^(…|Preparing…)$/.test(String(prevAnswer[0] || "").trim()));
+      if (!partial && prevReal) card.answer = prevAnswer; else if (!partial && keepOld) card.answer = prevAnswer;
+      card.streaming = false; if (cards[idx] === card) renderCard();
+      status("Answer stalled — press AI Answer to try again.", "live"); return;
+    }
+    status("Retrying…", "live");
+    setTimeout(() => { if (answerEpoch === epoch && card.req === ctl) generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, retries: tries }); }, 800);
+  };
   const named = String((card && card.question) || "").replace(/\s+/g, " ").trim();
   status(named && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(named) ? "Answering: " + named : (consolidated ? "Deriving the question and answering…" : "Answering…"), "live");
   const plainHeard = consolidated ? question.replace(/^(Them|You):\s*/gm, "") : question;
@@ -2029,7 +2070,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       const hit = !directDesktop && book.sid === (current && current.id) && bookMatch(derivedQ, depthKey);
       if (hit) { if (answerCtl === ctl) answerCtl = null; serveBook(card, hit, depthKey); return; }
     } catch (e) {
-      if (e && e.name === "AbortError") { if (card.req === ctl) { card.streaming = false; card.meta = "superseded by the next question"; if (cards[idx] === card) renderCard(); } return; }
+      if (e && e.name === "AbortError") { if (card.req === ctl) { card.streaming = false; stallRetry(); } return; }
     }
   }
   const qText = String(derivedQ || question).trim();
@@ -2039,7 +2080,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   if (!directDesktop && window.KompasAnchors && qText.length >= 8) {
     const facts = anchorFacts();
     try {
-      const pack = await window.KompasAnchors.load(qText, facts.role, facts.resume, current && current.id);
+      const pack = await Promise.race([window.KompasAnchors.load(qText, facts.role, facts.resume, current && current.id), new Promise((r) => setTimeout(() => r(null), 15000))]);   // anchors are an enhancement: never let their load hang the answer
       if (pack && pack.anchors) {
         card.anchors = card.anchors || {};
         for (const k of ["engineer", "director"]) if (pack.anchors[k] && !(card.anchors[k] && card.anchors[k].prose)) card.anchors[k] = pack.anchors[k];
@@ -2101,9 +2142,13 @@ async function generateAnswerRequest(question, card, opts = {}) {
         generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, retries: tries, regen: opts.regen || keepOld });
     }, Math.max(500, retryAfterMs));
   };
+  let fetchTimer = null;
   try {
+    let responded = false;
+    fetchTimer = setTimeout(() => { if (!responded && card.req === ctl) { try { ctl.abort(); } catch {} } }, 45000);   // no response headers in 45s means the fetch itself hung: fail into the retry, not the 2-minute wall
     const res = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
-      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, pinned: !!opts.pinned, source: opts.source === "screen" ? "screen" : undefined, again: !!opts.reask, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel(), ...(directDesktop ? { responseCalibration: "three-level-v1" } : {}) }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
+      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, pinned: !!opts.pinned, again: !!opts.reask, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel(), ...(directDesktop ? { responseCalibration: "three-level-v1" } : {}) }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
+    responded = true; clearTimeout(fetchTimer);
     if (!res.ok || !res.body) {
       const failure = await res.json().catch(() => ({}));
       throw Object.assign(new Error(failure.error || "Paid answer service returned " + res.status), { providerFailure: true, code: failure.code || (res.status === 401 || res.status === 403 ? "AUTH" : ""), retryAfterMs: failure.retryAfterMs });
@@ -2185,6 +2230,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       }
     }
     status(`Answered — first words in ${(first / 1000).toFixed(2)}s.`, "live");
+    if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }   // generated: the question collapses away, only the response box stays
   } catch (e) {
     if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — eject only if renewal fails
       if (await tryRefreshAuth()) { recoverAnswer("", 800); return; }
@@ -2194,11 +2240,11 @@ async function generateAnswerRequest(question, card, opts = {}) {
     card.streaming = false;
     if (e && e.name === "AbortError") {
       if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 2000);
-      card.meta = "superseded by the next question"; if (cards[idx] === card) renderCard(); return;
+      stallRetry(); return;
     }
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 2000);
     recoverAnswer(e && e.code || "", e && e.retryAfterMs || 1000);
-  } finally { clearTimeout(hardTimer); release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
+  } finally { clearTimeout(hardTimer); clearTimeout(fetchTimer); release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
 }
 
 /* ---- manual, AI Answer, screen, copy, export, shortcuts ---- */
@@ -2258,7 +2304,10 @@ async function aiAnswer(fromAuto) {
       finally { flushing = false; }
     }
     if (sessionEpoch !== transcriptionEpoch) return;
-    const pending = pendingHeard();
+    // Formation window (owner, 26 Oct): the last 8 heard lines are enough to
+    // form and cut a question. Older lines stay in the transcript and reach
+    // the answer as earlier context — they are not re-formed into questions.
+    const pending = pendingHeard().slice(-8);
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
     if (transcriptionFailedEpoch === sessionEpoch && !pending.length && !typedText) {
@@ -2283,9 +2332,16 @@ async function aiAnswer(fromAuto) {
         if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
         answeredSeq = heardSeq; updatePending();
         const q = pressQuestion(typedText, combined, cur.question) || cur.question;
-        const heard = combined.noiseOnly ? [cur.earlier, cur.heard, q].filter(Boolean).join("\n") : (combined.heard || q);
-        showPressed(cur, q);
-        return await generateAnswer(heard, cur, { consolidated: true, earlier: "", derived: q, reask: true, pinned: true });
+        // A re-press is a fresh ask, not a pinned replay: with no typed text the
+        // combined material is still a transcript, so it goes through the same
+        // derive cut and no-question gate as a fresh heard press instead of
+        // pinning the whole concatenation to the card and answering it. The
+        // card keeps its old question until the cut lands — it never shows the
+        // concatenation. Typed re-presses stay pinned whole.
+        const heardOnly = !typedText;
+        const heard = (combined.noiseOnly ? [cur.earlier, cur.heard, q].filter(Boolean).join("\n") : (combined.heard || q)).replace(/\nCurrent question \(on screen\):[^\n]*/g, "").trim();
+        showPressed(cur, heardOnly ? cur.question : q);
+        return await generateAnswer(heard, cur, { consolidated: true, earlier: "", derived: heardOnly ? undefined : q, reask: true, pinned: !heardOnly });
       }
       const intake = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You" });
       if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
@@ -2308,12 +2364,17 @@ async function aiAnswer(fromAuto) {
         showPressed(card, q);
         return await generateAnswer(heard, card, { consolidated: true, earlier, derived: q, pinned: true });
       }
-      const heard = intake.heard;
+      // Heard-only questions are messy transcripts, not clean questions: let
+      // the server cut the actual ask (derive step + unpinned cut) instead of
+      // pinning the whole concatenation to the card. Typed questions stay
+      // pinned whole — the typed words already are the question.
+      const heard = intake.heard.replace(/\nCurrent question \(on screen\):[^\n]*/g, "").trim();
       const said = pressQuestion(typedText, intake, "") || intake.derived || heardAsQuestion(pending);
-      const card = addCard(said || "Answering what was just heard…", ["…"]);
+      const heardOnly = !typedText;
+      const card = addCard(heardOnly ? "Deriving…" : (said || "Answering what was just heard…"), ["…"]);
       card.heard = heard; card.earlier = earlier;
       showPressed(card, card.question);
-      return await generateAnswer(heard, card, { consolidated: true, earlier, derived: said, pinned: true });
+      return await generateAnswer(heard, card, { consolidated: true, earlier, derived: heardOnly ? undefined : said, pinned: !heardOnly });
     }
     if (fromAuto) return;
     const c = cards[idx];
@@ -2797,7 +2858,15 @@ async function saveRunTranscript() {
 // session is read and put in order of time, so the viewer, the download and What went wrong all see a single transcript.
 async function sessionTranscript(s) {
   const runs = ((s && s.transcripts) || []).slice().sort((a, b) => a.at - b.at); if (!runs.length) return null;
-  const recs = (await Promise.all(runs.map(t => DossierDB.get(t.key)))).filter(Boolean); if (!recs.length) return null;
+  const recs = (await Promise.all(runs.map(t => DossierDB.get(t.key)))).filter(Boolean);
+  if (!recs.length) {
+    // The entry is saved synchronously on leave but the text put is async:
+    // a window killed mid-close leaves a row with no text. The raw run log
+    // still in this browser rebuilds it; only when that log is gone too is
+    // the transcript really lost.
+    try { const raw = localStorage.getItem("perfact.log." + s.id); const log = JSON.parse(raw || "[]"); if (Array.isArray(log) && log.length) return { at: log[0].at, log, text: transcriptText(s, log) }; } catch {}
+    return null;
+  }
   if (recs.every(r => Array.isArray(r.log) && r.log.length)) {
     const seen = new Set(), log = recs.flatMap(r => r.log).sort((a, b) => a.at - b.at)
       .filter(e => { const k = e.at + "|" + e.t + "|" + (e.text || e.question || ""); if (seen.has(k)) return false; seen.add(k); return true; });

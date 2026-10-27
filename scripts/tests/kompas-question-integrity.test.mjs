@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { questionToAnswer } from "../../src/lib/kompasAnswer.ts";
 
 const appJs = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8");
-const route = readFileSync(new URL("../../src/app/api/kompas/answer/route.ts", import.meta.url), "utf8");
+const route = readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8");
 const answerLib = readFileSync(new URL("../../src/lib/kompasAnswer.ts", import.meta.url), "utf8");
 
 test("the formed question joins every heard line — the last-line form is gone", () => {
@@ -35,10 +35,12 @@ test("the server takes the formed question at full length and keeps re-asks ques
   assert.match(route, /repeatQuestionGuidance\(tier\)/);
 });
 
-test("questionToAnswer keeps compound asks whole and caps at 2000, never 900", () => {
+test("questionToAnswer keeps the whole pinned question and caps at 2000, never 900", () => {
   const start = answerLib.indexOf("export function questionToAnswer");
   const body = answerLib.slice(start, answerLib.indexOf("\n}", start));
-  assert.match(body, /asks\.length >= 2/);
+  // 26 Oct 2026: a single recognised ask is no longer cut out of a pinned question (kompas-question-whole.test.mjs).
+  assert.match(body, /const whole = parts\.slice\(from\)/);
+  assert.ok(!body.includes("cutQuestion(asked)"), "a pinned question is never cut down to one clause");
   assert.ok(!body.includes("slice(0, 900)"), "the 900-char cut is gone from questionToAnswer");
 });
 
