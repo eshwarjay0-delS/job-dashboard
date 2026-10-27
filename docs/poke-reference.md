@@ -79,3 +79,5 @@ Production verified READY on 26 October 2026: dpl_DMKpH4wn4tDqJwjhfB9N5HMCuQXU, 
 
 
 27 October release reconciliation: PR #84 merged as 9dde95d74fb5beded6f0352f34836f6117ae0342. Retained full regression completed 1123/1123 with zero failures in 56.2 seconds on the branch preserving master be5587d; TypeScript passed. Production dpl_7jqk94yNTXbpqpNXrApLXhNKtNJV verified READY at that exact merge SHA, target production, job-dashboard-fawn.vercel.app assigned, aliasError null. Supersedes prior publication/deployment-pending notes for timestamp hardening. Authenticated Gmail acceptance, schedule integration and atomic occurrence claims remain pending. No email sent or scheduler enabled.
+
+27 October: eligibility review now rejects zero outbound timestamps and dueAt preceding lastSentAt. Five eligibility tests and twelve sender/time tests pass (17 total). Pure helper only; publication preview and production verification pending, no route integration or sending enabled.
