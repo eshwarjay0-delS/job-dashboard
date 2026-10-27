@@ -189,3 +189,13 @@ test('the director owner is a role, never an invented person or a title the resu
   assert.match(svc, /Name the decision owner in that sentence\. Before closing/)
   assert.match(svc, /The decision owner is a role in the organisation \(the business owner of the platform, the risk owner, security leadership\), never a person's name, and the candidate keeps the title the resume gives: never speak as a CISO or any title the resume does not hold\./)
 })
+
+// Owner's live session, 27 Oct 2026, mic only (every line "You"): the cut must take the interviewer's ask, not the reply.
+test('the question cut takes the ask from mixed mic lines and leaves the candidate\'s reply out', async () => {
+  const A = await import('../../src/lib/kompasAnswer.ts')
+  assert.equal(A.cutQuestion("You: Are you working on any projects currently\nYou: Yeah, yeah, I'm still working with the city.\nYou: Alright, could you, do you mind elaborating a little bit on that, regress your responsibilities"),
+    'Are you working on any projects currently. could you, do you mind elaborating a little bit on that, regress your responsibilities')
+  assert.equal(A.cutQuestion('You: Alright, could you explain what dependency confusion is?\nYou: So yeah, Dependency'), 'Could you explain what dependency confusion is?')
+  assert.equal(A.cutQuestion('You: How would you design\nYou: a SIEM pipeline for payments?'), 'How would you design a SIEM pipeline for payments?')
+  assert.equal(A.cutQuestion('You: are, Throatstripe, EDR, then, uh, actively data data, uh, and, uh, yeah. All right. I do have, um, a hard stop, but again, I wanted to thank you for taking the time out of your day to\nYou: Thank you.\nYou: and'), '')
+})

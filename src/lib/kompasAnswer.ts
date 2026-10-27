@@ -408,9 +408,18 @@ export function plainlyNoQuestion(heard: string): boolean {
  * the candidate reading the previous answer, and noise. The answer follows the ask,
  * not the ramble. "Okay" alone is not a question.
  */
+// A transcript line that ends with no punctuation, followed by one that starts with a capital, ends a sentence. Owner's
+// live session, 27 Oct 2026, mic only: "Are you working on any projects currently" / "Yeah, yeah, I'm still working with
+// the city." / "could you ... elaborate on that" was joined into one asked sentence, and his reply rode along in the cut.
+function transcriptSentences(heard: string): string {
+  const lines = String(heard || "").split(/\r?\n/).map((l) => l.replace(/^(?:You(?: \(typed\))?|Them):\s*/i, "").trim()).filter(Boolean)
+  // A segment is several words; one ending in a word that wants more ("integrate", "with", "the") runs on into the next.
+  const CONTINUES = /\b(?:a|an|the|to|of|for|with|and|or|but|between|about|on|in|into|from|by|at|as|is|are|was|were|be|your|my|our|their|this|that|these|those|integrate|use|using|configure|compare|between)$/i
+  return lines.map((l, i) => (i < lines.length - 1 && l.split(/\s+/).length >= 3 && !/[.?!,;:…-]$/.test(l) && !CONTINUES.test(l) && /^[A-Z]/.test(lines[i + 1]) ? l + "." : l)).join(" ")
+}
+
 export function cutQuestion(heard: string): string {
-  const text = String(heard || "")
-    .replace(/^(?:You(?: \(typed\))?|Them):\s*/gim, " ")
+  const text = transcriptSentences(heard)
     .replace(/\s+/g, " ")
     .trim()
   if (BARE_INTRO.test(text)) return "Tell me about yourself"
@@ -427,9 +436,12 @@ export function cutQuestion(heard: string): string {
     from--
   }
   while (from < last && parts[from].kind === "context" && parts[from].text.split(/\s+/).length > 40) from++   // a long monologue is not setup
+  // "could you elaborate on that": the ask it points to is kept, the candidate's own reply between them is not.
+  let pointed = ""
+  if (from === last && /\b(?:that|this|it|those|these)\b/i.test(parts[last].text) && last >= 2 && parts[last - 1].kind === "own" && parts[last - 2].kind === "ask") pointed = parts[last - 2].text.replace(/[.]$/, "") + ". "
   // Instructions after the ask ("Give a falsifiable test", "Keep it suitable for technical HR") are asks themselves, so
   // the last ask is the end of the question.
-  const q = parts.slice(from, last + 1).map((p) => p.text).join(" ").replace(/\s+/g, " ").trim()
+  const q = (pointed + parts.slice(from, last + 1).map((p) => p.text).join(" ")).replace(/\s+/g, " ").trim()
   if (q.split(/\s+/).length < 3) return ""
   return (q.charAt(0).toUpperCase() + q.slice(1)).slice(0, 2000)
 }
