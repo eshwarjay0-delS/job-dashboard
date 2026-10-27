@@ -57,7 +57,7 @@ test("scrolling to the top alone never reveals the question; only an overscroll 
   assert.ok(!sync.includes("toggle"), "no toggle that would reveal on reaching the top");
   assert.ok(!sync.includes('remove("q-away")'), "reaching the top alone never reveals");
   assert.ok(src.includes('e.deltaY < 0 && answerPane && answerPane.scrollTop <= 0) card.classList.remove("q-away")'), "wheel up at the very top reveals");
-  assert.ok(src.includes('y - touchStartY > 24) card.classList.remove("q-away")'), "touch pull-down at the very top reveals");
+  assert.ok(src.includes('touchReveal(touchStartTop, answerPane.scrollTop, y - touchStartY)) card.classList.remove("q-away")'), "touch reveal is two-phase: only a drag that starts at the top reveals (27 Oct)");
 });
 
 test("a generated answer collapses the question away on both answer paths", () => {

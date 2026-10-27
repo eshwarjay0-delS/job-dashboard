@@ -938,12 +938,18 @@ const answerPane = $("answer");
 function syncQuestion() { const card = $("card"); if (card && answerPane && answerPane.scrollTop > 2) card.classList.add("q-away"); }   // scrolling down hides the question; only an overscroll gesture brings it back
 answerPane?.addEventListener("scroll", syncQuestion, { passive: true });
 // Overscroll reveal (owner, 26 Oct): at the very top, one more scroll up shows the
-// question again — reaching the top alone never does. Scrolling down anywhere on
+// question again — reaching the top alone never does. Wheel-up at the top reveals
+// at once (the arriving wheel event itself cannot, it sees the pane above the top).
+// Touch is two-phase (27 Oct): the drag must START at the top, so a drag that
+// arrives at the top mid-stroke never reveals, however far it pulls past it —
+// scrolling up to read must not pop the question back. Scrolling down anywhere on
 // the card hides it, smoothly, so only the response box stays in view.
+function touchReveal(startTop, top, pull) { return startTop <= 0 && top <= 0 && pull > 24; }
+// Touch reveal wiring ends here.
 $("card")?.addEventListener("wheel", (e) => { const card = $("card"); if (!card) return; if (e.deltaY > 0) card.classList.add("q-away"); else if (e.deltaY < 0 && answerPane && answerPane.scrollTop <= 0) card.classList.remove("q-away"); }, { passive: true });
-let touchStartY = 0;
-$("card")?.addEventListener("touchstart", (e) => { touchStartY = (e.touches[0] && e.touches[0].clientY) || 0; }, { passive: true });
-$("card")?.addEventListener("touchmove", (e) => { const card = $("card"); if (!card) return; const y = (e.touches[0] && e.touches[0].clientY) || 0; if (answerPane && answerPane.scrollTop <= 0 && y - touchStartY > 24) card.classList.remove("q-away"); else if (touchStartY - y > 24) card.classList.add("q-away"); }, { passive: true });
+let touchStartY = 0, touchStartTop = 0;
+$("card")?.addEventListener("touchstart", (e) => { touchStartY = (e.touches[0] && e.touches[0].clientY) || 0; touchStartTop = answerPane ? answerPane.scrollTop : 0; }, { passive: true });
+$("card")?.addEventListener("touchmove", (e) => { const card = $("card"); if (!card) return; const y = (e.touches[0] && e.touches[0].clientY) || 0; if (answerPane && touchReveal(touchStartTop, answerPane.scrollTop, y - touchStartY)) card.classList.remove("q-away"); else if (touchStartY - y > 24) card.classList.add("q-away"); }, { passive: true });
 $("lookTab")?.addEventListener("change", (e) => { LS.set("tabSize", Number(e.target.value)); applyLook(); });
 // The model that writes answers. Empty is the server's own lanes; the server ignores anything not on its list.
 const LIVE_MODELS = ["", "gpt-5.6-luna"];
