@@ -11,7 +11,7 @@ test("MarketFit login displays desktop illustration and compact mobile flow", ()
   assert.match(login, /<MarketFitLoginStory \/>/)
   assert.match(login, /<MarketFitLoginStory compact \/>/)
   assert.match(login, /lg:hidden/)
-  assert.match(login, /lg:flex/)
+  assert.match(login, /lg:grid/)
 })
 
 test("every animation class used by the component is defined", () => {
