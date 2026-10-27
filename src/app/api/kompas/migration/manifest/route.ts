@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic"
 // Actual code changes remain reviewed/deployed, never eval'd from a user file.
 const NO_STORE = { "Cache-Control": "no-store" }
 const RUNTIME_ASSETS = [
+  "screen-core.js", "screen-review.js",
   "app.js", "index.html", "move-core.js", "move.js",
   "diamond.js", "jev.js", "jev-prep.js", "levels-core.js",
   "anchors.js", "anchor-flight.js", "correct.js", "feedback.js",

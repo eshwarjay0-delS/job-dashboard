@@ -373,3 +373,19 @@ for (let fold = 0; fold < 30; fold++) {
     }
   })
 }
+
+test('screen question preserves code, line breaks and trailing constraints in the actual model prompt', async()=>{
+ const h=harness()
+ const question='Explain this code:\nif (x < 0) return -1;\n'+ '// implementation detail\n'.repeat(100)+'What is the complexity? Include empty-input and overflow tests.'
+ const r=await h.post({source:'screen',pinned:true,question,derived:question,config:{resume:'Source resume',jd:'Security engineering'}})
+ assert.equal(r.status,200)
+ assert.ok(h.calls[0].messages[1].content.includes(question),'the complete screen question reaches the answer model')
+})
+test('oversized screen questions are refused, never silently truncated', async()=>{
+ const h=harness();const r=await h.post({source:'screen',question:'x'.repeat(12001)})
+ assert.equal(r.status,400);assert.equal(h.calls.length,0)
+})
+test('screen MCQ instructions preserve selection semantics in the answer prompt',async()=>{
+ const h=harness();const r=await h.post({source:'screen',question:'Question 1 (mcq; multiple choice):\nWhich controls?\nOptions:\nA: MFA\nB: RBAC',config:{resume:'Current source'}})
+ assert.equal(r.status,200);const prompt=h.calls[0].messages[1].content;assert.match(prompt,/For multiple-choice, give all supported labels/);assert.match(prompt,/A: MFA\nB: RBAC/)
+})

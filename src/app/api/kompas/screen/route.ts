@@ -3,7 +3,7 @@ import { authenticatedUser } from "@/lib/authBoundary"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { keysFor, resolveKeys } from "@/lib/llm"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
-import { SCREEN_BODY_LIMIT, SCREEN_EXTRACTION_POLICY, screenImage, screenQuestion } from "@/lib/kompasScreen"
+import { SCREEN_BODY_LIMIT, SCREEN_EXTRACTION_POLICY, screenImage, screenTasks } from "@/lib/kompasScreen"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -55,10 +55,10 @@ export async function POST(request: NextRequest) {
     const data = await response.json()
     input = Number(data.usage?.prompt_tokens) || 0; output = Number(data.usage?.completion_tokens) || 0
     if (data.choices?.[0]?.finish_reason !== 'stop') return failure("The screen question could not be read completely. Share a smaller area.", 422)
-    const question = screenQuestion(data.choices?.[0]?.message?.content)
-    if (!question) return failure("No clear question was readable. Share the question window or type it.", 422)
+    const tasks = screenTasks(data.choices?.[0]?.message?.content)
+    if (!tasks?.length) return failure("No clear question was readable. Share the question window or type it.", 422)
     ok = true
-    return NextResponse.json({ question, needsAnswer: true }, { headers: NO_STORE })
+    return NextResponse.json({ tasks, needsReview: true }, { headers: NO_STORE })
   } catch { return failure("Screen analysis was interrupted. Please retry or type the question.", 502) }
   finally { scheduleLlmRecord({ at, app: "kompas", purpose: "screen", provider: "openrouter", model, ok, status, input, output, cacheRead: 0, cacheWrite: 0, ms: Date.now() - at }) }
 }
