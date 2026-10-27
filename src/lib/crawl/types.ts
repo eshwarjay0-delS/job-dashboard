@@ -37,6 +37,8 @@ export type PortalAdapter = {
   fetchJobs?: (get: Fetcher) => Promise<RawJob[]>
   /** pause between this portal's requests, in ms; the runner's own 600 unless a portal asks for slower */
   gapMs?: number
+  /** the time this portal may take in a run, in ms, when its pace needs more than the runner's usual 60 s */
+  budgetMs?: number
 }
 
 export type CrawlResult = {

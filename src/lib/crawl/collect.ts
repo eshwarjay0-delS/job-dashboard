@@ -47,7 +47,8 @@ export type PortalOutcome<T> = { adapter: PortalAdapter; value?: T; error?: stri
 /**
  * `work` for every portal, `concurrency` at a time (different firms, so one firm still gets one request at a time),
  * starting at `offset` so the order turns day by day and the same portals are not always the ones time runs out on.
- * A portal not started by `deadline` is reported skipped, never half-done; one that runs past `perPortalMs` is
+ * A portal not started by `deadline` is reported skipped, never half-done; one that runs past `perPortalMs` (or its own
+ * `budgetMs`, for a portal that asks for a slow pace) is
  * reported as timed out. Outcomes come back in the portals' own order. Until 20 Oct 2026 portals were crawled one
  * after another inside a 60 s function: fine for two portals, cut off partway for thirty.
  */
@@ -66,10 +67,12 @@ export async function crawlEach<T>(
     while (next < order.length) {
       const i = order[next++]
       const adapter = adapters[i]
-      if (now() >= opts.deadline) { out[i] = { adapter, skipped: true }; continue }
+      const limit = adapter.budgetMs ?? opts.perPortalMs
+      // Nor is one started whose own time would run past the run's end (the deadline plus the usual time a portal gets).
+      if (now() >= opts.deadline || now() + limit > opts.deadline + opts.perPortalMs) { out[i] = { adapter, skipped: true }; continue }
       let timer: ReturnType<typeof setTimeout> | undefined
       try {
-        const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${Math.round(opts.perPortalMs / 1000)} s`)), opts.perPortalMs) })
+        const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${Math.round(limit / 1000)} s`)), limit) })
         out[i] = { adapter, value: await Promise.race([work(adapter), late]) }
       } catch (e) {
         out[i] = { adapter, error: String(e instanceof Error ? e.message : e).slice(0, 300) }

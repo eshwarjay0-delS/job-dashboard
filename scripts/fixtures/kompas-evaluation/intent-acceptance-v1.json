@@ -1,0 +1,470 @@
+[
+  {
+    "id": "intent-intro-engineer",
+    "category": "intro",
+    "question": "Introduce yourself using your full supported career, clients, contributions and achievements.",
+    "level": "engineer",
+    "criteria": [
+      "Career breadth",
+      "Supported facts only",
+      "No single-project collapse"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-intro-architect",
+    "category": "intro",
+    "question": "Introduce yourself using your full supported career, clients, contributions and achievements.",
+    "level": "architect",
+    "criteria": [
+      "Career breadth",
+      "Supported facts only",
+      "No single-project collapse"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-intro-director",
+    "category": "intro",
+    "question": "Introduce yourself using your full supported career, clients, contributions and achievements.",
+    "level": "director",
+    "criteria": [
+      "Career breadth",
+      "Supported facts only",
+      "No single-project collapse"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-intro-repeat-engineer",
+    "category": "intro-repeat",
+    "question": "Introduce yourself again, more clearly.",
+    "level": "engineer",
+    "criteria": [
+      "Same career facts",
+      "No invented totals",
+      "No forced novelty"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-intro-repeat-architect",
+    "category": "intro-repeat",
+    "question": "Introduce yourself again, more clearly.",
+    "level": "architect",
+    "criteria": [
+      "Same career facts",
+      "No invented totals",
+      "No forced novelty"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-intro-repeat-director",
+    "category": "intro-repeat",
+    "question": "Introduce yourself again, more clearly.",
+    "level": "director",
+    "criteria": [
+      "Same career facts",
+      "No invented totals",
+      "No forced novelty"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-abbreviation-engineer",
+    "category": "abbreviation",
+    "question": "IDOR",
+    "level": "engineer",
+    "criteria": [
+      "Expand supported abbreviation",
+      "Meaning and purpose",
+      "Compact relevant example"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-abbreviation-architect",
+    "category": "abbreviation",
+    "question": "IDOR",
+    "level": "architect",
+    "criteria": [
+      "Expand supported abbreviation",
+      "Meaning and purpose",
+      "Compact relevant example"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-abbreviation-director",
+    "category": "abbreviation",
+    "question": "IDOR",
+    "level": "director",
+    "criteria": [
+      "Expand supported abbreviation",
+      "Meaning and purpose",
+      "Compact relevant example"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-comparison-engineer",
+    "category": "comparison",
+    "question": "Compare IDOR and CSRF.",
+    "level": "engineer",
+    "criteria": [
+      "Shared comparison axes",
+      "Authorization versus forged authenticated action",
+      "No personal story required"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-comparison-architect",
+    "category": "comparison",
+    "question": "Compare IDOR and CSRF.",
+    "level": "architect",
+    "criteria": [
+      "Shared comparison axes",
+      "Authorization versus forged authenticated action",
+      "No personal story required"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-comparison-director",
+    "category": "comparison",
+    "question": "Compare IDOR and CSRF.",
+    "level": "director",
+    "criteria": [
+      "Shared comparison axes",
+      "Authorization versus forged authenticated action",
+      "No personal story required"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-compound-engineer",
+    "category": "compound",
+    "question": "Define IDOR, explain why it matters, and give one mitigation.",
+    "level": "engineer",
+    "criteria": [
+      "All three subparts",
+      "Correct mitigation",
+      "No unrelated implementation dump"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-compound-architect",
+    "category": "compound",
+    "question": "Define IDOR, explain why it matters, and give one mitigation.",
+    "level": "architect",
+    "criteria": [
+      "All three subparts",
+      "Correct mitigation",
+      "No unrelated implementation dump"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-compound-director",
+    "category": "compound",
+    "question": "Define IDOR, explain why it matters, and give one mitigation.",
+    "level": "director",
+    "criteria": [
+      "All three subparts",
+      "Correct mitigation",
+      "No unrelated implementation dump"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-procedure-engineer",
+    "category": "procedure",
+    "question": "How would you verify an object-level authorization fix?",
+    "level": "engineer",
+    "criteria": [
+      "Ordered steps",
+      "Negative tests",
+      "Cross-user access checked"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-procedure-architect",
+    "category": "procedure",
+    "question": "How would you verify an object-level authorization fix?",
+    "level": "architect",
+    "criteria": [
+      "Ordered steps",
+      "Negative tests",
+      "Cross-user access checked"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-procedure-director",
+    "category": "procedure",
+    "question": "How would you verify an object-level authorization fix?",
+    "level": "director",
+    "criteria": [
+      "Ordered steps",
+      "Negative tests",
+      "Cross-user access checked"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-diagnosis-engineer",
+    "category": "diagnosis",
+    "question": "A permission fix passes unit tests but fails for one tenant. How would you diagnose it?",
+    "level": "engineer",
+    "criteria": [
+      "Competing hypotheses",
+      "Discriminating evidence",
+      "Safe next action"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-diagnosis-architect",
+    "category": "diagnosis",
+    "question": "A permission fix passes unit tests but fails for one tenant. How would you diagnose it?",
+    "level": "architect",
+    "criteria": [
+      "Competing hypotheses",
+      "Discriminating evidence",
+      "Safe next action"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-diagnosis-director",
+    "category": "diagnosis",
+    "question": "A permission fix passes unit tests but fails for one tenant. How would you diagnose it?",
+    "level": "director",
+    "criteria": [
+      "Competing hypotheses",
+      "Discriminating evidence",
+      "Safe next action"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-design-engineer",
+    "category": "design",
+    "question": "Design tenant isolation for an API and explain failure handling.",
+    "level": "engineer",
+    "criteria": [
+      "Trust boundaries",
+      "Data flows",
+      "Tradeoffs and tests"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-design-architect",
+    "category": "design",
+    "question": "Design tenant isolation for an API and explain failure handling.",
+    "level": "architect",
+    "criteria": [
+      "Trust boundaries",
+      "Data flows",
+      "Tradeoffs and tests"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-design-director",
+    "category": "design",
+    "question": "Design tenant isolation for an API and explain failure handling.",
+    "level": "director",
+    "criteria": [
+      "Trust boundaries",
+      "Data flows",
+      "Tradeoffs and tests"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-experience-engineer",
+    "category": "experience",
+    "question": "Describe a vulnerability you personally discovered and the impact.",
+    "level": "engineer",
+    "criteria": [
+      "Only source-supported experience",
+      "Personal versus team contribution",
+      "No invented metrics"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-experience-architect",
+    "category": "experience",
+    "question": "Describe a vulnerability you personally discovered and the impact.",
+    "level": "architect",
+    "criteria": [
+      "Only source-supported experience",
+      "Personal versus team contribution",
+      "No invented metrics"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-experience-director",
+    "category": "experience",
+    "question": "Describe a vulnerability you personally discovered and the impact.",
+    "level": "director",
+    "criteria": [
+      "Only source-supported experience",
+      "Personal versus team contribution",
+      "No invented metrics"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-unknown-experience-engineer",
+    "category": "unknown-experience",
+    "question": "What exact financial savings did your vulnerability discovery produce?",
+    "level": "engineer",
+    "criteria": [
+      "Do not invent savings",
+      "Explain missing evidence",
+      "Separate measurable technical outcome"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-unknown-experience-architect",
+    "category": "unknown-experience",
+    "question": "What exact financial savings did your vulnerability discovery produce?",
+    "level": "architect",
+    "criteria": [
+      "Do not invent savings",
+      "Explain missing evidence",
+      "Separate measurable technical outcome"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-unknown-experience-director",
+    "category": "unknown-experience",
+    "question": "What exact financial savings did your vulnerability discovery produce?",
+    "level": "director",
+    "criteria": [
+      "Do not invent savings",
+      "Explain missing evidence",
+      "Separate measurable technical outcome"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-drilldown-engineer",
+    "category": "drilldown",
+    "question": "In that same incident, why did your first mitigation fail?",
+    "level": "engineer",
+    "criteria": [
+      "Same supported incident",
+      "No invented failed attempt",
+      "State missing context when needed"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-drilldown-architect",
+    "category": "drilldown",
+    "question": "In that same incident, why did your first mitigation fail?",
+    "level": "architect",
+    "criteria": [
+      "Same supported incident",
+      "No invented failed attempt",
+      "State missing context when needed"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-drilldown-director",
+    "category": "drilldown",
+    "question": "In that same incident, why did your first mitigation fail?",
+    "level": "director",
+    "criteria": [
+      "Same supported incident",
+      "No invented failed attempt",
+      "State missing context when needed"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-topic-switch-engineer",
+    "category": "topic-switch",
+    "question": "New topic: what is CSRF?",
+    "level": "engineer",
+    "criteria": [
+      "Follow new topic",
+      "Definition and purpose",
+      "Do not carry prior incident"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-topic-switch-architect",
+    "category": "topic-switch",
+    "question": "New topic: what is CSRF?",
+    "level": "architect",
+    "criteria": [
+      "Follow new topic",
+      "Definition and purpose",
+      "Do not carry prior incident"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  },
+  {
+    "id": "intent-topic-switch-director",
+    "category": "topic-switch",
+    "question": "New topic: what is CSRF?",
+    "level": "director",
+    "criteria": [
+      "Follow new topic",
+      "Definition and purpose",
+      "Do not carry prior incident"
+    ],
+    "requiresApprovedSources": true,
+    "historyPolicy": "Explicit reviewed context required for intro-repeat and drilldown; other cases isolated. Never fabricate prior turns."
+  }
+]

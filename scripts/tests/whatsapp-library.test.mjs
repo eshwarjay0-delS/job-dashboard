@@ -29,7 +29,7 @@ const SOC = path.join(USER_DIR, 'a@x.com', 'SOC Analyst', 'SOC.docx')
 const APPSEC = path.join(USER_DIR, 'a@x.com', 'AppSec Engineer', 'AppSec.docx')
 const JD = 'Application Security Engineer. You will run threat modeling, Burp Suite testing and OWASP Top 10 reviews for our web apps.'
 
-function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, have = null, sure = true, extra = [], hold = null } = {}) {
+function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, have = null, sure = true, extra = [], hold = null, floorOk = true } = {}) {
   process.env.WHATSAPP_PAIR_WAIT_MS = '0'
   const store = new Map()
   const said = [], docs = [], saved = [], used = [], logs = [], runs = [], events = [], uploads = []
@@ -74,6 +74,8 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
       readShelf: async () => ({ uses: {} }),
       relOf: (dir, abs) => path.relative(dir, abs).split(path.sep).join('/'),
     },
+    // Whether a resume made earlier for the job still meets the 90% floor (src/lib/made-floor.ts, 26 Oct 2026).
+    '@/lib/made-floor': { madeMeetsFloor: async () => floorOk },
     '@/lib/resume-library': { jobKeyOf: jd => (jd === JD ? 'job-1' : `job-${String(jd).length}`) },
     '@/lib/library-agent': { agentPick: async () => { if (hold) await hold; return agent }, logPick: async (u, e) => { logs.push(e) }, readPicks: async (u, n = 50) => logs.slice(-n).reverse() },
     '@/lib/keywords': { extractKeywords: () => ['burp suite', 'owasp'] },
@@ -96,7 +98,7 @@ test('a job description asks which email; "1" starts from the agent\'s pick in F
   assert.equal(b.runs.length, 1)
   assert.equal(b.runs[0].givenPath, APPSEC, 'the code ranks AppSec first and the agent agreed')
   assert.equal(b.runs[0].userResumeDir, USER_DIR)
-  assert.match(b.said.at(-1), /Updating your \*AppSec\* resume \(in AppSec Engineer\)\. I chose it because its title is the job's: Application Security Engineer/)
+  assert.match(b.said.at(-1), /Updating your \*AppSec\* resume \(in AppSec Engineer\)\. I chose it because its title matches the job's role: Application Security Engineer/)
   assert.equal(b.saved.length, 1)
   assert.equal(b.saved[0].userDir, USER_DIR)
   assert.equal(b.saved[0].depth, 1, 'made from a resume the person wrote')
@@ -154,7 +156,7 @@ test('a "Security Analyst" post starts from the resume titled for it, not the on
   const b = bot({ agent: null, extra: library() })
   await b.wa.handle('15550010', { type: 'text', id: 'm1', text: { body: `${POST}\n1` } }, {}, 'user1')
   assert.equal(b.runs[0].givenPath, CYBER, 'the AI/AppSec resume shows more of the keywords and was picked before; its title is not the role')
-  assert.match(b.said.at(-1), /Updating your \*Cyber Security Analyst\* resume \(in Identity and Access Management\)\. I chose it because its title is the job's: Security Analyst/)
+  assert.match(b.said.at(-1), /Updating your \*Cyber Security Analyst\* resume \(in Identity and Access Management\)\. I chose it because its title matches the job's role: Security Analyst/)
   assert.equal(b.logs[0].role, 'Security Analyst')
   assert.equal(b.logs[0].titled, 1)
 })
@@ -217,6 +219,14 @@ test('a job made before is sent again as it is: no new run, nothing saved', asyn
   assert.equal(b.saved.length, 0)
   assert.match(b.docs.at(-1), /You already have this one/)
   assert.ok((await b.wa.loadSession('15550004')).last, 'redo can make it afresh')
+})
+
+test('a job made before below the 90% floor is made again, not sent again (owner, 26 Oct 2026: "the baseline is serve atleast 90% match")', async () => {
+  const have = { abs: APPSEC, file: { path: 'a@x.com/AppSec Engineer/AppSec.docx', role: 'Application Security Engineer', company: 'Acme', category: 'AppSec Engineer', at: Date.UTC(2026, 9, 23) } }
+  const b = bot({ have, floorOk: false })
+  await b.wa.handle('15550014', { type: 'text', id: 'm1', text: { body: `${JD}\n1` } }, {}, 'user1')
+  assert.equal(b.runs.length, 1, 'made again')
+  assert.ok(!b.docs.some(d => /You already have this one/.test(d)))
 })
 
 // ── Found in review before this shipped (19 Oct 2026) ──

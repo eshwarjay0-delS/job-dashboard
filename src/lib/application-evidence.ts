@@ -1,6 +1,11 @@
 // Conservative, deterministic evidence rules. Absence of evidence remains unknown.
 export function emailAddress(value: string): string {
-  return value.match(/[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0].toLowerCase() || ""
+  // Quoted display names can themselves contain an email or angle brackets.
+  // They are labels, not the mailbox used for account ownership.
+  const unquoted = value.replace(/"(?:\\.|[^"\\])*"/g, "")
+  const mailboxes = [...unquoted.matchAll(/<([^<>]+)>/g)]
+  if (mailboxes.length > 1) return "" // ambiguous sender is not outbound evidence
+  return (mailboxes[0]?.[1] ?? unquoted).match(/[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0].toLowerCase() || ""
 }
 
 export function authoredText(body: string): string {

@@ -15,7 +15,13 @@ export const RESUME_CATEGORIES: Record<string, string[]> = {
   "DevSecOps": ["devsecops", "snyk", "checkmarx", "sonarqube", "security gates", "pipeline security"],
   "Kubernetes and Container Security": ["kubernetes", "container security", "workload governance", "vmware", "vcf", "container adoption"],
   "DevOps and Platform Engineering": ["devops", "ci/cd", "jenkins", "argocd", "platform engineer", "site reliability", "helm"],
-  "Identity and Access Management": ["identity governance", "identity and access", "sso", "oauth", "openid", "saml", "okta", "sailpoint"],
+  // The words of access-control work in an application (PeopleSoft, SAP, Oracle, Workday security) too: a PeopleSoft
+  // Security Analyst post was filed under Application and API Security, then Data Protection and Privacy (26 Oct 2026),
+  // because only "application security" and "encryption" matched anything.
+  "Identity and Access Management": ["identity governance", "identity and access", "sso", "oauth", "openid", "saml", "okta", "sailpoint",
+    "access management", "access control", "role-based access", "rbac", "permission lists", "user profiles", "row-level security",
+    "user provisioning", "provisioning", "deprovisioning", "access reviews", "access certification", "segregation of duties",
+    "single sign-on", "peoplesoft security", "sap security", "erp security", "workday security", "oracle security"],
   "Privileged Access Management": ["privileged access", "cyberark", "epv", "psm", "cpm", "beyondtrust", "password vault"],
   "Network Security": ["network security", "firewall", "palo alto", "fortinet", "cisco", "vpn", "zero trust"],
   "OT and Industrial Security": ["ot security", "industrial", "scada", "ics", "plc", "iec 62443", "operational technology"],

@@ -71,7 +71,8 @@ test('JazzHR (IntelliPro): city and state apart, nothing else guessed', async ()
   assert.equal(d.querySelector('input[placeholder="City"]').value, 'St. Louis')
   assert.equal(d.querySelector('input[placeholder="State/Province"]').value, 'Missouri')
   assert.equal(box(d, /^Phone/).value, PROFILE.phone)
-  assert.equal(result.needsAttention.length, 0, 'nothing is left that the person has to answer')
+  // Only the required resume upload, as no resume was given in this test (pointed out since 2.0.5, 21 Oct 2026).
+  assert.deepEqual([...result.needsAttention], ['Resume'], 'nothing else is left that the person has to answer')
 })
 
 test('Recruitee: "Are you a U.S. citizen?" is not answered because a note beside it says "security clearance"', async () => {

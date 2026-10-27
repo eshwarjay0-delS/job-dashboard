@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<outertag>
+<systemtime>2026-10-20 23:49:08</systemtime>
+<jobs>
+	<job>		
+		<ID>1</ID>
+		<jobdivaid>29497277</jobdivaid>
+		<jobdiva_no>26-11407</jobdiva_no>
+		<optional_ref>26-11407</optional_ref>
+		<portal_url><![CDATA[https://www2.jobdiva.com/candidates/myjobs/openjob_outside.jsp?a=testportal123&from=COMP&id=29497277&SearchString=&StatesString=]]></portal_url>
+		<title><![CDATA[Senior Data Engineer - Remote]]></title>
+		
+		<location>MN - Eagan</location>
+		<issuedate>2026-10-20 17:37:04</issuedate>
+		<startdate>2026-11-30 00:00:00</startdate>
+		<endddate>2027-12-31 00:00:00</endddate>
+		<division></division>
+		<division2></division2>
+		<jobpriority>11</jobpriority>
+		<positiontype>2</positiontype>
+		
+		<ratemin></ratemin>
+		<ratemax></ratemax>
+		<rateper></rateper>
+		<onsiteflexibility>100</onsiteflexibility>
+		<jobdescription><![CDATA[<div style="font-family: Arial; font-size: 11pt;"> <p><span style="font-size:11pt;"><strong>Genesis10 is currently seeking a Senior Data Engineer for a long-term contract position with a Leading Pharmacy Benefit Manager located in Eagan, MN.<br /> <br /> Compensation: $79.00 - $82.00 per hour, W2, based on qualifications<br /> <br /> Position Overview:</strong><br /> This individual will play a key role in designing, developing, and implementing scalable data integration and transformation solutions within a Google Cloud Platform (GCP) environment. The ideal candidate will bring strong hands-on experience with ETL development, GCP data engineering services, Kafka, and SQL, along with the ability to work independently in a fast-paced delivery environment to support a critical client implementation initiative.</span></p> <p><span style="font-size:11pt;"><strong>Key Responsibilities:</strong></span></p> <ul> <li><span style="font-size:11pt;">Design, develop, and maintain scalable ETL/ELT pipelines supporting enterprise data integration and client implementation initiatives</span></li> <li><span style="font-size:11pt;">Build and optimize data ingestion, transformation, and movement processes across multiple applications and platforms</span></li> <li><span style="font-size:11pt;">Design, develop, and maintain cloud-based data engineering solutions leveraging GCP technologies (BigQuery, Dataflow, Cloud Composer, Cloud Storage)</span></li> <li><span style="font-size:11pt;">]]></jobdescription>
+	</job>
+<job>		
+		<ID>2</ID>
+		<jobdivaid>29497027</jobdivaid>
+		<jobdiva_no>26-11406</jobdiva_no>
+		<optional_ref>BACJP00225557</optional_ref>
+		<portal_url><![CDATA[https://www2.jobdiva.com/candidates/myjobs/openjob_outside.jsp?a=testportal123&from=COMP&id=29497027&SearchString=&StatesString=]]></portal_url>
+		<title><![CDATA[Full Stack Java Developer - Hybrid]]></title>
+		
+		<location>NC - Charlotte</location>
+		<issuedate>2026-10-20 17:19:09</issuedate>
+		<startdate>2026-12-21 00:00:00</startdate>
+		<endddate>2027-12-20 00:00:00</endddate>
+		<division></division>
+		<division2></division2>
+		<jobpriority>3</jobpriority>
+		<positiontype>2</positiontype>
+		
+		<ratemin></ratemin>
+		<ratemax></ratemax>
+		<rateper></rateper>
+		<onsiteflexibility>50</onsiteflexibility>
+		<jobdescription><![CDATA[<div style="font-family: Arial; font-size: 11pt;"> <p><strong>Genesis10 is currently seeking a Full Stack Java Developer for a hybrid position (3 days per week) with a Global Financial Institution located in Charlotte, NC. This is a 12+ month contract opportunity.</strong></p> <p>We are seeking a talented Full Stack Developer with strong Java programming skills and front-end experience with Node.js & React.js. This role will support the development, release, and production deployment of iOS and Android applications, and will be responsible for designing and building next-generation mobile applications. Duties may include collaborating with the design team for new application features, identifying and fixing application bottlenecks, maintaining the core code, and updating applications.</p> <p><strong>Responsibilities:</strong></p> <ul> <li>Writing Splunk Queries</li> <li>Ensuring quality and performance of the application to specifications</li> <li>Identifying potential problems and resolving application bottlenecks</li> <li>Fixing application bugs before the final release</li> <li>Publishing application on the App Store</li> <li>Designing and implementing application updates</li> <li>Maintaining the code and atomization of the application</li> </ul> <p><strong>Requirements:</strong></p> <ul> <li>Bachelor&#39;s degree in computer science or software engineering</li> <li>5+ years of experience as a Full-stack developer with Java Programming as a primary skill</li> <li>]]></jobdescription>
+	</job>
+<job>		
+		<ID>3</ID>
+		<jobdivaid>29496885</jobdivaid>
+		<jobdiva_no>26-11404</jobdiva_no>
+		<optional_ref>110282-1</optional_ref>
+		<portal_url><![CDATA[https://www2.jobdiva.com/candidates/myjobs/openjob_outside.jsp?a=testportal123&from=COMP&id=29496885&SearchString=&StatesString=]]></portal_url>
+		<title><![CDATA[Software Engineer - Remote]]></title>
+		
+		<location>NY - New York</location>
+		<issuedate>2026-10-20 17:01:38</issuedate>
+		<startdate>2026-11-30 00:00:00</startdate>
+		<endddate>2027-05-28 00:00:00</endddate>
+		<division></division>
+		<division2></division2>
+		<jobpriority>3</jobpriority>
+		<positiontype>2</positiontype>
+		
+		<ratemin></ratemin>
+		<ratemax></ratemax>
+		<rateper></rateper>
+		<onsiteflexibility>100</onsiteflexibility>
+		<jobdescription><![CDATA[<div style="font-family: Arial; font-size: 11pt;"> <p><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;"><strong>Genesis10 is currently seeking a Software Engineer - Remote position with a Major Financial Institution located in New York, NY. This is a long-term contract opportunity.</strong></span></span></p> <p><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;">This role will collaborate with and across Agile teams to design, develop, test, implement, and support technical solutions using full-stack development tools and technologies. The ideal candidate will utilize various programming languages like Python, Open Source technologies, and a variety of AWS tools and services with a special focus on Serverless initiatives.</span></span></p> <p><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;"><strong>Responsibilities:</strong></span></span></p> <ul> <li><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;">Collaborate with and across Agile teams to design, develop, test, implement, and support technical solutions using full-stack development tools and technologies</span></span></li> <li><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;">]]></jobdescription>
+	</job>
+<job>		
+		<ID>4</ID>
+		<jobdivaid>29496856</jobdivaid>
+		<jobdiva_no>26-11403</jobdiva_no>
+		<optional_ref>BACJJP00040278</optional_ref>
+		<portal_url><![CDATA[https://www2.jobdiva.com/candidates/myjobs/openjob_outside.jsp?a=testportal123&from=COMP&id=29496856&SearchString=&StatesString=]]></portal_url>
+		<title><![CDATA[Software Test Engineer - Hybrid]]></title>
+		
+		<location>NC - Charlotte</location>
+		<issuedate>2026-10-20 16:56:57</issuedate>
+		<startdate>2026-11-09 00:00:00</startdate>
+		<endddate>2027-11-08 00:00:00</endddate>
+		<division></division>
+		<division2></division2>
+		<jobpriority>1</jobpriority>
+		<positiontype>2</positiontype>
+		
+		<ratemin></ratemin>
+		<ratemax></ratemax>
+		<rateper></rateper>
+		<onsiteflexibility>0</onsiteflexibility>
+		<jobdescription><![CDATA[<div style="font-family: Arial; font-size: 11pt;"> <p><strong>Genesis10 is currently seeking a Software Test Engineer for a hybrid position (3 days onsite per week) with a Global Financial Institution located in Charlotte, NC. This is a 12+ month contract opportunity.</strong></p> <p>This role is responsible for testing and delivering complex software requirements to accomplish business outcomes. The ideal candidate will ensure that software is tested to meet functional, non-functional, and compliance requirements by building and executing both manual and automated test suites, recording and communicating test results, and assisting with triaging defects.</p> <p><strong>Responsibilities:</strong></p> <ul> <li>Develop detailed, comprehensive, and well-structured test cases based on functional, non-functional, and compliance requirements</li> <li>Lead test planning at a team level, ensuring stories are well refined and contain clear acceptance criteria</li> <li>Implement the test framework for the team and lead test case reviews</li> <li>Identify automation opportunities and develop test automation for applicable test types</li> <li>Condition and generate test data, ensuring data compliance requirements are met on all levels of test environments</li> <li>Execute manual and automated test cases, record test results, and report issues and defects</li> <li>Participate in triaging reported issues/defects and assist with resolving or escalating them as necessary</li> <li>]]></jobdescription>
+	</job>
+<job>		
+		<ID>5</ID>
+		<jobdivaid>29496809</jobdivaid>
+		<jobdiva_no>26-11401</jobdiva_no>
+		<optional_ref>26-11401</optional_ref>
+		<portal_url><![CDATA[https://www2.jobdiva.com/candidates/myjobs/openjob_outside.jsp?a=testportal123&from=COMP&id=29496809&SearchString=&StatesString=]]></portal_url>
+		<title><![CDATA[Starburst Engineer]]></title>
+		
+		<location>NC - Charlotte</location>
+		<issuedate>2026-10-20 16:50:26</issuedate>
+		<startdate>2026-11-09 00:00:00</startdate>
+		<endddate>2027-11-12 00:00:00</endddate>
+		<division></division>
+		<division2></division2>
+		<jobpriority>5</jobpriority>
+		<positiontype>2</positiontype>
+		
+		<ratemin></ratemin>
+		<ratemax></ratemax>
+		<rateper></rateper>
+		<onsiteflexibility>50</onsiteflexibility>
+		<jobdescription><![CDATA[<div style="font-family: Arial; font-size: 11pt;"> <p><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;"><strong>Genesis10 is currently seeking a Starburst Engineer for a contract position with a Global Financial Institution located in Charlotte, NC. This is a 12+ month contract opportunity.</strong></span></span></p> <p><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;">We are seeking an experienced Starburst Engineer with strong hands-on implementation and configuration experience integrating Oracle data sources with Starburst. The ideal candidate will be responsible for configuring Starburst connectivity to Oracle databases, enabling federated SQL access to Oracle schemas, tables, and views, and supporting data querying and retrieval through the Starburst platform. This role requires practical experience with Starburst catalogs and connectors, Oracle connectivity, SQL troubleshooting, and DevOps practices.</span></span></p> <p><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;"><strong>Responsibilities:</strong></span></span></p> <ul> <li><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;">Implement, configure, and maintain Starburst connectivity to Oracle data sources using Starburst catalogs and Oracle connectors</span></span></li> <li><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;">]]></jobdescription>
+	</job>
+<job>		
+		<ID>6</ID>
+		<jobdivaid>29496750</jobdivaid>
+		<jobdiva_no>26-11400</jobdiva_no>
+		<optional_ref>711-1</optional_ref>
+		<portal_url><![CDATA[https://www2.jobdiva.com/candidates/myjobs/openjob_outside.jsp?a=testportal123&from=COMP&id=29496750&SearchString=&StatesString=]]></portal_url>
+		<title><![CDATA[Customer Service Representative - Onsite]]></title>
+		
+		<location>WI - Mauston</location>
+		<issuedate>2026-10-20 16:42:15</issuedate>
+		<startdate>2026-11-09 00:00:00</startdate>
+		<endddate>2027-05-07 00:00:00</endddate>
+		<division></division>
+		<division2></division2>
+		<jobpriority>3</jobpriority>
+		<positiontype>2</positiontype>
+		
+		<ratemin></ratemin>
+		<ratemax></ratemax>
+		<rateper></rateper>
+		<onsiteflexibility>0</onsiteflexibility>
+		<jobdescription><![CDATA[<div style="font-family: Arial; font-size: 11pt;"> <p><span style="font-size:11pt;"><strong>Genesis10 is currently seeking a Customer Service Representative - Onsite for a contract position with a Global Manufacturing Company located in Mauston, WI.<br /> <br /> Compensation: $20.00 per hour, W2</strong><br /> <br /> <strong>Position Overview:</strong><br /> This role joins a customer support team and is responsible for the planning of orders and daily communication with a wide range of customer accounts. The position requires working collaboratively with various internal departments in a fast-paced environment.</span></p> <p><span style="font-size:11pt;"><strong>Key Responsibilities:</strong></span></p> <ul> <li><span style="font-size:11pt;">Plan orders and communicate with customers daily</span></li> <li><span style="font-size:11pt;">Multi-task and respond to customer needs in a fast-paced environment</span></li> <li><span style="font-size:11pt;">Work with people from various departments within the company</span></li> </ul> <p><span style="font-size:11pt;"><strong>Primary Requirements:</strong></span></p> <ul> <li><span style="font-size:11pt;">High School diploma or equivalent</span></li> <li><span style="font-size:11pt;">Good written and verbal communication skills</span></li> <li><span style="font-size:11pt;">Must be able to work on site in Mauston, WI</span></li> </ul> <p><span style="font-size:11pt;"><strong>Desired Skills:</strong></span></p> <ul> <li>]]></jobdescription>
+	</job>
+<job>		
+		<ID>7</ID>
+		<jobdivaid>29496425</jobdivaid>
+		<jobdiva_no>26-11398</jobdiva_no>
+		<optional_ref>SMBCADJP00001547</optional_ref>
+		<portal_url><![CDATA[https://www2.jobdiva.com/candidates/myjobs/openjob_outside.jsp?a=testportal123&from=COMP&id=29496425&SearchString=&StatesString=]]></portal_url>
+		<title><![CDATA[Python Full Stack Developer - Hybrid]]></title>
+		
+		<location>NC - Charlotte</location>
+		<issuedate>2026-10-20 16:11:27</issuedate>
+		<startdate>2026-10-26 00:00:00</startdate>
+		<endddate>2027-10-22 00:00:00</endddate>
+		<division></division>
+		<division2></division2>
+		<jobpriority>3</jobpriority>
+		<positiontype>2</positiontype>
+		
+		<ratemin></ratemin>
+		<ratemax></ratemax>
+		<rateper></rateper>
+		<onsiteflexibility>50</onsiteflexibility>
+		<jobdescription><![CDATA[<div style="font-family: Arial; font-size: 11pt;"> <p style="margin-top:0; margin-bottom:8pt;"><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;"><strong>Genesis10 is currently seeking a Python Full Stack Developer - Hybrid position with a Global Financial Institution located in Charlotte, NC. This is a 12 month contract opportunity.</strong></span></span></p> <p style="margin:8pt 0;"><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;">This role involves developing highly scalable applications using Core Python and web frameworks such as Django, Flask, or FastAPI. The ideal candidate will have strong experience with SQL, Azure environments, and an understanding of the financial and risk management domains.</span></span></p> <p style="margin-top:14pt; margin-bottom:0;"><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;"><strong>Requirements:</strong></span></span></p> <ul style="margin-top:4pt; margin-bottom:0;"> <li><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;">8 years of prior experience as a developer in the required technologies</span></span></li> <li><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;">Develop highly scalable applications in Core Python</span></span></li> <li><span style="font-size:11pt;"><span style="font-family:Arial,Helvetica,sans-serif;">]]></jobdescription>
+	</job>
+<job>		
+		<ID>8</ID>
+		<jobdivaid>29496156</jobdivaid>
+		<jobdiva_no>26-11397</jobdiva_no>
+		<optional_ref>DEXJP00004852</optional_ref>
+		<portal_url><![CDATA[https://www2.jobdiva.com/candidates/myjobs/openjob_outside.jsp?a=testportal123&from=COMP&id=29496156&SearchString=&StatesString=]]></portal_url>
+		<title><![CDATA[Technical Writer - Medical Device - Remote]]></title>
+		
+		<location>CA - San Diego</location>
+		<issuedate>2026-10-20 15:39:14</issuedate>
+		<startdate>2026-11-09 00:00:00</startdate>
+		<endddate>2028-05-09 00:00:00</endddate>
+		<division></division>
+		<division2></division2>
+		<jobpriority>3</jobpriority>
+		<positiontype>3</positiontype>
+		
+		<ratemin></ratemin>
+		<ratemax></ratemax>
+		<rateper></rateper>
+		<onsiteflexibility>100</onsiteflexibility>
+		<jobdescription><![CDATA[<div style="font-family: Arial; font-size: 11pt;"> <p><span style="font-size:11pt;"><strong>Genesis10 is currently seeking a Technical Writer - Remote position with a Global Medical Technology Company located in San Diego, CA. This is an 18+ month contract to hire opportunity.<br /> <br /> Compensation: $31.00 - $41.00 per hour, W2, based on qualifications</strong><br /> <br /> <strong>Position Overview:</strong><br /> As a <strong>Technical Writer</strong>, you will work with technical implementation teams to create and edit high-quality technical documentation for software and data solutions for mobile applications. This role involves detailing software and system architecture, ensuring compliance with a Quality Management System, and continuously improving technical writing processes and style guidelines.</span></p> <p><span style="font-size:11pt;"><strong>Key Responsibilities:</strong></span></p> <ul> <li><span style="font-size:11pt;">Work with technical implementation teams to understand and document product requirements</span></li> <li><span style="font-size:11pt;">Create, and edit high-quality technical documentation detailing software and data solutions for mobile applications, including software and system architecture, design, and product requirements</span></li> <li><span style="font-size:11pt;">Assist in the creation and submission of documentation required for compliance with our Quality Management System</span></li> <li><span style="font-size:11pt;">]]></jobdescription>
+	</job>
+</jobs>
+</outertag>

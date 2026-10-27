@@ -29,7 +29,8 @@ test('INSPYR: the open job feed is read as jobs, technology titles only, with ki
   }
   assert.ok(jobs.some(j => j.engagement === 'Right to Hire') && jobs.some(j => j.engagement === 'Direct Placement') && jobs.some(j => j.engagement === 'Contract'))
   assert.equal(jobs.find(j => j.title === 'Program Manager III').payRange, '$62 – $82/hr', 'pay is read from the description: the salary fields are empty on this site')
-  assert.equal(jobs.find(j => j.title === 'Payroll Service Delivery Analyst').payRange, '$28/hour – $36/hour')
+  assert.equal(jobs.find(j => j.title === 'Senior Business Analyst').payRange, '$55 to $70 per hour')
+  assert.ok(!jobs.some(j => /Payroll/.test(j.title)), 'a payroll analyst is not technology work (21 Oct 2026)')
   assert.throws(() => inspyrPage('{"code":"rest_no_route"}'), /did not come back/)
 })
 

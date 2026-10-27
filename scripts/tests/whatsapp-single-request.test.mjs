@@ -63,7 +63,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     '@/lib/whatsapp-trace': { trace: () => {} },
     // Delivery callbacks for inbox alerts (538d77d3, 22 Oct); no status callback is sent here.
     '@/lib/mail-update-store': { recordUpdateProviderStatus: async () => true },
-    '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/role-match': {}, '@/lib/library-choose': {}, '@/lib/chief-approvals': {}, '@/lib/resume-library-store': {}, '@/lib/resume-library': {},
+    '@/lib/library-pick-store': {}, '@/lib/library-pick': {}, '@/lib/role-match': {}, '@/lib/library-choose': {}, '@/lib/chief-approvals': {}, '@/lib/resume-library-store': {}, '@/lib/resume-library': {}, '@/lib/made-floor': {},
     '@/lib/library-agent': {}, '@/lib/keywords': {}, '@/lib/resumeOrganization': {},
   }
   const { generate, captionFor } = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { generate, captionFor };')
@@ -87,6 +87,11 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
   assert.equal(saved.resumePath, undefined)
   assert.equal(saved.jd, undefined)
   const caption = captionFor('Eshwar', { role: 'Engineer' }, { coverage: 63, quality: { status: 'needs_review' } })
+  const gapCaption = captionFor('Eshwar', {}, { coverage: 28.5, quality: { status: 'needs_review', missing: ['f5', 'cisco'] } })
+  assert.ok(gapCaption.includes('28.5%'))
+  assert.ok(gapCaption.includes('Not covered in this file: f5, cisco'))
+  assert.ok(!gapCaption.includes('cut short'))
+  assert.ok(!gapCaption.includes('could add'))
   assert.ok(caption.includes('63%'))
   assert.ok(caption.includes('incomplete'))
   assert.ok(!caption.includes('Draft:'))

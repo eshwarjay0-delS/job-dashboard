@@ -125,7 +125,7 @@ test('inside the chosen email the closest resume wins, and never one of another 
   assert.deepEqual(rankFor(all, 'nobody@x.com', asked), { ranked: [], builtOnAlready: 0 })
   // Said to the person before the work starts. The email is said first by the bot, on its own.
   assert.equal(saidOf(ranked[0]), 'your *SOC Analyst - Kestrel* resume (in SIEM and Incident Response), which already shows 3 of the 4 things this job asks for')
-  assert.equal(saidOf(ranked[0], "because its title is the job's: SOC Analyst"), "your *SOC Analyst - Kestrel* resume (in SIEM and Incident Response). I chose it because its title is the job's: SOC Analyst. It already shows 3 of the 4 things this job asks for")
+  assert.equal(saidOf(ranked[0], "because its title matches the job's role: SOC Analyst"), "your *SOC Analyst - Kestrel* resume (in SIEM and Incident Response). I chose it because its title matches the job's role: SOC Analyst. It already shows 3 of the 4 things this job asks for")
   assert.ok(!read('src/app/api/whatsapp/webhook/route.ts').includes('selectedEmailSource('))
 })
 

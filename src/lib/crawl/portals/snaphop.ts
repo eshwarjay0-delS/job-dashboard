@@ -1,4 +1,4 @@
-// Eliassen and System One both run their careers site on SnapHop's recruiting portal, whose job lists are drawn on the
+// Eliassen, System One and Addison run their careers site on SnapHop's recruiting portal, whose job lists are drawn on the
 // server: a <li class="list-group-item"> per job holding the job's address, title (h3), place, a snippet and the date.
 // One reader for both. The job's kind (contract, contract to hire) is not on the card; it is the filter the list was
 // asked for with.
@@ -13,9 +13,11 @@ function isoDate(s: string): string | undefined {
 
 /** The jobs on one list page, each with `engagement`; `base` is the portal's own address. A page with none gives []. */
 export function readCards(html: string, base: string, engagement: string): RawJob[] {
-  return splitCards(html, /<li class="list-group-item">\s*(?=<a href="\/job\/)/).flatMap((chunk): RawJob[] => {
+  // A job's address is /job/... on a portal of its own (Eliassen, System One) and /jobs/job/... when the board sits inside
+  // the firm's site (Addison).
+  return splitCards(html, /<li class="list-group-item">\s*(?=<a href="(?:\/[\w-]+)?\/job\/)/).flatMap((chunk): RawJob[] => {
     const card = chunk.split("</li>")[0]
-    const href = card.match(/<a href="(\/job\/[^"?]+)/)?.[1]
+    const href = card.match(/<a href="((?:\/[\w-]+)?\/job\/[^"?]+)/)?.[1]
     const title = clean(card.match(/<h3>([\s\S]*?)<\/h3>/)?.[1] || "")
     if (!href || !title) return []
     const place = clean(card.match(/<strong>([\s\S]*?)<\/strong>/)?.[1] || "")

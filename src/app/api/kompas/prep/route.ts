@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { callLLM, resolveKeys } from "@/lib/llm"
+import { parsePrepPack, prepFailureReason } from "@/lib/kompasPrepPack"
 import { checkRateLimit } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
@@ -46,6 +47,9 @@ export async function POST(request: NextRequest) {
     const keys = resolveKeys({})
     const { text } = await callLLM({
       keys, purpose: "kompas:prep", tier: "heavy",
+      // Built while the person sets up, so it may take longer than a live answer: measured 26 Oct, the shared per-call
+      // deadline cut prep off ("provider timed out") on half the evaluation chains. Under this route's 60 s maxDuration.
+      timeoutMs: 50_000,
       system: `You build an interview prep pack for a candidate, from their resume and the job description. Return ONLY valid JSON, no markdown fences, no commentary. Shape:
 {
   "identity": "2-3 sentence spoken identity: who they are, years, current focus",
@@ -57,8 +61,9 @@ Rules: 10-14 questions covering intro (tier 0), experience/STAR (tier 1), design
       user: `${facts}\n\nBuild the prep pack.`,
       maxTokens: 4000,
     })
-    const pack = JSON.parse(text) as Record<string, unknown>
-    if (!Array.isArray(pack.questions)) throw new Error("bad pack")
+    const read = parsePrepPack(text)
+    if (!read.ok) throw new Error(read.reason)
+    const pack = read.pack
     const questions = (pack.questions as unknown[]).slice(0, 20).map((q) => {
       const o = (q || {}) as Record<string, unknown>
       return {
@@ -80,7 +85,11 @@ Rules: 10-14 questions covering intro (tier 0), experience/STAR (tier 1), design
       projects,
       questions,
     }, { headers: NO_STORE })
-  } catch {
-    return NextResponse.json({ error: "Prep failed. The page retries automatically." }, { status: 502, headers: NO_STORE })
+  } catch (e) {
+    // The reason goes to the log and to the caller (no resume text, and of a provider's refusal only its name and status):
+    // a cut-off reply and a refused provider looked the same before, "Prep failed" and nothing else.
+    const reason = prepFailureReason(e)
+    console.warn("[kompas:prep] failed:", reason)
+    return NextResponse.json({ error: "Prep failed. The page retries automatically.", reason }, { status: 502, headers: NO_STORE })
   }
 }

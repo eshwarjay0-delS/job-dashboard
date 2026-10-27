@@ -16,6 +16,7 @@ import { scheduleSttRecord } from "@/lib/sttLedger"
 import { cleanupAllowed, restoreSpelling } from "@/lib/kompasTranscript"
 import { guardHallucinations, deLooped as guardDeLooped, decodeStats, needsSecondChance } from "@/lib/kompasGuard"
 import { accuracyPrompt, repairDictation } from "@/lib/kompasDictation"
+import { uploadMimeForContainer } from "@/lib/kompasAudioMime"
 
 export type SpeechPurpose = "flow" | "transcribe"
 export type SpeechCode = "too-large" | "empty" | "bad-audio" | "busy" | "unavailable"
@@ -206,7 +207,7 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
 
   const buildForm = (temperature: string, format: 'verbose_json' | 'json') => {
     const form = new FormData()
-    form.append("file", new Blob([input.audio as BlobPart], { type }), `audio.${container}`)
+    form.append("file", new Blob([input.audio as BlobPart], { type: uploadMimeForContainer(container, type) }), `audio.${container}`)
     form.append("model", model)
     form.append("response_format", format)
     form.append("temperature", temperature)

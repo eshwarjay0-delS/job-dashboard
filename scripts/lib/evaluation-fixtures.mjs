@@ -1,0 +1,13 @@
+export function fixtureName(value = 'interview-50') {
+ if (!['interview-50', 'intent-acceptance-v1'].includes(value)) throw Error('Unknown evaluation fixture')
+ return value
+}
+export function caseInput(c, sources, fixture) {
+ const key = fixture === 'interview-50' ? c.chain : c.id
+ const source = sources[key]
+ if (!['resume','jd'].every(k => typeof source?.[k] === 'string' && source[k].trim())) throw Error(`Missing approved resume/JD bundle for ${key}; zero model calls made.`)
+ const dependent = fixture !== 'interview-50' && ['intro-repeat','drilldown'].includes(c.category)
+ const history = source.history
+ if (dependent && (!Array.isArray(history) || !history.length || !history.every(t => typeof t?.q === 'string' && t.q.trim() && typeof t?.a === 'string' && t.a.trim()))) throw Error(`Missing reviewed prior history for ${key}; zero model calls made.`)
+ return { key, config: { resume: source.resume, jd: source.jd }, history: dependent ? history : [] }
+}
