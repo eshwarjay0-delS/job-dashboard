@@ -817,6 +817,7 @@ function renderCard() {
   $("question").textContent = draft || c.question;
   $("question").title = draft ? "Typed. Press AI Answer to include it." : (c.heard || "");
   const ul = $("answer"), keep = ul.scrollTop;
+  const nearBottom = ul.scrollHeight - keep - ul.clientHeight < 120;
   const lines = answerLines(c.answer);   // rendering is read-only (book rule, 23 Oct): showing a card never rewrites its stored answer, so flipping back and forth cannot lose or flatten a generated response
   ul.innerHTML = "";
   lines.forEach(({ t, kind, lang }) => {
@@ -834,6 +835,7 @@ function renderCard() {
   $("card").classList.toggle("streaming", !!c.streaming);
   wrapWords(ul);                                     // every word is addressable, for Follow along
   ul.scrollTop = keep;
+  if (c.req === answerCtl && nearBottom) ul.scrollTop = ul.scrollHeight;   // a streaming answer follows its tail while you are already near it; reading higher up is never yanked
   if (typeof followRendered === "function") followRendered(c);
 }
 // Wrap each word of the answer in <span class="w"> (skipping the pause pills) so Follow along can mark
@@ -1627,7 +1629,7 @@ function resetLiveState() {           // a new or exited session starts clean: n
 //  - two words that together are one letter from a known long term become it ("cyber arc" -> CyberArk);
 //  - a long lowercase word one letter from a known long term becomes it ("sentinal" -> Sentinel);
 //  - a lowercased CamelCase term gets its real casing ("powershell" -> PowerShell). Short English words are never touched.
-const DOMAIN_TERMS = "CyberArk PAS PVWA CPM PSM PSMP PTA EPM AIM CCP PACLI PAReplicate PrivateArk Vault LDAP LDAPS SAML OAuth OIDC RADIUS Kerberos NTLM MFA SSO SIEM SOAR EDR XDR Splunk Sentinel QRadar ServiceNow PowerShell Python REST API SSH RDP WinRM Azure AWS GCP Entra IAM PAM IGA SailPoint Okta BeyondTrust Delinea Thycotic HashiCorp Terraform Ansible Jenkins Kubernetes AKS EKS Docker Linux Unix Windows SQL Oracle SAP NIST SOX PCI HIPAA ISO CIS MITRE STRIDE OWASP SAST DAST Fortify Qualys Wiz CrowdStrike Defender Syslog SNMP TLS PKI HSM KMS JSON YAML GitHub GitLab ServiceNow Jira Confluence VMware vCenter ESXi".split(" ");
+const DOMAIN_TERMS = "CyberArk PAS PVWA CPM PSM PSMP PTA EPM AIM CCP PACLI PAReplicate PrivateArk Vault LDAP LDAPS SAML OAuth OIDC RADIUS Kerberos NTLM MFA SSO SIEM SOAR EDR XDR Splunk Sentinel QRadar ServiceNow PowerShell Python REST API SSH RDP WinRM Azure AWS GCP Entra IAM PAM IGA SailPoint Okta BeyondTrust Delinea Thycotic HashiCorp Terraform Ansible Jenkins Kubernetes AKS EKS Docker Linux Unix Windows SQL Oracle SAP NIST SOX PCI HIPAA ISO CIS MITRE STRIDE OWASP SAST DAST Fortify Qualys Wiz CrowdStrike Defender Syslog SNMP TLS PKI HSM KMS JSON YAML GitHub GitLab ServiceNow Jira Confluence VMware vCenter ESXi Zscaler Venafi Saviynt".split(" ");
 // Real acronyms are already right: a heard "CSA" or "CSV" is never "corrected" into CSF (self-play false positives, 2026-09-30).
 const KNOWN_ACRONYMS = new Set("AAA ACL AD AES AI AKS ALB AMI API APT ARP ASA ASN AWS AZ BGP BIA BYOD CA CASB CCPA CCP CDN CI CD CIA CIDR CIS CISA CISM CISO CISSP CLI CMDB CMMC CPU CRL CSA CSF CSP CSPM CSR CSRF CSV CTI CVE CVSS CWPP DAST DDoS DHCP DKIM DLP DMARC DMZ DNS DNSSEC DoD DoS DR DRP EC2 ECS EDR EKS ELB EPM ERP ETL FIDO FIM FIPS GCP GDPR GPO GRC HA HIDS HIPAA HIPS HMAC HR HSM HTTP HTTPS IaaS IaC IAM ICS IDP IdP IDS IGA IOC IOT IoT IP IPS IPsec IR ISMS ISO IT ITGC ITIL ITSM JIT JML JSON JWT KMS KPI KQL LAN LAPS LDAP LDAPS LLM MAC MDM MDR MFA ML MSSP MTTD MTTR NAC NAT NDR NGFW NIST NOC NTLM NTP OIDC OKR OS OSI OSINT OT OTP OWASP PaaS PAM PCI PHI PII PIM PKI PLC POC PSM PTA QA RACI RADIUS RASP RBAC RCA RDP REST RPO RSA RTO SaaS SAML SAST SBOM SCA SCADA SCIM SDLC SIEM SLA SMB SMTP SNMP SOAR SOC SOP SOX SPF SPL SQL SSDLC SSH SSL SSO SSPM STIX STRIDE TCP TLS TPM TTP TTPs UBA UDP UEBA URL USB UTM VLAN VM VPC VPN WAF WAN XDR XML XSS YAML ZTNA ISE IRM DN IEC STP IPC QMS LIMS CUCM BSOD RAM ROM GPU SSD HDD PC MDE DPA EOL SME PMO POA&M SSP ATO FedRAMP".split(" ").map(x => x.toUpperCase()));
 const HEADER_WORDS = /^(SUMMARY|SKILLS|PROJECTS?|EXPERIENCE|EDUCATION|CERTIFICATIONS?|PROFILE|OBJECTIVE|RESPONSIBILITIES|ACHIEVEMENTS|PROFESSIONAL|TECHNICAL|CORE|COMPETENCIES|TOOLS|REFERENCES)$/;
@@ -1692,6 +1694,8 @@ const PHRASE_FIXES = [
   [/\bnessus\b/gi, "Nessus"],
   [/\bsplunk\b/gi, "Splunk"],
   [/\bfifth\s+third\b/gi, "Fifth Third"],
+  [/\b(?:zee|see)\s+scaler\b/gi, "Zscaler"],
+  [/\bven\s+a\s+fi\b/gi, "Venafi"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");
@@ -1742,9 +1746,9 @@ function heardDraft(lines, screen, answerText) {
     bits.push(text);
   }
   // The Heard line is a live caption, not the record (the drawer holds every
-  // line): show only the freshest phrase, never the whole backlog.
-  const tail = bits.length ? bits[bits.length - 1] : "";
-  return tail.length > 200 ? "…" + tail.slice(-200) : tail;
+  // line): show the last four phrases, rolling forward as new lines arrive.
+  const q = bits.slice(-4).join(" ");
+  return q.length > 600 ? "…" + q.slice(-600) : q;
 }
 function onTranscript(who, text) {
   text = fixTerms(fixPhrases(text));
@@ -2265,7 +2269,10 @@ async function aiAnswer(fromAuto) {
       finally { flushing = false; }
     }
     if (sessionEpoch !== transcriptionEpoch) return;
-    const pending = pendingHeard();
+    // Formation window (owner, 26 Oct): the last 8 heard lines are enough to
+    // form and cut a question. Older lines stay in the transcript and reach
+    // the answer as earlier context — they are not re-formed into questions.
+    const pending = pendingHeard().slice(-8);
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
     if (transcriptionFailedEpoch === sessionEpoch && !pending.length && !typedText) {

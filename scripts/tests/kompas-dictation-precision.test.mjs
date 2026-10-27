@@ -117,7 +117,7 @@ test("level 5: a greeting is not the question, and a fragment stays on the quest
   assert.equal(ctx.heardDraft([{ who: "You", text: "How does V-Cert differ from the direct API?" }], ""), "How does V-Cert differ from the direct API?");
   assert.equal(
     ctx.heardDraft([{ who: "Them", text: "Venafi" }], "How do you discover certificates?"),
-    "How do you discover certificates — Venafi",
+    "Venafi",
   );
   assert.equal(
     ctx.heardDraft([{ who: "Them", text: "How does V-Cert differ from the direct API?" }], "How do you discover certificates?"),

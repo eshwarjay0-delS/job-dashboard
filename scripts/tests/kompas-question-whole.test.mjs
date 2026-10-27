@@ -80,6 +80,7 @@ test('a dictated story plus the real question cuts to the question only (owner, 
   ].join(' ')
   const out = questionToAnswer(heard, '', false)
   assert.ok(out.toLowerCase().includes('distinguish certificate pinning'), `keeps the ask, got: ${out}`)
+  assert.ok(out.toLowerCase().includes('mutual tls'), `keeps the question keywords, got: ${out}`)
   assert.ok(out.toLowerCase().includes('how would you investigate that'), `keeps the last ask, got: ${out}`)
   assert.ok(!/nosebleed|dad died|lost my job/i.test(out), `drops the story, got: ${out}`)
 })
