@@ -11,7 +11,7 @@ export type SharedKompasSession = {
   ledger?: unknown
   pending?: { requestId: string; question: string; expiresAt: number }
 }
-type Store = Pick<typeof blob, 'list' | 'getText' | 'putIfAbsent'>
+type Store = Pick<typeof blob, 'getText' | 'putIfAbsent'>
 const account = (id: string) => {
   if (!id.trim()) throw new Error('Verified account required')
   return createHash('sha256').update(id).digest('hex')
@@ -25,12 +25,30 @@ const prefix = (owner: string, id: string) => {
 export function sharedKompasStore(storage: Store = blob) {
   async function read(owner: string, id: string): Promise<SharedKompasSession | null> {
     const base = prefix(owner, id)
-    const keys = (await storage.list(base)).filter(k => /^\d{10}\.json$/.test(k.slice(base.length))).sort()
-    if (!keys.length) return null
-    const raw = await storage.getText(keys[keys.length - 1])
-    if (!raw) throw new Error('Session revision unavailable')
+    // All committed revisions are contiguous, starting at zero. Listing the R2
+    // bucket required ListObjectsV2 permission that was never needed for reads and
+    // broke live WhatsApp Kompas even when message receipts and creates succeeded.
+    // Probe only exact keys with GetObject: O(log revisions), safe for long sessions.
+    const get = (revision: number) => storage.getText(base + String(revision).padStart(10, '0') + '.json')
+    const first = await get(0)
+    if (first === null) return null
+    const MAX = 9_999_999_998
+    let low = 0, high = 1
+    while (high <= MAX && await get(high) !== null) {
+      low = high
+      if (high >= Math.floor(MAX / 2)) { high = MAX + 1; break }
+      high *= 2
+    }
+    if (high > MAX) high = MAX + 1
+    while (high - low > 1) {
+      const mid = low + Math.floor((high - low) / 2)
+      if (await get(mid) !== null) low = mid
+      else high = mid
+    }
+    const raw = low === 0 ? first : await get(low)
+    if (raw === null) throw new Error('Session revision unavailable')
     const value = JSON.parse(raw) as SharedKompasSession
-    if (value.owner !== owner || value.id !== id) throw new Error('Session ownership mismatch')
+    if (value.owner !== owner || value.id !== id || value.revision !== low) throw new Error('Session ownership or revision mismatch')
     return value
   }
   async function create(owner: string): Promise<SharedKompasSession> {

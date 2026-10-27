@@ -74,7 +74,7 @@ runInNewContext(compiled("src/lib/whatsapp-kompas-channel.ts"), {
     } },
     "@/lib/kompas-session-store": { sharedKompasStore: () => store },
     "@/lib/kompas-shared-turn": { sharedKompasTurn: sharedTurn },
-    "@/lib/whatsapp-kompas": { kompasTransition: reducer.exports.kompasTransition },
+    "@/lib/whatsapp-kompas": { kompasTransition: reducer.exports.kompasTransition, classifyKompasPastedSource: reducer.exports.classifyKompasPastedSource },
   })[key] || nodeRequire(key),
   Buffer, Date,
 })
@@ -229,4 +229,49 @@ test("16. Explicit Use 2 profile switching avoids the Kompas storage preconditio
   assert.match(webhook.slice(profile, kompas), /\(\?:use\|switch/)
   const select = webhook.indexOf("const email = choiceIn(text", kompas)
   assert.ok(select > kompas, "Existing resume selection must remain behind the shortcut")
+})
+
+test("17. Pasted job description first, then Resume.docx, preserves both sources", async () => {
+  reset()
+  await execute(t("kompas"))
+  const jd = "Title: Security Engineer\nOrganization: Information Technology\nPosition: Contract Hire\nPRIMARY LOCATION: New York, NY\nClient: LPL Financial\nDESCRIPTION: The Security Engineer will be responsible for helping develop, mature and sustain the Application Security program."
+  const first = await execute(t(jd))
+  assert.match(first.sent[0], /Send your resume/)
+  const second = await execute(d("resume", "Eshwar_Resume.docx"))
+  assert.match(second.sent[0], /Sources received/)
+  const state = [...sessions.values()][0]
+  assert.equal(state.sources.jd, jd)
+  assert.equal(state.sources.resume, "Verified resume contents")
+  assert.equal((await execute(t("start"))).sent[0].includes("Ready for your questions"), true)
+  assert.equal((await execute(t("Explain vulnerability management"))).sent[0], "The grounded answer")
+})
+test("18. Resume and pasted JD are accepted even if received concurrently", async () => {
+  reset()
+  await execute(t("kompas"))
+  const jd = "Title: Application Security Engineer\nPosition: Full Time\nClient: Banking Institution\nDESCRIPTION: This role will be responsible for threat modeling, security testing, and vulnerability management in distributed systems."
+  await Promise.all([execute(t(jd)), execute(d("resume", "Eshwar_Resume.docx"))])
+  const state = [...sessions.values()][0]
+  assert.equal(state.sources.jd, jd)
+  assert.equal(state.sources.resume, "Verified resume contents")
+})
+test("19. Previously mistaken JD in resume slot is automatically corrected", async () => {
+  reset()
+  await execute(t("kompas"))
+  const jd = "Title: Security Engineer\nOrganization: Banking\nPosition: Contract\nClient: LPL Financial\nDESCRIPTION: The engineer will be responsible for AppSec and vulnerability management, with direct enterprise security responsibilities."
+  const entry = [...sessions.entries()][0]
+  const legacy = entry[1]
+  sessions.set(entry[0], {...legacy, revision: legacy.revision + 1, sources: {...legacy.sources, resume: jd}})
+  const result = await execute(d("resume", "Eshwar_Resume.docx"))
+  assert.match(result.sent[0], /Sources received/)
+  const state = [...sessions.values()][0]
+  assert.equal(state.sources.jd, jd)
+  assert.equal(state.sources.resume, "Verified resume contents")
+})
+test("20. Source setup does not depend on R2 ListObjectsV2 permission", async () => {
+  reset()
+  await execute(t("kompas"))
+  await execute(d("resume", "resume.docx"))
+  await execute(d("jd", "job.pdf"))
+  assert.equal(calls, 0)
+  assert.equal((await execute(t("TLS"))).sent[0], "The grounded answer")
 })
