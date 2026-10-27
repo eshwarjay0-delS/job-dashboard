@@ -156,14 +156,39 @@ export async function sendDocument(to: string, data: Buffer, filename: string, c
 }
 
 /** Download an inbound attachment: media id → signed URL → bytes. */
-export async function downloadMedia(mediaId: string): Promise<Buffer> {
+export async function downloadMedia(mediaId: string, maxBytes?: number): Promise<Buffer> {
   const meta = await fetch(`${GRAPH}/${mediaId}`, { headers: auth(), signal: AbortSignal.timeout(20000) })
   if (!meta.ok) throw new Error(`WA media meta ${meta.status}`)
   const { url } = await meta.json() as { url: string }
   // The CDN URL still requires the bearer token.
   const bin = await fetch(url, { headers: auth(), signal: AbortSignal.timeout(30000) })
   if (!bin.ok) throw new Error(`WA media fetch ${bin.status}`)
-  return Buffer.from(await bin.arrayBuffer())
+  if (maxBytes === undefined) return Buffer.from(await bin.arrayBuffer())
+  if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) throw new Error("Invalid media size limit")
+  const size = Number(bin.headers.get("content-length"))
+  if (Number.isFinite(size) && size > maxBytes) {
+    await bin.body?.cancel()
+    throw new Error("WhatsApp attachment exceeds size limit")
+  }
+  if (!bin.body) {
+    const bytes = Buffer.from(await bin.arrayBuffer())
+    if (bytes.length > maxBytes) throw new Error("WhatsApp attachment exceeds size limit")
+    return bytes
+  }
+  const reader = bin.body.getReader()
+  const chunks: Buffer[] = []
+  let total = 0
+  while (true) {
+    const item = await reader.read()
+    if (item.done) break
+    total += item.value.byteLength
+    if (total > maxBytes) {
+      await reader.cancel()
+      throw new Error("WhatsApp attachment exceeds size limit")
+    }
+    chunks.push(Buffer.from(item.value))
+  }
+  return Buffer.concat(chunks, total)
 }
 
 export type WhatsAppButton = { id: string; title: string }
