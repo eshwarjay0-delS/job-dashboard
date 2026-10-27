@@ -69,8 +69,11 @@ export function canonicalQuestion(q: string, tier: Tier): string {
  * pays its reasoning from the same ceiling as the answer, so a hard follow-up can spend nearly all of it reasoning.
  */
 export function cutShort(finish: string, text: string, targetWords: number): boolean {
-  const words = String(text || "").split(/\s+/).filter(Boolean).length
-  return finish === "length" && words < Math.max(25, Math.round(targetWords * 0.35))
+  if (finish !== "length") return false
+  const t = String(text || "").trim()
+  const words = t.split(/\s+/).filter(Boolean).length
+  // Also stopped mid-sentence: the intent baseline's comparison answers ended on "or same" with the mitigation missing.
+  return words < Math.max(25, Math.round(targetWords * 0.35)) || !/[.!?]["')\]]*$/.test(t)
 }
 
 const NOT_A_TERM =/^(?:next|continue|go on|go ahead|repeat|again|pause|stop|wait|done|skip|more|same|okay|ok|yes|no|thanks|thank you|hello|hi|hey)\b/i
