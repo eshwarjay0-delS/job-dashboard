@@ -2388,7 +2388,12 @@ async function aiAnswer(fromAuto) {
       // whole, and answer that. Frequency of pressing is the miss signal.
       const answeredText = typeof cur.answer === "string" ? cur.answer : (cur && cur.answer || []).join("\n");
       const typedOwn = !!typedText && typedStandsAlone(typedText);   // a typed question of its own gets its own card
-      const isRepress = !fromAuto && !typedOwn && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
+      // A new question in what was heard since the last answer is a new page, not a re-press. Owner's live session, 27 Oct
+      // 2026: every press after the first counted as a re-press of the page on screen, so the old question was formed and
+      // answered again ("could you explain what dependency confusion is?" got the host-header answer; "multiple tools
+      // reporting the same vulnerability" got the password-reset answer). A press with nothing new asked still re-asks.
+      const newAsk = !typedText && pending.some(t => Q_CUE.test(t.text) && echoShare(t.text, cur && cur.question || "") < 0.6);
+      const isRepress = !fromAuto && !typedOwn && !newAsk && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
       if (isRepress) {
         const previous = transcript.filter(t => t.seq <= answeredSeq).slice(-40);
         const combined = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You", previous, currentQuestion: cur.question });

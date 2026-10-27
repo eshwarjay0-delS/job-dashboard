@@ -181,3 +181,11 @@ test('voice repair never cuts a condition that is still open into a claim of its
   const s = 'I would abandon the leading hypothesis the moment the nslookup returns the correct IP, the route table shows no overlap, the HAR shows the correct Zscaler proxy, and the NAC status is compliant, because those combined evidences prove the problem lies elsewhere.'
   assert.doesNotMatch(voiceRepair(s) || s, /proxy\. The NAC status is compliant/)
 })
+
+// Owner's live session, 27 Oct 2026: Director answers opened "as the Chief Information Security Officer (CISO)" and "as noted
+// by the decision owner, Alice Smith". His wording ("Name the decision owner in that sentence") stays; the owner is a role.
+test('the director owner is a role, never an invented person or a title the resume does not hold', () => {
+  const svc = readFileSync(new URL('../../src/lib/kompasAnswerService.ts', import.meta.url), 'utf8')
+  assert.match(svc, /Name the decision owner in that sentence\. Before closing/)
+  assert.match(svc, /The decision owner is a role in the organisation \(the business owner of the platform, the risk owner, security leadership\), never a person's name, and the candidate keeps the title the resume gives: never speak as a CISO or any title the resume does not hold\./)
+})

@@ -90,3 +90,27 @@ test("pressing AI Answer again with nothing typed re-asks the same question on t
   assert.equal(s.cards[1].question, OLD_Q);
   assert.equal(asked[0].opts.reask, true);
 });
+
+// Owner's live session, 27 Oct 2026 (session log read back from the desktop): after the first answer every press was a
+// re-press of the page on screen, so the old question was formed and answered again.
+function heardSession(lines) {
+  const h = session("");
+  h.s.pendingHeard = () => lines.map((text, i) => ({ seq: 2 + i, who: "You", text }));
+  h.s.composeIntake = h.s.composeIntake;   // the real intake from app.js
+  return h;
+}
+test("a new question heard since the last answer opens a new page and is not a re-press", async () => {
+  const { s, asked } = heardSession(["Alright, could you explain what dependency confusion is?", "So yeah, Dependency"]);
+  await s.aiAnswer(false);
+  assert.equal(s.cards.length, 2);
+  assert.equal(s.cards[0].answer, OLD_A, "the answered page stays as it was");
+  assert.equal(asked[0].card, s.cards[1]);
+  assert.notEqual(asked[0].opts.reask, true, "a new question is answered as new, not as the old one again");
+  assert.doesNotMatch(String(asked[0].heard), /Current question \(on screen\)/);
+});
+test("a press with nothing new asked is still a re-press (the 21 Oct rule), on the next page", async () => {
+  const { s, asked } = heardSession(["and I also checked the proxy logs for that host"]);
+  await s.aiAnswer(false);
+  assert.equal(s.cards.length, 2);
+  assert.equal(asked[0].opts.reask, true);
+});

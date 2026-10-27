@@ -814,7 +814,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     `QUESTION TYPE: ${why} (tier ${tier}). ${rule}`,
     `INTERVIEW MODE: ${modeBlock(tier, question, level)}`,
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
-    level === "director" ? `DIRECTOR OPENING (this overrides the shape's opening sentence): sentence one states the decision — what you are doing — not a definition and not an axis. Name the decision owner in that sentence. Before closing, name the measures you will track, each as a named measure, never a vague promise to monitor.` : "",
+    level === "director" ? `DIRECTOR OPENING (this overrides the shape's opening sentence): sentence one states the decision — what you are doing — not a definition and not an axis. Name the decision owner in that sentence. Before closing, name the measures you will track, each as a named measure, never a vague promise to monitor. The decision owner is a role in the organisation (the business owner of the platform, the risk owner, security leadership), never a person's name, and the candidate keeps the title the resume gives: never speak as a CISO or any title the resume does not hold.` : "",
     `LENGTH TARGET: about ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Hit it — a quick factual ask gets a short answer, a deep dive gets room.`,
     depthGuidance,
     tier !== 0 && routedProject
