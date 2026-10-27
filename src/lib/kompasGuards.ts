@@ -1,4 +1,4 @@
-import { isLocationSeg } from "../../src/lib/kompasResume.ts"
+import { resumeRoles, type ResumeRole, type ResumeRoles } from "../../src/lib/kompasResume.ts"
 // Kompas grounding guards — anti-hallucination code ported from perfACT's
 // interview engine (copilot/api/answer.js). Prompt rules are wishes; these are
 // guarantees: figures, employers, titles, dates and places in a spoken answer
@@ -280,65 +280,11 @@ export function finishCleanly(text: string): string {
 }
 
 // ------------------------------------------------------- resume role parse ---
-// One parser for every common resume layout (perfACT self-play over 15
-// resumes, 2026-09-30): "Cigna Healthcare — IAM Team Lead | Texas | Sep 2023 –
-// Present", "Fifth Bank" / "Senior Security Engineer | Nov 2023 – Present",
-// "Security Analyst, Acme | 2019 - 2021". Section headers, locations and
-// education lines are skipped.
-const MONTH = "(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?\\s+"
-const ROLE_DATES = new RegExp(
-  `\\b(?:${MONTH})?(?:19|20)\\d{2}\\s*(?:[–—-]|to)\\s*(?:(?:${MONTH})?(?:19|20)\\d{2}|present|current|now|till date|date)\\b`, "i")
+// One parser, in kompasResume.ts. This file kept its own copy until 27 Oct 2026, and the copy missed the parser's fixes:
+// it still read "Senior Endpoint Security | Citi Bank" as employer "Senior Endpoint Security", title "Citi Bank".
 const TITLE_WORDS = /\b(engineer|analyst|developer|manager|architect|lead|consultant|specialist|administrator|admin|intern|director|officer|associate|scientist|designer|tester|responsibilities|experience|summary|education)\b/i
-const HEADER_LINE = /^[A-Z0-9 &/,.()'-]{4,}$/
-const EDU_LINE = /\b(university|college|institute|school|academy|b\.?\s?tech|b\.?\s?e\.?\b|m\.?\s?s\.?\b|m\.?\s?tech|bachelor|master'?s?|ph\.?\s?d|degree|diploma)\b/i
-
-interface ParsedRole { at: number; headAt: number; org: string; title: string; dates: string; current: boolean }
-
-function parseRoles(lines: string[]): ParsedRole[] {
-  const out: ParsedRole[] = []
-  lines.forEach((l, i) => {
-    if (l.length > 160 || !ROLE_DATES.test(l)) return
-    const bare = l.replace(/^[•▪●\-*\uFFFD]\s*/, "")
-    if (EDU_LINE.test(bare)) return
-    let p = i - 1
-    while (p >= 0 && !lines[p]) p--
-    const prev = p >= 0 ? lines[p] : ""
-    const dates = (bare.match(ROLE_DATES) || [""])[0]
-    let segs = bare.replace(ROLE_DATES, "").split(/\s*[|•·]\s*/).map((x) => x.replace(/^[\s,–—-]+|[\s,–—-]+$/g, "").trim()).filter(Boolean)
-    segs = segs.filter((x, k) => !(k > 0 && isLocationSeg(x) && !TITLE_WORDS.test(x)))
-    const first = segs[0] || ""
-    const dash = first.split(/\s+[—–]\s+|\s+-\s+/)
-    let org = ""
-    let title = ""
-    let oneLine = true
-    if (dash.length >= 2) {
-      const a = dash[0]
-      const b = dash.slice(1).join(" — ")
-      if (TITLE_WORDS.test(a) && !TITLE_WORDS.test(b)) { title = a; org = b } else { org = a; title = b }
-    } else if (segs.length >= 2) {
-      if (TITLE_WORDS.test(segs[0]) && !TITLE_WORDS.test(segs[1])) { title = segs[0]; org = segs[1] } else { org = segs[0]; title = segs[1] }
-    } else {
-      oneLine = false
-      title = first
-      org = HEADER_LINE.test(prev) || ROLE_DATES.test(prev) ? "" : prev
-      if (org && TITLE_WORDS.test(org) && !TITLE_WORDS.test(title)) [org, title] = [title, org]
-    }
-    org = org.replace(/^[•▪●\-*\uFFFD]\s*/, "").split(/\s*,\s*/)[0].trim()
-    out.push({ at: i, headAt: oneLine || !org ? i : p, org, title: title.trim(), dates, current: /present|current|now|till date/i.test(dates) })
-  })
-  return out
-}
-
-export interface ResumeRoles { employers: string[]; current: string; currentRole: ParsedRole | null; list: ParsedRole[] }
-
-export function resumeRoles(resume: string | undefined): ResumeRoles {
-  const lines = String(resume || "").split(/\r?\n/).map((l) => l.replace(/\s+/g, " ").trim())
-  const list = parseRoles(lines)
-  const employers = [...new Set(list.map((r) => r.org).filter(Boolean))]
-  const cur = list.find((r) => r.current) || null
-  const current = cur ? `${cur.org || ""} — ${cur.title} | ${cur.dates}`.replace(/^ — /, "") : ""
-  return { employers, current, currentRole: cur, list }
-}
+export { resumeRoles }
+export type { ResumeRoles }
 
 // "Fifth Third" = the resume's "Fifth Third Bank": how the call says an employer.
 function employerAliases(employers: string[], text: string): Array<{ said: string; resume: string }> {
@@ -364,9 +310,9 @@ export function speakFacts(opts: {
   identity?: string; projects?: string;
 }): SpeakFacts {
   const heardAll = `${opts.heard || ""}`
-  const roles = resumeRoles(opts.resume)
+  const roles = resumeRoles(opts.resume || "")
   const alias = employerAliases(roles.employers, heardAll)[0]
-  const cr: ParsedRole | null = roles.currentRole
+  const cr: ResumeRole | null = roles.currentRole
   const employer = alias ? alias.said : (cr?.org || "")
   const title = cr?.title || ""
   const known = `${opts.resume || ""}\n${opts.jd || ""}\n${opts.documents || ""}\n${opts.identity || ""}\n${opts.projects || ""}\n${heardAll}`.toLowerCase()

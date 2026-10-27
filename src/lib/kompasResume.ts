@@ -56,15 +56,36 @@ export function isLocationSeg(seg: string): boolean {
   return !!m && (/^[A-Z]{2}$/.test(m[2].trim()) || PLACE.test(m[2].trim()))
 }
 
+// A Word tab between the place and the dates is lost in the text: "New York, NYNOV 2024 – PRESENT", "IndiaAPR 2017".
+// Measured 27 Oct 2026 on the owner's Endpoint Analyst resume: the start month fell off every role. Only a month glued to
+// a two-letter code or to a lower-case letter is split, so "SUMMARY 2020" stays as written.
+const GLUED_MONTH = /(?<=\b[A-Z]{2}|[a-z])((?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*)(\.?\s+(?:19|20)\d{2}\b)/g
+
 function cleanLines(resume: string): string[] {
   return String(resume || "")
     .split(/\r?\n/)
-    .map((l) => l.replace(/\s+/g, " ").trim())
+    .map((l) => l.replace(/\s+/g, " ").replace(GLUED_MONTH, " $1$2").trim())
+}
+
+// Which part of "A | B" is the job title when neither or both carry a title word. "Senior Endpoint Security | Citi Bank"
+// and "Endpoint Security | CVS Health" were read as employer "Senior Endpoint Security", title "Citi Bank", and every
+// introduction opened "I'm a Citi Bank at Citi Bank" (live evaluation, 27 Oct 2026).
+const SENIORITY = /\b(?:senior|sr\.?|junior|jr\.?|principal|staff|head|chief|vp|vice president)\b/i
+const ORG_WORDS =
+  /\b(?:bank|health|healthcare|inc|llc|ltd|limited|corp|corporation|company|group|communications|technologies|technology|solutions|services|systems|labs|partners|university|hospital|city of|county|state of|department|agency|government|insurance|financial|capital|airlines|consulting|networks|software|pharma|energy|holdings|bancorp)\b|&/i
+const titleish = (s: string) => TITLE_WORDS.test(s) || SENIORITY.test(s)
+/** "title" when `a` is the title and `b` the employer, "org" for the reverse, "" when the line alone cannot tell. */
+function headerOrder(a: string, b: string): "title" | "org" | "" {
+  if (titleish(a) !== titleish(b)) return titleish(a) ? "title" : "org"
+  if (ORG_WORDS.test(a) !== ORG_WORDS.test(b)) return ORG_WORDS.test(b) ? "title" : "org"
+  return ""
 }
 
 /** Parse every role header out of the resume's lines. */
 export function parseRoles(lines: string[]): ResumeRole[] {
   const out: ResumeRole[] = []
+  const unsure: { role: ResumeRole; a: string; b: string }[] = []   // one-line headers whose order the line could not tell
+  const orders: string[] = []
   lines.forEach((l, i) => {
     if (l.length > 160 || !ROLE_DATES.test(l)) return
     const bare = l.replace(/^[•▪●\-*\uFFFD]\s*/, "")
@@ -84,23 +105,18 @@ export function parseRoles(lines: string[]): ResumeRole[] {
     let org = ""
     let title = ""
     let oneLine = true
-    if (dash.length >= 2) {
-      const a = dash[0]
-      const b = dash.slice(1).join(" — ")
-      if (TITLE_WORDS.test(a) && !TITLE_WORDS.test(b)) {
-        title = a
-        org = b
+    let pair: [string, string] | null = null
+    if (dash.length >= 2) pair = [dash[0], dash.slice(1).join(" — ")]
+    else if (segs.length >= 2) pair = [segs[0], segs[1]]
+    if (pair) {
+      const order = headerOrder(pair[0], pair[1])
+      if (order) orders.push(order)
+      if (order === "title") {
+        title = pair[0]
+        org = pair[1]
       } else {
-        org = a
-        title = b
-      }
-    } else if (segs.length >= 2) {
-      if (TITLE_WORDS.test(segs[0]) && !TITLE_WORDS.test(segs[1])) {
-        title = segs[0]
-        org = segs[1]
-      } else {
-        org = segs[0]
-        title = segs[1]
+        org = pair[0]
+        title = pair[1]
       }
     } else {
       oneLine = false
@@ -112,7 +128,7 @@ export function parseRoles(lines: string[]): ResumeRole[] {
       .replace(/^[•▪●\-*\uFFFD]\s*/, "")
       .split(/\s*,\s*/)[0]
       .trim()
-    out.push({
+    const role: ResumeRole = {
       at: i,
       headAt: oneLine || !org ? i : p,
       org,
@@ -120,8 +136,17 @@ export function parseRoles(lines: string[]): ResumeRole[] {
       dates,
       current: /present|current|now|till date/i.test(dates),
       bullets: [],
-    })
+    }
+    out.push(role)
+    if (pair && !headerOrder(pair[0], pair[1])) unsure.push({ role, a: pair[0], b: pair[1] })
   })
+  // A resume writes every header the same way round: an unclear one follows the order its other headers use.
+  const titleFirst = orders.filter((o) => o === "title").length
+  if (titleFirst > orders.length - titleFirst)
+    for (const u of unsure) {
+      u.role.title = u.a.trim()
+      u.role.org = u.b.replace(/^[•▪●\-*�]\s*/, "").split(/\s*,\s*/)[0].trim()
+    }
   return out
 }
 

@@ -3,6 +3,9 @@
 // reply cut off at the token ceiling did, and the route said only "Prep failed". This reads the object out of the reply and,
 // when there is none, says why (cut off, or no JSON at all), so the reason reaches the log.
 
+import { allowedNumbers, needsGuard } from "../../src/lib/kompasGuards.ts"
+import { resumeRoles } from "../../src/lib/kompasResume.ts"
+
 export type PrepPackResult = { ok: true; pack: Record<string, unknown> } | { ok: false; reason: string }
 
 export function parsePrepPack(text: string): PrepPackResult {
@@ -31,4 +34,35 @@ export function prepFailureReason(e: unknown): string {
   if (/^(empty reply|no JSON object|reply )/.test(m)) return m.slice(0, 120)
   if (/No API key/i.test(m)) return "no provider key"
   return "unexpected error"
+}
+
+// Holds the prep projects to the resume. Measured 27 Oct 2026 on the owner's Endpoint Analyst session: prep read only the
+// resume's first 6,000 characters (summary and skills, none of the work history), so it wrote three projects with no
+// employer and outcomes nobody wrote ("reducing endpoint policy violations by over 30%", "cutting mean time to detect by
+// 40%", "200+ resources"), and answers reached for those projects out of the blue. A project now names the resume employer
+// it happened at or is dropped, and a clause carrying a figure the resume does not state is cut from its outcome.
+export type PrepProject = { id: string; name: string; employer: string; role: string; impact: string }
+
+const plain = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+
+/** The text without any clause that states a figure the resume does not; "" when the first clause already does. */
+export function withoutUnsourcedFigures(text: string, allowed: Set<string>): string {
+  const t = String(text || "").trim()
+  if (!t || !needsGuard(t, allowed)) return t
+  const parts = t.split(/,\s+/)
+  const cut = parts.findIndex((x) => needsGuard(x, allowed))
+  return cut > 0 ? parts.slice(0, cut).join(", ").replace(/[\s.;:,]*$/, ".") : ""
+}
+
+export function groundPrepProjects(projects: PrepProject[], resume: string): PrepProject[] {
+  const employers = resumeRoles(resume).employers
+  const allowed = allowedNumbers(resume)
+  const out: PrepProject[] = []
+  for (const p of projects) {
+    const said = plain(p.employer)
+    const employer = employers.find((e) => said && (plain(e) === said || plain(e).includes(said) || said.includes(plain(e)))) || ""
+    if (!p.name || (employers.length && !employer)) continue
+    out.push({ ...p, employer, impact: withoutUnsourcedFigures(p.impact, allowed) })
+  }
+  return out
 }
