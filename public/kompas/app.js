@@ -1600,11 +1600,26 @@ async function transcribe(blob, who, opt) {
 const Q_CUE = /\?\s*$|^(so,? )?(what|how|why|when|where|which|who|whose|can|could|would|will|should|do|does|did|are|is|was|were|have|has|tell|walk|describe|explain|give|share|talk|imagine|suppose|let's|lets)\b|\b(tell me|walk me|how would you|what would you|why did you|can you|could you|would you|have you|do you|are you|what is|what are|your experience|about yourself|introduce)\b/i;
 let lastQ = { card: null, at: 0 };
 let capTimer = null;
+// The interviewer heard again through your speakers (owner, 27 Oct 2026: "The You starts to appear whenever them
+// speaking"). The mic's echo cancellation only removes what this page plays, not the meeting app, so the call came back
+// as You. While the call audio carries speech, or did a moment ago, no You caption is shown; a You line that repeats
+// what Them just said (half or more of its words) is not yours and is dropped (onTranscript).
+let themLines = [];   // what the call audio said in the last 30 s, interim and final
+function noteThem(text) { const at = Date.now(); themLines = themLines.filter(l => at - l.at < 30000); themLines.push({ text: String(text || ""), at }); }
+function themSpeaking() { const now = performance.now(); return captures.some(c => c.who === "Them" && !c.stopped && (c.voiced || now - (c.lastVoice || 0) < 1500)); }
+function echoOfThem(text) { const recent = themLines.filter(l => Date.now() - l.at < 30000).map(l => l.text).join(" "); return recent ? echoShare(text, recent) : 0; }
+// One section: the line being said shows inside the question box, under the question. A new question from Them brings
+// a tucked-away box back (never while an answer is still being written on that page); your own speech never moves it.
 function showCaption(who, text, isInterim) {
   const el = $("caption"); if (!el) return;
+  if (who === "Them") noteThem(text);
+  else if (themSpeaking() || echoOfThem(text) >= 0.5) return;
   el.classList.remove("hidden"); el.classList.toggle("interim", !!isInterim);
   $("capWho").textContent = who === "You" ? "You" : "Them"; $("capText").textContent = text;
-  clearTimeout(capTimer); capTimer = setTimeout(() => el.classList.add("hidden"), 9000);
+  const box = el.closest(".q"); if (box) { box.classList.add("live"); box.scrollTop = box.scrollHeight; }
+  const card = $("card");
+  if (who === "Them" && card && card.classList.contains("q-away") && !(cards[idx] && cards[idx].streaming)) card.classList.remove("q-away");
+  clearTimeout(capTimer); capTimer = setTimeout(() => { el.classList.add("hidden"); if (box) box.classList.remove("live"); }, 9000);
 }
 // A chat, not a log (owner, 27 Oct 2026: "make it more like chat modes like back and forth real time clarity"): Them
 // on the left, You on the right. A speaker's lines run on in one bubble until the other side speaks or 20 s pass, and a
@@ -1804,8 +1819,13 @@ function heardDraft(lines, screen, answerText) {
   const q = bits.slice(-4).join(" ");
   return q.length > 600 ? "…" + q.slice(-600) : q;
 }
-function onTranscript(who, text) {
+function onTranscript(who, text, lookedAgain) {
   text = fixTerms(fixPhrases(text));
+  if (who === "Them") noteThem(text);
+  else if (who === "You" && captures.some(c => c.who === "Them")) {
+    if (echoOfThem(text) >= 0.5) { logEvent({ t: "echo", who, text }); return; }   // the interviewer through your speakers, not you
+    if (!lookedAgain && themSpeaking()) { setTimeout(() => { if (running) onTranscript(who, text, true); }, 2000); return; }   // their words may still be on the way: look again
+  }
   if (who === "You" && follow.on && !follow.sr) followHear(text, true);   // Follow along without live recognition
   transcript.push({ who, text, at: Date.now(), seq: ++heardSeq });
   if (!answerCtl) {

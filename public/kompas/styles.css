@@ -224,6 +224,13 @@ body{
    two lines when shown (plus the focus mode's divider), nothing at all when scrolled away. */
 #view-copilot .card .q{max-height:3.1em}
 html.desktop-focus #view-copilot .card .q{max-height:calc(3.1em + 15px)}
+/* One section (owner, 27 Oct 2026: "combine both You and question section"): what is being said runs on a line inside
+   the question box, and the box gives that line room while it shows. */
+.q-body{min-width:0}
+#view-copilot .q .caption{display:flex;gap:8px;align-items:baseline;margin:3px 0 0;padding:0;border:0;background:none;font-size:.86em;line-height:1.45}
+#view-copilot .q .caption.hidden{display:none}
+#view-copilot .card .q.live{max-height:5.4em}
+html.desktop-focus #view-copilot .card .q.live{max-height:calc(5.4em + 15px)}
 #view-copilot .card.q-away .q{max-height:0!important;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important;border-bottom-width:0!important;overflow:hidden!important}
 .q b{font-weight:700}
 .a-head{font-size:14.5px;font-weight:700;margin:2px 0 9px}
