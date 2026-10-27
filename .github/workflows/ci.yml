@@ -48,6 +48,9 @@ jobs:
       - name: Verify WhatsApp Kompas channel and shared-session safety
         run: node --test scripts/tests/whatsapp-kompas*.test.mjs scripts/tests/kompas-shared-session.test.mjs scripts/tests/kompas-shared-turn.test.mjs
 
+      - name: Verify WhatsApp voice notes, commands and low-overhead processing
+        run: node --test scripts/tests/whatsapp-voice.test.mjs
+
       - name: Verify consented voice benchmark metrics
         run: node --test scripts/tests/kompas-voice-metrics.test.mjs
 

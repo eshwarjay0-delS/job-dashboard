@@ -275,3 +275,18 @@ test("20. Source setup does not depend on R2 ListObjectsV2 permission", async ()
   assert.equal(calls, 0)
   assert.equal((await execute(t("TLS"))).sent[0], "The grounded answer")
 })
+
+test("21. A spoken casual message before sources does not overwrite resume or JD",async()=>{
+  reset()
+  await execute(t("kompas"))
+  const msg={type:"text",text:{body:"This feels like a controlled environment. Make voice notes fast."},mfitVoiceNote:true}
+  const outcome=await execute(msg)
+  assert.match(outcome.sent[0],/Voice note understood/)
+  const state=[...sessions.values()][0]
+  assert.equal(state.sources.resume,undefined)
+  assert.equal(state.sources.jd,undefined)
+  const jd="Job description: Security Engineer at a financial company. Responsibilities include AppSec, vulnerability management and risk assessment."
+  const parsed=await execute({type:"text",text:{body:jd},mfitVoiceNote:true})
+  assert.match(parsed.sent[0],/Send your resume/)
+  assert.equal([...sessions.values()][0].sources.jd,jd)
+})
