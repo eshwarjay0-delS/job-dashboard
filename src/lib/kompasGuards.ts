@@ -40,6 +40,16 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   if (/\b(port|ports|version|v\.?|cve[-\s]?|event(?:\s*id)?|error|code|rule|threshold|severity|p[0-4]|build|ticket|case|change)\s*$/i.test(before)) return true
   if (/^x[0-9a-f]/i.test(after)) return true
   if (/^\s*(port|ports)\b/i.test(after)) return true
+  // Structural numbers are labels, not result claims — the guard rewrote them
+  // all to "several" (26 Oct 2026 live rounds: "Hypothesis several", "Tier
+  // several", "several:several UTC", "id=several"). A result claim ("cut by
+  // 40%", "5 rules created") still has no label word before it, so it stays
+  // guarded; only a number that IS the label, the time, the id or the
+  // threshold passes through.
+  if (/\b(?:hypothes(?:is|es)|options?|steps?|phases?|tiers?|rules?|controls?|requirements?|items?|cases?)\s*$/i.test(before)) return true
+  if (/\d:$/.test(before) || /^:\d/.test(after)) return true
+  if (/\bid\s*[=#:]\s*$/i.test(before)) return true
+  if (/[\u2265\u2264<>]\s*$/.test(before)) return true
   // HTTP responses and product versions describe a mechanism, not a result
   // claimed from the candidate's career. Do not turn `returns 403` into
   // `returns several` while guarding unsupported achievement metrics.
