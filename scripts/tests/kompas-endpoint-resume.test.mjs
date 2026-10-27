@@ -113,3 +113,26 @@ test('event IDs and hypothesis labels stay as written; claimed results are still
   for (const s of keep) assert.equal(G.applyGuards(s, null, allowed).text, s)
   assert.doesNotMatch(G.applyGuards('I reduced alert noise by 40% across 200 endpoints.', null, allowed).text, /40%|200/)
 })
+
+// Owner's Kompas Master Rules (27 Oct 2026), §1 and §2: each interviewer ask takes its own lane, an ambiguous "would you"
+// takes the scenario lane, a direct fact is answered first, and a follow-up continues the same case.
+test('the Master Rules intent table holds: every example takes its lane', async () => {
+  const R = await import('../../src/lib/kompasDesktopResponse.ts')
+  const lane = (q) => R.desktopQuestionKind(q)
+  assert.equal(lane('What is IDOR?'), 'definition')
+  assert.equal(lane('IDOR vs CSRF'), 'comparison')
+  assert.equal(lane('How does Kerberos authentication work?'), 'definition')
+  assert.equal(lane('Tell me about a difficult EPM rollout.'), 'experience')
+  assert.equal(lane('How would you investigate lateral movement?'), 'implementation')
+  assert.equal(lane('CyberArk EPM blocks a signed business application after an update. Would you allow it? Explain your decision process.'), 'implementation')
+  assert.equal(lane('Drawing on your experience with both platforms, how would you distinguish a detection difference from missing telemetry?'), 'implementation')
+  assert.equal(lane('Choose a real Citi or CVS incident: what was your initial hypothesis, and how did you verify recovery?'), 'experience')
+  const fact = R.desktopResponsePolicy('engineer', 'Have you configured CyberArk EPM?')
+  assert.match(fact.guidance, /This asks for a fact about the candidate\. Answer it first, yes or no, from the resume/)
+  for (const q of ['What happened after that?', 'What logs did you check?']) {
+    const p = R.desktopResponsePolicy('engineer', q)
+    assert.equal(p.kind, 'experience', q)
+    assert.match(p.guidance, /This continues the case from the previous turn/, q)
+  }
+  assert.match(R.desktopResponsePolicy('engineer', 'What is IDOR?').guidance, /never announced \(no "The key takeaway is", "In conclusion", "To sum up"\)/)
+})
