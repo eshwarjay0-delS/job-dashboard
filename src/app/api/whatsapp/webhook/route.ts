@@ -305,7 +305,17 @@ export async function POST(request: NextRequest) {
     try {
       await handle(from, msg, session, userId, verifiedKompasAccount)
     } catch (e) {
-      try { await sendText(from, plainFailure(e, "do that", true)) } catch { /* ignore */ }
+      // Most errors here are session/database/storage faults, not LLM requests.
+      // A bare storage 403 used to tell customers "no AI service is on" even for
+      // Help and profile switching. Claim provider failure only when the error
+      // actually names one; never disclose raw provider or storage exceptions.
+      const detail = String((e as Error)?.message || e || "")
+      const providerError = /\b(?:OpenRouter|OpenAI|Anthropic|Gemini|Groq)\b/i.test(detail)
+      console.error("[whatsapp] message handling error", providerError ? "provider" : "operation", (e as Error)?.name || "error")
+      const message = providerError
+        ? plainFailure(e, "do that", true)
+        : "I couldn't process that message because a MarketFit service is unavailable. Your request was not completed. Please retry."
+      try { await sendText(from, message) } catch { /* ignore */ }
     }
   }
   if (typeof after === "function") after(work)
@@ -383,6 +393,15 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       }
       return sendText(from, err ? `Skipped. ⚠️ ${err}` : "Skipped — the draft was discarded.")
     }
+  }
+
+  // Global basic assistance must never depend on an optional Kompas state read.
+  // Keep "start" in the Kompas reducer because it advances interview setup.
+  // Help/menu/greetings are safe in either mode and make troubleshooting possible
+  // even when R2 session storage or the model provider is degraded.
+  if (type === "text") {
+    const command = String((msg.text as { body?: string } | undefined)?.body || "").trim().toLowerCase()
+    if (["help", "hi", "hello", "menu"].includes(command)) return sendText(from, HELP)
   }
 
   // Kompas has an explicit opt-in command and an independent, account-owned session.
