@@ -835,7 +835,7 @@ export async function POST(request: NextRequest) {
     identity: "",
     projects: "",
   })
-  const allowed = allowedNumbers(resumeSrc, docsSrc)
+  const allowed = allowedNumbers(resumeSrc, docsSrc, question)
   const figuresList = [...allowed].slice(0, 30)
   const figuresLine = `FIGURES: the ONLY result numbers you may state are these, from the candidate's own material: ${figuresList.length ? figuresList.join(", ") : "(none)"}. Never invent a count, percentage, duration or before/after figure — describe the change in words ("cut the queue to something the team could clear by lunch"). Technical constants (ports, versions, thresholds in a rule) are fine.`
   const factsText = [

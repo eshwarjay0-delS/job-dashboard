@@ -19,7 +19,7 @@ export interface SpeakFacts {
 // The ONLY result numbers the answer may state are these, from the
 // candidate's own material. Same extraction perfACT feeds its FIGURES prompt.
 const FIGURE_RE = /\b\d[\d,.]*\+?(?:\s*(?:%|x\b|years?|yrs?|months?|k\b|M\b))?/g
-const normFigure = (f: string) => f.toLowerCase().replace(/\s+/g, " ").trim()
+const normFigure = (f: string) => f.toLowerCase().replace(/\+/g, "").replace(/\s+/g, " ").trim()
 
 export function allowedNumbers(...sources: Array<string | undefined>): Set<string> {
   const out = new Set<string>()
@@ -63,7 +63,7 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   if (/^[1-5]\d{2}$/.test(value) && (/\b(?:forbidden|unauthorized|responses?|status|http)\b/i.test(after) || /(?:expect\w*|return\w*|respond\w*|receiv\w*|status|http)[^.\n]{0,20}$/i.test(before))) return true
   if (/^\d+\.\d+(?:\.\d+)?$/.test(value) && /\b(?:kubernetes|istio|nginx|splunk(?: es)?|python|node(?:\.js)?|java|postgres(?:ql)?|kong|tls)\s*$/i.test(before)) return true
   if (/\b(?:invoice_id|customer_id|tenant_id|owner_id)\s*=\s*$/i.test(before) || /\/invoices\/\s*$/i.test(before)) return true
-  if (/[-_#]$/.test(before) || /^[-_]/.test(after)) return true
+  if (/[-_\u2013\u2014\u2212#]$/.test(before) || /^[-_\u2013\u2014\u2212]/.test(after)) return true
   return false
 }
 

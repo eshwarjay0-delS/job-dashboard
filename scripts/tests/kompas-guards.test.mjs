@@ -30,6 +30,11 @@ test('invented result figures are still rewritten, allowlisted figures kept', ()
   assert.equal(guardText('I have 11+ years in IT.', allowed).text, 'I have 11+ years in IT.')
 })
 
+test('plus-qualified source figures allow the bare figure', () => {
+  const allowed = allowedNumbers('8+ years of experience')
+  assert.equal(guardText('I have 8 years of experience.', allowed).text, 'I have 8 years of experience.')
+})
+
 test('guard output stays grammatical: percentages and trailing periods', () => {
   assert.equal(kept('Route 10% of traffic via a service mesh.'), 'Route a share of traffic via a service mesh.')
   assert.equal(kept('Then gradually increase to 10%.'), 'Then gradually increase to a higher share.')
@@ -40,4 +45,6 @@ test('guard output stays grammatical: percentages and trailing periods', () => {
   assert.equal(kept('From that diff I generate hypotheses: 3.'), 'From that diff I generate hypotheses: 3.')
   assert.equal(kept('For 1 I check the event log for Update calls.'), 'For 1 I check the event log for Update calls.')
   assert.equal(kept('For 5 years we ran checks.'), 'For several years we ran checks.')
+  assert.equal(kept('Built around NIST 800\u201353 controls.'), 'Built around NIST 800\u201353 controls.')
+  assert.equal(kept('Map required AC\u20132 and SC\u20137 families.'), 'Map required AC\u20132 and SC\u20137 families.')
 })
