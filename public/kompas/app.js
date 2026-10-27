@@ -855,7 +855,7 @@ function wrapWords(root) {
   }
 }
 function animateCard() { const card = $("card"); card.style.animation = "none"; void card.offsetWidth; card.style.animation = ""; }
-const toTop = () => { const ul = $("answer"); if (ul) ul.scrollTop = 0; if (typeof syncQuestion === "function") syncQuestion(); };   // a new question opens at the top, where the question line is visible
+const toTop = () => { const ul = $("answer"); if (ul) ul.scrollTop = 0; const c = $("card"); if (c) c.classList.remove("q-away"); };   // a new question opens at the top, where the question line is visible
 $("prevBtn").onclick = () => { if (idx > 0) { idx--; renderCard(); toTop(); animateCard(); } };
 $("nextBtn").onclick = () => { if (idx < cards.length - 1) { idx++; renderCard(); toTop(); animateCard(); } };
 function addCard(question, answer) { const c = { question, answer }; cards.push(c); idx = cards.length - 1; renderCard(); toTop(); animateCard(); return c; }
@@ -935,8 +935,15 @@ $("textMinus")?.addEventListener("click", () => stepText(-2));
 $("textPlus")?.addEventListener("click", () => stepText(2));
 window.addEventListener("kompas-text-size", () => applyLook());
 const answerPane = $("answer");
-function syncQuestion() { const card = $("card"); if (card && answerPane) card.classList.toggle("q-away", answerPane.scrollTop > 2); }
+function syncQuestion() { const card = $("card"); if (card && answerPane && answerPane.scrollTop > 2) card.classList.add("q-away"); }   // scrolling down hides the question; only an overscroll gesture brings it back
 answerPane?.addEventListener("scroll", syncQuestion, { passive: true });
+// Overscroll reveal (owner, 26 Oct): at the very top, one more scroll up shows the
+// question again — reaching the top alone never does. Scrolling down anywhere on
+// the card hides it, smoothly, so only the response box stays in view.
+$("card")?.addEventListener("wheel", (e) => { const card = $("card"); if (!card) return; if (e.deltaY > 0) card.classList.add("q-away"); else if (e.deltaY < 0 && answerPane && answerPane.scrollTop <= 0) card.classList.remove("q-away"); }, { passive: true });
+let touchStartY = 0;
+$("card")?.addEventListener("touchstart", (e) => { touchStartY = (e.touches[0] && e.touches[0].clientY) || 0; }, { passive: true });
+$("card")?.addEventListener("touchmove", (e) => { const card = $("card"); if (!card) return; const y = (e.touches[0] && e.touches[0].clientY) || 0; if (answerPane && answerPane.scrollTop <= 0 && y - touchStartY > 24) card.classList.remove("q-away"); else if (touchStartY - y > 24) card.classList.add("q-away"); }, { passive: true });
 $("lookTab")?.addEventListener("change", (e) => { LS.set("tabSize", Number(e.target.value)); applyLook(); });
 // The model that writes answers. Empty is the server's own lanes; the server ignores anything not on its list.
 const LIVE_MODELS = ["", "gpt-5.6-luna"];
@@ -1949,6 +1956,7 @@ function serveBook(card, hit, depthKey) {
   if (cards[idx] === card) renderCard();
   logEvent({ t: "answer", question: card.question, derived: card.question, book: true, depth: $("liveInterviewer").selectedOptions[0].textContent, text: hit.text, meta: card.meta, depthKey });
   status("Answered from the opening book — no wait, no AI call. Press ↓ for a deeper live answer.", "live");
+  if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }
   if (window.KompasDiamond) {
     card.anchorQ = card.question;
     for (const a of window.KompasDiamond.questionPlan(card.anchors || {}).levels) fillAnchor(card, a);
@@ -1979,6 +1987,7 @@ async function generateAnswer(question, card, opts = {}) {
     if (answerCtl === ctl) answerCtl = null;
   }
 }
+function nextStallTry(retries) { const tries = (retries || 0) + 1; return tries <= 2 ? tries : 0; }   // a stalled request retries twice, then says so plainly instead of sitting on "…" forever
 async function generateAnswerRequest(question, card, opts = {}) {
   question = String(question || "").trim(); if (!question) return;
   card = card || addCard(question, ["…"]);
@@ -2008,6 +2017,20 @@ async function generateAnswerRequest(question, card, opts = {}) {
   const keepOld = !!opts.retries && !opts.regen && !(Array.isArray(prevAnswer) && /^(…|Groq|The answer lane)/.test(String(prevAnswer[0] || "")));
   if (!keepOld) card.answer = ["…"];
   card.streaming = true; card.meta = keepOld ? `regenerating at ${depthLabel()} depth…` : ""; if (cards[idx] === card) renderCard();
+  // A timer abort is not a supersede: the request died on our own watchdog, so
+  // retry it (twice) instead of leaving a "…" card with a stale status forever.
+  const stallRetry = () => {
+    const tries = nextStallTry(opts.retries);
+    if (!tries) {
+      const partial = typeof card.answer === "string" && card.answer.trim().length > 8 && card.answer.trim() !== "…";
+      const prevReal = (typeof prevAnswer === "string" && prevAnswer.trim().length > 8 && prevAnswer.trim() !== "…") || (Array.isArray(prevAnswer) && prevAnswer.join("\n").trim().length > 8 && !/^(…|Preparing…)$/.test(String(prevAnswer[0] || "").trim()));
+      if (!partial && prevReal) card.answer = prevAnswer; else if (!partial && keepOld) card.answer = prevAnswer;
+      card.streaming = false; if (cards[idx] === card) renderCard();
+      status("Answer stalled — press AI Answer to try again.", "live"); return;
+    }
+    status("Retrying…", "live");
+    setTimeout(() => { if (answerEpoch === epoch && card.req === ctl) generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, retries: tries }); }, 800);
+  };
   const named = String((card && card.question) || "").replace(/\s+/g, " ").trim();
   status(named && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(named) ? "Answering: " + named : (consolidated ? "Deriving the question and answering…" : "Answering…"), "live");
   const plainHeard = consolidated ? question.replace(/^(Them|You):\s*/gm, "") : question;
@@ -2040,7 +2063,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       const hit = !directDesktop && book.sid === (current && current.id) && bookMatch(derivedQ, depthKey);
       if (hit) { if (answerCtl === ctl) answerCtl = null; serveBook(card, hit, depthKey); return; }
     } catch (e) {
-      if (e && e.name === "AbortError") { if (card.req === ctl) { card.streaming = false; card.meta = "superseded by the next question"; if (cards[idx] === card) renderCard(); } return; }
+      if (e && e.name === "AbortError") { if (card.req === ctl) { card.streaming = false; stallRetry(); } return; }
     }
   }
   const qText = String(derivedQ || question).trim();
@@ -2050,7 +2073,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   if (!directDesktop && window.KompasAnchors && qText.length >= 8) {
     const facts = anchorFacts();
     try {
-      const pack = await window.KompasAnchors.load(qText, facts.role, facts.resume, current && current.id);
+      const pack = await Promise.race([window.KompasAnchors.load(qText, facts.role, facts.resume, current && current.id), new Promise((r) => setTimeout(() => r(null), 15000))]);   // anchors are an enhancement: never let their load hang the answer
       if (pack && pack.anchors) {
         card.anchors = card.anchors || {};
         for (const k of ["engineer", "director"]) if (pack.anchors[k] && !(card.anchors[k] && card.anchors[k].prose)) card.anchors[k] = pack.anchors[k];
@@ -2112,9 +2135,13 @@ async function generateAnswerRequest(question, card, opts = {}) {
         generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, retries: tries, regen: opts.regen || keepOld });
     }, Math.max(500, retryAfterMs));
   };
+  let fetchTimer = null;
   try {
+    let responded = false;
+    fetchTimer = setTimeout(() => { if (!responded && card.req === ctl) { try { ctl.abort(); } catch {} } }, 45000);   // no response headers in 45s means the fetch itself hung: fail into the retry, not the 2-minute wall
     const res = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
       body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, pinned: !!opts.pinned, again: !!opts.reask, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel(), ...(directDesktop ? { responseCalibration: "three-level-v1" } : {}) }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
+    responded = true; clearTimeout(fetchTimer);
     if (!res.ok || !res.body) {
       const failure = await res.json().catch(() => ({}));
       throw Object.assign(new Error(failure.error || "Paid answer service returned " + res.status), { providerFailure: true, code: failure.code || (res.status === 401 || res.status === 403 ? "AUTH" : ""), retryAfterMs: failure.retryAfterMs });
@@ -2196,6 +2223,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       }
     }
     status(`Answered — first words in ${(first / 1000).toFixed(2)}s.`, "live");
+    if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }   // generated: the question collapses away, only the response box stays
   } catch (e) {
     if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — eject only if renewal fails
       if (await tryRefreshAuth()) { recoverAnswer("", 800); return; }
@@ -2205,11 +2233,11 @@ async function generateAnswerRequest(question, card, opts = {}) {
     card.streaming = false;
     if (e && e.name === "AbortError") {
       if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 2000);
-      card.meta = "superseded by the next question"; if (cards[idx] === card) renderCard(); return;
+      stallRetry(); return;
     }
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 2000);
     recoverAnswer(e && e.code || "", e && e.retryAfterMs || 1000);
-  } finally { clearTimeout(hardTimer); release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
+  } finally { clearTimeout(hardTimer); clearTimeout(fetchTimer); release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
 }
 
 /* ---- manual, AI Answer, screen, copy, export, shortcuts ---- */
@@ -2297,9 +2325,16 @@ async function aiAnswer(fromAuto) {
         if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
         answeredSeq = heardSeq; updatePending();
         const q = pressQuestion(typedText, combined, cur.question) || cur.question;
-        const heard = combined.noiseOnly ? [cur.earlier, cur.heard, q].filter(Boolean).join("\n") : (combined.heard || q);
-        showPressed(cur, q);
-        return await generateAnswer(heard, cur, { consolidated: true, earlier: "", derived: q, reask: true, pinned: true });
+        // A re-press is a fresh ask, not a pinned replay: with no typed text the
+        // combined material is still a transcript, so it goes through the same
+        // derive cut and no-question gate as a fresh heard press instead of
+        // pinning the whole concatenation to the card and answering it. The
+        // card keeps its old question until the cut lands — it never shows the
+        // concatenation. Typed re-presses stay pinned whole.
+        const heardOnly = !typedText;
+        const heard = (combined.noiseOnly ? [cur.earlier, cur.heard, q].filter(Boolean).join("\n") : (combined.heard || q)).replace(/\nCurrent question \(on screen\):[^\n]*/g, "").trim();
+        showPressed(cur, heardOnly ? cur.question : q);
+        return await generateAnswer(heard, cur, { consolidated: true, earlier: "", derived: heardOnly ? undefined : q, reask: true, pinned: !heardOnly });
       }
       const intake = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You" });
       if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
@@ -2781,7 +2816,15 @@ async function saveRunTranscript() {
 // session is read and put in order of time, so the viewer, the download and What went wrong all see a single transcript.
 async function sessionTranscript(s) {
   const runs = ((s && s.transcripts) || []).slice().sort((a, b) => a.at - b.at); if (!runs.length) return null;
-  const recs = (await Promise.all(runs.map(t => DossierDB.get(t.key)))).filter(Boolean); if (!recs.length) return null;
+  const recs = (await Promise.all(runs.map(t => DossierDB.get(t.key)))).filter(Boolean);
+  if (!recs.length) {
+    // The entry is saved synchronously on leave but the text put is async:
+    // a window killed mid-close leaves a row with no text. The raw run log
+    // still in this browser rebuilds it; only when that log is gone too is
+    // the transcript really lost.
+    try { const raw = localStorage.getItem("perfact.log." + s.id); const log = JSON.parse(raw || "[]"); if (Array.isArray(log) && log.length) return { at: log[0].at, log, text: transcriptText(s, log) }; } catch {}
+    return null;
+  }
   if (recs.every(r => Array.isArray(r.log) && r.log.length)) {
     const seen = new Set(), log = recs.flatMap(r => r.log).sort((a, b) => a.at - b.at)
       .filter(e => { const k = e.at + "|" + e.t + "|" + (e.text || e.question || ""); if (seen.has(k)) return false; seen.add(k); return true; });

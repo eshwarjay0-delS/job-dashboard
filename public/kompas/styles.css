@@ -213,8 +213,8 @@ body{
 /* Prev/Next response toggles live on the action bar as pills (owner, 23 Oct 2026) — no absolute-positioned corner buttons. */
 .card{animation:cardIn .26s var(--ease) both}
 @keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.q{display:flex;gap:9px;font-size:16px;line-height:1.55;margin-bottom:14px;max-height:7.75em;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;transition:opacity .12s linear}
-.card.q-away .q{opacity:0;pointer-events:none}
+.q{display:flex;gap:9px;font-size:16px;line-height:1.55;margin-bottom:14px;max-height:3.1em;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;transition:max-height .5s cubic-bezier(.22,1,.36,1),margin-bottom .5s cubic-bezier(.22,1,.36,1),opacity .3s linear}
+.card.q-away .q{opacity:0;max-height:0;margin-bottom:0;overflow:hidden;pointer-events:none}
 .q b{font-weight:700}
 .a-head{font-size:14.5px;font-weight:700;margin:2px 0 9px}
 .a ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px}
