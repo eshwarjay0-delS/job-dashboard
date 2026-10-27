@@ -39,7 +39,7 @@ export async function GET(req: Request) {
       if (!t.messages.length) continue
       const latest = t.messages[t.messages.length - 1]
       const own = t.accountEmail.toLowerCase()
-      const outbound = latest.from.toLowerCase().includes(own)
+      const outbound = emailAddress(latest.from) === own
       if (!outbound) continue
 
       const ms = Date.now() - Number(latest.internalDate || 0)
@@ -49,7 +49,7 @@ export async function GET(req: Request) {
       // Who did he write to? The most recent inbound message's sender.
       let to = ""
       for (let i = t.messages.length - 2; i >= 0; i--) {
-        if (!t.messages[i].from.toLowerCase().includes(own)) {
+        if (emailAddress(t.messages[i].from) !== own) {
           to = t.messages[i].from
           break
         }
