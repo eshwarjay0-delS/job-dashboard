@@ -1015,3 +1015,8 @@ html.kd .cap-text,html.kd .drawer-body,html.kd .statusline{font-size:var(--text-
 .screen-review pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.5}
 .screen-review-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
 .screen-review-actions button{min-height:44px}
+
+/* The manually initiated desktop screen capture has its own visible action.
+   Keep AI Answer most prominent; the single-row toolbar may scroll on narrow panels. */
+html.kd #screenCaptureAnswerBtn{display:inline-flex !important;align-items:center;justify-content:center;white-space:nowrap;flex:0 0 auto;font-size:12px;padding:0 9px;height:30px;gap:4px}
+html.kd #screenCaptureAnswerBtn:hover{border-color:var(--line-strong);background:var(--surface-2)}

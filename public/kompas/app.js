@@ -880,13 +880,16 @@ function startClock() { startedAt = Date.now(); const tick = () => { $("clock").
 function stopClock() { if (clockTimer) clearInterval(clockTimer); clockTimer = null; }
 
 /* ---- sources (both ON by default), theme, drawer ---- */
-// systemAudio: false is the only way the desktop hides computer audio. Otherwise the speaker control stays,
-// and Start hears the output mix (Them) as well as the microphone (You). The screen-share button stays hidden
-// on the desktop: main.js answers getDisplayMedia itself, so there is no window to pick.
+// Computer-audio support is independent of the screen-question capture action.
+// The native Electron display handler already permits getDisplayMedia; hiding the
+// screen action on desktop made the completed screen review and answering path unreachable.
 const NO_SYS_AUDIO = window.kompasDesktop?.systemAudio === false;
 const srcOn = { mic: true, sys: !NO_SYS_AUDIO };
-if (NO_SYS_AUDIO) { $("sysBtn").classList.add("hidden"); $("screenBtn").classList.add("hidden"); }
-else if (window.kompasDesktop) $("screenBtn").classList.add("hidden");
+if (NO_SYS_AUDIO) $("sysBtn").classList.add("hidden");
+if (window.kompasDesktop) {
+  $("screenBtn").classList.remove("hidden");
+  $("screenCaptureAnswerBtn")?.classList.remove("hidden");
+}
 function syncSrc() {
   $("micBtn").classList.toggle("on", srcOn.mic); $("sysBtn").classList.toggle("on", srcOn.sys);
   $("micBtn").title = "Microphone (you) — " + (srcOn.mic ? "on" : "off");
@@ -2416,6 +2419,9 @@ async function aiAnswer(fromAuto) {
   } finally { aiBusy = false; }
 }
 $("screenBtn").onclick = analyseScreen;
+// One visible desktop action for captured questions. It uses the same verified
+// capture → region review → grounded answer path as the existing menu/shortcut.
+if ($("screenCaptureAnswerBtn")) $("screenCaptureAnswerBtn").onclick = analyseScreen;
 async function grabFrame() {
   let track = displayVideo && displayVideo.readyState === "live" ? displayVideo : null;
   if (!track) { const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }); track = s.getVideoTracks()[0]; displayVideo = track; }

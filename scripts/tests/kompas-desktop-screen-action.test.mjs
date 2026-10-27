@@ -1,0 +1,33 @@
+import test from "node:test"
+import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+
+const html = readFileSync("public/kompas/index.html", "utf8")
+const app = readFileSync("public/kompas/app.js", "utf8")
+const styles = readFileSync("public/kompas/styles.css", "utf8")
+
+test("desktop live toolbar contains Screen Answer immediately next to AI Answer", () => {
+  const answer = html.indexOf('id="answerBtn"')
+  const screen = html.indexOf('id="screenCaptureAnswerBtn"')
+  const auto = html.indexOf('id="autoBtn"')
+  assert.ok(answer > 0 && screen > answer && auto > screen)
+  assert.match(html, /id="screenCaptureAnswerBtn"[^>]*title="Capture the current screen[^"]*"/)
+})
+test("screen capture is enabled in desktop even when computer audio is unsupported", () => {
+  const audioBlock = app.slice(app.indexOf("const NO_SYS_AUDIO"), app.indexOf("function syncSrc()"))
+  assert.match(audioBlock, /if \(NO_SYS_AUDIO\) \$\("sysBtn"\)\.classList\.add\("hidden"\)/)
+  assert.doesNotMatch(audioBlock, /\$\("screenBtn"\)\.classList\.add\("hidden"\)/)
+  assert.match(audioBlock, /if \(window\.kompasDesktop\) \{[\s\S]*?\$\("screenCaptureAnswerBtn"\)\?\.classList\.remove\("hidden"\)/)
+})
+test("visible button, menu and keyboard shortcut share the same capture flow", () => {
+  assert.match(app, /\$\("screenBtn"\)\.onclick = analyseScreen/)
+  assert.match(app, /\$\("screenCaptureAnswerBtn"\)\.onclick = analyseScreen/)
+  assert.match(app, /e\.ctrlKey && e\.shiftKey && \(e\.key === "S" \|\| e\.key === "s"\)/)
+  assert.match(app, /async function analyseScreen\(\)/)
+  assert.match(app, /window\.KompasScreenReview\(/)
+  assert.match(app, /generateAnswer\(card\.question, card, \{ pinned: true, derived: card\.question, source: "screen" \}\)/)
+})
+test("desktop-only styling does not expose the extra toolbar button in web mode", () => {
+  assert.match(html, /class="pill action hidden" id="screenCaptureAnswerBtn"/)
+  assert.match(styles, /html\.kd #screenCaptureAnswerBtn\{display:inline-flex !important/)
+})
