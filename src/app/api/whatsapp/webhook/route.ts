@@ -286,6 +286,7 @@ export async function POST(request: NextRequest) {
     return ok()
   }
   const userId = sender.who.userId
+  const verifiedKompasAccount = sender.who.own
 
   if (!msgId) return ok()
   const receipt = createHash("sha256").update(`${from}:${msgId}`).digest("hex")
@@ -302,7 +303,7 @@ export async function POST(request: NextRequest) {
   // Until 19 Oct 2026 the answer waited for the whole resume, minutes, and Meta re-sent what it took for a failure.
   const work = async () => {
     try {
-      await handle(from, msg, session, userId, sender.who.own)
+      await handle(from, msg, session, userId, verifiedKompasAccount)
     } catch (e) {
       try { await sendText(from, plainFailure(e, "do that", true)) } catch { /* ignore */ }
     }
