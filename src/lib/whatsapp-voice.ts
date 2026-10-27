@@ -28,6 +28,24 @@ export const MAX_WHATSAPP_VOICE_BYTES = 4 * 1024 * 1024
 const MIN_WHATSAPP_VOICE_BYTES = 800
 const MAX_TRANSCRIPT_LENGTH = 60_000
 
+/**
+ * STT punctuates tiny spoken commands and usually hears our brand "Kompas"
+ * as the English word "compass". Normalize ONLY isolated commands; never
+ * rewrite a sentence, document or interview answer.
+ */
+export function normalizeShortVoiceCommand(raw: string): string {
+  const text = raw.trim()
+  const phrase = text.replace(/[.!?\s]+$/g, "").trim().toLowerCase()
+  if (phrase === "kompas" || phrase === "compass") return "kompas"
+  if (["revert", "start", "help", "menu", "status"].includes(phrase)) return phrase
+  const selection = phrase.match(/^(?:use|switch(?: to)?)\s+(one|two|three|four|five|six|seven|eight|nine|[1-9])$/)
+  if (selection) {
+    const n = ["one","two","three","four","five","six","seven","eight","nine"].indexOf(selection[1])
+    return "use " + (n >= 0 ? n + 1 : selection[1])
+  }
+  return text
+}
+
 /** No transcript or audio content is emitted to application logs. */
 export async function speechToWhatsAppText(
   msg: Message,
@@ -63,7 +81,7 @@ export async function speechToWhatsAppText(
       audio: new Uint8Array(bytes), mime, purpose: "transcribe",
       userHash: deps.hash(owner),
     })
-    const spoken = result.text.trim()
+    const spoken = normalizeShortVoiceCommand(result.text)
     if (!spoken) return { ok: false, reply: "I couldn't detect clear speech in the voice note. Please try again or dictate using your keyboard microphone." }
     if (spoken.length > MAX_TRANSCRIPT_LENGTH)
       return { ok: false, reply: "The spoken message is too long. Please send it as a few shorter notes." }
