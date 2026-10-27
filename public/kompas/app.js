@@ -416,6 +416,7 @@ async function restoreLive(s) {
   transcript = Array.isArray(snap.transcript) ? snap.transcript : [];
   heardSeq = answeredSeq = transcript.reduce((n, t) => Math.max(n, Number(t.seq) || 0), heardSeq);   // what came back is already dealt with: only what is heard from now on is pending
   updatePending(); renderDrawer(); renderCard();
+  if (current) seedIdentity(current);   // a resumed run gets its intro card too, so Prev always has somewhere to go
 }
 // The live box is closing: the run stays open for Continue. The session is marked first (that part cannot wait when the window
 // itself is going), the screen is stored after.
