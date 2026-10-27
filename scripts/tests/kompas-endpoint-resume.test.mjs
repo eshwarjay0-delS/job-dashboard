@@ -74,3 +74,42 @@ test('an introduction opens with the total years when the resume states them, an
   const route = readFileSync(new URL('../../src/app/api/kompas/prep/route.ts', import.meta.url), 'utf8')
   assert.match(route, /A tool, platform or client named together with an employer must be one that employer's section of the resume lists\./)
 })
+
+// Judged 27 Oct 2026, round r02 against r01: one-sentence "how would you distinguish A, B, C and D" asks got no parts list,
+// a closing "without ..." condition took the question mark and the ask was dropped, workarounds weakened controls, and the
+// number guard turned event IDs and hypothesis labels into "several".
+test('a listed set inside one sentence becomes one part per item, and a closing condition keeps the ask', async () => {
+  const A = await import('../../src/lib/kompasAnswer.ts')
+  const tell = A.requestedParts('A Windows endpoint can access public websites but intermittently loses access to an internal application after switching from office Wi-Fi to VPN. How would you distinguish DNS caching, overlapping routes, proxy selection, and NAC restrictions, and what evidence would confirm the root cause?')
+  assert.deepEqual(tell.parts.slice(1), ['DNS caching: the evidence that confirms or rules it out', 'overlapping routes: the evidence that confirms or rules it out', 'proxy selection: the evidence that confirms or rules it out', 'NAC restrictions: the evidence that confirms or rules it out'])
+  const kept = A.requestedParts('If a desktop application fails under TLS inspection while browser access works, how would you distinguish certificate pinning, mutual TLS, trust-store differences, and protocol incompatibility without broadly bypassing inspection?')
+  assert.equal(kept.parts.length, 5)
+  assert.deepEqual(kept.constraints, ['without broadly bypassing inspection'])
+  assert.deepEqual(A.requestedParts('How would you segment the incidents, isolate interacting causes, prioritize controlled tests, and decide what to roll back within 45 minutes?').parts.slice(1), ['segment the incidents', 'isolate interacting causes', 'prioritize controlled tests', 'decide what to roll back within 45 minutes'])
+  assert.deepEqual(A.requestedParts('Choose a real Citi or CVS incident involving authentication, certificate errors, or HTTP inspection: what was your initial hypothesis, which exact evidence disproved or confirmed it, what did you personally change, and how did you verify both recovery and prevention of recurrence?').parts.slice(1), ['what was your initial hypothesis', 'which exact evidence disproved or confirmed it', 'what did you personally change', 'how did you verify both recovery and prevention of recurrence'])
+  assert.equal(A.requestedParts('Using your Splunk, Sentinel, and QRadar experience, how would you correlate endpoint processes, authentication failures, proxy events, and incident tickets while accounting for clock skew, duplicate records, shared IP addresses, renamed devices, and missing identifiers?').parts.length, 10)
+  assert.deepEqual(A.requestedParts('Compare IDOR and CSRF.').parts, ['Compare IDOR and CSRF'])   // two things stay one comparison
+})
+
+test('safety and exactness sit on the baseline rule for scenarios and for incident stories', async () => {
+  const R = await import('../../src/lib/kompasDesktopResponse.ts')
+  for (const q of ['An endpoint outage is approaching its SLA deadline. How would you select a safe workaround?', 'Choose a real Citi incident: what did you personally change?']) {
+    const g = R.desktopResponsePolicy('engineer', q).guidance
+    assert.match(g, /Containment never weakens a security control/, q)
+    assert.match(g, /never a subnet-wide allow, a disabled policy, or an inspection bypass beyond the named destination/, q)
+    assert.match(g, /name only tools that employer's resume section lists/, q)
+  }
+  assert.doesNotMatch(R.desktopResponsePolicy('engineer', 'Define IDOR versus CSRF.').guidance, /Containment never weakens|resume section lists/)
+})
+
+test('event IDs and hypothesis labels stay as written; claimed results are still guarded', () => {
+  const allowed = G.allowedNumbers('9+ years')
+  const keep = [
+    'I check the Windows Event Security log for 4624 and 4625 entries to verify the token.',
+    'I then review the Security event IDs 4768/4769 for the alias versus the hostname to confirm the fallback.',
+    'I assign tasks numbered 1-3: 1 – capture packets on the subnet, 2 – verify token issuance in Okta, 3 – check Zscaler logs.',
+    'We build a hypothesis matrix labeling 1 equals Intune policy, 2 equals EPM rule, 3 equals CA renewal.',
+  ]
+  for (const s of keep) assert.equal(G.applyGuards(s, null, allowed).text, s)
+  assert.doesNotMatch(G.applyGuards('I reduced alert noise by 40% across 200 endpoints.', null, allowed).text, /40%|200/)
+})

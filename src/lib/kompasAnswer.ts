@@ -102,9 +102,12 @@ export function requestedParts(question: string): { parts: string[]; constraints
     let core = sentence.replace(LEAD_FILLER, "").replace(/[.!]+$/, "").trim()
     if (!core) continue
     if (CONDITION.test(core)) { constraints.push(core); continue }
+    // Read before the condition is cut off: "..., how would you distinguish A, B and C without bypassing inspection?" kept
+    // its question mark on the condition, so the ask itself was taken for setup and dropped (27 Oct 2026).
+    const asked = /\?$/.test(core)
     const tail = core.match(/^(.*?),?\s+((?:without|but (?:do not|don't|never))\b.*)$/i)
-    if (tail && tail[1].split(/\s+/).length >= 3) { core = tail[1].trim(); constraints.push(tail[2].trim()) }
-    if (!/\?$/.test(core) && !ASK_OPENER.test(core)) continue   // the setup the ask stands on
+    if (tail && tail[1].split(/\s+/).length >= 3) { core = tail[1].trim(); constraints.push(tail[2].trim().replace(/\?$/, "")) }
+    if (!asked && !ASK_OPENER.test(core)) continue   // the setup the ask stands on
     const list = core.match(LIST_VERB)
     if (list && /,|\band\b/.test(list[2]) && !/\b(?:why|how|what|when|where|whether|versus|vs)\b/i.test(list[2])) {
       const items = list[2].split(/,\s*(?:and\s+)?|\s+and\s+/).map((x) => x.trim()).filter(Boolean)
@@ -112,9 +115,64 @@ export function requestedParts(question: string): { parts: string[]; constraints
     }
     const clauses = core.split(/,\s*(?:and\s+)?|;\s*|\s+and\s+(?=(?:explain|give|describe|define|state|name|list|show|compare|walk|outline|discuss|recommend|propose|justify|why|how|what)\b)/i).map((x) => x.trim()).filter(Boolean)
     if (clauses.length >= 2 && clauses.every((x) => ASK_OPENER.test(x))) { parts.push(...clauses); continue }
-    parts.push(core)
+    parts.push(core, ...listedParts(core))
   }
   return { parts, constraints }
+}
+
+// One sentence that names a set: "how would you distinguish a stale DNS response, overlapping routes, proxy selection, and
+// a NAC restriction?", "...correlate A, B, C and D while accounting for E, F, G", "how would you organize X, select Y,
+// communicate Z, and separate W". Judged 27 Oct 2026 on the owner's Endpoint Analyst set: such a sentence counted as one
+// part, the model got no parts list, and answers gave general checks that skipped items or never told them apart. Each
+// listed item is now its own part under the sentence; a list of fewer than three, or one with a long item, stays whole.
+const SET_VERB = /\b(distinguish(?: between)?|differentiate(?: between)?|tell apart|isolate|investigate|test|examine|correlate|balance|account(?:ing)? for|evaluate|assess|verify|segment|prioriti[sz]e|handle|cover)\s+(.+)$/i
+const TELL_APART = /^(?:distinguish|differentiate|tell apart|isolate)/i
+const STEP_VERB = /^(?:organi[sz]e|select|choose|communicate|separate|identify|correct|establish|design|assess|segment|isolate|prioriti[sz]e|decide|implement|enforce|protect|handle|avoid|explain|verify|validate|build|assign|maintain|distinguish|investigate|test|examine|preserve|coordinate|escalate|contain|restore|document|collect|compare)\b/i
+const CLAUSE_START = /,?\s+(?:and\s+|or\s+)?(?=(?:what|how|why|which|while|without|so that|before|whether|then)\b)/i
+
+function setItems(text: string): string[] {
+  const out: string[] = []
+  let rest = text
+  for (let guard = 0; guard < 3 && rest; guard++) {
+    const m = rest.replace(/[?.!]+$/, "").match(SET_VERB)
+    if (!m) break
+    const body = m[2].split(CLAUSE_START)[0]
+    rest = m[2].slice(body.length)
+    let items = body.split(/,\s*(?:and\s+|or\s+)?/).map((x) => x.trim()).filter(Boolean)
+    if (!/,\s*(?:and|or)\s/.test(body) && items.length >= 2) {   // "A, B and C": the last pair has no comma of its own
+      const lastPair = items[items.length - 1].split(/\s+(?:and|or)\s+/)
+      if (lastPair.length === 2 && lastPair.every((x) => x.split(/\s+/).length <= 4)) items = [...items.slice(0, -1), ...lastPair]
+    }
+    if (TELL_APART.test(m[1]) && items.length && / from /.test(items[0])) items = [...items[0].split(/ from /), ...items.slice(1)]
+    if (items.length < 3 || items.some((x) => x.split(/\s+/).length > 9)) continue
+    out.push(...items.map((x) => (TELL_APART.test(m[1]) ? `${x}: the evidence that confirms or rules it out` : `${m[1].toLowerCase()} ${x}`)))
+  }
+  return out
+}
+
+const STEP_SPLIT = new RegExp(`,\\s*(?:and\\s+)?(?=${STEP_VERB.source.slice(1)})`, "i")
+const ASK_SPLIT = /,\s*(?:and\s+)?(?=(?:what|which|how|why|when|where|who)\b)/i
+
+export function listedParts(core: string): string[] {
+  const text = core.replace(/[?.!]+$/, "")
+  // "how would you organize X, select Y, communicate Z, and separate W": a chain of steps, each its own part (and a set
+  // inside one step, "distinguish A, B, C and D", is listed under it).
+  const steps = text.split(STEP_SPLIT).map((x) => x.trim()).filter(Boolean)
+  if (steps.length >= 2 && steps.slice(1).every((x) => x.split(/\s+/).length <= 14)) {
+    const first = steps[0].replace(/^.*?\b(?:would|will|do|did|could|should)\s+you\s+/i, "")
+    return [first, ...setItems(first), ...steps.slice(1).flatMap((x) => [x, ...setItems(x)])]
+  }
+  // "...: what was your hypothesis, which evidence confirmed it, what did you change, and how did you verify it?"
+  const asks = text.split(ASK_SPLIT).map((x) => x.trim()).filter(Boolean)
+  if (asks.length >= 3) return [asks[0].replace(/^[^:]*:\s*/, ""), ...asks.slice(1)]
+  const items = setItems(core)
+  // "while enforcing least privilege, protecting sensitive information, handling partial failures, and avoiding ..."
+  const whileList = core.match(/\bwhile\s+(\w+ing\b.+?)[?.!]*$/i)
+  if (whileList) {
+    const gerunds = whileList[1].split(/,\s*(?:and\s+)?/).map((x) => x.trim()).filter(Boolean)
+    if (gerunds.length >= 3 && gerunds.every((x) => /^\w+ing\b/.test(x) && x.split(/\s+/).length <= 8) && !items.some((x) => gerunds.some((g) => x.includes(g)))) items.push(...gerunds)
+  }
+  return items
 }
 
 // Parakeet baseline: median length of 1,767 real answers of each kind, scaled

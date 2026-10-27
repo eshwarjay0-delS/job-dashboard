@@ -38,7 +38,13 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   const before = line.slice(Math.max(0, at - 28), at)
   const after = line.slice(at + fig.length, at + fig.length + 14)
   const value = fig.replace(/[.,]+$/, "")
-  if (/\b(port|ports|version|v\.?|cve[-\s]?|event(?:\s*id)?|error|code|rule|threshold|severity|p[0-4]|build|ticket|case|change)\s*$/i.test(before)) return true
+  if (/\b(port|ports|version|v\.?|cve[-\s]?|event(?:\s*ids?)?|error|code|rule|threshold|severity|p[0-4]|build|ticket|case|change)\s*$/i.test(before)) return true
+  // Evaluation 27 Oct 2026 (Endpoint Analyst set): "Security event IDs 4768/4769" and "the Security log for 4624 and 4625
+  // entries" came out "several/several", and hypotheses labelled "1 –", "numbered 1", "1 equals" became "several". A
+  // four-digit id in a sentence about events or logs, the second id of a pair, and a one-digit label are not claims.
+  if (/^\d{4}$/.test(value) && !/^(?:19|20)\d\d$/.test(value) && /\bevents?\b|\blogs?\b|\bevent ids?\b/i.test(line)) return true
+  if (/\d\/$/.test(before)) return true
+  if (/^[1-9]$/.test(value) && (/^\s*(?:[–—=:-]\s*[A-Za-z]|equals\b)/.test(after) || /\b(?:numbered|label(?:l?ed|l?ing)?|labels?)\s*$/i.test(before))) return true
   if (/^x[0-9a-f]/i.test(after)) return true
   if (/^\s*(port|ports)\b/i.test(after)) return true
   // Structural numbers are labels, not result claims — the guard rewrote them

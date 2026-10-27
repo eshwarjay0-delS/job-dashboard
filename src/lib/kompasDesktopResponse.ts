@@ -35,7 +35,11 @@ export function desktopQuestionKind(question: string): DesktopQuestionKind {
     // "a vulnerability you personally discovered", "your first mitigation in that same incident": the candidate's own work.
     // Measured 26 Oct 2026: both were answered as a 70-90 word concept or as a generic procedure.
     || /\byou(?:'ve| have)? (?:personally |yourself |ever |once )?(?:discovered|found|faced|built|implemented|led|designed|handled|resolved|fixed|investigated|owned|delivered|migrated|automated|managed|reported|caught)\b/.test(q)
-    || /\b(?:same|that) incident\b[\s\S]*\byour\b|\byour (?:first |own |initial )?(?:mitigation|fix|remediation|discovery|finding|incident|project|decision|approach)\b/.test(q)) return 'experience'
+    || /\b(?:same|that) incident\b[\s\S]*\byour\b|\byour (?:first |own |initial )?(?:mitigation|fix|remediation|discovery|finding|incident|project|decision|approach)\b/.test(q)
+    // "Choose a real Citi or CVS incident ...: what did you personally change" was answered as a hypothetical procedure,
+    // and on its own as a 70-word general turn (evaluation, 27 Oct 2026). A real incident the candidate picks is their own.
+    || /\b(?:choose|pick|describe|give|share|defend|walk (?:me )?through|tell me about)\b[^.?!]{0,80}?\b(?:a|an|one)\s+(?:real|recent|specific|actual|concrete)\s+(?:[\w-]+\s+){0,4}?(?:incident|project|outage|example|situation|case|story)\b/.test(q)
+    || /\bwhat did you (?:personally |yourself )?(?:change|do|fix|own|decide|build)\b/.test(q)) return 'experience'
   if (practical) return 'implementation'
   if (!askedForDepth && /\b(compare|versus|vs\.?|difference|distinguish)\b/.test(q)) return 'comparison'
   if (!askedForDepth && /\b(define|definition|what (?:is|are)|meaning of)\b/.test(q)) return 'definition'
@@ -48,6 +52,13 @@ export function desktopQuestionKind(question: string): DesktopQuestionKind {
 // disabled JWT validation or ran deny-all on the critical service, "tests" that passed when no records came back, and
 // hypotheses ruled out by the evidence that confirmed them.
 const SAFE_LOGIC = "Containment never weakens a security control to restore service: no bypassing authentication, token validation or inspection, no blanket allow, and no deny-all that takes the critical service down. Missing telemetry is never a pass. A hypothesis is confirmed or ruled out by the evidence named, never both."
+  // Judged 27 Oct 2026 on the Endpoint Analyst set: a "workaround" opened a subnet-wide Zscaler allow, an incident story
+  // bypassed inspection for a whole domain, and "block NTLM fallback" was offered as the fix. Added, the rule above kept.
+  + " A workaround or exception is the narrowest that restores the service: only the affected application, destination or group, with an owner, an expiry or review date and monitoring while it stands; never a subnet-wide allow, a disabled policy, or an inspection bypass beyond the named destination."
+
+// Same evaluation: confident but wrong specifics (Kerberos error codes, "whoami /f", AppEnforce.log as an EPM log), and
+// Palo Alto placed at CVS, whose resume section lists Check Point. Real specifics stay; they must be exact and in place.
+const EXACT_AND_PLACED = "Name an error code, event ID, log, setting or product behaviour only when it is exact for that product; otherwise say the check in plain words. When you say what you did at an employer, name only tools that employer's resume section lists."
 
 const SURFACE_STOP = "Do not pull logs, list search keywords, open a tool chain, or aggregate Splunk. Do not add a personal incident, project lifecycle, implementation walkthrough, log collection, Splunk queries, integration plan, bottlenecks or achievement metrics to a definition or comparison."
 
@@ -97,9 +108,9 @@ export function desktopResponsePolicy(audience: string, question: string) {
   const scope = surface
     ? `This is a ${kind}. Touch the technical idea in the abstract and stop. ${angle} ${SURFACE_STOP}`
     : kind === "experience"
-    ? `Use one supported real example. Explain what was discovered or built, the candidate's own actions, the actual bottleneck, how it was resolved, and the impact on the work. A deep example gets that account. Use only supplied facts and metrics. If the incident is absent, say so and give the approach as a hypothesis. ${angle}`
+    ? `Use one supported real example. Explain what was discovered or built, the candidate's own actions, the actual bottleneck, how it was resolved, and the impact on the work. A deep example gets that account. Use only supplied facts and metrics. If the incident is absent, say so and give the approach as a hypothesis. ${angle} ${SAFE_LOGIC} ${EXACT_AND_PLACED}`
     : kind === "implementation"
-    ? `Follow the precise path the question asked. ${angle} A follow-up stays on the piece that was asked. Do not restart the whole story. Do not pull logs or aggregate Splunk unless the question asked for that hunt. ${SAFE_LOGIC}`
+    ? `Follow the precise path the question asked. ${angle} A follow-up stays on the piece that was asked. Do not restart the whole story. Do not pull logs or aggregate Splunk unless the question asked for that hunt. ${SAFE_LOGIC} ${EXACT_AND_PLACED}`
     : `This is an ordinary question. Answer it in a few sentences. ${angle} ${SURFACE_STOP}`
   const shape = levelMetrics(level)
   const spoken = `SPOKEN MEASURES for this level only: depth ${shape.depth}, distinction ${shape.distinction}, integration ${shape.integration}, relevance ${shape.relevance}, confidence ${shape.confidence}. These are not the same as the other two levels. SPOKEN CARD: one sentence a line, the way a person talks. Keep the technical name. Do not write a command, a sign, a math sum, or a block of code. Write at least nine, never >=9. Write and, never an ampersand and never x-amp. The last sentence is the plain takeaway, still about this question. Do not open another topic.`
