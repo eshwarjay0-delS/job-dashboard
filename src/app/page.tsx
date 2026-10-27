@@ -10,6 +10,7 @@
 // and features that did not exist. None of that is here. The numbers that are here come from the product itself.
 
 import Link from "next/link"
+import Image from "next/image"
 import { ArrowRight, Check, Clock, FileText, FolderOpen, Inbox, Lock, MessageCircle, Mic, ShieldCheck, Sparkles, CalendarCheck } from "lucide-react"
 import { PLANS } from "@/lib/plans"
 import { JoinList, LandingNav, Reveal } from "./_landing/landing-client"
@@ -123,6 +124,38 @@ export default function Home() {
               </ul>
             </Reveal>
             <Reveal delay={120}><ProductPicture /></Reveal>
+          </div>
+        </section>
+
+        <section aria-labelledby="quiet-step-title" className="mx-auto max-w-6xl px-5 pb-20 sm:pb-24">
+          <div className={`${card} overflow-hidden`}>
+            <figure className="m-0">
+              <Image src="/brand/marketfit-quiet-morning.webp" width={1672} height={941}
+                sizes="(max-width: 1152px) 100vw, 1112px"
+                alt="An anime illustration of a professional reviewing a resume in MarketFit beside a sunlit window."
+                className="h-auto w-full" />
+              <figcaption className={`${soft} border-b border-[var(--border)] px-6 py-2 text-[12px]`}>An illustrated look at MarketFit. The screen is a visual concept.</figcaption>
+            </figure>
+            <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-2 lg:gap-12">
+              <div>
+                <p className="text-[14px] font-semibold text-[var(--accent)]">A little room to breathe</p>
+                <h2 id="quiet-step-title" className={`${display} ${ink} mt-3 text-[32px] leading-[1.15] sm:text-[40px]`}>Your next step,<br />at your pace.</h2>
+                <p className={`${muted} mt-4 max-w-md text-[16px] leading-relaxed`}>Start with one opportunity. Bring your experience into focus, review your resume, and keep it close for what comes next.</p>
+                <Link href="/signup" className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-xl bg-[var(--accent)] px-5 font-semibold text-[var(--bg)] transition-colors hover:bg-[var(--accent-h)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]">Take the first step <ArrowRight size={18} /></Link>
+              </div>
+              <ol className="grid content-center gap-3" aria-label="A calmer resume workflow">
+                {[
+                  ["01", "Bring the opportunity", "Start with the job description you want to work on."],
+                  ["02", "Make it yours", "Review how your own experience is presented."],
+                  ["03", "Keep it close", "Find the resume again in your files."],
+                ].map(([number, title, text]) => (
+                  <li key={number} className="flex items-start gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
+                    <span aria-hidden="true" className="font-display pt-0.5 text-[20px] text-[var(--accent)]">{number}</span>
+                    <div><h3 className={`${ink} text-[16px] font-semibold`}>{title}</h3><p className={`${muted} mt-1 text-[14px] leading-relaxed`}>{text}</p></div>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </div>
         </section>
 
