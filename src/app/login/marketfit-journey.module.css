@@ -2,8 +2,11 @@
 .scene {
   position: relative;
   isolation: isolate;
-  width: min(100%, 470px);
-  height: clamp(285px, 33vh, 360px);
+  /* Grow the opening artwork with its stage, without stretching tall cards indefinitely. */
+  width: min(100%, 650px);
+  max-width: none;
+  height: min(100%, 660px);
+  min-height: 0;
   margin-inline: auto;
   color: var(--text);
 }
