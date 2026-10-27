@@ -2337,23 +2337,40 @@ async function grabFrame() {
   let track = displayVideo && displayVideo.readyState === "live" ? displayVideo : null;
   if (!track) { const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }); track = s.getVideoTracks()[0]; displayVideo = track; }
   const video = document.createElement("video"); video.muted = true; video.playsInline = true;
-  video.srcObject = new MediaStream([track]); await video.play();
-  if (video.readyState < 2) await new Promise(r => { video.onloadeddata = r; setTimeout(r, 1500); });
-  const w = video.videoWidth || 1280, h = video.videoHeight || 720, k = Math.min(1, 1600 / w);
-  const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
-  c.getContext("2d").drawImage(video, 0, 0, c.width, c.height);
-  video.pause(); video.srcObject = null;
-  return c.toDataURL("image/jpeg", 0.72);
+  try {
+    video.srcObject = new MediaStream([track]); await video.play();
+    if (video.readyState < 2) await new Promise(r => { video.onloadeddata = r; setTimeout(r, 1500); });
+    if (track.readyState !== "live" || video.readyState < 2 || !video.videoWidth || !video.videoHeight) throw new Error("No readable screen frame yet. Please retry.");
+    const w = video.videoWidth, h = video.videoHeight, k = Math.min(1, 1600 / w);
+    const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+    const context = c.getContext("2d");
+    if (!context) throw new Error("Screen capture is unavailable in this browser.");
+    context.drawImage(video, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.72);
+  } finally { video.onloadeddata = null; video.pause(); video.srcObject = null; }
 }
 async function analyseScreen() {
+  if (aiBusy) { status("Still working on the last answer.", "live"); return; }
+  aiBusy = true; aiBusySince = Date.now();
+  const screenSession = current && current.id;
   const card = addCard("🖥 Reading the screen…", ["…"]); card.streaming = true; renderCard();
   const t0 = performance.now();
   try {
     const image = await grabFrame();
-    const res = await fetch("/api/screen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ image, prep: slimPrep(), config: liveConfig() }) });
+    const res = await fetch("/api/screen", { signal: AbortSignal.timeout(30000), method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ image, prep: slimPrep(), config: liveConfig() }) });
     const data = await res.json();
+    if ((current && current.id) !== screenSession || !cards.includes(card)) throw new Error("Session changed. Capture the screen again in the active session.");
+    if (!res.ok) throw new Error(data.error || "Screen analysis failed. Please retry.");
+    if (data.needsAnswer === true) {
+      if (typeof data.question !== "string" || !data.question.trim()) throw new Error("No screen question was returned. Please retry.");
+      card.question = data.question.trim();
+      await generateAnswer(card.question, card, { pinned: true, derived: card.question });
+      return;
+    }
+    if (typeof data.text !== "string" || !data.text.trim()) throw new Error("No screen answer was returned. Please retry.");
     card.question = "🖥 " + (data.question || "On screen"); card.answer = data.text || "- Nothing readable came back from the screen — try Analyse Screen again.";
   } catch (e) { card.question = "🖥 Screen"; card.answer = ["Couldn't capture the screen — " + (e && e.name === "NotAllowedError" ? "share was cancelled" : (e && e.message || e))]; }
+  finally { aiBusy = false; }
   card.streaming = false; card.meta = ((performance.now() - t0) / 1000).toFixed(1) + "s · vision";
   if (cards[idx] === card) renderCard();
 }
