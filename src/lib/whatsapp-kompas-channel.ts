@@ -148,7 +148,7 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
     for (let i = 0; i < 4; i++) {
       const created = await sessions.create(owner)
       if (await changeChannel(owner, from, channel, created.id)) {
-        await send("Kompas started. Send your resume, then the job description. You may attach supporting PDF, DOCX or TXT files. Send start when ready.")
+        await send("Kompas started. Send your resume and job description in either order. You may paste the JD and attach Resume.docx or other supporting PDF, DOCX or TXT files. Send start when ready.")
         return true
       }
       channel = await readChannel(owner, from)
