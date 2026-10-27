@@ -190,6 +190,13 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
     let input: KompasInput
     if (type === "text") {
       const role = classifyKompasPastedSource(sources, text)
+      // A user can send a casual voice question or product feedback before
+      // submitting their interview sources. Never silently store that audio
+      // transcript as a "resume" or "JD" merely because it arrived first.
+      if (msg.mfitVoiceNote === true && !role && (!sources.resume || !sources.jd) && command !== "start") {
+        await send("Voice note understood, but Kompas still needs your resume and job description before answering interview questions. Send them as files or text; you can dictate a JD starting with 'Job description:'.")
+        return true
+      }
       input = role ? { kind: "document", role, name: role === "jd" ? "Pasted job description" : "Pasted resume", text }
         : { kind: "text", text }
     } else {
