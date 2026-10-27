@@ -43,7 +43,12 @@ export function desktopQuestionKind(question: string): DesktopQuestionKind {
   return 'general'
 }
 
-const SURFACE_STOP = "Do not pull logs, list search keywords, open a tool chain, or aggregate Splunk. Do not add a personal incident, project lifecycle, implementation walkthrough, log collection, Splunk queries, integration plan, bottlenecks or achievement metrics to a definition or comparison."
+// Measured 26 Oct 2026 (evaluation round 2, grounding 2.78/4): design and failure scenarios were told as if they had
+// happened, with results nobody supplied: "the monitor fires clean for three cycles, proving remediation held",
+// "confirming a less than 250 ms response time", "the team lead signed off", a named decision owner.
+const HYPOTHETICAL = "The scenario in this question is hypothetical unless the candidate's own sources document it: say what you would do, check, and expect, in would and if-then terms. Never state an outcome as having happened: no achieved times, counts, percentages, sign-offs or confirmations, and never a named person. Name a decision owner by role, never by a name."
+
+const SURFACE_STOP ="Do not pull logs, list search keywords, open a tool chain, or aggregate Splunk. Do not add a personal incident, project lifecycle, implementation walkthrough, log collection, Splunk queries, integration plan, bottlenecks or achievement metrics to a definition or comparison."
 
 /** The craft block for a desktop answer. A definition does not inherit the investigation outline. */
 export function desktopCraft(kind: DesktopQuestionKind): string {
@@ -83,9 +88,9 @@ export function desktopResponsePolicy(audience: string, question: string) {
       : "This is not a general recruiter. Give the method, the pivot, and who was accountable. Use hypotheses, evidence, research, alternatives, pivots. Show on-call accountability. Use metrics only when supplied. Do not give the build manual.")
     : kind === "implementation"
     ? (level === "architect"
-      ? "Explain how it was built, configured, and integrated, bit by bit, including the interface, the tradeoff, and the test."
+      ? "Explain how you would build, configure, and integrate it, bit by bit, including the interface, the tradeoff, and the test."
       : level === "director"
-      ? "Keep that understanding and speak it at the business and operational level: the decision, the risk, and the result the operation can use. Do not recite the build steps."
+      ? "Keep that understanding and speak it at the business and operational level: the decision, the risk, and the result you would expect and how you would measure it. Do not recite the build steps."
       : "This is not a general recruiter. For this engineering problem, give methodical reasoning: hypotheses, evidence, research, alternatives, pivots. Show on-call accountability. Use metrics only when supplied. Do not give the build, the setup, and the integration unless this question asked how it was built.")
     : ""
   const scope = surface
@@ -93,7 +98,7 @@ export function desktopResponsePolicy(audience: string, question: string) {
     : kind === "experience"
     ? `Use one supported real example. Explain what was discovered or built, the candidate's own actions, the actual bottleneck, how it was resolved, and the impact on the work. A deep example gets that account. Use only supplied facts and metrics. If the incident is absent, say so and give the approach as a hypothesis. ${angle}`
     : kind === "implementation"
-    ? `Follow the precise path the question asked. ${angle} A follow-up stays on the piece that was asked. Do not restart the whole story. Do not pull logs or aggregate Splunk unless the question asked for that hunt.`
+    ? `Follow the precise path the question asked. ${angle} A follow-up stays on the piece that was asked. Do not restart the whole story. Do not pull logs or aggregate Splunk unless the question asked for that hunt. ${HYPOTHETICAL}`
     : `This is an ordinary question. Answer it in a few sentences. ${angle} ${SURFACE_STOP}`
   const shape = levelMetrics(level)
   const spoken = `SPOKEN MEASURES for this level only: depth ${shape.depth}, distinction ${shape.distinction}, integration ${shape.integration}, relevance ${shape.relevance}, confidence ${shape.confidence}. These are not the same as the other two levels. SPOKEN CARD: one sentence a line, the way a person talks. Keep the technical name. Do not write a command, a sign, a math sum, or a block of code. Write at least nine, never >=9. Write and, never an ampersand and never x-amp. The last sentence is the plain takeaway, still about this question. Do not open another topic.`
