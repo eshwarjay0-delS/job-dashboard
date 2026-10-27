@@ -46,7 +46,7 @@ test('the candidate\'s own discovery and own incident are experience, a hypothet
 })
 
 test('the route puts the parts checklist right under the question, for every tier but an introduction', () => {
-  const route = readFileSync(new URL('../../src/app/api/kompas/answer/route.ts', import.meta.url), 'utf8')
+  const route = readFileSync(new URL('../../src/lib/kompasAnswerService.ts', import.meta.url), 'utf8')
   assert.match(route, /const asks = tier !== 0 \? requestedParts\(question\)/)
   assert.match(route, /userText: `ANSWER ONLY THIS:\\n\$\{question\}\\n\\n\$\{partsBlock \?/)
 })

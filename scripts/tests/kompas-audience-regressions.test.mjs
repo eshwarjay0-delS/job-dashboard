@@ -109,7 +109,7 @@ test('the question is cut out of the ramble, and a definition stays a storytelle
 })
 
 test('the desktop answer route keeps the interview sequence in the words the model hears last', () => {
-  const route = readFileSync(new URL('../../src/app/api/kompas/answer/route.ts', import.meta.url), 'utf8')
+  const route = readFileSync(new URL('../../src/lib/kompasAnswerService.ts', import.meta.url), 'utf8')
   assert.match(route, /INTERVIEW/)
   assert.match(route, /\$\{INTERVIEW\}/)
 })

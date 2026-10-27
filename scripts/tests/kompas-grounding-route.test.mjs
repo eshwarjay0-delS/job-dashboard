@@ -12,7 +12,7 @@ function harness(options = {}) {
   const calls = []
   let dossiers = 0, vaults = 0
   const mocks = {
-    '@/lib/authBoundary': { authenticatedUser: async () => ({ id: 'test-user' }) },
+    '@/lib/authBoundary': { authenticatedUser: async () => options.unauthenticated ? null : ({ id: 'test-user' }) },
     '@/lib/llm': { keysFor: async () => { vaults++; return { openrouter: 'test-key' } }, resolveKeys: () => ({}) },
     '@/lib/rateLimit': { checkRateLimit: () => ({ ok: true }) },
     '@/lib/dossier': { dossierContext: async () => { dossiers++; return options.hungDossier ? new Promise(() => {}) : 'OLD GENERATED INCIDENT' } },
@@ -373,3 +373,12 @@ for (let fold = 0; fold < 30; fold++) {
     }
   })
 }
+
+ test('HTTP route rejects unauthenticated callers before provider or source access', async () => {
+  const h = harness({unauthenticated:true})
+  const response = await h.post({question:'DNS',config:{resume:'source',jd:'JD'}})
+  assert.equal(response.status,401)
+  assert.equal(h.calls.length,0)
+  assert.equal(h.dossiers,0)
+  assert.equal(h.vaults,0)
+})
