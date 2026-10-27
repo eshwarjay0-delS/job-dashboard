@@ -45,6 +45,9 @@ jobs:
       - name: Verify desktop Screen Answer UI and capture path
         run: node --check public/kompas/app.js && node --test scripts/tests/kompas-desktop-screen-action.test.mjs scripts/tests/kompas-screen-response.test.mjs scripts/tests/kompas-screen-review.test.mjs
 
+      - name: Verify WhatsApp Kompas channel and shared-session safety
+        run: node --test scripts/tests/whatsapp-kompas*.test.mjs scripts/tests/kompas-shared-session.test.mjs scripts/tests/kompas-shared-turn.test.mjs
+
       - name: Verify consented voice benchmark metrics
         run: node --test scripts/tests/kompas-voice-metrics.test.mjs
 
