@@ -299,16 +299,52 @@ export function cutQuestion(heard: string): string {
     .replace(/\s+/g, " ")
     .trim()
   if (BARE_INTRO.test(text)) return "Tell me about yourself"
-  const re = /((?:how|what|why|when|where|which|who)\b[^?.!]{6,180}\??|(?:can|could|would|will|do|did|are|have)\s+you\b[^?.!]{4,180}\??|(?:tell me|walk me|give me|explain|describe|define|compare)\b[^?.!]{4,180}\??)/gi
-  const found: string[] = []
-  let m: RegExpExecArray | null
-  while ((m = re.exec(text))) {
-    const q = m[1].replace(/^(?:ok(?:ay)?|so|and|also|yes|yeah|uh|um)[, ]+/i, "").trim()
-    if (q.split(/\s+/).length >= 3) found.push(q)
+  // The interviewer's whole ask, not its last clause (measured 26 Oct 2026: "Design X. Explain trust boundaries..."
+  // was answered as "Explain trust boundaries...", and "Give a falsifiable test and an exit criterion" was dropped).
+  // The last ask, the asks and the scenario just before it, and the instructions right after it, in order.
+  const parts = askSentences(text)
+  let last = -1
+  for (let i = parts.length - 1; i >= 0; i--) if (parts[i].kind === "ask") { last = i; break }
+  if (last < 0) return ""
+  let from = last, context = 0
+  while (from > 0 && (parts[from - 1].kind === "ask" || (parts[from - 1].kind === "context" && context < 2))) {
+    if (parts[from - 1].kind === "context") context++
+    from--
   }
-  if (!found.length) return ""
-  const q = found[found.length - 1].replace(/\s+/g, " ").trim()
-  return q.charAt(0).toUpperCase() + q.slice(1)
+  while (from < last && parts[from].kind === "context" && parts[from].text.split(/\s+/).length > 40) from++   // a long monologue is not setup
+  // Instructions after the ask ("Give a falsifiable test", "Keep it suitable for technical HR") are asks themselves, so
+  // the last ask is the end of the question.
+  const q = parts.slice(from, last + 1).map((p) => p.text).join(" ").replace(/\s+/g, " ").trim()
+  if (q.split(/\s+/).length < 3) return ""
+  return (q.charAt(0).toUpperCase() + q.slice(1)).slice(0, 2000)
+}
+
+// The openers of an interviewer's ask or instruction. Before 26 Oct 2026 only how/what/why..., can/would you, tell me,
+// walk me, give me, explain, describe, define and compare counted, so any other imperative ("Design", "Walk through",
+// "State", "Give a", "Keep it") was not part of the question at all.
+const ASK_OPENER = /^(?:how|what|why|when|where|which|who|whom|whose)\b|^(?:can|could|would|will|should|do|does|did|are|have|has)\s+(?:you|we)\b|^(?:tell|walk|take|talk|show|give|explain|describe|define|compare|contrast|differentiate|distinguish|design|build|implement|configure|architect|plan|outline|list|name|state|share|write|draft|map|diagnose|troubleshoot|debug|identify|recommend|propose|justify|estimate|summari[sz]e|discuss|evaluate|assess|analy[sz]e|elaborate|expand|go|dig|introduce|imagine|suppose|pick|choose|select|rank|prioriti[sz]e|break|weigh|defend|verify|validate|test|measure|quantify|detail|clarify|demonstrate|illustrate|cover|include|keep|focus|assume|consider|avoid|limit|stay|mention|start|end|finish|continue)\b/i
+// Somewhere inside a sentence that does not open as one (speech-to-text often has no full stops): the ask starts here.
+const ASK_INSIDE = /\b(?:how|what|why|when|where|which|who)\b|\b(?:can|could|would|will|do|did|are|have)\s+you\b|\b(?:tell me|walk me|give me|explain|describe|define|compare|design|build|implement|configure)\b/i
+const LEAD_FILLER = /^(?:(?:ok(?:ay)?|so|and|also|now|then|next|finally|right|alright|all right|well|yes|yeah|uh+|um+|please|great|perfect|cool|sure)[,.!]?\s+)+/i
+const PLEASANTRY = /^(?:(?:that'?s|that is)\s+(?:great|good|interesting|fair|helpful|clear|right|true)|thanks?\b|thank you\b|(?:great|perfect|nice|good|interesting|excellent|awesome|wonderful|got it|makes sense|i see|understood)[.!]*$)/i
+const OWN_WORDS = /^(?:i|i'm|i've|i'd|i'll|we|we're|we've|we'd|my|our|me)\b/i
+
+type AskPart = { kind: "ask" | "context" | "noise" | "own"; text: string }
+
+/** Each sentence, read as an ask, setup for one, a filler, or the candidate's own words. */
+function askSentences(text: string): AskPart[] {
+  return String(text || "").split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean).map((sentence): AskPart => {
+    const bare = sentence.replace(LEAD_FILLER, "").trim()
+    if (!bare || noiseOnly(bare) || PLEASANTRY.test(bare)) return { kind: "noise", text: bare }
+    if (ASK_OPENER.test(bare) || (/\?$/.test(bare) && !OWN_WORDS.test(bare))) return { kind: "ask", text: bare }
+    const inside = bare.search(ASK_INSIDE)
+    if (inside > 0 && bare.slice(inside).split(/\s+/).length >= 3) {
+      const tail = bare.slice(inside)
+      // "In your experience, how do you..." keeps its lead; a ramble before the ask does not.
+      return { kind: "ask", text: OWN_WORDS.test(bare) ? tail.slice(0, 400) : bare }
+    }
+    return { kind: OWN_WORDS.test(bare) ? "own" : "context", text: bare }
+  })
 }
 
 const SPOKEN_NOISE =
@@ -333,15 +369,14 @@ export function noiseOnly(text: string): boolean {
 export function questionToAnswer(heard: string, explicit: string, pinned = false): string {
   const asked = String(explicit || "").replace(/\s+/g, " ").trim()
   if (pinned && asked && !noiseOnly(asked)) {
-    // A compound ask stays whole (owner, 23 Oct 2026): when the formed
-    // question carries more than one ask, answer all of it, in order —
-    // never only the last clause. A single ask keeps the cut form.
-    const isAsk = (s: string) => { const t = s.replace(/^(?:and|so|also|but|ok(?:ay)?|yes|yeah)[, ]+/i, ""); return t.split(/\s+/).length >= 3 && /^(?:how|what|why|when|where|which|who)\b|^(?:can|could|would|will|do|did|are|have)\s+you\b|^(?:tell me|walk me|give me|explain|describe|define|compare)\b/i.test(t) }
-    const clauses = (asked.match(/[^?.!]+[?.!]+/g) || []).map((s) => s.trim()).filter(Boolean)
-    const asks = clauses.filter(isAsk)
-    if (asks.length >= 2) return asks.join(" ").slice(0, 2000)
-    const inner = cutQuestion(asked)
-    return (inner || asked).slice(0, 2000)
+    // The formed question on the card is the whole of what was asked (owner, 23 Oct 2026): every ask, the setup between
+    // them and every instruction, in order. Only leading filler and the candidate's own words before the first ask go.
+    // Before 26 Oct a single recognised ask was cut out of it, so "Design X. Explain Y." was answered as "Explain Y."
+    const parts = askSentences(asked)
+    let from = 0
+    while (from < parts.length - 1 && (parts[from].kind === "noise" || parts[from].kind === "own")) from++
+    const whole = parts.slice(from).map((p) => p.text).join(" ").replace(/\s+/g, " ").trim()
+    return (whole && !noiseOnly(whole) ? whole : asked).slice(0, 2000)
   }
   const cut = cutQuestion([heard, asked].filter(Boolean).join("\n"))
   if (cut) return cut
