@@ -71,7 +71,7 @@ export async function speechToWhatsAppText(
       ok: true,
       // Keep Meta's original message ID: the signed, de-duplicated webhook owns
       // delivery and command semantics. The reducer never sees raw audio.
-      message: { ...msg, type: "text", text: { body: spoken } },
+      message: { ...msg, type: "text", text: { body: spoken }, mfitVoiceNote: true },
       characters: spoken.length,
       elapsedMs: Date.now() - started,
     }
