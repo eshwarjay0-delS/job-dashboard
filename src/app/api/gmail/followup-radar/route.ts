@@ -42,8 +42,11 @@ export async function GET(req: Request) {
       const outbound = emailAddress(latest.from) === own
       if (!outbound) continue
 
-      const ms = Date.now() - Number(latest.internalDate || 0)
-      const daysWaiting = Math.floor(ms / 86_400_000)
+      const now = Date.now()
+      const sentAt = Number(latest.internalDate)
+      // Missing, invalid or future evidence cannot establish a quiet interval.
+      if (!latest.internalDate || !Number.isFinite(sentAt) || sentAt <= 0 || sentAt > now) continue
+      const daysWaiting = Math.floor((now - sentAt) / 86_400_000)
       if (!Number.isFinite(daysWaiting) || daysWaiting < minWait) continue
 
       // Who did he write to? The most recent inbound message's sender.
