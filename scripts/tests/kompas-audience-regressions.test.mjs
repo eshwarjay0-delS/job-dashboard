@@ -59,7 +59,7 @@ test('the live page says a problem before the session and does not leave a failu
   assert.match(page, /function heardAsQuestion/)
   assert.doesNotMatch(page, /transcript\.length > 500/)
   assert.match(page, /flushHeard\(1500\)/)
-  assert.match(page, /derived: said/)
+  assert.match(page, /derived: heardOnly \? undefined : said/)
   assert.match(page, /Answering: /)
   assert.match(page, /pinned: true/)
   assert.match(page, /async function wrapSession/)

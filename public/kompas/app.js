@@ -835,7 +835,7 @@ function renderCard() {
   $("card").classList.toggle("streaming", !!c.streaming);
   wrapWords(ul);                                     // every word is addressable, for Follow along
   ul.scrollTop = keep;
-  if (c.req === answerCtl && nearBottom) ul.scrollTop = ul.scrollHeight;   // a streaming answer follows its tail while you are already near it; reading higher up is never yanked
+  if (c.streaming && nearBottom) ul.scrollTop = ul.scrollHeight;   // a streaming answer follows its tail while you are already near it; reading higher up is never yanked
   if (typeof followRendered === "function") followRendered(c);
 }
 // Wrap each word of the answer in <span class="w"> (skipping the pause pills) so Follow along can mark
