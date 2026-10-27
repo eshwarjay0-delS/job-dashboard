@@ -34,6 +34,7 @@ import { claimLinkCode } from "@/lib/whatsapp-link"
 import { notRegisteredMessage, NOT_CHECKED_MESSAGE, siteOf } from "@/lib/whatsapp-who-core"
 import { sameResumeIdentity } from "@/lib/resume-identity"
 import { extractText } from "@/lib/docx"
+import { handleWhatsAppKompas } from "@/lib/whatsapp-kompas-channel"
 import { extractProfile } from "@/lib/profile"
 import { plainFailure } from "@/lib/plain-failure"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
@@ -301,7 +302,7 @@ export async function POST(request: NextRequest) {
   // Until 19 Oct 2026 the answer waited for the whole resume, minutes, and Meta re-sent what it took for a failure.
   const work = async () => {
     try {
-      await handle(from, msg, session, userId)
+      await handle(from, msg, session, userId, sender.who.own)
     } catch (e) {
       try { await sendText(from, plainFailure(e, "do that", true)) } catch { /* ignore */ }
     }
@@ -311,7 +312,7 @@ export async function POST(request: NextRequest) {
   return ok()
 }
 
-async function handle(from: string, msg: Record<string, unknown>, session: Session, userId: string) {
+async function handle(from: string, msg: Record<string, unknown>, session: Session, userId: string, verified: boolean) {
   const type = String(msg.type || "")
 
   // ── Chief approval cards (Phase 4) ─────────────────────────────────────────
@@ -381,6 +382,20 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
       }
       return sendText(from, err ? `Skipped. ⚠️ ${err}` : "Skipped — the draft was discarded.")
     }
+  }
+
+  // Kompas has an explicit opt-in command and an independent, account-owned session.
+  // All other WhatsApp traffic continues through the original MFit resume workflow.
+  if (type === "text" || type === "document") {
+    const consumed = await handleWhatsAppKompas({
+      from, owner: userId, verified, requestId: String(msg.id || ""), msg,
+      send: async message => {
+        // A verified number relinked during generation cannot receive the old account's answer.
+        const latest = await resolveWhatsAppUser(from)
+        if (latest.who?.own && latest.who.userId === userId) await sendText(from, message)
+      },
+    })
+    if (consumed) return
   }
 
   // ── Commands / change requests / JD text ────────────────────────────────────
