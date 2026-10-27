@@ -15,7 +15,8 @@ if ($("releaseBuild")) $("releaseBuild").textContent = "Release " + BUILD.replac
 async function checkForUpdate() {
   if (BUILD === "dev" || location.protocol === "file:") return;
   try {
-    const v = await (await fetch("/version.json?t=" + Date.now(), { cache: "no-store" })).json();
+    // The page's own stamp, next to index.html: the root /version.json was a different file, so the update pill showed forever.
+    const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (!v || !v.build || v.build === BUILD) return;
     // Inactivity, a hidden screen or a deploy is never consent to discard work.
     if ($("updatePill")) return;
@@ -863,6 +864,20 @@ const toTop = () => { const ul = $("answer"); if (ul) ul.scrollTop = 0; const c 
 $("prevBtn").onclick = () => { if (idx > 0) { idx--; renderCard(); toTop(); animateCard(); } };
 $("nextBtn").onclick = () => { if (idx < cards.length - 1) { idx++; renderCard(); toTop(); animateCard(); } };
 function addCard(question, answer) { const c = { question, answer }; cards.push(c); idx = cards.length - 1; renderCard(); toTop(); animateCard(); return c; }
+// A page holds a finished answer: not streaming, and more than the "…" placeholder.
+function hasAnswer(c) { const t = (typeof c.answer === "string" ? c.answer : (c.answer || []).join("\n")).trim(); return !c.streaming && t.length > 8 && !/^[.…\s]+$/.test(t); }
+// Takes an empty page out of the book. The only page stays (the live view always shows one); returns whether it went.
+function dropPage(c) {
+  const i = cards.indexOf(c);
+  if (i < 0 || cards.length < 2) return false;
+  const shown = idx === i;
+  cards.splice(i, 1);
+  if (idx > i || (shown && idx > 0)) idx--;   // the page you were on stays in view; a removed page in view gives way to the one before it
+  idx = Math.min(idx, cards.length - 1);
+  renderCard();
+  if (shown) toTop();   // reading another page: its place is not moved
+  return true;
+}
 // Copy / Export give what the screen shows: no placeholders, headings as headings, no markdown noise.
 function plainAnswer(answer) {
   return answerLines(answer).map(({ t, kind, lang }) => {
@@ -1044,8 +1059,7 @@ function sayAloud(s) {
 function regenerateForAudience() {
   if (typeof logAction === "function") logAction("regen", { to: $("liveInterviewer").value });
   const c = cards[idx], label = $("liveInterviewer").selectedOptions[0].textContent;
-  if (c && c.req) { const previous = c.req; c.req = null; try { previous.abort(); } catch {} }
-  if (typeof answerCtl !== "undefined" && answerCtl) { try { answerCtl.abort(); } catch {} answerCtl = null; }
+  if (c && c.req) { const previous = c.req; c.req = null; try { previous.abort(); } catch {} if (typeof answerCtl !== "undefined" && answerCtl === previous) answerCtl = null; }   // only this page's request: another page's answer keeps streaming
   if (c) c.streaming = false;
   if (!c || /^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(c.question) || !String(c.question).trim()) { status("Now answering for: " + label, "live"); return; }
   if (desktopResponses()) {
@@ -1653,6 +1667,8 @@ function scheduleAuto() {
   }, AUTO_QUIET_MS);
 }
 function resetLiveState() {           // a new or exited session starts clean: no leaked stream, timer or badge
+  for (const c of inflight) { try { c.abort(); } catch {} }
+  inflight.clear();
   if (answerCtl) { try { answerCtl.abort(); } catch {} answerCtl = null; }
   clearTimeout(autoTimer);
   heardSeq = 0; answeredSeq = 0;
@@ -1806,6 +1822,7 @@ function onTranscript(who, text) {
 
 /* ---- answers: streamed, grounded on the dossier ---- */
 let answerCtl = null;
+const inflight = new Set();   // every answer request still running, one per page (a page finishes even after the next question starts)
 let answerEpoch = 0;            // bumps on every answer request: an automatic retry only fires if nothing newer started
 function slimPrep() { const p = current && current.prep; return p ? { identity: p.identity, persona: p.persona, projects: p.projects } : {}; }
 function buildTranscript() { return transcript.slice(-80).map(t => `${t.who}: ${t.text}`).join("\n"); }
@@ -2024,8 +2041,11 @@ async function generateAnswerRequest(question, card, opts = {}) {
   question = String(question || "").trim(); if (!question) return;
   card = card || addCard(question, ["…"]);
   if (location.protocol === "file:") { card.answer = ["(Preview) Serve the deployed app for grounded answers."]; renderCard(); return; }
-  if (answerCtl) { try { answerCtl.abort(); } catch {} }          // the newest question always wins
-  const ctl = new AbortController(); answerCtl = ctl; card.req = ctl;   // card.req: which request owns this card now
+  // One page, one request (owner, 27 Oct 2026: paging back showed earlier answers as "half ass generation or completely
+  // invisible"). A new question used to abort whatever was streaming, so the page before it kept half its answer. Now
+  // only this page's own earlier request is replaced; another page finishes in the background.
+  if (card.req) { try { card.req.abort(); } catch {} }
+  const ctl = new AbortController(); answerCtl = ctl; card.req = ctl; inflight.add(ctl);   // card.req: which request owns this card now
   const hardTimer = setTimeout(() => { try { ctl.abort(); } catch {} }, 120000);   // no request may run past 2 min — a silent hang here used to wedge the answer latch and mute every later press and typed Enter
   if (card === follow.card) { follow.pos = 0; follow.livePos = 0; }
   const t0 = performance.now(); let first = 0, text = "", meta = {};
@@ -2082,10 +2102,8 @@ async function generateAnswerRequest(question, card, opts = {}) {
           derivedQ = kept;
         } else {
           card.streaming = false;
-          card.answer = [];
-          card.question = "No question yet";
           if (answerCtl === ctl) answerCtl = null;
-          if (cards[idx] === card) renderCard();
+          if (!dropPage(card)) { card.answer = []; card.question = "No question yet"; if (cards[idx] === card) renderCard(); }   // nothing to answer: no blank page left in the book
           status("Listening for the next question.", "live");
           return;
         }
@@ -2269,7 +2287,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 2000);
     recoverAnswer(e && e.code || "", e && e.retryAfterMs || 1000);
-  } finally { clearTimeout(hardTimer); clearTimeout(fetchTimer); release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
+  } finally { inflight.delete(ctl); clearTimeout(hardTimer); clearTimeout(fetchTimer); release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
 }
 
 /* ---- manual, AI Answer, screen, copy, export, shortcuts ---- */
@@ -2365,8 +2383,12 @@ async function aiAnswer(fromAuto) {
         // concatenation. Typed re-presses stay pinned whole.
         const heardOnly = !typedText;
         const heard = (combined.noiseOnly ? [cur.earlier, cur.heard, q].filter(Boolean).join("\n") : (combined.heard || q)).replace(/\nCurrent question \(on screen\):[^\n]*/g, "").trim();
-        showPressed(cur, heardOnly ? cur.question : q);
-        return await generateAnswer(heard, cur, { consolidated: true, earlier: "", derived: heardOnly ? undefined : q, reask: true, pinned: !heardOnly });
+        // The re-ask goes on the next page (book rule, 27 Oct 2026): the page it re-asks keeps its question and finished
+        // answer instead of being wiped to "…" and rewritten in place.
+        const page = addCard(cur.question, ["…"]);
+        page.heard = heard; page.earlier = cur.earlier || "";
+        showPressed(page, heardOnly ? cur.question : q);
+        return await generateAnswer(heard, page, { consolidated: true, earlier: "", derived: heardOnly ? undefined : q, reask: true, pinned: !heardOnly });
       }
       const intake = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You" });
       if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
@@ -2409,8 +2431,11 @@ async function aiAnswer(fromAuto) {
     // itself says the last answer missed (owner, 21 Oct 2026). Re-deriving
     // the old heard text alone is what showed "No question yet".
     if (c && c.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(c.question)) {
-      showPressed(c, c.question);
-      return await generateAnswer(c.question, c, { reask: true, pinned: true, derived: c.question });
+      // A finished page stays as it is; asking it again opens the next page. A page with no answer yet is asked again in place.
+      const page = hasAnswer(c) ? addCard(c.question, ["…"]) : c;
+      if (page !== c) { page.heard = c.heard; page.earlier = c.earlier; }
+      showPressed(page, c.question);
+      return await generateAnswer(c.question, page, { reask: true, pinned: true, derived: c.question });
     }
     if (c && c.heard) return await generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "" });
     status("Nothing heard yet — press Start, or type a question.", "live");
@@ -2426,9 +2451,18 @@ if ($("screenCaptureAnswerBtn")) $("screenCaptureAnswerBtn").onclick = analyseSc
 async function grabFrame() {
   // Windows Kompas 0.8+ returns a fresh, bounded in-memory JPEG. This avoids
   // trying to extract the image from the system-audio loopback display track.
-  if (typeof window !== "undefined" && window.kompasDesktop?.captureScreen) return await window.kompasDesktop.captureScreen();
+  // If the native capture refuses (for example before the live view has registered), the stream path still runs.
+  let nativeError = null;
+  if (typeof window !== "undefined" && window.kompasDesktop?.captureScreen) {
+    try { return await window.kompasDesktop.captureScreen(); } catch (e) { nativeError = e; }
+  }
   let track = displayVideo && displayVideo.readyState === "live" ? displayVideo : null;
-  if (!track) { const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }); track = s.getVideoTracks()[0]; displayVideo = track; }
+  if (!track) {
+    let s;
+    try { s = await screenStream(); }
+    catch (e) { if (nativeError && e && e.name !== "NotAllowedError") throw new Error((nativeError.message || String(nativeError)) + " " + (e.message || "")); throw e; }
+    track = s.getVideoTracks()[0]; displayVideo = track;
+  }
   const video = document.createElement("video"); video.muted = true; video.playsInline = true;
   try {
     video.srcObject = new MediaStream([track]); await video.play();
@@ -2441,6 +2475,29 @@ async function grabFrame() {
     context.drawImage(video, 0, 0, c.width, c.height);
     return c.toDataURL("image/jpeg", 0.72);
   } finally { video.onloadeddata = null; video.pause(); video.srcObject = null; }
+}
+// A fresh screen stream for Screen Answer. Owner report, 27 Oct 2026: desktop 0.7 showed "Could not start video
+// source" (NotReadableError: Windows refused to start the stream for that Kompas process; the same request in a clean
+// Electron 44.5.1 process with 0.7's handler and window settings captured 1920x1080 every time). One fresh retry, on
+// desktop asked the way call audio asks (the handler always serves that), its audio let go at once; then a sentence
+// that says what happened and what to do.
+async function screenStream() {
+  const desktop = typeof window !== "undefined" && !!window.kompasDesktop;
+  try { return await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }); }
+  catch (e) {
+    if (!e || (e.name !== "NotReadableError" && e.name !== "AbortError")) throw e;
+    await new Promise(r => setTimeout(r, 400));
+    try {
+      const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: desktop });
+      s.getAudioTracks().forEach(t => t.stop());
+      return s;
+    } catch (again) {
+      if (again && again.name === "NotAllowedError") throw again;
+      throw new Error(desktop
+        ? "Windows would not start screen capture in this Kompas window (" + (again && again.message || e.message) + "). Close Kompas fully and open it again, then press Screen Answer."
+        : "The browser could not start the screen share (" + (again && again.message || e.message) + "). Stop any other screen share, then try again.");
+    }
+  }
 }
 async function analyseScreen() {
   if (aiBusy) { status("Still working on the last answer.", "live"); return; }

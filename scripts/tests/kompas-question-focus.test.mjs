@@ -68,7 +68,7 @@ test("a generated answer collapses the question away on both answer paths", () =
 
 test("heard-only re-presses go through the derive cut, never pinned", () => {
   assert.ok(src.includes("derived: heardOnly ? undefined : q, reask: true, pinned: !heardOnly"), "heard-only re-press is unpinned with no derived question");
-  assert.ok(src.includes("showPressed(cur, heardOnly ? cur.question : q)"), "card keeps its old question until the cut lands — the concatenation never shows");
+  assert.ok(src.includes("showPressed(page, heardOnly ? cur.question : q)"), "the new page keeps the old question until the cut lands — the concatenation never shows");
   assert.ok(src.includes("derived: heardOnly ? undefined : said, pinned: !heardOnly"), "fresh heard presses keep the same routing");
 });
 

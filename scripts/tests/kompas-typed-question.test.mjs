@@ -20,6 +20,7 @@ const code = [
   slice("// ── Question intake", "// ── end question intake ──"),
   slice("function pressQuestion(", "$(\"answerBtn\")"),
   slice("async function aiAnswer(", "$(\"screenBtn\")"),
+  slice("function hasAnswer(", "\n// Takes an empty page"),
 ].join("\n");
 
 const OLD_Q = "Tell me about a security incident you handled end to end";
@@ -66,19 +67,26 @@ test("a typed question with no question mark still stands on its own", async () 
   assert.equal(asked[0].opts.derived, "explain zero trust network access");
 });
 
-test("a lone typed keyword still refines the question on screen, without a second copy of it", async () => {
+// Owner, 27 Oct 2026 (book rule): every request and response is its own page. A re-press still refines the question on
+// screen, and its answer goes on the next page; the page it re-asks keeps its question and answer.
+test("a lone typed keyword refines the question on screen on the next page, without a second copy of it", async () => {
   const { s, asked } = session("Kerberos");
   await s.aiAnswer(false);
-  assert.equal(s.cards.length, 1, "a keyword is a re-press of the question on screen");
-  assert.equal(s.cards[0].question, `${OLD_Q} — Kerberos`);
+  assert.equal(s.cards.length, 2, "the re-ask is the next page");
+  assert.equal(s.cards[0].question, OLD_Q);
+  assert.equal(s.cards[0].answer, OLD_A, "the re-asked page keeps its answer");
+  assert.equal(s.cards[1].question, `${OLD_Q} — Kerberos`);
+  assert.equal(asked[0].card, s.cards[1]);
   assert.equal(asked[0].opts.reask, true);
-  assert.equal(s.cards[0].question.split(OLD_Q).length - 1, 1, "the old question appears once");
+  assert.equal(s.cards[1].question.split(OLD_Q).length - 1, 1, "the old question appears once");
 });
 
-test("pressing AI Answer again with nothing typed is still a re-press of the same card", async () => {
+test("pressing AI Answer again with nothing typed re-asks the same question on the next page", async () => {
   const { s, asked } = session("");
   await s.aiAnswer(false);
-  assert.equal(s.cards.length, 1);
-  assert.equal(asked[0].card, s.cards[0]);
+  assert.equal(s.cards.length, 2);
+  assert.equal(s.cards[0].answer, OLD_A, "the finished page is not wiped");
+  assert.equal(asked[0].card, s.cards[1]);
+  assert.equal(s.cards[1].question, OLD_Q);
   assert.equal(asked[0].opts.reask, true);
 });
