@@ -9,7 +9,7 @@ import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
   classify, canonicalQuestion, lengthPlan, questionDepth, plainlyNoQuestion, cleanQuestion, cutQuestion, questionToAnswer, resolveFollowUp,
   tierRule, pickShape, DERIVE_SYSTEM, INTRODUCTION_POLICY, INTRO_CAREER_SPINE, INTENT_BOUNDARY, PERSONAL_EXPERIENCE_POLICY, TECHNICAL_ANSWER_BOUNDARY, RESPONSE_CRAFT_POLICY, isPersonalEvidenceQuestion, type LengthPlan,
-  answerLevel, questionRegister, levelGuidance, ANSWER_LEVEL_NAME,
+  answerLevel, questionRegister, levelGuidance, ANSWER_LEVEL_NAME, missingStructure, STRUCTURE_REPAIR_SYSTEM,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
   commit, recordAngle, matchBank,
 } from "@/lib/kompasAnswer"
@@ -293,6 +293,7 @@ type AnswerJob = {
   interviewer: string
   level: string
   register: string
+  shape: string
   tier: number
   fallbackText: string
   orKey: string | undefined
@@ -334,6 +335,28 @@ function recordLane(model: string, ok: boolean, usage: { input: number; output: 
 
 // SSE answer: meta → deltas → (wait) → replace → done. The exact event contract
 // perfACT's frontend speaks, so the self-hosted app.js needs no changes.
+// Structural repair: prompt wording dropped the design alternative and the
+// director sentence-one owner across three live samples, so code checks for
+// them and one targeted rewrite adds only what is missing. The original
+// stands on any failure, and a repair that fixes nothing is discarded —
+// never a worse answer, never a second rewrite.
+async function repairStructure(job: AnswerJob, guardedText: string, signal: AbortSignal): Promise<{ text: string; repaired: number }> {
+  const opts = { level: job.level, register: job.register, shape: job.shape, tier: job.tier }
+  const missing = missingStructure(guardedText, opts)
+  if (!missing.length || !job.orKey) return { text: guardedText, repaired: 0 }
+  try {
+    const { text } = await fetchOpenRouter(job.orKey, PAID_MODEL, STRUCTURE_REPAIR_SYSTEM,
+      `QUESTION: ${job.question}\n\nANSWER:\n${guardedText}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}\n\nReturn the full rewritten answer and nothing else.`,
+      1600, AbortSignal.any([signal, AbortSignal.timeout(30000)]))
+    const repaired = text.trim()
+    if (!repaired) return { text: guardedText, repaired: 0 }
+    const rg = applyGuards(repaired, job.guardFacts, job.allowed)
+    if (!rg.text.trim()) return { text: guardedText, repaired: 0 }
+    if (missingStructure(rg.text, opts).length >= missing.length) return { text: guardedText, repaired: 0 }
+    return { text: rg.text, repaired: 1 }
+  } catch { return { text: guardedText, repaired: 0 } }
+}
+
 async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response> {
   const encoder = new TextEncoder()
   const startedAt = job.startedAt
@@ -424,7 +447,13 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         // allowlist. Voice repair runs after — the client's `replace` event
         // swaps the streamed draft for the finished answer.
         const g = applyGuards(raw.trim(), job.guardFacts, job.allowed)
-        const guardedText = g.text
+        let guardedText = g.text
+        let repaired = 0
+        {
+          const r = await repairStructure(job, guardedText, signal)
+          guardedText = r.text
+          repaired = r.repaired
+        }
         let finalText = readAloud(job.tier === 0 ? (voiceRepair(guardedText) || guardedText).replace(/\[(?:beat|breath)\]|\(pause\)/gi, ' ') : blendSpoken(voiceRepair(guardedText) || guardedText) || guardedText) || guardedText
         // Optional post-generation fact-check: the model only POINTS at
         // unsupported claims; code does the replacement, so the fix is
@@ -442,7 +471,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         }
         if (finalText !== raw) emit({ type: "replace", text: finalText })
         emit({
-          type: "done", degraded, guarded: g.guarded, verified,
+          type: "done", degraded, guarded: g.guarded, verified, repaired,
           ledger: job.ledger,
           ...metaBase, provider: servedProvider, model: servedModel,
           timing: { ...timing, total_ms: Date.now() - startedAt },
@@ -505,7 +534,14 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   // Grounding guards before voice repair: unbracket → place/prestige/title/
   // version fixes → figures allowlist. Then the optional fact-check.
   const g = applyGuards(raw.trim(), job.guardFacts, job.allowed)
-  let out = readAloud(job.tier === 0 ? (voiceRepair(g.text) || g.text).replace(/\[(?:beat|breath)\]|\(pause\)/gi, ' ') : blendSpoken(voiceRepair(g.text) || g.text) || g.text) || g.text
+  let guardedText = g.text
+  let repaired = 0
+  {
+    const r = await repairStructure(job, guardedText, signal)
+    guardedText = r.text
+    repaired = r.repaired
+  }
+  let out = readAloud(job.tier === 0 ? (voiceRepair(guardedText) || guardedText).replace(/\[(?:beat|breath)\]|\(pause\)/gi, ' ') : blendSpoken(voiceRepair(guardedText) || guardedText) || guardedText) || guardedText
   let verified = 0
   if (process.env.KOMPAS_VERIFY === "1" && !degraded && job.factsText && job.orKey) {
     try {
@@ -524,6 +560,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     degraded,
     guarded: g.guarded,
     verified,
+    repaired,
     ledger: job.ledger,
     meta: {
       engine: "marketfit", provider: servedProvider, model: servedModel,
@@ -813,6 +850,7 @@ ${INTERVIEW}`
     interviewer,
     level,
     register,
+    shape: shape || "",
     tier,
     fallbackText,
     orKey: keys.openrouter || undefined,

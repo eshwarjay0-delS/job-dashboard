@@ -4,7 +4,7 @@
 // are still rewritten.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { guardText, needsGuard, allowedNumbers } from '../../src/lib/kompasGuards.ts'
+import { guardText, needsGuard, allowedNumbers, applyGuards } from '../../src/lib/kompasGuards.ts'
 
 const empty = new Set()
 const kept = (line) => guardText(line, empty).text
@@ -28,4 +28,13 @@ test('invented result figures are still rewritten, allowlisted figures kept', ()
   assert.match(created, /several rules/)
   const allowed = allowedNumbers('11+ years in IT, 8+ years in InfoSec')
   assert.equal(guardText('I have 11+ years in IT.', allowed).text, 'I have 11+ years in IT.')
+})
+
+test('guard output stays grammatical: percentages and trailing periods', () => {
+  assert.equal(kept('Route 10% of traffic via a service mesh.'), 'Route a share of traffic via a service mesh.')
+  assert.equal(kept('Then gradually increase to 10%.'), 'Then gradually increase to a higher share.')
+  assert.equal(kept('The quarantine index must contain at least 90% of the expected event count.'), 'The quarantine index must contain at least a share of the expected event count.')
+  assert.equal(kept('We did 3. Hypothesis 1: a manual change.'), 'We did several. Hypothesis 1: a manual change.')
+  assert.equal(applyGuards('several Hypothesis 1: a manual change.', null, empty).text, 'Hypothesis 1: a manual change.')
+  assert.equal(kept('Cut incidents by 40% in a quarter.'), 'Cut incidents by noticeably in a quarter.')
 })

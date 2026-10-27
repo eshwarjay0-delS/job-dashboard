@@ -665,6 +665,29 @@ export const SHAPES: Record<string, ShapeDef[]> = {
 
 const SHAPE_SKIP = new Set(["I", "Have", "Are", "Do", "What", "How", "Can", "Could", "Would", "Tell", "Why", "When", "Which"]);
 
+/** Code check for the two structural requirements prompt wording keeps
+ * dropping: the design shape's required alternative sentence, and the
+ * director practice opening naming the decision owner. Returns what is
+ * missing, so the route can repair it with one targeted rewrite instead of
+ * another prompt tweak. A heuristic gate, not a verdict: an answer that
+ * phrases the element unusually still counts as present when its marker
+ * words appear. */
+export function missingStructure(text: string, opts: { level: string; register: string; shape: string; tier: number }): string[] {
+  const missing: string[] = []
+  if (!text || !text.trim() || opts.tier === 0) return missing
+  const plain = text.replace(/\[(?:beat|breath)\]|\(pause\)/gi, " ")
+  if (/Sentence two names the one alternative/.test(opts.shape || "")) {
+    if (!/\b(alternative|rejected|ruled out|passed on|instead of|rather than|did not choose|didn't choose|chose .* over|opted against)\b/i.test(plain)) missing.push("a sentence naming the one alternative you rejected and what it cost")
+  }
+  if (opts.level === "director" && opts.register === "practice") {
+    const first = plain.split(/(?<=[.!?])\s/)[0] || plain
+    if (!/\b(owner|product manager|CISO|business (unit )?leader|vice president|risk manager|accountable)\b/i.test(first)) missing.push("the decision owner named in sentence one")
+  }
+  return missing
+}
+
+export const STRUCTURE_REPAIR_SYSTEM = `You repair one interview answer. Rewrite the SAME answer with minimal changes: keep every sentence, fact, example, and pause marker ([beat]/[breath]) unless a change is required by the missing element below. Do not shorten it, do not add new claims, do not invent numbers, and do not change the answer's level or voice. Add ONLY the missing element, in the place its instruction names.`
+
 /** First-win archetype match. Returns the shape instruction or null. */
 export function pickShape(question: string, tier: number, known = ""): string | null {
   const q = String(question || "");

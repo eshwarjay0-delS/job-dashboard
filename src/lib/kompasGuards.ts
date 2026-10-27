@@ -95,15 +95,36 @@ export function guardText(line: string, allowed: Set<string>): { text: string; r
   let removed = 0
   const re = new RegExp(FIGURE_RE.source, "g")
   let text = String(line || "").replace(re, (fig: string, offset: number, full: string) => {
-    const n = normFigure(fig)
-    if (allowed.has(n)) return fig
+    // A trailing period that ends a sentence is punctuation, not part of the
+    // figure: "3." at a sentence end must not lose its period when the
+    // figure is rewritten ("3. Hypothesis 1" must never become "several
+    // Hypothesis 1"). Decimals ("3.5") never end in a period, so they are
+    // untouched by this split.
+    let core = fig
+    let suffix = ""
+    if (/\.$/.test(fig) && !/\d/.test(full[offset + fig.length] || "")) {
+      core = fig.slice(0, -1)
+      suffix = "."
+    }
+    const n = normFigure(core)
+    if (allowed.has(n) || allowed.has(normFigure(fig))) return fig
     if (isTechnicalConstant(full, fig, offset)) return fig
     removed++
     const before = full.slice(0, offset)
+    const after = full.slice(offset + fig.length)
     const hasArticle = /\b(a|an|the)\s+$/i.test(before)
-    let plain = plainFor(fig, hasArticle)
+    let plain: string
+    if (/%$/.test(core)) {
+      // A percentage replacement must fit its sentence: "route 10% of
+      // traffic" becomes "route a share of traffic", not "route noticeably
+      // of traffic"; "increase to 10%" becomes "increase to a higher
+      // share", not "increase to noticeably".
+      if (/^\s+of\b/.test(after)) plain = "a share"
+      else if (/\bto\s+(a|an|the\s+)?$/.test(before)) plain = "a higher share"
+      else plain = plainFor(core, hasArticle)
+    } else plain = plainFor(core, hasArticle)
     if (hasArticle) plain = plain.replace(/^(a|an|the)\s+/i, "")
-    return plain
+    return plain + suffix
   })
   text = text.replace(/\bin a few years ago/gi, "back then")
   return { text, removed }
@@ -144,6 +165,7 @@ export function unbracket(s: string, facts?: SpeakFacts | null): string {
 // Never leave markup or a dangling word behind: "at ****", "** **", "at ,".
 export function cleanOrphans(line: string): string {
   return String(line)
+    .replace(/\bseveral\s+(?=Hypothesis \d+:)/gi, "")
     .replace(/\*{4,}/g, "")
     .replace(/\*\*\s+\*\*/g, " ")
     .replace(/(^|[^*])\*\s*\*(?!\*)/g, "$1")
