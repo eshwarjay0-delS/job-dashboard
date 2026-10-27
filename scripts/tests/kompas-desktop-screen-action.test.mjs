@@ -31,3 +31,12 @@ test("desktop-only styling does not expose the extra toolbar button in web mode"
   assert.match(html, /class="pill action hidden" id="screenCaptureAnswerBtn"/)
   assert.match(styles, /html\.kd #screenCaptureAnswerBtn\{display:inline-flex !important/)
 })
+
+test("native Windows screenshot bridge precedes browser display capture fallback", () => {
+  const start = app.indexOf("async function grabFrame()")
+  const native = app.indexOf("window.kompasDesktop?.captureScreen", start)
+  const legacy = app.indexOf("navigator.mediaDevices.getDisplayMedia", start)
+  assert.ok(start >= 0 && native > start && legacy > native,
+    "The native desktop must capture a fresh screen frame instead of sharing the audio-loopback track")
+  assert.match(app.slice(start, legacy), /return await window\.kompasDesktop\.captureScreen\(\)/)
+})
