@@ -35,7 +35,7 @@ const cases=[
 for(let n=1;n<=cases.length;n++)test('Kompas precise spoken regression fold '+String(n).padStart(2,'0')+' / 20',()=>{
  for(const [label,q,good,bad,ids] of cases.slice(0,n)){
   assert.deepEqual(Array.from(questionParts(q),p=>p.id).sort(),[...ids].sort(),label+' part extraction')
-  assert.deepEqual(missingQuestionParts(q,good),[],label+' good answer')
+  assert.deepEqual(Array.from(missingQuestionParts(q,good)),[],label+' good answer')
   if(ids.length)assert.ok(missingQuestionParts(q,bad).length>0,label+' incomplete answer')
   assert.equal(questionCoverage(q,good).percent,100)
   assert.match(precisionPrompt(q),/SPOKEN PRECISION/)
