@@ -25,6 +25,7 @@ test('the candidate\'s own experience keeps its real-example contract', () => {
 
 test('the director opening is the owner\'s own wording', () => {
   const route = readFileSync(new URL('../../src/lib/kompasAnswerService.ts', import.meta.url), 'utf8')
-  assert.match(route, /Name the decision owner in that sentence\. Before closing/)
+  const answer = readFileSync(new URL('../../src/lib/kompasAnswer.ts', import.meta.url), 'utf8')   // DIRECTOR_OPENING lives here
+  assert.match(answer, /Name the decision owner in that sentence\. Before closing/)
   assert.match(route, /cover every one inside your natural spoken answer, the same voice and depth as always/)
 })

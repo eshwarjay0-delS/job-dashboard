@@ -6,7 +6,7 @@ import { resumeRoles, resumeDigest, employerAliases } from "@/lib/kompasResume"
 import { hashUserId } from "@/lib/sttLedger"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
-  classify, canonicalQuestion, requestedParts, cutShort, lengthPlan, questionDepth, plainlyNoQuestion, cleanQuestion, cutQuestion, questionToAnswer, resolveFollowUp,
+  classify, canonicalQuestion, requestedParts, cutShort, lengthPlan, questionDepth, deriveByCode, questionForAnswer, DIRECTOR_OPENING,
   tierRule, pickShape, DERIVE_SYSTEM, INTRODUCTION_POLICY, INTRO_CAREER_SPINE, INTENT_BOUNDARY, PERSONAL_EXPERIENCE_POLICY, TECHNICAL_ANSWER_BOUNDARY, RESPONSE_CRAFT_POLICY, isPersonalEvidenceQuestion, type LengthPlan,
   answerLevel, questionRegister, levelGuidance, ANSWER_LEVEL_NAME, missingStructure, STRUCTURE_REPAIR_SYSTEM,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
@@ -604,14 +604,6 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   }, { headers: NO_STORE })
 }
 
-// The previous turns the page sends with a derive (recentQA): the question cut uses them to tell the candidate's reply
-// to the last question from setup for the new one.
-function previousTurns(history: unknown): string {
-  return (Array.isArray(history) ? history : []).slice(-2)
-    .map((t) => (t && typeof t === "object" ? `${str((t as Record<string, unknown>).q, 400)} ${str((t as Record<string, unknown>).a, 2400)}` : ""))
-    .join(" ").trim()
-}
-
 /** Internal entry point: callers must verify the channel identity before invoking. */
 export async function answerForVerifiedUser(request: NextRequest, user: { id: string }) {
   const startedAt = Date.now()
@@ -625,10 +617,10 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   }
 
   // Deterministic question detection needs neither storage nor a provider call.
+  // The code gates (src/lib/kompasAnswer.ts deriveByCode) are the ones the baseline contract replays.
   if (body.deriveOnly) {
-    const heard = str(body.question, 5000)
-    if (!heard || plainlyNoQuestion(heard)) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
-    const clean = cleanQuestion(heard) || cutQuestion(heard, previousTurns(body.history))
+    const clean = deriveByCode(str(body.question, 5000), body.history, body.reask === true)
+    if (clean === null) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
     if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
   }
 
@@ -655,10 +647,8 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     // Deriving from the earlier text is what answered "No question yet" while the question was the new speech.
     const heard = str(body.question, 5000)
     const earlier = str(body.transcript, 900)
-    if (!heard) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
-    if (plainlyNoQuestion(heard))
-      return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
-    const clean = cleanQuestion(heard) || cutQuestion(heard, previousTurns(body.history))
+    const clean = deriveByCode(heard, body.history, body.reask === true)
+    if (clean === null) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
     if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
     try {
       const { text } = await fetchOpenRouter(paidKey, PAID_MODEL, DERIVE_SYSTEM,
@@ -679,7 +669,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // yields to the ask inside that line. "Okay" stays unanswered. Anything else
   // typed or heard is the question — dropping it left the card on the previous answer.
   const again = body.again === true
-  let question = questionToAnswer(heardAll, asked, body.pinned === true)
+  let question = questionForAnswer(heardAll, asked, body.pinned === true, again, body.history)
   if (!question) {
     const quiet = `data: ${JSON.stringify({ type: "meta", noQuestion: true })}\n\ndata: ${JSON.stringify({ type: "done", noQuestion: true })}\n\n`
     if (body.stream) {
@@ -721,12 +711,8 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     : []
   const retrieved = retrievedList.slice(0, 4).join("\n")
 
-  // perfACT's answering intelligence: classify → tier rule → length plan.
-  // A topic-less follow-up ("go deeper") is glued to the previous question in code.
-  question = resolveFollowUp(question, historyArr.map((h) => {
-    const o = (h && typeof h === "object" ? h : {}) as Record<string, unknown>
-    return { q: str(o.q ?? o.question, 300) }
-  }))
+  // perfACT's answering intelligence: classify → tier rule → length plan. (A topic-less follow-up was already glued to
+  // the previous question in code by questionForAnswer.)
   const { tier, why } = classify(question)
   // Minimal intro triggers ("intro") get a canonical question so the model
   // generates a spoken self-introduction instead of echoing the trigger.
@@ -822,7 +808,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     `QUESTION TYPE: ${why} (tier ${tier}). ${rule}`,
     `INTERVIEW MODE: ${modeBlock(tier, question, level)}`,
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
-    level === "director" ? `DIRECTOR OPENING (this overrides the shape's opening sentence): sentence one states the decision — what you are doing — not a definition and not an axis. Name the decision owner in that sentence. Before closing, name the measures you will track, each as a named measure, never a vague promise to monitor. The decision owner is a role in the organisation (the business owner of the platform, the risk owner, security leadership), never a person's name, and the candidate keeps the title the resume gives: never speak as a CISO or any title the resume does not hold.` : "",
+    level === "director" ? DIRECTOR_OPENING : "",
     `LENGTH TARGET: about ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Hit it — a quick factual ask gets a short answer, a deep dive gets room.`,
     depthGuidance,
     tier !== 0 && routedProject

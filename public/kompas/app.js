@@ -1887,8 +1887,21 @@ function echoShare(text, answerText) {
   const bag = new Set(intakeWords(answerText));
   return words.filter(w => bag.has(w)).length / words.length;
 }
-// Closing pleasantries of a call. Bare thanks are already noise lines; these carry the sign-off itself.
-const SIGN_OFF = /\b(?:hard stop|(?:take|taking|took) the time|thank(?:s| you) (?:so much |again )?for (?:your|the|taking|making|joining|speaking|talking|coming)|(?:nice|great|good|pleasure|lovely) (?:talking|speaking|meeting|chatting) (?:to|with) you|have a (?:great|good|nice|lovely) (?:day|evening|weekend|one|rest)|(?:be|get|getting) (?:in touch|back to you)|next steps|(?:that'?s|those are|that is) all (?:the |my |i have|from me|for today)|out of time|(?:bye|goodbye)\b)/i;
+// Closing pleasantries of a call, judged one sentence at a time (review of 398f299: "Thanks for the overview. What
+// drove the move to Azure?" was swallowed whole). Bare thanks are noise lines; these carry the sign-off itself.
+const SIGN_OFF = /\b(?:hard stop|(?:take|taking|took) the time|thank(?:s| you) (?:so much |again )?for (?:your time|the time|taking|making|joining|speaking|talking|coming|having me|the opportunity|the chat|the conversation)|(?:nice|great|good|pleasure|lovely) (?:talking|speaking|meeting|chatting) (?:to|with) you|have a (?:great|good|nice|lovely) (?:day|evening|weekend|one|rest)|(?:be|get|getting) (?:in touch|back to you)|(?:about|on|with|regarding) (?:the )?next steps|(?:will|'ll) reach out|(?:that'?s|those are|that is) all (?:the questions|my questions|i have|from me|for today|we have)|that'?s it (?:from|for) (?:me|my side|my end|today|now)|(?:right |just )?at time|out of time|wrap (?:it |things )?up|(?:bye|goodbye)\b)/i;
+// A courtesy answer to a closing: "Thanks, you too.", "Take care."
+const COURTESY = /^(?:(?:ok(?:ay)?|yeah|yes|sure|great|alright|thanks?|thank you)[,.!\s]+)*(?:you too|likewise|same (?:here|to you)|take care|talk (?:to you )?soon|sounds good|cheers|appreciate it|bye(?: now)?|goodbye)[.!\s]*$/i;
+// Asks that do not open like a question: "My question is how you'd...", "The other thing I wanted to ask is when...".
+const ASK_PHRASE = /\b(?:my question is|the (?:real |other |next |last |main |follow[- ]?up )?question is|(?:i )?wanted to ask|i want to ask|i'd like to ask|let me ask|what i want to (?:know|understand)|(?:the )?thing i'm trying to get at|the follow[- ]?up is|part (?:one|two|three) is)\b/i;
+function sentencesOf(text) { return String(text || "").split(/(?<=[.?!])\s+/).map(x => x.trim()).filter(Boolean); }
+function closingSentence(x) {
+  if (isNoiseLine(x) || COURTESY.test(x)) return true;
+  if (!SIGN_OFF.test(x)) return false;
+  const rest = x.replace(new RegExp(SIGN_OFF.source, "gi"), " ").trim();
+  return !/\?/.test(x) && !Q_CUE.test(rest) && !ASK_PHRASE.test(rest);
+}
+function askSentence(x) { return !closingSentence(x) && (Q_CUE.test(x) || /\?/.test(x) || ASK_PHRASE.test(x)); }
 const NOISE_WORDS = new Set("hi hello hey ok okay yeah yes no uh um hmm thanks thank you right alright sure good great nice bye there everyone all guys".split(" "));
 function isNoiseLine(text) { const ws = String(text || "").toLowerCase().replace(/[^a-z\s]+/g, " ").split(/\s+/).filter(Boolean); return ws.length >= 1 && ws.length <= 4 && ws.every(w => NOISE_WORDS.has(w)); }
 function composeIntake(lines, opts = {}) {
@@ -1948,6 +1961,13 @@ function headAndTail(text, limit) {
   return t.slice(0, half) + " […] " + t.slice(-half);
 }
 const consolidatedNeedsDerive = (opts) => !!opts.consolidated && !opts.derived;   // AI Answer: match after the question is derived
+// The derive request. A re-ask tells the server so: the page being re-asked is the previous turn, and its own setup
+// must not be read as his reply to it.
+function deriveBody(question, card, opts) { return { deriveOnly: true, client: BUILD, question, transcript: opts.earlier || "", history: recentQA(card), reask: !!opts.reask }; }
+// The question fields of the answer request. A question the code cut already formed is pinned, so the server answers
+// it as formed instead of cutting the heard text a second time (review of 398f299: the second cut glued his reply and
+// the "You (context keywords)" label back in front of the question the model was told to answer).
+function questionFields(question, derivedQ, derivedBy, opts) { return { question, derived: derivedQ || undefined, pinned: !!opts.pinned || derivedBy === "code", again: !!opts.reask }; }
 function askingLevel() {
   const who = ($("liveInterviewer") && $("liveInterviewer").value) || "engineer";
   if (who !== "peer") window.__peerOf = who;
@@ -2103,19 +2123,19 @@ async function generateAnswerRequest(question, card, opts = {}) {
       status("Answer stalled — press AI Answer to try again.", "live"); return;
     }
     status("Retrying…", "live");
-    setTimeout(() => { if (answerEpoch === epoch && card.req === ctl) generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, retries: tries }); }, 800);
+    setTimeout(() => { if (answerEpoch === epoch && card.req === ctl) generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, derivedBy, retries: tries }); }, 800);
   };
   const named = String((card && card.question) || "").replace(/\s+/g, " ").trim();
   status(named && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(named) ? "Answering: " + named : (consolidated ? "Deriving the question and answering…" : "Answering…"), "live");
   const plainHeard = consolidated ? question.replace(/^(Them|You):\s*/gm, "") : question;
   // Relevance first: work out what the interviewer actually asked, THEN pull the persona-file and
   // dossier material that matches that question — not whatever words happened to be in the ramble.
-  let derivedQ = opts.derived || "", derivedBy = opts.derived ? "kept" : "";                 // regenerating: the question is already known
+  let derivedQ = opts.derived || "", derivedBy = opts.derived ? (opts.derivedBy || "kept") : "";   // regenerating: the question is already known
   if (consolidated && !derivedQ) {
     try {
       const deriveTimer = setTimeout(() => { try { ctl.abort(); } catch {} }, 30000);
       const dr = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
-        body: JSON.stringify({ deriveOnly: true, client: BUILD, question, transcript: opts.earlier || "", history: recentQA(card) }) });
+        body: JSON.stringify(deriveBody(question, card, opts)) });
       const dj = await dr.json(); clearTimeout(deriveTimer);
       if (card.req !== ctl) return;
       if (dj.noQuestion) {
@@ -2204,7 +2224,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     sessionReadyUntil = 0;
     if (retry) setTimeout(() => {
       if (answerEpoch === epoch && card.req === ctl)
-        generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, retries: tries, regen: opts.regen || keepOld });
+        generateAnswer(question, card, { ...opts, derived: derivedQ || opts.derived, derivedBy, retries: tries, regen: opts.regen || keepOld });
     }, Math.max(500, retryAfterMs));
   };
   let fetchTimer = null;
@@ -2212,7 +2232,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     let responded = false;
     fetchTimer = setTimeout(() => { if (!responded && card.req === ctl) { try { ctl.abort(); } catch {} } }, 45000);   // no response headers in 45s means the fetch itself hung: fail into the retry, not the 2-minute wall
     const res = await fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" }, signal: ctl.signal,
-      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, derived: derivedQ || undefined, pinned: !!opts.pinned, again: !!opts.reask, question, transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel(), ...(directDesktop ? { responseCalibration: "three-level-v1" } : {}) }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
+      body: JSON.stringify({ stream: true, client: BUILD, liveModel: liveModel() || undefined, consolidated, ...questionFields(question, derivedQ, derivedBy, opts), transcript: consolidated ? (opts.earlier || "") : buildTranscript(), config: { ...liveConfig(), interviewer: writeAnchor, level: askingLevel(), ...(directDesktop ? { responseCalibration: "three-level-v1" } : {}) }, prep, retrieved, ledger: ctx.ledger, history: ctx.history }) });
     responded = true; clearTimeout(fetchTimer);
     if (!res.ok || !res.body) {
       const failure = await res.json().catch(() => ({}));
@@ -2394,40 +2414,38 @@ async function aiAnswer(fromAuto) {
       // 2026: every press after the first counted as a re-press of the page on screen, so the old question was formed and
       // answered again ("could you explain what dependency confusion is?" got the host-header answer; "multiple tools
       // reporting the same vulnerability" got the password-reset answer). A press with nothing new asked still re-asks.
-      const newAsk = !typedText && pending.some(t => Q_CUE.test(t.text) && echoShare(t.text, cur && cur.question || "") < 0.6);
+      // Each sentence is judged on its own: "Thanks for the overview. What drove the move to Azure?" is a new question, and
+      // "My question is how you'd isolate a runner" asks without opening like a question (review of 398f299).
+      const newAsk = !typedText && pending.some(t => sentencesOf(t.text).some(x => askSentence(x) && echoShare(x, cur && cur.question || "") < 0.6));
       // The sign-off is not a re-press (27 Oct 2026): "I do have a hard stop ... thank you for taking the time" heard
-      // after an answer re-asked the page on screen and answered it again. Only sign-off lines and fillers, no ask.
-      if (!typedText && pending.some(t => SIGN_OFF.test(t.text)) && pending.every(t => isNoiseLine(t.text) || (SIGN_OFF.test(t.text) && !Q_CUE.test(t.text)))) {
+      // after an answer re-asked the page on screen and answered it again. Only closing sentences and fillers, no ask.
+      if (!typedText && pending.some(t => sentencesOf(t.text).some(x => SIGN_OFF.test(x) || COURTESY.test(x))) && pending.every(t => sentencesOf(t.text).every(closingSentence))) {
         answeredSeq = heardSeq; updatePending();
         if (!fromAuto) status("Nothing question-like in that — still listening.", "live");
         return;
       }
-      const isRepress =!fromAuto && !typedOwn && !newAsk && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
+      const isRepress = !fromAuto && !typedOwn && !newAsk && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
       if (isRepress) {
-        const previous = transcript.filter(t => t.seq <= answeredSeq).slice(-40);
-        const combined = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You", previous, currentQuestion: cur.question });
+        // The re-ask is formed from the lines that formed the page on screen plus what was heard since, never from the
+        // whole interview (baseline contract, 27 Oct 2026): with forty earlier lines and the on-screen question stripped,
+        // the cut took the LAST OLD question in that history and answered it again, and a typed re-press pinned all
+        // forty lines as its question. The formation lines stay the first page's, so a chain of re-asks stays bounded.
+        const combined = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You", currentQuestion: cur.question });
         if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
         answeredSeq = heardSeq; updatePending();
         const q = pressQuestion(typedText, combined, cur.question) || cur.question;
         // A re-press is a fresh ask, not a pinned replay: with no typed text the
-        // combined material is still a transcript, so it goes through the same
-        // derive cut and no-question gate as a fresh heard press instead of
-        // pinning the whole concatenation to the card and answering it. The
-        // card keeps its old question until the cut lands — it never shows the
-        // concatenation. Typed re-presses stay pinned whole.
+        // material is still a transcript, so it goes through the same derive cut
+        // and no-question gate as a fresh heard press. The card keeps its old
+        // question until the cut lands. Typed re-presses stay pinned whole.
         const heardOnly = !typedText;
-        // A heard re-ask is formed from what formed the page on screen plus what was heard since, never from the whole
-        // interview (baseline contract, 27 Oct 2026): with forty earlier lines and the on-screen question stripped, the
-        // cut took the LAST OLD question in that history and answered it again.
-        const own = String(cur.heard || "").replace(/^(?:Current question \(on screen\)|Lane \(the question already on screen[^)]*\)):[^\n]*$/gm, "").trim();
-        const since = composeIntake(pending, { answerText, micIsSource: questionSource() === "You" }).heard;
-        const heard = heardOnly
-          ? [own && !/^Lane \(/m.test(String(cur.heard || "")) ? own : `You: ${cur.question}`, since].filter(Boolean).join("\n").trim()
-          : (combined.heard || q).replace(/\nCurrent question \(on screen\):[^\n]*/g, "").trim();
+        const formed = String(cur.formed || "").replace(/^You \(context keywords\):[^\n]*$/gm, "").trim() || `You: ${cur.question}`;
+        const since = combined.heard.replace(/^Current question \(on screen\):[^\n]*$/gm, "").trim();
+        const heard = [formed, since].filter(Boolean).join("\n").trim();
         // The re-ask goes on the next page (book rule, 27 Oct 2026): the page it re-asks keeps its question and finished
         // answer instead of being wiped to "…" and rewritten in place.
         const page = addCard(cur.question, ["…"]);
-        page.heard = heard; page.earlier = cur.earlier || "";
+        page.heard = heard; page.earlier = cur.earlier || ""; page.formed = cur.formed;
         showPressed(page, heardOnly ? cur.question : q);
         return await generateAnswer(heard, page, { consolidated: true, earlier: "", derived: heardOnly ? undefined : q, reask: true, pinned: !heardOnly });
       }
@@ -2460,7 +2478,7 @@ async function aiAnswer(fromAuto) {
       const said = pressQuestion(typedText, intake, "") || intake.derived || heardAsQuestion(pending);
       const heardOnly = !typedText;
       const card = addCard(heardOnly ? "Deriving…" : (said || "Answering what was just heard…"), ["…"]);
-      card.heard = heard; card.earlier = earlier;
+      card.heard = heard; card.earlier = earlier; card.formed = heard;
       showPressed(card, card.question);
       return await generateAnswer(heard, card, { consolidated: true, earlier, derived: heardOnly ? undefined : said, pinned: !heardOnly });
     }
@@ -2474,7 +2492,7 @@ async function aiAnswer(fromAuto) {
     if (c && c.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(c.question)) {
       // A finished page stays as it is; asking it again opens the next page. A page with no answer yet is asked again in place.
       const page = hasAnswer(c) ? addCard(c.question, ["…"]) : c;
-      if (page !== c) { page.heard = c.heard; page.earlier = c.earlier; }
+      if (page !== c) { page.heard = c.heard; page.earlier = c.earlier; page.formed = c.formed; }
       showPressed(page, c.question);
       return await generateAnswer(c.question, page, { reask: true, pinned: true, derived: c.question });
     }

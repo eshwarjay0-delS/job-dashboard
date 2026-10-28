@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Kompas baseline contract
+        run: node scripts/kompas-baseline.mjs
+
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
@@ -80,6 +83,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Kompas baseline contract
+        run: node scripts/kompas-baseline.mjs
 
       - name: Install Vercel CLI
         run: npm install -g vercel@latest

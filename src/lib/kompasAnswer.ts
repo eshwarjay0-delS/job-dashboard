@@ -392,6 +392,9 @@ const BARE_INTRO = /^(?:(?:big|brief|short|quick|full|personal|detailed|self)\s+
 const ASKS =
   /\?\s*$|^(so,? |and,? |also,? )?(what|how|why|when|where|which|who|can|could|would|will|should|do|does|did|are|is|have|has|tell|walk|describe|explain|give|share|talk|imagine|suppose|pick|choose|name|list|select|design|compare|outline|rank|identify|recommend|propose)\b|\b(tell me|walk me|show me|how would you|what would you|can you|could you|would you|have you|do you)\b/i
 
+// Asks that do not open like a question (the page's ASK_PHRASE in public/kompas/app.js is the same list).
+const ASK_PHRASE = /\b(?:my question is|the (?:real |other |next |last |main |follow[- ]?up )?question is|(?:i )?wanted to ask|i want to ask|i'd like to ask|let me ask|what i want to (?:know|understand)|(?:the )?thing i'm trying to get at|the follow[- ]?up is|part (?:one|two|three) is)\b/i
+
 /** Speaker-aware: any Them: line is a question; otherwise needs ? or an ask-pattern. */
 export function plainlyNoQuestion(heard: string): boolean {
   const lines = String(heard || "").split("\n").filter((l) => l.trim())
@@ -399,7 +402,9 @@ export function plainlyNoQuestion(heard: string): boolean {
   if (lines.some((l) => /^Them:/.test(l))) return false
   return !lines.some((l) => {
     const t = l.replace(/^(You|Them):\s*/, "")
-    return BARE_INTRO.test(t.trim()) || /\?/.test(t) || ASKS.test(t) || LOGISTICS.test(t) || THEIRQ.test(t)
+    // Each sentence of a segment, and asks that do not open like a question ("Got it. My question is how you'd
+    // isolate..."): review of 398f299, these were "no question" and the page was dropped.
+    return BARE_INTRO.test(t.trim()) || /\?/.test(t) || t.split(/(?<=[.!])\s+/).some((x) => ASKS.test(x)) || ASK_PHRASE.test(t) || LOGISTICS.test(t) || THEIRQ.test(t)
   })
 }
 
@@ -412,7 +417,11 @@ export function plainlyNoQuestion(heard: string): boolean {
 // live session, 27 Oct 2026, mic only: "Are you working on any projects currently" / "Yeah, yeah, I'm still working with
 // the city." / "could you ... elaborate on that" was joined into one asked sentence, and his reply rode along in the cut.
 function transcriptSentences(heard: string): string {
-  const lines = String(heard || "").split(/\r?\n/).map((l) => l.replace(/^(?:You(?: \(typed\))?|Them):\s*/i, "").trim()).filter(Boolean)
+  // The page's own labels are never words of the question: his mic fragments ("You (context keywords)") are context
+  // only, and the on-screen question and lane lines are copies (review of 398f299: the label was answered as text).
+  const lines = String(heard || "").split(/\r?\n/)
+    .filter((l) => !/^\s*(?:You \(context keywords\)|Current question \(on screen\)|Lane \([^)]*\)):/i.test(l))
+    .map((l) => l.replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/i, "").trim()).filter(Boolean)
   // A segment is several words; one ending in a word that wants more ("integrate", "with", "the") runs on into the next.
   const CONTINUES = /\b(?:a|an|the|to|of|for|with|and|or|but|between|about|on|in|into|from|by|at|as|is|are|was|were|be|your|my|our|their|this|that|these|those|integrate|use|using|configure|compare|between)$/i
   return lines.map((l, i) => (i < lines.length - 1 && l.split(/\s+/).length >= 3 && !/[.?!,;:…-]$/.test(l) && !CONTINUES.test(l) && /^[A-Z]/.test(lines[i + 1]) ? l + "." : l)).join(" ")
@@ -420,19 +429,39 @@ function transcriptSentences(heard: string): string {
 
 // The candidate's reply to the previous question, heard on the same mic, is not setup for the next one. Owner's live
 // session, 27 Oct 2026 (mic only): his spoken answer about dependency confusion was cut in front of the next question.
-// A sentence whose content words are mostly the previous turn's (question and answer) belongs to that turn.
-const TOPIC_STOP = new Set("about after again also been before being could does doing from have here into just like more most much only other over same some such than that their them then there these they this those through very what when where which while will with would your yours".split(" "))
+// His reply either reads the last answer aloud (most of its content words are that answer's) or defines the subject
+// the last question asked about ("Dependency confusion is when..."). The last QUESTION's words alone prove nothing: an
+// interviewer's follow-up setup shares them (review of 398f299: "The security tools report the same vulnerability
+// twice..." was dropped at 0.4 against question and answer).
+const TOPIC_STOP = new Set("about after again also been before being could does doing from have here into just like more most much only other over same some such than that their them then there these they this those through very what when where which while will with would your yours explain describe tell".split(" "))
 function topicWords(text: string): string[] {
   return String(text || "").toLowerCase().replace(/[^a-z0-9+#.-]+/g, " ").split(/\s+/).map((w) => w.replace(/^[.-]+|[.-]+$/g, "")).filter((w) => w.length >= 4 && !TOPIC_STOP.has(w))
 }
-function belongsToPrevious(sentence: string, previous: string): boolean {
+export type PreviousTurn = { question: string; answers: string }
+function belongsToPrevious(sentence: string, previous: PreviousTurn): boolean {
   const words = topicWords(sentence)
-  if (!previous || words.length < 3) return false
-  const bag = new Set(topicWords(previous))
-  return words.filter((w) => bag.has(w)).length / words.length >= 0.4
+  if (words.length < 3) return false
+  if (previous.answers) {
+    const bag = new Set(topicWords(previous.answers))
+    if (words.filter((w) => bag.has(w)).length / words.length >= 0.6) return true
+  }
+  const defined = sentence.replace(LEAD_FILLER, "").match(/^(?:(?:the|a|an)\s+)?([a-z0-9][\w+#.-]*(?:\s+[a-z0-9][\w+#.-]*){0,3}?)\s+(?:is|are|means|refers to|happens)\b/i)
+  if (!defined || !previous.question) return false
+  const subject = topicWords(defined[1]), asked = new Set(topicWords(previous.question))
+  return subject.length > 0 && subject.every((w) => asked.has(w))
 }
+/** The last turns the page sends (recentQA): the last question and the last two answers. */
+export function previousTurn(history: unknown): PreviousTurn {
+  const turns = (Array.isArray(history) ? history : []).filter((t) => t && typeof t === "object").slice(-2) as Array<Record<string, unknown>>
+  const last = turns[turns.length - 1]
+  return {
+    question: last ? String(last.q ?? last.question ?? "").slice(0, 400) : "",
+    answers: turns.map((t) => String(t.a ?? "").slice(0, 2400)).join(" ").trim(),
+  }
+}
+const NO_TURN: PreviousTurn = { question: "", answers: "" }
 
-export function cutQuestion(heard: string, previous = ""): string {
+export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN): string {
   const text = transcriptSentences(heard)
     .replace(/\s+/g, " ")
     .trim()
@@ -445,7 +474,11 @@ export function cutQuestion(heard: string, previous = ""): string {
   for (let i = parts.length - 1; i >= 0; i--) if (parts[i].kind === "ask") { last = i; break }
   if (last < 0) return ""
   let from = last, context = 0
-  while (from > 0 && (parts[from - 1].kind === "ask" || (parts[from - 1].kind === "context" && context < 2 && !belongsToPrevious(parts[from - 1].text, previous)))) {
+  // "Let me push on that. <setup>": announced setup is kept. So is the sentence a pointing ask ("rate limit it") needs.
+  const before = TOPIC_SHIFT.test(text) ? NO_TURN : previous
+  const points = /\b(?:it|that|this|them|those|these|there)\b/i.test(parts[last].text)
+  const reply = (i: number) => !/\?$/.test(parts[i].text) && !ASK_OPENER.test(parts[i].text) && !(points && i === last - 1) && belongsToPrevious(parts[i].text, before)
+  while (from > 0 && !reply(from - 1) && (parts[from - 1].kind === "ask" || (parts[from - 1].kind === "context" && context < 2))) {
     if (parts[from - 1].kind === "context") context++
     from--
   }
@@ -469,6 +502,11 @@ const ASK_INSIDE = /\b(?:how|what|why|when|where|which|who)\b(?!\s+to\b)|\b(?:ca
 const LEAD_FILLER = /^(?:(?:ok(?:ay)?|so|and|also|now|then|next|finally|right|alright|all right|well|yes|yeah|uh+|um+|please|great|perfect|cool|sure)[,.!]?\s+)+/i
 const PLEASANTRY = /^(?:(?:that'?s|that is)\s+(?:great|good|interesting|fair|helpful|clear|right|true)|thanks?\b|thank you\b|(?:great|perfect|nice|good|interesting|excellent|awesome|wonderful|got it|makes sense|i see|understood)[.!]*$)/i
 const OWN_WORDS = /^(?:i|i'm|i've|i'd|i'll|we|we're|we've|we'd|my|our|me)\b/i
+// Speaks to the candidate, or says it is asking: such a sentence is never read as a statement.
+const ADDRESSES = /\byou(?:rs?|rself)?\b/i
+const ASKS_FOR = /\b(?:question|asking|wonder(?:ing)?|curious|follow[- ]?up|(?:want|like|love|need|trying) to (?:know|hear|understand|see|learn|get at)|get at|part (?:one|two|three)|next part|scenario)\b/i
+// The interviewer says the next sentence is new setup, even when it shares the last turn's words.
+const TOPIC_SHIFT = /\b(?:different topic|new topic|change of topic|switch(?:ing)? gears|moving on|let me push|push on that|build(?:ing)? on that|next question|(?:another|new|different) scenario|let's say|imagine|suppose)\b/i
 
 type AskPart = { kind: "ask" | "context" | "noise" | "own"; text: string }
 
@@ -492,13 +530,18 @@ function classifyAskSentence(sentence: string): AskPart {
     if (!asked && /^(?:why|how|what|when|where|which|who)\s+(?:i|we|my|our|i'm|i've|we're)\b/i.test(bare)) return { kind: "own", text: bare }
     if (!asked && !ASK_OPENER.test(bare) && (bare.split(/\s+/).length < 4 || /\.{2,}|…/.test(bare))) return { kind: "noise", text: bare }
     if (ASK_OPENER.test(bare) || (asked && !OWN_WORDS.test(bare))) return { kind: "ask", text: bare }
-    // "Dependency confusion is when the build pulls...", "that's how we did it": a wh-word after "is" explains, and "the
-    // build" or "our design" is a noun, not an instruction (baseline contract, 27 Oct 2026: his spoken answer counted as
-    // an ask and was glued in front of the next question).
-    const inside = bare
-      .replace(/\b(?:is|are|was|were|'s|means|happens)\s+(?:when|where|what|which|who|how|why)\b/gi, (m) => " ".repeat(m.length))
-      .replace(/\b(?:the|a|an|our|your|their|its|this|that|my|each|every)\s+(?:build|design|compare|implement|configure)\b/gi, (m) => " ".repeat(m.length))
-      .search(ASK_INSIDE)
+    // "Dependency confusion is when the build pulls...", "..., which is why we pin names": in a sentence that speaks to
+    // no one and asks for nothing, a wh-word after "is" or a comma explains and "the build" is a noun, so it is not an
+    // ask (baseline contract, 27 Oct 2026: his spoken answer was glued in front of the next question). A sentence that
+    // speaks to the candidate ("my question is how you'd...") or says it asks ("the real question is why...") keeps
+    // every hit: the review of 398f299 measured eleven real questions lost when the blanking applied to them too.
+    const explains = !ADDRESSES.test(bare) && !ASKS_FOR.test(bare)
+    const blank = (m: string) => " ".repeat(m.length)
+    const inside = (explains
+      ? bare.replace(/\b(?:is|are|was|were|'s|means|happens)\s+(?:when|where|what|which|who|how|why)\b/gi, blank)
+        .replace(/,\s*which\b/gi, blank)
+        .replace(/\b(?:the|a|an|this|that|each|every)\s+(?:build|design)\b/gi, blank)
+      : bare).search(ASK_INSIDE)
     if (inside > 0 && bare.slice(inside).split(/\s+/).length >= 3) {
       const tail = bare.slice(inside)
       // "In your experience, how do you..." keeps its lead; a ramble before the ask does not.
@@ -527,7 +570,7 @@ export function noiseOnly(text: string): boolean {
  * unanswered. Anything else typed or heard is kept — dropping it is what
  * left the card on the previous answer.
  */
-export function questionToAnswer(heard: string, explicit: string, pinned = false): string {
+export function questionToAnswer(heard: string, explicit: string, pinned = false, previous: PreviousTurn = NO_TURN): string {
   const asked = String(explicit || "").replace(/\s+/g, " ").trim()
   if (pinned && asked && !noiseOnly(asked)) {
     // The formed question on the card is the whole of what was asked (owner, 23 Oct 2026): every ask, the setup between
@@ -539,7 +582,7 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
     const whole = parts.slice(from).map((p) => p.text).join(" ").replace(/\s+/g, " ").trim()
     return (whole && !noiseOnly(whole) ? whole : asked).slice(0, 2000)
   }
-  const cut = cutQuestion([heard, asked].filter(Boolean).join("\n"))
+  const cut = cutQuestion([heard, asked].filter(Boolean).join("\n"), previous)
   if (cut) return cut
   if (asked && !noiseOnly(asked)) return asked.slice(0, 2000)
   const bare = String(heard || "")
@@ -549,6 +592,33 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
   if (bare && !noiseOnly(bare) && bare.split(/\s+/).filter(Boolean).length >= 3) return bare.slice(0, 2000)
   return ""
 }
+
+/**
+ * The code gates of a derive, in order: plainly no question → null; one clean question from the call audio; the cut,
+ * which knows the previous turn unless this is a re-ask of it. "" means the model decides. The service and the
+ * baseline contract (scripts/kompas-baseline.mjs) both call this, so the contract replays the real derive.
+ */
+export function deriveByCode(heard: string, history: unknown, reask = false): string | null {
+  if (!heard || plainlyNoQuestion(heard)) return null
+  return cleanQuestion(heard) || cutQuestion(heard, reask ? NO_TURN : previousTurn(history))
+}
+
+/**
+ * The question the answer request answers: the formed question when pinned, otherwise the cut of what was heard with
+ * the derived question, knowing the previous turn (review of 398f299: without it his reply was glued back in front of
+ * the question the model was told to answer). A topic-less follow-up is tied to the last question.
+ */
+export function questionForAnswer(heard: string, asked: string, pinned: boolean, again: boolean, history: unknown): string {
+  const turns = Array.isArray(history) ? history : []
+  const q = questionToAnswer(heard, asked, pinned, again ? NO_TURN : previousTurn(turns))
+  return q ? resolveFollowUp(q, turns.map((h) => {
+    const o = (h && typeof h === "object" ? h : {}) as Record<string, unknown>
+    return { q: String(o.q ?? o.question ?? "").slice(0, 300) }
+  })) : ""
+}
+
+// The Director level's opening, in the owner's words, plus the 27 Oct rule that the decision owner is a role.
+export const DIRECTOR_OPENING = `DIRECTOR OPENING (this overrides the shape's opening sentence): sentence one states the decision — what you are doing — not a definition and not an axis. Name the decision owner in that sentence. Before closing, name the measures you will track, each as a named measure, never a vague promise to monitor. The decision owner is a role in the organisation (the business owner of the platform, the risk owner, security leadership), never a person's name, and the candidate keeps the title the resume gives: never speak as a CISO or any title the resume does not hold.`
 
 /** Verbatim extraction when the transcript reduces to exactly one clean question. */
 export function cleanQuestion(heard: string): string {
