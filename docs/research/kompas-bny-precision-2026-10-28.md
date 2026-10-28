@@ -26,3 +26,9 @@ The timeline export contains unverified model-generated candidate claims. Neithe
 
 ## Release gates
 Run TypeScript, Kompas baseline, focused 20-fold suite, full hardening, and build. Confirm preview and compare actual generated answers on consented source/resume/JD contexts, measuring response relevance, exact subparts, factual claims, first-word latency, and final TTS. Verify production deployment separately from PR merge. Preserve parallel voice/native work.
+
+## Release evidence — 28 October 2026
+- PR #109 merged into master at 60062b4c0bf2788d3f9db6b23237cdf3fbeddc77.
+- GitHub CI run 40765788005 succeeded: lint, type-check, 20 cumulative precision folds, adjacent Kompas and WhatsApp verification, and final Webpack build. The earlier Turbopack font-import issue in GitHub Actions was addressed by using the documented Webpack build path for CI; Vercel preview builds were READY.
+- Vercel production deployment dpl_2vxG1pT6ZcrqhqfGnZzbSQ6t5uC8 reports READY on exact merge SHA, alias job-dashboard-fawn.vercel.app.
+- Authenticated live-model answers, Windows native voice, provisional stream TTS, and practical end-to-end response improvement remain unverified; do not claim otherwise.
