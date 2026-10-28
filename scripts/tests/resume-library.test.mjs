@@ -154,7 +154,7 @@ test('WhatsApp works on a private temporary copy of a resume sent, and files it 
   assert.ok(bot.includes('const gen = await loadGen(from, replyTo)'))
   assert.ok(bot.includes('if (gen.userId !== userId) return sendText(from'))
   assert.ok(bot.includes('await sendDocument(from, file, `${name}.docx`, caption)'))
-  assert.ok(bot.includes('await sendText(from, plainFailure(e, "do that", true))'))
+  assert.ok((bot.includes('? plainFailure(e, "do that", true)') && bot.includes('MarketFit service is unavailable. Your request was not completed. Please retry.') && bot.includes('await sendText(from, message)')))
 })
 
 test('a number joins an account with a code that works once, for fifteen minutes, five tries an hour', async () => {
@@ -300,5 +300,5 @@ test('a failure is told in one plain sentence: the reason, and nothing of the ma
   assert.ok(!chat.includes('The agent hit an error') && !chat.includes('const safe = raw'), 'the raw text of a failure is not sent to the chat')
   assert.ok(chat.includes('console.error("agent/chat error:", failureTag(err), err)'), 'it is still written to the server log')
   assert.ok(chat.includes('WHEN A TOOL FAILS: tell him in one plain sentence'))
-  assert.ok(!bot.includes('Something went wrong: ${String(e)') && bot.includes('await sendText(from, plainFailure(e, "do that", true))'))
+  assert.ok(!bot.includes('Something went wrong: ${String(e)') && (bot.includes('? plainFailure(e, "do that", true)') && bot.includes('MarketFit service is unavailable. Your request was not completed. Please retry.') && bot.includes('await sendText(from, message)')))
 })
