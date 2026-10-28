@@ -7,7 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { trackInterviews, decide, noteSent, toSendForYou, followUpWords, validState, emptyState, FIRST_AFTER_DAYS, EVERY_DAYS, MOST_SENT_FOR_YOU, OLD_AFTER_DAYS } from '../../src/lib/interview-track.ts'
+import { trackInterviews, decide, noteSent, toSendForYou, followUpWords, validState, emptyState, weekdayForHim, dayList, cleanDays, FIRST_AFTER_DAYS, EVERY_DAYS, MOST_SENT_FOR_YOU, OLD_AFTER_DAYS } from '../../src/lib/interview-track.ts'
 
 const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 const ME = 'me@example.com', DAY = 86_400_000, NOW = Date.UTC(2026, 9, 13, 18, 0, 0)
@@ -140,4 +140,46 @@ test('the Interviews page shows every interview with what to do, and sending for
   // What is sent for him: only what toSendForYou allows, written down before the next is considered, by the daily job.
   assert.ok(sender.includes('toSendForYou(') && sender.includes('noteSent(') && sender.includes('followUpWords('))
   assert.ok(daily.includes('sendInterviewFollowUps('))
+})
+
+test('ticked days are the only days the automatic send may ring on, and a manual send is not bound by them', () => {
+  const id = `${ME}:quiet`
+  const threads = [thread('quiet', msg('Shikha Rao', 'shikha@vendorone.example', 12, INVITE))]
+  const run = (state, now = NOW) => { const r = trackInterviews([found('quiet', -9)], threads, [ME], now, { state }); return { r, send: toSendForYou(r.active, state, now) } }
+  // NOW is Tuesday 13:00 in Chicago (18:00 UTC). A ticked Tuesday rings; a ticked Wednesday does not.
+  assert.equal(weekdayForHim(NOW), 2)
+  assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', NOW, undefined, [2])).send.map(t => t.id), [id])
+  assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', NOW, undefined, [3])).send, [])
+  assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', NOW, undefined, [])).send.map(t => t.id), [id], 'no ticks means any day')
+  // Wednesday 02:00 UTC is still Tuesday evening in Chicago: the ticked Tuesday rings, the Wednesday does not.
+  const tueNight = Date.UTC(2026, 9, 14, 2, 0, 0)
+  assert.equal(weekdayForHim(tueNight), 2)
+  assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', NOW, undefined, [2]), tueNight).send.map(t => t.id), [id])
+  assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', NOW, undefined, [3]), tueNight).send, [])
+  // What he is told names the ticked days instead of promising a next date the ticks may hold back.
+  const ticked = run(decide(emptyState(), id, 'send_for_me', NOW, undefined, [1, 3]))
+  assert.deepEqual(ticked.r.active[0].forYou.days, [1, 3])
+  assert.equal(ticked.r.active[0].say, 'I send Shikha a short follow-up for you on Mon, Wed until there is news.')
+  assert.equal(dayList([3, 1]), 'Mon, Wed')
+})
+
+test('rewording what is sent, or re-ticking its days, never switches it on or off and never forgets what went out', () => {
+  const id = `${ME}:quiet`
+  let state = decide(emptyState(), id, 'send_for_me', NOW, { subject: 'Old subject', body: 'Old body' }, [1])
+  state = noteSent(state, id, NOW)
+  state = decide(state, id, 'save_words', NOW + DAY, { subject: 'New subject', body: 'New body' })
+  assert.deepEqual(state.handed, [{ id, on: true, at: NOW, sent: [NOW], subject: 'New subject', body: 'New body', days: [1] }])
+  state = decide(state, id, 'set_days', NOW + DAY, undefined, [2, 5])
+  assert.deepEqual(state.handed, [{ id, on: true, at: NOW, sent: [NOW], subject: 'New subject', body: 'New body', days: [2, 5] }])
+  // Opting in again keeps the ticks he already chose unless he ticks new ones.
+  state = decide(decide(emptyState(), id, 'send_for_me', NOW, undefined, [4]), id, 'stop_sending', NOW)
+  assert.deepEqual(decide(state, id, 'send_for_me', NOW).handed[0].days, [4])
+  assert.deepEqual(decide(state, id, 'send_for_me', NOW, undefined, [0]).handed[0].days, [0])
+  // Clearing the ticks leaves the switch and the count alone.
+  state = decide(state, id, 'set_days', NOW, undefined, [])
+  assert.deepEqual(state.handed, [{ id, on: false, at: NOW, sent: [], days: [] }])
+  // Only real weekdays survive, each once.
+  assert.deepEqual(cleanDays([0, 2, 2, 8, -1, 'x', 6]), [0, 2, 6])
+  assert.deepEqual(validState({ marks: [], handed: [{ id, on: true, at: 1, sent: [], days: [0, 2, 2, 8, -1] }] }).handed, [{ id, on: true, at: 1, sent: [], days: [0, 2] }])
+  assert.deepEqual(validState({ marks: [], handed: [{ id, on: true, at: 1, sent: [], days: [] }] }).handed, [{ id, on: true, at: 1, sent: [] }])
 })

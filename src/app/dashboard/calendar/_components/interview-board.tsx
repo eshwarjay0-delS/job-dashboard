@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react"
 import Link from "next/link"
 import RecruiterButton from "../../_components/recruiter-button"
 import { createClient } from "@/lib/supabase/client"
-import type { Tracked } from "@/lib/interview-track"
+import { dayList, type Tracked } from "@/lib/interview-track"
 
 type Answer = { ok: boolean; error?: string; active: Tracked[]; past: Tracked[]; due: number; canSendForYou: boolean; words: Record<string, { subject: string; body: string }> }
 
@@ -56,13 +56,32 @@ const big: CSSProperties = { minHeight: 44, padding: "0 18px", fontSize: 15, dis
 const day = (at: number) => (at ? new Date(at).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) : "")
 const digits = (phone: string) => phone.replace(/ext\..*$/i, "").replace(/\D/g, "")
 const mailto = (email: string) => { const at = email.lastIndexOf("@"); return at < 1 ? "#" : `mailto:${encodeURIComponent(email.slice(0, at))}@${encodeURIComponent(email.slice(at + 1))}` }
-const openHref = (threadId: string) => `/dashboard/mail?open=${encodeURIComponent(threadId)}`
+const openHref = (threadId: string, account?: string) => `/dashboard/mail?open=${encodeURIComponent(threadId)}${account ? `&account=${encodeURIComponent(account)}` : ""}`
+// Weekday ticks, like an alarm: which days the automatic follow-up may ring on. No ticks means any day.
+const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"]
+function DayTicks({ days, onToggle, disabled }: { days: number[]; onToggle: (day: number) => void; disabled?: boolean }) {
+  return (
+    <span style={{ display: "inline-flex", gap: 4, flexWrap: "wrap", alignItems: "center" }} role="group" aria-label="Days the automatic follow-up may go out">
+      {DAY_LETTERS.map((letter, d) => {
+        const on = days.includes(d)
+        return (
+          <button key={d} type="button" disabled={disabled} aria-pressed={on} aria-label={`Toggle ${dayList([d])}`} title={dayList([d])}
+            onClick={() => onToggle(d)}
+            style={{ width: 32, height: 32, borderRadius: 16, border: `1.5px solid ${on ? "var(--accent)" : "var(--border)"}`, background: on ? "var(--accent-soft)" : "var(--surface)", color: on ? "var(--accent-txt)" : "var(--text-muted)", fontSize: 13, fontWeight: 800, cursor: disabled ? "wait" : "pointer" }}>
+            {letter}
+          </button>
+        )
+      })}
+    </span>
+  )
+}
 
 export default function InterviewBoard() {
   const [data, setData] = useState<Answer | null>(() => boardMemory)
   const [error, setError] = useState("")
   const [busy, setBusy] = useState("")
   const [asking, setAsking] = useState("")       // the interview whose "send for me" words are being shown
+  const [askDays, setAskDays] = useState<number[]>([]) // weekday ticks chosen while opting in
   const [editing, setEditing] = useState("")   // the interview whose draft is being edited
   const [editSubject, setEditSubject] = useState("")
   const [editBody, setEditBody] = useState("")
@@ -87,17 +106,24 @@ export default function InterviewBoard() {
     return () => { cancelled = true }
   }, [load])
 
-  const choose = async (id: string | string[], action: "rejected" | "completed" | "reopen" | "send_for_me" | "stop_sending", customWords?: { subject: string; body: string }) => {
+  const choose = async (id: string | string[], action: "rejected" | "completed" | "reopen" | "send_for_me" | "stop_sending" | "save_words" | "set_days" | "send_now", customWords?: { subject: string; body: string }, days?: number[]) => {
     if (busy) return
     setBusy(`${action}:${Array.isArray(id) ? "all" : id}`)
     try {
       const payload: Record<string, unknown> = Array.isArray(id) ? { ids: id, action } : { id, action }
-      if (customWords && action === "send_for_me") { payload.subject = customWords.subject; payload.body = customWords.body }
+      if (customWords && (action === "send_for_me" || action === "save_words" || action === "send_now")) { payload.subject = customWords.subject; payload.body = customWords.body }
+      if (days !== undefined) payload.days = days
       const r = await fetch("/api/gmail/interview-track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
       take(await r.json())
       setAsking("")
+      setAskDays([])
       setEditing("")
     } catch { setError("That could not be saved just now.") } finally { setBusy("") }
+  }
+
+  const toggleDay = (id: string, current: number[], d: number) => {
+    const next = current.includes(d) ? current.filter(x => x !== d) : [...current, d].sort((a, b) => a - b)
+    void choose(id, "set_days", undefined, next)
   }
 
   const startEdit = (id: string, subject: string, body: string) => {
@@ -127,7 +153,7 @@ export default function InterviewBoard() {
           const words = data.words[t.id]
           const mine = !!t.forYou?.on
           return (
-            <article key={t.id} style={{ ...card, borderLeft: t.action === "none" ? undefined : "4px solid var(--spot)" }}>
+            <article key={t.id} id={t.threadId ? `interview-${t.threadId}` : undefined} style={{ ...card, borderLeft: t.action === "none" ? undefined : "4px solid var(--spot)" }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <span style={tag}>{PHASE[t.phase]}</span>
                 <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 650, overflowWrap: "anywhere" }}>{t.role}{t.company ? <span style={{ fontWeight: 400, color: "var(--text-muted)" }}> · {t.company}</span> : null}</span>
@@ -149,13 +175,59 @@ export default function InterviewBoard() {
               )}
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                {t.threadId && <Link href={openHref(t.threadId)} className={t.action === "none" ? "btn-outline" : "btn-accent"} style={big}>{t.action === "reply" ? "Open and reply" : t.action === "follow_up" ? "Open and follow up" : "Open"}</Link>}
+                {t.threadId && <Link href={openHref(t.threadId, t.account)} className={t.action === "none" ? "btn-outline" : "btn-accent"} style={big}>{t.action === "reply" ? "Open and reply" : t.action === "follow_up" ? "Open and follow up" : "Open"}</Link>}
                 {t.phase === "waiting" && t.contact && !t.contact.recruiter && !t.theyWrote && (mine
                   ? <button type="button" className="btn-outline" disabled={!!busy} onClick={() => { void choose(t.id, "stop_sending") }} style={big}>{busy === `stop_sending:${t.id}` ? "Saving…" : "Stop sending for me"}</button>
-                  : <button type="button" className="btn-outline" aria-expanded={asking === t.id} onClick={() => setAsking(a => (a === t.id ? "" : t.id))} style={big}>Send one for me every week</button>)}
+                  : <button type="button" className="btn-outline" aria-expanded={asking === t.id} onClick={() => { setAsking(a => (a === t.id ? "" : t.id)); setAskDays([]) }} style={big}>Send one for me every week</button>)}
                 <button type="button" className="btn-ghost" disabled={!!busy} onClick={() => { void choose(t.id, "completed") }} style={{ minHeight: 44, padding: "0 12px", fontSize: 14 }}>{busy === `completed:${t.id}` ? "Saving…" : "It is finished"}</button>
                 <button type="button" className="btn-ghost" disabled={!!busy} onClick={() => { void choose(t.id, "rejected") }} style={{ minHeight: 44, padding: "0 12px", fontSize: 14 }}>{busy === `rejected:${t.id}` ? "Saving…" : "Not going ahead"}</button>
               </div>
+
+              {/* What is being sent for him is always in view while it is switched on — not only while he is
+                  being asked. He can reword it here, send one at once, or tick the days it may ring on. */}
+              {mine && words && (
+                <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 12, border: "1px solid var(--border-strong)", background: "var(--surface-2)" }}>
+                  <p style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 650 }}>What I send to {name}{t.forYou?.days?.length ? `, on ${dayList(t.forYou.days)}` : ", once a week"}, from {t.account}:</p>
+                  {editing === t.id ? (
+                    <>
+                      <label style={{ display: "block", margin: "0 0 8px", fontSize: 13, color: "var(--text-muted)" }}>Subject
+                        <input value={editSubject} onChange={e => setEditSubject(e.target.value)} maxLength={200}
+                          style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", fontSize: 14, borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)" }} />
+                      </label>
+                      <label style={{ display: "block", margin: "0 0 10px", fontSize: 13, color: "var(--text-muted)" }}>Message
+                        <textarea value={editBody} onChange={e => setEditBody(e.target.value)} maxLength={2000} rows={8}
+                          style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", fontSize: 14, lineHeight: 1.6, borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", resize: "vertical" }} />
+                      </label>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button type="button" className="btn-accent" disabled={!!busy}
+                          onClick={() => { void choose(t.id, "save_words", { subject: editSubject, body: editBody }) }} style={big}>
+                          {busy === `save_words:${t.id}` ? "Saving…" : "Save words"}
+                        </button>
+                        <button type="button" className="btn-outline" disabled={!!busy}
+                          onClick={() => { void choose(t.id, "send_now", { subject: editSubject, body: editBody }) }} style={big}>
+                          {busy === `send_now:${t.id}` ? "Sending…" : "Send edited now"}
+                        </button>
+                        <button type="button" className="btn-outline" onClick={() => setEditing("")} style={big}>Cancel edit</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ margin: "0 0 4px", ...muted }}>Subject: {words.subject}</p>
+                      <p style={{ margin: "0 0 10px", fontSize: 14.5, lineHeight: 1.6, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{words.body}</p>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                        <button type="button" className="btn-accent" disabled={!!busy}
+                          onClick={() => { void choose(t.id, "send_now") }} style={big}>
+                          {busy === `send_now:${t.id}` ? "Sending…" : "Send now"}
+                        </button>
+                        <button type="button" className="btn-outline" onClick={() => startEdit(t.id, words.subject, words.body)} style={big}>Edit</button>
+                        <span style={muted}>Ring on:</span>
+                        <DayTicks days={t.forYou?.days || []} disabled={!!busy} onToggle={d => toggleDay(t.id, t.forYou?.days || [], d)} />
+                      </div>
+                      <p style={{ ...muted, margin: "10px 0 0" }}>Send now goes out at once and counts toward the four. The automatic send rings only on the ticked days; with none ticked it rings any day, once a week.</p>
+                    </>
+                  )}
+                </div>
+              )}
 
               {asking === t.id && words && (
                 <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 12, border: "1px solid var(--border-strong)", background: "var(--surface-2)" }}>
@@ -181,10 +253,15 @@ export default function InterviewBoard() {
                     </>
                   )}
                   <p style={{ ...muted, margin: "0 0 10px" }}>It stops by itself when {name} answers, when you mark this finished, or after four. You can stop it at any time.</p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", margin: "0 0 10px" }}>
+                    <span style={muted}>Ring on:</span>
+                    <DayTicks days={askDays} onToggle={d => setAskDays(cur => cur.includes(d) ? cur.filter(x => x !== d) : [...cur, d].sort((a, b) => a - b))} />
+                    <span style={muted}>Leave them blank and it rings any day.</span>
+                  </div>
                   {data.canSendForYou ? (
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <button type="button" className="btn-accent" disabled={!!busy}
-                        onClick={() => { void choose(t.id, "send_for_me", editing === t.id ? { subject: editSubject, body: editBody } : undefined) }} style={big}>
+                        onClick={() => { void choose(t.id, "send_for_me", editing === t.id ? { subject: editSubject, body: editBody } : undefined, askDays.length ? askDays : undefined) }} style={big}>
                         {busy === `send_for_me:${t.id}` ? "Saving…" : editing === t.id ? "Yes, send my edited version every week" : "Yes, send it for me every week"}
                       </button>
                       {editing !== t.id && (
@@ -221,7 +298,7 @@ export default function InterviewBoard() {
                     <div style={{ fontSize: 14.5, fontWeight: 650, overflowWrap: "anywhere" }}>{t.role}{t.company ? ` · ${t.company}` : ""}</div>
                     <div style={muted}>Interview {t.timeKnown ? "on" : "around"} {day(t.at)}. {t.say}</div>
                   </div>
-                  {t.threadId && <Link href={openHref(t.threadId)} style={pill}>Open</Link>}
+                  {t.threadId && <Link href={openHref(t.threadId, t.account)} style={pill}>Open</Link>}
                   <button type="button" className="btn-ghost" disabled={!!busy} onClick={() => { void choose(t.id, "reopen") }} style={{ minHeight: 36, padding: "0 12px", fontSize: 13.5 }}>{busy === `reopen:${t.id}` ? "Saving…" : "Follow them again"}</button>
                 </li>
               ))}
