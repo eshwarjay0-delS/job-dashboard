@@ -431,5 +431,11 @@ export async function verifyAnswer(
   })
   if (!fixed) return { text: null, fixed }
   let k = 0 // put back the headings (QUESTION: / ##) the check skipped
-  return { text: all.map((l) => (isHead(l) ? bare(l) : "- " + out[k++])).join("\n"), fixed }
+  // Preserve the original spoken paragraph/line structure. A fact-check must
+  // never turn an interview response into an unsolicited Markdown bullet list.
+  return { text: all.map((l) => {
+    if (isHead(l)) return l
+    const prefix = l.match(/^\s*[-•*]\s*/)?.[0] || ""
+    return prefix + out[k++]
+  }).join("\n"), fixed }
 }
