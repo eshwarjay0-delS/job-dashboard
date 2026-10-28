@@ -43,6 +43,7 @@ function loadTs(path) {
 }
 const A = ts ? loadTs('src/lib/kompasAnswer.ts') : null
 const R = ts ? loadTs('src/lib/kompasDesktopResponse.ts') : null
+const P = ts ? loadTs('src/lib/kompasInterviewPrecision.ts') : null
 // The service's code without its comments, so a rule moved into a comment does not count as wired.
 const service = read('src/lib/kompasAnswerService.ts').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:"'`\\])\/\/.*$/gm, '$1')
 
@@ -379,7 +380,9 @@ if (A && R) {
   await check('the service answers through the functions this replay runs', () => {
     eq((service.match(/deriveByCode\(/g) || []).length, 2, 'both derive paths use deriveByCode')
     eq((service.match(/deriveByCode\((?:str\(body\.question, 5000\)|heard), body\.history, body\.reask === true\)/g) || []).length, 2, 'and pass it the page\'s history and re-ask flag')
-    ok(/let question = questionForAnswer\(heardAll, asked, body\.pinned === true, again, body\.history\)/.test(service), 'the answer question is questionForAnswer')
+    ok(/let question = latestInterviewerAsk\(questionForAnswer\(heardAll, asked, body\.pinned === true, again, body\.history\)\)/.test(service), 'questionForAnswer still anchors the answer and the reviewed latest-ask isolator applies afterwards')
+    ok(P && P.latestInterviewerAsk('Previous answer. Are you familiar with policy deviations?') === 'Are you familiar with policy deviations?', 'the new ask is isolated from the previous answer')
+    ok(P && P.latestInterviewerAsk('How do you assess business impact? How do you verify root cause?') === 'How do you assess business impact? How do you verify root cause?', 'two genuine parts of the same question remain intact')
     ok(!/\b(?:cutQuestion|questionToAnswer|cleanQuestion|plainlyNoQuestion)\(/.test(service), 'no second, untested path to the question')
   })
 }
