@@ -401,7 +401,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       const emit = (o: Record<string, unknown>) => {
         try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(o)}\n\n`)) } catch { /* client went away */ }
       }
-      const timing = { preparation_ms: Date.now() - startedAt, first_ms: 0, lane: "", total_ms: 0 }
+      const timing = { preparation_ms: Date.now() - startedAt, first_ms: 0, visible_first_ms: 0, lane: "", total_ms: 0 }
       let raw = ""
       let lastErr = ""
       let servedModel = ""
@@ -409,7 +409,10 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       const onDelta = (d: string) => {
         if (!raw && d) timing.first_ms = Date.now() - startedAt
         raw += d
-        if (releaseProvisionalDelta(job.streamPolicy)) emit({ type: "delta", text: d })
+        if (releaseProvisionalDelta(job.streamPolicy)) {
+          if (!timing.visible_first_ms && d) timing.visible_first_ms = Date.now() - startedAt
+          emit({ type: "delta", text: d })
+        }
       }
       try {
         emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy })
@@ -511,7 +514,10 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         finalText = correctVerifiedPresentationErrors(finalText)
         // Personal history is held back until guards have run. Even if unchanged,
         // it must be emitted now because no provisional deltas were sent.
-        if (mustEmitFinalReplacement(job.streamPolicy, finalText, raw)) emit({ type: "replace", text: finalText })
+        if (mustEmitFinalReplacement(job.streamPolicy, finalText, raw)) {
+          if (!timing.visible_first_ms && finalText) timing.visible_first_ms = Date.now() - startedAt
+          emit({ type: "replace", text: finalText })
+        }
         emit({
           type: "done", degraded, guarded: g.guarded, verified, repaired,
           precision: { coverage: questionCoverage(job.question, finalText), flags: spokenQualityFlags(job.question, finalText) },
