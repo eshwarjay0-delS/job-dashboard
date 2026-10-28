@@ -1,8 +1,9 @@
 'use client'
 import Link from 'next/link'
 import SourceEditor from './source-editor'
+import SupportManager from './support-manager'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-type Snapshot = { id: string; revision: number; history: { q: string; a: string }[]; ready: boolean; hasResume: boolean; hasJd: boolean; documentCount: number; pending: boolean }
+type Snapshot = { id: string; revision: number; history: { q: string; a: string }[]; ready: boolean; hasResume: boolean; hasJd: boolean; documentCount: number; pending: boolean; supportingDocuments?: { index: number; name: string; characters: number }[] }
 export default function SharedChat({ id }: { id: string }) {
   const [session, setSession] = useState<Snapshot | null>(null)
   const [question, setQuestion] = useState('')
@@ -68,6 +69,7 @@ export default function SharedChat({ id }: { id: string }) {
       <p>Resume: {session.hasResume ? 'received' : 'needed'} · Job description: {session.hasJd ? 'received' : 'needed'} · Supporting documents: {session.documentCount}</p>
       {!session.ready && <p>Add the missing resume or job description below, or send it in WhatsApp.</p>}
       <SourceEditor session={session} onSaved={accept} onAuthLost={() => { authLost.current = true; setSession(null); setError('Sign in again to edit sources.') }} />
+      <SupportManager session={session} onSaved={accept} onAuthLost={() => { authLost.current = true; setSession(null); setError('Sign in again to manage supporting documents.') }} />
       <div aria-label="Conversation history">
         {session.history.length === 0 && <p>No answers yet. Ask your first question once your sources are ready.</p>}
         {session.history.map((turn, index) => <article key={index} style={{ margin: '24px 0', padding: 20, border: '1px solid var(--border)', borderRadius: 16 }}>
