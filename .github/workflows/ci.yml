@@ -63,8 +63,8 @@ jobs:
       - name: Verify MarketFit login visual story and media asset
         run: node --test scripts/tests/login-journey-animation.test.mjs scripts/tests/login-35s-story.test.mjs
 
-      - name: Build
-        run: npm run build
+      - name: Build (Webpack; Next 16 Turbopack Google-font resolver fails in GitHub runner)
+        run: npm run build -- --webpack
         env:
           # Stub vars so build doesn't crash on missing env
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
