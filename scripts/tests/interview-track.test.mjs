@@ -7,7 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { trackInterviews, decide, noteSent, toSendForYou, followUpWords, validState, emptyState, weekdayForHim, dayList, cleanDays, FIRST_AFTER_DAYS, EVERY_DAYS, MOST_SENT_FOR_YOU, OLD_AFTER_DAYS } from '../../src/lib/interview-track.ts'
+import { trackInterviews, decide, noteSent, toSendForYou, followUpWords, validState, emptyState, weekdayForHim, dayList, cleanDays, DEFAULT_DAYS, ringDays, FIRST_AFTER_DAYS, EVERY_DAYS, MOST_SENT_FOR_YOU, OLD_AFTER_DAYS } from '../../src/lib/interview-track.ts'
 
 const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 const ME = 'me@example.com', DAY = 86_400_000, NOW = Date.UTC(2026, 9, 13, 18, 0, 0)
@@ -101,15 +101,16 @@ test('a follow-up is sent for him only on his standing word, once a week, and it
   const run = (state, now = NOW, t = threads) => { const r = trackInterviews([found('quiet', -9)], t, [ME], now, { state }); return { r, send: toSendForYou(r.active, state, now) } }
   // Not asked for: nothing is ever sent.
   assert.deepEqual(run(emptyState()).send, [])
-  let state = decide(emptyState(), id, 'send_for_me', NOW)
+  let state = decide(emptyState(), id, 'send_for_me', NOW, undefined, [0, 1, 2, 3, 4, 5, 6])
   let { r, send } = run(state)
   assert.deepEqual(send.map(t => t.id), [id], 'due now, and he asked for it')
   assert.equal(r.active[0].action, 'none', 'he is not asked to do what is being done for him'); assert.equal(r.active[0].forYou.on, true)
-  assert.match(r.active[0].say, /^I am sending Shikha a short follow-up for you\./)
+  assert.deepEqual(r.active[0].forYou.days, [0, 1, 2, 3, 4, 5, 6])
+  assert.match(r.active[0].say, /^I send Shikha a short follow-up for you on Sun, Mon, Tue, Wed, Thu, Fri, Sat until there is news\.$/)
   // Once sent, not again for a week.
   state = noteSent(state, id, NOW)
   assert.deepEqual(run(state, NOW + 3 * DAY).send, [])
-  assert.match(run(state, NOW + 3 * DAY).r.active[0].say, /^I send Shikha a short follow-up for you every week until there is news\. The next one is on /)
+  assert.match(run(state, NOW + 3 * DAY).r.active[0].say, /^I send Shikha a short follow-up for you on Sun, Mon, Tue, Wed, Thu, Fri, Sat until there is news\.$/)
   assert.deepEqual(run(state, NOW + 7 * DAY).send.map(t => t.id), [id])
   // They answered: it stops, and he is told to read what they wrote.
   const answered = [thread('quiet', msg('Shikha Rao', 'shikha@vendorone.example', 12, INVITE), { ...msg('Shikha Rao', 'shikha@vendorone.example', 0, 'Thanks Sam, feedback is expected Friday.'), internalDate: String(NOW + 2 * DAY) })]
@@ -150,7 +151,14 @@ test('ticked days are the only days the automatic send may ring on, and a manual
   assert.equal(weekdayForHim(NOW), 2)
   assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', NOW, undefined, [2])).send.map(t => t.id), [id])
   assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', NOW, undefined, [3])).send, [])
-  assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', NOW, undefined, [])).send.map(t => t.id), [id], 'no ticks means any day')
+  // No ticks means Monday and Thursday, his standing default — not any day.
+  const mon = Date.UTC(2026, 9, 12, 18, 0, 0) // Monday 13:00 in Chicago
+  const thu = Date.UTC(2026, 9, 15, 18, 0, 0) // Thursday 13:00 in Chicago
+  assert.equal(weekdayForHim(mon), 1); assert.equal(weekdayForHim(thu), 4)
+  assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', NOW), mon).send.map(t => t.id), [id], 'no ticks rings Monday')
+  assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', NOW), NOW).send, [], 'no ticks does not ring Tuesday')
+  assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', NOW), thu).send.map(t => t.id), [id], 'no ticks rings Thursday')
+  assert.deepEqual(run(decide(emptyState(), id, 'send_for_me', NOW, undefined, []), mon).send.map(t => t.id), [id], 'cleared ticks fall back to Monday and Thursday')
   // Wednesday 02:00 UTC is still Tuesday evening in Chicago: the ticked Tuesday rings, the Wednesday does not.
   const tueNight = Date.UTC(2026, 9, 14, 2, 0, 0)
   assert.equal(weekdayForHim(tueNight), 2)
@@ -161,6 +169,13 @@ test('ticked days are the only days the automatic send may ring on, and a manual
   assert.deepEqual(ticked.r.active[0].forYou.days, [1, 3])
   assert.equal(ticked.r.active[0].say, 'I send Shikha a short follow-up for you on Mon, Wed until there is news.')
   assert.equal(dayList([3, 1]), 'Mon, Wed')
+  // With nothing ticked, the card itself shows Monday and Thursday.
+  assert.deepEqual(DEFAULT_DAYS, [1, 4])
+  assert.deepEqual(ringDays([]), [1, 4]); assert.deepEqual(ringDays(undefined), [1, 4])
+  const plain = run(decide(emptyState(), id, 'send_for_me', NOW))
+  assert.deepEqual(plain.r.active[0].forYou.days, [1, 4])
+  assert.equal(plain.r.active[0].say, 'I send Shikha a short follow-up for you on Mon, Thu until there is news.')
+  assert.equal(dayList([1, 4]), 'Mon, Thu')
 })
 
 test('rewording what is sent, or re-ticking its days, never switches it on or off and never forgets what went out', () => {

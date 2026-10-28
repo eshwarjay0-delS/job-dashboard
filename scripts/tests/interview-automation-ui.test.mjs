@@ -19,8 +19,13 @@ test('the inbox carries an Interviews pile that links both ways to the board', (
 test('what is sent for him stays visible, editable, and sendable at once, on ticked days', () => {
   const board = read('src/app/dashboard/calendar/_components/interview-board.tsx')
   for (const said of ['What I send to', 'Send now', 'Save words', 'Send edited now', 'Ring on', 'DayTicks']) assert.ok(board.includes(said), said)
+  assert.ok(board.includes('Monday and Thursday are ticked to start'), 'Monday and Thursday ticked to start')
+  assert.ok(board.includes('untick them all and it rings Monday and Thursday'), 'untick-all falls back to Monday and Thursday')
+  assert.ok(board.includes('AbortSignal.timeout'), 'the button can never spin forever')
+  assert.ok(board.includes('check Sent before tapping again'), 'a timed-out send warns before any re-tap')
   const api = read('src/app/api/gmail/interview-track/route.ts')
   for (const action of ['"send_now"', '"save_words"', '"set_days"']) assert.ok(api.includes(action), action)
   const sender = read('src/lib/interview-followups.ts')
   assert.ok(sender.includes('sendInterviewFollowUpNow('))
+  assert.ok(sender.includes('threadsIn'), 'send-now verifies against the kept copy')
 })

@@ -9,7 +9,7 @@
 // "send_for_me" is the person's standing word that a short follow-up may be sent for them once a week until there is
 // news (the daily job sends it: src/lib/interview-followups.ts). The exact words are in `words`, shown before they say yes.
 // "save_words" rewords what is sent without switching it on or off; "set_days" ticks the weekdays the automatic send
-// may ring on (empty clears back to any day); "send_now" sends one follow-up at once, on the person's tap, and counts
+// may ring on (empty clears back to Monday and Thursday); "send_now" sends one follow-up at once, on the person's tap, and counts
 // toward the four. The automatic send obeys the ticks; a manual send does not.
 import { NextResponse } from "next/server"
 import { requireAuth, isAuthContext, threadsToInterviews, enrichInterviewEvidence, scheduleInterviewDiscovery, TRACKING_DAYS, type AuthContext } from "../_lib"
@@ -78,7 +78,9 @@ export async function POST(req: Request) {
       const { data: { user } } = await ctx.supabase.auth.getUser()
       const meta = (user?.user_metadata || {}) as { full_name?: string; name?: string }
       const myName = String(meta.full_name || meta.name || "").trim().split(/\s+/)[0] || ""
-      const sent = await sendInterviewFollowUpNow(ctx.userId, myName, ids[0], customWords)
+      // The board's kept copy verifies the tap; only an interview it missed falls back to the live scan.
+      const kept = await keptThreads(ctx, TRACKING_DAYS, { fetchWhenEmpty: true }).catch(() => null)
+      const sent = await sendInterviewFollowUpNow(ctx.userId, myName, ids[0], customWords, undefined, kept?.threads.length ? kept.threads : undefined)
       if (!sent.ok) return NextResponse.json({ ok: false, error: sent.error || "That send could not go out just now." }, { status: 400 })
       return NextResponse.json(await answer(ctx), PRIVATE)
     }

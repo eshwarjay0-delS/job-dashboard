@@ -65,6 +65,10 @@ const first = (name: string): string => String(name || "").trim().split(/\s+/)[0
 const dayWord = (at: number): string => new Date(at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })
 /** Short weekday names indexed like getUTCDay (0 = Sunday). Shared by the day ticks and the copy that names them. */
 export const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+/** The days an automatic send rings on when none were ticked: Monday and Thursday, his standing default (28 Oct 2026). */
+export const DEFAULT_DAYS = [1, 4]
+/** The days a send may ring on: the ticked ones, or Monday and Thursday when none were ticked. */
+export const ringDays = (days?: number[]): number[] => (days?.length ? days : [...DEFAULT_DAYS])
 export const dayList = (days: number[]): string => [...days].sort((a, b) => a - b).map(d => DAY_SHORT[d] || "").filter(Boolean).join(", ")
 /** The weekday the person lives in: the daily check runs once a day, and a ticked day means that weekday for him. */
 export const weekdayForHim = (now: number): number => {
@@ -159,9 +163,7 @@ export function trackInterviews(found: Found[], threads: OverviewThread[], myEma
     else if (phase === "today") say = "Your interview is today. Good luck. I will keep an eye on what comes after."
     else if (theyWrote) { say = `${name === "them" ? "They" : name} wrote to you after the interview. Read it and answer.`; action = "reply" }
     else if (carried) say = `Your recruiter ${name} is carrying this one. There is nothing for you to chase.`
-    else if (sending) say = hand?.days?.length
-      ? `I send ${name} a short follow-up for you on ${dayList(hand.days)} until there is news.`
-      : due ? `I am sending ${name} a short follow-up for you. It goes out with the next daily check.` : `I send ${name} a short follow-up for you every week until there is news. The next one is on ${dayWord(nextAt)}.`
+    else if (sending) say = `I send ${name} a short follow-up for you on ${dayList(ringDays(hand?.days))} until there is news.`
     else if (old) say = `Your interview was ${days(since)} ago and nothing has come since. If it is over, tell me and I will stop following it.`
     else if (due) { say = mineAfter.length || sentForYou ? `It has been ${days(Math.floor((now - lastWord) / DAY))} since the last follow-up and there is no news yet. Another short, friendly one to ${name} is a good idea.` : `Your interview was ${days(since)} ago and there is no news yet. A short, friendly follow-up to ${name} is a good idea.`; action = "follow_up" }
     else say = mineAfter.length || sentForYou ? `You followed up ${days(Math.max(0, Math.floor((now - lastWord) / DAY)))} ago. Nothing to do now; I will bring it back on ${dayWord(nextAt)}.` : `Your interview was ${since === 0 ? "today" : `${days(since)} ago`}. It is normal to hear nothing yet. I will bring it back on ${dayWord(nextAt)}.`
@@ -170,7 +172,7 @@ export function trackInterviews(found: Found[], threads: OverviewThread[], myEma
       id: f.id, threadId, account, role: f.role, company: f.company, kind: f.kind || "", at, timeKnown, phase, days: phase === "coming" ? until : since, contact, lastMine, theyWrote,
       followUps: mineAfter.length + sentForYou, due: due && !sending, nextAt: old || carried ? 0 : nextAt, say, old, action,
       ...(mark ? { outcome: mark.outcome, decidedAt: mark.at } : {}),
-      ...(hand ? { forYou: { on: sending || (hand.on && phase !== "past" && !theyWrote && sentForYou < MOST_SENT_FOR_YOU && !contact?.recruiter), sent: sentForYou, nextAt: sending ? nextAt : 0, ...(hand.days?.length ? { days: hand.days } : {}), ...(hand.on && theyWrote ? { ended: "answered" as const } : hand.on && sentForYou >= MOST_SENT_FOR_YOU ? { ended: "limit" as const } : {}) } } : {}),
+      ...(hand ? { forYou: { on: sending || (hand.on && phase !== "past" && !theyWrote && sentForYou < MOST_SENT_FOR_YOU && !contact?.recruiter), sent: sentForYou, nextAt: sending ? nextAt : 0, days: ringDays(hand.days), ...(hand.on && theyWrote ? { ended: "answered" as const } : hand.on && sentForYou >= MOST_SENT_FOR_YOU ? { ended: "limit" as const } : {}) } } : {}),
     })
   }
   const rank = (t: Tracked) => (t.action === "reply" ? 0 : t.action === "follow_up" ? 1 : t.phase === "today" ? 2 : t.phase === "coming" ? 3 : t.old ? 5 : 4)
@@ -185,8 +187,8 @@ export function toSendForYou(active: Tracked[], state: TrackState, now: number):
     const hand = state.handed.find(h => h.id === t.id)
     if (!hand?.on || t.phase !== "waiting" || t.theyWrote || !t.contact || t.contact.recruiter) return false
     if (hand.sent.length >= MOST_SENT_FOR_YOU || !t.nextAt || now < t.nextAt) return false
-    // Ticked days are the only days the automatic send may ring on. A manual Send now is not bound by them.
-    if (hand.days?.length && !hand.days.includes(weekdayForHim(now))) return false
+    // Ticked days are the only days the automatic send may ring on; with none ticked it is Monday and Thursday. A manual Send now is not bound by them.
+    if (!ringDays(hand.days).includes(weekdayForHim(now))) return false
     // Never two within six days, whatever else is true.
     return !hand.sent.some(at => now - at < 6 * DAY)
   })

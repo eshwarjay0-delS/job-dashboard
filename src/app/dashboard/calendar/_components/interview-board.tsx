@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react"
 import Link from "next/link"
 import RecruiterButton from "../../_components/recruiter-button"
 import { createClient } from "@/lib/supabase/client"
-import { dayList, type Tracked } from "@/lib/interview-track"
+import { dayList, DEFAULT_DAYS, type Tracked } from "@/lib/interview-track"
 
 type Answer = { ok: boolean; error?: string; active: Tracked[]; past: Tracked[]; due: number; canSendForYou: boolean; words: Record<string, { subject: string; body: string }> }
 
@@ -81,7 +81,7 @@ export default function InterviewBoard() {
   const [error, setError] = useState("")
   const [busy, setBusy] = useState("")
   const [asking, setAsking] = useState("")       // the interview whose "send for me" words are being shown
-  const [askDays, setAskDays] = useState<number[]>([]) // weekday ticks chosen while opting in
+  const [askDays, setAskDays] = useState<number[]>([...DEFAULT_DAYS]) // weekday ticks chosen while opting in; Monday and Thursday to start
   const [editing, setEditing] = useState("")   // the interview whose draft is being edited
   const [editSubject, setEditSubject] = useState("")
   const [editBody, setEditBody] = useState("")
@@ -113,12 +113,15 @@ export default function InterviewBoard() {
       const payload: Record<string, unknown> = Array.isArray(id) ? { ids: id, action } : { id, action }
       if (customWords && (action === "send_for_me" || action === "save_words" || action === "send_now")) { payload.subject = customWords.subject; payload.body = customWords.body }
       if (days !== undefined) payload.days = days
-      const r = await fetch("/api/gmail/interview-track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+      const r = await fetch("/api/gmail/interview-track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: AbortSignal.timeout(60_000) })
       take(await r.json())
       setAsking("")
-      setAskDays([])
+      setAskDays([...DEFAULT_DAYS])
       setEditing("")
-    } catch { setError("That could not be saved just now.") } finally { setBusy("") }
+    } catch (e) {
+      const timedOut = e instanceof DOMException && e.name === "TimeoutError"
+      setError(timedOut && action === "send_now" ? "That is taking longer than usual. It may still go out, so check Sent before tapping again." : "That could not be saved just now.")
+    } finally { setBusy("") }
   }
 
   const toggleDay = (id: string, current: number[], d: number) => {
@@ -178,7 +181,7 @@ export default function InterviewBoard() {
                 {t.threadId && <Link href={openHref(t.threadId, t.account)} className={t.action === "none" ? "btn-outline" : "btn-accent"} style={big}>{t.action === "reply" ? "Open and reply" : t.action === "follow_up" ? "Open and follow up" : "Open"}</Link>}
                 {t.phase === "waiting" && t.contact && !t.contact.recruiter && !t.theyWrote && (mine
                   ? <button type="button" className="btn-outline" disabled={!!busy} onClick={() => { void choose(t.id, "stop_sending") }} style={big}>{busy === `stop_sending:${t.id}` ? "Saving…" : "Stop sending for me"}</button>
-                  : <button type="button" className="btn-outline" aria-expanded={asking === t.id} onClick={() => { setAsking(a => (a === t.id ? "" : t.id)); setAskDays([]) }} style={big}>Send one for me every week</button>)}
+                  : <button type="button" className="btn-outline" aria-expanded={asking === t.id} onClick={() => { setAsking(a => (a === t.id ? "" : t.id)); setAskDays(t.forYou?.days?.length ? [...t.forYou.days] : [...DEFAULT_DAYS]) }} style={big}>Send one for me every week</button>)}
                 <button type="button" className="btn-ghost" disabled={!!busy} onClick={() => { void choose(t.id, "completed") }} style={{ minHeight: 44, padding: "0 12px", fontSize: 14 }}>{busy === `completed:${t.id}` ? "Saving…" : "It is finished"}</button>
                 <button type="button" className="btn-ghost" disabled={!!busy} onClick={() => { void choose(t.id, "rejected") }} style={{ minHeight: 44, padding: "0 12px", fontSize: 14 }}>{busy === `rejected:${t.id}` ? "Saving…" : "Not going ahead"}</button>
               </div>
@@ -221,9 +224,9 @@ export default function InterviewBoard() {
                         </button>
                         <button type="button" className="btn-outline" onClick={() => startEdit(t.id, words.subject, words.body)} style={big}>Edit</button>
                         <span style={muted}>Ring on:</span>
-                        <DayTicks days={t.forYou?.days || []} disabled={!!busy} onToggle={d => toggleDay(t.id, t.forYou?.days || [], d)} />
+                        <DayTicks days={t.forYou?.days || DEFAULT_DAYS} disabled={!!busy} onToggle={d => toggleDay(t.id, t.forYou?.days || DEFAULT_DAYS, d)} />
                       </div>
-                      <p style={{ ...muted, margin: "10px 0 0" }}>Send now goes out at once and counts toward the four. The automatic send rings only on the ticked days; with none ticked it rings any day, once a week.</p>
+                      <p style={{ ...muted, margin: "10px 0 0" }}>Send now goes out at once and counts toward the four. The automatic send rings only on the ticked days; untick them all and it rings Monday and Thursday, once a week.</p>
                     </>
                   )}
                 </div>
@@ -256,7 +259,7 @@ export default function InterviewBoard() {
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", margin: "0 0 10px" }}>
                     <span style={muted}>Ring on:</span>
                     <DayTicks days={askDays} onToggle={d => setAskDays(cur => cur.includes(d) ? cur.filter(x => x !== d) : [...cur, d].sort((a, b) => a - b))} />
-                    <span style={muted}>Leave them blank and it rings any day.</span>
+                    <span style={muted}>Monday and Thursday are ticked to start.</span>
                   </div>
                   {data.canSendForYou ? (
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

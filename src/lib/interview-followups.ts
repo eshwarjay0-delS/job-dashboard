@@ -6,7 +6,7 @@
 // waiting for news, a week since the last word, at most four times, never to one of their own recruiters. Each send is
 // written down before the next is considered, so a job that runs twice cannot send twice.
 import { blob } from "@/lib/storage"
-import { fetchClassifiedThreads, threadsToInterviews, TRACKING_DAYS } from "@/app/api/gmail/_lib"
+import { fetchClassifiedThreads, threadsToInterviews, TRACKING_DAYS, type ClassifiedThread } from "@/app/api/gmail/_lib"
 import { getGoogleWorkspaceAccessToken, listGoogleWorkspaceAccounts } from "@/lib/googleWorkspace"
 import { emptyState, followUpWords, noteSent, toSendForYou, trackInterviews, validState, MOST_SENT_FOR_YOU, type TrackState } from "@/lib/interview-track"
 import { isMyRecruiter } from "@/lib/my-recruiters"
@@ -64,16 +64,23 @@ export async function sendInterviewFollowUps(userId: string, myName: string, now
  * only to an interview the person switched sending on for, still waiting, with a contact who is not one of their own
  * recruiters, and only while fewer than four have gone out. Ticked days do not bind it; the tap is the schedule.
  * The send is written down before the mail goes out, exactly as the daily job does, so it can never go twice.
+ * Verified against the board's kept copy, so the tap answers at once; the live scan is only the fallback for an
+ * interview the kept copy missed.
  */
-export async function sendInterviewFollowUpNow(userId: string, myName: string, id: string, wordsIn?: { subject: string; body: string }, now = Date.now()): Promise<{ ok: boolean; error?: string }> {
+export async function sendInterviewFollowUpNow(userId: string, myName: string, id: string, wordsIn?: { subject: string; body: string }, now = Date.now(), threadsIn?: ClassifiedThread[]): Promise<{ ok: boolean; error?: string }> {
   const state0 = await readTrackState(userId)
   const hand = state0.handed.find(h => h.id === id)
   if (!hand?.on) return { ok: false, error: "Sending for this interview is not switched on." }
   if (hand.sent.length >= MOST_SENT_FOR_YOU) return { ok: false, error: "Four follow-ups have already been sent for this interview." }
-  const [{ threads }, accounts, recruiters] = await Promise.all([fetchClassifiedThreads(userId, { days: TRACKING_DAYS, max: 100 }), listGoogleWorkspaceAccounts(userId), readRecruiters(userId)])
+  const [accounts, recruiters] = await Promise.all([listGoogleWorkspaceAccounts(userId), readRecruiters(userId)])
   const mine = accounts.map(a => a.google_email)
-  const { active } = trackInterviews(threadsToInterviews(threads), threads, mine, now, { state: state0, recruiter: email => isMyRecruiter(recruiters, email) })
-  const t = active.find(x => x.id === id)
+  const verify = (threads: ClassifiedThread[]) => trackInterviews(threadsToInterviews(threads), threads, mine, now, { state: state0, recruiter: email => isMyRecruiter(recruiters, email) }).active.find(x => x.id === id)
+  // The board's kept copy verifies the tap at once; the live scan is only the fallback for an interview the kept copy missed.
+  let t = threadsIn ? verify(threadsIn) : undefined
+  if (!t) {
+    const { threads } = await fetchClassifiedThreads(userId, { days: TRACKING_DAYS, max: 100 })
+    t = verify(threads)
+  }
   if (!t || t.phase !== "waiting" || t.theyWrote || !t.contact || t.contact.recruiter) return { ok: false, error: "This interview cannot be followed up right now." }
   const account = accounts.find(a => a.google_email.toLowerCase() === t.account && a.gmail_enabled)
   const token = account ? await getGoogleWorkspaceAccessToken(userId, account.id) : null
