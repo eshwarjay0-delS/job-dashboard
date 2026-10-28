@@ -15,7 +15,7 @@ import {
 import { QUESTION_FIRST_POLICY, repeatQuestionGuidance } from "@/lib/kompasIntent"
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
 import { formatInterviewHistory } from "@/lib/kompasHistory"
-import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestionParts, questionParts, spokenQualityFlags } from "@/lib/kompasInterviewPrecision"
+import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestionParts, questionParts, spokenQualityFlags, correctVerifiedPresentationErrors } from "@/lib/kompasInterviewPrecision"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
 import { desktopCraft, desktopResponsePolicy } from "@/lib/kompasDesktopResponse"
@@ -483,7 +483,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         // text: unbracket → place/prestige/title/version fixes → figures
         // allowlist. Voice repair runs after — the client's `replace` event
         // swaps the streamed draft for the finished answer.
-        const g = applyGuards(raw.trim(), job.guardFacts, job.allowed)
+        const g = applyGuards(correctVerifiedPresentationErrors(raw.trim()), job.guardFacts, job.allowed)
         let guardedText = g.text
         let repaired = 0
         {
@@ -506,6 +506,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
             if (v?.text) { verified = v.fixed; finalText = v.text }
           } catch { /* the guarded answer stands */ }
         }
+        finalText = correctVerifiedPresentationErrors(finalText)
         if (finalText !== raw) emit({ type: "replace", text: finalText })
         emit({
           type: "done", degraded, guarded: g.guarded, verified, repaired,
@@ -571,7 +572,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   }
   // Grounding guards before voice repair: unbracket → place/prestige/title/
   // version fixes → figures allowlist. Then the optional fact-check.
-  const g = applyGuards(raw.trim(), job.guardFacts, job.allowed)
+  const g = applyGuards(correctVerifiedPresentationErrors(raw.trim()), job.guardFacts, job.allowed)
   let guardedText = g.text
   let repaired = 0
   {
@@ -590,6 +591,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
       if (v?.text) { verified = v.fixed; out = v.text }
     } catch { /* the guarded answer stands */ }
   }
+  out = correctVerifiedPresentationErrors(out)
   if (!out.trim()) return NextResponse.json({ error: "Nothing to answer." }, { status: 400, headers: NO_STORE })
   void lastErr
   return NextResponse.json({
