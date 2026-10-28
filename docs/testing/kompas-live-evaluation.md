@@ -81,3 +81,16 @@ Full regression completed: 1020/1020 pass, zero failures, duration 58.8 seconds;
 PR #78 preview passed and merged on 26 October 2026 as 557212dca659c6d5fe65a566052eab518892f19c. Full regression 1020/1020 and TypeScript passed. Production rollout pending confirmation; manifests certify capture coverage only, not answer quality. Zero live comparison rounds.
 
 Production verified READY on 26 October 2026: dpl_6cK1if8URpHCvNsQ9ceqMENxRMYy, commit 1a86fa304227f27c7f1c244366e287ffe120bbff includes PR #78, target production, job-dashboard-fawn.vercel.app alias assigned, aliasError null. Capture-manifest tooling is released; zero live comparisons and native Windows acceptance remain unverified.
+
+
+## Runner integration repair — 28 October 2026
+
+Current master 3569e3a contained incompatible pieces of prior runner changes: an undefined FIXTURES registry; unimported buildManifest and undefined hashes/code; discarded reviewed ledgers; and a completion path losing case metadata. This repair uses the validated fixture selector, records local runner revision separately from the unverified deployed engine revision, and preserves reviewed history/ledger for dependent questions. Isolated supplemental cases reject supplied history or ledger before any API call.
+
+The manifest contract supersedes the contradictory historical assertions above: failed preflight/answer attempts produce a failed manifest; successful capture produces capture-complete with quality unverified and case metadata. One test previously required both absence and presence of the same preflight manifest; it now verifies the explicit failure record. A second contradictory fixture test silently discarded leaked history; it now requires rejection. These changes strengthen auditability and isolation, not answer-quality thresholds. Capture IDs, provenance hashes, pending review and source-text exclusion are asserted.
+
+Validation: 15/15 focused tests, including subprocess mock runs of 50 baseline and 36 supplemental cases; TypeScript passes. No real provider calls or WhatsApp/email sends. Full regression result recorded below when complete. KOMPAS_API_TOKEN remains absent; real evaluation needs an authenticated authorized environment and approved private resume/JD/history bundles. No token should be posted in chat.
+
+Current production was verified READY at 3569e3a on job-dashboard-fawn.vercel.app before this repair. The separate Kompas Continuous Voice Delivery task remains enabled; no separately named Bible-Keeper task appeared in accessible tasks. This script-only change does not edit voice/native code. Other backlog items and original Oct17 incident acceptance remain open.
+
+Full validation completed: 1,376 tests, 1,354 pass / 22 fail. All five prior evaluation-runner failures are resolved; remaining failures match the older WhatsApp harness and source-contract failures already recorded. No assertions were disabled or skipped. Publication and production evidence remain separate from real generated-answer acceptance.
