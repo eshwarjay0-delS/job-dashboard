@@ -59,11 +59,11 @@ test('an empty page leaves the book without moving the page you are reading', ()
   assert.match(app, /if \(!dropPage\(card\)\) \{ card\.answer = \[\]; card\.question = "No question yet";/)
 })
 
-function streamCtx(results) {
+function streamCtx(results, desktop = { captureScreen: async () => '' }) {
   const calls = []
   const stopped = []
   const ctx = {
-    window: { kompasDesktop: {} }, calls, stopped, setTimeout: (f) => f(),
+    window: { kompasDesktop: desktop }, calls, stopped, setTimeout: (f) => f(),
     navigator: { mediaDevices: { getDisplayMedia: async (c) => {
       calls.push(JSON.stringify(c))
       const r = results.shift()
@@ -88,6 +88,9 @@ test('Screen Answer retries a refused stream once, the way call audio asks, and 
 test('when Windows still refuses, the card says what happened and what to do; a cancel stays a cancel', async () => {
   let ctx = streamCtx([named('NotReadableError', 'Could not start video source'), named('NotReadableError', 'Could not start video source')])
   await assert.rejects(vm.runInContext('screenStream()', ctx), /Windows would not start screen capture in this Kompas window \(Could not start video source\)\. Close Kompas fully and open it again, then press Screen Answer\./)
+  // An old desktop build (no native capture) says so: reopening it from the website only reopened the 7 Oct runtime.
+  ctx = streamCtx([named('NotReadableError', 'Could not start video source'), named('NotReadableError', 'Could not start video source')], {})
+  await assert.rejects(vm.runInContext('screenStream()', ctx), /older desktop build \(before 0\.8\) that cannot capture the screen \(Could not start video source\)\. Close it, then open Kompas once from the Kompas icon on your desktop\./)
   ctx = streamCtx([named('NotAllowedError', 'Permission denied')])
   await assert.rejects(vm.runInContext('screenStream()', ctx), (e) => e.name === 'NotAllowedError')
   assert.equal(ctx.calls.length, 1)

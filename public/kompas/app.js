@@ -2552,9 +2552,14 @@ async function screenStream() {
       return s;
     } catch (again) {
       if (again && again.name === "NotAllowedError") throw again;
+      const why = again && again.message || e.message;
+      // A desktop build with no native capture is an old one (28 Oct 2026: the website's links opened a 7 Oct
+      // development runtime, so reopening only reopened it). The new build takes the links once it is opened.
+      if (desktop && !window.kompasDesktop.captureScreen)
+        throw new Error("This Kompas window is an older desktop build (" + (window.kompasDesktop.version || "before 0.8") + ") that cannot capture the screen (" + why + "). Close it, then open Kompas once from the Kompas icon on your desktop. From then on the website opens the new build.");
       throw new Error(desktop
-        ? "Windows would not start screen capture in this Kompas window (" + (again && again.message || e.message) + "). Close Kompas fully and open it again, then press Screen Answer."
-        : "The browser could not start the screen share (" + (again && again.message || e.message) + "). Stop any other screen share, then try again.");
+        ? "Windows would not start screen capture in this Kompas window (" + why + "). Close Kompas fully and open it again, then press Screen Answer."
+        : "The browser could not start the screen share (" + why + "). Stop any other screen share, then try again.");
     }
   }
 }
