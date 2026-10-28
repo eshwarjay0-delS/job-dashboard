@@ -23,6 +23,14 @@ type Arguments = {
 }
 const hash = (value: string) => createHash("sha256").update(value).digest("hex")
 const ids = (from: string) => from.replace(/\D/g, "")
+const sharedLink = (id: string) => {
+  let origin = "https://job-dashboard-fawn.vercel.app"
+  try {
+    const configured = new URL(process.env.NEXT_PUBLIC_APP_URL || origin)
+    if (configured.protocol === "https:" && !configured.username && !configured.password) origin = configured.origin
+  } catch { /* use the canonical deployment */ }
+  return `\nOpen this conversation on the web (sign in to the same account): ${origin}/dashboard/kompas/shared/${encodeURIComponent(id)}`
+}
 const pathFor = (owner: string, from: string) => {
   if (!owner || ids(from).length < 8) throw new Error("Verified sender required")
   return `kompas/channels/${hash(owner)}/${hash(ids(from))}/`
@@ -142,18 +150,18 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
   }
   if (command === "kompas") {
     if (channel.sessionId) {
-      await send("Kompas is already active. Send your resume and job description, then your questions. Send revert to return to tailoring.")
+      await send("Kompas is already active. Send your resume and job description, then your questions. Send revert to return to tailoring." + sharedLink(channel.sessionId))
       return true
     }
     for (let i = 0; i < 4; i++) {
       const created = await sessions.create(owner)
       if (await changeChannel(owner, from, channel, created.id)) {
-        await send("Kompas started. Send your resume and job description in either order. You may paste the JD and attach Resume.docx or other supporting PDF, DOCX or TXT files. Send start when ready.")
+        await send("Kompas started. Send your resume and job description in either order. You may paste the JD and attach Resume.docx or other supporting PDF, DOCX or TXT files. Send start when ready." + sharedLink(created.id))
         return true
       }
       channel = await readChannel(owner, from)
       if (channel.sessionId) {
-        await send("Kompas is already active. Send your resume, job description or a question.")
+        await send("Kompas is already active. Send your resume, job description or a question." + sharedLink(channel.sessionId))
         return true
       }
     }
