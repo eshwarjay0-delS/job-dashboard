@@ -74,6 +74,8 @@ test('shared answer service never emits personal model deltas before final guard
  assert.match(service,/mustEmitFinalReplacement\(job\.streamPolicy, finalText, raw\)/)
  assert.match(service,/streamPolicy: answerStreamPolicy\(tier, question\)/)
  assert.match(service,/streamPolicy: job\.streamPolicy/)
+ assert.match(service,/visible_first_ms/)
+ assert.match(service,/if \(!timing\.visible_first_ms && finalText\)/)
 })
 test('interviewer-suggested achievements are not automatically whitelisted as personal metrics',()=>{
  const service=readFileSync(new URL('../../src/lib/kompasAnswerService.ts',import.meta.url),'utf8')
