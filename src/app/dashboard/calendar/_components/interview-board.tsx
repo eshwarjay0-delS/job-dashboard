@@ -57,7 +57,7 @@ const day = (at: number) => (at ? new Date(at).toLocaleDateString(undefined, { w
 const digits = (phone: string) => phone.replace(/ext\..*$/i, "").replace(/\D/g, "")
 const mailto = (email: string) => { const at = email.lastIndexOf("@"); return at < 1 ? "#" : `mailto:${encodeURIComponent(email.slice(0, at))}@${encodeURIComponent(email.slice(at + 1))}` }
 const openHref = (threadId: string, account?: string) => `/dashboard/mail?open=${encodeURIComponent(threadId)}${account ? `&account=${encodeURIComponent(account)}` : ""}`
-// Weekday ticks, like an alarm: which days the automatic follow-up may ring on. No ticks means any day.
+// Weekday ticks, like an alarm: which days the automatic follow-up may ring on. No ticks means Monday and Thursday.
 const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"]
 function DayTicks({ days, onToggle, disabled }: { days: number[]; onToggle: (day: number) => void; disabled?: boolean }) {
   return (
@@ -67,7 +67,7 @@ function DayTicks({ days, onToggle, disabled }: { days: number[]; onToggle: (day
         return (
           <button key={d} type="button" disabled={disabled} aria-pressed={on} aria-label={`Toggle ${dayList([d])}`} title={dayList([d])}
             onClick={() => onToggle(d)}
-            style={{ width: 32, height: 32, borderRadius: 16, border: `1.5px solid ${on ? "var(--accent)" : "var(--border)"}`, background: on ? "var(--accent-soft)" : "var(--surface)", color: on ? "var(--accent-txt)" : "var(--text-muted)", fontSize: 13, fontWeight: 800, cursor: disabled ? "wait" : "pointer" }}>
+            style={{ width: 32, height: 32, borderRadius: 16, border: `1.5px solid ${on ? "var(--accent)" : "var(--border)"}`, background: on ? "var(--accent)" : "var(--surface)", color: on ? "var(--bg)" : "var(--text-muted)", fontSize: 13, fontWeight: 800, cursor: disabled ? "wait" : "pointer" }}>
             {letter}
           </button>
         )
@@ -84,6 +84,9 @@ export default function InterviewBoard() {
   const [askDays, setAskDays] = useState<number[]>([...DEFAULT_DAYS]) // weekday ticks chosen while opting in; Monday and Thursday to start
   const [editing, setEditing] = useState("")   // the interview whose draft is being edited
   const [history, setHistory] = useState("")   // the interview whose MarketFit send history is being shown
+  const [collapsed, setCollapsed] = useState<string[]>([]) // sending panels folded shut on their header tap
+  const [saved, setSaved] = useState("")        // the card whose day ticks just saved in the background
+  const [toast, setToast] = useState("")        // the little sent notification, cleared on its own
   const [editSubject, setEditSubject] = useState("")
   const [editBody, setEditBody] = useState("")
   const [showPast, setShowPast] = useState(false)
@@ -107,8 +110,12 @@ export default function InterviewBoard() {
     return () => { cancelled = true }
   }, [load])
 
-  const choose = async (id: string | string[], action: "rejected" | "completed" | "reopen" | "send_for_me" | "stop_sending" | "save_words" | "set_days" | "send_now", customWords?: { subject: string; body: string }, days?: number[]) => {
-    if (busy) return
+  // One card's slow save or send never disables another card: a bulk action still waits for everything,
+  // a single-card action waits only for a bulk action or for its own card.
+  const busyFor = (id: string | string[]) => Array.isArray(id) ? busy !== "" : (busy !== "" && (busy.endsWith(":all") || busy.endsWith(`:${id}`)))
+
+  const choose = async (id: string | string[], action: "rejected" | "completed" | "reopen" | "send_for_me" | "stop_sending" | "save_words" | "set_days" | "send_now", customWords?: { subject: string; body: string }, days?: number[]): Promise<boolean> => {
+    if (busyFor(id)) return false
     setBusy(`${action}:${Array.isArray(id) ? "all" : id}`)
     try {
       const payload: Record<string, unknown> = Array.isArray(id) ? { ids: id, action } : { id, action }
@@ -119,15 +126,29 @@ export default function InterviewBoard() {
       setAsking("")
       setAskDays([...DEFAULT_DAYS])
       setEditing("")
+      if (action === "send_now" && !Array.isArray(id)) {
+        const card = data?.active.find(x => x.id === id)
+        const who = card ? (card.contact?.name || card.contact?.email || "them").split(/\s+/)[0] : "them"
+        setToast(`Sent to ${who}.`)
+        setTimeout(() => setToast(""), 4000)
+      }
+      return true
     } catch (e) {
       const timedOut = e instanceof DOMException && e.name === "TimeoutError"
       setError(timedOut && action === "send_now" ? "That is taking longer than usual. It may still go out, so check Sent before tapping again." : "That could not be saved just now.")
+      return false
     } finally { setBusy("") }
   }
 
-  const toggleDay = (id: string, current: number[], d: number) => {
+  // Ticks paint at once and save behind them; a failed save falls back to a fresh read, so the ticks never lie.
+  const toggleDay = async (id: string, current: number[], d: number) => {
     const next = current.includes(d) ? current.filter(x => x !== d) : [...current, d].sort((a, b) => a - b)
-    void choose(id, "set_days", undefined, next)
+    setData(cur => cur ? { ...cur, active: cur.active.map(x => x.id === id && x.forYou ? { ...x, forYou: { ...x.forYou, days: next } } : x) } : cur)
+    const ok = await choose(id, "set_days", undefined, next)
+    if (ok) {
+      setSaved(id)
+      setTimeout(() => setSaved(cur => cur === id ? "" : cur), 3000)
+    } else load()
   }
 
   const startEdit = (id: string, subject: string, body: string) => {
@@ -181,17 +202,26 @@ export default function InterviewBoard() {
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                 {t.threadId && <Link href={openHref(t.threadId, t.account)} className={t.action === "none" ? "btn-outline" : "btn-accent"} style={big}>{t.action === "reply" ? "Open and reply" : t.action === "follow_up" ? "Open and follow up" : "Open"}</Link>}
                 {t.phase === "waiting" && t.contact && !t.contact.recruiter && !t.theyWrote && (mine
-                  ? <button type="button" className="btn-outline" disabled={!!busy} onClick={() => { void choose(t.id, "stop_sending") }} style={big}>{busy === `stop_sending:${t.id}` ? "Saving…" : "Stop sending for me"}</button>
+                  ? <button type="button" className="btn-outline" disabled={busyFor(t.id)} onClick={() => { void choose(t.id, "stop_sending") }} style={big}>{busy === `stop_sending:${t.id}` ? "Saving…" : "Stop sending for me"}</button>
                   : <button type="button" className="btn-outline" aria-expanded={asking === t.id} onClick={() => { setAsking(a => (a === t.id ? "" : t.id)); setAskDays(t.forYou?.days?.length ? [...t.forYou.days] : [...DEFAULT_DAYS]) }} style={big}>Send one for me every week</button>)}
-                <button type="button" className="btn-ghost" disabled={!!busy} onClick={() => { void choose(t.id, "completed") }} style={{ minHeight: 44, padding: "0 12px", fontSize: 14 }}>{busy === `completed:${t.id}` ? "Saving…" : "It is finished"}</button>
-                <button type="button" className="btn-ghost" disabled={!!busy} onClick={() => { void choose(t.id, "rejected") }} style={{ minHeight: 44, padding: "0 12px", fontSize: 14 }}>{busy === `rejected:${t.id}` ? "Saving…" : "Not going ahead"}</button>
+                <button type="button" className="btn-ghost" disabled={busyFor(t.id)} onClick={() => { void choose(t.id, "completed") }} style={{ minHeight: 44, padding: "0 12px", fontSize: 14 }}>{busy === `completed:${t.id}` ? "Saving…" : "It is finished"}</button>
+                <button type="button" className="btn-ghost" disabled={busyFor(t.id)} onClick={() => { void choose(t.id, "rejected") }} style={{ minHeight: 44, padding: "0 12px", fontSize: 14 }}>{busy === `rejected:${t.id}` ? "Saving…" : "Not going ahead"}</button>
               </div>
 
-              {/* What is being sent for him is always in view while it is switched on — not only while he is
-                  being asked. He can reword it here, send one at once, or tick the days it may ring on. */}
+              {/* The sending panel folds shut on its header tap; the ring days stay in view at the top right. */}
               {mine && words && (
                 <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 12, border: "1px solid var(--border-strong)", background: "var(--surface-2)" }}>
-                  <p style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 650 }}>What I send to {name}{t.forYou?.days?.length ? `, on ${dayList(t.forYou.days)}` : ", once a week"}, from {t.account}:</p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", margin: "0 0 8px" }}>
+                    <button type="button" aria-expanded={!collapsed.includes(t.id)} onClick={() => setCollapsed(cur => cur.includes(t.id) ? cur.filter(x => x !== t.id) : [...cur, t.id])} style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 650, color: "var(--text)", cursor: "pointer", textAlign: "left" }}>
+                      {collapsed.includes(t.id) ? "▸" : "▾"} What I send to {name}{t.forYou?.days?.length ? `, on ${dayList(t.forYou.days)}` : ", once a week"}, from {t.account}:
+                    </button>
+                    <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                      <span style={muted}>Ring on, once a week:</span>
+                      <DayTicks days={t.forYou?.days || DEFAULT_DAYS} disabled={busyFor(t.id)} onToggle={d => toggleDay(t.id, t.forYou?.days || DEFAULT_DAYS, d)} />
+                      {saved === t.id && <span style={{ fontSize: 13, color: "var(--text-muted)" }}>Saved</span>}
+                    </span>
+                  </div>
+                  {!collapsed.includes(t.id) && (<>
                   <div style={{ display: "flex", gap: 8, margin: "0 0 10px" }}>
                     <button type="button" className={history === t.id ? "btn-outline" : "btn-accent"} onClick={() => setHistory("")} style={{ minHeight: 32, padding: "4px 12px", fontSize: 13 }}>Message</button>
                     <button type="button" className={history === t.id ? "btn-accent" : "btn-outline"} onClick={() => { setHistory(t.id); setEditing("") }} style={{ minHeight: 32, padding: "4px 12px", fontSize: 13 }}>History</button>
@@ -207,11 +237,11 @@ export default function InterviewBoard() {
                           style={{ display: "block", width: "100%", marginTop: 4, padding: "8px 10px", fontSize: 14, lineHeight: 1.6, borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", resize: "vertical" }} />
                       </label>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button type="button" className="btn-accent" disabled={!!busy}
+                        <button type="button" className="btn-accent" disabled={busyFor(t.id)}
                           onClick={() => { void choose(t.id, "save_words", { subject: editSubject, body: editBody }) }} style={big}>
                           {busy === `save_words:${t.id}` ? "Saving…" : "Save words"}
                         </button>
-                        <button type="button" className="btn-outline" disabled={!!busy}
+                        <button type="button" className="btn-outline" disabled={busyFor(t.id)}
                           onClick={() => { void choose(t.id, "send_now", { subject: editSubject, body: editBody }) }} style={big}>
                           {busy === `send_now:${t.id}` ? "Sending…" : "Send edited now"}
                         </button>
@@ -237,23 +267,28 @@ export default function InterviewBoard() {
                       <p style={{ margin: "0 0 10px", fontSize: 14.5, lineHeight: 1.6, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{words.body}</p>
                       {t.forYou?.sentAt?.length ? <p style={{ ...muted, margin: "0 0 10px" }}>Last sent {day(t.forYou.sentAt[t.forYou.sentAt.length - 1])}.</p> : null}
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                        <button type="button" className="btn-accent" disabled={!!busy}
+                        <button type="button" className="btn-accent" disabled={busyFor(t.id)}
                           onClick={() => { void choose(t.id, "send_now") }} style={big}>
                           {busy === `send_now:${t.id}` ? "Sending…" : "Send now"}
                         </button>
                         <button type="button" className="btn-outline" onClick={() => startEdit(t.id, words.subject, words.body)} style={big}>Edit</button>
-                        <span style={muted}>Ring on:</span>
-                        <DayTicks days={t.forYou?.days || DEFAULT_DAYS} disabled={!!busy} onToggle={d => toggleDay(t.id, t.forYou?.days || DEFAULT_DAYS, d)} />
                       </div>
                       <p style={{ ...muted, margin: "10px 0 0" }}>Send now goes out at once and counts toward the four. The automatic send rings only on the ticked days; untick them all and it rings Monday and Thursday, once a week.</p>
                     </>
                   )}
+                  </>)}
                 </div>
               )}
 
               {asking === t.id && words && (
                 <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 12, border: "1px solid var(--border-strong)", background: "var(--surface-2)" }}>
-                  <p style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 650 }}>This is what I will send to {name}, once a week, from {t.account}:</p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", margin: "0 0 8px" }}>
+                    <p style={{ margin: 0, fontSize: 14, fontWeight: 650 }}>This is what I will send to {name}, once a week, from {t.account}:</p>
+                    <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                      <span style={muted}>Ring on, once a week:</span>
+                      <DayTicks days={askDays} onToggle={d => setAskDays(cur => cur.includes(d) ? cur.filter(x => x !== d) : [...cur, d].sort((a, b) => a - b))} />
+                    </span>
+                  </div>
                   {editing === t.id ? (
                     <>
                       <label style={{ display: "block", margin: "0 0 8px", fontSize: 13, color: "var(--text-muted)" }}>Subject
@@ -275,14 +310,10 @@ export default function InterviewBoard() {
                     </>
                   )}
                   <p style={{ ...muted, margin: "0 0 10px" }}>It stops by itself when {name} answers, when you mark this finished, or after four. You can stop it at any time.</p>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", margin: "0 0 10px" }}>
-                    <span style={muted}>Ring on:</span>
-                    <DayTicks days={askDays} onToggle={d => setAskDays(cur => cur.includes(d) ? cur.filter(x => x !== d) : [...cur, d].sort((a, b) => a - b))} />
-                    <span style={muted}>Monday and Thursday are ticked to start.</span>
-                  </div>
+
                   {data.canSendForYou ? (
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button type="button" className="btn-accent" disabled={!!busy}
+                      <button type="button" className="btn-accent" disabled={busyFor(t.id)}
                         onClick={() => { void choose(t.id, "send_for_me", editing === t.id ? { subject: editSubject, body: editBody } : undefined, askDays.length ? askDays : undefined) }} style={big}>
                         {busy === `send_for_me:${t.id}` ? "Saving…" : editing === t.id ? "Yes, send my edited version every week" : "Yes, send it for me every week"}
                       </button>
@@ -321,13 +352,15 @@ export default function InterviewBoard() {
                     <div style={muted}>Interview {t.timeKnown ? "on" : "around"} {day(t.at)}. {t.say}</div>
                   </div>
                   {t.threadId && <Link href={openHref(t.threadId, t.account)} style={pill}>Open</Link>}
-                  <button type="button" className="btn-ghost" disabled={!!busy} onClick={() => { void choose(t.id, "reopen") }} style={{ minHeight: 36, padding: "0 12px", fontSize: 13.5 }}>{busy === `reopen:${t.id}` ? "Saving…" : "Follow them again"}</button>
+                  <button type="button" className="btn-ghost" disabled={busyFor(t.id)} onClick={() => { void choose(t.id, "reopen") }} style={{ minHeight: 36, padding: "0 12px", fontSize: 13.5 }}>{busy === `reopen:${t.id}` ? "Saving…" : "Follow them again"}</button>
                 </li>
               ))}
             </ul>
           )}
         </div>
       )}
+      {toast ? <div role="status" style={{ position: "fixed", left: "50%", bottom: 24, zIndex: 50, padding: "10px 16px", borderRadius: 999, background: "var(--accent)", color: "var(--bg)", fontSize: 14, fontWeight: 650, boxShadow: "0 4px 16px rgba(0,0,0,.2)", transform: "translateX(-50%)", animation: "mfit-toast-in 250ms ease-out" }}>{toast}</div> : null}
+      <style>{`@keyframes mfit-toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }`}</style>
     </section>
   )
 }

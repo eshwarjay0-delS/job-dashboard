@@ -64,6 +64,9 @@ export async function sendInterviewFollowUps(userId: string, myName: string, now
  * only to an interview the person switched sending on for, still waiting, with a contact who is not one of their own
  * recruiters, and only while fewer than four have gone out. Ticked days do not bind it; the tap is the schedule.
  * The send is written down before the mail goes out, exactly as the daily job does, so it can never go twice.
+ * A plain re-tap within the hour of a recorded send is a double-tap, not a new send: it is skipped outright,
+ * so a slow button plus a reload can never mail the same follow-up three times. A reworded send still goes out,
+ * because new words are a new intent.
  * Verified against the board's kept copy, so the tap answers at once; the live scan is only the fallback for an
  * interview the kept copy missed.
  */
@@ -72,6 +75,8 @@ export async function sendInterviewFollowUpNow(userId: string, myName: string, i
   const hand = state0.handed.find(h => h.id === id)
   if (!hand?.on) return { ok: false, error: "Sending for this interview is not switched on." }
   if (hand.sent.length >= MOST_SENT_FOR_YOU) return { ok: false, error: "Four follow-ups have already been sent for this interview." }
+  // A plain re-tap within the hour of a recorded send is a double-tap, not a new send: skip it.
+  if (!wordsIn?.subject && !wordsIn?.body && hand.sent.some(at => now - at < 60 * 60 * 1000)) return { ok: true }
   const [accounts, recruiters] = await Promise.all([listGoogleWorkspaceAccounts(userId), readRecruiters(userId)])
   const mine = accounts.map(a => a.google_email)
   const verify = (threads: ClassifiedThread[]) => trackInterviews(threadsToInterviews(threads), threads, mine, now, { state: state0, recruiter: email => isMyRecruiter(recruiters, email) }).active.find(x => x.id === id)
