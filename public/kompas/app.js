@@ -2507,17 +2507,6 @@ $("screenBtn").onclick = analyseScreen;
 // One visible desktop action for captured questions. It uses the same verified
 // capture → region review → grounded answer path as the existing menu/shortcut.
 if ($("screenCaptureAnswerBtn")) $("screenCaptureAnswerBtn").onclick = analyseScreen;
-function isBlankFrame(data) {
-  // A captured frame with no readable content: every sampled pixel matches the first within a small
-  // tolerance. A window that opted out of capture comes back as one flat colour, usually black, so
-  // it is caught here instead of being sent to vision as if it held a question. Any real content —
-  // text on a background — breaks the flatness, so it is never flagged.
-  if (!data || !data.length) return true;
-  const step = 4 * Math.max(1, Math.floor(data.length / 4 / 4096));
-  const r0 = data[0], g0 = data[1], b0 = data[2];
-  for (let i = 0; i < data.length; i += step) { if (Math.abs(data[i] - r0) > 12 || Math.abs(data[i + 1] - g0) > 12 || Math.abs(data[i + 2] - b0) > 12) return false; }
-  return true;
-}
 async function grabFrame() {
   // Windows Kompas 0.8+ returns a fresh, bounded in-memory JPEG. This avoids
   // trying to extract the image from the system-audio loopback display track.
@@ -2543,7 +2532,18 @@ async function grabFrame() {
     const context = c.getContext("2d");
     if (!context) throw new Error("Screen capture is unavailable in this browser.");
     context.drawImage(video, 0, 0, c.width, c.height);
-    if (isBlankFrame(context.getImageData(0, 0, c.width, c.height).data)) throw new Error("This window opted out of screen capture, so its content comes back blank. Running as administrator does not change that — share the window another way, or type the question.");
+    // A window that opted out of capture comes back as one flat colour, usually black. Sample the
+    // frame here so it is named as such instead of being sent to vision as if it held a question.
+    // Any real content — text on a background — breaks the flatness, so it is never flagged. The
+    // check lives inside grabFrame because suites run this function on its own.
+    const pixels = context.getImageData(0, 0, c.width, c.height).data;
+    let flat = pixels.length > 0;
+    if (flat) {
+      const r0 = pixels[0], g0 = pixels[1], b0 = pixels[2];
+      const step = 4 * Math.max(1, Math.floor(pixels.length / 4 / 4096));
+      for (let i = 0; i < pixels.length; i += step) { if (Math.abs(pixels[i] - r0) > 12 || Math.abs(pixels[i + 1] - g0) > 12 || Math.abs(pixels[i + 2] - b0) > 12) { flat = false; break; } }
+    }
+    if (flat) throw new Error("This window opted out of screen capture, so its content comes back blank. Running as administrator does not change that — share the window another way, or type the question.");
     return c.toDataURL("image/jpeg", 0.72);
   } finally { video.onloadeddata = null; video.pause(); video.srcObject = null; }
 }

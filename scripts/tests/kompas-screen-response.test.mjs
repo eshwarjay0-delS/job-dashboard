@@ -32,7 +32,7 @@ for(const scenario of ['play error','ended track','zero dimensions','missing can
  let paused=false, drawn=false
  const track={readyState:scenario==='ended track'?'ended':'live'}
  const video={muted:false,playsInline:false,readyState:2,videoWidth:scenario==='zero dimensions'?0:1920,videoHeight:1080,play:async()=>{if(scenario==='play error')throw Error('play failed')},pause:()=>{paused=true}}
- const canvas={getContext:()=>scenario==='missing canvas'?null:{drawImage:()=>{drawn=true}},toDataURL:()=> 'frame'}
+ const canvas={getContext:()=>scenario==='missing canvas'?null:{drawImage:()=>{drawn=true},getImageData:()=>({data:Uint8ClampedArray.from([0,0,0,255,255,255,255,255])})},toDataURL:()=> 'frame'}
  const ctx=vm.createContext({displayVideo:track,navigator:{mediaDevices:{getDisplayMedia:async()=>({getVideoTracks:()=>[track]})}},document:{createElement:t=>t==='video'?video:canvas},MediaStream:class{},setTimeout})
  vm.runInContext(source.slice(source.indexOf('async function grabFrame()'),source.indexOf('async function analyseScreen()')),ctx)
  if(scenario==='success'){assert.equal(await ctx.grabFrame(),'frame');assert.equal(drawn,true);assert.equal(canvas.width,1600);assert.equal(canvas.height,900)}else await assert.rejects(ctx.grabFrame())
