@@ -604,6 +604,14 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   }, { headers: NO_STORE })
 }
 
+// The previous turns the page sends with a derive (recentQA): the question cut uses them to tell the candidate's reply
+// to the last question from setup for the new one.
+function previousTurns(history: unknown): string {
+  return (Array.isArray(history) ? history : []).slice(-2)
+    .map((t) => (t && typeof t === "object" ? `${str((t as Record<string, unknown>).q, 400)} ${str((t as Record<string, unknown>).a, 2400)}` : ""))
+    .join(" ").trim()
+}
+
 /** Internal entry point: callers must verify the channel identity before invoking. */
 export async function answerForVerifiedUser(request: NextRequest, user: { id: string }) {
   const startedAt = Date.now()
@@ -620,7 +628,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   if (body.deriveOnly) {
     const heard = str(body.question, 5000)
     if (!heard || plainlyNoQuestion(heard)) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
-    const clean = cleanQuestion(heard) || cutQuestion(heard)
+    const clean = cleanQuestion(heard) || cutQuestion(heard, previousTurns(body.history))
     if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
   }
 
@@ -650,7 +658,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     if (!heard) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
     if (plainlyNoQuestion(heard))
       return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
-    const clean = cleanQuestion(heard) || cutQuestion(heard)
+    const clean = cleanQuestion(heard) || cutQuestion(heard, previousTurns(body.history))
     if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
     try {
       const { text } = await fetchOpenRouter(paidKey, PAID_MODEL, DERIVE_SYSTEM,

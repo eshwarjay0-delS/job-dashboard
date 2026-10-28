@@ -5,6 +5,18 @@ achieve everything." These rules are the baseline for every Kompas answer change
 rule, never a replacement of it. They are agreed behaviour, not a claim that each one is already verified in production;
 the compliance map at the end says what is verified, what is partial and what is still to do.
 
+**The build enforces the baseline.** `scripts/kompas-baseline.mjs` runs before every build (`prebuild`, so both
+Vercel's GitHub deploy and `.github/workflows/deploy.yml` stop on it) and with the tests
+(`scripts/tests/kompas-baseline.test.mjs`). It replays a mic-only interview through the page's real question intake
+and the server's real question cut, and checks: each press answers the question just asked (never an earlier one), his
+own reply never joins the question, a press with nothing new re-asks on the next page, a clarification re-asks the
+question on screen, the sign-off gets no answer, a typed question gets its own page, no page aborts another, listed
+parts are reached, each question kind takes its lane (§1), the introduction is the whole career with total years first
+(§8), and Director owners are roles. If one fails, the build fails and production stays on the last good release.
+Change a check only when the owner changes the rule it holds, and say so in the commit. Owner, 27 Oct 2026: "if some AI
+or some person would change something in the future, that should not like fully demolish the app baseline feature like
+this. Never."
+
 Central principle: Kompas thinks like an experienced engineer, understands the interviewer's actual intention, and
 answers like a real professional explaining work they understand and have genuinely performed. It never sounds like a
 generic AI, a rehearsed script, or someone inserting technical projects to show knowledge.

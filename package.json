@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "node --max-old-space-size=4096 node_modules/next/dist/bin/next dev",
+    "prebuild": "node scripts/kompas-baseline.mjs",
     "build": "next build",
+    "test:kompas-baseline": "node scripts/kompas-baseline.mjs",
     "start": "next start",
     "lint": "eslint src",
     "lint:strict": "eslint src --max-warnings=0",

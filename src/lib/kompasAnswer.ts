@@ -418,7 +418,21 @@ function transcriptSentences(heard: string): string {
   return lines.map((l, i) => (i < lines.length - 1 && l.split(/\s+/).length >= 3 && !/[.?!,;:…-]$/.test(l) && !CONTINUES.test(l) && /^[A-Z]/.test(lines[i + 1]) ? l + "." : l)).join(" ")
 }
 
-export function cutQuestion(heard: string): string {
+// The candidate's reply to the previous question, heard on the same mic, is not setup for the next one. Owner's live
+// session, 27 Oct 2026 (mic only): his spoken answer about dependency confusion was cut in front of the next question.
+// A sentence whose content words are mostly the previous turn's (question and answer) belongs to that turn.
+const TOPIC_STOP = new Set("about after again also been before being could does doing from have here into just like more most much only other over same some such than that their them then there these they this those through very what when where which while will with would your yours".split(" "))
+function topicWords(text: string): string[] {
+  return String(text || "").toLowerCase().replace(/[^a-z0-9+#.-]+/g, " ").split(/\s+/).map((w) => w.replace(/^[.-]+|[.-]+$/g, "")).filter((w) => w.length >= 4 && !TOPIC_STOP.has(w))
+}
+function belongsToPrevious(sentence: string, previous: string): boolean {
+  const words = topicWords(sentence)
+  if (!previous || words.length < 3) return false
+  const bag = new Set(topicWords(previous))
+  return words.filter((w) => bag.has(w)).length / words.length >= 0.4
+}
+
+export function cutQuestion(heard: string, previous = ""): string {
   const text = transcriptSentences(heard)
     .replace(/\s+/g, " ")
     .trim()
@@ -431,7 +445,7 @@ export function cutQuestion(heard: string): string {
   for (let i = parts.length - 1; i >= 0; i--) if (parts[i].kind === "ask") { last = i; break }
   if (last < 0) return ""
   let from = last, context = 0
-  while (from > 0 && (parts[from - 1].kind === "ask" || (parts[from - 1].kind === "context" && context < 2))) {
+  while (from > 0 && (parts[from - 1].kind === "ask" || (parts[from - 1].kind === "context" && context < 2 && !belongsToPrevious(parts[from - 1].text, previous)))) {
     if (parts[from - 1].kind === "context") context++
     from--
   }
@@ -478,7 +492,13 @@ function classifyAskSentence(sentence: string): AskPart {
     if (!asked && /^(?:why|how|what|when|where|which|who)\s+(?:i|we|my|our|i'm|i've|we're)\b/i.test(bare)) return { kind: "own", text: bare }
     if (!asked && !ASK_OPENER.test(bare) && (bare.split(/\s+/).length < 4 || /\.{2,}|…/.test(bare))) return { kind: "noise", text: bare }
     if (ASK_OPENER.test(bare) || (asked && !OWN_WORDS.test(bare))) return { kind: "ask", text: bare }
-    const inside = bare.search(ASK_INSIDE)
+    // "Dependency confusion is when the build pulls...", "that's how we did it": a wh-word after "is" explains, and "the
+    // build" or "our design" is a noun, not an instruction (baseline contract, 27 Oct 2026: his spoken answer counted as
+    // an ask and was glued in front of the next question).
+    const inside = bare
+      .replace(/\b(?:is|are|was|were|'s|means|happens)\s+(?:when|where|what|which|who|how|why)\b/gi, (m) => " ".repeat(m.length))
+      .replace(/\b(?:the|a|an|our|your|their|its|this|that|my|each|every)\s+(?:build|design|compare|implement|configure)\b/gi, (m) => " ".repeat(m.length))
+      .search(ASK_INSIDE)
     if (inside > 0 && bare.slice(inside).split(/\s+/).length >= 3) {
       const tail = bare.slice(inside)
       // "In your experience, how do you..." keeps its lead; a ramble before the ask does not.

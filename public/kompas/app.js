@@ -1887,6 +1887,8 @@ function echoShare(text, answerText) {
   const bag = new Set(intakeWords(answerText));
   return words.filter(w => bag.has(w)).length / words.length;
 }
+// Closing pleasantries of a call. Bare thanks are already noise lines; these carry the sign-off itself.
+const SIGN_OFF = /\b(?:hard stop|(?:take|taking|took) the time|thank(?:s| you) (?:so much |again )?for (?:your|the|taking|making|joining|speaking|talking|coming)|(?:nice|great|good|pleasure|lovely) (?:talking|speaking|meeting|chatting) (?:to|with) you|have a (?:great|good|nice|lovely) (?:day|evening|weekend|one|rest)|(?:be|get|getting) (?:in touch|back to you)|next steps|(?:that'?s|those are|that is) all (?:the |my |i have|from me|for today)|out of time|(?:bye|goodbye)\b)/i;
 const NOISE_WORDS = new Set("hi hello hey ok okay yeah yes no uh um hmm thanks thank you right alright sure good great nice bye there everyone all guys".split(" "));
 function isNoiseLine(text) { const ws = String(text || "").toLowerCase().replace(/[^a-z\s]+/g, " ").split(/\s+/).filter(Boolean); return ws.length >= 1 && ws.length <= 4 && ws.every(w => NOISE_WORDS.has(w)); }
 function composeIntake(lines, opts = {}) {
@@ -2393,7 +2395,14 @@ async function aiAnswer(fromAuto) {
       // answered again ("could you explain what dependency confusion is?" got the host-header answer; "multiple tools
       // reporting the same vulnerability" got the password-reset answer). A press with nothing new asked still re-asks.
       const newAsk = !typedText && pending.some(t => Q_CUE.test(t.text) && echoShare(t.text, cur && cur.question || "") < 0.6);
-      const isRepress = !fromAuto && !typedOwn && !newAsk && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
+      // The sign-off is not a re-press (27 Oct 2026): "I do have a hard stop ... thank you for taking the time" heard
+      // after an answer re-asked the page on screen and answered it again. Only sign-off lines and fillers, no ask.
+      if (!typedText && pending.some(t => SIGN_OFF.test(t.text)) && pending.every(t => isNoiseLine(t.text) || (SIGN_OFF.test(t.text) && !Q_CUE.test(t.text)))) {
+        answeredSeq = heardSeq; updatePending();
+        if (!fromAuto) status("Nothing question-like in that — still listening.", "live");
+        return;
+      }
+      const isRepress =!fromAuto && !typedOwn && !newAsk && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
       if (isRepress) {
         const previous = transcript.filter(t => t.seq <= answeredSeq).slice(-40);
         const combined = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You", previous, currentQuestion: cur.question });
@@ -2407,7 +2416,14 @@ async function aiAnswer(fromAuto) {
         // card keeps its old question until the cut lands — it never shows the
         // concatenation. Typed re-presses stay pinned whole.
         const heardOnly = !typedText;
-        const heard = (combined.noiseOnly ? [cur.earlier, cur.heard, q].filter(Boolean).join("\n") : (combined.heard || q)).replace(/\nCurrent question \(on screen\):[^\n]*/g, "").trim();
+        // A heard re-ask is formed from what formed the page on screen plus what was heard since, never from the whole
+        // interview (baseline contract, 27 Oct 2026): with forty earlier lines and the on-screen question stripped, the
+        // cut took the LAST OLD question in that history and answered it again.
+        const own = String(cur.heard || "").replace(/^(?:Current question \(on screen\)|Lane \(the question already on screen[^)]*\)):[^\n]*$/gm, "").trim();
+        const since = composeIntake(pending, { answerText, micIsSource: questionSource() === "You" }).heard;
+        const heard = heardOnly
+          ? [own && !/^Lane \(/m.test(String(cur.heard || "")) ? own : `You: ${cur.question}`, since].filter(Boolean).join("\n").trim()
+          : (combined.heard || q).replace(/\nCurrent question \(on screen\):[^\n]*/g, "").trim();
         // The re-ask goes on the next page (book rule, 27 Oct 2026): the page it re-asks keeps its question and finished
         // answer instead of being wiped to "…" and rewritten in place.
         const page = addCard(cur.question, ["…"]);
