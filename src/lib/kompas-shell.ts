@@ -1,5 +1,5 @@
 // Prevent a partial dashboard copy from losing Question Bank, review, or release updates.
-// The deployed Perfact HTML and assets are the single Kompas release on both sites.
+// The self-hosted public/kompas HTML and assets are the canonical Kompas release.
 export function mountKompasHtml(html: string): string {
   if (!/<html[\s>]/i.test(html) || !html.includes('id="view-dashboard"')) throw new Error("Invalid Kompas shell")
   const shim = `<base href="/kompas/">
@@ -176,5 +176,14 @@ export function mountKompasHtml(html: string): string {
   new MutationObserver(paintCredits).observe(document.documentElement, { childList: true, subtree: true });
 })();
 </script>`
-  return html.replace(/<head([^>]*)>/i, `<head$1>\n${shim}`)
+  // Hosted navigation only: do not modify the packaged native workspace or copy local evidence.
+  const sharedEntry = `<aside id="mfSharedChats" aria-label="WhatsApp conversations" style="margin:0 0 24px;padding:20px;border:1px solid var(--border);border-radius:12px">
+<h2 style="font-size:20px;margin:0 0 8px">Continue a WhatsApp chat</h2>
+<p style="margin:0 0 12px;line-height:1.6">Open your shared resume, job description and conversation history. Sign in with the MarketFit account linked to your WhatsApp.</p>
+<a class="btn" href="/dashboard/kompas/shared">Open WhatsApp chats</a>
+<p class="muted" style="margin:12px 0 0;line-height:1.6">The sessions below stay in this browser. They are separate from shared WhatsApp chats and are not transferred automatically.</p>
+</aside>`
+  const mounted = html.includes('id="mfSharedChats"') ? html : html.replace(
+    /(<section\b[^>]*\bid="view-dashboard"[^>]*>\s*<main\b[^>]*>)/i, `$1\n${sharedEntry}`)
+  return mounted.replace(/<head([^>]*)>/i, `<head$1>\n${shim}`)
 }
