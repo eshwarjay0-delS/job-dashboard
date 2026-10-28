@@ -337,7 +337,7 @@ export function levelGuidance(level: AnswerLevel, register: QuestionRegister): s
     case "architect":
       return `ANSWER LEVEL — ${ANSWER_LEVEL_NAME[level]}: full build depth. How it was built, set up and integrated, step by step in the order it happens — the components, the settings, queries or code where they ARE the answer, the alternatives weighed and what each costs, the failure modes and how each was handled. This listener builds systems: leave nothing at "we configured it", and ground every step in the background's real stack.`
     case "director":
-      return `ANSWER LEVEL — ${ANSWER_LEVEL_NAME[level]}: architect-and-developer understanding, spoken as business. Lead with the decision, or the stakes of the situation. Then what was achieved — the outcomes and the metrics that prove them: name the measures he actually tracks (coverage, detection or response time, false-positive rate, audit results, cost or hours saved) using only figures the background supports. The mechanism is compressed to the one line that shows he knows it cold — no step-by-step procedure, no settings, no tool walkthrough. Every technical point lands on a business consequence: risk reduced, operations protected, money or time saved.`
+      return `ANSWER LEVEL — ${ANSWER_LEVEL_NAME[level]}: architect-and-developer understanding, spoken as business. Lead with the decision, or the stakes of the situation. Then explain the supported evidence, the decision or gap, and what risk remains. Name measurements only when the interviewer asks for them, and only quote a measured achievement when an original source substantiates its value. The mechanism is compressed to the one line that shows he knows it cold — no step-by-step procedure, no settings, no tool walkthrough. Every technical point lands on a business consequence: risk reduced, operations protected, money or time saved.`
     default:
       return `ANSWER LEVEL — ${ANSWER_LEVEL_NAME[level]}: adapt to the current question. For Technical HR screening, explain the relevant JD keywords, their uses, requirement rationale and operational significance. For engineering problem-solving, explain hypotheses, evidence, research, alternatives and pivots, dependencies, troubleshooting, remediation, testing and monitoring as relevant. Include ownership, on-call decisions, peer communication and mentoring when asked. Allow technical specifics needed to solve the problem; do not turn every question into a complete runbook. Use supplied metrics or label proposed measures; never invent results.`
   }
@@ -618,7 +618,7 @@ export function questionForAnswer(heard: string, asked: string, pinned: boolean,
 }
 
 // The Director level's opening, in the owner's words, plus the 27 Oct rule that the decision owner is a role.
-export const DIRECTOR_OPENING = `DIRECTOR OPENING (this overrides the shape's opening sentence): sentence one states the decision — what you are doing — not a definition and not an axis. Name the decision owner in that sentence. Before closing, name the measures you will track, each as a named measure, never a vague promise to monitor. The decision owner is a role in the organisation (the business owner of the platform, the risk owner, security leadership), never a person's name, and the candidate keeps the title the resume gives: never speak as a CISO or any title the resume does not hold.`
+export const DIRECTOR_OPENING = `DIRECTOR OPENING: Answer the exact question in its own terms. For a definition or comparison, start with the meaning or direct preference, not an unasked decision-maker. For a process question, explain the evidence and the risk judgment. For personal experience, state the real work and specific supported action, not a fictitious approval. Name a decision owner only if the interviewer asks who owns or approves something; never add a KPI or metric the question does not call for. A decision owner, when relevant, is a role in the organisation, never a person's name, and the candidate keeps the title the resume gives: never speak as a CISO or any title the resume does not hold.`
 
 /** Verbatim extraction when the transcript reduces to exactly one clean question. */
 export function cleanQuestion(heard: string): string {
@@ -945,19 +945,12 @@ export function missingStructure(text: string, opts: { level: string; register: 
   if (/Sentence two names the one alternative/.test(opts.shape || "")) {
     if (!/\b(alternative|rejected|ruled out|ruled against|passed on|passed over|instead of|instead\b|rather than|did not choose|didn't choose|chose .* over|opted against|opted for .* over|went with .* over|set aside|decided against)\b/i.test(plain)) missing.push("a sentence naming the one alternative you rejected and what it cost")
   }
-  // Director means decision first in every register: a compare question
-  // ("risk acceptance versus remediation") registers as concept, and the
-  // practice-only gate let its owner requirement silently never fire in
-  // round 4. The register still shapes how the answer is built; it no longer
-  // excuses a missing owner.
-  if (opts.level === "director") {
-    const first = plain.split(/(?<=[.!?])\s/)[0] || plain
-    if (!/\b(owner|product manager|CISO|business (unit )?leader|vice president|risk manager|accountable)\b/i.test(first)) missing.push("the decision owner named in sentence one")
-  }
+  // A Director-level audience does not imply the interviewer asked who decides.
+  // Never force an owner into a definition, comparison, or personal example.
   return missing
 }
 
-export const STRUCTURE_REPAIR_SYSTEM = `You repair one interview answer. Rewrite the SAME answer with minimal changes: keep every sentence, fact, example, and pause marker ([beat]/[breath]) unless a change is required by the missing element below. Do not shorten it, do not add new claims, do not invent numbers, and do not change the answer's level or voice. Add ONLY the missing element, in the place its instruction names. You MUST add the missing element even if that means adding a sentence: keeping the existing sentences does not mean leaving the answer unchanged.`
+export const STRUCTURE_REPAIR_SYSTEM = `You repair one interview answer. Rewrite the SAME answer with minimal changes: keep every supported fact and relevant example unless a change is required by the missing element below. Do not shorten it, do not add new claims, do not invent numbers, and do not change the answer's level or voice. Add ONLY the missing element, in the place its instruction names. You MUST add the missing element even if that means adding a sentence: keeping the existing sentences does not mean leaving the answer unchanged.`
 
 /** First-win archetype match. Returns the shape instruction or null. */
 export function pickShape(question: string, tier: number, known = ""): string | null {
