@@ -16,6 +16,7 @@ import { QUESTION_FIRST_POLICY, repeatQuestionGuidance } from "@/lib/kompasInten
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
 import { formatInterviewHistory } from "@/lib/kompasHistory"
 import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestionParts, questionParts, spokenQualityFlags, correctVerifiedPresentationErrors } from "@/lib/kompasInterviewPrecision"
+import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
 import { desktopCraft, desktopResponsePolicy } from "@/lib/kompasDesktopResponse"
@@ -309,6 +310,7 @@ type AnswerJob = {
   guardFacts: SpeakFacts
   allowed: Set<string>
   factsText: string
+  streamPolicy: KompasStreamPolicy
 }
 
 // The lanes, in order: an explicit OpenRouter pick from the live screen first,
@@ -399,7 +401,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       const emit = (o: Record<string, unknown>) => {
         try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(o)}\n\n`)) } catch { /* client went away */ }
       }
-      const timing = { preparation_ms: Date.now() - startedAt, first_ms: 0, lane: "", total_ms: 0 }
+      const timing = { preparation_ms: Date.now() - startedAt, first_ms: 0, visible_first_ms: 0, lane: "", total_ms: 0 }
       let raw = ""
       let lastErr = ""
       let servedModel = ""
@@ -407,10 +409,13 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       const onDelta = (d: string) => {
         if (!raw && d) timing.first_ms = Date.now() - startedAt
         raw += d
-        emit({ type: "delta", text: d })
+        if (releaseProvisionalDelta(job.streamPolicy)) {
+          if (!timing.visible_first_ms && d) timing.visible_first_ms = Date.now() - startedAt
+          emit({ type: "delta", text: d })
+        }
       }
       try {
-        emit({ type: "meta", ...metaBase })
+        emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy })
         if (job.orKey) {
           const runLane = async (model: string, tag: string): Promise<"ok" | "cut" | "fail"> => {
             const began = Date.now()
@@ -507,7 +512,12 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           } catch { /* the guarded answer stands */ }
         }
         finalText = correctVerifiedPresentationErrors(finalText)
-        if (finalText !== raw) emit({ type: "replace", text: finalText })
+        // Personal history is held back until guards have run. Even if unchanged,
+        // it must be emitted now because no provisional deltas were sent.
+        if (mustEmitFinalReplacement(job.streamPolicy, finalText, raw)) {
+          if (!timing.visible_first_ms && finalText) timing.visible_first_ms = Date.now() - startedAt
+          emit({ type: "replace", text: finalText })
+        }
         emit({
           type: "done", degraded, guarded: g.guarded, verified, repaired,
           precision: { coverage: questionCoverage(job.question, finalText), flags: spokenQualityFlags(job.question, finalText) },
@@ -859,15 +869,11 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     identity: "",
     projects: "",
   })
-  const allowed = allowedNumbers(resumeSrc, docsSrc, question)
+  const allowed = allowedNumbers(resumeSrc, docsSrc) // the interviewer asking a number is NOT proof that the candidate achieved it
   const figuresList = [...allowed].slice(0, 30)
   const figuresLine = `FIGURES: the ONLY result numbers you may state are these, from the candidate's own material: ${figuresList.length ? figuresList.join(", ") : "(none)"}. Never invent a count, percentage, duration or before/after figure — describe the change in words ("cut the queue to something the team could clear by lunch"). Technical constants (ports, versions, thresholds in a rule) are fine.`
-  const factsText = [
-    resumeSrc && `RESUME:\n${resumeSrc}`,
-    jdSrc && `JOB DESCRIPTION:\n${jdSrc}`,
-    docsSrc && `DOCUMENTS:\n${docsSrc}`,
-    grounding && `BACKGROUND:\n${grounding.slice(0, 4000)}`,
-  ].filter(Boolean).join("\n\n")
+  const factsText = candidateEvidenceForVerification(resumeSrc, docsSrc)
+  // Role requirements and generated dossier context guide relevance, not personal factual proof.
   const desktopCloser = desktopPolicy
     ? `${desktopPolicy.guidance}\n\nObey the question shape. A definition or a comparison stays on the idea. A deep example carries the bottleneck and the impact at this level's angle. Do not reuse one outline for both.`
     : ""
@@ -903,6 +909,7 @@ ${INTERVIEW}`
     guardFacts,
     allowed,
     factsText,
+    streamPolicy: answerStreamPolicy(tier, question),
   }
   if (body.stream) return streamAnswer(request, job)
   return jsonAnswer(request, job)
