@@ -82,7 +82,7 @@ async function readDocument(msg: Message, role: "resume" | "jd" | "support"): Pr
   const bytes = await downloadMedia(doc.id, 5 * 1024 * 1024)
   let text: string
   if (lower.endsWith(".docx")) text = await extractText(bytes).catch(() => "")
-  else if (lower.endsWith(".pdf")) text = await pdfText(bytes)
+  else if (lower.endsWith(".pdf")) text = await pdfText(bytes, { requireComplete: true })
   else text = bytes.includes(0) ? "" : bytes.toString("utf8")
   text = text.replace(/\u0000/g, "").trim()
   if (!text) return null
@@ -218,7 +218,7 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
         return true
       }
       if (!attachment) {
-        await send("Please send a readable DOCX, PDF or TXT document smaller than 5 MB.")
+        await send("Please send a readable DOCX, PDF or TXT document smaller than 5 MB. PDFs must have at most 12 pages; split longer documents into smaller files.")
         return true
       }
       input = attachment
