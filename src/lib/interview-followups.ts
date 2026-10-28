@@ -8,7 +8,7 @@
 import { blob } from "@/lib/storage"
 import { fetchClassifiedThreads, threadsToInterviews, TRACKING_DAYS } from "@/app/api/gmail/_lib"
 import { getGoogleWorkspaceAccessToken, listGoogleWorkspaceAccounts } from "@/lib/googleWorkspace"
-import { emptyState, followUpWords, noteSent, toSendForYou, trackInterviews, validState, type TrackState } from "@/lib/interview-track"
+import { emptyState, followUpWords, noteSent, toSendForYou, trackInterviews, validState, MOST_SENT_FOR_YOU, type TrackState } from "@/lib/interview-track"
 import { isMyRecruiter } from "@/lib/my-recruiters"
 import { readRecruiters } from "@/lib/my-recruiters-store"
 
@@ -57,4 +57,44 @@ export async function sendInterviewFollowUps(userId: string, myName: string, now
     } catch (error) { failed++; console.error("[interviews] a follow-up could not be sent", String(error).slice(0, 200)) }
   }
   return { sent, failed }
+}
+
+/**
+ * Send one follow-up right now, on the person's tap — not on the daily check's schedule. It still counts: it goes
+ * only to an interview the person switched sending on for, still waiting, with a contact who is not one of their own
+ * recruiters, and only while fewer than four have gone out. Ticked days do not bind it; the tap is the schedule.
+ * The send is written down before the mail goes out, exactly as the daily job does, so it can never go twice.
+ */
+export async function sendInterviewFollowUpNow(userId: string, myName: string, id: string, wordsIn?: { subject: string; body: string }, now = Date.now()): Promise<{ ok: boolean; error?: string }> {
+  const state0 = await readTrackState(userId)
+  const hand = state0.handed.find(h => h.id === id)
+  if (!hand?.on) return { ok: false, error: "Sending for this interview is not switched on." }
+  if (hand.sent.length >= MOST_SENT_FOR_YOU) return { ok: false, error: "Four follow-ups have already been sent for this interview." }
+  const [{ threads }, accounts, recruiters] = await Promise.all([fetchClassifiedThreads(userId, { days: TRACKING_DAYS, max: 100 }), listGoogleWorkspaceAccounts(userId), readRecruiters(userId)])
+  const mine = accounts.map(a => a.google_email)
+  const { active } = trackInterviews(threadsToInterviews(threads), threads, mine, now, { state: state0, recruiter: email => isMyRecruiter(recruiters, email) })
+  const t = active.find(x => x.id === id)
+  if (!t || t.phase !== "waiting" || t.theyWrote || !t.contact || t.contact.recruiter) return { ok: false, error: "This interview cannot be followed up right now." }
+  const account = accounts.find(a => a.google_email.toLowerCase() === t.account && a.gmail_enabled)
+  const token = account ? await getGoogleWorkspaceAccessToken(userId, account.id) : null
+  if (!token) return { ok: false, error: "That inbox is not connected right now." }
+  const words = wordsIn?.subject && wordsIn?.body
+    ? { subject: wordsIn.subject.slice(0, 200), body: wordsIn.body.slice(0, 2000) }
+    : hand.subject && hand.body ? { subject: hand.subject, body: hand.body } : followUpWords(t, myName)
+  // Written down first, and edited words saved with it when the person reworded it on the way to this tap.
+  let state = noteSent(state0, id, now)
+  if (wordsIn?.subject && wordsIn?.body) state = { ...state, handed: state.handed.map(x => (x.id === id ? { ...x, subject: words.subject, body: words.body } : x)) }
+  await writeTrackState(userId, state)
+  try {
+    const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+      method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ raw: encode(t.contact.email, words.subject, words.body) }), signal: AbortSignal.timeout(20_000),
+    })
+    if (res.ok) return { ok: true }
+    console.error("[interviews] a send-now follow-up was refused", res.status)
+    return { ok: false, error: "Gmail refused that send just now. It is still counted, so it will not go twice." }
+  } catch (error) {
+    console.error("[interviews] a send-now follow-up could not be sent", String(error).slice(0, 200))
+    return { ok: false, error: "That send could not go out just now. It is still counted, so it will not go twice." }
+  }
 }

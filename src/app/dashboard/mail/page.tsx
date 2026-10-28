@@ -23,6 +23,7 @@ import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 
 import IgnoreControls from "./_components/ignore-controls"
 import { ignoreReason, type IgnoreRule } from "@/lib/gmail-ignore"
+import { interviewThreadKeys, mailHasInterview, interviewBoardHref } from "@/lib/interview-mail-link"
 
 type AcctFn = (id: string) => { tint: string; email: string }
 
@@ -194,7 +195,7 @@ function RoleCard({ group, onOpen, acct }: { group: RoleGroup; onOpen: (id: stri
   )
 }
 
-type View = "needs" | "theirs" | "roles" | "all" | "drafts" | "waiting" | "papers"
+type View = "needs" | "theirs" | "roles" | "all" | "drafts" | "waiting" | "papers" | "interviews"
 
 export default function MailPage() {
   const [ignoreRules, setIgnoreRules] = useState<IgnoreRule[]>([])
@@ -236,6 +237,9 @@ export default function MailPage() {
   // 30. A mail kept from before the field existed falls back to the old rule until the next refresh.
   const waiting = (x: Mail) => (x.yourTurn ?? !!x.needsReply) && !answered.includes(x.id)
   const live = mails.filter(x => (!!ignoreReason(x, ignoreRules) === showIgnored) && (x.stage !== "rejected" || restored.includes(x.id)) && (account === "all" || x.account === account))
+  // Threads that proved an interview: the interview list already arrives with the mail, so this pile needs no new fetch.
+  const interviewKeys = interviewThreadKeys(interviews)
+  const interviewMails = live.filter(x => mailHasInterview(interviewKeys, x.account, x.id))
   const needsList = live.filter(waiting)
   const theirsList = live.filter(x => !!x.lastMine && !waiting(x))
   const filed = mails.filter(x => x.stage === "rejected" && !restored.includes(x.id))
@@ -256,7 +260,7 @@ export default function MailPage() {
   // The inbox is sent with the search, so the number the server gives and the rows it lists are of that inbox.
   const search = useMailSearch(mails, account === "all" ? "" : account)
   const found = search.active ? search.results.filter(x => account === "all" || x.account === account) : null
-  const shown = found ?? (showIgnored ? live : view === "needs" ? needsList : view === "theirs" ? theirsList : live)
+  const shown = found ?? (showIgnored ? live : view === "needs" ? needsList : view === "theirs" ? theirsList : view === "interviews" ? interviewMails : live)
   // `opened` is a conversation asked for by its address (?open=, from the Follow-ups page). It is shown even when the
   // list does not hold it, because it was filed as a rejection or its sender is hidden: the person asked for that one.
   const [opened, setOpened] = useState<string | null>(null)
@@ -267,11 +271,13 @@ export default function MailPage() {
   const selectedMail = (x: Mail) => x.id === sel && (!selectedInbox || x.account === selectedInbox)
   const m = shown.find(selectedMail) ?? (sel && sel === opened ? mails.find(selectedMail) ?? (fetched && selectedMail(fetched) ? fetched : undefined) : undefined)
 
-  // Three piles a person can hold in their head. The other three ways of looking wait behind "More".
+  // Piles a person can hold in their head, interviews among them: the thread that proved an interview is looked at
+  // here as well as on the interviews board, and each one links to the other. The other ways of looking wait behind "More".
   const VIEWS: [View, string, number][] = [
     ["needs", "Your turn", needsList.length],
     ["theirs", "Their turn", theirsList.length],
     ["all", "Everything", live.length],
+    ["interviews", "Interviews", interviewMails.length],
   ]
   const MORE: [View, string, number][] = [
     ["papers", "RTR and rate", papersCount],
@@ -491,15 +497,21 @@ export default function MailPage() {
                       </div>
                     )}</div>
                     <ThreadActions mail={x} rules={tracked}/>
+                    {mailHasInterview(interviewKeys, x.account, x.id) && (
+                      <Link href={interviewBoardHref(x.id)}
+                        style={{ flex: "none", marginTop: 14, minHeight: 36, padding: "0 12px", display: "inline-flex", alignItems: "center", borderRadius: 999, border: "1px solid var(--border-strong)", background: "var(--surface)", color: "var(--text)", fontSize: 13, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>
+                        Interview
+                      </Link>
+                    )}
                   </div>
                 ))}
                 {!shown.length && (
                   <div style={{ padding: 32, textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: 14, color: "var(--text-muted)", fontSize: 13.5 }}>
                     <Leaf size={18} style={{ marginBottom: 8 }} />
                     <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
-                      {search.active ? (search.pending ? "Looking inside every message…" : "Nothing matches") : view === "needs" ? "Nobody is waiting on you" : view === "theirs" ? "Nobody owes you an answer" : "Nothing here"}
+                      {search.active ? (search.pending ? "Looking inside every message…" : "Nothing matches") : view === "needs" ? "Nobody is waiting on you" : view === "theirs" ? "Nobody owes you an answer" : view === "interviews" ? "No interview threads here" : "Nothing here"}
                     </div>
-                    {search.active ? (search.pending ? "" : "Try fewer words, or just part of a name.") : view === "needs" ? "Every thread is answered or scheduled." : live.length === 0 ? (
+                    {search.active ? (search.pending ? "" : "Try fewer words, or just part of a name.") : view === "needs" ? "Every thread is answered or scheduled." : view === "interviews" ? "When an invite lands, its thread shows up here." : live.length === 0 ? (
                       <span>No job emails in the last 30 days on the connected account{accounts.length > 1 ? "s" : ""}. <Link href="/dashboard/connections" style={{ fontWeight: 700, color: "var(--text)" }}>Connect your main inbox →</Link></span>
                     ) : "Try another view."}
                   </div>
@@ -535,6 +547,11 @@ export default function MailPage() {
               </div>
 
               {m && <button type="button" className="mf-mail-back" onClick={() => { setSel(null); setSelectedInbox("") }} aria-label="Back to inbox">← Back</button>}
+              {m && mailHasInterview(interviewKeys, m.account, m.id) && (
+                <div style={{ margin: "0 0 10px" }}>
+                  <Link href={interviewBoardHref(m.id)} style={{ fontSize: 13.5, fontWeight: 700, color: "var(--accent-txt)" }}>View this interview on the Interviews board →</Link>
+                </div>
+              )}
               {m && <FoldedConversation key={`${m.account}:${m.id}`} mail={m} tint={acct(m.account).tint} restored={restored.includes(m.id)} onSent={()=>approve(m.id)} />}
 
             </div>
