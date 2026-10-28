@@ -63,6 +63,12 @@ test('optional verifier preserves original bullet style when it existed',async()
  assert.ok(output)
  assert.equal(output.text,'- Access reviews\nWe reduced exposure by a measurable amount.')
 })
+test('verifier source contract challenges fabricated one-time events without censoring general technique explanations',()=>{
+ const source=readFileSync(new URL('../../src/lib/kompasGuards.ts',import.meta.url),'utf8')
+ assert.match(source,/specific claimed incidents or projects/)
+ assert.match(source,/A listed skill or responsibility is NOT evidence/)
+ assert.match(source,/Do NOT change explicitly hypothetical examples/)
+})
 test('verifier makes no structural edits when no claim is flagged',async()=>{
  const output=await verifyAnswer(async()=>JSON.stringify({lines:[]}),
  'RESUME: worked in cybersecurity','I check owner evidence. I review the control gap.')
