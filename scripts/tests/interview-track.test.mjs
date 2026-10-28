@@ -106,11 +106,13 @@ test('a follow-up is sent for him only on his standing word, once a week, and it
   assert.deepEqual(send.map(t => t.id), [id], 'due now, and he asked for it')
   assert.equal(r.active[0].action, 'none', 'he is not asked to do what is being done for him'); assert.equal(r.active[0].forYou.on, true)
   assert.deepEqual(r.active[0].forYou.days, [0, 1, 2, 3, 4, 5, 6])
+  assert.deepEqual(r.active[0].forYou.sentAt, [])
   assert.match(r.active[0].say, /^I send Shikha a short follow-up for you on Sun, Mon, Tue, Wed, Thu, Fri, Sat until there is news\.$/)
   // Once sent, not again for a week.
   state = noteSent(state, id, NOW)
   assert.deepEqual(run(state, NOW + 3 * DAY).send, [])
   assert.match(run(state, NOW + 3 * DAY).r.active[0].say, /^I send Shikha a short follow-up for you on Sun, Mon, Tue, Wed, Thu, Fri, Sat until there is news\.$/)
+  assert.deepEqual(run(state, NOW + 3 * DAY).r.active[0].forYou.sentAt, [NOW])
   assert.deepEqual(run(state, NOW + 7 * DAY).send.map(t => t.id), [id])
   // They answered: it stops, and he is told to read what they wrote.
   const answered = [thread('quiet', msg('Shikha Rao', 'shikha@vendorone.example', 12, INVITE), { ...msg('Shikha Rao', 'shikha@vendorone.example', 0, 'Thanks Sam, feedback is expected Friday.'), internalDate: String(NOW + 2 * DAY) })]

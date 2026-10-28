@@ -83,6 +83,7 @@ export default function InterviewBoard() {
   const [asking, setAsking] = useState("")       // the interview whose "send for me" words are being shown
   const [askDays, setAskDays] = useState<number[]>([...DEFAULT_DAYS]) // weekday ticks chosen while opting in; Monday and Thursday to start
   const [editing, setEditing] = useState("")   // the interview whose draft is being edited
+  const [history, setHistory] = useState("")   // the interview whose MarketFit send history is being shown
   const [editSubject, setEditSubject] = useState("")
   const [editBody, setEditBody] = useState("")
   const [showPast, setShowPast] = useState(false)
@@ -191,6 +192,10 @@ export default function InterviewBoard() {
               {mine && words && (
                 <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 12, border: "1px solid var(--border-strong)", background: "var(--surface-2)" }}>
                   <p style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 650 }}>What I send to {name}{t.forYou?.days?.length ? `, on ${dayList(t.forYou.days)}` : ", once a week"}, from {t.account}:</p>
+                  <div style={{ display: "flex", gap: 8, margin: "0 0 10px" }}>
+                    <button type="button" className={history === t.id ? "btn-outline" : "btn-accent"} onClick={() => setHistory("")} style={{ minHeight: 32, padding: "4px 12px", fontSize: 13 }}>Message</button>
+                    <button type="button" className={history === t.id ? "btn-accent" : "btn-outline"} onClick={() => { setHistory(t.id); setEditing("") }} style={{ minHeight: 32, padding: "4px 12px", fontSize: 13 }}>History</button>
+                  </div>
                   {editing === t.id ? (
                     <>
                       <label style={{ display: "block", margin: "0 0 8px", fontSize: 13, color: "var(--text-muted)" }}>Subject
@@ -213,10 +218,24 @@ export default function InterviewBoard() {
                         <button type="button" className="btn-outline" onClick={() => setEditing("")} style={big}>Cancel edit</button>
                       </div>
                     </>
+                  ) : history === t.id ? (
+                    <>
+                      {t.forYou?.sentAt?.length ? (
+                        <>
+                          <p style={{ ...muted, margin: "0 0 8px" }}>Last sent {day(t.forYou.sentAt[t.forYou.sentAt.length - 1])}.</p>
+                          <ul style={{ margin: "0 0 10px", paddingLeft: 18, fontSize: 14.5, lineHeight: 1.6 }}>
+                            {[...t.forYou.sentAt].reverse().map(at => <li key={at}>{day(at)}</li>)}
+                          </ul>
+                        </>
+                      ) : (
+                        <p style={{ ...muted, margin: "0 0 10px" }}>Nothing sent from MarketFit yet.</p>
+                      )}
+                    </>
                   ) : (
                     <>
                       <p style={{ margin: "0 0 4px", ...muted }}>Subject: {words.subject}</p>
                       <p style={{ margin: "0 0 10px", fontSize: 14.5, lineHeight: 1.6, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{words.body}</p>
+                      {t.forYou?.sentAt?.length ? <p style={{ ...muted, margin: "0 0 10px" }}>Last sent {day(t.forYou.sentAt[t.forYou.sentAt.length - 1])}.</p> : null}
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                         <button type="button" className="btn-accent" disabled={!!busy}
                           onClick={() => { void choose(t.id, "send_now") }} style={big}>

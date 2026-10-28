@@ -18,7 +18,7 @@ test('the inbox carries an Interviews pile that links both ways to the board', (
 
 test('what is sent for him stays visible, editable, and sendable at once, on ticked days', () => {
   const board = read('src/app/dashboard/calendar/_components/interview-board.tsx')
-  for (const said of ['What I send to', 'Send now', 'Save words', 'Send edited now', 'Ring on', 'DayTicks']) assert.ok(board.includes(said), said)
+  for (const said of ['What I send to', 'Send now', 'Save words', 'Send edited now', 'Ring on', 'DayTicks', 'History', 'Last sent']) assert.ok(board.includes(said), said)
   assert.ok(board.includes('Monday and Thursday are ticked to start'), 'Monday and Thursday ticked to start')
   assert.ok(board.includes('untick them all and it rings Monday and Thursday'), 'untick-all falls back to Monday and Thursday')
   assert.ok(board.includes('AbortSignal.timeout'), 'the button can never spin forever')

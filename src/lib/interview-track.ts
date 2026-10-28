@@ -58,7 +58,7 @@ export interface Tracked {
   action: "none" | "reply" | "follow_up"
   outcome?: Outcome
   decidedAt?: number
-  forYou?: { on: boolean; sent: number; nextAt: number; ended?: "answered" | "limit"; days?: number[] }
+  forYou?: { on: boolean; sent: number; sentAt: number[]; nextAt: number; ended?: "answered" | "limit"; days?: number[] }
 }
 
 const first = (name: string): string => String(name || "").trim().split(/\s+/)[0] || "them"
@@ -172,7 +172,7 @@ export function trackInterviews(found: Found[], threads: OverviewThread[], myEma
       id: f.id, threadId, account, role: f.role, company: f.company, kind: f.kind || "", at, timeKnown, phase, days: phase === "coming" ? until : since, contact, lastMine, theyWrote,
       followUps: mineAfter.length + sentForYou, due: due && !sending, nextAt: old || carried ? 0 : nextAt, say, old, action,
       ...(mark ? { outcome: mark.outcome, decidedAt: mark.at } : {}),
-      ...(hand ? { forYou: { on: sending || (hand.on && phase !== "past" && !theyWrote && sentForYou < MOST_SENT_FOR_YOU && !contact?.recruiter), sent: sentForYou, nextAt: sending ? nextAt : 0, days: ringDays(hand.days), ...(hand.on && theyWrote ? { ended: "answered" as const } : hand.on && sentForYou >= MOST_SENT_FOR_YOU ? { ended: "limit" as const } : {}) } } : {}),
+      ...(hand ? { forYou: { on: sending || (hand.on && phase !== "past" && !theyWrote && sentForYou < MOST_SENT_FOR_YOU && !contact?.recruiter), sent: sentForYou, sentAt: [...(hand.sent || [])], nextAt: sending ? nextAt : 0, days: ringDays(hand.days), ...(hand.on && theyWrote ? { ended: "answered" as const } : hand.on && sentForYou >= MOST_SENT_FOR_YOU ? { ended: "limit" as const } : {}) } } : {}),
     })
   }
   const rank = (t: Tracked) => (t.action === "reply" ? 0 : t.action === "follow_up" ? 1 : t.phase === "today" ? 2 : t.phase === "coming" ? 3 : t.old ? 5 : 4)

@@ -51,7 +51,7 @@ Whenever you open an email, a contact card for the sender appears alongside it â
 ## What exists today (keep and extend)
 
 - `/dashboard/mail` â€” the mail experience home.
-- Interviews in the inbox (28 Oct 2026): an Interviews pile in `/dashboard/mail`, matched on account plus thread id; interview threads link to their board card and back; while a follow-up is switched on, the exact message stays visible on the card with Edit, Send now, and weekday ticks for the automatic send (Monday and Thursday ticked to start). Send now verifies against the board's kept copy, with the live scan only as fallback, and the button times out at 60 seconds with a check-Sent warning instead of spinning forever.
+- Interviews in the inbox (28 Oct 2026): an Interviews pile in `/dashboard/mail`, matched on account plus thread id; interview threads link to their board card and back; while a follow-up is switched on, the exact message stays visible on the card with Edit, Send now, and weekday ticks for the automatic send (Monday and Thursday ticked to start). Send now verifies against the board's kept copy, with the live scan only as fallback, and the button times out at 60 seconds with a check-Sent warning instead of spinning forever. A History tab beside the message lists each MarketFit send, with the last-sent date shown on the card.
 - 11-category classifier, follow-up engine, 5 watchdogs, daily 8am cron, crawler.
 - Smart Reply (3 chips, per-account reply profiles, approve-before-send).
 - Agent chat (`/dashboard/agent`) answering from mail.
