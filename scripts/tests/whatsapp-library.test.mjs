@@ -29,16 +29,19 @@ const SOC = path.join(USER_DIR, 'a@x.com', 'SOC Analyst', 'SOC.docx')
 const APPSEC = path.join(USER_DIR, 'a@x.com', 'AppSec Engineer', 'AppSec.docx')
 const JD = 'Application Security Engineer. You will run threat modeling, Burp Suite testing and OWASP Top 10 reviews for our web apps.'
 
-function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, have = null, sure = true, extra = [], hold = null, floorOk = true } = {}) {
+function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, have = null, sure = true, extra = [], hold = null, floorOk = true, kompasConsumes = false } = {}) {
   process.env.WHATSAPP_PAIR_WAIT_MS = '0'
   const store = new Map()
-  const said = [], docs = [], saved = [], used = [], logs = [], runs = [], events = [], uploads = []
+  const said = [], docs = [], saved = [], used = [], logs = [], runs = [], events = [], uploads = [], channelCalls = []
   const blob = {
     getText: async k => store.get(k) ?? null, put: async (k, v) => { store.set(k, v) }, delete: async k => { store.delete(k) },
     putIfAbsent: async (k, v) => { if (store.has(k)) return false; store.set(k, v); return true },
     get: async k => (k.startsWith('tailored/') ? Buffer.from('a@x.com tailored resume') : null),
   }
   const mocks = {
+    // These cases exercise resume tailoring; channel transport has its own acceptance suite.
+    '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async input => { channelCalls.push(input); return kompasConsumes } },
+    '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('Unexpected voice transcription in tailoring test') } },
     'next/server': {},
     '@/lib/storage': { blob, readPath: async p => (p === SOC || p === APPSEC || extra.some(e => e.path === p) || String(p).includes('inbox') ? Buffer.from(`resume of a@x.com at ${p}`) : null), writePath: async () => {}, existsPath: async () => true, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: USERS },
@@ -84,7 +87,7 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
   // The choice of resume is its own module, shared with Apply on the website: it runs for real over the same stand-ins.
   mocks['@/lib/library-choose'] = load('src/lib/library-choose.ts', mocks)
   const wa = load('src/app/api/whatsapp/webhook/route.ts', mocks, '\nexport { handle, loadSession };')
-  return { wa, store, said, docs, saved, used, logs, runs, events, uploads }
+  return { wa, store, said, docs, saved, used, logs, runs, events, uploads, channelCalls }
 }
 
 test('a job description asks which email; "1" starts from the agent\'s pick in Files and files the result there', async () => {
@@ -371,4 +374,27 @@ test('"Why did you pick that resume?" and "What resumes do I have?" are answered
   await b.wa.handle(N, { type: 'text', id: 'm5', text: { body: 'which resume did you use?' } }, await b.wa.loadSession(N), 'user1')
   assert.match(b.said.at(-1), /your \*AI plus AppSec\* resume/)
   assert.match(b.said.at(-1), /You asked for it by name/)
+})
+
+
+test('a message consumed by Kompas cannot also start resume tailoring', async () => {
+  const b = bot({ kompasConsumes: true })
+  await b.wa.handle('15550001', { type: 'text', id: 'channel-question', text: { body: JD } }, {}, 'user1', true)
+  assert.equal(b.channelCalls.length, 1)
+  assert.equal(b.channelCalls[0].owner, 'user1')
+  assert.equal(b.channelCalls[0].verified, true)
+  assert.equal(b.channelCalls[0].requestId, 'channel-question')
+  assert.equal(b.runs.length, 0)
+  assert.equal(b.saved.length, 0)
+  assert.equal(b.docs.length, 0)
+  assert.equal(b.said.length, 0)
+  assert.equal(b.store.size, 0)
+})
+
+test('explicit profile switching bypasses the optional Kompas channel', async () => {
+  const b = bot({ kompasConsumes: true })
+  await b.wa.handle('15550001', { type: 'text', id: 'profile-switch', text: { body: 'use 2' } }, {}, 'user1', true)
+  assert.equal(b.channelCalls.length, 0)
+  assert.equal((await b.wa.loadSession('15550001')).last?.email, 'b@y.com')
+  assert.equal(b.runs.length, 0)
 })

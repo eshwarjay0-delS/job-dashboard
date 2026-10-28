@@ -65,3 +65,16 @@ Regression comparison: patched full suite completed 1,374 tests: 1,347 pass / 27
 Release evidence: [PR #100](https://github.com/eshwarjay0-delS/job-dashboard/pull/100) merged as `0934ed6a2b6992b8bd1597a44c4d4a448d4dfc61`. Vercel preview passed at `77cdcf11f1cc8f68420e922fdab3317e9abf7fa8`; production `dpl_4HWPWqSHCeqWZEZi5QCMFWAw9wxs` read back READY, target production, exact merge SHA and live alias `job-dashboard-fawn.vercel.app`, aliasError null. Existing PDF-to-Word suite: 4/4 pass. Code deployment is verified; no real Meta message delivery or model-quality acceptance is claimed.
 
 Next approved slice: repair the evaluation runner FIXTURES regression and older WhatsApp harness failures while retaining assertions; desktop synchronization and live delivery acceptance remain separate.
+
+
+## Tailoring test harness restoration — 28 October
+
+Continue owner-approved WhatsApp reliability work from master 30ec8d9. Legacy tailoring tests could no longer import the webhook after the Kompas channel and voice imports were added. Their harnesses now provide explicit boundaries: the channel returns not-consumed for tailoring scenarios, and unexpected voice transcription throws. Runtime code and all existing assertions are unchanged. Separate channel acceptance tests remain in the focused run.
+
+Two new route behavior checks verify that a Kompas-consumed message cannot also generate/store/send a tailored resume, and that explicit profile switching bypasses the optional Kompas channel and persists the selected email. Account, verified flag and request ID forwarding are asserted. Focused validation: 60/60 tests pass; TypeScript passes. Full regression result follows. No real messages or model calls.
+
+Production before this change was READY at 30ec8d9 on job-dashboard-fawn.vercel.app. Kompas Continuous Voice Delivery remains enabled; this work does not edit voice/native runtime. No separately named Bible-Keeper task appeared in accessible tasks. Original Oct17 incident acceptance still requires the original JD/resume/generated artifact and trace; these harness repairs are not evidence of live resume match or delivery success.
+
+Four remaining source-contract failures were traced to prior runtime changes: generic operation failures now use a sanitized service-unavailable reply rather than always attributing them to an AI provider; failed tailoring uses a concise retry reply; unchanged generation takes the existing library fallback or explicitly reports no changes. Source assertions now require those actual branches, preserving raw-error exclusion and unchanged-result safeguards. Added runtime-harness checks confirm failed and unchanged direct rewrites send no document, release their request claims, and report the failure without exposing the mock provider error. These updates do not change or newly authorize fallback behavior.
+
+Final validation: full hardening suite 1,378/1,378 pass, zero failures, 71.0 seconds; focused channel/tailoring 60/60; source/failure reconciliation 44/44; TypeScript and diff checks pass. Supersedes the previous 22-failure status for this revision only. This is offline regression evidence, not live resume-match or WhatsApp delivery acceptance.
