@@ -290,3 +290,14 @@ test("21. A spoken casual message before sources does not overwrite resume or JD
   assert.match(parsed.sent[0],/Send your resume/)
   assert.equal([...sessions.values()][0].sources.jd,jd)
 })
+
+test('shared web link identifies the same session and repeated kompas retains it', async () => {
+  reset()
+  const first = await execute(t('kompas'))
+  const session = [...sessions.values()][0]
+  assert.ok(first.sent[0].includes(`/dashboard/kompas/shared/${session.id}`))
+  assert.match(first.sent[0], /sign in to the same account/)
+  const repeat = await execute(t('kompas'))
+  assert.ok(repeat.sent[0].includes(`/dashboard/kompas/shared/${session.id}`))
+  assert.equal(sessions.size, 1)
+})
