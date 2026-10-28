@@ -20,6 +20,7 @@ const scenarios = [
   [4, 'What clients have you worked with?', 'guarded-final'],
   [2, 'What did you personally achieve in that project?', 'guarded-final'],
   [2, 'What would you bring to our team?', 'guarded-final'],
+  [2, 'What would you bring to BNY?', 'guarded-final'],
   [2, 'Tell me about your biggest achievement.', 'guarded-final'],
   [2, 'What is NIST CSF?', 'progressive'],
   [2, 'Explain the difference between CRI and NIST.', 'progressive'],
@@ -30,7 +31,7 @@ const scenarios = [
   [2, 'Compare impact, likelihood, and residual risk.', 'progressive'],
 ]
 for(let n=1;n<=scenarios.length;n++){
- test('safe spoken streaming cumulative round '+n+' / 20',()=>{
+ test('safe spoken streaming cumulative round '+n+' / 21',()=>{
   for(const [tier,q,want] of scenarios.slice(0,n)){
     const got=answerStreamPolicy(tier,q)
     assert.equal(got,want,q)
