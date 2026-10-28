@@ -49,15 +49,12 @@ test('missingStructure flags a design answer with no alternative, passes one wit
   assert.deepEqual(missingStructure(withAltPhrased, opts), [])
 })
 
-test('missingStructure flags a director practice opening with no owner, passes a named one', () => {
-  const opts = { level: "director", register: "practice", shape: "", tier: 1 }
-  const without = "Risk acceptance means we acknowledge the vulnerability, document its business impact, and decide not to fix it. The owner signed off later."
-  assert.deepEqual(missingStructure(without, opts), ["the decision owner named in sentence one"])
-  const withOwner = "The product manager decided to accept the risk and own the exception. Remediation was required elsewhere."
+test('Director speech does not force an unasked decision owner', () => {
+  const opts = { level: 'director', register: 'practice', shape: '', tier: 1 }
+  const without = 'Risk acceptance means we acknowledge the vulnerability, document its business impact, and decide not to fix it.'
+  const withOwner = 'The product manager decided to accept the risk and own the exception.'
+  assert.deepEqual(missingStructure(without, opts), [])
   assert.deepEqual(missingStructure(withOwner, opts), [])
-  // Intro answers are out of scope. A director compare question registers
-  // as concept, and round 4 proved the practice-only gate let its owner
-  // requirement never fire, so concept directors now flag too.
   assert.deepEqual(missingStructure(without, { ...opts, tier: 0 }), [])
-  assert.deepEqual(missingStructure(without, { ...opts, register: "concept" }), ["the decision owner named in sentence one"])
+  assert.deepEqual(missingStructure(without, { ...opts, register: 'concept' }), [])
 })
