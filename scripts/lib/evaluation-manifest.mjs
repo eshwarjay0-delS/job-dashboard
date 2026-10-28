@@ -2,6 +2,7 @@
 export function buildManifest({ status, stage, round, fixture, caseCount, records, hashes, code, completedAt }) {
  return {
   status,
+  quality: 'unverified',
   stage,
   round,
   fixture,
