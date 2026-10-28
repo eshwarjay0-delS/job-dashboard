@@ -93,3 +93,17 @@ export function latestInterviewerAsk(input: string): string {
  }
  return text
 }
+
+
+/** Conservative, well-established correctness fixes. Not a general hallucination detector. */
+export function correctVerifiedPresentationErrors(input:string):string {
+ let answer=String(input||'')
+ // The CSF 2.0 functions are Govern, Identify, Protect, Detect, Respond and Recover.
+ answer=answer.replace(/(\b(?:NIST\s+)?(?:CSF|Cybersecurity Framework)\s*2\.0\b[^.!?]{0,90}?)\b(?:five|5) functions\b/gi,'$1six functions')
+ // There is no universal NIST SP 800-53 residual-risk subtraction factor.
+ answer=answer.replace(/[^.!?]*\b(?:applying (?:the )?)?(?:NIST\s*(?:SP\s*)?)?800[-‐‑–— ]53 residual[-‐‑–— ]?risk factor\b[^.!?]*[.!?]/gi,
+  ' I assess residual risk by checking what exposure remains after the actual controls are tested.')
+ answer=answer.replace(/\[(?:beat|breath|pause)\]|\((?:pause|beat|breath)\)/gi,' ')
+  .replace(/__([^_\n]{1,70})__/g,'$1').replace(/\*\*([^*\n]{1,100})\*\*/g,'$1')
+ return answer.replace(/\s+/g,' ').replace(/\s+([,.;!?])/g,'$1').trim()
+}
