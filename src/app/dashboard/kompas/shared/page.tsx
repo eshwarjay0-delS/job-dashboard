@@ -27,8 +27,9 @@ export default function SharedSessions() {
     return () => { clearTimeout(initial); current.current?.abort() }
   }, [refresh])
   return <section style={{ maxWidth: 900, margin: '0 auto', padding: '32px 20px' }}>
+    <a href="/dashboard/kompas">Back to Kompas workspace</a>
     <h1 style={{ fontSize: 'clamp(28px, 5vw, 44px)' }}>Your shared Kompas chats</h1>
-    <p>Continue a WhatsApp conversation using the same resume, job description and answer history.</p>
+    <p>Continue a WhatsApp conversation using the same resume, job description and answer history. Browser-local Kompas sessions are separate and do not appear here.</p>
     <button type="button" onClick={() => void refresh()} disabled={loading}>Refresh sessions</button>
     {loading && <p role="status">Loading sessions…</p>}
     {error && <p role="alert">{error}</p>}

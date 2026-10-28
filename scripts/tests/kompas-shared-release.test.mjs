@@ -52,3 +52,20 @@ test('all assets use the canonical release before stale public files', async () 
 test('upstream error pages cannot masquerade as a working shell', () => {
   assert.throws(()=>mountKompasHtml('<html><head></head><body>Not found</body></html>'))
 })
+
+test('canonical hosted workspace exposes shared chats without changing native assets or local session controls', () => {
+  const source = readFileSync(new URL('../../public/kompas/index.html', import.meta.url), 'utf8')
+  const mounted = mountKompasHtml(source)
+  const dashboard = mounted.match(/<section[^>]*id="view-dashboard"[\s\S]*?<\/section>/)[0]
+  assert.ok(!source.includes('id="mfSharedChats"'), 'packaged native source stays unchanged')
+  assert.equal((dashboard.match(/id="mfSharedChats"/g) || []).length, 1)
+  assert.match(dashboard, /href="\/dashboard\/kompas\/shared"/)
+  assert.match(dashboard, /not transferred automatically/)
+  assert.match(dashboard, /id="newSessionBtn"/)
+  assert.match(dashboard, /id="sessionList"/)
+  assert.equal((mountKompasHtml(mounted).match(/id="mfSharedChats"/g) || []).length, 1)
+  const scripts = text => [...text.matchAll(/<script[^>]+src="([^"]+)"/g)].map(m => m[1])
+  assert.deepEqual(scripts(mounted), scripts(source))
+  const catalog = readFileSync(new URL('../../src/app/dashboard/kompas/shared/page.tsx', import.meta.url), 'utf8')
+  assert.match(catalog, /<a href="\/dashboard\/kompas">Back to Kompas workspace<\/a>/, 'shell return uses a full document navigation')
+})
