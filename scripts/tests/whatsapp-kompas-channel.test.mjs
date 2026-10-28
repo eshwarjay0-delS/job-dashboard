@@ -23,7 +23,10 @@ const blob = {
     return true
   },
 }
+const registered = []
+let catalogFails = false
 const store = {
+  remember: async (owner,id) => { if(catalogFails)throw Error("Catalog unavailable");registered.push({owner,id});return true },
   create: async owner => {
     const id = String(++seq).padStart(8, "0") + "-1111-4111-8111-111111111111"
     const value = { id, owner, revision: 0, sources: { mode: "kompas", documents: [] }, history: [] }
@@ -300,4 +303,17 @@ test('shared web link identifies the same session and repeated kompas retains it
   const repeat = await execute(t('kompas'))
   assert.ok(repeat.sent[0].includes(`/dashboard/kompas/shared/${session.id}`))
   assert.equal(sessions.size, 1)
+})
+
+test('catalog failures do not block an active kompas reply',async()=>{
+ catalogFails=true
+ try {
+  const messages=[]
+  await module.exports.handleWhatsAppKompas({from:'15550009999',owner:'catalog-owner',verified:true,requestId:'catalog-test',msg:{type:'text',text:{body:'kompas'}},send:async text=>messages.push(text)})
+  assert.match(messages[0],/Kompas started/)
+  catalogFails=false
+  await module.exports.handleWhatsAppKompas({from:'15550009999',owner:'catalog-owner',verified:true,requestId:'catalog-retry',msg:{type:'text',text:{body:'kompas'}},send:async text=>messages.push(text)})
+  assert.ok(registered.some(s=>s.owner==='catalog-owner'))
+  assert.match(messages[1],/already active/)
+ } finally { catalogFails=false }
 })

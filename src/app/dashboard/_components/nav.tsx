@@ -71,6 +71,7 @@ export const NAV_TABS: NavTab[] = [
     items: [
       // One page for both since 8 Oct 2026 (the owner: "Combine kompas flow and transcribe to be in one page"). The old
       // address, /dashboard/kompas/transcribe, sends people to this page with Transcribe showing.
+      { href: "/dashboard/kompas/shared", label: "WhatsApp chats", icon: ICON.mic, what: "Continue your shared Kompas conversations." },
       { href: "/dashboard/kompas/flow", label: "Kompas Flow", icon: ICON.mic, what: "Speak, and get clean text you can paste anywhere." },
     ],
   },

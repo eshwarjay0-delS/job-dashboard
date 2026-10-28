@@ -63,5 +63,39 @@ export function sharedKompasStore(storage: Store = blob) {
     if (!current || current.revision !== expected) return false
     return storage.putIfAbsent(prefix(owner, next.id) + String(next.revision).padStart(10, '0') + '.json', JSON.stringify(next))
   }
-  return { read, create, commit }
+  type Catalog = { owner: string; revision: number; sessions: { id: string; addedAt: string }[] }
+  const catalogKey = (owner: string, revision: number) => `kompas/catalog/${account(owner)}/${String(revision).padStart(10, '0')}.json`
+  async function catalog(owner: string): Promise<Catalog> {
+    const get = (n: number) => storage.getText(catalogKey(owner, n))
+    const first = await get(0)
+    if (first === null) return { owner, revision: -1, sessions: [] }
+    let low = 0, high = 1
+    const max = 9999999999
+    while (high < max && await get(high) !== null) { low = high; high = Math.min(max, high * 2) }
+    while (high - low > 1) {
+      const mid = low + Math.floor((high - low) / 2)
+      if (await get(mid) !== null) low = mid
+      else high = mid
+    }
+    const value = JSON.parse(low === 0 ? first : (await get(low)) || 'null') as Catalog
+    if (!value || value.owner !== owner || value.revision !== low || !Array.isArray(value.sessions) ||
+        value.sessions.length > 100 || value.sessions.some(s => !s || !validId(s.id) || typeof s.addedAt !== 'string' || !Number.isFinite(Date.parse(s.addedAt))) ||
+        new Set(value.sessions.map(s => s.id)).size !== value.sessions.length) throw new Error('Invalid session catalog')
+    return value
+  }
+  /** Discovery metadata only. Registration never authorizes access to a session. */
+  async function remember(owner: string, id: string): Promise<boolean> {
+    if (!await read(owner, id)) return false
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const current = await catalog(owner)
+      if (current.sessions.some(s => s.id === id)) return true
+      const revision = current.revision + 1
+      if (revision >= 9999999999) throw new Error('Session catalog exhausted')
+      const next: Catalog = { owner, revision, sessions: [{ id, addedAt: new Date().toISOString() }, ...current.sessions].slice(0, 100) }
+      if (await storage.putIfAbsent(catalogKey(owner, revision), JSON.stringify(next))) return true
+    }
+    return false
+  }
+  async function list(owner: string) { return (await catalog(owner)).sessions.map(({ id, addedAt }) => ({ id, addedAt })) }
+  return { read, create, commit, remember, list }
 }

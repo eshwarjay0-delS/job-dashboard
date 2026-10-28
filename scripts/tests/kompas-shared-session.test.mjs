@@ -61,3 +61,26 @@ test('sessions support deep revision histories with no ListObjects access',async
  assert.equal(again.revision,55)
  assert.equal(again.history.length,55)
 })
+
+for(let fold=1;fold<=10;fold++) test(`catalog fold ${fold}: concurrent registrations survive without listing or duplicates`,async()=>{
+ const db=setup(), sessions=await Promise.all(Array.from({length:fold},()=>db.create('alice')))
+ assert.ok((await Promise.all(sessions.map(s=>db.remember('alice',s.id)))).every(Boolean))
+ assert.ok((await Promise.all(sessions.map(s=>db.remember('alice',s.id)))).every(Boolean))
+ const list=await db.list('alice')
+ assert.equal(list.length,fold)
+ assert.equal(new Set(list.map(s=>s.id)).size,fold)
+ assert.equal((await db.list('bob')).length,0)
+ assert.equal(await db.remember('bob',sessions[0].id),false)
+ assert.ok(list.every(s=>Object.keys(s).sort().join(',')==='addedAt,id'))
+})
+test('catalog retains latest 100 registrations while older sessions remain readable',async()=>{
+ const db=setup(), sessions=[]
+ for(let i=0;i<103;i++){const s=await db.create('alice');sessions.push(s);assert.equal(await db.remember('alice',s.id),true)}
+ const list=await db.list('alice')
+ assert.equal(list.length,100);assert.equal(list[0].id,sessions[102].id);assert.equal(list.at(-1).id,sessions[3].id)
+ assert.ok(await db.read('alice',sessions[0].id))
+})
+test('catalog fails closed on corrupted owner metadata',async()=>{
+ const db=mod.exports.sharedKompasStore({getText:async key=>key.endsWith('/0000000000.json')?JSON.stringify({owner:'bob',revision:0,sessions:[]}):null,putIfAbsent:async()=>true})
+ await assert.rejects(db.list('alice'),/Invalid session catalog/)
+})

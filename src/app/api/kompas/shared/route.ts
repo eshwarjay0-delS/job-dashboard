@@ -14,9 +14,16 @@ export async function GET(request: NextRequest) {
   const user = await authenticatedUser(request)
   if (!user) return reply({ error: 'Sign in with the MarketFit account linked to your WhatsApp.' }, 401)
   const id = request.nextUrl.searchParams.get('id')
+  if (id === null) {
+    try { return reply({ sessions: await sharedKompasStore().list(user.id) }) }
+    catch { return reply({ error: 'Sessions unavailable. Please retry.' }, 503) }
+  }
   if (!validId(id)) return reply({ error: 'Invalid session link.' }, 400)
   try {
     const session = await sharedKompasStore().read(user.id, id)
+    if (session) {
+      try { await sharedKompasStore().remember(user.id, id) } catch { /* Retry discovery on the next owned visit. */ }
+    }
     return session ? reply(view(session)) : reply({ error: 'Session not found for this account.' }, 404)
   } catch { return reply({ error: 'Session unavailable. Please retry.' }, 503) }
 }
