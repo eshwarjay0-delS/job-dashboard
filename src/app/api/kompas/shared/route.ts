@@ -10,6 +10,7 @@ const validId = (id: unknown): id is string => typeof id === 'string' && /^[a-f0
 const reply = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
 const view = (s: SharedKompasSession) => ({ id: s.id, revision: s.revision, history: s.history,
   ready: Boolean(s.sources.resume && s.sources.jd), hasResume: Boolean(s.sources.resume), hasJd: Boolean(s.sources.jd),
+  supportingDocuments: s.sources.documents.map((d, index) => ({ index, name: d.name, characters: d.text.length })),
   documentCount: s.sources.documents.length, pending: Boolean(s.pending && s.pending.expiresAt > Date.now()) })
 export async function GET(request: NextRequest) {
   const user = await authenticatedUser(request)
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const user = await authenticatedUser(request)
   if (!user) return reply({ error: 'Sign in with the MarketFit account linked to your WhatsApp.' }, 401)
-  let input: { id?: unknown; revision?: unknown; role?: unknown; name?: unknown; text?: unknown }
+  let input: { id?: unknown; revision?: unknown; role?: unknown; name?: unknown; text?: unknown; operation?: unknown; index?: unknown }
   try {
     const raw = await request.text()
     if (raw.length > 400000) return reply({ error: 'Source request is too large.' }, 413)
@@ -66,7 +67,9 @@ export async function PATCH(request: NextRequest) {
   } catch { return reply({ error: 'Invalid source request.' }, 400) }
   if (!validId(input.id) || typeof input.revision !== 'number' || !Number.isSafeInteger(input.revision) || input.revision < 0 ||
       !['resume', 'jd', 'support'].includes(String(input.role)) || typeof input.role !== 'string' ||
-      typeof input.text !== 'string' || !input.text.trim() ||
+      (input.operation !== undefined && (typeof input.operation !== 'string' || !['add', 'replace', 'remove'].includes(input.operation))) ||
+      ((input.operation === 'replace' || input.operation === 'remove') && (input.role !== 'support' || typeof input.index !== 'number' || !Number.isSafeInteger(input.index) || input.index < 0)) ||
+      (input.operation !== 'remove' && (typeof input.text !== 'string' || !input.text.trim())) ||
       (input.name !== undefined && (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 100)))
     return reply({ error: 'Provide a source type, readable text and the current revision.' }, 400)
   const role = input.role as 'resume' | 'jd' | 'support'
@@ -76,10 +79,23 @@ export async function PATCH(request: NextRequest) {
     const session = await store.read(user.id, input.id)
     if (!session) return reply({ error: 'Session not found for this account.' }, 404)
     if (session.revision !== input.revision) return reply({ error: 'The conversation changed. Review the latest revision before saving your draft.' }, 409)
-    const change = kompasTransition(session.sources, { kind: 'document', role, name, text: input.text })
-    if (change.action !== 'setup' || !change.state) return reply({ error: change.prompt || 'Source cannot be used.' }, 422)
-    if (JSON.stringify(change.state) === JSON.stringify(session.sources)) return reply(view(session))
-    const next = { ...session, revision: session.revision + 1, sources: change.state, history: [], ledger: undefined, pending: undefined }
+    const editing = input.operation === 'replace' || input.operation === 'remove'
+    const index = input.index as number
+    if (editing && index >= session.sources.documents.length) return reply({ error: 'Supporting document not found at this revision.' }, 400)
+    const remaining = editing ? session.sources.documents.filter((_, i) => i !== index) : session.sources.documents
+    let sources = { ...session.sources, documents: remaining }
+    if (input.operation !== 'remove') {
+      const change = kompasTransition(sources, { kind: 'document', role, name, text: input.text as string })
+      if (change.action !== 'setup' || !change.state) return reply({ error: change.prompt || 'Source cannot be used.' }, 422)
+      sources = change.state
+      // Validate the replacement against the remaining budget, then retain document order.
+      if (input.operation === 'replace') {
+        const replacement = sources.documents.at(-1)!
+        sources = { ...sources, documents: session.sources.documents.map((d, i) => i === index ? replacement : d) }
+      }
+    }
+    if (JSON.stringify(sources) === JSON.stringify(session.sources)) return reply(view(session))
+    const next = { ...session, revision: session.revision + 1, sources, history: [], ledger: undefined, pending: undefined }
     if (!await store.commit(user.id, session.revision, next)) return reply({ error: 'The conversation changed. Review the latest revision before saving your draft.' }, 409)
     return reply(view(next))
   } catch { return reply({ error: 'Source could not be saved. Refresh before retrying.' }, 503) }
