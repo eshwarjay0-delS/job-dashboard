@@ -43,7 +43,7 @@ jobs:
         run: node --test scripts/tests/kompas-interview-precision.test.mjs scripts/tests/kompas-shape-calibration.test.mjs
 
       - name: Verify grounded spoken streaming and original-source claims
-        run: node --test scripts/tests/kompas-safe-spoken-stream.test.mjs
+        run: node --test scripts/tests/kompas-safe-spoken-stream.test.mjs scripts/tests/kompas-deploy-build.test.mjs
 
       - name: Verify Kompas migration asset closure and lossless import
         run: node --experimental-strip-types --test scripts/tests/kompas-migration-assets.test.mjs scripts/tests/kompas-review-parity.test.mjs scripts/tests/kompas-blend-harvest.test.mjs scripts/tests/kompas-three-levels.test.mjs scripts/tests/kompas-desktop-three-levels.test.mjs scripts/tests/kompas-blend.test.mjs scripts/tests/kompas-session-recap.test.mjs scripts/tests/kompas-grounding-route.test.mjs
