@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 type Snapshot = { id: string; revision: number; history: { q: string; a: string }[]; ready: boolean; hasResume: boolean; hasJd: boolean; documentCount: number; pending: boolean }
 export default function SharedChat({ id }: { id: string }) {
@@ -55,6 +56,7 @@ export default function SharedChat({ id }: { id: string }) {
     finally { if (alive.current) setBusy(false) }
   }
   return <section style={{ maxWidth: 880, margin: '0 auto' }}>
+    <Link href="/dashboard/kompas/shared">All shared chats</Link>
     <p style={{ color: 'var(--muted)' }}>KOMPAS · SHARED CHAT</p>
     <h1 style={{ fontSize: 'clamp(28px, 5vw, 44px)', lineHeight: 1.15 }}>Continue your WhatsApp conversation</h1>
     <p>The same resume, job description and conversation are used here. Updates appear every five seconds while this page is visible.</p>

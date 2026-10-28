@@ -116,6 +116,9 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
     return false
   }
   const sessions = sharedKompasStore()
+  const remember = async (id: string) => {
+    try { await sessions.remember(owner, id) } catch { /* Discovery can retry on the next kompas command; chat remains usable. */ }
+  }
   let channel: Channel
   try {
     channel = await readChannel(owner, from)
@@ -150,17 +153,20 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
   }
   if (command === "kompas") {
     if (channel.sessionId) {
+      await remember(channel.sessionId)
       await send("Kompas is already active. Send your resume and job description, then your questions. Send revert to return to tailoring." + sharedLink(channel.sessionId))
       return true
     }
     for (let i = 0; i < 4; i++) {
       const created = await sessions.create(owner)
       if (await changeChannel(owner, from, channel, created.id)) {
+        await remember(created.id)
         await send("Kompas started. Send your resume and job description in either order. You may paste the JD and attach Resume.docx or other supporting PDF, DOCX or TXT files. Send start when ready." + sharedLink(created.id))
         return true
       }
       channel = await readChannel(owner, from)
       if (channel.sessionId) {
+        await remember(channel.sessionId)
         await send("Kompas is already active. Send your resume, job description or a question." + sharedLink(channel.sessionId))
         return true
       }
