@@ -70,7 +70,7 @@ test('verifier makes no structural edits when no claim is flagged',async()=>{
 })
 test('shared answer service never emits personal model deltas before final guards',()=>{
  const service=readFileSync(new URL('../../src/lib/kompasAnswerService.ts',import.meta.url),'utf8')
- assert.match(service,/if \(releaseProvisionalDelta\(job\.streamPolicy\)\) emit\(\{ type: "delta", text: d \}\)/)
+ assert.match(service,/if \(releaseProvisionalDelta\(job\.streamPolicy\)\)\s*\{[\s\S]{0,240}emit\(\{ type: "delta", text: d \}\)/)
  assert.match(service,/mustEmitFinalReplacement\(job\.streamPolicy, finalText, raw\)/)
  assert.match(service,/streamPolicy: answerStreamPolicy\(tier, question\)/)
  assert.match(service,/streamPolicy: job\.streamPolicy/)
