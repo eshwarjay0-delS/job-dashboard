@@ -1,0 +1,36 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { runInNewContext } from 'node:vm'
+import ts from 'typescript'
+const require=createRequire(import.meta.url)
+function moduleAt(path,deps){const m={exports:{}};runInNewContext(ts.transpileModule(readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module:m,exports:m.exports,Date,require:n=>n in deps?deps[n]:require(n)});return m.exports}
+const reducer=moduleAt('src/lib/whatsapp-kompas.ts',{})
+const stores=moduleAt('src/lib/kompas-session-store.ts',{'@/lib/storage':{blob:{}}})
+async function setup(){
+ const files=new Map();let user={id:'alice'},fail=false,writes=0
+ const db=stores.sharedKompasStore({getText:async k=>{if(fail)throw Error('secret bucket detail');return files.get(k)??null},putIfAbsent:async(k,v)=>{if(files.has(k))return false;files.set(k,v);writes++;return true}})
+ let s=await db.create('alice');await db.commit('alice',0,{...s,revision:1,sources:{mode:'kompas',resume:'Original resume',jd:'Original JD',documents:[]},history:[{q:'Old Q',a:'Old A'}],ledger:{secret:'old'}});s=await db.read('alice',s.id)
+ const api=moduleAt('src/app/api/kompas/shared/route.ts',{'next/server':{NextResponse:Response},'@/lib/authBoundary':{authenticatedUser:async()=>user},'@/lib/kompas-session-store':{sharedKompasStore:()=>db},'@/lib/kompas-shared-turn':{},'@/lib/whatsapp-kompas':reducer})
+ const body={id:s.id,revision:1,role:'resume',text:'Updated resume',owner:'mallory'}
+ const run=b=>api.PATCH({text:async()=>typeof b==='string'?b:JSON.stringify(b)})
+ return {api,db,body,run,get writes(){return writes},set user(v){user=v},set fail(v){fail=v}}
+}
+test('source editing rejects signed-out and another account before mutation',async()=>{const h=await setup(),n=h.writes;h.user=null;let r=await h.run(h.body);assert.equal(r.status,401);assert.equal(r.headers.get('cache-control'),'no-store');h.user={id:'bob'};assert.equal((await h.run(h.body)).status,404);assert.equal(h.writes,n)})
+test('source change preserves other evidence and resets active context without leaking text',async()=>{const h=await setup();const r=await h.run(h.body);assert.equal(r.status,200);const view=await r.json();assert.equal(view.revision,2);assert.equal(view.history.length,0);assert.doesNotMatch(JSON.stringify(view),/Updated resume|Original JD|alice|secret/);const s=await h.db.read('alice',h.body.id);assert.equal(s.sources.resume,'Updated resume');assert.equal(s.sources.jd,'Original JD');assert.equal(s.ledger,undefined);assert.equal(s.pending,undefined)})
+test('identical replacement is a no-op preserving revision/history',async()=>{const h=await setup();assert.equal((await h.run({...h.body,text:'Original resume'})).status,200);const s=await h.db.read('alice',h.body.id);assert.equal(s.revision,1);assert.equal(s.history.length,1)})
+test('source bounds reject overflow and retain evidence; exact maximum accepted',async()=>{for(const [role,limit]of [['resume',60000],['jd',8000]]){const h=await setup();assert.equal((await h.run({...h.body,role,text:'x'.repeat(limit+1)})).status,422);assert.equal((await h.db.read('alice',h.body.id)).revision,1);assert.equal((await h.run({...h.body,role,text:'x'.repeat(limit)})).status,200)}})
+test('support budget includes names and separators and rejects document eleven',async()=>{const h=await setup();assert.equal((await h.run({...h.body,role:'support',name:'n',text:'x'.repeat(7995)})).status,200);assert.equal((await h.run({...h.body,revision:2,role:'support',text:'extra'})).status,422);const g=await setup();for(let i=0;i<10;i++)assert.equal((await g.run({...g.body,revision:i+1,role:'support',text:'note '+i})).status,200);assert.equal((await g.run({...g.body,revision:11,role:'support',text:'eleven'})).status,422)})
+test('malformed inputs cannot mutate stored evidence',async()=>{for(const patch of [{id:'../wrong'},{revision:-1},{revision:1.5},{role:'question'},{text:''},{text:123},{name:'x'.repeat(101)}]){const h=await setup();assert.equal((await h.run({...h.body,...patch})).status,400);assert.equal((await h.db.read('alice',h.body.id)).revision,1)}const h=await setup();assert.equal((await h.run('x'.repeat(400001))).status,413);assert.equal((await h.run('null')).status,400)})
+for(let fold=1;fold<=10;fold++)test(`source fold ${fold}: concurrent editors cannot overwrite the winning source`,async()=>{const h=await setup();const responses=await Promise.all(Array.from({length:fold+1},(_,i)=>h.run({...h.body,text:'candidate '+i})));assert.equal(responses.filter(r=>r.status===200).length,1);assert.equal(responses.filter(r=>r.status===409).length,fold);const s=await h.db.read('alice',h.body.id);assert.equal(s.revision,2);assert.match(s.sources.resume,/candidate/);assert.equal((await h.run(h.body)).status,409)})
+test('storage failures are sanitized and non-cacheable',async()=>{const h=await setup();h.fail=true;const r=await h.run(h.body);assert.equal(r.status,503);assert.equal(r.headers.get('cache-control'),'no-store');assert.doesNotMatch(await r.text(),/secret bucket/)})
+test('web source update cancels in-flight shared answer and prevents old ledger/history commit',async()=>{
+ const h=await setup();let started,finish;const began=new Promise(r=>started=r)
+ const {sharedKompasTurn}=moduleAt('src/lib/kompas-shared-turn.ts',{'./kompasAnswerService':{},'./kompas-session-store':{}})
+ const pending=sharedKompasTurn('alice',h.body.id,1,'req','Why?',{store:h.db,now:()=>Date.now(),answer:async()=>{started();return new Promise(r=>finish=r)}})
+ await began
+ assert.equal((await h.run({...h.body,revision:2,role:'jd',text:'New job'})).status,200)
+ finish(Response.json({text:'Stale answer',ledger:{stale:true}}));assert.equal((await pending).status,'conflict')
+ const s=await h.db.read('alice',h.body.id);assert.equal(s.sources.jd,'New job');assert.equal(s.history.length,0);assert.equal(s.ledger,undefined);assert.equal(s.pending,undefined)
+})

@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import SourceEditor from './source-editor'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 type Snapshot = { id: string; revision: number; history: { q: string; a: string }[]; ready: boolean; hasResume: boolean; hasJd: boolean; documentCount: number; pending: boolean }
 export default function SharedChat({ id }: { id: string }) {
@@ -65,7 +66,8 @@ export default function SharedChat({ id }: { id: string }) {
     {!session && !error && <p role="status">Loading your conversation…</p>}
     {session && <>
       <p>Resume: {session.hasResume ? 'received' : 'needed'} · Job description: {session.hasJd ? 'received' : 'needed'} · Supporting documents: {session.documentCount}</p>
-      {!session.ready && <p>Send the missing resume or job description in WhatsApp, then refresh here.</p>}
+      {!session.ready && <p>Add the missing resume or job description below, or send it in WhatsApp.</p>}
+      <SourceEditor session={session} onSaved={accept} onAuthLost={() => { authLost.current = true; setSession(null); setError('Sign in again to edit sources.') }} />
       <div aria-label="Conversation history">
         {session.history.length === 0 && <p>No answers yet. Ask your first question once your sources are ready.</p>}
         {session.history.map((turn, index) => <article key={index} style={{ margin: '24px 0', padding: 20, border: '1px solid var(--border)', borderRadius: 16 }}>

@@ -10,6 +10,7 @@ function setup(){
  const m={exports:{}}
  const code=ts.transpileModule(readFileSync('src/app/api/kompas/shared/route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  runInNewContext(code,{module:m,exports:m.exports,Date,require:name=>{
+  if(name==='@/lib/whatsapp-kompas')return {}
   if(name==='next/server')return {NextResponse:Response}
   if(name==='@/lib/authBoundary')return {authenticatedUser:async()=>user}
   if(name==='@/lib/kompas-session-store')return {sharedKompasStore:()=>({list:async owner=>{calls.push(['list',owner]);if(fail)throw Error('private storage error');return owner==='alice'?[{id,addedAt:'2026-10-28T00:00:00Z'}]:[]},remember:async()=>true,read:async(owner,key)=>{calls.push(['read',owner,key]);if(fail)throw Error('private storage error');return owner===session.owner&&key===id?session:null}})}
