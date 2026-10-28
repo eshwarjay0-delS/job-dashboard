@@ -67,3 +67,29 @@ export function spokenQualityFlags(question:string,answer:string):string[] {
  if(/\b800[-‐‑–— ]53\b[^.!?]{0,80}\b(?:residual[- ]risk factor|subtract(?:ion|ing)? (?:the )?mitigated)\b/i.test(text))flags.push('unsupported-risk-formula')
  return flags
 }
+
+
+/** Isolate a new interviewer ask from earlier candidate speech or room chatter.
+ * Do not discard two genuine parts of the same interview question. */
+export function latestInterviewerAsk(input: string): string {
+ let text=String(input||'').replace(/\s+/g,' ').trim()
+ if(!text)return ''
+ const next=/\b(?:moving (?:on )?to|on to|let['’]?s (?:move|go) to) (?:the )?next question(?: is)?[,:.\s]*/gi
+ let lastEnd=-1
+ for(let m:RegExpExecArray|null;(m=next.exec(text));)lastEnd=next.lastIndex
+ if(lastEnd>=0&&lastEnd<text.length)text=text.slice(lastEnd).trim()
+ const starter=/^(?:are you familiar with|what (?:is|are|do|would|have)|how (?:do|did|would)|can you|tell me about|give me|which (?:framework|one)|why don['’]?t you)\b/i
+ const boundary=/[.!?]\s+(?=(?:are you familiar with|what (?:is|are|do|would|have)|how (?:do|did|would)|can you|tell me about|give me|which (?:framework|one)|why don['’]?t you)\b)/gi
+ let split:RegExpExecArray|null
+ while((split=boundary.exec(text))){
+  const first=text.slice(0,split.index).trim()
+  const remainder=text.slice(split.index+split[0].length-(split[0].match(/\s+$/)?.[0].length||0)).trim()
+  if(starter.test(remainder)&&!starter.test(first)&&!/\?/.test(first)){text=remainder;break}
+ }
+ const filler=/^(?:what else (?:did|do) i have\??|i don['’]?t think i (?:have|had) anything else[.!?]?)[\s,;.]*/i
+ if(filler.test(text)){
+  const rest=text.replace(filler,'').replace(/^i think you did a good job[^.!?]*[.!?]?[\s,;.]*/i,'')
+  if(starter.test(rest))text=rest.trim()
+ }
+ return text
+}
