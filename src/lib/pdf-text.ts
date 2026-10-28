@@ -15,15 +15,22 @@ export function isPdf(bytes: Uint8Array | null | undefined): boolean {
 
 const MOST_PAGES = 12
 
-export async function pdfText(bytes: Uint8Array): Promise<string> {
+export async function pdfText(bytes: Uint8Array, options: { requireComplete?: boolean } = {}): Promise<string> {
   if (!isPdf(bytes)) return ""
   try {
     const { getDocumentProxy, extractText } = await import("unpdf")
     // The reader keeps the array it is given, so it gets a copy.
     const pdf = await getDocumentProxy(new Uint8Array(bytes))
-    if (pdf.numPages > MOST_PAGES * 4) return ""   // not a resume; reading it would only take time
-    const { text } = await extractText(pdf, { mergePages: false })
-    return (Array.isArray(text) ? text : [String(text || "")]).slice(0, MOST_PAGES).join("\n").replace(/\u0000/g, "").slice(0, 200_000)
+    try {
+      // Library classification may sample pages. Interview evidence must never be sampled silently.
+      if (pdf.numPages > (options.requireComplete ? MOST_PAGES : MOST_PAGES * 4)) return ""
+      const { text } = await extractText(pdf, { mergePages: false })
+      const pages = Array.isArray(text) ? text : [String(text || "")]
+      if (options.requireComplete && pages.length !== pdf.numPages) return ""
+      const joined = pages.slice(0, MOST_PAGES).join("\n").replace(/\u0000/g, "")
+      if (options.requireComplete && joined.length > 200_000) return ""
+      return joined.slice(0, 200_000)
+    } finally { await pdf.loadingTask.destroy() }
   } catch (error) {
     console.error("[pdf-text] could not read a PDF", String(error).slice(0, 200))
     return ""
