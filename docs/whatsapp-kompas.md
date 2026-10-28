@@ -147,3 +147,7 @@ Current master 27a06b8 serves the canonical browser-local Kompas workspace throu
 Acceptance still needs a working browser with an authorized linked account. Native session convergence requires a separate coordinated implementation; the original resume incident requires its exact source/output/trace.
 
 Validation: mounted-shell tests 4/4; full regression 1454/1454, zero failures; TypeScript, focused ESLint and production webpack build pass. The real canonical HTML retains all script sources and local-session controls; repeated mounting does not duplicate the entry. Browser executable unavailable, so visual/authenticated acceptance remains open. No real messages or model calls.
+
+Release verified 28 October: PR #108 merged as 59715c31864bf6bb851ae7d5925967f9f6cde403 after preview dpl_GkFQjJTWDPvx5rwVATrQsTc1N5HK READY at 0dabcd84. Production dpl_74cAdZWqvZD5RXP6dVUFRgJqj1Gv verified READY/production through job-dashboard-fawn.vercel.app at exact merge SHA with aliasError null. Live workspace GET returns 200/no-store with exactly one shared-chat entry and the local-session disclosure; signed-out shared API GET remains 401/no-store. This is live HTML/auth-boundary verification, not authenticated browser or native synchronization acceptance.
+
+Next: explicit account-owned shared-session selection from the local workspace with no silent source migration. Coordinate native/voice runtime ownership; do not relabel a navigation link as full session synchronization.
