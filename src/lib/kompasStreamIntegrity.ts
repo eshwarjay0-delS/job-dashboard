@@ -13,7 +13,7 @@ export function answerStreamPolicy(tier: number, question: string): KompasStream
   if (tier === 0 || tier === 1 || tier === 3 || tier === 4) return "guarded-final"
   // Some T2 queries are explicitly asking for a personal achievement but fall
   // outside the classifier's narrow experience patterns.
-  if (/\b(?:what (?:did|have) you (?:personally )?(?:do|achieve|deliver)|your (?:biggest|greatest|most significant) (?:achievement|impact)|tell me about (?:your|a time you)|what (?:can|would) you bring to (?:our|the) team)\b/i.test(question)) return "guarded-final"
+  if (/\b(?:what (?:did|have) you (?:personally )?(?:do|achieve|deliver)|your (?:biggest|greatest|most significant) (?:achievement|impact)|tell me about (?:your|a time you)|what (?:can|would) you bring to (?:our|the) team|what (?:can|would) you bring (?:to|here)|(?:current|past|previous) experience (?:that|you)|highlight (?:for me )?anything|what sets you apart)\b/i.test(question)) return "guarded-final"
   return "progressive"
 }
 
