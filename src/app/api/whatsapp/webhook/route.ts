@@ -883,7 +883,10 @@ async function bootstrapLegacyResumeFailures(): Promise<number> {
     if (!userDir) continue
     const abs = path.resolve(userDir, last.used)
     if (!abs.startsWith(path.resolve(userDir) + path.sep) || !(await existsPath(abs))) continue
-    const genIndex = JSON.parse((await blob.getText(genDir(from) + "/_index.json")) || "[]") as { key: string }[]
+    const marker = "whatsapp/legacy-resume-recovery/" + from + "-" + jobKeyOf(last.jd)
+    if (await blob.exists(marker)) continue
+    let genIndex: { key: string }[] = []
+    try { genIndex = JSON.parse((await blob.getText(genDir(from) + "/_index.json")) || "[]") as { key: string }[] } catch { continue }
     const sent = await Promise.all(genIndex.slice(-30).map(async g => {
       try { const raw = await blob.getText(g.key); return raw ? JSON.parse(raw) as Gen : null } catch { return null }
     }))
@@ -894,6 +897,7 @@ async function bootstrapLegacyResumeFailures(): Promise<number> {
     await enqueueResumeRecovery({ id, from, userId, jd: last.jd, jdId, resumePath: abs,
       resumeName: path.basename(abs, ".docx"), files: { userDir, email: last.email, said: path.basename(abs),
       depth: 1, rel: last.used, abs, redo: true } })
+    await blob.putIfAbsent(marker, String(last.at))
     queued++
   }
   return queued
