@@ -747,6 +747,14 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     return files ? sendLibraryFallback(from, files, "rewrite produced no changes") : sendText(from, `The rewrite produced no changes. ${retry}`)
   }
 
+  // A low-quality or partial draft is never a completed tailored resume.
+  // Do not save it, send it as final, or silently claim a match that is not supported.
+  const coverage = result.coverage ?? result.score
+  if (result.skills_only || result.partial || !Number.isFinite(coverage) || coverage < 90 || result.quality?.status === "needs_review") {
+    console.error("[whatsapp] tailoring quality gate rejected draft", { coverage, partial: !!result.partial, skillsOnly: !!result.skills_only, status: result.quality?.status })
+    return sendText(from, "I couldn't complete a reliable tailored resume for this job description. No incomplete file was delivered or saved. Please try again later.")
+  }
+
   // A rewrite below the coverage target is still sent, with what is missing named in the caption. From 18 Oct 2026 the
   // bot held every such file back ("below the 95% floor. I have held the file"), and nearly every real job post asks
   // for something a resume cannot truthfully claim, so the resume almost never arrived (reported 19 Oct 2026: "Resume
