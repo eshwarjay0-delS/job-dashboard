@@ -63,6 +63,7 @@ function load(file, mocks = {}, extra = '') {
   runInNewContext(ts.transpileModule(src, { compilerOptions: { esModuleInterop: true, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, {
     module: testModule, exports: testModule.exports, process, console, Buffer, setTimeout,
     require: id => id in mocks ? mocks[id] : require(id),
+    clearTimeout,
   })
   return testModule.exports
 }
@@ -73,6 +74,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   let file = null
   let samePerson = true
   let sendError = null
+  let hang = false
   const statuses = ['uncertain']
   const entries = new Map()
   const blob = {
@@ -90,7 +92,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/storage': { blob, readPath: async () => Buffer.from('eshwarjay05@gmail.com'), writePath: async () => {}, deletePath: async () => {}, existsPath: async () => true },
     '@/lib/paths': { DATA_DIR: '/data' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true, resolveKeys: () => ({}), tailorKeys: k => k },
-    '@/lib/tailor': { runTailor: async () => { runs++; return acceptable } },
+    '@/lib/tailor': { runTailor: () => { runs++; return hang ? new Promise(() => {}) : Promise.resolve(acceptable) } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer', company: '', location: '' }) },
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async () => { if (sendError) throw sendError; return 'sent' } },
     '@/lib/owner': { isOwnerWhatsApp: () => false },
@@ -141,4 +143,10 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   assert.equal(runs, 3)
   assert.match(said.at(-1), /WhatsApp refused it/)
   assert.equal(said.filter(t => /run stopped before a file/.test(t)).length, 0)
+
+  hang = true
+  const stalled = generate('15550021', { jdId: 'stalled', jd: 'Cloud security job five', resumePath: '/resume.docx' }, 'user', 300)
+  const timed = await Promise.race([stalled.then(() => 'done'), new Promise(resolve => setTimeout(() => resolve('still waiting'), 2000))])
+  assert.equal(timed, 'done')
+  assert.match(said.at(-1), /could not tailor your resume just now/)
 })

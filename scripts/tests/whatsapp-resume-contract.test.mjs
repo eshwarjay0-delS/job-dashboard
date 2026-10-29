@@ -19,8 +19,12 @@ test('never silently deliver the original resume as a tailored fallback', () => 
   assert.doesNotMatch(webhook, /sendLibraryFallback\(/)
   assert.match(webhook, /if \(!acceptableWhatsAppResume\(result\)\)/)
 })
-test('skill floor only inserts candidate-supported JD terms', () => {
-  assert.match(tailor, /const left = scoreKws\.filter\(k => floorKws\.has\(k\) && forcedJdKws\.includes\(k\)/)
+test('skill floor writes every job-post skill onto the skills line and does not strip it off again', () => {
+  assert.match(tailor, /const left = scoreKws\.filter\(k => floorKws\.has\(k\) && !cur\.afterKw\.has\(k\) && !isCertification\(k\)\)/)
+  const clear = tailor.indexOf('await stripUnsupportedSkills(')
+  const floor = tailor.indexOf('await placeEverything(best)')
+  assert.ok(clear > 0 && floor > clear, 'unconfirmed tools are cleared before the floor writes the job-post terms')
+  assert.equal(tailor.indexOf('await stripUnsupportedSkills(', floor), -1)
 })
 test('repair prompts chase evidenced skills, not impossible JD-only gaps', () => {
   assert.match(tailor, /const missing = forcedJdKws\.filter\(k => !current\.afterKw\.has\(k\)\)/)

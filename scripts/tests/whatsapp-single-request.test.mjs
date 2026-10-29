@@ -14,6 +14,7 @@ function load(file, mocks = {}, extra = '') {
   runInNewContext(ts.transpileModule(src, { compilerOptions: { esModuleInterop: true, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, {
     module: testModule, exports: testModule.exports, process, console, Buffer, setTimeout,
     require: id => id in mocks ? mocks[id] : require(id),
+    clearTimeout,
   })
   return testModule.exports
 }

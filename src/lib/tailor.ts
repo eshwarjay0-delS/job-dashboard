@@ -716,9 +716,9 @@ export async function runTailor(opts: {
   // fits best. Kept only if the measured coverage rose. With no skills section it changes nothing (and says so in the
   // result's missing terms).
   const placeEverything = async (cur: Pass): Promise<Pass> => {
-    // Only the post's own skills, written in a sentence about the work (floorTerms): never a Gemini suggestion (it would
-    // be named to the person as "from the job post"), a credential, a clearance, a rank, a place or a recruiter's name.
-    const left = scoreKws.filter(k => floorKws.has(k) && forcedJdKws.includes(k) && !cur.afterKw.has(k) && !isCertification(k))
+    // The post's own skill terms (floorTerms), certifications excepted. They are written on the skills
+    // line and named in the reply. They are not written into experience bullets as work the person did.
+    const left = scoreKws.filter(k => floorKws.has(k) && !cur.afterKw.has(k) && !isCertification(k))
     if (!left.length) return cur
     // A soft skill ("problem solving", "communication skills") reads as a strength, not a tool: it goes into the summary
     // as one short sentence when the summary is a single paragraph the person left open to rewriting; a summary they
@@ -851,6 +851,14 @@ export async function runTailor(opts: {
     best = filled
   }
   if (best) best = await stripAddedCerts(best)
+  // A model sometimes writes an unconfirmed tool onto a skills line. Take those off, then the floor
+  // below writes the job post's own terms back in one labeled pass. Stripping after the floor is what
+  // left a delivered file at 47% of the job post.
+  if (best && !refine) {
+    const banned = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
+    const stripped = await stripUnsupportedSkills(best, banned)
+    if (stripped !== best) { best = stripped; usedModel = `${usedModel} + unconfirmed tools cleared before the skills floor` }
+  }
 
   // THE FLOOR. Owner, 26 Oct 2026, after two WhatsApp resumes came back at 52% and 28.5% ("JD keyword coverage") because
   // terms such as PeopleSoft Query Manager, row-level security, F5 and Cisco were never written in: "I want this to be a
@@ -871,11 +879,6 @@ export async function runTailor(opts: {
   if (best && !refine) {
     const floored = await placeEverything(best)
     if (floored !== best) { floorFrom = best; best = floored; usedModel = `${usedModel} + every job-post term on the skills section` }
-  }
-  if (best && !refine) {
-    const banned = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
-    const stripped = await stripUnsupportedSkills(best, banned)
-    if (stripped !== best) { best = stripped; usedModel = `${usedModel} + unconfirmed job-post tools removed from skills` }
   }
   if (!best) {
     // A split draft is put together a few seconds BEFORE the deadline, so "out of time" is judged with that margin and by
@@ -998,7 +1001,15 @@ export async function runTailor(opts: {
     notes.push(`JD qualification gaps not supported by candidate evidence: ${unsupportedJdKws.length}`)
   }
   notes.push(`Evidence-supported JD vocabulary retained: ${Math.round(attainableCoverage * 100)}%`)
-  const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(best.tailoredText, [k]).has(k))
+  const editedBullets = new Map((best.edits.bullets || []).map(b => [b.idx, b.text]))
+  const bulletText = [
+    ...zones.roles.flatMap(r => r.bullets.map(b => editedBullets.get(b.idx) || b.text)),
+    ...(best.edits.added || []).map(a => a.text || ""),
+  ].join("\n")
+  const floorOnSkills = new Set((best.floor || []).map(k => k.toLowerCase()))
+  // A term written only onto the skills line by the floor is named in the reply. The same term
+  // inside an experience bullet is a claim that the person did that work, and that still blocks delivery.
+  const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(bulletText, [k]).has(k) || (coveredJdKeywords(best.tailoredText, [k]).has(k) && !floorOnSkills.has(k.toLowerCase())))
   if (unverifiedAdded.length > 0) notes.push(`Unverified JD claims require candidate confirmation: ${unverifiedAdded.join(", ")}`)
   // Diagnostic codes contain no resume, JD, name or phone number.
   const qualityBlockers = [

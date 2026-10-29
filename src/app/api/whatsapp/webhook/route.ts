@@ -720,6 +720,16 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   let sending = false
   let told = false
   let failureCode = "quality_incomplete"
+  // A quiet recovery still owes the chat one sentence the first time. Repeating it on every later retry is noise.
+  const sayOutcome = async (text: string) => {
+    if (quiet) {
+      const current = await readResumeRecovery(job).catch(() => null)
+      if (current?.toldUser) return
+      await patchResumeRecovery(job, { toldUser: true }).catch(() => {})
+    }
+    told = true
+    await sendText(from, text).catch(() => {})
+  }
   let failedCandidate: { token: string; coverage: number; supportedCoverage: number } | undefined
   try {
   // Consume this pair now. Completion must not erase a newer request arriving meanwhile: the session is read again and
@@ -739,9 +749,18 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd }).catch(() => ({ role: "", company: "", location: "" }))
 
+  const tailorWithin = (opts: Parameters<typeof runTailor>[0]) => {
+    const limit = Math.max(1000, Math.min(opts.maxMs || maxMs, maxMs))
+    let timer: ReturnType<typeof setTimeout> | undefined
+    return new Promise<TailorResult>((resolve, reject) => {
+      timer = setTimeout(() => reject(new Error("Tailoring timed out")), limit)
+      const stop = () => { try { clearTimeout(timer) } catch { /* the timer already fired */ } }
+      runTailor(opts).then(value => { stop(); resolve(value) }, error => { stop(); reject(error) })
+    })
+  }
   let result: TailorResult
   try {
-    result = await runTailor({
+    result = await tailorWithin({
       jd: session.jd,
       keys,
       userResumeDir: files ? files.userDir : path.join(INBOX_DIR, digits(from)),
@@ -757,7 +776,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   } catch (e) {
     failureCode = "provider_error"
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
-    if (!quiet) { told = true; await sendText(from, "I could not tailor your resume just now. Your resume and this job are saved, and MarketFit will try again.").catch(() => {}) }
+    await sayOutcome("I could not tailor your resume just now. Your resume and this job are saved, and MarketFit will try again.")
     return;
   }
 
@@ -766,7 +785,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
     failureCode = "unchanged"
-    if (!quiet) { told = true; await sendText(from, "The rewrite produced no changes, so I did not send a file. Send *redo* to try again.").catch(() => {}) }
+    await sayOutcome("The rewrite produced no changes, so I did not send a file. Send *redo* to try again.")
     return;
   }
 
@@ -778,7 +797,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     const remaining = maxMs - elapsed - 15_000
     if (remaining >= 35_000) {
       try {
-        const fresh = await runTailor({
+        const fresh = await tailorWithin({
           jd: session.jd, keys,
           userResumeDir: files ? files.userDir : path.join(INBOX_DIR, digits(from)),
           givenPath: session.resumePath,
@@ -818,20 +837,20 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       roleCount: result.role_alignment?.length ?? 0,
       unverifiedCount: result.unverified_added_keywords?.length ?? 0,
     })
-    if (!quiet) { told = true; await sendText(from, qualityStop(result)).catch(() => {}) }
+    await sayOutcome(qualityStop(result))
     return;
   }
   const file = await blob.get(`tailored/${result.token}.docx`)
   if (!file) {
     failureCode = "file_missing"
-    if (!quiet) { told = true; await sendText(from, "I did not send a file. The draft was made but the Word file could not be opened. Your resume and this job are saved for another try.").catch(() => {}) }
+    await sayOutcome("I did not send a file. The draft was made but the Word file could not be opened. Your resume and this job are saved for another try.")
     return;
   }
 
   const source = await readPath(session.resumePath)
   if (!source || !sameResumeIdentity(await extractText(source), await extractText(file))) {
     failureCode = "identity_mismatch"
-    if (!quiet) { told = true; await sendText(from, "I did not send a file. The draft changed the name or email on the resume, so I stopped. Your original resume and this job are saved for another try.").catch(() => {}) }
+    await sayOutcome("I did not send a file. The draft changed the name or email on the resume, so I stopped. Your original resume and this job are saved for another try.")
     return;
   }
   const meta = await metaPromise
@@ -881,12 +900,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       sending = false
       failureCode = "whatsapp_http_rejected"
     } else failureCode = "delivery_unconfirmed"
-    if (!quiet) {
-      told = true
-      await sendText(from, refused
-        ? "I did not send a file. WhatsApp refused it. Your resume and this job are saved for another try."
-        : "WhatsApp did not confirm the file. I will not send a second copy in case the first one arrives. If nothing arrives, send *redo*.").catch(() => {})
-    }
+    await sayOutcome(refused
+      ? "I did not send a file. WhatsApp refused it. Your resume and this job are saved for another try."
+      : "WhatsApp did not confirm the file. I will not send a second copy in case the first one arrives. If nothing arrives, send *redo*.")
     return
   }
   if (!sentId) throw new Error("WhatsApp document send returned no message id")
@@ -902,13 +918,10 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     await deletePath(session.resumePath).catch(() => {})
   } catch (error) {
     console.error("[whatsapp] resume run stopped", String(error).slice(0, 200))
-    if (!told && !quiet) {
-      told = true
-      await sendText(from, "The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.").catch(() => {})
-    }
+    if (!told) await sayOutcome("The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.")
   } finally {
-    if (!finished && !told && !quiet) {
-      await sendText(from, "The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.").catch(() => {})
+    if (!finished && !told) {
+      await sayOutcome("The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.")
     }
     if (!finished) {
       if (sending) {
@@ -1132,9 +1145,10 @@ async function pickAndMake(from: string, job: { jd: string; jdId: string }, emai
   if (choice.kind === "unnamed") return sendText(from, `I could not find a resume called *${choice.hint}* under ${email}. Your resumes there: ${choice.have.map(t => `*${t}*`).join(", ")}. Say _use the ${choice.have[0]} resume_ and I will start from it.`)
   if (choice.kind === "unreadable") return sendText(from, `I could not open a resume in your Files that carries *${email}*. Send that resume as a *.docx* file with the job description.`)
   const { picked, rel, why } = choice
-  // The pick happens inside the same 300 s function as the rewrite (after up to PAIR_WAIT_MS of waiting for a paired
-  // file): the rewrite gets what is left, so the file is still sent in time.
-  const budget = Math.max(120_000, TAILOR_BUDGET_MS - PAIR_WAIT_MS - (Date.now() - began))
+  // The pick happens inside the same 300 s function as the rewrite. Starting a rewrite
+  // after that time is already gone is what left the chat on "I'll send a file" with nothing after it.
+  const budget = TAILOR_BUDGET_MS - PAIR_WAIT_MS - (Date.now() - began)
+  if (budget < 20_000) return sendText(from, "I did not send a file. Choosing the resume used the time I have. Send the job once more and I will start again.")
   return generate(from, { jd: job.jd, jdId: job.jdId, resumePath: picked.candidate.path, resumeName: picked.candidate.name }, userId, budget,
     { userDir, email, said: saidOf(picked, why), depth: picked.candidate.depth, rel, abs: picked.candidate.path, ...(redo ? { redo } : {}) })
 }

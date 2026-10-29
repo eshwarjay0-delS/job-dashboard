@@ -1,3 +1,7 @@
+## 2026-10-29 — A 47% job-post score was the skills line being stripped
+
+The delivered file had 100% of the skills the resume already showed and 47% of the job post, because job-post terms were removed from the skills line after they were written. Those terms are written back onto the skills line and named as from the job post. They are not written into experience as work already done. A run that does not finish still says so instead of stopping after the updating line.
+
 ## 2026-10-29 — WhatsApp refusing the file is said in the chat
 
 If WhatsApp refuses the upload, the chat says the file was not sent and the job is saved for another try. If the upload is not confirmed, it does not send a second copy. Any other stop, after the updating line, still leaves one sentence. The five-fold checks passed with this added.

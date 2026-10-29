@@ -30,6 +30,8 @@ export type ResumeRecoveryJob = {
   deliveredMessageId?: string
   deliveryState?: "accepted" | "sent" | "delivered" | "read" | "failed"
   errorCode?: string
+  /** The chat was already told this attempt did not send a file. Later quiet retries stay quiet. */
+  toldUser?: boolean
 }
 
 export const recoveryKey = (id: string) => `whatsapp/resume-recovery/${id}.json`
