@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { acceptableWhatsAppResume } from '../../src/lib/whatsapp-resume-acceptance.ts'
 import { resumeQuality } from '../../src/lib/resume-quality.ts'
+import { retryDelayMs } from '../../src/lib/whatsapp-retry-policy.ts'
 
 const draft = (overrides = {}) => ({
   token: 't-1', diff: [{ section: 'Experience', before: 'Old', after: 'New' }],
@@ -30,5 +31,12 @@ const scenarios = [
 for (const [name, result, expected] of scenarios) {
   test('WhatsApp quality regression: ' + name, () => {
     assert.equal(acceptableWhatsAppResume(result), expected)
+  })
+}
+
+const retrySchedule = [300000, 600000, 1200000, 2400000, 4800000, 9600000, 19200000, 21600000, 21600000, 21600000]
+for (let i = 0; i < retrySchedule.length; i++) {
+  test('WhatsApp recovery backoff attempt ' + (i + 1), () => {
+    assert.equal(retryDelayMs(i + 1), retrySchedule[i])
   })
 }
