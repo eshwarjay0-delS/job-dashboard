@@ -61,3 +61,26 @@ test('a Send now button the server must refuse is replaced by its reason, and a 
   assert.ok(sender.includes('Nothing was counted, so you can try again.'), 'a rolled-back refusal says nothing was counted')
   assert.ok(sender.includes('It is still counted, so it will not go twice.'), 'an ambiguous timeout still keeps the count')
 })
+
+test('a refused automatic send is never recorded: the daily job rolls it back like the tap path', () => {
+  // 29 Oct 2026: the Thursday ring recorded sends that never reached Gmail — the daily job wrote
+  // the send down first and, unlike the tap path, never rolled it back on a definite refusal, so
+  // the card showed Last sent for mail that does not exist and the slot was consumed.
+  const sender = read('src/lib/interview-followups.ts')
+  const daily = sender.slice(0, sender.indexOf('export async function sendInterviewFollowUpNow'))
+  assert.ok(daily.includes('a follow-up was refused'), 'the daily job names a definite refusal')
+  assert.ok(daily.includes('sent: x.sent.slice(0, -1)'), 'a refused automatic send rolls its record back')
+  assert.ok(daily.includes('must never consume one of the four'), 'the rollback rule is stated for the daily job')
+  assert.ok(daily.includes('a follow-up could not be sent'), 'the ambiguous timeout keeps its own branch')
+})
+
+test('history always shows the exact time of every send, never a bare date', () => {
+  // 29 Oct 2026, his words: "I need exact time always in history." A bare date cannot be checked
+  // against Gmail Sent, and one once passed for a send that never went out.
+  const board = read('src/app/dashboard/calendar/_components/interview-board.tsx')
+  const fmt = board.slice(board.indexOf('const dayTime'), board.indexOf('const digits'))
+  assert.ok(fmt.includes('hour') && fmt.includes('minute'), 'the send-time format carries hour and minute')
+  assert.equal((board.match(/Last sent \{dayTime\(/g) || []).length, 2, 'both Last sent lines show the exact time')
+  assert.ok(board.includes('<li key={at}>{dayTime(at)}</li>'), 'every History entry shows the exact time')
+  assert.ok(board.includes('day(t.at)'), 'interview dates keep the bare date format')
+})

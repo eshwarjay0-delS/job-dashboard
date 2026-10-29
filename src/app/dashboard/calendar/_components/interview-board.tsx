@@ -54,6 +54,10 @@ const pill: CSSProperties = { display: "inline-flex", alignItems: "center", minH
 const muted: CSSProperties = { fontSize: 12.5, color: "var(--text-muted)" }
 const big: CSSProperties = { minHeight: 44, padding: "0 18px", fontSize: 15, display: "inline-flex", alignItems: "center", textDecoration: "none" }
 const day = (at: number) => (at ? new Date(at).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) : "")
+// History always shows the exact time, never a bare date: a send record without its time
+// cannot be checked against Gmail Sent, and a bare date once passed for a send that never
+// went out. Interview dates keep day(); only send records use dayTime().
+const dayTime = (at: number) => (at ? new Date(at).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "")
 const digits = (phone: string) => phone.replace(/ext\..*$/i, "").replace(/\D/g, "")
 const mailto = (email: string) => { const at = email.lastIndexOf("@"); return at < 1 ? "#" : `mailto:${encodeURIComponent(email.slice(0, at))}@${encodeURIComponent(email.slice(at + 1))}` }
 const openHref = (threadId: string, account?: string) => `/dashboard/mail?open=${encodeURIComponent(threadId)}${account ? `&account=${encodeURIComponent(account)}` : ""}`
@@ -261,9 +265,9 @@ export default function InterviewBoard() {
                     <>
                       {t.forYou?.sentAt?.length ? (
                         <>
-                          <p style={{ ...muted, margin: "0 0 8px" }}>Last sent {day(t.forYou.sentAt[t.forYou.sentAt.length - 1])}.</p>
+                          <p style={{ ...muted, margin: "0 0 8px" }}>Last sent {dayTime(t.forYou.sentAt[t.forYou.sentAt.length - 1])}.</p>
                           <ul style={{ margin: "0 0 10px", paddingLeft: 18, fontSize: 14.5, lineHeight: 1.6 }}>
-                            {[...t.forYou.sentAt].reverse().map(at => <li key={at}>{day(at)}</li>)}
+                            {[...t.forYou.sentAt].reverse().map(at => <li key={at}>{dayTime(at)}</li>)}
                           </ul>
                         </>
                       ) : (
@@ -274,7 +278,7 @@ export default function InterviewBoard() {
                     <>
                       <p style={{ margin: "0 0 4px", ...muted }}>Subject: {words.subject}</p>
                       <p style={{ margin: "0 0 10px", fontSize: 14.5, lineHeight: 1.6, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{words.body}</p>
-                      {t.forYou?.sentAt?.length ? <p style={{ ...muted, margin: "0 0 10px" }}>Last sent {day(t.forYou.sentAt[t.forYou.sentAt.length - 1])}.</p> : null}
+                      {t.forYou?.sentAt?.length ? <p style={{ ...muted, margin: "0 0 10px" }}>Last sent {dayTime(t.forYou.sentAt[t.forYou.sentAt.length - 1])}.</p> : null}
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                         {sendBlock ? (
                           <p style={{ ...muted, margin: 0 }}>{sendBlock}</p>

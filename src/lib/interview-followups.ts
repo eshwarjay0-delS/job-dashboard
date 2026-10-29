@@ -44,7 +44,11 @@ export async function sendInterviewFollowUps(userId: string, myName: string, now
     // Prefer user-edited words when present; fall back to the generated draft.
     const hand = state.handed.find(h => h.id === t.id)
     const words = hand?.subject && hand?.body ? { subject: hand.subject, body: hand.body } : followUpWords(t, myName)
-    // Written down first: if the send then fails it is not tried again today, and it can never go twice.
+    // Written down first so a job that runs twice cannot send twice — but a definite Gmail
+    // refusal rolls it straight back, exactly as the tap path does. A refused automatic send
+    // must never show as Last sent, and must never consume one of the four; the next run
+    // tries it again instead. Only the ambiguous timeout below keeps its count, because the
+    // mail may still have gone out during it.
     state = noteSent(state, t.id, now)
     await writeTrackState(userId, state)
     try {
@@ -53,7 +57,15 @@ export async function sendInterviewFollowUps(userId: string, myName: string, now
         // Sent as a message of its own, as the reply box on the site sends: its subject says what it follows up on.
         body: JSON.stringify({ raw: encode(t.contact.email, words.subject, words.body) }), signal: AbortSignal.timeout(20_000),
       })
-      if (res.ok) sent++; else { failed++; console.error("[interviews] a follow-up was refused", res.status) }
+      if (res.ok) sent++
+      else {
+        failed++
+        console.error("[interviews] a follow-up was refused", res.status)
+        try {
+          state = { ...state, handed: state.handed.map(x => (x.id === t.id ? { ...x, sent: x.sent.slice(0, -1) } : x)) }
+          await writeTrackState(userId, state)
+        } catch {}
+      }
     } catch (error) { failed++; console.error("[interviews] a follow-up could not be sent", String(error).slice(0, 200)) }
   }
   return { sent, failed }
