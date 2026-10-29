@@ -1,3 +1,11 @@
+## 2026-10-29 — WhatsApp keeps the email you named, and does not promise a file it will not send
+
+**Asked:** after "use 1", later jobs still started from the other email. Help and a job post were told no AI service was on. A run said a Word file was coming, then refused it. A sent file quoted only the low whole-job percentage.
+
+**Done:** "use 1" is stored apart from the job record, so a run that already started cannot put the other email back. Help does not wait on the Kompas session store. The chat says a Word file is sent only if the run finishes cleanly, and if it does not, it says so in one message. A file that does go out names both the supported-skill percentage and the whole job-post percentage, plus the gaps.
+
+**Not claimed:** this is not on the live site until the Vercel deploy for this commit succeeds. A 10% file is still withheld when the supported skills are under 95%. Tools that are only in the job post are still not written in as experience.
+
 ## 2026-10-29 — One hundred intent folds
 
 Each fold rechecks every question before it. All 100 passed, and the rediscovery folds passed with them. A named topic is answered. "U.S." is not cut in half. This is routing, not one hundred live model answers.

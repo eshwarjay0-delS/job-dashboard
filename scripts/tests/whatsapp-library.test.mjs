@@ -46,7 +46,7 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     '@/lib/storage': { blob, readPath: async p => (p === SOC || p === APPSEC || extra.some(e => e.path === p) || String(p).includes('inbox') ? Buffer.from(`resume of a@x.com at ${p}`) : null), writePath: async () => {}, existsPath: async () => true, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data', USER_RESUMES_DIR: USERS },
     '@/lib/llm': { resolveKeys: () => ({}), hasAnyKey: () => true, keysFor: async () => ({ gemini: 'g' }), tailorKeys: k => k },
-    '@/lib/tailor': { runTailor: async o => { runs.push(o); return { token: 't1', score: 100, coverage: 100, quality: { status: 'coverage_met', matched: 3, total: 3, missing: [] }, keyword_analysis: { matched: ['owasp'], added: ['burp suite', 'threat modeling'], missing: [] } } } },
+    '@/lib/tailor': { runTailor: async o => { runs.push(o); return { token: 't1', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 3, total: 3, missing: [] }, keyword_analysis: { matched: ['owasp'], added: ['burp suite', 'threat modeling'], missing: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Application Security Engineer', company: 'Acme', location: '' }) },
     '@/lib/whatsapp': { sendText: async (to, t) => { said.push(t) }, sendDocument: async (to, f, n, caption) => { docs.push(caption); events.push('delivered'); return 'wamid-' + docs.length }, downloadMedia: async () => Buffer.from('a@x.com uploaded resume') },
     '@/lib/owner': { isOwnerWhatsApp: () => false }, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
@@ -79,6 +79,16 @@ function bot({ agent = { index: 0, why: 'same kind of role', by: 'gemini' }, hav
     },
     // Whether a resume made earlier for the job still meets the 90% floor (src/lib/made-floor.ts, 26 Oct 2026).
     '@/lib/made-floor': { madeMeetsFloor: async () => floorOk },
+    '@/lib/whatsapp-resume-acceptance': load('src/lib/whatsapp-resume-acceptance.ts'),
+    '@/lib/whatsapp-resume-recovery': {
+      enqueueResumeRecovery: async input => ({ ...input, status: 'pending' }),
+      patchResumeRecovery: async () => {},
+      deferResumeRecovery: async () => {},
+      dueResumeRecoveries: async () => [],
+      markResumeDocumentAccepted: async () => true,
+      recordResumeDeliveryStatus: async () => {},
+      readResumeRecovery: async () => null,
+    },
     '@/lib/resume-library': { jobKeyOf: jd => (jd === JD ? 'job-1' : `job-${String(jd).length}`) },
     '@/lib/library-agent': { agentPick: async () => { if (hold) await hold; return agent }, logPick: async (u, e) => { logs.push(e) }, readPicks: async (u, n = 50) => logs.slice(-n).reverse() },
     '@/lib/keywords': { extractKeywords: () => ['burp suite', 'owasp'] },
@@ -397,4 +407,26 @@ test('explicit profile switching bypasses the optional Kompas channel', async ()
   assert.equal(b.channelCalls.length, 0)
   assert.equal((await b.wa.loadSession('15550001')).last?.email, 'b@y.com')
   assert.equal(b.runs.length, 0)
+})
+
+test('use 1 stays after a finished run records the other email', async () => {
+  const b = bot()
+  const N = '15550021'
+  await b.wa.handle(N, { type: 'text', id: 'u1', text: { body: 'use 1' } }, {}, 'user1')
+  assert.match(b.said.at(-1), /every job now starts from your \*a@x\.com\*/)
+  const key = 'whatsapp/session-15550021.json'
+  const session = JSON.parse(b.store.get(key))
+  session.last = { jd: 'older job', email: 'b@y.com', at: Date.now() }
+  b.store.set(key, JSON.stringify(session))
+  const other = 'Cloud Security Engineer for AWS guardrails, IAM reviews, GuardDuty triage and Terraform policy as code.'
+  await b.wa.handle(N, { type: 'text', id: 'job', text: { body: other } }, await b.wa.loadSession(N), 'user1')
+  assert.ok(b.said.some(t => t.startsWith('On it: starting from your *a@x.com* resumes.')))
+  assert.equal(b.runs[0].givenPath, APPSEC)
+})
+
+test('help is answered even when Kompas would consume the message', async () => {
+  const b = bot({ kompasConsumes: true })
+  await b.wa.handle('15550001', { type: 'text', id: 'help-1', text: { body: 'Help' } }, {}, 'user1', true)
+  assert.equal(b.channelCalls.length, 0)
+  assert.match(b.said.at(-1), /job description/i)
 })

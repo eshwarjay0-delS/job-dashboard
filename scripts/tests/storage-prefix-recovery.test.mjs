@@ -11,7 +11,7 @@ const require = createRequire(import.meta.url)
 const ts = require("typescript")
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..")
 const compile = path => ts.transpileModule(readFileSync(resolve(root, path), "utf8"), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
 }).outputText
 
 function evaluate(code, dependencies, context = {}) {

@@ -436,8 +436,10 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
   // an interview question. Route it through the existing verified library
   // selection even if the optional Kompas state store is unavailable.
   // This specifically protects "Use 2", which was failing before selection.
+  // Help and a numbered profile switch must not wait on the Kompas session store.
+  // A storage fault there used to be reported as "no AI service is switched on".
   const profileCommand = type === "text" &&
-    /^(?:use|switch(?:\s+to)?|profile|email)\s+[1-9]\d{0,2}$/i.test(
+    /^(?:use|switch(?:\s+to)?|profile|email)\s+[1-9]\d{0,2}$|^(?:help|hi|hello|menu|start)$/i.test(
       String((msg.text as { body?: string } | undefined)?.body || "").trim(),
     )
 
@@ -525,6 +527,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
         if (cur.jdId === job.jdId) { delete cur.jd; delete cur.jdId }
         remember(cur, email)
         await saveSession(from, cur)
+        await pinProfile(from, email)
         return fromLibrary(from, job, email, userId, !!session.pending.hint, session.pending.slots, session.pending.hint ? { hint: session.pending.hint } : undefined)
       }
       if (!replyTo) return sendText(from, askWhichEmail(session.pending.slots))
@@ -544,6 +547,7 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
           const cur = await loadSession(from)
           remember(cur, email)
           await saveSession(from, cur)
+          await pinProfile(from, email)
           return sendText(from, `Got it: every job now starts from your *${email}* resumes. Send a job description whenever you're ready.`)
         }
       }
@@ -563,9 +567,9 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
         const { slots } = await emailSlots(userId)
         const houston = slots.find(s => s.includes('eshwarjay05'))
         if (houston) {
-          if (session.last) session.last.email = houston
-          else session.last = { jd: '', email: houston, at: Date.now() }
+          remember(session, houston)
           await saveSession(from, session)
+          await pinProfile(from, houston)
           return sendText(from, "Got it — I'll use your Houston resume (eshwarjay05) from now on. Send a job description whenever you're ready.")
         }
       }
@@ -573,9 +577,9 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
         const { slots } = await emailSlots(userId)
         const stl = slots.find(s => s.includes('jayeshwar44'))
         if (stl) {
-          if (session.last) session.last.email = stl
-          else session.last = { jd: '', email: stl, at: Date.now() }
+          remember(session, stl)
           await saveSession(from, session)
+          await pinProfile(from, stl)
           return sendText(from, "Got it — I'll use your St. Louis resume (jayeshwar44) from now on. Send a job description whenever you're ready.")
         }
       }
@@ -623,11 +627,15 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     const said = sure ? readChoice(post, slots) : { email: "", rest: post }
     const cur = await loadSession(from)
     if (cur.jdId !== String(msg.id) || cur.resumePath) return   // a newer message or a resume took over meanwhile
-    const email = said.email || remembered(cur, slots) || (live(slots).length === 1 ? live(slots)[0] : "")
+    // A standing "use 1" lives in its own record. The job record is rewritten when a run
+    // finishes, and that rewrite used to put the previous email back.
+    const pin = await pinnedProfile(from, slots)
+    const email = said.email || pin || remembered(cur, slots) || (live(slots).length === 1 ? live(slots)[0] : "")
     if (email) {
       delete cur.jd; delete cur.jdId
       remember(cur, email)
       await saveSession(from, cur)
+      await pinProfile(from, email)
       return fromLibrary(from, { jd: said.email ? said.rest : post, jdId: String(msg.id) }, email, userId, !!tail.hint, slots, tail.hint ? { hint: tail.hint } : undefined)
     }
     cur.pending = { jd: post, jdId: String(msg.id), slots, at: Date.now(), ...(tail.hint ? { hint: tail.hint } : {}) }
@@ -718,8 +726,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   await saveSession(from, cur)
 
   if (!quiet) await sendText(from, files
-    ? `Updating ${files.said}. I’ll send one Word file when this run finishes.`
-    : "Updating your resume. I’ll send one Word file when this run finishes.")
+    ? `Updating ${files.said}. A Word file is sent only if this run finishes cleanly.`
+    : "Updating your resume. A Word file is sent only if this run finishes cleanly.")
 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd }).catch(() => ({ role: "", company: "", location: "" }))
@@ -742,6 +750,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   } catch (e) {
     failureCode = "provider_error"
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
+    if (!quiet) await sendText(from, "I could not tailor your resume just now. Your resume and this job are saved, and MarketFit will try again.").catch(() => {})
     return;
   }
 
@@ -750,6 +759,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
     failureCode = "unchanged"
+    if (!quiet) await sendText(from, "The rewrite produced no changes, so I did not send a file. Send *redo* to try again.").catch(() => {})
     return;
   }
 
@@ -801,6 +811,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       roleCount: result.role_alignment?.length ?? 0,
       unverifiedCount: result.unverified_added_keywords?.length ?? 0,
     })
+    if (!quiet) await sendText(from, qualityStop(result)).catch(() => {})
     return;
   }
   const file = await blob.get(`tailored/${result.token}.docx`)
@@ -892,7 +903,23 @@ function remembered(session: Session, slots: string[]): string {
 
 /** Every next job starts from this email until the person says otherwise. A job made before stays redo-able. */
 function remember(session: Session, email: string) {
-  session.last = { jd: session.last?.jd || "", email, at: Date.now() }
+  session.last = { jd: session.last?.jd || "", email, at: Date.now(), ...(session.last?.used ? { used: session.last.used } : {}) }
+}
+
+// Standing profile. A finished run rewrites session.last with the email THAT run used.
+// "use 1" is stored apart from that record, so a run that started earlier cannot put the other email back.
+const profileKey = (from: string) => `whatsapp/profile-${digits(from)}.json`
+
+async function pinProfile(from: string, email: string): Promise<void> {
+  await blob.put(profileKey(from), JSON.stringify({ email: email.toLowerCase(), at: Date.now() }))
+}
+
+async function pinnedProfile(from: string, slots: string[]): Promise<string> {
+  try {
+    const raw = await blob.getText(profileKey(from))
+    const email = String(raw ? (JSON.parse(raw) as { email?: string }).email || "" : "").toLowerCase()
+    return live(slots).find(slot => slot.toLowerCase() === email) || ""
+  } catch { return "" }
 }
 
 /** Said the moment a job is taken: which email it starts from, and how to switch when there is more than one. */
@@ -1204,6 +1231,22 @@ function notAdded(result: TailorResult): string[] {
   return out
 }
 
+function qualityStop(result: TailorResult): string {
+  const reasons = whatsappResumeRejectionReasons(result)
+  const invented = (result.unverified_added_keywords || []).filter(Boolean).slice(0, 6)
+  if (invented.length) {
+    return `I did not send a file. The draft added ${invented.join(", ")} from the job post, and those are not in your resume, so I will not present them as your experience. Your resume and this job are saved for another try. No incomplete file was delivered.`
+  }
+  if (reasons.includes("supported_coverage_below_floor")) {
+    const supported = Number.isFinite(result.supported_coverage) ? `${Math.round(result.supported_coverage!)}%` : "too little"
+    return `I did not send a file. Of the skills your resume already supports, this draft covered ${supported}. A file goes out only at 95% or more of those skills. Your resume and this job are saved for another try. No incomplete file was delivered.`
+  }
+  if (reasons.includes("skills_only")) {
+    return "I did not send a file. The writers did not finish a full resume, so nothing incomplete went out. Your resume and this job are saved, and MarketFit will try again."
+  }
+  return "I did not send a file. The draft did not pass the checks for a finished resume that stays within your real experience. Your resume and this job are saved for another try. No incomplete file was delivered."
+}
+
 function captionFor(name: string, meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }, more: string[] = []): string {
   // Never present an unchanged resume as tailored — say so plainly.
   if (result.unchanged) {
@@ -1214,10 +1257,15 @@ function captionFor(name: string, meta: Meta, result: TailorResult, update?: { r
       "Reply to this file to request changes.",
     ].join("\n")
   }
+  const supported = Number.isFinite(result.supported_coverage) ? `Skills your resume already supports: ${result.supported_coverage}%` : ""
+  const overall = Number.isFinite(result.coverage) ? `JD keyword coverage ${result.coverage}%` : ""
   return [
     `*${name}*${update ? ` (update ${update.number})` : ""}`,
     ...(meta.role ? [`${meta.role}${meta.company ? ` · ${meta.company}` : ""}`] : []),
     ...more,
+    ...(supported ? [supported] : []),
+    ...(overall ? [overall] : []),
+    ...notAdded(result),
     "Reply to this file to request changes.",
   ].join("\n")
 }

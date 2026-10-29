@@ -979,7 +979,7 @@ export async function runTailor(opts: {
   }
   notes.push(`Evidence-supported JD vocabulary retained: ${Math.round(attainableCoverage * 100)}%`)
   const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(best.tailoredText, [k]).has(k))
-  if (unverifiedAdded.length) notes.push(`Unverified JD claims require candidate confirmation: ${unverifiedAdded.join(", ")}`)
+  if (unverifiedAdded.length > 0) notes.push(`Unverified JD claims require candidate confirmation: ${unverifiedAdded.join(", ")}`)
   // Diagnostic codes contain no resume, JD, name or phone number.
   const qualityBlockers = [
     ...(skillsOnly ? ["skills_only"] : []),

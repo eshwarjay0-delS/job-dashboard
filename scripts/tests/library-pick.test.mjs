@@ -168,7 +168,7 @@ test('WhatsApp bot: a resume sent wins, otherwise the email is asked once and re
   assert.ok(bot.includes('session.jd = post'))
   assert.ok(bot.includes('if (session.resumePath) return generate(from, session, userId)'), 'a resume sent with the job is used')
   assert.ok(bot.includes('await new Promise(r => setTimeout(r, PAIR_WAIT_MS))'), 'a resume arriving a moment after the job still wins')
-  assert.ok(bot.includes('const email = said.email || remembered(cur, slots) || (live(slots).length === 1 ? live(slots)[0] : "")'))
+  assert.ok(bot.includes('const email = said.email || pin || remembered(cur, slots) || (live(slots).length === 1 ? live(slots)[0] : "")'))
   assert.ok(bot.includes('return sendText(from, askWhichEmail(slots))'), 'never picked and more than one email: asked')
   assert.ok(!/default to the first/i.test(bot), 'the first email is never used silently')
   assert.ok(bot.includes('await saveSession(from, { seen: session.seen })'))
