@@ -367,6 +367,14 @@ async function repairStructure(job: AnswerJob, guardedText: string, req: NextReq
   const offTopic = tangentSignals(job.question, guardedText)
   const namedMissing = missingNamedQuestionTerms(job.question, guardedText)
   const missing = [...namedMissing.map(t => `the interviewer explicitly named ${t}; explain its relevance`), ...structureMissing, ...precisionMissing.map(p => `the interviewer explicitly asked about ${p}`), ...offTopic.map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
+  // Core acceptance: structure + named-term misses are the repair's contract.
+  // Rounds 11-12 both flagged Q2's alternative and 800-53, yet the final
+  // answer still lacked both — consistent with a rewrite that fixed the core
+  // but introduced a new advisory precision/tangent flag and was discarded
+  // whole by the old all-or-nothing rule. Accept when the core improves
+  // with no new core item, even if an advisory flag appears; a rewrite that
+  // fixes no core item is still discarded.
+  const coreMissing = [...structureMissing, ...namedMissing]
   if (!missing.length || !job.orKey) return { text: guardedText, repaired: 0 }
   // At most two attempts: the second names exactly what the first rewrite
   // still missed. A failed call is not retried; a rewrite that fixes nothing
@@ -386,7 +394,10 @@ async function repairStructure(job: AnswerJob, guardedText: string, req: NextReq
       const rg = applyGuards(repaired, job.guardFacts, job.allowed)
       if (!rg.text.trim()) return { text: guardedText, repaired: 0 }
       stillMissing = [...missingStructure(rg.text, opts), ...(explicitParts.length >= 2 ? missingQuestionParts(job.question, rg.text).map(p => `the interviewer explicitly asked about ${p}`) : []), ...missingNamedQuestionTerms(job.question, rg.text).map(t => `the interviewer explicitly named ${t}; explain its relevance`), ...tangentSignals(job.question, rg.text).map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
-      if (stillMissing.length < missing.length && stillMissing.every(m => missing.includes(m))) return { text: rg.text, repaired: 1 }
+      const coreStill = [...missingStructure(rg.text, opts), ...missingNamedQuestionTerms(job.question, rg.text)]
+      if (coreMissing.length > 0) {
+        if (coreStill.length < coreMissing.length && coreStill.every(m => coreMissing.includes(m))) return { text: rg.text, repaired: 1 }
+      } else if (stillMissing.length < missing.length && stillMissing.every(m => missing.includes(m))) return { text: rg.text, repaired: 1 }
     } catch { return { text: guardedText, repaired: 0 } }
   }
   return { text: guardedText, repaired: 0 }

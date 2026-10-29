@@ -945,8 +945,21 @@ export function missingStructure(text: string, opts: { level: string; register: 
   if (/Sentence two names the one alternative/.test(opts.shape || "")) {
     if (!/\b(alternative|rejected|ruled out|ruled against|passed on|passed over|instead of|instead\b|rather than|did not choose|didn't choose|chose .* over|opted against|opted for .* over|went with .* over|set aside|decided against)\b/i.test(plain)) missing.push("a sentence naming the one alternative you rejected and what it cost")
   }
+  // Numbered hypotheses are a shape requirement, not a prompt preference:
+  // rounds 11-12 (Oct 29) both answered a competing-hypotheses question with
+  // unnumbered prose even though pickShape returned the numbering shape, and
+  // nothing in this check flagged it, so repair never ran for Q3.
+  if (/Number each hypothesis in order/.test(opts.shape || "")) {
+    const labels = plain.match(/hypothesis\s*[1-9]\d*/gi) || []
+    const distinct = new Set(labels.map((l) => l.replace(/\D/g, "")))
+    if (distinct.size < 2) missing.push("each competing hypothesis numbered in order (Hypothesis 1, Hypothesis 2, ...), with a test attached to each and back-references by number")
+  }
   // A Director-level audience does not imply the interviewer asked who decides.
   // Never force an owner into a definition, comparison, or personal example.
+  // (The explicit-owner case is handled by precision parts, not here: see the
+  // pinned test 'Director owner is never automatically forced by structural
+  // repair' — an owner is only repaired in when the question itself asks for
+  // one, via questionParts, never from the level alone.)
   return missing
 }
 

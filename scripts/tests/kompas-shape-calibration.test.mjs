@@ -58,3 +58,26 @@ test('Director speech does not force an unasked decision owner', () => {
   assert.deepEqual(missingStructure(without, { ...opts, tier: 0 }), [])
   assert.deepEqual(missingStructure(without, { ...opts, register: 'concept' }), [])
 })
+
+test('missingStructure flags unnumbered hypotheses, passes numbered ones (rounds 11-12)', () => {
+  const q = 'In that design, audit evidence disagrees with live configuration. Walk through diagnosis, competing hypotheses, safe containment and rollback.'
+  const shape = pickShape(q, 2)
+  assert.match(shape, /Number each hypothesis in order/)
+  const opts = { level: 'architect', register: 'practice', shape, tier: 2 }
+  const unnumbered = 'Competing hypotheses are then enumerated: a recent code change introduced a regression, a downstream dependency is returning unexpected responses, a resource limit was hit, or a configuration drift altered a feature flag.'
+  assert.deepEqual(missingStructure(unnumbered, opts), ['each competing hypothesis numbered in order (Hypothesis 1, Hypothesis 2, ...), with a test attached to each and back-references by number'])
+  const numbered = 'Hypothesis 1: a recent code change introduced a regression. For Hypothesis 1 I check the deployment diff. Hypothesis 2: a downstream dependency is returning unexpected responses. For Hypothesis 2 I check the dependency health endpoint.'
+  assert.deepEqual(missingStructure(numbered, opts), [])
+})
+
+test('explicitly asked decision owner and measures are precision parts (Q5, rounds 11-12)', async () => {
+  const { missingQuestionParts, questionParts } = await import('../../src/lib/kompasInterviewPrecision.ts')
+  const q = 'Now explain the same incident to a director: risk acceptance versus remediation. State decision owner, business exposure and measures you would track, without inventing achieved numbers.'
+  const labels = questionParts(q).map((p) => p.label)
+  assert.ok(labels.includes('decision owner'), 'owner part present when explicitly asked')
+  assert.ok(labels.includes('measures you would track'), 'measures part present when explicitly asked')
+  const round12 = 'Risk acceptance means we acknowledge the vulnerability and consciously decide to live with the potential impact, whereas remediation means we take concrete steps to eliminate or mitigate that vulnerability. Accepting leaves the exposure on the risk register and requires ongoing monitoring.'
+  assert.deepEqual(missingQuestionParts(q, round12), ['decision owner', 'measures you would track'])
+  const round11 = 'The decision owner is the risk manager or CRO, the business exposure is the potential loss from the accepted risk. We would track the open exception count and any related audit findings to ensure the acceptance remains justified.'
+  assert.deepEqual(missingQuestionParts(q, round11), [])
+})
