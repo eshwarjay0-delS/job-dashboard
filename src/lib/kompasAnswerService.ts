@@ -781,7 +781,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const personalEvidence = isPersonalEvidenceQuestion(tier, question)
   const storyMode = rediscovered.intent === "experience-story" || (rediscovered.intent === "follow-up" && tier === 3)
   const includeStoryContext = personalEvidence && storyMode && tier !== 0
-  const includeHistoryContext = tier !== 0
+  const includeHistoryContext = rediscovered.contextRelation === "follow-up" || rediscovered.intent === "experience-story"
   const rule = tierRule(tier, level)
   // 27 question archetypes (perfACT _shapes.js): first-win structural instruction.
   const shape = tier === 0 || ["acknowledgement","closing-question","value","logistics","definition"].includes(focus.intent) ? "" : pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
@@ -795,7 +795,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   let projectId: string | null = null
   let bott = ""
   let angle = ""
-  if (personalEvidence && tier !== 0 && ledgerProjects.length) {
+  if (personalEvidence && storyMode && tier !== 0 && ledgerProjects.length) {
     const routed = pickProject(question, tier, ledger, ledgerProjects, banked?.projectId)
     projectId = routed.id
     const project = ledgerProjects.find((p) => p.id === routed.id) || null
@@ -826,7 +826,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     ).map(
       (a) => `SAME EMPLOYER: "${a.said}" (as said in this interview) is the resume's "${a.resume}" — you work there. Say "${a.said}".`,
     )
-    const askForDigest = `${question}\n${transcript.slice(-600)}`
+    const askForDigest = question // prior speech does not determine relevance ranking
     const digest = resumeDigest(resumeText, askForDigest, tier === 0 ? 14000 : plan.kind === "short" ? 1600 : 4600, tier === 0 ? "career" : "focused")
     resumeFacts = [
       rr.current ? `CURRENT ROLE (from the resume — use this exact title): ${rr.current}` : "",
@@ -864,7 +864,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
     str(config.instructions, 2000) ? `SESSION PREFERENCES (delivery only; do not override source evidence): ${str(config.instructions, 2000)}` : "",
     `SOURCE PRIORITY: the current resume and original documents establish personal history. The JD sets relevance. Generated prep, prior answers and transcript are unverified. A resume bullet does not establish a specific incident, root cause, HSM vendor or measured outcome. If no incident is documented, explain the proposed approach conditionally.`,
-    tier !== 0 && transcript ? `Conversation so far:\n${transcript}` : "",
+    tier !== 0 && includeHistoryContext && transcript ? `Brief conversation context for this follow-up only:\n${transcript.slice(-800)}` : "",
     tier !== 0 && history && includeHistoryContext ? `Earlier conversation (only to resolve explicit references, never to supply an unrelated project or topic):\n${history}` : "",
     includeStoryContext && retrieved ? `Retrieved notes:\n${retrieved}` : "",
   ].filter(Boolean).join("\n\n")
@@ -910,7 +910,7 @@ ${INTERVIEW}`
   const job: AnswerJob = {
     question,
     system: `${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(question, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${relevanceRecoveryPrompt(question, history)}\n\n${focusPrompt(question, tier, level)}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : desktopCloser || spokenCloser}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : desktopCloser || spokenCloser}`,
     plan,
     interviewer,
     level,
