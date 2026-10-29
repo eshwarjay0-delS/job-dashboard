@@ -67,6 +67,12 @@ const BUDGET: Record<ReplyIntent,[number,number,string,string,"surface"|"asked-o
 export function focusPlan(question:string,tier:number,level:string):FocusPlan{
  const intent=interviewIntent(question)
  const [min,max,opening,proof,depth]=BUDGET[intent]
+ // Full self-introductions are career-spanning; do not flatten them just to
+ // satisfy the default short-answer ceiling. An explicitly brief intro remains short.
+ if(intent==="introduction" && tier===0){
+  const brief=/\b(?:brief|briefly|quick|short|30 seconds|half a minute)\b/i.test(question)
+  return {intent,minWords:brief?65:240,maxWords:brief?110:250,opening,proof,technicalDepth:"surface"}
+ }
  const detailed=(DEEP.test(question)&&["scenario","technical-process","experience-story","follow-up"].includes(intent)) || (intent==="comparison"&&/\b(?:technically|at the protocol level|under the hood|in detail|how .+ differ)\b/i.test(question))
  // Technical depth may grow when specifically requested, not merely because
  // the session is in Director/Engineer mode. Preserve full source-backed intros.
