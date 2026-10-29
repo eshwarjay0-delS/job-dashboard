@@ -23,16 +23,25 @@ export function evaluate(dataset,baseline=null){
     if(e.referenceWords===0){sum.silent++;if(e.insertions)sum.hallucinated++}
   }
   const sampleSetSha256=createHash("sha256").update(JSON.stringify([...ids].sort())).digest("hex");
+  // IDs alone cannot prove a comparable reference: the same IDs could be
+  // silently paired with different words, terminology or speaker labels.
+  const referenceSetSha256=createHash("sha256").update(JSON.stringify(
+    dataset.samples.map(row=>({
+      id:row.id,reference:row.reference.normalize("NFC"),
+      terms:[...(row.technicalTerms??[])].map(t=>t.normalize("NFC")).sort(),
+      speaker:typeof row.referenceSpeaker==="string"?row.referenceSpeaker:null,
+    })).sort((a,b)=>a.id.localeCompare(b.id))
+  )).digest("hex");
   const metrics={wer:rate(sum.substitutions+sum.deletions+sum.insertions,sum.referenceWords),
     deletionRate:rate(sum.deletions,sum.referenceWords),substitutionRate:rate(sum.substitutions,sum.referenceWords),
     insertionRate:rate(sum.insertions,sum.referenceWords),technicalTermRecall:rate(sum.recognized,sum.expected),
     zeroEditRate:rate(sum.zero,sum.edited),speakerAttribution:rate(sum.correct,sum.speakers),
     p50LatencyMs:percentile(times,.5),p95LatencyMs:percentile(times,.95),
     silenceHallucinationRate:rate(sum.hallucinated,sum.silent)};
-  const out={schemaVersion:1,datasetId:dataset.datasetId,revision:dataset.revision,sampleCount:dataset.samples.length,sampleSetSha256,
+  const out={schemaVersion:1,datasetId:dataset.datasetId,revision:dataset.revision,sampleCount:dataset.samples.length,sampleSetSha256,referenceSetSha256,
     coverage:{referenceWords:sum.referenceWords,technicalOccurrences:sum.expected,editLabels:sum.edited,speakerLabels:sum.speakers,latencySamples:times.length,silentClips:sum.silent},metrics};
   if(baseline){
-    if(baseline.schemaVersion!==1||baseline.datasetId!==out.datasetId||baseline.revision!==out.revision||baseline.sampleCount!==out.sampleCount||baseline.sampleSetSha256!==sampleSetSha256)
+    if(baseline.schemaVersion!==1||baseline.datasetId!==out.datasetId||baseline.revision!==out.revision||baseline.sampleCount!==out.sampleCount||baseline.sampleSetSha256!==sampleSetSha256||baseline.referenceSetSha256!==referenceSetSha256)
       throw Error("Baseline mismatch: dataset, revision or sample count");
     out.deltaFromBaseline=Object.fromEntries(Object.entries(metrics).map(([k,v])=>[k,v===null||typeof baseline.metrics?.[k]!=="number"?null:v-baseline.metrics[k]]));
   }
