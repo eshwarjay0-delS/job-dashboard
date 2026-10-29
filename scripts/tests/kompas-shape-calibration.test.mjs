@@ -7,7 +7,14 @@
 // override, and a numbered-hypotheses shape.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { pickShape, levelGuidance , missingStructure } from '../../src/lib/kompasAnswer.ts'
+import { pickShape, levelGuidance , missingStructure, STRUCTURE_REPAIR_SYSTEM } from '../../src/lib/kompasAnswer.ts'
+
+test('repair system lets the missing element be written, literally where it names a form (round 13)', () => {
+  assert.match(STRUCTURE_REPAIR_SYSTEM, /part of what the interviewer asked for/)
+  assert.match(STRUCTURE_REPAIR_SYSTEM, /Hypothesis 1:/)
+  assert.match(STRUCTURE_REPAIR_SYSTEM, /do not invent achieved numbers/)
+  assert.doesNotMatch(STRUCTURE_REPAIR_SYSTEM, /do not add new claims/)
+})
 
 test('design shape requires the rejected alternative as sentence two', () => {
   const shape = pickShape('Design multi-cloud controls mapped to NIST 800-53. Explain trust boundaries, data flow, failure isolation, rollout and validation.', 2)
