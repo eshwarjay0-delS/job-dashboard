@@ -16,7 +16,7 @@ import { QUESTION_FIRST_POLICY, repeatQuestionGuidance } from "@/lib/kompasInten
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
 import { formatInterviewHistory } from "@/lib/kompasHistory"
 import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestionParts, questionParts, spokenQualityFlags, correctVerifiedPresentationErrors } from "@/lib/kompasInterviewPrecision"
-import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals } from "@/lib/kompasRelevance"
+import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms } from "@/lib/kompasRelevance"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
@@ -361,7 +361,8 @@ async function repairStructure(job: AnswerJob, guardedText: string, req: NextReq
   // be simplified before it reaches the candidate. This check is diagnostic
   // and conservative: expert questions never trigger this specific repair.
   const offTopic = tangentSignals(job.question, guardedText)
-  const missing = [...structureMissing, ...precisionMissing.map(p => `the interviewer explicitly asked about ${p}`), ...offTopic.map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
+  const namedMissing = missingNamedQuestionTerms(job.question, guardedText)
+  const missing = [...namedMissing.map(t => `the interviewer explicitly named ${t}; explain its relevance`), ...structureMissing, ...precisionMissing.map(p => `the interviewer explicitly asked about ${p}`), ...offTopic.map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
   if (!missing.length || !job.orKey) return { text: guardedText, repaired: 0 }
   // At most two attempts: the second names exactly what the first rewrite
   // still missed. A failed call is not retried; a rewrite that fixes nothing
@@ -380,7 +381,7 @@ async function repairStructure(job: AnswerJob, guardedText: string, req: NextReq
       if (!repaired) return { text: guardedText, repaired: 0 }
       const rg = applyGuards(repaired, job.guardFacts, job.allowed)
       if (!rg.text.trim()) return { text: guardedText, repaired: 0 }
-      stillMissing = [...missingStructure(rg.text, opts), ...(explicitParts.length >= 2 ? missingQuestionParts(job.question, rg.text).map(p => `the interviewer explicitly asked about ${p}`) : []), ...tangentSignals(job.question, rg.text).map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
+      stillMissing = [...missingStructure(rg.text, opts), ...(explicitParts.length >= 2 ? missingQuestionParts(job.question, rg.text).map(p => `the interviewer explicitly asked about ${p}`) : []), ...missingNamedQuestionTerms(job.question, rg.text).map(t => `the interviewer explicitly named ${t}; explain its relevance`), ...tangentSignals(job.question, rg.text).map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
       if (stillMissing.length < missing.length && stillMissing.every(m => missing.includes(m))) return { text: rg.text, repaired: 1 }
     } catch { return { text: guardedText, repaired: 0 } }
   }
@@ -525,7 +526,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         }
         emit({
           type: "done", degraded, guarded: g.guarded, verified, repaired,
-          precision: { coverage: questionCoverage(job.question, finalText), flags: [...spokenQualityFlags(job.question, finalText), ...tangentSignals(job.question, finalText).map(t => `off-topic-jargon:${t}`)] },
+          precision: { coverage: questionCoverage(job.question, finalText), flags: [...spokenQualityFlags(job.question, finalText), ...tangentSignals(job.question, finalText).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, finalText).map(t => `missing-named-term:${t}`)] },
           ledger: job.ledger,
           ...metaBase, provider: servedProvider, model: servedModel,
           timing: { ...timing, total_ms: Date.now() - startedAt },
@@ -612,7 +613,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   return NextResponse.json({
     text: out,
     polished: true,
-    precision: { coverage: questionCoverage(job.question, out), flags: [...spokenQualityFlags(job.question, out), ...tangentSignals(job.question, out).map(t => `off-topic-jargon:${t}`)] },
+    precision: { coverage: questionCoverage(job.question, out), flags: [...spokenQualityFlags(job.question, out), ...tangentSignals(job.question, out).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, out).map(t => `missing-named-term:${t}`)] },
     degraded,
     guarded: g.guarded,
     verified,
