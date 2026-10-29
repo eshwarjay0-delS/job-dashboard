@@ -138,9 +138,9 @@ test('a downloaded transcript says what it is: its name, day, length and whether
 // ── the server keeps nothing ─────────────────────────────────────────────────
 test('both routes ask who is there before reading what was sent, and limit how much and how often', () => {
   const speech = read('src/app/api/kompas/speech/route.ts'), tidy = read('src/app/api/kompas/tidy/route.ts')
-  assert.ok(speech.indexOf('authenticatedUser(request)') < speech.indexOf('request.arrayBuffer()'), 'speech: who, then the recording')
+  assert.ok(speech.indexOf('authenticatedUser(request)') < speech.indexOf('readBoundedAudio(request.body, MAX_BYTES)'), 'speech: authenticate before reading a byte')
   assert.ok(tidy.indexOf('authenticatedUser(request)') < tidy.indexOf('request.text()'), 'tidy: who, then the text')
-  assert.ok(/MAX_BYTES = 4 \* 1024 \* 1024/.test(speech) && /audio\.byteLength > MAX_BYTES/.test(speech) && /audio\.byteLength < MIN_BYTES/.test(speech))
+  assert.ok(/MAX_BYTES = 4 \* 1024 \* 1024/.test(speech) && /if \(audio === null\) return refuse\("too-large"\)/.test(speech) && /audio\.byteLength < MIN_BYTES/.test(speech))
   assert.ok(/checkRateLimit\(`kompas-speech:\$\{user\.id\}`/.test(speech) && /checkRateLimit\(`kompas-tidy:\$\{user\.id\}`/.test(tidy))
   assert.ok(/text\.length > MAX_TIDY_CHARS/.test(tidy))
   assert.ok(/try \{ return decodeURIComponent\(value\)/.test(speech), 'a malformed hint header is a bad header, not a failed request')
