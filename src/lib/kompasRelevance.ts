@@ -86,6 +86,7 @@ export function focusPrompt(question:string,tier:number,level:string):string{
   "Never turn a short/direct/soft question into a technical architecture lecture. One answer thread, no accidental second topic.",
   "Use the interviewer's exact technical nouns when essential. Otherwise translate concepts into ordinary speech. A term or tool never earns a sentence merely because it appears in the resume, JD or earlier conversation.",
   "Every technical name must either answer a named part of THIS question or explain the immediately preceding decision; otherwise omit it. Define an unfamiliar acronym in a short clause if it is indispensable.",
+  ...(namedQuestionTerms(question).length ? ["EXACT NAMED CONCEPTS: "+namedQuestionTerms(question).join(", ")+". Address each directly if it is one of the requested subjects; no unrelated resume/technology inventory."] : []),
   "When the question asks for independent challenge, distinguish the control owner's claims from evidence you personally reviewed; do not claim to approve risk on behalf of leadership.",
   "An explanation is not a demonstration of personal history. Only original resume/documents support employers, responsibilities, incidents, achievements or figures.",
   "Spoken length guide: "+p.minWords+"–"+p.maxWords+" words unless user explicitly asks for more. Do not fill space to reach a token or word quota. Stop when the requested parts are complete.",
@@ -109,4 +110,52 @@ export function tangentSignals(question:string,answer:string):string[]{
  // One legitimately relevant term in a role overview is okay; two unsupported
  // high-specificity terms in a soft question indicate likely jargon drift.
  return excess.length>=2?excess:[]
+}
+
+
+/**
+ * Explicit question nouns: retain exactly named concepts without a general
+ * keyword-stuffing requirement. Only concepts actually named by interviewer
+ * enter this register; résumé and JD technologies do not.
+ */
+const NAMED_CONCEPTS: Array<{id:string;ask:RegExp;answer:RegExp}>=[
+ {id:"NIST CSF",ask:/\b(?:NIST\s*)?(?:CSF|Cybersecurity Framework)\b/i,answer:/\b(?:NIST\s*)?(?:CSF|Cybersecurity Framework)\b/i},
+ {id:"CRI Profile",ask:/\b(?:CRI(?:\s+Profile)?|Cyber Risk Institute(?:\s+Profile)?)\b/i,answer:/\b(?:CRI(?:\s+Profile)?|Cyber Risk Institute(?:\s+Profile)?)\b/i},
+ {id:"NIST 800-53",ask:/\b(?:NIST\s*(?:SP\s*)?)?800[-\u2010-\u2015 ]53\b/i,answer:/\b(?:NIST\s*(?:SP\s*)?)?800[-\u2010-\u2015 ]53\b/i},
+ {id:"ServiceNow",ask:/\bServiceNow(?:\s+GRC)?\b/i,answer:/\bServiceNow(?:\s+GRC)?\b/i},
+ {id:"IAM",ask:/\b(?:IAM|identity (?:and )?access management)\b/i,answer:/\b(?:IAM|identity (?:and )?access management|access governance)\b/i},
+ {id:"PAM",ask:/\b(?:PAM|privileged access management)\b/i,answer:/\b(?:PAM|privileged access management|privileged access)\b/i},
+ {id:"MFA",ask:/\b(?:MFA|multi.factor authentication)\b/i,answer:/\b(?:MFA|multi.factor authentication|second.factor authentication)\b/i},
+ {id:"EDR",ask:/\b(?:EDR|endpoint detection and response)\b/i,answer:/\b(?:EDR|endpoint detection and response|endpoint detection)\b/i},
+ {id:"SIEM",ask:/\b(?:SIEM|security information and event management)\b/i,answer:/\b(?:SIEM|security information and event management|centralized security logs)\b/i},
+ {id:"TLS",ask:/\b(?:TLS|Transport Layer Security)\b/i,answer:/\b(?:TLS|Transport Layer Security)\b/i},
+ {id:"PKI",ask:/\b(?:PKI|Public Key Infrastructure)\b/i,answer:/\b(?:PKI|Public Key Infrastructure|certificate trust)\b/i},
+ {id:"DHCP",ask:/\b(?:DHCP|Dynamic Host Configuration Protocol)\b/i,answer:/\b(?:DHCP|Dynamic Host Configuration Protocol|IP address leasing)\b/i},
+ {id:"DNS",ask:/\b(?:DNS|Domain Name System)\b/i,answer:/\b(?:DNS|Domain Name System|name resolution)\b/i},
+ {id:"Kerberos",ask:/\bKerberos\b/i,answer:/\bKerberos\b/i},
+ {id:"NLA",ask:/\b(?:NLA|Network Level Authentication)\b/i,answer:/\b(?:NLA|Network Level Authentication)\b/i},
+ {id:"RDP",ask:/\b(?:RDP|Remote Desktop Protocol)\b/i,answer:/\b(?:RDP|Remote Desktop Protocol|Remote Desktop)\b/i},
+ {id:"SAML",ask:/\bSAML\b/i,answer:/\bSAML\b/i},
+ {id:"OAuth",ask:/\bOAuth(?:\s*2\.0)?\b/i,answer:/\bOAuth(?:\s*2\.0)?\b/i},
+ {id:"OIDC",ask:/\b(?:OIDC|OpenID Connect)\b/i,answer:/\b(?:OIDC|OpenID Connect)\b/i},
+ {id:"JWT",ask:/\b(?:JWT|JSON Web Token)\b/i,answer:/\b(?:JWT|JSON Web Token)\b/i},
+ {id:"CVE",ask:/\bCVE[- ]\d{4}[- ]\d{4,}\b/i,answer:/\bCVE[- ]\d{4}[- ]\d{4,}\b/i},
+ {id:"SQL",ask:/\bSQL\b/i,answer:/\bSQL\b/i},
+ {id:"XSS",ask:/\b(?:XSS|cross.site scripting)\b/i,answer:/\b(?:XSS|cross.site scripting)\b/i},
+ {id:"IDOR",ask:/\b(?:IDOR|insecure direct object references?)\b/i,answer:/\b(?:IDOR|insecure direct object references?)\b/i},
+ {id:"Zero Trust",ask:/\bZero[- ]Trust\b/i,answer:/\bZero[- ]Trust\b/i},
+ {id:"Azure Policy",ask:/\bAzure Policy\b/i,answer:/\bAzure Policy\b/i},
+ {id:"Power BI",ask:/\bPower BI\b/i,answer:/\bPower BI\b/i},
+ {id:"CyberArk",ask:/\bCyberArk\b/i,answer:/\bCyberArk\b/i},
+ {id:"Qualys",ask:/\bQualys\b/i,answer:/\bQualys\b/i},
+ {id:"Splunk",ask:/\bSplunk\b/i,answer:/\bSplunk\b/i},
+ {id:"Microsoft Sentinel",ask:/\b(?:Microsoft|Azure) Sentinel\b/i,answer:/\b(?:Microsoft|Azure) Sentinel\b/i},
+]
+export function namedQuestionTerms(question:string):string[]{
+ const q=String(question||'')
+ return NAMED_CONCEPTS.filter(t=>t.ask.test(q)).map(t=>t.id)
+}
+export function missingNamedQuestionTerms(question:string,answer:string):string[]{
+ const q=String(question||''),a=String(answer||'')
+ return NAMED_CONCEPTS.filter(t=>t.ask.test(q)&&!t.answer.test(a)).map(t=>t.id)
 }
