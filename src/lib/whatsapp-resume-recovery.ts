@@ -4,6 +4,7 @@
  * Never log this record: it contains a candidate's JD and sender identity.
  */
 import { blob } from "./storage"
+import { retryDelayMs } from "./whatsapp-retry-policy"
 
 export type ResumeRecoveryJob = {
   version: 1
@@ -53,10 +54,6 @@ export async function patchResumeRecovery(id: string, patch: Partial<ResumeRecov
   // The immutable input is never overwritten by a stale retry.
   const { id: _id, jd: _jd, from: _from, userId: _uid, ...updates } = patch
   await blob.put(recoveryKey(id), JSON.stringify({ ...job, ...updates, updatedAt: Date.now() }))
-}
-
-export function retryDelayMs(attempts: number): number {
-  return Math.min(6 * 60 * 60_000, 5 * 60_000 * 2 ** Math.min(7, Math.max(0, attempts - 1)))
 }
 
 export async function deferResumeRecovery(id: string, code: string, candidate?: { token: string; coverage: number; supportedCoverage: number }): Promise<void> {
