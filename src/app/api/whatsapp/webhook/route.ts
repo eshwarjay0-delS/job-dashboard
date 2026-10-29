@@ -63,9 +63,9 @@ async function sendText(to: string, text: string) {
   trace(to, { dir: "out", kind: "text", text })
   return sendTextRaw(to, text)
 }
-async function sendDocument(to: string, file: Buffer, filename: string, caption: string) {
+async function sendDocument(to: string, file: Buffer, filename: string, caption: string, opaqueJobId?: string) {
   trace(to, { dir: "out", kind: "document", file: filename, text: caption })
-  return sendDocumentRaw(to, file, filename, caption)
+  return sendDocumentRaw(to, file, filename, caption, opaqueJobId)
 }
 
 const INBOX_DIR = path.join(DATA_DIR, "whatsapp", "inbox")
@@ -830,7 +830,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   let sentId = ""
   try {
     sentId = await deliver(from, file, name, captionFor(name, meta, result, undefined, more), { userId, jd: session.jd, meta, changes: [], source: session.resumeName,
-      ...(filed ? { saved: filed.abs, depth: !floorMade && (!files || files.depth === 0) ? 1 : 2 } : {}) })
+      ...(filed ? { saved: filed.abs, depth: !floorMade && (!files || files.depth === 0) ? 1 : 2 } : {}) }, job)
   } catch (error) {
     // An explicit Meta HTTP rejection proves no document was accepted; retry it.
     // A timeout or unknown response is ambiguous and must not be sent twice.
@@ -1141,13 +1141,13 @@ async function refine(from: string, replyTo: string, request: string, userId: st
 
 // Send the document and keep a copy of this exact version, recorded under the sent
 // message's id, so a later swipe-reply to it can be traced back and edited.
-async function deliver(from: string, file: Buffer, name: string, caption: string, gen: Omit<Gen, "file" | "createdAt">): Promise<string> {
+async function deliver(from: string, file: Buffer, name: string, caption: string, gen: Omit<Gen, "file" | "createdAt">, opaqueJobId?: string): Promise<string> {
   const vfile = path.join(VERSIONS_DIR, digits(from), `${Date.now().toString(36)}-${randomBytes(4).toString("hex")}.docx`)
   // Store the copy while the upload runs, so it costs no extra wall time.
   const stored = writePath(vfile, file).then(() => true, () => false)
   let wamid = ""
   try {
-    wamid = await sendDocument(from, file, `${name}.docx`, caption)
+    wamid = await sendDocument(from, file, `${name}.docx`, caption, opaqueJobId)
   } catch (e) {
     if (await stored) await deletePath(vfile)
     throw e
