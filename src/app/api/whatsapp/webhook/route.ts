@@ -685,6 +685,7 @@ async function sendLibraryFallback(from: string, files: FromFiles, reason: strin
 }
 
 async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS, files?: FromFiles) {
+  const startedAt = Date.now()
   const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
   if (!hasAnyKey(keys)) return files ? sendLibraryFallback(from, files, "provider unavailable") : sendText(from, "Resume tailoring is temporarily unavailable. Your original resume has not been modified.")
   if (!session.jd || !session.resumePath) return sendText(from, HELP)
@@ -745,6 +746,30 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
     return files ? sendLibraryFallback(from, files, "rewrite produced no changes") : sendText(from, `The rewrite produced no changes. ${retry}`)
+  }
+
+  // A cached, incomplete result must never permanently block the same JD.
+  // Give the engine one fresh full rewrite while there is enough request budget.
+  const firstCoverage = result.coverage ?? result.score
+  const firstRejected = result.skills_only || !!result.partial || !Number.isFinite(firstCoverage) || firstCoverage < 90 || result.quality?.status === "needs_review"
+  if (firstRejected && maxMs >= 120_000) {
+    const elapsed = Date.now() - startedAt
+    const remaining = maxMs - elapsed - 15_000
+    if (remaining >= 35_000) {
+      try {
+        const fresh = await runTailor({
+          jd: session.jd, keys,
+          userResumeDir: files ? files.userDir : path.join(INBOX_DIR, digits(from)),
+          givenPath: session.resumePath,
+          mode: "full", noCache: true, maxMs: remaining,
+          sections: { summary: false, skills: true, experience: true },
+        })
+        const freshCoverage = fresh.coverage ?? fresh.score
+        if (!fresh.unchanged && !fresh.skills_only && !fresh.partial && Number.isFinite(freshCoverage) && freshCoverage >= 90 && fresh.quality?.status !== "needs_review") result = fresh
+      } catch (error) {
+        console.error("[whatsapp] automatic quality retry failed", String(error).slice(0, 300))
+      }
+    }
   }
 
   // A low-quality or partial draft is never a completed tailored resume.
