@@ -64,7 +64,7 @@ test('Live service actually uses rediscovery in both prompt paths',()=>{
  const s=readFileSync(new URL('../../src/lib/kompasAnswerService.ts',import.meta.url),'utf8')
  assert.match(s,/rediscovered = rediscoverRelevance\(originalTurnAsk, history\)/)
  assert.equal((s.match(/relevanceRecoveryPrompt\(originalAsk, history\)/g)||[]).length,1,'preserve setup constraints once while answering only the extracted ask')
- assert.match(s,/const originalAsk = question/)
+ assert.match(s,/const originalAsk = originalTurnAsk/)
  assert.match(s,/classify\(rediscovered\.currentAsk \|\| question\)/)
  assert.match(s,/canonicalQuestion\(rediscovered\.currentAsk \|\| question, tier\)/)
  assert.match(s,/const storyMode = rediscovered\.intent === "experience-story"/)
