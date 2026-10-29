@@ -16,7 +16,7 @@ interface GmailData {
   steps: Step[]
   unfollowed: Array<{ id: string; domain: string; company_name: string; reason: string }>
   drafts: Array<{ id: string; threadId: string; account: string; to: string; subject: string; snippet: string }>
-  radar: Array<{ threadId: string; account: string; to: string; subject: string; snippet: string; daysWaiting: number; jobTitle: string; vendor: string }>
+  radar: Array<{ threadId: string; account: string; to: string; subject: string; snippet: string; daysWaiting: number; jobTitle: string; vendor: string; eligibility: string; dueAt: number; lastSentAt: number; lastInboundAt: number | null }>
   issues: Array<{ account: string; reason: string }>
   loading: boolean
   connected: boolean

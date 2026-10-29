@@ -1,5 +1,6 @@
 import { ignoreReason, validIgnoreRule } from "@/lib/gmail-ignore"
 import { emailAddress } from "@/lib/application-evidence"
+import { radarReviewObservation } from "@/lib/followup-eligibility"
 import { NextResponse } from "next/server"
 import { requireAuth, isAuthContext, fetchClassifiedThreads } from "../_lib"
 import { checkRateLimit } from "@/lib/rateLimit"
@@ -28,6 +29,7 @@ export async function GET(req: Request) {
       threadId: string; account: string
       to: string; subject: string; snippet: string
       daysWaiting: number; jobTitle: string; vendor: string
+      eligibility: string; dueAt: number; lastSentAt: number; lastInboundAt: number | null
     }> = []
 
     const { data: { user: preferenceUser } } = await ctx.supabase.auth.getUser()
@@ -51,12 +53,30 @@ export async function GET(req: Request) {
 
       // Who did he write to? The most recent inbound message's sender.
       let to = ""
+      let lastInboundAt: number | undefined
       for (let i = t.messages.length - 2; i >= 0; i--) {
         if (emailAddress(t.messages[i].from) !== own) {
           to = t.messages[i].from
+          // Only a verified inbound timestamp is passed on. An unverifiable
+          // inbound time is treated as no timestamp evidence, never fabricated.
+          // Order already establishes no reply after the outbound: the latest
+          // message is outbound, so every inbound precedes it.
+          const inboundAt = Number(t.messages[i].internalDate)
+          if (Number.isFinite(inboundAt)) lastInboundAt = inboundAt
           break
         }
       }
+      // Review-only verified observation. A 'due' verdict here never grants
+      // permission to send, schedule, or claim; it only stamps this radar item
+      // as passing the shared eligibility rule on verified evidence.
+      const observation = radarReviewObservation({
+        account: t.accountEmail,
+        threadId: t.threadId,
+        sentAt,
+        lastInboundAt,
+        minWaitDays: minWait,
+        now,
+      })
       radar.push({
         threadId: t.threadId,
         account: t.accountEmail,
@@ -66,6 +86,10 @@ export async function GET(req: Request) {
         daysWaiting,
         jobTitle: latest.jobTitle || t.messages.find(m => m.jobTitle)?.jobTitle || "",
         vendor: latest.vendor || t.messages.find(m => m.vendor)?.vendor || "",
+        eligibility: observation.eligibility,
+        dueAt: observation.dueAt,
+        lastSentAt: observation.lastSentAt,
+        lastInboundAt: observation.lastInboundAt,
       })
     }
 
