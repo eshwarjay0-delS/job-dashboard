@@ -6,6 +6,7 @@ import { archiveSessionChunk } from "@/lib/kompasSessionArchive"
 import { hashUserId } from "@/lib/sttLedger"
 import { deductPoints, POINTS_PER_INTERVIEW } from "@/lib/creditsLedger"
 import { checkRateLimit } from "@/lib/rateLimit"
+import { readBoundedAudio } from "@/lib/kompasAudioUpload"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -50,8 +51,12 @@ export async function POST(request: NextRequest) {
   if (!audioType(mime)) return refuse("bad-audio")
   // Refused by its declared size before it is read, and again by its real size after.
   if (Number(request.headers.get("content-length")) > MAX_BYTES) return refuse("too-large")
-  const audio = new Uint8Array(await request.arrayBuffer())
-  if (audio.byteLength > MAX_BYTES) return refuse("too-large")
+  // Content-Length can be missing or dishonest. Bound the actual stream before
+  // allocating a contiguous buffer; do not send oversized audio to Whisper.
+  let audio: Uint8Array | null
+  try { audio = await readBoundedAudio(request.body, MAX_BYTES) }
+  catch { return refuse("bad-audio") }
+  if (audio === null) return refuse("too-large")
   if (audio.byteLength < MIN_BYTES) return refuse("empty")
 
   const language = (request.headers.get("x-speech-lang") || "").trim().toLowerCase()
