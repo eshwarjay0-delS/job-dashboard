@@ -832,6 +832,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     // An explicit Meta HTTP rejection proves no document was accepted; retry it.
     // A timeout or unknown response is ambiguous and must not be sent twice.
     if (/WA (?:upload|sendDoc) [45]\d\d:/.test(String(error))) {
+      await patchResumeRecovery(job, { status: "pending" })
       sending = false
       failureCode = "whatsapp_http_rejected"
     }
