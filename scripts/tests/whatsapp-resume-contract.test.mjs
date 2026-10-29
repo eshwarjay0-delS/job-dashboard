@@ -19,12 +19,35 @@ test('never silently deliver the original resume as a tailored fallback', () => 
   assert.doesNotMatch(webhook, /sendLibraryFallback\(/)
   assert.match(webhook, /if \(!acceptableWhatsAppResume\(result\)\)/)
 })
-test('skill floor writes every job-post skill onto the skills line and does not strip it off again', () => {
-  assert.match(tailor, /const left = scoreKws\.filter\(k => floorKws\.has\(k\) && !cur\.afterKw\.has\(k\) && !isCertification\(k\)\)/)
+test('skills floor adds only evidenced JD terms and never fabricates a missing qualification', () => {
+  assert.match(tailor, /const left = scoreKws\.filter\(k => floorKws\.has\(k\) && forcedJdKws\.includes\(k\) && !cur\.afterKw\.has\(k\) && !isCertification\(k\)\)/)
   const clear = tailor.indexOf('await stripUnsupportedSkills(')
   const floor = tailor.indexOf('await placeEverything(best)')
-  assert.ok(clear > 0 && floor > clear, 'unconfirmed tools are cleared before the floor writes the job-post terms')
+  assert.ok(clear > 0 && floor > clear, 'unconfirmed tools must be cleared before evidence-only placement')
   assert.equal(tailor.indexOf('await stripUnsupportedSkills(', floor), -1)
+  assert.match(tailor, /const unverifiedAdded = unsupportedJdKws\.filter\(k => coveredJdKeywords\(best\.tailoredText, \[k\]\)\.has\(k\)\)/)
+  assert.doesNotMatch(tailor, /!floorOnSkills\.has/)
+})
+test('ten varied candidate-evidence skill-floor cases', () => {
+  const expression = tailor.match(/const left = (scoreKws\.filter\([^\n]+\))/)?.[1]
+  assert.ok(expression, 'use the real production placement expression')
+  const place = new Function('scoreKws', 'floorKws', 'forcedJdKws', 'cur', 'isCertification', 'return ' + expression)
+  const cases = [
+    { score: ['aws'], evidence: ['aws'], present: [], certs: [], expected: ['aws'] },
+    { score: ['illumia'], evidence: [], present: [], certs: [], expected: [] },
+    { score: ['azure'], evidence: ['azure'], present: ['azure'], certs: [], expected: [] },
+    { score: ['cissp'], evidence: ['cissp'], present: [], certs: ['cissp'], expected: [] },
+    { score: ['splunk','unknown tool'], evidence: ['splunk'], present: [], certs: [], expected: ['splunk'] },
+    { score: ['unknown a','unknown b'], evidence: [], present: [], certs: [], expected: [] },
+    { score: ['python','terraform','aws'], evidence: ['python','terraform','aws'], present: [], certs: [], expected: ['python','terraform','aws'] },
+    { score: ['dns','dhcp'], evidence: ['dns','dhcp'], present: ['dns'], certs: [], expected: ['dhcp'] },
+    { score: ['zero trust'], evidence: ['soc'], present: [], certs: [], expected: [] },
+    { score: ['okta','azure'], evidence: ['okta','azure'], floor: ['azure'], present: [], certs: [], expected: ['azure'] },
+  ]
+  for (const [i, c] of cases.entries()) {
+    const actual = place(c.score, new Set(c.floor || c.score), c.evidence, { afterKw: new Set(c.present) }, k => c.certs.includes(k))
+    assert.deepEqual(actual, c.expected, 'evidence case ' + (i + 1))
+  }
 })
 test('repair prompts chase evidenced skills, not impossible JD-only gaps', () => {
   assert.match(tailor, /const missing = forcedJdKws\.filter\(k => !current\.afterKw\.has\(k\)\)/)
