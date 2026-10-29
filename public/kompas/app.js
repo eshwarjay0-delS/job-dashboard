@@ -1770,6 +1770,8 @@ const PHRASE_FIXES = [
   [/\bservice\s+now\b/gi, "ServiceNow"],
   [/\bgoogle\s+sec\s*ops\b/gi, "Google SecOps"],
   [/\bbig\s+in\s*tro\b/gi, "Big Intro"],
+  [/\bsaviant\b/gi, "Saviynt"],
+  [/\bsavvy\s+ent\b/gi, "Saviynt"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");

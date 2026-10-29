@@ -45,6 +45,8 @@ test("phrase fixes repair the recurring multi-word garbles", () => {
     ["track it in service now", "ServiceNow"],
     ["what is google sec ops", "Google SecOps"],
     ["give me a big intro", "Big Intro"],
+    ["how do you administer saviant", "Saviynt"],
+    ["how do you administer savvy ent", "Saviynt"],
   ];
   for (const [input, want] of cases) assert.ok(ctx.fixPhrases(input).includes(want), `${input} -> ${ctx.fixPhrases(input)}`);
 });
