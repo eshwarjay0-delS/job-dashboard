@@ -16,6 +16,9 @@ import { QUESTION_FIRST_POLICY, repeatQuestionGuidance } from "@/lib/kompasInten
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
 import { formatInterviewHistory } from "@/lib/kompasHistory"
 import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestionParts, questionParts, spokenQualityFlags, correctVerifiedPresentationErrors } from "@/lib/kompasInterviewPrecision"
+import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms, interviewIntent } from "@/lib/kompasRelevance"
+import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
+import { questionKernel } from "@/lib/kompasIntentKernel"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
@@ -209,15 +212,15 @@ const SYSTEM = `You are answering a live interview question as the candidate's c
 
 DELIVERY (this is the balance — hold it on every answer):
 - ANSWER FIRST: sentence one is the answer in words this listener already has — the decision, the difference, or the check. A product name belongs there only when the question used it. The precise name comes next, in the same breath as what it does. Never open by restating the question, with framing, or with praise for the question.
-- THINK OUT LOUD. Reason in front of the listener: "It depends on the system — I'm going to assume it's on a Windows server, just to make the example easy."
+- REASON WHEN REQUESTED: For a troubleshooting, design or decision question, explain the one condition that drives your next step. Do not introduce a Windows server or any assumed environment in unrelated questions.
 - CONCRETE OVER ABSTRACT. Explain a specific mechanism and example. Personal projects and observed logs require original supporting evidence; otherwise use a clearly hypothetical example.
-- UNFOLD STEP BY STEP, one clear move at a time, with natural pause points.
-- 60% human narration, 40% crisp technical. Each technical point said once, said well, inside the story.
+- SEQUENCE ONLY WHEN ASKED: Walk through steps for a process, incident or troubleshooting question. For a comparison, introduction, short yes/no, or closing, give a direct conversational response instead.
+- RELEVANCE OVER TECHNICAL QUOTA: There is no required percentage of jargon or mechanisms. Each term must earn its place by answering the current question.
 - TECHNICAL PRECISION: explain the condition being checked, the action taken, and how success is tested. Name a version only if supported by original source material and relevant to the question. Plain language can be exact; product names alone are not depth.
-- CONCRETE NUMBERS FROM FACTS: 'cut MTTD from 4 hours to 12 minutes' not 'much faster', '300 endpoints' not 'a large fleet'. When FACTS is silent on a number, describe scale honestly ('our EDR fleet', 'the ticketing queue') — never invent a figure.
+- MEASUREMENTS ONLY WITH SOURCE SUPPORT: Never invent a precise count, improvement, timeline, or business result. When facts lack a number, speak naturally without inventing a quantitative example.
 - TALK WITH, NOT AT: natural connected sentences. Do not manufacture filler such as "right?", "you know", or "basically".
 - SPOKEN DELIVERY: use natural punctuation and short connected sentences instead of [beat], [breath], double-underscore emphasis, or stage directions. They can leak into the spoken output.
-- PLAIN VERBS: use, fix, check — not utilize, remediate, validate. Never "stakeholders" (name the role), never "leveraged", never "great question".
+- PLAIN, EXACT LANGUAGE: prefer clear verbs, but never avoid an exact term the interviewer explicitly used. In a control-risk discussion, remediation, root cause, residual risk, validation and control ownership are useful terms when they answer the question. Avoid empty jargon and generic role labels; never open with "great question".
 
 CLARITY (the standard for every answer — nothing abstract, unfinished or unclear, ever):
 - MIRROR, LIKE CLEAR RIVER WATER: reflect this interviewer's own world back to them — their vocabulary, their priorities, the question behind their question — clean, still and easy to see through. One clear line of thought per paragraph, in a natural order. No tangents, no needless hedging, no stacked qualifiers. State a real uncertainty plainly; confidence never turns an assumption into an observation.
@@ -249,6 +252,7 @@ const CODE_ASK_Q =
 // modeBlock below — owner directive, 22 Oct 2026: three levels.)
 
 const MODE_BLOCKS: Record<string, string> = {
+  conversational: `CONVERSATIONAL MODE: The interviewer wants a direct person-to-person answer. Match the latest question: short definition, sincere acknowledgement, concise comparison, clear personal value or practical availability. Do not force a technical drill-down, a historical incident, a rejected alternative, a project rotation or a metrics scoreboard. If this is a closing, ask one or two thoughtful questions rather than making a sales pitch.`,
   behavioural: `BEHAVIOURAL MODE: they score evidence about you, not systems. Each answer is one real moment, told as what you did.
 - Tell the PROJECT from the background below, at its employer: one project and one employer per answer.
 - A failure, conflict or feedback story is built on a prepared answer below or a bottleneck from your background, with roles, never names.
@@ -259,12 +263,12 @@ const MODE_BLOCKS: Record<string, string> = {
 - If the JD names Amazon or its Leadership Principles, aim the story at the one principle the question points to and let the result prove it. Never say its name.
 - Never a student, lab or side-project story.`,
   technical: `TECHNICAL MODE: they score mechanism, judgement and evidence, never vocabulary.
-- Hold the 60/40 balance: 60% human narration of the reasoning, 40% crisp technical mechanism.
-- Take each part down the ladder: what it is, how it works in the order the data or the attacker moves, why it is built that way and what that costs, and where it breaks.
-- Show judgement: the option you rejected and why, the fact that decided it, and the condition that would flip your call. Commit; never end on "it depends".
+- Match technical depth to the current ask rather than trying to meet a fixed share of technical jargon.
+- For a basic what-is question, define and explain its purpose. Only for an explicit mechanics or troubleshooting question, trace the requested data flow, failure and verification.
+- Show a rejected alternative only when the interviewer asks for a decision, design trade-off or option comparison. Do not force one into every definition or tool familiarity question.
 - Use the background to understand the technologies in use. Personal achievements and client stories belong only when the question asks about personal work.
 - A tool the background does not name: one clause says it was not yours and names the product you ran for that job, then the full answer in the present tense.
-- Every control gets its limit. A fix or an incident closes on how you proved it held and what stops a repeat.
+- For remediation or incident questions, explain evidence of effectiveness and what remains unresolved. For a direct concept question, stop after the concept is clear.
 - Stay inside what was asked: a question about one product is answered from inside it, and the wider stack only if they ask.`,
   // Owner, 23 Oct 2026: answers are read and spoken, so no code is shown. The earlier rule (one fenced, runnable block)
   // is in git history; a live round that needs typed code would need its own view, which is the owner's call.
@@ -275,6 +279,7 @@ const MODE_BLOCKS: Record<string, string> = {
 function modeBlock(tier: number, question: string, level: string): string {
   if (tier === 0) return INTRODUCTION_POLICY
   if (CODE_ASK_Q.test(question)) return MODE_BLOCKS.coding
+  if (["value","closing-question","acknowledgement","comparison","definition","logistics"].includes(interviewIntent(question))) return MODE_BLOCKS.conversational
   // The final-round block belongs to the Director LEVEL (owner, 22 Oct 2026:
   // three levels) — not to whichever anchor happens to be writing, so an
   // Architect + Developer answer keeps its full build depth.
@@ -356,7 +361,12 @@ async function repairStructure(job: AnswerJob, guardedText: string, req: NextReq
   const structureMissing = missingStructure(guardedText, opts)
   const explicitParts = questionParts(job.question)
   const precisionMissing = explicitParts.length >= 2 ? missingQuestionParts(job.question, guardedText) : []
-  const missing = [...structureMissing, ...precisionMissing.map(p => `the interviewer explicitly asked about ${p}`)]
+  // A soft/personal question with multiple unrelated specialist phrases should
+  // be simplified before it reaches the candidate. This check is diagnostic
+  // and conservative: expert questions never trigger this specific repair.
+  const offTopic = tangentSignals(job.question, guardedText)
+  const namedMissing = missingNamedQuestionTerms(job.question, guardedText)
+  const missing = [...namedMissing.map(t => `the interviewer explicitly named ${t}; explain its relevance`), ...structureMissing, ...precisionMissing.map(p => `the interviewer explicitly asked about ${p}`), ...offTopic.map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
   if (!missing.length || !job.orKey) return { text: guardedText, repaired: 0 }
   // At most two attempts: the second names exactly what the first rewrite
   // still missed. A failed call is not retried; a rewrite that fixes nothing
@@ -368,14 +378,14 @@ async function repairStructure(job: AnswerJob, guardedText: string, req: NextReq
   for (let attempt = 0; attempt < 2; attempt++) {
     const extra = attempt === 0 ? "" : `\n\nYour previous rewrite still missed:\n${stillMissing.map((m) => `- ${m}`).join("\n")}\nThe rewritten answer MUST contain each item above.`
     try {
-      const { text } = await fetchOpenRouter(job.orKey, PAID_MODEL, STRUCTURE_REPAIR_SYSTEM,
+      const { text } = await fetchOpenRouter(job.orKey, PAID_MODEL, offTopic.length ? `${STRUCTURE_REPAIR_SYSTEM}\nWhen the missing element says remove an unasked tangent, actually delete that jargon and its unrelated clause. Keep the one direct answer and every genuinely requested point; do not replace it with a different technical story.` : STRUCTURE_REPAIR_SYSTEM,
         `QUESTION: ${job.question}\n\nANSWER:\n${guardedText}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}${extra}\n\nReturn the full rewritten answer and nothing else.`,
         1600, AbortSignal.any([req.signal, AbortSignal.timeout(60000)]))
       const repaired = text.trim()
       if (!repaired) return { text: guardedText, repaired: 0 }
       const rg = applyGuards(repaired, job.guardFacts, job.allowed)
       if (!rg.text.trim()) return { text: guardedText, repaired: 0 }
-      stillMissing = [...missingStructure(rg.text, opts), ...(explicitParts.length >= 2 ? missingQuestionParts(job.question, rg.text).map(p => `the interviewer explicitly asked about ${p}`) : [])]
+      stillMissing = [...missingStructure(rg.text, opts), ...(explicitParts.length >= 2 ? missingQuestionParts(job.question, rg.text).map(p => `the interviewer explicitly asked about ${p}`) : []), ...missingNamedQuestionTerms(job.question, rg.text).map(t => `the interviewer explicitly named ${t}; explain its relevance`), ...tangentSignals(job.question, rg.text).map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
       if (stillMissing.length < missing.length && stillMissing.every(m => missing.includes(m))) return { text: rg.text, repaired: 1 }
     } catch { return { text: guardedText, repaired: 0 } }
   }
@@ -520,7 +530,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         }
         emit({
           type: "done", degraded, guarded: g.guarded, verified, repaired,
-          precision: { coverage: questionCoverage(job.question, finalText), flags: spokenQualityFlags(job.question, finalText) },
+          precision: { coverage: questionCoverage(job.question, finalText), flags: [...spokenQualityFlags(job.question, finalText), ...tangentSignals(job.question, finalText).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, finalText).map(t => `missing-named-term:${t}`)] },
           ledger: job.ledger,
           ...metaBase, provider: servedProvider, model: servedModel,
           timing: { ...timing, total_ms: Date.now() - startedAt },
@@ -607,7 +617,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   return NextResponse.json({
     text: out,
     polished: true,
-    precision: { coverage: questionCoverage(job.question, out), flags: spokenQualityFlags(job.question, out) },
+    precision: { coverage: questionCoverage(job.question, out), flags: [...spokenQualityFlags(job.question, out), ...tangentSignals(job.question, out).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, out).map(t => `missing-named-term:${t}`)] },
     degraded,
     guarded: g.guarded,
     verified,
@@ -724,6 +734,16 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const transcript = str(body.transcript, 4000)
   const historyArr = Array.isArray(body.history) ? body.history : []
   const history = formatInterviewHistory(historyArr)
+  // An earlier ASR/turn extractor may trim constraints or attach old
+  // history to a "which of those?" question. When the current raw utterance
+  // contains its own clear ask, recover that before all ranking/repair steps.
+  // Mixed speaker-labelled transcripts still use the derived isolated ask.
+  const sameTurn = asked || heardAll
+  const sameTurnKernel = questionKernel(sameTurn)
+  const hasSpeakerLabels = /(?:^|\n)\s*(?:You|Them|Interviewer):/mi.test(sameTurn)
+  const clearlyAsked = /^(?:what|which|who|why|how|where|when|can|could|would|will|do|does|did|have|has|are|is|tell|describe|explain|give|walk|share|highlight|suppose|imagine|assume|if|given|consider)\b/i.test(sameTurnKernel.ask)
+  const originalTurnAsk = !hasSpeakerLabels && clearlyAsked ? sameTurn : question
+  const rediscovered = rediscoverRelevance(originalTurnAsk, history)
   const retrievedList = Array.isArray(body.retrieved)
     ? body.retrieved.map((r) => str(r, 500)).filter(Boolean)
     : []
@@ -731,14 +751,19 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
 
   // perfACT's answering intelligence: classify → tier rule → length plan. (A topic-less follow-up was already glued to
   // the previous question in code by questionForAnswer.)
-  const { tier, why } = classify(question)
+  // The normalized ask, not background keyword baggage, controls tier,
+  // source selection, word budget, repair checks and named-term verification.
+  // Preserve the full current-turn utterance separately for its real constraints.
+  const originalAsk = originalTurnAsk
+  const { tier, why } = classify(rediscovered.currentAsk || question)
   // Minimal intro triggers ("intro") get a canonical question so the model
   // generates a spoken self-introduction instead of echoing the trigger.
-  question = canonicalQuestion(question, tier)
+  question = canonicalQuestion(rediscovered.currentAsk || question, tier)
   // The question's own register decides how deep ANY level may go: a concept
   // question (define / compare / what-is) is answered abstractly, a practice
   // question (his work, a scenario, a deep example) takes the level's depth.
   let register = questionRegister(question, tier)
+  const focus = focusPlan(question, tier, level)
   const plan = lengthPlan(tier, question, level, {
     difficulty: str(config.difficulty, 20) || undefined,
     length: str(config.length, 20) || undefined,
@@ -750,6 +775,13 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     plan.words = desktopPolicy.words
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
     plan.maxTokens = Math.min(4000, Math.max(600, Math.round(plan.words * 2.6) + 300))
+  }
+  // The real question sets the spoken word ceiling, overriding arbitrary
+  // session depth and fixed technical quotas. Do not pad an already complete answer.
+  if (plan.kind !== "code") {
+    plan.words = applyFocusBudget(plan.words, focus)
+    plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
+    plan.maxTokens = Math.min(plan.maxTokens, Math.max(600, Math.round(plan.words * 2.6) + 350))
   }
   // Depth calibration inside the practice register: match the answer's focus
   // to the question's depth. A surface question gets a direct answer; a deep
@@ -763,11 +795,12 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     ? "ANSWER CALIBRATION: This is a deep, scoped question. Go deep on the specific angle asked — concrete details, trade-offs, and real constraints. Stay focused on what was asked, don't broaden."
     : ""
   const personalEvidence = isPersonalEvidenceQuestion(tier, question)
-  const includeStoryContext = personalEvidence && tier !== 0
-  const includeHistoryContext = tier !== 0
+  const storyMode = rediscovered.intent === "experience-story" || (rediscovered.intent === "follow-up" && tier === 3)
+  const includeStoryContext = personalEvidence && storyMode && tier !== 0
+  const includeHistoryContext = rediscovered.contextRelation === "follow-up" || rediscovered.intent === "experience-story"
   const rule = tierRule(tier, level)
   // 27 question archetypes (perfACT _shapes.js): first-win structural instruction.
-  const shape = tier === 0 ? "" : pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
+  const shape = tier === 0 || !["scenario","technical-process","experience-story","follow-up"].includes(focus.intent) ? "" : pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
   // perfACT's rotation ledger (client-carried): the frontend sends its ledger
   // with every turn and stores the one returned, so a session never retells
   // the same story, bottleneck or angle. Route this question to a project by
@@ -778,7 +811,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   let projectId: string | null = null
   let bott = ""
   let angle = ""
-  if (personalEvidence && tier !== 0 && ledgerProjects.length) {
+  if (personalEvidence && storyMode && tier !== 0 && ledgerProjects.length) {
     const routed = pickProject(question, tier, ledger, ledgerProjects, banked?.projectId)
     projectId = routed.id
     const project = ledgerProjects.find((p) => p.id === routed.id) || null
@@ -809,7 +842,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     ).map(
       (a) => `SAME EMPLOYER: "${a.said}" (as said in this interview) is the resume's "${a.resume}" — you work there. Say "${a.said}".`,
     )
-    const askForDigest = `${question}\n${transcript.slice(-600)}`
+    const askForDigest = question // prior speech does not determine relevance ranking
     const digest = resumeDigest(resumeText, askForDigest, tier === 0 ? 14000 : plan.kind === "short" ? 1600 : 4600, tier === 0 ? "career" : "focused")
     resumeFacts = [
       rr.current ? `CURRENT ROLE (from the resume — use this exact title): ${rr.current}` : "",
@@ -823,17 +856,18 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const context = [
     `The listener is at ${ANSWER_LEVEL_NAME[level]}. The level block below is the controlling spec for this answer's depth and register.`,
     tier === 0 ? `INTRODUCTION AUDIENCE: ${level}. Audience adjusts language and emphasis, not the career-wide scope. No step-by-step project reconstruction.` : levelGuidance(level, register),
-    `QUESTION TYPE: ${why} (tier ${tier}). ${rule}`,
+    `LATEST ACTUAL QUESTION INTENT: ${rediscovered.intent}. Answer mode: ${rediscovered.answerMode}. The old perfACT tier is merely a shape hint: ${why} (tier ${tier}).`,
+    storyMode || ["scenario","technical-process"].includes(rediscovered.intent) ? `DEEP QUESTION RULE: ${rule}` : "",
     `INTERVIEW MODE: ${modeBlock(tier, question, level)}`,
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
     level === "director" ? DIRECTOR_OPENING : "",
-    `LENGTH TARGET: about ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Hit it — a quick factual ask gets a short answer, a deep dive gets room.`,
+    `LENGTH CEILING: usually no more than ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Do not pad the response; finish when all asked parts are answered.`,
     depthGuidance,
-    tier !== 0 && routedProject
+    storyMode && tier !== 0 && routedProject
       ? `Only if the original sources corroborate it, anchor this answer in this generated project summary: ${routedProject.title}${routedProject.employer ? ` (${routedProject.employer})` : ""}. Do not switch projects mid-answer.`
       : "",
-    bott ? `Unverified generated bottleneck; use only if corroborated by original sources: ${bott}.` : "",
-    angle && tier !== 0 && plan.kind !== "code" ? `Fresh angle for this telling: ${angle}.` : "",
+    storyMode && bott ? `Unverified generated bottleneck; use only if corroborated by original sources: ${bott}.` : "",
+    storyMode && angle && tier !== 0 && plan.kind !== "code" ? `Fresh angle for this telling: ${angle}.` : "",
     includeStoryContext && tier !== 3 && toldNames.length
       ? `Stories already told this session — do not retell them: ${toldNames.join("; ")}.`
       : "",
@@ -842,11 +876,11 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     includeStoryContext && prep.projects ? `UNVERIFIED generated project summaries: ${str(prep.projects, 2000)}` : "",
     includeStoryContext && grounding ? `Historical context (personal claims require original source corroboration):\n${grounding.slice(0, 4500)}` : "",
     resumeFacts ? `${resumeFacts}` : "",
-    tier !== 0 && jdSrc ? `JOB DESCRIPTION (requirements and priorities, never evidence of personal history):\n${jdSrc}` : "",
+    tier !== 0 && jdSrc && !["closing-question","acknowledgement","definition","logistics"].includes(rediscovered.intent) ? `JOB DESCRIPTION (role priorities, not candidate history):\n${jdSrc}` : "",
     docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
     str(config.instructions, 2000) ? `SESSION PREFERENCES (delivery only; do not override source evidence): ${str(config.instructions, 2000)}` : "",
     `SOURCE PRIORITY: the current resume and original documents establish personal history. The JD sets relevance. Generated prep, prior answers and transcript are unverified. A resume bullet does not establish a specific incident, root cause, HSM vendor or measured outcome. If no incident is documented, explain the proposed approach conditionally.`,
-    tier !== 0 && transcript ? `Conversation so far:\n${transcript}` : "",
+    tier !== 0 && includeHistoryContext && transcript ? `Brief conversation context for this follow-up only:\n${transcript.slice(-800)}` : "",
     tier !== 0 && history && includeHistoryContext ? `Earlier conversation (only to resolve explicit references, never to supply an unrelated project or topic):\n${history}` : "",
     includeStoryContext && retrieved ? `Retrieved notes:\n${retrieved}` : "",
   ].filter(Boolean).join("\n\n")
@@ -880,7 +914,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const spokenCloser = `Speak it. Sentence one is the answer in words this listener already understands. Then one path. On every sentence, ask whether you are 100% on this question, at this layer. A sentence that is not, is not said.
 A general scenario — a time, a would-you, a launch, or a people question: the decision or the moment, in plain words, and one picture. Do not open a mechanism they did not ask for. If the background has no such incident, say what you would do.
 A technical question — a what-is, a how, an investigate, a fix, or a test: specialist, spoken the way a person talks in the meeting. Simple words, or one abstract sentence that carries the meaning. Do not recite a query, a parameter, a claim name, or a stack. Inside a program, write the real numbers. A status code, a port, and a literal in code stay written as themselves. Make the most important distinction clear in normal spoken words, without double-underscores or another formatting marker.
-If a second topic starts, stop.
+When the question has multiple parts, cover all of them. Do not open unasked topics.
 
 ${INTERVIEW}`
   // Every part the question asks for, in its order, and the conditions it sets (requestedParts): a compound or listed
@@ -891,7 +925,7 @@ ${INTERVIEW}`
     : ""
   const job: AnswerJob = {
     question,
-    system: `${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
+    system: `${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
     userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : desktopCloser || spokenCloser}`,
     plan,
     interviewer,

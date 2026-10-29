@@ -40,7 +40,7 @@ jobs:
         continue-on-error: false
 
       - name: Verify 20-fold Kompas interview question fidelity
-        run: node --test scripts/tests/kompas-interview-precision.test.mjs scripts/tests/kompas-shape-calibration.test.mjs
+        run: node --test scripts/tests/kompas-interview-precision.test.mjs scripts/tests/kompas-shape-calibration.test.mjs scripts/tests/kompas-50fold-relevance.test.mjs scripts/tests/kompas-relevance-review.test.mjs scripts/tests/kompas-relevance-recovery.test.mjs scripts/tests/kompas-chief-kernel-54fold.test.mjs
 
       - name: Verify grounded spoken streaming and original-source claims
         run: node --test scripts/tests/kompas-safe-spoken-stream.test.mjs scripts/tests/kompas-deploy-build.test.mjs
@@ -66,8 +66,26 @@ jobs:
       - name: Verify MarketFit login visual story and media asset
         run: node --test scripts/tests/login-journey-animation.test.mjs scripts/tests/login-35s-story.test.mjs
 
-      - name: Build (Webpack; Next 16 Turbopack Google-font resolver fails in GitHub runner)
-        run: npm run build -- --webpack
+      - name: Build (Webpack; retry only known intermittent Google-font URL bug)
+        run: |
+          # Next 16 occasionally receives a valid Google Fonts /l/font?kit URL
+          # with no extension. Its loader then throws "reading '1'" in both
+          # webpack and Turbopack. Retry only this known transient issue;
+          # every other build error fails immediately, and retries are bounded.
+          for attempt in 1 2 3 4; do
+            set +e
+            npm run build -- --webpack 2>&1 | tee /tmp/marketfit-build.log
+            status=${PIPESTATUS[0]}
+            set -e
+            if [ "$status" -eq 0 ]; then exit 0; fi
+            if ! grep -q "Cannot read properties of null (reading '1')" /tmp/marketfit-build.log || ! grep -q 'next/font' /tmp/marketfit-build.log; then
+              exit "$status"
+            fi
+            if [ "$attempt" -ge 4 ]; then exit "$status"; fi
+            echo "::warning::Next.js received an extensionless Google Fonts URL; retrying safe Webpack build ($attempt/4)"
+            rm -rf .next
+            sleep "$((attempt * 2))"
+          done
         env:
           # Stub vars so build doesn't crash on missing env
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
