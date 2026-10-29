@@ -8,7 +8,7 @@
  * 4) choose relevant depth and evidence, excluding story/tool rotation unless asked;
  * 5) explicitly tell the writer what NOT to answer.
  */
-import { focusPlan, interviewIntent, namedQuestionTerms, type ReplyIntent } from "./kompasRelevance"
+import { focusPlan, interviewIntent, namedQuestionTerms, type ReplyIntent } from "./kompasRelevance.ts"
 export type RelevanceRecovery={
  currentAsk:string
  intent:ReplyIntent
