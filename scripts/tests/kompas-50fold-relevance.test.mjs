@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {
- interviewIntent, focusPlan, focusPrompt, applyFocusBudget, tangentSignals
+ interviewIntent, focusPlan, focusPrompt, applyFocusBudget, tangentSignals, namedQuestionTerms, missingNamedQuestionTerms
 } from '../../src/lib/kompasRelevance.ts'
 
 const cases=JSON.parse(readFileSync(new URL('../fixtures/kompas-50fold-intents.json',import.meta.url),'utf8'))
@@ -81,4 +81,28 @@ test('Code integration keeps answer scope and avoids forced random project rotat
  assert.match(s,/applyFocusBudget\(plan\.words, focus\)/)
  assert.match(s,/const focus = focusPlan\(question, tier, level\)/)
  assert.match(s,/focus\.intent === "experience-story"/)
+})
+
+test('Explicitly named technical concepts survive answer extraction and repair',()=>{
+ const q='Compare NIST CSF, CRI Profile, and NIST 800-53 for control issue management.'
+ assert.deepEqual(namedQuestionTerms(q),['NIST CSF','CRI Profile','NIST 800-53'])
+ assert.deepEqual(missingNamedQuestionTerms(q,'NIST CSF is broad; CRI Profile is financial-sector focused.'),['NIST 800-53'])
+ assert.deepEqual(missingNamedQuestionTerms(q,'NIST CSF groups outcomes, CRI Profile tailors financial requirements, and NIST 800-53 defines detailed controls.'),[])
+})
+test('A broad strengths question does not demand every setup keyword',()=>{
+ const q='We use Azure Policy and CyberArk. What would you bring to our team?'
+ assert.equal(interviewIntent(q),'value')
+ assert.deepEqual(missingNamedQuestionTerms(q,'I bring practical control review, remediation challenge, and clear risk communication.'),[])
+})
+test('Technical questions keep named tools, but never auto-invent unasked ones',()=>{
+ const q='How does TLS validation rely on PKI?'
+ assert.deepEqual(namedQuestionTerms(q),['TLS','PKI'])
+ assert.deepEqual(missingNamedQuestionTerms(q,'TLS uses the PKI certificate trust chain to verify peers.'),[])
+ assert.deepEqual(missingNamedQuestionTerms(q,'I check the certificate trust chain.'),['TLS'])
+})
+test('Named-term repair is integrated with the existing grounding path',()=>{
+ const s=readFileSync(new URL('../../src/lib/kompasAnswerService.ts',import.meta.url),'utf8')
+ assert.match(s,/namedMissing = missingNamedQuestionTerms\(job\.question, guardedText\)/)
+ assert.match(s,/missing-named-term:/)
+ assert.match(s,/missingNamedQuestionTerms\(job\.question, rg\.text\)/)
 })
