@@ -10,6 +10,7 @@ on:
       - 'src/lib/whatsapp-retry-policy.ts'
       - 'src/app/api/whatsapp/**'
       - 'scripts/tests/whatsapp-resume-recovery.test.mjs'
+      - 'scripts/tests/whatsapp-resume-contract.test.mjs'
       - '.github/workflows/whatsapp-resume-regression.yml'
   pull_request:
     paths:
@@ -20,6 +21,7 @@ on:
       - 'src/lib/whatsapp-retry-policy.ts'
       - 'src/app/api/whatsapp/**'
       - 'scripts/tests/whatsapp-resume-recovery.test.mjs'
+      - 'scripts/tests/whatsapp-resume-contract.test.mjs'
   workflow_dispatch:
 jobs:
   regression:
@@ -33,4 +35,4 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs
+      - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs
