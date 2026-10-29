@@ -11,8 +11,8 @@ export type QuestionKernel={
   constraints: string[]
   carryOptions: boolean
 }
-const ASK_HEAD=/\b(?:what|which|who|why|how|where|when|can you|could you|would you|will you|do you|does|did you|have you|are you|is there|tell me|describe|explain|give me|walk me through|share an example|highlight for me|talk about)\b/i
-const ASKER=/^\s*(?:(?:okay|alright|all right|yeah|so|now|well|and|then|uh|um|like|you know)[,.\s]+){0,6}(?:what|which|who|why|how|where|when|can|could|would|will|do|does|did|have|has|are|is|tell|describe|explain|give|walk|share|highlight|talk)\b/i
+const ASK_HEAD=/\b(?:any questions|what|which|who|why|how|where|when|can you|could you|would you|will you|do you|does|did you|have you|are you|is there|tell me|describe|explain|give me|walk me through|share an example|highlight for me|talk about)\b/i
+const ASKER=/^\s*(?:(?:okay|alright|all right|yeah|so|now|well|and|then|uh|um|like|you know)[,.\s]+){0,6}(?:any questions|what|which|who|why|how|where|when|can|could|would|will|do|does|did|have|has|are|is|tell|describe|explain|give|walk|share|highlight|talk)\b/i
 const SCOPED_CLAUSE=/(?:[;,]\s*|\b(?:so|and|then|but|now)\s*,?\s*|\b(?:my|the) (?:real |next )?question is\s*)(?=(?:what|which|who|why|how|when|can|could|would|do|have|tell me|describe|explain|give me|walk me through|highlight for me)\b)/ig
 const RHETORICAL=/^(?:right|okay|yeah|you know|make sense|does that make sense|got it)\??$/i
 const OPTION_REFERENCE=/\b(?:which (?:of (?:those|these|them)|one)|between (?:those|these|them)|of (?:these|those) (?:two|three|options)|which (?:framework|tool|option) (?:is|would be) (?:better|stronger|more relevant)|either one)\b/i
