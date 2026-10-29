@@ -34,6 +34,20 @@ test('source change during generation suppresses stale answer',async()=>{
  assert.equal(await h.deps.store.commit('alice',current.revision,{...current,revision:current.revision+1,pending:undefined,sources:{...current.sources,jd:'Updated JD'}}),true)
  finish(Response.json({text:'Old result'}));assert.equal((await pending).status,'conflict');assert.equal(h.state.sources.jd,'Updated JD');assert.equal(h.state.history.length,1)
 })
+test('a different question is not delivered as a copy of the previous answer', async () => {
+  const copy = 'Network level authentication checks the client before a remote session is allowed to start at all.'
+  const h = setup(async () => Response.json({ text: copy }))
+  await h.deps.store.commit('alice', 0, { ...h.state, revision: 1, history: [{ q: 'What is NLA and why do we disable it?', a: copy }] })
+  assert.equal((await h.run(1)).status, 'repeated')
+  assert.equal(h.state.history.length, 1)
+  assert.equal(h.state.pending, undefined)
+})
+test('the same question may repeat its answer', async () => {
+  const copy = 'Network level authentication checks the client before a remote session is allowed to start at all.'
+  const h = setup(async () => Response.json({ text: copy }))
+  await h.deps.store.commit('alice', 0, { ...h.state, revision: 1, history: [{ q: 'DNS', a: copy }] })
+  assert.equal((await h.run(1)).status, 'answered')
+})
 test('provider failure releases claim without appending fabricated answer',async()=>{
  const h=setup(async()=>Response.json({error:'Unavailable'},{status:503}));assert.equal((await h.run()).status,'unavailable');assert.equal(h.state.pending,undefined);assert.equal(h.state.history.length,1)
 })

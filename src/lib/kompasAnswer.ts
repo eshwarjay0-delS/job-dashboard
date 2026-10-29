@@ -596,7 +596,12 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
     .replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ")
     .replace(/\s+/g, " ")
     .trim()
-  if (bare && !noiseOnly(bare) && (topicFragment(bare) || bare.split(/\s+/).filter(Boolean).length >= 3)) return bare.slice(0, 2000)
+  if (bare && !noiseOnly(bare)) {
+    const words = bare.split(/\s+/).filter(Boolean)
+    // "Explain that" is two words. Dropping it left the previous answer on screen.
+    const shortFollow = words.length >= 2 && words.length <= 9 && (PRESS.test(bare) || POINTS_BACK.test(bare))
+    if (topicFragment(bare) || words.length >= 3 || shortFollow) return bare.slice(0, 2000)
+  }
   return ""
 }
 
@@ -673,15 +678,44 @@ const PRESS =
 const POINTS_BACK =
   /\b(that|this|it|those|these|there|then|you (said|mentioned|described|talked about))\b/i
 
-/** A topic-less follow-up ("go deeper") is glued to the previous question IN CODE. */
+/** What is left once the follow-up phrase and the pronoun are gone. A named subject means a new question. */
+function followUpResidue(q: string): string {
+  return String(q || "")
+    .replace(PRESS, " ")
+    .replace(POINTS_BACK, " ")
+    .replace(/\b(?:explain|elaborate|expand|clarify|repeat|deeper|detail|specifically|exactly|meaning|example)\b/gi, " ")
+    .replace(/\b(?:would|could|should|please|just|really|start|with|about|through|walk)\b/gi, " ")
+}
+
+/** A topic-less follow-up ("go deeper", "explain that") is glued to the previous question IN CODE.
+ * A short question that still names its own subject is not. "What exactly is least privilege?"
+ * used to be rewritten as a follow-up of whatever was on screen, so a different question was answered as the same one.
+ */
 export function resolveFollowUp(d: string, history: Array<{ q?: string }>): string {
   const q = String(d || "").trim()
   const hist = Array.isArray(history) ? history.filter((h) => h && h.q) : []
   if (!q || !hist.length) return q
-  const topicless = q.split(/\s+/).length <= 9 && (PRESS.test(q) || POINTS_BACK.test(q))
-  if (!topicless) return q
+  const points = PRESS.test(q) || POINTS_BACK.test(q)
+  const named = topicWords(followUpResidue(q)).length > 0
+  if (!(q.split(/\s+/).length <= 9 && points && !named)) return q
   const last = String(hist[hist.length - 1].q).replace(/[?.!\s]+$/, "")
   return `${q.replace(/[?.!\s]+$/, "")} — following up on: "${last}"?`
+}
+
+function spokenKey(text: string): string {
+  return String(text || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+}
+
+/** The line the answer prompt adds when this ask is not the previous one. */
+export function differentQuestionLine(question: string, history: unknown): string {
+  if (/following up on/i.test(question)) return ""
+  const turns = (Array.isArray(history) ? history : []).filter((t) => t && typeof t === "object") as Array<Record<string, unknown>>
+  const last = turns[turns.length - 1]
+  if (!last) return ""
+  const prev = spokenKey(String(last.q ?? last.question ?? ""))
+  const next = spokenKey(question)
+  if (!prev || !next || prev === next) return ""
+  return "DIFFERENT QUESTION: this ask is not the previous one. Do not reuse the previous answer, its opening, or its example."
 }
 
 // ---- Per-tier answer rules (perfACT TIER_RULES, pivoted to MarketFit's delivery) ----

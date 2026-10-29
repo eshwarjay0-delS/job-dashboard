@@ -266,6 +266,8 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
           await send(result.text)
       } else if (result.status === "unavailable") {
         await send("Kompas could not answer right now. Your question was not added to the conversation. Please retry.")
+      } else if (result.status === "repeated") {
+        await send("This question is different from the last one, and the answer came back the same. I did not send that copy. Please send the question once more.")
       } else {
         const now = await readChannel(owner, from)
         if (now.sessionId === channel.sessionId) await send("This session changed or has an answer in progress. Please resend the question.")

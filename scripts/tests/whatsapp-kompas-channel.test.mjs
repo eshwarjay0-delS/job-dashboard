@@ -56,6 +56,7 @@ const sharedTurn = async (owner, id, expected, requestId, question) => {
   if (!original || original.revision !== expected) return { status: "conflict" }
   calls++
   const answer = await provider(question, original)
+  if (answer === "REPEAT") return { status: "repeated" }
   const current = await store.read(owner, id)
   if (!current || current.revision !== expected) return { status: "conflict" }
   const next = { ...current, revision: current.revision + 1,
@@ -120,6 +121,14 @@ test("4. Resume and JD unlock an answer from one shared engine", async () => {
   const r = await execute(t("DNS"))
   assert.equal(r.sent[0], "The grounded answer")
   assert.equal(calls, 1)
+})
+test("4b. A repeated answer for a different question is not sent", async () => {
+  reset()
+  await started()
+  provider = async () => "REPEAT"
+  const r = await execute(t("What exactly is least privilege?"))
+  assert.match(r.sent[0], /did not send that copy/)
+  assert.equal([...sessions.values()][0].history.length, 0)
 })
 test("5. A supporting document remains separate from the two primary sources", async () => {
   reset()
