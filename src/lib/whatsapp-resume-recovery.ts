@@ -90,8 +90,11 @@ const messageIndexKey = (wamid: string) =>
 export async function markResumeDocumentAccepted(id: string, wamid: string): Promise<boolean> {
   await blob.put(messageIndexKey(wamid), id)
   const current = await readResumeRecovery(id)
-  // A signed failure callback can beat the original HTTP response.
-  if (current?.deliveryState === "failed" && current.deliveredMessageId === wamid) return false
+  if (!current) return false
+  // A signed failure callback can beat the original HTTP response. Keep the
+  // failed message id as a tombstone so a late HTTP 200 cannot resurrect it.
+  if (current.deliveryState === "failed" && current.deliveredMessageId === wamid) return false
+  if (current.status === "delivered" && current.deliveredMessageId && current.deliveredMessageId !== wamid) return false
   await patchResumeRecovery(id, { status: "delivered", deliveredMessageId: wamid, deliveryState: "accepted" })
   return true
 }
@@ -125,7 +128,7 @@ export async function recordResumeDeliveryStatus(wamid: string, state: "sent" | 
     if (job.deliveryState === "delivered" || job.deliveryState === "read") return
     const attempts = job.attempts + 1
     await blob.put(recoveryKey(id), JSON.stringify({
-      ...job, status: "pending", deliveryState: "failed", deliveredMessageId: undefined,
+      ...job, status: "pending", deliveryState: "failed", deliveredMessageId: wamid,
       attempts, retryAt: Date.now() + retryDelayMs(attempts), errorCode: "meta_delivery_failed",
       updatedAt: Date.now(),
     }))
