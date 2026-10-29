@@ -112,3 +112,19 @@ test('a failed JD stays saved without asking for manual resubmission', () => {
   assert.match(webhook, /The document upload is unconfirmed\. Your request is saved/)
   assert.doesNotMatch(webhook, /If nothing arrives, send \*redo\*/)
 })
+
+
+test('Meta acceptance preserves a recoverable original instead of deleting the only source', () => {
+  assert.match(webhook, /session\.resumeFiled && await existsPath\(session\.resumeFiled\)/)
+  assert.match(webhook, /patchResumeRecovery\(job, \{ resumePath: session\.resumeFiled \}\)/)
+  assert.match(webhook, /if \(durable\?\.resumePath === session\.resumeFiled\)/)
+  assert.match(webhook, /const fallback = job\.resumeFiled \|\| ""/)
+  assert.match(webhook, /path\.resolve\(fallback\)\.startsWith\(path\.resolve\(root\) \+ path\.sep\)/)
+  assert.match(webhook, /await deferResumeRecovery\(job\.id, "source_missing"\)/)
+})
+
+test('recovery distinguishes Meta acceptance and signed handset confirmation', () => {
+  assert.match(webhook, /let handsetConfirmed = 0/)
+  assert.match(webhook, /state\?\.deliveryState === "delivered" \|\| state\?\.deliveryState === "read"/)
+  assert.match(webhook, /handsetConfirmed, stillPending/)
+})
