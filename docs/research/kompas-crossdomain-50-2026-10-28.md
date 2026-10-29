@@ -45,3 +45,29 @@ node scripts/kompas-paired-review.mjs /private/round-1.json /private/round-1.man
 The pairing gate rejects duplicate/missing case IDs, incomplete or failed captures, mismatched exact questions, mismatched source digests, changed capture IDs, missing provider/model fields and synthetic-provider metadata. It emits a row-by-row Markdown comparison only when all fifty raw response pairs are present. The output is created with restricted file permissions and never written inside the source repository.
 
 The report intentionally reads **human-reviewed quality: NOT VERIFIED**. Matching strings/IDs or a self-reported reference model cannot independently authenticate model provenance, technical truth, natural delivery or user preference. Human review must grade every answer with cited reasons. Native speech and WhatsApp timing remain separate checks. This change has not captured fifty genuine response pairs.
+
+
+## Canonical question integrity and manually scored 50-fold acceptance (29 Oct)
+An audit found that two different question texts could be changed together in the reference and Kompas captures yet still pass the original pair matching. The pairing utility now additionally loads the exact repository-authorized benchmark fixture, checks its SHA-256 against manifest, capture and reference records, rejects unknown case IDs, and confirms each original question matches the canonical case. Only allowlisted fixture names are accepted. This repairs a general evidence-integrity defect, not one question.
+
+The independent assessment script `scripts/kompas-score-review.mjs` accepts a privately saved paired-report JSON and a separate manually completed review JSON. For all 50 cases, the reviewer must score each original answer separately on eight axes (direct relevance, explicit coverage, factual grounding, technical correctness, context continuity, natural delivery, unnecessary detail, audience depth), use 0–4 integer scores with a concrete rationale for each, and explicitly record hard failures such as fabrication, contradictory facts, unsafe advice, privacy or answering the wrong question. Evidence quotes, where supplied, must occur in the original answer. No average can override a hard failure. Missing/duplicate cases, mismatched questions/fingerprints, invalid scores or unsigned review are rejected.
+
+Example review format (illustrative only; never treat this as a real result):
+```json
+{ "reviewerId":"human-reviewer", "reviewedAt":"2026-10-29T12:00:00Z", "signedOff":true, "sourceSha256":"<from paired file>", "fixtureSha256":"<from paired file>", "cases":[{"id":"crossdomain-01","question":"<exact fixture question>","domain":"security","hardFailures":[],"kompas":{"directRelevance":{"score":4,"reason":"Concrete supporting assessment with explicit original evidence."}},"reference":{"directRelevance":{"score":4,"reason":"Concrete supporting assessment with explicit original evidence."}}}] }
+```
+All eight rating categories for both answers and all 50 cases are mandatory; the abbreviated example is not executable as a complete review.
+
+```bash
+node scripts/kompas-score-review.mjs /private/paired.json /private/human-review.json /private/scorecard.json
+```
+
+Scores are *self-attested human review*, not externally authenticated independent correctness or proof of model origin. The reported output explicitly labels that limitation. No model calls or scores have been fabricated. This closes evaluation tooling and leaves genuine authenticated capture, human scoring, desktop speech and WhatsApp parity as separate release acceptance tasks.
+
+## Complete private review workflow
+1. Use the already guarded authenticated runner to capture all 50 actual Kompas answers with approved resume/JD files.
+2. Supply independent original ChatGPT responses with *the same source and canonical fixture SHA-256*; the reference JSON must carry `fixtureSha256` and `sourcesSha256` from the capture manifest.
+3. `node scripts/kompas-paired-review.mjs /private/round-1.json /private/round-1.manifest.json /private/reference.json /private/paired.md` now creates both `/private/paired.md` and `/private/paired.json`, with no overwrite.
+4. `node scripts/kompas-review-template.mjs /private/paired.json /private/review-template.json` creates 50 blank records and eight axes for each response, without synthetic scores.
+5. Review the real answers and source evidence, fill the private template, set a real reviewer ID and date and signedOff true, then run `node scripts/kompas-score-review.mjs /private/paired.json /private/review-template.json /private/scorecard.json`.
+6. Treat those ratings as self-attested until reviewer independence and model provenance have actually been verified. Keep production/native/WhatsApp and latency acceptance independent. Do not claim a fifty-case pass from any of the tools alone.
