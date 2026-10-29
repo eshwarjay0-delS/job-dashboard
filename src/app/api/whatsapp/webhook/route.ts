@@ -824,8 +824,19 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // ambiguous send automatically: that could deliver duplicates.
   await patchResumeRecovery(job, { status: "sending" })
   sending = true
-  const sentId = await deliver(from, file, name, captionFor(name, meta, result, undefined, more), { userId, jd: session.jd, meta, changes: [], source: session.resumeName,
-    ...(filed ? { saved: filed.abs, depth: !floorMade && (!files || files.depth === 0) ? 1 : 2 } : {}) })
+  let sentId = ""
+  try {
+    sentId = await deliver(from, file, name, captionFor(name, meta, result, undefined, more), { userId, jd: session.jd, meta, changes: [], source: session.resumeName,
+      ...(filed ? { saved: filed.abs, depth: !floorMade && (!files || files.depth === 0) ? 1 : 2 } : {}) })
+  } catch (error) {
+    // An explicit Meta HTTP rejection proves no document was accepted; retry it.
+    // A timeout or unknown response is ambiguous and must not be sent twice.
+    if (/WA (?:upload|sendDoc) [45]\d\d:/.test(String(error))) {
+      sending = false
+      failureCode = "whatsapp_http_rejected"
+    }
+    throw error
+  }
   if (!sentId) throw new Error("WhatsApp document send returned no message id")
   await patchResumeRecovery(job, { status: "delivered", deliveredMessageId: sentId })
   finished = true
