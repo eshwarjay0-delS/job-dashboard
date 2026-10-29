@@ -4,6 +4,7 @@
  * Never log this record: it contains a candidate's JD and sender identity.
  */
 import { blob } from "./storage"
+import { createHash } from "crypto"
 import { retryDelayMs } from "./whatsapp-retry-policy"
 
 export type ResumeRecoveryJob = {
@@ -27,6 +28,7 @@ export type ResumeRecoveryJob = {
   retryAt: number
   best?: { token: string; coverage: number; supportedCoverage: number }
   deliveredMessageId?: string
+  deliveryState?: "accepted" | "sent" | "delivered" | "read" | "failed"
   errorCode?: string
 }
 
@@ -79,4 +81,37 @@ export async function dueResumeRecoveries(limit = 1): Promise<ResumeRecoveryJob[
     !!j && j.version === 1 && j.status === "pending" && j.retryAt <= now &&
     j.createdAt <= now && now - j.createdAt < 14 * 24 * 60 * 60_000)
     .sort((a, b) => a.retryAt - b.retryAt).slice(0, limit)
+}
+
+/** Index by a one-way hash of Meta's message id; never scan every user's jobs on callbacks. */
+const messageIndexKey = (wamid: string) =>
+  `whatsapp/resume-message-index/${createHash("sha256").update(wamid).digest("hex")}.txt`
+
+export async function markResumeDocumentAccepted(id: string, wamid: string): Promise<void> {
+  await blob.put(messageIndexKey(wamid), id)
+  await patchResumeRecovery(id, { status: "delivered", deliveredMessageId: wamid, deliveryState: "accepted" })
+}
+
+/** Authenticated Meta callbacks distinguish an API acceptance from real handset delivery. */
+export async function recordResumeDeliveryStatus(wamid: string, state: "sent" | "delivered" | "read" | "failed"): Promise<void> {
+  if (!wamid) return
+  const id = await blob.getText(messageIndexKey(wamid))
+  if (!id) return
+  const job = await readResumeRecovery(id)
+  if (!job || job.deliveredMessageId !== wamid) return
+  if (state === "failed") {
+    if (job.deliveryState === "delivered" || job.deliveryState === "read") return
+    const attempts = job.attempts + 1
+    await blob.put(recoveryKey(id), JSON.stringify({
+      ...job, status: "pending", deliveryState: "failed", deliveredMessageId: undefined,
+      attempts, retryAt: Date.now() + retryDelayMs(attempts), errorCode: "meta_delivery_failed",
+      updatedAt: Date.now(),
+    }))
+    return
+  }
+  const rank = { accepted: 0, sent: 1, delivered: 2, read: 3, failed: -1 }
+  if (rank[state] <= rank[job.deliveryState || "accepted"]) return
+  await blob.put(recoveryKey(id), JSON.stringify({ ...job, deliveryState: state, updatedAt: Date.now() }))
+  if (state === "delivered" || state === "read")
+    console.info("[whatsapp] resume handset delivery confirmed", { job: id.slice(0, 12), state })
 }
