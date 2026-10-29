@@ -695,9 +695,15 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   })
   if (queued.status === "delivered" || queued.status === "sending" || queued.status === "uncertain") {
     if (quiet) return
-    const said = queued.status === "delivered"
-      ? "That resume was already sent. Reply to the file if you want a change, or send *redo* to make it again."
-      : "That resume is still being finished. I will send the file in this chat when it is ready."
+    const handsetConfirmed = queued.status === "delivered" &&
+      (queued.deliveryState === "delivered" || queued.deliveryState === "read")
+    const said = handsetConfirmed
+      ? "That resume was delivered. Reply to the file if you want a change."
+      : queued.status === "delivered"
+        ? "WhatsApp accepted the document, but handset delivery has not been confirmed. Your request is saved; I will not send a duplicate while its status is unknown."
+        : queued.status === "uncertain"
+          ? "The document upload is unconfirmed. Your request is saved, and I will not risk sending a duplicate while delivery is unknown."
+          : "That resume is still being finished. Your request is saved for automatic recovery."
     return sendText(from, said)
   }
   const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
@@ -785,7 +791,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
     failureCode = "unchanged"
-    await sayOutcome("The rewrite produced no changes, so I did not send a file. Send *redo* to try again.")
+    await sayOutcome("The rewrite produced no changes, so I did not send a file. Your request is saved and will be retried automatically.")
     return;
   }
 
@@ -902,7 +908,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     } else failureCode = "delivery_unconfirmed"
     await sayOutcome(refused
       ? "I did not send a file. WhatsApp refused it. Your resume and this job are saved for another try."
-      : "WhatsApp did not confirm the file. I will not send a second copy in case the first one arrives. If nothing arrives, send *redo*.")
+      : "WhatsApp did not confirm the file. Your request is saved. I will not send a duplicate while the first delivery is unconfirmed.")
     return
   }
   if (!sentId) throw new Error("WhatsApp document send returned no message id")
