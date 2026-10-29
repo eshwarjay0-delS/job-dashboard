@@ -222,6 +222,7 @@ const HELP = [
 
 // ── Meta webhook verification (GET) ───────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  if (request.nextUrl.pathname.endsWith("/recover")) return recoverResumeJobs(request)
   const sp = request.nextUrl.searchParams
   const expected = (process.env.WHATSAPP_VERIFY_TOKEN || "").trim()
   if (sp.get("hub.mode") === "subscribe" && expected && sp.get("hub.verify_token") === expected) {
@@ -827,6 +828,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   sending = true
   const sentId = await deliver(from, file, name, captionFor(name, meta, result, undefined, more), { userId, jd: session.jd, meta, changes: [], source: session.resumeName,
     ...(filed ? { saved: filed.abs, depth: !floorMade && (!files || files.depth === 0) ? 1 : 2 } : {}) })
+  if (!sentId) throw new Error("WhatsApp document send returned no message id")
   await patchResumeRecovery(job, { status: "delivered", deliveredMessageId: sentId })
   finished = true
   await recordWhatsAppUsage(userId, "resume_tailor", result)
@@ -865,6 +867,68 @@ function startLine(email: string, slots: string[]): string {
 }
 
 // The emails a person's resumes carry, numbered for good (library-pick-store.ts).
+// Rebuild the last pre-queue failure for each sender without replaying a sent document.
+async function bootstrapLegacyResumeFailures(): Promise<number> {
+  const keys = (await blob.list("whatsapp/session-")).filter(k => /^whatsapp\/session-\d+\.json$/.test(k))
+  let queued = 0
+  const cutoff = Date.parse("2026-10-29T17:45:00Z")
+  for (const key of keys.slice(0, 200)) {
+    const from = key.match(/session-(\d+)\.json$/)?.[1] || ""
+    if (!from) continue
+    const session = await loadSession(from)
+    const last = session.last
+    if (!last?.jd || !last.used || !last.email || !last.at || last.at < cutoff) continue
+    const sender = await resolveWhatsAppUser(from)
+    if (!sender.who) continue
+    const userId = sender.who.userId
+    const userDir = filesOf(userId)
+    if (!userDir) continue
+    const abs = path.resolve(userDir, last.used)
+    if (!abs.startsWith(path.resolve(userDir) + path.sep) || !(await existsPath(abs))) continue
+    const genIndex = JSON.parse((await blob.getText(genDir(from) + "/_index.json")) || "[]") as { key: string }[]
+    const sent = await Promise.all(genIndex.slice(-30).map(async g => {
+      try { const raw = await blob.getText(g.key); return raw ? JSON.parse(raw) as Gen : null } catch { return null }
+    }))
+    if (sent.some(g => g && g.jd === last.jd && g.createdAt >= last.at - 60_000)) continue
+    const jdId = "legacy-" + last.at
+    const id = createHash("sha256").update(from + ":" + jdId).digest("hex")
+    if (await blob.exists("whatsapp/resume-recovery/" + id + ".json")) continue
+    await enqueueResumeRecovery({ id, from, userId, jd: last.jd, jdId, resumePath: abs,
+      resumeName: path.basename(abs, ".docx"), files: { userDir, email: last.email, said: path.basename(abs),
+      depth: 1, rel: last.used, abs, redo: true } })
+    queued++
+  }
+  return queued
+}
+
+async function recoverResumeJobs(request: NextRequest) {
+  const secret = process.env.CRON_SECRET || ""
+  if (secret.length < 16 || request.headers.get("authorization") !== "Bearer " + secret)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const bootstrapped = await bootstrapLegacyResumeFailures()
+  const jobs = await dueResumeRecoveries(1)
+  let attempted = 0
+  for (const job of jobs) {
+    const sender = await resolveWhatsAppUser(job.from)
+    if (!sender.who || sender.who.userId !== job.userId) {
+      await patchResumeRecovery(job.id, { status: "uncertain", errorCode: "account_changed" })
+      continue
+    }
+    if (!(await existsPath(job.resumePath))) {
+      await deferResumeRecovery(job.id, "source_missing")
+      continue
+    }
+    attempted++
+    try {
+      await generate(job.from, { jd: job.jd, jdId: job.jdId, resumePath: job.resumePath,
+        resumeName: job.resumeName, resumeFiled: job.resumeFiled }, job.userId, TAILOR_BUDGET_MS, job.files, true)
+    } catch (error) {
+      console.error("[whatsapp] recovery run failed", (error as Error)?.name || "error")
+      await deferResumeRecovery(job.id, "recovery_exception")
+    }
+  }
+  return NextResponse.json({ bootstrapped, attempted, pending: jobs.length })
+}
 async function emailSlots(userId: string): Promise<{ slots: string[]; sure: boolean; failed: boolean }> {
   try {
     const { counts } = await libraryOf(path.join(USER_RESUMES_DIR, userId))
