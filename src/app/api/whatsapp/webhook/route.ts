@@ -711,7 +711,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (cur.resumePath === session.resumePath) { delete cur.resumePath; delete cur.resumeName; delete cur.resumeAt }
   if (cur.pending?.jdId === session.jdId) delete cur.pending
   cur.seen = [...new Set([...(cur.seen || []), ...(session.seen || [])])].slice(-40)
-  if (files) cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
+  if (files && !quiet) cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
   await saveSession(from, cur)
 
   if (!quiet) await sendText(from, files
