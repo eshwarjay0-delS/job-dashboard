@@ -13,6 +13,8 @@ export function words(text) {
 /** Levenshtein alignment with separate substitution/deletion/insertion counts. */
 export function editCounts(reference, hypothesis) {
   const a = words(reference), b = words(hypothesis)
+  // Align per utterance, not an entire hour-long recording in one quadratic matrix.
+  if (a.length > 2000 || b.length > 2000) throw new RangeError('Split long transcripts into utterances of at most 2000 words')
   const dp = Array.from({length:a.length+1},()=>Array(b.length+1))
   dp[0][0]={s:0,d:0,i:0}
   for(let j=1;j<=b.length;j++)dp[0][j]={s:0,d:0,i:j}
@@ -83,14 +85,39 @@ export function evaluate(samples) {
     p95LatencyMs:percentile(latencies,0.95),
   }
 }
+export function compareSamples(baseline, candidate) {
+  if(!Array.isArray(baseline)||!Array.isArray(candidate))throw new TypeError('Expected sample arrays')
+  const byId = new Map()
+  for(const row of baseline){
+    if(typeof row.id!=='string'||!row.id.trim()||byId.has(row.id))throw new Error('Baseline requires unique nonempty IDs')
+    byId.set(row.id,row)
+  }
+  const seen=new Set()
+  for(const row of candidate){
+    if(typeof row.id!=='string'||!byId.has(row.id)||seen.has(row.id))throw new Error('Candidate IDs must match baseline exactly')
+    seen.add(row.id)
+  }
+  if(seen.size!==byId.size)throw new Error('Candidate is missing baseline samples')
+  const before=evaluate(baseline), after=evaluate(candidate)
+  const delta={}
+  for(const key of ['wer','deletionRate','technicalTermRecall','zeroEditRate','speakerAttributionAccuracy','p50LatencyMs','p95LatencyMs']){
+    delta[key]=before[key]===null||after[key]===null?null:after[key]-before[key]
+  }
+  return {baseline:before,candidate:after,delta}
+}
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const file=process.argv[2]
-  if(!file){console.error('Usage: node scripts/voice-benchmark.mjs samples.json');process.exitCode=2}
+  if(!file){console.error('Usage: node scripts/voice-benchmark.mjs candidate.json [baseline.json]');process.exitCode=2}
   else {
     try {
       const payload=JSON.parse(readFileSync(file,'utf8'))
       if(payload.kind!=='synthetic'&&payload.kind!=='consented-deidentified')throw new Error('Dataset kind must be synthetic or consented-deidentified')
-      console.log(JSON.stringify({kind:payload.kind,metrics:evaluate(payload.samples)},null,2))
+      const baselineFile=process.argv[3]
+      if(baselineFile){
+        const base=JSON.parse(readFileSync(baselineFile,'utf8'))
+        if(base.kind!==payload.kind)throw new Error('Baseline and candidate dataset kinds differ')
+        console.log(JSON.stringify({kind:payload.kind,...compareSamples(base.samples,payload.samples)},null,2))
+      }else console.log(JSON.stringify({kind:payload.kind,metrics:evaluate(payload.samples)},null,2))
     } catch(error){console.error('Benchmark failed:',error.message);process.exitCode=1}
   }
 }
