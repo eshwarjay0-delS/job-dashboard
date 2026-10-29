@@ -719,7 +719,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     : "Updating your resume. I’ll send one Word file when this run finishes.")
 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
-  const metaPromise = extractJdMeta({ keys, jd: session.jd })
+  const metaPromise = extractJdMeta({ keys, jd: session.jd }).catch(() => ({ role: "", company: "", location: "" }))
 
   let result: TailorResult
   try {
