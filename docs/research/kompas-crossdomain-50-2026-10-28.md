@@ -27,3 +27,21 @@ node scripts/kompas-live-evaluate.mjs /private/sources.json /private/kompas-resu
 ```
 
 The runner records raw model answers, timing, provenance and pending human review. It does **not** capture ChatGPT comparison responses or certify semantic truth by itself. Require a reviewer and separate same-question reference outputs before declaring a quality pass. No live token or candidate source bundle has been available in this agent session.
+
+
+## Strict side-by-side evidence report (29 October follow-up)
+The answer-capture runner and static jargon diagnostics cannot certify a 50-response ChatGPT-versus-Kompas comparison: loose text lists can be incomplete, misaligned or sourced from a different resume/JD. The private-only `scripts/kompas-paired-review.mjs` requires the capture JSON, its completion manifest and an independent reference JSON with the **same** `sourcesSha256` value.
+
+Reference export shape is illustrative only; never invent responses:
+```json
+{"sourcesSha256":"<exact 64-character digest from manifest>","responses":[{"id":"crossdomain-01","question":"<exact original utterance>","text":"<actual reference response>","model":"<reported model>"}]}
+```
+
+Run with real private files, outside the repository:
+```bash
+node scripts/kompas-paired-review.mjs /private/round-1.json /private/round-1.manifest.json /private/reference.json /private/paired.md
+```
+
+The pairing gate rejects duplicate/missing case IDs, incomplete or failed captures, mismatched exact questions, mismatched source digests, changed capture IDs, missing provider/model fields and synthetic-provider metadata. It emits a row-by-row Markdown comparison only when all fifty raw response pairs are present. The output is created with restricted file permissions and never written inside the source repository.
+
+The report intentionally reads **human-reviewed quality: NOT VERIFIED**. Matching strings/IDs or a self-reported reference model cannot independently authenticate model provenance, technical truth, natural delivery or user preference. Human review must grade every answer with cited reasons. Native speech and WhatsApp timing remain separate checks. This change has not captured fifty genuine response pairs.
