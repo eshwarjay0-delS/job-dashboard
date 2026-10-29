@@ -741,10 +741,14 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
 
   // perfACT's answering intelligence: classify → tier rule → length plan. (A topic-less follow-up was already glued to
   // the previous question in code by questionForAnswer.)
-  const { tier, why } = classify(question)
+  // The normalized ask, not background keyword baggage, controls tier,
+  // source selection, word budget, repair checks and named-term verification.
+  // Preserve the full current-turn utterance separately for its real constraints.
+  const originalAsk = question
+  const { tier, why } = classify(rediscovered.currentAsk || question)
   // Minimal intro triggers ("intro") get a canonical question so the model
   // generates a spoken self-introduction instead of echoing the trigger.
-  question = canonicalQuestion(question, tier)
+  question = canonicalQuestion(rediscovered.currentAsk || question, tier)
   // The question's own register decides how deep ANY level may go: a concept
   // question (define / compare / what-is) is answered abstractly, a practice
   // question (his work, a scenario, a deep example) takes the level's depth.
@@ -911,7 +915,7 @@ ${INTERVIEW}`
     : ""
   const job: AnswerJob = {
     question,
-    system: `${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(question, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
+    system: `${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
     userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : desktopCloser || spokenCloser}`,
     plan,
     interviewer,
