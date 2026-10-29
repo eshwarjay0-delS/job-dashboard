@@ -4,6 +4,8 @@ Measured on ten asks after "What is NLA and why do we disable it?": three new qu
 
 The build then failed its fidelity check because "How do you assess business impact, root cause, compensating controls, and residual risk?" is an explanation, and the check still expected a description. The check now expects an explanation. The named parts are unchanged.
 
+The next build check failed because production also runs the WhatsApp resume gates before `next build`, and the check still expected only the Kompas baseline. The check now requires those gates. They are not removed.
+
 ## 2026-10-29 — Kompas stays deep on the real question
 
 From the Security Analyst III session: words before "next question" are not the question. What is NLA and why it is disabled opens with the definition and then the mechanism. How you assess impact, root cause, compensating controls, residual risk, and validity covers each part. A fit question and what you would bring open with the experience. A comparison names both things. A challenge story is one supported story. No invented decision-maker, person, metric, or formula. One hundred earlier intent folds still pass. Not fifty live model answers.
