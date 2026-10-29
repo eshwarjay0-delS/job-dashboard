@@ -77,6 +77,10 @@ test('the question is cut out of the ramble, and a definition stays a storytelle
   assert.equal(questionToAnswer('Venafi certificate discovery', 'Venafi certificate discovery', true), 'Venafi certificate discovery')
   assert.match(questionToAnswer('Okay. how do you configure certificate discovery in Venafi?', 'Okay. how do you configure certificate discovery in Venafi?', true), /how do you configure certificate discovery in Venafi/i)
   assert.equal(questionToAnswer('Hello.', 'Hello.', true), '')
+  const parts = 'Define IDOR, compare it with CSRF, and name the bottleneck you hit.'
+  assert.match(questionToAnswer(parts, parts, true), /Define IDOR/)
+  assert.match(questionToAnswer(parts, parts, true), /compare it with CSRF/)
+  assert.match(questionToAnswer(parts, parts, true), /bottleneck you hit/)
   const code = 'if n <= 3:\n    return True\nif n % 2 == 0:\n    return False'
   assert.match(applyGuards(code, null, new Set()).text, /n <= 3/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /name the mechanism once/)

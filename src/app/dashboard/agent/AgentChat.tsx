@@ -98,12 +98,11 @@ export default function AgentChat() {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, maxWidth: 980 }}>
       <div>
-        <div className="ink-label">MFit Agent</div>
-        <h1 style={{ margin: "4px 0 8px" }}>Your job-hunt strategist</h1>
+        <div className="ink-label">Chief</div>
+        <h1 style={{ margin: "4px 0 8px" }}>Talk to the Chief</h1>
         <p style={{ color: "var(--muted)", margin: "0 0 4px", maxWidth: 640 }}>
-          Ask about any role, vendor, or submission. The agent pulls every related thread,
-          maps the full vendor chain, checks your history — then gives you one precise call.
-          It drafts, never sends.
+          This is the live chat. He listens here and answers here. He has the open work.
+          He drafts. Nothing goes out until you say yes.
         </p>
       </div>
 

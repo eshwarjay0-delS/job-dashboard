@@ -283,6 +283,21 @@ export function plainlyNoQuestion(heard: string): boolean {
  * the candidate reading the previous answer, and noise. The answer follows the ask,
  * not the ramble. "Okay" alone is not a question.
  */
+export function wholeQuestion(heard: string): string {
+  const text = String(heard || "")
+    .replace(/^(?:You(?: \(typed\))?|Them):\s*/gim, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^(?:ok(?:ay)?|so|yes|yeah|uh|um)[, ]+/i, "")
+    .trim()
+  const sentences = text.split(/(?<=[.!?])\s+/).filter((s) => s && !SPOKEN_NOISE.test(s))
+  if (sentences.length <= 2 && text.length <= 700 && (ASKS.test(text) || /\?/.test(text))) {
+    if (/^(?:self\s+)?intro(?:duction)?\.?$/i.test(text)) return "Tell me about yourself"
+    return text.charAt(0).toUpperCase() + text.slice(1)
+  }
+  return cutQuestion(heard)
+}
+
 export function cutQuestion(heard: string): string {
   const text = String(heard || "")
     .replace(/^(?:You(?: \(typed\))?|Them):\s*/gim, " ")
@@ -323,10 +338,11 @@ export function noiseOnly(text: string): boolean {
 export function questionToAnswer(heard: string, explicit: string, pinned = false): string {
   const asked = String(explicit || "").replace(/\s+/g, " ").trim()
   if (pinned && asked && !noiseOnly(asked)) {
-    const inner = cutQuestion(asked)
-    return (inner || asked).slice(0, 900)
+    const full = asked.replace(/^(?:ok(?:ay)?|so|yes|yeah|uh|um)[, ]+/i, "").trim()
+    if (/^(?:self\s+)?intro(?:duction)?\.?$/i.test(full)) return "Tell me about yourself"
+    return (full.charAt(0).toUpperCase() + full.slice(1)).slice(0, 900)
   }
-  const cut = cutQuestion([heard, asked].filter(Boolean).join("\n"))
+  const cut = wholeQuestion([heard, asked].filter(Boolean).join("\n"))
   if (cut) return cut
   if (asked && !noiseOnly(asked)) return asked.slice(0, 900)
   const bare = String(heard || "")

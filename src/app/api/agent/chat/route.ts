@@ -7,6 +7,7 @@ import { checkRateLimit } from "@/lib/rateLimit"
 import { plainFailure, failureKind, failureTag, worthAnotherTry } from "@/lib/plain-failure"
 import { isAdminEmail } from "@/lib/owner"
 import { readBrief, startFromBrief } from "@/lib/chief-brief"
+import { chiefDeskSummary } from "@/lib/chief-desk"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -67,7 +68,11 @@ export async function POST(req: NextRequest) {
     // The appointed rules for everyone; the owner's own brief only on his account (chief-rules.ts). Since 23 Oct 2026
     // the prompt starts from the person's own brief (chief-brief.ts): the one rule, Me, candidates, voice, Never and the
     // never-contact list, read before every job.
-    const system = startFromBrief(await readBrief(user.id), `${chiefSystemPrompt(owner)}\n\n${toolPromptBlock()}\n\n${WHEN_A_TOOL_FAILS}`)
+    const desk = owner ? chiefDeskSummary() : null
+    const deskNote = desk
+      ? `\n\nLIVE CHAT: you are listening here. Answer him in this chat. OPEN DESK: ${desk.count} jobs, up to ${desk.workerCap} workers. Kompas first:\n${desk.items.filter(i => i.area === "kompas").slice(0, 8).map(i => `- ${i.title}`).join("\n")}`
+      : ""
+    const system = startFromBrief(await readBrief(user.id), `${chiefSystemPrompt(owner)}${deskNote}\n\n${toolPromptBlock()}\n\n${WHEN_A_TOOL_FAILS}`)
     const convo: ChatMsg[] = messages.slice(-12) // keep the turn bounded
     // What he wrote himself: a rate or a claim in a draft stands only when it is in these words (chief-guard.ts).
     const ctx = { userId: user.id, ownerWords: messages.filter(m => m.role === "user").map(m => String(m.content || "")).slice(-12) }

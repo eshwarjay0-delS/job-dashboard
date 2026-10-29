@@ -169,20 +169,20 @@ export default function FloatingAgent() {
     <>
       {/* Launcher */}
       {!open && (
-        <button type="button" onClick={toggle} className="mf-agent-launch" aria-label="Ask MFit">
+        <button type="button" onClick={toggle} className="mf-agent-launch" aria-label="Talk to the Chief">
           <Sparkles size={20} aria-hidden="true" />
-          <span className="mf-agent-launch-text">Ask MFit</span>
+          <span className="mf-agent-launch-text">Chief</span>
           {unread > 0 && <span className="mf-agent-badge" aria-label={`${unread} new`}>{unread}</span>}
         </button>
       )}
 
       {/* Panel */}
       {open && (
-        <section aria-label="MFit Agent chat" className="mf-agent-panel">
+        <section aria-label="Chief chat" className="mf-agent-panel">
           <header className="mf-agent-head">
             <span className="mf-agent-avatar"><Sparkles size={17} aria-hidden="true" /></span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="mf-agent-name">MFit Agent</div>
+              <div className="mf-agent-name">Chief</div>
               <div className="mf-agent-status"><span className={`mf-agent-dot${listening ? " is-listening" : ""}`} aria-hidden="true" />{status}</div>
             </div>
             <button type="button" onClick={toggle} aria-label="Close chat" className="mf-agent-icon-btn">
@@ -193,8 +193,7 @@ export default function FloatingAgent() {
           <div className="mf-agent-body" aria-live="polite">
             <div className="mf-agent-msg is-agent">
               <p style={{ margin: 0 }}>
-                Hi{name ? ` ${name}` : ""}! I read your job mail, so I can tell you who is waiting on you, what needs a
-                follow-up and when your next interview is.
+                Hi{name ? ` ${name}` : ""}. I am the Chief. I listen here. Tell me the goal. I will do the steps and bring you the decisions.
               </p>
             </div>
             {messages.length === 0 && (

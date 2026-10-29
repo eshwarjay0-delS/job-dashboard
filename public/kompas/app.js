@@ -884,7 +884,7 @@ function stopClock() { if (clockTimer) clearInterval(clockTimer); clockTimer = n
 const NO_SYS_AUDIO = window.kompasDesktop?.systemAudio === false;
 const srcOn = { mic: true, sys: !NO_SYS_AUDIO };
 if (NO_SYS_AUDIO) { $("sysBtn").classList.add("hidden"); $("screenBtn").classList.add("hidden"); }
-else if (window.kompasDesktop) $("screenBtn").classList.add("hidden");
+else if (window.kompasDesktop) $("screenBtn").classList.remove("hidden");
 function syncSrc() {
   $("micBtn").classList.toggle("on", srcOn.mic); $("sysBtn").classList.toggle("on", srcOn.sys);
   $("micBtn").title = "Microphone (you) — " + (srcOn.mic ? "on" : "off");
@@ -2329,6 +2329,11 @@ async function aiAnswer(fromAuto) {
 }
 $("screenBtn").onclick = analyseScreen;
 async function grabFrame() {
+  if (window.kompasDesktop && typeof window.kompasDesktop.captureScreen === "function") {
+    const shot = await window.kompasDesktop.captureScreen();
+    if (shot && shot.image) return shot.image;
+    throw new Error((shot && shot.error) || "The screen did not come back");
+  }
   let track = displayVideo && displayVideo.readyState === "live" ? displayVideo : null;
   if (!track) { const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }); track = s.getVideoTracks()[0]; displayVideo = track; }
   const video = document.createElement("video"); video.muted = true; video.playsInline = true;

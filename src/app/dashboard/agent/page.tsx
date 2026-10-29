@@ -1,8 +1,8 @@
 import AgentChat from "./AgentChat"
 
 export const metadata = {
-  title: "MFit Agent — MarketFit",
-  description: "Your job-hunt strategist: chain analysis, watchdog alerts, and follow-up drafts.",
+  title: "Chief — MarketFit",
+  description: "The live chat. The Chief listens here, answers here, and keeps the open work.",
 }
 
 export default function AgentPage() {
