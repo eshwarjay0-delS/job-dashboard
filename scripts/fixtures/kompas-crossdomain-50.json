@@ -1,0 +1,352 @@
+[
+  {
+    "id": 1,
+    "domain": "security",
+    "intent": "introduction",
+    "question": "Tell me about yourself.",
+    "input": "Thanks for joining. Tell me about yourself."
+  },
+  {
+    "id": 2,
+    "domain": "software",
+    "intent": "introduction",
+    "question": "Walk me through your background.",
+    "input": "Walk me through your background."
+  },
+  {
+    "id": 3,
+    "domain": "analytics",
+    "intent": "introduction",
+    "question": "Give me a quick overview of your experience.",
+    "input": "Give me a quick overview of your experience."
+  },
+  {
+    "id": 4,
+    "domain": "validation",
+    "intent": "introduction",
+    "question": "Summarize your career.",
+    "input": "Summarize your career."
+  },
+  {
+    "id": 5,
+    "domain": "salesforce",
+    "intent": "introduction",
+    "question": "What's your background?",
+    "input": "What's your background?"
+  },
+  {
+    "id": 6,
+    "domain": "security",
+    "intent": "value",
+    "question": "What would you bring to a cybersecurity team?",
+    "input": "What would you bring to a cybersecurity team?"
+  },
+  {
+    "id": 7,
+    "domain": "delivery",
+    "intent": "value",
+    "question": "What sets you apart from other applicants?",
+    "input": "What sets you apart from other applicants?"
+  },
+  {
+    "id": 8,
+    "domain": "validation",
+    "intent": "value",
+    "question": "Why are you interested in this position?",
+    "input": "Our team operates across vendors. Why are you interested in this position?"
+  },
+  {
+    "id": 9,
+    "domain": "quality",
+    "intent": "value",
+    "question": "How would you contribute to our QA team?",
+    "input": "We use Selenium and Cypress. How would you contribute to our QA team?"
+  },
+  {
+    "id": 10,
+    "domain": "analytics",
+    "intent": "value",
+    "question": "What makes you a good fit for this analyst role?",
+    "input": "What makes you a good fit for this analyst role?"
+  },
+  {
+    "id": 11,
+    "domain": "grc",
+    "intent": "experience-story",
+    "question": "Tell me about a time you challenged a risk owner.",
+    "input": "We have difficult stakeholders. Tell me about a time you challenged a risk owner."
+  },
+  {
+    "id": 12,
+    "domain": "software",
+    "intent": "experience-story",
+    "question": "Describe a situation where you disagreed with a developer.",
+    "input": "Describe a situation where you disagreed with a developer."
+  },
+  {
+    "id": 13,
+    "domain": "security",
+    "intent": "experience-story",
+    "question": "Walk me through an incident you investigated.",
+    "input": "Walk me through an incident you investigated."
+  },
+  {
+    "id": 14,
+    "domain": "delivery",
+    "intent": "experience-story",
+    "question": "Describe a project you delivered end to end.",
+    "input": "Describe a project you delivered end to end."
+  },
+  {
+    "id": 15,
+    "domain": "cloud",
+    "intent": "experience-story",
+    "question": "Give me an example of when you resolved a production issue.",
+    "input": "Give me an example of when you resolved a production issue."
+  },
+  {
+    "id": 16,
+    "domain": "network",
+    "intent": "definition",
+    "question": "What is DHCP?",
+    "input": "Network operations here are busy. What is DHCP?"
+  },
+  {
+    "id": 17,
+    "domain": "validation",
+    "intent": "definition",
+    "question": "Define GMP.",
+    "input": "Define GMP."
+  },
+  {
+    "id": 18,
+    "domain": "validation",
+    "intent": "definition",
+    "question": "What does CAPA mean?",
+    "input": "What does CAPA mean?"
+  },
+  {
+    "id": 19,
+    "domain": "salesforce",
+    "intent": "definition",
+    "question": "What is Salesforce Flow?",
+    "input": "What is Salesforce Flow?"
+  },
+  {
+    "id": 20,
+    "domain": "grc",
+    "intent": "definition",
+    "question": "What is least privilege?",
+    "input": "What is least privilege?"
+  },
+  {
+    "id": 21,
+    "domain": "analytics",
+    "intent": "comparison",
+    "question": "Compare SQL and NoSQL for reporting.",
+    "input": "Compare SQL and NoSQL for reporting."
+  },
+  {
+    "id": 22,
+    "domain": "grc",
+    "intent": "comparison",
+    "question": "What's the difference between preventive and detective controls?",
+    "input": "What's the difference between preventive and detective controls?"
+  },
+  {
+    "id": 23,
+    "domain": "validation",
+    "intent": "comparison",
+    "question": "Compare IQ, OQ and PQ.",
+    "input": "Compare IQ, OQ and PQ."
+  },
+  {
+    "id": 24,
+    "domain": "software",
+    "intent": "comparison",
+    "question": "Which would you choose, Python or Java?",
+    "input": "Which would you choose, Python or Java?"
+  },
+  {
+    "id": 25,
+    "domain": "security",
+    "intent": "comparison",
+    "question": "How do OAuth and OIDC differ?",
+    "input": "How do OAuth and OIDC differ?"
+  },
+  {
+    "id": 26,
+    "domain": "grc",
+    "intent": "scenario",
+    "question": "How would you handle a missed regulatory deadline?",
+    "input": "How would you handle a missed regulatory deadline?"
+  },
+  {
+    "id": 27,
+    "domain": "analytics",
+    "intent": "scenario",
+    "question": "Suppose the database is unavailable; what would you do?",
+    "input": "Suppose the database is unavailable; what would you do?"
+  },
+  {
+    "id": 28,
+    "domain": "quality",
+    "intent": "scenario",
+    "question": "What would you do if a new release duplicated records?",
+    "input": "What would you do if a new release duplicated records?"
+  },
+  {
+    "id": 29,
+    "domain": "salesforce",
+    "intent": "scenario",
+    "question": "How would you troubleshoot a Salesforce Flow that fails for some users?",
+    "input": "How would you troubleshoot a Salesforce Flow that fails for some users?"
+  },
+  {
+    "id": 30,
+    "domain": "security",
+    "intent": "scenario",
+    "question": "Imagine a phishing alert on a finance mailbox. How would you respond?",
+    "input": "Imagine a phishing alert on a finance mailbox. How would you respond?"
+  },
+  {
+    "id": 31,
+    "domain": "security",
+    "intent": "technical-process",
+    "question": "How does Kerberos authentication work?",
+    "input": "Our identity estate has multiple realms. How does Kerberos authentication work?"
+  },
+  {
+    "id": 32,
+    "domain": "network",
+    "intent": "technical-process",
+    "question": "Explain how TLS certificate validation works.",
+    "input": "Explain how TLS certificate validation works."
+  },
+  {
+    "id": 33,
+    "domain": "validation",
+    "intent": "technical-process",
+    "question": "Explain how a PAS-X electronic batch record is generated.",
+    "input": "Explain how a PAS-X electronic batch record is generated."
+  },
+  {
+    "id": 34,
+    "domain": "software",
+    "intent": "technical-process",
+    "question": "Design a retry mechanism for an asynchronous API.",
+    "input": "Design a retry mechanism for an asynchronous API."
+  },
+  {
+    "id": 35,
+    "domain": "network",
+    "intent": "technical-process",
+    "question": "Step by step, troubleshoot a DNS resolution failure.",
+    "input": "Step by step, troubleshoot a DNS resolution failure."
+  },
+  {
+    "id": 36,
+    "domain": "grc",
+    "intent": "direct",
+    "question": "Have you used ServiceNow?",
+    "input": "Have you used ServiceNow?"
+  },
+  {
+    "id": 37,
+    "domain": "delivery",
+    "intent": "direct",
+    "question": "How do you stay organized?",
+    "input": "How do you stay organized?"
+  },
+  {
+    "id": 38,
+    "domain": "analytics",
+    "intent": "direct",
+    "question": "Which metrics would you report to your manager?",
+    "input": "There are different stakeholders. Which metrics would you report to your manager?"
+  },
+  {
+    "id": 39,
+    "domain": "analytics",
+    "intent": "direct",
+    "question": "How do you reconcile an analytics report?",
+    "input": "How do you reconcile an analytics report?"
+  },
+  {
+    "id": 40,
+    "domain": "cloud",
+    "intent": "direct",
+    "question": "What risks do you check before deploying a patch?",
+    "input": "What risks do you check before deploying a patch?"
+  },
+  {
+    "id": 41,
+    "domain": "delivery",
+    "intent": "logistics",
+    "question": "Can you relocate to Pittsburgh?",
+    "input": "Can you relocate to Pittsburgh?"
+  },
+  {
+    "id": 42,
+    "domain": "delivery",
+    "intent": "logistics",
+    "question": "Are you comfortable with a hybrid schedule?",
+    "input": "Are you comfortable with a hybrid schedule?"
+  },
+  {
+    "id": 43,
+    "domain": "delivery",
+    "intent": "logistics",
+    "question": "When could you start?",
+    "input": "We hire quickly. When could you start?"
+  },
+  {
+    "id": 44,
+    "domain": "grc",
+    "intent": "follow-up",
+    "question": "How did you verify that?",
+    "input": "How did you verify that?"
+  },
+  {
+    "id": 45,
+    "domain": "quality",
+    "intent": "follow-up",
+    "question": "Why was that important?",
+    "input": "Why was that important?"
+  },
+  {
+    "id": 46,
+    "domain": "grc",
+    "intent": "follow-up",
+    "question": "Tell me more about that exception.",
+    "input": "Tell me more about that exception."
+  },
+  {
+    "id": 47,
+    "domain": "delivery",
+    "intent": "closing-question",
+    "question": "Any questions for us?",
+    "input": "We finished reviewing your experience. Any questions for us?"
+  },
+  {
+    "id": 48,
+    "domain": "delivery",
+    "intent": "closing-question",
+    "question": "Do you have any questions?",
+    "input": "Do you have any questions?"
+  },
+  {
+    "id": 49,
+    "domain": "delivery",
+    "intent": "acknowledgement",
+    "question": "We value independent analysis across teams.",
+    "input": "We value independent analysis across teams."
+  },
+  {
+    "id": 50,
+    "domain": "quality",
+    "intent": "acknowledgement",
+    "question": "Our QA team handles initial triage; you'll own investigations afterward.",
+    "input": "Our QA team handles initial triage; you'll own investigations afterward."
+  }
+]
