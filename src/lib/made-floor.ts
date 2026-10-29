@@ -1,5 +1,5 @@
 // A resume made earlier for a job is offered again instead of being made again (one job, one file), but only when it
-// still meets the floor. Owner, 26 Oct 2026: "the baseline is serve at least 90% match". Resumes made between 22 and
+// still meets the floor. Current reuse baseline: 95% measured JD coverage. Resumes made between 22 and
 // 26 Oct came back at 28-52% for want of the floor; sent again as they were, the same job would keep getting them.
 // A file made once the floor was in place is not made again on that account: the floor already did what it could for
 // its source, and remaking it on every paste would pay for the same resume again and again.
@@ -19,7 +19,7 @@ export function floorShare(text: string, jd: string): number {
   return coveredJdKeywords(text, targets).size / targets.length
 }
 
-/** Should the resume at `abs`, saved at `at`, be offered again? Made after the floor, or still at 90%: yes. Unreadable: no. */
+/** Should a saved resume be offered again? Re-read the actual DOCX regardless of timestamp. */
 export async function madeMeetsFloor(abs: string, jd: string, at = 0): Promise<boolean> {
   // Creation date is not proof of quality: even newer files can fail the floor.
   try {
