@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import vm from 'node:vm'
 const source=readFileSync('public/kompas/app.js','utf8')
-const code=source.slice(source.indexOf('async function analyseScreen()'),source.indexOf('/* ---- Follow along:'))
+const code=source.slice(source.indexOf('function stripScreenChrome'),source.indexOf('/* ---- Follow along:'))
 async function run(response, captureError) {
  const card={}, requests=[]
  const context=vm.createContext({current:{id:"session-a"},aiBusy:false, aiBusySince:0, AbortSignal,addCard:()=>card,renderCard:()=>{},performance:{now:()=>0},grabFrame:async()=>{if(captureError)throw captureError;return 'data:image/jpeg;base64,fixture'},fetch:async(url,init)=>{requests.push({url,body:JSON.parse(init.body)});return response},slimPrep:()=>({role:'security'}),liveConfig:()=>({level:'technical'}),cards:[card],idx:0})
@@ -42,6 +42,14 @@ for(const change of ['switch session','clear cards'])test(`${change} during extr
  const card={};let answers=0,ctx
  ctx=vm.createContext({current:{id:'a'},aiBusy:false,aiBusySince:0,AbortSignal,addCard:()=>card,renderCard:()=>{},performance:{now:()=>0},grabFrame:async()=> 'frame',fetch:async()=>{if(change==='switch session')ctx.current={id:'b'};else ctx.cards=[];return {ok:true,json:async()=>({needsAnswer:true,question:'Explain DNS'})}},slimPrep:()=>({}),liveConfig:()=>({}),cards:[card],idx:0,generateAnswer:async()=>{answers++}})
  vm.runInContext(code,ctx);await ctx.analyseScreen();assert.equal(answers,0);assert.equal(ctx.aiBusy,false);assert.match(String(card.answer),/Session changed/)
+})
+test('the card shows the screen question without the capture label', async () => {
+  const card = {}
+  const shown = 'Question 1 (free-text; unknown choice):\nExplain zero trust'
+  const ctx = vm.createContext({ current: { id: 'a' }, aiBusy: false, aiBusySince: 0, AbortSignal, addCard: () => card, renderCard: () => {}, performance: { now: () => 0 }, grabFrame: async () => 'frame', fetch: async () => ({ ok: true, json: async () => ({ needsAnswer: true, question: shown }) }), slimPrep: () => ({}), liveConfig: () => ({}), cards: [card], idx: 0, generateAnswer: async (q) => { assert.equal(q, 'Explain zero trust'); card.streaming = false } })
+  vm.runInContext(code, ctx)
+  await ctx.analyseScreen()
+  assert.equal(card.question, 'Explain zero trust')
 })
 test('a review payload answers directly without opening any dialog',async()=>{
  const card={};let answers=0, dialogCalls=0

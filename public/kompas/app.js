@@ -2595,6 +2595,10 @@ async function screenStream() {
     }
   }
 }
+function stripScreenChrome(question) {
+  const stripped = String(question || "").replace(/^Question \d+ \([^)\n]{0,80}\):\s*/gm, "").trim();
+  return stripped || String(question || "").trim();
+}
 async function analyseScreen() {
   if (aiBusy) { status("Still working on the last answer.", "live"); return; }
   aiBusy = true; aiBusySince = Date.now();
@@ -2625,12 +2629,12 @@ async function analyseScreen() {
         ? window.KompasScreenCore.format(tasks)
         : tasks.map(t => t.question).join("\n\n");
       if (typeof formatted !== "string" || !formatted.trim()) throw new Error("No screen question was returned. Please retry.");
-      card.question = formatted.trim(); card.screenTask = true;
+      card.question = stripScreenChrome(formatted.trim()); card.screenTask = true;
       await generateAnswer(card.question, card, { pinned: true, derived: card.question, source: "screen" });
       return;
     } else if (data.needsAnswer === true) {
       if (typeof data.question !== "string" || !data.question.trim()) throw new Error("No screen question was returned. Please retry.");
-      card.question = data.question.trim(); card.screenTask = true;
+      card.question = stripScreenChrome(data.question.trim()); card.screenTask = true;
       await generateAnswer(card.question, card, { pinned: true, derived: card.question, source: "screen" });
       return;
     }

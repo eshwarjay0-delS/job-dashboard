@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import vm from 'node:vm'
 
 const app = readFileSync(new URL('../../public/kompas/app.js', import.meta.url), 'utf8')
-const code = app.slice(app.indexOf('async function analyseScreen()'), app.indexOf('/* ---- Follow along:'))
+const code = app.slice(app.indexOf('function stripScreenChrome'), app.indexOf('/* ---- Follow along:'))
 
 function baseContext(overrides = {}) {
   return vm.createContext({
