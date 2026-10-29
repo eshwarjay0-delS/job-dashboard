@@ -44,7 +44,7 @@ import { libraryOf, numberedEmails, candidatesFor } from "@/lib/library-pick-sto
 import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME } from "@/lib/library-pick"
 import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
 import { madeMeetsFloor } from "@/lib/made-floor"
-import { acceptableWhatsAppResume } from "@/lib/whatsapp-resume-acceptance"
+import { acceptableWhatsAppResume, whatsappResumeRejectionReasons } from "@/lib/whatsapp-resume-acceptance"
 import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
@@ -769,7 +769,18 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
           sections: { summary: false, skills: true, experience: true },
         })
         if (acceptableWhatsAppResume(fresh)) result = fresh
-        else if ((fresh.supported_coverage ?? 0) > (result.supported_coverage ?? 0)) result = fresh
+        else {
+          const priorBlockers = whatsappResumeRejectionReasons(result).length
+          const freshBlockers = whatsappResumeRejectionReasons(fresh).length
+          // At equal supported coverage, retain the pass with fewer genuine
+          // completion blockers. The previous comparison discarded an improved
+          // role rewrite whenever both drafts already scored 100% supported.
+          if ((freshBlockers < priorBlockers &&
+               (fresh.supported_coverage ?? 0) >= (result.supported_coverage ?? 0) - 1) ||
+              (freshBlockers === priorBlockers &&
+               (fresh.supported_coverage ?? 0) > (result.supported_coverage ?? 0)))
+            result = fresh
+        }
       } catch (error) {
         console.error("[whatsapp] automatic quality retry failed", String(error).slice(0, 300))
       }
@@ -782,7 +793,14 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (!acceptableWhatsAppResume(result)) {
     failureCode = "quality_rejected"
     failedCandidate = { token: result.token, coverage, supportedCoverage: result.supported_coverage ?? 0 }
-    console.error("[whatsapp] tailoring quality gate rejected draft", { coverage, supportedCoverage: result.supported_coverage, partial: !!result.partial, skillsOnly: !!result.skills_only, status: result.quality?.status })
+    console.error("[whatsapp] tailoring quality gate rejected draft", {
+      coverage, supportedCoverage: result.supported_coverage,
+      partial: !!result.partial, skillsOnly: !!result.skills_only,
+      status: result.quality?.status, incomplete: !!result.quality?.incomplete,
+      blockers: whatsappResumeRejectionReasons(result),
+      roleCount: result.role_alignment?.length ?? 0,
+      unverifiedCount: result.unverified_added_keywords?.length ?? 0,
+    })
     return;
   }
   const file = await blob.get(`tailored/${result.token}.docx`)
