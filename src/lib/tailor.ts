@@ -783,7 +783,7 @@ export async function runTailor(opts: {
         const missing = forcedJdKws.filter(k => !current.afterKw.has(k))
         if (!missing.length) break
         const repairPrefs: string[] = [
-          `COVERAGE REPAIR PASS ${repair}: current rendered JD coverage is ${coveragePercent(current.cov)}%. The default completion target is at least ${Math.round(TARGET_COVERAGE * 100)}%.`,
+          `EVIDENCE-SUPPORTED COVERAGE REPAIR PASS ${repair}: verified JD term retention is ${coveragePercent(supportedShare(current))}%. Target at least ${Math.round(TARGET_COVERAGE * 100)}% of evidenced terms; do not invent unsupported requirements.`,
           `The JD is a KNOWN JD supplied/approved by the user. Incorporate ALL of these still-missing ATS terms naturally and contextually: ${missing.join(", ")}.`,
           "Do not claim a JD qualification unless the baseline or explicit candidate confirmation substantiates it. Preserve immutable identity, experience length, employers, dates, education, and certifications.",
           "Distribute terms across the summary, skills, and relevant experience instead of keyword stuffing.",
