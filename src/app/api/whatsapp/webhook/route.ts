@@ -44,6 +44,7 @@ import { libraryOf, numberedEmails, candidatesFor } from "@/lib/library-pick-sto
 import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME } from "@/lib/library-pick"
 import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
 import { madeMeetsFloor } from "@/lib/made-floor"
+import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, type ResumeRecoveryJob } from "@/lib/whatsapp-resume-recovery"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
 import { chooseResume, type Prefer } from "@/lib/library-choose"
@@ -670,39 +671,36 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
 // Where a run starts when it starts from the person's Files: their folder, the email, and what was picked.
 type FromFiles = { userDir: string; email: string; said: string; depth: number; rel: string; abs: string; redo?: boolean }
 
-// A provider outage must not strand someone who already has a resume in Files.
-// This is the ORIGINAL selected resume, explicitly not a tailored result.
-async function sendLibraryFallback(from: string, files: FromFiles, reason: string) {
-  const original = await readPath(files.abs).catch(() => null)
-  if (!original) return sendText(from, "Resume tailoring is unavailable and I could not open the selected original resume. Please try again later.")
-  const name = await outputNameFor(original)
-  await sendDocument(from, original, `${name}.docx`, [
-    "*Temporary fallback — original resume, NOT tailored*",
-    `Closest available library match: ${files.said}.`,
-    "The AI rewrite could not complete (" + reason + "). This document is unchanged and has not been checked against the job description.",
-    "Send *redo* when AI tailoring is available to generate an updated version."
-  ].join("\n"))
-}
-
-async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS, files?: FromFiles) {
+async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS, files?: FromFiles, quiet = false) {
   const startedAt = Date.now()
-  const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
-  if (!hasAnyKey(keys)) return files ? sendLibraryFallback(from, files, "provider unavailable") : sendText(from, "Resume tailoring is temporarily unavailable. Your original resume has not been modified.")
-  if (!session.jd || !session.resumePath) return sendText(from, HELP)
-  const retry = files ? "Send *redo* to try again." : "Please resend the job description and resume to retry."
-
-  // One claim per JD, across all workers and either input order. Claim before any AI call.
+  if (!session.jd || !session.resumePath) return quiet ? undefined : sendText(from, HELP)
   const job = createHash("sha256").update(`${from}:${session.jdId || session.jd}`).digest("hex")
+  // Persist input before clearing the interactive session. Retries use the exact chosen original.
+  const queued = await enqueueResumeRecovery({
+    id: job, from, userId, jd: session.jd, jdId: session.jdId || "",
+    resumePath: session.resumePath, resumeName: session.resumeName, resumeFiled: session.resumeFiled, files,
+  })
+  if (queued.status === "delivered" || queued.status === "sending" || queued.status === "uncertain") return
+  const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
+  if (!hasAnyKey(keys)) {
+    await deferResumeRecovery(job, "provider_unavailable")
+    return quiet ? undefined : sendText(from, "Your resume request is saved. Tailoring is unavailable; MarketFit will retry automatically.")
+  }
+  // One claim per JD across workers.
   const claimKey = `whatsapp/jobs/${job}`
   const claimToken = randomBytes(6).toString("hex")
   if (!await blob.putIfAbsent(claimKey, JSON.stringify({ at: Date.now(), token: claimToken }))) {
     const held = JSON.parse((await blob.getText(claimKey).catch(() => null)) || "{}") as { at?: number }
     if (held.at && Date.now() - held.at < IN_FLIGHT_MS)
-      return sendText(from, "I am already making the resume for this job. It will arrive in this chat.")
+      return quiet ? undefined : sendText(from, "I am already making the resume for this job. It will arrive in this chat.")
     // A prior function was interrupted, or this is a legacy permanent claim. Replace it so a manual retry is never
     // ignored forever. The six-minute lease outlives the platform's five-minute function ceiling.
     await blob.put(claimKey, JSON.stringify({ at: Date.now(), token: claimToken }))
   }
+  let finished = false
+  let sending = false
+  let failureCode = "quality_incomplete"
+  let failedCandidate: { token: string; coverage: number; supportedCoverage: number } | undefined
   try {
   // Consume this pair now. Completion must not erase a newer request arriving meanwhile: the session is read again and
   // only what belongs to this job is cleared (a job from Files spends seconds picking before this; found in review).
@@ -714,7 +712,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (files) cur.last = { jd: session.jd, email: files.email, at: Date.now(), used: files.rel }
   await saveSession(from, cur)
 
-  await sendText(from, files
+  if (!quiet) await sendText(from, files
     ? `Updating ${files.said}. I’ll send one Word file when this run finishes.`
     : "Updating your resume. I’ll send one Word file when this run finishes.")
 
