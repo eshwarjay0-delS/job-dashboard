@@ -58,7 +58,7 @@ export function interviewIntent(question: string): ReplyIntent {
   const noSubstantiveAsk=!QUESTION.test(q.replace(/\b(?:right|okay|yeah)\s*\?\s*$/i,""))
   const words=q.split(/\s+/).filter(Boolean)
   const greeting=/^(?:hi|hello|hey|ok(?:ay)?|thanks|thank you|yeah|yes|no|right|great)[.!]*$/i.test(q)
-  const told=ACK.test(q) || /^(?:you will|we have|we are|the team|the first|i expect)\b/i.test(q)
+  const told=ACK.test(q) || /^(?:you will|we\b|i\b|the team|our team|the first)\b/i.test(q)
   if(noSubstantiveAsk && !greeting && !told && words.length>=1 && words.length<=8) return "direct"
   if(noSubstantiveAsk || (ACK.test(q) && !/\b(?:what|how|why|tell me|can you|do you|would you)\b/i.test(q)))return "acknowledgement"
   return "direct"

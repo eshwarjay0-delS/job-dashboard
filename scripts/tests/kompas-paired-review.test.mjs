@@ -80,9 +80,11 @@ test("CLI writes one private file, refuses overwrite, and refuses repository out
   const structured=JSON.parse(await readFile(got.structured,"utf8"))
   assert.equal(structured.pairs.length,50)
   assert.equal(structured.fixtureSha256,fixtureSha)
-  assert.equal((await stat(got.structured)).mode&0o777,0o600)
+  if(process.platform!=="win32"){
+   assert.equal((await stat(got.structured)).mode&0o777,0o600)
+   assert.equal((await stat(dest)).mode&0o777,0o600)
+  }
   assert.match(await readFile(dest,"utf8"),/Independent reference 50/)
-  assert.equal((await stat(dest)).mode&0o777,0o600)
   await assert.rejects(runCli([...f,dest]),/EEXIST/)
   const repoOutput=path.resolve("private-answers-must-not-be-here.md")
   await assert.rejects(runCli([...f,repoOutput]),/outside the repository/)
