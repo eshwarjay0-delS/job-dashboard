@@ -133,7 +133,9 @@ export async function recordResumeDeliveryStatus(wamid: string, state: "sent" | 
   }
   const rank = { accepted: 0, sent: 1, delivered: 2, read: 3, failed: -1 }
   if (rank[state] <= rank[job.deliveryState || "accepted"]) return
-  await blob.put(recoveryKey(id), JSON.stringify({ ...job, deliveryState: state, updatedAt: Date.now() }))
+  await blob.put(recoveryKey(id), JSON.stringify({ ...job, deliveryState: state,
+    status: job.status === "pending" && job.deliveryState === "failed" ? "delivered" : job.status,
+    updatedAt: Date.now() }))
   if (state === "delivered" || state === "read")
     console.info("[whatsapp] resume handset delivery confirmed", { job: id.slice(0, 12), state })
 }
