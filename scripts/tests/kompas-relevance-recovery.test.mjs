@@ -66,3 +66,12 @@ test('Live service actually uses rediscovery in both prompt paths',()=>{
  assert.equal((s.match(/relevanceRecoveryPrompt\(question, history\)/g)||[]).length,1,'do not duplicate instruction and distract from the actual question')
  assert.match(s,/const storyMode = rediscovered\.intent === "experience-story"/)
 })
+
+test('Closing question is recovered from a long interviewer explanation',()=>{
+ const q='We have 27 security control leads and you will work across the teams. The first ninety days are about learning. So what questions do you have from me about the role?'
+ const r=rediscoverRelevance(q)
+ assert.equal(r.intent,'closing-question')
+ assert.ok(r.currentAsk.startsWith('what questions'))
+ assert.deepEqual(r.requestedTopics,[])
+ assert.equal(r.answerMode,'ask')
+})
