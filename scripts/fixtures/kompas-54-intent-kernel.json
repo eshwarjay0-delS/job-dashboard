@@ -1,0 +1,326 @@
+[
+  {
+    "id": 1,
+    "input": "What is residual risk?",
+    "include": "What is residual risk?",
+    "exclude": ""
+  },
+  {
+    "id": 2,
+    "input": "Which framework is more useful for mapping controls?",
+    "include": "Which framework is more useful",
+    "exclude": ""
+  },
+  {
+    "id": 3,
+    "input": "Tell me about a time you challenged a control owner.",
+    "include": "Tell me about a time",
+    "exclude": ""
+  },
+  {
+    "id": 4,
+    "input": "How would you review an exception?",
+    "include": "How would you review",
+    "exclude": ""
+  },
+  {
+    "id": 5,
+    "input": "How do you verify remediation?",
+    "include": "How do you verify",
+    "exclude": ""
+  },
+  {
+    "id": 6,
+    "input": "Have you used ServiceNow GRC?",
+    "include": "Have you used",
+    "exclude": ""
+  },
+  {
+    "id": 7,
+    "input": "What would you bring to this team?",
+    "include": "What would you bring",
+    "exclude": ""
+  },
+  {
+    "id": 8,
+    "input": "Why are you interested in the role?",
+    "include": "Why are you interested",
+    "exclude": ""
+  },
+  {
+    "id": 9,
+    "input": "Tell me about yourself.",
+    "include": "Tell me about yourself",
+    "exclude": ""
+  },
+  {
+    "id": 10,
+    "input": "Any questions for me?",
+    "include": "Any questions for me",
+    "exclude": ""
+  },
+  {
+    "id": 11,
+    "input": "Which of those frameworks would you use?",
+    "include": "Which of those frameworks",
+    "exclude": ""
+  },
+  {
+    "id": 12,
+    "input": "Explain the difference between inherent and residual risk.",
+    "include": "Explain the difference",
+    "exclude": ""
+  },
+  {
+    "id": 13,
+    "input": "How does TLS certificate validation work?",
+    "include": "How does TLS",
+    "exclude": ""
+  },
+  {
+    "id": 14,
+    "input": "What is network level authentication?",
+    "include": "What is network",
+    "exclude": ""
+  },
+  {
+    "id": 15,
+    "input": "We have 27 cybersecurity control areas. What questions do you have for me?",
+    "include": "What questions do you have",
+    "exclude": "We have 27"
+  },
+  {
+    "id": 16,
+    "input": "We have separate owners for IAM and vulnerability management. What would you bring to the team?",
+    "include": "What would you bring",
+    "exclude": "owners for IAM"
+  },
+  {
+    "id": 17,
+    "input": "I work closely with audit and engineering. So how would you handle a disagreement?",
+    "include": "how would you handle",
+    "exclude": "audit and engineering"
+  },
+  {
+    "id": 18,
+    "input": "The first 30 days are about learning. What would you focus on first?",
+    "include": "What would you focus",
+    "exclude": "first 30 days"
+  },
+  {
+    "id": 19,
+    "input": "You know we review CRI Profile and NIST CSF. Which of those are you stronger with?",
+    "include": "Which of those are",
+    "exclude": "CRI Profile"
+  },
+  {
+    "id": 20,
+    "input": "We use CyberArk and ServiceNow for different jobs. Which one would you prioritize for an access issue?",
+    "include": "Which one would you prioritize",
+    "exclude": "We use CyberArk"
+  },
+  {
+    "id": 21,
+    "input": "I appreciate your background, so what questions do you have for me?",
+    "include": "what questions do you have",
+    "exclude": "appreciate your background"
+  },
+  {
+    "id": 22,
+    "input": "Our team covers incident response and IAM. Now why are you interested in joining?",
+    "include": "why are you interested",
+    "exclude": "team covers"
+  },
+  {
+    "id": 23,
+    "input": "There are 27 control leads; What would your first priority be?",
+    "include": "What would your first priority",
+    "exclude": "27 control leads"
+  },
+  {
+    "id": 24,
+    "input": "Our remediation plans vary, and I need independent judgment. So how would you challenge a weak plan?",
+    "include": "how would you challenge",
+    "exclude": "Our remediation"
+  },
+  {
+    "id": 25,
+    "input": "We manage many cases; How do you prioritize overdue issues?",
+    "include": "How do you prioritize",
+    "exclude": "We manage"
+  },
+  {
+    "id": 26,
+    "input": "The CEO expects clear updates. Tell me how you communicate residual risk.",
+    "include": "Tell me how",
+    "exclude": "CEO expects"
+  },
+  {
+    "id": 27,
+    "input": "We have lots of tools but this is oversight. What do you think makes a good control analyst?",
+    "include": "What do you think",
+    "exclude": "lots of tools"
+  },
+  {
+    "id": 28,
+    "input": "I am asking about the role, not penetration testing. Which parts of risk governance do you enjoy?",
+    "include": "Which parts",
+    "exclude": "penetration testing"
+  },
+  {
+    "id": 29,
+    "input": "We've discussed access reviews and risk ratings. So what would you improve first?",
+    "include": "what would you improve",
+    "exclude": "discussed access"
+  },
+  {
+    "id": 30,
+    "input": "We can handle the how later. What questions do you have for me now?",
+    "include": "What questions do you have",
+    "exclude": "how later"
+  },
+  {
+    "id": 31,
+    "input": "No downtime is permitted. How would you validate the change?",
+    "include": "How would you validate",
+    "exclude": "No downtime"
+  },
+  {
+    "id": 32,
+    "input": "You cannot restart the identity service. What would you check first?",
+    "include": "What would you check",
+    "exclude": "cannot restart"
+  },
+  {
+    "id": 33,
+    "input": "You must preserve audit evidence. How would you close this issue?",
+    "include": "How would you close",
+    "exclude": "must preserve"
+  },
+  {
+    "id": 34,
+    "input": "Only the risk owner may accept the exception. What would your recommendation be?",
+    "include": "What would your recommendation",
+    "exclude": "Only the risk owner"
+  },
+  {
+    "id": 35,
+    "input": "We need to keep the service running. How do you verify the control?",
+    "include": "How do you verify",
+    "exclude": "keep the service"
+  },
+  {
+    "id": 36,
+    "input": "You have no direct database access. How would you confirm root cause?",
+    "include": "How would you confirm",
+    "exclude": "no direct"
+  },
+  {
+    "id": 37,
+    "input": "There is a critical production outage. What would you do?",
+    "include": "What would you do",
+    "exclude": "critical production"
+  },
+  {
+    "id": 38,
+    "input": "Within the first ninety days, you should be independent. What would you prioritize?",
+    "include": "What would you prioritize",
+    "exclude": "Within the first"
+  },
+  {
+    "id": 39,
+    "input": "No manager approval has been given. How would you escalate a residual risk?",
+    "include": "How would you escalate",
+    "exclude": "No manager"
+  },
+  {
+    "id": 40,
+    "input": "The remediation must be complete in 30 days. What evidence would you seek?",
+    "include": "What evidence would",
+    "exclude": "must be complete"
+  },
+  {
+    "id": 41,
+    "input": "You cannot disable legacy accounts immediately. How would you reduce exposure?",
+    "include": "How would you reduce",
+    "exclude": "cannot disable"
+  },
+  {
+    "id": 42,
+    "input": "A change must be reversible. What would you test before rollout?",
+    "include": "What would you test",
+    "exclude": "must be reversible"
+  },
+  {
+    "id": 43,
+    "input": "We have a strict exception policy. Which compensating control would you choose?",
+    "include": "Which compensating control",
+    "exclude": "strict exception"
+  },
+  {
+    "id": 44,
+    "input": "How did you identify the root cause? How did you validate the proposed fix?",
+    "include": "How did you identify",
+    "exclude": ""
+  },
+  {
+    "id": 45,
+    "input": "What did the owner propose? And how did you challenge it?",
+    "include": "What did the owner",
+    "exclude": ""
+  },
+  {
+    "id": 46,
+    "input": "How did you evaluate impact? What was the residual risk?",
+    "include": "How did you evaluate",
+    "exclude": ""
+  },
+  {
+    "id": 47,
+    "input": "Tell me about a time you disagreed with security. What did you do?",
+    "include": "Tell me about a time",
+    "exclude": ""
+  },
+  {
+    "id": 48,
+    "input": "We use IAM, PAM and ServiceNow. How do you check the evidence? Why might you reject it?",
+    "include": "How do you check",
+    "exclude": "We use IAM"
+  },
+  {
+    "id": 49,
+    "input": "We follow NIST CSF, CRI and NIST 800-53. Which of those do you know best?",
+    "include": "Which of those",
+    "exclude": "NIST CSF"
+  },
+  {
+    "id": 50,
+    "input": "The first 90 days will be intense. Right?",
+    "include": "The first 90 days",
+    "exclude": ""
+  },
+  {
+    "id": 51,
+    "input": "We have 27 control owners and different teams. Right?",
+    "include": "We have 27 control owners",
+    "exclude": ""
+  },
+  {
+    "id": 52,
+    "input": "You will learn the process first and then challenge teams. Okay?",
+    "include": "You will learn",
+    "exclude": ""
+  },
+  {
+    "id": 53,
+    "input": "I liked our conversation. My question is what would you bring to BNY?",
+    "include": "what would you bring",
+    "exclude": "I liked our conversation"
+  },
+  {
+    "id": 54,
+    "input": "We review vulnerabilities, risk exceptions and access gaps. So what questions do you have about our role?",
+    "include": "what questions do you have",
+    "exclude": "We review vulnerabilities"
+  }
+]
