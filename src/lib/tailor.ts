@@ -960,7 +960,7 @@ export async function runTailor(opts: {
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,
     ranked_candidates: rankedCandidates, what_changed: whatChanged(edits), edits, notes,
     applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff, review,
-    cached: false, elapsed_ms: Date.now() - started, coverage: coveragePercent(best.cov), role_alignment,
+    cached: false, elapsed_ms: Date.now() - started, coverage: coveragePercent(attainableCoverage), role_alignment,
     experience_skills: { listed: claimedKw.size, shown: provenKw.size },
     ...(best.partial ? { partial: best.partial } : {}),
     ...(diff.length ? {} : { unchanged: true }),
