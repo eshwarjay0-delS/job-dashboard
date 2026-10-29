@@ -20,14 +20,14 @@ export type FocusPlan = {
 const EXPERIENCE=/\b(?:tell me about a time|share an example|give me an example of (?:when|a time)|describe a situation|have you ever|what did you do when|walk me through (?:an|a) (?:issue|incident|project|challenge)|a time (?:you|when you))\b/i
 const CLOSING=/\b(?:what questions (?:do|would|might|can) you have|any questions (?:for|from) me|what would you (?:like to )?ask (?:me|us)|anything you(?:'d| would) (?:like|want) to ask|questions about (?:the|this) (?:role|team|company))\b/i
 const INTRO=/\b(?:tell me about yourself|introduce yourself|walk (?:me|us) through your (?:career|background)|your professional background|career (?:journey|overview)|self introduction)\b/i
-const VALUE=/\b(?:what (?:would|can|do) you bring to|what (?:can|would) you contribute|why (?:are|would|should) (?:we hire you|you be (?:a )?(?:good|strong) fit)|what makes you (?:a )?(?:good|strong) fit|what sets you apart|highlight (?:for me )?anything|anything (?:else )?(?:i|we) should (?:know|be aware of)|why (?:do|would) you want (?:this|to work)|why (?:bny|this role|our team))\b/i
+const VALUE=/\b(?:what (?:would|can|do) you bring to|what (?:can|would) you contribute|why (?:are|would|should) (?:we hire you|you be (?:a )?(?:good|strong) fit)|what makes you (?:a )?(?:good|strong) fit|what sets you apart|highlight (?:for me )?anything|anything (?:else )?(?:i|we) should (?:know|be aware of)|what else should (?:i|we) know|why (?:do|would) you want (?:this|to work)|why (?:bny|this role|our team))\b/i
 const LOGISTICS=/\b(?:relocat(?:e|ion)|on.?site|hybrid|notice period|start date|available to start|sponsorship|work authorization|travel|salary|compensation|clearance|working (?:hours|days))\b/i
 const DEFINE=/\b(?:what is|what are|what does .{1,55} mean|define|stands? for|explain (?:the term|what .{1,60} is))\b/i
-const COMPARE=/\b(?:which (?:one|framework|tool|approach|option)|stronger (?:in|with)|more (?:proficient|comfortable|familiar)|difference between|compare|versus|vs[.]?|how do .+ differ|prefer .+ (?:or|over))\b/i
+const COMPARE=/\b(?:which (?:one|framework|tool|approach|option)|which would you (?:choose|pick|prefer)|stronger (?:in|with)|more (?:proficient|comfortable|familiar)|difference between|compare|versus|vs[.]?|how do .+ differ|prefer .+ (?:or|over))\b/i
 const SCENARIO=/\b(?:how would you|what would you do|suppose|imagine|if you (?:were|had|found|saw)|hypothetical|in that situation|how should (?:we|the team)|scenario)\b/i
 const DEEP=/\b(?:step by step|walk me through|under the hood|exact (?:logs|fields|mechanics|steps|flow)|deep dive|debug|troubleshoot|design|implement|packet|query|architecture|how (?:does|do|did) .+ work|how exactly)\b/i
 const ACK=/^\s*(?:yeah|right|okay|ok|great|thanks|thank you|that makes sense|absolutely|so that's|you(?:'ll| will)|we(?:'ll| will)|the team|our team|it's important|i expect|i would expect)\b/i
-const FOLLOW=/^\s*(?:and (?:then|how|why|what)|what (?:about|happened)|how (?:so|did you verify)|can you (?:expand|elaborate)|go (?:deeper|on)|tell me more|why is that)\b/i
+const FOLLOW=/^\s*(?:and (?:then|how|why|what)|what (?:about|happened)|how (?:so|did you verify)|can you (?:expand|elaborate)|go (?:deeper|on)|tell me more|why is that|why is that important)\b/i
 const QUESTION=/\?|^\s*(?:what|why|how|when|where|which|who|tell|describe|explain|give|walk|could|can|would|will|are|is|do|does|have|has|should)\b/i
 
 export function interviewIntent(question: string): ReplyIntent {
