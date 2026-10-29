@@ -589,8 +589,10 @@ export async function runTailor(opts: {
   }
   const roleShare = (p: Pass) => (countedRoles.length ? 1 - lackingRoles(p.edits).length / countedRoles.length : 1)
   const provenShare = (p: Pass) => (p.claimedKw.size ? p.provenKw.size / p.claimedKw.size : 1)
+  const supportedShare = (p: Pass) => forcedJdKws.length
+    ? coveredJdKeywords(p.tailoredText, forcedJdKws).size / forcedJdKws.length : 0
   const quality = (p: Pass) =>
-    (splitDraft ? 0.4 * p.cov + 0.3 * roleReflect(p) + 0.3 * provenShare(p) - 0.25 * (1 - roleShare(p)) : p.cov)
+    (splitDraft ? 0.4 * supportedShare(p) + 0.3 * roleReflect(p) + 0.3 * provenShare(p) - 0.25 * (1 - roleShare(p)) : supportedShare(p))
     - (summaryWanted && !(p.edits.summary || "").trim() ? 0.08 : 0) - .05 * (p.partial?.failed || 0)
   // The JD terms still missing, computed from the resume with no model call, so the pass targets the gap.
   const injectFor = (covered: Set<string>): string[] => {
@@ -664,7 +666,7 @@ export async function runTailor(opts: {
         }
         return next
       }, quality)
-      if (!cur.partial && cur.cov >= TARGET_COVERAGE && !countedRoles.some(i => cur.required[i].some(k => !cur.roleKw[i].has(k)))) break
+      if (!cur.partial && supportedShare(cur) >= TARGET_COVERAGE && !countedRoles.some(i => cur.required[i].some(k => !cur.roleKw[i].has(k)))) break
     }
     return cur
   }
@@ -769,14 +771,14 @@ export async function runTailor(opts: {
       // floor gets repair passes that preserve the requested change (never silently
       // handing back a low-match resume as "tailored"). A split draft climbs in fillGaps below.
       const REFINE_COVERAGE_FLOOR = 0.95
-      if (current.cov >= TARGET_COVERAGE || splitDraft) break
-      if (refine && current.cov >= REFINE_COVERAGE_FLOOR) break
+      if (supportedShare(current) >= TARGET_COVERAGE || splitDraft) break
+      if (refine && supportedShare(current) >= REFINE_COVERAGE_FLOOR) break
 
       // Coverage repair passes are deliberately targeted at the exact terms still absent
       // from the rendered DOCX. They regenerate from the canonical source so formatting
       // remains stable, and only a measurable improvement replaces the current best pass.
       // Stop only for the hard request deadline or the 98% completion threshold.
-      for (let repair = 1; repair <= 3 && current.cov < TARGET_COVERAGE; repair++) {
+      for (let repair = 1; repair <= 3 && supportedShare(current) < TARGET_COVERAGE; repair++) {
         if (deadline - Date.now() < 5000) break
         const missing = forcedJdKws.filter(k => !current.afterKw.has(k))
         if (!missing.length) break
@@ -792,7 +794,7 @@ export async function runTailor(opts: {
           return null
         })
         if (!candidate) break
-        if (candidate.cov > current.cov) {
+        if (quality(candidate) > quality(current)) {
           best = candidate
           current = candidate
           usedModel = candidate.via ?? lane.label ?? String(lane.pref)
@@ -800,7 +802,7 @@ export async function runTailor(opts: {
           break
         }
       }
-      if (best && best.cov >= TARGET_COVERAGE) break
+      if (best && supportedShare(best) >= TARGET_COVERAGE) break
     } finally { if (timer) clearTimeout(timer) }
   }
   // Put the supported target vocabulary into the profile BEFORE experience repair. Previously this
