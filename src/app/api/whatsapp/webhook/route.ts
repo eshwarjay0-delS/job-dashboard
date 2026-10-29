@@ -955,6 +955,8 @@ async function recoverResumeJobs(request: NextRequest) {
   const bootstrapped = await bootstrapLegacyResumeFailures()
   const jobs = await dueResumeRecoveries(1)
   let attempted = 0
+  let accepted = 0
+  let stillPending = 0
   for (const job of jobs) {
     const sender = await resolveWhatsAppUser(job.from)
     if (!sender.who || sender.who.userId !== job.userId) {
@@ -969,12 +971,17 @@ async function recoverResumeJobs(request: NextRequest) {
     try {
       await generate(job.from, { jd: job.jd, jdId: job.jdId, resumePath: job.resumePath,
         resumeName: job.resumeName, resumeFiled: job.resumeFiled }, job.userId, TAILOR_BUDGET_MS, job.files, true)
+      const state = await readResumeRecovery(job.id)
+      if (state?.status === "delivered") accepted++
+      else stillPending++
     } catch (error) {
       console.error("[whatsapp] recovery run failed", (error as Error)?.name || "error")
       await deferResumeRecovery(job.id, "recovery_exception")
     }
   }
-  return NextResponse.json({ bootstrapped, attempted, pending: jobs.length })
+  // Counts only: no candidate identity, JD or resume content in logs.
+  console.info("[whatsapp] resume recovery cron", { bootstrapped, due: jobs.length, attempted, accepted, stillPending })
+  return NextResponse.json({ bootstrapped, attempted, accepted, stillPending, due: jobs.length })
 }
 async function emailSlots(userId: string): Promise<{ slots: string[]; sure: boolean; failed: boolean }> {
   try {
