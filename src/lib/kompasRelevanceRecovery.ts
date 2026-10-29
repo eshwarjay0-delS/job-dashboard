@@ -23,7 +23,7 @@ const elliptical=/^(?:and (?:then|how|why|what)|why (?:is|was) that|what (?:abou
 const TOPICS=[
  ["business impact",/\b(?:business impact|business (?:services|processes)|customer impact)\b/i],
  ["root cause",/\b(?:root cause|root-cause|underlying (?:cause|failure))\b/i],
- ["compensating controls",/\b(?:compensating (?:control|measure)|temporary safeguard|interim control)\b/i],
+ ["compensating controls",/\b(?:compensating (?:controls?|measures?)|temporary safeguard|interim control)\b/i],
  ["residual risk",/\b(?:residual risk|remaining (?:risk|exposure))\b/i],
  ["remediation plan",/\b(?:remediation (?:plan|strategy)|corrective action|proposed fix)\b/i],
  ["independent challenge",/\b(?:challenge|push back|question the (?:owner|team)|disagree|independently (?:assess|verify))\b/i],
