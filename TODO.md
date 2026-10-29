@@ -1,3 +1,27 @@
+## 2026-10-29 — Job-post terms go back on the skills line, and a repeat does not pay twice
+
+**Asked:** tailored files were covering about 47% of the job post, and a run could sit on `/api/tailor` until the request died. Eshwar's decision: put the missing job-post terms back on the skills line, labelled as from the job post, the way `2cdb8db` did, after `94dacbf` limited that line to terms the resume already showed. Also cache every finished result, and do not start a second paid run while the same request is already running. Twenty WhatsApp screenshots from the live bot are the same failure.
+
+**Measured on the sample Word file, AI writer off** (scripts/tests/helpers/resume-floor-run.mjs, before this change / after):
+
+| Job | Before | After |
+|---|---|---|
+| peoplesoft | 15.0% | 100% |
+| zerotrust | 0.0% | 100% |
+| clearance | 80.0% | 100% |
+| benefits | 14.3% | 100% |
+| peoplesoft, summary left open | 15.0% | 100% |
+
+Name, email, dates, and experience bullets were unchanged. Bold skill headings stayed bold. Terms the floor wrote are named in the reply as from the job post. A term that lands in an experience bullet is still a claim and still blocks the file.
+
+**Also:** a finished tailor is cached at any coverage (cache generation 20). An identical request that arrives while the first is running shares that result. WhatsApp does not send a file under 95% of the job post. "Make another one with selecting Cybersecurity Analyst resume" does not resend the 19 Oct file and does not fall through to a different resume. A storage fault on "use 1" says the email choice was not saved. A Kompas throw does not eat the job description.
+
+**Checked:** resume-floor, keyword-targets, tailor-lanes, WhatsApp contract, acceptance, recovery, library, 5-fold, and single-request: 136/136 with the ts-alias loader. Not a live WhatsApp send. Not a live model run. Not on production until this branch is merged and the Vercel deploy succeeds.
+
+**Still open:** the exact chat line "I couldn't complete a reliable tailored resume..." is not in this source; the live refusal is the quality stop. "No AI service is switched on" at 9:43 AM needs the provider error from that request; this change does not invent a key. A MarketFit storage outage can still stop a message. `/api/tailor` still holds one request open for up to 280s inside a 300s function. That freeze is not redesigned here.
+
+**Next:** after deploy, resend the Fairview and Honeywell posts and read the caption. Then split `/api/tailor` so the browser is not held for the whole model ladder.
+
 ## 2026-10-29 — The remaining local checks
 
 The desktop already shows a fenced sample as code and keeps the sentences around it. The older check still expected the fence to disappear. That check now matches the display. On Windows, the private scorecard mode is not asserted, because the file system reports 666, and the migration check loads its script through a file URL so it can run. The migration kept the current session answer and did not replace it.

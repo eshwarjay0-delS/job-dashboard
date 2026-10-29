@@ -35,8 +35,8 @@ const runs = (() => {
 
 test('with every AI provider down, every job post still gets a resume showing at least 90% of its skills, measured on the Word file', () => {
   for (const [name, r] of Object.entries(runs)) {
-    assert.ok(r.measured >= 0.9, `${name}: ${(r.measured * 100).toFixed(1)}% on the file (${r.shown.length}/${r.targets.length})`)
-    assert.ok(r.coverage >= 90, `${name}: the tailor reports ${r.coverage}%`)
+    assert.ok(r.measured >= 0.95, `${name}: ${(r.measured * 100).toFixed(1)}% on the file (${r.shown.length}/${r.targets.length})`)
+    assert.ok(r.coverage >= 95, `${name}: the tailor reports ${r.coverage}%`)
     assert.equal(r.skillsOnly, true, `${name}: said to be the skills section only`)
     assert.ok(r.status !== 'needs_review', `${name}: ${r.status}`)
   }
@@ -107,7 +107,8 @@ test('the reply names what came from the job post, never says "cut short", and a
   assert.ok(read('src/lib/tailor-file.ts').includes('o.result.placed_from_jd?.length || o.result.placed_in_summary?.length || o.result.skills_only ? 2 : 1'))
   // Only the post's own skills are scored and written; a run the floor carried is never cached as complete.
   assert.ok(tailor.includes('const scoreKws = floorTerms(jd, targetKeywords(jdExtracted, [], jd))') && tailor.includes('const left = scoreKws.filter(k => floorKws.has(k) && !cur.afterKw.has(k) && !isCertification(k))'))
-  assert.ok(tailor.includes('partial: skillsOnly || floorCarried ||') && tailor.includes('const oneSummary = sec.summary !== false &&'))
+  assert.ok(tailor.includes('for (let floorRound = 0; floorRound < 4; floorRound++)') && tailor.includes('const oneSummary = sec.summary !== false &&'))
+  assert.ok(tailor.includes('Job-post terms placed on the skills line, not as confirmed experience'))
   // The floor runs last, after the certificate clean-up, and also when no AI writer answered.
   const at = (s) => tailor.indexOf(s)
   assert.ok(at('if (best) best = await stripAddedCerts(best)') < at('const floored = await placeEverything(best)'))

@@ -9,7 +9,7 @@ import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, roleSpanMonths, type Edits, type Zones } from "./docx"
 import { adapt, expandConfirmedVocabulary, expandJdKeywordsTwice, type ConfirmedVocabulary } from "./claude"
 import { recentFeedback } from "./feedback"
-import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords, weightedCoverage, detectJDLevel, estimateYears } from "./keywords"
+import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 import { priceCalls, type PricedCall } from "./llmPrices"
@@ -136,7 +136,9 @@ function normJD(jd: string): string {
 // Earlier contexts could truncate explicit confirmations behind a lengthy pasted JD.
 // Version 18 preserves subthreshold fractional coverage in every result field.
 // Version 19 prevents a high-overlap resume with thin per-role experience coverage from being served as complete.
-const CACHE_GENERATION = "19"
+// Version 20 places missing job-post skills on the skills line and caches every finished run.
+const CACHE_GENERATION = "20"
+const inflightTailors = new Map<string, Promise<TailorResult>>()
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
     .update([J1_VERSION, CACHE_GENERATION, normJD(jd), filepath, sourceHash, prefs.join("|")].join("::"))
@@ -262,11 +264,30 @@ export async function runTailor(opts: {
       // Confirm the tailored .docx still exists AND the cached shape is current.
       if (!(await blob.exists(`tailored/${cached.token}.docx`))) throw new Error("tailored file gone")
       if (!cached.keyword_analysis || !cached.diff || (!refine && (!Number.isFinite(cached.supported_coverage) || !Array.isArray(cached.unsupported_keywords)))) throw new Error("stale cache shape")
-      // Never replay a pre-contract low-coverage artifact. A known JD tailor is complete
-      // only when the rendered DOCX itself clears the keyword quality gate.
-      if (!refine && cached.quality?.status !== "coverage_met") throw new Error("cached result below keyword quality gate")
+      // A finished run is replayed at any coverage. The generation in the key drops
+      // results made before labelled job-post skills were written back onto the line.
       return { ...cached, cached: true, elapsed_ms: Date.now() - started }
     } catch { /* miss → generate */ }
+  }
+
+  // An identical request that arrives while this one is still running (a double-click,
+  // or a retry after the caller timed out) waits for it and shares the result.
+  // It does not start a second paid model ladder.
+  if (!opts.noCache) {
+    const existing = inflightTailors.get(key)
+    if (existing) {
+      const shared = await existing
+      return { ...shared, cached: true, elapsed_ms: Date.now() - started }
+    }
+    let resolveWork: (result: TailorResult) => void = () => {}
+    let rejectWork: (error: unknown) => void = () => {}
+    const work = new Promise<TailorResult>((resolve, reject) => { resolveWork = resolve; rejectWork = reject })
+    inflightTailors.set(key, work)
+    void runTailor({ ...opts, noCache: true }).then(
+      result => resolveWork(result),
+      error => rejectWork(error),
+    ).finally(() => { if (inflightTailors.get(key) === work) inflightTailors.delete(key) })
+    return work
   }
 
   // 3) Generate — SMART MODEL LADDER (token-aware quality).
@@ -716,9 +737,10 @@ export async function runTailor(opts: {
   // fits best. Kept only if the measured coverage rose. With no skills section it changes nothing (and says so in the
   // result's missing terms).
   const placeEverything = async (cur: Pass): Promise<Pass> => {
-    // Candidate-evidenced job skill terms (floorTerms), certifications excepted. They are written on the skills
-    // line and named in the reply. Unsupported JD-only terms are never added as qualifications.
-    const left = scoreKws.filter(k => floorKws.has(k) && forcedJdKws.includes(k) && !cur.afterKw.has(k) && !isCertification(k))
+    // The post's own skill terms (floorTerms), certifications excepted. They are written on the skills
+    // line and named in the reply as coming from the job post, not as confirmed experience.
+    // They are not written into experience bullets as work the person did.
+    const left = scoreKws.filter(k => floorKws.has(k) && !cur.afterKw.has(k) && !isCertification(k))
     if (!left.length) return cur
     // A soft skill ("problem solving", "communication skills") reads as a strength, not a tool: it goes into the summary
     // as one short sentence when the summary is a single paragraph the person left open to rewriting; a summary they
@@ -852,8 +874,8 @@ export async function runTailor(opts: {
   }
   if (best) best = await stripAddedCerts(best)
   // A model sometimes writes an unconfirmed tool onto a skills line. Take those off, then the floor
-  // below writes only evidenced terms back. Stripping after the floor previously
-  // caused lower keyword overlap; unsupported terms must remain honest gaps.
+  // below writes the job post's own terms back in one labelled pass. Stripping after the floor is what
+  // left a delivered file at 47% of the job post. The reply names those terms as from the job post.
   if (best && !refine) {
     const banned = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
     const stripped = await stripUnsupportedSkills(best, banned)
@@ -865,9 +887,9 @@ export async function runTailor(opts: {
   // consistent build. Even if something going wrong ... the baseline is serve at least 90% match." And 19 Oct: every job
   // keyword goes in, certifications never. Since 22 Oct the passes above write a term into the experience only where the
   // source resume or the person's own words show it (4cbe02a), and that stays: the bullets are the candidate's record.
-  // What is still missing AND candidate-evidenced is written onto the skills line it fits best, as the JD spells it, and named
-  // in the reply. Unsupported terms stay gaps, not skills. When no AI writer answered at all, the
-  // source resume is never delivered as a tailored success: the skills-only result is blocked.
+  // What is still missing is written onto the skills line it fits best, as the job post spells it, and named
+  // in the reply so the person sees what came from the job post alone. The pass repeats while coverage is
+  // under 95% and each pass still adds terms. Experience bullets stay the candidate's record.
   let floorFrom: Pass | null = null
   if (!best && !refine) {
     const plain = await applyEdits({ headline: { title: "", tagline: "" }, summary: "", skills: [], bullets: [], extras: [] })
@@ -877,8 +899,13 @@ export async function runTailor(opts: {
     skillsOnly = true
   }
   if (best && !refine) {
-    const floored = await placeEverything(best)
-    if (floored !== best) { floorFrom = best; best = floored; usedModel = `${usedModel} + candidate-evidenced JD terms on skills` }
+    for (let floorRound = 0; floorRound < 4; floorRound++) {
+      const floored = await placeEverything(best)
+      if (floored === best) break
+      if (!floorFrom) floorFrom = best
+      best = floored
+      if (!usedModel.includes("job-post terms on the skills line")) usedModel = `${usedModel} + job-post terms on the skills line`
+    }
   }
   if (!best) {
     // A split draft is put together a few seconds BEFORE the deadline, so "out of time" is judged with that margin and by
@@ -893,13 +920,11 @@ export async function runTailor(opts: {
   const evidencePass = floorFrom ?? best
   const { claimedKw, roleKw, required, provenKw } = evidencePass
   if (skillsOnly) notes.push("No AI writer answered in time: only the skills section was brought up to the job post. Ask again for the full rewrite.")
-  if (best.floor?.length) notes.push(`Candidate-supported JD terms placed in the skills section: ${best.floor.join(", ")}`)
+  if (best.floor?.length) notes.push(`Job-post terms placed on the skills line, not as confirmed experience: ${best.floor.join(", ")}`)
   if (best.floorSummary?.length) notes.push(`Written into the summary as strengths, from the job post: ${best.floorSummary.join(", ")}`)
-  // A run the floor, not the rewrite, carried to the target is never kept as complete or served again from the cache: the
-  // next identical request gets another rewrite (26 Oct 2026 review).
-  // Deterministically placing an already-evidenced skill in its skills line
-  // is not itself an incomplete rewrite. Still block skills-only fallbacks and
-  // unfinished experience roles through the separate completion checks below.
+  // A skills-line placement is a finished result and is cached with every other finished run.
+  // Experience that was not rewritten, and a skills-only file still under 95% of the job post,
+  // stay blocked through the checks below.
   const floorCarried = !!floorFrom && skillsOnly
   if (!opts.refine && !jdGenerated.length) notes.push("Gemini keyword review returned no additional terms; generation used the directly extracted JD requirements.")
   notes.push("The JD supplies target requirements; the source resume and explicit candidate confirmations supply experience evidence. The target is 98% keyword coverage where supported. Scores measure exported document keyword overlap, not hiring probability.")
@@ -1001,21 +1026,32 @@ export async function runTailor(opts: {
     notes.push(`JD qualification gaps not supported by candidate evidence: ${unsupportedJdKws.length}`)
   }
   notes.push(`Evidence-supported JD vocabulary retained: ${Math.round(attainableCoverage * 100)}%`)
-  // Unsupported JD terms anywhere in the exported resume are unverified claims,
-  // including the skills section. A JD is a target, never proof of experience.
-  const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(best.tailoredText, [k]).has(k))
+  const editedBullets = new Map((best.edits.bullets || []).map(b => [b.idx, b.text]))
+  const bulletText = [
+    ...zones.roles.flatMap(r => r.bullets.map(b => editedBullets.get(b.idx) || b.text)),
+    ...(best.edits.added || []).map(a => a.text || ""),
+  ].join("\n")
+  const floorOnSkills = new Set([...(best.floor || []), ...(best.floorSummary || [])].map(k => k.toLowerCase()))
+  // A term the floor wrote onto the skills line, or into an open summary as a strength, is labelled
+  // as coming from the job post. The same term inside an experience bullet is a claim that the person
+  // did that work, and that still blocks delivery.
+  const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(bulletText, [k]).has(k) || (coveredJdKeywords(best.tailoredText, [k]).has(k) && !floorOnSkills.has(k.toLowerCase())))
   if (unverifiedAdded.length > 0) notes.push(`Unverified JD claims require candidate confirmation: ${unverifiedAdded.join(", ")}`)
   // Diagnostic codes contain no resume, JD, name or phone number.
   const qualityBlockers = [
-    ...(skillsOnly ? ["skills_only"] : []),
-    ...(floorCarried ? ["floor_only"] : []),
+    ...(skillsOnly && best.cov < RESUME_MIN_COVERAGE ? ["skills_only"] : []),
+    ...(floorCarried && best.cov < RESUME_MIN_COVERAGE ? ["floor_only"] : []),
     ...(best.partial ? ["draft_parts_missing"] : []),
     ...(unverifiedAdded.length ? ["unverified_jd_terms"] : []),
-    ...(splitDraft && lackingRoles(best.edits).length ? ["roles_unrewritten"] : []),
-    ...(splitDraft && !experienceCoverageComplete(role_alignment, TARGET_COVERAGE) ? ["role_evidence_gaps"] : []),
+    ...(splitDraft && !skillsOnly && lackingRoles(best.edits).length ? ["roles_unrewritten"] : []),
+    ...(splitDraft && !skillsOnly && !experienceCoverageComplete(role_alignment, TARGET_COVERAGE) ? ["role_evidence_gaps"] : []),
     ...(!diff.length ? ["unchanged"] : []),
   ]
-  const qualityReport = resumeQuality({ matched: attainableCovered.size, total: attainableKws.length, missing: attainableKws.filter(k => !attainableCovered.has(k)), weightedCoverage: attainableCoverage, partial: qualityBlockers.some(k => k !== "unchanged"), unchanged: !diff.length })
+  // The delivery score is the job post itself. Evidenced-only scoring reported 100% while
+  // the file still showed about half the post, and a post the resume had never used
+  // scored as an empty denominator (needs review) after the skills line was filled.
+  const coveredScore = scoreKws.filter(k => afterKw.has(k))
+  const qualityReport = resumeQuality({ matched: coveredScore.length, total: scoreKws.length, missing: scoreKws.filter(k => !afterKw.has(k)), weightedCoverage: best.cov, partial: qualityBlockers.some(k => k !== "unchanged"), unchanged: !diff.length })
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
 
@@ -1044,10 +1080,10 @@ export async function runTailor(opts: {
     requirements: scoreKws, enrichmentSuggestions: jdGenerated, result,
   })).catch(() => { result.notes.push("Run diagnostic persistence failed; generated document storage is separate.") })
 
-  // Only a whole draft that changed something is worth serving again: an incomplete or unchanged one should be redone
-  // the next time it is asked for, when the providers may have room.
+  // Every finished run that changed the file is served again, at any coverage, so a repeat does not pay
+  // for another model ladder. An incomplete or unchanged draft is still redone when the providers have room.
   if (!result.partial && !result.unchanged) {
-    if (result.quality?.status === "coverage_met") await blob.put(cacheKey, JSON.stringify(result)).catch(() => {})
+    await blob.put(cacheKey, JSON.stringify(result)).catch(() => {})
   }
   return result
 }

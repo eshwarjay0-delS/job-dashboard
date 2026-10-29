@@ -21,7 +21,7 @@ function loadTS(rel) {
 const { resumeQuality } = loadTS("src/lib/resume-quality.ts")
 const { acceptableWhatsAppResume, whatsappResumeRejectionReasons } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
 const make = (changes = {}) => ({
-  token: "safe-docx-token", coverage: 84.3, supported_coverage: 100,
+  token: "safe-docx-token", coverage: 100, supported_coverage: 100,
   diff: [{ section: "Experience", before: "A", after: "B" }],
   quality: resumeQuality({ matched: 13, total: 13, missing: [], partial: false }),
   unverified_added_keywords: [], quality_blockers: [],
@@ -33,13 +33,19 @@ const rejects = (name, changes, reason) => test(name, () => {
   assert.ok(whatsappResumeRejectionReasons(draft).includes(reason))
 })
 
-test("84.3% overall / 100% supported / fully rewritten / no unverified terms is deliverable", () => {
+test("100% of the job post and 100% of supported skills is deliverable", () => {
   const draft = make()
   assert.equal(draft.quality.status, "coverage_met")
   assert.equal(acceptableWhatsAppResume(draft), true)
 })
+test("84.3% of the job post is not delivered even when supported skills are 100%", () => {
+  const draft = make({ coverage: 84.3 })
+  assert.equal(acceptableWhatsAppResume(draft), false)
+  assert.ok(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"))
+})
 test("95% supported complete draft ships with honestly disclosed gaps", () => {
   const draft = make({
+    coverage: 95,
     supported_coverage: 95,
     quality: resumeQuality({ matched: 19, total: 20, missing: ["unsupported gap"], partial: false }),
   })
@@ -48,6 +54,7 @@ test("95% supported complete draft ships with honestly disclosed gaps", () => {
 })
 test("98% supported complete draft meets target", () => {
   const draft = make({
+    coverage: 98,
     supported_coverage: 98,
     quality: resumeQuality({ matched: 49, total: 50, missing: ["gap"], partial: false }),
   })
@@ -69,9 +76,13 @@ rejects("unverified JD claims are rejected independently of score", {
 rejects("missing role rewrite is rejected independently of score", {
   quality_blockers: ["roles_unrewritten"],
 }, "roles_unrewritten")
-rejects("source-only fallback is not a completed tailored document", {
+rejects("a skills-only file under 95% of the job post is not delivered", {
   skills_only: true,
-}, "skills_only")
+  coverage: 84.3,
+}, "jd_coverage_below_floor")
+test("a skills-only file that reaches 95% of the job post can be delivered", () => {
+  assert.equal(acceptableWhatsAppResume(make({ skills_only: true, coverage: 100 })), true)
+})
 rejects("failed draft parts are not a completed tailored document", {
   partial: { failed: 1, total: 5 },
 }, "draft_parts_missing")

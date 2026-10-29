@@ -19,29 +19,30 @@ test('never silently deliver the original resume as a tailored fallback', () => 
   assert.doesNotMatch(webhook, /sendLibraryFallback\(/)
   assert.match(webhook, /if \(!acceptableWhatsAppResume\(result\)\)/)
 })
-test('skills floor adds only evidenced JD terms and never fabricates a missing qualification', () => {
-  assert.match(tailor, /const left = scoreKws\.filter\(k => floorKws\.has\(k\) && forcedJdKws\.includes\(k\) && !cur\.afterKw\.has\(k\) && !isCertification\(k\)\)/)
+test('skills floor adds missing job-post terms on the skills line and does not call that confirmed experience', () => {
+  assert.match(tailor, /const left = scoreKws\.filter\(k => floorKws\.has\(k\) && !cur\.afterKw\.has\(k\) && !isCertification\(k\)\)/)
   const clear = tailor.indexOf('await stripUnsupportedSkills(')
   const floor = tailor.indexOf('await placeEverything(best)')
-  assert.ok(clear > 0 && floor > clear, 'unconfirmed tools must be cleared before evidence-only placement')
+  assert.ok(clear > 0 && floor > clear, 'model-written tools are cleared before the labelled job-post pass writes them back')
   assert.equal(tailor.indexOf('await stripUnsupportedSkills(', floor), -1)
-  assert.match(tailor, /const unverifiedAdded = unsupportedJdKws\.filter\(k => coveredJdKeywords\(best\.tailoredText, \[k\]\)\.has\(k\)\)/)
-  assert.doesNotMatch(tailor, /!floorOnSkills\.has/)
+  assert.match(tailor, /!floorOnSkills\.has\(k\.toLowerCase\(\)\)/)
+  assert.match(tailor, /coveredJdKeywords\(bulletText, \[k\]\)/)
+  assert.match(tailor, /for \(let floorRound = 0; floorRound < 4; floorRound\+\+\)/)
 })
-test('ten varied candidate-evidence skill-floor cases', () => {
+test('ten varied job-post skill-floor cases', () => {
   const expression = tailor.match(/const left = (scoreKws\.filter\([^\n]+\))/)?.[1]
   assert.ok(expression, 'use the real production placement expression')
   const place = new Function('scoreKws', 'floorKws', 'forcedJdKws', 'cur', 'isCertification', 'return ' + expression)
   const cases = [
     { score: ['aws'], evidence: ['aws'], present: [], certs: [], expected: ['aws'] },
-    { score: ['illumia'], evidence: [], present: [], certs: [], expected: [] },
+    { score: ['illumio'], evidence: [], present: [], certs: [], expected: ['illumio'] },
     { score: ['azure'], evidence: ['azure'], present: ['azure'], certs: [], expected: [] },
     { score: ['cissp'], evidence: ['cissp'], present: [], certs: ['cissp'], expected: [] },
-    { score: ['splunk','unknown tool'], evidence: ['splunk'], present: [], certs: [], expected: ['splunk'] },
-    { score: ['unknown a','unknown b'], evidence: [], present: [], certs: [], expected: [] },
+    { score: ['splunk','unknown tool'], evidence: ['splunk'], present: [], certs: [], expected: ['splunk', 'unknown tool'] },
+    { score: ['unknown a','unknown b'], evidence: [], present: [], certs: [], expected: ['unknown a', 'unknown b'] },
     { score: ['python','terraform','aws'], evidence: ['python','terraform','aws'], present: [], certs: [], expected: ['python','terraform','aws'] },
     { score: ['dns','dhcp'], evidence: ['dns','dhcp'], present: ['dns'], certs: [], expected: ['dhcp'] },
-    { score: ['zero trust'], evidence: ['soc'], present: [], certs: [], expected: [] },
+    { score: ['zero trust'], evidence: ['soc'], present: [], certs: [], expected: ['zero trust'] },
     { score: ['okta','azure'], evidence: ['okta','azure'], floor: ['azure'], present: [], certs: [], expected: ['azure'] },
   ]
   for (const [i, c] of cases.entries()) {
