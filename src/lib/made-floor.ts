@@ -8,7 +8,7 @@ import { extractText } from "./docx"
 import { extractJdKeywords, coveredJdKeywords } from "./keywords"
 import { targetKeywords, floorTerms } from "./keyword-targets"
 
-export const MADE_FLOOR = 0.9
+export const MADE_FLOOR = 0.95
 /** By when the floor is live (26 Oct 2026, 17:00 Central; it shipped earlier that afternoon). Files saved after this went through it. */
 export const FLOOR_SINCE = Date.parse("2026-10-26T22:00:00Z")
 
@@ -21,7 +21,7 @@ export function floorShare(text: string, jd: string): number {
 
 /** Should the resume at `abs`, saved at `at`, be offered again? Made after the floor, or still at 90%: yes. Unreadable: no. */
 export async function madeMeetsFloor(abs: string, jd: string, at = 0): Promise<boolean> {
-  if (at >= FLOOR_SINCE) return true
+  // Creation date is not proof of quality: even newer files can fail the floor.
   try {
     const bytes = await readPath(abs)
     return !!bytes && floorShare(await extractText(bytes), jd) >= MADE_FLOOR
