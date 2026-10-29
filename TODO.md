@@ -1,3 +1,11 @@
+## 2026-10-29 — A topic from the microphone is the question
+
+**Asked:** every keyword heard, even when it is not shaped like a question, is answered. A number is spoken only when the source has it. Screen capture and a sign-in from a few minutes ago were already wrong.
+
+**Done:** a short topic such as "Compliance and GRC side" or "Kerberos" is its own question. It is not glued onto the previous card. The answer is told to cover every word and to say a result was not measured when the source has no number. The desktop shell takes a real screen picture and does not open Chrome again during the first fifteen minutes after sign-in. That shell change is on this machine until the desktop app is rebuilt.
+
+**Not live.** These page changes are on the session branch. The running desktop still loads the live site until this is released. The fifty real model comparisons were not run. No signed-in session was available for that.
+
 ## 2026-10-23 — This chat is on the Chief's desk
 
 **Asked:** the Chief runs the workers, up to 100. Gather the open jobs first, from Plan and Vision, from REA, and from what he already asked. He speaks only to the Chief. Hand this chat over too.

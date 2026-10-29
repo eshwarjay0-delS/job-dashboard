@@ -1,5 +1,5 @@
 /** Desktop response contract. The question sets the depth. The level changes how it is spoken. */
-export type DesktopQuestionKind = 'definition' | 'comparison' | 'experience' | 'implementation' | 'general'
+export type DesktopQuestionKind = 'definition' | 'comparison' | 'experience' | 'implementation' | 'topic' | 'general'
 export type DesktopLevel = 'engineer' | 'architect' | 'director'
 
 export type LevelMetrics = {
@@ -30,6 +30,9 @@ export function desktopQuestionKind(question: string): DesktopQuestionKind {
   if (!askedForDepth && /\b(compare|versus|vs\.?|difference|distinguish)\b/.test(q)) return 'comparison'
   if (!askedForDepth && /\b(define|definition|what (?:is|are)|meaning of)\b/.test(q)) return 'definition'
   if (/\b(step.by.step|in.depth|deep|granular|implement|configure|integrate|debug|troubleshoot|design|build|how (?:did|would|do) you)\b/.test(q)) return 'implementation'
+  const words = q.split(/\s+/).filter(Boolean)
+  const shaped = /\b(what|how|why|when|where|which|who|can you|could you|would you|tell me|define|compare|explain|describe|walk me|talk about)\b/.test(q)
+  if (!shaped && words.length >= 1 && words.length <= 12) return 'topic'
   return 'general'
 }
 
@@ -39,6 +42,9 @@ const SURFACE_STOP = "Do not pull logs, list search keywords, open a tool chain,
 export function desktopCraft(kind: DesktopQuestionKind): string {
   if (kind === "definition" || kind === "comparison" || kind === "general") {
     return "RESPONSE CRAFT: Sentence one answers the question. A few more sentences may name the idea. Then stop. Do not open an investigation, a tool list, a log hunt, or a project story."
+  }
+  if (kind === "topic") {
+    return "RESPONSE CRAFT: They named a topic. Infer the interview question those words imply and answer that. Cover every word they said. One supported example if the record has it. No invented number."
   }
   if (kind === "experience") {
     return "RESPONSE CRAFT: One real example. The bottleneck, what was done, and the impact. This is not the outline used for a definition."
@@ -58,6 +64,8 @@ export function desktopResponsePolicy(audience: string, question: string) {
     ? (level === "engineer" ? 250 : level === "architect" ? 420 : 320)
     : kind === "implementation"
     ? (level === "engineer" ? 180 : level === "architect" ? 420 : 260)
+    : kind === "topic"
+    ? (level === "architect" ? 200 : level === "director" ? 150 : 160)
     : (level === "architect" ? 90 : 70)
   const angle = surface
     ? (level === "architect"
@@ -84,6 +92,8 @@ export function desktopResponsePolicy(audience: string, question: string) {
     ? `Use one supported real example. Explain what was discovered or built, the candidate's own actions, the actual bottleneck, how it was resolved, and the impact on the work. A deep example gets that account. Use only supplied facts and metrics. If the incident is absent, say so and give the approach as a hypothesis. ${angle}`
     : kind === "implementation"
     ? `Follow the precise path the question asked. ${angle} A follow-up stays on the piece that was asked. Do not restart the whole story. Do not pull logs or aggregate Splunk unless the question asked for that hunt.`
+    : kind === "topic"
+    ? `They said a topic, not a finished question. Treat every word as part of the question. Answer the interview question those words imply. If the record shows that work, use one example from it and cover every word they said. If it does not, give the approach and say that exact case was not in the record. A result number is spoken only when the source contains it. If it does not, say the result was not measured. Do not invent an incident, a metric, a tool, or an employer. Do not restart the whole career.`
     : `This is an ordinary question. Answer it in a few sentences. ${angle} ${SURFACE_STOP}`
   const shape = levelMetrics(level)
   const spoken = `SPOKEN MEASURES for this level only: depth ${shape.depth}, distinction ${shape.distinction}, integration ${shape.integration}, relevance ${shape.relevance}, confidence ${shape.confidence}. These are not the same as the other two levels. SPOKEN CARD: one sentence a line, the way a person talks. Keep the technical name. Do not write a command, a sign, a math sum, or a block of code. Write at least nine, never >=9. Write and, never an ampersand and never x-amp. The last sentence is the plain takeaway, still about this question. Do not open another topic.`

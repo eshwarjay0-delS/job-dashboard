@@ -1792,7 +1792,7 @@ function intakeWords(text) { return String(text || "").toLowerCase().replace(/[^
 // Gluing it onto the old question overwrote that card and kept answering the old topic
 // (owner, 21 Oct 2026: "the questions isn't updating", "kept on giving the same answer").
 // A lone keyword ("Kerberos") still refines the question already on screen.
-function typedStandsAlone(text) { const t = String(text || "").trim(); return !!t && !isNoiseLine(t) && (Q_CUE.test(t) || intakeWords(t).length >= 3); }
+function typedStandsAlone(text) { const t = String(text || "").trim(); return !!t && !isNoiseLine(t) && (Q_CUE.test(t) || intakeWords(t).length >= 1); }
 function intakeTerms(text) {
   const out = [];
   for (const raw of String(text || "").split(/\s+/)) {
@@ -1828,8 +1828,8 @@ function composeIntake(lines, opts = {}) {
     // Mic ("You") from here on.
     if (echoShare(text, answerText) >= 0.5) { dropped.echo++; pushKw(text); continue; }   // spelling out the on-screen answer
     if (isNoiseLine(text)) { dropped.noise++; continue; }
-    if (micIsSource && (Q_CUE.test(text) || intakeWords(text).length >= 4)) { primary.push({ who: "You", text }); pushKw(text); continue; }
-    micContext.push(text); pushKw(text);   // his own words: context/keywords only, never the question
+    if (micIsSource && (Q_CUE.test(text) || intakeWords(text).length >= 1)) { primary.push({ who: "You", text }); pushKw(text); continue; }
+    micContext.push(text); pushKw(text);   // beside a real question, his words stay context
   }
   if (typed) { primary.unshift({ who: "You (typed)", text: typed }); pushKw(typed); }
   const primaryText = primary.map(p => p.text).join(" ");
@@ -1838,7 +1838,8 @@ function composeIntake(lines, opts = {}) {
   const longestLineWords = primary.reduce((m, p) => Math.max(m, intakeWords(p.text).length), 0);
   const typedStrong = primary.some(p => p.who === "You (typed)" && (Q_CUE.test(p.text) || intakeWords(p.text).length >= 3));
   if (anchorQ) pushKw(anchorQ);
-  const worthy = primary.length > 0 && (hasCue || typedStrong || longestLineWords >= 6 || !!anchorQ);
+  const topicLine = primary.some(p => !isNoiseLine(p.text) && (intakeWords(p.text).length >= 1) && !Q_CUE.test(p.text) && intakeWords(p.text).length < 6);
+  const worthy = primary.length > 0 && (hasCue || typedStrong || longestLineWords >= 6 || topicLine || !!anchorQ);
   const heardLines = primary.map(p => `${p.who}: ${p.text}`);
   if (micContext.length) heardLines.push(`You (context keywords): ${micContext.join(" ").slice(0, 300)}`);
   if (anchorQ) heardLines.push(`Current question (on screen): ${anchorQ}`);
@@ -2226,8 +2227,9 @@ function pressQuestion(typed, intake, screen) {
   if (derived && lane && low(lane).includes(low(derived))) derived = "";   // the old question is the lane, never a second copy in front of it
   const bits = [typedClean, derived].filter(Boolean);
   let q = bits.join(" ").trim();
-  if (q && lane && q.split(/\s+/).length < 8 && !Q_CUE.test(q)) q = lane.replace(/[?.!\s]+$/, "") + " — " + q;
-  if (!q && intake && intake.keywords && intake.keywords.length && lane && !/^(Preparing…|Ready|Cleared\.|No question yet|Deriving)/.test(lane)) q = lane.replace(/[?.!\s]+$/, "") + " — " + intake.keywords.slice(0, 6).join(" ");
+  const followUp = q && q.split(/\s+/).length <= 9 && /\b(go deeper|more detail|elaborate|what exactly|how did you know|say that again)\b/i.test(q);
+  if (q && lane && followUp) q = lane.replace(/[?.!\s]+$/, "") + " — " + q;
+  if (!q && intake && intake.keywords && intake.keywords.length) q = intake.keywords.slice(0, 8).join(" ");
   return q || "";
 }
 function showPressed(card, q) {

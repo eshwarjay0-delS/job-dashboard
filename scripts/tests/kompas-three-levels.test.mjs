@@ -47,6 +47,14 @@ test("a deep example is not answered like a definition", () => {
   assert.ok(architect.words > engineer.words)
 })
 
+test("a named topic is answered as that topic, and a number is not invented", () => {
+  const policy = desktopResponsePolicy("engineer", "Compliance and GRC side")
+  assert.equal(policy.kind, "topic")
+  assert.match(policy.guidance, /every word/i)
+  assert.match(policy.guidance, /not measured/)
+  assert.doesNotMatch(policy.guidance, /Do not pull logs/)
+})
+
 test("an ordinary question does not become an investigation", () => {
   const policy = desktopResponsePolicy("engineer", "Can you talk about CSRF?")
   assert.equal(policy.kind, "general")

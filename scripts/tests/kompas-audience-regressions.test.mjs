@@ -81,6 +81,8 @@ test('the question is cut out of the ramble, and a definition stays a storytelle
   assert.match(questionToAnswer(parts, parts, true), /Define IDOR/)
   assert.match(questionToAnswer(parts, parts, true), /compare it with CSRF/)
   assert.match(questionToAnswer(parts, parts, true), /bottleneck you hit/)
+  assert.equal(questionToAnswer('CyberArk', 'CyberArk', true), 'CyberArk')
+  assert.equal(questionToAnswer('Compliance and GRC side', '', false), 'Compliance and GRC side')
   const code = 'if n <= 3:\n    return True\nif n % 2 == 0:\n    return False'
   assert.match(applyGuards(code, null, new Set()).text, /n <= 3/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /name the mechanism once/)

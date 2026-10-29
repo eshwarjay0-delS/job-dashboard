@@ -548,7 +548,7 @@ export async function POST(request: NextRequest) {
   if (body.deriveOnly) {
     const heard = str(body.question, 5000)
     if (!heard || plainlyNoQuestion(heard)) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
-    const clean = cleanQuestion(heard) || cutQuestion(heard)
+    const clean = cleanQuestion(heard) || cutQuestion(heard) || questionToAnswer(heard, "", false)
     if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
   }
 
@@ -578,7 +578,7 @@ export async function POST(request: NextRequest) {
     if (!heard) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
     if (plainlyNoQuestion(heard))
       return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
-    const clean = cleanQuestion(heard) || cutQuestion(heard)
+    const clean = cleanQuestion(heard) || cutQuestion(heard) || questionToAnswer(heard, "", false)
     if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
     try {
       const { text } = await fetchOpenRouter(paidKey, PAID_MODEL, DERIVE_SYSTEM,
@@ -664,7 +664,7 @@ export async function POST(request: NextRequest) {
     register,
   })
   const desktopPolicy = config.responseCalibration === "three-level-v1" ? desktopResponsePolicy(level, question) : null
-  if (desktopPolicy) register = desktopPolicy.kind === "experience" || desktopPolicy.kind === "implementation" ? "practice" : "concept"
+  if (desktopPolicy) register = desktopPolicy.kind === "experience" || desktopPolicy.kind === "implementation" || desktopPolicy.kind === "topic" ? "practice" : "concept"
   if (desktopPolicy && tier !== 0 && plan.kind !== "code") {
     plan.words = desktopPolicy.words
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
@@ -803,7 +803,7 @@ If a second topic starts, stop.
 ${INTERVIEW}`
   const job: AnswerJob = {
     question,
-    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
+    system: `${SYSTEM}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
     userText: `ANSWER ONLY THIS:\n${question}\n\n${context}\n\n${figuresLine}\n\n${heardAll && heardAll !== question ? `JUST SAID (a constraint here may matter; a different question here does not):\n${heardAll}\n\n` : ""}ANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? "The previous answer to this question was wrong. Answer it again. Do not reuse that answer's opening, its example, or its order of points.\n\n" : ""}${tier === 0 ? INTRODUCTION_POLICY : desktopCloser || spokenCloser}`,
     plan,
     interviewer,

@@ -267,14 +267,28 @@ export function lengthPlan(
 const ASKS =
   /\?\s*$|^(so,? |and,? |also,? )?(what|how|why|when|where|which|who|can|could|would|will|should|do|does|did|are|is|have|has|tell|walk|describe|explain|give|share|talk|imagine|suppose|pick|choose|name|list|select|design|compare|outline|rank|identify|recommend|propose)\b|\b(tell me|walk me|show me|how would you|what would you|can you|could you|would you|have you|do you)\b/i
 
-/** Speaker-aware: any Them: line is a question; otherwise needs ? or an ask-pattern. */
+/** A short topic, with no question mark, is still the question. A greeting is not. */
+export function topicFragment(text: string): boolean {
+  const t = String(text || "")
+    .replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (!t || noiseOnly(t)) return false
+  if (/\?/.test(t) || ASKS.test(t)) return false
+  const words = t.split(/\s+/).filter(Boolean)
+  if (words.length < 1 || words.length > 12) return false
+  const said = words.map((w) => w.replace(/[.!?]+$/g, "")).filter((w) => w && !SPOKEN_NOISE.test(w))
+  return said.length >= 1
+}
+
+/** Speaker-aware: a Them: line, an ask, or a topic fragment is a question. */
 export function plainlyNoQuestion(heard: string): boolean {
   const lines = String(heard || "").split("\n").filter((l) => l.trim())
   if (!lines.length) return true
   if (lines.some((l) => /^Them:/.test(l))) return false
   return !lines.some((l) => {
     const t = l.replace(/^(You|Them):\s*/, "")
-    return /\?/.test(t) || ASKS.test(t) || LOGISTICS.test(t) || THEIRQ.test(t)
+    return /\?/.test(t) || ASKS.test(t) || LOGISTICS.test(t) || THEIRQ.test(t) || topicFragment(t)
   })
 }
 
@@ -291,7 +305,7 @@ export function wholeQuestion(heard: string): string {
     .replace(/^(?:ok(?:ay)?|so|yes|yeah|uh|um)[, ]+/i, "")
     .trim()
   const sentences = text.split(/(?<=[.!?])\s+/).filter((s) => s && !SPOKEN_NOISE.test(s))
-  if (sentences.length <= 2 && text.length <= 700 && (ASKS.test(text) || /\?/.test(text))) {
+  if (sentences.length <= 2 && text.length <= 700 && (ASKS.test(text) || /\?/.test(text) || topicFragment(text))) {
     if (/^(?:self\s+)?intro(?:duction)?\.?$/i.test(text)) return "Tell me about yourself"
     return text.charAt(0).toUpperCase() + text.slice(1)
   }
@@ -349,7 +363,7 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
     .replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ")
     .replace(/\s+/g, " ")
     .trim()
-  if (bare && !noiseOnly(bare) && bare.split(/\s+/).filter(Boolean).length >= 3) return bare.slice(0, 900)
+  if (bare && !noiseOnly(bare) && (topicFragment(bare) || bare.split(/\s+/).filter(Boolean).length >= 3)) return bare.slice(0, 900)
   return ""
 }
 
