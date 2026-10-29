@@ -785,21 +785,20 @@ function answerLines(answer) {
   if (window.KompasCorrect && window.KompasCorrect.asSpeaker) answer = window.KompasCorrect.asSpeaker(String(answer || ""), window.__speakerName);
   if (window.KompasCorrect) answer = sayAnswer(answer);
   if (Array.isArray(answer)) return answer.map(t => ({ t: String(t).trim().replace(/^(?:[-•]|\*(?!\*))\s*/, "").trim(), kind: "bullet" })).filter(x => x.t);
-  // On the desktop the answer is spoken. A fenced block is not read out, so it is not drawn.
-  const spoken = !!window.kompasDesktop;
+  // Code is visual content even when narration remains spoken. Never execute it.
   const out = []; let code = null, prose = [];
   const flush = () => { if (prose.length) out.push(...proseLines(prose.join("\n"))); prose = []; };
   for (const raw of String(answer || "").split("\n")) {
     if (/^\s*```/.test(raw)) {
-      if (code) { if (!spoken) out.push({ t: code.lines.join("\n"), kind: "code", lang: code.lang }); code = null; }
+      if (code) { out.push({ t: code.lines.join("\n"), kind: "code", lang: code.lang }); code = null; }
       else { flush(); code = { lang: raw.replace(/^\s*```/, "").trim(), lines: [] }; }
       continue;
     }
-    if (code) { if (!spoken) code.lines.push(raw); }
+    if (code) { code.lines.push(raw); }
     else prose.push(raw);
   }
   flush();
-  if (code && !spoken) out.push({ t: code.lines.join("\n"), kind: "code", lang: code.lang });
+  if (code) out.push({ t: code.lines.join("\n"), kind: "code", lang: code.lang });
   return out;
 }
 function proseLines(text) {
