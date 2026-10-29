@@ -57,3 +57,8 @@ test('Meta delivery callbacks update the durable resume job record', () => {
   assert.match(queue, /meta_delivery_failed/)
   assert.match(queue, /resume handset delivery confirmed/)
 })
+
+test('cross-provider best draft is selected by evidence and role quality, not raw JD overlap', () => {
+  assert.match(tailor, /if \(!best \|\| quality\(first\) > quality\(best\)\)/)
+  assert.match(tailor, /unsupportedPenalty\(p\)/)
+})
