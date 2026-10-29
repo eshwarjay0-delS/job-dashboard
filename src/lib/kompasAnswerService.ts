@@ -8,7 +8,7 @@ import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
   classify, canonicalQuestion, requestedParts, cutShort, lengthPlan, questionDepth, deriveByCode, questionForAnswer, DIRECTOR_OPENING,
   tierRule, pickShape, DERIVE_SYSTEM, INTRODUCTION_POLICY, INTRO_CAREER_SPINE, INTENT_BOUNDARY, PERSONAL_EXPERIENCE_POLICY, TECHNICAL_ANSWER_BOUNDARY, RESPONSE_CRAFT_POLICY, isPersonalEvidenceQuestion, type LengthPlan,
-  answerLevel, questionRegister, levelGuidance, ANSWER_LEVEL_NAME, missingStructure, STRUCTURE_REPAIR_SYSTEM,
+  answerLevel, questionRegister, levelGuidance, ANSWER_LEVEL_NAME, missingStructure, structureRepairSystem,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
   commit, recordAngle, matchBank, differentQuestionLine,
 } from "@/lib/kompasAnswer"
@@ -21,12 +21,13 @@ import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasReleva
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
+import { judgeRewrite, lostAfterSettle, repairLogLine, statusFor, type RepairOutcome } from "@/lib/kompasRepair"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
 import { desktopCraft, desktopResponsePolicy } from "@/lib/kompasDesktopResponse"
 import {
-  allowedNumbers, applyGuards, speakFacts, verifyAnswer,
+  allowedNumbers, applyGuards, questionFigures, speakFacts, verifyAnswer,
   type SpeakFacts,
 } from "@/lib/kompasGuards"
 
@@ -328,6 +329,8 @@ type AnswerJob = {
   // for the optional post-generation fact-check.
   guardFacts: SpeakFacts
   allowed: Set<string>
+  // The interviewer's own figures: structure an answer refers back to, never proof of a result (kompasGuards).
+  askedFigures: Set<string>
   factsText: string
   streamPolicy: KompasStreamPolicy
   sourceText: string
@@ -380,51 +383,55 @@ function spokenAfterModel(job: AnswerJob, text: string): { text: string; provide
 // them and one targeted rewrite adds only what is missing. The original
 // stands on any failure, and a repair that fixes nothing is discarded —
 // never a worse answer, never a second rewrite.
-async function repairStructure(job: AnswerJob, guardedText: string, req: NextRequest): Promise<{ text: string; repaired: number }> {
+// Everything the repair checks, for any text: core items (structure, named terms) decide; the rest are advisory.
+function repairChecks(job: AnswerJob, text: string): { core: string[]; all: string[] } {
   const opts = { level: job.level, register: job.register, shape: job.shape, tier: job.tier }
-  const structureMissing = missingStructure(guardedText, opts)
-  const explicitParts = questionParts(job.question)
-  const precisionMissing = explicitParts.length >= 2 ? missingQuestionParts(job.question, guardedText) : []
-  // A soft/personal question with multiple unrelated specialist phrases should
-  // be simplified before it reaches the candidate. This check is diagnostic
-  // and conservative: expert questions never trigger this specific repair.
-  const offTopic = tangentSignals(job.question, guardedText)
-  const namedMissing = missingNamedQuestionTerms(job.question, guardedText)
-  const missing = [...namedMissing.map(t => `the interviewer explicitly named ${t}; explain its relevance`), ...structureMissing, ...precisionMissing.map(p => `the interviewer explicitly asked about ${p}`), ...offTopic.map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
-  // Core acceptance: structure + named-term misses are the repair's contract.
-  // Rounds 11-12 both flagged Q2's alternative and 800-53, yet the final
-  // answer still lacked both — consistent with a rewrite that fixed the core
-  // but introduced a new advisory precision/tangent flag and was discarded
-  // whole by the old all-or-nothing rule. Accept when the core improves
-  // with no new core item, even if an advisory flag appears; a rewrite that
-  // fixes no core item is still discarded.
-  const coreMissing = [...structureMissing, ...namedMissing]
-  if (!missing.length || !job.orKey) return { text: guardedText, repaired: 0 }
-  // At most two attempts: the second names exactly what the first rewrite
-  // still missed. A failed call is not retried; a rewrite that fixes nothing
-  // is discarded, never shipped. The abort signal is the request signal, not
-  // the 55s lane signal: a repair at settle time must not inherit only the
-  // lane budget left over after generation, or it aborts silently and the
-  // original stands no matter what the rewrite would have fixed.
-  let stillMissing = missing
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const extra = attempt === 0 ? "" : `\n\nYour previous rewrite still missed:\n${stillMissing.map((m) => `- ${m}`).join("\n")}\nThe rewritten answer MUST contain each item above.`
+  const structure = missingStructure(text, opts)
+  const named = missingNamedQuestionTerms(job.question, text).map((t) => `the interviewer explicitly named ${t}; explain its relevance`)
+  const parts = questionParts(job.question).length >= 2 ? missingQuestionParts(job.question, text).map((p) => `the interviewer explicitly asked about ${p}`) : []
+  // A soft/personal question with several unrelated specialist phrases is simplified; expert questions never trigger it.
+  const tangents = tangentSignals(job.question, text).map((t) => `remove the unasked technical tangent ${t} and keep the direct answer`)
+  return { core: [...structure, ...named], all: [...named, ...structure, ...parts, ...tangents] }
+}
+
+// At most two attempts. The second rewrites the BEST answer so far and names only what it still misses (v1 rewrote
+// the original twice with the full list, so a partial fix from attempt one was thrown away). The abort signal is the
+// request signal, not the 55s lane signal, so a settle-time repair does not inherit a spent lane budget.
+async function repairStructure(job: AnswerJob, guardedText: string, req: NextRequest): Promise<{ text: string; repaired: number; repair: RepairOutcome }> {
+  const first = repairChecks(job, guardedText)
+  const missing = first.all
+  if (!missing.length) return { text: guardedText, repaired: 0, repair: { status: "not-needed", attempts: 0, missing: [], stillMissing: [] } }
+  if (!job.orKey) return { text: guardedText, repaired: 0, repair: { status: "no-key", attempts: 0, missing, stillMissing: missing } }
+  let best = { text: guardedText, core: first.core, all: first.all }
+  let attempts = 0
+  let failed = false
+  for (let attempt = 0; attempt < 2 && best.all.length; attempt++) {
+    attempts++
+    const removeTangent = best.all.some((m) => m.startsWith("remove the unasked technical tangent"))
     try {
-      const { text } = await fetchOpenRouter(job.orKey, PAID_MODEL, offTopic.length ? `${STRUCTURE_REPAIR_SYSTEM}\nWhen the missing element says remove an unasked tangent, actually delete that jargon and its unrelated clause. Keep the one direct answer and every genuinely requested point; do not replace it with a different technical story.` : STRUCTURE_REPAIR_SYSTEM,
-        `QUESTION: ${job.question}\n\nANSWER:\n${guardedText}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}${extra}\n\nReturn the full rewritten answer and nothing else.`,
+      const { text } = await fetchOpenRouter(job.orKey, PAID_MODEL, structureRepairSystem(job.plan.words, removeTangent),
+        `QUESTION: ${job.question}\n\nANSWER:\n${best.text}\n\nMISSING:\n${best.all.map((m) => `- ${m}`).join("\n")}\n\nThe rewritten answer MUST contain each item above. Return the full rewritten answer and nothing else.`,
         1600, AbortSignal.any([req.signal, AbortSignal.timeout(60000)]))
-      const repaired = text.trim()
-      if (!repaired) return { text: guardedText, repaired: 0 }
-      const rg = applyGuards(repaired, job.guardFacts, job.allowed)
-      if (!rg.text.trim()) return { text: guardedText, repaired: 0 }
-      stillMissing = [...missingStructure(rg.text, opts), ...(explicitParts.length >= 2 ? missingQuestionParts(job.question, rg.text).map(p => `the interviewer explicitly asked about ${p}`) : []), ...missingNamedQuestionTerms(job.question, rg.text).map(t => `the interviewer explicitly named ${t}; explain its relevance`), ...tangentSignals(job.question, rg.text).map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
-      const coreStill = [...missingStructure(rg.text, opts), ...missingNamedQuestionTerms(job.question, rg.text)]
-      if (coreMissing.length > 0) {
-        if (coreStill.length < coreMissing.length && coreStill.every(m => coreMissing.includes(m))) return { text: rg.text, repaired: 1 }
-      } else if (stillMissing.length < missing.length && stillMissing.every(m => missing.includes(m))) return { text: rg.text, repaired: 1 }
-    } catch { return { text: guardedText, repaired: 0 } }
+      const rewrite = text.trim()
+      if (!rewrite || isProviderErrorAnswer(rewrite)) continue
+      const rg = applyGuards(rewrite, job.guardFacts, job.allowed, job.askedFigures)
+      if (!rg.text.trim()) continue
+      const after = repairChecks(job, rg.text)
+      if (judgeRewrite(best.core, after.core, best.all, after.all) > 0) best = { text: rg.text, core: after.core, all: after.all }
+    } catch { failed = true; break }
   }
-  return { text: guardedText, repaired: 0 }
+  const fixed = missing.length - best.all.length
+  const status = best.text === guardedText ? (failed && attempts === 1 ? "failed" : "discarded") : statusFor(fixed, missing.length, best.all.length)
+  return { text: best.text, repaired: best.text === guardedText ? 0 : 1, repair: { status, attempts, missing, stillMissing: best.all } }
+}
+
+/** After settling, record whether what the repair fixed is still there, and log one line per repaired answer. */
+function settleRepair(job: AnswerJob, repair: RepairOutcome, finalText: string): RepairOutcome {
+  if (repair.status === "not-needed") return repair
+  const lost = lostAfterSettle(repair, repairChecks(job, finalText).all)
+  const out = { ...repair, survived: !lost.length, lostAfterSettle: lost }
+  console.info(repairLogLine(out, job.question))
+  return out
 }
 
 async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response> {
@@ -533,13 +540,15 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         // text: unbracket → place/prestige/title/version fixes → figures
         // allowlist. Voice repair runs after — the client's `replace` event
         // swaps the streamed draft for the finished answer.
-        const g = applyGuards(correctVerifiedPresentationErrors(raw.trim()), job.guardFacts, job.allowed)
+        const g = applyGuards(correctVerifiedPresentationErrors(raw.trim()), job.guardFacts, job.allowed, job.askedFigures)
         let guardedText = g.text
         let repaired = 0
+        let repair: RepairOutcome
         {
           const r = await repairStructure(job, guardedText, req)
           guardedText = r.text
           repaired = r.repaired
+          repair = r.repair
         }
         let finalText = readAloud(job.tier === 0 ? (voiceRepair(guardedText) || guardedText).replace(/\[(?:beat|breath)\]|\(pause\)/gi, ' ') : blendSpoken(voiceRepair(guardedText) || guardedText) || guardedText) || guardedText
         // Optional post-generation fact-check: the model only POINTS at
@@ -564,6 +573,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           return
         }
         finalText = settled.text
+        repair = settleRepair(job, repair, finalText)
         // Personal history is held back until guards have run. Even if unchanged,
         // it must be emitted now because no provisional deltas were sent.
         if (mustEmitFinalReplacement(job.streamPolicy, finalText, raw)) {
@@ -571,7 +581,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           emit({ type: "replace", text: finalText })
         }
         emit({
-          type: "done", degraded, guarded: g.guarded, verified, repaired,
+          type: "done", degraded, guarded: g.guarded, verified, repaired, repair,
           precision: { coverage: questionCoverage(job.question, finalText), flags: [...spokenQualityFlags(job.question, finalText), ...tangentSignals(job.question, finalText).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, finalText).map(t => `missing-named-term:${t}`)] },
           ledger: job.ledger,
           ...metaBase, provider: servedProvider, model: servedModel,
@@ -634,13 +644,15 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   }
   // Grounding guards before voice repair: unbracket → place/prestige/title/
   // version fixes → figures allowlist. Then the optional fact-check.
-  const g = applyGuards(correctVerifiedPresentationErrors(raw.trim()), job.guardFacts, job.allowed)
+  const g = applyGuards(correctVerifiedPresentationErrors(raw.trim()), job.guardFacts, job.allowed, job.askedFigures)
   let guardedText = g.text
   let repaired = 0
+  let repair: RepairOutcome
   {
     const r = await repairStructure(job, guardedText, req)
     guardedText = r.text
     repaired = r.repaired
+    repair = r.repair
   }
   let out = readAloud(job.tier === 0 ? (voiceRepair(guardedText) || guardedText).replace(/\[(?:beat|breath)\]|\(pause\)/gi, ' ') : blendSpoken(voiceRepair(guardedText) || guardedText) || guardedText) || guardedText
   let verified = 0
@@ -660,6 +672,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     return NextResponse.json({ ...failure, quiet: true }, { status: failure.status, headers: NO_STORE })
   }
   out = settled.text
+  repair = settleRepair(job, repair, out)
   if (!out.trim()) return NextResponse.json({ error: "Nothing to answer.", quiet: true }, { status: 400, headers: NO_STORE })
   void lastErr
   return NextResponse.json({
@@ -670,6 +683,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     guarded: g.guarded,
     verified,
     repaired,
+    repair,
     ledger: job.ledger,
     meta: {
       engine: "marketfit", provider: servedProvider, model: servedModel,
@@ -833,9 +847,11 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   }
   const sourceText = [resumeSrc, jdSrc, docsSrc].filter(Boolean).join("\n")
   const spokenLevel = level === "architect" || level === "director" ? level : "engineer"
-  const spokenShape = dissectQuestion(question, sourceText).shape
+  const spokenCut = dissectQuestion(question, sourceText)
+  const spokenShape = spokenCut.shape
   if (plan.kind !== "code") {
-    const band = modeBand(spokenShape, spokenLevel)
+    // The dissected band already carries the multi-part scale, so a five-part design ask is not cut at a one-part ceiling.
+    const band = spokenCut.modes[spokenLevel] || modeBand(spokenShape, spokenLevel)
     const briefIntro = spokenShape === "intro" && /\b(?:brief|briefly|quick|short|30 seconds|one minute)\b/i.test(question)
     plan.words = briefIntro ? Math.max(24, Math.round(band.targetWords * 0.6)) : band.targetWords
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
@@ -999,6 +1015,7 @@ ${INTERVIEW}`
     startedAt,
     guardFacts,
     allowed,
+    askedFigures: questionFigures(question),
     factsText,
     streamPolicy: answerStreamPolicy(tier, question),
     sourceText,

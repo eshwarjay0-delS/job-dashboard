@@ -1028,9 +1028,20 @@ export function missingStructure(text: string, opts: { level: string; register: 
   return missing
 }
 
-export const STRUCTURE_REPAIR_SYSTEM = `You repair one interview answer. Rewrite the SAME answer with minimal changes: keep every supported fact and relevant example unless a change is required by the missing element below. Do not shorten it, do not change the answer's level or voice, and do not invent achieved numbers or results. The missing element is part of what the interviewer asked for, so writing it completes the answer — it is not an invented claim, and it must not be left out to keep the answer unchanged. Add ONLY the missing element, in the place its instruction names. You MUST add the missing element even if that means adding a sentence: keeping the existing sentences does not mean leaving the answer unchanged. When a missing element names a label or a form, write it literally: a rejected alternative gets one sentence naming the alternative and what it cost; numbered hypotheses get literal 'Hypothesis 1:', 'Hypothesis 2:' labels, a test attached to each, and later references by number; a named framework or term gets named in the answer and tied to specific design elements with its control families or codes, not merely mentioned in passing.`
+export const STRUCTURE_REPAIR_SYSTEM = `You repair one interview answer. Rewrite the SAME answer with minimal changes: keep every supported fact and relevant example that answers the question, unless a change is required by the missing element below. Do not change the answer's level or voice, and do not invent achieved numbers or results. If the answer is already at its word limit, make room by tightening wording or dropping a point the interviewer did not ask about, never by dropping the missing element. The missing element is part of what the interviewer asked for, so writing it completes the answer — it is not an invented claim, and it must not be left out to keep the answer unchanged. Add ONLY the missing element, in the place its instruction names. You MUST add the missing element even if that means adding a sentence: keeping the existing sentences does not mean leaving the answer unchanged. When a missing element names a label or a form, write it literally: a rejected alternative gets one sentence naming the alternative and what it cost; numbered hypotheses get literal 'Hypothesis 1:', 'Hypothesis 2:' labels, a test attached to each, and later references by number; a named framework or term gets named in the answer and tied to specific design elements with its control families or codes, not merely mentioned in passing.`
 
 /** First-win archetype match. Returns the shape instruction or null. */
+// One repair prompt, no contradictions: v1 said "Do not shorten it" while the tangent instruction said "delete that
+// jargon" and the mode ceiling then trimmed the longer rewrite, so a landed repair could be cut back out (hitachi-grc
+// Q2 and Q3, rounds 11 to 14). The ceiling is stated here so the rewrite fits it.
+export function structureRepairSystem(maxWords: number, removeTangent: boolean): string {
+  const limit = maxWords > 0 ? `\nStay within ${maxWords} words in total.` : ""
+  const tangent = removeTangent
+    ? "\nWhen the missing element says remove an unasked tangent, delete that jargon and its unrelated clause. Keep the one direct answer and every point the interviewer asked for; do not replace it with a different technical story."
+    : ""
+  return `${STRUCTURE_REPAIR_SYSTEM}${tangent}${limit}`
+}
+
 export function pickShape(question: string, tier: number, known = ""): string | null {
   const q = String(question || "");
   for (const mode of ["behavioural", "technical"]) {

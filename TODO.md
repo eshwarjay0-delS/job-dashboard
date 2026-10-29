@@ -1,3 +1,24 @@
+## 2026-10-29 — Kompas relevance folds 1 to 14: repair is visible, the number guard keeps structure, code comes first
+
+**Done on the box.** Cloud agents failed at startup. Same branch as PR #124, with master merged in. The fold log is in `docs/kompas-relevance-playbook.md`.
+
+- The repair prompt no longer says "Do not shorten it" against the tangent rule and the word ceiling.
+- The second repair attempt builds on the best rewrite.
+- Every answer carries a `repair` outcome, and `survived` shows when a later step cut a landed repair.
+- The number guard passes versions such as 5.4.6 and the interviewer's own figures, and says "noticeably", not "by noticeably".
+- Code questions are told to give the fenced block first at every level.
+- Multi-part and "go deeper" questions get the larger band.
+- The offline draft uses the resume's experience lines and never the header.
+- `scripts/kompas-live-eval.mjs` now runs the hitachi-grc chain and checks the pieces each question names.
+
+**Tests (code-level only, not live answer quality).**
+- The CI node test steps: 745 pass, 0 fail. This includes the new `kompas-relevance-folds.test.mjs` (16) and `kompas-guards.test.mjs` (6), both added to CI.
+- `node scripts/kompas-baseline.mjs`: 15 checks hold.
+- `tsc --noEmit`: clean.
+- `npm run lint`: 0 errors, 260 warnings that were already there.
+
+**Not tested.** No live answer was measured, because `KOMPAS_EVAL_TOKEN` was not set. Desktop was not checked. Deploy was not checked. GitHub CI has not run on these commits, because no push was possible from the box.
+
 ## 2026-10-29 — Kompas relevance fold: dissection, mode ceilings, master prompt v1
 
 **Checked first.** Master and production were the same commit, `4f70b96`. Deployment `dpl_BeCwCn5npGE1rXmJ1Hvi2SvVDJ68` was READY and held `job-dashboard-fawn.vercel.app`. Pull requests 111, 112, and 113 are already inside that commit. `POST /api/answer` on that build returned 404. `POST /api/kompas/answer` returned 401. The page rewrites the first path in the browser. Open pull requests 89, 32, and 23 are not in production. They are not the chief answer algorithm.

@@ -35,10 +35,24 @@ const ok = (v, what) => { if (!v) throw new Error(what) }
 // ---------------------------------------------------------------- server modules, compiled in memory
 let ts = null
 try { ts = require('typescript') } catch { /* reported below */ }
+// A server module may import a sibling as "./x.ts" or "./x" (kompasDesktopResponse imports kompasDissection, which
+// imports kompasRelevance). Plain require cannot load .ts, so a relative import is compiled the same way, once.
+const loaded = new Map()
 function loadTs(path) {
+  if (loaded.has(path)) return loaded.get(path)
   const out = ts.transpileModule(read(path), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText
   const mod = { exports: {} }
-  vm.runInNewContext(out, { module: mod, exports: mod.exports, require, console })
+  loaded.set(path, mod.exports)
+  const dir = path.slice(0, path.lastIndexOf('/') + 1)
+  const local = (spec) => {
+    if (spec.startsWith('@/')) spec = 'src/' + spec.slice(2)
+    else if (spec.startsWith('./') || spec.startsWith('../')) spec = new URL(spec, new URL(dir, 'file:///')).pathname.slice(1)
+    else return require(spec)
+    const file = spec.endsWith('.ts') ? spec : `${spec}.ts`
+    return loadTs(file)
+  }
+  vm.runInNewContext(out, { module: mod, exports: mod.exports, require: local, console })
+  loaded.set(path, mod.exports)
   return mod.exports
 }
 const A = ts ? loadTs('src/lib/kompasAnswer.ts') : null

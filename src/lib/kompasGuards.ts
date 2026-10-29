@@ -77,6 +77,9 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   // `returns several` while guarding unsupported achievement metrics.
   if (/^[1-5]\d{2}$/.test(value) && /\b(?:http|status|returns?|responds?(?: with)?|receives?|expects?)(?: an?)?\s*$/i.test(before)) return true
   if (/^[1-5]\d{2}$/.test(value) && (/\b(?:forbidden|unauthorized|responses?|status|http)\b/i.test(after) || /(?:expect\w*|return\w*|respond\w*|receiv\w*|status|http)[^.\n]{0,20}$/i.test(before))) return true
+  // A three-part dotted number is always a version ("upgraded the library to 5.4.6" came out "to several"); no
+  // result claim is written that way.
+  if (/^\d+\.\d+\.\d+$/.test(value)) return true
   if (/^\d+\.\d+(?:\.\d+)?$/.test(value) && /\b(?:kubernetes|istio|nginx|splunk(?: es)?|python|node(?:\.js)?|java|postgres(?:ql)?|kong|tls)\s*$/i.test(before)) return true
   if (/\b(?:invoice_id|customer_id|tenant_id|owner_id)\s*=\s*$/i.test(before) || /\/invoices\/\s*$/i.test(before)) return true
   if (/[-_\u2010\u2011\u2013\u2014\u2212#]$/.test(before) || /^[-_\u2010\u2011\u2013\u2014\u2212]/.test(after)) return true
@@ -142,12 +145,15 @@ export function guardText(line: string, allowed: Set<string>): { text: string; r
       // of traffic"; "increase to 10%" becomes "increase to a higher
       // share", not "increase to noticeably".
       if (/^\s+of\b/.test(after)) plain = "a share"
+      // "reduced audit gaps by 40%" came out "by noticeably"; the replacement takes the place of "by 40%".
+      else if (/\bby\s+$/i.test(before)) plain = "\u0000noticeably"
       else if (/\bto\s+(a|an|the\s+)?$/.test(before)) plain = "a higher share"
       else plain = plainFor(core, hasArticle)
     } else plain = plainFor(core, hasArticle)
     if (hasArticle) plain = plain.replace(/^(a|an|the)\s+/i, "")
     return plain + suffix
   })
+  text = text.replace(/\bby\s+\u0000/gi, "").replace(/\u0000/g, "")
   text = text.replace(/several(milliseconds?|seconds?|minutes?|hours?|ms|secs?|mins?|hrs?|kb|mb|gb|tb|s)\b/gi, "several")
   text = text.replace(/\bin a few years ago/gi, "back then")
   return { text, removed }
@@ -333,8 +339,31 @@ export function speakFacts(opts: {
 // ------------------------------------------------------------ full pipeline ---
 // perfACT's streaming settle() chain, run per line on the finished text:
 // unbracket → place → versions → prestige → title → orphans → figures.
+/**
+ * The interviewer's own figures ("the 72-hour window", "three regions", "NIST 800-53") are structure the answer
+ * refers back to. They pass, except straight after "by", where repeating the question's number turns it into a
+ * result the candidate claims ("cut MTTR by 40%" is still guarded when only the question said 40%).
+ */
+export function questionFigures(question: string): Set<string> {
+  const out = new Set<string>()
+  for (const f of String(question || "").match(FIGURE_RE) || []) out.add(normFigure(f))
+  return out
+}
+
+function withAskedFigures(sentence: string, allowed: Set<string>, asked: Set<string>): Set<string> {
+  if (!asked.size) return allowed
+  const merged = new Set(allowed)
+  const re = new RegExp(FIGURE_RE.source, "g")
+  let m: RegExpExecArray | null
+  while ((m = re.exec(sentence))) {
+    const n = normFigure(m[0])
+    if (asked.has(n) && !/\bby\s+$/i.test(sentence.slice(0, m.index))) merged.add(n)
+  }
+  return merged
+}
+
 export function applyGuards(
-  text: string, facts: SpeakFacts | null, allowed: Set<string>,
+  text: string, facts: SpeakFacts | null, allowed: Set<string>, asked: Set<string> = new Set(),
 ): { text: string; guarded: number } {
   let guarded = 0
   const lines = String(text || "").split("\n")
@@ -350,9 +379,10 @@ export function applyGuards(
     const parts = line.split(/(?<=[.!?])(\s+)/)
     let changed = false
     const kept = parts.map((part) => {
-      if (!part.trim() || !claimsResult(part) || !needsGuard(part, allowed)) return part
+      const ok = withAskedFigures(part, allowed, asked)
+      if (!part.trim() || !claimsResult(part) || !needsGuard(part, ok)) return part
       changed = true
-      return guardText(part, allowed).text
+      return guardText(part, ok).text
     })
     if (!changed) return line
     guarded++

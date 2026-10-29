@@ -110,9 +110,11 @@ test('Technical questions keep named tools, but never auto-invent unasked ones',
 })
 test('Named-term repair is integrated with the existing grounding path',()=>{
  const s=readFileSync(new URL('../../src/lib/kompasAnswerService.ts',import.meta.url),'utf8')
- assert.match(s,/namedMissing = missingNamedQuestionTerms\(job\.question, guardedText\)/)
+ // Named terms are a core repair check, run on the first answer and on every rewrite (repairChecks).
+ assert.match(s,/const named = missingNamedQuestionTerms\(job\.question, text\)/)
  assert.match(s,/missing-named-term:/)
- assert.match(s,/missingNamedQuestionTerms\(job\.question, rg\.text\)/)
+ assert.match(s,/repairChecks\(job, guardedText\)/)
+ assert.match(s,/repairChecks\(job, rg\.text\)/)
 })
 
 test('JD keywords must not flood social and definition turns',()=>{
