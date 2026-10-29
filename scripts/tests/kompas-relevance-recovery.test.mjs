@@ -63,6 +63,6 @@ test('Soft manager comments are not treated as a cybersecurity assessment',()=>{
 test('Live service actually uses rediscovery in both prompt paths',()=>{
  const s=readFileSync(new URL('../../src/lib/kompasAnswerService.ts',import.meta.url),'utf8')
  assert.match(s,/rediscovered = rediscoverRelevance\(question, history\)/)
- assert.ok(s.match(/relevanceRecoveryPrompt\(question, history\)/g).length>=2)
+ assert.equal((s.match(/relevanceRecoveryPrompt\(question, history\)/g)||[]).length,1,'do not duplicate instruction and distract from the actual question')
  assert.match(s,/const storyMode = rediscovered\.intent === "experience-story"/)
 })
