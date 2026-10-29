@@ -19,6 +19,8 @@ import { tailorRunKey } from "./tailor-review"
 
 export interface TailorResult {
   quality?: ReturnType<typeof resumeQuality>
+  /** Non-PII codes explaining why a high keyword score may still be blocked. */
+  quality_blockers?: string[]
   token: string
   score: number
   score_before: number
@@ -502,8 +504,18 @@ export async function runTailor(opts: {
       const y = Number(line.match(YEARS_RE)?.[1])
       if (y) for (const k of coveredJdKeywords(line, listed)) skillYears.set(k, Math.max(y, skillYears.get(k) || 0))
     }
-    const required = zones.roles.map(() => [] as string[])
-    for (const k of listed) for (const i of rolesForYears(skillYears.get(k) || summaryYears)) required[i].push(k)
+    // Require a named skill in a client's bullets ONLY where the original
+    // client record already evidences that skill. Earlier "years math" forced
+    // every listed skill into every role (including unrelated clients), making
+    // 100% supported global coverage fail the per-role gate and inviting
+    // fabricated work histories. Explicit years can narrow a role window,
+    // but can never create role evidence on their own.
+    const required = zones.roles.map((r, i) => {
+      const evidenced = coveredJdKeywords(r.bullets.map(b => b.text).join("\n"), listed)
+      return listed.filter(k => evidenced.has(k) &&
+        (!skillYears.has(k) && !summaryYears ||
+          rolesForYears(skillYears.get(k) || summaryYears).includes(i)))
+    })
     const rw = rewrites(edits)
     const added = addedFor(edits)
     const roleText = zones.roles.map((r, i) => [...r.bullets.map(b => rw.get(b.idx) ?? b.text), ...added[i]].join("\n"))
@@ -862,7 +874,10 @@ export async function runTailor(opts: {
   if (best.floorSummary?.length) notes.push(`Written into the summary as strengths, from the job post: ${best.floorSummary.join(", ")}`)
   // A run the floor, not the rewrite, carried to the target is never kept as complete or served again from the cache: the
   // next identical request gets another rewrite (26 Oct 2026 review).
-  const floorCarried = !!floorFrom && supportedShare(floorFrom) < TARGET_COVERAGE
+  // Deterministically placing an already-evidenced skill in its skills line
+  // is not itself an incomplete rewrite. Still block skills-only fallbacks and
+  // unfinished experience roles through the separate completion checks below.
+  const floorCarried = !!floorFrom && skillsOnly
   if (!opts.refine && !jdGenerated.length) notes.push("Gemini keyword review returned no additional terms; generation used the directly extracted JD requirements.")
   notes.push("The JD supplies target requirements; the source resume and explicit candidate confirmations supply experience evidence. The target is 98% keyword coverage where supported. Scores measure exported document keyword overlap, not hiring probability.")
   notes.push(`Tailored with ${usedModel} · JD keyword coverage ${coveragePercent(best.cov)}%`)
@@ -965,12 +980,23 @@ export async function runTailor(opts: {
   notes.push(`Evidence-supported JD vocabulary retained: ${Math.round(attainableCoverage * 100)}%`)
   const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(best.tailoredText, [k]).has(k))
   if (unverifiedAdded.length) notes.push(`Unverified JD claims require candidate confirmation: ${unverifiedAdded.join(", ")}`)
-  const qualityReport = resumeQuality({ matched: attainableCovered.size, total: attainableKws.length, missing: attainableKws.filter(k => !attainableCovered.has(k)), weightedCoverage: attainableCoverage, partial: skillsOnly || floorCarried || !!best.partial || unverifiedAdded.length > 0 || (splitDraft && (lackingRoles(best.edits).length > 0 || !experienceCoverageComplete(role_alignment, TARGET_COVERAGE))), unchanged: !diff.length })
+  // Diagnostic codes contain no resume, JD, name or phone number.
+  const qualityBlockers = [
+    ...(skillsOnly ? ["skills_only"] : []),
+    ...(floorCarried ? ["floor_only"] : []),
+    ...(best.partial ? ["draft_parts_missing"] : []),
+    ...(unverifiedAdded.length ? ["unverified_jd_terms"] : []),
+    ...(splitDraft && lackingRoles(best.edits).length ? ["roles_unrewritten"] : []),
+    ...(splitDraft && !experienceCoverageComplete(role_alignment, TARGET_COVERAGE) ? ["role_evidence_gaps"] : []),
+    ...(!diff.length ? ["unchanged"] : []),
+  ]
+  const qualityReport = resumeQuality({ matched: attainableCovered.size, total: attainableKws.length, missing: attainableKws.filter(k => !attainableCovered.has(k)), weightedCoverage: attainableCoverage, partial: qualityBlockers.some(k => k !== "unchanged"), unchanged: !diff.length })
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
 
   const result: TailorResult = {
     quality: qualityReport,
+    quality_blockers: qualityBlockers,
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,
     ranked_candidates: rankedCandidates, what_changed: whatChanged(edits), edits, notes,
     applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff, review,
