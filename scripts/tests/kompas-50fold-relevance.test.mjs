@@ -75,6 +75,14 @@ test('The named role/company does not change the value of a direct preference',(
  assert.match(focusPrompt(q,4,'director'),/Intent: comparison/)
  assert.ok(focusPlan(q,4,'director').maxWords<=100)
 })
+test('Latest actual question overrides legacy tier-scaffolding for conversational asks',()=>{
+ const service=readFileSync(new URL('../../src/lib/kompasAnswerService.ts',import.meta.url),'utf8')
+ assert.match(service,/MODE_BLOCKS\.conversational/)
+ assert.match(service,/includes\(interviewIntent\(question\)\)/)
+ assert.match(service,/const includeHistoryContext = rediscovered\.contextRelation === "follow-up"/)
+ assert.match(service,/personalEvidence && storyMode && tier !== 0 && ledgerProjects\.length/)
+ assert.match(service,/const askForDigest = question/)
+})
 test('Code integration keeps answer scope and avoids forced random project rotation',()=>{
  const s=readFileSync(new URL('../../src/lib/kompasAnswerService.ts',import.meta.url),'utf8')
  assert.match(s,/focusPrompt\(question, tier, level\)/)
