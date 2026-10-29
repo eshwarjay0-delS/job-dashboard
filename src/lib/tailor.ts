@@ -952,7 +952,7 @@ export async function runTailor(opts: {
   }
   notes.push(`Evidence-supported JD vocabulary retained: ${Math.round(attainableCoverage * 100)}%`)
   const wc = weightedCoverage(best.tailoredText, scoreKws)
-  const qualityReport = resumeQuality({ matched: wc.matched.length, total: scoreKws.length, missing: wc.missing, weightedCoverage: wc.coverage, partial: skillsOnly || floorCarried || !!best.partial || (splitDraft && (lackingRoles(best.edits).length > 0 || provenShare(evidencePass) < TARGET_COVERAGE || !experienceCoverageComplete(role_alignment, TARGET_COVERAGE))), unchanged: !diff.length })
+  const qualityReport = resumeQuality({ matched: attainableCovered.size, total: attainableKws.length, missing: attainableKws.filter(k => !attainableCovered.has(k)), weightedCoverage: attainableCoverage, partial: skillsOnly || floorCarried || !!best.partial || (splitDraft && (lackingRoles(best.edits).length > 0 || provenShare(evidencePass) < TARGET_COVERAGE || !experienceCoverageComplete(role_alignment, TARGET_COVERAGE))), unchanged: !diff.length })
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
 
