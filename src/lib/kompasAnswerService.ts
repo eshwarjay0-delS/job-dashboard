@@ -357,7 +357,11 @@ async function repairStructure(job: AnswerJob, guardedText: string, req: NextReq
   const structureMissing = missingStructure(guardedText, opts)
   const explicitParts = questionParts(job.question)
   const precisionMissing = explicitParts.length >= 2 ? missingQuestionParts(job.question, guardedText) : []
-  const missing = [...structureMissing, ...precisionMissing.map(p => `the interviewer explicitly asked about ${p}`)]
+  // A soft/personal question with multiple unrelated specialist phrases should
+  // be simplified before it reaches the candidate. This check is diagnostic
+  // and conservative: expert questions never trigger this specific repair.
+  const offTopic = tangentSignals(job.question, guardedText)
+  const missing = [...structureMissing, ...precisionMissing.map(p => `the interviewer explicitly asked about ${p}`), ...offTopic.map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
   if (!missing.length || !job.orKey) return { text: guardedText, repaired: 0 }
   // At most two attempts: the second names exactly what the first rewrite
   // still missed. A failed call is not retried; a rewrite that fixes nothing
@@ -369,14 +373,14 @@ async function repairStructure(job: AnswerJob, guardedText: string, req: NextReq
   for (let attempt = 0; attempt < 2; attempt++) {
     const extra = attempt === 0 ? "" : `\n\nYour previous rewrite still missed:\n${stillMissing.map((m) => `- ${m}`).join("\n")}\nThe rewritten answer MUST contain each item above.`
     try {
-      const { text } = await fetchOpenRouter(job.orKey, PAID_MODEL, STRUCTURE_REPAIR_SYSTEM,
+      const { text } = await fetchOpenRouter(job.orKey, PAID_MODEL, offTopic.length ? `${STRUCTURE_REPAIR_SYSTEM}\nWhen the missing element says remove an unasked tangent, actually delete that jargon and its unrelated clause. Keep the one direct answer and every genuinely requested point; do not replace it with a different technical story.` : STRUCTURE_REPAIR_SYSTEM,
         `QUESTION: ${job.question}\n\nANSWER:\n${guardedText}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}${extra}\n\nReturn the full rewritten answer and nothing else.`,
         1600, AbortSignal.any([req.signal, AbortSignal.timeout(60000)]))
       const repaired = text.trim()
       if (!repaired) return { text: guardedText, repaired: 0 }
       const rg = applyGuards(repaired, job.guardFacts, job.allowed)
       if (!rg.text.trim()) return { text: guardedText, repaired: 0 }
-      stillMissing = [...missingStructure(rg.text, opts), ...(explicitParts.length >= 2 ? missingQuestionParts(job.question, rg.text).map(p => `the interviewer explicitly asked about ${p}`) : [])]
+      stillMissing = [...missingStructure(rg.text, opts), ...(explicitParts.length >= 2 ? missingQuestionParts(job.question, rg.text).map(p => `the interviewer explicitly asked about ${p}`) : []), ...tangentSignals(job.question, rg.text).map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
       if (stillMissing.length < missing.length && stillMissing.every(m => missing.includes(m))) return { text: rg.text, repaired: 1 }
     } catch { return { text: guardedText, repaired: 0 } }
   }
