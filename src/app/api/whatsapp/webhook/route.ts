@@ -821,8 +821,14 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     if (filed) more.push(`Saved in your Files: ${filed.email} / ${filed.category}`)
     more.push(DIFFERENT_RESUME)
   }
-  await deliver(from, file, name, captionFor(name, meta, result, undefined, more), { userId, jd: session.jd, meta, changes: [], source: session.resumeName,
+  // Meta can accept an upload before the function sees its response. Never retry an
+  // ambiguous send automatically: that could deliver duplicates.
+  await patchResumeRecovery(job, { status: "sending" })
+  sending = true
+  const sentId = await deliver(from, file, name, captionFor(name, meta, result, undefined, more), { userId, jd: session.jd, meta, changes: [], source: session.resumeName,
     ...(filed ? { saved: filed.abs, depth: !floorMade && (!files || files.depth === 0) ? 1 : 2 } : {}) })
+  await patchResumeRecovery(job, { status: "delivered", deliveredMessageId: sentId })
+  finished = true
   await recordWhatsAppUsage(userId, "resume_tailor", result)
   // Counted once the resume it started is delivered, so a failed run never makes a resume look more used.
   if (files) await markUsed(files.userDir, files.abs).catch(() => {})
@@ -830,6 +836,10 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (session.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
     await deletePath(session.resumePath).catch(() => {})
   } finally {
+    if (!finished) {
+      if (sending) await patchResumeRecovery(job, { status: "uncertain", errorCode: "delivery_unconfirmed" }).catch(() => {})
+      else await deferResumeRecovery(job, failureCode, failedCandidate).catch(e => console.error("[whatsapp] recovery persistence failed", String(e).slice(0, 100)))
+    }
     const held = JSON.parse((await blob.getText(claimKey).catch(() => null)) || "{}") as { token?: string }
     if (held.token === claimToken) await blob.delete(claimKey).catch(() => {})
   }
@@ -1042,7 +1052,7 @@ async function refine(from: string, replyTo: string, request: string, userId: st
 
 // Send the document and keep a copy of this exact version, recorded under the sent
 // message's id, so a later swipe-reply to it can be traced back and edited.
-async function deliver(from: string, file: Buffer, name: string, caption: string, gen: Omit<Gen, "file" | "createdAt">) {
+async function deliver(from: string, file: Buffer, name: string, caption: string, gen: Omit<Gen, "file" | "createdAt">): Promise<string> {
   const vfile = path.join(VERSIONS_DIR, digits(from), `${Date.now().toString(36)}-${randomBytes(4).toString("hex")}.docx`)
   // Store the copy while the upload runs, so it costs no extra wall time.
   const stored = writePath(vfile, file).then(() => true, () => false)
@@ -1053,9 +1063,10 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
     if (await stored) await deletePath(vfile)
     throw e
   }
-  if (!(await stored)) return
+  if (!(await stored)) return wamid
   if (wamid) await saveGen(from, wamid, { ...gen, file: vfile, createdAt: Date.now() })
   else await deletePath(vfile)
+  return wamid
 }
 
 // What the reply says about the keywords, plainly. Every job-post keyword goes in (19 Oct 2026; certifications never) and
