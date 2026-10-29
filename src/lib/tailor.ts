@@ -296,11 +296,13 @@ export async function runTailor(opts: {
   const jdKws = [...new Set([...targetKeywords(jdExtracted, jdGenerated, jd).filter(k => !isQualificationOrJunk(k)), ...scoreKws])]
   const floorKws = new Set(floorTerms(jd, scoreKws))
   const shareOf = (shown: Set<string>) => (scoreKws.length ? scoreKws.filter(k => shown.has(k)).length / scoreKws.length : 1)
-  const jdKwsPrompt = [...new Set([...jdKws, ...jdGenerated])]
   const candidateStatements = [...immediatePrefs, ...storedFeedback]
   const forcedJdKws = explicitlyConfirmsAllRequirements(candidateStatements)
     ? jdKws
     : [...coveredJdKeywords([text, ...candidateStatements].join("\n"), jdKws)].filter(k => jdKws.includes(k))
+  // The JD is target context, not evidence. Only verified terms are mandatory in
+  // rewrite prompts; chasing every JD phrase caused fabricated skills and timeouts.
+  const jdKwsPrompt = [...new Set(forcedJdKws)]
   const beforeKw = coveredJdKeywords(text, jdKws)
   const matchedOn = [...beforeKw]
   const kwMatched = scoreKws.filter(k => beforeKw.has(k))
@@ -776,7 +778,7 @@ export async function runTailor(opts: {
       // Stop only for the hard request deadline or the 98% completion threshold.
       for (let repair = 1; repair <= 3 && current.cov < TARGET_COVERAGE; repair++) {
         if (deadline - Date.now() < 5000) break
-        const missing = jdKws.filter(k => !current.afterKw.has(k))
+        const missing = forcedJdKws.filter(k => !current.afterKw.has(k))
         if (!missing.length) break
         const repairPrefs: string[] = [
           `COVERAGE REPAIR PASS ${repair}: current rendered JD coverage is ${coveragePercent(current.cov)}%. The default completion target is at least ${Math.round(TARGET_COVERAGE * 100)}%.`,
