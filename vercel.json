@@ -13,6 +13,9 @@
     },
     "src/app/api/**": {
       "maxDuration": 60
+    },
+    "src/app/api/whatsapp/recover/route.ts": {
+      "maxDuration": 300
     }
   },
   "headers": [
@@ -57,6 +60,10 @@
     {
       "path": "/api/crawl/run",
       "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/whatsapp/recover",
+      "schedule": "5 13 * * *"
     }
   ]
 }
