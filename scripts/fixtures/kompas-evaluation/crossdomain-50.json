@@ -1,0 +1,702 @@
+[
+  {
+    "id": "crossdomain-01",
+    "question": "Thanks for joining. Tell me about yourself.",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Tell me about yourself.",
+      "intent": "introduction",
+      "domain": "security",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-02",
+    "question": "Walk me through your background.",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Walk me through your background.",
+      "intent": "introduction",
+      "domain": "software",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-03",
+    "question": "Give me a quick overview of your experience.",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Give me a quick overview of your experience.",
+      "intent": "introduction",
+      "domain": "analytics",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-04",
+    "question": "Summarize your career.",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Summarize your career.",
+      "intent": "introduction",
+      "domain": "validation",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-05",
+    "question": "What's your background?",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "What's your background?",
+      "intent": "introduction",
+      "domain": "salesforce",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-06",
+    "question": "What would you bring to a cybersecurity team?",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "What would you bring to a cybersecurity team?",
+      "intent": "value",
+      "domain": "security",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-07",
+    "question": "What sets you apart from other applicants?",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "What sets you apart from other applicants?",
+      "intent": "value",
+      "domain": "delivery",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-08",
+    "question": "Our team operates across vendors. Why are you interested in this position?",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Why are you interested in this position?",
+      "intent": "value",
+      "domain": "validation",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-09",
+    "question": "We use Selenium and Cypress. How would you contribute to our QA team?",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "How would you contribute to our QA team?",
+      "intent": "value",
+      "domain": "quality",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-10",
+    "question": "What makes you a good fit for this analyst role?",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "What makes you a good fit for this analyst role?",
+      "intent": "value",
+      "domain": "analytics",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-11",
+    "question": "We have difficult stakeholders. Tell me about a time you challenged a risk owner.",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Tell me about a time you challenged a risk owner.",
+      "intent": "experience-story",
+      "domain": "grc",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-12",
+    "question": "Describe a situation where you disagreed with a developer.",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Describe a situation where you disagreed with a developer.",
+      "intent": "experience-story",
+      "domain": "software",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-13",
+    "question": "Walk me through an incident you investigated.",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Walk me through an incident you investigated.",
+      "intent": "experience-story",
+      "domain": "security",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-14",
+    "question": "Describe a project you delivered end to end.",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Describe a project you delivered end to end.",
+      "intent": "experience-story",
+      "domain": "delivery",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-15",
+    "question": "Give me an example of when you resolved a production issue.",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Give me an example of when you resolved a production issue.",
+      "intent": "experience-story",
+      "domain": "cloud",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-16",
+    "question": "Network operations here are busy. What is DHCP?",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "What is DHCP?",
+      "intent": "definition",
+      "domain": "network",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-17",
+    "question": "Define GMP.",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Define GMP.",
+      "intent": "definition",
+      "domain": "validation",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-18",
+    "question": "What does CAPA mean?",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "What does CAPA mean?",
+      "intent": "definition",
+      "domain": "validation",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-19",
+    "question": "What is Salesforce Flow?",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "What is Salesforce Flow?",
+      "intent": "definition",
+      "domain": "salesforce",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-20",
+    "question": "What is least privilege?",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "What is least privilege?",
+      "intent": "definition",
+      "domain": "grc",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-21",
+    "question": "Compare SQL and NoSQL for reporting.",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Compare SQL and NoSQL for reporting.",
+      "intent": "comparison",
+      "domain": "analytics",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-22",
+    "question": "What's the difference between preventive and detective controls?",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "What's the difference between preventive and detective controls?",
+      "intent": "comparison",
+      "domain": "grc",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-23",
+    "question": "Compare IQ, OQ and PQ.",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Compare IQ, OQ and PQ.",
+      "intent": "comparison",
+      "domain": "validation",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-24",
+    "question": "Which would you choose, Python or Java?",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Which would you choose, Python or Java?",
+      "intent": "comparison",
+      "domain": "software",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-25",
+    "question": "How do OAuth and OIDC differ?",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "How do OAuth and OIDC differ?",
+      "intent": "comparison",
+      "domain": "security",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-26",
+    "question": "How would you handle a missed regulatory deadline?",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "How would you handle a missed regulatory deadline?",
+      "intent": "scenario",
+      "domain": "grc",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-27",
+    "question": "Suppose the database is unavailable; what would you do?",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Suppose the database is unavailable; what would you do?",
+      "intent": "scenario",
+      "domain": "analytics",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-28",
+    "question": "What would you do if a new release duplicated records?",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "What would you do if a new release duplicated records?",
+      "intent": "scenario",
+      "domain": "quality",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-29",
+    "question": "How would you troubleshoot a Salesforce Flow that fails for some users?",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "How would you troubleshoot a Salesforce Flow that fails for some users?",
+      "intent": "scenario",
+      "domain": "salesforce",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-30",
+    "question": "Imagine a phishing alert on a finance mailbox. How would you respond?",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Imagine a phishing alert on a finance mailbox. How would you respond?",
+      "intent": "scenario",
+      "domain": "security",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-31",
+    "question": "Our identity estate has multiple realms. How does Kerberos authentication work?",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "How does Kerberos authentication work?",
+      "intent": "technical-process",
+      "domain": "security",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-32",
+    "question": "Explain how TLS certificate validation works.",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Explain how TLS certificate validation works.",
+      "intent": "technical-process",
+      "domain": "network",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-33",
+    "question": "Explain how a PAS-X electronic batch record is generated.",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Explain how a PAS-X electronic batch record is generated.",
+      "intent": "technical-process",
+      "domain": "validation",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-34",
+    "question": "Design a retry mechanism for an asynchronous API.",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Design a retry mechanism for an asynchronous API.",
+      "intent": "technical-process",
+      "domain": "software",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-35",
+    "question": "Step by step, troubleshoot a DNS resolution failure.",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Step by step, troubleshoot a DNS resolution failure.",
+      "intent": "technical-process",
+      "domain": "network",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-36",
+    "question": "Have you used ServiceNow?",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Have you used ServiceNow?",
+      "intent": "direct",
+      "domain": "grc",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-37",
+    "question": "How do you stay organized?",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "How do you stay organized?",
+      "intent": "direct",
+      "domain": "delivery",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-38",
+    "question": "There are different stakeholders. Which metrics would you report to your manager?",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Which metrics would you report to your manager?",
+      "intent": "direct",
+      "domain": "analytics",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-39",
+    "question": "How do you reconcile an analytics report?",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "How do you reconcile an analytics report?",
+      "intent": "direct",
+      "domain": "analytics",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-40",
+    "question": "What risks do you check before deploying a patch?",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "What risks do you check before deploying a patch?",
+      "intent": "direct",
+      "domain": "cloud",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-41",
+    "question": "Can you relocate to Pittsburgh?",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Can you relocate to Pittsburgh?",
+      "intent": "logistics",
+      "domain": "delivery",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-42",
+    "question": "Are you comfortable with a hybrid schedule?",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Are you comfortable with a hybrid schedule?",
+      "intent": "logistics",
+      "domain": "delivery",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-43",
+    "question": "We hire quickly. When could you start?",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "When could you start?",
+      "intent": "logistics",
+      "domain": "delivery",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-44",
+    "question": "How did you verify that?",
+    "level": "architect",
+    "category": "follow-up",
+    "criteria": {
+      "targetAsk": "How did you verify that?",
+      "intent": "follow-up",
+      "domain": "grc",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-45",
+    "question": "Why was that important?",
+    "level": "director",
+    "category": "follow-up",
+    "criteria": {
+      "targetAsk": "Why was that important?",
+      "intent": "follow-up",
+      "domain": "quality",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-46",
+    "question": "Tell me more about that exception.",
+    "level": "engineer",
+    "category": "follow-up",
+    "criteria": {
+      "targetAsk": "Tell me more about that exception.",
+      "intent": "follow-up",
+      "domain": "grc",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-47",
+    "question": "We finished reviewing your experience. Any questions for us?",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Any questions for us?",
+      "intent": "closing-question",
+      "domain": "delivery",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-48",
+    "question": "Do you have any questions?",
+    "level": "director",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Do you have any questions?",
+      "intent": "closing-question",
+      "domain": "delivery",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-49",
+    "question": "We value independent analysis across teams.",
+    "level": "engineer",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "We value independent analysis across teams.",
+      "intent": "acknowledgement",
+      "domain": "delivery",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  },
+  {
+    "id": "crossdomain-50",
+    "question": "Our QA team handles initial triage; you'll own investigations afterward.",
+    "level": "architect",
+    "category": "isolated",
+    "criteria": {
+      "targetAsk": "Our QA team handles initial triage; you'll own investigations afterward.",
+      "intent": "acknowledgement",
+      "domain": "quality",
+      "groundedExperienceOnly": true,
+      "noInventedClaims": true,
+      "spokenRelevance": true
+    }
+  }
+]
