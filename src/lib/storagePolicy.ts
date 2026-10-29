@@ -1,3 +1,12 @@
+/** Listing is a directory-prefix operation, not an object-key write.
+ * Accept one optional trailing slash for legacy callers, while preserving
+ * strict key validation for put/get/delete and rejecting traversal/double slashes.
+ */
+export function storageListPrefix(prefix: string): string {
+  const normalized = prefix.endsWith("/") && prefix.length > 1 ? prefix.slice(0, -1) : prefix
+  return storageSegments(normalized).join("/")
+}
+
 /** Reject ambiguous object keys instead of silently mapping them to another file. */
 export function storageSegments(key: string): string[] {
   if (key === "") return []
