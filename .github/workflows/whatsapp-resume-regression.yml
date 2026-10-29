@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/lib/tailor.ts'
       - 'src/lib/resume-quality.ts'
+      - 'src/lib/made-floor.ts'
       - 'src/lib/whatsapp-resume-acceptance.ts'
       - 'src/lib/whatsapp-resume-recovery.ts'
       - 'src/lib/whatsapp-retry-policy.ts'
@@ -16,6 +17,7 @@ on:
     paths:
       - 'src/lib/tailor.ts'
       - 'src/lib/resume-quality.ts'
+      - 'src/lib/made-floor.ts'
       - 'src/lib/whatsapp-resume-acceptance.ts'
       - 'src/lib/whatsapp-resume-recovery.ts'
       - 'src/lib/whatsapp-retry-policy.ts'
