@@ -40,6 +40,11 @@ test("phrase fixes repair the recurring multi-word garbles", () => {
     ["tell me about crowd strike and active directory", "CrowdStrike"],
     ["tell me about crowd strike and active directory", "Active Directory"],
     ["walk me through kerberose ticket handling", "Kerberos"],
+    ["are you a u s citizen", "U.S. citizen"],
+    ["how do you use nist csf here", "NIST CSF"],
+    ["track it in service now", "ServiceNow"],
+    ["what is google sec ops", "Google SecOps"],
+    ["give me a big intro", "Big Intro"],
   ];
   for (const [input, want] of cases) assert.ok(ctx.fixPhrases(input).includes(want), `${input} -> ${ctx.fixPhrases(input)}`);
 });

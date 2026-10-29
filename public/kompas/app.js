@@ -1765,6 +1765,11 @@ const PHRASE_FIXES = [
   [/\bfifth\s+third\b/gi, "Fifth Third"],
   [/\b(?:zee|see)\s+scaler\b/gi, "Zscaler"],
   [/\bven\s+a\s+fi\b/gi, "Venafi"],
+  [/\bu\s+s\s+citizen\b/gi, "U.S. citizen"],
+  [/\bnist\s+c\s*s\s*f\b/gi, "NIST CSF"],
+  [/\bservice\s+now\b/gi, "ServiceNow"],
+  [/\bgoogle\s+sec\s*ops\b/gi, "Google SecOps"],
+  [/\bbig\s+in\s*tro\b/gi, "Big Intro"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");
