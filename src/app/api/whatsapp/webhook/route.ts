@@ -45,7 +45,7 @@ import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_R
 import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
 import { madeMeetsFloor } from "@/lib/made-floor"
 import { acceptableWhatsAppResume } from "@/lib/whatsapp-resume-acceptance"
-import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, markResumeDocumentAccepted, recordResumeDeliveryStatus } from "@/lib/whatsapp-resume-recovery"
+import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
 import { chooseResume, type Prefer } from "@/lib/library-choose"
@@ -853,7 +853,10 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     await deletePath(session.resumePath).catch(() => {})
   } finally {
     if (!finished) {
-      if (sending) await patchResumeRecovery(job, { status: "uncertain", errorCode: "delivery_unconfirmed" }).catch(() => {})
+      if (sending) {
+        const latest = await readResumeRecovery(job).catch(() => null)
+        if (latest?.status === "sending") await patchResumeRecovery(job, { status: "uncertain", errorCode: "delivery_unconfirmed" }).catch(() => {})
+      }
       else await deferResumeRecovery(job, failureCode, failedCandidate).catch(e => console.error("[whatsapp] recovery persistence failed", String(e).slice(0, 100)))
     }
     const held = JSON.parse((await blob.getText(claimKey).catch(() => null)) || "{}") as { token?: string }
