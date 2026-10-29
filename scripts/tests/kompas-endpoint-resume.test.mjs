@@ -188,8 +188,8 @@ test('the director owner is a role, never an invented person or a title the resu
   const svc = readFileSync(new URL('../../src/lib/kompasAnswerService.ts', import.meta.url), 'utf8')
   assert.match(svc, /level === "director" \? DIRECTOR_OPENING : ""/)                  // the Director prompt carries the shared opening
   const { DIRECTOR_OPENING } = await import('../../src/lib/kompasAnswer.ts')
-  assert.match(DIRECTOR_OPENING, /Name the decision owner in that sentence\. Before closing/)
-  assert.match(DIRECTOR_OPENING, /The decision owner is a role in the organisation \(the business owner of the platform, the risk owner, security leadership\), never a person's name, and the candidate keeps the title the resume gives: never speak as a CISO or any title the resume does not hold\./)
+  assert.match(DIRECTOR_OPENING, /Name a decision owner only if the interviewer asks who owns or approves something/)
+  assert.match(DIRECTOR_OPENING, /never a person's name, and the candidate keeps the title the resume gives: never speak as a CISO or any title the resume does not hold/)
 })
 
 // Owner's live session, 27 Oct 2026, mic only (every line "You"): the cut must take the interviewer's ask, not the reply.

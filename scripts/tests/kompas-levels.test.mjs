@@ -58,7 +58,7 @@ test('levelGuidance: concept register caps every level to the abstract', () => {
 test('levelGuidance: practice register carries each level its own depth', () => {
   assert.match(levelGuidance('architect', 'practice'), /step by step/)
   assert.match(levelGuidance('architect', 'practice'), /built, set up and integrated/)
-  assert.match(levelGuidance('director', 'practice'), /metrics that prove them/)
+  assert.match(levelGuidance('director', 'practice'), /Name measurements only when the interviewer asks/)
   assert.match(levelGuidance('director', 'practice'), /business consequence/)
   assert.match(levelGuidance('director', 'practice'), /no step-by-step procedure/)
   assert.match(levelGuidance('engineer', 'practice'), /Technical HR screening/)
