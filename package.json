@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node --max-old-space-size=4096 node_modules/next/dist/bin/next dev",
-    "prebuild": "node scripts/kompas-baseline.mjs",
+    "prebuild": "node scripts/kompas-baseline.mjs && node --test scripts/tests/whatsapp-resume-acceptance.test.mjs",
     "build": "next build",
     "test:kompas-baseline": "node scripts/kompas-baseline.mjs",
     "start": "next start",
