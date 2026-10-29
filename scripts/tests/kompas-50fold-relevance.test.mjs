@@ -49,7 +49,8 @@ test('Technical drill-down can name specialized terms when asked',()=>{
  const q='Explain how Kerberoasting and DCSync differ technically.'
  const answer='Kerberoasting and DCSync rely on different permissions and attack paths.'
  assert.deepEqual(tangentSignals(q,answer),[])
- assert.equal(focusPlan(q,3,'engineer').intent,'technical-process')
+ assert.equal(focusPlan(q,3,'engineer').intent,'comparison')
+ assert.equal(focusPlan(q,3,'engineer').technicalDepth,'deep')
 })
 test('A manager statement produces a brief acknowledgement, not a story',()=>{
  const q='We have twenty seven control leads, and you will work across each of their teams.'
