@@ -20,7 +20,6 @@ export type RelevanceRecovery={
  evidencePolicy:"source-supported-history"|"hypothetical-only"|"no-personal-story"
 }
 const elliptical=/^(?:and (?:then|how|why|what)|why (?:is|was) that|what (?:about|happened|changed)|how (?:so|did you (?:check|know|verify))|can you (?:expand|elaborate)|tell me more|go (?:deeper|on)|what did you do next)/i
-const QUESTION_ACT=/\b(?:what|how|why|where|when|which|who|can|could|would|should|tell me|describe|explain|walk me|give me|ask|do you|have you)\b/i
 const TOPICS=[
  ["business impact",/\b(?:business impact|business (?:services|processes)|customer impact)\b/i],
  ["root cause",/\b(?:root cause|root-cause|underlying (?:cause|failure))\b/i],
