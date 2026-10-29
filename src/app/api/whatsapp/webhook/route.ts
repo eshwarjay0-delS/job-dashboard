@@ -867,7 +867,7 @@ function startLine(email: string, slots: string[]): string {
 // The emails a person's resumes carry, numbered for good (library-pick-store.ts).
 // Rebuild the last pre-queue failure for each sender without replaying a sent document.
 async function bootstrapLegacyResumeFailures(): Promise<number> {
-  const keys = (await blob.list("whatsapp/session-")).filter(k => /^whatsapp\/session-\d+\.json$/.test(k))
+  const keys = (await blob.list("whatsapp")).filter(k => /^whatsapp\/session-\d+\.json$/.test(k))
   let queued = 0
   const cutoff = Date.parse("2026-10-29T17:45:00Z")
   for (const key of keys.slice(0, 200)) {
