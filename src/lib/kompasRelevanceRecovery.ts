@@ -47,7 +47,10 @@ function latestSubject(history:string):string{
 export function rediscoverRelevance(question:string,history=""):RelevanceRecovery{
  const kernel=questionKernel(question)
  const currentAsk=kernel.ask
- const intent=interviewIntent(currentAsk)
+ // "Which of those?" is an option comparison even when the generic
+ // intent classifier sees only an elliptical pronoun.
+ const intent:ReplyIntent=kernel.carryOptions && /^which\b/i.test(currentAsk)
+  ? "comparison" : interviewIntent(currentAsk)
  const prior=latestSubject(history)
  const isElliptical=intent==="follow-up" && elliptical.test(currentAsk) && !!prior
  // No generic resume/JD keyword expansion. A named term is in the current
