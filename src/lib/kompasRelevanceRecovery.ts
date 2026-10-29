@@ -40,7 +40,12 @@ const TOPICS=[
 
 function latestSubject(history:string):string{
  const lines=String(history||"").split(/\n+/).map(x=>x.trim()).filter(Boolean)
- const candidate=lines.slice(-12).reverse().find(x=>/^(?:Them|Interviewer|question):\s*/i.test(x))
+ const candidate=lines.slice(-16).reverse().find(x=>{
+  if(!/^(?:Them|Interviewer|question):\s*/i.test(x))return false
+  const value=x.replace(/^(?:Them|Interviewer|question):\s*/i,"").trim()
+  // A casual "okay" after an answer is not the prior subject of a follow-up.
+  return value.length>=14 && !/^(?:okay|ok|right|sure|great|thanks|thank you|sounds good|makes sense|got it)[.!,\s]*$/i.test(value)
+ })
  if(!candidate)return ""
  return candidate.replace(/^(?:Them|Interviewer|question):\s*/i,"").slice(0,240)
 }
