@@ -8,6 +8,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Finish means committed, deployed, and live
+
+Owner, 29 Oct 2026: *"Commit, deployed and live?"* then *"Always do that remember. don't make me repeat."*
+
+When a product change is finished, commit it, push it to master, and confirm the production deploy before saying it is done. Do not wait to be asked. A commit is not live until the deploy status is success and `https://job-dashboard-fawn.vercel.app` shows that build. If the deploy is rate limited, say so and retry. Do not call the work live before that check.
+
 ## Plan & Vision is the continuous handoff record
 
 For every MFit task, update `src/lib/plan-vision-journal.ts` and the relevant product plan/docs in the same change as the implementation. Record new ideas, exact prompt/policy decisions, wishes, approval or rejection, active work, blockers, pending work, commits, deployment evidence and verification limits. Read these records before continuing a product task.
