@@ -71,6 +71,15 @@ export function spokenQualityFlags(question:string,answer:string):string[] {
 }
 
 
+/** A fragment the interviewer says before the real ask. A scenario is not chatter. */
+function chatterLead(first: string): boolean {
+  const t = first.trim()
+  if (/^(?:not blindly|i (?:don['’]?t|do not) think|i think you|what else (?:did|do) i|yeah|yes|ok(?:ay)?|right|um+|uh+|so|well|thanks|thank you|hello|hi|sure|great|previous answer)\b/i.test(t)) return true
+  const words = t.replace(/[^A-Za-z0-9\s]/g, " ").split(/\s+/).filter(Boolean)
+  // A short label is chatter. A scenario ("the build fails", "a permission fix passes") is the question's setup.
+  return words.length > 0 && words.length <= 3 && !/\b(?:is|are|was|were|fails?|failed|passes?|passed|breaks?|broke|works?|worked|runs?|ran|uses?|used)\b/i.test(t)
+}
+
 /** Isolate a new interviewer ask from earlier candidate speech or room chatter.
  * Do not discard two genuine parts of the same interview question. */
 export function latestInterviewerAsk(input: string): string {
@@ -86,7 +95,12 @@ export function latestInterviewerAsk(input: string): string {
  while((split=boundary.exec(text))){
   const first=text.slice(0,split.index).trim()
   const remainder=text.slice(split.index+split[0].length-(split[0].match(/\s+$/)?.[0].length||0)).trim()
-  if(starter.test(remainder)&&!starter.test(first)&&!/\?/.test(first)){text=remainder;break}
+  // A question mark means the words before it are already a question. Dropping them
+  // answered only the later ask ("Have you configured CyberArk?" vanished once
+  // "What is least privilege?" began). A scenario before "How would you" is part of
+  // the question. Only a fragment of chatter is removed.
+  if(text[split.index]==='?') continue
+  if(starter.test(remainder)&&!starter.test(first)&&!/\?/.test(first)&&chatterLead(first)){text=remainder;break}
  }
  const filler=/^(?:what else (?:did|do) i have\??|i don['’]?t think i (?:have|had) anything else[.!?]?)[\s,;.]*/i
  if(filler.test(text)){

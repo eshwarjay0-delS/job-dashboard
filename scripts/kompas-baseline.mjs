@@ -35,10 +35,21 @@ const ok = (v, what) => { if (!v) throw new Error(what) }
 // ---------------------------------------------------------------- server modules, compiled in memory
 let ts = null
 try { ts = require('typescript') } catch { /* reported below */ }
+const loadedTs = new Map()
 function loadTs(path) {
+  if (loadedTs.has(path)) return loadedTs.get(path)
   const out = ts.transpileModule(read(path), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText
   const mod = { exports: {} }
-  vm.runInNewContext(out, { module: mod, exports: mod.exports, require, console })
+  loadedTs.set(path, mod.exports)
+  const dir = path.split('/').slice(0, -1).join('/')
+  const localRequire = (spec) => {
+    if (spec.startsWith('.')) {
+      const rel = spec.replace(/^\.\//, '').replace(/\.js$/, '')
+      return loadTs(`${dir}/${rel.endsWith('.ts') ? rel : rel + '.ts'}`)
+    }
+    return require(spec)
+  }
+  vm.runInNewContext(out, { module: mod, exports: mod.exports, require: localRequire, console })
   return mod.exports
 }
 const A = ts ? loadTs('src/lib/kompasAnswer.ts') : null
@@ -66,6 +77,7 @@ const PAGE = (() => {
     slice('const Q_CUE =', '\nlet lastQ'),
     slice('// ── Question intake', '// ── end question intake ──'),
     slice('function recentQA(', '\nfunction askingLevel('),
+    slice('function shortFollowUp(', 'const armsAuto'),
     slice('function pressQuestion(', '$("answerBtn")'),
     slice('async function aiAnswer(', '$("screenBtn")'),
     slice('function hasAnswer(', '\n// Takes an empty page'),

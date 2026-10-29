@@ -130,6 +130,7 @@ test('repeated AI Answer clicks do not abort an answer already in progress',asyn
  vm.runInContext(source.slice(source.indexOf('const Q_CUE ='), source.indexOf(';', source.indexOf('const Q_CUE =')) + 1),s);
  vm.runInContext(section('// ── Question intake', '// ── end question intake ──'),s);
  vm.runInContext(section('function heardAsQuestion(', '\n'),s);
+ vm.runInContext(section('function shortFollowUp(', 'const armsAuto'),s);
  vm.runInContext(section('function pressQuestion(', '$("answerBtn")'),s);
  vm.runInContext(section('async function aiAnswer(', '$("screenBtn")'),s);
  const first=s.aiAnswer(false);await s.aiAnswer(false);assert.equal(calls,1);assert.equal(s.aiBusy,true);done();await first;assert.equal(s.aiBusy,false);
