@@ -223,7 +223,7 @@ const HELP = [
 
 // ── Meta webhook verification (GET) ───────────────────────────────────────────
 export async function GET(request: NextRequest) {
-  if (request.nextUrl.pathname.endsWith("/recover")) return recoverResumeJobs(request)
+  if (/\/recover\/?$/.test(request.nextUrl.pathname)) return recoverResumeJobs(request)
   const sp = request.nextUrl.searchParams
   const expected = (process.env.WHATSAPP_VERIFY_TOKEN || "").trim()
   if (sp.get("hub.mode") === "subscribe" && expected && sp.get("hub.verify_token") === expected) {
