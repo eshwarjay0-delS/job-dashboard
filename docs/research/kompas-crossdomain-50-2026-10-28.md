@@ -63,3 +63,11 @@ node scripts/kompas-score-review.mjs /private/paired.json /private/human-review.
 ```
 
 Scores are *self-attested human review*, not externally authenticated independent correctness or proof of model origin. The reported output explicitly labels that limitation. No model calls or scores have been fabricated. This closes evaluation tooling and leaves genuine authenticated capture, human scoring, desktop speech and WhatsApp parity as separate release acceptance tasks.
+
+## Complete private review workflow
+1. Use the already guarded authenticated runner to capture all 50 actual Kompas answers with approved resume/JD files.
+2. Supply independent original ChatGPT responses with *the same source and canonical fixture SHA-256*; the reference JSON must carry `fixtureSha256` and `sourcesSha256` from the capture manifest.
+3. `node scripts/kompas-paired-review.mjs /private/round-1.json /private/round-1.manifest.json /private/reference.json /private/paired.md` now creates both `/private/paired.md` and `/private/paired.json`, with no overwrite.
+4. `node scripts/kompas-review-template.mjs /private/paired.json /private/review-template.json` creates 50 blank records and eight axes for each response, without synthetic scores.
+5. Review the real answers and source evidence, fill the private template, set a real reviewer ID and date and signedOff true, then run `node scripts/kompas-score-review.mjs /private/paired.json /private/review-template.json /private/scorecard.json`.
+6. Treat those ratings as self-attested until reviewer independence and model provenance have actually been verified. Keep production/native/WhatsApp and latency acceptance independent. Do not claim a fifty-case pass from any of the tools alone.
