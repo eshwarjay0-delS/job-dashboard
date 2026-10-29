@@ -13,7 +13,7 @@ export type QuestionKernel={
 }
 const ASK_HEAD=/\b(?:what|which|who|why|how|where|when|can you|could you|would you|will you|do you|does|did you|have you|are you|is there|tell me|describe|explain|give me|walk me through|share an example|highlight for me|talk about)\b/i
 const ASKER=/^\s*(?:(?:okay|alright|all right|yeah|so|now|well|and|then|uh|um|like|you know)[,.\s]+){0,6}(?:what|which|who|why|how|where|when|can|could|would|will|do|does|did|have|has|are|is|tell|describe|explain|give|walk|share|highlight|talk)\b/i
-const SCOPED_CLAUSE=/\b(?:so|and|then|but|now)\s*,?\s*(?=(?:what|which|who|why|how|when|can|could|would|do|have|tell me|describe|explain|give me|walk me through|highlight for me)\b)/ig
+const SCOPED_CLAUSE=/(?:[;,]\s*|\b(?:so|and|then|but|now)\s*,?\s*|\b(?:my|the) (?:real |next )?question is\s*)(?=(?:what|which|who|why|how|when|can|could|would|do|have|tell me|describe|explain|give me|walk me through|highlight for me)\b)/ig
 const RHETORICAL=/^(?:right|okay|yeah|you know|make sense|does that make sense|got it)\??$/i
 const OPTION_REFERENCE=/\b(?:which (?:of (?:those|these|them)|one)|between (?:those|these|them)|of (?:these|those) (?:two|three|options)|which (?:framework|tool|option) (?:is|would be) (?:better|stronger|more relevant)|either one)\b/i
 const CONSTRAINTS=/\b(?:must|cannot|can't|should not|without|no (?:access|downtime|restart|internet|admin)|only|while|within (?:\d+|the first)|not allowed|critical production|keep (?:it|the service) (?:running|available)|under (?:time|pressure)|first \d+ days)\b/i
@@ -73,7 +73,9 @@ export function questionKernel(value:string):QuestionKernel{
  // Retain consecutive explicit sub-questions, e.g. "How was it found? How
  // was it validated?" They are one compound ask, not competing topics.
  while(first>0&&isAsk(lastEmbeddedAsk(sentences[first-1]))&&!RHETORICAL.test(sentences[first-1]))first--
+ const firstChosen=lastEmbeddedAsk(sentences[first])
+ const leading=sentences[first].endsWith(firstChosen) ? sentences[first].slice(0,-firstChosen.length).trim() : ""
  const ask=sentences.slice(first,last+1).map(lastEmbeddedAsk).join(" ").replace(/\s+(?:right|okay|you know)\s*\?\s*$/i,"").trim()
- const setup=sentences.slice(0,first).concat(sentences.slice(last+1)).join(" ").trim()
+ const setup=[...sentences.slice(0,first),leading,...sentences.slice(last+1)].filter(Boolean).join(" ").trim()
  return {ask:ask||original,setup,constraints:getConstraints(setup),carryOptions:OPTION_REFERENCE.test(ask)}
 }
