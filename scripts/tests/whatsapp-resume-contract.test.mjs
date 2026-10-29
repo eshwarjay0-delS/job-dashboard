@@ -101,3 +101,14 @@ test('ambiguous Meta timeouts can be reconciled by opaque callback job id', () =
   assert.match(sender, /biz_opaque_callback_data: opaqueJobId/)
   assert.match(queue, /timed-out document reconciled as delivered/)
 })
+
+test('WhatsApp never mistakes Meta API acceptance for handset delivery', () => {
+  assert.match(webhook, /queued\.deliveryState === "delivered" \|\| queued\.deliveryState === "read"/)
+  assert.match(webhook, /WhatsApp accepted the document, but handset delivery has not been confirmed/)
+  assert.match(webhook, /I will not send a duplicate while its status is unknown/)
+})
+test('a failed JD stays saved without asking for manual resubmission', () => {
+  assert.match(webhook, /The rewrite produced no changes, so I did not send a file\. Your request is saved and will be retried automatically/)
+  assert.match(webhook, /The document upload is unconfirmed\. Your request is saved/)
+  assert.doesNotMatch(webhook, /If nothing arrives, send \*redo\*/)
+})
