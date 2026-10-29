@@ -20,7 +20,7 @@ export function floorShare(text: string, jd: string): number {
 }
 
 /** Should a saved resume be offered again? Re-read the actual DOCX regardless of timestamp. */
-export async function madeMeetsFloor(abs: string, jd: string, at = 0): Promise<boolean> {
+export async function madeMeetsFloor(abs: string, jd: string, _at = 0): Promise<boolean> {
   // Creation date is not proof of quality: even newer files can fail the floor.
   try {
     const bytes = await readPath(abs)
