@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
       const reason = state === "failed" ? [firstError?.code, firstError?.title].filter(Boolean).join(": ") : ""
       return Promise.all([
         recordUpdateProviderStatus(id, state, Number.isFinite(seconds) ? seconds * 1000 : Date.now(), reason),
-        recordResumeDeliveryStatus(id, state).catch(() => {}),
+        recordResumeDeliveryStatus(id, state, String(status.biz_opaque_callback_data || "")).catch(() => {}),
       ])
     }))
     return ok()
