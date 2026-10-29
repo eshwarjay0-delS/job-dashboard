@@ -590,8 +590,11 @@ export async function runTailor(opts: {
   const provenShare = (p: Pass) => (p.claimedKw.size ? p.provenKw.size / p.claimedKw.size : 1)
   const supportedShare = (p: Pass) => forcedJdKws.length
     ? coveredJdKeywords(p.tailoredText, forcedJdKws).size / forcedJdKws.length : 0
+  const unsupportedPenalty = (p: Pass) => scoreKws.length
+    ? scoreKws.filter(k => !forcedJdKws.includes(k) && p.afterKw.has(k)).length / scoreKws.length : 0
   const quality = (p: Pass) =>
     (splitDraft ? 0.4 * supportedShare(p) + 0.3 * roleReflect(p) + 0.3 * provenShare(p) - 0.25 * (1 - roleShare(p)) : supportedShare(p))
+    - 0.3 * unsupportedPenalty(p)
     - (summaryWanted && !(p.edits.summary || "").trim() ? 0.08 : 0) - .05 * (p.partial?.failed || 0)
   // The JD terms still missing, computed from the resume with no model call, so the pass targets the gap.
   const injectFor = (covered: Set<string>): string[] => {
@@ -760,7 +763,7 @@ export async function runTailor(opts: {
         new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), remaining) }),
       ])
       if (!first) continue
-      if (!best || first.cov > best.cov) {
+      if (!best || quality(first) > quality(best)) {
         best = first
         usedModel = first.via ?? lane.label ?? String(lane.pref)
       }
