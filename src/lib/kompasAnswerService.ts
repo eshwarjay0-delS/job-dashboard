@@ -247,7 +247,7 @@ Return only the answer, no preamble, no commentary.`
 // (architect/director/lead/supervisor) gets the final block; tier 1 experience
 // questions get behavioural; everything else gets technical.
 const CODE_ASK_Q =
-  /\b(write|implement|code (up|this|it)|coding|program|function|algorithm|big.?o|time complexity|leetcode|two.?sum|palindrome|fibonacci|linked list|binary (search|tree)|hash ?map|array|substring|reverse (a|the) (string|list)|sql (query|to)|query (to|that)|regex (to|for|that)|script (to|that)|class (that|to)|refactor|debug (this|the)|unit test|endpoint)\b/i
+  /\b(write|implement|code|coding|program|function|algorithm|big.?o|time complexity|leetcode|two.?sum|palindrome|fibonacci|linked list|binary (search|tree)|hash ?map|array|substring|reverse (a|the) (string|list)|sql (query|to)|query (to|that)|regex (to|for|that)|script (to|that)|class (that|to)|refactor|debug (this|the)|unit test|endpoint)\b/i
 // (The final-round mode is keyed to the Director answering level in
 // modeBlock below — owner directive, 22 Oct 2026: three levels.)
 
@@ -270,9 +270,15 @@ const MODE_BLOCKS: Record<string, string> = {
 - A tool the background does not name: one clause says it was not yours and names the product you ran for that job, then the full answer in the present tense.
 - For remediation or incident questions, explain evidence of effectiveness and what remains unresolved. For a direct concept question, stop after the concept is clear.
 - Stay inside what was asked: a question about one product is answered from inside it, and the wider stack only if they ask.`,
-  // Owner, 23 Oct 2026: answers are read and spoken, so no code is shown. The earlier rule (one fenced, runnable block)
-  // is in git history; a live round that needs typed code would need its own view, which is the owner's call.
-  coding: `CODING INTERVIEW. When they ask you to write, fix, optimise or design code, say the solution the way you would talk it through with the interviewer, and show no code: (1) one sentence on the approach and its cost in plain words (for example, it runs in linear time and keeps one small lookup table); (2) the steps in the order the code runs, each one sentence: what it takes in, what it checks, what it keeps, what it returns, naming the function, library or data structure as a word; (3) one edge case and how the solution handles it, and one trade-off or alternative you would mention. No code blocks, no inline code, no symbols, operators or formulas: say equals, greater than, plus, divided by, or better, the meaning. Use the language they name; otherwise the one the background shows most. Never invent an API, library function or flag; if unsure it exists, describe the plain construct. Talk about THIS solution: never claim you wrote it before or tie it to a project, test suite, pipeline or tool unless the background shows exactly that.`,
+  // Owner, 29 Oct 2026 — this supersedes the 23 Oct 2026 no-code rule in full. The owner directed code everywhere,
+  // live or not: walkthroughs are not the answer. A walkthrough is only the explanation when a follow-up asks for one.
+  // The card already renders fenced blocks as code (public/kompas/app.js codeblock), so the block below is displayable.
+  coding: `CODING. This rule overrides the spoken-delivery guidance and the level guidance: when the question asks for code, the code comes first.
+- Give the code FIRST as one fenced, runnable block in the language they name; otherwise the one the background shows most. No walkthrough before it, no prose summary of the approach first. Use real fences with the language name, so the card renders it as code.
+- After the block, stop, unless the question also asks for an explanation: then add at most a short note on what it does.
+- If the question asks to explain, walk through, or understand code already given in this session (how it works, why, its cost, its edge cases), explain in words instead: the approach in one sentence, the steps in the order the code runs, the cost, one edge case and how it is handled, and one trade-off or alternative.
+- If a follow-up asks to change the code, give the updated fenced block, not a description of the change.
+- Never invent an API, library function or flag; if unsure it exists, use the plain construct. Never claim you wrote it before or tie it to a project, test suite, pipeline or tool unless the background shows exactly that.`,
   final: `FINAL ROUND (Architect, Director, Lead, Supervisor). Answer the question word for word: sentence one is the answer to exactly what they asked, in their terms. Then only what that question needs — the decision, the reason, the one fact that proves it. No preamble, no background they did not ask for, no second topic, no recap, no pitch. Every sentence must earn its place; stop when the question is answered.`,
 }
 
@@ -287,6 +293,12 @@ function modeBlock(tier: number, question: string, level: string): string {
   if (tier === 1) return MODE_BLOCKS.behavioural
   return MODE_BLOCKS.technical
 }
+
+// Owner, 29 Oct 2026: the user-facing half of the code-first rule. It rides in the
+// answer request itself (not only the system prompt) so a coding question can never
+// come back as a spoken walkthrough: the block comes first, and the spoken closer's
+// "do not recite code" line is explicitly overridden for this question.
+const CODING_CLOSER = `CODING OVERRIDE — this overrides the spoken-delivery lines above for this question: give the code first as one fenced, runnable block in the language asked for. No walkthrough before the code. Explain only if this question asks for an explanation or is a follow-up about code already given.`
 
 function str(v: unknown, max: number): string {
   return typeof v === "string" ? v.trim().slice(0, max) : ""
@@ -937,7 +949,7 @@ ${INTERVIEW}`
   const job: AnswerJob = {
     question,
     system: `${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : desktopCloser || spokenCloser}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? `${desktopCloser || spokenCloser}\n\n${CODING_CLOSER}` : desktopCloser || spokenCloser}`,
     plan,
     interviewer,
     level,

@@ -99,17 +99,16 @@ test('streaming carries the same grounding and measures preparation and first co
   assert.equal(h.dossiers, 0)
 })
 
-// Owner, 23 Oct 2026: answers are read and spoken, so a coding request is talked through in order, with no code shown.
-// This replaced "coding requests receive runnable code instructions" (one fenced, runnable block).
-test('coding requests are talked through step by step, with no code shown', async () => {
+// Owner, 29 Oct 2026 — supersedes the 23 Oct 2026 no-code rule in full: a coding request gets code first,
+// everywhere, live or not. A walkthrough is only the explanation when a follow-up asks for one.
+test('coding requests get a fenced runnable block first, not a walkthrough', async () => {
   const h = harness()
   const response = await h.post({ question: 'Give me a Python program for prime numbers.', config: { resume: 'Python automation.' } })
   assert.equal((await response.json()).meta.kind, 'code')
   const prompt = h.calls[0].messages[1].content
-  assert.match(prompt, /say the solution the way you would talk it through/)
-  assert.match(prompt, /the steps in the order the code runs/)
-  assert.match(prompt, /No code blocks, no inline code, no symbols/)
-  assert.doesNotMatch(prompt, /complete and runnable|ONE fenced block/)
+  assert.match(prompt, /one fenced, runnable block/)
+  assert.match(prompt, /No walkthrough before/)
+  assert.doesNotMatch(prompt, /No code blocks, no inline code/)
 })
 
 
