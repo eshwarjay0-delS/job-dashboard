@@ -67,7 +67,7 @@ const BUDGET: Record<ReplyIntent,[number,number,string,string,"surface"|"asked-o
 export function focusPlan(question:string,tier:number,level:string):FocusPlan{
  const intent=interviewIntent(question)
  const [min,max,opening,proof,depth]=BUDGET[intent]
- const detailed=DEEP.test(question)&&["scenario","technical-process","experience-story","follow-up"].includes(intent)
+ const detailed=(DEEP.test(question)&&["scenario","technical-process","experience-story","follow-up"].includes(intent)) || (intent==="comparison"&&/\b(?:technically|at the protocol level|under the hood|in detail|how .+ differ)\b/i.test(question))
  // Technical depth may grow when specifically requested, not merely because
  // the session is in Director/Engineer mode. Preserve full source-backed intros.
  const adjusted=detailed?max+40:max
