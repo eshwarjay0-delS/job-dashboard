@@ -97,7 +97,9 @@ export async function markResumeDocumentAccepted(id: string, wamid: string): Pro
   // failed message id as a tombstone so a late HTTP 200 cannot resurrect it.
   if (current.deliveryState === "failed" && current.deliveredMessageId === wamid) return false
   if (current.status === "delivered" && current.deliveredMessageId && current.deliveredMessageId !== wamid) return false
-  await patchResumeRecovery(id, { status: "delivered", deliveredMessageId: wamid, deliveryState: "accepted" })
+  // Meta HTTP 200 means accepted by the API, not delivered to the handset.
+  // Keep the job out of automatic resend while waiting for a signed callback.
+  await patchResumeRecovery(id, { status: "uncertain", deliveredMessageId: wamid, deliveryState: "accepted" })
   return true
 }
 
@@ -113,7 +115,7 @@ export async function recordResumeDeliveryStatus(wamid: string, state: "sent" | 
       id = opaqueJobId
       await blob.put(messageIndexKey(wamid), id)
       await blob.put(recoveryKey(id), JSON.stringify({ ...unknown,
-        status: state === "failed" ? "pending" : "delivered",
+        status: state === "failed" ? "pending" : (state === "delivered" || state === "read") ? "delivered" : "uncertain",
         deliveredMessageId: wamid,
         deliveryState: state, updatedAt: Date.now(),
         ...(state === "failed" ? { attempts: unknown.attempts + 1, retryAt: Date.now() + retryDelayMs(unknown.attempts + 1), errorCode: "meta_delivery_failed" } : {}),
@@ -139,7 +141,9 @@ export async function recordResumeDeliveryStatus(wamid: string, state: "sent" | 
   const rank = { accepted: 0, sent: 1, delivered: 2, read: 3, failed: -1 }
   if (rank[state] <= rank[job.deliveryState || "accepted"]) return
   await blob.put(recoveryKey(id), JSON.stringify({ ...job, deliveryState: state,
-    status: job.status === "pending" && job.deliveryState === "failed" ? "delivered" : job.status,
+    // Only a signed delivered/read callback confirms handset receipt.
+    // A signed sent callback still cannot justify a duplicate automatic send.
+    status: state === "delivered" || state === "read" ? "delivered" : "uncertain",
     updatedAt: Date.now() }))
   if (state === "delivered" || state === "read")
     console.info("[whatsapp] resume handset delivery confirmed", { job: id.slice(0, 12), state })
