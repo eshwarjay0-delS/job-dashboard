@@ -45,7 +45,7 @@ import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_R
 import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
 import { madeMeetsFloor } from "@/lib/made-floor"
 import { acceptableWhatsAppResume } from "@/lib/whatsapp-resume-acceptance"
-import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries } from "@/lib/whatsapp-resume-recovery"
+import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, markResumeDocumentAccepted, recordResumeDeliveryStatus } from "@/lib/whatsapp-resume-recovery"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
 import { chooseResume, type Prefer } from "@/lib/library-choose"
@@ -259,7 +259,10 @@ export async function POST(request: NextRequest) {
       const seconds = Number(status.timestamp)
       const firstError = (status.errors as { code?: number; title?: string }[] | undefined)?.[0]
       const reason = state === "failed" ? [firstError?.code, firstError?.title].filter(Boolean).join(": ") : ""
-      return recordUpdateProviderStatus(id, state, Number.isFinite(seconds) ? seconds * 1000 : Date.now(), reason)
+      return Promise.all([
+        recordUpdateProviderStatus(id, state, Number.isFinite(seconds) ? seconds * 1000 : Date.now(), reason),
+        recordResumeDeliveryStatus(id, state).catch(() => {}),
+      ])
     }))
     return ok()
   }
@@ -839,7 +842,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     throw error
   }
   if (!sentId) throw new Error("WhatsApp document send returned no message id")
-  await patchResumeRecovery(job, { status: "delivered", deliveredMessageId: sentId })
+  await markResumeDocumentAccepted(job, sentId)
   console.info("[whatsapp] tailored document accepted by Meta", { job: job.slice(0, 12), message: sentId.slice(0, 16), overallCoverage: result.coverage, supportedCoverage: result.supported_coverage })
   finished = true
   await recordWhatsAppUsage(userId, "resume_tailor", result)
