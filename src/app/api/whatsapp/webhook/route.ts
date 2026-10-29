@@ -702,7 +702,9 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       : queued.status === "delivered"
         ? "WhatsApp accepted the document, but handset delivery has not been confirmed. Your request is saved; I will not send a duplicate while its status is unknown."
         : queued.status === "uncertain"
-          ? "The document upload is unconfirmed. Your request is saved, and I will not risk sending a duplicate while delivery is unknown."
+          ? (queued.deliveryState === "accepted" || queued.deliveryState === "sent"
+            ? "WhatsApp accepted the document, but handset delivery has not been confirmed. Your request is saved; I will not send a duplicate while its status is unknown."
+            : "The document upload is unconfirmed. Your request is saved, and I will not risk sending a duplicate while delivery is unknown.")
           : "That resume is still being finished. Your request is saved for automatic recovery."
     return sendText(from, said)
   }
@@ -1030,6 +1032,7 @@ async function recoverResumeJobs(request: NextRequest) {
   const jobs = await dueResumeRecoveries(1)
   let attempted = 0
   let accepted = 0
+  let handsetConfirmed = 0
   let stillPending = 0
   for (const job of jobs) {
     const sender = await resolveWhatsAppUser(job.from)
@@ -1046,16 +1049,18 @@ async function recoverResumeJobs(request: NextRequest) {
       await generate(job.from, { jd: job.jd, jdId: job.jdId, resumePath: job.resumePath,
         resumeName: job.resumeName, resumeFiled: job.resumeFiled }, job.userId, TAILOR_BUDGET_MS, job.files, true)
       const state = await readResumeRecovery(job.id)
-      if (state?.status === "delivered") accepted++
+      if (state?.deliveryState === "accepted" || state?.deliveryState === "sent" ||
+          state?.deliveryState === "delivered" || state?.deliveryState === "read") accepted++
       else stillPending++
+      if (state?.deliveryState === "delivered" || state?.deliveryState === "read") handsetConfirmed++
     } catch (error) {
       console.error("[whatsapp] recovery run failed", (error as Error)?.name || "error")
       await deferResumeRecovery(job.id, "recovery_exception")
     }
   }
   // Counts only: no candidate identity, JD or resume content in logs.
-  console.info("[whatsapp] resume recovery cron", { bootstrapped, due: jobs.length, attempted, accepted, stillPending })
-  return NextResponse.json({ bootstrapped, attempted, accepted, stillPending, due: jobs.length })
+  console.info("[whatsapp] resume recovery cron", { bootstrapped, due: jobs.length, attempted, accepted, handsetConfirmed, stillPending })
+  return NextResponse.json({ bootstrapped, attempted, accepted, handsetConfirmed, stillPending, due: jobs.length })
 }
 async function emailSlots(userId: string): Promise<{ slots: string[]; sure: boolean; failed: boolean }> {
   try {
