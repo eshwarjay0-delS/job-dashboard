@@ -63,7 +63,7 @@
     },
     {
       "path": "/api/whatsapp/recover",
-      "schedule": "20 19 * * *"
+      "schedule": "45 23 * * *"
     }
   ]
 }
