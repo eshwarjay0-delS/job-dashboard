@@ -718,6 +718,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   }
   let finished = false
   let sending = false
+  let told = false
   let failureCode = "quality_incomplete"
   let failedCandidate: { token: string; coverage: number; supportedCoverage: number } | undefined
   try {
@@ -756,7 +757,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   } catch (e) {
     failureCode = "provider_error"
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
-    if (!quiet) await sendText(from, "I could not tailor your resume just now. Your resume and this job are saved, and MarketFit will try again.").catch(() => {})
+    if (!quiet) { told = true; await sendText(from, "I could not tailor your resume just now. Your resume and this job are saved, and MarketFit will try again.").catch(() => {}) }
     return;
   }
 
@@ -765,7 +766,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
     failureCode = "unchanged"
-    if (!quiet) await sendText(from, "The rewrite produced no changes, so I did not send a file. Send *redo* to try again.").catch(() => {})
+    if (!quiet) { told = true; await sendText(from, "The rewrite produced no changes, so I did not send a file. Send *redo* to try again.").catch(() => {}) }
     return;
   }
 
@@ -817,20 +818,20 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       roleCount: result.role_alignment?.length ?? 0,
       unverifiedCount: result.unverified_added_keywords?.length ?? 0,
     })
-    if (!quiet) await sendText(from, qualityStop(result)).catch(() => {})
+    if (!quiet) { told = true; await sendText(from, qualityStop(result)).catch(() => {}) }
     return;
   }
   const file = await blob.get(`tailored/${result.token}.docx`)
   if (!file) {
     failureCode = "file_missing"
-    if (!quiet) await sendText(from, "I did not send a file. The draft was made but the Word file could not be opened. Your resume and this job are saved for another try.").catch(() => {})
+    if (!quiet) { told = true; await sendText(from, "I did not send a file. The draft was made but the Word file could not be opened. Your resume and this job are saved for another try.").catch(() => {}) }
     return;
   }
 
   const source = await readPath(session.resumePath)
   if (!source || !sameResumeIdentity(await extractText(source), await extractText(file))) {
     failureCode = "identity_mismatch"
-    if (!quiet) await sendText(from, "I did not send a file. The draft changed the name or email on the resume, so I stopped. Your original resume and this job are saved for another try.").catch(() => {})
+    if (!quiet) { told = true; await sendText(from, "I did not send a file. The draft changed the name or email on the resume, so I stopped. Your original resume and this job are saved for another try.").catch(() => {}) }
     return;
   }
   const meta = await metaPromise
@@ -874,12 +875,19 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   } catch (error) {
     // An explicit Meta HTTP rejection proves no document was accepted; retry it.
     // A timeout or unknown response is ambiguous and must not be sent twice.
-    if (/WA (?:upload|sendDoc) [45]\d\d:/.test(String(error))) {
+    const refused = /WA (?:upload|sendDoc) [45]\d\d:/.test(String(error))
+    if (refused) {
       await patchResumeRecovery(job, { status: "pending" })
       sending = false
       failureCode = "whatsapp_http_rejected"
+    } else failureCode = "delivery_unconfirmed"
+    if (!quiet) {
+      told = true
+      await sendText(from, refused
+        ? "I did not send a file. WhatsApp refused it. Your resume and this job are saved for another try."
+        : "WhatsApp did not confirm the file. I will not send a second copy in case the first one arrives. If nothing arrives, send *redo*.").catch(() => {})
     }
-    throw error
+    return
   }
   if (!sentId) throw new Error("WhatsApp document send returned no message id")
   const accepted = await markResumeDocumentAccepted(job, sentId)
@@ -892,7 +900,16 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
 
   if (session.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
     await deletePath(session.resumePath).catch(() => {})
+  } catch (error) {
+    console.error("[whatsapp] resume run stopped", String(error).slice(0, 200))
+    if (!told && !quiet) {
+      told = true
+      await sendText(from, "The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.").catch(() => {})
+    }
   } finally {
+    if (!finished && !told && !quiet) {
+      await sendText(from, "The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.").catch(() => {})
+    }
     if (!finished) {
       if (sending) {
         const latest = await readResumeRecovery(job).catch(() => null)

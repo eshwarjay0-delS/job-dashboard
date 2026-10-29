@@ -1,3 +1,9 @@
+## 2026-10-29 — WhatsApp refusing the file is said in the chat
+
+If WhatsApp refuses the upload, the chat says the file was not sent and the job is saved for another try. If the upload is not confirmed, it does not send a second copy. Any other stop, after the updating line, still leaves one sentence. The five-fold checks passed with this added.
+
+Not on the live site while Vercel is rate limited. Live remains `e7f979b`.
+
 ## 2026-10-29 — Five folds: a resume run has to leave a result
 
 Each fold rechecks the earlier ones.

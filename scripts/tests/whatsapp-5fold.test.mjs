@@ -72,6 +72,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   let runs = 0
   let file = null
   let samePerson = true
+  let sendError = null
   const statuses = ['uncertain']
   const entries = new Map()
   const blob = {
@@ -91,7 +92,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true, resolveKeys: () => ({}), tailorKeys: k => k },
     '@/lib/tailor': { runTailor: async () => { runs++; return acceptable } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer', company: '', location: '' }) },
-    '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async () => 'sent' },
+    '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async () => { if (sendError) throw sendError; return 'sent' } },
     '@/lib/owner': { isOwnerWhatsApp: () => false },
     '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},
     '@/lib/profile': { extractProfile: async () => ({ firstName: 'Eshwar' }) },
@@ -132,4 +133,12 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   await generate('15550021', { jdId: 'wrong-person', jd: 'Cloud security job three', resumePath: '/resume.docx' }, 'user')
   assert.equal(runs, 2)
   assert.match(said.at(-1), /changed the name or email/)
+
+  file = Buffer.from('eshwarjay05@gmail.com')
+  samePerson = true
+  sendError = new Error('WA sendDoc 500: no')
+  await generate('15550021', { jdId: 'refused', jd: 'Cloud security job four', resumePath: '/resume.docx' }, 'user')
+  assert.equal(runs, 3)
+  assert.match(said.at(-1), /WhatsApp refused it/)
+  assert.equal(said.filter(t => /run stopped before a file/.test(t)).length, 0)
 })
