@@ -2589,7 +2589,7 @@ async function analyseScreen() {
     if ((current && current.id) !== screenSession || !cards.includes(card)) throw new Error("Session changed. Capture the screen again in the active session.");
     if (!res.ok) throw new Error(data.error || "Screen analysis failed. Please retry.");
     if (data.needsReview === true) {
-      if (!Array.isArray(data.tasks) || !data.tasks.length || !window.KompasScreenReview) throw new Error("Screen review could not open. Please reload and retry.");
+      if (!Array.isArray(data.tasks) || !data.tasks.length || !(await ensureScreenReview())) throw new Error("Screen review could not open. Please reload and retry.");
       aiBusy = false; screenOwnsAnswer = false;
       const selection = await window.KompasScreenReview({ image, tasks: data.tasks, sessionId: screenSession });
       if ((current && current.id) !== screenSession || !cards.includes(card)) throw new Error("Session changed. Capture again in the active session.");
@@ -2617,6 +2617,27 @@ async function analyseScreen() {
   finally { if (screenOwnsAnswer) aiBusy = false; }
   card.streaming = false; card.meta = ((performance.now() - t0) / 1000).toFixed(1) + "s · vision";
   if (cards[idx] === card) renderCard();
+}
+// The review dialog normally arrives with the page. A stale cached page can
+// reach the review step without it, which used to fail the whole capture.
+// Recover by loading the two review scripts in order and trying again;
+// only if that fails does the capture report that the review could not open.
+async function ensureScreenReview() {
+  if (typeof window !== "undefined" && window.KompasScreenReview) return true;
+  if (typeof document === "undefined") return false;
+  const parent = document.head || document.body;
+  if (!parent || typeof parent.appendChild !== "function") return false;
+  for (const src of ["screen-core.js", "screen-review.js"]) {
+    const loaded = await new Promise((resolve) => {
+      const tag = document.createElement("script");
+      tag.src = src;
+      tag.onload = () => resolve(true);
+      tag.onerror = () => resolve(false);
+      parent.appendChild(tag);
+    });
+    if (!loaded) return false;
+  }
+  return typeof window !== "undefined" && !!window.KompasScreenReview;
 }
 /* ---- Follow along: tracks the words YOU speak, typing-test style ----
    Owner, 2026-09-29: "it should work the way thetypingtest.com works — the order of characters the user
