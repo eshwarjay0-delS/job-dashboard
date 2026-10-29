@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import { posix } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
 
@@ -38,7 +39,9 @@ function harness(options = {}) {
         }
         return Response.json({ choices: [{ message: { content: options.modelAnswer || 'I check the certificate chain.' } }] })
       },
-      require: (id) => mocks[id] || (id.startsWith('@/') ? load('src/' + id.slice(2) + '.ts') : require(id)),
+      require: (id) => mocks[id] || (id.startsWith('@/') ? load('src/' + id.slice(2) + '.ts')
+        : id.startsWith('.') ? load(posix.normalize(posix.join(posix.dirname(file), id)))
+        : require(id)),
     }, { filename: file })
     return module.exports
   }
@@ -62,7 +65,7 @@ test('the actual answer route sends active resume and JD to the model, without r
   const prompt = h.calls[0].messages[1].content
   assert.match(prompt, /Maintained PKI and Venafi TPP/)
   assert.match(prompt, /TCS requires highly available Root CA/)
-  assert.match(prompt, /never evidence of personal history/)
+  assert.match(prompt, /JOB DESCRIPTION \(role priorities, not candidate history\)/)
   assert.doesNotMatch(prompt, /OLD GENERATED INCIDENT/)
   assert.equal(h.dossiers, 0)
   assert.ok((await response.json()).meta.timing.total_ms >= 0)
@@ -91,7 +94,8 @@ test('streaming carries the same grounding and measures preparation and first co
   assert.match(stream, /"type":"delta"/)
   assert.match(stream, /"preparation_ms":\d+/)
   assert.match(stream, /"first_ms":\d+/)
-  assert.match(h.calls[0].messages[1].content, /PKI Architect at TCS/)
+  assert.doesNotMatch(h.calls[0].messages[1].content, /PKI Architect at TCS/)
+  assert.match(h.calls[0].messages[1].content, /I administer Venafi TPP/)
   assert.equal(h.dossiers, 0)
 })
 
@@ -381,4 +385,44 @@ for (let fold = 0; fold < 30; fold++) {
   assert.equal(h.calls.length,0)
   assert.equal(h.dossiers,0)
   assert.equal(h.vaults,0)
+})
+
+
+test('Chief relevance: a director setup is excluded from the actual answer request',async()=>{
+  const h=harness({modelAnswer:'I would bring independent control review and clear risk reporting.'})
+  const question='We use CyberArk, Splunk and Power BI across 27 teams. The job also touches IAM and vulnerability management. What would you bring to this team?'
+  const response=await h.post({question,config:{resume:'Reviewed access control gaps and tracked remediation in ServiceNow GRC.'}})
+  assert.equal(response.status,200)
+  assert.equal(h.calls.length,1)
+  const user=h.calls[0].messages[1].content
+  const system=h.calls[0].messages[0].content
+  assert.match(user,/ANSWER ONLY THIS:\nWhat would you bring to this team\?/i)
+  assert.doesNotMatch(user,/ANSWER ONLY THIS:\nWe use CyberArk/i)
+  assert.match(system,/Current ask: What would you bring to this team\?/i)
+  assert.doesNotMatch(system,/Explicitly requested subjects:.*CyberArk/i)
+})
+
+test('Chief relevance: scenario limitations survive while extraneous setup is not the asked task',async()=>{
+  const h=harness({modelAnswer:'I would validate the approved change without restarting production.'})
+  const question='No production downtime is allowed. You must keep all audit records. How would you verify the control remediation?'
+  const response=await h.post({question,config:{resume:'Reviewed remediation evidence and risk exceptions.'}})
+  assert.equal(response.status,200)
+  const user=h.calls[0].messages[1].content
+  const system=h.calls[0].messages[0].content
+  assert.match(user,/ANSWER ONLY THIS:\nHow would you verify the control remediation\?/i)
+  assert.match(system,/Current-turn constraints/)
+  assert.match(system,/No production downtime/)
+  assert.match(system,/keep all audit records/)
+})
+
+test('Chief relevance: which-of-those carries explicit current-turn choices, not generated history',async()=>{
+  const h=harness({modelAnswer:'My strongest framework is NIST CSF, and I have worked with CRI as well.'})
+  const question='We assess NIST CSF, CRI Profile and NIST 800-53. Which of those are you strongest in?'
+  const response=await h.post({question,config:{resume:'Supported NIST CSF and CRI Profile control assessments.'},history:[{q:'DCSync and Cobalt Strike?',a:'Old unrelated project'}]})
+  assert.equal(response.status,200)
+  const user=h.calls[0].messages[1].content
+  const system=h.calls[0].messages[0].content
+  assert.match(user,/ANSWER ONLY THIS:\nWhich of those are you strongest in\?/i)
+  assert.match(system,/Explicitly requested subjects: NIST CSF; CRI Profile; NIST 800-53/i)
+  assert.doesNotMatch(system,/Explicitly requested subjects:.*DCSync/i)
 })

@@ -9,6 +9,7 @@
  * 5) explicitly tell the writer what NOT to answer.
  */
 import { focusPlan, interviewIntent, namedQuestionTerms, type ReplyIntent } from "./kompasRelevance.ts"
+import { questionKernel } from "./kompasIntentKernel.ts"
 export type RelevanceRecovery={
  currentAsk:string
  intent:ReplyIntent
@@ -18,6 +19,8 @@ export type RelevanceRecovery={
  contextRelation:"none"|"follow-up"
  excludedMoves:string[]
  evidencePolicy:"source-supported-history"|"hypothetical-only"|"no-personal-story"
+ constraints:string[]
+ discardedSetup:string
 }
 const elliptical=/^(?:and (?:then|how|why|what)|why (?:is|was) that|what (?:about|happened|changed)|how (?:so|did you (?:check|know|verify))|can you (?:expand|elaborate)|tell me more|go (?:deeper|on)|what did you do next)/i
 const TOPICS=[
@@ -35,27 +38,24 @@ const TOPICS=[
  ["decision criteria",/\b(?:how (?:do|would) you (?:decide|prioriti[sz]e)|criteria|trade.?off)\b/i],
 ] as const
 
-function coreQuestion(q:string):string{
- const raw=String(q||"").replace(/\s+/g," ").trim()
- if(!raw)return ""
- // A long interview statement may end in a real question. For clear closing
- // invitations, the actual ask outranks everything discussed earlier.
- const closing=/\b(?:what questions (?:do|would|might|can) you have|any questions (?:for|from) me|what would you (?:like to )?ask (?:me|us)|anything you(?:'d| would) (?:like|want) to ask)\b/gi
- const hits=[...raw.matchAll(closing)]
- if(hits.length&&typeof hits[hits.length-1].index === 'number' && hits[hits.length-1].index! > 0)return raw.slice(hits[hits.length-1].index).replace(/\s+(?:right|okay|you know)\s*\?\s*$/i,"").trim()
- // ASR sometimes appends "right?" to an explanation. That is not a request
- // to dump a security runbook.
- return raw.replace(/\s+(?:right|okay|you know)\s*\?\s*$/i,"").trim()||raw
-}
 function latestSubject(history:string):string{
  const lines=String(history||"").split(/\n+/).map(x=>x.trim()).filter(Boolean)
- const candidate=lines.slice(-12).reverse().find(x=>/^(?:Them|Interviewer|question):\s*/i.test(x))
+ const candidate=lines.slice(-16).reverse().find(x=>{
+  if(!/^(?:Them|Interviewer|question):\s*/i.test(x))return false
+  const value=x.replace(/^(?:Them|Interviewer|question):\s*/i,"").trim()
+  // A casual "okay" after an answer is not the prior subject of a follow-up.
+  return value.length>=14 && !/^(?:(?:okay|ok|right|sure|great|thanks|thank you|sounds good|makes sense|got it)[.!?,\s]*)+$/i.test(value)
+ })
  if(!candidate)return ""
  return candidate.replace(/^(?:Them|Interviewer|question):\s*/i,"").slice(0,240)
 }
 export function rediscoverRelevance(question:string,history=""):RelevanceRecovery{
- const currentAsk=coreQuestion(question)
- const intent=interviewIntent(currentAsk)
+ const kernel=questionKernel(question)
+ const currentAsk=kernel.ask
+ // "Which of those?" is an option comparison even when the generic
+ // intent classifier sees only an elliptical pronoun.
+ const intent:ReplyIntent=kernel.carryOptions && /^which\b/i.test(currentAsk)
+  ? "comparison" : interviewIntent(currentAsk)
  const prior=latestSubject(history)
  const isElliptical=intent==="follow-up" && elliptical.test(currentAsk) && !!prior
  // No generic resume/JD keyword expansion. A named term is in the current
@@ -63,6 +63,9 @@ export function rediscoverRelevance(question:string,history=""):RelevanceRecover
  const requestedTopics=[...new Set([
   ...TOPICS.filter(([,re])=>re.test(currentAsk)).map(([name])=>name),
   ...namedQuestionTerms(currentAsk),
+  // Only carry named choices from the same utterance when the final question
+  // explicitly points back to them (e.g., "which of those?").
+  ...(kernel.carryOptions ? namedQuestionTerms(kernel.setup) : []),
  ])]
  const noNewStory=["definition","comparison","acknowledgement","closing-question","logistics","value"].includes(intent)
  const evidencePolicy:RelevanceRecovery["evidencePolicy"]=intent==="experience-story"||intent==="introduction"||intent==="value"
@@ -87,6 +90,7 @@ export function rediscoverRelevance(question:string,history=""):RelevanceRecover
   contextSubject:isElliptical?prior:"",
   contextRelation:isElliptical?"follow-up":"none",
   excludedMoves,evidencePolicy,
+  constraints:kernel.constraints,discardedSetup:kernel.setup,
  }
 }
 export function relevanceRecoveryPrompt(question:string,history=""):string{
@@ -94,11 +98,13 @@ export function relevanceRecoveryPrompt(question:string,history=""):string{
  return [
   "RELEVANCE RE-DISCOVERY — source of truth is the latest interviewer ask:",
   "Current ask: "+c.currentAsk,
+  c.constraints.length?"Current-turn constraints (keep them; never turn them into past achievements): "+c.constraints.join(" / "):"",
   "Intent: "+c.intent+". Response action: "+c.answerMode+".",
   c.requestedTopics.length?"Explicitly requested subjects: "+c.requestedTopics.join("; "):"No listed technical terms are mandatory; answer the plain meaning.",
   c.contextRelation==="follow-up"?"Recover ONLY this prior subject for an elliptical follow-up: "+c.contextSubject:"Treat prior context as background, not a second question.",
   "Personal evidence rule: "+c.evidencePolicy+".",
   ...c.excludedMoves,
+  "Selection rule: identify the one result this interviewer expects, then use only the subject, evidence and steps needed for that result. Do not recite adjacent technologies, elaborate incident details, or a canned project merely because they match the job.",
   "Before speaking, internally check: Does sentence one answer the current request? Do all explicitly named subparts have a sensible answer? Does each later sentence explain the same thing or supply necessary evidence? Drop anything else.",
   "Return only the natural first-person spoken answer, not this analysis, questions, tags or a list."
  ].join("\n")

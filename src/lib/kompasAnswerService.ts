@@ -18,6 +18,7 @@ import { formatInterviewHistory } from "@/lib/kompasHistory"
 import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestionParts, questionParts, spokenQualityFlags, correctVerifiedPresentationErrors } from "@/lib/kompasInterviewPrecision"
 import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms, interviewIntent } from "@/lib/kompasRelevance"
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
+import { questionKernel } from "@/lib/kompasIntentKernel"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
@@ -733,7 +734,16 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const transcript = str(body.transcript, 4000)
   const historyArr = Array.isArray(body.history) ? body.history : []
   const history = formatInterviewHistory(historyArr)
-  const rediscovered = rediscoverRelevance(question, history)
+  // An earlier ASR/turn extractor may trim constraints or attach old
+  // history to a "which of those?" question. When the current raw utterance
+  // contains its own clear ask, recover that before all ranking/repair steps.
+  // Mixed speaker-labelled transcripts still use the derived isolated ask.
+  const sameTurn = asked || heardAll
+  const sameTurnKernel = questionKernel(sameTurn)
+  const hasSpeakerLabels = /(?:^|\n)\s*(?:You|Them|Interviewer):/mi.test(sameTurn)
+  const clearlyAsked = /^(?:what|which|who|why|how|where|when|can|could|would|will|do|does|did|have|has|are|is|tell|describe|explain|give|walk|share|highlight|suppose|imagine|assume|if|given|consider)\b/i.test(sameTurnKernel.ask)
+  const originalTurnAsk = !hasSpeakerLabels && clearlyAsked ? sameTurn : question
+  const rediscovered = rediscoverRelevance(originalTurnAsk, history)
   const retrievedList = Array.isArray(body.retrieved)
     ? body.retrieved.map((r) => str(r, 500)).filter(Boolean)
     : []
@@ -741,10 +751,14 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
 
   // perfACT's answering intelligence: classify → tier rule → length plan. (A topic-less follow-up was already glued to
   // the previous question in code by questionForAnswer.)
-  const { tier, why } = classify(question)
+  // The normalized ask, not background keyword baggage, controls tier,
+  // source selection, word budget, repair checks and named-term verification.
+  // Preserve the full current-turn utterance separately for its real constraints.
+  const originalAsk = originalTurnAsk
+  const { tier, why } = classify(rediscovered.currentAsk || question)
   // Minimal intro triggers ("intro") get a canonical question so the model
   // generates a spoken self-introduction instead of echoing the trigger.
-  question = canonicalQuestion(question, tier)
+  question = canonicalQuestion(rediscovered.currentAsk || question, tier)
   // The question's own register decides how deep ANY level may go: a concept
   // question (define / compare / what-is) is answered abstractly, a practice
   // question (his work, a scenario, a deep example) takes the level's depth.
@@ -911,7 +925,7 @@ ${INTERVIEW}`
     : ""
   const job: AnswerJob = {
     question,
-    system: `${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(question, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
+    system: `${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
     userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : desktopCloser || spokenCloser}`,
     plan,
     interviewer,
