@@ -1,6 +1,8 @@
 import { ignoreReason, validIgnoreRule } from "@/lib/gmail-ignore"
 import { emailAddress } from "@/lib/application-evidence"
 import { radarReviewObservation } from "@/lib/followup-eligibility"
+import { getFollowupClaim } from "@/lib/followup-claims"
+import { blob } from "@/lib/storage"
 import { NextResponse } from "next/server"
 import { requireAuth, isAuthContext, fetchClassifiedThreads } from "../_lib"
 import { checkRateLimit } from "@/lib/rateLimit"
@@ -30,6 +32,7 @@ export async function GET(req: Request) {
       to: string; subject: string; snippet: string
       daysWaiting: number; jobTitle: string; vendor: string
       eligibility: string; dueAt: number; lastSentAt: number; lastInboundAt: number | null
+      claim: { claimed: boolean; claimedAt: number | null } | 'unknown'
     }> = []
 
     const { data: { user: preferenceUser } } = await ctx.supabase.auth.getUser()
@@ -77,6 +80,22 @@ export async function GET(req: Request) {
         minWaitDays: minWait,
         now,
       })
+      // Review read only: whether this exact occurrence is already claimed.
+      // A failed claim read never fails the radar response; it reports unknown.
+      let claim: { claimed: boolean; claimedAt: number | null } | 'unknown' = 'unknown'
+      try {
+        const existing = await getFollowupClaim(blob, {
+          userId: ctx.userId,
+          account: t.accountEmail,
+          thread: t.threadId,
+          occurrence: observation.occurrence,
+        })
+        claim = existing
+          ? { claimed: true, claimedAt: existing.claimedAt }
+          : { claimed: false, claimedAt: null }
+      } catch {
+        claim = 'unknown'
+      }
       radar.push({
         threadId: t.threadId,
         account: t.accountEmail,
@@ -90,6 +109,7 @@ export async function GET(req: Request) {
         dueAt: observation.dueAt,
         lastSentAt: observation.lastSentAt,
         lastInboundAt: observation.lastInboundAt,
+        claim,
       })
     }
 
