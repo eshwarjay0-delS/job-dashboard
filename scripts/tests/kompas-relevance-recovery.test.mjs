@@ -10,7 +10,7 @@ test('All fifty asks keep current intent and cannot import historical keywords',
   assert.equal(p.intent,c.intent,'case '+c.id+': '+c.question)
   assert.equal(p.currentAsk,c.question)
   assert.equal(p.requestedTopics.includes('DCSync'),false)
-  assert.equal(p.contextRelation,'none','case '+c.id+' does not reference a previous turn')
+  assert.equal(p.contextRelation,c.intent==='follow-up'?'follow-up':'none','case '+c.id+' must resolve history only for a true follow-up')
   assert.match(relevanceRecoveryPrompt(c.question),/Does sentence one answer the current request/)
  }
 })
