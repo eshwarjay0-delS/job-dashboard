@@ -74,9 +74,9 @@ test("filesystem adapter lists directory prefixes with or without slash", async 
     const { blob } = adapter({}, directory)
     const a = await blob.list("whatsapp/resume-recovery")
     const b = await blob.list("whatsapp/resume-recovery/")
-    assert.deepEqual(a, ["whatsapp/resume-recovery/a.json"])
+    assert.deepEqual(Array.from(a), ["whatsapp/resume-recovery/a.json"])
     assert.deepEqual(b, a)
-    assert.deepEqual(await blob.list("whatsapp/resume-recovery/a-nonexistent"), [])
+    assert.deepEqual(Array.from(await blob.list("whatsapp/resume-recovery/a-nonexistent")), [])
     await assert.rejects(blob.list("whatsapp/resume-recovery//"), /Invalid storage key/)
     await assert.rejects(blob.get("whatsapp/resume-recovery/"), /Invalid storage key/)
   } finally { rmSync(directory, { recursive: true, force: true }) }
