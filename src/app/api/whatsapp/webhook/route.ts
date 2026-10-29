@@ -922,8 +922,17 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // Counted once the resume it started is delivered, so a failed run never makes a resume look more used.
   if (files) await markUsed(files.userDir, files.abs).catch(() => {})
 
-  if (session.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep))
-    await deletePath(session.resumePath).catch(() => {})
+  // Keep the original source recoverable after Meta API acceptance: a later
+  // signed failure callback may require regeneration without user resubmission.
+  // When the same original was already filed in Files, switch the queue to
+  // that durable copy before removing the temporary inbox copy.
+  if (session.resumePath?.startsWith(path.join(INBOX_DIR, digits(from)) + path.sep) &&
+      session.resumeFiled && await existsPath(session.resumeFiled)) {
+    await patchResumeRecovery(job, { resumePath: session.resumeFiled })
+    const durable = await readResumeRecovery(job)
+    if (durable?.resumePath === session.resumeFiled)
+      await deletePath(session.resumePath).catch(() => {})
+  }
   } catch (error) {
     console.error("[whatsapp] resume run stopped", String(error).slice(0, 200))
     if (!told) await sayOutcome("The run stopped before a file or a reason went out. Your resume and this job are saved, and MarketFit will try again.")
@@ -1040,13 +1049,25 @@ async function recoverResumeJobs(request: NextRequest) {
       await patchResumeRecovery(job.id, { status: "uncertain", errorCode: "account_changed" })
       continue
     }
-    if (!(await existsPath(job.resumePath))) {
-      await deferResumeRecovery(job.id, "source_missing")
-      continue
+    let resumePath = job.resumePath
+    if (!(await existsPath(resumePath))) {
+      // Earlier builds deleted uploaded inbox originals immediately after an
+      // API-accepted send. Recover only from that user's previously filed
+      // ORIGINAL source; never substitute a tailored output or another account.
+      const root = filesOf(job.userId)
+      const fallback = job.resumeFiled || ""
+      if (root && fallback && path.resolve(fallback).startsWith(path.resolve(root) + path.sep) &&
+          await existsPath(fallback)) {
+        resumePath = fallback
+        await patchResumeRecovery(job.id, { resumePath })
+      } else {
+        await deferResumeRecovery(job.id, "source_missing")
+        continue
+      }
     }
     attempted++
     try {
-      await generate(job.from, { jd: job.jd, jdId: job.jdId, resumePath: job.resumePath,
+      await generate(job.from, { jd: job.jd, jdId: job.jdId, resumePath,
         resumeName: job.resumeName, resumeFiled: job.resumeFiled }, job.userId, TAILOR_BUDGET_MS, job.files, true)
       const state = await readResumeRecovery(job.id)
       if (state?.deliveryState === "accepted" || state?.deliveryState === "sent" ||
