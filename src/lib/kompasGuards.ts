@@ -154,6 +154,11 @@ export function guardText(line: string, allowed: Set<string>): { text: string; r
     return plain + suffix
   })
   text = text.replace(/\bby\s+\u0000/gi, "").replace(/\u0000/g, "")
+  // Stress round 3: "I closed 95 percent of findings" came out "several percent of", "$2M" came out "$millions" and
+  // "over 200" came out "over several". Each now reads as something a person says.
+  text = text.replace(/\bseveral percent of (?!the\b|my\b|our\b|their\b)/gi, "most of the ").replace(/\bseveral percent of\b/gi, "most of").replace(/\bseveral percent\b/gi, "noticeably")
+  text = text.replace(/\$\s?(millions|thousands|several)\b/g, (_m, w: string) => (w === "several" ? "money" : w + " of dollars"))
+  text = text.replace(/\b(?:over|more than|nearly|almost|about|around|roughly) several\b/gi, "many")
   text = text.replace(/several(milliseconds?|seconds?|minutes?|hours?|ms|secs?|mins?|hrs?|kb|mb|gb|tb|s)\b/gi, "several")
   text = text.replace(/\bin a few years ago/gi, "back then")
   return { text, removed }
@@ -399,11 +404,17 @@ export function applyGuards(
 const CLAIMANT = /\b(?:i|we|my|our|me|us|i've|we've|i'm|we're)\b/i
 const RESULT = /\b(?:reduc|cut|sav|improv|increas|decreas|achiev|deliver|lower|rais|boost|grew|grow|shrank|shrink|eliminat|resolv|handl|process|manag|led|built|onboard|migrat|deploy|automat|secur|protect|block|detect|prevent|accelerat|sped|speed|shorten|drop|halv|doubl|tripl|scal|support|own|oversaw|mentor|train|serv|complet|clos|fix|remediat|patch)\w*/i
 const PLAN = /\b(?:would|will|could|should|can|might|may|if|i'd|we'd|i'll|we'll|plan|propose|expect|target|threshold|set|configure|alert when|at least|at most|within|every|per)\b/i
+const MODAL = /\b(?:would|will|could|should|can|might|may|if|i'd|we'd|i'll|we'll|plan|propose|expect|target)\b/i
+const PAST_RESULT = /\b(?:(?:reduc|sav|improv|increas|decreas|achiev|deliver|lower|rais|boost|eliminat|resolv|handl|process|manag|onboard|migrat|deploy|automat|secur|protect|block|detect|prevent|accelerat|shorten|drop|halv|doubl|tripl|scal|support|own|mentor|train|serv|complet|clos|fix|remediat|patch)ed|cut|led|built|grew|shrank|sped|oversaw)\b/i
 export function claimsResult(sentence: string): boolean {
   const s = String(sentence || "")
   if (/\$\s?\d|\b\d[\d,.]*\s*(?:k|m|million|billion)?\s*(?:usd|dollars)\b/i.test(s)) return true
   if (/\b\d+\+?\s*(?:years?|yrs?)\b/i.test(s) && CLAIMANT.test(s)) return true
-  if (PLAN.test(s)) return false
+  // Stress round 3 (29 Oct 2026): "I reduced incidents by 40% within a quarter", "I cut review time by 50% per audit
+  // cycle" and "I handled over 200 findings every quarter" kept their invented figures, because "within", "per", "every"
+  // and "at least" counted as plan words. Those words only describe a plan when a modal or "if" makes it one; a
+  // first-person past result with a figure is still a claim.
+  if (PLAN.test(s) && (MODAL.test(s) || !PAST_RESULT.test(s) || !CLAIMANT.test(s))) return false
   if (/\d\s*%|\bpercent\b|\b\d[\d,.]*\s*(?:x|times)\b/i.test(s) && RESULT.test(s)) return true
   return CLAIMANT.test(s) && RESULT.test(s)
 }

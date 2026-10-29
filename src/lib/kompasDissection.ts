@@ -336,8 +336,29 @@ export function dissectionPrompt(question: string, level: AnswerLevel, sources =
 
 const PROVIDER_ERROR = /\bopenrouter\b|\btry again in\s+\d|\btokens per minute\b|\bOPENROUTER_[A-Z0-9_]+\b|\banswer engine is at its limit\b|\bpaid provider is temporarily\b|\bpaid answer service returned\b/i
 
+// Stress round 3 (29 Oct 2026): nine of ten raw provider or gateway failures ("Error: Request failed with status code 429",
+// "502 Bad Gateway", a JSON error body, "model is overloaded", a context-length refusal, a model refusal) were not
+// recognised, so settle would have shown them as the answer. These shapes only count when the text IS the failure:
+// short, or opening with it. A real answer that mentions a 502 or rate limiting while explaining a design is kept.
+const PROVIDER_FAILURE_SHAPE = [
+  /^\s*\{\s*"error"\s*:/i,
+  /^\s*(?:error\b|request failed\b)/i,
+  /\bstatus code (?:4\d\d|5\d\d)\b/i,
+  /^\s*(?:4\d\d|5\d\d)\s+(?:bad gateway|gateway time-?out|service unavailable|internal server error|too many requests|payment required)\b/i,
+  /^\s*(?:internal server error|bad gateway|service unavailable|gateway time-?out|too many requests)[.!]?\s*$/i,
+  /\bupstream connect error\b|\bdisconnect\/reset before headers\b/i,
+  /\brate limit (?:exceeded|reached)\b|\bplease retry later\b/i,
+  /\binsufficient (?:credits|quota|balance)\b|\bquota exceeded\b/i,
+  /\b(?:model|server) is (?:currently )?overloaded\b/i,
+  /\bmaximum context length\b|\bcontext[_ ]length[_ ]exceeded\b/i,
+  /^\s*(?:i'm sorry|i am sorry|sorry),? (?:but )?i (?:can't|cannot|am unable to|won't) (?:help|assist|comply|answer)\b/i,
+  /^\s*as an ai(?: language model)?\b/i,
+]
 export function isProviderErrorAnswer(text: string): boolean {
-  return PROVIDER_ERROR.test(String(text || ""))
+  const t = String(text || "")
+  if (PROVIDER_ERROR.test(t)) return true
+  const short = wordCount(t) <= 30
+  return PROVIDER_FAILURE_SHAPE.some((re) => re.test(t) && (short || re.source.startsWith("^")))
 }
 
 /** Shared content words over all content words of both answers (Jaccard). Two grounded answers may share a resume line; the same answer shares nearly everything. */

@@ -561,6 +561,32 @@ function classifyAskSentence(sentence: string): AskPart {
 const SPOKEN_NOISE =
   /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|bye|goodbye|good morning|good afternoon|good evening|how are you|what'?s up|cool|sure|right|alright|all right|got it|sounds good)[.!?]*$/i
 
+// Stress round 2, idea E of the competitor study (a rival's auto trigger fired on "yeah that's a tough one"): 13 of 15
+// interviewer acknowledgements and small-talk lines ("makes sense", "let's dive in", "I see what you mean", "give me one
+// second", "sorry, my dog is barking") were formed into a question and answered; "I see what you mean" became the
+// question "What you mean". A whole utterance that is only one of these, with no question mark, is not a question.
+const SMALL_TALK_LEAD = "(?:(?:yeah|yes|ok(?:ay)?|right|alright|all right|so|well|hmm+|mm+|oh|ah|nice|great|good|perfect|cool|sure|sorry|wow|excellent|awesome|thanks)[,.!]?\\s+)*"
+const SMALL_TALK_CORE = [
+  "that'?s (?:a |an |really |very )?(?:tough|hard|good|great|fair|interesting|helpful|fine|clear|nice|solid|cool|tricky)(?: one| question| point| answer| idea| example)?",
+  "that (?:makes sense|helps|is helpful|is interesting|works)",
+  "makes (?:total |perfect )?sense", "fair enough", "good,? good", "very good", "all good", "no worries", "sounds good",
+  "(?:thanks|thank you)(?: so much| for that)?", "i see(?: what you mean)?", "i hear you", "got it", "understood", "noted",
+  "interesting(?: point| one)?", "(?:i )?(?:really )?like that(?: answer| idea| one| example)?", "(?:i )?appreciate (?:that|it)",
+  "let'?s (?:dive in|get started|begin|start|move on|keep going|continue|jump in|jump right in)",
+  "give me (?:a|one) (?:second|sec|moment|minute)", "(?:just )?(?:one|a) (?:second|sec|moment)", "hold on", "bear with me",
+  "let me (?:pull up|find|check|grab|look at) (?:my|the) (?:notes|screen|list|questions|next question)",
+  "(?:my|the) (?:dog|cat|kid|kids|baby|neighbou?r) (?:is|are) (?:barking|crying|loud|here|making noise)",
+  "the weather (?:has been|is|was) [a-z ]{2,30}", "(?:you'?re|you are) breaking up(?: a (?:bit|little))?", "okay cool", "cool cool", "nice one",
+]
+const SMALL_TALK = new RegExp(`^${SMALL_TALK_LEAD}(?:${SMALL_TALK_CORE.join("|")})[.!]*$`, "i")
+
+/** An interviewer acknowledgement or small talk, on its own: never answered. */
+export function smallTalkOnly(text: string): boolean {
+  const t = String(text || "").replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gi, " ").replace(/\s+/g, " ").trim()
+  if (!t || /\?/.test(t) || t.split(/\s+/).length > 14) return false
+  return SMALL_TALK.test(t)
+}
+
 /** A greeting or a filler is not a question. A short technical fragment is. */
 export function noiseOnly(text: string): boolean {
   const t = String(text || "")
@@ -568,7 +594,7 @@ export function noiseOnly(text: string): boolean {
     .replace(/\s+/g, " ")
     .trim()
   if (!t) return true
-  return SPOKEN_NOISE.test(t)
+  return SPOKEN_NOISE.test(t) || smallTalkOnly(t)
 }
 
 /**
@@ -627,6 +653,8 @@ export function topicFragment(text: string): boolean {
  */
 export function deriveByCode(heard: string, history: unknown, reask = false): string | null {
   if (!heard || plainlyNoQuestion(heard)) return null
+  // Every line is small talk ("Them: makes sense"): nothing to derive, and the model is not asked to find a question in it.
+  if (String(heard).split("\n").filter((l) => l.trim()).every((l) => noiseOnly(l))) return null
   const clean = cleanQuestion(heard) || cutQuestion(heard, reask ? NO_TURN : previousTurn(history))
   if (clean) return clean
   const topic = topicFragment(String(heard).replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " "))
