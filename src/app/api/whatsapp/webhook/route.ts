@@ -873,7 +873,10 @@ async function bootstrapLegacyResumeFailures(): Promise<number> {
   for (const key of keys.slice(0, 200)) {
     const from = key.match(/session-(\d+)\.json$/)?.[1] || ""
     if (!from) continue
-    const session = await loadSession(from)
+    // Read the persisted record directly: interactive sessions expire after 24h,
+    // but a failed job must remain recoverable after a deployment delay.
+    let session: Session
+    try { session = JSON.parse((await blob.getText(key)) || "{}") as Session } catch { continue }
     const last = session.last
     if (!last?.jd || !last.used || !last.email || !last.at || last.at < cutoff) continue
     const sender = await resolveWhatsAppUser(from)
