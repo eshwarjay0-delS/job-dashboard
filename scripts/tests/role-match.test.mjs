@@ -66,6 +66,11 @@ test('a job that names a speciality does not keep a generic security title besid
   assert.deepEqual(R.narrowByRole(ranked, 'Information Security AI Engineer').pool.map(r => r.candidate.name), ['AI Engineer'])
   const onlyGeneric = R.narrowByRole([cand('Security Engineer', { title: 'Security Engineer' })], 'Information Security AI Engineer')
   assert.deepEqual(onlyGeneric.pool.map(r => r.candidate.name), ['Security Engineer'])
+  const sameTitle = [
+    cand('App file', { title: 'Security Engineer', folder: 'Application and API Security' }),
+    cand('AI file', { title: 'Security Engineer', folder: 'AI Security and Governance' }),
+  ]
+  assert.deepEqual(R.narrowByRole(sameTitle, 'Information Security AI Engineer').pool.map(r => r.candidate.name), ['AI file'])
 })
 
 test('a resume is read by the title in its name, however the name is written', () => {

@@ -140,12 +140,12 @@ export function narrowByRole(ranked: Ranked[], role: string): { pool: Ranked[]; 
   const top = Math.max(...fits.map(f => f.fit))
   if (top < 4) return { pool: ranked, fit: top, narrowed: false }
   let pool = fits.filter(f => f.fit === top).map(f => f.r)
-  // A job that names a speciality must not leave a generic security title tied with one that names it.
-  // "Information Security AI Engineer" was keeping "Security Engineer" beside "AI Engineer", and the
-  // generic file was the one sent.
+  // A job that names a speciality must not leave a generic security title tied with one that names it,
+  // in the title, the file name, or the folder. "Information Security AI Engineer" was keeping
+  // "Security Engineer" beside the AI file, and the generic file was the one sent.
   const want = parseTitle(role).domains.filter(d => d !== "security")
   if (want.length) {
-    const named = fits.filter(f => f.fit === top && [f.r.candidate.title, f.r.candidate.name].some(t => {
+    const named = fits.filter(f => f.fit === top && [f.r.candidate.title, f.r.candidate.name, f.r.candidate.folder].some(t => {
       const has = t ? parseTitle(t).domains : []
       return want.some(d => has.includes(d))
     })).map(f => f.r)

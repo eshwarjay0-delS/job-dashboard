@@ -1,3 +1,7 @@
+## 2026-10-29 — Same title, the folder that names the speciality stays
+
+Two files both titled Security Engineer were a tie for Information Security AI Engineer. The one in AI Security and Governance stays. The one in Application and API Security does not, when the job names AI. A title that already names the speciality still wins on the title. A Security Analyst in an Identity folder is still kept for a Security Analyst job, because that job names no extra speciality.
+
 ## 2026-10-29 — A named short question is not glued on the desktop
 
 "What exactly is least privilege?" was still attached to the question already on screen when the desktop formed the ask. "Go deeper" still follows that question. The page stamp is kompas-20261029-ownq.
