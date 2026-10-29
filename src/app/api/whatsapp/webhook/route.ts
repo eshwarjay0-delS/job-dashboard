@@ -735,22 +735,25 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       sections: { summary: false, skills: true, experience: true },
     })
   } catch (e) {
-    // The pair was consumed before generation; a retry supplies a new pair.
+    failureCode = "provider_error"
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
-    return files ? sendLibraryFallback(from, files, "provider request failed") : sendText(from, `I could not tailor your resume just now. ${retry}`)
+    return quiet ? undefined : sendText(from, "Your resume request is saved. The rewrite failed; MarketFit will retry automatically.")
   }
 
   // Nothing came back different: the same file with "Match 28% -> 28%" on it is not a tailored resume, so it is not sent as one.
   // A retry supplies a fresh JD and resume pair.
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
-    return files ? sendLibraryFallback(from, files, "rewrite produced no changes") : sendText(from, `The rewrite produced no changes. ${retry}`)
+    failureCode = "unchanged"
+    return quiet ? undefined : sendText(from, "The rewrite produced no changes. Your request is saved for automatic recovery.")
   }
 
   // A cached, incomplete result must never permanently block the same JD.
   // Give the engine one fresh full rewrite while there is enough request budget.
-  const firstCoverage = result.coverage ?? result.score
-  const firstRejected = result.skills_only || !!result.partial || !Number.isFinite(firstCoverage) || firstCoverage < 90 || result.quality?.status === "needs_review"
+  const acceptable = (r: TailorResult) => !r.unchanged && !r.skills_only && !r.partial &&
+    !!r.quality && r.quality.status !== "needs_review" && !r.quality.incomplete &&
+    Number.isFinite(r.supported_coverage) && r.supported_coverage! >= 95
+  const firstRejected = !acceptable(result)
   if (firstRejected && maxMs >= 120_000) {
     const elapsed = Date.now() - startedAt
     const remaining = maxMs - elapsed - 15_000
@@ -763,8 +766,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
           mode: "full", noCache: true, maxMs: remaining,
           sections: { summary: false, skills: true, experience: true },
         })
-        const freshCoverage = fresh.coverage ?? fresh.score
-        if (!fresh.unchanged && !fresh.skills_only && !fresh.partial && Number.isFinite(freshCoverage) && freshCoverage >= 90 && fresh.quality?.status !== "needs_review") result = fresh
+        if (acceptable(fresh)) result = fresh
+        else if ((fresh.supported_coverage ?? 0) > (result.supported_coverage ?? 0)) result = fresh
       } catch (error) {
         console.error("[whatsapp] automatic quality retry failed", String(error).slice(0, 300))
       }
@@ -774,17 +777,19 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // A low-quality or partial draft is never a completed tailored resume.
   // Do not save it, send it as final, or silently claim a match that is not supported.
   const coverage = result.coverage ?? result.score
-  if (result.skills_only || result.partial || !Number.isFinite(coverage) || coverage < 90 || result.quality?.status === "needs_review") {
-    console.error("[whatsapp] tailoring quality gate rejected draft", { coverage, partial: !!result.partial, skillsOnly: !!result.skills_only, status: result.quality?.status })
-    return sendText(from, "I couldn't complete a reliable tailored resume for this job description. No incomplete file was delivered or saved. Please try again later.")
+  if (!acceptable(result)) {
+    failureCode = "quality_rejected"
+    failedCandidate = { token: result.token, coverage, supportedCoverage: result.supported_coverage ?? 0 }
+    console.error("[whatsapp] tailoring quality gate rejected draft", { coverage, supportedCoverage: result.supported_coverage, partial: !!result.partial, skillsOnly: !!result.skills_only, status: result.quality?.status })
+    return quiet ? undefined : sendText(from, "The draft did not pass quality checks. Your original resume and JD are saved for automatic recovery; no incomplete file was delivered.")
   }
-
   const file = await blob.get(`tailored/${result.token}.docx`)
-  if (!file) return sendText(from, "The resume generated but the file could not be read back. Please try again.")
+  if (!file) { failureCode = "file_missing"; return quiet ? undefined : sendText(from, "Your resume request is saved; the generated file was unavailable. MarketFit will retry.") }
 
   const source = await readPath(session.resumePath)
   if (!source || !sameResumeIdentity(await extractText(source), await extractText(file))) {
-    return sendText(from, "The generated file changed the resume’s contact email, so I stopped delivery. Please resend your JD and resume to retry.")
+    failureCode = "identity_mismatch"
+    return quiet ? undefined : sendText(from, "The draft failed its identity check. Your original resume is preserved; no document was delivered.")
   }
   const meta = await metaPromise
   const name = await outputNameFor(file)
