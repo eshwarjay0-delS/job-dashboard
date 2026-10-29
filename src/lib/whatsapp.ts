@@ -127,7 +127,7 @@ export async function sendText(to: string, body: string): Promise<void> {
 
 /** Upload bytes to Meta, then send them as a document message. */
 /** Returns the sent message's id (wamid), so a later swipe-reply can be traced to THIS document. */
-export async function sendDocument(to: string, data: Buffer, filename: string, caption?: string): Promise<string> {
+export async function sendDocument(to: string, data: Buffer, filename: string, caption?: string, opaqueJobId?: string): Promise<string> {
   const form = new FormData()
   form.append("messaging_product", "whatsapp")
   form.append("type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
@@ -146,6 +146,7 @@ export async function sendDocument(to: string, data: Buffer, filename: string, c
     headers: { ...auth(), "content-type": "application/json" },
     body: JSON.stringify({
       messaging_product: "whatsapp", to, type: "document",
+      ...(opaqueJobId && /^[a-f0-9]{64}$/.test(opaqueJobId) ? { biz_opaque_callback_data: opaqueJobId } : {}),
       document: { id, filename, ...(caption ? { caption: caption.slice(0, 1000) } : {}) },
     }),
     signal: AbortSignal.timeout(20000),
