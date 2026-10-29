@@ -600,6 +600,8 @@ export function topicFragment(text: string): boolean {
     .replace(/\s+/g, " ")
     .trim()
   if (!t || noiseOnly(t) || /\?/.test(t) || ASKS.test(t) || ASK_PHRASE.test(t)) return false
+  if (/\b(?:thanks|thank you|happy to|nice to meet|good to meet|making the time)\b/i.test(t)) return false
+  if (/^(?:hi|hello|hey|yes|yeah|ok(?:ay)?|sure|of course)\b/i.test(t)) return false
   const words = t.split(/\s+/).filter(Boolean)
   if (words.length < 1 || words.length > 12) return false
   const said = words.map((w) => w.replace(/[.!?]+$/g, "")).filter((w) => w && !SPOKEN_NOISE.test(w))

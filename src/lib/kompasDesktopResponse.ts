@@ -63,7 +63,7 @@ export function desktopQuestionKind(question: string): DesktopQuestionKind {
   if (!askedForDepth && /\b(define|definition|what (?:is|are)|meaning of)\b/.test(q)) return 'definition'
   if (/\b(step.by.step|in.depth|deep|granular|implement|configure|integrate|debug|troubleshoot|design|build|how (?:did|would|do) you)\b/.test(q)) return 'implementation'
   const words = q.split(' ').filter(Boolean)
-  const shaped = /\b(what|how|why|when|where|which|who|can you|could you|would you|tell me|define|compare|explain|describe|walk me|talk about)\b/.test(q)
+  const shaped = /\b(what|how|why|when|where|which|who|can you|could you|would you|have you|did you|do you|are you|were you|tell me|define|compare|explain|describe|walk me|talk about)\b/.test(q)
   if (!shaped && words.length >= 1 && words.length <= 12) return 'topic'
   return 'general'
 }
