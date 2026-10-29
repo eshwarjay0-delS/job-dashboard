@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import { posix } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
 
@@ -38,7 +39,9 @@ function harness(options = {}) {
         }
         return Response.json({ choices: [{ message: { content: options.modelAnswer || 'I check the certificate chain.' } }] })
       },
-      require: (id) => mocks[id] || (id.startsWith('@/') ? load('src/' + id.slice(2) + '.ts') : require(id)),
+      require: (id) => mocks[id] || (id.startsWith('@/') ? load('src/' + id.slice(2) + '.ts')
+        : id.startsWith('.') ? load(posix.normalize(posix.join(posix.dirname(file), id)))
+        : require(id)),
     }, { filename: file })
     return module.exports
   }
