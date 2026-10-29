@@ -1071,8 +1071,6 @@ function captionFor(name: string, meta: Meta, result: TailorResult, update?: { r
   return [
     `*${name}*${update ? ` (update ${update.number})` : ""}`,
     ...(meta.role ? [`${meta.role}${meta.company ? ` · ${meta.company}` : ""}`] : []),
-    `JD keyword coverage: ${coverage}%.`,
-    ...notAdded(result),
     ...more,
     "Reply to this file to request changes.",
   ].join("\n")
