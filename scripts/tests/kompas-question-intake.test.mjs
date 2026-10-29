@@ -82,15 +82,22 @@ test("the typed box concatenates with computer audio at answer time", () => {
   assert.equal(r.primaryCount, 2);
 });
 
-test("keyword-only fragments are not worthy and not noise: the caller tackles them into the lane", () => {
+test("a topic with no question mark is the question", () => {
   const r = composeIntake([
     { who: "Them", text: "CyberArk vault" },
     { who: "Them", text: "and the CPM rotation piece" },
   ], {});
-  assert.equal(r.worthy, false);
+  assert.equal(r.worthy, true);
   assert.equal(r.noiseOnly, false);
   assert.ok(r.keywords.includes("CyberArk"));
   assert.ok(r.keywords.length >= 2);
+});
+
+test("mic-only: a short topic is the question", () => {
+  const r = composeIntake([{ who: "You", text: "Compliance and GRC side" }], { micIsSource: true });
+  assert.equal(r.worthy, true);
+  assert.equal(r.primaryCount, 1);
+  assert.match(r.heard, /Compliance and GRC side/);
 });
 
 test("mic-only mode: the mic is the question source, minus the echo drop", () => {

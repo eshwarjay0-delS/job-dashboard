@@ -1,3 +1,7 @@
+## 2026-10-29 — A topic from the microphone is the question
+
+A short topic such as "Kerberos" or "Compliance and GRC side" is its own question. It is not glued onto the previous page. One to three words are still asked as "what is it". A result number is spoken only when the source has it. The desktop build that matches this page is 0.8.0: screen capture returns a JPEG, and a sign-in from the last fifteen minutes does not open Chrome again.
+
 ## 2026-10-23 — The Chief session took over; checks on the handed-over branch
 
 **Done:** attached followup-hq and gmail-watcher and created the session branch in both. Attaching parfAct and kompas was refused by the session's permission check, so the private briefing and its "Next, in order" list were not read.

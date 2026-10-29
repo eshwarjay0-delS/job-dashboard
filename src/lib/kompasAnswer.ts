@@ -83,7 +83,7 @@ export function isBareTerm(q: string): boolean {
   const t = String(q || "").trim().replace(/[.!]+$/, "")
   if (!t || /\?/.test(t) || NOT_A_TERM.test(t) || BARE_INTRO.test(t)) return false
   const words = t.split(/\s+/)
-  if (words.length > 4 || !/^[A-Za-z0-9]/.test(t)) return false
+  if (words.length > 3 || !/^[A-Za-z0-9]/.test(t)) return false
   return !ASK_OPENER.test(t) && !/\b(?:is|are|was|were|do|does|did|can|could|would|should|have|has|i|you|we|my|your)\b/i.test(t)
 }
 
@@ -404,7 +404,7 @@ export function plainlyNoQuestion(heard: string): boolean {
     const t = l.replace(/^(You|Them):\s*/, "")
     // Each sentence of a segment, and asks that do not open like a question ("Got it. My question is how you'd
     // isolate..."): review of 398f299, these were "no question" and the page was dropped.
-    return BARE_INTRO.test(t.trim()) || /\?/.test(t) || t.split(/(?<=[.!])\s+/).some((x) => ASKS.test(x)) || ASK_PHRASE.test(t) || LOGISTICS.test(t) || THEIRQ.test(t)
+    return BARE_INTRO.test(t.trim()) || /\?/.test(t) || t.split(/(?<=[.!])\s+/).some((x) => ASKS.test(x)) || ASK_PHRASE.test(t) || LOGISTICS.test(t) || THEIRQ.test(t) || topicFragment(t)
   })
 }
 
@@ -589,8 +589,21 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
     .replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ")
     .replace(/\s+/g, " ")
     .trim()
-  if (bare && !noiseOnly(bare) && bare.split(/\s+/).filter(Boolean).length >= 3) return bare.slice(0, 2000)
+  if (bare && !noiseOnly(bare) && (topicFragment(bare) || bare.split(/\s+/).filter(Boolean).length >= 3)) return bare.slice(0, 2000)
   return ""
+}
+
+/** A short topic, with no question mark, is still the question. A greeting is not. */
+export function topicFragment(text: string): boolean {
+  const t = String(text || "")
+    .replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (!t || noiseOnly(t) || /\?/.test(t) || ASKS.test(t) || ASK_PHRASE.test(t)) return false
+  const words = t.split(/\s+/).filter(Boolean)
+  if (words.length < 1 || words.length > 12) return false
+  const said = words.map((w) => w.replace(/[.!?]+$/g, "")).filter((w) => w && !SPOKEN_NOISE.test(w))
+  return said.length >= 1
 }
 
 /**
@@ -600,7 +613,10 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
  */
 export function deriveByCode(heard: string, history: unknown, reask = false): string | null {
   if (!heard || plainlyNoQuestion(heard)) return null
-  return cleanQuestion(heard) || cutQuestion(heard, reask ? NO_TURN : previousTurn(history))
+  const clean = cleanQuestion(heard) || cutQuestion(heard, reask ? NO_TURN : previousTurn(history))
+  if (clean) return clean
+  const topic = topicFragment(String(heard).replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " "))
+  return topic ? String(heard).replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ").replace(/\s+/g, " ").trim().slice(0, 2000) : ""
 }
 
 /**

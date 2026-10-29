@@ -69,16 +69,16 @@ test("a typed question with no question mark still stands on its own", async () 
 
 // Owner, 27 Oct 2026 (book rule): every request and response is its own page. A re-press still refines the question on
 // screen, and its answer goes on the next page; the page it re-asks keeps its question and answer.
-test("a lone typed keyword refines the question on screen on the next page, without a second copy of it", async () => {
+test("a lone typed keyword is its own question on the next page", async () => {
   const { s, asked } = session("Kerberos");
   await s.aiAnswer(false);
-  assert.equal(s.cards.length, 2, "the re-ask is the next page");
+  assert.equal(s.cards.length, 2);
   assert.equal(s.cards[0].question, OLD_Q);
-  assert.equal(s.cards[0].answer, OLD_A, "the re-asked page keeps its answer");
-  assert.equal(s.cards[1].question, `${OLD_Q} — Kerberos`);
+  assert.equal(s.cards[0].answer, OLD_A, "the earlier page keeps its answer");
+  assert.equal(s.cards[1].question, "Kerberos");
   assert.equal(asked[0].card, s.cards[1]);
-  assert.equal(asked[0].opts.reask, true);
-  assert.equal(s.cards[1].question.split(OLD_Q).length - 1, 1, "the old question appears once");
+  assert.equal(asked[0].opts.derived, "Kerberos");
+  assert.equal(asked[0].opts.reask, undefined);
 });
 
 test("pressing AI Answer again with nothing typed re-asks the same question on the next page", async () => {
