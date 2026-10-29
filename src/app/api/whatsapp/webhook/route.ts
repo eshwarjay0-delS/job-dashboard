@@ -742,7 +742,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   } catch (e) {
     failureCode = "provider_error"
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
-    return // Queued for recovery; do not spam the chat with failed intermediate drafts.
+    return;
   }
 
   // Nothing came back different: the same file with "Match 28% -> 28%" on it is not a tailored resume, so it is not sent as one.
@@ -750,7 +750,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
     failureCode = "unchanged"
-    return // Queued for recovery; do not spam the chat with failed intermediate drafts.
+    return;
   }
 
   // A cached, incomplete result must never permanently block the same JD.
@@ -783,15 +783,15 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     failureCode = "quality_rejected"
     failedCandidate = { token: result.token, coverage, supportedCoverage: result.supported_coverage ?? 0 }
     console.error("[whatsapp] tailoring quality gate rejected draft", { coverage, supportedCoverage: result.supported_coverage, partial: !!result.partial, skillsOnly: !!result.skills_only, status: result.quality?.status })
-    return // Queued for recovery; do not spam the chat with failed intermediate drafts.
+    return;
   }
   const file = await blob.get(`tailored/${result.token}.docx`)
-  if (!file) { failureCode = "file_missing"; return // Queued for recovery; do not spam the chat with failed intermediate drafts. }
+  if (!file) { failureCode = "file_missing"; return; }
 
   const source = await readPath(session.resumePath)
   if (!source || !sameResumeIdentity(await extractText(source), await extractText(file))) {
     failureCode = "identity_mismatch"
-    return // Queued for recovery; do not spam the chat with failed intermediate drafts.
+    return;
   }
   const meta = await metaPromise
   const name = await outputNameFor(file)
