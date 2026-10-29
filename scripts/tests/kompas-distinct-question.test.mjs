@@ -6,6 +6,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { questionForAnswer, differentQuestionLine } from '../../src/lib/kompasAnswer.ts'
+import { interviewIntent } from '../../src/lib/kompasRelevance.ts'
 
 const previous = [{ q: 'What is NLA and why do we disable it?', a: 'NLA checks the client before the session starts.' }]
 const asks = [
@@ -57,6 +58,14 @@ for (let n = 1; n <= asks.length; n++) {
     assert.equal(seen.size, n)
   })
 }
+
+test('a follow-up keeps its own intent when the previous question is quoted after it', () => {
+  const glued = 'Go deeper — following up on: "What is NLA and why do we disable it"?'
+  assert.equal(interviewIntent(glued), 'follow-up')
+  assert.equal(interviewIntent('Explain that — following up on: "What is NLA and why do we disable it"?'), 'follow-up')
+  assert.equal(interviewIntent('Which of those would you start with — following up on: "What is NLA and why do we disable it"?'), 'comparison')
+  assert.equal(interviewIntent('What is NLA and why do we disable it?'), 'definition')
+})
 
 test('words before the next question are not answered as the previous ask', () => {
   const heard = 'Moving to the next question, what exactly is least privilege?'

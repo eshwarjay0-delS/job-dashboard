@@ -1,3 +1,7 @@
+## 2026-10-29 — Go deeper is not another definition of the previous question
+
+"Go deeper" and "Explain that" were glued onto the previous question, and the quoted "what is" made the follow-up a definition again. The follow-up is classified from the words before that quote. "Which of those" stays a comparison. "What is NLA" by itself stays a definition. One hundred intent folds still pass.
+
 ## 2026-10-29 — Same title, the folder that names the speciality stays
 
 Two files both titled Security Engineer were a tie for Information Security AI Engineer. The one in AI Security and Governance stays. The one in Application and API Security does not, when the job names AI. A title that already names the speciality still wins on the title. A Security Analyst in an Identity folder is still kept for a Security Analyst job, because that job names no extra speciality.
