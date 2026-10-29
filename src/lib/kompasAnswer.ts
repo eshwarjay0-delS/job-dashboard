@@ -461,10 +461,17 @@ export function previousTurn(history: unknown): PreviousTurn {
 }
 const NO_TURN: PreviousTurn = { question: "", answers: "" }
 
+/** The interviewer said the earlier words were not this question. Keep what follows. */
+function afterMarkedNextQuestion(text: string): string {
+  const next = /\b(?:moving (?:on )?to|on to|let['’]?s (?:move|go) to) (?:the )?next question(?: is)?[,:.\s]*/gi
+  let lastEnd = -1
+  for (let m: RegExpExecArray | null; (m = next.exec(text));) lastEnd = next.lastIndex
+  return lastEnd >= 0 && lastEnd < text.length ? text.slice(lastEnd).trim() : text
+}
+
 export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN): string {
-  const text = transcriptSentences(heard)
-    .replace(/\s+/g, " ")
-    .trim()
+  const raw = transcriptSentences(heard).replace(/\s+/g, " ").trim()
+  const text = afterMarkedNextQuestion(raw)
   if (BARE_INTRO.test(text)) return "Tell me about yourself"
   // The interviewer's whole ask, not its last clause (measured 26 Oct 2026: "Design X. Explain trust boundaries..."
   // was answered as "Explain trust boundaries...", and "Give a falsifiable test and an exit criterion" was dropped).
@@ -634,7 +641,7 @@ export function stripScreenChrome(question: string): string {
 
 export function questionForAnswer(heard: string, asked: string, pinned: boolean, again: boolean, history: unknown): string {
   const turns = Array.isArray(history) ? history : []
-  const q = questionToAnswer(stripScreenChrome(heard), stripScreenChrome(asked), pinned, again ? NO_TURN : previousTurn(turns))
+  const q = afterMarkedNextQuestion(questionToAnswer(stripScreenChrome(heard), stripScreenChrome(asked), pinned, again ? NO_TURN : previousTurn(turns)))
   return q ? resolveFollowUp(q, turns.map((h) => {
     const o = (h && typeof h === "object" ? h : {}) as Record<string, unknown>
     return { q: String(o.q ?? o.question ?? "").slice(0, 300) }

@@ -42,7 +42,7 @@
   {
     "id": 9,
     "question": "How do you assess business impact, root cause, compensating controls and residual risk?",
-    "intent": "direct"
+    "intent": "technical-process"
   },
   {
     "id": 10,
@@ -57,7 +57,7 @@
   {
     "id": 12,
     "question": "How do you validate that a control owner has provided accurate evidence?",
-    "intent": "direct"
+    "intent": "technical-process"
   },
   {
     "id": 13,
@@ -227,7 +227,7 @@
   {
     "id": 46,
     "question": "How would you explain a material risk to a nontechnical business leader?",
-    "intent": "scenario"
+    "intent": "definition"
   },
   {
     "id": 47,
@@ -317,7 +317,7 @@
   {
     "id": 64,
     "question": "How would you evaluate a compensating control?",
-    "intent": "scenario"
+    "intent": "technical-process"
   },
   {
     "id": 65,

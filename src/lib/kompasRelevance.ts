@@ -20,10 +20,10 @@ export type FocusPlan = {
 const EXPERIENCE=/\b(?:tell me about a time|share an example|give me an example of (?:when|a time)|describe a situation|have you ever|how have you|what did you do when|walk me through (?:an|a) (?:[\w-]+\s+){0,6}?(?:issue|incident|project|challenge|failure)(?:\s+you|\s+where|\s+that|\s+when)?|a time (?:you|when you))\b/i
 const CLOSING=/\b(?:what questions (?:do|would|might|can) you have|any questions (?:for|from) me|what would you (?:like to )?ask (?:me|us)|anything you(?:'d| would) (?:like|want) to ask|questions about (?:the|this) (?:role|team|company))\b/i
 const INTRO=/\b(?:tell me about yourself|introduce yourself|walk (?:me|us) through your (?:career|background)|your professional background|career (?:journey|overview)|self introduction)\b/i
-const VALUE=/\b(?:what (?:would|can|do) you bring to|what (?:can|would) you contribute|why (?:are|would|should) (?:we hire you|you be (?:a )?(?:good|strong) fit)|what makes you (?:a )?(?:good|strong) fit|what sets you apart|highlight (?:for me )?anything|anything (?:else )?(?:i|we) should (?:know|be aware of)|what else should (?:i|we) know|why (?:do|would) you want (?:this|to work)|why (?:bny|this role|our team))\b/i
+const VALUE=/\b(?:what (?:would|can|do) you bring to|what you can bring|highlight .{0,40}(?:bring|experience)|what (?:can|would) you contribute|why (?:are|would|should) (?:we hire you|you be (?:a )?(?:good|strong) fit)|what makes you (?:a )?(?:good|strong) fit|what sets you apart|highlight (?:for me )?anything|anything (?:else )?(?:i|we) should (?:know|be aware of)|what else should (?:i|we) know|why (?:do|would) you want (?:this|to work)|why (?:bny|this role|our team))\b/i
 const LOGISTICS=/\b(?:relocat(?:e|ion)|on.?site|hybrid|notice period|start date|available to start|sponsorship|work authorization|where are you based|where do you live|are you a(?:n| a)? (?:u\.?s\.? )?citizen|travel|salary|compensation|clearance|working (?:hours|days))\b/i
 const DEFINE=/\b(?:what is|what are|what does .{1,55} mean|define|stands? for|explain (?:the term|what .{1,60} is))\b/i
-const COMPARE=/\b(?:which (?:one|framework|tool|approach|option|is)|which would you (?:choose|pick|prefer)|stronger (?:in|with)|more (?:proficient|comfortable|familiar)|difference between|compare|versus|vs[.]?|how do .+ differ|how\b[^?]{0,110}\bdiffer(?:s|ed)?\b|prefer .+ (?:or|over))\b/i
+const COMPARE=/\b(?:which (?:one|framework|tool|approach|option|is)|which of those|which would you (?:choose|pick|prefer|start)|stronger (?:in|with)|more (?:proficient|comfortable|familiar)|difference between|compare|versus|vs[.]?|how do .+ differ|how is .{1,80} different|how\b[^?]{0,110}\bdiffer(?:s|ed)?\b|prefer .+ (?:or|over))\b/i
 const SCENARIO=/\b(?:how would you|what would you do|suppose|imagine|if you (?:were|had|found|saw)|hypothetical|in that situation|how should (?:we|the team)|scenario)\b/i
 const DEEP=/\b(?:step by step|walk me through|under the hood|exact (?:logs|fields|mechanics|steps|flow)|deep dive|debug|troubleshoot|design|implement|packet|query|architecture|how (?:does|do|did) .+ work|how exactly)\b/i
 const ACK=/^\s*(?:yeah|right|okay|ok|great|thanks|thank you|that makes sense|absolutely|so that's|you(?:'ll| will)|we(?:'ll| will)|the team|our team|it's important|i expect|i would expect)\b/i
@@ -33,6 +33,13 @@ const QUESTION=/\?|^\s*(?:what|why|how|when|where|which|who|tell|describe|explai
 export function interviewIntent(question: string): ReplyIntent {
   const q=String(question||'').trim()
   if(!q) return "direct"
+  // The interviewer marked the earlier words as not the question. The ask is what follows.
+  if(/\b(?:any questions|what questions do you have|do you have any questions)\b[^.?!]*\??\s*$/i.test(q)) return "closing-question"
+  // "How would you explain residual risk to a business owner" asks for the meaning, said so they can use it.
+  if(/\bhow would you explain\b/i.test(q)) return "definition"
+  // Several named checks in one assess question need the mechanism of each, not a yes/no.
+  if(/\bhow (?:do|did|would) you (?:typically )?(?:assess|evaluate|measure|validate|determine)\b/i.test(q)) return "technical-process"
+  if(/\b(?:are you familiar with|do you know)\b.+\b(?:and|or|versus|vs\.?)\b/i.test(q)) return "comparison"
   // Interviewers vary the wording across disciplines; route the requested action,
   // not the job-specific vocabulary. These patterns complement the baseline.
   if(/\b(?:any questions for (?:us|the team)|do you have any questions|anything you(?:'d| would) like to ask\??)\b/i.test(q)) return "closing-question"
@@ -87,7 +94,7 @@ export function focusPlan(question:string,tier:number,level:string):FocusPlan{
   const brief=/\b(?:brief|briefly|quick|short|30 seconds|half a minute)\b/i.test(question)
   return {intent,minWords:brief?65:240,maxWords:brief?110:250,opening,proof,technicalDepth:"surface"}
  }
- const detailed=(DEEP.test(question)&&["scenario","technical-process","experience-story","follow-up"].includes(intent)) || (intent==="comparison"&&/\b(?:technically|at the protocol level|under the hood|in detail|how .+ differ)\b/i.test(question))
+ const detailed=(DEEP.test(question)&&["scenario","technical-process","experience-story","follow-up"].includes(intent)) || (intent==="comparison"&&/\b(?:technically|at the protocol level|under the hood|in detail|how .+ differ|how is .{1,80} different)\b/i.test(question)) || (intent==="definition"&&/\b(?:why|how|disable)\b/i.test(question)) || intent==="technical-process"
  // Technical depth may grow when specifically requested, not merely because
  // the session is in Director/Engineer mode. Preserve full source-backed intros.
  const adjusted=detailed?max+40:max
@@ -111,8 +118,14 @@ export function focusPrompt(question:string,tier:number,level:string):string{
   "When the question asks for independent challenge, distinguish the control owner's claims from evidence you personally reviewed; do not claim to approve risk on behalf of leadership.",
   "An explanation is not a demonstration of personal history. Only original resume/documents support employers, responsibilities, incidents, achievements or figures.",
   "Spoken length guide: "+p.minWords+"–"+p.maxWords+" words unless user explicitly asks for more. Do not fill space to reach a token or word quota. Stop when the requested parts are complete.",
-  "Technical depth: "+p.technicalDepth+". An explicitly requested implementation drill-down may be detailed; a general invitation, definition, logistics question, or closing question must stay on the surface."
- ].join("\n")
+  "Technical depth: "+p.technicalDepth+". An explicitly requested implementation drill-down may be detailed; a general invitation, a bare definition, a logistics question, or a closing question must stay on the surface.",
+  "DEPTH WITH RELEVANCE: Sentence one answers this question. Later sentences add only the mechanism, the reason, or the evidence that sentence needs. A job description does not prove the work. Do not invent a decision owner, a person's name, a metric, a formula, or a title the resume does not hold.",
+  p.intent==="definition" ? "Open with what it is. If the question also asks why or how, give that mechanism next, in concrete terms, not a leadership lecture." : "",
+  p.intent==="comparison" ? "Name every option in the question. The first sentence is the difference or the one you use more. No unrelated person." : "",
+  p.intent==="value" || p.intent==="introduction" ? "Open with the relevant experience. Name a tool only when it shows that fit." : "",
+  p.intent==="experience-story" ? "One supported story: what was weak, what you reviewed, what changed. Do not promote yourself to an authority the resume does not give." : "",
+  p.intent==="technical-process" ? "Cover each named part in order, with the check and the failure mode for that part. Do not replace the parts with a formula or a metric." : "",
+ ].filter(Boolean).join("\n")
 }
 
 /** Diagnostics only; never silently censor legitimate specialist material. */

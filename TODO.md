@@ -1,3 +1,7 @@
+## 2026-10-29 — Kompas stays deep on the real question
+
+From the Security Analyst III session: words before "next question" are not the question. What is NLA and why it is disabled opens with the definition and then the mechanism. How you assess impact, root cause, compensating controls, residual risk, and validity covers each part. A fit question and what you would bring open with the experience. A comparison names both things. A challenge story is one supported story. No invented decision-maker, person, metric, or formula. One hundred earlier intent folds still pass. Not fifty live model answers.
+
 ## 2026-10-29 — A 47% job-post score was the skills line being stripped
 
 The delivered file had 100% of the skills the resume already showed and 47% of the job post, because job-post terms were removed from the skills line after they were written. Those terms are written back onto the skills line and named as from the job post. They are not written into experience as work already done. A run that does not finish still says so instead of stopping after the updating line.
