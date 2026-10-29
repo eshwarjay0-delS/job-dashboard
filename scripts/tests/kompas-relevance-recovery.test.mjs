@@ -62,7 +62,7 @@ test('Soft manager comments are not treated as a cybersecurity assessment',()=>{
 })
 test('Live service actually uses rediscovery in both prompt paths',()=>{
  const s=readFileSync(new URL('../../src/lib/kompasAnswerService.ts',import.meta.url),'utf8')
- assert.match(s,/rediscovered = rediscoverRelevance\(question, history\)/)
+ assert.match(s,/rediscovered = rediscoverRelevance\(originalTurnAsk, history\)/)
  assert.equal((s.match(/relevanceRecoveryPrompt\(originalAsk, history\)/g)||[]).length,1,'preserve setup constraints once while answering only the extracted ask')
  assert.match(s,/const originalAsk = question/)
  assert.match(s,/classify\(rediscovered\.currentAsk \|\| question\)/)
