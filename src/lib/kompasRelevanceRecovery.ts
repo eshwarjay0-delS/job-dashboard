@@ -38,6 +38,11 @@ const TOPICS=[
 function coreQuestion(q:string):string{
  const raw=String(q||"").replace(/\s+/g," ").trim()
  if(!raw)return ""
+ // A long interview statement may end in a real question. For clear closing
+ // invitations, the actual ask outranks everything discussed earlier.
+ const closing=/\b(?:what questions (?:do|would|might|can) you have|any questions (?:for|from) me|what would you (?:like to )?ask (?:me|us)|anything you(?:'d| would) (?:like|want) to ask)\b/gi
+ const hits=[...raw.matchAll(closing)]
+ if(hits.length&&typeof hits[hits.length-1].index === 'number' && hits[hits.length-1].index! > 0)return raw.slice(hits[hits.length-1].index).replace(/\s+(?:right|okay|you know)\s*\?\s*$/i,"").trim()
  // ASR sometimes appends "right?" to an explanation. That is not a request
  // to dump a security runbook.
  return raw.replace(/\s+(?:right|okay|you know)\s*\?\s*$/i,"").trim()||raw
