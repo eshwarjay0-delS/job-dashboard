@@ -860,7 +860,7 @@ export async function runTailor(opts: {
   if (best.floorSummary?.length) notes.push(`Written into the summary as strengths, from the job post: ${best.floorSummary.join(", ")}`)
   // A run the floor, not the rewrite, carried to the target is never kept as complete or served again from the cache: the
   // next identical request gets another rewrite (26 Oct 2026 review).
-  const floorCarried = !!floorFrom && floorFrom.cov < TARGET_COVERAGE
+  const floorCarried = !!floorFrom && supportedShare(floorFrom) < TARGET_COVERAGE
   if (!opts.refine && !jdGenerated.length) notes.push("Gemini keyword review returned no additional terms; generation used the directly extracted JD requirements.")
   notes.push("The JD supplies target requirements; the source resume and explicit candidate confirmations supply experience evidence. The target is 98% keyword coverage where supported. Scores measure exported document keyword overlap, not hiring probability.")
   notes.push(`Tailored with ${usedModel} · JD keyword coverage ${coveragePercent(best.cov)}%`)
