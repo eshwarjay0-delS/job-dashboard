@@ -17,3 +17,13 @@ Static fixtures are checked by node:test through `npm run test:hardening`. This 
 
 ## Priority
 Run CI on the PR; investigate any baseline regressions. Do not merge on a claim of 50/50 unless the full applicable CI is green. Request actual model-answer capture in an authenticated session, then rerun after each relevant engine fix.
+
+
+## Actual model-capture pathway (not yet executed)
+The guarded live runner now accepts `crossdomain-50` as its fourth argument. It sends all fifty distinct role scenarios (including varied spoken prefaces) to the shared authenticated Kompas answer API, with engineer/architect/director audience rotation. Supply an approved `SOURCES.json` keyed by case id (`crossdomain-01` through `crossdomain-50`), each containing its own original resume and JD text. Cases categorized `follow-up` additionally require reviewed history; every other case rejects history and ledger leakage across candidates. Run only in an authorized private environment with `KOMPAS_API_TOKEN` configured securely, for example:
+
+```bash
+node scripts/kompas-live-evaluate.mjs /private/sources.json /private/kompas-results 1 crossdomain-50
+```
+
+The runner records raw model answers, timing, provenance and pending human review. It does **not** capture ChatGPT comparison responses or certify semantic truth by itself. Require a reviewer and separate same-question reference outputs before declaring a quality pass. No live token or candidate source bundle has been available in this agent session.
