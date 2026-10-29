@@ -93,9 +93,27 @@ export async function markResumeDocumentAccepted(id: string, wamid: string): Pro
 }
 
 /** Authenticated Meta callbacks distinguish an API acceptance from real handset delivery. */
-export async function recordResumeDeliveryStatus(wamid: string, state: "sent" | "delivered" | "read" | "failed"): Promise<void> {
+export async function recordResumeDeliveryStatus(wamid: string, state: "sent" | "delivered" | "read" | "failed", opaqueJobId?: string): Promise<void> {
   if (!wamid) return
-  const id = await blob.getText(messageIndexKey(wamid))
+  let id = await blob.getText(messageIndexKey(wamid))
+  // Meta echoes the opaque job id even if the original HTTP response timed out.
+  // Reconcile that ambiguous send instead of leaving it stuck or duplicating it.
+  if (!id && opaqueJobId && /^[a-f0-9]{64}$/.test(opaqueJobId)) {
+    const unknown = await readResumeRecovery(opaqueJobId)
+    if (unknown && !unknown.deliveredMessageId && (unknown.status === "uncertain" || unknown.status === "sending")) {
+      id = opaqueJobId
+      await blob.put(messageIndexKey(wamid), id)
+      await blob.put(recoveryKey(id), JSON.stringify({ ...unknown,
+        status: state === "failed" ? "pending" : "delivered",
+        deliveredMessageId: state === "failed" ? undefined : wamid,
+        deliveryState: state, updatedAt: Date.now(),
+        ...(state === "failed" ? { attempts: unknown.attempts + 1, retryAt: Date.now() + retryDelayMs(unknown.attempts + 1), errorCode: "meta_delivery_failed" } : {}),
+      }))
+      if (state === "delivered" || state === "read")
+        console.info("[whatsapp] timed-out document reconciled as delivered", { job: id.slice(0, 12), state })
+      return
+    }
+  }
   if (!id) return
   const job = await readResumeRecovery(id)
   if (!job || job.deliveredMessageId !== wamid) return
