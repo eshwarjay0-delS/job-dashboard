@@ -65,7 +65,7 @@ test('the actual answer route sends active resume and JD to the model, without r
   const prompt = h.calls[0].messages[1].content
   assert.match(prompt, /Maintained PKI and Venafi TPP/)
   assert.match(prompt, /TCS requires highly available Root CA/)
-  assert.match(prompt, /never evidence of personal history/)
+  assert.match(prompt, /JOB DESCRIPTION \(role priorities, not candidate history\)/)
   assert.doesNotMatch(prompt, /OLD GENERATED INCIDENT/)
   assert.equal(h.dossiers, 0)
   assert.ok((await response.json()).meta.timing.total_ms >= 0)
@@ -94,7 +94,8 @@ test('streaming carries the same grounding and measures preparation and first co
   assert.match(stream, /"type":"delta"/)
   assert.match(stream, /"preparation_ms":\d+/)
   assert.match(stream, /"first_ms":\d+/)
-  assert.match(h.calls[0].messages[1].content, /PKI Architect at TCS/)
+  assert.doesNotMatch(h.calls[0].messages[1].content, /PKI Architect at TCS/)
+  assert.match(h.calls[0].messages[1].content, /I administer Venafi TPP/)
   assert.equal(h.dossiers, 0)
 })
 
