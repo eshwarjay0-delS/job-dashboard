@@ -156,6 +156,7 @@ export function namedQuestionTerms(question:string):string[]{
  return NAMED_CONCEPTS.filter(t=>t.ask.test(q)).map(t=>t.id)
 }
 export function missingNamedQuestionTerms(question:string,answer:string):string[]{
+ if(["introduction","closing-question","acknowledgement","value","logistics"].includes(interviewIntent(question)))return []
  const q=String(question||''),a=String(answer||'')
  return NAMED_CONCEPTS.filter(t=>t.ask.test(q)&&!t.answer.test(a)).map(t=>t.id)
 }
