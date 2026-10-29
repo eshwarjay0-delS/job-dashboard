@@ -1,3 +1,15 @@
+## 2026-10-29 — Five folds: a resume run has to leave a result
+
+Each fold rechecks the earlier ones.
+
+1. Comma list: PW-6000 dropped, Sentinel kept. Already held.
+2. Pipe list: PW-7000 dropped. Already held.
+3. Bullet list: Pro-Watch PW-6000 dropped as one item. Already held.
+4. Heading: `PW-6000: Sentinel, Splunk` used to stay unchanged. The heading is no longer kept when it is the unconfirmed tool. Result: `Sentinel, Splunk.`
+5. A run that cannot send now says so: still finishing, the Word file could not be opened, or the draft changed the name or email. It does not stop after "Updating".
+
+Not a live WhatsApp send. Not on the site until the next Vercel build is allowed through.
+
 ## 2026-10-29 — An unconfirmed tool on the skills line does not fail the whole resume
 
 **Asked:** a Fairview run said a Word file was coming, then refused the draft. A Honeywell file named PW-6000, ISO 27001 and SOC 2 as gaps.

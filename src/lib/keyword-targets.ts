@@ -158,32 +158,42 @@ const contains = (text: string, term: string) =>
   new RegExp(`(?<![A-Za-z0-9])${escapeRe(term)}(?![A-Za-z0-9])`, "i").test(text)
 
 /**
- * Skills lines with every certification the source resume does not list taken out (the AI writer adds them now and
- * then: PCNSE appeared in a test on 19 Oct 2026). Returns only the lines that changed. A heading ("Governance,
- * Compliance: ") is kept as it is; only the listed items are looked at.
- */
-/**
  * Skills-list items that name a job-post tool the source resume does not contain.
  * A bullet is left alone: this only splits a skills line and drops the unconfirmed item.
  * A term the source already shows stays, even if it was also passed in as banned.
+ * A heading that is itself that tool ("PW-6000: Sentinel") is not kept as a category name.
  */
 export function withoutUnsupportedSkills(lines: { idx: number; text: string }[], sourceText: string, banned: string[]): { idx: number; text: string }[] {
   const terms = [...new Set(banned.map(t => String(t || "").trim()).filter(t => t && !contains(sourceText, t)))]
   if (!terms.length) return []
   const out: { idx: number; text: string }[] = []
   for (const l of lines) {
-    const heading = l.text.match(/^([^:\n]{2,70}:)\s*/)?.[0] || ""
-    const body = l.text.slice(heading.length)
+    const originalHeading = l.text.match(/^([^:\n]{2,70}:)\s*/)?.[0] || ""
+    let heading = originalHeading
+    const body = l.text.slice(originalHeading.length)
+    if (heading) {
+      const label = heading.replace(/:\s*$/, "").trim()
+      if (terms.some(term => contains(label, term))) {
+        const pieces = label.split(/\s*,\s*|\s+and\s+|\s*\/\s*/i).map(s => s.trim()).filter(Boolean)
+        const safe = pieces.filter(p => !terms.some(term => contains(p, term)))
+        heading = safe.length ? `${safe.join(", ")}: ` : ""
+      }
+    }
     const sep = separatorOf(body)
     const end = /[.;]\s*$/.test(body) ? body.trim().slice(-1) : ""
     const items = (end ? body.trim().slice(0, -1) : body).split(sep.trim() === "," ? /\s*,\s*/ : new RegExp(`\\s*${escapeRe(sep.trim())}\\s*`))
     const kept = items.filter(item => item.trim() && !terms.some(term => contains(item, term)))
-    if (kept.length === items.length) continue
+    if (heading === originalHeading && kept.length === items.length) continue
     out.push({ idx: l.idx, text: `${heading}${kept.join(sep)}${end}` })
   }
   return out
 }
 
+/**
+ * Skills lines with every certification the source resume does not list taken out (the AI writer adds them now and
+ * then: PCNSE appeared in a test on 19 Oct 2026). Returns only the lines that changed. A heading ("Governance,
+ * Compliance: ") is kept as it is; only the listed items are looked at.
+ */
 export function withoutAddedCerts(lines: { idx: number; text: string }[], sourceText: string): { idx: number; text: string }[] {
   const out: { idx: number; text: string }[] = []
   for (const l of lines) {

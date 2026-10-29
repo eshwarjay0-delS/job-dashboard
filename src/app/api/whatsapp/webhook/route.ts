@@ -693,7 +693,13 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     id: job, from, userId, jd: session.jd, jdId: session.jdId || "",
     resumePath: session.resumePath, resumeName: session.resumeName, resumeFiled: session.resumeFiled, files,
   })
-  if (queued.status === "delivered" || queued.status === "sending" || queued.status === "uncertain") return
+  if (queued.status === "delivered" || queued.status === "sending" || queued.status === "uncertain") {
+    if (quiet) return
+    const said = queued.status === "delivered"
+      ? "That resume was already sent. Reply to the file if you want a change, or send *redo* to make it again."
+      : "That resume is still being finished. I will send the file in this chat when it is ready."
+    return sendText(from, said)
+  }
   const keys = await keysFor("resume-tailor", () => tailorKeys(resolveKeys({}), { owner: isOwnerWhatsApp(from) }))
   if (!hasAnyKey(keys)) {
     await deferResumeRecovery(job, "provider_unavailable")
@@ -815,11 +821,16 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     return;
   }
   const file = await blob.get(`tailored/${result.token}.docx`)
-  if (!file) { failureCode = "file_missing"; return; }
+  if (!file) {
+    failureCode = "file_missing"
+    if (!quiet) await sendText(from, "I did not send a file. The draft was made but the Word file could not be opened. Your resume and this job are saved for another try.").catch(() => {})
+    return;
+  }
 
   const source = await readPath(session.resumePath)
   if (!source || !sameResumeIdentity(await extractText(source), await extractText(file))) {
     failureCode = "identity_mismatch"
+    if (!quiet) await sendText(from, "I did not send a file. The draft changed the name or email on the resume, so I stopped. Your original resume and this job are saved for another try.").catch(() => {})
     return;
   }
   const meta = await metaPromise
