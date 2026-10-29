@@ -16,7 +16,7 @@ const ASKER=/^\s*(?:(?:okay|alright|all right|yeah|so|now|well|and|then|uh|um|li
 const SCOPED_CLAUSE=/(?:[;,]\s*|\b(?:so|and|then|but|now)\s*,?\s*|\b(?:my|the) (?:real |next )?question is\s*)(?=(?:what|which|who|why|how|when|can|could|would|do|have|tell me|describe|explain|give me|walk me through|highlight for me)\b)/ig
 const RHETORICAL=/^(?:right|okay|yeah|you know|make sense|does that make sense|got it)\??$/i
 const OPTION_REFERENCE=/\b(?:which (?:of (?:those|these|them)|one)|between (?:those|these|them)|of (?:these|those) (?:two|three|options)|which (?:framework|tool|option) (?:is|would be) (?:better|stronger|more relevant)|either one)\b/i
-const CONSTRAINTS=/\b(?:must|cannot|can't|should not|without|no (?:access|downtime|restart|internet|admin)|only|while|within (?:\d+|the first)|not allowed|critical production|keep (?:it|the service) (?:running|available)|under (?:time|pressure)|first \d+ days)\b/i
+const CONSTRAINTS=/\b(?:must|cannot|can't|should not|without|no (?:production )?(?:access|downtime|restart|internet|admin)|only|while|within (?:\d+|the first)|not allowed|critical production|keep (?:it|the service) (?:running|available)|under (?:time|pressure)|first \d+ days|suppose|imagine|assume|given|consider)\b/i
 
 function cleaned(value:string):string{
  return String(value||"").replace(/\s+/g," ").trim()
@@ -52,6 +52,10 @@ function getConstraints(setup:string):string[]{
 export function questionKernel(value:string):QuestionKernel{
  const original=cleaned(value)
  if(!original)return {ask:"",setup:"",constraints:[],carryOptions:false}
+ // A hypothetical opening defines the problem itself. Never trim it away
+ // merely because it is followed by a short "what would you do?" clause.
+ if(/^(?:suppose|imagine|assume|if|given|consider)\b/i.test(original))
+  return {ask:original,setup:"",constraints:[],carryOptions:false}
  const sentences=sentenceParts(original)
  let last=-1
  for(let i=0;i<sentences.length;i++){
