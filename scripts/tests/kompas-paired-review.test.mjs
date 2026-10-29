@@ -52,7 +52,7 @@ test("Markdown is a true row-by-row comparison with escaped pipes and multiline 
  const d=sample()
  d.captures[0].text="A | B\nC"
  const md=renderPairedMarkdown(pairCapturedAnswers(d.captures,d.manifest,d.reference))
- assert.ok(md.includes("A \\\\| B<br>C"))
+ assert.ok(md.includes("A \\| B<br>C"))
  assert.equal(md.split("\n").filter(line=>line.startsWith("| crossdomain-")).length,50)
 })
 test("CLI writes one private file, refuses overwrite, and refuses repository output",async()=>{
