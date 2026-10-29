@@ -1,3 +1,5 @@
+import { modeBand, type AnswerShape } from "./kompasDissection.ts"
+
 /** Desktop response contract. The question sets the depth. The level changes how it is spoken. */
 export type DesktopQuestionKind = 'definition' | 'comparison' | 'experience' | 'implementation' | 'topic' | 'general'
 export type DesktopLevel = 'engineer' | 'architect' | 'director'
@@ -13,9 +15,10 @@ export type LevelMetrics = {
 
 /** Six spoken measures. Relevance stays high. The other five move with the level. */
 export function levelMetrics(level: DesktopLevel): LevelMetrics {
-  if (level === "architect") return { depth: 0.95, distinction: 0.85, integration: 0.95, relevance: 0.95, confidence: 0.75, length: 420 }
-  if (level === "director") return { depth: 0.25, distinction: 0.95, integration: 0.1, relevance: 0.95, confidence: 0.95, length: 240 }
-  return { depth: 0.55, distinction: 0.7, integration: 0.3, relevance: 0.95, confidence: 0.55, length: 180 }
+  // Depth, length, and confidence are at least 50% apart across the three modes.
+  if (level === "architect") return { depth: 0.72, distinction: 0.85, integration: 0.95, relevance: 0.95, confidence: 0.48, length: 360 }
+  if (level === "director") return { depth: 0.22, distinction: 0.95, integration: 0.15, relevance: 0.95, confidence: 0.84, length: 240 }
+  return { depth: 0.4, distinction: 0.55, integration: 0.28, relevance: 0.95, confidence: 0.3, length: 160 }
 }
 
 export function metricsApart(a: LevelMetrics, b: LevelMetrics): number {
@@ -113,23 +116,21 @@ export function desktopCraft(kind: DesktopQuestionKind): string {
   return "RESPONSE CRAFT: Follow only the path this question asked, in spoken order. Do not add a log hunt that was not asked."
 }
 
+function desktopShape(kind: DesktopQuestionKind): AnswerShape {
+  if (kind === "definition") return "definition"
+  if (kind === "comparison") return "comparison"
+  if (kind === "experience") return "personal-experience"
+  if (kind === "implementation") return "technical-deep-dive"
+  return "direct"
+}
+
 export function desktopResponsePolicy(audience: string, question: string) {
   const kind = desktopQuestionKind(question)
   const level = audience === "director" ? "director" : /architect|developer/.test(audience) ? "architect" : "engineer"
   // Master Rules §2 T4, a direct experience fact ("Have you configured CyberArk EPM?"): the fact first, one proof point.
   const directFact = kind === "general" && /^(?:so,?\s+|and\s+)?(?:have|has|did|do|are|were) you\b/i.test(question.trim())
   const surface = (kind === "definition" || kind === "comparison" || kind === "general") && !directFact
-  const words = kind === "definition"
-    ? (level === "architect" ? 100 : level === "director" ? 90 : 80)
-    : kind === "comparison"
-    ? (level === "architect" ? 120 : level === "director" ? 110 : 100)
-    : kind === "experience"
-    ? (level === "engineer" ? 250 : level === "architect" ? 420 : 320)
-    : kind === "implementation"
-    ? (level === "engineer" ? 180 : level === "architect" ? 420 : 260)
-    : kind === "topic"
-    ? (level === "architect" ? 200 : level === "director" ? 150 : 160)
-    : (level === "architect" ? 90 : 70)
+  const words = modeBand(desktopShape(kind), level).targetWords
   const angle = surface
     ? (level === "architect"
       ? "Name the mechanism in one precise sentence: the check that fails, or the boundary that is missing. Then stop. Do not build it, set it up, or integrate it."

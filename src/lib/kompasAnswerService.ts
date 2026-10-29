@@ -19,6 +19,8 @@ import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestio
 import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms, interviewIntent } from "@/lib/kompasRelevance"
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { questionKernel } from "@/lib/kompasIntentKernel"
+import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
+import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
@@ -328,6 +330,8 @@ type AnswerJob = {
   allowed: Set<string>
   factsText: string
   streamPolicy: KompasStreamPolicy
+  sourceText: string
+  previousAnswer: string
 }
 
 // The lanes, in order: an explicit OpenRouter pick from the live screen first,
@@ -359,6 +363,14 @@ function recordLane(model: string, ok: boolean, usage: { input: number; output: 
     ...(status ? { status } : {}),
     input: usage?.input || 0, output: usage?.output || 0, cacheRead: 0, cacheWrite: 0, ms: Date.now() - began,
   })
+}
+
+function spokenAfterModel(job: AnswerJob, text: string): { text: string; providerError: boolean } {
+  if (isProviderErrorAnswer(text)) return { text: "", providerError: true }
+  if (job.plan.kind === "code") return { text, providerError: false }
+  const level = job.level === "architect" || job.level === "director" ? job.level : "engineer"
+  const settled = settleSpokenAnswer(job.question, text, level, job.sourceText, job.previousAnswer, job.plan.words)
+  return { text: settled.text, providerError: settled.providerError || !settled.text.trim() }
 }
 
 // SSE answer: meta → deltas → (wait) → replace → done. The exact event contract
@@ -545,6 +557,13 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           } catch { /* the guarded answer stands */ }
         }
         finalText = correctVerifiedPresentationErrors(finalText)
+        const settled = spokenAfterModel(job, finalText)
+        if (settled.providerError || !settled.text.trim()) {
+          emit({ type: "replace", text: "" })
+          emit({ type: "done", unavailable: true, ...answerFailure(lastErr || "openrouter 502 blocked"), ...metaBase, provider: "openrouter", model: servedModel || PAID_MODEL })
+          return
+        }
+        finalText = settled.text
         // Personal history is held back until guards have run. Even if unchanged,
         // it must be emitted now because no provisional deltas were sent.
         if (mustEmitFinalReplacement(job.streamPolicy, finalText, raw)) {
@@ -635,7 +654,13 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     } catch { /* the guarded answer stands */ }
   }
   out = correctVerifiedPresentationErrors(out)
-  if (!out.trim()) return NextResponse.json({ error: "Nothing to answer." }, { status: 400, headers: NO_STORE })
+  const settled = spokenAfterModel(job, out)
+  if (settled.providerError || !settled.text.trim()) {
+    const failure = answerFailure(lastErr || "openrouter 502 blocked")
+    return NextResponse.json({ ...failure, quiet: true }, { status: failure.status, headers: NO_STORE })
+  }
+  out = settled.text
+  if (!out.trim()) return NextResponse.json({ error: "Nothing to answer.", quiet: true }, { status: 400, headers: NO_STORE })
   void lastErr
   return NextResponse.json({
     text: out,
@@ -806,6 +831,16 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
     plan.maxTokens = Math.min(plan.maxTokens, Math.max(600, Math.round(plan.words * 2.6) + 350))
   }
+  const sourceText = [resumeSrc, jdSrc, docsSrc].filter(Boolean).join("\n")
+  const spokenLevel = level === "architect" || level === "director" ? level : "engineer"
+  const spokenShape = dissectQuestion(question, sourceText).shape
+  if (plan.kind !== "code") {
+    const band = modeBand(spokenShape, spokenLevel)
+    const briefIntro = spokenShape === "intro" && /\b(?:brief|briefly|quick|short|30 seconds|one minute)\b/i.test(question)
+    plan.words = briefIntro ? Math.max(24, Math.round(band.targetWords * 0.6)) : band.targetWords
+    plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
+    plan.maxTokens = Math.min(4000, Math.max(500, Math.round(plan.words * 2.6) + 240))
+  }
   // Depth calibration inside the practice register: match the answer's focus
   // to the question's depth. A surface question gets a direct answer; a deep
   // scoped question gets a focused deep dive. (Concept questions are governed
@@ -912,9 +947,8 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // each feature uses"). OpenRouter lanes run only when the vault leaves the
   // key in; otherwise one vault-honoring call is made and delivered as SSE.
   const keys = rawKeys
-  const fallbackText = tier === 0 ? "I need the current resume evidence to give a reliable career overview. Please retry the introduction." : retrievedList[0]
-    || (prep.identity ? str(prep.identity, 600) : "")
-    || "The answer engine is at its limit right now — press AI Answer again in a moment."
+  const fallbackText = ""
+  const previousAnswer = historyArr.length ? str((historyArr[historyArr.length - 1] as { a?: unknown; answer?: unknown })?.a ?? (historyArr[historyArr.length - 1] as { answer?: unknown })?.answer, 4000) : ""
   // Grounding guards (perfACT anti-hallucination): the facts a claim may be
   // filled from (employer/title/known), the figures the answer may state, and
   // the source text for the optional post-generation fact-check.
@@ -948,7 +982,7 @@ ${INTERVIEW}`
     : ""
   const job: AnswerJob = {
     question,
-    system: `${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
+    system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
     userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? `${desktopCloser || spokenCloser}\n\n${CODING_CLOSER}` : desktopCloser || spokenCloser}`,
     plan,
     interviewer,
@@ -967,6 +1001,8 @@ ${INTERVIEW}`
     allowed,
     factsText,
     streamPolicy: answerStreamPolicy(tier, question),
+    sourceText,
+    previousAnswer,
   }
   if (body.stream) return streamAnswer(request, job)
   return jsonAnswer(request, job)
@@ -980,5 +1016,5 @@ function answerFailure(message: string) {
     : status === 403 ? "OpenRouter blocked the request. Check key permissions and account policy."
     : status === 429 ? "The paid provider is temporarily rate limited. Your question is preserved."
     : "The paid provider could not complete this answer. Your question is preserved."
-  return { status, code, error }
+  return { status, code, error, quiet: true }
 }

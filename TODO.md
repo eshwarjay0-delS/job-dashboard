@@ -1,3 +1,13 @@
+## 2026-10-29 — Kompas relevance fold: dissection, mode ceilings, master prompt v1
+
+**Checked first.** Master and production were the same commit, `4f70b96`. Deployment `dpl_BeCwCn5npGE1rXmJ1Hvi2SvVDJ68` was READY and held `job-dashboard-fawn.vercel.app`. Pull requests 111, 112, and 113 are already inside that commit. `POST /api/answer` on that build returned 404. `POST /api/kompas/answer` returned 401. The page rewrites the first path in the browser. Open pull requests 89, 32, and 23 are not in production. They are not the chief answer algorithm.
+
+**This fold.** The question is dissected into its shape, its own keywords, and a ban list of tools that are not in the question or the resume. The three modes have word ceilings at least 50 percent apart. A long answer is cut to that ceiling. A banned tool is dropped. Provider error text is not returned as the answer, and the page will not paint it. `/api/answer` now hits the same engine as `/api/kompas/answer`. The spoken spec is `docs/kompas/MASTER_PROMPT_v1.md`. The handoff is `docs/kompas-relevance-playbook.md`.
+
+**Tests.** Code tests cover the bands, the ban list, the trim, the provider-error refusal, four hand-written reference answers against a fictional resume, and the live-eval script refusing to run with no token. Not a live model score. `KOMPAS_EVAL_TOKEN` was not set.
+
+**Deploy.** Not claimed in this note until the pull request is merged and the new production deployment is READY.
+
 ## 2026-10-29 — A specialised job does not stay tied to a generic security title
 
 Information Security AI Engineer was keeping Security Engineer beside AI Engineer, both at the same title score, and the generic file could be the one sent. When the job names a speciality and one of the tied resumes names it, that resume stays. If the only resume is the generic title, it still stays.

@@ -1149,6 +1149,9 @@ function warmDesktopLevels(card, question) {
 let running = false;
 $("startBtn").onclick = () => running ? wrapSession() : start();
 
+function providerLeak(text) {
+  return /\bopenrouter\b|\btry again in\s+\d|\btokens per minute\b|\bOPENROUTER_[A-Z0-9_]+\b|\banswer engine is at its limit\b|\bpaid provider is temporarily\b|\bpaid answer service returned\b/i.test(String(text || ""));
+}
 function isUnavailableAnswer(meta, text) {
   return !!meta.degraded && /answer engine is busy|answer engine hit an error|answer engine is at its limit|press AI Answer again|paid answer service returned|engine unavailable|groq's free/i.test(String(text || ""));
 }
@@ -2208,7 +2211,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   // re-rendering the full card DOM on every token (was causing visible jank).
   let renderQueued = false;
   const show = (t) => {
-    if (card.req !== ctl || isUnavailableAnswer({ degraded: true }, t)) return;
+    if (card.req !== ctl || isUnavailableAnswer({ degraded: true }, t) || providerLeak(t)) return;
     const spoken = sayAloud(t).trim();
     card.answer = spoken ? spoken : ["…"];
     if (cards[idx] !== card || renderQueued) return;
@@ -2273,7 +2276,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       }
     }
     if (card.req !== ctl) return;                                      // a newer request took this card over
-    if (meta.error || meta.unavailable || meta.busy || isUnavailableAnswer(meta, text)) {
+    if (meta.error || meta.unavailable || meta.busy || meta.quiet || isUnavailableAnswer(meta, text) || providerLeak(text)) {
       recoverAnswer(meta.code || (meta.daily ? "CREDITS" : ""), meta.retryAfterMs || 1000);
       return;
     }
