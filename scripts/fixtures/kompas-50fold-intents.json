@@ -217,7 +217,7 @@
   {
     "id": 44,
     "question": "What questions would you ask our control owners?",
-    "intent": "closing-question"
+    "intent": "direct"
   },
   {
     "id": 45,
