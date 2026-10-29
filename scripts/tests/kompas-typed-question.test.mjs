@@ -60,6 +60,13 @@ test("a typed question after an answer gets its own card, and the earlier questi
   assert.equal(box.value, "", "the box empties only once the question is on its card");
 });
 
+test("a short question that names its subject is not glued onto the question on screen", () => {
+  const { s } = session("");
+  const lane = "What is NLA and why do we disable it?";
+  assert.equal(s.pressQuestion("What exactly is least privilege?", { derived: "" }, lane), "What exactly is least privilege?");
+  assert.equal(s.pressQuestion("go deeper", { derived: "" }, lane), lane.replace(/[?.!\s]+$/, "") + " — go deeper");
+});
+
 test("a typed question with no question mark still stands on its own", async () => {
   const { s, asked } = session("explain zero trust network access");
   await s.aiAnswer(false);
