@@ -56,7 +56,7 @@ test('no usable document fails recovery instead of throwing', async () => {
   assert.equal(await ctx.ensureScreenReview(), false)
 })
 
-test('the screen flow awaits recovery and still reports failure when recovery fails', () => {
-  assert.match(app, /!\(await ensureScreenReview\(\)\)/)
-  assert.match(app, /Screen review could not open\. Please reload and retry\./)
+test('the screen flow never opens the review dialog', () => {
+  assert.doesNotMatch(app, /KompasScreenReview\(\{ image, tasks: data\.tasks/)
+  assert.doesNotMatch(app, /Screen review could not open/)
 })

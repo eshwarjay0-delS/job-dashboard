@@ -2597,20 +2597,17 @@ async function analyseScreen() {
     if ((current && current.id) !== screenSession || !cards.includes(card)) throw new Error("Session changed. Capture the screen again in the active session.");
     if (!res.ok) throw new Error(data.error || "Screen analysis failed. Please retry.");
     if (data.needsReview === true) {
-      if (!Array.isArray(data.tasks) || !data.tasks.length || !(await ensureScreenReview())) throw new Error("Screen review could not open. Please reload and retry.");
-      aiBusy = false; screenOwnsAnswer = false;
-      const selection = await window.KompasScreenReview({ image, tasks: data.tasks, sessionId: screenSession });
-      if ((current && current.id) !== screenSession || !cards.includes(card)) throw new Error("Session changed. Capture again in the active session.");
-      if (selection.action !== "answer") {
-        card.question = "Screen sections";
-        card.answer = selection.action === "collect" ? "Sections kept. Scroll the shared window and choose Analyse screen again. No answer generated yet." : "Screen review cancelled. No answer generated.";
-      } else {
-        card.question = selection.question; card.screenTask = true;
-        if (aiBusy) throw new Error("An answer is still running. Wait for it, then press AI Answer for this question.");
-        aiBusy = true; aiBusySince = Date.now(); screenOwnsAnswer = true;
-        await generateAnswer(card.question, card, { pinned: true, derived: card.question, source: "screen" });
-        return;
-      }
+      // No dialog, ever: a review payload from an older deployment answers
+      // directly from its tasks, the same as a fresh direct answer.
+      const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+      if (!tasks.length) throw new Error("No screen question was returned. Please retry.");
+      const formatted = (typeof window !== "undefined" && window.KompasScreenCore && typeof window.KompasScreenCore.format === "function")
+        ? window.KompasScreenCore.format(tasks)
+        : tasks.map(t => t.question).join("\n\n");
+      if (typeof formatted !== "string" || !formatted.trim()) throw new Error("No screen question was returned. Please retry.");
+      card.question = formatted.trim(); card.screenTask = true;
+      await generateAnswer(card.question, card, { pinned: true, derived: card.question, source: "screen" });
+      return;
     } else if (data.needsAnswer === true) {
       if (typeof data.question !== "string" || !data.question.trim()) throw new Error("No screen question was returned. Please retry.");
       card.question = data.question.trim(); card.screenTask = true;

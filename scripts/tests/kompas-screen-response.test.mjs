@@ -43,13 +43,13 @@ for(const change of ['switch session','clear cards'])test(`${change} during extr
  ctx=vm.createContext({current:{id:'a'},aiBusy:false,aiBusySince:0,AbortSignal,addCard:()=>card,renderCard:()=>{},performance:{now:()=>0},grabFrame:async()=> 'frame',fetch:async()=>{if(change==='switch session')ctx.current={id:'b'};else ctx.cards=[];return {ok:true,json:async()=>({needsAnswer:true,question:'Explain DNS'})}},slimPrep:()=>({}),liveConfig:()=>({}),cards:[card],idx:0,generateAnswer:async()=>{answers++}})
  vm.runInContext(code,ctx);await ctx.analyseScreen();assert.equal(answers,0);assert.equal(ctx.aiBusy,false);assert.match(String(card.answer),/Session changed/)
 })
-for(const action of ['collect','cancel','answer'])test(`region review action ${action} controls answer generation`,async()=>{
- const card={};let answers=0
- const ctx=vm.createContext({current:{id:'a'},aiBusy:false,aiBusySince:0,AbortSignal,addCard:()=>card,renderCard:()=>{},performance:{now:()=>0},grabFrame:async()=> 'frame',fetch:async()=>({ok:true,json:async()=>({needsReview:true,tasks:[{question:'Which option?'}]})}),slimPrep:()=>({}),liveConfig:()=>({}),cards:[card],idx:0,window:{KompasScreenReview:async()=>({action,question:'Question 1: Which option? A: first B: second'})},generateAnswer:async(q,c,opts)=>{answers++;assert.equal(opts.source,'screen');assert.match(q,/A: first B: second/);c.streaming=false}})
- vm.runInContext(code,ctx);await ctx.analyseScreen();assert.equal(answers,action==='answer'?1:0);assert.equal(ctx.aiBusy,false)
+test('a review payload answers directly without opening any dialog',async()=>{
+ const card={};let answers=0, dialogCalls=0
+ const ctx=vm.createContext({current:{id:'a'},aiBusy:false,aiBusySince:0,AbortSignal,addCard:()=>card,renderCard:()=>{},performance:{now:()=>0},grabFrame:async()=> 'frame',fetch:async()=>({ok:true,json:async()=>({needsReview:true,tasks:[{question:'Which option?'}]})}),slimPrep:()=>({}),liveConfig:()=>({}),cards:[card],idx:0,window:{KompasScreenReview:async()=>{dialogCalls++;return {action:'answer',question:'Should never be used'}},KompasScreenCore:{format:tasks=>tasks.map(t=>t.question).join('\n\n')}},generateAnswer:async(q,c,opts)=>{answers++;assert.equal(opts.source,'screen');assert.match(q,/Which option\?/);c.streaming=false}})
+ vm.runInContext(code,ctx);await ctx.analyseScreen();assert.equal(answers,1);assert.equal(dialogCalls,0);assert.equal(ctx.aiBusy,false);assert.equal(card.screenTask,true);assert.equal(card.question,'Which option?')
 })
-test('an answer started during review is not aborted or unlocked by the screen flow',async()=>{
- const card={};let ctx,answers=0
- ctx=vm.createContext({current:{id:'a'},aiBusy:false,aiBusySince:0,AbortSignal,addCard:()=>card,renderCard:()=>{},performance:{now:()=>0},grabFrame:async()=> 'frame',fetch:async()=>({ok:true,json:async()=>({needsReview:true,tasks:[{}]})}),slimPrep:()=>({}),liveConfig:()=>({}),cards:[card],idx:0,window:{KompasScreenReview:async()=>{ctx.aiBusy=true;return {action:'answer',question:'Complete question and options'}}},generateAnswer:async()=>{answers++}})
- vm.runInContext(code,ctx);await ctx.analyseScreen();assert.equal(answers,0);assert.equal(ctx.aiBusy,true);assert.equal(card.question,'Complete question and options');assert.equal(card.screenTask,true)
+test('a review payload without the formatter still answers from question text',async()=>{
+ const card={};let answers=0
+ const ctx=vm.createContext({current:{id:'a'},aiBusy:false,aiBusySince:0,AbortSignal,addCard:()=>card,renderCard:()=>{},performance:{now:()=>0},grabFrame:async()=> 'frame',fetch:async()=>({ok:true,json:async()=>({needsReview:true,tasks:[{question:'First?'},{question:'Second?'}]})}),slimPrep:()=>({}),liveConfig:()=>({}),cards:[card],idx:0,window:{},generateAnswer:async(q)=>{answers++;assert.match(q,/First\?/);assert.match(q,/Second\?/)}})
+ vm.runInContext(code,ctx);await ctx.analyseScreen();assert.equal(answers,1);assert.equal(ctx.aiBusy,false)
 })

@@ -14,6 +14,11 @@ export function screenImage(value: unknown): string | null {
     : bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP'
   return valid ? value : null
 }
+/** Mirror of the client's KompasScreenCore.format: one formatted question block per task. */
+export function formatScreenTasks(tasks: ScreenTask[]): string {
+  return tasks.map((t, i) => `Question ${i + 1} (${t.kind}; ${t.choiceMode} choice):\n${t.question}` +
+    (t.options.length ? `\nOptions:\n${t.options.map(o => `${o.label}: ${o.text}`).join('\n')}` : '')).join('\n\n')
+}
 export function screenQuestion(value: unknown): string | null {
   if (typeof value !== 'string') return null
   try {

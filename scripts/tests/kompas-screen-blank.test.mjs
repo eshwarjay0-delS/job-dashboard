@@ -52,7 +52,7 @@ test('capture never interrupts the user with a dialog or a focus steal', () => {
 test('review crops by region, so a question area is captured, not just the whole screen', () => {
   const review = readFileSync(new URL('../../public/kompas/screen-review.js', import.meta.url), 'utf8')
   assert.match(review, /function crop\(image,bounds\)/)
-  assert.match(app, /KompasScreenReview\(\{ image, tasks: data\.tasks/)
+  assert.doesNotMatch(app, /KompasScreenReview\(\{ image, tasks: data\.tasks/)
 })
 
 test('capture works the same for ordinary, overlay, fullscreen and elevated windows', async () => {
