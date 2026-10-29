@@ -44,7 +44,8 @@ import { libraryOf, numberedEmails, candidatesFor } from "@/lib/library-pick-sto
 import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME } from "@/lib/library-pick"
 import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
 import { madeMeetsFloor } from "@/lib/made-floor"
-import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, type ResumeRecoveryJob } from "@/lib/whatsapp-resume-recovery"
+import { acceptableWhatsAppResume } from "@/lib/whatsapp-resume-acceptance"
+import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries } from "@/lib/whatsapp-resume-recovery"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
 import { chooseResume, type Prefer } from "@/lib/library-choose"
@@ -751,10 +752,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
 
   // A cached, incomplete result must never permanently block the same JD.
   // Give the engine one fresh full rewrite while there is enough request budget.
-  const acceptable = (r: TailorResult) => !r.unchanged && !r.skills_only && !r.partial &&
-    !!r.quality && r.quality.status !== "needs_review" && !r.quality.incomplete &&
-    Number.isFinite(r.supported_coverage) && r.supported_coverage! >= 95
-  const firstRejected = !acceptable(result)
+  const firstRejected = !acceptableWhatsAppResume(result)
   if (firstRejected && maxMs >= 120_000) {
     const elapsed = Date.now() - startedAt
     const remaining = maxMs - elapsed - 15_000
@@ -767,7 +765,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
           mode: "full", noCache: true, maxMs: remaining,
           sections: { summary: false, skills: true, experience: true },
         })
-        if (acceptable(fresh)) result = fresh
+        if (acceptableWhatsAppResume(fresh)) result = fresh
         else if ((fresh.supported_coverage ?? 0) > (result.supported_coverage ?? 0)) result = fresh
       } catch (error) {
         console.error("[whatsapp] automatic quality retry failed", String(error).slice(0, 300))
@@ -778,7 +776,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   // A low-quality or partial draft is never a completed tailored resume.
   // Do not save it, send it as final, or silently claim a match that is not supported.
   const coverage = result.coverage ?? result.score
-  if (!acceptable(result)) {
+  if (!acceptableWhatsAppResume(result)) {
     failureCode = "quality_rejected"
     failedCandidate = { token: result.token, coverage, supportedCoverage: result.supported_coverage ?? 0 }
     console.error("[whatsapp] tailoring quality gate rejected draft", { coverage, supportedCoverage: result.supported_coverage, partial: !!result.partial, skillsOnly: !!result.skills_only, status: result.quality?.status })
