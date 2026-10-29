@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs'
 const webhook = readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8')
 const tailor = readFileSync(new URL('../../src/lib/tailor.ts', import.meta.url), 'utf8')
 const queue = readFileSync(new URL('../../src/lib/whatsapp-resume-recovery.ts', import.meta.url), 'utf8')
+const made = readFileSync(new URL('../../src/lib/made-floor.ts', import.meta.url), 'utf8')
 const config = JSON.parse(readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'))
 
 test('job input is durably enqueued before interactive session consumption', () => {
@@ -61,4 +62,9 @@ test('Meta delivery callbacks update the durable resume job record', () => {
 test('cross-provider best draft is selected by evidence and role quality, not raw JD overlap', () => {
   assert.match(tailor, /if \(!best \|\| quality\(first\) > quality\(best\)\)/)
   assert.match(tailor, /unsupportedPenalty\(p\)/)
+})
+
+test('saved resumes are remeasured instead of trusted by date alone', () => {
+  assert.match(made, /export const MADE_FLOOR = 0\.95/)
+  assert.doesNotMatch(made, /if \(at >= FLOOR_SINCE\) return true/)
 })
