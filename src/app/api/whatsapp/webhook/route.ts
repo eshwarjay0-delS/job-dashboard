@@ -755,25 +755,6 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     return sendText(from, "I couldn't complete a reliable tailored resume for this job description. No incomplete file was delivered or saved. Please try again later.")
   }
 
-  // A rewrite below the coverage target is still sent, with what is missing named in the caption. From 18 Oct 2026 the
-  // bot held every such file back ("below the 95% floor. I have held the file"), and nearly every real job post asks
-  // for something a resume cannot truthfully claim, so the resume almost never arrived (reported 19 Oct 2026: "Resume
-  // tailor on whatsapp isn't working at all"). The person decides; the caption tells them what is not covered.
-  if (result.quality?.status === "needs_review") {
-    // Certificates and platforms the person does not have are qualification gaps, not wording the rewrite missed.
-    const UNFILLABLE = /\b(ccsp|cism|crisc|cisa|cissp|oscp|ceh|gsec|gcfa|gcia|security\+|pmp|pmi|itil|cobit|hyperledger|besu|canton|solana|ethereum|blockchain|solidity|web3|defi)\b/i
-    const missing = result.quality.missing || []
-    const unfillable = missing.filter(t => UNFILLABLE.test(t))
-    const fillable = missing.filter(t => !UNFILLABLE.test(t))
-    if (unfillable.length > 0 && fillable.length === 0) {
-      result.quality = { ...result.quality, status: "delivered_with_gaps" as const,
-        missing: [`Qualification gaps (not on your resume): ${unfillable.slice(0, 6).join(", ")}`] }
-    }
-  }
-  // 95-97%: deliver with gaps noted so the user gets a usable resume, not nothing.
-  const gapsNote = result.quality?.status === "delivered_with_gaps"
-    ? ` Note: ${result.quality.matched}/${result.quality.total} JD terms covered. Missing: ${(result.quality.missing || []).slice(0, 8).join(", ")}.`
-    : ""
   const file = await blob.get(`tailored/${result.token}.docx`)
   if (!file) return sendText(from, "The resume generated but the file could not be read back. Please try again.")
 
@@ -1066,7 +1047,6 @@ function notAdded(result: TailorResult): string[] {
 }
 
 function captionFor(name: string, meta: Meta, result: TailorResult, update?: { request: string; number: number; lines: number }, more: string[] = []): string {
-  const coverage = result.coverage ?? result.score
   // Never present an unchanged resume as tailored — say so plainly.
   if (result.unchanged) {
     return [
