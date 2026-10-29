@@ -44,7 +44,7 @@ function coreQuestion(q:string):string{
 }
 function latestSubject(history:string):string{
  const lines=String(history||"").split(/\n+/).map(x=>x.trim()).filter(Boolean)
- const candidate=lines.slice(-8).reverse().find(x=>/\b(?:Them:|Interviewer:|question:|what|how|why|tell me|explain)\b/i.test(x))
+ const candidate=lines.slice(-12).reverse().find(x=>/^(?:Them|Interviewer|question):\s*/i.test(x))
  if(!candidate)return ""
  return candidate.replace(/^(?:Them|Interviewer|question):\s*/i,"").slice(0,240)
 }
