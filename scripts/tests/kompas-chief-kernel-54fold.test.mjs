@@ -84,7 +84,7 @@ test("Follow-up context is a relevant reference only, not evidence of previously
 test("The live answer service runs relevance recovery before building a user-facing answer",()=>{
  const s=readFileSync(new URL("../../src/lib/kompasAnswerService.ts",import.meta.url),"utf8")
  assert.match(s,/rediscoverRelevance\(question, history\)/)
- assert.match(s,/relevanceRecoveryPrompt\(question, history\)/)
+ assert.match(s,/relevanceRecoveryPrompt\(originalAsk, history\)/)
  const kernel=readFileSync(new URL("../../src/lib/kompasRelevanceRecovery.ts",import.meta.url),"utf8")
  assert.match(kernel,/questionKernel\(question\)/)
 })
