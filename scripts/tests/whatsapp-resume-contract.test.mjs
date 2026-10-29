@@ -54,7 +54,7 @@ test('scheduled recovery has a five-minute execution budget and a daily cron', (
 })
 
 test('Meta delivery callbacks update the durable resume job record', () => {
-  assert.match(webhook, /recordResumeDeliveryStatus\(id, state\)/)
+  assert.match(webhook, /recordResumeDeliveryStatus\(id, state, String\(status\.biz_opaque_callback_data/)
   assert.match(queue, /meta_delivery_failed/)
   assert.match(queue, /resume handset delivery confirmed/)
 })
@@ -67,4 +67,10 @@ test('cross-provider best draft is selected by evidence and role quality, not ra
 test('saved resumes are remeasured instead of trusted by date alone', () => {
   assert.match(made, /export const MADE_FLOOR = 0\.95/)
   assert.doesNotMatch(made, /if \(at >= FLOOR_SINCE\) return true/)
+})
+
+test('ambiguous Meta timeouts can be reconciled by opaque callback job id', () => {
+  const sender = readFileSync(new URL('../../src/lib/whatsapp.ts', import.meta.url), 'utf8')
+  assert.match(sender, /biz_opaque_callback_data: opaqueJobId/)
+  assert.match(queue, /timed-out document reconciled as delivered/)
 })
