@@ -626,9 +626,15 @@ export function deriveByCode(heard: string, history: unknown, reask = false): st
  * the derived question, knowing the previous turn (review of 398f299: without it his reply was glued back in front of
  * the question the model was told to answer). A topic-less follow-up is tied to the last question.
  */
+/** Screen capture labels the kind of question. That label is not part of the ask. */
+export function stripScreenChrome(question: string): string {
+  const stripped = String(question || "").replace(/^Question \d+ \([^)\n]{0,80}\):\s*/gm, "").trim()
+  return stripped || String(question || "").trim()
+}
+
 export function questionForAnswer(heard: string, asked: string, pinned: boolean, again: boolean, history: unknown): string {
   const turns = Array.isArray(history) ? history : []
-  const q = questionToAnswer(heard, asked, pinned, again ? NO_TURN : previousTurn(turns))
+  const q = questionToAnswer(stripScreenChrome(heard), stripScreenChrome(asked), pinned, again ? NO_TURN : previousTurn(turns))
   return q ? resolveFollowUp(q, turns.map((h) => {
     const o = (h && typeof h === "object" ? h : {}) as Record<string, unknown>
     return { q: String(o.q ?? o.question ?? "").slice(0, 300) }

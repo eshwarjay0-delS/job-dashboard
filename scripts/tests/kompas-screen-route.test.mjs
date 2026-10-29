@@ -47,3 +47,13 @@ test('two questions answer directly as one formatted question',async()=>{
  const h=harness({data:{choices:[{finish_reason:'stop',message:{content:JSON.stringify({tasks:[task('First?'),task('Second?')]})}}]}})
  const body=await (await h.post({image:jpeg})).json();assert.equal(body.needsAnswer,true);assert.match(body.question,/First\?/);assert.match(body.question,/Second\?/);assert.equal(body.tasks,undefined)
 })
+test('the answer follows the screen question, not the capture label', async () => {
+  const { stripScreenChrome, questionForAnswer } = await import('../../src/lib/kompasAnswer.ts')
+  const shown = 'Question 1 (free-text; unknown choice):\nExplain zero trust\n\nQuestion 2 (mcq; single choice):\nWhat is IDOR?\nOptions:\nA: a missing check'
+  assert.equal(stripScreenChrome(shown), 'Explain zero trust\n\nWhat is IDOR?\nOptions:\nA: a missing check')
+  const told = questionForAnswer(shown, shown, true, false, [])
+  assert.match(told, /Explain zero trust/)
+  assert.match(told, /What is IDOR\?/)
+  assert.match(told, /A: a missing check/)
+  assert.doesNotMatch(told, /free-text|unknown choice|Question 1/)
+})
