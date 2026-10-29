@@ -42,7 +42,7 @@ test('failed pre-queue JD can be bootstrapped from retained session data', () =>
 })
 test('document delivery uses a durable sending lease before Meta call', () => {
   assert.ok(webhook.indexOf('status: "sending"') < webhook.indexOf('sentId = await deliver('))
-  assert.match(webhook, /status: "delivered", deliveredMessageId: sentId/)
+  assert.match(webhook, /markResumeDocumentAccepted\(job, sentId\)/)
 })
 test('identity is verified before WhatsApp document delivery', () => {
   assert.ok(webhook.indexOf('sameResumeIdentity(await extractText(source), await extractText(file))') < webhook.indexOf('sentId = await deliver('))
@@ -50,4 +50,10 @@ test('identity is verified before WhatsApp document delivery', () => {
 test('scheduled recovery has a five-minute execution budget and a daily cron', () => {
   assert.equal(config.functions['src/app/api/whatsapp/recover/route.ts'].maxDuration, 300)
   assert.ok(config.crons.some(c => c.path === '/api/whatsapp/recover'))
+})
+
+test('Meta delivery callbacks update the durable resume job record', () => {
+  assert.match(webhook, /recordResumeDeliveryStatus\(id, state\)/)
+  assert.match(queue, /meta_delivery_failed/)
+  assert.match(queue, /resume handset delivery confirmed/)
 })
