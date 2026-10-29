@@ -940,6 +940,17 @@ export async function runTailor(opts: {
   // and handed an untailored resume (found in review, 2026-10-05).
   // Weighted coverage (Jobscan REA): hard skills count 3x, titles 2x, soft 1x, buzzwords 0.5x.
   // Preserve actual counts; weighting is a separate signal, not proof of recruiter acceptance.
+  // Evaluate whether the rewrite retained the candidate's evidenced JD vocabulary separately
+  // from JD requirements the candidate has never claimed. An honest gap must not be
+  // interpreted as a failed rewrite, and it must never be silently invented.
+  const attainableKws = scoreKws.filter(k => forcedJdKws.includes(k) || beforeKw.has(k))
+  const attainableCovered = coveredJdKeywords(best.tailoredText, attainableKws)
+  const attainableCoverage = attainableKws.length ? attainableCovered.size / attainableKws.length : 1
+  const unsupportedJdKws = scoreKws.filter(k => !attainableKws.includes(k))
+  if (unsupportedJdKws.length) {
+    notes.push(`JD qualification gaps not supported by candidate evidence: ${unsupportedJdKws.length}`)
+  }
+  notes.push(`Evidence-supported JD vocabulary retained: ${Math.round(attainableCoverage * 100)}%`)
   const wc = weightedCoverage(best.tailoredText, scoreKws)
   const qualityReport = resumeQuality({ matched: wc.matched.length, total: scoreKws.length, missing: wc.missing, weightedCoverage: wc.coverage, partial: skillsOnly || floorCarried || !!best.partial || (splitDraft && (lackingRoles(best.edits).length > 0 || provenShare(evidencePass) < TARGET_COVERAGE || !experienceCoverageComplete(role_alignment, TARGET_COVERAGE))), unchanged: !diff.length })
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
