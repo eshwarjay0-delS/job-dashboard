@@ -4,7 +4,7 @@
  * The source fingerprint is a provenance check, not a proof the candidate's
  * resume statements or generated answers are true.
  */
-import { readFile, mkdir, writeFile } from "node:fs/promises"
+import { readFile, mkdir, writeFile, unlink } from "node:fs/promises"
 import { readFileSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { dirname, resolve, sep } from "node:path"
@@ -133,7 +133,9 @@ export async function runCli(args) {
   // Do not write potentially sensitive reference/candidate answers inside a repo.
   const root = resolve(fileURLToPath(new URL("../", import.meta.url)))
   const target = resolve(destination)
-  check(target !== root && !target.startsWith(root + sep), "Paired responses must be written outside the repository")
+  const jsonTarget = target.toLowerCase().endsWith(".md") ? target.slice(0, -3) + ".json" : target + ".json"
+  check(target !== jsonTarget && target !== root && !target.startsWith(root + sep) &&
+    jsonTarget !== root && !jsonTarget.startsWith(root + sep), "Paired responses must be written outside the repository")
   const [captures, manifest, reference] = await Promise.all([
     readFile(capturePath, "utf8").then(JSON.parse),
     readFile(manifestPath, "utf8").then(JSON.parse),
@@ -141,8 +143,17 @@ export async function runCli(args) {
   ])
   const report = pairCapturedAnswers(captures, manifest, reference)
   await mkdir(dirname(target), { recursive: true, mode: 0o700 })
-  await writeFile(target, renderPairedMarkdown(report), { flag: "wx", mode: 0o600 })
-  return { saved: target, paired: report.count, quality: report.quality }
+  await mkdir(dirname(jsonTarget), { recursive: true, mode: 0o700 })
+  // Both private formats are required: Markdown to compare visually, JSON to
+  // review every case. A failed second write must not leave a partial pair.
+  await writeFile(jsonTarget, JSON.stringify(report, null, 2) + "\n", { flag: "wx", mode: 0o600 })
+  try {
+    await writeFile(target, renderPairedMarkdown(report), { flag: "wx", mode: 0o600 })
+  } catch (error) {
+    await unlink(jsonTarget).catch(() => {})
+    throw error
+  }
+  return { saved: target, structured: jsonTarget, paired: report.count, quality: report.quality }
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   runCli(process.argv.slice(2)).then(x => console.log(JSON.stringify(x)))
