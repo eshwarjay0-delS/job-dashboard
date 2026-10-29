@@ -114,3 +114,8 @@ test('Named-term repair is integrated with the existing grounding path',()=>{
  assert.match(s,/missing-named-term:/)
  assert.match(s,/missingNamedQuestionTerms\(job\.question, rg\.text\)/)
 })
+
+test('JD keywords must not flood social and definition turns',()=>{
+ const s=readFileSync(new URL('../../src/lib/kompasAnswerService.ts',import.meta.url),'utf8')
+ assert.ok(s.includes('["closing-question","acknowledgement","definition","logistics"].includes(rediscovered.intent)'))
+})
