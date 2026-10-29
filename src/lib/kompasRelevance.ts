@@ -41,7 +41,7 @@ export function interviewIntent(question: string): ReplyIntent {
   if(/\b(?:describe (?:a|an) (?:project|incident|challenge|failure|achievement|situation) (?:you|where|that|when)|walk me through (?:a|an) (?:project|incident|failure|challenge) (?:you|where|that))\b/i.test(q)) return "experience-story"
   if(/\bwhen (?:can|could|would) you start\b/i.test(q)) return "logistics"
   if(/^\s*(?:why was that important|what did you do next|how did you (?:measure|test|check|confirm) (?:that|it|the result))\b/i.test(q)) return "follow-up"
-  if(/\b(?:explain how|describe how)\b/i.test(q)) return "technical-process"
+  if(/\b(?:explain how|describe how)\b/i.test(q) && !COMPARE.test(q)) return "technical-process"
   if(CLOSING.test(q)) return "closing-question"
   if(INTRO.test(q) || /^intro(?:duction)?[.?!]?$/i.test(q)) return "introduction"
   if(VALUE.test(q)) return "value"
@@ -86,7 +86,8 @@ export function focusPlan(question:string,tier:number,level:string):FocusPlan{
  // Technical depth may grow when specifically requested, not merely because
  // the session is in Director/Engineer mode. Preserve full source-backed intros.
  const adjusted=detailed?max+40:max
- const minWords=tier===0?Math.max(min,115):min
+ const minWords=tier===0 && ["experience-story","technical-process","scenario"].includes(intent)
+  ? Math.min(adjusted,Math.max(min,115)) : min
  return {intent,minWords,maxWords:adjusted,opening,proof,technicalDepth:detailed?"deep":depth}
 }
 export function applyFocusBudget(original:number,plan:FocusPlan):number{
