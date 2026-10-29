@@ -296,7 +296,6 @@ export async function runTailor(opts: {
   const jdKws = [...new Set([...targetKeywords(jdExtracted, jdGenerated, jd).filter(k => !isQualificationOrJunk(k)), ...scoreKws])]
   const floorKws = new Set(floorTerms(jd, scoreKws))
   const shareOf = (shown: Set<string>) => (scoreKws.length ? scoreKws.filter(k => shown.has(k)).length / scoreKws.length : 1)
-  const candidateStatements = [...immediatePrefs, ...storedFeedback]
   const forcedJdKws = explicitlyConfirmsAllRequirements(immediatePrefs)
     ? jdKws
     : [...coveredJdKeywords([text, ...immediatePrefs].join("\n"), jdKws)].filter(k => jdKws.includes(k))
@@ -686,7 +685,7 @@ export async function runTailor(opts: {
       skills: afterPlace, jd,
       bullets: zones.roles.flatMap(r => r.bullets.map(b => ({ idx: b.idx, role: r.role, text: (cur.edits.bullets || []).find(x => x.idx === b.idx)?.text || b.text }))),
       pairs: relationalPairs,
-      evidence: [text, ...candidateStatements].join("\n"),
+      evidence: [text, ...immediatePrefs].join("\n"),
     })
     const addedSkills = mergeIndexedEdits(placed, woven.skills)
     const bulletEdits = woven.bullets
@@ -929,7 +928,7 @@ export async function runTailor(opts: {
   // The change list the person keeps or undoes before download, and the reading it was made from. No model call.
   const review = tailorReview({
     zones, text, edits, dropped: best.dropped, requirements: scoreKws, jd,
-    evidence: candidateStatements.join("\n"), covers: coveredJdKeywords, spanOf: r => roleSpanMonths(r),
+    evidence: immediatePrefs.join("\n"), covers: coveredJdKeywords, spanOf: r => roleSpanMonths(r),
   })
 
   // Total the real token usage across every model call this tailor made. Anthropic
