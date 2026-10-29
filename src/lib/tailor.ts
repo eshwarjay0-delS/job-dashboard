@@ -297,7 +297,7 @@ export async function runTailor(opts: {
   const floorKws = new Set(floorTerms(jd, scoreKws))
   const shareOf = (shown: Set<string>) => (scoreKws.length ? scoreKws.filter(k => shown.has(k)).length / scoreKws.length : 1)
   const candidateStatements = [...immediatePrefs, ...storedFeedback]
-  const forcedJdKws = explicitlyConfirmsAllRequirements(candidateStatements)
+  const forcedJdKws = explicitlyConfirmsAllRequirements(immediatePrefs)
     ? jdKws
     : [...coveredJdKeywords([text, ...candidateStatements].join("\n"), jdKws)].filter(k => jdKws.includes(k))
   // The JD is target context, not evidence. Only verified terms are mandatory in
