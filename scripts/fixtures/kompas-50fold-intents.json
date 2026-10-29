@@ -248,5 +248,255 @@
     "id": 50,
     "question": "What else should I know about your background before we finish?",
     "intent": "value"
+  },
+  {
+    "id": 51,
+    "question": "Compliance and GRC side",
+    "intent": "direct"
+  },
+  {
+    "id": 52,
+    "question": "Kerberos",
+    "intent": "direct"
+  },
+  {
+    "id": 53,
+    "question": "CyberArk EPM",
+    "intent": "direct"
+  },
+  {
+    "id": 54,
+    "question": "NIST CSF",
+    "intent": "direct"
+  },
+  {
+    "id": 55,
+    "question": "Splunk and CrowdStrike",
+    "intent": "direct"
+  },
+  {
+    "id": 56,
+    "question": "Big Intro",
+    "intent": "introduction"
+  },
+  {
+    "id": 57,
+    "question": "Where are you based?",
+    "intent": "logistics"
+  },
+  {
+    "id": 58,
+    "question": "Explain how a greylist differs from an allowlist.",
+    "intent": "comparison"
+  },
+  {
+    "id": 59,
+    "question": "Walk me through a critical security incident you handled.",
+    "intent": "experience-story"
+  },
+  {
+    "id": 60,
+    "question": "The issue is ninety five percent remediated.",
+    "intent": "direct"
+  },
+  {
+    "id": 61,
+    "question": "A remediation owner disagrees with your assessment.",
+    "intent": "scenario"
+  },
+  {
+    "id": 62,
+    "question": "Hello.",
+    "intent": "acknowledgement"
+  },
+  {
+    "id": 63,
+    "question": "Okay.",
+    "intent": "acknowledgement"
+  },
+  {
+    "id": 64,
+    "question": "How would you evaluate a compensating control?",
+    "intent": "scenario"
+  },
+  {
+    "id": 65,
+    "question": "Go deeper on the phishing case.",
+    "intent": "follow-up"
+  },
+  {
+    "id": 66,
+    "question": "What would you do if the endpoint sensor was offline?",
+    "intent": "scenario"
+  },
+  {
+    "id": 67,
+    "question": "Tell me about a time the first fix failed.",
+    "intent": "experience-story"
+  },
+  {
+    "id": 68,
+    "question": "How have you applied MITRE ATT&CK to detection engineering?",
+    "intent": "experience-story"
+  },
+  {
+    "id": 69,
+    "question": "Are you a U.S. citizen?",
+    "intent": "logistics"
+  },
+  {
+    "id": 70,
+    "question": "Define least privilege.",
+    "intent": "definition"
+  },
+  {
+    "id": 71,
+    "question": "Compare allowlisting and greylisting.",
+    "intent": "comparison"
+  },
+  {
+    "id": 72,
+    "question": "Salesforce CPQ and guided selling",
+    "intent": "direct"
+  },
+  {
+    "id": 73,
+    "question": "MITRE ATT&CK and the cyber kill chain",
+    "intent": "direct"
+  },
+  {
+    "id": 74,
+    "question": "Thanks for your time.",
+    "intent": "acknowledgement"
+  },
+  {
+    "id": 75,
+    "question": "How do you integrate Splunk and Microsoft Sentinel?",
+    "intent": "direct"
+  },
+  {
+    "id": 76,
+    "question": "How do you secure AWS, Azure, and GCP?",
+    "intent": "direct"
+  },
+  {
+    "id": 77,
+    "question": "What is operating effectiveness?",
+    "intent": "definition"
+  },
+  {
+    "id": 78,
+    "question": "Which is stricter, a policy exception or a compensating control?",
+    "intent": "comparison"
+  },
+  {
+    "id": 79,
+    "question": "Have you ever discovered a vulnerability? Give a deep example.",
+    "intent": "experience-story"
+  },
+  {
+    "id": 80,
+    "question": "Can you talk about CSRF?",
+    "intent": "direct"
+  },
+  {
+    "id": 81,
+    "question": "IDOR versus CSRF",
+    "intent": "comparison"
+  },
+  {
+    "id": 82,
+    "question": "What questions do you have for us?",
+    "intent": "closing-question"
+  },
+  {
+    "id": 83,
+    "question": "Introduce yourself briefly.",
+    "intent": "introduction"
+  },
+  {
+    "id": 84,
+    "question": "When could you start?",
+    "intent": "logistics"
+  },
+  {
+    "id": 85,
+    "question": "Why are you interested in this role?",
+    "intent": "value"
+  },
+  {
+    "id": 86,
+    "question": "Describe a project you led from assessment to closure.",
+    "intent": "experience-story"
+  },
+  {
+    "id": 87,
+    "question": "Suppose the patch window is closed. What would you do?",
+    "intent": "scenario"
+  },
+  {
+    "id": 88,
+    "question": "Explain how certificate discovery works.",
+    "intent": "technical-process"
+  },
+  {
+    "id": 89,
+    "question": "How did you verify the retest?",
+    "intent": "follow-up"
+  },
+  {
+    "id": 90,
+    "question": "We have twenty seven control leads across the bank.",
+    "intent": "acknowledgement"
+  },
+  {
+    "id": 91,
+    "question": "What would you bring to this security program?",
+    "intent": "value"
+  },
+  {
+    "id": 92,
+    "question": "Walk me through how DNS resolution works.",
+    "intent": "technical-process"
+  },
+  {
+    "id": 93,
+    "question": "What does MFA stand for?",
+    "intent": "definition"
+  },
+  {
+    "id": 94,
+    "question": "Are you comfortable with a hybrid schedule in Dallas?",
+    "intent": "logistics"
+  },
+  {
+    "id": 95,
+    "question": "Tell me more about the compensating control.",
+    "intent": "follow-up"
+  },
+  {
+    "id": 96,
+    "question": "A control owner tells you the ticket is done.",
+    "intent": "scenario"
+  },
+  {
+    "id": 97,
+    "question": "Qualys and Nessus",
+    "intent": "direct"
+  },
+  {
+    "id": 98,
+    "question": "Google SecOps",
+    "intent": "direct"
+  },
+  {
+    "id": 99,
+    "question": "How do you decide whether closure evidence is enough for audit?",
+    "intent": "direct"
+  },
+  {
+    "id": 100,
+    "question": "Give me a brief overview of your career.",
+    "intent": "introduction"
   }
 ]

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {rediscoverRelevance,relevanceRecoveryPrompt} from '../../src/lib/kompasRelevanceRecovery.ts'
 const questions=JSON.parse(readFileSync(new URL('../fixtures/kompas-50fold-intents.json',import.meta.url),'utf8'))
-test('All fifty asks keep current intent and cannot import historical keywords',()=>{
- assert.equal(questions.length,50)
+test('All one hundred asks keep current intent and cannot import historical keywords',()=>{
+ assert.equal(questions.length,100)
  for(const c of questions){
   const p=rediscoverRelevance(c.question,'Them: Tell me how CyberArk PSM, DCSync and SQL injection work.\nYou: I know Burp Suite.\n')
   assert.equal(p.intent,c.intent,'case '+c.id+': '+c.question)
@@ -14,8 +14,8 @@ test('All fifty asks keep current intent and cannot import historical keywords',
   assert.match(relevanceRecoveryPrompt(c.question),/Does sentence one answer the current request/)
  }
 })
-for(let fold=1;fold<=50;fold++){
- test('Rediscovery fold '+String(fold).padStart(2,'0')+'/50 cumulative',()=>{
+for(let fold=1;fold<=questions.length;fold++){
+ test('Rediscovery fold '+String(fold).padStart(3,'0')+'/'+questions.length+' cumulative',()=>{
   for(const item of questions.slice(0,fold)){
    const r=rediscoverRelevance(item.question)
    assert.equal(r.intent,item.intent,'fold '+fold+', case '+item.id)

@@ -1,3 +1,7 @@
+## 2026-10-29 — One hundred intent folds
+
+Each fold rechecks every question before it. All 100 passed, and the rediscovery folds passed with them. A named topic is answered. "U.S." is not cut in half. This is routing, not one hundred live model answers.
+
 ## 2026-10-29 — A topic from the microphone is the question
 
 A short topic such as "Kerberos" or "Compliance and GRC side" is its own question. It is not glued onto the previous page. One to three words are still asked as "what is it". A result number is spoken only when the source has it. The desktop build that matches this page is 0.8.0: screen capture returns a JPEG, and a sign-in from the last fifteen minutes does not open Chrome again.

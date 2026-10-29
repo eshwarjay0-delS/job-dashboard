@@ -27,7 +27,7 @@ function removeFillerHead(s:string):string{
 function sentenceParts(value:string):string[]{
  // Keep NIST SP 800-53, "e.g.", dotted software versions etc. as text.
  // Only split when a terminal mark is followed by a plausible sentence start.
- return value.split(/(?<=[?!.])\s+(?=[A-Z]|(?:so|what|how|which|why|tell|and|now)\b)/i).filter(Boolean)
+  return value.split(/(?<=[?!.])\s+(?=[A-Z]|(?:[Ss]o|[Ww]hat|[Hh]ow|[Ww]hich|[Ww]hy|[Tt]ell|[Aa]nd|[Nn]ow)\b)/).filter(Boolean)
 }
 function isAsk(s:string):boolean{
  const t=removeFillerHead(s).replace(/[?!.]\s*$/,"").trim()

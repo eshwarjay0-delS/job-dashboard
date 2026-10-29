@@ -54,8 +54,9 @@ export function rediscoverRelevance(question:string,history=""):RelevanceRecover
  const currentAsk=kernel.ask
  // "Which of those?" is an option comparison even when the generic
  // intent classifier sees only an elliptical pronoun.
+ const whole=interviewIntent(question)
  const intent:ReplyIntent=kernel.carryOptions && /^which\b/i.test(currentAsk)
-  ? "comparison" : interviewIntent(currentAsk)
+  ? "comparison" : whole==="follow-up" ? "follow-up" : interviewIntent(currentAsk)
  const prior=latestSubject(history)
  const isElliptical=intent==="follow-up" && elliptical.test(currentAsk) && !!prior
  // No generic resume/JD keyword expansion. A named term is in the current
