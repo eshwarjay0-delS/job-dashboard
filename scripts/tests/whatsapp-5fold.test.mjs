@@ -122,8 +122,8 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
   }, '\nexport { generate };')
 
   await generate('15550021', { jdId: 'stuck', jd: 'Cloud security job', resumePath: '/resume.docx' }, 'user')
-  assert.equal(runs, 0, 'a run already in flight does not start a second silent one')
-  assert.match(said.at(-1), /still being finished/)
+  assert.equal(runs, 0, 'an uncertain Meta upload is not sent again')
+  assert.match(said.at(-1), /document upload is unconfirmed/)
 
   file = null
   await generate('15550021', { jdId: 'missing-file', jd: 'Cloud security job two', resumePath: '/resume.docx' }, 'user')
