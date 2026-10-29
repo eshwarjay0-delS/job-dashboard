@@ -80,7 +80,7 @@ test('Code integration keeps answer scope and avoids forced random project rotat
  assert.match(s,/focusPrompt\(question, tier, level\)/)
  assert.match(s,/applyFocusBudget\(plan\.words, focus\)/)
  assert.match(s,/const focus = focusPlan\(question, tier, level\)/)
- assert.match(s,/focus\.intent === "experience-story"/)
+ assert.match(s,/rediscovered\.intent === "experience-story"/)
 })
 
 test('Explicitly named technical concepts survive answer extraction and repair',()=>{
