@@ -87,12 +87,13 @@ export async function dueResumeRecoveries(limit = 1): Promise<ResumeRecoveryJob[
 const messageIndexKey = (wamid: string) =>
   `whatsapp/resume-message-index/${createHash("sha256").update(wamid).digest("hex")}.txt`
 
-export async function markResumeDocumentAccepted(id: string, wamid: string): Promise<void> {
+export async function markResumeDocumentAccepted(id: string, wamid: string): Promise<boolean> {
   await blob.put(messageIndexKey(wamid), id)
   const current = await readResumeRecovery(id)
   // A signed failure callback can beat the original HTTP response.
-  if (current?.deliveryState === "failed" && current.deliveredMessageId === wamid) return
+  if (current?.deliveryState === "failed" && current.deliveredMessageId === wamid) return false
   await patchResumeRecovery(id, { status: "delivered", deliveredMessageId: wamid, deliveryState: "accepted" })
+  return true
 }
 
 /** Authenticated Meta callbacks distinguish an API acceptance from real handset delivery. */
