@@ -886,7 +886,11 @@ async function bootstrapLegacyResumeFailures(): Promise<number> {
   const keys = (await blob.list("whatsapp")).filter(k => /^whatsapp\/session-\d+\.json$/.test(k))
   let queued = 0
   const cutoff = Date.parse("2026-10-29T17:45:00Z")
-  for (const key of keys.slice(0, 200)) {
+  const cursorKey = "whatsapp/recovery-bootstrap-cursor.txt"
+  const offset = Math.max(0, Number((await blob.getText(cursorKey)) || 0) || 0)
+  const batch = keys.slice(offset, offset + 200)
+  await blob.put(cursorKey, String(offset + batch.length >= keys.length ? 0 : offset + batch.length))
+  for (const key of batch) {
     const from = key.match(/session-(\d+)\.json$/)?.[1] || ""
     if (!from) continue
     // Read the persisted record directly: interactive sessions expire after 24h,
