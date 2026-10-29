@@ -1,19 +1,21 @@
 # Kompas voice upload and benchmark — 29 October 2026
 
-## Change and ownership
-The canonical MFit Kompas speech endpoint (`src/app/api/kompas/speech/route.ts`) previously called `request.arrayBuffer()` before enforcing the 4 MiB limit. A missing or dishonest Content-Length header could cause an oversized upload to be fully buffered before rejection. The endpoint now reads incrementally, rejects at the first byte over the existing limit, cancels the upstream stream, and copies accepted chunks into one exact-sized array. Authentication, per-user rate limiting, purpose/MIME checks, minimum-size checks, transcription, and the existing session-archive/consent path are unchanged.
+## Canonical endpoint improvement
+The MFit Kompas speech endpoint (`src/app/api/kompas/speech/route.ts`) previously called `request.arrayBuffer()` before enforcing the 4 MiB limit. A missing or dishonest Content-Length could force buffering an oversized upload before rejection. The endpoint now reads incrementally, rejects at the first byte over the existing limit, cancels the upstream stream, and copies accepted chunks into one exact-sized array. Authentication, per-user rate limiting, purpose/MIME checks, minimum-size checks, transcription, and existing consent/session archive behavior are unchanged.
 
-Perfact's independent transcription route already bounds streamed bodies; its open PR #13 addresses pre-parsed bodies. Do not duplicate a separate MFit answer engine there.
+Perfact's independent transcription route already bounds streamed bodies; its open PR #13 addresses pre-parsed bodies. The canonical engine remains MFit Kompas.
 
-## Local verification (offline, synthetic inputs only)
-- `node --experimental-strip-types --test scripts/tests/kompas-audio-upload.test.mjs`: **12/12 passed** in the isolated local test harness.
-- `node --test scripts/tests/voice-benchmark.test.mjs`: **15/15 passed** in the isolated local test harness.
-- The existing `scripts/tests/kompas-speech.test.mjs` static contract was updated to check authentication before `readBoundedAudio` and explicit oversized rejection. Full repository CI and hosted smoke testing are required before production promotion.
+## Verification
+- `node --experimental-strip-types --test scripts/tests/kompas-audio-upload.test.mjs`: **12/12 passed** in an isolated local test harness (synthetic byte streams).
+- Existing `scripts/tests/kompas-speech.test.mjs` static contract updated to require authentication before the bounded read and explicit oversize rejection.
+- The existing `scripts/kompas-voice-metrics-core.mjs`, `scripts/kompas-voice-metrics-report.mjs` and `scripts/tests/kompas-voice-metrics.test.mjs` are the **single canonical offline benchmark**. No duplicate metric implementation was retained.
+- New reference-set SHA-256 binds reference text, technical terminology and reference speaker labels to each ID. Comparisons reject changed reference data and legacy baselines lacking this fingerprint.
+- Full CI, hosted preview smoke, and a consented real-audio baseline remain mandatory before production promotion.
 
-## Repeatable benchmark
-Run `node scripts/voice-benchmark.mjs candidate.json [baseline.json]` with a local JSON object containing `kind: "synthetic"` or `kind: "consented-deidentified"` and `samples`. Each sample includes a unique `id` when comparing to baseline, `reference`, `hypothesis`, optional `technicalTerms` (array of exact phrases), optional aligned `speakerReference` and `speakerHypothesis` arrays, and optional measured `latencyMs`. Keep utterances <=2000 words. Output is aggregate only; never commit personal audio, raw transcripts, private fixtures, or user identifiers.
+## Offline aggregate benchmark
+Run `node scripts/kompas-voice-metrics-cli.mjs candidate.json [baseline-aggregate.json]`. Candidate JSON must include `datasetId`, `revision` and a nonempty `samples` array. Each sample needs a unique `id`, `consent:true`, `reference`, `hypothesis`, and optionally `technicalTerms` (array), `editCount`, `referenceSpeaker`, `predictedSpeaker`, and measured `latencyMs`. Keep clips <=500 words; split long recordings. Never commit private fixtures or audio.
 
-Metrics: word error rate (S+D+I/reference words), deletion rate (D/reference words), technical phrase recall (matched occurrences / reference occurrences), zero-edit utterance rate, speaker attribution accuracy over aligned reference turns, and nearest-rank P50/P95 latency. Missing denominators are **null**, never zero or perfect. A paired comparison requires the exact same unique case IDs and dataset kind and returns signed candidate-minus-baseline deltas.
+The aggregate-only output includes WER, deletion/substitution/insertion rates, technical-term recall, zero-edit rate (only when editCount is supplied), speaker attribution accuracy (only with both labels), silence hallucination rate, and P50/P95 latency. Missing denominators are null. To compare, use a baseline aggregate generated with the same dataset ID, revision, sample IDs, **and reference-set fingerprint**. Candidate-minus-baseline deltas are computed only after validation. No raw transcript, audio or speaker identity appears in the report.
 
 ## Baseline and release gate
-**Consented real-world baseline: NOT YET MEASURED.** WER, deletions, term recall, zero-edit rate, speaker accuracy, and live P50/P95 latency are all unavailable. The 27 offline test cases establish correctness of boundary handling and metric calculation, **not** live STT accuracy or latency improvements. No production promotion until CI, route-level behavior, and the actual Vercel deployment are verified. Preserve the current READY production deployment as rollback reference.
+**Consented real-world baseline: NOT YET MEASURED.** WER, deletion rate, technical recall, zero-edit rate, speaker attribution, and live P50/P95 latency are unavailable for this change. Synthetic upload tests measure boundary correctness, not live accuracy or latency. Keep production unchanged until full CI and the deployed route are verified. Preserve the latest READY production deployment as the rollback reference.
