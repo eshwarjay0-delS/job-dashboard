@@ -107,6 +107,16 @@ function heardSession(lines) {
   h.s.composeIntake = h.s.composeIntake;   // the real intake from app.js
   return h;
 }
+test("go deeper heard after an answer is a new ask, not a re-press of the old question", async () => {
+  const { s, asked } = heardSession(["Go deeper"]);
+  await s.aiAnswer(false);
+  assert.equal(s.cards.length, 2);
+  assert.equal(s.cards[0].question, OLD_Q);
+  assert.equal(s.cards[0].answer, OLD_A);
+  assert.notEqual(asked[0].opts.reask, true);
+  assert.match(String(asked[0].heard), /Go deeper/);
+});
+
 test("a new question heard since the last answer opens a new page and is not a re-press", async () => {
   const { s, asked } = heardSession(["Alright, could you explain what dependency confusion is?", "So yeah, Dependency"]);
   await s.aiAnswer(false);

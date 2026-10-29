@@ -475,7 +475,7 @@ function afterMarkedNextQuestion(text: string): string {
 /** "And why?", "Why?", "How come?" — a follow-up, not a new subject and not silence. */
 export function shortFollowUp(text: string): boolean {
   const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim()
-  return /^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|why|how)(?:\s+though)?[.?!]*$/i.test(t)
+  return /^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|go deeper|dig deeper|explain that|explain this|explain it|say that again|why|how)(?:\s+though)?[.?!]*$/i.test(t)
 }
 
 /** An unpunctuated clause, or one that stops on a function word, is still being said. */

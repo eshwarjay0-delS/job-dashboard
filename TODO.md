@@ -1,3 +1,7 @@
+## 2026-10-29 — Go deeper heard after an answer is a new ask
+
+"Go deeper" and "Explain that" were not treated as questions, so a press after an answer re-asked the old question. They are short follow-ups now. "What exactly is least privilege?" is not. The page stamp is kompas-20261029-deeper. Fifty heard sequences still cut apart.
+
 ## 2026-10-29 — Go deeper is not another definition of the previous question
 
 "Go deeper" and "Explain that" were glued onto the previous question, and the quoted "what is" made the follow-up a definition again. The follow-up is classified from the words before that quote. "Which of those" stays a comparison. "What is NLA" by itself stays a definition. One hundred intent folds still pass.

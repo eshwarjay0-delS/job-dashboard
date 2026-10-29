@@ -407,6 +407,10 @@ test("the desktop page splits and holds the same way", () => {
   }
   assert.equal(ctx.clauseStillOpen("How would you design a PKI"), true)
   assert.equal(ctx.repeatsPriorQuestion("And why?", "What is NLA and why do we disable it?"), false)
+  assert.equal(ctx.repeatsPriorQuestion("Go deeper", "What is NLA and why do we disable it?"), false)
+  assert.equal(shortFollowUp("Go deeper"), true)
+  assert.equal(shortFollowUp("Explain that"), true)
+  assert.equal(shortFollowUp("What exactly is least privilege?"), false)
   assert.equal(ctx.repeatsPriorQuestion("What is PKI?", "What is PKI?"), true)
   assert.match(src, /clauseStillOpen\(tail\) \? 7000 : AUTO_QUIET_MS/)
   assert.match(src, /spans.length > 1/)
