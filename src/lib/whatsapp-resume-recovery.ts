@@ -1,0 +1,85 @@
+/**
+ * Durable WhatsApp resume recovery. The original JD and chosen source path survive
+ * serverless timeouts and session consumption; no generated draft is delivered here.
+ * Never log this record: it contains a candidate's JD and sender identity.
+ */
+import { blob } from "./storage"
+
+export type ResumeRecoveryJob = {
+  version: 1
+  id: string
+  from: string
+  userId: string
+  jd: string
+  jdId: string
+  resumePath: string
+  resumeName?: string
+  resumeFiled?: string
+  files?: {
+    userDir: string; email: string; said: string; depth: number
+    rel: string; abs: string; redo?: boolean
+  }
+  status: "pending" | "sending" | "delivered" | "uncertain"
+  createdAt: number
+  updatedAt: number
+  attempts: number
+  retryAt: number
+  best?: { token: string; coverage: number; supportedCoverage: number }
+  deliveredMessageId?: string
+  errorCode?: string
+}
+
+export const recoveryKey = (id: string) => `whatsapp/resume-recovery/${id}.json`
+
+export async function readResumeRecovery(id: string): Promise<ResumeRecoveryJob | null> {
+  const raw = await blob.getText(recoveryKey(id))
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as ResumeRecoveryJob
+    return parsed.version === 1 && parsed.id === id ? parsed : null
+  } catch { return null }
+}
+
+export async function enqueueResumeRecovery(input: Omit<ResumeRecoveryJob, "version" | "status" | "createdAt" | "updatedAt" | "attempts" | "retryAt">): Promise<ResumeRecoveryJob> {
+  const now = Date.now()
+  const fresh: ResumeRecoveryJob = { ...input, version: 1, status: "pending", createdAt: now, updatedAt: now, attempts: 0, retryAt: now }
+  await blob.putIfAbsent(recoveryKey(input.id), JSON.stringify(fresh))
+  return (await readResumeRecovery(input.id)) || fresh
+}
+
+export async function patchResumeRecovery(id: string, patch: Partial<ResumeRecoveryJob>): Promise<void> {
+  const job = await readResumeRecovery(id)
+  if (!job || job.status === "delivered") return
+  // The immutable input is never overwritten by a stale retry.
+  const { id: _id, jd: _jd, from: _from, userId: _uid, ...updates } = patch
+  await blob.put(recoveryKey(id), JSON.stringify({ ...job, ...updates, updatedAt: Date.now() }))
+}
+
+export function retryDelayMs(attempts: number): number {
+  return Math.min(6 * 60 * 60_000, 5 * 60_000 * 2 ** Math.min(6, Math.max(0, attempts - 1)))
+}
+
+export async function deferResumeRecovery(id: string, code: string, candidate?: { token: string; coverage: number; supportedCoverage: number }): Promise<void> {
+  const job = await readResumeRecovery(id)
+  if (!job || job.status === "delivered" || job.status === "uncertain" || job.status === "sending") return
+  const attempts = job.attempts + 1
+  const best = candidate && (!job.best || candidate.supportedCoverage > job.best.supportedCoverage ||
+    (candidate.supportedCoverage === job.best.supportedCoverage && candidate.coverage > job.best.coverage))
+    ? candidate : job.best
+  await patchResumeRecovery(id, { status: "pending", attempts, retryAt: Date.now() + retryDelayMs(attempts), errorCode: code, best })
+}
+
+export async function dueResumeRecoveries(limit = 1): Promise<ResumeRecoveryJob[]> {
+  const keys = (await blob.list("whatsapp/resume-recovery/")).filter(k => k.endsWith(".json"))
+  const now = Date.now()
+  const jobs = await Promise.all(keys.map(async key => {
+    try {
+      const raw = await blob.getText(key)
+      return raw ? JSON.parse(raw) as ResumeRecoveryJob : null
+    } catch { return null }
+  }))
+  return jobs.filter((j): j is ResumeRecoveryJob =>
+    !!j && j.version === 1 && j.status === "pending" && j.retryAt <= now &&
+    j.createdAt <= now && now - j.createdAt < 14 * 24 * 60 * 60_000)
+    .sort((a, b) => a.retryAt - b.retryAt).slice(0, limit)
+}
