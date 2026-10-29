@@ -1,3 +1,7 @@
+## 2026-10-29 — A specialised job does not stay tied to a generic security title
+
+Information Security AI Engineer was keeping Security Engineer beside AI Engineer, both at the same title score, and the generic file could be the one sent. When the job names a speciality and one of the tied resumes names it, that resume stays. If the only resume is the generic title, it still stays.
+
 ## 2026-10-29 — The remaining local checks
 
 The desktop already shows a fenced sample as code and keeps the sentences around it. The older check still expected the fence to disappear. That check now matches the display. On Windows, the private scorecard mode is not asserted, because the file system reports 666, and the migration check loads its script through a file URL so it can run. The migration kept the current session answer and did not replace it.
