@@ -47,7 +47,7 @@ test('An unrelated earlier experience cannot be treated as a new answer requirem
 test('Compound BNY issue review questions preserve user-named components in human phrasing',()=>{
  const r=rediscoverRelevance('How do you assess business impact, root cause, compensating controls, and residual risk?')
  assert.deepEqual(r.requestedTopics,['business impact','root cause','compensating controls','residual risk'])
- assert.equal(r.answerMode,'describe')
+ assert.equal(r.answerMode,'explain')
 })
 test('Technical mechanics asked directly are allowed depth, without invented project history',()=>{
  const r=rediscoverRelevance('How does TLS work with PKI?')

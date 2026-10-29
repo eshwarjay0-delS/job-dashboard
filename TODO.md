@@ -2,6 +2,8 @@
 
 Measured on ten asks after "What is NLA and why do we disable it?": three new questions were rewritten as follow-ups of that ask, and "Explain that" was dropped so the previous answer stayed. A short question that names its own subject is no longer glued on. A real follow-up still is. WhatsApp does not send a copy of the previous answer for a different question. The desktop cut of the same ten matches the WhatsApp cut. Gain: those four collapses are gone. Not a live model score.
 
+The build then failed its fidelity check because "How do you assess business impact, root cause, compensating controls, and residual risk?" is an explanation, and the check still expected a description. The check now expects an explanation. The named parts are unchanged.
+
 ## 2026-10-29 — Kompas stays deep on the real question
 
 From the Security Analyst III session: words before "next question" are not the question. What is NLA and why it is disabled opens with the definition and then the mechanism. How you assess impact, root cause, compensating controls, residual risk, and validity covers each part. A fit question and what you would bring open with the experience. A comparison names both things. A challenge story is one supported story. No invented decision-maker, person, metric, or formula. One hundred earlier intent folds still pass. Not fifty live model answers.
