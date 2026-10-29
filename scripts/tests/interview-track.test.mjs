@@ -7,7 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { trackInterviews, decide, noteSent, toSendForYou, followUpWords, validState, emptyState, weekdayForHim, dayList, cleanDays, DEFAULT_DAYS, ringDays, FIRST_AFTER_DAYS, EVERY_DAYS, MOST_SENT_FOR_YOU, OLD_AFTER_DAYS } from '../../src/lib/interview-track.ts'
+import { trackInterviews, decide, noteSent, toSendForYou, followUpWords, validState, emptyState, weekdayForHim, dayList, cleanDays, DEFAULT_DAYS, ringDays, FIRST_AFTER_DAYS, EVERY_DAYS, MOST_SENT_FOR_YOU, OLD_AFTER_DAYS, sendNowBlockReason } from '../../src/lib/interview-track.ts'
 
 const read = (p) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 const ME = 'me@example.com', DAY = 86_400_000, NOW = Date.UTC(2026, 9, 13, 18, 0, 0)
@@ -199,4 +199,18 @@ test('rewording what is sent, or re-ticking its days, never switches it on or of
   assert.deepEqual(cleanDays([0, 2, 2, 8, -1, 'x', 6]), [0, 2, 6])
   assert.deepEqual(validState({ marks: [], handed: [{ id, on: true, at: 1, sent: [], days: [0, 2, 2, 8, -1] }] }).handed, [{ id, on: true, at: 1, sent: [], days: [0, 2] }])
   assert.deepEqual(validState({ marks: [], handed: [{ id, on: true, at: 1, sent: [], days: [] }] }).handed, [{ id, on: true, at: 1, sent: [] }])
+})
+
+test('Send now never presents as a working button on a card the server must refuse', () => {
+  const contact = { name: 'Shikha Rao', email: 'shikha@vendorone.example', company: 'VendorOne', phones: [], recruiter: false }
+  const own = { ...contact, recruiter: true }
+  const base = { phase: 'waiting', contact, theyWrote: false, sent: 0 }
+  assert.equal(sendNowBlockReason(base), '')
+  assert.match(sendNowBlockReason({ ...base, phase: 'coming' }), /hasn't happened yet/)
+  assert.match(sendNowBlockReason({ ...base, phase: 'today' }), /is today/)
+  assert.match(sendNowBlockReason({ ...base, phase: 'past' }), /isn't waiting/)
+  assert.match(sendNowBlockReason({ ...base, contact: null }), /no outside contact/)
+  assert.match(sendNowBlockReason({ ...base, contact: own }), /own recruiters/)
+  assert.match(sendNowBlockReason({ ...base, theyWrote: true }), /wrote last/)
+  assert.match(sendNowBlockReason({ ...base, sent: MOST_SENT_FOR_YOU }), /Four follow-ups already sent/)
 })

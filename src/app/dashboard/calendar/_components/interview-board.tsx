@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react"
 import Link from "next/link"
 import RecruiterButton from "../../_components/recruiter-button"
 import { createClient } from "@/lib/supabase/client"
-import { dayList, DEFAULT_DAYS, type Tracked } from "@/lib/interview-track"
+import { dayList, DEFAULT_DAYS, sendNowBlockReason, type Tracked } from "@/lib/interview-track"
 
 type Answer = { ok: boolean; error?: string; active: Tracked[]; past: Tracked[]; due: number; canSendForYou: boolean; words: Record<string, { subject: string; body: string }> }
 
@@ -181,6 +181,7 @@ export default function InterviewBoard() {
           const name = (t.contact?.name || t.contact?.email || "them").split(/\s+/)[0]
           const words = data.words[t.id]
           const mine = !!t.forYou?.on
+          const sendBlock = sendNowBlockReason({ phase: t.phase, contact: t.contact, theyWrote: t.theyWrote, sent: t.forYou?.sent ?? 0 })
           return (
             <article key={t.id} id={t.threadId ? `interview-${t.threadId}` : undefined} style={{ ...card, borderLeft: t.action === "none" ? undefined : "4px solid var(--spot)" }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -245,10 +246,14 @@ export default function InterviewBoard() {
                           onClick={() => { void choose(t.id, "save_words", { subject: editSubject, body: editBody }) }} style={big}>
                           {busy === `save_words:${t.id}` ? "Saving…" : "Save words"}
                         </button>
-                        <button type="button" className="btn-outline" disabled={busyFor(t.id)}
-                          onClick={() => { void choose(t.id, "send_now", { subject: editSubject, body: editBody }) }} style={big}>
-                          {busy === `send_now:${t.id}` ? "Sending…" : "Send edited now"}
-                        </button>
+                        {sendBlock ? (
+                          <p style={{ ...muted, margin: 0, alignSelf: "center" }}>{sendBlock}</p>
+                        ) : (
+                          <button type="button" className="btn-outline" disabled={busyFor(t.id)}
+                            onClick={() => { void choose(t.id, "send_now", { subject: editSubject, body: editBody }) }} style={big}>
+                            {busy === `send_now:${t.id}` ? "Sending…" : "Send edited now"}
+                          </button>
+                        )}
                         <button type="button" className="btn-outline" onClick={() => setEditing("")} style={big}>Cancel edit</button>
                       </div>
                     </>
@@ -271,10 +276,14 @@ export default function InterviewBoard() {
                       <p style={{ margin: "0 0 10px", fontSize: 14.5, lineHeight: 1.6, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{words.body}</p>
                       {t.forYou?.sentAt?.length ? <p style={{ ...muted, margin: "0 0 10px" }}>Last sent {day(t.forYou.sentAt[t.forYou.sentAt.length - 1])}.</p> : null}
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                        <button type="button" className="btn-accent" disabled={busyFor(t.id)}
-                          onClick={() => { void choose(t.id, "send_now") }} style={big}>
-                          {busy === `send_now:${t.id}` ? "Sending…" : "Send now"}
-                        </button>
+                        {sendBlock ? (
+                          <p style={{ ...muted, margin: 0 }}>{sendBlock}</p>
+                        ) : (
+                          <button type="button" className="btn-accent" disabled={busyFor(t.id)}
+                            onClick={() => { void choose(t.id, "send_now") }} style={big}>
+                            {busy === `send_now:${t.id}` ? "Sending…" : "Send now"}
+                          </button>
+                        )}
                         <button type="button" className="btn-outline" onClick={() => startEdit(t.id, words.subject, words.body)} style={big}>Edit</button>
                       </div>
                       <p style={{ ...muted, margin: "10px 0 0" }}>Send now goes out at once and counts toward the four. The automatic send rings only on the ticked days; untick them all and it rings Monday and Thursday, once a week.</p>

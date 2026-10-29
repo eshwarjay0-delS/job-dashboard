@@ -107,6 +107,22 @@ export function decide(state: TrackState, id: string, action: "rejected" | "comp
 }
 export const noteSent = (state: TrackState, id: string, now: number): TrackState => ({ marks: state.marks, handed: state.handed.map(h => (h.id === id ? { ...h, sent: [...h.sent, now] } : h)) })
 
+/** Why Send now cannot go out for this card, in the server's own gate order — or "" when it can.
+ * The board shows this instead of a Send now button a tap cannot honour: a button the server
+ * must refuse (interview not waiting yet, recruiter wrote last, no outside contact, four already
+ * sent) may never present as a working send. The hour's double-tap guard is not a reason here:
+ * it is a skip, and the board names it as one when it happens. */
+export function sendNowBlockReason(t: { phase: Phase; contact: Reach | null; theyWrote: boolean; sent: number }): string {
+  if (t.sent >= MOST_SENT_FOR_YOU) return "Four follow-ups already sent for this interview."
+  if (t.theyWrote) return "The recruiter wrote last, so there is nothing to follow up right now."
+  if (t.contact?.recruiter) return "This contact is one of your own recruiters, so nothing is sent to them."
+  if (!t.contact) return "There is no outside contact to follow up with on this card."
+  if (t.phase === "coming") return "This interview hasn't happened yet, so Send now can't go out."
+  if (t.phase === "today") return "This interview is today, so Send now can't go out yet."
+  if (t.phase !== "waiting") return "This interview isn't waiting for news right now, so Send now can't go out."
+  return ""
+}
+
 type Opts = { state?: TrackState; recruiter?: (email: string) => boolean }
 
 /** Every proven interview in its place: the ones still open (what needs him first, then the soonest), and the past. */

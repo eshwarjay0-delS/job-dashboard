@@ -105,7 +105,17 @@ export async function sendInterviewFollowUpNow(userId: string, myName: string, i
     })
     if (res.ok) return { ok: true }
     console.error("[interviews] a send-now follow-up was refused", res.status)
-    return { ok: false, error: "Gmail refused that send just now. It is still counted, so it will not go twice." }
+    // A definite refusal means Gmail answered and no mail went out, so the recorded send is
+    // rolled back: a refused tap must never consume one of the four sends. Only the ambiguous
+    // case below (timeout, where the mail may still have gone out) keeps the count.
+    let rolledBack = false
+    try {
+      await writeTrackState(userId, { ...state, handed: state.handed.map(x => (x.id === id ? { ...x, sent: x.sent.slice(0, -1) } : x)) })
+      rolledBack = true
+    } catch {}
+    return { ok: false, error: rolledBack
+      ? "Gmail refused that send just now. Nothing was counted, so you can try again."
+      : "Gmail refused that send just now. It is still counted, so it will not go twice." }
   } catch (error) {
     console.error("[interviews] a send-now follow-up could not be sent", String(error).slice(0, 200))
     return { ok: false, error: "That send could not go out just now. It is still counted, so it will not go twice." }

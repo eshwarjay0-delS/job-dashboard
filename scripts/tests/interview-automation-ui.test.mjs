@@ -51,3 +51,13 @@ test('a tap never claims a send it did not make: the toast is gated on ok, a ski
   const api = read('src/app/api/gmail/interview-track/route.ts')
   assert.ok(api.includes('sent.skipped ? { ...out, skipped: true } : out'), 'the route carries the skip to the board')
 })
+
+test('a Send now button the server must refuse is replaced by its reason, and a refused send counts nothing', () => {
+  const board = read('src/app/dashboard/calendar/_components/interview-board.tsx')
+  assert.ok(board.includes('sendNowBlockReason('), 'the panel asks the server gate before showing Send now')
+  assert.ok(board.includes('sendBlock ?'), 'a blocked card shows the reason instead of the button')
+  const sender = read('src/lib/interview-followups.ts')
+  assert.ok(sender.includes('sent: x.sent.slice(0, -1)'), 'a definite refusal rolls the recorded send back')
+  assert.ok(sender.includes('Nothing was counted, so you can try again.'), 'a rolled-back refusal says nothing was counted')
+  assert.ok(sender.includes('It is still counted, so it will not go twice.'), 'an ambiguous timeout still keeps the count')
+})
