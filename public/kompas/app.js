@@ -2583,7 +2583,15 @@ async function analyseScreen() {
   const card = addCard("🖥 Reading the screen…", ["…"]); card.streaming = true; renderCard();
   const t0 = performance.now();
   try {
-    const image = await grabFrame();
+    // The Screen Capture press is the consent to hide Kompas itself while the
+    // frame is grabbed, so the overlay never pollutes the shot. Hidden only
+    // for the grab, restored right after, even when the grab fails.
+    const overlayEl = (typeof document !== "undefined" && document.getElementById) ? document.getElementById("overlay") : null;
+    const canHide = !!(overlayEl && overlayEl.style);
+    const prevVisibility = canHide ? overlayEl.style.visibility : "";
+    if (canHide) overlayEl.style.visibility = "hidden";
+    let image;
+    try { image = await grabFrame(); } finally { if (canHide) overlayEl.style.visibility = prevVisibility; }
     const res = await fetch("/api/screen", { signal: AbortSignal.timeout(30000), method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ image, prep: slimPrep(), config: liveConfig() }) });
     const data = await res.json();
     if ((current && current.id) !== screenSession || !cards.includes(card)) throw new Error("Session changed. Capture the screen again in the active session.");
