@@ -56,7 +56,7 @@ export async function patchResumeRecovery(id: string, patch: Partial<ResumeRecov
 }
 
 export function retryDelayMs(attempts: number): number {
-  return Math.min(6 * 60 * 60_000, 5 * 60_000 * 2 ** Math.min(6, Math.max(0, attempts - 1)))
+  return Math.min(6 * 60 * 60_000, 5 * 60_000 * 2 ** Math.min(7, Math.max(0, attempts - 1)))
 }
 
 export async function deferResumeRecovery(id: string, code: string, candidate?: { token: string; coverage: number; supportedCoverage: number }): Promise<void> {
