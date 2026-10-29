@@ -57,6 +57,8 @@ export interface TailorResult {
   supported_coverage?: number
   /** JD requirements not evidenced by the candidate; never add as claimed skills merely to raise a score. */
   unsupported_keywords?: string[]
+  /** Unsupported requirements that appeared as new claims in the generated document. */
+  unverified_added_keywords?: string[]
   // Per role: bullets rewritten and added, the listed JD skills this role must show to back the
   // candidate's claimed years (`required`), and how many its bullets do show (`skills`).
   role_alignment?: { role: string; bullets: number; rewritten: number; added: number; skills: number; required: number }[]
@@ -955,7 +957,9 @@ export async function runTailor(opts: {
     notes.push(`JD qualification gaps not supported by candidate evidence: ${unsupportedJdKws.length}`)
   }
   notes.push(`Evidence-supported JD vocabulary retained: ${Math.round(attainableCoverage * 100)}%`)
-  const qualityReport = resumeQuality({ matched: attainableCovered.size, total: attainableKws.length, missing: attainableKws.filter(k => !attainableCovered.has(k)), weightedCoverage: attainableCoverage, partial: skillsOnly || floorCarried || !!best.partial || (splitDraft && (lackingRoles(best.edits).length > 0 || !experienceCoverageComplete(role_alignment, TARGET_COVERAGE))), unchanged: !diff.length })
+  const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(best.tailoredText, [k]).has(k))
+  if (unverifiedAdded.length) notes.push(`Unverified JD claims require candidate confirmation: ${unverifiedAdded.join(", ")}`)
+  const qualityReport = resumeQuality({ matched: attainableCovered.size, total: attainableKws.length, missing: attainableKws.filter(k => !attainableCovered.has(k)), weightedCoverage: attainableCoverage, partial: skillsOnly || floorCarried || !!best.partial || unverifiedAdded.length > 0 || (splitDraft && (lackingRoles(best.edits).length > 0 || !experienceCoverageComplete(role_alignment, TARGET_COVERAGE))), unchanged: !diff.length })
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
 
@@ -964,7 +968,7 @@ export async function runTailor(opts: {
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,
     ranked_candidates: rankedCandidates, what_changed: whatChanged(edits), edits, notes,
     applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff, review,
-    cached: false, elapsed_ms: Date.now() - started, coverage: coveragePercent(best.cov), supported_coverage: coveragePercent(attainableCoverage), unsupported_keywords: unsupportedJdKws, role_alignment,
+    cached: false, elapsed_ms: Date.now() - started, coverage: coveragePercent(best.cov), supported_coverage: coveragePercent(attainableCoverage), unsupported_keywords: unsupportedJdKws, unverified_added_keywords: unverifiedAdded, role_alignment,
     experience_skills: { listed: claimedKw.size, shown: provenKw.size },
     ...(best.partial ? { partial: best.partial } : {}),
     ...(diff.length ? {} : { unchanged: true }),
