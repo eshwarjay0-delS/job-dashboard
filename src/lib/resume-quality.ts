@@ -42,14 +42,13 @@ export function resumeQuality(input: {
   const rawCoverage = validCounts ? input.matched / input.total : 0
   const validWeight = input.weightedCoverage === undefined || (Number.isFinite(input.weightedCoverage) && input.weightedCoverage >= 0 && input.weightedCoverage <= 1)
   const coverage = validWeight ? Math.min(rawCoverage, input.weightedCoverage ?? rawCoverage) : 0
-  // If coverage meets the floor, deliver even if marked partial — a 95%+ resume
-  // with some sections not perfectly rewritten is better than nothing.
-  // Only block on partial when coverage is also below floor.
-  const coverageOk = validCounts && coverage >= RESUME_MIN_COVERAGE
-  // Keyword overlap cannot establish that every requested role finished rewriting.
-  // Partial results may still meet the delivery floor, but are never completed/cacheable.
-  const meetsTarget = validCounts && coverage >= RESUME_TARGET_COVERAGE && !input.unchanged && !input.partial
-  const meetsFloor = coverageOk && !input.unchanged
+  // Coverage and completion are independent. An incomplete rewrite, missing
+  // experience section or unverified claim is never deliverable merely because
+  // its supported keywords score 95-100%.
+  const coverageOk = validCounts && validWeight && coverage >= RESUME_MIN_COVERAGE
+  const complete = !input.unchanged && !input.partial
+  const meetsTarget = coverageOk && coverage >= RESUME_TARGET_COVERAGE && complete
+  const meetsFloor = coverageOk && complete
   return {
     status: meetsTarget ? "coverage_met" as const : meetsFloor ? "delivered_with_gaps" as const : "needs_review" as const,
     minimum: RESUME_MIN_COVERAGE * 100,
