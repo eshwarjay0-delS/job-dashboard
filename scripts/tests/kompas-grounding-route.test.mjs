@@ -382,3 +382,43 @@ for (let fold = 0; fold < 30; fold++) {
   assert.equal(h.dossiers,0)
   assert.equal(h.vaults,0)
 })
+
+
+test('Chief relevance: a director setup is excluded from the actual answer request',async()=>{
+  const h=harness({modelAnswer:'I would bring independent control review and clear risk reporting.'})
+  const question='We use CyberArk, Splunk and Power BI across 27 teams. The job also touches IAM and vulnerability management. What would you bring to this team?'
+  const response=await h.post({question,config:{resume:'Reviewed access control gaps and tracked remediation in ServiceNow GRC.'}})
+  assert.equal(response.status,200)
+  assert.equal(h.calls.length,1)
+  const user=h.calls[0].messages[1].content
+  const system=h.calls[0].messages[0].content
+  assert.match(user,/ANSWER ONLY THIS:\nWhat would you bring to this team\?/i)
+  assert.doesNotMatch(user,/ANSWER ONLY THIS:\nWe use CyberArk/i)
+  assert.match(system,/Current ask: What would you bring to this team\?/i)
+  assert.doesNotMatch(system,/Explicitly requested subjects:.*CyberArk/i)
+})
+
+test('Chief relevance: scenario limitations survive while extraneous setup is not the asked task',async()=>{
+  const h=harness({modelAnswer:'I would validate the approved change without restarting production.'})
+  const question='No production downtime is allowed. You must keep all audit records. How would you verify the control remediation?'
+  const response=await h.post({question,config:{resume:'Reviewed remediation evidence and risk exceptions.'}})
+  assert.equal(response.status,200)
+  const user=h.calls[0].messages[1].content
+  const system=h.calls[0].messages[0].content
+  assert.match(user,/ANSWER ONLY THIS:\nHow would you verify the control remediation\?/i)
+  assert.match(system,/Current-turn constraints/)
+  assert.match(system,/No production downtime/)
+  assert.match(system,/keep all audit records/)
+})
+
+test('Chief relevance: which-of-those carries explicit current-turn choices, not generated history',async()=>{
+  const h=harness({modelAnswer:'My strongest framework is NIST CSF, and I have worked with CRI as well.'})
+  const question='We assess NIST CSF, CRI Profile and NIST 800-53. Which of those are you strongest in?'
+  const response=await h.post({question,config:{resume:'Supported NIST CSF and CRI Profile control assessments.'},history:[{q:'DCSync and Cobalt Strike?',a:'Old unrelated project'}]})
+  assert.equal(response.status,200)
+  const user=h.calls[0].messages[1].content
+  const system=h.calls[0].messages[0].content
+  assert.match(user,/ANSWER ONLY THIS:\nWhich of those are you strongest in\?/i)
+  assert.match(system,/Explicitly requested subjects: NIST CSF; CRI Profile; NIST 800-53/i)
+  assert.doesNotMatch(system,/Explicitly requested subjects:.*DCSync/i)
+})
