@@ -79,7 +79,7 @@ export async function dueResumeRecoveries(limit = 1): Promise<ResumeRecoveryJob[
   }))
   return jobs.filter((j): j is ResumeRecoveryJob =>
     !!j && j.version === 1 && j.status === "pending" && j.retryAt <= now &&
-    j.createdAt <= now && now - j.createdAt < 14 * 24 * 60 * 60_000)
+    j.createdAt <= now)
     .sort((a, b) => a.retryAt - b.retryAt).slice(0, limit)
 }
 
