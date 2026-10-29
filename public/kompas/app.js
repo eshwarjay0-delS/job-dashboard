@@ -2508,6 +2508,19 @@ $("screenBtn").onclick = analyseScreen;
 // capture → region review → grounded answer path as the existing menu/shortcut.
 if ($("screenCaptureAnswerBtn")) $("screenCaptureAnswerBtn").onclick = analyseScreen;
 async function grabFrame() {
+  // A companion extension may hand the page a frame it captured without a
+  // picker (tab capture needs no share dialog). One frame, one use: it is
+  // consumed here and cleared, so a stale frame can never answer twice.
+  // The attribute crosses the extension's isolated world; the page reads it
+  // straight from the document, so no listener or message bridge is needed.
+  if (typeof document !== "undefined" && document.documentElement && typeof document.documentElement.getAttribute === "function") {
+    const extFrame = document.documentElement.getAttribute("data-kompas-ext-frame");
+    if (typeof extFrame === "string" && extFrame) {
+      if (typeof document.documentElement.removeAttribute === "function") document.documentElement.removeAttribute("data-kompas-ext-frame");
+      if (extFrame.indexOf("data:image/") === 0) return extFrame;
+      throw new Error("The companion capture did not return a readable frame. Press Screen Answer again.");
+    }
+  }
   // Windows Kompas 0.8+ returns a fresh, bounded in-memory JPEG. This avoids
   // trying to extract the image from the system-audio loopback display track.
   // If the native capture refuses (for example before the live view has registered), the stream path still runs.

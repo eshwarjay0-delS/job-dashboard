@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Kompas Tab Capture",
+  "version": "1.0",
+  "description": "Captures the armed tab for Kompas Screen Answer without a share picker. Tab capture needs no share dialog.",
+  "permissions": ["tabCapture", "offscreen", "activeTab"],
+  "host_permissions": ["https://job-dashboard-fawn.vercel.app/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Arm this tab for Kompas" },
+  "content_scripts": [
+    {
+      "matches": ["https://job-dashboard-fawn.vercel.app/kompas*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

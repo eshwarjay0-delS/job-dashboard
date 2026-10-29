@@ -80,3 +80,38 @@ test('a blank elevated frame is still a protected window; elevation changes noth
   assert.match(r.error.message, /opted out of screen capture/)
   assert.match(r.error.message, /Running as administrator does not change that/)
 })
+
+async function grabExt(frame) {
+  let removed = false
+  const ctx = vm.createContext({
+    document: {
+      documentElement: {
+        getAttribute: (n) => n === 'data-kompas-ext-frame' ? frame : null,
+        removeAttribute: () => { removed = true },
+      },
+      createElement: () => { throw new Error('no canvas needed'); },
+    },
+    navigator: { mediaDevices: { getDisplayMedia: async () => { throw new Error('picker must not run'); } } },
+    window: { kompasDesktop: { captureScreen: async () => { throw new Error('native must not run'); } } },
+    setTimeout,
+  })
+  vm.runInContext(grabSrc, ctx)
+  return ctx.grabFrame().then(
+    (v) => ({ ok: true, value: v, removed }),
+    (e) => ({ ok: false, error: e, removed }),
+  )
+}
+
+test('an extension frame answers without native capture or the share picker', async () => {
+  const r = await grabExt('data:image/jpeg;base64,AAAA')
+  assert.equal(r.ok, true)
+  assert.equal(r.value, 'data:image/jpeg;base64,AAAA')
+  assert.equal(r.removed, true)
+})
+
+test('a garbage extension frame fails plainly instead of falling through to the picker', async () => {
+  const r = await grabExt('not-a-frame')
+  assert.equal(r.ok, false)
+  assert.match(r.error.message, /companion capture did not return a readable frame/)
+  assert.equal(r.removed, true)
+})
