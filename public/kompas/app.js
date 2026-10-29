@@ -2370,7 +2370,14 @@ function pressQuestion(typed, intake, screen) {
   if (derived && lane && low(lane).includes(low(derived))) derived = "";   // the old question is the lane, never a second copy in front of it
   const bits = [typedClean, derived].filter(Boolean);
   let q = bits.join(" ").trim();
-  const followUp = q && q.split(/\s+/).length <= 9 && /\b(go deeper|more detail|elaborate|what exactly|how did you know|say that again)\b/i.test(q);
+  // "Go deeper" follows the question on screen. "What exactly is least privilege?" names its own subject, so it does not.
+  const followMark = /\b(?:go deeper|more detail|elaborate|what exactly|how did you know|say that again)\b/i;
+  const namesOwnSubject = (text) => {
+    const rest = text.replace(followMark, " ").replace(/\b(?:that|this|it|those|these|there|then)\b/gi, " ");
+    const stop = new Set("what how why when where which who the are was were does did you your about with from into onto and but for".split(" "));
+    return rest.toLowerCase().replace(/[^a-z0-9+#.-]+/g, " ").split(/\s+/).some((w) => w.length >= 4 && !stop.has(w));
+  };
+  const followUp = q && q.split(/\s+/).length <= 9 && followMark.test(q) && !namesOwnSubject(q);
   if (q && lane && followUp) q = lane.replace(/[?.!\s]+$/, "") + " — " + q;
   if (!q && intake && intake.keywords && intake.keywords.length) q = intake.keywords.slice(0, 8).join(" ");
   return q || "";

@@ -61,6 +61,13 @@ test('step one of a pick: every resume with the job\'s title, all of them, and o
   assert.equal(R.narrowByRole(ranked, '').pool.length, 5)
 })
 
+test('a job that names a speciality does not keep a generic security title beside one that names it', () => {
+  const ranked = [cand('Security Engineer', { title: 'Security Engineer' }), cand('AI Engineer', { title: 'AI Engineer' })]
+  assert.deepEqual(R.narrowByRole(ranked, 'Information Security AI Engineer').pool.map(r => r.candidate.name), ['AI Engineer'])
+  const onlyGeneric = R.narrowByRole([cand('Security Engineer', { title: 'Security Engineer' })], 'Information Security AI Engineer')
+  assert.deepEqual(onlyGeneric.pool.map(r => r.candidate.name), ['Security Engineer'])
+})
+
 test('a resume is read by the title in its name, however the name is written', () => {
   const ranked = ['Eshwar Janjirala - Cyber Security Analyst', 'Jayeshwar_CyberSecurityAnalyst_2024', 'Resume_AppSec_Engineer_v3.docx', 'Eshwar_Resume', 'Cloud DevOps Engineer', 'IAM-Engineer'].map(n => cand(n))
   const names = (role) => R.narrowByRole(ranked, role).pool.map(r => r.candidate.name)

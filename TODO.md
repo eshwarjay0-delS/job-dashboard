@@ -16,11 +16,19 @@ Name, email, dates, and experience bullets were unchanged. Bold skill headings s
 
 **Also:** a finished tailor is cached at any coverage (cache generation 20). An identical request that arrives while the first is running shares that result. WhatsApp does not send a file under 95% of the job post. "Make another one with selecting Cybersecurity Analyst resume" does not resend the 19 Oct file and does not fall through to a different resume. A storage fault on "use 1" says the email choice was not saved. A Kompas throw does not eat the job description.
 
-**Checked:** resume-floor, keyword-targets, tailor-lanes, WhatsApp contract, acceptance, recovery, library, 5-fold, and single-request: 136/136 with the ts-alias loader. Not a live WhatsApp send. Not a live model run. Not on production until this branch is merged and the Vercel deploy succeeds.
+**Checked:** resume-floor, keyword-targets, tailor-lanes, WhatsApp contract, acceptance, recovery, library, 5-fold, and single-request, plus master's role-match and typed-question checks after merging `d79727c`: 153/153 with the ts-alias loader. Not a live WhatsApp send. Not a live model run. Not on production until this branch is merged and the Vercel deploy succeeds.
 
 **Still open:** the exact chat line "I couldn't complete a reliable tailored resume..." is not in this source; the live refusal is the quality stop. "No AI service is switched on" at 9:43 AM needs the provider error from that request; this change does not invent a key. A MarketFit storage outage can still stop a message. `/api/tailor` still holds one request open for up to 280s inside a 300s function. That freeze is not redesigned here.
 
 **Next:** after deploy, resend the Fairview and Honeywell posts and read the caption. Then split `/api/tailor` so the browser is not held for the whole model ladder.
+
+## 2026-10-29 — A named short question is not glued on the desktop
+
+"What exactly is least privilege?" was still attached to the question already on screen when the desktop formed the ask. "Go deeper" still follows that question. The page stamp is kompas-20261029-ownq.
+
+## 2026-10-29 — A specialised job does not stay tied to a generic security title
+
+Information Security AI Engineer was keeping Security Engineer beside AI Engineer, both at the same title score, and the generic file could be the one sent. When the job names a speciality and one of the tied resumes names it, that resume stays. If the only resume is the generic title, it still stays.
 
 ## 2026-10-29 — The remaining local checks
 
