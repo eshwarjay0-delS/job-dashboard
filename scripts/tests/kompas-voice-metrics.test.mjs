@@ -46,3 +46,22 @@ test("baseline comparison refuses a changed sample cohort even with matching cou
  assert.throws(()=>evaluate(set([row("two","yes","yes")]),a),/Baseline mismatch/);
  assert.match(a.sampleSetSha256,/^[0-9a-f]{64}$/);
 });
+
+test("baseline fingerprint refuses changed reference words under same IDs",()=>{
+  const baseline=evaluate(set([row("one","Azure Sentinel","Azure Sentinel")]));
+  assert.match(baseline.referenceSetSha256,/^[0-9a-f]{64}$/);
+  assert.throws(()=>evaluate(set([row("one","Azure Defender","Azure Sentinel")]),baseline),/Baseline mismatch/);
+});
+test("baseline fingerprint refuses changed technical terms under same IDs",()=>{
+  const baseline=evaluate(set([row("one","Azure Sentinel","Azure Sentinel",{technicalTerms:["Azure Sentinel"]})]));
+  assert.throws(()=>evaluate(set([row("one","Azure Sentinel","Azure Sentinel",{technicalTerms:["Sentinel"]})]),baseline),/Baseline mismatch/);
+});
+test("baseline fingerprint refuses changed reference speaker under same IDs",()=>{
+  const baseline=evaluate(set([row("one","yes","yes",{referenceSpeaker:"speaker-1",predictedSpeaker:"speaker-1"})]));
+  assert.throws(()=>evaluate(set([row("one","yes","yes",{referenceSpeaker:"speaker-2",predictedSpeaker:"speaker-1"})]),baseline),/Baseline mismatch/);
+});
+test("legacy baseline without reference fingerprint cannot claim comparable improvement",()=>{
+  const baseline=evaluate(set([row("one","yes","yes")]));
+  delete baseline.referenceSetSha256;
+  assert.throws(()=>evaluate(set([row("one","yes","yes")]),baseline),/Baseline mismatch/);
+});
