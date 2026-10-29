@@ -5,11 +5,22 @@
  * resume statements or generated answers are true.
  */
 import { readFile, mkdir, writeFile } from "node:fs/promises"
+import { readFileSync } from "node:fs"
+import { createHash } from "node:crypto"
 import { dirname, resolve, sep } from "node:path"
 import { fileURLToPath } from "node:url"
+import { fixtureName } from "./lib/evaluation-fixtures.mjs"
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/
 const SHA = /^[a-f0-9]{64}$/
+function canonicalFixture(name) {
+  // Never resolve a caller-supplied path; only audited fixtures are valid.
+  const safe = fixtureName(name)
+  const bytes = readFileSync(new URL("./fixtures/kompas-evaluation/" + safe + ".json", import.meta.url))
+  const digest = createHash("sha256").update(bytes).digest("hex")
+  const rows = JSON.parse(bytes.toString("utf8"))
+  return { digest, byId: listUnique(rows, "canonical fixture"), count: rows.length }
+}
 function check(ok, message) { if (!ok) throw new Error(message) }
 function listUnique(rows, label) {
   check(Array.isArray(rows), label + " must be an array")
@@ -35,6 +46,10 @@ export function pairCapturedAnswers(captures, manifest, reference, expectedCount
   check(manifest.caseCount === expectedCount && manifest.capturedCount === expectedCount, "Manifest is not a complete " + expectedCount + "-case capture")
   check(SHA.test(String(manifest.sourcesSha256 || "")), "Missing sources SHA-256 in capture manifest")
   check(typeof manifest.fixture === "string" && manifest.fixture.trim(), "Missing source fixture")
+  const authoritative = canonicalFixture(manifest.fixture)
+  check(authoritative.count === expectedCount, "Expected count differs from canonical fixture")
+  check(manifest.fixtureSha256 === authoritative.digest, "Manifest fixture SHA-256 does not match the repository fixture")
+  check(reference?.fixtureSha256 === authoritative.digest, "Reference fixture SHA-256 does not match the repository fixture")
   const cases = listUnique(manifest.cases, "manifest cases")
   const captured = listUnique(captures, "Kompas captures")
   check(cases.size === expectedCount && captured.size === expectedCount, "Incomplete Kompas capture cases")
@@ -47,15 +62,19 @@ export function pairCapturedAnswers(captures, manifest, reference, expectedCount
     const id = manifestCase.id
     const capture = captured.get(id)
     const ref = benchmark.get(id)
+    const original = authoritative.byId.get(id)
+    check(!!original, "Unrecognized case ID in manifest: " + id)
     check(!!capture && !!ref, "Unpaired case " + id)
     check(manifestCase.captureId === capture.captureId && typeof capture.captureId === "string" && capture.captureId.length > 10, "Capture ID differs from manifest at " + id)
     check(manifestCase.reviewStatus === "pending", "Capture has an unexpected review state at " + id)
     check(typeof capture.question === "string" && capture.question.trim() && capture.question === ref.question, "Questions differ at " + id)
+    check(capture.question === original.question, "Question differs from canonical fixture at " + id)
     check(typeof capture.text === "string" && capture.text.trim(), "Missing actual Kompas answer at " + id)
     check(typeof ref.text === "string" && ref.text.trim(), "Missing ChatGPT reference answer at " + id)
     check(capture.status !== "failed" && capture.degraded !== true, "Degraded or failed Kompas capture at " + id)
     check(capture.review && capture.review.status === "pending", "Kompas capture was not marked pending review at " + id)
     check(capture.provenance?.sourcesSha256 === manifest.sourcesSha256, "Kompas source fingerprint mismatch at " + id)
+    check(capture.provenance?.fixtureSha256 === authoritative.digest, "Kompas fixture fingerprint mismatch at " + id)
     check(capture.fixture === manifest.fixture, "Kompas fixture mismatch at " + id)
     check(typeof capture.meta?.model === "string" && capture.meta.model.trim() && !/mock|synthetic|fake/i.test(capture.meta.model), "Missing or synthetic Kompas model at " + id)
     check(typeof capture.meta?.provider === "string" && capture.meta.provider.trim() && !/mock|synthetic|fake/i.test(capture.meta.provider), "Missing or synthetic Kompas provider at " + id)
@@ -70,7 +89,7 @@ export function pairCapturedAnswers(captures, manifest, reference, expectedCount
   }
   const avg = key => Math.round(pairs.reduce((sum, p) => sum + p[key], 0) / pairs.length)
   return {
-    fixture: manifest.fixture, sourceSha256: manifest.sourcesSha256,
+    fixture: manifest.fixture, fixtureSha256: authoritative.digest, sourceSha256: manifest.sourcesSha256,
     count: pairs.length, referenceCount: benchmark.size, kompasCount: captured.size,
     averageReferenceWords: avg("referenceWords"), averageKompasWords: avg("kompasWords"),
     quality: "unverified", reviewedByHuman: 0,
@@ -89,6 +108,7 @@ export function renderPairedMarkdown(report) {
     "Cases with both original outputs: " + report.count,
     "Fixture: " + report.fixture,
     "Shared source SHA-256: " + report.sourceSha256,
+    "Canonical question fixture SHA-256: " + report.fixtureSha256,
     "Average reference words: " + report.averageReferenceWords,
     "Average Kompas words: " + report.averageKompasWords,
     "",
