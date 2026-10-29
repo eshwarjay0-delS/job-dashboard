@@ -45,6 +45,8 @@ test('new ask is isolated from prior speech but compound question is retained',(
  assert.equal(latestInterviewerAsk('Not blindly present in everything. Are you familiar with policy deviations?'),'Are you familiar with policy deviations?')
  assert.equal(latestInterviewerAsk('Moving to the next question, what is NLA?'),'what is NLA?')
  assert.equal(latestInterviewerAsk('How do you assess the business impact? How do you understand root cause?'),'How do you assess the business impact? How do you understand root cause?')
+ assert.equal(latestInterviewerAsk('Have you configured CyberArk? What is least privilege?'),'Have you configured CyberArk? What is least privilege?')
+ assert.equal(latestInterviewerAsk('A permission fix passes unit tests but fails for one tenant. How would you diagnose it?'),'A permission fix passes unit tests but fails for one tenant. How would you diagnose it?')
 })
 test('wrong framework count is corrected and pseudo risk formula is removed',()=>{
  assert.match(correctVerifiedPresentationErrors('NIST CSF 2.0 has five functions.'),/six functions/)

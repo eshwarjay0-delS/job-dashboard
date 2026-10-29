@@ -147,6 +147,7 @@ try {
     extract("const NOISE_WORDS", "function isNoiseLine") +
     extract("function isNoiseLine", "function composeIntake") +
     extractLine("const Q_CUE =", "/i;") + "/i;\n" +
+    extract("function shortFollowUp", "function clauseStillOpen") +
     extract("function pressQuestion", "function showPressed") +
     "\nthis.segmentKept = segmentKept; this.flushAction = flushAction; this.audioNeedsResume = audioNeedsResume; this.pressQuestion = pressQuestion;",
     ctx

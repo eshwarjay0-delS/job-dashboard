@@ -6,6 +6,16 @@
 
 Information Security AI Engineer was keeping Security Engineer beside AI Engineer, both at the same title score, and the generic file could be the one sent. When the job names a speciality and one of the tied resumes names it, that resume stays. If the only resume is the generic title, it still stays.
 
+## 2026-10-29 — Questions were still being missed, merged, or misheard
+
+**Found, by replaying the real cut, not by guessing.** The desktop waits 1.1 seconds of silence to end a phrase, then another 2.2 seconds before it answers everything heard as one question. Two questions inside that window became one answer. A finished question that ended in a question mark was thrown away once the next question started with "what" or "how", so "Have you configured CyberArk?" vanished when "What is least privilege?" began. A pause longer than about 3.3 seconds cut a sentence in half and answered the first half. "And why?", "Why?", and "How come?" were dropped because they are under three words, and "And why?" was also treated as the same question when the previous ask already contained the word why. Filler between two questions ("Yeah. Okay.") hid the first question. A scenario in front of "How would you" was stripped, so only "How would you diagnose it?" remained. Whisper's usual garbles of Kubernetes, PKI, Terraform, and STAR were left as heard. A multi-part question such as "Design X. Explain the trust boundaries." was already kept whole, and that stays.
+
+**Measured on 50 sequences, 66 asks, before any fix:** 21 missed (31.8%), 20 merged (30.3%), 11 of 11 misheard. A merged ask is one that shared its answer with a different question.
+
+**Changed.** An unfinished clause is held for up to 7 seconds so a pause in the middle of a sentence stays one question. Distinct questions in one breath, or back to back, are answered separately. A short follow-up is kept and attached to the question it follows. A real scenario stays with its how-question. The usual mishearings of Kubernetes, PKI, Terraform, and STAR are repaired on the server and on the desktop page. First-person spoken answers and the resume prompts were not touched.
+
+**After the same 50 sequences:** missed 0, merged 0, misheard 0. Typecheck passed. Lint reported no errors. The Kompas baseline contract held, 15 of 15. The question, speech, dictation, and voice suites that cover this path passed. Not a live desktop microphone session. Not deployed: Vercel is rate limited, so this is a pull request only.
+
 ## 2026-10-29 — The remaining local checks
 
 The desktop already shows a fenced sample as code and keeps the sentences around it. The older check still expected the fence to disappear. That check now matches the display. On Windows, the private scorecard mode is not asserted, because the file system reports 666, and the migration check loads its script through a file URL so it can run. The migration kept the current session answer and did not replace it.

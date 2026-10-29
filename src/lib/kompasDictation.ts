@@ -10,6 +10,7 @@ export const ACCURACY_TERMS = [
   "CyberArk", "PowerShell", "Base64", "REST API", "Group Policy", "Kerberos",
   "SIEM", "domain controller", "MITRE ATT&CK", "Active Directory", "Microsoft Sentinel",
   "Qualys", "Nessus", "Splunk", "SAML", "OAuth", "PKI", "CrowdStrike",
+  "Kubernetes", "Terraform", "STAR",
 ] as const
 
 const CANON = new Map(ACCURACY_TERMS.map((term) => [term.toLowerCase(), term]))
@@ -105,6 +106,20 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bnessus\b/gi, "Nessus"],
   [/\bsplunk\b/gi, "Splunk"],
   [/\bfifth\s+third\b/gi, "Fifth Third"],
+  // Whisper's repeated garbles of interview terms. A nearby English word is left alone.
+  [/\bcooper\s+nett(?:y|ie)s\b/gi, "Kubernetes"],
+  [/\bkuber\s*netes\b/gi, "Kubernetes"],
+  [/\bkube\s*netes\b/gi, "Kubernetes"],
+  [/\bkubernet(?:ee|i)s\b/gi, "Kubernetes"],
+  [/\bkubernetes\b/gi, "Kubernetes"],
+  [/\b(?:pee\s+kay\s+eye|p\.?\s*k\.?\s*i\.?)\b/gi, "PKI"],
+  [/\bterra\s+form\b/gi, "Terraform"],
+  [/\bterror\s+form\b/gi, "Terraform"],
+  [/\bteraform\b/gi, "Terraform"],
+  [/\bterraform\b/gi, "Terraform"],
+  [/\bstart\s+method\b/gi, "STAR method"],
+  [/\bs\.?\s*t\.?\s*a\.?\s*r\.?\s+method\b/gi, "STAR method"],
+  [/\bstar\s+method\b/gi, "STAR method"],
 ]
 
 /** Repair a heard line. Ordinary sentences, and a line already repaired, come back unchanged. */
