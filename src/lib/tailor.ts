@@ -259,7 +259,7 @@ export async function runTailor(opts: {
       const cached = JSON.parse(raw) as TailorResult
       // Confirm the tailored .docx still exists AND the cached shape is current.
       if (!(await blob.exists(`tailored/${cached.token}.docx`))) throw new Error("tailored file gone")
-      if (!cached.keyword_analysis || !cached.diff) throw new Error("stale cache shape")
+      if (!cached.keyword_analysis || !cached.diff || (!refine && (!Number.isFinite(cached.supported_coverage) || !Array.isArray(cached.unsupported_keywords)))) throw new Error("stale cache shape")
       // Never replay a pre-contract low-coverage artifact. A known JD tailor is complete
       // only when the rendered DOCX itself clears the keyword quality gate.
       if (!refine && cached.quality?.status !== "coverage_met") throw new Error("cached result below keyword quality gate")
