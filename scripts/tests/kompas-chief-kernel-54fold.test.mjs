@@ -88,3 +88,11 @@ test("The live answer service runs relevance recovery before building a user-fac
  const kernel=readFileSync(new URL("../../src/lib/kompasRelevanceRecovery.ts",import.meta.url),"utf8")
  assert.match(kernel,/questionKernel\(question\)/)
 })
+
+test("Brief interviewer acknowledgments do not hijack a follow-up subject",()=>{
+ const history="Them: Walk me through how you evaluated the policy exception.\\nYou: I checked source evidence.\\nThem: Great, makes sense.\\nThem: Okay.\\n"
+ const context=rediscoverRelevance("How did you verify that?",history)
+ assert.equal(context.intent,"follow-up")
+ assert.match(context.contextSubject,/evaluated the policy exception/)
+ assert.doesNotMatch(context.contextSubject,/Okay/)
+})
