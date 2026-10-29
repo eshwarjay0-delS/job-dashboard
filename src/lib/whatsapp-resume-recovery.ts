@@ -69,7 +69,7 @@ export async function deferResumeRecovery(id: string, code: string, candidate?: 
 }
 
 export async function dueResumeRecoveries(limit = 1): Promise<ResumeRecoveryJob[]> {
-  const keys = (await blob.list("whatsapp/resume-recovery/")).filter(k => k.endsWith(".json"))
+  const keys = (await blob.list("whatsapp/resume-recovery")).filter(k => k.endsWith(".json"))
   const now = Date.now()
   const jobs = await Promise.all(keys.map(async key => {
     try {
