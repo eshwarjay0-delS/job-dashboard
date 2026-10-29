@@ -66,7 +66,7 @@ test("CLI saves reviewed scorecard privately with no overwrite",async()=>{
   assert.equal(res.reviewed,50)
   const saved=JSON.parse(await readFile(out,"utf8"))
   assert.equal(saved.metrics.kompasAverage,4)
-  assert.equal((await stat(out)).mode&0o777,0o600)
+  if(process.platform!=="win32") assert.equal((await stat(out)).mode&0o777,0o600)
   await assert.rejects(runCli([p,q,out]),/EEXIST/)
   await assert.rejects(runCli([p,q,path.resolve("scores-must-not-be-public.json")]),/outside the repository/)
  }finally{await rm(dir,{recursive:true,force:true})}

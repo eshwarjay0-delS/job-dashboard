@@ -2,7 +2,7 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync, existsSync, readdirSync } from "node:fs"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const dir = path.join(root, "public", "kompas")
@@ -37,7 +37,7 @@ test("the migration page has executable export/import controllers on MarketFit",
 })
 
 test("full browser migration preserves IndexedDB evidence and does not clobber local sessions", async () => {
-  await import(path.join(dir, "move-core.js"))
+  await import(pathToFileURL(path.join(dir, "move-core.js")).href)
   const M = globalThis.KompasMove
   assert.ok(M)
   assert.deepEqual(Object.keys(M.SCHEMA).sort(), ["perfact-dossier", "perfact-files"])

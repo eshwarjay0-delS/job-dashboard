@@ -1,3 +1,7 @@
+## 2026-10-29 — The remaining local checks
+
+The desktop already shows a fenced sample as code and keeps the sentences around it. The older check still expected the fence to disappear. That check now matches the display. On Windows, the private scorecard mode is not asserted, because the file system reports 666, and the migration check loads its script through a file URL so it can run. The migration kept the current session answer and did not replace it.
+
 ## 2026-10-29 — A different question stays a different question
 
 Measured on ten asks after "What is NLA and why do we disable it?": three new questions were rewritten as follow-ups of that ask, and "Explain that" was dropped so the previous answer stayed. A short question that names its own subject is no longer glued on. A real follow-up still is. WhatsApp does not send a copy of the previous answer for a different question. The desktop cut of the same ten matches the WhatsApp cut. Gain: those four collapses are gone. Not a live model score.
