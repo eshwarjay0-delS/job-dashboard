@@ -1,3 +1,5 @@
+import { resolve } from "node:path"
+import { fileURLToPath } from "node:url"
 /**
  * Verify Vercel's Git-integrated deployment status for the exact commit.
  * This observes deployment, it never creates another build or uses a Vercel
@@ -33,7 +35,7 @@ export async function verifyVercelStatus({repo,sha,token,fetcher=fetch,sleeper=w
  }
  throw Error("No successful Vercel Git deployment status for "+sha+" after "+attempts+" checks")
 }
-if(process.argv[1]&&import.meta.url===new URL("file://"+process.argv[1]).href){
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  verifyVercelStatus({repo:process.env.GITHUB_REPOSITORY,sha:process.env.GITHUB_SHA,token:process.env.GITHUB_TOKEN})
   .then(result=>console.log(JSON.stringify(result)))
   .catch(e=>{console.error(e.message);process.exitCode=1})
