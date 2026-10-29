@@ -742,7 +742,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   } catch (e) {
     failureCode = "provider_error"
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
-    return quiet ? undefined : sendText(from, "Your resume request is saved. The rewrite failed; MarketFit will retry automatically.")
+    return // Queued for recovery; do not spam the chat with failed intermediate drafts.
   }
 
   // Nothing came back different: the same file with "Match 28% -> 28%" on it is not a tailored resume, so it is not sent as one.
@@ -750,7 +750,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   if (result.unchanged) {
     console.error("[whatsapp] tailor changed nothing", (result.notes || []).find(n => n.startsWith("Tailored with")) || "")
     failureCode = "unchanged"
-    return quiet ? undefined : sendText(from, "The rewrite produced no changes. Your request is saved for automatic recovery.")
+    return // Queued for recovery; do not spam the chat with failed intermediate drafts.
   }
 
   // A cached, incomplete result must never permanently block the same JD.
@@ -783,15 +783,15 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
     failureCode = "quality_rejected"
     failedCandidate = { token: result.token, coverage, supportedCoverage: result.supported_coverage ?? 0 }
     console.error("[whatsapp] tailoring quality gate rejected draft", { coverage, supportedCoverage: result.supported_coverage, partial: !!result.partial, skillsOnly: !!result.skills_only, status: result.quality?.status })
-    return quiet ? undefined : sendText(from, "The draft did not pass quality checks. Your original resume and JD are saved for automatic recovery; no incomplete file was delivered.")
+    return // Queued for recovery; do not spam the chat with failed intermediate drafts.
   }
   const file = await blob.get(`tailored/${result.token}.docx`)
-  if (!file) { failureCode = "file_missing"; return quiet ? undefined : sendText(from, "Your resume request is saved; the generated file was unavailable. MarketFit will retry.") }
+  if (!file) { failureCode = "file_missing"; return // Queued for recovery; do not spam the chat with failed intermediate drafts. }
 
   const source = await readPath(session.resumePath)
   if (!source || !sameResumeIdentity(await extractText(source), await extractText(file))) {
     failureCode = "identity_mismatch"
-    return quiet ? undefined : sendText(from, "The draft failed its identity check. Your original resume is preserved; no document was delivered.")
+    return // Queued for recovery; do not spam the chat with failed intermediate drafts.
   }
   const meta = await metaPromise
   const name = await outputNameFor(file)
