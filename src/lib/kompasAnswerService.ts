@@ -16,6 +16,7 @@ import { QUESTION_FIRST_POLICY, repeatQuestionGuidance } from "@/lib/kompasInten
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
 import { formatInterviewHistory } from "@/lib/kompasHistory"
 import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestionParts, questionParts, spokenQualityFlags, correctVerifiedPresentationErrors } from "@/lib/kompasInterviewPrecision"
+import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals } from "@/lib/kompasRelevance"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
@@ -520,7 +521,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
         }
         emit({
           type: "done", degraded, guarded: g.guarded, verified, repaired,
-          precision: { coverage: questionCoverage(job.question, finalText), flags: spokenQualityFlags(job.question, finalText) },
+          precision: { coverage: questionCoverage(job.question, finalText), flags: [...spokenQualityFlags(job.question, finalText), ...tangentSignals(job.question, finalText).map(t => `off-topic-jargon:${t}`)] },
           ledger: job.ledger,
           ...metaBase, provider: servedProvider, model: servedModel,
           timing: { ...timing, total_ms: Date.now() - startedAt },
@@ -607,7 +608,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   return NextResponse.json({
     text: out,
     polished: true,
-    precision: { coverage: questionCoverage(job.question, out), flags: spokenQualityFlags(job.question, out) },
+    precision: { coverage: questionCoverage(job.question, out), flags: [...spokenQualityFlags(job.question, out), ...tangentSignals(job.question, out).map(t => `off-topic-jargon:${t}`)] },
     degraded,
     guarded: g.guarded,
     verified,
@@ -739,6 +740,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // question (define / compare / what-is) is answered abstractly, a practice
   // question (his work, a scenario, a deep example) takes the level's depth.
   let register = questionRegister(question, tier)
+  const focus = focusPlan(question, tier, level)
   const plan = lengthPlan(tier, question, level, {
     difficulty: str(config.difficulty, 20) || undefined,
     length: str(config.length, 20) || undefined,
@@ -750,6 +752,13 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     plan.words = desktopPolicy.words
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
     plan.maxTokens = Math.min(4000, Math.max(600, Math.round(plan.words * 2.6) + 300))
+  }
+  // The real question sets the spoken word ceiling, overriding arbitrary
+  // session depth and fixed technical quotas. Do not pad an already complete answer.
+  if (plan.kind !== "code") {
+    plan.words = applyFocusBudget(plan.words, focus)
+    plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
+    plan.maxTokens = Math.min(plan.maxTokens, Math.max(600, Math.round(plan.words * 2.6) + 350))
   }
   // Depth calibration inside the practice register: match the answer's focus
   // to the question's depth. A surface question gets a direct answer; a deep
@@ -763,11 +772,12 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     ? "ANSWER CALIBRATION: This is a deep, scoped question. Go deep on the specific angle asked — concrete details, trade-offs, and real constraints. Stay focused on what was asked, don't broaden."
     : ""
   const personalEvidence = isPersonalEvidenceQuestion(tier, question)
-  const includeStoryContext = personalEvidence && tier !== 0
+  const storyMode = focus.intent === "experience-story" || (focus.intent === "follow-up" && tier === 3)
+  const includeStoryContext = personalEvidence && storyMode && tier !== 0
   const includeHistoryContext = tier !== 0
   const rule = tierRule(tier, level)
   // 27 question archetypes (perfACT _shapes.js): first-win structural instruction.
-  const shape = tier === 0 ? "" : pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
+  const shape = tier === 0 || ["acknowledgement","closing-question","value","logistics","definition"].includes(focus.intent) ? "" : pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
   // perfACT's rotation ledger (client-carried): the frontend sends its ledger
   // with every turn and stores the one returned, so a session never retells
   // the same story, bottleneck or angle. Route this question to a project by
@@ -827,13 +837,13 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     `INTERVIEW MODE: ${modeBlock(tier, question, level)}`,
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
     level === "director" ? DIRECTOR_OPENING : "",
-    `LENGTH TARGET: about ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Hit it — a quick factual ask gets a short answer, a deep dive gets room.`,
+    `LENGTH CEILING: usually no more than ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Do not pad the response; finish when all asked parts are answered.`,
     depthGuidance,
-    tier !== 0 && routedProject
+    storyMode && tier !== 0 && routedProject
       ? `Only if the original sources corroborate it, anchor this answer in this generated project summary: ${routedProject.title}${routedProject.employer ? ` (${routedProject.employer})` : ""}. Do not switch projects mid-answer.`
       : "",
-    bott ? `Unverified generated bottleneck; use only if corroborated by original sources: ${bott}.` : "",
-    angle && tier !== 0 && plan.kind !== "code" ? `Fresh angle for this telling: ${angle}.` : "",
+    storyMode && bott ? `Unverified generated bottleneck; use only if corroborated by original sources: ${bott}.` : "",
+    storyMode && angle && tier !== 0 && plan.kind !== "code" ? `Fresh angle for this telling: ${angle}.` : "",
     includeStoryContext && tier !== 3 && toldNames.length
       ? `Stories already told this session — do not retell them: ${toldNames.join("; ")}.`
       : "",
@@ -880,7 +890,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const spokenCloser = `Speak it. Sentence one is the answer in words this listener already understands. Then one path. On every sentence, ask whether you are 100% on this question, at this layer. A sentence that is not, is not said.
 A general scenario — a time, a would-you, a launch, or a people question: the decision or the moment, in plain words, and one picture. Do not open a mechanism they did not ask for. If the background has no such incident, say what you would do.
 A technical question — a what-is, a how, an investigate, a fix, or a test: specialist, spoken the way a person talks in the meeting. Simple words, or one abstract sentence that carries the meaning. Do not recite a query, a parameter, a claim name, or a stack. Inside a program, write the real numbers. A status code, a port, and a literal in code stay written as themselves. Make the most important distinction clear in normal spoken words, without double-underscores or another formatting marker.
-If a second topic starts, stop.
+When the question has multiple parts, cover all of them. Do not open unasked topics.
 
 ${INTERVIEW}`
   // Every part the question asks for, in its order, and the conditions it sets (requestedParts): a compound or listed
@@ -891,8 +901,8 @@ ${INTERVIEW}`
     : ""
   const job: AnswerJob = {
     question,
-    system: `${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : desktopCloser || spokenCloser}`,
+    system: `${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${focusPrompt(question, tier, level)}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : desktopCloser || spokenCloser}`,
     plan,
     interviewer,
     level,
