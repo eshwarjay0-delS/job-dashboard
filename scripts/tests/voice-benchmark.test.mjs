@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {words,editCounts,evaluate} from '../voice-benchmark.mjs'
+import {words,editCounts,evaluate,compareSamples} from '../voice-benchmark.mjs'
 const sample=(reference,hypothesis,extra={})=>({reference,hypothesis,...extra})
 test('normalizes punctuation and case without changing words',()=>assert.deepEqual(words('Hello, AD!'),['hello','ad']))
 test('perfect transcript has zero edits',()=>assert.deepEqual(editCounts('DNS is up','DNS is up'),{s:0,d:0,i:0,referenceWords:3,hypothesisWords:3}))
@@ -14,3 +14,6 @@ test('speaker labels evaluated at aligned turns',()=>assert.equal(evaluate([samp
 test('latency percentiles are nearest rank',()=>{const r=evaluate([10,20,30,40,50].map(x=>sample('a','a',{latencyMs:x})));assert.equal(r.p50LatencyMs,30);assert.equal(r.p95LatencyMs,50)})
 test('missing denominators are null, not invented accuracy',()=>{const r=evaluate([]);assert.equal(r.wer,null);assert.equal(r.technicalTermRecall,null);assert.equal(r.speakerAttributionAccuracy,null);assert.equal(r.p95LatencyMs,null)})
 test('rejects invalid latency',()=>assert.throws(()=>evaluate([sample('a','a',{latencyMs:-1})]),RangeError))
+test('compares paired baselines with signed deltas',()=>{const before=[{id:'x',...sample('one two','one',{latencyMs:200})}];const after=[{id:'x',...sample('one two','one two',{latencyMs:100})}];const r=compareSamples(before,after);assert.equal(r.delta.wer,-.5);assert.equal(r.delta.p50LatencyMs,-100)})
+test('refuses missing or mismatched baseline cases',()=>assert.throws(()=>compareSamples([{id:'x',...sample('a','a')}],[{id:'y',...sample('a','a')}]),/IDs/))
+test('bounds quadratic alignment memory on long transcripts',()=>assert.throws(()=>editCounts('a '.repeat(2001),'a'),RangeError))
