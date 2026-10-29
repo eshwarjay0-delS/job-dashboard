@@ -21,7 +21,7 @@ import {
   DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command,
 } from "@aws-sdk/client-s3"
 import { DATA_DIR } from "@/lib/paths"
-import { storageSegments, storageMode } from "@/lib/storagePolicy"
+import { storageSegments, storageListPrefix, storageMode } from "@/lib/storagePolicy"
 
 export interface Blob {
   /** Write bytes (or a string) at `key`, creating any parent structure. */
@@ -179,7 +179,8 @@ class FsStorage implements Blob {
     return (await this.listInfo(prefix)).map(f => f.key)
   }
   async listInfo(prefix: string): Promise<{ key: string; size: number; mtime: Date }[]> {
-    const base = this.abs(prefix)
+    const normalizedPrefix = storageListPrefix(prefix)
+    const base = this.abs(normalizedPrefix)
     const out: { key: string; size: number; mtime: Date }[] = []
     const walk = async (dir: string, rel: string) => {
       let entries
@@ -189,7 +190,7 @@ class FsStorage implements Blob {
         if (e.isDirectory()) await walk(path.join(dir, e.name), childRel)
         else {
           const s = await stat(path.join(dir, e.name)).catch(() => null)
-          out.push({ key: prefix ? `${prefix}/${childRel}` : childRel, size: s?.size ?? 0, mtime: s?.mtime ?? new Date(0) })
+          out.push({ key: normalizedPrefix ? `${normalizedPrefix}/${childRel}` : childRel, size: s?.size ?? 0, mtime: s?.mtime ?? new Date(0) })
         }
       }
     }
@@ -263,7 +264,7 @@ class R2Storage implements Blob {
     return (await this.listInfo(prefix)).map(f => f.key)
   }
   async listInfo(prefix: string): Promise<{ key: string; size: number; mtime: Date }[]> {
-    const p = this.norm(prefix)
+    const p = this.norm(storageListPrefix(prefix))
     const Prefix = p ? p + "/" : undefined
     const out: { key: string; size: number; mtime: Date }[] = []
     let token: string | undefined
