@@ -109,7 +109,7 @@ export function tangentSignals(question:string,answer:string):string[]{
  const excess=UNEXPECTED_JARGON.filter(term=>a.toLowerCase().includes(term.toLowerCase())&&!q.includes(term.toLowerCase()))
  // One legitimately relevant term in a role overview is okay; two unsupported
  // high-specificity terms in a soft question indicate likely jargon drift.
- return excess.length>=2?excess:[]
+ return excess.length >= (["closing-question","acknowledgement","logistics","definition"].includes(intent) ? 1 : 2) ? excess : []
 }
 
 
