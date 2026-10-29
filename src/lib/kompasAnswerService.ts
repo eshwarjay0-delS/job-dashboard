@@ -16,7 +16,7 @@ import { QUESTION_FIRST_POLICY, repeatQuestionGuidance } from "@/lib/kompasInten
 import { voiceRepair } from "@/lib/kompasVoiceRepair"
 import { formatInterviewHistory } from "@/lib/kompasHistory"
 import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestionParts, questionParts, spokenQualityFlags, correctVerifiedPresentationErrors } from "@/lib/kompasInterviewPrecision"
-import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms } from "@/lib/kompasRelevance"
+import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms, interviewIntent } from "@/lib/kompasRelevance"
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
@@ -251,6 +251,7 @@ const CODE_ASK_Q =
 // modeBlock below — owner directive, 22 Oct 2026: three levels.)
 
 const MODE_BLOCKS: Record<string, string> = {
+  conversational: `CONVERSATIONAL MODE: The interviewer wants a direct person-to-person answer. Match the latest question: short definition, sincere acknowledgement, concise comparison, clear personal value or practical availability. Do not force a technical drill-down, a historical incident, a rejected alternative, a project rotation or a metrics scoreboard. If this is a closing, ask one or two thoughtful questions rather than making a sales pitch.`,
   behavioural: `BEHAVIOURAL MODE: they score evidence about you, not systems. Each answer is one real moment, told as what you did.
 - Tell the PROJECT from the background below, at its employer: one project and one employer per answer.
 - A failure, conflict or feedback story is built on a prepared answer below or a bottleneck from your background, with roles, never names.
@@ -277,6 +278,7 @@ const MODE_BLOCKS: Record<string, string> = {
 function modeBlock(tier: number, question: string, level: string): string {
   if (tier === 0) return INTRODUCTION_POLICY
   if (CODE_ASK_Q.test(question)) return MODE_BLOCKS.coding
+  if (["value","closing-question","acknowledgement","comparison","definition","logistics"].includes(interviewIntent(question))) return MODE_BLOCKS.conversational
   // The final-round block belongs to the Director LEVEL (owner, 22 Oct 2026:
   // three levels) — not to whichever anchor happens to be writing, so an
   // Architect + Developer answer keeps its full build depth.
@@ -784,7 +786,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const includeHistoryContext = rediscovered.contextRelation === "follow-up" || rediscovered.intent === "experience-story"
   const rule = tierRule(tier, level)
   // 27 question archetypes (perfACT _shapes.js): first-win structural instruction.
-  const shape = tier === 0 || ["acknowledgement","closing-question","value","logistics","definition"].includes(focus.intent) ? "" : pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
+  const shape = tier === 0 || !["scenario","technical-process","experience-story","follow-up"].includes(focus.intent) ? "" : pickShape(question, tier, grounding + " " + str(prep.projects, 2000))
   // perfACT's rotation ledger (client-carried): the frontend sends its ledger
   // with every turn and stores the one returned, so a session never retells
   // the same story, bottleneck or angle. Route this question to a project by
@@ -841,7 +843,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     `The listener is at ${ANSWER_LEVEL_NAME[level]}. The level block below is the controlling spec for this answer's depth and register.`,
     tier === 0 ? `INTRODUCTION AUDIENCE: ${level}. Audience adjusts language and emphasis, not the career-wide scope. No step-by-step project reconstruction.` : levelGuidance(level, register),
     `LATEST ACTUAL QUESTION INTENT: ${rediscovered.intent}. Answer mode: ${rediscovered.answerMode}. The old perfACT tier is merely a shape hint: ${why} (tier ${tier}).`,
-    `QUESTION TYPE RULE (only where relevant to this question): ${rule}`,
+    storyMode || ["scenario","technical-process"].includes(rediscovered.intent) ? `DEEP QUESTION RULE: ${rule}` : "",
     `INTERVIEW MODE: ${modeBlock(tier, question, level)}`,
     shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
     level === "director" ? DIRECTOR_OPENING : "",
