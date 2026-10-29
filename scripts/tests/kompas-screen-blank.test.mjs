@@ -54,3 +54,29 @@ test('review crops by region, so a question area is captured, not just the whole
   assert.match(review, /function crop\(image,bounds\)/)
   assert.match(app, /KompasScreenReview\(\{ image, tasks: data\.tasks/)
 })
+
+test('capture works the same for ordinary, overlay, fullscreen and elevated windows', async () => {
+  // The capture path is kind-agnostic: only the pixels differ. Each frame below
+  // stands for one window kind holding real content; every one must capture,
+  // draw, and leave no capture running behind.
+  const kinds = {
+    ordinary: [...flat(3, [20, 20, 20]), ...px(240, 240, 240)],
+    overlay: [...flat(3, [10, 40, 90]), ...px(255, 220, 0)],
+    fullscreen: [...flat(3, [60, 10, 10]), ...px(0, 255, 128)],
+    elevated: [...flat(3, [30, 30, 60]), ...px(128, 200, 255)],
+  }
+  for (const [kind, pixels] of Object.entries(kinds)) {
+    const r = await grab(pixels)
+    assert.equal(r.ok, true, kind)
+    assert.equal(r.value, 'frame', kind)
+    assert.equal(r.drawn, true, kind)
+    assert.equal(r.paused, true, kind)
+  }
+})
+
+test('a blank elevated frame is still a protected window; elevation changes nothing', async () => {
+  const r = await grab(flat(4, [0, 0, 0]))
+  assert.equal(r.ok, false)
+  assert.match(r.error.message, /opted out of screen capture/)
+  assert.match(r.error.message, /Running as administrator does not change that/)
+})
