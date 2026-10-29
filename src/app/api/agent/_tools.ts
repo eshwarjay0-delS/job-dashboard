@@ -16,6 +16,7 @@ import {
 import { readBrief, writeBrief, mergeBrief, parseBriefText, screenBrief, briefWords, briefShowText, contactList, type ChiefBrief } from "@/lib/chief-brief"
 import { guardDraft, neverContactHit } from "@/lib/chief-guard"
 import { proposeJobs, planCardText, stepOf, stepFindings, findingsText, nextRunAfter, STEPS } from "@/lib/chief-goal"
+import { chiefDeskSummary } from "@/lib/chief-desk"
 
 export interface ToolContext {
   userId: string
@@ -670,6 +671,14 @@ export const AGENT_TOOLS: Record<string, { description: string; fn: ToolFn }> = 
     description:
       "The user's brief, read before every job: the one rule, Me, My candidates, My voice (two lines), Never, and the never-contact list. Args: action ('show'|'set', default show); for set any of me, people, voice, never, rule (strings), neverContact (replaces the list), addNeverContact (adds names or domains), or text (lines like 'Me: …'). Never put identity numbers or passwords in it.",
     fn: chiefBrief,
+  },
+  chief_desk: {
+    description:
+      "The open work the Chief owns. Plan and Vision items still open, unfinished REA sessions, and the chat handed over on 23 Oct 2026. Kompas is listed first. Args: area (optional: kompas, gmail, applications, resume, all). Use this before assigning work.",
+    fn: async (_ctx, args) => {
+      const area = str(args.area).trim()
+      return { ok: true, data: chiefDeskSummary(area || undefined) }
+    },
   },
   chief_goal: {
     description:

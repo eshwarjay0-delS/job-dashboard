@@ -1,3 +1,11 @@
+## 2026-10-23 — This chat is on the Chief's desk
+
+**Asked:** the Chief runs the workers, up to 100. Gather the open jobs first, from Plan and Vision, from REA, and from what he already asked. He speaks only to the Chief. Hand this chat over too.
+
+**On the desk:** Kompas three levels and the spoken card, the confirmed-keyword resume rule, and the open Plan and Vision and REA items. Kompas is listed first. Nothing sends without his yes.
+
+**Not a live run.** The Chief reads this with the chief_desk tool. The desktop changes are still not on the live page.
+
 ## 2026-10-23 — NEXT: every open to-do, by who does it
 
 The single list of what comes next. The Chief session runs all the work (owner: "Chief touches everything", "I said

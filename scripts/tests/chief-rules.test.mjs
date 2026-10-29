@@ -33,6 +33,7 @@ test('every user\'s Chief works under the appointed rules', () => {
   }
   assert.ok(rules.CHIEF_RULES.some(r => r.id === 'nothing-without-yes') && rules.CHIEF_RULES.some(r => r.id === 'blank-price'))
   assert.equal(rules.CHIEF_RULES[0].id, 'whole-work-away')
+  assert.ok(rules.CHIEF_RULES.some(r => r.id === 'only-voice'))
 })
 
 test('the owner\'s own facts reach only his own Chief', () => {
@@ -44,5 +45,7 @@ test('the owner\'s own facts reach only his own Chief', () => {
   const his = chiefSystemPrompt(true)
   for (const fact of ['646-820-3671', 'eshwarjay05@gmail.com', 'jayeshwar44@gmail.com', 'TekBlu', 'Regards, Eshwar']) assert.ok(his.includes(fact), fact)
   assert.match(someone, /You do the whole job while the user is away/)
+  assert.match(his, /THIS CHAT/)
+  assert.ok(!someone.includes("THIS CHAT"), "another user's Chief is not given this chat")
   assert.match(readFileSync(new URL('../../src/app/api/agent/chat/route.ts', import.meta.url), 'utf8'), /chiefSystemPrompt\(owner\)/)
 })
