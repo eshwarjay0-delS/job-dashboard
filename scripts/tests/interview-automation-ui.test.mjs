@@ -34,3 +34,20 @@ test('what is sent for him stays visible, editable, and sendable at once, on tic
   assert.ok(sender.includes('double-tap'), 'a plain re-tap is named as a double-tap, not a new send')
   assert.ok(sender.includes('60 * 60 * 1000'), 'the double-tap window is one hour')
 })
+
+test('a tap never claims a send it did not make: the toast is gated on ok, a skipped re-tap says so', () => {
+  const board = read('src/app/dashboard/calendar/_components/interview-board.tsx')
+  // The ok gate sits before any panel is closed or any toast is raised, so a failed tap keeps the
+  // person's edit open and shows only the error line — and a failed day tick reverts instead of
+  // saying Saved (choose returns false, toggleDay falls back to a fresh read).
+  const gate = board.indexOf('if (!j?.ok) return false')
+  assert.ok(gate > -1, 'choose gates on the answer ok')
+  assert.ok(gate < board.indexOf('setEditing("")'), 'a failed tap does not close the edit panel')
+  assert.ok(gate < board.indexOf('setToast('), 'a failed tap raises no toast')
+  assert.ok(board.includes('Already sent a moment ago — nothing sent twice.'), 'a skipped re-tap names itself')
+  assert.ok(board.includes('j.skipped ?'), 'the toast tells a skip apart from a real send')
+  const sender = read('src/lib/interview-followups.ts')
+  assert.ok(sender.includes('return { ok: true, skipped: true }'), 'the guard reports its skip')
+  const api = read('src/app/api/gmail/interview-track/route.ts')
+  assert.ok(api.includes('sent.skipped ? { ...out, skipped: true } : out'), 'the route carries the skip to the board')
+})

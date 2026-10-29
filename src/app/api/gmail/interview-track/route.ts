@@ -82,7 +82,8 @@ export async function POST(req: Request) {
       const kept = await keptThreads(ctx, TRACKING_DAYS, { fetchWhenEmpty: true }).catch(() => null)
       const sent = await sendInterviewFollowUpNow(ctx.userId, myName, ids[0], customWords, undefined, kept?.threads.length ? kept.threads : undefined)
       if (!sent.ok) return NextResponse.json({ ok: false, error: sent.error || "That send could not go out just now." }, { status: 400 })
-      return NextResponse.json(await answer(ctx), PRIVATE)
+      const out = await answer(ctx)
+      return NextResponse.json(sent.skipped ? { ...out, skipped: true } : out, PRIVATE)
     }
     let state = await readTrackState(ctx.userId)
     const now = Date.now()

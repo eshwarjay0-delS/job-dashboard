@@ -122,14 +122,18 @@ export default function InterviewBoard() {
       if (customWords && (action === "send_for_me" || action === "save_words" || action === "send_now")) { payload.subject = customWords.subject; payload.body = customWords.body }
       if (days !== undefined) payload.days = days
       const r = await fetch("/api/gmail/interview-track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: AbortSignal.timeout(60_000) })
-      take(await r.json())
+      const j = await r.json() as Answer & { skipped?: boolean }
+      take(j)
+      // A failed tap must never claim a send, and must never close the panel the person was working in:
+      // the error line from take() is the whole answer until the tap really goes out.
+      if (!j?.ok) return false
       setAsking("")
       setAskDays([...DEFAULT_DAYS])
       setEditing("")
       if (action === "send_now" && !Array.isArray(id)) {
         const card = data?.active.find(x => x.id === id)
         const who = card ? (card.contact?.name || card.contact?.email || "them").split(/\s+/)[0] : "them"
-        setToast(`Sent to ${who}.`)
+        setToast(j.skipped ? "Already sent a moment ago — nothing sent twice." : `Sent to ${who}.`)
         setTimeout(() => setToast(""), 4000)
       }
       return true
