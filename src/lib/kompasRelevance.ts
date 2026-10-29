@@ -33,6 +33,15 @@ const QUESTION=/\?|^\s*(?:what|why|how|when|where|which|who|tell|describe|explai
 export function interviewIntent(question: string): ReplyIntent {
   const q=String(question||'').trim()
   if(!q) return "direct"
+  // Interviewers vary the wording across disciplines; route the requested action,
+  // not the job-specific vocabulary. These patterns complement the baseline.
+  if(/\b(?:any questions for (?:us|the team)|do you have any questions|anything you(?:'d| would) like to ask\??)\b/i.test(q)) return "closing-question"
+  if(/\b(?:give me (?:a )?(?:(?:quick|brief|short) )?overview of your (?:background|career|experience)|summari[sz]e your (?:background|career|experience)|what(?:'s| is) your background)\b/i.test(q)) return "introduction"
+  if(/\b(?:why are you interested in (?:this|the|our) (?:position|job|role|team|company)|how would you contribute to (?:this|the|our|a|an)\b)\b/i.test(q)) return "value"
+  if(/\b(?:describe (?:a|an) (?:project|incident|challenge|failure|achievement|situation) (?:you|where|that|when)|walk me through (?:a|an) (?:project|incident|failure|challenge) (?:you|where|that))\b/i.test(q)) return "experience-story"
+  if(/\bwhen (?:can|could|would) you start\b/i.test(q)) return "logistics"
+  if(/^\s*(?:why was that important|what did you do next|how did you (?:measure|test|check|confirm) (?:that|it|the result))\b/i.test(q)) return "follow-up"
+  if(/\b(?:explain how|describe how)\b/i.test(q)) return "technical-process"
   if(CLOSING.test(q)) return "closing-question"
   if(INTRO.test(q) || /^intro(?:duction)?[.?!]?$/i.test(q)) return "introduction"
   if(VALUE.test(q)) return "value"
