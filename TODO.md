@@ -1,3 +1,11 @@
+## 2026-10-29 — An unconfirmed tool on the skills line does not fail the whole resume
+
+**Asked:** a Fairview run said a Word file was coming, then refused the draft. A Honeywell file named PW-6000, ISO 27001 and SOC 2 as gaps.
+
+**Done:** a skills-list item that names a job-post tool the resume does not contain is removed. Sentinel stays if the resume already shows it. Experience bullets are not edited to hide a tool. The use-1 email pin is on production as `e7f979b` (Vercel success, production alias rebuilt 20:19 UTC).
+
+**Not claimed:** a live WhatsApp file after this strip. A draft can still be refused when the supported skills are under 95% or an experience bullet adds an unconfirmed tool.
+
 ## 2026-10-29 — WhatsApp keeps the email you named, and does not promise a file it will not send
 
 **Asked:** after "use 1", later jobs still started from the other email. Help and a job post were told no AI service was on. A run said a Word file was coming, then refused it. A sent file quoted only the low whole-job percentage.

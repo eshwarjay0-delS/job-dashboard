@@ -2,7 +2,7 @@
 // micro-segmentation job of 19 Oct 2026: the job post's literal extraction and Gemini's two passes, as measured.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { targetKeywords, skillLike, placeInSkills, isCertification, jdSpelling, withoutAddedCerts, weaveConfirmedVocabulary, parseConfirmedVocabulary } from '../../src/lib/keyword-targets.ts'
+import { targetKeywords, skillLike, placeInSkills, isCertification, jdSpelling, withoutAddedCerts, withoutUnsupportedSkills, weaveConfirmedVocabulary, parseConfirmedVocabulary } from '../../src/lib/keyword-targets.ts'
 
 const literal = ['siem', 'splunk', 'ansible', 'aws', 'azure', 'zero trust', 'firewall', 'vpn', 'tcp/ip', 'dns', 'routing', 'network security',
   'compliance', 'nist', 'pci', 'python', 'policy', 'palo alto', 'ipsec', 'micro-segmentation', 'vpc', 'vnet', 'tcp', 'ip', 'globalprotect',
@@ -46,6 +46,14 @@ test('certifications are ignored always: never a target, and one the writer slip
   assert.equal(out.find(l => l.idx === 7)?.text, 'Governance, Compliance, and Collaboration: PCI DSS, NIST 800-53, NIST Cybersecurity Framework, CIS Controls, ISO 27001, HIPAA, ITIL, ServiceNow GRC')
   assert.equal(out.find(l => l.idx === 9)?.text, 'Credentials: CISSP.', 'a certification the source does list stays')
   assert.ok(!out.some(l => l.idx === 8), 'a line with no added certification is untouched')
+})
+
+test('an unconfirmed job-post tool is taken off the skills line, and a tool the resume already shows stays', () => {
+  const source = 'Operated Microsoft Sentinel and Splunk for detection.'
+  const lines = [{ idx: 3, text: 'Security tools: Sentinel, PW-6000, Splunk.' }]
+  const out = withoutUnsupportedSkills(lines, source, ['pw-6000', 'sentinel', 'splunk'])
+  assert.equal(out[0].text, 'Security tools: Sentinel, Splunk.')
+  assert.deepEqual(withoutUnsupportedSkills(lines, source, ['sentinel']), [], 'a term the source contains is not banned')
 })
 
 test('each missing term goes onto the skills line it fits, in the job post\'s spelling, keeping the line\'s heading and separator', () => {

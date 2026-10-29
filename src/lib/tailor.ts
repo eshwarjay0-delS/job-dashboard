@@ -13,7 +13,7 @@ import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords,
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
 import { workParts, judgeLane, extraModels, type Lane, type LaneOut } from "./tailorLanes"
 import { priceCalls, type PricedCall } from "./llmPrices"
-import { targetKeywords, placeInSkills, isCertification, isQualificationOrJunk, floorTerms, jdSpelling, withoutAddedCerts, weaveConfirmedVocabulary, SOFT_SKILL, type RelationalPair } from "./keyword-targets"
+import { targetKeywords, placeInSkills, isCertification, isQualificationOrJunk, floorTerms, jdSpelling, withoutAddedCerts, withoutUnsupportedSkills, weaveConfirmedVocabulary, SOFT_SKILL, type RelationalPair } from "./keyword-targets"
 import { tailorReview, type TailorReview } from "./resume-changes"
 import { tailorRunKey } from "./tailor-review"
 
@@ -757,6 +757,21 @@ export async function runTailor(opts: {
     return next
   }
 
+  // A model sometimes writes a job-post product onto a skills line the source never had.
+  // That one item used to fail the whole file. Take the item off the skills line. Leave bullets unchanged.
+  const stripUnsupportedSkills = async (cur: Pass, banned: string[]): Promise<Pass> => {
+    if (!zones.skills.length || !banned.length) return cur
+    const sk = skillEdits(cur.edits)
+    const cleaned = withoutUnsupportedSkills(zones.skills.map(s => ({ idx: s.idx, text: sk.get(s.idx) ?? s.text })), text, banned)
+    if (!cleaned.length) return cur
+    const next = await applyEdits({ ...cur.edits, skills: mergeIndexedEdits(cur.edits.skills || [], cleaned) })
+    next.via = cur.via
+    next.partial = cur.partial
+    next.floor = (cur.floor || []).filter(k => next.afterKw.has(k))
+    next.floorSummary = cur.floorSummary
+    return next
+  }
+
   let best: Pass | null = null
   let usedModel = ""
   let skillsOnly = false
@@ -856,6 +871,11 @@ export async function runTailor(opts: {
   if (best && !refine) {
     const floored = await placeEverything(best)
     if (floored !== best) { floorFrom = best; best = floored; usedModel = `${usedModel} + every job-post term on the skills section` }
+  }
+  if (best && !refine) {
+    const banned = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
+    const stripped = await stripUnsupportedSkills(best, banned)
+    if (stripped !== best) { best = stripped; usedModel = `${usedModel} + unconfirmed job-post tools removed from skills` }
   }
   if (!best) {
     // A split draft is put together a few seconds BEFORE the deadline, so "out of time" is judged with that margin and by
