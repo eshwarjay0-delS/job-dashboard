@@ -299,7 +299,7 @@ export async function runTailor(opts: {
   const candidateStatements = [...immediatePrefs, ...storedFeedback]
   const forcedJdKws = explicitlyConfirmsAllRequirements(immediatePrefs)
     ? jdKws
-    : [...coveredJdKeywords([text, ...candidateStatements].join("\n"), jdKws)].filter(k => jdKws.includes(k))
+    : [...coveredJdKeywords([text, ...immediatePrefs].join("\n"), jdKws)].filter(k => jdKws.includes(k))
   // The JD is target context, not evidence. Only verified terms are mandatory in
   // rewrite prompts; chasing every JD phrase caused fabricated skills and timeouts.
   const jdKwsPrompt = [...new Set(forcedJdKws)]
