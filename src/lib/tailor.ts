@@ -712,13 +712,13 @@ export async function runTailor(opts: {
     return next
   }
 
-  // THE FLOOR's placement (see below): every target term still missing, certifications excepted, onto the skills line it
+  // THE FLOOR's placement (see below): only candidate-evidenced target terms still missing, certifications excepted, onto the skills line it
   // fits best. Kept only if the measured coverage rose. With no skills section it changes nothing (and says so in the
   // result's missing terms).
   const placeEverything = async (cur: Pass): Promise<Pass> => {
-    // The post's own skill terms (floorTerms), certifications excepted. They are written on the skills
-    // line and named in the reply. They are not written into experience bullets as work the person did.
-    const left = scoreKws.filter(k => floorKws.has(k) && !cur.afterKw.has(k) && !isCertification(k))
+    // Candidate-evidenced job skill terms (floorTerms), certifications excepted. They are written on the skills
+    // line and named in the reply. Unsupported JD-only terms are never added as qualifications.
+    const left = scoreKws.filter(k => floorKws.has(k) && forcedJdKws.includes(k) && !cur.afterKw.has(k) && !isCertification(k))
     if (!left.length) return cur
     // A soft skill ("problem solving", "communication skills") reads as a strength, not a tool: it goes into the summary
     // as one short sentence when the summary is a single paragraph the person left open to rewriting; a summary they
@@ -852,8 +852,8 @@ export async function runTailor(opts: {
   }
   if (best) best = await stripAddedCerts(best)
   // A model sometimes writes an unconfirmed tool onto a skills line. Take those off, then the floor
-  // below writes the job post's own terms back in one labeled pass. Stripping after the floor is what
-  // left a delivered file at 47% of the job post.
+  // below writes only evidenced terms back. Stripping after the floor previously
+  // caused lower keyword overlap; unsupported terms must remain honest gaps.
   if (best && !refine) {
     const banned = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
     const stripped = await stripUnsupportedSkills(best, banned)
@@ -865,9 +865,9 @@ export async function runTailor(opts: {
   // consistent build. Even if something going wrong ... the baseline is serve at least 90% match." And 19 Oct: every job
   // keyword goes in, certifications never. Since 22 Oct the passes above write a term into the experience only where the
   // source resume or the person's own words show it (4cbe02a), and that stays: the bullets are the candidate's record.
-  // What is still missing after them is written onto the skills line it fits best, as the job post spells it, and named
-  // in the reply so the person sees exactly what came from the job post alone. When no AI writer answered at all, the
-  // source resume with every term placed is still sent: a floor that holds when the providers do not.
+  // What is still missing AND candidate-evidenced is written onto the skills line it fits best, as the JD spells it, and named
+  // in the reply. Unsupported terms stay gaps, not skills. When no AI writer answered at all, the
+  // source resume is never delivered as a tailored success: the skills-only result is blocked.
   let floorFrom: Pass | null = null
   if (!best && !refine) {
     const plain = await applyEdits({ headline: { title: "", tagline: "" }, summary: "", skills: [], bullets: [], extras: [] })
@@ -878,7 +878,7 @@ export async function runTailor(opts: {
   }
   if (best && !refine) {
     const floored = await placeEverything(best)
-    if (floored !== best) { floorFrom = best; best = floored; usedModel = `${usedModel} + every job-post term on the skills section` }
+    if (floored !== best) { floorFrom = best; best = floored; usedModel = `${usedModel} + candidate-evidenced JD terms on skills` }
   }
   if (!best) {
     // A split draft is put together a few seconds BEFORE the deadline, so "out of time" is judged with that margin and by
@@ -893,7 +893,7 @@ export async function runTailor(opts: {
   const evidencePass = floorFrom ?? best
   const { claimedKw, roleKw, required, provenKw } = evidencePass
   if (skillsOnly) notes.push("No AI writer answered in time: only the skills section was brought up to the job post. Ask again for the full rewrite.")
-  if (best.floor?.length) notes.push(`Written onto the skills section from the job post (not shown in the source resume): ${best.floor.join(", ")}`)
+  if (best.floor?.length) notes.push(`Candidate-supported JD terms placed in the skills section: ${best.floor.join(", ")}`)
   if (best.floorSummary?.length) notes.push(`Written into the summary as strengths, from the job post: ${best.floorSummary.join(", ")}`)
   // A run the floor, not the rewrite, carried to the target is never kept as complete or served again from the cache: the
   // next identical request gets another rewrite (26 Oct 2026 review).
@@ -1001,15 +1001,9 @@ export async function runTailor(opts: {
     notes.push(`JD qualification gaps not supported by candidate evidence: ${unsupportedJdKws.length}`)
   }
   notes.push(`Evidence-supported JD vocabulary retained: ${Math.round(attainableCoverage * 100)}%`)
-  const editedBullets = new Map((best.edits.bullets || []).map(b => [b.idx, b.text]))
-  const bulletText = [
-    ...zones.roles.flatMap(r => r.bullets.map(b => editedBullets.get(b.idx) || b.text)),
-    ...(best.edits.added || []).map(a => a.text || ""),
-  ].join("\n")
-  const floorOnSkills = new Set((best.floor || []).map(k => k.toLowerCase()))
-  // A term written only onto the skills line by the floor is named in the reply. The same term
-  // inside an experience bullet is a claim that the person did that work, and that still blocks delivery.
-  const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(bulletText, [k]).has(k) || (coveredJdKeywords(best.tailoredText, [k]).has(k) && !floorOnSkills.has(k.toLowerCase())))
+  // Unsupported JD terms anywhere in the exported resume are unverified claims,
+  // including the skills section. A JD is a target, never proof of experience.
+  const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(best.tailoredText, [k]).has(k))
   if (unverifiedAdded.length > 0) notes.push(`Unverified JD claims require candidate confirmation: ${unverifiedAdded.join(", ")}`)
   // Diagnostic codes contain no resume, JD, name or phone number.
   const qualityBlockers = [
