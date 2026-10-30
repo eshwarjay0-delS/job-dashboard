@@ -37,7 +37,7 @@ function session(typed) {
     cards: [{ question: OLD_Q, answer: OLD_A }], idx: 0,
     $: (id) => (id === "manualInput" ? box : { classList: { add() {}, remove() {}, toggle() {}, contains: () => false } }),
     pendingHeard: () => [], updatePending() {}, flushHeard: async () => {}, setChat() {}, status() {},
-    logEvent() {}, renderCard() {}, toTop() {}, clearTimeout() {}, plainAnswer: (a) => String(a),
+    logEvent() {}, logDecision() {}, renderCard() {}, toTop() {}, clearTimeout() {}, plainAnswer: (a) => String(a),
     questionSource: () => "Them",
     generateAnswer: async (heard, card, opts) => { asked.push({ heard, card, opts }); },
   };

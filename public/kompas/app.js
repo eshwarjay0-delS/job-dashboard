@@ -393,6 +393,9 @@ let transcriptionOrder = Promise.resolve();
 // regeneration) — for Get transcript. Clear doesn't touch it; a reload mid-interview picks it back up.
 let sessionLog = [];
 let logSaveT = 0;
+// One structured reason per keep / drop / cut / gate decision (slice 2). Only the reason, the source and the length of
+// the words, never the words themselves.
+function logDecision(reason, source, text) { try { logEvent(decisionEvent(reason, source, text)); } catch {} }
 function logEvent(ev) {
   sessionLog.push({ at: Date.now(), ...ev }); if (sessionLog.length > 4000) sessionLog.shift();
   // written only while that session's live box is open: an event that lands after the box closed must not bring a closed run's log back
@@ -1367,7 +1370,17 @@ function stopSource(who) {
   if (who === "Them") displayVideo = null;
   return Promise.allSettled(finishing);
 }
-function questionSource() { return captures.some(c => c.who === "Them") ? "Them" : "You"; }
+// Who can open a question (slice 2, 29 Oct 2026): askSource() maps each capture through roleOfSource(), so computer
+// audio is the interviewer and, while it is captured, mic words never open a question. With no computer audio the mic
+// is the only voice, so it keeps opening questions as before, labelled "mic-only" in the session log. If the mapping
+// ever throws, the old rule answers.
+let lastSourceMode = "";
+function questionSource() {
+  let pick;
+  try { pick = askSource(captures.map(c => c.who)); } catch { return captures.some(c => c.who === "Them") ? "Them" : "You"; }
+  if (pick.mode !== lastSourceMode && captures.length) { lastSourceMode = pick.mode; logDecision(pick.reason, pick.source, ""); }
+  return pick.source;
+}
 
 function startSegment(cap) {
   cap.chunks = []; cap.segStart = performance.now(); cap.speechMs = 0; cap.voiced = false; cap.interimAt = 0;
@@ -1399,6 +1412,7 @@ function endSegment(cap, keep, restart = true, force = false) {
   const rec = cap.rec, chunks = cap.chunks, speech = cap.speechMs;
   const epoch = transcriptionEpoch;
   const prompt = whisperPrompt();
+  const spokenAt = spokenWallTime(cap.lastVoice, performance.now(), Date.now());   // when the words were said, not when the text came back
   if (restart && !cap.stopped) {
     try { startSegment(cap); } catch {
       cap.rec = null;
@@ -1414,7 +1428,7 @@ function endSegment(cap, keep, restart = true, force = false) {
   rec.onstop = () => {
     if (!segmentKept(speech, keep, force)) return settle();
     const blob = new Blob(chunks, { type: rec.mimeType || MIME || "audio/webm" });
-    if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech }).then(settle, settle); else settle();
+    if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech, spokenAt }).then(settle, settle); else settle();
   };
   try { rec.stop(); } catch { settle(); }
   const watchdog = setTimeout(() => {
@@ -1474,8 +1488,79 @@ function dictateStep(cap, rms, now, vad) {
   else if (!voiced && segLen > V.IDLE_RECYCLE_MS) action = speechMs >= 60 ? "rescue" : "drop";
   return { noise, speechMs, voiced, lastVoice, lastTick, speaking, scream, action };
 }
+// Audio-silence watchdog hooks (slice 5d, 29 Oct 2026), the web side of desktop-patches/audio-silence-watchdog.md.
+// The desktop's 3 s audio pulse reads them; nothing on this page reads or calls them. They can never break capture:
+//  - window.__kompasLevels = { peak, at }: the louder of mic / call audio over the last ~1 s, written from the RMS
+//    the VAD already computes. Writing it is read-only for capture and every write sits in try/catch.
+//  - window.__kompasTracks: [mic track, call-audio track] that are attached now (a source that is off is left out).
+//  - window.__kompasRestartCapture(): stops and re-acquires the sources attached now and rewires the AudioContext.
+//    Only on an explicit call, only while capturing, one restart at a time, never throws, never navigates or
+//    touches sign-in. The call-audio share is re-acquired only on the desktop (a browser would ask for the share
+//    dialog again); there the page restarts the mic only.
+function installWatchdogHooks(win, deps) {
+  const LEVEL_WINDOW_MS = 1000;
+  const recent = { You: { rms: 0, at: 0 }, Them: { rms: 0, at: 0 } };
+  let restarting = false;
+  const tap = (who, rms) => {
+    try {
+      if (who !== "You" && who !== "Them") return;
+      const v = Number(rms);
+      if (!Number.isFinite(v) || v < 0) return;
+      const at = Date.now();
+      recent[who] = { rms: v, at };
+      let peak = 0;
+      for (const k of ["You", "Them"]) if (at - recent[k].at <= LEVEL_WINDOW_MS && recent[k].rms > peak) peak = recent[k].rms;
+      win.__kompasLevels = { peak: Math.min(1, peak), at };
+    } catch {}
+  };
+  try {
+    Object.defineProperty(win, "__kompasTracks", {
+      configurable: true,
+      get() {
+        try {
+          const out = [];
+          for (const who of ["You", "Them"]) {
+            const cap = deps.captures().find((c) => c && c.who === who && !c.stopped);
+            const track = cap && cap.stream && cap.stream.getAudioTracks ? cap.stream.getAudioTracks()[0] : null;
+            if (track) out.push(track);
+          }
+          return out;
+        } catch { return []; }
+      },
+    });
+  } catch {}
+  win.__kompasRestartCapture = () => {
+    try {
+      if (restarting || !deps.running()) return false;
+      const who = deps.captures().filter((c) => c && !c.stopped).map((c) => c.who);
+      const restart = [...new Set(who)].filter((w) => w === "You" || (w === "Them" && deps.desktop()));
+      if (!restart.length) { try { deps.primeAudio(); } catch {} return false; }
+      restarting = true;
+      Promise.resolve().then(async () => {
+        for (const w of restart) {
+          try { await deps.stopSource(w); } catch {}
+          try { deps.primeAudio(); } catch {}
+          if (!deps.running()) break;
+          try { await (w === "You" ? deps.startMic() : deps.startSys()); } catch {}
+        }
+        try { deps.reportSources(); } catch {}
+      }).catch(() => {}).finally(() => { restarting = false; });
+      return true;
+    } catch { restarting = false; return false; }
+  };
+  return tap;
+}
+let kompasLevelTap = () => {};
+try {
+  kompasLevelTap = installWatchdogHooks(window, {
+    captures: () => captures, running: () => running, desktop: () => !!window.kompasDesktop,
+    stopSource: (w) => stopSource(w), startMic: () => startMic(), startSys: () => startSys(),
+    primeAudio: () => primeAudio(), reportSources: () => reportSources(),
+  });
+} catch {}
 function vadStep(cap, rms) {
   if (cap.stopped || !running) return;
+  try { kompasLevelTap(cap.who, rms); } catch {}   // slice 5d: watchdog level, read only
   const now = performance.now();
   cap.lastVadAt = now;
   if (rms > 0.004) { cap.lastAudibleAt = now; cap.zeroWarned = false; }
@@ -1601,7 +1686,7 @@ async function transcribe(blob, who, opt) {
     if (epoch !== transcriptionEpoch) return;
     if (failure && opt.final) { transcriptionFailedEpoch = epoch; status(failure, "err"); return false; }
     if (!clean) return;
-    if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(who, clean); }
+    if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(who, clean, false, opt.spokenAt); }
     else if (running) showCaption(who, clean, true);
   } finally { if (cap) cap.inflight--; if (release) release(); }
 }
@@ -1615,9 +1700,61 @@ let capTimer = null;
 // as You. While the call audio carries speech, or did a moment ago, no You caption is shown; a You line that repeats
 // what Them just said (half or more of its words) is not yours and is dropped (onTranscript).
 let themLines = [];   // what the call audio said in the last 30 s, interim and final
-function noteThem(text) { const at = Date.now(); themLines = themLines.filter(l => at - l.at < 30000); themLines.push({ text: String(text || ""), at }); }
+function noteThem(text, spokenAt) { const at = Date.now(); themLines = themLines.filter(l => at - l.at < 30000); themLines.push({ text: String(text || ""), at, spokenAt: Number.isFinite(spokenAt) ? spokenAt : undefined }); }
 function themSpeaking() { const now = performance.now(); return captures.some(c => c.who === "Them" && !c.stopped && (c.voiced || now - (c.lastVoice || 0) < 1500)); }
 function echoOfThem(text) { const recent = themLines.filter(l => Date.now() - l.at < 30000).map(l => l.text).join(" "); return recent ? echoShare(text, recent) : 0; }
+// ── Source-aware intake (29 Oct 2026) ──
+// Computer audio is the interviewer, the microphone is you, and typed text is your own question. Speaker bleed: the
+// interviewer comes back through the mic a moment later. A mic line that repeats what the call audio said within about
+// 1.5 seconds is bleed, even a short one like "And why?" that the 30-second echo rule cannot judge, so it never opens a
+// question. Your own answer, said later or in other words, is kept.
+function roleOfSource(source) { const SOURCE_ROLE = { system: "Them", computer: "Them", loopback: "Them", them: "Them", mic: "You", microphone: "You", you: "You", typed: "You (typed)" }; return SOURCE_ROLE[String(source || "").trim().toLowerCase()] || "You"; }
+function bleedWords(text) { return String(text || "").toLowerCase().replace(/[^a-z0-9'+#]+/g, " ").split(/\s+/).filter(w => w.length > 1 || /\d/.test(w)); }
+function micBleed(text, at, lines, spokenAt) {
+  const words = bleedWords(text); if (words.length < 2) return false;
+  const near = (lines || []).filter(l => bleedNear(l, at, spokenAt));   // about 1.5 s
+  if (!near.length) return false;
+  const bag = new Set(bleedWords(near.map(l => l.text).join(" ")));
+  return words.filter(w => bag.has(w)).length / words.length >= 0.6;
+}
+// Slice 2 (29 Oct 2026). askSource: computer audio, when captured, is the only voice that opens a question; with mic only,
+// the mic does (labelled). spokenWallTime: when the last word of a clip was said, on the wall clock, or null.
+function askSource(whos) {
+  if (Array.from(whos || []).some(w => roleOfSource(w) === "Them")) return { source: roleOfSource("system"), mode: "call", reason: "source-computer-audio-is-interviewer" };
+  return { source: roleOfSource("mic"), mode: "mic-only", reason: "source-mic-only-fallback" };
+}
+function spokenWallTime(lastVoicePerf, nowPerf, nowWall) {
+  const lv = Number(lastVoicePerf), np = Number(nowPerf), nw = Number(nowWall);
+  if (!Number.isFinite(lv) || !Number.isFinite(np) || !Number.isFinite(nw) || lv <= 0 || lv > np || np - lv > 30000) return null;
+  return nw - (np - lv);
+}
+// The leak window, judged by when words were said where both sides know it, and by when text came back otherwise.
+function bleedNear(line, at, spokenAt) {
+  if (!line) return false;
+  if (Math.abs(Number(at) - Number(line.at)) <= 1500) return true;
+  return Number.isFinite(spokenAt) && Number.isFinite(line.spokenAt) && Math.abs(spokenAt - line.spokenAt) <= 1500;
+}
+const TURN_CLOSING = /^(?:(?:ok(?:ay)?|great|perfect|cool|nice|thanks|thank you|got it|sounds good|all right|alright|awesome|makes sense|that makes sense|good|right)[\s,.!]*)+$/i;
+// Turn gate: answer now, wait (a clause is still open, or no ask yet), or skip (filler, thanks). Any fault answers.
+function turnGate(text) {
+  try {
+    const t = String(text || "").replace(/\s+/g, " ").trim();
+    if (!t) return { outcome: "skip", reason: "empty" };
+    const pre = typeof gateNoAnswerNeeded === "function" ? gateNoAnswerNeeded(t) : null;   // slice 3: audio checks, statements
+    if (pre) return pre;
+    if (Q_CUE.test(t) || opensNewAsk(t)) return clauseStillOpen(t) ? { outcome: "wait", reason: "clause-open" } : { outcome: "answer", reason: "question" };
+    if (isNoiseLine(t)) return { outcome: "skip", reason: "filler" };
+    if (TURN_CLOSING.test(t)) return { outcome: "skip", reason: "closing" };
+    return { outcome: "wait", reason: "no-ask-yet" };
+  } catch { return { outcome: "answer", reason: "gate-error-fail-open" }; }
+}
+function decisionEvent(reason, source, text) { return { t: "decision", reason: String(reason || "unknown").slice(0, 60), source: String(source || ""), len: String(text || "").length }; }
+// Answer anyway: a manual press within 15 s of a turned-away press, with nothing new heard or typed, answers those lines.
+function answerAnywayLines(held, o) {
+  if (!held || !o || o.fromAuto || o.pending || o.typed || !Array.isArray(held.lines) || !held.lines.length) return null;
+  return Number(o.now) - Number(held.at) <= 15000 ? held.lines : null;
+}
+// ── end source-aware intake ──
 // One section: the line being said shows inside the question box, under the question. A new question from Them brings
 // a tucked-away box back (never while an answer is still being written on that page); your own speech never moves it.
 function showCaption(who, text, isInterim) {
@@ -1688,6 +1825,16 @@ function shortFollowUp(text) {
   return /^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|go deeper|dig deeper|explain that|explain this|explain it|say that again|why|how)(?:\s+though)?[.?!]*$/i.test(t);
 }
 // "Go deeper on that exception" names a subject, so it is not the two-word follow-up, and it is still a new ask.
+// A typed "And why?" after an answer gets its own card (#32), and it is about the question on that page: the follow-up
+// is attached to the open question instead of standing alone with no subject.
+function typedFollowUpQuestion(typed, openQuestion) {
+  const t = String(typed || "").replace(/\s+/g, " ").trim(), q = String(openQuestion || "").replace(/\s+/g, " ").trim();
+  if (!t || !q || !shortFollowUp(t) || /^(Preparing|Ready|Cleared\.|No question yet|Deriving)/.test(q)) return "";
+  // A typed statement ("go deeper", "more on the vault part") is kept as typed; only a typed question gets a "?" (slice 2).
+  const asks = /^(?:(?:and|so|but|ok(?:ay)?)[, ]+)?(?:what|why|how|when|where|which|who|whose|can|could|would|will|should|do|does|did|are|is|was|were|have|has)\b/i;
+  const end = (x) => /[?.!]$/.test(x) ? "" : asks.test(x) ? "?" : ".";
+  return q + end(q) + " " + t.charAt(0).toUpperCase() + t.slice(1) + end(t);
+}
 function opensNewAsk(text) {
   const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim();
   if (shortFollowUp(t)) return true;
@@ -1700,6 +1847,10 @@ function clauseStillOpen(text) {
   return /\b(?:a|an|the|to|of|for|with|and|or|but|about|on|in|into|from|by|at|as|your|my|our|their|between|would|could|should)\s*$/i.test(t);
 }
 function repeatsPriorQuestion(text, previous) {
+  if (repeatsPriorQuestionV2(text, previous)) return true;
+  try { return !shortFollowUp(text) && repeatsPriorQuestionV3(text, previous); } catch { return false; }   // slice 3: only ever adds a repeat
+}
+function repeatsPriorQuestionV2(text, previous) {
   const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9+#]+/g, " ").trim();
   const stop = new Set("the a an and or of to in on for with you your yours we our it its is are was were do does did have has had can could would should will just like really very this that those these what how why when where which who about from into".split(" "));
   const a = norm(text), b = norm(previous);
@@ -1734,12 +1885,84 @@ function splitHead(sentence) {
   const m = String(sentence || "").replace(SPLIT_LEAD, "").match(/^what (?:is|are)\s+(?:an?|the\s+)?(?:meaning of\s+)?([a-z0-9][\w+#.-]*(?:\s+[a-z0-9][\w+#.-]*){0,3})/i);
   return m ? m[1].toLowerCase().replace(/[?.!\s]+$/g, "").trim() : "";
 }
-function splitSeparate(next, prevText) {
+// Slice 3 (29 Oct 2026), round-2 production failures. Every rule below only runs inside the v3 pass, and
+// splitDistinctAsks returns the v2 cut whenever the v3 pass throws or would change a single heard word.
+const SPLIT_ORDINAL = /^(?:(?:first|second|third|fourth|fifth)(?:ly)?|lastly|number (?:one|two|three|four|five))\b[,:]?\s*/i;
+const SPLIT_TAG = /,\s*(?:right|correct|yes|no|yeah|true|isn't it|aren't you|don't you|didn't you|haven't you|wasn't it)\?\s*$/i;
+const SPLIT_POLITE = /^(?:i'?d (?:love|like|be (?:curious|interested|keen)) to (?:hear|know|learn|understand)|i would (?:love|like) to (?:hear|know)|i'?m curious (?:about|how|what|why|to hear))\b/i;
+const SPLIT_AUDIO_CHECK = /^(?:(?:hello|hi|hey)[,.!]?\s+)?(?:(?:can|could) you (?:hear|see) me(?:\s+(?:ok(?:ay)?|now|alright|all right|well|clearly))?|(?:am i|are you) (?:audible|on mute|muted|still there|there)|is my (?:audio|mic|microphone|video|sound) (?:ok(?:ay)?|working|coming through)|(?:are|is) (?:you|my audio) (?:breaking up|cutting out))[?.!]*$/i;
+const SPLIT_CONTEXT_FOLLOW = /^(?:what about|how about)\s+(?:with\s+|in\s+|for\s+|on\s+)?[\w+#.-]+(?:\s+[\w+#.-]+){0,3}\s*\?*$|^(?:can|could) you (?:give|share) (?:me |us )?(?:an?|one|some) (?:\w+ )?examples?\b|^(?:for example|for instance|like what|such as)\??$|^what (?:was|were) the (?:outcome|result|results|impact|lesson|lessons|takeaway)\b|^what happened (?:next|after|then)\b|^(?:and )?then what\b|^what did you learn\b|^(?:how|what|why|when|where) (?:does|do|did|is|are|was|were|would|can|could|will) (?:it|they|that|this|those|these)\b/i;
+function splitAskBody(sentence) { return String(sentence || "").replace(SPLIT_LEAD, "").replace(SPLIT_ORDINAL, "").replace(SPLIT_LEAD, "").trim(); }
+function splitSetsAsk(sentence) {
+  const bare = String(sentence || "").replace(SPLIT_LEAD, "").trim();
+  if (!bare || splitNoise(bare) || SPLIT_AUDIO_CHECK.test(bare)) return false;
+  const body = splitAskBody(sentence);
+  return SPLIT_OPENER.test(body) || (/\?\s*$/.test(body) && SPLIT_START.test(body)) || SPLIT_TAG.test(bare) || SPLIT_POLITE.test(body);
+}
+// "What is Zscaler? I would say Zscaler is a cloud proxy.": an ask, then four or more words of answer, nothing asked since.
+function splitAnswerBetween(prevText) {
+  const ss = String(prevText || "").trim().split(/(?<=[.?!])\s+/).filter(Boolean);
+  let last = -1;
+  ss.forEach((s, i) => { if (splitSetsAsk(s)) last = i; });
+  if (last < 0 || last >= ss.length - 1) return false;
+  const after = ss.slice(last + 1);
+  return after.every((s) => !/\?\s*$/.test(s) && !SPLIT_OPENER.test(splitAskBody(s))) && after.join(" ").split(/\s+/).length >= 4;
+}
+// v3 rules, checked before the v2 rules: true = new card, false = same card, null = let v2 decide.
+function splitSeparateV3(next, prevText) {
+  const bare = String(next || "").replace(SPLIT_LEAD, "").trim();
+  if (!bare) return null;
+  const body = splitAskBody(next);
+  if (SPLIT_ORDINAL.test(bare) && !/^first(?:ly)?\b/i.test(bare) && (SPLIT_OPENER.test(body) || /\?\s*$/.test(body))) return true;
+  if (SPLIT_AUDIO_CHECK.test(bare)) return false;
+  const prevProper = new Set(splitProper(prevText));
+  const prevTopic = new Set(splitTopicWords(prevText));
+  // "And what about SailPoint, have you used it?" names a new subject and asks its own question.
+  const named = bare.match(/^what about\s+([\w+#.-]+(?:\s+[\w+#.-]+){0,2}),\s*(?:have|do|did|can|could|would|are|were|is|was) you\b/i);
+  if (named && named[1].toLowerCase().split(/\s+/).some((w) => w.length >= 3 && !prevTopic.has(w) && !prevProper.has(w))) return true;
+  if (SPLIT_CONTEXT_FOLLOW.test(bare)) return false;
+  const fresh = splitProper(bare).some((n) => !prevProper.has(n));
+  const prevWords = new Set(splitTopicWords(prevText));
+  const freshWords = splitTopicWords(bare).filter((w) => !prevWords.has(w));
+  const politeNoise = new Set("love like hear know learn understand curious interested keen also".split(" "));
+  if (SPLIT_POLITE.test(bare) && (fresh || (freshWords.some((w) => !politeNoise.has(w)) && !/\b(?:that|this|it|those|these|more)\b/i.test(bare)))) return true;
+  if (/\?\s*$/.test(bare) && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && freshWords.length > 0 && !/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && splitAnswerBetween(prevText)) return true;
+  return null;
+}
+// Turn gate pre-check: audio checks and statements built like questions. Unsure, or any fault, says nothing (null).
+const GATE_PSEUDO_ASK = /^(?:(?:so|and|okay|ok|well|now)[, ]+)*(?:how|what|why|who|where|when) (?:we|we're|we are|they|they're|our team|our company|the team|this team) [^?]*\b(?:is|are|was|were)\b[^?]*[.!]$/i;
+const GATE_ASK_ANNOUNCED = /^(?:(?:thank you|thanks|great|okay|ok|so|and|now)[,.!]?\s+)*(?:my|the) next question is (?:around|about|on|regarding)\b[^?]*[.!]?$/i;
+function gateNoAnswerNeeded(text) {
+  try {
+    const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim();
+    if (!t) return null;
+    const parts = t.split(/(?<=[.?!])\s+/).map((s) => s.replace(SPLIT_LEAD, "").trim()).filter(Boolean);
+    if (parts.length && parts.every((s) => SPLIT_AUDIO_CHECK.test(s) || splitNoise(s))) return parts.some((s) => SPLIT_AUDIO_CHECK.test(s)) ? { outcome: "skip", reason: "audio-check" } : null;
+    if (parts.length === 1 && GATE_PSEUDO_ASK.test(t)) return { outcome: "skip", reason: "statement-not-ask" };
+    if (GATE_ASK_ANNOUNCED.test(t)) return { outcome: "wait", reason: "ask-announced" };
+    return null;
+  } catch { return null; }
+}
+// Cross-turn repeat (slice 3): "Sorry, what is CyberArk?", "..., again?", "... please.", "Can you tell me how Kerberos
+// works?". Filler is dropped and plurals are folded, and both questions must hold exactly the same words, so a question
+// with one new word is never hidden.
+const REPEAT_FILLER = new Set("sorry again please said repeat let tell me can could you just once more question asked asking ask".split(" "));
+function repeatsPriorQuestionV3(text, previous) {
+  const stop = new Set("the a an and or of to in on for with you your yours we our it its is are was were do does did have has had can could would should will just like really very this that those these what how why when where which who about from into".split(" "));
+  const bag = (s) => new Set(String(s || "").toLowerCase().replace(/[^a-z0-9+#]+/g, " ").trim().split(/\s+/).filter((w) => w.length >= 3 && !stop.has(w) && !REPEAT_FILLER.has(w)).map((w) => w.length > 4 ? w.replace(/([^s])s$/, "$1") : w));
+  const a = bag(text), b = bag(previous);
+  if (!a.size || a.size !== b.size) return false;
+  for (const w of a) if (!b.has(w)) return false;
+  return true;
+}
+function splitSeparate(next, prevText, v3, v4) {
+  if (v4) { const r = splitSeparateV4(next, prevText); if (r !== null) return r; }
+  if (v3) { const r = splitSeparateV3(next, prevText); if (r !== null) return r; }
   const bare = String(next || "").replace(SPLIT_LEAD, "").trim();
   if (!bare || shortFollowUp(bare) || SPLIT_CONTINUES.test(bare)) return false;
   // "Go deeper" stays with the question it follows. "Go deeper on that exception" is the next question.
-  if (/^(?:(?:and|so|ok(?:ay)?|right|well|then|now)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|walk me through)\b/i.test(bare)) {
-    const press = new Set("deeper dig elaborate explain walk through that this".split(" "));
+  if (/^(?:(?:and|so|ok(?:ay)?|right|well|then|now)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|walk me through|explain (?:the|your|that|this)\s+(?:[\w+#.-]+\s+){1,4}(?:part|piece|bit|side|step)\b)\b/i.test(bare)) {
+    const press = new Set("deeper dig elaborate explain walk through that this part piece side step more".split(" "));
     const prevWords = new Set(splitTopicWords(prevText));
     const fresh = splitTopicWords(bare).filter((w) => !press.has(w) && !prevWords.has(w));
     if (fresh.length > 0) return true;
@@ -1748,9 +1971,11 @@ function splitSeparate(next, prevText) {
   const prevBare = ((String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || prevText).replace(SPLIT_LEAD, "")).replace(/[.?!]+$/, "").trim();
   if (/^(?:tell me about yourself|introduce yourself|walk (?:me|us) through your (?:career|background))\b/i.test(prevBare)
       && /^(?:what questions (?:do|would|might|can) you have|any questions(?: for (?:us|me|the team))?|do you have any questions)\b/i.test(String(bare).replace(/[.?!]+$/, ""))) return true;
+  const prevSentence = (String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim();
+  // "Tell me about yourself. Why do you want this job?": an opening ask about you is its own card (same as the server).
+  if (SPLIT_INTRO.test(String(prevSentence).replace(SPLIT_LEAD, "")) && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && (/\?\s*$/.test(bare) || !/[.?!]\s*$/.test(prevSentence))) return true;
   if (/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && splitProper(bare).length === 0) return false;
   if (!SPLIT_START.test(bare)) return false;
-  const prevSentence = (String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim();
   const prevProper = new Set(splitProper(prevText));
   const nextProper = splitProper(bare);
   const parallel = /^(?:how|what) (?:do|did|would|could) you\b/i;
@@ -1761,28 +1986,284 @@ function splitSeparate(next, prevText) {
   const prevWords = new Set(splitTopicWords(prevText));
   const fresh = splitTopicWords(bare).filter((w) => !prevWords.has(w));
   if (/^(?:have you|do you|did you|can you|could you|would you|tell me|walk me|describe)\b/i.test(bare) && fresh.length > 0) return true;
-  return /\?\s*$/.test(prevSentence) && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && fresh.length > 0;
+  const prevEnded = /\?\s*$/.test(prevSentence) || (/^(?:tell me about|walk me through)\b/i.test(String(prevSentence).replace(SPLIT_LEAD, "")) && /\.\s*$/.test(prevSentence) && /\?\s*$/.test(bare)) || (!/[.?!]\s*$/.test(prevSentence) && SPLIT_START.test(String(prevSentence).replace(SPLIT_LEAD, "")));   // a mid-sentence cut piece
+  return prevEnded && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && fresh.length > 0;
 }
-function splitDistinctAsks(text) {
+// Same as the server (29 Oct 2026): no full stops from speech-to-text ("what is cyberark what is okta"). A new question
+// starts mid-sentence only at a strong opener after a finished ask of three words or more, never after a word that
+// keeps the clause going ("and why", "handle what happens", "a time when"). Failsafe: never drop a word.
+const SPLIT_INTRO = /^(?:tell me (?:a (?:little |bit )?(?:bit )?)?about yourself|introduce yourself|(?:walk|take) me through (?:your )?(?:resume|background|career|cv)|tell me about your (?:background|career))\b/i;
+const SPLIT_MID_ASK = /\b(?:(?:go|dig) deeper on\b|explain the (?:[\w+#.-]+\s+){1,4}part\b|(?:what|how|why|when|where|who|which)\s+(?:is|are|was|were|do|does|did|would|could|can|will|should|has|have)\b|what's\b|tell me about\b|walk me through\b|can you (?:tell|walk|explain|describe)\b|could you (?:tell|walk|explain|describe)\b)/gi;
+const SPLIT_MID_KEEPS = /\b(?:and|or|but|so|nor|then|me|us|them|him|her|know|knows|explain|describe|tell|ask|asked|asking|understand|see|show|about|on|of|in|for|to|than|that|is|are|was|were|wonder|sure|decide|decided|mean|matters|handle|exactly|just|like|into|from|with|by|at|as|if|whether|because|a|an|the|time|moment|day|case|cases|place|reason|point)\s*$/i;
+const SPLIT_MID_OPEN = /\b(?:if|whether|unless|(?:how|where|when|what) (?:you|we|they))\b/i;   // "how you would migrate what is left": the clause is still open
+function splitMidAsks(sentence) {
+  if (/[.?!]\s*\S/.test(sentence)) return [sentence];
+  const cuts = [];
+  SPLIT_MID_ASK.lastIndex = 0;
+  for (let m; (m = SPLIT_MID_ASK.exec(sentence));) {
+    if (m.index === 0) continue;
+    const left = sentence.slice(cuts.length ? cuts[cuts.length - 1] : 0, m.index).trim();
+    const bareLeft = left.replace(SPLIT_LEAD, "");
+    if (bareLeft.split(/\s+/).length < 3 || !SPLIT_START.test(bareLeft) || SPLIT_MID_KEEPS.test(left) || SPLIT_MID_OPEN.test(bareLeft.replace(/^\S+\s+/, ""))) continue;
+    cuts.push(m.index);
+  }
+  if (!cuts.length) return [sentence];
+  const out = [];
+  let from = 0;
+  for (const at of cuts) { out.push(sentence.slice(from, at).trim()); from = at; }
+  out.push(sentence.slice(from).trim());
+  return out.filter(Boolean);
+}
+// Slice 4 (29 Oct 2026): punctuation-stripped runs ("what is pam okay what is iga um what is oidc") and "Explain the
+// CyberArk CPM. Explain the PSM.". Every rule below only runs inside the v4 pass, and splitDistinctAsks returns the
+// slice-3 cut whenever the v4 pass throws or would change a single heard word.
+const SPLIT_MID_ASK4 = /\b(?:(?:go|dig) deeper on\b|explain the (?:[\w+#.-]+\s+){1,4}part\b|(?:what|how|why|when|where|who|which)\s+(?:is|are|was|were|do|does|did|would|could|can|will|should|has|have)\b|what's\b|tell me about\b|walk me through\b|(?:can|could) you (?:tell|walk|explain|describe)\b|(?:have|did) you (?:ever )?(?:used|use|worked|work|implemented|deployed|managed|led|built|configured|administered|run)\b|do you (?:have|use|know)\b|explain (?:the|your)\s)/gi;
+// Filler that sits between two asks: "okay", "um", "so", "and then (after that)", "next". "and" alone is not one,
+// so "tell me about zscaler and why did you choose it" keeps its clause.
+const SPLIT_BRIDGE_WORDS = "um+|uh+|so|okay|ok|alright|and then(?: after that)?|and (?:um+|uh+)|then|next|now|also|(?:and )?after that";
+const SPLIT_BRIDGE_ORD = "second(?:ly)?|third(?:ly)?|fourth(?:ly)?|lastly|number (?:two|three|four|five)";
+const SPLIT_BRIDGE_TAIL = new RegExp("(?:\\b(?:" + SPLIT_BRIDGE_WORDS + "|" + SPLIT_BRIDGE_ORD + ")\\s+)+$", "i");
+const SPLIT_BRIDGE_LEAD = new RegExp("^(?:(?:" + SPLIT_BRIDGE_WORDS + ")[,]?\\s+)+", "i");
+// A piece may start where a strong opener follows a finished ask of three words or more, with the filler before the
+// opener moved onto the new piece. The pieces are rejoined unless the separate rules say the next one is new.
+function splitMidAsksV4(sentence) {
+  if (/[.?!]\s*\S/.test(sentence)) return [sentence];
+  const cuts = [];
+  SPLIT_MID_ASK4.lastIndex = 0;
+  for (let m; (m = SPLIT_MID_ASK4.exec(sentence));) {
+    if (m.index === 0) continue;
+    const from = cuts.length ? cuts[cuts.length - 1] : 0;
+    const left = sentence.slice(from, m.index);
+    const tail = left.match(SPLIT_BRIDGE_TAIL);
+    const coreLen = tail ? left.length - tail[0].length : left.length;
+    const core = left.slice(0, coreLen).trim();
+    const bareCore = core.replace(SPLIT_LEAD, "").replace(SPLIT_ORDINAL, "").replace(SPLIT_LEAD, "");
+    // "explain the cyberark cpm explain the psm": an "explain the" piece only after a finished "explain the" piece.
+    if (/^explain (?:the|your)\s$/i.test(m[0]) && !(/^explain (?:the|your)\s/i.test(bareCore) && bareCore.split(/\s+/).length >= 3 && !SPLIT_MID_KEEPS.test(core))) continue;
+    if (/^explain (?:the|your)\s$/i.test(m[0])) { if (from + coreLen > from) cuts.push(from + coreLen); continue; }
+    if (!bareCore || /,\s*$/.test(core) || bareCore.split(/\s+/).length < 3 || !SPLIT_START.test(bareCore) || SPLIT_MID_KEEPS.test(core) || SPLIT_MID_OPEN.test(bareCore.replace(/^\S+\s+/, ""))) continue;
+    if (from + coreLen > from) cuts.push(from + coreLen);
+  }
+  if (!cuts.length) return [sentence];
+  const out = [];
+  let from = 0;
+  for (const at of cuts) { out.push(sentence.slice(from, at).trim()); from = at; }
+  out.push(sentence.slice(from).trim());
+  return out.filter(Boolean);
+}
+// true = new card, false = same card, null = let the slice-3 rules decide.
+function splitSeparateV4(next, prevText) {
+  const raw = String(next || "").trim();
+  // "and then after that what is okta", "um have you used saviynt": judge the ask without the bridge filler.
+  const stripped = raw.replace(SPLIT_BRIDGE_LEAD, "").replace(/^,\s*/, "").trim();
+  // "um second how does it rotate passwords": a numbered ask after the bridge is the next card (as in slice 3).
+  const ord = stripped.match(SPLIT_ORDINAL);
+  if (ord && stripped !== raw && !/^first(?:ly)?\b/i.test(stripped) && SPLIT_OPENER.test(stripped.slice(ord[0].length).replace(SPLIT_LEAD, ""))) return true;
+  if (stripped && stripped !== raw && stripped.split(/\s+/).length >= 3 && /^(?:what|why|how|when|where|which|who|have you|did you|do you|can you|could you|tell me|walk me)\b/i.test(stripped)) return splitSeparate(stripped, prevText, true);
+  // "Explain the CyberArk CPM. Explain the PSM.": an "explain the X" after a finished explain or question sentence,
+  // where X is all new words, is the next card. "Explain that part", "Explain the trust part" stay.
+  const prevSentence = (String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || "").trim();
+  const ex = raw.replace(SPLIT_LEAD, "").match(/^explain (?:the|your)\s+([\w+#.-]+(?:\s+[\w+#.-]+){0,3})\s*[.?!]?$/i);
+  if (ex && (/[.?!]\s*$/.test(prevSentence) || /^explain (?:the|your)\s/i.test(prevSentence.replace(SPLIT_LEAD, ""))) && /^(?:explain|describe|what|how|why|tell me|walk me)\b/i.test(prevSentence.replace(SPLIT_LEAD, "")) && !/\b(?:that|this|it|those|these|same|part|piece|bit|side|step|more|further|again)\b/i.test(ex[1])) {
+    const prevW = new Set(String(prevText || "").toLowerCase().split(/[^a-z0-9+#]+/).filter(Boolean));
+    const obj = ex[1].toLowerCase().split(/[^a-z0-9+#]+/).filter((w) => w.length >= 3 && !/^(?:and|the|how|why|your)$/.test(w));
+    if (obj.length && obj.every((w) => !prevW.has(w))) return true;
+  }
+  return null;
+}
+function splitSpokenWords(text) { return String(text || "").toLowerCase().replace(/[^a-z0-9+#']+/g, " ").trim(); }
+function splitDistinctAsksBy(text, midCut, v3, v4) {
   const raw = String(text || "");
   const clean = (typeof fixPhrases === "function" ? fixPhrases(raw) : raw).replace(/\s+/g, " ").trim();
   if (!clean) return [];
-  const sentences = clean.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean);
+  const said = clean.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean);
+  const sentences = midCut ? said.flatMap(v4 ? splitMidAsksV4 : splitMidAsks) : said;
   const groups = [[]];
   let asked = false;
   for (const sentence of sentences) {
     const bare = sentence.replace(SPLIT_LEAD, "").trim();
     if (!bare || splitNoise(bare) || splitNoise(sentence)) continue;
     const prev = groups[groups.length - 1].join(" ");
-    if (asked && splitSeparate(sentence, prev)) { groups.push([sentence]); asked = true; continue; }
+    if (asked && splitSeparate(sentence, prev, v3, v4)) { groups.push([sentence]); asked = true; continue; }
     groups[groups.length - 1].push(sentence);
-    if (bare && !splitNoise(bare) && (SPLIT_OPENER.test(bare) || (/\?\s*$/.test(bare) && SPLIT_START.test(bare)))) asked = true;
+    if (v3 ? splitSetsAsk(sentence) : (bare && !splitNoise(bare) && (SPLIT_OPENER.test(bare) || (/\?\s*$/.test(bare) && SPLIT_START.test(bare))))) asked = true;
   }
   return groups.map((g) => g.join(" ").replace(/\s+/g, " ").trim()).filter(Boolean);
+}
+// Slice 5b (29 Oct 2026), from the blind dossier bank. A pass over the slice-4 cards that only regroups whole
+// pieces: on a fault or any changed word the slice-4 cut stands.
+//  - "what dashboards or data tools || have you used": a what/which piece with no verb is finished by the next one.
+//  - "how do you speak about controls to people || who do not have a security background": "who" right after a
+//    word for people, with no filler between, is that clause. "where do guardrails belong who can modify" still cuts.
+//  - Two finished "?" asks, each 7 words or more, that share no topic word and do not point back, are two cards.
+//    "How do you assess the business impact? How do you understand root cause?" (6 words) stays one card.
+const SPLIT5_STOP = new Set("what how why when where which who whom whose you your yours the and for with that this from have does did would could should into about there their them they been being were was are is can will what's tell walk give describe explain me us our ever just really also more most some any many much very".split(" "));
+const SPLIT5_VERB = /\b(?:is|are|was|were|do|does|did|have|has|had|would|could|should|can|will|make|makes|look|looks|use|used|prevent|prevented|show|shows)\b/i;
+const SPLIT5_OPEN = /^(?:what|how|why|when|where|which|who|is there|are there|are you|were you|was there|is it|do you|did you|have you|has your|can you|could you|would you|tell me|walk me|describe)\b/i;
+const SPLIT5_BACK = /\b(?:it|its|that|this|they|them|their|those|these|the same|such)\b/i;
+function split5Words(s) { return String(s || "").toLowerCase().split(/[^a-z0-9+#]+/).filter((w) => w.length >= 4 && !SPLIT5_STOP.has(w)).map((w) => w.length > 4 ? w.replace(/([^s])s$/, "$1") : w); }
+function split5Lead(s) { return String(s || "").replace(/^(?:(?:um+|uh+|so|okay|ok|and|then|next|now|also|alright)[,]?\s+)+/i, "").trim(); }
+function split5Pair(a, b) {
+  const x = split5Lead(a), y = split5Lead(b);
+  if (!/\?\s*$/.test(x) || !/\?\s*$/.test(y)) return false;
+  if (!SPLIT5_OPEN.test(x) || !SPLIT5_OPEN.test(y)) return false;
+  if (x.split(/\s+/).length < 7 || y.split(/\s+/).length < 7) return false;
+  if (SPLIT5_BACK.test(y)) return false;
+  const left = new Set(split5Words(x));
+  return split5Words(y).every((w) => !left.has(w));
+}
+function splitCardsV5(cards) {
+  const merged = [];
+  for (const card of cards) {
+    const prev = merged.length ? merged[merged.length - 1] : "";
+    const bare = split5Lead(card);
+    const prevBare = split5Lead(prev);
+    const fragment = prev && !/[.?!]\s*$/.test(prev) && /^(?:what|which|how many|how much)\s/i.test(prevBare) && prevBare.split(/\s+/).length <= 6 && !SPLIT5_VERB.test(prevBare.replace(/^\S+\s+/, ""))
+      && /^(?:have|did|do|would|could|can|will) you\b/i.test(bare);
+    const clause = prev && !/[.?!]\s*$/.test(prev) && /^who\s/i.test(card) && /\b(?:people|someone|anyone|everyone|those|users|staff|person|persons|stakeholders|engineers|owners|managers|leaders|executives|employees|members|colleagues|peers|clients|customers|vendors)\s*$/i.test(prev);
+    if (fragment || clause) merged[merged.length - 1] = prev + " " + card;
+    else merged.push(card);
+  }
+  const out = [];
+  for (const card of merged) {
+    const ss = card.split(/(?<=[?])\s+/).filter(Boolean);
+    let cur = ss[0] || "";
+    for (let i = 1; i < ss.length; i++) {
+      if (split5Pair(ss[i - 1], ss[i])) { out.push(cur.trim()); cur = ss[i]; } else cur += " " + ss[i];
+    }
+    if (cur.trim()) out.push(cur.trim());
+  }
+  return out;
+}
+// Slice 6 (30 Oct 2026): spoken filler at a question's start or end ("Um so what…", "…, right?", "you know,",
+// "What what…", "How do you, sorry, what…") hid the question opener. The cut is run again on a detection copy with
+// that filler left out. The shown and saved text is never changed: cards are cut from the original words, only at
+// a "?" "." or "!" the speaker's text already has, and only when every sentence-end cut of slice 5 is kept.
+// Any fault, lost word or doubt returns the slice-5 cut.
+const FILL6_LEAD = /^(?:um+|uh+|so|okay|ok|alright|like|yeah|well|and)$/i;
+const FILL6_OPEN = /^(?:what|why|how|when|where|which|who|whose|can|could|would|will|do|does|did|is|are|was|were|have|has|tell|walk|describe|explain|give|should)$/i;
+const fill6Bare = (t) => String(t).replace(/^[^\w']+|[^\w']+$/g, "").toLowerCase();
+const fill6Norm = (t) => String(t).toLowerCase().replace(/[^a-z0-9]+/g, "");
+const fill6End = (t) => /[.?!]["')\]]*$/.test(t);
+function fill6Detect(tokens) {
+  const det = tokens.slice();
+  const sentOf = [], touched = new Set();
+  const falseStart = [];
+  let sent = 0;
+  for (let i = 0; i < tokens.length; i++) { sentOf.push(sent); if (fill6End(tokens[i])) sent++; }
+  const drop = (i) => { det[i] = null; touched.add(sentOf[i]); };
+  for (let s = 0; s < tokens.length; s++) {
+    if (s > 0 && !fill6End(tokens[s - 1])) continue;
+    let i = s;
+    // a false start: "How do you, sorry, what…" / "What was, um, how…"
+    for (let k = 1; k <= 3 && i + k + 1 < tokens.length; k++) {
+      const end = tokens[i + k - 1], f = tokens[i + k];
+      if (fill6End(end)) break;
+      if (/,$/.test(end) && /^(?:sorry|um+|uh+|i mean),$/i.test(f) && FILL6_OPEN.test(fill6Bare(tokens[i + k + 1])) && FILL6_OPEN.test(fill6Bare(tokens[i]))) {
+        for (let j = i; j <= i + k; j++) drop(j);
+        falseStart.push(i + k + 1);
+        i += k + 1; break;
+      }
+    }
+    // leading filler run: "Um so", "Okay, um,", "Yeah and", "Like" — only before an opener; a lone "and" stays
+    let j = i;
+    while (j < tokens.length && !fill6End(tokens[j]) && FILL6_LEAD.test(fill6Bare(tokens[j]))) j++;
+    if (j > i && j < tokens.length && FILL6_OPEN.test(fill6Bare(tokens[j])) && !(j - i === 1 && fill6Bare(tokens[i]) === "and")) {
+      for (let x = i; x < j; x++) drop(x);
+      i = j;
+    }
+    // "What what is…": a doubled opener
+    if (i + 1 < tokens.length && FILL6_OPEN.test(fill6Bare(tokens[i])) && fill6Bare(tokens[i]) === fill6Bare(tokens[i + 1]) && !/[,.?!]$/.test(tokens[i])) drop(i);
+  }
+  for (let i = 0; i + 1 < tokens.length; i++) {
+    if (det[i] === null || det[i + 1] === null) continue;
+    if (fill6Bare(tokens[i]) === "you" && /^know,$/i.test(tokens[i + 1]) && i + 2 < tokens.length && !fill6End(tokens[i + 1])) { drop(i); drop(i + 1); }
+  }
+  for (let i = 1; i < tokens.length; i++) {
+    if (/^right\?$/i.test(tokens[i]) && det[i - 1] !== null && /,$/.test(tokens[i - 1])) { drop(i); det[i - 1] = tokens[i - 1].replace(/,$/, "?"); }
+  }
+  for (let i = 0; i < det.length; i++) {
+    if (det[i] === null) continue;
+    let p = i - 1; while (p >= 0 && det[p] === null) p--;
+    if ((p < 0 || fill6End(det[p])) && (i === 0 || det[i - 1] === null)) det[i] = det[i].charAt(0).toUpperCase() + det[i].slice(1);
+  }
+  return { det, sentOf, touched, falseStart };
+}
+// Maps cards back onto token indices; null if any card is not a whole run of the given tokens.
+function fill6Bounds(cards, toks) {
+  const bounds = []; let at = 0;
+  for (const c of cards) {
+    const n = String(c).trim().split(/\s+/).filter(Boolean).length;
+    const want = fill6Norm(String(c)), have = toks.slice(at, at + n).map(fill6Norm).join("");
+    if (!n || want !== have) return null;
+    at += n; bounds.push(at);
+  }
+  return at === toks.length ? bounds.slice(0, -1) : null;
+}
+function splitCardsFiller6(text, cut5, cutAgain) {
+  try {
+    const tokens = String(text).trim().split(/\s+/).filter(Boolean);
+    if (tokens.length < 4) return cut5;
+    const { det, falseStart } = fill6Detect(tokens);
+    if (det.every((t, i) => t === tokens[i])) return cut5;
+    const keptIdx = [], detToks = [];
+    det.forEach((t, i) => { if (t !== null) { keptIdx.push(i); detToks.push(t); } });
+    const b6det = fill6Bounds(cutAgain(detToks.join(" ")), detToks);
+    const b5 = fill6Bounds(cut5, tokens);
+    if (!b6det || !b5) return cut5;
+    const b6 = [];
+    for (const b of b6det) {
+      const o1 = keptIdx[b - 1], o2 = keptIdx[b];
+      let cut = -1;
+      for (let p = o2 - 1; p >= o1; p--) if (fill6End(tokens[p])) { cut = p + 1; break; }
+      if (cut < 0) return cut5;
+      b6.push(cut);
+    }
+    for (const b of b5) {
+      if (b6.includes(b)) continue;
+      // a slice-5 cut may only be dropped when it sits just after a false start ("What was, um, what methods || do you…")
+      if (fill6End(tokens[b - 1]) || !falseStart.some((f) => b > f && b - f <= 6)) return cut5;
+    }
+    if (b6.length === b5.length && b6.every((b, k) => b === b5[k])) return cut5;
+    const out = []; let from = 0;
+    for (const b of [...b6, tokens.length]) { out.push(tokens.slice(from, b).join(" ")); from = b; }
+    return fill6Norm(out.join(" ")) === fill6Norm(tokens.join(" ")) ? out : cut5;
+  } catch { return cut5; }
+}
+function splitDistinctAsks(text) {
+  const cut5 = splitDistinctAsksV5(text);
+  return splitCardsFiller6(text, cut5, splitDistinctAsksV5);   // slice 6: never worse than slice 5 (falls back on doubt)
+}
+function splitDistinctAsksV5(text) {
+  const cut4 = splitDistinctAsksV4(text);
+  try {
+    const cut5 = splitCardsV5(cut4);
+    return splitSpokenWords(cut5.join(" ")) === splitSpokenWords(cut4.join(" ")) ? cut5 : cut4;   // slice 5b failsafe: the slice-4 cut on any lost word
+  } catch { return cut4; }
+}
+function splitDistinctAsksV4(text) {
+  const v3 = splitDistinctAsksV3(text);
+  try {
+    const cut4 = splitDistinctAsksBy(text, true, true, true);
+    return splitSpokenWords(cut4.join(" ")) === splitSpokenWords(v3.join(" ")) ? cut4 : v3;   // slice 4 failsafe: the slice-3 cut on any lost word
+  } catch { return v3; }
+}
+function splitDistinctAsksV3(text) {
+  const before = splitDistinctAsksBy(text, false);
+  let v2 = before;
+  try {
+    const after = splitDistinctAsksBy(text, true);
+    v2 = splitSpokenWords(after.join(" ")) === splitSpokenWords(before.join(" ")) ? after : before;   // failsafe: no word lost
+  } catch { return before; }
+  try {
+    const v3 = splitDistinctAsksBy(text, true, true);
+    return splitSpokenWords(v3.join(" ")) === splitSpokenWords(v2.join(" ")) ? v3 : v2;   // slice 3 failsafe: the v2 cut on any lost word
+  } catch { return v2; }
 }
 const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
 function scheduleAuto() {
   clearTimeout(autoTimer);
+  noteTurnGate();
   if (!autoOn || !armsAuto()) return;
   const tail = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
   const wait = clauseStillOpen(tail) ? 7000 : AUTO_QUIET_MS;
@@ -1792,6 +2273,20 @@ function scheduleAuto() {
     aiAnswer(true);
   }, wait);
 }
+// Turn gate (slice 2): each new heard line from the question source gets answer / wait / no answer needed, logged with
+// its reason. It only labels; it never stops an answer. "No answer needed" says so and points to AI Answer, which
+// always answers ("Answer anyway").
+function noteTurnGate() {
+  try {
+    const src = questionSource(), last = pendingHeard().filter(t => t.who === src).slice(-1)[0];
+    if (!last || last.seq === gateSeenSeq) return;
+    gateSeenSeq = last.seq;
+    const g = turnGate(last.text);
+    logDecision("gate-" + g.outcome + ":" + g.reason, src, last.text);
+    if (g.outcome === "skip" && !answerCtl) status("Heard — no answer needed. Press AI Answer to answer anyway.", "live");
+  } catch { /* the gate only labels; a fault here never blocks an answer */ }
+}
+let gateSeenSeq = 0;
 function resetLiveState() {           // a new or exited session starts clean: no leaked stream, timer or badge
   for (const c of inflight) { try { c.abort(); } catch {} }
   inflight.clear();
@@ -1837,6 +2332,8 @@ function edits1(a, b) {                                  // true when a and b di
 // vocabulary — token-level fixTerms cannot see across words ("domain control
 // her"). Deliberately narrow: every pattern is anchored to a domain phrase,
 // so ordinary sentences pass through untouched.
+// Slice 5a: this list and REPAIRS in src/lib/kompasDictation.ts are ONE list, entry for entry (same pattern, order
+// and output). scripts/tests/kompas-spelling-parity.test.mjs fails if they drift: change both in the same patch.
 const PHRASE_FIXES = [
   [/\bdomain control(?:ler|er| her| a)\b/gi, "domain controller"],
   [/\b(?:mitre|miter|myter) attack\b/gi, "MITRE ATT&CK"],
@@ -1878,9 +2375,9 @@ const PHRASE_FIXES = [
   [/\bven\s+a\s+fi\b/gi, "Venafi"],
   [/\bu\s+s\s+citizen\b/gi, "U.S. citizen"],
   [/\bnist\s+c\s*s\s*f\b/gi, "NIST CSF"],
-  [/\bservice\s+now\b/gi, "ServiceNow"],
+  [/(?<=\b(?:(?:using|used|use|via|into|like|vs|versus|from|our|their|integrate|integrated|integrating|configured|deployed|implemented|administered|cyberark|okta|sailpoint|saviynt|jira)\s+(?:with\s+|to\s+)?|(?:(?:track|tracked|tracking|log|logged|logging|ticket|tickets|ticketed|raise|raised|submit|submitted|document|documented)\s+(?:(?:it|this|that|them|these|those|one|a\s+ticket|the\s+ticket)\s+)?|(?:open|opened|file|filed|record|recorded|create|created|request|requested)\s+(?:it|this|that|them|these|those|one|a\s+ticket|the\s+ticket)\s+)in\s+))service\s+now\b|\bservice\s+now(?=\s+(?:tickets?|itsm|itom|cmdb|instances?|workflows?|platform|integration|admin|modules?|incidents?|change|requests?|catalog|grc|secops|irm|api|discovery|flows?)\b)/gi, "ServiceNow"],   // slice 5a: tool context only, so "the service now is slow" stays; "track it / log it / ticket in service now" is tool context
   [/\bgoogle\s+sec\s*ops\b/gi, "Google SecOps"],
-  [/\bbig\s+in\s*tro\b/gi, "Big Intro"],
+  [/(?<=\b(?:at|for|join|joining|joined|about|with|to)\s+)big\s+in\s*tro\b(?!\s+(?:to|for|of|and|speech|video|slide|moment)\b)|(?<=\bgive\s+(?:me|us)\s+a\s+)big\s+in\s*tro(?=\s*[.?!]?\s*$)/gi, "Big Intro"],   // slice 5a: the company name only, so "a big intro" stays; a bare "give me a big intro" (master test) is still the name
   [/\bsaviant\b/gi, "Saviynt"],
   [/\bsavvy\s+ent\b/gi, "Saviynt"],
   [/\bcooper\s+nett(?:y|ie)s\b/gi, "Kubernetes"],
@@ -1896,6 +2393,28 @@ const PHRASE_FIXES = [
   [/\bstart\s+method\b/gi, "STAR method"],
   [/\bs\.?\s*t\.?\s*a\.?\s*r\.?\s+method\b/gi, "STAR method"],
   [/\bstar\s+method\b/gi, "STAR method"],
+  // Mishearings found on 29 Oct 2026 (voice slice). Each one is anchored to its domain words.
+  [/\bsail\s+point\b/gi, "SailPoint"],
+  [/(?<=\b(?:did|does|with|into|using|use|used|like|from|vs|versus|deploy|deployed|implemented|chose|picked|cyberark|our|the|a)\s+)beyond\s+trust\b|\bbeyond\s+trust(?=\s+(?:pam|password|privileged|remote|vault|endpoint|suite|platform|deployment|rollout|compare[sd]?)\b)/gi, "BeyondTrust"],   // only next to tool words, so "went beyond trust" stays
+  [/\bhashi\s+corp\b/gi, "HashiCorp"],
+  [/\bz\s+scaler\b/gi, "Zscaler"],
+  [/\bcyber\s*arch\b/gi, "CyberArk"],
+  [/\bmy\s+tree\s+attack\b/gi, "MITRE ATT&CK"],
+  [/\bresid(?:ue)?\s+jewel\s+risk\b/gi, "residual risk"],
+  [/\bdev\s+sec\s+ops\b/gi, "DevSecOps"],
+  [/\bsoc\s+(?:two|2)\b|\bsock\s+(?:two|2)(?=\s+(?:audits?|reports?|type|compliance|controls?|certification|readiness|attestation|program|framework)\b)/gi, "SOC 2"],   // "a sock two days ago" stays
+  [/\bnist\s+eight\s+hundred\s+(?:dash\s+)?fifty[\s-]three\b/gi, "NIST 800-53"],
+  [/\b(?:in\s*tra|entra)\s+i\.?\s*d\b/gi, "Entra ID"],
+  [/\bpost\s+gres\s*q\s*l\b/gi, "PostgreSQL"],
+  [/\bjay\s+son\s+web\s+tokens?\b/gi, "JSON Web Token"],
+  [/\bo\s+i\s+d\s+c\b/gi, "OIDC"],
+  [/\bsam\s+el\s+(assertion|token|response|sso|federation)\b/gi, "SAML $1"],
+  [/\bans\s+ible\b/gi, "Ansible"],
+  [/(?<=\b(?:use|used|using|in|on|with|from|our|into|self-hosted|hosted|via|of)\s+)git\s+lab\b|\bgit\s+lab(?=\s+(?:runners?|ci|pipelines?|repos?|repository|server|instance|issues?|merge|projects?)\b)/gi, "GitLab"],   // "go git lab results" stays
+  [/\b(?:get|git)\s+hub\s+(actions|repo|repository|workflow)\b/gi, "GitHub $1"],
+  [/\bec\s+two\s+(instances?)\b/gi, "EC2 $1"],
+  [/\bs\s+three\s+(buckets?)\b/gi, "S3 $1"],
+  [/\bdocker\s+file\b/gi, "Dockerfile"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");
@@ -1950,13 +2469,15 @@ function heardDraft(lines, screen, answerText) {
   const q = bits.slice(-4).join(" ");
   return q.length > 600 ? "…" + q.slice(-600) : q;
 }
-function onTranscript(who, text, lookedAgain) {
+function onTranscript(who, text, lookedAgain, spokenAt) {
   text = fixTerms(fixPhrases(text));
-  if (who === "Them") noteThem(text);
+  if (who === "Them") noteThem(text, spokenAt);
   else if (who === "You" && captures.some(c => c.who === "Them")) {
-    if (echoOfThem(text) >= 0.5) { logEvent({ t: "echo", who, text }); return; }   // the interviewer through your speakers, not you
-    if (!lookedAgain && themSpeaking()) { setTimeout(() => { if (running) onTranscript(who, text, true); }, 2000); return; }   // their words may still be on the way: look again
+    if (micBleed(text, Date.now(), themLines, spokenAt)) { logDecision("drop-mic-bleed", who, text); logEvent({ t: "echo", who, text, bleed: true }); return; }   // the call audio through the mic within 1.5 s
+    if (echoOfThem(text) >= 0.5) { logDecision("drop-mic-echo", who, text); logEvent({ t: "echo", who, text }); return; }   // the interviewer through your speakers, not you
+    if (!lookedAgain && themSpeaking()) { setTimeout(() => { if (running) onTranscript(who, text, true, spokenAt); }, 2000); return; }   // their words may still be on the way: look again
   }
+  logDecision(who === questionSource() ? "keep-can-open" : "keep-context", who, text);
   if (who === "You" && follow.on && !follow.sr) followHear(text, true);   // Follow along without live recognition
   transcript.push({ who, text, at: Date.now(), seq: ++heardSeq });
   if (!answerCtl) {
@@ -2515,6 +3036,7 @@ function showPressed(card, q) {
 }
 $("answerBtn").onclick = () => aiAnswer(false);
 let aiBusy = false, aiBusySince = 0;
+let answerAnywayHeld = null;   // the lines a manual press just turned away, for "Answer anyway"
 async function aiAnswer(fromAuto) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
@@ -2532,9 +3054,13 @@ async function aiAnswer(fromAuto) {
     // Formation window (owner, 26 Oct): the last 8 heard lines are enough to
     // form and cut a question. Older lines stay in the transcript and reach
     // the answer as earlier context — they are not re-formed into questions.
-    const pending = pendingHeard().slice(-8);
+    let pending = pendingHeard().slice(-8);
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
+    // Answer anyway (slice 2): a press right after "Nothing question-like" answers those same lines.
+    let anyway = false;
+    try { const back = answerAnywayLines(answerAnywayHeld, { fromAuto, pending: pending.length, typed: typedText, now: Date.now() }); if (back) { pending = back; anyway = true; logDecision("answer-anyway", questionSource(), back.map(t => t.text).join(" ")); } } catch {}
+    answerAnywayHeld = null;
     if (transcriptionFailedEpoch === sessionEpoch && !pending.length && !typedText) {
       setChat(true);
       status("The last phrase could not be transcribed. Please repeat it or type it here.", "err");
@@ -2559,9 +3085,10 @@ async function aiAnswer(fromAuto) {
       const newAsk = !typedText && pending.some(t => sentencesOf(t.text).some(x => (askSentence(x) || opensNewAsk(x)) && !repeatsPriorQuestion(x, cur && cur.question || "")));
       // The sign-off is not a re-press (27 Oct 2026): "I do have a hard stop ... thank you for taking the time" heard
       // after an answer re-asked the page on screen and answered it again. Only closing sentences and fillers, no ask.
-      if (!typedText && pending.some(t => sentencesOf(t.text).some(x => SIGN_OFF.test(x) || COURTESY.test(x))) && pending.every(t => sentencesOf(t.text).every(closingSentence))) {
+      if (!anyway && !typedText && pending.some(t => sentencesOf(t.text).some(x => SIGN_OFF.test(x) || COURTESY.test(x))) && pending.every(t => sentencesOf(t.text).every(closingSentence))) {
         answeredSeq = heardSeq; updatePending();
-        if (!fromAuto) status("Nothing question-like in that — still listening.", "live");
+        logDecision("skip-sign-off", questionSource(), pending.map(t => t.text).join(" "));
+        if (!fromAuto) { answerAnywayHeld = { lines: pending.slice(), at: Date.now() }; status("Nothing question-like in that — press AI Answer again to answer anyway.", "live"); }
         return;
       }
       const isRepress = !fromAuto && !typedOwn && !newAsk && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
@@ -2592,8 +3119,9 @@ async function aiAnswer(fromAuto) {
       const intake = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You" });
       if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
       answeredSeq = heardSeq; updatePending();
-      if (intake.noiseOnly) {
-        if (!fromAuto) status("Nothing question-like in that — still listening.", "live");
+      logDecision(intake.noiseOnly ? "skip-noise" : "intake", questionSource(), pending.map(t => t.text).join(" "));
+      if (intake.noiseOnly && !anyway) {
+        if (!fromAuto) { answerAnywayHeld = { lines: pending.slice(), at: Date.now() }; status("Nothing question-like in that — press AI Answer again to answer anyway.", "live"); }
         return;
       }
       const cutSeq = pending.length ? pending[0].seq : heardSeq + 1;
@@ -2615,11 +3143,14 @@ async function aiAnswer(fromAuto) {
       // pinning the whole concatenation to the card. Typed questions stay
       // pinned whole — the typed words already are the question.
       const heard = intake.heard.replace(/\nCurrent question \(on screen\):[^\n]*/g, "").trim();
-      const said = pressQuestion(typedText, intake, "") || intake.derived || heardAsQuestion(pending);
+      const followTyped = typedText && cur && hasAnswer(cur) ? typedFollowUpQuestion(typedText, cur.question) : "";   // "And why?" typed after an answer: own card, same subject
+      const said = followTyped || pressQuestion(typedText, intake, "") || intake.derived || heardAsQuestion(pending);
       const heardOnly = !typedText;
       // Typed words are the question, and two questions in the box are two asks.
       // A design followed by an explanation stays one. The microphone uses the same cut.
       const spans = splitDistinctAsks(heardOnly ? (intake.derived || said || "") : (typedText || said || ""));
+      // Merge with slice 3: a typed "And why? …" after an answer keeps its subject on the first card.
+      if (!heardOnly && followTyped && spans.length > 1) spans[0] = typedFollowUpQuestion(spans[0], cur.question) || spans[0];
       if (spans.length > 1) {
         const who = heardOnly ? (questionSource() === "You" ? "You" : "Them") : "You";
         for (const span of spans) {

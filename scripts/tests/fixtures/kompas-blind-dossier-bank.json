@@ -1,0 +1,2357 @@
+{
+ "note": "Blind bank, built 29 Oct 2026 from the 20 ChatGPT dossier files. Questions are copied verbatim from the dossiers (numbering removed). Expected card count = number of separately numbered source questions in the run, fixed before any cut ran. Seed 20261029.",
+ "questionCount": 191,
+ "runs": [
+  {
+   "id": "b000",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AEKFXRA0465GSQ9K87VSK.txt"
+   ],
+   "questions": [
+    "What is your experience with NIST CSF versus NIST 800-53?",
+    "How do you decide which control gaps to fix first?"
+   ],
+   "punctuated": "What is your experience with NIST CSF versus NIST 800-53? How do you decide which control gaps to fix first?",
+   "stripped": "what is your experience with nist csf versus nist 800-53 how do you decide which control gaps to fix first",
+   "filler": "what is your experience with nist csf versus nist 800-53 and how do you decide which control gaps to fix first"
+  },
+  {
+   "id": "b001",
+   "expect": 3,
+   "sources": [
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "What is the pay-rate range and overtime expectation, if any?",
+    "What secrets/tokens are available to pull requests or untrusted build steps?",
+    "What is the W2/C2C/contract arrangement?"
+   ],
+   "punctuated": "What is the pay-rate range and overtime expectation, if any? What secrets/tokens are available to pull requests or untrusted build steps? What is the W2/C2C/contract arrangement?",
+   "stripped": "what is the pay-rate range and overtime expectation if any what secretstokens are available to pull requests or untrusted build steps what is the w2c2ccontract arrangement",
+   "filler": "what is the pay-rate range and overtime expectation if any so what secretstokens are available to pull requests or untrusted build steps so what is the w2c2ccontract arrangement"
+  },
+  {
+   "id": "b002",
+   "expect": 4,
+   "sources": [
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65AD45A9R50AP1Q4DK6DVP5.txt",
+    "01M65ADDQ09E6HC1AGDN9YP4KD.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "What does good look like to you in a controls programme?",
+    "How many PSM connection components did you build?",
+    "What is the difference between CIP-005 and CIP-007?",
+    "What if the upstream component is compromised?"
+   ],
+   "punctuated": "What does good look like to you in a controls programme? How many PSM connection components did you build? What is the difference between CIP-005 and CIP-007? What if the upstream component is compromised?",
+   "stripped": "what does good look like to you in a controls programme how many psm connection components did you build what is the difference between cip-005 and cip-007 what if the upstream component is compromised",
+   "filler": "what does good look like to you in a controls programme um how many psm connection components did you build um what is the difference between cip-005 and cip-007 um what if the upstream component is compromised"
+  },
+  {
+   "id": "b003",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65ADMJ6RQA4CSP6Z1C1MDGA.txt"
+   ],
+   "questions": [
+    "What facts were disputed?",
+    "How do you handle application-to-application credentials?"
+   ],
+   "punctuated": "What facts were disputed? How do you handle application-to-application credentials?",
+   "stripped": "what facts were disputed how do you handle application-to-application credentials",
+   "filler": "what facts were disputed so how do you handle application-to-application credentials"
+  },
+  {
+   "id": "b004",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you evaluate a dashboard you did not personally build?",
+    "What is excessive agency?",
+    "How do you review an API?"
+   ],
+   "punctuated": "How do you evaluate a dashboard you did not personally build? What is excessive agency? How do you review an API?",
+   "stripped": "how do you evaluate a dashboard you did not personally build what is excessive agency how do you review an api",
+   "filler": "how do you evaluate a dashboard you did not personally build so what is excessive agency so how do you review an api"
+  },
+  {
+   "id": "b005",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "How did it map to actual internal controls?",
+    "What does telemetry let us reconstruct after abuse?"
+   ],
+   "punctuated": "How did it map to actual internal controls? What does telemetry let us reconstruct after abuse?",
+   "stripped": "how did it map to actual internal controls what does telemetry let us reconstruct after abuse",
+   "filler": "how did it map to actual internal controls uh what does telemetry let us reconstruct after abuse"
+  },
+  {
+   "id": "b006",
+   "expect": 3,
+   "sources": [
+    "01M65ADSYK91A1EZP69ZJ40RXA.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you plan segmentation without breaking clinical systems?",
+    "What data is allowed into long-term memory?",
+    "How do you think about third party security?"
+   ],
+   "punctuated": "How do you plan segmentation without breaking clinical systems? What data is allowed into long-term memory? How do you think about third party security?",
+   "stripped": "how do you plan segmentation without breaking clinical systems what data is allowed into long-term memory how do you think about third party security",
+   "filler": "how do you plan segmentation without breaking clinical systems uh what data is allowed into long-term memory uh how do you think about third party security"
+  },
+  {
+   "id": "b007",
+   "expect": 4,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65ADDQ09E6HC1AGDN9YP4KD.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you prioritize 50 open issues with limited resources?",
+    "How do you test BOLA/IDOR?",
+    "What is a BES Cyber Asset?",
+    "How do you secure RAG?"
+   ],
+   "punctuated": "How do you prioritize 50 open issues with limited resources? How do you test BOLA/IDOR? What is a BES Cyber Asset? How do you secure RAG?",
+   "stripped": "how do you prioritize 50 open issues with limited resources how do you test bolaidor what is a bes cyber asset how do you secure rag",
+   "filler": "how do you prioritize 50 open issues with limited resources okay how do you test bolaidor okay what is a bes cyber asset okay how do you secure rag"
+  },
+  {
+   "id": "b008",
+   "expect": 2,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How would you validate a Power BI or SQL report before leadership sees it?",
+    "Which assets, accounts, applications, or legal entities are in scope?"
+   ],
+   "punctuated": "How would you validate a Power BI or SQL report before leadership sees it? Which assets, accounts, applications, or legal entities are in scope?",
+   "stripped": "how would you validate a power bi or sql report before leadership sees it which assets accounts applications or legal entities are in scope",
+   "filler": "how would you validate a power bi or sql report before leadership sees it so which assets accounts applications or legal entities are in scope"
+  },
+  {
+   "id": "b009",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AE006X7Y9V01FSJNT2HBA.txt"
+   ],
+   "questions": [
+    "How would you verify issue remediation across many applications or accounts?",
+    "What is memory poisoning?",
+    "How do you plan and validate network segmentation without breaking clinical systems?"
+   ],
+   "punctuated": "How would you verify issue remediation across many applications or accounts? What is memory poisoning? How do you plan and validate network segmentation without breaking clinical systems?",
+   "stripped": "how would you verify issue remediation across many applications or accounts what is memory poisoning how do you plan and validate network segmentation without breaking clinical systems",
+   "filler": "how would you verify issue remediation across many applications or accounts and what is memory poisoning and how do you plan and validate network segmentation without breaking clinical systems"
+  },
+  {
+   "id": "b010",
+   "expect": 2,
+   "sources": [
+    "01M65AD5CWZ6MY4JZAJH884AHT.txt",
+    "01M65AEQGSDDEQ0AEVB80TCHRY.txt"
+   ],
+   "questions": [
+    "How do you handle emergency containment when the primary lead is unavailable?",
+    "Is there a clear control objective that ties to a specific risk?"
+   ],
+   "punctuated": "How do you handle emergency containment when the primary lead is unavailable? Is there a clear control objective that ties to a specific risk?",
+   "stripped": "how do you handle emergency containment when the primary lead is unavailable is there a clear control objective that ties to a specific risk",
+   "filler": "how do you handle emergency containment when the primary lead is unavailable uh is there a clear control objective that ties to a specific risk"
+  },
+  {
+   "id": "b011",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AEQGSDDEQ0AEVB80TCHRY.txt"
+   ],
+   "questions": [
+    "What do you do when interviewers ask what you would change in ServiceNow?",
+    "How would you describe your level of ServiceNow GRC experience?",
+    "Is there evidence that the control operated in the assessment period?"
+   ],
+   "punctuated": "What do you do when interviewers ask what you would change in ServiceNow? How would you describe your level of ServiceNow GRC experience? Is there evidence that the control operated in the assessment period?",
+   "stripped": "what do you do when interviewers ask what you would change in servicenow how would you describe your level of servicenow grc experience is there evidence that the control operated in the assessment period",
+   "filler": "what do you do when interviewers ask what you would change in servicenow and how would you describe your level of servicenow grc experience and is there evidence that the control operated in the assessment period"
+  },
+  {
+   "id": "b012",
+   "expect": 4,
+   "sources": [
+    "01M65AD5CWZ6MY4JZAJH884AHT.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65ADSYK91A1EZP69ZJ40RXA.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "Which investigations and reviews would you want this person to own first?",
+    "What did you do in the Citi, CVS and City of San Diego control environments?",
+    "How would you approach the network lifecycle refresh in a live hospital?",
+    "How would you write a five-part finding for excessive production administrator access?"
+   ],
+   "punctuated": "Which investigations and reviews would you want this person to own first? What did you do in the Citi, CVS and City of San Diego control environments? How would you approach the network lifecycle refresh in a live hospital? How would you write a five-part finding for excessive production administrator access?",
+   "stripped": "which investigations and reviews would you want this person to own first what did you do in the citi cvs and city of san diego control environments how would you approach the network lifecycle refresh in a live hospital how would you write a five-part finding for excessive production administrator access",
+   "filler": "which investigations and reviews would you want this person to own first and what did you do in the citi cvs and city of san diego control environments and how would you approach the network lifecycle refresh in a live hospital and how would you write a five-part finding for excessive production administrator access"
+  },
+  {
+   "id": "b013",
+   "expect": 2,
+   "sources": [
+    "01M65ADDQ09E6HC1AGDN9YP4KD.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "What has to be reported and how fast?",
+    "How do you test prompt injection?"
+   ],
+   "punctuated": "What has to be reported and how fast? How do you test prompt injection?",
+   "stripped": "what has to be reported and how fast how do you test prompt injection",
+   "filler": "what has to be reported and how fast okay how do you test prompt injection"
+  },
+  {
+   "id": "b014",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you use Python to connect vulnerability information to a risk record?",
+    "Which tools have you used for vulnerability assessment?",
+    "What privilege or user interaction is required?"
+   ],
+   "punctuated": "How do you use Python to connect vulnerability information to a risk record? Which tools have you used for vulnerability assessment? What privilege or user interaction is required?",
+   "stripped": "how do you use python to connect vulnerability information to a risk record which tools have you used for vulnerability assessment what privilege or user interaction is required",
+   "filler": "how do you use python to connect vulnerability information to a risk record um which tools have you used for vulnerability assessment um what privilege or user interaction is required"
+  },
+  {
+   "id": "b015",
+   "expect": 2,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "How have you used NIST CSF, NIST SP 800-53 and the CRI Profile in actual assessments?",
+    "How do you evaluate an AI red-team result?"
+   ],
+   "punctuated": "How have you used NIST CSF, NIST SP 800-53 and the CRI Profile in actual assessments? How do you evaluate an AI red-team result?",
+   "stripped": "how have you used nist csf nist sp 800-53 and the cri profile in actual assessments how do you evaluate an ai red-team result",
+   "filler": "how have you used nist csf nist sp 800-53 and the cri profile in actual assessments so how do you evaluate an ai red-team result"
+  },
+  {
+   "id": "b016",
+   "expect": 3,
+   "sources": [
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65AD45A9R50AP1Q4DK6DVP5.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "How do you write a control requirement that an engineer can actually build from?",
+    "What did the latest DR test actually prove?",
+    "What artifacts did you personally create, and who approved closure?"
+   ],
+   "punctuated": "How do you write a control requirement that an engineer can actually build from? What did the latest DR test actually prove? What artifacts did you personally create, and who approved closure?",
+   "stripped": "how do you write a control requirement that an engineer can actually build from what did the latest dr test actually prove what artifacts did you personally create and who approved closure",
+   "filler": "how do you write a control requirement that an engineer can actually build from okay what did the latest dr test actually prove okay what artifacts did you personally create and who approved closure"
+  },
+  {
+   "id": "b017",
+   "expect": 4,
+   "sources": [
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you handle it when a peer disagrees with your control design?",
+    "What is the underlying root cause, rather than the immediate symptom?",
+    "What would you do if the control owner claimed a remediation is done, but evidence disagrees?",
+    "What methods do you use for threat modeling?"
+   ],
+   "punctuated": "How do you handle it when a peer disagrees with your control design? What is the underlying root cause, rather than the immediate symptom? What would you do if the control owner claimed a remediation is done, but evidence disagrees? What methods do you use for threat modeling?",
+   "stripped": "how do you handle it when a peer disagrees with your control design what is the underlying root cause rather than the immediate symptom what would you do if the control owner claimed a remediation is done but evidence disagrees what methods do you use for threat modeling",
+   "filler": "how do you handle it when a peer disagrees with your control design uh what is the underlying root cause rather than the immediate symptom uh what would you do if the control owner claimed a remediation is done but evidence disagrees uh what methods do you use for threat modeling"
+  },
+  {
+   "id": "b018",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How did we detect the issue, and how long may it have existed?",
+    "What dashboards or data tools have you used?"
+   ],
+   "punctuated": "How did we detect the issue, and how long may it have existed? What dashboards or data tools have you used?",
+   "stripped": "how did we detect the issue and how long may it have existed what dashboards or data tools have you used",
+   "filler": "how did we detect the issue and how long may it have existed so what dashboards or data tools have you used"
+  },
+  {
+   "id": "b019",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "When did you escalate and to whom?",
+    "What do you do when a critical vulnerability affects multiple banking applications and misses the deadline?",
+    "How do you judge whether a compensating control is effective?"
+   ],
+   "punctuated": "When did you escalate and to whom? What do you do when a critical vulnerability affects multiple banking applications and misses the deadline? How do you judge whether a compensating control is effective?",
+   "stripped": "when did you escalate and to whom what do you do when a critical vulnerability affects multiple banking applications and misses the deadline how do you judge whether a compensating control is effective",
+   "filler": "when did you escalate and to whom um what do you do when a critical vulnerability affects multiple banking applications and misses the deadline um how do you judge whether a compensating control is effective"
+  },
+  {
+   "id": "b020",
+   "expect": 2,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What is your approach to running control-owner triage calls?",
+    "What closure test demonstrates the control works consistently, not once?"
+   ],
+   "punctuated": "What is your approach to running control-owner triage calls? What closure test demonstrates the control works consistently, not once?",
+   "stripped": "what is your approach to running control-owner triage calls what closure test demonstrates the control works consistently not once",
+   "filler": "what is your approach to running control-owner triage calls so what closure test demonstrates the control works consistently not once"
+  },
+  {
+   "id": "b021",
+   "expect": 3,
+   "sources": [
+    "01M65ADF44H15TQ4K5VFJ6N71H.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65ADDQ09E6HC1AGDN9YP4KD.txt"
+   ],
+   "questions": [
+    "How have you handled configuration change monitoring for CIP-010?",
+    "How did you check duplicates, missing owners, overdue dates, and stale data?",
+    "What does CIP-007 require on patching?"
+   ],
+   "punctuated": "How have you handled configuration change monitoring for CIP-010? How did you check duplicates, missing owners, overdue dates, and stale data? What does CIP-007 require on patching?",
+   "stripped": "how have you handled configuration change monitoring for cip-010 how did you check duplicates missing owners overdue dates and stale data what does cip-007 require on patching",
+   "filler": "how have you handled configuration change monitoring for cip-010 so how did you check duplicates missing owners overdue dates and stale data so what does cip-007 require on patching"
+  },
+  {
+   "id": "b022",
+   "expect": 4,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD5CWZ6MY4JZAJH884AHT.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What is your approach when the owner disputes the severity rating?",
+    "What would make you confident after 90 days that this hire is succeeding?",
+    "What secrets or cloud credentials are exposed to pull requests or untrusted build steps?",
+    "What would make the remediation fail or slip?"
+   ],
+   "punctuated": "What is your approach when the owner disputes the severity rating? What would make you confident after 90 days that this hire is succeeding? What secrets or cloud credentials are exposed to pull requests or untrusted build steps? What would make the remediation fail or slip?",
+   "stripped": "what is your approach when the owner disputes the severity rating what would make you confident after 90 days that this hire is succeeding what secrets or cloud credentials are exposed to pull requests or untrusted build steps what would make the remediation fail or slip",
+   "filler": "what is your approach when the owner disputes the severity rating so what would make you confident after 90 days that this hire is succeeding so what secrets or cloud credentials are exposed to pull requests or untrusted build steps so what would make the remediation fail or slip"
+  },
+  {
+   "id": "b023",
+   "expect": 2,
+   "sources": [
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "Is there a compensating control that really blocks the path?",
+    "What is the interview structure - recruiter, hiring manager, technical design, panel?"
+   ],
+   "punctuated": "Is there a compensating control that really blocks the path? What is the interview structure - recruiter, hiring manager, technical design, panel?",
+   "stripped": "is there a compensating control that really blocks the path what is the interview structure - recruiter hiring manager technical design panel",
+   "filler": "is there a compensating control that really blocks the path okay what is the interview structure - recruiter hiring manager technical design panel"
+  },
+  {
+   "id": "b024",
+   "expect": 3,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you prioritize several findings before release?",
+    "Where do guardrails belong?",
+    "What is the smallest safe proof that answers the business risk question?"
+   ],
+   "punctuated": "How do you prioritize several findings before release? Where do guardrails belong? What is the smallest safe proof that answers the business risk question?",
+   "stripped": "how do you prioritize several findings before release where do guardrails belong what is the smallest safe proof that answers the business risk question",
+   "filler": "how do you prioritize several findings before release and where do guardrails belong and what is the smallest safe proof that answers the business risk question"
+  },
+  {
+   "id": "b025",
+   "expect": 2,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "When is residual risk unacceptable after remediation?",
+    "What should an effective policy exception approval contain for audit?"
+   ],
+   "punctuated": "When is residual risk unacceptable after remediation? What should an effective policy exception approval contain for audit?",
+   "stripped": "when is residual risk unacceptable after remediation what should an effective policy exception approval contain for audit",
+   "filler": "when is residual risk unacceptable after remediation and what should an effective policy exception approval contain for audit"
+  },
+  {
+   "id": "b026",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How do you challenge a root-cause analysis submitted by a control owner?",
+    "What residual risk remains until closure, and who is authorized to accept it?",
+    "How would you evaluate a compensating control?"
+   ],
+   "punctuated": "How do you challenge a root-cause analysis submitted by a control owner? What residual risk remains until closure, and who is authorized to accept it? How would you evaluate a compensating control?",
+   "stripped": "how do you challenge a root-cause analysis submitted by a control owner what residual risk remains until closure and who is authorized to accept it how would you evaluate a compensating control",
+   "filler": "how do you challenge a root-cause analysis submitted by a control owner so what residual risk remains until closure and who is authorized to accept it so how would you evaluate a compensating control"
+  },
+  {
+   "id": "b027",
+   "expect": 4,
+   "sources": [
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How do you connect a cloud security tool like Wiz into a control framework?",
+    "What makes a ServiceNow control issue audit-ready?",
+    "Who owns each action, and what are the dated milestones/dependencies?",
+    "What would you do in your first 30 days?"
+   ],
+   "punctuated": "How do you connect a cloud security tool like Wiz into a control framework? What makes a ServiceNow control issue audit-ready? Who owns each action, and what are the dated milestones/dependencies? What would you do in your first 30 days?",
+   "stripped": "how do you connect a cloud security tool like wiz into a control framework what makes a servicenow control issue audit-ready who owns each action and what are the dated milestonesdependencies what would you do in your first 30 days",
+   "filler": "how do you connect a cloud security tool like wiz into a control framework and what makes a servicenow control issue audit-ready and who owns each action and what are the dated milestonesdependencies and what would you do in your first 30 days"
+  },
+  {
+   "id": "b028",
+   "expect": 2,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "Do you have any questions for us?",
+    "How would you distinguish SailPoint/IGA from CyberArk/PAM and ServiceNow GRC?"
+   ],
+   "punctuated": "Do you have any questions for us? How would you distinguish SailPoint/IGA from CyberArk/PAM and ServiceNow GRC?",
+   "stripped": "do you have any questions for us how would you distinguish sailpointiga from cyberarkpam and servicenow grc",
+   "filler": "do you have any questions for us um how would you distinguish sailpointiga from cyberarkpam and servicenow grc"
+  },
+  {
+   "id": "b029",
+   "expect": 3,
+   "sources": [
+    "01M65ADF44H15TQ4K5VFJ6N71H.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What is the difference between IT and OT incident response?",
+    "What is your approach when a team repeatedly misses milestones?",
+    "What business assets or processes were exposed?"
+   ],
+   "punctuated": "What is the difference between IT and OT incident response? What is your approach when a team repeatedly misses milestones? What business assets or processes were exposed?",
+   "stripped": "what is the difference between it and ot incident response what is your approach when a team repeatedly misses milestones what business assets or processes were exposed",
+   "filler": "what is the difference between it and ot incident response uh what is your approach when a team repeatedly misses milestones uh what business assets or processes were exposed"
+  },
+  {
+   "id": "b030",
+   "expect": 2,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "Why are you interested in this work and what is your greatest strength?",
+    "How do you stay organized?"
+   ],
+   "punctuated": "Why are you interested in this work and what is your greatest strength? How do you stay organized?",
+   "stripped": "why are you interested in this work and what is your greatest strength how do you stay organized",
+   "filler": "why are you interested in this work and what is your greatest strength uh how do you stay organized"
+  },
+  {
+   "id": "b031",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "How do you keep multiple projects and teams on track?",
+    "How many onsite days per week?",
+    "How do you handle disagreement with a remediation owner?"
+   ],
+   "punctuated": "How do you keep multiple projects and teams on track? How many onsite days per week? How do you handle disagreement with a remediation owner?",
+   "stripped": "how do you keep multiple projects and teams on track how many onsite days per week how do you handle disagreement with a remediation owner",
+   "filler": "how do you keep multiple projects and teams on track um how many onsite days per week um how do you handle disagreement with a remediation owner"
+  },
+  {
+   "id": "b032",
+   "expect": 4,
+   "sources": [
+    "01M65AD5CWZ6MY4JZAJH884AHT.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADMJ6RQA4CSP6Z1C1MDGA.txt"
+   ],
+   "questions": [
+    "What evidence do you expect before a firewall review is considered complete?",
+    "What interim controls exist, how do they work, and what evidence proves them?",
+    "What is a dangerous cloud IAM pattern?",
+    "How do you tune EPM policy to reduce false positives at scale?"
+   ],
+   "punctuated": "What evidence do you expect before a firewall review is considered complete? What interim controls exist, how do they work, and what evidence proves them? What is a dangerous cloud IAM pattern? How do you tune EPM policy to reduce false positives at scale?",
+   "stripped": "what evidence do you expect before a firewall review is considered complete what interim controls exist how do they work and what evidence proves them what is a dangerous cloud iam pattern how do you tune epm policy to reduce false positives at scale",
+   "filler": "what evidence do you expect before a firewall review is considered complete um what interim controls exist how do they work and what evidence proves them um what is a dangerous cloud iam pattern um how do you tune epm policy to reduce false positives at scale"
+  },
+  {
+   "id": "b033",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "What changed in the risk discussion because of the report?",
+    "What is the difference between an alert, vulnerability and a control issue?"
+   ],
+   "punctuated": "What changed in the risk discussion because of the report? What is the difference between an alert, vulnerability and a control issue?",
+   "stripped": "what changed in the risk discussion because of the report what is the difference between an alert vulnerability and a control issue",
+   "filler": "what changed in the risk discussion because of the report uh what is the difference between an alert vulnerability and a control issue"
+  },
+  {
+   "id": "b034",
+   "expect": 3,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD45A9R50AP1Q4DK6DVP5.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "What do you look for in CI/CD?",
+    "How do you document compensating controls?",
+    "What prevented the IAM issue from recurring?"
+   ],
+   "punctuated": "What do you look for in CI/CD? How do you document compensating controls? What prevented the IAM issue from recurring?",
+   "stripped": "what do you look for in cicd how do you document compensating controls what prevented the iam issue from recurring",
+   "filler": "what do you look for in cicd uh how do you document compensating controls uh what prevented the iam issue from recurring"
+  },
+  {
+   "id": "b035",
+   "expect": 2,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AEKFXRA0465GSQ9K87VSK.txt"
+   ],
+   "questions": [
+    "What is your general approach to a security design review?",
+    "How do you design evidence requirements?"
+   ],
+   "punctuated": "What is your general approach to a security design review? How do you design evidence requirements?",
+   "stripped": "what is your general approach to a security design review how do you design evidence requirements",
+   "filler": "what is your general approach to a security design review uh how do you design evidence requirements"
+  },
+  {
+   "id": "b036",
+   "expect": 3,
+   "sources": [
+    "01M65ADRDX6MF0BDT6F51XV0R0.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AEKFXRA0465GSQ9K87VSK.txt"
+   ],
+   "questions": [
+    "How would you approach the UPS and power monitoring work?",
+    "How do you explain risk to an executive who isn\u2019t technical?",
+    "How do you report control findings to leadership?"
+   ],
+   "punctuated": "How would you approach the UPS and power monitoring work? How do you explain risk to an executive who isn\u2019t technical? How do you report control findings to leadership?",
+   "stripped": "how would you approach the ups and power monitoring work how do you explain risk to an executive who isnt technical how do you report control findings to leadership",
+   "filler": "how would you approach the ups and power monitoring work okay how do you explain risk to an executive who isnt technical okay how do you report control findings to leadership"
+  },
+  {
+   "id": "b037",
+   "expect": 4,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How would you enforce object level authorization on every request?",
+    "Where do AI guardrails belong?",
+    "What does the attacker control?",
+    "What data inputs did you rely on?"
+   ],
+   "punctuated": "How would you enforce object level authorization on every request? Where do AI guardrails belong? What does the attacker control? What data inputs did you rely on?",
+   "stripped": "how would you enforce object level authorization on every request where do ai guardrails belong what does the attacker control what data inputs did you rely on",
+   "filler": "how would you enforce object level authorization on every request uh where do ai guardrails belong uh what does the attacker control uh what data inputs did you rely on"
+  },
+  {
+   "id": "b038",
+   "expect": 2,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How do you test BOLA or IDOR?",
+    "What is your ServiceNow GRC experience?"
+   ],
+   "punctuated": "How do you test BOLA or IDOR? What is your ServiceNow GRC experience?",
+   "stripped": "how do you test bola or idor what is your servicenow grc experience",
+   "filler": "how do you test bola or idor and what is your servicenow grc experience"
+  },
+  {
+   "id": "b039",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "Have you challenged someone senior to you?",
+    "Why do you want this role?",
+    "Who is the end client?"
+   ],
+   "punctuated": "Have you challenged someone senior to you? Why do you want this role? Who is the end client?",
+   "stripped": "have you challenged someone senior to you why do you want this role who is the end client",
+   "filler": "have you challenged someone senior to you so why do you want this role so who is the end client"
+  },
+  {
+   "id": "b040",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "What corrective action prevents recurrence?",
+    "What are the most common high impact risks you see in design reviews?"
+   ],
+   "punctuated": "What corrective action prevents recurrence? What are the most common high impact risks you see in design reviews?",
+   "stripped": "what corrective action prevents recurrence what are the most common high impact risks you see in design reviews",
+   "filler": "what corrective action prevents recurrence and what are the most common high impact risks you see in design reviews"
+  },
+  {
+   "id": "b041",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How do you manage policy deviations and security exceptions?",
+    "How do you threat model a microservice architecture?",
+    "How did you evaluate temporary controls?"
+   ],
+   "punctuated": "How do you manage policy deviations and security exceptions? How do you threat model a microservice architecture? How did you evaluate temporary controls?",
+   "stripped": "how do you manage policy deviations and security exceptions how do you threat model a microservice architecture how did you evaluate temporary controls",
+   "filler": "how do you manage policy deviations and security exceptions and how do you threat model a microservice architecture and how did you evaluate temporary controls"
+  },
+  {
+   "id": "b042",
+   "expect": 4,
+   "sources": [
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How do you handle competing priorities from different stakeholders?",
+    "How do you secure tool use?",
+    "What kinds of applications have you worked with?",
+    "What new evidence did the owner provide?"
+   ],
+   "punctuated": "How do you handle competing priorities from different stakeholders? How do you secure tool use? What kinds of applications have you worked with? What new evidence did the owner provide?",
+   "stripped": "how do you handle competing priorities from different stakeholders how do you secure tool use what kinds of applications have you worked with what new evidence did the owner provide",
+   "filler": "how do you handle competing priorities from different stakeholders um how do you secure tool use um what kinds of applications have you worked with um what new evidence did the owner provide"
+  },
+  {
+   "id": "b043",
+   "expect": 2,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADMJ6RQA4CSP6Z1C1MDGA.txt"
+   ],
+   "questions": [
+    "How do you validate remediation?",
+    "How would you remove local admin rights from 30,000 endpoints without causing a support disaster?"
+   ],
+   "punctuated": "How do you validate remediation? How would you remove local admin rights from 30,000 endpoints without causing a support disaster?",
+   "stripped": "how do you validate remediation how would you remove local admin rights from 30000 endpoints without causing a support disaster",
+   "filler": "how do you validate remediation um how would you remove local admin rights from 30000 endpoints without causing a support disaster"
+  },
+  {
+   "id": "b044",
+   "expect": 3,
+   "sources": [
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What resource or action is privileged?",
+    "Who can modify workflow definitions, reusable actions, deployment scripts, and protected branches?",
+    "What evidence distinguishes your hypothesis from other plausible causes?"
+   ],
+   "punctuated": "What resource or action is privileged? Who can modify workflow definitions, reusable actions, deployment scripts, and protected branches? What evidence distinguishes your hypothesis from other plausible causes?",
+   "stripped": "what resource or action is privileged who can modify workflow definitions reusable actions deployment scripts and protected branches what evidence distinguishes your hypothesis from other plausible causes",
+   "filler": "what resource or action is privileged and who can modify workflow definitions reusable actions deployment scripts and protected branches and what evidence distinguishes your hypothesis from other plausible causes"
+  },
+  {
+   "id": "b045",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65ADSYK91A1EZP69ZJ40RXA.txt"
+   ],
+   "questions": [
+    "How did you document unresolved assumptions?",
+    "How comfortable are you leading and giving direction to a small team?"
+   ],
+   "punctuated": "How did you document unresolved assumptions? How comfortable are you leading and giving direction to a small team?",
+   "stripped": "how did you document unresolved assumptions how comfortable are you leading and giving direction to a small team",
+   "filler": "how did you document unresolved assumptions okay how comfortable are you leading and giving direction to a small team"
+  },
+  {
+   "id": "b046",
+   "expect": 3,
+   "sources": [
+    "01M65ADF44H15TQ4K5VFJ6N71H.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How would you approach securing an OT environment you have just inherited?",
+    "How do you evaluate whether a remediation plan leaves an unacceptable level of residual risk?",
+    "What was the eventual decision and how did it affect delivery or risk?"
+   ],
+   "punctuated": "How would you approach securing an OT environment you have just inherited? How do you evaluate whether a remediation plan leaves an unacceptable level of residual risk? What was the eventual decision and how did it affect delivery or risk?",
+   "stripped": "how would you approach securing an ot environment you have just inherited how do you evaluate whether a remediation plan leaves an unacceptable level of residual risk what was the eventual decision and how did it affect delivery or risk",
+   "filler": "how would you approach securing an ot environment you have just inherited um how do you evaluate whether a remediation plan leaves an unacceptable level of residual risk um what was the eventual decision and how did it affect delivery or risk"
+  },
+  {
+   "id": "b047",
+   "expect": 4,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "Have you designed authorization for a multi tenant API?",
+    "What is the smallest safe proof that answers the risk question?",
+    "How were gaps and exceptions recorded?",
+    "what did your team control?"
+   ],
+   "punctuated": "Have you designed authorization for a multi tenant API? What is the smallest safe proof that answers the risk question? How were gaps and exceptions recorded? what did your team control?",
+   "stripped": "have you designed authorization for a multi tenant api what is the smallest safe proof that answers the risk question how were gaps and exceptions recorded what did your team control",
+   "filler": "have you designed authorization for a multi tenant api okay what is the smallest safe proof that answers the risk question okay how were gaps and exceptions recorded okay what did your team control"
+  },
+  {
+   "id": "b048",
+   "expect": 2,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How would you prioritize the first 90 days across 27 control areas?",
+    "How would you classify and prioritize threat model findings?"
+   ],
+   "punctuated": "How would you prioritize the first 90 days across 27 control areas? How would you classify and prioritize threat model findings?",
+   "stripped": "how would you prioritize the first 90 days across 27 control areas how would you classify and prioritize threat model findings",
+   "filler": "how would you prioritize the first 90 days across 27 control areas uh how would you classify and prioritize threat model findings"
+  },
+  {
+   "id": "b049",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you handle a finding when root cause is uncertain?",
+    "What telemetry shows attempted or successful exploitation?",
+    "How do you review cloud security?"
+   ],
+   "punctuated": "How do you handle a finding when root cause is uncertain? What telemetry shows attempted or successful exploitation? How do you review cloud security?",
+   "stripped": "how do you handle a finding when root cause is uncertain what telemetry shows attempted or successful exploitation how do you review cloud security",
+   "filler": "how do you handle a finding when root cause is uncertain um what telemetry shows attempted or successful exploitation um how do you review cloud security"
+  },
+  {
+   "id": "b050",
+   "expect": 2,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "Would you do object checks on every request, or use a central policy layer?",
+    "How do you handle scanner findings?"
+   ],
+   "punctuated": "Would you do object checks on every request, or use a central policy layer? How do you handle scanner findings?",
+   "stripped": "would you do object checks on every request or use a central policy layer how do you handle scanner findings",
+   "filler": "would you do object checks on every request or use a central policy layer and how do you handle scanner findings"
+  },
+  {
+   "id": "b051",
+   "expect": 3,
+   "sources": [
+    "01M65ADW78G7ES4MK3QHTMM2DC.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65ADRDX6MF0BDT6F51XV0R0.txt"
+   ],
+   "questions": [
+    "What happens when the model provider has an outage or changes the model under you?",
+    "Who can modify workflow definitions and protected branches?",
+    "How would you approach finishing the core migration cleanup?"
+   ],
+   "punctuated": "What happens when the model provider has an outage or changes the model under you? Who can modify workflow definitions and protected branches? How would you approach finishing the core migration cleanup?",
+   "stripped": "what happens when the model provider has an outage or changes the model under you who can modify workflow definitions and protected branches how would you approach finishing the core migration cleanup",
+   "filler": "what happens when the model provider has an outage or changes the model under you so who can modify workflow definitions and protected branches so how would you approach finishing the core migration cleanup"
+  },
+  {
+   "id": "b052",
+   "expect": 4,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "Why BNY and why this role?",
+    "How do you threat model an AI agent?",
+    "What judgment did you provide rather than merely copying a mapping?",
+    "What are the common causes of cross tenant data leakage?"
+   ],
+   "punctuated": "Why BNY and why this role? How do you threat model an AI agent? What judgment did you provide rather than merely copying a mapping? What are the common causes of cross tenant data leakage?",
+   "stripped": "why bny and why this role how do you threat model an ai agent what judgment did you provide rather than merely copying a mapping what are the common causes of cross tenant data leakage",
+   "filler": "why bny and why this role okay how do you threat model an ai agent okay what judgment did you provide rather than merely copying a mapping okay what are the common causes of cross tenant data leakage"
+  },
+  {
+   "id": "b053",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65ADMJ6RQA4CSP6Z1C1MDGA.txt"
+   ],
+   "questions": [
+    "How does the CRI Profile fit financial services?",
+    "How does EPM fit with your EDR, and are they not doing the same thing?"
+   ],
+   "punctuated": "How does the CRI Profile fit financial services? How does EPM fit with your EDR, and are they not doing the same thing?",
+   "stripped": "how does the cri profile fit financial services how does epm fit with your edr and are they not doing the same thing",
+   "filler": "how does the cri profile fit financial services uh how does epm fit with your edr and are they not doing the same thing"
+  },
+  {
+   "id": "b054",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "What did you personally build, configure, review, or present?",
+    "How do you distinguish an incomplete RCA from a complete one?",
+    "How do you interpret NIST 800-53 design and operating effectiveness?"
+   ],
+   "punctuated": "What did you personally build, configure, review, or present? How do you distinguish an incomplete RCA from a complete one? How do you interpret NIST 800-53 design and operating effectiveness?",
+   "stripped": "what did you personally build configure review or present how do you distinguish an incomplete rca from a complete one how do you interpret nist 800-53 design and operating effectiveness",
+   "filler": "what did you personally build configure review or present so how do you distinguish an incomplete rca from a complete one so how do you interpret nist 800-53 design and operating effectiveness"
+  },
+  {
+   "id": "b055",
+   "expect": 2,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "What would you ask the hiring manager and risk decisioning lead?",
+    "What do you do when an engineering team or vendor disagrees with your finding?"
+   ],
+   "punctuated": "What would you ask the hiring manager and risk decisioning lead? What do you do when an engineering team or vendor disagrees with your finding?",
+   "stripped": "what would you ask the hiring manager and risk decisioning lead what do you do when an engineering team or vendor disagrees with your finding",
+   "filler": "what would you ask the hiring manager and risk decisioning lead um what do you do when an engineering team or vendor disagrees with your finding"
+  },
+  {
+   "id": "b056",
+   "expect": 3,
+   "sources": [
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65ADF44H15TQ4K5VFJ6N71H.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What identity does the next component trust?",
+    "How do you monitor an OT network without disrupting it?",
+    "What did you do at CVS Health?"
+   ],
+   "punctuated": "What identity does the next component trust? How do you monitor an OT network without disrupting it? What did you do at CVS Health?",
+   "stripped": "what identity does the next component trust how do you monitor an ot network without disrupting it what did you do at cvs health",
+   "filler": "what identity does the next component trust uh how do you monitor an ot network without disrupting it uh what did you do at cvs health"
+  },
+  {
+   "id": "b057",
+   "expect": 4,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What makes a vulnerability exploitable?",
+    "How do you review a containerized workload?",
+    "How do you assess residual risk?",
+    "Which controls or risk categories were being assessed?"
+   ],
+   "punctuated": "What makes a vulnerability exploitable? How do you review a containerized workload? How do you assess residual risk? Which controls or risk categories were being assessed?",
+   "stripped": "what makes a vulnerability exploitable how do you review a containerized workload how do you assess residual risk which controls or risk categories were being assessed",
+   "filler": "what makes a vulnerability exploitable um how do you review a containerized workload um how do you assess residual risk um which controls or risk categories were being assessed"
+  },
+  {
+   "id": "b058",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "Did you ask clarifying questions before reaching a conclusion?",
+    "How do you assess a firewall control gap without breaking production?"
+   ],
+   "punctuated": "Did you ask clarifying questions before reaching a conclusion? How do you assess a firewall control gap without breaking production?",
+   "stripped": "did you ask clarifying questions before reaching a conclusion how do you assess a firewall control gap without breaking production",
+   "filler": "did you ask clarifying questions before reaching a conclusion uh how do you assess a firewall control gap without breaking production"
+  },
+  {
+   "id": "b059",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "Why are you leaving your current role?",
+    "How would you decide between remediation and formal risk acceptance?",
+    "What is least privilege in a distributed system?"
+   ],
+   "punctuated": "Why are you leaving your current role? How would you decide between remediation and formal risk acceptance? What is least privilege in a distributed system?",
+   "stripped": "why are you leaving your current role how would you decide between remediation and formal risk acceptance what is least privilege in a distributed system",
+   "filler": "why are you leaving your current role so how would you decide between remediation and formal risk acceptance so what is least privilege in a distributed system"
+  },
+  {
+   "id": "b060",
+   "expect": 2,
+   "sources": [
+    "01M65AD5CWZ6MY4JZAJH884AHT.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "Which upcoming changes will require the most support from this position?",
+    "What questions do you have for me?"
+   ],
+   "punctuated": "Which upcoming changes will require the most support from this position? What questions do you have for me?",
+   "stripped": "which upcoming changes will require the most support from this position what questions do you have for me",
+   "filler": "which upcoming changes will require the most support from this position okay what questions do you have for me"
+  },
+  {
+   "id": "b061",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What precisely failed, against which control requirement?",
+    "Have you automated vulnerability assessment or security validation?",
+    "How do you know whether a remediation is sustainable?"
+   ],
+   "punctuated": "What precisely failed, against which control requirement? Have you automated vulnerability assessment or security validation? How do you know whether a remediation is sustainable?",
+   "stripped": "what precisely failed against which control requirement have you automated vulnerability assessment or security validation how do you know whether a remediation is sustainable",
+   "filler": "what precisely failed against which control requirement and have you automated vulnerability assessment or security validation and how do you know whether a remediation is sustainable"
+  },
+  {
+   "id": "b062",
+   "expect": 4,
+   "sources": [
+    "01M65ADMJ6RQA4CSP6Z1C1MDGA.txt",
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What does PTA add that the Vault audit log does not?",
+    "What do you do when a control owner will not give you the information you need?",
+    "How did you establish population completeness?",
+    "What was the actual control requirement?"
+   ],
+   "punctuated": "What does PTA add that the Vault audit log does not? What do you do when a control owner will not give you the information you need? How did you establish population completeness? What was the actual control requirement?",
+   "stripped": "what does pta add that the vault audit log does not what do you do when a control owner will not give you the information you need how did you establish population completeness what was the actual control requirement",
+   "filler": "what does pta add that the vault audit log does not uh what do you do when a control owner will not give you the information you need uh how did you establish population completeness uh what was the actual control requirement"
+  },
+  {
+   "id": "b063",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "What framework and version were you using?",
+    "How would you validate a critical issue closure if Splunk shows zero alerts?"
+   ],
+   "punctuated": "What framework and version were you using? How would you validate a critical issue closure if Splunk shows zero alerts?",
+   "stripped": "what framework and version were you using how would you validate a critical issue closure if splunk shows zero alerts",
+   "filler": "what framework and version were you using and how would you validate a critical issue closure if splunk shows zero alerts"
+  },
+  {
+   "id": "b064",
+   "expect": 3,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65AEKFXRA0465GSQ9K87VSK.txt"
+   ],
+   "questions": [
+    "How do you secure agent tool use?",
+    "How do you speak about controls to people who do not have a security background?",
+    "What do you do when engineering tells you your requirement cannot be built?"
+   ],
+   "punctuated": "How do you secure agent tool use? How do you speak about controls to people who do not have a security background? What do you do when engineering tells you your requirement cannot be built?",
+   "stripped": "how do you secure agent tool use how do you speak about controls to people who do not have a security background what do you do when engineering tells you your requirement cannot be built",
+   "filler": "how do you secure agent tool use and how do you speak about controls to people who do not have a security background and what do you do when engineering tells you your requirement cannot be built"
+  },
+  {
+   "id": "b065",
+   "expect": 2,
+   "sources": [
+    "01M65ADW78G7ES4MK3QHTMM2DC.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How do you stop analysts becoming deskilled or over-reliant on the agent?",
+    "What does it mean to challenge a control issue?"
+   ],
+   "punctuated": "How do you stop analysts becoming deskilled or over-reliant on the agent? What does it mean to challenge a control issue?",
+   "stripped": "how do you stop analysts becoming deskilled or over-reliant on the agent what does it mean to challenge a control issue",
+   "filler": "how do you stop analysts becoming deskilled or over-reliant on the agent and what does it mean to challenge a control issue"
+  },
+  {
+   "id": "b066",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD5CWZ6MY4JZAJH884AHT.txt"
+   ],
+   "questions": [
+    "What evidence distinguished implementation from effective operation?",
+    "Can you walk me through your professional journey?",
+    "Where do handoffs between the SOC, network team, and application owners become difficult?"
+   ],
+   "punctuated": "What evidence distinguished implementation from effective operation? Can you walk me through your professional journey? Where do handoffs between the SOC, network team, and application owners become difficult?",
+   "stripped": "what evidence distinguished implementation from effective operation can you walk me through your professional journey where do handoffs between the soc network team and application owners become difficult",
+   "filler": "what evidence distinguished implementation from effective operation um can you walk me through your professional journey um where do handoffs between the soc network team and application owners become difficult"
+  },
+  {
+   "id": "b067",
+   "expect": 4,
+   "sources": [
+    "01M65ADF44H15TQ4K5VFJ6N71H.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "How would you secure vendor remote access into the plant?",
+    "Are you a control tester or a risk analyst?",
+    "What does a privacy design review look like?",
+    "What if the authorization service is unavailable?"
+   ],
+   "punctuated": "How would you secure vendor remote access into the plant? Are you a control tester or a risk analyst? What does a privacy design review look like? What if the authorization service is unavailable?",
+   "stripped": "how would you secure vendor remote access into the plant are you a control tester or a risk analyst what does a privacy design review look like what if the authorization service is unavailable",
+   "filler": "how would you secure vendor remote access into the plant um are you a control tester or a risk analyst um what does a privacy design review look like um what if the authorization service is unavailable"
+  },
+  {
+   "id": "b068",
+   "expect": 2,
+   "sources": [
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "How do you speak about controls to people who do not have a security background?",
+    "What do you do when a critical vulnerability affects multiple banking applications and misses the deadline?"
+   ],
+   "punctuated": "How do you speak about controls to people who do not have a security background? What do you do when a critical vulnerability affects multiple banking applications and misses the deadline?",
+   "stripped": "how do you speak about controls to people who do not have a security background what do you do when a critical vulnerability affects multiple banking applications and misses the deadline",
+   "filler": "how do you speak about controls to people who do not have a security background and what do you do when a critical vulnerability affects multiple banking applications and misses the deadline"
+  },
+  {
+   "id": "b069",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65ADDQ09E6HC1AGDN9YP4KD.txt",
+    "01M65AEKFXRA0465GSQ9K87VSK.txt"
+   ],
+   "questions": [
+    "Why are you leaving your current role?",
+    "What has to be reported and how fast?",
+    "What does good look like to you in a controls programme?"
+   ],
+   "punctuated": "Why are you leaving your current role? What has to be reported and how fast? What does good look like to you in a controls programme?",
+   "stripped": "why are you leaving your current role what has to be reported and how fast what does good look like to you in a controls programme",
+   "filler": "why are you leaving your current role um what has to be reported and how fast um what does good look like to you in a controls programme"
+  },
+  {
+   "id": "b070",
+   "expect": 2,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADSYK91A1EZP69ZJ40RXA.txt"
+   ],
+   "questions": [
+    "How do you test BOLA or IDOR?",
+    "How comfortable are you leading and giving direction to a small team?"
+   ],
+   "punctuated": "How do you test BOLA or IDOR? How comfortable are you leading and giving direction to a small team?",
+   "stripped": "how do you test bola or idor how comfortable are you leading and giving direction to a small team",
+   "filler": "how do you test bola or idor um how comfortable are you leading and giving direction to a small team"
+  },
+  {
+   "id": "b071",
+   "expect": 3,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADMJ6RQA4CSP6Z1C1MDGA.txt"
+   ],
+   "questions": [
+    "What does a privacy design review look like?",
+    "Which tools have you used for vulnerability assessment?",
+    "How do you handle application-to-application credentials?"
+   ],
+   "punctuated": "What does a privacy design review look like? Which tools have you used for vulnerability assessment? How do you handle application-to-application credentials?",
+   "stripped": "what does a privacy design review look like which tools have you used for vulnerability assessment how do you handle application-to-application credentials",
+   "filler": "what does a privacy design review look like okay which tools have you used for vulnerability assessment okay how do you handle application-to-application credentials"
+  },
+  {
+   "id": "b072",
+   "expect": 4,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What secrets or cloud credentials are exposed to pull requests or untrusted build steps?",
+    "What if the authorization service is unavailable?",
+    "What does telemetry let us reconstruct after abuse?",
+    "How did you document unresolved assumptions?"
+   ],
+   "punctuated": "What secrets or cloud credentials are exposed to pull requests or untrusted build steps? What if the authorization service is unavailable? What does telemetry let us reconstruct after abuse? How did you document unresolved assumptions?",
+   "stripped": "what secrets or cloud credentials are exposed to pull requests or untrusted build steps what if the authorization service is unavailable what does telemetry let us reconstruct after abuse how did you document unresolved assumptions",
+   "filler": "what secrets or cloud credentials are exposed to pull requests or untrusted build steps um what if the authorization service is unavailable um what does telemetry let us reconstruct after abuse um how did you document unresolved assumptions"
+  },
+  {
+   "id": "b073",
+   "expect": 2,
+   "sources": [
+    "01M65AD5CWZ6MY4JZAJH884AHT.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "What would make you confident after 90 days that this hire is succeeding?",
+    "What is the interview structure - recruiter, hiring manager, technical design, panel?"
+   ],
+   "punctuated": "What would make you confident after 90 days that this hire is succeeding? What is the interview structure - recruiter, hiring manager, technical design, panel?",
+   "stripped": "what would make you confident after 90 days that this hire is succeeding what is the interview structure - recruiter hiring manager technical design panel",
+   "filler": "what would make you confident after 90 days that this hire is succeeding okay what is the interview structure - recruiter hiring manager technical design panel"
+  },
+  {
+   "id": "b074",
+   "expect": 3,
+   "sources": [
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD5CWZ6MY4JZAJH884AHT.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "What if the upstream component is compromised?",
+    "Which upcoming changes will require the most support from this position?",
+    "How do you evaluate an AI red-team result?"
+   ],
+   "punctuated": "What if the upstream component is compromised? Which upcoming changes will require the most support from this position? How do you evaluate an AI red-team result?",
+   "stripped": "what if the upstream component is compromised which upcoming changes will require the most support from this position how do you evaluate an ai red-team result",
+   "filler": "what if the upstream component is compromised uh which upcoming changes will require the most support from this position uh how do you evaluate an ai red-team result"
+  },
+  {
+   "id": "b075",
+   "expect": 2,
+   "sources": [
+    "01M65AD5CWZ6MY4JZAJH884AHT.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "Where do handoffs between the SOC, network team, and application owners become difficult?",
+    "What does it mean to challenge a control issue?"
+   ],
+   "punctuated": "Where do handoffs between the SOC, network team, and application owners become difficult? What does it mean to challenge a control issue?",
+   "stripped": "where do handoffs between the soc network team and application owners become difficult what does it mean to challenge a control issue",
+   "filler": "where do handoffs between the soc network team and application owners become difficult and what does it mean to challenge a control issue"
+  },
+  {
+   "id": "b076",
+   "expect": 3,
+   "sources": [
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "What is the pay-rate range and overtime expectation, if any?",
+    "How would you describe your level of ServiceNow GRC experience?",
+    "What does the attacker control?"
+   ],
+   "punctuated": "What is the pay-rate range and overtime expectation, if any? How would you describe your level of ServiceNow GRC experience? What does the attacker control?",
+   "stripped": "what is the pay-rate range and overtime expectation if any how would you describe your level of servicenow grc experience what does the attacker control",
+   "filler": "what is the pay-rate range and overtime expectation if any okay how would you describe your level of servicenow grc experience okay what does the attacker control"
+  },
+  {
+   "id": "b077",
+   "expect": 4,
+   "sources": [
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD5CWZ6MY4JZAJH884AHT.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "Who is the end client?",
+    "What questions do you have for me?",
+    "How do you handle emergency containment when the primary lead is unavailable?",
+    "What secrets/tokens are available to pull requests or untrusted build steps?"
+   ],
+   "punctuated": "Who is the end client? What questions do you have for me? How do you handle emergency containment when the primary lead is unavailable? What secrets/tokens are available to pull requests or untrusted build steps?",
+   "stripped": "who is the end client what questions do you have for me how do you handle emergency containment when the primary lead is unavailable what secretstokens are available to pull requests or untrusted build steps",
+   "filler": "who is the end client okay what questions do you have for me okay how do you handle emergency containment when the primary lead is unavailable okay what secretstokens are available to pull requests or untrusted build steps"
+  },
+  {
+   "id": "b078",
+   "expect": 2,
+   "sources": [
+    "01M65AEQGSDDEQ0AEVB80TCHRY.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "Is there a clear control objective that ties to a specific risk?",
+    "What dashboards or data tools have you used?"
+   ],
+   "punctuated": "Is there a clear control objective that ties to a specific risk? What dashboards or data tools have you used?",
+   "stripped": "is there a clear control objective that ties to a specific risk what dashboards or data tools have you used",
+   "filler": "is there a clear control objective that ties to a specific risk so what dashboards or data tools have you used"
+  },
+  {
+   "id": "b079",
+   "expect": 3,
+   "sources": [
+    "01M65AD45A9R50AP1Q4DK6DVP5.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How do you document compensating controls?",
+    "What do you do when an engineering team or vendor disagrees with your finding?",
+    "How did you evaluate temporary controls?"
+   ],
+   "punctuated": "How do you document compensating controls? What do you do when an engineering team or vendor disagrees with your finding? How did you evaluate temporary controls?",
+   "stripped": "how do you document compensating controls what do you do when an engineering team or vendor disagrees with your finding how did you evaluate temporary controls",
+   "filler": "how do you document compensating controls so what do you do when an engineering team or vendor disagrees with your finding so how did you evaluate temporary controls"
+  },
+  {
+   "id": "b080",
+   "expect": 2,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD45A9R50AP1Q4DK6DVP5.txt"
+   ],
+   "questions": [
+    "How would you validate a critical issue closure if Splunk shows zero alerts?",
+    "What did the latest DR test actually prove?"
+   ],
+   "punctuated": "How would you validate a critical issue closure if Splunk shows zero alerts? What did the latest DR test actually prove?",
+   "stripped": "how would you validate a critical issue closure if splunk shows zero alerts what did the latest dr test actually prove",
+   "filler": "how would you validate a critical issue closure if splunk shows zero alerts okay what did the latest dr test actually prove"
+  },
+  {
+   "id": "b081",
+   "expect": 3,
+   "sources": [
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "Where do guardrails belong?",
+    "Who can modify workflow definitions and protected branches?",
+    "How do you validate remediation?"
+   ],
+   "punctuated": "Where do guardrails belong? Who can modify workflow definitions and protected branches? How do you validate remediation?",
+   "stripped": "where do guardrails belong who can modify workflow definitions and protected branches how do you validate remediation",
+   "filler": "where do guardrails belong uh who can modify workflow definitions and protected branches uh how do you validate remediation"
+  },
+  {
+   "id": "b082",
+   "expect": 4,
+   "sources": [
+    "01M65ADRDX6MF0BDT6F51XV0R0.txt",
+    "01M65ADDQ09E6HC1AGDN9YP4KD.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How would you approach the UPS and power monitoring work?",
+    "What is a BES Cyber Asset?",
+    "What judgment did you provide rather than merely copying a mapping?",
+    "Have you automated vulnerability assessment or security validation?"
+   ],
+   "punctuated": "How would you approach the UPS and power monitoring work? What is a BES Cyber Asset? What judgment did you provide rather than merely copying a mapping? Have you automated vulnerability assessment or security validation?",
+   "stripped": "how would you approach the ups and power monitoring work what is a bes cyber asset what judgment did you provide rather than merely copying a mapping have you automated vulnerability assessment or security validation",
+   "filler": "how would you approach the ups and power monitoring work so what is a bes cyber asset so what judgment did you provide rather than merely copying a mapping so have you automated vulnerability assessment or security validation"
+  },
+  {
+   "id": "b083",
+   "expect": 2,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What should an effective policy exception approval contain for audit?",
+    "Have you challenged someone senior to you?"
+   ],
+   "punctuated": "What should an effective policy exception approval contain for audit? Have you challenged someone senior to you?",
+   "stripped": "what should an effective policy exception approval contain for audit have you challenged someone senior to you",
+   "filler": "what should an effective policy exception approval contain for audit and have you challenged someone senior to you"
+  },
+  {
+   "id": "b084",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65ADW78G7ES4MK3QHTMM2DC.txt"
+   ],
+   "questions": [
+    "What would you do if the control owner claimed a remediation is done, but evidence disagrees?",
+    "How do you connect a cloud security tool like Wiz into a control framework?",
+    "What happens when the model provider has an outage or changes the model under you?"
+   ],
+   "punctuated": "What would you do if the control owner claimed a remediation is done, but evidence disagrees? How do you connect a cloud security tool like Wiz into a control framework? What happens when the model provider has an outage or changes the model under you?",
+   "stripped": "what would you do if the control owner claimed a remediation is done but evidence disagrees how do you connect a cloud security tool like wiz into a control framework what happens when the model provider has an outage or changes the model under you",
+   "filler": "what would you do if the control owner claimed a remediation is done but evidence disagrees okay how do you connect a cloud security tool like wiz into a control framework okay what happens when the model provider has an outage or changes the model under you"
+  },
+  {
+   "id": "b085",
+   "expect": 2,
+   "sources": [
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65ADF44H15TQ4K5VFJ6N71H.txt"
+   ],
+   "questions": [
+    "What is least privilege in a distributed system?",
+    "How have you handled configuration change monitoring for CIP-010?"
+   ],
+   "punctuated": "What is least privilege in a distributed system? How have you handled configuration change monitoring for CIP-010?",
+   "stripped": "what is least privilege in a distributed system how have you handled configuration change monitoring for cip-010",
+   "filler": "what is least privilege in a distributed system so how have you handled configuration change monitoring for cip-010"
+  },
+  {
+   "id": "b086",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What facts were disputed?",
+    "Who owns each action, and what are the dated milestones/dependencies?",
+    "How do you prioritize 50 open issues with limited resources?"
+   ],
+   "punctuated": "What facts were disputed? Who owns each action, and what are the dated milestones/dependencies? How do you prioritize 50 open issues with limited resources?",
+   "stripped": "what facts were disputed who owns each action and what are the dated milestonesdependencies how do you prioritize 50 open issues with limited resources",
+   "filler": "what facts were disputed um who owns each action and what are the dated milestonesdependencies um how do you prioritize 50 open issues with limited resources"
+  },
+  {
+   "id": "b087",
+   "expect": 4,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How do you handle a finding when root cause is uncertain?",
+    "What do you do when engineering tells you your requirement cannot be built?",
+    "What is the W2/C2C/contract arrangement?",
+    "What did you do at CVS Health?"
+   ],
+   "punctuated": "How do you handle a finding when root cause is uncertain? What do you do when engineering tells you your requirement cannot be built? What is the W2/C2C/contract arrangement? What did you do at CVS Health?",
+   "stripped": "how do you handle a finding when root cause is uncertain what do you do when engineering tells you your requirement cannot be built what is the w2c2ccontract arrangement what did you do at cvs health",
+   "filler": "how do you handle a finding when root cause is uncertain so what do you do when engineering tells you your requirement cannot be built so what is the w2c2ccontract arrangement so what did you do at cvs health"
+  },
+  {
+   "id": "b088",
+   "expect": 2,
+   "sources": [
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "Why do you want this role?",
+    "What do you do when interviewers ask what you would change in ServiceNow?"
+   ],
+   "punctuated": "Why do you want this role? What do you do when interviewers ask what you would change in ServiceNow?",
+   "stripped": "why do you want this role what do you do when interviewers ask what you would change in servicenow",
+   "filler": "why do you want this role and what do you do when interviewers ask what you would change in servicenow"
+  },
+  {
+   "id": "b089",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you evaluate a dashboard you did not personally build?",
+    "Did you ask clarifying questions before reaching a conclusion?",
+    "What do you look for in CI/CD?"
+   ],
+   "punctuated": "How do you evaluate a dashboard you did not personally build? Did you ask clarifying questions before reaching a conclusion? What do you look for in CI/CD?",
+   "stripped": "how do you evaluate a dashboard you did not personally build did you ask clarifying questions before reaching a conclusion what do you look for in cicd",
+   "filler": "how do you evaluate a dashboard you did not personally build um did you ask clarifying questions before reaching a conclusion um what do you look for in cicd"
+  },
+  {
+   "id": "b090",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What business assets or processes were exposed?",
+    "Which assets, accounts, applications, or legal entities are in scope?"
+   ],
+   "punctuated": "What business assets or processes were exposed? Which assets, accounts, applications, or legal entities are in scope?",
+   "stripped": "what business assets or processes were exposed which assets accounts applications or legal entities are in scope",
+   "filler": "what business assets or processes were exposed so which assets accounts applications or legal entities are in scope"
+  },
+  {
+   "id": "b091",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "Why are you interested in this work and what is your greatest strength?",
+    "What makes a ServiceNow control issue audit-ready?",
+    "What makes a vulnerability exploitable?"
+   ],
+   "punctuated": "Why are you interested in this work and what is your greatest strength? What makes a ServiceNow control issue audit-ready? What makes a vulnerability exploitable?",
+   "stripped": "why are you interested in this work and what is your greatest strength what makes a servicenow control issue audit-ready what makes a vulnerability exploitable",
+   "filler": "why are you interested in this work and what is your greatest strength um what makes a servicenow control issue audit-ready um what makes a vulnerability exploitable"
+  },
+  {
+   "id": "b092",
+   "expect": 4,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "What did you personally build, configure, review, or present?",
+    "What corrective action prevents recurrence?",
+    "How would you verify issue remediation across many applications or accounts?",
+    "How would you decide between remediation and formal risk acceptance?"
+   ],
+   "punctuated": "What did you personally build, configure, review, or present? What corrective action prevents recurrence? How would you verify issue remediation across many applications or accounts? How would you decide between remediation and formal risk acceptance?",
+   "stripped": "what did you personally build configure review or present what corrective action prevents recurrence how would you verify issue remediation across many applications or accounts how would you decide between remediation and formal risk acceptance",
+   "filler": "what did you personally build configure review or present and what corrective action prevents recurrence and how would you verify issue remediation across many applications or accounts and how would you decide between remediation and formal risk acceptance"
+  },
+  {
+   "id": "b093",
+   "expect": 2,
+   "sources": [
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you design evidence requirements?",
+    "How would you classify and prioritize threat model findings?"
+   ],
+   "punctuated": "How do you design evidence requirements? How would you classify and prioritize threat model findings?",
+   "stripped": "how do you design evidence requirements how would you classify and prioritize threat model findings",
+   "filler": "how do you design evidence requirements and how would you classify and prioritize threat model findings"
+  },
+  {
+   "id": "b094",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What is your ServiceNow GRC experience?",
+    "What residual risk remains until closure, and who is authorized to accept it?",
+    "How do you know whether a remediation is sustainable?"
+   ],
+   "punctuated": "What is your ServiceNow GRC experience? What residual risk remains until closure, and who is authorized to accept it? How do you know whether a remediation is sustainable?",
+   "stripped": "what is your servicenow grc experience what residual risk remains until closure and who is authorized to accept it how do you know whether a remediation is sustainable",
+   "filler": "what is your servicenow grc experience uh what residual risk remains until closure and who is authorized to accept it uh how do you know whether a remediation is sustainable"
+  },
+  {
+   "id": "b095",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you stay organized?",
+    "Would you do object checks on every request, or use a central policy layer?"
+   ],
+   "punctuated": "How do you stay organized? Would you do object checks on every request, or use a central policy layer?",
+   "stripped": "how do you stay organized would you do object checks on every request or use a central policy layer",
+   "filler": "how do you stay organized uh would you do object checks on every request or use a central policy layer"
+  },
+  {
+   "id": "b096",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How did you establish population completeness?",
+    "How do you review cloud security?",
+    "What are the most common high impact risks you see in design reviews?"
+   ],
+   "punctuated": "How did you establish population completeness? How do you review cloud security? What are the most common high impact risks you see in design reviews?",
+   "stripped": "how did you establish population completeness how do you review cloud security what are the most common high impact risks you see in design reviews",
+   "filler": "how did you establish population completeness okay how do you review cloud security okay what are the most common high impact risks you see in design reviews"
+  },
+  {
+   "id": "b097",
+   "expect": 4,
+   "sources": [
+    "01M65ADRDX6MF0BDT6F51XV0R0.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65ADDQ09E6HC1AGDN9YP4KD.txt"
+   ],
+   "questions": [
+    "How would you approach finishing the core migration cleanup?",
+    "How do you challenge a root-cause analysis submitted by a control owner?",
+    "How many onsite days per week?",
+    "What does CIP-007 require on patching?"
+   ],
+   "punctuated": "How would you approach finishing the core migration cleanup? How do you challenge a root-cause analysis submitted by a control owner? How many onsite days per week? What does CIP-007 require on patching?",
+   "stripped": "how would you approach finishing the core migration cleanup how do you challenge a root-cause analysis submitted by a control owner how many onsite days per week what does cip-007 require on patching",
+   "filler": "how would you approach finishing the core migration cleanup so how do you challenge a root-cause analysis submitted by a control owner so how many onsite days per week so what does cip-007 require on patching"
+  },
+  {
+   "id": "b098",
+   "expect": 2,
+   "sources": [
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "What is excessive agency?",
+    "How do you evaluate whether a remediation plan leaves an unacceptable level of residual risk?"
+   ],
+   "punctuated": "What is excessive agency? How do you evaluate whether a remediation plan leaves an unacceptable level of residual risk?",
+   "stripped": "what is excessive agency how do you evaluate whether a remediation plan leaves an unacceptable level of residual risk",
+   "filler": "what is excessive agency okay how do you evaluate whether a remediation plan leaves an unacceptable level of residual risk"
+  },
+  {
+   "id": "b099",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What would you do in your first 30 days?",
+    "What is your approach when the owner disputes the severity rating?",
+    "Are you a control tester or a risk analyst?"
+   ],
+   "punctuated": "What would you do in your first 30 days? What is your approach when the owner disputes the severity rating? Are you a control tester or a risk analyst?",
+   "stripped": "what would you do in your first 30 days what is your approach when the owner disputes the severity rating are you a control tester or a risk analyst",
+   "filler": "what would you do in your first 30 days and what is your approach when the owner disputes the severity rating and are you a control tester or a risk analyst"
+  },
+  {
+   "id": "b100",
+   "expect": 2,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "Have you designed authorization for a multi tenant API?",
+    "Is there a compensating control that really blocks the path?"
+   ],
+   "punctuated": "Have you designed authorization for a multi tenant API? Is there a compensating control that really blocks the path?",
+   "stripped": "have you designed authorization for a multi tenant api is there a compensating control that really blocks the path",
+   "filler": "have you designed authorization for a multi tenant api so is there a compensating control that really blocks the path"
+  },
+  {
+   "id": "b101",
+   "expect": 3,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "What are the common causes of cross tenant data leakage?",
+    "How do you secure tool use?",
+    "What kinds of applications have you worked with?"
+   ],
+   "punctuated": "What are the common causes of cross tenant data leakage? How do you secure tool use? What kinds of applications have you worked with?",
+   "stripped": "what are the common causes of cross tenant data leakage how do you secure tool use what kinds of applications have you worked with",
+   "filler": "what are the common causes of cross tenant data leakage uh how do you secure tool use uh what kinds of applications have you worked with"
+  },
+  {
+   "id": "b102",
+   "expect": 4,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD5CWZ6MY4JZAJH884AHT.txt",
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65ADSYK91A1EZP69ZJ40RXA.txt"
+   ],
+   "questions": [
+    "How do you explain risk to an executive who isn\u2019t technical?",
+    "What evidence do you expect before a firewall review is considered complete?",
+    "How do you write a control requirement that an engineer can actually build from?",
+    "How would you approach the network lifecycle refresh in a live hospital?"
+   ],
+   "punctuated": "How do you explain risk to an executive who isn\u2019t technical? What evidence do you expect before a firewall review is considered complete? How do you write a control requirement that an engineer can actually build from? How would you approach the network lifecycle refresh in a live hospital?",
+   "stripped": "how do you explain risk to an executive who isnt technical what evidence do you expect before a firewall review is considered complete how do you write a control requirement that an engineer can actually build from how would you approach the network lifecycle refresh in a live hospital",
+   "filler": "how do you explain risk to an executive who isnt technical so what evidence do you expect before a firewall review is considered complete so how do you write a control requirement that an engineer can actually build from so how would you approach the network lifecycle refresh in a live hospital"
+  },
+  {
+   "id": "b103",
+   "expect": 2,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you assess a firewall control gap without breaking production?",
+    "How do you think about third party security?"
+   ],
+   "punctuated": "How do you assess a firewall control gap without breaking production? How do you think about third party security?",
+   "stripped": "how do you assess a firewall control gap without breaking production how do you think about third party security",
+   "filler": "how do you assess a firewall control gap without breaking production and how do you think about third party security"
+  },
+  {
+   "id": "b104",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "When did you escalate and to whom?",
+    "How do you handle competing priorities from different stakeholders?",
+    "What is your general approach to a security design review?"
+   ],
+   "punctuated": "When did you escalate and to whom? How do you handle competing priorities from different stakeholders? What is your general approach to a security design review?",
+   "stripped": "when did you escalate and to whom how do you handle competing priorities from different stakeholders what is your general approach to a security design review",
+   "filler": "when did you escalate and to whom um how do you handle competing priorities from different stakeholders um what is your general approach to a security design review"
+  },
+  {
+   "id": "b105",
+   "expect": 2,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you secure agent tool use?",
+    "What is memory poisoning?"
+   ],
+   "punctuated": "How do you secure agent tool use? What is memory poisoning?",
+   "stripped": "how do you secure agent tool use what is memory poisoning",
+   "filler": "how do you secure agent tool use uh what is memory poisoning"
+  },
+  {
+   "id": "b106",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "What is the underlying root cause, rather than the immediate symptom?",
+    "Why BNY and why this role?",
+    "What privilege or user interaction is required?"
+   ],
+   "punctuated": "What is the underlying root cause, rather than the immediate symptom? Why BNY and why this role? What privilege or user interaction is required?",
+   "stripped": "what is the underlying root cause rather than the immediate symptom why bny and why this role what privilege or user interaction is required",
+   "filler": "what is the underlying root cause rather than the immediate symptom and why bny and why this role and what privilege or user interaction is required"
+  },
+  {
+   "id": "b107",
+   "expect": 4,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADMJ6RQA4CSP6Z1C1MDGA.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADMJ6RQA4CSP6Z1C1MDGA.txt"
+   ],
+   "questions": [
+    "Do you have any questions for us?",
+    "What does PTA add that the Vault audit log does not?",
+    "How do you secure RAG?",
+    "How does EPM fit with your EDR, and are they not doing the same thing?"
+   ],
+   "punctuated": "Do you have any questions for us? What does PTA add that the Vault audit log does not? How do you secure RAG? How does EPM fit with your EDR, and are they not doing the same thing?",
+   "stripped": "do you have any questions for us what does pta add that the vault audit log does not how do you secure rag how does epm fit with your edr and are they not doing the same thing",
+   "filler": "do you have any questions for us so what does pta add that the vault audit log does not so how do you secure rag so how does epm fit with your edr and are they not doing the same thing"
+  },
+  {
+   "id": "b108",
+   "expect": 2,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "How do you judge whether a compensating control is effective?",
+    "What is your approach to running control-owner triage calls?"
+   ],
+   "punctuated": "How do you judge whether a compensating control is effective? What is your approach to running control-owner triage calls?",
+   "stripped": "how do you judge whether a compensating control is effective what is your approach to running control-owner triage calls",
+   "filler": "how do you judge whether a compensating control is effective so what is your approach to running control-owner triage calls"
+  },
+  {
+   "id": "b109",
+   "expect": 3,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you handle scanner findings?",
+    "Who can modify workflow definitions, reusable actions, deployment scripts, and protected branches?",
+    "Where do AI guardrails belong?"
+   ],
+   "punctuated": "How do you handle scanner findings? Who can modify workflow definitions, reusable actions, deployment scripts, and protected branches? Where do AI guardrails belong?",
+   "stripped": "how do you handle scanner findings who can modify workflow definitions reusable actions deployment scripts and protected branches where do ai guardrails belong",
+   "filler": "how do you handle scanner findings okay who can modify workflow definitions reusable actions deployment scripts and protected branches okay where do ai guardrails belong"
+  },
+  {
+   "id": "b110",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AEQGSDDEQ0AEVB80TCHRY.txt"
+   ],
+   "questions": [
+    "Which controls or risk categories were being assessed?",
+    "Is there evidence that the control operated in the assessment period?"
+   ],
+   "punctuated": "Which controls or risk categories were being assessed? Is there evidence that the control operated in the assessment period?",
+   "stripped": "which controls or risk categories were being assessed is there evidence that the control operated in the assessment period",
+   "filler": "which controls or risk categories were being assessed and is there evidence that the control operated in the assessment period"
+  },
+  {
+   "id": "b111",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD45A9R50AP1Q4DK6DVP5.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "What was the actual control requirement?",
+    "How many PSM connection components did you build?",
+    "What is the smallest safe proof that answers the business risk question?"
+   ],
+   "punctuated": "What was the actual control requirement? How many PSM connection components did you build? What is the smallest safe proof that answers the business risk question?",
+   "stripped": "what was the actual control requirement how many psm connection components did you build what is the smallest safe proof that answers the business risk question",
+   "filler": "what was the actual control requirement so how many psm connection components did you build so what is the smallest safe proof that answers the business risk question"
+  },
+  {
+   "id": "b112",
+   "expect": 4,
+   "sources": [
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How do you handle it when a peer disagrees with your control design?",
+    "What data inputs did you rely on?",
+    "How do you prioritize several findings before release?",
+    "How do you assess residual risk?"
+   ],
+   "punctuated": "How do you handle it when a peer disagrees with your control design? What data inputs did you rely on? How do you prioritize several findings before release? How do you assess residual risk?",
+   "stripped": "how do you handle it when a peer disagrees with your control design what data inputs did you rely on how do you prioritize several findings before release how do you assess residual risk",
+   "filler": "how do you handle it when a peer disagrees with your control design and what data inputs did you rely on and how do you prioritize several findings before release and how do you assess residual risk"
+  },
+  {
+   "id": "b113",
+   "expect": 2,
+   "sources": [
+    "01M65AEKFXRA0465GSQ9K87VSK.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How do you decide which control gaps to fix first?",
+    "How do you review an API?"
+   ],
+   "punctuated": "How do you decide which control gaps to fix first? How do you review an API?",
+   "stripped": "how do you decide which control gaps to fix first how do you review an api",
+   "filler": "how do you decide which control gaps to fix first um how do you review an api"
+  },
+  {
+   "id": "b114",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADMJ6RQA4CSP6Z1C1MDGA.txt"
+   ],
+   "questions": [
+    "What was the eventual decision and how did it affect delivery or risk?",
+    "How do you review a containerized workload?",
+    "How would you remove local admin rights from 30,000 endpoints without causing a support disaster?"
+   ],
+   "punctuated": "What was the eventual decision and how did it affect delivery or risk? How do you review a containerized workload? How would you remove local admin rights from 30,000 endpoints without causing a support disaster?",
+   "stripped": "what was the eventual decision and how did it affect delivery or risk how do you review a containerized workload how would you remove local admin rights from 30000 endpoints without causing a support disaster",
+   "filler": "what was the eventual decision and how did it affect delivery or risk so how do you review a containerized workload so how would you remove local admin rights from 30000 endpoints without causing a support disaster"
+  },
+  {
+   "id": "b115",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "How did we detect the issue, and how long may it have existed?",
+    "How would you distinguish SailPoint/IGA from CyberArk/PAM and ServiceNow GRC?"
+   ],
+   "punctuated": "How did we detect the issue, and how long may it have existed? How would you distinguish SailPoint/IGA from CyberArk/PAM and ServiceNow GRC?",
+   "stripped": "how did we detect the issue and how long may it have existed how would you distinguish sailpointiga from cyberarkpam and servicenow grc",
+   "filler": "how did we detect the issue and how long may it have existed okay how would you distinguish sailpointiga from cyberarkpam and servicenow grc"
+  },
+  {
+   "id": "b116",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "How would you validate a Power BI or SQL report before leadership sees it?",
+    "How do you keep multiple projects and teams on track?",
+    "How do you interpret NIST 800-53 design and operating effectiveness?"
+   ],
+   "punctuated": "How would you validate a Power BI or SQL report before leadership sees it? How do you keep multiple projects and teams on track? How do you interpret NIST 800-53 design and operating effectiveness?",
+   "stripped": "how would you validate a power bi or sql report before leadership sees it how do you keep multiple projects and teams on track how do you interpret nist 800-53 design and operating effectiveness",
+   "filler": "how would you validate a power bi or sql report before leadership sees it uh how do you keep multiple projects and teams on track uh how do you interpret nist 800-53 design and operating effectiveness"
+  },
+  {
+   "id": "b117",
+   "expect": 4,
+   "sources": [
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65ADDQ09E6HC1AGDN9YP4KD.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "What is a dangerous cloud IAM pattern?",
+    "What is your experience with NIST CSF versus NIST 800-53?",
+    "What is the difference between CIP-005 and CIP-007?",
+    "How do you test prompt injection?"
+   ],
+   "punctuated": "What is a dangerous cloud IAM pattern? What is your experience with NIST CSF versus NIST 800-53? What is the difference between CIP-005 and CIP-007? How do you test prompt injection?",
+   "stripped": "what is a dangerous cloud iam pattern what is your experience with nist csf versus nist 800-53 what is the difference between cip-005 and cip-007 how do you test prompt injection",
+   "filler": "what is a dangerous cloud iam pattern so what is your experience with nist csf versus nist 800-53 so what is the difference between cip-005 and cip-007 so how do you test prompt injection"
+  },
+  {
+   "id": "b118",
+   "expect": 2,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "What prevented the IAM issue from recurring?",
+    "What is your approach when a team repeatedly misses milestones?"
+   ],
+   "punctuated": "What prevented the IAM issue from recurring? What is your approach when a team repeatedly misses milestones?",
+   "stripped": "what prevented the iam issue from recurring what is your approach when a team repeatedly misses milestones",
+   "filler": "what prevented the iam issue from recurring so what is your approach when a team repeatedly misses milestones"
+  },
+  {
+   "id": "b119",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "What is the difference between an alert, vulnerability and a control issue?",
+    "How do you handle disagreement with a remediation owner?",
+    "what did your team control?"
+   ],
+   "punctuated": "What is the difference between an alert, vulnerability and a control issue? How do you handle disagreement with a remediation owner? what did your team control?",
+   "stripped": "what is the difference between an alert vulnerability and a control issue how do you handle disagreement with a remediation owner what did your team control",
+   "filler": "what is the difference between an alert vulnerability and a control issue okay how do you handle disagreement with a remediation owner okay what did your team control"
+  },
+  {
+   "id": "b120",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD5CWZ6MY4JZAJH884AHT.txt"
+   ],
+   "questions": [
+    "How does the CRI Profile fit financial services?",
+    "Which investigations and reviews would you want this person to own first?"
+   ],
+   "punctuated": "How does the CRI Profile fit financial services? Which investigations and reviews would you want this person to own first?",
+   "stripped": "how does the cri profile fit financial services which investigations and reviews would you want this person to own first",
+   "filler": "how does the cri profile fit financial services uh which investigations and reviews would you want this person to own first"
+  },
+  {
+   "id": "b121",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt"
+   ],
+   "questions": [
+    "How would you prioritize the first 90 days across 27 control areas?",
+    "What changed in the risk discussion because of the report?",
+    "How do you threat model a microservice architecture?"
+   ],
+   "punctuated": "How would you prioritize the first 90 days across 27 control areas? What changed in the risk discussion because of the report? How do you threat model a microservice architecture?",
+   "stripped": "how would you prioritize the first 90 days across 27 control areas what changed in the risk discussion because of the report how do you threat model a microservice architecture",
+   "filler": "how would you prioritize the first 90 days across 27 control areas um what changed in the risk discussion because of the report um how do you threat model a microservice architecture"
+  },
+  {
+   "id": "b122",
+   "expect": 4,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65ADF44H15TQ4K5VFJ6N71H.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "How do you distinguish an incomplete RCA from a complete one?",
+    "What is the difference between IT and OT incident response?",
+    "How would you write a five-part finding for excessive production administrator access?",
+    "How do you use Python to connect vulnerability information to a risk record?"
+   ],
+   "punctuated": "How do you distinguish an incomplete RCA from a complete one? What is the difference between IT and OT incident response? How would you write a five-part finding for excessive production administrator access? How do you use Python to connect vulnerability information to a risk record?",
+   "stripped": "how do you distinguish an incomplete rca from a complete one what is the difference between it and ot incident response how would you write a five-part finding for excessive production administrator access how do you use python to connect vulnerability information to a risk record",
+   "filler": "how do you distinguish an incomplete rca from a complete one uh what is the difference between it and ot incident response uh how would you write a five-part finding for excessive production administrator access uh how do you use python to connect vulnerability information to a risk record"
+  },
+  {
+   "id": "b123",
+   "expect": 2,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65ADSYK91A1EZP69ZJ40RXA.txt"
+   ],
+   "questions": [
+    "What did you do in the Citi, CVS and City of San Diego control environments?",
+    "How do you plan segmentation without breaking clinical systems?"
+   ],
+   "punctuated": "What did you do in the Citi, CVS and City of San Diego control environments? How do you plan segmentation without breaking clinical systems?",
+   "stripped": "what did you do in the citi cvs and city of san diego control environments how do you plan segmentation without breaking clinical systems",
+   "filler": "what did you do in the citi cvs and city of san diego control environments um how do you plan segmentation without breaking clinical systems"
+  },
+  {
+   "id": "b124",
+   "expect": 3,
+   "sources": [
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65ADW78G7ES4MK3QHTMM2DC.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "What is the smallest safe proof that answers the risk question?",
+    "How do you stop analysts becoming deskilled or over-reliant on the agent?",
+    "What artifacts did you personally create, and who approved closure?"
+   ],
+   "punctuated": "What is the smallest safe proof that answers the risk question? How do you stop analysts becoming deskilled or over-reliant on the agent? What artifacts did you personally create, and who approved closure?",
+   "stripped": "what is the smallest safe proof that answers the risk question how do you stop analysts becoming deskilled or over-reliant on the agent what artifacts did you personally create and who approved closure",
+   "filler": "what is the smallest safe proof that answers the risk question okay how do you stop analysts becoming deskilled or over-reliant on the agent okay what artifacts did you personally create and who approved closure"
+  },
+  {
+   "id": "b125",
+   "expect": 2,
+   "sources": [
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt",
+    "01M65ADMJ6RQA4CSP6Z1C1MDGA.txt"
+   ],
+   "questions": [
+    "What data is allowed into long-term memory?",
+    "How do you tune EPM policy to reduce false positives at scale?"
+   ],
+   "punctuated": "What data is allowed into long-term memory? How do you tune EPM policy to reduce false positives at scale?",
+   "stripped": "what data is allowed into long-term memory how do you tune epm policy to reduce false positives at scale",
+   "filler": "what data is allowed into long-term memory so how do you tune epm policy to reduce false positives at scale"
+  },
+  {
+   "id": "b126",
+   "expect": 3,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt"
+   ],
+   "questions": [
+    "How have you used NIST CSF, NIST SP 800-53 and the CRI Profile in actual assessments?",
+    "What framework and version were you using?",
+    "What new evidence did the owner provide?"
+   ],
+   "punctuated": "How have you used NIST CSF, NIST SP 800-53 and the CRI Profile in actual assessments? What framework and version were you using? What new evidence did the owner provide?",
+   "stripped": "how have you used nist csf nist sp 800-53 and the cri profile in actual assessments what framework and version were you using what new evidence did the owner provide",
+   "filler": "how have you used nist csf nist sp 800-53 and the cri profile in actual assessments uh what framework and version were you using uh what new evidence did the owner provide"
+  },
+  {
+   "id": "b127",
+   "expect": 4,
+   "sources": [
+    "01M65AD079BBVNFNY0NY8D684J.txt",
+    "01M65ADF44H15TQ4K5VFJ6N71H.txt",
+    "01M65AD6RDMNCDNAWYM3ADKWP7.txt",
+    "01M65ADBX0PJ670J8MXWBY6HHX.txt"
+   ],
+   "questions": [
+    "When is residual risk unacceptable after remediation?",
+    "How would you approach securing an OT environment you have just inherited?",
+    "How would you enforce object level authorization on every request?",
+    "What identity does the next component trust?"
+   ],
+   "punctuated": "When is residual risk unacceptable after remediation? How would you approach securing an OT environment you have just inherited? How would you enforce object level authorization on every request? What identity does the next component trust?",
+   "stripped": "when is residual risk unacceptable after remediation how would you approach securing an ot environment you have just inherited how would you enforce object level authorization on every request what identity does the next component trust",
+   "filler": "when is residual risk unacceptable after remediation um how would you approach securing an ot environment you have just inherited um how would you enforce object level authorization on every request um what identity does the next component trust"
+  },
+  {
+   "id": "b128",
+   "expect": 2,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD079BBVNFNY0NY8D684J.txt"
+   ],
+   "questions": [
+    "How were gaps and exceptions recorded?",
+    "What would you ask the hiring manager and risk decisioning lead?"
+   ],
+   "punctuated": "How were gaps and exceptions recorded? What would you ask the hiring manager and risk decisioning lead?",
+   "stripped": "how were gaps and exceptions recorded what would you ask the hiring manager and risk decisioning lead",
+   "filler": "how were gaps and exceptions recorded so what would you ask the hiring manager and risk decisioning lead"
+  },
+  {
+   "id": "b129",
+   "expect": 3,
+   "sources": [
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AD268NGWTW1BWZTNMC2DQ.txt",
+    "01M65AEKFXRA0465GSQ9K87VSK.txt"
+   ],
+   "questions": [
+    "What would make the remediation fail or slip?",
+    "What interim controls exist, how do they work, and what evidence proves them?",
+    "How do you report control findings to leadership?"
+   ],
+   "punctuated": "What would make the remediation fail or slip? What interim controls exist, how do they work, and what evidence proves them? How do you report control findings to leadership?",
+   "stripped": "what would make the remediation fail or slip what interim controls exist how do they work and what evidence proves them how do you report control findings to leadership",
+   "filler": "what would make the remediation fail or slip uh what interim controls exist how do they work and what evidence proves them uh how do you report control findings to leadership"
+  }
+ ],
+ "singles": [
+  "What artifacts did you personally create, and who approved closure?",
+  "What prevented the IAM issue from recurring?",
+  "How would you write a five-part finding for excessive production administrator access?",
+  "How do you handle a finding when root cause is uncertain?",
+  "What makes a ServiceNow control issue audit-ready?",
+  "How would you describe your level of ServiceNow GRC experience?",
+  "How would you validate a Power BI or SQL report before leadership sees it?",
+  "What would you do if the control owner claimed a remediation is done, but evidence disagrees?",
+  "How do you challenge a root-cause analysis submitted by a control owner?",
+  "What do you do when a critical vulnerability affects multiple banking applications and misses the deadline?",
+  "How would you prioritize the first 90 days across 27 control areas?",
+  "How do you manage policy deviations and security exceptions?",
+  "How do you judge whether a compensating control is effective?",
+  "When is residual risk unacceptable after remediation?",
+  "How have you used NIST CSF, NIST SP 800-53 and the CRI Profile in actual assessments?",
+  "How do you use Python to connect vulnerability information to a risk record?",
+  "How would you distinguish SailPoint/IGA from CyberArk/PAM and ServiceNow GRC?",
+  "How do you evaluate a dashboard you did not personally build?",
+  "What is your approach to running control-owner triage calls?",
+  "How do you handle disagreement with a remediation owner?",
+  "What did you do in the Citi, CVS and City of San Diego control environments?",
+  "How do you assess a firewall control gap without breaking production?",
+  "How would you validate a critical issue closure if Splunk shows zero alerts?",
+  "What should an effective policy exception approval contain for audit?",
+  "How would you verify issue remediation across many applications or accounts?",
+  "How do you interpret NIST 800-53 design and operating effectiveness?",
+  "How would you decide between remediation and formal risk acceptance?",
+  "What do you do when interviewers ask what you would change in ServiceNow?",
+  "What is the difference between an alert, vulnerability and a control issue?",
+  "What is your approach when the owner disputes the severity rating?",
+  "Why are you interested in this work and what is your greatest strength?",
+  "What would you ask the hiring manager and risk decisioning lead?",
+  "How do you evaluate whether a remediation plan leaves an unacceptable level of residual risk?",
+  "Why BNY and why this role?",
+  "What precisely failed, against which control requirement?",
+  "How did we detect the issue, and how long may it have existed?",
+  "Which assets, accounts, applications, or legal entities are in scope?",
+  "How did you establish population completeness?",
+  "What is the underlying root cause, rather than the immediate symptom?",
+  "What evidence distinguishes your hypothesis from other plausible causes?",
+  "What corrective action prevents recurrence?",
+  "Who owns each action, and what are the dated milestones/dependencies?",
+  "What would make the remediation fail or slip?",
+  "What interim controls exist, how do they work, and what evidence proves them?",
+  "What residual risk remains until closure, and who is authorized to accept it?",
+  "What closure test demonstrates the control works consistently, not once?",
+  "What does it mean to challenge a control issue?",
+  "How do you distinguish an incomplete RCA from a complete one?",
+  "How would you evaluate a compensating control?",
+  "How do you prioritize 50 open issues with limited resources?",
+  "How do you assess residual risk?",
+  "What did you do at CVS Health?",
+  "What is your approach when a team repeatedly misses milestones?",
+  "What is your experience with NIST CSF versus NIST 800-53?",
+  "How does the CRI Profile fit financial services?",
+  "What is your ServiceNow GRC experience?",
+  "How do you explain risk to an executive who isn\u2019t technical?",
+  "Are you a control tester or a risk analyst?",
+  "What dashboards or data tools have you used?",
+  "How do you know whether a remediation is sustainable?",
+  "Have you challenged someone senior to you?",
+  "How do you stay organized?",
+  "Why are you leaving your current role?",
+  "What would you do in your first 30 days?",
+  "How do you keep multiple projects and teams on track?",
+  "What questions do you have for me?",
+  "What was the actual control requirement?",
+  "What business assets or processes were exposed?",
+  "How did you evaluate temporary controls?",
+  "What framework and version were you using?",
+  "How did it map to actual internal controls?",
+  "Which controls or risk categories were being assessed?",
+  "What evidence distinguished implementation from effective operation?",
+  "How were gaps and exceptions recorded?",
+  "What judgment did you provide rather than merely copying a mapping?",
+  "What data inputs did you rely on?",
+  "How did you check duplicates, missing owners, overdue dates, and stale data?",
+  "What changed in the risk discussion because of the report?",
+  "What did you personally build, configure, review, or present?",
+  "What facts were disputed?",
+  "Did you ask clarifying questions before reaching a conclusion?",
+  "What new evidence did the owner provide?",
+  "How did you document unresolved assumptions?",
+  "When did you escalate and to whom?",
+  "What was the eventual decision and how did it affect delivery or risk?",
+  "How many PSM connection components did you build?",
+  "What did the latest DR test actually prove?",
+  "How do you document compensating controls?",
+  "Which investigations and reviews would you want this person to own first?",
+  "Where do handoffs between the SOC, network team, and application owners become difficult?",
+  "What evidence do you expect before a firewall review is considered complete?",
+  "How do you handle emergency containment when the primary lead is unavailable?",
+  "Which upcoming changes will require the most support from this position?",
+  "What would make you confident after 90 days that this hire is succeeding?",
+  "Who can modify workflow definitions, reusable actions, deployment scripts, and protected branches?",
+  "What secrets or cloud credentials are exposed to pull requests or untrusted build steps?",
+  "What privilege or user interaction is required?",
+  "What is the smallest safe proof that answers the business risk question?",
+  "How do you threat model a microservice architecture?",
+  "How do you test BOLA or IDOR?",
+  "How do you review an API?",
+  "What makes a vulnerability exploitable?",
+  "How do you validate remediation?",
+  "How do you review cloud security?",
+  "What is a dangerous cloud IAM pattern?",
+  "What do you look for in CI/CD?",
+  "How do you threat model an AI agent?",
+  "How do you test prompt injection?",
+  "How do you secure agent tool use?",
+  "How do you secure RAG?",
+  "What is memory poisoning?",
+  "Where do AI guardrails belong?",
+  "How do you review a containerized workload?",
+  "What does a privacy design review look like?",
+  "How do you handle scanner findings?",
+  "How do you think about third party security?",
+  "How do you prioritize several findings before release?",
+  "Can you walk me through your professional journey?",
+  "What kinds of applications have you worked with?",
+  "Have you designed authorization for a multi tenant API?",
+  "How would you enforce object level authorization on every request?",
+  "Would you do object checks on every request, or use a central policy layer?",
+  "What is your general approach to a security design review?",
+  "What are the most common high impact risks you see in design reviews?",
+  "What are the common causes of cross tenant data leakage?",
+  "How would you classify and prioritize threat model findings?",
+  "What methods do you use for threat modeling?",
+  "Which tools have you used for vulnerability assessment?",
+  "Have you automated vulnerability assessment or security validation?",
+  "What do you do when an engineering team or vendor disagrees with your finding?",
+  "Do you have any questions for us?",
+  "what did your team control?",
+  "What does the attacker control?",
+  "What identity does the next component trust?",
+  "What resource or action is privileged?",
+  "What if the upstream component is compromised?",
+  "What if the authorization service is unavailable?",
+  "What does telemetry let us reconstruct after abuse?",
+  "Who can modify workflow definitions and protected branches?",
+  "What secrets/tokens are available to pull requests or untrusted build steps?",
+  "What data is allowed into long-term memory?",
+  "Is there a compensating control that really blocks the path?",
+  "What telemetry shows attempted or successful exploitation?",
+  "What is the smallest safe proof that answers the risk question?",
+  "How many onsite days per week?",
+  "Who is the end client?",
+  "What is the interview structure - recruiter, hiring manager, technical design, panel?",
+  "What is the W2/C2C/contract arrangement?",
+  "What is the pay-rate range and overtime expectation, if any?",
+  "What is least privilege in a distributed system?",
+  "How do you test BOLA/IDOR?",
+  "What is excessive agency?",
+  "How do you secure tool use?",
+  "Where do guardrails belong?",
+  "How do you evaluate an AI red-team result?",
+  "What is the difference between CIP-005 and CIP-007?",
+  "What does CIP-007 require on patching?",
+  "What is a BES Cyber Asset?",
+  "What has to be reported and how fast?",
+  "How have you handled configuration change monitoring for CIP-010?",
+  "How would you approach securing an OT environment you have just inherited?",
+  "How do you monitor an OT network without disrupting it?",
+  "What is the difference between IT and OT incident response?",
+  "How would you secure vendor remote access into the plant?",
+  "How would you remove local admin rights from 30,000 endpoints without causing a support disaster?",
+  "How do you tune EPM policy to reduce false positives at scale?",
+  "How does EPM fit with your EDR, and are they not doing the same thing?",
+  "How do you handle application-to-application credentials?",
+  "What does PTA add that the Vault audit log does not?",
+  "How would you approach the UPS and power monitoring work?",
+  "How would you approach finishing the core migration cleanup?",
+  "How comfortable are you leading and giving direction to a small team?",
+  "How would you approach the network lifecycle refresh in a live hospital?",
+  "How do you plan segmentation without breaking clinical systems?",
+  "What happens when the model provider has an outage or changes the model under you?",
+  "How do you stop analysts becoming deskilled or over-reliant on the agent?",
+  "How do you plan and validate network segmentation without breaking clinical systems?",
+  "How do you speak about controls to people who do not have a security background?",
+  "How do you handle it when a peer disagrees with your control design?",
+  "What do you do when a control owner will not give you the information you need?",
+  "How do you decide which control gaps to fix first?",
+  "How do you report control findings to leadership?",
+  "How do you design evidence requirements?",
+  "How do you write a control requirement that an engineer can actually build from?",
+  "How do you connect a cloud security tool like Wiz into a control framework?",
+  "What do you do when engineering tells you your requirement cannot be built?",
+  "How do you handle competing priorities from different stakeholders?",
+  "What does good look like to you in a controls programme?",
+  "Why do you want this role?",
+  "Is there a clear control objective that ties to a specific risk?",
+  "Is there evidence that the control operated in the assessment period?"
+ ]
+}
