@@ -113,8 +113,11 @@ test('Named-term repair is integrated with the existing grounding path',()=>{
  // Named terms are a core repair check, run on the first answer and on every rewrite (repairChecks).
  assert.match(s,/const named = missingNamedQuestionTerms\(job\.question, text\)/)
  assert.match(s,/missing-named-term:/)
- assert.match(s,/repairChecks\(job, guardedText\)/)
- assert.match(s,/repairChecks\(job, rg\.text\)/)
+ // 29 Oct 2026: the loop moved to runRepairLoop (kompasRepair.ts), which runs `checks` on the first answer and on every
+ // guarded rewrite; scripts/tests/kompas-repair-harness.test.mjs proves that with recorded model outputs.
+ assert.match(s,/runRepairLoop\(guardedText, \{/)
+ assert.match(s,/checks: \(text\) => repairChecks\(job, text\)/)
+ assert.match(s,/guard: \(text\) => applyGuards\(text, job\.guardFacts, job\.allowed, job\.askedFigures\)\.text/)
 })
 
 test('JD keywords must not flood social and definition turns',()=>{

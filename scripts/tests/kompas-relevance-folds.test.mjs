@@ -143,7 +143,7 @@ test("the repair prompt no longer contradicts the ceiling or the tangent rule", 
   const service = readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8")
   assert.match(service, /repair = settleRepair\(job, repair, finalText\)/)
   assert.match(service, /type: "done", degraded, guarded: g\.guarded, verified, repaired, repair,/)
-  assert.match(service, /ANSWER:\\n\$\{best\.text\}/)
+  assert.match(service, /ANSWER:\\n\$\{best\}/)
 })
 
 test("repair outcome: kept on any core fix, partial is visible, a later cut is reported", () => {

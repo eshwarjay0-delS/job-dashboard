@@ -410,7 +410,7 @@ async function repairStructure(job: AnswerJob, guardedText: string, req: NextReq
     guard: (text) => applyGuards(text, job.guardFacts, job.allowed, job.askedFigures).text,
     rewrite: async (best, missing) => {
       const removeTangent = missing.some((m) => m.startsWith("remove the unasked technical tangent"))
-      const { text } = await fetchOpenRouter(job.orKey, PAID_MODEL, structureRepairSystem(job.plan.words, removeTangent),
+      const { text } = await fetchOpenRouter(job.orKey || "", PAID_MODEL, structureRepairSystem(job.plan.words, removeTangent),
         `QUESTION: ${job.question}\n\nANSWER:\n${best}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}\n\nThe rewritten answer MUST contain each item above. Return the full rewritten answer and nothing else.`,
         1600, AbortSignal.any([req.signal, AbortSignal.timeout(60000)]))
       return text
