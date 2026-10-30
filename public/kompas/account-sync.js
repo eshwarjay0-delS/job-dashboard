@@ -104,7 +104,8 @@
           cursor = page.nextCursor;
         }
         const nextOwner=data.userId;
-        if(owner!==nextOwner){
+        const firstPullForOwner = owner !== nextOwner;
+        if(firstPullForOwner){
           if(owner)persist();
           const previous=storage.getItem(prefix+"owner")||"";
           const unscoped=read();
@@ -122,7 +123,7 @@
         // previously created sessions offline. Those missing from the server
         // are queued, but never infer the ownership of unscoped legacy records.
         const knownIds=new Set((data.records||[]).map(r=>r.id));
-        for (const s of local) if(!knownIds.has(s.id) && !pending[s.id]){
+        for (const s of local) if(firstPullForOwner && !knownIds.has(s.id) && !pending[s.id]){
           const op=delta([],[s])[0];if(op)queue(op);
         }
         remoteWrite(combine(data.records||[],local,pending));
