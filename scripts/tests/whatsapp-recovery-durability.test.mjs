@@ -194,3 +194,55 @@ test("legacy lookup does not confuse identical job text from separate senders", 
   assert.equal(await api.hasResumeRecoveryForJD("b", "user", "Cloud Security Consultant"), true)
   assert.equal(await api.hasResumeRecoveryForJD("c", "user", "Cloud Security Consultant"), false)
 })
+
+// Route-budget regression: a slow legacy bootstrap must not consume the time
+// reserved for a signed-delivery-safe send, state writes, and final cron counts.
+const budgetSource = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../src/lib/whatsapp-recovery-budget.ts"), "utf8")
+const budgetCompiled = ts.transpileModule(budgetSource, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText
+const budgetModule = { exports: {} }
+vm.runInNewContext(budgetCompiled, { module: budgetModule, exports: budgetModule.exports, Date, Math, Number })
+const budget = budgetModule.exports.recoveryTailorBudget
+
+test("recovery route reserves a finish window across ten bootstrap durations", () => {
+  const now = 1_800_000_000_000
+  const cases = [
+    [0, 240_000], [1_000, 240_000], [15_000, 240_000],
+    [30_000, 225_000], [60_000, 195_000], [100_000, 155_000],
+    [150_000, 105_000], [210_000, 45_000], [220_000, 35_000],
+    [250_000, 5_000],
+  ]
+  for (const [elapsed, expected] of cases) {
+    const actual = budget(now - elapsed, now)
+    assert.equal(actual, expected, "elapsed " + elapsed)
+    assert.ok(actual + elapsed + 45_000 <= 300_000)
+  }
+})
+
+test("recovery budget rejects invalid and exhausted runtime", () => {
+  const now = 1_800_000_000_000
+  assert.equal(budget(now - 300_000, now), 0)
+  assert.equal(budget(NaN, now), 0)
+  assert.equal(budget(now, Infinity), 0)
+  assert.equal(budget(now, now, NaN), 0)
+  assert.equal(budget(now, now, 20_000), 20_000)
+  assert.equal(budget(now + 1000, now), 240_000)
+})
+
+test("authenticated recovery route checkpoints progress before long work and uses remaining budget", () => {
+  const route = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../src/app/api/whatsapp/webhook/route.ts"), "utf8")
+  const start = route.indexOf("async function recoverResumeJobsInner(")
+  const end = route.indexOf("async function emailSlots(", start)
+  assert.ok(start > 0 && end > start)
+  const worker = route.slice(start, end)
+  const auth = worker.indexOf('return NextResponse.json({ error: "Unauthorized" }')
+  const checkpoint = worker.indexOf('stage: "authenticated"')
+  const bootstrap = worker.indexOf("await bootstrapLegacyResumeFailures()")
+  assert.ok(auth >= 0 && checkpoint > auth && bootstrap > checkpoint)
+  assert.ok(worker.includes("recoveryTailorBudget(startedAt)"))
+  assert.ok(worker.includes("budget < RECOVERY_MIN_TAILOR_MS"))
+  assert.ok(worker.includes("job.userId, budget, job.files, true"))
+  assert.ok(worker.includes('stage: "attempt_started"'))
+  assert.ok(worker.includes('stage: "attempt_finished"'))
+})
