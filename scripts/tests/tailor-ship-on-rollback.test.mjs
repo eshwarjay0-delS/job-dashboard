@@ -1,5 +1,5 @@
 // WhatsApp refusal 30 Oct 2026 10:40 AM CT (Salesforce Security Specialist): the job-post terms rollback restored every
-// paragraph, roles_unrewritten fired and the file was refused at 0%. Owner rule: a file is never refused over JD terms.
+// paragraph. Restored source text must never be mistaken for a complete tailored experience rewrite.
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync, existsSync } from "node:fs"
@@ -31,12 +31,12 @@ test("bug: the shipped module exists and tailor.ts builds its role blockers thro
   assert.doesNotMatch(t, /lackingRoles\(best\.edits\)\.length \? \["roles_unrewritten"\]/)
 })
 
-test("bug: rollback-restored roles are not roles_unrewritten / role_evidence_gaps (switch on by default)", () => {
+test("rollback-restored roles still require evidence and rewrites", () => {
   const m = load(MOD)
-  assert.deepEqual([...m.roleQualityBlockers(live, {})], [])
+  assert.deepEqual([...m.roleQualityBlockers(live, {})], ["roles_unrewritten", "role_evidence_gaps"])
 })
 
-test("bug: the live case is delivered with the shortfall label, not refused", () => {
+test("incomplete 0% draft is rejected, not sent with a shortfall label", () => {
   const m = load(MOD)
   const acc = load("src/lib/whatsapp-resume-acceptance.ts")
   const result = {
@@ -44,21 +44,24 @@ test("bug: the live case is delivered with the shortfall label, not refused", ()
     quality: resumeQuality({ matched: 0, total: 8, missing: ["siem", "aws", "okta"], partial: m.roleQualityBlockers(live, {}).length > 0 }),
     unverified_added_keywords: [], quality_blockers: m.roleQualityBlockers(live, {}), bullets_reverted_for_jd_terms: 9,
   }
-  assert.deepEqual([...acc.whatsappResumeRejectionReasons(result)], [])
-  assert.equal(acc.deliveredWithShortfall(result), true)
+  const reasons = acc.whatsappResumeRejectionReasons(result)
+  for (const blocker of ["quality_incomplete", "roles_unrewritten", "role_evidence_gaps"])
+    assert.ok(reasons.includes(blocker), blocker)
+  assert.equal(acc.deliveredWithShortfall(result), false)
 })
 
-test("TAILOR_SHIP_ON_ROLLBACK=0 restores the old blockers", () => {
+test("legacy switch off still blocks incomplete experience", () => {
   for (const v of ["0", "false", "off", "no"]) {
     const m = load(MOD, { TAILOR_SHIP_ON_ROLLBACK: v })
     assert.deepEqual([...m.roleQualityBlockers(live)], ["roles_unrewritten", "role_evidence_gaps"])
   }
 })
 
-test("only rollback-caused gaps are excused", () => {
+test("rollback or JD gate cannot excuse missing roles; complete roles pass", () => {
   const m = load(MOD)
   assert.deepEqual([...m.roleQualityBlockers({ ...live, bulletsReverted: 0 }, {})], ["roles_unrewritten", "role_evidence_gaps"])
   assert.deepEqual([...m.roleQualityBlockers({ ...live, jdGate: false }, {})], ["roles_unrewritten", "role_evidence_gaps"])
+  assert.deepEqual([...m.roleQualityBlockers(live, { TAILOR_SHIP_ON_ROLLBACK: "1" })], ["roles_unrewritten", "role_evidence_gaps"])
   assert.deepEqual([...m.roleQualityBlockers({ ...live, splitDraft: false }, {})], [])
   assert.deepEqual([...m.roleQualityBlockers({ ...live, skillsOnly: true }, {})], [])
   assert.deepEqual([...m.roleQualityBlockers({ ...live, bulletsReverted: 0, lackingRoleCount: 0, experienceComplete: true }, {})], [])
