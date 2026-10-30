@@ -56,7 +56,8 @@ export const KOMPAS_LOGISTICS_TERMS: string[] = [
 export const KOMPAS_LOGISTICS_UNAMBIGUOUS = /\bcurrent(?:ly)? (?:location|located|based|living)\b|\byour (?:home |current )?address\b|\bwhere (?:do you live|are you (?:based|located|living))\b|\bnotice period\b|\bsalary (?:expectation|range|requirement)s?\b|\b(?:need|require)\b.{0,25}\bsponsorship\b|\bauthori[sz]ed to work\b|\bwork authori[sz]ation\b/i
 const HANDOFF_LOGISTICS = new RegExp(KOMPAS_LOGISTICS_TERMS.join("|"), "gim")
 // Our false-positive protections: resume and GRC wording that only looks like logistics.
-const NOT_LOGISTICS = /\b(?:executive|business|project|program(?:me)?|risk|control|budget)\s+sponsors?\b|\bcitizen[- ](?:services?|facing|portal|data|records?|experience|requests?)\b|\btravel\s+(?:and|&)\s+expense\b|\baddress(?:es|ed|ing)?\s+(?:the|a|its|each|every)\b/gi
+// demo-final: "hybrid identity / cloud / environment / integration ..." is technical resume content, not a work arrangement.
+const NOT_LOGISTICS = /\b(?:executive|business|project|program(?:me)?|risk|control|budget)\s+sponsors?\b|\bcitizen[- ](?:services?|facing|portal|data|records?|experience|requests?)\b|\btravel\s+(?:and|&)\s+expense\b|\baddress(?:es|ed|ing)?\s+(?:the|a|its|each|every)\b|\bhybrid[\s-]+(?:identit(?:y|ies)|cloud|clouds|environments?|integrations?|infrastructure|architecture|deployments?|directory|AD|Azure\s+AD|Entra|join(?:ed)?|network(?:ing|s)?|connectivity|workloads?|IAM|PKI|key\s+management)\b/gi
 const LOGISTICS: RegExp[] = [
   /\b(?:visa|h-?1b|green\s*card|sponsorship|sponsor\s+(?:me|my|a\s+visa)|work\s+authori[sz]ation|authori[sz]ed\s+to\s+work|citizen(?:ship)?|work\s+permit|\bOPT\b|EAD)\b/gi,
   /\b(?:salary|compensation|pay\s+(?:rate|range|expectations?)|hourly\s+rate|bill\s+rate|rate\s+expectations?|per\s+hour)\b/gi,

@@ -40,3 +40,20 @@ test("#126 write-ups: logistics lines are removed and the write-up is not ok", a
   const r = gateWriteup("## Evidence hierarchy\nI can relocate and start date is flexible.\nI validate fixes.", { stage: "synthesis", sources: [] })
   assert.ok(r.logistics.length); assert.ok(!r.ok); assert.doesNotMatch(r.markdown, /relocate/); assert.match(r.markdown, /validate fixes/)
 })
+
+test("demo-final: hybrid identity/cloud/environment/integration is technical resume content, not logistics", async () => {
+  const { stripLogistics, bannedLogistics } = await import("../../src/lib/dossierBlueprint.ts")
+  for (const line of [
+    "Led hybrid identity integrations with Active Directory and Entra ID.",
+    "Migrated workloads to a hybrid cloud environment on AWS and Azure.",
+    "Built hybrid integration between on-prem AD and Okta.",
+    "Secured the hybrid environment with Conditional Access.",
+    "Designed a hybrid infrastructure for PAM.",
+  ]) {
+    assert.deepEqual(bannedLogistics(line), [], line)
+    assert.equal(stripLogistics(line), line, line)
+  }
+  for (const line of ["The role is hybrid, 3 days on-site in Pittsburgh.", "Eshwar is open to hybrid work.", "Hybrid work model, 2 days in office."]) {
+    assert.equal(stripLogistics(line), "", line)
+  }
+})
