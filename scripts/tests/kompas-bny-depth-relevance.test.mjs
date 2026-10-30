@@ -120,6 +120,15 @@ test('a short citizenship question is kept and answered as logistics', () => {
   }
   assert.equal(interviewIntent('Can you work weekends?'), 'logistics')
   assert.equal(interviewIntent('Are you available for on-call?'), 'logistics')
+  for (const heard of ['Travel?', 'Visa?', 'W2?', 'C2C?', 'Full time?', 'Contract?', 'PTO?', 'Benefits?', '401k?', 'EAD?', 'TN visa?', 'Hourly?', 'Day rate?']) {
+    const kept = questionForAnswer(heard, '', false, false, [{ q: 'What is NLA and why do we disable it?' }])
+    assert.equal(kept, heard, heard)
+    assert.equal(interviewIntent(kept), 'logistics', heard)
+  }
+  assert.equal(interviewIntent('Are you full time or contract?'), 'logistics')
+  assert.equal(interviewIntent('Can you start in two weeks?'), 'logistics')
+  assert.equal(interviewIntent('What is your day rate?'), 'logistics')
+  assert.equal(interviewIntent('What is a smart contract?'), 'definition')
 })
 
 test('a short follow-up is not told to open a new mechanism', () => {

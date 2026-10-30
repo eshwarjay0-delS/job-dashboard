@@ -1,3 +1,7 @@
+## 2026-10-30 — Pay and employment questions are not dropped
+
+Travel, visa, W2, C2C, full time, contract, PTO, benefits, 401k, EAD, TN visa, hourly, and day rate were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Full time or contract, starting in two weeks, and a day rate stay short. "What is a smart contract?" stays a definition.
+
 ## 2026-10-30 — Shift, weekend, and start-date questions are not dropped
 
 Start date, relocation, clearance, sponsorship, night shift, shift, weekend, overtime, and citizen were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Working weekends and on-call stay short. A hybrid-cloud design stays technical.
