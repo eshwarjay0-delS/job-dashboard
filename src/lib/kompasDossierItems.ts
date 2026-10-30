@@ -93,7 +93,9 @@ export function dossierItems(text: string, maxWords = 160): DossierItem[] | null
         flush(i); head = i; headEnd = i; start = i; blankRun = 0; continue
       }
       // prose: an untitled item breaks at a blank line (paragraph); a headed item keeps paragraphs until maxWords
-      if (start >= 0 && (bodyWords + wc(lines[i]) > maxWords || (head < 0 && blankRun > 0))) flush(i)
+      // r10: a headed item also ends at a gap of 2+ blank lines, so a heading with no answer of its own does not swallow
+      // a later, separate paragraph (and a blanked question's answer is not glued under the item above).
+      if (start >= 0 && (bodyWords + wc(lines[i]) > maxWords || (head < 0 && blankRun > 0) || (head >= 0 && blankRun >= 2))) flush(i)
       if (start < 0) start = i
       body.push(i); bodyWords += wc(lines[i]); blankRun = 0
     }

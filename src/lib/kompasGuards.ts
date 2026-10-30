@@ -406,6 +406,9 @@ export function questionFigures(question: string): Set<string> {
   return out
 }
 
+function firstPersonResult(sentence: string): boolean {
+  try { return /\b(?:I|we|my team|our team)\b/i.test(sentence) && /\b(?:cut|reduced|lowered|slashed|dropped|decreased|halved|saved|improved|increased|boosted|grew|raised)\b/i.test(sentence) && claimsResult(sentence) } catch { return false }
+}
 function withAskedFigures(sentence: string, allowed: Set<string>, asked: Set<string>): Set<string> {
   if (!asked.size) return allowed
   const merged = new Set(allowed)
@@ -413,7 +416,8 @@ function withAskedFigures(sentence: string, allowed: Set<string>, asked: Set<str
   let m: RegExpExecArray | null
   while ((m = re.exec(sentence))) {
     const n = normFigure(m[0])
-    if (asked.has(n) && !/\bby\s+$/i.test(sentence.slice(0, m.index))) {
+    // r10 (Lens r4 note): a first-person result claim never borrows the question's figure.
+    if (asked.has(n) && !/\bby\s+$/i.test(sentence.slice(0, m.index)) && !firstPersonResult(sentence)) {
       merged.add(n)
       // r9: the question's own figure carries its own noun ("5 regions"), not any noun ("5 weeks")
       try {

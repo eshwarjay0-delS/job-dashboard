@@ -371,6 +371,7 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
       }
       // r5: intent families add a smaller score per family (at most two different words of it), so a story told in
       // other words is found. Failsafe: any error leaves the plain lexical score.
+      // Stack trial: r10's ranking change (generic-story damping) is NOT included; guard parts only.
       try {
         s += intentScore(d, fams, famDf, N)
         // r5: a behavioral ask prefers a story-shaped passage once it already matches the topic
@@ -414,8 +415,16 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
         return comma >= 0 ? `${heading.slice(comma + 1)} ${p.line}` : p.line
       } catch { return p.text }
     }
+    // r10: coaching/prohibition sentences ("Do not claim…", "respond based on the actual terms…") never prove coverage,
+    // and a count ask ("how many …") is covered only by a passage that states a count. Stricter only; failsafe: as before.
+    const countAsk = /\bhow many\b|\bwhat (?:number|count) of\b|\bhow much\b/i.test(q)
     const coversTopic = (p: Passage, topic: string[]) => {
-      const d = new Set(tokens(coverText(p)))
+      let ct = coverText(p)
+      try {
+        ct = withoutCoaching(ct)
+        if (countAsk && !COUNT_RE.test(ct)) return false
+      } catch { ct = coverText(p) }
+      const d = new Set(tokens(ct))
       // an ASR-split pair ("terra form") whose joined word is in the passage covers both halves
       const hit = new Set(topic.filter((t) => d.has(t)))
       topic.forEach((t, i) => { const n = topic[i + 1]; if (n && d.has(stem(t + n))) { hit.add(t); hit.add(n) } })
@@ -598,7 +607,8 @@ function supportedBy(claim: string, haystack: string): boolean {
 
 // r5: an interviewer premise about the candidate ("since you led a team of 50", "given your time as CISO at Contoso",
 // "I see you ran…"). Only the clause about "you/your" is read, never the interviewer's own company line.
-const PREMISE_CLAUSE = /(?:^|[.?!,;]\s*|\b(?:so|and|i see|i know|i noticed|i read that)\s+)((?:since|as|given(?: that)?|because|now that|considering|with)\s+(?:you|your)\b[^,?.;]{3,140}|(?:you|you've|you have)\s+(?:led|managed|ran|built|owned|were|grew|headed|scaled|ran)\b[^,?.;]{3,140})/gi
+// r10 (Lens r4 note): result verbs (cut, reduced, slashed, lowered, dropped, …) and "I heard / I understand" lead-ins added.
+const PREMISE_CLAUSE = /(?:^|[.?!,;]\s*|\b(?:so|and|i see|i know|i noticed|i read that|i heard(?: that)?|i understand(?: that)?|i was told(?: that)?)\s+)((?:since|as|given(?: that)?|because|now that|considering|with)\s+(?:you|your)\b[^,?.;]{3,140}|(?:you|you've|you have)\s+(?:led|managed|ran|built|owned|were|grew|headed|scaled|cut|reduced|lowered|slashed|dropped|decreased|halved|closed|saved|rotated|wrote|caught|deployed|implemented|improved|increased|boosted)\b[^,?.;]{3,140})/gi
 /** Interviewer claims about the candidate that the experience sources do not back. Empty with no sources or no premise. */
 export function falsePremises(question: string, docs: SourceDoc[] | null | undefined): string[] {
   try {
@@ -711,3 +721,16 @@ export function sourceConflicts(docs: SourceDoc[] | null | undefined): string[] 
     return []
   }
 }
+
+/** r10: a coaching, prohibition or advice-to-candidate sentence, not the candidate's own evidence. */
+export function coachingSentence(sentence: string): boolean {
+  const t = String(sentence || "").trim()
+  if (/^(?:do not|don't|never|avoid|ask|respond|confirm|fill|say|tell them|be ready|prepare|mention|remember)\b/i.test(t)) return true
+  if (/\b(?:do not|don't|never) (?:claim|say|mention|invent|state|promise|imply|overclaim)\b/i.test(t) && !/^(?:I|We|My)\b/.test(t)) return true
+  return /\brespond based on\b|\bbefore the call\b|\[ ___/i.test(t)
+}
+/** r10: text with coaching sentences removed (failsafe: the text unchanged on error). */
+export function withoutCoaching(text: string): string {
+  try { return String(text || "").split(/(?<=[.!?])\s+/).filter((x) => !coachingSentence(x)).join(" ") } catch { return String(text || "") }
+}
+const COUNT_RE = /\b\d+\b|\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozen|dozens|hundred|hundreds|thousand|thousands|single|a couple|several)\b/i
