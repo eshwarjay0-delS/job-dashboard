@@ -328,7 +328,7 @@ test('asked once, then remembered: the next job starts at once from that email, 
 
   await b.wa.handle(N, { type: 'text', id: 'm4', text: { body: 'use 2' } }, await b.wa.loadSession(N), 'user1')
   assert.match(b.said.at(-1), /every job now starts from your \*b@y\.com\* resumes/)
-  assert.equal((await b.wa.loadSession(N)).last?.email, 'b@y.com')
+  assert.equal((await b.wa.loadSession(N)).preferredEmail, 'b@y.com')
   // The next job goes to b@y.com: it holds no resume in this stand-in, which the bot says plainly.
   await b.wa.handle(N, { type: 'text', id: 'm5', text: { body: `${other} Also Wiz and Prisma Cloud.` } }, await b.wa.loadSession(N), 'user1')
   assert.ok(b.said.some(t => t.startsWith('On it: starting from your *b@y.com* resumes.')))
@@ -406,7 +406,7 @@ test('explicit profile switching bypasses the optional Kompas channel', async ()
   const b = bot({ kompasConsumes: true })
   await b.wa.handle('15550001', { type: 'text', id: 'profile-switch', text: { body: 'use 2' } }, {}, 'user1', true)
   assert.equal(b.channelCalls.length, 0)
-  assert.equal((await b.wa.loadSession('15550001')).last?.email, 'b@y.com')
+  assert.equal((await b.wa.loadSession('15550001')).preferredEmail, 'b@y.com')
   assert.equal(b.runs.length, 0)
 })
 
