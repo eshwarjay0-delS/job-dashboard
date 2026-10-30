@@ -30,6 +30,8 @@ test('rejects swapped identities and an extra identity, preserves unchanged emai
   try { assert.equal(sameResumeIdentity('JAYESHWAR44@gmail.com', 'jayeshwar44@gmail.com'), true) } finally { delete process.env.JD_TERMS_ALWAYS_ON_SKILLS }
 })
 test('with the job-post terms gate on, a changed phone or date stops the send; an unchanged file passes', () => {
+  // Gate on with a real name line: an email that differs only in letter case is the same resume.
+  assert.equal(sameResumeIdentity('Eshwar Jay\nJAYESHWAR44@gmail.com', 'Eshwar Jay\njayeshwar44@gmail.com'), true)
   const src = 'Eshwar Jay\njayeshwar44@gmail.com | (312) 555-0142\nAnalyst, Acme  Jan 2021 - Mar 2024'
   assert.equal(sameResumeIdentity(src, src), true)
   assert.equal(sameResumeIdentity(src, src.replace('0142', '0143')), false)
