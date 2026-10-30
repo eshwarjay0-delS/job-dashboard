@@ -236,9 +236,15 @@ function containsTerm(text: string, term: string): boolean {
  * "explain it to a director", "in two minutes") steer the mode, not the topic, so they are not keywords.
  */
 export function topicOfAsk(question: string): string {
-  return String(question || "")
+  // Stress round 2 (29 Oct 2026): "Since you led the SOC at a large bank, how big was your team?" made the premise the
+  // keywords, so the prompt told the model to open on "led, SOC, large bank" - a premise the resume may not support.
+  // A leading since/given/as clause before the actual question is context, not topic. Failsafe: nothing left keeps all.
+  const raw = String(question || "")
+  const premise = raw.match(/^\s*(?:since|given(?: that)?|as|because|now that)\s+(?:you|your)\b[^,?]{3,120},\s*((?:how|what|why|when|where|which|who|can|could|would|do|did|have|tell|walk|describe)\b[\s\S]+)$/i)
+  const asked = premise && premise[1].trim().split(/\s+/).length >= 3 ? premise[1] : raw
+  return asked
     .replace(/\b(?:keep|make) it (?:suitable|simple|short|brief|plain)[^.?!]*[.?!]?/gi, " ")
-    .replace(/\b(?:for|to) (?:a |an |the )?(?:technical hr|non-technical|recruiter|director|executive|cfo|ceo|business audience|hiring manager)\b/gi, " ")
+    .replace(/\b(?:for|to) (?:a |an |the )?(?:technical hr|non-technical|recruiter|director|executive|cfo|ceo|business audience|hiring manager|engineer|architect|developer|new analyst|junior analyst)\b/gi, " ")
     .replace(/\bin (?:one|two|three|\d+) (?:minutes?|sentences?|lines?)\b/gi, " ")
     .replace(/\bwithout inventing achieved numbers\b/gi, " ")
     .replace(/\s+/g, " ")
@@ -266,6 +272,9 @@ export function questionKeywords(question: string): string[] {
   const raw = topicOfAsk(question)
   const lower = raw.toLowerCase()
   const found: string[] = []
+  // Round 4: "When would you not accept residual risk?" had the same keywords as its opposite. The negated verb leads.
+  const negated = lower.match(/\b(?:not|never|n't)\s+(?:\w+ly\s+)?([a-z]{4,})\b/)
+  if (negated && !STOP.has(negated[1])) found.push(`not ${negated[1]}`)
   for (const phrase of PHRASES) if (lower.includes(phrase)) found.push(phrase)
   for (const match of raw.matchAll(/\b[A-Z][A-Z0-9]{1,6}\b/g)) found.push(match[0])
   for (const rawToken of lower.replace(/[^a-z0-9+#.-]+/g, " ").split(/\s+/)) {
@@ -318,7 +327,8 @@ export function bannedTerms(question: string, sources: string, shape: AnswerShap
 export function cleanSpokenAsk(question: string): string {
   const out = String(question || "")
     .replace(/\b(?:um+|uh+|erm+|er|hmm+)\b[,.]?/gi, " ")
-    .replace(/\b(?:you know|i mean|sort of|kind of)\b,?/gi, " ")
+    .replace(/(?<!\b(?:do|did|does|would|as|if|what|how|where|don't|didn't)\s)\b(?:you know|i mean)\b,?/gi, " ")
+    .replace(/(?<!\b(?:what|which|the|this|that|any|some|a|one)\s)\b(?:sort of|kind of)\b,?/gi, " ")
     .replace(/(^|[\s,])like,?(?=\s+(?:what|how|why|the|a|an|inherent|residual|\w+ing)\b)/gi, "$1")
     .replace(/^\s*(?:so|okay so|ok so|alright so|well)[,\s]+/i, "")
     .replace(/\b(\w+)\s+\1\b/gi, "$1")
@@ -396,6 +406,8 @@ const PROVIDER_FAILURE_SHAPE = [
   /\bmaximum context length\b|\bcontext[_ ]length[_ ]exceeded\b/i,
   /^\s*(?:i'm sorry|i am sorry|sorry),? (?:but )?i (?:can't|cannot|am unable to|won't) (?:help|assist|comply|answer)\b/i,
   /^\s*as an ai(?: language model)?\b/i,
+  // Round 5: client or gateway timeouts.
+  /^\s*(?:the )?(?:request|connection|upstream) timed out\b|\btimed out after \d+\s*ms\b|\bE(?:TIMEDOUT|CONNRESET|CONNREFUSED)\b/i,
 ]
 export function isProviderErrorAnswer(text: string): boolean {
   const t = String(text || "")
@@ -712,6 +724,11 @@ function rankedExperience(question: string, resume: string, offTopicAllowed = 99
   return ranked.filter((row, index) => index === 0 || row.n > 0 || offTopic++ < offTopicAllowed).map((row) => row.line)
 }
 
+/** "challenged a weak plan" is said "When I challenged a weak plan"; "a situation where a fix did not hold" is "In a situation...". */
+function storyFrame(lead: string): string {
+  return /^(?:\w+ed|led|built|made|took|told|kept|set|ran|drove|taught|brought|held|found|wrote|sent|had|trained|got|caught|fought|dealt|saw)\b/i.test(lead) ? `When I ${lead}` : `In ${lead}`
+}
+
 const OPENERS: Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>> = {
   definition: {
     engineer: (l) => `Here is what ${l} means in my own work.`,
@@ -724,9 +741,9 @@ const OPENERS: Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>
     architect: (l) => `I separate ${l} by what each one checks and where each one stops.`,
   },
   "personal-experience": {
-    engineer: (l) => `Yes, I have ${l}, and here is the real example.`,
-    director: (l) => `When I ${l}, my decision was to hold the item until the proof was there.`,
-    architect: (l) => `When I ${l}, I checked the plan against the evidence one step at a time.`,
+    engineer: (l) => `${storyFrame(l)}, here is the real example.`,
+    director: (l) => `${storyFrame(l)}, my decision was to hold the item until the proof was there.`,
+    architect: (l) => `${storyFrame(l)}, I checked the plan against the evidence one step at a time.`,
   },
   logistics: {
     engineer: (l) => `Yes, I can ${l}, and that schedule works for me.`,
@@ -738,12 +755,81 @@ const OPENERS: Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>
     director: (l) => `Building on that, ${l} is where I make the next call for the business.`,
     architect: (l) => `Building on that, I treat ${l} as its own check with its own failure point.`,
   },
+  intro: {
+    engineer: () => `Here is a short introduction to my background and the work I do now.`,
+    director: () => `Here is my background in brief, with the decisions my work supports.`,
+    architect: () => `Here is my background, and how my work fits together from evidence to sign-off.`,
+  },
+  value: {
+    engineer: (l) => `On ${l}, I bring careful, evidence-first work.`,
+    director: (l) => `On ${l}, I bring clear decisions and owners who know what is still open.`,
+    architect: (l) => `On ${l}, I bring a process where each step has a check that proves it.`,
+  },
+  closing: {
+    engineer: () => `Yes, I would like to ask how this team decides which open items matter most.`,
+    director: () => `Yes, I would like to ask who owns the risk decisions here and how they are reported.`,
+    architect: () => `Yes, I would like to ask how evidence moves from the control owners to sign-off here, and where it stalls.`,
+  },
+  acknowledgement: {
+    engineer: () => `Yes, I can hear you clearly, thank you, and I am glad to be here.`,
+    director: () => `Yes, I can hear you clearly, thank you, and I am ready whenever you are.`,
+    architect: () => `Yes, I can hear you clearly, thank you, and I am glad to talk through the work.`,
+  },
+  scenario: {
+    engineer: (l) => `For ${l}, here is the first thing I would do.`,
+    director: (l) => `For ${l}, I would make the first decision quickly and name who owns it.`,
+    architect: (l) => `For ${l}, I would walk the steps in order and note where each one can fail.`,
+  },
+  "technical-deep-dive": {
+    engineer: (l) => `On ${l}, here is what I do in practice.`,
+    director: (l) => `On ${l}, I start with the decision and the risk it carries for the business.`,
+    architect: (l) => `On ${l}, I would show how the pieces connect and where they fail.`,
+  },
   direct: {
-    engineer: (l) => `Here is how I ${l}.`,
-    director: (l) => `To ${l}, I start with the decision and the risk it carries for the business.`,
-    architect: (l) => `To ${l}, I would show how the pieces connect and where they fail.`,
+    engineer: (l) => `On ${l}, here is my answer from my own work.`,
+    director: (l) => `On ${l}, I start with the decision and the risk it carries for the business.`,
+    architect: (l) => `On ${l}, I would show how the pieces connect and where they fail.`,
   },
 } as Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>>
+
+/** The interviewer's phrase said by the candidate: "your background" is "my background" in the answer. */
+function spokenLead(lead: string, question = ""): string {
+  // "How do you handle a suspicious login" leaves a verb phrase; said back it is "how I handle a suspicious login".
+  const verb = /^\s*(?:(?:so|and|now)[,\s]+)?(?:how|why) (?:do|did|would|will|should|could|can) you\b/i.test(cleanSpokenAsk(question))
+  const said = verb && !/^how\b/i.test(lead) ? `how I ${lead}` : lead
+  return said
+    .replace(/\byourself\b/gi, "myself").replace(/\byours\b/gi, "mine").replace(/\byour\b/gi, "my")
+    .replace(/\byou are\b/gi, "I am").replace(/\byou(?:'ve| have)\b/gi, "I have").replace(/\byou\b/gi, "I")
+}
+
+// Offline stand-in only: approach lines, seeded with the interviewer's phrase, that fill a mode to its aim when the
+// resume has nothing more on the topic. They make no claim about past results and carry no numbers.
+const APPROACH: Record<AnswerLevel, Array<(lead: string) => string>> = {
+  engineer: [
+    (l) => `On ${l}, I would start by confirming the scope and who owns it.`,
+    () => "Then I check the evidence against the live setting before I call it done.",
+    () => "I write down what changed so the next person can repeat it.",
+  ],
+  director: [
+    (l) => `On ${l}, the first call is whether the risk is acceptable today or needs action now.`,
+    () => "I name one owner for that call and a date for the next review.",
+    () => "The decision goes on record.",
+    () => "The owner signs off in writing.",
+    () => "If the owner accepts the risk, I record the reason and when it expires.",
+  ],
+  architect: [
+    (l) => `On ${l}, I break the work into parts that each have their own check.`,
+    () => "For each part, I note what it depends on and what happens when that dependency fails.",
+    () => "I keep the evidence for each step next to the step, so a reviewer can follow it without asking me.",
+    () => "Where the work touches another team, I agree the handoff and the proof that it happened.",
+    () => "I test the weakest step first, because that is where a fix usually stops holding.",
+    () => "When a check fails, the item goes back to its owner with the evidence that failed.",
+    () => "After the change, I confirm the setting again later to make sure it stayed in place.",
+    () => "I keep the steps short enough that someone new can run them the same way.",
+    () => "Each part gets its own owner.",
+    () => "I name what would prove it wrong.",
+  ],
+}
 
 const CLOSERS: Record<AnswerLevel, string[]> = {
   engineer: [],
@@ -765,12 +851,16 @@ const CLOSERS: Record<AnswerLevel, string[]> = {
  */
 export function draftSpokenAnswer(question: string, level: AnswerLevel, resume: string): string {
   const cut = dissectQuestion(question, resume)
-  const lead = leadPhrase(question)
+  const lead = spokenLead(leadPhrase(question), splitFollowUp(cleanSpokenAsk(question)).own)
   const opener = (OPENERS[cut.shape] || OPENERS.direct)[level] || OPENERS.direct[level]
   // A tied follow-up is ranked on its own words, so it does not read back the lines the first answer already used.
   const tied = splitFollowUp(question)
   const lines = rankedExperience(tied.previous ? tied.own : question, resume, { engineer: 0, director: 1, architect: 3 }[level]).map(firstPerson)
   const mode = cut.modes[level]
+  // Each mode stops about a third short of the next one up, so the three stay at least 50% apart in length.
+  const archStop = cut.modes.architect.aimWords
+  const dirStop = Math.min(cut.modes.director.aimWords, Math.floor(archStop / 1.55))
+  const stop = level === "architect" ? archStop : level === "director" ? dirStop : Math.max(cut.modes.engineer.minWords, Math.min(cut.modes.engineer.aimWords, Math.floor(dirStop / 1.7)))
   const parts = [opener(lead)]
   let words = wordCount(parts[0])
   const story = cut.shape === "personal-experience" || cut.shape === "scenario"
@@ -781,7 +871,7 @@ export function draftSpokenAnswer(question: string, level: AnswerLevel, resume: 
   for (const line of lines) {
     const n = wordCount(line)
     // The best matching line may run past the aim (never past the ceiling): it is the evidence the answer needs.
-    if (used >= most || words + n > (used ? mode.aimWords : mode.maxWords)) continue
+    if (used >= most || words + n > (used ? stop : mode.maxWords)) continue
     parts.push(line)
     words += n
     used++
@@ -796,15 +886,26 @@ export function draftSpokenAnswer(question: string, level: AnswerLevel, resume: 
     const templates = PART_LINES[level]
     const line = templates[i % templates.length](part)
     const n = wordCount(line)
-    if (words + n > mode.aimWords) return
+    if (words + n > stop) return
     parts.push(line)
     words += n
   })
   for (const line of CLOSERS[level]) {
     const n = wordCount(line)
-    if (words + n > mode.aimWords) continue
+    if (words + n > stop) continue
     parts.push(line)
     words += n
+  }
+  // Short shapes (greeting, logistics, closing) stop at the opener and the supported lines; others fill to the aim.
+  if (!["acknowledgement", "logistics", "closing"].includes(cut.shape)) {
+    for (const make of APPROACH[level]) {
+      const line = make(lead)
+      const n = wordCount(line)
+      if (words >= stop) break
+      if (words + n > (level === "architect" ? mode.maxWords : stop) || parts.includes(line)) continue
+      parts.push(line)
+      words += n
+    }
   }
   return trimToWords(parts.join(" "), mode.maxWords)
 }

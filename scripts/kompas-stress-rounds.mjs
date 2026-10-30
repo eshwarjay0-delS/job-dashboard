@@ -124,7 +124,45 @@ const R4 = [
     "How do you handle a ransomware incident?", "What is a SIEM?", "What's your experience with cloud security?", "How do you prioritize vulnerabilities?",
     "What is threat modeling?", "Explain encryption at rest.", "How would you build a security awareness program?"].map((q) => A("off-resume", q)),
 ]
-export const ROUNDS = [R1, R2, R3, R4]
+// ------------------------------------------------------------------ round 5: the hardest mixes, judged on the production paths
+const LONG_GARBLED = "okay so um we've got like three things going on, the audit team wants um evidence for the access reviews, the owners say the the fixes are done, and leadership wants a date, so uh how would you decide what to check first, who signs off, and what you would tell leadership this week"
+const R5 = [
+  // Off-topic speech around one real ask: the ask is kept, the chatter is not.
+  ...[["sorry, my kid just walked in. Anyway, how do you scope an access review?", "scope an access review", "kid"],
+    ["The coffee here is terrible, honestly. So, what does a compensating control mean?", "compensating control", "coffee"],
+    ["We use a lot of spreadsheets, it's a mess. How would you track exceptions?", "track exceptions", "spreadsheets"],
+    ["Our last candidate talked for twenty minutes. Keep it short: what is least privilege?", "least privilege", "candidate"]].map(([heard, want, drop]) => ({ kind: "intake", family: "off-topic speech around an ask", heard, want, drop })),
+  // Interviewer statements with no ask: never a question.
+  ...["So our team is about twelve people and we mostly do SOX work.", "We're hoping to fill this role by the end of the quarter.",
+    "I'll be sharing your notes with the hiring manager afterwards."].map((heard) => ({ kind: "statement", family: "off-topic statement (no ask)", heard })),
+  // Keyword traps on the production prompt: premise, audience, negation, filler and the follow-up tag never become keywords.
+  ...[["Since you led the SOC at a large bank, how did you report risk?", ["report", "risk"], ["led", "large", "bank"]],
+    ["Given that you ran the audit program, what would you change first?", ["change"], ["audit", "program"]],
+    ["Explain residual risk to an engineer.", ["residual risk"], ["engineer"]],
+    ["When would you never accept a policy exception?", ["not accept", "policy exception"], []],
+    ["um so like how do you you scope an access review you know", ["scope", "access", "review"], ["um", "like", "know"]],
+    ["What about expiry dates — following up on: \"How do you track exceptions\"?", ["expiry"], ["following"]]].map(([q, must, never]) => ({ kind: "keywords", family: "keyword trap", q, must, never })),
+  // Follow-ups: tied when additive, not tied when a new question, and a follow-up of a follow-up stays on the first topic.
+  ...[["How do you validate that a fix is still in place?", "Could you also automate that?", "automate"],
+    ["Write a SQL query that lists findings with no owner.", "What's the time complexity?", "complexity"],
+    ["Explain how a finding moves from open to closed.", "Any edge cases?", "edge"]].map(([first, follow, keyword]) => ({ kind: "followup", family: "follow-up (idea D, more)", first, follow, keyword })),
+  ...[["Explain residual risk.", "How do you secure a CI pipeline?"], ["Write a SQL query that lists findings with no owner.", "Tell me about a time you trained an analyst."],
+    ["What would you monitor?", "What is zero trust?"]].map(([first, next]) => ({ kind: "notFollowup", family: "new question after history (must not tie)", first, next })),
+  // Jargon a model might bring in unasked is cut from the spoken answer; asked jargon stays.
+  ...[["How do you keep user accounts safe?", "I review who has access each quarter. I also watch for Kerberoasting and pass-the-hash.", "Kerberoasting"],
+    ["How do you make sure logs are useful?", "I agree which events matter with the owner. Then I ship them to Splunk.", "Splunk"]].map(([q, raw, term]) => ({ kind: "jargon", family: "jargon temptation (settle)", q, raw, term })),
+  { kind: "jargonKept", family: "jargon asked (kept)", q: "How do you detect Kerberoasting?", raw: "I look for unusual service ticket requests, because Kerberoasting abuses them." },
+  // Invented results with money and time units.
+  ...[["I saved the company $2M in audit fees.", true], ["I reduced time to close from 4 hours to 30 minutes.", true],
+    ["I would review it within 30 days of the finding.", false]].map(([sentence, invented]) => ({ kind: "numbers", family: "invented-number (units)", sentence, invented })),
+  // More provider failure shapes.
+  ...["Error 503: Service Unavailable", "context_length_exceeded", "Request timed out after 60000ms"].map((raw) => ({ kind: "provider", family: "provider-error (more)", raw })),
+  // Very long garbled multi-part, a very short follow-up word, and two jargon-bait near-duplicates.
+  A("very-long garbled multi-part", LONG_GARBLED, { garbled: true }),
+  { kind: "nearDup", family: "near-duplicate (jargon bait)", a: "How do you keep user accounts safe?", b: "How do you keep service accounts safe?" },
+  { kind: "nearDup", family: "near-duplicate (scope)", a: "How do you scope an access review?", b: "How do you scope an audit?" },
+]
+export const ROUNDS = [R1, R2, R3, R4, R5]
 
 // ------------------------------------------------------------------ checks
 const FILLER = /\b(?:um+|uh+|erm|you know)\b/i
@@ -234,6 +272,55 @@ export function judgeCase(c) {
       if (/^(?:answer|short answer)\b/i.test(s.text)) fails.push(`${level}: reads out an "Answer" label`)
     }
     return fails
+  }
+  if (c.kind === "intake") {
+    // As the live client sends it: the derived ask, unpinned (first try or retry) and pinned (the card).
+    const heard = `Them: ${c.heard}`
+    const derived = deriveByCode(heard, []) || ""
+    const fails = []
+    if (!derived.toLowerCase().includes(c.want)) fails.push(`derive lost the ask: "${derived}"`)
+    if (derived.toLowerCase().includes(c.drop)) fails.push(`derive kept the chatter: "${derived}"`)
+    for (const pinned of [false, true]) {
+      const q = questionForAnswer(heard, derived, pinned, false, [])
+      const low = q.toLowerCase()
+      if (!low.includes(c.want)) fails.push(`${pinned ? "pinned" : "unpinned"}: ask lost: "${q}"`)
+      if (low.split(c.want).length > 2) fails.push(`${pinned ? "pinned" : "unpinned"}: the ask is said twice: "${q}"`)
+      if (pinned && low.includes(c.drop)) fails.push(`pinned: chatter kept in the ask: "${q}"`)
+    }
+    return fails
+  }
+  if (c.kind === "statement") {
+    const q = questionForAnswer(c.heard, "", false, false, [])
+    const d = deriveByCode(`Them: ${c.heard}`, [])
+    const fails = []
+    if (q && dissectQuestion(q).shape !== "acknowledgement") fails.push(`a statement became a question to answer: "${q}" (${dissectQuestion(q).shape})`)
+    // Decision (yellow): a statement addressed to the candidate may be derived, as long as it is only acknowledged.
+    if (d && dissectQuestion(d).shape !== "acknowledgement") fails.push(`derive turned a statement into a question: "${d}" (${dissectQuestion(d).shape})`)
+    return fails
+  }
+  if (c.kind === "keywords") {
+    const kw = dissectQuestion(c.q).keywords.map((k) => k.toLowerCase()) // what the answer prompt is given
+    const fails = []
+    for (const m of c.must) if (!kw.some((k) => k.includes(m))) fails.push(`missing keyword "${m}": ${kw.join("|")}`)
+    for (const n of c.never) if (kw.some((k) => k === n || k.split(" ").includes(n))) fails.push(`keyword "${n}" should not lead: ${kw.join("|")}`)
+    return fails
+  }
+  if (c.kind === "notFollowup") {
+    const q = questionForAnswer(c.next, "", false, false, [{ q: c.first }])
+    return /following up on/i.test(q) ? [`a new question was tied to the previous one: "${q}"`] : []
+  }
+  if (c.kind === "jargon") {
+    const fails = []
+    for (const level of LEVELS) {
+      const s = settleSpokenAnswer(c.q, c.raw, level, RESUME)
+      if (s.text.includes(c.term)) fails.push(`${level}: unasked "${c.term}" kept`)
+      if (!s.text) fails.push(`${level}: the whole answer was dropped`)
+    }
+    return fails
+  }
+  if (c.kind === "jargonKept") {
+    const s = settleSpokenAnswer(c.q, c.raw, "engineer", RESUME)
+    return s.text.includes("Kerberoasting") ? [] : [`asked jargon was cut: "${s.text}"`]
   }
   if (c.kind === "repeat") {
     const s = settleSpokenAnswer(c.q, c.raw, "director", RESUME, c.previous)

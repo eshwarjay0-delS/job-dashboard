@@ -615,7 +615,12 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
     const whole = parts.slice(from).map((p) => p.text).join(" ").replace(/\s+/g, " ").trim()
     return (whole && !noiseOnly(whole) ? whole : asked).slice(0, 2000)
   }
-  const cut = cutQuestion([heard, asked].filter(Boolean).join("\n"), previous)
+  // Stress round 5 (29 Oct 2026): unpinned with the derived ask (a retry sends both), the ask was cut out of heard AND
+  // appended again, so the model was told to answer "...scope an access review? Anyway, how do you scope an access
+  // review?". When heard already holds the ask, heard alone is cut; the joined cut stays as the fallback.
+  const key = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+  const inHeard = asked && key(asked).length > 0 && key(heard).includes(key(asked))
+  const cut = (inHeard ? cutQuestion(heard, previous) : "") || cutQuestion([heard, asked].filter(Boolean).join("\n"), previous)
   if (cut) return cut
   if (asked && !noiseOnly(asked)) return asked.slice(0, 2000)
   const bare = String(heard || "")

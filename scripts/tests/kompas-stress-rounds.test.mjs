@@ -2,7 +2,7 @@
 // paths every live answer goes through, not live answer quality (that needs scripts/kompas-live-eval.mjs with a token).
 import test from "node:test"
 import assert from "node:assert/strict"
-import { cleanSpokenAsk, leadPhrase, spokenMarkup, dropRepeatedSentences, isProviderErrorAnswer, settleSpokenAnswer, dissectQuestion, asksForCode, splitFollowUp, sameAnswerRatio, draftSpokenAnswer } from "../../src/lib/kompasDissection.ts"
+import { questionKeywords, evaluateLiveAnswers, cleanSpokenAsk, leadPhrase, spokenMarkup, dropRepeatedSentences, isProviderErrorAnswer, settleSpokenAnswer, dissectQuestion, asksForCode, splitFollowUp, sameAnswerRatio, draftSpokenAnswer } from "../../src/lib/kompasDissection.ts"
 import { applyGuards } from "../../src/lib/kompasGuards.ts"
 
 const guard = (s) => applyGuards(s, null, new Set(), new Set()).text
@@ -170,4 +170,55 @@ test("round 2: backchannel noise never becomes a question", () => {
     assert.equal(questionForAnswer(heard, "", false, false, []), "", heard)
   }
   assert.equal(questionForAnswer("Oh, how do you close a finding?", "", false, false, []).includes("close a finding"), true)
+})
+
+test("round 5: unpinned with the derived ask, the ask is not said twice", () => {
+  for (const said of ["sorry, my kid just walked in. Anyway, how do you scope an access review?", "The coffee here is terrible, honestly. So, what does a compensating control mean?"]) {
+    const heard = `Them: ${said}`
+    const derived = deriveByCode(heard, [])
+    const q = questionForAnswer(heard, derived, false, false, [])
+    const core = derived.replace(/^(?:anyway|so),?\s*/i, "").replace(/\?$/, "").toLowerCase()
+    assert.equal(q.toLowerCase().split(core).length, 2, q)
+  }
+})
+
+test("round 5 failsafe: a derived ask that is not in heard is still added", () => {
+  const q = questionForAnswer("Them: we talked about audits earlier", "How do you scope an access review?", false, false, [])
+  assert.match(q, /scope an access review/)
+})
+
+test("round 5: a premise, an audience or a filler never leads the keywords; a negation does", () => {
+  const kw = (q) => dissectQuestion(q).keywords.map((k) => k.toLowerCase())
+  assert.deepEqual(kw("Since you led the SOC at a large bank, how did you report risk?").filter((k) => /led|bank|large/.test(k)), [])
+  assert.deepEqual(kw("Given that you ran the audit program, what would you change first?").filter((k) => /audit|program/.test(k)), [])
+  assert.ok(!kw("Explain residual risk to an engineer.").includes("engineer"))
+  assert.equal(kw("When would you never accept a policy exception?")[0], "not accept")
+  assert.ok(!kw("um so like how do you you scope an access review you know").some((k) => /^(?:um|like|know)$/.test(k)))
+})
+
+test("round 5 failsafe: a premise with no ask after it, and ordinary phrases, keep their words", () => {
+  assert.ok(questionKeywords("Since you led the SOC, tell me.").some((k) => k === "SOC"))
+  assert.ok(questionKeywords("How do you report risk to the board?").includes("report"))
+  assert.equal(cleanSpokenAsk("Do you know SQL?"), "Do you know SQL?")
+  assert.equal(cleanSpokenAsk("What kind of controls do you test?"), "What kind of controls do you test?")
+  assert.equal(cleanSpokenAsk("As you know, the team is small."), "As you know, the team is small.")
+})
+
+test("round 5: timeouts are provider failures; a timeout answer is not", () => {
+  for (const raw of ["Request timed out after 60000ms", "Error 503: Service Unavailable", "context_length_exceeded", "ETIMEDOUT"]) assert.equal(isProviderErrorAnswer(raw), true, raw)
+  assert.equal(isProviderErrorAnswer("I would alert when a request timed out after 30 seconds, and page the owner."), false)
+})
+
+test("offline stand-in: every mode is first person, speakable, and at least 50% apart in length", () => {
+  const qs = ["Tell me about yourself.", "What is your biggest weakness?", "How do you handle a suspicious login?", "Describe a situation where a fix did not hold.",
+    "What would you bring to this team?", "Define least privilege.", "Since you led the SOC at a large bank, how big was your team?"]
+  for (const q of qs) {
+    const rows = ["engineer", "director", "architect"].map((level) => ({ question: q, level, text: draftSpokenAnswer(q, level, RESUME) }))
+    for (const r of rows) {
+      assert.doesNotMatch(r.text, /\b(?:your|yourself)\b/i, `${r.level}: ${r.text}`)
+      assert.doesNotMatch(r.text, /\bI (?:how|what|why|your|you|a situation)\b|\bWhen I a\b|\bsince I led\b/i, `${r.level}: ${r.text}`)
+    }
+    const gaps = evaluateLiveAnswers(rows, RESUME).failures.filter((f) => f.startsWith("length gap"))
+    assert.deepEqual(gaps, [], q)
+  }
 })
