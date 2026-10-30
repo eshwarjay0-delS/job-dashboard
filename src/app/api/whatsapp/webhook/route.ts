@@ -443,12 +443,17 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
   // Help and a numbered profile switch must not wait on the Kompas session store.
   // A storage fault there used to be reported as "no AI service is switched on".
   const profileCommand = type === "text" &&
-    /^(?:use|switch(?:\s+to)?|profile|email)\s+[1-9]\d{0,2}$|^(?:help|hi|hello|menu|start)$/i.test(
+    /^(?:use|switch(?:\s+to)?|profile|email)\s+[1-9]\d{0,2}$|^(?:help|hi|hello|menu)$/i.test(
       String((msg.text as { body?: string } | undefined)?.body || "").trim(),
     )
 
   // Kompas has an explicit opt-in command and an independent, account-owned session.
   // All other WhatsApp traffic continues through the original MFit resume workflow.
+  // The exact Kompas opt-in and exit commands must never be reinterpreted as
+  // ordinary resume/JD text when the optional session service fails.
+  const explicitKompasCommand = type === "text" && /^(?:kompas|revert)$/i.test(
+    String((msg.text as { body?: string } | undefined)?.body || "").trim(),
+  )
   if (!profileCommand && (type === "text" || type === "document")) {
     let consumed = false
     try {
@@ -463,7 +468,10 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     } catch (error) {
       // A Kompas storage fault must not eat a job description or a profile switch.
       // The channel already answers when it knows the session cannot be read.
-      console.error("[whatsapp] kompas handoff failed", String(error).slice(0, 160))
+      console.error("[whatsapp] kompas handoff failed", (error as Error)?.name || "error")
+      if (explicitKompasCommand) {
+        return sendText(from, "Kompas is temporarily unavailable. Your interview mode was not changed. Please retry this command.")
+      }
     }
     if (consumed) return
   }
