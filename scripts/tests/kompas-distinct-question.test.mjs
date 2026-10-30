@@ -59,6 +59,13 @@ for (let n = 1; n <= asks.length; n++) {
   })
 }
 
+test('a follow-up is not told to discard the answer it continues', () => {
+  assert.equal(differentQuestionLine('Go deeper on that exception.', previous), '')
+  assert.equal(differentQuestionLine('Why is that dangerous?', previous), '')
+  assert.match(differentQuestionLine('What exactly is least privilege?', previous), /DIFFERENT QUESTION/)
+  assert.match(differentQuestionLine('Elaborate on session recording.', previous), /DIFFERENT QUESTION/)
+})
+
 test('a follow-up keeps its own intent when the previous question is quoted after it', () => {
   const glued = 'Go deeper — following up on: "What is NLA and why do we disable it"?'
   assert.equal(interviewIntent(glued), 'follow-up')

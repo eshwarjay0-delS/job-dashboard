@@ -1,3 +1,59 @@
+## 2026-10-30 — Pay and employment questions are not dropped
+
+Travel, visa, W2, C2C, full time, contract, PTO, benefits, 401k, EAD, TN visa, hourly, and day rate were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Full time or contract, starting in two weeks, and a day rate stay short. "What is a smart contract?" stays a definition.
+
+## 2026-10-30 — Shift, weekend, and start-date questions are not dropped
+
+Start date, relocation, clearance, sponsorship, night shift, shift, weekend, overtime, and citizen were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Working weekends and on-call stay short. A hybrid-cloud design stays technical.
+
+## 2026-10-30 — A one-word logistics question is not dropped
+
+Salary, hybrid, onsite, remote, notice, bonus, and TS/SCI were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Two weeks' notice, night work, days in the office, and being local to a city stay short too. A hybrid-cloud design stays a technical question.
+
+## 2026-10-30 — A short visa question is not dropped
+
+"H-1B?" was dropped, so the previous answer stayed on screen. "Do you need an H-1B?", a green card, a visa, and commuting to the office were answered as long questions. They stay short logistics answers. "How would you opt for least privilege?" stays a scenario. "How does work authorization work?" stays technical.
+
+## 2026-10-30 — A spaced citizenship question stays a short logistics answer
+
+"Are you a u s citizen" was treated as a normal question, so it could run long. "Are you authorized to work in the U.S.?" did the same. Both stay logistics. "How does work authorization work?" stays a technical explanation. One hundred intent folds still pass.
+
+## 2026-10-30 — A limit before the question no longer swallows the ask
+
+"No downtime, how would you verify the remediation?" and "Without a restart, how would you patch the service?" were stored as the condition only, so the ask was dropped. The limit stays a condition and the question stays the question. "With no downtime, how would you..." is the same split.
+
+## 2026-10-30 — No downtime stays a condition of the question
+
+"How would you verify the remediation with no downtime?" kept the limit inside the ask, so it was not named as a condition. "There can be no downtime" before the question was skipped the same way. Both are now conditions. The ask itself stays. A "without ..." condition still keeps the ask.
+
+## 2026-10-30 — Two questions on screen are answered separately
+
+A screen capture that held two questions was one answer. Each Question block is now its own page. The options stay with their question. One question on screen is still one page. There is still no review dialog. The page stamp is kompas-20261030-screen.
+
+## 2026-10-30 — Two typed questions open two pages
+
+Typing "What is Kubernetes? What is Terraform?" kept both on one page. The box now uses the same cut as the microphone and WhatsApp. Each question gets its own page. A design followed by an explanation stays one page. One typed question still opens one page. The page stamp is kompas-20261030-typed.
+
+## 2026-10-30 — Two WhatsApp questions in one message are both answered
+
+The microphone already cut "What is Kubernetes? What is Terraform?" into two asks. WhatsApp sent that message as one turn, so the second ask was lost. WhatsApp now uses the same cut. A design followed by an explanation stays one answer. One question still sends one answer.
+
+## 2026-10-30 — An introduction and a request for questions are both kept
+
+"Tell me about yourself. What questions do you have?" was one closing question, so the introduction was dropped. Those two are now separate asks. A design followed by an explanation stays one question. Setup before "Any questions?" stays with that question. If both still arrive as one string, the answer introduces first and then asks one question about the team. The page stamp is kompas-20261030-both.
+
+## 2026-10-29 — Go deeper must add a mechanism, not repeat the opening
+
+The depth flag already said deep. The prompt now says sentence one adds the mechanism or reason the previous answer did not give, and does not repeat that opening. A short follow-up such as "Why is that dangerous?" does not get that line.
+
+## 2026-10-29 — Go deeper is a deep follow-up
+
+"Go deeper on that exception" stayed a short follow-up, so the answer could repeat the previous one at the same depth. Asking to go deeper, dig deeper, give more detail, elaborate, or explain that now deepens the same subject. "Why is that dangerous?" stays the shorter follow-up. One hundred intent folds still pass.
+
+## 2026-10-29 — A follow-up is not told to throw away the previous answer
+
+"Go deeper on that exception" and "Why is that dangerous?" were follow-ups, and the prompt still said the question was different and not to reuse the previous answer. A follow-up no longer gets that line. "What exactly is least privilege?" and "Elaborate on session recording" still do.
+
 ## 2026-10-29 — Only the call audio opens a question, leaks judged by when words were said, and a turn gate
 
 While computer audio is captured, mic words never open a question; questionSource now goes through the computer-audio-is-interviewer mapping. With the mic only, the mic still opens questions, as before, and the session log says "mic-only". A mic line is judged a leak of the call audio by when its words were said, where both clips know it, and otherwise by when the text came back, as before; your own words said later, or in other words, are kept. Each heard line gets a logged turn gate: answer now, wait, or no answer needed. The gate only labels. When a press is turned away as "nothing question-like", pressing AI Answer again within 15 seconds answers those lines anyway. Every keep, drop, cut and gate decision is logged as a reason, a source and a length, with no words. Parakeet now gives up after 4 seconds instead of 15, and Whisper takes the clip. "Beyond trust", "git lab" and "sock two" are only repaired next to their tool words, so "went beyond trust" and "a sock two days ago" stay. A typed "Go deeper" keeps its full stop and is not made a question.

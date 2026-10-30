@@ -57,7 +57,24 @@ test('a review payload answers directly without opening any dialog',async()=>{
  vm.runInContext(code,ctx);await ctx.analyseScreen();assert.equal(answers,1);assert.equal(dialogCalls,0);assert.equal(ctx.aiBusy,false);assert.equal(card.screenTask,true);assert.equal(card.question,'Which option?')
 })
 test('a review payload without the formatter still answers from question text',async()=>{
- const card={};let answers=0
- const ctx=vm.createContext({current:{id:'a'},aiBusy:false,aiBusySince:0,AbortSignal,addCard:()=>card,renderCard:()=>{},performance:{now:()=>0},grabFrame:async()=> 'frame',fetch:async()=>({ok:true,json:async()=>({needsReview:true,tasks:[{question:'First?'},{question:'Second?'}]})}),slimPrep:()=>({}),liveConfig:()=>({}),cards:[card],idx:0,window:{},generateAnswer:async(q)=>{answers++;assert.match(q,/First\?/);assert.match(q,/Second\?/)}})
- vm.runInContext(code,ctx);await ctx.analyseScreen();assert.equal(answers,1);assert.equal(ctx.aiBusy,false)
+ const card={};const seen=[]
+ const ctx=vm.createContext({current:{id:'a'},aiBusy:false,aiBusySince:0,AbortSignal,addCard:()=>card,renderCard:()=>{},performance:{now:()=>0},grabFrame:async()=> 'frame',fetch:async()=>({ok:true,json:async()=>({needsReview:true,tasks:[{question:'First?'},{question:'Second?'}]})}),slimPrep:()=>({}),liveConfig:()=>({}),cards:[card],idx:0,window:{},generateAnswer:async(q)=>{seen.push(q)}})
+ vm.runInContext(code,ctx);await ctx.analyseScreen();assert.deepEqual(seen,['First?','Second?']);assert.equal(ctx.aiBusy,false)
+})
+test('two captured questions are answered separately and the options stay with their question', async () => {
+  const cards = []
+  const seen = []
+  const shown = 'Question 1 (free-text; unknown choice):\nExplain zero trust\n\nQuestion 2 (mcq; single choice):\nWhat is IDOR?\nOptions:\nA: a missing check'
+  const ctx = vm.createContext({ current: { id: 'a' }, aiBusy: false, aiBusySince: 0, AbortSignal, addCard: (q) => { const c = { question: q }; cards.push(c); return c }, renderCard: () => {}, performance: { now: () => 0 }, grabFrame: async () => 'frame', fetch: async () => ({ ok: true, json: async () => ({ needsAnswer: true, question: shown }) }), slimPrep: () => ({}), liveConfig: () => ({}), cards, idx: 0, generateAnswer: async (q, c, opts) => { seen.push({ q, pinned: opts.pinned, source: opts.source }); c.streaming = false } })
+  vm.runInContext(code, ctx)
+  await ctx.analyseScreen()
+  assert.equal(seen.length, 2)
+  assert.equal(seen[0].q, 'Explain zero trust')
+  assert.equal(seen[0].pinned, true)
+  assert.equal(seen[0].source, 'screen')
+  assert.match(seen[1].q, /What is IDOR\?/)
+  assert.match(seen[1].q, /A: a missing check/)
+  assert.doesNotMatch(seen[0].q, /IDOR/)
+  assert.doesNotMatch(seen[1].q, /zero trust/)
+  assert.doesNotMatch(seen[1].q, /Question 2/)
 })

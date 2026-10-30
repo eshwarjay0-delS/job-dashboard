@@ -1885,6 +1885,10 @@ function splitSeparate(next, prevText, v3, v4) {
     const fresh = splitTopicWords(bare).filter((w) => !press.has(w) && !prevWords.has(w));
     if (fresh.length > 0) return true;
   }
+  // "Tell me about yourself. What questions do you have?" is two asks. A design followed by an explanation stays one.
+  const prevBare = ((String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || prevText).replace(SPLIT_LEAD, "")).replace(/[.?!]+$/, "").trim();
+  if (/^(?:tell me about yourself|introduce yourself|walk (?:me|us) through your (?:career|background))\b/i.test(prevBare)
+      && /^(?:what questions (?:do|would|might|can) you have|any questions(?: for (?:us|me|the team))?|do you have any questions)\b/i.test(String(bare).replace(/[.?!]+$/, ""))) return true;
   const prevSentence = (String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim();
   // "Tell me about yourself. Why do you want this job?": an opening ask about you is its own card (same as the server).
   if (SPLIT_INTRO.test(String(prevSentence).replace(SPLIT_LEAD, "")) && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && (/\?\s*$/.test(bare) || !/[.?!]\s*$/.test(prevSentence))) return true;
@@ -2907,17 +2911,21 @@ async function aiAnswer(fromAuto) {
       const followTyped = typedText && cur && hasAnswer(cur) ? typedFollowUpQuestion(typedText, cur.question) : "";   // "And why?" typed after an answer: own card, same subject
       const said = followTyped || pressQuestion(typedText, intake, "") || intake.derived || heardAsQuestion(pending);
       const heardOnly = !typedText;
-      const spans = heardOnly ? splitDistinctAsks(intake.derived || said || "") : [];
+      // Typed words are the question, and two questions in the box are two asks.
+      // A design followed by an explanation stays one. The microphone uses the same cut.
+      const spans = splitDistinctAsks(heardOnly ? (intake.derived || said || "") : (typedText || said || ""));
+      // Merge with slice 3: a typed "And why? …" after an answer keeps its subject on the first card.
+      if (!heardOnly && followTyped && spans.length > 1) spans[0] = typedFollowUpQuestion(spans[0], cur.question) || spans[0];
       if (spans.length > 1) {
-        const who = questionSource() === "You" ? "You" : "Them";
+        const who = heardOnly ? (questionSource() === "You" ? "You" : "Them") : "You";
         for (const span of spans) {
           const spanHeard = who + ": " + span;
-          const card = addCard("Deriving…", ["…"]);
+          const card = addCard(heardOnly ? "Deriving…" : span, ["…"]);
           card.heard = spanHeard;
           card.earlier = earlier;
           card.formed = spanHeard;
-          showPressed(card, "Deriving…");
-          await generateAnswer(spanHeard, card, { consolidated: true, earlier, pinned: false });
+          showPressed(card, heardOnly ? "Deriving…" : span);
+          await generateAnswer(spanHeard, card, { consolidated: true, earlier, derived: heardOnly ? undefined : span, pinned: !heardOnly });
         }
         return;
       }
@@ -3036,6 +3044,15 @@ function stripScreenChrome(question) {
   const stripped = String(question || "").replace(/^Question \d+ \([^)\n]{0,80}\):\s*/gm, "").trim();
   return stripped || String(question || "").trim();
 }
+// A captured screen can hold more than one question. Each Question N block is
+// its own ask, options included. One block stays one ask. No review dialog.
+function screenQuestionPieces(raw) {
+  const text = String(raw || "").trim();
+  if (!text) return [];
+  const headed = text.split(/(?=Question \d+ \([^)\n]{0,80}\):)/).map((s) => s.trim()).filter(Boolean);
+  const parts = (headed.length > 1 ? headed : [text]).map((s) => stripScreenChrome(s)).filter(Boolean);
+  return parts.length ? parts : [stripScreenChrome(text)];
+}
 async function analyseScreen() {
   if (aiBusy) { status("Still working on the last answer.", "live"); return; }
   aiBusy = true; aiBusySince = Date.now();
@@ -3062,17 +3079,32 @@ async function analyseScreen() {
       // directly from its tasks, the same as a fresh direct answer.
       const tasks = Array.isArray(data.tasks) ? data.tasks : [];
       if (!tasks.length) throw new Error("No screen question was returned. Please retry.");
-      const formatted = (typeof window !== "undefined" && window.KompasScreenCore && typeof window.KompasScreenCore.format === "function")
-        ? window.KompasScreenCore.format(tasks)
-        : tasks.map(t => t.question).join("\n\n");
-      if (typeof formatted !== "string" || !formatted.trim()) throw new Error("No screen question was returned. Please retry.");
-      card.question = stripScreenChrome(formatted.trim()); card.screenTask = true;
-      await generateAnswer(card.question, card, { pinned: true, derived: card.question, source: "screen" });
+      const pieces = tasks.map((t) => {
+        const formatted = (typeof window !== "undefined" && window.KompasScreenCore && typeof window.KompasScreenCore.format === "function")
+          ? window.KompasScreenCore.format([t])
+          : t.question;
+        return stripScreenChrome(String(formatted || "").trim());
+      }).filter(Boolean);
+      if (!pieces.length) throw new Error("No screen question was returned. Please retry.");
+      card.question = pieces[0]; card.screenTask = true;
+      await generateAnswer(pieces[0], card, { pinned: true, derived: pieces[0], source: "screen" });
+      for (const piece of pieces.slice(1)) {
+        if ((current && current.id) !== screenSession || !cards.includes(card)) return;
+        const next = addCard(piece, ["…"]); next.screenTask = true;
+        await generateAnswer(piece, next, { pinned: true, derived: piece, source: "screen" });
+      }
       return;
     } else if (data.needsAnswer === true) {
       if (typeof data.question !== "string" || !data.question.trim()) throw new Error("No screen question was returned. Please retry.");
-      card.question = stripScreenChrome(data.question.trim()); card.screenTask = true;
-      await generateAnswer(card.question, card, { pinned: true, derived: card.question, source: "screen" });
+      const pieces = screenQuestionPieces(data.question);
+      if (!pieces.length) throw new Error("No screen question was returned. Please retry.");
+      card.question = pieces[0]; card.screenTask = true;
+      await generateAnswer(pieces[0], card, { pinned: true, derived: pieces[0], source: "screen" });
+      for (const piece of pieces.slice(1)) {
+        if ((current && current.id) !== screenSession || !cards.includes(card)) return;
+        const next = addCard(piece, ["…"]); next.screenTask = true;
+        await generateAnswer(piece, next, { pinned: true, derived: piece, source: "screen" });
+      }
       return;
     }
     if (!data.needsReview) {
