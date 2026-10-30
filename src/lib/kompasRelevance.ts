@@ -134,6 +134,7 @@ export function focusPrompt(question:string,tier:number,level:string):string{
   p.intent==="value" || p.intent==="introduction" ? "Open with the relevant experience. Name a tool only when it shows that fit." : "",
   p.intent==="experience-story" ? "One supported story: what was weak, what you reviewed, what changed. Do not promote yourself to an authority the resume does not give." : "",
   p.intent==="technical-process" ? "Cover each named part in order, with the check and the failure mode for that part. Do not replace the parts with a formula or a metric." : "",
+  p.intent==="follow-up" && p.technicalDepth==="deep" ? "The interviewer asked to go deeper on the same subject. Sentence one adds the mechanism or reason the previous answer did not already give. Do not repeat that answer's opening." : "",
  ].filter(Boolean).join("\n")
 }
 

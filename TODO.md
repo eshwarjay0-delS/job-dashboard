@@ -1,3 +1,7 @@
+## 2026-10-29 — Go deeper must add a mechanism, not repeat the opening
+
+The depth flag already said deep. The prompt now says sentence one adds the mechanism or reason the previous answer did not give, and does not repeat that opening. A short follow-up such as "Why is that dangerous?" does not get that line.
+
 ## 2026-10-29 — Go deeper is a deep follow-up
 
 "Go deeper on that exception" stayed a short follow-up, so the answer could repeat the previous one at the same depth. Asking to go deeper, dig deeper, give more detail, elaborate, or explain that now deepens the same subject. "Why is that dangerous?" stays the shorter follow-up. One hundred intent folds still pass.

@@ -43,9 +43,17 @@ for (let n = 1; n <= folds.length; n++) {
       if (intent === 'technical-process') assert.match(prompt, /Cover each named part in order/)
       if (intent === 'value') assert.match(prompt, /Open with the relevant experience/)
       if (intent === 'experience-story') assert.match(prompt, /One supported story/)
+      if (intent === 'follow-up' && depth === 'deep') assert.match(prompt, /asked to go deeper on the same subject/)
     }
   })
 }
+
+test('a short follow-up is not told to open a new mechanism', () => {
+  const prompt = focusPrompt('Why is that dangerous?', 2, 'director')
+  assert.equal(interviewIntent('Why is that dangerous?'), 'follow-up')
+  assert.equal(focusPlan('Why is that dangerous?', 2, 'director').technicalDepth, 'asked-only')
+  assert.doesNotMatch(prompt, /asked to go deeper/)
+})
 
 test('words before "next question" are not the question', () => {
   const heard = 'Possible or anyone has to talk to why we disable it? I will explain this later. Moving to the next question, what is NLA and why do we disable it?'
