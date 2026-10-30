@@ -876,6 +876,25 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
       .join("\n")
   }
 
+  // Master Bible retrieval is a bounded optional server-side lookup, never a
+  // second model call. Resume / JD remain the authoritative current sources.
+  // Prior Q&A can guide topic continuity, not invent candidate achievements.
+  let priorBibleContext = ""
+  if (tier !== 0 && !["closing-question", "acknowledgement", "logistics"].includes(rediscovered.intent)) {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      priorBibleContext = await Promise.race([
+        import("@/lib/kompas-master-bible").then(m =>
+          m.masterBibleContext(hashUserId(user.id), question, {
+            followUp: includeHistoryContext ? history.slice(-250) : undefined,
+            maxChars: 2200,
+          })),
+        new Promise<string>(resolve => { timer = setTimeout(() => resolve(""), 110) }),
+      ])
+    } catch { /* historical retrieval must never block the live reply */ }
+    finally { if (timer) clearTimeout(timer) }
+  }
+
   const context = [
     `The listener is at ${ANSWER_LEVEL_NAME[level]}. The level block below is the controlling spec for this answer's depth and register.`,
     tier === 0 ? `INTRODUCTION AUDIENCE: ${level}. Audience adjusts language and emphasis, not the career-wide scope. No step-by-step project reconstruction.` : levelGuidance(level, register),
@@ -898,6 +917,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     includeStoryContext && prep.persona ? `Persona: ${str(prep.persona, 800)}` : "",
     includeStoryContext && prep.projects ? `UNVERIFIED generated project summaries: ${str(prep.projects, 2000)}` : "",
     includeStoryContext && grounding ? `Historical context (personal claims require original source corroboration):\n${grounding.slice(0, 4500)}` : "",
+    priorBibleContext ? `MASTER BIBLE — PRIOR SESSION Q&A (context and earlier wording only, never proof that an incident happened):\n${priorBibleContext}` : "",
     resumeFacts ? `${resumeFacts}` : "",
     tier !== 0 && jdSrc && !["closing-question","acknowledgement","definition","logistics"].includes(rediscovered.intent) ? `JOB DESCRIPTION (role priorities, not candidate history):\n${jdSrc}` : "",
     docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
