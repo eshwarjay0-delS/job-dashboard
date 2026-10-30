@@ -1,4 +1,7 @@
 import { modeBand, type AnswerShape } from "./kompasDissection.ts"
+import { askSentences } from "./kompasAsk.ts"
+import { openerCategory } from "./kompasOpener.ts"
+import { lensBlock } from "./kompasAudience.ts"
 
 /** Desktop response contract. The question sets the depth. The level changes how it is spoken. */
 export type DesktopQuestionKind = 'definition' | 'comparison' | 'experience' | 'implementation' | 'topic' | 'general'
@@ -124,6 +127,23 @@ function desktopShape(kind: DesktopQuestionKind): AnswerShape {
   return "direct"
 }
 
+// Lens r1 (29 Oct 2026, notebooklm-lens-spec §2): podcast explain modes, said by one speaker. The challenge is a real,
+// general limitation of the idea; never an incident, employer or number the sources do not hold.
+export const EXPLAIN_MODES = "EXPLAIN MODES (one speaker, inside the word aim): Define the term in one plain line. Picture it with one everyday image. Challenge: the counterpoint a sharp listener would raise ('You might say MFA alone fixes this'), drawn from general knowledge, never a made-up incident, and no number or figure. Resolve: why the answer still holds, or the condition under which it stops holding. At a short word aim, Challenge and Resolve share one sentence. The last sentence is still the takeaway; if you offer the next rung, it is a short clause inside the last sentence."
+const EXPLAIN_ASK = /^(?:(?:so|ok|okay|right|and|like|then|anyway|simply put|in short|quickly|in plain (?:english|words)|in simple terms|plain english|dumb it down|in depth|under the hood)[,:]?\s+|(?:as an?|for an?|speaking to an?|to an?)\s[\w -]{1,40}?[,:]\s+)*(?:what (?:is|are)|what's|explain|(?:can|could|would) you explain|how (?:would|do|can) you explain|how (?:does|do)\b|how (?:is|are) [^?]{0,200}\bwork|what does [^?]{1,200}\bmean\b|why\b|eli5 (?!(?:that|this|it)\b)|dig into\b|double.?click on (?!(?:that|this|it)\b)|non.?technical version\b)|\b(?:difference between|what'?s the difference|go deeper|deeper|why does|why is|why do|explain)\b/
+const PERSONAL_ASK = /\b(?:tell me about a time|have you ever|did you|walk me through (?:a|the|your) (?:time|incident|project)|a time (?:when )?you)\b/
+export function explainModesAsked(question: string): boolean {
+  // Lens r3: each sentence and each comma clause of the cleaned ask is read on its own, so a ramble, a typo or an injected
+  // line before the real ask does not hide it. A personal-story ask anywhere in the question turns explain modes off.
+  const parts = askSentences(question)
+  if (parts.some((p) => PERSONAL_ASK.test(p)) || openerCategory(question) === "experience-story") return false
+  return parts.some((p) => {
+    // About the candidate, not a concept: "What is your biggest weakness?", "Why should we hire you?" (lens r1 failure hunt).
+    if (/\b(?:you|your|yours|yourself|hire|(?:this|a|the) (?:\w+ )?(?:role|job|position)|this (?:company|team))\b/.test(p.replace(/\b(?:(?:how )?(?:can|could|would|do) you (?:explain|walk|tell|describe|define|go))\b/g, ""))) return false
+    return p.split(/,\s+(?:and\s+)?|\s+-\s+/).some((c) => EXPLAIN_ASK.test(c.trim()))
+  })
+}
+
 export function desktopResponsePolicy(audience: string, question: string) {
   const kind = desktopQuestionKind(question)
   const level = audience === "director" ? "director" : /architect|developer/.test(audience) ? "architect" : "engineer"
@@ -165,7 +185,58 @@ export function desktopResponsePolicy(audience: string, question: string) {
     : directFact
     ? `This asks for a fact about the candidate. Answer it first, yes or no, from the resume, then one compact proof from the role whose section lists it. Do not define the tool, recite the introduction or open a story. ${EXACT_AND_PLACED}`
     : `This is an ordinary question. Answer it in a few sentences. ${angle} ${SURFACE_STOP}`
+  const explain = explainModesAsked(question) ? ` ${EXPLAIN_MODES}` : ""
   const shape = levelMetrics(level)
   const spoken = `SPOKEN MEASURES for this level only: depth ${shape.depth}, distinction ${shape.distinction}, integration ${shape.integration}, relevance ${shape.relevance}, confidence ${shape.confidence}. These are not the same as the other two levels. SPOKEN CARD: one sentence a line, the way a person talks. Keep the technical name. Do not write a command, a sign, a math sum, or a block of code. Write at least nine, never >=9. Write and, never an ampersand and never x-amp. The last sentence is the plain takeaway, still about this question, said as the completed thought itself and never announced (no "The key takeaway is", "In conclusion", "To sum up"). Do not open another topic.`
-  return { kind, level, words, metrics: shape, guidance: `DESKTOP THREE-LEVEL RESPONSE CONTRACT — this shape wins over any earlier template that treats every question as an investigation.\nQUESTION SHAPE: ${kind}. ${scope}\n${spoken}\nAim for about ${words} words. The level changes the angle. The question decides how far to go. A definition is not a deep example. A deep example is not a definition.` }
+  return { kind, level, words, metrics: shape, guidance: `DESKTOP THREE-LEVEL RESPONSE CONTRACT — this shape wins over any earlier template that treats every question as an investigation.\nQUESTION SHAPE: ${kind}. ${scope}${explain}\n${spoken}\nAim for about ${words} words. The level changes the angle. The question decides how far to go. A definition is not a deep example. A deep example is not a definition.` }
+}
+
+/** Lens r4: the environment switch for the desktop lens wiring. OFF unless set to "on" or "1". */
+export const DESKTOP_LENS_SWITCH = "KOMPAS_DESKTOP_LENS"
+type DesktopWire = { on: boolean; delivery: string; tail: string }
+/** Lens r4: the two desktop slots of the system prompt (AUDIENCE DELIVERY and the closing repeat).
+ *  Off (default): exactly today's slots, the desktop guidance in both. On: the desktop guidance once, followed by the lens
+ *  block (LENS, DEPTH, OWN THE ROOM, REALISM), and no closing repeat. Anything that throws gives today's slots. */
+export function desktopDelivery(
+  policy: { guidance?: string } | null | undefined, level: string, question: string,
+  opts: { on?: boolean; lens?: (level: string, question: string) => string } = {},
+): DesktopWire {
+  const guidance = typeof policy?.guidance === "string" ? policy.guidance : ""
+  const today: DesktopWire = { on: false, delivery: guidance, tail: guidance }
+  try {
+    const env = typeof process !== "undefined" ? String(process.env?.[DESKTOP_LENS_SWITCH] ?? "").trim().toLowerCase() : ""
+    const on = opts.on ?? (env === "on" || env === "1")
+    if (!on || !guidance) return today
+    const lens = (opts.lens || lensBlock)(level, question)
+    if (typeof lens !== "string" || !lens.trim()) return today
+    return { on: true, delivery: `${guidance} ${lens}`, tail: "" }
+  } catch {
+    return today
+  }
+}
+
+/** A challenge line: the counterpoint sentence the explain modes ask for. */
+const CHALLENGE_LINE = /^(?:challenge:\s*|you (?:might|could|may) say\b|some (?:would|might|will) say\b|a (?:fair|common|sharp) (?:pushback|objection|challenge|counterpoint)\b|the (?:catch|counterpoint|pushback|objection) is\b|a sharp listener (?:might|would)\b|critics (?:say|argue)\b|one objection\b)/i
+const sentences = (t: string) => String(t || "").split(/(?<=[.!?])\s+/)
+/** Lens r4: if a guard rewrote a challenge line, the rewrite never reaches the answer. The original line comes back when it
+ *  holds no figure; when it does, the line is dropped, because restoring it would bring back an unsourced figure.
+ *  With the candidate's allowed figures given, a challenge line holding any other figure is dropped even when no guard touched
+ *  it (a modal "You might say MFA cuts 99%" is not a result claim, so the guard leaves it). Other sentences keep the guarded
+ *  text. If the sentences do not line up one to one, the guarded text is kept. */
+export function keepChallengeLines(original: string, guarded: string, allowed?: Set<string>): string {
+  try {
+    const a = sentences(original), b = sentences(guarded)
+    if (a.length !== b.length) return guarded
+    const out: string[] = []
+    a.forEach((orig, i) => {
+      if (!CHALLENGE_LINE.test(orig.trim())) return void out.push(b[i])
+      const figures = orig.match(/\d[\d,.]*\s?%?/g) || []
+      const unsourced = figures.some((f) => !allowed || !(allowed.has(f.trim()) || allowed.has(f.trim().replace(/%$/, ""))))
+      if (orig === b[i]) return void (allowed && unsourced ? undefined : out.push(b[i]))
+      if (!figures.length) out.push(orig)
+    })
+    return out.join(" ")
+  } catch {
+    return guarded
+  }
 }

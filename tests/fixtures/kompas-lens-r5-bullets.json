@@ -1,0 +1,602 @@
+[
+ {
+  "text": "Developed Python and Bash scripts to automate health checks, reporting, and validation tasks.",
+  "file": "Cyber Marketing/Business Analyst _ System Engineer/ESHWAR JANJIRALA(5).docx"
+ },
+ {
+  "text": "Developed PowerBI dashboards, operational reports, and forensic views for SOC and leadership.",
+  "file": "Cyber Marketing/Database Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Developed Bash and Python scripts to automate infrastructure validation and operational reporting.",
+  "file": "Cyber Marketing/Database Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Developed PowerShell and Python automation for SailPoint reporting, certification tracking, access validation, and compliance workflows.",
+  "file": "Cyber Marketing/IAM _ PAM/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Supported Active Directory and Azure AD, including group management, authentication troubleshooting, and GPO support.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Supported VMware infrastructure, provisioning VMs, troubleshooting resource and network issues.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Supported cabling, terminations, and plant/refinery environments, following safety and compliance protocols.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Supported cloud security operations across AWS and Azure, including IAM policy reviews, logging enablement, and security monitoring.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Implemented Azure Security Center / Defender for Cloud, improving security posture visibility and driving remediation of high-risk misconfigurations.",
+  "file": "Cyber Marketing/Cloud Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Implemented Infrastructure as Code security practices using ARM templates and Terraform-based configurations.",
+  "file": "Cyber Marketing/Cloud Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Implemented identity lifecycle workflows (Joiner / Mover / Leaver) in SailPoint, automating provisioning, deprovisioning, and role-based access assignments.",
+  "file": "Cyber Marketing/IAM _ PAM/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Implemented AWS security controls like IAM policies, KMS encryption, CloudTrail logging, and GuardDuty threat detection.",
+  "file": "Cyber Marketing/OT Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Built custom scripts and PoCs in Python and PowerShell to validate exploitability beyond automated scanners.",
+  "file": "Cyber Marketing/Penetration Tester/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Built exploitation PoCs where needed and mapped findings to MITRE ATT&CK for consistent reporting and risk communication.",
+  "file": "Cyber Marketing/Red Team/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Built serverless event-driven workflows on AWS Lambda and EventBridge, linking to DynamoDB Streams and Step Functions, reducing latency and manual overhead.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Built Retrieval-Augmented Generation (RAG) and GraphRAG pipelines using OpenAI embeddings, Azure OpenAI, AWS Bedrock, Pinecone, PGVector, ChromaDB, and Neo4j graph databases.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Designed and implemented secure Azure cloud architectures supporting enterprise workloads across IaaS and PaaS services.",
+  "file": "Cyber Marketing/Cloud Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Designed identity-first security models using Azure AD, RBAC, Conditional Access, and PIM to enforce least-privilege access.",
+  "file": "Cyber Marketing/Cloud Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Designed automated testing workflows to improve coverage and efficiency of assessments.",
+  "file": "Cyber Marketing/Red Team/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Designed secure cloud architectures including IAM models, network segmentation, encryption standards, logging, and monitoring controls.",
+  "file": "Cyber Marketing/Security Architect _ GRC/ESHWAR JANJIRALA (1).docx"
+ },
+ {
+  "text": "Assisted in security incident response, user lockouts, malware alerts, and access misuse investigations.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Assisted with cloud infrastructure support (AWS/Azure) and hybrid integrations.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Assisted with firewall rule updates and connectivity troubleshooting.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Assisted with OWASP Top 10 vulnerability identification and remediation guidance.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Integrated application and AI security testing into CI/CD pipelines, enforcing vulnerability gates and shift-left security practices.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Integrated security controls into CI/CD pipelines, ensuring secure builds, deployments, and secrets handling in Azure DevOps and GitHub.",
+  "file": "Cyber Marketing/Cloud Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Integrated IAM and IGA platforms with cloud and enterprise applications using SAML, OAuth2, and OIDC.",
+  "file": "Cyber Marketing/IAM _ PAM/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Integrated findings into CI/CD and DevSecOps pipelines (Jenkins) to support continuous security testing and regression validation.",
+  "file": "Cyber Marketing/Penetration Tester/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Performed user provisioning and deprovisioning, access corrections, and SOX access validations for business and non-SOX applications.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Performed application and API penetration testing across traditional and AI-enabled applications, identifying and validating OWASP Top 10 and API Top 10 vulnerabilities.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Performed secure code reviews for Java (Spring Boot) and Node.js (Express) applications, identifying insecure coding patterns and guiding developers on remediation.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Performed manual exploitation and validation using Burp Suite and red team methodologies.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Collaborated with security and audit teams to prepare QAR and access evidence.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Collaborated with DevOps teams to integrate security testing into CI/CD pipelines.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Collaborated with developers to secure PaaS services including App Services, Storage Accounts, Key Vault, and Azure SQL.",
+  "file": "Cyber Marketing/Cloud Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Collaborated with MSSP/MDR teams and internal stakeholders to resolve incidents within SLA targets.",
+  "file": "Cyber Marketing/OT Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Automated IAM enforcement checks for web apps with JavaScript and PowerShell and contributed to SOC SOPs and phishing playbooks.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Automated security testing and validation using Python and JavaScript, improving coverage and reducing manual effort. Partnered with developers, DevOps, and platform teams to embed secure coding and DevSecOps practices.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Automated security validation checks using Python and JavaScript.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Automated routine security and infrastructure checks using PowerShell and Python.",
+  "file": "Cyber Marketing/Cloud Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Participated in infrastructure upgrades and migrations, documenting changes and validating connectivity.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Participated in security incident investigations related to identity misuse and access violations.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Worked with Cisco devices (CCNA-level tasks) and assisted with Arista switches.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Worked with application owners to remediate access issues and improve identity governance processes.",
+  "file": "Cyber Marketing/IAM _ PAM/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Configured VLANs, trunking, ACLs, QoS, and routing policies for campus and WAN environments.",
+  "file": "Cyber Marketing/Network/ESHWAR-JANJIRALA.docx"
+ },
+ {
+  "text": "Configured serverless applications with API Gateway, DynamoDB, AWS Lambda, and automated promotions with CodePipeline.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Conducted red team\u2013style testing using Kali Linux, Burp Suite, Metasploit, and custom scripts to simulate real-world attack scenarios.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Conducted web, API, and microservices penetration testing aligned with OWASP Top 10 and API Top 10.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Led on-prem to Azure migration security planning, ensuring network segmentation, identity controls, and secure connectivity were aligned with enterprise standards.",
+  "file": "Cyber Marketing/Cloud Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Led SailPoint access certification campaigns, including quarterly and ad-hoc reviews, remediation tracking, and audit evidence generation.",
+  "file": "Cyber Marketing/IAM _ PAM/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Cloud Platforms & Security: AWS, Azure, GCP (foundational); IAM roles & policies, virtual networks, cloud access controls, hybrid identity integrations.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Cloud & Container Security: Cloud application security assessments in AWS; container and Kubernetes security fundamentals.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Managed Linux system configurations, user permissions, and service administration.",
+  "file": "Cyber Marketing/Database Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Managed and maintained OT asset inventory using Industrial Defender, ensuring accurate tracking of industrial devices across control system environments",
+  "file": "Cyber Marketing/OT Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Created and maintained technical documentation, SOPs, and runbooks for IAM, cloud security, and operational procedures.",
+  "file": "Cyber Marketing/Security Architect _ GRC/ESHWAR JANJIRALA (1).docx"
+ },
+ {
+  "text": "Created serverless APIs with API Gateway, AWS Lambda, DynamoDB; used SAM/CloudFormation for predictable promotions.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Experience deploying and managing serverless architectures (AWS Lambda, EventBridge, Step Functions).",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Experience with data platforms and databases: PostgreSQL, MySQL, MongoDB, Cassandra, Redis.",
+  "file": "GC Remote/Cloud Data/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Monitored SIEM alerts and log events in Splunk, Microsoft Sentinel, and QRadar and fine-tuned rules to improve phishing and malware detection.",
+  "file": "Cyber Marketing/Business Analyst _ System Engineer/ESHWAR JANJIRALA(5).docx"
+ },
+ {
+  "text": "Monitored infrastructure systems and responded to operational alerts using centralized monitoring platforms.",
+  "file": "Cyber Marketing/Database Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Deployed and maintained Securonix and Splunk pipelines for enterprise threat detection and UEBA, onboarding authentication, endpoint, and application logs.",
+  "file": "Cyber Marketing/Business Analyst _ System Engineer/ESHWAR JANJIRALA(5).docx"
+ },
+ {
+  "text": "Deployed microservices on Amazon EKS with Helm/Kustomize, applying PodSecurityPolicies, RBAC, and OPA Gatekeeper to enforce multi-tenant isolation.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Strong knowledge of monitoring/observability tools: Prometheus, Grafana, Datadog, Dynatrace, ELK Stack, CloudWatch.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Strong background in Infrastructure-as-Code (IaC), Terraform module development, cloud-native deployments, observability integrations, and AI-enhanced DevOps operations within distributed enterprise environments.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Security & Compliance Awareness: Network security best practices, segmentation, access controls, firewall compliance, audit support, risk awareness in regulated environments.",
+  "file": "Cyber Marketing/Network/ESHWAR-JANJIRALA.docx"
+ },
+ {
+  "text": "Security Operations & Incident Response: SOC operations, alert triage, incident investigation, escalation handling, containment support, evidence collection, post-incident reporting, continuous monitoring improvements.",
+  "file": "Cyber Marketing/OT Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Administered Linux (RHEL) and Windows environments supporting enterprise applications and infrastructure.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Administered Active Directory and Azure Entra ID, supporting authentication and access services.",
+  "file": "Cyber Marketing/Business Analyst _ System Engineer/ESHWAR JANJIRALA(5).docx"
+ },
+ {
+  "text": "Support secure-by-design initiatives, providing architecture feedback during early development and cloud migration phases.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Support NetApp storage systems, including provisioning, monitoring, and incident resolution.",
+  "file": "Cyber Marketing/Business Analyst _ System Engineer/ESHWAR JANJIRALA(5).docx"
+ },
+ {
+  "text": "Maintained vulnerability documentation, remediation tracking, and security testing artifacts.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Maintained accurate IPAM records, diagrams, and change documentation.",
+  "file": "Cyber Marketing/Network/ESHWAR-JANJIRALA.docx"
+ },
+ {
+  "text": "Contributed to improving secure coding practices by highlighting recurring vulnerability patterns and root causes.",
+  "file": "Cyber Marketing/Cloud Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Contributed to IAM and IGA architecture decisions for cloud and AI-enabled platforms, ensuring least-privilege access and governance for service accounts and machine identities.",
+  "file": "Cyber Marketing/IAM _ PAM/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Partnered with infrastructure and application teams to secure VNets, subnets, NSGs, private endpoints, and firewall policies.",
+  "file": "Cyber Marketing/Cloud Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Partnered with audit and compliance teams to support SOX, PCI, and regulatory reviews, producing audit-ready IAM and IGA evidence.",
+  "file": "Cyber Marketing/IAM _ PAM/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Investigated phishing, malware infections, suspicious account activity, and unauthorized access attempts.",
+  "file": "Cyber Marketing/OT Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Investigated alerts across Splunk, Microsoft Sentinel, QRadar, and EDR platforms, focusing on endpoint, identity, and network-based events.",
+  "file": "Cyber Marketing/Penetration Tester/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Established centralized logging, monitoring, and alerting standards across cloud and hybrid environments.",
+  "file": "Cyber Marketing/Security Architect _ GRC/ESHWAR JANJIRALA (1).docx"
+ },
+ {
+  "text": "Established SLIs, SLOs, and error budget frameworks to improve service reliability and operational accountability.",
+  "file": "GC Remote/Cloud Data/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Hands-on AI Cloud Engineer with strong expertise in Terraform, AWS cloud infrastructure, containerized platforms, CI/CD automation, and security-first operational design supporting enterprise-scale environments.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Hands-on experience using industry-standard security tools including Burp Suite, Fortify, Qualys, Wiz, and DefectDojo for vulnerability assessment, analysis, and remediation tracking. Experienced in assessing modern cloud-native and AI-powered applications, securing Azure workloads including AKS, App Services, and serverless environments",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Optimized storage & compute by enforcing S3 Object Locking, Cross-Region Replication, EBS lifecycle policies, and EC2 Spot Fleet orchestration for cost control.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Optimized costs using EC2 Spot, S3 lifecycle policies, EBS gp3 volumes, resource reclamation; reported savings to stakeholders.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Leveraged AI-assisted coding and automation platforms to improve cloud engineering efficiency, Terraform development, deployment troubleshooting, and operational task automation.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Leveraged Ansible Tower to deploy playbooks and integrate with GitHub for code storage in AWS.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Identity & Access Management (IAM): User provisioning/deprovisioning, AD & Azure AD administration, access validations, SOX access reviews, role reconciliation, evidence preparation, identity lifecycle support.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Identity & Directory Services: Active Directory domain administration, Azure Entra ID (Azure AD), hybrid identity, authentication and access troubleshooting, user/group lifecycle management.",
+  "file": "Cyber Marketing/Business Analyst _ System Engineer/ESHWAR JANJIRALA(5).docx"
+ },
+ {
+  "text": "AI & Emerging Identity Governance (Exposure): AI/ML platform identity considerations (AWS, Azure), least-privilege access for AI services, governance considerations for ML pipelines.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "AI & LLM Application Security: Assessment of AI-enabled applications for prompt injection, model abuse, insecure inference APIs, data leakage, and authorization bypass risks.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Lead network changes following ITIL change control, test plans, and rollback strategies.",
+  "file": "Cyber Marketing/Network/ESHWAR-JANJIRALA.docx"
+ },
+ {
+  "text": "Lead and support cloud security monitoring and incident response across AWS, Azure, and hybrid environments.",
+  "file": "Cyber Marketing/OT Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Executed logic and source-level exploitation on live bug bounty applications under time-sensitive condition",
+  "file": "Cyber Marketing/Network/ESHWAR-JANJIRALA.docx"
+ },
+ {
+  "text": "Executed manual web and API penetration tests aligned with OWASP Top 10 and OWASP API Top 10 frameworks.",
+  "file": "Cyber Marketing/Penetration Tester/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Delivered post-exploitation walkthroughs to internal review teams with clear root cause breakdowns",
+  "file": "Cyber Marketing/Network/ESHWAR-JANJIRALA.docx"
+ },
+ {
+  "text": "Delivered clear remediation guidance, working backward from attacker techniques to practical engineering fixes.",
+  "file": "Cyber Marketing/Penetration Tester/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Utilized Industrial Defender to monitor configuration changes in ICS/SCADA systems, validating against baseline configurations",
+  "file": "Cyber Marketing/OT Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Utilized Redis for caching test results, token metadata, and frequently accessed data, improving lookup performance by over 60%.",
+  "file": "GC Remote/FSD/Eshwar_FSD.docx"
+ },
+ {
+  "text": "Experienced in integrating GenAI technologies including AWS Bedrock, GitHub Copilot, Claude Code, and AI-assisted engineering workflows to improve infrastructure automation, operational efficiency, and incident response processes.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Experienced building scalable data ingestion platforms, workflow orchestration solutions, and secure cloud architectures supporting large-scale enterprise workloads.",
+  "file": "GC Remote/Cloud Data/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Enforced IAM least privilege, KMS encryption, Secrets Manager rotation; onboarded apps to IRSA to eliminate long-lived credentials.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Enforced enterprise governance, compliance, and security standards across Kubernetes and Azure cloud environments supporting regulated financial services workloads.",
+  "file": "GC Remote/Cloud Sec/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Enhanced observability with OpenTelemetry, Prometheus, Grafana, CloudWatch Insights.",
+  "file": "GC Remote/DevOps/Eshwar_Devops.docx"
+ },
+ {
+  "text": "Enhanced system resilience through Resilience4j, retry/timeout strategies in Java, and exception handling in Python services for fault tolerance.",
+  "file": "GC Remote/FSD/Eshwar_FSD.docx"
+ },
+ {
+  "text": "Provided day-to-day L1/L2 network support including VLAN changes, switch troubleshooting, DNS/DHCP issues, and break/fix activities.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Provided actionable remediation guidance, assisting clients with hardening cloud assets including S3 buckets, metadata endpoints, and IAM configurations.",
+  "file": "Cyber Marketing/Red Team/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Administer and support Linux and Windows systems running critical enterprise platforms across on-prem and Azure environments.",
+  "file": "Cyber Marketing/Business Analyst _ System Engineer/ESHWAR JANJIRALA(5).docx"
+ },
+ {
+  "text": "Administer Azure Entra ID and support hybrid identity integrations with Active Directory.",
+  "file": "Cyber Marketing/Business Analyst _ System Engineer/ESHWAR JANJIRALA(5).docx"
+ },
+ {
+  "text": "Authored network access policies, secure ACLs, and segmentation exceptions.",
+  "file": "Cyber Marketing/Business Analyst _ System Engineer/ESHWAR JANJIRALA(5).docx"
+ },
+ {
+  "text": "Authored Ansible Playbooks (YAML) for EC2 provisioning, service configuration, patching.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Improved cloud visibility using Azure Monitor, Log Analytics, and Sentinel dashboards.",
+  "file": "Cyber Marketing/Cloud Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Improved AI model deployment velocity by 60% by automating CI/CD pipelines with Jenkins + AWS CodePipeline + Kubernetes, accelerating rollout of NIM-powered personalization and fraud detection services.",
+  "file": "Thakkuva/Thakkuva/AI_Marketing/EshwarJ_AI.docx"
+ },
+ {
+  "text": "Azure Active Directory / Entra ID: Conditional Access policies, MFA enforcement, identity protection, Privileged Identity Management (PIM), app registrations, enterprise applications, hybrid identity integrations.",
+  "file": "Cyber Marketing/IAM _ PAM/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Azure Cloud Security Architecture: Azure IaaS, PaaS, SaaS security architecture, Azure App Services security, AKS workload protection, Azure Functions security, virtual machine security hardening.",
+  "file": "GC Remote/Cloud Sec/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Produce detailed network diagrams, IP/VLAN documentation, and operational runbooks.",
+  "file": "Cyber Marketing/Network/ESHWAR-JANJIRALA.docx"
+ },
+ {
+  "text": "Produce executive-ready and technical reports mapping vulnerabilities to business risk, compliance impact, and realistic attacker scenarios.",
+  "file": "Cyber Marketing/Penetration Tester/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Identified and prioritized vulnerabilities with SAST, DAST, and SCA scanning with Fortify, Snyk, and Invicti.",
+  "file": "Cyber Marketing/OT Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Identified and tracked OT vulnerabilities using Industrial Defender, supporting risk prioritization and remediation tracking",
+  "file": "Cyber Marketing/OT Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Conduct cloud security assessments across AWS and Azure, including testing of IAM roles, storage services (S3/Blob), metadata services, serverless components, and network security controls.",
+  "file": "Cyber Marketing/Penetration Tester/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Conduct threat hunting aligned to MITRE ATT&CK to proactively identify advanced and stealthy threats.",
+  "file": "Cyber Marketing/SOC _ Detection/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Expertise in containerization and orchestration with Docker, Kubernetes, Helm, OpenShift, and EKS/AKS/GKE.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Expertise in Remedy Force, CMDB, and Change Management end-to-end implementation.",
+  "file": "GC Remote/Service Now/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Architected AI-enabled intelligent automation pipelines integrating Azure Cognitive Services and Power Platform to streamline document processing and compliance reporting workflows.",
+  "file": "GC Remote/AI/Eshwar_Resume.docx"
+ },
+ {
+  "text": "Architected a security event pipeline using Pub/Sub to ingest, buffer, and distribute high-volume logs from Cloud Audit Logs and VPC Flow Logs to downstream SIEM and analytics tools",
+  "file": "GC Remote/Cloud Sec/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Linux & Unix System Administration: RHEL, AIX, Linux CLI, system patching, performance tuning, troubleshooting, user/group management, cron jobs, RPM package builds (exposure), shell scripting.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Linux System Administration: RHEL, CentOS, Ubuntu; system services, systemd, users/groups, permissions, cron, logging, performance tuning, troubleshooting, package management, patching, host hardening.",
+  "file": "Cyber Marketing/Business Analyst _ System Engineer/ESHWAR JANJIRALA(5).docx"
+ },
+ {
+  "text": "Network Administration (L1/L2/Lite L3): TCP/IP, VLANs, DNS, DHCP, NAT, routing fundamentals, Layer 1\u20132 troubleshooting, cabling & terminations, Cisco switches/routers, Arista exposure.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Network Security & Protocols: TCP/IP, DNS, DHCP, NAT, VLANs, public/private IPs, network traffic analysis, Wireshark, tcpdump basics.",
+  "file": "Cyber Marketing/OT Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Vulnerability & Patch Management: Vulnerability triage, remediation tracking, validation of fixes, coordination with infrastructure and application teams.",
+  "file": "Cyber Marketing/Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Vulnerability Research & Exploitability: CVE analysis, exploitability assessment, severity prioritization, risk-based remediation guidance, vulnerability chaining",
+  "file": "Cyber Marketing/Red Team/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Reviewed and secured API authentication and authorization mechanisms using OAuth2, JWT, RBAC, and token lifecycle controls.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Reviewed Terraform and cloud configurations for security best practices and access controls.",
+  "file": "Cyber Marketing/Security Engineer/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Produced detailed technical vulnerability reports and executive-level risk summaries, tracking remediation to closure.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Produced architecture diagrams, security documentation, and executive-level summaries for leadership and audit teams.",
+  "file": "Cyber Marketing/Cloud Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Enterprise Security Architecture & Threat ModelingLed secure design reviews and STRIDE-based threat modeling for applications and APIs, enabling early risk identification and mitigation.",
+  "file": "Cyber Marketing/Appsec Engineer/ESHWAR JANJIRAL1.docx"
+ },
+ {
+  "text": "Enterprise Networking & Architecture: TCP/IP, IPv4/IPv6, LAN/WAN design, campus & data center networking, high availability, redundancy planning, fault tolerance, enterprise-scale network operations.",
+  "file": "Cyber Marketing/Network/ESHWAR-JANJIRALA.docx"
+ },
+ {
+  "text": "Manage PKI infrastructure using EJBCA, supporting certificate issuance, renewal, revocation, and troubleshooting.",
+  "file": "Cyber Marketing/Business Analyst _ System Engineer/ESHWAR JANJIRALA(5).docx"
+ },
+ {
+  "text": "Manage Palo Alto firewalls via Panorama, including policy design, NAT, VPNs, HA failover, and rule optimization.",
+  "file": "Cyber Marketing/Network/ESHWAR-JANJIRALA.docx"
+ },
+ {
+  "text": "Develop Python and Bash automation for certificate lifecycle management, system validation, and operational reporting.",
+  "file": "Cyber Marketing/Business Analyst _ System Engineer/ESHWAR JANJIRALA(5).docx"
+ },
+ {
+  "text": "Develop Python scripts and Ansible playbooks to automate VLAN provisioning, configuration checks, and network validation.",
+  "file": "Cyber Marketing/Network/ESHWAR-JANJIRALA.docx"
+ },
+ {
+  "text": "Perform day-to-day Windows OS and application administration, including monitoring and issue resolution.",
+  "file": "Cyber Marketing/Business Analyst _ System Engineer/ESHWAR JANJIRALA(5).docx"
+ },
+ {
+  "text": "Perform kernel updates, OS upgrades, and patch management ensuring minimal downtime for production systems.",
+  "file": "Cyber Marketing/Database Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Defined and enforced Azure Policies for governance, compliance, and secure baseline enforcement across subscriptions.",
+  "file": "Cyber Marketing/Cloud Security/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Defined security guardrails, reference architectures, and secure design patterns for engineering and platform teams.",
+  "file": "Cyber Marketing/Security Architect _ GRC/ESHWAR JANJIRALA (1).docx"
+ },
+ {
+  "text": "Provide production support and incident resolution for enterprise server infrastructure.",
+  "file": "Cyber Marketing/Database Admin/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Provide Tier-3 NOC escalation support, resolving complex routing, switching, DNS, and firewall issues.",
+  "file": "Cyber Marketing/Network/ESHWAR-JANJIRALA.docx"
+ },
+ {
+  "text": "Active Directory & Directory Services: AD DS, LDAP/LDAPS, DNS dependencies, GPO fundamentals, domain trusts, identity synchronization (Entra Connect).",
+  "file": "Cyber Marketing/IAM _ PAM/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Active Directory & Enterprise Attacks: AD enumeration, Kerberos & NTLM abuse concepts, privilege escalation paths, lateral movement techniques, BloodHound-driven attack analysis, credential access workflows",
+  "file": "Cyber Marketing/Red Team/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Designed, implemented, and supported enterprise IAM and IGA solutions using SailPoint IdentityNow / IdentityIQ, Azure AD (Entra ID), and CyberArk PAM across hybrid environments.",
+  "file": "Cyber Marketing/IAM _ PAM/ESHWAR JANJIRALA.docx"
+ },
+ {
+  "text": "Designed, deployed, and managed enterprise-grade Azure Kubernetes Service (AKS) clusters supporting highly available containerized workloads across production and non-production environments.",
+  "file": "GC Remote/Cloud Sec/ESHWAR JANJIRALA.docx"
+ }
+]
