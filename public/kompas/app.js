@@ -4921,9 +4921,16 @@ async function openHandedSession(s) {
     const previous = { ...all[index] };
     for (const key of ["token", "refreshToken", "tokenExp", "access_token", "refresh_token"]) delete previous[key];
     const combined = { ...previous, ...incoming };
-    if (Array.isArray(previous.transcripts) &&
-        (!Array.isArray(incoming.transcripts) || previous.transcripts.length >= incoming.transcripts.length))
-      combined.transcripts = previous.transcripts;
+    // Each saved run has its own key. Include runs from both devices rather
+    // than picking one whole transcript list by length (equal-length lists can
+    // contain distinct runs). Keep the existing twenty-run retention rule.
+    if (Array.isArray(previous.transcripts) || Array.isArray(incoming.transcripts)) {
+      const byKey = new Map();
+      for (const entry of [...(previous.transcripts || []), ...(incoming.transcripts || [])])
+        if (entry && typeof entry.key === "string") byKey.set(entry.key, entry);
+      combined.transcripts = [...byKey.values()]
+        .sort((a, b) => (Number(a.at) || 0) - (Number(b.at) || 0)).slice(-20);
+    }
     // A delayed browser handoff must not revive an interview already ended
     // on this device or discard its lifecycle metadata.
     for (const key of ["runAt", "pausedAt", "endedAt", "endedBy"])
