@@ -12,6 +12,21 @@ const $ = (id) => document.getElementById(id);
    The deploy stamps window.PERFACT_BUILD into index.html and writes /version.json. */
 const BUILD = window.PERFACT_BUILD || "dev";
 if ($("releaseBuild")) $("releaseBuild").textContent = "Release " + BUILD.replace(/^kompas-/, "");
+// The label names the exact commit and build time the server stamped into version.json at build time
+// (scripts/stamp-version.mjs). Without a stamp (local, or an older build) the hand-set BUILD label above stays.
+async function showReleaseStamp() {
+  try {
+    const el = $("releaseBuild");
+    if (!el || BUILD === "dev" || location.protocol === "file:") return;
+    const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
+    if (!v || !/^[0-9a-f]{7}$/i.test(String(v.commit || ""))) return;
+    const at = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(v.builtAt || "")) ? " · built " + String(v.builtAt).slice(0, 16).replace("T", " ") + " UTC" : "";
+    el.textContent = "Release " + v.commit + at;
+    el.dataset.commit = v.commit;
+    el.title = "Build " + (v.build || BUILD) + ", commit " + v.commit + ". Both Kompas entry points use this release. Session history stays in this browser.";
+  } catch {}
+}
+showReleaseStamp();
 async function checkForUpdate() {
   if (BUILD === "dev" || location.protocol === "file:") return;
   try {

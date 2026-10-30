@@ -16,7 +16,8 @@
     "test:applications": "node scripts/test-applications-merge.mts",
     "check": "npm run typecheck && npm run lint && npm run test:autofill && npm run test:applications",
     "analyze": "ANALYZE=true next build",
-    "test:hardening": "node --test scripts/tests/*.test.mjs"
+    "test:hardening": "node --test scripts/tests/*.test.mjs",
+    "test:baseline": "node --no-warnings --experimental-strip-types --test scripts/tests/kompas-baseline-gate.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1107.0",
