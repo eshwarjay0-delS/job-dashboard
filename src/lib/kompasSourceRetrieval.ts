@@ -417,6 +417,17 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
     // r10: coaching/prohibition sentences ("Do not claim…", "respond based on the actual terms…") never prove coverage,
     // and a count ask ("how many …") is covered only by a passage that states a count. Stricter only; failsafe: as before.
     const countAsk = /\bhow many\b|\bwhat (?:number|count) of\b|\bhow much\b/i.test(q)
+    // r13: inflection / same-meaning folding (rolled out ~ rollout ~ deploy, percent ~ percentage ~ %, plural/tense,
+    // "sign off" ~ sign-off, cost ~ spend ~ price ~ budget only for money or slot-free asks). Failsafe: exact words only.
+    let qFold: (t: string) => string[] = () => []
+    let moneyOk = false
+    try {
+      const sl = askedSlot(q)
+      moneyOk = !sl || sl === "money"
+      const alts = particleAlts(q)
+      qFold = (t: string) => [foldWord(t, moneyOk), ...(alts.get(t) || []).map((x) => foldWord(x, moneyOk))]
+    } catch { qFold = () => [] }
+    const foldedHas = (d: Set<string>, df: Set<string>, t: string) => d.has(t) || qFold(t).some((f) => df.has(f))
     const coversTopic = (p: Passage, topic: string[]) => {
       let ct = coverText(p)
       try {
@@ -424,8 +435,10 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
         if (countAsk && !COUNT_RE.test(ct)) return false
       } catch { ct = coverText(p) }
       const d = new Set(tokens(ct))
+      let dfold = new Set<string>()
+      try { dfold = foldSet(ct, moneyOk) } catch { dfold = new Set() }
       // an ASR-split pair ("terra form") whose joined word is in the passage covers both halves
-      const hit = new Set(topic.filter((t) => d.has(t)))
+      const hit = new Set(topic.filter((t) => foldedHas(d, dfold, t)))
       topic.forEach((t, i) => { const n = topic[i + 1]; if (n && d.has(stem(t + n))) { hit.add(t); hit.add(n) } })
       return topic.length > 0 && hit.size * 2 >= topic.length
     }
@@ -464,7 +477,9 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
       if (matched) {
         const corpus = new Set<string>(); for (const d of docsTok) for (const t of d) corpus.add(t)
         const joined = new Set<string>(); topic.forEach((t, i) => { const n = topic[i + 1]; if (n && corpus.has(stem(t + n))) { joined.add(t); joined.add(n) } })
-        const absent = topic.filter((t) => t.length >= 4 && !/^\d+$/.test(t) && !corpus.has(t) && !joined.has(t) && !famWord(t) && !related.has(t) && !ASK_GENERIC.has(t) && !ASK_GENERIC.has(t.replace(/(?:ing|ed|es|s)$/, "")))
+        let cfold = new Set<string>()
+        try { cfold = foldSet(passages.map((p) => p.text).join("\n"), moneyOk) } catch { cfold = new Set() }
+        const absent = topic.filter((t) => t.length >= 4 && !/^\d+$/.test(t) && !foldedHas(corpus, cfold, t) && !joined.has(t) && !(askedSlot(q) && R13_CUE.test(t)) && !famWord(t) && !related.has(t) && !ASK_GENERIC.has(t) && !ASK_GENERIC.has(t.replace(/(?:ing|ed|es|s)$/, "")))
         // a two-part ask whose absent words all sit in the part already named missing keeps its covered part
         const inMissing = (t: string) => missing.some((m) => tokens(m).map(heard).includes(t))
         if (INTERVIEWER_SIDE.test(q) || (absent.length && !(missing.length && absent.every(inMissing)))) { matched = false; missing = [] }
@@ -477,7 +492,14 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
       const slot = matched ? askedSlot(q) : null
       if (slot) {
         const words = topic.filter((t) => t.length >= 3 && !ASK_GENERIC.has(t) && !SLOT_CUE.test(t))
-        const filled = ranked.some((p) => p.proves === "experience" && covers(p) && slotFilled(slot, withoutCoaching(coverText(p)), words, START_ASK.test(q), TEAM_ASK.test(q)))
+        // r13: an employer or product named in the ask must be in the passage that states the value
+        let ents: string[] = []
+        try { const vocab0 = new Set(docsTok.flat()); ents = entityWords(q).filter((e) => vocab0.has(e)) } catch { ents = [] }
+        // r13: when the ask names an employer, the value sentence must also hold a non-name topic word (the subject),
+        // so "what percentage of findings did you close at X" is not met by any percentage near X's name
+        const subject = ents.length ? words.filter((w) => !ents.includes(w)) : []
+        const named = (p: Passage) => !ents.length || ents.some((e) => tokens(coverText(p)).includes(e))
+        const filled = ranked.some((p) => p.proves === "experience" && covers(p) && named(p) && slotFilled(slot, withoutCoaching(coverText(p)), words, START_ASK.test(q), TEAM_ASK.test(q), END_ASK.test(q), subject))
         if (!filled) { matched = false; missing = [] }
       }
     } catch { /* failsafe: matched unchanged */ }
@@ -826,7 +848,8 @@ const ASK_GENERIC = new Set(("done do doing did make made making keep kept keeps
   + "usually typically generally exactly specifically overall today recently currently first last next previous past future year years month "
   + "months week weeks day days ensure make sure deal dealt manage managed apply applied build built create created set setup set-up "
   + "improve improved reduce reduced increase increased change changed look looked find found decide decided choose chose pick picked "
-  + "role roles job jobs task tasks project projects process processes team teams company companies area areas field level levels").split(/\s+/))
+  + "role roles job jobs task tasks project projects process processes team teams company companies area areas field level levels "
+  + "instead apart rather versus").split(/\s+/))
 
 /** r11: the r8 dossier-item ranking switch. On only when KOMPAS_DOSSIER_ITEMS is "on" or "1"; any error → off. */
 export const DOSSIER_ITEMS_SWITCH = "KOMPAS_DOSSIER_ITEMS"
@@ -835,8 +858,15 @@ export function dossierItemsOn(): boolean {
 }
 
 // r12: the asked-for slot of a question, or null when it asks for no specific value.
-export type AskSlot = "person" | "title" | "count" | "money" | "date" | "outcome" | "tech"
+export type AskSlot = "person" | "title" | "count" | "money" | "date" | "outcome" | "tech" | "duration" | "findings" | "signoff"
 const SLOT_ASK: [AskSlot, RegExp][] = [
+  // r13 forms first: who signed off, how long an engagement ran, what a review found, pay rate, contract end, team size
+  ["signoff", /\bwho (?:signed|signs|sign) off\b|\bwho (?:approved|signed)\b|\bwhose (?:sign-?off|approval|signature)\b|\bwho (?:had|has|needed|needs) to (?:sign off|sign-off|approve)\b/i],
+  ["duration", /\bhow long (?:was|were|did|is) (?:your|the|that|this) (?:[\w.-]+ ){0,3}(?:engagement|contract|stint|tenure|assignment|placement)\b|\bhow long (?:were|was) you (?:at|with)\b|\bhow (?:many|long) (?:months|years) (?:were|was|did) you (?:at|with|spend)\b/i],
+  ["findings", /\bwhat did (?:the|your|that) (?:[\w.-]+ ){0,3}(?:review|audit|assessment|pen ?test|test|scan)s? (?:at [\w.-]+(?: [A-Z][\w.-]*)? )?(?:find|show|turn up|reveal|conclude|uncover)\b|\b(?:findings|results?|outcome) of (?:the|your|that) (?:[\w.-]+ ){0,2}(?:review|audit|assessment|pen ?test)\b|\bwhat came out of (?:the|your|that) (?:[\w.-]+ ){0,3}(?:review|audit|assessment)\b/i],
+  ["money", /\b(?:hourly|day|daily|bill|billing|pay|consulting) rate\b|\brate (?:did|do) you (?:charge|bill|get|earn)\b/i],
+  ["date", /\bend date\b|\bwhen (?:does|did|will) (?:your|the) (?:[\w.-]+ ){0,3}contract (?:end|finish|expire)\b/i],
+  ["count", /\bhow (?:big|large) (?:was|is|were) (?:the|your) (?:[\w.-]+ ){0,2}team\b|\bhow (?:big|large) a team\b|\bwhat size (?:was|is) (?:the|your) (?:[\w.-]+ ){0,2}team\b/i],
   ["money", /\b(?:salary|salaries|budget|compensation|pay(?:ed|id)?|earn(?:ed)?|bonus)\b|\bhow much\b[^?]*\b(?:cost|spend|spent|price)|\b(?:cost|price)\b[^?]*\b(?:per|a) (?:year|month|seat)/i],
   ["person", /\bwho (?:was|is|were|did|managed|hired|led|ran)\b|\bname of (?:your|the) |\b(?:manager|boss|supervisor)'s name\b/i],
   ["title", /\b(?:job|exact|official|your) title\b|\bwhat (?:was|is) your title\b/i],
@@ -857,18 +887,76 @@ const SLOT_VALUE: Record<AskSlot, RegExp> = {
   money: /[$£€]\s?\d|\b\d[\d,.]*\s?(?:k|K|million|billion|thousand|USD|dollars)\b/,
   date: /\b(?:19|20)\d\d\b|\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\b|\bQ[1-4]\b/,
   outcome: /\d\s?%|\bpercent\b|\b(?:passed|failed|reduced|cut|dropped|increased|improved|zero|no findings)\b[^.\n]{0,40}\d/i,
+  duration: /\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|eighteen|twenty|thirty|a few|several)[- ](?:years?|months?|weeks?|days?)\b/i,
+  findings: /\b(?:review|audit|assessment|test|scan|report)s?\b[^.\n]{0,40}\b(?:found|showed|shows?|identified|revealed|turned up|concluded|uncovered|flagged)\b|\bfindings? (?:was|were|is|are|included)\b|\b(?:classic|main|key|top) finding\b/i,
+  signoff: /\b(?:signed off|sign-?offs?|approved|signature)\b[^.\n]{0,30}\b(?:CISO|CIO|CTO|CFO|VP|[Dd]irector|[Oo]wner|[Mm]anager|[Bb]oard|[Cc]ommittee|[Rr]eviewer|[A-Z][a-z]+ [A-Z][a-z]+)|\b(?:CISO|CIO|CTO|CFO|VP|[Dd]irector|[Oo]wner|[Mm]anager|[Bb]oard|[Cc]ommittee|[Rr]eviewer)s?(?:'s?)? (?:sign-?offs?|signed off|approv(?:al|ed))\b/,
   tech: /\b[A-Z][a-z]+[A-Z][A-Za-z]*\b|\b[A-Z]{3,}\b|\b(?:Splunk|Sentinel|QRadar|Chronicle|Elastic|ArcSight|LogRhythm|CrowdStrike|Defender|Tenable|Qualys|Okta|Python|Java|Go|AWS|Azure|GCP)\b/,
 }
 // "when did you start / join" needs the date beside a start word, not any year near the employer name
 const START_ASK = /\b(?:start|started|join|joined|hired|begin|began)\b/i
 const START_WORD = /\b(?:start(?:ed|ing)?|join(?:ed|ing)?|hired|beg[ai]n|since|onboarded)\b/i
 // "how many people / how big a team" needs a head count ("a team of six", "12 engineers"), not any number near the employer
-const TEAM_ASK = /\bhow many (?:people|engineers|analysts|staff|direct reports|reports|members|persons?)\b|\b(?:team|headcount) size\b|\bhow (?:big|large) (?:was|is) (?:your|the) team\b/i
+const TEAM_ASK = /\bhow (?:big|large) (?:was|is|were) (?:the|your) (?:[\w.-]+ ){0,2}team\b|\bhow (?:big|large) a team\b|\bwhat size (?:was|is) (?:the|your) (?:[\w.-]+ ){0,2}team\b|\bhow many (?:people|engineers|analysts|staff|direct reports|reports|members|persons?)\b|\b(?:team|headcount) size\b|\bhow (?:big|large) (?:was|is) (?:your|the) team\b/i
 const TEAM_COUNT = /\bteam of (?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|a dozen)\b|(?:\b\d[\d,]*|\b(?:two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozen))[- ](?:\w+ )?(?:people|engineers|analysts|staff|direct reports|reports|members|person|FTEs?|contractors)\b/i
 // the cue word of an ask ("title", "manager", "salary") is not the shared topic: the value must sit by another topic word
-const SLOT_CUE = /^(?:title|job|exact|official|manag|manager|boss|supervisor|report|salar|salary|budget|compensat|pay|paid|earn|cost|price|percent|percentag|result|outcome|final|start|year|month|date|name|number|count|team|size|siem|edr|stack|tech|tool)/
+const SLOT_CUE = /^(?:rate|hourly|daily|size|big|large|long|end|ended|finding|find|sign|signed|approv|whose|title|job|exact|official|manag|manager|boss|supervisor|report|salar|salary|budget|compensat|pay|paid|earn|cost|price|percent|percentag|result|outcome|final|start|year|month|date|name|number|count|team|size|siem|edr|stack|tech|tool)/
 // a value of the slot type in a sentence (or line) that also holds a topic word; no topic words → any sentence
-export function slotFilled(slot: AskSlot, text: string, topic: string[], startAsk = false, teamAsk = false): boolean {
+export function slotFilled(slot: AskSlot, text: string, topic: string[], startAsk = false, teamAsk = false, endAsk = false, subject: string[] = []): boolean {
   const want = new Set(topic)
-  return text.split(/(?<=[.!?;])\s+|\n+/).some((s) => SLOT_VALUE[slot].test(s) && (!startAsk || slot !== "date" || START_WORD.test(s)) && (!teamAsk || slot !== "count" || TEAM_COUNT.test(s)) && (!want.size || tokens(s).some((t) => want.has(t))))
+  // r13 slots read whole sentences (a ";" list keeps "closure evidence: … owner sign-offs" together)
+  const parts = /^(?:signoff|findings|duration)$/.test(slot) ? text.split(/(?<=[.!?])\s+|\n+/) : text.split(/(?<=[.!?;])\s+|\n+/)
+  const subj = subject.map((w) => foldWord(w))
+  const hasSubject = (s: string) => { if (!subj.length) return true; try { const f = foldSet(s, false); return subj.some((w) => f.has(w)) } catch { return true } }
+  return parts.some((s) => hasSubject(s) && SLOT_VALUE[slot].test(s) && (!startAsk || slot !== "date" || START_WORD.test(s)) && (!endAsk || slot !== "date" || END_WORD.test(s)) && (!teamAsk || slot !== "count" || TEAM_COUNT.test(s)) && (!want.size || tokens(s).some((t) => want.has(t))))
+}
+// r13: cue words of the new slot forms ("how big", "what size", "day rate") are judged by the slot gate, not by absence
+const R13_CUE = /^(?:size|big|large|long|rate|hourly|daily|end|ended|sign|signed|whose|finding|find|approv)/
+// "when did the contract end" needs the date beside an end word
+const END_ASK = /\b(?:end|ended|ends|finish|finished|expire|expired|end date)\b/i
+const END_WORD = /\b(?:end(?:ed|s|ing)?|finish(?:ed)?|expir(?:ed|y|es)|until|through|wrapped|left)\b/i
+
+// r13: folding. A word and its inflections share one key ("hardened"/"hardening" -> "harden", "rolled out"/"rollout" ->
+// "deploy", "percentage"/"64%" -> "percent"); the money words share "money" only when the ask is a money or slot-free ask.
+const PARTICLES = new Set(["out", "off", "up", "in", "over", "down"])
+const MONEY_CLASS = /^(?:cost|pric|spend|spent|budget|fee)$/
+export function foldWord(t: string, moneyOk = false): string {
+  let w = String(t || "").toLowerCase().replace(/-/g, "")
+  if (/^\d[\d.,]*%$/.test(w)) return "percent"
+  if (/^\d/.test(w)) return w
+  w = w.replace(/^programme/, "program")
+  if (w.length > 5 && /ies$/.test(w)) w = w.slice(0, -3) + "y"
+  else if (w.length > 4 && /[^s]s$/.test(w)) w = w.slice(0, -1)
+  if (w.length > 5 && /ie$/.test(w)) w = w.slice(0, -2) + "y"
+  if (w.length > 5 && /ing$/.test(w)) w = w.slice(0, -3)
+  else if (w.length > 4 && /ed$/.test(w)) w = w.slice(0, -2)
+  else if (w.length > 4 && /edout$|ingout$/.test(w)) w = w.replace(/(?:ed|ing)out$/, "out")
+  if (w.length > 3 && /e$/.test(w)) w = w.slice(0, -1)
+  w = w.replace(/([b-df-hj-np-tv-z])\1(out|off|up)?$/, "$1$2")
+  if (/^(?:rol+out|deploy(?:ment)?)$/.test(w)) return "deploy"
+  if (/^percent(?:ag)?$/.test(w)) return "percent"
+  if (moneyOk && MONEY_CLASS.test(w)) return "money"
+  return w
+}
+/** words of the ask followed by a particle ("roll out", "sign off") also try their joined form */
+function particleAlts(q: string): Map<string, string[]> {
+  const raw = String(q || "").toLowerCase().replace(/[^a-z0-9%-]+/g, " ").split(/\s+/).filter(Boolean)
+  const m = new Map<string, string[]>()
+  raw.forEach((w, i) => { const n = raw[i + 1]; if (n && PARTICLES.has(n)) { const k = stem(w); m.set(k, [...(m.get(k) || []), w + n]) } })
+  return m
+}
+function foldSet(text: string, moneyOk: boolean): Set<string> {
+  const raw = String(text || "").toLowerCase().replace(/[^a-z0-9%-]+/g, " ").split(/\s+/).filter(Boolean)
+  const out = new Set<string>()
+  raw.forEach((w, i) => {
+    out.add(foldWord(w, moneyOk)); out.add(foldWord(stem(w), moneyOk))
+    const n = raw[i + 1]; if (n && PARTICLES.has(n)) out.add(foldWord(w + n, moneyOk))
+    if (w.includes("-")) out.add(foldWord(w.replace(/-/g, ""), moneyOk))
+  })
+  if (moneyOk && /[$£€]\s?\d|\b\d[\d,.]*\s?(?:k|million|billion|dollars)\b/i.test(text)) out.add("money")
+  return out
+}
+/** r13: employer / product names in an ask (capitalised words after the first), lower-cased like tokens */
+function entityWords(q: string): string[] {
+  const ws = String(q || "").replace(/[?!.,]/g, " ").split(/\s+/).filter(Boolean).slice(1)
+  return [...new Set(ws.filter((w) => /^[A-Z][A-Za-z0-9&]+$/.test(w) && !/^(?:I|I'm|I've|What|Who|How|When|Why|Which|Whose|Tell|Did|Do)$/.test(w)).map((w) => stem(w.toLowerCase())))]
 }
