@@ -133,3 +133,28 @@ export function formatFastDossierContext(hits: FastHit[]): string {
   if (!hits.length) return ""
   return hits.map(h => "[S:" + h.sourceId + "] (" + h.evidence + "; " + h.kind + "; " + h.title + ")\n" + h.text).join("\n\n")
 }
+
+
+/**
+ * End-of-session compaction: a bounded HOT index, not the source archive.
+ * Old immutable minis remain in durable storage even after compaction.
+ */
+export function extendFastDossierIndex(
+  prior: FastDossierIndex | null, next: FastDossierIndex,
+  maxChunks = 800,
+): FastDossierIndex {
+  if (next.version !== FAST_DOSSIER_VERSION || (prior && prior.version !== FAST_DOSSIER_VERSION))
+    throw new Error("Mismatched fast dossier index")
+  const limit = Math.max(1, Math.min(MAX_CHUNKS, maxChunks))
+  const chunks = [...(prior?.chunks || []), ...next.chunks].slice(-limit)
+  const postings: Record<string, number[]> = Object.create(null) as Record<string, number[]>
+  chunks.forEach((chunk, id) => {
+    for (const term of new Set(tokenizeDossier(chunk.text))) {
+      if (!Object.prototype.hasOwnProperty.call(postings, term)) postings[term] = []
+      postings[term].push(id)
+    }
+  })
+  return {
+    ...next, chunks, postings, createdAt: next.createdAt,
+  }
+}
