@@ -37,13 +37,13 @@ test("3. failsafe: your own answer is kept, later, in other words, or a single w
 test("4. the desktop checks bleed before the echo rule for mic lines", () => {
   const a = src.indexOf("function onTranscript(");
   const body = src.slice(a, src.indexOf("\n}", a));
-  assert.ok(body.indexOf("micBleed(text, Date.now(), themLines)") > 0);
+  assert.ok(body.indexOf("micBleed(text, Date.now(), themLines, spokenAt)") > 0);
   assert.ok(body.indexOf("micBleed(") < body.indexOf("echoOfThem(text) >= 0.5"));
 });
 
 test("5. a typed follow-up after an answer gets its own card about the open question (#32)", () => {
   assert.equal(api.typedFollowUpQuestion("and why", "What is NLA?"), "What is NLA? And why?");
-  assert.equal(api.typedFollowUpQuestion("Go deeper", "Tell me about the PKI rollout"), "Tell me about the PKI rollout? Go deeper?");
+  assert.equal(api.typedFollowUpQuestion("Go deeper", "Tell me about the PKI rollout"), "Tell me about the PKI rollout. Go deeper.");   // slice 2: typed statements get no "?"
   assert.ok(src.includes('const followTyped = typedText && cur && hasAnswer(cur) ? typedFollowUpQuestion(typedText, cur.question) : "";'));
   assert.ok(src.includes("const said = followTyped || pressQuestion("));
 });

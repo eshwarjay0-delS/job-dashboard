@@ -760,14 +760,17 @@ function separateQuestion(next: string, prevText: string): boolean {
   const bare = next.replace(LEAD_FILLER, "").trim()
   if (!bare || shortFollowUp(bare) || CONTINUES_ASK.test(bare)) return false
   // "Go deeper" stays with the question it follows. "Go deeper on that exception" is the next question.
-  if (/^(?:(?:and|so|ok(?:ay)?|right|well|then|now)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|walk me through)\b/i.test(bare)) {
-    const press = new Set("deeper dig elaborate explain walk through that this".split(" "))
+  if (/^(?:(?:and|so|ok(?:ay)?|right|well|then|now)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|walk me through|explain (?:the|your|that|this)\s+(?:[\w+#.-]+\s+){1,4}(?:part|piece|bit|side|step)\b)\b/i.test(bare)) {
+    const press = new Set("deeper dig elaborate explain walk through that this part piece side step more".split(" "))
     const fresh = topicWords(bare).filter((w) => !press.has(w) && !topicWords(prevText).includes(w))
     if (fresh.length > 0) return true
   }
+  const prevSentence = (prevText.trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim()
+  // "Tell me about yourself. Why do you want this job?" An opening ask about you is answered on its own, so a
+  // question-word question that follows it with its own "?" is the next card, even when it says "this job".
+  if (INTRO_ASK.test(prevSentence.replace(LEAD_FILLER, "")) && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && (/\?\s*$/.test(bare) || !/[.?!]\s*$/.test(prevSentence))) return true
   if (/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && properNouns(bare).length === 0) return false
   if (!SEPARATE_START.test(bare)) return false
-  const prevSentence = (prevText.trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim()
   const prevProper = new Set(properNouns(prevText))
   const nextProper = properNouns(bare)
   const parallel = /^(?:how|what) (?:do|did|would|could) you\b/i
@@ -780,8 +783,41 @@ function separateQuestion(next: string, prevText: string): boolean {
   if (a && b && a !== b) return true
   const fresh = topicWords(bare).filter((w) => !topicWords(prevText).includes(w))
   if (/^(?:have you|do you|did you|can you|could you|would you|tell me|walk me|describe)\b/i.test(bare) && fresh.length > 0) return true
-  const prevEnded = /\?\s*$/.test(prevSentence)
+  // A piece cut mid-sentence by midSentenceAsks has no "?" of its own; it was already a finished ask.
+  const prevEnded = /\?\s*$/.test(prevSentence) || (/^(?:tell me about|walk me through)\b/i.test(prevSentence.replace(LEAD_FILLER, "")) && /\.\s*$/.test(prevSentence) && /\?\s*$/.test(bare)) || (!/[.?!]\s*$/.test(prevSentence) && SEPARATE_START.test(prevSentence.replace(LEAD_FILLER, "")))
   return prevEnded && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && fresh.length > 0
+}
+
+// Speech-to-text often drops every full stop: "what is cyberark what is okta". A new question can start in the
+// middle of a sentence only at a strong opener ("what is", "how do", "tell me about"), never after a word that
+// keeps the clause going ("and why", "handle what happens", "a time when"), and only after a finished ask of three
+// words or more. The pieces are rejoined unless separateQuestion says the next one is a new question.
+const INTRO_ASK = /^(?:tell me (?:a (?:little |bit )?(?:bit )?)?about yourself|introduce yourself|(?:walk|take) me through (?:your )?(?:resume|background|career|cv)|tell me about your (?:background|career))\b/i
+
+const MID_ASK = /\b(?:(?:go|dig) deeper on\b|explain the (?:[\w+#.-]+\s+){1,4}part\b|(?:what|how|why|when|where|who|which)\s+(?:is|are|was|were|do|does|did|would|could|can|will|should|has|have)\b|what's\b|tell me about\b|walk me through\b|can you (?:tell|walk|explain|describe)\b|could you (?:tell|walk|explain|describe)\b)/gi
+const MID_KEEPS = /\b(?:and|or|but|so|nor|then|me|us|them|him|her|know|knows|explain|describe|tell|ask|asked|asking|understand|see|show|about|on|of|in|for|to|than|that|is|are|was|were|wonder|sure|decide|decided|mean|matters|handle|exactly|just|like|into|from|with|by|at|as|if|whether|because|a|an|the|time|moment|day|case|cases|place|reason|point)\s*$/i
+const MID_OPEN_CLAUSE = /\b(?:if|whether|unless|(?:how|where|when|what) (?:you|we|they))\b/i   // "how you would migrate what is left": the clause is still open
+function midSentenceAsks(sentence: string): string[] {
+  if (/[.?!]\s*\S/.test(sentence)) return [sentence]
+  const cuts: number[] = []
+  MID_ASK.lastIndex = 0
+  for (let m: RegExpExecArray | null; (m = MID_ASK.exec(sentence));) {
+    if (m.index === 0) continue
+    const left = sentence.slice(cuts.length ? cuts[cuts.length - 1] : 0, m.index).trim()
+    const bareLeft = left.replace(LEAD_FILLER, "")
+    if (bareLeft.split(/\s+/).length < 3 || !SEPARATE_START.test(bareLeft) || MID_KEEPS.test(left) || MID_OPEN_CLAUSE.test(bareLeft.replace(/^\S+\s+/, ""))) continue
+    cuts.push(m.index)
+  }
+  if (!cuts.length) return [sentence]
+  const out: string[] = []
+  let from = 0
+  for (const at of cuts) { out.push(sentence.slice(from, at).trim()); from = at }
+  out.push(sentence.slice(from).trim())
+  return out.filter(Boolean)
+}
+
+function spokenWords(text: string): string {
+  return String(text || "").toLowerCase().replace(/[^a-z0-9+#']+/g, " ").trim()
 }
 
 function looksLikeAsk(sentence: string): boolean {
@@ -795,10 +831,11 @@ function looksLikeAsk(sentence: string): boolean {
  * ("Design X. Explain the trust boundaries.") stays one question. "What is
  * Kubernetes? What is Terraform?" does not.
  */
-export function splitDistinctAsks(text: string): string[] {
+function splitDistinctAsksBy(text: string, midCut: boolean): string[] {
   const clean = repairDictation(String(text || "")).replace(/\s+/g, " ").trim()
   if (!clean) return []
-  const sentences = clean.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean)
+  const said = clean.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean)
+  const sentences = midCut ? said.flatMap(midSentenceAsks) : said
   const groups: string[][] = [[]]
   let asked = false
   for (const sentence of sentences) {
@@ -814,6 +851,17 @@ export function splitDistinctAsks(text: string): string[] {
     if (looksLikeAsk(sentence)) asked = true
   }
   return groups.map((g) => g.join(" ").replace(/\s+/g, " ").trim()).filter(Boolean)
+}
+
+export function splitDistinctAsks(text: string): string[] {
+  const before = splitDistinctAsksBy(text, false)
+  try {
+    const after = splitDistinctAsksBy(text, true)
+    // Failsafe: the cut never drops or reorders a word; if it would, keep the earlier cut.
+    return spokenWords(after.join(" ")) === spokenWords(before.join(" ")) ? after : before
+  } catch {
+    return before
+  }
 }
 
 /** Every question in one heard stretch, each cut the way a single ask is cut. */

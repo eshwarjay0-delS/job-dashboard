@@ -19,7 +19,12 @@ export function loadIntake() {
     "this.api = { fixPhrases, intakeWords, echoShare, isNoiseLine, typedStandsAlone, shortFollowUp,",
     "  micBleed: typeof micBleed === 'function' ? micBleed : null,",
     "  roleOfSource: typeof roleOfSource === 'function' ? roleOfSource : null,",
-    "  typedFollowUpQuestion: typeof typedFollowUpQuestion === 'function' ? typedFollowUpQuestion : null };",
+    "  typedFollowUpQuestion: typeof typedFollowUpQuestion === 'function' ? typedFollowUpQuestion : null,",
+    "  askSource: typeof askSource === 'function' ? askSource : null,",
+    "  spokenWallTime: typeof spokenWallTime === 'function' ? spokenWallTime : null,",
+    "  turnGate: typeof turnGate === 'function' ? turnGate : null,",
+    "  decisionEvent: typeof decisionEvent === 'function' ? decisionEvent : null,",
+    "  answerAnywayLines: typeof answerAnywayLines === 'function' ? answerAnywayLines : null };",
   ].join("\n");
   const ctx = { console };
   vm.createContext(ctx);

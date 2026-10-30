@@ -122,14 +122,14 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bstar\s+method\b/gi, "STAR method"],
   // Mishearings found on 29 Oct 2026 (voice slice). Each one is anchored to its domain words.
   [/\bsail\s+point\b/gi, "SailPoint"],
-  [/\bbeyond\s+trust\b/gi, "BeyondTrust"],
+  [/(?<=\b(?:did|does|with|into|using|use|used|like|from|vs|versus|deploy|deployed|implemented|chose|picked|cyberark|our|the|a)\s+)beyond\s+trust\b|\bbeyond\s+trust(?=\s+(?:pam|password|privileged|remote|vault|endpoint|suite|platform|deployment|rollout|compare[sd]?)\b)/gi, "BeyondTrust"],   // only next to tool words, so "went beyond trust" stays
   [/\bhashi\s+corp\b/gi, "HashiCorp"],
   [/\bz\s+scaler\b/gi, "Zscaler"],
   [/\bcyber\s*arch\b/gi, "CyberArk"],
   [/\bmy\s+tree\s+attack\b/gi, "MITRE ATT&CK"],
   [/\bresid(?:ue)?\s+jewel\s+risk\b/gi, "residual risk"],
   [/\bdev\s+sec\s+ops\b/gi, "DevSecOps"],
-  [/\b(?:sock|soc)\s+(?:two|2)\b/gi, "SOC 2"],
+  [/\bsoc\s+(?:two|2)\b|\bsock\s+(?:two|2)(?=\s+(?:audits?|reports?|type|compliance|controls?|certification|readiness|attestation|program|framework)\b)/gi, "SOC 2"],   // "a sock two days ago" stays
   [/\bnist\s+eight\s+hundred\s+(?:dash\s+)?fifty[\s-]three\b/gi, "NIST 800-53"],
   [/\b(?:in\s*tra|entra)\s+i\.?\s*d\b/gi, "Entra ID"],
   [/\bpost\s+gres\s*q\s*l\b/gi, "PostgreSQL"],
@@ -137,7 +137,7 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bo\s+i\s+d\s+c\b/gi, "OIDC"],
   [/\bsam\s+el\s+(assertion|token|response|sso|federation)\b/gi, "SAML $1"],
   [/\bans\s+ible\b/gi, "Ansible"],
-  [/\bgit\s+lab\b/gi, "GitLab"],
+  [/(?<=\b(?:use|used|using|in|on|with|from|our|into|self-hosted|hosted|via|of)\s+)git\s+lab\b|\bgit\s+lab(?=\s+(?:runners?|ci|pipelines?|repos?|repository|server|instance|issues?|merge|projects?)\b)/gi, "GitLab"],   // "go git lab results" stays
   [/\b(?:get|git)\s+hub\s+(actions|repo|repository|workflow)\b/gi, "GitHub $1"],
   [/\bec\s+two\s+(instances?)\b/gi, "EC2 $1"],
   [/\bs\s+three\s+(buckets?)\b/gi, "S3 $1"],

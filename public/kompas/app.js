@@ -393,6 +393,9 @@ let transcriptionOrder = Promise.resolve();
 // regeneration) — for Get transcript. Clear doesn't touch it; a reload mid-interview picks it back up.
 let sessionLog = [];
 let logSaveT = 0;
+// One structured reason per keep / drop / cut / gate decision (slice 2). Only the reason, the source and the length of
+// the words, never the words themselves.
+function logDecision(reason, source, text) { try { logEvent(decisionEvent(reason, source, text)); } catch {} }
 function logEvent(ev) {
   sessionLog.push({ at: Date.now(), ...ev }); if (sessionLog.length > 4000) sessionLog.shift();
   // written only while that session's live box is open: an event that lands after the box closed must not bring a closed run's log back
@@ -1364,7 +1367,17 @@ function stopSource(who) {
   if (who === "Them") displayVideo = null;
   return Promise.allSettled(finishing);
 }
-function questionSource() { return captures.some(c => c.who === "Them") ? "Them" : "You"; }
+// Who can open a question (slice 2, 29 Oct 2026): askSource() maps each capture through roleOfSource(), so computer
+// audio is the interviewer and, while it is captured, mic words never open a question. With no computer audio the mic
+// is the only voice, so it keeps opening questions as before, labelled "mic-only" in the session log. If the mapping
+// ever throws, the old rule answers.
+let lastSourceMode = "";
+function questionSource() {
+  let pick;
+  try { pick = askSource(captures.map(c => c.who)); } catch { return captures.some(c => c.who === "Them") ? "Them" : "You"; }
+  if (pick.mode !== lastSourceMode && captures.length) { lastSourceMode = pick.mode; logDecision(pick.reason, pick.source, ""); }
+  return pick.source;
+}
 
 function startSegment(cap) {
   cap.chunks = []; cap.segStart = performance.now(); cap.speechMs = 0; cap.voiced = false; cap.interimAt = 0;
@@ -1396,6 +1409,7 @@ function endSegment(cap, keep, restart = true, force = false) {
   const rec = cap.rec, chunks = cap.chunks, speech = cap.speechMs;
   const epoch = transcriptionEpoch;
   const prompt = whisperPrompt();
+  const spokenAt = spokenWallTime(cap.lastVoice, performance.now(), Date.now());   // when the words were said, not when the text came back
   if (restart && !cap.stopped) {
     try { startSegment(cap); } catch {
       cap.rec = null;
@@ -1411,7 +1425,7 @@ function endSegment(cap, keep, restart = true, force = false) {
   rec.onstop = () => {
     if (!segmentKept(speech, keep, force)) return settle();
     const blob = new Blob(chunks, { type: rec.mimeType || MIME || "audio/webm" });
-    if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech }).then(settle, settle); else settle();
+    if (blob.size) transcribe(blob, cap.who, { final: true, epoch, prompt, speechMs: speech, spokenAt }).then(settle, settle); else settle();
   };
   try { rec.stop(); } catch { settle(); }
   const watchdog = setTimeout(() => {
@@ -1590,7 +1604,7 @@ async function transcribe(blob, who, opt) {
     if (epoch !== transcriptionEpoch) return;
     if (failure && opt.final) { transcriptionFailedEpoch = epoch; status(failure, "err"); return false; }
     if (!clean) return;
-    if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(who, clean); }
+    if (opt.final) { transcriptionFailedEpoch = -1; onTranscript(who, clean, false, opt.spokenAt); }
     else if (running) showCaption(who, clean, true);
   } finally { if (cap) cap.inflight--; if (release) release(); }
 }
@@ -1604,7 +1618,7 @@ let capTimer = null;
 // as You. While the call audio carries speech, or did a moment ago, no You caption is shown; a You line that repeats
 // what Them just said (half or more of its words) is not yours and is dropped (onTranscript).
 let themLines = [];   // what the call audio said in the last 30 s, interim and final
-function noteThem(text) { const at = Date.now(); themLines = themLines.filter(l => at - l.at < 30000); themLines.push({ text: String(text || ""), at }); }
+function noteThem(text, spokenAt) { const at = Date.now(); themLines = themLines.filter(l => at - l.at < 30000); themLines.push({ text: String(text || ""), at, spokenAt: Number.isFinite(spokenAt) ? spokenAt : undefined }); }
 function themSpeaking() { const now = performance.now(); return captures.some(c => c.who === "Them" && !c.stopped && (c.voiced || now - (c.lastVoice || 0) < 1500)); }
 function echoOfThem(text) { const recent = themLines.filter(l => Date.now() - l.at < 30000).map(l => l.text).join(" "); return recent ? echoShare(text, recent) : 0; }
 // ── Source-aware intake (29 Oct 2026) ──
@@ -1614,12 +1628,47 @@ function echoOfThem(text) { const recent = themLines.filter(l => Date.now() - l.
 // question. Your own answer, said later or in other words, is kept.
 function roleOfSource(source) { const SOURCE_ROLE = { system: "Them", computer: "Them", loopback: "Them", them: "Them", mic: "You", microphone: "You", you: "You", typed: "You (typed)" }; return SOURCE_ROLE[String(source || "").trim().toLowerCase()] || "You"; }
 function bleedWords(text) { return String(text || "").toLowerCase().replace(/[^a-z0-9'+#]+/g, " ").split(/\s+/).filter(w => w.length > 1 || /\d/.test(w)); }
-function micBleed(text, at, lines) {
+function micBleed(text, at, lines, spokenAt) {
   const words = bleedWords(text); if (words.length < 2) return false;
-  const near = (lines || []).filter(l => l && Math.abs(Number(at) - Number(l.at)) <= 1500);   // about 1.5 s
+  const near = (lines || []).filter(l => bleedNear(l, at, spokenAt));   // about 1.5 s
   if (!near.length) return false;
   const bag = new Set(bleedWords(near.map(l => l.text).join(" ")));
   return words.filter(w => bag.has(w)).length / words.length >= 0.6;
+}
+// Slice 2 (29 Oct 2026). askSource: computer audio, when captured, is the only voice that opens a question; with mic only,
+// the mic does (labelled). spokenWallTime: when the last word of a clip was said, on the wall clock, or null.
+function askSource(whos) {
+  if (Array.from(whos || []).some(w => roleOfSource(w) === "Them")) return { source: roleOfSource("system"), mode: "call", reason: "source-computer-audio-is-interviewer" };
+  return { source: roleOfSource("mic"), mode: "mic-only", reason: "source-mic-only-fallback" };
+}
+function spokenWallTime(lastVoicePerf, nowPerf, nowWall) {
+  const lv = Number(lastVoicePerf), np = Number(nowPerf), nw = Number(nowWall);
+  if (!Number.isFinite(lv) || !Number.isFinite(np) || !Number.isFinite(nw) || lv <= 0 || lv > np || np - lv > 30000) return null;
+  return nw - (np - lv);
+}
+// The leak window, judged by when words were said where both sides know it, and by when text came back otherwise.
+function bleedNear(line, at, spokenAt) {
+  if (!line) return false;
+  if (Math.abs(Number(at) - Number(line.at)) <= 1500) return true;
+  return Number.isFinite(spokenAt) && Number.isFinite(line.spokenAt) && Math.abs(spokenAt - line.spokenAt) <= 1500;
+}
+const TURN_CLOSING = /^(?:(?:ok(?:ay)?|great|perfect|cool|nice|thanks|thank you|got it|sounds good|all right|alright|awesome|makes sense|that makes sense|good|right)[\s,.!]*)+$/i;
+// Turn gate: answer now, wait (a clause is still open, or no ask yet), or skip (filler, thanks). Any fault answers.
+function turnGate(text) {
+  try {
+    const t = String(text || "").replace(/\s+/g, " ").trim();
+    if (!t) return { outcome: "skip", reason: "empty" };
+    if (Q_CUE.test(t) || opensNewAsk(t)) return clauseStillOpen(t) ? { outcome: "wait", reason: "clause-open" } : { outcome: "answer", reason: "question" };
+    if (isNoiseLine(t)) return { outcome: "skip", reason: "filler" };
+    if (TURN_CLOSING.test(t)) return { outcome: "skip", reason: "closing" };
+    return { outcome: "wait", reason: "no-ask-yet" };
+  } catch { return { outcome: "answer", reason: "gate-error-fail-open" }; }
+}
+function decisionEvent(reason, source, text) { return { t: "decision", reason: String(reason || "unknown").slice(0, 60), source: String(source || ""), len: String(text || "").length }; }
+// Answer anyway: a manual press within 15 s of a turned-away press, with nothing new heard or typed, answers those lines.
+function answerAnywayLines(held, o) {
+  if (!held || !o || o.fromAuto || o.pending || o.typed || !Array.isArray(held.lines) || !held.lines.length) return null;
+  return Number(o.now) - Number(held.at) <= 15000 ? held.lines : null;
 }
 // ── end source-aware intake ──
 // One section: the line being said shows inside the question box, under the question. A new question from Them brings
@@ -1697,7 +1746,10 @@ function shortFollowUp(text) {
 function typedFollowUpQuestion(typed, openQuestion) {
   const t = String(typed || "").replace(/\s+/g, " ").trim(), q = String(openQuestion || "").replace(/\s+/g, " ").trim();
   if (!t || !q || !shortFollowUp(t) || /^(Preparing|Ready|Cleared\.|No question yet|Deriving)/.test(q)) return "";
-  return (/[?.!]$/.test(q) ? q : q + "?") + " " + t.charAt(0).toUpperCase() + t.slice(1) + (/[?.!]$/.test(t) ? "" : "?");
+  // A typed statement ("go deeper", "more on the vault part") is kept as typed; only a typed question gets a "?" (slice 2).
+  const asks = /^(?:(?:and|so|but|ok(?:ay)?)[, ]+)?(?:what|why|how|when|where|which|who|whose|can|could|would|will|should|do|does|did|are|is|was|were|have|has)\b/i;
+  const end = (x) => /[?.!]$/.test(x) ? "" : asks.test(x) ? "?" : ".";
+  return q + end(q) + " " + t.charAt(0).toUpperCase() + t.slice(1) + end(t);
 }
 function opensNewAsk(text) {
   const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim();
@@ -1749,15 +1801,17 @@ function splitSeparate(next, prevText) {
   const bare = String(next || "").replace(SPLIT_LEAD, "").trim();
   if (!bare || shortFollowUp(bare) || SPLIT_CONTINUES.test(bare)) return false;
   // "Go deeper" stays with the question it follows. "Go deeper on that exception" is the next question.
-  if (/^(?:(?:and|so|ok(?:ay)?|right|well|then|now)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|walk me through)\b/i.test(bare)) {
-    const press = new Set("deeper dig elaborate explain walk through that this".split(" "));
+  if (/^(?:(?:and|so|ok(?:ay)?|right|well|then|now)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|walk me through|explain (?:the|your|that|this)\s+(?:[\w+#.-]+\s+){1,4}(?:part|piece|bit|side|step)\b)\b/i.test(bare)) {
+    const press = new Set("deeper dig elaborate explain walk through that this part piece side step more".split(" "));
     const prevWords = new Set(splitTopicWords(prevText));
     const fresh = splitTopicWords(bare).filter((w) => !press.has(w) && !prevWords.has(w));
     if (fresh.length > 0) return true;
   }
+  const prevSentence = (String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim();
+  // "Tell me about yourself. Why do you want this job?": an opening ask about you is its own card (same as the server).
+  if (SPLIT_INTRO.test(String(prevSentence).replace(SPLIT_LEAD, "")) && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && (/\?\s*$/.test(bare) || !/[.?!]\s*$/.test(prevSentence))) return true;
   if (/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && splitProper(bare).length === 0) return false;
   if (!SPLIT_START.test(bare)) return false;
-  const prevSentence = (String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim();
   const prevProper = new Set(splitProper(prevText));
   const nextProper = splitProper(bare);
   const parallel = /^(?:how|what) (?:do|did|would|could) you\b/i;
@@ -1768,13 +1822,41 @@ function splitSeparate(next, prevText) {
   const prevWords = new Set(splitTopicWords(prevText));
   const fresh = splitTopicWords(bare).filter((w) => !prevWords.has(w));
   if (/^(?:have you|do you|did you|can you|could you|would you|tell me|walk me|describe)\b/i.test(bare) && fresh.length > 0) return true;
-  return /\?\s*$/.test(prevSentence) && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && fresh.length > 0;
+  const prevEnded = /\?\s*$/.test(prevSentence) || (/^(?:tell me about|walk me through)\b/i.test(String(prevSentence).replace(SPLIT_LEAD, "")) && /\.\s*$/.test(prevSentence) && /\?\s*$/.test(bare)) || (!/[.?!]\s*$/.test(prevSentence) && SPLIT_START.test(String(prevSentence).replace(SPLIT_LEAD, "")));   // a mid-sentence cut piece
+  return prevEnded && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && fresh.length > 0;
 }
-function splitDistinctAsks(text) {
+// Same as the server (29 Oct 2026): no full stops from speech-to-text ("what is cyberark what is okta"). A new question
+// starts mid-sentence only at a strong opener after a finished ask of three words or more, never after a word that
+// keeps the clause going ("and why", "handle what happens", "a time when"). Failsafe: never drop a word.
+const SPLIT_INTRO = /^(?:tell me (?:a (?:little |bit )?(?:bit )?)?about yourself|introduce yourself|(?:walk|take) me through (?:your )?(?:resume|background|career|cv)|tell me about your (?:background|career))\b/i;
+const SPLIT_MID_ASK = /\b(?:(?:go|dig) deeper on\b|explain the (?:[\w+#.-]+\s+){1,4}part\b|(?:what|how|why|when|where|who|which)\s+(?:is|are|was|were|do|does|did|would|could|can|will|should|has|have)\b|what's\b|tell me about\b|walk me through\b|can you (?:tell|walk|explain|describe)\b|could you (?:tell|walk|explain|describe)\b)/gi;
+const SPLIT_MID_KEEPS = /\b(?:and|or|but|so|nor|then|me|us|them|him|her|know|knows|explain|describe|tell|ask|asked|asking|understand|see|show|about|on|of|in|for|to|than|that|is|are|was|were|wonder|sure|decide|decided|mean|matters|handle|exactly|just|like|into|from|with|by|at|as|if|whether|because|a|an|the|time|moment|day|case|cases|place|reason|point)\s*$/i;
+const SPLIT_MID_OPEN = /\b(?:if|whether|unless|(?:how|where|when|what) (?:you|we|they))\b/i;   // "how you would migrate what is left": the clause is still open
+function splitMidAsks(sentence) {
+  if (/[.?!]\s*\S/.test(sentence)) return [sentence];
+  const cuts = [];
+  SPLIT_MID_ASK.lastIndex = 0;
+  for (let m; (m = SPLIT_MID_ASK.exec(sentence));) {
+    if (m.index === 0) continue;
+    const left = sentence.slice(cuts.length ? cuts[cuts.length - 1] : 0, m.index).trim();
+    const bareLeft = left.replace(SPLIT_LEAD, "");
+    if (bareLeft.split(/\s+/).length < 3 || !SPLIT_START.test(bareLeft) || SPLIT_MID_KEEPS.test(left) || SPLIT_MID_OPEN.test(bareLeft.replace(/^\S+\s+/, ""))) continue;
+    cuts.push(m.index);
+  }
+  if (!cuts.length) return [sentence];
+  const out = [];
+  let from = 0;
+  for (const at of cuts) { out.push(sentence.slice(from, at).trim()); from = at; }
+  out.push(sentence.slice(from).trim());
+  return out.filter(Boolean);
+}
+function splitSpokenWords(text) { return String(text || "").toLowerCase().replace(/[^a-z0-9+#']+/g, " ").trim(); }
+function splitDistinctAsksBy(text, midCut) {
   const raw = String(text || "");
   const clean = (typeof fixPhrases === "function" ? fixPhrases(raw) : raw).replace(/\s+/g, " ").trim();
   if (!clean) return [];
-  const sentences = clean.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean);
+  const said = clean.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean);
+  const sentences = midCut ? said.flatMap(splitMidAsks) : said;
   const groups = [[]];
   let asked = false;
   for (const sentence of sentences) {
@@ -1787,9 +1869,17 @@ function splitDistinctAsks(text) {
   }
   return groups.map((g) => g.join(" ").replace(/\s+/g, " ").trim()).filter(Boolean);
 }
+function splitDistinctAsks(text) {
+  const before = splitDistinctAsksBy(text, false);
+  try {
+    const after = splitDistinctAsksBy(text, true);
+    return splitSpokenWords(after.join(" ")) === splitSpokenWords(before.join(" ")) ? after : before;   // failsafe: no word lost
+  } catch { return before; }
+}
 const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
 function scheduleAuto() {
   clearTimeout(autoTimer);
+  noteTurnGate();
   if (!autoOn || !armsAuto()) return;
   const tail = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
   const wait = clauseStillOpen(tail) ? 7000 : AUTO_QUIET_MS;
@@ -1799,6 +1889,20 @@ function scheduleAuto() {
     aiAnswer(true);
   }, wait);
 }
+// Turn gate (slice 2): each new heard line from the question source gets answer / wait / no answer needed, logged with
+// its reason. It only labels; it never stops an answer. "No answer needed" says so and points to AI Answer, which
+// always answers ("Answer anyway").
+function noteTurnGate() {
+  try {
+    const src = questionSource(), last = pendingHeard().filter(t => t.who === src).slice(-1)[0];
+    if (!last || last.seq === gateSeenSeq) return;
+    gateSeenSeq = last.seq;
+    const g = turnGate(last.text);
+    logDecision("gate-" + g.outcome + ":" + g.reason, src, last.text);
+    if (g.outcome === "skip" && !answerCtl) status("Heard — no answer needed. Press AI Answer to answer anyway.", "live");
+  } catch { /* the gate only labels; a fault here never blocks an answer */ }
+}
+let gateSeenSeq = 0;
 function resetLiveState() {           // a new or exited session starts clean: no leaked stream, timer or badge
   for (const c of inflight) { try { c.abort(); } catch {} }
   inflight.clear();
@@ -1905,14 +2009,14 @@ const PHRASE_FIXES = [
   [/\bstar\s+method\b/gi, "STAR method"],
   // Mishearings found on 29 Oct 2026 (voice slice). Each one is anchored to its domain words.
   [/\bsail\s+point\b/gi, "SailPoint"],
-  [/\bbeyond\s+trust\b/gi, "BeyondTrust"],
+  [/(?<=\b(?:did|does|with|into|using|use|used|like|from|vs|versus|deploy|deployed|implemented|chose|picked|cyberark|our|the|a)\s+)beyond\s+trust\b|\bbeyond\s+trust(?=\s+(?:pam|password|privileged|remote|vault|endpoint|suite|platform|deployment|rollout|compare[sd]?)\b)/gi, "BeyondTrust"],   // only next to tool words, so "went beyond trust" stays
   [/\bhashi\s+corp\b/gi, "HashiCorp"],
   [/\bz\s+scaler\b/gi, "Zscaler"],
   [/\bcyber\s*arch\b/gi, "CyberArk"],
   [/\bmy\s+tree\s+attack\b/gi, "MITRE ATT&CK"],
   [/\bresid(?:ue)?\s+jewel\s+risk\b/gi, "residual risk"],
   [/\bdev\s+sec\s+ops\b/gi, "DevSecOps"],
-  [/\b(?:sock|soc)\s+(?:two|2)\b/gi, "SOC 2"],
+  [/\bsoc\s+(?:two|2)\b|\bsock\s+(?:two|2)(?=\s+(?:audits?|reports?|type|compliance|controls?|certification|readiness|attestation|program|framework)\b)/gi, "SOC 2"],   // "a sock two days ago" stays
   [/\bnist\s+eight\s+hundred\s+(?:dash\s+)?fifty[\s-]three\b/gi, "NIST 800-53"],
   [/\b(?:in\s*tra|entra)\s+i\.?\s*d\b/gi, "Entra ID"],
   [/\bpost\s+gres\s*q\s*l\b/gi, "PostgreSQL"],
@@ -1920,7 +2024,7 @@ const PHRASE_FIXES = [
   [/\bo\s+i\s+d\s+c\b/gi, "OIDC"],
   [/\bsam\s+el\s+(assertion|token|response|sso|federation)\b/gi, "SAML $1"],
   [/\bans\s+ible\b/gi, "Ansible"],
-  [/\bgit\s+lab\b/gi, "GitLab"],
+  [/(?<=\b(?:use|used|using|in|on|with|from|our|into|self-hosted|hosted|via|of)\s+)git\s+lab\b|\bgit\s+lab(?=\s+(?:runners?|ci|pipelines?|repos?|repository|server|instance|issues?|merge|projects?)\b)/gi, "GitLab"],   // "go git lab results" stays
   [/\b(?:get|git)\s+hub\s+(actions|repo|repository|workflow)\b/gi, "GitHub $1"],
   [/\bec\s+two\s+(instances?)\b/gi, "EC2 $1"],
   [/\bs\s+three\s+(buckets?)\b/gi, "S3 $1"],
@@ -1979,14 +2083,15 @@ function heardDraft(lines, screen, answerText) {
   const q = bits.slice(-4).join(" ");
   return q.length > 600 ? "…" + q.slice(-600) : q;
 }
-function onTranscript(who, text, lookedAgain) {
+function onTranscript(who, text, lookedAgain, spokenAt) {
   text = fixTerms(fixPhrases(text));
-  if (who === "Them") noteThem(text);
+  if (who === "Them") noteThem(text, spokenAt);
   else if (who === "You" && captures.some(c => c.who === "Them")) {
-    if (micBleed(text, Date.now(), themLines)) { logEvent({ t: "echo", who, text, bleed: true }); return; }   // the call audio through the mic within 1.5 s
-    if (echoOfThem(text) >= 0.5) { logEvent({ t: "echo", who, text }); return; }   // the interviewer through your speakers, not you
-    if (!lookedAgain && themSpeaking()) { setTimeout(() => { if (running) onTranscript(who, text, true); }, 2000); return; }   // their words may still be on the way: look again
+    if (micBleed(text, Date.now(), themLines, spokenAt)) { logDecision("drop-mic-bleed", who, text); logEvent({ t: "echo", who, text, bleed: true }); return; }   // the call audio through the mic within 1.5 s
+    if (echoOfThem(text) >= 0.5) { logDecision("drop-mic-echo", who, text); logEvent({ t: "echo", who, text }); return; }   // the interviewer through your speakers, not you
+    if (!lookedAgain && themSpeaking()) { setTimeout(() => { if (running) onTranscript(who, text, true, spokenAt); }, 2000); return; }   // their words may still be on the way: look again
   }
+  logDecision(who === questionSource() ? "keep-can-open" : "keep-context", who, text);
   if (who === "You" && follow.on && !follow.sr) followHear(text, true);   // Follow along without live recognition
   transcript.push({ who, text, at: Date.now(), seq: ++heardSeq });
   if (!answerCtl) {
@@ -2545,6 +2650,7 @@ function showPressed(card, q) {
 }
 $("answerBtn").onclick = () => aiAnswer(false);
 let aiBusy = false, aiBusySince = 0;
+let answerAnywayHeld = null;   // the lines a manual press just turned away, for "Answer anyway"
 async function aiAnswer(fromAuto) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
@@ -2562,9 +2668,13 @@ async function aiAnswer(fromAuto) {
     // Formation window (owner, 26 Oct): the last 8 heard lines are enough to
     // form and cut a question. Older lines stay in the transcript and reach
     // the answer as earlier context — they are not re-formed into questions.
-    const pending = pendingHeard().slice(-8);
+    let pending = pendingHeard().slice(-8);
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
+    // Answer anyway (slice 2): a press right after "Nothing question-like" answers those same lines.
+    let anyway = false;
+    try { const back = answerAnywayLines(answerAnywayHeld, { fromAuto, pending: pending.length, typed: typedText, now: Date.now() }); if (back) { pending = back; anyway = true; logDecision("answer-anyway", questionSource(), back.map(t => t.text).join(" ")); } } catch {}
+    answerAnywayHeld = null;
     if (transcriptionFailedEpoch === sessionEpoch && !pending.length && !typedText) {
       setChat(true);
       status("The last phrase could not be transcribed. Please repeat it or type it here.", "err");
@@ -2589,9 +2699,10 @@ async function aiAnswer(fromAuto) {
       const newAsk = !typedText && pending.some(t => sentencesOf(t.text).some(x => (askSentence(x) || opensNewAsk(x)) && !repeatsPriorQuestion(x, cur && cur.question || "")));
       // The sign-off is not a re-press (27 Oct 2026): "I do have a hard stop ... thank you for taking the time" heard
       // after an answer re-asked the page on screen and answered it again. Only closing sentences and fillers, no ask.
-      if (!typedText && pending.some(t => sentencesOf(t.text).some(x => SIGN_OFF.test(x) || COURTESY.test(x))) && pending.every(t => sentencesOf(t.text).every(closingSentence))) {
+      if (!anyway && !typedText && pending.some(t => sentencesOf(t.text).some(x => SIGN_OFF.test(x) || COURTESY.test(x))) && pending.every(t => sentencesOf(t.text).every(closingSentence))) {
         answeredSeq = heardSeq; updatePending();
-        if (!fromAuto) status("Nothing question-like in that — still listening.", "live");
+        logDecision("skip-sign-off", questionSource(), pending.map(t => t.text).join(" "));
+        if (!fromAuto) { answerAnywayHeld = { lines: pending.slice(), at: Date.now() }; status("Nothing question-like in that — press AI Answer again to answer anyway.", "live"); }
         return;
       }
       const isRepress = !fromAuto && !typedOwn && !newAsk && !!cur && answeredText.trim().length > 8 && !/^[.…\s]+$/.test(answeredText.trim()) && !!cur.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(cur.question);
@@ -2622,8 +2733,9 @@ async function aiAnswer(fromAuto) {
       const intake = composeIntake(pending, { typedText, answerText, micIsSource: questionSource() === "You" });
       if (typedText) { box.value = ""; logEvent({ t: "line", who: "You (typed)", text: typedText }); }
       answeredSeq = heardSeq; updatePending();
-      if (intake.noiseOnly) {
-        if (!fromAuto) status("Nothing question-like in that — still listening.", "live");
+      logDecision(intake.noiseOnly ? "skip-noise" : "intake", questionSource(), pending.map(t => t.text).join(" "));
+      if (intake.noiseOnly && !anyway) {
+        if (!fromAuto) { answerAnywayHeld = { lines: pending.slice(), at: Date.now() }; status("Nothing question-like in that — press AI Answer again to answer anyway.", "live"); }
         return;
       }
       const cutSeq = pending.length ? pending[0].seq : heardSeq + 1;
