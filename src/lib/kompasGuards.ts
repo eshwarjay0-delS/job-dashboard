@@ -50,6 +50,11 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   // An item of a spoken numbered list: "a hypothesis matrix: 1 CA renewal breaks inspection, 2 Intune policy ..., and 3 EPM rule"
   // came out "several CA renewal" (round r05, ea-20).
   if (/^[1-9]$/.test(value) && /(?:[:,;]|\band)\s*$/.test(before) && /^\s+[A-Z][A-Za-z]/.test(after)) return true
+  // r4 (item 25): a number that is part of a standard or product name is a label: "ISO 27001" came out "ISO several",
+  // "SOC 2" "SOC several", "Windows Server 2019" "a few years ago", "24/7" "several/7", "step 2 of 3" "of several".
+  if (/\b(?:ISO(?:\/IEC)?|IEC|SOC|PCI(?: DSS)?|DSS|NIST(?: SP| CSF)?|SP|CSF|RFC|FIPS|CIS|IL|FedRAMP|Server|Windows|Office|SQL|RHEL|Ubuntu|macOS|iOS|Android|Exchange|SharePoint|OWASP Top|Top|Article|Section|Level|Type|Gen|Wave|Release|Sprint|Round|Day|Week|Q)\s*$/.test(before)) return true
+  if (/^\/\s*7\b/.test(after) && value === "24") return true
+  if (/\b(?:steps?|phases?|parts?|items?|questions?|hypothes(?:is|es)|options?)\s+\d+\s+(?:of|out of)\s+$/i.test(before)) return true
   if (/^x[0-9a-f]/i.test(after)) return true
   if (/^\s*(port|ports)\b/i.test(after)) return true
   // Structural numbers are labels, not result claims — the guard rewrote them
@@ -156,6 +161,9 @@ export function guardText(line: string, allowed: Set<string>): { text: string; r
   text = text.replace(/\bby\s+\u0000/gi, "").replace(/\u0000/g, "")
   // Stress round 3: "I closed 95 percent of findings" came out "several percent of", "$2M" came out "$millions" and
   // "over 200" came out "over several". Each now reads as something a person says.
+  // r4 (item 25): "by 60 percent" came out "by noticeably" and "top 10 percent" "top noticeably".
+  text = text.replace(/\bby (?:several|noticeably) percent\b/gi, "noticeably").replace(/\bby noticeably\b/gi, "noticeably")
+  text = text.replace(/\b(?:the )?top (?:several|noticeably)(?: percent)?\b/gi, "near the top").replace(/\bin near the top\b/gi, "near the top")
   text = text.replace(/\bseveral percent of (?!the\b|my\b|our\b|their\b)/gi, "most of the ").replace(/\bseveral percent of\b/gi, "most of").replace(/\bseveral percent\b/gi, "noticeably")
   text = text.replace(/\$\s?(millions|thousands|several)\b/g, (_m, w: string) => (w === "several" ? "money" : w + " of dollars"))
   text = text.replace(/\b(?:over|more than|nearly|almost|about|around|roughly) several\b/gi, "many")

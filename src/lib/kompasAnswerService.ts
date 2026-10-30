@@ -22,7 +22,7 @@ import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
 import { repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type SourceDoc } from "@/lib/kompasSourceRetrieval"
-import { lostAfterSettle, repairLogLine, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
+import { lostAfterSettle, repairLogLine, repairSourceRule, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
@@ -404,6 +404,16 @@ function repairChecks(job: AnswerJob, text: string): { core: string[]; all: stri
   return { core: [...structure, ...named, ...voiceEcho, ...sourceCheck], all: [...named, ...structure, ...voiceEcho, ...sourceCheck, ...parts, ...tangents] }
 }
 
+// r4 (item 24): the source lines the repair may draw on; empty (old prompt) with no experience sources or on any error.
+function repairSourceBlock(job: AnswerJob): string {
+  try {
+    if (!Array.isArray(job.sourceDocs) || !job.sourceDocs.some((d) => d.proves === "experience")) return ""
+    return sourcePassagesPrompt(retrievePassages(job.question, job.sourceDocs))
+  } catch {
+    return ""
+  }
+}
+
 // At most two attempts. The second rewrites the BEST answer so far and names only what it still misses (v1 rewrote
 // the original twice with the full list, so a partial fix from attempt one was thrown away). The abort signal is the
 // request signal, not the 55s lane signal, so a settle-time repair does not inherit a spent lane budget.
@@ -416,7 +426,7 @@ async function repairStructure(job: AnswerJob, guardedText: string, req: NextReq
     rewrite: async (best, missing) => {
       const removeTangent = missing.some((m) => m.startsWith("remove the unasked technical tangent"))
       const { text } = await fetchOpenRouter(job.orKey || "", PAID_MODEL, structureRepairSystem(job.plan.words, removeTangent),
-        `QUESTION: ${job.question}\n\nANSWER:\n${best}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}\n\nThe rewritten answer MUST contain each item above. Return the full rewritten answer and nothing else.`,
+        `QUESTION: ${job.question}\n\nANSWER:\n${best}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}\n\n${repairSourceRule(repairSourceBlock(job))}The rewritten answer MUST contain each item above. Return the full rewritten answer and nothing else.`,
         1600, AbortSignal.any([req.signal, AbortSignal.timeout(60000)]))
       return text
     },

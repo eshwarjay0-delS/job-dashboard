@@ -1444,6 +1444,14 @@ async function flushHeard(maxMs = 43000) {
 // Five dictation levels, each one decided before the next is trusted.
 // 1. A scream is speech on the first sample, and it pulls a climbed floor back down.
 // 2. A short start (a question word, a soft onset) is transcribed at the idle recycle, not dropped.
+// r4 (item 24): the server reports every guard repair (landed / partial / discarded / failed) but the card never showed
+// it, so a repair that failed looked the same as one that landed. Empty when no repair was needed or no status came back.
+function repairBadge(r) {
+  if (!r || !r.status || r.status === "not-needed") return "";
+  const lost = r.survived === false ? " (lost in trim)" : "";
+  return ({ landed: " · ✓ repair landed", partial: " · ◐ repair partial", discarded: " · ✗ repair discarded", failed: " · ✗ repair failed", "no-key": " · ✗ repair skipped (no key)" }[r.status] || "") + (r.status === "landed" || r.status === "partial" ? lost : "");
+}
+
 // 3. Phrase repair and the security lexicon live in fixPhrases and whisperPrompt.
 // 4. An empty decode of real speech is sent once more with a bare prompt.
 // 5. heardDraft shows what landed, and a greeting does not become the question.
@@ -2399,7 +2407,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     const kind = ({ 0: "intro", 1: "story", 2: "reasoning", 3: "drill-down", 4: "your experience" }[meta.tier] || "") + (meta.length && ["closed", "which", "theirq", "logistics"].includes(meta.length.kind) ? " · short form" : "") + (meta.derived ? " · from everything heard" : "") + (meta.voice ? ` · voice ${meta.voice.passed}/${meta.voice.total}` : "");
     const spoken = (s) => s >= 90 ? `${Math.round(s / 60)} min` : `${s}s`;
     const len = meta.length && meta.length.secs ? ` · ~${spoken(meta.length.secs[0])}–${spoken(meta.length.secs[1])} spoken` : "";
-    card.meta = `⚡ ${(first / 1000).toFixed(2)}s · ${((performance.now() - t0) / 1000).toFixed(2)}s${kind ? " · " + kind : ""}${len}${retrieved.length ? " · dossier" : ""}${meta.checked ? " · ✓ fact-checked" : ""}`;
+    card.meta = `⚡ ${(first / 1000).toFixed(2)}s · ${((performance.now() - t0) / 1000).toFixed(2)}s${kind ? " · " + kind : ""}${len}${retrieved.length ? " · dossier" : ""}${meta.checked ? " · ✓ fact-checked" : ""}${repairBadge(meta.repair)}`;
     if (cards[idx] === card) renderCard();
     logAnswer({ derived: meta.derived || derivedQ || "", derivedBy: derivedBy || "", kind: meta.length && meta.length.kind, tier: meta.tier, lane: meta.timing && meta.timing.lane, voice: meta.voice && `${meta.voice.passed}/${meta.voice.total}`, ms: Math.round(performance.now() - t0), depthKey });
     if (!meta.degraded && !/backup model/.test(card.meta)) { card.byDepth = card.byDepth || {}; card.byDepth[depthKey] = { answer: card.answer, meta: card.meta }; }

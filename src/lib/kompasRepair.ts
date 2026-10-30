@@ -82,3 +82,16 @@ export async function runRepairLoop(original: string, deps: RepairLoopDeps): Pro
   const status = best.text === original ? (failed && attempts === 1 ? "failed" : "discarded") : statusFor(fixed, missing.length, best.all.length)
   return { text: best.text, repaired: best.text === original ? 0 : 1, repair: { status, attempts, missing, stillMissing: best.all } }
 }
+
+// r4 (item 24): the rewrite was told to ADD the missing part (system prompt) and to add NO unsupported claim (source
+// check), but it never saw the candidate's sources, so the added part was invented, failed the source check and the
+// repair was discarded. With sources, the prompt now carries the source lines and says which rule wins. With no sources
+// the prompt is exactly the old one.
+export function repairSourceRule(sourceBlock: string): string {
+  const src = String(sourceBlock || "").trim()
+  if (!src) return ""
+  return `${src}\n\nRULE: Adding a missing part is completing the answer, not a new claim. Write each missing part from only the SOURCES lines above; when they do not cover it, say it in general terms ("I would…") with no new employer, tool, date or number. `
+}
+export function repairUserPrompt(question: string, best: string, missing: string[], sourceBlock: string): string {
+  return `QUESTION: ${question}\n\nANSWER:\n${best}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}\n\n${repairSourceRule(sourceBlock)}The rewritten answer MUST contain each item above. Return the full rewritten answer and nothing else.`
+}

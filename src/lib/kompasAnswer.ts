@@ -475,6 +475,9 @@ function afterMarkedNextQuestion(text: string): string {
 /** "And why?", "Why?", "How come?" — a follow-up, not a new subject and not silence. */
 export function shortFollowUp(text: string): boolean {
   const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim()
+  // r4: "And?", "and then?", "what happened next?" and "why that?" were dropped or answered with no topic. Failsafe:
+  // only these whole short forms count; anything longer is judged as before.
+  if (/^(?:(?:and|so|ok(?:ay)?|um+|uh+)[, ]+)*(?:and|and then|then what|what then|what happened next|what happened then|what next|what came next|and after that|go on|why that|why so)[.?!]*$/i.test(t)) return true
   return /^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|go deeper|dig deeper|explain that|explain this|explain it|say that again|why|how)(?:\s+though)?[.?!]*$/i.test(t)
 }
 
@@ -757,10 +760,35 @@ export function stripScreenChrome(question: string): string {
   return stripped || String(question || "").trim()
 }
 
+// r4 (29 Oct 2026): an interviewer who corrects themselves mid-question ("Tell me about X, sorry, actually, how did you
+// handle Y?") was answered on the whole garbled line. Only the corrected ask is kept; one that points back ("after it")
+// keeps the first topic as what it follows up on. Failsafe: no marker after a clause break, a remainder under three
+// words or without an ask word, or any error → the text unchanged.
+const SELF_CORRECTION = /(?:[,.;:!?]|\s[\u2014\u2013-])\s*(?:(?:sorry|actually|no|wait|no wait|scratch that|let me rephrase(?: that)?|i mean|or rather|rather)[,.;:]?\s+)+/gi
+const ASK_WORD = /^(?:how|what|why|when|where|who|which|tell|walk|describe|give|can|could|would|did|do|have|explain|talk)\b/i
+export function afterSelfCorrection(text: string): string {
+  try {
+    const t = String(text || "")
+    let last: RegExpExecArray | null = null
+    for (const m of t.matchAll(SELF_CORRECTION)) {
+      if (/\b(?:sorry|actually|wait|scratch|rephrase|mean|rather)\b/i.test(m[0])) last = m as RegExpExecArray
+    }
+    if (!last) return t
+    const rest = t.slice(last.index + last[0].length).trim()
+    const before = t.slice(0, last.index).replace(/[\s,.;:\u2014\u2013-]+$/, "").trim()
+    if (rest.split(/\s+/).length < 3 || !ASK_WORD.test(rest) || !before) return t
+    const ask = rest.charAt(0).toUpperCase() + rest.slice(1)
+    if (/\b(?:it|that|this|them|those)\b/i.test(ask)) return `${ask.replace(/[?.!\s]+$/, "")} \u2014 following up on: "${before}"?`
+    return ask
+  } catch {
+    return String(text || "")
+  }
+}
 export function questionForAnswer(heard: string, asked: string, pinned: boolean, again: boolean, history: unknown): string {
   const turns = Array.isArray(history) ? history : []
   const formed = afterMarkedNextQuestion(questionToAnswer(stripScreenChrome(heard), stripScreenChrome(asked), pinned, again ? NO_TURN : previousTurn(turns)))
-  const q = formed ? tidySpokenAsk(formed) : formed
+  const corrected = formed ? afterSelfCorrection(formed) : formed
+  const q = corrected ? (/following up on: "/.test(corrected) && corrected !== formed ? corrected : tidySpokenAsk(corrected)) : formed
   const source = String((pinned && asked) || heard || "").split("\n").filter((l) => l.trim()).pop() || ""
   const startedWithAnd = /^\s*(?:(?:Them|You)(?: \([a-z]+\))?:\s*)?(?:and|but)\b/i.test(source)
   // Round 13: "I'm not convinced. Who decides it is acceptable?" lost the pushback when only the last ask was kept, so it

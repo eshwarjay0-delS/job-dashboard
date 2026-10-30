@@ -37,6 +37,22 @@ export function normalizeResumeLayout(resume: string | null | undefined): string
         }
         out.push(line); continue
       }
+      // r4: unusual role lines. "Role — Employer — Jan '21–Present", "Role · Employer · 05/2017 – 12/2020" and
+      // "Role, Employer (Summer 2022 – current)" become role headings; a first line "Name | City" with no date is the
+      // name, and a lone all-caps section word ("EXPERIENCE", "WORK") is a section heading. Only plain lines (no bullet
+      // or #) of at most 20 words with a date are touched; anything else is left for the rules below.
+      if (!/^\s*[-*•#]/.test(line) && t) {
+        const dated = /\b(?:19|20)\d{2}\b|'\d{2}\b|\b(?:present|current|now)\b/i.test(t)
+        const short = t.split(/\s+/).length <= 20
+        const firstText = !out.some((l) => l.trim())
+        if (firstText && / \| /.test(t) && !dated && t.split(/\s+/).length <= 8) { out.push(`# ${t}`); changed = true; continue }
+        if (/^[A-Z][A-Z &]{2,30}$/.test(t) && t.split(/\s+/).length <= 3) { out.push(`## ${t.charAt(0) + t.slice(1).toLowerCase()}`); changed = true; continue }
+        if (dated && short && !/^\s*(?:\w+ed|led|ran|built|wrote|made|owned)\b/i.test(t)) {
+          const bits = t.split(/\s+[\u2014\u00b7]\s+|\s+[\u2013-]\s+(?=[A-Z][^\d]*[\u2014\u00b7\u2013-])/).map((b) => b.trim()).filter(Boolean)
+          if (bits.length === 3 && /\d|present|current|now/i.test(bits[2])) { head(`${bits[0]}, ${bits[1]} (${bits[2]})`); changed = true; continue }
+          if (/^[^()]{3,80}, [^()]{2,60} \([^()]*(?:\d{4}|'\d{2}|present|current|now)[^()]*\)$/i.test(t) && !/[.!?]$/.test(t)) { head(t); changed = true; continue }
+        }
+      }
       // "Role | Employer | Years" on its own line (no bullet body)
       if (!/^\s*[-*•#]/.test(line) && / \| /.test(t) && t.split(/\s+/).length <= 14) {
         const [role, employer, years] = t.split(/\s+\|\s+/)

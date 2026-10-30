@@ -439,6 +439,8 @@ const PROVIDER_FAILURE_SHAPE = [
   // overloaded_error") were shown as answers. Only when the text opens with the exception class.
   /^\s*(?:[a-z_]+\.)*(?:API\w*|InternalServer|RateLimit|ServiceUnavailable|Overloaded|Authentication|PermissionDenied|BadRequest|NotFound|UnprocessableEntity|Conflict)Error\b\s*:?/,
   /\boverloaded_error\b|\brate_limit_error\b|\bapi_error\b/i,
+  // r4: OpenRouter's bare "Provider returned error" was shown as an answer. Only when the text opens with it.
+  /^\s*provider returned error\b/i,
   // Round 10: dotted module path + exception class + colon ("httpx.ReadTimeout: timed out",
   // "google.api_core.exceptions.ServiceUnavailable: 503").
   /^\s*(?:[a-z_][a-z0-9_]*\.)+[A-Z]\w*(?:Error|Exception|Timeout|Unavailable|Overloaded)\s*:/,
@@ -899,12 +901,47 @@ const PART_LINES: Record<AnswerLevel, Array<(part: string) => string>> = {
   ],
 }
 
+// r4 (item 26): each experience line's role heading, so "your experience at Hitachi" finds the Hitachi bullets (they
+// never say "Hitachi" themselves) and an intro starts from the latest role. Empty map on any error (old ranking).
+function headingOf(resume: string): Map<string, string> {
+  const out = new Map<string, string>()
+  try {
+    const text = normalizeResumeLayout(String(resume || "")).replace(/[*`]/g, " ")
+    let heading = ""
+    for (const raw of text.split(/\n+/)) {
+      if (/^\s*###/.test(raw)) { heading = raw.replace(/^[#\s]+/, "").toLowerCase(); continue }
+      if (/^\s*#/.test(raw)) { heading = ""; continue }
+      const line = raw.replace(/^[-•\s#]+/, "").replace(/\s+/g, " ").trim()
+      if (line && heading && !out.has(line)) out.set(line, heading)
+    }
+  } catch { /* old ranking */ }
+  return out
+}
+const INTRO_ASK = /\b(?:tell me about yourself|introduce yourself|walk me through your (?:background|resume|career|experience)|about your background)\b/i
+
 function rankedExperience(question: string, resume: string, offTopicAllowed = 99): string[] {
   const lines = experienceLines(resume)
   const keys = questionKeywords(question).map((k) => k.toLowerCase())
-  const score = (line: string) => {
+  const headings = headingOf(resume)
+  const firstHeading = [...headings.values()][0] || ""
+  const intro = INTRO_ASK.test(String(question || ""))
+  const employerKeys = keys.filter((k) => k.length >= 3 && /^[a-z0-9]/.test(k) && [...headings.values()].some((h) => {
+    const emp = h.split(/\s+[—–·|,]\s+|\s+at\s+|\(/).slice(1).join(" ")
+    return new RegExp(`(?:^|[^a-z0-9])${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:$|[^a-z0-9])`).test(emp)
+  }))
+  const byHeading = (line: string) => {
+    const h = headings.get(line.replace(/[*`]/g, " ").replace(/\s+/g, " ").trim()) || ""
+    return (h && employerKeys.some((k) => h.includes(k)) ? 2 : 0) + (intro && h && h === firstHeading ? 1 : 0)
+  }
+  const score = (line: string) => byHeading(line) + baseScore(line)
+  const baseScore = (line: string) => {
     const low = line.toLowerCase()
-    return keys.reduce((sum, key) => sum + (low.includes(key) ? (key.includes(" ") ? 3 : 1) : 0), 0)
+    // r4: a key matches as a whole word (plural or -ed/-ing allowed), so "cloud" no longer matches inside "CloudTrail".
+    // Failsafe: a key the pattern cannot be built for falls back to the substring check as before.
+    const has = (key: string) => {
+      try { return new RegExp(`(?:^|[^a-z0-9])${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:s|es|ed|ing)?(?:$|[^a-z0-9])`).test(low) } catch { return low.includes(key) }
+    }
+    return keys.reduce((sum, key) => sum + (has(key) ? (key.includes(" ") ? 3 : 1) : 0), 0)
   }
   // Lines that do not match the question are rotated by the question, so two questions never fall back on the same lines.
   const seed = [...String(question)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
@@ -1076,21 +1113,76 @@ const CLOSERS: Record<AnswerLevel, string[]> = {
  * instead of filler, so Engineer, Director, and Architect differ by real content. It is a stand-in, not a live answer.
  */
 export function draftSpokenAnswer(question: string, level: AnswerLevel, resume: string, previous: string[] = []): string {
-  // Round 6: each mode is at least 1.5 times the one below it. The mode below is drafted first and this one fills to
-  // that floor from more supported or approach lines, never past its own ceiling (failsafe: the ceiling wins).
-  const below = level === "architect" ? "director" : level === "director" ? "engineer" : null
-  const floor = below ? Math.ceil(wordCount(draftSpokenAnswer(question, below, resume, previous)) * 1.5) : 0
-  const text = draftAtLevel(question, level, resume, previous, floor)
+  return draftLadder(question, resume, previous)[level]
+}
+
+// Round 6: each mode is at least 1.5 times the one below it. The mode below is drafted first and the next fills to
+// that floor from more supported or approach lines, never past its own ceiling (failsafe: the ceiling wins).
+function ladderFrom(question: string, resume: string, previous: string[], engineer: string): Record<AnswerLevel, string> {
+  const dFloor = Math.ceil(wordCount(engineer) * 1.5)
+  let director = draftAtLevel(question, "director", resume, previous, dFloor)
   // Round 13 (29 Oct 2026): a Director draft at its own ceiling left the Architect no room to be 1.5 times longer
   // ("ROI … in dollars": 66 vs 94 words). Director is cut to the Architect ceiling over 1.5 on a sentence boundary.
   // Failsafe: never below the Director floor from Engineer, so the lower gap holds too.
-  if (level === "director") {
-    const cut = dissectQuestion(question, resume)
-    const room = Math.floor(cut.modes.architect.maxWords / 1.5)
-    const trimmed = wordCount(text) > room && room >= floor ? trimToWords(text, room) : text
-    if (wordCount(trimmed) >= floor) return trimmed
+  const cut = dissectQuestion(question, resume)
+  const room = Math.floor(cut.modes.architect.maxWords / 1.5)
+  const trimmed = wordCount(director) > room && room >= dFloor ? trimToWords(director, room) : director
+  if (wordCount(trimmed) >= dFloor) director = trimmed
+  const architect = draftAtLevel(question, "architect", resume, previous, Math.ceil(wordCount(director) * 1.5))
+  return { engineer, director, architect } as Record<AnswerLevel, string>
+}
+const ladderHolds = (l: Record<AnswerLevel, string>) =>
+  wordCount(l.director) >= wordCount(l.engineer) * 1.5 && wordCount(l.architect) >= wordCount(l.director) * 1.5
+
+// r4 (29 Oct 2026): with ceilings exactly 1.5x apart (44/66/99) an Engineer near its ceiling can leave the Director one
+// word short (two-part ask, one-paragraph resume: 43/64/99). The Engineer then drops only the filler after its lead
+// ("On X, here is my answer from my own work." + line → "On X, I led …"): it still opens on the asked words and keeps
+// its resume line, and gets shorter, never longer. Failsafe: used only when the ladder fails and the compact ladder holds.
+const ENGINEER_FILLER = /^((?:Building on that, )?(?:On|For|As for|as for|for) [^]*?), (?:I add one concrete step|here is (?:my answer|the real example|what [^.]{1,80} means)(?:,? (?:from|in) my own work)?|I bring careful, evidence-first work)\.$/
+export function compactEngineer(text: string): string {
+  try {
+    const all = sentencesOf(text)
+    const m = all[0]?.match(ENGINEER_FILLER)
+    if (!m || all.length < 2 || !/^(?:I|As I said earlier)\b/.test(all[1])) return text
+    const next = all[1].replace(/^As I said earlier\b/, "as I said earlier")
+    return [`${m[1]}, ${next}`, ...all.slice(2)].join(" ")
+  } catch {
+    return text
   }
-  return text
+}
+// r4: when the lines left after earlier answers run out, a mode can end short of 1.5x the one below. The longer mode is
+// never padded; the shorter one is cut on a sentence boundary instead: Director to the Architect over 1.5 (never below
+// its own floor from Engineer), then Engineer to the Director over 1.5 (keeping its opener and at least one more
+// sentence). Failsafe: a cut that would break either rule is not made.
+function settleLadder(l: Record<AnswerLevel, string>, compacted = false): Record<AnswerLevel, string> {
+  try {
+    let { engineer, director } = l
+    const architect = l.architect
+    if (wordCount(architect) < wordCount(director) * 1.5) {
+      const d = trimToWords(director, Math.floor(wordCount(architect) / 1.5))
+      if (sentencesOf(d).length >= 2) director = d
+    }
+    if (wordCount(director) < wordCount(engineer) * 1.5) {
+      const e = trimToWords(engineer, Math.floor(wordCount(director) / 1.5))
+      // the Engineer keeps its opener and one more sentence; a compact Engineer is one sentence that already holds both
+      if (sentencesOf(e).length >= (compacted ? 1 : 2) && wordCount(e) >= wordCount(sentencesOf(engineer)[0] || "") + (compacted ? 0 : 1)) engineer = e
+    }
+    return { engineer, director, architect } as Record<AnswerLevel, string>
+  } catch {
+    return l
+  }
+}
+function draftLadder(question: string, resume: string, previous: string[]): Record<AnswerLevel, string> {
+  const usual = ladderFrom(question, resume, previous, draftAtLevel(question, "engineer", resume, previous, 0))
+  if (ladderHolds(usual)) return usual
+  const short = compactEngineer(usual.engineer)
+  const compact = short === usual.engineer ? null : ladderFrom(question, resume, previous, short)
+  if (compact && ladderHolds(compact)) return compact
+  for (const [base, c] of (compact ? [[usual, false], [compact, true]] : [[usual, false]]) as Array<[Record<AnswerLevel, string>, boolean]>) {
+    const settled = settleLadder(base, c)
+    if (ladderHolds(settled)) return settled
+  }
+  return usual
 }
 
 export const NUMBER_ASK = /\b(?:what (?:percentage|percent|share|number|proportion)|by what percent|how many|how much (?:faster|money|time|did)|in dollars|dollar value|roi\b|pass rate|false-positive rate|give me (?:a|the) (?:number|percentage)|exact(?:ly)? how many|to the nearest)\b/i
@@ -1136,7 +1228,30 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   const fresh = (line: string) => !said.has(key(line))
   // A tied follow-up is ranked on its own words, so it does not read back the lines the first answer already used.
   const tied = splitFollowUp(question)
-  const lines = rankedExperience(tied.previous ? tied.own : question, resume, { engineer: 0, director: 1, architect: 3 }[level]).map(firstPerson).filter(fresh)
+  // r4: a bare follow-up ("Why that?", "How so?", "And then?") has no topic of its own, so it is ranked on the question
+  // it follows up on; otherwise every such follow-up drafted "my resume does not show this". Failsafe: a follow-up
+  // with any other word is ranked on its own words as before.
+  const bareFollow = (t: string) => /^(?:(?:and|so|then|why|how|what|that|this|happened|next|come|though|go|on|after|not|now)\b[\s,]*)+[?.!]*$/i.test(t.trim())
+  const rankOn = tied.previous ? (bareFollow(tied.own) ? tied.previous : tied.own) : question
+  let lines = rankedExperience(rankOn, resume, { engineer: 0, director: 1, architect: 3 }[level]).map(firstPerson).filter(fresh)
+  // r4: a three-part ask ("triage, access reviews, and HIPAA controls") spent Director's room on two lines for one part
+  // and never named the third. With 2+ asked parts, the best line for each part goes first, in the asked order.
+  // Failsafe: one part, or any error, keeps the ranked order.
+  try {
+    const asked = askedPartList(rankOn)
+    if (asked.length >= 2) {
+      const lead: string[] = []
+      for (const part of asked) {
+        // The part's own best line; when an earlier answer already said it, a short pointer names the part instead of
+        // letting a line about another part stand in for it (500-sequence run: 10/63 three-part asks dropped a part).
+        const top = rankedExperience(part, resume, 0).map(firstPerson)[0]
+        const pick = top && lines.includes(top) && !lead.includes(top) ? top : rankedExperience(part, resume, 0).map(firstPerson).find((l) => lines.includes(l) && !lead.includes(l))
+        if (top && !fresh(top) && !lead.some((l) => l.startsWith(`On ${part},`))) lead.push(`On ${part}, it is the work I described a moment ago.`)
+        else if (pick) lead.push(pick)
+      }
+      lines = [...lead, ...lines.filter((l) => !lead.includes(l))]
+    }
+  } catch { /* failsafe: ranked order */ }
   const mode = cut.modes[level]
   // Each mode stops about a third short of the next one up, so the three stay at least 50% apart in length.
   const archStop = cut.modes.architect.aimWords
@@ -1177,6 +1292,23 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
       words += wordCount(intro) + wordCount(pick)
       used++
     }
+  }
+  // r4 (29 Oct 2026): when the only resume line that covers the ask was already said, the draft claimed "my resume does
+  // not show this exact work", which is false. The covering line is said again, marked as said earlier. Failsafe: only a
+  // line that matches the ask (rankedExperience returns none when nothing matches), and only when nothing else was used.
+  if (!used && cut.shape !== "personal-experience") {
+    try {
+      const again = rankedExperience(rankOn, resume, 0).map(firstPerson).find((l) => !fresh(l))
+      if (again) {
+        const full = `As I said earlier, ${again.charAt(0).toLowerCase()}${again.slice(1)}`.replace(/^As I said earlier, i\b/, "As I said earlier, I")
+        // a short mode with no room for the whole line points back to it instead of dropping it
+        // a new question (not a follow-up) never reads the same line back, so two asks never get one answer (round 6)
+        const line = tied.previous && words + wordCount(full) <= mode.maxWords ? full : "As I said earlier, this comes from the work I just described."
+        parts.push(line)
+        words += wordCount(line)
+        used++
+      }
+    } catch { /* failsafe: the honest line below */ }
   }
   if (!used) {
     const honest = HONEST_LINES.find(fresh) || HONEST_LINES[0]

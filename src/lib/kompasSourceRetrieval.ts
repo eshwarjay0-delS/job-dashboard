@@ -77,8 +77,20 @@ export function splitPassages(docs: SourceDoc[] | null | undefined): Passage[] {
 export type QuestionKind = "behavioral" | "technical" | "leadership"
 export function questionKind(question: string): QuestionKind {
   const q = String(question || "").toLowerCase()
-  if (/\b(?:lead|led|leading|manage|managed|managing|mentor|hire|hiring|grow (?:a|the) team|your team|stakeholders?|executives?|board|influence)\b/.test(q)) return "leadership"
-  if (/\b(?:tell me about a time|a time (?:when|you)|give me an example|describe a situation|walk me through a situation|disagree|conflict|mistake|failure|proud|why do you want|why this role|motivat|strength|weakness)\b/.test(q)) return "behavioral"
+  // r4: "a product lead" is a person, not leading; "manage firewall rules" is technical. Lead as a noun after
+  // a/the/product/tech/team/project is not counted, and manage counts only with people, budget, on-call or hiring.
+  // Failsafe: any other leadership word still labels the ask leadership, as before.
+  const noun = q.replace(/\b(?:a|the|product|tech|team|project|engineering) lead\b/g, " ")
+  const manageOther = /\bmanag(?:e|ed|ing)\b/.test(noun) && !/\bmanag(?:e|ed|ing) (?:the |a |my |your |our )?(?:team|people|staff|analysts?|engineers?|budget|security budget|tooling budget|on-call|hiring|reports?|stakeholders?|vendors?|managers?)\b/.test(noun)
+  const rest = manageOther ? noun.replace(/\bmanag(?:e|ed|ing)\b/g, " ") : noun
+  // r4: a story frame ("tell me about a time…") is behavioral unless the candidate is the one leading in it.
+  const story = /\b(?:tell me about a time|a time (?:when|you|someone)|give me an example|describe a (?:situation|time)|walk me through a situation)\b/.test(q)
+  const iLed = /\b(?:you|i) (?:lead|led|manage|managed|mentor|mentored|hire|hired|grew|coached)\b/.test(rest)
+  if (story && !iLed) return "behavioral"
+  if (/\b(?:lead|led|leading|manage|managed|managing|mentor|hire|hiring|grow (?:a|the) team|your team|stakeholders?|executives?|board|influence)\b/.test(rest)) return "leadership"
+  // r4: program-owner asks (budget, roadmap, vendor spend, the CTO/CISO, an interview loop, growing engineers)
+  if (/\b(?:budgets?|roadmap|vendor spend|cto|ciso|ceo|interview loop|grow engineers|staff roles|headcount)\b/.test(q)) return "leadership"
+  if (/\b(?:tell me about a time|a time (?:when|you)|give me an example|describe a situation|walk me through a situation|disagree|conflict|mistake|failure|proud|why do you want|why this role|motivat\w*|strengths?|weakness(?:es)?)\b/.test(q)) return "behavioral"
   return "technical"
 }
 const KIND_BOOST: Record<QuestionKind, (p: Passage) => number> = {
@@ -122,7 +134,7 @@ export function heardAs(token: string, vocab: Set<string>): string {
 }
 const PART_SPLIT = /\s*(?:,\s*(?:and\s+)?|\band\b|\bas well as\b|\bplus\b)\s*/i
 const PART_FRAME = /^(?:(?:how|what|why|when|where|did|do|does|you|your|tell|me|about|walk|through|approach|approached|handle|handled|work|on|with|the|a|an|so|um|like)\s+)+/i
-export interface RetrieveOptions { recent?: string[] | null; kindBoost?: boolean }
+export interface RetrieveOptions { recent?: string[] | null; kindBoost?: boolean | "full" }
 
 export function retrievePassages(question: string, docs: SourceDoc[] | null | undefined, k = 4, opts: RetrieveOptions = {}): Retrieval {
   try {
@@ -170,7 +182,11 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
     const demote = recent.length && !GOES_BACK.test(q)
     for (const p of scored) {
       if (p.score <= 0) continue
-      p.score *= boost(p)
+      // r4: behavior 7 is a tiebreaker only. On two fixtures (28 and 64 questions) the full 1.25x boost never moved the
+      // right passage first more often than no boost, so it now only separates passages within 3% of each other.
+      // kindBoost:"full" keeps the old strength for the measurement. Failsafe: a boost of 1 changes nothing.
+      const b = boost(p)
+      p.score *= opts?.kindBoost === "full" || b <= 1 ? b : 1.03
       if (demote && recent.some((r) => usedIn(p, r))) p.score *= ASKS_NEW.test(q) ? 0.2 : 0.4
     }
     let ranked = scored.filter((p) => p.score > 0).sort((a, b) => b.score - a.score)
@@ -178,8 +194,18 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
     // "In your sources" needs real topic coverage: the best experience passage holds at least half of the asked topic
     // words (interview chatter like "sorry, the line cut out" is not topic), not one shared generic word.
     const topic = [...new Set([...questionKeywords(q).flatMap((kw) => tokens(kw)).filter((t) => t !== "not" && !CHATTER.has(t)).map(heard), ...splitHeard])]
+    // r4: a topic word found only in the role title ("SOC Analyst") does not cover the ask ("SOC 2 Type II audits"); the
+    // employer part of the heading still counts, so "What did you do at 3M?" is found. Failsafe: no heading → the text.
+    const coverText = (p: Passage) => {
+      try {
+        if (p.text === p.line) return p.text
+        const heading = p.text.slice(0, p.text.length - p.line.length).replace(/:\s*$/, "")
+        const comma = heading.indexOf(",")
+        return comma >= 0 ? `${heading.slice(comma + 1)} ${p.line}` : p.line
+      } catch { return p.text }
+    }
     const coversTopic = (p: Passage, topic: string[]) => {
-      const d = new Set(tokens(p.text))
+      const d = new Set(tokens(coverText(p)))
       // an ASR-split pair ("terra form") whose joined word is in the passage covers both halves
       const hit = new Set(topic.filter((t) => d.has(t)))
       topic.forEach((t, i) => { const n = topic[i + 1]; if (n && d.has(stem(t + n))) { hit.add(t); hit.add(n) } })
