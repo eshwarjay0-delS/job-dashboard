@@ -192,3 +192,31 @@ test("null reference speaker is unmeasured and does not invent attribution",()=>
   assert.equal(result.coverage.speakerLabels,0);
   assert.equal(result.metrics.speakerAttribution,null);
 });
+
+test("baseline rejects WER lower than its error-rate components",()=>{
+  const samples=[row("a","one two three","one four three")],base=evaluate(set(samples));
+  assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,wer:0}}),/Baseline mismatch/);
+});
+test("baseline rejects inflated deletion rate inconsistent with WER",()=>{
+  const samples=[row("a","one two","one")],base=evaluate(set(samples));
+  assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,deletionRate:1}}),/Baseline mismatch/);
+});
+test("baseline rejects inflated substitution rate inconsistent with WER",()=>{
+  const samples=[row("a","one two","one")],base=evaluate(set(samples));
+  assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,substitutionRate:1}}),/Baseline mismatch/);
+});
+test("baseline rejects speaker accuracy greater than prediction coverage",()=>{
+  const samples=[row("a","hello","hello",{referenceSpeaker:"A",predictedSpeaker:"A"}),row("b","hello","hello",{referenceSpeaker:"B"})],base=evaluate(set(samples));
+  assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,speakerAttribution:1}}),/Baseline mismatch/);
+});
+test("baseline accepts valid fractional WER component rounding",()=>{
+  const samples=[row("a","one two three","one four")],base=evaluate(set(samples));
+  assert.equal(evaluate(set(samples),base).deltaFromBaseline.wer,0);
+});
+test("baseline accepts WER greater than one with consistent insertions and speaker abstentions",()=>{
+  const samples=[row("a","one","one two three",{referenceSpeaker:"A"})],base=evaluate(set(samples));
+  assert.equal(base.metrics.wer,2);
+  assert.equal(base.metrics.speakerAttribution,0);
+  assert.equal(base.metrics.speakerPredictionRate,0);
+  assert.equal(evaluate(set(samples),base).deltaFromBaseline.wer,0);
+});

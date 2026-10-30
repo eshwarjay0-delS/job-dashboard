@@ -19,8 +19,18 @@ function validBaselineMetrics(metrics,coverage){
     if(typeof value!=="number"||!Number.isFinite(value)||value<0)return false;
     if(!unbounded.has(key)&&value>1)return false;
   }
-  return !(metrics.p50LatencyMs!==null&&metrics.p95LatencyMs!==null&&
-    metrics.p50LatencyMs>metrics.p95LatencyMs);
+  if(metrics.p50LatencyMs!==null&&metrics.p95LatencyMs!==null&&
+    metrics.p50LatencyMs>metrics.p95LatencyMs)return false;
+  // All word-error components use the same reference-word denominator.
+  // Independently valid-looking rates can otherwise contradict the reported WER
+  // and conceal a regression in a forged or corrupted baseline.
+  if(coverage.referenceWords>0){
+    const parts=metrics.deletionRate+metrics.substitutionRate+metrics.insertionRate;
+    if(Math.abs(metrics.wer-parts)>1e-10)return false;
+  }
+  // Every correctly attributed speaker must also have a prediction.
+  if(coverage.speakerLabels>0&&metrics.speakerAttribution>metrics.speakerPredictionRate+1e-10)return false;
+  return true;
 }
 
 // Missing predictions are legitimate abstentions; malformed or blank labels are not.
