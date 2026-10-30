@@ -837,6 +837,21 @@ export function experienceLines(resume: string): string[] {
     .filter((line) => !/^\s*#/.test(line))
     .map((line) => line.replace(/^[-•\s#]+/, "").replace(/\s+/g, " ").trim())
     .filter((line) => wordCount(line) >= 6 && !/@|https?:|^fictional\b|^b\.?s\.?\b|^education\b/i.test(line))
+    // r8: coaching text about another person ("He is reporting up favourably", "She wants someone who…") is never the
+    // candidate's own evidence, so it never enters a first-person draft. Failsafe: any error keeps the line.
+    .filter((line) => { try { return !thirdPersonCoaching(line) } catch { return true } })
+}
+
+/**
+ * r8: a line that is coaching or notes about another person, not the candidate's own work: it opens on a third-person
+ * subject (He/She/They + verb, His/Her words) or talks to the reader about someone else ("told you to", "your recruiter").
+ * A resume line that merely names a third party ("Led the migration with the CTO and his team") is not matched.
+ */
+export function thirdPersonCoaching(line: string): boolean {
+  const t = String(line || "").replace(/^[-*•"“'\s]+/, "")
+  if (/^(?:He|She|They)\s+(?:is|was|were|are|has|had|have|also|said|says|told|tells|wants|wanted|will|would|thinks|thought|likes|liked|asked|asks|covers|seemed|seems|mentioned|is\b|'s)\b/.test(t)) return true
+  if (/^(?:His|Her|Their)\s+(?:words|view|take|concern|point|team|boss|note|feedback)\b/.test(t)) return true
+  return /\b(?:he|she|they) (?:also )?told you\b|\byour (?:\w+ )?recruiter\b|\breporting up favourabl/i.test(t)
 }
 
 function firstPerson(line: string): string {

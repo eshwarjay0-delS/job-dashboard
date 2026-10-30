@@ -8,10 +8,16 @@ import { questionKeywords, topicOfAsk } from "./kompasDissection.ts"
 import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 import { createHash } from "node:crypto"
 import { CTX, dropCoveredFigureClaims, figureContextKeys, figureMentions, mentionSupported, type FigureMention } from "./kompasFigureContext.ts"
+import { dossierItems, relatedTerms } from "./kompasDossierItems.ts"
+
+/** Stack trial flag: r8 dossier items (and so r8 related-word / weight ranking, which only runs on item passages). Default OFF. */
+export function dossierItemsOn(): boolean {
+  try { return typeof process !== "undefined" && process.env?.KOMPAS_DOSSIER_ITEMS === "1" } catch { return false }
+}
 
 export type Proves = "experience" | "emphasis"
 export interface SourceDoc { name: string; text: string; proves: Proves }
-export interface Passage { id: string; source: string; proves: Proves; text: string; line: string; score: number }
+export interface Passage { id: string; source: string; proves: Proves; text: string; line: string; score: number; span?: [number, number]; weight?: number; itemId?: string }
 export interface Retrieval { matched: boolean; passages: Passage[]; closest: Passage | null; all: Passage[]; missing?: string[] }
 
 export const NOT_IN_SOURCES =
@@ -57,6 +63,22 @@ export function splitPassages(docs: SourceDoc[] | null | undefined): Passage[] {
     let heading = ""
     let n = 0
     const body0 = doc.name === "resume" ? normalizeResumeLayout(doc.text) : doc.text
+    // r8: a structured dossier (question/heading lines with answers beneath) becomes one passage per item: the heading
+    // travels with its answer paragraphs, wrapped lines stay together, page headers/footers are dropped. Failsafe: no
+    // detectable structure (or any error) → the line split below, exactly as before.
+    // Stack trial: r8 dossier-item split is behind KOMPAS_DOSSIER_ITEMS=1 (default OFF → line split, ranking unchanged).
+    if (doc.name === "dossier" && dossierItemsOn()) {
+      let items: ReturnType<typeof dossierItems> = null
+      try { items = dossierItems(doc.text) } catch { items = null }
+      if (items && items.length) {
+        for (const it of items) {
+          if (words(it.text) < 4) continue
+          n++
+          out.push({ id: `D${n}`, source: doc.name, proves: doc.proves, line: it.text, text: it.text, score: 0, span: it.span, weight: it.weight, itemId: it.id })
+        }
+        continue
+      }
+    }
     let chunks = doc.proves === "emphasis" ? body0.split(/(?<=[.!?])\s+|\n+/) : body0.split(/\n+/)
     // r5: a saved "Q: … / A: …" pair is one passage, so the answer travels with the question it answers.
     // Failsafe: lines without the markers (or any error) split exactly as before.
@@ -333,6 +355,8 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
       } catch { lex = null }
     }
     const df = (t: string) => docsTok.filter((d) => d.includes(t)).length
+    let related = new Map<string, number>()
+    try { if (passages.some((p) => p.span)) related = relatedTerms([...keys].filter((t) => !famWord(t)), docsTok) } catch { related = new Map() }
     const scored = passages.map((p, i) => {
       const d = docsTok[i]
       let s = 0
@@ -352,6 +376,12 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
         // r5: a behavioral ask prefers a story-shaped passage once it already matches the topic
         if (s > 0 && storyAsk && storyShaped(p.line)) s *= 1.2
       } catch { /* failsafe: lexical score only */ }
+      // r8: related words (same-passage co-occurrence and shared 6-letter stems; no hand lists) add a small score.
+      // r8: an item that is a bare heading, title or fragment is weighted down. Failsafe: unchanged score on error.
+      try {
+        if (related.size) for (const [t, w] of related) { const tf = d.filter((x) => x === t).length; if (tf) s += w * Math.log(1 + (N - df(t) + 0.5) / (df(t) + 0.5)) * Math.min(tf, 2) / 2 }
+        if (typeof p.weight === "number" && p.weight > 0 && p.weight < 1) s *= p.weight
+      } catch { /* failsafe */ }
       return { ...p, score: p.proves === "emphasis" ? s * 0.5 : s }
     })
     // Behavior 7 and 8 only reorder: coverage ("matched") is computed on the same passages, so it never changes.
