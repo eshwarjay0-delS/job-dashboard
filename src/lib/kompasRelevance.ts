@@ -25,6 +25,7 @@ const LOGISTICS=/\b(?:relocat(?:e|ion)|on.?site|hybrid|notice period|start date|
 const DEFINE=/\b(?:what (?:exactly |precisely )?is|what (?:exactly |precisely )?are|what(?: does|'s| is) .{1,55} mean|define|stands? for|explain (?:the term|what .{1,60} is))\b/i
 const COMPARE=/\b(?:which (?:one|framework|tool|approach|option|is)|which of those|which would you (?:choose|pick|prefer|start)|stronger (?:in|with)|more (?:proficient|comfortable|familiar)|difference between|compare|versus|vs[.]?|how do .+ differ|how is .{1,80} different|how\b[^?]{0,110}\bdiffer(?:s|ed)?\b|prefer .+ (?:or|over))\b/i
 const SCENARIO=/\b(?:how would you|what would you do|suppose|imagine|if you (?:were|had|found|saw)|hypothetical|in that situation|how should (?:we|the team)|scenario)\b/i
+const EXPLAIN_EXPERIENCE=/\b(?:explain|describe|tell (?:me|us) (?:a (?:little|bit) |a little bit |more )?about|walk (?:me|us) through|talk (?:me|us) (?:through|about)|elaborate on|share|go (?:over|through))\s+(?:(?:a (?:little|bit)|a little bit|more)\s+(?:about\s+)?)?(?:your|ur)\s+(?:(?:hands-on|practical|prior|past|previous|professional|relevant|overall|direct|own|real-world|real|actual|day-to-day)\s+)*(?:experience|background|work|involvement|exposure)\s+(?:with|in|on|around|using|of|leading|managing|running|building|doing|handling|designing|owning)\s+\S/i
 const DEEP=/\b(?:step by step|walk me through|under the hood|exact (?:logs|fields|mechanics|steps|flow)|deep dive|debug|troubleshoot|design|implement|packet|query|architecture|how (?:does|do|did) .+ work|how exactly)\b/i
 const ACK=/^\s*(?:yeah|right|okay|ok|great|thanks|thank you|that makes sense|absolutely|so that's|you(?:'ll| will)|we(?:'ll| will)|the team|our team|it's important|i expect|i would expect)\b/i
 const FOLLOW=/^\s*(?:and (?:then|how|why|what)|what (?:about|happened)|what did you (?:check|see|do) first|how (?:so|did you verify)|can you (?:expand|elaborate)|(?:go|dig) deeper|go on|tell me more|why is that|why is that important|explain (?:that|this|it)|walk me through (?:that|this|it)|say that again)\b/i
@@ -67,6 +68,13 @@ export function interviewIntent(question: string): ReplyIntent {
   if(/\b(?:two|\d+)\s+weeks'?\s+notice\b|\b(?:work(?:ing)?\s+(?:nights?|weekends?)|night shifts?|available for on-?call|work(?:ing)? on-?call|full[- ]time|day rate|hourly (?:rate|pay)|start in (?:two|\d+) weeks)\b|\bare you local\b/i.test(q)) return "logistics"
   if(/\b(?:in(?:\s+the)?\s+office|days?\s+in(?:\s+the)?\s+office)\b/i.test(q) && !/\b(?:how|why|design|troubleshoot)\b/i.test(q)) return "logistics"
   if(/^\s*(?:why was that important|what did you do next|how did you (?:measure|test|check|confirm) (?:that|it|the result))\b/i.test(q)) return "follow-up"
+  // Explain-length (30 Oct 2026, live): "Explain / describe / walk me through / tell me about your experience with X" fell
+  // through to "direct" and got the 44-word direct ceiling, so a clear invitation to explain came back as shorthand. It
+  // is an experience ask: the full source-grounded STAR band. Failsafe: an explicitly brief or one-sentence ask, a
+  // yes/no ("Do you have experience with X?") and a comparison keep their own shorter route. A topic must follow the
+  // noun (a bare "your background" is an introduction), and an ask that ends on an employer ("…at Google") keeps its
+  // old route, so the employer honesty line ("the resume does not show…") still fires.
+  if(EXPLAIN_EXPERIENCE.test(q) && !/\b(?:brief(?:ly)?|quick(?:ly)?|short|in (?:one|a|two) (?:sentence|line|word)s?|in a nutshell|one-liner)\b/i.test(q) && !COMPARE.test(q) && !/\bat\s+[A-Z][\w&.-]*(?:\s+[A-Z][\w&.-]*)*\s*(?:[,.?!]|$)/.test(q)) return "experience-story"
   if(/\b(?:explain how|describe how)\b/i.test(q) && !COMPARE.test(q)) return "technical-process"
   if(CLOSING.test(q) && !INTRO.test(q)) return "closing-question"
   if(INTRO.test(q) || /^(?:(?:big|brief|short|quick|full|personal|detailed|self)\s+)?intro(?:duction)?[.?!]*$/i.test(q)) return "introduction"
