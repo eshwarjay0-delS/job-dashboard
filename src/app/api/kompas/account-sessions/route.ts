@@ -40,12 +40,19 @@ export async function GET(req: NextRequest) {
   if (!user) return json({ ok: false, error: "Sign in to sync your sessions." }, 401)
   try {
     const db = createServiceClient()
-    const { data, error } = await db.from("kompas_account_sessions")
+    // Cursor pagination follows the owner/session primary key; no arbitrary
+    // 300-session cutoff and no shifting offset when another device updates.
+    const cursor = req.nextUrl.searchParams.get("after") || ""
+    if (cursor && !ID_RE.test(cursor)) return json({ ok: false, error: "Invalid sync cursor." }, 400)
+    let query = db.from("kompas_account_sessions")
       .select("session_id,payload,deleted_at,updated_at,revision")
-      .eq("user_id", user.id).order("updated_at", { ascending: false }).limit(300)
+      .eq("user_id", user.id).order("session_id", { ascending: true }).limit(100)
+    if (cursor) query = query.gt("session_id", cursor)
+    const { data, error } = await query
     if (error) throw error
     return json({
       ok: true, userId: user.id, email: user.email,
+      nextCursor: (data || []).length === 100 ? data![data!.length - 1].session_id : null,
       records: (data || []).map(r => ({
         id: r.session_id, session: r.deleted_at ? null : r.payload,
         deleted: !!r.deleted_at, revision: r.revision, updatedAt: r.updated_at,
