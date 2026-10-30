@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
     if (session[field] !== undefined) safe[field] = session[field]
   }
-  // Capability link: 256 random bits, SHA-256 digest at rest, two-minute TTL.
+  // Capability link: 256 random bits, SHA-256 digest at rest, five-minute TTL.
   // Supabase table is server-only under RLS; no browser/anon read permission.
   const ticket = randomBytes(32).toString("base64url")
   const ticketHash = createHash("sha256").update(ticket).digest("hex")
@@ -77,12 +77,12 @@ export async function POST(request: NextRequest) {
     const db = createServiceClient()
     const { error } = await db.from("kompas_desktop_handoffs").insert({
       ticket_hash: ticketHash, user_id: user.id, payload: safe,
-      expires_at: new Date(Date.now() + 120_000).toISOString(),
+      expires_at: new Date(Date.now() + 300_000).toISOString(),
     })
     if (error) throw error
     // Opportunistic expiry cleanup. Redemption atomically deletes valid rows.
     await db.from("kompas_desktop_handoffs").delete().lt("expires_at", new Date().toISOString())
-    return NextResponse.json({ ok: true, ticket, expiresInSeconds: 120 }, { headers: NO_STORE })
+    return NextResponse.json({ ok: true, ticket, expiresInSeconds: 300 }, { headers: NO_STORE })
   } catch {
     return NextResponse.json({ ok: false, error: "Desktop connection is unavailable. Your saved session is unchanged." }, { status: 503, headers: NO_STORE })
   }
