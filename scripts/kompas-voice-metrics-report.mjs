@@ -23,6 +23,13 @@ function validBaselineMetrics(metrics,coverage){
     metrics.p50LatencyMs>metrics.p95LatencyMs);
 }
 
+// Missing predictions are legitimate abstentions; malformed or blank labels are not.
+function speakerLabel(value,field){
+  if(value===undefined||value===null)return null;
+  if(typeof value!=="string"||!value.trim())throw Error("Invalid "+field+" label");
+  return value;
+}
+
 export function evaluate(dataset,baseline=null){
   if(!dataset||!dataset.datasetId||!dataset.revision||!Array.isArray(dataset.samples)||!dataset.samples.length)
     throw Error("Dataset ID, revision and nonempty samples required");
@@ -39,10 +46,12 @@ export function evaluate(dataset,baseline=null){
     for(const k of ["referenceWords","substitutions","deletions","insertions"])sum[k]+=e[k];
     sum.expected+=t.expected;sum.recognized+=t.recognized;
     if(row.editCount!==undefined){sum.edited++;if(row.editCount===0)sum.zero++}
-    if(typeof row.referenceSpeaker==="string"){
+    const referenceSpeaker=speakerLabel(row.referenceSpeaker,"reference speaker");
+    const predictedSpeaker=speakerLabel(row.predictedSpeaker,"predicted speaker");
+    if(referenceSpeaker!==null){
       // A missing prediction is an attribution failure, not an unmeasured clip.
       sum.speakers++;
-      if(typeof row.predictedSpeaker==="string"){sum.predicted++;if(row.referenceSpeaker===row.predictedSpeaker)sum.correct++}
+      if(predictedSpeaker!==null){sum.predicted++;if(referenceSpeaker===predictedSpeaker)sum.correct++}
     }
     if(row.latencyMs!==undefined)times.push(row.latencyMs);
     if(e.referenceWords===0){sum.silent++;if(e.insertions)sum.hallucinated++}
