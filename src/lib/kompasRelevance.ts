@@ -58,7 +58,7 @@ export function interviewIntent(question: string): ReplyIntent {
   if(EXPERIENCE.test(q)) return "experience-story"
   if(LOGISTICS.test(q) && !/\b(?:how (?:does|do)|why|difference|design|troubleshoot)\b/i.test(q)) return "logistics"
   if(COMPARE.test(q)) return "comparison"
-  if(DEFINE.test(q)) return "definition"
+  if(DEFINE.test(q) && !/\bwhat(?:'s| is| are) (?:your|you)\b/i.test(q)) return "definition"
   if(FOLLOW.test(q) && q.split(/\s+/).length<=12) return "follow-up"
   if(SCENARIO.test(q)) return "scenario"
   if(DEEP.test(q)) return "technical-process"

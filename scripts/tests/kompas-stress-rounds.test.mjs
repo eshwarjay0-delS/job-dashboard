@@ -222,3 +222,13 @@ test("offline stand-in: every mode is first person, speakable, and at least 50% 
     assert.deepEqual(gaps, [], q)
   }
 })
+
+test("round 5: a question about the candidate is not a definition", async () => {
+  const { interviewIntent } = await import("../../src/lib/kompasRelevance.ts")
+  for (const q of ["What is your biggest weakness?", "What are your salary expectations?", "What's your management style?"]) assert.notEqual(interviewIntent(q), "definition", q)
+})
+
+test("round 5 failsafe: real definitions stay definitions", async () => {
+  const { interviewIntent } = await import("../../src/lib/kompasRelevance.ts")
+  for (const q of ["What is zero trust?", "What are compensating controls?", "What does residual risk mean?"]) assert.equal(interviewIntent(q), "definition", q)
+})
