@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { appendDossierSession } from "@/lib/dossier"
+import { saveSessionMiniDossier } from "@/lib/kompas-master-bible"
 import { hashUserId } from "@/lib/sttLedger"
 import { createServiceClient } from "@/lib/supabase/service"
 
@@ -67,6 +68,20 @@ export async function POST(request: NextRequest) {
 
   if (!qa.length) return NextResponse.json({ ok: false, reason: "no Q&A pairs found" }, { headers: NO_STORE })
 
-  const recorded = await appendDossierSession(hashUserId(user.id), { id: sessionId, field, qa: qa.slice(0, 40) })
-  return NextResponse.json({ ok: true, recorded, pairs: qa.length }, { headers: NO_STORE })
+  const owner = hashUserId(user.id)
+  try {
+    // Immutable mini + revisioned master first; a failure is not quietly
+    // disguised as a successful Bible update. A retry is idempotent.
+    const master = await saveSessionMiniDossier(owner, sessionId, field, qa)
+    const recorded = await appendDossierSession(owner, { id: sessionId, field, qa: qa.slice(0, 40) })
+    return NextResponse.json({
+      ok: true, recorded, pairs: qa.length,
+      miniDossier: "stored", masterBible: "updated",
+      masterRevision: master.revision, newSession: master.added,
+    }, { headers: NO_STORE })
+  } catch {
+    return NextResponse.json({
+      ok: false, error: "Session Bible update could not be confirmed. Retry the same session ID safely.",
+    }, { status: 503, headers: NO_STORE })
+  }
 }
