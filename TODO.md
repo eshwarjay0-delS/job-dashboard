@@ -1,3 +1,7 @@
+## 2026-10-30 — Shift, weekend, and start-date questions are not dropped
+
+Start date, relocation, clearance, sponsorship, night shift, shift, weekend, overtime, and citizen were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Working weekends and on-call stay short. A hybrid-cloud design stays technical.
+
 ## 2026-10-30 — A one-word logistics question is not dropped
 
 Salary, hybrid, onsite, remote, notice, bonus, and TS/SCI were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Two weeks' notice, night work, days in the office, and being local to a city stay short too. A hybrid-cloud design stays a technical question.
