@@ -10,7 +10,9 @@ export const HOLE_RE = /\[ ___ [^\]]*\]/g
 
 /** New persona parts, in blueprint order. The existing parts (cover, who, projects, …) are unchanged. */
 export const BLUEPRINT_PARTS = ["evidence", "oneminute", "signals", "fixfirst", "ladder", "jargon"] as const
-export type BlueprintPart = (typeof BLUEPRINT_PARTS)[number]
+/** Round-5 parts, additive: BLUEPRINT_PARTS above is unchanged and still the default order. */
+export const BLUEPRINT_PARTS_EXTRA = ["whycompany", "first30", "onepage", "riskxlate"] as const
+export type BlueprintPart = (typeof BLUEPRINT_PARTS)[number] | (typeof BLUEPRINT_PARTS_EXTRA)[number]
 
 export const BLUEPRINT_GUIDE: Record<BlueprintPart, string> = {
   evidence: "Cover and evidence base: role, company, round, working model. List every source given and what each can prove. Then a two-source table: | Claim | Supported by | Status | — status is 'resume', 'JD (emphasis only, not experience)', or 'illustrative: rehearse as I would'. End with: a proposed answer is a rehearsal draft, not proof an incident happened.",
@@ -19,6 +21,10 @@ export const BLUEPRINT_GUIDE: Record<BlueprintPart, string> = {
   fixfirst: "Fix before the call: contradictions between what was said in earlier sessions and the resume (employers, dates, titles, tools), plus facts learned about the team. Blunt, one line each. If nothing conflicts, say so.",
   ladder: "Follow-up ladders: for the questions already asked or most likely, the 2nd, 3rd and 4th question an interviewer asks next, each with a one-line note on what it tests.",
   jargon: "Jargon sheet: the JD's terms, each defined in one plain line, then why it matters here. No numbers that are not in the sources.",
+  whycompany: "Why this company: a dated company snapshot ('As of <date>, public sources only') where every fact carries its public source link and a quoted line; a fact with no public source given is a marked hole, never recalled from memory. Then a first-person 'why here' answer that ties two or three snapshot facts to the JD and to resume work only.",
+  first30: "The first 30 minutes: a minute-by-minute outline of how the call likely opens (introductions, the tell-me-about-yourself, the first technical probe, my questions) with what I say at each step. Timings are a plan, not a claim.",
+  onepage: "One-page summary: positioning line, three strongest resume-backed proofs, the open holes to fill, three questions I will ask, and the one thing not to say. Must fit one printed page.",
+  riskxlate: "Technical-to-risk translations: a table | Technical thing | What it means as risk | How I would say it |. Each row ties a resume or JD term to the business risk in one plain sentence. No figures not in the sources.",
 }
 
 export const BLUEPRINT_RULES = [
@@ -31,6 +37,7 @@ export const BLUEPRINT_RULES = [
 // AD079 names these Kompas answers as invented. They never come back, whatever digits the sources hold.
 const BANNED: RegExp[] = [
   /\b\d[\d,]*[\s-]*point\s+risk\s+(?:tolerance|threshold)\b/gi,
+  /\b(?:risk\s+)?(?:tolerance|threshold)\s+of\s+\d[\d,]*[\s-]*points?\b/gi,
   /\b(?:fixed\s+)?\d+[\s-]*day\s+SLA\b/gi,
   /\bclosure[\s-]+rates?\b[^.\n]{0,40}?\d+(?:\.\d+)?\s*%/gi,
   /\b\d+(?:\.\d+)?\s*%[^.\n]{0,30}?\bclosure[\s-]+rates?\b/gi,
@@ -48,9 +55,17 @@ const CONTACT: RegExp[] = [
   /\b(?:www\.)?linkedin\.com\/\S*/gi,
 ]
 export function stripContact(text: string): string {
-  let t = String(text || "")
-  for (const re of CONTACT) t = t.replace(re, "[contact left out]")
-  return t
+  // A public source link on a snapshot citation line ("> Source S1: ...") is a citation, not contact detail;
+  // every other URL, and any email, phone or LinkedIn on any line, is still removed.
+  return String(text || "").split("\n").map((line) => {
+    const cite = /^\s*> Source S\d+:/.test(line)
+    let t = line
+    for (const re of CONTACT) {
+      if (cite && re.source.startsWith("\\bhttps?")) { t = t.replace(re, (u) => /linkedin|teams\.|zoom\.|calendly|mailto/i.test(u) ? "[contact left out]" : u); continue }
+      t = t.replace(re, "[contact left out]")
+    }
+    return t
+  }).join("\n")
 }
 
 const FIGURE_RE = /\b\d[\d,.]*\+?(?:\s*(?:%|x\b|years?|yrs?|months?|k\b|M\b))?/g
@@ -138,8 +153,44 @@ export const CORE_SECTIONS: Array<[string, RegExp]> = [
   ["follow-up ladders", /^#{1,3} .*ladder/im],
 ]
 
-export function skeletonCheck(md: string, items: DossierItem[]): { ok: boolean; missing: string[]; itemsWithoutAngles: number; itemsWithoutLadder: number; banned: string[] } {
-  const missing = CORE_SECTIONS.filter(([, re]) => !re.test(md)).map(([n]) => n)
+export const CORE_SECTIONS_EXTRA: Array<[string, RegExp]> = [
+  ["why this company", /^#{1,3} .*why (?:bny|this company|here)/im],
+  ["company snapshot", /^#{1,3} .*company snapshot/im],
+  ["first 30 minutes", /^#{1,3} .*first 30 minutes/im],
+  ["one-page summary", /^#{1,3} .*one-page summary/im],
+  ["technical-to-risk translations", /^#{1,3} .*technical[- ]to[- ]risk/im],
+]
+
+export type SnapshotFact = { text: string; quote?: string; url?: string; title?: string; published?: string; need?: string; reason?: string }
+/** Dated company snapshot. A fact stays only with an https source and a quoted line, and every figure in
+ *  it must appear in that quote; anything else is a marked hole. Nothing is recalled from model memory. */
+export function companySnapshot(o: { company: string; asOf: string; facts: SnapshotFact[] }): { md: string; holes: string[]; blocked: string[]; cited: number } {
+  const blocked: string[] = [], holes: string[] = []
+  let cited = 0
+  const rows = o.facts.map((f, i) => {
+    if (!f.url || !/^https:\/\//.test(f.url) || !f.quote) {
+      const h = `[ ___ confirm before the call: ${f.need || f.text} (${f.reason || "no public source found"}) ]`
+      holes.push(h); return `- ${h}`
+    }
+    const g = gateFigures(f.text, [f.quote])
+    blocked.push(...g.blocked); holes.push(...holesIn(g.text))
+    cited++
+    return `- ${g.text} [S${i + 1}]\n  > "${f.quote}"\n  > Source S${i + 1}: ${f.title || f.url}${f.published ? ", " + f.published : ""} (${f.url})`
+  })
+  return { md: `### Company snapshot: ${o.company} (as of ${o.asOf}, public sources only)\n\n${rows.join("\n")}\n`, holes, blocked, cited }
+}
+
+export type RiskRow = { technical: string; risk: string; say: string; source: string }
+/** Technical-to-risk table: every cell is gated against the row's own source text. */
+export function riskTranslations(rows: RiskRow[], sources: Array<string | undefined>): { md: string; blocked: string[] } {
+  const blocked: string[] = []
+  const cell = (t: string, src: string) => { const g = gateFigures(t, [src, ...sources]); blocked.push(...g.blocked); return g.text.replace(/\|/g, "/") }
+  const body = rows.map((r) => `| ${cell(r.technical, r.source)} | ${cell(r.risk, r.source)} | ${cell(r.say, r.source)} |`)
+  return { md: ["| Technical thing | What it means as risk | How I would say it |", "| --- | --- | --- |", ...body].join("\n") + "\n", blocked }
+}
+
+export function skeletonCheck(md: string, items: DossierItem[], opts: { full?: boolean } = {}): { ok: boolean; missing: string[]; itemsWithoutAngles: number; itemsWithoutLadder: number; banned: string[] } {
+  const missing = [...CORE_SECTIONS, ...(opts.full ? CORE_SECTIONS_EXTRA : [])].filter(([, re]) => !re.test(md)).map(([n]) => n)
   const itemsWithoutAngles = items.filter((i) => !i.angles).length
   const itemsWithoutLadder = items.filter((i) => !i.ladder || i.ladder.length < 3).length
   const banned = bannedFigures(md)

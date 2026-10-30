@@ -3,6 +3,8 @@
 // A merge never writes new text: it only keeps, folds, ranks or rejects items that already carry a source.
 import { createHash } from "node:crypto"
 import { allowedNumbers, needsGuard } from "./kompasGuards.ts"
+import type { SessionMini } from "./kompas-master-bible.ts"
+import type { DossierSource, DossierSourceKind } from "./kompas-dossier-bots.ts"
 
 export const SECTION_IDS = [
   "evidence", "oneminute", "signals", "fixfirst", "positioning", "architecture",
@@ -151,7 +153,12 @@ export function loadBible(raw: unknown): Bible {
 }
 
 /** A mini dossier from one saved session (dossier.ts DossierSession), read only. */
-export function miniFromSession(s: { id: string; at: number; qa: Array<{ q: string; a: string }> }): Bible {
+type OldSession = { id: string; at: number; qa: Array<{ q: string; a: string }> }
+/** Accepts PR #126's stored SessionMini (sessionId, ISO at) or the older {id, at:number} shape. */
+export function miniFromSession(raw: OldSession | SessionMini): Bible {
+  const s: OldSession = "sessionId" in raw
+    ? { id: raw.sessionId, at: Date.parse(raw.at) || 0, qa: raw.qa }
+    : raw
   const m = emptyBible(s.id)
   m.updatedAt = s.at
   for (const qa of s.qa || []) {
@@ -173,6 +180,26 @@ export function toSpeedSources(b: Bible): { resume: string; documents: string; q
     else out.documents.push(it.text)
   }
   return { resume: out.resume.join("\n"), documents: out.documents.join("\n"), qa: out.qa.join("\n"), jd: out.jd.join("\n") }
+}
+
+const KIND_OF: Record<string, DossierSourceKind> = {
+  resume: "resume", jd: "job_description", document: "document", transcript: "interview_transcript",
+  session: "interview_transcript", "legacy-dossier": "chat_transcript",
+}
+/** PR #126 feed: sourced items grouped per doc kind as DossierSource[] (for validateDossierSources,
+ *  buildDualDossierPlan, buildFastDossierIndex). Holes never leave the Bible. */
+export function toDossierSources(b: Bible): DossierSource[] {
+  const groups = new Map<DossierSourceKind, string[]>()
+  for (const id of SECTION_IDS) for (const it of b.sections[id]) {
+    if (it.status !== "sourced" || !it.source) continue
+    const kind = KIND_OF[String(it.source.doc)] || "document"
+    if (!groups.has(kind)) groups.set(kind, [])
+    groups.get(kind)!.push(it.text)
+  }
+  return [...groups].map(([kind, lines]) => {
+    const text = lines.join("\n")
+    return { id: "bible-" + kind, kind, title: "Dossier Bible: " + kind, text, digest: sha(text) }
+  })
 }
 
 /** The opener: first sentence only, first person, every figure in its source span; otherwise a marked hole. */
