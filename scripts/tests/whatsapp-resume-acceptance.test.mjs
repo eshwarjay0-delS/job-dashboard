@@ -18,6 +18,15 @@ function loadTS(rel) {
   vm.runInNewContext(compiled, { exports, module: { exports }, require }, { filename: rel })
   return exports
 }
+// TAILOR_DELIVER_WITH_SHORTFALL=0: the earlier under-95% refusal (blueprint 2026-10-30 delivers with the shortfall listed).
+function loadRefusing(rel) {
+  const source = readFileSync(resolve(root, rel), "utf8")
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  const exports = {}
+  vm.runInNewContext(compiled, { exports, module: { exports }, require, process: { env: { TAILOR_DELIVER_WITH_SHORTFALL: "0" } } })
+  return exports
+}
+const refusing = loadRefusing("src/lib/whatsapp-resume-acceptance.ts")
 const { resumeQuality } = loadTS("src/lib/resume-quality.ts")
 const { acceptableWhatsAppResume, whatsappResumeRejectionReasons } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
 const { removeUnsupportedRewrites } = loadTS("src/lib/resume-unsupported-rewrites.ts")
@@ -39,10 +48,14 @@ test("100% of the job post and 100% of supported skills is deliverable", () => {
   assert.equal(draft.quality.status, "coverage_met")
   assert.equal(acceptableWhatsAppResume(draft), true)
 })
-test("84.3% of the job post is not delivered even when supported skills are 100%", () => {
+test("switch off: 84.3% of the job post is not delivered even when supported skills are 100%", () => {
   const draft = make({ coverage: 84.3 })
-  assert.equal(acceptableWhatsAppResume(draft), false)
-  assert.ok(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"))
+  assert.equal(refusing.acceptableWhatsAppResume(draft), false)
+  assert.ok(refusing.whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"))
+})
+test("switch on: a complete 84.3% draft is delivered with the shortfall listed, not refused", () => {
+  const draft = make({ coverage: 84.3 })
+  assert.equal(whatsappResumeRejectionReasons(draft).includes("jd_coverage_below_floor"), false)
 })
 test("95% supported complete draft ships with honestly disclosed gaps", () => {
   const draft = make({
@@ -192,11 +205,11 @@ test("switch on: locked skills or no skills section sends the file with the term
   assert.equal(acceptableWhatsAppResume(make({ ...unplaced, jd_terms_unplaced_reason: "no_skills_section" })), true)
 })
 test("switch on: the locked/no-skills exemption covers the coverage shortfall only", () => {
-  assert.ok(whatsappResumeRejectionReasons(make({ ...unplaced, jd_terms_unplaced_reason: undefined })).includes("jd_coverage_below_floor"))
+  assert.ok(refusing.whatsappResumeRejectionReasons(make({ ...unplaced, jd_terms_unplaced_reason: undefined })).includes("jd_coverage_below_floor"))
   assert.equal(acceptableWhatsAppResume(make({ ...unplaced, quality_blockers: ["roles_unrewritten"] })), false)
   assert.equal(acceptableWhatsAppResume(make({ ...unplaced, partial: { failed: 1, total: 5 } })), false)
   assert.equal(acceptableWhatsAppResume(make({ ...unplaced, quality: { ...unplaced.quality, incomplete: true } })), false)
-  assert.equal(acceptableWhatsAppResume(make({ ...unplaced, jd_terms_unplaced: [] })), false)
+  assert.equal(refusing.acceptableWhatsAppResume(make({ ...unplaced, jd_terms_unplaced: [] })), false)
 })
 test("switch off (JD_TERMS_ALWAYS_ON_SKILLS=0) restores the coverage refusal", () => {
   const off = loadWithEnv("src/lib/whatsapp-resume-acceptance.ts", { JD_TERMS_ALWAYS_ON_SKILLS: "0" })

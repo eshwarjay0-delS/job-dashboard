@@ -11,6 +11,19 @@ function jdTermsGateOn(): boolean {
   return !(v === "0" || v === "false" || v === "off" || v === "no")
 }
 
+// Blueprint 2026-10-30, coverage gate: a complete file under 95% of the job post is delivered with the missing terms
+// listed in the reply instead of a refusal. TAILOR_DELIVER_WITH_SHORTFALL=0 (or the job-post terms switch off) restores it.
+function shortfallDeliveryOn(): boolean {
+  const v = String(globalThis.process?.env?.TAILOR_DELIVER_WITH_SHORTFALL ?? "").trim().toLowerCase()
+  return !(v === "0" || v === "false" || v === "off" || v === "no")
+}
+/** A complete draft under 95% of the job post, sent with the shortfall named. Anything incomplete is still refused. */
+export function deliveredWithShortfall(result: TailorResult): boolean {
+  return jdTermsGateOn() && shortfallDeliveryOn() && Number.isFinite(result.coverage) && result.coverage! < 95 &&
+    !result.partial && !result.skills_only && !result.unchanged && !result.quality?.incomplete &&
+    !(result.quality_blockers || []).length && !(result.unverified_added_keywords || []).length
+}
+
 export function whatsappResumeRejectionReasons(result: TailorResult): string[] {
   const reasons: string[] = []
   const quality = result.quality
@@ -25,12 +38,13 @@ export function whatsappResumeRejectionReasons(result: TailorResult): string[] {
   // no other blocker), and the only quality problem allowed is terms left out.
   const unplacedOk = jdTermsGateOn() && !!result.jd_terms_unplaced_reason && !!result.jd_terms_unplaced?.length &&
     !result.partial && !quality?.incomplete && !(result.quality_blockers || []).length
-  if (!unplacedOk && (!Number.isFinite(result.coverage) || result.coverage! < 95))
+  const shortfallOk = deliveredWithShortfall(result)
+  if (!unplacedOk && !shortfallOk && (!Number.isFinite(result.coverage) || result.coverage! < 95))
     reasons.push("jd_coverage_below_floor")
   if (result.partial) reasons.push("draft_parts_missing")
   if (!quality) return [...reasons, "quality_report_missing"]
   if (quality.incomplete) reasons.push("quality_incomplete")
-  if (quality.status !== "coverage_met" && quality.status !== "delivered_with_gaps" && !(unplacedOk && quality.status === "needs_review"))
+  if (quality.status !== "coverage_met" && quality.status !== "delivered_with_gaps" && !((unplacedOk || shortfallOk) && quality.status === "needs_review"))
     reasons.push("quality_not_deliverable")
   if (!Number.isInteger(quality.total) || quality.total <= 0 ||
       !Number.isInteger(quality.matched) || quality.matched < 0 ||

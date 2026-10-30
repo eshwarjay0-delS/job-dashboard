@@ -19,6 +19,7 @@ import { tailorReview, type TailorReview } from "./resume-changes"
 import { tailorRunKey } from "./tailor-review"
 import { jdTermsGateOn, type JdTermsUnplacedReason } from "./jd-terms-gate"
 import { cleanTerm, isJunkTerm, isGuardUnsafe } from "./resume-skills-line"
+import { cacheSkipRefusedOn, refusedForReplay } from "./tailor-guards"
 
 export interface TailorResult {
   quality?: ReturnType<typeof resumeQuality>
@@ -75,6 +76,8 @@ export interface TailorResult {
   unchanged?: boolean
   /** Job-post terms the floor wrote onto the skills section because no pass had put them in (see THE FLOOR in runTailor). */
   placed_from_jd?: string[]
+  /** Gate on: job-post terms the AI writer itself put on the skills line (not the floor's). Named in the reply as job-post terms. */
+  skills_from_jd_writer?: string[]
   /** Soft skills the floor wrote into an open summary as one "Strengths:" sentence. */
   placed_in_summary?: string[]
   /** No AI writer answered in time: the file is the source resume with only its skills section brought up to the floor. */
@@ -275,6 +278,9 @@ export async function runTailor(opts: {
       if (!(await blob.exists(`tailored/${cached.token}.docx`))) throw new Error("tailored file gone")
       if (!cached.keyword_analysis || !cached.diff || (!refine && (!Number.isFinite(cached.supported_coverage) || !Array.isArray(cached.unsupported_keywords)))) throw new Error("stale cache shape")
       if ((cached.jd_terms_gate ?? "off") !== (jdTermsGateOn() ? "on" : "off")) throw new Error("stale cache shape")
+      // A stored run the delivery checks refuse is not replayed (blueprint 2026-10-30): the next request redraws it.
+      // TAILOR_CACHE_SKIP_REFUSED=0 restores replay of every finished run.
+      if (cacheSkipRefusedOn() && refusedForReplay(cached)) throw new Error("refused result")
       // A finished run is replayed at any coverage. The generation in the key drops
       // results made before labelled job-post skills were written back onto the line.
       return { ...cached, cached: true, elapsed_ms: Date.now() - started }
@@ -1107,6 +1113,13 @@ export async function runTailor(opts: {
   const unplacedReason: JdTermsUnplacedReason | undefined = !jdGate || refine ? undefined : sec.skills === false ? "skills_locked" : !zones.skills.length ? "no_skills_section" : undefined
   const unplacedTerms = unplacedReason ? scoreKws.filter(k => floorKws.has(k) && !afterKw.has(k) && !isCertification(k)).map(k => jdSpelling(k, jd)) : []
   if (unverifiedAdded.length > 0) notes.push(`Unverified JD claims require candidate confirmation: ${unverifiedAdded.join(", ")}`)
+  // Gate on: job-post terms the AI writer itself wrote onto the skills line (not the floor's) are named too (blueprint item 5).
+  const floorNamed = new Set((best.floor || []).map(k => k.toLowerCase()))
+  const skillsLines = (best.edits.skills || []).map(s => s.text || "").join("\n")
+  const writerOnSkills = jdGate && !refine
+    ? [...coveredJdKeywords(skillsLines, unsupportedJdKws)].filter(k => !floorNamed.has(k.toLowerCase()) && !isCertification(k)).map(k => jdSpelling(k, jd))
+    : []
+  if (writerOnSkills.length) notes.push(`Job-post terms the writer put on the skills line, not as confirmed experience: ${writerOnSkills.join(", ")}`)
   // Diagnostic codes contain no resume, JD, name or phone number.
   const qualityBlockers = [
     ...(skillsOnly && best.cov < RESUME_MIN_COVERAGE ? ["skills_only"] : []),
@@ -1136,6 +1149,7 @@ export async function runTailor(opts: {
     ...(best.partial ? { partial: best.partial } : {}),
     ...(diff.length ? {} : { unchanged: true }),
     ...(best.floor?.length ? { placed_from_jd: best.floor.map(k => jdSpelling(k, jd)) } : {}),
+    ...(writerOnSkills.length ? { skills_from_jd_writer: writerOnSkills } : {}),
     ...(best.floorSummary?.length ? { placed_in_summary: best.floorSummary.map(k => jdSpelling(k, jd)) } : {}),
     ...(skillsOnly ? { skills_only: true } : {}),
     jd_terms_gate: jdGate ? "on" : "off",

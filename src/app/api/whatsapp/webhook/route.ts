@@ -813,7 +813,10 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
 
   // A cached, incomplete result must never permanently block the same JD.
   // Give the engine one fresh full rewrite while there is enough request budget.
-  const firstRejected = !acceptableWhatsAppResume(result)
+  // Under 95% of the job post a complete file is delivered with the shortfall listed (TAILOR_DELIVER_WITH_SHORTFALL), so
+  // it still gets the one fresh rewrite first, and the acceptable pass with the higher coverage is the one sent.
+  const belowTarget = (r: TailorResult) => Number.isFinite(r.coverage) && r.coverage! < 95
+  const firstRejected = !acceptableWhatsAppResume(result) || belowTarget(result)
   if (firstRejected && maxMs >= 120_000) {
     const elapsed = Date.now() - startedAt
     const remaining = maxMs - elapsed - 15_000
@@ -826,8 +829,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
           mode: "full", noCache: true, maxMs: remaining,
           sections: { summary: false, skills: true, experience: true },
         })
-        if (acceptableWhatsAppResume(fresh)) result = fresh
-        else {
+        if (acceptableWhatsAppResume(fresh) && (!acceptableWhatsAppResume(result) || (fresh.coverage ?? 0) > (result.coverage ?? 0))) result = fresh
+        else if (!acceptableWhatsAppResume(result)) {
           const priorBlockers = whatsappResumeRejectionReasons(result).length
           const freshBlockers = whatsappResumeRejectionReasons(fresh).length
           // At equal supported coverage, retain the pass with fewer genuine
@@ -1352,14 +1355,18 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
 function notAdded(result: TailorResult): string[] {
   const out: string[] = []
   if (result.skills_only) out.push("The AI writers did not answer in time, so this file only adds the job post's keywords; your experience is as you wrote it. Send *redo* for the full rewrite.")
-  const placed = result.placed_from_jd || []
+  // The floor's terms and the ones the AI writer itself put on the skills line (blueprint 2026-10-30, item 5).
+  const placed = [...new Set([...(result.placed_from_jd || []), ...(result.skills_from_jd_writer || [])])]
   if (placed.length) out.push(`Added to your skills from the job post: ${placed.slice(0, 8).join(", ")}${placed.length > 8 ? ` and ${placed.length - 8} more` : ""}. Check you can speak to each.`)
   if (result.placed_in_summary?.length) out.push(`Added to your summary as strengths: ${result.placed_in_summary.join(", ")}.`)
   const unplaced = unplacedTermsLine(result.jd_terms_unplaced, result.jd_terms_unplaced_reason)
   if (unplaced) out.push(unplaced)
   const listed = new Set((result.jd_terms_unplaced || []).map(t => t.toLowerCase()))
   const missing = (result.quality?.missing || []).filter(m => !isCertification(m) && !listed.has(m.toLowerCase()))
-  if (missing.length) out.push(`Not covered in this file: ${missing.slice(0, 6).join(", ")}. These gaps need review against your actual experience.`)
+  // Below the 95% target the file is sent with the full shortfall named (blueprint 2026-10-30), not refused.
+  const short = Number.isFinite(result.coverage) && result.coverage! < 95
+  if (missing.length && short) out.push(`Below the 95% target (${result.coverage}% of the job post). Still missing: ${missing.slice(0, 12).join(", ")}${missing.length > 12 ? ` and ${missing.length - 12} more` : ""}. Add any you can speak to.`)
+  else if (missing.length) out.push(`Not covered in this file: ${missing.slice(0, 6).join(", ")}. These gaps need review against your actual experience.`)
   // Some parts of the rewrite never came back: said whatever else the file shows.
   if ((result.partial && !result.skills_only) || (!out.length && result.quality?.status === "needs_review")) out.push("This result is incomplete and needs review. Reply to this file to request changes.")
   return out
