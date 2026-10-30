@@ -1,3 +1,7 @@
+## 2026-10-29 — A follow-up is not told to throw away the previous answer
+
+"Go deeper on that exception" and "Why is that dangerous?" were follow-ups, and the prompt still said the question was different and not to reuse the previous answer. A follow-up no longer gets that line. "What exactly is least privilege?" and "Elaborate on session recording" still do.
+
 ## 2026-10-29 — A named follow-up in the same breath is the next question
 
 "What is NLA? Go deeper on that exception." was one question. The second sentence names its own subject, so it is cut apart. "Go deeper" by itself stays with the question it follows. The page stamp is kompas-20261029-split. Fifty heard sequences still cut apart.

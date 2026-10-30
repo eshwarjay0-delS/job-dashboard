@@ -1,5 +1,6 @@
 import { repairDictation } from "./kompasDictation.ts"
 import { latestInterviewerAsk } from "./kompasInterviewPrecision.ts"
+import { interviewIntent } from "./kompasRelevance.ts"
 
 // Kompas answer intelligence — ported from perfACT's interview engine
 // (copilot/api/answer.js + _audiences.js), running on MarketFit's OpenRouter
@@ -837,7 +838,7 @@ function spokenKey(text: string): string {
 
 /** The line the answer prompt adds when this ask is not the previous one. */
 export function differentQuestionLine(question: string, history: unknown): string {
-  if (/following up on/i.test(question)) return ""
+  if (/following up on/i.test(question) || shortFollowUp(question) || interviewIntent(question) === "follow-up") return ""
   const turns = (Array.isArray(history) ? history : []).filter((t) => t && typeof t === "object") as Array<Record<string, unknown>>
   const last = turns[turns.length - 1]
   if (!last) return ""
