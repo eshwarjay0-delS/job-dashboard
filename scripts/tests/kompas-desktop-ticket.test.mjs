@@ -43,3 +43,34 @@ test("ticket redeem is atomic, single-use and not client-readable", () => {
   assert.match(redeem, /status: 410/)
   assert.match(redeem, /Cache-Control.*no-store/)
 })
+
+
+test("legacy structured interview instructions survive the desktop handoff without truncation", () => {
+  const start = issue.indexOf("function instructionText(value: unknown): string | null {")
+  const end = issue.indexOf("// Browser-local session details", start)
+  assert.ok(start >= 0 && end > start, "the issue route must normalize saved instruction variants")
+  const src = issue.slice(start, end).replace(
+    "function instructionText(value: unknown): string | null {",
+    "function instructionText(value) {",
+  )
+  const ctx = vm.createContext({ JSON, String, Number, Object, Array })
+  vm.runInContext(src + "\\nthis.normalize = instructionText;", ctx)
+  const norm = input => vm.runInContext("normalize(input)", Object.assign(ctx, { input }))
+  const cases = [
+    ["plain instructions", "plain instructions"],
+    [null, ""],
+    [undefined, ""],
+    [false, "false"],
+    [0, "0"],
+    [["answer naturally", "cite the resume"], '["answer naturally","cite the resume"]'],
+    [{ voice: "natural", audience: "director" }, '{"voice":"natural","audience":"director"}'],
+    [{ rules: ["do not invent metrics", "cover technical depth"] }, '{"rules":["do not invent metrics","cover technical depth"]}'],
+    [{ nested: { paragraphs: ["a", "b"] } }, '{"nested":{"paragraphs":["a","b"]}}'],
+    ["x".repeat(45000), "x".repeat(45000)],
+  ]
+  for (const [input, expected] of cases) assert.equal(norm(input), expected)
+  assert.equal(norm(Infinity), null, "non-finite numeric input is not accepted")
+  assert.match(issue, /instructions: 120000/, "large saved prompt is preserved within bounded request size")
+  assert.match(issue, /field === "instructions" \\? instructionText\\(session\\[field\\]\\) : session\\[field\\]/)
+  assert.match(issue, /Buffer\\.byteLength\\(raw, "utf8"\\) > MAX_BYTES/, "request byte cap is still enforced")
+})
