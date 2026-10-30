@@ -4061,6 +4061,7 @@ const DossierDB = {
 cloudArchive = (() => {
   const keyPattern = /^([A-Za-z0-9:_-]{1,128}):(live|tx:[0-9]+)$/;
   const pending = new Set();
+  const generations = new Map(); // new recording edits arriving during upload must not be dropped
   let flushing = false;
   const storageKey = () => "perfact.cloud.artifacts." + accountSessionSync.owner;
   const authorization = () => {
@@ -4073,6 +4074,7 @@ cloudArchive = (() => {
   };
   function queue(key) {
     if (!keyPattern.test(key || "") || !accountSessionSync?.owner) return;
+    generations.set(key,(generations.get(key)||0)+1);
     pending.add(key); persist(); void replay();
   }
   async function pull(key) {
@@ -4096,6 +4098,7 @@ cloudArchive = (() => {
     try {
       await accountSessionSync.flush(); // Session row must exist before artifact FK.
       for (const key of [...pending].slice(0, 15)) {
+        const generation = generations.get(key)||0;
         const snap = await DossierDB.get(key);
         if (!snap || typeof snap !== "object") { pending.delete(key); continue; }
         const res = await fetch("/api/kompas/account-artifacts", {
@@ -4105,7 +4108,8 @@ cloudArchive = (() => {
         if (!res.ok) break; // Offline, over size limit or queued parent; retry later.
         const answer = await res.json();
         if (!answer.ok) break;
-        pending.delete(key); persist();
+        if ((generations.get(key)||0)===generation) pending.delete(key);
+        persist();
       }
     } catch {} finally { flushing = false; persist(); }
   }
