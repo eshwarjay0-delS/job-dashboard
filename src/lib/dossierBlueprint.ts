@@ -71,7 +71,36 @@ export function stripContact(text: string): string {
 const FIGURE_RE = /\b\d[\d,.]*\+?(?:\s*(?:%|x\b|years?|yrs?|months?|k\b|M\b))?/g
 
 /** Every figure the sources do not state becomes HOLE. Returns the gated text and what was blocked. */
+const NUM_WORD = "two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|dozen|dozens|hundreds|thousands"
+const NUM_NOUN = "percent|per cent|analysts|engineers|people|staff|teams|tickets|findings|alerts|incidents|issues|hours|days|weeks|months|years|servers|hosts|endpoints|controls|applications|apps|vendors|clients|users|accounts"
+const WORD_CLAIM_RE = new RegExp(`\\b(?:(?:${NUM_WORD})(?:[\\s-]+(?:${NUM_WORD}))?\\s+(?:${NUM_NOUN})|halved|doubled|tripled|quadrupled|tenfold)\\b`, "gi")
+const RANGE_RE = /(\d[\d,.]*)\s*[-\u2013]\s*(\d[\d,.]*)(\s*%)?/g
+
+/** Every figure the sources do not state becomes HOLE. Also closes three gaps found by probing (round 6):
+ *  numeric ranges (each end must be sourced), full-width digits (NFKC first), and spelled-number claims. */
 export function gateFigures(text: string, sources: Array<string | undefined>): { text: string; blocked: string[] } {
+  const src = sources.map((x) => String(x || "").normalize("NFKC"))
+  const lowSrc = src.join("\n").toLowerCase()
+  const blocked: string[] = []
+  let t = String(text || "").normalize("NFKC")
+  t = t.replace(RANGE_RE, (m, a: string, b: string, pct: string | undefined, at: number, full: string) => {
+    const p = pct ? "%" : ""
+    // Only a quantity range is a claim: "70-80%", "10-15 tickets", "between 3-5". Identifiers and
+    // labels ("NIST 800-53", "Minute 0-2", "pages 3-4") are left to the core check's own rules.
+    const after = full.slice(at + m.length, at + m.length + 24)
+    const before = full.slice(Math.max(0, at - 12), at)
+    const quantity = !!pct || new RegExp(`^\\s*(?:k\\b|M\\b|x\\b|${NUM_NOUN})`, "i").test(after) || /\b(?:from|between|within|about|around|roughly)\s*$/i.test(before)
+    if (!quantity) return m
+    const bad = gateFiguresCore(`${a}${p}`, src).blocked.length || gateFiguresCore(`${b}${p}`, src).blocked.length
+    if (!bad) return m
+    blocked.push(m.trim()); return HOLE
+  })
+  t = t.replace(WORD_CLAIM_RE, (m) => { if (lowSrc.includes(m.toLowerCase())) return m; blocked.push(m); return HOLE })
+  const core = gateFiguresCore(t, src)
+  return { text: core.text, blocked: [...blocked, ...core.blocked] }
+}
+
+function gateFiguresCore(text: string, sources: Array<string | undefined>): { text: string; blocked: string[] } {
   // List markers in a source ("1. ", "## 3. ") are structure: they must not whitelist "3 weeks" or "6 analysts".
   const allowed = allowedNumbers(...sources.map((x) => String(x || "").replace(/^(\s*(?:#+\s*)?)\d+[.)]\s/gm, "$1")))
   const blocked: string[] = []
