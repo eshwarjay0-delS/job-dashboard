@@ -69,6 +69,14 @@ const RANK_COMPANY = new Set([...RANK, "security", "information", "engineering",
 const BENEFIT_OR_EMPLOYER = /\b(?:medical|dental|vision|401\s*\(?k\)?|pto|paid time off|holidays?|wellness|tuition|equal opportunity|affirmative action|talent acquisition|fortune \d+|inc|llc|ltd|corp|corporation|staffing)\b/i
 const US_STATE_WORDS = new Set(["alabama", "alaska", "arizona", "arkansas", "california", "colorado", "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho", "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana", "maine", "maryland", "massachusetts", "michigan", "minnesota", "mississippi", "missouri", "montana", "nebraska", "nevada", "new hampshire", "new jersey", "new mexico", "new york", "north carolina", "north dakota", "ohio", "oklahoma", "oregon", "pennsylvania", "rhode island", "south carolina", "south dakota", "tennessee", "texas", "utah", "vermont", "virginia", "washington", "west virginia", "wisconsin", "wyoming", "district of columbia", "united states", "usa", "us", "remote", "hybrid", "onsite", "on-site"])
 
+// Work status, pay, workplace and authorisation lines (gate change, 29 Oct 2026): "H1-B", "W-2", "GC EAD", "$120k",
+// "Remote - US", "Hybrid (3 days)", "Work authorization required", "candidates". "Remote Desktop Services" stays a skill.
+const WORK_STATUS = new Set(["gc", "ead", "gcead", "h1", "h1b", "h4", "h4ead", "opt", "cpt", "stemopt", "tn", "l1", "l2", "usc", "w2", "c2c", "corptocorp"])
+const POST_FILLER = new Set(["candidates", "candidate", "applicants", "applicant"])
+const PAY_TERM = /[$\u20ac\u00a3\u20b9]\s?\d|\b\d+\s?k\b|\/\s?(?:hr|hour|yr|year)\b|\bper (?:hour|annum|year)\b|\bsalary\b/i
+const WORKPLACE_TERM = /^(?:remote|hybrid|on ?-?site|in office)\b.*\b(?:in|from|at|days?|weeks?|us|usa|office|only|first)\b|^(?:remote|hybrid|on ?-?site)\s*(?:\(?\d|$)/i
+const AUTH_TERM = /\bauthori[sz](?:ed|ation) to work\b|\bwork authori[sz]ation\b|\bright to work\b/i
+
 /** A qualification or a word of the post that is not a skill: never written onto a resume, never counted in the match. */
 export function isQualificationOrJunk(term: string): boolean {
   const t = String(term || "").toLowerCase().trim()
@@ -76,6 +84,8 @@ export function isQualificationOrJunk(term: string): boolean {
   if (isCertification(t) || CLEARANCE_TERM.test(t) || CLEARANCE_WORD.test(t) || DEGREE_TERM.test(t) || BENEFIT_OR_EMPLOYER.test(t)) return true
   if (/^(?:fy\s?)?\d/.test(t) || /^v\d+(?:\.\d+)*$/.test(t)) return true
   if (US_STATE_WORDS.has(t)) return true
+  if (WORK_STATUS.has(t.replace(/[^a-z0-9]+/g, "")) || POST_FILLER.has(t)) return true
+  if (PAY_TERM.test(t) || WORKPLACE_TERM.test(t) || AUTH_TERM.test(t)) return true
   const w = t.split(/[\s/-]+/).filter(Boolean)
   return w.length > 0 && w.every(x => RANK_COMPANY.has(x)) && w.some(x => RANK.has(x))
 }
