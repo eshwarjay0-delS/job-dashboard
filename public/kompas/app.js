@@ -204,9 +204,40 @@ function continueSession(s) {
   x.pausedAt = null; LS.set("sessions", sessions);
   launchCopilot(x, { resume: true });
 }
+const miniSending = new Set();
+const miniAttempts = new Map();
+// Stop is only a PAUSE. Explicit End seals the mini dossier into the server
+// Bible while keeping all transcript text in the local archive.
+async function syncMiniDossier(s) {
+  if (!s || !s.id || !s.endedAt || s.bibleSyncedAt || miniSending.has(s.id)) return;
+  miniSending.add(s.id); miniAttempts.set(s.id, Date.now());
+  try {
+    const transcript = await sessionTranscript(s);
+    const qa = (Array.isArray(transcript && transcript.log) ? transcript.log : [])
+      .filter(e => e && e.t === "answer" && !e.failed && !e.noQuestion &&
+        String(e.question || "").trim() && String(e.text || "").trim())
+      .map(e => ({ q: String(e.question).slice(0, 8000), a: String(e.text).slice(0, 16000) }))
+      .slice(0, 200);
+    if (!qa.length) return; // no generated Q&A; raw transcript remains preserved locally
+    const res = await fetch("/api/kompas/dossier/mini", {
+      method: "POST", credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId: String(s.id), field: String(s.role || "general"), qa }),
+    });
+    if (!res.ok || !(await res.json()).ok) return; // pending; retry on a later open
+    const all = LS.get("sessions", []), row = all.find(x => x.id === s.id);
+    if (row && row.endedAt && !row.bibleSyncedAt) {
+      row.bibleSyncedAt = Date.now(); LS.set("sessions", all); sessions = all;
+    }
+  } catch { /* Offline or expired sign-in: keep local transcript for retry. */ }
+  finally { miniSending.delete(s.id); }
+}
 function endSession(s) {
   sessions = LS.get("sessions", []); const x = sessions.find(v => v.id === s.id);
-  if (x && sessionOpen(x) && !liveElsewhere(x)) { closeRun(x, Date.now(), "you"); LS.set("sessions", sessions); }
+  if (x && sessionOpen(x) && !liveElsewhere(x)) {
+    closeRun(x, Date.now(), "you"); LS.set("sessions", sessions);
+    void syncMiniDossier(x);
+  }
   renderSessions();
 }
 // Another window changed the sessions: this one takes the new list, so it never writes an old one back.
@@ -259,6 +290,11 @@ function renderSessions() {
     if (nTx) { tx.classList.remove("hidden"); tx.onclick = () => viewTranscripts(s); }   // one session, one transcript, however many times it was stopped and continued
     card.querySelector(".sc-del").onclick = () => { sessions = sessions.filter(x => x.id !== s.id); LS.set("sessions", sessions); renderSessions(); };
     list.append(card);
+  }
+  // A failed network request does not lose a mini: each completed local
+  // transcript can be retried after reconnect. Rate-limit retries per tab.
+  for (const s of sessions.filter(x => x.endedAt && !x.bibleSyncedAt).slice(0, 3)) {
+    if (Date.now() - (miniAttempts.get(s.id) || 0) > 60000) void syncMiniDossier(s);
   }
 }
 $("newSessionBtn").onclick = openWizard;
