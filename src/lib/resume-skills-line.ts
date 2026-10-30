@@ -257,7 +257,9 @@ export function deliver({ jobTerms = [], sourceText = '', draftText, supportedTe
   const draft = draftText ?? sourceText
   const kept = ((Array.isArray(jobTerms) ? jobTerms : []) as unknown[]).map(cleanTerm).filter(t => t && !isJunkTerm(t))
   const srcReport = buildKeywordReport({ jobTerms: kept, resumeText: sourceText, supportedTerms })
-  let { text, reverted } = revertBullets(sourceText, draft, srcReport.unsupportedGap)
+  const reverted0 = revertBullets(sourceText, draft, srcReport.unsupportedGap)
+  const reverted = reverted0.reverted
+  let text = reverted0.text
   if (skillsLocked) text = restoreSkills(sourceText, text)
   const plan = planSkillsLine({ jobTerms, resumeText: text, supportedTerms, skillsLocked, sourceText, options: policy })
   const final = plan.send || plan.blockedBy !== 'policy' ? applySkillsPlan(text, plan) : text
