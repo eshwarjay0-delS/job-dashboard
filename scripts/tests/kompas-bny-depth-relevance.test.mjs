@@ -76,6 +76,15 @@ test('what exactly is a term is a definition', () => {
   assert.match(focusPrompt(q, 2, 'director'), /Open with what it is/)
 })
 
+test('an introduction and a request for questions are both kept', () => {
+  const heard = 'Tell me about yourself. What questions do you have?'
+  assert.equal(interviewIntent(heard), 'introduction')
+  assert.match(focusPrompt(heard, 2, 'director'), /also asked what questions you have/)
+  assert.equal(interviewIntent('Any questions?'), 'closing-question')
+  assert.equal(interviewIntent('The team runs several control areas. Any questions?'), 'closing-question')
+  assert.equal(interviewIntent('Tell me about yourself.'), 'introduction')
+})
+
 test('a short citizenship question is kept and answered as logistics', () => {
   const q = questionForAnswer('U.S. citizen?', '', false, false, [{ q: 'What is NLA and why do we disable it?' }])
   assert.match(q, /U\.S\. citizen/i)

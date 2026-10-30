@@ -1,3 +1,7 @@
+## 2026-10-30 — An introduction and a request for questions are both kept
+
+"Tell me about yourself. What questions do you have?" was one closing question, so the introduction was dropped. Those two are now separate asks. A design followed by an explanation stays one question. Setup before "Any questions?" stays with that question. If both still arrive as one string, the answer introduces first and then asks one question about the team. The page stamp is kompas-20261030-both.
+
 ## 2026-10-29 — Go deeper must add a mechanism, not repeat the opening
 
 The depth flag already said deep. The prompt now says sentence one adds the mechanism or reason the previous answer did not give, and does not repeat that opening. A short follow-up such as "Why is that dangerous?" does not get that line.

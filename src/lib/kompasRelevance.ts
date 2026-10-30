@@ -46,7 +46,7 @@ export function interviewIntent(question: string): ReplyIntent {
   // The prompt then tells the answer to start over. A bare why or how come stays a follow-up.
   if(BARE_FOLLOW.test(q)) return "follow-up"
   // The interviewer marked the earlier words as not the question. The ask is what follows.
-  if(/\b(?:any questions|what questions do you have|do you have any questions)\b[^.?!]*\??\s*$/i.test(q)) return "closing-question"
+  if(/\b(?:any questions|what questions do you have|do you have any questions)\b[^.?!]*\??\s*$/i.test(q) && !INTRO.test(q)) return "closing-question"
   // "How would you explain residual risk to a business owner" asks for the meaning, said so they can use it.
   if(/\bhow would you explain\b/i.test(q)) return "definition"
   // Several named checks in one assess question need the mechanism of each, not a yes/no.
@@ -54,14 +54,14 @@ export function interviewIntent(question: string): ReplyIntent {
   if(/\b(?:are you familiar with|do you know)\b.+\b(?:and|or|versus|vs\.?)\b/i.test(q)) return "comparison"
   // Interviewers vary the wording across disciplines; route the requested action,
   // not the job-specific vocabulary. These patterns complement the baseline.
-  if(/\b(?:any questions for (?:us|the team)|do you have any questions|anything you(?:'d| would) like to ask\??)\b/i.test(q)) return "closing-question"
+  if(/\b(?:any questions for (?:us|the team)|do you have any questions|anything you(?:'d| would) like to ask\??)\b/i.test(q) && !INTRO.test(q)) return "closing-question"
   if(/\b(?:give me (?:a )?(?:(?:quick|brief|short) )?overview of your (?:background|career|experience)|summari[sz]e your (?:background|career|experience)|what(?:'s| is) your background)\b/i.test(q)) return "introduction"
   if(/\b(?:why are you interested in (?:this|the|our) (?:position|job|role|team|company)|how would you contribute to (?:this|the|our|a|an)\b)\b/i.test(q)) return "value"
   if(/\b(?:describe (?:a|an) (?:project|incident|challenge|failure|achievement|situation) (?:you|where|that|when)|walk me through (?:a|an) (?:project|incident|failure|challenge) (?:you|where|that))\b/i.test(q)) return "experience-story"
   if(/\bwhen (?:can|could|would) you start\b/i.test(q)) return "logistics"
   if(/^\s*(?:why was that important|what did you do next|how did you (?:measure|test|check|confirm) (?:that|it|the result))\b/i.test(q)) return "follow-up"
   if(/\b(?:explain how|describe how)\b/i.test(q) && !COMPARE.test(q)) return "technical-process"
-  if(CLOSING.test(q)) return "closing-question"
+  if(CLOSING.test(q) && !INTRO.test(q)) return "closing-question"
   if(INTRO.test(q) || /^(?:(?:big|brief|short|quick|full|personal|detailed|self)\s+)?intro(?:duction)?[.?!]*$/i.test(q)) return "introduction"
   if(VALUE.test(q)) return "value"
   if(EXPERIENCE.test(q)) return "experience-story"
@@ -137,6 +137,7 @@ export function focusPrompt(question:string,tier:number,level:string):string{
   p.intent==="definition" ? "Open with what it is. If the question also asks why or how, give that mechanism next, in concrete terms, not a leadership lecture." : "",
   p.intent==="comparison" ? "Name every option in the question. The first sentence is the difference or the one you use more. No unrelated person." : "",
   p.intent==="value" || p.intent==="introduction" ? "Open with the relevant experience. Name a tool only when it shows that fit." : "",
+  INTRO.test(question) && CLOSING.test(question) ? "The interviewer also asked what questions you have. After the introduction, ask one specific question about this team." : "",
   p.intent==="experience-story" ? "One supported story: what was weak, what you reviewed, what changed. Do not promote yourself to an authority the resume does not give." : "",
   p.intent==="technical-process" ? "Cover each named part in order, with the check and the failure mode for that part. Do not replace the parts with a formula or a metric." : "",
   p.intent==="follow-up" && p.technicalDepth==="deep" ? "The interviewer asked to go deeper on the same subject. Sentence one adds the mechanism or reason the previous answer did not already give. Do not repeat that answer's opening." : "",

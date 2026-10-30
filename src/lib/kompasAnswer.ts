@@ -777,6 +777,10 @@ function separateQuestion(next: string, prevText: string): boolean {
     const fresh = topicWords(bare).filter((w) => !press.has(w) && !topicWords(prevText).includes(w))
     if (fresh.length > 0) return true
   }
+  // "Tell me about yourself. What questions do you have?" is two asks. A design followed by an explanation stays one.
+  const prevBare = ((prevText.trim().split(/(?<=[.?!])\s+/).pop() || prevText).replace(LEAD_FILLER, "")).replace(/[.?!]+$/, "").trim()
+  if (/^(?:tell me about yourself|introduce yourself|walk (?:me|us) through your (?:career|background))\b/i.test(prevBare)
+      && /^(?:what questions (?:do|would|might|can) you have|any questions(?: for (?:us|me|the team))?|do you have any questions)\b/i.test(bare.replace(/[.?!]+$/, ""))) return true
   if (/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && properNouns(bare).length === 0) return false
   if (!SEPARATE_START.test(bare)) return false
   const prevSentence = (prevText.trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim()

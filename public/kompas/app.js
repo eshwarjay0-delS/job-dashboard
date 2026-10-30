@@ -1733,6 +1733,10 @@ function splitSeparate(next, prevText) {
     const fresh = splitTopicWords(bare).filter((w) => !press.has(w) && !prevWords.has(w));
     if (fresh.length > 0) return true;
   }
+  // "Tell me about yourself. What questions do you have?" is two asks. A design followed by an explanation stays one.
+  const prevBare = ((String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || prevText).replace(SPLIT_LEAD, "")).replace(/[.?!]+$/, "").trim();
+  if (/^(?:tell me about yourself|introduce yourself|walk (?:me|us) through your (?:career|background))\b/i.test(prevBare)
+      && /^(?:what questions (?:do|would|might|can) you have|any questions(?: for (?:us|me|the team))?|do you have any questions)\b/i.test(String(bare).replace(/[.?!]+$/, ""))) return true;
   if (/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && splitProper(bare).length === 0) return false;
   if (!SPLIT_START.test(bare)) return false;
   const prevSentence = (String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim();
