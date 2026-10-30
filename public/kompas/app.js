@@ -1477,8 +1477,79 @@ function dictateStep(cap, rms, now, vad) {
   else if (!voiced && segLen > V.IDLE_RECYCLE_MS) action = speechMs >= 60 ? "rescue" : "drop";
   return { noise, speechMs, voiced, lastVoice, lastTick, speaking, scream, action };
 }
+// Audio-silence watchdog hooks (slice 5d, 29 Oct 2026), the web side of desktop-patches/audio-silence-watchdog.md.
+// The desktop's 3 s audio pulse reads them; nothing on this page reads or calls them. They can never break capture:
+//  - window.__kompasLevels = { peak, at }: the louder of mic / call audio over the last ~1 s, written from the RMS
+//    the VAD already computes. Writing it is read-only for capture and every write sits in try/catch.
+//  - window.__kompasTracks: [mic track, call-audio track] that are attached now (a source that is off is left out).
+//  - window.__kompasRestartCapture(): stops and re-acquires the sources attached now and rewires the AudioContext.
+//    Only on an explicit call, only while capturing, one restart at a time, never throws, never navigates or
+//    touches sign-in. The call-audio share is re-acquired only on the desktop (a browser would ask for the share
+//    dialog again); there the page restarts the mic only.
+function installWatchdogHooks(win, deps) {
+  const LEVEL_WINDOW_MS = 1000;
+  const recent = { You: { rms: 0, at: 0 }, Them: { rms: 0, at: 0 } };
+  let restarting = false;
+  const tap = (who, rms) => {
+    try {
+      if (who !== "You" && who !== "Them") return;
+      const v = Number(rms);
+      if (!Number.isFinite(v) || v < 0) return;
+      const at = Date.now();
+      recent[who] = { rms: v, at };
+      let peak = 0;
+      for (const k of ["You", "Them"]) if (at - recent[k].at <= LEVEL_WINDOW_MS && recent[k].rms > peak) peak = recent[k].rms;
+      win.__kompasLevels = { peak: Math.min(1, peak), at };
+    } catch {}
+  };
+  try {
+    Object.defineProperty(win, "__kompasTracks", {
+      configurable: true,
+      get() {
+        try {
+          const out = [];
+          for (const who of ["You", "Them"]) {
+            const cap = deps.captures().find((c) => c && c.who === who && !c.stopped);
+            const track = cap && cap.stream && cap.stream.getAudioTracks ? cap.stream.getAudioTracks()[0] : null;
+            if (track) out.push(track);
+          }
+          return out;
+        } catch { return []; }
+      },
+    });
+  } catch {}
+  win.__kompasRestartCapture = () => {
+    try {
+      if (restarting || !deps.running()) return false;
+      const who = deps.captures().filter((c) => c && !c.stopped).map((c) => c.who);
+      const restart = [...new Set(who)].filter((w) => w === "You" || (w === "Them" && deps.desktop()));
+      if (!restart.length) { try { deps.primeAudio(); } catch {} return false; }
+      restarting = true;
+      Promise.resolve().then(async () => {
+        for (const w of restart) {
+          try { await deps.stopSource(w); } catch {}
+          try { deps.primeAudio(); } catch {}
+          if (!deps.running()) break;
+          try { await (w === "You" ? deps.startMic() : deps.startSys()); } catch {}
+        }
+        try { deps.reportSources(); } catch {}
+      }).catch(() => {}).finally(() => { restarting = false; });
+      return true;
+    } catch { restarting = false; return false; }
+  };
+  return tap;
+}
+let kompasLevelTap = () => {};
+try {
+  kompasLevelTap = installWatchdogHooks(window, {
+    captures: () => captures, running: () => running, desktop: () => !!window.kompasDesktop,
+    stopSource: (w) => stopSource(w), startMic: () => startMic(), startSys: () => startSys(),
+    primeAudio: () => primeAudio(), reportSources: () => reportSources(),
+  });
+} catch {}
 function vadStep(cap, rms) {
   if (cap.stopped || !running) return;
+  try { kompasLevelTap(cap.who, rms); } catch {}   // slice 5d: watchdog level, read only
   const now = performance.now();
   cap.lastVadAt = now;
   if (rms > 0.004) { cap.lastAudibleAt = now; cap.zeroWarned = false; }
