@@ -57,6 +57,9 @@ jobs:
       - name: Verify WhatsApp voice notes, commands and low-overhead processing
         run: node --test scripts/tests/whatsapp-voice.test.mjs
 
+      - name: Verify source-aware intake, typed follow-ups, mishearings and the speech provider switch
+        run: node --experimental-strip-types --test scripts/tests/kompas-source-intake.test.mjs scripts/tests/kompas-stt-provider.test.mjs scripts/tests/kompas-dictation-accuracy.test.mjs
+
       - name: Verify consented voice benchmark metrics
         run: node --test scripts/tests/kompas-voice-metrics.test.mjs
 

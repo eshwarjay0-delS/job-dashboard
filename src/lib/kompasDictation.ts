@@ -120,6 +120,28 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bstart\s+method\b/gi, "STAR method"],
   [/\bs\.?\s*t\.?\s*a\.?\s*r\.?\s+method\b/gi, "STAR method"],
   [/\bstar\s+method\b/gi, "STAR method"],
+  // Mishearings found on 29 Oct 2026 (voice slice). Each one is anchored to its domain words.
+  [/\bsail\s+point\b/gi, "SailPoint"],
+  [/\bbeyond\s+trust\b/gi, "BeyondTrust"],
+  [/\bhashi\s+corp\b/gi, "HashiCorp"],
+  [/\bz\s+scaler\b/gi, "Zscaler"],
+  [/\bcyber\s*arch\b/gi, "CyberArk"],
+  [/\bmy\s+tree\s+attack\b/gi, "MITRE ATT&CK"],
+  [/\bresid(?:ue)?\s+jewel\s+risk\b/gi, "residual risk"],
+  [/\bdev\s+sec\s+ops\b/gi, "DevSecOps"],
+  [/\b(?:sock|soc)\s+(?:two|2)\b/gi, "SOC 2"],
+  [/\bnist\s+eight\s+hundred\s+(?:dash\s+)?fifty[\s-]three\b/gi, "NIST 800-53"],
+  [/\b(?:in\s*tra|entra)\s+i\.?\s*d\b/gi, "Entra ID"],
+  [/\bpost\s+gres\s*q\s*l\b/gi, "PostgreSQL"],
+  [/\bjay\s+son\s+web\s+tokens?\b/gi, "JSON Web Token"],
+  [/\bo\s+i\s+d\s+c\b/gi, "OIDC"],
+  [/\bsam\s+el\s+(assertion|token|response|sso|federation)\b/gi, "SAML $1"],
+  [/\bans\s+ible\b/gi, "Ansible"],
+  [/\bgit\s+lab\b/gi, "GitLab"],
+  [/\b(?:get|git)\s+hub\s+(actions|repo|repository|workflow)\b/gi, "GitHub $1"],
+  [/\bec\s+two\s+(instances?)\b/gi, "EC2 $1"],
+  [/\bs\s+three\s+(buckets?)\b/gi, "S3 $1"],
+  [/\bdocker\s+file\b/gi, "Dockerfile"],
 ]
 
 /** Repair a heard line. Ordinary sentences, and a line already repaired, come back unchanged. */

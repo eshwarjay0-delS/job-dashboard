@@ -1607,6 +1607,21 @@ let themLines = [];   // what the call audio said in the last 30 s, interim and 
 function noteThem(text) { const at = Date.now(); themLines = themLines.filter(l => at - l.at < 30000); themLines.push({ text: String(text || ""), at }); }
 function themSpeaking() { const now = performance.now(); return captures.some(c => c.who === "Them" && !c.stopped && (c.voiced || now - (c.lastVoice || 0) < 1500)); }
 function echoOfThem(text) { const recent = themLines.filter(l => Date.now() - l.at < 30000).map(l => l.text).join(" "); return recent ? echoShare(text, recent) : 0; }
+// ── Source-aware intake (29 Oct 2026) ──
+// Computer audio is the interviewer, the microphone is you, and typed text is your own question. Speaker bleed: the
+// interviewer comes back through the mic a moment later. A mic line that repeats what the call audio said within about
+// 1.5 seconds is bleed, even a short one like "And why?" that the 30-second echo rule cannot judge, so it never opens a
+// question. Your own answer, said later or in other words, is kept.
+function roleOfSource(source) { const SOURCE_ROLE = { system: "Them", computer: "Them", loopback: "Them", them: "Them", mic: "You", microphone: "You", you: "You", typed: "You (typed)" }; return SOURCE_ROLE[String(source || "").trim().toLowerCase()] || "You"; }
+function bleedWords(text) { return String(text || "").toLowerCase().replace(/[^a-z0-9'+#]+/g, " ").split(/\s+/).filter(w => w.length > 1 || /\d/.test(w)); }
+function micBleed(text, at, lines) {
+  const words = bleedWords(text); if (words.length < 2) return false;
+  const near = (lines || []).filter(l => l && Math.abs(Number(at) - Number(l.at)) <= 1500);   // about 1.5 s
+  if (!near.length) return false;
+  const bag = new Set(bleedWords(near.map(l => l.text).join(" ")));
+  return words.filter(w => bag.has(w)).length / words.length >= 0.6;
+}
+// ── end source-aware intake ──
 // One section: the line being said shows inside the question box, under the question. A new question from Them brings
 // a tucked-away box back (never while an answer is still being written on that page); your own speech never moves it.
 function showCaption(who, text, isInterim) {
@@ -1677,6 +1692,13 @@ function shortFollowUp(text) {
   return /^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|go deeper|dig deeper|explain that|explain this|explain it|say that again|why|how)(?:\s+though)?[.?!]*$/i.test(t);
 }
 // "Go deeper on that exception" names a subject, so it is not the two-word follow-up, and it is still a new ask.
+// A typed "And why?" after an answer gets its own card (#32), and it is about the question on that page: the follow-up
+// is attached to the open question instead of standing alone with no subject.
+function typedFollowUpQuestion(typed, openQuestion) {
+  const t = String(typed || "").replace(/\s+/g, " ").trim(), q = String(openQuestion || "").replace(/\s+/g, " ").trim();
+  if (!t || !q || !shortFollowUp(t) || /^(Preparing|Ready|Cleared\.|No question yet|Deriving)/.test(q)) return "";
+  return (/[?.!]$/.test(q) ? q : q + "?") + " " + t.charAt(0).toUpperCase() + t.slice(1) + (/[?.!]$/.test(t) ? "" : "?");
+}
 function opensNewAsk(text) {
   const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim();
   if (shortFollowUp(t)) return true;
@@ -1881,6 +1903,28 @@ const PHRASE_FIXES = [
   [/\bstart\s+method\b/gi, "STAR method"],
   [/\bs\.?\s*t\.?\s*a\.?\s*r\.?\s+method\b/gi, "STAR method"],
   [/\bstar\s+method\b/gi, "STAR method"],
+  // Mishearings found on 29 Oct 2026 (voice slice). Each one is anchored to its domain words.
+  [/\bsail\s+point\b/gi, "SailPoint"],
+  [/\bbeyond\s+trust\b/gi, "BeyondTrust"],
+  [/\bhashi\s+corp\b/gi, "HashiCorp"],
+  [/\bz\s+scaler\b/gi, "Zscaler"],
+  [/\bcyber\s*arch\b/gi, "CyberArk"],
+  [/\bmy\s+tree\s+attack\b/gi, "MITRE ATT&CK"],
+  [/\bresid(?:ue)?\s+jewel\s+risk\b/gi, "residual risk"],
+  [/\bdev\s+sec\s+ops\b/gi, "DevSecOps"],
+  [/\b(?:sock|soc)\s+(?:two|2)\b/gi, "SOC 2"],
+  [/\bnist\s+eight\s+hundred\s+(?:dash\s+)?fifty[\s-]three\b/gi, "NIST 800-53"],
+  [/\b(?:in\s*tra|entra)\s+i\.?\s*d\b/gi, "Entra ID"],
+  [/\bpost\s+gres\s*q\s*l\b/gi, "PostgreSQL"],
+  [/\bjay\s+son\s+web\s+tokens?\b/gi, "JSON Web Token"],
+  [/\bo\s+i\s+d\s+c\b/gi, "OIDC"],
+  [/\bsam\s+el\s+(assertion|token|response|sso|federation)\b/gi, "SAML $1"],
+  [/\bans\s+ible\b/gi, "Ansible"],
+  [/\bgit\s+lab\b/gi, "GitLab"],
+  [/\b(?:get|git)\s+hub\s+(actions|repo|repository|workflow)\b/gi, "GitHub $1"],
+  [/\bec\s+two\s+(instances?)\b/gi, "EC2 $1"],
+  [/\bs\s+three\s+(buckets?)\b/gi, "S3 $1"],
+  [/\bdocker\s+file\b/gi, "Dockerfile"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");
@@ -1939,6 +1983,7 @@ function onTranscript(who, text, lookedAgain) {
   text = fixTerms(fixPhrases(text));
   if (who === "Them") noteThem(text);
   else if (who === "You" && captures.some(c => c.who === "Them")) {
+    if (micBleed(text, Date.now(), themLines)) { logEvent({ t: "echo", who, text, bleed: true }); return; }   // the call audio through the mic within 1.5 s
     if (echoOfThem(text) >= 0.5) { logEvent({ t: "echo", who, text }); return; }   // the interviewer through your speakers, not you
     if (!lookedAgain && themSpeaking()) { setTimeout(() => { if (running) onTranscript(who, text, true); }, 2000); return; }   // their words may still be on the way: look again
   }
@@ -2600,7 +2645,8 @@ async function aiAnswer(fromAuto) {
       // pinning the whole concatenation to the card. Typed questions stay
       // pinned whole — the typed words already are the question.
       const heard = intake.heard.replace(/\nCurrent question \(on screen\):[^\n]*/g, "").trim();
-      const said = pressQuestion(typedText, intake, "") || intake.derived || heardAsQuestion(pending);
+      const followTyped = typedText && cur && hasAnswer(cur) ? typedFollowUpQuestion(typedText, cur.question) : "";   // "And why?" typed after an answer: own card, same subject
+      const said = followTyped || pressQuestion(typedText, intake, "") || intake.derived || heardAsQuestion(pending);
       const heardOnly = !typedText;
       const spans = heardOnly ? splitDistinctAsks(intake.derived || said || "") : [];
       if (spans.length > 1) {
