@@ -2606,17 +2606,19 @@ async function aiAnswer(fromAuto) {
       const heard = intake.heard.replace(/\nCurrent question \(on screen\):[^\n]*/g, "").trim();
       const said = pressQuestion(typedText, intake, "") || intake.derived || heardAsQuestion(pending);
       const heardOnly = !typedText;
-      const spans = heardOnly ? splitDistinctAsks(intake.derived || said || "") : [];
+      // Typed words are the question, and two questions in the box are two asks.
+      // A design followed by an explanation stays one. The microphone uses the same cut.
+      const spans = splitDistinctAsks(heardOnly ? (intake.derived || said || "") : (typedText || said || ""));
       if (spans.length > 1) {
-        const who = questionSource() === "You" ? "You" : "Them";
+        const who = heardOnly ? (questionSource() === "You" ? "You" : "Them") : "You";
         for (const span of spans) {
           const spanHeard = who + ": " + span;
-          const card = addCard("Deriving…", ["…"]);
+          const card = addCard(heardOnly ? "Deriving…" : span, ["…"]);
           card.heard = spanHeard;
           card.earlier = earlier;
           card.formed = spanHeard;
-          showPressed(card, "Deriving…");
-          await generateAnswer(spanHeard, card, { consolidated: true, earlier, pinned: false });
+          showPressed(card, heardOnly ? "Deriving…" : span);
+          await generateAnswer(spanHeard, card, { consolidated: true, earlier, derived: heardOnly ? undefined : span, pinned: !heardOnly });
         }
         return;
       }

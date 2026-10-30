@@ -1,3 +1,7 @@
+## 2026-10-30 — Two typed questions open two pages
+
+Typing "What is Kubernetes? What is Terraform?" kept both on one page. The box now uses the same cut as the microphone and WhatsApp. Each question gets its own page. A design followed by an explanation stays one page. One typed question still opens one page. The page stamp is kompas-20261030-typed.
+
 ## 2026-10-30 — Two WhatsApp questions in one message are both answered
 
 The microphone already cut "What is Kubernetes? What is Terraform?" into two asks. WhatsApp sent that message as one turn, so the second ask was lost. WhatsApp now uses the same cut. A design followed by an explanation stays one answer. One question still sends one answer.
