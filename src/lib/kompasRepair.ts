@@ -2,7 +2,7 @@
 // calls the rewrite; this file decides whether a rewrite is kept and reports what happened, so a repair that landed
 // and was later cut is visible in the done event instead of hiding behind "repaired: 0".
 
-export type RepairStatus = "not-needed" | "no-key" | "landed" | "partial" | "discarded" | "failed"
+export type RepairStatus = "not-needed" | "advisory" | "no-key" | "landed" | "partial" | "discarded" | "failed"
 
 export interface RepairOutcome {
   status: RepairStatus
@@ -56,6 +56,19 @@ export interface RepairLoopDeps {
   guard?: (text: string) => string
   isProviderError?: (text: string) => boolean
   hasKey?: boolean
+  // Speed r6: when true, the model is called only for a real gap (repairNeedsModel); advisory-only items are reported
+  // with status "advisory" and the original stands. Unset keeps the old behaviour exactly.
+  gateAdvisory?: boolean
+}
+
+// Speed r6 (29 Oct 2026): a real gap is a core item (missing structure, a named term, a repeated or third-person answer,
+// an unsupported source claim) or a part the interviewer explicitly asked for. An unasked-tangent note alone is advisory:
+// it no longer costs a blocking model call. Failsafe: anything not recognised as advisory counts as a real gap.
+const ADVISORY = /^remove the unasked technical tangent /
+export function repairNeedsModel(checks: RepairChecks | null | undefined): boolean {
+  if (!checks) return false
+  if (Array.isArray(checks.core) && checks.core.length) return true
+  return (Array.isArray(checks.all) ? checks.all : []).some((item) => !ADVISORY.test(String(item)))
 }
 export interface RepairLoopResult { text: string; repaired: number; repair: RepairOutcome }
 
@@ -63,6 +76,7 @@ export async function runRepairLoop(original: string, deps: RepairLoopDeps): Pro
   const first = deps.checks(original)
   const missing = first.all
   if (!missing.length) return { text: original, repaired: 0, repair: { status: "not-needed", attempts: 0, missing: [], stillMissing: [] } }
+  if (deps.gateAdvisory && !repairNeedsModel(first)) return { text: original, repaired: 0, repair: { status: "advisory", attempts: 0, missing, stillMissing: missing } }
   if (deps.hasKey === false) return { text: original, repaired: 0, repair: { status: "no-key", attempts: 0, missing, stillMissing: missing } }
   let best = { text: original, core: first.core, all: first.all }
   let attempts = 0
