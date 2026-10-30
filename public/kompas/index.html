@@ -69,6 +69,10 @@
         <li class="gs-step" id="gsStart"><span class="gs-dot"></span><div class="gs-txt"><b>Start the copilot</b><span>Press Start on a session. Answers appear as they ask.</span></div></li>
       </ol>
     </div>
+    <div id="cloudSyncBanner" role="status" aria-live="polite" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+      <span id="cloudSyncStatus" class="muted small">Connecting saved sessions across your signed-in devices…</span>
+      <button class="btn ghost small hidden" id="importLocalSessions">Import local sessions</button>
+    </div>
     <div class="session-list" id="sessionList"></div>
     <div class="empty-sessions hidden" id="emptySessions">
       <p>Your sessions will appear here.</p>
@@ -423,9 +427,10 @@
                 <option value="1000">~1000 pages</option>
               </select></div>
             <label class="pref-row"><div class="pref-t"><b>Answer automatically</b><span>When they stop talking</span></div><input type="checkbox" class="tgl" id="autoAnswer" /></label>
-            <label class="pref-row"><div class="pref-t"><b>Save the transcript</b><span>Kept on this device</span></div><input type="checkbox" class="tgl" id="saveTranscript" checked /></label>
+            <label class="pref-row"><div class="pref-t"><b>Save the transcript</b><span>Stored locally; session metadata synchronizes to your account</span></div><input type="checkbox" class="tgl" id="saveTranscript" checked /></label>
             <div class="pref-row stack"><div class="pref-t"><b>AI instructions</b><span>Anything Kompas should always do</span></div>
-              <textarea id="instructions" rows="2" placeholder="e.g. Emphasize cloud security"></textarea></div>
+              <textarea id="instructions" rows="8" placeholder="Paste complete interview instructions, technical rules, style requirements or other context here. Your text will not be silently shortened."></textarea>
+              <span class="muted small">Full instructions are saved with this interview and synced to your signed-in devices. Model context limits may still affect how much the AI can use in a single answer.</span></div>
           </div>
         </details>
       </div>
@@ -702,7 +707,8 @@
 <script>window.PERFACT_BUILD = "kompas-20261030-screen";</script>
 <script src="screen-core.js"></script>
 <script src="screen-review.js"></script>
-<script src="app.js?v=20261030-screen"></script>
+<script src="account-sync.js?v=20261030-accounts"></script>
+<script src="app.js?v=20261030-accounts"></script>
 <script src="desktop-focus.js"></script>
 <script src="qbank-problems.js"></script>
 <script src="qbank-library.js"></script>
