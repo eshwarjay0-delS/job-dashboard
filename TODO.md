@@ -1,3 +1,7 @@
+## 2026-10-30 — A spaced citizenship question stays a short logistics answer
+
+"Are you a u s citizen" was treated as a normal question, so it could run long. "Are you authorized to work in the U.S.?" did the same. Both stay logistics. "How does work authorization work?" stays a technical explanation. One hundred intent folds still pass.
+
 ## 2026-10-30 — A limit before the question no longer swallows the ask
 
 "No downtime, how would you verify the remediation?" and "Without a restart, how would you patch the service?" were stored as the condition only, so the ask was dropped. The limit stays a condition and the question stays the question. "With no downtime, how would you..." is the same split.

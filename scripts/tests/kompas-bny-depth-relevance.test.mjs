@@ -92,6 +92,10 @@ test('a short citizenship question is kept and answered as logistics', () => {
   assert.equal(interviewIntent(q), 'logistics')
   assert.equal(interviewIntent('Are you a U.S. citizen?'), 'logistics')
   assert.match(questionForAnswer('Are you a U.S. citizen?', '', false, false, []), /Are you a U\.S\. citizen\?/)
+  assert.equal(interviewIntent('Are you a u s citizen'), 'logistics')
+  assert.equal(focusPlan('Are you a u s citizen', 2, 'director').technicalDepth, 'surface')
+  assert.equal(interviewIntent('Are you authorized to work in the U.S.?'), 'logistics')
+  assert.equal(interviewIntent('How does work authorization work?'), 'technical-process')
 })
 
 test('a short follow-up is not told to open a new mechanism', () => {
