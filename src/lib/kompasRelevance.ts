@@ -27,11 +27,18 @@ const COMPARE=/\b(?:which (?:one|framework|tool|approach|option|is)|which of tho
 const SCENARIO=/\b(?:how would you|what would you do|suppose|imagine|if you (?:were|had|found|saw)|hypothetical|in that situation|how should (?:we|the team)|scenario)\b/i
 const DEEP=/\b(?:step by step|walk me through|under the hood|exact (?:logs|fields|mechanics|steps|flow)|deep dive|debug|troubleshoot|design|implement|packet|query|architecture|how (?:does|do|did) .+ work|how exactly)\b/i
 const ACK=/^\s*(?:yeah|right|okay|ok|great|thanks|thank you|that makes sense|absolutely|so that's|you(?:'ll| will)|we(?:'ll| will)|the team|our team|it's important|i expect|i would expect)\b/i
-const FOLLOW=/^\s*(?:and (?:then|how|why|what)|what (?:about|happened)|what did you (?:check|see|do) first|how (?:so|did you verify)|can you (?:expand|elaborate)|go (?:deeper|on)|tell me more|why is that|why is that important)\b/i
+const FOLLOW=/^\s*(?:and (?:then|how|why|what)|what (?:about|happened)|what did you (?:check|see|do) first|how (?:so|did you verify)|can you (?:expand|elaborate)|go (?:deeper|on)|tell me more|why is that|why is that important|explain (?:that|this|it)|walk me through (?:that|this|it)|say that again)\b/i
 const QUESTION=/\?|^\s*(?:what|why|how|when|where|which|who|tell|describe|explain|give|walk|could|can|would|will|are|is|do|does|have|has|should)\b/i
 
+/** The press phrase, not the quoted earlier question glued on after it. */
+function askWithoutPrior(question: string): string {
+  const q = String(question || "").trim()
+  const lead = q.split(/\s*—\s*following up on\s*:/i)[0].trim()
+  return lead || q
+}
+
 export function interviewIntent(question: string): ReplyIntent {
-  const q=String(question||'').trim()
+  const q=askWithoutPrior(question)
   if(!q) return "direct"
   // Stress round 2 (29 Oct 2026): "Hi, can you hear me okay?" and "How are you doing today?" were answered as direct
   // questions. A greeting or line check gets a brief acknowledgement, never a work answer.

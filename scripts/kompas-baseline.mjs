@@ -48,6 +48,7 @@ function loadTs(path) {
     if (spec.startsWith('@/')) spec = 'src/' + spec.slice(2)
     else if (spec.startsWith('./') || spec.startsWith('../')) spec = new URL(spec, new URL(dir, 'file:///')).pathname.slice(1)
     else return require(spec)
+    spec = spec.replace(/\.js$/, '')
     const file = spec.endsWith('.ts') ? spec : `${spec}.ts`
     return loadTs(file)
   }
@@ -80,6 +81,7 @@ const PAGE = (() => {
     slice('const Q_CUE =', '\nlet lastQ'),
     slice('// ── Question intake', '// ── end question intake ──'),
     slice('function recentQA(', '\nfunction askingLevel('),
+    slice('function shortFollowUp(', 'const armsAuto'),
     slice('function pressQuestion(', '$("answerBtn")'),
     slice('async function aiAnswer(', '$("screenBtn")'),
     slice('function hasAnswer(', '\n// Takes an empty page'),
