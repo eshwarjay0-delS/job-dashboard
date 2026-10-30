@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs"
 import { createRequire } from "node:module"
 import { runInNewContext } from "node:vm"
 import ts from "typescript"
+import { splitDistinctAsks } from "../../src/lib/kompasAnswer.ts"
 
 const nodeRequire = createRequire(import.meta.url)
 const revisions = new Map()
@@ -78,6 +79,7 @@ runInNewContext(compiled("src/lib/whatsapp-kompas-channel.ts"), {
     } },
     "@/lib/kompas-session-store": { sharedKompasStore: () => store },
     "@/lib/kompas-shared-turn": { sharedKompasTurn: sharedTurn },
+    "@/lib/kompasAnswer": { splitDistinctAsks },
     "@/lib/whatsapp-kompas": { kompasTransition: reducer.exports.kompasTransition, classifyKompasPastedSource: reducer.exports.classifyKompasPastedSource },
   })[key] || nodeRequire(key),
   Buffer, Date,
@@ -121,6 +123,22 @@ test("4. Resume and JD unlock an answer from one shared engine", async () => {
   const r = await execute(t("DNS"))
   assert.equal(r.sent[0], "The grounded answer")
   assert.equal(calls, 1)
+})
+test("4a. Two questions in one message are answered separately, and a two-part design stays one", async () => {
+  reset()
+  await started()
+  const seen = []
+  provider = async question => { seen.push(question); return "Answer for " + question }
+  const split = await execute(t("What is Kubernetes? What is Terraform?"))
+  assert.deepEqual(seen, ["What is Kubernetes?", "What is Terraform?"])
+  assert.equal(split.sent.length, 2)
+  assert.match(split.sent[0], /Kubernetes/)
+  assert.match(split.sent[1], /Terraform/)
+  assert.equal([...sessions.values()][0].history.length, 2)
+  const before = calls
+  const whole = await execute(t("Design the logging pipeline. Explain the trust boundaries."))
+  assert.equal(calls, before + 1)
+  assert.equal(whole.sent.length, 1)
 })
 test("4b. A repeated answer for a different question is not sent", async () => {
   reset()
@@ -217,7 +235,7 @@ test("14. Basic WhatsApp Help is routed before any optional Kompas storage call"
   const webhook = readFileSync("src/app/api/whatsapp/webhook/route.ts", "utf8")
   const handleStart = webhook.indexOf("async function handle(from:")
   const command = webhook.indexOf('["help", "hi", "hello", "menu"].includes(command)', handleStart)
-  const kompas = webhook.indexOf("const consumed = await handleWhatsAppKompas", handleStart)
+  const kompas = webhook.indexOf("consumed = await handleWhatsAppKompas", handleStart)
   assert.ok(handleStart > 0 && command > handleStart && kompas > command,
     "Help/menu must not be blocked by the Kompas session lookup")
   assert.match(webhook.slice(command, kompas), /return sendText\(from, HELP\)/)
@@ -235,7 +253,7 @@ test("16. Explicit Use 2 profile switching avoids the Kompas storage preconditio
   const webhook = readFileSync("src/app/api/whatsapp/webhook/route.ts", "utf8")
   const handleStart = webhook.indexOf("async function handle(from:")
   const profile = webhook.indexOf("const profileCommand =", handleStart)
-  const kompas = webhook.indexOf("const consumed = await handleWhatsAppKompas", handleStart)
+  const kompas = webhook.indexOf("consumed = await handleWhatsAppKompas", handleStart)
   assert.ok(handleStart > 0 && profile > handleStart && kompas > profile)
   assert.match(webhook.slice(profile, kompas), /if \(!profileCommand && \(type === "text" \|\| type === "document"\)\)/)
   assert.match(webhook.slice(profile, kompas), /\(\?:use\|switch/)

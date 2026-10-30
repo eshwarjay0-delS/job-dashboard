@@ -19,29 +19,30 @@ test('never silently deliver the original resume as a tailored fallback', () => 
   assert.doesNotMatch(webhook, /sendLibraryFallback\(/)
   assert.match(webhook, /if \(!acceptableWhatsAppResume\(result\)\)/)
 })
-test('skills floor adds only evidenced JD terms and never fabricates a missing qualification', () => {
-  assert.match(tailor, /const left = scoreKws\.filter\(k => floorKws\.has\(k\) && forcedJdKws\.includes\(k\) && !cur\.afterKw\.has\(k\) && !isCertification\(k\)\)/)
+test('skills floor adds missing job-post terms on the skills line and does not call that confirmed experience', () => {
+  assert.match(tailor, /const left = scoreKws\.filter\(k => floorKws\.has\(k\) && !cur\.afterKw\.has\(k\) && !isCertification\(k\)\)/)
   const clear = tailor.indexOf('await stripUnsupportedSkills(')
   const floor = tailor.indexOf('await placeEverything(best)')
-  assert.ok(clear > 0 && floor > clear, 'unconfirmed tools must be cleared before evidence-only placement')
+  assert.ok(clear > 0 && floor > clear, 'model-written tools are cleared before the labelled job-post pass writes them back')
   assert.equal(tailor.indexOf('await stripUnsupportedSkills(', floor), -1)
-  assert.match(tailor, /const unverifiedAdded = unsupportedJdKws\.filter\(k => coveredJdKeywords\(best\.tailoredText, \[k\]\)\.has\(k\)\)/)
-  assert.doesNotMatch(tailor, /!floorOnSkills\.has/)
+  assert.match(tailor, /!floorOnSkills\.has\(k\.toLowerCase\(\)\)/)
+  assert.match(tailor, /coveredJdKeywords\(bulletText, \[k\]\)/)
+  assert.match(tailor, /for \(let floorRound = 0; floorRound < 4; floorRound\+\+\)/)
 })
-test('ten varied candidate-evidence skill-floor cases', () => {
+test('ten varied job-post skill-floor cases', () => {
   const expression = tailor.match(/const left = (scoreKws\.filter\([^\n]+\))/)?.[1]
   assert.ok(expression, 'use the real production placement expression')
   const place = new Function('scoreKws', 'floorKws', 'forcedJdKws', 'cur', 'isCertification', 'return ' + expression)
   const cases = [
     { score: ['aws'], evidence: ['aws'], present: [], certs: [], expected: ['aws'] },
-    { score: ['illumia'], evidence: [], present: [], certs: [], expected: [] },
+    { score: ['illumio'], evidence: [], present: [], certs: [], expected: ['illumio'] },
     { score: ['azure'], evidence: ['azure'], present: ['azure'], certs: [], expected: [] },
     { score: ['cissp'], evidence: ['cissp'], present: [], certs: ['cissp'], expected: [] },
-    { score: ['splunk','unknown tool'], evidence: ['splunk'], present: [], certs: [], expected: ['splunk'] },
-    { score: ['unknown a','unknown b'], evidence: [], present: [], certs: [], expected: [] },
+    { score: ['splunk','unknown tool'], evidence: ['splunk'], present: [], certs: [], expected: ['splunk', 'unknown tool'] },
+    { score: ['unknown a','unknown b'], evidence: [], present: [], certs: [], expected: ['unknown a', 'unknown b'] },
     { score: ['python','terraform','aws'], evidence: ['python','terraform','aws'], present: [], certs: [], expected: ['python','terraform','aws'] },
     { score: ['dns','dhcp'], evidence: ['dns','dhcp'], present: ['dns'], certs: [], expected: ['dhcp'] },
-    { score: ['zero trust'], evidence: ['soc'], present: [], certs: [], expected: [] },
+    { score: ['zero trust'], evidence: ['soc'], present: [], certs: [], expected: ['zero trust'] },
     { score: ['okta','azure'], evidence: ['okta','azure'], floor: ['azure'], present: [], certs: [], expected: ['azure'] },
   ]
   for (const [i, c] of cases.entries()) {
@@ -55,6 +56,12 @@ test('repair prompts chase evidenced skills, not impossible JD-only gaps', () =>
 test('new unverified JD claims force review', () => {
   assert.match(tailor, /unverifiedAdded\.length > 0/)
   assert.match(tailor, /unverified_added_keywords: unverifiedAdded/)
+})
+test('job-post terms gate: bullets carrying job-only terms are reverted before the floor, and the switch reaches the cache', () => {
+  assert.match(tailor, /jdTermsGateOn\(/)
+  assert.match(tailor, /bullets_reverted_for_jd_terms/)
+  assert.match(tailor, /jd_terms_unplaced_reason/)
+  assert.match(tailor, /stale cache shape/)
 })
 test('legacy cache must carry the evidence-aware scoring contract', () => {
   assert.match(tailor, /Number\.isFinite\(cached\.supported_coverage\)/)
@@ -127,4 +134,19 @@ test('recovery distinguishes Meta acceptance and signed handset confirmation', (
   assert.match(webhook, /let handsetConfirmed = 0/)
   assert.match(webhook, /state\?\.deliveryState === "delivered" \|\| state\?\.deliveryState === "read"/)
   assert.match(webhook, /handsetConfirmed, stillPending/)
+})
+
+test('switching WhatsApp email never rewrites the saved JD source or timestamps', () => {
+  const fn = webhook.match(/function remember\(session: Session, email: string\) \{([\s\S]*?)\n\}/)?.[1] || ''
+  assert.match(fn, /session\.preferredEmail = email\.toLowerCase\(\)/)
+  assert.doesNotMatch(fn, /session\.last\s*=/)
+  assert.doesNotMatch(fn, /Date\.now\(\)/)
+  assert.match(webhook, /session\.preferredEmail \|\| session\.last\?\.email/)
+})
+
+test('legacy recovery uses stable JD identity and refuses a duplicate persisted job', () => {
+  assert.match(webhook, /await hasResumeRecoveryForJD\(from, userId, last\.jd\)/)
+  assert.match(webhook, /const jdId = "legacy-" \+ jobKeyOf\(last\.jd\)/)
+  assert.doesNotMatch(webhook, /const jdId = "legacy-" \+ last\.at/)
+  assert.match(queue, /existing\.from === from && existing\.userId === userId && existing\.jd === jd/)
 })

@@ -37,7 +37,7 @@ function session(typed) {
     cards: [{ question: OLD_Q, answer: OLD_A }], idx: 0,
     $: (id) => (id === "manualInput" ? box : { classList: { add() {}, remove() {}, toggle() {}, contains: () => false } }),
     pendingHeard: () => [], updatePending() {}, flushHeard: async () => {}, setChat() {}, status() {},
-    logEvent() {}, renderCard() {}, toTop() {}, clearTimeout() {}, plainAnswer: (a) => String(a),
+    logEvent() {}, logDecision() {}, renderCard() {}, toTop() {}, clearTimeout() {}, plainAnswer: (a) => String(a),
     questionSource: () => "Them",
     generateAnswer: async (heard, card, opts) => { asked.push({ heard, card, opts }); },
   };
@@ -66,6 +66,24 @@ test("a short question that names its subject is not glued onto the question on 
   const lane = "What is NLA and why do we disable it?";
   assert.equal(s.pressQuestion("What exactly is least privilege?", { derived: "" }, lane), "What exactly is least privilege?");
   assert.equal(s.pressQuestion("go deeper", { derived: "" }, lane), lane.replace(/[?.!\s]+$/, "") + " — go deeper");
+});
+
+test("two typed questions open two pages, and a design with an explanation stays one", async () => {
+  const { s, asked } = session("What is Kubernetes? What is Terraform?");
+  await s.aiAnswer(false);
+  assert.equal(s.cards.length, 3);
+  assert.equal(s.cards[0].question, OLD_Q);
+  assert.equal(s.cards[0].answer, OLD_A);
+  assert.equal(s.cards[1].question, "What is Kubernetes?");
+  assert.equal(s.cards[2].question, "What is Terraform?");
+  assert.equal(asked.length, 2);
+  assert.equal(asked[0].opts.derived, "What is Kubernetes?");
+  assert.equal(asked[1].opts.derived, "What is Terraform?");
+  assert.equal(asked[0].opts.pinned, true);
+  const one = session("Design the logging pipeline. Explain the trust boundaries.");
+  await one.s.aiAnswer(false);
+  assert.equal(one.s.cards.length, 2);
+  assert.equal(one.asked.length, 1);
 });
 
 test("a typed question with no question mark still stands on its own", async () => {

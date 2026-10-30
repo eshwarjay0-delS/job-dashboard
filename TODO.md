@@ -1,3 +1,59 @@
+## 2026-10-30 — The rest of the personal questions stay quiet
+
+Bonus, equity, 401k, W2 or C2C, a contract role, OPT, L1, earliest start, notice, the city you live in, weekends, on call, shift, working from home, remote, PTO, and EST hours were still answered. They are skipped. A data-center or server relocation is still answered. "How does work authorization work?" is still answered.
+
+## 2026-10-30 — Nights, weekends, and on-call stay quiet; how work authorization works does not
+
+Kompas does not answer availability. "Can you work nights?", weekends, and on-call were still sent to the model. They are skipped. "How does work authorization work?" was skipped with them. That one asks for the mechanism, so it is answered. "Have you supported on-call incident response?" stays an experience question.
+
+## 2026-10-30 — A spoken limit stays on the conditions line
+
+"The service must stay up. How would you patch it?" named only the question. The limit is now a condition, and the question stays the question. The same split covers "No production access" and "You must keep the service running."
+
+## 2026-10-30 — Pay and employment questions are not dropped
+
+Travel, visa, W2, C2C, full time, contract, PTO, benefits, 401k, EAD, TN visa, hourly, and day rate were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Full time or contract, starting in two weeks, and a day rate stay short. "What is a smart contract?" stays a definition.
+
+## 2026-10-30 — Shift, weekend, and start-date questions are not dropped
+
+Start date, relocation, clearance, sponsorship, night shift, shift, weekend, overtime, and citizen were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Working weekends and on-call stay short. A hybrid-cloud design stays technical.
+
+## 2026-10-30 — A one-word logistics question is not dropped
+
+Salary, hybrid, onsite, remote, notice, bonus, and TS/SCI were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Two weeks' notice, night work, days in the office, and being local to a city stay short too. A hybrid-cloud design stays a technical question.
+
+## 2026-10-30 — A short visa question is not dropped
+
+"H-1B?" was dropped, so the previous answer stayed on screen. "Do you need an H-1B?", a green card, a visa, and commuting to the office were answered as long questions. They stay short logistics answers. "How would you opt for least privilege?" stays a scenario. "How does work authorization work?" stays technical.
+
+## 2026-10-30 — A spaced citizenship question stays a short logistics answer
+
+"Are you a u s citizen" was treated as a normal question, so it could run long. "Are you authorized to work in the U.S.?" did the same. Both stay logistics. "How does work authorization work?" stays a technical explanation. One hundred intent folds still pass.
+
+## 2026-10-30 — A limit before the question no longer swallows the ask
+
+"No downtime, how would you verify the remediation?" and "Without a restart, how would you patch the service?" were stored as the condition only, so the ask was dropped. The limit stays a condition and the question stays the question. "With no downtime, how would you..." is the same split.
+
+## 2026-10-30 — No downtime stays a condition of the question
+
+"How would you verify the remediation with no downtime?" kept the limit inside the ask, so it was not named as a condition. "There can be no downtime" before the question was skipped the same way. Both are now conditions. The ask itself stays. A "without ..." condition still keeps the ask.
+
+## 2026-10-30 — Two questions on screen are answered separately
+
+A screen capture that held two questions was one answer. Each Question block is now its own page. The options stay with their question. One question on screen is still one page. There is still no review dialog. The page stamp is kompas-20261030-screen.
+
+## 2026-10-30 — Two typed questions open two pages
+
+Typing "What is Kubernetes? What is Terraform?" kept both on one page. The box now uses the same cut as the microphone and WhatsApp. Each question gets its own page. A design followed by an explanation stays one page. One typed question still opens one page. The page stamp is kompas-20261030-typed.
+
+## 2026-10-30 — Two WhatsApp questions in one message are both answered
+
+The microphone already cut "What is Kubernetes? What is Terraform?" into two asks. WhatsApp sent that message as one turn, so the second ask was lost. WhatsApp now uses the same cut. A design followed by an explanation stays one answer. One question still sends one answer.
+
+## 2026-10-30 — An introduction and a request for questions are both kept
+
+"Tell me about yourself. What questions do you have?" was one closing question, so the introduction was dropped. Those two are now separate asks. A design followed by an explanation stays one question. Setup before "Any questions?" stays with that question. If both still arrive as one string, the answer introduces first and then asks one question about the team. The page stamp is kompas-20261030-both.
+
 ## 2026-10-29 — Go deeper must add a mechanism, not repeat the opening
 
 The depth flag already said deep. The prompt now says sentence one adds the mechanism or reason the previous answer did not give, and does not repeat that opening. A short follow-up such as "Why is that dangerous?" does not get that line.
@@ -10,6 +66,23 @@ The depth flag already said deep. The prompt now says sentence one adds the mech
 
 "Go deeper on that exception" and "Why is that dangerous?" were follow-ups, and the prompt still said the question was different and not to reuse the previous answer. A follow-up no longer gets that line. "What exactly is least privilege?" and "Elaborate on session recording" still do.
 
+## 2026-10-29 — Only the call audio opens a question, leaks judged by when words were said, and a turn gate
+
+While computer audio is captured, mic words never open a question; questionSource now goes through the computer-audio-is-interviewer mapping. With the mic only, the mic still opens questions, as before, and the session log says "mic-only". A mic line is judged a leak of the call audio by when its words were said, where both clips know it, and otherwise by when the text came back, as before; your own words said later, or in other words, are kept. Each heard line gets a logged turn gate: answer now, wait, or no answer needed. The gate only labels. When a press is turned away as "nothing question-like", pressing AI Answer again within 15 seconds answers those lines anyway. Every keep, drop, cut and gate decision is logged as a reason, a source and a length, with no words. Parakeet now gives up after 4 seconds instead of 15, and Whisper takes the clip. "Beyond trust", "git lab" and "sock two" are only repaired next to their tool words, so "went beyond trust" and "a sock two days ago" stay. A typed "Go deeper" keeps its full stop and is not made a question.
+
+**Offline stress, slice 2 v1 before, v2 after:** 50 calls: mic leak kept 48 to 0, filler that got "answer" 50 to 0, normal English repaired 50 to 0, typed statements made questions 50 to 0. 200 calls: 187 to 0, 200 to 0, 200 to 0, 200 to 0. Your own answers dropped, questions labelled "no answer needed", and tool names missed were 0 before and after. Before, there was no gate, so all filler counts as a miss. The mic never opened a question in a call before or after, because questionSource already preferred computer audio; v2 makes it go through the mapping and log it.
+
+## 2026-10-29 — Two questions with no full stops, "Explain the Venafi part", and the opening questions
+
+Read-only replay of the live build kompas-20261029-split found three cuts that merged questions. Speech-to-text often drops every full stop, so "what is cyberark what is okta" was one card; it is now two. A new question starts mid-sentence only at a strong opener ("what is", "how do", "why did", "tell me about", "go deeper on", "explain the … part") after a finished ask of three words or more, and never after a word that keeps the clause going, so "tell me about zscaler and why did you choose it", "how do you handle what happens when a token expires", "tell me about a time when you failed", "what is the difference between sso and saml" and "walk me through how you would migrate what is left" each stay one card. "Tell me about your PKI work. Explain the Venafi part." is now two cards, the same as "Go deeper on that exception", while "Explain that part" and "Go deeper" stay with their question (before, "Explain that part" was wrongly its own card). "Tell me about yourself. Why do you want this job? Where do you see yourself in five years?" is now three cards; the word "this" in "this job" had kept the second question attached. Two "How do you…" questions about one subject still stay together. Failsafe: the old cut runs first; if the new cut throws or would lose a word, the old cut is used. Desktop (public/kompas/app.js) and server (src/lib/kompasAnswer.ts) cut the same way, checked on every stress case.
+
+**Offline cut stress, branch 0b655ef before, this slice after:** 50 stretches: merged 10 to 0, over-split 2 to 0, words dropped 0 to 0, desktop and server different 0 to 0. 200 stretches: merged 42 to 0, over-split 6 to 0, dropped 0 to 0, different 0 to 0. 21 cases times 10 variants (210 variants; the 200 run covers 200 of them in order) (lower case, no punctuation, "um", "so", "okay so", extra spaces, one breath). The cases were written alongside the fix, so these are not blind numbers. Not a live microphone session. Not deployed.
+
+## 2026-10-29 — The call audio heard again through the mic, and a typed "And why?"
+
+Computer audio is the interviewer, the microphone is you, and typed text is your own question. When the call came back through the mic within about 1.5 seconds, a short line like "Can you do that?" got through, because the 30-second echo rule had no words to compare. A mic line that repeats what the call said within 1.5 seconds is now dropped. Your own answer, said later or in other words, is kept. A typed "And why?" after an answer got its own card with no subject. It now gets its own card about the question on that page: "What is NLA? And why?". "Go deeper on that exception" still names its own subject and stands alone. Twenty-one more mishearings are repaired on the server and on the desktop, such as "sail point", "my tree attack", "resid jewel risk", "sock two" and "intra id". A Parakeet speech switch is added, off by default. It needs KOMPAS_STT_PROVIDER=parakeet and KOMPAS_PARAKEET_URL, and any Parakeet failure falls back to Whisper. With the switch off, Whisper's result is unchanged.
+
+**Offline stress, master 9f30cb7 before, this branch after:** 50 sequences: bleed leaked 2 to 0, typed follow-ups with no subject 23 to 0, misheard 15 of 26 to 0, your own answers dropped 0 to 0. 200 sequences: bleed leaked 14 to 0, typed follow-ups with no subject 89 to 0, misheard 80 of 105 to 0, your own answers dropped 0 to 0. Not a live microphone session. Not deployed: pushed as a branch only.
 ## 2026-10-29 — A named follow-up in the same breath is the next question
 
 "What is NLA? Go deeper on that exception." was one question. The second sentence names its own subject, so it is cut apart. "Go deeper" by itself stays with the question it follows. The page stamp is kompas-20261029-split. Fifty heard sequences still cut apart.
@@ -26,9 +99,66 @@ The depth flag already said deep. The prompt now says sentence one adds the mech
 
 "Go deeper" and "Explain that" were glued onto the previous question, and the quoted "what is" made the follow-up a definition again. The follow-up is classified from the words before that quote. "Which of those" stays a comparison. "What is NLA" by itself stays a definition. One hundred intent folds still pass.
 
+## 2026-10-29 — Kompas relevance folds 1 to 14: repair is visible, the number guard keeps structure, code comes first
+
+**Done on the box.** Cloud agents failed at startup. Same branch as PR #124, with master merged in. The fold log is in `docs/kompas-relevance-playbook.md`.
+
+- The repair prompt no longer says "Do not shorten it" against the tangent rule and the word ceiling.
+- The second repair attempt builds on the best rewrite.
+- Every answer carries a `repair` outcome, and `survived` shows when a later step cut a landed repair.
+- The number guard passes versions such as 5.4.6 and the interviewer's own figures, and says "noticeably", not "by noticeably".
+- Code questions are told to give the fenced block first at every level.
+- Multi-part and "go deeper" questions get the larger band.
+- The offline draft uses the resume's experience lines and never the header.
+- `scripts/kompas-live-eval.mjs` now runs the hitachi-grc chain and checks the pieces each question names.
+
+**Tests (code-level only, not live answer quality).**
+- The CI node test steps: 745 pass, 0 fail. This includes the new `kompas-relevance-folds.test.mjs` (16) and `kompas-guards.test.mjs` (6), both added to CI.
+- `node scripts/kompas-baseline.mjs`: 15 checks hold.
+- `tsc --noEmit`: clean.
+- `npm run lint`: 0 errors, 260 warnings that were already there.
+
+**Not tested.** No live answer was measured, because `KOMPAS_EVAL_TOKEN` was not set. Desktop was not checked. Deploy was not checked. GitHub CI has not run on these commits, because no push was possible from the box.
+
+## 2026-10-29 — Kompas relevance fold: dissection, mode ceilings, master prompt v1
+
+**Checked first.** Master and production were the same commit, `4f70b96`. Deployment `dpl_BeCwCn5npGE1rXmJ1Hvi2SvVDJ68` was READY and held `job-dashboard-fawn.vercel.app`. Pull requests 111, 112, and 113 are already inside that commit. `POST /api/answer` on that build returned 404. `POST /api/kompas/answer` returned 401. The page rewrites the first path in the browser. Open pull requests 89, 32, and 23 are not in production. They are not the chief answer algorithm.
+
+**This fold.** The question is dissected into its shape, its own keywords, and a ban list of tools that are not in the question or the resume. The three modes have word ceilings at least 50 percent apart. A long answer is cut to that ceiling. A banned tool is dropped. Provider error text is not returned as the answer, and the page will not paint it. `/api/answer` now hits the same engine as `/api/kompas/answer`. The spoken spec is `docs/kompas/MASTER_PROMPT_v1.md`. The handoff is `docs/kompas-relevance-playbook.md`.
+
+**Tests.** Code tests cover the bands, the ban list, the trim, the provider-error refusal, four hand-written reference answers against a fictional resume, and the live-eval script refusing to run with no token. Not a live model score. `KOMPAS_EVAL_TOKEN` was not set.
+
+**Deploy.** Not claimed in this note until the pull request is merged and the new production deployment is READY.
+
+**Offline stress rounds 6 and 7 (local, not pushed).** Merged master (#125). Rounds 1 to 5 went from 11 failing to 0 of 204. Round 6 added 90 checks and round 7 added 33. On first run, round 6 had 11 failing and round 7 had 2 failing. All 327 now pass. Fixed: "resid jewel risk" is repaired to residual risk, and a short "what's X" is a definition. The candidate's name or he/she in a past-tense sentence is rewritten to "I". Any other third-person voice is flagged to the repair loop. Each mode is at least 1.5 times the one below. The same answer to a different question, compared against the last three turns, is flagged to the repair loop. Sentences said in the last three answers are dropped. Five more asides are treated as small talk. "HTTP 503 Service Unavailable" and "The upstream request timed out." are refused. Misheard jargon is grounded on the repaired ask. Without history, the offline stand-in still gives alike drafts for 46 near-duplicate pairs. This is reported as information, not as a failure. Offline and code-level only. Not live answer quality.
+
 ## 2026-10-29 — Same title, the folder that names the speciality stays
 
 Two files both titled Security Engineer were a tie for Information Security AI Engineer. The one in AI Security and Governance stays. The one in Application and API Security does not, when the job names AI. A title that already names the speciality still wins on the title. A Security Analyst in an Identity folder is still kept for a Security Analyst job, because that job names no extra speciality.
+
+## 2026-10-29 — Job-post terms go back on the skills line, and a repeat does not pay twice
+
+**Asked:** tailored files were covering about 47% of the job post, and a run could sit on `/api/tailor` until the request died. Eshwar's decision: put the missing job-post terms back on the skills line, labelled as from the job post, the way `2cdb8db` did, after `94dacbf` limited that line to terms the resume already showed. Also cache every finished result, and do not start a second paid run while the same request is already running. Twenty WhatsApp screenshots from the live bot are the same failure.
+
+**Measured on the sample Word file, AI writer off** (scripts/tests/helpers/resume-floor-run.mjs, before this change / after):
+
+| Job | Before | After |
+|---|---|---|
+| peoplesoft | 15.0% | 100% |
+| zerotrust | 0.0% | 100% |
+| clearance | 80.0% | 100% |
+| benefits | 14.3% | 100% |
+| peoplesoft, summary left open | 15.0% | 100% |
+
+Name, email, dates, and experience bullets were unchanged. Bold skill headings stayed bold. Terms the floor wrote are named in the reply as from the job post. A term that lands in an experience bullet is still a claim and still blocks the file.
+
+**Also:** a finished tailor is cached at any coverage (cache generation 20). An identical request that arrives while the first is running shares that result. WhatsApp does not send a file under 95% of the job post. "Make another one with selecting Cybersecurity Analyst resume" does not resend the 19 Oct file and does not fall through to a different resume. A storage fault on "use 1" says the email choice was not saved. A Kompas throw does not eat the job description.
+
+**Checked:** resume-floor, keyword-targets, tailor-lanes, WhatsApp contract, acceptance, recovery, library, 5-fold, and single-request, plus master's role-match and typed-question checks after merging `d79727c`: 153/153 with the ts-alias loader. Not a live WhatsApp send. Not a live model run. Not on production until this branch is merged and the Vercel deploy succeeds.
+
+**Still open:** the exact chat line "I couldn't complete a reliable tailored resume..." is not in this source; the live refusal is the quality stop. "No AI service is switched on" at 9:43 AM needs the provider error from that request; this change does not invent a key. A MarketFit storage outage can still stop a message. `/api/tailor` still holds one request open for up to 280s inside a 300s function. That freeze is not redesigned here.
+
+**Next:** after deploy, resend the Fairview and Honeywell posts and read the caption. Then split `/api/tailor` so the browser is not held for the whole model ladder.
 
 ## 2026-10-29 — A named short question is not glued on the desktop
 

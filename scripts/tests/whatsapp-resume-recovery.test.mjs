@@ -12,8 +12,8 @@ const draft = (overrides = {}) => ({
 })
 
 const scenarios = [
-  ['98% evidenced skills, 60% overall JD: honest incomplete match is eligible', draft(), true],
-  ['95% evidenced skills with explicit unsupported gaps is eligible', draft({ supported_coverage: 95, quality: resumeQuality({ matched: 95, total: 100, missing: ['gap'] }) }), true],
+  ['60% of the job post is not delivered', draft(), false],
+  ['95% of the job post with one named gap is eligible', draft({ coverage: 95, supported_coverage: 95, quality: resumeQuality({ matched: 95, total: 100, missing: ['gap'] }) }), true],
   ['94.9% evidenced skills must not be delivered', draft({ supported_coverage: 94.9 }), false],
   ['90% evidenced skills must not be delivered', draft({ supported_coverage: 90 }), false],
   ['partial experience rewrite must not be delivered', draft({ partial: { failed: 1, total: 5 } }), false],
@@ -26,7 +26,7 @@ const scenarios = [
   ['NaN coverage must not pass', draft({ supported_coverage: Number.NaN }), false],
   ['zero evidence requirements must not count as a 100% match', draft({ supported_coverage: 100, quality: resumeQuality({ matched: 0, total: 0, missing: [] }) }), false],
   ['below-floor quality status must not be overridden by a percentage', draft({ supported_coverage: 100, quality: resumeQuality({ matched: 80, total: 100, missing: ['gap'] }) }), false],
-  ['a completed 100% evidenced rewrite is eligible', draft({ supported_coverage: 100, quality: resumeQuality({ matched: 10, total: 10, missing: [] }) }), true],
+  ['a completed rewrite at 100% of the job post is eligible', draft({ coverage: 100, supported_coverage: 100, quality: resumeQuality({ matched: 10, total: 10, missing: [] }) }), true],
 ]
 for (const [name, result, expected] of scenarios) {
   test('WhatsApp quality regression: ' + name, () => {

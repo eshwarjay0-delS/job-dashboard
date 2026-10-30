@@ -2,10 +2,38 @@
 import {createHash} from "node:crypto";
 import {edits,termCounts,percentile} from "./kompas-voice-metrics-core.mjs";
 const rate=(a,b)=>b?a/b:null;
+/** Reject baseline values that could hide a regression behind a null or impossible rate. */
+function validBaselineMetrics(metrics,coverage){
+  if(!metrics||typeof metrics!=="object"||!coverage)return false;
+  const denominators={
+    wer:"referenceWords",deletionRate:"referenceWords",substitutionRate:"referenceWords",
+    insertionRate:"referenceWords",technicalTermRecall:"technicalOccurrences",
+    zeroEditRate:"editLabels",speakerAttribution:"speakerLabels",
+    speakerPredictionRate:"speakerLabels",p50LatencyMs:"latencySamples",
+    p95LatencyMs:"latencySamples",silenceHallucinationRate:"silentClips",
+  };
+  const unbounded=new Set(["wer","insertionRate","p50LatencyMs","p95LatencyMs"]);
+  for(const [key,denom] of Object.entries(denominators)){
+    const value=metrics[key],hasData=coverage[denom]>0;
+    if(!hasData){if(value!==null)return false;continue;}
+    if(typeof value!=="number"||!Number.isFinite(value)||value<0)return false;
+    if(!unbounded.has(key)&&value>1)return false;
+  }
+  return !(metrics.p50LatencyMs!==null&&metrics.p95LatencyMs!==null&&
+    metrics.p50LatencyMs>metrics.p95LatencyMs);
+}
+
+// Missing predictions are legitimate abstentions; malformed or blank labels are not.
+function speakerLabel(value,field){
+  if(value===undefined||value===null)return null;
+  if(typeof value!=="string"||!value.trim())throw Error("Invalid "+field+" label");
+  return value;
+}
+
 export function evaluate(dataset,baseline=null){
   if(!dataset||!dataset.datasetId||!dataset.revision||!Array.isArray(dataset.samples)||!dataset.samples.length)
     throw Error("Dataset ID, revision and nonempty samples required");
-  const ids=new Set(),sum={referenceWords:0,substitutions:0,deletions:0,insertions:0,expected:0,recognized:0,zero:0,edited:0,speakers:0,correct:0,silent:0,hallucinated:0},times=[];
+  const ids=new Set(),sum={referenceWords:0,substitutions:0,deletions:0,insertions:0,expected:0,recognized:0,zero:0,edited:0,speakers:0,predicted:0,correct:0,silent:0,hallucinated:0},times=[];
   for(const [i,row] of dataset.samples.entries()){
     if(!row||row.consent!==true)throw Error("Sample "+(i+1)+": explicit evaluation consent required");
     if(typeof row.id!=="string"||!row.id||ids.has(row.id))throw Error("Sample "+(i+1)+": invalid or duplicate ID");
@@ -18,7 +46,13 @@ export function evaluate(dataset,baseline=null){
     for(const k of ["referenceWords","substitutions","deletions","insertions"])sum[k]+=e[k];
     sum.expected+=t.expected;sum.recognized+=t.recognized;
     if(row.editCount!==undefined){sum.edited++;if(row.editCount===0)sum.zero++}
-    if(typeof row.referenceSpeaker==="string"&&typeof row.predictedSpeaker==="string"){sum.speakers++;if(row.referenceSpeaker===row.predictedSpeaker)sum.correct++}
+    const referenceSpeaker=speakerLabel(row.referenceSpeaker,"reference speaker");
+    const predictedSpeaker=speakerLabel(row.predictedSpeaker,"predicted speaker");
+    if(referenceSpeaker!==null){
+      // A missing prediction is an attribution failure, not an unmeasured clip.
+      sum.speakers++;
+      if(predictedSpeaker!==null){sum.predicted++;if(referenceSpeaker===predictedSpeaker)sum.correct++}
+    }
     if(row.latencyMs!==undefined)times.push(row.latencyMs);
     if(e.referenceWords===0){sum.silent++;if(e.insertions)sum.hallucinated++}
   }
@@ -32,17 +66,33 @@ export function evaluate(dataset,baseline=null){
       speaker:typeof row.referenceSpeaker==="string"?row.referenceSpeaker:null,
     })).sort((a,b)=>a.id.localeCompare(b.id))
   )).digest("hex");
+  // Bind measurement-label availability to each sample, not just total counts.
+  // Otherwise a candidate can drop slow clips' latency or move edit/speaker
+  // labels between clips and report a misleading improvement.
+  // This fingerprint contains only IDs and label-presence booleans.
+  const measurementSetSha256=createHash("sha256").update(JSON.stringify(
+    dataset.samples.map(row=>({
+      id:row.id,
+      hasEditLabel:row.editCount!==undefined,
+      hasReferenceSpeaker:typeof row.referenceSpeaker==="string",
+      hasLatency:row.latencyMs!==undefined,
+    })).sort((a,b)=>a.id.localeCompare(b.id))
+  )).digest("hex");
   const metrics={wer:rate(sum.substitutions+sum.deletions+sum.insertions,sum.referenceWords),
     deletionRate:rate(sum.deletions,sum.referenceWords),substitutionRate:rate(sum.substitutions,sum.referenceWords),
     insertionRate:rate(sum.insertions,sum.referenceWords),technicalTermRecall:rate(sum.recognized,sum.expected),
     zeroEditRate:rate(sum.zero,sum.edited),speakerAttribution:rate(sum.correct,sum.speakers),
+    speakerPredictionRate:rate(sum.predicted,sum.speakers),
     p50LatencyMs:percentile(times,.5),p95LatencyMs:percentile(times,.95),
     silenceHallucinationRate:rate(sum.hallucinated,sum.silent)};
-  const out={schemaVersion:1,datasetId:dataset.datasetId,revision:dataset.revision,sampleCount:dataset.samples.length,sampleSetSha256,referenceSetSha256,
+  const out={schemaVersion:2,datasetId:dataset.datasetId,revision:dataset.revision,sampleCount:dataset.samples.length,sampleSetSha256,referenceSetSha256,measurementSetSha256,
     coverage:{referenceWords:sum.referenceWords,technicalOccurrences:sum.expected,editLabels:sum.edited,speakerLabels:sum.speakers,latencySamples:times.length,silentClips:sum.silent},metrics};
   if(baseline){
-    if(baseline.schemaVersion!==1||baseline.datasetId!==out.datasetId||baseline.revision!==out.revision||baseline.sampleCount!==out.sampleCount||baseline.sampleSetSha256!==sampleSetSha256||baseline.referenceSetSha256!==referenceSetSha256)
+    if(baseline.schemaVersion!==2||baseline.datasetId!==out.datasetId||baseline.revision!==out.revision||baseline.sampleCount!==out.sampleCount||baseline.sampleSetSha256!==sampleSetSha256||baseline.referenceSetSha256!==referenceSetSha256||baseline.measurementSetSha256!==measurementSetSha256)
       throw Error("Baseline mismatch: dataset, revision or sample count");
+    if(!baseline.coverage||Object.entries(out.coverage).some(([key,count])=>baseline.coverage[key]!==count)||
+      !validBaselineMetrics(baseline.metrics,baseline.coverage))
+      throw Error("Baseline mismatch: measurement coverage or metric validity");
     out.deltaFromBaseline=Object.fromEntries(Object.entries(metrics).map(([k,v])=>[k,v===null||typeof baseline.metrics?.[k]!=="number"?null:v-baseline.metrics[k]]));
   }
   return out;

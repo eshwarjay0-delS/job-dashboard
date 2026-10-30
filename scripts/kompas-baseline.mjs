@@ -35,21 +35,25 @@ const ok = (v, what) => { if (!v) throw new Error(what) }
 // ---------------------------------------------------------------- server modules, compiled in memory
 let ts = null
 try { ts = require('typescript') } catch { /* reported below */ }
-const loadedTs = new Map()
+// A server module may import a sibling as "./x.ts" or "./x" (kompasDesktopResponse imports kompasDissection, which
+// imports kompasRelevance). Plain require cannot load .ts, so a relative import is compiled the same way, once.
+const loaded = new Map()
 function loadTs(path) {
-  if (loadedTs.has(path)) return loadedTs.get(path)
+  if (loaded.has(path)) return loaded.get(path)
   const out = ts.transpileModule(read(path), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText
   const mod = { exports: {} }
-  loadedTs.set(path, mod.exports)
-  const dir = path.split('/').slice(0, -1).join('/')
-  const localRequire = (spec) => {
-    if (spec.startsWith('.')) {
-      const rel = spec.replace(/^\.\//, '').replace(/\.js$/, '')
-      return loadTs(`${dir}/${rel.endsWith('.ts') ? rel : rel + '.ts'}`)
-    }
-    return require(spec)
+  loaded.set(path, mod.exports)
+  const dir = path.slice(0, path.lastIndexOf('/') + 1)
+  const local = (spec) => {
+    if (spec.startsWith('@/')) spec = 'src/' + spec.slice(2)
+    else if (spec.startsWith('./') || spec.startsWith('../')) spec = new URL(spec, new URL(dir, 'file:///')).pathname.slice(1)
+    else return require(spec)
+    spec = spec.replace(/\.js$/, '')
+    const file = spec.endsWith('.ts') ? spec : `${spec}.ts`
+    return loadTs(file)
   }
-  vm.runInNewContext(out, { module: mod, exports: mod.exports, require: localRequire, console })
+  vm.runInNewContext(out, { module: mod, exports: mod.exports, require: local, console })
+  loaded.set(path, mod.exports)
   return mod.exports
 }
 const A = ts ? loadTs('src/lib/kompasAnswer.ts') : null
@@ -107,7 +111,7 @@ function livePage(engine = ECHOED) {
     cards: [{ question: 'Ready', answer: ['Press Start — both your mic and the call audio are on by default.'] }], idx: 0,
     box: { value: '' },
     pendingHeard() { return s.transcript.filter((t) => t.seq > s.answeredSeq) },
-    updatePending() {}, flushHeard: async () => {}, setChat() {}, logEvent() {}, renderCard() {}, toTop() {},
+    updatePending() {}, flushHeard: async () => {}, setChat() {}, logEvent() {}, logDecision() {}, renderCard() {}, toTop() {},
     animateCard() {}, clearTimeout() {}, plainAnswer: (a) => (Array.isArray(a) ? a.join(' ') : String(a)), questionSource: () => s.source,
     // A crash inside AI Answer lands in status(..., "err"): that fails the replay instead of passing silently.
     status(msg, kind) { if (kind === 'err') errors.push(String(msg)) },

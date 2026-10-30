@@ -9,6 +9,7 @@ import { pdfText } from "@/lib/pdf-text"
 import { downloadMedia } from "@/lib/whatsapp"
 import { sharedKompasStore } from "@/lib/kompas-session-store"
 import { sharedKompasTurn } from "@/lib/kompas-shared-turn"
+import { splitDistinctAsks } from "@/lib/kompasAnswer"
 import { classifyKompasPastedSource, kompasTransition, type KompasInput } from "@/lib/whatsapp-kompas"
 
 type Message = Record<string, unknown>
@@ -256,21 +257,38 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
       return true
     }
     if (transitioned.action === "answer" && transitioned.question) {
-      const result = await sharedKompasTurn(owner, original.id, original.revision, requestId, transitioned.question)
-      if (result.status === "answered" && result.text && result.session) {
-        const [now, stored] = await Promise.all([
-          readChannel(owner, from), sessions.read(owner, original.id),
-        ])
-        // Revert, relink, updated sources, duplicate claims or later responses must never leak stale text.
-        if (now.sessionId === channel.sessionId && stored?.revision === result.session.revision)
+      // The microphone already answers each question in one breath. A WhatsApp
+      // message used to send both to one turn, so the second ask was lost.
+      const asks = splitDistinctAsks(transitioned.question)
+      const questions = asks.length ? asks : [transitioned.question]
+      let revision = original.revision
+      for (let i = 0; i < questions.length; i++) {
+        const turnId = i === 0 ? requestId : `${requestId}:${i}`.slice(0, 256)
+        const result = await sharedKompasTurn(owner, original.id, revision, turnId, questions[i])
+        if (result.status === "answered" && result.text && result.session) {
+          const [now, stored] = await Promise.all([
+            readChannel(owner, from), sessions.read(owner, original.id),
+          ])
+          // Revert, relink, updated sources, duplicate claims or later responses must never leak stale text.
+          if (now.sessionId !== channel.sessionId || stored?.revision !== result.session.revision) return true
           await send(result.text)
-      } else if (result.status === "unavailable") {
-        await send("Kompas could not answer right now. Your question was not added to the conversation. Please retry.")
-      } else if (result.status === "repeated") {
-        await send("This question is different from the last one, and the answer came back the same. I did not send that copy. Please send the question once more.")
-      } else {
+          revision = result.session.revision
+          continue
+        }
+        if (result.status === "skipped" && result.session) { await send("Personal logistics, not answered."); revision = result.session.revision; continue }
+        if (result.status === "unavailable") {
+          await send("Kompas could not answer right now. Your question was not added to the conversation. Please retry.")
+          return true
+        }
+        if (result.status === "repeated") {
+          await send("This question is different from the last one, and the answer came back the same. I did not send that copy. Please send the question once more.")
+          const stored = await sessions.read(owner, original.id)
+          if (stored && stored.revision !== revision) revision = stored.revision
+          continue
+        }
         const now = await readChannel(owner, from)
         if (now.sessionId === channel.sessionId) await send("This session changed or has an answer in progress. Please resend the question.")
+        return true
       }
       return true
     }

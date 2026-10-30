@@ -45,10 +45,12 @@ import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_R
 import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
 import { madeMeetsFloor } from "@/lib/made-floor"
 import { acceptableWhatsAppResume, whatsappResumeRejectionReasons } from "@/lib/whatsapp-resume-acceptance"
-import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
+import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, hasResumeRecoveryForJD, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
+import { recoveryTailorBudget, RECOVERY_MIN_TAILOR_MS } from "@/lib/whatsapp-recovery-budget"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
 import { chooseResume, type Prefer } from "@/lib/library-choose"
+import { uploadStale } from "@/lib/whatsapp-upload-age"
 import { titlesOf, parseInstruction, parseQuestion, splitTailInstruction, type Instruction } from "@/lib/role-match"
 import { getApprovalCard, saveApprovalCard, parseCardButton, deliverApprovalCard, sendGmailDraft, updateGmailDraft, deleteGmailDraft, sendLocked, keepOpenFlags } from "@/lib/chief-approvals"
 // The first words the Chief answers; the module itself is loaded only when one is sent.
@@ -113,6 +115,8 @@ type Session = {
   pending?: { jd: string; jdId: string; slots: string[]; at: number; hint?: string }
   /** The last job made from Files, for "redo" and "make another one with the X resume". `used`: the resume it started from. */
   last?: { jd: string; email: string; at: number; used?: string }
+  /** Current profile selection; never rewrites the immutable last JD/source for recovery. */
+  preferredEmail?: string
   /** Approval card awaiting the owner's edited draft text (Phase 4, chief-approvals). */
   awaitingEditCardId?: string
 }
@@ -446,14 +450,21 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
   // Kompas has an explicit opt-in command and an independent, account-owned session.
   // All other WhatsApp traffic continues through the original MFit resume workflow.
   if (!profileCommand && (type === "text" || type === "document")) {
-    const consumed = await handleWhatsAppKompas({
-      from, owner: userId, verified, requestId: String(msg.id || ""), msg,
-      send: async message => {
-        // A verified number relinked during generation cannot receive the old account's answer.
-        const latest = await resolveWhatsAppUser(from)
-        if (latest.who?.own && latest.who.userId === userId) await sendText(from, message)
-      },
-    })
+    let consumed = false
+    try {
+      consumed = await handleWhatsAppKompas({
+        from, owner: userId, verified, requestId: String(msg.id || ""), msg,
+        send: async message => {
+          // A verified number relinked during generation cannot receive the old account's answer.
+          const latest = await resolveWhatsAppUser(from)
+          if (latest.who?.own && latest.who.userId === userId) await sendText(from, message)
+        },
+      })
+    } catch (error) {
+      // A Kompas storage fault must not eat a job description or a profile switch.
+      // The channel already answers when it knows the session cannot be read.
+      console.error("[whatsapp] kompas handoff failed", String(error).slice(0, 160))
+    }
     if (consumed) return
   }
 
@@ -544,11 +555,15 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
         const { slots } = await emailSlots(userId)
         const email = choiceIn(text.replace(/^(?:switch(?:\s+to)?|profile|email)\s+/i, ""), slots)
         if (email) {
-          const cur = await loadSession(from)
-          remember(cur, email)
-          await saveSession(from, cur)
-          await pinProfile(from, email)
-          return sendText(from, `Got it: every job now starts from your *${email}* resumes. Send a job description whenever you're ready.`)
+          try {
+            const cur = await loadSession(from)
+            remember(cur, email)
+            await saveSession(from, cur)
+            await pinProfile(from, email).catch(() => {})
+            return sendText(from, `Got it: every job now starts from your *${email}* resumes. Send a job description whenever you're ready.`)
+          } catch {
+            return sendText(from, "I could not save that email choice just now. Send *use 1* again in a minute. Nothing else was changed.")
+          }
         }
       }
       // "Make another one", "use the SOC resume": the last job again, from the resume named (before the profile
@@ -609,6 +624,12 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     session.jdId = String(msg.id)
     delete session.pending
     await saveSession(from, session)
+    // A pending upload older than WHATSAPP_UPLOAD_MAX_AGE (30 min) is dropped so the library chooses (30 Oct 2026).
+    if (session.resumePath && uploadStale(session.resumeAt)) {
+      console.info("[whatsapp] stale upload dropped", { ageMin: Math.round((Date.now() - (session.resumeAt || 0)) / 60000) })
+      delete session.resumePath; delete session.resumeName; delete session.resumeAt; delete session.resumeFiled
+      await saveSession(from, session)
+    }
     if (session.resumePath) return generate(from, session, userId)
     // A resume sent with the job description arrives as its own message a second or two later, and it wins: without
     // this short wait the run from Files claimed the job first and the resume was ignored without a word (found 19 Oct
@@ -687,6 +708,7 @@ type FromFiles = { userDir: string; email: string; said: string; depth: number; 
 async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS, files?: FromFiles, quiet = false) {
   const startedAt = Date.now()
   if (!session.jd || !session.resumePath) return quiet ? undefined : sendText(from, HELP)
+  console.info("[whatsapp] run source", { via: files ? "library" : "upload", name: session.resumeName ?? null, rel: files?.rel ?? null, ageMin: session.resumeAt ? Math.round((Date.now() - session.resumeAt) / 60000) : null })
   const job = createHash("sha256").update(`${from}:${session.jdId || session.jd}`).digest("hex")
   // Persist input before clearing the interactive session. Retries use the exact chosen original.
   const queued = await enqueueResumeRecovery({
@@ -752,7 +774,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
 
   if (!quiet) await sendText(from, files
     ? `Updating ${files.said}. A Word file is sent only if this run finishes cleanly.`
-    : "Updating your resume. A Word file is sent only if this run finishes cleanly.")
+    : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. A Word file is sent only if this run finishes cleanly.`)
 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd }).catch(() => ({ role: "", company: "", location: "" }))
@@ -799,7 +821,10 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
 
   // A cached, incomplete result must never permanently block the same JD.
   // Give the engine one fresh full rewrite while there is enough request budget.
-  const firstRejected = !acceptableWhatsAppResume(result)
+  // Under 95% of the job post a complete file is delivered with the shortfall listed (TAILOR_DELIVER_WITH_SHORTFALL), so
+  // it still gets the one fresh rewrite first, and the acceptable pass with the higher coverage is the one sent.
+  const belowTarget = (r: TailorResult) => Number.isFinite(r.coverage) && r.coverage! < 95
+  const firstRejected = !acceptableWhatsAppResume(result) || belowTarget(result)
   if (firstRejected && maxMs >= 120_000) {
     const elapsed = Date.now() - startedAt
     const remaining = maxMs - elapsed - 15_000
@@ -812,8 +837,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
           mode: "full", noCache: true, maxMs: remaining,
           sections: { summary: false, skills: true, experience: true },
         })
-        if (acceptableWhatsAppResume(fresh)) result = fresh
-        else {
+        if (acceptableWhatsAppResume(fresh) && (!acceptableWhatsAppResume(result) || (fresh.coverage ?? 0) > (result.coverage ?? 0))) result = fresh
+        else if (!acceptableWhatsAppResume(result)) {
           const priorBlockers = whatsappResumeRejectionReasons(result).length
           const freshBlockers = whatsappResumeRejectionReasons(fresh).length
           // At equal supported coverage, retain the pass with fewer genuine
@@ -844,6 +869,11 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       blockers: whatsappResumeRejectionReasons(result),
       roleCount: result.role_alignment?.length ?? 0,
       unverifiedCount: result.unverified_added_keywords?.length ?? 0,
+      // Why the floor placed nothing, decided in one look next time. Counts and codes only, no resume text.
+      placedFromJd: result.placed_from_jd?.length ?? 0,
+      unplacedReason: result.jd_terms_unplaced_reason ?? null,
+      bulletsReverted: result.bullets_reverted_for_jd_terms ?? 0,
+      cached: !!result.cached,
     })
     await sayOutcome(qualityStop(result))
     return;
@@ -856,7 +886,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   }
 
   const source = await readPath(session.resumePath)
-  if (!source || !sameResumeIdentity(await extractText(source), await extractText(file))) {
+  if (!source || !(await sameResumeFacts(source, file))) {
     failureCode = "identity_mismatch"
     await sayOutcome("I did not send a file. The draft changed the name or email on the resume, so I stopped. Your original resume and this job are saved for another try.")
     return;
@@ -955,13 +985,15 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
 // ── From the person's Files ─────────────────────────────────────────────────────
 /** The email this number used last, while it still holds resumes. */
 function remembered(session: Session, slots: string[]): string {
-  const was = String(session.last?.email || "").toLowerCase()
+  const was = String(session.preferredEmail || session.last?.email || "").toLowerCase()
   return was && live(slots).includes(was) ? was : ""
 }
 
 /** Every next job starts from this email until the person says otherwise. A job made before stays redo-able. */
 function remember(session: Session, email: string) {
-  session.last = { jd: session.last?.jd || "", email, at: Date.now(), ...(session.last?.used ? { used: session.last.used } : {}) }
+  // Changing accounts must not re-date the previous JD or relabel its source resume.
+  // The standing selection is also persisted by pinProfile(), separately.
+  session.preferredEmail = email.toLowerCase()
 }
 
 // Standing profile. A finished run rewrites session.last with the email THAT run used.
@@ -1015,13 +1047,17 @@ async function bootstrapLegacyResumeFailures(): Promise<number> {
     if (!abs.startsWith(path.resolve(userDir) + path.sep) || !(await existsPath(abs))) continue
     const marker = "whatsapp/legacy-resume-recovery/" + from + "-" + jobKeyOf(last.jd)
     if (await blob.exists(marker)) continue
+    // The original webhook may already have enqueued this JD under its Meta message ID.
+    // Never create a second recovery job even when that one is awaiting a callback.
+    if (await hasResumeRecoveryForJD(from, userId, last.jd)) continue
     let genIndex: { key: string }[] = []
     try { genIndex = JSON.parse((await blob.getText(genDir(from) + "/_index.json")) || "[]") as { key: string }[] } catch { continue }
     const sent = await Promise.all(genIndex.slice(-30).map(async g => {
       try { const raw = await blob.getText(g.key); return raw ? JSON.parse(raw) as Gen : null } catch { return null }
     }))
     if (sent.some(g => g && g.jd === last.jd && g.createdAt >= last.at - 60_000)) continue
-    const jdId = "legacy-" + last.at
+    // A profile switch must not change the identity of this legacy job.
+    const jdId = "legacy-" + jobKeyOf(last.jd)
     const id = createHash("sha256").update(from + ":" + jdId).digest("hex")
     if (await blob.exists("whatsapp/resume-recovery/" + id + ".json")) continue
     await enqueueResumeRecovery({ id, from, userId, jd: last.jd, jdId, resumePath: abs,
@@ -1044,7 +1080,7 @@ async function recoverResumeJobs(request: NextRequest) {
     } catch { /* marker only */ }
   }
   try {
-    const res = await recoverResumeJobsInner(request)
+    const res = await recoverResumeJobsInner(request, startedAt, mark)
     if (res.status !== 401) await mark(res.ok ? "ok" : "http_" + res.status, await res.clone().json().catch(() => ({})))
     return res
   } catch (error) {
@@ -1052,12 +1088,17 @@ async function recoverResumeJobs(request: NextRequest) {
     throw error
   }
 }
-async function recoverResumeJobsInner(request: NextRequest) {
+async function recoverResumeJobsInner(request: NextRequest, startedAt: number, progress: (outcome: string, counts: unknown) => Promise<void>) {
   const secret = process.env.CRON_SECRET || ""
   if (secret.length < 16 || request.headers.get("authorization") !== "Bearer " + secret)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  // Checkpoint before legacy storage scans: a platform timeout must not look like a cron that never ran.
+  console.info("[whatsapp] resume recovery cron started")
+  await progress("running", { stage: "authenticated" })
   const bootstrapped = await bootstrapLegacyResumeFailures()
+  await progress("running", { stage: "bootstrapped", bootstrapped })
   const jobs = await dueResumeRecoveries(1)
+  await progress("running", { stage: "queue_selected", bootstrapped, due: jobs.length })
   let attempted = 0
   let accepted = 0
   let handsetConfirmed = 0
@@ -1084,15 +1125,25 @@ async function recoverResumeJobsInner(request: NextRequest) {
         continue
       }
     }
+    // Bootstrap and queue enumeration consume the SAME 300-second function budget.
+    // Leave time for quality checks, Meta upload, state writes and a final count log.
+    const budget = recoveryTailorBudget(startedAt)
+    if (budget < RECOVERY_MIN_TAILOR_MS) {
+      console.warn("[whatsapp] resume recovery deferred for route time budget", { budgetMs: budget, attempted })
+      await progress("running", { stage: "insufficient_budget", bootstrapped, due: jobs.length, attempted })
+      break // Still pending; no send occurred and the next authenticated run may retry.
+    }
     attempted++
+    await progress("running", { stage: "attempt_started", bootstrapped, due: jobs.length, attempted })
     try {
       await generate(job.from, { jd: job.jd, jdId: job.jdId, resumePath,
-        resumeName: job.resumeName, resumeFiled: job.resumeFiled }, job.userId, TAILOR_BUDGET_MS, job.files, true)
+        resumeName: job.resumeName, resumeFiled: job.resumeFiled }, job.userId, budget, job.files, true)
       const state = await readResumeRecovery(job.id)
       if (state?.deliveryState === "accepted" || state?.deliveryState === "sent" ||
           state?.deliveryState === "delivered" || state?.deliveryState === "read") accepted++
       else stillPending++
       if (state?.deliveryState === "delivered" || state?.deliveryState === "read") handsetConfirmed++
+      await progress("running", { stage: "attempt_finished", bootstrapped, due: jobs.length, attempted, accepted, handsetConfirmed, stillPending })
     } catch (error) {
       console.error("[whatsapp] recovery run failed", (error as Error)?.name || "error")
       await deferResumeRecovery(job.id, "recovery_exception")
@@ -1122,7 +1173,10 @@ async function emailSlots(userId: string): Promise<{ slots: string[]; sure: bool
 async function fromLibrary(from: string, job: { jd: string; jdId: string }, email: string, userId: string, redo = false, slots?: string[], prefer?: Prefer) {
   const began = Date.now()
   const userDir = path.join(USER_RESUMES_DIR, userId)
-  if (!redo) {
+  // A named resume, or another go, is a new file. The one already made for this job
+  // is not sent back in its place (29 Oct: "make another one with the Cybersecurity Analyst resume"
+  // was answered with the 19 Oct file, then a different folder).
+  if (!redo && !prefer?.hint) {
     // Sent again as it is only while it meets the 90% floor; one made below it (22-26 Oct 2026) is made again, and
     // not from itself: like a redo, the new run starts from what the person wrote (26 Oct 2026 review).
     const have = await existingForJob(userDir, email, job.jd).catch(() => null)
@@ -1277,7 +1331,7 @@ async function refine(from: string, replyTo: string, request: string, userId: st
 
   const meta = await metaPromise
   const source = await readPath(gen.file)
-  if (!source || !sameResumeIdentity(await extractText(source), await extractText(file))) {
+  if (!source || !(await sameResumeFacts(source, file))) {
     return sendText(from, "The update changed the resume’s contact email, so I stopped delivery. Reply to the original file to retry.")
   }
   const changes = [...(gen.changes || []), request]
@@ -1314,21 +1368,57 @@ async function deliver(from: string, file: Buffer, name: string, caption: string
 function notAdded(result: TailorResult): string[] {
   const out: string[] = []
   if (result.skills_only) out.push("The AI writers did not answer in time, so this file only adds the job post's keywords; your experience is as you wrote it. Send *redo* for the full rewrite.")
-  const placed = result.placed_from_jd || []
+  // The floor's terms and the ones the AI writer itself put on the skills line (blueprint 2026-10-30, item 5).
+  const placed = [...new Set([...(result.placed_from_jd || []), ...(result.skills_from_jd_writer || [])])]
   if (placed.length) out.push(`Added to your skills from the job post: ${placed.slice(0, 8).join(", ")}${placed.length > 8 ? ` and ${placed.length - 8} more` : ""}. Check you can speak to each.`)
   if (result.placed_in_summary?.length) out.push(`Added to your summary as strengths: ${result.placed_in_summary.join(", ")}.`)
-  const missing = (result.quality?.missing || []).filter(m => !isCertification(m))
-  if (missing.length) out.push(`Not covered in this file: ${missing.slice(0, 6).join(", ")}. These gaps need review against your actual experience.`)
+  const unplaced = unplacedTermsLine(result.jd_terms_unplaced, result.jd_terms_unplaced_reason)
+  if (unplaced) out.push(unplaced)
+  const listed = new Set((result.jd_terms_unplaced || []).map(t => t.toLowerCase()))
+  const missing = (result.quality?.missing || []).filter(m => !isCertification(m) && !listed.has(m.toLowerCase()))
+  // Below the 95% target the file is sent with the full shortfall named (blueprint 2026-10-30), not refused.
+  const short = Number.isFinite(result.coverage) && result.coverage! < 95
+  if (missing.length && short) out.push(`Below the 95% target (${result.coverage}% of the job post). Still missing: ${missing.slice(0, 12).join(", ")}${missing.length > 12 ? ` and ${missing.length - 12} more` : ""}. Add any you can speak to.`)
+  else if (missing.length) out.push(`Not covered in this file: ${missing.slice(0, 6).join(", ")}. These gaps need review against your actual experience.`)
   // Some parts of the rewrite never came back: said whatever else the file shows.
   if ((result.partial && !result.skills_only) || (!out.length && result.quality?.status === "needs_review")) out.push("This result is incomplete and needs review. Reply to this file to request changes.")
   return out
 }
 
+// The send check. sameResumeIdentity compares every email and, with the job-post terms gate on, runs the round-trip guard:
+// the name, every email, phone, link and date of the source must be in the exported file unchanged, and none added.
+async function sameResumeFacts(source: Buffer, file: Buffer): Promise<boolean> {
+  const [a, b] = await Promise.all([extractText(source), extractText(file)])
+  return sameResumeIdentity(a, b)
+}
+
+// Same switch as src/lib/jd-terms-gate.ts, kept local so the route's test harnesses need no new module mocks.
+function jdTermsGateOn(): boolean {
+  const v = String(process.env.JD_TERMS_ALWAYS_ON_SKILLS ?? "").trim().toLowerCase()
+  return !(v === "0" || v === "false" || v === "off" || v === "no")
+}
+
+function unplacedTermsLine(terms: string[] | undefined, reason: string | undefined): string {
+  const list = (terms || []).filter(Boolean)
+  if (!list.length || !reason) return ""
+  const why = reason === "skills_locked" ? "you asked me not to edit your skills" : "your resume has no skills section"
+  const shown = list.slice(0, 10).join(", ") + (list.length > 10 ? ` and ${list.length - 10} more` : "")
+  return `Not added to the file because ${why}: ${shown}. Add any you can speak to.`
+}
+
 function qualityStop(result: TailorResult): string {
   const reasons = whatsappResumeRejectionReasons(result)
   const invented = (result.unverified_added_keywords || []).filter(Boolean).slice(0, 6)
-  if (invented.length) {
+  // Gate on, this refusal is gone: a job-post term in a bullet is sent back and moved to the skills line in runTailor.
+  // Gate off (JD_TERMS_ALWAYS_ON_SKILLS=0) restores it.
+  if (invented.length && !jdTermsGateOn()) {
     return `I did not send a file. The draft added ${invented.join(", ")} from the job post, and those are not in your resume, so I will not present them as your experience. Your resume and this job are saved for another try. No incomplete file was delivered.`
+  }
+  if (reasons.includes("jd_coverage_below_floor")) {
+    const pct = Number.isFinite(result.coverage) ? `${result.coverage}%` : "under 95%"
+    const gaps = [...(result.keyword_analysis?.missing || []), ...(result.quality?.missing || [])].filter(m => m && !isCertification(m))
+    const named = [...new Set(gaps)].slice(0, 8)
+    return `I did not send a file. The rewrite reached ${pct} of the job post, below the 95% floor.${named.length ? ` Still missing: ${named.join(", ")}.` : ""} Your resume and this job are saved for another try. No incomplete file was delivered.`
   }
   if (reasons.includes("supported_coverage_below_floor")) {
     const supported = Number.isFinite(result.supported_coverage) ? `${Math.round(result.supported_coverage!)}%` : "too little"

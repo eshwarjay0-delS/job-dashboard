@@ -106,6 +106,17 @@ Qualifications:
 - Problem solving, adaptability and clear communication.`,
 }
 
+// The production refusal of 29 Oct 2026: a post asking for GCP security and GCP IAM, which the resume never shows.
+// With JD_TERMS_ALWAYS_ON_SKILLS on (the default) the floor writes both on the skills line and a file is sent;
+// switched off, the old refusal. Run alone with FLOOR_CASES=gate (scripts/tests/resume-floor-gate.test.mjs).
+export const GATE_JOBS = {
+  gcp: `Cloud Security Engineer
+Responsibilities:
+- Hands-on experience with GCP IAM and GCP Security Command Center; gcp security and gcp iam are required.
+- Monitor alerts in Splunk and automate remediation in Python.
+- Manage access reviews and SOX audit evidence with Okta and Azure AD.`,
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const userDir = path.resolve('data/user-resumes/u1')
   const file = path.join(userDir, 'jordan.test@example.com', 'Identity and Access Management', 'Cyber Security Analyst.docx')
@@ -116,14 +127,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const { extractJdKeywords, coveredJdKeywords } = await import(src('lib/keywords.ts'))
   const { targetKeywords, floorTerms } = await import(src('lib/keyword-targets.ts'))
   const out = {}
-  const runs = [
+  const runs = process.env.FLOOR_CASES === 'gate' ? [
+    { name: 'gcp', jd: GATE_JOBS.gcp, summary: false },
+    { name: 'gcpLocked', jd: GATE_JOBS.gcp, summary: false, skills: false },
+  ] : [
     ...Object.entries(JOBS).map(([name, jd]) => ({ name, jd, summary: false })),
     ...Object.entries(JUNK_JOBS).map(([name, jd]) => ({ name, jd, summary: false })),
     // The person left the summary open to rewriting: strengths may go into it.
     { name: 'peoplesoftOpenSummary', jd: JOBS.peoplesoft, summary: true },
   ]
-  for (const { name, jd, summary } of runs) {
-    const r = await runTailor({ jd, keys: {}, userResumeDir: userDir, givenPath: file, mode: 'full', maxMs: 15000, noCache: true, sections: { summary, skills: true, experience: true } })
+  for (const { name, jd, summary, skills = true } of runs) {
+    const r = await runTailor({ jd, keys: {}, userResumeDir: userDir, givenPath: file, mode: 'full', maxMs: 15000, noCache: true, sections: { summary, skills, experience: true } })
     const bytes = readFileSync(path.join('data', 'tailored', `${r.token}.docx`))
     const text = await extractText(bytes)
     const xml = await (await JSZip.loadAsync(bytes)).file('word/document.xml').async('string')
@@ -140,6 +154,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       email: (text.match(/[\w.]+@[\w.]+/) || [''])[0],
       bullets: text.split('\n').filter(l => l.startsWith('•')),
       boldHeads,
+      unverified: r.unverified_added_keywords || [], unplaced: r.jd_terms_unplaced || [], unplacedReason: r.jd_terms_unplaced_reason || null,
+      quality: r.quality || null, partial: r.partial || null, blockers: r.quality_blockers || [], diff: r.diff || [], skillsOnlyFlag: r.skills_only || false,
     }
   }
   console.log(JSON.stringify(out))

@@ -70,6 +70,23 @@ export async function deferResumeRecovery(id: string, code: string, candidate?: 
   await patchResumeRecovery(id, { status: "pending", attempts, retryAt: Date.now() + retryDelayMs(attempts), errorCode: code, best })
 }
 
+/** Legacy bootstrap must not create a second job for a JD already queued, sending,
+ * accepted by Meta, or handset-delivered. Compare actual persisted input rather
+ * than a mutable session timestamp. Fail closed if listing fails. */
+export async function hasResumeRecoveryForJD(from: string, userId: string, jd: string): Promise<boolean> {
+  const keys = (await blob.list("whatsapp/resume-recovery")).filter(k => k.endsWith(".json"))
+  for (const key of keys) {
+    let existing: ResumeRecoveryJob | null = null
+    try {
+      const raw = await blob.getText(key)
+      existing = raw ? JSON.parse(raw) as ResumeRecoveryJob : null
+    } catch { continue }
+    if (existing?.version === 1 && existing.from === from && existing.userId === userId && existing.jd === jd)
+      return true
+  }
+  return false
+}
+
 export async function dueResumeRecoveries(limit = 1): Promise<ResumeRecoveryJob[]> {
   const keys = (await blob.list("whatsapp/resume-recovery")).filter(k => k.endsWith(".json"))
   const now = Date.now()

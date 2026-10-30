@@ -40,22 +40,56 @@ jobs:
         continue-on-error: false
 
       - name: Verify cross-domain and interview question fidelity
-        run: node --test scripts/tests/kompas-interview-precision.test.mjs scripts/tests/kompas-shape-calibration.test.mjs scripts/tests/kompas-50fold-relevance.test.mjs scripts/tests/kompas-crossdomain-50.test.mjs scripts/tests/kompas-crossdomain-live-fixture.test.mjs scripts/tests/kompas-paired-review.test.mjs scripts/tests/kompas-score-review.test.mjs scripts/tests/kompas-review-template.test.mjs scripts/tests/kompas-relevance-review.test.mjs scripts/tests/kompas-relevance-recovery.test.mjs scripts/tests/kompas-chief-kernel-54fold.test.mjs
+        run: node --test scripts/tests/kompas-interview-precision.test.mjs scripts/tests/kompas-shape-calibration.test.mjs scripts/tests/kompas-50fold-relevance.test.mjs scripts/tests/kompas-crossdomain-50.test.mjs scripts/tests/kompas-crossdomain-live-fixture.test.mjs scripts/tests/kompas-paired-review.test.mjs scripts/tests/kompas-score-review.test.mjs scripts/tests/kompas-review-template.test.mjs scripts/tests/kompas-relevance-review.test.mjs scripts/tests/kompas-relevance-recovery.test.mjs scripts/tests/kompas-chief-kernel-54fold.test.mjs scripts/tests/kompas-dissection.test.mjs scripts/tests/kompas-live-eval.test.mjs scripts/tests/kompas-reference-answers.test.mjs scripts/tests/kompas-relevance-folds.test.mjs scripts/tests/kompas-guards.test.mjs scripts/tests/kompas-stress-rounds.test.mjs scripts/tests/kompas-round5.test.mjs scripts/tests/kompas-round6.test.mjs scripts/tests/kompas-repair-harness.test.mjs scripts/tests/kompas-round8.test.mjs scripts/tests/kompas-round11.test.mjs scripts/tests/kompas-source-retrieval.test.mjs scripts/tests/kompas-grounding-r5.test.mjs scripts/tests/kompas-grounding-r2.test.mjs scripts/tests/kompas-grounding-r3.test.mjs scripts/tests/kompas-grounding-r4.test.mjs scripts/tests/kompas-speed-r6.test.mjs scripts/tests/kompas-speed-r6-on-r5.test.mjs scripts/tests/kompas-guards-r9.test.mjs scripts/tests/kompas-guards-r9b.test.mjs scripts/tests/kompas-grounding-r10.test.mjs scripts/tests/kompas-grounding-r11.test.mjs scripts/tests/kompas-premise-verbs-r11b.test.mjs scripts/tests/kompas-premise-spelled-r11c.test.mjs scripts/tests/kompas-premise-reported-r11d.test.mjs scripts/tests/kompas-grounding-r12.test.mjs scripts/tests/kompas-grounding-r13.test.mjs scripts/tests/kompas-explain-length.test.mjs scripts/tests/kompas-ask-arming.test.mjs scripts/tests/kompas-auto-wait.test.mjs scripts/tests/kompas-vad-floor.test.mjs scripts/tests/kompas-logistics-overskip.test.mjs scripts/tests/kompas-voice-gaps.test.mjs scripts/tests/kompas-what-experience-length.test.mjs
+
+      - name: Verify r8 dossier items (flag KOMPAS_DOSSIER_ITEMS, default OFF in the app)
+        run: KOMPAS_DOSSIER_ITEMS=1 node --test scripts/tests/kompas-grounding-r8.test.mjs
 
       - name: Verify grounded spoken streaming and original-source claims
-        run: node --test scripts/tests/kompas-safe-spoken-stream.test.mjs scripts/tests/kompas-deploy-build.test.mjs
+        run: node --test scripts/tests/kompas-safe-spoken-stream.test.mjs scripts/tests/kompas-deploy-build.test.mjs scripts/tests/kompas-build-stamp.test.mjs
 
       - name: Verify Kompas migration asset closure and lossless import
-        run: node --experimental-strip-types --test scripts/tests/kompas-migration-assets.test.mjs scripts/tests/kompas-review-parity.test.mjs scripts/tests/kompas-blend-harvest.test.mjs scripts/tests/kompas-three-levels.test.mjs scripts/tests/kompas-desktop-three-levels.test.mjs scripts/tests/kompas-blend.test.mjs scripts/tests/kompas-session-recap.test.mjs scripts/tests/kompas-grounding-route.test.mjs
+        run: node --experimental-strip-types --test scripts/tests/kompas-migration-assets.test.mjs scripts/tests/kompas-review-parity.test.mjs scripts/tests/kompas-blend-harvest.test.mjs scripts/tests/kompas-three-levels.test.mjs scripts/tests/kompas-desktop-three-levels.test.mjs scripts/tests/kompas-blend.test.mjs scripts/tests/kompas-session-recap.test.mjs scripts/tests/kompas-grounding-route.test.mjs scripts/tests/kompas-speed-r6-route.test.mjs
 
       - name: Verify desktop Screen Answer UI and capture path
         run: node --check public/kompas/app.js && node --test scripts/tests/kompas-desktop-screen-action.test.mjs scripts/tests/kompas-screen-response.test.mjs scripts/tests/kompas-screen-review.test.mjs
 
+      - name: Verify secure web-to-desktop interview transfer and long instructions
+        run: node --test scripts/tests/kompas-desktop-ticket.test.mjs
+
+      - name: Verify slice 5d audio-watchdog hooks (levels, tracks, guarded restart; fake devices only)
+        run: node --no-warnings --test scripts/tests/kompas-audio-watchdog-hooks.test.mjs
       - name: Verify WhatsApp Kompas channel and shared-session safety
         run: node --test scripts/tests/whatsapp-kompas*.test.mjs scripts/tests/kompas-shared-session.test.mjs scripts/tests/kompas-shared-turn.test.mjs
 
       - name: Verify WhatsApp voice notes, commands and low-overhead processing
         run: node --test scripts/tests/whatsapp-voice.test.mjs
+
+      - name: Verify source-aware intake, typed follow-ups, mishearings and the speech provider switch
+        run: node --experimental-strip-types --test scripts/tests/kompas-source-intake.test.mjs scripts/tests/kompas-stt-provider.test.mjs scripts/tests/kompas-dictation-accuracy.test.mjs
+
+      - name: Verify slice 5a spelling parity (one repair list on the desktop and the server; normal English untouched)
+        run: node --experimental-strip-types --test scripts/tests/kompas-spelling-parity.test.mjs
+
+      - name: Verify the question cut with no punctuation, named follow-ups and opening questions (50 and 200 stress)
+        run: node --experimental-strip-types --test scripts/tests/kompas-question-cut-slice2.test.mjs scripts/tests/kompas-question-replay.test.mjs
+
+      - name: Verify who opens a question, bleed by spoken time, the turn gate and the guarded repairs (50 and 200 stress)
+        run: node --experimental-strip-types --test scripts/tests/kompas-source-gate-v2.test.mjs
+
+      - name: Verify slice 3 question cut (follow-ups, repeats, lists, tags, polite asks, audio checks, statements; 50 and 200 stress)
+        run: node --experimental-strip-types --test scripts/tests/kompas-question-cut-slice3.test.mjs
+
+      - name: Verify slice 4 question cut (unpunctuated runs, explain the X, SSH on both sides; 50 and 200 stress)
+        run: node --experimental-strip-types --test scripts/tests/kompas-question-cut-slice4.test.mjs
+
+      - name: Verify slice 5b blind dossier bank (191 real questions, 130 runs; punctuated, stripped, filler)
+        run: node --experimental-strip-types --test scripts/tests/kompas-blind-bank.test.mjs
+      - name: Verify slice 6 leading/trailing filler (detection copy only; shown text unchanged)
+        run: node --no-warnings --experimental-strip-types --test scripts/tests/kompas-filler-leading.test.mjs
+
+      - name: Verify slice 5c early-release decision (design reference, flag off; not wired into the page)
+        run: node --test scripts/tests/kompas-early-release.test.mjs
 
       - name: Verify consented voice benchmark metrics
         run: node --test scripts/tests/kompas-voice-metrics.test.mjs
