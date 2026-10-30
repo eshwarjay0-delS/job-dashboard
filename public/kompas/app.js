@@ -4851,13 +4851,31 @@ function launchInstalled(s) {
     if (status) {
       status.textContent = "If Windows prompts, choose Open Kompas. If nothing opens, ";
       const retry = document.createElement("a");
-      retry.href = url;
-      retry.textContent = "click here to open this session";
+      // The first protocol navigation may have already redeemed this single-use
+      // ticket. Never offer that spent ticket as a retry link.
+      retry.href = "#";
+      retry.textContent = "prepare a new secure connection link";
+      retry.onclick = event => {
+        event.preventDefault();
+        desktopTicketCache = null;
+        retry.textContent = "Preparing a fresh ticket…";
+        prepareDesktopSession(s).then(fresh => {
+          retry.href = "marketfit-kompas://open?ticket=" + fresh;
+          retry.textContent = "click here to open this session";
+          // The next real click directly opens Windows, preserving the browser gesture.
+          retry.onclick = () => { desktopTicketCache = null; };
+        }).catch(e => {
+          retry.textContent = String(e && e.message || "Could not prepare a new link.");
+        });
+      };
       retry.style.textDecoration = "underline";
       status.appendChild(retry);
       status.appendChild(document.createTextNode(". "));
       status.classList.remove("hidden");
     }
+    // This ticket can be redeemed only once. After we have attempted the
+    // protocol launch, another Connect action must issue a new ticket.
+    desktopTicketCache = null;
     window.location.assign(url);
   }
   // A prepared ticket means the protocol navigation runs synchronously in
@@ -4890,8 +4908,31 @@ async function openHandedSession(s) {
   // The desktop can receive it while its account session list is still loading.
   if (accountSessionSync) await accountSessionSync.refresh();
   const all = LS.get("sessions", []);
-  if (!all.some(x => x.id === s.id)) { all.unshift(s); LS.set("sessions", all); sessions = all; }
-  launchCopilot(s);
+  // Handoff auth credentials belong to Electron's protected token store. The
+  // account session cache must never persist a bearer/refresh token.
+  const incoming = { ...s };
+  for (const key of ["token", "refreshToken", "tokenExp", "access_token", "refresh_token"]) delete incoming[key];
+  const index = all.findIndex(x => x.id === incoming.id);
+  if (index < 0) all.unshift(incoming);
+  else {
+    // Reopening a known session must carry over the latest resume, JD and
+    // personal instructions from the sending browser, not keep a stale
+    // snapshot from a previous Windows launch. Preserve richer local history.
+    const previous = { ...all[index] };
+    for (const key of ["token", "refreshToken", "tokenExp", "access_token", "refresh_token"]) delete previous[key];
+    const combined = { ...previous, ...incoming };
+    if (Array.isArray(previous.transcripts) &&
+        (!Array.isArray(incoming.transcripts) || previous.transcripts.length >= incoming.transcripts.length))
+      combined.transcripts = previous.transcripts;
+    // A delayed browser handoff must not revive an interview already ended
+    // on this device or discard its lifecycle metadata.
+    for (const key of ["runAt", "pausedAt", "endedAt", "endedBy"])
+      if (previous[key] !== undefined && incoming[key] === undefined) combined[key] = previous[key];
+    all[index] = combined;
+  }
+  LS.set("sessions", all);
+  sessions = all;
+  launchCopilot(index < 0 ? incoming : all[index]);
   $("connectPanel").classList.add("hidden");
   if (!$("startBtn").classList.contains("on")) $("startBtn").click();
 }
