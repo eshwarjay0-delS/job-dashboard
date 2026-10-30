@@ -9,7 +9,7 @@ const issue = fs.readFileSync(path.resolve("src/app/api/kompas/desktop-handoff/r
 const redeem = fs.readFileSync(path.resolve("src/app/api/kompas/desktop-handoff/redeem/route.ts"), "utf8")
 
 test("loaded resume and JD are never placed in the Windows launcher URL", () => {
-  const code = app.slice(app.indexOf("function packSession(s) {"), app.indexOf("function launchInstalled(s) {"))
+  const code = app.slice(app.indexOf("function packSession(s) {"), app.indexOf("function openHandedSession(s) {"))
   assert.ok(code.includes("function prepareDesktopSession(s)"), "ticket issue route must exist")
   assert.ok(code.includes('fetch("/api/kompas/desktop-handoff"'), "full session must go to same-origin HTTPS route")
   assert.ok(code.includes('window.location.assign(url)'), "short protocol link must use browser navigation")
