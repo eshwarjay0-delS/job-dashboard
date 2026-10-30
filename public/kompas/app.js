@@ -4742,8 +4742,14 @@ function launchInstalled(s) {
     }
   });
 }
+let lastDesktopHandoff = { id: "", at: 0 };
 function openHandedSession(s) {
   if (!s || !s.id || !window.kompasDesktop) return;
+  // takeSession() and onSession() can race during first load. Treat one
+  // delivery as one start, not two capture restarts.
+  const now = Date.now();
+  if (lastDesktopHandoff.id === s.id && now - lastDesktopHandoff.at < 3000) return;
+  lastDesktopHandoff = { id: s.id, at: now };
   const all = LS.get("sessions", []);
   if (!all.some(x => x.id === s.id)) { all.unshift(s); LS.set("sessions", all); sessions = all; }
   launchCopilot(s);
