@@ -2,6 +2,7 @@ import { modeBand, type AnswerShape } from "./kompasDissection.ts"
 import { askSentences } from "./kompasAsk.ts"
 import { openerCategory } from "./kompasOpener.ts"
 import { lensBlock, lensSwitchOn } from "./kompasAudience.ts"
+import { pickMoves, pivotBlock, recordAngles } from "./kompasPivot.ts"
 
 /** Desktop response contract. The question sets the depth. The level changes how it is spoken. */
 export type DesktopQuestionKind = 'definition' | 'comparison' | 'experience' | 'implementation' | 'topic' | 'general'
@@ -193,13 +194,15 @@ export function desktopResponsePolicy(audience: string, question: string) {
 
 /** Lens r4: the environment switch for the desktop lens wiring. OFF unless set to "on" or "1". */
 export const DESKTOP_LENS_SWITCH = "KOMPAS_DESKTOP_LENS"
+/** Lens 3D/4D: the angles of the last answers in this process, used only when the lens switch is on. */
+const PIVOT_LEDGER: string[][] = []
 type DesktopWire = { on: boolean; delivery: string; tail: string }
 /** Lens r4: the two desktop slots of the system prompt (AUDIENCE DELIVERY and the closing repeat).
  *  Off (default): exactly today's slots, the desktop guidance in both. On: the desktop guidance once, followed by the lens
  *  block (LENS, DEPTH, OWN THE ROOM, REALISM), and no closing repeat. Anything that throws gives today's slots. */
 export function desktopDelivery(
   policy: { guidance?: string } | null | undefined, level: string, question: string,
-  opts: { on?: boolean; lens?: (level: string, question: string) => string } = {},
+  opts: { on?: boolean; lens?: (level: string, question: string) => string; ledger?: string[][] } = {},
 ): DesktopWire {
   const guidance = typeof policy?.guidance === "string" ? policy.guidance : ""
   const today: DesktopWire = { on: false, delivery: guidance, tail: guidance }
@@ -209,7 +212,12 @@ export function desktopDelivery(
     if (!on || !guidance) return today
     const lens = (opts.lens || lensBlock)(level, question)
     if (typeof lens !== "string" || !lens.trim()) return today
-    return { on: true, delivery: `${guidance} ${lens}`, tail: "" }
+    // Lens 3D/4D (30 Oct 2026): two or three pivot moves after the lens block, rotated by the follow-up ledger.
+    const ledger = opts.ledger || PIVOT_LEDGER
+    const pivot = pivotBlock(question, level, ledger)
+    if (!pivot) return { on: true, delivery: `${guidance} ${lens}`, tail: "" }
+    ledger.splice(0, ledger.length, ...recordAngles(ledger, pickMoves(question, level, ledger).map((m) => m.angle)))
+    return { on: true, delivery: `${guidance} ${lens} ${pivot}`, tail: "" }
   } catch {
     return today
   }
