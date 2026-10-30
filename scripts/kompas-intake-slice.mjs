@@ -24,7 +24,10 @@ export function loadIntake() {
     "  spokenWallTime: typeof spokenWallTime === 'function' ? spokenWallTime : null,",
     "  turnGate: typeof turnGate === 'function' ? turnGate : null,",
     "  decisionEvent: typeof decisionEvent === 'function' ? decisionEvent : null,",
-    "  answerAnywayLines: typeof answerAnywayLines === 'function' ? answerAnywayLines : null };",
+    "  answerAnywayLines: typeof answerAnywayLines === 'function' ? answerAnywayLines : null,",
+    "  gateNoAnswerNeeded: typeof gateNoAnswerNeeded === 'function' ? gateNoAnswerNeeded : null,",
+    "  repeatsPriorQuestion: typeof repeatsPriorQuestion === 'function' ? repeatsPriorQuestion : null,",
+    "  splitDistinctAsks: typeof splitDistinctAsks === 'function' ? splitDistinctAsks : null };",
   ].join("\n");
   const ctx = { console };
   vm.createContext(ctx);

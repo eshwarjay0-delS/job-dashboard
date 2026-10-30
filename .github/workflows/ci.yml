@@ -66,6 +66,9 @@ jobs:
       - name: Verify who opens a question, bleed by spoken time, the turn gate and the guarded repairs (50 and 200 stress)
         run: node --experimental-strip-types --test scripts/tests/kompas-source-gate-v2.test.mjs
 
+      - name: Verify slice 3 question cut (follow-ups, repeats, lists, tags, polite asks, audio checks, statements; 50 and 200 stress)
+        run: node --experimental-strip-types --test scripts/tests/kompas-question-cut-slice3.test.mjs
+
       - name: Verify consented voice benchmark metrics
         run: node --test scripts/tests/kompas-voice-metrics.test.mjs
 

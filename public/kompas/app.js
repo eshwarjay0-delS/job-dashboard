@@ -1658,6 +1658,8 @@ function turnGate(text) {
   try {
     const t = String(text || "").replace(/\s+/g, " ").trim();
     if (!t) return { outcome: "skip", reason: "empty" };
+    const pre = typeof gateNoAnswerNeeded === "function" ? gateNoAnswerNeeded(t) : null;   // slice 3: audio checks, statements
+    if (pre) return pre;
     if (Q_CUE.test(t) || opensNewAsk(t)) return clauseStillOpen(t) ? { outcome: "wait", reason: "clause-open" } : { outcome: "answer", reason: "question" };
     if (isNoiseLine(t)) return { outcome: "skip", reason: "filler" };
     if (TURN_CLOSING.test(t)) return { outcome: "skip", reason: "closing" };
@@ -1763,6 +1765,10 @@ function clauseStillOpen(text) {
   return /\b(?:a|an|the|to|of|for|with|and|or|but|about|on|in|into|from|by|at|as|your|my|our|their|between|would|could|should)\s*$/i.test(t);
 }
 function repeatsPriorQuestion(text, previous) {
+  if (repeatsPriorQuestionV2(text, previous)) return true;
+  try { return !shortFollowUp(text) && repeatsPriorQuestionV3(text, previous); } catch { return false; }   // slice 3: only ever adds a repeat
+}
+function repeatsPriorQuestionV2(text, previous) {
   const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9+#]+/g, " ").trim();
   const stop = new Set("the a an and or of to in on for with you your yours we our it its is are was were do does did have has had can could would should will just like really very this that those these what how why when where which who about from into".split(" "));
   const a = norm(text), b = norm(previous);
@@ -1797,7 +1803,78 @@ function splitHead(sentence) {
   const m = String(sentence || "").replace(SPLIT_LEAD, "").match(/^what (?:is|are)\s+(?:an?|the\s+)?(?:meaning of\s+)?([a-z0-9][\w+#.-]*(?:\s+[a-z0-9][\w+#.-]*){0,3})/i);
   return m ? m[1].toLowerCase().replace(/[?.!\s]+$/g, "").trim() : "";
 }
-function splitSeparate(next, prevText) {
+// Slice 3 (29 Oct 2026), round-2 production failures. Every rule below only runs inside the v3 pass, and
+// splitDistinctAsks returns the v2 cut whenever the v3 pass throws or would change a single heard word.
+const SPLIT_ORDINAL = /^(?:(?:first|second|third|fourth|fifth)(?:ly)?|lastly|number (?:one|two|three|four|five))\b[,:]?\s*/i;
+const SPLIT_TAG = /,\s*(?:right|correct|yes|no|yeah|true|isn't it|aren't you|don't you|didn't you|haven't you|wasn't it)\?\s*$/i;
+const SPLIT_POLITE = /^(?:i'?d (?:love|like|be (?:curious|interested|keen)) to (?:hear|know|learn|understand)|i would (?:love|like) to (?:hear|know)|i'?m curious (?:about|how|what|why|to hear))\b/i;
+const SPLIT_AUDIO_CHECK = /^(?:(?:hello|hi|hey)[,.!]?\s+)?(?:(?:can|could) you (?:hear|see) me(?:\s+(?:ok(?:ay)?|now|alright|all right|well|clearly))?|(?:am i|are you) (?:audible|on mute|muted|still there|there)|is my (?:audio|mic|microphone|video|sound) (?:ok(?:ay)?|working|coming through)|(?:are|is) (?:you|my audio) (?:breaking up|cutting out))[?.!]*$/i;
+const SPLIT_CONTEXT_FOLLOW = /^(?:what about|how about)\s+(?:with\s+|in\s+|for\s+|on\s+)?[\w+#.-]+(?:\s+[\w+#.-]+){0,3}\s*\?*$|^(?:can|could) you (?:give|share) (?:me |us )?(?:an?|one|some) (?:\w+ )?examples?\b|^(?:for example|for instance|like what|such as)\??$|^what (?:was|were) the (?:outcome|result|results|impact|lesson|lessons|takeaway)\b|^what happened (?:next|after|then)\b|^(?:and )?then what\b|^what did you learn\b|^(?:how|what|why|when|where) (?:does|do|did|is|are|was|were|would|can|could|will) (?:it|they|that|this|those|these)\b/i;
+function splitAskBody(sentence) { return String(sentence || "").replace(SPLIT_LEAD, "").replace(SPLIT_ORDINAL, "").replace(SPLIT_LEAD, "").trim(); }
+function splitSetsAsk(sentence) {
+  const bare = String(sentence || "").replace(SPLIT_LEAD, "").trim();
+  if (!bare || splitNoise(bare) || SPLIT_AUDIO_CHECK.test(bare)) return false;
+  const body = splitAskBody(sentence);
+  return SPLIT_OPENER.test(body) || (/\?\s*$/.test(body) && SPLIT_START.test(body)) || SPLIT_TAG.test(bare) || SPLIT_POLITE.test(body);
+}
+// "What is Zscaler? I would say Zscaler is a cloud proxy.": an ask, then four or more words of answer, nothing asked since.
+function splitAnswerBetween(prevText) {
+  const ss = String(prevText || "").trim().split(/(?<=[.?!])\s+/).filter(Boolean);
+  let last = -1;
+  ss.forEach((s, i) => { if (splitSetsAsk(s)) last = i; });
+  if (last < 0 || last >= ss.length - 1) return false;
+  const after = ss.slice(last + 1);
+  return after.every((s) => !/\?\s*$/.test(s) && !SPLIT_OPENER.test(splitAskBody(s))) && after.join(" ").split(/\s+/).length >= 4;
+}
+// v3 rules, checked before the v2 rules: true = new card, false = same card, null = let v2 decide.
+function splitSeparateV3(next, prevText) {
+  const bare = String(next || "").replace(SPLIT_LEAD, "").trim();
+  if (!bare) return null;
+  const body = splitAskBody(next);
+  if (SPLIT_ORDINAL.test(bare) && !/^first(?:ly)?\b/i.test(bare) && (SPLIT_OPENER.test(body) || /\?\s*$/.test(body))) return true;
+  if (SPLIT_AUDIO_CHECK.test(bare)) return false;
+  const prevProper = new Set(splitProper(prevText));
+  const prevTopic = new Set(splitTopicWords(prevText));
+  // "And what about SailPoint, have you used it?" names a new subject and asks its own question.
+  const named = bare.match(/^what about\s+([\w+#.-]+(?:\s+[\w+#.-]+){0,2}),\s*(?:have|do|did|can|could|would|are|were|is|was) you\b/i);
+  if (named && named[1].toLowerCase().split(/\s+/).some((w) => w.length >= 3 && !prevTopic.has(w) && !prevProper.has(w))) return true;
+  if (SPLIT_CONTEXT_FOLLOW.test(bare)) return false;
+  const fresh = splitProper(bare).some((n) => !prevProper.has(n));
+  const prevWords = new Set(splitTopicWords(prevText));
+  const freshWords = splitTopicWords(bare).filter((w) => !prevWords.has(w));
+  const politeNoise = new Set("love like hear know learn understand curious interested keen also".split(" "));
+  if (SPLIT_POLITE.test(bare) && (fresh || (freshWords.some((w) => !politeNoise.has(w)) && !/\b(?:that|this|it|those|these|more)\b/i.test(bare)))) return true;
+  if (/\?\s*$/.test(bare) && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && freshWords.length > 0 && !/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && splitAnswerBetween(prevText)) return true;
+  return null;
+}
+// Turn gate pre-check: audio checks and statements built like questions. Unsure, or any fault, says nothing (null).
+const GATE_PSEUDO_ASK = /^(?:(?:so|and|okay|ok|well|now)[, ]+)*(?:how|what|why|who|where|when) (?:we|we're|we are|they|they're|our team|our company|the team|this team) [^?]*\b(?:is|are|was|were)\b[^?]*[.!]$/i;
+const GATE_ASK_ANNOUNCED = /^(?:(?:thank you|thanks|great|okay|ok|so|and|now)[,.!]?\s+)*(?:my|the) next question is (?:around|about|on|regarding)\b[^?]*[.!]?$/i;
+function gateNoAnswerNeeded(text) {
+  try {
+    const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim();
+    if (!t) return null;
+    const parts = t.split(/(?<=[.?!])\s+/).map((s) => s.replace(SPLIT_LEAD, "").trim()).filter(Boolean);
+    if (parts.length && parts.every((s) => SPLIT_AUDIO_CHECK.test(s) || splitNoise(s))) return parts.some((s) => SPLIT_AUDIO_CHECK.test(s)) ? { outcome: "skip", reason: "audio-check" } : null;
+    if (parts.length === 1 && GATE_PSEUDO_ASK.test(t)) return { outcome: "skip", reason: "statement-not-ask" };
+    if (GATE_ASK_ANNOUNCED.test(t)) return { outcome: "wait", reason: "ask-announced" };
+    return null;
+  } catch { return null; }
+}
+// Cross-turn repeat (slice 3): "Sorry, what is CyberArk?", "..., again?", "... please.", "Can you tell me how Kerberos
+// works?". Filler is dropped and plurals are folded, and both questions must hold exactly the same words, so a question
+// with one new word is never hidden.
+const REPEAT_FILLER = new Set("sorry again please said repeat let tell me can could you just once more question asked asking ask".split(" "));
+function repeatsPriorQuestionV3(text, previous) {
+  const stop = new Set("the a an and or of to in on for with you your yours we our it its is are was were do does did have has had can could would should will just like really very this that those these what how why when where which who about from into".split(" "));
+  const bag = (s) => new Set(String(s || "").toLowerCase().replace(/[^a-z0-9+#]+/g, " ").trim().split(/\s+/).filter((w) => w.length >= 3 && !stop.has(w) && !REPEAT_FILLER.has(w)).map((w) => w.length > 4 ? w.replace(/([^s])s$/, "$1") : w));
+  const a = bag(text), b = bag(previous);
+  if (!a.size || a.size !== b.size) return false;
+  for (const w of a) if (!b.has(w)) return false;
+  return true;
+}
+function splitSeparate(next, prevText, v3) {
+  if (v3) { const r = splitSeparateV3(next, prevText); if (r !== null) return r; }
   const bare = String(next || "").replace(SPLIT_LEAD, "").trim();
   if (!bare || shortFollowUp(bare) || SPLIT_CONTINUES.test(bare)) return false;
   // "Go deeper" stays with the question it follows. "Go deeper on that exception" is the next question.
@@ -1851,7 +1928,7 @@ function splitMidAsks(sentence) {
   return out.filter(Boolean);
 }
 function splitSpokenWords(text) { return String(text || "").toLowerCase().replace(/[^a-z0-9+#']+/g, " ").trim(); }
-function splitDistinctAsksBy(text, midCut) {
+function splitDistinctAsksBy(text, midCut, v3) {
   const raw = String(text || "");
   const clean = (typeof fixPhrases === "function" ? fixPhrases(raw) : raw).replace(/\s+/g, " ").trim();
   if (!clean) return [];
@@ -1863,18 +1940,23 @@ function splitDistinctAsksBy(text, midCut) {
     const bare = sentence.replace(SPLIT_LEAD, "").trim();
     if (!bare || splitNoise(bare) || splitNoise(sentence)) continue;
     const prev = groups[groups.length - 1].join(" ");
-    if (asked && splitSeparate(sentence, prev)) { groups.push([sentence]); asked = true; continue; }
+    if (asked && splitSeparate(sentence, prev, v3)) { groups.push([sentence]); asked = true; continue; }
     groups[groups.length - 1].push(sentence);
-    if (bare && !splitNoise(bare) && (SPLIT_OPENER.test(bare) || (/\?\s*$/.test(bare) && SPLIT_START.test(bare)))) asked = true;
+    if (v3 ? splitSetsAsk(sentence) : (bare && !splitNoise(bare) && (SPLIT_OPENER.test(bare) || (/\?\s*$/.test(bare) && SPLIT_START.test(bare))))) asked = true;
   }
   return groups.map((g) => g.join(" ").replace(/\s+/g, " ").trim()).filter(Boolean);
 }
 function splitDistinctAsks(text) {
   const before = splitDistinctAsksBy(text, false);
+  let v2 = before;
   try {
     const after = splitDistinctAsksBy(text, true);
-    return splitSpokenWords(after.join(" ")) === splitSpokenWords(before.join(" ")) ? after : before;   // failsafe: no word lost
+    v2 = splitSpokenWords(after.join(" ")) === splitSpokenWords(before.join(" ")) ? after : before;   // failsafe: no word lost
   } catch { return before; }
+  try {
+    const v3 = splitDistinctAsksBy(text, true, true);
+    return splitSpokenWords(v3.join(" ")) === splitSpokenWords(v2.join(" ")) ? v3 : v2;   // slice 3 failsafe: the v2 cut on any lost word
+  } catch { return v2; }
 }
 const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
 function scheduleAuto() {

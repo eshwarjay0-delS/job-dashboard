@@ -490,6 +490,15 @@ const PRIOR_STOP = new Set("the a an and or of to in on for with you your yours 
 
 /** The same question said again. A short follow-up is not a duplicate, and a new noun is not either. */
 export function repeatsPriorQuestion(text: string, previous: string): boolean {
+  if (repeatsPriorQuestionV2(text, previous)) return true
+  try {
+    return !shortFollowUp(text) && repeatsPriorQuestionV3(text, previous) // slice 3: only ever adds a repeat
+  } catch {
+    return false
+  }
+}
+
+function repeatsPriorQuestionV2(text: string, previous: string): boolean {
   const norm = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9+#]+/g, " ").trim()
   const a = norm(text)
   const b = norm(previous)
@@ -755,8 +764,65 @@ function whatIsHead(sentence: string): string {
   return m ? m[1].toLowerCase().replace(/[?.!\s]+$/g, "").trim() : ""
 }
 
+// Slice 3 (29 Oct 2026), round-2 production failures. Every rule below only runs inside the v3 pass, and
+// splitDistinctAsks returns the v2 cut whenever the v3 pass throws or would change a single heard word.
+const SPLIT_ORDINAL = /^(?:(?:first|second|third|fourth|fifth)(?:ly)?|lastly|number (?:one|two|three|four|five))\b[,:]?\s*/i;
+const SPLIT_TAG = /,\s*(?:right|correct|yes|no|yeah|true|isn't it|aren't you|don't you|didn't you|haven't you|wasn't it)\?\s*$/i;
+const SPLIT_POLITE = /^(?:i'?d (?:love|like|be (?:curious|interested|keen)) to (?:hear|know|learn|understand)|i would (?:love|like) to (?:hear|know)|i'?m curious (?:about|how|what|why|to hear))\b/i;
+const SPLIT_AUDIO_CHECK = /^(?:(?:hello|hi|hey)[,.!]?\s+)?(?:(?:can|could) you (?:hear|see) me(?:\s+(?:ok(?:ay)?|now|alright|all right|well|clearly))?|(?:am i|are you) (?:audible|on mute|muted|still there|there)|is my (?:audio|mic|microphone|video|sound) (?:ok(?:ay)?|working|coming through)|(?:are|is) (?:you|my audio) (?:breaking up|cutting out))[?.!]*$/i;
+const SPLIT_CONTEXT_FOLLOW = /^(?:what about|how about)\s+(?:with\s+|in\s+|for\s+|on\s+)?[\w+#.-]+(?:\s+[\w+#.-]+){0,3}\s*\?*$|^(?:can|could) you (?:give|share) (?:me |us )?(?:an?|one|some) (?:\w+ )?examples?\b|^(?:for example|for instance|like what|such as)\??$|^what (?:was|were) the (?:outcome|result|results|impact|lesson|lessons|takeaway)\b|^what happened (?:next|after|then)\b|^(?:and )?then what\b|^what did you learn\b|^(?:how|what|why|when|where) (?:does|do|did|is|are|was|were|would|can|could|will) (?:it|they|that|this|those|these)\b/i;
+function splitAskBody(sentence: string): string { return String(sentence || "").replace(LEAD_FILLER, "").replace(SPLIT_ORDINAL, "").replace(LEAD_FILLER, "").trim(); }
+function splitSetsAsk(sentence: string): boolean {
+  const bare = String(sentence || "").replace(LEAD_FILLER, "").trim();
+  if (!bare || noiseOnly(bare) || SPLIT_AUDIO_CHECK.test(bare)) return false;
+  const body = splitAskBody(sentence);
+  return ASK_OPENER.test(body) || (/\?\s*$/.test(body) && SEPARATE_START.test(body)) || SPLIT_TAG.test(bare) || SPLIT_POLITE.test(body);
+}
+// "What is Zscaler? I would say Zscaler is a cloud proxy.": an ask, then four or more words of answer, nothing asked since.
+function splitAnswerBetween(prevText: string): boolean {
+  const ss = String(prevText || "").trim().split(/(?<=[.?!])\s+/).filter(Boolean);
+  let last = -1;
+  ss.forEach((s: string, i: number) => { if (splitSetsAsk(s)) last = i; });
+  if (last < 0 || last >= ss.length - 1) return false;
+  const after = ss.slice(last + 1);
+  return after.every((s) => !/\?\s*$/.test(s) && !ASK_OPENER.test(splitAskBody(s))) && after.join(" ").split(/\s+/).length >= 4;
+}
+// v3 rules, checked before the v2 rules: true = new card, false = same card, null = let v2 decide.
+function splitSeparateV3(next: string, prevText: string): boolean | null {
+  const bare = String(next || "").replace(LEAD_FILLER, "").trim();
+  if (!bare) return null;
+  const body = splitAskBody(next);
+  if (SPLIT_ORDINAL.test(bare) && !/^first(?:ly)?\b/i.test(bare) && (ASK_OPENER.test(body) || /\?\s*$/.test(body))) return true;
+  if (SPLIT_AUDIO_CHECK.test(bare)) return false;
+  const prevProper = new Set(properNouns(prevText));
+  const prevTopic = new Set(topicWords(prevText));
+  // "And what about SailPoint, have you used it?" names a new subject and asks its own question.
+  const named = bare.match(/^what about\s+([\w+#.-]+(?:\s+[\w+#.-]+){0,2}),\s*(?:have|do|did|can|could|would|are|were|is|was) you\b/i);
+  if (named && named[1].toLowerCase().split(/\s+/).some((w) => w.length >= 3 && !prevTopic.has(w) && !prevProper.has(w))) return true;
+  if (SPLIT_CONTEXT_FOLLOW.test(bare)) return false;
+  const fresh = properNouns(bare).some((n) => !prevProper.has(n));
+  const prevWords = new Set(topicWords(prevText));
+  const freshWords = topicWords(bare).filter((w) => !prevWords.has(w));
+  const politeNoise = new Set("love like hear know learn understand curious interested keen also".split(" "));
+  if (SPLIT_POLITE.test(bare) && (fresh || (freshWords.some((w) => !politeNoise.has(w)) && !/\b(?:that|this|it|those|these|more)\b/i.test(bare)))) return true;
+  if (/\?\s*$/.test(bare) && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && freshWords.length > 0 && !/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && splitAnswerBetween(prevText)) return true;
+  return null;
+}
+// Cross-turn repeat (slice 3): "Sorry, what is CyberArk?", "..., again?", "... please.", "Can you tell me how Kerberos
+// works?". Filler is dropped and plurals are folded, and both questions must hold exactly the same words, so a question
+// with one new word is never hidden.
+const REPEAT_FILLER = new Set("sorry again please said repeat let tell me can could you just once more question asked asking ask".split(" "));
+function repeatsPriorQuestionV3(text: string, previous: string): boolean {
+  const stop = new Set("the a an and or of to in on for with you your yours we our it its is are was were do does did have has had can could would should will just like really very this that those these what how why when where which who about from into".split(" "));
+  const bag = (s: string) => new Set(String(s || "").toLowerCase().replace(/[^a-z0-9+#]+/g, " ").trim().split(/\s+/).filter((w) => w.length >= 3 && !stop.has(w) && !REPEAT_FILLER.has(w)).map((w) => w.length > 4 ? w.replace(/([^s])s$/, "$1") : w));
+  const a = bag(text), b = bag(previous);
+  if (!a.size || a.size !== b.size) return false;
+  for (const w of a) if (!b.has(w)) return false;
+  return true;
+}
 /** A later sentence is its own interview question, not the next part of the one already started. */
-function separateQuestion(next: string, prevText: string): boolean {
+function separateQuestion(next: string, prevText: string, v3 = false): boolean {
+  if (v3) { const r = splitSeparateV3(next, prevText); if (r !== null) return r }
   const bare = next.replace(LEAD_FILLER, "").trim()
   if (!bare || shortFollowUp(bare) || CONTINUES_ASK.test(bare)) return false
   // "Go deeper" stays with the question it follows. "Go deeper on that exception" is the next question.
@@ -831,7 +897,7 @@ function looksLikeAsk(sentence: string): boolean {
  * ("Design X. Explain the trust boundaries.") stays one question. "What is
  * Kubernetes? What is Terraform?" does not.
  */
-function splitDistinctAsksBy(text: string, midCut: boolean): string[] {
+function splitDistinctAsksBy(text: string, midCut: boolean, v3 = false): string[] {
   const clean = repairDictation(String(text || "")).replace(/\s+/g, " ").trim()
   if (!clean) return []
   const said = clean.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean)
@@ -842,25 +908,33 @@ function splitDistinctAsksBy(text: string, midCut: boolean): string[] {
     const bare = sentence.replace(LEAD_FILLER, "").trim()
     if (!bare || noiseOnly(bare) || noiseOnly(sentence)) continue
     const prev = groups[groups.length - 1].join(" ")
-    if (asked && separateQuestion(sentence, prev)) {
+    if (asked && separateQuestion(sentence, prev, v3)) {
       groups.push([sentence])
       asked = true
       continue
     }
     groups[groups.length - 1].push(sentence)
-    if (looksLikeAsk(sentence)) asked = true
+    if (v3 ? splitSetsAsk(sentence) : looksLikeAsk(sentence)) asked = true
   }
   return groups.map((g) => g.join(" ").replace(/\s+/g, " ").trim()).filter(Boolean)
 }
 
 export function splitDistinctAsks(text: string): string[] {
   const before = splitDistinctAsksBy(text, false)
+  let v2 = before
   try {
     const after = splitDistinctAsksBy(text, true)
     // Failsafe: the cut never drops or reorders a word; if it would, keep the earlier cut.
-    return spokenWords(after.join(" ")) === spokenWords(before.join(" ")) ? after : before
+    v2 = spokenWords(after.join(" ")) === spokenWords(before.join(" ")) ? after : before
   } catch {
     return before
+  }
+  try {
+    // Slice 3 failsafe: the v3 rules may only regroup words; on any change or fault, the v2 cut stands.
+    const v3 = splitDistinctAsksBy(text, true, true)
+    return spokenWords(v3.join(" ")) === spokenWords(v2.join(" ")) ? v3 : v2
+  } catch {
+    return v2
   }
 }
 
