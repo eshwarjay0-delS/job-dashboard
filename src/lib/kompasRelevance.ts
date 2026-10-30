@@ -81,7 +81,10 @@ export function interviewIntent(question: string): ReplyIntent {
   // Director statements often trail off with "right?" without asking the
   // candidate a substantive question. Do not introduce a full technical story.
   if(!QUESTION.test(q) && /\b(?:tells you|asks you|disagrees with (?:you|your))\b/i.test(q)) return "scenario"
-  const noSubstantiveAsk=!QUESTION.test(q.replace(/\b(?:right|okay|yeah)\s*\?\s*$/i,""))
+  // r5 (29 Oct 2026): "You will see X come up a lot. Tell me about Y." was read as a statement and got a line-check reply.
+  // A later sentence that opens with an imperative ask (tell, describe, explain, walk, give) is a real ask.
+  const laterAsk=/[.!;]\s+(?:so,?\s+)?(?:tell me|describe|explain|walk me|give me)\b/i.test(q)
+  const noSubstantiveAsk=!QUESTION.test(q.replace(/\b(?:right|okay|yeah)\s*\?\s*$/i,"")) && !laterAsk
   const words=q.split(/\s+/).filter(Boolean)
   const greeting=/^(?:hi|hello|hey|ok(?:ay)?|thanks|thank you|yeah|yes|no|right|great)[.!]*$/i.test(q)
   const told=ACK.test(q) || /^(?:you will|we\b|i\b|the team|our team|the first)\b/i.test(q)
