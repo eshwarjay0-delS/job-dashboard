@@ -621,7 +621,8 @@ function supportedBy(claim: string, haystack: string): boolean {
 // r5: an interviewer premise about the candidate ("since you led a team of 50", "given your time as CISO at Contoso",
 // "I see you ran…"). Only the clause about "you/your" is read, never the interviewer's own company line.
 // r10 (Lens r4 note): result verbs (cut, reduced, slashed, lowered, dropped, …) and "I heard / I understand" lead-ins added.
-const PREMISE_CLAUSE = /(?:^|[.?!,;]\s*|\b(?:so|and|i see|i know|i noticed|i read that|i heard(?: that)?|i understand(?: that)?|i was told(?: that)?)\s+)((?:since|as|given(?: that)?|because|now that|considering|with)\s+(?:you|your)\b[^,?.;]{3,140}|(?:you|you've|you have)\s+(?:led|managed|ran|built|owned|were|grew|headed|scaled|cut|reduced|lowered|slashed|dropped|decreased|halved|closed|saved|rotated|wrote|caught|deployed|implemented|improved|increased|boosted)\b[^,?.;]{3,140})/gi
+// r11b: "you had / you'd / your team" subjects and a clause-opening result gerund ("Cutting incidents 70% …") added (stricter only).
+const PREMISE_CLAUSE = /(?:^|[.?!,;]\s*|\b(?:so|and|i see|i know|i noticed|i read that|i heard(?: that)?|i understand(?: that)?|i was told(?: that)?)\s+)((?:since|as|given(?: that)?|because|now that|considering|with)\s+(?:you|your)\b[^,?.;]{3,140}|(?:you|you've|you have|you had|you'd|your (?:team|group|org|organi[sz]ation))\s+(?:led|managed|ran|built|owned|were|grew|headed|scaled|cut|reduced|lowered|slashed|dropped|decreased|halved|closed|saved|rotated|wrote|caught|deployed|implemented|improved|increased|boosted)\b[^,?.;]{3,140}|(?<=^|[.?!;]\s*)(?:cutting|reducing|lowering|slashing|dropping|decreasing|halving|closing|saving|rotating|improving|increasing|boosting)\s+[^,?.;]{3,140})/gi
 /** Interviewer claims about the candidate that the experience sources do not back. Empty with no sources or no premise. */
 export function falsePremises(question: string, docs: SourceDoc[] | null | undefined): string[] {
   try {
@@ -630,6 +631,8 @@ export function falsePremises(question: string, docs: SourceDoc[] | null | undef
     const out: string[] = []
     for (const m of String(question || "").matchAll(PREMISE_CLAUSE)) {
       const clause = m[1].replace(/^(?:since|as|given(?: that)?|because|now that|considering|with)\s+/i, "").replace(/^(?:you|your)\s+/i, "")
+        // r11b: the clause-opening gerund ("Cutting …") is the verb, not a name
+        .replace(/^(?:cutting|reducing|lowering|slashing|dropping|decreasing|halving|closing|saving|rotating|improving|increasing|boosting)\b/i, (w) => w.toLowerCase())
       for (const c of extractClaims(clause)) if (!/^(?:you|your|i)$/i.test(c) && !supportedBy(c, hay) && !out.includes(c)) out.push(c)
     }
     return dropCoveredFigureClaims(out)
