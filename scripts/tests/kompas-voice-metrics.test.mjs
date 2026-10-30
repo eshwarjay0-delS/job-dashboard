@@ -74,9 +74,17 @@ test("baseline rejects moved edit labels even when edit-label totals match",()=>
   const base=evaluate(set([row("a","yes","yes",{editCount:0}),row("b","yes","yes")]));
   assert.throws(()=>evaluate(set([row("a","yes","yes"),row("b","yes","yes",{editCount:0})]),base),/Baseline mismatch/);
 });
-test("baseline rejects moved speaker predictions despite identical reference speakers",()=>{
+test("baseline accepts moved predictions with the same reference speaker cohort",()=>{
   const base=evaluate(set([row("a","yes","yes",{referenceSpeaker:"one",predictedSpeaker:"one"}),row("b","yes","yes",{referenceSpeaker:"two"})]));
-  assert.throws(()=>evaluate(set([row("a","yes","yes",{referenceSpeaker:"one"}),row("b","yes","yes",{referenceSpeaker:"two",predictedSpeaker:"two"})]),base),/Baseline mismatch/);
+  const next=evaluate(set([row("a","yes","yes",{referenceSpeaker:"one"}),row("b","yes","yes",{referenceSpeaker:"two",predictedSpeaker:"two"})]),base);
+  assert.equal(base.coverage.speakerLabels,2);
+  assert.equal(next.coverage.speakerLabels,2);
+  assert.equal(base.metrics.speakerAttribution,.5);
+  assert.equal(next.metrics.speakerAttribution,.5);
+  assert.equal(next.metrics.speakerPredictionRate,.5);
+  assert.equal(next.deltaFromBaseline.speakerAttribution,0);
+  assert.equal(next.deltaFromBaseline.speakerPredictionRate,0);
+  assert.equal(next.measurementSetSha256,base.measurementSetSha256);
 });
 test("baseline accepts same measurement-label cohort with changed predictions",()=>{
   const base=evaluate(set([row("a","yes","yes",{editCount:0,latencyMs:900,referenceSpeaker:"one",predictedSpeaker:"one"})]));
