@@ -101,11 +101,24 @@ export function requestedParts(question: string): { parts: string[]; constraints
   const parts: string[] = [], constraints: string[] = []
   // Not "compare": "Compare IDOR and CSRF" is one part, the comparison.
   const LIST_VERB = /^((?:explain|state|cover|give|include|describe|list|name|walk through|walk me through|discuss|outline|address|show|identify)\b)\s+(.+)$/i
-  const CONDITION = /^(?:keep|make it|stay|limit|avoid|assume|use only|focus|without|don'?t|do not|never|there can be no|no (?:production )?(?:downtime|restart|outage))\b/i
+  const CONDITION = /^(?:keep|make it|stay|limit|avoid|assume|use only|focus|without|don'?t|do not|never|there can be no|(?:with |and )?no (?:production )?(?:downtime|restart|outage))\b/i
   for (const sentence of String(question || "").split(/(?<=[.?!])\s+/)) {
     let core = sentence.replace(LEAD_FILLER, "").replace(/[.!]+$/, "").trim()
     if (!core) continue
-    if (CONDITION.test(core)) { constraints.push(core); continue }
+    if (CONDITION.test(core)) {
+      // "No downtime, how would you verify it?" is a limit and an ask. Taking the
+      // whole sentence as the limit dropped the ask (the same miss as a trailing
+      // "without", on the other side of the sentence).
+      const embedded = core.match(/^(.*?),?\s+((?:how|what|why|when|where|which|who)\b.+)$/i)
+      const limit = embedded ? embedded[1].replace(/[?,]+$/, "").trim() : ""
+      if (embedded && limit.split(/\s+/).length >= 2 && limit.split(/\s+/).length <= 14) {
+        constraints.push(limit)
+        core = embedded[2].trim()
+      } else {
+        constraints.push(core)
+        continue
+      }
+    }
     // Read before the condition is cut off: "..., how would you distinguish A, B and C without bypassing inspection?" kept
     // its question mark on the condition, so the ask itself was taken for setup and dropped (27 Oct 2026).
     const asked = /\?$/.test(core)

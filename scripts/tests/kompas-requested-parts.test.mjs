@@ -28,6 +28,15 @@ test('a listed ask becomes one part per item, in order, and its conditions are k
   assert.deepEqual(inline.constraints, ['with no downtime'])
   assert.match(inline.parts[0], /^How would you verify the remediation/)
   assert.doesNotMatch(inline.parts.join(' '), /downtime/)
+  const leading = A.requestedParts('No downtime, how would you verify the remediation?')
+  assert.deepEqual(leading.constraints, ['No downtime'])
+  assert.match(leading.parts.join(' '), /how would you verify the remediation/i)
+  const withLead = A.requestedParts('With no downtime, how would you verify the remediation?')
+  assert.deepEqual(withLead.constraints, ['With no downtime'])
+  assert.match(withLead.parts.join(' '), /how would you verify the remediation/i)
+  const restart = A.requestedParts('Without a restart, how would you patch the service?')
+  assert.deepEqual(restart.constraints, ['Without a restart'])
+  assert.match(restart.parts.join(' '), /how would you patch the service/i)
 })
 
 test('setup sentences are context, a single ask stays one part, and "and" inside a name is not a split', () => {

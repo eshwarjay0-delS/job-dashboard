@@ -1,3 +1,7 @@
+## 2026-10-30 — A limit before the question no longer swallows the ask
+
+"No downtime, how would you verify the remediation?" and "Without a restart, how would you patch the service?" were stored as the condition only, so the ask was dropped. The limit stays a condition and the question stays the question. "With no downtime, how would you..." is the same split.
+
 ## 2026-10-30 — No downtime stays a condition of the question
 
 "How would you verify the remediation with no downtime?" kept the limit inside the ask, so it was not named as a condition. "There can be no downtime" before the question was skipped the same way. Both are now conditions. The ask itself stays. A "without ..." condition still keeps the ask.
