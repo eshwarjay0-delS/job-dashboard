@@ -2,7 +2,7 @@
 // paths every live answer goes through, not live answer quality (that needs scripts/kompas-live-eval.mjs with a token).
 import test from "node:test"
 import assert from "node:assert/strict"
-import { spokenMarkup, dropRepeatedSentences, isProviderErrorAnswer, settleSpokenAnswer, dissectQuestion, asksForCode, splitFollowUp, sameAnswerRatio, draftSpokenAnswer } from "../../src/lib/kompasDissection.ts"
+import { cleanSpokenAsk, leadPhrase, spokenMarkup, dropRepeatedSentences, isProviderErrorAnswer, settleSpokenAnswer, dissectQuestion, asksForCode, splitFollowUp, sameAnswerRatio, draftSpokenAnswer } from "../../src/lib/kompasDissection.ts"
 import { applyGuards } from "../../src/lib/kompasGuards.ts"
 
 const guard = (s) => applyGuards(s, null, new Set(), new Set()).text
@@ -144,4 +144,30 @@ test("round 4 failsafe: a full read-back or an asked repeat keeps the text, flag
   const again = settleSpokenAnswer("Can you say that again?", previous, "director", "", previous)
   assert.ok(again.text.includes("compared the evidence"))
   assert.equal(dropRepeatedSentences("Short. New idea here.", "Short."), "Short. New idea here.")
+})
+
+test("round 2: speech fillers never decide the shape or become keywords", () => {
+  assert.equal(dissectQuestion("tell me about uh yourself").shape, "intro")
+  assert.equal(dissectQuestion("what's residual risk mean to you").shape, "definition")
+  const garbled = dissectQuestion("um so like what's the uh resid jewel risk thing")
+  assert.ok(!garbled.keywords.some((k) => /^(?:um|uh|like|thing|so)$/i.test(k)), garbled.keywords.join("|"))
+  assert.equal(leadPhrase("tell me about a time you you challenged a remediation plan"), "challenged a remediation plan")
+  for (const q of ["Hi, can you hear me okay?", "How are you doing today?", "Hello, how's it going?"]) assert.equal(dissectQuestion(q).shape, "acknowledgement", q)
+})
+
+test("round 2 failsafe: real words that look like fillers are kept, and filler-only asks keep their words", () => {
+  assert.equal(cleanSpokenAsk("What do you like about this role?"), "What do you like about this role?")
+  assert.equal(cleanSpokenAsk("Which thing would you fix first?"), "Which thing would you fix first?")
+  assert.equal(cleanSpokenAsk("um uh"), "um uh")
+  for (const q of ["How are you handling exception expiry?", "Can you hear me out on a design question: how would you isolate tenants?"]) {
+    assert.notEqual(dissectQuestion(q).shape, "acknowledgement", q)
+  }
+})
+
+test("round 2: backchannel noise never becomes a question", () => {
+  for (const heard of ["um", "uh huh", "mm-hmm", "mhm", "oh", "I see"]) {
+    assert.equal(deriveByCode(heard, []), null, heard)
+    assert.equal(questionForAnswer(heard, "", false, false, []), "", heard)
+  }
+  assert.equal(questionForAnswer("Oh, how do you close a finding?", "", false, false, []).includes("close a finding"), true)
 })

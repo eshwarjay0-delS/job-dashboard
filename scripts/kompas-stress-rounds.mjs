@@ -61,6 +61,7 @@ const R2 = [
     "What did you dislike about your last manager?", "Why do you want to leave your current job?", "What is your salary expectation?",
     "Since you led the SOC at a large bank, how big was your team?", "Would you bypass a control if the CEO asked you to?"].map((q) => A("trick", q)),
   ...SMALL_TALK.map((heard) => ({ kind: "smalltalk", family: "small-talk (idea E)", heard })),
+  ...["um", "uh huh", "mm-hmm", "mhm", "oh", "I see"].map((heard) => ({ kind: "smalltalk", family: "backchannel noise", heard })),
   ...["How do you keep user accounts safe?", "How do you stop attackers moving around the network?", "How do you check who has admin rights?",
     "How do you make sure logs are useful?", "How do you protect passwords?", "How do you handle a suspicious login?"].map((q) => A("jargon-bait", q)),
   ...[["um so like what's the uh resid jewel risk thing", "definition"], ["uh what is uh least privilege", "definition"],
@@ -68,7 +69,7 @@ const R2 = [
     ["what's the difference between a policy deviation and and a policy exception you know", "comparison"],
     ["what's residual risk mean to you", "definition"], ["define compensating uh control", "definition"],
     ["how do you assess business in pact", null], ["tell me about uh yourself", "intro"],
-    ["are you able to work on site like three days a week", "logistics"], ["um", null]].map(([q, shape]) => A("garbled", q, { shapes: shape ? [shape] : null, garbled: true })),
+    ["are you able to work on site like three days a week", "logistics"]].map(([q, shape]) => A("garbled", q, { shapes: shape ? [shape] : null, garbled: true })),
   ...["Hi, can you hear me okay?", "How are you doing today?", "Thanks for joining, shall we get started?"].map((q) => A("greeting", q, { shapes: ["logistics", "acknowledgement"] })),
 ]
 

@@ -310,9 +310,29 @@ export function bannedTerms(question: string, sources: string, shape: AnswerShap
   }).map((item) => item.term)
 }
 
+/**
+ * Stress round 2 (29 Oct 2026): speech fillers decided the cut. "Tell me about uh yourself" was not an intro, and
+ * "the uh resid jewel risk thing" made "thing" a keyword. Fillers, doubled words and a trailing "thing" go before the
+ * intent and keywords are read; the ask itself is returned as heard.
+ */
+export function cleanSpokenAsk(question: string): string {
+  const out = String(question || "")
+    .replace(/\b(?:um+|uh+|erm+|er|hmm+)\b[,.]?/gi, " ")
+    .replace(/\b(?:you know|i mean|sort of|kind of)\b,?/gi, " ")
+    .replace(/(^|[\s,])like,?(?=\s+(?:what|how|why|the|a|an|inherent|residual|\w+ing)\b)/gi, "$1")
+    .replace(/^\s*(?:so|okay so|ok so|alright so|well)[,\s]+/i, "")
+    .replace(/\b(\w+)\s+\1\b/gi, "$1")
+    .replace(/\s+(?:thing|stuff)(?=\s*[?.!]*\s*$)/i, "")
+    .replace(/\s+([?.!,])/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim()
+  // Failsafe: an ask that is only filler keeps its words, so nothing is lost.
+  return out || String(question || "").trim()
+}
+
 export function dissectQuestion(question: string, sources = ""): QuestionDissection {
   const ask = String(question || "").replace(/\s+/g, " ").trim()
-  const tied = splitFollowUp(ask)
+  const tied = splitFollowUp(cleanSpokenAsk(ask))
   const own = interviewIntent(tied.own)
   // A tied follow-up keeps its own intent when it has one; a generic one ("what would you monitor?") is a follow-up.
   const intent: ReplyIntent = tied.previous && (own === "direct" || own === "acknowledgement") ? "follow-up" : own
@@ -324,7 +344,7 @@ export function dissectQuestion(question: string, sources = ""): QuestionDissect
     ask,
     intent,
     shape,
-    keywords: questionKeywords(ask),
+    keywords: questionKeywords(cleanSpokenAsk(ask)),
     banned: bannedTerms(ask, sources, shape),
     depthAsked: depthAsked(ask, shape),
     modes: modesFor(shape, partsScale(ask)),
@@ -617,8 +637,8 @@ function firstPerson(line: string): string {
  * "What is the difference between", "Are you able to", "How do you"), so the answer can open on those exact words.
  */
 export function leadPhrase(question: string): string {
-  const tied = splitFollowUp(question)
-  if (tied.previous) question = tied.own
+  const tied = splitFollowUp(cleanSpokenAsk(question))
+  question = tied.previous ? tied.own : cleanSpokenAsk(question)
   let topic = (topicOfAsk(question).split(/(?<=[a-z0-9)])[?!.]\s+/i)[0] || "").replace(/[?!.]+\s*$/, "").trim()
   const frames = [
     /^(?:so,?\s+|and\s+|now,?\s+)/i,
