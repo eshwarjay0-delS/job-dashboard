@@ -39,6 +39,9 @@ jobs:
         run: npx tsc --noEmit --skipLibCheck
         continue-on-error: false
 
+      - name: Verify secure web-to-desktop interview transfer and long instructions
+        run: node --test scripts/tests/kompas-desktop-ticket.test.mjs
+
       - name: Verify cross-domain and interview question fidelity
         run: node --test scripts/tests/kompas-interview-precision.test.mjs scripts/tests/kompas-shape-calibration.test.mjs scripts/tests/kompas-50fold-relevance.test.mjs scripts/tests/kompas-crossdomain-50.test.mjs scripts/tests/kompas-crossdomain-live-fixture.test.mjs scripts/tests/kompas-paired-review.test.mjs scripts/tests/kompas-score-review.test.mjs scripts/tests/kompas-review-template.test.mjs scripts/tests/kompas-relevance-review.test.mjs scripts/tests/kompas-relevance-recovery.test.mjs scripts/tests/kompas-chief-kernel-54fold.test.mjs scripts/tests/kompas-dissection.test.mjs scripts/tests/kompas-live-eval.test.mjs scripts/tests/kompas-reference-answers.test.mjs scripts/tests/kompas-relevance-folds.test.mjs scripts/tests/kompas-guards.test.mjs scripts/tests/kompas-stress-rounds.test.mjs scripts/tests/kompas-round5.test.mjs scripts/tests/kompas-round6.test.mjs scripts/tests/kompas-repair-harness.test.mjs scripts/tests/kompas-round8.test.mjs scripts/tests/kompas-round11.test.mjs scripts/tests/kompas-source-retrieval.test.mjs scripts/tests/kompas-grounding-r5.test.mjs scripts/tests/kompas-grounding-r2.test.mjs scripts/tests/kompas-grounding-r3.test.mjs scripts/tests/kompas-grounding-r4.test.mjs scripts/tests/kompas-speed-r6.test.mjs scripts/tests/kompas-speed-r6-on-r5.test.mjs scripts/tests/kompas-guards-r9.test.mjs scripts/tests/kompas-guards-r9b.test.mjs scripts/tests/kompas-grounding-r10.test.mjs scripts/tests/kompas-grounding-r11.test.mjs scripts/tests/kompas-premise-verbs-r11b.test.mjs scripts/tests/kompas-premise-spelled-r11c.test.mjs scripts/tests/kompas-premise-reported-r11d.test.mjs scripts/tests/kompas-grounding-r12.test.mjs scripts/tests/kompas-grounding-r13.test.mjs scripts/tests/kompas-explain-length.test.mjs scripts/tests/kompas-ask-arming.test.mjs scripts/tests/kompas-auto-wait.test.mjs scripts/tests/kompas-vad-floor.test.mjs scripts/tests/kompas-logistics-overskip.test.mjs scripts/tests/kompas-voice-gaps.test.mjs scripts/tests/kompas-what-experience-length.test.mjs
 
@@ -53,9 +56,6 @@ jobs:
 
       - name: Verify desktop Screen Answer UI and capture path
         run: node --check public/kompas/app.js && node --test scripts/tests/kompas-desktop-screen-action.test.mjs scripts/tests/kompas-screen-response.test.mjs scripts/tests/kompas-screen-review.test.mjs
-
-      - name: Verify secure web-to-desktop interview transfer and long instructions
-        run: node --test scripts/tests/kompas-desktop-ticket.test.mjs
 
       - name: Verify slice 5d audio-watchdog hooks (levels, tracks, guarded restart; fake devices only)
         run: node --no-warnings --test scripts/tests/kompas-audio-watchdog-hooks.test.mjs
