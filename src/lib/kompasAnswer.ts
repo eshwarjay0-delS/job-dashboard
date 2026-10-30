@@ -495,6 +495,9 @@ function afterMarkedNextQuestion(text: string): string {
 /** "And why?", "Why?", "How come?" — a follow-up, not a new subject and not silence. */
 export function shortFollowUp(text: string): boolean {
   const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim()
+  // r4: "And?", "and then?", "what happened next?" and "why that?" were dropped or answered with no topic. Failsafe:
+  // only these whole short forms count; anything longer is judged as before.
+  if (/^(?:(?:and|so|ok(?:ay)?|um+|uh+)[, ]+)*(?:and|and then|then what|what then|what happened next|what happened then|what next|what came next|and after that|go on|why that|why so)[.?!]*$/i.test(t)) return true
   return /^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|go deeper|dig deeper|explain that|explain this|explain it|say that again|why|how)(?:\s+though)?[.?!]*$/i.test(t)
 }
 
@@ -625,7 +628,45 @@ function classifyAskSentence(sentence: string): AskPart {
 }
 
 const SPOKEN_NOISE =
-  /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|bye|goodbye|good morning|good afternoon|good evening|how are you|what'?s up|cool|sure|right|alright|all right|got it|sounds good)[.!?]*$/i
+  /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|uh[- ]?huh|mm+[- ]?hmm+|m+hm+|mm+|ah+|oh+|i see|bye|goodbye|good morning|good afternoon|good evening|how are you|what'?s up|cool|sure|right|alright|all right|got it|sounds good)[.!?]*$/i
+
+// Stress round 2, idea E of the competitor study (a rival's auto trigger fired on "yeah that's a tough one"): 13 of 15
+// interviewer acknowledgements and small-talk lines ("makes sense", "let's dive in", "I see what you mean", "give me one
+// second", "sorry, my dog is barking") were formed into a question and answered; "I see what you mean" became the
+// question "What you mean". A whole utterance that is only one of these, with no question mark, is not a question.
+const SMALL_TALK_LEAD = "(?:(?:yeah|yes|ok(?:ay)?|right|alright|all right|so|well|hmm+|mm+|oh|ah|nice|great|good|perfect|cool|sure|sorry|wow|excellent|awesome|thanks)[,.!]?\\s+)*"
+const SMALL_TALK_CORE = [
+  "that'?s (?:a |an |really |very )?(?:tough|hard|good|great|fair|interesting|helpful|fine|clear|nice|solid|cool|tricky)(?: one| question| point| answer| idea| example)?",
+  "that (?:makes sense|helps|is helpful|is interesting|works)",
+  "makes (?:total |perfect )?sense", "fair enough", "good,? good", "very good", "all good", "no worries", "sounds good",
+  "(?:thanks|thank you)(?: so much| for that)?", "i see(?: what you mean)?", "i hear you", "got it", "understood", "noted",
+  "interesting(?: point| one)?", "(?:i )?(?:really )?like that(?: answer| idea| one| example)?", "(?:i )?appreciate (?:that|it)",
+  "let'?s (?:dive in|get started|begin|start|move on|keep going|continue|jump in|jump right in)",
+  "give me (?:a|one) (?:second|sec|moment|minute)", "(?:just )?(?:one|a) (?:second|sec|moment)", "hold on", "bear with me",
+  "let me (?:pull up|find|check|grab|look at) (?:my|the) (?:notes|screen|list|questions|next question)",
+  "(?:my|the) (?:dog|cat|kid|kids|baby|neighbou?r) (?:is|are) (?:barking|crying|loud|here|making noise)",
+  "the weather (?:has been|is|was) [a-z ]{2,30}", "(?:you'?re|you are) breaking up(?: a (?:bit|little))?", "okay cool", "cool cool", "nice one",
+  // Round 6 (29 Oct 2026): five more interviewer asides were formed into questions and answered.
+  "that'?s (?:basically |about |pretty much )?(?:the team|it|all|everything|the role|the setup)", "right,? right",
+  "(?:we'?ll|let'?s|i'?ll) circle back (?:on|to) (?:that|it|this)",
+  "(?:my|the|your) (?:screen|video|audio|connection|internet|wi-?fi|mic) (?:froze|dropped|cut out|lagged|glitched|is lagging)(?: for a (?:second|sec|moment|bit))?",
+  "i'?m (?:just )?(?:writing|noting|jotting) (?:that|this|it) down", "let me (?:write|note|jot) (?:that|this|it) down",
+  // Round 8 (29 Oct 2026): five more asides were formed into questions and answered ("mm-hm", "got it, thanks", "I'm going
+  // to mute for a second", "let me check the time", "sorry, someone just walked in"). Whole-utterance only, no "?".
+  "(?:mm-?hm+|uh-?huh|mhm+)(?:,? (?:okay|ok|right|sure|yeah|got it))?", 
+  // Round 10: meeting housekeeping.
+  "(?:i'?m|i am) (?:going to|gonna|about to) share my screen", "(?:sorry,? )?(?:i'?m|i was|you'?re|you were) (?:on|still on) mute",
+  "can (?:everyone|everybody|you|you all) (?:hear|see) me(?: okay| alright| now| well| fine)?", "got it,? (?:thanks|thank you)", "(?:i'?m|i am) (?:going to|gonna) (?:mute|go on mute)(?: for a (?:second|sec|moment|bit|minute))?",
+  "let me (?:check|look at) the (?:time|clock)", "someone (?:just )?(?:walked|came) in",
+]
+const SMALL_TALK = new RegExp(`^${SMALL_TALK_LEAD}(?:${SMALL_TALK_CORE.join("|")})[.!]*$`, "i")
+
+/** An interviewer acknowledgement or small talk, on its own: never answered. */
+export function smallTalkOnly(text: string): boolean {
+  const t = String(text || "").replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gi, " ").replace(/\s+/g, " ").trim()
+  if (!t || /\?/.test(t) || t.split(/\s+/).length > 14) return false
+  return SMALL_TALK.test(t)
+}
 
 /** A greeting or a filler is not a question. A short technical fragment is. */
 export function noiseOnly(text: string): boolean {
@@ -634,7 +675,7 @@ export function noiseOnly(text: string): boolean {
     .replace(/\s+/g, " ")
     .trim()
   if (!t) return true
-  return SPOKEN_NOISE.test(t)
+  return SPOKEN_NOISE.test(t) || smallTalkOnly(t)
 }
 
 /**
@@ -655,7 +696,12 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
     const whole = parts.slice(from).map((p) => p.text).join(" ").replace(/\s+/g, " ").trim()
     return (whole && !noiseOnly(whole) ? whole : asked).slice(0, 2000)
   }
-  const cut = cutQuestion([heard, asked].filter(Boolean).join("\n"), previous)
+  // Stress round 5 (29 Oct 2026): unpinned with the derived ask (a retry sends both), the ask was cut out of heard AND
+  // appended again, so the model was told to answer "...scope an access review? Anyway, how do you scope an access
+  // review?". When heard already holds the ask, heard alone is cut; the joined cut stays as the fallback.
+  const key = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+  const inHeard = asked && key(asked).length > 0 && key(heard).includes(key(asked))
+  const cut = (inHeard ? cutQuestion(heard, previous) : "") || cutQuestion([heard, asked].filter(Boolean).join("\n"), previous)
   if (cut) return cut
   if (asked && !noiseOnly(asked)) return asked.slice(0, 2000)
   const bare = String(heard || "")
@@ -691,8 +737,43 @@ export function topicFragment(text: string): boolean {
  * which knows the previous turn unless this is a re-ask of it. "" means the model decides. The service and the
  * baseline contract (scripts/kompas-baseline.mjs) both call this, so the contract replays the real derive.
  */
+/**
+ * Round 8 (29 Oct 2026): "uh so, um, how do you like, scope an an access review" was derived and answered word for word,
+ * so the ask "scope an access review" never appeared in it. Fillers inside the ask, "you like," and a doubled word or
+ * restarted phrase ("how do you, how do you prove") are removed. Failsafe: if that leaves nothing, the ask is kept as is.
+ */
+export function tidySpokenAsk(question: string): string {
+  const raw = String(question || "")
+  const out = raw
+    .replace(/(^|[\s,])(?:um+|uh+|erm+)\b[,.]?/gi, "$1")
+    .replace(/\b(you|we|i)\s+like,\s+/gi, "$1 ")
+    .replace(/\b((?:\w+\s+){1,3}\w+),?\s+\1\b/gi, "$1")
+    .replace(/\b(\w+)\s+\1\b/gi, "$1")
+    .replace(/\s+([?.!,])/g, "$1")
+    .replace(/^[\s,]+/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (!out) return raw.trim()
+  // Once tidied, the heard ask and the derived ask can be the same sentence; it is said once.
+  const seen = new Set<string>()
+  const once = out.split(/(?<=[.?!])\s+/).filter((sentence) => {
+    const key = sentence.toLowerCase().replace(/[^a-z0-9 ]+/g, "").trim()
+    if (key && seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).join(" ")
+  return once.charAt(0).toUpperCase() + once.slice(1)
+}
+
 export function deriveByCode(heard: string, history: unknown, reask = false): string | null {
+  const derived = deriveByCodeRaw(heard, history, reask)
+  return derived ? tidySpokenAsk(derived) : derived
+}
+
+function deriveByCodeRaw(heard: string, history: unknown, reask = false): string | null {
   if (!heard || plainlyNoQuestion(heard)) return null
+  // Every line is small talk ("Them: makes sense"): nothing to derive, and the model is not asked to find a question in it.
+  if (String(heard).split("\n").filter((l) => l.trim()).every((l) => noiseOnly(l))) return null
   const clean = cleanQuestion(heard) || cutQuestion(heard, reask ? NO_TURN : previousTurn(history))
   if (clean) return clean
   const topic = topicFragment(String(heard).replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " "))
@@ -710,13 +791,45 @@ export function stripScreenChrome(question: string): string {
   return stripped || String(question || "").trim()
 }
 
+// r4 (29 Oct 2026): an interviewer who corrects themselves mid-question ("Tell me about X, sorry, actually, how did you
+// handle Y?") was answered on the whole garbled line. Only the corrected ask is kept; one that points back ("after it")
+// keeps the first topic as what it follows up on. Failsafe: no marker after a clause break, a remainder under three
+// words or without an ask word, or any error → the text unchanged.
+const SELF_CORRECTION = /(?:[,.;:!?]|\s[\u2014\u2013-])\s*(?:(?:sorry|actually|no|wait|no wait|scratch that|let me rephrase(?: that)?|i mean|or rather|rather)[,.;:]?\s+)+/gi
+const ASK_WORD = /^(?:how|what|why|when|where|who|which|tell|walk|describe|give|can|could|would|did|do|have|explain|talk)\b/i
+export function afterSelfCorrection(text: string): string {
+  try {
+    const t = String(text || "")
+    let last: RegExpExecArray | null = null
+    for (const m of t.matchAll(SELF_CORRECTION)) {
+      if (/\b(?:sorry|actually|wait|scratch|rephrase|mean|rather)\b/i.test(m[0])) last = m as RegExpExecArray
+    }
+    if (!last) return t
+    const rest = t.slice(last.index + last[0].length).trim()
+    const before = t.slice(0, last.index).replace(/[\s,.;:\u2014\u2013-]+$/, "").trim()
+    if (rest.split(/\s+/).length < 3 || !ASK_WORD.test(rest) || !before) return t
+    const ask = rest.charAt(0).toUpperCase() + rest.slice(1)
+    if (/\b(?:it|that|this|them|those)\b/i.test(ask)) return `${ask.replace(/[?.!\s]+$/, "")} \u2014 following up on: "${before}"?`
+    return ask
+  } catch {
+    return String(text || "")
+  }
+}
 export function questionForAnswer(heard: string, asked: string, pinned: boolean, again: boolean, history: unknown): string {
   const turns = Array.isArray(history) ? history : []
-  const q = afterMarkedNextQuestion(questionToAnswer(stripScreenChrome(heard), stripScreenChrome(asked), pinned, again ? NO_TURN : previousTurn(turns)))
-  return q ? resolveFollowUp(q, turns.map((h) => {
+  const formed = afterMarkedNextQuestion(questionToAnswer(stripScreenChrome(heard), stripScreenChrome(asked), pinned, again ? NO_TURN : previousTurn(turns)))
+  const corrected = formed ? afterSelfCorrection(formed) : formed
+  const q = corrected ? (/following up on: "/.test(corrected) && corrected !== formed ? corrected : tidySpokenAsk(corrected)) : formed
+  const source = String((pinned && asked) || heard || "").split("\n").filter((l) => l.trim()).pop() || ""
+  const startedWithAnd = /^\s*(?:(?:Them|You)(?: \([a-z]+\))?:\s*)?(?:and|but)\b/i.test(source)
+  // Round 13: "I'm not convinced. Who decides it is acceptable?" lost the pushback when only the last ask was kept, so it
+  // was answered as a new question with no topic. With history, the pushback sentence is kept in front of the ask.
+  const said = source.replace(/^\s*(?:Them|You)(?: \([a-z]+\))?:\s*/i, "").trim()
+  const pushed = turns.length && q && PUSHBACK.test(said) && !PUSHBACK.test(q) && said.replace(/[?.!\s]+$/, "").toLowerCase().endsWith(q.replace(/[?.!\s]+$/, "").toLowerCase().slice(-20)) ? `${said.match(/^[^.?!]*[.?!]?/)?.[0] || ""} ${q}`.trim() : q
+  return q ? resolveFollowUp(pushed, turns.map((h) => {
     const o = (h && typeof h === "object" ? h : {}) as Record<string, unknown>
     return { q: String(o.q ?? o.question ?? "").slice(0, 300) }
-  })) : ""
+  }), startedWithAnd) : ""
 }
 
 // The Director level's opening, in the owner's words, plus the 27 Oct rule that the decision owner is a role.
@@ -753,23 +866,86 @@ function followUpResidue(q: string): string {
     .replace(/\b(?:would|could|should|please|just|really|start|with|about|through|walk)\b/gi, " ")
 }
 
+/** A follow-up that adds to the previous ask rather than starting a new one. */
+export const ADDITIVE_FOLLOW_UP =
+  /^\s*(?:(?:and|so|okay|ok)[,\s]+)?(?:(?:can|could|would|will) you (?:also|then)\b|(?:can|could|would) you add\b[^?]*\b(?:it|that|this|them|there)\b|what would you (?:monitor|do differently|change|measure|track|log|alert on)\b|what (?:about|if)\b|how (?:would|do|will) you test (?:it|that|this|them)\b|also\b|any (?:edge cases|trade-?offs)\b|what(?:'s| is) the (?:time|space) complexity\b)/i
+
 /** A topic-less follow-up ("go deeper", "explain that") is glued to the previous question IN CODE.
  * A short question that still names its own subject is not. "What exactly is least privilege?"
  * used to be rewritten as a follow-up of whatever was on screen, so a different question was answered as the same one.
  */
-export function resolveFollowUp(d: string, history: Array<{ q?: string }>): string {
+// Round 9 (29 Oct 2026): short follow-ups that start with "and" ("And who signs it off?", "And how often?", "And who do
+// you include?") or lean on a pronoun ("How long can it last?", "If it fails?") were answered as new questions with no
+// subject. They are tied when short and they do not open a new subject of their own ("And what is zero trust?" is new).
+const CONTINUES_LEAD = /^\s*(?:and|so then|but)\b[,\s]+/i
+const OWN_SUBJECT = /\b(?:what (?:is|are)|define|explain|tell me about|describe|where are you|when can you)\b/i
+const LEANS_BACK = /\b(?:it|they|them|those|these|ones)\b/i
+function continuesPrevious(q: string, startedWithAnd: boolean): boolean {
+  const words = q.split(/\s+/).length
+  if ((startedWithAnd || CONTINUES_LEAD.test(q)) && words <= 7 && (!OWN_SUBJECT.test(q) || LEANS_BACK.test(q))) return true
+  return words <= 5 && LEANS_BACK.test(q) && !OWN_SUBJECT.test(q) && !/^\s*(?:tell|walk|describe|why do you want)\b/i.test(q)
+}
+
+/** The question a follow-up chain started from: the innermost quoted ask of "X — following up on: "…"". */
+export function rootAsk(q: string): string {
+  let out = String(q || "")
+  for (let i = 0; i < 5; i++) {
+    const m = out.match(/following up on:\s*"([\s\S]*)"\??\s*$/i)
+    if (!m) break
+    out = m[1]
+  }
+  return out.replace(/[?.!\s]+$/, "")
+}
+
+/** "the second one" after a multi-part question: the part it points at, or "" when the previous ask has no list. */
+const ORDINALS: Record<string, number> = { first: 0, second: 1, third: 2, fourth: 3, last: -1 }
+export function orderedPartOf(previous: string, ask: string): string {
+  const m = String(ask || "").match(/\b(?:the )?(first|second|third|fourth|last) (?:one|part|point|thing|bit)\b/i)
+  if (!m) return ""
+  const body = String(previous || "").replace(/[?.!\s]+$/, "")
+    .replace(/^\s*(?:can you |could you )?(?:explain|describe|define|tell me about|walk me through|what (?:is|are))\s+/i, "")
+  const parts = body.split(/\s*,\s*(?:and\s+)?|\s+and\s+/i).map((p) => p.trim()).filter(Boolean)
+  if (parts.length < 2) return ""
+  const i = ORDINALS[m[1].toLowerCase()]
+  return parts[i < 0 ? parts.length - 1 : i] || ""
+}
+
+/** Round 12 (29 Oct 2026): interviewer pushback ("That doesn't sound right.") was answered as a new question with
+ * "that doesn't sound right" as its topic. It is tied to the question it challenges. A pushback that carries a new
+ * question of its own ("That doesn't sound right. How would you prove it?") stays tied, since it is the same topic. */
+export const PUSHBACK = /^\s*(?:hmm+[,.]?\s*|well[,\s]+|really\??\s*)*(?:that (?:doesn\'t|does not) (?:sound|seem) right|i\'m not (?:sure|convinced)(?: that\'s (?:right|correct))?|i(?:\'d| would) push back(?: on that)?|really\?\s*(?=\w)|that seems (?:backwards|too simple|wrong|off)|i don\'t think that\'s (?:right|how it works)|that contradicts|are you sure(?: about that)?|i disagree|most people would (?:say|just)|that\'s not (?:right|what i)|i\'m not buying)\b/i
+export function resolveFollowUp(d: string, history: Array<{ q?: string }>, startedWithAnd = false): string {
   const q = String(d || "").trim()
   const hist = Array.isArray(history) ? history.filter((h) => h && h.q) : []
   if (!q || !hist.length) return q
+  // Round 9: a follow-up to a follow-up nested the tag ("X — following up on: "Y — following up on: …"") and the inner tag
+  // was said aloud. The chain is tied to its root question, the real topic.
+  const lastRaw = String(hist[hist.length - 1].q)
+  const inChain = /following up on:/i.test(lastRaw)
+  const lastAsk = rootAsk(lastRaw)
+  if (PUSHBACK.test(q) && q.split(/\s+/).length <= 30) return `${q.replace(/[?.!\s]+$/, "")} — following up on: "${lastAsk}"?`
+  const part = orderedPartOf(lastAsk, q)
+  if (part) {
+    // Round 10: "And the second one again?" names the part, so the answer and keywords carry it. Failsafe: no list, no change.
+    const said = q.replace(/\b(?:the )?(?:first|second|third|fourth|last) (?:one|part|point|thing|bit)\b/i, part).replace(/[?.!\s]+$/, "")
+    return `${said.charAt(0).toUpperCase() + said.slice(1)} — following up on: "${lastAsk}"?`
+  }
+  if ((continuesPrevious(q, startedWithAnd) || (inChain && q.split(/\s+/).length <= 5 && !OWN_SUBJECT.test(q) && !/^\s*(?:tell|walk|describe)\b/i.test(q))) && !shortFollowUp(q)) {
+    const say = q.replace(CONTINUES_LEAD, "").replace(/[?.!\s]+$/, "")
+    return `${say.charAt(0).toUpperCase() + say.slice(1)} — following up on: "${lastAsk}"?`
+  }
   if (shortFollowUp(q)) {
-    const last = String(hist[hist.length - 1].q).replace(/[?.!\s]+$/, "")
+    const last = lastAsk
     const say = q.replace(/[?.!\s]+$/, "")
     return `${say.charAt(0).toUpperCase() + say.slice(1)} — following up on: "${last}"?`
   }
   const points = PRESS.test(q) || POINTS_BACK.test(q)
   const named = topicWords(followUpResidue(q)).length > 0
-  if (!(q.split(/\s+/).length <= 9 && points && !named)) return q
-  const last = String(hist[hist.length - 1].q).replace(/[?.!\s]+$/, "")
+  const short = q.split(/\s+/).length <= 9
+  // Idea D (stress round 3): an additive follow-up ("can you also add unit tests?") names a new word but stays on the
+  // previous topic, so it is tied too. A short ask that is its own question ("what is least privilege?") is not.
+  if (!(short && ((points && !named) || ADDITIVE_FOLLOW_UP.test(q)))) return q
+  const last = lastAsk
   return `${q.replace(/[?.!\s]+$/, "")} — following up on: "${last}"?`
 }
 
@@ -1192,9 +1368,20 @@ export function missingStructure(text: string, opts: { level: string; register: 
   return missing
 }
 
-export const STRUCTURE_REPAIR_SYSTEM = `You repair one interview answer. Rewrite the SAME answer with minimal changes: keep every supported fact and relevant example unless a change is required by the missing element below. Do not shorten it, do not change the answer's level or voice, and do not invent achieved numbers or results. The missing element is part of what the interviewer asked for, so writing it completes the answer — it is not an invented claim, and it must not be left out to keep the answer unchanged. Add ONLY the missing element, in the place its instruction names. You MUST add the missing element even if that means adding a sentence: keeping the existing sentences does not mean leaving the answer unchanged. When a missing element names a label or a form, write it literally: a rejected alternative gets one sentence naming the alternative and what it cost; numbered hypotheses get literal 'Hypothesis 1:', 'Hypothesis 2:' labels, a test attached to each, and later references by number; a named framework or term gets named in the answer and tied to specific design elements with its control families or codes, not merely mentioned in passing.`
+export const STRUCTURE_REPAIR_SYSTEM = `You repair one interview answer. Rewrite the SAME answer with minimal changes: keep every supported fact and relevant example that answers the question, unless a change is required by the missing element below. Do not change the answer's level or voice, and do not invent achieved numbers or results. If the answer is already at its word limit, make room by tightening wording or dropping a point the interviewer did not ask about, never by dropping the missing element. The missing element is part of what the interviewer asked for, so writing it completes the answer — it is not an invented claim, and it must not be left out to keep the answer unchanged. Add ONLY the missing element, in the place its instruction names. You MUST add the missing element even if that means adding a sentence: keeping the existing sentences does not mean leaving the answer unchanged. When a missing element names a label or a form, write it literally: a rejected alternative gets one sentence naming the alternative and what it cost; numbered hypotheses get literal 'Hypothesis 1:', 'Hypothesis 2:' labels, a test attached to each, and later references by number; a named framework or term gets named in the answer and tied to specific design elements with its control families or codes, not merely mentioned in passing.`
 
 /** First-win archetype match. Returns the shape instruction or null. */
+// One repair prompt, no contradictions: v1 said "Do not shorten it" while the tangent instruction said "delete that
+// jargon" and the mode ceiling then trimmed the longer rewrite, so a landed repair could be cut back out (hitachi-grc
+// Q2 and Q3, rounds 11 to 14). The ceiling is stated here so the rewrite fits it.
+export function structureRepairSystem(maxWords: number, removeTangent: boolean): string {
+  const limit = maxWords > 0 ? `\nStay within ${maxWords} words in total.` : ""
+  const tangent = removeTangent
+    ? "\nWhen the missing element says remove an unasked tangent, delete that jargon and its unrelated clause. Keep the one direct answer and every point the interviewer asked for; do not replace it with a different technical story."
+    : ""
+  return `${STRUCTURE_REPAIR_SYSTEM}${tangent}${limit}`
+}
+
 export function pickShape(question: string, tier: number, known = ""): string | null {
   const q = String(question || "");
   for (const mode of ["behavioural", "technical"]) {
