@@ -1,3 +1,7 @@
+## 2026-10-30 — Two WhatsApp questions in one message are both answered
+
+The microphone already cut "What is Kubernetes? What is Terraform?" into two asks. WhatsApp sent that message as one turn, so the second ask was lost. WhatsApp now uses the same cut. A design followed by an explanation stays one answer. One question still sends one answer.
+
 ## 2026-10-30 — An introduction and a request for questions are both kept
 
 "Tell me about yourself. What questions do you have?" was one closing question, so the introduction was dropped. Those two are now separate asks. A design followed by an explanation stays one question. Setup before "Any questions?" stays with that question. If both still arrive as one string, the answer introduces first and then asks one question about the team. The page stamp is kompas-20261030-both.
