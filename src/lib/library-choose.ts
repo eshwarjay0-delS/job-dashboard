@@ -70,9 +70,11 @@ export async function chooseResume(opts: { userDir: string; userId: string; emai
   // The AI agent picks from the pool, the code's ranking stands beside it, and the agent's pick is used when it names a
   // real resume of this email (owner: "I was expecting agent always working internally with that WhatsApp chat").
   const keys = await keysFor("resume-keywords", () => resolveKeys({}))
-  const ai = await agentPick({ keys, jd, ranked: pool, uses: await usesOf(userDir, email, pool), relOf: relOfAbs, role, titled: !!titled || !!prefer.hint }).catch(() => null)
+  // A resume the person named is not handed to the agent, and a file that will not open
+  // is not replaced with a different resume from another folder.
+  const ai = prefer.hint ? null : await agentPick({ keys, jd, ranked: pool, uses: await usesOf(userDir, email, pool), relOf: relOfAbs, role, titled: !!titled || !!prefer.hint }).catch(() => null)
   const first = ai ? [pool[ai.index], ...pool.filter((_, i) => i !== ai.index)] : pool
-  const order = [...first, ...all.filter(r => !pool.includes(r))]
+  const order = prefer.hint ? first.filter(r => pool.includes(r)) : [...first, ...all.filter(r => !pool.includes(r))]
   let picked: Ranked | null = null
   for (const one of order.slice(0, 8)) {
     const bytes = await readPath(one.candidate.path).catch(() => null)

@@ -161,9 +161,15 @@ const TERM_ALIASES: string[][] = [
   ["ioc", "iocs", "indicator of compromise", "indicators of compromise"],
   ["csoc", "cyber security operations center", "cybersecurity operations center"],
 ]
-const normalizeTerm = (text: string): string => text.toLowerCase()
-  .replace(/[‐‑‒–—-]/g, " ").replace(/[,;:()]/g, " ").replace(/\s+/g, " ").trim()
+// v2 keyword matching (resume-keyword-report.ts): accents (résumé == resume), every unicode dash, CI-CD == CI/CD,
+// Node JS == Node.js, ASP.NET / VB.NET contain .NET, and a non-string term matches nothing instead of throwing.
+const normalizeTerm = (text: unknown): string => (typeof text === "string" || typeof text === "number" ? String(text) : "")
+  .normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  .replace(/\bci\s*[/\-&\u2010-\u2015\u2212]\s*cd\b/g, "cicd").replace(/\bnode\s*\.?\s*js\b/g, "nodejs")
+  .replace(/\b(asp|vb)\.net\b/g, "$1 .net")
+  .replace(/[‐‑‒–—―−-]/g, " ").replace(/[,;:()]/g, " ").replace(/\s+/g, " ").trim()
 export function present(text: string, term: string): boolean {
+  if (typeof term !== "string" || typeof text !== "string") return false
   // Explicit credential alternatives represent ONE requirement, not every credential.
   if (/^(?:cissp|ccsp|cism|crisc|cisa|oscp|ceh)(?: or (?:cissp|ccsp|cism|crisc|cisa|oscp|ceh))+$/i.test(term)) {
     return term.split(/ or /i).some(option => present(text, option))
