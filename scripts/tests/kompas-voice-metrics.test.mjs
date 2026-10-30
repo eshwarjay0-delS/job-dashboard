@@ -80,6 +80,7 @@ test("baseline accepts moved predictions with the same reference speaker cohort"
   assert.equal(base.coverage.speakerLabels,2);
   assert.equal(next.coverage.speakerLabels,2);
   assert.equal(base.metrics.speakerAttribution,.5);
+  assert.equal(base.metrics.speakerPredictionRate,.5);
   assert.equal(next.metrics.speakerAttribution,.5);
   assert.equal(next.metrics.speakerPredictionRate,.5);
   assert.equal(next.deltaFromBaseline.speakerAttribution,0);
