@@ -2099,6 +2099,8 @@ function edits1(a, b) {                                  // true when a and b di
 // vocabulary — token-level fixTerms cannot see across words ("domain control
 // her"). Deliberately narrow: every pattern is anchored to a domain phrase,
 // so ordinary sentences pass through untouched.
+// Slice 5a: this list and REPAIRS in src/lib/kompasDictation.ts are ONE list, entry for entry (same pattern, order
+// and output). scripts/tests/kompas-spelling-parity.test.mjs fails if they drift: change both in the same patch.
 const PHRASE_FIXES = [
   [/\bdomain control(?:ler|er| her| a)\b/gi, "domain controller"],
   [/\b(?:mitre|miter|myter) attack\b/gi, "MITRE ATT&CK"],
@@ -2140,9 +2142,9 @@ const PHRASE_FIXES = [
   [/\bven\s+a\s+fi\b/gi, "Venafi"],
   [/\bu\s+s\s+citizen\b/gi, "U.S. citizen"],
   [/\bnist\s+c\s*s\s*f\b/gi, "NIST CSF"],
-  [/\bservice\s+now\b/gi, "ServiceNow"],
+  [/(?<=\b(?:(?:using|used|use|via|into|like|vs|versus|from|our|their|integrate|integrated|integrating|configured|deployed|implemented|administered|cyberark|okta|sailpoint|saviynt|jira)\s+(?:with\s+|to\s+)?|(?:(?:track|tracked|tracking|log|logged|logging|ticket|tickets|ticketed|raise|raised|submit|submitted|document|documented)\s+(?:(?:it|this|that|them|these|those|one|a\s+ticket|the\s+ticket)\s+)?|(?:open|opened|file|filed|record|recorded|create|created|request|requested)\s+(?:it|this|that|them|these|those|one|a\s+ticket|the\s+ticket)\s+)in\s+))service\s+now\b|\bservice\s+now(?=\s+(?:tickets?|itsm|itom|cmdb|instances?|workflows?|platform|integration|admin|modules?|incidents?|change|requests?|catalog|grc|secops|irm|api|discovery|flows?)\b)/gi, "ServiceNow"],   // slice 5a: tool context only, so "the service now is slow" stays; "track it / log it / ticket in service now" is tool context
   [/\bgoogle\s+sec\s*ops\b/gi, "Google SecOps"],
-  [/\bbig\s+in\s*tro\b/gi, "Big Intro"],
+  [/(?<=\b(?:at|for|join|joining|joined|about|with|to)\s+)big\s+in\s*tro\b(?!\s+(?:to|for|of|and|speech|video|slide|moment)\b)|(?<=\bgive\s+(?:me|us)\s+a\s+)big\s+in\s*tro(?=\s*[.?!]?\s*$)/gi, "Big Intro"],   // slice 5a: the company name only, so "a big intro" stays; a bare "give me a big intro" (master test) is still the name
   [/\bsaviant\b/gi, "Saviynt"],
   [/\bsavvy\s+ent\b/gi, "Saviynt"],
   [/\bcooper\s+nett(?:y|ie)s\b/gi, "Kubernetes"],

@@ -71,6 +71,8 @@ export function rankHintTerms(terms: readonly string[]): string[] {
   return [...front, ...mid, ...back]
 }
 
+// Slice 5a: the same list as PHRASE_FIXES in public/kompas/app.js, entry for entry. The page is a plain browser
+// script, so the list is written twice; scripts/tests/kompas-spelling-parity.test.mjs locks the two together.
 const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bdomain control(?:ler|er| her| a)\b/gi, "domain controller"],
   [/\b(?:mitre|miter|myter) attack\b/gi, "MITRE ATT&CK"],
@@ -100,13 +102,23 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bticket\s+granting\b/gi, "ticket-granting"],
   [/\bpass\s+the\s+hash\b(?!\s+brown\b)/gi, "pass-the-hash"],
   [/\bpass\s+the\s+ticket\b/gi, "pass-the-ticket"],
-  [/\bcyber\s+ark\b/gi, "CyberArk"],
+  [/\bcyber[\s-]+ar[ck]\b/gi, "CyberArk"],                                           // "cyber-arc" on his 27 Oct card
+  [/\b(?:shkivs|shkives|sh\s+keys|s\s+h\s+keys|ssh\s+keys)\b/gi, "SSH keys"],      // "Shkivs" reached his question and the answer, 27 Oct
+  [/\b(?:shkiv|sh\s+key|s\s+h\s+key|ssh\s+key)\b/gi, "SSH key"],
   [/\bmicro\s+soft\s+sentinel\b/gi, "Microsoft Sentinel"],
   [/\bqualys\b/gi, "Qualys"],
   [/\bnessus\b/gi, "Nessus"],
   [/\bsplunk\b/gi, "Splunk"],
   [/\bfifth\s+third\b/gi, "Fifth Third"],
-  // Whisper's repeated garbles of interview terms. A nearby English word is left alone.
+  [/\b(?:zee|see)\s+scaler\b/gi, "Zscaler"],
+  [/\bven\s+a\s+fi\b/gi, "Venafi"],
+  [/\bu\s+s\s+citizen\b/gi, "U.S. citizen"],
+  [/\bnist\s+c\s*s\s*f\b/gi, "NIST CSF"],
+  [/(?<=\b(?:(?:using|used|use|via|into|like|vs|versus|from|our|their|integrate|integrated|integrating|configured|deployed|implemented|administered|cyberark|okta|sailpoint|saviynt|jira)\s+(?:with\s+|to\s+)?|(?:(?:track|tracked|tracking|log|logged|logging|ticket|tickets|ticketed|raise|raised|submit|submitted|document|documented)\s+(?:(?:it|this|that|them|these|those|one|a\s+ticket|the\s+ticket)\s+)?|(?:open|opened|file|filed|record|recorded|create|created|request|requested)\s+(?:it|this|that|them|these|those|one|a\s+ticket|the\s+ticket)\s+)in\s+))service\s+now\b|\bservice\s+now(?=\s+(?:tickets?|itsm|itom|cmdb|instances?|workflows?|platform|integration|admin|modules?|incidents?|change|requests?|catalog|grc|secops|irm|api|discovery|flows?)\b)/gi, "ServiceNow"],   // slice 5a: tool context only, so "the service now is slow" stays; "track it / log it / ticket in service now" is tool context
+  [/\bgoogle\s+sec\s*ops\b/gi, "Google SecOps"],
+  [/(?<=\b(?:at|for|join|joining|joined|about|with|to)\s+)big\s+in\s*tro\b(?!\s+(?:to|for|of|and|speech|video|slide|moment)\b)|(?<=\bgive\s+(?:me|us)\s+a\s+)big\s+in\s*tro(?=\s*[.?!]?\s*$)/gi, "Big Intro"],   // slice 5a: the company name only, so "a big intro" stays; a bare "give me a big intro" (master test) is still the name
+  [/\bsaviant\b/gi, "Saviynt"],
+  [/\bsavvy\s+ent\b/gi, "Saviynt"],
   [/\bcooper\s+nett(?:y|ie)s\b/gi, "Kubernetes"],
   [/\bkuber\s*netes\b/gi, "Kubernetes"],
   [/\bkube\s*netes\b/gi, "Kubernetes"],
@@ -122,9 +134,6 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bstar\s+method\b/gi, "STAR method"],
   // Mishearings found on 29 Oct 2026 (voice slice). Each one is anchored to its domain words.
   [/\bsail\s+point\b/gi, "SailPoint"],
-  // Slice 4: the desktop already wrote "SSH keys"/"SSH key"; the server left "ssh keys", so the two cuts differed in text.
-  [/\b(?:shkivs|shkives|sh\s+keys|s\s+h\s+keys|ssh\s+keys)\b/gi, "SSH keys"],
-  [/\b(?:shkiv|sh\s+key|s\s+h\s+key|ssh\s+key)\b/gi, "SSH key"],
   [/(?<=\b(?:did|does|with|into|using|use|used|like|from|vs|versus|deploy|deployed|implemented|chose|picked|cyberark|our|the|a)\s+)beyond\s+trust\b|\bbeyond\s+trust(?=\s+(?:pam|password|privileged|remote|vault|endpoint|suite|platform|deployment|rollout|compare[sd]?)\b)/gi, "BeyondTrust"],   // only next to tool words, so "went beyond trust" stays
   [/\bhashi\s+corp\b/gi, "HashiCorp"],
   [/\bz\s+scaler\b/gi, "Zscaler"],
@@ -146,6 +155,9 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bs\s+three\s+(buckets?)\b/gi, "S3 $1"],
   [/\bdocker\s+file\b/gi, "Dockerfile"],
 ]
+
+/** The repair list, exported for the parity test. Read only. */
+export const DICTATION_REPAIRS: ReadonlyArray<readonly [RegExp, string | ((match: string) => string)]> = REPAIRS
 
 /** Repair a heard line. Ordinary sentences, and a line already repaired, come back unchanged. */
 export function repairDictation(text: string): string {
