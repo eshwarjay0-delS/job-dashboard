@@ -1,3 +1,23 @@
+## 2026-10-30 — Pay and employment questions are not dropped
+
+Travel, visa, W2, C2C, full time, contract, PTO, benefits, 401k, EAD, TN visa, hourly, and day rate were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Full time or contract, starting in two weeks, and a day rate stay short. "What is a smart contract?" stays a definition.
+
+## 2026-10-30 — Shift, weekend, and start-date questions are not dropped
+
+Start date, relocation, clearance, sponsorship, night shift, shift, weekend, overtime, and citizen were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Working weekends and on-call stay short. A hybrid-cloud design stays technical.
+
+## 2026-10-30 — A one-word logistics question is not dropped
+
+Salary, hybrid, onsite, remote, notice, bonus, and TS/SCI were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Two weeks' notice, night work, days in the office, and being local to a city stay short too. A hybrid-cloud design stays a technical question.
+
+## 2026-10-30 — A short visa question is not dropped
+
+"H-1B?" was dropped, so the previous answer stayed on screen. "Do you need an H-1B?", a green card, a visa, and commuting to the office were answered as long questions. They stay short logistics answers. "How would you opt for least privilege?" stays a scenario. "How does work authorization work?" stays technical.
+
+## 2026-10-30 — A spaced citizenship question stays a short logistics answer
+
+"Are you a u s citizen" was treated as a normal question, so it could run long. "Are you authorized to work in the U.S.?" did the same. Both stay logistics. "How does work authorization work?" stays a technical explanation. One hundred intent folds still pass.
+
 ## 2026-10-30 — A limit before the question no longer swallows the ask
 
 "No downtime, how would you verify the remediation?" and "Without a restart, how would you patch the service?" were stored as the condition only, so the ask was dropped. The limit stays a condition and the question stays the question. "With no downtime, how would you..." is the same split.

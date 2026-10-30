@@ -578,7 +578,7 @@ function interviewSentences(text: string): string[] {
 
 /** A two-word logistics ask is still the question. "U.S. citizen?" used to fall under the three-word floor and disappear. */
 function shortLogistics(text: string): boolean {
-  return /\b(?:u\.?s\.?|united states)\s+citizens?\b/i.test(text)
+  return /\b(?:u\.?s\.?|u\s+s|united states)\s+citizens?\b|\b(?:h-?1b|opt|green card|hybrid|on-?site|salary|remote|bonus|notice|ts\s*\/\s*sci|start date|night shift|on-?call|relocation|clearance|sponsorship|shift|weekend|overtime|citizen|travel|visa|w-?2|c2c|full[- ]time|pto|benefits|401k|equity|ead|l-?1|hourly|day rate|contract)\b/i.test(text)
 }
 
 function askSentences(text: string): AskPart[] {
