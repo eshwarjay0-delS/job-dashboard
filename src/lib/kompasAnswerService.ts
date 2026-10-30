@@ -18,6 +18,7 @@ import { formatInterviewHistory } from "@/lib/kompasHistory"
 import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestionParts, questionParts, spokenQualityFlags, correctVerifiedPresentationErrors } from "@/lib/kompasInterviewPrecision"
 import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms, interviewIntent } from "@/lib/kompasRelevance"
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
+import { withoutLogistics } from "@/lib/kompasLogistics"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
@@ -721,12 +722,18 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // typed or heard is the question — dropping it left the card on the previous answer.
   const again = body.again === true
   let question = latestInterviewerAsk(questionForAnswer(heardAll, asked, body.pinned === true, again, body.history))
+  // Owner rule, 29 Oct 2026: no logistics in answers (visa, pay, relocation, location, start date,
+  // notice). A purely logistics ask gets the quiet reply with no model call; a mixed ask keeps the rest.
+  const logisticsFree = question ? withoutLogistics(question) : question
+  const logisticsDropped = logisticsFree !== question
+  question = logisticsFree
   if (!question) {
-    const quiet = `data: ${JSON.stringify({ type: "meta", noQuestion: true })}\n\ndata: ${JSON.stringify({ type: "done", noQuestion: true })}\n\n`
+    const extra = logisticsDropped ? { skipped: "logistics" } : {}
+    const quiet = `data: ${JSON.stringify({ type: "meta", noQuestion: true, ...extra })}\n\ndata: ${JSON.stringify({ type: "done", noQuestion: true, ...extra })}\n\n`
     if (body.stream) {
       return new Response(quiet, { headers: { "content-type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } })
     }
-    return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
+    return NextResponse.json({ noQuestion: true, ...extra }, { headers: NO_STORE })
   }
 
   const config = (body.config && typeof body.config === "object" ? body.config : {}) as Record<string, unknown>
@@ -765,7 +772,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const sameTurnKernel = questionKernel(sameTurn)
   const hasSpeakerLabels = /(?:^|\n)\s*(?:You|Them|Interviewer):/mi.test(sameTurn)
   const clearlyAsked = /^(?:what|which|who|why|how|where|when|can|could|would|will|do|does|did|have|has|are|is|tell|describe|explain|give|walk|share|highlight|suppose|imagine|assume|if|given|consider)\b/i.test(sameTurnKernel.ask)
-  const originalTurnAsk = !hasSpeakerLabels && clearlyAsked ? sameTurn : question
+  const originalTurnAsk = !logisticsDropped && !hasSpeakerLabels && clearlyAsked ? sameTurn : question
   const rediscovered = rediscoverRelevance(originalTurnAsk, history)
   const retrievedList = Array.isArray(body.retrieved)
     ? body.retrieved.map((r) => str(r, 500)).filter(Boolean)

@@ -2398,7 +2398,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       card.answer = keepOld ? prevAnswer : [];
       card.meta = "";
       if (cards[idx] === card) renderCard();
-      status("Still listening.", "live");
+      status(meta.skipped === "logistics" ? "Skipped: a logistics question. Kompas answers only from your resume." : "Still listening.", "live");
       return;
     }
     if (!text.trim()) throw new Error("The answer engine returned an empty response. Please retry.");
