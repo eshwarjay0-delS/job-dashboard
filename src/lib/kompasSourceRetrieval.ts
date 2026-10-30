@@ -10,14 +10,9 @@ import { createHash } from "node:crypto"
 import { CTX, dropCoveredFigureClaims, figureContextKeys, figureMentions, mentionSupported, type FigureMention } from "./kompasFigureContext.ts"
 import { dossierItems, relatedTerms } from "./kompasDossierItems.ts"
 
-/** Stack trial flag: r8 dossier items (and so r8 related-word / weight ranking, which only runs on item passages). Default OFF. */
-export function dossierItemsOn(): boolean {
-  try { return typeof process !== "undefined" && process.env?.KOMPAS_DOSSIER_ITEMS === "1" } catch { return false }
-}
-
 export type Proves = "experience" | "emphasis"
 export interface SourceDoc { name: string; text: string; proves: Proves }
-export interface Passage { id: string; source: string; proves: Proves; text: string; line: string; score: number; span?: [number, number]; weight?: number; itemId?: string }
+export interface Passage { id: string; source: string; proves: Proves; text: string; line: string; score: number; span?: [number, number]; weight?: number; itemId?: string; body?: string }
 export interface Retrieval { matched: boolean; passages: Passage[]; closest: Passage | null; all: Passage[]; missing?: string[] }
 
 export const NOT_IN_SOURCES =
@@ -74,7 +69,7 @@ export function splitPassages(docs: SourceDoc[] | null | undefined): Passage[] {
         for (const it of items) {
           if (words(it.text) < 4) continue
           n++
-          out.push({ id: `D${n}`, source: doc.name, proves: doc.proves, line: it.text, text: it.text, score: 0, span: it.span, weight: it.weight, itemId: it.id })
+          out.push({ id: `D${n}`, source: doc.name, proves: doc.proves, line: it.text, text: it.text, score: 0, span: it.span, weight: it.weight, itemId: it.id, body: it.body })
         }
         continue
       }
@@ -409,6 +404,10 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
     // employer part of the heading still counts, so "What did you do at 3M?" is found. Failsafe: no heading → the text.
     const coverText = (p: Passage) => {
       try {
+        // r11 (r8 honesty drop): a dossier item whose heading has no answer body under it (a bare question, title or
+        // heading line that repeats the ask's words) proves nothing. An item with a body keeps heading + body, since
+        // its heading is the question that body answers.
+        if (p.span && typeof p.body === "string" && p.body.trim().split(/\s+/).length < 6) return ""
         if (p.text === p.line) return p.text
         const heading = p.text.slice(0, p.text.length - p.line.length).replace(/:\s*$/, "")
         const comma = heading.indexOf(",")
@@ -457,6 +456,20 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
         if (anyCovered) { matched = true; missing = judged.filter((j) => j.judged && !j.covered).map((j) => j.part) }
       }
     } catch { matched = wholeMatched; missing = [] }
+    // r11: stricter-only honesty gates. (a) A distinctive topic word that appears nowhere in the sources (a tool, an
+    // employer fact like "salary") means the ask is not in them, however many generic words match. Intent words and
+    // ASR-split pairs are exempt. (b) A question about the interviewer's side (their team, this role, "here") is never in
+    // the candidate's sources. Failsafe: any error leaves matched as computed above.
+    try {
+      if (matched) {
+        const corpus = new Set<string>(); for (const d of docsTok) for (const t of d) corpus.add(t)
+        const joined = new Set<string>(); topic.forEach((t, i) => { const n = topic[i + 1]; if (n && corpus.has(stem(t + n))) { joined.add(t); joined.add(n) } })
+        const absent = topic.filter((t) => t.length >= 4 && !/^\d+$/.test(t) && !corpus.has(t) && !joined.has(t) && !famWord(t) && !related.has(t) && !ASK_GENERIC.has(t) && !ASK_GENERIC.has(t.replace(/(?:ing|ed|es|s)$/, "")))
+        // a two-part ask whose absent words all sit in the part already named missing keeps its covered part
+        const inMissing = (t: string) => missing.some((m) => tokens(m).map(heard).includes(t))
+        if (INTERVIEWER_SIDE.test(q) || (absent.length && !(missing.length && absent.every(inMissing)))) { matched = false; missing = [] }
+      }
+    } catch { /* failsafe: matched unchanged */ }
     const closest = matched ? ranked.find((p) => p.proves === "experience") || null : closestExample(q, experience)
     return missing.length ? { matched, passages: ranked.slice(0, k), closest, all: scored, missing } : { matched, passages: ranked.slice(0, k), closest, all: scored }
   } catch {
@@ -734,3 +747,22 @@ export function withoutCoaching(text: string): string {
   try { return String(text || "").split(/(?<=[.!?])\s+/).filter((x) => !coachingSentence(x)).join(" ") } catch { return String(text || "") }
 }
 const COUNT_RE = /\b\d+\b|\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozen|dozens|hundred|hundreds|thousand|thousands|single|a couple|several)\b/i
+
+/** r11: a question about the interviewer's side (their team or company, this role, "here", who I would report to). */
+const INTERVIEWER_SIDE = /\b(?:this (?:role|position|job|opening)|your (?:company|organi[sz]ation|org)\b|(?:team|company|org|people|stack|tools?) (?:here|at your)\b|\bhere\?|would i (?:report|be|work|start)|will i (?:report|be|work|start)|after this round|salary band|interview process)/i
+/** r11: ask words that are never a topic of their own (verbs and fillers of the asking), so their absence proves nothing. */
+const ASK_GENERIC = new Set(("done do doing did make made making keep kept keeps many much more most mention mentioned prepare prepar meet meeting met use used using usage "
+  + "handle handl speed fast quick quickly approach work worked working get got give gave take took run ran running go went going come came "
+  + "think thought feel felt know knew want wanted need needed like liked help helped start started stop stopped tell told talk talked walk "
+  + "describe explain example examples time times thing things something anything everything someone people person kind sort type part parts "
+  + "best better good great hard hardest easy easier biggest big small large lot lots way ways really actually just also still ever never "
+  + "usually typically generally exactly specifically overall today recently currently first last next previous past future year years month "
+  + "months week weeks day days ensure make sure deal dealt manage managed apply applied build built create created set setup set-up "
+  + "improve improved reduce reduced increase increased change changed look looked find found decide decided choose chose pick picked "
+  + "role roles job jobs task tasks project projects process processes team teams company companies area areas field level levels").split(/\s+/))
+
+/** r11: the r8 dossier-item ranking switch. On only when KOMPAS_DOSSIER_ITEMS is "on" or "1"; any error → off. */
+export const DOSSIER_ITEMS_SWITCH = "KOMPAS_DOSSIER_ITEMS"
+export function dossierItemsOn(): boolean {
+  try { const v = typeof process !== "undefined" ? String(process.env?.[DOSSIER_ITEMS_SWITCH] ?? "").trim().toLowerCase() : ""; return v === "on" || v === "1" } catch { return false }
+}
