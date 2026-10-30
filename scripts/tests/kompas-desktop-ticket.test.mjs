@@ -128,7 +128,7 @@ test("desktop handoff updates existing account session without losing transcript
   const start = app.indexOf("let lastDesktopHandoff =")
   const end = app.indexOf("window.kompasDesktop?.takeSession?.()",start)
   assert.ok(start>0 && end>start)
-  const existing={id:"s777",resume:"old resume",jd:"old JD",instructions:"old rules",transcripts:[{q:"test",a:"saved"}],endedAt:101,token:"stale-secret"}
+  const existing={id:"s777",resume:"old resume",jd:"old JD",instructions:"old rules",transcripts:[{key:"s777:tx:1",at:100}],endedAt:101,token:"stale-secret"}
   let stored=[existing], opened=null
   const ctx={
     Date:{now:()=>10000},
@@ -140,12 +140,12 @@ test("desktop handoff updates existing account session without losing transcript
     $:()=>({classList:{add(){},contains(){return false}},click(){}}),
   }
   vm.runInNewContext(app.slice(start,end)+"\nthis.openHandoff=openHandedSession;",ctx)
-  await ctx.openHandoff({id:"s777",resume:"new resume",jd:"new JD",instructions:"all new rules",token:"bearer-secret",refreshToken:"refresh-secret",tokenExp:1234})
+  await ctx.openHandoff({id:"s777",resume:"new resume",jd:"new JD",instructions:"all new rules",transcripts:[{key:"s777:tx:2",at:102}],token:"bearer-secret",refreshToken:"refresh-secret",tokenExp:1234})
   assert.equal(stored.length,1)
   assert.equal(stored[0].resume,"new resume")
   assert.equal(stored[0].jd,"new JD")
   assert.equal(stored[0].instructions,"all new rules")
-  assert.equal(stored[0].transcripts.length,1)
+  assert.deepEqual(Array.from(stored[0].transcripts,t=>t.key),["s777:tx:1","s777:tx:2"])
   assert.equal(stored[0].endedAt,101)
   for (const key of ["token","refreshToken","tokenExp"]) {
     assert.equal(Object.hasOwn(stored[0],key),false,key+" must never enter device session storage")
