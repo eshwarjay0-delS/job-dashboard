@@ -41,6 +41,8 @@
 
 **Deploy.** Not claimed in this note until the pull request is merged and the new production deployment is READY.
 
+**Offline stress rounds 6 and 7 (local, not pushed).** Merged master (#125). Rounds 1 to 5 went from 11 failing to 0 of 204. Round 6 added 90 checks and round 7 added 33. On first run, round 6 had 11 failing and round 7 had 2 failing. All 327 now pass. Fixed: "resid jewel risk" is repaired to residual risk, and a short "what's X" is a definition. The candidate's name or he/she in a past-tense sentence is rewritten to "I". Any other third-person voice is flagged to the repair loop. Each mode is at least 1.5 times the one below. The same answer to a different question, compared against the last three turns, is flagged to the repair loop. Sentences said in the last three answers are dropped. Five more asides are treated as small talk. "HTTP 503 Service Unavailable" and "The upstream request timed out." are refused. Misheard jargon is grounded on the repaired ask. Without history, the offline stand-in still gives alike drafts for 46 near-duplicate pairs. This is reported as information, not as a failure. Offline and code-level only. Not live answer quality.
+
 ## 2026-10-29 — Same title, the folder that names the speciality stays
 
 Two files both titled Security Engineer were a tie for Information Security AI Engineer. The one in AI Security and Governance stays. The one in Application and API Security does not, when the job names AI. A title that already names the speciality still wins on the title. A Security Analyst in an Identity folder is still kept for a Security Analyst job, because that job names no extra speciality.

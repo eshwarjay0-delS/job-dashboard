@@ -6,6 +6,7 @@
  */
 import { interviewIntent, type ReplyIntent } from "./kompasRelevance.ts"
 import type { AnswerLevel } from "./kompasAnswer.ts"
+import { repairDictation } from "./kompasDictation.ts"
 
 export type AnswerShape =
   | "intro"
@@ -325,7 +326,8 @@ export function bannedTerms(question: string, sources: string, shape: AnswerShap
  * intent and keywords are read; the ask itself is returned as heard.
  */
 export function cleanSpokenAsk(question: string): string {
-  const out = String(question || "")
+  // Round 6: a typed or derived ask gets the same garble repair as heard speech ("resid jewel risk" is residual risk).
+  const out = repairDictation(String(question || ""))
     .replace(/\b(?:um+|uh+|erm+|er|hmm+)\b[,.]?/gi, " ")
     .replace(/(?<!\b(?:do|did|does|would|as|if|what|how|where|don't|didn't)\s)\b(?:you know|i mean)\b,?/gi, " ")
     .replace(/(?<!\b(?:what|which|the|this|that|any|some|a|one)\s)\b(?:sort of|kind of)\b,?/gi, " ")
@@ -355,7 +357,8 @@ export function dissectQuestion(question: string, sources = ""): QuestionDissect
     intent,
     shape,
     keywords: questionKeywords(cleanSpokenAsk(ask)),
-    banned: bannedTerms(ask, sources, shape),
+    // Round 6: "what's the cooper netties control plane" asked about Kubernetes; the repaired ask decides what is grounded.
+    banned: bannedTerms(repairDictation(ask), sources, shape),
     depthAsked: depthAsked(ask, shape),
     modes: modesFor(shape, partsScale(ask)),
   }
@@ -408,6 +411,9 @@ const PROVIDER_FAILURE_SHAPE = [
   /^\s*as an ai(?: language model)?\b/i,
   // Round 5: client or gateway timeouts.
   /^\s*(?:the )?(?:request|connection|upstream) timed out\b|\btimed out after \d+\s*ms\b|\bE(?:TIMEDOUT|CONNRESET|CONNREFUSED)\b/i,
+  // Round 6: "HTTP 503 Service Unavailable" and "The upstream request timed out." were shown as answers.
+  /^\s*HTTP(?:\/[\d.]+)?\s+[45]\d\d(?:\s+[A-Za-z' ]{0,40})?[.!]?\s*$/i,
+  /^\s*(?:the )?(?:upstream|gateway|server|api) (?:request|connection|call) timed out\b/i,
 ]
 export function isProviderErrorAnswer(text: string): boolean {
   const t = String(text || "")
@@ -457,6 +463,8 @@ export type SpokenAssessment = {
   banned: string[]
   missingEcho: boolean
   repeated: boolean
+  /** Round 6: the answer still speaks about the candidate in the third person after the safe rewrite. */
+  thirdPerson: boolean
   inBand: boolean
 }
 
@@ -474,7 +482,7 @@ export function settleSpokenAnswer(
   const mode = cut.modes[level] || cut.modes.engineer
   const cap = ceiling && ceiling > 0 ? ceiling : mode.maxWords
   if (isProviderErrorAnswer(answer)) {
-    return { text: "", words: 0, providerError: true, banned: [], missingEcho: false, repeated: false, inBand: false }
+    return { text: "", words: 0, providerError: true, banned: [], missingEcho: false, repeated: false, thirdPerson: false, inBand: false }
   }
   // Code-first: a fenced block is shown exactly as written, at every level. Only the prose around it is settled.
   const fence = String(answer || "").match(/```[\s\S]*?```/)
@@ -482,11 +490,12 @@ export function settleSpokenAnswer(
     const prose = String(answer).replace(fence[0], " ").replace(/\s+/g, " ").trim()
     const around = prose ? trimToWords(stripListMarkers(prose), cap) : ""
     const text = [fence[0], around].filter(Boolean).join("\n\n")
-    return { text, words: wordCount(around), providerError: false, banned: [], missingEcho: false, repeated: false, inBand: true }
+    return { text, words: wordCount(around), providerError: false, banned: [], missingEcho: false, repeated: false, thirdPerson: false, inBand: true }
   }
   // An asked repeat ("say that again") keeps every sentence; only an unasked read-back is trimmed.
   const askedRepeat = /\b(?:repeat|again|once more|say that|same answer)\b/i.test(question)
-  const spoken = askedRepeat ? spokenMarkup(answer) : dropRepeatedSentences(spokenMarkup(answer), previousAnswer)
+  const voiced = firstPersonRewrite(spokenMarkup(answer), sources)
+  const spoken = askedRepeat ? voiced.text : dropRepeatedSentences(voiced.text, previousAnswer)
   const kept = sentencesOf(spoken).filter((sentence) => !cut.banned.some((term) => containsTerm(sentence, term)))
   const stripped = stripListMarkers(kept.join(" "))
   const text = trimToWords(stripped, cap, (sentence) => requiredSentence(question, sentence))
@@ -503,8 +512,134 @@ export function settleSpokenAnswer(
     banned,
     missingEcho,
     repeated,
-    inBand: words >= minWords && words <= cap && !missingEcho && !banned.length && !repeated,
+    thirdPerson: voiced.thirdPerson,
+    inBand: words >= minWords && words <= cap && !missingEcho && !banned.length && !repeated && !voiced.thirdPerson,
   }
+}
+
+// ------------------------------------------------------------------ Round 6: third person about the candidate
+const JOB_WORD = /\b(?:analyst|engineer|manager|director|architect|developer|security|senior|lead|consultant|specialist|resume|curriculum|vitae|sample|experience|summary|profile)\b/i
+/** The candidate's name from the resume header: the first plain two- or three-word capitalised line before any section. */
+export function candidateName(sources: string): { first: string; full: string } | null {
+  const lines = String(sources || "").split(/\n/).map((line) => line.trim()).filter(Boolean).slice(0, 8)
+  for (const line of lines) {
+    if (/^#/.test(line)) {
+      if (/^#+\s*(?:experience|work|professional|education|skills|summary|profile)\b/i.test(line)) break
+      continue
+    }
+    const m = line.match(/^([A-Z][a-z]+(?:[-'][A-Z]?[a-z]+)?)(?:\s+[A-Z][a-z]+(?:[-'][A-Z]?[a-z]+)?){1,2}$/)
+    if (m && !JOB_WORD.test(line)) return { first: m[1], full: line }
+  }
+  return null
+}
+
+const PAST_IRREGULAR = new Set("told led ran wrote sent built made took gave saw found kept set got put held brought began chose drove knew met paid said spent taught thought understood won was had did became stood rewrote oversaw".split(" "))
+const MODAL_VERB = new Set("would will can could should might must".split(" "))
+/** "Jordan tracked" can become "I tracked" with no other word changed; "Jordan tracks" cannot ("I tracks"). */
+function firstPersonVerb(verb: string): string | null {
+  const v = verb.toLowerCase()
+  if (v === "is") return "am"
+  if (v === "has") return "have"
+  if (MODAL_VERB.has(v) || PAST_IRREGULAR.has(v)) return v
+  if (/^[a-z]{3,}ed$/.test(v)) return v
+  return null
+}
+function escapeRe(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/**
+ * Stress round 4/6 (29 Oct 2026): a live answer that says "Jordan tracked residual risk… He told the business…" passed
+ * settle unchanged. The only automatic rewrite is the safe one: the candidate's own name (from the resume header), or
+ * he/she straight after such a sentence, as the subject of a past-tense or modal verb becomes "I"; "Jordan's" leading a
+ * sentence becomes "My". Anything else that still names the candidate, or an answer with no "I" that is told by he/she,
+ * is left as written and flagged so the repair loop asks for a first-person rewrite. Other people in a first-person
+ * story ("My manager Sam… He agreed") are never touched. Introductions ("I'm Jordan Hale") are not third person.
+ */
+const ADVERB = "then|also|later|still|first|quickly|personally|again|now"
+export function firstPersonRewrite(text: string, sources = ""): { text: string; thirdPerson: boolean } {
+  const original = String(text || "")
+  const name = candidateName(sources)
+  let out = original
+  let leftover = false
+  if (name) {
+    // Round 7: "He then checked" and "Jordan also sent" carry one adverb between the subject and the verb.
+    const subject = new RegExp(`^(${escapeRe(name.full)}|${escapeRe(name.first)})('s)?\\s+(?:(${ADVERB})\\s+)?([A-Za-z]+)`)
+    let changed = false
+    let candidateLed = false
+    const rewritten = sentencesOf(original).map((sentence) => {
+      const m = sentence.match(subject)
+      if (m) {
+        if (m[2]) { changed = true; candidateLed = true; return `My ${m[3] ? `${m[3]} ` : ""}${m[4]}${sentence.slice(m[0].length)}` }
+        const verb = firstPersonVerb(m[4])
+        candidateLed = Boolean(verb)
+        if (!verb) return sentence
+        changed = true
+        return `I ${m[3] ? `${m[3]} ` : ""}${verb}${sentence.slice(m[0].length)}`
+      }
+      const pronoun = candidateLed ? sentence.match(new RegExp(`^(?:He|She)\\s+(?:(${ADVERB})\\s+)?([A-Za-z]+)`)) : null
+      const verb = pronoun ? firstPersonVerb(pronoun[2]) : null
+      if (pronoun && verb) { changed = true; return `I ${pronoun[1] ? `${pronoun[1]} ` : ""}${verb}${sentence.slice(pronoun[0].length)}` }
+      if (pronoun) leftover = true
+      candidateLed = false
+      return sentence
+    })
+    if (changed) out = rewritten.join(" ")
+  }
+  const intro = /\b(?:I'm|I am|my name is|name's|call me|this is)\s+$/i
+  const named = name ? [...out.matchAll(new RegExp(`\\b${escapeRe(name.first)}\\b`, "g"))].some((m) => !intro.test(out.slice(0, m.index))) : false
+  const toldByPronoun = !/\b(?:I|I'm|I've|I'd)\b/.test(out) && !/\b(?:my|me|mine)\b/i.test(out) && sentencesOf(out).some((sentence) => /^(?:He|She)\s+[a-z]/.test(sentence))
+  return { text: out, thirdPerson: named || toldByPronoun || leftover }
+}
+
+// ------------------------------------------------------------------ Round 6: the same answer for a different question
+const ASKED_REPEAT_Q = /\b(?:repeat|again|once more|say that|same answer)\b/i
+export type AnswerEcho = { same: boolean; ratio: number; against: string; reason: string; fresh: string[] }
+function saysTerm(answer: string, term: string): boolean {
+  if (containsTerm(answer, term)) return true
+  const words = contentTokensLoose(answer)
+  return term.toLowerCase().split(/\s+/).filter((t) => t !== "not").every((t) => {
+    const stem = t.slice(0, Math.max(4, t.length - 2))
+    return words.some((w) => w.startsWith(stem))
+  }) && (!/^not\s/i.test(term) || /\b(?:not|never|n't|reject|refuse|decline)\b/i.test(answer))
+}
+function contentTokensLoose(text: string): string[] {
+  return String(text || "").toLowerCase().replace(/[^a-z0-9+#.-]+/g, " ").split(/\s+/).filter((w) => w.length >= 3)
+}
+
+/**
+ * Round 6 (29 Oct 2026): near-duplicate questions ("What is a policy exception?" then "When would you reject a policy
+ * exception?"; Kubernetes then a CI pipeline) could get the previous answer again. Production only had a prompt line
+ * and an exact-sentence trim against the last answer. This checks the last three turns: the same answer (Jaccard >= 0.6)
+ * to a different question, or a mostly shared answer (>= 0.4) that never says the words that make the new question new.
+ * Failsafes: an asked repeat, a tied or short follow-up, the same question, or no previous answer is never flagged; a
+ * flag only asks the repair loop for a rewrite, and the original stands when the rewrite is not better.
+ */
+export function answerEchoesPrevious(question: string, answer: string, turns: Array<{ q?: unknown; a?: unknown }> = []): AnswerEcho {
+  const none: AnswerEcho = { same: false, ratio: 0, against: "", reason: "", fresh: [] }
+  const q = String(question || "").trim()
+  const text = String(answer || "").trim()
+  if (!q || !text || ASKED_REPEAT_Q.test(q) || splitFollowUp(q).previous || interviewIntent(q) === "follow-up") return none
+  const key = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+  const now = questionKeywords(cleanSpokenAsk(q))
+  for (const turn of (Array.isArray(turns) ? turns : []).slice(-3).reverse()) {
+    const prevQ = String(turn?.q ?? "").trim()
+    const prevA = String(turn?.a ?? "").trim()
+    if (!prevQ || !prevA || key(prevQ) === key(q)) continue
+    const ratio = sameAnswerRatio(text, prevA)
+    const before = new Set(questionKeywords(cleanSpokenAsk(prevQ)).flatMap((k) => k.toLowerCase().split(/\s+/)))
+    const fresh = now.filter((k) => !k.toLowerCase().split(/\s+/).every((t) => before.has(t)))
+    // A short answer that shares a frame but says the new words and is mostly new content is a new answer.
+    const prevTokens = new Set(contentTokens(prevA))
+    const own = contentTokens(text)
+    const novelShare = own.length ? own.filter((t) => !prevTokens.has(t)).length / own.length : 0
+    const answersNew = fresh.length > 0 && fresh.some((k) => saysTerm(text, k)) && novelShare >= 0.3
+    if (ratio >= 0.8 || (ratio >= 0.6 && !answersNew)) return { same: true, ratio, against: prevQ, reason: `the answer repeats the answer to the earlier question "${prevQ}"`, fresh }
+    if (ratio >= 0.4 && fresh.length && !fresh.some((k) => saysTerm(text, k))) {
+      return { same: true, ratio, against: prevQ, reason: `the answer never addresses ${fresh.join(", ")}, which is what makes this question different from "${prevQ}"`, fresh }
+    }
+  }
+  return none
 }
 
 /**
@@ -809,6 +944,9 @@ const APPROACH: Record<AnswerLevel, Array<(lead: string) => string>> = {
     (l) => `On ${l}, I would start by confirming the scope and who owns it.`,
     () => "Then I check the evidence against the live setting before I call it done.",
     () => "I write down what changed so the next person can repeat it.",
+    (l) => `For ${l}, I keep the first step small and check it worked.`,
+    () => "If something does not match, I ask the owner before I change anything.",
+    () => "I keep the notes short so anyone on the team can follow them.",
   ],
   director: [
     (l) => `On ${l}, the first call is whether the risk is acceptable today or needs action now.`,
@@ -816,6 +954,10 @@ const APPROACH: Record<AnswerLevel, Array<(lead: string) => string>> = {
     () => "The decision goes on record.",
     () => "The owner signs off in writing.",
     () => "If the owner accepts the risk, I record the reason and when it expires.",
+    (l) => `For ${l}, I tell leadership what is still open and what it costs to wait.`,
+    () => "I agree the deadline with the owner before work starts.",
+    () => "Anything past its date comes back to me for a new decision.",
+    () => "I keep the summary to one page so it gets read.",
   ],
   architect: [
     (l) => `On ${l}, I break the work into parts that each have their own check.`,
@@ -828,6 +970,10 @@ const APPROACH: Record<AnswerLevel, Array<(lead: string) => string>> = {
     () => "I keep the steps short enough that someone new can run them the same way.",
     () => "Each part gets its own owner.",
     () => "I name what would prove it wrong.",
+    (l) => `For ${l}, I write down the inputs, the check, and the expected result before I start.`,
+    () => "I look for the step that depends on a person remembering, and I replace it with a check.",
+    () => "I record which evidence came from the live setting and which came from a ticket.",
+    () => "If two steps can fail the same way, I make sure one of them is caught early.",
   ],
 }
 
@@ -849,13 +995,32 @@ const CLOSERS: Record<AnswerLevel, string[]> = {
  * experience lines that match the question (never the resume header), and adds more supported lines per mode
  * instead of filler, so Engineer, Director, and Architect differ by real content. It is a stand-in, not a live answer.
  */
-export function draftSpokenAnswer(question: string, level: AnswerLevel, resume: string): string {
+export function draftSpokenAnswer(question: string, level: AnswerLevel, resume: string, previous: string[] = []): string {
+  // Round 6: each mode is at least 1.5 times the one below it. The mode below is drafted first and this one fills to
+  // that floor from more supported or approach lines, never past its own ceiling (failsafe: the ceiling wins).
+  const below = level === "architect" ? "director" : level === "director" ? "engineer" : null
+  const floor = below ? Math.ceil(wordCount(draftSpokenAnswer(question, below, resume, previous)) * 1.5) : 0
+  return draftAtLevel(question, level, resume, previous, floor)
+}
+
+const HONEST_LINES = [
+  "My resume does not show this exact work, so I answer from how I would approach it.",
+  "I have not done this in a past role, so I will walk through how I would handle it.",
+  "This is not something I have run before, so I will give the steps I would take.",
+]
+
+function draftAtLevel(question: string, level: AnswerLevel, resume: string, previous: string[], floor: number): string {
   const cut = dissectQuestion(question, resume)
   const lead = spokenLead(leadPhrase(question), splitFollowUp(cleanSpokenAsk(question)).own)
   const opener = (OPENERS[cut.shape] || OPENERS.direct)[level] || OPENERS.direct[level]
+  // Round 6: as asked live, the previous answers are known. A sentence already said in them is not said again, as the
+  // production prompt asks ("Do not reuse the previous answer") and settle enforces; the next line in the pool is used.
+  const key = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+  const said = new Set(previous.flatMap((answer) => sentencesOf(answer)).map(key))
+  const fresh = (line: string) => !said.has(key(line))
   // A tied follow-up is ranked on its own words, so it does not read back the lines the first answer already used.
   const tied = splitFollowUp(question)
-  const lines = rankedExperience(tied.previous ? tied.own : question, resume, { engineer: 0, director: 1, architect: 3 }[level]).map(firstPerson)
+  const lines = rankedExperience(tied.previous ? tied.own : question, resume, { engineer: 0, director: 1, architect: 3 }[level]).map(firstPerson).filter(fresh)
   const mode = cut.modes[level]
   // Each mode stops about a third short of the next one up, so the three stay at least 50% apart in length.
   const archStop = cut.modes.architect.aimWords
@@ -877,7 +1042,7 @@ export function draftSpokenAnswer(question: string, level: AnswerLevel, resume: 
     used++
   }
   if (!used) {
-    const honest = "My resume does not show this exact work, so I answer from how I would approach it."
+    const honest = HONEST_LINES.find(fresh) || HONEST_LINES[0]
     parts.push(honest)
     words += wordCount(honest)
   }
@@ -892,17 +1057,27 @@ export function draftSpokenAnswer(question: string, level: AnswerLevel, resume: 
   })
   for (const line of CLOSERS[level]) {
     const n = wordCount(line)
-    if (words + n > stop) continue
+    if (words + n > stop || !fresh(line)) continue
     parts.push(line)
     words += n
   }
+  const approach = APPROACH[level].map((make) => make(lead)).filter((line) => fresh(line) && !parts.includes(line))
   // Short shapes (greeting, logistics, closing) stop at the opener and the supported lines; others fill to the aim.
   if (!["acknowledgement", "logistics", "closing"].includes(cut.shape)) {
-    for (const make of APPROACH[level]) {
-      const line = make(lead)
+    for (const line of approach) {
       const n = wordCount(line)
       if (words >= stop) break
       if (words + n > (level === "architect" ? mode.maxWords : stop) || parts.includes(line)) continue
+      parts.push(line)
+      words += n
+    }
+  }
+  // The floor from the mode below: unused supported lines first, then approach lines, each only if it fits the ceiling.
+  if (words < floor) {
+    for (const line of [...lines, ...CLOSERS[level].filter(fresh), ...approach]) {
+      if (words >= floor) break
+      const n = wordCount(line)
+      if (parts.includes(line) || words + n > mode.maxWords) continue
       parts.push(line)
       words += n
     }

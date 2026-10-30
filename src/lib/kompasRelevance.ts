@@ -66,6 +66,9 @@ export function interviewIntent(question: string): ReplyIntent {
   if(LOGISTICS.test(q) && !/\b(?:how (?:does|do)|why|difference|design|troubleshoot)\b/i.test(q)) return "logistics"
   if(COMPARE.test(q)) return "comparison"
   if(DEFINE.test(q) && !/\bwhat(?:'s| is| are) (?:your|you)\b/i.test(q)) return "definition"
+  // Round 6 (29 Oct 2026): "what's the residual risk" was a direct ask while "what is the residual risk" was a definition.
+  // A short "what's X" with no "you/your" is the same ask as "what is X".
+  if(/^\s*what's\s+(?:an?\s+|the\s+)?(?!your\b|you\b)[a-z0-9][\w\s-]{1,40}\??\s*$/i.test(q) && q.trim().split(/\s+/).length<=7) return "definition"
   if(FOLLOW.test(q) && q.split(/\s+/).length<=12) return "follow-up"
   if(SCENARIO.test(q)) return "scenario"
   if(DEEP.test(q)) return "technical-process"

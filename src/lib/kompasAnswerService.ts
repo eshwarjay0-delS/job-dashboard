@@ -20,7 +20,7 @@ import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQ
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
-import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
+import { answerEchoesPrevious, dissectQuestion, dissectionPrompt, firstPersonRewrite, isProviderErrorAnswer, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
 import { judgeRewrite, lostAfterSettle, repairLogLine, statusFor, type RepairOutcome } from "@/lib/kompasRepair"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
@@ -335,6 +335,8 @@ type AnswerJob = {
   streamPolicy: KompasStreamPolicy
   sourceText: string
   previousAnswer: string
+  // Round 6: the last three turns, so a different question cannot get any of the last three answers again.
+  previousTurns: Array<{ q: string; a: string }>
 }
 
 // The lanes, in order: an explicit OpenRouter pick from the live screen first,
@@ -391,7 +393,12 @@ function repairChecks(job: AnswerJob, text: string): { core: string[]; all: stri
   const parts = questionParts(job.question).length >= 2 ? missingQuestionParts(job.question, text).map((p) => `the interviewer explicitly asked about ${p}`) : []
   // A soft/personal question with several unrelated specialist phrases is simplified; expert questions never trigger it.
   const tangents = tangentSignals(job.question, text).map((t) => `remove the unasked technical tangent ${t} and keep the direct answer`)
-  return { core: [...structure, ...named], all: [...named, ...structure, ...parts, ...tangents] }
+  // Round 6: the previous answer given again to a different question, and third person the settle rewrite cannot fix,
+  // are core: the rewrite is kept only when it clears them, otherwise the original stands (never a blank answer).
+  const echo = answerEchoesPrevious(job.question, text, job.previousTurns)
+  const echoed = echo.same ? [`${echo.reason}; answer only this question${echo.fresh.length ? ` and say ${echo.fresh.join(", ")} in the first sentence` : ""}`] : []
+  const voice = firstPersonRewrite(text, job.sourceText).thirdPerson ? ["speak as the candidate in the first person (I, my); never use the candidate's name or he or she for the candidate"] : []
+  return { core: [...structure, ...named, ...echoed, ...voice], all: [...named, ...structure, ...echoed, ...voice, ...parts, ...tangents] }
 }
 
 // At most two attempts. The second rewrites the BEST answer so far and names only what it still misses (v1 rewrote
@@ -964,7 +971,12 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // key in; otherwise one vault-honoring call is made and delivered as SSE.
   const keys = rawKeys
   const fallbackText = ""
-  const previousAnswer = historyArr.length ? str((historyArr[historyArr.length - 1] as { a?: unknown; answer?: unknown })?.a ?? (historyArr[historyArr.length - 1] as { answer?: unknown })?.answer, 4000) : ""
+  const previousTurns = historyArr.slice(-3).map((turn) => {
+    const t = (turn && typeof turn === "object" ? turn : {}) as { q?: unknown; question?: unknown; a?: unknown; answer?: unknown }
+    return { q: str(t.q ?? t.question, 600), a: str(t.a ?? t.answer, 4000) }
+  }).filter((turn) => turn.a)
+  // Settle drops any sentence already said in the last three answers (was: the last answer only).
+  const previousAnswer = previousTurns.map((turn) => turn.a).join("\n")
   // Grounding guards (perfACT anti-hallucination): the facts a claim may be
   // filled from (employer/title/known), the figures the answer may state, and
   // the source text for the optional post-generation fact-check.
@@ -1020,6 +1032,7 @@ ${INTERVIEW}`
     streamPolicy: answerStreamPolicy(tier, question),
     sourceText,
     previousAnswer,
+    previousTurns,
   }
   if (body.stream) return streamAnswer(request, job)
   return jsonAnswer(request, job)

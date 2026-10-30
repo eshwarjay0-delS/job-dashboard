@@ -12,7 +12,7 @@
 import { readFileSync } from "node:fs"
 import {
   draftSpokenAnswer, dissectQuestion, evaluateLiveAnswers, settleSpokenAnswer, sameAnswerRatio, sentencesOf,
-  isProviderErrorAnswer, questionKeywords, wordCount,
+  isProviderErrorAnswer, questionKeywords, wordCount, answerEchoesPrevious, firstPersonRewrite,
 } from "../src/lib/kompasDissection.ts"
 import { deriveByCode, questionForAnswer } from "../src/lib/kompasAnswer.ts"
 import { applyGuards } from "../src/lib/kompasGuards.ts"
@@ -162,7 +162,99 @@ const R5 = [
   { kind: "nearDup", family: "near-duplicate (jargon bait)", a: "How do you keep user accounts safe?", b: "How do you keep service accounts safe?" },
   { kind: "nearDup", family: "near-duplicate (scope)", a: "How do you scope an access review?", b: "How do you scope an audit?" },
 ]
-export const ROUNDS = [R1, R2, R3, R4, R5]
+// ------------------------------------------------------------------ round 6: mishears, third person, echoes across turns, mode floors
+const ECHO = (a, aText, b, bText, same) => ({ kind: "echo", family: same ? "echo: copied answer (must flag)" : "echo: real new answer (must pass)", a, aText, b, bText, same })
+const R6 = [
+  ...[["um so like what's the uh resid jewel risk thing", "definition"], ["what is residue all risk", "definition"], ["what's the residual joule risk", "definition"],
+    ["define resid jewel risk", "definition"], ["what's a compensating control", "definition"], ["what's zero trust", "definition"],
+    ["what's the cooper netties control plane", "definition"], ["uh what's terror form", "definition"],
+    ["so what's least privilege", "definition"], ["what's the difference between inherent and resid jewel risk", "comparison"]].map(([q, shape]) => A("mishear / what's (round 6)", q, { shapes: [shape], garbled: true })),
+  ...["What's your biggest weakness?", "what's your salary expectation", "What's your experience with cloud security?", "what's your notice period", "What's your management style?"]
+    .map((q) => ({ kind: "notDefinition", family: "what's your (not a definition)", q })),
+  ...[["Jordan tracked residual risk on open findings. He told the business what remained.", false, /^I tracked .* I told /],
+    ["Jordan Hale reviewed remediation plans and sent weak evidence back.", false, /^I reviewed /],
+    ["Jordan's weekly summary named one finding per paragraph.", false, /^My weekly summary/],
+    ["Jordan would hold the item until the evidence matched.", false, /^I would hold/],
+    ["Jordan sent findings to the owner. She confirmed the date.", false, /^I sent .* I confirmed/],
+    ["Jordan tracks residual risk every week.", true, /^Jordan tracks/],
+    ["The weekly summary was written by Jordan for the owner.", true, /Jordan/],
+    ["He tracked residual risk. He told the business.", true, /^He tracked/],
+    ["My manager Sam reviewed the plan. He agreed to hold the item.", false, /^My manager Sam/],
+    ["I'm Jordan Hale, and I review remediation plans.", false, /^I'm Jordan Hale/]].map(([raw, flag, shape]) => ({ kind: "voice", family: "third person (round 6)", raw, flag, shape })),
+  ...[["What is a policy exception?", "How do you approve a policy exception?"], ["How do you track open findings?", "How do you report open findings?"],
+    ["How do you secure Kubernetes clusters?", "How do you monitor Kubernetes clusters?"], ["What is zero trust?", "How would you roll out zero trust?"],
+    ["What is residual risk?", "Who owns residual risk?"], ["How do you scope an access review?", "How do you close an access review?"],
+    ["What is least privilege?", "How do you enforce least privilege?"], ["How do you handle a suspicious login?", "How do you handle a lost laptop?"],
+    ["Explain residual risk to an engineer.", "Explain residual risk to a director."], ["When would you accept residual risk?", "When would you not accept residual risk?"],
+    ["How do you keep user accounts safe?", "How do you keep service accounts safe?"], ["What is SASE?", "What is a SIEM?"],
+    ["How do you protect passwords?", "How do you rotate passwords?"], ["How do you validate a fix?", "How do you reopen a fix that failed?"],
+    ["What is a compensating control?", "When is a compensating control not enough?"], ["How do you prioritize vulnerabilities?", "How do you prioritize audit findings?"],
+    ["How many years of experience do you have?", "Why do you want to leave your current job?"], ["What is threat modeling?", "Who should join a threat modeling session?"],
+    ["How do you secure a CI pipeline?", "How do you secure a container registry?"], ["What is business impact?", "How do you measure business impact?"]]
+    .map(([a, b]) => ({ kind: "nearDup", family: "near-duplicate (round 6, asked in a row)", a, b })),
+  ...[["What is a policy exception?", "A policy exception is an approved, time-limited departure from a policy, with a compensating control and an owner.",
+      "When would you reject a policy exception?", "I reject a policy exception when it has no end date, no owner, or no compensating control, and I send it back with what is missing."],
+    ["How do you secure Kubernetes clusters?", "I secure Kubernetes clusters by limiting who can reach the control plane, scanning images before they run, and keeping network policies tight between namespaces.",
+      "How do you secure a CI pipeline?", "I secure a CI pipeline by signing build artifacts, keeping secrets out of logs, and giving each pipeline only the deploy rights it needs."],
+    ["What is zero trust?", "Zero trust means no request is trusted because of where it comes from; every request proves who it is and what it may reach.",
+      "What is SASE?", "SASE puts network security and access control in one cloud service, so remote users get the same checks as the office."],
+    ["How do you track open findings?", "I track open findings in one register with an owner, a due date, and the evidence that would close each one.",
+      "How do you close open findings?", "I close an open finding only when the live setting matches the fix and the owner signs off on the evidence."],
+    ["When would you accept residual risk?", "I accept residual risk when the owner signs it off, a compensating control is in place, and the acceptance has an expiry date.",
+      "When would you not accept residual risk?", "I do not accept residual risk when no one owns it, when there is no compensating control, or when the impact would stop a critical process."]]
+    .flatMap(([a, aText, b, bText]) => [ECHO(a, aText, b, aText, true), ECHO(a, aText, b, bText, false)]),
+  ...[["What is residual risk?", "Can you repeat that?"], ["What is residual risk?", "Say that again, please."], ["What is residual risk?", "What is residual risk?"],
+    ["What is residual risk?", "Go deeper — following up on: \"What is residual risk\"?"], ["What is residual risk?", "Explain that."]]
+    .map(([a, b]) => ({ kind: "echoExempt", family: "echo exempt (repeat / follow-up)", a, b })),
+  ...[["What is a policy exception?", "How do you track open findings?", "When would you reject a policy exception?"],
+    ["What is zero trust?", "What is residual risk?", "What is SASE?"], ["How do you secure Kubernetes clusters?", "What is least privilege?", "How do you secure a CI pipeline?"],
+    ["How do you scope an access review?", "Tell me about yourself.", "How do you scope an audit?"], ["What is business impact?", "When can you start?", "How do you measure business impact?"]]
+    .map(([a, mid, c]) => ({ kind: "echoChain", family: "echo two turns back (last three turns)", a, mid, c })),
+  ...["Would you bypass a control if the CEO asked you to?", "Would you ever ignore a finding to hit a deadline?", "Is one hundred percent security possible?",
+    "Would you sign off on evidence you had not checked?", "Should security ever say no to the business?", "Would you report your own mistake to an auditor?",
+    "Can a control be too strict?", "Would you close a finding the owner says is fixed?", "Is a policy exception a failure?", "Do auditors always find the real risks?"].map((q) => A("trick (round 6 mode floors)", q)),
+  ...["so yeah, that's basically the team", "okay cool cool", "right, right", "we'll circle back on that", "my screen froze for a second", "I'm writing that down"]
+    .map((heard) => ({ kind: "smalltalk", family: "small talk (round 6)", heard })),
+  ...["Error: 429 Too Many Requests", "HTTP 503 Service Unavailable", "{\"error\":\"model_not_found\"}", "The upstream request timed out.", "Error: ECONNRESET"]
+    .map((raw) => ({ kind: "provider", family: "provider-error (round 6)", raw })),
+  ...[["I cut audit prep time by 60%.", true], ["I closed 300 findings last year.", true], ["I would review exceptions every 90 days.", false], ["I check the setting again after 30 days.", false]]
+    .map(([sentence, invented]) => ({ kind: "numbers", family: "invented-number (round 6)", sentence, invented })),
+]
+// ------------------------------------------------------------------ round 7: disguised copies, mixed voice, asides around asks
+const PREV_A = "I accept residual risk when the owner signs it off, a compensating control is in place, and the acceptance has an expiry date. I record the reason in the register and review it before it expires."
+const R7 = [
+  // A model that changes only the opener but keeps the old body is still a copy.
+  ...[["When would you accept residual risk?", "Who signs off residual risk?", "The owner signs off residual risk. "],
+    ["When would you accept residual risk?", "How do you report residual risk?", "I report residual risk like this. "],
+    ["When would you accept residual risk?", "When would you not accept residual risk?", "I would not accept residual risk in some cases. "],
+    ["When would you accept residual risk?", "How long can an exception last?", "An exception can last a while. "],
+    ["When would you accept residual risk?", "What is residual risk?", "Residual risk is what is left over. "]]
+    .map(([a, b, opener]) => ECHO(a, PREV_A, b, opener + PREV_A, true)),
+  // Asked repeats in other words are never flagged.
+  ...["Could you say that one more time?", "Sorry, I missed that, can you go over it again?", "Come again?", "Can you run through that once more?", "Pardon, could you repeat the last part?"]
+    .map((b) => ({ kind: "echoExempt", family: "echo exempt (asked repeat, other words)", a: "What is residual risk?", b })),
+  // Mixed voice in one answer.
+  ...[["I reviewed the plan. Jordan also sent the findings back.", false, /I also sent/],
+    ["Jordan Hale's team reviewed the plan with the owner.", false, /^My team reviewed/],
+    ["Jordan led the access review. He then checked the fix a month later.", false, /^I led .*I then checked/],
+    ["Jordan led the access review. He thinks it went well.", true, /^I led .*He thinks/],
+    ["Jordan, as the analyst, tracked the findings.", true, /^Jordan, as/],
+    ["The owner, not Jordan, signed the exception.", true, /Jordan/]].map(([raw, flag, shape]) => ({ kind: "voice", family: "third person mixed (round 7)", raw, flag, shape })),
+  // Mishears inside harder asks.
+  { kind: "keywords", family: "mishear + negation keywords", q: "when would you not accept resid jewel risk", must: ["not accept", "residual risk"], never: ["jewel"] },
+  { kind: "keywords", family: "mishear + premise keywords", q: "Since you ran the audit program, how do you explain resid jewel risk?", must: ["residual risk"], never: ["audit", "program", "jewel"] },
+  ...[["we'll circle back on that. How do you scope an access review?", "scope an access review", "circle back"],
+    ["my screen froze for a second, sorry. What is least privilege?", "least privilege", "screen froze"],
+    ["right, right. So how would you track exceptions?", "track exceptions", "right, right"]].map(([heard, want, drop]) => ({ kind: "intake", family: "aside then a real ask (round 7)", heard, want, drop })),
+  ...["Is it better to accept a risk or delay a release?", "Would you trust an owner who says it is fixed?", "Should an analyst ever overrule a manager?",
+    "Is compliance the same as security?", "What would you do if your fix broke production?"].map((q) => A("trick (round 7 mode floors)", q)),
+  ...["Error code: 500 - {'error': {'message': 'Internal error'}}", "   502 Bad Gateway   ", "HTTP/1.1 429 Too Many Requests", "Gateway Timeout", "The server call timed out after waiting."]
+    .map((raw) => ({ kind: "provider", family: "provider-error (round 7)", raw })),
+  ...["I would add a timeout so a slow upstream request does not block the review queue.", "HTTP 503 errors from the scanner go to the owner as a ticket."]
+    .map((raw) => ({ kind: "notProvider", family: "provider-error look-alike (round 7, legit)", raw })),
+]
+export const ROUNDS = [R1, R2, R3, R4, R5, R6, R7]
+export const INFO = []
 
 // ------------------------------------------------------------------ checks
 const FILLER = /\b(?:um+|uh+|erm|you know)\b/i
@@ -212,14 +304,53 @@ function judgeAnswerCase(c) {
 export function judgeCase(c) {
   if (c.kind === "answer") return judgeAnswerCase(c).fails
   if (c.kind === "nearDup") {
+    // Round 6: judged as asked live. Question b comes after a, so the previous answer is known (the production prompt
+    // and settle both have it). Two things must hold: the stand-in answers b differently, and the production check
+    // flags the previous answer if a model gave it again for b. The stand-in with no history is reported as info only,
+    // because production never answers without the previous turn.
     const fails = []
     for (const level of LEVELS) {
       const a = draftSpokenAnswer(c.a, level, RESUME)
-      const b = draftSpokenAnswer(c.b, level, RESUME)
+      const b = draftSpokenAnswer(c.b, level, RESUME, [a])
       const r = sameAnswerRatio(a, b)
       if (r >= 0.7) fails.push(`${level}: same answer (Jaccard ${r.toFixed(2)})`)
+      if (answerEchoesPrevious(c.b, b, [{ q: c.a, a }]).same) fails.push(`${level}: the new answer is flagged as the previous one`)
+      if (!answerEchoesPrevious(c.b, a, [{ q: c.a, a }]).same) fails.push(`${level}: a copy of the previous answer is not caught`)
+      const cold = sameAnswerRatio(a, draftSpokenAnswer(c.b, level, RESUME))
+      if (cold >= 0.7) INFO.push(`stand-in with no history, ${level}: "${c.a}" / "${c.b}" Jaccard ${cold.toFixed(2)}`)
     }
     return fails
+  }
+  if (c.kind === "echo") {
+    const r = answerEchoesPrevious(c.b, c.bText, [{ q: c.a, a: c.aText }])
+    return r.same === c.same ? [] : [c.same ? "copied answer not caught" : `real new answer flagged: ${r.reason}`]
+  }
+  if (c.kind === "echoExempt") {
+    const prev = draftSpokenAnswer(c.a, "director", RESUME)
+    return answerEchoesPrevious(c.b, prev, [{ q: c.a, a: prev }]).same ? ["a repeat or follow-up was flagged as an echo"] : []
+  }
+  if (c.kind === "echoChain") {
+    const a = draftSpokenAnswer(c.a, "director", RESUME)
+    const mid = draftSpokenAnswer(c.mid, "director", RESUME, [a])
+    const turns = [{ q: c.a, a }, { q: c.mid, a: mid }]
+    const fails = []
+    if (!answerEchoesPrevious(c.c, a, turns).same) fails.push("the answer from two turns back given again is not caught")
+    const fresh = draftSpokenAnswer(c.c, "director", RESUME, [a, mid])
+    if (answerEchoesPrevious(c.c, fresh, turns).same) fails.push(`the new answer is flagged: ${fresh}`)
+    return fails
+  }
+  if (c.kind === "voice") {
+    const r = firstPersonRewrite(c.raw, RESUME)
+    const fails = []
+    if (r.thirdPerson !== c.flag) fails.push(`third person flag ${r.thirdPerson}, expected ${c.flag}: "${r.text}"`)
+    if (!c.shape.test(r.text)) fails.push(`rewrite "${r.text}"`)
+    const s = settleSpokenAnswer("What does residual risk mean?", c.raw, "architect", RESUME)
+    if (!s.text) fails.push("settle blanked the answer")
+    return fails
+  }
+  if (c.kind === "notDefinition") {
+    const shape = dissectQuestion(c.q).shape
+    return shape === "definition" ? [`"${c.q}" read as a definition`] : []
   }
   if (c.kind === "smalltalk") {
     const fails = []
@@ -353,5 +484,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     for (const f of r.failures) console.log(`- [${f.family}] ${String(f.ask).slice(0, 90)}\n    ${f.fails.join("\n    ")}`)
   }
   console.log(`\nTOTAL ${total} checks, ${failed} failing (offline, code-level only; not live answer quality)`)
+  if (INFO.length) console.log(`\nINFO (not failures): ${INFO.length} stand-in pairs still alike with no history\n  ${INFO.join("\n  ")}`)
   process.exitCode = failed ? 1 : 0
 }
