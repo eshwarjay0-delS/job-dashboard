@@ -32,7 +32,7 @@ test("only a signed-in user can issue a short-lived ticket", () => {
   assert.match(issue, /authenticatedUser\(request\)/)
   assert.match(issue, /randomBytes\(32\)/)
   assert.match(issue, /createHash\("sha256"\)/)
-  assert.match(issue, /Date\.now\(\) \+ 120_000/)
+  assert.match(issue, /Date\.now\(\) \+ 300_000/)
   assert.match(issue, /session\.site !== "marketfit"/)
   assert.ok(!issue.includes("console.log"))
 })
