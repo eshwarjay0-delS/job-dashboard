@@ -1,0 +1,22 @@
+[
+  {
+    "question": "What does residual risk mean?",
+    "level": "engineer",
+    "answer": "Residual risk is what is still left after the control you already have is in place. I tracked residual risk on open findings and told the business what still remained."
+  },
+  {
+    "question": "What is the difference between a policy deviation and a policy exception?",
+    "level": "engineer",
+    "answer": "A policy deviation is a break from the rule, and a policy exception is a break someone approved on purpose. I explained the difference between a policy deviation and a policy exception in audit prep."
+  },
+  {
+    "question": "Tell me about a time you challenged a weak remediation plan.",
+    "level": "engineer",
+    "answer": "I challenged a weak remediation plan by sending it back before anyone called the item closed. The record says I reviewed remediation plans for access reviews and sent weak evidence back to the owner. I might tell that story because the plan named a fix and did not show that the fix had happened. I asked what the owner could produce, waited for that evidence, and only then treated the item as ready to close. I did not invent a percentage for it. The point was that a plan is not proof."
+  },
+  {
+    "question": "How do you assess business impact and residual risk?",
+    "level": "engineer",
+    "answer": "I assess business impact by asking what the process cannot do while the finding stays open, and I assess residual risk by naming what remains after the planned control. I tracked residual risk on open findings and said what the business would still carry. I might keep those as two questions because they are not the same check. Business impact is the hurt if nothing changes. Residual risk is the hurt that is still there after the change."
+  }
+]

@@ -17,5 +17,6 @@ const cases=JSON.parse(readFileSync(new URL('../fixtures/kompas-evaluation/inter
 for(const c of cases.filter(c=>c.step>=2)) test(`${c.id}: preserve requested practical depth`,()=>{
  const policy=desktopResponsePolicy(c.level,c.question)
  assert.equal(policy.kind,'implementation')
- assert.ok(policy.words>=180)
+ const definition=desktopResponsePolicy(c.level,'What is CSRF?')
+ assert.ok(policy.words>=Math.round(definition.words*1.5),'a practical question stays longer than a definition at the same level')
 })
