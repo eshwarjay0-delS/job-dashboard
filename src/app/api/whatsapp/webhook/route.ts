@@ -46,6 +46,7 @@ import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib
 import { madeMeetsFloor } from "@/lib/made-floor"
 import { acceptableWhatsAppResume, whatsappResumeRejectionReasons } from "@/lib/whatsapp-resume-acceptance"
 import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, hasResumeRecoveryForJD, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
+import { recoveryTailorBudget, RECOVERY_MIN_TAILOR_MS } from "@/lib/whatsapp-recovery-budget"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
 import { chooseResume, type Prefer } from "@/lib/library-choose"
@@ -1052,7 +1053,7 @@ async function recoverResumeJobs(request: NextRequest) {
     } catch { /* marker only */ }
   }
   try {
-    const res = await recoverResumeJobsInner(request)
+    const res = await recoverResumeJobsInner(request, startedAt, mark)
     if (res.status !== 401) await mark(res.ok ? "ok" : "http_" + res.status, await res.clone().json().catch(() => ({})))
     return res
   } catch (error) {
@@ -1060,12 +1061,17 @@ async function recoverResumeJobs(request: NextRequest) {
     throw error
   }
 }
-async function recoverResumeJobsInner(request: NextRequest) {
+async function recoverResumeJobsInner(request: NextRequest, startedAt: number, progress: (outcome: string, counts: unknown) => Promise<void>) {
   const secret = process.env.CRON_SECRET || ""
   if (secret.length < 16 || request.headers.get("authorization") !== "Bearer " + secret)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  // Checkpoint before legacy storage scans: a platform timeout must not look like a cron that never ran.
+  console.info("[whatsapp] resume recovery cron started")
+  await progress("running", { stage: "authenticated" })
   const bootstrapped = await bootstrapLegacyResumeFailures()
+  await progress("running", { stage: "bootstrapped", bootstrapped })
   const jobs = await dueResumeRecoveries(1)
+  await progress("running", { stage: "queue_selected", bootstrapped, due: jobs.length })
   let attempted = 0
   let accepted = 0
   let handsetConfirmed = 0
@@ -1092,15 +1098,25 @@ async function recoverResumeJobsInner(request: NextRequest) {
         continue
       }
     }
+    // Bootstrap and queue enumeration consume the SAME 300-second function budget.
+    // Leave time for quality checks, Meta upload, state writes and a final count log.
+    const budget = recoveryTailorBudget(startedAt)
+    if (budget < RECOVERY_MIN_TAILOR_MS) {
+      console.warn("[whatsapp] resume recovery deferred for route time budget", { budgetMs: budget, attempted })
+      await progress("running", { stage: "insufficient_budget", bootstrapped, due: jobs.length, attempted })
+      break // Still pending; no send occurred and the next authenticated run may retry.
+    }
     attempted++
+    await progress("running", { stage: "attempt_started", bootstrapped, due: jobs.length, attempted })
     try {
       await generate(job.from, { jd: job.jd, jdId: job.jdId, resumePath,
-        resumeName: job.resumeName, resumeFiled: job.resumeFiled }, job.userId, TAILOR_BUDGET_MS, job.files, true)
+        resumeName: job.resumeName, resumeFiled: job.resumeFiled }, job.userId, budget, job.files, true)
       const state = await readResumeRecovery(job.id)
       if (state?.deliveryState === "accepted" || state?.deliveryState === "sent" ||
           state?.deliveryState === "delivered" || state?.deliveryState === "read") accepted++
       else stillPending++
       if (state?.deliveryState === "delivered" || state?.deliveryState === "read") handsetConfirmed++
+      await progress("running", { stage: "attempt_finished", bootstrapped, due: jobs.length, attempted, accepted, handsetConfirmed, stillPending })
     } catch (error) {
       console.error("[whatsapp] recovery run failed", (error as Error)?.name || "error")
       await deferResumeRecovery(job.id, "recovery_exception")
