@@ -1033,7 +1033,26 @@ async function bootstrapLegacyResumeFailures(): Promise<number> {
   return queued
 }
 
+// One small marker so a cron run can be checked later even though Vercel keeps logs for ~30 minutes.
+// Only route, time, outcome and counts: no phone number, candidate, JD or resume content. Best effort: never breaks the cron.
 async function recoverResumeJobs(request: NextRequest) {
+  const startedAt = Date.now()
+  const mark = async (outcome: string, counts: unknown) => {
+    try {
+      await blob.put("whatsapp/recovery-last-run.json", JSON.stringify({
+        route: "/api/whatsapp/recover", at: new Date(startedAt).toISOString(), ms: Date.now() - startedAt, outcome, counts }))
+    } catch { /* marker only */ }
+  }
+  try {
+    const res = await recoverResumeJobsInner(request)
+    if (res.status !== 401) await mark(res.ok ? "ok" : "http_" + res.status, await res.clone().json().catch(() => ({})))
+    return res
+  } catch (error) {
+    await mark("error:" + ((error as Error)?.name || "error"), {})
+    throw error
+  }
+}
+async function recoverResumeJobsInner(request: NextRequest) {
   const secret = process.env.CRON_SECRET || ""
   if (secret.length < 16 || request.headers.get("authorization") !== "Bearer " + secret)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
