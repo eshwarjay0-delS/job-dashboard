@@ -1,7 +1,7 @@
 // The dossier as a printable page (dossier-blueprint upgrade step 3, print-CSS route for the demo). Markdown in,
 // self-contained HTML out; headless Chrome or the browser's Print turns it into the PDF. Every figure passes the
 // dossierBlueprint gate (kompasGuards.allowedNumbers underneath) and contact details are left out before render.
-import { gateFigures, holesIn, stripContact } from "./dossierBlueprint.ts"
+import { gateFigures, holesIn, stripContact, stripLogistics } from "./dossierBlueprint.ts"
 
 const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 const inline = (t: string) => esc(t)
@@ -55,7 +55,7 @@ mark.hole{background:#ffe3e3;color:#a10000;font-weight:600}.pb{break-after:page}
 
 /** The print page: gated, contact-free, holes highlighted. */
 export function dossierHtml(opts: { title: string; md: string; sources: string[] }): { html: string; blocked: number; blockedList: string[]; holes: string[] } {
-  const gated = gateFigures(stripContact(opts.md), opts.sources)
+  const gated = gateFigures(stripLogistics(stripContact(opts.md)), opts.sources)
   const body = markdownToHtml(gated.text)
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(opts.title)}</title><style>${CSS}</style></head><body>${body}</body></html>`
   return { html, blocked: gated.blocked.length, blockedList: gated.blocked, holes: holesIn(gated.text) }

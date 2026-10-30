@@ -15,7 +15,7 @@ export const BLUEPRINT_PARTS_EXTRA = ["whycompany", "first30", "onepage", "riskx
 export type BlueprintPart = (typeof BLUEPRINT_PARTS)[number] | (typeof BLUEPRINT_PARTS_EXTRA)[number]
 
 export const BLUEPRINT_GUIDE: Record<BlueprintPart, string> = {
-  evidence: "Cover and evidence base: role, company, round, working model. List every source given and what each can prove. Then a two-source table: | Claim | Supported by | Status | — status is 'resume', 'JD (emphasis only, not experience)', or 'illustrative: rehearse as I would'. End with: a proposed answer is a rehearsal draft, not proof an incident happened.",
+  evidence: "Cover and evidence base: role, company, round. List every source given and what each can prove. Then a two-source table: | Claim | Supported by | Status | — status is 'resume', 'JD (emphasis only, not experience)', or 'illustrative: rehearse as I would'. End with: a proposed answer is a rehearsal draft, not proof an incident happened.",
   oneminute: "The interview in one minute: what the manager actually needs (numbered), what the role is not, and a one-sentence first-person positioning line. Only from the JD, expectations and notes given.",
   signals: "Signals: 4-8 short phrases quoted exactly from the JD, expectations or notes, each as: > \"quote\" then 'What it changes:' one line about how answers should shift. Never paraphrase inside the quote marks.",
   fixfirst: "Fix before the call: contradictions between what was said in earlier sessions and the resume (employers, dates, titles, tools), plus facts learned about the team. Blunt, one line each. If nothing conflicts, say so.",
@@ -32,7 +32,40 @@ export const BLUEPRINT_RULES = [
   "Never invent numbers, incidents, employers, dates or tools. A figure not in the sources is written exactly as " + HOLE + ".",
   "An unknown fact (name, date, tool, outcome) is written as [ ___ confirm before the call: what ] — never guessed.",
   "Never change or repeat the resume name, contact details or dates beyond what the sources show.",
+  "No logistics: never write about visa or work authorization, citizenship, pay or rates, relocation, current location, address, start date, contract terms, or on-site/remote/hybrid arrangements, even if a source mentions them. Only resume-derived experience and the role's work.",
 ].join("\n")
+
+// Eshwar's rule (29 Oct 2026): no logistics anywhere in a dossier or answer. Phrases, not bare words, so
+// "address the root cause" or "relocated the pipeline" are not caught.
+const LOGISTICS: RegExp[] = [
+  /\b(?:visa|h-?1b|green\s*card|sponsorship|sponsor\s+(?:me|my|a\s+visa)|work\s+authori[sz]ation|authori[sz]ed\s+to\s+work|citizen(?:ship)?|work\s+permit|\bOPT\b|EAD)\b/gi,
+  /\b(?:salary|compensation|pay\s+(?:rate|range|expectations?)|hourly\s+rate|bill\s+rate|rate\s+expectations?|per\s+hour)\b/gi,
+  /\b(?:relocat(?:e|ion|ing)\b(?!\s+(?:the|a|an|our|my|its)\s+(?:log|pipeline|data|bucket|service|server|workload|database)))/gi,
+  /\b(?:current(?:ly)?\s+(?:location|located|based)|where\s+(?:are\s+you|I\s+am|I'm)\s+(?:located|based)|local\s+to|commut(?:e|ing)|home\s+address|mailing\s+address|street\s+address)\b/gi,
+  /\b(?:start\s+date|notice\s+period|available\s+to\s+start|when\s+(?:could|can|would)\s+you\s+start)\b/gi,
+  /\b(?:on-?site|in-?office|in\s+office|hybrid|(?:fully\s+|not\s+)?remote\s*(?:role|position|work|job)?(?=\W)|work\s+from\s+home|days?\s+(?:a|per|each)\s+week|working\s+model|return\s+to\s+office)\b/gi,
+  /\b(?:contract\s+(?:length|term|duration|terms)|conversion\s+to\s+(?:full-?time|FTE|perm)|contract-to-hire|w-?2|c2c|1099)\b/gi,
+  /^#{1,4}\s.*\blogistics\b/gim,
+]
+export function bannedLogistics(text: string): string[] {
+  const out: string[] = []
+  for (const re of LOGISTICS) for (const m of String(text || "").matchAll(new RegExp(re.source, re.flags))) out.push(m[0].trim())
+  return out
+}
+/** Drops every line that carries logistics; a heading naming logistics drops its whole section. */
+export function stripLogistics(md: string): string {
+  const out: string[] = []
+  let skipLevel = 0
+  for (const line of String(md || "").split("\n")) {
+    const h = /^(#{1,4})\s/.exec(line)
+    if (skipLevel && h && h[1].length <= skipLevel) skipLevel = 0
+    if (skipLevel) continue
+    if (h && /\blogistics\b/i.test(line)) { skipLevel = h[1].length; continue }
+    if (bannedLogistics(line).length) continue
+    out.push(line)
+  }
+  return out.join("\n")
+}
 
 // AD079 names these Kompas answers as invented. They never come back, whatever digits the sources hold.
 const BANNED: RegExp[] = [
@@ -218,10 +251,11 @@ export function riskTranslations(rows: RiskRow[], sources: Array<string | undefi
   return { md: ["| Technical thing | What it means as risk | How I would say it |", "| --- | --- | --- |", ...body].join("\n") + "\n", blocked }
 }
 
-export function skeletonCheck(md: string, items: DossierItem[], opts: { full?: boolean } = {}): { ok: boolean; missing: string[]; itemsWithoutAngles: number; itemsWithoutLadder: number; banned: string[] } {
+export function skeletonCheck(md: string, items: DossierItem[], opts: { full?: boolean } = {}): { ok: boolean; missing: string[]; itemsWithoutAngles: number; itemsWithoutLadder: number; banned: string[]; logistics: string[] } {
   const missing = [...CORE_SECTIONS, ...(opts.full ? CORE_SECTIONS_EXTRA : [])].filter(([, re]) => !re.test(md)).map(([n]) => n)
   const itemsWithoutAngles = items.filter((i) => !i.angles).length
   const itemsWithoutLadder = items.filter((i) => !i.ladder || i.ladder.length < 3).length
   const banned = bannedFigures(md)
-  return { ok: !missing.length && !itemsWithoutAngles && !itemsWithoutLadder && !banned.length, missing, itemsWithoutAngles, itemsWithoutLadder, banned }
+  const logistics = bannedLogistics(md)
+  return { ok: !missing.length && !itemsWithoutAngles && !itemsWithoutLadder && !banned.length && !logistics.length, missing, itemsWithoutAngles, itemsWithoutLadder, banned, logistics }
 }

@@ -2,7 +2,7 @@
 // layout check and print-HTML builder over a finished write-up. NOT imported by any route: the live answer
 // path and #126's intelligence route are unchanged. maybeGateWriteup is the only hook, and it is a no-op
 // unless KOMPAS_DOSSIER_WRITEUP_GATE=1 (off by default).
-import { gateFigures, holesIn, bannedFigures, CORE_SECTIONS, CORE_SECTIONS_EXTRA, stripContact } from "./dossierBlueprint.ts"
+import { gateFigures, holesIn, bannedFigures, CORE_SECTIONS, CORE_SECTIONS_EXTRA, stripContact, stripLogistics, bannedLogistics } from "./dossierBlueprint.ts"
 import { dossierHtml } from "./dossierPdf.ts"
 import { dossierCitationWarnings, type DossierSource, type DossierStage } from "./kompas-dossier-bots.ts"
 
@@ -17,7 +17,7 @@ export type WriteupShape = "pr126" | "blueprint" | "old-object" | "empty" | "unk
 export type WriteupReport = {
   stage: DossierStage; shape: WriteupShape; ok: boolean
   missingSections: string[]; blocked: string[]; banned: string[]; holes: string[]
-  citationWarnings: string[]; contactRemoved: number; markdown: string; html: string
+  citationWarnings: string[]; contactRemoved: number; logistics: string[]; markdown: string; html: string
 }
 
 const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
@@ -50,7 +50,8 @@ export function gateWriteup(input: unknown, opts: { stage: DossierStage; sources
   }
   if (!md.trim()) shape = "empty"
   const srcText = opts.sources.map((s) => s.text)
-  const stripped = stripContact(md)
+  const logistics = bannedLogistics(md)
+  const stripped = stripLogistics(stripContact(md))
   const contactRemoved = (stripped.match(/\[contact left out\]/g) || []).length - (md.match(/\[contact left out\]/g) || []).length
   const { text: masked, cites } = maskCites(stripped)
   const g = gateFigures(masked, srcText)
@@ -67,8 +68,8 @@ export function gateWriteup(input: unknown, opts: { stage: DossierStage; sources
   const banned = bannedFigures(md)
   return {
     stage: opts.stage, shape, markdown: gated, html, blocked: g.blocked, banned, holes: holesIn(gated),
-    missingSections, citationWarnings, contactRemoved,
-    ok: shape !== "empty" && shape !== "old-object" && !missingSections.length && !g.blocked.length && !banned.length && !citationWarnings.length,
+    missingSections, citationWarnings, contactRemoved, logistics,
+    ok: shape !== "empty" && shape !== "old-object" && !missingSections.length && !g.blocked.length && !banned.length && !logistics.length && !citationWarnings.length,
   }
 }
 
