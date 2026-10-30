@@ -34,11 +34,18 @@ export async function parakeetTranscribe(input: SttInput, env: Env = process.env
   if (!res.ok) throw new Error("parakeet http " + res.status)
   const data = (await res.json()) as { text?: unknown; language?: unknown; seconds?: unknown }
   const text = typeof data.text === "string" ? data.text.trim() : ""
-  if (!text) throw new Error("parakeet empty")
+  // A successful HTTP response is not proof of a usable transcript. Refuse
+  // runaway or NUL-bearing provider output so Whisper can recover this clip.
+  // This bound is intentionally far above an ordinary 4 MiB audio clip.
+  if (!text || text.length > 100_000 || text.includes("\\u0000")) throw new Error("parakeet invalid transcript")
+  const seconds = typeof data.seconds === "number" && Number.isFinite(data.seconds) && data.seconds >= 0
+    ? data.seconds : null
+  const language = typeof data.language === "string" && data.language.trim().length <= 32 &&
+    !/[\\u0000-\\u001f]/.test(data.language) ? data.language.trim() || null : null
   return {
     text,
-    seconds: typeof data.seconds === "number" ? data.seconds : null,
-    language: typeof data.language === "string" ? data.language : null,
+    seconds,
+    language,
     model: "parakeet",
     segments: [],
     words: [],
