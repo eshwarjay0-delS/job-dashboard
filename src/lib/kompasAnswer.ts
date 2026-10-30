@@ -101,7 +101,7 @@ export function requestedParts(question: string): { parts: string[]; constraints
   const parts: string[] = [], constraints: string[] = []
   // Not "compare": "Compare IDOR and CSRF" is one part, the comparison.
   const LIST_VERB = /^((?:explain|state|cover|give|include|describe|list|name|walk through|walk me through|discuss|outline|address|show|identify)\b)\s+(.+)$/i
-  const CONDITION = /^(?:keep|make it|stay|limit|avoid|assume|use only|focus|without|don'?t|do not|never)\b/i
+  const CONDITION = /^(?:keep|make it|stay|limit|avoid|assume|use only|focus|without|don'?t|do not|never|there can be no|no (?:production )?(?:downtime|restart|outage))\b/i
   for (const sentence of String(question || "").split(/(?<=[.?!])\s+/)) {
     let core = sentence.replace(LEAD_FILLER, "").replace(/[.!]+$/, "").trim()
     if (!core) continue
@@ -109,7 +109,7 @@ export function requestedParts(question: string): { parts: string[]; constraints
     // Read before the condition is cut off: "..., how would you distinguish A, B and C without bypassing inspection?" kept
     // its question mark on the condition, so the ask itself was taken for setup and dropped (27 Oct 2026).
     const asked = /\?$/.test(core)
-    const tail = core.match(/^(.*?),?\s+((?:without|but (?:do not|don't|never))\b.*)$/i)
+    const tail = core.match(/^(.*?),?\s+((?:without|but (?:do not|don't|never)|with no (?:production )?(?:downtime|restart|outage)|and no (?:production )?(?:downtime|restart|outage))\b.*)$/i)
     if (tail && tail[1].split(/\s+/).length >= 3) { core = tail[1].trim(); constraints.push(tail[2].trim().replace(/\?$/, "")) }
     if (!asked && !ASK_OPENER.test(core)) continue   // the setup the ask stands on
     const list = core.match(LIST_VERB)

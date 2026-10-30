@@ -1,3 +1,7 @@
+## 2026-10-30 — No downtime stays a condition of the question
+
+"How would you verify the remediation with no downtime?" kept the limit inside the ask, so it was not named as a condition. "There can be no downtime" before the question was skipped the same way. Both are now conditions. The ask itself stays. A "without ..." condition still keeps the ask.
+
 ## 2026-10-30 — Two questions on screen are answered separately
 
 A screen capture that held two questions was one answer. Each Question block is now its own page. The options stay with their question. One question on screen is still one page. There is still no review dialog. The page stamp is kompas-20261030-screen.

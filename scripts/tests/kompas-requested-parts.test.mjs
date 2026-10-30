@@ -21,6 +21,13 @@ test('a listed ask becomes one part per item, in order, and its conditions are k
   assert.deepEqual(compound.parts, ['Define IDOR', 'explain why it matters', 'give one mitigation'])
   const definition = A.requestedParts('Define NIST CSF risk assessments. Keep it suitable for technical HR.')
   assert.deepEqual(definition, { parts: ['Define NIST CSF risk assessments'], constraints: ['Keep it suitable for technical HR'] })
+  const quiet = A.requestedParts('There can be no downtime. How would you verify the remediation?')
+  assert.deepEqual(quiet.constraints, ['There can be no downtime'])
+  assert.match(quiet.parts.join(' '), /How would you verify the remediation/)
+  const inline = A.requestedParts('How would you verify the remediation with no downtime?')
+  assert.deepEqual(inline.constraints, ['with no downtime'])
+  assert.match(inline.parts[0], /^How would you verify the remediation/)
+  assert.doesNotMatch(inline.parts.join(' '), /downtime/)
 })
 
 test('setup sentences are context, a single ask stays one part, and "and" inside a name is not a split', () => {
