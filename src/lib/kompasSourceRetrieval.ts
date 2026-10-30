@@ -4,7 +4,7 @@
  * Pure and offline: no model, no network. Every entry point fails safe to "no block, no check", so a turn with
  * empty or broken sources behaves exactly as before this module existed.
  */
-import { questionKeywords } from "./kompasDissection.ts"
+import { questionKeywords, topicOfAsk } from "./kompasDissection.ts"
 import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 
 export type Proves = "experience" | "emphasis"
@@ -55,7 +55,10 @@ export function splitPassages(docs: SourceDoc[] | null | undefined): Passage[] {
     let heading = ""
     let n = 0
     const body0 = doc.name === "resume" ? normalizeResumeLayout(doc.text) : doc.text
-    const chunks = doc.proves === "emphasis" ? body0.split(/(?<=[.!?])\s+|\n+/) : body0.split(/\n+/)
+    let chunks = doc.proves === "emphasis" ? body0.split(/(?<=[.!?])\s+|\n+/) : body0.split(/\n+/)
+    // r5: a saved "Q: … / A: …" pair is one passage, so the answer travels with the question it answers.
+    // Failsafe: lines without the markers (or any error) split exactly as before.
+    try { if (doc.name === "saved Q&A") chunks = pairQA(chunks) } catch { /* keep the plain split */ }
     for (const raw of chunks) {
       const line = raw.trim()
       if (!line) continue
@@ -70,6 +73,79 @@ export function splitPassages(docs: SourceDoc[] | null | undefined): Passage[] {
     }
   }
   return out
+}
+
+function pairQA(lines: string[]): string[] {
+  const out: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const q = lines[i].trim(), a = (lines[i + 1] || "").trim()
+    if (/^Q\s*[:.]/i.test(q) && /^A\s*[:.]/i.test(a)) { out.push(`${q} ${a}`); i++ } else out.push(lines[i])
+  }
+  return out
+}
+
+/**
+ * r5 intent families (our own list): interview stories are told in other words than the question ("challenged my boss"
+ * vs "disagreed with the CTO"). A question word in a family lets passages with any word of that family score, at a
+ * lower weight than a shared word. A root ending in "=" must match the whole word. Pure data; no outside code.
+ */
+const INTENT: Record<string, string[]> = {
+  conflict: ["disagre", "conflict", "clash", "argu", "friction", "tension", "dispute", "mediat", "pushed=", "push=", "objec", "challeng", "oppos", "fight", "settl", "resolv", "against=", "said=", "no="],
+  failure: ["fail", "mistak", "missed=", "miss=", "missing=", "error", "wrong", "dropped=", "lesson", "responsib", "fell=", "fall=", "short=", "~owned="],
+  crisis: ["crisis", "emergenc", "pressur", "stepped=", "charge=", "~commander", "~bridge=", "outbreak", "ownership"],
+  ambiguity: ["ambigu", "unclear", "uncertain", "vague", "fuzzy", "unknown", "~option", "information="],
+  deadline: ["deadline", "~date=", "~dates=", "tight=", "slip", "~scope=", "~fixed=", "schedul", "~standup", "~time=", "move="],
+  mentoring: ["mentor", "coach", "~junior", "teach", "develop", "grew=", "grow=", "experienced="],
+  influence: ["influenc", "persuad", "convinc", "buy-in", "buyin", "authorit", "skeptic", "~adopt", "~paired", "power=", "~manage=", "department"],
+  burnout: ["burn", "exhaust", "overload", "overwork", "~rotation", "~on-call", "~oncall", "~secondary", "tired"],
+  delegation: ["delegat", "hand=", "~triage", "~routine", "weakness", "improv", "letting="],
+  motivation: ["motivat", "drive=", "drives=", "excit", "interest", "passion", "enjoy"],
+  pride: ["proud", "accomplish", "achiev", "happiest", "happy="],
+  // who the story is with: someone senior ("my boss", "an executive") vs peers ("two teammates")
+  upward: ["boss", "executive", "senior=", "leadership=", "leader=", "~cto=", "~ciso=", "~ceo=", "~board="],
+  peers: ["teammat", "colleague", "peers=", "people=", "~two=", "~engineers="],
+}
+// A root starting with "~" only matches in a passage; it never makes a question join the family ("lead key rotation").
+const inFamily = (t: string, roots: string[], asked = false) => roots.some((r0) => {
+  if (asked && r0.startsWith("~")) return false
+  const r = r0.replace(/^~/, "")
+  return r.endsWith("=") ? t === r.slice(0, -1) : t.startsWith(r)
+})
+/** Intent families a question touches (empty for a plain technical ask). */
+export function intentFamilies(question: string): string[] {
+  try {
+    const ts = tokens(question).concat(String(question || "").toLowerCase().split(/[^a-z-]+/).filter((t) => t.length >= 2))
+    return Object.keys(INTENT).filter((f) => ts.some((t) => inFamily(t, INTENT[f], true)))
+  } catch { return [] }
+}
+/** A story: first person, past tense, a situation and what was done ("At X I …, so I …"). Resume bullets are not stories. */
+export function storyShaped(text: string): boolean {
+  const t = String(text || "")
+  const firstPast = (t.match(/\b(?:I|we)\s+(?:\w+ed|ran|led|wrote|cut|kept|took|made|split|showed|had|was|were|got|went|stepped|built|set|said|told)\b/g) || []).length
+  return firstPast >= 2 || (firstPast >= 1 && (/\b(?:so|then|because|after|until|when)\b|;/i.test(t) || /^(?:Desktop dossier:\s*)?(?:At|In|During|While|When)\b/.test(t)))
+}
+
+/**
+ * r5, index-ready: intent score of one passage from its token list alone. A prebuilt per-session index can pass its
+ * stored tokens and a cached family document count; nothing here rescans source text.
+ */
+export function intentScore(passageTokens: string[], fams: string[], famDf: (f: string) => number, N: number): number {
+  let s = 0
+  for (const f of fams) {
+    const roots = INTENT[f]
+    if (!roots) continue
+    // distinct family roots met, so a joined pair ("disagreedwith") never counts its word twice
+    const hit = roots.filter((r) => passageTokens.some((x) => inFamily(x, [r]))).length
+    if (!hit) continue
+    const fdf = famDf(f)
+    s += 0.9 * (hit >= 2 ? 1.35 : 1) * Math.log(1 + (N - fdf + 0.5) / (fdf + 0.5))
+  }
+  return s
+}
+/** r5, index-ready: how many passages (as token lists) hold any word of a family. Cache it per session. */
+export function familyDocFreq(docsTok: string[][], family: string): number {
+  const roots = INTENT[family] || []
+  return docsTok.filter((d) => d.some((x) => inFamily(x, roots))).length
 }
 
 /** BM25-style lexical scoring against the dissected question's keywords; a JD line is weighted down. */
@@ -144,9 +220,15 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
     const docsTok = passages.map((p) => tokens(p.text))
     const vocab = new Set(docsTok.flat())
     let heard = (t: string) => t
-    try { heard = (t: string) => heardAs(t, vocab) } catch { /* failsafe: exact words only */ }
+    // r5: an intent word ("charge", "missing") is meant as said, never re-heard as a near source word ("change")
+    const asIntent = (t: string) => Object.values(INTENT).some((roots) => inFamily(t, roots, true))
+    try { heard = (t: string) => asIntent(t) ? t : heardAs(t, vocab) } catch { /* failsafe: exact words only */ }
     const keys = new Set(questionKeywords(q).flatMap((kw) => tokens(kw)).filter((t) => t !== "not").map(heard))
-    for (const t of tokens(q)) keys.add(heard(t))
+    // r5: in a long ask, context sentences before the real ask ("our pain was X… how did you handle Y?") do not rank.
+    // Failsafe: when the ask part cannot be found (or any error), every question word counts as before.
+    let askPart = q
+    try { const a = topicOfAsk(q); if (a && a.length < q.length && a.trim().split(/\s+/).length >= 3) askPart = a } catch { askPart = q }
+    for (const t of tokens(askPart)) keys.add(heard(t))
     // r3: a word the transcript split in two ("sis log") is tried joined against the source words ("syslog")
     const splitHeard: string[] = []
     try {
@@ -163,15 +245,30 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
     const avg = docsTok.reduce((a, d) => a + d.length, 0) / docsTok.length || 1
     const df = (t: string) => docsTok.filter((d) => d.includes(t)).length
     const N = passages.length
+    let fams: string[] = []
+    let storyAsk = false
+    const famDfCache = new Map<string, number>()
+    const famDf = (f: string) => { if (!famDfCache.has(f)) famDfCache.set(f, familyDocFreq(docsTok, f)); return famDfCache.get(f) as number }
+    const famWord = (t: string) => { try { return fams.some((f) => inFamily(t, INTENT[f], true)) } catch { return false } }
+    try { fams = intentFamilies(q); storyAsk = fams.length > 0 || questionKind(q) === "behavioral" } catch { fams = []; storyAsk = false }
     const scored = passages.map((p, i) => {
       const d = docsTok[i]
       let s = 0
       for (const t of keys) {
+        // r5: an intent word ("failed", "deadline") is scored once, by its family below, not again by spelling
+        if (famWord(t)) continue
         const tf = d.filter((x) => x === t).length
         if (!tf) continue
         const idf = Math.log(1 + (N - df(t) + 0.5) / (df(t) + 0.5))
         s += idf * (tf * 2.2) / (tf + 1.2 * (0.25 + 0.75 * d.length / avg))
       }
+      // r5: intent families add a smaller score per family (at most two different words of it), so a story told in
+      // other words is found. Failsafe: any error leaves the plain lexical score.
+      try {
+        s += intentScore(d, fams, famDf, N)
+        // r5: a behavioral ask prefers a story-shaped passage once it already matches the topic
+        if (s > 0 && storyAsk && storyShaped(p.line)) s *= 1.2
+      } catch { /* failsafe: lexical score only */ }
       return { ...p, score: p.proves === "emphasis" ? s * 0.5 : s }
     })
     // Behavior 7 and 8 only reorder: coverage ("matched") is computed on the same passages, so it never changes.
@@ -326,6 +423,32 @@ function supportedBy(claim: string, haystack: string): boolean {
   return haystack.includes(c)
 }
 
+// r5: an interviewer premise about the candidate ("since you led a team of 50", "given your time as CISO at Contoso",
+// "I see you ran…"). Only the clause about "you/your" is read, never the interviewer's own company line.
+const PREMISE_CLAUSE = /(?:^|[.?!,;]\s*|\b(?:so|and|i see|i know|i noticed|i read that)\s+)((?:since|as|given(?: that)?|because|now that|considering|with)\s+(?:you|your)\b[^,?.;]{3,140}|(?:you|you've|you have)\s+(?:led|managed|ran|built|owned|were|grew|headed|scaled|ran)\b[^,?.;]{3,140})/gi
+/** Interviewer claims about the candidate that the experience sources do not back. Empty with no sources or no premise. */
+export function falsePremises(question: string, docs: SourceDoc[] | null | undefined): string[] {
+  try {
+    if (!Array.isArray(docs) || !docs.some((d) => d.proves === "experience")) return []
+    const hay = docs.filter((d) => d.proves === "experience").map((d) => d.text).join("\n").toLowerCase()
+    const out: string[] = []
+    for (const m of String(question || "").matchAll(PREMISE_CLAUSE)) {
+      const clause = m[1].replace(/^(?:since|as|given(?: that)?|because|now that|considering|with)\s+/i, "").replace(/^(?:you|your)\s+/i, "")
+      for (const c of extractClaims(clause)) if (!/^(?:you|your|i)$/i.test(c) && !supportedBy(c, hay) && !out.includes(c)) out.push(c)
+    }
+    return out
+  } catch {
+    return []
+  }
+}
+/** Prompt line for a false premise: do not accept it, correct it in one clause from the sources, then answer. */
+export function premisePrompt(question: string, docs: SourceDoc[] | null | undefined): string {
+  const bad = falsePremises(question, docs)
+  return bad.length
+    ? `INTERVIEWER PREMISE NOT IN YOUR SOURCES: ${bad.join(", ")}. Do not accept or repeat it as the candidate's fact. Correct it politely in one short clause with what the sources do show, then answer the real ask.`
+    : ""
+}
+
 /** Claims the candidate's experience sources do not back. Words the interviewer said are not the candidate's claims. */
 export function unsupportedClaims(text: string, passages: Passage[], docs: SourceDoc[] | null | undefined, question = ""): string[] {
   try {
@@ -333,7 +456,10 @@ export function unsupportedClaims(text: string, passages: Passage[], docs: Sourc
     const hay = [...(passages || []).filter((p) => p.proves === "experience").map((p) => p.text),
       ...docs.filter((d) => d.proves === "experience").map((d) => d.text)].join("\n").toLowerCase()
     const q = String(question || "").toLowerCase()
-    return extractClaims(text).filter((c) => !supportedBy(c, hay) && !q.includes(c.toLowerCase()))
+    // r5: words the interviewer said are exempt, except a false premise about the candidate (failsafe: none → as before)
+    let premise: string[] = []
+    try { premise = falsePremises(question, docs).map((c) => c.toLowerCase()) } catch { premise = [] }
+    return extractClaims(text).filter((c) => !supportedBy(c, hay) && (!q.includes(c.toLowerCase()) || premise.includes(c.toLowerCase())))
   } catch {
     return []
   }

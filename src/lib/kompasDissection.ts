@@ -247,7 +247,35 @@ export function topicOfAsk(question: string): string {
   // Stress round 2 (29 Oct 2026): "Since you led the SOC at a large bank, how big was your team?" made the premise the
   // keywords, so the prompt told the model to open on "led, SOC, large bank" - a premise the resume may not support.
   // A leading since/given/as clause before the actual question is context, not topic. Failsafe: nothing left keeps all.
-  const raw = String(question || "")
+  let raw = String(question || "")
+  // r5 (29 Oct 2026): a long multi-sentence ask ("Last quarter our pain was X… What I actually want to hear is how you
+  // handled Y?") opened on the context sentence. The topic is the last sentence that asks, from a "my question is" /
+  // "what I want to know is" marker when there is one. Failsafe: one sentence, no asking sentence, or fewer than 3
+  // words left keeps the whole text.
+  try {
+    const sentences = raw.split(/(?<=[.?!])\s+/).filter((x) => x.trim())
+    if (sentences.length >= 2) {
+      const asks = (x: string) => /\?\s*$/.test(x) || /^\s*(?:so,?\s+)?(?:how|what|why|when|where|which|who|tell me|describe|explain|walk me|give me|can you|could you|would you)\b/i.test(x) || /\b(?:my question is|what i (?:really |actually )?want to (?:know|hear|understand) is|the thing i want to know is)\b/i.test(x)
+      const last = [...sentences].reverse().find(asks)
+      // only when the earlier sentences are context (not an ask or an instruction like "Design X.") and the last ask
+      // names a topic of its own ("What would you do?" keeps the premise before it as its topic)
+      const instruction = (x: string) => asks(x) || /^\s*(?:design|build|explain|list|compare|outline|define|propose|sketch|draw|imagine|assume|suppose|say)\b/i.test(x)
+      const generic = new Set("what would you do how did does handle handled approach think about tell more that this then next there here want know hear really actually question anyway okay walk through give example describe explain".split(" "))
+      const topicWords = (x: string) => x.toLowerCase().split(/[^a-z0-9-]+/).filter((w) => w.length >= 4 && !generic.has(w)).length
+      const context = last ? sentences.slice(0, sentences.indexOf(last)).every((x) => !instruction(x)) : false
+      // and only for a long setup (3+ sentences) or a spoken pivot ("set that aside", "anyway", "my question is"); a short
+      // "A key expired last night. Who do you call first?" keeps its premise as the topic
+      const pivot = /\b(?:set (?:that|it|this) aside|anyway|that said|my question is|want to (?:know|hear|understand)|the thing i want to know)\b/i.test(raw)
+      const imperative = last ? /^\s*(?:so,?\s+)?(?:tell me about|walk me through|describe|give me an example of)\b/i.test(last) : false
+      if (last && last !== sentences[0] && context && topicWords(last) >= 1 && (sentences.length >= 3 || pivot || imperative)) {
+        const marked = last.replace(/^[\s\S]*?\b(?:my question is|what i (?:really |actually )?want to (?:know|hear|understand) is|the thing i want to know is)[,:]?\s*/i, "").replace(/^(?:so|anyway|okay)[,]?\s+/i, "")
+        if (marked.trim().split(/\s+/).length >= 3) raw = marked.trim()
+      }
+    }
+    // a lone sentence can still carry the marker ("Anyway, what I really want to know is how you handled X?")
+    const lone = raw.match(/^\s*(?:(?:so|anyway|okay|ok)[,]?\s+)?(?:my question is|what i (?:really |actually )?want to (?:know|hear|understand) is|the thing i want to know is)[,:]?\s+([\s\S]+)$/i)
+    if (lone && lone[1].trim().split(/\s+/).length >= 3) raw = lone[1].trim()
+  } catch { raw = String(question || "") }
   const premise = raw.match(/^\s*(?:since|given(?: that)?|as|because|now that)\s+(?:you|your)\b[^,?]{3,120},\s*((?:how|what|why|when|where|which|who|can|could|would|do|did|have|tell|walk|describe)\b[\s\S]+)$/i)
   let asked = premise && premise[1].trim().split(/\s+/).length >= 3 ? premise[1] : raw
   // Round 11 (29 Oct 2026): a jargon-stuffed setup ("With zero trust, SASE and all that, how do you…", "…, you know, with

@@ -21,7 +21,7 @@ import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasReleva
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
-import { repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type SourceDoc } from "@/lib/kompasSourceRetrieval"
+import { premisePrompt, repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type SourceDoc } from "@/lib/kompasSourceRetrieval"
 import { lostAfterSettle, repairLogLine, repairSourceRule, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
@@ -942,7 +942,8 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // Behavior 8 (r2): passages the last two answers already used are demoted unless the ask goes back to them.
   const recentAnswers = historyArr.slice(-2).map((h: unknown) => (h && typeof h === "object" ? String((h as Record<string, unknown>).a ?? (h as Record<string, unknown>).answer ?? "") : "")).filter(Boolean)
   const sourceRetrieval = retrievePassages(question, groundingDocs, 4, { recent: recentAnswers })
-  const sourceBlock = sourcePassagesPrompt(sourceRetrieval)
+  // r5: a false interviewer premise about the candidate is named so the model corrects it instead of accepting it
+  const sourceBlock = [sourcePassagesPrompt(sourceRetrieval), premisePrompt(question, groundingDocs)].filter(Boolean).join("\n")
   const context = [
     `The listener is at ${ANSWER_LEVEL_NAME[level]}. The level block below is the controlling spec for this answer's depth and register.`,
     tier === 0 ? `INTRODUCTION AUDIENCE: ${level}. Audience adjusts language and emphasis, not the career-wide scope. No step-by-step project reconstruction.` : levelGuidance(level, register),
