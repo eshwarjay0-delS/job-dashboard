@@ -1,0 +1,89 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import vm from "node:vm";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const {delta,combine,create} = require("../../public/kompas/account-sync.js");
+const server = fs.readFileSync("src/app/api/kompas/account-sessions/route.ts","utf8");
+const handoff = fs.readFileSync("src/app/api/kompas/desktop-handoff/route.ts","utf8");
+const app = fs.readFileSync("public/kompas/app.js","utf8");
+const html = fs.readFileSync("public/kompas/index.html","utf8");
+const sql = fs.readFileSync("supabase/migrations/20261030222000_kompas_session_large_payload.sql","utf8");
+
+test("separate devices change different fields without resending stale full snapshots",()=>{
+  const base=[{id:"s1",role:"Security Engineer",company:"Old",instructions:"Long rules"}];
+  assert.deepEqual(delta(base,[{...base[0],role:"Cybersecurity Engineer"}]),[{id:"s1",patch:{role:"Cybersecurity Engineer",id:"s1"},deleted:false}]);
+  assert.deepEqual(delta(base,[{...base[0],company:"Citi"}]),[{id:"s1",patch:{company:"Citi",id:"s1"},deleted:false}]);
+});
+test("cloud returns sessions created by a different device",()=>{
+  const merged=combine([
+    {id:"remote",session:{id:"remote",role:"Endpoint Analyst",createdAt:20}},
+    {id:"local",session:{id:"local",role:"Security Engineer",createdAt:10}}],
+    [{id:"local",role:"Old",createdAt:10}],{});
+  assert.deepEqual(merged.map(x=>x.id),["remote","local"]);
+  assert.equal(merged[1].role,"Security Engineer");
+});
+test("deletions are final; old offline devices cannot resurrect a tombstone",()=>{
+  const r=combine([{id:"s1",deleted:true,session:null}],[{id:"s1",role:"Stale"}],{s1:{id:"s1",patch:{role:"Stale"},deleted:false}});
+  assert.deepEqual(r,[]);
+});
+test("pending offline changes overlay a remote row without dropping other fields",()=>{
+  const merged=combine([{id:"s1",session:{id:"s1",role:"Architect",instructions:"Original"}}],
+    [{id:"s1",role:"Old",instructions:"Personal"}],
+    {s1:{id:"s1",patch:{instructions:"Personal"},deleted:false}});
+  assert.equal(merged[0].role,"Architect");
+  assert.equal(merged[0].instructions,"Personal");
+});
+test("account isolation requires verified server ownership; unknown local lists are not auto-uploaded",async()=>{
+  let data=new Map([["perfact.sessions",JSON.stringify([{id:"legacy",role:"Old device"}])]]);
+  const store={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};
+  let current=JSON.parse(store.getItem("perfact.sessions"));
+  let posts=[];
+  const sync=create({storage:store,read:()=>current,write:rows=>{current=rows;store.setItem("perfact.sessions",JSON.stringify(rows));},
+    render:()=>{},notify:()=>{},fetcher:async(_url,opts)=>{
+      if(opts.method==="GET")return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:[]})};
+      posts.push(JSON.parse(opts.body));return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:[]})};
+    }});
+  await sync.refresh();
+  assert.deepEqual(current,[]);
+  assert.equal(posts.length,0);
+  assert.equal(JSON.parse(store.getItem("perfact.cloud.legacy"))[0].id,"legacy");
+  assert.equal(sync.importLegacy(),true);
+  assert.equal(current[0].id,"legacy");
+  assert.equal(posts.length,1);
+});
+test("switching authenticated account never displays previous account's local sessions",async()=>{
+  let account="one";const storage=new Map();
+  const store={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,String(v)),removeItem:k=>storage.delete(k)};
+  let current=[];
+  const sync=create({storage:store,read:()=>current,write:r=>{current=r;store.setItem("perfact.sessions",JSON.stringify(r));},render:()=>{},notify:()=>{},
+    fetcher:async(_url,opts)=>({ok:true,json:async()=>({ok:true,userId:account,records:account==="one"?[{id:"s1",session:{id:"s1",role:"Role One"}}]:[{id:"s2",session:{id:"s2",role:"Role Two"}}]})})});
+  await sync.refresh();assert.deepEqual(current.map(x=>x.id),["s1"]);
+  account="two";await sync.refresh();assert.deepEqual(current.map(x=>x.id),["s2"]);
+});
+test("long AI instructions are sent verbatim rather than trimmed",()=>{
+  const long="A".repeat(650000)+"  \n";
+  assert.ok(long.length>20000);
+  assert.match(app,/instructions: \$\("instructions"\)\.value,/);
+  assert.match(handoff,/LARGE_TEXT_FIELDS/);\n  assert.match(handoff,/const MAX_BYTES = 4_000_000/);
+  assert.match(sql,/octet_length\(v_patch::text\) > 2000000/);
+  assert.ok(!app.includes('try { write(slimForStore(k, v)); }'));
+  assert.match(html,/account-sync\.js/);
+});
+test("cloud read and write authenticate the account; no global unsecured session list",()=>{
+  assert.match(server,/authenticatedUser\(req\)/);
+  assert.match(server,/\.eq\("user_id", user\.id\)/);
+  assert.match(server,/createServiceClient\(\)/);
+  assert.match(server,/merge_kompas_account_session/);
+  assert.match(sql,/enable row level security/);
+  assert.match(sql,/revoke all on public\.kompas_account_sessions from public, anon, authenticated/);
+});
+test("returns to Sessions, focus, visibility and desktop handoffs re-read the cloud",()=>{
+  assert.match(app,/if \(accountSessionSync\) void accountSessionSync\.refresh\(\)/);
+  assert.match(app,/async function openHandedSession\(s\)/);
+  const lib=fs.readFileSync("public/kompas/account-sync.js","utf8");
+  assert.match(lib,/addEventListener\("focus"/);
+  assert.match(lib,/visibilitychange/);
+  assert.match(lib,/setInterval\(/);
+});
