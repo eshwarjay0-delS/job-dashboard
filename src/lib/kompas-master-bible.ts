@@ -96,12 +96,18 @@ export function masterBibleStore(storage: MiniStore = blob) {
     const delta = buildFastDossierIndex([source], sha(contentHash), "", "")
     for (let retry = 0; retry < 30; retry++) {
       const current = await readLatest(owner, true)
-      if (current?.latestSession === id) return { added: false, revision: current.revision }
+      if (current?.latestSession === id) {
+        await storage.put(metaKey(owner), JSON.stringify({ revision: current.revision, sourceDigest: current.sourceDigest }))
+        return { added: false, revision: current.revision }
+      }
       // Historical idempotency check: past revisions each keep the id of the
       // committed mini. O(session count) only at session close, never on a turn.
       for (let rev = current?.revision ?? -1; rev >= 0; rev--) {
         const history = rev === current?.revision ? current : await readRevision(owner, rev)
-        if (history?.latestSession === id) return { added: false, revision: current!.revision }
+        if (history?.latestSession === id) {
+          await storage.put(metaKey(owner), JSON.stringify({ revision: current!.revision, sourceDigest: current!.sourceDigest }))
+          return { added: false, revision: current!.revision }
+        }
       }
       const n = (current?.revision ?? -1) + 1
       const merged = extendFastDossierIndex(current?.index ?? null, delta, 800)
