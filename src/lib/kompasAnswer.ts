@@ -1,3 +1,6 @@
+import { repairDictation } from "./kompasDictation.ts"
+import { latestInterviewerAsk } from "./kompasInterviewPrecision.ts"
+
 // Kompas answer intelligence — ported from perfACT's interview engine
 // (copilot/api/answer.js + _audiences.js), running on MarketFit's OpenRouter
 // provider. perfACT's classification, length calibration, follow-up chaining
@@ -469,8 +472,39 @@ function afterMarkedNextQuestion(text: string): string {
   return lastEnd >= 0 && lastEnd < text.length ? text.slice(lastEnd).trim() : text
 }
 
+/** "And why?", "Why?", "How come?" — a follow-up, not a new subject and not silence. */
+export function shortFollowUp(text: string): boolean {
+  const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim()
+  return /^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|go deeper|dig deeper|explain that|explain this|explain it|say that again|why|how)(?:\s+though)?[.?!]*$/i.test(t)
+}
+
+/** An unpunctuated clause, or one that stops on a function word, is still being said. */
+export function clauseStillOpen(text: string): boolean {
+  const t = String(text || "").replace(/\s+/g, " ").trim()
+  if (!t || /[?.!…]["']?$/.test(t)) return false
+  if (/^(?:how|what|why|when|where|which|who|can|could|would|will|do|does|did|have|has|are|is|tell|walk|describe|explain|give)\b/i.test(t)) return true
+  return /\b(?:a|an|the|to|of|for|with|and|or|but|about|on|in|into|from|by|at|as|your|my|our|their|between|would|could|should)\s*$/i.test(t)
+}
+
+const PRIOR_STOP = new Set("the a an and or of to in on for with you your yours we our it its is are was were do does did have has had can could would should will just like really very this that those these what how why when where which who about from into".split(" "))
+
+/** The same question said again. A short follow-up is not a duplicate, and a new noun is not either. */
+export function repeatsPriorQuestion(text: string, previous: string): boolean {
+  const norm = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9+#]+/g, " ").trim()
+  const a = norm(text)
+  const b = norm(previous)
+  if (!a || !b) return false
+  if (shortFollowUp(text)) return false
+  if (a === b) return true
+  const words = (s: string) => norm(s).split(/\s+/).filter((w) => w.length >= 3 && !PRIOR_STOP.has(w))
+  const aw = words(text)
+  const bw = new Set(words(previous))
+  if (!aw.length || aw.some((w) => !bw.has(w))) return false
+  return aw.filter((w) => bw.has(w)).length / aw.length >= 0.85
+}
+
 export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN): string {
-  const raw = transcriptSentences(heard).replace(/\s+/g, " ").trim()
+  const raw = transcriptSentences(repairDictation(heard)).replace(/\s+/g, " ").trim()
   const text = afterMarkedNextQuestion(raw)
   if (BARE_INTRO.test(text)) return "Tell me about yourself"
   // The interviewer's whole ask, not its last clause (measured 26 Oct 2026: "Design X. Explain trust boundaries..."
@@ -496,7 +530,8 @@ export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN): st
   // Instructions after the ask ("Give a falsifiable test", "Keep it suitable for technical HR") are asks themselves, so
   // the last ask is the end of the question.
   const q = (pointed + parts.slice(from, last + 1).map((p) => p.text).join(" ")).replace(/\s+/g, " ").trim()
-  if (q.split(/\s+/).length < 3) return ""
+  // "And why?" is two words or fewer. Dropping it left the previous answer on screen.
+  if (!q || (q.split(/\s+/).length < 3 && !shortFollowUp(q) && !shortFollowUp(text))) return ""
   return (q.charAt(0).toUpperCase() + q.slice(1)).slice(0, 2000)
 }
 
@@ -695,11 +730,99 @@ export function resolveFollowUp(d: string, history: Array<{ q?: string }>): stri
   const q = String(d || "").trim()
   const hist = Array.isArray(history) ? history.filter((h) => h && h.q) : []
   if (!q || !hist.length) return q
+  if (shortFollowUp(q)) {
+    const last = String(hist[hist.length - 1].q).replace(/[?.!\s]+$/, "")
+    const say = q.replace(/[?.!\s]+$/, "")
+    return `${say.charAt(0).toUpperCase() + say.slice(1)} — following up on: "${last}"?`
+  }
   const points = PRESS.test(q) || POINTS_BACK.test(q)
   const named = topicWords(followUpResidue(q)).length > 0
   if (!(q.split(/\s+/).length <= 9 && points && !named)) return q
   const last = String(hist[hist.length - 1].q).replace(/[?.!\s]+$/, "")
   return `${q.replace(/[?.!\s]+$/, "")} — following up on: "${last}"?`
+}
+
+const PROPER_STOP = new Set("what how why when where which who tell walk have has can could would will did does are the and but for you your yeah okay right great thanks this that those these".split(" "))
+const SEPARATE_START = /^(?:what|why|how|when|where|which|who|can you|could you|would you|will you|do you|did you|have you|are you|tell me|walk me|describe)\b/i
+const CONTINUES_ASK = /^(?:what if|what about (?:that|this|it)|how about (?:that|this)|why (?:is|was|did|would) (?:that|it|this)|how (?:did|would|do) (?:that|it|this)|which of (?:those|these|them)|walk me through (?:that|this|it))\b/i
+
+function properNouns(sentence: string): string[] {
+  return (sentence.match(/\b[A-Z][A-Za-z0-9+#.-]{2,}\b/g) || []).map((w) => w.toLowerCase()).filter((w) => !PROPER_STOP.has(w))
+}
+
+function whatIsHead(sentence: string): string {
+  const m = sentence.replace(LEAD_FILLER, "").match(/^what (?:is|are)\s+(?:an?|the\s+)?(?:meaning of\s+)?([a-z0-9][\w+#.-]*(?:\s+[a-z0-9][\w+#.-]*){0,3})/i)
+  return m ? m[1].toLowerCase().replace(/[?.!\s]+$/g, "").trim() : ""
+}
+
+/** A later sentence is its own interview question, not the next part of the one already started. */
+function separateQuestion(next: string, prevText: string): boolean {
+  const bare = next.replace(LEAD_FILLER, "").trim()
+  if (!bare || shortFollowUp(bare) || CONTINUES_ASK.test(bare)) return false
+  if (/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && properNouns(bare).length === 0) return false
+  if (!SEPARATE_START.test(bare)) return false
+  const prevSentence = (prevText.trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim()
+  const prevProper = new Set(properNouns(prevText))
+  const nextProper = properNouns(bare)
+  const parallel = /^(?:how|what) (?:do|did|would|could) you\b/i
+  if (parallel.test(bare) && parallel.test(prevSentence.replace(LEAD_FILLER, ""))) {
+    return nextProper.some((n) => !prevProper.has(n))
+  }
+  if (nextProper.some((n) => !prevProper.has(n))) return true
+  const a = whatIsHead(prevSentence)
+  const b = whatIsHead(bare)
+  if (a && b && a !== b) return true
+  const fresh = topicWords(bare).filter((w) => !topicWords(prevText).includes(w))
+  if (/^(?:have you|do you|did you|can you|could you|would you|tell me|walk me|describe)\b/i.test(bare) && fresh.length > 0) return true
+  const prevEnded = /\?\s*$/.test(prevSentence)
+  return prevEnded && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && fresh.length > 0
+}
+
+function looksLikeAsk(sentence: string): boolean {
+  const bare = sentence.replace(LEAD_FILLER, "").trim()
+  if (!bare || noiseOnly(bare)) return false
+  return ASK_OPENER.test(bare) || (/\?\s*$/.test(bare) && SEPARATE_START.test(bare))
+}
+
+/**
+ * Distinct interview questions inside one heard stretch. A multi-part ask
+ * ("Design X. Explain the trust boundaries.") stays one question. "What is
+ * Kubernetes? What is Terraform?" does not.
+ */
+export function splitDistinctAsks(text: string): string[] {
+  const clean = repairDictation(String(text || "")).replace(/\s+/g, " ").trim()
+  if (!clean) return []
+  const sentences = clean.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean)
+  const groups: string[][] = [[]]
+  let asked = false
+  for (const sentence of sentences) {
+    const bare = sentence.replace(LEAD_FILLER, "").trim()
+    if (!bare || noiseOnly(bare) || noiseOnly(sentence)) continue
+    const prev = groups[groups.length - 1].join(" ")
+    if (asked && separateQuestion(sentence, prev)) {
+      groups.push([sentence])
+      asked = true
+      continue
+    }
+    groups[groups.length - 1].push(sentence)
+    if (looksLikeAsk(sentence)) asked = true
+  }
+  return groups.map((g) => g.join(" ").replace(/\s+/g, " ").trim()).filter(Boolean)
+}
+
+/** Every question in one heard stretch, each cut the way a single ask is cut. */
+export function answerableQuestions(heard: string, history: unknown): string[] {
+  const body = String(heard || "").replace(/^(?:You|Them):\s*/gim, " ").replace(/\s+/g, " ").trim()
+  const spans = splitDistinctAsks(body)
+  let turns = (Array.isArray(history) ? history : []).filter((t) => t && typeof t === "object") as Array<Record<string, unknown>>
+  const out: string[] = []
+  for (const span of spans) {
+    const q = latestInterviewerAsk(questionForAnswer(span, "", false, false, turns))
+    if (!q) continue
+    out.push(q)
+    turns = [...turns, { q, a: "" }]
+  }
+  return out
 }
 
 function spokenKey(text: string): string {

@@ -108,6 +108,29 @@ test("19. qualys, nessus, splunk and fifth third keep their names", () => {
   assert.equal(D.repairDictation("qualys and nessus and splunk at fifth third"), "Qualys and Nessus and Splunk at Fifth Third");
 });
 
+test("21. kubernetes, pki, terraform and STAR survive the usual mishearings", () => {
+  assert.equal(D.repairDictation("What is cooper netties?"), "What is Kubernetes?");
+  assert.equal(D.repairDictation("How does kuber netes schedule a pod?"), "How does Kubernetes schedule a pod?");
+  assert.equal(D.repairDictation("Have you run kube netes in production?"), "Have you run Kubernetes in production?");
+  assert.equal(D.repairDictation("What is pee kay eye?"), "What is PKI?");
+  assert.equal(D.repairDictation("How do you protect P K I keys?"), "How do you protect PKI keys?");
+  assert.equal(D.repairDictation("What is terra form?"), "What is Terraform?");
+  assert.equal(D.repairDictation("Have you used terror form for infrastructure?"), "Have you used Terraform for infrastructure?");
+  assert.equal(D.repairDictation("Tell me about a time you used the start method."), "Tell me about a time you used the STAR method.");
+  assert.equal(D.repairDictation("How do you structure an answer with the S T A R method?"), "How do you structure an answer with the STAR method?");
+  assert.equal(D.repairDictation(D.repairDictation("What is cooper netties?")), "What is Kubernetes?");
+  for (const same of [
+    "the cooper union is in the city",
+    "terraforming a barren cluster is not the task",
+    "a terror alert is not a tool",
+    "the start of the method is slow",
+    "pick the key that fits",
+  ]) assert.equal(D.repairDictation(same), same, same);
+  for (const sample of ["What is cooper netties?", "What is terra form?", "the start of the method is slow"]) {
+    assert.equal(ctx.fixPhrases(sample), D.repairDictation(sample), sample);
+  }
+});
+
 test("20. a repaired line is stable, ordinary sentences stay put, and the page repairs the same way", () => {
   const line = "how does vee cert submit a pkcs ten to gemalto";
   const once = D.repairDictation(line);

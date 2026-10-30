@@ -1,3 +1,19 @@
+## 2026-10-29 — Go deeper on a named subject is still a new ask
+
+"Go deeper" alone was a new ask. "Go deeper on that exception" was not, so a press after an answer re-asked the old question. A follow-up that continues into its subject is a new ask. The page stamp is kompas-20261029-ask.
+
+## 2026-10-29 — Go deeper heard after an answer is a new ask
+
+"Go deeper" and "Explain that" were not treated as questions, so a press after an answer re-asked the old question. They are short follow-ups now. "What exactly is least privilege?" is not. The page stamp is kompas-20261029-deeper. Fifty heard sequences still cut apart.
+
+## 2026-10-29 — Go deeper is not another definition of the previous question
+
+"Go deeper" and "Explain that" were glued onto the previous question, and the quoted "what is" made the follow-up a definition again. The follow-up is classified from the words before that quote. "Which of those" stays a comparison. "What is NLA" by itself stays a definition. One hundred intent folds still pass.
+
+## 2026-10-29 — Same title, the folder that names the speciality stays
+
+Two files both titled Security Engineer were a tie for Information Security AI Engineer. The one in AI Security and Governance stays. The one in Application and API Security does not, when the job names AI. A title that already names the speciality still wins on the title. A Security Analyst in an Identity folder is still kept for a Security Analyst job, because that job names no extra speciality.
+
 ## 2026-10-29 — Job-post terms go back on the skills line, and a repeat does not pay twice
 
 **Asked:** tailored files were covering about 47% of the job post, and a run could sit on `/api/tailor` until the request died. Eshwar's decision: put the missing job-post terms back on the skills line, labelled as from the job post, the way `2cdb8db` did, after `94dacbf` limited that line to terms the resume already showed. Also cache every finished result, and do not start a second paid run while the same request is already running. Twenty WhatsApp screenshots from the live bot are the same failure.
@@ -29,6 +45,16 @@ Name, email, dates, and experience bullets were unchanged. Bold skill headings s
 ## 2026-10-29 — A specialised job does not stay tied to a generic security title
 
 Information Security AI Engineer was keeping Security Engineer beside AI Engineer, both at the same title score, and the generic file could be the one sent. When the job names a speciality and one of the tied resumes names it, that resume stays. If the only resume is the generic title, it still stays.
+
+## 2026-10-29 — Questions were still being missed, merged, or misheard
+
+**Found, by replaying the real cut, not by guessing.** The desktop waits 1.1 seconds of silence to end a phrase, then another 2.2 seconds before it answers everything heard as one question. Two questions inside that window became one answer. A finished question that ended in a question mark was thrown away once the next question started with "what" or "how", so "Have you configured CyberArk?" vanished when "What is least privilege?" began. A pause longer than about 3.3 seconds cut a sentence in half and answered the first half. "And why?", "Why?", and "How come?" were dropped because they are under three words, and "And why?" was also treated as the same question when the previous ask already contained the word why. Filler between two questions ("Yeah. Okay.") hid the first question. A scenario in front of "How would you" was stripped, so only "How would you diagnose it?" remained. Whisper's usual garbles of Kubernetes, PKI, Terraform, and STAR were left as heard. A multi-part question such as "Design X. Explain the trust boundaries." was already kept whole, and that stays.
+
+**Measured on 50 sequences, 66 asks, before any fix:** 21 missed (31.8%), 20 merged (30.3%), 11 of 11 misheard. A merged ask is one that shared its answer with a different question.
+
+**Changed.** An unfinished clause is held for up to 7 seconds so a pause in the middle of a sentence stays one question. Distinct questions in one breath, or back to back, are answered separately. A short follow-up is kept and attached to the question it follows. A real scenario stays with its how-question. The usual mishearings of Kubernetes, PKI, Terraform, and STAR are repaired on the server and on the desktop page. First-person spoken answers and the resume prompts were not touched.
+
+**After the same 50 sequences:** missed 0, merged 0, misheard 0. Typecheck passed. Lint reported no errors. The Kompas baseline contract held, 15 of 15. The question, speech, dictation, and voice suites that cover this path passed. Not a live desktop microphone session. Not deployed: Vercel is rate limited, so this is a pull request only.
 
 ## 2026-10-29 — The remaining local checks
 

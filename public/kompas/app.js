@@ -1490,7 +1490,7 @@ function meter(who, rms, speaking) {
 let interimOffUntil = 0;
 let transcriptionFailedEpoch = -1;
 function whisperPrompt(opt) {
-  const SPEECH_LEXICON = ["V-Cert", "Venafi TPP", "Luna HSM", "PKCS#10", "SIEM", "SOAR", "EDR", "XDR", "MITRE ATT&CK", "Kerberos", "Active Directory", "domain controller", "DNS hijacking", "Group Policy", "lateral movement", "privilege escalation", "threat hunting", "incident response", "vulnerability management", "zero trust", "SAML", "OAuth", "PKI", "firewall", "WAF", "Splunk", "CrowdStrike", "Microsoft Sentinel", "Microsoft Defender", "Okta", "CyberArk", "Venafi", "Nessus", "Qualys", "SOC analyst", "phishing", "ransomware", "malware", "endpoint security", "Azure"];
+  const SPEECH_LEXICON = ["V-Cert", "Venafi TPP", "Luna HSM", "PKCS#10", "SIEM", "SOAR", "EDR", "XDR", "MITRE ATT&CK", "Kerberos", "Active Directory", "domain controller", "DNS hijacking", "Group Policy", "lateral movement", "privilege escalation", "threat hunting", "incident response", "vulnerability management", "zero trust", "SAML", "OAuth", "PKI", "Kubernetes", "Terraform", "STAR method", "firewall", "WAF", "Splunk", "CrowdStrike", "Microsoft Sentinel", "Microsoft Defender", "Okta", "CyberArk", "Venafi", "Nessus", "Qualys", "SOC analyst", "phishing", "ransomware", "malware", "endpoint security", "Azure"];
   const s = current || {};
   const learned = (s.voiceVocabulary || []).filter(t => typeof t === "string").slice(-40);
   const terms = [...new Set((`${s.role || ""} ${s.jd || ""} ${(s.resume || "").slice(0, 3000)}`.match(/\b[A-Z][A-Za-z0-9+#./-]{1,}\b/g) || []))].slice(0, 45);
@@ -1499,7 +1499,7 @@ function whisperPrompt(opt) {
   // The word "Vocabulary" is not sent: Whisper echoes a prompt label back as speech.
   const bare = !!(opt && opt.bare);
   const prev = bare ? "" : (typeof transcript !== "undefined" && transcript.length ? String(transcript[transcript.length - 1].text || "") : "").replace(/\s+/g, " ").replace(/[,;]/g, " ").trim().slice(-110);
-  const core = ["V-Cert", "Venafi TPP", "Luna HSM", "PKCS#10", "Gemalto", "Fifth Third", "CyberArk", "PowerShell", "Kerberos", "SIEM", "domain controller", "MITRE ATT&CK"];
+  const core = ["V-Cert", "Venafi TPP", "Luna HSM", "PKCS#10", "Gemalto", "Fifth Third", "CyberArk", "PowerShell", "Kerberos", "SIEM", "domain controller", "MITRE ATT&CK", "Kubernetes", "Terraform", "PKI", "STAR method"];
   const rest = SPEECH_LEXICON.filter(t => !core.includes(t));
   return [...new Set([...core, ...(prev ? [prev] : []), ...learned, ...terms, ...rest])].join(", ").slice(0, 550);
 }
@@ -1670,15 +1670,105 @@ $("autoBtn").onclick = () => {
 // Only the INTERVIEWER's question can arm Auto. With call audio captured, your own mic lines are you
 // reading the answer aloud — they must never trigger (and cut off) a new answer. Mic-only: the mic
 // is the question source, as before.
-const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && Q_CUE.test(t.text));
+// Same cut as src/lib/kompasAnswer.ts. A short follow-up is not the previous question,
+// and an unfinished clause is not ready to answer.
+function shortFollowUp(text) {
+  const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim();
+  return /^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|go deeper|dig deeper|explain that|explain this|explain it|say that again|why|how)(?:\s+though)?[.?!]*$/i.test(t);
+}
+// "Go deeper on that exception" names a subject, so it is not the two-word follow-up, and it is still a new ask.
+function opensNewAsk(text) {
+  const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim();
+  if (shortFollowUp(t)) return true;
+  return /^(?:(?:and|so|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|walk me through|say that again)\b/i.test(t);
+}
+function clauseStillOpen(text) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  if (!t || /[?.!…]["']?$/.test(t)) return false;
+  if (/^(?:how|what|why|when|where|which|who|can|could|would|will|do|does|did|have|has|are|is|tell|walk|describe|explain|give)\b/i.test(t)) return true;
+  return /\b(?:a|an|the|to|of|for|with|and|or|but|about|on|in|into|from|by|at|as|your|my|our|their|between|would|could|should)\s*$/i.test(t);
+}
+function repeatsPriorQuestion(text, previous) {
+  const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9+#]+/g, " ").trim();
+  const stop = new Set("the a an and or of to in on for with you your yours we our it its is are was were do does did have has had can could would should will just like really very this that those these what how why when where which who about from into".split(" "));
+  const a = norm(text), b = norm(previous);
+  if (!a || !b) return false;
+  if (shortFollowUp(text)) return false;
+  if (a === b) return true;
+  const words = (s) => norm(s).split(/\s+/).filter((w) => w.length >= 3 && !stop.has(w));
+  const aw = words(text), bw = new Set(words(previous));
+  if (!aw.length || aw.some((w) => !bw.has(w))) return false;
+  return aw.filter((w) => bw.has(w)).length / aw.length >= 0.85;
+}
+// Kept equal to splitDistinctAsks in src/lib/kompasAnswer.ts. A multi-part ask stays one
+// question. Two questions in one breath become two.
+const SPLIT_LEAD = /^(?:(?:ok(?:ay)?|so|and|also|now|then|next|finally|right|alright|all right|well|yes|yeah|uh+|um+|please|great|perfect|cool|sure)[,.!]?\s+)+/i;
+const SPLIT_NOISE = /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|bye|goodbye|good morning|good afternoon|good evening|how are you|what'?s up|cool|sure|right|alright|all right|got it|sounds good)[.!?]*$/i;
+const SPLIT_OPENER = /^(?:how|what|why|when|where|which|who|whom|whose)\b(?!\s+to\b)|^(?:can|could|would|will|should|do|does|did|are|have|has)\s+(?:you|we)\b|^(?:tell|walk|take|talk|show|give|explain|describe|define|compare|contrast|differentiate|distinguish|design|build|implement|configure|architect|plan|outline|list|name|state|share|write|draft|map|diagnose|troubleshoot|debug|identify|recommend|propose|justify|estimate|summari[sz]e|discuss|evaluate|assess|analy[sz]e|elaborate|expand|go|dig|introduce|imagine|suppose|pick|choose|select|rank|prioriti[sz]e|break|weigh|defend|verify|validate|test|measure|quantify|detail|clarify|demonstrate|illustrate|cover|include|keep|focus|assume|consider|avoid|limit|stay|mention|start|end|finish|continue)\b/i;
+const SPLIT_START = /^(?:what|why|how|when|where|which|who|can you|could you|would you|will you|do you|did you|have you|are you|tell me|walk me|describe)\b/i;
+const SPLIT_CONTINUES = /^(?:what if|what about (?:that|this|it)|how about (?:that|this)|why (?:is|was|did|would) (?:that|it|this)|how (?:did|would|do) (?:that|it|this)|which of (?:those|these|them)|walk me through (?:that|this|it))\b/i;
+const SPLIT_PROPER_STOP = new Set("what how why when where which who tell walk have has can could would will did does are the and but for you your yeah okay right great thanks this that those these".split(" "));
+const SPLIT_TOPIC_STOP = new Set("about after again also been before being could does doing from have here into just like more most much only other over same some such than that their them then there these they this those through very what when where which while will with would your yours explain describe tell".split(" "));
+function splitNoise(text) {
+  const t = String(text || "").replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gi, " ").replace(/\s+/g, " ").trim();
+  return !t || SPLIT_NOISE.test(t);
+}
+function splitTopicWords(text) {
+  return String(text || "").toLowerCase().replace(/[^a-z0-9+#.-]+/g, " ").split(/\s+/).map((w) => w.replace(/^[.-]+|[.-]+$/g, "")).filter((w) => w.length >= 4 && !SPLIT_TOPIC_STOP.has(w));
+}
+function splitProper(sentence) {
+  return (String(sentence || "").match(/\b[A-Z][A-Za-z0-9+#.-]{2,}\b/g) || []).map((w) => w.toLowerCase()).filter((w) => !SPLIT_PROPER_STOP.has(w));
+}
+function splitHead(sentence) {
+  const m = String(sentence || "").replace(SPLIT_LEAD, "").match(/^what (?:is|are)\s+(?:an?|the\s+)?(?:meaning of\s+)?([a-z0-9][\w+#.-]*(?:\s+[a-z0-9][\w+#.-]*){0,3})/i);
+  return m ? m[1].toLowerCase().replace(/[?.!\s]+$/g, "").trim() : "";
+}
+function splitSeparate(next, prevText) {
+  const bare = String(next || "").replace(SPLIT_LEAD, "").trim();
+  if (!bare || shortFollowUp(bare) || SPLIT_CONTINUES.test(bare)) return false;
+  if (/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && splitProper(bare).length === 0) return false;
+  if (!SPLIT_START.test(bare)) return false;
+  const prevSentence = (String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim();
+  const prevProper = new Set(splitProper(prevText));
+  const nextProper = splitProper(bare);
+  const parallel = /^(?:how|what) (?:do|did|would|could) you\b/i;
+  if (parallel.test(bare) && parallel.test(String(prevSentence).replace(SPLIT_LEAD, ""))) return nextProper.some((n) => !prevProper.has(n));
+  if (nextProper.some((n) => !prevProper.has(n))) return true;
+  const a = splitHead(prevSentence), b = splitHead(bare);
+  if (a && b && a !== b) return true;
+  const prevWords = new Set(splitTopicWords(prevText));
+  const fresh = splitTopicWords(bare).filter((w) => !prevWords.has(w));
+  if (/^(?:have you|do you|did you|can you|could you|would you|tell me|walk me|describe)\b/i.test(bare) && fresh.length > 0) return true;
+  return /\?\s*$/.test(prevSentence) && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && fresh.length > 0;
+}
+function splitDistinctAsks(text) {
+  const raw = String(text || "");
+  const clean = (typeof fixPhrases === "function" ? fixPhrases(raw) : raw).replace(/\s+/g, " ").trim();
+  if (!clean) return [];
+  const sentences = clean.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean);
+  const groups = [[]];
+  let asked = false;
+  for (const sentence of sentences) {
+    const bare = sentence.replace(SPLIT_LEAD, "").trim();
+    if (!bare || splitNoise(bare) || splitNoise(sentence)) continue;
+    const prev = groups[groups.length - 1].join(" ");
+    if (asked && splitSeparate(sentence, prev)) { groups.push([sentence]); asked = true; continue; }
+    groups[groups.length - 1].push(sentence);
+    if (bare && !splitNoise(bare) && (SPLIT_OPENER.test(bare) || (/\?\s*$/.test(bare) && SPLIT_START.test(bare)))) asked = true;
+  }
+  return groups.map((g) => g.join(" ").replace(/\s+/g, " ").trim()).filter(Boolean);
+}
+const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
 function scheduleAuto() {
   clearTimeout(autoTimer);
   if (!autoOn || !armsAuto()) return;
+  const tail = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
+  const wait = clauseStillOpen(tail) ? 7000 : AUTO_QUIET_MS;
   autoTimer = setTimeout(function fire() {
     if (!autoOn || !armsAuto()) return;
     if (captures.some(c => c.voiced) || finals.size || answerCtl) { autoTimer = setTimeout(fire, 700); return; }   // still talking / still answering
     aiAnswer(true);
-  }, AUTO_QUIET_MS);
+  }, wait);
 }
 function resetLiveState() {           // a new or exited session starts clean: no leaked stream, timer or badge
   for (const c of inflight) { try { c.abort(); } catch {} }
@@ -1771,6 +1861,19 @@ const PHRASE_FIXES = [
   [/\bbig\s+in\s*tro\b/gi, "Big Intro"],
   [/\bsaviant\b/gi, "Saviynt"],
   [/\bsavvy\s+ent\b/gi, "Saviynt"],
+  [/\bcooper\s+nett(?:y|ie)s\b/gi, "Kubernetes"],
+  [/\bkuber\s*netes\b/gi, "Kubernetes"],
+  [/\bkube\s*netes\b/gi, "Kubernetes"],
+  [/\bkubernet(?:ee|i)s\b/gi, "Kubernetes"],
+  [/\bkubernetes\b/gi, "Kubernetes"],
+  [/\b(?:pee\s+kay\s+eye|p\.?\s*k\.?\s*i\.?)\b/gi, "PKI"],
+  [/\bterra\s+form\b/gi, "Terraform"],
+  [/\bterror\s+form\b/gi, "Terraform"],
+  [/\bteraform\b/gi, "Terraform"],
+  [/\bterraform\b/gi, "Terraform"],
+  [/\bstart\s+method\b/gi, "STAR method"],
+  [/\bs\.?\s*t\.?\s*a\.?\s*r\.?\s+method\b/gi, "STAR method"],
+  [/\bstar\s+method\b/gi, "STAR method"],
 ];
 function fixPhrases(text) {
   let t = String(text || "");
@@ -2367,7 +2470,7 @@ function pressQuestion(typed, intake, screen) {
   if (typedClean && derived && low(derived).includes(low(typedClean))) typedClean = "";   // the formed question already carries the typed words — keep the whole, never the fragment (owner, 23 Oct)
   else if (typedClean && derived && low(typedClean).includes(low(derived))) derived = "";
   const lane = String(screen || "").trim();
-  if (derived && lane && low(lane).includes(low(derived))) derived = "";   // the old question is the lane, never a second copy in front of it
+  if (derived && lane && low(lane).includes(low(derived)) && !shortFollowUp(derived)) derived = "";   // the old question is the lane, never a second copy in front of it. A short follow-up still names a word the old question used.
   const bits = [typedClean, derived].filter(Boolean);
   let q = bits.join(" ").trim();
   // "Go deeper" follows the question on screen. "What exactly is least privilege?" names its own subject, so it does not.
@@ -2377,7 +2480,7 @@ function pressQuestion(typed, intake, screen) {
     const stop = new Set("what how why when where which who the are was were does did you your about with from into onto and but for".split(" "));
     return rest.toLowerCase().replace(/[^a-z0-9+#.-]+/g, " ").split(/\s+/).some((w) => w.length >= 4 && !stop.has(w));
   };
-  const followUp = q && q.split(/\s+/).length <= 9 && followMark.test(q) && !namesOwnSubject(q);
+  const followUp = q && q.split(/\s+/).length <= 9 && (followMark.test(q) || shortFollowUp(q)) && !namesOwnSubject(q);
   if (q && lane && followUp) q = lane.replace(/[?.!\s]+$/, "") + " — " + q;
   if (!q && intake && intake.keywords && intake.keywords.length) q = intake.keywords.slice(0, 8).join(" ");
   return q || "";
@@ -2431,7 +2534,7 @@ async function aiAnswer(fromAuto) {
       // reporting the same vulnerability" got the password-reset answer). A press with nothing new asked still re-asks.
       // Each sentence is judged on its own: "Thanks for the overview. What drove the move to Azure?" is a new question, and
       // "My question is how you'd isolate a runner" asks without opening like a question (review of 398f299).
-      const newAsk = !typedText && pending.some(t => sentencesOf(t.text).some(x => askSentence(x) && echoShare(x, cur && cur.question || "") < 0.6));
+      const newAsk = !typedText && pending.some(t => sentencesOf(t.text).some(x => (askSentence(x) || opensNewAsk(x)) && !repeatsPriorQuestion(x, cur && cur.question || "")));
       // The sign-off is not a re-press (27 Oct 2026): "I do have a hard stop ... thank you for taking the time" heard
       // after an answer re-asked the page on screen and answered it again. Only closing sentences and fillers, no ask.
       if (!typedText && pending.some(t => sentencesOf(t.text).some(x => SIGN_OFF.test(x) || COURTESY.test(x))) && pending.every(t => sentencesOf(t.text).every(closingSentence))) {
@@ -2492,6 +2595,20 @@ async function aiAnswer(fromAuto) {
       const heard = intake.heard.replace(/\nCurrent question \(on screen\):[^\n]*/g, "").trim();
       const said = pressQuestion(typedText, intake, "") || intake.derived || heardAsQuestion(pending);
       const heardOnly = !typedText;
+      const spans = heardOnly ? splitDistinctAsks(intake.derived || said || "") : [];
+      if (spans.length > 1) {
+        const who = questionSource() === "You" ? "You" : "Them";
+        for (const span of spans) {
+          const spanHeard = who + ": " + span;
+          const card = addCard("Deriving…", ["…"]);
+          card.heard = spanHeard;
+          card.earlier = earlier;
+          card.formed = spanHeard;
+          showPressed(card, "Deriving…");
+          await generateAnswer(spanHeard, card, { consolidated: true, earlier, pinned: false });
+        }
+        return;
+      }
       const card = addCard(heardOnly ? "Deriving…" : (said || "Answering what was just heard…"), ["…"]);
       card.heard = heard; card.earlier = earlier; card.formed = heard;
       showPressed(card, card.question);
