@@ -1,3 +1,7 @@
+## 2026-10-30 — The rest of the personal questions stay quiet
+
+Bonus, equity, 401k, W2 or C2C, a contract role, OPT, L1, earliest start, notice, the city you live in, weekends, on call, shift, working from home, remote, PTO, and EST hours were still answered. They are skipped. A data-center or server relocation is still answered. "How does work authorization work?" is still answered.
+
 ## 2026-10-30 — Nights, weekends, and on-call stay quiet; how work authorization works does not
 
 Kompas does not answer availability. "Can you work nights?", weekends, and on-call were still sent to the model. They are skipped. "How does work authorization work?" was skipped with them. That one asks for the mechanism, so it is answered. "Have you supported on-call incident response?" stays an experience question.

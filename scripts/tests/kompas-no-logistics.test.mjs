@@ -65,4 +65,9 @@ test('demo-final: the server backstop never silences resume history or the techn
   assert.equal(logisticsBackstop('Can you work weekends?'), '')
   assert.equal(logisticsBackstop('Are you available for on-call?'), '')
   assert.equal(logisticsBackstop('Have you supported on-call incident response?'), 'Have you supported on-call incident response?')
+  assert.equal(logisticsBackstop('Tell me about the data center relocation.'), 'Tell me about the data center relocation.')
+  assert.equal(logisticsBackstop('How did you relocate the Vault servers?'), 'How did you relocate the Vault servers?')
+  for (const q of ['What is your bonus?', 'Do you need a signing bonus?', 'Do you expect equity?', 'What is your 401k match?', 'Are you W2 or C2C?', 'Is this a contract role?', 'Do you hold OPT?', 'Will you need an L1?', 'When is your earliest start?', 'How much notice do you need?', 'Which city do you live in?', 'Are you open to weekends?', 'Will you be on call?', 'What is your shift?', 'Can you work from home?', 'Are you remote?', 'Can you work EST hours?', 'Do you have PTO questions?']) {
+    assert.equal(logisticsBackstop(q), '', q)
+  }
 })

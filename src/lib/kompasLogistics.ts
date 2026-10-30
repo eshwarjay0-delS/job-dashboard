@@ -9,18 +9,19 @@ import { interviewIntent } from "./kompasRelevance.ts"
 const PERSONAL = new RegExp([
   String.raw`^\s*(?:notice|remote|bonus|salary|hybrid|on-?site|h-?1b|opt|ts\s*\/\s*sci|shift|weekend|overtime|citizen|clearance|sponsorship|relocation|start date|night shift|travel|visa|tn visa|w-?2|c2c|full[- ]time|contract|pto|benefits|401k|equity|ead|l-?1|hourly|day rate|(?:u\.?\s*s\.?|u\s+s)\s+citizen)[.?!]*\s*$`,
   String.raw`\bwhen (?:can|could|would) you (?:start|join|begin)\b|\bstart date\b|\bavailable to (?:start|join|begin)\b|\b(?:two|\d+)\s+weeks'?\s+notice\b|\bnotice period\b|\bstart in (?:two|\d+) weeks\b`,
-  String.raw`\brelocat(?:e|ion|ing)\b`,
+  String.raw`(?<!\b(?:data ?cent(?:er|re)|server|workload|application|app|service|cloud|vault|database|office|team)\s)\brelocat(?:e|es|ed|ing|ion)\b(?!\s+(?:the|a|an|our|this|that|these|those|it|its|of|data|workloads?|services?|servers?|apps?|applications?|vault|psm|databases?)\b)`,
   String.raw`\bsponsor(?:ship)?\b|\bvisa\b|\bh-?1b\b|\bgreen card\b|\bwork(?:ing)? authori[sz]ation\b|\bauthori[sz]ed to work\b|\bcitizen(?:ship)?\b|\bead\b`,
   String.raw`\bsalary\b|\bcompensation\b|\b(?:desired|expected|your|hourly|day|pay) (?:pay|rate|range)\b|\bhow much (?:do|would|are) you\b.{0,30}\b(?:paid|make|earn|expect|looking for)\b|\bc2c\b|\bw-?2\b`,
   String.raw`\bwhere are you (?:based|located|living|from)\b|\bwhere do you live\b|\bcurrent(?:ly)? (?:location|located|based|living)\b|\byour (?:home |current )?address\b|\bare you local\b|\bcommute\b`,
   String.raw`\b(?:open|okay|ok|comfortable|willing|able|fine|happy)\s+(?:to|with)\s+(?:work(?:ing)?\s+)?(?:a\s+)?(?:hybrid|on-?site|remote|in the office|travel|relocat|nights?|weekends?|on-?call|shifts?)`,
   String.raw`\bdays?\s+in(?:\s+the)?\s+office\b|\bwilling to travel\b|\btravel (?:requirement|percent)|\b(?:do|have) you (?:have|hold|got) (?:an? )?(?:active )?(?:security )?clearance\b|\bclearable\b|\bfull[- ]time or contract\b|\bcontract or full[- ]time\b`,
   String.raw`\b(?:work(?:ing)?\s+(?:nights?|weekends?)|night shifts?|available for on-?call|work(?:ing)? on-?call)\b`,
+  String.raw`\b(?:your|signing|annual|expected) bonus\b|\b(?:expect(?:ed)?|your) equity\b|\b401k\b|\bcontract role\b|\b(?:hold|on) opt\b|\bopt status\b|\b(?:need an l-?1|l-?1 visa)\b|\bearliest start\b|\b(?:how much notice|notice do you need)\b|\bcity do you live\b|\btime zone are you\b|\bwork (?:est|cst|pst|mst|eastern|central|pacific|mountain) hours\b|\bwork from home\b|\bare you remote\b|\bopen to weekends\b|\bbe on[- ]?call\b|\byour shift\b|\bpto\b`,
 ].join("|"), "i")
 
 // Asks the classifier files elsewhere ("What is your current location?" reads as a definition)
 // but that can only mean the candidate's own terms.
-const UNAMBIGUOUS = /\bcurrent(?:ly)? (?:location|located|based|living)\b|\byour (?:home |current )?address\b|\bwhere (?:do you live|are you (?:based|located|living))\b|\bnotice period\b|\bsalary (?:expectation|range|requirement)s?\b|\b(?:need|require)\b.{0,25}\bsponsorship\b|\bauthori[sz]ed to work\b|\bwork authori[sz]ation\b/i
+const UNAMBIGUOUS = /\bcurrent(?:ly)? (?:location|located|based|living)\b|\byour (?:home |current )?address\b|\bwhere (?:do you live|are you (?:based|located|living))\b|\bnotice period\b|\bsalary (?:expectation|range|requirement)s?\b|\b(?:need|require)\b.{0,25}\bsponsorship\b|\bauthori[sz]ed to work\b|\bwork authori[sz]ation\b|\b(?:your|signing|annual|expected) bonus\b|\b(?:expect(?:ed)?|your) equity\b|\b401k\b|\bw-?2\b|\bc2c\b|\bcontract role\b|\b(?:hold|on) opt\b|\bopt status\b|\b(?:need an l-?1|l-?1 visa)\b|\bearliest start\b|\b(?:how much notice|notice do you need)\b|\bcity do you live\b|\btime zone are you\b|\bwork (?:est|cst|pst|mst|eastern|central|pacific|mountain) hours\b|\bwork from home\b|\bare you remote\b|\bopen to weekends\b|\bbe on[- ]?call\b|\byour shift\b|\bpto\b/i
 
 /** One clause is logistics only when the classifier says so and it asks about the candidate's own terms. */
 export function isLogisticsAsk(clause: string): boolean {
