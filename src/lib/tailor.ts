@@ -18,6 +18,7 @@ import { targetKeywords, placeInSkills, isCertification, isQualificationOrJunk, 
 import { tailorReview, type TailorReview } from "./resume-changes"
 import { tailorRunKey } from "./tailor-review"
 import { jdTermsGateOn, type JdTermsUnplacedReason } from "./jd-terms-gate"
+import { cleanTerm, isJunkTerm, isGuardUnsafe } from "./resume-skills-line"
 
 export interface TailorResult {
   quality?: ReturnType<typeof resumeQuality>
@@ -325,6 +326,8 @@ export async function runTailor(opts: {
   // are not skills left out (a clearance, a degree, a rank, a benefit, a place: isQualificationOrJunk), so the floor at
   // the end can meet it honestly and a resume made earlier is checked against the same set (made-floor.ts). Gemini's
   // suggestions stay targets for the writer (jdKws, jdKwsPrompt), never for the score or the floor.
+  // The job-post terms switch (JD_TERMS_ALWAYS_ON_SKILLS, default on), read once per run.
+  const jdGate = jdTermsGateOn()
   const scoreKws = floorTerms(jd, targetKeywords(jdExtracted, [], jd))
   const jdKws = [...new Set([...targetKeywords(jdExtracted, jdGenerated, jd).filter(k => !isQualificationOrJunk(k)), ...scoreKws])]
   const floorKws = new Set(floorTerms(jd, scoreKws))
@@ -750,7 +753,11 @@ export async function runTailor(opts: {
     // The post's own skill terms (floorTerms), certifications excepted. They are written on the skills
     // line and named in the reply as coming from the job post, not as confirmed experience.
     // They are not written into experience bullets as work the person did.
+    // Switch on, the v2 skills-line rules (resume-skills-line.ts): a term is written with its whitespace and line breaks
+    // collapsed, and never if it is junk (work status, pay, workplace) or would trip the round-trip guard (a date, phone,
+    // email or link).
     const left = scoreKws.filter(k => floorKws.has(k) && !cur.afterKw.has(k) && !isCertification(k))
+      .filter(k => !jdGate || (cleanTerm(k) === k && !isJunkTerm(k) && !isGuardUnsafe(k)))
     if (!left.length) return cur
     // A soft skill ("problem solving", "communication skills") reads as a strength, not a tool: it goes into the summary
     // as one short sentence when the summary is a single paragraph the person left open to rewriting; a summary they
@@ -895,23 +902,22 @@ export async function runTailor(opts: {
   // Job-post terms gate (owner, 29 Oct 2026). A job-post-only term the writer put into an experience bullet is a claim
   // the person did that work. The bullet goes back to the source text (a new bullet carrying it is dropped), and the
   // floor below writes the term onto the skills line, named in the reply. Bullets without such a term keep the edit.
-  const jdGate = jdTermsGateOn()
   let bulletsReverted = 0
+  // Switch on: master's rollback (removeUnsupportedRewrites, the whole original paragraph back) runs once BEFORE the floor
+  // too, so a job-post-only term the writer put in a bullet, an added row, an extra, the headline or the summary is taken
+  // out there and the floor below then writes it onto the skills line. The skills line itself is left for the floor.
   if (best && !refine && jdGate) {
     const jobOnly = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k) && !isCertification(k))
-    const carries = (t: string) => jobOnly.some(k => coveredJdKeywords(t, [k]).has(k))
-    const keptBullets = (best.edits.bullets || []).filter(b => !(carries(b.text || "") && !carries(bulletBefore.get(b.idx) || "")))
-    const keptAdded = (best.edits.added || []).filter(a => !carries(a.text || ""))
-    const reverted = (best.edits.bullets || []).length - keptBullets.length + (best.edits.added || []).length - keptAdded.length
-    if (reverted) {
-      const next = await applyEdits({ ...best.edits, bullets: keptBullets, added: keptAdded })
-      next.via = best.via
-      next.partial = best.partial
-      next.floor = best.floor
-      next.floorSummary = best.floorSummary
-      best = next
-      bulletsReverted = reverted
-      usedModel = `${usedModel} + ${reverted} bullet(s) with job-post-only terms restored`
+    if (jobOnly.length) {
+      const cleaned = removeUnsupportedRewrites(best.edits, value => coveredJdKeywords(value, jobOnly).size > 0, { keepSkills: true })
+      if (cleaned.removed) {
+        const next = await applyEdits(cleaned.edits)
+        next.via = best.via
+        next.partial = best.partial
+        best = next
+        bulletsReverted = cleaned.removed
+        usedModel = `${usedModel} + ${cleaned.removed} paragraph(s) with job-post-only terms restored`
+      }
     }
   }
 
@@ -946,16 +952,19 @@ export async function runTailor(opts: {
   // that work claim might also be invented. Re-score the actual exported DOCX
   // and re-run every normal completion/evidence gate; never force acceptance.
   if (best) {
-    const unsupported = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
+    // Switch on (JD_TERMS_ALWAYS_ON_SKILLS): the skills line is not rolled back and the floor's placed terms (skills line,
+    // open-summary "Strengths:") are not counted as unsupported; every other section is rolled back as before. Off: unchanged.
+    const placedByFloor = jdGate ? new Set([...(best.floor || []), ...(best.floorSummary || [])]) : new Set<string>()
+    const unsupported = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k) && !placedByFloor.has(k))
     if (unsupported.length) {
       const cleaned = removeUnsupportedRewrites(best.edits,
-        value => coveredJdKeywords(value, unsupported).size > 0)
+        value => coveredJdKeywords(value, unsupported).size > 0, { keepSkills: jdGate })
       if (cleaned.removed) {
         const previous = best
         const restored = await applyEdits(cleaned.edits)
         restored.via = previous.via
         restored.partial = previous.partial
-        restored.floor = (previous.floor || []).filter(k => restored.afterKw.has(k))
+        restored.floor = jdGate ? previous.floor : (previous.floor || []).filter(k => restored.afterKw.has(k))
         restored.floorSummary = (previous.floorSummary || []).filter(k => restored.afterKw.has(k))
         best = restored
         // Evidence and role counts must be computed from the sanitized pass.
