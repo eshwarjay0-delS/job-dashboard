@@ -2,7 +2,7 @@
 // paths every live answer goes through, not live answer quality (that needs scripts/kompas-live-eval.mjs with a token).
 import test from "node:test"
 import assert from "node:assert/strict"
-import { isProviderErrorAnswer, settleSpokenAnswer } from "../../src/lib/kompasDissection.ts"
+import { isProviderErrorAnswer, settleSpokenAnswer, dissectQuestion, asksForCode, splitFollowUp, sameAnswerRatio, draftSpokenAnswer } from "../../src/lib/kompasDissection.ts"
 import { applyGuards } from "../../src/lib/kompasGuards.ts"
 
 const guard = (s) => applyGuards(s, null, new Set(), new Set()).text
@@ -70,4 +70,43 @@ test("round 2 failsafe: a real ask after small talk is still answered", () => {
     assert.equal(smallTalkOnly(topic), false, topic)
     assert.ok(questionForAnswer(topic, "", false, false, []), topic)
   }
+})
+
+import { RESUME } from "../kompas-stress-rounds.mjs"
+
+const FOLLOW_UPS = [
+  ["Write a Python function that returns the findings still open after 30 days.", "Can you also add unit tests?", "tests"],
+  ["Design multi-cloud controls mapped to NIST 800-53.", "What would you monitor?", "monitor"],
+  ["Tell me about a time you challenged a weak remediation plan.", "What would you do differently?", "differently"],
+  ["Write a SQL query that lists findings with no owner.", "Could you add an index for it?", "index"],
+  ["How do you assess business impact and residual risk?", "How would you test that?", "test"],
+  ["Explain how a finding moves from open to closed.", "And what about exceptions?", "exceptions"],
+]
+
+test("round 3, idea D: an additive follow-up stays on the previous topic and leads with its own word", () => {
+  for (const [first, follow, keyword] of FOLLOW_UPS) {
+    const formed = questionForAnswer(follow, "", false, false, [{ q: first }])
+    assert.ok(formed.includes(first.replace(/[?.!\s]+$/, "")), `${follow} -> ${formed}`)
+    assert.ok(splitFollowUp(formed).own.toLowerCase().includes(keyword), formed)
+    const cut = dissectQuestion(formed)
+    assert.ok(cut.keywords.slice(0, 2).some((k) => k.toLowerCase().includes(keyword.slice(0, 4))), `${follow}: ${cut.keywords.join("|")}`)
+    assert.ok(!cut.keywords.includes("following"), cut.keywords.join("|"))
+    assert.equal(splitFollowUp(formed).previous, first.replace(/[?.!\s]+$/, ""))
+    for (const level of ["engineer", "architect", "director"]) {
+      const next = draftSpokenAnswer(formed, level, RESUME)
+      assert.ok(sameAnswerRatio(draftSpokenAnswer(first, level, RESUME), next) < 0.5, `${level} ${follow}`)
+      assert.ok(!/following up on/i.test(next), next)
+    }
+  }
+  assert.equal(asksForCode(questionForAnswer("Can you also add unit tests?", "", false, false, [{ q: FOLLOW_UPS[0][0] }])), true)
+})
+
+test("round 3 failsafe: a short question with its own subject, or no history, is not tied", () => {
+  const history = [{ q: "Explain residual risk." }]
+  for (const q of ["What is least privilege?", "Tell me about yourself.", "How do you handle a ransomware incident?", "Why do you want this role?"]) {
+    assert.equal(questionForAnswer(q, "", false, false, history), q, q)
+  }
+  assert.equal(questionForAnswer("Can you also add unit tests?", "", false, false, []), "Can you also add unit tests?")
+  assert.equal(asksForCode(questionForAnswer("What would you monitor?", "", false, false, history)), false)
+  assert.deepEqual(splitFollowUp("What is residual risk?"), { own: "What is residual risk?", previous: "" })
 })

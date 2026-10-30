@@ -715,6 +715,10 @@ function followUpResidue(q: string): string {
     .replace(/\b(?:would|could|should|please|just|really|start|with|about|through|walk)\b/gi, " ")
 }
 
+/** A follow-up that adds to the previous ask rather than starting a new one. */
+export const ADDITIVE_FOLLOW_UP =
+  /^\s*(?:(?:and|so|okay|ok)[,\s]+)?(?:(?:can|could|would|will) you (?:also|then)\b|(?:can|could|would) you add\b[^?]*\b(?:it|that|this|them|there)\b|what would you (?:monitor|do differently|change|measure|track|log|alert on)\b|what (?:about|if)\b|how (?:would|do|will) you test (?:it|that|this|them)\b|also\b|any (?:edge cases|trade-?offs)\b|what(?:'s| is) the (?:time|space) complexity\b)/i
+
 /** A topic-less follow-up ("go deeper", "explain that") is glued to the previous question IN CODE.
  * A short question that still names its own subject is not. "What exactly is least privilege?"
  * used to be rewritten as a follow-up of whatever was on screen, so a different question was answered as the same one.
@@ -725,7 +729,10 @@ export function resolveFollowUp(d: string, history: Array<{ q?: string }>): stri
   if (!q || !hist.length) return q
   const points = PRESS.test(q) || POINTS_BACK.test(q)
   const named = topicWords(followUpResidue(q)).length > 0
-  if (!(q.split(/\s+/).length <= 9 && points && !named)) return q
+  const short = q.split(/\s+/).length <= 9
+  // Idea D (stress round 3): an additive follow-up ("can you also add unit tests?") names a new word but stays on the
+  // previous topic, so it is tied too. A short ask that is its own question ("what is least privilege?") is not.
+  if (!(short && ((points && !named) || ADDITIVE_FOLLOW_UP.test(q)))) return q
   const last = String(hist[hist.length - 1].q).replace(/[?.!\s]+$/, "")
   return `${q.replace(/[?.!\s]+$/, "")} — following up on: "${last}"?`
 }

@@ -245,7 +245,24 @@ export function topicOfAsk(question: string): string {
     .trim()
 }
 
+/**
+ * Idea D (stress round 3, 29 Oct 2026): a follow-up is tied to the previous question in code as
+ * `ask — following up on: "previous"?`. The tag is ours, not the interviewer's: the follow-up's own words lead and the
+ * previous question only adds topic, so "following" was never a keyword and the intent was not read off the old ask.
+ */
+const FOLLOW_UP_TAG = /\s+—\s+following up on:\s+"([^"]*)"\??\s*$/
+export function splitFollowUp(question: string): { own: string; previous: string } {
+  const text = String(question || "")
+  const m = text.match(FOLLOW_UP_TAG)
+  if (!m) return { own: text, previous: "" }
+  const own = text.slice(0, m.index).trim()
+  // Failsafe: an empty follow-up part (never expected) keeps the whole text, so the ask is never lost.
+  return own ? { own: /[?.!]$/.test(own) ? own : `${own}?`, previous: m[1].trim() } : { own: text, previous: "" }
+}
+
 export function questionKeywords(question: string): string[] {
+  const tied = splitFollowUp(question)
+  if (tied.previous) return [...new Set([...questionKeywords(tied.own), ...questionKeywords(tied.previous)])].slice(0, 8)
   const raw = topicOfAsk(question)
   const lower = raw.toLowerCase()
   const found: string[] = []
@@ -295,7 +312,10 @@ export function bannedTerms(question: string, sources: string, shape: AnswerShap
 
 export function dissectQuestion(question: string, sources = ""): QuestionDissection {
   const ask = String(question || "").replace(/\s+/g, " ").trim()
-  const intent = interviewIntent(ask)
+  const tied = splitFollowUp(ask)
+  const own = interviewIntent(tied.own)
+  // A tied follow-up keeps its own intent when it has one; a generic one ("what would you monitor?") is a follow-up.
+  const intent: ReplyIntent = tied.previous && (own === "direct" || own === "acknowledgement") ? "follow-up" : own
   let shape = shapeFromIntent(intent)
   // "Go deeper on that failure" was a direct answer with a 99-word Architect ceiling. Asked depth wins over a
   // generic shape; it never turns an intro, a story, or a logistics ask into a deep dive.
@@ -315,6 +335,9 @@ export function dissectQuestion(question: string, sources = ""): QuestionDissect
 // question that only mentions "function" in passing is not forced into a code block.
 const CODE_REQUEST_Q = /\b(?:write|implement|code up|show me the code|give me (?:the )?code)\b[^?]*\b(?:code|function|script|query|program|class|regex|algorithm|endpoint|test)\b|\b(?:sql query|regex (?:to|for)|unit test for)\b/i
 export function asksForCode(question: string): boolean {
+  const tied = splitFollowUp(question)
+  // "Can you also add unit tests?" after a coding ask is still a coding ask; any other follow-up is judged on its own words.
+  if (tied.previous) return CODE_REQUEST_Q.test(tied.own) || (CODE_REQUEST_Q.test(tied.previous) && /\b(?:tests?|code|function|index|query|edge cases?|complexity|handle|refactor)\b/i.test(tied.own))
   return CODE_REQUEST_Q.test(String(question || ""))
 }
 
@@ -559,10 +582,15 @@ function firstPerson(line: string): string {
  * "What is the difference between", "Are you able to", "How do you"), so the answer can open on those exact words.
  */
 export function leadPhrase(question: string): string {
+  const tied = splitFollowUp(question)
+  if (tied.previous) question = tied.own
   let topic = (topicOfAsk(question).split(/(?<=[a-z0-9)])[?!.]\s+/i)[0] || "").replace(/[?!.]+\s*$/, "").trim()
   const frames = [
     /^(?:so,?\s+|and\s+|now,?\s+)/i,
     /^(?:can|could|would) you\s+(?:please\s+)?(?:tell me|explain|describe|walk me through|share)\s+(?:about\s+)?/i,
+    /^(?:can|could|would) you\s+(?:also\s+)?(?:add|include)\s+(?:an?\s+|the\s+|some\s+)?/i,
+    /^what about\s+/i,
+    /^what would you\s+/i,
     /^tell me about (?:a time (?:when )?(?:you|that you)\s+)?/i,
     /^(?:give me an example of (?:a time )?(?:when )?(?:you\s+)?)/i,
     /^what(?:'s| is) the difference between\s+/i,
@@ -650,6 +678,11 @@ const OPENERS: Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>
     director: (l) => `Yes, I can ${l}, and I plan my week around it.`,
     architect: (l) => `Yes, I can ${l}, and I have worked that way before.`,
   },
+  "follow-up": {
+    engineer: (l) => `Building on that, for ${l}, I add one concrete step.`,
+    director: (l) => `Building on that, ${l} is where I make the next call for the business.`,
+    architect: (l) => `Building on that, I treat ${l} as its own check with its own failure point.`,
+  },
   direct: {
     engineer: (l) => `Here is how I ${l}.`,
     director: (l) => `To ${l}, I start with the decision and the risk it carries for the business.`,
@@ -679,7 +712,9 @@ export function draftSpokenAnswer(question: string, level: AnswerLevel, resume: 
   const cut = dissectQuestion(question, resume)
   const lead = leadPhrase(question)
   const opener = (OPENERS[cut.shape] || OPENERS.direct)[level] || OPENERS.direct[level]
-  const lines = rankedExperience(question, resume, { engineer: 0, director: 1, architect: 3 }[level]).map(firstPerson)
+  // A tied follow-up is ranked on its own words, so it does not read back the lines the first answer already used.
+  const tied = splitFollowUp(question)
+  const lines = rankedExperience(tied.previous ? tied.own : question, resume, { engineer: 0, director: 1, architect: 3 }[level]).map(firstPerson)
   const mode = cut.modes[level]
   const parts = [opener(lead)]
   let words = wordCount(parts[0])
