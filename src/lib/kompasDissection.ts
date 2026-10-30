@@ -8,6 +8,7 @@ import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 import { interviewIntent, type ReplyIntent } from "./kompasRelevance.ts"
 import type { AnswerLevel } from "./kompasAnswer.ts"
 import { repairDictation } from "./kompasDictation.ts"
+import { normalizeAskText } from "./kompasAskText.ts"
 
 export type AnswerShape =
   | "intro"
@@ -278,6 +279,11 @@ export function topicOfAsk(question: string): string {
   } catch { raw = String(question || "") }
   const premise = raw.match(/^\s*(?:since|given(?: that)?|as|because|now that)\s+(?:you|your)\b[^,?]{3,120},\s*((?:how|what|why|when|where|which|who|can|could|would|do|did|have|tell|walk|describe)\b[\s\S]+)$/i)
   let asked = premise && premise[1].trim().split(/\s+/).length >= 3 ? premise[1] : raw
+  // r7 (29 Oct 2026): "As VP of Engineering at Corvid, how…" and "You cut cloud spend by 90 percent, so how did you do
+  // it?" opened on the premise ("On as the CTO of Brightpath…", "On I cut cloud spend by 90 percent…"), which states a
+  // wrong claim as the user's own. Same failsafe: the ask left must be 3+ words.
+  const more = asked === raw ? premiseSplit(raw) : null
+  if (more) asked = more.ask
   // Round 11 (29 Oct 2026): a jargon-stuffed setup ("With zero trust, SASE and all that, how do you…", "…, you know, with
   // all the SOAR and CNAPP stuff these days?") was read as the topic, so answers opened on and repeated the buzzwords.
   // Failsafe: the ask left must be 3+ words, or the whole question is kept.
@@ -392,7 +398,7 @@ export function cleanSpokenAsk(question: string): string {
 }
 
 export function dissectQuestion(question: string, sources = ""): QuestionDissection {
-  const ask = String(question || "").replace(/\s+/g, " ").trim()
+  const ask = normalizeAskText(question) // r7 (#28): was String(question).replace(/\s+/g, " ").trim(); also drops invisible characters
   const tied = splitFollowUp(cleanSpokenAsk(ask))
   const own = interviewIntent(tied.own)
   // A tied follow-up keeps its own intent when it has one; a generic one ("what would you monitor?") is a follow-up.
@@ -416,11 +422,35 @@ export function dissectQuestion(question: string, sources = ""): QuestionDissect
 // Same trigger the service uses for its coding block (CODE_ASK_Q), narrowed to an actual request for code so a
 // question that only mentions "function" in passing is not forced into a code block.
 const CODE_REQUEST_Q = /\b(?:write|implement|code up|show me the code|give me (?:the )?code)\b[^?]*\b(?:code|function|script|query|program|class|regex|algorithm|endpoint|test)\b|\b(?:sql query|regex (?:to|for)|unit test for)\b/i
+// r7: "Write a PySpark job…", "Write an Airflow DAG…", "Implement a token bucket rate limiter in TypeScript." were missed.
+// Only an imperative write/implement at the start, so "Describe how you implemented…" stays a spoken answer.
+const CODE_REQUEST_R7 = /^\s*(?:(?:um+|uh+|so|okay|ok|well|now|can you|could you|please)[,\s]+)*(?:write|implement|code up)\s+(?:a|an|the|me a|me an)\b[^?]*?(?:\b(?:job|dag|limiter|cache|handler|parser|method|class|worker|middleware|migration|decorator|hook|component|resolver)\b|\bin (?:python|go|golang|typescript|javascript|java|sql|rust|scala|kotlin|c\+\+|c#|ruby|bash|pyspark)\b)/i
 export function asksForCode(question: string): boolean {
+  question = normalizeAskText(question) // r7 (#28): "Wri\u200bte a function" is still a coding ask
   const tied = splitFollowUp(question)
   // "Can you also add unit tests?" after a coding ask is still a coding ask; any other follow-up is judged on its own words.
   if (tied.previous) return CODE_REQUEST_Q.test(tied.own) || (CODE_REQUEST_Q.test(tied.previous) && /\b(?:tests?|code|function|index|query|edge cases?|complexity|handle|refactor)\b/i.test(tied.own))
-  return CODE_REQUEST_Q.test(String(question || ""))
+  return CODE_REQUEST_Q.test(question) || CODE_REQUEST_R7.test(question)
+}
+
+// r7 (29 Oct 2026): role or achievement premises the earlier since/given/as-you rule missed.
+const ROLE_PREMISE = /^\s*([Aa]s\s+(?:the\s+|a\s+|an\s+)?(?!I\b|We\b|You\b)(?:[A-Z][\w&.-]*|head|lead|leader|manager|director|founder|owner)\b[^,?]{1,100}),\s*((?:how|what|why|when|where|which|who|can|could|would|do|did|tell|walk|describe)\b[\s\S]+)$/
+const CLAIM_PREMISE = /^\s*(you(?:'ve| have)?\s+(?:cut|scaled|led|managed|built|grew|saved|founded|ran|reduced|increased|doubled|tripled|hired|owned)\b[^,?]{3,140}),\s*(?:so|and)\s+((?:how|what|why|when|where|which|who|can|could|would|do|did|tell|walk|describe)\b[\s\S]+)$/i
+function premiseSplit(raw: string): { premise: string; ask: string } | null {
+  const m = String(raw || "").match(ROLE_PREMISE) || String(raw || "").match(CLAIM_PREMISE)
+  // "You scaled the API to a billion requests a day, so what broke?": a wh-ask of 2+ words is enough after an explicit
+  // "You <claim>, so"; a one-word ask ("so why?") keeps the whole question (failsafe).
+  const min = m && CLAIM_PREMISE.test(String(raw || "")) ? 2 : 3
+  return m && m[2].trim().split(/\s+/).length >= min ? { premise: m[1].trim(), ask: m[2].trim() } : null
+}
+/** The premise an ask leans on ("You cut cloud spend by 90 percent"), or "" when there is none. Never throws. */
+export function questionPremise(question: string): string {
+  try {
+    const raw = String(question || "")
+    const old = raw.match(/^\s*((?:since|given(?: that)?|as|because|now that)\s+(?:you|your)\b[^,?]{3,120}),\s*((?:how|what|why|when|where|which|who|can|could|would|do|did|have|tell|walk|describe)\b[\s\S]+)$/i)
+    if (old && old[2].trim().split(/\s+/).length >= 3) return old[1].trim()
+    return premiseSplit(raw)?.premise || ""
+  } catch { return "" }
 }
 
 export function dissectionPrompt(question: string, level: AnswerLevel, sources = ""): string {
@@ -436,6 +466,8 @@ export function dissectionPrompt(question: string, level: AnswerLevel, sources =
       : `Mode ${level}. Aim for about ${mode.aimWords} words and never more than ${mode.maxWords}. Stop as soon as the question is answered. ${mode.voice}`,
     ban ? `Banned unless the question already used them: ${ban}.` : "",
     "Do not reuse the previous answer. Do not add a second topic.",
+    // r7: a premise is the interviewer's claim, not the user's fact. Failsafe: no premise, no line.
+    questionPremise(question) ? `The question assumes: "${questionPremise(question).slice(0, 140)}". Do not repeat or confirm it unless the sources show it; if they do not, say so in one short first-person clause and answer the actual ask.` : "",
   ].filter(Boolean).join("\n")
 }
 

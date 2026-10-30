@@ -5,6 +5,7 @@
  * The incoming question controls depth; the original resume/docs control facts.
  * Generic questions must not trigger unrelated technical project inventories.
  */
+import { normalizeAskText } from "./kompasAskText.ts"
 export type ReplyIntent =
   | "introduction" | "closing-question" | "acknowledgement" | "value"
   | "experience-story" | "comparison" | "definition" | "scenario"
@@ -40,7 +41,8 @@ function askWithoutPrior(question: string): string {
 const BARE_FOLLOW=/^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|why|how)(?:\s+though)?[.?!]*$/i
 
 export function interviewIntent(question: string): ReplyIntent {
-  const q=askWithoutPrior(question)
+  // r7 (#28): invisible characters and odd spaces never change the intent. Failsafe: normalizeAskText never throws.
+  const q=askWithoutPrior(normalizeAskText(question))
   if(!q) return "direct"
   // Stress round 2 (29 Oct 2026): "Hi, can you hear me okay?" and "How are you doing today?" were answered as direct
   // questions. A greeting or line check gets a brief acknowledgement, never a work answer.
@@ -81,6 +83,10 @@ export function interviewIntent(question: string): ReplyIntent {
   // Director statements often trail off with "right?" without asking the
   // candidate a substantive question. Do not introduce a full technical story.
   if(!QUESTION.test(q) && /\b(?:tells you|asks you|disagrees with (?:you|your))\b/i.test(q)) return "scenario"
+  // r7 (#28): "Write a Python function that returns the findings still open after 30 days." has no question mark, so it
+  // fell through to acknowledgement and got a "yes, I can hear you" reply. A typed instruction to produce code or an
+  // explanation is an ask. Narrow: only a leading imperative verb; greetings and statements are unchanged.
+  if(/^\s*(?:(?:um+|uh+|so|okay|ok|well|now)[,\s]+)*(?:please\s+)?(?:write|implement|code up|build|create|design|show me|give me|explain|describe|walk me through|list|compare)\b/i.test(q) && q.split(/\s+/).length>=3) return "direct"
   // r5 (29 Oct 2026): "You will see X come up a lot. Tell me about Y." was read as a statement and got a line-check reply.
   // A later sentence that opens with an imperative ask (tell, describe, explain, walk, give) is a real ask.
   const laterAsk=/[.!;]\s+(?:so,?\s+)?(?:tell me|describe|explain|walk me|give me)\b/i.test(q)

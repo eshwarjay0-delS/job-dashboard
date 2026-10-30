@@ -34,12 +34,26 @@
  * offline timings exclude the model and the network; they only show what the code path itself adds. Latency is
  * reporting only: it never fails the run, and offline mode always exits 0.
  * Live mode records `latency` too (client-side, non-streaming request, so first word equals finish there).
+ *
+ * r7 hardening (pending #28, 29 Oct 2026; scripts/kompas-eval-hardening.mjs):
+ *   KOMPAS_EVAL_SET=banks      the r7 realism banks (data engineering, backend dossiers; noise, coding, design, wrong
+ *                              premises), one sample per kind per role, at all three levels. KOMPAS_EVAL_BANK_N caps it.
+ *   KOMPAS_EVAL_EVIDENCE=path  every answer is appended to path as one JSON line as it lands (fsync), so a killed run
+ *                              keeps its evidence; a rerun skips questions already recorded. The report goes to
+ *                              path.report.json (temp file + rename) and a human scorecard to path.scorecard.md.
+ *   - the canonical sample set is hash-checked; a changed, blank or duplicated canonical question fails before any call.
+ *   - no pass on empty: zero judged answers exits 1 (live) and is reported ok:false (offline).
+ *   - extra detectors on every answer: blank, provider error, third person, the per-surface code rule (#27), a wrong
+ *     premise adopted, numbers not in the sources. Every report carries `evidence`: offline stand-in or live.
  */
 import { readFileSync } from "node:fs"
 import { evaluateLiveAnswers, draftSpokenAnswer, settleSpokenAnswer, dissectQuestion } from "../src/lib/kompasDissection.ts"
 import { applyGuards } from "../src/lib/kompasGuards.ts"
 import { criteriaMisses } from "../src/lib/kompasEvalCriteria.ts"
 import { performance } from "node:perf_hooks"
+import * as H from "./kompas-eval-hardening.mjs"
+import { bankQuestions, loadBank, ROLES } from "./kompas-realism-banks.mjs"
+import { normalizeAskText } from "../src/lib/kompasAskText.ts"
 
 const offline = process.env.KOMPAS_EVAL_OFFLINE === "1"
 const token = process.env.KOMPAS_EVAL_TOKEN || ""
@@ -114,16 +128,37 @@ const sample = [
   "How do you assess business impact and residual risk?",
   "Write a Python function that returns the findings still open after 30 days.",
 ]
+// r7: the canonical sample set's hash. Changing a sample question on purpose means updating this value in the same commit.
+const SAMPLE_HASH = "f95c6f6db6de138a"
+const integrity = H.canonicalIntegrity(sample, SAMPLE_HASH)
+if (integrity.length) {
+  console.error(`Canonical question set failed its integrity check: ${integrity.join("; ")}. No answers were judged.`)
+  process.exit(1)
+}
+const evidencePath = process.env.KOMPAS_EVAL_EVIDENCE || ""
+const recorded = new Map(H.readEvidence(evidencePath).rows.map((row) => [H.evidenceKey(row), row]))
+const bankN = Math.max(1, Number(process.env.KOMPAS_EVAL_BANK_N || 1))
+function bankSet() {
+  const out = []
+  for (const role of ROLES) {
+    const qs = bankQuestions(role)
+    const byKind = {}
+    for (const x of qs) (byKind[x.kind] ||= []).push(x)
+    for (const kind of Object.keys(byKind)) for (const x of byKind[kind].slice(0, bankN)) out.push({ ...x, role, resume: loadBank(role).resume })
+  }
+  return out
+}
 const hitachi = fixture.filter((item) => item.chain === "hitachi-grc").sort((a, b) => a.step - b.step).map((item) => item.question)
 
 /** Offline: the code path a live answer passes through, with no model. First word is when the draft's opening exists. */
-function askOffline(question, level, history) {
+function askOffline(question, level, history, sources = resume) {
   const began = performance.now()
-  dissectQuestion(question, resume)
-  const draft = draftSpokenAnswer(question, level, resume)
+  question = normalizeAskText(question)
+  dissectQuestion(question, sources)
+  const draft = draftSpokenAnswer(question, level, sources)
   const firstWordMs = performance.now() - began
   const previous = history.length ? history[history.length - 1].a : ""
-  const settled = settleSpokenAnswer(question, draft, level, resume, previous)
+  const settled = settleSpokenAnswer(question, draft, level, sources, previous)
   const text = applyGuards(settled.text, null, new Set(), new Set()).text
   return { text, repair: null, firstWordMs, finishMs: performance.now() - began }
 }
@@ -135,8 +170,8 @@ function percentile(values, p) {
   return Math.round(sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1))] * 1000) / 1000
 }
 
-async function ask(question, level, history) {
-  if (offline) return askOffline(question, level, history)
+async function ask(question, level, history, sources = resume) {
+  if (offline) return askOffline(question, level, history, sources)
   const began = performance.now()
   const response = await fetch(new URL("/api/kompas/answer", origin), {
     method: "POST",
@@ -145,7 +180,7 @@ async function ask(question, level, history) {
       stream: false,
       question,
       history,
-      config: { level, interviewer: level, responseCalibration: "three-level-v1", resume },
+      config: { level, interviewer: level, responseCalibration: "three-level-v1", resume: sources },
     }),
     signal: AbortSignal.timeout(90000),
   })
@@ -160,13 +195,26 @@ async function ask(question, level, history) {
 const rows = []
 const repairs = []
 const timings = []
-async function run(questions, chained) {
+const extra = []
+async function run(questions, chained, setName = set) {
   for (const level of levels) {
     const history = []
-    for (const question of questions) {
-      process.stderr.write(`asking ${level}: ${question}\n`)
-      const { text, repair, firstWordMs, finishMs } = await ask(question, level, chained ? history.slice() : [])
-      rows.push({ question, level, text })
+    for (const item of questions) {
+      const { q: question, resume: sources = resume, premise = "" } = typeof item === "string" ? { q: item } : item
+      const key = H.evidenceKey({ set: setName, level, question })
+      let got = recorded.get(key)
+      if (got) process.stderr.write(`kept from evidence ${level}: ${question}\n`)
+      else {
+        process.stderr.write(`asking ${level}: ${question}\n`)
+        try { got = { set: setName, level, question, ...(await ask(question, level, chained ? history.slice() : [], sources)) } }
+        catch (error) { got = { set: setName, level, question, text: "", error: String(error?.message || error).slice(0, 120), firstWordMs: null, finishMs: null } }
+        H.appendEvidence(evidencePath, got)
+      }
+      const { text, repair, firstWordMs, finishMs } = got
+      for (const f of H.answerFailures({ question, text, sources, premise })) extra.push(`${f} for ${level}: ${question.slice(0, 80)}`)
+      if (got.error) extra.push(`request failed (${got.error}) for ${level}: ${question.slice(0, 80)}`)
+      if (!String(text || "").trim()) continue
+      rows.push({ question, level, text, sources })
       timings.push({ level, firstWordMs, finishMs })
       if (repair) repairs.push({ level, question, ...repair })
       if (chained) history.push({ q: question, a: text })
@@ -175,10 +223,17 @@ async function run(questions, chained) {
 }
 if (set === "sample" || set === "all") await run(sample, false)
 if (set === "hitachi" || set === "all") await run(hitachi, true)
+if (set === "banks") await run(bankSet(), false, "banks")
 
-const judged = evaluateLiveAnswers(rows, resume)
+// r7: each answer is judged against its own sources (the bank dossiers differ from the sample resume). Failsafe: one
+// group per distinct source text, so the sample and hitachi sets are judged exactly as before.
+const groups = new Map()
+for (const row of rows) { const k = row.sources || resume; if (!groups.has(k)) groups.set(k, []); groups.get(k).push({ question: row.question, level: row.level, text: row.text }) }
+const judged = { failures: [], warnings: [] }
+for (const [sources, group] of groups) { const j = evaluateLiveAnswers(group, sources); judged.failures.push(...j.failures); judged.warnings.push(...j.warnings) }
 const criteria = rows.flatMap((row) => criteriaMisses(row.question, row.text).map((miss) => `missing ${miss.check} for ${row.level}: ${row.question}`))
-const failures = [...judged.failures, ...criteria]
+const failures = [...new Set([...judged.failures, ...criteria, ...extra])]
+const final = H.verdict(rows, failures, offline ? H.OFFLINE_LABEL : H.LIVE_LABEL)
 const latency = Object.fromEntries(levels.map((level) => {
   const mine = timings.filter((t) => t.level === level)
   const first = mine.map((t) => t.firstWordMs)
@@ -187,17 +242,23 @@ const latency = Object.fromEntries(levels.map((level) => {
 }))
 const report = {
   mode: offline ? "offline (code-level stand-in; NOT live answer quality; timings exclude model and network)" : "live",
+  evidence: final.evidence,
   origin: offline ? null : origin,
   set,
   questions: new Set(rows.map((row) => row.question)).size,
   answers: rows.length,
-  ok: failures.length === 0,
-  failures,
+  ok: final.ok,
+  failures: final.failures,
   warnings: judged.warnings,
   repairs: repairs.map((r) => ({ level: r.level, question: r.question.slice(0, 80), status: r.status, attempts: r.attempts, missing: r.missing?.length || 0, stillMissing: r.stillMissing?.length || 0, survived: r.survived })),
   words: rows.map((row) => ({ level: row.level, words: row.text.trim().split(/\s+/).length, question: row.question.slice(0, 80) })),
   latency: { reportingOnly: true, ...latency },
 }
 console.log(JSON.stringify(report, null, 2))
-// Offline is reporting only: drafts are a stand-in, so their failures inform and never gate.
-if (failures.length && !offline) process.exit(1)
+if (evidencePath) {
+  H.writeReportAtomic(`${evidencePath}.report.json`, report)
+  H.writeTextAtomic(`${evidencePath}.scorecard.md`, H.humanScorecard(rows, final.evidence))
+}
+// Offline is reporting only: drafts are a stand-in, so their failures inform and never gate. Live: any failure, or
+// nothing judged at all (no pass on empty), exits 1.
+if (!final.ok && !offline) process.exit(1)
