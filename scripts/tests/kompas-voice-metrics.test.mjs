@@ -140,3 +140,32 @@ test("speaker prediction without reference is not scored as a verified attributi
   assert.equal(r.metrics.speakerAttribution,null);
   assert.equal(r.metrics.speakerPredictionRate,null);
 });
+
+test("baseline cannot hide observed WER by changing it to null",()=>{
+  const samples=[row("a","one two","one",{latencyMs:100})],base=evaluate(set(samples));
+  assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,wer:null}}),/Baseline mismatch/);
+});
+test("baseline cannot hide observed speaker errors behind null",()=>{
+  const samples=[row("a","yes","yes",{referenceSpeaker:"A"})],base=evaluate(set(samples));
+  assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,speakerAttribution:null}}),/Baseline mismatch/);
+});
+test("baseline cannot invent measurements for absent latency cohort",()=>{
+  const samples=[row("a","yes","yes")],base=evaluate(set(samples));
+  assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,p95LatencyMs:0}}),/Baseline mismatch/);
+});
+test("baseline refuses impossible bounded rates and negative WER",()=>{
+  const samples=[row("a","yes","yes",{editCount:0})],base=evaluate(set(samples));
+  for(const [key,value] of [["zeroEditRate",1.01],["technicalTermRecall",-1],["wer",-0.1]]){
+    assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,[key]:value}}),/Baseline mismatch/);
+  }
+});
+test("baseline rejects reversed latency percentiles",()=>{
+  const samples=[row("a","yes","yes",{latencyMs:100}),row("b","yes","yes",{latencyMs:200})],base=evaluate(set(samples));
+  assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,p50LatencyMs:250}}),/Baseline mismatch/);
+});
+test("baseline accepts zero-coverage nulls and WER above one from insertions",()=>{
+  const samples=[row("a","yes","yes yes yes")],base=evaluate(set(samples));
+  assert.equal(base.metrics.wer,2);
+  assert.equal(base.metrics.p95LatencyMs,null);
+  assert.equal(evaluate(set(samples),base).deltaFromBaseline.wer,0);
+});

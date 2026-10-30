@@ -2,6 +2,27 @@
 import {createHash} from "node:crypto";
 import {edits,termCounts,percentile} from "./kompas-voice-metrics-core.mjs";
 const rate=(a,b)=>b?a/b:null;
+/** Reject baseline values that could hide a regression behind a null or impossible rate. */
+function validBaselineMetrics(metrics,coverage){
+  if(!metrics||typeof metrics!=="object"||!coverage)return false;
+  const denominators={
+    wer:"referenceWords",deletionRate:"referenceWords",substitutionRate:"referenceWords",
+    insertionRate:"referenceWords",technicalTermRecall:"technicalOccurrences",
+    zeroEditRate:"editLabels",speakerAttribution:"speakerLabels",
+    speakerPredictionRate:"speakerLabels",p50LatencyMs:"latencySamples",
+    p95LatencyMs:"latencySamples",silenceHallucinationRate:"silentClips",
+  };
+  const unbounded=new Set(["wer","insertionRate","p50LatencyMs","p95LatencyMs"]);
+  for(const [key,denom] of Object.entries(denominators)){
+    const value=metrics[key],hasData=coverage[denom]>0;
+    if(!hasData){if(value!==null)return false;continue;}
+    if(typeof value!=="number"||!Number.isFinite(value)||value<0)return false;
+    if(!unbounded.has(key)&&value>1)return false;
+  }
+  return !(metrics.p50LatencyMs!==null&&metrics.p95LatencyMs!==null&&
+    metrics.p50LatencyMs>metrics.p95LatencyMs);
+}
+
 export function evaluate(dataset,baseline=null){
   if(!dataset||!dataset.datasetId||!dataset.revision||!Array.isArray(dataset.samples)||!dataset.samples.length)
     throw Error("Dataset ID, revision and nonempty samples required");
@@ -61,8 +82,7 @@ export function evaluate(dataset,baseline=null){
     if(baseline.schemaVersion!==2||baseline.datasetId!==out.datasetId||baseline.revision!==out.revision||baseline.sampleCount!==out.sampleCount||baseline.sampleSetSha256!==sampleSetSha256||baseline.referenceSetSha256!==referenceSetSha256||baseline.measurementSetSha256!==measurementSetSha256)
       throw Error("Baseline mismatch: dataset, revision or sample count");
     if(!baseline.coverage||Object.entries(out.coverage).some(([key,count])=>baseline.coverage[key]!==count)||
-      !baseline.metrics||Object.keys(metrics).some(key=>
-        !(baseline.metrics[key]===null||(typeof baseline.metrics[key]==="number"&&Number.isFinite(baseline.metrics[key])))))
+      !validBaselineMetrics(baseline.metrics,baseline.coverage))
       throw Error("Baseline mismatch: measurement coverage or metric validity");
     out.deltaFromBaseline=Object.fromEntries(Object.entries(metrics).map(([k,v])=>[k,v===null||typeof baseline.metrics?.[k]!=="number"?null:v-baseline.metrics[k]]));
   }
