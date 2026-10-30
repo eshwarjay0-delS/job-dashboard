@@ -4,6 +4,7 @@
 // the sources do not state is never reworded into a softer claim here; it becomes a visibly marked hole the
 // candidate fills before the call.
 import { allowedNumbers, needsGuard } from "./kompasGuards.ts"
+import { CTX } from "./kompasFigureContext.ts"
 import { honestyCheck, holeSlot, SLOT_LABEL } from "./dossierHonesty.ts"
 
 export const HOLE = "[ ___ confirm: your actual figure ]"
@@ -155,7 +156,10 @@ export function gateFigures(text: string, sources: Array<string | undefined>): {
 
 function gateFiguresCore(text: string, sources: Array<string | undefined>): { text: string; blocked: string[] } {
   // List markers in a source ("1. ", "## 3. ") are structure: they must not whitelist "3 weeks" or "6 analysts".
-  const allowed = allowedNumbers(...sources.map((x) => String(x || "").replace(/^(\s*(?:#+\s*)?)\d+[.)]\s/gm, "$1")))
+  // demo-final merge: the dossier gate masks other digits with "N", so AQ's r9 "what the number counts" context keys
+  // (kompasFigureContext) cannot match here; keep the number-only allowlist this gate was built and tested on.
+  // Live Kompas answers still use the stricter r9 check in kompasGuards.
+  const allowed = new Set([...allowedNumbers(...sources.map((x) => String(x || "").replace(/^(\s*(?:#+\s*)?)\d+[.)]\s/gm, "$1")))].filter((k) => !k.startsWith(CTX)))
   const blocked: string[] = []
   let t = String(text || "")
   for (const re of BANNED) t = t.replace(new RegExp(re.source, re.flags), (m) => { blocked.push(m); return HOLE })
