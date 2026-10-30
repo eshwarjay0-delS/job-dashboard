@@ -4,9 +4,21 @@
  * A final-only policy waits for the existing deterministic guards and optional
  * external fact check. It does NOT claim the final answer is independently verified.
  */
-export type KompasStreamPolicy = "guarded-final" | "progressive"
+export type KompasStreamPolicy = "guarded-final" | "guarded-sentence" | "progressive"
 
-export function answerStreamPolicy(tier: number, question: string): KompasStreamPolicy {
+// Speed r6 (29 Oct 2026): personal history no longer waits for the whole answer. "guarded-sentence" releases a sentence
+// only after the deterministic guards (figures, place/prestige/title, unsupported employer/tool/scale claims, provider
+// error text) pass on that sentence; the first failing sentence stops all further release, and the full-answer guards,
+// repair and settle still run and always end in a final replace. sentenceStream:false (or KOMPAS_SENTENCE_STREAM=0)
+// restores "guarded-final" exactly.
+export function answerStreamPolicy(tier: number, question: string, opts: { sentenceStream?: boolean } = {}): KompasStreamPolicy {
+  const held = heldPolicy(tier, question)
+  if (held !== "guarded-final") return held
+  const on = opts.sentenceStream ?? (typeof process === "undefined" || process.env?.KOMPAS_SENTENCE_STREAM !== "0")
+  return on ? "guarded-sentence" : "guarded-final"
+}
+
+function heldPolicy(tier: number, question: string): KompasStreamPolicy {
   // T0: career, T1: personal story, T3: follow-up on earlier project, T4: direct
   // personal background. Do not let a candidate read an invented event or metric
   // from an unreviewed delta before the final grounding pass can remove it.
@@ -22,7 +34,7 @@ export function releaseProvisionalDelta(policy: KompasStreamPolicy): boolean {
 }
 
 export function mustEmitFinalReplacement(policy: KompasStreamPolicy, finalText: string, rawText: string): boolean {
-  return policy === "guarded-final" || finalText !== rawText
+  return policy === "guarded-final" || policy === "guarded-sentence" || finalText !== rawText
 }
 
 /** The JD and generated/historical context set relevance, never prove candidate history. */

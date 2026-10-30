@@ -117,6 +117,9 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bterror\s+form\b/gi, "Terraform"],
   [/\bteraform\b/gi, "Terraform"],
   [/\bterraform\b/gi, "Terraform"],
+  // Stress round 2/6 (29 Oct 2026): "um what's the uh resid jewel risk thing" was answered as a direct ask about a jewel.
+  // Only "resid…" followed by a garble and then "risk" is repaired; "crown jewel risk" and "residue on" stay as heard.
+  [/\bresid(?:ue|ual)?\s+(?:jewel|jewell|joule|you all|all|al)\s+(risks?)\b/gi, "residual $1"],
   [/\bstart\s+method\b/gi, "STAR method"],
   [/\bs\.?\s*t\.?\s*a\.?\s*r\.?\s+method\b/gi, "STAR method"],
   [/\bstar\s+method\b/gi, "STAR method"],

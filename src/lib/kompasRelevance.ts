@@ -17,12 +17,12 @@ export type FocusPlan = {
   proof: string
   technicalDepth: "surface" | "asked-only" | "deep"
 }
-const EXPERIENCE=/\b(?:tell me about a time|share an example|give me an example of (?:when|a time)|describe a situation|have you ever|how have you|what did you do when|walk me through (?:an|a) (?:[\w-]+\s+){0,6}?(?:issue|incident|project|challenge|failure)(?:\s+you|\s+where|\s+that|\s+when)?|a time (?:you|when you))\b/i
+const EXPERIENCE=/\b(?:tell me about a time|share an example|give me an example of (?:when|a time)|describe a situation|have you ever|how have you|what did you do when|walk me through (?:an|a) (?:[\w-]+\s+){0,6}?(?:issue|incident|project|challenge|failure)(?:\s+you|\s+where|\s+that|\s+when)?|a time (?:you|when you)|walk me through a (?:situation|time) (?:where|when)|(?:tell me about|what (?:is|was)) your (?:biggest|worst|proudest|hardest|greatest) (?:mistake|failure|achievement|success|challenge|win|regret))\b/i
 const CLOSING=/\b(?:what questions (?:do|would|might|can) you have|any questions (?:for|from) me|what would you (?:like to )?ask (?:me|us)|anything you(?:'d| would) (?:like|want) to ask|questions about (?:the|this) (?:role|team|company))\b/i
 const INTRO=/\b(?:tell me about yourself|introduce yourself|walk (?:me|us) through your (?:career|background)|your professional background|career (?:journey|overview)|self introduction)\b/i
 const VALUE=/\b(?:what (?:would|can|do) you bring to|what you can bring|highlight .{0,40}(?:bring|experience)|what (?:can|would) you contribute|why (?:are|would|should) (?:we hire you|you be (?:a )?(?:good|strong) fit)|what makes you (?:a )?(?:good|strong) fit|what sets you apart|highlight (?:for me )?anything|anything (?:else )?(?:i|we) should (?:know|be aware of)|what else should (?:i|we) know|why (?:do|would) you want (?:this|to work)|why (?:bny|this role|our team))\b/i
 const LOGISTICS=/\b(?:relocat(?:e|ion)|on.?site|hybrid|notice period|start date|available to start|sponsorship|work authorization|authori[sz]ed to work|h-?1b|green card|opt\b(?!\s+(?:for|in|to|out)\b)|visa|commute|where are you based|where do you live|are you a(?:n| a)? (?:(?:u\.?\s*s\.?|u\s+s)\s+)?citizen|(?:u\.?\s*s\.?|u\s+s|united states)\s+citizens?|travel|salary|compensation|clearance|working (?:hours|days))\b/i
-const DEFINE=/\b(?:what (?:exactly |precisely )?is|what (?:exactly |precisely )?are|what does .{1,55} mean|define|stands? for|explain (?:the term|what .{1,60} is))\b/i
+const DEFINE=/\b(?:what (?:exactly |precisely )?is|what (?:exactly |precisely )?are|what(?: does|'s| is) .{1,55} mean|define|stands? for|explain (?:the term|what .{1,60} is))\b/i
 const COMPARE=/\b(?:which (?:one|framework|tool|approach|option|is)|which of those|which would you (?:choose|pick|prefer|start)|stronger (?:in|with)|more (?:proficient|comfortable|familiar)|difference between|compare|versus|vs[.]?|how do .+ differ|how is .{1,80} different|how\b[^?]{0,110}\bdiffer(?:s|ed)?\b|prefer .+ (?:or|over))\b/i
 const SCENARIO=/\b(?:how would you|what would you do|suppose|imagine|if you (?:were|had|found|saw)|hypothetical|in that situation|how should (?:we|the team)|scenario)\b/i
 const DEEP=/\b(?:step by step|walk me through|under the hood|exact (?:logs|fields|mechanics|steps|flow)|deep dive|debug|troubleshoot|design|implement|packet|query|architecture|how (?:does|do|did) .+ work|how exactly)\b/i
@@ -45,13 +45,17 @@ export function interviewIntent(question: string): ReplyIntent {
   // "Why?" is glued onto the previous question, then classified as a new direct ask.
   // The prompt then tells the answer to start over. A bare why or how come stays a follow-up.
   if(BARE_FOLLOW.test(q)) return "follow-up"
+  // Stress round 2 (29 Oct 2026): "Hi, can you hear me okay?" and "How are you doing today?" were answered as direct
+  // questions. A greeting or line check gets a brief acknowledgement, never a work answer.
+  if(/^\s*(?:(?:hi|hello|hey|good (?:morning|afternoon|evening))\b[,.!\s]*)?(?:(?:can|could) you hear me(?: okay| ok| alright| well)?|(?:are you|is it) able to hear me|how are you(?: doing)?(?: today)?|how(?:'s| is) (?:it going|your day(?: going)?)|is my (?:audio|mic|video) (?:okay|ok|working))[\s?.!]*$/i.test(q)) return "acknowledgement"
   // The interviewer marked the earlier words as not the question. The ask is what follows.
   if(/\b(?:any questions|what questions do you have|do you have any questions)\b[^.?!]*\??\s*$/i.test(q) && !INTRO.test(q)) return "closing-question"
   // "How would you explain residual risk to a business owner" asks for the meaning, said so they can use it.
   if(/\bhow would you explain\b/i.test(q)) return "definition"
   // Several named checks in one assess question need the mechanism of each, not a yes/no.
   if(/\bhow (?:do|did|would) you (?:typically )?(?:assess|evaluate|measure|validate|determine)\b/i.test(q)) return "technical-process"
-  if(/\b(?:are you familiar with|do you know)\b.+\b(?:and|or|versus|vs\.?)\b/i.test(q)) return "comparison"
+  // Round 13: "how do you know the test is enough … and who signs off" was read as a comparison.
+  if(/\b(?:are you familiar with|(?<!\bhow )do you know)\b.+\b(?:and|or|versus|vs\.?)\b/i.test(q)) return "comparison"
   // Interviewers vary the wording across disciplines; route the requested action,
   // not the job-specific vocabulary. These patterns complement the baseline.
   if(/\b(?:any questions for (?:us|the team)|do you have any questions|anything you(?:'d| would) like to ask\??)\b/i.test(q) && !INTRO.test(q)) return "closing-question"
@@ -70,14 +74,20 @@ export function interviewIntent(question: string): ReplyIntent {
   if(EXPERIENCE.test(q)) return "experience-story"
   if(LOGISTICS.test(q) && !/\b(?:how (?:does|do)|why|difference|design|troubleshoot)\b/i.test(q)) return "logistics"
   if(COMPARE.test(q)) return "comparison"
-  if(DEFINE.test(q)) return "definition"
+  if(DEFINE.test(q) && !/\bwhat(?:'s| is| are) (?:your|you)\b/i.test(q)) return "definition"
+  // Round 6 (29 Oct 2026): "what's the residual risk" was a direct ask while "what is the residual risk" was a definition.
+  // A short "what's X" with no "you/your" is the same ask as "what is X".
+  if(/^\s*what's\s+(?:an?\s+|the\s+)?(?!your\b|you\b)[a-z0-9][\w\s-]{1,40}\??\s*$/i.test(q) && q.trim().split(/\s+/).length<=7) return "definition"
   if(FOLLOW.test(q) && q.split(/\s+/).length<=12) return "follow-up"
   if(SCENARIO.test(q)) return "scenario"
   if(DEEP.test(q)) return "technical-process"
   // Director statements often trail off with "right?" without asking the
   // candidate a substantive question. Do not introduce a full technical story.
   if(!QUESTION.test(q) && /\b(?:tells you|asks you|disagrees with (?:you|your))\b/i.test(q)) return "scenario"
-  const noSubstantiveAsk=!QUESTION.test(q.replace(/\b(?:right|okay|yeah)\s*\?\s*$/i,""))
+  // r5 (29 Oct 2026): "You will see X come up a lot. Tell me about Y." was read as a statement and got a line-check reply.
+  // A later sentence that opens with an imperative ask (tell, describe, explain, walk, give) is a real ask.
+  const laterAsk=/[.!;]\s+(?:so,?\s+)?(?:tell me|describe|explain|walk me|give me)\b/i.test(q)
+  const noSubstantiveAsk=!QUESTION.test(q.replace(/\b(?:right|okay|yeah)\s*\?\s*$/i,"")) && !laterAsk
   const words=q.split(/\s+/).filter(Boolean)
   const greeting=/^(?:hi|hello|hey|ok(?:ay)?|thanks|thank you|yeah|yes|no|right|great)[.!]*$/i.test(q)
   const told=ACK.test(q) || /^(?:you will|we\b|i\b|the team|our team|the first)\b/i.test(q)

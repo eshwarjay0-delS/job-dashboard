@@ -1,4 +1,5 @@
 import { resumeRoles, type ResumeRole, type ResumeRoles } from "../../src/lib/kompasResume.ts"
+import { CTX, STRUCTURAL, figureContextKeys, figureMentions, hasContext, mentionAt, mentionSupported } from "./kompasFigureContext.ts"
 // Kompas grounding guards — anti-hallucination code ported from perfACT's
 // interview engine (copilot/api/answer.js). Prompt rules are wishes; these are
 // guarantees: figures, employers, titles, dates and places in a spoken answer
@@ -28,7 +29,25 @@ export function allowedNumbers(...sources: Array<string | undefined>): Set<strin
     const m = String(s || "").match(FIGURE_RE)
     if (m) for (const f of m) out.add(normFigure(f))
   }
+  // r9: what each number counts (kompasFigureContext). Prompt-facing lists use figureList() to leave these out.
+  try { for (const k of figureContextKeys(...sources)) out.add(k) } catch { /* no context keys → contextual figures fail (stricter) */ }
   return out
+}
+
+/**
+ * r9: a figure is backed when the number is allowed AND, when the sentence names what it counts ("4 weeks", "4 regions",
+ * "$2 million", "3-5 weeks"), the sources hold that number on that noun (or money). Throws → not backed.
+ */
+function figureBacked(line: string, fig: string, at: number, allowed: Set<string>, core?: string): boolean {
+  try {
+    if (!allowed.has(normFigure(fig)) && !(core && allowed.has(normFigure(core)))) return false
+    // an allowlist built without r9 context keys (a hand-made Set) keeps the number-only check it had before
+    if (!hasContext(allowed)) return true
+    const m = mentionAt(line, at)
+    if (!m || m.label) return true
+    if (!m.head.length && !m.money) return true
+    return mentionSupported(m, allowed)
+  } catch { return false }
 }
 
 // Technical constants are fine (perfACT's FIGURES prompt says so): ports,
@@ -50,6 +69,11 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   // An item of a spoken numbered list: "a hypothesis matrix: 1 CA renewal breaks inspection, 2 Intune policy ..., and 3 EPM rule"
   // came out "several CA renewal" (round r05, ea-20).
   if (/^[1-9]$/.test(value) && /(?:[:,;]|\band)\s*$/.test(before) && /^\s+[A-Z][A-Za-z]/.test(after)) return true
+  // r4 (item 25): a number that is part of a standard or product name is a label: "ISO 27001" came out "ISO several",
+  // "SOC 2" "SOC several", "Windows Server 2019" "a few years ago", "24/7" "several/7", "step 2 of 3" "of several".
+  if (/\b(?:ISO(?:\/IEC)?|IEC|SOC|PCI(?: DSS)?|DSS|NIST(?: SP| CSF)?|SP|CSF|RFC|FIPS|CIS|IL|FedRAMP|Server|Windows|Office|SQL|RHEL|Ubuntu|macOS|iOS|Android|Exchange|SharePoint|OWASP Top|Top|Article|Section|Level|Type|Gen|Wave|Release|Sprint|Round|Day|Week|Q)\s*$/.test(before)) return true
+  if (/^\/\s*7\b/.test(after) && value === "24") return true
+  if (/\b(?:steps?|phases?|parts?|items?|questions?|hypothes(?:is|es)|options?)\s+\d+\s+(?:of|out of)\s+$/i.test(before)) return true
   if (/^x[0-9a-f]/i.test(after)) return true
   if (/^\s*(port|ports)\b/i.test(after)) return true
   // Structural numbers are labels, not result claims — the guard rewrote them
@@ -77,18 +101,42 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   // `returns several` while guarding unsupported achievement metrics.
   if (/^[1-5]\d{2}$/.test(value) && /\b(?:http|status|returns?|responds?(?: with)?|receives?|expects?)(?: an?)?\s*$/i.test(before)) return true
   if (/^[1-5]\d{2}$/.test(value) && (/\b(?:forbidden|unauthorized|responses?|status|http)\b/i.test(after) || /(?:expect\w*|return\w*|respond\w*|receiv\w*|status|http)[^.\n]{0,20}$/i.test(before))) return true
+  // A three-part dotted number is always a version ("upgraded the library to 5.4.6" came out "to several"); no
+  // result claim is written that way.
+  if (/^\d+\.\d+\.\d+$/.test(value)) return true
   if (/^\d+\.\d+(?:\.\d+)?$/.test(value) && /\b(?:kubernetes|istio|nginx|splunk(?: es)?|python|node(?:\.js)?|java|postgres(?:ql)?|kong|tls)\s*$/i.test(before)) return true
   if (/\b(?:invoice_id|customer_id|tenant_id|owner_id)\s*=\s*$/i.test(before) || /\/invoices\/\s*$/i.test(before)) return true
+  // r9: a range ("3-5 weeks") or a hyphen unit ("a 4-week rollout") counts something; it is not an identifier.
+  if (!/^(?:19|20)\d\d$/.test(value) && rangeOrUnit(line, at, fig)) return false
   if (/[-_\u2010\u2011\u2013\u2014\u2212#]$/.test(before) || /^[-_\u2010\u2011\u2013\u2014\u2212]/.test(after)) return true
   return false
 }
 
+function rangeOrUnit(line: string, at: number, fig: string): boolean {
+  try {
+    const after = line.slice(at + fig.length)
+    const before = line.slice(0, at)
+    const hy = after.match(/^[-\u2010\u2011]\s?(?:second|minute|hour|day|week|month|quarter|year|person|people|member|engineer|analyst|region|country|site|node|server|team|office|state|cluster|account)s?\b/i)
+    if (hy) return !STRUCTURAL.test(after.slice(hy[0].length)) && !/[A-Za-z][-\w]*[-]$/.test(before)
+    // first number of "3-5 weeks": not glued to letters before (CVE-2021-44228, AES-256 stay identifiers)
+    const noun = /^%?\s+(?!(?:and|or|for|to|of|in|on|at|with|the|a|an|is|was|are)\b)[A-Za-z]/
+    if (/\b(?:NIST(?: SP)?|SP|ISO(?:\/IEC)?|IEC|RFC|PCI(?: DSS)?|DSS|CIS|FIPS|SOC)\s*\d[\d.]*\s?[-\u2013]?\s?$/i.test(before)) return false
+    if (/^\s?[-\u2013\u2014]\s?\d[\d,.]*%?\s+[A-Za-z]/.test(after) && noun.test(after.replace(/^\s?[-\u2013\u2014]\s?\d[\d,.]*/, "")) && !/[A-Za-z\d][-\u2013\u2014]?$/.test(before)) return true
+    // second number of a range
+    if (/(?:^|[\s($])\d[\d,.]*\s?[-\u2013\u2014]\s?$/.test(before) && noun.test(after)) return true
+    return false
+  } catch { return false }
+}
+
 export function needsGuard(line: string, allowed: Set<string>): boolean {
   const figs = String(line || "").match(FIGURE_RE) || []
-  for (const f of figs) {
-    const fig = f as string
-    if (allowed.has(normFigure(fig))) continue
-    const at = String(line).indexOf(fig)
+  const re = new RegExp(FIGURE_RE.source, "g")
+  let mm: RegExpExecArray | null
+  void figs; void figureMentions
+  while ((mm = re.exec(String(line || "")))) {
+    const fig = mm[0]
+    const at = mm.index
+    if (figureBacked(String(line), fig, at, allowed)) continue
     if (isTechnicalConstant(String(line), fig, at)) continue
     return true
   }
@@ -128,8 +176,7 @@ export function guardText(line: string, allowed: Set<string>): { text: string; r
       core = fig.slice(0, -1)
       suffix = "."
     }
-    const n = normFigure(core)
-    if (allowed.has(n) || allowed.has(normFigure(fig))) return fig
+    if (figureBacked(full, fig, offset, allowed, core)) return fig
     if (isTechnicalConstant(full, fig, offset)) return fig
     removed++
     const before = full.slice(0, offset)
@@ -142,14 +189,28 @@ export function guardText(line: string, allowed: Set<string>): { text: string; r
       // of traffic"; "increase to 10%" becomes "increase to a higher
       // share", not "increase to noticeably".
       if (/^\s+of\b/.test(after)) plain = "a share"
+      // "reduced audit gaps by 40%" came out "by noticeably"; the replacement takes the place of "by 40%".
+      else if (/\bby\s+$/i.test(before)) plain = "\u0000noticeably"
       else if (/\bto\s+(a|an|the\s+)?$/.test(before)) plain = "a higher share"
       else plain = plainFor(core, hasArticle)
     } else plain = plainFor(core, hasArticle)
     if (hasArticle) plain = plain.replace(/^(a|an|the)\s+/i, "")
     return plain + suffix
   })
+  text = text.replace(/\bby\s+\u0000/gi, "").replace(/\u0000/g, "")
+  // Stress round 3: "I closed 95 percent of findings" came out "several percent of", "$2M" came out "$millions" and
+  // "over 200" came out "over several". Each now reads as something a person says.
+  // r4 (item 25): "by 60 percent" came out "by noticeably" and "top 10 percent" "top noticeably".
+  text = text.replace(/\bby (?:several|noticeably) percent\b/gi, "noticeably").replace(/\bby noticeably\b/gi, "noticeably")
+  text = text.replace(/\b(?:the )?top (?:several|noticeably)(?: percent)?\b/gi, "near the top").replace(/\bin near the top\b/gi, "near the top")
+  text = text.replace(/\bseveral percent of (?!the\b|my\b|our\b|their\b)/gi, "most of the ").replace(/\bseveral percent of\b/gi, "most of").replace(/\bseveral percent\b/gi, "noticeably")
+  text = text.replace(/\$\s?(millions|thousands|several)\b/g, (_m, w: string) => (w === "several" ? "money" : w + " of dollars"))
+  text = text.replace(/\b(?:over|more than|nearly|almost|about|around|roughly) several\b/gi, "many")
   text = text.replace(/several(milliseconds?|seconds?|minutes?|hours?|ms|secs?|mins?|hrs?|kb|mb|gb|tb|s)\b/gi, "several")
   text = text.replace(/\bin a few years ago/gi, "back then")
+  // r9: an invented range or hyphen unit reads as a person says it ("several-several weeks" → "several weeks", "a several-week" → "a multi-week")
+  text = text.replace(/\bseveral\s?(?:[-\u2013\u2014]|to)\s?several\b/gi, "several")
+  text = text.replace(/\b(a|an)\s+several-(second|minute|hour|day|week|month|quarter|year)\b/gi, "a multi-$2").replace(/\bseveral-(second|minute|hour|day|week|month|quarter|year)\b/gi, "multi-$1")
   return { text, removed }
 }
 
@@ -333,8 +394,43 @@ export function speakFacts(opts: {
 // ------------------------------------------------------------ full pipeline ---
 // perfACT's streaming settle() chain, run per line on the finished text:
 // unbracket → place → versions → prestige → title → orphans → figures.
+/**
+ * The interviewer's own figures ("the 72-hour window", "three regions", "NIST 800-53") are structure the answer
+ * refers back to. They pass, except straight after "by", where repeating the question's number turns it into a
+ * result the candidate claims ("cut MTTR by 40%" is still guarded when only the question said 40%).
+ */
+export function questionFigures(question: string): Set<string> {
+  const out = new Set<string>()
+  for (const f of String(question || "").match(FIGURE_RE) || []) out.add(normFigure(f))
+  try { for (const k of figureContextKeys(question)) out.add(k) } catch { /* none */ }
+  return out
+}
+
+function firstPersonResult(sentence: string): boolean {
+  try { return /\b(?:I|we|my team|our team)\b/i.test(sentence) && /\b(?:cut|reduced|lowered|slashed|dropped|decreased|halved|saved|improved|increased|boosted|grew|raised)\b/i.test(sentence) && claimsResult(sentence) } catch { return false }
+}
+function withAskedFigures(sentence: string, allowed: Set<string>, asked: Set<string>): Set<string> {
+  if (!asked.size) return allowed
+  const merged = new Set(allowed)
+  const re = new RegExp(FIGURE_RE.source, "g")
+  let m: RegExpExecArray | null
+  while ((m = re.exec(sentence))) {
+    const n = normFigure(m[0])
+    // r10 (Lens r4 note): a first-person result claim never borrows the question's figure.
+    if (asked.has(n) && !/\bby\s+$/i.test(sentence.slice(0, m.index)) && !firstPersonResult(sentence)) {
+      merged.add(n)
+      // r9: the question's own figure carries its own noun ("5 regions"), not any noun ("5 weeks")
+      try {
+        const f = mentionAt(sentence, m.index)
+        if (f) for (const k of asked) if (k.startsWith(`${CTX}${f.n}|`)) merged.add(k)
+      } catch { /* stricter: no context added */ }
+    }
+  }
+  return merged
+}
+
 export function applyGuards(
-  text: string, facts: SpeakFacts | null, allowed: Set<string>,
+  text: string, facts: SpeakFacts | null, allowed: Set<string>, asked: Set<string> = new Set(),
 ): { text: string; guarded: number } {
   let guarded = 0
   const lines = String(text || "").split("\n")
@@ -350,9 +446,10 @@ export function applyGuards(
     const parts = line.split(/(?<=[.!?])(\s+)/)
     let changed = false
     const kept = parts.map((part) => {
-      if (!part.trim() || !claimsResult(part) || !needsGuard(part, allowed)) return part
+      const ok = withAskedFigures(part, allowed, asked)
+      if (!part.trim() || !claimsResult(part) || !needsGuard(part, ok)) return part
       changed = true
-      return guardText(part, allowed).text
+      return guardText(part, ok).text
     })
     if (!changed) return line
     guarded++
@@ -369,11 +466,17 @@ export function applyGuards(
 const CLAIMANT = /\b(?:i|we|my|our|me|us|i've|we've|i'm|we're)\b/i
 const RESULT = /\b(?:reduc|cut|sav|improv|increas|decreas|achiev|deliver|lower|rais|boost|grew|grow|shrank|shrink|eliminat|resolv|handl|process|manag|led|built|onboard|migrat|deploy|automat|secur|protect|block|detect|prevent|accelerat|sped|speed|shorten|drop|halv|doubl|tripl|scal|support|own|oversaw|mentor|train|serv|complet|clos|fix|remediat|patch)\w*/i
 const PLAN = /\b(?:would|will|could|should|can|might|may|if|i'd|we'd|i'll|we'll|plan|propose|expect|target|threshold|set|configure|alert when|at least|at most|within|every|per)\b/i
+const MODAL = /\b(?:would|will|could|should|can|might|may|if|i'd|we'd|i'll|we'll|plan|propose|expect|target)\b/i
+const PAST_RESULT = /\b(?:(?:reduc|sav|improv|increas|decreas|achiev|deliver|lower|rais|boost|eliminat|resolv|handl|process|manag|onboard|migrat|deploy|automat|secur|protect|block|detect|prevent|accelerat|shorten|drop|halv|doubl|tripl|scal|support|own|mentor|train|serv|complet|clos|fix|remediat|patch)ed|cut|led|built|grew|shrank|sped|oversaw)\b/i
 export function claimsResult(sentence: string): boolean {
   const s = String(sentence || "")
   if (/\$\s?\d|\b\d[\d,.]*\s*(?:k|m|million|billion)?\s*(?:usd|dollars)\b/i.test(s)) return true
   if (/\b\d+\+?\s*(?:years?|yrs?)\b/i.test(s) && CLAIMANT.test(s)) return true
-  if (PLAN.test(s)) return false
+  // Stress round 3 (29 Oct 2026): "I reduced incidents by 40% within a quarter", "I cut review time by 50% per audit
+  // cycle" and "I handled over 200 findings every quarter" kept their invented figures, because "within", "per", "every"
+  // and "at least" counted as plan words. Those words only describe a plan when a modal or "if" makes it one; a
+  // first-person past result with a figure is still a claim.
+  if (PLAN.test(s) && (MODAL.test(s) || !PAST_RESULT.test(s) || !CLAIMANT.test(s))) return false
   if (/\d\s*%|\bpercent\b|\b\d[\d,.]*\s*(?:x|times)\b/i.test(s) && RESULT.test(s)) return true
   return CLAIMANT.test(s) && RESULT.test(s)
 }
