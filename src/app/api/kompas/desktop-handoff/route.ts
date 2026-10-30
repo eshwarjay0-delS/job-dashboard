@@ -11,12 +11,29 @@ const NO_STORE = { "Cache-Control": "no-store, private", "X-Content-Type-Options
 const MAX_BYTES = 256_000
 const FIELD_LIMITS: Record<string, number> = {
   id: 128, type: 32, role: 512, company: 512, jd: 120000, resume: 120000,
-  documents: 120000, instructions: 20000, language: 24, interviewer: 64,
+  documents: 120000, instructions: 120000, language: 24, interviewer: 64,
   difficulty: 64, tone: 64, mode: 64, length: 64,
   token: 16384, refreshToken: 16384,
 }
 const BOOL_FIELDS = ["autoAnswer", "autoMode", "saveTranscript"] as const
 const NUM_FIELDS = ["createdAt", "tokenExp"] as const
+
+/**
+ * Older browser sessions can contain structured custom instructions (arrays or
+ * objects) rather than the wizard's plain textarea string. Preserve all text
+ * when issuing a desktop ticket; never silently drop or truncate it.
+ * The outer request cap and FIELD_LIMITS still reject oversized payloads.
+ */
+function instructionText(value: unknown): string | null {
+  if (value === undefined || value === null) return ""
+  if (typeof value === "string") return value
+  if (typeof value === "boolean") return String(value)
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : null
+  if (Array.isArray(value) || (typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype)) {
+    try { return JSON.stringify(value) } catch { return null }
+  }
+  return null
+}
 
 // Browser-local session details are transferred over HTTPS, NOT embedded in
 // Chromium's Windows external-protocol link (which fails above ~2 KB).
@@ -52,10 +69,11 @@ export async function POST(request: NextRequest) {
   const safe: Record<string, unknown> = { site: "marketfit" }
   for (const [field, max] of Object.entries(FIELD_LIMITS)) {
     if (session[field] === undefined) continue
-    if (typeof session[field] !== "string" || (session[field] as string).length > max) {
+    const value = field === "instructions" ? instructionText(session[field]) : session[field]
+    if (typeof value !== "string" || value.length > max) {
       return NextResponse.json({ ok: false, error: "Invalid interview field: " + field }, { status: 400, headers: NO_STORE })
     }
-    safe[field] = session[field]
+    safe[field] = value
   }
   for (const field of BOOL_FIELDS) {
     if (session[field] !== undefined && typeof session[field] !== "boolean") {
