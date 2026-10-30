@@ -65,7 +65,7 @@ test("failsafe: other people in a first-person story are not rewritten or flagge
 })
 test("the repair loop is told about third person it cannot fix itself", () => {
   const s = readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8")
-  assert.match(s, /firstPersonRewrite\(text, job\.sourceText\)\.thirdPerson/)
+  assert.match(s, /repairLoopVoiceEchoChecks\(job\.question, text, job\.previousTurns, job\.sourceText\)/)
 })
 
 // ---- 3. Mode gap on a trick question
@@ -129,7 +129,8 @@ test("settle drops sentences said in any of the last three answers, not only the
   const s = settleSpokenAnswer("How do you close a finding?", raw, "director", RESUME, [older, last].join("\n"))
   assert.doesNotMatch(s.text, /compared the evidence/)
   const svc = readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8")
-  assert.match(svc, /answerEchoesPrevious\(job\.question, text, job\.previousTurns\)/)
+  assert.match(svc, /repairLoopVoiceEchoChecks\(job\.question, text, job\.previousTurns, job\.sourceText\)/)
+  assert.match(readFileSync(new URL("../../src/lib/kompasDissection.ts", import.meta.url), "utf8"), /answerEchoesPrevious\(question, text, previousTurns\)/)
 })
 
 // ---- Round 6 stress reds, fixed with a failing test and a failsafe each
@@ -139,6 +140,9 @@ import { smallTalkOnly } from "../../src/lib/kompasAnswer.ts"
 test("misheard jargon is grounded on the repaired ask, not the raw one", () => {
   const cut = dissectQuestion("what's the cooper netties control plane")
   assert.ok(!cut.banned.some((b) => /cooper|netties/i.test(b)), cut.banned.join("|"))
+  // The asked tool, once repaired, is grounded: Kubernetes and Terraform must not be banned (before the fix they were).
+  assert.ok(!cut.banned.includes("Kubernetes"), cut.banned.join("|"))
+  assert.ok(!dissectQuestion("how would you use terror form for this").banned.includes("Terraform"))
   assert.equal(repairDictation("what's the cooper netties control plane"), "what's the Kubernetes control plane")
 })
 test("interviewer asides are small talk; failsafe: an aside followed by a real ask is not", () => {

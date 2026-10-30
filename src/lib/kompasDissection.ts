@@ -1084,3 +1084,15 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   }
   return trimToWords(parts.join(" "), mode.maxWords)
 }
+
+/**
+ * The two round-6 repair-loop checks, as one pure function so the service and the recorded-output harness
+ * (scripts/kompas-repair-harness.mjs) run the same code: the previous answer given again to a different question, and
+ * third person about the candidate that the settle rewrite cannot fix. Both are core items for judgeRewrite.
+ */
+export function repairLoopVoiceEchoChecks(question: string, text: string, previousTurns: Array<{ q?: unknown; a?: unknown }> = [], sourceText = ""): string[] {
+  const echo = answerEchoesPrevious(question, text, previousTurns)
+  const echoed = echo.same ? [`${echo.reason}; answer only this question${echo.fresh.length ? ` and say ${echo.fresh.join(", ")} in the first sentence` : ""}`] : []
+  const voice = firstPersonRewrite(text, sourceText).thirdPerson ? ["speak as the candidate in the first person (I, my); never use the candidate's name or he or she for the candidate"] : []
+  return [...echoed, ...voice]
+}

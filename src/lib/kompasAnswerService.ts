@@ -20,8 +20,8 @@ import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQ
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
-import { answerEchoesPrevious, dissectQuestion, dissectionPrompt, firstPersonRewrite, isProviderErrorAnswer, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
-import { judgeRewrite, lostAfterSettle, repairLogLine, statusFor, type RepairOutcome } from "@/lib/kompasRepair"
+import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
+import { lostAfterSettle, repairLogLine, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
@@ -395,41 +395,27 @@ function repairChecks(job: AnswerJob, text: string): { core: string[]; all: stri
   const tangents = tangentSignals(job.question, text).map((t) => `remove the unasked technical tangent ${t} and keep the direct answer`)
   // Round 6: the previous answer given again to a different question, and third person the settle rewrite cannot fix,
   // are core: the rewrite is kept only when it clears them, otherwise the original stands (never a blank answer).
-  const echo = answerEchoesPrevious(job.question, text, job.previousTurns)
-  const echoed = echo.same ? [`${echo.reason}; answer only this question${echo.fresh.length ? ` and say ${echo.fresh.join(", ")} in the first sentence` : ""}`] : []
-  const voice = firstPersonRewrite(text, job.sourceText).thirdPerson ? ["speak as the candidate in the first person (I, my); never use the candidate's name or he or she for the candidate"] : []
-  return { core: [...structure, ...named, ...echoed, ...voice], all: [...named, ...structure, ...echoed, ...voice, ...parts, ...tangents] }
+  const voiceEcho = repairLoopVoiceEchoChecks(job.question, text, job.previousTurns, job.sourceText)
+  return { core: [...structure, ...named, ...voiceEcho], all: [...named, ...structure, ...voiceEcho, ...parts, ...tangents] }
 }
 
 // At most two attempts. The second rewrites the BEST answer so far and names only what it still misses (v1 rewrote
 // the original twice with the full list, so a partial fix from attempt one was thrown away). The abort signal is the
 // request signal, not the 55s lane signal, so a settle-time repair does not inherit a spent lane budget.
 async function repairStructure(job: AnswerJob, guardedText: string, req: NextRequest): Promise<{ text: string; repaired: number; repair: RepairOutcome }> {
-  const first = repairChecks(job, guardedText)
-  const missing = first.all
-  if (!missing.length) return { text: guardedText, repaired: 0, repair: { status: "not-needed", attempts: 0, missing: [], stillMissing: [] } }
-  if (!job.orKey) return { text: guardedText, repaired: 0, repair: { status: "no-key", attempts: 0, missing, stillMissing: missing } }
-  let best = { text: guardedText, core: first.core, all: first.all }
-  let attempts = 0
-  let failed = false
-  for (let attempt = 0; attempt < 2 && best.all.length; attempt++) {
-    attempts++
-    const removeTangent = best.all.some((m) => m.startsWith("remove the unasked technical tangent"))
-    try {
+  return runRepairLoop(guardedText, {
+    checks: (text) => repairChecks(job, text),
+    hasKey: Boolean(job.orKey),
+    isProviderError: isProviderErrorAnswer,
+    guard: (text) => applyGuards(text, job.guardFacts, job.allowed, job.askedFigures).text,
+    rewrite: async (best, missing) => {
+      const removeTangent = missing.some((m) => m.startsWith("remove the unasked technical tangent"))
       const { text } = await fetchOpenRouter(job.orKey, PAID_MODEL, structureRepairSystem(job.plan.words, removeTangent),
-        `QUESTION: ${job.question}\n\nANSWER:\n${best.text}\n\nMISSING:\n${best.all.map((m) => `- ${m}`).join("\n")}\n\nThe rewritten answer MUST contain each item above. Return the full rewritten answer and nothing else.`,
+        `QUESTION: ${job.question}\n\nANSWER:\n${best}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}\n\nThe rewritten answer MUST contain each item above. Return the full rewritten answer and nothing else.`,
         1600, AbortSignal.any([req.signal, AbortSignal.timeout(60000)]))
-      const rewrite = text.trim()
-      if (!rewrite || isProviderErrorAnswer(rewrite)) continue
-      const rg = applyGuards(rewrite, job.guardFacts, job.allowed, job.askedFigures)
-      if (!rg.text.trim()) continue
-      const after = repairChecks(job, rg.text)
-      if (judgeRewrite(best.core, after.core, best.all, after.all) > 0) best = { text: rg.text, core: after.core, all: after.all }
-    } catch { failed = true; break }
-  }
-  const fixed = missing.length - best.all.length
-  const status = best.text === guardedText ? (failed && attempts === 1 ? "failed" : "discarded") : statusFor(fixed, missing.length, best.all.length)
-  return { text: best.text, repaired: best.text === guardedText ? 0 : 1, repair: { status, attempts, missing, stillMissing: best.all } }
+      return text
+    },
+  })
 }
 
 /** After settling, record whether what the repair fixed is still there, and log one line per repaired answer. */

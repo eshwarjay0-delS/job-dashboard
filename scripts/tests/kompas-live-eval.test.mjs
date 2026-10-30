@@ -50,3 +50,27 @@ test("idea F failsafe: without the offline flag a missing token still exits 2 be
   assert.equal(result.status, 2)
   assert.doesNotMatch(`${result.stderr}${result.stdout}`, /asking |latency/)
 })
+
+test("repair set: without KOMPAS_EVAL_TOKEN it does nothing and exits 0", () => {
+  const env = { ...process.env, KOMPAS_EVAL_SET: "repair", KOMPAS_EVAL_OFFLINE: "0", KOMPAS_BASE_URL: "http://127.0.0.1:9" }
+  delete env.KOMPAS_EVAL_TOKEN
+  const result = spawnSync(process.execPath, ["scripts/kompas-live-eval.mjs"], { encoding: "utf8", env, cwd: new URL("../..", import.meta.url) })
+  assert.equal(result.status, 0, result.stderr)
+  assert.match(result.stdout, /"mode": "skipped"/)
+})
+test("repair set offline replays the recorded cases and shows PASS/FAIL per case", () => {
+  const env = { ...process.env, KOMPAS_EVAL_SET: "repair", KOMPAS_EVAL_OFFLINE: "1", KOMPAS_BASE_URL: "http://127.0.0.1:9" }
+  delete env.KOMPAS_EVAL_TOKEN
+  const result = spawnSync(process.execPath, ["scripts/kompas-live-eval.mjs"], { encoding: "utf8", env, cwd: new URL("../..", import.meta.url) })
+  assert.equal(result.status, 0, result.stderr)
+  const report = JSON.parse(result.stdout)
+  assert.equal(report.ok, true)
+  assert.ok(report.total >= 15)
+  assert.ok(report.results.every((r) => r.result === "PASS"))
+})
+test("repair set live mode reads the token from the environment and never prints it", () => {
+  const source = readFileSync(new URL("../kompas-live-eval.mjs", import.meta.url), "utf8")
+  const block = source.slice(source.indexOf('=== "repair"'), source.indexOf('if (!token && !offline) {\n  console.error'))
+  assert.match(block, /Bearer \$\{token\}/)
+  assert.doesNotMatch(block, /console\.\w+\([^)]*token\b(?!\s*is)/)
+})

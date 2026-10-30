@@ -9,7 +9,7 @@
  *
  * Optional:
  *   KOMPAS_BASE_URL   default https://job-dashboard-fawn.vercel.app
- *   KOMPAS_EVAL_SET   sample | hitachi | all (default all)
+ *   KOMPAS_EVAL_SET   sample | hitachi | all (default all) | repair (repair-loop cases; see below)
  *
  * Sets:
  *   sample   four sample-resume questions plus one code question, each at engineer, director and architect.
@@ -43,6 +43,59 @@ import { performance } from "node:perf_hooks"
 
 const offline = process.env.KOMPAS_EVAL_OFFLINE === "1"
 const token = process.env.KOMPAS_EVAL_TOKEN || ""
+
+// Repair-loop cases (29 Oct 2026): KOMPAS_EVAL_SET=repair runs the recorded cases of scripts/kompas-repair-harness.mjs.
+//   with KOMPAS_EVAL_TOKEN   live: each case's question is asked with the earlier turn as history, and the answer the
+//                            server returns must not repeat the earlier answer, must be first person, must not be blank or
+//                            provider-error text. The server's `repair` field (status, attempts) is printed; attempts > 2
+//                            fails. Exit 1 on any failure.
+//   KOMPAS_EVAL_OFFLINE=1    replays the recorded model outputs through the production loop (NOT live answer quality).
+//   neither                  prints that it was skipped, makes no network call, exits 0.
+if ((process.env.KOMPAS_EVAL_SET || "") === "repair") {
+  const harness = await import("./kompas-repair-harness.mjs")
+  if (!token && !offline) {
+    console.log(JSON.stringify({ mode: "skipped", reason: "KOMPAS_EVAL_TOKEN is not set; no production call was made", cases: harness.CASES.length }, null, 2))
+    process.exit(0)
+  }
+  if (offline) {
+    const rows = await harness.runAll()
+    const failed = rows.filter((r) => r.fails.length)
+    console.log(JSON.stringify({ mode: "offline (recorded model outputs; NOT live answer quality)", ok: !failed.length, pass: rows.length - failed.length, total: rows.length,
+      results: rows.map((r) => ({ id: r.id, result: r.fails.length ? "FAIL" : "PASS", status: r.status, attempts: r.attempts, fails: r.fails })) }, null, 2))
+    process.exit(0)
+  }
+  const { repairLoopVoiceEchoChecks, isProviderErrorAnswer } = await import("../src/lib/kompasDissection.ts")
+  const base = process.env.KOMPAS_BASE_URL || "https://job-dashboard-fawn.vercel.app"
+  const results = []
+  for (const c of harness.CASES) {
+    const history = harness.PREVIOUS_TURNS
+    const fails = []
+    let text = "", repair = null
+    try {
+      const response = await fetch(new URL("/api/kompas/answer", base), {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({ stream: false, question: c.question, history, config: { level: "director", interviewer: "director", responseCalibration: "three-level-v1", resume: harness.RESUME } }),
+        signal: AbortSignal.timeout(90000),
+      })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) fails.push(`HTTP ${response.status} ${body.code || ""}`.trim())
+      text = String(body.text || "")
+      repair = body.repair || null
+    } catch (error) { fails.push(`request failed: ${error?.name || "error"}`) }
+    if (!fails.length) {
+      if (!text.trim()) fails.push("blank answer")
+      if (isProviderErrorAnswer(text)) fails.push("provider error text shown as the answer")
+      for (const item of repairLoopVoiceEchoChecks(c.question, text, harness.PREVIOUS_TURNS, harness.RESUME)) fails.push(item.slice(0, 120))
+      if (repair && repair.attempts > 2) fails.push(`repair made ${repair.attempts} attempts, more than 2`)
+    }
+    results.push({ id: c.id, result: fails.length ? "FAIL" : "PASS", repair: repair ? { status: repair.status, attempts: repair.attempts } : null, words: text.trim() ? text.trim().split(/\s+/).length : 0, fails })
+    process.stderr.write(`${fails.length ? "FAIL" : "PASS"} ${c.id}\n`)
+  }
+  const failed = results.filter((r) => r.result === "FAIL").length
+  console.log(JSON.stringify({ mode: "live", origin: base, ok: !failed, pass: results.length - failed, total: results.length, results }, null, 2))
+  process.exit(failed ? 1 : 0)
+}
 if (!token && !offline) {
   console.error("KOMPAS_EVAL_TOKEN is not set. No production call was made. Put a Supabase access token in the environment and run this again.")
   process.exit(2)
