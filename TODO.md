@@ -1,3 +1,7 @@
+## 2026-10-29 — Go deeper on a named subject is still a new ask
+
+"Go deeper" alone was a new ask. "Go deeper on that exception" was not, so a press after an answer re-asked the old question. A follow-up that continues into its subject is a new ask. The page stamp is kompas-20261029-ask.
+
 ## 2026-10-29 — Go deeper heard after an answer is a new ask
 
 "Go deeper" and "Explain that" were not treated as questions, so a press after an answer re-asked the old question. They are short follow-ups now. "What exactly is least privilege?" is not. The page stamp is kompas-20261029-deeper. Fifty heard sequences still cut apart.

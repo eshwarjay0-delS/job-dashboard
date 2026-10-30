@@ -1676,6 +1676,12 @@ function shortFollowUp(text) {
   const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim();
   return /^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|go deeper|dig deeper|explain that|explain this|explain it|say that again|why|how)(?:\s+though)?[.?!]*$/i.test(t);
 }
+// "Go deeper on that exception" names a subject, so it is not the two-word follow-up, and it is still a new ask.
+function opensNewAsk(text) {
+  const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim();
+  if (shortFollowUp(t)) return true;
+  return /^(?:(?:and|so|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|walk me through|say that again)\b/i.test(t);
+}
 function clauseStillOpen(text) {
   const t = String(text || "").replace(/\s+/g, " ").trim();
   if (!t || /[?.!…]["']?$/.test(t)) return false;
@@ -1752,7 +1758,7 @@ function splitDistinctAsks(text) {
   }
   return groups.map((g) => g.join(" ").replace(/\s+/g, " ").trim()).filter(Boolean);
 }
-const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && (Q_CUE.test(t.text) || shortFollowUp(t.text)));
+const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
 function scheduleAuto() {
   clearTimeout(autoTimer);
   if (!autoOn || !armsAuto()) return;
@@ -2528,7 +2534,7 @@ async function aiAnswer(fromAuto) {
       // reporting the same vulnerability" got the password-reset answer). A press with nothing new asked still re-asks.
       // Each sentence is judged on its own: "Thanks for the overview. What drove the move to Azure?" is a new question, and
       // "My question is how you'd isolate a runner" asks without opening like a question (review of 398f299).
-      const newAsk = !typedText && pending.some(t => sentencesOf(t.text).some(x => (askSentence(x) || shortFollowUp(x)) && !repeatsPriorQuestion(x, cur && cur.question || "")));
+      const newAsk = !typedText && pending.some(t => sentencesOf(t.text).some(x => (askSentence(x) || opensNewAsk(x)) && !repeatsPriorQuestion(x, cur && cur.question || "")));
       // The sign-off is not a re-press (27 Oct 2026): "I do have a hard stop ... thank you for taking the time" heard
       // after an answer re-asked the page on screen and answered it again. Only closing sentences and fillers, no ask.
       if (!typedText && pending.some(t => sentencesOf(t.text).some(x => SIGN_OFF.test(x) || COURTESY.test(x))) && pending.every(t => sentencesOf(t.text).every(closingSentence))) {
