@@ -46,7 +46,10 @@ test("r8: a question line and its answer lines are one item; page headers/footer
   assert.ok(!items.some((i) => /Page \d|THE FILE/.test(i.text)))
   assert.equal(lineKind("Tree 3"), "title")
 })
-test("r8: the matching question pulls its answer first, not a fragment", () => {
+test("r8: the matching question pulls its answer first, not a fragment", (t) => {
+  // demo-final: the r8 item split ships behind KOMPAS_DOSSIER_ITEMS (default OFF), so this test turns it on for itself.
+  const was = process.env.KOMPAS_DOSSIER_ITEMS; process.env.KOMPAS_DOSSIER_ITEMS = "1"
+  t.after(() => { if (was === undefined) delete process.env.KOMPAS_DOSSIER_ITEMS; else process.env.KOMPAS_DOSSIER_ITEMS = was })
   const r = retrievePassages("How would you threat model a payments API?", sourceDocs({ dossier: DOSSIER }))
   assert.match(r.passages[0].text, /trust boundary/)
   assert.ok(Array.isArray(r.passages[0].span))
