@@ -275,6 +275,7 @@ export async function handleWhatsAppKompas({ from, owner, verified, requestId, m
           revision = result.session.revision
           continue
         }
+        if (result.status === "skipped" && result.session) { await send("Personal logistics, not answered."); revision = result.session.revision; continue }
         if (result.status === "unavailable") {
           await send("Kompas could not answer right now. Your question was not added to the conversation. Please retry.")
           return true
