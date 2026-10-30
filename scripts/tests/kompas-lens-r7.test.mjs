@@ -7,6 +7,8 @@ import { lensBlock } from "../../src/lib/kompasAudience.ts"
 import { contradictions } from "../kompas-lens-prompt-check.mjs"
 import { openerPrompt } from "../../src/lib/kompasOpener.ts"
 import { runMatrix } from "../kompas-lens-matrix.mjs"
+// The Lens prompt layer ships OFF (KOMPAS_DESKTOP_LENS); these tests check it switched on. kompas-lens-default-off.test.mjs checks off.
+process.env.KOMPAS_DESKTOP_LENS = "on"
 
 vm.runInThisContext(readFileSync(new URL("../../public/kompas/levels-core.js", import.meta.url), "utf8"))
 const K = globalThis.KompasLevels

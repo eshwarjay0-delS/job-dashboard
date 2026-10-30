@@ -9,6 +9,8 @@ import { depthFor, audienceGuidance, composeLensAnswer, REALISM, RUNGS, lensBloc
 import { allowedNumbers, applyGuards, speakFacts, claimsResult, questionFigures } from "../../src/lib/kompasGuards.ts"
 import { modeBand } from "../../src/lib/kompasDissection.ts"
 import { CONCEPTS, S } from "../kompas-lens-folds.mjs"
+// The Lens prompt layer ships OFF (KOMPAS_DESKTOP_LENS); these tests check it switched on. kompas-lens-default-off.test.mjs checks off.
+process.env.KOMPAS_DESKTOP_LENS = "on"
 
 // ---- (1) contradictions in the real assembled prompt text
 test("prompt checker: no contradiction between the lens blocks and the existing rules (9 audiences x 10 questions x 3 paths x 3 opener states)", () => {

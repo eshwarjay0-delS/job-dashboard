@@ -1,7 +1,7 @@
 import { modeBand, type AnswerShape } from "./kompasDissection.ts"
 import { askSentences } from "./kompasAsk.ts"
 import { openerCategory } from "./kompasOpener.ts"
-import { lensBlock } from "./kompasAudience.ts"
+import { lensBlock, lensSwitchOn } from "./kompasAudience.ts"
 
 /** Desktop response contract. The question sets the depth. The level changes how it is spoken. */
 export type DesktopQuestionKind = 'definition' | 'comparison' | 'experience' | 'implementation' | 'topic' | 'general'
@@ -185,7 +185,7 @@ export function desktopResponsePolicy(audience: string, question: string) {
     : directFact
     ? `This asks for a fact about the candidate. Answer it first, yes or no, from the resume, then one compact proof from the role whose section lists it. Do not define the tool, recite the introduction or open a story. ${EXACT_AND_PLACED}`
     : `This is an ordinary question. Answer it in a few sentences. ${angle} ${SURFACE_STOP}`
-  const explain = explainModesAsked(question) ? ` ${EXPLAIN_MODES}` : ""
+  const explain = lensSwitchOn() && explainModesAsked(question) ? ` ${EXPLAIN_MODES}` : "" // Lens: OFF unless KOMPAS_DESKTOP_LENS=on
   const shape = levelMetrics(level)
   const spoken = `SPOKEN MEASURES for this level only: depth ${shape.depth}, distinction ${shape.distinction}, integration ${shape.integration}, relevance ${shape.relevance}, confidence ${shape.confidence}. These are not the same as the other two levels. SPOKEN CARD: one sentence a line, the way a person talks. Keep the technical name. Do not write a command, a sign, a math sum, or a block of code. Write at least nine, never >=9. Write and, never an ampersand and never x-amp. The last sentence is the plain takeaway, still about this question, said as the completed thought itself and never announced (no "The key takeaway is", "In conclusion", "To sum up"). Do not open another topic.`
   return { kind, level, words, metrics: shape, guidance: `DESKTOP THREE-LEVEL RESPONSE CONTRACT — this shape wins over any earlier template that treats every question as an investigation.\nQUESTION SHAPE: ${kind}. ${scope}${explain}\n${spoken}\nAim for about ${words} words. The level changes the angle. The question decides how far to go. A definition is not a deep example. A deep example is not a definition.` }

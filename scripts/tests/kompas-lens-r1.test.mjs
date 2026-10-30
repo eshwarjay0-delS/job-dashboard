@@ -7,6 +7,8 @@ import { desktopResponsePolicy, explainModesAsked } from "../../src/lib/kompasDe
 import { extractClaims } from "../../src/lib/kompasSourceRetrieval.ts"
 import { allowedNumbers } from "../../src/lib/kompasGuards.ts"
 import { S, LENSES, variant } from "../kompas-lens-folds.mjs"
+// The Lens prompt layer ships OFF (KOMPAS_DESKTOP_LENS); these tests check it switched on. kompas-lens-default-off.test.mjs checks off.
+process.env.KOMPAS_DESKTOP_LENS = "on"
 
 const N = Number(process.env.LENS_FOLDS || 200)
 const SOURCES = [S.resume, S.jd, S.documents]

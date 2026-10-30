@@ -8,6 +8,8 @@ import { openerCategory, pickOpener, buildOpenerTable } from "../../src/lib/komp
 import { explainModesAsked, desktopResponsePolicy } from "../../src/lib/kompasDesktopResponse.ts"
 import { depthFor, audienceGuidance, composeLensAnswer, composeLensParts, realismMarkers } from "../../src/lib/kompasAudience.ts"
 import { CONCEPTS, variant } from "../kompas-lens-folds.mjs"
+// The Lens prompt layer ships OFF (KOMPAS_DESKTOP_LENS); these tests check it switched on. kompas-lens-default-off.test.mjs checks off.
+process.env.KOMPAS_DESKTOP_LENS = "on"
 
 const S = JSON.parse(readFileSync(new URL("../../tests/fixtures/kompas-sample-sources.json", import.meta.url), "utf8"))
 
