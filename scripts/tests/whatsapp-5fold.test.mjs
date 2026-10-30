@@ -84,7 +84,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     getText: async key => entries.get(key) ?? null,
     delete: async key => { entries.delete(key) },
   }
-  const acceptable = { token: 'result', score: 100, coverage: 40, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] } }
+  const acceptable = { token: 'result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] } }
   const { generate } = load('src/app/api/whatsapp/webhook/route.ts', {
     '@/lib/whatsapp-kompas-channel': { handleWhatsAppKompas: async () => false },
     '@/lib/whatsapp-voice': { speechToWhatsAppText: async () => { throw new Error('no voice') } },

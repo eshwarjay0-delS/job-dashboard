@@ -26,6 +26,10 @@ const LOGISTICS=/\b(?:relocat(?:e|ion)|on.?site|hybrid|notice period|start date|
 const DEFINE=/\b(?:what (?:exactly |precisely )?is|what (?:exactly |precisely )?are|what(?: does|'s| is) .{1,55} mean|define|stands? for|explain (?:the term|what .{1,60} is))\b/i
 const COMPARE=/\b(?:which (?:one|framework|tool|approach|option|is)|which of those|which would you (?:choose|pick|prefer|start)|stronger (?:in|with)|more (?:proficient|comfortable|familiar)|difference between|compare|versus|vs[.]?|how do .+ differ|how is .{1,80} different|how\b[^?]{0,110}\bdiffer(?:s|ed)?\b|prefer .+ (?:or|over))\b/i
 const SCENARIO=/\b(?:how would you|what would you do|suppose|imagine|if you (?:were|had|found|saw)|hypothetical|in that situation|how should (?:we|the team)|scenario)\b/i
+const EXPLAIN_EXPERIENCE=/\b(?:explain|describe|tell (?:me|us) (?:a (?:little|bit) |a little bit |more )?about|walk (?:me|us) through|talk (?:me|us) (?:through|about)|elaborate on|share|go (?:over|through))\s+(?:(?:a (?:little|bit)|a little bit|more)\s+(?:about\s+)?)?(?:your|ur)\s+(?:(?:hands-on|practical|prior|past|previous|professional|relevant|overall|direct|own|real-world|real|actual|day-to-day)\s+)*(?:experience|background|work|involvement|exposure)\s+(?:with|in|on|around|using|of|leading|managing|running|building|doing|handling|designing|owning)\s+\S/i
+// "What is your experience with X?" (owner list, 30 Oct 2026): the same invitation to explain as "Explain your experience
+// with X", asked as a what-question. It fell through to "direct" and got the 44-word ceiling.
+const WHAT_EXPERIENCE=/\b(?:what(?:'s|\s+is|\s+has\s+been|\s+was|\s+would\s+you\s+say\s+is)\s+(?:your|ur)\s+(?:(?:hands-on|practical|prior|past|previous|professional|relevant|overall|direct|own|real-world|real|actual|day-to-day)\s+)*(?:experience|background|involvement|exposure)|what\s+(?:kind\s+of\s+|sort\s+of\s+|type\s+of\s+)?(?:hands-on\s+|practical\s+|prior\s+|relevant\s+)?experience\s+do\s+you\s+have)\s+(?:with|in|on|around|using|of|leading|managing|running|building|doing|handling|designing|owning)\s+\S/i
 const DEEP=/\b(?:step by step|walk me through|under the hood|exact (?:logs|fields|mechanics|steps|flow)|deep dive|debug|troubleshoot|design|implement|packet|query|architecture|how (?:does|do|did) .+ work|how exactly)\b/i
 const ACK=/^\s*(?:yeah|right|okay|ok|great|thanks|thank you|that makes sense|absolutely|so that's|you(?:'ll| will)|we(?:'ll| will)|the team|our team|it's important|i expect|i would expect)\b/i
 const FOLLOW=/^\s*(?:and (?:then|how|why|what)|what (?:about|happened)|what did you (?:check|see|do) first|how (?:so|did you verify)|can you (?:expand|elaborate)|(?:go|dig) deeper|go on|tell me more|why is that|why is that important|explain (?:that|this|it)|walk me through (?:that|this|it)|say that again)\b/i
@@ -50,6 +54,9 @@ export function interviewIntent(question: string): ReplyIntent {
   // "Why?" is glued onto the previous question, then classified as a new direct ask.
   // The prompt then tells the answer to start over. A bare why or how come stays a follow-up.
   if(BARE_FOLLOW.test(q)) return "follow-up"
+  // Stress round 2 (29 Oct 2026): "Hi, can you hear me okay?" and "How are you doing today?" were answered as direct
+  // questions. A greeting or line check gets a brief acknowledgement, never a work answer.
+  if(/^\s*(?:(?:hi|hello|hey|good (?:morning|afternoon|evening))\b[,.!\s]*)?(?:(?:can|could) you hear me(?: okay| ok| alright| well)?|(?:are you|is it) able to hear me|how are you(?: doing)?(?: today)?|how(?:'s| is) (?:it going|your day(?: going)?)|is my (?:audio|mic|video) (?:okay|ok|working))[\s?.!]*$/i.test(q)) return "acknowledgement"
   // The interviewer marked the earlier words as not the question. The ask is what follows.
   if(/\b(?:any questions|what questions do you have|do you have any questions)\b[^.?!]*\??\s*$/i.test(q) && !INTRO.test(q)) return "closing-question"
   // "How would you explain residual risk to a business owner" asks for the meaning, said so they can use it.
@@ -66,9 +73,16 @@ export function interviewIntent(question: string): ReplyIntent {
   if(/\b(?:describe (?:a|an) (?:project|incident|challenge|failure|achievement|situation) (?:you|where|that|when)|walk me through (?:a|an) (?:project|incident|failure|challenge) (?:you|where|that))\b/i.test(q)) return "experience-story"
   if(/\bwhen (?:can|could|would) you start\b/i.test(q)) return "logistics"
   if(/^(?:notice|remote|bonus|salary|hybrid|on-?site|h-?1b|opt|ts\s*\/\s*sci|shift|weekend|overtime|citizen|clearance|sponsorship|relocation|start date|night shift|travel|visa|tn visa|w-?2|c2c|full[- ]time|contract|pto|benefits|401k|equity|ead|l-?1|hourly|day rate)[.?!]*$/i.test(q)) return "logistics"
-  if(/\b(?:two|\d+)\s+weeks'?\s+notice\b|\b(?:work(?:ing)?\s+(?:nights?|weekends?)|night shifts?|on-?call|full[- ]time|day rate|hourly (?:rate|pay)|start in (?:two|\d+) weeks)\b|\bare you local\b/i.test(q)) return "logistics"
+  if(/\b(?:two|\d+)\s+weeks'?\s+notice\b|\b(?:work(?:ing)?\s+(?:nights?|weekends?)|night shifts?|available for on-?call|work(?:ing)? on-?call|full[- ]time|day rate|hourly (?:rate|pay)|start in (?:two|\d+) weeks)\b|\bare you local\b/i.test(q)) return "logistics"
   if(/\b(?:in(?:\s+the)?\s+office|days?\s+in(?:\s+the)?\s+office)\b/i.test(q) && !/\b(?:how|why|design|troubleshoot)\b/i.test(q)) return "logistics"
   if(/^\s*(?:why was that important|what did you do next|how did you (?:measure|test|check|confirm) (?:that|it|the result))\b/i.test(q)) return "follow-up"
+  // Explain-length (30 Oct 2026, live): "Explain / describe / walk me through / tell me about your experience with X" fell
+  // through to "direct" and got the 44-word direct ceiling, so a clear invitation to explain came back as shorthand. It
+  // is an experience ask: the full source-grounded STAR band. Failsafe: an explicitly brief or one-sentence ask, a
+  // yes/no ("Do you have experience with X?") and a comparison keep their own shorter route. A topic must follow the
+  // noun (a bare "your background" is an introduction), and an ask that ends on an employer ("…at Google") keeps its
+  // old route, so the employer honesty line ("the resume does not show…") still fires.
+  if((EXPLAIN_EXPERIENCE.test(q) || WHAT_EXPERIENCE.test(q)) && !/\b(?:brief(?:ly)?|quick(?:ly)?|short|in (?:one|a|two) (?:sentence|line|word)s?|in a nutshell|one-liner)\b/i.test(q) && !COMPARE.test(q) && !/\bat\s+[A-Z][\w&.-]*(?:\s+[A-Z][\w&.-]*)*\s*(?:[,.?!]|$)/.test(q)) return "experience-story"
   if(/\b(?:explain how|describe how)\b/i.test(q) && !COMPARE.test(q)) return "technical-process"
   if(CLOSING.test(q) && !INTRO.test(q)) return "closing-question"
   if(INTRO.test(q) || /^(?:(?:big|brief|short|quick|full|personal|detailed|self)\s+)?intro(?:duction)?[.?!]*$/i.test(q)) return "introduction"
@@ -86,10 +100,6 @@ export function interviewIntent(question: string): ReplyIntent {
   // Director statements often trail off with "right?" without asking the
   // candidate a substantive question. Do not introduce a full technical story.
   if(!QUESTION.test(q) && /\b(?:tells you|asks you|disagrees with (?:you|your))\b/i.test(q)) return "scenario"
-  // r7 (#28): "Write a Python function that returns the findings still open after 30 days." has no question mark, so it
-  // fell through to acknowledgement and got a "yes, I can hear you" reply. A typed instruction to produce code or an
-  // explanation is an ask. Narrow: only a leading imperative verb; greetings and statements are unchanged.
-  if(/^\s*(?:(?:um+|uh+|so|okay|ok|well|now)[,\s]+)*(?:please\s+)?(?:write|implement|code up|build|create|design|show me|give me|explain|describe|walk me through|list|compare)\b/i.test(q) && q.split(/\s+/).length>=3) return "direct"
   // r5 (29 Oct 2026): "You will see X come up a lot. Tell me about Y." was read as a statement and got a line-check reply.
   // A later sentence that opens with an imperative ask (tell, describe, explain, walk, give) is a real ask.
   const laterAsk=/[.!;]\s+(?:so,?\s+)?(?:tell me|describe|explain|walk me|give me)\b/i.test(q)
@@ -228,4 +238,29 @@ export function missingNamedQuestionTerms(question:string,answer:string):string[
  if(["introduction","closing-question","acknowledgement","value","logistics"].includes(interviewIntent(question)))return []
  const q=String(question||''),a=String(answer||'')
  return NAMED_CONCEPTS.filter(t=>t.ask.test(q)&&!t.answer.test(a)).map(t=>t.id)
+}
+
+// Owner rule (Eshwar, 29 Oct 2026, 11:26 PM CT): Kompas does not answer personal logistics. Only resume content may be
+// personal. The owner's list only (not clearance, travel, remote or hybrid), and only the candidate's own present or future
+// terms: "What was your start date at Citi?" is resume history and "high availability" or "IP address" is technical.
+const PERSONAL_LOGISTICS = /\b(?:visa|sponsorship|sponsor (?:me|you)|work authori[sz]ation|authori[sz]ed to work|h-?1b|green card|ead|citizenship|(?:u\.?\s*s\.?|u\s+s|united states|american|a|an)\s+citizens?|salary|compensation|ctc|pay (?:range|rate|expectations?)|(?:hourly|day|bill|your|desired|expected) rate|relocat(?:e|ion)(?!\s+(?:the|a|an|our|this|that|these|those|it|its|data|workloads?|services?|servers?|apps?|applications?|secrets?|keys?|credentials?|certificates?|certs?|accounts?|hosts?|clusters?|subnets?)\b)|(?:your|home|current|mailing|residential) address|where (?:are|do) you (?:currently )?(?:based|located|live|living|staying)|current(?:ly)? location|(?:your|earliest|possible|expected) start date|when (?:can|could|would) you (?:start|join)|how soon can you (?:start|join)|available to (?:start|join)|notice period|weeks'? notice|your availability(?! (?:targets?|slas?|slos?|goals?|metrics?|numbers?|requirements?)\b)|are you (?:currently )?available(?! (?:zones?|regions?)\b))\b|^\s*(?:(?:what is |what's )?(?:your )?availability|citizen|notice|start date)[.?!]*$/i
+const NOT_PERSONAL = /\b(?:was|were|did|had|tell me about (?!your (?:visa|salary|notice|availability|relocation))|how (?:do|does|did|would|is|are)|why|explain|describe|walk (?:me|us) through|design|implement|build|difference|zones?|limit(?:ing|s)?|work at|experience|worked|projects?)\b|\b(?:and|also|plus)\b[^.?!]*\b(?:what|how|why|tell|explain|describe|walk)\b/i
+/** A pure personal-logistics ask the owner does not want answered. Anything else, or anything ambiguous, is false. */
+// Chief decision (29 Oct 2026, 11:49 PM CT): the candidate's own relocation and location fail closed, even behind why/how/tell me.
+// Moving servers, workloads or a data center is technical and stays open; an unsplit compound still fails open.
+const PERSONAL_MOVE = /(?<!\b(?:data ?cent(?:er|re)|server|workload|application|app|service|cloud|vault|database|office|team)\s)\brelocat(?:e|es|ed|ing|ion)\b(?!\s+(?:the|a|an|our|this|that|these|those|it|its|of|data|workloads?|services?|servers?|apps?|applications?|vault|psm|databases?|secrets?|keys?|credentials?|certificates?|certs?|accounts?|hosts?|clusters?|subnets?)\b)|\bwhere (?:are|do) you (?:currently )?(?:based|located|live|living|staying)\b|\b(?:you are|you're) (?:currently )?(?:based|located)\b|\byour current(?:ly)? location\b|\bwhy are you based\b/i
+const UNSPLIT_COMPOUND = /\b(?:and|also|plus)\b[^.?!]*\b(?:what|how|why|tell|explain|describe|walk)\b/i
+export function personalLogistics(text: string): boolean {
+  const t = String(text || "").trim()
+  if (!t || t.split(/\s+/).length > 16) return false
+  if (PERSONAL_MOVE.test(t)) return !UNSPLIT_COMPOUND.test(t)
+  return PERSONAL_LOGISTICS.test(t) && !NOT_PERSONAL.test(t)
+}
+/** The ask with any pure logistics clause removed, other words untouched; "" when only logistics was asked. */
+export function withoutLogistics(text: string): string {
+  const s = String(text || "")
+  const parts = s.split(/,?\s+(?:and|also|plus)(?:\s+(?:um+|uh+|so|then|also|and),?)*\s+(?=(?:tell|explain|describe|how|what|why|walk|can|could|do|have|are|where|when|would)\b)/i)
+  if (parts.length === 1) return personalLogistics(s) ? "" : s
+  const kept = parts.filter((p) => !personalLogistics(p))
+  return kept.length === parts.length ? s : kept.join(" and ").trim()
 }

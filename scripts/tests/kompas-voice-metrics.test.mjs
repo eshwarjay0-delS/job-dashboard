@@ -65,3 +65,130 @@ test("legacy baseline without reference fingerprint cannot claim comparable impr
   delete baseline.referenceSetSha256;
   assert.throws(()=>evaluate(set([row("one","yes","yes")]),baseline),/Baseline mismatch/);
 });
+
+test("baseline rejects a shifted latency subset with the same sample count",()=>{
+  const base=evaluate(set([row("a","yes","yes",{latencyMs:900}),row("b","yes","yes")]));
+  assert.throws(()=>evaluate(set([row("a","yes","yes"),row("b","yes","yes",{latencyMs:100})]),base),/Baseline mismatch/);
+});
+test("baseline rejects moved edit labels even when edit-label totals match",()=>{
+  const base=evaluate(set([row("a","yes","yes",{editCount:0}),row("b","yes","yes")]));
+  assert.throws(()=>evaluate(set([row("a","yes","yes"),row("b","yes","yes",{editCount:0})]),base),/Baseline mismatch/);
+});
+test("baseline accepts moved predictions with the same reference speaker cohort",()=>{
+  const base=evaluate(set([row("a","yes","yes",{referenceSpeaker:"one",predictedSpeaker:"one"}),row("b","yes","yes",{referenceSpeaker:"two"})]));
+  const next=evaluate(set([row("a","yes","yes",{referenceSpeaker:"one"}),row("b","yes","yes",{referenceSpeaker:"two",predictedSpeaker:"two"})]),base);
+  assert.equal(base.coverage.speakerLabels,2);
+  assert.equal(next.coverage.speakerLabels,2);
+  assert.equal(base.metrics.speakerAttribution,.5);
+  assert.equal(base.metrics.speakerPredictionRate,.5);
+  assert.equal(next.metrics.speakerAttribution,.5);
+  assert.equal(next.metrics.speakerPredictionRate,.5);
+  assert.equal(next.deltaFromBaseline.speakerAttribution,0);
+  assert.equal(next.deltaFromBaseline.speakerPredictionRate,0);
+  assert.equal(next.measurementSetSha256,base.measurementSetSha256);
+});
+test("baseline accepts same measurement-label cohort with changed predictions",()=>{
+  const base=evaluate(set([row("a","yes","yes",{editCount:0,latencyMs:900,referenceSpeaker:"one",predictedSpeaker:"one"})]));
+  const next=evaluate(set([row("a","yes","no",{editCount:1,latencyMs:100,referenceSpeaker:"one",predictedSpeaker:"two"})]),base);
+  assert.equal(next.deltaFromBaseline.wer,1);
+  assert.equal(next.deltaFromBaseline.p50LatencyMs,-800);
+  assert.equal(next.deltaFromBaseline.zeroEditRate,-1);
+  assert.equal(next.deltaFromBaseline.speakerAttribution,-1);
+});
+test("baseline rejects missing measurement fingerprint or modified coverage",()=>{
+  const base=evaluate(set([row("a","yes","yes",{latencyMs:100})]));
+  assert.match(base.measurementSetSha256,/^[a-f0-9]{64}$/);
+  assert.throws(()=>evaluate(set([row("a","yes","yes",{latencyMs:100})]),{...base,measurementSetSha256:undefined}),/Baseline mismatch/);
+  assert.throws(()=>evaluate(set([row("a","yes","yes",{latencyMs:100})]),{...base,coverage:{...base.coverage,latencySamples:0}}),/Baseline mismatch/);
+});
+test("baseline rejects nonfinite or malformed aggregate metrics",()=>{
+  const base=evaluate(set([row("a","yes","yes")]));
+  assert.throws(()=>evaluate(set([row("a","yes","yes")]),{...base,metrics:{...base.metrics,wer:Infinity}}),/Baseline mismatch/);
+  assert.throws(()=>evaluate(set([row("a","yes","yes")]),{...base,metrics:{...base.metrics,wer:"0"}}),/Baseline mismatch/);
+});
+
+test("missing speaker prediction is counted as wrong rather than omitted",()=>{
+  const r=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A"}),row("b","hello","hello",{referenceSpeaker:"B",predictedSpeaker:"B"})]));
+  assert.equal(r.coverage.speakerLabels,2);
+  assert.equal(r.metrics.speakerAttribution,.5);
+  assert.equal(r.metrics.speakerPredictionRate,.5);
+});
+test("all missing predictions produce zero accuracy rather than undefined accuracy",()=>{
+  const r=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A"})]));
+  assert.equal(r.metrics.speakerAttribution,0);
+  assert.equal(r.metrics.speakerPredictionRate,0);
+});
+test("speaker abstention and later prediction are comparable for identical reference cohort",()=>{
+  const base=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A"})]));
+  const candidate=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A",predictedSpeaker:"A"})]),base);
+  assert.equal(candidate.deltaFromBaseline.speakerAttribution,1);
+  assert.equal(candidate.deltaFromBaseline.speakerPredictionRate,1);
+  assert.equal(candidate.measurementSetSha256,base.measurementSetSha256);
+});
+test("legacy speaker benchmark schema is rejected, never silently compared",()=>{
+  const base=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A"})]));
+  assert.equal(base.schemaVersion,2);
+  assert.throws(()=>evaluate(set([row("a","hello","hello",{referenceSpeaker:"A"})]),{...base,schemaVersion:1}),/Baseline mismatch/);
+});
+test("speaker reference cohort cannot be changed to game attribution denominator",()=>{
+  const base=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A"}),row("b","hello","hello")]));
+  assert.throws(()=>evaluate(set([row("a","hello","hello"),row("b","hello","hello",{referenceSpeaker:"A"})]),base),/Baseline mismatch/);
+});
+test("speaker prediction without reference is not scored as a verified attribution",()=>{
+  const r=evaluate(set([row("a","hello","hello",{predictedSpeaker:"A"})]));
+  assert.equal(r.coverage.speakerLabels,0);
+  assert.equal(r.metrics.speakerAttribution,null);
+  assert.equal(r.metrics.speakerPredictionRate,null);
+});
+
+test("baseline cannot hide observed WER by changing it to null",()=>{
+  const samples=[row("a","one two","one",{latencyMs:100})],base=evaluate(set(samples));
+  assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,wer:null}}),/Baseline mismatch/);
+});
+test("baseline cannot hide observed speaker errors behind null",()=>{
+  const samples=[row("a","yes","yes",{referenceSpeaker:"A"})],base=evaluate(set(samples));
+  assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,speakerAttribution:null}}),/Baseline mismatch/);
+});
+test("baseline cannot invent measurements for absent latency cohort",()=>{
+  const samples=[row("a","yes","yes")],base=evaluate(set(samples));
+  assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,p95LatencyMs:0}}),/Baseline mismatch/);
+});
+test("baseline refuses impossible bounded rates and negative WER",()=>{
+  const samples=[row("a","yes","yes",{editCount:0})],base=evaluate(set(samples));
+  for(const [key,value] of [["zeroEditRate",1.01],["technicalTermRecall",-1],["wer",-0.1]]){
+    assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,[key]:value}}),/Baseline mismatch/);
+  }
+});
+test("baseline rejects reversed latency percentiles",()=>{
+  const samples=[row("a","yes","yes",{latencyMs:100}),row("b","yes","yes",{latencyMs:200})],base=evaluate(set(samples));
+  assert.throws(()=>evaluate(set(samples),{...base,metrics:{...base.metrics,p50LatencyMs:250}}),/Baseline mismatch/);
+});
+test("baseline accepts zero-coverage nulls and WER above one from insertions",()=>{
+  const samples=[row("a","yes","yes yes yes")],base=evaluate(set(samples));
+  assert.equal(base.metrics.wer,2);
+  assert.equal(base.metrics.p95LatencyMs,null);
+  assert.equal(evaluate(set(samples),base).deltaFromBaseline.wer,0);
+});
+
+test("empty reference speaker cannot create an apparently correct attribution",()=>{
+  assert.throws(()=>evaluate(set([row("a","hello","hello",{referenceSpeaker:"",predictedSpeaker:""})])),/Invalid reference speaker label/);
+});
+test("whitespace-only predicted speaker is not a valid successful prediction",()=>{
+  assert.throws(()=>evaluate(set([row("a","hello","hello",{referenceSpeaker:"A",predictedSpeaker:"  "})])),/Invalid predicted speaker label/);
+});
+test("numeric reference speaker is not silently dropped from the denominator",()=>{
+  assert.throws(()=>evaluate(set([row("a","hello","hello",{referenceSpeaker:42})])),/Invalid reference speaker label/);
+});
+test("object predicted speaker is rejected instead of becoming an abstention",()=>{
+  assert.throws(()=>evaluate(set([row("a","hello","hello",{referenceSpeaker:"A",predictedSpeaker:{id:"A"}})])),/Invalid predicted speaker label/);
+});
+test("null predicted speaker remains an explicit abstention",()=>{
+  const result=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A",predictedSpeaker:null})]));
+  assert.equal(result.metrics.speakerAttribution,0);
+  assert.equal(result.metrics.speakerPredictionRate,0);
+});
+test("null reference speaker is unmeasured and does not invent attribution",()=>{
+  const result=evaluate(set([row("a","hello","hello",{referenceSpeaker:null,predictedSpeaker:"A"})]));
+  assert.equal(result.coverage.speakerLabels,0);
+  assert.equal(result.metrics.speakerAttribution,null);
+});

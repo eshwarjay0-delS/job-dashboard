@@ -7,6 +7,9 @@
  * an invented work claim would leave the invented work claim behind.
  * Original paragraphs are not edited, and the final rendered DOCX must still
  * pass all normal completeness and evidence checks.
+ *
+ * opts.keepSkills (the job-post terms switch on): the skills line is left as is, job-post terms go there on purpose.
+ * Every other section is still rolled back.
  */
 export function removeUnsupportedRewrites<E extends {
   headline?: { title?: string; tagline?: string }
@@ -15,7 +18,7 @@ export function removeUnsupportedRewrites<E extends {
   bullets?: { text: string }[]
   extras?: { text: string }[]
   added?: { text: string }[]
-}>(edits: E, unsupported: (text: string) => boolean): { edits: E; removed: number } {
+}>(edits: E, unsupported: (text: string) => boolean, opts: { keepSkills?: boolean } = {}): { edits: E; removed: number } {
   let removed = 0
   const keep = <T extends { text: string }>(rows: T[] | undefined): T[] | undefined =>
     rows?.filter(row => {
@@ -36,7 +39,8 @@ export function removeUnsupportedRewrites<E extends {
       tagline: restore(edits.headline.tagline),
     } : undefined,
     summary: restore(edits.summary),
-    skills: keep(edits.skills),
+    // keepSkills: the job-post terms switch (JD_TERMS_ALWAYS_ON_SKILLS) is on, so job-post terms belong on the skills line.
+    skills: opts.keepSkills ? edits.skills : keep(edits.skills),
     bullets: keep(edits.bullets),
     extras: keep(edits.extras),
     added: keep(edits.added),

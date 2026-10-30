@@ -1,0 +1,25 @@
+name: Kompas baseline gate
+
+# Offline answer-regression gate for the locked Kompas baseline (owner, 30 Oct 2026).
+# Runs on every push and PR to master. Needs no npm install, no secrets and no network: about 10 seconds.
+# It must be green before any production deploy (release checklist: PRE_DEPLOY_SMOKE_CHECKLIST.md).
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  gate:
+    name: Kompas baseline answer gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Baseline answer-regression gate (logistics, explain length, honesty and premise, question detection)
+        run: npm run test:baseline

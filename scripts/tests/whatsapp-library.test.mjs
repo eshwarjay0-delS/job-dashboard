@@ -193,6 +193,15 @@ test('"Make another one with selecting Cybersecurity Analyst resume" is an instr
   assert.equal((await b.wa.loadSession(N)).jd, undefined, 'the instruction did not replace the post')
   assert.equal(b.logs.at(-1).hint, 'Cybersecurity Analyst')
 
+  // The file already made for this job must not be sent back when another base resume was named.
+  const again = bot({ have: { abs: APPSEC, file: { path: 'a@x.com/AppSec Engineer/AppSec.docx', role: 'Application Security Engineer', company: 'Acme', category: 'AppSec Engineer', at: Date.UTC(2026, 9, 19) } }, extra: library(), agent: null })
+  await again.wa.handle(N, { type: 'text', id: 'm9', text: { body: `${JD}\n1` } }, {}, 'user1')
+  assert.match(again.docs.at(-1), /You already have this one/)
+  await again.wa.handle(N, { type: 'text', id: 'm10', text: { body: said } }, await again.wa.loadSession(N), 'user1')
+  assert.equal(again.runs.at(-1).givenPath, CYBER, 'the named resume, not the Identity folder stand-in')
+  assert.equal(again.runs.at(-1).jd, JD)
+  assert.equal(again.docs.filter(d => /You already have this one/.test(d)).length, 1)
+
   // "Another one" with no name: not the resume the last go started from.
   await b.wa.handle(N, { type: 'text', id: 'm3', text: { body: 'make another one' } }, await b.wa.loadSession(N), 'user1')
   assert.equal(b.runs.length, first + 2)

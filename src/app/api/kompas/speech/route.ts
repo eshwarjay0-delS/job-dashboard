@@ -7,6 +7,7 @@ import { hashUserId } from "@/lib/sttLedger"
 import { deductPoints, POINTS_PER_INTERVIEW } from "@/lib/creditsLedger"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { readBoundedAudio } from "@/lib/kompasAudioUpload"
+import { parakeetTranscribe, transcribeWithFallback } from "@/lib/kompasSttProvider"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -65,13 +66,14 @@ export async function POST(request: NextRequest) {
   const sessionId = (request.headers.get("x-session-id") || "").replace(/[^a-zA-Z0-9-]/g, "").slice(0, 64)
   const audioSource = request.headers.get("x-audio-source") === "system" ? "system" : "mic"
   try {
-    const heard = await transcribeAudio({
+    // Whisper unless KOMPAS_STT_PROVIDER=parakeet and KOMPAS_PARAKEET_URL are both set; Parakeet falls back to Whisper.
+    const heard = await transcribeWithFallback({
       audio, mime: mime!, purpose,
       hint: decoded(request.headers.get("x-speech-hint"), 560) || undefined,
       language: /^[a-z]{2}$/.test(language) ? language : undefined,
       sessionId: sessionId || undefined,
       userHash: hashUserId(user.id),
-    })
+    }, { whisper: transcribeAudio, parakeet: parakeetTranscribe })
     if (sessionId) {
       const bytes = audio
       const text = typeof heard === "object" && heard ? String((heard as { text?: unknown }).text || "") : ""

@@ -1,3 +1,11 @@
+## 2026-10-30 — The rest of the personal questions stay quiet
+
+Bonus, equity, 401k, W2 or C2C, a contract role, OPT, L1, earliest start, notice, the city you live in, weekends, on call, shift, working from home, remote, PTO, and EST hours were still answered. They are skipped. A data-center or server relocation is still answered. "How does work authorization work?" is still answered.
+
+## 2026-10-30 — Nights, weekends, and on-call stay quiet; how work authorization works does not
+
+Kompas does not answer availability. "Can you work nights?", weekends, and on-call were still sent to the model. They are skipped. "How does work authorization work?" was skipped with them. That one asks for the mechanism, so it is answered. "Have you supported on-call incident response?" stays an experience question.
+
 ## 2026-10-30 — A spoken limit stays on the conditions line
 
 "The service must stay up. How would you patch it?" named only the question. The limit is now a condition, and the question stays the question. The same split covers "No production access" and "You must keep the service running."
@@ -58,6 +66,23 @@ The depth flag already said deep. The prompt now says sentence one adds the mech
 
 "Go deeper on that exception" and "Why is that dangerous?" were follow-ups, and the prompt still said the question was different and not to reuse the previous answer. A follow-up no longer gets that line. "What exactly is least privilege?" and "Elaborate on session recording" still do.
 
+## 2026-10-29 — Only the call audio opens a question, leaks judged by when words were said, and a turn gate
+
+While computer audio is captured, mic words never open a question; questionSource now goes through the computer-audio-is-interviewer mapping. With the mic only, the mic still opens questions, as before, and the session log says "mic-only". A mic line is judged a leak of the call audio by when its words were said, where both clips know it, and otherwise by when the text came back, as before; your own words said later, or in other words, are kept. Each heard line gets a logged turn gate: answer now, wait, or no answer needed. The gate only labels. When a press is turned away as "nothing question-like", pressing AI Answer again within 15 seconds answers those lines anyway. Every keep, drop, cut and gate decision is logged as a reason, a source and a length, with no words. Parakeet now gives up after 4 seconds instead of 15, and Whisper takes the clip. "Beyond trust", "git lab" and "sock two" are only repaired next to their tool words, so "went beyond trust" and "a sock two days ago" stay. A typed "Go deeper" keeps its full stop and is not made a question.
+
+**Offline stress, slice 2 v1 before, v2 after:** 50 calls: mic leak kept 48 to 0, filler that got "answer" 50 to 0, normal English repaired 50 to 0, typed statements made questions 50 to 0. 200 calls: 187 to 0, 200 to 0, 200 to 0, 200 to 0. Your own answers dropped, questions labelled "no answer needed", and tool names missed were 0 before and after. Before, there was no gate, so all filler counts as a miss. The mic never opened a question in a call before or after, because questionSource already preferred computer audio; v2 makes it go through the mapping and log it.
+
+## 2026-10-29 — Two questions with no full stops, "Explain the Venafi part", and the opening questions
+
+Read-only replay of the live build kompas-20261029-split found three cuts that merged questions. Speech-to-text often drops every full stop, so "what is cyberark what is okta" was one card; it is now two. A new question starts mid-sentence only at a strong opener ("what is", "how do", "why did", "tell me about", "go deeper on", "explain the … part") after a finished ask of three words or more, and never after a word that keeps the clause going, so "tell me about zscaler and why did you choose it", "how do you handle what happens when a token expires", "tell me about a time when you failed", "what is the difference between sso and saml" and "walk me through how you would migrate what is left" each stay one card. "Tell me about your PKI work. Explain the Venafi part." is now two cards, the same as "Go deeper on that exception", while "Explain that part" and "Go deeper" stay with their question (before, "Explain that part" was wrongly its own card). "Tell me about yourself. Why do you want this job? Where do you see yourself in five years?" is now three cards; the word "this" in "this job" had kept the second question attached. Two "How do you…" questions about one subject still stay together. Failsafe: the old cut runs first; if the new cut throws or would lose a word, the old cut is used. Desktop (public/kompas/app.js) and server (src/lib/kompasAnswer.ts) cut the same way, checked on every stress case.
+
+**Offline cut stress, branch 0b655ef before, this slice after:** 50 stretches: merged 10 to 0, over-split 2 to 0, words dropped 0 to 0, desktop and server different 0 to 0. 200 stretches: merged 42 to 0, over-split 6 to 0, dropped 0 to 0, different 0 to 0. 21 cases times 10 variants (210 variants; the 200 run covers 200 of them in order) (lower case, no punctuation, "um", "so", "okay so", extra spaces, one breath). The cases were written alongside the fix, so these are not blind numbers. Not a live microphone session. Not deployed.
+
+## 2026-10-29 — The call audio heard again through the mic, and a typed "And why?"
+
+Computer audio is the interviewer, the microphone is you, and typed text is your own question. When the call came back through the mic within about 1.5 seconds, a short line like "Can you do that?" got through, because the 30-second echo rule had no words to compare. A mic line that repeats what the call said within 1.5 seconds is now dropped. Your own answer, said later or in other words, is kept. A typed "And why?" after an answer got its own card with no subject. It now gets its own card about the question on that page: "What is NLA? And why?". "Go deeper on that exception" still names its own subject and stands alone. Twenty-one more mishearings are repaired on the server and on the desktop, such as "sail point", "my tree attack", "resid jewel risk", "sock two" and "intra id". A Parakeet speech switch is added, off by default. It needs KOMPAS_STT_PROVIDER=parakeet and KOMPAS_PARAKEET_URL, and any Parakeet failure falls back to Whisper. With the switch off, Whisper's result is unchanged.
+
+**Offline stress, master 9f30cb7 before, this branch after:** 50 sequences: bleed leaked 2 to 0, typed follow-ups with no subject 23 to 0, misheard 15 of 26 to 0, your own answers dropped 0 to 0. 200 sequences: bleed leaked 14 to 0, typed follow-ups with no subject 89 to 0, misheard 80 of 105 to 0, your own answers dropped 0 to 0. Not a live microphone session. Not deployed: pushed as a branch only.
 ## 2026-10-29 — A named follow-up in the same breath is the next question
 
 "What is NLA? Go deeper on that exception." was one question. The second sentence names its own subject, so it is cut apart. "Go deeper" by itself stays with the question it follows. The page stamp is kompas-20261029-split. Fifty heard sequences still cut apart.
@@ -110,6 +135,30 @@ The depth flag already said deep. The prompt now says sentence one adds the mech
 ## 2026-10-29 — Same title, the folder that names the speciality stays
 
 Two files both titled Security Engineer were a tie for Information Security AI Engineer. The one in AI Security and Governance stays. The one in Application and API Security does not, when the job names AI. A title that already names the speciality still wins on the title. A Security Analyst in an Identity folder is still kept for a Security Analyst job, because that job names no extra speciality.
+
+## 2026-10-29 — Job-post terms go back on the skills line, and a repeat does not pay twice
+
+**Asked:** tailored files were covering about 47% of the job post, and a run could sit on `/api/tailor` until the request died. Eshwar's decision: put the missing job-post terms back on the skills line, labelled as from the job post, the way `2cdb8db` did, after `94dacbf` limited that line to terms the resume already showed. Also cache every finished result, and do not start a second paid run while the same request is already running. Twenty WhatsApp screenshots from the live bot are the same failure.
+
+**Measured on the sample Word file, AI writer off** (scripts/tests/helpers/resume-floor-run.mjs, before this change / after):
+
+| Job | Before | After |
+|---|---|---|
+| peoplesoft | 15.0% | 100% |
+| zerotrust | 0.0% | 100% |
+| clearance | 80.0% | 100% |
+| benefits | 14.3% | 100% |
+| peoplesoft, summary left open | 15.0% | 100% |
+
+Name, email, dates, and experience bullets were unchanged. Bold skill headings stayed bold. Terms the floor wrote are named in the reply as from the job post. A term that lands in an experience bullet is still a claim and still blocks the file.
+
+**Also:** a finished tailor is cached at any coverage (cache generation 20). An identical request that arrives while the first is running shares that result. WhatsApp does not send a file under 95% of the job post. "Make another one with selecting Cybersecurity Analyst resume" does not resend the 19 Oct file and does not fall through to a different resume. A storage fault on "use 1" says the email choice was not saved. A Kompas throw does not eat the job description.
+
+**Checked:** resume-floor, keyword-targets, tailor-lanes, WhatsApp contract, acceptance, recovery, library, 5-fold, and single-request, plus master's role-match and typed-question checks after merging `d79727c`: 153/153 with the ts-alias loader. Not a live WhatsApp send. Not a live model run. Not on production until this branch is merged and the Vercel deploy succeeds.
+
+**Still open:** the exact chat line "I couldn't complete a reliable tailored resume..." is not in this source; the live refusal is the quality stop. "No AI service is switched on" at 9:43 AM needs the provider error from that request; this change does not invent a key. A MarketFit storage outage can still stop a message. `/api/tailor` still holds one request open for up to 280s inside a 300s function. That freeze is not redesigned here.
+
+**Next:** after deploy, resend the Fairview and Honeywell posts and read the caption. Then split `/api/tailor` so the browser is not held for the whole model ladder.
 
 ## 2026-10-29 — A named short question is not glued on the desktop
 

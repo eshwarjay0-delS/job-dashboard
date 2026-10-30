@@ -8,8 +8,8 @@
  * production question step); the "answer" is the stand-in draft (draftSpokenAnswer) plus seeded inventions.
  */
 import { readFileSync } from "node:fs"
-import { pathToFileURL, fileURLToPath } from "node:url"
-const ROOT = process.env.KOMPAS_ROOT || fileURLToPath(new URL("..", import.meta.url))
+import { pathToFileURL } from "node:url"
+const ROOT = process.env.KOMPAS_ROOT || new URL("..", import.meta.url).pathname
 const D = await import(pathToFileURL(`${ROOT}/src/lib/kompasDissection.ts`).href)
 const R = await import(pathToFileURL(`${ROOT}/src/lib/kompasSourceRetrieval.ts`).href)
 const A = await import(pathToFileURL(`${ROOT}/src/lib/kompasAnswer.ts`).href)

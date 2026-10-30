@@ -18,6 +18,6 @@ test('a reply stopped by the ceiling far short of its target is cut; a finished 
 test('the streaming lane clears the card and asks once more when the reply was cut short', () => {
   const route = readFileSync(new URL('../../src/lib/kompasAnswerService.ts', import.meta.url), 'utf8')
   assert.match(route, /if \(cutShort\(usage\.finish, raw, job\.plan\.words\)\)/)
-  assert.ok(/emit\(\{ type: "replace", text: "" \}\)\r?\n\s+return "cut"/.test(route), 'the cut fragment is cleared from the card')
+  assert.ok(/emit\(\{ type: "replace", text: "" \}\)\r?\n(?:\s+gate = newGate\(false\)\r?\n)?\s+return "cut"/.test(route), 'the cut fragment is cleared from the card')   // demo-final: AQ resets the stream gate before the retry
   assert.match(route, /=== "cut" && !askedAgain/)
 })

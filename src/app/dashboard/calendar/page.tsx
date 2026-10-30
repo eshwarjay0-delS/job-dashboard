@@ -9,6 +9,8 @@ import { navItem } from "../_components/nav"
 import { fmtHour, type Interview } from "../_suite/sample"
 import { useGmailData, buildAccounts, makeAcct } from "@/lib/use-gmail-data"
 import InterviewBoard from "./_components/interview-board"
+import MonthCalendar from "./_components/month-calendar"
+import { toCalendarEvents } from "@/lib/interview-calendar"
 
 // ── Current week (Mon–Sun), computed live ───────────────────────────────────
 const now = new Date()
@@ -308,6 +310,16 @@ export default function CalendarPage() {
       {/* Every interview that is still open, each with what to do about it; the ones that ended are under "Past
           interviews". Before 13 Oct 2026 this page showed a week at a time and nothing said what came after one. */}
       {connected && <InterviewBoard />}
+
+      {/* One monthly calendar across all three views. Switching the view
+          option below re-filters the calendar to that view's interviews;
+          the list views underneath stay as they were. */}
+      {connected && !loading && (
+        <MonthCalendar
+          events={toCalendarEvents(tab === "upcoming" ? upcoming : tab === "past" ? past : unknown)}
+          bucketLabel={tab === "upcoming" ? "Upcoming invites" : tab === "past" ? "Past scheduled" : "Date unverified"}
+        />
+      )}
 
       {error && !loading && (
         <div className="mf-notice" role="status">

@@ -353,13 +353,14 @@ test('a part every lane refused comes back with the reason, and a timeout does n
 // ── what the tailor and the bot promise, read from the source ────────────────
 test('an incomplete or unchanged draft is not stored, not sent as tailored, and old stored drafts are not served', () => {
   const tailor = read('src/lib/tailor.ts'), bot = read('src/app/api/whatsapp/webhook/route.ts'), claude = read('src/lib/claude.ts')
-  assert.match(tailor, /if \(!result\.partial && !result\.unchanged\) \{\s*if \(result\.quality\?\.status === "coverage_met"\) await blob\.put\(cacheKey/)
+  assert.match(tailor, /if \(!result\.partial && !result\.unchanged\) \{\s*await blob\.put\(cacheKey/)
+  assert.match(tailor, /inflightTailors/, 'an identical request already running is not started again')
   assert.match(tailor, /\[J1_VERSION, CACHE_GENERATION, normJD\(jd\)/, 'drafts stored before the fix are not served again')
   assert.match(tailor, /\.\.\.\(diff\.length \? \{\} : \{ unchanged: true \}\)/)
   assert.match(tailor, /if \(failed \* 2 > total\) throw new Error\(`Tailoring incomplete/)
   assert.match(tailor, /LADDER\.unshift\(lunaStep\)/, 'GPT Luna leads when the caller holds the key')
   assert.match(tailor, /for \(const lane of splitDraft \? lanes\.slice\(0, 1\) : lanes\)/, 'a split draft is made once: it already uses every lane')
-  assert.match(bot, /if \(result\.unchanged\) \{[\s\S]{0,400}return files \? sendLibraryFallback\(from, files, "rewrite produced no changes"\) : sendText\(from, `The rewrite produced no changes/)
+  assert.match(bot, /if \(result\.unchanged\) \{[\s\S]{0,500}The rewrite produced no changes, so I did not send a file/)
   assert.match(claude, /API \(400\|401\|402\|403\|404\|413\|429\)\\b\|TimeoutError/, 'a refusal that will not clear, or a timeout, is not asked again on the same model')
 })
 

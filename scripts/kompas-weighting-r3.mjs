@@ -2,8 +2,8 @@
 // r3 weighting measurement (29 Oct 2026). OFFLINE retrieval only, NOT live answer quality. Does the behavior 7
 // question-kind boost put the right passage first more often? Each question names the passage a good answer leads on.
 import { readFileSync } from "node:fs"
-import { pathToFileURL, fileURLToPath } from "node:url"
-const R = await import(pathToFileURL(fileURLToPath(new URL("../src/lib/kompasSourceRetrieval.ts", import.meta.url))).href)
+import { pathToFileURL } from "node:url"
+const R = await import(pathToFileURL(new URL("../src/lib/kompasSourceRetrieval.ts", import.meta.url).pathname).href)
 const S = JSON.parse(readFileSync(new URL("../tests/fixtures/kompas-weighting-sources.json", import.meta.url), "utf8"))
 const DOCS = R.sourceDocs(S)
 export const CASES = [

@@ -18,11 +18,24 @@ function load(file, mocks = {}, extra = '') {
   })
   return testModule.exports
 }
-const { sameResumeIdentity } = load('src/lib/resume-identity.ts')
+const { sameResumeIdentity } = load('src/lib/resume-identity.ts', {
+  '@/lib/resume-round-trip-guard': load('src/lib/resume-round-trip-guard.ts'),
+  '@/lib/jd-terms-gate': load('src/lib/jd-terms-gate.ts'),
+})
 test('rejects swapped identities and an extra identity, preserves unchanged email', () => {
   assert.equal(sameResumeIdentity('jayeshwar44@gmail.com', 'eshwarjay05@gmail.com'), false)
   assert.equal(sameResumeIdentity('jayeshwar44@gmail.com', 'jayeshwar44@gmail.com eshwarjay05@gmail.com'), false)
-  assert.equal(sameResumeIdentity('JAYESHWAR44@gmail.com', 'jayeshwar44@gmail.com'), true)
+  // Email case alone is not a change; the round-trip guard (gate on) also reads the first line as the name, so check it off.
+  process.env.JD_TERMS_ALWAYS_ON_SKILLS = '0'
+  try { assert.equal(sameResumeIdentity('JAYESHWAR44@gmail.com', 'jayeshwar44@gmail.com'), true) } finally { delete process.env.JD_TERMS_ALWAYS_ON_SKILLS }
+})
+test('with the job-post terms gate on, a changed phone or date stops the send; an unchanged file passes', () => {
+  // Gate on with a real name line: an email that differs only in letter case is the same resume.
+  assert.equal(sameResumeIdentity('Eshwar Jay\nJAYESHWAR44@gmail.com', 'Eshwar Jay\njayeshwar44@gmail.com'), true)
+  const src = 'Eshwar Jay\njayeshwar44@gmail.com | (312) 555-0142\nAnalyst, Acme  Jan 2021 - Mar 2024'
+  assert.equal(sameResumeIdentity(src, src), true)
+  assert.equal(sameResumeIdentity(src, src.replace('0142', '0143')), false)
+  assert.equal(sameResumeIdentity(src, src.replace('Jan 2021', 'Jan 2020')), false)
 })
 test('concurrent storage claims produce exactly one winner and propagate storage failures', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'wa-claim-'))
@@ -57,7 +70,7 @@ test('same JD starts once concurrently and its lease releases for a deliberate r
     'next/server': {}, '@/lib/storage': { blob, readPath: async () => Buffer.from('same@email.com'), writePath: async () => {}, deletePath: async () => {} },
     '@/lib/paths': { DATA_DIR: '/data' },
     '@/lib/llm': { keysFor: async () => ({}), hasAnyKey: () => true },
-    '@/lib/tailor': { runTailor: async () => { runs++; if (failNext) { failNext = false; throw new Error('provider timeout') } if (unchangedNext) { unchangedNext = false; return { token: 'unchanged-result', unchanged: true, score: 63, coverage: 63 } } return { token: 'result', score: 63, coverage: 63, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] } } } },
+    '@/lib/tailor': { runTailor: async () => { runs++; if (failNext) { failNext = false; throw new Error('provider timeout') } if (unchangedNext) { unchangedNext = false; return { token: 'unchanged-result', unchanged: true, score: 63, coverage: 63 } } return { token: 'result', score: 100, coverage: 100, supported_coverage: 100, diff: [{ section: 'Experience', before: 'A', after: 'B' }], unverified_added_keywords: [], quality_blockers: [], quality: { status: 'coverage_met', matched: 10, total: 10, missing: [] } } } },
     '@/lib/claude': { extractJdMeta: async () => ({ role: 'Engineer' }) },
     '@/lib/whatsapp': { sendText: async (_to, message) => { said.push(message) }, sendDocument: async () => { deliveries++; return 'sent' } },
     '@/lib/owner': {}, '@/lib/whatsapp-who': {}, '@/lib/whatsapp-link': {}, '@/lib/whatsapp-who-core': {},

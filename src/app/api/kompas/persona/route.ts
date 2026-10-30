@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { callLLM, resolveKeys } from "@/lib/llm"
 import { checkRateLimit } from "@/lib/rateLimit"
+import { getDossierSessions } from "@/lib/dossier"
+import { hashUserId } from "@/lib/sttLedger"
+import * as kompasAudience from "@/lib/kompasAudience"
+import { BLUEPRINT_GUIDE, BLUEPRINT_RULES, gateFigures, stripContact, holesIn, type BlueprintPart } from "@/lib/dossierBlueprint"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -13,6 +17,11 @@ export const maxDuration = 60
 // returned markdown ("### " units) into the persona file in IndexedDB.
 // Request: { config, prep, part, projectIds?, projectOffset?, batch?, total?, interviewer }
 // Response: { lane, md?, done? } — md holds the markdown for this part.
+// Blueprint parts (29 Oct 2026, research/dossier-blueprint.md): evidence, oneminute, signals, fixfirst, ladder,
+// jargon. They also read config.instructions / body.expectations (the expectations narrative) and body.transcript,
+// fixfirst reads the user's saved sessions (read only), and every figure they return passes the dossier gate:
+// a number the sources do not state comes back as a marked hole, never a guess. Response adds blocked[] and holes[].
+// The existing parts above are unchanged.
 
 const NO_STORE = { "Cache-Control": "no-store" }
 
@@ -55,6 +64,9 @@ export async function POST(request: NextRequest) {
     prep.projects ? `Projects: ${str(prep.projects, 2000)}` : "",
   ].filter(Boolean).join("\n\n")
 
+  const blueprint = (Object.prototype.hasOwnProperty.call(BLUEPRINT_GUIDE, part) ? part : "") as BlueprintPart | ""
+  if (blueprint) return blueprintPart(blueprint, user.id, interviewer, body, config, prep, facts)
+
   const guide = PART_GUIDE[part] || PART_GUIDE.cover
 
   try {
@@ -66,6 +78,46 @@ export async function POST(request: NextRequest) {
       maxTokens: 1200,
     })
     return NextResponse.json({ lane: provider, md: text.trim(), done: true }, { headers: NO_STORE })
+  } catch {
+    return NextResponse.json({ lane: "none" }, { headers: NO_STORE })
+  }
+}
+
+// Voice rules come from the Lens bot's blocks in kompasAudience (REALISM / LENS) once they ship; the dossier
+// engine does not write its own. Until then only the existing EVIDENCE_POLICY applies.
+function lensBlocks(): string {
+  const a = kompasAudience as unknown as Record<string, unknown>
+  return ["EVIDENCE_POLICY", "REALISM", "LENS"].map((k) => (typeof a[k] === "string" ? (a[k] as string) : "")).filter(Boolean).join("\n\n")
+}
+
+async function blueprintPart(
+  part: BlueprintPart, userId: string, interviewer: string, body: Record<string, unknown>,
+  config: Record<string, unknown>, prep: Record<string, unknown>, facts: string,
+) {
+  const expectations = str(body.expectations, 3000) || str(config.instructions, 3000)
+  const transcript = str(body.transcript, 6000)
+  let sessions = ""
+  if (part === "fixfirst" || part === "ladder") {
+    const list = await getDossierSessions(hashUserId(userId), 5).catch(() => [])
+    sessions = list.flatMap((x) => x.qa.slice(0, 12).map((qa) => `Q: ${qa.q.slice(0, 200)}\nA: ${qa.a.slice(0, 400)}`)).join("\n").slice(0, 6000)
+  }
+  const sources = [str(config.resume, 12000), str(config.jd, 6000), expectations, transcript, sessions, str(prep.projects, 2000)]
+  const user = [
+    facts,
+    expectations ? `Expectations / recruiter or manager notes:\n${expectations}` : "",
+    transcript ? `Earlier round transcript:\n${transcript}` : "",
+    sessions ? `Earlier Kompas sessions (what was actually said; earlier AI answers are not evidence):\n${sessions}` : "",
+    `Write the "${part}" section. ${BLUEPRINT_GUIDE[part]}`,
+  ].filter(Boolean).join("\n\n")
+  try {
+    const keys = resolveKeys({})
+    const { text, provider } = await callLLM({
+      keys, purpose: `kompas:persona:${part}`, tier: "heavy",
+      system: [`You write one section of a candidate's interview dossier, in markdown. Use "### " headings for each unit. Write for a ${interviewer} audience.`, BLUEPRINT_RULES, lensBlocks()].filter(Boolean).join("\n\n"),
+      user, maxTokens: 1600,
+    })
+    const gated = gateFigures(stripContact(text.trim()), sources)
+    return NextResponse.json({ lane: provider, md: gated.text, done: true, blocked: gated.blocked, holes: holesIn(gated.text).length }, { headers: NO_STORE })
   } catch {
     return NextResponse.json({ lane: "none" }, { headers: NO_STORE })
   }

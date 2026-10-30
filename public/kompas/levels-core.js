@@ -223,5 +223,15 @@
     return d && d.text ? d.text : (a.prose || "");
   }
 
-  globalThis.KompasLevels = { LADDER, ANCHORS, KINDS, PERSONAS, NEEDS, shape, complete, derive, deriveAll, key, hash, fromProse, textFor, guessKind, sessionDossierKey, sessionLevelsKey, maturityKey };
+  // Lens r1 (29 Oct 2026, notebooklm-lens-spec §6): the three desktop modes are the three lenses. Labels only; derive() is unchanged.
+  const LENS_LABELS = {
+    engineer: { label: "Technical peer", opens: "the mechanism", goes: "the one check and its failure mode" },
+    architect: { label: "Architect", opens: "the decision and the boundary it sets", goes: "tradeoff, scale, where it breaks" },
+    director: { label: "Director / hiring manager", opens: "the decision and its business cost", goes: "ownership, tradeoff, what would change my mind" },
+  };
+  // Lens r7: hiring_manager reads as Director, as the prompt lens does. Lens r2: HR levels are made from the Engineer answer but are not technical peers; lead and supervisor read as Director.
+  const HR_LENS = { label: "HR / technical HR", opens: "the plain idea", goes: "why it matters for the role" };
+  const lensFor = (level) => /^(?:hr|technical_hr)$/.test(level) ? HR_LENS
+    : LENS_LABELS[level === "developer" ? "architect" : /^(?:lead|supervisor|hiring_manager)$/.test(level) ? "director" : level] || LENS_LABELS.engineer;
+  globalThis.KompasLevels = { LENS_LABELS, lensFor, LADDER, ANCHORS, KINDS, PERSONAS, NEEDS, shape, complete, derive, deriveAll, key, hash, fromProse, textFor, guessKind, sessionDossierKey, sessionLevelsKey, maturityKey };
 })();

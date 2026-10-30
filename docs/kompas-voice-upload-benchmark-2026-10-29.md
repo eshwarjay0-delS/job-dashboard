@@ -19,3 +19,23 @@ The aggregate-only output includes WER, deletion/substitution/insertion rates, t
 
 ## Baseline and release gate
 **Consented real-world baseline: NOT YET MEASURED.** WER, deletion rate, technical recall, zero-edit rate, speaker attribution, and live P50/P95 latency are unavailable for this change. Synthetic upload tests measure boundary correctness, not live accuracy or latency. Keep production unchanged until full CI and the deployed route are verified. Preserve the latest READY production deployment as the rollback reference.
+
+## 30 October 2026: comparable measurement-label coverage
+
+A reference-set fingerprint alone is insufficient for fair before/after comparisons. If a candidate removes latency from a slow clip and adds latency to a fast clip, the sample IDs, reference text and total latency-label count can remain identical while P95 appears to improve. The same issue affects edit and speaker-label coverage.
+
+The aggregate evaluator now also emits `measurementSetSha256`, a SHA-256 of **sample IDs and booleans for availability** of latency, edit-count and speaker-attribution labels. No transcript, speaker name or audio is included in this fingerprint. Baseline comparison rejects changes in per-sample measurement-label availability, mismatched coverage totals and malformed/nonfinite baseline metrics. Older aggregate baselines without this new fingerprint must be regenerated from the **same consented recordings**; never fabricate a matching fingerprint. Actual accuracy and latency deltas remain **not measured** until paired consented baseline/candidate data exist.
+
+Regression scenarios cover swapped latency/edit/speaker labels, valid changes in measured values with stable coverage, missing fingerprints, altered coverage and invalid baseline metrics. This changes only the offline evaluator and does not alter speech capture, model selection, user consent, session archiving, or production transcription.
+
+## 30 October 2026: speaker attribution abstention correction (schema v2)
+
+The previous aggregate scorer counted speaker attribution only when **both** the human reference and a predicted speaker label were present. A recognizer that omitted predictions on hard clips could therefore show artificially high attribution accuracy. The corrected denominator includes **every clip with a reference speaker**; a missing prediction counts as incorrect, and `speakerPredictionRate` separately measures the fraction with predictions. A predicted label without a reference is not scored. The per-sample measurement-availability fingerprint now binds the presence of a **reference speaker**, not whether the model attempted a prediction, so a candidate can legitimately improve by supplying previously missing predictions without changing the reference cohort.
+
+The aggregate schema increments from v1 to **v2**. Older aggregate baselines are intentionally rejected rather than compared under incompatible attribution definitions. Regenerate baselines only from the same consented, unchanged source recordings. No transcript or speaker name is emitted by the aggregate report; no live speech, model routing, capture, consent or session storage behavior changes. Synthetic tests do not establish a real-world accuracy gain.
+
+## 30 October 2026: reject malformed speaker labels
+
+The offline evaluator now requires each provided speaker label to be a nonblank string. Previously, an empty reference and empty prediction could be counted as a correct attribution, while a numeric reference or object prediction could be silently excluded as unmeasured. Missing or explicit `null` labels remain valid for genuinely unmeasured references and predicted-speaker abstentions. This does not change schema v2 output for well-formed recordings or change live capture, consent, storage, authentication, or model selection.
+
+Six synthetic regression cases cover empty/whitespace labels, nonstring values, and valid null abstentions. They do not establish real-world WER, speaker accuracy, or latency improvements. Require exact-head full CI, baseline gate, preview READY, and production SHA/alias verification before promotion.

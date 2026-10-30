@@ -26,7 +26,7 @@ export async function sharedKompasTurn(
   requestId: string,
   question: string,
   deps = { store: sharedKompasStore(), answer: answerForVerifiedUser, now: () => Date.now() },
-): Promise<{ status: 'answered' | 'conflict' | 'unavailable' | 'repeated'; session?: SharedKompasSession; text?: string }> {
+): Promise<{ status: 'answered' | 'conflict' | 'unavailable' | 'repeated' | 'skipped'; session?: SharedKompasSession; text?: string }> {
   if (!owner.trim() || !requestId.trim() || requestId.length > 256 || !question.trim() || question.length > 4000) throw new Error('Invalid turn')
   const session = await deps.store.read(owner, id)
   if (!session || session.revision !== expectedRevision) return { status: 'conflict' }
@@ -45,6 +45,10 @@ export async function sharedKompasTurn(
     })
     const response = await deps.answer(request, { id: owner })
     const result = await response.json()
+    if (response.ok && result.noQuestion && result.skipped === 'logistics') {   // owner rule 29 Oct: not answered, not an outage
+      const next: SharedKompasSession = { ...claimed, revision: claimed.revision + 1, pending: undefined }
+      return await deps.store.commit(owner, claimed.revision, next) ? { status: 'skipped', session: next } : { status: 'conflict' }
+    }
     if (!response.ok || result.unavailable || typeof result.text !== 'string' || !result.text.trim()) throw new Error('Answer unavailable')
     if (repeatsEarlierAnswer(session.history, question, result.text)) {
       await deps.store.commit(owner, claimed.revision, { ...claimed, revision: claimed.revision + 1, pending: undefined })

@@ -6,10 +6,13 @@
  */
 import { questionKeywords, topicOfAsk } from "./kompasDissection.ts"
 import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
+import { createHash } from "node:crypto"
+import { CTX, dropCoveredFigureClaims, figureContextKeys, figureMentions, mentionSupported, type FigureMention } from "./kompasFigureContext.ts"
+import { dossierItems, relatedTerms } from "./kompasDossierItems.ts"
 
 export type Proves = "experience" | "emphasis"
 export interface SourceDoc { name: string; text: string; proves: Proves }
-export interface Passage { id: string; source: string; proves: Proves; text: string; line: string; score: number }
+export interface Passage { id: string; source: string; proves: Proves; text: string; line: string; score: number; span?: [number, number]; weight?: number; itemId?: string; body?: string }
 export interface Retrieval { matched: boolean; passages: Passage[]; closest: Passage | null; all: Passage[]; missing?: string[] }
 
 export const NOT_IN_SOURCES =
@@ -55,6 +58,22 @@ export function splitPassages(docs: SourceDoc[] | null | undefined): Passage[] {
     let heading = ""
     let n = 0
     const body0 = doc.name === "resume" ? normalizeResumeLayout(doc.text) : doc.text
+    // r8: a structured dossier (question/heading lines with answers beneath) becomes one passage per item: the heading
+    // travels with its answer paragraphs, wrapped lines stay together, page headers/footers are dropped. Failsafe: no
+    // detectable structure (or any error) → the line split below, exactly as before.
+    // Stack trial: r8 dossier-item split is behind KOMPAS_DOSSIER_ITEMS=1 (default OFF → line split, ranking unchanged).
+    if (doc.name === "dossier" && dossierItemsOn()) {
+      let items: ReturnType<typeof dossierItems> = null
+      try { items = dossierItems(doc.text) } catch { items = null }
+      if (items && items.length) {
+        for (const it of items) {
+          if (words(it.text) < 4) continue
+          n++
+          out.push({ id: `D${n}`, source: doc.name, proves: doc.proves, line: it.text, text: it.text, score: 0, span: it.span, weight: it.weight, itemId: it.id, body: it.body })
+        }
+        continue
+      }
+    }
     let chunks = doc.proves === "emphasis" ? body0.split(/(?<=[.!?])\s+|\n+/) : body0.split(/\n+/)
     // r5: a saved "Q: … / A: …" pair is one passage, so the answer travels with the question it answers.
     // Failsafe: lines without the markers (or any error) split exactly as before.
@@ -210,15 +229,79 @@ export function heardAs(token: string, vocab: Set<string>): string {
 }
 const PART_SPLIT = /\s*(?:,\s*(?:and\s+)?|\band\b|\bas well as\b|\bplus\b)\s*/i
 const PART_FRAME = /^(?:(?:how|what|why|when|where|did|do|does|you|your|tell|me|about|walk|through|approach|approached|handle|handled|work|on|with|the|a|an|so|um|like)\s+)+/i
-export interface RetrieveOptions { recent?: string[] | null; kindBoost?: boolean | "full" }
+// Speed r6: `index` false forces the old per-question scan (equivalence tests and the "before" measurement); a
+// prebuilt SourceIndex may be passed; otherwise the session index for these docs is looked up (built once per content).
+export interface RetrieveOptions { recent?: string[] | null; kindBoost?: boolean | "full"; index?: SourceIndex | false | unknown }
+
+// ---- Speed r6: a per-session source index (29 Oct 2026). Everything retrievePassages derived from the source text on
+// every question (passages, token lists, vocabulary, document frequency, term counts) is built once per content hash
+// and kept in a small bounded in-memory map, so a question is a hash-map lookup per keyword, not a rescan of the
+// sources. Swappable: retrievePassages only reads the fields below, so a different index (the prototype's fastIndex,
+// a stored blob) can stand in by producing the same shape. Results are identical to the scan (equivalence test).
+export interface SourceIndex {
+  kind: "kompas-source-index-v1"
+  key: string
+  passages: Passage[]
+  docsTok: string[][]
+  vocab: Set<string>
+  single: Set<string>
+  avg: number
+  postings: Map<string, Array<[number, number]>>
+}
+const INDEX_MAX = 32
+const indexCache = new Map<string, SourceIndex>()
+export function sourceContentKey(docs: SourceDoc[] | null | undefined): string {
+  const h = createHash("sha256")
+  for (const d of Array.isArray(docs) ? docs : []) h.update(`${d.name}\u0000${d.proves}\u0000${d.text.length}\u0000${d.text}\u0001`)
+  return h.digest("hex")
+}
+export function buildSourceIndex(docs: SourceDoc[] | null | undefined): SourceIndex | null {
+  const passages = splitPassages(docs)
+  if (!passages.length) return null
+  const docsTok = passages.map((p) => tokens(p.text))
+  const postings = new Map<string, Array<[number, number]>>()
+  docsTok.forEach((d, i) => {
+    const tf = new Map<string, number>()
+    for (const t of d) tf.set(t, (tf.get(t) || 0) + 1)
+    for (const [t, n] of tf) { const list = postings.get(t); if (list) list.push([i, n]); else postings.set(t, [[i, n]]) }
+  })
+  return {
+    kind: "kompas-source-index-v1", key: sourceContentKey(docs), passages, docsTok,
+    vocab: new Set(docsTok.flat()),
+    single: new Set(passages.flatMap((p) => p.text.toLowerCase().split(/[^a-z0-9]+/)).filter((t) => t.length >= 6).map(stem)),
+    avg: docsTok.reduce((a, d) => a + d.length, 0) / docsTok.length || 1,
+    postings,
+  }
+}
+/** The session index for these sources: built on first use, then reused while the content is unchanged. Null when empty. */
+export function sourceIndexFor(docs: SourceDoc[] | null | undefined): SourceIndex | null {
+  if (!Array.isArray(docs) || !docs.length) return null
+  const key = sourceContentKey(docs)
+  const hit = indexCache.get(key)
+  if (hit) { indexCache.delete(key); indexCache.set(key, hit); return hit }
+  const ix = buildSourceIndex(docs)
+  if (!ix) return null
+  indexCache.set(key, ix)
+  while (indexCache.size > INDEX_MAX) indexCache.delete(indexCache.keys().next().value as string)
+  return ix
+}
+export function clearSourceIndexCache(): void { indexCache.clear() }
+const isIndex = (x: unknown): x is SourceIndex => !!x && typeof x === "object" && (x as SourceIndex).kind === "kompas-source-index-v1" &&
+  Array.isArray((x as SourceIndex).passages) && (x as SourceIndex).postings instanceof Map
 
 export function retrievePassages(question: string, docs: SourceDoc[] | null | undefined, k = 4, opts: RetrieveOptions = {}): Retrieval {
   try {
     const q = String(question || "").trim()
-    const passages = splitPassages(docs)
-    if (!q || !passages.length) return EMPTY
-    const docsTok = passages.map((p) => tokens(p.text))
-    const vocab = new Set(docsTok.flat())
+    if (!q) return EMPTY
+    // Speed r6: the session index when available; failsafe: any problem → the per-question scan exactly as before.
+    let ix: SourceIndex | null = null
+    if (opts?.index !== false) {
+      try { ix = opts?.index !== undefined ? (isIndex(opts.index) ? opts.index : null) : sourceIndexFor(docs) } catch { ix = null }
+    }
+    const passages = ix ? ix.passages : splitPassages(docs)
+    if (!passages.length) return EMPTY
+    const docsTok = ix ? ix.docsTok : passages.map((p) => tokens(p.text))
+    const vocab = ix ? ix.vocab : new Set(docsTok.flat())
     let heard = (t: string) => t
     // r5: an intent word ("charge", "missing") is meant as said, never re-heard as a near source word ("change")
     const asIntent = (t: string) => Object.values(INTENT).some((roots) => inFamily(t, roots, true))
@@ -234,7 +317,7 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
     try {
       const raw = q.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean)
       // only a real one-word source term counts, never a pair the indexer joined ("siem rules" → "siemrules")
-      const single = new Set(passages.flatMap((p) => p.text.toLowerCase().split(/[^a-z0-9]+/)).filter((t) => t.length >= 6).map(stem))
+      const single = ix ? ix.single : new Set(passages.flatMap((p) => p.text.toLowerCase().split(/[^a-z0-9]+/)).filter((t) => t.length >= 6).map(stem))
       for (let i = 1; i < raw.length; i++) {
         const j = raw[i - 1] + raw[i]
         if (j.length < 6 || raw[i - 1].length > 4 || STOP.has(raw[i - 1])) continue
@@ -242,8 +325,7 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
         if (single.has(h)) { keys.add(h); splitHeard.push(h) }
       }
     } catch { /* failsafe: no joined guesses */ }
-    const avg = docsTok.reduce((a, d) => a + d.length, 0) / docsTok.length || 1
-    const df = (t: string) => docsTok.filter((d) => d.includes(t)).length
+    const avg = ix ? ix.avg : docsTok.reduce((a, d) => a + d.length, 0) / docsTok.length || 1
     const N = passages.length
     let fams: string[] = []
     let storyAsk = false
@@ -251,10 +333,30 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
     const famDf = (f: string) => { if (!famDfCache.has(f)) famDfCache.set(f, familyDocFreq(docsTok, f)); return famDfCache.get(f) as number }
     const famWord = (t: string) => { try { return fams.some((f) => inFamily(t, INTENT[f], true)) } catch { return false } }
     try { fams = intentFamilies(q); storyAsk = fams.length > 0 || questionKind(q) === "behavioral" } catch { fams = []; storyAsk = false }
+    // Speed r6: the lexical BM25 part comes from the index postings (same terms, same key order, so identical floats);
+    // without an index it is the per-question scan exactly as r5 wrote it.
+    let lex: number[] | null = null
+    if (ix) {
+      try {
+        const sum = new Array<number>(N).fill(0)
+        for (const t of keys) {
+          if (famWord(t)) continue
+          const post = ix.postings.get(t)
+          if (!post) continue
+          const idf = Math.log(1 + (N - post.length + 0.5) / (post.length + 0.5))
+          for (const [i, tf] of post) sum[i] += idf * (tf * 2.2) / (tf + 1.2 * (0.25 + 0.75 * docsTok[i].length / avg))
+        }
+        lex = sum
+      } catch { lex = null }
+    }
+    const df = (t: string) => docsTok.filter((d) => d.includes(t)).length
+    let related = new Map<string, number>()
+    try { if (passages.some((p) => p.span)) related = relatedTerms([...keys].filter((t) => !famWord(t)), docsTok) } catch { related = new Map() }
     const scored = passages.map((p, i) => {
       const d = docsTok[i]
       let s = 0
-      for (const t of keys) {
+      if (lex) s = lex[i]
+      else for (const t of keys) {
         // r5: an intent word ("failed", "deadline") is scored once, by its family below, not again by spelling
         if (famWord(t)) continue
         const tf = d.filter((x) => x === t).length
@@ -264,11 +366,18 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
       }
       // r5: intent families add a smaller score per family (at most two different words of it), so a story told in
       // other words is found. Failsafe: any error leaves the plain lexical score.
+      // Stack trial: r10's ranking change (generic-story damping) is NOT included; guard parts only.
       try {
         s += intentScore(d, fams, famDf, N)
         // r5: a behavioral ask prefers a story-shaped passage once it already matches the topic
         if (s > 0 && storyAsk && storyShaped(p.line)) s *= 1.2
       } catch { /* failsafe: lexical score only */ }
+      // r8: related words (same-passage co-occurrence and shared 6-letter stems; no hand lists) add a small score.
+      // r8: an item that is a bare heading, title or fragment is weighted down. Failsafe: unchanged score on error.
+      try {
+        if (related.size) for (const [t, w] of related) { const tf = d.filter((x) => x === t).length; if (tf) s += w * Math.log(1 + (N - df(t) + 0.5) / (df(t) + 0.5)) * Math.min(tf, 2) / 2 }
+        if (typeof p.weight === "number" && p.weight > 0 && p.weight < 1) s *= p.weight
+      } catch { /* failsafe */ }
       return { ...p, score: p.proves === "emphasis" ? s * 0.5 : s }
     })
     // Behavior 7 and 8 only reorder: coverage ("matched") is computed on the same passages, so it never changes.
@@ -295,16 +404,41 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
     // employer part of the heading still counts, so "What did you do at 3M?" is found. Failsafe: no heading → the text.
     const coverText = (p: Passage) => {
       try {
+        // r11 (r8 honesty drop): a dossier item whose heading has no answer body under it (a bare question, title or
+        // heading line that repeats the ask's words) proves nothing. An item with a body keeps heading + body, since
+        // its heading is the question that body answers.
+        if (p.span && typeof p.body === "string" && p.body.trim().split(/\s+/).length < 6) return ""
         if (p.text === p.line) return p.text
         const heading = p.text.slice(0, p.text.length - p.line.length).replace(/:\s*$/, "")
         const comma = heading.indexOf(",")
         return comma >= 0 ? `${heading.slice(comma + 1)} ${p.line}` : p.line
       } catch { return p.text }
     }
+    // r10: coaching/prohibition sentences ("Do not claim…", "respond based on the actual terms…") never prove coverage,
+    // and a count ask ("how many …") is covered only by a passage that states a count. Stricter only; failsafe: as before.
+    const countAsk = /\bhow many\b|\bwhat (?:number|count) of\b|\bhow much\b/i.test(q)
+    // r13: inflection / same-meaning folding (rolled out ~ rollout ~ deploy, percent ~ percentage ~ %, plural/tense,
+    // "sign off" ~ sign-off, cost ~ spend ~ price ~ budget only for money or slot-free asks). Failsafe: exact words only.
+    let qFold: (t: string) => string[] = () => []
+    let moneyOk = false
+    try {
+      const sl = askedSlot(q)
+      moneyOk = !sl || sl === "money"
+      const alts = particleAlts(q)
+      qFold = (t: string) => [foldWord(t, moneyOk), ...(alts.get(t) || []).map((x) => foldWord(x, moneyOk))]
+    } catch { qFold = () => [] }
+    const foldedHas = (d: Set<string>, df: Set<string>, t: string) => d.has(t) || qFold(t).some((f) => df.has(f))
     const coversTopic = (p: Passage, topic: string[]) => {
-      const d = new Set(tokens(coverText(p)))
+      let ct = coverText(p)
+      try {
+        ct = withoutCoaching(ct)
+        if (countAsk && !COUNT_RE.test(ct)) return false
+      } catch { ct = coverText(p) }
+      const d = new Set(tokens(ct))
+      let dfold = new Set<string>()
+      try { dfold = foldSet(ct, moneyOk) } catch { dfold = new Set() }
       // an ASR-split pair ("terra form") whose joined word is in the passage covers both halves
-      const hit = new Set(topic.filter((t) => d.has(t)))
+      const hit = new Set(topic.filter((t) => foldedHas(d, dfold, t)))
       topic.forEach((t, i) => { const n = topic[i + 1]; if (n && d.has(stem(t + n))) { hit.add(t); hit.add(n) } })
       return topic.length > 0 && hit.size * 2 >= topic.length
     }
@@ -335,6 +469,40 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
         if (anyCovered) { matched = true; missing = judged.filter((j) => j.judged && !j.covered).map((j) => j.part) }
       }
     } catch { matched = wholeMatched; missing = [] }
+    // r11: stricter-only honesty gates. (a) A distinctive topic word that appears nowhere in the sources (a tool, an
+    // employer fact like "salary") means the ask is not in them, however many generic words match. Intent words and
+    // ASR-split pairs are exempt. (b) A question about the interviewer's side (their team, this role, "here") is never in
+    // the candidate's sources. Failsafe: any error leaves matched as computed above.
+    try {
+      if (matched) {
+        const corpus = new Set<string>(); for (const d of docsTok) for (const t of d) corpus.add(t)
+        const joined = new Set<string>(); topic.forEach((t, i) => { const n = topic[i + 1]; if (n && corpus.has(stem(t + n))) { joined.add(t); joined.add(n) } })
+        let cfold = new Set<string>()
+        try { cfold = foldSet(passages.map((p) => p.text).join("\n"), moneyOk) } catch { cfold = new Set() }
+        const absent = topic.filter((t) => t.length >= 4 && !/^\d+$/.test(t) && !foldedHas(corpus, cfold, t) && !joined.has(t) && !(askedSlot(q) && R13_CUE.test(t)) && !famWord(t) && !related.has(t) && !ASK_GENERIC.has(t) && !ASK_GENERIC.has(t.replace(/(?:ing|ed|es|s)$/, "")))
+        // a two-part ask whose absent words all sit in the part already named missing keeps its covered part
+        const inMissing = (t: string) => missing.some((m) => tokens(m).map(heard).includes(t))
+        if (INTERVIEWER_SIDE.test(q) || (absent.length && !(missing.length && absent.every(inMissing)))) { matched = false; missing = [] }
+      }
+    } catch { /* failsafe: matched unchanged */ }
+    // r12: near-miss slot gate. A question asking for a specific value (a person, a title, a count, money, a date, an
+    // outcome figure, a named tool) is covered only when a covering passage states a value of that type in a sentence
+    // that shares a topic word. Stricter only; failsafe: any error leaves matched unchanged.
+    try {
+      const slot = matched ? askedSlot(q) : null
+      if (slot) {
+        const words = topic.filter((t) => t.length >= 3 && !ASK_GENERIC.has(t) && !SLOT_CUE.test(t))
+        // r13: an employer or product named in the ask must be in the passage that states the value
+        let ents: string[] = []
+        try { const vocab0 = new Set(docsTok.flat()); ents = entityWords(q).filter((e) => vocab0.has(e)) } catch { ents = [] }
+        // r13: when the ask names an employer, the value sentence must also hold a non-name topic word (the subject),
+        // so "what percentage of findings did you close at X" is not met by any percentage near X's name
+        const subject = ents.length ? words.filter((w) => !ents.includes(w)) : []
+        const named = (p: Passage) => !ents.length || ents.some((e) => tokens(coverText(p)).includes(e))
+        const filled = ranked.some((p) => p.proves === "experience" && covers(p) && named(p) && slotFilled(slot, withoutCoaching(coverText(p)), words, START_ASK.test(q), TEAM_ASK.test(q), END_ASK.test(q), subject))
+        if (!filled) { matched = false; missing = [] }
+      }
+    } catch { /* failsafe: matched unchanged */ }
     const closest = matched ? ranked.find((p) => p.proves === "experience") || null : closestExample(q, experience)
     return missing.length ? { matched, passages: ranked.slice(0, k), closest, all: scored, missing } : { matched, passages: ranked.slice(0, k), closest, all: scored }
   } catch {
@@ -383,21 +551,70 @@ const TOOL_RE = new RegExp(`\\b(?:${TOOLS.join("|")})\\b`, "gi")
 const VAGUE_RE = /\b(?:(?:a|an) (?:very )?(?:large|huge|big|massive|sizable|global|enterprise-wide) (?:team|org|organi[sz]ation|program(?:me)?|budget|portfolio|estate|fleet|user base|customer base)|(?:millions|thousands|hundreds|dozens|tens|scores|billions)(?: of (?:thousands|millions))? of (?:[a-z-]+ )?(?:users|customers|engineers|people|analysts|developers|staff|employees|accounts|servers|endpoints|hosts|devices|records|dollars|transactions|alerts|findings|applications|apps|services|clients|members|reports))\b/gi
 const VAGUE_SCALE: Record<string, number> = { tens: 10, dozens: 24, scores: 40, hundreds: 200, thousands: 2000, millions: 2000000, billions: 2e9 }
 
+// r9: ordinary words that open a sentence are not names ("Leadership sees it weekly", "Failures go back to the owner").
+// Only a single capitalised word at the very start of a sentence is read this way; a name run ("Acme Corp"), a tool,
+// a word with inner capitals ("GuardDuty") or any word not on this list (Globex, Initech, Hooli, Boeing) is still a claim.
+const OPENER_WORDS = new Set(("leadership ownership partnership membership sponsorship stewardship relationship relationships " +
+  "failure failures success successes mistake mistakes lesson lessons result results outcome outcomes impact progress " +
+  "communication collaboration coordination documentation automation prioritization escalation escalations remediation " +
+  "accountability visibility consistency reliability availability scalability security safety privacy compliance governance " +
+  "trust clarity speed quality focus context culture people teams team stakeholders stakeholder customers customer users " +
+  "management engineering operations leaders leader owners owner engineers analysts everyone everything nothing someone something " +
+  "data evidence metrics logs alerts findings risk risks controls policies policy change changes cost costs time budget scope " +
+  "transparency honesty empathy patience feedback mentoring coaching training testing monitoring logging alerting tuning triage " +
+  "working looking building ensuring having being getting moving starting reviewing tracking mapping running leading managing " +
+  "using taking making keeping writing measuring explaining listening asking " +
+  "afterward afterwards eventually luckily unfortunately fortunately personally practically basically clearly naturally " +
+  "simply typically generally specifically importantly interestingly surprisingly looking back " +
+  "my our their that those these this such another other each both either neither one two three first second third last " +
+  "part most much more less half none few several plenty everybody nobody somebody " +
+  "early later recently previously currently today tomorrow yesterday weekly monthly daily quarterly annually " +
+  "good great better best bad worse worst hard harder easy simple key main core big small new old real true false " +
+  "was were is are be been had has have did do does got went came made took gave kept said told asked felt knew thought " +
+  "start begin end finish stop keep make take give get let try use run build lead own fix check").split(/\s+/))
+function commonOpener(w: string, next: string | undefined): boolean {
+  const l = w.toLowerCase()
+  if (!/^[A-Z][a-z]+$/.test(w) || TOOLS.includes(l)) return false
+  if (next && /^[A-Z][A-Za-z0-9&-]*$/.test(next) && !COMMON.has(next.toLowerCase())) return false // "Leadership Council", "Acme Corp"
+  return OPENER_WORDS.has(l) || COMMON.has(l) || (l.length >= 6 && /(?:ship|ment|ness|ity|tion|sion|ance|ence|ism)s?$/.test(l)) || (l.length >= 6 && /ly$/.test(l))
+}
+
+const ctxCache = new Map<string, Set<string>>()
+function contextSet(haystack: string): Set<string> {
+  let s = ctxCache.get(haystack)
+  if (!s) { s = new Set(figureContextKeys(haystack)); if (ctxCache.size > 16) ctxCache.clear(); ctxCache.set(haystack, s) }
+  return s
+}
+
 /** Personal claims a listener would take as fact: named employers, tools, acronyms, and figures. */
 export function extractClaims(text: string): string[] {
   const out: string[] = []
   const t = String(text || "")
+  // r9: a figure that names what it counts is one claim with its noun ("4 regions", "3-5 weeks", "a 4-week"), so a bare
+  // "4" elsewhere in the sources no longer backs it; a bare or standard-name number stays as it was ("40%", "27001").
+  let ments: FigureMention[] = []
+  try { ments = figureMentions(t) } catch { ments = [] }
+  const bareRe = /^(?:\d[\d,.]*\d%?|\d{2,}%?|\d%)$/
+  for (const m of ments) {
+    if (!m.label && (m.head.length || m.money)) out.push(m.claim.replace(/[.,]$/, ""))
+    else if (bareRe.test(m.raw.replace(/^\$\s?/, "").replace(/\s*(?:percent|per cent)$/i, "%").replace(/\s+%/, "%"))) out.push(m.raw.replace(/^\$\s?/, "").replace(/\s*(?:percent|per cent)$/i, "%").replace(/\s+%/, "%").replace(/[.,]$/, ""))
+  }
+  // the pre-r9 figure pass, so no figure it caught is lost (claims are de-duplicated below)
   for (const m of t.matchAll(/\b\d[\d,.]*\d%?|\b\d{2,}%?|\b\d%/g)) out.push(m[0].replace(/[.,]$/, ""))
   // r2: a small figure with a scale word or a currency sign ("$2 million", "3 billion") is a claim too
   for (const m of t.matchAll(/\$\s?\d[\d,.]*(?:\s?(?:k|m|bn|million|billion|thousand)\b)?|\b\d[\d,.]*\s(?:million|billion|thousand)\b/gi)) out.push(m[0].replace(/^\$\s?/, "").toLowerCase())
   for (const m of t.matchAll(VAGUE_RE)) out.push(m[0].toLowerCase())
   for (const m of t.matchAll(TOOL_RE)) if (!/^[A-Z]/.test(m[0])) out.push(m[0].toLowerCase())
   for (const sentence of t.split(/(?<=[.!?])\s+/)) {
-    const ws = sentence.replace(/[^\w\s&'-]/g, " ").split(/\s+/).filter(Boolean)
+    // r9: a comma, semicolon, colon or bracket ends a name ("SOC 2 Type II, NIST 800-53" is two names, each checked)
+    const ws = sentence.replace(/[,;:()]/g, " \u0002 ").replace(/[^\w\s&'\u0002-]/g, " ").split(/\s+/).filter(Boolean)
     let run: string[] = []
     const flush = () => { if (run.length) out.push(run.join(" ")); run = [] }
     ws.forEach((w, i) => {
-      const proper = /^[A-Z][A-Za-z0-9&-]*$/.test(w) && !COMMON.has(w.toLowerCase()) && !/'/.test(w)
+      let opener = false
+      try { opener = i === 0 && commonOpener(w, ws[1]) } catch { opener = false }
+      if (w === "\u0002") { flush(); return }
+      const proper = /^[A-Z][A-Za-z0-9&-]*$/.test(w) && !COMMON.has(w.toLowerCase()) && !/'/.test(w) && !opener
       if (proper && !(i === 0 && !/[A-Z].*[A-Z]|[a-z][A-Z]/.test(w) && COMMON.has(w.toLowerCase()))) run.push(w)
       else flush()
     })
@@ -418,25 +635,93 @@ function supportedBy(claim: string, haystack: string): boolean {
     for (const m of haystack.replace(/,/g, "").matchAll(new RegExp(`\\b(\\d+)(?: [a-z-]+){0,2} ${noun}`, "g"))) if (Number(m[1]) >= min) return true
     return haystack.includes(c)
   }
-  if (/\d\s?(?:k|m|bn|million|billion|thousand)$/.test(c)) return haystack.replace(/,/g, "").includes(c.replace(/,/g, ""))
-  if (/\d/.test(c)) return haystack.replace(/,/g, "").includes(c.replace(/,/g, "").replace(/%$/, ""))
+  if (/\d\s?(?:k|m|bn|million|billion|thousand)$/.test(c) && !/^\$/.test(c)) return haystack.replace(/,/g, "").includes(c.replace(/,/g, ""))
+  if (/\d/.test(c)) {
+    // r9: the same number with the same unit or noun (and "$" for money); a figure claim whose number never appears is unsupported
+    try {
+      const m = figureMentions(c)[0]
+      if (!m) return haystack.replace(/,/g, "").includes(c.replace(/,/g, "").replace(/%$/, ""))
+      const keys = contextSet(haystack)
+      const pre = haystack.replace(/,/g, "").includes(c.replace(/,/g, "").replace(/%$/, ""))
+      if (m.label) return pre
+      if (!m.head.length && !m.money) return pre && keys.has(`${CTX}${m.n}|`)
+      return mentionSupported(m, keys)
+    } catch { return false }
+  }
   return haystack.includes(c)
 }
 
 // r5: an interviewer premise about the candidate ("since you led a team of 50", "given your time as CISO at Contoso",
 // "I see you ran…"). Only the clause about "you/your" is read, never the interviewer's own company line.
-const PREMISE_CLAUSE = /(?:^|[.?!,;]\s*|\b(?:so|and|i see|i know|i noticed|i read that)\s+)((?:since|as|given(?: that)?|because|now that|considering|with)\s+(?:you|your)\b[^,?.;]{3,140}|(?:you|you've|you have)\s+(?:led|managed|ran|built|owned|were|grew|headed|scaled|ran)\b[^,?.;]{3,140})/gi
+// r10 (Lens r4 note): result verbs (cut, reduced, slashed, lowered, dropped, …) and "I heard / I understand" lead-ins added.
+// r11b: "you had / you'd / your team" subjects and a clause-opening result gerund ("Cutting incidents 70% …") added (stricter only).
+// r11d: "your resume / CV / LinkedIn says (that) you…", "I see on your resume that you…", "it says here you…" lead-ins. Stricter only.
+const PREMISE_CLAUSE = /(?:^|[.?!,;]\s*|\b(?:so|and|(?:i see|i read|i noticed) (?:on|in) your (?:resume|cv|linkedin|profile)(?: that)?|(?:your (?:resume|cv|linkedin|profile)|it) says(?: here)?(?: that)?|i see|i know|i noticed|i read that|i heard(?: that)?|i understand(?: that)?|i was told(?: that)?)\s+)((?:since|as|given(?: that)?|because|now that|considering|with)\s+(?:you|your)\b[^,?.;]{3,140}|(?:you|you've|you have|you had|you'd|your (?:team|group|org|organi[sz]ation))\s+(?:led|managed|ran|built|owned|were|grew|headed|scaled|cut|reduced|lowered|slashed|dropped|decreased|halved|closed|saved|rotated|onboarded|doubled|tripled|quadrupled|covered|migrated|hired|trained|wrote|caught|deployed|implemented|improved|increased|boosted)\b[^,?.;]{3,140}|(?<=^|[.?!;]\s*)(?:cutting|reducing|lowering|slashing|dropping|decreasing|halving|closing|saving|rotating|doubling|tripling|improving|increasing|boosting)\s+[^,?.;]{3,140})/gi
+// r11c: spelled-out figures read as digits for the premise check only (question clause and sources alike), so
+// "seventy percent" = "70%", "half" = "50%", "doubled" = "doubled 100%". Stricter only; failsafe: text unchanged.
+const SP_UNITS: Record<string, number> = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 }
+const SP_TENS: Record<string, number> = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 }
+export function spelledFigures(text: string): string {
+  try {
+    let t = String(text || "")
+    t = t.replace(/\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[\s-]+(one|two|three|four|five|six|seven|eight|nine))?\b/gi,
+      (_m, a: string, b?: string) => String(SP_TENS[a.toLowerCase()] + (b ? SP_UNITS[b.toLowerCase()] : 0)))
+    t = t.replace(/\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\b(?=\s+(?:percent|per cent|%|[a-z]+s\b))/gi, (m) => String(SP_UNITS[m.toLowerCase()]))
+    t = t.replace(/\b(\d+(?:\.\d+)?)\s*(?:percent|per cent)\b/gi, "$1%")
+    t = t.replace(/\btwo[\s-]thirds?\b/gi, "67%").replace(/\b(?:a|one)[\s-]third\b/gi, "33%").replace(/\b(?:three|3)[\s-]quarters\b/gi, "75%")
+      .replace(/\b(?:a|one)[\s-]quarter\b(?!\s+(?:of\s+)?(?:19|20)\d\d)/gi, "25%").replace(/\b(?:in|by)\s+half\b/gi, "by 50%").replace(/\bhalved\b/gi, "halved 50%")
+      .replace(/\b(doubl(?:ed|ing))\b/gi, "$1 100%").replace(/\b(tripl(?:ed|ing))\b/gi, "$1 200%").replace(/\b(quadrupl(?:ed|ing))\b/gi, "$1 300%")
+    return t
+  } catch { return String(text || "") }
+}
+const PREMISE_VERBISH = /^(?:cut|cuts|cutting|reduc\w*|lower\w*|slash\w*|drop\w*|decreas\w*|halv\w*|clos\w*|sav\w*|rotat\w*|improv\w*|increas\w*|boost\w*|doubl\w*|tripl\w*|quadrupl\w*|grew|grow\w*|rais\w*|right|correct|about|around|nearly|almost|over|more|less|than|with|from|into|across|last|year|years|month|months|percent|that|this|your|their|just)$/
+/** r11c: content words within 3 words either side of a figure in a premise clause (verbs and fillers dropped), stemmed. */
+function premiseNouns(clause: string, at: number, end: number): string[] {
+  const w = (t: string) => (t.toLowerCase().match(/[a-z][a-z-]+/g) || []).filter((x) => x.length >= 4 && !PREMISE_VERBISH.test(x)).map((x) => x.replace(/(?:ies|es|s)$/, ""))
+  return [...w(clause.slice(0, at)).slice(-3), ...w(clause.slice(end)).slice(0, 3)]
+}
+/** r11c: true when the sources state the same percentage with one of these words within 6 words of it. */
+function hayFigureNear(hay: string, n: string, near: string[]): boolean {
+  try {
+    for (const f of figureMentions(hay)) {
+      if (f.n !== n) continue
+      // the same line only, within 80 characters either side
+      const ls = Math.max(hay.lastIndexOf("\n", f.at) + 1, f.at - 80)
+      const le0 = hay.indexOf("\n", f.end), le = Math.min(le0 < 0 ? hay.length : le0, f.end + 80)
+      const win = hay.slice(ls, le).toLowerCase().match(/[a-z][a-z-]+/g) || []
+      const stems = new Set(win.map((x) => x.replace(/(?:ies|es|s)$/, "")))
+      if (near.some((x) => stems.has(x))) return true
+    }
+    return false
+  } catch { return true }
+}
 /** Interviewer claims about the candidate that the experience sources do not back. Empty with no sources or no premise. */
 export function falsePremises(question: string, docs: SourceDoc[] | null | undefined): string[] {
   try {
     if (!Array.isArray(docs) || !docs.some((d) => d.proves === "experience")) return []
-    const hay = docs.filter((d) => d.proves === "experience").map((d) => d.text).join("\n").toLowerCase()
+    const hay = spelledFigures(docs.filter((d) => d.proves === "experience").map((d) => d.text).join("\n")).toLowerCase()
     const out: string[] = []
-    for (const m of String(question || "").matchAll(PREMISE_CLAUSE)) {
+    for (const m of spelledFigures(String(question || "")).matchAll(PREMISE_CLAUSE)) {
       const clause = m[1].replace(/^(?:since|as|given(?: that)?|because|now that|considering|with)\s+/i, "").replace(/^(?:you|your)\s+/i, "")
+        // r11b: the clause-opening gerund ("Cutting …") is the verb, not a name
+        .replace(/^(?:cutting|reducing|lowering|slashing|dropping|decreasing|halving|closing|saving|rotating|improving|increasing|boosting)\b/i, (w) => w.toLowerCase())
       for (const c of extractClaims(clause)) if (!/^(?:you|your|i)$/i.test(c) && !supportedBy(c, hay) && !out.includes(c)) out.push(c)
+      // r11c: a figure in the premise must be backed with its own noun (the words around it in the clause), not the bare
+      // number alone ("cut incidents by 50%" is not backed by "cut audit prep time by 50%"). Stricter only; failsafe: skip.
+      try {
+        const keys = contextSet(hay)
+        for (const f of figureMentions(clause)) {
+          if (f.label) continue
+          const raw = f.raw.trim()
+          if (f.head.length) { if (!mentionSupported(f, keys) && !out.includes(raw)) out.push(raw); continue }
+          if (!f.pct) continue
+          // a percentage: some content word around it in the clause must sit around the same figure in the sources
+          const near = premiseNouns(clause, f.at, f.end)
+          if (near.length && !hayFigureNear(hay, f.n, near) && !out.includes(raw)) out.push(raw)
+        }
+      } catch { /* failsafe: claims above only */ }
     }
-    return out
+    return dropCoveredFigureClaims(out)
   } catch {
     return []
   }
@@ -459,7 +744,7 @@ export function unsupportedClaims(text: string, passages: Passage[], docs: Sourc
     // r5: words the interviewer said are exempt, except a false premise about the candidate (failsafe: none → as before)
     let premise: string[] = []
     try { premise = falsePremises(question, docs).map((c) => c.toLowerCase()) } catch { premise = [] }
-    return extractClaims(text).filter((c) => !supportedBy(c, hay) && (!q.includes(c.toLowerCase()) || premise.includes(c.toLowerCase())))
+    return dropCoveredFigureClaims(extractClaims(text).filter((c) => !supportedBy(c, hay) && (!q.includes(c.toLowerCase()) || premise.includes(c.toLowerCase()))))
   } catch {
     return []
   }
@@ -467,7 +752,7 @@ export function unsupportedClaims(text: string, passages: Passage[], docs: Sourc
 
 /** Supported claims over all claims for one answer (1 when the answer makes no personal claim). */
 export function claimSupport(text: string, passages: Passage[], docs: SourceDoc[] | null | undefined, question = ""): { supported: number; total: number; share: number; unsupported: string[] } {
-  const total = extractClaims(text).filter((c) => !String(question).toLowerCase().includes(c.toLowerCase())).length
+  const total = dropCoveredFigureClaims(extractClaims(text).filter((c) => !String(question).toLowerCase().includes(c.toLowerCase()))).length
   const unsupported = unsupportedClaims(text, passages, docs, question)
   const supported = total - unsupported.length
   return { supported, total, share: total ? supported / total : 1, unsupported }
@@ -537,4 +822,141 @@ export function sourceConflicts(docs: SourceDoc[] | null | undefined): string[] 
   } catch {
     return []
   }
+}
+
+/** r10: a coaching, prohibition or advice-to-candidate sentence, not the candidate's own evidence. */
+export function coachingSentence(sentence: string): boolean {
+  const t = String(sentence || "").trim()
+  if (/^(?:do not|don't|never|avoid|ask|respond|confirm|fill|say|tell them|be ready|prepare|mention|remember)\b/i.test(t)) return true
+  if (/\b(?:do not|don't|never) (?:claim|say|mention|invent|state|promise|imply|overclaim)\b/i.test(t) && !/^(?:I|We|My)\b/.test(t)) return true
+  return /\brespond based on\b|\bbefore the call\b|\[ ___/i.test(t)
+}
+/** r10: text with coaching sentences removed (failsafe: the text unchanged on error). */
+export function withoutCoaching(text: string): string {
+  try { return String(text || "").split(/(?<=[.!?])\s+/).filter((x) => !coachingSentence(x)).join(" ") } catch { return String(text || "") }
+}
+const COUNT_RE = /\b\d+\b|\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozen|dozens|hundred|hundreds|thousand|thousands|single|a couple|several)\b/i
+
+/** r11: a question about the interviewer's side (their team or company, this role, "here", who I would report to). */
+const INTERVIEWER_SIDE = /\b(?:this (?:role|position|job|opening)|your (?:company|organi[sz]ation|org)\b|(?:team|company|org|people|stack|tools?) (?:here|at your)\b|\bhere\?|would i (?:report|be|work|start)|will i (?:report|be|work|start)|after this round|salary band|interview process)/i
+/** r11: ask words that are never a topic of their own (verbs and fillers of the asking), so their absence proves nothing. */
+const ASK_GENERIC = new Set(("done do doing did make made making keep kept keeps many much more most mention mentioned prepare prepar meet meeting met use used using usage "
+  + "handle handl speed fast quick quickly approach work worked working get got give gave take took run ran running go went going come came "
+  + "think thought feel felt know knew want wanted need needed like liked help helped start started stop stopped tell told talk talked walk "
+  + "describe explain example examples time times thing things something anything everything someone people person kind sort type part parts "
+  + "best better good great hard hardest easy easier biggest big small large lot lots way ways really actually just also still ever never "
+  + "usually typically generally exactly specifically overall today recently currently first last next previous past future year years month "
+  + "months week weeks day days ensure make sure deal dealt manage managed apply applied build built create created set setup set-up "
+  + "improve improved reduce reduced increase increased change changed look looked find found decide decided choose chose pick picked "
+  + "role roles job jobs task tasks project projects process processes team teams company companies area areas field level levels "
+  + "instead apart rather versus").split(/\s+/))
+
+/** r11: the r8 dossier-item ranking switch. On only when KOMPAS_DOSSIER_ITEMS is "on" or "1"; any error → off. */
+export const DOSSIER_ITEMS_SWITCH = "KOMPAS_DOSSIER_ITEMS"
+export function dossierItemsOn(): boolean {
+  try { const v = typeof process !== "undefined" ? String(process.env?.[DOSSIER_ITEMS_SWITCH] ?? "").trim().toLowerCase() : ""; return v === "on" || v === "1" } catch { return false }
+}
+
+// r12: the asked-for slot of a question, or null when it asks for no specific value.
+export type AskSlot = "person" | "title" | "count" | "money" | "date" | "outcome" | "tech" | "duration" | "findings" | "signoff"
+const SLOT_ASK: [AskSlot, RegExp][] = [
+  // r13 forms first: who signed off, how long an engagement ran, what a review found, pay rate, contract end, team size
+  ["signoff", /\bwho (?:signed|signs|sign) off\b|\bwho (?:approved|signed)\b|\bwhose (?:sign-?off|approval|signature)\b|\bwho (?:had|has|needed|needs) to (?:sign off|sign-off|approve)\b/i],
+  ["duration", /\bhow long (?:was|were|did|is) (?:your|the|that|this) (?:[\w.-]+ ){0,3}(?:engagement|contract|stint|tenure|assignment|placement)\b|\bhow long (?:were|was) you (?:at|with)\b|\bhow (?:many|long) (?:months|years) (?:were|was|did) you (?:at|with|spend)\b/i],
+  ["findings", /\bwhat did (?:the|your|that) (?:[\w.-]+ ){0,3}(?:review|audit|assessment|pen ?test|test|scan)s? (?:at [\w.-]+(?: [A-Z][\w.-]*)? )?(?:find|show|turn up|reveal|conclude|uncover)\b|\b(?:findings|results?|outcome) of (?:the|your|that) (?:[\w.-]+ ){0,2}(?:review|audit|assessment|pen ?test)\b|\bwhat came out of (?:the|your|that) (?:[\w.-]+ ){0,3}(?:review|audit|assessment)\b/i],
+  ["money", /\b(?:hourly|day|daily|bill|billing|pay|consulting) rate\b|\brate (?:did|do) you (?:charge|bill|get|earn)\b/i],
+  ["date", /\bend date\b|\bwhen (?:does|did|will) (?:your|the) (?:[\w.-]+ ){0,3}contract (?:end|finish|expire)\b/i],
+  ["count", /\bhow (?:big|large) (?:was|is|were) (?:the|your) (?:[\w.-]+ ){0,2}team\b|\bhow (?:big|large) a team\b|\bwhat size (?:was|is) (?:the|your) (?:[\w.-]+ ){0,2}team\b/i],
+  ["money", /\b(?:salary|salaries|budget|compensation|pay(?:ed|id)?|earn(?:ed)?|bonus)\b|\bhow much\b[^?]*\b(?:cost|spend|spent|price)|\b(?:cost|price)\b[^?]*\b(?:per|a) (?:year|month|seat)/i],
+  ["person", /\bwho (?:was|is|were|did|managed|hired|led|ran)\b|\bname of (?:your|the) |\b(?:manager|boss|supervisor)'s name\b/i],
+  ["title", /\b(?:job|exact|official|your) title\b|\bwhat (?:was|is) your title\b/i],
+  ["date", /\bwhen did\b|\b(?:what|which|in what) (?:year|month|date)\b|\bstart date\b/i],
+  ["outcome", /\b(?:percentage|percent)\b|\bhow did [^?]*\bcome out\b|\b(?:final|exact) (?:result|outcome|score)\b/i],
+  ["tech", /\bwhat (?:siem|edr|xdr|soar|stack|tech stack|language|database|cloud|scanner|firewall|vendor)\b[^?]*\b(?:did|does|at|run|use)\b/i],
+  ["count", /\bhow many\b|\bwhat (?:number|count) of\b|\b(?:team|headcount) size\b/i],
+]
+export function askedSlot(q: string): AskSlot | null {
+  try { for (const [slot, re] of SLOT_ASK) if (re.test(q)) return slot } catch { /* failsafe */ }
+  return null
+}
+const SLOT_VALUE: Record<AskSlot, RegExp> = {
+  person: /\b(?:[Mm]anager|[Bb]oss|[Ss]upervisor|[Rr]eport(?:ed|s)? (?:directly )?to|CISO|CIO|CTO|VP|[Dd]irector|[Ll]ed by|[Hh]ired by)\b[^.\n()?]{0,40}?\b(?![A-Z][a-z]+ (?:Bank|Health|Group|Financial|Energy|Inc|Corp|Services|Security|Management|Can|What|How)\b)[A-Z][a-z]+ [A-Z][a-z]+|\b[A-Z][a-z]+ [A-Z][a-z]+, (?:the|my|our) (?:CISO|CIO|CTO|VP|[Dd]irector|[Mm]anager)/,
+  title: /\b(?:[Tt]itle|[Pp]osition) (?:was|is|of)\b|\b(?:Senior|Lead|Principal|Staff|Junior|Chief|Head) [A-Z][a-z]+/,
+  // a count, but not a duration or a share ("seven years", "30 days", "64%")
+  count: /(?:\b\d[\d,.]*|\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozen|hundred|thousand))\b(?!\+?\s*(?:-\s*)?(?:years?|months?|weeks?|days?|hours?|minutes?|%|percent|am|pm)\b)(?!%)/i,
+  money: /[$£€]\s?\d|\b\d[\d,.]*\s?(?:k|K|million|billion|thousand|USD|dollars)\b/,
+  date: /\b(?:19|20)\d\d\b|\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\b|\bQ[1-4]\b/,
+  outcome: /\d\s?%|\bpercent\b|\b(?:passed|failed|reduced|cut|dropped|increased|improved|zero|no findings)\b[^.\n]{0,40}\d/i,
+  duration: /\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|eighteen|twenty|thirty|a few|several)[- ](?:years?|months?|weeks?|days?)\b/i,
+  findings: /\b(?:review|audit|assessment|test|scan|report)s?\b[^.\n]{0,40}\b(?:found|showed|shows?|identified|revealed|turned up|concluded|uncovered|flagged)\b|\bfindings? (?:was|were|is|are|included)\b|\b(?:classic|main|key|top) finding\b/i,
+  signoff: /\b(?:signed off|sign-?offs?|approved|signature)\b[^.\n]{0,30}\b(?:CISO|CIO|CTO|CFO|VP|[Dd]irector|[Oo]wner|[Mm]anager|[Bb]oard|[Cc]ommittee|[Rr]eviewer|[A-Z][a-z]+ [A-Z][a-z]+)|\b(?:CISO|CIO|CTO|CFO|VP|[Dd]irector|[Oo]wner|[Mm]anager|[Bb]oard|[Cc]ommittee|[Rr]eviewer)s?(?:'s?)? (?:sign-?offs?|signed off|approv(?:al|ed))\b/,
+  tech: /\b[A-Z][a-z]+[A-Z][A-Za-z]*\b|\b[A-Z]{3,}\b|\b(?:Splunk|Sentinel|QRadar|Chronicle|Elastic|ArcSight|LogRhythm|CrowdStrike|Defender|Tenable|Qualys|Okta|Python|Java|Go|AWS|Azure|GCP)\b/,
+}
+// "when did you start / join" needs the date beside a start word, not any year near the employer name
+const START_ASK = /\b(?:start|started|join|joined|hired|begin|began)\b/i
+const START_WORD = /\b(?:start(?:ed|ing)?|join(?:ed|ing)?|hired|beg[ai]n|since|onboarded)\b/i
+// "how many people / how big a team" needs a head count ("a team of six", "12 engineers"), not any number near the employer
+const TEAM_ASK = /\bhow (?:big|large) (?:was|is|were) (?:the|your) (?:[\w.-]+ ){0,2}team\b|\bhow (?:big|large) a team\b|\bwhat size (?:was|is) (?:the|your) (?:[\w.-]+ ){0,2}team\b|\bhow many (?:people|engineers|analysts|staff|direct reports|reports|members|persons?)\b|\b(?:team|headcount) size\b|\bhow (?:big|large) (?:was|is) (?:your|the) team\b/i
+const TEAM_COUNT = /\bteam of (?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|a dozen)\b|(?:\b\d[\d,]*|\b(?:two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozen))[- ](?:\w+ )?(?:people|engineers|analysts|staff|direct reports|reports|members|person|FTEs?|contractors)\b/i
+// the cue word of an ask ("title", "manager", "salary") is not the shared topic: the value must sit by another topic word
+const SLOT_CUE = /^(?:rate|hourly|daily|size|big|large|long|end|ended|finding|find|sign|signed|approv|whose|title|job|exact|official|manag|manager|boss|supervisor|report|salar|salary|budget|compensat|pay|paid|earn|cost|price|percent|percentag|result|outcome|final|start|year|month|date|name|number|count|team|size|siem|edr|stack|tech|tool)/
+// a value of the slot type in a sentence (or line) that also holds a topic word; no topic words → any sentence
+export function slotFilled(slot: AskSlot, text: string, topic: string[], startAsk = false, teamAsk = false, endAsk = false, subject: string[] = []): boolean {
+  const want = new Set(topic)
+  // r13 slots read whole sentences (a ";" list keeps "closure evidence: … owner sign-offs" together)
+  const parts = /^(?:signoff|findings|duration)$/.test(slot) ? text.split(/(?<=[.!?])\s+|\n+/) : text.split(/(?<=[.!?;])\s+|\n+/)
+  const subj = subject.map((w) => foldWord(w))
+  const hasSubject = (s: string) => { if (!subj.length) return true; try { const f = foldSet(s, false); return subj.some((w) => f.has(w)) } catch { return true } }
+  return parts.some((s) => hasSubject(s) && SLOT_VALUE[slot].test(s) && (!startAsk || slot !== "date" || START_WORD.test(s)) && (!endAsk || slot !== "date" || END_WORD.test(s)) && (!teamAsk || slot !== "count" || TEAM_COUNT.test(s)) && (!want.size || tokens(s).some((t) => want.has(t))))
+}
+// r13: cue words of the new slot forms ("how big", "what size", "day rate") are judged by the slot gate, not by absence
+const R13_CUE = /^(?:size|big|large|long|rate|hourly|daily|end|ended|sign|signed|whose|finding|find|approv)/
+// "when did the contract end" needs the date beside an end word
+const END_ASK = /\b(?:end|ended|ends|finish|finished|expire|expired|end date)\b/i
+const END_WORD = /\b(?:end(?:ed|s|ing)?|finish(?:ed)?|expir(?:ed|y|es)|until|through|wrapped|left)\b/i
+
+// r13: folding. A word and its inflections share one key ("hardened"/"hardening" -> "harden", "rolled out"/"rollout" ->
+// "deploy", "percentage"/"64%" -> "percent"); the money words share "money" only when the ask is a money or slot-free ask.
+const PARTICLES = new Set(["out", "off", "up", "in", "over", "down"])
+const MONEY_CLASS = /^(?:cost|pric|spend|spent|budget|fee)$/
+export function foldWord(t: string, moneyOk = false): string {
+  let w = String(t || "").toLowerCase().replace(/-/g, "")
+  if (/^\d[\d.,]*%$/.test(w)) return "percent"
+  if (/^\d/.test(w)) return w
+  w = w.replace(/^programme/, "program")
+  if (w.length > 5 && /ies$/.test(w)) w = w.slice(0, -3) + "y"
+  else if (w.length > 4 && /[^s]s$/.test(w)) w = w.slice(0, -1)
+  if (w.length > 5 && /ie$/.test(w)) w = w.slice(0, -2) + "y"
+  if (w.length > 5 && /ing$/.test(w)) w = w.slice(0, -3)
+  else if (w.length > 4 && /ed$/.test(w)) w = w.slice(0, -2)
+  else if (w.length > 4 && /edout$|ingout$/.test(w)) w = w.replace(/(?:ed|ing)out$/, "out")
+  if (w.length > 3 && /e$/.test(w)) w = w.slice(0, -1)
+  w = w.replace(/([b-df-hj-np-tv-z])\1(out|off|up)?$/, "$1$2")
+  if (/^(?:rol+out|deploy(?:ment)?)$/.test(w)) return "deploy"
+  if (/^percent(?:ag)?$/.test(w)) return "percent"
+  if (moneyOk && MONEY_CLASS.test(w)) return "money"
+  return w
+}
+/** words of the ask followed by a particle ("roll out", "sign off") also try their joined form */
+function particleAlts(q: string): Map<string, string[]> {
+  const raw = String(q || "").toLowerCase().replace(/[^a-z0-9%-]+/g, " ").split(/\s+/).filter(Boolean)
+  const m = new Map<string, string[]>()
+  raw.forEach((w, i) => { const n = raw[i + 1]; if (n && PARTICLES.has(n)) { const k = stem(w); m.set(k, [...(m.get(k) || []), w + n]) } })
+  return m
+}
+function foldSet(text: string, moneyOk: boolean): Set<string> {
+  const raw = String(text || "").toLowerCase().replace(/[^a-z0-9%-]+/g, " ").split(/\s+/).filter(Boolean)
+  const out = new Set<string>()
+  raw.forEach((w, i) => {
+    out.add(foldWord(w, moneyOk)); out.add(foldWord(stem(w), moneyOk))
+    const n = raw[i + 1]; if (n && PARTICLES.has(n)) out.add(foldWord(w + n, moneyOk))
+    if (w.includes("-")) out.add(foldWord(w.replace(/-/g, ""), moneyOk))
+  })
+  if (moneyOk && /[$£€]\s?\d|\b\d[\d,.]*\s?(?:k|million|billion|dollars)\b/i.test(text)) out.add("money")
+  return out
+}
+/** r13: employer / product names in an ask (capitalised words after the first), lower-cased like tokens */
+function entityWords(q: string): string[] {
+  const ws = String(q || "").replace(/[?!.,]/g, " ").split(/\s+/).filter(Boolean).slice(1)
+  return [...new Set(ws.filter((w) => /^[A-Z][A-Za-z0-9&]+$/.test(w) && !/^(?:I|I'm|I've|What|Who|How|When|Why|Which|Whose|Tell|Did|Do)$/.test(w)).map((w) => stem(w.toLowerCase())))]
 }

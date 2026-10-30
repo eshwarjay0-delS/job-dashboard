@@ -111,7 +111,7 @@ function livePage(engine = ECHOED) {
     cards: [{ question: 'Ready', answer: ['Press Start — both your mic and the call audio are on by default.'] }], idx: 0,
     box: { value: '' },
     pendingHeard() { return s.transcript.filter((t) => t.seq > s.answeredSeq) },
-    updatePending() {}, flushHeard: async () => {}, setChat() {}, logEvent() {}, renderCard() {}, toTop() {},
+    updatePending() {}, flushHeard: async () => {}, setChat() {}, logEvent() {}, logDecision() {}, renderCard() {}, toTop() {},
     animateCard() {}, clearTimeout() {}, plainAnswer: (a) => (Array.isArray(a) ? a.join(' ') : String(a)), questionSource: () => s.source,
     // A crash inside AI Answer lands in status(..., "err"): that fails the replay instead of passing silently.
     status(msg, kind) { if (kind === 'err') errors.push(String(msg)) },
