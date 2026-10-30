@@ -17,10 +17,34 @@ import { retrievePassages, sourceIndexFor, unsupportedClaims, type Passage, type
 
 /** Lens contract v1 (research/lens-opener-contract.md): Opener. sourceDoc optional for the r6 hook's callers. */
 export interface SourcedOpener { text: string; sourceId: string; sourceDoc?: string; category: string; verbatim: true; leadIn?: string }
-/** Lens contract v2 (r5): the fixed lead-in list, copied from Lens kompasOpener.ts LEAD_INS (keep the two in step). A lead-in
+/** Lens contract v2 (r5): the fixed lead-in list, mirrors Lens kompasOpener.ts LEAD_INS (r6); scripts/tests/kompas-guards-r9b.test.mjs fails if it differs from the Lens bundle. A lead-in
  *  not on this list is dropped, never spoken. None holds a name, number or date, so it can add no fact. */
-export const LEAD_INS: readonly string[] = ["In one of my roles, I ", "In my work, I ", "My work has involved ", "From my background: ", "In one of my roles, I was ", "I am "]
+export const LEAD_INS: readonly string[] = ["In one of my roles, I ", "In my work, I ", "My work has involved ", "My work has included ", "In one of my roles, I was ", "I am ", "I have "]
 /** Spoken opener = known lead-in + the approved verbatim text. Approval is on `text` alone (approveSourcedOpener). */
+/** Lens contract v3 (r6) mirror of displayOpener: lead-in + text with only text's first letter lowercased (kept for an
+ *  acronym, inner-capital product name or one-letter first word). Pure; approval never uses it. */
+export function displayOpenerText(o: { text: string; leadIn?: string } | null | undefined): string {
+  const spoken = spokenOpenerText(o)
+  if (!o || !spoken) return ""
+  const t = o.text.trim(), l = spoken.slice(0, spoken.length - t.length)
+  if (!l) return t
+  const first = t.split(/\s+/)[0] || ""
+  const keep = /^[A-Z][A-Z0-9/&-]+\b/.test(first) || /^[A-Z][a-z]+[A-Z]/.test(first) || first.length === 1
+  return keep ? spoken : `${l}${t[0].toLowerCase()}${t.slice(1)}`
+}
+/** Mirror of Lens isSafeDisplay: true only for a known lead-in, shown === displayOpenerText(o), and the body equal to text
+ *  except the case of its first letter. Anything else falls back to the exact text. */
+export function isSafeDisplayText(o: { text: string; leadIn?: string } | null | undefined, shown: string): boolean {
+  if (!o || typeof o.text !== "string" || !o.text.trim() || !LEAD_INS.concat([""]).includes(String(o.leadIn || ""))) return false
+  const t = o.text.trim(), s = String(shown || "")
+  if (!s || s !== displayOpenerText(o)) return false
+  const body = s.slice(String(o.leadIn || "").length)
+  return body.length === t.length && body.slice(1) === t.slice(1) && body[0].toLowerCase() === t[0].toLowerCase()
+}
+function safeDisplay(op: SourcedOpener): string {
+  const shown = displayOpenerText(op)
+  return isSafeDisplayText(op, shown) ? shown : op.text.trim()
+}
 export function spokenOpenerText(o: { text: string; leadIn?: string } | null | undefined): string {
   if (!o || typeof o.text !== "string") return ""
   const t = o.text.trim()
@@ -114,8 +138,8 @@ export function createSentenceGate(o: { check: SentenceCheck; opener?: unknown; 
   let buf = ""
   let stop = false
   const out: string[] = []
-  // r9 (contract v2): approve on `text` only (exact match to the cited session passage id), then speak leadIn + text
-  const opener = approveSourcedOpener(o.opener, o.sourcePassages) ? spokenOpenerText(o.opener as SourcedOpener) : ""
+  // r9b (contract v3): approve on exact `text` only (cited session passage id); show displayOpener only if isSafeDisplay, else text
+  const opener = approveSourcedOpener(o.opener, o.sourcePassages) ? safeDisplay(o.opener as SourcedOpener) : ""
   const judge = (s: string): string[] => {
     const t = s.trim()
     if (!t || stop) return []

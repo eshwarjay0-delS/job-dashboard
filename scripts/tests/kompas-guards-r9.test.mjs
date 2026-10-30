@@ -153,7 +153,8 @@ test("v2: approval compares text only; a lead-in folded into text fails; changed
 test("v2: gate shows leadIn + text and withOpener gets the same string; unknown lead-in is dropped", () => {
   const op = { text: bullet, sourceId: pid, sourceDoc: "resume", category: "experience-story", verbatim: true, leadIn: "In one of my roles, I " }
   const g = G.createSentenceGate({ check, opener: op, sourcePassages: opP })
-  const spoken = "In one of my roles, I " + bullet
+  // r9b: superseded by contract v3 — the shown form is displayOpener (first letter lowercased), see kompas-guards-r9b.test.mjs
+  const spoken = "In one of my roles, I b" + bullet.slice(1)
   assert.deepEqual(g.start(), [spoken]); assert.equal(g.openerText(), spoken)
   assert.equal(G.withOpener("Then I tuned the noisy rules.", g.openerText()), `${spoken} Then I tuned the noisy rules.`)
   assert.equal(G.withOpener(`${spoken} Then I tuned it.`, g.openerText()), `${spoken} Then I tuned it.`)
