@@ -452,7 +452,10 @@ export function settleSpokenAnswer(
     const text = [fence[0], around].filter(Boolean).join("\n\n")
     return { text, words: wordCount(around), providerError: false, banned: [], missingEcho: false, repeated: false, inBand: true }
   }
-  const kept = sentencesOf(answer).filter((sentence) => !cut.banned.some((term) => containsTerm(sentence, term)))
+  // An asked repeat ("say that again") keeps every sentence; only an unasked read-back is trimmed.
+  const askedRepeat = /\b(?:repeat|again|once more|say that|same answer)\b/i.test(question)
+  const spoken = askedRepeat ? spokenMarkup(answer) : dropRepeatedSentences(spokenMarkup(answer), previousAnswer)
+  const kept = sentencesOf(spoken).filter((sentence) => !cut.banned.some((term) => containsTerm(sentence, term)))
   const stripped = stripListMarkers(kept.join(" "))
   const text = trimToWords(stripped, cap, (sentence) => requiredSentence(question, sentence))
   const opening = firstSentence(text).toLowerCase()
@@ -486,6 +489,38 @@ export function requiredSentence(question: string, sentence: string): boolean {
   if (/\b(exit criterion|stop condition|falsifiable)\b/i.test(q) && /\b(exit|stop|falsif|disprove)/i.test(sentence)) return true
   for (const code of q.match(/\b\d{2,4}-\d{1,3}\b/g) || []) if (sentence.includes(code)) return true
   return false
+}
+
+/**
+ * Stress round 4 (29 Oct 2026): the model sometimes writes for a page, not for speech ("## Answer", "**Residual risk**",
+ * "Answer: ..."). Those were read out as written. Only the markup goes; every word of the answer stays.
+ */
+export function spokenMarkup(text: string): string {
+  const out = String(text || "")
+    .replace(/^\s{0,3}#{1,6}\s*(?:(?:short |spoken |final )?answer|response|summary)\s*:?\s*$/gim, "")
+    .replace(/^\s{0,3}#{1,6}\s+(.+)$/gm, (_, heading: string) => (/[.?!:]$/.test(heading.trim()) ? heading.trim() : `${heading.trim()}.`))
+    .replace(/\*\*([^*\n]+)\*\*|__([^_\n]+)__/g, (_, a: string, b: string) => a || b)
+    .replace(/(^|\s)\*([^*\n]+)\*(?=[\s.,;:!?]|$)/g, "$1$2")
+    .replace(/\[([^\]\n]+)\]\((?:https?:)?[^)\s]*\)/g, "$1")
+    .replace(/`([^`\n]+)`/g, "$1")
+    .replace(/^\s*(?:(?:short|spoken|final|my)\s+)?(?:answer|response)\s*[:\-–—]\s*/i, "")
+    .trim()
+  // Failsafe: markup-only text (never expected) keeps the original rather than showing nothing.
+  return out || String(text || "")
+}
+
+/**
+ * Stress round 4: when the model reads back the previous answer, the sentences it already said are dropped. If too
+ * little is left to stand as an answer, the text is kept as written (the repeated flag still reports it).
+ */
+export function dropRepeatedSentences(text: string, previousAnswer = ""): string {
+  if (!previousAnswer) return text
+  const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+  const said = new Set(sentencesOf(previousAnswer).map(key).filter((k) => k.split(" ").length >= 5))
+  const all = sentencesOf(text)
+  const fresh = all.filter((sentence) => !said.has(key(sentence)))
+  if (fresh.length === all.length) return text
+  return fresh.length && wordCount(fresh.join(" ")) >= 8 ? fresh.join(" ") : text
 }
 
 function stripListMarkers(text: string): string {

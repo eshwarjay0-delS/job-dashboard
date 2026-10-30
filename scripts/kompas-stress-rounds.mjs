@@ -113,7 +113,9 @@ const R4 = [
     ["What does residual risk mean?", "Jordan tracked residual risk on open findings. He told the business what remained."],
     ["What does residual risk mean?", "Answer: Residual risk is what remains after the control is in place."]].map(([q, raw]) => ({ kind: "settle", family: "live-output speakable", q, raw })),
   ...[["How do you report residual risk to the business?", "I tracked residual risk on open findings and told the business what remained after the planned control was in place. I wrote the weekly risk summary in plain language."],
-    ["When would you reject a policy exception?", "I questioned exception requests that had no end date and sent them back for an expiry. I compared the evidence with the live setting."]].map(([q, raw]) => ({ kind: "repeat", family: "repeat of previous answer", q, raw, previous: raw })),
+    ["When would you reject a policy exception?", "I questioned exception requests that had no end date and sent them back for an expiry. I compared the evidence with the live setting."]].map(([q, raw]) => ({ kind: "repeat", family: "repeat of previous answer (full)", q, raw, previous: raw, full: true })),
+  ...[["When would you reject a policy exception?", "I reject an exception that has no end date and no compensating control. I tracked residual risk on open findings and told the business what remained after the planned control was in place.", "I tracked residual risk on open findings and told the business what remained after the planned control was in place. I wrote the weekly risk summary in plain language."],
+    ["How do you close a finding?", "I compared the evidence in each ticket with the live setting before I signed off. I close a finding only when the live setting matches the fix and the owner confirms it.", "I compared the evidence in each ticket with the live setting before I signed off. I sent weak plans back to the owner."]].map(([q, raw, previous]) => ({ kind: "repeat", family: "repeat of previous answer (partial)", q, raw, previous })),
   ...["What is residual risk?", "Tell me about a time you challenged a weak remediation plan.", "How do you assess business impact and residual risk?",
     "Explain how a finding moves from open to closed.", "Compare remediation and risk acceptance.", "What would you bring to this team?",
     "Tell me about yourself.", "Do you have any questions for us?", "Go deeper on that.", "Why is that important?"].map((q) => A("mode separation", q)),
@@ -234,7 +236,10 @@ export function judgeCase(c) {
   }
   if (c.kind === "repeat") {
     const s = settleSpokenAnswer(c.q, c.raw, "director", RESUME, c.previous)
-    return s.text && sameAnswerRatio(s.text, c.previous) >= 0.7 ? ["the previous answer is shown again"] : []
+    // Decision (yellow): a FULL read-back is kept, because an empty text shows the user "answer unavailable"; it is flagged.
+    if (c.full) return s.repeated ? [] : ["full repeat is not flagged as repeated"]
+    const old = sentencesOf(c.previous).map((x) => x.toLowerCase())
+    return sentencesOf(s.text).some((x) => old.includes(x.toLowerCase())) ? [`a sentence from the previous answer is said again: "${s.text}"`] : []
   }
   return [`unknown case kind ${c.kind}`]
 }

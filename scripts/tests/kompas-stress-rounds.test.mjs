@@ -2,7 +2,7 @@
 // paths every live answer goes through, not live answer quality (that needs scripts/kompas-live-eval.mjs with a token).
 import test from "node:test"
 import assert from "node:assert/strict"
-import { isProviderErrorAnswer, settleSpokenAnswer, dissectQuestion, asksForCode, splitFollowUp, sameAnswerRatio, draftSpokenAnswer } from "../../src/lib/kompasDissection.ts"
+import { spokenMarkup, dropRepeatedSentences, isProviderErrorAnswer, settleSpokenAnswer, dissectQuestion, asksForCode, splitFollowUp, sameAnswerRatio, draftSpokenAnswer } from "../../src/lib/kompasDissection.ts"
 import { applyGuards } from "../../src/lib/kompasGuards.ts"
 
 const guard = (s) => applyGuards(s, null, new Set(), new Set()).text
@@ -109,4 +109,39 @@ test("round 3 failsafe: a short question with its own subject, or no history, is
   assert.equal(questionForAnswer("Can you also add unit tests?", "", false, false, []), "Can you also add unit tests?")
   assert.equal(asksForCode(questionForAnswer("What would you monitor?", "", false, false, history)), false)
   assert.deepEqual(splitFollowUp("What is residual risk?"), { own: "What is residual risk?", previous: "" })
+})
+
+test("round 4: page markup and an Answer label are never read out", () => {
+  for (const raw of ["## Answer\nResidual risk is the risk left after the planned control is in place.",
+    "**Residual risk** is the risk left after the control is in place. I tracked it on open findings.",
+    "Answer: Residual risk is what remains after the control is in place.",
+    "Short answer - residual risk is what remains after the `control` is in place."]) {
+    const text = settleSpokenAnswer("What does residual risk mean?", raw, "engineer").text
+    assert.ok(!/[#*`]|^(?:short )?answer\b/i.test(text), text)
+    assert.match(text, /residual risk/i)
+  }
+})
+
+test("round 4 failsafe: plain answers, hash tags and math stars are not rewritten", () => {
+  for (const raw of ["I track residual risk on open findings.", "I filed it under ticket #42 and closed it.", "The answer is that I compare evidence with the live setting."]) {
+    assert.equal(spokenMarkup(raw), raw)
+  }
+  assert.equal(spokenMarkup("**"), "**")
+})
+
+test("round 4: sentences already said in the previous answer are dropped from a new answer", () => {
+  const previous = "I tracked residual risk on open findings and told the business what remained after the planned control was in place. I wrote the weekly risk summary in plain language."
+  const raw = "I reject an exception that has no end date and no compensating control. I tracked residual risk on open findings and told the business what remained after the planned control was in place."
+  const text = settleSpokenAnswer("When would you reject a policy exception?", raw, "director", "", previous).text
+  assert.equal(text, "I reject an exception that has no end date and no compensating control.")
+})
+
+test("round 4 failsafe: a full read-back or an asked repeat keeps the text, flagged, never an empty answer", () => {
+  const previous = "I questioned exception requests that had no end date and sent them back for an expiry. I compared the evidence with the live setting."
+  const full = settleSpokenAnswer("When would you reject a policy exception?", previous, "director", "", previous)
+  assert.ok(full.text.length > 0)
+  assert.equal(full.repeated, true)
+  const again = settleSpokenAnswer("Can you say that again?", previous, "director", "", previous)
+  assert.ok(again.text.includes("compared the evidence"))
+  assert.equal(dropRepeatedSentences("Short. New idea here.", "Short."), "Short. New idea here.")
 })
