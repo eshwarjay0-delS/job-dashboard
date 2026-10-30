@@ -21,6 +21,7 @@ import { formatInterviewHistory } from "@/lib/kompasHistory"
 import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestionParts, questionParts, spokenQualityFlags, correctVerifiedPresentationErrors } from "@/lib/kompasInterviewPrecision"
 import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms, interviewIntent, withoutLogistics } from "@/lib/kompasRelevance"
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
+import { logisticsBackstop as serverWithoutLogistics } from "@/lib/kompasLogistics"
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
@@ -813,7 +814,10 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // typed or heard is the question — dropping it left the card on the previous answer.
   const again = body.again === true
   let question = latestInterviewerAsk(questionForAnswer(heardAll, asked, body.pinned === true, again, body.history))
-  const skipped = question && !withoutLogistics(question) ? "logistics" : undefined; if (skipped) question = withoutLogistics(question)   // owner rule 29 Oct: personal logistics is never answered, even on a re-press
+  // Owner rule 29 Oct: personal logistics is never answered, even on a re-press. Voice's clause-level
+  // helper (kompasRelevance) runs first; the server helper (kompasLogistics) is a belt-and-braces backstop.
+  const stripLogistics = (s: string) => serverWithoutLogistics(withoutLogistics(s))
+  const skipped = question && !stripLogistics(question) ? "logistics" : undefined; if (skipped) question = ""
   if (!question) {
     const quiet = `data: ${JSON.stringify({ type: "meta", noQuestion: true, skipped })}\n\ndata: ${JSON.stringify({ type: "done", noQuestion: true, skipped })}\n\n`
     if (body.stream) {
@@ -821,7 +825,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     }
     return NextResponse.json({ noQuestion: true, skipped }, { headers: NO_STORE })
   }
-  question = withoutLogistics(question) || question   // "What is your visa status and tell me about PAM": only PAM is answered
+  question = stripLogistics(question) || question   // "What is your visa status and tell me about PAM": only PAM is answered
 
   const config = (body.config && typeof body.config === "object" ? body.config : {}) as Record<string, unknown>
   // The active sources take precedence over an older profile or generated Q&A.
@@ -859,7 +863,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const sameTurnKernel = questionKernel(sameTurn)
   const hasSpeakerLabels = /(?:^|\n)\s*(?:You|Them|Interviewer):/mi.test(sameTurn)
   const clearlyAsked = /^(?:what|which|who|why|how|where|when|can|could|would|will|do|does|did|have|has|are|is|tell|describe|explain|give|walk|share|highlight|suppose|imagine|assume|if|given|consider)\b/i.test(sameTurnKernel.ask)
-  const originalTurnAsk = !hasSpeakerLabels && clearlyAsked ? withoutLogistics(sameTurn) || question : question
+  const originalTurnAsk = !hasSpeakerLabels && clearlyAsked ? serverWithoutLogistics(withoutLogistics(sameTurn)) || question : question
   const rediscovered = rediscoverRelevance(originalTurnAsk, history)
   const retrievedList = Array.isArray(body.retrieved)
     ? body.retrieved.map((r) => str(r, 500)).filter(Boolean)
