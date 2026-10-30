@@ -4596,7 +4596,13 @@ function renderConnect(s) {
   $("connectPanel").classList.remove("hidden");
   $("copilotTip").classList.add("hidden");
 }
-document.querySelectorAll(".cn-app").forEach(b => b.onclick = () => { LS.set("connectApp", b.dataset.app); renderConnect(); });
+document.querySelectorAll(".cn-app").forEach(b => b.onclick = () => {
+  LS.set("connectApp", b.dataset.app);
+  renderConnect();
+  // Prepare the short-lived handoff while the user selects Desktop, so
+  // Connect & start can navigate within the next direct click gesture.
+  if (b.dataset.app === "desktop" && !window.kompasDesktop && current) void prepareDesktopSession(current).catch(() => {});
+});
 // The desktop app runs in its own Electron process and never sees the browser's
 // cookies, so its API calls 401. Pass the Supabase access token (a JWT) along with
 // the session handoff; the desktop injects it as Authorization: Bearer on its
@@ -4658,25 +4664,92 @@ function packSession(s) {
   const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(slim)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
   return (slim.site === "marketfit" ? "marketfit-kompas://open?d=" : "kompas://open?d=") + b64;
 }
+// External-protocol URLs longer than ~2 KB can be silently discarded by Chrome
+// on Windows. A full resume/JD plus session credentials is routinely much longer.
+// Keep those details on the authenticated MarketFit HTTPS route instead.
+let desktopTicketCache = null;
+let desktopTicketPending = null;
+function prepareDesktopSession(s) {
+  if (!s || !s.id) return Promise.reject(new Error("Choose an interview session first."));
+  if (desktopTicketCache && desktopTicketCache.id === s.id && Date.now() < desktopTicketCache.until) {
+    return Promise.resolve(desktopTicketCache.ticket);
+  }
+  if (desktopTicketPending && desktopTicketPending.id === s.id) return desktopTicketPending.promise;
+  const deepLink = packSession(s);
+  if (!deepLink.startsWith("marketfit-kompas://open?d=")) return Promise.reject(new Error("Not a MarketFit session."));
+  // Decode only in memory; NEVER navigate to this long URL or log it.
+  const encoded = deepLink.slice("marketfit-kompas://open?d=".length);
+  const session = JSON.parse(decodeURIComponent(escape(atob(encoded.replace(/-/g, "+").replace(/_/g, "/")))));
+  // The legacy URI encoder truncated long resumes/JDs to fit command lines.
+  // HTTPS ticket transport has no reason to silently discard saved content.
+  for (const field of ["resume", "jd", "documents", "instructions"]) {
+    if (typeof s[field] === "string") session[field] = s[field];
+  }
+  const pending = { id: s.id, promise: null };
+  pending.promise = fetch("/api/kompas/desktop-handoff", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ session }),
+    cache: "no-store",
+  }).then(async response => {
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data || !data.ok || !/^[A-Za-z0-9_-]{43}$/.test(data.ticket || "")) {
+      throw new Error(data && data.error || "Could not securely connect the desktop. Your session is still saved.");
+    }
+    desktopTicketCache = { id: s.id, ticket: data.ticket, until: Date.now() + 90_000 };
+    return data.ticket;
+  }).finally(() => { if (desktopTicketPending === pending) desktopTicketPending = null; });
+  desktopTicketPending = pending;
+  return pending.promise;
+}
 function launchInstalled(s) {
+  const status = $("cnDeskMiss");
   if (!s || !s.id) {
-    const status = $("cnDeskMiss");
     if (status) { status.textContent = "Choose an interview session first. "; status.classList.remove("hidden"); }
     return;
   }
-  // Chromium can block external-protocol navigation from an invisible iframe.
-  // Navigate directly, synchronously inside the user's button click so Windows
-  // receives the custom-protocol request with an actual user gesture.
-  const status = $("cnDeskMiss");
+  $("cnDesk")?.classList.remove("hidden");
+  function openWithTicket(ticket) {
+    const url = "marketfit-kompas://open?ticket=" + ticket;
+    if (status) {
+      status.textContent = "If Windows prompts, choose Open Kompas. If nothing opens, ";
+      const retry = document.createElement("a");
+      retry.href = url;
+      retry.textContent = "click here to open this session";
+      retry.style.textDecoration = "underline";
+      status.appendChild(retry);
+      status.appendChild(document.createTextNode(". "));
+      status.classList.remove("hidden");
+    }
+    window.location.assign(url);
+  }
+  // A prepared ticket means the protocol navigation runs synchronously in
+  // the user gesture. If preparation was still pending, also expose a real
+  // clickable link after the request completes (Chrome gesture fallback).
+  if (desktopTicketCache && desktopTicketCache.id === s.id && Date.now() < desktopTicketCache.until) {
+    openWithTicket(desktopTicketCache.ticket);
+    return;
+  }
   if (status) {
-    status.textContent = "If your browser asks, choose Open Kompas. If nothing opens, install or update the desktop app and try again. ";
+    status.textContent = "Securely connecting your saved interview… ";
     status.classList.remove("hidden");
   }
-  $("cnDesk")?.classList.remove("hidden");
-  window.location.assign(packSession(s));
+  prepareDesktopSession(s).then(openWithTicket).catch(e => {
+    if (status) {
+      status.textContent = String(e && e.message || "Could not connect. Please retry.");
+      status.classList.remove("hidden");
+    }
+  });
 }
+let lastDesktopHandoff = { id: "", at: 0 };
 function openHandedSession(s) {
   if (!s || !s.id || !window.kompasDesktop) return;
+  // takeSession() and onSession() can race during first load. Treat one
+  // delivery as one start, not two capture restarts.
+  const now = Date.now();
+  if (lastDesktopHandoff.id === s.id && now - lastDesktopHandoff.at < 3000) return;
+  lastDesktopHandoff = { id: s.id, at: now };
   const all = LS.get("sessions", []);
   if (!all.some(x => x.id === s.id)) { all.unshift(s); LS.set("sessions", all); sessions = all; }
   launchCopilot(s);

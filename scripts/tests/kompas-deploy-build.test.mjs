@@ -1,3 +1,4 @@
+import "./kompas-desktop-ticket.test.mjs" // Keep the connector regression in the existing CI gate
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
