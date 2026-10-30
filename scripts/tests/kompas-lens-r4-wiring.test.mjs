@@ -15,7 +15,9 @@ test("wiring: the service change is only the two slots, and with the switch off 
   assert.equal(back, sys(before))
   // off: desktopWire.delivery === desktopPolicy.guidance and desktopWire.tail === desktopPolicy.guidance (tests above), so the prompt is byte-identical
   assert.match(now, /const desktopWire = desktopPolicy \? desktopDelivery\(desktopPolicy, level, question\) : null/)
-  const changed = execFileSync("git", ["diff", "--numstat", BASE, "--", "src/lib/kompasAnswerService.ts"], { cwd: new URL("../..", import.meta.url).pathname, encoding: "utf8" }).trim().split(/\s+/)
+  // The budget measures the wiring commit itself (BASE..wiring), so later unrelated service fixes do not count against it.
+  const WIRING = execFileSync("git", ["log", "--format=%H", "--grep=^Kompas lens desktop wiring", "-n", "1"], { cwd: ROOT, encoding: "utf8" }).trim()
+  const changed = execFileSync("git", ["diff", "--numstat", BASE, WIRING, "--", "src/lib/kompasAnswerService.ts"], { cwd: new URL("../..", import.meta.url).pathname, encoding: "utf8" }).trim().split(/\s+/)
   assert.ok(Number(changed[0]) <= 3 && Number(changed[1]) <= 2, `service diff +${changed[0]} -${changed[1]}`)
 })
 

@@ -1,4 +1,5 @@
 import { figureList } from "@/lib/kompasFigureContext"
+import { deriveWithFallback } from "@/lib/kompasDeriveFallback"
 import { NextRequest, NextResponse } from "next/server"
 import { keysFor, resolveKeys, type LlmKeys } from "@/lib/llm"
 import { checkRateLimit } from "@/lib/rateLimit"
@@ -794,17 +795,14 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     const clean = deriveByCode(heard, body.history, body.reask === true)
     if (clean === null) return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
     if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
-    try {
+    // Gap B2: a failed or timed-out model call is retried once, then formed locally; it is never a silent "no question".
+    const outcome = await deriveWithFallback(async (timeoutMs) => {
       const { text } = await fetchOpenRouter(paidKey, PAID_MODEL, DERIVE_SYSTEM,
         `${earlier ? `EARLIER (already answered — context only):\n${earlier}\n\n` : ""}HEARD:\n${heard}`,
-        500, AbortSignal.any([request.signal, AbortSignal.timeout(15000)]))
-      const derived = text.trim()
-      if (!derived || /^NO_QUESTION/i.test(derived))
-        return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
-      return NextResponse.json({ derived }, { headers: NO_STORE })
-    } catch {
-      return NextResponse.json({ noQuestion: true }, { headers: NO_STORE })
-    }
+        500, AbortSignal.any([request.signal, AbortSignal.timeout(timeoutMs)]))
+      return text
+    }, heard)
+    return NextResponse.json(outcome, { headers: NO_STORE })
   }
 
   const heardAll = str(body.question, 4000)

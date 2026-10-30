@@ -1746,7 +1746,7 @@ async function transcribe(blob, who, opt) {
       if (failure && epoch === transcriptionEpoch) status("Connection interrupted. Retrying the captured phrase…", "live");
       await new Promise(resolve => setTimeout(resolve, delay));
     }
-    if (opt.final) await previous;
+    if (opt.final) await priorOrTimeout(previous);
     if (epoch !== transcriptionEpoch) return;
     if (failure && opt.final) { transcriptionFailedEpoch = epoch; status(failure, "err"); return false; }
     if (!clean) return;
@@ -1755,6 +1755,14 @@ async function transcribe(blob, who, opt) {
   } finally { if (cap) cap.inflight--; if (release) release(); }
 }
 
+// Gap B3 (30 Oct 2026): phrases were committed strictly in order, so one stalled upload (18 s, a 0.5 s pause, 18 s again)
+// held every later phrase back by about 36.5 s. A phrase now waits for the one before it for at most ORDER_WAIT_MS, then
+// goes ahead; the slow one is still shown when it arrives. Capture order holds whenever the earlier phrase is on time.
+const ORDER_WAIT_MS = 4000;
+function priorOrTimeout(previous, ms = ORDER_WAIT_MS) {
+  let timer;
+  return Promise.race([Promise.resolve(previous).catch(() => {}), new Promise(resolve => { timer = setTimeout(resolve, ms); })]).finally(() => clearTimeout(timer));
+}
 /* ---- what was heard → captions, drawer, questions ---- */
 const Q_CUE = /\?\s*$|^(so,? )?(what|how|why|when|where|which|who|whose|can|could|would|will|should|do|does|did|are|is|was|were|have|has|tell|walk|describe|explain|give|share|talk|imagine|suppose|let's|lets)\b|\b(tell me|walk me|how would you|what would you|why did you|can you|could you|would you|have you|do you|are you|what is|what are|your experience|about yourself|introduce)\b/i;
 let lastQ = { card: null, at: 0 };
@@ -1929,6 +1937,28 @@ function clauseStillOpen(text) {
   if (!t || /[?.!…]["']?$/.test(t)) return false;
   if (/^(?:how|what|why|when|where|which|who|can|could|would|will|do|does|did|have|has|are|is|tell|walk|describe|explain|give)\b/i.test(t)) return true;
   return /\b(?:a|an|the|to|of|for|with|and|or|but|about|on|in|into|from|by|at|as|your|my|our|their|between|would|could|should)\s*$/i.test(t);
+}
+// Gap B1 (30 Oct 2026): speech-to-text often drops the final "?", so every unpunctuated line that opened with a question
+// word ("What is your experience with Kubernetes") counted as an open clause and Auto waited 7 s instead of 2.2 s. A line
+// that looks complete (a short follow-up, or four or more words that do not end on a dangling word such as "the", "with",
+// "your", "me", "is") now gets the normal quiet wait. A line that really trails off keeps the long hold. Any fault keeps it.
+const DANGLING_END = /\b(?:a|an|the|to|of|for|with|and|or|but|nor|about|on|in|into|onto|from|by|at|as|your|my|our|their|his|her|its|between|among|through|like|than|versus|vs|if|whether|because|since|so|that's|is|are|was|were|be|been|am|would|could|should|can|will|shall|may|might|must|me|us|you|we|they|i|um+|uh+|er|erm|how|what|why|when|where|which|who|whom|whose|some|any|more|most|both|either|each|every|such|also|really|very|just|e\.?g|i\.?e)\s*[,;:\u2014\u2013-]*$/i;
+function looksComplete(text) {
+  try {
+    const t = String(text || "").replace(/\s+/g, " ").trim();
+    if (!t) return false;
+    if (shortFollowUp(t)) return true;
+    if (/[,;:\u2014\u2013-]$/.test(t)) return false;
+    return t.split(" ").length >= 4 && !DANGLING_END.test(t);
+  } catch { return false; }
+}
+function autoWaitMs(tail) {
+  try {
+    if (looksComplete(tail)) return AUTO_QUIET_MS;
+    const t = String(tail || "").replace(/\s+/g, " ").trim();
+    if (t && !/[?.!…]["']?$/.test(t) && DANGLING_END.test(t)) return 7000;   // trails off on "if", "and", "the"…
+  } catch {}
+  return clauseStillOpen(tail) ? 7000 : AUTO_QUIET_MS;
 }
 function repeatsPriorQuestion(text, previous) {
   if (repeatsPriorQuestionV2(text, previous)) return true;
@@ -2398,7 +2428,7 @@ function scheduleAuto() {
   noteTurnGate();
   if (!autoOn || !armsAuto()) return;
   const tail = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
-  const wait = clauseStillOpen(tail) ? 7000 : AUTO_QUIET_MS;
+  const wait = autoWaitMs(tail);
   autoTimer = setTimeout(function fire() {
     if (!autoOn || !armsAuto()) return;
     if (captures.some(c => c.voiced && c.who === questionSource()) || finals.size || answerCtl) { autoTimer = setTimeout(fire, 700); return; }   // the interviewer still talking / still answering (slice 12: your own mic never holds the answer back)
