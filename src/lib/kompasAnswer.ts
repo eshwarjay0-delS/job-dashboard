@@ -821,7 +821,8 @@ function repeatsPriorQuestionV3(text: string, previous: string): boolean {
   return true;
 }
 /** A later sentence is its own interview question, not the next part of the one already started. */
-function separateQuestion(next: string, prevText: string, v3 = false): boolean {
+function separateQuestion(next: string, prevText: string, v3 = false, v4 = false): boolean {
+  if (v4) { const r = splitSeparateV4(next, prevText); if (r !== null) return r }
   if (v3) { const r = splitSeparateV3(next, prevText); if (r !== null) return r }
   const bare = next.replace(LEAD_FILLER, "").trim()
   if (!bare || shortFollowUp(bare) || CONTINUES_ASK.test(bare)) return false
@@ -882,6 +883,64 @@ function midSentenceAsks(sentence: string): string[] {
   return out.filter(Boolean)
 }
 
+// Slice 4 (29 Oct 2026): punctuation-stripped runs ("what is pam okay what is iga um what is oidc") and "Explain the
+// CyberArk CPM. Explain the PSM.". Every rule below only runs inside the v4 pass, and splitDistinctAsks returns the
+// slice-3 cut whenever the v4 pass throws or would change a single heard word.
+const SPLIT_MID_ASK4 = /\b(?:(?:go|dig) deeper on\b|explain the (?:[\w+#.-]+\s+){1,4}part\b|(?:what|how|why|when|where|who|which)\s+(?:is|are|was|were|do|does|did|would|could|can|will|should|has|have)\b|what's\b|tell me about\b|walk me through\b|(?:can|could) you (?:tell|walk|explain|describe)\b|(?:have|did) you (?:ever )?(?:used|use|worked|work|implemented|deployed|managed|led|built|configured|administered|run)\b|do you (?:have|use|know)\b|explain (?:the|your)\s)/gi
+// Filler that sits between two asks: "okay", "um", "so", "and then (after that)", "next". "and" alone is not one,
+// so "tell me about zscaler and why did you choose it" keeps its clause.
+const SPLIT_BRIDGE_WORDS = "um+|uh+|so|okay|ok|alright|and then(?: after that)?|and (?:um+|uh+)|then|next|now|also|(?:and )?after that"
+const SPLIT_BRIDGE_ORD = "second(?:ly)?|third(?:ly)?|fourth(?:ly)?|lastly|number (?:two|three|four|five)"
+const SPLIT_BRIDGE_TAIL = new RegExp("(?:\\b(?:" + SPLIT_BRIDGE_WORDS + "|" + SPLIT_BRIDGE_ORD + ")\\s+)+$", "i")
+const SPLIT_BRIDGE_LEAD = new RegExp("^(?:(?:" + SPLIT_BRIDGE_WORDS + ")[,]?\\s+)+", "i")
+// A piece may start where a strong opener follows a finished ask of three words or more, with the filler before the
+// opener moved onto the new piece. The pieces are rejoined unless the separate rules say the next one is new.
+function splitMidAsksV4(sentence: string): string[] {
+  if (/[.?!]\s*\S/.test(sentence)) return [sentence]
+  const cuts: number[] = []
+  SPLIT_MID_ASK4.lastIndex = 0
+  for (let m: RegExpExecArray | null; (m = SPLIT_MID_ASK4.exec(sentence));) {
+    if (m.index === 0) continue
+    const from = cuts.length ? cuts[cuts.length - 1] : 0
+    const left = sentence.slice(from, m.index)
+    const tail = left.match(SPLIT_BRIDGE_TAIL)
+    const coreLen = tail ? left.length - tail[0].length : left.length
+    const core = left.slice(0, coreLen).trim()
+    const bareCore = core.replace(LEAD_FILLER, "").replace(SPLIT_ORDINAL, "").replace(LEAD_FILLER, "")
+    // "explain the cyberark cpm explain the psm": an "explain the" piece only after a finished "explain the" piece.
+    if (/^explain (?:the|your)\s$/i.test(m[0]) && !(/^explain (?:the|your)\s/i.test(bareCore) && bareCore.split(/\s+/).length >= 3 && !MID_KEEPS.test(core))) continue
+    if (/^explain (?:the|your)\s$/i.test(m[0])) { if (from + coreLen > from) cuts.push(from + coreLen); continue }
+    if (!bareCore || /,\s*$/.test(core) || bareCore.split(/\s+/).length < 3 || !SEPARATE_START.test(bareCore) || MID_KEEPS.test(core) || MID_OPEN_CLAUSE.test(bareCore.replace(/^\S+\s+/, ""))) continue
+    if (from + coreLen > from) cuts.push(from + coreLen)
+  }
+  if (!cuts.length) return [sentence]
+  const out: string[] = []
+  let from = 0
+  for (const at of cuts) { out.push(sentence.slice(from, at).trim()); from = at }
+  out.push(sentence.slice(from).trim())
+  return out.filter(Boolean)
+}
+// true = new card, false = same card, null = let the slice-3 rules decide.
+function splitSeparateV4(next: string, prevText: string): boolean | null {
+  const raw = String(next || "").trim()
+  // "and then after that what is okta", "um have you used saviynt": judge the ask without the bridge filler.
+  const stripped = raw.replace(SPLIT_BRIDGE_LEAD, "").replace(/^,\s*/, "").trim()
+  // "um second how does it rotate passwords": a numbered ask after the bridge is the next card (as in slice 3).
+  const ord = stripped.match(SPLIT_ORDINAL)
+  if (ord && stripped !== raw && !/^first(?:ly)?\b/i.test(stripped) && ASK_OPENER.test(stripped.slice(ord[0].length).replace(LEAD_FILLER, ""))) return true
+  if (stripped && stripped !== raw && stripped.split(/\s+/).length >= 3 && /^(?:what|why|how|when|where|which|who|have you|did you|do you|can you|could you|tell me|walk me)\b/i.test(stripped)) return separateQuestion(stripped, prevText, true)
+  // "Explain the CyberArk CPM. Explain the PSM.": an "explain the X" after a finished explain or question sentence,
+  // where X is all new words, is the next card. "Explain that part", "Explain the trust part" stay.
+  const prevSentence = (String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || "").trim()
+  const ex = raw.replace(LEAD_FILLER, "").match(/^explain (?:the|your)\s+([\w+#.-]+(?:\s+[\w+#.-]+){0,3})\s*[.?!]?$/i)
+  if (ex && (/[.?!]\s*$/.test(prevSentence) || /^explain (?:the|your)\s/i.test(prevSentence.replace(LEAD_FILLER, ""))) && /^(?:explain|describe|what|how|why|tell me|walk me)\b/i.test(prevSentence.replace(LEAD_FILLER, "")) && !/\b(?:that|this|it|those|these|same|part|piece|bit|side|step|more|further|again)\b/i.test(ex[1])) {
+    const prevW = new Set(String(prevText || "").toLowerCase().split(/[^a-z0-9+#]+/).filter(Boolean))
+    const obj = ex[1].toLowerCase().split(/[^a-z0-9+#]+/).filter((w) => w.length >= 3 && !/^(?:and|the|how|why|your)$/.test(w))
+    if (obj.length && obj.every((w) => !prevW.has(w))) return true
+  }
+  return null
+}
+
 function spokenWords(text: string): string {
   return String(text || "").toLowerCase().replace(/[^a-z0-9+#']+/g, " ").trim()
 }
@@ -897,18 +956,18 @@ function looksLikeAsk(sentence: string): boolean {
  * ("Design X. Explain the trust boundaries.") stays one question. "What is
  * Kubernetes? What is Terraform?" does not.
  */
-function splitDistinctAsksBy(text: string, midCut: boolean, v3 = false): string[] {
+function splitDistinctAsksBy(text: string, midCut: boolean, v3 = false, v4 = false): string[] {
   const clean = repairDictation(String(text || "")).replace(/\s+/g, " ").trim()
   if (!clean) return []
   const said = clean.split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean)
-  const sentences = midCut ? said.flatMap(midSentenceAsks) : said
+  const sentences = midCut ? said.flatMap(v4 ? splitMidAsksV4 : midSentenceAsks) : said
   const groups: string[][] = [[]]
   let asked = false
   for (const sentence of sentences) {
     const bare = sentence.replace(LEAD_FILLER, "").trim()
     if (!bare || noiseOnly(bare) || noiseOnly(sentence)) continue
     const prev = groups[groups.length - 1].join(" ")
-    if (asked && separateQuestion(sentence, prev, v3)) {
+    if (asked && separateQuestion(sentence, prev, v3, v4)) {
       groups.push([sentence])
       asked = true
       continue
@@ -920,6 +979,17 @@ function splitDistinctAsksBy(text: string, midCut: boolean, v3 = false): string[
 }
 
 export function splitDistinctAsks(text: string): string[] {
+  const v3 = splitDistinctAsksV3(text)
+  try {
+    // Slice 4 failsafe: the v4 rules may only regroup words; on any change or fault, the slice-3 cut stands.
+    const cut4 = splitDistinctAsksBy(text, true, true, true)
+    return spokenWords(cut4.join(" ")) === spokenWords(v3.join(" ")) ? cut4 : v3
+  } catch {
+    return v3
+  }
+}
+
+function splitDistinctAsksV3(text: string): string[] {
   const before = splitDistinctAsksBy(text, false)
   let v2 = before
   try {

@@ -69,6 +69,9 @@ jobs:
       - name: Verify slice 3 question cut (follow-ups, repeats, lists, tags, polite asks, audio checks, statements; 50 and 200 stress)
         run: node --experimental-strip-types --test scripts/tests/kompas-question-cut-slice3.test.mjs
 
+      - name: Verify slice 4 question cut (unpunctuated runs, explain the X, SSH on both sides; 50 and 200 stress)
+        run: node --experimental-strip-types --test scripts/tests/kompas-question-cut-slice4.test.mjs
+
       - name: Verify consented voice benchmark metrics
         run: node --test scripts/tests/kompas-voice-metrics.test.mjs
 

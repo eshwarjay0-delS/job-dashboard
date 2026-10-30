@@ -122,6 +122,9 @@ const REPAIRS: Array<[RegExp, string | ((match: string) => string)]> = [
   [/\bstar\s+method\b/gi, "STAR method"],
   // Mishearings found on 29 Oct 2026 (voice slice). Each one is anchored to its domain words.
   [/\bsail\s+point\b/gi, "SailPoint"],
+  // Slice 4: the desktop already wrote "SSH keys"/"SSH key"; the server left "ssh keys", so the two cuts differed in text.
+  [/\b(?:shkivs|shkives|sh\s+keys|s\s+h\s+keys|ssh\s+keys)\b/gi, "SSH keys"],
+  [/\b(?:shkiv|sh\s+key|s\s+h\s+key|ssh\s+key)\b/gi, "SSH key"],
   [/(?<=\b(?:did|does|with|into|using|use|used|like|from|vs|versus|deploy|deployed|implemented|chose|picked|cyberark|our|the|a)\s+)beyond\s+trust\b|\bbeyond\s+trust(?=\s+(?:pam|password|privileged|remote|vault|endpoint|suite|platform|deployment|rollout|compare[sd]?)\b)/gi, "BeyondTrust"],   // only next to tool words, so "went beyond trust" stays
   [/\bhashi\s+corp\b/gi, "HashiCorp"],
   [/\bz\s+scaler\b/gi, "Zscaler"],

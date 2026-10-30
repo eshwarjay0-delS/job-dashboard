@@ -230,3 +230,92 @@ if (process.argv[1]?.endsWith("kompas-cut-stress.mjs")) {
     for (const f of r.failures) console.log("  " + f);
   }
 }
+
+// ── Slice 4 (29 Oct 2026): punctuation-stripped runs. Speech-to-text often drops every mark, so each family of the
+// slice 2 and slice 3 banks is also run stripped and lower-cased, with filler said between the questions. The
+// expectations are the ones the punctuated bank already uses. [family, heard, cards]
+export const SLICE4_CASES = [
+  ["A-run", "what is cyberark what is okta", 2],
+  ["A-run", "what is pam okay what is iga um what is oidc so what is saml", 4],
+  ["A-run", "um what is saml so how does kerberos work", 2],
+  ["A-run", "what is cyberark um have you used saviynt", 2],
+  ["A-run", "so how do you rotate passwords in cyberark um have you used saviynt", 2],
+  ["A-run", "what is CyberArk and then after that what is Okta", 2],
+  ["A-run", "what is zscaler next what is venafi", 2],
+  ["A-run", "okay what is zscaler what is venafi what is sailpoint", 3],
+  ["A-run", "how does kerberos work okay what is ntlm", 2],
+  ["A-run", "what is a pam vault so tell me about your sailpoint work", 2],
+  ["A-run", "um so what is your experience with okta and um what is your notice period", 2],
+  ["A-keep", "what is the difference between sso and saml", 1],
+  ["A-keep", "how do you handle what happens when a token expires", 1],
+  ["A-keep", "tell me about a time when you failed", 1],
+  ["A-keep", "explain how okta works", 1],
+  ["A-keep", "tell me about zscaler and why did you choose it", 1],
+  ["A-keep", "tell me about zscaler and um why did you choose it", 1],
+  ["A-keep", "how did you deploy venafi okay why did you pick it over keyfactor", 1],
+  ["A-keep", "walk me through how you would migrate what is left of the ad forest", 1],
+  ["A-keep", "how do you rotate passwords and then how do you audit them", 1],
+  ["A-keep", "tell me about a time when you failed so what did you learn", 1],
+  ["A-keep", "what is cyberark and how does it work", 1],
+  ["B-explain", "Explain the CyberArk CPM. Explain the PSM.", 2],
+  ["B-explain", "What is CyberArk? Explain the Venafi TPP.", 2],
+  ["B-explain", "Explain the CyberArk CPM. Explain that part.", 1],
+  ["B-explain", "Tell me about your PKI work. Explain that part.", 1],
+  ["B-explain", "Design Splunk ingestion. Explain the trust boundaries.", 1],
+  ["B-explain", "What is Zero Trust? Explain the trust model.", 1],
+  ["B-explain", "Explain the CyberArk CPM. Explain it again.", 1],
+];
+// Strip every mark, lower-case, and say a filler where a sentence ended.
+const stripLow = (t) => t.replace(/[.?!,;:]/g, "").toLowerCase();
+const between = (f) => (t) => stripLow(t.replace(/([.?!]) (?=\S)/g, "$1 " + f + " "));
+export const SLICE4_VARIANTS = [
+  ["stripped", (t) => stripLow(t)],
+  ["stripped, um", between("um")],
+  ["stripped, so", between("so")],
+  ["stripped, okay", between("okay")],
+  ["stripped, and then", between("and then")],
+  ["stripped, next", between("next")],
+];
+// Desktop and server must write the same acronyms (slice 4, item C).
+export const SLICE4_ACRONYMS = ["how do you configure ssh keys", "we rotate the ssh key monthly", "Shkivs for the jump host", "s h keys and vault", "what is ssh", "SSH keys"];
+const words4 = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9+#']+/g, " ").trim().split(" ").filter(Boolean);
+export function runSlice4Stress(n, seed = 41) {
+  const desktop = loadDesktopCut();
+  const { api } = loadIntake();
+  let x = seed >>> 0;
+  const rnd = () => ((x = (Math.imul(x, 1664525) + 1013904223) >>> 0) / 4294967296);
+  // Every family: slice 4's own bank as heard, plus stripped variants of the slice 2, slice 3 and slice 4 banks.
+  const bank = [
+    ...SLICE4_CASES.map(([f, h, c]) => [f, "as heard", h, c]),
+    ...CUT_CASES.flatMap(([h, c]) => SLICE4_VARIANTS.map(([v, fn]) => ["s2-" + (c > 1 ? "split" : "keep"), v, fn(h), c])),
+    ...SLICE3_CASES.flatMap(([f, h, c]) => SLICE4_VARIANTS.map(([v, fn]) => ["s3-" + f, v, fn(h), c])),
+    ...SLICE4_CASES.filter(([f]) => f !== "A-run" && f !== "A-keep").flatMap(([f, h, c]) => SLICE4_VARIANTS.map(([v, fn]) => [f + " stripped", v, fn(h), c])),
+  ];
+  const m = { sequences: n, merged: 0, overSplit: 0, dropped: 0, mismatch: 0, acronymMismatch: 0, newWrong: 0, byFamily: {}, failures: [] };
+  const fam = (f, ok) => { m.byFamily[f] ??= [0, 0]; m.byFamily[f][1]++; if (ok) m.byFamily[f][0]++; };
+  for (let i = 0; i < n; i++) {
+    // The first SLICE4_CASES draws are the bank itself, in order; the rest are drawn at random from all families.
+    const [family, vname, text, cards] = i < SLICE4_CASES.length ? bank[i] : bank[Math.floor(rnd() * bank.length)];
+    const server = splitDistinctAsks(text), desk = desktop(text);
+    if (JSON.stringify(server) !== JSON.stringify(desk)) { m.mismatch++; m.failures.push("mismatch " + vname + ": " + text); }
+    if (server.length < cards) { m.merged++; m.failures.push("merged " + family + " " + vname + ": " + text + " -> " + JSON.stringify(server)); }
+    if (server.length > cards) { m.overSplit++; m.failures.push("over-split " + family + " " + vname + ": " + text + " -> " + JSON.stringify(server)); }
+    if (server.length !== cards && !family.startsWith("s2-") && !family.startsWith("s3-")) m.newWrong++;
+    const kept = new Set(words4(server.join(" ")));
+    if (words4(text).some((w) => !kept.has(w) && !/^(?:um+|uh+)$/.test(w))) { m.dropped++; m.failures.push("dropped " + text); }
+    fam(family, server.length === cards);
+  }
+  for (const t of SLICE4_ACRONYMS) {
+    const s = splitDistinctAsks(t).join(" "), d = desktop(t).join(" ");
+    if (s !== d) { m.acronymMismatch++; m.failures.push("acronym " + t + " -> server " + s + " desktop " + d); }
+  }
+  return m;
+}
+
+if (process.argv[1]?.endsWith("kompas-cut-stress.mjs")) {
+  for (const n of process.argv.slice(2).length ? process.argv.slice(2).map(Number) : [50, 200]) {
+    const r = runSlice4Stress(n);
+    console.log("slice4 " + JSON.stringify({ ...r, failures: r.failures.length }));
+    for (const f of r.failures) console.log("  " + f);
+  }
+}
