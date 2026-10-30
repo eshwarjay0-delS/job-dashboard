@@ -29,4 +29,4 @@ jobs:
         run: |
           node --check public/kompas/account-sync.js
           node --check public/kompas/app.js
-          node --test scripts/tests/kompas-account-sync.test.mjs
+          node --test scripts/tests/kompas-account-sync.test.mjs scripts/tests/kompas-desktop-ticket.test.mjs
