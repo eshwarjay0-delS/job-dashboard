@@ -21,7 +21,10 @@ export function whatsappResumeRejectionReasons(result: TailorResult): string[] {
     reasons.push("skills_only")
   // Gate on: a resume whose skills are locked or that has no skills section is sent with the job-post terms listed in
   // the reply, so its coverage is not a refusal. The round-trip guard in the route still decides whether it goes out.
-  const unplacedOk = jdTermsGateOn() && !!result.jd_terms_unplaced_reason
+  // Only the coverage shortfall is excused: the file must otherwise be complete (no failed parts, no incomplete report,
+  // no other blocker), and the only quality problem allowed is terms left out.
+  const unplacedOk = jdTermsGateOn() && !!result.jd_terms_unplaced_reason && !!result.jd_terms_unplaced?.length &&
+    !result.partial && !quality?.incomplete && !(result.quality_blockers || []).length
   if (!unplacedOk && (!Number.isFinite(result.coverage) || result.coverage! < 95))
     reasons.push("jd_coverage_below_floor")
   if (result.partial) reasons.push("draft_parts_missing")
