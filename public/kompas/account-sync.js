@@ -79,8 +79,9 @@
       try { write(next); local=next; persist(); render(); }
       finally { applied=false; }
     }
-    async function api(method, body) {
-      const response=await fetcher("/api/kompas/account-sessions",{method,credentials:"same-origin",headers:headers(),...(body?{body:JSON.stringify(body)}:{}),cache:"no-store"});
+    async function api(method, body, cursor = "") {
+      const url = "/api/kompas/account-sessions" + (cursor ? "?after=" + encodeURIComponent(cursor) : "");
+      const response=await fetcher(url,{method,credentials:"same-origin",headers:headers(),...(body?{body:JSON.stringify(body)}:{}),cache:"no-store"});
       if(!response.ok) throw new Error("Session synchronization unavailable ("+response.status+").");
       const parsed=await response.json();
       if(!parsed || !parsed.ok || !parsed.userId) throw new Error("Account session response unavailable.");
@@ -90,6 +91,18 @@
       if(requesting) return requesting;
       requesting=(async()=>{
         const data=await api("GET");
+        // Pull the entire account catalog, not only the first page.
+        const seen = new Set((data.records || []).map(r => r.id));
+        let cursor = data.nextCursor || "";
+        while (cursor) {
+          const page = await api("GET",null,cursor);
+          if (page.userId !== data.userId) throw new Error("Account switched during synchronization.");
+          for (const item of page.records || []) if (!seen.has(item.id)) {
+            seen.add(item.id);data.records.push(item);
+          }
+          if (!page.nextCursor || page.nextCursor === cursor) break;
+          cursor = page.nextCursor;
+        }
         const nextOwner=data.userId;
         if(owner!==nextOwner){
           if(owner)persist();
