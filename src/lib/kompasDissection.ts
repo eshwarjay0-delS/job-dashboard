@@ -1100,6 +1100,27 @@ const HONEST_LINES = [
   "This is not something I have run before, so I will give the steps I would take.",
 ]
 
+// r2 (29 Oct 2026): two stiff lead-ins. A statement premise ("the control failed in 37% of samples") after "For" is said
+// "For the control that failed…"; a wh-lead after "for" ("for who should accept a risk") is said "as for who…".
+// Failsafe: any other lead is returned unchanged.
+const PREMISE_VERB = /^(the|a|an|our|my|this|that|one|two|three|\d+)((?: [a-z][\w-]*){1,2}?) (failed|broke|missed|passed|slipped|was|were|is|are|had|has|went|got|kept|stopped|lapsed|expired)\b(.*)$/i
+export function premiseLead(lead: string): string {
+  try {
+    const m = String(lead || "").match(PREMISE_VERB)
+    if (!m || /\b(?:that|which|who|i|we|you)$/i.test(m[2].trim()) || /\b(?:is|are|was|were|has|had)\b/i.test(m[2])) return lead
+    return `${/^(?:The|A|An|Our|My|This|That|One|Two|Three)$/.test(m[1]) ? m[1].toLowerCase() : m[1]}${m[2]} that ${m[3]}${m[4]}`
+  } catch {
+    return lead
+  }
+}
+export function naturalOpener(text: string): string {
+  return String(text || "")
+    .replace(/^For (who|whom|what|which|where|why|whether)\b/, "As for $1")
+    .replace(/, for (who|whom|what|which|where|why|whether)\b/, ", as for $1")
+    .replace(/^On (who|whom|which|where)\b/, "As for $1")
+    .replace(/\bI treat (who|whom|which|where)\b/, "I treat the question of $1")
+}
+
 function draftAtLevel(question: string, level: AnswerLevel, resume: string, previous: string[], floor: number): string {
   const cut = dissectQuestion(question, resume)
   const lead = spokenLead(leadPhrase(question), splitFollowUp(cleanSpokenAsk(question)).own)
@@ -1119,7 +1140,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   const archStop = cut.modes.architect.aimWords
   const dirStop = Math.min(cut.modes.director.aimWords, Math.floor(archStop / 1.55))
   const stop = level === "architect" ? archStop : level === "director" ? dirStop : Math.max(cut.modes.engineer.minWords, Math.min(cut.modes.engineer.aimWords, Math.floor(dirStop / 1.7)))
-  const parts = [opener(lead)]
+  const parts = [naturalOpener(opener(premiseLead(lead)))]
   // Round 13 (read by eye): a trick ask for a figure ("What percentage…", "ROI in dollars") got a resume line and no
   // word on the number, which reads as dodging. The stand-in says once that it will not guess. Failsafe: a figure the
   // interviewer gave, or one on the resume, is not refused.

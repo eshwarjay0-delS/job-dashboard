@@ -929,7 +929,9 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // own sources are listed with fact IDs, or an honest "not in your sources" line with the closest real example.
   // Failsafe: any failure or no sources gives "" and the prompt is exactly as before.
   const groundingDocs: SourceDoc[] = sourceDocs({ resume: resumeSrc, jd: jdSrc, documents: docsSrc, dossier: grounding, savedQA: str(config.savedQA, 8000) })
-  const sourceRetrieval = retrievePassages(question, groundingDocs)
+  // Behavior 8 (r2): passages the last two answers already used are demoted unless the ask goes back to them.
+  const recentAnswers = historyArr.slice(-2).map((h: unknown) => (h && typeof h === "object" ? String((h as Record<string, unknown>).a ?? (h as Record<string, unknown>).answer ?? "") : "")).filter(Boolean)
+  const sourceRetrieval = retrievePassages(question, groundingDocs, 4, { recent: recentAnswers })
   const sourceBlock = sourcePassagesPrompt(sourceRetrieval)
   const context = [
     `The listener is at ${ANSWER_LEVEL_NAME[level]}. The level block below is the controlling spec for this answer's depth and register.`,

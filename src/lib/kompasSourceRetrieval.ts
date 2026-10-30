@@ -69,7 +69,32 @@ export function splitPassages(docs: SourceDoc[] | null | undefined): Passage[] {
 }
 
 /** BM25-style lexical scoring against the dissected question's keywords; a JD line is weighted down. */
-export function retrievePassages(question: string, docs: SourceDoc[] | null | undefined, k = 4): Retrieval {
+/** Behavior 7: the kind of question decides which passages get a light boost. Empty or unknown → technical (no boost). */
+export type QuestionKind = "behavioral" | "technical" | "leadership"
+export function questionKind(question: string): QuestionKind {
+  const q = String(question || "").toLowerCase()
+  if (/\b(?:lead|led|leading|manage|managed|managing|mentor|hire|hiring|grow (?:a|the) team|your team|stakeholders?|executives?|board|influence)\b/.test(q)) return "leadership"
+  if (/\b(?:tell me about a time|a time (?:when|you)|give me an example|describe a situation|walk me through a situation|disagree|conflict|mistake|failure|proud|why do you want|why this role|motivat|strength|weakness)\b/.test(q)) return "behavioral"
+  return "technical"
+}
+const KIND_BOOST: Record<QuestionKind, (p: Passage) => number> = {
+  leadership: (p) => /\b(?:led|lead|owned|ran|managed|mentored|reported|partnered|reviewed .* with)\b/i.test(p.text) ? 1.25 : 1,
+  behavioral: (p) => p.source === "saved Q&A" || p.source === "dossier" ? 1.25 : 1,
+  technical: () => 1,
+}
+// Behavior 8: a passage the last answers already leaned on is demoted, unless the ask goes back to it on purpose.
+const GOES_BACK = /\b(?:going back to|back to (?:that|the|your)|that (?:same )?(?:project|example|story|one)|same (?:project|example|story)|more (?:about|on) (?:that|it)|you (?:just )?mentioned|earlier you said)\b/i
+// A recent answer used a passage when it quotes the line or says at least 60% of its content words (answers paraphrase).
+function usedIn(p: Passage, answer: string): boolean {
+  if (answer.includes(p.line.toLowerCase())) return true
+  const said = new Set(tokens(answer))
+  const own = [...new Set(tokens(p.line))]
+  return own.length >= 3 && own.filter((t) => said.has(t)).length / own.length >= 0.6
+}
+const ASKS_NEW = /\b(?:what else|anything else|another (?:example|time|project|story)|other (?:example|time|project)s?|a different (?:example|project|story))\b/i
+export interface RetrieveOptions { recent?: string[] | null }
+
+export function retrievePassages(question: string, docs: SourceDoc[] | null | undefined, k = 4, opts: RetrieveOptions = {}): Retrieval {
   try {
     const q = String(question || "").trim()
     const passages = splitPassages(docs)
@@ -91,6 +116,16 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
       }
       return { ...p, score: p.proves === "emphasis" ? s * 0.5 : s }
     })
+    // Behavior 7 and 8 only reorder: coverage ("matched") is computed on the same passages, so it never changes.
+    let boost: (p: Passage) => number = () => 1
+    try { boost = KIND_BOOST[questionKind(q)] || boost } catch { /* failsafe: no boost */ }
+    const recent = Array.isArray(opts?.recent) ? opts.recent.map((r) => String(r || "").toLowerCase()).filter(Boolean) : []
+    const demote = recent.length && !GOES_BACK.test(q)
+    for (const p of scored) {
+      if (p.score <= 0) continue
+      p.score *= boost(p)
+      if (demote && recent.some((r) => usedIn(p, r))) p.score *= ASKS_NEW.test(q) ? 0.2 : 0.4
+    }
     const ranked = scored.filter((p) => p.score > 0).sort((a, b) => b.score - a.score)
     const experience = scored.filter((p) => p.proves === "experience")
     // "In your sources" needs real topic coverage: the best experience passage holds at least half of the asked topic
@@ -135,13 +170,29 @@ export function sourcePassagesPrompt(r: Retrieval | null | undefined): string {
 
 const COMMON = new Set(("i a an the at in on for so and but then when after before first next that this it if as with to " +
   "my we our however also during once from by each every because while yes no in general there here what how " +
-  "today now later finally from and so").split(" "))
+  "today now later finally from and so where whenever wherever although though since until unless whether both most many " +
+  "much some any all few several even still only just well sure right okay ok yes absolutely honestly frankly looking " +
+  "overall together instead otherwise meanwhile afterwards ultimately initially again usually often sometimes").split(" "))
+
+// Tools a listener takes as a personal claim even when written in lower case ("I ran it on kubernetes").
+const TOOLS = ("kubernetes k8s terraform splunk datadog wiz snyk okta jenkins ansible docker helm istio prometheus grafana " +
+  "crowdstrike sentinelone sentinel guardduty cloudtrail kms vault elastic elasticsearch kibana qradar palo tenable qualys " +
+  "nessus burp jira servicenow archer workday salesforce snowflake databricks kafka redis mongodb postgres graphql " +
+  "pulumi cloudformation azure gcp bigquery lambda opa gatekeeper falco sysdig lacework orca prisma zscaler netskope").split(" ")
+const TOOL_RE = new RegExp(`\\b(?:${TOOLS.join("|")})\\b`, "gi")
+// Vague scale claims ("a large team", "millions of users", "led dozens of engineers"): a scale word on a countable noun.
+const VAGUE_RE = /\b(?:(?:a|an) (?:very )?(?:large|huge|big|massive|sizable|global|enterprise-wide) (?:team|org|organi[sz]ation|program(?:me)?|budget|portfolio|estate|fleet|user base|customer base)|(?:millions|thousands|hundreds|dozens|tens|scores|billions)(?: of (?:thousands|millions))? of (?:[a-z-]+ )?(?:users|customers|engineers|people|analysts|developers|staff|employees|accounts|servers|endpoints|hosts|devices|records|dollars|transactions|alerts|findings|applications|apps|services|clients|members|reports))\b/gi
+const VAGUE_SCALE: Record<string, number> = { tens: 10, dozens: 24, scores: 40, hundreds: 200, thousands: 2000, millions: 2000000, billions: 2e9 }
 
 /** Personal claims a listener would take as fact: named employers, tools, acronyms, and figures. */
 export function extractClaims(text: string): string[] {
   const out: string[] = []
   const t = String(text || "")
   for (const m of t.matchAll(/\b\d[\d,.]*\d%?|\b\d{2,}%?|\b\d%/g)) out.push(m[0].replace(/[.,]$/, ""))
+  // r2: a small figure with a scale word or a currency sign ("$2 million", "3 billion") is a claim too
+  for (const m of t.matchAll(/\$\s?\d[\d,.]*(?:\s?(?:k|m|bn|million|billion|thousand)\b)?|\b\d[\d,.]*\s(?:million|billion|thousand)\b/gi)) out.push(m[0].replace(/^\$\s?/, "").toLowerCase())
+  for (const m of t.matchAll(VAGUE_RE)) out.push(m[0].toLowerCase())
+  for (const m of t.matchAll(TOOL_RE)) if (!/^[A-Z]/.test(m[0])) out.push(m[0].toLowerCase())
   for (const sentence of t.split(/(?<=[.!?])\s+/)) {
     const ws = sentence.replace(/[^\w\s&'-]/g, " ").split(/\s+/).filter(Boolean)
     let run: string[] = []
@@ -153,11 +204,22 @@ export function extractClaims(text: string): string[] {
     })
     flush()
   }
-  return [...new Set(out)]
+  // one claim per name: a lower-case tool and its capitalised form count once
+  const seen = new Set<string>()
+  return out.filter((c) => { const k = c.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true })
 }
 
 function supportedBy(claim: string, haystack: string): boolean {
   const c = claim.toLowerCase()
+  const vague = c.match(/^(millions|thousands|hundreds|dozens|tens|scores|billions)(?: of (?:thousands|millions))? of (?:[a-z-]+ )?([a-z]+)$/)
+  if (vague) {
+    // a figure in the sources on the same noun backs the vague scale word ("1,200 privileged accounts" → "hundreds of accounts")
+    const noun = vague[2].replace(/s$/, "")
+    const min = VAGUE_SCALE[vague[1]] || 10
+    for (const m of haystack.replace(/,/g, "").matchAll(new RegExp(`\\b(\\d+)(?: [a-z-]+){0,2} ${noun}`, "g"))) if (Number(m[1]) >= min) return true
+    return haystack.includes(c)
+  }
+  if (/\d\s?(?:k|m|bn|million|billion|thousand)$/.test(c)) return haystack.replace(/,/g, "").includes(c.replace(/,/g, ""))
   if (/\d/.test(c)) return haystack.replace(/,/g, "").includes(c.replace(/,/g, "").replace(/%$/, ""))
   return haystack.includes(c)
 }
