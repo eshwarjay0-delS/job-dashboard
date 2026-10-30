@@ -25,7 +25,7 @@ test("visible button, menu and keyboard shortcut share the same capture flow", (
   assert.match(app, /e\.ctrlKey && e\.shiftKey && \(e\.key === "S" \|\| e\.key === "s"\)/)
   assert.match(app, /async function analyseScreen\(\)/)
   assert.doesNotMatch(app, /window\.KompasScreenReview\(\{/)
-  assert.match(app, /generateAnswer\(card\.question, card, \{ pinned: true, derived: card\.question, source: "screen" \}\)/)
+  assert.match(app, /generateAnswer\(pieces\[0\], card, \{ pinned: true, derived: pieces\[0\], source: "screen" \}\)/)
 })
 test("desktop-only styling does not expose the extra toolbar button in web mode", () => {
   assert.match(html, /class="pill action hidden" id="screenCaptureAnswerBtn"/)
