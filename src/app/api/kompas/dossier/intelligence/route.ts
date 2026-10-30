@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { authenticatedUser } from "@/lib/authBoundary"
 import { keysFor, resolveKeys, callLLM } from "@/lib/llm"
 import { checkRateLimit } from "@/lib/rateLimit"
+import { hashUserId } from "@/lib/sttLedger"
+import { readPreparedDossier, savePreparedDossier } from "@/lib/kompas-dossier-store"
 import {
   buildDualDossierPlan, dossierCitationWarnings,
   type DossierPrompt, type DossierStage,
@@ -25,6 +27,21 @@ const MAX_BYTES = 1_100_000
  *   title, text
  * }] }
  */
+/** Load a previously committed manuscript; no model invocation. */
+export async function GET(request: NextRequest) {
+  const user = await authenticatedUser(request)
+  if (!user) return NextResponse.json({ error: "Sign in." }, { status: 401, headers: HEADERS })
+  const digest = request.nextUrl.searchParams.get("digest") || ""
+  if (!/^[a-f0-9]{64}$/.test(digest)) return NextResponse.json({ error: "Valid digest required." }, { status: 400, headers: HEADERS })
+  try {
+    const document = await readPreparedDossier(hashUserId(user.id), digest)
+    if (!document) return NextResponse.json({ error: "No prepared dossier at this digest." }, { status: 404, headers: HEADERS })
+    return NextResponse.json({ ok: true, dossier: document }, { headers: HEADERS })
+  } catch {
+    return NextResponse.json({ error: "Dossier storage unavailable." }, { status: 503, headers: HEADERS })
+  }
+}
+
 export async function POST(request: NextRequest) {
   const user = await authenticatedUser(request)
   if (!user) return NextResponse.json({ error: "Sign in to prepare a dossier." }, { status: 401, headers: HEADERS })
@@ -69,6 +86,9 @@ export async function POST(request: NextRequest) {
     // Both specialists analyze the SAME sources independently before synthesis.
     const [notebook, dossier] = await Promise.all([run(plan.notebook), run(plan.dossier)])
     const combined = await run(plan.synthesis(notebook.text, dossier.text))
+    await savePreparedDossier(hashUserId(user.id), plan.sourceDigest, plan.sources, {
+      notebook: notebook.text, dossier: dossier.text, unified: combined.text,
+    })
     return NextResponse.json({
       ok: true, mode, sourceDigest: plan.sourceDigest, version: plan.version,
       notebook: { text: notebook.text, provider: notebook.provider, model: notebook.model },
@@ -77,6 +97,7 @@ export async function POST(request: NextRequest) {
       sourceManifest: plan.sources.map(({ id, kind, title, digest }) => ({ id, kind, title, digest })),
       citationWarnings: dossierCitationWarnings(combined.text, plan.sources),
       factualReview: "required", pdfExport: "not-yet-generated", googleNotebookApiUsed: false,
+      serverStored: true,
     }, { headers: HEADERS })
   } catch {
     // A failed call is never represented as completed; do not supply a generic
