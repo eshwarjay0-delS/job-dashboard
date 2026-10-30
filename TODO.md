@@ -1,3 +1,7 @@
+## 2026-10-30 — A spoken limit stays on the conditions line
+
+"The service must stay up. How would you patch it?" named only the question. The limit is now a condition, and the question stays the question. The same split covers "No production access" and "You must keep the service running."
+
 ## 2026-10-30 — Pay and employment questions are not dropped
 
 Travel, visa, W2, C2C, full time, contract, PTO, benefits, 401k, EAD, TN visa, hourly, and day rate were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Full time or contract, starting in two weeks, and a day rate stay short. "What is a smart contract?" stays a definition.

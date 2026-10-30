@@ -124,7 +124,13 @@ export function requestedParts(question: string): { parts: string[]; constraints
     const asked = /\?$/.test(core)
     const tail = core.match(/^(.*?),?\s+((?:without|but (?:do not|don't|never)|with no (?:production )?(?:downtime|restart|outage)|and no (?:production )?(?:downtime|restart|outage))\b.*)$/i)
     if (tail && tail[1].split(/\s+/).length >= 3) { core = tail[1].trim(); constraints.push(tail[2].trim().replace(/\?$/, "")) }
-    if (!asked && !ASK_OPENER.test(core)) continue   // the setup the ask stands on
+    if (!asked && !ASK_OPENER.test(core)) {
+      // "The service must stay up. How would you patch it?" The limit was only
+      // in a side prompt, and the parts list named the question alone.
+      if (/\b(?:must (?:stay|keep|remain|not)|no production access|cannot|can(?:not|'t))\b/i.test(core) && core.split(/\s+/).length <= 16)
+        constraints.push(core.replace(/\.$/, ""))
+      continue
+    }
     const list = core.match(LIST_VERB)
     if (list && /,|\band\b/.test(list[2]) && !/\b(?:why|how|what|when|where|whether|versus|vs)\b/i.test(list[2])) {
       const items = list[2].split(/,\s*(?:and\s+)?|\s+and\s+/).map((x) => x.trim()).filter(Boolean)
