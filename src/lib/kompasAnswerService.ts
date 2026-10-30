@@ -876,23 +876,38 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
       .join("\n")
   }
 
-  // Master Bible retrieval is a bounded optional server-side lookup, never a
-  // second model call. Resume / JD remain the authoritative current sources.
-  // Prior Q&A can guide topic continuity, not invent candidate achievements.
+  // Two independent, bounded server-side retrieval lanes: active source-pair
+  // dossier and history of immutable session minis. They need no LLM call.
+  // The current resume/JD still govern every personal fact in the answer.
   let priorBibleContext = ""
   if (tier !== 0 && !["closing-question", "acknowledgement", "logistics"].includes(rediscovered.intent)) {
-    let timer: ReturnType<typeof setTimeout> | undefined
+    let timerA: ReturnType<typeof setTimeout> | undefined
+    let timerB: ReturnType<typeof setTimeout> | undefined
     try {
-      priorBibleContext = await Promise.race([
-        import("@/lib/kompas-master-bible").then(m =>
-          m.masterBibleContext(hashUserId(user.id), question, {
-            followUp: includeHistoryContext ? history.slice(-250) : undefined,
-            maxChars: 2200,
-          })),
-        new Promise<string>(resolve => { timer = setTimeout(() => resolve(""), 110) }),
+      const owner = hashUserId(user.id)
+      const followUp = includeHistoryContext ? history.slice(-250) : undefined
+      const [master, prepared] = await Promise.all([
+        Promise.race([
+          import("@/lib/kompas-master-bible").then(m =>
+            m.masterBibleContext(owner, question, { followUp, maxChars: 1600 })).catch(() => ""),
+          new Promise<string>(resolve => { timerA = setTimeout(() => resolve(""), 110) }),
+        ]),
+        Promise.race([
+          import("@/lib/kompas-dossier-store").then(m =>
+            m.activePreparedDossierContext(owner, resumeSrc, jdSrc, question, {
+              followUp, firstPerson: personalEvidence, maxChars: 1800,
+            })).catch(() => ""),
+          new Promise<string>(resolve => { timerB = setTimeout(() => resolve(""), 110) }),
+        ]),
       ])
-    } catch { /* historical retrieval must never block the live reply */ }
-    finally { if (timer) clearTimeout(timer) }
+      priorBibleContext = [
+        prepared ? "PREPARED SOURCE-BOUND DOSSIER (source references still require verification):\n" + prepared : "",
+        master ? "EARLIER SESSION MINI-DOSSIERS (rehearsal and context, not independent proof of work):\n" + master : "",
+      ].filter(Boolean).join("\n\n")
+    } finally {
+      if (timerA) clearTimeout(timerA)
+      if (timerB) clearTimeout(timerB)
+    }
   }
 
   const context = [
@@ -917,7 +932,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     includeStoryContext && prep.persona ? `Persona: ${str(prep.persona, 800)}` : "",
     includeStoryContext && prep.projects ? `UNVERIFIED generated project summaries: ${str(prep.projects, 2000)}` : "",
     includeStoryContext && grounding ? `Historical context (personal claims require original source corroboration):\n${grounding.slice(0, 4500)}` : "",
-    priorBibleContext ? `MASTER BIBLE — PRIOR SESSION Q&A (context and earlier wording only, never proof that an incident happened):\n${priorBibleContext}` : "",
+    priorBibleContext ? `${priorBibleContext}` : "",
     resumeFacts ? `${resumeFacts}` : "",
     tier !== 0 && jdSrc && !["closing-question","acknowledgement","definition","logistics"].includes(rediscovered.intent) ? `JOB DESCRIPTION (role priorities, not candidate history):\n${jdSrc}` : "",
     docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
