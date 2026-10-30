@@ -532,7 +532,7 @@ export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN): st
   // the last ask is the end of the question.
   const q = (pointed + parts.slice(from, last + 1).map((p) => p.text).join(" ")).replace(/\s+/g, " ").trim()
   // "And why?" is two words or fewer. Dropping it left the previous answer on screen.
-  if (!q || (q.split(/\s+/).length < 3 && !shortFollowUp(q) && !shortFollowUp(text))) return ""
+  if (!q || (q.split(/\s+/).length < 3 && !shortFollowUp(q) && !shortFollowUp(text) && !shortLogistics(q) && !shortLogistics(text))) return ""
   return (q.charAt(0).toUpperCase() + q.slice(1)).slice(0, 2000)
 }
 
@@ -554,8 +554,19 @@ const TOPIC_SHIFT = /\b(?:different topic|new topic|change of topic|switch(?:ing
 type AskPart = { kind: "ask" | "context" | "noise" | "own"; text: string }
 
 /** Each sentence, read as an ask, setup for one, a filler, or the candidate's own words. */
+function interviewSentences(text: string): string[] {
+  // "U.S. citizen?" is one question. The period in U.S. is an abbreviation, not a sentence end.
+  const hidden = String(text || "").replace(/\bU\.S\.(?=\s)/gi, "U\u0001S\u0001").replace(/\bU\.K\.(?=\s)/gi, "U\u0001K\u0001")
+  return hidden.split(/(?<=[.?!])\s+/).map((s) => s.replace(/\u0001/g, ".").trim()).filter(Boolean)
+}
+
+/** A two-word logistics ask is still the question. "U.S. citizen?" used to fall under the three-word floor and disappear. */
+function shortLogistics(text: string): boolean {
+  return /\b(?:u\.?s\.?|united states)\s+citizens?\b/i.test(text)
+}
+
 function askSentences(text: string): AskPart[] {
-  const sentences = String(text || "").split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean)
+  const sentences = interviewSentences(text)
   // The words after a fragment the transcriber cut off ("captured... how to use the Gemalto app") are that fragment's
   // tail: setup there is noise too, and only a clear ask survives it.
   return sentences.map(classifyAskSentence).map((part, i) =>
@@ -636,7 +647,7 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
     const words = bare.split(/\s+/).filter(Boolean)
     // "Explain that" is two words. Dropping it left the previous answer on screen.
     const shortFollow = words.length >= 2 && words.length <= 9 && (PRESS.test(bare) || POINTS_BACK.test(bare))
-    if (topicFragment(bare) || words.length >= 3 || shortFollow) return bare.slice(0, 2000)
+    if (topicFragment(bare) || words.length >= 3 || shortFollow || shortLogistics(bare)) return bare.slice(0, 2000)
   }
   return ""
 }
