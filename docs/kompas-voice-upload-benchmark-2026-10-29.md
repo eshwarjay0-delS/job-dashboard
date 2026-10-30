@@ -19,3 +19,11 @@ The aggregate-only output includes WER, deletion/substitution/insertion rates, t
 
 ## Baseline and release gate
 **Consented real-world baseline: NOT YET MEASURED.** WER, deletion rate, technical recall, zero-edit rate, speaker attribution, and live P50/P95 latency are unavailable for this change. Synthetic upload tests measure boundary correctness, not live accuracy or latency. Keep production unchanged until full CI and the deployed route are verified. Preserve the latest READY production deployment as the rollback reference.
+
+## 30 October 2026: comparable measurement-label coverage
+
+A reference-set fingerprint alone is insufficient for fair before/after comparisons. If a candidate removes latency from a slow clip and adds latency to a fast clip, the sample IDs, reference text and total latency-label count can remain identical while P95 appears to improve. The same issue affects edit and speaker-label coverage.
+
+The aggregate evaluator now also emits `measurementSetSha256`, a SHA-256 of **sample IDs and booleans for availability** of latency, edit-count and speaker-attribution labels. No transcript, speaker name or audio is included in this fingerprint. Baseline comparison rejects changes in per-sample measurement-label availability, mismatched coverage totals and malformed/nonfinite baseline metrics. Older aggregate baselines without this new fingerprint must be regenerated from the **same consented recordings**; never fabricate a matching fingerprint. Actual accuracy and latency deltas remain **not measured** until paired consented baseline/candidate data exist.
+
+Regression scenarios cover swapped latency/edit/speaker labels, valid changes in measured values with stable coverage, missing fingerprints, altered coverage and invalid baseline metrics. This changes only the offline evaluator and does not alter speech capture, model selection, user consent, session archiving, or production transcription.
