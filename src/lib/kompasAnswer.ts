@@ -759,6 +759,12 @@ function whatIsHead(sentence: string): string {
 function separateQuestion(next: string, prevText: string): boolean {
   const bare = next.replace(LEAD_FILLER, "").trim()
   if (!bare || shortFollowUp(bare) || CONTINUES_ASK.test(bare)) return false
+  // "Go deeper" stays with the question it follows. "Go deeper on that exception" is the next question.
+  if (/^(?:(?:and|so|ok(?:ay)?|right|well|then|now)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|walk me through)\b/i.test(bare)) {
+    const press = new Set("deeper dig elaborate explain walk through that this".split(" "))
+    const fresh = topicWords(bare).filter((w) => !press.has(w) && !topicWords(prevText).includes(w))
+    if (fresh.length > 0) return true
+  }
   if (/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && properNouns(bare).length === 0) return false
   if (!SEPARATE_START.test(bare)) return false
   const prevSentence = (prevText.trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim()

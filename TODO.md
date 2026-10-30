@@ -1,3 +1,7 @@
+## 2026-10-29 — A named follow-up in the same breath is the next question
+
+"What is NLA? Go deeper on that exception." was one question. The second sentence names its own subject, so it is cut apart. "Go deeper" by itself stays with the question it follows. The page stamp is kompas-20261029-split. Fifty heard sequences still cut apart.
+
 ## 2026-10-29 — Go deeper on a named subject is still a new ask
 
 "Go deeper" alone was a new ask. "Go deeper on that exception" was not, so a press after an answer re-asked the old question. A follow-up that continues into its subject is a new ask. The page stamp is kompas-20261029-ask.

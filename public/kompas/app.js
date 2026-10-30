@@ -1726,6 +1726,13 @@ function splitHead(sentence) {
 function splitSeparate(next, prevText) {
   const bare = String(next || "").replace(SPLIT_LEAD, "").trim();
   if (!bare || shortFollowUp(bare) || SPLIT_CONTINUES.test(bare)) return false;
+  // "Go deeper" stays with the question it follows. "Go deeper on that exception" is the next question.
+  if (/^(?:(?:and|so|ok(?:ay)?|right|well|then|now)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|walk me through)\b/i.test(bare)) {
+    const press = new Set("deeper dig elaborate explain walk through that this".split(" "));
+    const prevWords = new Set(splitTopicWords(prevText));
+    const fresh = splitTopicWords(bare).filter((w) => !press.has(w) && !prevWords.has(w));
+    if (fresh.length > 0) return true;
+  }
   if (/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && splitProper(bare).length === 0) return false;
   if (!SPLIT_START.test(bare)) return false;
   const prevSentence = (String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim();

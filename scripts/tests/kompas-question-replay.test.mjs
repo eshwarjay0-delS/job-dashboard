@@ -387,6 +387,8 @@ test("a multi-part question stays one question, and two subjects do not", () => 
   assert.equal(splitDistinctAsks("How do you assess the business impact? How do you understand root cause?").length, 1)
   assert.equal(splitDistinctAsks("Define IDOR, explain why it matters, and give one mitigation.").length, 1)
   assert.deepEqual(splitDistinctAsks("What is Kubernetes? What is Terraform?"), ["What is Kubernetes?", "What is Terraform?"])
+  assert.deepEqual(splitDistinctAsks("What is NLA and why do we disable it? Go deeper on that exception."), ["What is NLA and why do we disable it?", "Go deeper on that exception."])
+  assert.equal(splitDistinctAsks("What is NLA and why do we disable it? Go deeper.").length, 1)
   assert.equal(clauseStillOpen("How would you design a PKI"), true)
   assert.equal(clauseStillOpen("How would you design a PKI for a bank that already runs Venafi?"), false)
 })
@@ -406,6 +408,8 @@ test("the desktop page splits and holds the same way", () => {
     assert.equal(JSON.stringify(ctx.splitDistinctAsks(joined)), JSON.stringify(splitDistinctAsks(joined)), seq.id)
   }
   assert.equal(ctx.clauseStillOpen("How would you design a PKI"), true)
+  assert.equal(JSON.stringify(ctx.splitDistinctAsks("What is NLA and why do we disable it? Go deeper on that exception.")), JSON.stringify(["What is NLA and why do we disable it?", "Go deeper on that exception."]))
+  assert.equal(ctx.splitDistinctAsks("What is NLA and why do we disable it? Go deeper.").length, 1)
   assert.equal(ctx.repeatsPriorQuestion("And why?", "What is NLA and why do we disable it?"), false)
   assert.equal(ctx.repeatsPriorQuestion("Go deeper", "What is NLA and why do we disable it?"), false)
   assert.equal(shortFollowUp("Go deeper"), true)
