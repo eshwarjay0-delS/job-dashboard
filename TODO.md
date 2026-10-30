@@ -1,3 +1,7 @@
+## 2026-10-30 — Nights, weekends, and on-call stay quiet; how work authorization works does not
+
+Kompas does not answer availability. "Can you work nights?", weekends, and on-call were still sent to the model. They are skipped. "How does work authorization work?" was skipped with them. That one asks for the mechanism, so it is answered. "Have you supported on-call incident response?" stays an experience question.
+
 ## 2026-10-30 — A spoken limit stays on the conditions line
 
 "The service must stay up. How would you patch it?" named only the question. The limit is now a condition, and the question stays the question. The same split covers "No production access" and "You must keep the service running."

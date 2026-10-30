@@ -15,6 +15,7 @@ const PERSONAL = new RegExp([
   String.raw`\bwhere are you (?:based|located|living|from)\b|\bwhere do you live\b|\bcurrent(?:ly)? (?:location|located|based|living)\b|\byour (?:home |current )?address\b|\bare you local\b|\bcommute\b`,
   String.raw`\b(?:open|okay|ok|comfortable|willing|able|fine|happy)\s+(?:to|with)\s+(?:work(?:ing)?\s+)?(?:a\s+)?(?:hybrid|on-?site|remote|in the office|travel|relocat|nights?|weekends?|on-?call|shifts?)`,
   String.raw`\bdays?\s+in(?:\s+the)?\s+office\b|\bwilling to travel\b|\btravel (?:requirement|percent)|\b(?:do|have) you (?:have|hold|got) (?:an? )?(?:active )?(?:security )?clearance\b|\bclearable\b|\bfull[- ]time or contract\b|\bcontract or full[- ]time\b`,
+  String.raw`\b(?:work(?:ing)?\s+(?:nights?|weekends?)|night shifts?|available for on-?call|work(?:ing)? on-?call)\b`,
 ].join("|"), "i")
 
 // Asks the classifier files elsewhere ("What is your current location?" reads as a definition)
@@ -58,5 +59,7 @@ export function logisticsBackstop(question: string): string {
   const q = String(question || "")
   if (!q.trim()) return q
   if (/\b(?:was|were|did|had)\b/i.test(q) || /\s(?:and|also|plus)\s/i.test(q)) return q
+  // "How does work authorization work?" asks for the mechanism. It is not "are you authorized".
+  if (/\bhow (?:does|do|did)\b[^?]{0,80}\bwork\b/i.test(q)) return q
   return withoutLogistics(q)
 }
