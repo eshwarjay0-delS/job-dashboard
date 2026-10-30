@@ -97,3 +97,37 @@ test("baseline rejects nonfinite or malformed aggregate metrics",()=>{
   assert.throws(()=>evaluate(set([row("a","yes","yes")]),{...base,metrics:{...base.metrics,wer:Infinity}}),/Baseline mismatch/);
   assert.throws(()=>evaluate(set([row("a","yes","yes")]),{...base,metrics:{...base.metrics,wer:"0"}}),/Baseline mismatch/);
 });
+
+test("missing speaker prediction is counted as wrong rather than omitted",()=>{
+  const r=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A"}),row("b","hello","hello",{referenceSpeaker:"B",predictedSpeaker:"B"})]));
+  assert.equal(r.coverage.speakerLabels,2);
+  assert.equal(r.metrics.speakerAttribution,.5);
+  assert.equal(r.metrics.speakerPredictionRate,.5);
+});
+test("all missing predictions produce zero accuracy rather than undefined accuracy",()=>{
+  const r=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A"})]));
+  assert.equal(r.metrics.speakerAttribution,0);
+  assert.equal(r.metrics.speakerPredictionRate,0);
+});
+test("speaker abstention and later prediction are comparable for identical reference cohort",()=>{
+  const base=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A"})]));
+  const candidate=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A",predictedSpeaker:"A"})]),base);
+  assert.equal(candidate.deltaFromBaseline.speakerAttribution,1);
+  assert.equal(candidate.deltaFromBaseline.speakerPredictionRate,1);
+  assert.equal(candidate.measurementSetSha256,base.measurementSetSha256);
+});
+test("legacy speaker benchmark schema is rejected, never silently compared",()=>{
+  const base=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A"})]));
+  assert.equal(base.schemaVersion,2);
+  assert.throws(()=>evaluate(set([row("a","hello","hello",{referenceSpeaker:"A"})]),{...base,schemaVersion:1}),/Baseline mismatch/);
+});
+test("speaker reference cohort cannot be changed to game attribution denominator",()=>{
+  const base=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A"}),row("b","hello","hello")]));
+  assert.throws(()=>evaluate(set([row("a","hello","hello"),row("b","hello","hello",{referenceSpeaker:"A"})]),base),/Baseline mismatch/);
+});
+test("speaker prediction without reference is not scored as a verified attribution",()=>{
+  const r=evaluate(set([row("a","hello","hello",{predictedSpeaker:"A"})]));
+  assert.equal(r.coverage.speakerLabels,0);
+  assert.equal(r.metrics.speakerAttribution,null);
+  assert.equal(r.metrics.speakerPredictionRate,null);
+});
