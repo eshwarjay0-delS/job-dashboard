@@ -59,6 +59,10 @@ const PHRASES = [
 type Jargon = { term: string; family: string; product?: boolean }
 
 const JARGON: Jargon[] = [
+  // Round 11 (29 Oct 2026): buzzwords a model adds to sound current; said only when asked or on the resume.
+  ...["CNAPP", "CSPM", "XDR", "SOAR", "SASE", "SBOM", "eBPF", "service mesh", "Monte Carlo", "Bayesian network", "UEBA", "microsegmentation", "DevSecOps", "GitOps", "policy-as-code"]
+    .map((term) => ({ term, family: "buzz" })),
+  ...["ServiceNow", "Archer", "OneTrust"].map((term) => ({ term, family: "grc-tool", product: true })),
   { term: "Kerberoasting", family: "attack" },
   { term: "DCSync", family: "attack" },
   { term: "Golden Ticket", family: "attack" },
@@ -244,7 +248,14 @@ export function topicOfAsk(question: string): string {
   // A leading since/given/as clause before the actual question is context, not topic. Failsafe: nothing left keeps all.
   const raw = String(question || "")
   const premise = raw.match(/^\s*(?:since|given(?: that)?|as|because|now that)\s+(?:you|your)\b[^,?]{3,120},\s*((?:how|what|why|when|where|which|who|can|could|would|do|did|have|tell|walk|describe)\b[\s\S]+)$/i)
-  const asked = premise && premise[1].trim().split(/\s+/).length >= 3 ? premise[1] : raw
+  let asked = premise && premise[1].trim().split(/\s+/).length >= 3 ? premise[1] : raw
+  // Round 11 (29 Oct 2026): a jargon-stuffed setup ("With zero trust, SASE and all that, how do you…", "…, you know, with
+  // all the SOAR and CNAPP stuff these days?") was read as the topic, so answers opened on and repeated the buzzwords.
+  // Failsafe: the ask left must be 3+ words, or the whole question is kept.
+  const setup = asked.match(/^\s*(?:so,?\s+)?(?:with|given|considering|thinking about|in a world of|in light of|what with)\s+[^?]{3,200}?,\s*((?:how|what|why|when|where|which|who|can|could|would|do|did|tell|walk|describe)\b[^,]*[\s\S]*)$/i)
+  if (setup && setup[1].trim().split(/\s+/).length >= 3 && !/^(?:with|given)\s+(?:the|a|an)?\s*(?:time|example)\b/i.test(asked)) asked = setup[1]
+  const tail = asked.replace(/,\s*(?:you know,?\s*)?(?:with|and) all (?:the|that|this|those)\b[^?.!]*(?=[?.!]?\s*$)/i, "")
+  if (tail.trim().split(/\s+/).length >= 3) asked = tail
   return asked
     .replace(/\b(?:keep|make) it (?:suitable|simple|short|brief|plain)[^.?!]*[.?!]?/gi, " ")
     .replace(/\b(?:for|to) (?:a |an |the )?(?:technical hr|non-technical|recruiter|director|executive|cfo|ceo|business audience|hiring manager|engineer|architect|developer|new analyst|junior analyst)\b/gi, " ")
@@ -311,7 +322,8 @@ function depthAsked(question: string, shape: AnswerShape): boolean {
 }
 
 export function bannedTerms(question: string, sources: string, shape: AnswerShape): string[] {
-  const hay = `${question}\n${sources}`
+  // Round 11: jargon in a context preamble ("With SOAR, XDR and CNAPP, how do you…") is not asked; only the ask counts.
+  const hay = `${topicOfAsk(question)}\n${sources}`
   const deep = depthAsked(question, shape)
   const families = new Set(JARGON.filter((item) => containsTerm(hay, item.term)).map((item) => item.family))
   return JARGON.filter((item) => {
@@ -799,9 +811,13 @@ function firstPerson(line: string): string {
  * The interviewer's own phrase: the ask with its question frame taken off ("Tell me about a time you",
  * "What is the difference between", "Are you able to", "How do you"), so the answer can open on those exact words.
  */
+/** The pushback lead and the sentence it sits in ("That doesn't sound right.", "I disagree, I think…"). */
+const PUSHBACK_LEAD = /^\s*(?:hmm+[,.]?\s*|well[,\s]+|really\??\s*)*(?:that (?:doesn\'t|does not) (?:sound|seem) right|i\'m not (?:sure|convinced)(?: that\'s (?:right|correct))?|i(?:\'d| would) push back(?: on that)?|really\?\s*(?=\w)|that seems (?:backwards|too simple|wrong|off)|i don\'t think that\'s (?:right|how it works)|that contradicts|are you sure(?: about that)?|i disagree|most people would (?:say|just)|that\'s not (?:right|what i)|i\'m not buying)\b[^.?!]*[.?!]?\s*/i
 export function leadPhrase(question: string): string {
   const tied = splitFollowUp(cleanSpokenAsk(question))
-  question = tied.previous ? tied.own : cleanSpokenAsk(question)
+  // Round 12: for pushback the topic is the question being challenged, not "that doesn't sound right".
+  const ownTopic = tied.own.replace(PUSHBACK_LEAD, "").trim()
+  question = tied.previous ? (PUSHBACK_LEAD.test(tied.own) ? tied.previous : ownTopic || tied.own) : (cleanSpokenAsk(question).replace(PUSHBACK_LEAD, "").trim() || cleanSpokenAsk(question))
   let topic = (topicOfAsk(question).split(/(?<=[a-z0-9)])[?!.]\s+/i)[0] || "").replace(/[?!.]+\s*$/, "").trim()
   const frames = [
     /^(?:so,?\s+|and\s+|now,?\s+)/i,
@@ -810,22 +826,38 @@ export function leadPhrase(question: string): string {
     /^what about\s+/i,
     // Round 10: "what would you do if the owner says…" was said back as "For do if the owner says…".
     /^what (?:would|do|should|will) you do\s+(?=if\b|when\b)/i,
-    /^what would you\s+/i,
+    /^walk me through\s+/i,
     /^tell me about (?:a time (?:when )?(?:you|that you)\s+)?/i,
     /^(?:give me an example of (?:a time )?(?:when )?(?:you\s+)?)/i,
     /^what(?:'s| is) the difference between\s+/i,
     /^what(?:'s| is| are| does| do)\s+(?:a |an |the )?/i,
     /^(?:how|why) (?:do|did|would|does|is|are) (?:you\s+)?/i,
     /^(?:are|were) you (?:able|willing|comfortable|open) to\s+/i,
-    /^(?:do|did|have|has) you\s+/i,
     /^(?:define|explain|describe|compare)\s+/i,
   ]
   for (let i = 0; i < 3; i++) for (const frame of frames) topic = topic.replace(frame, "")
-  topic = topic.replace(/\s+(?:mean|means|work|works)$/i, "").replace(/\s+/g, " ").trim()
+  topic = topic.replace(/^actually\s+/i, "")
+  // Round 13 (read by eye): "what would you decide first" lost its frame ("On decide first…") and "Do you trust X" was
+  // "On trust X". They are said as mine: "what I would decide first", "whether I trust X", "whether I have ever…".
+  topic = topic.replace(/^what would you\s+/i, "what I would ").replace(/^(?:do|did) you\s+/i, "whether I ").replace(/^(?:have|has) you\s+/i, "whether I have ")
+  // Round 11: a multi-part ask's lead was cut mid-list ("how I run a vendor risk review, what would I ask the vendor, what").
+  // The lead is the first part only, when that part has 3+ words.
+  const firstPart = topic.split(/,\s*/)[0]
+  const rest = topic.slice(firstPart.length).replace(/^,\s*(?:and\s+)?/, "")
+  if (firstPart !== topic && (firstPart.split(/\s+/).length >= 3 || /^(?:how|what|who|when|why|where|which)\b/i.test(rest))) topic = firstPart
+  topic = topic.replace(/(?<!\b(?:at|to|from|for|of|my|our|the))\s+(?:mean|means|work|works)$/i, "").replace(/\s+/g, " ").trim()
   const words = topic.split(/\s+/).filter(Boolean)
   if (!words.length) return questionKeywords(question)[0] || "this question"
   if (/^[A-Z][a-z]/.test(words[0])) words[0] = words[0].toLowerCase()
-  return words.slice(0, 9).join(" ").replace(/[,;:]+$/, "")
+  // Round 11 (29 Oct 2026): a 9-word cut left "if the owner says it's fixed but there's no". The cut now allows 12 words
+  // and never ends on a function word; past 12 words it ends at the last clause break before the cut.
+  let kept = words.slice(0, 12)
+  if (words.length > 12) {
+    const brk = kept.findLastIndex((w, i) => i >= 3 && /^(?:but|and|or|so|because|while|which|that|then)$/i.test(w))
+    if (brk > 0) kept = kept.slice(0, brk)
+  }
+  while (kept.length < words.length && kept.length > 1 && /^(?:a|an|the|no|not|of|to|for|but|and|or|so|there's|there|is|are|with|in|on|at|by|my|your|its|their|if|when|that|which)$/i.test(kept[kept.length - 1].replace(/[,;:]+$/, ""))) kept.pop()
+  return kept.join(" ").replace(/[,;:]+$/, "")
 }
 
 /** The separate things the interviewer listed, in order: "trust boundaries, data flow, failure isolation, rollout and validation". */
@@ -837,7 +869,8 @@ export function askedPartList(question: string): string[] {
     if (!clause.includes(",")) continue
     const body = clause.replace(/^(?:explain|walk (?:me )?through|give|state|cover|describe|include|discuss)\s+/i, "").replace(/[?!.]+$/, "")
     for (const item of body.split(/,\s*|\s+and\s+/)) {
-      const part = item.replace(/^(?:the|a|an)\s+/i, "").trim()
+      // Round 13 (by eye): "and who signs off" was said "On and who signs off".
+      const part = item.replace(/^(?:and|or|then)\s+/i, "").replace(/^(?:the|a|an)\s+/i, "").trim()
       if (part && wordCount(part) <= 5) out.push(part.toLowerCase())
     }
   }
@@ -881,7 +914,7 @@ function rankedExperience(question: string, resume: string, offTopicAllowed = 99
 
 /** "challenged a weak plan" is said "When I challenged a weak plan"; "a situation where a fix did not hold" is "In a situation...". */
 function storyFrame(lead: string): string {
-  return /^(?:\w+ed|led|built|made|took|told|kept|set|ran|drove|taught|brought|held|found|wrote|sent|had|trained|got|caught|fought|dealt|saw)\b/i.test(lead) ? `When I ${lead}` : `In ${lead}`
+  return /^(?:\w+ed|led|built|made|took|told|kept|set|ran|drove|taught|brought|held|found|wrote|sent|had|trained|got|caught|fought|dealt|saw)\b/i.test(lead) ? `When I ${lead}` : /^(?:my|our)\b/i.test(lead) ? `On ${lead}` : `In ${lead.replace(/^a time\b/i, "the time")}`
 }
 
 const OPENERS: Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>> = {
@@ -950,8 +983,19 @@ const OPENERS: Record<AnswerShape, Record<AnswerLevel, (lead: string) => string>
 /** The interviewer's phrase said by the candidate: "your background" is "my background" in the answer. */
 function spokenLead(lead: string, question = ""): string {
   // "How do you handle a suspicious login" leaves a verb phrase; said back it is "how I handle a suspicious login".
-  const verb = /^\s*(?:(?:so|and|now)[,\s]+)?(?:how|why) (?:do|did|would|will|should|could|can) you\b/i.test(cleanSpokenAsk(question))
+  const verb = /^\s*(?:(?:so|and|now)[,\s]+)?(?:how|why) (?:do|did|would|will|should|could|can) you\b/i.test(topicOfAsk(cleanSpokenAsk(question).replace(PUSHBACK_LEAD, "")))
   const said = verb && !/^how\b/i.test(lead) ? `how I ${lead}` : lead
+  // Round 11: a condition ("if the owner says…") after "For"/"On" was "For if the owner says…"; it is said as a case.
+  // Round 11: a yes/no ask ("Would you close a finding…") was said back "On would I close a finding…"; it is "whether I would…".
+  // Round 11: "By what percent did you cut open findings" was said back "On by what percent did I cut…".
+  const amount = said.match(/^(by what (?:percent(?:age)?|share)|what (?:percent(?:age)?|share|number)|how (?:many|much|often|fast))((?: [\w-]+){0,3}?) (?:did|do|was|were|have|has) (?:you|I|we)\s+(.+)$/i)
+  if (amount) return spokenLead(`${/^by /i.test(amount[1]) ? "how much" : amount[1].toLowerCase()}${amount[2]} I ${amount[3]}`)
+  // Round 13: "What was the ROI of your programme" was said back "On what was the ROI of my programme".
+  if (/^what (?:percentage|share|portion|proportion|fraction) of /i.test(said)) return spokenLead(said.replace(/^what \w+ of /i, "the share of ").replace(/ (?:were|was) /i, " "))
+  if (/^what (?:was|is|are|were) (?:the|my|our|your) /i.test(said)) return spokenLead(said.replace(/^what (?:was|is|are|were) /i, ""))
+  const yesNo = said.match(/^(would|will|should|could|can|do|did) (you|I|we)\s+(.+)$/i)
+  if (yesNo) return spokenLead(`whether ${yesNo[2].toLowerCase() === "we" ? "we" : "I"} ${/^(?:do|did)$/i.test(yesNo[1]) ? "" : yesNo[1].toLowerCase() + " "}${yesNo[3]}`)
+  if (/^(?:if|when|whenever)\b/i.test(said)) return spokenLead(`the case where ${said.replace(/^\w+\s+/, "")}`)
   return said
     .replace(/\byourself\b/gi, "myself").replace(/\byours\b/gi, "mine").replace(/\byour\b/gi, "my")
     // Round 9 (29 Oct 2026): "What if the owner is senior to you?" was said back as "senior to I". Object "you" is "me".
@@ -980,6 +1024,9 @@ const APPROACH: Record<AnswerLevel, Array<(lead: string) => string>> = {
     () => "I agree the deadline with the owner before work starts.",
     () => "Anything past its date comes back to me for a new decision.",
     () => "I keep the summary to one page so it gets read.",
+    // Round 13: short lines so a floor one or two words short can still be met under the ceiling.
+    () => "I own that call.",
+    () => "Leadership sees it weekly.",
   ],
   architect: [
     (l) => `On ${l}, I break the work into parts that each have their own check.`,
@@ -992,6 +1039,8 @@ const APPROACH: Record<AnswerLevel, Array<(lead: string) => string>> = {
     () => "I keep the steps short enough that someone new can run them the same way.",
     () => "Each part gets its own owner.",
     () => "I name what would prove it wrong.",
+    () => "Every check is written down.",
+    () => "Failures go back to the owner.",
     (l) => `For ${l}, I write down the inputs, the check, and the expected result before I start.`,
     () => "I look for the step that depends on a person remembering, and I replace it with a check.",
     () => "I record which evidence came from the live setting and which came from a ticket.",
@@ -1022,8 +1071,21 @@ export function draftSpokenAnswer(question: string, level: AnswerLevel, resume: 
   // that floor from more supported or approach lines, never past its own ceiling (failsafe: the ceiling wins).
   const below = level === "architect" ? "director" : level === "director" ? "engineer" : null
   const floor = below ? Math.ceil(wordCount(draftSpokenAnswer(question, below, resume, previous)) * 1.5) : 0
-  return draftAtLevel(question, level, resume, previous, floor)
+  const text = draftAtLevel(question, level, resume, previous, floor)
+  // Round 13 (29 Oct 2026): a Director draft at its own ceiling left the Architect no room to be 1.5 times longer
+  // ("ROI … in dollars": 66 vs 94 words). Director is cut to the Architect ceiling over 1.5 on a sentence boundary.
+  // Failsafe: never below the Director floor from Engineer, so the lower gap holds too.
+  if (level === "director") {
+    const cut = dissectQuestion(question, resume)
+    const room = Math.floor(cut.modes.architect.maxWords / 1.5)
+    const trimmed = wordCount(text) > room && room >= floor ? trimToWords(text, room) : text
+    if (wordCount(trimmed) >= floor) return trimmed
+  }
+  return text
 }
+
+export const NUMBER_ASK = /\b(?:what (?:percentage|percent|share|number|proportion)|by what percent|how many|how much (?:faster|money|time|did)|in dollars|dollar value|roi\b|pass rate|false-positive rate|give me (?:a|the) (?:number|percentage)|exact(?:ly)? how many|to the nearest)\b/i
+export const NO_GUESS = "I won't guess a figure I can't back up."
 
 const HONEST_LINES = [
   "My resume does not show this exact work, so I answer from how I would approach it.",
@@ -1051,7 +1113,15 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   const dirStop = Math.min(cut.modes.director.aimWords, Math.floor(archStop / 1.55))
   const stop = level === "architect" ? archStop : level === "director" ? dirStop : Math.max(cut.modes.engineer.minWords, Math.min(cut.modes.engineer.aimWords, Math.floor(dirStop / 1.7)))
   const parts = [opener(lead)]
-  let words = wordCount(parts[0])
+  // Round 13 (read by eye): a trick ask for a figure ("What percentage…", "ROI in dollars") got a resume line and no
+  // word on the number, which reads as dodging. The stand-in says once that it will not guess. Failsafe: a figure the
+  // interviewer gave, or one on the resume, is not refused.
+  // Engineer says it in the opener itself, so it stays short enough for the 50% gaps (its ceiling is tight).
+  if (NUMBER_ASK.test(question) && !/\d/.test(question)) {
+    if (level === "engineer") parts[0] = `On ${lead}, ${NO_GUESS}`
+    else parts.push(NO_GUESS)
+  }
+  let words = wordCount(parts.join(" "))
   const story = cut.shape === "personal-experience" || cut.shape === "scenario"
   const deep = story || cut.shape === "technical-deep-dive"
   const most = { engineer: deep ? 2 : 1, director: 3, architect: 5 }[level]
@@ -1065,6 +1135,19 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     words += n
     used++
   }
+  // Round 12 (29 Oct 2026): a behavioural story with no matching resume line became "how I would approach it", which is
+  // not a story. The closest real resume line is told as the example, said as the closest one, never as an exact match.
+  // Failsafe: an empty resume keeps the honest line.
+  if (!used && cut.shape === "personal-experience") {
+    const real = experienceLines(resume).map(firstPerson).filter(fresh)
+    const pick = real[[...question].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % Math.max(1, real.length)]
+    if (pick) {
+      const intro = "The closest real example from my work is this one."
+      parts.push(intro, pick)
+      words += wordCount(intro) + wordCount(pick)
+      used++
+    }
+  }
   if (!used) {
     const honest = HONEST_LINES.find(fresh) || HONEST_LINES[0]
     parts.push(honest)
@@ -1073,7 +1156,10 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   const askedParts = askedPartList(question)
   askedParts.slice(0, level === "engineer" ? 2 : level === "director" ? 3 : askedParts.length).forEach((part, i) => {
     const templates = PART_LINES[level]
-    const line = templates[i % templates.length](part)
+    // Round 11: a listed part was said in the interviewer's voice ("On what would you check yourself"); it is said as mine.
+    const said = spokenLead(part.replace(/^(what|how|when|who|why|where|which) (would|do|will|should|did) you\s+(.+)$/i,
+      (_m, wh, aux, rest) => `${wh} I ${/^do$/i.test(aux) ? "" : aux + " "}${rest}`))
+    const line = templates[i % templates.length](said)
     const n = wordCount(line)
     if (words + n > stop) return
     parts.push(line)
@@ -1085,7 +1171,7 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
     parts.push(line)
     words += n
   }
-  const approach = APPROACH[level].map((make) => make(lead)).filter((line) => fresh(line) && !parts.includes(line))
+  const approach = APPROACH[level].map((make) => make(cut.shape === "personal-experience" ? "that situation" : lead)).filter((line) => fresh(line) && !parts.includes(line))
   // Short shapes (greeting, logistics, closing) stop at the opener and the supported lines; others fill to the aim.
   if (!["acknowledgement", "logistics", "closing"].includes(cut.shape)) {
     for (const line of approach) {

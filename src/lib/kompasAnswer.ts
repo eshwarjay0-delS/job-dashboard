@@ -763,7 +763,11 @@ export function questionForAnswer(heard: string, asked: string, pinned: boolean,
   const q = formed ? tidySpokenAsk(formed) : formed
   const source = String((pinned && asked) || heard || "").split("\n").filter((l) => l.trim()).pop() || ""
   const startedWithAnd = /^\s*(?:(?:Them|You)(?: \([a-z]+\))?:\s*)?(?:and|but)\b/i.test(source)
-  return q ? resolveFollowUp(q, turns.map((h) => {
+  // Round 13: "I'm not convinced. Who decides it is acceptable?" lost the pushback when only the last ask was kept, so it
+  // was answered as a new question with no topic. With history, the pushback sentence is kept in front of the ask.
+  const said = source.replace(/^\s*(?:Them|You)(?: \([a-z]+\))?:\s*/i, "").trim()
+  const pushed = turns.length && q && PUSHBACK.test(said) && !PUSHBACK.test(q) && said.replace(/[?.!\s]+$/, "").toLowerCase().endsWith(q.replace(/[?.!\s]+$/, "").toLowerCase().slice(-20)) ? `${said.match(/^[^.?!]*[.?!]?/)?.[0] || ""} ${q}`.trim() : q
+  return q ? resolveFollowUp(pushed, turns.map((h) => {
     const o = (h && typeof h === "object" ? h : {}) as Record<string, unknown>
     return { q: String(o.q ?? o.question ?? "").slice(0, 300) }
   }), startedWithAnd) : ""
@@ -847,6 +851,10 @@ export function orderedPartOf(previous: string, ask: string): string {
   return parts[i < 0 ? parts.length - 1 : i] || ""
 }
 
+/** Round 12 (29 Oct 2026): interviewer pushback ("That doesn't sound right.") was answered as a new question with
+ * "that doesn't sound right" as its topic. It is tied to the question it challenges. A pushback that carries a new
+ * question of its own ("That doesn't sound right. How would you prove it?") stays tied, since it is the same topic. */
+export const PUSHBACK = /^\s*(?:hmm+[,.]?\s*|well[,\s]+|really\??\s*)*(?:that (?:doesn\'t|does not) (?:sound|seem) right|i\'m not (?:sure|convinced)(?: that\'s (?:right|correct))?|i(?:\'d| would) push back(?: on that)?|really\?\s*(?=\w)|that seems (?:backwards|too simple|wrong|off)|i don\'t think that\'s (?:right|how it works)|that contradicts|are you sure(?: about that)?|i disagree|most people would (?:say|just)|that\'s not (?:right|what i)|i\'m not buying)\b/i
 export function resolveFollowUp(d: string, history: Array<{ q?: string }>, startedWithAnd = false): string {
   const q = String(d || "").trim()
   const hist = Array.isArray(history) ? history.filter((h) => h && h.q) : []
@@ -856,6 +864,7 @@ export function resolveFollowUp(d: string, history: Array<{ q?: string }>, start
   const lastRaw = String(hist[hist.length - 1].q)
   const inChain = /following up on:/i.test(lastRaw)
   const lastAsk = rootAsk(lastRaw)
+  if (PUSHBACK.test(q) && q.split(/\s+/).length <= 30) return `${q.replace(/[?.!\s]+$/, "")} — following up on: "${lastAsk}"?`
   const part = orderedPartOf(lastAsk, q)
   if (part) {
     // Round 10: "And the second one again?" names the part, so the answer and keywords carry it. Failsafe: no list, no change.

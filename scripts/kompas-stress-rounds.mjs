@@ -12,7 +12,7 @@
 import { readFileSync } from "node:fs"
 import {
   draftSpokenAnswer, dissectQuestion, evaluateLiveAnswers, settleSpokenAnswer, sameAnswerRatio, sentencesOf,
-  isProviderErrorAnswer, questionKeywords, wordCount, answerEchoesPrevious, firstPersonRewrite, askedPartList,
+  isProviderErrorAnswer, questionKeywords, wordCount, answerEchoesPrevious, firstPersonRewrite, askedPartList, modeBand, partsScale, leadPhrase,
 } from "../src/lib/kompasDissection.ts"
 import { deriveByCode, questionForAnswer } from "../src/lib/kompasAnswer.ts"
 import { applyGuards } from "../src/lib/kompasGuards.ts"
@@ -382,7 +382,118 @@ const R10_MORE = [
     ["Who signs it off — following up on: \"What is residual risk\"?", "Tell me about yourself."], ["Who signs it off — following up on: \"What is residual risk\"?", "What is least privilege?"],
     ["How do you test a control?", "And describe your last access review."]].map(([first, next]) => ({ kind: "notFollowup", family: "new question, failsafe for the tie rules (round 10)", first, next })),
 ]
-export const ROUNDS = [R1, R2, R3, R4, R5, R6, R7, R8, [...R9, ...R9_MORE], [...R10, ...R10_MORE]]
+
+// ------------------------------------------------------------------ round 11: long multi-part asks, made-up numbers, jargon stuffing, word limits
+const R11 = [
+  ...["Walk me through how you would scope an access review, who you would involve, what evidence you would collect, how you would rank what you find, and how you would report it to leadership.",
+    "Tell me how you track remediation, how you chase owners who miss dates, how you decide when to escalate, and what you report every week.",
+    "How do you test a control, how do you know the test is enough, what do you do when it fails, and who signs off?",
+    "Explain how you would handle a policy exception, from the request, to the review, to the approval, to the expiry date.",
+    "What is residual risk, how do you measure it, who accepts it, and when would you refuse to accept it?",
+    "Describe your first ninety days here: what you would learn, who you would meet, what you would fix first, and what you would leave alone.",
+    "How would you run a vendor risk review, what would you ask the vendor, what would you check yourself, and when would you stop the contract?",
+    "Tell me about change management: how changes get approved, how you check they were tested, how you spot unapproved ones, and how you report them.",
+    "How do you write a finding, how do you pick its rating, how do you agree the fix with the owner, and how do you prove it is closed?",
+    "What makes a good control owner, how do you train one, how do you tell when one is failing, and what do you do about it?"].map((q) => A("long multi-part (round 11)", q, { limit: true })),
+  ...["What percentage of your findings were closed on time last year?", "How many access reviews did you run in total, exactly?", "What was the dollar value of the risk you reduced?",
+    "Give me a number: how much faster were your reviews than the team average?", "What was your audit pass rate, as a percentage?", "How many people did you manage, and what was the budget?",
+    "By what percent did you cut open findings?", "How many hours a week did you save the team?", "What is your exact false-positive rate on control tests?",
+    "How many critical findings did you escalate in your last role?"].map((q) => A("trick: asks for made-up numbers (round 11)", q, { limit: true, noGuess: true })),
+  ...[["The control failed in 37% of samples. What would you do?", false], ["We had 12 open critical findings and 3 owners. How would you split the work?", false]]
+    .map(([q]) => A("asked numbers may be said back (round 11)", q, { limit: true })),
+  ...["How do you handle residual risk, you know, with all the SOAR, XDR, CSPM, CNAPP, and SBOM stuff these days?",
+    "So with zero trust, SASE, microsegmentation and all that, how do you check who has admin rights?",
+    "In a world of shift-left DevSecOps and GitOps and policy-as-code, how do you test a control?",
+    "With GRC platforms, ServiceNow IRM, Archer, OneTrust, how do you track exceptions?",
+    "Thinking about NIST CSF 2.0, ISO 27001, SOC 2, PCI and HITRUST, how do you prioritise findings?",
+    "Given Kubernetes, service mesh, eBPF and sidecars, how do you explain a risk to a business owner?",
+    "With LLM agents, RAG, vector stores and prompt injection, how do you review a remediation plan?",
+    "Considering SIEM, UEBA, SOAR playbooks and MITRE ATT&CK, how do you write a finding?"].map((q) => A("question stuffed with unasked jargon (round 11)", q, { limit: true, stuffed: true })),
+  ...[
+    ["How do you track exceptions?", "With SOAR, XDR and CSPM, I track exceptions in a register. I give each exception an owner and an expiry date. CNAPP dashboards help me spot drift.", "CNAPP"],
+    ["How do you check who has admin rights?", "I use eBPF probes and a service mesh to check admin rights. I compare the admin list with the approved list every month. I send gaps to the owner.", "eBPF"],
+    ["What is residual risk?", "Residual risk is what is left after controls. I explain it with FAIR, Monte Carlo and Bayesian networks. The owner decides whether to accept it.", "Monte Carlo"],
+  ].map(([q, raw, term]) => ({ kind: "jargon", family: "unasked jargon in the draft (round 11)", q, raw, term })),
+  ...["What is residual risk?", "How do you test a control?", "Tell me about a time you challenged a plan.", "How do you prioritise findings?", "Why do you want this role?"]
+    .flatMap((q) => LEVELS.map((level) => ({ kind: "settleLimit", family: "verbose draft cut to the mode limit (round 11)", q, level }))),
+]
+
+// ------------------------------------------------------------------ round 12: pushback, STAR stories, director vs engineer on one topic
+const PUSHBACK = ["That doesn't sound right.", "Hmm, I'm not sure that's correct.", "I'd push back on that.", "Really? That seems backwards to me.", "I don't think that's how it works.",
+  "That contradicts what you said earlier.", "Are you sure about that?", "I disagree, I think the owner should decide.", "That seems too simple.", "Most people would say the opposite."]
+const R12 = [
+  ...PUSHBACK.map((push, i) => ({ kind: "pushback", family: "interviewer pushback (round 12)",
+    first: ["What is residual risk?", "How do you test a control?", "Would you close a finding the owner says is fixed?", "How do you prioritise findings?", "Is a policy exception a failure?",
+      "Who should accept a risk?", "How do you track remediation?", "Should security ever slow down a release?", "How do you check who has admin rights?", "How do you explain a risk to a business owner?"][i], push })),
+  ...["Tell me about a time you challenged a plan.", "Tell me about a time a fix did not hold.", "Give me an example of when you pushed back on a senior owner.", "Describe a time you missed a deadline.",
+    "Tell me about a time you had to explain a risk to someone non-technical.", "Tell me about a conflict with a control owner and how you resolved it.", "Describe a time you found a problem nobody else saw.",
+    "Tell me about a time you changed your mind because of evidence.", "Walk me through a situation where you had to say no.", "Using the STAR method, tell me about a time you improved a process.",
+    "Tell me about your biggest mistake at work.", "Tell me about a time you led without authority."].map((q) => A("behavioural STAR, narrative and speakable (round 12)", q, { star: true, limit: true })),
+  ...[["How would you set up access reviews?", "access reviews"], ["How do you handle policy exceptions?", "policy exceptions"], ["How would you run remediation tracking?", "remediation tracking"],
+    ["How do you approach vendor risk?", "vendor risk"], ["How would you roll out a new control?", "new control"], ["How do you handle residual risk?", "residual risk"],
+    ["How would you manage change approvals?", "change approvals"], ["How do you report open findings?", "open findings"], ["How would you test segregation of duties?", "segregation of duties"],
+    ["How would you fix weak evidence in tickets?", "weak evidence"]].map(([q, topic]) => ({ kind: "modesDiffer", family: "director strategy vs engineer implementation, same topic (round 12)", q, topic })),
+  ...[["As a director, what is your strategy for access reviews?", "As an engineer, how would you implement access reviews?"],
+    ["What is the business case for remediation tracking?", "How exactly would you build remediation tracking?"],
+    ["How would you get leadership to fund control testing?", "What steps would you follow to test a control?"],
+    ["What is your strategy for vendor risk over the next year?", "What would you check in a single vendor review?"],
+    ["How would you decide which exceptions the business can carry?", "How would you record an exception in the register?"]].map(([a, b]) => ({ kind: "nearDup", family: "strategy vs implementation pair in a row (round 12)", a, b })),
+]
+
+// ------------------------------------------------------------------ round 13: repeats after a long gap, limits at the hardest, all mixes
+const GAP = ["How do you test a control?", "Why do you want this role?", "Tell me about a time you challenged a plan.", "How do you prioritise findings?", "What is least privilege?", "How do you track exceptions?"]
+const R13 = [
+  ...["What is residual risk?", "Who should accept a risk?", "How do you check who has admin rights?", "Would you close a finding the owner says is fixed?", "How do you explain a risk to a business owner?",
+    "Should security ever slow down a release?", "What is the difference between a risk and an issue?", "How do you review a remediation plan?"].map((q) => ({ kind: "repeatGap", family: "same question again after a long gap (round 13)", q })),
+  ...["Can you say that again?", "Sorry, come again?", "One more time, please, what was your answer on residual risk?"].map((ask) => ({ kind: "repeatAsked", family: "asked repeat after a gap (round 13)", ask })),
+  ...["That doesn't sound right. How would you actually prove a control works, who checks it, and what happens when it fails?",
+    "I'm not convinced. Give me exact numbers: how many findings, what percentage closed, and how fast?",
+    "With all the SOAR, CNAPP and zero trust stuff, as a director, what would you decide first about residual risk and who would own it?",
+    "Tell me, using STAR, about a time an owner said a fix was done but there was no evidence, what you did, what they said, and how it ended.",
+    "What would you do if the owner says it's fixed but there's no evidence?",
+    "What would you do if a senior owner refuses to fix a critical finding before the audit?",
+    "What would you do when two owners each say the other one owns the fix?",
+    "Would you accept a risk the business says is too expensive to fix?",
+    "Should you ever close a finding without evidence?",
+    "Could you sign off a control you did not test yourself?",
+    "Do you trust an owner's self-assessment?",
+    "So, uh, if the auditor and the owner disagree on the rating, what do you, um, what do you do?"].map((q) => A("hardest mixes, three modes (round 13)", q, { limit: true, leadOk: true })),
+  ...["What would you do if the owner says it's fixed but there's no evidence?", "What would you do if the vendor misses the deadline?", "What would you do when the scanner and the ticket disagree?",
+    "Would you close a finding the owner says is fixed?", "Should we accept this risk?", "Can you work with a team that pushes back?", "Do you review your own fixes?",
+    "If the owner refuses, what then?", "When an exception expires, what do you do?", "What would you do if leadership overrides you?"].map((q) => ({ kind: "lead", family: "spoken lead-in reads as a sentence (round 13)", q })),
+  ...[["What would you do if the owner says it's fixed but there's no evidence?", /^the case where the owner says it's fixed but there's no evidence$/],
+    ["Would you close a finding the owner says is fixed?", /^whether I would close a finding the owner says is fixed$/]].map(([q, want]) => ({ kind: "leadExact", family: "lead-in exact (round 13 failsafe)", q, want })),
+]
+
+const R13_MORE = [
+  ...[["How do you test a control?", "That doesn't sound right. How would you actually prove it works?"], ["What is residual risk?", "I'm not convinced. Who decides it is acceptable?"],
+    ["How do you track exceptions?", "I'd push back on that, isn't a register just paperwork?"], ["Who should accept a risk?", "I disagree, I think security should decide. Why not?"],
+    ["How do you prioritise findings?", "Are you sure? What if the business disagrees with your order?"], ["Would you close a finding the owner says is fixed?", "Really? Even for a senior owner?"],
+    ["How do you review a remediation plan?", "That seems too simple for a large bank."], ["How do you explain a risk to a business owner?", "Most people would say just show the rating."]]
+    .map(([first, push]) => ({ kind: "pushback", family: "pushback carrying a new ask (round 13)", first, push })),
+  ...["With SOAR, XDR, CNAPP and SBOM everywhere now, what would you do if the owner says it's fixed but there's no evidence?",
+    "Given zero trust, SASE and policy-as-code, how would you get leadership to fund control testing?",
+    "Thinking about DevSecOps, GitOps and eBPF, tell me about a time you challenged a plan.",
+    "So with ServiceNow, Archer and OneTrust all in play, how do you prove an exception has expired?",
+    "Considering UEBA, SIEM and microsegmentation, what is least privilege?"].map((q) => A("jargon setup on the hardest asks (round 13)", q, { limit: true, stuffed: true, leadOk: true })),
+  ...["What is the difference between a risk and an issue, how do you track each, who owns each, and when does one become the other?",
+    "Tell me about a time you challenged a plan, what evidence you used, what the owner said, how you resolved it, and what you would do differently now.",
+    "Explain trust boundaries, data flow, failure isolation, rollout and validation for an access review process.",
+    "How would you set up remediation tracking, the fields, the owners, the dates, the escalation path, the weekly report, and the sign-off?",
+    "Give me your view on residual risk, inherent risk, risk appetite, and risk acceptance, in plain words."].map((q) => A("longest multi-part at the word limit (round 13)", q, { limit: true })),
+  ...["Exactly how many findings did you close, to the nearest ten?", "What was the ROI of your remediation programme, in dollars?", "How many audits did you pass without a single finding?",
+    "Give me the percentage of controls you tested that failed.", "How many owners missed their dates last quarter?"].map((q) => A("made-up numbers, pressed (round 13)", q, { limit: true, noGuess: true })),
+  ...[["What is your strategy for access reviews across the whole company?", "access reviews"], ["How would you build the access review itself, step by step?", "access review"],
+    ["How would you decide the budget for control testing?", "control testing"], ["What would you check first in a control test?", "control test"],
+    ["How would you set the policy for exceptions across the business?", "exceptions"]].map(([q, topic]) => ({ kind: "modesDiffer", family: "strategy vs implementation wording (round 13)", q, topic })),
+  ...["What is least privilege?", "How do you track exceptions?", "Tell me about a time you challenged a plan.", "How do you test a control?"].map((q) => ({ kind: "repeatGap", family: "same question after a long gap, more shapes (round 13)", q })),
+  ...["Tell me about a time you challenged a plan.", "Tell me about a time you had to explain a risk to someone non-technical.", "Tell me about your proudest achievement.", "Describe a time you found a problem nobody else saw."]
+    .map((q) => A("STAR at every mode limit (round 13)", q, { star: true, limit: true })),
+  ...["Hmm, that doesn't sound right.", "Are you sure about that?"].map((push) => ({ kind: "pushback", family: "pushback with a filler (round 13)", first: "How do you test a control?", push })),
+  ...["What would you do if you disagree with the auditor?", "If you were sure the owner was wrong, what would you do?"].map((q) => A("pushback words inside a real ask (round 13 failsafe)", q, { limit: true, leadOk: true })),
+]
+
+export const ROUNDS = [R1, R2, R3, R4, R5, R6, R7, R8, [...R9, ...R9_MORE], [...R10, ...R10_MORE], R11, R12, [...R13, ...R13_MORE]]
 export const INFO = []
 
 // ------------------------------------------------------------------ checks
@@ -410,6 +521,16 @@ function invented(text, q) {
   return (text.match(/\b\d+\b/g) || []).filter((n) => !asked.has(n) && !resumeNumbers.has(n))
 }
 
+
+const STAR_LABEL = /\b(?:situation|task|action|result)\s*:/i
+const STUFFING = /\b(?:SOAR|XDR|CSPM|CNAPP|SBOM|SASE|microsegmentation|DevSecOps|GitOps|policy-as-code|ServiceNow|Archer|OneTrust|HITRUST|eBPF|service mesh|sidecars|LLM|RAG|vector stores?|prompt injection|SIEM|UEBA|MITRE|ATT&CK|zero trust|NIST|ISO 27001|SOC 2|PCI|Kubernetes)\b/
+const BAD_LEAD = /^(?:if|when|would|will|should|could|can|do|did|is|are|what|how|why)\b|\b(?:no|the|a|an|but|and|of|to|there's)$/i
+function limitIssues(q, level, text) {
+  const cut = dissectQuestion(q, RESUME)
+  const max = modeBand(cut.shape, level, partsScale(q)).maxWords
+  return wordCount(text) > max ? [`${level}: ${wordCount(text)} words over the ${max}-word limit`] : []
+}
+
 function judgeAnswerCase(c) {
   const fails = []
   const q = c.q
@@ -422,6 +543,11 @@ function judgeAnswerCase(c) {
     for (const issue of [...speakable(row.text), ...firstPersonIssues(row.text, q)]) fails.push(`${row.level}: ${issue}`)
     const nums = invented(row.text, q)
     if (nums.length) fails.push(`${row.level}: invented numbers ${nums.join(",")}`)
+    if (c.limit) for (const issue of limitIssues(q, row.level, row.text)) fails.push(issue)
+    if (c.stuffed) { const hit = row.text.match(STUFFING); if (hit && !RESUME.includes(hit[0])) fails.push(`${row.level}: says unasked jargon "${hit[0]}"`) }
+    if (c.noGuess && !/(?:not|won't) guess/i.test(row.text)) fails.push(`${row.level}: a figure was asked for and the answer does not say it will not guess`)
+    if (c.star) { if (STAR_LABEL.test(row.text)) fails.push(`${row.level}: reads STAR labels aloud`); if (!/\bI (?:\w+ed|sent|wrote|led|took|held|told|kept|made|found|had)\b/.test(row.text)) fails.push(`${row.level}: not a past-tense story`) }
+    if (c.leadOk && /^(?:For|On|With) (?:if|when|would|should|could|can|do)\b/.test(row.text)) fails.push(`${row.level}: broken lead-in "${row.text.slice(0, 40)}"`)
     const said = sentencesOf(row.text).map((s) => s.toLowerCase())
     if (new Set(said).size !== said.length) fails.push(`${row.level}: repeats a sentence`)
   }
@@ -619,6 +745,76 @@ export function judgeCase(c) {
     if (c.full) return s.repeated ? [] : ["full repeat is not flagged as repeated"]
     const old = sentencesOf(c.previous).map((x) => x.toLowerCase())
     return sentencesOf(s.text).some((x) => old.includes(x.toLowerCase())) ? [`a sentence from the previous answer is said again: "${s.text}"`] : []
+  }
+  if (c.kind === "settleLimit") {
+    const raw = Array.from({ length: 30 }, (_, i) => `I checked step ${["one","two","three","four","five","six"][i % 6]} of the work and sent the result to the owner${i ? " again" : ""} with the evidence attached.`).join(" ")
+    const s = settleSpokenAnswer(c.q, raw, c.level, RESUME)
+    const fails = limitIssues(c.q, c.level, s.text)
+    if (!s.text) fails.push(`${c.level}: the whole answer was dropped`)
+    return fails
+  }
+  if (c.kind === "pushback") {
+    const fails = []
+    for (const level of LEVELS) {
+      const first = draftSpokenAnswer(c.first, level, RESUME)
+      const formed = questionForAnswer(c.push, "", false, false, [{ q: c.first, a: first }])
+      if (!formed) { fails.push(`${level}: pushback was not answered`); continue }
+      const next = draftSpokenAnswer(formed, level, RESUME, [first])
+      const r = sameAnswerRatio(first, next)
+      if (r >= 0.5) fails.push(`${level}: pushback answer repeats the first answer (Jaccard ${r.toFixed(2)})`)
+      for (const issue of [...speakable(next), ...firstPersonIssues(next, formed)]) fails.push(`${level}: ${issue}`)
+      if (/following up on/i.test(next)) fails.push(`${level}: says the internal tag aloud`)
+      if (/^(?:For|On|With) (?:that doesn't|hmm|i'd|really|i don't|that contradicts|are you|i disagree|that seems|most people)\b/i.test(next)) fails.push(`${level}: says the pushback back as a topic: "${next.slice(0, 60)}"`)
+      const kw = questionKeywords(c.first).map((k) => k.toLowerCase())
+      if (kw.length && !kw.some((k) => next.toLowerCase().includes(k))) fails.push(`${level}: pushback answer lost the topic (${kw.join("|")})`)
+    }
+    return fails
+  }
+  if (c.kind === "modesDiffer") {
+    const e = draftSpokenAnswer(c.q, "engineer", RESUME), d = draftSpokenAnswer(c.q, "director", RESUME)
+    const fails = []
+    const r = sameAnswerRatio(e, d)
+    if (r >= 0.6) fails.push(`director and engineer answers alike (Jaccard ${r.toFixed(2)})`)
+    if (!/\b(?:decision|decide|owner|risk|business|leadership|call)\b/i.test(d)) fails.push("director answer has no decision/owner/risk")
+    if (!e.toLowerCase().includes(c.topic) || !d.toLowerCase().includes(c.topic)) fails.push(`topic "${c.topic}" not said in both modes`)
+    return fails
+  }
+  if (c.kind === "repeatGap") {
+    const fails = []
+    for (const level of LEVELS) {
+      const firstA = draftSpokenAnswer(c.q, level, RESUME)
+      const turns = [{ q: c.q, a: firstA }]
+      for (const g of GAP) turns.push({ q: g, a: draftSpokenAnswer(g, level, RESUME, turns.slice(-3).map((t) => t.a)) })
+      const formed = questionForAnswer(c.q, "", false, false, turns)
+      const again = draftSpokenAnswer(formed || c.q, level, RESUME, turns.slice(-3).map((t) => t.a))
+      if (!again) fails.push(`${level}: no answer to the repeated question`)
+      for (const issue of firstPersonIssues(again, c.q)) fails.push(`${level}: ${issue}`)
+      if (/following up on/i.test(formed)) fails.push(`${level}: a repeat after 6 turns was tied to the last question: "${formed}"`)
+      const kw = questionKeywords(c.q).map((k) => k.toLowerCase())
+      if (kw.length && !kw.some((k) => again.toLowerCase().includes(k))) fails.push(`${level}: repeated question answered off-topic`)
+      const s = settleSpokenAnswer(c.q, again, level, RESUME, turns[turns.length - 1].a)
+      if (!s.text) fails.push(`${level}: settle blanked the repeated answer`)
+    }
+    return fails
+  }
+  if (c.kind === "repeatAsked") {
+    const prev = draftSpokenAnswer("What is residual risk?", "director", RESUME)
+    const s = settleSpokenAnswer(c.ask, prev, "director", RESUME, prev)
+    return s.text ? [] : ["an asked repeat was blanked"]
+  }
+  if (c.kind === "lead") {
+    const fails = []
+    for (const level of LEVELS) {
+      const t = draftSpokenAnswer(c.q, level, RESUME)
+      const m = t.match(/^(?:For|On|With) (.+?),/)
+      if (m && BAD_LEAD.test(m[1].trim())) fails.push(`${level}: lead-in "${m[1]}"`)
+      if (/^(?:For|On|With) (?:if|when|would|should|could|can|do)\b/.test(t)) fails.push(`${level}: "${t.slice(0, 50)}"`)
+    }
+    return fails
+  }
+  if (c.kind === "leadExact") {
+    const t = draftSpokenAnswer(c.q, "engineer", RESUME).match(/^(?:For|On) (.+?), /)
+    return t && c.want.test(t[1]) ? [] : [`lead "${t && t[1]}"`]
   }
   return [`unknown case kind ${c.kind}`]
 }

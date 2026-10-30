@@ -17,7 +17,7 @@ export type FocusPlan = {
   proof: string
   technicalDepth: "surface" | "asked-only" | "deep"
 }
-const EXPERIENCE=/\b(?:tell me about a time|share an example|give me an example of (?:when|a time)|describe a situation|have you ever|how have you|what did you do when|walk me through (?:an|a) (?:[\w-]+\s+){0,6}?(?:issue|incident|project|challenge|failure)(?:\s+you|\s+where|\s+that|\s+when)?|a time (?:you|when you))\b/i
+const EXPERIENCE=/\b(?:tell me about a time|share an example|give me an example of (?:when|a time)|describe a situation|have you ever|how have you|what did you do when|walk me through (?:an|a) (?:[\w-]+\s+){0,6}?(?:issue|incident|project|challenge|failure)(?:\s+you|\s+where|\s+that|\s+when)?|a time (?:you|when you)|walk me through a (?:situation|time) (?:where|when)|(?:tell me about|what (?:is|was)) your (?:biggest|worst|proudest|hardest|greatest) (?:mistake|failure|achievement|success|challenge|win|regret))\b/i
 const CLOSING=/\b(?:what questions (?:do|would|might|can) you have|any questions (?:for|from) me|what would you (?:like to )?ask (?:me|us)|anything you(?:'d| would) (?:like|want) to ask|questions about (?:the|this) (?:role|team|company))\b/i
 const INTRO=/\b(?:tell me about yourself|introduce yourself|walk (?:me|us) through your (?:career|background)|your professional background|career (?:journey|overview)|self introduction)\b/i
 const VALUE=/\b(?:what (?:would|can|do) you bring to|what you can bring|highlight .{0,40}(?:bring|experience)|what (?:can|would) you contribute|why (?:are|would|should) (?:we hire you|you be (?:a )?(?:good|strong) fit)|what makes you (?:a )?(?:good|strong) fit|what sets you apart|highlight (?:for me )?anything|anything (?:else )?(?:i|we) should (?:know|be aware of)|what else should (?:i|we) know|why (?:do|would) you want (?:this|to work)|why (?:bny|this role|our team))\b/i
@@ -49,7 +49,8 @@ export function interviewIntent(question: string): ReplyIntent {
   if(/\bhow would you explain\b/i.test(q)) return "definition"
   // Several named checks in one assess question need the mechanism of each, not a yes/no.
   if(/\bhow (?:do|did|would) you (?:typically )?(?:assess|evaluate|measure|validate|determine)\b/i.test(q)) return "technical-process"
-  if(/\b(?:are you familiar with|do you know)\b.+\b(?:and|or|versus|vs\.?)\b/i.test(q)) return "comparison"
+  // Round 13: "how do you know the test is enough … and who signs off" was read as a comparison.
+  if(/\b(?:are you familiar with|(?<!\bhow )do you know)\b.+\b(?:and|or|versus|vs\.?)\b/i.test(q)) return "comparison"
   // Interviewers vary the wording across disciplines; route the requested action,
   // not the job-specific vocabulary. These patterns complement the baseline.
   if(/\b(?:any questions for (?:us|the team)|do you have any questions|anything you(?:'d| would) like to ask\??)\b/i.test(q)) return "closing-question"
