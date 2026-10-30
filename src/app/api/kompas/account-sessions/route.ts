@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   if (!limit.ok) return json({ ok: false, error: "Too many session updates." }, 429)
   if (Number(req.headers.get("content-length") || 0) > 4_000_000) return json({ ok: false, error: "Session update too large." }, 413)
   const raw = await req.text().catch(() => "")
-  if (Buffer.byteLength(raw, "utf8") > 650_000) return json({ ok: false, error: "Session update too large." }, 413)
+  if (Buffer.byteLength(raw, "utf8") > 4_000_000) return json({ ok: false, error: "Session update too large." }, 413)
   let body: unknown
   try { body = JSON.parse(raw) } catch { return json({ ok: false, error: "Invalid JSON." }, 400) }
   const ops = body && typeof body === "object" ? (body as Record<string, unknown>).operations : null
