@@ -1007,7 +1007,63 @@ function splitDistinctAsksBy(text: string, midCut: boolean, v3 = false, v4 = fal
   return groups.map((g) => g.join(" ").replace(/\s+/g, " ").trim()).filter(Boolean)
 }
 
+// Slice 5b (29 Oct 2026), from the blind dossier bank. A pass over the slice-4 cards that only regroups whole
+// pieces: on a fault or any changed word the slice-4 cut stands.
+//  - "what dashboards or data tools || have you used": a what/which piece with no verb is finished by the next one.
+//  - "how do you speak about controls to people || who do not have a security background": "who" right after a
+//    word for people, with no filler between, is that clause. "where do guardrails belong who can modify" still cuts.
+//  - Two finished "?" asks, each 7 words or more, that share no topic word and do not point back, are two cards.
+//    "How do you assess the business impact? How do you understand root cause?" (6 words) stays one card.
+const SPLIT5_STOP = new Set("what how why when where which who whom whose you your yours the and for with that this from have does did would could should into about there their them they been being were was are is can will what's tell walk give describe explain me us our ever just really also more most some any many much very".split(" "));
+const SPLIT5_VERB = /\b(?:is|are|was|were|do|does|did|have|has|had|would|could|should|can|will|make|makes|look|looks|use|used|prevent|prevented|show|shows)\b/i;
+const SPLIT5_OPEN = /^(?:what|how|why|when|where|which|who|is there|are there|are you|were you|was there|is it|do you|did you|have you|has your|can you|could you|would you|tell me|walk me|describe)\b/i;
+const SPLIT5_BACK = /\b(?:it|its|that|this|they|them|their|those|these|the same|such)\b/i;
+function split5Words(s: string): string[] { return String(s || "").toLowerCase().split(/[^a-z0-9+#]+/).filter((w) => w.length >= 4 && !SPLIT5_STOP.has(w)).map((w) => w.length > 4 ? w.replace(/([^s])s$/, "$1") : w); }
+function split5Lead(s: string): string { return String(s || "").replace(/^(?:(?:um+|uh+|so|okay|ok|and|then|next|now|also|alright)[,]?\s+)+/i, "").trim(); }
+function split5Pair(a: string, b: string): boolean {
+  const x = split5Lead(a), y = split5Lead(b);
+  if (!/\?\s*$/.test(x) || !/\?\s*$/.test(y)) return false;
+  if (!SPLIT5_OPEN.test(x) || !SPLIT5_OPEN.test(y)) return false;
+  if (x.split(/\s+/).length < 7 || y.split(/\s+/).length < 7) return false;
+  if (SPLIT5_BACK.test(y)) return false;
+  const left = new Set(split5Words(x));
+  return split5Words(y).every((w) => !left.has(w));
+}
+function splitCardsV5(cards: string[]): string[] {
+  const merged: string[] = [];
+  for (const card of cards) {
+    const prev = merged.length ? merged[merged.length - 1] : "";
+    const bare = split5Lead(card);
+    const prevBare = split5Lead(prev);
+    const fragment = prev && !/[.?!]\s*$/.test(prev) && /^(?:what|which|how many|how much)\s/i.test(prevBare) && prevBare.split(/\s+/).length <= 6 && !SPLIT5_VERB.test(prevBare.replace(/^\S+\s+/, ""))
+      && /^(?:have|did|do|would|could|can|will) you\b/i.test(bare);
+    const clause = prev && !/[.?!]\s*$/.test(prev) && /^who\s/i.test(card) && /\b(?:people|someone|anyone|everyone|those|users|staff|person|persons|stakeholders|engineers|owners|managers|leaders|executives|employees|members|colleagues|peers|clients|customers|vendors)\s*$/i.test(prev);
+    if (fragment || clause) merged[merged.length - 1] = prev + " " + card;
+    else merged.push(card);
+  }
+  const out: string[] = [];
+  for (const card of merged) {
+    const ss = card.split(/(?<=[?])\s+/).filter(Boolean);
+    let cur = ss[0] || "";
+    for (let i = 1; i < ss.length; i++) {
+      if (split5Pair(ss[i - 1], ss[i])) { out.push(cur.trim()); cur = ss[i]; } else cur += " " + ss[i];
+    }
+    if (cur.trim()) out.push(cur.trim());
+  }
+  return out;
+}
 export function splitDistinctAsks(text: string): string[] {
+  const cut4 = splitDistinctAsksV4(text)
+  try {
+    // Slice 5b failsafe: the v5 pass may only regroup whole pieces; on any change or fault, the slice-4 cut stands.
+    const cut5 = splitCardsV5(cut4)
+    return spokenWords(cut5.join(" ")) === spokenWords(cut4.join(" ")) ? cut5 : cut4
+  } catch {
+    return cut4
+  }
+}
+
+function splitDistinctAsksV4(text: string): string[] {
   const v3 = splitDistinctAsksV3(text)
   try {
     // Slice 4 failsafe: the v4 rules may only regroup words; on any change or fault, the slice-3 cut stands.

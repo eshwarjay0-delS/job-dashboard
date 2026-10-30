@@ -2008,7 +2008,59 @@ function splitDistinctAsksBy(text, midCut, v3, v4) {
   }
   return groups.map((g) => g.join(" ").replace(/\s+/g, " ").trim()).filter(Boolean);
 }
+// Slice 5b (29 Oct 2026), from the blind dossier bank. A pass over the slice-4 cards that only regroups whole
+// pieces: on a fault or any changed word the slice-4 cut stands.
+//  - "what dashboards or data tools || have you used": a what/which piece with no verb is finished by the next one.
+//  - "how do you speak about controls to people || who do not have a security background": "who" right after a
+//    word for people, with no filler between, is that clause. "where do guardrails belong who can modify" still cuts.
+//  - Two finished "?" asks, each 7 words or more, that share no topic word and do not point back, are two cards.
+//    "How do you assess the business impact? How do you understand root cause?" (6 words) stays one card.
+const SPLIT5_STOP = new Set("what how why when where which who whom whose you your yours the and for with that this from have does did would could should into about there their them they been being were was are is can will what's tell walk give describe explain me us our ever just really also more most some any many much very".split(" "));
+const SPLIT5_VERB = /\b(?:is|are|was|were|do|does|did|have|has|had|would|could|should|can|will|make|makes|look|looks|use|used|prevent|prevented|show|shows)\b/i;
+const SPLIT5_OPEN = /^(?:what|how|why|when|where|which|who|is there|are there|are you|were you|was there|is it|do you|did you|have you|has your|can you|could you|would you|tell me|walk me|describe)\b/i;
+const SPLIT5_BACK = /\b(?:it|its|that|this|they|them|their|those|these|the same|such)\b/i;
+function split5Words(s) { return String(s || "").toLowerCase().split(/[^a-z0-9+#]+/).filter((w) => w.length >= 4 && !SPLIT5_STOP.has(w)).map((w) => w.length > 4 ? w.replace(/([^s])s$/, "$1") : w); }
+function split5Lead(s) { return String(s || "").replace(/^(?:(?:um+|uh+|so|okay|ok|and|then|next|now|also|alright)[,]?\s+)+/i, "").trim(); }
+function split5Pair(a, b) {
+  const x = split5Lead(a), y = split5Lead(b);
+  if (!/\?\s*$/.test(x) || !/\?\s*$/.test(y)) return false;
+  if (!SPLIT5_OPEN.test(x) || !SPLIT5_OPEN.test(y)) return false;
+  if (x.split(/\s+/).length < 7 || y.split(/\s+/).length < 7) return false;
+  if (SPLIT5_BACK.test(y)) return false;
+  const left = new Set(split5Words(x));
+  return split5Words(y).every((w) => !left.has(w));
+}
+function splitCardsV5(cards) {
+  const merged = [];
+  for (const card of cards) {
+    const prev = merged.length ? merged[merged.length - 1] : "";
+    const bare = split5Lead(card);
+    const prevBare = split5Lead(prev);
+    const fragment = prev && !/[.?!]\s*$/.test(prev) && /^(?:what|which|how many|how much)\s/i.test(prevBare) && prevBare.split(/\s+/).length <= 6 && !SPLIT5_VERB.test(prevBare.replace(/^\S+\s+/, ""))
+      && /^(?:have|did|do|would|could|can|will) you\b/i.test(bare);
+    const clause = prev && !/[.?!]\s*$/.test(prev) && /^who\s/i.test(card) && /\b(?:people|someone|anyone|everyone|those|users|staff|person|persons|stakeholders|engineers|owners|managers|leaders|executives|employees|members|colleagues|peers|clients|customers|vendors)\s*$/i.test(prev);
+    if (fragment || clause) merged[merged.length - 1] = prev + " " + card;
+    else merged.push(card);
+  }
+  const out = [];
+  for (const card of merged) {
+    const ss = card.split(/(?<=[?])\s+/).filter(Boolean);
+    let cur = ss[0] || "";
+    for (let i = 1; i < ss.length; i++) {
+      if (split5Pair(ss[i - 1], ss[i])) { out.push(cur.trim()); cur = ss[i]; } else cur += " " + ss[i];
+    }
+    if (cur.trim()) out.push(cur.trim());
+  }
+  return out;
+}
 function splitDistinctAsks(text) {
+  const cut4 = splitDistinctAsksV4(text);
+  try {
+    const cut5 = splitCardsV5(cut4);
+    return splitSpokenWords(cut5.join(" ")) === splitSpokenWords(cut4.join(" ")) ? cut5 : cut4;   // slice 5b failsafe: the slice-4 cut on any lost word
+  } catch { return cut4; }
+}
+function splitDistinctAsksV4(text) {
   const v3 = splitDistinctAsksV3(text);
   try {
     const cut4 = splitDistinctAsksBy(text, true, true, true);
