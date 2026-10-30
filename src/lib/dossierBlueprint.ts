@@ -4,6 +4,7 @@
 // the sources do not state is never reworded into a softer claim here; it becomes a visibly marked hole the
 // candidate fills before the call.
 import { allowedNumbers, needsGuard } from "./kompasGuards.ts"
+import { honestyCheck, holeSlot, SLOT_LABEL } from "./dossierHonesty.ts"
 
 export const HOLE = "[ ___ confirm: your actual figure ]"
 export const HOLE_RE = /\[ ___ [^\]]*\]/g
@@ -37,6 +38,24 @@ export const BLUEPRINT_RULES = [
 
 // Eshwar's rule (29 Oct 2026): no logistics anywhere in a dossier or answer. Phrases, not bare words, so
 // "address the root cause" or "relocated the pipeline" are not caught.
+// Hand-off kit (Chief, 29 Oct 2026): the phrase list of the logistics-removal helper src/lib/kompasLogistics.ts
+// (branch logistics-removal a9b91ccc), mirrored verbatim. It is not imported: that patch also edits the live answer
+// service, and its isLogisticsAsk() needs interviewIntent()=="logistics" (a question classifier), while a dossier is
+// statements. scripts/tests/kompas-dossier-handoff.test.mjs keeps the two lists identical.
+export const KOMPAS_LOGISTICS_TERMS: string[] = [
+  String.raw`^\s*(?:notice|remote|bonus|salary|hybrid|on-?site|h-?1b|opt|ts\s*\/\s*sci|shift|weekend|overtime|citizen|clearance|sponsorship|relocation|start date|night shift|travel|visa|tn visa|w-?2|c2c|full[- ]time|contract|pto|benefits|401k|equity|ead|l-?1|hourly|day rate|(?:u\.?\s*s\.?|u\s+s)\s+citizen)[.?!]*\s*$`,
+  String.raw`\bwhen (?:can|could|would) you (?:start|join|begin)\b|\bstart date\b|\bavailable to (?:start|join|begin)\b|\b(?:two|\d+)\s+weeks'?\s+notice\b|\bnotice period\b|\bstart in (?:two|\d+) weeks\b`,
+  String.raw`\brelocat(?:e|ion|ing)\b`,
+  String.raw`\bsponsor(?:ship)?\b|\bvisa\b|\bh-?1b\b|\bgreen card\b|\bwork(?:ing)? authori[sz]ation\b|\bauthori[sz]ed to work\b|\bcitizen(?:ship)?\b|\bead\b`,
+  String.raw`\bsalary\b|\bcompensation\b|\b(?:desired|expected|your|hourly|day|pay) (?:pay|rate|range)\b|\bhow much (?:do|would|are) you\b.{0,30}\b(?:paid|make|earn|expect|looking for)\b|\bc2c\b|\bw-?2\b`,
+  String.raw`\bwhere are you (?:based|located|living|from)\b|\bwhere do you live\b|\bcurrent(?:ly)? (?:location|located|based|living)\b|\byour (?:home |current )?address\b|\bare you local\b|\bcommute\b`,
+  String.raw`\b(?:open|okay|ok|comfortable|willing|able|fine|happy)\s+(?:to|with)\s+(?:work(?:ing)?\s+)?(?:a\s+)?(?:hybrid|on-?site|remote|in the office|travel|relocat|nights?|weekends?|on-?call|shifts?)`,
+  String.raw`\bdays?\s+in(?:\s+the)?\s+office\b|\bwilling to travel\b|\btravel (?:requirement|percent)|\b(?:do|have) you (?:have|hold|got) (?:an? )?(?:active )?(?:security )?clearance\b|\bclearable\b|\bfull[- ]time or contract\b|\bcontract or full[- ]time\b`,
+]
+export const KOMPAS_LOGISTICS_UNAMBIGUOUS = /\bcurrent(?:ly)? (?:location|located|based|living)\b|\byour (?:home |current )?address\b|\bwhere (?:do you live|are you (?:based|located|living))\b|\bnotice period\b|\bsalary (?:expectation|range|requirement)s?\b|\b(?:need|require)\b.{0,25}\bsponsorship\b|\bauthori[sz]ed to work\b|\bwork authori[sz]ation\b/i
+const HANDOFF_LOGISTICS = new RegExp(KOMPAS_LOGISTICS_TERMS.join("|"), "gim")
+// Our false-positive protections: resume and GRC wording that only looks like logistics.
+const NOT_LOGISTICS = /\b(?:executive|business|project|program(?:me)?|risk|control|budget)\s+sponsors?\b|\bcitizen[- ](?:services?|facing|portal|data|records?|experience|requests?)\b|\btravel\s+(?:and|&)\s+expense\b|\baddress(?:es|ed|ing)?\s+(?:the|a|its|each|every)\b/gi
 const LOGISTICS: RegExp[] = [
   /\b(?:visa|h-?1b|green\s*card|sponsorship|sponsor\s+(?:me|my|a\s+visa)|work\s+authori[sz]ation|authori[sz]ed\s+to\s+work|citizen(?:ship)?|work\s+permit|\bOPT\b|EAD)\b/gi,
   /\b(?:salary|compensation|pay\s+(?:rate|range|expectations?)|hourly\s+rate|bill\s+rate|rate\s+expectations?|per\s+hour)\b/gi,
@@ -49,8 +68,9 @@ const LOGISTICS: RegExp[] = [
 ]
 export function bannedLogistics(text: string): string[] {
   const out: string[] = []
-  for (const re of LOGISTICS) for (const m of String(text || "").matchAll(new RegExp(re.source, re.flags))) out.push(m[0].trim())
-  return out
+  const t = String(text || "").replace(NOT_LOGISTICS, (m) => " ".repeat(m.length))
+  for (const re of [...LOGISTICS, HANDOFF_LOGISTICS, new RegExp(KOMPAS_LOGISTICS_UNAMBIGUOUS.source, "gi")]) for (const m of t.matchAll(new RegExp(re.source, re.flags))) if (m[0].trim()) out.push(m[0].trim())
+  return [...new Set(out)]
 }
 /** Drops every line that carries logistics; a heading naming logistics drops its whole section. */
 export function stripLogistics(md: string): string {
@@ -195,11 +215,20 @@ export function normalizeItem(raw: unknown): DossierItem {
 export function gateItem(item: DossierItem, sources: string[]): { item: DossierItem; blocked: string[] } {
   const blocked: string[] = []
   const g = (t: string) => { const r = gateFigures(stripContact(t), sources); blocked.push(...r.blocked); return r.text }
+  // Next to the number check: the AQ honesty rule (hand-off README section 2). A question asking for a kind of
+  // value the sources do not state near a question word gets "not in your sources", never a guess.
+  const h = honestyCheck(item, sources)
+  const miss = !!h.slot && !h.filled
+  const hole = (t: string) => miss && h.slot ? holeSlot(h.slot, t) : t
   const out: DossierItem = { ...item, q: g(item.q), a: item.a.map(g) }
-  if (item.angles) out.angles = { direct: g(item.angles.direct), architect: g(item.angles.architect), brownfield: g(item.angles.brownfield) }
-  if (item.ladder) out.ladder = item.ladder.map(g)
+  if (item.angles) out.angles = { direct: hole(g(item.angles.direct)), architect: hole(g(item.angles.architect)), brownfield: hole(g(item.angles.brownfield)) }
+  if (item.ladder) out.ladder = item.ladder.map((x) => hole(g(x)))
   if (item.failure) out.failure = g(item.failure)
-  if (item.opener) out.opener = g(item.opener)
+  if (item.opener) out.opener = hole(g(item.opener))
+  if (miss && h.slot) {
+    out.a = [`Not in your sources. [ ___ confirm: your actual ${SLOT_LABEL[h.slot]} ]`]
+    blocked.push(`honesty:${h.slot}`)
+  }
   return { item: out, blocked }
 }
 
