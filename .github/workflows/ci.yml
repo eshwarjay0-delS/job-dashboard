@@ -79,6 +79,8 @@ jobs:
 
       - name: Verify slice 5b blind dossier bank (191 real questions, 130 runs; punctuated, stripped, filler)
         run: node --experimental-strip-types --test scripts/tests/kompas-blind-bank.test.mjs
+      - name: Verify slice 6 leading/trailing filler (detection copy only; shown text unchanged)
+        run: node --no-warnings --experimental-strip-types --test scripts/tests/kompas-filler-leading.test.mjs
 
       - name: Verify slice 5c early-release decision (design reference, flag off; not wired into the page)
         run: node --test scripts/tests/kompas-early-release.test.mjs

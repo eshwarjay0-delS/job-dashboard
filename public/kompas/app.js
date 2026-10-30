@@ -2124,7 +2124,106 @@ function splitCardsV5(cards) {
   }
   return out;
 }
+// Slice 6 (30 Oct 2026): spoken filler at a question's start or end ("Um so what…", "…, right?", "you know,",
+// "What what…", "How do you, sorry, what…") hid the question opener. The cut is run again on a detection copy with
+// that filler left out. The shown and saved text is never changed: cards are cut from the original words, only at
+// a "?" "." or "!" the speaker's text already has, and only when every sentence-end cut of slice 5 is kept.
+// Any fault, lost word or doubt returns the slice-5 cut.
+const FILL6_LEAD = /^(?:um+|uh+|so|okay|ok|alright|like|yeah|well|and)$/i;
+const FILL6_OPEN = /^(?:what|why|how|when|where|which|who|whose|can|could|would|will|do|does|did|is|are|was|were|have|has|tell|walk|describe|explain|give|should)$/i;
+const fill6Bare = (t) => String(t).replace(/^[^\w']+|[^\w']+$/g, "").toLowerCase();
+const fill6Norm = (t) => String(t).toLowerCase().replace(/[^a-z0-9]+/g, "");
+const fill6End = (t) => /[.?!]["')\]]*$/.test(t);
+function fill6Detect(tokens) {
+  const det = tokens.slice();
+  const sentOf = [], touched = new Set();
+  const falseStart = [];
+  let sent = 0;
+  for (let i = 0; i < tokens.length; i++) { sentOf.push(sent); if (fill6End(tokens[i])) sent++; }
+  const drop = (i) => { det[i] = null; touched.add(sentOf[i]); };
+  for (let s = 0; s < tokens.length; s++) {
+    if (s > 0 && !fill6End(tokens[s - 1])) continue;
+    let i = s;
+    // a false start: "How do you, sorry, what…" / "What was, um, how…"
+    for (let k = 1; k <= 3 && i + k + 1 < tokens.length; k++) {
+      const end = tokens[i + k - 1], f = tokens[i + k];
+      if (fill6End(end)) break;
+      if (/,$/.test(end) && /^(?:sorry|um+|uh+|i mean),$/i.test(f) && FILL6_OPEN.test(fill6Bare(tokens[i + k + 1])) && FILL6_OPEN.test(fill6Bare(tokens[i]))) {
+        for (let j = i; j <= i + k; j++) drop(j);
+        falseStart.push(i + k + 1);
+        i += k + 1; break;
+      }
+    }
+    // leading filler run: "Um so", "Okay, um,", "Yeah and", "Like" — only before an opener; a lone "and" stays
+    let j = i;
+    while (j < tokens.length && !fill6End(tokens[j]) && FILL6_LEAD.test(fill6Bare(tokens[j]))) j++;
+    if (j > i && j < tokens.length && FILL6_OPEN.test(fill6Bare(tokens[j])) && !(j - i === 1 && fill6Bare(tokens[i]) === "and")) {
+      for (let x = i; x < j; x++) drop(x);
+      i = j;
+    }
+    // "What what is…": a doubled opener
+    if (i + 1 < tokens.length && FILL6_OPEN.test(fill6Bare(tokens[i])) && fill6Bare(tokens[i]) === fill6Bare(tokens[i + 1]) && !/[,.?!]$/.test(tokens[i])) drop(i);
+  }
+  for (let i = 0; i + 1 < tokens.length; i++) {
+    if (det[i] === null || det[i + 1] === null) continue;
+    if (fill6Bare(tokens[i]) === "you" && /^know,$/i.test(tokens[i + 1]) && i + 2 < tokens.length && !fill6End(tokens[i + 1])) { drop(i); drop(i + 1); }
+  }
+  for (let i = 1; i < tokens.length; i++) {
+    if (/^right\?$/i.test(tokens[i]) && det[i - 1] !== null && /,$/.test(tokens[i - 1])) { drop(i); det[i - 1] = tokens[i - 1].replace(/,$/, "?"); }
+  }
+  for (let i = 0; i < det.length; i++) {
+    if (det[i] === null) continue;
+    let p = i - 1; while (p >= 0 && det[p] === null) p--;
+    if ((p < 0 || fill6End(det[p])) && (i === 0 || det[i - 1] === null)) det[i] = det[i].charAt(0).toUpperCase() + det[i].slice(1);
+  }
+  return { det, sentOf, touched, falseStart };
+}
+// Maps cards back onto token indices; null if any card is not a whole run of the given tokens.
+function fill6Bounds(cards, toks) {
+  const bounds = []; let at = 0;
+  for (const c of cards) {
+    const n = String(c).trim().split(/\s+/).filter(Boolean).length;
+    const want = fill6Norm(String(c)), have = toks.slice(at, at + n).map(fill6Norm).join("");
+    if (!n || want !== have) return null;
+    at += n; bounds.push(at);
+  }
+  return at === toks.length ? bounds.slice(0, -1) : null;
+}
+function splitCardsFiller6(text, cut5, cutAgain) {
+  try {
+    const tokens = String(text).trim().split(/\s+/).filter(Boolean);
+    if (tokens.length < 4) return cut5;
+    const { det, falseStart } = fill6Detect(tokens);
+    if (det.every((t, i) => t === tokens[i])) return cut5;
+    const keptIdx = [], detToks = [];
+    det.forEach((t, i) => { if (t !== null) { keptIdx.push(i); detToks.push(t); } });
+    const b6det = fill6Bounds(cutAgain(detToks.join(" ")), detToks);
+    const b5 = fill6Bounds(cut5, tokens);
+    if (!b6det || !b5) return cut5;
+    const b6 = [];
+    for (const b of b6det) {
+      const o1 = keptIdx[b - 1], o2 = keptIdx[b];
+      let cut = -1;
+      for (let p = o2 - 1; p >= o1; p--) if (fill6End(tokens[p])) { cut = p + 1; break; }
+      if (cut < 0) return cut5;
+      b6.push(cut);
+    }
+    for (const b of b5) {
+      if (b6.includes(b)) continue;
+      // a slice-5 cut may only be dropped when it sits just after a false start ("What was, um, what methods || do you…")
+      if (fill6End(tokens[b - 1]) || !falseStart.some((f) => b > f && b - f <= 6)) return cut5;
+    }
+    if (b6.length === b5.length && b6.every((b, k) => b === b5[k])) return cut5;
+    const out = []; let from = 0;
+    for (const b of [...b6, tokens.length]) { out.push(tokens.slice(from, b).join(" ")); from = b; }
+    return fill6Norm(out.join(" ")) === fill6Norm(tokens.join(" ")) ? out : cut5;
+  } catch { return cut5; }
+}
 function splitDistinctAsks(text) {
+  const cut5 = splitDistinctAsksV5(text);
+  return splitCardsFiller6(text, cut5, splitDistinctAsksV5);   // slice 6: never worse than slice 5 (falls back on doubt)
+}
+function splitDistinctAsksV5(text) {
   const cut4 = splitDistinctAsksV4(text);
   try {
     const cut5 = splitCardsV5(cut4);
