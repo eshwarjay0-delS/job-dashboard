@@ -17,6 +17,7 @@ import { priceCalls, type PricedCall } from "./llmPrices"
 import { targetKeywords, placeInSkills, isCertification, isQualificationOrJunk, floorTerms, jdSpelling, withoutAddedCerts, withoutUnsupportedSkills, weaveConfirmedVocabulary, SOFT_SKILL, type RelationalPair } from "./keyword-targets"
 import { tailorReview, type TailorReview } from "./resume-changes"
 import { tailorRunKey } from "./tailor-review"
+import { jdTermsGateOn, type JdTermsUnplacedReason } from "./jd-terms-gate"
 
 export interface TailorResult {
   quality?: ReturnType<typeof resumeQuality>
@@ -77,6 +78,13 @@ export interface TailorResult {
   placed_in_summary?: string[]
   /** No AI writer answered in time: the file is the source resume with only its skills section brought up to the floor. */
   skills_only?: boolean
+  /** Job-post terms gate (src/lib/jd-terms-gate.ts) state this result was made under. A cached result from the other state is recomputed. */
+  jd_terms_gate?: "on" | "off"
+  /** Gate on: experience bullets the writer gave a job-post-only term, sent back to the source text (the term went to the skills line). */
+  bullets_reverted_for_jd_terms?: number
+  /** Gate on: job-post terms not written into the file because skills were locked or there is no skills section. Listed in the reply. */
+  jd_terms_unplaced?: string[]
+  jd_terms_unplaced_reason?: JdTermsUnplacedReason
   // Real token accounting for this tailor (proof the cache is working). estCostUSD is
   // approximate — priced at Haiku 4.5 rates; cacheReadTokens bill at ~1/10th of input.
   usage?: {
@@ -265,6 +273,7 @@ export async function runTailor(opts: {
       // Confirm the tailored .docx still exists AND the cached shape is current.
       if (!(await blob.exists(`tailored/${cached.token}.docx`))) throw new Error("tailored file gone")
       if (!cached.keyword_analysis || !cached.diff || (!refine && (!Number.isFinite(cached.supported_coverage) || !Array.isArray(cached.unsupported_keywords)))) throw new Error("stale cache shape")
+      if ((cached.jd_terms_gate ?? "off") !== (jdTermsGateOn() ? "on" : "off")) throw new Error("stale cache shape")
       // A finished run is replayed at any coverage. The generation in the key drops
       // results made before labelled job-post skills were written back onto the line.
       return { ...cached, cached: true, elapsed_ms: Date.now() - started }
@@ -883,6 +892,29 @@ export async function runTailor(opts: {
     if (stripped !== best) { best = stripped; usedModel = `${usedModel} + unconfirmed tools cleared before the skills floor` }
   }
 
+  // Job-post terms gate (owner, 29 Oct 2026). A job-post-only term the writer put into an experience bullet is a claim
+  // the person did that work. The bullet goes back to the source text (a new bullet carrying it is dropped), and the
+  // floor below writes the term onto the skills line, named in the reply. Bullets without such a term keep the edit.
+  const jdGate = jdTermsGateOn()
+  let bulletsReverted = 0
+  if (best && !refine && jdGate) {
+    const jobOnly = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k) && !isCertification(k))
+    const carries = (t: string) => jobOnly.some(k => coveredJdKeywords(t, [k]).has(k))
+    const keptBullets = (best.edits.bullets || []).filter(b => !(carries(b.text || "") && !carries(bulletBefore.get(b.idx) || "")))
+    const keptAdded = (best.edits.added || []).filter(a => !carries(a.text || ""))
+    const reverted = (best.edits.bullets || []).length - keptBullets.length + (best.edits.added || []).length - keptAdded.length
+    if (reverted) {
+      const next = await applyEdits({ ...best.edits, bullets: keptBullets, added: keptAdded })
+      next.via = best.via
+      next.partial = best.partial
+      next.floor = best.floor
+      next.floorSummary = best.floorSummary
+      best = next
+      bulletsReverted = reverted
+      usedModel = `${usedModel} + ${reverted} bullet(s) with job-post-only terms restored`
+    }
+  }
+
   // THE FLOOR. Owner, 26 Oct 2026, after two WhatsApp resumes came back at 52% and 28.5% ("JD keyword coverage") because
   // terms such as PeopleSoft Query Manager, row-level security, F5 and Cisco were never written in: "I want this to be a
   // consistent build. Even if something going wrong ... the baseline is serve at least 90% match." And 19 Oct: every job
@@ -1060,7 +1092,11 @@ export async function runTailor(opts: {
   // A term the floor wrote onto the skills line, or into an open summary as a strength, is labelled
   // as coming from the job post. The same term inside an experience bullet is a claim that the person
   // did that work, and that still blocks delivery.
-  const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(bulletText, [k]).has(k) || (coveredJdKeywords(best.tailoredText, [k]).has(k) && !floorOnSkills.has(k.toLowerCase())))
+  // Gate on: only an experience bullet makes a claim. A term on the skills line or in the summary is labelled in the reply.
+  const unverifiedAdded = unsupportedJdKws.filter(k => coveredJdKeywords(bulletText, [k]).has(k) || (!jdGate && coveredJdKeywords(best.tailoredText, [k]).has(k) && !floorOnSkills.has(k.toLowerCase())))
+  // Gate on, skills locked or no skills section: what the floor could not place is listed in the reply, not a refusal.
+  const unplacedReason: JdTermsUnplacedReason | undefined = !jdGate || refine ? undefined : sec.skills === false ? "skills_locked" : !zones.skills.length ? "no_skills_section" : undefined
+  const unplacedTerms = unplacedReason ? scoreKws.filter(k => floorKws.has(k) && !afterKw.has(k) && !isCertification(k)).map(k => jdSpelling(k, jd)) : []
   if (unverifiedAdded.length > 0) notes.push(`Unverified JD claims require candidate confirmation: ${unverifiedAdded.join(", ")}`)
   // Diagnostic codes contain no resume, JD, name or phone number.
   const qualityBlockers = [
@@ -1093,6 +1129,9 @@ export async function runTailor(opts: {
     ...(best.floor?.length ? { placed_from_jd: best.floor.map(k => jdSpelling(k, jd)) } : {}),
     ...(best.floorSummary?.length ? { placed_in_summary: best.floorSummary.map(k => jdSpelling(k, jd)) } : {}),
     ...(skillsOnly ? { skills_only: true } : {}),
+    jd_terms_gate: jdGate ? "on" : "off",
+    ...(bulletsReverted ? { bullets_reverted_for_jd_terms: bulletsReverted } : {}),
+    ...(unplacedTerms.length ? { jd_terms_unplaced: unplacedTerms, jd_terms_unplaced_reason: unplacedReason } : {}),
     usage: { calls: usageSink.length, inputTokens: uAgg.input, outputTokens: uAgg.output, cacheReadTokens: uAgg.cacheRead, cacheWriteTokens: uAgg.cacheWrite, estCostUSD, unpricedCalls: priced.unpricedCalls, byModel: priced.byModel },
   }
 

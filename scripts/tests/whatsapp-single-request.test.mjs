@@ -18,11 +18,22 @@ function load(file, mocks = {}, extra = '') {
   })
   return testModule.exports
 }
-const { sameResumeIdentity } = load('src/lib/resume-identity.ts')
+const { sameResumeIdentity } = load('src/lib/resume-identity.ts', {
+  '@/lib/resume-round-trip-guard': load('src/lib/resume-round-trip-guard.ts'),
+  '@/lib/jd-terms-gate': load('src/lib/jd-terms-gate.ts'),
+})
 test('rejects swapped identities and an extra identity, preserves unchanged email', () => {
   assert.equal(sameResumeIdentity('jayeshwar44@gmail.com', 'eshwarjay05@gmail.com'), false)
   assert.equal(sameResumeIdentity('jayeshwar44@gmail.com', 'jayeshwar44@gmail.com eshwarjay05@gmail.com'), false)
-  assert.equal(sameResumeIdentity('JAYESHWAR44@gmail.com', 'jayeshwar44@gmail.com'), true)
+  // Email case alone is not a change; the round-trip guard (gate on) also reads the first line as the name, so check it off.
+  process.env.JD_TERMS_ALWAYS_ON_SKILLS = '0'
+  try { assert.equal(sameResumeIdentity('JAYESHWAR44@gmail.com', 'jayeshwar44@gmail.com'), true) } finally { delete process.env.JD_TERMS_ALWAYS_ON_SKILLS }
+})
+test('with the job-post terms gate on, a changed phone or date stops the send; an unchanged file passes', () => {
+  const src = 'Eshwar Jay\njayeshwar44@gmail.com | (312) 555-0142\nAnalyst, Acme  Jan 2021 - Mar 2024'
+  assert.equal(sameResumeIdentity(src, src), true)
+  assert.equal(sameResumeIdentity(src, src.replace('0142', '0143')), false)
+  assert.equal(sameResumeIdentity(src, src.replace('Jan 2021', 'Jan 2020')), false)
 })
 test('concurrent storage claims produce exactly one winner and propagate storage failures', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'wa-claim-'))

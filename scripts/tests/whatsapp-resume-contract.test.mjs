@@ -57,6 +57,12 @@ test('new unverified JD claims force review', () => {
   assert.match(tailor, /unverifiedAdded\.length > 0/)
   assert.match(tailor, /unverified_added_keywords: unverifiedAdded/)
 })
+test('job-post terms gate: bullets carrying job-only terms are reverted before the floor, and the switch reaches the cache', () => {
+  assert.match(tailor, /jdTermsGateOn\(/)
+  assert.match(tailor, /bullets_reverted_for_jd_terms/)
+  assert.match(tailor, /jd_terms_unplaced_reason/)
+  assert.match(tailor, /stale cache shape/)
+})
 test('legacy cache must carry the evidence-aware scoring contract', () => {
   assert.match(tailor, /Number\.isFinite\(cached\.supported_coverage\)/)
 })

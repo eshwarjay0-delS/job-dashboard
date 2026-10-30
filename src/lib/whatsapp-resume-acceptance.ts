@@ -5,6 +5,12 @@ import type { TailorResult } from "./tailor"
  * requested section must be complete and unverified JD claims must be absent.
  * Overall JD overlap remains a separate, honest measure of missing skills.
  */
+// Same switch as src/lib/jd-terms-gate.ts, inlined so this module stays import-free for its tests' loader.
+function jdTermsGateOn(): boolean {
+  const v = String(globalThis.process?.env?.JD_TERMS_ALWAYS_ON_SKILLS ?? "").trim().toLowerCase()
+  return !(v === "0" || v === "false" || v === "off" || v === "no")
+}
+
 export function whatsappResumeRejectionReasons(result: TailorResult): string[] {
   const reasons: string[] = []
   const quality = result.quality
@@ -13,12 +19,15 @@ export function whatsappResumeRejectionReasons(result: TailorResult): string[] {
   if (result.unchanged || !result.diff?.length) reasons.push("unchanged")
   if (result.skills_only && !(Number.isFinite(result.coverage) && result.coverage! >= 95))
     reasons.push("skills_only")
-  if (!Number.isFinite(result.coverage) || result.coverage! < 95)
+  // Gate on: a resume whose skills are locked or that has no skills section is sent with the job-post terms listed in
+  // the reply, so its coverage is not a refusal. The round-trip guard in the route still decides whether it goes out.
+  const unplacedOk = jdTermsGateOn() && !!result.jd_terms_unplaced_reason
+  if (!unplacedOk && (!Number.isFinite(result.coverage) || result.coverage! < 95))
     reasons.push("jd_coverage_below_floor")
   if (result.partial) reasons.push("draft_parts_missing")
   if (!quality) return [...reasons, "quality_report_missing"]
   if (quality.incomplete) reasons.push("quality_incomplete")
-  if (quality.status !== "coverage_met" && quality.status !== "delivered_with_gaps")
+  if (quality.status !== "coverage_met" && quality.status !== "delivered_with_gaps" && !(unplacedOk && quality.status === "needs_review"))
     reasons.push("quality_not_deliverable")
   if (!Number.isInteger(quality.total) || quality.total <= 0 ||
       !Number.isInteger(quality.matched) || quality.matched < 0 ||
