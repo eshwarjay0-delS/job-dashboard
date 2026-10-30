@@ -82,7 +82,7 @@ test("cloud read and write authenticate the account; no global unsecured session
 });
 test("account sync accepts the same large payload envelope as the desktop handoff",()=>{
   assert.match(server,/Number\(req\.headers\.get\("content-length"\) \|\| 0\) > 4_000_000/);
-  assert.match(server,/Buffer\.byteLength\(raw,"utf8"\) > 4_000_000/);
+  assert.match(server,/Buffer\.byteLength\(raw,\s*"utf8"\) > 4_000_000/);
   assert.ok(!server.includes('Buffer.byteLength(raw,"utf8") > 650_000'),"No hidden 650 kB rejection");
 });
 test("returns to Sessions, focus, visibility and desktop handoffs re-read the cloud",()=>{
