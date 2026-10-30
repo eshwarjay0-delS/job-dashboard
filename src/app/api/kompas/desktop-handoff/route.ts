@@ -8,10 +8,10 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 const NO_STORE = { "Cache-Control": "no-store, private", "X-Content-Type-Options": "nosniff" }
-const MAX_BYTES = 60_000
+const MAX_BYTES = 256_000
 const FIELD_LIMITS: Record<string, number> = {
-  id: 128, type: 32, role: 512, company: 512, jd: 6000, resume: 8000,
-  documents: 2000, instructions: 4000, language: 24, interviewer: 64,
+  id: 128, type: 32, role: 512, company: 512, jd: 120000, resume: 120000,
+  documents: 120000, instructions: 20000, language: 24, interviewer: 64,
   difficulty: 64, tone: 64, mode: 64, length: 64,
   token: 16384, refreshToken: 16384,
 }
