@@ -65,3 +65,35 @@ test("legacy baseline without reference fingerprint cannot claim comparable impr
   delete baseline.referenceSetSha256;
   assert.throws(()=>evaluate(set([row("one","yes","yes")]),baseline),/Baseline mismatch/);
 });
+
+test("baseline rejects a shifted latency subset with the same sample count",()=>{
+  const base=evaluate(set([row("a","yes","yes",{latencyMs:900}),row("b","yes","yes")]));
+  assert.throws(()=>evaluate(set([row("a","yes","yes"),row("b","yes","yes",{latencyMs:100})]),base),/Baseline mismatch/);
+});
+test("baseline rejects moved edit labels even when edit-label totals match",()=>{
+  const base=evaluate(set([row("a","yes","yes",{editCount:0}),row("b","yes","yes")]));
+  assert.throws(()=>evaluate(set([row("a","yes","yes"),row("b","yes","yes",{editCount:0})]),base),/Baseline mismatch/);
+});
+test("baseline rejects moved speaker predictions despite identical reference speakers",()=>{
+  const base=evaluate(set([row("a","yes","yes",{referenceSpeaker:"one",predictedSpeaker:"one"}),row("b","yes","yes",{referenceSpeaker:"two"})]));
+  assert.throws(()=>evaluate(set([row("a","yes","yes",{referenceSpeaker:"one"}),row("b","yes","yes",{referenceSpeaker:"two",predictedSpeaker:"two"})]),base),/Baseline mismatch/);
+});
+test("baseline accepts same measurement-label cohort with changed predictions",()=>{
+  const base=evaluate(set([row("a","yes","yes",{editCount:0,latencyMs:900,referenceSpeaker:"one",predictedSpeaker:"one"})]));
+  const next=evaluate(set([row("a","yes","no",{editCount:1,latencyMs:100,referenceSpeaker:"one",predictedSpeaker:"two"})]),base);
+  assert.equal(next.deltaFromBaseline.wer,1);
+  assert.equal(next.deltaFromBaseline.p50LatencyMs,-800);
+  assert.equal(next.deltaFromBaseline.zeroEditRate,-1);
+  assert.equal(next.deltaFromBaseline.speakerAttribution,-1);
+});
+test("baseline rejects missing measurement fingerprint or modified coverage",()=>{
+  const base=evaluate(set([row("a","yes","yes",{latencyMs:100})]));
+  assert.match(base.measurementSetSha256,/^[a-f0-9]{64}$/);
+  assert.throws(()=>evaluate(set([row("a","yes","yes",{latencyMs:100})]),{...base,measurementSetSha256:undefined}),/Baseline mismatch/);
+  assert.throws(()=>evaluate(set([row("a","yes","yes",{latencyMs:100})]),{...base,coverage:{...base.coverage,latencySamples:0}}),/Baseline mismatch/);
+});
+test("baseline rejects nonfinite or malformed aggregate metrics",()=>{
+  const base=evaluate(set([row("a","yes","yes")]));
+  assert.throws(()=>evaluate(set([row("a","yes","yes")]),{...base,metrics:{...base.metrics,wer:Infinity}}),/Baseline mismatch/);
+  assert.throws(()=>evaluate(set([row("a","yes","yes")]),{...base,metrics:{...base.metrics,wer:"0"}}),/Baseline mismatch/);
+});
