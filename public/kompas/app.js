@@ -4680,6 +4680,11 @@ function prepareDesktopSession(s) {
   // Decode only in memory; NEVER navigate to this long URL or log it.
   const encoded = deepLink.slice("marketfit-kompas://open?d=".length);
   const session = JSON.parse(decodeURIComponent(escape(atob(encoded.replace(/-/g, "+").replace(/_/g, "/")))));
+  // The legacy URI encoder truncated long resumes/JDs to fit command lines.
+  // HTTPS ticket transport has no reason to silently discard saved content.
+  for (const field of ["resume", "jd", "documents", "instructions"]) {
+    if (typeof s[field] === "string") session[field] = s[field];
+  }
   const pending = { id: s.id, promise: null };
   pending.promise = fetch("/api/kompas/desktop-handoff", {
     method: "POST",
