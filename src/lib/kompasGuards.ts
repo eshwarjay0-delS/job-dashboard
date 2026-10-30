@@ -406,8 +406,9 @@ export function questionFigures(question: string): Set<string> {
   return out
 }
 
+// r11d: closed/rotated (all forms) count as first-person result verbs too. Stricter only.
 function firstPersonResult(sentence: string): boolean {
-  try { return /\b(?:I|we|my team|our team)\b/i.test(sentence) && /\b(?:cut|reduced|lowered|slashed|dropped|decreased|halved|saved|improved|increased|boosted|grew|raised)\b/i.test(sentence) && claimsResult(sentence) } catch { return false }
+  try { return /\b(?:I|we|my team|our team)\b/i.test(sentence) && /\b(?:cut|reduced|lowered|slashed|dropped|decreased|halved|saved|improved|increased|boosted|grew|raised|clos(?:e|es|ed|ing)|rotat(?:e|es|ed|ing))\b/i.test(sentence) && claimsResult(sentence) } catch { return false }
 }
 function withAskedFigures(sentence: string, allowed: Set<string>, asked: Set<string>): Set<string> {
   if (!asked.size) return allowed
@@ -464,7 +465,8 @@ export function applyGuards(
 // claim about results: the candidate's own past work, a percentage something was cut or raised by, money, or years.
 // A number in a plan, a test or a design ("would", "if", a threshold) is the mechanism and stays as written.
 const CLAIMANT = /\b(?:i|we|my|our|me|us|i've|we've|i'm|we're)\b/i
-const RESULT = /\b(?:reduc|cut|sav|improv|increas|decreas|achiev|deliver|lower|rais|boost|grew|grow|shrank|shrink|eliminat|resolv|handl|process|manag|led|built|onboard|migrat|deploy|automat|secur|protect|block|detect|prevent|accelerat|sped|speed|shorten|drop|halv|doubl|tripl|scal|support|own|oversaw|mentor|train|serv|complet|clos|fix|remediat|patch)\w*/i
+// r11d: "rotat…" counts as a result verb so a first-person rotated figure is still checked. Stricter only.
+const RESULT = /\b(?:reduc|cut|sav|improv|increas|decreas|achiev|deliver|lower|rais|boost|grew|grow|shrank|shrink|eliminat|resolv|handl|process|manag|led|built|onboard|migrat|deploy|automat|secur|protect|block|detect|prevent|accelerat|sped|speed|shorten|drop|halv|doubl|tripl|scal|support|own|oversaw|mentor|train|serv|complet|clos|fix|remediat|patch|rotat)\w*/i
 const PLAN = /\b(?:would|will|could|should|can|might|may|if|i'd|we'd|i'll|we'll|plan|propose|expect|target|threshold|set|configure|alert when|at least|at most|within|every|per)\b/i
 const MODAL = /\b(?:would|will|could|should|can|might|may|if|i'd|we'd|i'll|we'll|plan|propose|expect|target)\b/i
 const PAST_RESULT = /\b(?:(?:reduc|sav|improv|increas|decreas|achiev|deliver|lower|rais|boost|eliminat|resolv|handl|process|manag|onboard|migrat|deploy|automat|secur|protect|block|detect|prevent|accelerat|shorten|drop|halv|doubl|tripl|scal|support|own|mentor|train|serv|complet|clos|fix|remediat|patch)ed|cut|led|built|grew|shrank|sped|oversaw)\b/i
