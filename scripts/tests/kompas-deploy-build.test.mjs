@@ -8,7 +8,7 @@ test('Vercel must use the same verified Webpack build mode as CI',()=>{
   assert.equal(vercel.framework,'nextjs')
   const pkg=JSON.parse(readFileSync(new URL('../../package.json',import.meta.url),'utf8'))
   assert.equal(pkg.scripts.prebuild,'node scripts/kompas-baseline.mjs && node --test scripts/tests/whatsapp-resume-acceptance.test.mjs scripts/tests/whatsapp-recovery-durability.test.mjs scripts/tests/storage-prefix-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs')
-  assert.equal(pkg.scripts.build,'next build')
+  assert.equal(pkg.scripts.build,'node scripts/stamp-version.mjs && next build')
 })
 
 test('CI and Vercel agree on Webpack to prevent intermittent Turbopack font failures',()=>{

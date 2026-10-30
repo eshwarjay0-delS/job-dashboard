@@ -168,3 +168,29 @@ test("late Meta HTTP acceptance cannot downgrade signed handset confirmation", a
   assert.equal(await api.markResumeDocumentAccepted(id(5), "wamid-early"), true)
   assert.equal((await api.readResumeRecovery(id(5))).deliveryState, "delivered")
 })
+
+test("legacy bootstrap sees an existing JD in pending, sending, accepted, sent and delivered states", async () => {
+  const api = harness()
+  for (let i = 20; i < 25; i++) {
+    await api.enqueueResumeRecovery({ ...input(i), from: "sender-" + i, jd: "JD-" + i })
+    if (i === 21) await api.patchResumeRecovery(id(i), { status: "sending" })
+    if (i === 22 || i === 23 || i === 24) {
+      await api.markResumeDocumentAccepted(id(i), "wamid-" + i)
+      if (i === 23) await api.recordResumeDeliveryStatus("wamid-" + i, "sent")
+      if (i === 24) await api.recordResumeDeliveryStatus("wamid-" + i, "delivered")
+    }
+    assert.equal(await api.hasResumeRecoveryForJD("sender-" + i, "user", "JD-" + i), true)
+    assert.equal(await api.hasResumeRecoveryForJD("other", "user", "JD-" + i), false)
+    assert.equal(await api.hasResumeRecoveryForJD("sender-" + i, "other", "JD-" + i), false)
+    assert.equal(await api.hasResumeRecoveryForJD("sender-" + i, "user", "different JD"), false)
+  }
+})
+
+test("legacy lookup does not confuse identical job text from separate senders", async () => {
+  const api = harness()
+  await api.enqueueResumeRecovery({ ...input(30), from: "a", jd: "Cloud Security Consultant" })
+  await api.enqueueResumeRecovery({ ...input(31), from: "b", jd: "Cloud Security Consultant" })
+  assert.equal(await api.hasResumeRecoveryForJD("a", "user", "Cloud Security Consultant"), true)
+  assert.equal(await api.hasResumeRecoveryForJD("b", "user", "Cloud Security Consultant"), true)
+  assert.equal(await api.hasResumeRecoveryForJD("c", "user", "Cloud Security Consultant"), false)
+})

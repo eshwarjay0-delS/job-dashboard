@@ -1,5 +1,6 @@
 import { repairDictation } from "./kompasDictation.ts"
 import { latestInterviewerAsk } from "./kompasInterviewPrecision.ts"
+import { interviewIntent } from "./kompasRelevance.ts"
 
 // Kompas answer intelligence — ported from perfACT's interview engine
 // (copilot/api/answer.js + _audiences.js), running on MarketFit's OpenRouter
@@ -534,7 +535,7 @@ export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN): st
   // the last ask is the end of the question.
   const q = (pointed + parts.slice(from, last + 1).map((p) => p.text).join(" ")).replace(/\s+/g, " ").trim()
   // "And why?" is two words or fewer. Dropping it left the previous answer on screen.
-  if (!q || (q.split(/\s+/).length < 3 && !shortFollowUp(q) && !shortFollowUp(text))) return ""
+  if (!q || (q.split(/\s+/).length < 3 && !shortFollowUp(q) && !shortFollowUp(text) && !shortLogistics(q) && !shortLogistics(text))) return ""
   return (q.charAt(0).toUpperCase() + q.slice(1)).slice(0, 2000)
 }
 
@@ -556,8 +557,19 @@ const TOPIC_SHIFT = /\b(?:different topic|new topic|change of topic|switch(?:ing
 type AskPart = { kind: "ask" | "context" | "noise" | "own"; text: string }
 
 /** Each sentence, read as an ask, setup for one, a filler, or the candidate's own words. */
+function interviewSentences(text: string): string[] {
+  // "U.S. citizen?" is one question. The period in U.S. is an abbreviation, not a sentence end.
+  const hidden = String(text || "").replace(/\bU\.S\.(?=\s)/gi, "U\u0001S\u0001").replace(/\bU\.K\.(?=\s)/gi, "U\u0001K\u0001")
+  return hidden.split(/(?<=[.?!])\s+/).map((s) => s.replace(/\u0001/g, ".").trim()).filter(Boolean)
+}
+
+/** A two-word logistics ask is still the question. "U.S. citizen?" used to fall under the three-word floor and disappear. */
+function shortLogistics(text: string): boolean {
+  return /\b(?:u\.?s\.?|united states)\s+citizens?\b/i.test(text)
+}
+
 function askSentences(text: string): AskPart[] {
-  const sentences = String(text || "").split(/(?<=[.?!])\s+/).map((s) => s.trim()).filter(Boolean)
+  const sentences = interviewSentences(text)
   // The words after a fragment the transcriber cut off ("captured... how to use the Gemalto app") are that fragment's
   // tail: setup there is noise too, and only a clear ask survives it.
   return sentences.map(classifyAskSentence).map((part, i) =>
@@ -681,7 +693,7 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
     const words = bare.split(/\s+/).filter(Boolean)
     // "Explain that" is two words. Dropping it left the previous answer on screen.
     const shortFollow = words.length >= 2 && words.length <= 9 && (PRESS.test(bare) || POINTS_BACK.test(bare))
-    if (topicFragment(bare) || words.length >= 3 || shortFollow) return bare.slice(0, 2000)
+    if (topicFragment(bare) || words.length >= 3 || shortFollow || shortLogistics(bare)) return bare.slice(0, 2000)
   }
   return ""
 }
@@ -935,6 +947,16 @@ function whatIsHead(sentence: string): string {
 function separateQuestion(next: string, prevText: string): boolean {
   const bare = next.replace(LEAD_FILLER, "").trim()
   if (!bare || shortFollowUp(bare) || CONTINUES_ASK.test(bare)) return false
+  // "Go deeper" stays with the question it follows. "Go deeper on that exception" is the next question.
+  if (/^(?:(?:and|so|ok(?:ay)?|right|well|then|now)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|walk me through)\b/i.test(bare)) {
+    const press = new Set("deeper dig elaborate explain walk through that this".split(" "))
+    const fresh = topicWords(bare).filter((w) => !press.has(w) && !topicWords(prevText).includes(w))
+    if (fresh.length > 0) return true
+  }
+  // "Tell me about yourself. What questions do you have?" is two asks. A design followed by an explanation stays one.
+  const prevBare = ((prevText.trim().split(/(?<=[.?!])\s+/).pop() || prevText).replace(LEAD_FILLER, "")).replace(/[.?!]+$/, "").trim()
+  if (/^(?:tell me about yourself|introduce yourself|walk (?:me|us) through your (?:career|background))\b/i.test(prevBare)
+      && /^(?:what questions (?:do|would|might|can) you have|any questions(?: for (?:us|me|the team))?|do you have any questions)\b/i.test(bare.replace(/[.?!]+$/, ""))) return true
   if (/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && properNouns(bare).length === 0) return false
   if (!SEPARATE_START.test(bare)) return false
   const prevSentence = (prevText.trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim()
@@ -1007,7 +1029,7 @@ function spokenKey(text: string): string {
 
 /** The line the answer prompt adds when this ask is not the previous one. */
 export function differentQuestionLine(question: string, history: unknown): string {
-  if (/following up on/i.test(question)) return ""
+  if (/following up on/i.test(question) || shortFollowUp(question) || interviewIntent(question) === "follow-up") return ""
   const turns = (Array.isArray(history) ? history : []).filter((t) => t && typeof t === "object") as Array<Record<string, unknown>>
   const last = turns[turns.length - 1]
   if (!last) return ""

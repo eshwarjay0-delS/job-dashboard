@@ -3,7 +3,7 @@
 // not a decision-maker, a metric, or the sentence that came before "next question".
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { cutQuestion } from '../../src/lib/kompasAnswer.ts'
+import { cutQuestion, questionForAnswer } from '../../src/lib/kompasAnswer.ts'
 import { interviewIntent, focusPlan, focusPrompt } from '../../src/lib/kompasRelevance.ts'
 
 const folds = [
@@ -26,7 +26,7 @@ const folds = [
   ['What is least privilege?', 'definition', 'surface'],
   ['Tell me about yourself.', 'introduction', 'surface'],
   ['Why should we hire you for this control-oversight role?', 'value', 'surface'],
-  ['Go deeper on that exception.', 'follow-up', 'asked-only'],
+  ['Go deeper on that exception.', 'follow-up', 'deep'],
 ]
 
 for (let n = 1; n <= folds.length; n++) {
@@ -43,9 +43,63 @@ for (let n = 1; n <= folds.length; n++) {
       if (intent === 'technical-process') assert.match(prompt, /Cover each named part in order/)
       if (intent === 'value') assert.match(prompt, /Open with the relevant experience/)
       if (intent === 'experience-story') assert.match(prompt, /One supported story/)
+      if (intent === 'follow-up' && depth === 'deep') assert.match(prompt, /asked to go deeper on the same subject/)
     }
   })
 }
+
+test('a bare why stays a follow-up of the question it was glued to', () => {
+  const previous = [{ q: 'What is NLA and why do we disable it?' }]
+  for (const heard of ['Why?', 'And why?', 'How come?']) {
+    const q = questionForAnswer(heard, '', false, false, previous)
+    assert.match(q, /following up on/i, heard)
+    assert.equal(interviewIntent(q), 'follow-up', heard)
+    assert.equal(focusPlan(q, 2, 'director').technicalDepth, 'asked-only', heard)
+    assert.doesNotMatch(focusPrompt(q, 2, 'director'), /asked to go deeper/)
+  }
+})
+
+test('dig deeper on a named subject stays that subject and asks for the mechanism', () => {
+  const q = 'dig deeper on session recording'
+  assert.equal(interviewIntent(q), 'follow-up')
+  assert.equal(focusPlan(q, 2, 'director').technicalDepth, 'deep')
+  assert.match(focusPrompt(q, 2, 'director'), /asked to go deeper on the same subject/)
+  const cut = questionForAnswer(q, '', false, false, [{ q: 'What is NLA and why do we disable it?' }])
+  assert.match(cut, /session recording/i)
+  assert.doesNotMatch(cut, /NLA/)
+})
+
+test('what exactly is a term is a definition', () => {
+  const q = 'What exactly is least privilege?'
+  assert.equal(interviewIntent(q), 'definition')
+  assert.equal(focusPlan(q, 2, 'director').technicalDepth, 'surface')
+  assert.match(focusPrompt(q, 2, 'director'), /Open with what it is/)
+})
+
+test('an introduction and a request for questions are both kept', () => {
+  const heard = 'Tell me about yourself. What questions do you have?'
+  assert.equal(interviewIntent(heard), 'introduction')
+  assert.match(focusPrompt(heard, 2, 'director'), /also asked what questions you have/)
+  assert.equal(interviewIntent('Any questions?'), 'closing-question')
+  assert.equal(interviewIntent('The team runs several control areas. Any questions?'), 'closing-question')
+  assert.equal(interviewIntent('Tell me about yourself.'), 'introduction')
+})
+
+test('a short citizenship question is kept and answered as logistics', () => {
+  const q = questionForAnswer('U.S. citizen?', '', false, false, [{ q: 'What is NLA and why do we disable it?' }])
+  assert.match(q, /U\.S\. citizen/i)
+  assert.doesNotMatch(q, /NLA/)
+  assert.equal(interviewIntent(q), 'logistics')
+  assert.equal(interviewIntent('Are you a U.S. citizen?'), 'logistics')
+  assert.match(questionForAnswer('Are you a U.S. citizen?', '', false, false, []), /Are you a U\.S\. citizen\?/)
+})
+
+test('a short follow-up is not told to open a new mechanism', () => {
+  const prompt = focusPrompt('Why is that dangerous?', 2, 'director')
+  assert.equal(interviewIntent('Why is that dangerous?'), 'follow-up')
+  assert.equal(focusPlan('Why is that dangerous?', 2, 'director').technicalDepth, 'asked-only')
+  assert.doesNotMatch(prompt, /asked to go deeper/)
+})
 
 test('words before "next question" are not the question', () => {
   const heard = 'Possible or anyone has to talk to why we disable it? I will explain this later. Moving to the next question, what is NLA and why do we disable it?'
