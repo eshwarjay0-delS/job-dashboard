@@ -101,7 +101,9 @@ export function focusPlan(question:string,tier:number,level:string):FocusPlan{
   const brief=/\b(?:brief|briefly|quick|short|30 seconds|half a minute)\b/i.test(question)
   return {intent,minWords:brief?65:240,maxWords:brief?110:250,opening,proof,technicalDepth:"surface"}
  }
- const detailed=(DEEP.test(question)&&["scenario","technical-process","experience-story","follow-up"].includes(intent)) || (intent==="comparison"&&/\b(?:technically|at the protocol level|under the hood|in detail|how .+ differ|how is .{1,80} different)\b/i.test(question)) || (intent==="definition"&&/\b(?:why|how|disable)\b/i.test(question)) || intent==="technical-process"
+ const lead=askWithoutPrior(question)
+ const askedDeeper=intent==="follow-up" && /\b(?:go deeper|dig deeper|more detail|elaborate|explain (?:that|this|it))\b/i.test(lead)
+ const detailed=askedDeeper || (DEEP.test(question)&&["scenario","technical-process","experience-story","follow-up"].includes(intent)) || (intent==="comparison"&&/\b(?:technically|at the protocol level|under the hood|in detail|how .+ differ|how is .{1,80} different)\b/i.test(question)) || (intent==="definition"&&/\b(?:why|how|disable)\b/i.test(lead)) || intent==="technical-process"
  // Technical depth may grow when specifically requested, not merely because
  // the session is in Director/Engineer mode. Preserve full source-backed intros.
  const adjusted=detailed?max+40:max

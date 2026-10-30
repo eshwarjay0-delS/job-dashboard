@@ -26,7 +26,7 @@ const folds = [
   ['What is least privilege?', 'definition', 'surface'],
   ['Tell me about yourself.', 'introduction', 'surface'],
   ['Why should we hire you for this control-oversight role?', 'value', 'surface'],
-  ['Go deeper on that exception.', 'follow-up', 'asked-only'],
+  ['Go deeper on that exception.', 'follow-up', 'deep'],
 ]
 
 for (let n = 1; n <= folds.length; n++) {

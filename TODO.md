@@ -1,3 +1,7 @@
+## 2026-10-29 — Go deeper is a deep follow-up
+
+"Go deeper on that exception" stayed a short follow-up, so the answer could repeat the previous one at the same depth. Asking to go deeper, dig deeper, give more detail, elaborate, or explain that now deepens the same subject. "Why is that dangerous?" stays the shorter follow-up. One hundred intent folds still pass.
+
 ## 2026-10-29 — A follow-up is not told to throw away the previous answer
 
 "Go deeper on that exception" and "Why is that dangerous?" were follow-ups, and the prompt still said the question was different and not to reuse the previous answer. A follow-up no longer gets that line. "What exactly is least privilege?" and "Elaborate on session recording" still do.
