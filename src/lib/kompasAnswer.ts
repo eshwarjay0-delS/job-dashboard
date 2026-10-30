@@ -617,6 +617,13 @@ const SMALL_TALK_CORE = [
   "(?:we'?ll|let'?s|i'?ll) circle back (?:on|to) (?:that|it|this)",
   "(?:my|the|your) (?:screen|video|audio|connection|internet|wi-?fi|mic) (?:froze|dropped|cut out|lagged|glitched|is lagging)(?: for a (?:second|sec|moment|bit))?",
   "i'?m (?:just )?(?:writing|noting|jotting) (?:that|this|it) down", "let me (?:write|note|jot) (?:that|this|it) down",
+  // Round 8 (29 Oct 2026): five more asides were formed into questions and answered ("mm-hm", "got it, thanks", "I'm going
+  // to mute for a second", "let me check the time", "sorry, someone just walked in"). Whole-utterance only, no "?".
+  "(?:mm-?hm+|uh-?huh|mhm+)(?:,? (?:okay|ok|right|sure|yeah|got it))?", 
+  // Round 10: meeting housekeeping.
+  "(?:i'?m|i am) (?:going to|gonna|about to) share my screen", "(?:sorry,? )?(?:i'?m|i was|you'?re|you were) (?:on|still on) mute",
+  "can (?:everyone|everybody|you|you all) (?:hear|see) me(?: okay| alright| now| well| fine)?", "got it,? (?:thanks|thank you)", "(?:i'?m|i am) (?:going to|gonna) (?:mute|go on mute)(?: for a (?:second|sec|moment|bit|minute))?",
+  "let me (?:check|look at) the (?:time|clock)", "someone (?:just )?(?:walked|came) in",
 ]
 const SMALL_TALK = new RegExp(`^${SMALL_TALK_LEAD}(?:${SMALL_TALK_CORE.join("|")})[.!]*$`, "i")
 
@@ -696,7 +703,40 @@ export function topicFragment(text: string): boolean {
  * which knows the previous turn unless this is a re-ask of it. "" means the model decides. The service and the
  * baseline contract (scripts/kompas-baseline.mjs) both call this, so the contract replays the real derive.
  */
+/**
+ * Round 8 (29 Oct 2026): "uh so, um, how do you like, scope an an access review" was derived and answered word for word,
+ * so the ask "scope an access review" never appeared in it. Fillers inside the ask, "you like," and a doubled word or
+ * restarted phrase ("how do you, how do you prove") are removed. Failsafe: if that leaves nothing, the ask is kept as is.
+ */
+export function tidySpokenAsk(question: string): string {
+  const raw = String(question || "")
+  const out = raw
+    .replace(/(^|[\s,])(?:um+|uh+|erm+)\b[,.]?/gi, "$1")
+    .replace(/\b(you|we|i)\s+like,\s+/gi, "$1 ")
+    .replace(/\b((?:\w+\s+){1,3}\w+),?\s+\1\b/gi, "$1")
+    .replace(/\b(\w+)\s+\1\b/gi, "$1")
+    .replace(/\s+([?.!,])/g, "$1")
+    .replace(/^[\s,]+/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (!out) return raw.trim()
+  // Once tidied, the heard ask and the derived ask can be the same sentence; it is said once.
+  const seen = new Set<string>()
+  const once = out.split(/(?<=[.?!])\s+/).filter((sentence) => {
+    const key = sentence.toLowerCase().replace(/[^a-z0-9 ]+/g, "").trim()
+    if (key && seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).join(" ")
+  return once.charAt(0).toUpperCase() + once.slice(1)
+}
+
 export function deriveByCode(heard: string, history: unknown, reask = false): string | null {
+  const derived = deriveByCodeRaw(heard, history, reask)
+  return derived ? tidySpokenAsk(derived) : derived
+}
+
+function deriveByCodeRaw(heard: string, history: unknown, reask = false): string | null {
   if (!heard || plainlyNoQuestion(heard)) return null
   // Every line is small talk ("Them: makes sense"): nothing to derive, and the model is not asked to find a question in it.
   if (String(heard).split("\n").filter((l) => l.trim()).every((l) => noiseOnly(l))) return null
@@ -719,11 +759,14 @@ export function stripScreenChrome(question: string): string {
 
 export function questionForAnswer(heard: string, asked: string, pinned: boolean, again: boolean, history: unknown): string {
   const turns = Array.isArray(history) ? history : []
-  const q = afterMarkedNextQuestion(questionToAnswer(stripScreenChrome(heard), stripScreenChrome(asked), pinned, again ? NO_TURN : previousTurn(turns)))
+  const formed = afterMarkedNextQuestion(questionToAnswer(stripScreenChrome(heard), stripScreenChrome(asked), pinned, again ? NO_TURN : previousTurn(turns)))
+  const q = formed ? tidySpokenAsk(formed) : formed
+  const source = String((pinned && asked) || heard || "").split("\n").filter((l) => l.trim()).pop() || ""
+  const startedWithAnd = /^\s*(?:(?:Them|You)(?: \([a-z]+\))?:\s*)?(?:and|but)\b/i.test(source)
   return q ? resolveFollowUp(q, turns.map((h) => {
     const o = (h && typeof h === "object" ? h : {}) as Record<string, unknown>
     return { q: String(o.q ?? o.question ?? "").slice(0, 300) }
-  })) : ""
+  }), startedWithAnd) : ""
 }
 
 // The Director level's opening, in the owner's words, plus the 27 Oct rule that the decision owner is a role.
@@ -768,12 +811,63 @@ export const ADDITIVE_FOLLOW_UP =
  * A short question that still names its own subject is not. "What exactly is least privilege?"
  * used to be rewritten as a follow-up of whatever was on screen, so a different question was answered as the same one.
  */
-export function resolveFollowUp(d: string, history: Array<{ q?: string }>): string {
+// Round 9 (29 Oct 2026): short follow-ups that start with "and" ("And who signs it off?", "And how often?", "And who do
+// you include?") or lean on a pronoun ("How long can it last?", "If it fails?") were answered as new questions with no
+// subject. They are tied when short and they do not open a new subject of their own ("And what is zero trust?" is new).
+const CONTINUES_LEAD = /^\s*(?:and|so then|but)\b[,\s]+/i
+const OWN_SUBJECT = /\b(?:what (?:is|are)|define|explain|tell me about|describe|where are you|when can you)\b/i
+const LEANS_BACK = /\b(?:it|they|them|those|these|ones)\b/i
+function continuesPrevious(q: string, startedWithAnd: boolean): boolean {
+  const words = q.split(/\s+/).length
+  if ((startedWithAnd || CONTINUES_LEAD.test(q)) && words <= 7 && (!OWN_SUBJECT.test(q) || LEANS_BACK.test(q))) return true
+  return words <= 5 && LEANS_BACK.test(q) && !OWN_SUBJECT.test(q) && !/^\s*(?:tell|walk|describe|why do you want)\b/i.test(q)
+}
+
+/** The question a follow-up chain started from: the innermost quoted ask of "X — following up on: "…"". */
+export function rootAsk(q: string): string {
+  let out = String(q || "")
+  for (let i = 0; i < 5; i++) {
+    const m = out.match(/following up on:\s*"([\s\S]*)"\??\s*$/i)
+    if (!m) break
+    out = m[1]
+  }
+  return out.replace(/[?.!\s]+$/, "")
+}
+
+/** "the second one" after a multi-part question: the part it points at, or "" when the previous ask has no list. */
+const ORDINALS: Record<string, number> = { first: 0, second: 1, third: 2, fourth: 3, last: -1 }
+export function orderedPartOf(previous: string, ask: string): string {
+  const m = String(ask || "").match(/\b(?:the )?(first|second|third|fourth|last) (?:one|part|point|thing|bit)\b/i)
+  if (!m) return ""
+  const body = String(previous || "").replace(/[?.!\s]+$/, "")
+    .replace(/^\s*(?:can you |could you )?(?:explain|describe|define|tell me about|walk me through|what (?:is|are))\s+/i, "")
+  const parts = body.split(/\s*,\s*(?:and\s+)?|\s+and\s+/i).map((p) => p.trim()).filter(Boolean)
+  if (parts.length < 2) return ""
+  const i = ORDINALS[m[1].toLowerCase()]
+  return parts[i < 0 ? parts.length - 1 : i] || ""
+}
+
+export function resolveFollowUp(d: string, history: Array<{ q?: string }>, startedWithAnd = false): string {
   const q = String(d || "").trim()
   const hist = Array.isArray(history) ? history.filter((h) => h && h.q) : []
   if (!q || !hist.length) return q
+  // Round 9: a follow-up to a follow-up nested the tag ("X — following up on: "Y — following up on: …"") and the inner tag
+  // was said aloud. The chain is tied to its root question, the real topic.
+  const lastRaw = String(hist[hist.length - 1].q)
+  const inChain = /following up on:/i.test(lastRaw)
+  const lastAsk = rootAsk(lastRaw)
+  const part = orderedPartOf(lastAsk, q)
+  if (part) {
+    // Round 10: "And the second one again?" names the part, so the answer and keywords carry it. Failsafe: no list, no change.
+    const said = q.replace(/\b(?:the )?(?:first|second|third|fourth|last) (?:one|part|point|thing|bit)\b/i, part).replace(/[?.!\s]+$/, "")
+    return `${said.charAt(0).toUpperCase() + said.slice(1)} — following up on: "${lastAsk}"?`
+  }
+  if ((continuesPrevious(q, startedWithAnd) || (inChain && q.split(/\s+/).length <= 5 && !OWN_SUBJECT.test(q) && !/^\s*(?:tell|walk|describe)\b/i.test(q))) && !shortFollowUp(q)) {
+    const say = q.replace(CONTINUES_LEAD, "").replace(/[?.!\s]+$/, "")
+    return `${say.charAt(0).toUpperCase() + say.slice(1)} — following up on: "${lastAsk}"?`
+  }
   if (shortFollowUp(q)) {
-    const last = String(hist[hist.length - 1].q).replace(/[?.!\s]+$/, "")
+    const last = lastAsk
     const say = q.replace(/[?.!\s]+$/, "")
     return `${say.charAt(0).toUpperCase() + say.slice(1)} — following up on: "${last}"?`
   }
@@ -783,7 +877,7 @@ export function resolveFollowUp(d: string, history: Array<{ q?: string }>): stri
   // Idea D (stress round 3): an additive follow-up ("can you also add unit tests?") names a new word but stays on the
   // previous topic, so it is tied too. A short ask that is its own question ("what is least privilege?") is not.
   if (!(short && ((points && !named) || ADDITIVE_FOLLOW_UP.test(q)))) return q
-  const last = String(hist[hist.length - 1].q).replace(/[?.!\s]+$/, "")
+  const last = lastAsk
   return `${q.replace(/[?.!\s]+$/, "")} — following up on: "${last}"?`
 }
 

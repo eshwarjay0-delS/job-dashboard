@@ -52,6 +52,8 @@ const STOP = new Set(
 const PHRASES = [
   "residual risk", "least privilege", "policy deviation", "policy exception", "compensating control",
   "root cause", "business impact", "privileged access", "service now", "multi factor",
+  // Round 8: "explain the start method" is repaired to the STAR method, but the keywords split it into star|method.
+  "star method",
 ]
 
 type Jargon = { term: string; family: string; product?: boolean }
@@ -332,7 +334,13 @@ export function cleanSpokenAsk(question: string): string {
     .replace(/(?<!\b(?:do|did|does|would|as|if|what|how|where|don't|didn't)\s)\b(?:you know|i mean)\b,?/gi, " ")
     .replace(/(?<!\b(?:what|which|the|this|that|any|some|a|one)\s)\b(?:sort of|kind of)\b,?/gi, " ")
     .replace(/(^|[\s,])like,?(?=\s+(?:what|how|why|the|a|an|inherent|residual|\w+ing)\b)/gi, "$1")
+    // Round 8/10: "how do you like, scope", and a restarted phrase ("what would you, what would you do", "how do you, how do you").
+    .replace(/\b(you|we|i)\s+like,\s+/gi, "$1 ")
+    .replace(/,\s*like,\s*/gi, ", ").replace(/\band,\s+like,?\s+/gi, "and ")
+    .replace(/\b((?:\w+\s+){1,3}\w+),?\s+\1\b/gi, "$1")
     .replace(/^\s*(?:so|okay so|ok so|alright so|well)[,\s]+/i, "")
+    // Round 10: a spoken setup before the ask ("the thing is, how do you prove…") made "thing" a keyword.
+    .replace(/^\s*(?:(?:so|okay|ok|and)[,\s]+)*(?:the thing is|here'?s the thing|the question is|my question is|what i want to know is|i guess)[,:\s]+(?=\S)/i, "")
     .replace(/\b(\w+)\s+\1\b/gi, "$1")
     .replace(/\s+(?:thing|stuff)(?=\s*[?.!]*\s*$)/i, "")
     .replace(/\s+([?.!,])/g, "$1")
@@ -414,6 +422,13 @@ const PROVIDER_FAILURE_SHAPE = [
   // Round 6: "HTTP 503 Service Unavailable" and "The upstream request timed out." were shown as answers.
   /^\s*HTTP(?:\/[\d.]+)?\s+[45]\d\d(?:\s+[A-Za-z' ]{0,40})?[.!]?\s*$/i,
   /^\s*(?:the )?(?:upstream|gateway|server|api) (?:request|connection|call) timed out\b/i,
+  // Round 8: SDK exception lines ("openai.APIConnectionError: Connection error.", "anthropic.InternalServerError:
+  // overloaded_error") were shown as answers. Only when the text opens with the exception class.
+  /^\s*(?:[a-z_]+\.)*(?:API\w*|InternalServer|RateLimit|ServiceUnavailable|Overloaded|Authentication|PermissionDenied|BadRequest|NotFound|UnprocessableEntity|Conflict)Error\b\s*:?/,
+  /\boverloaded_error\b|\brate_limit_error\b|\bapi_error\b/i,
+  // Round 10: dotted module path + exception class + colon ("httpx.ReadTimeout: timed out",
+  // "google.api_core.exceptions.ServiceUnavailable: 503").
+  /^\s*(?:[a-z_][a-z0-9_]*\.)+[A-Z]\w*(?:Error|Exception|Timeout|Unavailable|Overloaded)\s*:/,
 ]
 export function isProviderErrorAnswer(text: string): boolean {
   const t = String(text || "")
@@ -577,9 +592,10 @@ export function firstPersonRewrite(text: string, sources = ""): { text: string; 
         changed = true
         return `I ${m[3] ? `${m[3]} ` : ""}${verb}${sentence.slice(m[0].length)}`
       }
-      const pronoun = candidateLed ? sentence.match(new RegExp(`^(?:He|She)\\s+(?:(${ADVERB})\\s+)?([A-Za-z]+)`)) : null
-      const verb = pronoun ? firstPersonVerb(pronoun[2]) : null
-      if (pronoun && verb) { changed = true; return `I ${pronoun[1] ? `${pronoun[1]} ` : ""}${verb}${sentence.slice(pronoun[0].length)}` }
+      // Round 10: a connector before the pronoun ("Then he agreed the evidence") kept "he" after the name was rewritten.
+      const pronoun = candidateLed ? sentence.match(new RegExp(`^(?:((?:Then|Later|Next|Afterwards|After that|So|And),?)\\s+(?:he|she)|He|She)\\s+(?:(${ADVERB})\\s+)?([A-Za-z]+)`)) : null
+      const verb = pronoun ? firstPersonVerb(pronoun[3]) : null
+      if (pronoun && verb) { changed = true; return `${pronoun[1] ? `${pronoun[1]} ` : ""}I ${pronoun[2] ? `${pronoun[2]} ` : ""}${verb}${sentence.slice(pronoun[0].length)}` }
       if (pronoun) leftover = true
       candidateLed = false
       return sentence
@@ -792,6 +808,8 @@ export function leadPhrase(question: string): string {
     /^(?:can|could|would) you\s+(?:please\s+)?(?:tell me|explain|describe|walk me through|share)\s+(?:about\s+)?/i,
     /^(?:can|could|would) you\s+(?:also\s+)?(?:add|include)\s+(?:an?\s+|the\s+|some\s+)?/i,
     /^what about\s+/i,
+    // Round 10: "what would you do if the owner says…" was said back as "For do if the owner says…".
+    /^what (?:would|do|should|will) you do\s+(?=if\b|when\b)/i,
     /^what would you\s+/i,
     /^tell me about (?:a time (?:when )?(?:you|that you)\s+)?/i,
     /^(?:give me an example of (?:a time )?(?:when )?(?:you\s+)?)/i,
@@ -813,7 +831,9 @@ export function leadPhrase(question: string): string {
 /** The separate things the interviewer listed, in order: "trust boundaries, data flow, failure isolation, rollout and validation". */
 export function askedPartList(question: string): string[] {
   const out: string[] = []
-  for (const clause of topicOfAsk(question).split(/(?<=[a-z0-9)])[?!.]\s+/i)) {
+  // Round 10 (29 Oct 2026): fillers between commas ("So, uh, what would you, um, what would you do") were read as listed
+  // parts ("so", "uh", "what would you"), so the prompt and the stand-in answered each. The ask is cleaned first.
+  for (const clause of topicOfAsk(cleanSpokenAsk(question)).split(/(?<=[a-z0-9)])[?!.]\s+/i)) {
     if (!clause.includes(",")) continue
     const body = clause.replace(/^(?:explain|walk (?:me )?through|give|state|cover|describe|include|discuss)\s+/i, "").replace(/[?!.]+$/, "")
     for (const item of body.split(/,\s*|\s+and\s+/)) {
@@ -934,6 +954,8 @@ function spokenLead(lead: string, question = ""): string {
   const said = verb && !/^how\b/i.test(lead) ? `how I ${lead}` : lead
   return said
     .replace(/\byourself\b/gi, "myself").replace(/\byours\b/gi, "mine").replace(/\byour\b/gi, "my")
+    // Round 9 (29 Oct 2026): "What if the owner is senior to you?" was said back as "senior to I". Object "you" is "me".
+    .replace(/\b(to|for|with|than|at|from|about|of|by|ask|asks|asked|tell|told|give|gave|show|let|help|hire|pay|trust|call|against|behind|before|after|like)\s+you\b(?!\s+(?:are|were|have|had|do|did|can|could|would|will|should|need|want|think)\b)/gi, "$1 me")
     .replace(/\byou are\b/gi, "I am").replace(/\byou(?:'ve| have)\b/gi, "I have").replace(/\byou\b/gi, "I")
 }
 
@@ -1015,7 +1037,9 @@ function draftAtLevel(question: string, level: AnswerLevel, resume: string, prev
   const opener = (OPENERS[cut.shape] || OPENERS.direct)[level] || OPENERS.direct[level]
   // Round 6: as asked live, the previous answers are known. A sentence already said in them is not said again, as the
   // production prompt asks ("Do not reuse the previous answer") and settle enforces; the next line in the pool is used.
-  const key = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+  // Round 9: a template line seeded with a new lead ("On what if it slips again, the first call is…") is the same line said
+  // again; the lead clause is ignored when comparing.
+  const key = (text: string) => text.replace(/^(?:on|for) [^,]{1,80}, /i, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
   const said = new Set(previous.flatMap((answer) => sentencesOf(answer)).map(key))
   const fresh = (line: string) => !said.has(key(line))
   // A tied follow-up is ranked on its own words, so it does not read back the lines the first answer already used.

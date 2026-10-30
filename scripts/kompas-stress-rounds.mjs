@@ -12,7 +12,7 @@
 import { readFileSync } from "node:fs"
 import {
   draftSpokenAnswer, dissectQuestion, evaluateLiveAnswers, settleSpokenAnswer, sameAnswerRatio, sentencesOf,
-  isProviderErrorAnswer, questionKeywords, wordCount, answerEchoesPrevious, firstPersonRewrite,
+  isProviderErrorAnswer, questionKeywords, wordCount, answerEchoesPrevious, firstPersonRewrite, askedPartList,
 } from "../src/lib/kompasDissection.ts"
 import { deriveByCode, questionForAnswer } from "../src/lib/kompasAnswer.ts"
 import { applyGuards } from "../src/lib/kompasGuards.ts"
@@ -253,7 +253,136 @@ const R7 = [
   ...["I would add a timeout so a slow upstream request does not block the review queue.", "HTTP 503 errors from the scanner go to the owner as a ticket."]
     .map((raw) => ({ kind: "notProvider", family: "provider-error look-alike (round 7, legit)", raw })),
 ]
-export const ROUNDS = [R1, R2, R3, R4, R5, R6, R7]
+
+// ------------------------------------------------------------------ round 8: harder tricks, near-duplicates in a row, garbled asks, mishears
+const R8 = [
+  ...["Is it ever right to hide a finding from an auditor?", "Would you sign off a risk you do not understand?", "Can you be too thorough in an access review?",
+    "Is a clean audit proof that controls work?", "Should every exception be rejected?", "Is zero risk a realistic target?", "Would you report your own manager's mistake?",
+    "Is it fine to close a finding without evidence if the owner is senior?", "Do more controls always mean less risk?", "Can a compensating control be worse than the original gap?",
+    "Is it okay to skip root cause when the fix is obvious?", "Would you rather miss a deadline or ship a weak fix?"].map((q) => A("trick (round 8 mode floors)", q)),
+  ...[["How do you scope an access review?", "How do you schedule an access review?"], ["What is inherent risk?", "What is residual risk?"],
+    ["How do you escalate an overdue finding?", "How do you close an overdue finding?"], ["Who owns a policy exception?", "Who approves a policy exception?"],
+    ["How do you test a preventive control?", "How do you test a detective control?"], ["How do you report risk to the board?", "How do you report risk to the owner?"],
+    ["What makes evidence good?", "What makes evidence weak?"], ["When do you reopen a finding?", "When do you close a finding?"],
+    ["How do you handle a late remediation plan?", "How do you handle a vague remediation plan?"], ["How do you measure control health?", "How do you measure risk reduction?"]]
+    .map(([a, b]) => ({ kind: "nearDup", family: "near-duplicate (round 8, asked in a row)", a, b })),
+  ...[["uh so, um, how do you like, scope an an access review", "scope an access review", "um"], ["sorry the line cut out. What is least privilege?", "least privilege", "line cut"],
+    ["okay okay. Next one. How do you track exceptions?", "track exceptions", "next one"], ["can you hear me now? good. How do you close a finding?", "close a finding", "hear me"],
+    ["I'm just reading from the list here. What is a compensating control?", "compensating control", "reading from"], ["hold on, my coffee. Okay, what is residual risk?", "residual risk", "coffee"]]
+    .map(([heard, want, drop]) => ({ kind: "intake", family: "garbled / aside then ask (round 8)", heard, want, drop })),
+  { kind: "keywords", family: "mishear (round 8)", q: "how would you secure cooper netties secrets", must: ["kubernetes"], never: ["cooper", "netties"] },
+  { kind: "keywords", family: "mishear (round 8)", q: "explain the start method for a story", must: ["star method"], never: ["start"] },
+  { kind: "keywords", family: "mishear (round 8)", q: "when would you not accept residue all risk", must: ["residual risk", "not accept"], never: ["residue"] },
+  { kind: "keywords", family: "mishear (round 8)", q: "what's the difference between inherent and resid jewel risk", must: ["inherent", "residual risk"], never: ["jewel"] },
+  ...["mm-hm", "okay, noted", "sure, sure", "got it, thanks", "that's fair", "I'm going to mute for a second", "let me check the time", "sorry, someone just walked in"]
+    .map((heard) => ({ kind: "smalltalk", family: "small talk (round 8)", heard })),
+  ...["{\"error\":\"rate_limited\",\"retry_after\":12}", "openai.APIConnectionError: Connection error.", "Request timed out.", "Service Unavailable", "anthropic.InternalServerError: overloaded_error"]
+    .map((raw) => ({ kind: "provider", family: "provider-error (round 8)", raw })),
+  ...["When the scanner timed out, I re-ran it and compared the results with the change log.", "A 429 from the vendor API meant I batched the evidence requests."]
+    .map((raw) => ({ kind: "notProvider", family: "provider-error look-alike (round 8, legit)", raw })),
+]
+
+// ------------------------------------------------------------------ round 9: long multi-part asks, recursive follow-ups, copies two turns back
+const R9 = [
+  ...["How do you assess residual risk, who signs it off, how long does the acceptance last, and what makes you reopen it?",
+    "Walk me through scoping an access review, picking the sample, chasing evidence, and reporting what you found.",
+    "Explain the difference between a policy exception and a deviation, when you would allow each, and who owns the follow-up.",
+    "Tell me how you would challenge a weak remediation plan, what evidence you would ask for, and how you would know the fix held.",
+    "If an owner misses a deadline, what do you do first, who do you tell, and how do you stop it happening again?",
+    "Describe how you map a control to a framework, how you test it, and how you report a failed test to the business.",
+    "What is least privilege, how do you check it in practice, and what do you do when a team pushes back?",
+    "How do you prioritise findings, how do you explain the order to owners, and what do you track every week?"].map((q) => A("long multi-part (round 9)", q)),
+  ...[["What is residual risk?", "And who signs it off?", "signs"], ["What is residual risk?", "What if they refuse?", "refuse"],
+    ["How do you track open findings?", "What about the overdue ones?", "overdue"], ["How do you track open findings?", "And how often?", "often"],
+    ["What is a policy exception?", "How long can it last?", "last"], ["How do you scope an access review?", "And who do you include?", "include"],
+    ["How do you challenge a weak remediation plan?", "What if the owner is senior to you?", "senior"], ["How do you test a control?", "And if it fails?", "fails"]]
+    .map(([first, follow, keyword]) => ({ kind: "followup", family: "recursive follow-up (round 9)", first, follow, keyword })),
+  ...[["What is residual risk?", "How do you report it?", "Who owns it?"], ["How do you scope an access review?", "Who do you include?", "How do you report the results?"],
+    ["What is a policy exception?", "Who approves it?", "How long does it last?"], ["How do you test a control?", "What if it fails?", "Who do you tell?"],
+    ["How do you track open findings?", "What about overdue ones?", "How do you close them?"], ["What is least privilege?", "How do you check it?", "What if a team pushes back?"]]
+    .map(([a, mid, c]) => ({ kind: "echoChain", family: "echo two turns back (round 9)", a, mid, c })),
+  ...[["What is residual risk?", "What is zero trust?"], ["How do you track open findings?", "Tell me about yourself."], ["Who signs off residual risk?", "Where are you based?"],
+    ["How do you test a control?", "Write a SQL query that lists findings with no owner."]].map(([first, next]) => ({ kind: "notFollowup", family: "new question after history (round 9)", first, next })),
+  ...[["Tell me about yourself.", "How do you track open findings?"], ["When can you start?", "What is residual risk?"], ["What is residual risk?", "Do you have any questions for us?"]]
+    .map(([a, b]) => ({ kind: "nearDup", family: "unrelated pair in a row (round 9)", a, b })),
+]
+
+// ------------------------------------------------------------------ round 10: the three modes on the hardest asks, disguised copies, mixed voice
+const PREV_B = "I scope an access review by starting from the systems that hold sensitive data, then I pick the accounts with privileged access, and I agree the evidence with each owner before the review starts. I report what I found to the owner and track every removal to closure."
+const R10 = [
+  ...["Is it ever acceptable to accept a risk without an owner?", "What would you do if two owners both refuse a finding?", "Would you trust evidence from a screenshot?",
+    "Why would a control pass the test and still fail in practice?", "What if the auditor is wrong?", "Explain residual risk to a ten-year-old.",
+    "If you had one week, what would you review first?", "How would you know your risk register is lying?", "Why do remediation plans fail?", "What is the hardest finding you have closed?",
+    "Should security ever slow down a release?", "What is the difference between a risk and an issue, and why does it matter?"].map((q) => A("three modes, hardest asks (round 10)", q)),
+  ...[["How do you scope an access review?", "Who do you include in an access review?", "I include these people. "],
+    ["How do you scope an access review?", "How do you report access review results?", "I report the results this way. "],
+    ["How do you scope an access review?", "How long does an access review take?", "It takes a few weeks. "],
+    ["How do you scope an access review?", "What is an access review?", "An access review checks access. "],
+    ["How do you scope an access review?", "How do you scope an access review for a cloud account?", "For a cloud account it is similar. "]]
+    .map(([a, b, opener]) => ECHO(a, PREV_B, b, opener + PREV_B, true)),
+  // A copy with the sentences reordered is still a copy.
+  ECHO("How do you scope an access review?", PREV_B, "Who do you include in an access review?", "I report what I found to the owner and track every removal to closure. I scope an access review by starting from the systems that hold sensitive data, then I pick the accounts with privileged access, and I agree the evidence with each owner before the review starts.", true),
+  ECHO("How do you scope an access review?", PREV_B, "Who do you include in an access review?", "I include the system owner, the manager of each account holder, and someone from identity who can remove access the same day. I keep security as the reviewer, not the approver.", false),
+  ECHO("How do you scope an access review?", PREV_B, "How long does an access review take?", "A quarterly access review takes me about two weeks for a sensitive system. Most of that time is waiting for owners to confirm, so I agree the deadline with them before I start.", false),
+  ...[["Jordan scoped the review. Then he agreed the evidence with each owner.", false, /^I scoped .*I agreed/],
+    ["Jordan Hale reported it to the committee.", false, /^I reported/],
+    ["As Jordan, I reviewed the plan.", true, /Jordan/],
+    ["My manager and Jordan reviewed it together.", true, /Jordan/],
+    ["I reviewed the plan with the owner. She signed the exception.", false, /^I reviewed .*She signed/],
+    ["Jordan's review found three gaps. He closed two.", false, /^My review .*I closed/]].map(([raw, flag, shape]) => ({ kind: "voice", family: "third person mixed (round 10)", raw, flag, shape })),
+  ...[["Explain residual risk, compensating controls and exception expiry.", "And the second one again?", "compensating"]]
+    .map(([first, follow, keyword]) => ({ kind: "followup", family: "follow-up on one part of a multi-part (round 10)", first, follow, keyword })),
+  ...["Hmm. So, uh, what would you, um, what would you do if the owner says it's fixed but there's no evidence?", "okay so the thing is, like, how do you, how do you prove a control works?",
+    "right so imagine, imagine you join on Monday, what do you look at first?"].map((q) => A("garbled long ask, three modes (round 10)", q, { garbled: true })),
+]
+
+// Round 9, more: three follow-ups in a row (each tied to the first real question, none a copy of an earlier answer),
+// and listed parts read from long garbled asks.
+const R9_MORE = [
+  ...[["What is residual risk?", ["And who signs it off?", "What if they refuse?", "And how often do you review it?"]],
+    ["How do you track open findings?", ["What about the overdue ones?", "And who do you tell?", "What if it slips again?"]],
+    ["How do you scope an access review?", ["And who do you include?", "What if they don't respond?", "And how long does it take?"]],
+    ["What is a policy exception?", ["How long can it last?", "And who approves it?", "What if it expires?"]],
+    ["How do you test a control?", ["And if it fails?", "Who do you tell?", "What if they disagree?"]],
+    ["How do you challenge a weak remediation plan?", ["What if the owner is senior to you?", "And if they still refuse?", "What would you track afterwards?"]]]
+    .map(([first, chain]) => ({ kind: "followChain", family: "three follow-ups in a row (round 9)", first, chain })),
+  ...[["So, uh, explain residual risk, um, compensating controls and, like, exception expiry.", ["residual risk", "compensating controls", "exception expiry"]],
+    ["Walk me through, uh, scoping, sampling, evidence and reporting.", ["scoping", "sampling", "evidence", "reporting"]],
+    ["Okay so, cover the owner, the deadline and, you know, the evidence.", ["owner", "deadline", "evidence"]],
+    ["Explain, um, trust boundaries, data flow, failure isolation and rollout.", ["trust boundaries", "data flow", "failure isolation", "rollout"]],
+    ["Describe the scope, the risks, and uh the rollback plan.", ["scope", "risks", "rollback plan"]],
+    ["Hmm, so, discuss preventive controls, detective controls and, er, corrective controls.", ["preventive controls", "detective controls", "corrective controls"]]]
+    .map(([q, parts]) => ({ kind: "parts", family: "listed parts in a garbled ask (round 9)", q, parts })),
+  ...["What is residual risk? And who signs it off? And how long does the acceptance last?",
+    "How do you scope an access review and who do you include and how do you report it and what do you do with the leavers?",
+    "Tell me about a time you challenged a plan, what the owner said, what you did next, and what you would do differently now."].map((q) => A("long multi-part, many asks (round 9)", q)),
+]
+
+const R10_MORE = [
+  ...["Uh, is it, um, is it ever okay to close a finding without evidence?", "So like, why would, why would a clean audit worry you?",
+    "Okay, the question is, how do you know a fix held?", "Here's the thing, what if the owner disagrees with the rating?",
+    "I guess, what is the difference between inherent and residual risk?", "Right so, um, what would you do if two findings conflict?",
+    "My question is, would you trust an owner's self-assessment?", "so, uh, the thing is, how do you, how do you rank findings?"].map((q) => A("garbled trick, three modes (round 10)", q, { garbled: true })),
+  ...[["Explain residual risk, compensating controls and exception expiry.", "And the last one?", "expiry"],
+    ["Explain residual risk, compensating controls and exception expiry.", "Go back to the first one.", "residual"],
+    ["Describe scoping, sampling and reporting for an access review.", "And the second part?", "sampling"]]
+    .map(([first, follow, keyword]) => ({ kind: "followup", family: "follow-up on one part of a multi-part (round 10)", first, follow, keyword })),
+  ...[["Jordan reviewed it. Afterwards he sent it back.", false, /^I reviewed .*Afterwards I sent/],
+    ["Jordan led it. So he tracked every finding.", false, /^I led .*So I tracked/],
+    ["Jordan led it. Then she signed it.", false, /^I led it\. Then I signed/],
+    ["He tracked the findings and reported them.", true, /^He tracked/]].map(([raw, flag, shape]) => ({ kind: "voice", family: "third person after a connector (round 10)", raw, flag, shape })),
+  ...["openai.RateLimitError: Error code: 429", "anthropic.APIStatusError: 529 overloaded", "google.api_core.exceptions.ServiceUnavailable: 503", "httpx.ReadTimeout: timed out",
+    "Error: socket hang up"].map((raw) => ({ kind: "provider", family: "provider-error SDK lines (round 10)", raw })),
+  ...["The RateLimitError in our client told me the vendor throttled us, so I batched the requests.", "A socket hang up from the proxy meant the change had broken keep-alive, so I rolled it back."]
+    .map((raw) => ({ kind: "notProvider", family: "provider-error look-alike (round 10, legit)", raw })),
+  ...["uh-huh", "mhm, okay", "right, okay, got it", "okay, I'm going to share my screen", "sorry, I'm on mute", "can everyone hear me okay"]
+    .map((heard) => ({ kind: "smalltalk", family: "small talk (round 10)", heard })),
+  // Failsafes for the round 9 tie rules: a new subject after "and", or mid-chain, is a new question.
+  ...[["What is residual risk?", "And what is zero trust?"], ["Who signs it off — following up on: \"What is residual risk\"?", "Where are you based?"],
+    ["Who signs it off — following up on: \"What is residual risk\"?", "Tell me about yourself."], ["Who signs it off — following up on: \"What is residual risk\"?", "What is least privilege?"],
+    ["How do you test a control?", "And describe your last access review."]].map(([first, next]) => ({ kind: "notFollowup", family: "new question, failsafe for the tie rules (round 10)", first, next })),
+]
+export const ROUNDS = [R1, R2, R3, R4, R5, R6, R7, R8, [...R9, ...R9_MORE], [...R10, ...R10_MORE]]
 export const INFO = []
 
 // ------------------------------------------------------------------ checks
@@ -271,6 +400,8 @@ function firstPersonIssues(text, q) {
   if (/\b(?:your|yourself)\b/i.test(text) && !/\byou\b/i.test("")) out.push("addresses the candidate as 'you/your'")
   if (/\bJordan\b|\b(?:he|she) (?:tracked|reviewed|told|sent)\b/.test(text)) out.push("third person")
   if (/\bI (?:how|what|why|where|when|who|um|uh|hi|hello|your|you|can your|residual|least|SQL|SOC|IAM|yourself)\b/i.test(text) || /\bI can your\b/i.test(text)) out.push("broken grammar around the question words")
+  // Round 9: an object "you" turned into "I" ("senior to I", "with I").
+  if (/\b(?:to|for|with|than|from|about|by|against) I\b(?!')/.test(text)) out.push("broken grammar: object 'I' instead of 'me'")
   if (FILLER.test(text)) out.push("echoes speech filler")
   return out
 }
@@ -370,7 +501,11 @@ export function judgeCase(c) {
     if (!tied) fails.push(`follow-up not tied to the previous question: "${formed}"`)
     for (const level of LEVELS) {
       const first = draftSpokenAnswer(c.first, level, RESUME)
-      const next = draftSpokenAnswer(formed, level, RESUME)
+      // Round 9: judged as asked live, like near-duplicates since round 6: production always has the previous answer for
+      // a tied follow-up. The stand-in with no history is reported as info only.
+      const next = draftSpokenAnswer(formed, level, RESUME, [first])
+      const coldNext = draftSpokenAnswer(formed, level, RESUME)
+      if (sameAnswerRatio(first, coldNext) >= 0.5) INFO.push(`follow-up stand-in with no history, ${level}: "${c.first}" / "${c.follow}" Jaccard ${sameAnswerRatio(first, coldNext).toFixed(2)}`)
       const r = sameAnswerRatio(first, next)
       if (r >= 0.5) fails.push(`${level}: follow-up repeats the first answer (Jaccard ${r.toFixed(2)})`)
       if (!next.toLowerCase().includes(c.keyword)) fails.push(`${level}: follow-up answer lacks "${c.keyword}"`)
@@ -379,6 +514,31 @@ export function judgeCase(c) {
     }
     const kw = questionKeywords(formed)
     if (!kw.some((k) => k.toLowerCase().includes(c.keyword.slice(0, 4)))) fails.push(`keywords miss the follow-up's word: ${kw.join("|")}`)
+    return fails
+  }
+  if (c.kind === "followChain") {
+    // Round 9: each follow-up is formed as live (history so far) and must stay tied to the conversation, not repeat an
+    // earlier answer in the chain, and stay first person.
+    const fails = []
+    for (const level of LEVELS) {
+      const history = [{ q: c.first, a: draftSpokenAnswer(c.first, level, RESUME) }]
+      for (const follow of c.chain) {
+        const formed = questionForAnswer(follow, "", false, false, history)
+        if (level === "engineer" && !/following up on/i.test(formed)) fails.push(`not tied: "${follow}" -> "${formed}"`)
+        const next = draftSpokenAnswer(formed, level, RESUME, history.map((h) => h.a))
+        for (const h of history) { const r = sameAnswerRatio(h.a, next); if (r >= 0.5) fails.push(`${level}: "${follow}" repeats an earlier answer (Jaccard ${r.toFixed(2)})`) }
+        for (const issue of firstPersonIssues(next, formed)) fails.push(`${level}: ${issue}`)
+        if (/following up on/i.test(next)) fails.push(`${level}: says the internal tag aloud`)
+        history.push({ q: formed, a: next })
+      }
+    }
+    return fails
+  }
+  if (c.kind === "parts") {
+    const got = askedPartList(c.q)
+    const fails = []
+    for (const p of c.parts) if (!got.some((g) => g.includes(p))) fails.push(`missing part "${p}": ${got.join("|")}`)
+    for (const g of got) if (/^(?:so|uh|um|er|hmm|like|you know|okay|okay so|what would you)$/i.test(g) || FILLER.test(g)) fails.push(`filler read as a part: "${g}"`)
     return fails
   }
   if (c.kind === "provider") {
@@ -468,7 +628,7 @@ export function runRound(index) {
   const failures = []
   for (const c of cases) {
     const fails = judgeCase(c)
-    if (fails.length) failures.push({ round: index + 1, family: c.family, ask: c.q || c.a || c.heard || c.follow || c.raw || c.sentence, fails: [...new Set(fails)] })
+    if (fails.length) failures.push({ round: index + 1, family: c.family, ask: c.q || c.a || c.first || c.heard || c.follow || c.raw || c.sentence, fails: [...new Set(fails)] })
   }
   return { round: index + 1, checks: cases.length, answers: cases.filter((c) => c.kind === "answer").length * 3, failures }
 }
