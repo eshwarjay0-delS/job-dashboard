@@ -39,7 +39,7 @@ test("only a signed-in user can issue a short-lived ticket", () => {
 
 test("ticket redeem is atomic, single-use and not client-readable", () => {
   assert.match(redeem, /claim_kompas_desktop_handoff/)
-  assert.match(redeem, /serviceClient/)
+  assert.match(redeem, /createServiceClient/)
   assert.match(redeem, /status: 410/)
   assert.match(redeem, /Cache-Control.*no-store/)
 })
