@@ -1,8 +1,7 @@
 // Guards r9b (29 Oct 2026): Lens contract v3 (displayOpener / isSafeDisplay). Offline, code-level only.
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync, existsSync } from "node:fs"
-import { execFileSync } from "node:child_process"
+import { readFileSync } from "node:fs"
 import * as R from "../../src/lib/kompasSourceRetrieval.ts"
 import * as G from "../../src/lib/kompasSentenceGate.ts"
 import { allowedNumbers, questionFigures, speakFacts } from "../../src/lib/kompasGuards.ts"
@@ -62,23 +61,9 @@ test("v3: the display never alters facts, numbers, dates or names, for every lea
   }
 })
 
-// ---- LEAD_INS must equal Lens's list, read from Lens's bundle (no hand copy)
-const BUNDLE = process.env.KOMPAS_LENS_BUNDLE || "/workspace/kompas-lens-r6.bundle"
-const LENS_REPO = process.env.KOMPAS_LENS_PREREQ || "/workspace/lens-work"
-function lensLeadIns() {
-  if (!existsSync(BUNDLE) || !existsSync(LENS_REPO)) return null
-  const dir = execFileSync("mktemp", ["-d"]).toString().trim()
-  try {
-    const git = (...a) => execFileSync("git", ["-C", dir, ...a], { stdio: ["ignore", "pipe", "pipe"] }).toString()
-    git("init", "-q"); git("fetch", "-q", LENS_REPO, "+refs/heads/*:refs/remotes/p/*")
-    git("fetch", "-q", BUNDLE, "+refs/heads/lens-r1:refs/remotes/b/lens")
-    const src = git("show", "refs/remotes/b/lens:src/lib/kompasOpener.ts")
-    const m = src.match(/export const LEAD_INS[^=]*=\s*(\[[^\]]*\])/)
-    return m ? JSON.parse(m[1]) : undefined
-  } finally { execFileSync("rm", ["-rf", dir]) }
-}
-const lens = lensLeadIns()
-test("LEAD_INS copy equals Lens's list in the bundle", { skip: lens === null ? `SKIPPED (not a pass): Lens bundle ${BUNDLE} or prerequisite repo ${LENS_REPO} absent` : false }, () => {
-  assert.ok(Array.isArray(lens), "LEAD_INS not found in Lens's kompasOpener.ts")
-  assert.deepEqual([...G.LEAD_INS], lens)
+// ---- LEAD_INS is Lens's list itself (Lens r7: the gate imports it from kompasOpener.ts; replaces the bundle-read drift test)
+import * as LensOpener from "../../src/lib/kompasOpener.ts"
+test("LEAD_INS is imported from Lens kompasOpener.ts (no hand copy can drift)", () => {
+  assert.equal(G.LEAD_INS, LensOpener.LEAD_INS)
+  assert.deepEqual([...G.LEAD_INS], [...LensOpener.LEAD_INS])
 })

@@ -17,9 +17,10 @@ import { retrievePassages, sourceIndexFor, unsupportedClaims, type Passage, type
 
 /** Lens contract v1 (research/lens-opener-contract.md): Opener. sourceDoc optional for the r6 hook's callers. */
 export interface SourcedOpener { text: string; sourceId: string; sourceDoc?: string; category: string; verbatim: true; leadIn?: string }
-/** Lens contract v2 (r5): the fixed lead-in list, mirrors Lens kompasOpener.ts LEAD_INS (r6); scripts/tests/kompas-guards-r9b.test.mjs fails if it differs from the Lens bundle. A lead-in
+/** Lens contract v2 (r5): the fixed lead-in list, imported from Lens kompasOpener.ts (r7); scripts/tests/kompas-guards-r9b.test.mjs checks it is the same list object. A lead-in
  *  not on this list is dropped, never spoken. None holds a name, number or date, so it can add no fact. */
-export const LEAD_INS: readonly string[] = ["In one of my roles, I ", "In my work, I ", "My work has involved ", "My work has included ", "In one of my roles, I was ", "I am ", "I have "]
+import { LEAD_INS } from "./kompasOpener.ts"
+export { LEAD_INS } // Lens r7: imported from Lens kompasOpener.ts (single source); was a hand copy checked against the Lens bundle
 /** Spoken opener = known lead-in + the approved verbatim text. Approval is on `text` alone (approveSourcedOpener). */
 /** Lens contract v3 (r6) mirror of displayOpener: lead-in + text with only text's first letter lowercased (kept for an
  *  acronym, inner-capital product name or one-letter first word). Pure; approval never uses it. */
