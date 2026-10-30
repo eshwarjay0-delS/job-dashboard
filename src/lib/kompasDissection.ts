@@ -792,10 +792,17 @@ export function evaluateLiveAnswers(rows: LiveAnswer[], sources = ""): { ok: boo
 /** The experience lines of a resume, in the candidate's order. Header, name, contact, and education are not experience. */
 export function experienceLines(resume: string): string[] {
   const text = String(resume || "").replace(/[*`]/g, " ")
-  const section = text.match(/^#+\s*(?:experience|work history|professional experience)\b[^\n]*\n([\s\S]*?)(?=^#+\s|\s*$(?![\s\S]))/im)
-  const body = section ? section[1] : text
+  const section = text.match(/^(#+)\s*(?:experience|work history|professional experience)\b[^\n]*\n([\s\S]*)/im)
+  // Source grounding (29 Oct 2026): a "### Role, Employer" heading inside Experience no longer ends the section; only
+  // a heading at the Experience level or higher does, and role headings themselves are not experience lines.
+  let body = text
+  if (section) {
+    const end = section[2].search(new RegExp(`^#{1,${section[1].length}}\\s`, "m"))
+    body = end >= 0 ? section[2].slice(0, end) : section[2]
+  }
   return body
     .split(/\n+/)
+    .filter((line) => !/^\s*#/.test(line))
     .map((line) => line.replace(/^[-•\s#]+/, "").replace(/\s+/g, " ").trim())
     .filter((line) => wordCount(line) >= 6 && !/@|https?:|^fictional\b|^b\.?s\.?\b|^education\b/i.test(line))
 }

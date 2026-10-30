@@ -21,6 +21,7 @@ import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasReleva
 import { questionKernel } from "@/lib/kompasIntentKernel"
 import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
 import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
+import { repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type SourceDoc } from "@/lib/kompasSourceRetrieval"
 import { lostAfterSettle, repairLogLine, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
@@ -334,6 +335,7 @@ type AnswerJob = {
   factsText: string
   streamPolicy: KompasStreamPolicy
   sourceText: string
+  sourceDocs: SourceDoc[]
   previousAnswer: string
   // Round 6: the last three turns, so a different question cannot get any of the last three answers again.
   previousTurns: Array<{ q: string; a: string }>
@@ -396,7 +398,10 @@ function repairChecks(job: AnswerJob, text: string): { core: string[]; all: stri
   // Round 6: the previous answer given again to a different question, and third person the settle rewrite cannot fix,
   // are core: the rewrite is kept only when it clears them, otherwise the original stands (never a blank answer).
   const voiceEcho = repairLoopVoiceEchoChecks(job.question, text, job.previousTurns, job.sourceText)
-  return { core: [...structure, ...named, ...voiceEcho], all: [...named, ...structure, ...voiceEcho, ...parts, ...tangents] }
+  // Source grounding (29 Oct 2026): a named employer, tool or figure the candidate's own sources do not back is a core
+  // item. Empty with no sources, so a sourceless turn repairs exactly as before.
+  const sourceCheck = repairLoopSourceChecks(job.question, text, job.sourceDocs)
+  return { core: [...structure, ...named, ...voiceEcho, ...sourceCheck], all: [...named, ...structure, ...voiceEcho, ...sourceCheck, ...parts, ...tangents] }
 }
 
 // At most two attempts. The second rewrites the BEST answer so far and names only what it still misses (v1 rewrote
@@ -920,6 +925,12 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
       .join("\n")
   }
 
+  // Source-grounded retrieval: the resume stays whole above; the most relevant labelled passages from all the user's
+  // own sources are listed with fact IDs, or an honest "not in your sources" line with the closest real example.
+  // Failsafe: any failure or no sources gives "" and the prompt is exactly as before.
+  const groundingDocs: SourceDoc[] = sourceDocs({ resume: resumeSrc, jd: jdSrc, documents: docsSrc, dossier: grounding, savedQA: str(config.savedQA, 8000) })
+  const sourceRetrieval = retrievePassages(question, groundingDocs)
+  const sourceBlock = sourcePassagesPrompt(sourceRetrieval)
   const context = [
     `The listener is at ${ANSWER_LEVEL_NAME[level]}. The level block below is the controlling spec for this answer's depth and register.`,
     tier === 0 ? `INTRODUCTION AUDIENCE: ${level}. Audience adjusts language and emphasis, not the career-wide scope. No step-by-step project reconstruction.` : levelGuidance(level, register),
@@ -945,6 +956,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     resumeFacts ? `${resumeFacts}` : "",
     tier !== 0 && jdSrc && !["closing-question","acknowledgement","definition","logistics"].includes(rediscovered.intent) ? `JOB DESCRIPTION (role priorities, not candidate history):\n${jdSrc}` : "",
     docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
+    sourceBlock,
     str(config.instructions, 2000) ? `SESSION PREFERENCES (delivery only; do not override source evidence): ${str(config.instructions, 2000)}` : "",
     `SOURCE PRIORITY: the current resume and original documents establish personal history. The JD sets relevance. Generated prep, prior answers and transcript are unverified. A resume bullet does not establish a specific incident, root cause, HSM vendor or measured outcome. If no incident is documented, explain the proposed approach conditionally.`,
     tier !== 0 && includeHistoryContext && transcript ? `Brief conversation context for this follow-up only:\n${transcript.slice(-800)}` : "",
@@ -1017,6 +1029,7 @@ ${INTERVIEW}`
     factsText,
     streamPolicy: answerStreamPolicy(tier, question),
     sourceText,
+    sourceDocs: groundingDocs,
     previousAnswer,
     previousTurns,
   }
