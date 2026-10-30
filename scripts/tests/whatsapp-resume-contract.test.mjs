@@ -128,3 +128,18 @@ test('recovery distinguishes Meta acceptance and signed handset confirmation', (
   assert.match(webhook, /state\?\.deliveryState === "delivered" \|\| state\?\.deliveryState === "read"/)
   assert.match(webhook, /handsetConfirmed, stillPending/)
 })
+
+test('switching WhatsApp email never rewrites the saved JD source or timestamps', () => {
+  const fn = webhook.match(/function remember\(session: Session, email: string\) \{([\s\S]*?)\n\}/)?.[1] || ''
+  assert.match(fn, /session\.preferredEmail = email\.toLowerCase\(\)/)
+  assert.doesNotMatch(fn, /session\.last\s*=/)
+  assert.doesNotMatch(fn, /Date\.now\(\)/)
+  assert.match(webhook, /session\.preferredEmail \|\| session\.last\?\.email/)
+})
+
+test('legacy recovery uses stable JD identity and refuses a duplicate persisted job', () => {
+  assert.match(webhook, /await hasResumeRecoveryForJD\(from, userId, last\.jd\)/)
+  assert.match(webhook, /const jdId = "legacy-" \+ jobKeyOf\(last\.jd\)/)
+  assert.doesNotMatch(webhook, /const jdId = "legacy-" \+ last\.at/)
+  assert.match(queue, /existing\.from === from && existing\.userId === userId && existing\.jd === jd/)
+})
