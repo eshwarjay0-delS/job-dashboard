@@ -622,18 +622,70 @@ function supportedBy(claim: string, haystack: string): boolean {
 // "I see you ran…"). Only the clause about "you/your" is read, never the interviewer's own company line.
 // r10 (Lens r4 note): result verbs (cut, reduced, slashed, lowered, dropped, …) and "I heard / I understand" lead-ins added.
 // r11b: "you had / you'd / your team" subjects and a clause-opening result gerund ("Cutting incidents 70% …") added (stricter only).
-const PREMISE_CLAUSE = /(?:^|[.?!,;]\s*|\b(?:so|and|i see|i know|i noticed|i read that|i heard(?: that)?|i understand(?: that)?|i was told(?: that)?)\s+)((?:since|as|given(?: that)?|because|now that|considering|with)\s+(?:you|your)\b[^,?.;]{3,140}|(?:you|you've|you have|you had|you'd|your (?:team|group|org|organi[sz]ation))\s+(?:led|managed|ran|built|owned|were|grew|headed|scaled|cut|reduced|lowered|slashed|dropped|decreased|halved|closed|saved|rotated|wrote|caught|deployed|implemented|improved|increased|boosted)\b[^,?.;]{3,140}|(?<=^|[.?!;]\s*)(?:cutting|reducing|lowering|slashing|dropping|decreasing|halving|closing|saving|rotating|improving|increasing|boosting)\s+[^,?.;]{3,140})/gi
+const PREMISE_CLAUSE = /(?:^|[.?!,;]\s*|\b(?:so|and|i see|i know|i noticed|i read that|i heard(?: that)?|i understand(?: that)?|i was told(?: that)?)\s+)((?:since|as|given(?: that)?|because|now that|considering|with)\s+(?:you|your)\b[^,?.;]{3,140}|(?:you|you've|you have|you had|you'd|your (?:team|group|org|organi[sz]ation))\s+(?:led|managed|ran|built|owned|were|grew|headed|scaled|cut|reduced|lowered|slashed|dropped|decreased|halved|closed|saved|rotated|onboarded|doubled|tripled|quadrupled|covered|migrated|hired|trained|wrote|caught|deployed|implemented|improved|increased|boosted)\b[^,?.;]{3,140}|(?<=^|[.?!;]\s*)(?:cutting|reducing|lowering|slashing|dropping|decreasing|halving|closing|saving|rotating|doubling|tripling|improving|increasing|boosting)\s+[^,?.;]{3,140})/gi
+// r11c: spelled-out figures read as digits for the premise check only (question clause and sources alike), so
+// "seventy percent" = "70%", "half" = "50%", "doubled" = "doubled 100%". Stricter only; failsafe: text unchanged.
+const SP_UNITS: Record<string, number> = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 }
+const SP_TENS: Record<string, number> = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 }
+export function spelledFigures(text: string): string {
+  try {
+    let t = String(text || "")
+    t = t.replace(/\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[\s-]+(one|two|three|four|five|six|seven|eight|nine))?\b/gi,
+      (_m, a: string, b?: string) => String(SP_TENS[a.toLowerCase()] + (b ? SP_UNITS[b.toLowerCase()] : 0)))
+    t = t.replace(/\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\b(?=\s+(?:percent|per cent|%|[a-z]+s\b))/gi, (m) => String(SP_UNITS[m.toLowerCase()]))
+    t = t.replace(/\b(\d+(?:\.\d+)?)\s*(?:percent|per cent)\b/gi, "$1%")
+    t = t.replace(/\btwo[\s-]thirds?\b/gi, "67%").replace(/\b(?:a|one)[\s-]third\b/gi, "33%").replace(/\b(?:three|3)[\s-]quarters\b/gi, "75%")
+      .replace(/\b(?:a|one)[\s-]quarter\b(?!\s+(?:of\s+)?(?:19|20)\d\d)/gi, "25%").replace(/\b(?:in|by)\s+half\b/gi, "by 50%").replace(/\bhalved\b/gi, "halved 50%")
+      .replace(/\b(doubl(?:ed|ing))\b/gi, "$1 100%").replace(/\b(tripl(?:ed|ing))\b/gi, "$1 200%").replace(/\b(quadrupl(?:ed|ing))\b/gi, "$1 300%")
+    return t
+  } catch { return String(text || "") }
+}
+const PREMISE_VERBISH = /^(?:cut|cuts|cutting|reduc\w*|lower\w*|slash\w*|drop\w*|decreas\w*|halv\w*|clos\w*|sav\w*|rotat\w*|improv\w*|increas\w*|boost\w*|doubl\w*|tripl\w*|quadrupl\w*|grew|grow\w*|rais\w*|right|correct|about|around|nearly|almost|over|more|less|than|with|from|into|across|last|year|years|month|months|percent|that|this|your|their|just)$/
+/** r11c: content words within 3 words either side of a figure in a premise clause (verbs and fillers dropped), stemmed. */
+function premiseNouns(clause: string, at: number, end: number): string[] {
+  const w = (t: string) => (t.toLowerCase().match(/[a-z][a-z-]+/g) || []).filter((x) => x.length >= 4 && !PREMISE_VERBISH.test(x)).map((x) => x.replace(/(?:ies|es|s)$/, ""))
+  return [...w(clause.slice(0, at)).slice(-3), ...w(clause.slice(end)).slice(0, 3)]
+}
+/** r11c: true when the sources state the same percentage with one of these words within 6 words of it. */
+function hayFigureNear(hay: string, n: string, near: string[]): boolean {
+  try {
+    for (const f of figureMentions(hay)) {
+      if (f.n !== n) continue
+      // the same line only, within 80 characters either side
+      const ls = Math.max(hay.lastIndexOf("\n", f.at) + 1, f.at - 80)
+      const le0 = hay.indexOf("\n", f.end), le = Math.min(le0 < 0 ? hay.length : le0, f.end + 80)
+      const win = hay.slice(ls, le).toLowerCase().match(/[a-z][a-z-]+/g) || []
+      const stems = new Set(win.map((x) => x.replace(/(?:ies|es|s)$/, "")))
+      if (near.some((x) => stems.has(x))) return true
+    }
+    return false
+  } catch { return true }
+}
 /** Interviewer claims about the candidate that the experience sources do not back. Empty with no sources or no premise. */
 export function falsePremises(question: string, docs: SourceDoc[] | null | undefined): string[] {
   try {
     if (!Array.isArray(docs) || !docs.some((d) => d.proves === "experience")) return []
-    const hay = docs.filter((d) => d.proves === "experience").map((d) => d.text).join("\n").toLowerCase()
+    const hay = spelledFigures(docs.filter((d) => d.proves === "experience").map((d) => d.text).join("\n")).toLowerCase()
     const out: string[] = []
-    for (const m of String(question || "").matchAll(PREMISE_CLAUSE)) {
+    for (const m of spelledFigures(String(question || "")).matchAll(PREMISE_CLAUSE)) {
       const clause = m[1].replace(/^(?:since|as|given(?: that)?|because|now that|considering|with)\s+/i, "").replace(/^(?:you|your)\s+/i, "")
         // r11b: the clause-opening gerund ("Cutting …") is the verb, not a name
         .replace(/^(?:cutting|reducing|lowering|slashing|dropping|decreasing|halving|closing|saving|rotating|improving|increasing|boosting)\b/i, (w) => w.toLowerCase())
       for (const c of extractClaims(clause)) if (!/^(?:you|your|i)$/i.test(c) && !supportedBy(c, hay) && !out.includes(c)) out.push(c)
+      // r11c: a figure in the premise must be backed with its own noun (the words around it in the clause), not the bare
+      // number alone ("cut incidents by 50%" is not backed by "cut audit prep time by 50%"). Stricter only; failsafe: skip.
+      try {
+        const keys = contextSet(hay)
+        for (const f of figureMentions(clause)) {
+          if (f.label) continue
+          const raw = f.raw.trim()
+          if (f.head.length) { if (!mentionSupported(f, keys) && !out.includes(raw)) out.push(raw); continue }
+          if (!f.pct) continue
+          // a percentage: some content word around it in the clause must sit around the same figure in the sources
+          const near = premiseNouns(clause, f.at, f.end)
+          if (near.length && !hayFigureNear(hay, f.n, near) && !out.includes(raw)) out.push(raw)
+        }
+      } catch { /* failsafe: claims above only */ }
     }
     return dropCoveredFigureClaims(out)
   } catch {
