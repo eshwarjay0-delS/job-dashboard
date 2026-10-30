@@ -5,7 +5,7 @@ const rate=(a,b)=>b?a/b:null;
 export function evaluate(dataset,baseline=null){
   if(!dataset||!dataset.datasetId||!dataset.revision||!Array.isArray(dataset.samples)||!dataset.samples.length)
     throw Error("Dataset ID, revision and nonempty samples required");
-  const ids=new Set(),sum={referenceWords:0,substitutions:0,deletions:0,insertions:0,expected:0,recognized:0,zero:0,edited:0,speakers:0,correct:0,silent:0,hallucinated:0},times=[];
+  const ids=new Set(),sum={referenceWords:0,substitutions:0,deletions:0,insertions:0,expected:0,recognized:0,zero:0,edited:0,speakers:0,predicted:0,correct:0,silent:0,hallucinated:0},times=[];
   for(const [i,row] of dataset.samples.entries()){
     if(!row||row.consent!==true)throw Error("Sample "+(i+1)+": explicit evaluation consent required");
     if(typeof row.id!=="string"||!row.id||ids.has(row.id))throw Error("Sample "+(i+1)+": invalid or duplicate ID");
@@ -18,7 +18,11 @@ export function evaluate(dataset,baseline=null){
     for(const k of ["referenceWords","substitutions","deletions","insertions"])sum[k]+=e[k];
     sum.expected+=t.expected;sum.recognized+=t.recognized;
     if(row.editCount!==undefined){sum.edited++;if(row.editCount===0)sum.zero++}
-    if(typeof row.referenceSpeaker==="string"&&typeof row.predictedSpeaker==="string"){sum.speakers++;if(row.referenceSpeaker===row.predictedSpeaker)sum.correct++}
+    if(typeof row.referenceSpeaker==="string"){
+      // A missing prediction is an attribution failure, not an unmeasured clip.
+      sum.speakers++;
+      if(typeof row.predictedSpeaker==="string"){sum.predicted++;if(row.referenceSpeaker===row.predictedSpeaker)sum.correct++}
+    }
     if(row.latencyMs!==undefined)times.push(row.latencyMs);
     if(e.referenceWords===0){sum.silent++;if(e.insertions)sum.hallucinated++}
   }
@@ -40,7 +44,7 @@ export function evaluate(dataset,baseline=null){
     dataset.samples.map(row=>({
       id:row.id,
       hasEditLabel:row.editCount!==undefined,
-      hasSpeakerLabel:typeof row.referenceSpeaker==="string"&&typeof row.predictedSpeaker==="string",
+      hasReferenceSpeaker:typeof row.referenceSpeaker==="string",
       hasLatency:row.latencyMs!==undefined,
     })).sort((a,b)=>a.id.localeCompare(b.id))
   )).digest("hex");
@@ -48,12 +52,13 @@ export function evaluate(dataset,baseline=null){
     deletionRate:rate(sum.deletions,sum.referenceWords),substitutionRate:rate(sum.substitutions,sum.referenceWords),
     insertionRate:rate(sum.insertions,sum.referenceWords),technicalTermRecall:rate(sum.recognized,sum.expected),
     zeroEditRate:rate(sum.zero,sum.edited),speakerAttribution:rate(sum.correct,sum.speakers),
+    speakerPredictionRate:rate(sum.predicted,sum.speakers),
     p50LatencyMs:percentile(times,.5),p95LatencyMs:percentile(times,.95),
     silenceHallucinationRate:rate(sum.hallucinated,sum.silent)};
-  const out={schemaVersion:1,datasetId:dataset.datasetId,revision:dataset.revision,sampleCount:dataset.samples.length,sampleSetSha256,referenceSetSha256,measurementSetSha256,
+  const out={schemaVersion:2,datasetId:dataset.datasetId,revision:dataset.revision,sampleCount:dataset.samples.length,sampleSetSha256,referenceSetSha256,measurementSetSha256,
     coverage:{referenceWords:sum.referenceWords,technicalOccurrences:sum.expected,editLabels:sum.edited,speakerLabels:sum.speakers,latencySamples:times.length,silentClips:sum.silent},metrics};
   if(baseline){
-    if(baseline.schemaVersion!==1||baseline.datasetId!==out.datasetId||baseline.revision!==out.revision||baseline.sampleCount!==out.sampleCount||baseline.sampleSetSha256!==sampleSetSha256||baseline.referenceSetSha256!==referenceSetSha256||baseline.measurementSetSha256!==measurementSetSha256)
+    if(baseline.schemaVersion!==2||baseline.datasetId!==out.datasetId||baseline.revision!==out.revision||baseline.sampleCount!==out.sampleCount||baseline.sampleSetSha256!==sampleSetSha256||baseline.referenceSetSha256!==referenceSetSha256||baseline.measurementSetSha256!==measurementSetSha256)
       throw Error("Baseline mismatch: dataset, revision or sample count");
     if(!baseline.coverage||Object.entries(out.coverage).some(([key,count])=>baseline.coverage[key]!==count)||
       !baseline.metrics||Object.keys(metrics).some(key=>
