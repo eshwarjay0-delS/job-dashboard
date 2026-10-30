@@ -85,3 +85,70 @@ test("desktop preserves unrestricted long text up to the overall platform envelo
   assert.match(issue, /Buffer\.byteLength\(raw, "utf8"\) > MAX_BYTES/, "overall byte safeguard remains")
   assert.match(issue, /session\.site !== "marketfit"/, "session origin check remains")
 })
+
+
+test("a redeemed desktop ticket is never reused on relaunch or as a retry link", async () => {
+  const start = app.indexOf("let desktopTicketCache =")
+  const end = app.indexOf("let lastDesktopHandoff =", start)
+  assert.ok(start > 0 && end > start)
+  const issued = [], launched = [], links = []
+  const status = { classList: { remove() {} }, appendChild(node) { links.push(node) }, textContent: "" }
+  const ctx = {
+    packSession: s => "marketfit-kompas://open?d=" + Buffer.from(JSON.stringify({id:s.id,site:"marketfit"}),"utf8").toString("base64url"),
+    atob: s => Buffer.from(s,"base64url").toString("binary"), escape, decodeURIComponent,
+    Date, JSON, String, Promise,
+    fetch: async (_url, opts) => {
+      issued.push(JSON.parse(opts.body).session)
+      return {ok:true,json:async()=>({ok:true,ticket:String(issued.length).padStart(43,"A")})}
+    },
+    window: {location:{assign(url) {launched.push(url)}}},
+    document: {createElement(){return {style:{},onclick:null,href:"",textContent:""}},createTextNode(t){return {textContent:t}}},
+    $: id => id === "cnDeskMiss" ? status : {classList:{remove(){}}},
+  }
+  vm.runInNewContext(app.slice(start,end)+"\nthis.preview = prepareDesktopSession; this.launch = launchInstalled;", ctx)
+  const s = {id:"s123",role:"Security Engineer",resume:"full resume",instructions:"long instructions"}
+  await ctx.preview(s)
+  ctx.launch(s)
+  assert.equal(launched.length,1)
+  assert.ok(launched[0].endsWith(String(1).padStart(43,"A")))
+  // A second Connect must request another ticket, never use the already-redeemed one.
+  ctx.launch(s)
+  await new Promise(resolve=>setImmediate(resolve))
+  assert.equal(issued.length,2)
+  assert.ok(launched[1].endsWith(String(2).padStart(43,"A")))
+  const retry = links.filter(x=>x&&typeof x.onclick==="function").at(-1)
+  assert.ok(retry)
+  assert.equal(retry.href,"#","a previously attempted ticket must not be left in a clickable link")
+  await retry.onclick({preventDefault(){}})
+  await new Promise(resolve=>setImmediate(resolve))
+  assert.ok(retry.href.endsWith(String(3).padStart(43,"A")),"retry prepares another unused ticket")
+})
+
+test("desktop handoff updates existing account session without losing transcript or persisting tokens", async () => {
+  const start = app.indexOf("let lastDesktopHandoff =")
+  const end = app.indexOf("window.kompasDesktop?.takeSession?.()",start)
+  assert.ok(start>0 && end>start)
+  const existing={id:"s777",resume:"old resume",jd:"old JD",instructions:"old rules",transcripts:[{q:"test",a:"saved"}],endedAt:101,token:"stale-secret"}
+  let stored=[existing], opened=null
+  const ctx={
+    Date:{now:()=>10000},
+    window:{kompasDesktop:{}},
+    accountSessionSync:{refresh:async()=>true},
+    LS:{get:()=>stored,set(_key,v){stored=v}},
+    sessions:stored,
+    launchCopilot:s=>{opened=s},
+    $:()=>({classList:{add(){},contains(){return false}},click(){}}),
+  }
+  vm.runInNewContext(app.slice(start,end)+"\nthis.openHandoff=openHandedSession;",ctx)
+  await ctx.openHandoff({id:"s777",resume:"new resume",jd:"new JD",instructions:"all new rules",token:"bearer-secret",refreshToken:"refresh-secret",tokenExp:1234})
+  assert.equal(stored.length,1)
+  assert.equal(stored[0].resume,"new resume")
+  assert.equal(stored[0].jd,"new JD")
+  assert.equal(stored[0].instructions,"all new rules")
+  assert.equal(stored[0].transcripts.length,1)
+  assert.equal(stored[0].endedAt,101)
+  for (const key of ["token","refreshToken","tokenExp"]) {
+    assert.equal(Object.hasOwn(stored[0],key),false,key+" must never enter device session storage")
+  }
+  assert.equal(opened.instructions,"all new rules")
+});
