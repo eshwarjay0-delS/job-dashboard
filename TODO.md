@@ -1,3 +1,7 @@
+## 2026-10-30 — Two questions on screen are answered separately
+
+A screen capture that held two questions was one answer. Each Question block is now its own page. The options stay with their question. One question on screen is still one page. There is still no review dialog. The page stamp is kompas-20261030-screen.
+
 ## 2026-10-30 — Two typed questions open two pages
 
 Typing "What is Kubernetes? What is Terraform?" kept both on one page. The box now uses the same cut as the microphone and WhatsApp. Each question gets its own page. A design followed by an explanation stays one page. One typed question still opens one page. The page stamp is kompas-20261030-typed.

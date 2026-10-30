@@ -2737,6 +2737,15 @@ function stripScreenChrome(question) {
   const stripped = String(question || "").replace(/^Question \d+ \([^)\n]{0,80}\):\s*/gm, "").trim();
   return stripped || String(question || "").trim();
 }
+// A captured screen can hold more than one question. Each Question N block is
+// its own ask, options included. One block stays one ask. No review dialog.
+function screenQuestionPieces(raw) {
+  const text = String(raw || "").trim();
+  if (!text) return [];
+  const headed = text.split(/(?=Question \d+ \([^)\n]{0,80}\):)/).map((s) => s.trim()).filter(Boolean);
+  const parts = (headed.length > 1 ? headed : [text]).map((s) => stripScreenChrome(s)).filter(Boolean);
+  return parts.length ? parts : [stripScreenChrome(text)];
+}
 async function analyseScreen() {
   if (aiBusy) { status("Still working on the last answer.", "live"); return; }
   aiBusy = true; aiBusySince = Date.now();
@@ -2763,17 +2772,32 @@ async function analyseScreen() {
       // directly from its tasks, the same as a fresh direct answer.
       const tasks = Array.isArray(data.tasks) ? data.tasks : [];
       if (!tasks.length) throw new Error("No screen question was returned. Please retry.");
-      const formatted = (typeof window !== "undefined" && window.KompasScreenCore && typeof window.KompasScreenCore.format === "function")
-        ? window.KompasScreenCore.format(tasks)
-        : tasks.map(t => t.question).join("\n\n");
-      if (typeof formatted !== "string" || !formatted.trim()) throw new Error("No screen question was returned. Please retry.");
-      card.question = stripScreenChrome(formatted.trim()); card.screenTask = true;
-      await generateAnswer(card.question, card, { pinned: true, derived: card.question, source: "screen" });
+      const pieces = tasks.map((t) => {
+        const formatted = (typeof window !== "undefined" && window.KompasScreenCore && typeof window.KompasScreenCore.format === "function")
+          ? window.KompasScreenCore.format([t])
+          : t.question;
+        return stripScreenChrome(String(formatted || "").trim());
+      }).filter(Boolean);
+      if (!pieces.length) throw new Error("No screen question was returned. Please retry.");
+      card.question = pieces[0]; card.screenTask = true;
+      await generateAnswer(pieces[0], card, { pinned: true, derived: pieces[0], source: "screen" });
+      for (const piece of pieces.slice(1)) {
+        if ((current && current.id) !== screenSession || !cards.includes(card)) return;
+        const next = addCard(piece, ["…"]); next.screenTask = true;
+        await generateAnswer(piece, next, { pinned: true, derived: piece, source: "screen" });
+      }
       return;
     } else if (data.needsAnswer === true) {
       if (typeof data.question !== "string" || !data.question.trim()) throw new Error("No screen question was returned. Please retry.");
-      card.question = stripScreenChrome(data.question.trim()); card.screenTask = true;
-      await generateAnswer(card.question, card, { pinned: true, derived: card.question, source: "screen" });
+      const pieces = screenQuestionPieces(data.question);
+      if (!pieces.length) throw new Error("No screen question was returned. Please retry.");
+      card.question = pieces[0]; card.screenTask = true;
+      await generateAnswer(pieces[0], card, { pinned: true, derived: pieces[0], source: "screen" });
+      for (const piece of pieces.slice(1)) {
+        if ((current && current.id) !== screenSession || !cards.includes(card)) return;
+        const next = addCard(piece, ["…"]); next.screenTask = true;
+        await generateAnswer(piece, next, { pinned: true, derived: piece, source: "screen" });
+      }
       return;
     }
     if (!data.needsReview) {
