@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url"
 // r7 (29 Oct 2026): pending #27 (one code-first vs spoken rule per surface), #28 (eval runner hardening), #29 (realism
 // banks). OFFLINE, code-level only: these tests say nothing about live answer quality.
 import test from "node:test"
@@ -130,7 +131,7 @@ import { spawnSync } from "node:child_process"
 test("#28 eval runner: offline banks run writes evidence, a labelled report and a scorecard; a rerun keeps evidence", () => {
   const dir = mkdtempSync(join(tmpdir(), "r7ev-")); const ev = join(dir, "ev.jsonl")
   const env = { ...process.env, KOMPAS_EVAL_OFFLINE: "1", KOMPAS_EVAL_SET: "banks", KOMPAS_EVAL_EVIDENCE: ev, KOMPAS_EVAL_TOKEN: "" }
-  const script = new URL("../kompas-live-eval.mjs", import.meta.url).pathname
+  const script = fileURLToPath(new URL("../kompas-live-eval.mjs", import.meta.url))
   const a = spawnSync(process.execPath, [script], { env, encoding: "utf8" })
   assert.equal(a.status, 0, a.stderr.slice(-400))
   const rep = JSON.parse(readFileSync(`${ev}.report.json`, "utf8"))

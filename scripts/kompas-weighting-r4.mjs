@@ -3,8 +3,8 @@
 // Compares the question-kind boost OFF, ON (r2/r3 strength) and as a tiebreaker (r4), on the r3 28-question fixture and
 // a new 64-question fixture. "Right passage first" means the passage a good answer leads on is ranked first.
 import { readFileSync } from "node:fs"
-import { pathToFileURL } from "node:url"
-const R = await import(pathToFileURL(new URL("../src/lib/kompasSourceRetrieval.ts", import.meta.url).pathname).href)
+import { pathToFileURL, fileURLToPath } from "node:url"
+const R = await import(pathToFileURL(fileURLToPath(new URL("../src/lib/kompasSourceRetrieval.ts", import.meta.url))).href)
 const W3 = await import("./kompas-weighting-r3.mjs")
 const S4 = JSON.parse(readFileSync(new URL("../tests/fixtures/kompas-weighting-sources-r4.json", import.meta.url), "utf8"))
 const S3 = JSON.parse(readFileSync(new URL("../tests/fixtures/kompas-weighting-sources.json", import.meta.url), "utf8"))

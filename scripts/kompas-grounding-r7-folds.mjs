@@ -7,12 +7,12 @@
  * production question step); the "answer" is the stand-in draft (draftSpokenAnswer) at the sequence's mode, judged by the
  * r7 detectors (scripts/kompas-eval-hardening.mjs) and the per-surface rule (#27).
  */
-import { pathToFileURL } from "node:url"
+import { pathToFileURL, fileURLToPath } from "node:url"
 import { sequences } from "./kompas-realism-banks.mjs"
 import * as H from "./kompas-eval-hardening.mjs"
 import { normalizeAskText } from "../src/lib/kompasAskText.ts"
 import { spokenSurface, surfaceViolations } from "../src/lib/kompasSurfaceRule.ts"
-const ROOT = process.env.KOMPAS_ROOT || new URL("..", import.meta.url).pathname
+const ROOT = process.env.KOMPAS_ROOT || fileURLToPath(new URL("..", import.meta.url))
 const D = await import(pathToFileURL(`${ROOT}/src/lib/kompasDissection.ts`).href)
 const A = await import(pathToFileURL(`${ROOT}/src/lib/kompasAnswer.ts`).href)
 const Rel = await import(pathToFileURL(`${ROOT}/src/lib/kompasRelevance.ts`).href)

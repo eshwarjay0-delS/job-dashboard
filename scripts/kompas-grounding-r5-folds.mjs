@@ -8,8 +8,8 @@
  * "answer" is the stand-in draft (draftSpokenAnswer) plus seeded inventions and premise echoes.
  */
 import { readFileSync } from "node:fs"
-import { pathToFileURL } from "node:url"
-const ROOT = process.env.KOMPAS_ROOT || new URL("..", import.meta.url).pathname
+import { pathToFileURL, fileURLToPath } from "node:url"
+const ROOT = process.env.KOMPAS_ROOT || fileURLToPath(new URL("..", import.meta.url))
 const D = await import(pathToFileURL(`${ROOT}/src/lib/kompasDissection.ts`).href)
 const R = await import(pathToFileURL(`${ROOT}/src/lib/kompasSourceRetrieval.ts`).href)
 const A = await import(pathToFileURL(`${ROOT}/src/lib/kompasAnswer.ts`).href)

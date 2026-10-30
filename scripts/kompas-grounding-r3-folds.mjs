@@ -7,8 +7,8 @@
  * The "answer" is the code-level stand-in draft (draftSpokenAnswer) plus seeded inventions; no model writes anything.
  */
 import { readFileSync } from "node:fs"
-import { pathToFileURL } from "node:url"
-const ROOT = process.env.KOMPAS_ROOT || new URL("..", import.meta.url).pathname
+import { pathToFileURL, fileURLToPath } from "node:url"
+const ROOT = process.env.KOMPAS_ROOT || fileURLToPath(new URL("..", import.meta.url))
 const D = await import(pathToFileURL(`${ROOT}/src/lib/kompasDissection.ts`).href)
 const R = await import(pathToFileURL(`${ROOT}/src/lib/kompasSourceRetrieval.ts`).href)
 const S = JSON.parse(readFileSync(new URL("../tests/fixtures/kompas-sample-sources.json", import.meta.url), "utf8"))
