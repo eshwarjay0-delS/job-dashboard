@@ -70,6 +70,39 @@ The depth flag already said deep. The prompt now says sentence one adds the mech
 
 "Go deeper" and "Explain that" were glued onto the previous question, and the quoted "what is" made the follow-up a definition again. The follow-up is classified from the words before that quote. "Which of those" stays a comparison. "What is NLA" by itself stays a definition. One hundred intent folds still pass.
 
+## 2026-10-29 — Kompas relevance folds 1 to 14: repair is visible, the number guard keeps structure, code comes first
+
+**Done on the box.** Cloud agents failed at startup. Same branch as PR #124, with master merged in. The fold log is in `docs/kompas-relevance-playbook.md`.
+
+- The repair prompt no longer says "Do not shorten it" against the tangent rule and the word ceiling.
+- The second repair attempt builds on the best rewrite.
+- Every answer carries a `repair` outcome, and `survived` shows when a later step cut a landed repair.
+- The number guard passes versions such as 5.4.6 and the interviewer's own figures, and says "noticeably", not "by noticeably".
+- Code questions are told to give the fenced block first at every level.
+- Multi-part and "go deeper" questions get the larger band.
+- The offline draft uses the resume's experience lines and never the header.
+- `scripts/kompas-live-eval.mjs` now runs the hitachi-grc chain and checks the pieces each question names.
+
+**Tests (code-level only, not live answer quality).**
+- The CI node test steps: 745 pass, 0 fail. This includes the new `kompas-relevance-folds.test.mjs` (16) and `kompas-guards.test.mjs` (6), both added to CI.
+- `node scripts/kompas-baseline.mjs`: 15 checks hold.
+- `tsc --noEmit`: clean.
+- `npm run lint`: 0 errors, 260 warnings that were already there.
+
+**Not tested.** No live answer was measured, because `KOMPAS_EVAL_TOKEN` was not set. Desktop was not checked. Deploy was not checked. GitHub CI has not run on these commits, because no push was possible from the box.
+
+## 2026-10-29 — Kompas relevance fold: dissection, mode ceilings, master prompt v1
+
+**Checked first.** Master and production were the same commit, `4f70b96`. Deployment `dpl_BeCwCn5npGE1rXmJ1Hvi2SvVDJ68` was READY and held `job-dashboard-fawn.vercel.app`. Pull requests 111, 112, and 113 are already inside that commit. `POST /api/answer` on that build returned 404. `POST /api/kompas/answer` returned 401. The page rewrites the first path in the browser. Open pull requests 89, 32, and 23 are not in production. They are not the chief answer algorithm.
+
+**This fold.** The question is dissected into its shape, its own keywords, and a ban list of tools that are not in the question or the resume. The three modes have word ceilings at least 50 percent apart. A long answer is cut to that ceiling. A banned tool is dropped. Provider error text is not returned as the answer, and the page will not paint it. `/api/answer` now hits the same engine as `/api/kompas/answer`. The spoken spec is `docs/kompas/MASTER_PROMPT_v1.md`. The handoff is `docs/kompas-relevance-playbook.md`.
+
+**Tests.** Code tests cover the bands, the ban list, the trim, the provider-error refusal, four hand-written reference answers against a fictional resume, and the live-eval script refusing to run with no token. Not a live model score. `KOMPAS_EVAL_TOKEN` was not set.
+
+**Deploy.** Not claimed in this note until the pull request is merged and the new production deployment is READY.
+
+**Offline stress rounds 6 and 7 (local, not pushed).** Merged master (#125). Rounds 1 to 5 went from 11 failing to 0 of 204. Round 6 added 90 checks and round 7 added 33. On first run, round 6 had 11 failing and round 7 had 2 failing. All 327 now pass. Fixed: "resid jewel risk" is repaired to residual risk, and a short "what's X" is a definition. The candidate's name or he/she in a past-tense sentence is rewritten to "I". Any other third-person voice is flagged to the repair loop. Each mode is at least 1.5 times the one below. The same answer to a different question, compared against the last three turns, is flagged to the repair loop. Sentences said in the last three answers are dropped. Five more asides are treated as small talk. "HTTP 503 Service Unavailable" and "The upstream request timed out." are refused. Misheard jargon is grounded on the repaired ask. Without history, the offline stand-in still gives alike drafts for 46 near-duplicate pairs. This is reported as information, not as a failure. Offline and code-level only. Not live answer quality.
+
 ## 2026-10-29 — Same title, the folder that names the speciality stays
 
 Two files both titled Security Engineer were a tie for Information Security AI Engineer. The one in AI Security and Governance stays. The one in Application and API Security does not, when the job names AI. A title that already names the speciality still wins on the title. A Security Analyst in an Identity folder is still kept for a Security Analyst job, because that job names no extra speciality.

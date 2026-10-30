@@ -1,14 +1,17 @@
+import { figureList } from "@/lib/kompasFigureContext"
 import { NextRequest, NextResponse } from "next/server"
 import { keysFor, resolveKeys, type LlmKeys } from "@/lib/llm"
 import { checkRateLimit } from "@/lib/rateLimit"
 import { dossierContext } from "@/lib/dossier"
-import { resumeRoles, resumeDigest, employerAliases } from "@/lib/kompasResume"
+import { employerAliases } from "@/lib/kompasResume"
+import { cachedDigest, sessionFacts } from "@/lib/kompasSessionCache"
+import { createSentenceGate, sentenceCheck, sourcedOpenerFor, splitOpenerPassages, withOpener, type SourcedOpener } from "@/lib/kompasSentenceGate"
 import { hashUserId } from "@/lib/sttLedger"
 import { scheduleLlmRecord } from "@/lib/llmLedger"
 import {
   classify, canonicalQuestion, requestedParts, cutShort, lengthPlan, questionDepth, deriveByCode, questionForAnswer, DIRECTOR_OPENING,
   tierRule, pickShape, DERIVE_SYSTEM, INTRODUCTION_POLICY, INTRO_CAREER_SPINE, INTENT_BOUNDARY, PERSONAL_EXPERIENCE_POLICY, TECHNICAL_ANSWER_BOUNDARY, RESPONSE_CRAFT_POLICY, isPersonalEvidenceQuestion, type LengthPlan,
-  answerLevel, questionRegister, levelGuidance, ANSWER_LEVEL_NAME, missingStructure, STRUCTURE_REPAIR_SYSTEM,
+  answerLevel, questionRegister, levelGuidance, ANSWER_LEVEL_NAME, missingStructure, structureRepairSystem,
   normLedger, toLedgerProjects, pickProject, pickBottleneck, pickAngle,
   commit, recordAngle, matchBank, differentQuestionLine,
 } from "@/lib/kompasAnswer"
@@ -19,12 +22,16 @@ import { latestInterviewerAsk, precisionPrompt, questionCoverage, missingQuestio
 import { focusPlan, focusPrompt, applyFocusBudget, tangentSignals, missingNamedQuestionTerms, interviewIntent } from "@/lib/kompasRelevance"
 import { rediscoverRelevance, relevanceRecoveryPrompt } from "@/lib/kompasRelevanceRecovery"
 import { questionKernel } from "@/lib/kompasIntentKernel"
+import { masterPromptBlock } from "@/lib/kompasMasterPrompt"
+import { dissectQuestion, dissectionPrompt, isProviderErrorAnswer, repairLoopVoiceEchoChecks, modeBand, settleSpokenAnswer } from "@/lib/kompasDissection"
+import { premisePrompt, repairLoopSourceChecks, retrievePassages, sourceDocs, sourcePassagesPrompt, type Passage, type SourceDoc } from "@/lib/kompasSourceRetrieval"
+import { lostAfterSettle, repairLogLine, repairSourceRule, runRepairLoop, type RepairOutcome } from "@/lib/kompasRepair"
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
 import { desktopCraft, desktopResponsePolicy } from "@/lib/kompasDesktopResponse"
 import {
-  allowedNumbers, applyGuards, speakFacts, verifyAnswer,
+  applyGuards, questionFigures, verifyAnswer,
   type SpeakFacts,
 } from "@/lib/kompasGuards"
 
@@ -326,8 +333,18 @@ type AnswerJob = {
   // for the optional post-generation fact-check.
   guardFacts: SpeakFacts
   allowed: Set<string>
+  // The interviewer's own figures: structure an answer refers back to, never proof of a result (kompasGuards).
+  askedFigures: Set<string>
   factsText: string
   streamPolicy: KompasStreamPolicy
+  sourceText: string
+  sourceDocs: SourceDoc[]
+  // Speed r6: the retrieved passages (for the per-sentence source check) and an optional Lens sourced opener.
+  passages?: Passage[]
+  opener?: SourcedOpener | null
+  previousAnswer: string
+  // Round 6: the last three turns, so a different question cannot get any of the last three answers again.
+  previousTurns: Array<{ q: string; a: string }>
 }
 
 // The lanes, in order: an explicit OpenRouter pick from the live screen first,
@@ -361,6 +378,14 @@ function recordLane(model: string, ok: boolean, usage: { input: number; output: 
   })
 }
 
+function spokenAfterModel(job: AnswerJob, text: string): { text: string; providerError: boolean } {
+  if (isProviderErrorAnswer(text)) return { text: "", providerError: true }
+  if (job.plan.kind === "code") return { text, providerError: false }
+  const level = job.level === "architect" || job.level === "director" ? job.level : "engineer"
+  const settled = settleSpokenAnswer(job.question, text, level, job.sourceText, job.previousAnswer, job.plan.words)
+  return { text: settled.text, providerError: settled.providerError || !settled.text.trim() }
+}
+
 // SSE answer: meta → deltas → (wait) → replace → done. The exact event contract
 // perfACT's frontend speaks, so the self-hosted app.js needs no changes.
 // Structural repair: prompt wording dropped the design alternative and the
@@ -368,51 +393,61 @@ function recordLane(model: string, ok: boolean, usage: { input: number; output: 
 // them and one targeted rewrite adds only what is missing. The original
 // stands on any failure, and a repair that fixes nothing is discarded —
 // never a worse answer, never a second rewrite.
-async function repairStructure(job: AnswerJob, guardedText: string, req: NextRequest): Promise<{ text: string; repaired: number }> {
+// Everything the repair checks, for any text: core items (structure, named terms) decide; the rest are advisory.
+function repairChecks(job: AnswerJob, text: string): { core: string[]; all: string[] } {
   const opts = { level: job.level, register: job.register, shape: job.shape, tier: job.tier }
-  const structureMissing = missingStructure(guardedText, opts)
-  const explicitParts = questionParts(job.question)
-  const precisionMissing = explicitParts.length >= 2 ? missingQuestionParts(job.question, guardedText) : []
-  // A soft/personal question with multiple unrelated specialist phrases should
-  // be simplified before it reaches the candidate. This check is diagnostic
-  // and conservative: expert questions never trigger this specific repair.
-  const offTopic = tangentSignals(job.question, guardedText)
-  const namedMissing = missingNamedQuestionTerms(job.question, guardedText)
-  const missing = [...namedMissing.map(t => `the interviewer explicitly named ${t}; explain its relevance`), ...structureMissing, ...precisionMissing.map(p => `the interviewer explicitly asked about ${p}`), ...offTopic.map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
-  // Core acceptance: structure + named-term misses are the repair's contract.
-  // Rounds 11-12 both flagged Q2's alternative and 800-53, yet the final
-  // answer still lacked both — consistent with a rewrite that fixed the core
-  // but introduced a new advisory precision/tangent flag and was discarded
-  // whole by the old all-or-nothing rule. Accept when the core improves
-  // with no new core item, even if an advisory flag appears; a rewrite that
-  // fixes no core item is still discarded.
-  const coreMissing = [...structureMissing, ...namedMissing]
-  if (!missing.length || !job.orKey) return { text: guardedText, repaired: 0 }
-  // At most two attempts: the second names exactly what the first rewrite
-  // still missed. A failed call is not retried; a rewrite that fixes nothing
-  // is discarded, never shipped. The abort signal is the request signal, not
-  // the 55s lane signal: a repair at settle time must not inherit only the
-  // lane budget left over after generation, or it aborts silently and the
-  // original stands no matter what the rewrite would have fixed.
-  let stillMissing = missing
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const extra = attempt === 0 ? "" : `\n\nYour previous rewrite still missed:\n${stillMissing.map((m) => `- ${m}`).join("\n")}\nThe rewritten answer MUST contain each item above.`
-    try {
-      const { text } = await fetchOpenRouter(job.orKey, PAID_MODEL, offTopic.length ? `${STRUCTURE_REPAIR_SYSTEM}\nWhen the missing element says remove an unasked tangent, actually delete that jargon and its unrelated clause. Keep the one direct answer and every genuinely requested point; do not replace it with a different technical story.` : STRUCTURE_REPAIR_SYSTEM,
-        `QUESTION: ${job.question}\n\nANSWER:\n${guardedText}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}${extra}\n\nReturn the full rewritten answer and nothing else.`,
-        1600, AbortSignal.any([req.signal, AbortSignal.timeout(60000)]))
-      const repaired = text.trim()
-      if (!repaired) return { text: guardedText, repaired: 0 }
-      const rg = applyGuards(repaired, job.guardFacts, job.allowed)
-      if (!rg.text.trim()) return { text: guardedText, repaired: 0 }
-      stillMissing = [...missingStructure(rg.text, opts), ...(explicitParts.length >= 2 ? missingQuestionParts(job.question, rg.text).map(p => `the interviewer explicitly asked about ${p}`) : []), ...missingNamedQuestionTerms(job.question, rg.text).map(t => `the interviewer explicitly named ${t}; explain its relevance`), ...tangentSignals(job.question, rg.text).map(t => `remove the unasked technical tangent ${t} and keep the direct answer`)]
-      const coreStill = [...missingStructure(rg.text, opts), ...missingNamedQuestionTerms(job.question, rg.text)]
-      if (coreMissing.length > 0) {
-        if (coreStill.length < coreMissing.length && coreStill.every(m => coreMissing.includes(m))) return { text: rg.text, repaired: 1 }
-      } else if (stillMissing.length < missing.length && stillMissing.every(m => missing.includes(m))) return { text: rg.text, repaired: 1 }
-    } catch { return { text: guardedText, repaired: 0 } }
+  const structure = missingStructure(text, opts)
+  const named = missingNamedQuestionTerms(job.question, text).map((t) => `the interviewer explicitly named ${t}; explain its relevance`)
+  const parts = questionParts(job.question).length >= 2 ? missingQuestionParts(job.question, text).map((p) => `the interviewer explicitly asked about ${p}`) : []
+  // A soft/personal question with several unrelated specialist phrases is simplified; expert questions never trigger it.
+  const tangents = tangentSignals(job.question, text).map((t) => `remove the unasked technical tangent ${t} and keep the direct answer`)
+  // Round 6: the previous answer given again to a different question, and third person the settle rewrite cannot fix,
+  // are core: the rewrite is kept only when it clears them, otherwise the original stands (never a blank answer).
+  const voiceEcho = repairLoopVoiceEchoChecks(job.question, text, job.previousTurns, job.sourceText)
+  // Source grounding (29 Oct 2026): a named employer, tool or figure the candidate's own sources do not back is a core
+  // item. Empty with no sources, so a sourceless turn repairs exactly as before.
+  const sourceCheck = repairLoopSourceChecks(job.question, text, job.sourceDocs)
+  return { core: [...structure, ...named, ...voiceEcho, ...sourceCheck], all: [...named, ...structure, ...voiceEcho, ...sourceCheck, ...parts, ...tangents] }
+}
+
+// r4 (item 24): the source lines the repair may draw on; empty (old prompt) with no experience sources or on any error.
+function repairSourceBlock(job: AnswerJob): string {
+  try {
+    if (!Array.isArray(job.sourceDocs) || !job.sourceDocs.some((d) => d.proves === "experience")) return ""
+    return sourcePassagesPrompt(retrievePassages(job.question, job.sourceDocs))
+  } catch {
+    return ""
   }
-  return { text: guardedText, repaired: 0 }
+}
+
+// At most two attempts. The second rewrites the BEST answer so far and names only what it still misses (v1 rewrote
+// the original twice with the full list, so a partial fix from attempt one was thrown away). The abort signal is the
+// request signal, not the 55s lane signal, so a settle-time repair does not inherit a spent lane budget.
+async function repairStructure(job: AnswerJob, guardedText: string, req: NextRequest): Promise<{ text: string; repaired: number; repair: RepairOutcome }> {
+  return runRepairLoop(guardedText, {
+    checks: (text) => repairChecks(job, text),
+    hasKey: Boolean(job.orKey),
+    isProviderError: isProviderErrorAnswer,
+    guard: (text) => applyGuards(text, job.guardFacts, job.allowed, job.askedFigures).text,
+    // Speed r6: a blocking model call only for a real gap; an unasked-tangent note alone is reported as "advisory".
+    gateAdvisory: process.env.KOMPAS_REPAIR_GATE !== "0",
+    rewrite: async (best, missing) => {
+      const removeTangent = missing.some((m) => m.startsWith("remove the unasked technical tangent"))
+      const { text } = await fetchOpenRouter(job.orKey || "", PAID_MODEL, structureRepairSystem(job.plan.words, removeTangent),
+        `QUESTION: ${job.question}\n\nANSWER:\n${best}\n\nMISSING:\n${missing.map((m) => `- ${m}`).join("\n")}\n\n${repairSourceRule(repairSourceBlock(job))}The rewritten answer MUST contain each item above. Return the full rewritten answer and nothing else.`,
+        1600, AbortSignal.any([req.signal, AbortSignal.timeout(60000)]))
+      return text
+    },
+  })
+}
+
+/** After settling, record whether what the repair fixed is still there, and log one line per repaired answer. */
+function settleRepair(job: AnswerJob, repair: RepairOutcome, finalText: string): RepairOutcome {
+  if (repair.status === "not-needed") return repair
+  const lost = lostAfterSettle(repair, repairChecks(job, finalText).all)
+  const out = { ...repair, survived: !lost.length, lostAfterSettle: lost }
+  console.info(repairLogLine(out, job.question))
+  return out
 }
 
 async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response> {
@@ -439,16 +474,40 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
       let lastErr = ""
       let servedModel = ""
       const servedProvider = "openrouter"
+      // Speed r6: personal history releases sentence by sentence through the guard gate (kompasSentenceGate). Any
+      // failure to build the gate leaves it null, which holds every delta back exactly like guarded-final.
+      const sentenceMode = job.streamPolicy === "guarded-sentence"
+      const newGate = (withOpenerToo: boolean) => {
+        if (!sentenceMode) return null
+        try {
+          return createSentenceGate({
+            check: sentenceCheck({ facts: job.guardFacts, allowed: job.allowed, asked: job.askedFigures, docs: job.sourceDocs, question: job.question, passages: job.passages || [] }),
+            opener: withOpenerToo ? job.opener : null,
+            sourcePassages: splitOpenerPassages(job.sourceDocs),
+          })
+        } catch { return null }
+      }
+      let gate = newGate(true)
+      const opener = gate?.openerText() || ""
+      const show = (t: string) => {
+        if (!t) return
+        if (!timing.visible_first_ms) timing.visible_first_ms = Date.now() - startedAt
+        emit({ type: "delta", text: t })
+      }
       const onDelta = (d: string) => {
         if (!raw && d) timing.first_ms = Date.now() - startedAt
         raw += d
         if (releaseProvisionalDelta(job.streamPolicy)) {
           if (!timing.visible_first_ms && d) timing.visible_first_ms = Date.now() - startedAt
           emit({ type: "delta", text: d })
+        } else if (gate) {
+          for (const sentence of gate.push(d)) show(sentence + " ")
         }
       }
       try {
         emit({ type: "meta", ...metaBase, streamPolicy: job.streamPolicy })
+        // Lens's verbatim sourced opener (approved by exact match) goes on screen before the model is called.
+        if (gate) for (const o of gate.start()) show(o + " ")
         if (job.orKey) {
           const runLane = async (model: string, tag: string): Promise<"ok" | "cut" | "fail"> => {
             const began = Date.now()
@@ -461,6 +520,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
                 lastErr = "openrouter 502 answer cut short at the token ceiling"
                 raw = ""
                 emit({ type: "replace", text: "" })
+                gate = newGate(false)
                 return "cut"
               }
               servedModel = model
@@ -517,17 +577,20 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           emit({ type: "done", unavailable: true, degraded: true, ...failure, ...metaBase, provider: "openrouter", model: PAID_MODEL })
           return
         }
+        if (gate) for (const sentence of gate.finish()) show(sentence + " ")
         // Grounding guards (perfACT anti-hallucination) run on the complete
         // text: unbracket → place/prestige/title/version fixes → figures
         // allowlist. Voice repair runs after — the client's `replace` event
         // swaps the streamed draft for the finished answer.
-        const g = applyGuards(correctVerifiedPresentationErrors(raw.trim()), job.guardFacts, job.allowed)
+        const g = applyGuards(correctVerifiedPresentationErrors(raw.trim()), job.guardFacts, job.allowed, job.askedFigures)
         let guardedText = g.text
         let repaired = 0
+        let repair: RepairOutcome
         {
           const r = await repairStructure(job, guardedText, req)
           guardedText = r.text
           repaired = r.repaired
+          repair = r.repair
         }
         let finalText = readAloud(job.tier === 0 ? (voiceRepair(guardedText) || guardedText).replace(/\[(?:beat|breath)\]|\(pause\)/gi, ' ') : blendSpoken(voiceRepair(guardedText) || guardedText) || guardedText) || guardedText
         // Optional post-generation fact-check: the model only POINTS at
@@ -545,6 +608,17 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           } catch { /* the guarded answer stands */ }
         }
         finalText = correctVerifiedPresentationErrors(finalText)
+        const settled = spokenAfterModel(job, finalText)
+        if (settled.providerError || !settled.text.trim()) {
+          emit({ type: "replace", text: "" })
+          emit({ type: "done", unavailable: true, ...answerFailure(lastErr || "openrouter 502 blocked"), ...metaBase, provider: "openrouter", model: servedModel || PAID_MODEL })
+          return
+        }
+        finalText = settled.text
+        // Speed r6: an opener already on screen stays at the front of the final answer (once). It is a verbatim line from
+        // the user's own experience sources, so it adds no claim the guards have not already accepted.
+        if (opener) finalText = withOpener(finalText, opener)
+        repair = settleRepair(job, repair, finalText)
         // Personal history is held back until guards have run. Even if unchanged,
         // it must be emitted now because no provisional deltas were sent.
         if (mustEmitFinalReplacement(job.streamPolicy, finalText, raw)) {
@@ -552,7 +626,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           emit({ type: "replace", text: finalText })
         }
         emit({
-          type: "done", degraded, guarded: g.guarded, verified, repaired,
+          type: "done", degraded, guarded: g.guarded, verified, repaired, repair,
           precision: { coverage: questionCoverage(job.question, finalText), flags: [...spokenQualityFlags(job.question, finalText), ...tangentSignals(job.question, finalText).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, finalText).map(t => `missing-named-term:${t}`)] },
           ledger: job.ledger,
           ...metaBase, provider: servedProvider, model: servedModel,
@@ -615,13 +689,15 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
   }
   // Grounding guards before voice repair: unbracket → place/prestige/title/
   // version fixes → figures allowlist. Then the optional fact-check.
-  const g = applyGuards(correctVerifiedPresentationErrors(raw.trim()), job.guardFacts, job.allowed)
+  const g = applyGuards(correctVerifiedPresentationErrors(raw.trim()), job.guardFacts, job.allowed, job.askedFigures)
   let guardedText = g.text
   let repaired = 0
+  let repair: RepairOutcome
   {
     const r = await repairStructure(job, guardedText, req)
     guardedText = r.text
     repaired = r.repaired
+    repair = r.repair
   }
   let out = readAloud(job.tier === 0 ? (voiceRepair(guardedText) || guardedText).replace(/\[(?:beat|breath)\]|\(pause\)/gi, ' ') : blendSpoken(voiceRepair(guardedText) || guardedText) || guardedText) || guardedText
   let verified = 0
@@ -635,7 +711,14 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     } catch { /* the guarded answer stands */ }
   }
   out = correctVerifiedPresentationErrors(out)
-  if (!out.trim()) return NextResponse.json({ error: "Nothing to answer." }, { status: 400, headers: NO_STORE })
+  const settled = spokenAfterModel(job, out)
+  if (settled.providerError || !settled.text.trim()) {
+    const failure = answerFailure(lastErr || "openrouter 502 blocked")
+    return NextResponse.json({ ...failure, quiet: true }, { status: failure.status, headers: NO_STORE })
+  }
+  out = settled.text
+  repair = settleRepair(job, repair, out)
+  if (!out.trim()) return NextResponse.json({ error: "Nothing to answer.", quiet: true }, { status: 400, headers: NO_STORE })
   void lastErr
   return NextResponse.json({
     text: out,
@@ -645,6 +728,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     guarded: g.guarded,
     verified,
     repaired,
+    repair,
     ledger: job.ledger,
     meta: {
       engine: "marketfit", provider: servedProvider, model: servedModel,
@@ -675,10 +759,18 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     if (clean) return NextResponse.json({ derived: clean, derivedBy: "code" }, { headers: NO_STORE })
   }
 
-  const vaultKeys = await keysFor("kompas:answer", () => resolveKeys({}))
-  const paidKey = vaultKeys.openrouter || resolveKeys({}).openrouter
-  if (!paidKey) return NextResponse.json({ error: "Paid OpenRouter is not configured.", code: "OPENROUTER_NOT_CONFIGURED" }, { status: 503, headers: NO_STORE })
+  // Speed r6: on an answer turn the key vault is read WHILE the question, sources, dossier race and prompt are prepared
+  // (awaited just before the answer is built), instead of before all of it. Same keysFor, same 4 s ceiling, same
+  // fail-closed rule for paid keys and the same 503 when no key. Preflight and model derive still wait first, as before.
+  const keysPromise = keysFor("kompas:answer", () => resolveKeys({}))
+  keysPromise.catch(() => { /* awaited below; a failure there surfaces exactly as before */ })
+  const paidKeyNow = async () => (await keysPromise).openrouter || resolveKeys({}).openrouter
+  const NO_KEY = () => NextResponse.json({ error: "Paid OpenRouter is not configured.", code: "OPENROUTER_NOT_CONFIGURED" }, { status: 503, headers: NO_STORE })
+  if (body.preflight === true || body.deriveOnly) {
+    if (!(await paidKeyNow())) return NO_KEY()
+  }
   if (body.preflight === true) {
+    const paidKey = (await paidKeyNow()) as string
     try {
       await fetchOpenRouter(paidKey, PAID_MODEL, "Reply with READY only.", "Check answer service readiness.", 256, AbortSignal.any([request.signal, AbortSignal.timeout(20000)]))
       return NextResponse.json({ ready: true, provider: "openrouter", model: PAID_MODEL, checkedAt: Date.now() }, { headers: NO_STORE })
@@ -687,7 +779,6 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
       return NextResponse.json({ ready: false, ...failure }, { status: failure.status, headers: NO_STORE })
     }
   }
-  const rawKeys: LlmKeys = { openrouter: paidKey }
 
   // deriveOnly: the frontend asking "was that a question?" — cheapest first.
   // Gate 1 (code): speaker-aware — no Them: line and no ask pattern = no question.
@@ -696,6 +787,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   if (body.deriveOnly) {
     // The page sends the new speech as `question` and what was already answered as `transcript`.
     // Deriving from the earlier text is what answered "No question yet" while the question was the new speech.
+    const paidKey = (await paidKeyNow()) as string
     const heard = str(body.question, 5000)
     const earlier = str(body.transcript, 900)
     const clean = deriveByCode(heard, body.history, body.reask === true)
@@ -806,6 +898,18 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
     plan.maxTokens = Math.min(plan.maxTokens, Math.max(600, Math.round(plan.words * 2.6) + 350))
   }
+  const sourceText = [resumeSrc, jdSrc, docsSrc].filter(Boolean).join("\n")
+  const spokenLevel = level === "architect" || level === "director" ? level : "engineer"
+  const spokenCut = dissectQuestion(question, sourceText)
+  const spokenShape = spokenCut.shape
+  if (plan.kind !== "code") {
+    // The dissected band already carries the multi-part scale, so a five-part design ask is not cut at a one-part ceiling.
+    const band = spokenCut.modes[spokenLevel] || modeBand(spokenShape, spokenLevel)
+    const briefIntro = spokenShape === "intro" && /\b(?:brief|briefly|quick|short|30 seconds|one minute)\b/i.test(question)
+    plan.words = briefIntro ? Math.max(24, Math.round(band.targetWords * 0.6)) : band.targetWords
+    plan.secs = [Math.round(plan.words * 0.8 / 2.5), Math.round(plan.words * 1.25 / 2.5)]
+    plan.maxTokens = Math.min(4000, Math.max(500, Math.round(plan.words * 2.6) + 240))
+  }
   // Depth calibration inside the practice register: match the answer's focus
   // to the question's depth. A surface question gets a direct answer; a deep
   // scoped question gets a focused deep dive. (Concept questions are governed
@@ -858,7 +962,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const resumeText = resumeSrc
   let resumeFacts = ""
   if (resumeText && resumeText.length > 200) {
-    const rr = resumeRoles(resumeText)
+    const rr = sessionFacts(resumeSrc, docsSrc).roles
     const aliasLines = employerAliases(
       rr.employers,
       `${question}\n${transcript}`,
@@ -866,7 +970,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
       (a) => `SAME EMPLOYER: "${a.said}" (as said in this interview) is the resume's "${a.resume}" — you work there. Say "${a.said}".`,
     )
     const askForDigest = question // prior speech does not determine relevance ranking
-    const digest = resumeDigest(resumeText, askForDigest, tier === 0 ? 14000 : plan.kind === "short" ? 1600 : 4600, tier === 0 ? "career" : "focused")
+    const digest = cachedDigest(resumeText, askForDigest, tier === 0 ? 14000 : plan.kind === "short" ? 1600 : 4600, tier === 0 ? "career" : "focused")
     resumeFacts = [
       rr.current ? `CURRENT ROLE (from the resume — use this exact title): ${rr.current}` : "",
       ...aliasLines,
@@ -876,6 +980,15 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
       .join("\n")
   }
 
+  // Source-grounded retrieval: the resume stays whole above; the most relevant labelled passages from all the user's
+  // own sources are listed with fact IDs, or an honest "not in your sources" line with the closest real example.
+  // Failsafe: any failure or no sources gives "" and the prompt is exactly as before.
+  const groundingDocs: SourceDoc[] = sourceDocs({ resume: resumeSrc, jd: jdSrc, documents: docsSrc, dossier: grounding, savedQA: str(config.savedQA, 8000) })
+  // Behavior 8 (r2): passages the last two answers already used are demoted unless the ask goes back to them.
+  const recentAnswers = historyArr.slice(-2).map((h: unknown) => (h && typeof h === "object" ? String((h as Record<string, unknown>).a ?? (h as Record<string, unknown>).answer ?? "") : "")).filter(Boolean)
+  const sourceRetrieval = retrievePassages(question, groundingDocs, 4, { recent: recentAnswers })
+  // r5: a false interviewer premise about the candidate is named so the model corrects it instead of accepting it
+  const sourceBlock = [sourcePassagesPrompt(sourceRetrieval), premisePrompt(question, groundingDocs)].filter(Boolean).join("\n")
   const context = [
     `The listener is at ${ANSWER_LEVEL_NAME[level]}. The level block below is the controlling spec for this answer's depth and register.`,
     tier === 0 ? `INTRODUCTION AUDIENCE: ${level}. Audience adjusts language and emphasis, not the career-wide scope. No step-by-step project reconstruction.` : levelGuidance(level, register),
@@ -901,6 +1014,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     resumeFacts ? `${resumeFacts}` : "",
     tier !== 0 && jdSrc && !["closing-question","acknowledgement","definition","logistics"].includes(rediscovered.intent) ? `JOB DESCRIPTION (role priorities, not candidate history):\n${jdSrc}` : "",
     docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
+    sourceBlock,
     str(config.instructions, 2000) ? `SESSION PREFERENCES (delivery only; do not override source evidence): ${str(config.instructions, 2000)}` : "",
     `SOURCE PRIORITY: the current resume and original documents establish personal history. The JD sets relevance. Generated prep, prior answers and transcript are unverified. A resume bullet does not establish a specific incident, root cause, HSM vendor or measured outcome. If no incident is documented, explain the proposed approach conditionally.`,
     tier !== 0 && includeHistoryContext && transcript ? `Brief conversation context for this follow-up only:\n${transcript.slice(-800)}` : "",
@@ -911,23 +1025,22 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // The vault decides which providers this feature may use (Admin → "Which AI
   // each feature uses"). OpenRouter lanes run only when the vault leaves the
   // key in; otherwise one vault-honoring call is made and delivered as SSE.
-  const keys = rawKeys
-  const fallbackText = tier === 0 ? "I need the current resume evidence to give a reliable career overview. Please retry the introduction." : retrievedList[0]
-    || (prep.identity ? str(prep.identity, 600) : "")
-    || "The answer engine is at its limit right now — press AI Answer again in a moment."
+  const paidKey = await paidKeyNow()
+  if (!paidKey) return NO_KEY()
+  const keys: LlmKeys = { openrouter: paidKey }
+  const fallbackText = ""
+  const previousTurns = historyArr.slice(-3).map((turn) => {
+    const t = (turn && typeof turn === "object" ? turn : {}) as { q?: unknown; question?: unknown; a?: unknown; answer?: unknown }
+    return { q: str(t.q ?? t.question, 600), a: str(t.a ?? t.answer, 4000) }
+  }).filter((turn) => turn.a)
+  // Settle drops any sentence already said in the last three answers (was: the last answer only).
+  const previousAnswer = previousTurns.map((turn) => turn.a).join("\n")
   // Grounding guards (perfACT anti-hallucination): the facts a claim may be
   // filled from (employer/title/known), the figures the answer may state, and
   // the source text for the optional post-generation fact-check.
-  const guardFacts = speakFacts({
-    resume: resumeSrc,
-    jd: "",
-    documents: docsSrc,
-    heard: "",
-    identity: "",
-    projects: "",
-  })
-  const allowed = allowedNumbers(resumeSrc, docsSrc) // the interviewer asking a number is NOT proof that the candidate achieved it
-  const figuresList = [...allowed].slice(0, 30)
+  // Speed r6: built once per resume+documents content (kompasSessionCache), identical to speakFacts/allowedNumbers.
+  const { guardFacts, allowed } = sessionFacts(resumeSrc, docsSrc) // the interviewer asking a number is NOT proof that the candidate achieved it
+  const figuresList = figureList(allowed).slice(0, 30) // r9: context keys never reach the prompt
   const figuresLine = `FIGURES: the ONLY result numbers you may state are these, from the candidate's own material: ${figuresList.length ? figuresList.join(", ") : "(none)"}. Never invent a count, percentage, duration or before/after figure — describe the change in words ("cut the queue to something the team could clear by lunch"). Technical constants (ports, versions, thresholds in a rule) are fine.`
   const factsText = candidateEvidenceForVerification(resumeSrc, docsSrc)
   // Role requirements and generated dossier context guide relevance, not personal factual proof.
@@ -948,7 +1061,7 @@ ${INTERVIEW}`
     : ""
   const job: AnswerJob = {
     question,
-    system: `${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
+    system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopPolicy?.guidance || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopPolicy?.guidance || "" : ""}`,
     userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? `${desktopCloser || spokenCloser}\n\n${CODING_CLOSER}` : desktopCloser || spokenCloser}`,
     plan,
     interviewer,
@@ -965,8 +1078,15 @@ ${INTERVIEW}`
     startedAt,
     guardFacts,
     allowed,
+    askedFigures: questionFigures(question),
     factsText,
     streamPolicy: answerStreamPolicy(tier, question),
+    sourceText,
+    sourceDocs: groundingDocs,
+    passages: sourceRetrieval.passages,
+    opener: personalEvidence ? sourcedOpenerFor(question, groundingDocs) : null,
+    previousAnswer,
+    previousTurns,
   }
   if (body.stream) return streamAnswer(request, job)
   return jsonAnswer(request, job)
@@ -980,5 +1100,5 @@ function answerFailure(message: string) {
     : status === 403 ? "OpenRouter blocked the request. Check key permissions and account policy."
     : status === 429 ? "The paid provider is temporarily rate limited. Your question is preserved."
     : "The paid provider could not complete this answer. Your question is preserved."
-  return { status, code, error }
+  return { status, code, error, quiet: true }
 }

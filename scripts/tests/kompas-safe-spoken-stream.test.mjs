@@ -33,7 +33,13 @@ const scenarios = [
 for(let n=1;n<=scenarios.length;n++){
  test('safe spoken streaming cumulative round '+n+' / 21',()=>{
   for(const [tier,q,want] of scenarios.slice(0,n)){
-    const got=answerStreamPolicy(tier,q)
+    // Speed r6: the held set is unchanged; with sentence streaming off it is exactly guarded-final, and on (default) the
+    // same set is guarded-sentence, which never releases a raw delta and always ends in the final replacement.
+    const got=answerStreamPolicy(tier,q,{sentenceStream:false})
+    const on=answerStreamPolicy(tier,q)
+    assert.equal(on,want==='progressive'?'progressive':'guarded-sentence',q)
+    assert.equal(releaseProvisionalDelta(on),want==='progressive',q)
+    assert.equal(mustEmitFinalReplacement(on,'Same answer','Same answer'),want!=='progressive',q)
     assert.equal(got,want,q)
     assert.equal(releaseProvisionalDelta(got),want==='progressive',q)
     assert.equal(mustEmitFinalReplacement(got,'Same answer','Same answer'),want==='guarded-final',q)
@@ -85,7 +91,11 @@ test('shared answer service never emits personal model deltas before final guard
 })
 test('interviewer-suggested achievements are not automatically whitelisted as personal metrics',()=>{
  const service=readFileSync(new URL('../../src/lib/kompasAnswerService.ts',import.meta.url),'utf8')
- assert.match(service,/const allowed = allowedNumbers\(resumeSrc, docsSrc\)/)
+ // Speed r6: the list is built once per content in kompasSessionCache from the same two inputs, never the question.
+ assert.match(service,/const \{ guardFacts, allowed \} = sessionFacts\(resumeSrc, docsSrc\)/)
+ const cache=readFileSync(new URL('../../src/lib/kompasSessionCache.ts',import.meta.url),'utf8')
+ assert.match(cache,/allowed: allowedNumbers\(resume, documents\)/)
+ assert.doesNotMatch(service,/allowedNumbers\([^)]*question/)
  assert.doesNotMatch(service,/allowedNumbers\(resumeSrc, docsSrc, question\)/)
 })
 test('the candidate fact-check evidence excludes unverified JD and generated dossier background',()=>{

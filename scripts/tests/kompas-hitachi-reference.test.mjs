@@ -28,7 +28,8 @@ for (const [index, [question, expected]] of cases.entries()) {
    assert.equal(desktopQuestionKind(question), expected)
    assert.equal(policy.kind, expected)
    assert.equal(policy.level, level)
-   assert.ok(policy.words >= 180, 'a scoped practical question must not receive the 70–90 word general-answer cap')
+   const definition = desktopResponsePolicy(level, 'Define CSRF.')
+   assert.ok(policy.words >= Math.round(definition.words * 1.5), 'a scoped practical question stays longer than a definition at the same level')
    assert.doesNotMatch(policy.guidance, /This is a general\.|This is an ordinary question/)
    if (expected === 'experience') {
     assert.match(policy.guidance, /Use only supplied facts and metrics/)
