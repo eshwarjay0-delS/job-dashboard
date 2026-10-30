@@ -513,6 +513,7 @@ let book = { sid: null, items: [] };
 const BOOK_MAX = 10;
 const bookWords = (t) => new Set((String(t).toLowerCase().match(/[a-z][a-z0-9+#.-]{2,}/g) || []).filter(w => !FSTOP.has(w) && !/^(what|when|where|which|with|have|your|about|would|could|should|tell|explain|describe|please|there|their|this|that|some|give|walk)$/.test(w)).map(w => w.slice(0, 5)));
 function bookMatch(q, depthKey) {
+  if (personalLogistics(q)) return null;                             // never a cached answer for personal logistics
   const A = bookWords(q); if (!A.size) return null;
   // a plain intro only — "introduce yourself AND explain why X / a typical day / your education" needs a live answer (self-play)
   const intro = /\b(introduce|introduction|about yourself|walk me through your (background|resume|career))\b/i.test(q)
@@ -538,15 +539,15 @@ async function readAnswerStream(res) {
 }
 async function buildBook(s) {
   if (location.protocol === "file:" || !s.prep) return;
-  const key = s.id + ":book:personal-evidence-v1";
+  const key = s.id + ":book:personal-evidence-v2";
   let saved = await DossierDB.get(key);
   if (!(saved && saved.items && saved.items.length)) {                // same factors + interviewer: reuse that book
     const twin = twinSession(s, x => (x.interviewer || "engineer") === (s.interviewer || "engineer"));
-    const theirs = twin && await DossierDB.get(twin.id + ":book:personal-evidence-v1");
+    const theirs = twin && await DossierDB.get(twin.id + ":book:personal-evidence-v2");
     if (theirs && theirs.items && theirs.items.length) { saved = { ...theirs }; await DossierDB.put(key, saved); }
   }
   book = { sid: s.id, items: (saved && saved.items) || [] };
-  const qs = ["Tell me about yourself."].concat(((s.prep && s.prep.questions) || []).map(q => q.q).filter(Boolean)).slice(0, BOOK_MAX);
+  const qs = ["Tell me about yourself."].concat(((s.prep && s.prep.questions) || []).map(q => q.q).filter(Boolean)).filter((q) => !personalLogistics(q)).slice(0, BOOK_MAX);
   const depthKey = `${s.interviewer || "engineer"}|${s.mode || "technical"}|${s.length || ""}`;
   for (const q of qs) {
     if (current !== s || dossierAbort) return;
@@ -840,6 +841,10 @@ function renderCard() {
     inline(li, t);
     ul.append(li);
   });
+  if (c.meta === "Personal logistics, not answered" && !lines.length) {   // the quiet card (owner, 29 Oct): one muted line, no answer text
+    const li = document.createElement("li"); li.className = "skipnote"; li.style.opacity = "0.55"; li.style.fontStyle = "italic";
+    li.textContent = "Personal logistics, not answered"; ul.append(li);
+  }
   $("card").classList.toggle("streaming", !!c.streaming);
   wrapWords(ul);                                     // every word is addressable, for Follow along
   ul.scrollTop = keep;   // rendering never moves the pane (owner, 27 Oct 2026: while it generates "the screen should just stay on top")
@@ -2260,6 +2265,26 @@ function splitDistinctAsksV3(text) {
     return splitSpokenWords(v3.join(" ")) === splitSpokenWords(v2.join(" ")) ? v3 : v2;   // slice 3 failsafe: the v2 cut on any lost word
   } catch { return v2; }
 }
+// personal-logistics parity: start — a copy of src/lib/kompasRelevance.ts (owner rule, 29 Oct 2026): cached answers (book,
+// anchors) are painted here without a server call, so the page skips the same asks. Parity: kompas-logistics-client.test.mjs.
+const PERSONAL_LOGISTICS = /\b(?:visa|sponsorship|sponsor (?:me|you)|work authori[sz]ation|authori[sz]ed to work|h-?1b|green card|ead|citizenship|(?:u\.?\s*s\.?|u\s+s|united states|american|a|an)\s+citizens?|salary|compensation|ctc|pay (?:range|rate|expectations?)|(?:hourly|day|bill|your|desired|expected) rate|relocat(?:e|ion)(?!\s+(?:the|a|an|our|this|that|these|those|it|its|data|workloads?|services?|servers?|apps?|applications?)\b)|(?:your|home|current|mailing|residential) address|where (?:are|do) you (?:currently )?(?:based|located|live|living|staying)|current(?:ly)? location|(?:your|earliest|possible|expected) start date|when (?:can|could|would) you (?:start|join)|how soon can you (?:start|join)|available to (?:start|join)|notice period|weeks'? notice|your availability)\b|^\s*(?:(?:what is |what's )?(?:your )?availability|citizen|notice|start date)[.?!]*$/i
+const NOT_PERSONAL = /\b(?:was|were|did|had|tell me about (?!your (?:visa|salary|notice|availability|relocation))|how (?:do|does|did|would|is|are)|why|explain|describe|walk (?:me|us) through|design|implement|build|difference|zones?|limit(?:ing|s)?|work at|experience|worked|projects?)\b|\b(?:and|also|plus)\b[^.?!]*\b(?:what|how|why|tell|explain|describe|walk)\b/i
+const PERSONAL_MOVE = /(?<!\b(?:data ?cent(?:er|re)|server|workload|application|app|service|cloud|vault|database|office|team)\s)\brelocat(?:e|es|ed|ing|ion)\b(?!\s+(?:the|a|an|our|this|that|these|those|it|its|of|data|workloads?|services?|servers?|apps?|applications?|vault|psm|databases?)\b)|\bwhere (?:are|do) you (?:currently )?(?:based|located|live|living|staying)\b|\b(?:you are|you're) (?:currently )?(?:based|located)\b|\byour current(?:ly)? location\b|\bwhy are you based\b/i
+const UNSPLIT_COMPOUND = /\b(?:and|also|plus)\b[^.?!]*\b(?:what|how|why|tell|explain|describe|walk)\b/i
+function personalLogistics(text) {
+  const t = String(text || "").trim()
+  if (!t || t.split(/\s+/).length > 16) return false
+  if (PERSONAL_MOVE.test(t)) return !UNSPLIT_COMPOUND.test(t)
+  return PERSONAL_LOGISTICS.test(t) && !NOT_PERSONAL.test(t)
+}
+function withoutLogistics(text) {
+  const s = String(text || "")
+  const parts = s.split(/,?\s+(?:and|also|plus)(?:\s+(?:um+|uh+|so|then|also|and),?)*\s+(?=(?:tell|explain|describe|how|what|why|walk|can|could|do|have|are|where|when|would)\b)/i)
+  if (parts.length === 1) return personalLogistics(s) ? "" : s
+  const kept = parts.filter((p) => !personalLogistics(p))
+  return kept.length === parts.length ? s : kept.join(" and ").trim()
+}
+// personal-logistics parity: end
 const armsAuto = () => pendingHeard().some(t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
 function scheduleAuto() {
   clearTimeout(autoTimer);
@@ -2632,6 +2657,7 @@ function anchorFacts() {
 }
 function paintFromAnchors(card) {
   if (desktopResponses() || !card || !card.anchors || !window.KompasLevels || !window.KompasDiamond) return false;
+  if (personalLogistics(card.anchorQ || "") || personalLogistics(card.question || "")) return false;   // never a cached answer for personal logistics
   const level = askingLevel();
   const plan = window.KompasDiamond.plan(level, card.anchors, window.__peerOf);
   if (!plan.ready) return false;
@@ -2745,7 +2771,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
   if (card === follow.card) { follow.pos = 0; follow.livePos = 0; }
   const t0 = performance.now(); let first = 0, text = "", meta = {};
   const depthLabel = () => { const o = $("liveInterviewer").selectedOptions[0]; return o ? o.textContent : ""; };
-  const logAnswer = (extra) => logEvent({ t: "answer", question: card.question, derived: derivedQ || meta.derived || "", typed: !consolidated, regen: !!opts.derived, depth: depthLabel(), text: typeof card.answer === "string" ? card.answer : (card.answer || []).join("\n"), meta: card.meta || "", ...extra });
+  const logAnswer = (extra) => logEvent({ t: "answer", question: card.question, derived: derivedQ || meta.derived || "", typed: !consolidated, regen: !!opts.derived, depth: depthLabel(), text: typeof card.answer === "string" ? card.answer : (card.answer || []).join("\n"), meta: card.meta || "", original: card.original || undefined, ...extra });
   const consolidated = !!opts.consolidated;
   const epoch = ++answerEpoch;
   const directDesktop = desktopResponses(); let responseKey = "";
@@ -3154,20 +3180,24 @@ async function aiAnswer(fromAuto) {
       if (spans.length > 1) {
         const who = heardOnly ? (questionSource() === "You" ? "You" : "Them") : "You";
         for (const span of spans) {
+          const shown = heardOnly ? span : (withoutLogistics(span) || span);   // a typed compound shows only its non-logistics part
           const spanHeard = who + ": " + span;
-          const card = addCard(heardOnly ? "Deriving…" : span, ["…"]);
+          const card = addCard(heardOnly ? "Deriving…" : shown, ["…"]);
+          if (shown !== span) card.original = span;
           card.heard = spanHeard;
           card.earlier = earlier;
           card.formed = spanHeard;
-          showPressed(card, heardOnly ? "Deriving…" : span);
-          await generateAnswer(spanHeard, card, { consolidated: true, earlier, derived: heardOnly ? undefined : span, pinned: !heardOnly });
+          showPressed(card, heardOnly ? "Deriving…" : shown);
+          await generateAnswer(spanHeard, card, { consolidated: true, earlier, derived: heardOnly ? undefined : shown, pinned: !heardOnly });
         }
         return;
       }
-      const card = addCard(heardOnly ? "Deriving…" : (said || "Answering what was just heard…"), ["…"]);
+      const shownSaid = heardOnly ? said : (withoutLogistics(said) || said);   // the typed words, minus a logistics clause
+      const card = addCard(heardOnly ? "Deriving…" : (shownSaid || "Answering what was just heard…"), ["…"]);
+      if (shownSaid !== said) card.original = said;
       card.heard = heard; card.earlier = earlier; card.formed = heard;
       showPressed(card, card.question);
-      return await generateAnswer(heard, card, { consolidated: true, earlier, derived: heardOnly ? undefined : said, pinned: !heardOnly });
+      return await generateAnswer(heard, card, { consolidated: true, earlier, derived: heardOnly ? undefined : shownSaid, pinned: !heardOnly });
     }
     if (fromAuto) return;
     const c = cards[idx];
