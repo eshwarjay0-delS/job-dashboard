@@ -45,7 +45,7 @@ import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_R
 import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
 import { madeMeetsFloor } from "@/lib/made-floor"
 import { acceptableWhatsAppResume, whatsappResumeRejectionReasons } from "@/lib/whatsapp-resume-acceptance"
-import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
+import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, hasResumeRecoveryForJD, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
 import { chooseResume, type Prefer } from "@/lib/library-choose"
@@ -113,6 +113,8 @@ type Session = {
   pending?: { jd: string; jdId: string; slots: string[]; at: number; hint?: string }
   /** The last job made from Files, for "redo" and "make another one with the X resume". `used`: the resume it started from. */
   last?: { jd: string; email: string; at: number; used?: string }
+  /** Current profile selection; never rewrites the immutable last JD/source for recovery. */
+  preferredEmail?: string
   /** Approval card awaiting the owner's edited draft text (Phase 4, chief-approvals). */
   awaitingEditCardId?: string
 }
@@ -966,13 +968,15 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
 // ── From the person's Files ─────────────────────────────────────────────────────
 /** The email this number used last, while it still holds resumes. */
 function remembered(session: Session, slots: string[]): string {
-  const was = String(session.last?.email || "").toLowerCase()
+  const was = String(session.preferredEmail || session.last?.email || "").toLowerCase()
   return was && live(slots).includes(was) ? was : ""
 }
 
 /** Every next job starts from this email until the person says otherwise. A job made before stays redo-able. */
 function remember(session: Session, email: string) {
-  session.last = { jd: session.last?.jd || "", email, at: Date.now(), ...(session.last?.used ? { used: session.last.used } : {}) }
+  // Changing accounts must not re-date the previous JD or relabel its source resume.
+  // The standing selection is also persisted by pinProfile(), separately.
+  session.preferredEmail = email.toLowerCase()
 }
 
 // Standing profile. A finished run rewrites session.last with the email THAT run used.
@@ -1026,13 +1030,17 @@ async function bootstrapLegacyResumeFailures(): Promise<number> {
     if (!abs.startsWith(path.resolve(userDir) + path.sep) || !(await existsPath(abs))) continue
     const marker = "whatsapp/legacy-resume-recovery/" + from + "-" + jobKeyOf(last.jd)
     if (await blob.exists(marker)) continue
+    // The original webhook may already have enqueued this JD under its Meta message ID.
+    // Never create a second recovery job even when that one is awaiting a callback.
+    if (await hasResumeRecoveryForJD(from, userId, last.jd)) continue
     let genIndex: { key: string }[] = []
     try { genIndex = JSON.parse((await blob.getText(genDir(from) + "/_index.json")) || "[]") as { key: string }[] } catch { continue }
     const sent = await Promise.all(genIndex.slice(-30).map(async g => {
       try { const raw = await blob.getText(g.key); return raw ? JSON.parse(raw) as Gen : null } catch { return null }
     }))
     if (sent.some(g => g && g.jd === last.jd && g.createdAt >= last.at - 60_000)) continue
-    const jdId = "legacy-" + last.at
+    // A profile switch must not change the identity of this legacy job.
+    const jdId = "legacy-" + jobKeyOf(last.jd)
     const id = createHash("sha256").update(from + ":" + jdId).digest("hex")
     if (await blob.exists("whatsapp/resume-recovery/" + id + ".json")) continue
     await enqueueResumeRecovery({ id, from, userId, jd: last.jd, jdId, resumePath: abs,
@@ -1044,7 +1052,26 @@ async function bootstrapLegacyResumeFailures(): Promise<number> {
   return queued
 }
 
+// One small marker so a cron run can be checked later even though Vercel keeps logs for ~30 minutes.
+// Only route, time, outcome and counts: no phone number, candidate, JD or resume content. Best effort: never breaks the cron.
 async function recoverResumeJobs(request: NextRequest) {
+  const startedAt = Date.now()
+  const mark = async (outcome: string, counts: unknown) => {
+    try {
+      await blob.put("whatsapp/recovery-last-run.json", JSON.stringify({
+        route: "/api/whatsapp/recover", at: new Date(startedAt).toISOString(), ms: Date.now() - startedAt, outcome, counts }))
+    } catch { /* marker only */ }
+  }
+  try {
+    const res = await recoverResumeJobsInner(request)
+    if (res.status !== 401) await mark(res.ok ? "ok" : "http_" + res.status, await res.clone().json().catch(() => ({})))
+    return res
+  } catch (error) {
+    await mark("error:" + ((error as Error)?.name || "error"), {})
+    throw error
+  }
+}
+async function recoverResumeJobsInner(request: NextRequest) {
   const secret = process.env.CRON_SECRET || ""
   if (secret.length < 16 || request.headers.get("authorization") !== "Bearer " + secret)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

@@ -1,4 +1,5 @@
 import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
+import { removeUnsupportedRewrites } from "./resume-unsupported-rewrites"
 import { candidateEvidenceInput, explicitlyConfirmsAllRequirements } from "./resume-evidence"
 import { preserveSkillHeadings } from "./resume-format"
 import { RESUME_MIN_COVERAGE, RESUME_TARGET_COVERAGE, experienceCoverageComplete, resumeQuality, requiredEvidenceTerms, coveragePercent } from "./resume-quality"
@@ -905,6 +906,30 @@ export async function runTailor(opts: {
       if (!floorFrom) floorFrom = best
       best = floored
       if (!usedModel.includes("job-post terms on the skills line")) usedModel = `${usedModel} + job-post terms on the skills line`
+    }
+  }
+  // A model may still invent a JD-only tool in a client bullet, title, summary,
+  // project, or skills line after the earlier skills-only cleanup. Restore the
+  // ORIGINAL paragraph rather than deleting just the tool name: the rest of
+  // that work claim might also be invented. Re-score the actual exported DOCX
+  // and re-run every normal completion/evidence gate; never force acceptance.
+  if (best) {
+    const unsupported = scoreKws.filter(k => !forcedJdKws.includes(k) && !beforeKw.has(k))
+    if (unsupported.length) {
+      const cleaned = removeUnsupportedRewrites(best.edits,
+        value => coveredJdKeywords(value, unsupported).size > 0)
+      if (cleaned.removed) {
+        const previous = best
+        const restored = await applyEdits(cleaned.edits)
+        restored.via = previous.via
+        restored.partial = previous.partial
+        restored.floor = (previous.floor || []).filter(k => restored.afterKw.has(k))
+        restored.floorSummary = (previous.floorSummary || []).filter(k => restored.afterKw.has(k))
+        best = restored
+        // Evidence and role counts must be computed from the sanitized pass.
+        floorFrom = null
+        usedModel += " + unsupported claim paragraphs restored"
+      }
     }
   }
   if (!best) {

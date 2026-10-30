@@ -20,6 +20,7 @@ function loadTS(rel) {
 }
 const { resumeQuality } = loadTS("src/lib/resume-quality.ts")
 const { acceptableWhatsAppResume, whatsappResumeRejectionReasons } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+const { removeUnsupportedRewrites } = loadTS("src/lib/resume-unsupported-rewrites.ts")
 const make = (changes = {}) => ({
   token: "safe-docx-token", coverage: 100, supported_coverage: 100,
   diff: [{ section: "Experience", before: "A", after: "B" }],
@@ -121,4 +122,52 @@ test("partial reports remain needs_review at 95% and 98%", () => {
 })
 test("invalid weighted ratio never passes the quality floor", () => {
   assert.equal(resumeQuality({ matched: 10, total: 10, missing: [], weightedCoverage: 1.5 }).status, "needs_review")
+})
+
+test("unsupported JD-only work claim restores the entire original bullet, not just the tool name", () => {
+  const original = {
+    bullets: [
+      { idx: 11, text: "Built an unsupported-product security program for a client" },
+      { idx: 12, text: "Improved evidenced IAM policy troubleshooting" },
+    ],
+    skills: [{ idx: 20, text: "IAM and audit evidence" }],
+  }
+  const cleaned = removeUnsupportedRewrites(original, text => text.includes("unsupported-product"))
+  assert.equal(cleaned.removed, 1)
+  assert.equal(cleaned.edits.bullets.length, 1)
+  assert.equal(cleaned.edits.bullets[0].idx, 12)
+  assert.equal(cleaned.edits.bullets[0].text, "Improved evidenced IAM policy troubleshooting")
+  assert.equal(original.bullets.length, 2)
+})
+test("unsupported JD-only claims in every editable section are reverted, preserving evidenced edits", () => {
+  const edits = {
+    headline: { title: "unsupported-product specialist", tagline: "Verified security engineering" },
+    summary: "Led unsupported-product deployments",
+    skills: [{ idx: 1, text: "unsupported-product" }, { idx: 2, text: "IAM" }],
+    bullets: [{ idx: 3, text: "Implemented unsupported-product" }, { idx: 4, text: "Reviewed access controls" }],
+    extras: [{ idx: 5, text: "unsupported-product certification" }],
+    added: [{ after: 4, text: "Used unsupported-product at a bank" }],
+  }
+  const cleaned = removeUnsupportedRewrites(edits, text => text.includes("unsupported-product"))
+  assert.equal(cleaned.removed, 6)
+  assert.equal(cleaned.edits.headline.title, "")
+  assert.equal(cleaned.edits.headline.tagline, "Verified security engineering")
+  assert.equal(cleaned.edits.summary, "")
+  assert.equal(cleaned.edits.skills.length, 1)
+  assert.equal(cleaned.edits.skills[0].text, "IAM")
+  assert.equal(cleaned.edits.bullets.length, 1)
+  assert.equal(cleaned.edits.bullets[0].idx, 4)
+  assert.equal(cleaned.edits.extras.length, 0)
+  assert.equal(cleaned.edits.added.length, 0)
+})
+test("evidence-supported edits remain unchanged and no rewrite is fabricated by the sanitizer", () => {
+  const edits = { bullets: [{ idx: 1, text: "Documented existing AWS IAM access controls" }] }
+  const cleaned = removeUnsupportedRewrites(edits, text => text.includes("unsupported-product"))
+  assert.equal(cleaned.removed, 0)
+  assert.equal(cleaned.edits, edits)
+})
+test("sanitizing an unsafe claim cannot override the independent role-completeness gate", () => {
+  const unsafe = make({ quality_blockers: ["roles_unrewritten"] })
+  assert.equal(acceptableWhatsAppResume(unsafe), false)
+  assert.ok(whatsappResumeRejectionReasons(unsafe).includes("roles_unrewritten"))
 })

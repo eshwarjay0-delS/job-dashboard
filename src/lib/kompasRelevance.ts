@@ -21,13 +21,13 @@ const EXPERIENCE=/\b(?:tell me about a time|share an example|give me an example 
 const CLOSING=/\b(?:what questions (?:do|would|might|can) you have|any questions (?:for|from) me|what would you (?:like to )?ask (?:me|us)|anything you(?:'d| would) (?:like|want) to ask|questions about (?:the|this) (?:role|team|company))\b/i
 const INTRO=/\b(?:tell me about yourself|introduce yourself|walk (?:me|us) through your (?:career|background)|your professional background|career (?:journey|overview)|self introduction)\b/i
 const VALUE=/\b(?:what (?:would|can|do) you bring to|what you can bring|highlight .{0,40}(?:bring|experience)|what (?:can|would) you contribute|why (?:are|would|should) (?:we hire you|you be (?:a )?(?:good|strong) fit)|what makes you (?:a )?(?:good|strong) fit|what sets you apart|highlight (?:for me )?anything|anything (?:else )?(?:i|we) should (?:know|be aware of)|what else should (?:i|we) know|why (?:do|would) you want (?:this|to work)|why (?:bny|this role|our team))\b/i
-const LOGISTICS=/\b(?:relocat(?:e|ion)|on.?site|hybrid|notice period|start date|available to start|sponsorship|work authorization|where are you based|where do you live|are you a(?:n| a)? (?:u\.?s\.? )?citizen|travel|salary|compensation|clearance|working (?:hours|days))\b/i
-const DEFINE=/\b(?:what is|what are|what does .{1,55} mean|define|stands? for|explain (?:the term|what .{1,60} is))\b/i
+const LOGISTICS=/\b(?:relocat(?:e|ion)|on.?site|hybrid|notice period|start date|available to start|sponsorship|work authorization|authori[sz]ed to work|h-?1b|green card|opt\b(?!\s+(?:for|in|to|out)\b)|visa|commute|where are you based|where do you live|are you a(?:n| a)? (?:(?:u\.?\s*s\.?|u\s+s)\s+)?citizen|(?:u\.?\s*s\.?|u\s+s|united states)\s+citizens?|travel|salary|compensation|clearance|working (?:hours|days))\b/i
+const DEFINE=/\b(?:what (?:exactly |precisely )?is|what (?:exactly |precisely )?are|what does .{1,55} mean|define|stands? for|explain (?:the term|what .{1,60} is))\b/i
 const COMPARE=/\b(?:which (?:one|framework|tool|approach|option|is)|which of those|which would you (?:choose|pick|prefer|start)|stronger (?:in|with)|more (?:proficient|comfortable|familiar)|difference between|compare|versus|vs[.]?|how do .+ differ|how is .{1,80} different|how\b[^?]{0,110}\bdiffer(?:s|ed)?\b|prefer .+ (?:or|over))\b/i
 const SCENARIO=/\b(?:how would you|what would you do|suppose|imagine|if you (?:were|had|found|saw)|hypothetical|in that situation|how should (?:we|the team)|scenario)\b/i
 const DEEP=/\b(?:step by step|walk me through|under the hood|exact (?:logs|fields|mechanics|steps|flow)|deep dive|debug|troubleshoot|design|implement|packet|query|architecture|how (?:does|do|did) .+ work|how exactly)\b/i
 const ACK=/^\s*(?:yeah|right|okay|ok|great|thanks|thank you|that makes sense|absolutely|so that's|you(?:'ll| will)|we(?:'ll| will)|the team|our team|it's important|i expect|i would expect)\b/i
-const FOLLOW=/^\s*(?:and (?:then|how|why|what)|what (?:about|happened)|what did you (?:check|see|do) first|how (?:so|did you verify)|can you (?:expand|elaborate)|go (?:deeper|on)|tell me more|why is that|why is that important|explain (?:that|this|it)|walk me through (?:that|this|it)|say that again)\b/i
+const FOLLOW=/^\s*(?:and (?:then|how|why|what)|what (?:about|happened)|what did you (?:check|see|do) first|how (?:so|did you verify)|can you (?:expand|elaborate)|(?:go|dig) deeper|go on|tell me more|why is that|why is that important|explain (?:that|this|it)|walk me through (?:that|this|it)|say that again)\b/i
 const QUESTION=/\?|^\s*(?:what|why|how|when|where|which|who|tell|describe|explain|give|walk|could|can|would|will|are|is|do|does|have|has|should)\b/i
 
 /** The press phrase, not the quoted earlier question glued on after it. */
@@ -37,11 +37,16 @@ function askWithoutPrior(question: string): string {
   return lead || q
 }
 
+const BARE_FOLLOW=/^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|why|how)(?:\s+though)?[.?!]*$/i
+
 export function interviewIntent(question: string): ReplyIntent {
   const q=askWithoutPrior(question)
   if(!q) return "direct"
+  // "Why?" is glued onto the previous question, then classified as a new direct ask.
+  // The prompt then tells the answer to start over. A bare why or how come stays a follow-up.
+  if(BARE_FOLLOW.test(q)) return "follow-up"
   // The interviewer marked the earlier words as not the question. The ask is what follows.
-  if(/\b(?:any questions|what questions do you have|do you have any questions)\b[^.?!]*\??\s*$/i.test(q)) return "closing-question"
+  if(/\b(?:any questions|what questions do you have|do you have any questions)\b[^.?!]*\??\s*$/i.test(q) && !INTRO.test(q)) return "closing-question"
   // "How would you explain residual risk to a business owner" asks for the meaning, said so they can use it.
   if(/\bhow would you explain\b/i.test(q)) return "definition"
   // Several named checks in one assess question need the mechanism of each, not a yes/no.
@@ -49,14 +54,17 @@ export function interviewIntent(question: string): ReplyIntent {
   if(/\b(?:are you familiar with|do you know)\b.+\b(?:and|or|versus|vs\.?)\b/i.test(q)) return "comparison"
   // Interviewers vary the wording across disciplines; route the requested action,
   // not the job-specific vocabulary. These patterns complement the baseline.
-  if(/\b(?:any questions for (?:us|the team)|do you have any questions|anything you(?:'d| would) like to ask\??)\b/i.test(q)) return "closing-question"
+  if(/\b(?:any questions for (?:us|the team)|do you have any questions|anything you(?:'d| would) like to ask\??)\b/i.test(q) && !INTRO.test(q)) return "closing-question"
   if(/\b(?:give me (?:a )?(?:(?:quick|brief|short) )?overview of your (?:background|career|experience)|summari[sz]e your (?:background|career|experience)|what(?:'s| is) your background)\b/i.test(q)) return "introduction"
   if(/\b(?:why are you interested in (?:this|the|our) (?:position|job|role|team|company)|how would you contribute to (?:this|the|our|a|an)\b)\b/i.test(q)) return "value"
   if(/\b(?:describe (?:a|an) (?:project|incident|challenge|failure|achievement|situation) (?:you|where|that|when)|walk me through (?:a|an) (?:project|incident|failure|challenge) (?:you|where|that))\b/i.test(q)) return "experience-story"
   if(/\bwhen (?:can|could|would) you start\b/i.test(q)) return "logistics"
+  if(/^(?:notice|remote|bonus|salary|hybrid|on-?site|h-?1b|opt|ts\s*\/\s*sci)[.?!]*$/i.test(q)) return "logistics"
+  if(/\b(?:two|\d+)\s+weeks'?\s+notice\b|\b(?:work(?:ing)?\s+nights?|night shifts?)\b|\bare you local\b/i.test(q)) return "logistics"
+  if(/\b(?:in(?:\s+the)?\s+office|days?\s+in(?:\s+the)?\s+office)\b/i.test(q) && !/\b(?:how|why|design|troubleshoot)\b/i.test(q)) return "logistics"
   if(/^\s*(?:why was that important|what did you do next|how did you (?:measure|test|check|confirm) (?:that|it|the result))\b/i.test(q)) return "follow-up"
   if(/\b(?:explain how|describe how)\b/i.test(q) && !COMPARE.test(q)) return "technical-process"
-  if(CLOSING.test(q)) return "closing-question"
+  if(CLOSING.test(q) && !INTRO.test(q)) return "closing-question"
   if(INTRO.test(q) || /^(?:(?:big|brief|short|quick|full|personal|detailed|self)\s+)?intro(?:duction)?[.?!]*$/i.test(q)) return "introduction"
   if(VALUE.test(q)) return "value"
   if(EXPERIENCE.test(q)) return "experience-story"
@@ -101,7 +109,9 @@ export function focusPlan(question:string,tier:number,level:string):FocusPlan{
   const brief=/\b(?:brief|briefly|quick|short|30 seconds|half a minute)\b/i.test(question)
   return {intent,minWords:brief?65:240,maxWords:brief?110:250,opening,proof,technicalDepth:"surface"}
  }
- const detailed=(DEEP.test(question)&&["scenario","technical-process","experience-story","follow-up"].includes(intent)) || (intent==="comparison"&&/\b(?:technically|at the protocol level|under the hood|in detail|how .+ differ|how is .{1,80} different)\b/i.test(question)) || (intent==="definition"&&/\b(?:why|how|disable)\b/i.test(question)) || intent==="technical-process"
+ const lead=askWithoutPrior(question)
+ const askedDeeper=intent==="follow-up" && /\b(?:go deeper|dig deeper|more detail|elaborate|explain (?:that|this|it))\b/i.test(lead)
+ const detailed=askedDeeper || (DEEP.test(question)&&["scenario","technical-process","experience-story","follow-up"].includes(intent)) || (intent==="comparison"&&/\b(?:technically|at the protocol level|under the hood|in detail|how .+ differ|how is .{1,80} different)\b/i.test(question)) || (intent==="definition"&&/\b(?:why|how|disable)\b/i.test(lead)) || intent==="technical-process"
  // Technical depth may grow when specifically requested, not merely because
  // the session is in Director/Engineer mode. Preserve full source-backed intros.
  const adjusted=detailed?max+40:max
@@ -130,8 +140,10 @@ export function focusPrompt(question:string,tier:number,level:string):string{
   p.intent==="definition" ? "Open with what it is. If the question also asks why or how, give that mechanism next, in concrete terms, not a leadership lecture." : "",
   p.intent==="comparison" ? "Name every option in the question. The first sentence is the difference or the one you use more. No unrelated person." : "",
   p.intent==="value" || p.intent==="introduction" ? "Open with the relevant experience. Name a tool only when it shows that fit." : "",
+  INTRO.test(question) && CLOSING.test(question) ? "The interviewer also asked what questions you have. After the introduction, ask one specific question about this team." : "",
   p.intent==="experience-story" ? "One supported story: what was weak, what you reviewed, what changed. Do not promote yourself to an authority the resume does not give." : "",
   p.intent==="technical-process" ? "Cover each named part in order, with the check and the failure mode for that part. Do not replace the parts with a formula or a metric." : "",
+  p.intent==="follow-up" && p.technicalDepth==="deep" ? "The interviewer asked to go deeper on the same subject. Sentence one adds the mechanism or reason the previous answer did not already give. Do not repeat that answer's opening." : "",
  ].filter(Boolean).join("\n")
 }
 

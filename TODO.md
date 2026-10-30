@@ -1,3 +1,55 @@
+## 2026-10-30 — A one-word logistics question is not dropped
+
+Salary, hybrid, onsite, remote, notice, bonus, and TS/SCI were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Two weeks' notice, night work, days in the office, and being local to a city stay short too. A hybrid-cloud design stays a technical question.
+
+## 2026-10-30 — A short visa question is not dropped
+
+"H-1B?" was dropped, so the previous answer stayed on screen. "Do you need an H-1B?", a green card, a visa, and commuting to the office were answered as long questions. They stay short logistics answers. "How would you opt for least privilege?" stays a scenario. "How does work authorization work?" stays technical.
+
+## 2026-10-30 — A spaced citizenship question stays a short logistics answer
+
+"Are you a u s citizen" was treated as a normal question, so it could run long. "Are you authorized to work in the U.S.?" did the same. Both stay logistics. "How does work authorization work?" stays a technical explanation. One hundred intent folds still pass.
+
+## 2026-10-30 — A limit before the question no longer swallows the ask
+
+"No downtime, how would you verify the remediation?" and "Without a restart, how would you patch the service?" were stored as the condition only, so the ask was dropped. The limit stays a condition and the question stays the question. "With no downtime, how would you..." is the same split.
+
+## 2026-10-30 — No downtime stays a condition of the question
+
+"How would you verify the remediation with no downtime?" kept the limit inside the ask, so it was not named as a condition. "There can be no downtime" before the question was skipped the same way. Both are now conditions. The ask itself stays. A "without ..." condition still keeps the ask.
+
+## 2026-10-30 — Two questions on screen are answered separately
+
+A screen capture that held two questions was one answer. Each Question block is now its own page. The options stay with their question. One question on screen is still one page. There is still no review dialog. The page stamp is kompas-20261030-screen.
+
+## 2026-10-30 — Two typed questions open two pages
+
+Typing "What is Kubernetes? What is Terraform?" kept both on one page. The box now uses the same cut as the microphone and WhatsApp. Each question gets its own page. A design followed by an explanation stays one page. One typed question still opens one page. The page stamp is kompas-20261030-typed.
+
+## 2026-10-30 — Two WhatsApp questions in one message are both answered
+
+The microphone already cut "What is Kubernetes? What is Terraform?" into two asks. WhatsApp sent that message as one turn, so the second ask was lost. WhatsApp now uses the same cut. A design followed by an explanation stays one answer. One question still sends one answer.
+
+## 2026-10-30 — An introduction and a request for questions are both kept
+
+"Tell me about yourself. What questions do you have?" was one closing question, so the introduction was dropped. Those two are now separate asks. A design followed by an explanation stays one question. Setup before "Any questions?" stays with that question. If both still arrive as one string, the answer introduces first and then asks one question about the team. The page stamp is kompas-20261030-both.
+
+## 2026-10-29 — Go deeper must add a mechanism, not repeat the opening
+
+The depth flag already said deep. The prompt now says sentence one adds the mechanism or reason the previous answer did not give, and does not repeat that opening. A short follow-up such as "Why is that dangerous?" does not get that line.
+
+## 2026-10-29 — Go deeper is a deep follow-up
+
+"Go deeper on that exception" stayed a short follow-up, so the answer could repeat the previous one at the same depth. Asking to go deeper, dig deeper, give more detail, elaborate, or explain that now deepens the same subject. "Why is that dangerous?" stays the shorter follow-up. One hundred intent folds still pass.
+
+## 2026-10-29 — A follow-up is not told to throw away the previous answer
+
+"Go deeper on that exception" and "Why is that dangerous?" were follow-ups, and the prompt still said the question was different and not to reuse the previous answer. A follow-up no longer gets that line. "What exactly is least privilege?" and "Elaborate on session recording" still do.
+
+## 2026-10-29 — A named follow-up in the same breath is the next question
+
+"What is NLA? Go deeper on that exception." was one question. The second sentence names its own subject, so it is cut apart. "Go deeper" by itself stays with the question it follows. The page stamp is kompas-20261029-split. Fifty heard sequences still cut apart.
+
 ## 2026-10-29 — Go deeper on a named subject is still a new ask
 
 "Go deeper" alone was a new ask. "Go deeper on that exception" was not, so a press after an answer re-asked the old question. A follow-up that continues into its subject is a new ask. The page stamp is kompas-20261029-ask.

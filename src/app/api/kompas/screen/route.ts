@@ -57,9 +57,8 @@ export async function POST(request: NextRequest) {
     if (data.choices?.[0]?.finish_reason !== 'stop') return failure("The screen question could not be read completely. Share a smaller area.", 422)
     const tasks = screenTasks(data.choices?.[0]?.message?.content)
     if (!tasks?.length) return failure("No clear question was readable. Share the question window or type it.", 422)
-    // Capture never interrupts with a dialog: every extraction answers
-    // directly, exactly like AI Answer — one press, one card, no modal.
-    // Multiple questions arrive as one formatted question, answered once.
+    // Capture never interrupts with a dialog. The page answers each Question
+    // block on its own card, the same way a typed pair of questions does.
     ok = true
     return NextResponse.json({ needsAnswer: true, question: formatScreenTasks(tasks) }, { headers: NO_STORE })
   } catch { return failure("Screen analysis was interrupted. Please retry or type the question.", 502) }
