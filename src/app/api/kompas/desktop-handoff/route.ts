@@ -8,15 +8,32 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 const NO_STORE = { "Cache-Control": "no-store, private", "X-Content-Type-Options": "nosniff" }
-const MAX_BYTES = 256_000
+const MAX_BYTES = 4_000_000 // guard platform request size; no per-field text limit
 const FIELD_LIMITS: Record<string, number> = {
-  id: 128, type: 32, role: 512, company: 512, jd: 120000, resume: 120000,
-  documents: 120000, instructions: 20000, language: 24, interviewer: 64,
+  id: 128, type: 32, role: 512, company: 512, language: 24, interviewer: 64,
   difficulty: 64, tone: 64, mode: 64, length: 64,
   token: 16384, refreshToken: 16384,
 }
+const LARGE_TEXT_FIELDS = ["resume", "jd", "documents", "instructions"] as const
 const BOOL_FIELDS = ["autoAnswer", "autoMode", "saveTranscript"] as const
 const NUM_FIELDS = ["createdAt", "tokenExp"] as const
+
+/**
+ * Older browser sessions can contain structured custom instructions (arrays or
+ * objects) rather than the wizard's plain textarea string. Preserve all text
+ * when issuing a desktop ticket; never silently drop or truncate it.
+ * The outer request cap and FIELD_LIMITS still reject oversized payloads.
+ */
+function instructionText(value: unknown): string | null {
+  if (value === undefined || value === null) return ""
+  if (typeof value === "string") return value
+  if (typeof value === "boolean") return String(value)
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : null
+  if (Array.isArray(value) || typeof value === "object") {
+    try { return JSON.stringify(value) } catch { return null }
+  }
+  return null
+}
 
 // Browser-local session details are transferred over HTTPS, NOT embedded in
 // Chromium's Windows external-protocol link (which fails above ~2 KB).
@@ -45,7 +62,7 @@ export async function POST(request: NextRequest) {
   if (session.site !== "marketfit" || typeof session.id !== "string" || !session.id.trim() || session.id.length > FIELD_LIMITS.id) {
     return NextResponse.json({ ok: false, error: "Invalid MarketFit interview." }, { status: 400, headers: NO_STORE })
   }
-  const allowed = new Set([...Object.keys(FIELD_LIMITS), ...BOOL_FIELDS, ...NUM_FIELDS, "site"])
+  const allowed = new Set([...Object.keys(FIELD_LIMITS), ...LARGE_TEXT_FIELDS, ...BOOL_FIELDS, ...NUM_FIELDS, "site"])
   if (Object.keys(session).some(k => !allowed.has(k))) {
     return NextResponse.json({ ok: false, error: "Unrecognized interview fields." }, { status: 400, headers: NO_STORE })
   }
@@ -56,6 +73,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: "Invalid interview field: " + field }, { status: 400, headers: NO_STORE })
     }
     safe[field] = session[field]
+  }
+  // The browser's interview fields have no separate per-field length caps.
+  // Only the overall safe transport limit (validated above) applies. Do not
+  // silently truncate or reject saved long prompts that work in browser mode.
+  for (const field of LARGE_TEXT_FIELDS) {
+    if (session[field] === undefined) continue
+    const value = field === "instructions" ? instructionText(session[field]) : session[field]
+    if (typeof value !== "string") {
+      return NextResponse.json({ ok: false, error: "Invalid interview field: " + field }, { status: 400, headers: NO_STORE })
+    }
+    safe[field] = value
   }
   for (const field of BOOL_FIELDS) {
     if (session[field] !== undefined && typeof session[field] !== "boolean") {

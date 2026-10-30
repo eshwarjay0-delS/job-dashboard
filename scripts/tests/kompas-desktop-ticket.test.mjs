@@ -43,3 +43,45 @@ test("ticket redeem is atomic, single-use and not client-readable", () => {
   assert.match(redeem, /status: 410/)
   assert.match(redeem, /Cache-Control.*no-store/)
 })
+
+test("ten representative instruction formats survive the desktop issue route", () => {
+  const start = issue.indexOf("function instructionText(value: unknown): string | null {")
+  const end = issue.indexOf("// Browser-local session details", start)
+  assert.ok(start >= 0 && end > start, "normalization helper must exist")
+  const code = issue.slice(start, end).replace(
+    "function instructionText(value: unknown): string | null {",
+    "function instructionText(value) {",
+  )
+  const ctx = vm.createContext({ JSON, String, Number, Object, Array })
+  vm.runInContext(code + "\nthis.normalize = instructionText;", ctx)
+  const cases = [
+    ["natural spoken response", "natural spoken response"],
+    [null, ""],
+    [undefined, ""],
+    [false, "false"],
+    [0, "0"],
+    [["natural", "grounded"], '["natural","grounded"]'],
+    [{ voice: "natural", level: "engineer" }, '{"voice":"natural","level":"engineer"}'],
+    [{ rules: ["keep evidence", "cover trade-offs"] }, '{"rules":["keep evidence","cover trade-offs"]}'],
+    [{ nested: { sections: ["intro", "technical"] } }, '{"nested":{"sections":["intro","technical"]}}'],
+    ["🛡️ résumé: ".repeat(22000), "🛡️ résumé: ".repeat(22000)],
+  ]
+  for (const [input, expected] of cases) {
+    ctx.input = input
+    assert.equal(vm.runInContext("normalize(input)", ctx), expected)
+  }
+  ctx.input = Infinity
+  assert.equal(vm.runInContext("normalize(input)", ctx), null)
+})
+
+test("desktop preserves unrestricted long text up to the overall platform envelope", () => {
+  assert.match(issue, /const MAX_BYTES = 4_000_000/)
+  assert.match(issue, /const LARGE_TEXT_FIELDS = \["resume", "jd", "documents", "instructions"\]/)
+  assert.match(issue, /const allowed = new Set\(\[\.\.\.Object\.keys\(FIELD_LIMITS\), \.\.\.LARGE_TEXT_FIELDS/)
+  assert.match(issue, /for \(const field of LARGE_TEXT_FIELDS\)/)
+  assert.match(issue, /field === "instructions" \? instructionText\(session\[field\]\) : session\[field\]/)
+  assert.ok(!/instructions:\s*(?:20000|120000)/.test(issue), "old 20k/120k instruction limits are removed")
+  assert.ok(!/jd:\s*120000|resume:\s*120000|documents:\s*120000/.test(issue), "web text fields are not independently capped")
+  assert.match(issue, /Buffer\.byteLength\(raw, "utf8"\) > MAX_BYTES/, "overall byte safeguard remains")
+  assert.match(issue, /session\.site !== "marketfit"/, "session origin check remains")
+})
