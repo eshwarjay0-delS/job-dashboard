@@ -1,3 +1,7 @@
+## 2026-10-30 — A short visa question is not dropped
+
+"H-1B?" was dropped, so the previous answer stayed on screen. "Do you need an H-1B?", a green card, a visa, and commuting to the office were answered as long questions. They stay short logistics answers. "How would you opt for least privilege?" stays a scenario. "How does work authorization work?" stays technical.
+
 ## 2026-10-30 — A spaced citizenship question stays a short logistics answer
 
 "Are you a u s citizen" was treated as a normal question, so it could run long. "Are you authorized to work in the U.S.?" did the same. Both stay logistics. "How does work authorization work?" stays a technical explanation. One hundred intent folds still pass.
