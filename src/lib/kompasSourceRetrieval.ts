@@ -470,6 +470,17 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
         if (INTERVIEWER_SIDE.test(q) || (absent.length && !(missing.length && absent.every(inMissing)))) { matched = false; missing = [] }
       }
     } catch { /* failsafe: matched unchanged */ }
+    // r12: near-miss slot gate. A question asking for a specific value (a person, a title, a count, money, a date, an
+    // outcome figure, a named tool) is covered only when a covering passage states a value of that type in a sentence
+    // that shares a topic word. Stricter only; failsafe: any error leaves matched unchanged.
+    try {
+      const slot = matched ? askedSlot(q) : null
+      if (slot) {
+        const words = topic.filter((t) => t.length >= 3 && !ASK_GENERIC.has(t) && !SLOT_CUE.test(t))
+        const filled = ranked.some((p) => p.proves === "experience" && covers(p) && slotFilled(slot, withoutCoaching(coverText(p)), words, START_ASK.test(q), TEAM_ASK.test(q)))
+        if (!filled) { matched = false; missing = [] }
+      }
+    } catch { /* failsafe: matched unchanged */ }
     const closest = matched ? ranked.find((p) => p.proves === "experience") || null : closestExample(q, experience)
     return missing.length ? { matched, passages: ranked.slice(0, k), closest, all: scored, missing } : { matched, passages: ranked.slice(0, k), closest, all: scored }
   } catch {
@@ -820,4 +831,43 @@ const ASK_GENERIC = new Set(("done do doing did make made making keep kept keeps
 export const DOSSIER_ITEMS_SWITCH = "KOMPAS_DOSSIER_ITEMS"
 export function dossierItemsOn(): boolean {
   try { const v = typeof process !== "undefined" ? String(process.env?.[DOSSIER_ITEMS_SWITCH] ?? "").trim().toLowerCase() : ""; return v === "on" || v === "1" } catch { return false }
+}
+
+// r12: the asked-for slot of a question, or null when it asks for no specific value.
+export type AskSlot = "person" | "title" | "count" | "money" | "date" | "outcome" | "tech"
+const SLOT_ASK: [AskSlot, RegExp][] = [
+  ["money", /\b(?:salary|salaries|budget|compensation|pay(?:ed|id)?|earn(?:ed)?|bonus)\b|\bhow much\b[^?]*\b(?:cost|spend|spent|price)|\b(?:cost|price)\b[^?]*\b(?:per|a) (?:year|month|seat)/i],
+  ["person", /\bwho (?:was|is|were|did|managed|hired|led|ran)\b|\bname of (?:your|the) |\b(?:manager|boss|supervisor)'s name\b/i],
+  ["title", /\b(?:job|exact|official|your) title\b|\bwhat (?:was|is) your title\b/i],
+  ["date", /\bwhen did\b|\b(?:what|which|in what) (?:year|month|date)\b|\bstart date\b/i],
+  ["outcome", /\b(?:percentage|percent)\b|\bhow did [^?]*\bcome out\b|\b(?:final|exact) (?:result|outcome|score)\b/i],
+  ["tech", /\bwhat (?:siem|edr|xdr|soar|stack|tech stack|language|database|cloud|scanner|firewall|vendor)\b[^?]*\b(?:did|does|at|run|use)\b/i],
+  ["count", /\bhow many\b|\bwhat (?:number|count) of\b|\b(?:team|headcount) size\b/i],
+]
+export function askedSlot(q: string): AskSlot | null {
+  try { for (const [slot, re] of SLOT_ASK) if (re.test(q)) return slot } catch { /* failsafe */ }
+  return null
+}
+const SLOT_VALUE: Record<AskSlot, RegExp> = {
+  person: /\b(?:[Mm]anager|[Bb]oss|[Ss]upervisor|[Rr]eport(?:ed|s)? (?:directly )?to|CISO|CIO|CTO|VP|[Dd]irector|[Ll]ed by|[Hh]ired by)\b[^.\n()?]{0,40}?\b(?![A-Z][a-z]+ (?:Bank|Health|Group|Financial|Energy|Inc|Corp|Services|Security|Management|Can|What|How)\b)[A-Z][a-z]+ [A-Z][a-z]+|\b[A-Z][a-z]+ [A-Z][a-z]+, (?:the|my|our) (?:CISO|CIO|CTO|VP|[Dd]irector|[Mm]anager)/,
+  title: /\b(?:[Tt]itle|[Pp]osition) (?:was|is|of)\b|\b(?:Senior|Lead|Principal|Staff|Junior|Chief|Head) [A-Z][a-z]+/,
+  // a count, but not a duration or a share ("seven years", "30 days", "64%")
+  count: /(?:\b\d[\d,.]*|\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozen|hundred|thousand))\b(?!\+?\s*(?:-\s*)?(?:years?|months?|weeks?|days?|hours?|minutes?|%|percent|am|pm)\b)(?!%)/i,
+  money: /[$£€]\s?\d|\b\d[\d,.]*\s?(?:k|K|million|billion|thousand|USD|dollars)\b/,
+  date: /\b(?:19|20)\d\d\b|\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\b|\bQ[1-4]\b/,
+  outcome: /\d\s?%|\bpercent\b|\b(?:passed|failed|reduced|cut|dropped|increased|improved|zero|no findings)\b[^.\n]{0,40}\d/i,
+  tech: /\b[A-Z][a-z]+[A-Z][A-Za-z]*\b|\b[A-Z]{3,}\b|\b(?:Splunk|Sentinel|QRadar|Chronicle|Elastic|ArcSight|LogRhythm|CrowdStrike|Defender|Tenable|Qualys|Okta|Python|Java|Go|AWS|Azure|GCP)\b/,
+}
+// "when did you start / join" needs the date beside a start word, not any year near the employer name
+const START_ASK = /\b(?:start|started|join|joined|hired|begin|began)\b/i
+const START_WORD = /\b(?:start(?:ed|ing)?|join(?:ed|ing)?|hired|beg[ai]n|since|onboarded)\b/i
+// "how many people / how big a team" needs a head count ("a team of six", "12 engineers"), not any number near the employer
+const TEAM_ASK = /\bhow many (?:people|engineers|analysts|staff|direct reports|reports|members|persons?)\b|\b(?:team|headcount) size\b|\bhow (?:big|large) (?:was|is) (?:your|the) team\b/i
+const TEAM_COUNT = /\bteam of (?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|a dozen)\b|(?:\b\d[\d,]*|\b(?:two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|dozen))[- ](?:\w+ )?(?:people|engineers|analysts|staff|direct reports|reports|members|person|FTEs?|contractors)\b/i
+// the cue word of an ask ("title", "manager", "salary") is not the shared topic: the value must sit by another topic word
+const SLOT_CUE = /^(?:title|job|exact|official|manag|manager|boss|supervisor|report|salar|salary|budget|compensat|pay|paid|earn|cost|price|percent|percentag|result|outcome|final|start|year|month|date|name|number|count|team|size|siem|edr|stack|tech|tool)/
+// a value of the slot type in a sentence (or line) that also holds a topic word; no topic words → any sentence
+export function slotFilled(slot: AskSlot, text: string, topic: string[], startAsk = false, teamAsk = false): boolean {
+  const want = new Set(topic)
+  return text.split(/(?<=[.!?;])\s+|\n+/).some((s) => SLOT_VALUE[slot].test(s) && (!startAsk || slot !== "date" || START_WORD.test(s)) && (!teamAsk || slot !== "count" || TEAM_COUNT.test(s)) && (!want.size || tokens(s).some((t) => want.has(t))))
 }
