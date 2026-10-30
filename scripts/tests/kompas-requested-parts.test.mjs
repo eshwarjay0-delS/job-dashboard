@@ -37,6 +37,15 @@ test('a listed ask becomes one part per item, in order, and its conditions are k
   const restart = A.requestedParts('Without a restart, how would you patch the service?')
   assert.deepEqual(restart.constraints, ['Without a restart'])
   assert.match(restart.parts.join(' '), /how would you patch the service/i)
+  const stay = A.requestedParts('The service must stay up. How would you patch it?')
+  assert.deepEqual(stay.constraints, ['The service must stay up'])
+  assert.match(stay.parts.join(' '), /How would you patch it/)
+  const access = A.requestedParts('No production access. How would you investigate the alert?')
+  assert.deepEqual(access.constraints, ['No production access'])
+  assert.match(access.parts.join(' '), /How would you investigate the alert/)
+  const running = A.requestedParts('You must keep the service running. How would you verify the remediation?')
+  assert.deepEqual(running.constraints, ['You must keep the service running'])
+  assert.match(running.parts.join(' '), /How would you verify the remediation/)
 })
 
 test('setup sentences are context, a single ask stays one part, and "and" inside a name is not a split', () => {
