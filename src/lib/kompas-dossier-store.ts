@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { blob } from "./storage"
 import { type DossierSource } from "./kompas-dossier-bots"
-import { buildFastDossierIndex, type FastDossierIndex, FAST_DOSSIER_VERSION } from "./kompas-fast-dossier"
+import { buildFastDossierIndex, queryFastDossier, formatFastDossierContext, type FastDossierIndex, FAST_DOSSIER_VERSION } from "./kompas-fast-dossier"
 
 const fp = (v: string) => createHash("sha256").update(v).digest("hex")
 const isDigest = (v: string) => /^[a-f0-9]{64}$/.test(v)
@@ -32,7 +32,7 @@ export async function savePreparedDossier(
   if (!isDigest(ownerHash) || !isDigest(sourceDigest)) throw new Error("Invalid owner or dossier identity.")
   const resumeText = sources.filter(s => s.kind === "resume").map(s => s.text).join("\n")
   const jdText = sources.filter(s => s.kind === "job_description").map(s => s.text).join("\n")
-  const idx = buildFastDossierIndex(sources, sourceDigest, fp(resumeText), fp(jdText))
+  const idx = buildFastDossierIndex(sources, sourceDigest, fp(resumeText.slice(0, 60000)), fp(jdText.slice(0, 8000)))
   const document: SavedDossier = {
     version: FAST_DOSSIER_VERSION, sourceDigest, stages,
     sourceManifest: sources.map(({ id, kind, title, digest }) => ({ id, kind, title, digest })),
@@ -41,6 +41,7 @@ export async function savePreparedDossier(
   // Save first. Do not call a cache insertion durable persistence.
   await blob.put(key(ownerHash, sourceDigest, "index.json"), JSON.stringify(idx))
   await blob.put(key(ownerHash, sourceDigest, "manuscript.json"), JSON.stringify(document))
+  await blob.put("dossier/" + ownerHash + "/fast/active.json", JSON.stringify({ digest: sourceDigest }))
   touch(ownerHash + ":" + sourceDigest, idx)
 }
 
@@ -73,4 +74,27 @@ export async function loadFastDossier(
   if (jd && idx.jobFingerprint !== fp(jd)) return null
   if (!resume || !jd) return null // don't infer personal context without the active pair
   return idx
+}
+
+
+/** A new source pair selects an existing index only if fingerprints match.
+ * The active pointer is convenience; it never proves a historical claim.
+ */
+export async function activePreparedDossierContext(
+  ownerHash: string, resume: string, jd: string, question: string,
+  opts: { followUp?: string; firstPerson?: boolean; maxChars?: number } = {},
+): Promise<string> {
+  if (!isDigest(ownerHash) || !resume || !jd) return ""
+  const raw = await blob.getText("dossier/" + ownerHash + "/fast/active.json")
+  if (!raw) return ""
+  let d: string
+  try { d = (JSON.parse(raw) as {digest?: string}).digest || "" } catch { return "" }
+  if (!isDigest(d)) return ""
+  const idx = await loadFastDossier(ownerHash, d, resume, jd)
+  if (!idx) return ""
+  const hits = queryFastDossier(idx, question, {
+    limit: 5, maxChars: opts.maxChars ?? 2000,
+    followUp: opts.followUp, firstPerson: opts.firstPerson,
+  })
+  return formatFastDossierContext(hits)
 }
