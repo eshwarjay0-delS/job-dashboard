@@ -1906,7 +1906,35 @@ function repeatsPriorQuestionV2(text, previous) {
 // Kept equal to splitDistinctAsks in src/lib/kompasAnswer.ts. A multi-part ask stays one
 // question. Two questions in one breath become two.
 const SPLIT_LEAD = /^(?:(?:ok(?:ay)?|so|and|also|now|then|next|finally|right|alright|all right|well|yes|yeah|uh+|um+|please|great|perfect|cool|sure)[,.!]?\s+)+/i;
-const SPLIT_NOISE = /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|bye|goodbye|good morning|good afternoon|good evening|how are you|what'?s up|cool|sure|right|alright|all right|got it|sounds good)[.!?]*$/i;
+// demo-final: SPLIT_NOISE and the small-talk lines mirror SPOKEN_NOISE / SMALL_TALK / noiseOnly in src/lib/kompasAnswer.ts (AQ stress rounds 2-10).
+const SPLIT_NOISE = /^(?:ok(?:ay)?|hi|hello|hey|thanks|thank you|yeah|yep|yes|no|nope|uh+|um+|hmm+|uh[- ]?huh|mm+[- ]?hmm+|m+hm+|mm+|ah+|oh+|i see|bye|goodbye|good morning|good afternoon|good evening|how are you|what'?s up|cool|sure|right|alright|all right|got it|sounds good)[.!?]*$/i;
+const SPLIT_SMALL_TALK_LEAD = "(?:(?:yeah|yes|ok(?:ay)?|right|alright|all right|so|well|hmm+|mm+|oh|ah|nice|great|good|perfect|cool|sure|sorry|wow|excellent|awesome|thanks)[,.!]?\\s+)*";
+const SPLIT_SMALL_TALK_CORE = [
+  "that'?s (?:a |an |really |very )?(?:tough|hard|good|great|fair|interesting|helpful|fine|clear|nice|solid|cool|tricky)(?: one| question| point| answer| idea| example)?",
+  "that (?:makes sense|helps|is helpful|is interesting|works)",
+  "makes (?:total |perfect )?sense", "fair enough", "good,? good", "very good", "all good", "no worries", "sounds good",
+  "(?:thanks|thank you)(?: so much| for that)?", "i see(?: what you mean)?", "i hear you", "got it", "understood", "noted",
+  "interesting(?: point| one)?", "(?:i )?(?:really )?like that(?: answer| idea| one| example)?", "(?:i )?appreciate (?:that|it)",
+  "let'?s (?:dive in|get started|begin|start|move on|keep going|continue|jump in|jump right in)",
+  "give me (?:a|one) (?:second|sec|moment|minute)", "(?:just )?(?:one|a) (?:second|sec|moment)", "hold on", "bear with me",
+  "let me (?:pull up|find|check|grab|look at) (?:my|the) (?:notes|screen|list|questions|next question)",
+  "(?:my|the) (?:dog|cat|kid|kids|baby|neighbou?r) (?:is|are) (?:barking|crying|loud|here|making noise)",
+  "the weather (?:has been|is|was) [a-z ]{2,30}", "(?:you'?re|you are) breaking up(?: a (?:bit|little))?", "okay cool", "cool cool", "nice one",
+  // Round 6 (29 Oct 2026): five more interviewer asides were formed into questions and answered.
+  "that'?s (?:basically |about |pretty much )?(?:the team|it|all|everything|the role|the setup)", "right,? right",
+  "(?:we'?ll|let'?s|i'?ll) circle back (?:on|to) (?:that|it|this)",
+  "(?:my|the|your) (?:screen|video|audio|connection|internet|wi-?fi|mic) (?:froze|dropped|cut out|lagged|glitched|is lagging)(?: for a (?:second|sec|moment|bit))?",
+  "i'?m (?:just )?(?:writing|noting|jotting) (?:that|this|it) down", "let me (?:write|note|jot) (?:that|this|it) down",
+  // Round 8 (29 Oct 2026): five more asides were formed into questions and answered ("mm-hm", "got it, thanks", "I'm going
+  // to mute for a second", "let me check the time", "sorry, someone just walked in"). Whole-utterance only, no "?".
+  "(?:mm-?hm+|uh-?huh|mhm+)(?:,? (?:okay|ok|right|sure|yeah|got it))?", 
+  // Round 10: meeting housekeeping.
+  "(?:i'?m|i am) (?:going to|gonna|about to) share my screen", "(?:sorry,? )?(?:i'?m|i was|you'?re|you were) (?:on|still on) mute",
+  "can (?:everyone|everybody|you|you all) (?:hear|see) me(?: okay| alright| now| well| fine)?", "got it,? (?:thanks|thank you)", "(?:i'?m|i am) (?:going to|gonna) (?:mute|go on mute)(?: for a (?:second|sec|moment|bit|minute))?",
+  "let me (?:check|look at) the (?:time|clock)", "someone (?:just )?(?:walked|came) in",
+];
+const SPLIT_SMALL_TALK = new RegExp(`^${SPLIT_SMALL_TALK_LEAD}(?:${SPLIT_SMALL_TALK_CORE.join("|")})[.!]*$`, "i");
+function splitSmallTalk(t) { return !!t && !/\?/.test(t) && t.split(/\s+/).length <= 14 && SPLIT_SMALL_TALK.test(t); }
 const SPLIT_OPENER = /^(?:how|what|why|when|where|which|who|whom|whose)\b(?!\s+to\b)|^(?:can|could|would|will|should|do|does|did|are|have|has)\s+(?:you|we)\b|^(?:tell|walk|take|talk|show|give|explain|describe|define|compare|contrast|differentiate|distinguish|design|build|implement|configure|architect|plan|outline|list|name|state|share|write|draft|map|diagnose|troubleshoot|debug|identify|recommend|propose|justify|estimate|summari[sz]e|discuss|evaluate|assess|analy[sz]e|elaborate|expand|go|dig|introduce|imagine|suppose|pick|choose|select|rank|prioriti[sz]e|break|weigh|defend|verify|validate|test|measure|quantify|detail|clarify|demonstrate|illustrate|cover|include|keep|focus|assume|consider|avoid|limit|stay|mention|start|end|finish|continue)\b/i;
 const SPLIT_START = /^(?:what|why|how|when|where|which|who|can you|could you|would you|will you|do you|did you|have you|are you|tell me|walk me|describe)\b/i;
 const SPLIT_CONTINUES = /^(?:what if|what about (?:that|this|it)|how about (?:that|this)|why (?:is|was|did|would) (?:that|it|this)|how (?:did|would|do) (?:that|it|this)|which of (?:those|these|them)|walk me through (?:that|this|it))\b/i;
@@ -1914,7 +1942,7 @@ const SPLIT_PROPER_STOP = new Set("what how why when where which who tell walk h
 const SPLIT_TOPIC_STOP = new Set("about after again also been before being could does doing from have here into just like more most much only other over same some such than that their them then there these they this those through very what when where which while will with would your yours explain describe tell".split(" "));
 function splitNoise(text) {
   const t = String(text || "").replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gi, " ").replace(/\s+/g, " ").trim();
-  return !t || SPLIT_NOISE.test(t);
+  return !t || SPLIT_NOISE.test(t) || splitSmallTalk(t);
 }
 function splitTopicWords(text) {
   return String(text || "").toLowerCase().replace(/[^a-z0-9+#.-]+/g, " ").split(/\s+/).map((w) => w.replace(/^[.-]+|[.-]+$/g, "")).filter((w) => w.length >= 4 && !SPLIT_TOPIC_STOP.has(w));
@@ -2451,6 +2479,8 @@ const PHRASE_FIXES = [
   [/\bterror\s+form\b/gi, "Terraform"],
   [/\bteraform\b/gi, "Terraform"],
   [/\bterraform\b/gi, "Terraform"],
+  // demo-final: mirrors the server repair AQ added in kompasDictation.ts (stress round 2/6), kept entry for entry.
+  [/\bresid(?:ue|ual)?\s+(?:jewel|jewell|joule|you all|all|al)\s+(risks?)\b/gi, "residual $1"],
   [/\bstart\s+method\b/gi, "STAR method"],
   [/\bs\.?\s*t\.?\s*a\.?\s*r\.?\s+method\b/gi, "STAR method"],
   [/\bstar\s+method\b/gi, "STAR method"],
