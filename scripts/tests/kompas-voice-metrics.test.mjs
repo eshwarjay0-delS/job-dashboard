@@ -169,3 +169,26 @@ test("baseline accepts zero-coverage nulls and WER above one from insertions",()
   assert.equal(base.metrics.p95LatencyMs,null);
   assert.equal(evaluate(set(samples),base).deltaFromBaseline.wer,0);
 });
+
+test("empty reference speaker cannot create an apparently correct attribution",()=>{
+  assert.throws(()=>evaluate(set([row("a","hello","hello",{referenceSpeaker:"",predictedSpeaker:""})])),/Invalid reference speaker label/);
+});
+test("whitespace-only predicted speaker is not a valid successful prediction",()=>{
+  assert.throws(()=>evaluate(set([row("a","hello","hello",{referenceSpeaker:"A",predictedSpeaker:"  "})])),/Invalid predicted speaker label/);
+});
+test("numeric reference speaker is not silently dropped from the denominator",()=>{
+  assert.throws(()=>evaluate(set([row("a","hello","hello",{referenceSpeaker:42})])),/Invalid reference speaker label/);
+});
+test("object predicted speaker is rejected instead of becoming an abstention",()=>{
+  assert.throws(()=>evaluate(set([row("a","hello","hello",{referenceSpeaker:"A",predictedSpeaker:{id:"A"}})])),/Invalid predicted speaker label/);
+});
+test("null predicted speaker remains an explicit abstention",()=>{
+  const result=evaluate(set([row("a","hello","hello",{referenceSpeaker:"A",predictedSpeaker:null})]));
+  assert.equal(result.metrics.speakerAttribution,0);
+  assert.equal(result.metrics.speakerPredictionRate,0);
+});
+test("null reference speaker is unmeasured and does not invent attribution",()=>{
+  const result=evaluate(set([row("a","hello","hello",{referenceSpeaker:null,predictedSpeaker:"A"})]));
+  assert.equal(result.coverage.speakerLabels,0);
+  assert.equal(result.metrics.speakerAttribution,null);
+});
