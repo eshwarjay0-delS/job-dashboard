@@ -7,6 +7,7 @@
 import { questionKeywords, topicOfAsk } from "./kompasDissection.ts"
 import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 import { createHash } from "node:crypto"
+import { CTX, dropCoveredFigureClaims, figureContextKeys, figureMentions, mentionSupported, type FigureMention } from "./kompasFigureContext.ts"
 
 export type Proves = "experience" | "emphasis"
 export interface SourceDoc { name: string; text: string; proves: Proves }
@@ -465,21 +466,70 @@ const TOOL_RE = new RegExp(`\\b(?:${TOOLS.join("|")})\\b`, "gi")
 const VAGUE_RE = /\b(?:(?:a|an) (?:very )?(?:large|huge|big|massive|sizable|global|enterprise-wide) (?:team|org|organi[sz]ation|program(?:me)?|budget|portfolio|estate|fleet|user base|customer base)|(?:millions|thousands|hundreds|dozens|tens|scores|billions)(?: of (?:thousands|millions))? of (?:[a-z-]+ )?(?:users|customers|engineers|people|analysts|developers|staff|employees|accounts|servers|endpoints|hosts|devices|records|dollars|transactions|alerts|findings|applications|apps|services|clients|members|reports))\b/gi
 const VAGUE_SCALE: Record<string, number> = { tens: 10, dozens: 24, scores: 40, hundreds: 200, thousands: 2000, millions: 2000000, billions: 2e9 }
 
+// r9: ordinary words that open a sentence are not names ("Leadership sees it weekly", "Failures go back to the owner").
+// Only a single capitalised word at the very start of a sentence is read this way; a name run ("Acme Corp"), a tool,
+// a word with inner capitals ("GuardDuty") or any word not on this list (Globex, Initech, Hooli, Boeing) is still a claim.
+const OPENER_WORDS = new Set(("leadership ownership partnership membership sponsorship stewardship relationship relationships " +
+  "failure failures success successes mistake mistakes lesson lessons result results outcome outcomes impact progress " +
+  "communication collaboration coordination documentation automation prioritization escalation escalations remediation " +
+  "accountability visibility consistency reliability availability scalability security safety privacy compliance governance " +
+  "trust clarity speed quality focus context culture people teams team stakeholders stakeholder customers customer users " +
+  "management engineering operations leaders leader owners owner engineers analysts everyone everything nothing someone something " +
+  "data evidence metrics logs alerts findings risk risks controls policies policy change changes cost costs time budget scope " +
+  "transparency honesty empathy patience feedback mentoring coaching training testing monitoring logging alerting tuning triage " +
+  "working looking building ensuring having being getting moving starting reviewing tracking mapping running leading managing " +
+  "using taking making keeping writing measuring explaining listening asking " +
+  "afterward afterwards eventually luckily unfortunately fortunately personally practically basically clearly naturally " +
+  "simply typically generally specifically importantly interestingly surprisingly looking back " +
+  "my our their that those these this such another other each both either neither one two three first second third last " +
+  "part most much more less half none few several plenty everybody nobody somebody " +
+  "early later recently previously currently today tomorrow yesterday weekly monthly daily quarterly annually " +
+  "good great better best bad worse worst hard harder easy simple key main core big small new old real true false " +
+  "was were is are be been had has have did do does got went came made took gave kept said told asked felt knew thought " +
+  "start begin end finish stop keep make take give get let try use run build lead own fix check").split(/\s+/))
+function commonOpener(w: string, next: string | undefined): boolean {
+  const l = w.toLowerCase()
+  if (!/^[A-Z][a-z]+$/.test(w) || TOOLS.includes(l)) return false
+  if (next && /^[A-Z][A-Za-z0-9&-]*$/.test(next) && !COMMON.has(next.toLowerCase())) return false // "Leadership Council", "Acme Corp"
+  return OPENER_WORDS.has(l) || COMMON.has(l) || (l.length >= 6 && /(?:ship|ment|ness|ity|tion|sion|ance|ence|ism)s?$/.test(l)) || (l.length >= 6 && /ly$/.test(l))
+}
+
+const ctxCache = new Map<string, Set<string>>()
+function contextSet(haystack: string): Set<string> {
+  let s = ctxCache.get(haystack)
+  if (!s) { s = new Set(figureContextKeys(haystack)); if (ctxCache.size > 16) ctxCache.clear(); ctxCache.set(haystack, s) }
+  return s
+}
+
 /** Personal claims a listener would take as fact: named employers, tools, acronyms, and figures. */
 export function extractClaims(text: string): string[] {
   const out: string[] = []
   const t = String(text || "")
+  // r9: a figure that names what it counts is one claim with its noun ("4 regions", "3-5 weeks", "a 4-week"), so a bare
+  // "4" elsewhere in the sources no longer backs it; a bare or standard-name number stays as it was ("40%", "27001").
+  let ments: FigureMention[] = []
+  try { ments = figureMentions(t) } catch { ments = [] }
+  const bareRe = /^(?:\d[\d,.]*\d%?|\d{2,}%?|\d%)$/
+  for (const m of ments) {
+    if (!m.label && (m.head.length || m.money)) out.push(m.claim.replace(/[.,]$/, ""))
+    else if (bareRe.test(m.raw.replace(/^\$\s?/, "").replace(/\s*(?:percent|per cent)$/i, "%").replace(/\s+%/, "%"))) out.push(m.raw.replace(/^\$\s?/, "").replace(/\s*(?:percent|per cent)$/i, "%").replace(/\s+%/, "%").replace(/[.,]$/, ""))
+  }
+  // the pre-r9 figure pass, so no figure it caught is lost (claims are de-duplicated below)
   for (const m of t.matchAll(/\b\d[\d,.]*\d%?|\b\d{2,}%?|\b\d%/g)) out.push(m[0].replace(/[.,]$/, ""))
   // r2: a small figure with a scale word or a currency sign ("$2 million", "3 billion") is a claim too
   for (const m of t.matchAll(/\$\s?\d[\d,.]*(?:\s?(?:k|m|bn|million|billion|thousand)\b)?|\b\d[\d,.]*\s(?:million|billion|thousand)\b/gi)) out.push(m[0].replace(/^\$\s?/, "").toLowerCase())
   for (const m of t.matchAll(VAGUE_RE)) out.push(m[0].toLowerCase())
   for (const m of t.matchAll(TOOL_RE)) if (!/^[A-Z]/.test(m[0])) out.push(m[0].toLowerCase())
   for (const sentence of t.split(/(?<=[.!?])\s+/)) {
-    const ws = sentence.replace(/[^\w\s&'-]/g, " ").split(/\s+/).filter(Boolean)
+    // r9: a comma, semicolon, colon or bracket ends a name ("SOC 2 Type II, NIST 800-53" is two names, each checked)
+    const ws = sentence.replace(/[,;:()]/g, " \u0002 ").replace(/[^\w\s&'\u0002-]/g, " ").split(/\s+/).filter(Boolean)
     let run: string[] = []
     const flush = () => { if (run.length) out.push(run.join(" ")); run = [] }
     ws.forEach((w, i) => {
-      const proper = /^[A-Z][A-Za-z0-9&-]*$/.test(w) && !COMMON.has(w.toLowerCase()) && !/'/.test(w)
+      let opener = false
+      try { opener = i === 0 && commonOpener(w, ws[1]) } catch { opener = false }
+      if (w === "\u0002") { flush(); return }
+      const proper = /^[A-Z][A-Za-z0-9&-]*$/.test(w) && !COMMON.has(w.toLowerCase()) && !/'/.test(w) && !opener
       if (proper && !(i === 0 && !/[A-Z].*[A-Z]|[a-z][A-Z]/.test(w) && COMMON.has(w.toLowerCase()))) run.push(w)
       else flush()
     })
@@ -500,8 +550,19 @@ function supportedBy(claim: string, haystack: string): boolean {
     for (const m of haystack.replace(/,/g, "").matchAll(new RegExp(`\\b(\\d+)(?: [a-z-]+){0,2} ${noun}`, "g"))) if (Number(m[1]) >= min) return true
     return haystack.includes(c)
   }
-  if (/\d\s?(?:k|m|bn|million|billion|thousand)$/.test(c)) return haystack.replace(/,/g, "").includes(c.replace(/,/g, ""))
-  if (/\d/.test(c)) return haystack.replace(/,/g, "").includes(c.replace(/,/g, "").replace(/%$/, ""))
+  if (/\d\s?(?:k|m|bn|million|billion|thousand)$/.test(c) && !/^\$/.test(c)) return haystack.replace(/,/g, "").includes(c.replace(/,/g, ""))
+  if (/\d/.test(c)) {
+    // r9: the same number with the same unit or noun (and "$" for money); a figure claim whose number never appears is unsupported
+    try {
+      const m = figureMentions(c)[0]
+      if (!m) return haystack.replace(/,/g, "").includes(c.replace(/,/g, "").replace(/%$/, ""))
+      const keys = contextSet(haystack)
+      const pre = haystack.replace(/,/g, "").includes(c.replace(/,/g, "").replace(/%$/, ""))
+      if (m.label) return pre
+      if (!m.head.length && !m.money) return pre && keys.has(`${CTX}${m.n}|`)
+      return mentionSupported(m, keys)
+    } catch { return false }
+  }
   return haystack.includes(c)
 }
 
@@ -518,7 +579,7 @@ export function falsePremises(question: string, docs: SourceDoc[] | null | undef
       const clause = m[1].replace(/^(?:since|as|given(?: that)?|because|now that|considering|with)\s+/i, "").replace(/^(?:you|your)\s+/i, "")
       for (const c of extractClaims(clause)) if (!/^(?:you|your|i)$/i.test(c) && !supportedBy(c, hay) && !out.includes(c)) out.push(c)
     }
-    return out
+    return dropCoveredFigureClaims(out)
   } catch {
     return []
   }
@@ -541,7 +602,7 @@ export function unsupportedClaims(text: string, passages: Passage[], docs: Sourc
     // r5: words the interviewer said are exempt, except a false premise about the candidate (failsafe: none → as before)
     let premise: string[] = []
     try { premise = falsePremises(question, docs).map((c) => c.toLowerCase()) } catch { premise = [] }
-    return extractClaims(text).filter((c) => !supportedBy(c, hay) && (!q.includes(c.toLowerCase()) || premise.includes(c.toLowerCase())))
+    return dropCoveredFigureClaims(extractClaims(text).filter((c) => !supportedBy(c, hay) && (!q.includes(c.toLowerCase()) || premise.includes(c.toLowerCase()))))
   } catch {
     return []
   }
@@ -549,7 +610,7 @@ export function unsupportedClaims(text: string, passages: Passage[], docs: Sourc
 
 /** Supported claims over all claims for one answer (1 when the answer makes no personal claim). */
 export function claimSupport(text: string, passages: Passage[], docs: SourceDoc[] | null | undefined, question = ""): { supported: number; total: number; share: number; unsupported: string[] } {
-  const total = extractClaims(text).filter((c) => !String(question).toLowerCase().includes(c.toLowerCase())).length
+  const total = dropCoveredFigureClaims(extractClaims(text).filter((c) => !String(question).toLowerCase().includes(c.toLowerCase()))).length
   const unsupported = unsupportedClaims(text, passages, docs, question)
   const supported = total - unsupported.length
   return { supported, total, share: total ? supported / total : 1, unsupported }

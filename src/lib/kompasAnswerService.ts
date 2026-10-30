@@ -1,3 +1,4 @@
+import { figureList } from "@/lib/kompasFigureContext"
 import { NextRequest, NextResponse } from "next/server"
 import { keysFor, resolveKeys, type LlmKeys } from "@/lib/llm"
 import { checkRateLimit } from "@/lib/rateLimit"
@@ -1039,7 +1040,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   // the source text for the optional post-generation fact-check.
   // Speed r6: built once per resume+documents content (kompasSessionCache), identical to speakFacts/allowedNumbers.
   const { guardFacts, allowed } = sessionFacts(resumeSrc, docsSrc) // the interviewer asking a number is NOT proof that the candidate achieved it
-  const figuresList = [...allowed].slice(0, 30)
+  const figuresList = figureList(allowed).slice(0, 30) // r9: context keys never reach the prompt
   const figuresLine = `FIGURES: the ONLY result numbers you may state are these, from the candidate's own material: ${figuresList.length ? figuresList.join(", ") : "(none)"}. Never invent a count, percentage, duration or before/after figure — describe the change in words ("cut the queue to something the team could clear by lunch"). Technical constants (ports, versions, thresholds in a rule) are fine.`
   const factsText = candidateEvidenceForVerification(resumeSrc, docsSrc)
   // Role requirements and generated dossier context guide relevance, not personal factual proof.

@@ -13,9 +13,24 @@
  */
 import { applyGuards, type SpeakFacts } from "./kompasGuards.ts"
 import { isProviderErrorAnswer } from "./kompasDissection.ts"
-import { sourceIndexFor, unsupportedClaims, type Passage, type SourceDoc } from "./kompasSourceRetrieval.ts"
+import { retrievePassages, sourceIndexFor, unsupportedClaims, type Passage, type SourceDoc } from "./kompasSourceRetrieval.ts"
 
-export interface SourcedOpener { text: string; sourceId: string; category: string; verbatim: true }
+/** Lens contract v1 (research/lens-opener-contract.md): Opener. sourceDoc optional for the r6 hook's callers. */
+export interface SourcedOpener { text: string; sourceId: string; sourceDoc?: string; category: string; verbatim: true; leadIn?: string }
+/** Lens contract v2 (r5): the fixed lead-in list, copied from Lens kompasOpener.ts LEAD_INS (keep the two in step). A lead-in
+ *  not on this list is dropped, never spoken. None holds a name, number or date, so it can add no fact. */
+export const LEAD_INS: readonly string[] = ["In one of my roles, I ", "In my work, I ", "My work has involved ", "From my background: ", "In one of my roles, I was ", "I am "]
+/** Spoken opener = known lead-in + the approved verbatim text. Approval is on `text` alone (approveSourcedOpener). */
+export function spokenOpenerText(o: { text: string; leadIn?: string } | null | undefined): string {
+  if (!o || typeof o.text !== "string") return ""
+  const t = o.text.trim()
+  return t ? `${LEAD_INS.includes(String(o.leadIn || "")) ? o.leadIn : ""}${t}` : ""
+}
+export type OpenerCategory = "experience-story" | "introduction" | "scenario" | "coding" | "definition" | "general"
+export type OpenerTable = Record<string, SourcedOpener[]>
+export interface OpenerSourceItem { id: string; sourceDoc: string; category: string; text: string; status: string }
+type PickOpener = (table: OpenerTable, question: string, match?: { passages: Array<{ id: string; kind?: string; proves?: string }> }) => SourcedOpener | null | undefined
+const EXPERIENCE_DOCS = new Set(["resume", "document", "documents", "transcript", "session"])
 export type SentenceCheck = (sentence: string) => boolean
 
 const THIRD = /\bthe candidate\b|\b(?:she|he) (?:led|built|ran|wrote|owned|managed)\b|\[[^\]]*\]|\{\{/i
@@ -47,6 +62,9 @@ export function approveSourcedOpener(op: unknown, passages: Passage[] | null | u
   try {
     const o = op as SourcedOpener | null
     if (!o || o.verbatim !== true || typeof o.text !== "string" || typeof o.sourceId !== "string") return false
+    // r9 (Lens contract): a category is required, and a named source document must be an experience source (never JD/legacy)
+    if (typeof o.category !== "string" || !o.category.trim()) return false
+    if (o.sourceDoc !== undefined && !EXPERIENCE_DOCS.has(String(o.sourceDoc))) return false
     const text = o.text.trim()
     if (!text) return false
     const p = (Array.isArray(passages) ? passages : []).find((x) => x.id === o.sourceId)
@@ -54,10 +72,34 @@ export function approveSourcedOpener(op: unknown, passages: Passage[] | null | u
   } catch { return false }
 }
 
+// r9: same rule as Lens's withoutOpenerRepeat (contract §6): a body sentence whose word overlap with the opener is >= 0.6
+// (over the smaller word set, words of 3+ letters) restates it and is dropped. Only deletes; never adds or rewrites.
+const owords = (s: string) => String(s || "").replace(/\s+/g, " ").trim().toLowerCase().replace(/[^a-z0-9%\s]/g, " ").split(" ").filter((w) => w.length > 2)
+export function repeatsOpener(sentence: string, opener: SourcedOpener | string | null | undefined): boolean {
+  try {
+    const t = typeof opener === "string" ? opener : opener?.text
+    const ow = new Set(owords(String(t || "")))
+    const sw = new Set(owords(sentence))
+    if (!ow.size || !sw.size) return false
+    let inter = 0
+    for (const w of sw) if (ow.has(w)) inter++
+    return inter / Math.min(sw.size, ow.size) >= 0.6
+  } catch { return false }
+}
+export function withoutOpenerRepeat(body: string, opener: SourcedOpener | string | null | undefined): string {
+  if (!opener) return body
+  try {
+    const parts = String(body || "").split(/(?<=[.!?])\s+/)
+    const kept = parts.filter((x) => !repeatsOpener(x, opener))
+    return kept.length === parts.length ? body : kept.join(" ").trim()
+  } catch { return body }
+}
+
 export function withOpener(finalText: string, opener: string): string {
   const o = String(opener || "").trim()
   if (!o) return finalText
-  return String(finalText || "").trimStart().startsWith(o) ? finalText : `${o} ${String(finalText || "").trimStart()}`.trim()
+  if (String(finalText || "").trimStart().startsWith(o)) return finalText
+  return `${o} ${withoutOpenerRepeat(String(finalText || "").trimStart(), o)}`.trim()
 }
 
 export interface SentenceGate {
@@ -72,10 +114,13 @@ export function createSentenceGate(o: { check: SentenceCheck; opener?: unknown; 
   let buf = ""
   let stop = false
   const out: string[] = []
-  const opener = approveSourcedOpener(o.opener, o.sourcePassages) ? (o.opener as SourcedOpener).text.trim() : ""
+  // r9 (contract v2): approve on `text` only (exact match to the cited session passage id), then speak leadIn + text
+  const opener = approveSourcedOpener(o.opener, o.sourcePassages) ? spokenOpenerText(o.opener as SourcedOpener) : ""
   const judge = (s: string): string[] => {
     const t = s.trim()
     if (!t || stop) return []
+    // r9: a body sentence that restates the approved opener is dropped (Lens contract §6/§7: repeat filter, then the guard)
+    if (opener && repeatsOpener(t, opener)) return []
     let ok = false
     try { ok = o.check(t) === true } catch { ok = false }
     if (!ok) { stop = true; return [] }
@@ -114,4 +159,53 @@ export function sourcedOpenerFor(question: string, docs: SourceDoc[]): SourcedOp
 /** The passages an opener may cite: the session index's passages (same ids retrieval uses). Empty on any error. */
 export function splitOpenerPassages(docs: SourceDoc[] | null | undefined): Passage[] {
   try { return sourceIndexFor(docs)?.passages || [] } catch { return [] }
+}
+
+// ---- r9: Lens opener wiring (contract v1). Lens's buildOpenerTable/pickOpener plug in through lensOpenerProvider.
+// Lens's module (lens-work, branch lens-r1, src/lib/kompasOpener.ts) imports kompasAsk.ts, which is not on this branch,
+// so it is NOT imported here. contractOpenerTable/contractPickOpener are STUBS with the same contract shape, for tests and
+// until Lens's file lands; registering either one is the caller's choice (the service registers nothing by default).
+/** STUB of Lens buildOpenerTable: keeps sourced, single-sentence, word-for-word experience lines; refuses the rest. */
+export function contractOpenerTable(items: OpenerSourceItem[], sources: { resume?: string; documents?: string; transcript?: string; session?: string }): { table: OpenerTable; refused: Array<{ id: string; reason: string }> } {
+  const table: OpenerTable = { "experience-story": [], introduction: [], scenario: [], coding: [], definition: [], general: [] }
+  const refused: Array<{ id: string; reason: string }> = []
+  const flat = (x: string) => String(x || "").replace(/\s+/g, " ").trim()
+  const key: Record<string, "resume" | "documents" | "transcript" | "session"> = { resume: "resume", document: "documents", documents: "documents", transcript: "transcript", session: "session" }
+  for (const it of items || []) {
+    const text = flat(it?.text)
+    const k = key[String(it?.sourceDoc)]
+    const reason = it?.status !== "sourced" ? "not sourced" : !k ? "not an experience source" : !(String(it.category) in table) ? "unknown category"
+      : !text ? "empty" : !flat(String(sources?.[k] || "")).includes(text) ? "not word for word in its source" : ""
+    if (reason) { refused.push({ id: String(it?.id), reason }); continue }
+    table[it.category].push({ text, sourceId: it.id, sourceDoc: String(it.sourceDoc), category: it.category, verbatim: true })
+  }
+  return { table, refused }
+}
+/** STUB of Lens pickOpener: personal-history asks only (story / introduction); prefers a matched passage id; empty → null. */
+export function contractPickOpener(table: OpenerTable, question: string, match?: { passages: Array<{ id: string; kind?: string; proves?: string }> }): SourcedOpener | null {
+  const q = String(question || "")
+  const cat = /\b(introduce yourself|about yourself|walk me through your (?:resume|background))\b/i.test(q) ? "introduction"
+    : /\b(?:tell me about (?:a|one|the) time|(?:a|one) time (?:when )?you|describe a (?:situation|time)|how did you|what did you|did you|have you)\b/i.test(q) ? "experience-story" : ""
+  if (!cat) return null
+  const list = table?.[cat] || []
+  if (!list.length) return null
+  for (const p of match?.passages || []) { if (p.proves === "emphasis") continue; const hit = list.find((o) => o.sourceId === p.id); if (hit) return hit }
+  return list[0]
+}
+/**
+ * Provider for setSourcedOpenerProvider from a Lens-shaped table and pick function. The matched passages come from the
+ * existing retrieval (read only). Anything that throws, or a pick that is not contract-shaped, gives no opener. The gate
+ * still approves an opener only by exact match to its cited source passage (approveSourcedOpener).
+ */
+export function lensOpenerProvider(o: { table: (docs: SourceDoc[]) => OpenerTable; pick: PickOpener }): (question: string, docs: SourceDoc[]) => SourcedOpener | null {
+  return (question, docs) => {
+    try {
+      const table = o.table(docs)
+      let match: { passages: Array<{ id: string; kind?: string; proves?: string }> } = { passages: [] }
+      try { match = { passages: retrievePassages(question, docs, 4).passages } } catch { /* first item in the category */ }
+      const op = o.pick(table, question, match)
+      if (!op || op.verbatim !== true || typeof op.text !== "string" || typeof op.sourceId !== "string" || !String(op.category || "").trim()) return null
+      return { text: op.text, sourceId: op.sourceId, sourceDoc: op.sourceDoc, category: op.category, verbatim: true, ...(typeof op.leadIn === "string" ? { leadIn: op.leadIn } : {}) }
+    } catch { return null }
+  }
 }

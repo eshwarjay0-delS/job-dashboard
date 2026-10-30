@@ -1,4 +1,5 @@
 import { resumeRoles, type ResumeRole, type ResumeRoles } from "../../src/lib/kompasResume.ts"
+import { CTX, STRUCTURAL, figureContextKeys, figureMentions, hasContext, mentionAt, mentionSupported } from "./kompasFigureContext.ts"
 // Kompas grounding guards — anti-hallucination code ported from perfACT's
 // interview engine (copilot/api/answer.js). Prompt rules are wishes; these are
 // guarantees: figures, employers, titles, dates and places in a spoken answer
@@ -28,7 +29,25 @@ export function allowedNumbers(...sources: Array<string | undefined>): Set<strin
     const m = String(s || "").match(FIGURE_RE)
     if (m) for (const f of m) out.add(normFigure(f))
   }
+  // r9: what each number counts (kompasFigureContext). Prompt-facing lists use figureList() to leave these out.
+  try { for (const k of figureContextKeys(...sources)) out.add(k) } catch { /* no context keys → contextual figures fail (stricter) */ }
   return out
+}
+
+/**
+ * r9: a figure is backed when the number is allowed AND, when the sentence names what it counts ("4 weeks", "4 regions",
+ * "$2 million", "3-5 weeks"), the sources hold that number on that noun (or money). Throws → not backed.
+ */
+function figureBacked(line: string, fig: string, at: number, allowed: Set<string>, core?: string): boolean {
+  try {
+    if (!allowed.has(normFigure(fig)) && !(core && allowed.has(normFigure(core)))) return false
+    // an allowlist built without r9 context keys (a hand-made Set) keeps the number-only check it had before
+    if (!hasContext(allowed)) return true
+    const m = mentionAt(line, at)
+    if (!m || m.label) return true
+    if (!m.head.length && !m.money) return true
+    return mentionSupported(m, allowed)
+  } catch { return false }
 }
 
 // Technical constants are fine (perfACT's FIGURES prompt says so): ports,
@@ -87,16 +106,37 @@ function isTechnicalConstant(line: string, fig: string, at: number): boolean {
   if (/^\d+\.\d+\.\d+$/.test(value)) return true
   if (/^\d+\.\d+(?:\.\d+)?$/.test(value) && /\b(?:kubernetes|istio|nginx|splunk(?: es)?|python|node(?:\.js)?|java|postgres(?:ql)?|kong|tls)\s*$/i.test(before)) return true
   if (/\b(?:invoice_id|customer_id|tenant_id|owner_id)\s*=\s*$/i.test(before) || /\/invoices\/\s*$/i.test(before)) return true
+  // r9: a range ("3-5 weeks") or a hyphen unit ("a 4-week rollout") counts something; it is not an identifier.
+  if (!/^(?:19|20)\d\d$/.test(value) && rangeOrUnit(line, at, fig)) return false
   if (/[-_\u2010\u2011\u2013\u2014\u2212#]$/.test(before) || /^[-_\u2010\u2011\u2013\u2014\u2212]/.test(after)) return true
   return false
 }
 
+function rangeOrUnit(line: string, at: number, fig: string): boolean {
+  try {
+    const after = line.slice(at + fig.length)
+    const before = line.slice(0, at)
+    const hy = after.match(/^[-\u2010\u2011]\s?(?:second|minute|hour|day|week|month|quarter|year|person|people|member|engineer|analyst|region|country|site|node|server|team|office|state|cluster|account)s?\b/i)
+    if (hy) return !STRUCTURAL.test(after.slice(hy[0].length)) && !/[A-Za-z][-\w]*[-]$/.test(before)
+    // first number of "3-5 weeks": not glued to letters before (CVE-2021-44228, AES-256 stay identifiers)
+    const noun = /^%?\s+(?!(?:and|or|for|to|of|in|on|at|with|the|a|an|is|was|are)\b)[A-Za-z]/
+    if (/\b(?:NIST(?: SP)?|SP|ISO(?:\/IEC)?|IEC|RFC|PCI(?: DSS)?|DSS|CIS|FIPS|SOC)\s*\d[\d.]*\s?[-\u2013]?\s?$/i.test(before)) return false
+    if (/^\s?[-\u2013\u2014]\s?\d[\d,.]*%?\s+[A-Za-z]/.test(after) && noun.test(after.replace(/^\s?[-\u2013\u2014]\s?\d[\d,.]*/, "")) && !/[A-Za-z\d][-\u2013\u2014]?$/.test(before)) return true
+    // second number of a range
+    if (/(?:^|[\s($])\d[\d,.]*\s?[-\u2013\u2014]\s?$/.test(before) && noun.test(after)) return true
+    return false
+  } catch { return false }
+}
+
 export function needsGuard(line: string, allowed: Set<string>): boolean {
   const figs = String(line || "").match(FIGURE_RE) || []
-  for (const f of figs) {
-    const fig = f as string
-    if (allowed.has(normFigure(fig))) continue
-    const at = String(line).indexOf(fig)
+  const re = new RegExp(FIGURE_RE.source, "g")
+  let mm: RegExpExecArray | null
+  void figs; void figureMentions
+  while ((mm = re.exec(String(line || "")))) {
+    const fig = mm[0]
+    const at = mm.index
+    if (figureBacked(String(line), fig, at, allowed)) continue
     if (isTechnicalConstant(String(line), fig, at)) continue
     return true
   }
@@ -136,8 +176,7 @@ export function guardText(line: string, allowed: Set<string>): { text: string; r
       core = fig.slice(0, -1)
       suffix = "."
     }
-    const n = normFigure(core)
-    if (allowed.has(n) || allowed.has(normFigure(fig))) return fig
+    if (figureBacked(full, fig, offset, allowed, core)) return fig
     if (isTechnicalConstant(full, fig, offset)) return fig
     removed++
     const before = full.slice(0, offset)
@@ -169,6 +208,9 @@ export function guardText(line: string, allowed: Set<string>): { text: string; r
   text = text.replace(/\b(?:over|more than|nearly|almost|about|around|roughly) several\b/gi, "many")
   text = text.replace(/several(milliseconds?|seconds?|minutes?|hours?|ms|secs?|mins?|hrs?|kb|mb|gb|tb|s)\b/gi, "several")
   text = text.replace(/\bin a few years ago/gi, "back then")
+  // r9: an invented range or hyphen unit reads as a person says it ("several-several weeks" → "several weeks", "a several-week" → "a multi-week")
+  text = text.replace(/\bseveral\s?(?:[-\u2013\u2014]|to)\s?several\b/gi, "several")
+  text = text.replace(/\b(a|an)\s+several-(second|minute|hour|day|week|month|quarter|year)\b/gi, "a multi-$2").replace(/\bseveral-(second|minute|hour|day|week|month|quarter|year)\b/gi, "multi-$1")
   return { text, removed }
 }
 
@@ -360,6 +402,7 @@ export function speakFacts(opts: {
 export function questionFigures(question: string): Set<string> {
   const out = new Set<string>()
   for (const f of String(question || "").match(FIGURE_RE) || []) out.add(normFigure(f))
+  try { for (const k of figureContextKeys(question)) out.add(k) } catch { /* none */ }
   return out
 }
 
@@ -370,7 +413,14 @@ function withAskedFigures(sentence: string, allowed: Set<string>, asked: Set<str
   let m: RegExpExecArray | null
   while ((m = re.exec(sentence))) {
     const n = normFigure(m[0])
-    if (asked.has(n) && !/\bby\s+$/i.test(sentence.slice(0, m.index))) merged.add(n)
+    if (asked.has(n) && !/\bby\s+$/i.test(sentence.slice(0, m.index))) {
+      merged.add(n)
+      // r9: the question's own figure carries its own noun ("5 regions"), not any noun ("5 weeks")
+      try {
+        const f = mentionAt(sentence, m.index)
+        if (f) for (const k of asked) if (k.startsWith(`${CTX}${f.n}|`)) merged.add(k)
+      } catch { /* stricter: no context added */ }
+    }
   }
   return merged
 }
