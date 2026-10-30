@@ -4,6 +4,7 @@
  * must not appear. The selected mode chooses length, depth, and confidence.
  * This module does not call a model.
  */
+import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 import { interviewIntent, type ReplyIntent } from "./kompasRelevance.ts"
 import type { AnswerLevel } from "./kompasAnswer.ts"
 import { repairDictation } from "./kompasDictation.ts"
@@ -791,7 +792,8 @@ export function evaluateLiveAnswers(rows: LiveAnswer[], sources = ""): { ok: boo
 
 /** The experience lines of a resume, in the candidate's order. Header, name, contact, and education are not experience. */
 export function experienceLines(resume: string): string[] {
-  const text = String(resume || "").replace(/[*`]/g, " ")
+  // r3: one-paragraph, table and "Role | Employer" layouts are read as role headings and one line per bullet
+  const text = normalizeResumeLayout(String(resume || "")).replace(/[*`]/g, " ")
   const section = text.match(/^(#+)\s*(?:experience|work history|professional experience)\b[^\n]*\n([\s\S]*)/im)
   // Source grounding (29 Oct 2026): a "### Role, Employer" heading inside Experience no longer ends the section; only
   // a heading at the Experience level or higher does, and role headings themselves are not experience lines.

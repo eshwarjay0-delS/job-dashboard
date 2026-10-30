@@ -5,11 +5,12 @@
  * empty or broken sources behaves exactly as before this module existed.
  */
 import { questionKeywords } from "./kompasDissection.ts"
+import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
 
 export type Proves = "experience" | "emphasis"
 export interface SourceDoc { name: string; text: string; proves: Proves }
 export interface Passage { id: string; source: string; proves: Proves; text: string; line: string; score: number }
-export interface Retrieval { matched: boolean; passages: Passage[]; closest: Passage | null; all: Passage[] }
+export interface Retrieval { matched: boolean; passages: Passage[]; closest: Passage | null; all: Passage[]; missing?: string[] }
 
 export const NOT_IN_SOURCES =
   "NOT IN YOUR SOURCES: nothing in the candidate's resume, dossier or saved answers covers this. Do not claim personal experience of it, and never invent an employer, tool, project or number. Answer in general voice (\"In general, teams...\"), then bridge to the closest real example below only if it truly relates."
@@ -38,9 +39,11 @@ function tokens(text: string): string[] {
   const raw = String(text || "").toLowerCase().replace(/[^a-z0-9+#%-]+/g, " ").split(/\s+/).map((t) => t.replace(/^-+|-+$/g, ""))
   // ASR splits ("terra form", "cloud trail"): the joined pair is also a token, so it meets the source's one word.
   const joined = raw.slice(1).map((t, i) => raw[i] + t).filter((t) => t.length >= 8)
-  return [...raw, ...joined].filter((t) => t.length >= 3 && !STOP.has(t)).map(stem)
+  // r3: "post-incident" also yields "postincident", so a transcript's "post incident" (joined pair) meets it
+  const unhyphen = raw.filter((t) => t.includes("-")).map((t) => t.replace(/-/g, ""))
+  return [...raw, ...joined, ...unhyphen].filter((t) => t.length >= 3 && !STOP.has(t)).map(stem)
 }
-const CHATTER = new Set(("sorry line cut out resume mentions lot piece hardest change last part quick going back differently " +
+const CHATTER = new Set(("else anything another sorry line cut out resume mentions lot piece hardest change last part quick going back differently " +
   "again repeat mean say said job role question").split(" "))
 const words = (s: string) => s.trim().split(/\s+/).filter(Boolean).length
 
@@ -51,7 +54,8 @@ export function splitPassages(docs: SourceDoc[] | null | undefined): Passage[] {
   for (const doc of docs) {
     let heading = ""
     let n = 0
-    const chunks = doc.proves === "emphasis" ? doc.text.split(/(?<=[.!?])\s+|\n+/) : doc.text.split(/\n+/)
+    const body0 = doc.name === "resume" ? normalizeResumeLayout(doc.text) : doc.text
+    const chunks = doc.proves === "emphasis" ? body0.split(/(?<=[.!?])\s+|\n+/) : body0.split(/\n+/)
     for (const raw of chunks) {
       const line = raw.trim()
       if (!line) continue
@@ -92,16 +96,58 @@ function usedIn(p: Passage, answer: string): boolean {
   return own.length >= 3 && own.filter((t) => said.has(t)).length / own.length >= 0.6
 }
 const ASKS_NEW = /\b(?:what else|anything else|another (?:example|time|project|story)|other (?:example|time|project)s?|a different (?:example|project|story))\b/i
-export interface RetrieveOptions { recent?: string[] | null }
+// r3: a misheard word ("spunk", "privilege", "hippa") maps to the one source word one edit away (two for long words),
+// same first letter, only when the heard word is not itself in the sources. Never maps onto a stop word.
+function edits(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)])
+  for (let j = 1; j <= b.length; j++) d[0][j] = j
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1)
+  }
+  return d[a.length][b.length]
+}
+export function heardAs(token: string, vocab: Set<string>): string {
+  if (vocab.has(token) || token.length < 5 || /\d/.test(token)) return token
+  const max = token.length >= 8 ? 2 : 1
+  let best = token, bestD = max + 1
+  for (const v of vocab) {
+    if (v[0] !== token[0] || Math.abs(v.length - token.length) > max) continue
+    const e = edits(token, v)
+    if (e < bestD || (e === bestD && v.length > best.length)) { best = v; bestD = e }
+  }
+  // "hippa" vs "hipaa" is a swap plus one letter: allow two edits on a 5-letter word only when the letters are the same set
+  if (bestD > max && token.length >= 5) for (const v of vocab) if (v.length === token.length && v[0] === token[0] && [...v].sort().join("") === [...token].sort().join("")) return v
+  return bestD <= max ? best : token
+}
+const PART_SPLIT = /\s*(?:,\s*(?:and\s+)?|\band\b|\bas well as\b|\bplus\b)\s*/i
+const PART_FRAME = /^(?:(?:how|what|why|when|where|did|do|does|you|your|tell|me|about|walk|through|approach|approached|handle|handled|work|on|with|the|a|an|so|um|like)\s+)+/i
+export interface RetrieveOptions { recent?: string[] | null; kindBoost?: boolean }
 
 export function retrievePassages(question: string, docs: SourceDoc[] | null | undefined, k = 4, opts: RetrieveOptions = {}): Retrieval {
   try {
     const q = String(question || "").trim()
     const passages = splitPassages(docs)
     if (!q || !passages.length) return EMPTY
-    const keys = new Set(questionKeywords(q).flatMap((kw) => tokens(kw)).filter((t) => t !== "not"))
-    for (const t of tokens(q)) keys.add(t)
     const docsTok = passages.map((p) => tokens(p.text))
+    const vocab = new Set(docsTok.flat())
+    let heard = (t: string) => t
+    try { heard = (t: string) => heardAs(t, vocab) } catch { /* failsafe: exact words only */ }
+    const keys = new Set(questionKeywords(q).flatMap((kw) => tokens(kw)).filter((t) => t !== "not").map(heard))
+    for (const t of tokens(q)) keys.add(heard(t))
+    // r3: a word the transcript split in two ("sis log") is tried joined against the source words ("syslog")
+    const splitHeard: string[] = []
+    try {
+      const raw = q.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean)
+      // only a real one-word source term counts, never a pair the indexer joined ("siem rules" → "siemrules")
+      const single = new Set(passages.flatMap((p) => p.text.toLowerCase().split(/[^a-z0-9]+/)).filter((t) => t.length >= 6).map(stem))
+      for (let i = 1; i < raw.length; i++) {
+        const j = raw[i - 1] + raw[i]
+        if (j.length < 6 || raw[i - 1].length > 4 || STOP.has(raw[i - 1])) continue
+        const h = heardAs(j, single)
+        if (single.has(h)) { keys.add(h); splitHeard.push(h) }
+      }
+    } catch { /* failsafe: no joined guesses */ }
     const avg = docsTok.reduce((a, d) => a + d.length, 0) / docsTok.length || 1
     const df = (t: string) => docsTok.filter((d) => d.includes(t)).length
     const N = passages.length
@@ -118,7 +164,8 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
     })
     // Behavior 7 and 8 only reorder: coverage ("matched") is computed on the same passages, so it never changes.
     let boost: (p: Passage) => number = () => 1
-    try { boost = KIND_BOOST[questionKind(q)] || boost } catch { /* failsafe: no boost */ }
+    // r3: kindBoost:false turns behavior 7 off, for the before/after weighting measurement only (default stays on)
+    if (opts?.kindBoost !== false) try { boost = KIND_BOOST[questionKind(q)] || boost } catch { /* failsafe: no boost */ }
     const recent = Array.isArray(opts?.recent) ? opts.recent.map((r) => String(r || "").toLowerCase()).filter(Boolean) : []
     const demote = recent.length && !GOES_BACK.test(q)
     for (const p of scored) {
@@ -126,21 +173,47 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
       p.score *= boost(p)
       if (demote && recent.some((r) => usedIn(p, r))) p.score *= ASKS_NEW.test(q) ? 0.2 : 0.4
     }
-    const ranked = scored.filter((p) => p.score > 0).sort((a, b) => b.score - a.score)
+    let ranked = scored.filter((p) => p.score > 0).sort((a, b) => b.score - a.score)
     const experience = scored.filter((p) => p.proves === "experience")
     // "In your sources" needs real topic coverage: the best experience passage holds at least half of the asked topic
     // words (interview chatter like "sorry, the line cut out" is not topic), not one shared generic word.
-    const topic = [...new Set(questionKeywords(q).flatMap((kw) => tokens(kw)).filter((t) => t !== "not" && !CHATTER.has(t)))]
-    const covers = (p: Passage) => {
+    const topic = [...new Set([...questionKeywords(q).flatMap((kw) => tokens(kw)).filter((t) => t !== "not" && !CHATTER.has(t)).map(heard), ...splitHeard])]
+    const coversTopic = (p: Passage, topic: string[]) => {
       const d = new Set(tokens(p.text))
       // an ASR-split pair ("terra form") whose joined word is in the passage covers both halves
       const hit = new Set(topic.filter((t) => d.has(t)))
       topic.forEach((t, i) => { const n = topic[i + 1]; if (n && d.has(stem(t + n))) { hit.add(t); hit.add(n) } })
       return topic.length > 0 && hit.size * 2 >= topic.length
     }
-    const matched = ranked.some((p) => p.proves === "experience" && covers(p))
+    const covers = (p: Passage) => coversTopic(p, topic)
+    // r3: "what else" leads on the best passage not said yet that still covers the topic, even when the score
+    // demotion alone left a said passage first. When none does, the r2 order stands. Failsafe: order as before.
+    try {
+      if (demote && ASKS_NEW.test(q)) {
+        const isUsed = (p: Passage) => recent.some((r) => usedIn(p, r))
+        const lead = ranked.find((p) => p.proves === "experience" && !isUsed(p) && covers(p))
+        if (lead && lead !== ranked[0]) ranked = [lead, ...ranked.filter((p) => p !== lead)]
+      }
+    } catch { /* failsafe: keep the scored order */ }
+    const wholeMatched = ranked.some((p) => p.proves === "experience" && covers(p))
+    // r3: a two-part ask ("X and Y") is in the sources when one part is; the part nothing covers is named as missing.
+    // Each part needs two topic words of its own to be judged ("pros and cons" is never a part). Failsafe: any error →
+    // the whole-question result as before, with no missing parts.
+    let matched = wholeMatched
+    let missing: string[] = []
+    try {
+      const parts = q.replace(/[?!.]+\s*$/, "").split(PART_SPLIT).map((x) => x.replace(PART_FRAME, "").trim()).filter(Boolean)
+      if (parts.length >= 2) {
+        const judged = parts.map((part) => {
+          const pt = [...new Set(tokens(part).filter((t) => !CHATTER.has(t) && !/^(?:approach|handle|went|wrong|proud)/.test(t)).map(heard))]
+          return { part, judged: pt.length >= 2, covered: pt.length >= 2 && experience.some((p) => p.score > 0 && coversTopic(p, pt)) }
+        })
+        const anyCovered = judged.some((j) => j.covered)
+        if (anyCovered) { matched = true; missing = judged.filter((j) => j.judged && !j.covered).map((j) => j.part) }
+      }
+    } catch { matched = wholeMatched; missing = [] }
     const closest = matched ? ranked.find((p) => p.proves === "experience") || null : closestExample(q, experience)
-    return { matched, passages: ranked.slice(0, k), closest, all: scored }
+    return missing.length ? { matched, passages: ranked.slice(0, k), closest, all: scored, missing } : { matched, passages: ranked.slice(0, k), closest, all: scored }
   } catch {
     return EMPTY
   }
@@ -161,8 +234,11 @@ export function sourcePassagesPrompt(r: Retrieval | null | undefined): string {
     if (!r.matched) return r.closest
       ? `${NOT_IN_SOURCES}\nCLOSEST REAL EXAMPLE [${r.closest.id} · ${r.closest.source}]: ${r.closest.text}`
       : NOT_IN_SOURCES
+    const partly = Array.isArray(r.missing) && r.missing.length
+      ? `\nPARTLY NOT IN YOUR SOURCES: ${r.missing.join("; ")}. Answer the covered part from the passages above, then say plainly you have not done ${r.missing.length > 1 ? "those" : "that"} yourself and answer it in general voice; never invent experience of it.`
+      : ""
     return `SOURCE PASSAGES (the candidate's own sources, most relevant first; personal claims about employers, tools, dates and numbers must be backed by these or the full resume. A job description line shows what to emphasise, never what the candidate did):\n${
-      r.passages.map((p) => `[${p.id} · ${p.source} · ${p.proves}] ${p.text}`).join("\n")}`
+      r.passages.map((p) => `[${p.id} · ${p.source} · ${p.proves}] ${p.text}`).join("\n")}${partly}`
   } catch {
     return ""
   }
