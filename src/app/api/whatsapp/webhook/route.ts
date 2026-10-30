@@ -50,6 +50,7 @@ import { recoveryTailorBudget, RECOVERY_MIN_TAILOR_MS } from "@/lib/whatsapp-rec
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
 import { readPicks } from "@/lib/library-agent"
 import { chooseResume, type Prefer } from "@/lib/library-choose"
+import { uploadStale } from "@/lib/whatsapp-upload-age"
 import { titlesOf, parseInstruction, parseQuestion, splitTailInstruction, type Instruction } from "@/lib/role-match"
 import { getApprovalCard, saveApprovalCard, parseCardButton, deliverApprovalCard, sendGmailDraft, updateGmailDraft, deleteGmailDraft, sendLocked, keepOpenFlags } from "@/lib/chief-approvals"
 // The first words the Chief answers; the module itself is loaded only when one is sent.
@@ -623,6 +624,12 @@ async function handle(from: string, msg: Record<string, unknown>, session: Sessi
     session.jdId = String(msg.id)
     delete session.pending
     await saveSession(from, session)
+    // A pending upload older than WHATSAPP_UPLOAD_MAX_AGE (30 min) is dropped so the library chooses (30 Oct 2026).
+    if (session.resumePath && uploadStale(session.resumeAt)) {
+      console.info("[whatsapp] stale upload dropped", { ageMin: Math.round((Date.now() - (session.resumeAt || 0)) / 60000) })
+      delete session.resumePath; delete session.resumeName; delete session.resumeAt; delete session.resumeFiled
+      await saveSession(from, session)
+    }
     if (session.resumePath) return generate(from, session, userId)
     // A resume sent with the job description arrives as its own message a second or two later, and it wins: without
     // this short wait the run from Files claimed the job first and the resume was ignored without a word (found 19 Oct
@@ -701,6 +708,7 @@ type FromFiles = { userDir: string; email: string; said: string; depth: number; 
 async function generate(from: string, session: Session, userId: string, maxMs = TAILOR_BUDGET_MS, files?: FromFiles, quiet = false) {
   const startedAt = Date.now()
   if (!session.jd || !session.resumePath) return quiet ? undefined : sendText(from, HELP)
+  console.info("[whatsapp] run source", { via: files ? "library" : "upload", name: session.resumeName ?? null, rel: files?.rel ?? null, ageMin: session.resumeAt ? Math.round((Date.now() - session.resumeAt) / 60000) : null })
   const job = createHash("sha256").update(`${from}:${session.jdId || session.jd}`).digest("hex")
   // Persist input before clearing the interactive session. Retries use the exact chosen original.
   const queued = await enqueueResumeRecovery({
@@ -766,7 +774,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
 
   if (!quiet) await sendText(from, files
     ? `Updating ${files.said}. A Word file is sent only if this run finishes cleanly.`
-    : "Updating your resume. A Word file is sent only if this run finishes cleanly.")
+    : `Updating ${session.resumeName ? `*${session.resumeName}*` : "your resume"}. A Word file is sent only if this run finishes cleanly.`)
 
   // Role/company/location runs alongside the tailor, so it costs no extra wall time.
   const metaPromise = extractJdMeta({ keys, jd: session.jd }).catch(() => ({ role: "", company: "", location: "" }))
@@ -861,6 +869,11 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       blockers: whatsappResumeRejectionReasons(result),
       roleCount: result.role_alignment?.length ?? 0,
       unverifiedCount: result.unverified_added_keywords?.length ?? 0,
+      // Why the floor placed nothing, decided in one look next time. Counts and codes only, no resume text.
+      placedFromJd: result.placed_from_jd?.length ?? 0,
+      unplacedReason: result.jd_terms_unplaced_reason ?? null,
+      bulletsReverted: result.bullets_reverted_for_jd_terms ?? 0,
+      cached: !!result.cached,
     })
     await sayOutcome(qualityStop(result))
     return;

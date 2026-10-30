@@ -1,3 +1,4 @@
+import { roleQualityBlockers } from "./tailor-ship-on-rollback"
 import { acceptImprovingRepairs, mergeIndexedEdits } from "./resume-repair"
 import { removeUnsupportedRewrites } from "./resume-unsupported-rewrites"
 import { candidateEvidenceInput, explicitlyConfirmsAllRequirements } from "./resume-evidence"
@@ -1126,8 +1127,11 @@ export async function runTailor(opts: {
     ...(floorCarried && best.cov < RESUME_MIN_COVERAGE ? ["floor_only"] : []),
     ...(best.partial ? ["draft_parts_missing"] : []),
     ...(unverifiedAdded.length ? ["unverified_jd_terms"] : []),
-    ...(splitDraft && !skillsOnly && lackingRoles(best.edits).length ? ["roles_unrewritten"] : []),
-    ...(splitDraft && !skillsOnly && !experienceCoverageComplete(role_alignment, TARGET_COVERAGE) ? ["role_evidence_gaps"] : []),
+    // Gate on: roles the job-post terms rollback put back are the candidate's own record (TAILOR_SHIP_ON_ROLLBACK).
+    ...roleQualityBlockers({
+      splitDraft: !!splitDraft, skillsOnly: !!skillsOnly, lackingRoleCount: splitDraft && !skillsOnly ? lackingRoles(best.edits).length : 0,
+      experienceComplete: !splitDraft || skillsOnly || experienceCoverageComplete(role_alignment, TARGET_COVERAGE), jdGate, bulletsReverted,
+    }),
     ...(!diff.length ? ["unchanged"] : []),
   ]
   // The delivery score is the job post itself. Evidenced-only scoring reported 100% while
