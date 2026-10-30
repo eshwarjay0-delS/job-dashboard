@@ -77,14 +77,23 @@ function dropOldLogs() {
   }
   names.slice(0, Math.max(1, names.length - 1)).forEach(name => localStorage.removeItem(name));
 }
+let accountSessionSync = null;
+let cloudArchive = null;
 const LS = {
   get(k, d) { try { const v = localStorage.getItem("perfact." + k); return v ? JSON.parse(v) : d; } catch { return d; } },
   set(k, v) {
     const key = "perfact." + k;
-    const write = (val) => localStorage.setItem(key, JSON.stringify(val));
-    try { write(v); return; } catch { /* the store is full; the retries below keep the record */ }
-    try { dropOldLogs(); write(v); return; } catch {}
-    try { write(slimForStore(k, v)); } catch {}
+    const before = k === "sessions" ? this.get(k, []) : null;
+    const write = () => { localStorage.setItem(key, JSON.stringify(v)); return true; };
+    let ok = false;
+    try { ok = write(); } catch {}
+    if (!ok) { try { dropOldLogs(); ok = write(); } catch {} }
+    // No silent shortening of resumes, JDs or personal AI instructions.
+    if (!ok && k === "sessions") {
+      const banner = document.getElementById("cloudSyncStatus");
+      if (banner) { banner.textContent = "Offline storage full. Your complete session is being sent to your account. Check Sync before closing."; banner.classList.remove("hidden"); }
+    }
+    if (k === "sessions" && accountSessionSync && !accountSessionSync.applying) accountSessionSync.localWrite(before, v);
   },
 };
 
@@ -111,7 +120,7 @@ $("loginBtn").onclick = () => {
   LS.set("user", { email });
   openDashboard();
 };
-$("logoutBtn").onclick = () => { LS.set("user", null); show("login"); };
+$("logoutBtn").onclick = () => { accountSessionSync?.signOutLocal(); LS.set("user", null); show("login"); };
 
 /* ------------------------------ dashboard --------------------------------- */
 function openDashboard() {
@@ -119,6 +128,7 @@ function openDashboard() {
   renderSessions();
   renderGetStarted();
   show("dashboard");
+  if (accountSessionSync) void accountSessionSync.refresh();
 }
 /* First-run checklist: resume → session → start; each step ticks itself off, hidden once all three are done or dismissed. */
 function renderGetStarted() {
@@ -151,6 +161,7 @@ function openTranscripts() {
     list.append(row);
   }
   show("transcripts");
+  if (accountSessionSync) void accountSessionSync.refresh();
 }
 /* ---- a session's life: Start → Stop → Continue, until explicitly Ended ----
    Historical policy (superseded 2026-10-20), owner 2026-10-01: Continue for 30 minutes; after that the
@@ -161,6 +172,12 @@ function openTranscripts() {
 // Superseded 2026-10-20: absence, Stop and a lost heartbeat never end a session.
 // Only the explicit End action finalizes it. Preserve historical clock-ended records.
 const liveKey = (id) => id + ":live";
+const kompasDeviceId = (() => {
+  const key = "perfact.device.id";
+  let id = localStorage.getItem(key);
+  if (!id) { id = "device-" + (globalThis.crypto?.randomUUID?.() || Date.now() + "-" + Math.random().toString(36).slice(2)); try { localStorage.setItem(key,id); } catch {} }
+  return id;
+})();
 const sessionOpen = (s) => !!s.runAt && !s.endedAt;
 const liveOpenFor = (s) => !!current && current.id === s.id && !$("view-copilot").classList.contains("hidden");
 const clockTime = (t) => new Date(t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -175,10 +192,24 @@ function beat(on) {
   if (!on || !current || !current.id) return;
   beatId = current.id;
   const tick = () => { try { localStorage.setItem(beatKey(beatId), String(Date.now())); } catch {} };
-  tick(); beatTimer = setInterval(tick, 5000);
+  tick(); let lastCloudBeat = 0;
+  beatTimer = setInterval(() => {
+    tick();
+    if (current && current.id === beatId && sessionOpen(current) && Date.now() - lastCloudBeat > 15000) {
+      lastCloudBeat = Date.now();
+      current.lastActiveAt = lastCloudBeat;
+      saveSession(current, true);
+    }
+  }, 5000);
 }
 // 90 seconds, not 15: a window in the background is only allowed to run its timers about once a minute
-const liveElsewhere = (s) => { if (liveOpenFor(s)) return false; try { return Date.now() - Number(localStorage.getItem(beatKey(s.id)) || 0) < 90000; } catch { return false; } };
+const liveElsewhere = (s) => {
+  if (liveOpenFor(s)) return false;
+  if (s.runDeviceId && s.runDeviceId !== kompasDeviceId && s.runAt && !s.pausedAt)
+    return Date.now() - (Number(s.lastActiveAt) || Number(s.runAt) || 0) < 90000;
+  try { return Date.now() - Number(localStorage.getItem(beatKey(s.id)) || 0) < 90000; }
+  catch { return false; }
+};
 // A run's transcript, made from its event log: the entry for the session's list and the stored text. null when nothing was heard or answered.
 function runTranscript(s, log, ended) {
   const heard = log.filter(e => e.t === "line").length, answers = log.filter(e => e.t === "answer" && !e.noQuestion).length;
@@ -399,7 +430,7 @@ function segSet(id, val) { const box = $(id); if (!box) return; [...box.children
 
 function finishWizard() {
   const s = {
-    id: "s" + Date.now(),
+    id: "s" + Date.now() + "_" + Math.random().toString(36).slice(2, 10),
     createdAt: Date.now(),
     type: draft.type,
     jobLink: $("jobLink").value.trim(),
@@ -415,7 +446,7 @@ function finishWizard() {
     length: draft.length,
     tone: draft.tone,
     mode: draft.mode || "technical",
-    instructions: $("instructions").value.trim(),
+    instructions: $("instructions").value,
     autoAnswer: $("autoAnswer").checked,
     autoMode: $("autoAnswer").checked,
     saveTranscript: $("saveTranscript").checked,
@@ -487,7 +518,8 @@ async function pauseRun() {
 function markRun() {
   const s = current; if (!s || !s.id) return;
   if (!s.runAt || s.endedAt) s.runAt = Date.now();
-  s.endedAt = null; s.endedBy = null; s.pausedAt = null; saveSession(s, true);
+  s.endedAt = null; s.endedBy = null; s.pausedAt = null;
+  s.runDeviceId = kompasDeviceId; s.lastActiveAt = Date.now(); saveSession(s, true);
 }
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 function cfgOf(s) { return { company: s.company, role: s.role, jd: s.jd, resume: s.resume, documents: s.documents, instructions: s.instructions, language: s.language }; }
@@ -4009,9 +4041,76 @@ document.addEventListener("keydown", (e) => {
 const DossierDB = {
   _p: null,
   open() { if (this._p) return this._p; this._p = new Promise((res, rej) => { const r = indexedDB.open("perfact-dossier", 2); r.onupgradeneeded = () => { const db = r.result; if (!db.objectStoreNames.contains("d")) db.createObjectStore("d"); if (!db.objectStoreNames.contains("levels")) db.createObjectStore("levels"); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); return this._p; },
-  async get(id) { try { const db = await this.open(); return await new Promise(res => { const rq = db.transaction("d", "readonly").objectStore("d").get(id); rq.onsuccess = () => res(rq.result || null); rq.onerror = () => res(null); }); } catch { return null; } },
-  async put(id, v) { try { const db = await this.open(); await new Promise(res => { const tx = db.transaction("d", "readwrite"); tx.objectStore("d").put(v, id); tx.oncomplete = res; tx.onerror = res; }); } catch {} },
+  async get(id) {
+    let local = null;
+    try { const db = await this.open(); local = await new Promise(res => { const rq = db.transaction("d", "readonly").objectStore("d").get(id); rq.onsuccess = () => res(rq.result || null); rq.onerror = () => res(null); }); } catch {}
+    // A session opened on a second device has no local IndexedDB transcript.
+    if (local) return local;
+    const remote = cloudArchive && await cloudArchive.pull(id);
+    if (remote) await this.put(id, remote, true);
+    return remote || null;
+  },
+  async put(id, v, onlyLocal = false) {
+    try { const db = await this.open(); await new Promise(res => { const tx = db.transaction("d", "readwrite"); tx.objectStore("d").put(v, id); tx.oncomplete = res; tx.onerror = res; }); } catch {}
+    if (!onlyLocal && cloudArchive) cloudArchive.queue(id);
+  },
 };
+// Keep a synced copy of completed transcripts and paused-run cards. The
+// browser's IndexedDB remains the offline fallback; uploads retry after login
+// and never mix recordings between different verified MarketFit accounts.
+cloudArchive = (() => {
+  const keyPattern = /^([A-Za-z0-9:_-]{1,128}):(live|tx:[0-9]+)$/;
+  const pending = new Set();
+  let flushing = false;
+  const storageKey = () => "perfact.cloud.artifacts." + accountSessionSync.owner;
+  const authorization = () => {
+    const token = supabaseAccessToken();
+    return { "content-type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}) };
+  };
+  const persist = () => {
+    if (!accountSessionSync?.owner) return;
+    try { localStorage.setItem(storageKey(), JSON.stringify([...pending].slice(-400))); } catch {}
+  };
+  function queue(key) {
+    if (!keyPattern.test(key || "") || !accountSessionSync?.owner) return;
+    pending.add(key); persist(); void replay();
+  }
+  async function pull(key) {
+    if (!keyPattern.test(key || "") || !accountSessionSync?.owner) return null;
+    try {
+      const url = "/api/kompas/account-artifacts?key=" + encodeURIComponent(key);
+      const res = await fetch(url, { credentials: "same-origin", headers: authorization(), cache: "no-store" });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data && data.ok ? (data.data || null) : null;
+    } catch { return null; }
+  }
+  async function replay() {
+    if (!accountSessionSync?.owner || flushing) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey()) || "[]");
+      if (Array.isArray(saved)) saved.forEach(k => { if (keyPattern.test(k)) pending.add(k); });
+    } catch {}
+    if (!pending.size) return;
+    flushing = true;
+    try {
+      await accountSessionSync.flush(); // Session row must exist before artifact FK.
+      for (const key of [...pending].slice(0, 15)) {
+        const snap = await DossierDB.get(key);
+        if (!snap || typeof snap !== "object") { pending.delete(key); continue; }
+        const res = await fetch("/api/kompas/account-artifacts", {
+          method: "POST", credentials: "same-origin", headers: authorization(),
+          body: JSON.stringify({ key, data: snap }), cache: "no-store",
+        });
+        if (!res.ok) break; // Offline, over size limit or queued parent; retry later.
+        const answer = await res.json();
+        if (!answer.ok) break;
+        pending.delete(key); persist();
+      }
+    } catch {} finally { flushing = false; persist(); }
+  }
+  return {queue,pull,replay};
+})();
 const INTERVIEWER_KEYS = ["engineer", "architect", "director"];   // the four levels offered (owner, 5 Oct 2026)
 const CATEGORIES = ["identity & background", "behavioral (STAR)", "technical deep-dive", "scenario & troubleshooting", "system & architecture design", "tools & stack specifics", "failure & lessons", "conflict & collaboration", "leadership & ownership", "gaps & weaknesses", "motivation & culture fit", "closing & questions to ask"];
 const PAGES_BY_DIFFICULTY = { easy: 100, standard: 250, hard: 500, expert: 1000 };
@@ -4544,10 +4643,43 @@ function resolveDocumentsText() {
 }
 
 /* --------------------------------- boot ----------------------------------- */
-// Login bypassed for now — assume an authenticated session (like MarketFit).
+// The verified Supabase account, never the local demo email, owns cloud sessions.
+accountSessionSync = window.KompasSessionCloud?.create({
+  storage: localStorage,
+  fetcher: (url, opts) => fetch(url, opts),
+  authToken: () => supabaseAccessToken(),
+  read: () => LS.get("sessions", []),
+  write: rows => LS.set("sessions", rows),
+  render: () => {
+    sessions = LS.get("sessions", []);
+    if (!$("view-dashboard").classList.contains("hidden")) { renderSessions(); renderGetStarted(); }
+    if (!$("view-transcripts").classList.contains("hidden")) openTranscripts();
+  },
+  notify: state => {
+    const banner = $("cloudSyncStatus"), importBtn = $("importLocalSessions");
+    if (!banner) return;
+    if (state.state === "synced") {
+      banner.textContent = state.legacy ? state.legacy + " earlier sessions are on this device only. Import them into this signed-in account to make them available everywhere." : "Sessions synchronized across devices.";
+      if (importBtn) importBtn.classList.toggle("hidden", !state.legacy);
+      if (cloudArchive) void cloudArchive.replay();
+    } else { banner.textContent = state.message || "Offline: local sessions will sync on reconnect."; }
+    banner.classList.remove("hidden");
+  },
+});
+$("importLocalSessions")?.addEventListener("click", () => {
+  const prior = (() => { try { return JSON.parse(localStorage.getItem("perfact.cloud.legacy") || "[]"); } catch { return []; } })();
+  if (accountSessionSync?.importLegacy()) {
+    for (const s of prior) {
+      for (const t of (s.transcripts || [])) if (t.key) cloudArchive?.queue(t.key);
+      if (s.id) cloudArchive?.queue(liveKey(s.id));
+    }
+    void accountSessionSync.refresh();
+  }
+});
 if (!LS.get("user")) LS.set("user", { email: "you@perfact.app" });
 pruneExpiredResumes();           // a resume past its 15 days is removed on launch, even if the Resume view is never opened
 openDashboard();
+accountSessionSync?.start();
 
 /* ---- live screen: one clean row; secondary tools live in the ⋯ menu ---- */
 (() => {
@@ -4743,13 +4875,16 @@ function launchInstalled(s) {
   });
 }
 let lastDesktopHandoff = { id: "", at: 0 };
-function openHandedSession(s) {
+async function openHandedSession(s) {
   if (!s || !s.id || !window.kompasDesktop) return;
   // takeSession() and onSession() can race during first load. Treat one
   // delivery as one start, not two capture restarts.
   const now = Date.now();
   if (lastDesktopHandoff.id === s.id && now - lastDesktopHandoff.at < 3000) return;
   lastDesktopHandoff = { id: s.id, at: now };
+  // Verify the signed-in account before writing a newly handed-off interview.
+  // The desktop can receive it while its account session list is still loading.
+  if (accountSessionSync) await accountSessionSync.refresh();
   const all = LS.get("sessions", []);
   if (!all.some(x => x.id === s.id)) { all.unshift(s); LS.set("sessions", all); sessions = all; }
   launchCopilot(s);
