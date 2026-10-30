@@ -1,8 +1,7 @@
 // Owner rule (30 Oct 2026): a resume file is never refused over missing job-post terms.
-// With the job-post terms gate on, the rollback in tailor.ts puts back the candidate's original paragraph for any
-// rewrite that used a job-post-only term. Those roles are the candidate's own record, not an unfinished draft, so
-// they no longer count as roles_unrewritten / role_evidence_gaps. The file then goes out with the existing
-// "Below the 95% target... Still missing" label. TAILOR_SHIP_ON_ROLLBACK=0 restores the old refusal.
+// A JD-terms rollback can restore the original paragraphs, which prevents unsupported
+// claims but does not constitute a completed rewrite. Experience gaps must still block
+// delivery, even when TAILOR_SHIP_ON_ROLLBACK is enabled.
 // Import-free so the tests' vm loader can read it.
 export function shipOnRollbackOn(env: Record<string, string | undefined> | undefined = globalThis.process?.env): boolean {
   const v = String(env?.TAILOR_SHIP_ON_ROLLBACK ?? "").trim().toLowerCase()
@@ -18,11 +17,13 @@ export type RoleBlockerInput = {
   bulletsReverted: number
 }
 
-/** The role-level quality blockers. Rollback-caused gaps are excused only when the gate restored paragraphs. */
+/** The role-level quality blockers; restoring original paragraphs never proves completion. */
 export function roleQualityBlockers(i: RoleBlockerInput, env?: Record<string, string | undefined>): string[] {
   if (!i.splitDraft || i.skillsOnly) return []
-  const excused = i.jdGate && i.bulletsReverted > 0 && shipOnRollbackOn(env ?? globalThis.process?.env)
-  if (excused) return []
+  // A rollback restores original source paragraphs, but it does not complete the
+  // requested experience rewrites. Never excuse missing roles or evidence gaps.
+  // Keep the legacy switch available for compatibility; it cannot waive delivery safety.
+  void env
   return [
     ...(i.lackingRoleCount > 0 ? ["roles_unrewritten"] : []),
     ...(!i.experienceComplete ? ["role_evidence_gaps"] : []),
