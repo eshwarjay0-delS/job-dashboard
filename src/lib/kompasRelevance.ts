@@ -5,6 +5,7 @@
  * The incoming question controls depth; the original resume/docs control facts.
  * Generic questions must not trigger unrelated technical project inventories.
  */
+import { normalizeAskText } from "./kompasAskText.ts"
 export type ReplyIntent =
   | "introduction" | "closing-question" | "acknowledgement" | "value"
   | "experience-story" | "comparison" | "definition" | "scenario"
@@ -44,8 +45,12 @@ function askWithoutPrior(question: string): string {
 const BARE_FOLLOW=/^(?:(?:and|so|but|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:how come|how so|why not|why though|and why|and how|why|how)(?:\s+though)?[.?!]*$/i
 
 export function interviewIntent(question: string): ReplyIntent {
-  const q=askWithoutPrior(question)
+  // r7 (#28): invisible characters and odd spaces never change the intent. Failsafe: normalizeAskText never throws.
+  const q=askWithoutPrior(normalizeAskText(question))
   if(!q) return "direct"
+  // Stress round 2 (29 Oct 2026): "Hi, can you hear me okay?" and "How are you doing today?" were answered as direct
+  // questions. A greeting or line check gets a brief acknowledgement, never a work answer.
+  if(/^\s*(?:(?:hi|hello|hey|good (?:morning|afternoon|evening))\b[,.!\s]*)?(?:(?:can|could) you hear me(?: okay| ok| alright| well)?|(?:are you|is it) able to hear me|how are you(?: doing)?(?: today)?|how(?:'s| is) (?:it going|your day(?: going)?)|is my (?:audio|mic|video) (?:okay|ok|working))[\s?.!]*$/i.test(q)) return "acknowledgement"
   // "Why?" is glued onto the previous question, then classified as a new direct ask.
   // The prompt then tells the answer to start over. A bare why or how come stays a follow-up.
   if(BARE_FOLLOW.test(q)) return "follow-up"
