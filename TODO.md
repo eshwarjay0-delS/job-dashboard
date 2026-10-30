@@ -1,3 +1,7 @@
+## 2026-10-30 — A one-word logistics question is not dropped
+
+Salary, hybrid, onsite, remote, notice, bonus, and TS/SCI were dropped, so the previous answer stayed on screen. They are kept and answered as logistics. Two weeks' notice, night work, days in the office, and being local to a city stay short too. A hybrid-cloud design stays a technical question.
+
 ## 2026-10-30 — A short visa question is not dropped
 
 "H-1B?" was dropped, so the previous answer stayed on screen. "Do you need an H-1B?", a green card, a visa, and commuting to the office were answered as long questions. They stay short logistics answers. "How would you opt for least privilege?" stays a scenario. "How does work authorization work?" stays technical.

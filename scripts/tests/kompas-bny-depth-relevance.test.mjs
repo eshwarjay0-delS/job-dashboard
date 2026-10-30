@@ -103,6 +103,16 @@ test('a short citizenship question is kept and answered as logistics', () => {
   assert.equal(interviewIntent('Are you on a visa?'), 'logistics')
   assert.equal(interviewIntent('Can you commute to the office?'), 'logistics')
   assert.equal(interviewIntent('How would you opt for least privilege?'), 'scenario')
+  for (const heard of ['Salary?', 'Hybrid?', 'Onsite?', 'Remote?', 'Notice?', 'Bonus?', 'TS/SCI?']) {
+    const kept = questionForAnswer(heard, '', false, false, [{ q: 'What is NLA and why do we disable it?' }])
+    assert.equal(kept, heard, heard)
+    assert.equal(interviewIntent(kept), 'logistics', heard)
+  }
+  assert.equal(interviewIntent('Two weeks notice?'), 'logistics')
+  assert.equal(interviewIntent('Can you work nights?'), 'logistics')
+  assert.equal(interviewIntent('Five days in office?'), 'logistics')
+  assert.equal(interviewIntent('Are you local to Dallas?'), 'logistics')
+  assert.equal(interviewIntent('Design a zero trust approach for a hybrid cloud environment.'), 'technical-process')
 })
 
 test('a short follow-up is not told to open a new mechanism', () => {
