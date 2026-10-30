@@ -66,8 +66,9 @@ test("long AI instructions are sent verbatim rather than trimmed",()=>{
   const long="A".repeat(650000)+"  \n";
   assert.ok(long.length>20000);
   assert.match(app,/instructions: \$\("instructions"\)\.value,/);
-  assert.match(handoff,/LARGE_TEXT_FIELDS/);\n  assert.match(handoff,/const MAX_BYTES = 4_000_000/);
-  assert.match(sql,/octet_length\(v_patch::text\) > 2000000/);
+  assert.match(handoff,/LARGE_TEXT_FIELDS/);
+  assert.match(handoff,/const MAX_BYTES = 4_000_000/);
+  assert.match(sql,/octet_length\(v_patch::text\) > 4000000/);
   assert.ok(!app.includes('try { write(slimForStore(k, v)); }'));
   assert.match(html,/account-sync\.js/);
 });
