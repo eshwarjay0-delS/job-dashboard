@@ -1,4 +1,5 @@
 import { normalizeAsk } from "./kompasAsk.ts"
+import { withoutLogistics } from "./kompasLogistics.ts"
 /** Delivery changes with the listener; technical correctness does not. */
 export const CALIBRATION = "CALIBRATION (every answer, every audience): the first sentence answers the question in plain words. Then the mechanism, with one concrete example when the question needs one. Then only the technical detail this listener can use. Then the tradeoff, or how the result is checked. A narrow fact can stop after the first sentence. Never open with a catalogue of tools, and never leave a pause mark or an error sentence in the words they will say."
 
@@ -71,6 +72,8 @@ const DEPTH_LINE: Record<Depth, string> = {
 const DEPTH_DEEP_DIRECTOR = "DEPTH deep (Director): the decision, its tradeoff and what evidence would change it; mechanism in one sentence."
 export const OWN_THE_ROOM = "OWN THE ROOM: answer first in one short sentence. A fuller body only when the shape allows, with a figure only when a source holds it; a narrow or surface question stops after that sentence. A spoken opener is the answer's first sentence: start the body at the next point. On a vague question, the assumption goes inside the first sentence ('Assuming you mean X, ...'). One thread. Offer the next rung only as a short clause inside the last sentence."
 export function lensBlock(audience: string, question: string): string {
+  // Owner rule (29 Oct 2026): a pure logistics ask gets the quiet reply; the lens adds nothing to it.
+  if (String(question || "").trim() && !withoutLogistics(question)) return ""
   const id = lensOf(audience), l = LENS[id], d = depthFor(question)
   const depth = d === "deep" && id === "director" ? DEPTH_DEEP_DIRECTOR : DEPTH_LINE[d]
   return `LENS ${l.label}: open with ${l.opens}; go into ${l.goes}; avoid ${l.avoids}. The facts are the same for every listener; only order, depth and wording change. ${depth} ${OWN_THE_ROOM} ${REALISM}`

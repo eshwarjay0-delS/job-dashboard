@@ -1,4 +1,5 @@
 // Lens r2 (29 Oct 2026). OFFLINE STAND-IN: rule checks and the deterministic composer, no live model.
+import { withoutLogistics } from "../../src/lib/kompasLogistics.ts"
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
@@ -26,7 +27,9 @@ test(`hunt: every audience x question gives exactly one LENS line and one REALIS
   const bad = []
   for (const a of AUD) for (const h of HUNT) {
     const g = audienceGuidance(a, h.q)
-    if ((g.match(/\bLENS [A-Z]/g) || []).length !== 1 || (g.match(/REALISM \(/g) || []).length !== 1) bad.push(`${a}|${h.q}`)
+    // Lens logistics relabel (29 Oct 2026, owner rule): a pure logistics ask ("What are your salary expectations?") gets no lens block.
+    const want = withoutLogistics(h.q) ? 1 : 0
+    if ((g.match(/\bLENS [A-Z]/g) || []).length !== want || (g.match(/REALISM \(/g) || []).length !== want) bad.push(`${a}|${h.q}`)
     if (!desktopResponsePolicy(a, h.q).guidance) bad.push(`policy ${a}|${h.q}`)
   }
   assert.deepEqual(bad.slice(0, 5), [])

@@ -5,6 +5,20 @@
  */
 import { allowedNumbers } from "./kompasGuards.ts"
 import { askSentences, normalizeAsk } from "./kompasAsk.ts"
+import { withoutLogistics } from "./kompasLogistics.ts"
+import { bannedLogistics } from "./kompasLogisticsPhrases.ts"
+
+/** Owner rule (29 Oct 2026): no logistics. Dossier's phrase list (text side) and Answer Quality's ask helper (question side). */
+// Dossier's list bans bare "hybrid"; on a resume line "hybrid identity / environments / cloud" is technical, so that one
+// match is ignored there (reported to Dossier, whose list is unchanged here).
+const TECH_HYBRID = /\bhybrid\s+(?:identity|identities|environments?|cloud|infrastructure|integrations?|networks?|networking|ad|azure|deployments?|architectures?|workloads?|join)\b/gi
+export const logisticsPhrases = (text: string): string[] => {
+  const tech = (String(text || "").match(TECH_HYBRID) || []).length
+  let skip = tech
+  return bannedLogistics(text).filter((m) => !(skip > 0 && /^hybrid$/i.test(m) && skip-- > 0))
+}
+/** True when any clause of the ask is a logistics ask (visa, pay, relocation, location, start date, notice …). */
+export const asksLogistics = (question: string): boolean => withoutLogistics(question) !== String(question || "").trim()
 
 export type OpenerCategory = "experience-story" | "introduction" | "scenario" | "coding" | "definition" | "general"
 export interface OpenerSourceItem { id: string; sourceDoc: string; category: OpenerCategory | string; text: string; status: "sourced" | "hole" | string; current?: boolean }
@@ -155,6 +169,7 @@ export function buildOpenerTable(items: OpenerSourceItem[], sources: OpenerSourc
       : !(it.category in table) ? "unknown category"
       : !text ? "empty"
       : !flat(String(sources[key] || "")).includes(text) ? "not word for word in its source document"
+      : logisticsPhrases(text).length ? "carries logistics (owner rule: only resume experience is personal)"
       : text.split(" ").length > MAX_WORDS ? "longer than a short opener"
       : (text.match(/\b\d[\d,.]*%?/g) || []).some((f) => !allowed.has(f.replace(/[.,]$/, "").toLowerCase())) ? "a figure not in the sources"
       : ""
@@ -167,6 +182,8 @@ export function buildOpenerTable(items: OpenerSourceItem[], sources: OpenerSourc
 /** Lookup only. Personal-history questions get an opener; an empty category gives null, never an invented line. */
 export function pickOpener(table: OpenerTable, question: string, match?: { passages?: Array<{ id: string; kind?: string; proves?: string }> } | null, ceilingWords?: number, approve?: (o: Opener) => boolean): Opener | null {
   const fits = (o: Opener) => !ceilingWords || spokenOpener(o).split(" ").length <= Math.floor(ceilingWords * OPENER_SHARE)
+  // Owner rule: a question with any logistics ask never gets an opener (the service gives the quiet reply or answers the rest).
+  if (asksLogistics(question)) return null
   const cat = openerCategory(question)
   if (!PERSONAL.includes(cat)) return null
   // fastIndex's 'biggest|challenge|led' also fire on concept asks ("What is the biggest risk in cloud?"): personal means about you.
