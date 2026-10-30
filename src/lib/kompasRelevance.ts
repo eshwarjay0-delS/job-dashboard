@@ -223,3 +223,28 @@ export function missingNamedQuestionTerms(question:string,answer:string):string[
  const q=String(question||''),a=String(answer||'')
  return NAMED_CONCEPTS.filter(t=>t.ask.test(q)&&!t.answer.test(a)).map(t=>t.id)
 }
+
+// Owner rule (Eshwar, 29 Oct 2026, 11:26 PM CT): Kompas does not answer personal logistics. Only resume content may be
+// personal. The owner's list only (not clearance, travel, remote or hybrid), and only the candidate's own present or future
+// terms: "What was your start date at Citi?" is resume history and "high availability" or "IP address" is technical.
+const PERSONAL_LOGISTICS = /\b(?:visa|sponsorship|sponsor (?:me|you)|work authori[sz]ation|authori[sz]ed to work|h-?1b|green card|ead|citizenship|(?:u\.?\s*s\.?|u\s+s|united states|american|a|an)\s+citizens?|salary|compensation|ctc|pay (?:range|rate|expectations?)|(?:hourly|day|bill|your|desired|expected) rate|relocat(?:e|ion)(?!\s+(?:the|a|an|our|this|that|these|those|it|its|data|workloads?|services?|servers?|apps?|applications?)\b)|(?:your|home|current|mailing|residential) address|where (?:are|do) you (?:currently )?(?:based|located|live|living|staying)|current(?:ly)? location|(?:your|earliest|possible|expected) start date|when (?:can|could|would) you (?:start|join)|how soon can you (?:start|join)|available to (?:start|join)|notice period|weeks'? notice|your availability)\b|^\s*(?:(?:what is |what's )?(?:your )?availability|citizen|notice|start date)[.?!]*$/i
+const NOT_PERSONAL = /\b(?:was|were|did|had|tell me about (?!your (?:visa|salary|notice|availability|relocation))|how (?:do|does|did|would|is|are)|why|explain|describe|walk (?:me|us) through|design|implement|build|difference|zones?|limit(?:ing|s)?|work at|experience|worked|projects?)\b|\b(?:and|also|plus)\b[^.?!]*\b(?:what|how|why|tell|explain|describe|walk)\b/i
+/** A pure personal-logistics ask the owner does not want answered. Anything else, or anything ambiguous, is false. */
+// Chief decision (29 Oct 2026, 11:49 PM CT): the candidate's own relocation and location fail closed, even behind why/how/tell me.
+// Moving servers, workloads or a data center is technical and stays open; an unsplit compound still fails open.
+const PERSONAL_MOVE = /(?<!\b(?:data ?cent(?:er|re)|server|workload|application|app|service|cloud|vault|database|office|team)\s)\brelocat(?:e|es|ed|ing|ion)\b(?!\s+(?:the|a|an|our|this|that|these|those|it|its|of|data|workloads?|services?|servers?|apps?|applications?|vault|psm|databases?)\b)|\bwhere (?:are|do) you (?:currently )?(?:based|located|live|living|staying)\b|\b(?:you are|you're) (?:currently )?(?:based|located)\b|\byour current(?:ly)? location\b|\bwhy are you based\b/i
+const UNSPLIT_COMPOUND = /\b(?:and|also|plus)\b[^.?!]*\b(?:what|how|why|tell|explain|describe|walk)\b/i
+export function personalLogistics(text: string): boolean {
+  const t = String(text || "").trim()
+  if (!t || t.split(/\s+/).length > 16) return false
+  if (PERSONAL_MOVE.test(t)) return !UNSPLIT_COMPOUND.test(t)
+  return PERSONAL_LOGISTICS.test(t) && !NOT_PERSONAL.test(t)
+}
+/** The ask with any pure logistics clause removed, other words untouched; "" when only logistics was asked. */
+export function withoutLogistics(text: string): string {
+  const s = String(text || "")
+  const parts = s.split(/,?\s+(?:and|also|plus)(?:\s+(?:um+|uh+|so|then|also|and),?)*\s+(?=(?:tell|explain|describe|how|what|why|walk|can|could|do|have|are|where|when|would)\b)/i)
+  if (parts.length === 1) return personalLogistics(s) ? "" : s
+  const kept = parts.filter((p) => !personalLogistics(p))
+  return kept.length === parts.length ? s : kept.join(" and ").trim()
+}

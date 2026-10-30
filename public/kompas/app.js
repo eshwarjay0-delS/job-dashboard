@@ -2928,9 +2928,9 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (meta.noQuestion) {
       card.streaming = false;
       card.answer = keepOld ? prevAnswer : [];
-      card.meta = "";
+      card.meta = meta.skipped === "logistics" ? "Personal logistics, not answered" : "";   // owner rule 29 Oct: a quiet card says why, with no answer text
       if (cards[idx] === card) renderCard();
-      status("Still listening.", "live");
+      status(meta.skipped === "logistics" ? "Personal logistics, not answered. Still listening." : "Still listening.", "live");
       return;
     }
     if (!text.trim()) throw new Error("The answer engine returned an empty response. Please retry.");
