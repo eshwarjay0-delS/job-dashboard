@@ -6,6 +6,7 @@
  */
 import { questionKeywords, topicOfAsk } from "./kompasDissection.ts"
 import { normalizeResumeLayout } from "./kompasResumeLayout.ts"
+import { createHash } from "node:crypto"
 
 export type Proves = "experience" | "emphasis"
 export interface SourceDoc { name: string; text: string; proves: Proves }
@@ -210,15 +211,79 @@ export function heardAs(token: string, vocab: Set<string>): string {
 }
 const PART_SPLIT = /\s*(?:,\s*(?:and\s+)?|\band\b|\bas well as\b|\bplus\b)\s*/i
 const PART_FRAME = /^(?:(?:how|what|why|when|where|did|do|does|you|your|tell|me|about|walk|through|approach|approached|handle|handled|work|on|with|the|a|an|so|um|like)\s+)+/i
-export interface RetrieveOptions { recent?: string[] | null; kindBoost?: boolean | "full" }
+// Speed r6: `index` false forces the old per-question scan (equivalence tests and the "before" measurement); a
+// prebuilt SourceIndex may be passed; otherwise the session index for these docs is looked up (built once per content).
+export interface RetrieveOptions { recent?: string[] | null; kindBoost?: boolean | "full"; index?: SourceIndex | false | unknown }
+
+// ---- Speed r6: a per-session source index (29 Oct 2026). Everything retrievePassages derived from the source text on
+// every question (passages, token lists, vocabulary, document frequency, term counts) is built once per content hash
+// and kept in a small bounded in-memory map, so a question is a hash-map lookup per keyword, not a rescan of the
+// sources. Swappable: retrievePassages only reads the fields below, so a different index (the prototype's fastIndex,
+// a stored blob) can stand in by producing the same shape. Results are identical to the scan (equivalence test).
+export interface SourceIndex {
+  kind: "kompas-source-index-v1"
+  key: string
+  passages: Passage[]
+  docsTok: string[][]
+  vocab: Set<string>
+  single: Set<string>
+  avg: number
+  postings: Map<string, Array<[number, number]>>
+}
+const INDEX_MAX = 32
+const indexCache = new Map<string, SourceIndex>()
+export function sourceContentKey(docs: SourceDoc[] | null | undefined): string {
+  const h = createHash("sha256")
+  for (const d of Array.isArray(docs) ? docs : []) h.update(`${d.name}\u0000${d.proves}\u0000${d.text.length}\u0000${d.text}\u0001`)
+  return h.digest("hex")
+}
+export function buildSourceIndex(docs: SourceDoc[] | null | undefined): SourceIndex | null {
+  const passages = splitPassages(docs)
+  if (!passages.length) return null
+  const docsTok = passages.map((p) => tokens(p.text))
+  const postings = new Map<string, Array<[number, number]>>()
+  docsTok.forEach((d, i) => {
+    const tf = new Map<string, number>()
+    for (const t of d) tf.set(t, (tf.get(t) || 0) + 1)
+    for (const [t, n] of tf) { const list = postings.get(t); if (list) list.push([i, n]); else postings.set(t, [[i, n]]) }
+  })
+  return {
+    kind: "kompas-source-index-v1", key: sourceContentKey(docs), passages, docsTok,
+    vocab: new Set(docsTok.flat()),
+    single: new Set(passages.flatMap((p) => p.text.toLowerCase().split(/[^a-z0-9]+/)).filter((t) => t.length >= 6).map(stem)),
+    avg: docsTok.reduce((a, d) => a + d.length, 0) / docsTok.length || 1,
+    postings,
+  }
+}
+/** The session index for these sources: built on first use, then reused while the content is unchanged. Null when empty. */
+export function sourceIndexFor(docs: SourceDoc[] | null | undefined): SourceIndex | null {
+  if (!Array.isArray(docs) || !docs.length) return null
+  const key = sourceContentKey(docs)
+  const hit = indexCache.get(key)
+  if (hit) { indexCache.delete(key); indexCache.set(key, hit); return hit }
+  const ix = buildSourceIndex(docs)
+  if (!ix) return null
+  indexCache.set(key, ix)
+  while (indexCache.size > INDEX_MAX) indexCache.delete(indexCache.keys().next().value as string)
+  return ix
+}
+export function clearSourceIndexCache(): void { indexCache.clear() }
+const isIndex = (x: unknown): x is SourceIndex => !!x && typeof x === "object" && (x as SourceIndex).kind === "kompas-source-index-v1" &&
+  Array.isArray((x as SourceIndex).passages) && (x as SourceIndex).postings instanceof Map
 
 export function retrievePassages(question: string, docs: SourceDoc[] | null | undefined, k = 4, opts: RetrieveOptions = {}): Retrieval {
   try {
     const q = String(question || "").trim()
-    const passages = splitPassages(docs)
-    if (!q || !passages.length) return EMPTY
-    const docsTok = passages.map((p) => tokens(p.text))
-    const vocab = new Set(docsTok.flat())
+    if (!q) return EMPTY
+    // Speed r6: the session index when available; failsafe: any problem → the per-question scan exactly as before.
+    let ix: SourceIndex | null = null
+    if (opts?.index !== false) {
+      try { ix = opts?.index !== undefined ? (isIndex(opts.index) ? opts.index : null) : sourceIndexFor(docs) } catch { ix = null }
+    }
+    const passages = ix ? ix.passages : splitPassages(docs)
+    if (!passages.length) return EMPTY
+    const docsTok = ix ? ix.docsTok : passages.map((p) => tokens(p.text))
+    const vocab = ix ? ix.vocab : new Set(docsTok.flat())
     let heard = (t: string) => t
     // r5: an intent word ("charge", "missing") is meant as said, never re-heard as a near source word ("change")
     const asIntent = (t: string) => Object.values(INTENT).some((roots) => inFamily(t, roots, true))
@@ -234,7 +299,7 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
     try {
       const raw = q.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean)
       // only a real one-word source term counts, never a pair the indexer joined ("siem rules" → "siemrules")
-      const single = new Set(passages.flatMap((p) => p.text.toLowerCase().split(/[^a-z0-9]+/)).filter((t) => t.length >= 6).map(stem))
+      const single = ix ? ix.single : new Set(passages.flatMap((p) => p.text.toLowerCase().split(/[^a-z0-9]+/)).filter((t) => t.length >= 6).map(stem))
       for (let i = 1; i < raw.length; i++) {
         const j = raw[i - 1] + raw[i]
         if (j.length < 6 || raw[i - 1].length > 4 || STOP.has(raw[i - 1])) continue
@@ -242,8 +307,7 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
         if (single.has(h)) { keys.add(h); splitHeard.push(h) }
       }
     } catch { /* failsafe: no joined guesses */ }
-    const avg = docsTok.reduce((a, d) => a + d.length, 0) / docsTok.length || 1
-    const df = (t: string) => docsTok.filter((d) => d.includes(t)).length
+    const avg = ix ? ix.avg : docsTok.reduce((a, d) => a + d.length, 0) / docsTok.length || 1
     const N = passages.length
     let fams: string[] = []
     let storyAsk = false
@@ -251,10 +315,28 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
     const famDf = (f: string) => { if (!famDfCache.has(f)) famDfCache.set(f, familyDocFreq(docsTok, f)); return famDfCache.get(f) as number }
     const famWord = (t: string) => { try { return fams.some((f) => inFamily(t, INTENT[f], true)) } catch { return false } }
     try { fams = intentFamilies(q); storyAsk = fams.length > 0 || questionKind(q) === "behavioral" } catch { fams = []; storyAsk = false }
+    // Speed r6: the lexical BM25 part comes from the index postings (same terms, same key order, so identical floats);
+    // without an index it is the per-question scan exactly as r5 wrote it.
+    let lex: number[] | null = null
+    if (ix) {
+      try {
+        const sum = new Array<number>(N).fill(0)
+        for (const t of keys) {
+          if (famWord(t)) continue
+          const post = ix.postings.get(t)
+          if (!post) continue
+          const idf = Math.log(1 + (N - post.length + 0.5) / (post.length + 0.5))
+          for (const [i, tf] of post) sum[i] += idf * (tf * 2.2) / (tf + 1.2 * (0.25 + 0.75 * docsTok[i].length / avg))
+        }
+        lex = sum
+      } catch { lex = null }
+    }
+    const df = (t: string) => docsTok.filter((d) => d.includes(t)).length
     const scored = passages.map((p, i) => {
       const d = docsTok[i]
       let s = 0
-      for (const t of keys) {
+      if (lex) s = lex[i]
+      else for (const t of keys) {
         // r5: an intent word ("failed", "deadline") is scored once, by its family below, not again by spelling
         if (famWord(t)) continue
         const tf = d.filter((x) => x === t).length
