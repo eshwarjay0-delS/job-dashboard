@@ -217,7 +217,7 @@ test("14. Basic WhatsApp Help is routed before any optional Kompas storage call"
   const webhook = readFileSync("src/app/api/whatsapp/webhook/route.ts", "utf8")
   const handleStart = webhook.indexOf("async function handle(from:")
   const command = webhook.indexOf('["help", "hi", "hello", "menu"].includes(command)', handleStart)
-  const kompas = webhook.indexOf("const consumed = await handleWhatsAppKompas", handleStart)
+  const kompas = webhook.indexOf("consumed = await handleWhatsAppKompas", handleStart)
   assert.ok(handleStart > 0 && command > handleStart && kompas > command,
     "Help/menu must not be blocked by the Kompas session lookup")
   assert.match(webhook.slice(command, kompas), /return sendText\(from, HELP\)/)
@@ -235,7 +235,7 @@ test("16. Explicit Use 2 profile switching avoids the Kompas storage preconditio
   const webhook = readFileSync("src/app/api/whatsapp/webhook/route.ts", "utf8")
   const handleStart = webhook.indexOf("async function handle(from:")
   const profile = webhook.indexOf("const profileCommand =", handleStart)
-  const kompas = webhook.indexOf("const consumed = await handleWhatsAppKompas", handleStart)
+  const kompas = webhook.indexOf("consumed = await handleWhatsAppKompas", handleStart)
   assert.ok(handleStart > 0 && profile > handleStart && kompas > profile)
   assert.match(webhook.slice(profile, kompas), /if \(!profileCommand && \(type === "text" \|\| type === "document"\)\)/)
   assert.match(webhook.slice(profile, kompas), /\(\?:use\|switch/)
