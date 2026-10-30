@@ -223,6 +223,21 @@ export function desktopDelivery(
   }
 }
 
+/** Lens 3D/4D on the web page (30 Oct 2026): the web client sends no three-level calibration, so it gets the lens block
+ *  through audienceGuidance and this PIVOT line after it. Empty unless KOMPAS_DESKTOP_LENS is on; anything that throws gives "". */
+const WEB_PIVOT_LEDGER: string[][] = []
+export function webPivotLine(question: string, level: string): string {
+  try {
+    if (!lensSwitchOn()) return ""
+    const pivot = pivotBlock(question, level, WEB_PIVOT_LEDGER)
+    if (!pivot) return ""
+    WEB_PIVOT_LEDGER.splice(0, WEB_PIVOT_LEDGER.length, ...recordAngles(WEB_PIVOT_LEDGER, pickMoves(question, level, WEB_PIVOT_LEDGER).map((m) => m.angle)))
+    return pivot
+  } catch {
+    return ""
+  }
+}
+
 /** A challenge line: the counterpoint sentence the explain modes ask for. */
 const CHALLENGE_LINE = /^(?:challenge:\s*|you (?:might|could|may) say\b|some (?:would|might|will) say\b|a (?:fair|common|sharp) (?:pushback|objection|challenge|counterpoint)\b|the (?:catch|counterpoint|pushback|objection) is\b|a sharp listener (?:might|would)\b|critics (?:say|argue)\b|one objection\b)/i
 const sentences = (t: string) => String(t || "").split(/(?<=[.!?])\s+/)

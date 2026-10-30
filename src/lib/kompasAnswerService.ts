@@ -31,7 +31,7 @@ import { lostAfterSettle, repairLogLine, repairSourceRule, runRepairLoop, type R
 import { answerStreamPolicy, releaseProvisionalDelta, mustEmitFinalReplacement, candidateEvidenceForVerification, type KompasStreamPolicy } from "@/lib/kompasStreamIntegrity"
 import { blendPrompt, blendSpoken, readAloud } from "@/lib/kompasBlend"
 import { audienceGuidance, EVIDENCE_POLICY, INTERVIEW } from "@/lib/kompasAudience"
-import { desktopCraft, desktopResponsePolicy, desktopDelivery } from "@/lib/kompasDesktopResponse"
+import { desktopCraft, desktopResponsePolicy, desktopDelivery, webPivotLine } from "@/lib/kompasDesktopResponse"
 import {
   applyGuards, questionFigures, verifyAnswer,
   type SpeakFacts,
@@ -890,6 +890,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   })
   const desktopPolicy = config.responseCalibration === "three-level-v1" ? desktopResponsePolicy(level, question) : null
   const desktopWire = desktopPolicy ? desktopDelivery(desktopPolicy, level, question) : null // lens r4: OFF unless KOMPAS_DESKTOP_LENS=on
+  const webPivot = desktopWire ? "" : webPivotLine(question, level) // Lens 3D/4D on web: "" unless KOMPAS_DESKTOP_LENS=on
   if (desktopPolicy) register = desktopPolicy.kind === "experience" || desktopPolicy.kind === "implementation" || desktopPolicy.kind === "topic" ? "practice" : "concept"
   if (desktopPolicy && tier !== 0 && plan.kind !== "code") {
     plan.words = desktopPolicy.words
@@ -1101,7 +1102,7 @@ ${INTERVIEW}`
     : ""
   const job: AnswerJob = {
     question,
-    system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : desktopWire?.delivery || audienceGuidance(level, question)}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopWire?.tail || "" : ""}`,
+    system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : (desktopWire?.delivery || audienceGuidance(level, question)) + (webPivot ? " " + webPivot : "")}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopWire?.tail || "" : ""}`,
     userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? `${desktopCloser || spokenCloser}\n\n${CODING_CLOSER}` : desktopCloser || spokenCloser}`,
     plan,
     interviewer,

@@ -11,8 +11,9 @@ test("wiring: the service change is only the two slots, and with the switch off 
   const now = readFileSync(new URL("../../src/lib/kompasAnswerService.ts", import.meta.url), "utf8")
   const before = execFileSync("git", ["show", `${BASE}:src/lib/kompasAnswerService.ts`], { cwd: new URL("../..", import.meta.url).pathname, encoding: "utf8" })
   const sys = (s) => s.split("\n").find((l) => l.includes("AUDIENCE DELIVERY"))
-  const back = sys(now).replace("desktopWire?.delivery || audienceGuidance(level, question)", "desktopPolicy?.guidance || audienceGuidance(level, question)").replace("desktopWire?.tail || \"\"", "desktopPolicy?.guidance || \"\"")
+  const back = sys(now).replace('(desktopWire?.delivery || audienceGuidance(level, question)) + (webPivot ? " " + webPivot : "")', "desktopWire?.delivery || audienceGuidance(level, question)").replace("desktopWire?.delivery || audienceGuidance(level, question)", "desktopPolicy?.guidance || audienceGuidance(level, question)").replace("desktopWire?.tail || \"\"", "desktopPolicy?.guidance || \"\"")
   assert.equal(back, sys(before))
+  // web pivot: webPivotLine() is "" while the switch is off (kompas-lens-web-pivot.test.mjs), so the added term adds nothing
   // off: desktopWire.delivery === desktopPolicy.guidance and desktopWire.tail === desktopPolicy.guidance (tests above), so the prompt is byte-identical
   assert.match(now, /const desktopWire = desktopPolicy \? desktopDelivery\(desktopPolicy, level, question\) : null/)
   // The budget measures the wiring commit itself (BASE..wiring), so later unrelated service fixes do not count against it.
