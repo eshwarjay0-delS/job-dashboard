@@ -21,13 +21,18 @@ const PERSONAL = new RegExp([
 
 // Asks the classifier files elsewhere ("What is your current location?" reads as a definition)
 // but that can only mean the candidate's own terms.
-const UNAMBIGUOUS = /\bcurrent(?:ly)? (?:location|located|based|living)\b|\byour (?:home |current )?address\b|\bwhere (?:do you live|are you (?:based|located|living))\b|\bnotice period\b|\bsalary (?:expectation|range|requirement)s?\b|\b(?:need|require)\b.{0,25}\bsponsorship\b|\bauthori[sz]ed to work\b|\bwork authori[sz]ation\b|\b(?:your|signing|annual|expected) bonus\b|\b(?:expect(?:ed)?|your) equity\b|\b401k\b|\bw-?2\b|\bc2c\b|\bcontract role\b|\b(?:hold|on) opt\b|\bopt status\b|\b(?:need an l-?1|l-?1 visa)\b|\bearliest start\b|\b(?:how much notice|notice do you need)\b|\bcity do you live\b|\btime zone are you\b|\bwork (?:est|cst|pst|mst|eastern|central|pacific|mountain) hours\b|\bwork from home\b|\bare you remote\b|\bopen to weekends\b|\bbe on[- ]?call\b|\byour shift\b|\bpto\b/i
+const UNAMBIGUOUS = /\bcurrent(?:ly)? (?:location|located|based|living)\b|\byour (?:home |current )?address\b|\bwhere (?:do you live|are you (?:based|located|living))\b|\bnotice period\b|\bsalary (?:expectation|range|requirement)s?\b|\b(?:need|require)\b.{0,25}\bsponsorship\b|\bauthori[sz]ed to work\b|\bwork authori[sz]ation\b|\b(?:your|signing|annual|expected) bonus\b|\b(?:expect(?:ed)?|your) equity\b|\b401k\b|\bw-?2\b|\bc2c\b|\bcontract role\b|\b(?:hold|on) opt\b|\bopt status\b|\b(?:need an l-?1|l-?1 visa)\b|\bearliest start\b|\b(?:how much notice|notice do you need)\b|\bcity do you live\b|\btime zone are you\b|\bwork (?:est|cst|pst|mst|eastern|central|pacific|mountain) hours\b|\bwork from home\b|\bare you remote\b|\bopen to weekends\b|\bbe on[- ]?call\b|\byour shift\b|\bpto\b|\b(?:okay|ok|comfortable|fine|happy) with (?:on-?call|weekends?|nights?|night shifts?|travel(?:ing)?|relocat\w*)\b/i
 
 /** One clause is logistics only when the classifier says so and it asks about the candidate's own terms. */
 export function isLogisticsAsk(clause: string): boolean {
   const c = String(clause || "").trim()
-  return !!c && PERSONAL.test(c) && (interviewIntent(c) === "logistics" || UNAMBIGUOUS.test(c))
+  return !!c && PERSONAL.test(c) && !TECHNICAL.test(c) && (interviewIntent(c) === "logistics" || UNAMBIGUOUS.test(c))
 }
+
+// Slice 12 (owner, 30 Oct 2026 8:50 AM CT: questions skipped "as if it never heard"): a technical ask that shares a word
+// with the logistics list ("shift-left", "compensation controls", "be on call for an upgrade", "notice to give users
+// before a policy change", "start date field mapping") is a real question, not the candidate's own terms.
+const TECHNICAL = /\b(?:experience (?:with|working|in|on|doing)|shift-left|compensat(?:ion|ing) controls?|(?:field|attribute) mapping|runbooks?|upgrades?|cutover|change windows?|maturity|assessments?|give (?:users|app(?:lication)? owners|teams|stakeholders)|rate limit(?:s|ing)?)\b/i
 
 // "U.S." is not a sentence end.
 const SENTENCE = /(?<=[?!]|(?<!\b[A-Za-z])\.)\s+/

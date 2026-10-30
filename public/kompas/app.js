@@ -1514,6 +1514,14 @@ function dictateStep(cap, rms, now, vad) {
   const V = vad || { SILENCE_MS: 1100, MAX_SEG_MS: 28000, IDLE_RECYCLE_MS: 6000 };
   let noise = Number(cap.noise) || 0.001, speechMs = cap.speechMs || 0, voiced = !!cap.voiced;
   let lastVoice = cap.lastVoice || 0, lastTick = cap.lastTick || 0;
+  // Slice 12: the floor also learns a steady level it is stuck under. Over each 1.5 s the quietest level is kept; when even
+  // that sits well above the floor (a fan, line hiss, call comfort noise), the floor moves halfway up to it. Speech always
+  // dips between words, so speech over a quiet room leaves the floor where it was.
+  let floorMin = Number.isFinite(cap.floorMin) ? Math.min(cap.floorMin, rms) : rms, floorAt = Number.isFinite(cap.floorAt) ? cap.floorAt : now;
+  if (now - floorAt >= 1500) {
+    if (floorMin > noise * 1.5 && floorMin < 0.05) noise = noise + (floorMin - noise) * 0.5;
+    floorMin = rms; floorAt = now;
+  }
   const scream = rms >= 0.08 || (noise > 0.008 && rms > noise * 6);
   if (scream && noise > rms * 0.2) noise = Math.max(0.001, rms * 0.12);
   const threshold = Math.max(0.003, noise * 2.5);
@@ -1527,7 +1535,7 @@ function dictateStep(cap, rms, now, vad) {
   if (voiced && now - lastVoice > V.SILENCE_MS) action = "end";
   else if (segLen > V.MAX_SEG_MS) action = voiced ? "end" : "drop";
   else if (!voiced && segLen > V.IDLE_RECYCLE_MS) action = speechMs >= 60 ? "rescue" : "drop";
-  return { noise, speechMs, voiced, lastVoice, lastTick, speaking, scream, action };
+  return { noise, speechMs, voiced, lastVoice, lastTick, speaking, scream, action, floorMin, floorAt };
 }
 // Audio-silence watchdog hooks (slice 5d, 29 Oct 2026), the web side of desktop-patches/audio-silence-watchdog.md.
 // The desktop's 3 s audio pulse reads them; nothing on this page reads or calls them. They can never break capture:
@@ -1607,7 +1615,7 @@ function vadStep(cap, rms) {
   if (rms > 0.004) { cap.lastAudibleAt = now; cap.zeroWarned = false; }
   const step = dictateStep(cap, rms, now, VAD);
   cap.noise = step.noise; cap.speechMs = step.speechMs; cap.voiced = step.voiced;
-  cap.lastVoice = step.lastVoice; cap.lastTick = step.lastTick;
+  cap.lastVoice = step.lastVoice; cap.lastTick = step.lastTick; cap.floorMin = step.floorMin; cap.floorAt = step.floorAt;
   meter(cap.who, rms, step.speaking);
   if (step.action === "end") return endSegment(cap, true, true, step.scream || step.speechMs >= 60);
   if (step.action === "rescue") return endSegment(cap, true, true, true);
@@ -1876,10 +1884,30 @@ function typedFollowUpQuestion(typed, openQuestion) {
   const end = (x) => /[?.!]$/.test(x) ? "" : asks.test(x) ? "?" : ".";
   return q + end(q) + " " + t.charAt(0).toUpperCase() + t.slice(1) + end(t);
 }
+// Slice 12 (owner, 30 Oct 2026 8:50 AM CT: questions "passed fully as if it never heard"): an ask that opens with a
+// filler ("Okay so what happens...", "uh who is...") or does not open with a question word ("I'd love to hear about...",
+// "Kerberos versus NTLM.") never armed Auto, and a press after an answer took it for a re-press of the page on screen.
+const ASK_LEAD = /^(?:(?:ok(?:ay)?|alright|all right|so|and|but|um+|uh+|hmm+|well|now|right|yeah|yes|great|cool|perfect|got it|thanks|thank you)[,.!]?\s+)+/i;
+const ASK_INDIRECT = /^(?:i'?d (?:love|like) to (?:hear|know|understand|learn)|i would (?:love|like) to (?:hear|know|understand|learn)|i'?m (?:curious|interested|wondering)|i am (?:curious|interested|wondering)|curious (?:about|how|what|why|whether|if)|interested in (?:how|what|why|your)|i was (?:wondering|curious)|i wonder\b|i want to (?:hear|know|understand)|help (?:me|us) understand|(?:run|talk|take|bring) (?:me|us) through|go through (?:how|what|why|your)|let me hear|paint (?:me|us) a picture|remind me|(?:any |your )?thoughts on|your (?:take|view|thinking) on|(?:any |what'?s your )?experience with|please (?:explain|describe|tell|walk|share|talk|elaborate|go over|clarify)|go ahead and (?:explain|describe|tell|walk|share|talk)|elaborate on|(?:the )?difference between|(?:maybe |let'?s )?start (?:with|by)|next (?:one|question|topic)[,:]?\s+\S)|^[\w#+./-]+(?: [\w#+./-]+){0,3} (?:versus|vs\.?) [\w#+./-]+[.?!]*$|\b(?:how|what|why|when|where) (?:did|do|would|will|have|can|could) you\b/i;
 function opensNewAsk(text) {
   const t = String(text || "").replace(/^(?:You|Them):\s*/gi, " ").replace(/\s+/g, " ").trim();
   if (shortFollowUp(t)) return true;
-  return /^(?:(?:and|so|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|walk me through|say that again)\b/i.test(t);
+  if (/^(?:(?:and|so|ok(?:ay)?|right|well|then|now|um+|uh+|yeah|yes)[, ]+)*(?:go deeper|dig deeper|elaborate|explain that|explain this|explain it|walk me through|say that again)\b/i.test(t)) return true;
+  try {
+    const bare = t.replace(ASK_LEAD, "");
+    return (bare !== t && !!bare && Q_CUE.test(bare)) || ASK_INDIRECT.test(bare);
+  } catch { return false; }
+}
+// Slice 12: the question is formed from the last 8 lines heard since the last answer. When more than 8 lines followed the
+// interviewer's ask (his own words, a long setup), the ask fell out and the turn was dropped. The latest unanswered ask
+// still opens the window, up to 16 lines. Any fault keeps the 8-line window.
+function formationWindow(lines, isAsk, n = 8, cap = 16) {
+  const all = Array.from(lines || []), win = all.slice(-n);
+  try {
+    if (win.some(isAsk)) return win;
+    for (let i = all.length - n - 1; i >= Math.max(0, all.length - cap); i--) if (isAsk(all[i])) return all.slice(i);
+  } catch {}
+  return win;
 }
 function clauseStillOpen(text) {
   const t = String(text || "").replace(/\s+/g, " ").trim();
@@ -2331,9 +2359,9 @@ function splitDistinctAsksV3(text) {
 }
 // personal-logistics parity: start — a copy of src/lib/kompasRelevance.ts (owner rule, 29 Oct 2026): cached answers (book,
 // anchors) are painted here without a server call, so the page skips the same asks. Parity: kompas-logistics-client.test.mjs.
-const PERSONAL_LOGISTICS = /\b(?:visa|sponsorship|sponsor (?:me|you)|work authori[sz]ation|authori[sz]ed to work|h-?1b|green card|ead|citizenship|(?:u\.?\s*s\.?|u\s+s|united states|american|a|an)\s+citizens?|salary|compensation|ctc|pay (?:range|rate|expectations?)|(?:hourly|day|bill|your|desired|expected) rate|relocat(?:e|ion)(?!\s+(?:the|a|an|our|this|that|these|those|it|its|data|workloads?|services?|servers?|apps?|applications?)\b)|(?:your|home|current|mailing|residential) address|where (?:are|do) you (?:currently )?(?:based|located|live|living|staying)|current(?:ly)? location|(?:your|earliest|possible|expected) start date|when (?:can|could|would) you (?:start|join)|how soon can you (?:start|join)|available to (?:start|join)|notice period|weeks'? notice|your availability|are you (?:currently )?available(?! (?:zones?|regions?)\b))\b|^\s*(?:(?:what is |what's )?(?:your )?availability|citizen|notice|start date)[.?!]*$/i
+const PERSONAL_LOGISTICS = /\b(?:visa|sponsorship|sponsor (?:me|you)|work authori[sz]ation|authori[sz]ed to work|h-?1b|green card|ead|citizenship|(?:u\.?\s*s\.?|u\s+s|united states|american|a|an)\s+citizens?|salary|compensation|ctc|pay (?:range|rate|expectations?)|(?:hourly|day|bill|your|desired|expected) rate|relocat(?:e|ion)(?!\s+(?:the|a|an|our|this|that|these|those|it|its|data|workloads?|services?|servers?|apps?|applications?|secrets?|keys?|credentials?|certificates?|certs?|accounts?|hosts?|clusters?|subnets?)\b)|(?:your|home|current|mailing|residential) address|where (?:are|do) you (?:currently )?(?:based|located|live|living|staying)|current(?:ly)? location|(?:your|earliest|possible|expected) start date|when (?:can|could|would) you (?:start|join)|how soon can you (?:start|join)|available to (?:start|join)|notice period|weeks'? notice|your availability(?! (?:targets?|slas?|slos?|goals?|metrics?|numbers?|requirements?)\b)|are you (?:currently )?available(?! (?:zones?|regions?)\b))\b|^\s*(?:(?:what is |what's )?(?:your )?availability|citizen|notice|start date)[.?!]*$/i
 const NOT_PERSONAL = /\b(?:was|were|did|had|tell me about (?!your (?:visa|salary|notice|availability|relocation))|how (?:do|does|did|would|is|are)|why|explain|describe|walk (?:me|us) through|design|implement|build|difference|zones?|limit(?:ing|s)?|work at|experience|worked|projects?)\b|\b(?:and|also|plus)\b[^.?!]*\b(?:what|how|why|tell|explain|describe|walk)\b/i
-const PERSONAL_MOVE = /(?<!\b(?:data ?cent(?:er|re)|server|workload|application|app|service|cloud|vault|database|office|team)\s)\brelocat(?:e|es|ed|ing|ion)\b(?!\s+(?:the|a|an|our|this|that|these|those|it|its|of|data|workloads?|services?|servers?|apps?|applications?|vault|psm|databases?)\b)|\bwhere (?:are|do) you (?:currently )?(?:based|located|live|living|staying)\b|\b(?:you are|you're) (?:currently )?(?:based|located)\b|\byour current(?:ly)? location\b|\bwhy are you based\b/i
+const PERSONAL_MOVE = /(?<!\b(?:data ?cent(?:er|re)|server|workload|application|app|service|cloud|vault|database|office|team)\s)\brelocat(?:e|es|ed|ing|ion)\b(?!\s+(?:the|a|an|our|this|that|these|those|it|its|of|data|workloads?|services?|servers?|apps?|applications?|vault|psm|databases?|secrets?|keys?|credentials?|certificates?|certs?|accounts?|hosts?|clusters?|subnets?)\b)|\bwhere (?:are|do) you (?:currently )?(?:based|located|live|living|staying)\b|\b(?:you are|you're) (?:currently )?(?:based|located)\b|\byour current(?:ly)? location\b|\bwhy are you based\b/i
 const UNSPLIT_COMPOUND = /\b(?:and|also|plus)\b[^.?!]*\b(?:what|how|why|tell|explain|describe|walk)\b/i
 function personalLogistics(text) {
   const t = String(text || "").trim()
@@ -2358,7 +2386,7 @@ function scheduleAuto() {
   const wait = clauseStillOpen(tail) ? 7000 : AUTO_QUIET_MS;
   autoTimer = setTimeout(function fire() {
     if (!autoOn || !armsAuto()) return;
-    if (captures.some(c => c.voiced) || finals.size || answerCtl) { autoTimer = setTimeout(fire, 700); return; }   // still talking / still answering
+    if (captures.some(c => c.voiced && c.who === questionSource()) || finals.size || answerCtl) { autoTimer = setTimeout(fire, 700); return; }   // the interviewer still talking / still answering (slice 12: your own mic never holds the answer back)
     aiAnswer(true);
   }, wait);
 }
@@ -3146,7 +3174,7 @@ async function aiAnswer(fromAuto) {
     // Formation window (owner, 26 Oct): the last 8 heard lines are enough to
     // form and cut a question. Older lines stay in the transcript and reach
     // the answer as earlier context — they are not re-formed into questions.
-    let pending = pendingHeard().slice(-8);
+    let pending = formationWindow(pendingHeard(), t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
     // Answer anyway (slice 2): a press right after "Nothing question-like" answers those same lines.
