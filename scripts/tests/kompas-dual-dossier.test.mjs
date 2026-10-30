@@ -56,9 +56,9 @@ test("job description cannot become proof of work and a chat answer cannot becom
 
 test("citations allow only real source ids and flag absent citations", () => {
   const ss = validateDossierSources(standard())
-  assert.deepEqual(dossierCitationWarnings("Candidate claim [S:resume] and role [S:jd].", ss), [])
-  assert.deepEqual(dossierCitationWarnings("Project [S:made-up] and [S:resume]", ss), ["unknown-source-citation:made-up"])
-  assert.deepEqual(dossierCitationWarnings("An uncited page.", ss), ["no-source-citations"])
+  assert.deepEqual(Array.from(dossierCitationWarnings("Candidate claim [S:resume] and role [S:jd].", ss)), [])
+  assert.deepEqual(Array.from(dossierCitationWarnings("Project [S:made-up] and [S:resume]", ss)), ["unknown-source-citation:made-up"])
+  assert.deepEqual(Array.from(dossierCitationWarnings("An uncited page.", ss)), ["no-source-citations"])
 })
 
 test("negative validation: duplicate, forged kinds, missing identity, accidental truncation rejected", () => {
