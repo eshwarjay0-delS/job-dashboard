@@ -76,8 +76,8 @@ export async function createClientFromRequest(request: NextRequest) {
 
   const bearer = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!bearer) return createClient();
-  // An already-expired bearer carries no authority: treat it as absent and
-  // let the cookie session speak. The desktop shell used to pin the single
+  // An already-expired bearer carries no authority: never fall back to a
+  // different cookie identity. The desktop shell used to pin the single
   // JWT it was handed at launch and inject it on every /api/* call; an hour
   // later that dead token was overriding perfectly good cookies and 401-ing
   // everything — the app "worked when checked" and failed later, worst
