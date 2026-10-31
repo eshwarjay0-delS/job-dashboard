@@ -8,7 +8,7 @@ const response = (status, data) => ({
   status, ok: status >= 200 && status < 300,
   json: async () => data,
 });
-const version = response(200, { commit: sha.slice(0, 7), build: "kompas", builtAt: "2026-10-31T01:00:00Z" });
+const version = response(200, { commit: sha.slice(0, 7), commitFull: sha, build: "kompas", builtAt: "2026-10-31T01:00:00Z" });
 const health = response(200, { ok: true, app: "MarketFit" });
 
 test("exact PR-head version and healthy live route pass without credentials or audio", async () => {
@@ -39,6 +39,20 @@ test("stale preview never passes until exact SHA is served", async () => {
   });
   assert.equal(result.attempt, 2);
   assert.equal(sleeps, 1);
+});
+
+test("matching 7-character prefixes cannot substitute for a full-SHA proof", async () => {
+  const samePrefix = sha.slice(0, 7) + "0".repeat(33);
+  for (const data of [
+    { commit: sha.slice(0, 7) },
+    { commit: sha.slice(0, 7), commitFull: samePrefix },
+    { commit: sha.slice(0, 7), commitFull: "malformed" },
+  ]) {
+    await assert.rejects(verifyVoicePreview({
+      baseUrl: origin, expectedSha: sha, attempts: 1,
+      fetcher: async (url) => url.pathname === "/version.json" ? response(200, data) : health,
+    }), /full commit does not match/);
+  }
 });
 
 test("protected and redirected previews fail closed without a share link", async () => {
