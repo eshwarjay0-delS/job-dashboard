@@ -535,7 +535,7 @@ function repeatsPriorQuestionV2(text: string, previous: string): boolean {
   return aw.filter((w) => bw.has(w)).length / aw.length >= 0.85
 }
 
-export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN): string {
+export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN, reask = false): string {
   const raw = transcriptSentences(repairDictation(heard)).replace(/\s+/g, " ").trim()
   const text = afterMarkedNextQuestion(raw)
   if (BARE_INTRO.test(text)) return "Tell me about yourself"
@@ -546,22 +546,45 @@ export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN): st
   let last = -1
   for (let i = parts.length - 1; i >= 0; i--) if (parts[i].kind === "ask") { last = i; break }
   if (last < 0) return ""
-  let from = last, context = 0
+  // Deterministic window selection (owner, 31 Oct 2026): before it answers, the engine always puzzles "was this
+  // everything they were expecting?" It keeps the widest window of the last asks — Last 1 2 3 4, then 1 2 3, then
+  // 1 2, then 1 — and only shrinks that window on proof something was settled: an ask from the previous turn, the
+  // candidate's own speech taking the floor, or a long fragment between asks. A short acknowledgement ("Yeah.",
+  // "Right.") or setup sentences between asks never shrink it: shrinking there is what left the card answering only
+  // the last question, as if the rest was never heard.
   // "Let me push on that. <setup>": announced setup is kept. So is the sentence a pointing ask ("rate limit it") needs.
   const before = TOPIC_SHIFT.test(text) ? NO_TURN : previous
   const points = /\b(?:it|that|this|them|those|these|there)\b/i.test(parts[last].text)
   const reply = (i: number) => !/\?$/.test(parts[i].text) && !ASK_OPENER.test(parts[i].text) && !(points && i === last - 1) && belongsToPrevious(parts[i].text, before)
-  while (from > 0 && !reply(from - 1) && (parts[from - 1].kind === "ask" || (parts[from - 1].kind === "context" && context < 2))) {
-    if (parts[from - 1].kind === "context") context++
-    from--
+  const words = (t: string) => t.split(/\s+/).filter(Boolean).length
+  const kept: number[] = [last]
+  let asks = 1
+  let c = last - 1
+  // A re-press is the user saying the last answer missed: the concatenation widens to whatever was heard, previous
+  // things included, so a part missed at one instance comes back on the next tap. The material itself stays bounded
+  // client-side (the page chain plus what was heard since), so lifting the four-ask cap here never re-forms the
+  // whole interview. The break rules — previous turn, own speech, long fragment — still hold on a re-press.
+  while (c >= 0 && (reask || asks < 4)) {
+    if (reply(c)) break
+    const kind = parts[c].kind
+    if (kind === "ask") { kept.unshift(c); asks++; c-- }
+    else if (kind === "context") { kept.unshift(c); c-- }
+    else if (kind === "noise") {
+      // One short acknowledgement run between asks is skipped: never kept as text, never a break. A longer
+      // fragment is a real break (the transcriber's cut-off tail in the 27 Oct 2026 Gemalto card).
+      let s = c, w = 0, settled = false
+      while (s >= 0 && parts[s].kind === "noise") { w += words(parts[s].text); if (reply(s)) settled = true; s-- }
+      if (settled || w > 4) break
+      c = s
+    } else break // the candidate's own speech: an answer was given, or the floor changed hands
   }
-  while (from < last && parts[from].kind === "context" && parts[from].text.split(/\s+/).length > 40) from++   // a long monologue is not setup
+  while (kept.length > 1 && parts[kept[0]].kind === "context" && words(parts[kept[0]].text) > 40) kept.shift()   // a long monologue is not setup
   // "could you elaborate on that": the ask it points to is kept, the candidate's own reply between them is not.
   let pointed = ""
-  if (from === last && /\b(?:that|this|it|those|these)\b/i.test(parts[last].text) && last >= 2 && parts[last - 1].kind === "own" && parts[last - 2].kind === "ask") pointed = parts[last - 2].text.replace(/[.]$/, "") + ". "
+  if (kept.length === 1 && /\b(?:that|this|it|those|these)\b/i.test(parts[last].text) && last >= 2 && parts[last - 1].kind === "own" && parts[last - 2].kind === "ask") pointed = parts[last - 2].text.replace(/[.]$/, "") + ". "
   // Instructions after the ask ("Give a falsifiable test", "Keep it suitable for technical HR") are asks themselves, so
   // the last ask is the end of the question.
-  const q = (pointed + parts.slice(from, last + 1).map((p) => p.text).join(" ")).replace(/\s+/g, " ").trim()
+  const q = (pointed + kept.map((i) => parts[i].text).join(" ")).replace(/\s+/g, " ").trim()
   // "And why?" is two words or fewer. Dropping it left the previous answer on screen.
   if (!q || (q.split(/\s+/).length < 3 && !shortFollowUp(q) && !shortFollowUp(text) && !shortLogistics(q) && !shortLogistics(text))) return ""
   return (q.charAt(0).toUpperCase() + q.slice(1)).slice(0, 2000)
@@ -693,7 +716,7 @@ export function noiseOnly(text: string): boolean {
  * unanswered. Anything else typed or heard is kept — dropping it is what
  * left the card on the previous answer.
  */
-export function questionToAnswer(heard: string, explicit: string, pinned = false, previous: PreviousTurn = NO_TURN): string {
+export function questionToAnswer(heard: string, explicit: string, pinned = false, previous: PreviousTurn = NO_TURN, reask = false): string {
   const asked = String(explicit || "").replace(/\s+/g, " ").trim()
   if (pinned && asked && !noiseOnly(asked)) {
     // The formed question on the card is the whole of what was asked (owner, 23 Oct 2026): every ask, the setup between
@@ -710,7 +733,7 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
   // review?". When heard already holds the ask, heard alone is cut; the joined cut stays as the fallback.
   const key = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
   const inHeard = asked && key(asked).length > 0 && key(heard).includes(key(asked))
-  const cut = (inHeard ? cutQuestion(heard, previous) : "") || cutQuestion([heard, asked].filter(Boolean).join("\n"), previous)
+  const cut = (inHeard ? cutQuestion(heard, previous, reask) : "") || cutQuestion([heard, asked].filter(Boolean).join("\n"), previous, reask)
   if (cut) return cut
   if (asked && !noiseOnly(asked)) return asked.slice(0, 2000)
   const bare = String(heard || "")
@@ -783,7 +806,7 @@ function deriveByCodeRaw(heard: string, history: unknown, reask = false): string
   if (!heard || plainlyNoQuestion(heard)) return null
   // Every line is small talk ("Them: makes sense"): nothing to derive, and the model is not asked to find a question in it.
   if (String(heard).split("\n").filter((l) => l.trim()).every((l) => noiseOnly(l))) return null
-  const clean = cleanQuestion(heard) || cutQuestion(heard, reask ? NO_TURN : previousTurn(history))
+  const clean = cleanQuestion(heard) || cutQuestion(heard, reask ? NO_TURN : previousTurn(history), reask)
   if (clean) return clean
   const topic = topicFragment(String(heard).replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " "))
   return topic ? String(heard).replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ").replace(/\s+/g, " ").trim().slice(0, 2000) : ""
@@ -826,7 +849,7 @@ export function afterSelfCorrection(text: string): string {
 }
 export function questionForAnswer(heard: string, asked: string, pinned: boolean, again: boolean, history: unknown): string {
   const turns = Array.isArray(history) ? history : []
-  const formed = afterMarkedNextQuestion(questionToAnswer(stripScreenChrome(heard), stripScreenChrome(asked), pinned, again ? NO_TURN : previousTurn(turns)))
+  const formed = afterMarkedNextQuestion(questionToAnswer(stripScreenChrome(heard), stripScreenChrome(asked), pinned, again ? NO_TURN : previousTurn(turns), again))
   const corrected = formed ? afterSelfCorrection(formed) : formed
   const q = corrected ? (/following up on: "/.test(corrected) && corrected !== formed ? corrected : tidySpokenAsk(corrected)) : formed
   const source = String((pinned && asked) || heard || "").split("\n").filter((l) => l.trim()).pop() || ""

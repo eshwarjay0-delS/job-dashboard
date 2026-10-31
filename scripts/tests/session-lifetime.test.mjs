@@ -69,6 +69,33 @@ test('1000 desktop renewal attempts use the bridge without navigation', async ()
   assert.equal(calls, 1000);
 });
 
+// Owner, 31 Oct 2026: a session logged out midway. Mechanism: the desktop shell rotates the refresh family on
+// its own timer while the cookies keep the older generation, and the client then presented that stale token to
+// the cookie refresh — presenting an older token can revoke the whole family. On desktop the cookie path must
+// never run, bridge or no bridge; the shell's live token keeps calls working.
+test('desktop shell without the bridge never presents the cookie token', async () => {
+  const start = appSrc.indexOf('async function tryRefreshAuth()');
+  const end = appSrc.indexOf('// Idle is where sessions used to die', start);
+  const body = appSrc.slice(start, end) + '\nthis.tryRefreshAuth = tryRefreshAuth;';
+  let fetches = 0;
+  const context = {
+    window: { kompasDesktop: {} },
+    fetch: async () => { fetches++; return { ok: true }; },
+    Date,
+    __lastAuthRefresh: 0,
+  };
+  const { runInNewContext } = await import('node:vm');
+  runInNewContext(body, context);
+  assert.equal(await context.tryRefreshAuth(), false);
+  assert.equal(fetches, 0);
+});
+
+test('a shown reconnect pill clears itself when auth recovers', () => {
+  assert.match(appSrc, /function clearAuthPill\(\)/);
+  assert.match(appSrc, /deriveOnly: true, question: "ping"/);
+  assert.match(appSrc, /if \(window\.kompasDesktop\) return false;/);
+});
+
 test('sign-in paths still stamp the diagnostic login time', () => {
   const layout = readFileSync(new URL('../../src/app/dashboard/layout.tsx', import.meta.url), 'utf8');
   assert.match(layout, /SessionLifetimeGuard/);

@@ -663,22 +663,31 @@ async function buildBook(s) {
 // once, and only sends the window to login when renewal truly fails.
 let __authRedirected = false;
 let __lastAuthRefresh = 0;
+let __authRefreshFlight = null;
 function isAuthError(e) {
   const m = String((e && e.message) || e || "");
   return /\b401\b/.test(m) || /sign in/i.test(m);
 }
 async function tryRefreshAuth() {
-  try {
-    if (window.kompasDesktop && typeof window.kompasDesktop.refreshAuth === "function") {
-      const renewed = await window.kompasDesktop.refreshAuth();
-      if (renewed) { __lastAuthRefresh = Date.now(); return true; }
-      // An upgraded shell may have a valid cookie session but no encrypted
-      // refresh family yet. Let the same-origin cookie path try next.
-    }
-    const res = await fetch("/api/auth/refresh", { method: "POST" });
-    if (res.ok) { __lastAuthRefresh = Date.now(); return true; }
-  } catch {}
-  return false;
+  // Coalesce simultaneous prep, answer, focus and keepalive renewals.
+  // The Electron shell exclusively owns its refresh family: never fall back
+  // to stale webview cookies, which could revoke the desktop session.
+  if (__authRefreshFlight) return __authRefreshFlight;
+  __authRefreshFlight = (async () => {
+    try {
+      if (window.kompasDesktop) {
+        if (typeof window.kompasDesktop.refreshAuth !== "function") return false;
+        const renewed = await window.kompasDesktop.refreshAuth();
+        if (renewed) { __lastAuthRefresh = Date.now(); return true; }
+        return false;
+      }
+      const res = await fetch("/api/auth/refresh", { method: "POST", credentials: "same-origin", cache: "no-store" });
+      if (res.ok) { __lastAuthRefresh = Date.now(); return true; }
+    } catch {}
+    return false;
+  })();
+  try { return await __authRefreshFlight; }
+  finally { __authRefreshFlight = null; }
 }
 // Idle is where sessions used to die: renew quietly whenever the user comes
 // back to this window, and every 20 minutes while it stays open, so the next
@@ -694,6 +703,12 @@ try {
   window.addEventListener("focus", keepAuthAlive);
   setInterval(keepAuthAlive, 20 * 60 * 1000);
 } catch {}
+let __authProbeTimer = null;
+function clearAuthPill() {
+  if (__authProbeTimer) { clearInterval(__authProbeTimer); __authProbeTimer = null; }
+  __authRedirected = false;
+  try { const pill = $("sessionReconnect"); if (pill) pill.remove(); } catch {}
+}
 function redirectToLogin(message) {
   if (__authRedirected) return;
   __authRedirected = true;
@@ -708,6 +723,22 @@ function redirectToLogin(message) {
     else window.open("/login?next=" + encodeURIComponent(window.location.pathname + window.location.search), "_blank", "noopener,noreferrer");
   };
   document.body.append(link);
+  // Desktop only: the shell renews on its own timer underneath, so a pill shown during the renewal gap heals
+  // itself — probe a cheap authenticated call every 30s and clear the pill the moment the shell is live again.
+  // On the web there is no background renewer, so the pill stays until the user reconnects. The probe is a
+  // derive-only answer call: it proves auth without presenting any refresh token, so it cannot revoke anything.
+  // It stops after 10 minutes; a later successful answer clears the pill anyway.
+  if (window.kompasDesktop && !__authProbeTimer) {
+    let tries = 0;
+    __authProbeTimer = setInterval(async () => {
+      tries++;
+      try {
+        const res = await fetch("/api/kompas/answer", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ deriveOnly: true, question: "ping" }) });
+        if (res.ok) { clearAuthPill(); return; }
+      } catch {}
+      if (tries >= 20) { clearInterval(__authProbeTimer); __authProbeTimer = null; }
+    }, 30 * 1000);
+  }
 }
 async function preparePack(s) {
   if (location.protocol === "file:") { seedIdentity(s); status("Serve the deployed app for live prep + answers.", "live"); return; }
@@ -719,7 +750,7 @@ async function preparePack(s) {
       const res = await fetch("/api/prep", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ config: cfgOf(s) }) });
       const pack = await res.json();
       if (!res.ok || !Array.isArray(pack.questions)) throw new Error(pack.error || ("prep " + res.status));
-      s.prep = pack; s.__authRetried = false; saveSession(s);
+      s.prep = pack; s.__authRetried = false; saveSession(s); clearAuthPill();
     } catch (e) {
       if (isAuthError(e)) {                                            // 401: renew the session silently and retry once — eject only if renewal fails
         if (!s.__authRetried && await tryRefreshAuth()) { s.__authRetried = true; preparePack(s); return; }
@@ -3172,6 +3203,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       }
     }
     status("Answered.", "live");
+    clearAuthPill();
     if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }   // generated: the question collapses away, only the response box stays
   } catch (e) {
     if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — eject only if renewal fails
@@ -3312,7 +3344,11 @@ async function aiAnswer(fromAuto) {
         const heardOnly = !typedText;
         const formed = String(cur.formed || "").replace(/^You \(context keywords\):[^\n]*$/gm, "").trim() || `You: ${cur.question}`;
         const since = combined.heard.replace(/^Current question \(on screen\):[^\n]*$/gm, "").trim();
-        const heard = [formed, since].filter(Boolean).join("\n").trim();
+        // Tapping AI Answer again is itself the signal more concatenation is needed: each tap chains what the last
+        // page heard, so what was heard on an earlier tap survives even after it falls out of the formation window,
+        // and a part missed at one instance comes back on the next tap. The chain stays the page chain, never the
+        // whole interview.
+        const heard = [(cur.heard || formed), since].filter(Boolean).join("\n").trim();
         // The re-ask goes on the next page (book rule, 27 Oct 2026): the page it re-asks keeps its question and finished
         // answer instead of being wiped to "…" and rewritten in place.
         const page = addCard(cur.question, ["…"]);
