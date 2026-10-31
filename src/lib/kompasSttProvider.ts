@@ -21,6 +21,38 @@ export type SttResult = { text: string; seconds: number | null; language: string
 /** How long one Parakeet clip may take before Whisper takes over (29 Oct 2026: was 15 s, which left a person waiting). */
 export const PARAKEET_TIMEOUT_MS = 4_000
 
+/** Bound streamed provider JSON before parsing so a runaway ASR response cannot exhaust memory. */
+export const MAX_PARAKEET_RESPONSE_BYTES = 256 * 1024
+
+async function boundedParakeetJson(res: Response): Promise<unknown> {
+  // Fetch responses have a stream; older test doubles may expose only json().
+  if (!res.body) return res.json()
+  const reader = res.body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      size += value.byteLength
+      if (size > MAX_PARAKEET_RESPONSE_BYTES) {
+        await reader.cancel().catch(() => {})
+        throw new Error("parakeet response too large")
+      }
+      chunks.push(value)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+  const bytes = new Uint8Array(size)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes))
+}
+
 /** Send one clip to the owner's own Parakeet server. Expects JSON with a text field. */
 export async function parakeetTranscribe(input: SttInput, env: Env = process.env, fetcher: typeof fetch = fetch): Promise<SttResult> {
   const url = String(env.KOMPAS_PARAKEET_URL || "").trim()
@@ -32,7 +64,7 @@ export async function parakeetTranscribe(input: SttInput, env: Env = process.env
     signal: AbortSignal.timeout(PARAKEET_TIMEOUT_MS),
   })
   if (!res.ok) throw new Error("parakeet http " + res.status)
-  const data = (await res.json()) as { text?: unknown; language?: unknown; seconds?: unknown }
+  const data = (await boundedParakeetJson(res)) as { text?: unknown; language?: unknown; seconds?: unknown }
   const text = typeof data.text === "string" ? data.text.trim() : ""
   // A successful HTTP response is not proof of a usable transcript. Refuse
   // runaway or NUL-bearing provider output so Whisper can recover this clip.

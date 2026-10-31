@@ -98,3 +98,41 @@ test("12. provider-off mode never invokes the guarded Parakeet adapter", async (
   assert.equal(result.text, "from whisper");
   assert.equal(invoked, 0);
 });
+
+test("13. streamed Parakeet JSON preserves technical dictation and timing", async () => {
+  const payload = { text: "CyberArk EPM, AS-REP, OAuth 2.0, PKI.", seconds: 1.5, language: "en-US" };
+  const result = await P.parakeetTranscribe(input, parakeetEnv, async () => new Response(JSON.stringify(payload), { status: 200 }));
+  assert.equal(result.text, payload.text);
+  assert.equal(result.seconds, 1.5);
+  assert.equal(result.language, "en-US");
+});
+
+test("14. oversized streamed JSON is stopped before parsing and Whisper recovers", async () => {
+  const oversized = JSON.stringify({ text: "x".repeat(P.MAX_PARAKEET_RESPONSE_BYTES + 1) });
+  const fetcher = async () => new Response(oversized, { status: 200 });
+  await assert.rejects(P.parakeetTranscribe(input, parakeetEnv, fetcher), /response too large/);
+  const result = await P.transcribeWithFallback(input, {
+    whisper,
+    parakeet: clip => P.parakeetTranscribe(clip, parakeetEnv, fetcher),
+  }, parakeetEnv);
+  assert.equal(result.text, "from whisper");
+});
+
+test("15. exact response byte limit is allowed for otherwise valid JSON", async () => {
+  const empty = JSON.stringify({ text: "safe", padding: "" });
+  const body = JSON.stringify({ text: "safe", padding: "x".repeat(P.MAX_PARAKEET_RESPONSE_BYTES - Buffer.byteLength(empty)) });
+  assert.equal(Buffer.byteLength(body), P.MAX_PARAKEET_RESPONSE_BYTES);
+  const result = await P.parakeetTranscribe(input, parakeetEnv, async () => new Response(body, { status: 200 }));
+  assert.equal(result.text, "safe");
+});
+
+test("16. invalid UTF-8 provider JSON fails closed without leaking a transcript", async () => {
+  const invalid = new Uint8Array([123, 34, 116, 101, 120, 116, 34, 58, 34, 255, 34, 125]);
+  const fetcher = async () => new Response(invalid, { status: 200 });
+  await assert.rejects(P.parakeetTranscribe(input, parakeetEnv, fetcher));
+  const result = await P.transcribeWithFallback(input, {
+    whisper,
+    parakeet: clip => P.parakeetTranscribe(clip, parakeetEnv, fetcher),
+  }, parakeetEnv);
+  assert.equal(result.text, "from whisper");
+});
