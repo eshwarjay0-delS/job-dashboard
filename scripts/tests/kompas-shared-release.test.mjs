@@ -60,7 +60,7 @@ test('canonical hosted workspace exposes shared chats without changing native as
   assert.ok(!source.includes('id="mfSharedChats"'), 'packaged native source stays unchanged')
   assert.equal((dashboard.match(/id="mfSharedChats"/g) || []).length, 1)
   assert.match(dashboard, /href="\/dashboard\/kompas\/shared"/)
-  assert.match(dashboard, /not transferred automatically/)
+  assert.match(dashboard, /sessions sync across your signed-in devices/)
   assert.match(dashboard, /id="newSessionBtn"/)
   assert.match(dashboard, /id="sessionList"/)
   assert.equal((mountKompasHtml(mounted).match(/id="mfSharedChats"/g) || []).length, 1)
