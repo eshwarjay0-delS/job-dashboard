@@ -79,3 +79,58 @@ test("rejects non-Vercel origins, credentials, query tokens and invalid SHAs", a
   }
   await assert.rejects(verifyVoicePreview({ baseUrl: origin, expectedSha: "short" }), /40-character/);
 });
+
+
+test("private automation credential is sent only to the pinned preview origin on both routes", async () => {
+  const token = "test-only-opaque-credential";
+  const calls = [];
+  const result = await verifyVoicePreview({
+    baseUrl: origin, expectedSha: sha, protectionBypassToken: token, attempts: 1,
+    fetcher: async (url, options) => {
+      calls.push({ url: url.href, options });
+      return url.pathname === "/version.json" ? version : health;
+    },
+  });
+  assert.equal(result.status, "verified");
+  assert.equal(calls.length, 2);
+  for (const { url, options } of calls) {
+    assert.ok(url.startsWith(origin));
+    assert.ok(!url.includes(token));
+    assert.equal(options.headers["x-vercel-protection-bypass"], token);
+    assert.equal(options.redirect, "manual");
+  }
+});
+
+test("private credential never overrides stale commit, unhealthy route, or protected redirect", async () => {
+  const token = "test-only-opaque-credential";
+  for (const fetcher of [
+    async () => response(200, { commit: "0000000" }),
+    async (url) => url.pathname === "/version.json" ? version : response(200, { ok: false, app: "MarketFit" }),
+  ]) {
+    await assert.rejects(verifyVoicePreview({
+      baseUrl: origin, expectedSha: sha, protectionBypassToken: token,
+      attempts: 1, fetcher,
+    }), /Exact-head preview smoke failed/);
+  }
+  for (const status of [302, 401, 403]) {
+    await assert.rejects(verifyVoicePreview({
+      baseUrl: origin, expectedSha: sha, protectionBypassToken: token,
+      attempts: 1, fetcher: async () => response(status, {}),
+    }), /PREVIEW_ACCESS_BLOCKED/);
+  }
+});
+
+test("private credential is rejected for other Vercel tenants or unsafe header values", async () => {
+  for (const baseUrl of ["https://other-project.vercel.app/", "https://job-dashboard.vercel.app/"]) {
+    await assert.rejects(verifyVoicePreview({
+      baseUrl, expectedSha: sha, protectionBypassToken: "test-credential",
+      attempts: 1, fetcher: async () => { throw Error("must not contact other tenant"); },
+    }), /Invalid private preview authentication configuration/);
+  }
+  for (const protectionBypassToken of ["bad\nheader", "bad\rheader", "white space", "x".repeat(2049)]) {
+    await assert.rejects(verifyVoicePreview({
+      baseUrl: origin, expectedSha: sha, protectionBypassToken,
+      attempts: 1, fetcher: async () => { throw Error("must not send unsafe header"); },
+    }), /Invalid private preview authentication configuration/);
+  }
+});
