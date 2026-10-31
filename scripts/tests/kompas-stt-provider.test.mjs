@@ -42,3 +42,59 @@ test("5. the speech route goes through the switch", () => {
   assert.ok(route.includes("transcribeWithFallback({"));
   assert.ok(route.includes("{ whisper: transcribeAudio, parakeet: parakeetTranscribe }"));
 });
+
+
+const parakeetEnv = { KOMPAS_STT_PROVIDER: "parakeet", KOMPAS_PARAKEET_URL: "http://127.0.0.1:8000/asr" };
+const fakeResponse = data => async () => ({ ok: true, status: 200, json: async () => data });
+
+test("6. valid Parakeet transcript retains words, finite duration and language", async () => {
+  const out = await P.parakeetTranscribe(input, parakeetEnv, fakeResponse({ text: "  Active Directory  ", seconds: 2.75, language: " en-US " }));
+  assert.equal(out.text, "Active Directory");
+  assert.equal(out.seconds, 2.75);
+  assert.equal(out.language, "en-US");
+});
+
+test("7. invalid Parakeet durations cannot corrupt playback timing", async () => {
+  for (const seconds of [-1, Infinity, -Infinity, NaN, "3", {}]) {
+    const out = await P.parakeetTranscribe(input, parakeetEnv, fakeResponse({ text: "safe", seconds }));
+    assert.equal(out.seconds, null);
+  }
+  assert.equal((await P.parakeetTranscribe(input, parakeetEnv, fakeResponse({ text: "safe", seconds: 0 }))).seconds, 0);
+});
+
+test("8. invalid language metadata is discarded without losing a valid transcript", async () => {
+  for (const language of ["\u0000en", "en\nUS", "a".repeat(33), 42]) {
+    const out = await P.parakeetTranscribe(input, parakeetEnv, fakeResponse({ text: "safe", language }));
+    assert.equal(out.text, "safe");
+    assert.equal(out.language, null);
+  }
+});
+
+test("9. runaway Parakeet text is rejected, not displayed as an answer", async () => {
+  await assert.rejects(P.parakeetTranscribe(input, parakeetEnv, fakeResponse({ text: "a".repeat(100_001) })), /invalid transcript/);
+  assert.equal((await P.parakeetTranscribe(input, parakeetEnv, fakeResponse({ text: "a".repeat(100_000) }))).text.length, 100_000);
+});
+
+test("10. NUL-bearing Parakeet text is rejected without logging the transcript", async () => {
+  await assert.rejects(P.parakeetTranscribe(input, parakeetEnv, fakeResponse({ text: "secret\u0000text" })), /invalid transcript/);
+});
+
+test("11. invalid Parakeet output automatically falls back to existing Whisper", async () => {
+  let whisperCalls = 0;
+  const result = await P.transcribeWithFallback(input, {
+    whisper: async () => { whisperCalls++; return { text: "from whisper" }; },
+    parakeet: async clip => P.parakeetTranscribe(clip, parakeetEnv, fakeResponse({ text: "x".repeat(100_001) })),
+  }, parakeetEnv);
+  assert.equal(result.text, "from whisper");
+  assert.equal(whisperCalls, 1);
+});
+
+test("12. provider-off mode never invokes the guarded Parakeet adapter", async () => {
+  let invoked = 0;
+  const result = await P.transcribeWithFallback(input, {
+    whisper,
+    parakeet: async () => { invoked++; throw Error("should not run"); },
+  }, {});
+  assert.equal(result.text, "from whisper");
+  assert.equal(invoked, 0);
+});
