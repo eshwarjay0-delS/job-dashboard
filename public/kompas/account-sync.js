@@ -58,7 +58,7 @@
     const prefix = "perfact.cloud.";
     const getJSON = (key,fallback) => { try{return JSON.parse(storage.getItem(key))||fallback;}catch{return fallback;} };
     const putJSON = (key,value) => {try{storage.setItem(key,JSON.stringify(value));return true;}catch{return false;}};
-    let owner="", applied=false, busy=false, requesting=null, flushing=false, lastCheck=0, lastError=0;
+    let owner="", applied=false, busy=false, requesting=null, flushing=false, importing=false, lastCheck=0, lastError=0;
     let pending={}, local=[];
     const syncStatus=(status)=>{if(typeof notify==="function")notify(status);};
     const headers=()=>{ const token=typeof authToken==="function"?authToken():""; return { "content-type":"application/json",...(token?{Authorization:"Bearer "+token}:{}) }; };
@@ -136,7 +136,7 @@
         }
         remoteWrite(combine(data.records||[],local,pending));
         lastCheck=Date.now();
-        syncStatus({state:"synced",legacy:getJSON(prefix+"legacy",[]).length,owner});
+        syncStatus({state:importing?"importing":"synced",legacy:getJSON(prefix+"legacy",[]).length,owner});
         if(Object.keys(pending).length) void flush();
         return true;
       })().catch(err=>{
@@ -146,7 +146,8 @@
       return requesting;
     }
     async function flush() {
-      if(flushing || !owner || !Object.keys(pending).length) return;
+      if(flushing || !owner) return false;
+      if(!Object.keys(pending).length) return true;
       flushing=true;
       try {
         for(let round=0;round<40;round++) {
@@ -159,20 +160,46 @@
           persist();
         }
         if(!Object.keys(pending).length) void refresh();
+        return !Object.keys(pending).length;
       } catch(err) {
         lastError=Date.now();
         syncStatus({state:"offline",message:err.message});
+        return false;
       } finally {flushing=false;}
     }
-    function importLegacy() {
-      if(!owner)return false;
+    async function importLegacy() {
+      if(!owner || importing)return false;
       const existing=getJSON(prefix+"legacy",[]);
-      if(!existing.length)return false;
-      for(const op of delta([],existing))queue(op);
-      storage.removeItem(prefix+"legacy");
-      remoteWrite([...read().filter(s=>!existing.some(e=>e.id===s.id)), ...existing]);
-      persist();void flush();void refresh();
-      return true;
+      if(!Array.isArray(existing) || !existing.length)return false;
+      const verifiedOwner=owner;
+      const current=read();
+      // Imported records have no trustworthy account marker. The user must
+      // deliberately import them after authenticatedUser confirms ownership.
+      // Never overwrite a newer account record with an older browser snapshot.
+      const currentIds=new Set(current.map(s=>s.id));
+      const additions=existing.filter(s=>s && typeof s.id==="string" && !currentIds.has(s.id));
+      importing=true;
+      syncStatus({state:"importing",legacy:existing.length,owner});
+      try {
+        for(const op of delta([],additions))queue(op);
+        remoteWrite([...current,...additions]);
+        persist();
+        // Do not remove the original offline backup until the service accepts
+        // the full transfer and the verified account can read every session.
+        const uploaded=await flush();
+        if(!uploaded || owner!==verifiedOwner)return false;
+        const loaded=await refresh();
+        if(!loaded || owner!==verifiedOwner ||
+            !existing.every(s=>read().some(row=>row.id===s.id)))return false;
+        storage.removeItem(prefix+"legacy");
+        syncStatus({state:"synced",legacy:0,owner});
+        return true;
+      } finally {
+        importing=false;
+        if(storage.getItem(prefix+"legacy"))
+          syncStatus({state:"import-failed",legacy:existing.length,owner,
+            message:"Your earlier sessions remain safely on this device. Account transfer could not be confirmed; retry Import local sessions."});
+      }
     }
     function start() {
       void refresh();
