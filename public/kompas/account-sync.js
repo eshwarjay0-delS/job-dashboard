@@ -118,18 +118,14 @@
           storage.setItem(prefix+"owner",owner);
           pending=getJSON(prefix+"pending."+owner,{});
           const cached=getJSON(prefix+"cache."+owner,[]);
-          // If this browser already belonged to the exact same verified
-          // account, its current session list can be newer than the shadow
-          // cache (for example after a storage-quota failure or interrupted
-          // sync). Keep those changes instead of replacing them with [] on
-          // the first refresh after reload. Never infer ownership when the
-          // previous account is absent or different.
-          const sameOwner=previous===nextOwner && Array.isArray(unscoped) ? unscoped : [];
-          const recovered=new Map((Array.isArray(cached)?cached:[])
-            .filter(s=>s&&typeof s.id==="string").map(s=>[s.id,s]));
-          for (const s of sameOwner) if (s && typeof s.id==="string")
-            recovered.set(s.id,{...(recovered.get(s.id)||{}),...s});
-          local=[...recovered.values()];
+          // Only this exact verified owner can reuse the current browser list.
+          // A present unscoped list is authoritative on this device, even when
+          // empty: unioning it with a stale cache could resurrect deleted
+          // sessions after an interrupted save. When the browser's session key
+          // is genuinely missing, fall back to the same-owner shadow cache.
+          const sameOwner=previous===nextOwner && Array.isArray(unscoped) &&
+            storage.getItem("perfact.sessions")!==null;
+          local=sameOwner?unscoped:(Array.isArray(cached)?cached:[]);
         } else {local=read();}
         // A device which belonged to this same authenticated account may have
         // previously created sessions offline. Those missing from the server
