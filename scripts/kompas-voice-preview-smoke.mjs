@@ -45,7 +45,10 @@ export async function verifyVoicePreview({
       }
       if (versionResponse.ok) {
         const version = await versionResponse.json();
-        if (version && typeof version.commit === "string" && version.commit.toLowerCase() === prefix) {
+        // The 7-character UI label alone is not an exact-head proof: two commits
+        // can share a prefix. Require the full SHA from the deployed build stamp.
+        if (version && typeof version.commit === "string" && version.commit.toLowerCase() === prefix &&
+            typeof version.commitFull === "string" && version.commitFull.toLowerCase() === expectedSha.toLowerCase()) {
           const healthResponse = await fetcher(new URL("/api/health", base), requestOptions());
           if ([401, 403].includes(healthResponse.status) ||
               (healthResponse.status >= 300 && healthResponse.status < 400)) {
@@ -59,7 +62,7 @@ export async function verifyVoicePreview({
           }
           last = "health route not ready";
         } else {
-          last = "preview commit does not match PR head";
+          last = "preview full commit does not match PR head";
         }
       } else {
         last = "version route HTTP " + versionResponse.status;
