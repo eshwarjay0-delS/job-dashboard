@@ -1,0 +1,28 @@
+name: Kompas voice exact-head preview HTTP gate
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  voice-preview-smoke:
+    # Only the voice response-bound PR has this verified branch-scoped Vercel alias.
+    # No real microphone, audio, transcripts, credentials, or share links.
+    if: github.head_ref == 'fix/kompas-parakeet-bounded-json-20261030'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check smoke verifier fail-closed regressions
+        run: node --test scripts/tests/kompas-voice-preview-smoke.test.mjs
+      - name: Verify exact PR-head commit and health on deployed Vercel preview
+        env:
+          KOMPAS_PREVIEW_URL: https://job-dashboard-git-fix-kompas-parakeet-227d7c-qu4ntum-s-projects.vercel.app/
+          KOMPAS_EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/kompas-voice-preview-smoke.mjs
