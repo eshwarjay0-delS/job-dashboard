@@ -668,13 +668,18 @@ function isAuthError(e) {
   return /\b401\b/.test(m) || /sign in/i.test(m);
 }
 async function tryRefreshAuth() {
+  // The desktop shell owns the refresh family: it rotates the token on its own timer, so the webview cookies
+  // hold an older generation. Presenting that stale token to the cookie refresh can revoke the whole family
+  // and log the user out mid-session, so on desktop the cookie path never runs — not even when the bridge is
+  // absent or its renewal fails. The shell's live token keeps calls working; if the family is truly dead, the
+  // Reconnect pill (not a silent revoke) is the honest outcome. The web path below is the only cookie refresh,
+  // and there the cookies are the single holder, so it is safe.
   try {
     if (window.kompasDesktop && typeof window.kompasDesktop.refreshAuth === "function") {
       const renewed = await window.kompasDesktop.refreshAuth();
       if (renewed) { __lastAuthRefresh = Date.now(); return true; }
-      // An upgraded shell may have a valid cookie session but no encrypted
-      // refresh family yet. Let the same-origin cookie path try next.
     }
+    if (window.kompasDesktop) return false;
     const res = await fetch("/api/auth/refresh", { method: "POST" });
     if (res.ok) { __lastAuthRefresh = Date.now(); return true; }
   } catch {}
@@ -694,6 +699,12 @@ try {
   window.addEventListener("focus", keepAuthAlive);
   setInterval(keepAuthAlive, 20 * 60 * 1000);
 } catch {}
+let __authProbeTimer = null;
+function clearAuthPill() {
+  if (__authProbeTimer) { clearInterval(__authProbeTimer); __authProbeTimer = null; }
+  __authRedirected = false;
+  try { const pill = $("sessionReconnect"); if (pill) pill.remove(); } catch {}
+}
 function redirectToLogin(message) {
   if (__authRedirected) return;
   __authRedirected = true;
@@ -708,6 +719,22 @@ function redirectToLogin(message) {
     else window.open("/login?next=" + encodeURIComponent(window.location.pathname + window.location.search), "_blank", "noopener,noreferrer");
   };
   document.body.append(link);
+  // Desktop only: the shell renews on its own timer underneath, so a pill shown during the renewal gap heals
+  // itself — probe a cheap authenticated call every 30s and clear the pill the moment the shell is live again.
+  // On the web there is no background renewer, so the pill stays until the user reconnects. The probe is a
+  // derive-only answer call: it proves auth without presenting any refresh token, so it cannot revoke anything.
+  // It stops after 10 minutes; a later successful answer clears the pill anyway.
+  if (window.kompasDesktop && !__authProbeTimer) {
+    let tries = 0;
+    __authProbeTimer = setInterval(async () => {
+      tries++;
+      try {
+        const res = await fetch("/api/kompas/answer", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ deriveOnly: true, question: "ping" }) });
+        if (res.ok) { clearAuthPill(); return; }
+      } catch {}
+      if (tries >= 20) { clearInterval(__authProbeTimer); __authProbeTimer = null; }
+    }, 30 * 1000);
+  }
 }
 async function preparePack(s) {
   if (location.protocol === "file:") { seedIdentity(s); status("Serve the deployed app for live prep + answers.", "live"); return; }
@@ -719,7 +746,7 @@ async function preparePack(s) {
       const res = await fetch("/api/prep", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ config: cfgOf(s) }) });
       const pack = await res.json();
       if (!res.ok || !Array.isArray(pack.questions)) throw new Error(pack.error || ("prep " + res.status));
-      s.prep = pack; s.__authRetried = false; saveSession(s);
+      s.prep = pack; s.__authRetried = false; saveSession(s); clearAuthPill();
     } catch (e) {
       if (isAuthError(e)) {                                            // 401: renew the session silently and retry once — eject only if renewal fails
         if (!s.__authRetried && await tryRefreshAuth()) { s.__authRetried = true; preparePack(s); return; }
@@ -3172,6 +3199,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
       }
     }
     status("Answered.", "live");
+    clearAuthPill();
     if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }   // generated: the question collapses away, only the response box stays
   } catch (e) {
     if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — eject only if renewal fails
