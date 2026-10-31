@@ -24,11 +24,12 @@ test("commit comes from Vercel; local git only when asked; junk is refused", () 
   assert.equal(resolveCommit({ VERCEL_GIT_COMMIT_SHA: "not a sha; rm -rf" }, () => ""), "")
 })
 
-test("stamp keeps the build key and the smoke-script keys: build, commit (7 chars), builtAt", () => {
+test("stamp preserves short UI label and adds exact full SHA for preview verification", () => {
   const out = JSON.parse(stampJson('{"build": "kompas-20261030-screen"}', SHA, "2026-10-30T14:00:00.000Z"))
-  assert.deepEqual(out, { build: "kompas-20261030-screen", commit: "3afa210", builtAt: "2026-10-30T14:00:00.000Z" })
+  assert.deepEqual(out, { build: "kompas-20261030-screen", commit: "3afa210", commitFull: SHA, builtAt: "2026-10-30T14:00:00.000Z" })
   const again = JSON.parse(stampJson(JSON.stringify(out), "8c8175c000", "2026-10-31T01:02:03.000Z"))
   assert.equal(again.commit, "8c8175c"); assert.equal(again.build, "kompas-20261030-screen")
+  assert.equal(again.commitFull, undefined, "short SHA cannot retain an old full-SHA proof")
 })
 
 test("stampVersion writes every file with the same commit and time, and leaves files alone without a sha", () => {
@@ -38,7 +39,7 @@ test("stampVersion writes every file with the same commit and time, and leaves f
   for (const f of files) assert.equal(readFileSync(f, "utf8"), '{"build":"x"}\n')
   const r = stampVersion({ env: { VERCEL_GIT_COMMIT_SHA: SHA }, now: new Date("2026-10-30T14:00:00Z"), files, log: () => {} })
   assert.deepEqual(r, { commit: "3afa210", builtAt: "2026-10-30T14:00:00.000Z" })
-  for (const f of files) assert.deepEqual(JSON.parse(readFileSync(f, "utf8")), { build: "x", commit: "3afa210", builtAt: "2026-10-30T14:00:00.000Z" })
+  for (const f of files) assert.deepEqual(JSON.parse(readFileSync(f, "utf8")), { build: "x", commit: "3afa210", commitFull: SHA, builtAt: "2026-10-30T14:00:00.000Z" })
 })
 
 test("the capabilities label is the deployed commit, not a hand-edited date", () => {
