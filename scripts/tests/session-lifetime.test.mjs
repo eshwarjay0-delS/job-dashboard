@@ -45,7 +45,10 @@ test('web dashboard renews on open, focus, visibility and a 20-minute interval w
 });
 
 test('desktop bridge is preferred for renewal and reconnect is user-controlled', () => {
-  assert.match(appSrc, /typeof window\.kompasDesktop\.refreshAuth === "function"/);
+  // 9a072b5 restructured tryRefreshAuth into a single-flight form: the bridge
+  // guard is now the negated check, same behavior — desktop never falls
+  // through to the cookie path, bridge or no bridge.
+  assert.match(appSrc, /typeof window\.kompasDesktop\.refreshAuth !== "function"\) return false;/);
   assert.match(appSrc, /await window\.kompasDesktop\.refreshAuth\(\)/);
   assert.match(appSrc, /link\.textContent = "Reconnect sign-in"/);
   assert.match(appSrc, /window\.kompasDesktop\.openSignIn\(\)/);
@@ -62,6 +65,7 @@ test('1000 desktop renewal attempts use the bridge without navigation', async ()
     fetch: async () => { throw new Error('cookie fallback must not run'); },
     Date,
     __lastAuthRefresh: 0,
+    __authRefreshFlight: null,
   };
   const { runInNewContext } = await import('node:vm');
   runInNewContext(body, context);
@@ -83,6 +87,7 @@ test('desktop shell without the bridge never presents the cookie token', async (
     fetch: async () => { fetches++; return { ok: true }; },
     Date,
     __lastAuthRefresh: 0,
+    __authRefreshFlight: null,
   };
   const { runInNewContext } = await import('node:vm');
   runInNewContext(body, context);
@@ -93,7 +98,7 @@ test('desktop shell without the bridge never presents the cookie token', async (
 test('a shown reconnect pill clears itself when auth recovers', () => {
   assert.match(appSrc, /function clearAuthPill\(\)/);
   assert.match(appSrc, /deriveOnly: true, question: "ping"/);
-  assert.match(appSrc, /if \(window\.kompasDesktop\) return false;/);
+  assert.match(appSrc, /typeof window\.kompasDesktop\.refreshAuth !== "function"\) return false;/);
 });
 
 test('sign-in paths still stamp the diagnostic login time', () => {
