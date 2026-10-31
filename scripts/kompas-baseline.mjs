@@ -388,6 +388,7 @@ if (A && R) {
   await check('Director answers never invent a person or give him a title he does not hold', () => {
     ok(/never a person's name, and the candidate keeps the title the resume gives: never speak as a CISO or any title the resume does not hold/.test(A.DIRECTOR_OPENING), 'the role-not-person rule')
     ok(/level === "director" && !CODE_ASK_Q\.test\(question\) \? DIRECTOR_OPENING : ""/.test(service), 'the Director level\'s prompt carries it, except a code ask where the coding block controls')
+    ok(!/level === "director" \? DIRECTOR_OPENING : ""/.test(service), 'code asks do not inherit the Director prose opening that can collapse a fenced block')
   })
   await check('the page and the server know the same asks that do not open like a question', () => {
     const phrase = (src) => (/const ASK_PHRASE = (\/.*\/[a-z]*);?\r?\n/.exec(src) || [])[1]
