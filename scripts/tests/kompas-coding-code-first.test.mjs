@@ -39,11 +39,21 @@ test('the coding block gives code first and reserves walkthroughs for follow-up 
 test('the coding closer rides in the answer request itself, overriding the spoken closer', () => {
   assert.ok(service.includes('CODING OVERRIDE'), 'closer names itself an override')
   assert.ok(service.includes('No walkthrough before the code'), 'closer repeats the no-walkthrough rule')
-  assert.ok(service.includes('CODE_ASK_Q.test(question) ? `${desktopCloser || spokenCloser}\\n\\n${CODING_CLOSER}`'), 'closer is wired for coding questions')
+  assert.ok(service.includes('CODE_ASK_Q.test(question) ? CODING_CLOSER'), 'for a code ask only the coding closer rides, no spoken closer to override')
 })
 
 test('the card renders fenced blocks as code, so the block is displayable', () => {
   const app = read('public/kompas/app.js')
   assert.ok(app.includes('kind: "code"'), 'fenced sections become code parts')
   assert.ok(app.includes('className = "codeblock"'), 'code parts render as code blocks')
+})
+
+test('a Director code ask carries no one-line mechanism compression', () => {
+  assert.ok(service.includes('For this code question, the CODING block below is the controlling spec'), 'coding block controls a code ask')
+  assert.ok(service.includes('CODE_ASK_Q.test(question) ? "" : tier === 0'), 'level guidance is suppressed for a code ask')
+  assert.ok(service.includes('shape && !CODE_ASK_Q.test(question)'), 'prose shape is suppressed for a code ask')
+  assert.ok(service.includes('level === "director" && !CODE_ASK_Q.test(question) ? DIRECTOR_OPENING'), 'Director opening is suppressed for a code ask')
+  assert.ok(service.includes('the fenced code block sits outside the spoken-word budget'), 'fenced block sits outside the spoken ceiling')
+  assert.ok(service.includes('never collapsed to a single line and never written inline'), 'block is never collapsed to one line or written inline')
+  assert.ok(service.includes('the Director opening, the audience delivery, and the spoken-word ceiling'), 'closer names every block it overrides')
 })

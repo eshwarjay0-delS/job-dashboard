@@ -282,8 +282,8 @@ const MODE_BLOCKS: Record<string, string> = {
   // Owner, 29 Oct 2026 — this supersedes the 23 Oct 2026 no-code rule in full. The owner directed code everywhere,
   // live or not: walkthroughs are not the answer. A walkthrough is only the explanation when a follow-up asks for one.
   // The card already renders fenced blocks as code (public/kompas/app.js codeblock), so the block below is displayable.
-  coding: `CODING. This rule overrides the spoken-delivery guidance and the level guidance: when the question asks for code, the code comes first.
-- Give the code FIRST as one fenced, runnable block in the language they name; otherwise the one the background shows most. No walkthrough before it, no prose summary of the approach first. Use real fences with the language name, so the card renders it as code.
+  coding: `CODING. This rule overrides the spoken-delivery guidance, the level guidance, the Director one-line mechanism compression, and the spoken-word ceiling: when the question asks for code, the code comes first.
+- Give the code FIRST as one fenced, runnable block in the language they name; otherwise the one the background shows most. No walkthrough before it, no prose summary of the approach first. Use real fences with the language name, so the card renders it as code. The block is written out in full, never collapsed to a single line and never written inline.
 - After the block, stop, unless the question also asks for an explanation: then add at most a short note on what it does.
 - If the question asks to explain, walk through, or understand code already given in this session (how it works, why, its cost, its edge cases), explain in words instead: the approach in one sentence, the steps in the order the code runs, the cost, one edge case and how it is handled, and one trade-off or alternative.
 - If a follow-up asks to change the code, give the updated fenced block, not a description of the change.
@@ -307,7 +307,7 @@ function modeBlock(tier: number, question: string, level: string): string {
 // answer request itself (not only the system prompt) so a coding question can never
 // come back as a spoken walkthrough: the block comes first, and the spoken closer's
 // "do not recite code" line is explicitly overridden for this question.
-const CODING_CLOSER = `CODING OVERRIDE — this overrides the spoken-delivery lines above for this question: give the code first as one fenced, runnable block in the language asked for. No walkthrough before the code. Explain only if this question asks for an explanation or is a follow-up about code already given.`
+const CODING_CLOSER = `CODING OVERRIDE — this overrides the spoken-delivery lines, the level guidance, the Director opening, the audience delivery, and the spoken-word ceiling for this question: give the code first as one fenced, runnable block in the language asked for. The block is written out in full, never collapsed to a single line and never written inline. No walkthrough before the code. Explain only if this question asks for an explanation or is a follow-up about code already given.`
 
 function str(v: unknown, max: number): string {
   return typeof v === "string" ? v.trim().slice(0, max) : ""
@@ -1030,14 +1030,20 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   }
 
   const context = [
-    `The listener is at ${ANSWER_LEVEL_NAME[level]}. The level block below is the controlling spec for this answer's depth and register.`,
-    tier === 0 ? `INTRODUCTION AUDIENCE: ${level}. Audience adjusts language and emphasis, not the career-wide scope. No step-by-step project reconstruction.` : levelGuidance(level, register),
+    // A code question must not inherit the level compression that collapsed a
+    // Director answer into one inline line: the level block is crowned the
+    // controlling spec, the Director guidance compresses the mechanism to one
+    // line, and the ceiling counts spoken words. For a code ask the CODING
+    // block is the controlling spec instead, and the fenced block sits outside
+    // the spoken-word budget, so none of those lines compete with it.
+    CODE_ASK_Q.test(question) ? `The listener is at ${ANSWER_LEVEL_NAME[level]}. For this code question, the CODING block below is the controlling spec; the level block does not compress the code.` : `The listener is at ${ANSWER_LEVEL_NAME[level]}. The level block below is the controlling spec for this answer's depth and register.`,
+    CODE_ASK_Q.test(question) ? "" : tier === 0 ? `INTRODUCTION AUDIENCE: ${level}. Audience adjusts language and emphasis, not the career-wide scope. No step-by-step project reconstruction.` : levelGuidance(level, register),
     `LATEST ACTUAL QUESTION INTENT: ${rediscovered.intent}. Answer mode: ${rediscovered.answerMode}. The old perfACT tier is merely a shape hint: ${why} (tier ${tier}).`,
     storyMode || ["scenario","technical-process"].includes(rediscovered.intent) ? `DEEP QUESTION RULE: ${rule}` : "",
     `INTERVIEW MODE: ${modeBlock(tier, question, level)}`,
-    shape ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
-    level === "director" ? DIRECTOR_OPENING : "",
-    `LENGTH CEILING: usually no more than ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Do not pad the response; finish when all asked parts are answered.`,
+    shape && !CODE_ASK_Q.test(question) ? `ANSWER SHAPE (follow this structure): ${shape}` : "",
+    level === "director" && !CODE_ASK_Q.test(question) ? DIRECTOR_OPENING : "",
+    CODE_ASK_Q.test(question) ? `LENGTH CEILING: the fenced code block sits outside the spoken-word budget; any prose after it stays within ${plan.words} spoken words and the answer finishes when all asked parts are answered.` : `LENGTH CEILING: usually no more than ${plan.words} spoken words (${plan.secs[0]}-${plan.secs[1]} seconds). Do not pad the response; finish when all asked parts are answered.`,
     depthGuidance,
     storyMode && tier !== 0 && routedProject
       ? `Only if the original sources corroborate it, anchor this answer in this generated project summary: ${routedProject.title}${routedProject.employer ? ` (${routedProject.employer})` : ""}. Do not switch projects mid-answer.`
@@ -1103,7 +1109,7 @@ ${INTERVIEW}`
   const job: AnswerJob = {
     question,
     system: `${masterPromptBlock()}\n\n${dissectionPrompt(question, spokenLevel, sourceText)}\n\n${SYSTEM}\n\n${QUESTION_FIRST_POLICY}\n\n${relevanceRecoveryPrompt(originalAsk, history)}\n\n${focusPrompt(question, tier, level)}\n\n${precisionPrompt(question)}\n\n${EVIDENCE_POLICY}\n\nAUDIENCE DELIVERY:\n${tier === 0 ? INTRODUCTION_POLICY : (desktopWire?.delivery || audienceGuidance(level, question)) + (webPivot ? " " + webPivot : "")}\n\n${desktopPolicy && desktopPolicy.kind !== "experience" && desktopPolicy.kind !== "topic" ? TECHNICAL_ANSWER_BOUNDARY : personalEvidence || desktopPolicy?.kind === "topic" ? PERSONAL_EXPERIENCE_POLICY : TECHNICAL_ANSWER_BOUNDARY}\n\n${desktopPolicy ? desktopCraft(desktopPolicy.kind) : RESPONSE_CRAFT_POLICY}\n\n${blendPrompt()}\n\n${INTENT_BOUNDARY}\n\n${tier === 0 ? INTRO_CAREER_SPINE : ""}\n\n${tier !== 0 ? desktopWire?.tail || "" : ""}`,
-    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? `${desktopCloser || spokenCloser}\n\n${CODING_CLOSER}` : desktopCloser || spokenCloser}`,
+    userText: `ANSWER ONLY THIS:\n${question}\n\n${partsBlock ? `${partsBlock}\n\n` : ""}${context}\n\n${figuresLine}\n\n${differentQuestionLine(question, historyArr)}\n\nANSWER ONLY THIS, and nothing beside it: "${question}"\n\n${again ? repeatQuestionGuidance(tier) + "\n\n" : ""}${tier === 0 ? `${INTRODUCTION_POLICY}\n${INTRO_CAREER_SPINE}` : CODE_ASK_Q.test(question) ? CODING_CLOSER : desktopCloser || spokenCloser}`,
     plan,
     interviewer,
     level,

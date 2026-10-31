@@ -186,7 +186,7 @@ test('voice repair never cuts a condition that is still open into a claim of its
 // by the decision owner, Alice Smith". His wording ("Name the decision owner in that sentence") stays; the owner is a role.
 test('the director owner is a role, never an invented person or a title the resume does not hold', async () => {
   const svc = readFileSync(new URL('../../src/lib/kompasAnswerService.ts', import.meta.url), 'utf8')
-  assert.match(svc, /level === "director" \? DIRECTOR_OPENING : ""/)                  // the Director prompt carries the shared opening
+  assert.match(svc, /level === "director" && !CODE_ASK_Q\.test\(question\) \? DIRECTOR_OPENING : ""/) // the Director prompt carries the shared opening, except a code ask (coding block controls there)
   const { DIRECTOR_OPENING } = await import('../../src/lib/kompasAnswer.ts')
   assert.match(DIRECTOR_OPENING, /Name a decision owner only if the interviewer asks who owns or approves something/)
   assert.match(DIRECTOR_OPENING, /never a person's name, and the candidate keeps the title the resume gives: never speak as a CISO or any title the resume does not hold/)
