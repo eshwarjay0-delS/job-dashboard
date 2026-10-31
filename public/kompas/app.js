@@ -4663,16 +4663,24 @@ accountSessionSync = window.KompasSessionCloud?.create({
     const banner = $("cloudSyncStatus"), importBtn = $("importLocalSessions");
     if (!banner) return;
     if (state.state === "synced") {
-      banner.textContent = state.legacy ? state.legacy + " earlier sessions are on this device only. Import them into this signed-in account to make them available everywhere." : "Sessions synchronized across devices.";
-      if (importBtn) importBtn.classList.toggle("hidden", !state.legacy);
+      banner.textContent = state.legacy ? state.legacy + " earlier sessions are on this device only. Import them once into this signed-in account to make them available everywhere." : "Sessions synchronized across your signed-in devices.";
       if (cloudArchive) void cloudArchive.replay();
+    } else if (state.state === "importing") {
+      banner.textContent = "Importing your earlier sessions and verifying they are saved to this account…";
+    } else if (state.state === "import-failed") {
+      banner.textContent = state.message;
     } else { banner.textContent = state.message || "Offline: local sessions will sync on reconnect."; }
+    if (importBtn) {
+      importBtn.classList.toggle("hidden", !state.legacy);
+      importBtn.disabled = state.state === "importing";
+      importBtn.textContent = state.state === "importing" ? "Importing…" : "Import local sessions";
+    }
     banner.classList.remove("hidden");
   },
 });
-$("importLocalSessions")?.addEventListener("click", () => {
+$("importLocalSessions")?.addEventListener("click", async () => {
   const prior = (() => { try { return JSON.parse(localStorage.getItem("perfact.cloud.legacy") || "[]"); } catch { return []; } })();
-  if (accountSessionSync?.importLegacy()) {
+  if (await accountSessionSync?.importLegacy()) {
     for (const s of prior) {
       for (const t of (s.transcripts || [])) if (t.key) cloudArchive?.queue(t.key);
       if (s.id) cloudArchive?.queue(liveKey(s.id));
