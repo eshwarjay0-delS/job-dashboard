@@ -83,7 +83,15 @@ export async function createClientFromRequest(request: NextRequest) {
   // everything — the app "worked when checked" and failed later, worst
   // after idle. Dropping only EXPIRED tokens changes nothing for a live
   // credential, and an expired one could never authenticate anything anyway.
-  if (isExpiredJwt(bearer)) return createClient();
+  // A supplied Bearer credential is an explicit identity choice. Never fall back
+  // to a different cookie identity when it has expired (desktop/account switching).
+  // Pass the expired token to Supabase, which rejects it via getUser().
+  // The caller must refresh its token explicitly before retrying.
+  if (isExpiredJwt(bearer)) {
+    return createSupabaseClient(url, key, {
+      global: { headers: { Authorization: `Bearer ${bearer}` } },
+    });
+  }
 
   return createSupabaseClient(url, key, {
     global: { headers: { Authorization: `Bearer ${bearer}` } },
