@@ -1,7 +1,11 @@
 name: Kompas voice exact-head preview HTTP gate
 
+# Privileged preview credentials must never be available to PR-head code.
+# pull_request_target reads this workflow from trusted master; checkout stays
+# on master, never on the proposed PR branch or a fork's untrusted code.
 on:
-  pull_request:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [master]
 
 permissions:
@@ -9,23 +13,26 @@ permissions:
 
 jobs:
   voice-preview-smoke:
-    # Only the voice response-bound PR has this verified branch-scoped Vercel alias.
-    # No real microphone, audio, transcripts, credentials in logs, or share links.
-    if: github.head_ref == 'fix/kompas-parakeet-bounded-json-20261030'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: master
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Check smoke verifier fail-closed regressions
-        run: node --test scripts/tests/kompas-voice-preview-smoke.test.mjs
-      - name: Verify exact PR-head commit and health on deployed Vercel preview
+      - name: Verify synthetic preview gates without real audio or credentials
+        run: node --test scripts/tests/kompas-voice-preview-smoke.test.mjs scripts/tests/kompas-voice-preview-resolve.test.mjs
+      - name: Resolve READY exact-head preview from the pinned Vercel project
         env:
-          KOMPAS_PREVIEW_URL: https://job-dashboard-git-fix-kompas-parakeet-227d7c-qu4ntum-s-projects.vercel.app/
           KOMPAS_EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
-          # Optional private Vercel deployment-protection automation credential.
-          # Provision this as a GitHub Actions repository secret; never log it.
+          KOMPAS_VERCEL_API_TOKEN: ${{ secrets.KOMPAS_VERCEL_API_TOKEN }}
+          KOMPAS_VERCEL_TEAM_ID: team_KwcTxUmbowZqkysvuBZw2423
+        run: node scripts/kompas-voice-preview-resolve.mjs
+      - name: Verify exact PR-head commit and protected live health routes
+        env:
+          KOMPAS_EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
           KOMPAS_VERCEL_PREVIEW_BYPASS: ${{ secrets.KOMPAS_VERCEL_PREVIEW_BYPASS }}
         run: node scripts/kompas-voice-preview-smoke.mjs
