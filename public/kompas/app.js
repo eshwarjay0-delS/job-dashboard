@@ -663,22 +663,28 @@ async function buildBook(s) {
 // once, and only sends the window to login when renewal truly fails.
 let __authRedirected = false;
 let __lastAuthRefresh = 0;
+let __authRefreshFlight = null;
 function isAuthError(e) {
   const m = String((e && e.message) || e || "");
   return /\b401\b/.test(m) || /sign in/i.test(m);
 }
 async function tryRefreshAuth() {
-  try {
-    if (window.kompasDesktop && typeof window.kompasDesktop.refreshAuth === "function") {
-      const renewed = await window.kompasDesktop.refreshAuth();
-      if (renewed) { __lastAuthRefresh = Date.now(); return true; }
-      // An upgraded shell may have a valid cookie session but no encrypted
-      // refresh family yet. Let the same-origin cookie path try next.
-    }
-    const res = await fetch("/api/auth/refresh", { method: "POST" });
-    if (res.ok) { __lastAuthRefresh = Date.now(); return true; }
-  } catch {}
-  return false;
+  // One refresh flight per window prevents simultaneous token rotation when
+  // prep, answers, focus and the keepalive timer encounter an expired session.
+  if (__authRefreshFlight) return __authRefreshFlight;
+  __authRefreshFlight = (async () => {
+    try {
+      if (window.kompasDesktop && typeof window.kompasDesktop.refreshAuth === "function") {
+        const renewed = await window.kompasDesktop.refreshAuth();
+        if (renewed) { __lastAuthRefresh = Date.now(); return true; }
+      }
+      const res = await fetch("/api/auth/refresh", { method: "POST", credentials: "same-origin", cache: "no-store" });
+      if (res.ok) { __lastAuthRefresh = Date.now(); return true; }
+    } catch {}
+    return false;
+  })();
+  try { return await __authRefreshFlight; }
+  finally { __authRefreshFlight = null; }
 }
 // Idle is where sessions used to die: renew quietly whenever the user comes
 // back to this window, and every 20 minutes while it stays open, so the next
