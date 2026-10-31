@@ -21,10 +21,13 @@ export function resolveCommit(env = process.env, git = gitHead) {
   return /^[0-9a-f]{7,40}$/i.test(sha) ? sha.toLowerCase() : ""
 }
 
-/** version.json text with commit (7 chars) and builtAt set; every other key, "build" included, unchanged. */
+/** Preserve the 7-char UI commit, but also stamp the full SHA for release verification. */
 export function stampJson(text, sha, builtAt) {
   const v = JSON.parse(text)
   v.commit = sha.slice(0, 7)
+  // A short local fallback is not an exact deployment proof. Clear any stale full SHA.
+  if (/^[0-9a-f]{40}$/i.test(sha)) v.commitFull = sha.toLowerCase()
+  else delete v.commitFull
   v.builtAt = builtAt
   return JSON.stringify(v) + "\n"
 }
