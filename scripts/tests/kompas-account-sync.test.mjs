@@ -141,3 +141,25 @@ test("different verified owner never adopts previous account's unscoped sessions
   assert.equal(JSON.parse(db.get("perfact.cloud.cache.old-account"))[0].id,"old-bny",
     "old account's local data remains privately recoverable");
 });
+
+
+test("same-owner recovery does not resurrect a session removed from the current browser list",async()=>{
+  const now=[{id:"active",role:"Security Engineer",instructions:"current"}];
+  const db=new Map([
+    ["perfact.cloud.owner","verified-account"],
+    ["perfact.sessions",JSON.stringify(now)],
+    ["perfact.cloud.cache.verified-account",JSON.stringify([{id:"stale",role:"Old session"}])],
+  ]);
+  const storage={getItem:k=>db.get(k)||null,setItem:(k,v)=>db.set(k,String(v)),removeItem:k=>db.delete(k)};
+  let current=now,rows=[],posted=[];
+  const sync=create({storage,read:()=>current,write:v=>{current=v;db.set("perfact.sessions",JSON.stringify(v))},
+    render:()=>{},notify:()=>{},fetcher:async(_url,opts)=>{
+      if(opts.method==="GET")return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:rows})};
+      const body=JSON.parse(opts.body); posted.push(...body.operations.map(v=>v.id));
+      for(const op of body.operations)rows=[...rows.filter(r=>r.id!==op.id),{id:op.id,session:op.patch,deleted:op.deleted}];
+      return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:rows})};
+    }});
+  await sync.refresh();
+  assert.deepEqual(current.map(s=>s.id),["active"]);
+  assert.deepEqual(posted,["active"],"stale cached session must never be uploaded anew");
+});
