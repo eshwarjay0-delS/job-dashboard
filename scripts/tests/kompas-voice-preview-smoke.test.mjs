@@ -154,3 +154,34 @@ test("private credential is rejected for other Vercel tenants or unsafe header v
     }), /Invalid private preview authentication configuration/);
   }
 });
+
+test("API-resolved dynamic preview host may receive private bypass only when exactly pinned", async () => {
+  const host = "job-dashboard-git-fix-voice-abc-qu4ntum-s-projects.vercel.app";
+  const baseUrl = "https://" + host + "/";
+  const calls = [];
+  const result = await verifyVoicePreview({
+    baseUrl, expectedSha: sha, protectionBypassToken: "synthetic-token",
+    trustedPreviewHostname: host, attempts: 1,
+    fetcher: async (url, options) => {
+      calls.push([url.hostname, options.headers["x-vercel-protection-bypass"]]);
+      return url.pathname === "/version.json" ? version : health;
+    },
+  });
+  assert.equal(result.status, "verified");
+  assert.deepEqual(calls, [[host, "synthetic-token"], [host, "synthetic-token"]]);
+  for (const trustedPreviewHostname of [
+    "other-project.vercel.app", "job-dashboard-evil.vercel.app",
+    "job-dashboard-abc-qu4ntum-s-projects.vercel.app.evil.org",
+  ]) {
+    await assert.rejects(verifyVoicePreview({
+      baseUrl, expectedSha: sha, protectionBypassToken: "synthetic-token",
+      trustedPreviewHostname, attempts: 1,
+      fetcher: async () => { throw Error("must not send credentials"); },
+    }), /Invalid trusted preview hostname/);
+  }
+  await assert.rejects(verifyVoicePreview({
+    baseUrl: origin, expectedSha: sha, protectionBypassToken: "synthetic-token",
+    trustedPreviewHostname: host, attempts: 1,
+    fetcher: async () => { throw Error("must not send credentials"); },
+  }), /Invalid private preview authentication configuration/);
+});
