@@ -54,3 +54,35 @@ test('the sign-in page passes on only a well-formed desktop state, nothing else 
   assert.equal(safeAuthNext('/auth/desktop?other=1#x'), '/auth/desktop')
   assert.equal(safeAuthNext('/auth/desktop?state=' + encodeURIComponent(STATE + '&x=1')), '/auth/desktop')
 })
+
+// Owner, 31 Oct 2026: the handoff must rerun itself automatically — no "Allow the browser to open Kompas"
+// instruction, no button, no second navigation. The first launch stays the one location navigation; retries
+// ride a hidden frame on both schemes the shell claims.
+test('the handoff reruns itself silently on both schemes, with no second navigation', async () => {
+  const srcs = []
+  const frame = { style: {} }
+  Object.defineProperty(frame, 'src', { set(v) { srcs.push(v) } })
+  let timerFn = null
+  let cleared = false
+  const went = []
+  const window = { location: { search: '?state=' + STATE, assign: url => went.push(url), set href(url) { went.push(url) } } }
+  const context = vm.createContext({ window,
+    document: { cookie: 'sb-x-auth-token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3OCJ9.v'.repeat(1) + 'v'.repeat(30), createElement: () => frame, body: { appendChild: () => {} } },
+    setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
+    setInterval: (fn) => { timerFn = fn; return 1 },
+    clearInterval: () => { cleared = true; timerFn = null },
+    createClient: () => ({ auth: { getSession: async () => ({ data: { session: { access_token: 'test-access' } } }) } }) })
+  vm.runInContext(helpers + '\n' + effect, context)
+  await new Promise(resolve => setTimeout(resolve, 0))
+  assert.equal(went.length, 1)
+  assert.match(went[0], /^kompas:\/\/auth\?d=[A-Za-z0-9_-]+&state=/)
+  assert.ok(timerFn, 'retry loop scheduled')
+  timerFn(); timerFn(); timerFn()
+  assert.equal(srcs.length, 3)
+  assert.match(srcs[0], /^marketfit-kompas:\/\/auth\?d=[A-Za-z0-9_-]+&state=/)
+  assert.match(srcs[1], /^kompas:\/\/auth\?d=[A-Za-z0-9_-]+&state=/)
+  assert.match(srcs[2], /^marketfit-kompas:\/\/auth\?d=[A-Za-z0-9_-]+&state=/)
+  for (const src of srcs) assert.equal(new URL(src).searchParams.get('state'), STATE)
+  assert.equal(went.length, 1, 'retries use frames, never a second navigation')
+  assert.equal(cleared, true)
+})
