@@ -663,27 +663,31 @@ async function buildBook(s) {
 // once, and only sends the window to login when renewal truly fails.
 let __authRedirected = false;
 let __lastAuthRefresh = 0;
+let __authRefreshFlight = null;
 function isAuthError(e) {
   const m = String((e && e.message) || e || "");
   return /\b401\b/.test(m) || /sign in/i.test(m);
 }
 async function tryRefreshAuth() {
-  // The desktop shell owns the refresh family: it rotates the token on its own timer, so the webview cookies
-  // hold an older generation. Presenting that stale token to the cookie refresh can revoke the whole family
-  // and log the user out mid-session, so on desktop the cookie path never runs — not even when the bridge is
-  // absent or its renewal fails. The shell's live token keeps calls working; if the family is truly dead, the
-  // Reconnect pill (not a silent revoke) is the honest outcome. The web path below is the only cookie refresh,
-  // and there the cookies are the single holder, so it is safe.
-  try {
-    if (window.kompasDesktop && typeof window.kompasDesktop.refreshAuth === "function") {
-      const renewed = await window.kompasDesktop.refreshAuth();
-      if (renewed) { __lastAuthRefresh = Date.now(); return true; }
-    }
-    if (window.kompasDesktop) return false;
-    const res = await fetch("/api/auth/refresh", { method: "POST" });
-    if (res.ok) { __lastAuthRefresh = Date.now(); return true; }
-  } catch {}
-  return false;
+  // Coalesce simultaneous prep, answer, focus and keepalive renewals.
+  // The Electron shell exclusively owns its refresh family: never fall back
+  // to stale webview cookies, which could revoke the desktop session.
+  if (__authRefreshFlight) return __authRefreshFlight;
+  __authRefreshFlight = (async () => {
+    try {
+      if (window.kompasDesktop) {
+        if (typeof window.kompasDesktop.refreshAuth !== "function") return false;
+        const renewed = await window.kompasDesktop.refreshAuth();
+        if (renewed) { __lastAuthRefresh = Date.now(); return true; }
+        return false;
+      }
+      const res = await fetch("/api/auth/refresh", { method: "POST", credentials: "same-origin", cache: "no-store" });
+      if (res.ok) { __lastAuthRefresh = Date.now(); return true; }
+    } catch {}
+    return false;
+  })();
+  try { return await __authRefreshFlight; }
+  finally { __authRefreshFlight = null; }
 }
 // Idle is where sessions used to die: renew quietly whenever the user comes
 // back to this window, and every 20 minutes while it stays open, so the next
