@@ -136,13 +136,17 @@ test("private credential never overrides stale commit, unhealthy route, or prote
 });
 
 test("private credential is rejected for other Vercel tenants or unsafe header values", async () => {
-  for (const baseUrl of ["https://other-project.vercel.app/", "https://job-dashboard.vercel.app/",
-    "https://job-dashboard-git-fix-kompas-parakeet-227d7c-qu4ntum-s-projects.vercel.app:8443/"]) {
+  for (const baseUrl of ["https://other-project.vercel.app/", "https://job-dashboard.vercel.app/"]) {
     await assert.rejects(verifyVoicePreview({
       baseUrl, expectedSha: sha, protectionBypassToken: "test-credential",
       attempts: 1, fetcher: async () => { throw Error("must not contact other tenant"); },
     }), /Invalid private preview authentication configuration/);
   }
+  await assert.rejects(verifyVoicePreview({
+    baseUrl: "https://job-dashboard-git-fix-kompas-parakeet-227d7c-qu4ntum-s-projects.vercel.app:8443/",
+    expectedSha: sha, protectionBypassToken: "test-credential",
+    attempts: 1, fetcher: async () => { throw Error("must not contact nonstandard port"); },
+  }), /Preview URL must be a plain HTTPS Vercel origin/);
   for (const protectionBypassToken of ["bad\nheader", "bad\rheader", "white space", "x".repeat(2049)]) {
     await assert.rejects(verifyVoicePreview({
       baseUrl: origin, expectedSha: sha, protectionBypassToken,
