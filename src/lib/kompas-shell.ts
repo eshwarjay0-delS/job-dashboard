@@ -181,7 +181,7 @@ export function mountKompasHtml(html: string): string {
 <h2 style="font-size:20px;margin:0 0 8px">Continue a WhatsApp chat</h2>
 <p style="margin:0 0 12px;line-height:1.6">Open your shared resume, job description and conversation history. Sign in with the MarketFit account linked to your WhatsApp.</p>
 <a class="btn" href="/dashboard/kompas/shared">Open WhatsApp chats</a>
-<p class="muted" style="margin:12px 0 0;line-height:1.6">The sessions below stay in this browser. They are separate from shared WhatsApp chats and are not transferred automatically.</p>
+<p class="muted" style="margin:12px 0 0;line-height:1.6">Kompas sessions sync across your signed-in devices. Older browser-only sessions need a one-time import into your account. WhatsApp chats remain available under Open WhatsApp chats.</p>
 </aside>`
   const mounted = html.includes('id="mfSharedChats"') ? html : html.replace(
     /(<section\b[^>]*\bid="view-dashboard"[^>]*>\s*<main\b[^>]*>)/i, `$1\n${sharedEntry}`)

@@ -35,24 +35,77 @@ test("pending offline changes overlay a remote row without dropping other fields
   assert.equal(merged[0].role,"Architect");
   assert.equal(merged[0].instructions,"Personal");
 });
-test("account isolation requires verified server ownership; unknown local lists are not auto-uploaded",async()=>{
-  let data=new Map([["perfact.sessions",JSON.stringify([{id:"legacy",role:"Old device"}])]]);
-  const store={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};
-  let current=JSON.parse(store.getItem("perfact.sessions"));
-  let posts=[];
-  const sync=create({storage:store,read:()=>current,write:rows=>{current=rows;store.setItem("perfact.sessions",JSON.stringify(rows));},
-    render:()=>{},notify:()=>{},fetcher:async(_url,opts)=>{
-      if(opts.method==="GET")return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:[]})};
-      posts.push(JSON.parse(opts.body));return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:[]})};
-    }});
+test("legacy sessions upload only after explicit import and reappear on another device",async()=>{
+  const db=new Map([["perfact.sessions",JSON.stringify([
+    {id:"earlier-1",role:"Security Engineer",resume:"Full resume",jd:"Full JD",instructions:"Detailed rules"}
+  ])]]);
+  const storage={getItem:k=>db.get(k)||null,setItem:(k,v)=>db.set(k,String(v)),removeItem:k=>db.delete(k)};
+  let current=JSON.parse(db.get("perfact.sessions")), posts=[],remote=[];
+  const fetcher=async(_url,opts)=>{
+    if(opts.method==="GET")return {ok:true,json:async()=>({ok:true,userId:"verified-account",records:remote})};
+    const body=JSON.parse(opts.body);posts.push(body);
+    for(const op of body.operations)remote=[
+      ...remote.filter(r=>r.id!==op.id),{id:op.id,session:op.deleted?null:op.patch,deleted:op.deleted}
+    ];
+    return {ok:true,json:async()=>({ok:true,userId:"verified-account",records:remote})};
+  };
+  const sync=create({storage,read:()=>current,
+    write:rows=>{current=rows;storage.setItem("perfact.sessions",JSON.stringify(rows))},
+    render:()=>{},notify:()=>{},fetcher});
   await sync.refresh();
-  assert.deepEqual(current,[]);
-  assert.equal(posts.length,0);
-  assert.equal(JSON.parse(store.getItem("perfact.cloud.legacy"))[0].id,"legacy");
-  assert.equal(sync.importLegacy(),true);
-  assert.equal(current[0].id,"legacy");
+  assert.deepEqual(current,[],"the unsigned legacy list is never auto-assigned to an account");
+  assert.equal(posts.length,0,"no upload without an explicit owner action");
+  assert.equal(JSON.parse(storage.getItem("perfact.cloud.legacy"))[0].id,"earlier-1");
+  assert.equal(await sync.importLegacy(),true,"only a confirmed write and read completes the import");
+  assert.equal(current[0].id,"earlier-1");
   assert.equal(posts.length,1);
+  assert.equal(storage.getItem("perfact.cloud.legacy"),null,"backup clears only after server verification");
+
+  const other=new Map(),store2={getItem:k=>other.get(k)||null,setItem:(k,v)=>other.set(k,String(v)),removeItem:k=>other.delete(k)};
+  let second=[];
+  const device2=create({storage:store2,read:()=>second,write:rows=>{second=rows;store2.setItem("perfact.sessions",JSON.stringify(rows))},
+    render:()=>{},notify:()=>{},fetcher});
+  await device2.refresh();
+  assert.deepEqual(second.map(row=>row.id),["earlier-1"]);
+  assert.equal(second[0].resume,"Full resume");
+  assert.equal(second[0].jd,"Full JD");
+  assert.equal(second[0].instructions,"Detailed rules");
 });
+
+test("failed account upload retains the earlier sessions backup until retry succeeds",async()=>{
+  const db=new Map([["perfact.sessions",JSON.stringify([{id:"safe-1",role:"Endpoint Analyst"}])]]);
+  const storage={getItem:k=>db.get(k)||null,setItem:(k,v)=>db.set(k,String(v)),removeItem:k=>db.delete(k)};
+  let current=JSON.parse(db.get("perfact.sessions")),remote=[],fail=true,events=[];
+  const fetcher=async(_url,opts)=>{
+    if(opts.method==="GET")return {ok:true,json:async()=>({ok:true,userId:"verified-account",records:remote})};
+    if(fail) return {ok:false,status:503};
+    const body=JSON.parse(opts.body);
+    for(const op of body.operations)remote=[...remote.filter(r=>r.id!==op.id),{id:op.id,session:op.patch,deleted:op.deleted}];
+    return {ok:true,json:async()=>({ok:true,userId:"verified-account",records:remote})};
+  };
+  const sync=create({storage,read:()=>current,write:rows=>{current=rows;storage.setItem("perfact.sessions",JSON.stringify(rows))},
+    render:()=>{},notify:e=>events.push(e),fetcher});
+  await sync.refresh();
+  assert.equal(await sync.importLegacy(),false);
+  assert.equal(JSON.parse(storage.getItem("perfact.cloud.legacy"))[0].id,"safe-1");
+  assert.ok(events.some(e=>e.state==="import-failed"));
+  fail=false;
+  assert.equal(await sync.importLegacy(),true);
+  assert.equal(storage.getItem("perfact.cloud.legacy"),null);
+  assert.deepEqual(remote.map(r=>r.id),["safe-1"]);
+});
+
+test("a server acknowledgement without a durable catalog row never clears backup",async()=>{
+  const db=new Map([["perfact.sessions",JSON.stringify([{id:"safe-2",role:"Security Engineer"}])]]);
+  const storage={getItem:k=>db.get(k)||null,setItem:(k,v)=>db.set(k,String(v)),removeItem:k=>db.delete(k)};
+  let current=JSON.parse(db.get("perfact.sessions"));
+  const sync=create({storage,read:()=>current,write:rows=>{current=rows;storage.setItem("perfact.sessions",JSON.stringify(rows))},
+    render:()=>{},notify:()=>{},fetcher:async(_url,_opts)=>({ok:true,json:async()=>({ok:true,userId:"verified-account",records:[]})})});
+  await sync.refresh();
+  assert.equal(await sync.importLegacy(),false);
+  assert.equal(JSON.parse(storage.getItem("perfact.cloud.legacy"))[0].id,"safe-2");
+});
+
 test("switching authenticated account never displays previous account's local sessions",async()=>{
   let account="one";const storage=new Map();
   const store={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,String(v)),removeItem:k=>storage.delete(k)};
