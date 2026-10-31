@@ -88,6 +88,7 @@ test("rejects non-Vercel origins, credentials, query tokens and invalid SHAs", a
     "https://user:password@job-dashboard.vercel.app/",
     "https://job-dashboard.vercel.app/?_vercel_share=unsafe",
     "https://job-dashboard.vercel.app/path",
+    "https://job-dashboard.vercel.app:8443/",
   ]) {
     await assert.rejects(verifyVoicePreview({ baseUrl, expectedSha: sha }), /Preview URL must/);
   }
@@ -135,7 +136,8 @@ test("private credential never overrides stale commit, unhealthy route, or prote
 });
 
 test("private credential is rejected for other Vercel tenants or unsafe header values", async () => {
-  for (const baseUrl of ["https://other-project.vercel.app/", "https://job-dashboard.vercel.app/"]) {
+  for (const baseUrl of ["https://other-project.vercel.app/", "https://job-dashboard.vercel.app/",
+    "https://job-dashboard-git-fix-kompas-parakeet-227d7c-qu4ntum-s-projects.vercel.app:8443/"]) {
     await assert.rejects(verifyVoicePreview({
       baseUrl, expectedSha: sha, protectionBypassToken: "test-credential",
       attempts: 1, fetcher: async () => { throw Error("must not contact other tenant"); },
