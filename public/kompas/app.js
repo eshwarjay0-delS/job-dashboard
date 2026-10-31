@@ -149,15 +149,22 @@ $("navTranscripts").onclick = () => openTranscripts();
 function openTranscripts() {
   sessions = LS.get("sessions", []);
   const list = $("txList"); list.innerHTML = "";
-  const withTx = sessions.filter(s => (s.transcripts || []).length).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-  $("txEmpty").classList.toggle("hidden", withTx.length > 0);
-  for (const s of withTx) {
+  // Show the complete account session catalog here, not only sessions that
+  // already contain a transcript. Otherwise successfully synchronized sessions
+  // disappear from this page and look as though cloud history was lost.
+  const visibleSessions = sessions.filter(s => s && s.id).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  $("txEmpty").classList.toggle("hidden", visibleSessions.length > 0);
+  for (const s of visibleSessions) {
     const row = document.createElement("div");
     row.className = "doc-item";
     row.innerHTML = `<div class="doc-ico">☰</div><div class="doc-main"><div class="doc-name"></div><div class="doc-meta"></div></div><div class="doc-actions"><button class="btn">Open</button></div>`;
     row.querySelector(".doc-name").textContent = (s.role || "Untitled role") + (s.company ? " · " + s.company : "");
-    row.querySelector(".doc-meta").textContent = new Date(s.createdAt).toLocaleDateString();
-    row.querySelector(".btn").onclick = () => viewTranscripts(s);
+    const hasTranscript = Array.isArray(s.transcripts) && s.transcripts.length > 0;
+    row.querySelector(".doc-meta").textContent = (s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "Saved session") + (hasTranscript ? " · Transcript available" : " · No transcript recorded");
+    const open = row.querySelector(".btn");
+    open.textContent = hasTranscript ? "Open" : "No transcript";
+    open.disabled = !hasTranscript;
+    if (hasTranscript) open.onclick = () => viewTranscripts(s);
     list.append(row);
   }
   show("transcripts");
