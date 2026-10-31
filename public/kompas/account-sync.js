@@ -206,6 +206,14 @@
       setInterval(()=>{if(typeof document==="undefined" || !document.hidden)void refresh();},12000);
       if(typeof window!=="undefined"){
         window.addEventListener("focus",()=>{void refresh();});
+        window.addEventListener("online",()=>{void flush().then(()=>refresh());});
+        // A sibling tab may have written a new account-scoped snapshot.
+        // Reconcile through the authenticated server; never trust its local
+        // storage event as authority for account ownership or remote content.
+        window.addEventListener("storage",(event)=>{
+          if(!owner || !event.key || !event.key.startsWith(prefix+"cache."+owner))return;
+          void refresh();
+        });
         document.addEventListener("visibilitychange",()=>{if(!document.hidden)void refresh();});
       }
     }
