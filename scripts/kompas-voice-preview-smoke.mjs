@@ -6,11 +6,12 @@ import { fileURLToPath } from "node:url";
 
 const SHA = /^[a-f0-9]{40}$/i;
 const EXPECTED_PREVIEW_HOST = "job-dashboard-git-fix-kompas-parakeet-227d7c-qu4ntum-s-projects.vercel.app";
+const TRUSTED_PREVIEW_HOST = /^job-dashboard-[a-z0-9-]+-qu4ntum-s-projects\.vercel\.app$/;
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 export async function verifyVoicePreview({
   baseUrl, expectedSha, fetcher = fetch, sleeper = sleep,
-  attempts = 30, intervalMs = 10000, protectionBypassToken,
+  attempts = 30, intervalMs = 10000, protectionBypassToken, trustedPreviewHostname,
 }) {
   if (!SHA.test(String(expectedSha || ""))) throw Error("Expected exact 40-character commit SHA");
   if (!Number.isInteger(attempts) || attempts < 1 || attempts > 60) throw Error("Invalid attempt count");
@@ -23,8 +24,14 @@ export async function verifyVoicePreview({
   }
   // Never send an automation credential to an arbitrary Vercel tenant or URL.
   const token = protectionBypassToken || undefined;
+  // Only the trusted Vercel API resolver may provide a dynamic preview host.
+  // Keep the original pinned alias as the default for existing callers.
+  const expectedHost = trustedPreviewHostname === undefined ? EXPECTED_PREVIEW_HOST : trustedPreviewHostname;
+  if (typeof expectedHost !== "string" || !TRUSTED_PREVIEW_HOST.test(expectedHost)) {
+    throw Error("Invalid trusted preview hostname");
+  }
   if (token !== undefined && (typeof token !== "string" ||
-      !/^[\x21-\x7e]{1,2048}$/.test(token) || base.hostname !== EXPECTED_PREVIEW_HOST)) {
+      !/^[\x21-\x7e]{1,2048}$/.test(token) || base.hostname !== expectedHost)) {
     throw Error("Invalid private preview authentication configuration");
   }
   const headers = token ? { "x-vercel-protection-bypass": token } : undefined;
@@ -81,6 +88,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     baseUrl: process.env.KOMPAS_PREVIEW_URL,
     expectedSha: process.env.KOMPAS_EXPECTED_SHA,
     protectionBypassToken: process.env.KOMPAS_VERCEL_PREVIEW_BYPASS,
+    trustedPreviewHostname: process.env.KOMPAS_TRUSTED_PREVIEW_HOST,
   }).then((result) => console.log(JSON.stringify(result)))
     .catch((error) => { console.error(error.message); process.exitCode = 1; });
 }
