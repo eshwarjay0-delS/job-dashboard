@@ -18,7 +18,7 @@ export async function verifyVoicePreview({
   let base;
   try { base = new URL(baseUrl); } catch { throw Error("Invalid preview URL"); }
   if (base.protocol !== "https:" || !base.hostname.endsWith(".vercel.app") ||
-      base.username || base.password || base.search || base.hash || base.pathname !== "/") {
+      base.port || base.username || base.password || base.search || base.hash || base.pathname !== "/") {
     throw Error("Preview URL must be a plain HTTPS Vercel origin");
   }
   // Never send an automation credential to an arbitrary Vercel tenant or URL.
