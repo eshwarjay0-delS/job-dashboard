@@ -93,3 +93,73 @@ test("returns to Sessions, focus, visibility and desktop handoffs re-read the cl
   assert.match(lib,/visibilitychange/);
   assert.match(lib,/setInterval\(/);
 });
+
+
+test("same verified owner restores newer browser sessions when cloud shadow cache is missing",async()=>{
+  const old=[{id:"saved-bny",role:"Security Engineer",instructions:"original"}];
+  const newer=[{...old[0],instructions:"revised long rules",jd:"private JD"}];
+  const db=new Map([
+    ["perfact.cloud.owner","verified-account"],
+    ["perfact.sessions",JSON.stringify(newer)],
+  ]);
+  const storage={getItem:k=>db.get(k)||null,setItem:(k,v)=>db.set(k,String(v)),removeItem:k=>db.delete(k)};
+  let current=newer, posts=[],serverRows=[];
+  const sync=create({storage,read:()=>current,write:rows=>{current=rows;db.set("perfact.sessions",JSON.stringify(rows))},
+    render:()=>{},notify:()=>{},fetcher:async(_url,opts)=>{
+      if(opts.method==="GET")return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:serverRows})};
+      const request=JSON.parse(opts.body);
+      posts.push(request);
+      for(const op of request.operations) {
+        const row={id:op.id,session:op.deleted?null:op.patch,deleted:op.deleted};
+        serverRows=[...serverRows.filter(r=>r.id!==op.id),row];
+      }
+      return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:serverRows})};
+    }});
+  await sync.refresh();
+  assert.equal(current.length,1,"account reconnect must not erase its own session");
+  assert.equal(current[0].id,"saved-bny");
+  assert.equal(current[0].jd,"private JD");
+  assert.equal(current[0].instructions,"revised long rules");
+  assert.ok(posts.some(p=>p.operations.some(x=>x.id==="saved-bny")),"recovered changes must be queued for server persistence");
+});
+
+test("different verified owner never adopts previous account's unscoped sessions",async()=>{
+  const db=new Map([
+    ["perfact.cloud.owner","old-account"],
+    ["perfact.sessions",JSON.stringify([{id:"old-bny",role:"Security Engineer"}])],
+  ]);
+  const storage={getItem:k=>db.get(k)||null,setItem:(k,v)=>db.set(k,String(v)),removeItem:k=>db.delete(k)};
+  let current=JSON.parse(db.get("perfact.sessions")),posts=[];
+  const sync=create({storage,read:()=>current,write:r=>{current=r;db.set("perfact.sessions",JSON.stringify(r))},
+    render:()=>{},notify:()=>{},fetcher:async(_url,opts)=>{
+      if(opts.method==="GET")return{ok:true,json:async()=>({ok:true,userId:"new-account",records:[]})};
+      posts.push(JSON.parse(opts.body));return{ok:true,json:async()=>({ok:true,userId:"new-account",records:[]})};
+    }});
+  await sync.refresh();
+  assert.deepEqual(current,[],"a new account must not display or upload the previous owner's sessions");
+  assert.deepEqual(posts,[]);
+  assert.equal(JSON.parse(db.get("perfact.cloud.cache.old-account"))[0].id,"old-bny",
+    "old account's local data remains privately recoverable");
+});
+
+
+test("same-owner recovery does not resurrect a session removed from the current browser list",async()=>{
+  const now=[{id:"active",role:"Security Engineer",instructions:"current"}];
+  const db=new Map([
+    ["perfact.cloud.owner","verified-account"],
+    ["perfact.sessions",JSON.stringify(now)],
+    ["perfact.cloud.cache.verified-account",JSON.stringify([{id:"stale",role:"Old session"}])],
+  ]);
+  const storage={getItem:k=>db.get(k)||null,setItem:(k,v)=>db.set(k,String(v)),removeItem:k=>db.delete(k)};
+  let current=now,rows=[],posted=[];
+  const sync=create({storage,read:()=>current,write:v=>{current=v;db.set("perfact.sessions",JSON.stringify(v))},
+    render:()=>{},notify:()=>{},fetcher:async(_url,opts)=>{
+      if(opts.method==="GET")return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:rows})};
+      const body=JSON.parse(opts.body); posted.push(...body.operations.map(v=>v.id));
+      for(const op of body.operations)rows=[...rows.filter(r=>r.id!==op.id),{id:op.id,session:op.patch,deleted:op.deleted}];
+      return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:rows})};
+    }});
+  await sync.refresh();
+  assert.deepEqual(current.map(s=>s.id),["active"]);
+  assert.deepEqual(posted,["active"],"stale cached session must never be uploaded anew");
+});

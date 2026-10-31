@@ -117,7 +117,15 @@
           owner=nextOwner;
           storage.setItem(prefix+"owner",owner);
           pending=getJSON(prefix+"pending."+owner,{});
-          local=getJSON(prefix+"cache."+owner,[]);
+          const cached=getJSON(prefix+"cache."+owner,[]);
+          // Only this exact verified owner can reuse the current browser list.
+          // A present unscoped list is authoritative on this device, even when
+          // empty: unioning it with a stale cache could resurrect deleted
+          // sessions after an interrupted save. When the browser's session key
+          // is genuinely missing, fall back to the same-owner shadow cache.
+          const sameOwner=previous===nextOwner && Array.isArray(unscoped) &&
+            storage.getItem("perfact.sessions")!==null;
+          local=sameOwner?unscoped:(Array.isArray(cached)?cached:[]);
         } else {local=read();}
         // A device which belonged to this same authenticated account may have
         // previously created sessions offline. Those missing from the server
