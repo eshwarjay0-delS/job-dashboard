@@ -103,11 +103,17 @@ test("same verified owner restores newer browser sessions when cloud shadow cach
     ["perfact.sessions",JSON.stringify(newer)],
   ]);
   const storage={getItem:k=>db.get(k)||null,setItem:(k,v)=>db.set(k,String(v)),removeItem:k=>db.delete(k)};
-  let current=newer, posts=[];
+  let current=newer, posts=[],serverRows=[];
   const sync=create({storage,read:()=>current,write:rows=>{current=rows;db.set("perfact.sessions",JSON.stringify(rows))},
     render:()=>{},notify:()=>{},fetcher:async(_url,opts)=>{
-      if(opts.method==="GET")return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:[]})};
-      posts.push(JSON.parse(opts.body));return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:[]})};
+      if(opts.method==="GET")return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:serverRows})};
+      const request=JSON.parse(opts.body);
+      posts.push(request);
+      for(const op of request.operations) {
+        const row={id:op.id,session:op.deleted?null:op.patch,deleted:op.deleted};
+        serverRows=[...serverRows.filter(r=>r.id!==op.id),row];
+      }
+      return{ok:true,json:async()=>({ok:true,userId:"verified-account",records:serverRows})};
     }});
   await sync.refresh();
   assert.equal(current.length,1,"account reconnect must not erase its own session");
