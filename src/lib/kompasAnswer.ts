@@ -535,7 +535,7 @@ function repeatsPriorQuestionV2(text: string, previous: string): boolean {
   return aw.filter((w) => bw.has(w)).length / aw.length >= 0.85
 }
 
-export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN): string {
+export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN, reask = false): string {
   const raw = transcriptSentences(repairDictation(heard)).replace(/\s+/g, " ").trim()
   const text = afterMarkedNextQuestion(raw)
   if (BARE_INTRO.test(text)) return "Tell me about yourself"
@@ -560,7 +560,11 @@ export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN): st
   const kept: number[] = [last]
   let asks = 1
   let c = last - 1
-  while (c >= 0 && asks < 4) {
+  // A re-press is the user saying the last answer missed: the concatenation widens to whatever was heard, previous
+  // things included, so a part missed at one instance comes back on the next tap. The material itself stays bounded
+  // client-side (the page chain plus what was heard since), so lifting the four-ask cap here never re-forms the
+  // whole interview. The break rules — previous turn, own speech, long fragment — still hold on a re-press.
+  while (c >= 0 && (reask || asks < 4)) {
     if (reply(c)) break
     const kind = parts[c].kind
     if (kind === "ask") { kept.unshift(c); asks++; c-- }
@@ -712,7 +716,7 @@ export function noiseOnly(text: string): boolean {
  * unanswered. Anything else typed or heard is kept — dropping it is what
  * left the card on the previous answer.
  */
-export function questionToAnswer(heard: string, explicit: string, pinned = false, previous: PreviousTurn = NO_TURN): string {
+export function questionToAnswer(heard: string, explicit: string, pinned = false, previous: PreviousTurn = NO_TURN, reask = false): string {
   const asked = String(explicit || "").replace(/\s+/g, " ").trim()
   if (pinned && asked && !noiseOnly(asked)) {
     // The formed question on the card is the whole of what was asked (owner, 23 Oct 2026): every ask, the setup between
@@ -729,7 +733,7 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
   // review?". When heard already holds the ask, heard alone is cut; the joined cut stays as the fallback.
   const key = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
   const inHeard = asked && key(asked).length > 0 && key(heard).includes(key(asked))
-  const cut = (inHeard ? cutQuestion(heard, previous) : "") || cutQuestion([heard, asked].filter(Boolean).join("\n"), previous)
+  const cut = (inHeard ? cutQuestion(heard, previous, reask) : "") || cutQuestion([heard, asked].filter(Boolean).join("\n"), previous, reask)
   if (cut) return cut
   if (asked && !noiseOnly(asked)) return asked.slice(0, 2000)
   const bare = String(heard || "")
@@ -802,7 +806,7 @@ function deriveByCodeRaw(heard: string, history: unknown, reask = false): string
   if (!heard || plainlyNoQuestion(heard)) return null
   // Every line is small talk ("Them: makes sense"): nothing to derive, and the model is not asked to find a question in it.
   if (String(heard).split("\n").filter((l) => l.trim()).every((l) => noiseOnly(l))) return null
-  const clean = cleanQuestion(heard) || cutQuestion(heard, reask ? NO_TURN : previousTurn(history))
+  const clean = cleanQuestion(heard) || cutQuestion(heard, reask ? NO_TURN : previousTurn(history), reask)
   if (clean) return clean
   const topic = topicFragment(String(heard).replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " "))
   return topic ? String(heard).replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ").replace(/\s+/g, " ").trim().slice(0, 2000) : ""
@@ -845,7 +849,7 @@ export function afterSelfCorrection(text: string): string {
 }
 export function questionForAnswer(heard: string, asked: string, pinned: boolean, again: boolean, history: unknown): string {
   const turns = Array.isArray(history) ? history : []
-  const formed = afterMarkedNextQuestion(questionToAnswer(stripScreenChrome(heard), stripScreenChrome(asked), pinned, again ? NO_TURN : previousTurn(turns)))
+  const formed = afterMarkedNextQuestion(questionToAnswer(stripScreenChrome(heard), stripScreenChrome(asked), pinned, again ? NO_TURN : previousTurn(turns), again))
   const corrected = formed ? afterSelfCorrection(formed) : formed
   const q = corrected ? (/following up on: "/.test(corrected) && corrected !== formed ? corrected : tidySpokenAsk(corrected)) : formed
   const source = String((pinned && asked) || heard || "").split("\n").filter((l) => l.trim()).pop() || ""

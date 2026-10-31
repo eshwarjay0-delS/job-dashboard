@@ -5,7 +5,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-const { cutQuestion, questionToAnswer } = await import('../../src/lib/kompasAnswer.ts')
+const { cutQuestion, questionToAnswer, deriveByCode, questionForAnswer } = await import('../../src/lib/kompasAnswer.ts')
 
 const inOrder = (out, parts) => {
   let at = -1
@@ -70,4 +70,31 @@ test('the live unpinned path keeps every part too', () => {
 test('concatenation across sources stays one question: heard plus typed', () => {
   const out = questionToAnswer('Tell me about your SOC experience. Yeah.', 'How do you handle false positives?', false)
   inOrder(out, ['Tell me about your SOC experience', 'How do you handle false positives'])
+})
+
+// Re-press (owner, 31 Oct 2026): tapping AI Answer again is itself the signal more concatenation is needed — with
+// previous things, whatever was heard — so a part missed at one instance comes back on the next tap. The server
+// therefore lifts the four-ask cap on a re-press; the material stays bounded client-side to the page chain.
+const FIVE = 'How do you detect intrusions? How do you triage alerts? How do you contain a host? How do you write the report? How do you brief leadership?'
+
+test('a re-press lifts the four-ask cap: whatever was heard stays in', () => {
+  const out = cutQuestion(FIVE, undefined, true)
+  inOrder(out, ['How do you detect intrusions', 'How do you triage alerts', 'How do you contain a host', 'How do you write the report', 'How do you brief leadership'])
+})
+
+test('a re-press still breaks on the candidate taking the floor', () => {
+  assert.equal(
+    cutQuestion('Tell me about your SOC experience. I built the SIEM pipeline for the state. How do you handle false positives?', undefined, true),
+    'How do you handle false positives?',
+  )
+})
+
+test('the re-press server path keeps every part end to end', () => {
+  const out = questionForAnswer(FIVE, '', false, true, [])
+  inOrder(out, ['How do you detect intrusions', 'How do you triage alerts', 'How do you contain a host', 'How do you write the report', 'How do you brief leadership'])
+})
+
+test('the code derive on a re-press keeps every part', () => {
+  const out = deriveByCode(FIVE, [], true)
+  inOrder(out, ['How do you detect intrusions', 'How do you triage alerts', 'How do you contain a host', 'How do you write the report', 'How do you brief leadership'])
 })

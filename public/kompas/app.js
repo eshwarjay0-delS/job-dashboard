@@ -3312,7 +3312,11 @@ async function aiAnswer(fromAuto) {
         const heardOnly = !typedText;
         const formed = String(cur.formed || "").replace(/^You \(context keywords\):[^\n]*$/gm, "").trim() || `You: ${cur.question}`;
         const since = combined.heard.replace(/^Current question \(on screen\):[^\n]*$/gm, "").trim();
-        const heard = [formed, since].filter(Boolean).join("\n").trim();
+        // Tapping AI Answer again is itself the signal more concatenation is needed: each tap chains what the last
+        // page heard, so what was heard on an earlier tap survives even after it falls out of the formation window,
+        // and a part missed at one instance comes back on the next tap. The chain stays the page chain, never the
+        // whole interview.
+        const heard = [(cur.heard || formed), since].filter(Boolean).join("\n").trim();
         // The re-ask goes on the next page (book rule, 27 Oct 2026): the page it re-asks keeps its question and finished
         // answer instead of being wiped to "…" and rewritten in place.
         const page = addCard(cur.question, ["…"]);
