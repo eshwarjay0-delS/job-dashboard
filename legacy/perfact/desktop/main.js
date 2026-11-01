@@ -522,7 +522,7 @@ else {
     }
     if (!win) return;
     if (win.isMinimized()) win.restore();
-    win.show(); setCollapsed(false); bringBack(); win.focus();
+    win.show(); bringBack(); win.focus();
     if (win.webContents.isLoading()) return;
     deliverSession();
   });
