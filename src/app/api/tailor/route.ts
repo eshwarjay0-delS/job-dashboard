@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     const began = Date.now()
     const run = async (fresh: boolean) => {
       const out = await runTailor({
-        jd, keys, pref: body.llmHeavy, userResumeDir, maxMs: Math.max(30_000, 280_000 - waitedMs - (Date.now() - began)),
+        jd, keys, pref: body.llmHeavy, userResumeDir, ownerId: userId, maxMs: Math.max(30_000, 280_000 - waitedMs - (Date.now() - began)),
         givenPath: body.filepath || undefined,
         immediatePrefs: Array.isArray(body.immediatePrefs) ? body.immediatePrefs : [],
         noCache: fresh,

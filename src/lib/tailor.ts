@@ -170,6 +170,10 @@ export async function runTailor(opts: {
   keys: LlmKeys
   pref?: ProviderPref
   userResumeDir: string
+  // Dashboard caller id for the owner record written next to the docx (Nov 1 owner lock).
+  // Callers that do not pass one (WhatsApp flows) mint grandfathered tokens: no owner
+  // record, served to any signed-in caller as before.
+  ownerId?: string
   givenPath?: string
   immediatePrefs?: string[]
   noCache?: boolean
@@ -1141,6 +1145,14 @@ export async function runTailor(opts: {
   const qualityReport = resumeQuality({ matched: coveredScore.length, total: scoreKws.length, missing: scoreKws.filter(k => !afterKw.has(k)), weightedCoverage: best.cov, partial: qualityBlockers.some(k => k !== "unchanged"), unchanged: !diff.length })
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
+  // Owner lock (Nov 1): a token minted with a dashboard caller id carries an owner
+  // record next to the docx. The fetch route refuses a mismatched caller with 404;
+  // tokens without a record (minted before this change, or by flows without a caller
+  // id) keep the previous signed-in-caller behavior. A failed owner write never fails
+  // the tailor itself — the token simply stays grandfathered.
+  if (opts.ownerId) {
+    await blob.put(`tailored/${token}.owner.json`, JSON.stringify({ userId: opts.ownerId })).catch(() => {})
+  }
 
   const result: TailorResult = {
     quality: qualityReport,

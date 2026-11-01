@@ -11,9 +11,9 @@ export const runtime = "nodejs"
 // on GET_RESUME; dashboard links ride the session cookie). The URL token only
 // selects which document — anonymous token-only access is refused with 401,
 // checked before the blob read so anonymous callers cannot probe token
-// existence. Residual: tokens are not owner-mapped, so any signed-in caller
-// presenting a token can fetch that document; per-resume owner locking needs
-// a token→owner store at tailor time.
+// existence. Owner lock (Nov 1): tokens minted with a dashboard caller id carry
+// tailored/<token>.owner.json; a mismatched caller gets 404. Tokens without a
+// record (pre-lock or non-dashboard flows) keep the signed-in-caller behavior.
 
 // Extract the document's primary font from styles.xml so the PDF output uses
 // the same typeface the candidate chose for their resume, not a generic fallback.
@@ -55,6 +55,18 @@ export async function GET(request: NextRequest) {
   const name = (searchParams.get("name") || "Resume").replace(/[^a-z0-9_\-. &()+]/gi, "_")
 
   if (!token) return NextResponse.json({ error: "No token" }, { status: 400 })
+
+  // Owner lock (Nov 1): tokens minted with a dashboard caller id carry an owner
+  // record next to the docx. A present record whose owner is not the caller reads
+  // exactly like a missing file (404, no existence oracle); a missing record means
+  // a pre-lock or non-dashboard token, served as before to any signed-in caller.
+  // A corrupt owner record fails closed.
+  const ownerRaw = await blob.get(`tailored/${token}.owner.json`)
+  if (ownerRaw) {
+    let ownerId: unknown
+    try { ownerId = (JSON.parse(ownerRaw.toString()) as { userId?: unknown }).userId } catch { ownerId = undefined }
+    if (ownerId !== userId) return NextResponse.json({ error: "Tailored file expired — tailor again." }, { status: 404 })
+  }
 
   const buffer = await blob.get(`tailored/${token}.docx`)
   if (!buffer) {
