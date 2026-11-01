@@ -1,5 +1,6 @@
 import { normalizeAsk } from "./kompasAsk.ts"
 import { withoutLogistics } from "./kompasLogistics.ts"
+import { naturalNarrationGuidance } from "./kompasNaturalNarration.ts"
 /** Delivery changes with the listener; technical correctness does not. */
 export const CALIBRATION = "CALIBRATION (every answer, every audience): the first sentence answers the question in plain words. Then the mechanism, with one concrete example when the question needs one. Then only the technical detail this listener can use. Then the tradeoff, or how the result is checked. A narrow fact can stop after the first sentence. Never open with a catalogue of tools, and never leave a pause mark or an error sentence in the words they will say."
 
@@ -23,7 +24,7 @@ export function lensSwitchOn(): boolean {
 }
 
 export function audienceGuidance(audience: string, question: string): string {
-  const common = "Sentence one is the answer in words this listener already has. Then one path, one example on that path, the technical detail this listener can use inside that path, and how you would know it worked. A narrow fact can stop after the first sentence. Define an unfamiliar term when it first appears. Do not stack product names. " + CALIBRATION + " " + NARRATION + " " + RELEVANCE + " " + STORYTELLER + " " + INTERVIEW + (lensSwitchOn() ? " " + lensBlock(audience, question) : "")
+  const common = "Sentence one is the answer in words this listener already has. Then one path, one example on that path, the technical detail this listener can use inside that path, and how you would know it worked. A narrow fact can stop after the first sentence. Define an unfamiliar term when it first appears. Do not stack product names. " + CALIBRATION + " " + NARRATION + " " + RELEVANCE + " " + STORYTELLER + " " + INTERVIEW + (lensSwitchOn() ? " " + lensBlock(audience, question) : "") + " " + naturalNarrationGuidance(question, audience)
   if (/farmer|mixed|non.?technical|does not (?:write code|code)|operations manager/i.test(question)) {
     return common + " This question explicitly includes a nontechnical listener: honor that over the selected role. Explain the practical action and consequence first, then enough implementation detail for the engineer to evaluate it. Do not assume product knowledge."
   }

@@ -221,6 +221,10 @@ test("explicit desktop Bearer never falls back to a different browser-cookie acc
   const source = fs.readFileSync("src/lib/supabase/server.ts", "utf8");
   const marker = "export async function createClientFromRequest(request: NextRequest)";
   assert.ok(source.includes(marker), "request auth boundary must exist");
+  const helperMarker = "function isExpiredJwt(token: string): boolean";
+  assert.ok(source.includes(helperMarker), "the expired JWT check remains part of the production auth boundary");
+  const helperSource = source.slice(source.indexOf(helperMarker), source.indexOf(marker))
+    .replace(helperMarker, "function isExpiredJwt(token)");
   const functionSource = source.slice(source.indexOf(marker))
     .replace(marker, "async function createClientFromRequest(request)");
   const ctx = {
@@ -234,8 +238,9 @@ test("explicit desktop Bearer never falls back to a different browser-cookie acc
       authorization: options.global.headers.Authorization,
     }),
     stubClient: () => ({ identity: "anonymous-stub" }),
+    Buffer,
   };
-  vm.runInNewContext(functionSource + "\nthis.requestClient = createClientFromRequest;", ctx);
+  vm.runInNewContext(helperSource + "\n" + functionSource + "\nthis.requestClient = createClientFromRequest;", ctx);
   const request = value => ({ headers: { get: key => key === "authorization" ? value : null } });
   const expired = "a." + Buffer.from(JSON.stringify({ exp: 1 })).toString("base64url") + ".signature";
   const future = "a." + Buffer.from(JSON.stringify({ exp: 4102444800 })).toString("base64url") + ".signature";
