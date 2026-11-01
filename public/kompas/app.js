@@ -2115,6 +2115,63 @@ function formationWindow(lines, isAsk, n = 8, cap = 16) {
   } catch {}
   return win;
 }
+// Slice 12b: the question's start is the start of its turn, not eight lines
+// back (owner, 1 Nov 2026: "detect the start of the question... you already
+// have the whole transcript"). A speaker who takes the floor frames the ask
+// first — setup, context, pausing fillers — and the ask follows in the same
+// turn; cutting at eight lines kept only the tail, which reads to the other
+// end as if the question was never heard. The window opens at the latest
+// unanswered ask and walks back through the same turn: same-speaker lines
+// and short acknowledgements belong to it; a long line from the other side
+// (the floor changed hands) or a pure next-question marker ends it. No ask
+// in the lines falls back to the 8-line window, unchanged. Any fault keeps
+// the 8-line window. Self-contained: no module-level consts it depends on.
+function turnWordCount(text) { try { return String(text || "").split(/\s+/).filter(Boolean).length; } catch { return 0; } }
+function isTurnMarker(text) {
+  try { return /^\s*(next question|moving on to the next question|on to the next question|let'?s (?:move|go) on|let'?s (?:move|go) to the next question|moving on)[.?!…\s]*$/i.test(String(text || "").trim()); } catch { return false; }
+}
+function turnWindow(lines, source, isAsk) {
+  const all = Array.from(lines || []);
+  try {
+    let ask = -1;
+    for (let i = all.length - 1; i >= 0; i--) { const t = all[i]; if (t && t.who === source && (Q_CUE.test(t.text) || opensNewAsk(t.text))) { ask = i; break; } }
+    if (ask < 0) return formationWindow(all, isAsk);
+    let start = ask;
+    while (start > 0) {
+      const prev = all[start - 1];
+      if (!prev) break;
+      if (isTurnMarker(prev.text)) break;
+      if (prev.who !== source && turnWordCount(prev.text) > 4) break;
+      start--;
+    }
+    return all.slice(start);
+  } catch { return formationWindow(all, isAsk); }
+}
+// Re-press recovery (owner, 1 Nov 2026): a re-press means the last answer
+// missed, so the question is re-formed from the whole turn that holds it —
+// the transcript back to the turn's start — not from the stripped page
+// alone, which could never recover framing the first window cut. The walk
+// stops at a floor change or a next-question marker, so it never re-forms
+// the whole interview: the 27 Oct bounded-chain contract, narrowed to one
+// turn by the owner's 1 Nov direction. An unknown anchor returns null and
+// the caller falls back to the page chain, never worse.
+function recoverTurn(allLines, anchorSeq, source) {
+  try {
+    const all = Array.from(allLines || []);
+    let anchor = -1;
+    for (let i = 0; i < all.length; i++) if (all[i] && all[i].seq === anchorSeq) { anchor = i; break; }
+    if (anchor < 0) return null;
+    let start = anchor;
+    while (start > 0) {
+      const prev = all[start - 1];
+      if (!prev) break;
+      if (isTurnMarker(prev.text)) break;
+      if (prev.who !== source && turnWordCount(prev.text) > 4) break;
+      start--;
+    }
+    return all.slice(start);
+  } catch { return null; }
+}
 function clauseStillOpen(text) {
   const t = String(text || "").replace(/\s+/g, " ").trim();
   if (!t || /[?.!…]["']?$/.test(t)) return false;
@@ -3404,10 +3461,12 @@ async function aiAnswer(fromAuto) {
       finally { flushing = false; }
     }
     if (sessionEpoch !== transcriptionEpoch) return;
-    // Formation window (owner, 26 Oct): the last 8 heard lines are enough to
-    // form and cut a question. Older lines stay in the transcript and reach
-    // the answer as earlier context — they are not re-formed into questions.
-    let pending = formationWindow(pendingHeard(), t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
+    // Turn window (owner, 1 Nov 2026, supersedes the 26 Oct 8-line rule):
+    // the question is formed from its whole turn, back to the turn's start
+    // — framing, setup and pausing fillers included — not from the last
+    // eight lines. Older turns stay in the transcript and reach the answer
+    // as earlier context; they are not re-formed into questions.
+    let pending = turnWindow(pendingHeard(), questionSource(), t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
     // Answer anyway (slice 2): a press right after "Nothing question-like" answers those same lines.
@@ -3463,13 +3522,23 @@ async function aiAnswer(fromAuto) {
         const since = combined.heard.replace(/^Current question \(on screen\):[^\n]*$/gm, "").trim();
         // Tapping AI Answer again is itself the signal more concatenation is needed: each tap chains what the last
         // page heard, so what was heard on an earlier tap survives even after it falls out of the formation window,
-        // and a part missed at one instance comes back on the next tap. The chain stays the page chain, never the
-        // whole interview.
-        const heard = [(cur.heard || formed), since].filter(Boolean).join("\n").trim();
+        // and a part missed at one instance comes back on the next tap. Since 1 Nov 2026 the chain is the turn, not
+        // the stripped page alone: a re-press re-forms from the transcript back to the turn's start (recoverTurn),
+        // so framing the first window cut comes back. The walk stops at a floor change or a next-question marker,
+        // so it never re-forms the whole interview. A card without an anchor keeps the page chain.
+        let heard = [(cur.heard || formed), since].filter(Boolean).join("\n").trim();
+        let recoverSeq = null;
+        if (heardOnly && cur.formSeq != null) {
+          try {
+            const rec = recoverTurn(transcript, cur.formSeq, questionSource());
+            if (rec && rec.length) { heard = rec.map(t => `${t.who}: ${t.text}`).join("\n"); recoverSeq = rec[0].seq; }
+          } catch {}
+        }
         // The re-ask goes on the next page (book rule, 27 Oct 2026): the page it re-asks keeps its question and finished
         // answer instead of being wiped to "…" and rewritten in place.
         const page = addCard(cur.question, ["…"]);
         page.heard = heard; page.earlier = cur.earlier || ""; page.formed = cur.formed;
+        if (recoverSeq != null) page.formSeq = recoverSeq;
         showPressed(page, heardOnly ? cur.question : q);
         return await generateAnswer(heard, page, { consolidated: true, earlier: "", derived: heardOnly ? undefined : q, reask: true, pinned: !heardOnly });
       }
@@ -3492,6 +3561,7 @@ async function aiAnswer(fromAuto) {
         const heard = intake.heard + (lane ? `\nLane (the question already on screen — stay on it): ${lane}` : "");
         const card = addCard(q, ["…"]);
         card.heard = heard; card.earlier = earlier;
+        card.formSeq = pending.length ? pending[0].seq : null;
         showPressed(card, q);
         return await generateAnswer(heard, card, { consolidated: true, earlier, derived: q, pinned: true });
       }
@@ -3518,6 +3588,7 @@ async function aiAnswer(fromAuto) {
           card.heard = spanHeard;
           card.earlier = earlier;
           card.formed = spanHeard;
+          card.formSeq = pending.length ? pending[0].seq : null;
           showPressed(card, heardOnly ? "Deriving…" : shown);
           await generateAnswer(spanHeard, card, { consolidated: true, earlier, derived: heardOnly ? undefined : shown, pinned: !heardOnly });
         }
@@ -3527,6 +3598,7 @@ async function aiAnswer(fromAuto) {
       const card = addCard(heardOnly ? "Deriving…" : (shownSaid || "Answering what was just heard…"), ["…"]);
       if (shownSaid !== said) card.original = said;
       card.heard = heard; card.earlier = earlier; card.formed = heard;
+      card.formSeq = pending.length ? pending[0].seq : null;
       showPressed(card, card.question);
       return await generateAnswer(heard, card, { consolidated: true, earlier, derived: heardOnly ? undefined : shownSaid, pinned: !heardOnly });
     }

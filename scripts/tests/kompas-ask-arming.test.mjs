@@ -62,6 +62,9 @@ test("the formation window keeps the latest unanswered ask when more than 8 line
   assert.equal(ctx.formationWindow([], isAsk).length, 0);
 });
 test("aiAnswer forms the question from the formation window, not a bare last-8 slice", () => {
-  assert.match(src, /let pending = formationWindow\(pendingHeard\(\),/);
+  // 1 Nov 2026 turn window: the formation call is turnWindow (it falls back
+  // to formationWindow when no ask is present); the intent stands — the
+  // question is formed from a window, never a bare last-8 slice.
+  assert.match(src, /let pending = turnWindow\(pendingHeard\(\),/);
   assert.doesNotMatch(src, /let pending = pendingHeard\(\)\.slice\(-8\);/);
 });
