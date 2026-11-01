@@ -1931,6 +1931,23 @@ function interim(cap) {
   const blob = new Blob(chunks, { type: (cap.rec && cap.rec.mimeType) || MIME || "audio/webm" });
   if (blob.size > 4000) transcribe(blob, cap.who, { final: false, cap });
 }
+// Preserve captured mic and system clips during temporary provider rate limits.
+// One shared lane avoids hammering the paid transcription quota from two sources.
+let speechUploadQueue = Promise.resolve();
+let speechCooldownUntil = 0;
+function speechRetryAfterMs(headers, attempt = 0) {
+  const raw = String(headers?.get?.("retry-after") || "").trim();
+  const n = Number(raw), date = raw && !Number.isFinite(n) ? Date.parse(raw) : NaN;
+  const hint = raw && Number.isFinite(n) && n > 0 ? n * 1000 : Number.isFinite(date) ? date - Date.now() : 0;
+  return Math.min(120000, Math.max(3000, Number.isFinite(hint) && hint > 0 ? hint : 8000 * Math.pow(2, Math.min(4, attempt))));
+}
+function queueSpeechUpload(task) {
+  const previous = speechUploadQueue;
+  let release;
+  speechUploadQueue = new Promise(resolve => { release = resolve; });
+  return previous.catch(() => {}).then(task).finally(() => release());
+}
+function speechSleep(ms) { return new Promise(resolve => setTimeout(resolve, Math.max(0, ms))); }
 async function transcribe(blob, who, opt) {
   const epoch = opt.epoch ?? transcriptionEpoch;
   const cap = opt.cap; if (cap) cap.inflight++;
@@ -1939,24 +1956,32 @@ async function transcribe(blob, who, opt) {
   if (opt.final) transcriptionOrder = new Promise(resolve => { release = resolve; });
   let clean = "", failure = "";
   try {
-    // One bounded retry preserves the same audio after a temporary connection or server failure.
-    for (let attempt = 0; attempt < (opt.final ? 2 : 1); attempt++) {
+    const upload = async () => {
+    // A rate-limited final clip retries the SAME recorded bytes after cooldown.
+    for (let attempt = 0; attempt < (opt.final ? 5 : 1); attempt++) {
+      const cooldownWait = speechCooldownUntil - Date.now();
+      if (cooldownWait > 0) {
+        if (opt.final && epoch === transcriptionEpoch) status("Speech provider busy (429). Recorded audio retained; waiting for cooldown.", "live");
+        await speechSleep(cooldownWait);
+      }
       if (epoch !== transcriptionEpoch) break;
       const ctl = new AbortController();
       const timeout = setTimeout(() => ctl.abort(), 18000);
       let retry = false, delay = 500;
       try {
         const res = await fetch("/api/transcribe", { method: "POST", signal: ctl.signal,
-          headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-whisper-prompt": encodeURIComponent(opt.prompt ?? whisperPrompt()), "x-speech-lang": String((typeof current !== "undefined" && current && current.language) || "en").slice(0, 2).toLowerCase() }, body: blob });
+          headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-audio-source": who === "Them" ? "system" : "mic", "x-whisper-prompt": encodeURIComponent(opt.prompt ?? whisperPrompt()), "x-speech-lang": String((typeof current !== "undefined" && current && current.language) || "en").slice(0, 2).toLowerCase() }, body: blob });
         if (!res.ok) {
-          retry = res.status === 429 || res.status >= 500;
-          const retrySeconds = Number(res.headers?.get("retry-after"));
+          retry = attempt + 1 < (opt.final ? 5 : 1) && (res.status === 429 || res.status >= 500);
           if (res.status === 429) {
             interimOffUntil = performance.now() + 60000;
-            if (retrySeconds > 2) retry = false;
-            delay = Math.min(2000, Math.max(500, retrySeconds * 1000 || 500));
-          }
-          failure = `Transcription unavailable (${res.status}). This phrase was not transcribed; please repeat it or type it.`;
+            const cooldown = speechRetryAfterMs(res.headers, attempt);
+            speechCooldownUntil = Math.max(speechCooldownUntil, Date.now() + cooldown);
+            if (retry && epoch === transcriptionEpoch)
+              status("Speech provider busy (429). Saved audio remains queued for automatic retry.", "live");
+          } else delay = Math.min(6000, 750 * (attempt + 1));
+          failure = res.status === 429 ? "Speech provider is rate-limited (429). This recording has not been transcribed." :
+            `Transcription unavailable (${res.status}). This phrase was not transcribed; please repeat it or type it.`;
         } else {
           clean = cleanTranscript((await res.json()).text);
           if (!clean && dictationRetry(clean, opt.speechMs || 0, attempt)) {
@@ -1971,13 +1996,16 @@ async function transcribe(blob, who, opt) {
           }
         }
       } catch (error) {
-        retry = true;
+        retry = attempt + 1 < (opt.final ? 5 : 1);
+        delay = Math.min(6000, 750 * (attempt + 1));
         failure = error.name === "AbortError" ? "Transcription timed out. Please repeat the phrase or type it." : "Could not transcribe audio. Check your connection, then repeat the phrase.";
       } finally { clearTimeout(timeout); }
-      if (!retry || attempt || !opt.final) break;
+      if (!retry || !opt.final) break;
       if (failure && epoch === transcriptionEpoch) status("Connection interrupted. Retrying the captured phrase…", "live");
-      await new Promise(resolve => setTimeout(resolve, delay));
+      if (speechCooldownUntil <= Date.now()) await speechSleep(delay);
     }
+    };
+    if (opt.final) await queueSpeechUpload(upload); else await upload();
     if (opt.final) await priorOrTimeout(previous);
     if (epoch !== transcriptionEpoch) return;
     if (failure && opt.final) { transcriptionFailedEpoch = epoch; status(failure, "err"); return false; }
