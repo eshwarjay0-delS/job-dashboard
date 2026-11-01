@@ -490,6 +490,35 @@ function lockDownSession() {
   ses.protocol.handle("kompas", serve);
 }
 
+// Windows Live Captions capture: bounded, short-lived screenshot. The renderer
+// requests frames only while the user has enabled Captions in a live session.
+// This is NOT a general-purpose screenshot service and never stores images.
+let lastCaptionFrameAt = 0;
+async function captionFrame(request = {}) {
+  if (!win || win.isDestroyed() || !win.isVisible()) throw new Error("Kompas desktop is not visible");
+  const elapsed = Date.now() - lastCaptionFrameAt;
+  if (elapsed < 1100) throw new Error("Caption capture is pacing requests");
+  lastCaptionFrameAt = Date.now();
+  const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 1920, height: 1080 }, fetchWindowIcons: false });
+  if (!sources.length) throw new Error("No desktop screen available");
+  const screenId = Number.isInteger(request.screenId) ? Math.max(0, Math.min(sources.length - 1, request.screenId)) : 0;
+  const thumb = sources[screenId].thumbnail;
+  if (!thumb || thumb.isEmpty()) throw new Error("Cannot read this display");
+  let frame = thumb;
+  const box = request.bounds;
+  if (Array.isArray(box) && box.length === 4 && box.every(n => Number.isInteger(n) && n >= 0 && n <= 1000) && box[0] < box[2] && box[1] < box[3]) {
+    const sz = thumb.getSize();
+    const x = Math.floor(box[0] * sz.width / 1000), y = Math.floor(box[1] * sz.height / 1000);
+    const width = Math.min(sz.width - x, Math.ceil((box[2] - box[0]) * sz.width / 1000));
+    const height = Math.min(sz.height - y, Math.ceil((box[3] - box[1]) * sz.height / 1000));
+    if (width < 24 || height < 18) throw new Error("Caption area is too small");
+    frame = thumb.crop({ x, y, width, height });
+  }
+  const jpeg = frame.toJPEG(78);
+  if (!jpeg.length || jpeg.length > 2500000) throw new Error("Caption image exceeds the safe upload size");
+  return { image: "data:image/jpeg;base64," + jpeg.toString("base64"), screenId, monitors: sources.length };
+}
+
 function wireIpc() {
   ipcMain.on("kompas:collapse", (_e, on) => setCollapsed(typeof on === "boolean" ? on : !collapsed));
   ipcMain.on("kompas:close", () => win && win.close());
@@ -506,6 +535,10 @@ function wireIpc() {
   ipcMain.handle("kompas:get-private", () => !!config.isPrivate);
   ipcMain.handle("kompas:set-private", (_e, on) => setPrefs({ isPrivate: !!on }).isPrivate);
   ipcMain.handle("kompas:take-session", () => { const s = pendingSession; pendingSession = null; return s; });
+  ipcMain.handle("kompas:capture-captions", (event, options) => {
+    if (!win || event.sender.id !== win.webContents.id) throw new Error("Invalid caption capture caller");
+    return captionFrame(options || {});
+  });
 }
 
 if (!app.requestSingleInstanceLock()) app.quit();
