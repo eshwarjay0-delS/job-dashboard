@@ -84,7 +84,7 @@ export function naturalNarrationFlags(question: string, answer: string): string[
   // words like "key", "door", and "apartment" are not sufficient.
   if (!requestedAnalogy && /\b(?:think of it like|think of this like|it'?s (?:just )?like|imagine (?:you(?:'re| are)?|a|the)|picture (?:a|the|yourself))\b[^.!?\n]{0,120}\b(?:apartment|house key|front door|spare key under|kitchen|bouncer|movie ticket|airport security|traffic light)\b/i.test(response))
     flags.push("unrequested-toy-analogy")
-  if (/\b(?:that'?s (?:a )?(?:phenomenal|amazing|brilliant) question|what an incredible question|absolutely mind[- ]blowing)\b/i.test(response))
+  if (/\b(?:(?:that'?s|that is) (?:a )?(?:phenomenal|amazing|brilliant|excellent) question|what an incredible question|absolutely mind[- ]blowing)\b/i.test(response))
     flags.push("performative-interviewer-praise")
   if (/\b(?:at the end of the day|in conclusion|to sum(?:marize)? up|as you can see)\b/i.test(response))
     flags.push("scripted-landing")
