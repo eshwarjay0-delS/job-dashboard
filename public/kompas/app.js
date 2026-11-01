@@ -2987,7 +2987,7 @@ function captionTechnicalCorrection(raw) {
   ];
   const base = text;
   for (const item of homophones) {
-    if (!vocab.has(item.word.toUpperCase()) || !context || !item.context.test(base)) continue;
+    if (!vocab.has(item.word.toUpperCase()) || !context || (!directTermQuestion && !item.context.test(base))) continue;
     // "It would seem" is ordinary prose, never a product acronym.
     if (item.word === "SIEM" && /\b(?:it|would|does|did|might|may|could|should)\s+seem\b/i.test(base)) continue;
     text = text.replace(item.re, item.word);
