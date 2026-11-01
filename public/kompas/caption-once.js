@@ -3,15 +3,20 @@
   let busy = false;
   const clean = s => String(s || "").replace(/\s+/g, " ").trim();
   const similar = s => clean(s).toLowerCase().replace(/[^a-z0-9+#]+/g, " ");
+  function containsPhrase(haystack, needle) {
+    const a = " " + similar(haystack).trim() + " ";
+    const b = " " + similar(needle).trim() + " ";
+    return b.trim() ? a.includes(b) : false;
+  }
   function combine(previous, captured) {
     const before = clean(previous), next = clean(captured);
     if (!before) return next;
-    if (!next || similar(before).includes(similar(next))) return before;
-    if (similar(next).includes(similar(before))) return next;
+    if (!next || containsPhrase(before, next)) return before;
+    if (containsPhrase(next, before)) return next;
     return before + "\n" + next;
   }
   function extractedText(payload) {
-    if (payload?.needsAnswer === true) return clean(payload.question);
+    if (payload?.needsAnswer === true && typeof payload.question === "string") return clean(payload.question);
     if (payload?.needsReview === true && Array.isArray(payload.tasks))
       return payload.tasks.map(t => clean(t?.question)).filter(Boolean).join("\n");
     return "";
