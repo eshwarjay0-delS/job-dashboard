@@ -60,8 +60,11 @@ export async function createClientFromRequest(request: NextRequest) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return stubClient();
 
-  const bearer = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!bearer) return createClient();
+  const authorization = request.headers.get("authorization");
+  if (!authorization) return createClient();
+  // A supplied but invalid Authorization header must not inherit browser cookies.
+  const bearer = authorization.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+  if (!bearer) return stubClient();
 
   return createSupabaseClient(url, key, {
     global: { headers: { Authorization: `Bearer ${bearer}` } },
