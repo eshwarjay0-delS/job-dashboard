@@ -12,6 +12,12 @@ contextBridge.exposeInMainWorld("kompasDesktop", {
   version: "0.7.0",
   systemAudio: true,
   captureCaptions: (options) => ipcRenderer.invoke("kompas:capture-captions", options || {}),
+  monitorCaptions: (enabled) => ipcRenderer.invoke("kompas:caption-monitor", !!enabled),
+  onCaptionText: (fn) => {
+    const handler = (_event, data) => { if (typeof fn === "function") fn(data); };
+    ipcRenderer.on("kompas:caption-text", handler);
+    return () => ipcRenderer.removeListener("kompas:caption-text", handler);
+  },
   captionsAvailable: true,
   setScreen: (name) => { screenName = String(name); ipcRenderer.send("kompas:screen", screenName); paintScreen(); },
   setLive: (on) => ipcRenderer.send("kompas:live", !!on),
