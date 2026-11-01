@@ -59,7 +59,7 @@ assert.equal(context.parse(["https://attacker.invalid"]), null);
 assert.ok(desktop.includes('app.setAsDefaultProtocolClient(MARKETFIT_SCHEME'));
 assert.ok(desktop.includes('fs.mkdirSync(marketFitProfile, { recursive: true })'), "First installation must create MarketFit profile before setting userData");
 assert.ok(desktop.includes('app.setPath("userData", marketFitProfile)'), "Isolate the MarketFit session store");
-assert.ok(desktop.includes('activeSite = pendingSession ? siteFor(pendingSession) : (startedForMarketFit ? "marketfit" : "perfact")'), "Opening the desktop without a session must start MarketFit when requested");
+assert.ok(desktop.includes('activeSite = pendingSession ? siteFor(pendingSession) : "marketfit"'), "The installed desktop always starts canonical MFit when no explicit legacy deep link is passed");
 assert.match('marketfit-kompas://open', /^marketfit-kompas:\/\/open$/, "Installer page may launch MarketFit with no session");
 assert.equal(context.parse(["marketfit-kompas://open"]), null);
 assert.ok(desktop.includes('app.setAsDefaultProtocolClient(MARKETFIT_SCHEME'));
