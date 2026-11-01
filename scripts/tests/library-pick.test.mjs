@@ -68,6 +68,10 @@ test('the answer is read as he said it: "number one", "1", the address', () => {
   // Natural WhatsApp replies must select the right profile without another JD paste.
   assert.equal(choiceIn('The email is dwhit44@gmail.com in this case', TWO), B)
   assert.equal(choiceIn('For dwhit44@gmail.com', TWO), B)
+  assert.equal(choiceIn('The account is dwhit44@gmail.com', TWO), B)
+  assert.equal(choiceIn('Use dwhit44@gmail.com', TWO), B)
+  assert.equal(choiceIn('Please review this job with dwhit44@gmail.com contact info', TWO), '', 'incidental JD email is not a library selection')
+  assert.equal(choiceIn('I received an offer at dwhit44@gmail.com', TWO), '', 'an incidental address must not select a resume profile')
   assert.equal(choiceIn('The email is dana05@gmail.com in this case', TWO), A)
   assert.equal(choiceIn('I have both dana05@gmail.com and dwhit44@gmail.com', TWO), '')
   // As people really answer: a polite word after it, a digit tapped from the emoji keyboard, a circled digit.
@@ -178,6 +182,7 @@ test('WhatsApp bot: a resume sent wins, otherwise the email is asked once and re
   assert.ok(bot.includes('const claim = await claimLinkCode(from, linking[1])'))
   assert.ok(bot.includes('saveTailored('), 'every resume made is filed in Files')
   assert.ok(bot.includes('chooseResume({'), 'the resume is chosen by the module Apply on the website shares')
+  assert.ok(bot.includes('jobKeyOf(job.jd)}-${createHash("sha256").update(email.toLowerCase())'), 'duplicate-job claim is scoped by the selected email library')
   assert.ok(read('src/lib/library-choose.ts').includes('agentPick('), 'the AI agent picks the resume inside the email')
   assert.ok(!bot.includes('archiveGeneratedResume('))
   assert.ok(!bot.includes('resume_documents'))
