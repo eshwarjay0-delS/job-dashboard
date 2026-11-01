@@ -3593,6 +3593,20 @@ $("answerBtn").onclick = () => aiAnswer(false);
 let aiBusy = false, aiBusySince = 0;
 let answerAnywayHeld = null;   // the lines a manual press just turned away, for "Answer anyway"
 async function aiAnswer(fromAuto) {
+  // AI Answer must work even when the paid STT path is rate-limited: commit the
+  // caption draft immediately when the user explicitly presses the button.
+  if (!fromAuto && captionCaptureEnabled && running && captionDraft) {
+    const fresh = captionTechnicalCorrection(captionDraft);
+    if (fresh) {
+      captionDraft = "";
+      captionLastCommitted = fresh;
+      captionCommittedAt = Date.now();
+      const box = $("manualInput");
+      if (box && box.dataset.captionDraft === "1") { box.value = ""; delete box.dataset.captionDraft; }
+      if (!pendingHeard().some(t => t.who === "Them" && echoShare(fresh, t.text) >= 0.8))
+        onTranscript("Them", fresh, false, Date.now(), true);
+    }
+  }
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
     else { status("Still working on the last answer — one moment.", "live"); return; }
@@ -3816,7 +3830,11 @@ function captionQuestionLike(s) {
   const t = String(s || "").trim();
   if (!t || t.split(/\s+/).length < 2) return false;
   if (Q_CUE.test(t) || opensNewAsk(t)) return true;
-  return t.split(/\s+/).length <= 6 && /\b(?:SIEM|SOAR|IAM|PAM|EPM|CyberArk|Kerberos|SAML|OAuth|RBAC|EDR|XDR|DeltaV|PAS-X|PLC)\b/i.test(t);
+  // A spoken technical keyword fragment is an interview question too. Use
+  // current resume/JD/document terms; do not maintain a SIEM-only whitelist.
+  if (t.split(/\s+/).length > 9) return false;
+  const words = new Set(t.toLowerCase().split(/[^a-z0-9+#-]+/));
+  return termVocab().some(v => v.length >= 3 && words.has(v.toLowerCase()));
 }
 function captionReadText(raw) {
   const fresh = String(raw || "").replace(/\s+/g, " ").trim();
@@ -3836,9 +3854,9 @@ function captionReadText(raw) {
   status("Caption Capture heard: " + corrected.slice(-250), "live");
   return true;
 }
-function captionCommitIfQuiet() {
+function captionCommitIfQuiet(force = false) {
   if (!running || !captionCaptureEnabled || !captionDraft ||
-      Date.now() - captionLastChanged < 1050) return false;
+      (!force && Date.now() - captionLastChanged < 1050)) return false;
   const complete = captionTechnicalCorrection(captionDraft);
   if (!captionQuestionLike(complete)) return false;
   if (captionLastCommitted && captionNormalized(complete) === captionNormalized(captionLastCommitted)) {
@@ -3872,6 +3890,7 @@ function captionBegin() {
     captionDirectUnsubscribe = window.kompasDesktop.onCaptionText((event) => {
       if (!running || !captionCaptureEnabled || event?.source !== "windows-live-captions-uia" || typeof event.text !== "string") return;
       captionDirectAt = Date.now();
+      captionSeenAt = captionDirectAt;
       captionReadText(event.text);
       captionCommitIfQuiet();
     });
