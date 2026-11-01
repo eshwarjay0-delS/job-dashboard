@@ -51,7 +51,7 @@ const siteFor = (s) => s && s.site === "marketfit" ? "marketfit" : "perfact";
 const appPathFor = () => activeSite === "marketfit" ? "/kompas/index.html" : "/index.html";
 const targetOrigin = () => activeSite === "marketfit" ? MARKETFIT_API_ORIGIN : PERFACT_API_ORIGIN;
 const ORIGIN = "kompas://app";
-const FORWARD_HEADERS = ["content-type", "accept", "x-audio-mime", "x-whisper-prompt", "x-speech-hint", "x-speech-lang", "x-speech-for", "x-kompas-app"];
+const FORWARD_HEADERS = ["content-type", "accept", "x-audio-mime", "x-audio-source", "x-session-id", "x-whisper-prompt", "x-speech-hint", "x-speech-lang", "x-speech-for", "x-kompas-app"];
 const PANEL_CSS = fs.readFileSync(path.join(__dirname, "panel.css"), "utf8");
 
 protocol.registerSchemesAsPrivileged([
