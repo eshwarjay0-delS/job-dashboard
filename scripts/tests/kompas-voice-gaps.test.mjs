@@ -95,7 +95,7 @@ function transcribeEnv(extra = {}) {
   state.showCaption = () => {}
   vm.createContext(state)
   vm.runInContext(section("function whisperPrompt(", "// Owner, 2026-09-30"), state)
-  vm.runInContext(section("async function transcribe(", "/* ---- what was heard"), state)
+  vm.runInContext(section("let speechUploadActive = 0;", "/* ---- what was heard"), state)
   return state
 }
 test("B3: a stalled phrase no longer holds the next phrase back", { timeout: 15000 }, async () => {
