@@ -496,27 +496,34 @@ function lockDownSession() {
 let lastCaptionFrameAt = 0;
 async function captionFrame(request = {}) {
   if (!win || win.isDestroyed() || !win.isVisible()) throw new Error("Kompas desktop is not visible");
-  const elapsed = Date.now() - lastCaptionFrameAt;
-  if (elapsed < 1100) throw new Error("Caption capture is pacing requests");
+  if (Date.now() - lastCaptionFrameAt < 1100) throw new Error("Caption capture is pacing requests");
   lastCaptionFrameAt = Date.now();
-  const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 1920, height: 1080 }, fetchWindowIcons: false });
-  if (!sources.length) throw new Error("No desktop screen available");
-  const screenId = Number.isInteger(request.screenId) ? Math.max(0, Math.min(sources.length - 1, request.screenId)) : 0;
-  const thumb = sources[screenId].thumbnail;
-  if (!thumb || thumb.isEmpty()) throw new Error("Cannot read this display");
+  // Native Windows caption window title is the most privacy-preserving target:
+  // window-only acquisition works regardless of where it is moved or docked.
+  const windows = await desktopCapturer.getSources({ types: ["window"], thumbnailSize: { width: 1600, height: 600 }, fetchWindowIcons: false });
+  const live = windows.find(w => /^(?:live[ -]?captions?|windows live captions)(?:\\b|\\s*[—-])/i.test(String(w.name || "").trim()) && w.thumbnail && !w.thumbnail.isEmpty());
+  const useWindow = !!live;
+  const screens = useWindow ? [] : await desktopCapturer.getSources({
+    types: ["screen"], thumbnailSize: { width: 1920, height: 1080 }, fetchWindowIcons: false,
+  });
+  if (!live && !screens.length) throw new Error("No desktop display or Live Captions window available");
+  const screenId = useWindow ? -1 : Number.isInteger(request.screenId) ? Math.max(0, Math.min(screens.length - 1, request.screenId)) : 0;
+  const thumb = useWindow ? live.thumbnail : screens[screenId].thumbnail;
+  if (!thumb || thumb.isEmpty()) throw new Error("Cannot read the Live Captions or display image");
   let frame = thumb;
-  const box = request.bounds;
+  // Reuse a proven text box only on the same full screen; Windows may move it.
+  const box = !useWindow && request.bounds;
   if (Array.isArray(box) && box.length === 4 && box.every(n => Number.isInteger(n) && n >= 0 && n <= 1000) && box[0] < box[2] && box[1] < box[3]) {
     const sz = thumb.getSize();
     const x = Math.floor(box[0] * sz.width / 1000), y = Math.floor(box[1] * sz.height / 1000);
     const width = Math.min(sz.width - x, Math.ceil((box[2] - box[0]) * sz.width / 1000));
     const height = Math.min(sz.height - y, Math.ceil((box[3] - box[1]) * sz.height / 1000));
-    if (width < 24 || height < 18) throw new Error("Caption area is too small");
-    frame = thumb.crop({ x, y, width, height });
+    if (width >= 24 && height >= 18) frame = thumb.crop({ x, y, width, height });
   }
   const jpeg = frame.toJPEG(78);
-  if (!jpeg.length || jpeg.length > 2500000) throw new Error("Caption image exceeds the safe upload size");
-  return { image: "data:image/jpeg;base64," + jpeg.toString("base64"), screenId, monitors: sources.length };
+  if (!jpeg.length || jpeg.length > 2500000) throw new Error("Caption image exceeds safe upload size");
+  return { image: "data:image/jpeg;base64," + jpeg.toString("base64"), screenId, monitors: useWindow ? 1 : screens.length,
+    cropped: useWindow || frame !== thumb, source: useWindow ? "windows-live-captions" : "display" };
 }
 
 function wireIpc() {
