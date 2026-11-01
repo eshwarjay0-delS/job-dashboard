@@ -61,7 +61,8 @@ export async function createClientFromRequest(request: NextRequest) {
   if (!url || !key) return stubClient();
 
   const authorization = request.headers.get("authorization");
-  if (!authorization) return createClient();
+  // Only an absent header may use browser cookies; an explicitly empty header is invalid.
+  if (authorization === null) return createClient();
   // A supplied but invalid Authorization header must not inherit browser cookies.
   const bearer = authorization.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
   if (!bearer) return stubClient();
