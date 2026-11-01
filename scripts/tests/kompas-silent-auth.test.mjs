@@ -67,17 +67,33 @@ test('the same card failing twice while waiting retries only once on heal', asyn
   assert.equal(generated.length, 1, 'no duplicate retry for the same card');
 });
 
-test('wait stops after 20 failed probes with a neutral, non-auth message and no retry', async () => {
+test('wait never drops: after 20 failed probes it slows to 5 minutes and keeps waiting', async () => {
   const card = { question: 'Q', answer: ['…'] };
   const generated = [];
   const w = loadWait({ cards: [card], fetch: async () => ({ ok: false }), generateAnswer: (...a) => generated.push(a) });
   w.context.waitForAuthSilently({ question: 'Q', card, opts: {} });
   for (let i = 0; i < 20; i++) await w.tick()();
   assert.equal(generated.length, 0, 'nothing retries while auth stays down');
-  assert.ok(w.cleared() >= 1, 'probe timer stopped');
-  const msg = card.answer[0];
-  assert.match(msg, /Still waiting for the session/);
-  assert.doesNotMatch(msg, /sign|auth|login|reconnect/i, 'cap message never names auth');
+  assert.equal(w.timers(), 2, 'fast timer replaced by the slow timer');
+  assert.equal(w.cleared(), 1, 'only the fast timer stopped');
+  assert.deepEqual(card.answer, ['…'], 'no give-up message: the wait continues');
+  await w.tick()();
+  assert.equal(w.cleared(), 1, 'slow timer keeps running past 20 probes');
+  assert.equal(generated.length, 0);
+});
+
+test('slow wait heals and resumes when auth recovers', async () => {
+  const card = { question: 'Q', answer: ['…'] };
+  const generated = [];
+  let ok = false;
+  const w = loadWait({ cards: [card], fetch: async () => ({ ok }), generateAnswer: (...a) => generated.push(a) });
+  w.context.waitForAuthSilently({ question: 'Q', card, opts: {} });
+  for (let i = 0; i < 20; i++) await w.tick()();
+  assert.equal(generated.length, 0);
+  ok = true;
+  await w.tick()();
+  assert.equal(generated.length, 1, 'failed answer resumes whenever auth heals');
+  assert.equal(generated[0][1], card);
 });
 
 test('no auth UI text remains in the client', () => {

@@ -820,25 +820,24 @@ function waitForAuthSilently(retry) {
   __authWaiting = true;
   if (__authWaitTimer) return;
   let tries = 0;
-  __authWaitTimer = setInterval(async () => {
+  let slow = false;
+  const tick = async () => {
     tries++;
     try {
       try { await tryRefreshAuth(); } catch {}
       const res = await fetch("/api/kompas/answer", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ deriveOnly: true, question: "ping" }) });
       if (res.ok) { healAuthSilently(); return; }
     } catch {}
-    if (tries >= 20) {
-      clearInterval(__authWaitTimer); __authWaitTimer = null; __authWaiting = false;
-      const pending = __authPendingRetries; __authPendingRetries = [];
-      for (const p of pending) {
-        if (!p || !p.card) continue;
-        try {
-          if (typeof p.card.answer !== "string" || !p.card.answer.trim() || p.card.answer.trim() === "…") p.card.answer = ["Still waiting for the session. Press AI Answer again to retry."];
-          if (cards[idx] === p.card) renderCard();
-        } catch {}
-      }
+    // Never drop the wait: after 20 fast probes, keep probing every 5 minutes
+    // for as long as the page stays open. A failed answer resumes the moment
+    // auth heals, whenever that is. (Owner, 1 Nov 2026: never log out.)
+    if (!slow && tries >= 20) {
+      slow = true;
+      clearInterval(__authWaitTimer);
+      __authWaitTimer = setInterval(tick, 5 * 60 * 1000);
     }
-  }, 30 * 1000);
+  };
+  __authWaitTimer = setInterval(tick, 30 * 1000);
 }
 async function preparePack(s) {
   if (location.protocol === "file:") { seedIdentity(s); status("Serve the deployed app for live prep + answers.", "live"); return; }
