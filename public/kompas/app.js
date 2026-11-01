@@ -2970,7 +2970,8 @@ function captionTechnicalCorrection(raw) {
   const vocab = new Set(termVocab().map(v => v.toUpperCase()));
   const technical = /\b(security|cyber|SOC|log|logs|logging|alerts?|events?|threat|incident|monitor(?:ing)?|rules?|detection|correlat\w*|dashboard|tool|platform|orchestrat\w*|automati\w*|playbooks?|authentication|access|privileg\w*|integration|endpoint|policy|risk|architecture|configur\w*|cloud|pipeline|audit|identity)\b/i.test(text);
   const question = /(?:\?|^(?:what|how|why|which|tell|explain|describe|have|do|does|did|where|can|could|would|walk)\b)/i.test(text);
-  const context = technical || (question && /\b(experience|used|work|engineer|with|about)\b/i.test(text));
+  const directTermQuestion = /^\s*(?:what is|what does|define|explain|tell me about)\s+(?:seem|sore|soar)\s*[?.!]*$/i.test(text);
+  const context = technical || directTermQuestion || (question && /\b(experience|used|work|engineer|with|about)\b/i.test(text));
   const homophones = [
     { re: /\bseem\b/gi, word: "SIEM", context: /\b(?:seem)\b/i },
     { re: /\b(?:sore|soar)\b/gi, word: "SOAR", context: /\b(?:automati\w*|orchestrat\w*|playbooks?|security|incident|SOC|platform|tool|integration|alerts?|work|used)\b/i },
