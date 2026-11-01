@@ -965,6 +965,14 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     bott = pickBottleneck(project, ledger)
     angle = pickAngle(ledger)
     commit(ledger, routed.id, angle, bott, tier)
+  } else if (register === "practice" && tier !== 0) {
+    // Non-story practice turns (technical deep-dives, scenarios): the angle
+    // ledger still advances, so a re-ask rotates to a fresh view instead of
+    // re-serving the same telling. No project routing here — project and
+    // story accounting stay with story turns, and a practice turn needs no
+    // prep projects to rotate; only the angle moves.
+    angle = pickAngle(ledger)
+    recordAngle(ledger, angle)
   }
   const routedProject = projectId ? ledgerProjects.find((p) => p.id === projectId) || null : null
   const toldNames = Object.keys(ledger.story)
@@ -1073,7 +1081,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
       ? `Only if the original sources corroborate it, anchor this answer in this generated project summary: ${routedProject.title}${routedProject.employer ? ` (${routedProject.employer})` : ""}. Do not switch projects mid-answer.`
       : "",
     storyMode && bott ? `Unverified generated bottleneck; use only if corroborated by original sources: ${bott}.` : "",
-    storyMode && angle && tier !== 0 && plan.kind !== "code" ? `Fresh angle for this telling: ${angle}.` : "",
+    (storyMode || register === "practice") && angle && tier !== 0 && plan.kind !== "code" ? `Fresh angle for this telling: ${angle}.` : "",
     includeStoryContext && tier !== 3 && toldNames.length
       ? `Stories already told this session — do not retell them: ${toldNames.join("; ")}.`
       : "",
