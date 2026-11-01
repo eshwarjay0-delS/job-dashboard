@@ -2957,8 +2957,8 @@ function preserveSpokenQuestion(fullTurn, derived) {
   const source = String(fullTurn || "").replace(/\s+/g, " ").trim();
   const proposed = String(derived || "").replace(/\s+/g, " ").trim();
   if (!source || !proposed) return proposed || source;
-  const sWords = source.split(/\\s+/).filter(Boolean).length;
-  const dWords = proposed.split(/\\s+/).filter(Boolean).length;
+  const sWords = source.split(/\s+/).filter(Boolean).length;
+  const dWords = proposed.split(/\s+/).filter(Boolean).length;
   // A concise server reformulation is fine only when it has retained most of
   // what the interviewer actually said. If it lost a meaningful lead, keep
   // the literal captured turn for both the visible card and the answer engine.
