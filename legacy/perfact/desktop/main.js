@@ -508,7 +508,8 @@ function directCaptions(on) {
   if (process.platform !== "win32") return { active: false, reason: "Windows only" };
   if (!win || win.isDestroyed()) return { active: false };
   if (captionSidecar && !captionSidecar.killed) return { active: true };
-  const script = path.join(__dirname, "live-captions-uia.ps1");
+  const packagedScript = path.join(process.resourcesPath || "", "app.asar.unpacked", "live-captions-uia.ps1");
+  const script = fs.existsSync(packagedScript) ? packagedScript : path.join(__dirname, "live-captions-uia.ps1");
   if (!fs.existsSync(script)) return { active: false, reason: "Native caption reader is not installed" };
   try {
     const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script], {
