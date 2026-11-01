@@ -38,6 +38,14 @@ test("Caption title and native direct reader are available in installed Windows 
  assert.match(sidecar,/TreeScope\]::Children/)
  assert.doesNotMatch(sidecar,/Invoke-RestMethod|Invoke-WebRequest|Start-Transcript|Out-File/)
 })
+test("Caption Capture requires explicit consent each session before remote screen OCR",()=>{
+ assert.match(app,/let captionCaptureEnabled = false;/)
+ assert.match(app,/typeof window\.confirm !== "function"/)
+ assert.match(app,/desktop display may be sent to the authenticated screen-analysis service/)
+ assert.match(app,/function captionEnd\(\) \{\s*captionCaptureEnabled = false;/)
+ assert.match(app,/if \(!running \|\| !captionCaptureEnabled \|\| captionCaptureBusy\) return;/)
+ assert.match(html,/id="screenCaptureAnswerBtn"[^>]*aria-pressed="false"/)
+})
 test("Native direct caption route gets priority, with 200ms local quiet detector",()=>{
  assert.match(app,/captionDirectAt = Date.now\(\);\s*captionSeenAt = captionDirectAt/)
  assert.match(app,/captionQuietTimer = setInterval\(\(\) => captionCommitIfQuiet\(\), 200\)/)
