@@ -1218,7 +1218,7 @@ $("collapseBtn").onclick = () => $("overlay").classList.toggle("collapsed");
 $("hideBtn").onclick = () => $("overlay").classList.toggle("collapsed");
 $("transcriptBtn").onclick = () => $("drawer").classList.toggle("hidden");
 $("personaBtn").onclick = () => openPersonaFile();
-$("clearBtn").onclick = () => { if (window.KompasScreenReset) window.KompasScreenReset(); cards = [{ question: "Cleared.", answer: ["Ask something, or let the call fill this in."] }]; idx = 0; transcript = []; answeredSeq = heardSeq; updatePending(); renderDrawer(); renderCard(); status("Cleared."); };
+$("clearBtn").onclick = () => { if (window.KompasScreenReset) window.KompasScreenReset(); cards = [{ question: "Cleared.", answer: ["Ask something, or let the call fill this in."] }]; idx = 0; transcript = []; lastCaption = ""; captionAnnounced = false; answeredSeq = heardSeq; updatePending(); renderDrawer(); renderCard(); status("Cleared."); };
 // Three asking levels. On the desktop, each level keeps its own answer for the
 // question on screen, and a switch shows that answer or starts it at once.
 // v3 drops answers stored before the question-depth correction.
@@ -2748,6 +2748,7 @@ function resetLiveState() {           // a new or exited session starts clean: n
   if (answerCtl) { try { answerCtl.abort(); } catch {} answerCtl = null; }
   clearTimeout(autoTimer);
   heardSeq = 0; answeredSeq = 0;
+  lastCaption = ""; captionAnnounced = false;
   updatePending();
 }
 // Misheard terms (owner, 2026-09-30: "yes — and dependency keywords and other related or used words as well").
@@ -2925,6 +2926,52 @@ function heardDraft(lines, screen, answerText) {
   // line): show the last four phrases, rolling forward as new lines arrive.
   const q = bits.slice(-4).join(" ");
   return q.length > 600 ? "…" + q.slice(-600) : q;
+}
+// Caption capture (owner, 1 Nov 2026, titled "caption capture"): when the
+// desktop shell detects a live-caption box anywhere, its text flows here
+// automatically — no share, no Whisper, no extra tap. Each caption update
+// repeats the tail of the previous one, so only the new words enter the
+// transcript, as interviewer lines, through the same onTranscript path
+// every heard line takes: term correction, question forming, Auto, and
+// AI Answer all work on captions exactly as on transcribed audio. The
+// caption to question-box leg is synchronous, so it lands in well under a
+// second; the shell polls the caption box at most every 250 ms (bridge
+// contract: the shell sends "kompas:caption" with the box text; the page
+// owns dedup). Self-contained: captionNewPart is pure, with its stopword
+// list inlined, so suites can extract it alone.
+function captionNewPart(last, text) {
+  try {
+    const stop = ["the", "a", "an", "and", "or", "but", "is", "are", "was", "were", "to", "of", "in", "on"];
+    const cur = String(text || "").replace(/\s+/g, " ").trim();
+    if (!cur) return { part: "", next: String(last || "") };
+    const prev = String(last || "").replace(/\s+/g, " ").trim();
+    if (!prev) return { part: cur, next: cur };
+    if (cur === prev) return { part: "", next: prev };
+    if (cur.startsWith(prev + " ")) return { part: cur.slice(prev.length).trim(), next: cur };
+    if (prev.startsWith(cur + " ")) return { part: "", next: prev };
+    const prevWords = prev.split(" "), curWords = cur.split(" ");
+    let overlap = 0;
+    const max = Math.min(prevWords.length, curWords.length, 40);
+    for (let k = max; k >= 1; k--) {
+      const a = prevWords.slice(-k).map(w => w.toLowerCase()).join(" ");
+      const b = curWords.slice(0, k).map(w => w.toLowerCase()).join(" ");
+      if (a === b && !(k === 1 && stop.includes(b))) { overlap = k; break; }
+    }
+    if (overlap > 0) return { part: curWords.slice(overlap).join(" ").trim(), next: cur };
+    return { part: cur, next: cur };
+  } catch { return { part: String(text || "").trim(), next: String(text || "").trim() }; }
+}
+let lastCaption = "";
+let captionSubscribed = false, captionAnnounced = false;
+function onCaptionText(text) {
+  try {
+    if (!running) return;
+    const r = captionNewPart(lastCaption, text);
+    lastCaption = r.next;
+    if (!r.part) return;
+    if (!captionAnnounced) { captionAnnounced = true; status("Caption capture connected — captions flow into the question box.", "live"); }
+    onTranscript("Them", r.part, false, Date.now());
+  } catch {}
 }
 function onTranscript(who, text, lookedAgain, spokenAt) {
   text = fixTerms(fixPhrases(text));
@@ -5269,6 +5316,11 @@ async function openHandedSession(s) {
 }
 window.kompasDesktop?.takeSession?.().then(s => { if (s) openHandedSession(s); });
 window.kompasDesktop?.onSession?.(openHandedSession);
+// Caption capture subscription: automatic, no toggle — when the desktop
+// build offers a caption channel, every box update flows into onCaptionText.
+// The guard keeps a session restart from subscribing twice (double ingest).
+if (typeof window.kompasDesktop?.onCaption === "function" && !captionSubscribed) { captionSubscribed = true; window.kompasDesktop.onCaption((t) => onCaptionText(t)); }
+window.__kompasCaption = onCaptionText;
 $("cnStart").onclick = () => {
   const app = window.kompasDesktop ? "desktop" : LS.get("connectApp", "web");
   if (!window.kompasDesktop && app === "desktop") { launchInstalled(current); return; }
