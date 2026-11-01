@@ -490,46 +490,33 @@ function lockDownSession() {
   ses.protocol.handle("kompas", serve);
 }
 
-// Window pin is session-local and selected by the user. Never substitute a
-// different window, a full display or Kompas itself if the chosen one closes.
-let pinnedCaptionSource = null;
-let lastPinnedFrameAt = 0;
-function trustedCaptionCaller(event) {
-  if (!win || win.isDestroyed() || event.sender.id !== win.webContents.id)
-    throw new Error("Only the active Kompas desktop can read its pinned window");
+// One user action = one capture. The native desktop chooses ONLY a window,
+// preferring the uniquely named Windows Live Captions panel; no background
+// polling, recording, full-screen grab, or reuse of an old frame.
+function isWindowsLiveCaption(name) {
+  return /^(?:windows\\s+)?live[\\s-]*captions?(?:$|[\\s—-])/i.test(String(name || "").trim());
 }
-async function enumerateCaptionWindows() {
-  const sources = await desktopCapturer.getSources({ types: ["window"], thumbnailSize: { width: 0, height: 0 } });
-  return sources.filter(src => src.name && !/^Kompas(?:\s|$)/i.test(src.name)).map(src => ({
-    id: src.id, name: src.name.slice(0, 150),
-    likelyCaptions: /live[\s-]*captions?/i.test(src.name),
-  }));
-}
-async function pinCaptionWindow(id) {
-  if (typeof id !== "string" || id.length > 150) throw new Error("Choose a valid window");
-  const windows = await enumerateCaptionWindows();
-  const selected = windows.find(w => w.id === id);
-  if (!selected) throw new Error("Selected window is no longer available; choose it again");
-  pinnedCaptionSource = { id: selected.id, name: selected.name };
-  return { ...pinnedCaptionSource };
-}
-async function pinnedCaptionFrame() {
-  if (!pinnedCaptionSource) throw new Error("No selected window is pinned");
-  if (Date.now() - lastPinnedFrameAt < 1200) throw new Error("Caption frame throttled");
-  lastPinnedFrameAt = Date.now();
-  const windows = await desktopCapturer.getSources({
-    types: ["window"], thumbnailSize: { width: 1440, height: 900 },
-    fetchWindowIcons: false,
-  });
-  const target = windows.find(src => src.id === pinnedCaptionSource.id);
-  if (!target || !target.thumbnail || target.thumbnail.isEmpty()) {
-    pinnedCaptionSource = null;
-    throw new Error("Selected window closed; select another window to continue");
+async function captionSnapshotOnce() {
+  const sources = await desktopCapturer.getSources({ types: ["window"], thumbnailSize: { width: 1600, height: 900 }, fetchWindowIcons: false });
+  const windows = sources.filter(src => src.id && src.name && !/^Kompas(?:\\s|$)/i.test(src.name));
+  if (!windows.length) throw new Error("No capturable window was found. Open Windows Live Captions and retry.");
+  const matched = windows.filter(w => isWindowsLiveCaption(w.name));
+  let target = matched.length === 1 ? matched[0] : null;
+  if (!target) {
+    const options = windows.slice(0, 12);
+    const choice = await dialog.showMessageBox(win, {
+      type: "question", title: "Caption Capture", message: "Choose the window to capture once",
+      detail: "Only the selected window will be sent for question recognition.",
+      buttons: [...options.map(w => w.name.slice(0, 64)), "Cancel"], cancelId: options.length, noLink: true,
+    });
+    if (choice.response >= options.length) throw new Error("Window capture cancelled");
+    target = options[choice.response];
   }
-  const jpeg = target.thumbnail.toJPEG(80);
-  if (jpeg.length > 2100000 || !jpeg.length) throw new Error("Pinned image exceeds capture limits");
+  if (!target.thumbnail || target.thumbnail.isEmpty()) throw new Error("The selected window is blank or protected from capture");
+  const jpeg = target.thumbnail.toJPEG(78);
+  if (!jpeg.length || jpeg.length > 2200000) throw new Error("The chosen window image exceeds capture limits");
   return { image: "data:image/jpeg;base64," + jpeg.toString("base64"),
-    sourceId: target.id, name: pinnedCaptionSource.name, cropped: true };
+    source: "window", name: target.name, capturedAt: Date.now() };
 }
 function wireIpc() {
   ipcMain.on("kompas:collapse", (_e, on) => setCollapsed(typeof on === "boolean" ? on : !collapsed));
@@ -547,10 +534,10 @@ function wireIpc() {
   ipcMain.handle("kompas:get-private", () => !!config.isPrivate);
   ipcMain.handle("kompas:set-private", (_e, on) => setPrefs({ isPrivate: !!on }).isPrivate);
   ipcMain.handle("kompas:take-session", () => { const s = pendingSession; pendingSession = null; return s; });
-  ipcMain.handle("kompas:caption-windows", (event) => { trustedCaptionCaller(event); return enumerateCaptionWindows(); });
-  ipcMain.handle("kompas:caption-pin", (event, sourceId) => { trustedCaptionCaller(event); return pinCaptionWindow(sourceId); });
-  ipcMain.handle("kompas:caption-frame", (event) => { trustedCaptionCaller(event); return pinnedCaptionFrame(); });
-  ipcMain.handle("kompas:caption-stop", (event) => { trustedCaptionCaller(event); pinnedCaptionSource = null; return true; });
+  ipcMain.handle("kompas:caption-once", (event) => {
+    if (!win || event.sender.id !== win.webContents.id) throw new Error("Invalid caption capture caller");
+    return captionSnapshotOnce();
+  });
 }
 
 if (!app.requestSingleInstanceLock()) app.quit();
