@@ -1193,7 +1193,7 @@ async function fromLibrary(from: string, job: { jd: string; jdId: string }, emai
   }
   // One run of a job at a time for a number: a job description pasted again, or a second "redo", while it is being made
   // would pay for the pick and the rewrite twice. The claim outlives the longest run (the function's 300 s).
-  const flightKey = `whatsapp/making/${digits(from)}-${jobKeyOf(job.jd)}`
+  const flightKey = `whatsapp/making/${digits(from)}-${jobKeyOf(job.jd)}-${createHash("sha256").update(email.toLowerCase()).digest("hex").slice(0, 16)}`
   const token = randomBytes(6).toString("hex")
   if (!(await blob.putIfAbsent(flightKey, JSON.stringify({ at: Date.now(), token })))) {
     const held = JSON.parse((await blob.getText(flightKey).catch(() => null)) || "{}") as { at?: number }

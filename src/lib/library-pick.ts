@@ -77,11 +77,11 @@ export function choiceIn(line: string, slots: string[]): string {
   const said = lower(String(line || "").normalize("NFKC")).replace(/[^\p{L}\p{N}@._+#' -]+/gu, " ").replace(/\s+/g, " ").trim()
     .replace(/[.\s]+$/g, "").replace(/\s+(?:please|pls|plz|thanks|thank you)$/g, "").replace(/[.\s]+$/g, "")
   if (!said || said.length > 180 || !emails.length) return ""
-  // A natural reply such as "The email is jayeshwar44@gmail.com in this case" is an
-  // account selection, not a new job description. Require exactly one address in the
-  // message and an exact match to one of this account's numbered email libraries.
-  const mentioned = [...new Set(said.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/g) || [])]
-  if (mentioned.length === 1 && emails.includes(mentioned[0])) return mentioned[0]
+  // A natural reply such as "The email is jayeshwar44@gmail.com in this case"
+  // selects a library. An incidental address inside unrelated prose does NOT:
+  // a pasted JD mentioning a known email must not switch resume identity.
+  const selected = said.match(/^(?:(?:the\s+)?(?:email|e-mail|account|library)(?:\s+address)?(?:\s+(?:is|should\s+be|for))?|for|use|choose|select|go\s+with)\s+([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})(?:\s+in\s+this\s+case)?$/i)
+  if (selected && emails.includes(selected[1])) return selected[1]
   // The address itself, or the part before the @ when only one address is written that way.
   const byName = (s: string): string => { const hit = emails.filter(e => e === s || e.split("@")[0] === s); return hit.length === 1 ? hit[0] : "" }
   // "number one", "email 2", "#1", "use the second one": the words around the number are dropped.
