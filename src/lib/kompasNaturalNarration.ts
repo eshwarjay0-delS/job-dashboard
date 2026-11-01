@@ -86,7 +86,7 @@ export function naturalNarrationFlags(question: string, answer: string): string[
     flags.push("unrequested-toy-analogy")
   if (/\b(?:(?:that'?s|that is) (?:a )?(?:phenomenal|amazing|brilliant|excellent) question|what an incredible question|absolutely mind[- ]blowing)\b/i.test(response))
     flags.push("performative-interviewer-praise")
-  if (/\b(?:at the end of the day|in conclusion|to sum(?:marize)? up|as you can see)\b/i.test(response))
+  if (/\b(?:at the end of the day|in conclusion|to summarize|to sum up|in summary|as you can see)\b/i.test(response))
     flags.push("scripted-landing")
   if (/^\s*(?:(?:HOST|EXPERT|NARRATOR|INTERVIEWER)\s*[:\-])/im.test(response))
     flags.push("podcast-speaker-label")
