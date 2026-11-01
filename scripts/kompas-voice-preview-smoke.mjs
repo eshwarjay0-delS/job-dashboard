@@ -30,8 +30,14 @@ export async function verifyVoicePreview({
   if (typeof expectedHost !== "string" || !TRUSTED_PREVIEW_HOST.test(expectedHost)) {
     throw Error("Invalid trusted preview hostname");
   }
+  // The trusted resolver's hostname is mandatory even when no bypass token is
+  // configured. A public preview must not be substituted for another deployment.
+  if (base.hostname !== expectedHost) {
+    throw Error(token !== undefined ? "Invalid private preview authentication configuration" :
+      "Preview hostname does not match trusted deployment");
+  }
   if (token !== undefined && (typeof token !== "string" ||
-      !/^[\x21-\x7e]{1,2048}$/.test(token) || base.hostname !== expectedHost)) {
+      !/^[\x21-\x7e]{1,2048}$/.test(token))) {
     throw Error("Invalid private preview authentication configuration");
   }
   const headers = token ? { "x-vercel-protection-bypass": token } : undefined;
