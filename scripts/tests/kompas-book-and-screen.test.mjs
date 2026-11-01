@@ -26,7 +26,10 @@ test('a new question replaces only its own page\'s request; other pages finish i
 
 test('pressing AI Answer again opens the next page and leaves the re-asked page as it was', () => {
   const press = fnSrc('aiAnswer')
-  assert.match(press, /const page = addCard\(cur\.question, \["…"\]\);\r?\n\s+page\.heard = heard; page\.earlier = cur\.earlier \|\| ""; page\.formed = cur\.formed;\r?\n\s+showPressed\(page, heardOnly \? cur\.question : q\);\r?\n\s+return await generateAnswer\(heard, page,/)
+  // Nov 1 turn-window change inserts the recoverSeq line between the formed
+  // line and showPressed; the book rule itself is unchanged (new page, old
+  // page kept, answer generated on the new page, never on the old one).
+  assert.match(press, /const page = addCard\(cur\.question, \["…"\]\);\r?\n\s+page\.heard = heard; page\.earlier = cur\.earlier \|\| ""; page\.formed = cur\.formed;\r?\n(\s+if \(recoverSeq != null\) page\.formSeq = recoverSeq;\r?\n)?\s+showPressed\(page, heardOnly \? cur\.question : q\);\r?\n\s+return await generateAnswer\(heard, page,/)
   assert.doesNotMatch(press, /generateAnswer\(heard, cur,/)
   assert.match(press, /const page = hasAnswer\(c\) \? addCard\(c\.question, \["…"\]\) : c;/)
 })
