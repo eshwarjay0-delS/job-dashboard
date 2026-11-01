@@ -552,7 +552,7 @@ async function captionFrame(request = {}) {
   // Native Windows caption window title is the most privacy-preserving target:
   // window-only acquisition works regardless of where it is moved or docked.
   const windows = await desktopCapturer.getSources({ types: ["window"], thumbnailSize: { width: 1600, height: 600 }, fetchWindowIcons: false });
-  const live = windows.find(w => /^(?:live[ -]?captions?|windows live captions)(?:\\b|\\s*[—-])/i.test(String(w.name || "").trim()) && w.thumbnail && !w.thumbnail.isEmpty());
+  const live = windows.find(w => /^(?:live[ -]?captions?|windows live captions)(?:\b|\s*[—-])/i.test(String(w.name || "").trim()) && w.thumbnail && !w.thumbnail.isEmpty());
   const useWindow = !!live;
   const screens = useWindow ? [] : await desktopCapturer.getSources({
     types: ["screen"], thumbnailSize: { width: 1920, height: 1080 }, fetchWindowIcons: false,
