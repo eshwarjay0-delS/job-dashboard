@@ -82,3 +82,37 @@ These are teaching examples, not claims that the candidate personally experience
 **The most natural answer is not the one that sounds most like a podcast.** It is the one that spots the real-world contradiction, explains the mechanism well enough to be challenged, admits the operational cost, and ends with evidence that would justify a decision.
 
 The research and deterministic tests establish an implementable narration specification. Whether actual Kompas outputs meet it must be independently measured after deployment.
+
+
+---
+
+## 1 November follow-up: system-wide gap review after v1 reached production
+
+### Review standard
+The canonical shared answer service—not a single BNY scenario—is the unit of change. I inspected `kompasAudience.ts`, `kompasNaturalNarration.ts`, `kompasAnswerService.ts`, `kompasInterviewPrecision.ts`, `kompasDissection.ts` and `kompasBlend.ts`. This review is based on repository code and prior teaching transcripts; it is not an authenticated model-output study.
+
+| Gap | Concrete failure mode | Safe action in this revision | Still unproven |
+| --- | --- | --- | --- |
+| 1. Conflicting system prompts | Existing `STORYTELLER` demanded humor, a personally resonant picture, and an analogy on every answer, directly contradicting the newer grounded narrative override | Replace unconditional picture/humor instructions at the actual source; keep answer-first question scope and optional evidence-supported human storytelling | Actual generator may still imitate memorized cliches from history |
+| 2. Multiple prompt layers | `NARRATION`, `RELEVANCE`, `INTERVIEW`, and primary service `SYSTEM` still requested one picture | Align those shared clauses with a factual discrepancy, exact mechanism and meaningful consequence | Model compliance with combined context and latency |
+| 3. No direct measurement of final prose | Earlier fifty-fold checks examined routing and prompt content rather than finished candidate replies | Add non-mutating `naturalNarrationFlags` wired into existing `precision.flags` on both SSE and JSON answer paths | 50 real generated responses have not been graded |
+| 4. Decorative metaphors mistaken for practical examples | "Apartment keys" and similar imagery can consume time and sound inexperienced | Flag **unrequested toy analogy** only when both analogy phrasing and toy-scene vocabulary appear | Implicit or sophisticated metaphors need human assessment |
+| 5. Podcast performance mixed with interview voice | Two-host script, "let's dive in", exaggerated praise and meta-intros can leak from NotebookLM-style teaching | Flag podcast openings, host labels, exaggerated praise and scripted landings; specify single candidate voice | Naturalness is not synonymous with absence of flagged strings |
+| 6. Surface-to-bottom drift | A simple definition may launch a rehearsed personal story or 120-word explanation | Flag unasked personal lead on direct concept questions and overlong short-fact answers | Exact desired length still varies by interviewer and tier |
+| 7. Hypothetical events becoming credentials | A generated story or third-party notebook narration may be reused as candidate's personal history | Keep source boundary in prompt; preserve existing source-backed claims checks | Human review required to detect subtle invented causation |
+| 8. Follow-up restarts and inconsistent ownership | A drilldown may rotate employers, change past facts or claim implementation authority | Preserve previously merged tier/ledger/owner controls; require same-case exact technical answer | Cross-turn semantic consistency needs session-level human grading |
+| 9. Interleaved speech and voice latency | A perfect written explanation could still arrive late or be revised after being spoken | No speculative pipeline changes. SSE/JSON get the same advisory flags without additional model calls or output mutation | Real desktop/phone microphone latency and WhatsApp parity |
+| 10. Teaching vs candidate voice | NotebookLM's source-grounded two-host format is pedagogically useful but can sound artificial in interview answers | Keep debate in the hidden analysis and one coherent first-person answer in output | Comparative human preference study against old engine |
+| 11. Evidence of correction | A deterministic flag isn't proof of technical truth, personal ownership or a good story | Flag only named output patterns; do not auto-rewrite or block genuine answers, and do not send private answer snippets as metrics | Independent factual and experiential review, per candidate source |
+| 12. Accumulated prompt complexity | Repeated and contradictory prose across SYSTEM and audience layers wastes attention and possibly tokens | Remove legacy mandatory image/humor clauses rather than piling on another narrator persona | Measure time-to-first-visible, total completion and model variation after deploy |
+
+### Engineering design decision
+Use **zero extra inference calls** for the first response-quality gap audit. `naturalNarrationFlags(question, answer)` observes final text without changing a single word. It returns categorical labels that can be sent through the existing precision diagnostics in both streaming and non-streaming responses. Existing authorization, account-scoped source retrieval, safe output guard, answer repair, ledger, session sync, SSE event contract, Windows capture and WhatsApp routing are left unchanged. This is deliberately conservative: regex-based absence of clichés is neither a proof of natural speech nor a measure of truthful experience.
+
+The new regression has fifty varied **normal** answers that should not be flagged, nineteen deliberately bad narrative examples, explicit analogy permission, a direct-answer length case, diagnostics parity, and empty-output safety. All examples are synthetic and source-neutral, not invented candidate resume facts.
+
+### Future experiment needed before claiming superior answers
+Capture the same 50 approved real interview prompts and consented original resume/JD for baseline and proposed engine, across EPM, GRC, security engineering, IAM, cloud and mixed audiences. Include repeated questions and two-step followups. Preserve outputs verbatim, label which response came from which exact commit, blinded reviewer scoring, latency, model/provider metadata, and source provenance. A reviewer should inspect false-negative and false-positive narration flags, not merely count them. Report failures separately for accuracy, first-person factual support, follow-up continuity, clarity, practical bottleneck, question coverage and conversational credibility. Use paired evidence and independently authorized model access. No benchmark pass or real-model improvement is asserted here.
+
+### Release discipline
+Run the 50-case narration tests, earlier audience regressions, source/owner-lock/session-sync tests, standard TypeScript/lint/build, exact-commit Vercel preview, then merge only with green applicable gates. Production READY for the exact merge SHA and domain alias are required before the word "live" is accurate. Maintain this dated addendum in the canonical research journal and record release evidence in Plan & Vision when verified.
