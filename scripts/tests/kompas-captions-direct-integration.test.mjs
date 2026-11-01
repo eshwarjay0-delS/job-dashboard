@@ -46,6 +46,33 @@ test("Caption Capture requires explicit consent each session before remote scree
  assert.match(app,/if \(!running \|\| !captionCaptureEnabled \|\| captionCaptureBusy\) return;/)
  assert.match(html,/id="screenCaptureAnswerBtn"[^>]*aria-pressed="false"/)
 })
+test("Caption Capture rejects denied consent and only starts after approval",()=>{
+ const begin=app.indexOf('if ($("screenCaptureAnswerBtn")) $("screenCaptureAnswerBtn").onclick = () => {')
+ const end=app.indexOf('captionUiState();\n$("screenBtn")',begin)
+ assert.ok(begin>0 && end>begin)
+ const button={}
+ let consent=false, starts=0, stops=0
+ const context={
+   window:{confirm:()=>consent},
+   $:()=>button,
+   captionUiState:()=>{},
+   captionBegin:()=>{starts++},
+   captionEnd:()=>{stops++},
+   status:()=>{},
+ }
+ runInNewContext('let captionCaptureEnabled = false;\n'+app.slice(begin,end)+'\nthis.enabled=()=>captionCaptureEnabled;',context)
+ assert.equal(context.enabled(),false)
+ button.onclick()
+ assert.equal(context.enabled(),false)
+ assert.equal(starts,0)
+ consent=true
+ button.onclick()
+ assert.equal(context.enabled(),true)
+ assert.equal(starts,1)
+ button.onclick()
+ assert.equal(context.enabled(),false)
+ assert.equal(stops,1)
+})
 test("Native direct caption route gets priority, with 200ms local quiet detector",()=>{
  assert.match(app,/captionDirectAt = Date.now\(\);\s*captionSeenAt = captionDirectAt/)
  assert.match(app,/captionQuietTimer = setInterval\(\(\) => captionCommitIfQuiet\(\), 200\)/)
