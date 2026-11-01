@@ -535,7 +535,7 @@ function wireIpc() {
   ipcMain.handle("kompas:set-private", (_e, on) => setPrefs({ isPrivate: !!on }).isPrivate);
   ipcMain.handle("kompas:take-session", () => { const s = pendingSession; pendingSession = null; return s; });
   ipcMain.handle("kompas:caption-once", (event) => {
-    if (!win || event.sender.id !== win.webContents.id) throw new Error("Invalid caption capture caller");
+    if (!win || event.sender.id !== win.webContents.id || !/^kompas:\/\/app\/kompas\//i.test(String(event.senderFrame?.url || ""))) throw new Error("Invalid caption capture caller");
     return captionSnapshotOnce();
   });
 }
