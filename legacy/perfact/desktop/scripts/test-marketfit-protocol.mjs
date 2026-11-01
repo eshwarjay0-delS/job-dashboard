@@ -7,7 +7,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const page = fs.readFileSync(path.join(root, "copilot", "app.js"), "utf8");
+// The standalone perfACT/copilot directory is no longer source of truth.
+const page = fs.readFileSync(path.resolve(root, "..", "..", "public", "kompas", "app.js"), "utf8");
 const desktop = fs.readFileSync(path.join(root, "desktop", "main.js"), "utf8");
 const sfx = fs.readFileSync(path.join(root, "desktop", "scripts", "sfx.cs"), "utf8");
 
@@ -26,6 +27,8 @@ function pack(pathname) {
     location: { pathname },
     btoa: str => Buffer.from(str, "binary").toString("base64"),
     unescape, encodeURIComponent, Date,
+    supabaseAccessToken: () => "fixture-access-token",
+    supabaseSession: () => ({ refresh_token: "fixture-refresh", expires_at: 9999999999 }),
   };
   vm.runInNewContext(packing + "\nthis.packSession = packSession;", globals);
   return globals.packSession(session);
@@ -56,11 +59,12 @@ assert.equal(context.parse(["https://attacker.invalid"]), null);
 assert.ok(desktop.includes('app.setAsDefaultProtocolClient(MARKETFIT_SCHEME'));
 assert.ok(desktop.includes('fs.mkdirSync(marketFitProfile, { recursive: true })'), "First installation must create MarketFit profile before setting userData");
 assert.ok(desktop.includes('app.setPath("userData", marketFitProfile)'), "Isolate the MarketFit session store");
-assert.ok(desktop.includes('activeSite = pendingSession ? siteFor(pendingSession) : (startedForMarketFit ? "marketfit" : "perfact")'), "Opening the desktop without a session must start MarketFit when requested");
+assert.ok(desktop.includes('activeSite = pendingSession ? siteFor(pendingSession) : "marketfit"'), "The installed desktop always starts canonical MFit when no explicit legacy deep link is passed");
 assert.match('marketfit-kompas://open', /^marketfit-kompas:\/\/open$/, "Installer page may launch MarketFit with no session");
 assert.equal(context.parse(["marketfit-kompas://open"]), null);
 assert.ok(desktop.includes('app.setAsDefaultProtocolClient(MARKETFIT_SCHEME'));
 
-assert.ok(page.includes("window.location.assign(packSession(s))"), "Native launch must use direct user gesture, not a hidden iframe");
+assert.ok(page.includes('window.location.assign(url)') && page.includes('"marketfit-kompas://open?ticket="') &&
+  page.includes('prepareDesktopSession(s).then(openWithTicket)'), "Desktop must use account-bound one-time handoff ticket and protocol navigation, not an iframe or long URL payload");
 assert.ok(sfx.includes("marketfit-kompas"), "Outer Windows launcher must forward MarketFit deep links");
 console.log("MarketFit native session protocol, isolated desktop profile, and standalone perfACT: verified");
