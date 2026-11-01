@@ -1336,6 +1336,14 @@ async function start() {
   startClock();
   markRun();
   reportSources();
+  // Phone mic-only sessions: say so plainly — the mic hears both sides,
+  // because phones have no separate call-audio capture (owner, 31 Oct 2026).
+  // The tip element is optional: guard the DOM call so extracted-function
+  // tests with minimal $ stubs (classList without remove) still pass.
+  if (!captures.some(c => c.who === "Them") && (typeof navigator === "undefined" || typeof navigator.mediaDevices?.getDisplayMedia !== "function")) {
+    const phoneTipEl = $("phoneTip");
+    if (phoneTipEl && phoneTipEl.classList && typeof phoneTipEl.classList.remove === "function") phoneTipEl.classList.remove("hidden");
+  }
 }
 async function stop(say = true) {
   running = false;
@@ -1403,6 +1411,16 @@ async function startMic() {
 async function startSys() {
   const generation = sourceGeneration.Them;
   if (captures.some(c => c.who === "Them")) return;
+  // Phones have no system-audio capture: getDisplayMedia does not exist on
+  // mobile browsers. Never attempt it there — the phone mic hears both sides,
+  // and attempting it only produced a raw TypeError. (Owner, 31 Oct 2026:
+  // mobile audio never arrived the way desktop call audio does.)
+  // typeof navigator is the guard: the bare identifier throws where no
+  // navigator exists at all (test VMs), while typeof alone is safe.
+  if (typeof navigator === "undefined" || typeof navigator.mediaDevices?.getDisplayMedia !== "function") {
+    captureErrors.push("Call audio: not available on phones — the phone mic hears both sides");
+    srcOn.sys = false; syncSrc(); return;
+  }
   try {
     // systemAudio and selfBrowserSurface belong to the browser share dialog. Electron answers "Not supported"
     // to that pair before main.js can hand back the output-mix loopback, so the desktop asks for video and
@@ -4747,6 +4765,7 @@ accountSessionSync?.start();
   // first time in the copilot: one line on how it works, until dismissed
   $("copilotTip").classList.toggle("hidden", !!LS.get("tipSeen", false));
   $("tipClose").onclick = () => { LS.set("tipSeen", true); $("copilotTip").classList.add("hidden"); };
+  $("phoneTipClose").onclick = () => { $("phoneTip").classList.add("hidden"); };
   $("startBtn").addEventListener("click", () => LS.set("started", true));
 })();
 

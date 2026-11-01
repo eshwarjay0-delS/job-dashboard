@@ -67,6 +67,23 @@ export async function createClientFromRequest(request: NextRequest) {
 
   const bearer = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!bearer) return createClient();
+  // An already-expired bearer carries no authority: never fall back to a
+  // different cookie identity. The desktop shell used to pin the single
+  // JWT it was handed at launch and inject it on every /api/* call; an hour
+  // later that dead token was overriding perfectly good cookies and 401-ing
+  // everything — the app "worked when checked" and failed later, worst
+  // after idle. Dropping only EXPIRED tokens changes nothing for a live
+  // credential, and an expired one could never authenticate anything anyway.
+  // A supplied Bearer credential is an explicit identity choice. Never fall back
+  // to a different cookie identity when it has expired (desktop/account switching).
+  // Pass the expired token to Supabase, which rejects it via getUser().
+  // The caller must refresh its token explicitly before retrying.
+  if (isExpiredJwt(bearer)) {
+    return createSupabaseClient(url, key, {
+      global: { headers: { Authorization: `Bearer ${bearer}` } },
+    });
+  }
+
   return createSupabaseClient(url, key, {
     global: { headers: { Authorization: `Bearer ${bearer}` } },
   });

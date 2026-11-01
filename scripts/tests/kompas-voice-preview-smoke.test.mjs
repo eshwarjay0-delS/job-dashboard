@@ -154,3 +154,62 @@ test("private credential is rejected for other Vercel tenants or unsafe header v
     }), /Invalid private preview authentication configuration/);
   }
 });
+
+test("API-resolved dynamic preview host may receive private bypass only when exactly pinned", async () => {
+  const host = "job-dashboard-git-fix-voice-abc-qu4ntum-s-projects.vercel.app";
+  const baseUrl = "https://" + host + "/";
+  const calls = [];
+  const result = await verifyVoicePreview({
+    baseUrl, expectedSha: sha, protectionBypassToken: "synthetic-token",
+    trustedPreviewHostname: host, attempts: 1,
+    fetcher: async (url, options) => {
+      calls.push([url.hostname, options.headers["x-vercel-protection-bypass"]]);
+      return url.pathname === "/version.json" ? version : health;
+    },
+  });
+  assert.equal(result.status, "verified");
+  assert.deepEqual(calls, [[host, "synthetic-token"], [host, "synthetic-token"]]);
+  for (const trustedPreviewHostname of [
+    "other-project.vercel.app", "job-dashboard-evil.vercel.app",
+    "job-dashboard-abc-qu4ntum-s-projects.vercel.app.evil.org",
+  ]) {
+    await assert.rejects(verifyVoicePreview({
+      baseUrl, expectedSha: sha, protectionBypassToken: "synthetic-token",
+      trustedPreviewHostname, attempts: 1,
+      fetcher: async () => { throw Error("must not send credentials"); },
+    }), /Invalid trusted preview hostname/);
+  }
+  await assert.rejects(verifyVoicePreview({
+    baseUrl: origin, expectedSha: sha, protectionBypassToken: "synthetic-token",
+    trustedPreviewHostname: host, attempts: 1,
+    fetcher: async () => { throw Error("must not send credentials"); },
+  }), /Invalid private preview authentication configuration/);
+});
+
+test("missing bypass token still enforces exact API-resolved hostname", async () => {
+  const trusted = "job-dashboard-git-fix-voice-abc-qu4ntum-s-projects.vercel.app";
+  for (const baseUrl of [
+    origin,
+    "https://job-dashboard-git-another-qu4ntum-s-projects.vercel.app/",
+    "https://other-project.vercel.app/",
+  ]) {
+    await assert.rejects(verifyVoicePreview({
+      baseUrl, expectedSha: sha, trustedPreviewHostname: trusted, attempts: 1,
+      fetcher: async () => { throw Error("must not contact untrusted host"); },
+    }), /Preview hostname does not match trusted deployment/);
+  }
+  await assert.rejects(verifyVoicePreview({
+    baseUrl: "https://other-project.vercel.app/", expectedSha: sha, attempts: 1,
+    fetcher: async () => { throw Error("must not contact other tenant"); },
+  }), /Preview hostname does not match trusted deployment/);
+  const result = await verifyVoicePreview({
+    baseUrl: "https://" + trusted + "/", expectedSha: sha,
+    trustedPreviewHostname: trusted, attempts: 1,
+    fetcher: async (url, options) => {
+      assert.equal(url.hostname, trusted);
+      assert.equal(options.headers, undefined);
+      return url.pathname === "/version.json" ? version : health;
+    },
+  });
+  assert.equal(result.status, "verified");
+});

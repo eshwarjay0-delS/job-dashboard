@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Kompas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="mf-night.css" />
 <link rel="stylesheet" href="desktop-focus.css" />
+<link rel="manifest" href="manifest.json" />
 <script src="theme-follow.js"></script>
 </head>
 <body>
@@ -538,6 +539,7 @@
     </div>
     <div class="live-mid">
     <div class="tip hidden" id="copilotTip"><span><b>How it works:</b> press <b>Start</b>, let them ask, then press <b>AI Answer</b> (or turn <b>Auto</b> on). <b>Follow along</b> tracks your place as you read. More tools are under <b>⋯</b>.</span><button class="icon-btn" id="tipClose" title="Got it">✕</button></div>
+    <div class="tip hidden" id="phoneTip"><span><b>Phone mic hears both sides:</b> put the call on speaker and keep the phone near you — phones have no separate call-audio capture.</span><button class="icon-btn" id="phoneTipClose" title="Got it">✕</button></div>
     <main class="content">
       <div class="card" id="card">
         <div class="q"><span class="q-ico">💬</span><span class="q-body"><b>Question:</b> <span id="question">Waiting for the interview to start…</span><span class="caption hidden" id="caption"><span class="cap-who" id="capWho">Them</span><span class="cap-text" id="capText"></span></span></span></div>

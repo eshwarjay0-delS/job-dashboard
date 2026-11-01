@@ -38,9 +38,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  // Admin-only count — require the same admin token used by /api/admin/auth
+  // Admin-only count — require the same admin token used by /api/admin/auth.
+  // Header-only: a ?token= query value lands in URLs, proxy logs, and browser
+  // history. Callers that used the query fallback must send x-admin-token.
   const adminPass = process.env.ADMIN_PASS || process.env.ADMIN_PASSWORD || ""
-  const token = request.headers.get("x-admin-token") ?? request.nextUrl.searchParams.get("token") ?? ""
+  const token = request.headers.get("x-admin-token") ?? ""
   if (!adminPass || !token || token !== adminPass) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
