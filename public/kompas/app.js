@@ -772,19 +772,32 @@ async function tryRefreshAuth() {
   try { return await __authRefreshFlight; }
   finally { __authRefreshFlight = null; }
 }
+// Transient network drops and concurrent token-rotation windows must not
+// instantly show a reconnect button in the middle of an interview. Try the
+// existing native/web refresh path again with bounded delays. A revoked refresh
+// family still fails closed and requires real sign-in; never reuse stale
+// browser cookies or bypass Supabase ownership.
+async function recoverLiveAuth() {
+  if (await tryRefreshAuth()) return true;
+  for (const delay of [800, 2400]) {
+    await new Promise(resolve => setTimeout(resolve, delay));
+    if (await tryRefreshAuth()) return true;
+  }
+  return false;
+}
 // Idle is where sessions used to die: renew quietly whenever the user comes
 // back to this window, and every 20 minutes while it stays open, so the next
 // action never meets an expired token.
 function keepAuthAlive() {
-  if (document.hidden) return;
+  if (document.hidden && !window.kompasDesktop) return;
   if (Date.now() - __lastAuthRefresh < 10 * 60 * 1000) return;
-  __lastAuthRefresh = Date.now();
+  // Do not stamp failed renewal as success: keep retrying while a meeting runs.
   void tryRefreshAuth();
 }
 try {
   document.addEventListener("visibilitychange", () => { if (!document.hidden) keepAuthAlive(); });
   window.addEventListener("focus", keepAuthAlive);
-  setInterval(keepAuthAlive, 20 * 60 * 1000);
+  setInterval(keepAuthAlive, 60 * 1000);
 } catch {}
 let __authProbeTimer = null;
 function clearAuthPill() {
@@ -836,7 +849,7 @@ async function preparePack(s) {
       s.prep = pack; s.__authRetried = false; saveSession(s); clearAuthPill();
     } catch (e) {
       if (isAuthError(e)) {                                            // 401: renew the session silently and retry once — eject only if renewal fails
-        if (!s.__authRetried && await tryRefreshAuth()) { s.__authRetried = true; preparePack(s); return; }
+        if (!s.__authRetried && await recoverLiveAuth()) { s.__authRetried = true; preparePack(s); return; }
         redirectToLogin(); return;
       }
       if (current !== s) return;
@@ -3399,7 +3412,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }   // generated: the question collapses away, only the response box stays
   } catch (e) {
     if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — eject only if renewal fails
-      if (await tryRefreshAuth()) { recoverAnswer("", 800); return; }
+      if (await recoverLiveAuth()) { recoverAnswer("", 800); return; }
       recoverAnswer("AUTH"); redirectToLogin(); return;
     }
     if (card.req !== ctl) return;                                      // aborted because this same card was re-asked
