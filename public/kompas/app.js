@@ -3760,6 +3760,150 @@ async function aiAnswer(fromAuto) {
     status(error.message || "Could not prepare an answer. Please retry.", "err");
   } finally { aiBusy = false; }
 }
+// Captions-first desktop input: the native bridge prefers the actual Windows
+// Live Captions window, anywhere on any monitor. Screen-region vision is a
+// fallback if Windows hides the window from desktopCapturer enumeration.
+// The owner can toggle it off; capture runs only during an active interview.
+let captionCaptureEnabled = !!window.kompasDesktop?.captureCaptions;
+let captionCaptureTimer = null, captionCaptureBusy = false;
+let captionLastRaw = "", captionDraft = "", captionLastChanged = 0, captionSeenAt = 0;
+let captionLastCommitted = "", captionCommittedAt = 0, captionScanScreen = 0, captionBounds = null;
+let captionMisses = 0, captionScanCount = 0, captionReadyAnswer = false;
+function captionUiState() {
+  const button = $("screenCaptureAnswerBtn");
+  if (!button) return;
+  const active = !!(captionCaptureEnabled && window.kompasDesktop?.captureCaptions);
+  button.classList.toggle("on", active);
+  button.setAttribute("aria-pressed", String(active));
+  const label = $("captionCaptureState"); if (label) label.textContent = active ? "ON" : "OFF";
+}
+function captionNormalized(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9+#]+/g, " ").trim(); }
+function captionDelta(before, after) {
+  const old = String(before || "").replace(/\s+/g, " ").trim();
+  const fresh = String(after || "").replace(/\s+/g, " ").trim();
+  if (!fresh || captionNormalized(old) === captionNormalized(fresh)) return "";
+  if (!old) return fresh;
+  const a = old.split(" "), b = fresh.split(" ");
+  const same = (x, y) => captionNormalized(x) === captionNormalized(y);
+  // Windows captions scroll continuously; append only genuinely new words.
+  for (let k = Math.min(a.length, b.length); k >= 2; k--) {
+    if (a.slice(-k).every((w, i) => same(w, b[i]))) return b.slice(k).join(" ");
+  }
+  if (captionNormalized(old).includes(captionNormalized(fresh))) return "";
+  if (captionNormalized(fresh).startsWith(captionNormalized(old))) return fresh.slice(old.length).trim();
+  return fresh;
+}
+function captionQuestionLike(s) {
+  const t = String(s || "").trim();
+  if (!t || t.split(/\s+/).length < 2) return false;
+  if (Q_CUE.test(t) || opensNewAsk(t)) return true;
+  return t.split(/\s+/).length <= 6 && /\b(?:SIEM|SOAR|IAM|PAM|EPM|CyberArk|Kerberos|SAML|OAuth|RBAC|EDR|XDR|DeltaV|PAS-X|PLC)\b/i.test(t);
+}
+function captionReadText(raw) {
+  const fresh = String(raw || "").replace(/\s+/g, " ").trim();
+  if (!fresh || captionNormalized(fresh) === captionNormalized(captionLastRaw)) return false;
+  const delta = captionDelta(captionLastRaw, fresh);
+  captionLastRaw = fresh;
+  if (!delta) return false;
+  captionDraft = [captionDraft, delta].filter(Boolean).join(" ").slice(-3500);
+  captionLastChanged = Date.now();
+  const corrected = captionTechnicalCorrection(captionDraft);
+  const box = $("manualInput");
+  // User typing always takes priority; never overwrite a manually edited box.
+  if (box && (!box.value.trim() || box.dataset.captionDraft === "1")) {
+    box.value = corrected;
+    box.dataset.captionDraft = "1";
+  }
+  status("Caption Capture heard: " + corrected.slice(-250), "live");
+  return true;
+}
+function captionCommitIfQuiet() {
+  if (!running || !captionCaptureEnabled || !captionDraft ||
+      Date.now() - captionLastChanged < 2200) return false;
+  const complete = captionTechnicalCorrection(captionDraft);
+  if (!captionQuestionLike(complete)) return false;
+  if (captionLastCommitted && captionNormalized(complete) === captionNormalized(captionLastCommitted)) {
+    captionDraft = ""; return false;
+  }
+  if (captionLastCommitted && Date.now() - captionCommittedAt < 20000 &&
+      echoShare(complete, captionLastCommitted) >= 0.85) {
+    captionDraft = ""; return false;
+  }
+  captionLastCommitted = complete;
+  captionCommittedAt = Date.now();
+  captionDraft = "";
+  const box = $("manualInput");
+  if (box && box.dataset.captionDraft === "1") { box.value = ""; delete box.dataset.captionDraft; }
+  // Prefer the OS captions over groq audio while a visible caption box exists,
+  // but use the SAME onTranscript → Kompas answer engine, not a parallel bot.
+  const duplicate = pendingHeard().some(t => t.who === "Them" && echoShare(complete, t.text) >= 0.8);
+  if (!duplicate) onTranscript("Them", complete, false, Date.now(), true);
+  if (!aiBusy) void aiAnswer(true);
+  else { captionReadyAnswer = true; status("New caption question queued until the previous answer finishes.", "live"); }
+  return true;
+}
+function captionBegin() {
+  captionUiState();
+  if (!running || !captionCaptureEnabled || !window.kompasDesktop?.captureCaptions || captionCaptureTimer) return;
+  const tick = async () => {
+    if (!running || !captionCaptureEnabled || captionCaptureBusy) return;
+    captionCommitIfQuiet();
+    if (aiBusy || captionReadyAnswer) return; // do not spend OCR requests while writing an answer
+    captionCaptureBusy = true;
+    try {
+      // Every sixth scan rediscovers the caption window if it has moved.
+      const bounds = captionBounds && captionScanCount++ % 6 !== 0 ? captionBounds : null;
+      const frame = await window.kompasDesktop.captureCaptions({ screenId: captionScanScreen, bounds });
+      if (!frame?.image) return;
+      const res = await fetch("/api/screen", { method: "POST", headers: { "content-type": "application/json" },
+        signal: AbortSignal.timeout(29000),
+        body: JSON.stringify({ mode: "live-captions", cropped: !!frame.cropped, image: frame.image }) });
+      if (!res.ok) {
+        if (res.status === 429) status("Caption recognition rate-limited. Keeping captured text; resuming on next scan.", "live");
+        else if (res.status === 401) status("Caption reader needs a renewed account session.", "err");
+        return;
+      }
+      const seen = await res.json();
+      if (!running || !captionCaptureEnabled) return;
+      if (seen.visible && typeof seen.text === "string" && seen.text.trim()) {
+        captionSeenAt = Date.now();
+        captionMisses = 0;
+        captionBounds = frame.cropped ? null : (Array.isArray(seen.bounds) ? seen.bounds : null);
+        captionReadText(seen.text);
+      } else {
+        captionMisses++;
+        if (captionMisses >= 2) { captionBounds = null; captionScanScreen = (captionScanScreen + 1) % Math.max(1, frame.monitors || 1); }
+      }
+    } catch (error) {
+      if (captionMisses++ > 3) { captionBounds = null; captionMisses = 0; }
+      // Desktop capture may be unavailable on old installed binaries.
+      if (error && /not available|invalid caption|not implemented/i.test(error.message || "")) {
+        status("Caption Capture requires the updated Kompas desktop application.", "err");
+      }
+    } finally {
+      captionCaptureBusy = false;
+      captionCommitIfQuiet();
+    }
+  };
+  captionCaptureTimer = setInterval(() => { void tick(); }, 4500);
+  void tick();
+}
+function captionEnd() {
+  if (captionCaptureTimer) clearInterval(captionCaptureTimer);
+  captionCaptureTimer = null;
+  captionDraft = ""; captionLastRaw = ""; captionLastChanged = 0; captionSeenAt = 0;
+  captionLastCommitted = ""; captionCommittedAt = 0; captionBounds = null; captionMisses = 0;
+  captionScanScreen = 0; captionScanCount = 0; captionReadyAnswer = false;
+  const box = $("manualInput");
+  if (box && box.dataset.captionDraft === "1") { box.value = ""; delete box.dataset.captionDraft; }
+}
+if ($("screenCaptureAnswerBtn")) $("screenCaptureAnswerBtn").onclick = () => {
+  captionCaptureEnabled = !captionCaptureEnabled;
+  captionUiState();
+  if (captionCaptureEnabled) { captionBegin(); status("Caption Capture ON — Windows Live Captions text takes priority over audio.", "live"); }
+  else { captionEnd(); status("Caption Capture OFF — audio and manual questions remain active.", "live"); }
+};
+captionUiState();
 $("screenBtn").onclick = analyseScreen;
 // One visible desktop action for captured questions. It uses the same verified
 // capture → region review → grounded answer path as the existing menu/shortcut.
