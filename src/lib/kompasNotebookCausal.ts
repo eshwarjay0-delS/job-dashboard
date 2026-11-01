@@ -18,7 +18,7 @@ export function workbenchTrack(question: string): WorkbenchTrack {
     return "coding"
   if (/\b(?:tell me about a time|describe a (?:time|situation)|share an example (?:of|when)|walk me through (?:an? )?(?:incident|project|issue) you|give me an example from your)\b/i.test(q))
     return "experience"
-  if (/^(?:and |okay,? |so |but )?(?:what exactly|which (?:log|record|field|event|permission)|how did you (?:verify|prove|know|confirm)|what happened next|who (?:approved|owned|signed off)|what did (?:you|they) (?:check|change|do)|why (?:that|did you choose)|go deeper|can you elaborate|what about (?:that|the))/i.test(q))
+  if (/^(?:and |okay,? |so |but )?(?:what exactly|which (?:log|record|field|event|permission)|how did you (?:verify|prove|know|confirm)|what happened next|who (?:approved|owned|signed off)|what did (?:you|they) (?:check|change|do)|why that|go deeper|can you elaborate|what about (?:that|the))/i.test(q))
     return "follow-up"
   if (/\b(?:difference between|compare|versus|vs\.?|trade[- ]?offs? between|how (?:are|do|does|did) .{3,65} differ)\b/i.test(q))
     return "comparison"
