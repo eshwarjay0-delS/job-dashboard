@@ -546,28 +546,31 @@ export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN, rea
   let last = -1
   for (let i = parts.length - 1; i >= 0; i--) if (parts[i].kind === "ask") { last = i; break }
   if (last < 0) return ""
-  // Deterministic window selection (owner, 31 Oct 2026): before it answers, the engine always puzzles "was this
-  // everything they were expecting?" It keeps the widest window of the last asks — Last 1 2 3 4, then 1 2 3, then
-  // 1 2, then 1 — and only shrinks that window on proof something was settled: an ask from the previous turn, the
-  // candidate's own speech taking the floor, or a long fragment between asks. A short acknowledgement ("Yeah.",
-  // "Right.") or setup sentences between asks never shrink it: shrinking there is what left the card answering only
-  // the last question, as if the rest was never heard.
+  // Deterministic window selection (owner, 31 Oct 2026, count corrected 1 Nov 2026): before it answers, the engine
+  // always puzzles "was this everything they were expecting?" It keeps every piece that belongs to the question —
+  // the brain chooses the last 2 things, the last 3 things, or many more sentences, however many the question spans —
+  // and only shrinks that window on proof something was settled: an ask from the previous turn, the candidate's own
+  // speech taking the floor, or a long fragment between asks. There is no count cap: a fixed count is what cut the
+  // head off a question spanning more than four asks, leaving the card answering only the tail. A short
+  // acknowledgement ("Yeah.", "Right.") or setup sentences between asks never shrink it: shrinking there is what left
+  // the card answering only the last question, as if the rest was never heard.
   // "Let me push on that. <setup>": announced setup is kept. So is the sentence a pointing ask ("rate limit it") needs.
   const before = TOPIC_SHIFT.test(text) ? NO_TURN : previous
   const points = /\b(?:it|that|this|them|those|these|there)\b/i.test(parts[last].text)
   const reply = (i: number) => !/\?$/.test(parts[i].text) && !ASK_OPENER.test(parts[i].text) && !(points && i === last - 1) && belongsToPrevious(parts[i].text, before)
   const words = (t: string) => t.split(/\s+/).filter(Boolean).length
   const kept: number[] = [last]
-  let asks = 1
   let c = last - 1
   // A re-press is the user saying the last answer missed: the concatenation widens to whatever was heard, previous
   // things included, so a part missed at one instance comes back on the next tap. The material itself stays bounded
-  // client-side (the page chain plus what was heard since), so lifting the four-ask cap here never re-forms the
-  // whole interview. The break rules — previous turn, own speech, long fragment — still hold on a re-press.
-  while (c >= 0 && (reask || asks < 4)) {
+  // client-side (the page chain plus what was heard since) and by the 4000-char return cap, so keeping every ask back
+  // to the first break never re-forms the whole interview. The break rules — previous turn, own speech, long
+  // fragment — still hold on a re-press. (reask is kept in the signature for callers; since 1 Nov 2026 it no longer
+  // changes the count, because no mode is count-capped anymore.)
+  while (c >= 0) {
     if (reply(c)) break
     const kind = parts[c].kind
-    if (kind === "ask") { kept.unshift(c); asks++; c-- }
+    if (kind === "ask") { kept.unshift(c); c-- }
     else if (kind === "context") { kept.unshift(c); c-- }
     else if (kind === "noise") {
       // One short acknowledgement run between asks is skipped: never kept as text, never a break. A longer

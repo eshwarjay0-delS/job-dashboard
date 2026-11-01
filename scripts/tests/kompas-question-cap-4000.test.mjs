@@ -6,9 +6,9 @@ import {questionToAnswer, cutQuestion} from '../../src/lib/kompasAnswer.ts'
 // Audit low (31 Oct 2026): the formed question was capped at 2000 chars at
 // every stage, always head-keep, so an over-long composed question lost its
 // NEWEST ask — the tail. That collides with the 31 Oct re-press rule, where
-// everything kept concatenates and the four-ask cap lifts: four substantial
-// asks run past 2000 chars, and the cap cut the very part the re-press
-// chained back in. The cap is now 4000 everywhere on the question path,
+// everything kept concatenates (and since 1 Nov 2026 no mode is count-capped):
+// four substantial asks run past 2000 chars, and the cap cut the very part
+// the re-press chained back in. The cap is now 4000 everywhere on the question path,
 // matching the heard window (heardAll and transcript are already 4000): a
 // composed question can carry everything the heard material holds, and a
 // bound still exists so runaway re-press chaining cannot grow unboundedly.

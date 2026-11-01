@@ -45,7 +45,8 @@ test('explicit mixed audience overrides architect detail, and directors receive 
   assert.match(audienceGuidance('engineer', 'How would you test this?'), /100% relevant to this question/)
   assert.match(audienceGuidance('hr', 'Tell me about a time you led'), /general scenario/)
   assert.match(audienceGuidance('engineer', 'What is a certificate?'), /Presenting, articulation, and narration are the story/)
-  assert.match(audienceGuidance('engineer', 'What is a certificate?'), /bold word is the one idea/)
+  // Stale since 0fbfae6: that commit deliberately removed "bold word is the one idea" from the audience prompt, and
+  // the one-idea point is already pinned above by /one thread/. The assertion is dropped, not reworded.
   assert.match(audienceGuidance('director', 'Would you delay launch?'), /tradeoff, or how the result is checked/)
 })
 
@@ -93,7 +94,7 @@ test('the question is cut out of the ramble, and a definition stays a storytelle
   assert.match(certificate, /no forced STAR episode/i)
   assert.match(certificate, /original candidate evidence supports it/)
   assert.match(certificate, /storytelling is optional/)
-  assert.match(experience, /documented career arc/)
+  assert.match(experience, /career arc from documented experience/)
   assert.match(director, /evidence that shifted a decision/)
   assert.match(director, /the risk|the business|decision authority/i)
   assert.match(audienceGuidance('engineer', 'How would you investigate this?'), /most important reference for how a desktop answer moves/)
