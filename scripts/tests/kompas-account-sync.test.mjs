@@ -221,10 +221,6 @@ test("explicit desktop Bearer never falls back to a different browser-cookie acc
   const source = fs.readFileSync("src/lib/supabase/server.ts", "utf8");
   const marker = "export async function createClientFromRequest(request: NextRequest)";
   assert.ok(source.includes(marker), "request auth boundary must exist");
-  const helperMarker = "function isExpiredJwt(token: string): boolean";
-  assert.ok(source.includes(helperMarker), "the expired JWT check remains part of the production auth boundary");
-  const helperSource = source.slice(source.indexOf(helperMarker), source.indexOf(marker))
-    .replace(helperMarker, "function isExpiredJwt(token)");
   const functionSource = source.slice(source.indexOf(marker))
     .replace(marker, "async function createClientFromRequest(request)");
   const ctx = {
@@ -240,7 +236,7 @@ test("explicit desktop Bearer never falls back to a different browser-cookie acc
     stubClient: () => ({ identity: "anonymous-stub" }),
     Buffer,
   };
-  vm.runInNewContext(helperSource + "\n" + functionSource + "\nthis.requestClient = createClientFromRequest;", ctx);
+  vm.runInNewContext(functionSource + "\nthis.requestClient = createClientFromRequest;", ctx);
   const request = value => ({ headers: { get: key => key === "authorization" ? value : null } });
   const expired = "a." + Buffer.from(JSON.stringify({ exp: 1 })).toString("base64url") + ".signature";
   const future = "a." + Buffer.from(JSON.stringify({ exp: 4102444800 })).toString("base64url") + ".signature";
@@ -251,5 +247,11 @@ test("explicit desktop Bearer never falls back to a different browser-cookie acc
   }
   assert.equal((await ctx.requestClient(request(null))).identity, "cookie-account-B",
     "cookie fallback is allowed only when no Bearer is supplied");
-  assert.match(source, /if \(!bearer\) return createClient\(\)/);
+  for (const malformed of ["", "Bearer", "Bearer   ", "Basic abc", "Bearer token another"]) {
+    const result = await ctx.requestClient(request(malformed));
+    assert.equal(result.identity, "anonymous-stub",
+      "explicit malformed Authorization cannot adopt cookie account");
+  }
+  assert.match(source, /if \(authorization === null\) return createClient\(\)/);
+  assert.match(source, /if \(!bearer\) return stubClient\(\)/);
 });
