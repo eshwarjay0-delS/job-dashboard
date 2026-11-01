@@ -2913,8 +2913,8 @@ function preserveSpokenQuestion(fullTurn, derived) {
   // even though the transcript already contains the introduction and constraints.
   // Only a single, validated spoken question calls this helper; don't use it for
   // independent multi-question turns or typed questions.
-  const source = String(fullTurn || "").replace(/\\s+/g, " ").trim();
-  const proposed = String(derived || "").replace(/\\s+/g, " ").trim();
+  const source = String(fullTurn || "").replace(/\s+/g, " ").trim();
+  const proposed = String(derived || "").replace(/\s+/g, " ").trim();
   if (!source || !proposed) return proposed || source;
   const sWords = source.split(/\\s+/).filter(Boolean).length;
   const dWords = proposed.split(/\\s+/).filter(Boolean).length;
@@ -3620,7 +3620,7 @@ async function aiAnswer(fromAuto) {
       // question. Preserve the full literal wording through derive, SSE, and
       // a saved/continued or cold-reopened session, not only its last clause.
       card.singleSpokenTurn = heardOnly;
-      card.fullSpokenQuestion = heardOnly ? String(spans[0] || said).replace(/\\s+/g, " ").trim() : "";
+      card.fullSpokenQuestion = heardOnly ? String(spans[0] || said).replace(/\s+/g, " ").trim() : "";
       card.formSeq = pending.length ? pending[0].seq : null;
       showPressed(card, card.question);
       return await generateAnswer(heard, card, { consolidated: true, earlier, derived: heardOnly ? undefined : shownSaid, pinned: !heardOnly });
