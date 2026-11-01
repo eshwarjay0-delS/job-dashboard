@@ -62,7 +62,7 @@ test("Narration is actually passed through the existing shared audience guidance
     assert.match(g,/SCENARIO VOICE/)
     assert.ok(g.indexOf("WORKBENCH NARRATION OVERRIDE")>g.indexOf("STORYTELLER:"),
       "Latest workbench override must follow the old forced-image storyteller text")
-    assert.match(g,/Question boundary/)
+    assert.match(g,/The first sentence answers the question in plain words/i)
   }
 })
 test("Naturalness must not pretend a Notebook-style discussion is candidate experience",()=>{
