@@ -7,7 +7,7 @@ import {
 } from "../../src/lib/kompasSourceRetrieval.ts"
 
 const S = JSON.parse(readFileSync(new URL("../../tests/fixtures/kompas-sample-sources.json", import.meta.url), "utf8"))
-const DOCS = sourceDocs({ resume: S.resume, jd: S.jd, documents: S.documents, savedQA: S.savedQA })
+const DOCS = sourceDocs({ resume: S.resume, jd: S.jd, dossier: S.dossier, savedQA: S.savedQA })
 
 test("sources split into labelled passages; headers and blanks are not passages", () => {
   const p = splitPassages(DOCS)
@@ -97,7 +97,7 @@ test("behavior 6: where-it-came-from chips are attached by code, verified, and n
   assert.doesNotMatch(text, /R\d|\[/)
 })
 test("behavior 9: resume and dossier disagreeing on an employer's dates is shown, resume wins", () => {
-  const docs = sourceDocs({ resume: S.resume, documents: "Northwind Bank (2019 to present): owned detections." })
+  const docs = sourceDocs({ resume: S.resume, dossier: "Northwind Bank (2019 to present): owned detections." })
   const c = sourceConflicts(docs)
   assert.equal(c.length, 1)
   assert.match(c[0], /Northwind Bank.*2021.*2019.*using the resume/i)

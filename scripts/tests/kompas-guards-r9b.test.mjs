@@ -7,9 +7,9 @@ import * as G from "../../src/lib/kompasSentenceGate.ts"
 import { allowedNumbers, questionFigures, speakFacts } from "../../src/lib/kompasGuards.ts"
 
 const S = JSON.parse(readFileSync(new URL("../../tests/fixtures/kompas-sample-sources.json", import.meta.url), "utf8"))
-const DOCS = R.sourceDocs({ resume: S.resume, jd: S.jd, documents: S.documents })
-const allowed = allowedNumbers(S.resume, S.documents)
-const facts = speakFacts({ resume: S.resume, jd: "", documents: S.documents, heard: "", identity: "", projects: "" })
+const DOCS = R.sourceDocs({ resume: S.resume, jd: S.jd, dossier: S.dossier })
+const allowed = allowedNumbers(S.resume, S.dossier)
+const facts = speakFacts({ resume: S.resume, jd: "", documents: S.dossier, heard: "", identity: "", projects: "" })
 const Q = "Tell me about a time you led a migration."
 const passages = R.retrievePassages(Q, DOCS, 4).passages
 const check = G.sentenceCheck({ facts, allowed, asked: questionFigures(Q), docs: DOCS, question: Q, passages })

@@ -10,9 +10,9 @@ const S = JSON.parse(readFileSync(new URL("../../tests/fixtures/kompas-sample-so
 const RES = `${S.resume}
 - Managed 4 analysts and covered 3 regions; the migration took 12 weeks and saved $2 million.
 - Mapped controls to ISO 27001, SOC 2 Type II, NIST 800-53 and PCI DSS 4.0 for a 24/7 SOC on Windows Server 2019.`
-const DOCS = R.sourceDocs({ resume: RES, jd: S.jd, documents: S.documents })
-const allowed = allowedNumbers(RES, S.documents)
-const facts = speakFacts({ resume: RES, jd: "", documents: S.documents, heard: "", identity: "", projects: "" })
+const DOCS = R.sourceDocs({ resume: RES, jd: S.jd, dossier: S.dossier })
+const allowed = allowedNumbers(RES, S.dossier)
+const facts = speakFacts({ resume: RES, jd: "", documents: S.dossier, heard: "", identity: "", projects: "" })
 const Q = "Tell me about a time you led a migration."
 const passages = R.retrievePassages(Q, DOCS, 4).passages
 const check = G.sentenceCheck({ facts, allowed, asked: questionFigures(Q), docs: DOCS, question: Q, passages })

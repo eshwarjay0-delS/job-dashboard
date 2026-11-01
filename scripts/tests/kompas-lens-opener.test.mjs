@@ -7,7 +7,7 @@ import { buildOpenerTable, pickOpener, openerCategory, openerPrompt, withoutOpen
 import { allowedNumbers } from "../../src/lib/kompasGuards.ts"
 
 const S = JSON.parse(readFileSync(new URL("../../tests/fixtures/kompas-sample-sources.json", import.meta.url), "utf8"))
-const SRC = { resume: S.resume, documents: S.documents }
+const SRC = { resume: S.resume, documents: S.dossier }
 const ITEMS = [
   { id: "resume:1", sourceDoc: "resume", category: "experience-story", status: "sourced", text: "Led incident response for a leaked API key: rotated the key in KMS, scoped the blast radius and wrote the post-incident review." },
   { id: "resume:0", sourceDoc: "resume", category: "experience-story", status: "sourced", text: "Built Splunk detections for AWS CloudTrail and GuardDuty findings and cut alert triage time by 40%." },
@@ -24,7 +24,7 @@ const all = Object.values(table).flat()
 test("every opener is verbatim from its own source document; reworded, hole and JD items are refused with a reason", () => {
   for (const o of all) {
     assert.equal(o.verbatim, true)
-    const hay = (o.sourceDoc === "resume" ? S.resume : S.documents).replace(/\s+/g, " ")
+    const hay = (o.sourceDoc === "resume" ? S.resume : S.dossier).replace(/\s+/g, " ")
     assert.ok(hay.includes(o.text), o.text)
   }
   assert.deepEqual(refused.map((r) => r.id).sort(), ["bad:1", "bad:2", "bad:3", "bad:4"])
@@ -32,7 +32,7 @@ test("every opener is verbatim from its own source document; reworded, hole and 
 })
 
 test("no invented numbers or stories: every figure in every opener is in allowedNumbers of the experience sources", () => {
-  const allowed = allowedNumbers(S.resume, S.documents)
+  const allowed = allowedNumbers(S.resume, S.dossier)
   for (const o of all) for (const f of o.text.match(/\b\d[\d,.]*%?/g) || []) assert.ok(allowed.has(f.replace(/[.,]$/, "")), f)
   assert.ok(!all.some((o) => /65%|50%/.test(o.text)))
 })
@@ -69,13 +69,13 @@ test("the body does not repeat the opener: prompt tells it, and restating senten
 test(`fold: 200 personal questions x item orders, 0 non-verbatim, 0 invented figures, 0 body repeats`, () => {
   const qs = ["Tell me about a time you {x}.", "Describe a situation where you {x}.", "What was your biggest challenge when you {x}?", "Walk me through a project where you {x}."]
   const xs = ["led incident response", "built detections", "handled a leaked key", "worked with audit", "tuned noisy rules"]
-  const allowed = allowedNumbers(S.resume, S.documents); let bad = 0, n = 0
+  const allowed = allowedNumbers(S.resume, S.dossier); let bad = 0, n = 0
   for (let i = 0; i < 200; i++) {
     const items = i % 2 ? [...ITEMS].reverse() : ITEMS
     const t = buildOpenerTable(items, SRC).table
     const q = qs[i % qs.length].replace("{x}", xs[i % xs.length]); const o = pickOpener(t, q, { passages: [{ id: t[openerCategory(q)]?.[0]?.sourceId }] }) // r7: matched passage passed explicitly
     n++; if (!o) { bad++; continue }
-    const hay = (o.sourceDoc === "resume" ? S.resume : S.documents).replace(/\s+/g, " ")
+    const hay = (o.sourceDoc === "resume" ? S.resume : S.dossier).replace(/\s+/g, " ")
     if (!hay.includes(o.text)) bad++
     if ((o.text.match(/\b\d[\d,.]*%?/g) || []).some((f) => !allowed.has(f.replace(/[.,]$/, "")))) bad++
     if (withoutOpenerRepeat(`${o.text} Then I checked the result.`, o).includes(o.text)) bad++
@@ -86,7 +86,7 @@ test(`fold: 200 personal questions x item orders, 0 non-verbatim, 0 invented fig
 const FAST = "/workspace/speed-work/src/fastIndex.ts"
 test("integration with the speed-work fastIndex prototype (skipped if absent): its matched passage ids drive the pick", { skip: !existsSync(FAST) }, async () => {
   const { buildIndex, matchQuestion } = await import(FAST)
-  const ix = buildIndex({ resume: S.resume, documents: S.documents, jd: S.jd })
+  const ix = buildIndex({ resume: S.resume, documents: S.dossier, jd: S.jd })
   const q = "Tell me about a time you led incident response for a leaked key."
   const m = matchQuestion(ix, q)
   assert.equal(m.category, openerCategory(q))

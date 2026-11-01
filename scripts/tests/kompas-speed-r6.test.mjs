@@ -12,7 +12,7 @@ import { resumeRoles, resumeDigest } from "../../src/lib/kompasResume.ts"
 
 const S = JSON.parse(readFileSync(new URL("../../tests/fixtures/kompas-sample-sources.json", import.meta.url), "utf8"))
 const W = JSON.parse(readFileSync(new URL("../../tests/fixtures/kompas-weighting-sources-r4.json", import.meta.url), "utf8"))
-const DOCS = R.sourceDocs({ resume: S.resume, jd: S.jd, documents: S.documents, savedQA: S.savedQA })
+const DOCS = R.sourceDocs({ resume: S.resume, jd: S.jd, dossier: S.dossier, savedQA: S.savedQA })
 const QS = ["How did you handle a leaked API key?", "Tell me about your Terraform guardrails.", "What else?", "How did you approach terra form and cloud trail?",
   "Tell me about Kubernetes admission controllers.", "How did you handle residual risks and HIPAA controls?", "sorry the line cut out, spunk detections?",
   "Tell me about a time you disagreed with a stakeholder.", "How did you lead the team on access reviews?", "", "post incident review", "What did you do at Northwind?"]
@@ -34,7 +34,7 @@ test("indexed retrieval returns exactly today's results on the fixtures", () => 
 test("the source index is built once per content and reused; a change rebuilds it", () => {
   R.clearSourceIndexCache()
   const a = R.sourceIndexFor(DOCS)
-  assert.equal(R.sourceIndexFor(R.sourceDocs({ resume: S.resume, jd: S.jd, documents: S.documents, savedQA: S.savedQA })), a)
+  assert.equal(R.sourceIndexFor(R.sourceDocs({ resume: S.resume, jd: S.jd, dossier: S.dossier, savedQA: S.savedQA })), a)
   const b = R.sourceIndexFor(R.sourceDocs({ resume: S.resume + "\n- Wrote a new detection for stolen OAuth tokens in Okta." }))
   assert.notEqual(a, b)
   assert.equal(R.sourceIndexFor([]), null)
@@ -48,16 +48,16 @@ test("index failsafe: a broken index falls back to the scan, same result", () =>
 // ---- 1. per-session cache of digest, speakable facts and allowed numbers
 test("session facts equal the per-question build and are cached by content hash", () => {
   C.clearSessionCache()
-  const a = C.sessionFacts(S.resume, S.documents)
-  assert.deepEqual(a.guardFacts, speakFacts({ resume: S.resume, jd: "", documents: S.documents, heard: "", identity: "", projects: "" }))
-  assert.deepEqual([...a.allowed], [...allowedNumbers(S.resume, S.documents)])
+  const a = C.sessionFacts(S.resume, S.dossier)
+  assert.deepEqual(a.guardFacts, speakFacts({ resume: S.resume, jd: "", documents: S.dossier, heard: "", identity: "", projects: "" }))
+  assert.deepEqual([...a.allowed], [...allowedNumbers(S.resume, S.dossier)])
   assert.deepEqual(a.roles, resumeRoles(S.resume))
   const before = C.sessionCacheStats().builds
-  C.sessionFacts(S.resume, S.documents)
+  C.sessionFacts(S.resume, S.dossier)
   assert.equal(C.sessionCacheStats().builds, before)
-  C.sessionFacts(S.resume + "\nCut costs by 12%.", S.documents)
+  C.sessionFacts(S.resume + "\nCut costs by 12%.", S.dossier)
   assert.equal(C.sessionCacheStats().builds, before + 1)
-  assert.ok(C.sessionFacts(S.resume + "\nCut costs by 12%.", S.documents).allowed.has("12%"))
+  assert.ok(C.sessionFacts(S.resume + "\nCut costs by 12%.", S.dossier).allowed.has("12%"))
 })
 test("cached allowed-numbers set cannot be poisoned by a caller", () => {
   C.clearSessionCache()
@@ -99,8 +99,8 @@ test("repair: advisory-only tangent items do not call the model; real gaps do", 
 })
 
 // ---- 4. per-sentence guarded streaming
-const facts = speakFacts({ resume: S.resume, documents: S.documents })
-const allowed = allowedNumbers(S.resume, S.documents)
+const facts = speakFacts({ resume: S.resume, documents: S.dossier })
+const allowed = allowedNumbers(S.resume, S.dossier)
 const gateFor = (q, opener) => G.createSentenceGate({
   check: G.sentenceCheck({ facts, allowed, asked: new Set(), docs: DOCS, question: q, passages: R.retrievePassages(q, DOCS).passages }),
   opener, sourcePassages: R.splitPassages(DOCS),

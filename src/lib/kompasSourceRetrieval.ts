@@ -16,10 +16,10 @@ export interface Passage { id: string; source: string; proves: Proves; text: str
 export interface Retrieval { matched: boolean; passages: Passage[]; closest: Passage | null; all: Passage[]; missing?: string[] }
 
 export const NOT_IN_SOURCES =
-  "NOT IN YOUR SOURCES: nothing in the candidate's resume, dossier or saved answers covers this. Do not claim personal experience of it, and never invent an employer, tool, project or number. Answer in general voice (\"In general, teams...\"), then bridge to the closest real example below only if it truly relates."
+  "NOT IN YOUR SOURCES: nothing in the candidate's resume, documents, dossier or saved answers covers this. Do not claim personal experience of it, and never invent an employer, tool, project or number. Answer in general voice (\"In general, teams...\"), then bridge to the closest real example below only if it truly relates."
 
 const EMPTY: Retrieval = { matched: false, passages: [], closest: null, all: [] }
-const PREFIX: Record<string, string> = { resume: "R", "job description": "J", dossier: "D", "saved Q&A": "Q" }
+const PREFIX: Record<string, string> = { resume: "R", "job description": "J", documents: "M", dossier: "D", "saved Q&A": "Q" }
 const STOP = new Set(("the and for with that this from your you have has was were are what how why when where which who did does " +
   "about tell time work experience describe example handle give walk through would could should can will into used use using " +
   "ever been them they their there then than also just like some more most very each every other").split(" "))
@@ -29,7 +29,12 @@ export function sourceDocs(src: { resume?: string; jd?: string; documents?: stri
   if (!src || typeof src !== "object") return []
   const docs: SourceDoc[] = [
     { name: "resume", text: String(src.resume || ""), proves: "experience" },
-    { name: "dossier", text: [src.documents, src.dossier].filter(Boolean).join("\n\n"), proves: "experience" },
+    // Documents are their own source (Nov 1): attached material (question banks,
+    // guides) must stay distinguishable from dossier notes so retrieval can rank
+    // it first and the prompt can label it. Previously the two were folded into
+    // one "dossier" source and no document-first rule was expressible.
+    { name: "documents", text: String(src.documents || ""), proves: "experience" },
+    { name: "dossier", text: String(src.dossier || ""), proves: "experience" },
     { name: "saved Q&A", text: String(src.savedQA || ""), proves: "experience" },
     { name: "job description", text: String(src.jd || ""), proves: "emphasis" },
   ]
@@ -396,6 +401,19 @@ export function retrievePassages(question: string, docs: SourceDoc[] | null | un
       if (demote && recent.some((r) => usedIn(p, r))) p.score *= ASKS_NEW.test(q) ? 0.2 : 0.4
     }
     let ranked = scored.filter((p) => p.score > 0).sort((a, b) => b.score - a.score)
+    // Documents first (Nov 1): when attached material matches the question, its
+    // passages lead the presented set and take the top-k slots before dossier
+    // notes; within each tier the relevance order stands, and the new-angle lead
+    // below can still promote an unused covering passage to the very front.
+    // Selection stays relevance-gated: only passages scoring above zero are ranked.
+    // A passage demoted for recent use stays out of the document tier: it sorts
+    // by its reduced score in the general pool, so the new-angle demotion
+    // contract holds for document passages too.
+    {
+      const isDemoted = (p: Passage) => demote && recent.some((r) => usedIn(p, r))
+      const docFirst = ranked.filter((p) => p.source === "documents" && !isDemoted(p))
+      if (docFirst.length && docFirst.length < ranked.length) ranked = [...docFirst, ...ranked.filter((p) => !(p.source === "documents" && !isDemoted(p)))]
+    }
     const experience = scored.filter((p) => p.proves === "experience")
     // "In your sources" needs real topic coverage: the best experience passage holds at least half of the asked topic
     // words (interview chatter like "sorry, the line cut out" is not topic), not one shared generic word.
@@ -528,7 +546,7 @@ export function sourcePassagesPrompt(r: Retrieval | null | undefined): string {
     const partly = Array.isArray(r.missing) && r.missing.length
       ? `\nPARTLY NOT IN YOUR SOURCES: ${r.missing.join("; ")}. Answer the covered part from the passages above, then say plainly you have not done ${r.missing.length > 1 ? "those" : "that"} yourself and answer it in general voice; never invent experience of it.`
       : ""
-    return `SOURCE PASSAGES (the candidate's own sources, most relevant first; personal claims about employers, tools, dates and numbers must be backed by these or the full resume. A job description line shows what to emphasise, never what the candidate did):\n${
+    return `SOURCE PASSAGES (the candidate's own sources, document material first, then most relevant; personal claims about employers, tools, dates and numbers must be backed by these or the full resume. A job description line shows what to emphasise, never what the candidate did):\n${
       r.passages.map((p) => `[${p.id} · ${p.source} · ${p.proves}] ${p.text}`).join("\n")}${partly}`
   } catch {
     return ""
