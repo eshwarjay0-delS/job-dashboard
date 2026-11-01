@@ -1,3 +1,4 @@
+import { naturalNarrationFlags } from "./kompasNaturalNarration.ts"
 /**
  * Interview answer precision. Topic coverage is a prompt/check signal, never
  * evidence that a model claim happened in the candidate's real career.
@@ -62,6 +63,7 @@ export function precisionPrompt(question:string):string {
 }
 export function spokenQualityFlags(question:string,answer:string):string[] {
  const text=String(answer||''),flags=missingQuestionParts(question,text).map(p=>'missing:'+p)
+ flags.push(...naturalNarrationFlags(question,text))
  if(/\[(?:beat|breath|pause)\]|\(pause\)|__[^_]+__|\*\*[^*]+\*\*/i.test(text))flags.push('spoken-markup')
  if(/^\s*(?:I (?:will|am going to) (?:summari[sz]e|answer|explain)|the answer (?:is|would be))\b/i.test(text))flags.push('meta-opening')
  if(/\b(?:as (?:the |a )?CISO|I (?:forced|ordered) the team)\b/i.test(text))flags.push('unsupported-authority-signal')
