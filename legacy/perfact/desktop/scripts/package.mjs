@@ -30,6 +30,7 @@ const out = await build({
     files: ["main.js", "preload.js", "live-captions-uia.ps1", "panel.css", "picker.html", "picker.js", "picker-preload.js", "icon-256.png", "package.json",
       { from: ".stage/copilot", to: "copilot", filter: COPILOT_FILES }],
     asar: true,
+    asarUnpack: ["live-captions-uia.ps1"],
     npmRebuild: false,
     win: { icon: "icon-256.png", signAndEditExecutable: false },
     portable: { artifactName: "Kompas.exe", unpackDirName: "Kompas" },
