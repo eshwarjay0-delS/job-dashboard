@@ -216,3 +216,35 @@ test("same-owner recovery does not resurrect a session removed from the current 
   assert.deepEqual(current.map(s=>s.id),["active"]);
   assert.deepEqual(posted,["active"],"stale cached session must never be uploaded anew");
 });
+
+test("explicit desktop Bearer never falls back to a different browser-cookie account", async () => {
+  const source = fs.readFileSync("src/lib/supabase/server.ts", "utf8");
+  const marker = "export async function createClientFromRequest(request: NextRequest)";
+  assert.ok(source.includes(marker), "request auth boundary must exist");
+  const functionSource = source.slice(source.indexOf(marker))
+    .replace(marker, "async function createClientFromRequest(request)");
+  const ctx = {
+    process: { env: {
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
+    } },
+    createClient: async () => ({ identity: "cookie-account-B" }),
+    createSupabaseClient: (_url, _key, options) => ({
+      identity: "bearer-account-A",
+      authorization: options.global.headers.Authorization,
+    }),
+    stubClient: () => ({ identity: "anonymous-stub" }),
+  };
+  vm.runInNewContext(functionSource + "\nthis.requestClient = createClientFromRequest;", ctx);
+  const request = value => ({ headers: { get: key => key === "authorization" ? value : null } });
+  const expired = "a." + Buffer.from(JSON.stringify({ exp: 1 })).toString("base64url") + ".signature";
+  const future = "a." + Buffer.from(JSON.stringify({ exp: 4102444800 })).toString("base64url") + ".signature";
+  for (const token of [expired, future, "not-a-jwt"]) {
+    const result = await ctx.requestClient(request("Bearer " + token));
+    assert.equal(result.identity, "bearer-account-A", "explicit token must not adopt cookie identity");
+    assert.equal(result.authorization, "Bearer " + token);
+  }
+  assert.equal((await ctx.requestClient(request(null))).identity, "cookie-account-B",
+    "cookie fallback is allowed only when no Bearer is supplied");
+  assert.match(source, /if \(!bearer\) return createClient\(\)/);
+});
