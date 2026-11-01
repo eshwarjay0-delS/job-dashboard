@@ -39,6 +39,9 @@ jobs:
         run: npx tsc --noEmit --skipLibCheck
         continue-on-error: false
 
+      - name: Verify 20-fold desktop/authentication/account-isolation runtime scenarios
+        run: node --test scripts/tests/kompas-desktop-auth-20fold.test.mjs scripts/tests/desktop-signin-state.test.mjs scripts/tests/kompas-auth-refresh-lock.test.mjs scripts/tests/auth-boundaries.test.mjs scripts/tests/kompas-session-continuity.test.mjs scripts/tests/kompas-desktop-handoff-migration.test.mjs scripts/tests/kompas-desktop-ticket.test.mjs
+
       - name: Verify cross-device Kompas session synchronization
         run: node --test scripts/tests/kompas-account-sync.test.mjs
 
