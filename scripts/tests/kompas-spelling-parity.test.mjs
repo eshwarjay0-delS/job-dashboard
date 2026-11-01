@@ -26,6 +26,10 @@ const TOOL = [
   ["why do you want to work at big intro", "Big Intro"], ["are you a u s citizen", "U.S. citizen"],
   ["how does ven a fi issue certificates", "Venafi"], ["what is cyber-arc", "CyberArk"], ["what is cyber ark", "CyberArk"],
   ["what is cyber arc pam", "CyberArk"],
+  ["what is your experience with seem", "SIEM"], ["we use seem for log correlation", "SIEM"],
+  ["the seem tool collects logs", "SIEM"], ["with seam we monitor alerts", "SIEM"],
+  ["our sim platform", "SIEM"], ["migrated to seem last year", "SIEM"],
+  ["talk about seem integration", "SIEM"], ["experience with the seem", "SIEM"],
 ];
 const PLAIN = [
   "the service now is slow", "customer service now takes a week", "we're in service now", "the car is in service now",
@@ -33,6 +37,9 @@ const PLAIN = [
   "give a big intro to the team", "that was a big intro", "a big introduction", "let us see the scaler settings",
   "i see scale problems", "the cyber archive", "u s and them", "he is savvy entirely", "a nist report", "google search ops",
   "venue a fine place", "the service desk", "he went beyond trust", "a sock two days ago",
+  "it would seem that the design works", "they seem happy with the result", "it seems to work fine",
+  "she seems nice", "this would seem odd", "a seam in the fabric", "the seam split open",
+  "sim game night", "seemingly simple",
 ];
 
 test("5a-1. the desktop and server lists are the same list, entry for entry", () => {
