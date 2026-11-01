@@ -2907,6 +2907,24 @@ let answerEpoch = 0;            // bumps on every answer request: an automatic r
 function slimPrep() { const p = current && current.prep; return p ? { identity: p.identity, persona: p.persona, projects: p.projects } : {}; }
 function buildTranscript() { return transcript.slice(-80).map(t => `${t.who}: ${t.text}`).join("\n"); }
 function heardAsQuestion(lines) { return lines.map(t => t.text).join(" ").replace(/\s+/g, " ").trim().slice(0, 4000); }
+function preserveSpokenQuestion(fullTurn, derived) {
+  // The source turn is the display authority when the speaker asked ONE question.
+  // The AI derive stage may compress that to only its tail ("...and why?"),
+  // even though the transcript already contains the introduction and constraints.
+  // Only a single, validated spoken question calls this helper; don't use it for
+  // independent multi-question turns or typed questions.
+  const source = String(fullTurn || "").replace(/\\s+/g, " ").trim();
+  const proposed = String(derived || "").replace(/\\s+/g, " ").trim();
+  if (!source || !proposed) return proposed || source;
+  const sWords = source.split(/\\s+/).filter(Boolean).length;
+  const dWords = proposed.split(/\\s+/).filter(Boolean).length;
+  // A concise server reformulation is fine only when it has retained most of
+  // what the interviewer actually said. If it lost a meaningful lead, keep
+  // the literal captured turn for both the visible card and the answer engine.
+  if (sWords >= 12 && sWords - dWords >= 7 && dWords <= Math.floor(sWords * 0.72))
+    return source;
+  return proposed;
+}
 function lastAsk(lines) {
   const them = lines.filter(t => t.who === "Them" || t.who === "You (typed)");
   const src = them.length ? them : lines;
@@ -3212,7 +3230,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
           return;
         }
       }
-      if (dj.derived) { derivedQ = dj.derived; card.question = derivedQ; if (cards[idx] === card) renderCard(); }
+      if (dj.derived) { derivedQ = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, dj.derived) : dj.derived; card.question = derivedQ; if (cards[idx] === card) renderCard(); }
       derivedBy = dj.derivedBy || "ai";
       const hit = !directDesktop && book.sid === (current && current.id) && bookMatch(derivedQ, depthKey);
       if (hit) { if (answerCtl === ctl) answerCtl = null; serveBook(card, hit, depthKey); return; }
@@ -3319,7 +3337,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
           const frame = buf.slice(0, i).trim(); buf = buf.slice(i + 2);
           if (!frame.startsWith("data:")) continue;
           let ev; try { ev = JSON.parse(frame.slice(5)); } catch { continue; }
-          if (ev.type === "meta") { meta = { ...meta, ...ev }; if (ev.derived && card.req === ctl && (consolidated || opts.pinned) && !opts.derived) { card.question = ev.derived; if (cards[idx] === card) { renderCard(); status("Answering: " + ev.derived, "live"); } } }
+          if (ev.type === "meta") { meta = { ...meta, ...ev }; if (ev.derived && card.req === ctl && (consolidated || opts.pinned) && !opts.derived) { const displayQ = card.singleSpokenTurn ? preserveSpokenQuestion(card.fullSpokenQuestion, ev.derived) : ev.derived; card.question = displayQ; if (cards[idx] === card) { renderCard(); status("Answering: " + displayQ, "live"); } } }
           else if (ev.type === "delta") { if (!first) first = performance.now() - t0; text += ev.text; show(text); }
           else if (ev.type === "replace") { if (!first) first = performance.now() - t0; text = ev.text; show(text); }
           else if (ev.type === "wait") { if (card.req === ctl) status("Reconnecting.", "live"); }
@@ -3537,7 +3555,7 @@ async function aiAnswer(fromAuto) {
         // The re-ask goes on the next page (book rule, 27 Oct 2026): the page it re-asks keeps its question and finished
         // answer instead of being wiped to "…" and rewritten in place.
         const page = addCard(cur.question, ["…"]);
-        page.heard = heard; page.earlier = cur.earlier || ""; page.formed = cur.formed;
+        page.heard = heard; page.earlier = cur.earlier || ""; page.formed = cur.formed; page.singleSpokenTurn = cur.singleSpokenTurn; page.fullSpokenQuestion = cur.fullSpokenQuestion;
         if (recoverSeq != null) page.formSeq = recoverSeq;
         showPressed(page, heardOnly ? cur.question : q);
         return await generateAnswer(heard, page, { consolidated: true, earlier: "", derived: heardOnly ? undefined : q, reask: true, pinned: !heardOnly });
@@ -3598,6 +3616,11 @@ async function aiAnswer(fromAuto) {
       const card = addCard(heardOnly ? "Deriving…" : (shownSaid || "Answering what was just heard…"), ["…"]);
       if (shownSaid !== said) card.original = said;
       card.heard = heard; card.earlier = earlier; card.formed = heard;
+      // This verified single spoken ask belongs to the interviewer as one
+      // question. Preserve the full literal wording through derive, SSE, and
+      // a saved/continued or cold-reopened session, not only its last clause.
+      card.singleSpokenTurn = heardOnly;
+      card.fullSpokenQuestion = heardOnly ? String(spans[0] || said).replace(/\\s+/g, " ").trim() : "";
       card.formSeq = pending.length ? pending[0].seq : null;
       showPressed(card, card.question);
       return await generateAnswer(heard, card, { consolidated: true, earlier, derived: heardOnly ? undefined : shownSaid, pinned: !heardOnly });
@@ -3612,7 +3635,7 @@ async function aiAnswer(fromAuto) {
     if (c && c.question && !/^(Preparing\u2026|Ready|Cleared\.|No question yet|Deriving)/.test(c.question)) {
       // A finished page stays as it is; asking it again opens the next page. A page with no answer yet is asked again in place.
       const page = hasAnswer(c) ? addCard(c.question, ["…"]) : c;
-      if (page !== c) { page.heard = c.heard; page.earlier = c.earlier; page.formed = c.formed; }
+      if (page !== c) { page.heard = c.heard; page.earlier = c.earlier; page.formed = c.formed; page.singleSpokenTurn = c.singleSpokenTurn; page.fullSpokenQuestion = c.fullSpokenQuestion; }
       showPressed(page, c.question);
       return await generateAnswer(c.question, page, { reask: true, pinned: true, derived: c.question });
     }
