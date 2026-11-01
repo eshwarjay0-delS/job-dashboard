@@ -1761,6 +1761,10 @@ function dictateStep(cap, rms, now, vad) {
 //    Only on an explicit call, only while capturing, one restart at a time, never throws, never navigates or
 //    touches sign-in. The call-audio share is re-acquired only on the desktop (a browser would ask for the share
 //    dialog again); there the page restarts the mic only.
+//  - window.__kompasLiveActivity (getter): true while any capture runs or any card streams an answer, false
+//    otherwise. The shell's release-aware restore reads it before reloading: a reload happens only on an
+//    explicit false. A getter, never a stored flag, so it cannot go stale; on any error it reports busy
+//    (fail-closed: no reload).
 function installWatchdogHooks(win, deps) {
   const LEVEL_WINDOW_MS = 1000;
   const recent = { You: { rms: 0, at: 0 }, Them: { rms: 0, at: 0 } };
@@ -1793,6 +1797,18 @@ function installWatchdogHooks(win, deps) {
       },
     });
   } catch {}
+  try {
+    Object.defineProperty(win, "__kompasLiveActivity", {
+      configurable: true,
+      get() {
+        try {
+          if (deps.captures().some((c) => c && !c.stopped)) return true;
+          if (deps.cards().some((c) => c && c.streaming)) return true;
+          return false;
+        } catch { return true; }
+      },
+    });
+  } catch {}
   win.__kompasRestartCapture = () => {
     try {
       if (restarting || !deps.running()) return false;
@@ -1818,6 +1834,7 @@ let kompasLevelTap = () => {};
 try {
   kompasLevelTap = installWatchdogHooks(window, {
     captures: () => captures, running: () => running, desktop: () => !!window.kompasDesktop,
+    cards: () => cards,
     stopSource: (w) => stopSource(w), startMic: () => startMic(), startSys: () => startSys(),
     primeAudio: () => primeAudio(), reportSources: () => reportSources(),
   });
