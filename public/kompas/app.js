@@ -1557,12 +1557,21 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
   if (who === "Them") displayVideo = owner?.getVideoTracks()[0] || null;
   const src = ctx.createMediaStreamSource(stream);
   const cap = { who, stream, owner, src, stopped: false, rec: null, chunks: [], segStart: 0, speechMs: 0, lastVoice: 0, lastTick: 0, voiced: false, noise: 0.001, interimAt: 0, inflight: 0, lastVadAt: performance.now(), lastAudibleAt: performance.now(), zeroWarned: false, watchdog: null, an: null };
-  const an = ctx.createAnalyser(); an.fftSize = 1024; src.connect(an); cap.an = an;
+  const an = ctx.createAnalyser(); an.fftSize = 1024;
+  // Parity (owner, 1 Nov 2026): the mic gets browser auto-gain, the raw
+  // system loopback gets none, so quiet call audio sat under the VAD floor
+  // and dropped every 6 s while the mic transcribed fine. A Them-only tap
+  // gain lifts the measured level (never the recorded stream) into the same
+  // working range. VAD thresholds untouched; Whisper input untouched.
+  let tap = null;
+  try { if (who === "Them" && typeof ctx.createGain === "function") { tap = ctx.createGain(); tap.gain.value = 4; src.connect(tap); } } catch { tap = null; }
+  const tapSrc = tap || src;
+  tapSrc.connect(an); cap.an = an; cap.tap = tap;
   if (ctx._lvl === "worklet") {
     const node = new AudioWorkletNode(ctx, "perfact-level");
     node.port.onmessage = (e) => vadStep(cap, e.data);
     const sink = ctx.createGain(); sink.gain.value = 0;
-    src.connect(node); node.connect(sink); sink.connect(ctx.destination);
+    tapSrc.connect(node); node.connect(sink); sink.connect(ctx.destination);
     cap.node = node; cap.sink = sink;
   } else {
     const buf = new Float32Array(an.fftSize);
@@ -1614,7 +1623,7 @@ function stopSource(who) {
   for (const cap of captures.filter(c => c.who === who)) {
     cap.stopped = true; stopCaptions(cap);
     finishing.push(endSegment(cap, cap.voiced, false));
-    try { cap.src.disconnect(); cap.node && cap.node.disconnect(); cap.sink && cap.sink.disconnect(); } catch {}
+    try { cap.src.disconnect(); cap.node && cap.node.disconnect(); cap.sink && cap.sink.disconnect(); cap.tap && cap.tap.disconnect(); } catch {}
     if (cap.timer) clearInterval(cap.timer);
     if (cap.watchdog) clearInterval(cap.watchdog);
     try { cap.stream.getTracks().forEach(t => t.stop()); } catch {}
