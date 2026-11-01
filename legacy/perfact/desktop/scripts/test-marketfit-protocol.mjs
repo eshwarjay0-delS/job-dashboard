@@ -7,7 +7,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const page = fs.readFileSync(path.join(root, "copilot", "app.js"), "utf8");
+// The standalone perfACT/copilot directory is no longer source of truth.
+const page = fs.readFileSync(path.resolve(root, "..", "..", "public", "kompas", "app.js"), "utf8");
 const desktop = fs.readFileSync(path.join(root, "desktop", "main.js"), "utf8");
 const sfx = fs.readFileSync(path.join(root, "desktop", "scripts", "sfx.cs"), "utf8");
 
