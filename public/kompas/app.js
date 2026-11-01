@@ -1438,10 +1438,11 @@ async function start() {
   if (srcOn.mic) opening.push(startMic());
   await Promise.allSettled(opening);
   if (!running || generation !== sourceGeneration.You) return;
-  if (!captures.length) { status(captureErrors.join(" · ") || "Nothing to capture.", "err"); stop(false); return; }
+  if (!captures.length && !captionCaptureEnabled) { status(captureErrors.join(" · ") || "Nothing to capture.", "err"); stop(false); return; }
   startClock();
   markRun();
   reportSources();
+  captionBegin();
   // Phone mic-only sessions: say so plainly — the mic hears both sides,
   // because phones have no separate call-audio capture (owner, 31 Oct 2026).
   // The tip element is optional: guard the DOM call so extracted-function
@@ -1452,6 +1453,7 @@ async function start() {
   }
 }
 async function stop(say = true) {
+  captionEnd();
   running = false;
   $("startBtn").textContent = "Start"; $("startBtn").classList.remove("on");
   document.querySelector(".rec").classList.remove("live"); stopClock();
@@ -2771,6 +2773,7 @@ function noteTurnGate() {
 }
 let gateSeenSeq = 0;
 function resetLiveState() {           // a new or exited session starts clean: no leaked stream, timer or badge
+  captionEnd();
   for (const c of inflight) { try { c.abort(); } catch {} }
   inflight.clear();
   if (answerCtl) { try { answerCtl.abort(); } catch {} answerCtl = null; }
@@ -2994,8 +2997,12 @@ function captionTechnicalCorrection(raw) {
   return fixTerms(fixPhrases(text));
 }
 
-function onTranscript(who, text, lookedAgain, spokenAt) {
-  text = fixTerms(fixPhrases(text));
+function onTranscript(who, text, lookedAgain, spokenAt, fromCaption = false) {
+  text = captionTechnicalCorrection(text);
+  // Prefer visible Windows captions over overlapping Groq text from a loopback
+  // clip; unrelated voice and later clips still flow normally.
+  if (who === "Them" && !fromCaption && captionCaptureEnabled && Date.now() - captionSeenAt < 12000 &&
+      echoShare(text, captionLastRaw || captionLastCommitted) >= 0.75) return;
   if (who === "Them") noteThem(text, spokenAt);
   else if (who === "You" && captures.some(c => c.who === "Them")) {
     if (micBleed(text, Date.now(), themLines, spokenAt)) { logDecision("drop-mic-bleed", who, text); logEvent({ t: "echo", who, text, bleed: true }); return; }   // the call audio through the mic within 1.5 s
@@ -3548,7 +3555,7 @@ $("manualInput").addEventListener("keydown", (e) => {
   sendManual();
 });
 function sendManual() { void aiAnswer(false); }   // the typed box joins the AI Answer intake (box + mic + computer audio concatenated)
-$("manualInput").addEventListener("input", () => { if (cards[idx]) renderCard(); });
+$("manualInput").addEventListener("input", () => { if ($("manualInput")?.dataset?.captionDraft === "1") delete $("manualInput").dataset.captionDraft; if (cards[idx]) renderCard(); });
 function pressQuestion(typed, intake, screen) {
   const clean = (s) => String(s || "").replace(/\s+/g, " ").trim();
   let typedClean = clean(typed), derived = clean(intake && intake.derived);
@@ -3758,7 +3765,13 @@ async function aiAnswer(fromAuto) {
     setChat(true);
   } catch (error) {
     status(error.message || "Could not prepare an answer. Please retry.", "err");
-  } finally { aiBusy = false; }
+  } finally {
+    aiBusy = false;
+    if (captionReadyAnswer && running && captionCaptureEnabled) {
+      captionReadyAnswer = false;
+      setTimeout(() => { if (running && captionCaptureEnabled && !aiBusy) void aiAnswer(true); }, 300);
+    }
+  }
 }
 // Captions-first desktop input: the native bridge prefers the actual Windows
 // Live Captions window, anywhere on any monitor. Screen-region vision is a
