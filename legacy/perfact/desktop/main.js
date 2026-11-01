@@ -18,6 +18,7 @@
 const { app, BrowserWindow, ipcMain, screen, shell, Menu, session, protocol, net, desktopCapturer, powerMonitor, globalShortcut, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const { spawn } = require("child_process");
 
 app.setName("Kompas");
 // Preserve the existing perfACT desktop while MarketFit gets its own native
@@ -414,7 +415,7 @@ function createWindow() {
     } catch { finish(); }
     setTimeout(finish, 1200);
   });
-  win.on("closed", () => { clearInterval(pinTimer); win = null; });
+  win.on("closed", () => { stopDirectCaptions(); clearInterval(pinTimer); win = null; });
 }
 
 // Edge grips drawn by the page: a transparent frameless window cannot count on the OS resize border, so the
@@ -490,6 +491,56 @@ function lockDownSession() {
   ses.protocol.handle("kompas", serve);
 }
 
+// Native direct-caption mode has zero vision calls and no screenshot upload.
+// An optional PowerShell 5.1 UIA sidecar reads ONLY the accessibility tree of
+// a window named "Live captions". The Windows built-in panel may expose no
+// TextPattern: in that case the browser falls back to bounded screenshot OCR.
+let captionSidecar = null;
+let captionSidecarBuffer = "";
+function stopDirectCaptions() {
+  const worker = captionSidecar;
+  captionSidecar = null;
+  captionSidecarBuffer = "";
+  if (worker && !worker.killed) { try { worker.kill(); } catch {} }
+}
+function directCaptions(on) {
+  if (!on) { stopDirectCaptions(); return { active: false }; }
+  if (process.platform !== "win32") return { active: false, reason: "Windows only" };
+  if (!win || win.isDestroyed()) return { active: false };
+  if (captionSidecar && !captionSidecar.killed) return { active: true };
+  const script = path.join(__dirname, "live-captions-uia.ps1");
+  if (!fs.existsSync(script)) return { active: false, reason: "Native caption reader is not installed" };
+  try {
+    const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script], {
+      windowsHide: true, stdio: ["ignore", "pipe", "ignore"],
+    });
+    captionSidecar = child;
+    captionSidecarBuffer = "";
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      if (captionSidecar !== child) return;
+      captionSidecarBuffer += chunk;
+      if (captionSidecarBuffer.length > 16000) captionSidecarBuffer = ""; // malformed output must not accumulate
+      while (captionSidecarBuffer.includes("\n")) {
+        const at = captionSidecarBuffer.indexOf("\n");
+        const line = captionSidecarBuffer.slice(0, at).trim();
+        captionSidecarBuffer = captionSidecarBuffer.slice(at + 1);
+        if (!line || line.length > 3500) continue;
+        try {
+          const event = JSON.parse(line);
+          if (event.source !== "windows-live-captions-uia" || typeof event.text !== "string" ||
+              !event.text.trim() || event.text.length > 2500) continue;
+          if (win && !win.isDestroyed()) win.webContents.send("kompas:caption-text", {
+            text: event.text, source: event.source, at: Date.now(),
+          });
+        } catch { /* Ignore unrelated, invalid sidecar output */ }
+      }
+    });
+    child.on("error", () => { if (captionSidecar === child) stopDirectCaptions(); });
+    child.on("exit", () => { if (captionSidecar === child) captionSidecar = null; });
+    return { active: true };
+  } catch { stopDirectCaptions(); return { active: false }; }
+}
 // Windows Live Captions capture: bounded, short-lived screenshot. The renderer
 // requests frames only while the user has enabled Captions in a live session.
 // This is NOT a general-purpose screenshot service and never stores images.
@@ -542,6 +593,10 @@ function wireIpc() {
   ipcMain.handle("kompas:get-private", () => !!config.isPrivate);
   ipcMain.handle("kompas:set-private", (_e, on) => setPrefs({ isPrivate: !!on }).isPrivate);
   ipcMain.handle("kompas:take-session", () => { const s = pendingSession; pendingSession = null; return s; });
+  ipcMain.handle("kompas:caption-monitor", (event, enabled) => {
+    if (!win || event.sender.id !== win.webContents.id) throw new Error("Invalid caption monitor caller");
+    return directCaptions(!!enabled);
+  });
   ipcMain.handle("kompas:capture-captions", (event, options) => {
     if (!win || event.sender.id !== win.webContents.id) throw new Error("Invalid caption capture caller");
     return captionFrame(options || {});
