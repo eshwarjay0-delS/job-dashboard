@@ -46,8 +46,8 @@ if (process.env.KOMPAS_DEBUG_PORT) app.commandLine.appendSwitch("remote-debuggin
 
 const PERFACT_API_ORIGIN = (process.env.KOMPAS_API_URL || "https://perfact-ten.vercel.app").replace(/\/+$/, "");
 const MARKETFIT_API_ORIGIN = "https://job-dashboard-fawn.vercel.app";
-let activeSite = "perfact";
-const siteFor = (s) => s && s.site === "marketfit" ? "marketfit" : "perfact";
+let activeSite = "marketfit";
+const siteFor = (s) => s && s.site === "perfact" ? "perfact" : "marketfit";
 const appPathFor = () => activeSite === "marketfit" ? "/kompas/index.html" : "/index.html";
 const targetOrigin = () => activeSite === "marketfit" ? MARKETFIT_API_ORIGIN : PERFACT_API_ORIGIN;
 const ORIGIN = "kompas://app";
@@ -568,7 +568,7 @@ else {
     pendingSession = sessionFromArgv(process.argv);
     // The installer page opens marketfit-kompas://open without an interview
     // payload. Route that first launch into MarketFit instead of perfACT.
-    activeSite = pendingSession ? siteFor(pendingSession) : (startedForMarketFit ? "marketfit" : "perfact");
+    activeSite = pendingSession ? siteFor(pendingSession) : "marketfit";
     Menu.setApplicationMenu(null);
     lockDownSession();
     wireIpc();
