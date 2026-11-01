@@ -1649,6 +1649,9 @@ function stopSource(who) {
 // ever throws, the old rule answers.
 let lastSourceMode = "";
 function questionSource() {
+  // Windows caption text is the interviewer even in caption-only or mic-only
+  // sessions. It must not be mistaken for the user's mic response.
+  if (captionCaptureEnabled && captionSeenAt && Date.now() - captionSeenAt < 18000) return "Them";
   let pick;
   try { pick = askSource(captures.map(c => c.who)); } catch { return captures.some(c => c.who === "Them") ? "Them" : "You"; }
   if (pick.mode !== lastSourceMode && captures.length) { lastSourceMode = pick.mode; logDecision(pick.reason, pick.source, ""); }
@@ -3779,6 +3782,7 @@ async function aiAnswer(fromAuto) {
 // The owner can toggle it off; capture runs only during an active interview.
 let captionCaptureEnabled = !!window.kompasDesktop?.captureCaptions;
 let captionCaptureTimer = null, captionCaptureBusy = false;
+let captionQuietTimer = null;
 let captionDirectAt = 0, captionDirectBootUntil = 0;
 let captionDirectUnsubscribe = null;
 let captionLastRaw = "", captionDraft = "", captionLastChanged = 0, captionSeenAt = 0;
@@ -3914,11 +3918,15 @@ function captionBegin() {
       captionCommitIfQuiet();
     }
   };
+  // The 200ms local quiet timer is free: no API calls and no video capture.
+  captionQuietTimer = setInterval(() => captionCommitIfQuiet(), 200);
   captionCaptureTimer = setInterval(() => { void tick(); }, 5500);
   void tick();
 }
 function captionEnd() {
   if (captionCaptureTimer) clearInterval(captionCaptureTimer);
+  if (captionQuietTimer) clearInterval(captionQuietTimer);
+  captionQuietTimer = null;
   if (captionDirectUnsubscribe) { try { captionDirectUnsubscribe(); } catch {} captionDirectUnsubscribe = null; }
   if (window.kompasDesktop?.monitorCaptions) void window.kompasDesktop.monitorCaptions(false).catch(() => {});
   captionDirectAt = 0; captionDirectBootUntil = 0;
