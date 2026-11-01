@@ -244,7 +244,13 @@ test("explicit desktop Bearer never falls back to a different browser-cookie acc
     assert.equal(result.identity, "bearer-account-A", "explicit token must not adopt cookie identity");
     assert.equal(result.authorization, "Bearer " + token);
   }
+  for (const header of ["Bearer ", "Bearer    ", "Basic credentials", "Bearer\\t"]) {
+    const result = await ctx.requestClient(request(header));
+    assert.equal(result.identity, "anonymous-stub",
+      "malformed explicit Authorization must not adopt cookie identity");
+  }
   assert.equal((await ctx.requestClient(request(null))).identity, "cookie-account-B",
-    "cookie fallback is allowed only when no Bearer is supplied");
-  assert.match(source, /if \(!bearer\) return createClient\(\)/);
+    "cookie fallback is allowed only when Authorization is absent");
+  assert.match(source, /if \(!authorization\) return createClient\(\)/);
+  assert.match(source, /if \(!bearer\) return stubClient\(\)/);
 });
