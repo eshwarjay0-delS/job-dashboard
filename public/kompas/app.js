@@ -3804,7 +3804,8 @@ async function aiAnswer(fromAuto) {
 // Live Captions window, anywhere on any monitor. Screen-region vision is a
 // fallback if Windows hides the window from desktopCapturer enumeration.
 // The owner can toggle it off; capture runs only during an active interview.
-let captionCaptureEnabled = !!window.kompasDesktop?.captureCaptions;
+// Session-scoped opt-in: OCR fallback may upload a display image.
+let captionCaptureEnabled = false;
 let captionCaptureTimer = null, captionCaptureBusy = false;
 let captionQuietTimer = null;
 let captionDirectAt = 0, captionDirectBootUntil = 0;
@@ -3957,6 +3958,8 @@ function captionBegin() {
   void tick();
 }
 function captionEnd() {
+  captionCaptureEnabled = false;
+  captionUiState();
   if (captionCaptureTimer) clearInterval(captionCaptureTimer);
   if (captionQuietTimer) clearInterval(captionQuietTimer);
   captionQuietTimer = null;
@@ -3971,7 +3974,14 @@ function captionEnd() {
   if (box && box.dataset.captionDraft === "1") { box.value = ""; delete box.dataset.captionDraft; }
 }
 if ($("screenCaptureAnswerBtn")) $("screenCaptureAnswerBtn").onclick = () => {
-  captionCaptureEnabled = !captionCaptureEnabled;
+  const enabling = !captionCaptureEnabled;
+  // Native captions are local; OCR fallback may send a full-display screenshot.
+  if (enabling && (typeof window.confirm !== "function" ||
+      !window.confirm("Enable Caption Capture for this interview session? Windows Live Captions text is read locally when available. Otherwise a screenshot of the captions window or desktop display may be sent to the authenticated screen-analysis service; other on-screen information may be included. You can switch it off at any time."))) {
+    status("Caption Capture remains OFF until you consent.", "live");
+    return;
+  }
+  captionCaptureEnabled = enabling;
   captionUiState();
   if (captionCaptureEnabled) { captionBegin(); status("Caption Capture ON — Windows Live Captions text takes priority over audio.", "live"); }
   else { captionEnd(); status("Caption Capture OFF — audio and manual questions remain active.", "live"); }
