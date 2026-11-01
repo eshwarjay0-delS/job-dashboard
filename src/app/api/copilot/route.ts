@@ -5,7 +5,8 @@ import { checkRateLimit } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
 
-// 150 Copilot messages per day per authenticated user.
+// 150 Copilot requests per day: one bucket per signed-in user, and one shared
+// "anon" bucket for everyone signed out.
 const COPILOT_DAILY_LIMIT = Number(process.env.COPILOT_DAILY_LIMIT ?? 150)
 const DAY_MS = 24 * 60 * 60 * 1000
 

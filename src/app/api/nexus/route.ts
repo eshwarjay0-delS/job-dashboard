@@ -5,9 +5,12 @@ import { checkRateLimit } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
 
-// 100 Nexus messages per day per authenticated user.
-// Prevents runaway usage of the server's own LLM key while still giving real users
-// plenty of headroom (a 10-turn conversation = 5 round-trips; 100/day ≈ 20 sessions).
+// 100 Nexus requests per day: one bucket per signed-in user, and one shared
+// "anon" bucket for everyone signed out. The gate runs whenever the limit is
+// above zero and the request carries any key (deployment or user-supplied);
+// keyless requests are rejected before it. Prevents runaway LLM-key usage
+// while giving real users headroom (a 10-turn conversation = 5 round-trips,
+// so 100/day ≈ 20 sessions).
 const NEXUS_DAILY_LIMIT = Number(process.env.NEXUS_DAILY_LIMIT ?? 100)
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -38,7 +41,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Per-user daily rate limit (only enforced when server-side LLM keys are in play)
+    // Daily rate limit, whenever the limit is above zero: signed-in users get
+    // their own bucket, and signed-out users share the single "anon" bucket.
+    // Key source does not matter — deployment keys and user-supplied keys
+    // alike pass through this gate.
     if (NEXUS_DAILY_LIMIT > 0) {
       let userId = "anon"
       try {
