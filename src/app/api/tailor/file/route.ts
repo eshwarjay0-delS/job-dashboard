@@ -2,18 +2,18 @@ import { NextRequest, NextResponse } from "next/server"
 import mammoth from "mammoth"
 import JSZip from "jszip"
 import { blob } from "@/lib/storage"
+import { authenticatedUserId, signInRequired } from "@/lib/authBoundary"
 
 export const runtime = "nodejs"
 
-// ACCEPTED RISK, decided 2026-09-02. This route has NO authentication: it serves
-// any tailored .docx to whoever presents its token. The token is a sha1 hex slice
-// (unguessable), so this is a capability URL — but anyone who ever sees one keeps
-// access to that resume indefinitely, and the file carries a full contact block.
-//
-// Left open deliberately: the gmail-jd-reply-board extension fetches tailored
-// resumes from here and has no auth plumbing, so requiring a session would break
-// it. Revisit if that extension gains a Bearer token (the job-dashboard extension
-// already has one via extension/auth.js getToken()).
+// Since 2026-11-01 the caller must be signed in: session cookie or Bearer
+// token via createClientFromRequest (the extension sends Bearer via getToken
+// on GET_RESUME; dashboard links ride the session cookie). The URL token only
+// selects which document — anonymous token-only access is refused with 401,
+// checked before the blob read so anonymous callers cannot probe token
+// existence. Residual: tokens are not owner-mapped, so any signed-in caller
+// presenting a token can fetch that document; per-resume owner locking needs
+// a token→owner store at tailor time.
 
 // Extract the document's primary font from styles.xml so the PDF output uses
 // the same typeface the candidate chose for their resume, not a generic fallback.
@@ -43,6 +43,9 @@ async function extractDocxFont(buffer: Buffer): Promise<{ body: string; heading:
 
 // GET /api/tailor/file?token=<token>&fmt=docx|pdf|preview&name=<name>
 export async function GET(request: NextRequest) {
+  // Caller must be signed in; the URL token only selects the document.
+  const userId = await authenticatedUserId(request)
+  if (!userId) return signInRequired()
   const { searchParams } = request.nextUrl
   const token = (searchParams.get("token") || "").replace(/[^a-z0-9]/gi, "")
   const fmtParam = searchParams.get("fmt") || "docx"

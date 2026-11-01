@@ -681,8 +681,19 @@ async function tryRefreshAuth() {
         if (renewed) { __lastAuthRefresh = Date.now(); return true; }
         return false;
       }
-      const res = await fetch("/api/auth/refresh", { method: "POST", credentials: "same-origin", cache: "no-store" });
-      if (res.ok) { __lastAuthRefresh = Date.now(); return true; }
+      // Cross-tab: two tabs renewing at once rotate the same cookie family
+      // and one tab's renewal invalidates the other's. Serialize renewals
+      // across tabs when the lock API exists; same-tab callers already
+      // coalesce on __authRefreshFlight above. Desktop never reaches here:
+      // the bridge branch above returns first.
+      const run = async () => {
+        const res = await fetch("/api/auth/refresh", { method: "POST", credentials: "same-origin", cache: "no-store" });
+        if (res.ok) { __lastAuthRefresh = Date.now(); return true; }
+        return false;
+      };
+      const locks = (typeof navigator !== "undefined" && navigator.locks) || null;
+      if (locks) return await locks.request("kompas-auth-refresh", { mode: "exclusive" }, run);
+      return await run();
     } catch {}
     return false;
   })();
