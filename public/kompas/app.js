@@ -3818,11 +3818,18 @@ async function grabFrame() {
 // that says what happened and what to do.
 async function screenStream() {
   const desktop = typeof window !== "undefined" && !!window.kompasDesktop;
-  try { return await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }); }
-  catch (e) {
-    if (!e || (e.name !== "NotReadableError" && e.name !== "AbortError")) throw e;
-    await new Promise(r => setTimeout(r, 400));
-    try {
+  // Windows first (owner, 1 Nov 2026): the Screen Answer button captures
+  // windows before screens or tabs. The window hint is a preference, not a
+  // promise — a browser that refuses it falls back to the plain call, and a
+  // cancelled picker is never retried.
+  let last = null;
+  for (const video of [{ displaySurface: "window" }, true]) {
+    try { return await navigator.mediaDevices.getDisplayMedia({ video, audio: false }); }
+    catch (e) { last = e; if (e && e.name === "NotAllowedError") throw e; }
+  }
+  const e = last;
+  await new Promise(r => setTimeout(r, 400));
+  try {
       const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: desktop });
       s.getAudioTracks().forEach(t => t.stop());
       return s;
@@ -3837,7 +3844,6 @@ async function screenStream() {
         ? "Windows would not start screen capture in this Kompas window (" + why + "). Close Kompas fully and open it again, then press Screen Answer."
         : "The browser could not start the screen share (" + why + "). Stop any other screen share, then try again.");
     }
-  }
 }
 function stripScreenChrome(question) {
   const stripped = String(question || "").replace(/^Question \d+ \([^)\n]{0,80}\):\s*/gm, "").trim();
