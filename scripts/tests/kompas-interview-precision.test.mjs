@@ -6,8 +6,21 @@ import { runInNewContext } from 'node:vm'
 const require=createRequire(import.meta.url)
 const ts=require('typescript')
 const source=readFileSync(new URL('../../src/lib/kompasInterviewPrecision.ts',import.meta.url),'utf8')
+const narrationSource=readFileSync(new URL('../../src/lib/kompasNaturalNarration.ts',import.meta.url),'utf8')
+const compilerOptions={module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}
+const narration={exports:{}}
+// Load the actual narration implementation, not a mock; the precision test
+// isolates CommonJS modules inside a VM and must explicitly resolve this import.
+runInNewContext(ts.transpileModule(narrationSource,{compilerOptions}).outputText,
+  {module:narration,exports:narration.exports,console})
 const mod={exports:{}}
-runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{module:mod,exports:mod.exports,console})
+runInNewContext(ts.transpileModule(source,{compilerOptions}).outputText,{
+ module:mod,exports:mod.exports,console,
+ require:(id)=> {
+  if(id==='./kompasNaturalNarration.ts')return narration.exports
+  throw Error('Unexpected precision dependency '+id)
+ },
+})
 const {questionParts,missingQuestionParts,questionCoverage,precisionPrompt,spokenQualityFlags,latestInterviewerAsk,correctVerifiedPresentationErrors}=mod.exports
 
 const cases=[

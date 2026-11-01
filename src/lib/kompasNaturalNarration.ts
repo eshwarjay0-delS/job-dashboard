@@ -60,3 +60,41 @@ export function naturalNarrationGuidance(question: string, audience: string): st
         : AUDIENCE.engineer
   return CORE + " " + KIND[kind] + " " + role
 }
+
+
+/**
+ * Non-mutating observational lint for finished model replies. Important:
+ * these flags are NOT a factuality judge and never strip a real candidate
+ * claim. Clients already receive precision.flags for the SSE and JSON paths.
+ *
+ * Avoid flagging normal technical terms such as API keys, door-controller
+ * access, rotating an encryption key, or a physical facility incident.
+ */
+export function naturalNarrationFlags(question: string, answer: string): string[] {
+  const ask = String(question || "")
+  const response = String(answer || "")
+  if (!response.trim()) return []
+  const flags: string[] = []
+  const requestedAnalogy = /\b(?:analogy|metaphor|metaphorical|compare (?:it|this) to|like i(?:'m| am) five|explain it like|make (?:an?|the) analogy)\b/i.test(ask)
+  const isCandidateStory = naturalAnswerShape(ask) === "experience" || naturalAnswerShape(ask) === "identity"
+  const initial = response.trim()
+  if (/^(?:(?:you know[, ]+)?(?:it'?s funny|welcome back|today we(?:'re| are) going to|let'?s (?:dive in|unpack|explore)|picture this)[,:.! ]+)/i.test(initial))
+    flags.push("podcast-style-opening")
+  // This deliberately keys on an analogy prompt AND a toy scene; isolated
+  // words like "key", "door", and "apartment" are not sufficient.
+  if (!requestedAnalogy && /\b(?:think of it like|think of this like|it'?s (?:just )?like|imagine (?:you(?:'re| are)?|a|the)|picture (?:a|the|yourself))\b[^.!?\n]{0,120}\b(?:apartment|house key|front door|spare key under|kitchen|bouncer|movie ticket|airport security|traffic light)\b/i.test(response))
+    flags.push("unrequested-toy-analogy")
+  if (/\b(?:(?:that'?s|that is) (?:a )?(?:phenomenal|amazing|brilliant|excellent) question|what an incredible question|absolutely mind[- ]blowing)\b/i.test(response))
+    flags.push("performative-interviewer-praise")
+  if (/\b(?:at the end of the day|in conclusion|to sum(?:marize)? up|as you can see)\b/i.test(response))
+    flags.push("scripted-landing")
+  if (/^\s*(?:(?:HOST|EXPERT|NARRATOR|INTERVIEWER)\s*[:\-])/im.test(response))
+    flags.push("podcast-speaker-label")
+  if (!isCandidateStory && /^(?:what (?:is|are|does)|define|difference between|compare)\b/i.test(ask.trim()) &&
+      /^\s*(?:at\s+[A-Z][A-Za-z& ]{2,35}[,.]?\s+(?:i|we)\b|when i was working at\b)/i.test(response))
+    flags.push("unasked-personal-story")
+  const count = response.trim().split(/\s+/).length
+  if (naturalAnswerShape(ask) === "direct" && ask.trim().split(/\s+/).length <= 10 && count > 115)
+    flags.push("direct-answer-overlong")
+  return flags
+}
