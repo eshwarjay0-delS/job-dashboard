@@ -3914,7 +3914,7 @@ function captionBegin() {
       captionCommitIfQuiet();
     }
   };
-  captionCaptureTimer = setInterval(() => { void tick(); }, 1500);
+  captionCaptureTimer = setInterval(() => { void tick(); }, 5500);
   void tick();
 }
 function captionEnd() {
