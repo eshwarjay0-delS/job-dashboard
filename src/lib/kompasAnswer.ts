@@ -1070,6 +1070,10 @@ function separateQuestion(next: string, prevText: string, v3 = false, v4 = false
   if (/^(?:tell me about yourself|introduce yourself|walk (?:me|us) through your (?:career|background))\b/i.test(prevBare)
       && /^(?:what questions (?:do|would|might|can) you have|any questions(?: for (?:us|me|the team))?|do you have any questions)\b/i.test(bare.replace(/[.?!]+$/, ""))) return true
   const prevSentence = (prevText.trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim()
+  // A piece that ends on a dash was continued, not finished: "Describe the high-level architecture of a SIEM —" is
+  // the lead of the question that follows it, so the wh-piece after it completes the same card. Without this the
+  // card showed only "what are the core components?" and the answer went generic (1 Nov 2026, live video question).
+  if (/[—–]\s*$/.test(prevSentence)) return false
   // "Tell me about yourself. Why do you want this job?" An opening ask about you is answered on its own, so a
   // question-word question that follows it with its own "?" is the next card, even when it says "this job".
   if (INTRO_ASK.test(prevSentence.replace(LEAD_FILLER, "")) && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && (/\?\s*$/.test(bare) || !/[.?!]\s*$/.test(prevSentence))) return true

@@ -2285,6 +2285,10 @@ function splitSeparate(next, prevText, v3, v4) {
   if (/^(?:tell me about yourself|introduce yourself|walk (?:me|us) through your (?:career|background))\b/i.test(prevBare)
       && /^(?:what questions (?:do|would|might|can) you have|any questions(?: for (?:us|me|the team))?|do you have any questions)\b/i.test(String(bare).replace(/[.?!]+$/, ""))) return true;
   const prevSentence = (String(prevText || "").trim().split(/(?<=[.?!])\s+/).pop() || prevText).trim();
+  // A piece that ends on a dash was continued, not finished: "Describe the high-level architecture of a SIEM —" is
+  // the lead of the question that follows it, so the wh-piece after it completes the same card. Without this the
+  // card showed only "what are the core components?" and the answer went generic (1 Nov 2026, live video question).
+  if (/[—–]\s*$/.test(prevSentence)) return false;
   // "Tell me about yourself. Why do you want this job?": an opening ask about you is its own card (same as the server).
   if (SPLIT_INTRO.test(String(prevSentence).replace(SPLIT_LEAD, "")) && /^(?:what|why|how|when|where|which|who)\b/i.test(bare) && (/\?\s*$/.test(bare) || !/[.?!]\s*$/.test(prevSentence))) return true;
   if (/\b(?:that|this|it|those|these|the same)\b/i.test(bare) && splitProper(bare).length === 0) return false;

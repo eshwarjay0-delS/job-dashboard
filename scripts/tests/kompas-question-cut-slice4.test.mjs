@@ -49,6 +49,17 @@ test("B failsafe: 'Explain that part', a design brief and a shared subject stay 
     "What is Zero Trust? Explain the trust model.", "Explain the CyberArk CPM. Explain it again."]) assert.equal(n(t), 1, t);
 });
 
+test("D. a dash-continued lead and its question stay one card (1 Nov 2026, live video question)", () => {
+  assert.deepEqual(both("Describe the high-level architecture of a SIEM — what are the core components?"), ["Describe the high-level architecture of a SIEM — what are the core components?"]);
+  assert.equal(n("What is a SIEM — what are the core components?"), 1);
+  assert.equal(n("What is index design — why does it matter for SIEM performance?"), 1);
+  assert.equal(n("Describe index design — why does it matter for SIEM performance?"), 1);
+  assert.equal(n("Describe the high-level architecture of a SIEM – what are the core components?"), 1);
+  // Guards: finished questions still split, and unpunctuated runs without a dash still split.
+  assert.equal(n("What is CyberArk? What is Okta?"), 2);
+  assert.equal(n("what is pam okay what is iga um what is oidc so what is saml"), 4);
+});
+
 test("C. the server writes 'SSH key(s)' like the desktop, and nothing else changes", () => {
   assert.equal(repairDictation("how do you configure ssh keys"), "how do you configure SSH keys");
   assert.equal(repairDictation("we rotate the ssh key monthly"), "we rotate the SSH key monthly");
