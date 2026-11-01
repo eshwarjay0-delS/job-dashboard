@@ -1520,6 +1520,17 @@ async function startSys() {
     await attachSource(new MediaStream(audio), "Them", disp, generation);
   } catch (e) { if (generation !== sourceGeneration.Them || !running) return; captureErrors.push("Call audio: " + (e && e.name === "NotAllowedError" ? "share cancelled" : (e && e.message || e))); srcOn.sys = false; syncSrc(); }
 }
+// Silence warning, shared by both capture tracks (parity, 1 Nov 2026): the microphone warned after 20 s of
+// silence, but the shared-audio track warned never, so a quiet or wrongly shared tab failed silently with no
+// on-screen word. The helper is pure so the rule is testable: same 20 s threshold, same once-per-silence flag
+// (vadStep already resets zeroWarned when sound returns), one message per track.
+function silenceWarningFor(cap, now) {
+  if (!cap || cap.zeroWarned) return null;
+  if (now - (cap.lastAudibleAt || now) <= 20000) return null;
+  if (cap.who === "You") return "Kompas is hearing silence from the microphone. Check the input device in your system sound settings, then keep talking.";
+  if (cap.who === "Them") return "Kompas is hearing silence from the shared audio. Check the shared tab is playing sound and tab audio is shared, then keep playing.";
+  return null;
+}
 async function attachSource(stream, who, owner, generation = sourceGeneration[who]) {
   const stale = () => !running || generation !== sourceGeneration[who] || !srcOn[who === "You" ? "mic" : "sys"] || captures.some(c => c.who === who);
   const releaseTracks = () => { stream.getTracks().forEach(t => t.stop()); owner?.getTracks().forEach(t => t.stop()); };
@@ -1557,9 +1568,10 @@ async function attachSource(stream, who, owner, generation = sourceGeneration[wh
       const buf = new Float32Array(cap.an.fftSize);
       cap.timer = setInterval(() => { cap.an.getFloatTimeDomainData(buf); let s = 0; for (let k = 0; k < buf.length; k++) s += buf[k] * buf[k]; vadStep(cap, Math.sqrt(s / buf.length)); }, 30);
     }
-    if (cap.who === "You" && !cap.zeroWarned && now - (cap.lastAudibleAt || now) > 20000) {
+    const warn = silenceWarningFor(cap, now);
+    if (warn) {
       cap.zeroWarned = true;
-      status("Kompas is hearing silence from the microphone. Check the input device in your system sound settings, then keep talking.", "err");
+      status(warn, "err");
     }
   }, 1000);
   const tracks = owner ? owner.getTracks() : stream.getAudioTracks();
