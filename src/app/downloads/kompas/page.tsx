@@ -4,7 +4,7 @@ export default function KompasDesktopDownload() {
   // Prefer a public release host (R2) when configured. Until then the private
   // perfACT release lets the authorized owner install the same proven desktop.
   const publicDesktopUrl = (process.env.KOMPAS_DESKTOP_URL || "").trim();
-  const desktopUrl = publicDesktopUrl || "https://github.com/eshwarjay0-delS/parfAct/releases/download/desktop-latest/Kompas.exe";
+  const desktopUrl = publicDesktopUrl || "https://github.com/eshwarjay0-delS/job-dashboard/releases/download/kompas-desktop-latest/Kompas.exe";
   const privateRelease = !publicDesktopUrl;
 
   return (
@@ -101,7 +101,7 @@ export default function KompasDesktopDownload() {
               </a>
               {privateRelease && (
                 <p style={{ color: "var(--text-muted, #8a8578)", fontSize: 13, marginTop: 12, lineHeight: 1.5 }}>
-                  The download is hosted in your private perfACT GitHub repository.
+                  The download is hosted in your MFit GitHub repository.
                   Sign in to GitHub with repository access. If clicking the button
                   opens a GitHub sign-in or 404 page, the executable is not publicly
                   downloadable yet. Public hosting can be configured through KOMPAS_DESKTOP_URL.
