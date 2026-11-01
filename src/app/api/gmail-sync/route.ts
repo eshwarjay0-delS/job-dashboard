@@ -194,7 +194,7 @@ export async function GET() {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ connected: false, reason: "not_logged_in", accounts: [] })
+    if (!user || user.is_anonymous) return NextResponse.json({ connected: false, reason: "not_logged_in", accounts: [] })
 
     const accounts = await listGoogleWorkspaceAccounts(user.id)
     return NextResponse.json({
@@ -222,7 +222,7 @@ export async function POST(req: Request) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) {
+    if (!user || user.is_anonymous) {
       return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
     }
 

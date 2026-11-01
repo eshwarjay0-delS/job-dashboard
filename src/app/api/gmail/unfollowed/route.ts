@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
+    if (!user || user.is_anonymous) return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
 
     // Existing rules remain user controlled; GET never recreates deleted rules.
 
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
+    if (!user || user.is_anonymous) return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
 
     const body = await req.json().catch(() => ({}))
     const domain = String(body.domain || "").trim().toLowerCase().replace(/^@/, "")
@@ -59,7 +59,7 @@ export async function DELETE(req: Request) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
+    if (!user || user.is_anonymous) return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
 
     const domain = new URL(req.url).searchParams.get("domain")?.trim().toLowerCase()
     if (!domain) return NextResponse.json({ ok: false, error: "Missing domain" }, { status: 400 })

@@ -21,8 +21,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const secret = (process.env.CRON_SECRET || "").trim()
   const auth = req.headers.get("authorization") || ""
-  // Never run privileged watches when the scheduler secret is not configured.
-  if (!secret) {
+  // Never run privileged watches when the scheduler secret is not configured,
+  // or when it is too short to be a real secret (mirror the whatsapp recover
+  // minimum of 16: a short secret arms the runner no better than none).
+  if (!secret || secret.length < 16) {
     return NextResponse.json({ error: "Scheduler unavailable." }, { status: 503 })
   }
   if (auth !== `Bearer ${secret}`) {
