@@ -20,7 +20,7 @@ export function workbenchTrack(question: string): WorkbenchTrack {
     return "experience"
   if (/^(?:and |okay,? |so |but )?(?:what exactly|which (?:log|record|field|event|permission)|how did you (?:verify|prove|know|confirm)|what happened next|who (?:approved|owned|signed off)|what did (?:you|they) (?:check|change|do)|why (?:that|did you choose)|go deeper|can you elaborate|what about (?:that|the))/i.test(q))
     return "follow-up"
-  if (/\b(?:difference between|compare|versus|vs\.?|trade[- ]?offs? between|how (?:are|do) .{3,65} differ)\b/i.test(q))
+  if (/\b(?:difference between|compare|versus|vs\.?|trade[- ]?offs? between|how (?:are|do|does|did) .{3,65} differ)\b/i.test(q))
     return "comparison"
   if (/\b(?:why (?:did|would) you (?:choose|pick|recommend|prioriti[sz]e|accept|reject)|which (?:would|should) you (?:choose|pick)|how (?:do|would) you (?:decide|prioriti[sz]e)|what (?:would|should) (?:change your mind|make you))\b/i.test(q))
     return "decision"
