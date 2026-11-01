@@ -11,7 +11,7 @@ const folds = [
   ["follow-up","How did you verify that?"],["follow-up","Who signed off?"],["follow-up","What artifacts did you create?"],
   ["scenario","How would you investigate a privileged access exception?"],["scenario","Suppose an access review says complete but admins still have access"],
   ["scenario","How do you decide whether to accept residual risk?"],["scenario","What would you monitor after deployment?"],["scenario","If you found a critical issue, what would you do?"],
-  ["mechanism","How does Kerberos authentication work?"],["mechanism","Explain how the token validation chain works"],["mechanism","What is the difference between design and operating effectiveness?"],
+  ["mechanism","How does Kerberos authentication work?"],["mechanism","Explain how the token validation chain works"],["direct","What is the difference between design and operating effectiveness?"],
   ["mechanism","Why does OAuth need a state parameter?"],["mechanism","How do certificates get validated?"],["mechanism","What happens when CyberArk rotation fails?"],
   ["direct","What is NIST CSF 2.0?"],["direct","Define compensating control"],["direct","Have you used ServiceNow?"],["direct","Are you local to Pittsburgh?"],["direct","When could you start?"],
   ["direct","What is IDOR?"],["direct","Compare DAST and SAST"],["direct","How many years of experience do you have?"],["direct","CRI"],
