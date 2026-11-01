@@ -46,7 +46,7 @@ body{
 .small{font-size:13px}
 
 /* view entrance — spotless fade+rise */
-.view{min-height:100vh}
+.view{min-height:100vh;min-height:100dvh}
 .view:not(.hidden){animation:viewIn .34s var(--ease) both}
 @keyframes viewIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
@@ -1024,3 +1024,21 @@ html.kd .cap-text,html.kd .drawer-body,html.kd .statusline{font-size:var(--text-
    Keep AI Answer most prominent; the single-row toolbar may scroll on narrow panels. */
 html.kd #screenCaptureAnswerBtn{display:inline-flex !important;align-items:center;justify-content:center;white-space:nowrap;flex:0 0 auto;font-size:12px;padding:0 9px;height:30px;gap:4px}
 html.kd #screenCaptureAnswerBtn:hover{border-color:var(--line-strong);background:var(--surface-2)}
+
+/* Phone: native-like full-screen live view (owner, 31 Oct 2026: the mobile
+   version was unusable — controls wrapped and cramped, the Level select
+   zoomed the page on tap, and the view did not fill the phone screen).
+   Desktop is untouched: everything below lives inside this one query. */
+@media (max-width:760px){
+  .view-copilot{padding:12px 10px calc(12px + env(safe-area-inset-bottom));gap:10px}
+  .bar-actions{gap:8px;padding:10px 12px}
+  .bar-actions .pill{height:48px;min-height:48px;font-size:16px;padding:0 16px}
+  .asking{flex:1 1 100%}
+  .asking .live-select{height:48px;font-size:16px;width:100%}
+  #view-copilot .card{width:100%}
+  .bar-ask{position:sticky;bottom:0;background:var(--bg);padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+  .manual{height:48px;font-size:16px}
+  .send{min-height:48px;min-width:48px}
+  .mini{min-height:44px;min-width:44px}
+  .drawer{max-height:40dvh}
+}
