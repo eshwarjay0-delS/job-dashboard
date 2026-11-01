@@ -317,6 +317,7 @@ function renderSessions() {
         <button class="btn primary sc-start">Start</button>
         <button class="btn ghost sc-end hidden">End</button>
         <button class="btn ghost sc-tx hidden">Transcript</button>
+        <button class="btn ghost sc-edit hidden">Edit setup</button>
         <button class="btn ghost sc-del">Delete</button>
       </div>`;
     card.querySelector(".sc-role").textContent = s.role || "Untitled role";
@@ -333,6 +334,11 @@ function renderSessions() {
       const end = card.querySelector(".sc-end"); end.classList.remove("hidden"); end.onclick = () => endSession(s);
       card.querySelector(".sc-del").classList.add("hidden");               // a session is ended before it is deleted
       card.classList.add("open");
+      // Only a session that can still be continued offers setup editing: the
+      // card itself opens the editor, and so does the Edit setup button. Clicks
+      // on the card's own buttons keep their existing actions.
+      const edit = card.querySelector(".sc-edit"); edit.classList.remove("hidden"); edit.onclick = () => openEditWizard(s);
+      card.onclick = (e) => { if (e.target.closest("button")) return; openEditWizard(s); };
     } else if (s.endedAt) {                                                // ended is final: nothing to start or continue, only its transcript to read
       startBtn.classList.add("hidden"); card.classList.add("ended");
       state.textContent = `Ended ${dayTime(s.endedAt)}${s.endedBy === "clock" ? ", 30 minutes after it was stopped" : ""}.`; state.classList.remove("hidden");
@@ -363,6 +369,7 @@ const DRAFT_KEY = "wizdraft";
 const wizardOpen = () => !$("view-wizard")?.classList.contains("hidden");
 function saveWizardDraft() {
   if (!draft || !wizardOpen() || !$("company")) return;
+  if (draft.editId) return;   // an edit writes the session on Save & continue, never the new-session draft cache
   LS.set(DRAFT_KEY, {
     jobLink: $("jobLink")?.value || "", company: $("company").value, role: $("role").value, jd: $("jd").value,
     instructions: $("instructions")?.value || "", type: draft.type, length: draft.length, tone: draft.tone, mode: draft.mode,
@@ -397,7 +404,7 @@ function openWizard() {
   // A new session starts with a blank job. The answer preferences he already saved stay.
   ["jobLink", "company", "role", "jd", "resume"].forEach(id => { if ($(id)) $(id).value = ""; });
   if ($("instructions")) $("instructions").value = prev.instructions || "";
-  $("resume")?.classList.add("hidden");                         // paste box stays folded until asked for
+  $("resume")?.classList.add("hidden"); if ($("resume")) $("resume").value = "";   // paste box stays folded until asked for, and empty so a stale paste cannot override the picked resume
   document.querySelectorAll(".choice").forEach(c => c.classList.toggle("on", c.dataset.type === "live"));
   segSet("lengthSeg", draft.length); segSet("toneSeg", draft.tone); segSet("modeSeg", prev.mode || "technical");
   $("model").value = draft.model; $("autoAnswer").checked = draft.autoAnswer; $("saveTranscript").checked = draft.saveTranscript;
@@ -413,12 +420,76 @@ function openWizard() {
   gotoStep(0);
   show("wizard");
 }
+// Edit the setup of a session that can still be continued, then continue it
+// with the edited setup. Only the stopped/open cards offer this (renderSessions
+// wires it in the sessionOpen branch); ended sessions are final and a session
+// open in another window cannot be continued here. The wizard is reused in edit
+// mode (draft.editId): fields pre-fill from the stored session, the new-session
+// draft cache is left untouched (saveWizardDraft guard), and cancelling changes
+// nothing because the session is only written on Save & continue.
+function openEditWizard(s) {
+  const stored = (LS.get("sessions", []) || []).find(v => v.id === s.id) || s;
+  draft = { type: stored.type || "live", length: stored.length || "balanced", tone: stored.tone || "professional", model: stored.model || "claude-haiku-4-5", language: "en", autoAnswer: !!stored.autoAnswer, saveTranscript: stored.saveTranscript !== false, editId: stored.id };
+  step = 0;
+  if ($("jobLink")) $("jobLink").value = stored.jobLink || "";
+  $("company").value = stored.company || ""; $("role").value = stored.role || ""; $("jd").value = stored.jd || "";
+  if ($("instructions")) $("instructions").value = stored.instructions || "";
+  document.querySelectorAll(".choice").forEach(c => c.classList.toggle("on", c.dataset.type === draft.type));
+  segSet("lengthSeg", draft.length); segSet("toneSeg", draft.tone); segSet("modeSeg", stored.mode || "technical");
+  draft.mode = stored.mode || "technical";
+  $("model").value = draft.model; $("autoAnswer").checked = draft.autoAnswer; $("saveTranscript").checked = draft.saveTranscript;
+  if ($("interviewerSelect")) { showCodingLevels($("interviewerSelect"), draft.mode); $("interviewerSelect").value = keptLevel(stored.interviewer, draft.mode); }
+  if ($("difficultySelect")) $("difficultySelect").value = stored.difficulty || "standard";
+  if ($("dossierSize")) $("dossierSize").value = stored.dossierSize || "auto";
+  selectedResumeId = (stored.resumeId && docsGet().some(d => d.id === stored.resumeId)) ? stored.resumeId : "";
+  if (!selectedResumeId && stored.resume) { $("resume").value = stored.resume; $("resume").classList.remove("hidden"); }
+  else { $("resume").value = ""; $("resume").classList.add("hidden"); }
+  selectedDocIds = new Set((stored.docIds || []).filter(id => docsGet().some(d => d.id === id)));
+  renderResumeSelect();
+  renderDocPicker();
+  gotoStep(0);
+  show("wizard");
+}
+// Save & continue for an edited session: only the setup fields move; the
+// lifecycle (id, createdAt, runAt, pausedAt, transcripts, ended state) is
+// untouched, and continuability is re-checked at save time, exactly as
+// continueSession guards it. The edited session then continues as-is.
+function finishEditWizard() {
+  const id = draft.editId;
+  sessions = LS.get("sessions", []);
+  const x = sessions.find(v => v.id === id);
+  if (!x || !sessionOpen(x) || liveElsewhere(x)) { renderSessions(); openDashboard(); return; }
+  x.type = draft.type;
+  x.jobLink = $("jobLink").value.trim();
+  x.company = $("company").value.trim();
+  x.role = $("role").value.trim();
+  x.jd = $("jd").value.trim();
+  x.resume = resolveResumeText();
+  x.documents = resolveDocumentsText();
+  x.docIds = [...selectedDocIds];
+  x.resumeId = selectedResumeId;
+  x.model = $("model").value;
+  x.language = "en";
+  x.length = draft.length;
+  x.tone = draft.tone;
+  x.mode = draft.mode || "technical";
+  x.instructions = $("instructions").value;
+  x.autoAnswer = $("autoAnswer").checked;
+  x.autoMode = $("autoAnswer").checked;
+  x.saveTranscript = $("saveTranscript").checked;
+  x.interviewer = ($("interviewerSelect") || {}).value || "engineer";
+  x.difficulty = ($("difficultySelect") || {}).value || "standard";
+  x.dossierSize = ($("dossierSize") || {}).value || "auto";
+  LS.set("sessions", sessions);
+  draft = null;
+  continueSession(x);
+}
 function gotoStep(n) {
   step = Math.max(0, Math.min(2, n));
   document.querySelectorAll(".wiz-pane").forEach(p => p.classList.toggle("hidden", +p.dataset.pane !== step));
   document.querySelectorAll(".wiz-step").forEach(s => s.classList.toggle("on", +s.dataset.step <= step));
   $("wizBack").textContent = step === 0 ? "Cancel" : "Back";
-  $("wizNext").textContent = step === 2 ? "Create & Start" : "Next";
+  $("wizNext").textContent = step === 2 ? (draft && draft.editId ? "Save & continue" : "Create & Start") : "Next";
 }
 $("wizClose").onclick = openDashboard;
 $("wizBack").onclick = () => { if (step === 0) openDashboard(); else gotoStep(step - 1); };
@@ -436,6 +507,7 @@ function segSet(id, val) { const box = $(id); if (!box) return; [...box.children
 ["input", "change"].forEach(ev => document.querySelectorAll(".wiz-pane").forEach(p => p.addEventListener(ev, saveWizardDraft)));
 
 function finishWizard() {
+  if (draft && draft.editId) return finishEditWizard();
   const s = {
     id: "s" + Date.now() + "_" + Math.random().toString(36).slice(2, 10),
     createdAt: Date.now(),
