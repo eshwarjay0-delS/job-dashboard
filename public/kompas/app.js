@@ -3829,7 +3829,11 @@ function captionDelta(before, after) {
 }
 function captionQuestionLike(s) {
   const t = String(s || "").trim();
-  if (!t || t.split(/\s+/).length < 2) return false;
+  if (!t) return false;
+  if (t.split(/\s+/).length === 1) {
+    const one = t.replace(/[^A-Za-z0-9+#-]+/g, "").toLowerCase();
+    return one.length >= 3 && termVocab().some(v => v.toLowerCase() === one);
+  }
   if (Q_CUE.test(t) || opensNewAsk(t)) return true;
   // A spoken technical keyword fragment is an interview question too. Use
   // current resume/JD/document terms; do not maintain a SIEM-only whitelist.
