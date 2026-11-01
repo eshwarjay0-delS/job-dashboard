@@ -1952,11 +1952,15 @@ function queueSpeechUpload(task) {
   return new Promise((resolve, reject) => {
     const start = () => {
       speechUploadActive++;
-      Promise.resolve().then(task).then(resolve, reject).finally(() => {
+      const release = () => {
         speechUploadActive--;
         const waiting = speechUploadWaiters.shift();
         if (waiting) waiting();
-      });
+      };
+      // Start the live fetch synchronously: delaying it to the next microtask
+      // both adds latency and breaks the established capture-order contract.
+      try { Promise.resolve(task()).then(resolve, reject).finally(release); }
+      catch (error) { release(); reject(error); }
     };
     if (speechUploadActive < 2) start(); else speechUploadWaiters.push(start);
   });
