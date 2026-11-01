@@ -1937,8 +1937,10 @@ function interim(cap) {
   if (blob.size > 4000) transcribe(blob, cap.who, { final: false, cap });
 }
 // Preserve captured mic and system clips during temporary provider rate limits.
-// One shared lane avoids hammering the paid transcription quota from two sources.
-let speechUploadQueue = Promise.resolve();
+// Keep at most two uploads in flight; one slow audio request must not hold
+// the next question hostage. Rate-limit responses still set a shared cooldown.
+let speechUploadActive = 0;
+const speechUploadWaiters = [];
 let speechCooldownUntil = 0;
 function speechRetryAfterMs(headers, attempt = 0) {
   const raw = String(headers?.get?.("retry-after") || "").trim();
@@ -1947,10 +1949,17 @@ function speechRetryAfterMs(headers, attempt = 0) {
   return Math.min(120000, Math.max(3000, Number.isFinite(hint) && hint > 0 ? hint : 8000 * Math.pow(2, Math.min(4, attempt))));
 }
 function queueSpeechUpload(task) {
-  const previous = speechUploadQueue;
-  let release;
-  speechUploadQueue = new Promise(resolve => { release = resolve; });
-  return previous.catch(() => {}).then(task).finally(() => release());
+  return new Promise((resolve, reject) => {
+    const start = () => {
+      speechUploadActive++;
+      Promise.resolve().then(task).then(resolve, reject).finally(() => {
+        speechUploadActive--;
+        const waiting = speechUploadWaiters.shift();
+        if (waiting) waiting();
+      });
+    };
+    if (speechUploadActive < 2) start(); else speechUploadWaiters.push(start);
+  });
 }
 function speechSleep(ms) { return new Promise(resolve => setTimeout(resolve, Math.max(0, ms))); }
 async function transcribe(blob, who, opt) {
