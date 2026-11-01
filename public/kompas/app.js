@@ -3779,6 +3779,8 @@ async function aiAnswer(fromAuto) {
 // The owner can toggle it off; capture runs only during an active interview.
 let captionCaptureEnabled = !!window.kompasDesktop?.captureCaptions;
 let captionCaptureTimer = null, captionCaptureBusy = false;
+let captionDirectAt = 0, captionDirectBootUntil = 0;
+let captionDirectUnsubscribe = null;
 let captionLastRaw = "", captionDraft = "", captionLastChanged = 0, captionSeenAt = 0;
 let captionLastCommitted = "", captionCommittedAt = 0, captionScanScreen = 0, captionBounds = null;
 let captionMisses = 0, captionScanCount = 0, captionReadyAnswer = false;
@@ -3832,7 +3834,7 @@ function captionReadText(raw) {
 }
 function captionCommitIfQuiet() {
   if (!running || !captionCaptureEnabled || !captionDraft ||
-      Date.now() - captionLastChanged < 2200) return false;
+      Date.now() - captionLastChanged < 1050) return false;
   const complete = captionTechnicalCorrection(captionDraft);
   if (!captionQuestionLike(complete)) return false;
   if (captionLastCommitted && captionNormalized(complete) === captionNormalized(captionLastCommitted)) {
@@ -3858,10 +3860,24 @@ function captionCommitIfQuiet() {
 function captionBegin() {
   captionUiState();
   if (!running || !captionCaptureEnabled || !window.kompasDesktop?.captureCaptions || captionCaptureTimer) return;
+  // UI Automation is the lowest-latency lane: direct text; no OCR or upload.
+  // Windows may not expose caption text through accessibility, so enable a
+  // screenshot fallback after a short probe period, without blocking audio.
+  captionDirectBootUntil = Date.now() + 2000;
+  if (typeof window.kompasDesktop.onCaptionText === "function" && !captionDirectUnsubscribe) {
+    captionDirectUnsubscribe = window.kompasDesktop.onCaptionText((event) => {
+      if (!running || !captionCaptureEnabled || event?.source !== "windows-live-captions-uia" || typeof event.text !== "string") return;
+      captionDirectAt = Date.now();
+      captionReadText(event.text);
+      captionCommitIfQuiet();
+    });
+  }
+  if (typeof window.kompasDesktop.monitorCaptions === "function")
+    void window.kompasDesktop.monitorCaptions(true).catch(() => {});
   const tick = async () => {
     if (!running || !captionCaptureEnabled || captionCaptureBusy) return;
     captionCommitIfQuiet();
-    if (aiBusy || captionReadyAnswer) return; // do not spend OCR requests while writing an answer
+    if (aiBusy || captionReadyAnswer || Date.now() < captionDirectBootUntil || Date.now() - captionDirectAt < 5500) return; // UIA text outranks screenshots and OCR
     captionCaptureBusy = true;
     try {
       // Every sixth scan rediscovers the caption window if it has moved.
@@ -3898,11 +3914,14 @@ function captionBegin() {
       captionCommitIfQuiet();
     }
   };
-  captionCaptureTimer = setInterval(() => { void tick(); }, 4500);
+  captionCaptureTimer = setInterval(() => { void tick(); }, 1500);
   void tick();
 }
 function captionEnd() {
   if (captionCaptureTimer) clearInterval(captionCaptureTimer);
+  if (captionDirectUnsubscribe) { try { captionDirectUnsubscribe(); } catch {} captionDirectUnsubscribe = null; }
+  if (window.kompasDesktop?.monitorCaptions) void window.kompasDesktop.monitorCaptions(false).catch(() => {});
+  captionDirectAt = 0; captionDirectBootUntil = 0;
   captionCaptureTimer = null;
   captionDraft = ""; captionLastRaw = ""; captionLastChanged = 0; captionSeenAt = 0;
   captionLastCommitted = ""; captionCommittedAt = 0; captionBounds = null; captionMisses = 0;
