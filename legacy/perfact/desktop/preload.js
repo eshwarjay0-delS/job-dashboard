@@ -11,6 +11,8 @@ let screenName = "", bar = null;
 contextBridge.exposeInMainWorld("kompasDesktop", {
   version: "0.7.0",
   systemAudio: true,
+  captureCaptions: (options) => ipcRenderer.invoke("kompas:capture-captions", options || {}),
+  captionsAvailable: true,
   setScreen: (name) => { screenName = String(name); ipcRenderer.send("kompas:screen", screenName); paintScreen(); },
   setLive: (on) => ipcRenderer.send("kompas:live", !!on),
   getPrivate: () => ipcRenderer.invoke("kompas:get-private"),
