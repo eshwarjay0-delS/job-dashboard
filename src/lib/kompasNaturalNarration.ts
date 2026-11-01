@@ -16,7 +16,7 @@ export function naturalAnswerShape(question: string): NaturalAnswerShape {
   if (/\b(?:what exactly|which logs|what did (?:you|the team) (?:check|do|change)|what happened next|how did you (?:verify|validate|prove|know)|who (?:approved|owned|signed off)|go deeper|more detail|what artifacts did you)\b/i.test(q)) return "follow-up"
   if (/\b(?:tell me about a time|describe a (?:time|situation)|share an example (?:of|when)|give me an example from|walk me through an? (?:issue|incident|project) (?:you|that))\b/i.test(q)) return "experience"
   if (/\b(?:how (?:would|could|should) you|what would you|suppose|imagine|if (?:you|the|an? )|how do you (?:decide|prioritize|assess|handle))\b/i.test(q)) return "scenario"
-  if (/\b(?:how (?:does|do|did|is|are)|explain how|why does|why do|what happens when|what is the difference|compare|under the hood|troubleshoot|architecture|mechanism|root cause)\b/i.test(q)) return "mechanism"
+  if (/\b(?:how (?:does|do|did|is|are)|explain how|why does|why do|what happens when|under the hood|troubleshoot|architecture|mechanism|root cause)\b/i.test(q)) return "mechanism"
   return "direct"
 }
 
