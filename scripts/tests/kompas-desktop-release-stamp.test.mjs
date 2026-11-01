@@ -16,5 +16,7 @@ test("Desktop update detection observes a changed release without force-reloadin
  assert.match(app,/v\.build === BUILD/)
  assert.match(app,/cache:\s*"no-store"/)
  assert.match(app,/b\.onclick = \(\) => location\.reload\(\)/)
- assert.doesNotMatch(app.slice(app.indexOf("async function checkForUpdate()"),app.indexOf("async function showCapabilityVersion")),/location\.reload\(\);(?!\s*\})/)
+ const section=app.slice(app.indexOf("async function checkForUpdate()"),app.indexOf("async function showCapabilityVersion"))
+ assert.match(section,/b\.onclick = \(\) => location\.reload\(\)/)
+ assert.equal((section.match(/location\.reload\(\)/g)||[]).length,1,"Only a user click may reload the session")
 })
