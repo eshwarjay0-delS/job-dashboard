@@ -494,11 +494,11 @@ function lockDownSession() {
 // preferring the uniquely named Windows Live Captions panel; no background
 // polling, recording, full-screen grab, or reuse of an old frame.
 function isWindowsLiveCaption(name) {
-  return /^(?:windows\\s+)?live[\\s-]*captions?(?:$|[\\s—-])/i.test(String(name || "").trim());
+  return /^(?:windows\s+)?live[\s-]*captions?(?:$|[\s—-])/i.test(String(name || "").trim());
 }
 async function captionSnapshotOnce() {
   const sources = await desktopCapturer.getSources({ types: ["window"], thumbnailSize: { width: 1600, height: 900 }, fetchWindowIcons: false });
-  const windows = sources.filter(src => src.id && src.name && !/^Kompas(?:\\s|$)/i.test(src.name));
+  const windows = sources.filter(src => src.id && src.name && !/^Kompas(?:\s|$)/i.test(src.name));
   if (!windows.length) throw new Error("No capturable window was found. Open Windows Live Captions and retry.");
   const matched = windows.filter(w => isWindowsLiveCaption(w.name));
   let target = matched.length === 1 ? matched[0] : null;
