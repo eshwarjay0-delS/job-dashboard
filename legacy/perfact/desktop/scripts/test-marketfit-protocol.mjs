@@ -64,6 +64,7 @@ assert.match('marketfit-kompas://open', /^marketfit-kompas:\/\/open$/, "Installe
 assert.equal(context.parse(["marketfit-kompas://open"]), null);
 assert.ok(desktop.includes('app.setAsDefaultProtocolClient(MARKETFIT_SCHEME'));
 
-assert.ok(page.includes("window.location.assign(packSession(s))"), "Native launch must use direct user gesture, not a hidden iframe");
+assert.ok(page.includes('window.location.assign(url)') && page.includes('"marketfit-kompas://open?ticket="') &&
+  page.includes('prepareDesktopSession(s).then(openWithTicket)'), "Desktop must use account-bound one-time handoff ticket and protocol navigation, not an iframe or long URL payload");
 assert.ok(sfx.includes("marketfit-kompas"), "Outer Windows launcher must forward MarketFit deep links");
 console.log("MarketFit native session protocol, isolated desktop profile, and standalone perfACT: verified");
