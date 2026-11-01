@@ -22,10 +22,11 @@ function harness(fetcher) {
     try { return await fetcher(...args) } finally { metrics.outstanding-- }
   }
   let clock = 1000
+  metrics.advance = ms => { clock += ms }
   const DateClock = { now: () => clock, parse: Date.parse.bind(Date) }
   const patch = live.replace(
     "function speechSleep(ms) { return new Promise(resolve => setTimeout(resolve, Math.max(0, ms))); }",
-    "function speechSleep(ms) { metrics.slept.push(ms); clock += ms; return Promise.resolve(); }"
+    "function speechSleep(ms) { metrics.slept.push(ms); metrics.advance(ms); return Promise.resolve(); }"
   )
   assert.notEqual(patch, live, "test replaces only async sleep with fake clock")
   const context = {
