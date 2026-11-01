@@ -8,7 +8,7 @@ const api = readFileSync(new URL("../../src/app/api/kompas/speech/route.ts", imp
 const provider = readFileSync(new URL("../../src/lib/kompasSpeech.ts", import.meta.url), "utf8")
 const desktop = readFileSync(new URL("../../legacy/perfact/desktop/main.js", import.meta.url), "utf8")
 const shell = readFileSync(new URL("../../src/lib/kompas-shell.ts", import.meta.url), "utf8")
-const start = app.indexOf("let speechUploadQueue = Promise.resolve();")
+const start = app.indexOf("let speechUploadActive = 0;")
 const end = app.indexOf("// Gap B3 (30 Oct", start)
 assert.ok(start > 0 && end > start, "live transcription code is found")
 const live = app.slice(start, end)
@@ -71,7 +71,7 @@ test("Mic and computer audio serialize instead of triggering a concurrent 429 st
     h.transcribe(h.blob, "Them", { final:true, epoch:1, speechMs:200 }),
     h.transcribe(h.blob, "You", { final:true, epoch:1, speechMs:200 }),
   ])
-  assert.equal(h.metrics.maxOutstanding, 1)
+  assert.equal(h.metrics.maxOutstanding, 2, "both tracks may decode concurrently so a slow first request never blocks follow-up audio")
   assert.deepEqual(h.metrics.fetched.map(x=>x.source), ["system", "mic"])
   assert.deepEqual(h.metrics.received.map(x=>x.who), ["Them", "You"])
 })
