@@ -44,15 +44,17 @@ test('web dashboard renews on open, focus, visibility and a 20-minute interval w
   assert.doesNotMatch(guardSrc, /location\.(?:assign|replace)|router\.(?:push|replace)/);
 });
 
-test('desktop bridge is preferred for renewal and reconnect is user-controlled', () => {
+test('desktop bridge is preferred for renewal and reconnect is silent, never user-controlled', () => {
   // 9a072b5 restructured tryRefreshAuth into a single-flight form: the bridge
   // guard is now the negated check, same behavior — desktop never falls
   // through to the cookie path, bridge or no bridge.
+  // 1 Nov 2026, owner rule: no auth UI mid-session — the 31 Oct reconnect
+  // pill is gone; renewal waits silently and the failed answer resumes itself.
   assert.match(appSrc, /typeof window\.kompasDesktop\.refreshAuth !== "function"\) return false;/);
   assert.match(appSrc, /await window\.kompasDesktop\.refreshAuth\(\)/);
-  assert.match(appSrc, /link\.textContent = "Reconnect sign-in"/);
-  assert.match(appSrc, /window\.kompasDesktop\.openSignIn\(\)/);
-  assert.match(appSrc, /window\.open\("\/login\?next="/);
+  assert.doesNotMatch(appSrc, /sessionReconnect|Reconnect sign-in/);
+  assert.match(appSrc, /function waitForAuthSilently\(retry\)/);
+  assert.match(appSrc, /function healAuthSilently\(\)/);
 });
 
 test('1000 desktop renewal attempts use the bridge without navigation', async () => {
@@ -95,8 +97,8 @@ test('desktop shell without the bridge never presents the cookie token', async (
   assert.equal(fetches, 0);
 });
 
-test('a shown reconnect pill clears itself when auth recovers', () => {
-  assert.match(appSrc, /function clearAuthPill\(\)/);
+test('silent auth wait clears itself when auth recovers', () => {
+  assert.match(appSrc, /function healAuthSilently\(\)/);
   assert.match(appSrc, /deriveOnly: true, question: "ping"/);
   assert.match(appSrc, /typeof window\.kompasDesktop\.refreshAuth !== "function"\) return false;/);
 });

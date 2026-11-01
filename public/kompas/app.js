@@ -732,8 +732,8 @@ async function buildBook(s) {
 // in the way" bug: sessions lapse quietly while the app sits idle, and the
 // first action afterwards met a dead token. Now the client first asks the
 // server to renew the session (the refresh cookie does the work), retries
-// once, and only sends the window to login when renewal truly fails.
-let __authRedirected = false;
+// once, and when renewal truly fails it waits silently (see
+// waitForAuthSilently below) — it never shows auth UI mid-session.
 let __lastAuthRefresh = 0;
 let __authRefreshFlight = null;
 function isAuthError(e) {
@@ -786,42 +786,59 @@ try {
   window.addEventListener("focus", keepAuthAlive);
   setInterval(keepAuthAlive, 20 * 60 * 1000);
 } catch {}
-let __authProbeTimer = null;
-function clearAuthPill() {
-  if (__authProbeTimer) { clearInterval(__authProbeTimer); __authProbeTimer = null; }
-  __authRedirected = false;
-  try { const pill = $("sessionReconnect"); if (pill) pill.remove(); } catch {}
-}
-function redirectToLogin(message) {
-  if (__authRedirected) return;
-  __authRedirected = true;
-  try { status(message || "Sign-in expired. Your session stays open; reconnect, then retry.", "err"); } catch {}
-  if ($("sessionReconnect")) return;
-  const link = document.createElement("button");
-  link.id = "sessionReconnect"; link.className = "update-pill"; link.textContent = "Reconnect sign-in";
-  link.style.bottom = "54px";
-  link.onclick = () => {
-    __authRedirected = false;
-    if (window.kompasDesktop && typeof window.kompasDesktop.openSignIn === "function") window.kompasDesktop.openSignIn();
-    else window.open("/login?next=" + encodeURIComponent(window.location.pathname + window.location.search), "_blank", "noopener,noreferrer");
-  };
-  document.body.append(link);
-  // Desktop only: the shell renews on its own timer underneath, so a pill shown during the renewal gap heals
-  // itself — probe a cheap authenticated call every 30s and clear the pill the moment the shell is live again.
-  // On the web there is no background renewer, so the pill stays until the user reconnects. The probe is a
-  // derive-only answer call: it proves auth without presenting any refresh token, so it cannot revoke anything.
-  // It stops after 10 minutes; a later successful answer clears the pill anyway.
-  if (window.kompasDesktop && !__authProbeTimer) {
-    let tries = 0;
-    __authProbeTimer = setInterval(async () => {
-      tries++;
+// Silent auth (owner, 1 Nov 2026): auth UI must never appear mid-session —
+// no pill, no sign-in prompt, no auth error text in front of a meeting or
+// demo. When renewal truly fails, the session waits silently: a cheap
+// authenticated probe runs every 30s, and the moment auth heals, the failed
+// answer resumes by itself. The user never sees, taps, or explains anything
+// auth-shaped. This supersedes the 31 Oct user-controlled reconnect pill.
+// Self-contained: no module-level consts it depends on.
+let __authWaitTimer = null;
+let __authWaiting = false;
+let __authPendingRetries = [];
+function healAuthSilently() {
+  if (__authWaitTimer) { clearInterval(__authWaitTimer); __authWaitTimer = null; }
+  __authWaiting = false;
+  const retries = __authPendingRetries; __authPendingRetries = [];
+  for (const retry of retries) {
+    if (!retry || !retry.card) continue;
+    const n = (retry.card.__authAutoRetries || 0) + 1;
+    retry.card.__authAutoRetries = n;
+    if (n <= 3) {
+      try { generateAnswer(retry.question, retry.card, retry.opts || {}); } catch {}
+    } else {
       try {
-        const res = await fetch("/api/kompas/answer", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ deriveOnly: true, question: "ping" }) });
-        if (res.ok) { clearAuthPill(); return; }
+        if (typeof retry.card.answer !== "string" || !retry.card.answer.trim() || retry.card.answer.trim() === "…") retry.card.answer = ["Still waiting for the session. Press AI Answer again to retry."];
+        if (cards[idx] === retry.card) renderCard();
       } catch {}
-      if (tries >= 20) { clearInterval(__authProbeTimer); __authProbeTimer = null; }
-    }, 30 * 1000);
+    }
   }
+}
+function waitForAuthSilently(retry) {
+  if (retry && retry.card && !__authPendingRetries.some(r => r.card === retry.card)) __authPendingRetries.push(retry);
+  if (__authWaiting) return;
+  __authWaiting = true;
+  if (__authWaitTimer) return;
+  let tries = 0;
+  __authWaitTimer = setInterval(async () => {
+    tries++;
+    try {
+      try { await tryRefreshAuth(); } catch {}
+      const res = await fetch("/api/kompas/answer", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ deriveOnly: true, question: "ping" }) });
+      if (res.ok) { healAuthSilently(); return; }
+    } catch {}
+    if (tries >= 20) {
+      clearInterval(__authWaitTimer); __authWaitTimer = null; __authWaiting = false;
+      const pending = __authPendingRetries; __authPendingRetries = [];
+      for (const p of pending) {
+        if (!p || !p.card) continue;
+        try {
+          if (typeof p.card.answer !== "string" || !p.card.answer.trim() || p.card.answer.trim() === "…") p.card.answer = ["Still waiting for the session. Press AI Answer again to retry."];
+          if (cards[idx] === p.card) renderCard();
+        } catch {}
+      }
+    }
+  }, 30 * 1000);
 }
 async function preparePack(s) {
   if (location.protocol === "file:") { seedIdentity(s); status("Serve the deployed app for live prep + answers.", "live"); return; }
@@ -833,11 +850,11 @@ async function preparePack(s) {
       const res = await fetch("/api/prep", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ config: cfgOf(s) }) });
       const pack = await res.json();
       if (!res.ok || !Array.isArray(pack.questions)) throw new Error(pack.error || ("prep " + res.status));
-      s.prep = pack; s.__authRetried = false; saveSession(s); clearAuthPill();
+      s.prep = pack; s.__authRetried = false; saveSession(s); healAuthSilently();
     } catch (e) {
-      if (isAuthError(e)) {                                            // 401: renew the session silently and retry once — eject only if renewal fails
+      if (isAuthError(e)) {                                            // 401: renew the session silently and retry once — wait silently if renewal fails
         if (!s.__authRetried && await tryRefreshAuth()) { s.__authRetried = true; preparePack(s); return; }
-        redirectToLogin(); return;
+        waitForAuthSilently(null); return;
       }
       if (current !== s) return;
       const ph = cards.findIndex(c => c.question === "Preparing…");
@@ -3377,12 +3394,12 @@ async function generateAnswerRequest(question, card, opts = {}) {
       }
     }
     status("Answered.", "live");
-    clearAuthPill();
+    healAuthSilently();
     if (cards[idx] === card) { const c = $("card"); if (c) c.classList.add("q-away"); }   // generated: the question collapses away, only the response box stays
   } catch (e) {
-    if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — eject only if renewal fails
+    if (isAuthError(e)) {                                              // 401: renew the session silently and re-ask — wait silently if renewal fails
       if (await tryRefreshAuth()) { recoverAnswer("", 800); return; }
-      recoverAnswer("AUTH"); redirectToLogin(); return;
+      recoverAnswer("AUTH"); waitForAuthSilently({ question, card, opts: { ...opts, derived: derivedQ || opts.derived, derivedBy } }); return;
     }
     if (card.req !== ctl) return;                                      // aborted because this same card was re-asked
     card.streaming = false;
