@@ -3514,6 +3514,19 @@ function showPressed(card, q) {
 $("answerBtn").onclick = () => aiAnswer(false);
 let aiBusy = false, aiBusySince = 0;
 let answerAnywayHeld = null;   // the lines a manual press just turned away, for "Answer anyway"
+// Plain reason when a press finds nothing to answer (owner, 1 Nov 2026:
+// "no question detected" with no reason is a dead end — say which link is
+// missing: no capture at all, the call-audio share ended, silence on the
+// shared track, or sound heard but nothing transcribed yet). Pure: the
+// caller computes the four flags from live state. Self-contained: no
+// module-level consts it depends on.
+function emptyPressReason(anyCapture, wantSys, hasThemCap, themSilent) {
+  if (!anyCapture) return "Nothing is capturing right now — press Start, or type a question.";
+  if (wantSys && !hasThemCap) return "Call audio sharing ended — press the speaker button to share it again.";
+  if (hasThemCap && themSilent) return "Kompas hears silence from the shared audio — check the shared tab is playing sound and tab audio is shared, then keep playing.";
+  if (hasThemCap) return "Kompas hears the call audio but nothing has been transcribed yet — keep playing, then press AI Answer again.";
+  return "Nothing heard yet — press Start, or type a question.";
+}
 async function aiAnswer(fromAuto) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
@@ -3686,7 +3699,8 @@ async function aiAnswer(fromAuto) {
       return await generateAnswer(c.question, page, { reask: true, pinned: true, derived: c.question });
     }
     if (c && c.heard) return await generateAnswer(c.heard, c, { consolidated: true, earlier: c.earlier || "" });
-    status("Nothing heard yet — press Start, or type a question.", "live");
+    const themCap = captures.find(c => c.who === "Them");
+    status(emptyPressReason(captures.length > 0, !!(typeof srcOn !== "undefined" && srcOn.sys), !!themCap, !!(themCap && (performance.now() - (themCap.lastAudibleAt || 0) > 20000))), "live");
     setChat(true);
   } catch (error) {
     status(error.message || "Could not prepare an answer. Please retry.", "err");
