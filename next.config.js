@@ -75,6 +75,10 @@ const nextConfig = {
     // entries come after the global one so their values win for the same header keys.
     const kompasHeaders = [
       { key: "Permissions-Policy", value: "camera=(), microphone=(self), display-capture=(self), geolocation=()" },
+      // 1 Nov 2026: Kompas must never serve a stale page. A restored desktop window showed days-old bytes while the
+      // server was READY, because these paths sent no no-store and the shell restores the existing window without
+      // reloading. Every load refetches the page and its scripts.
+      { key: "Cache-Control", value: "no-store" },
       {
         key: "Content-Security-Policy",
         value: [
