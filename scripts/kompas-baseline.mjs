@@ -116,7 +116,7 @@ function livePage(engine = ECHOED) {
     // A crash inside AI Answer lands in status(..., "err"): that fails the replay instead of passing silently.
     status(msg, kind) { if (kind === 'err') errors.push(String(msg)) },
   }
-  s.$ = (id) => (id === 'manualInput' ? s.box : { classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, title: '', textContent: '' })
+  s.$ = (id) => (id === 'manualInput' ? s.box : { classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, setAttribute() {}, title: '', textContent: '' })
   s.addCard = (q, answer) => { const c = { question: q, answer }; s.cards.push(c); s.idx = s.cards.length - 1; return c }
   // generateAnswer as the page runs it, with the network and the model stood in for: the page's derive request goes to
   // the server's real code gates, then the page's answer request fields go to the server's real answer question.
