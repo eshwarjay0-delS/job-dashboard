@@ -1,0 +1,72 @@
+name: Kompas Windows Caption Capture executable
+
+on:
+  pull_request:
+    paths:
+      - 'legacy/perfact/desktop/**'
+      - 'public/kompas/**'
+      - '.github/workflows/kompas-windows-desktop.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'legacy/perfact/desktop/**'
+      - 'public/kompas/**'
+      - '.github/workflows/kompas-windows-desktop.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows-build:
+    name: Build canonical MFit Kompas Windows EXE
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: legacy/perfact/desktop/package-lock.json
+      - name: Check canonical MFit files and native caption reader
+        shell: pwsh
+        run: |
+          if (!(Test-Path 'public/kompas/index.html')) { throw 'Missing canonical MFit page' }
+          if (!(Test-Path 'legacy/perfact/desktop/live-captions-uia.ps1')) { throw 'Missing native Windows captions sidecar' }
+          $null = [System.Management.Automation.PSParser]::Tokenize(
+            (Get-Content 'legacy/perfact/desktop/live-captions-uia.ps1' -Raw), [ref]$null)
+      - name: Install desktop dependencies
+        working-directory: legacy/perfact/desktop
+        run: npm ci
+      - name: Validate Electron native app and MarketFit launch protocol
+        working-directory: legacy/perfact/desktop
+        run: npm run check
+      - name: Build full x64 Windows executable
+        working-directory: legacy/perfact/desktop
+        run: npm run dist
+      - name: Verify real Windows executable
+        shell: pwsh
+        run: |
+          $path = 'legacy/perfact/desktop/dist/Kompas.exe'
+          if (!(Test-Path $path)) { throw 'Missing Kompas.exe' }
+          $size = (Get-Item $path).Length
+          if ($size -lt 20000000) { throw "Unexpectedly small Windows build: $size" }
+          Write-Output "Verified Kompas.exe: $size bytes"
+      - name: Publish Windows artifact for verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kompas-Windows-Caption-Capture-${{ github.sha }}
+          path: legacy/perfact/desktop/dist/Kompas.exe
+          if-no-files-found: error
+          retention-days: 14
+      - name: Update canonical MFit desktop release asset
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: kompas-desktop-latest
+          name: Kompas Desktop — latest MFit release
+          files: legacy/perfact/desktop/dist/Kompas.exe
+          fail_on_unmatched_files: true
+          overwrite_files: true
+          make_latest: true
