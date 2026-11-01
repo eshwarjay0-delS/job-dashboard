@@ -2750,7 +2750,7 @@ const inflight = new Set();   // every answer request still running, one per pag
 let answerEpoch = 0;            // bumps on every answer request: an automatic retry only fires if nothing newer started
 function slimPrep() { const p = current && current.prep; return p ? { identity: p.identity, persona: p.persona, projects: p.projects } : {}; }
 function buildTranscript() { return transcript.slice(-80).map(t => `${t.who}: ${t.text}`).join("\n"); }
-function heardAsQuestion(lines) { return lines.map(t => t.text).join(" ").replace(/\s+/g, " ").trim().slice(0, 2000); }
+function heardAsQuestion(lines) { return lines.map(t => t.text).join(" ").replace(/\s+/g, " ").trim().slice(0, 4000); }
 function lastAsk(lines) {
   const them = lines.filter(t => t.who === "Them" || t.who === "You (typed)");
   const src = them.length ? them : lines;
@@ -2845,7 +2845,7 @@ function composeIntake(lines, opts = {}) {
   return {
     worthy, hasCue, contentWords, keywords, dropped, anchorQ,
     heard: heardLines.join("\n"),
-    derived: primary.length ? primary.filter(p => !anchorQ || p.text !== anchorQ).map(p => p.text).join(" ").replace(/\s+/g, " ").trim().slice(0, 2000) : "",   // the formed question is the WHOLE of what was asked, every line in order — never just the last line (owner, 23 Oct: a 100-word question collapsed to its last 10 words on the card). The question already on screen is the lane, not new material, so it is not copied into the formed question a second time.
+    derived: primary.length ? primary.filter(p => !anchorQ || p.text !== anchorQ).map(p => p.text).join(" ").replace(/\s+/g, " ").trim().slice(0, 4000) : "",   // the formed question is the WHOLE of what was asked, every line in order — never just the last line (owner, 23 Oct: a 100-word question collapsed to its last 10 words on the card). The question already on screen is the lane, not new material, so it is not copied into the formed question a second time.
     primaryCount: primary.length, micContextCount: micContext.length,
     noiseOnly: primary.length === 0 && micContext.length === 0 && keywords.length === 0,
   };
@@ -3188,7 +3188,7 @@ async function generateAnswerRequest(question, card, opts = {}) {
     }
     if (!text.trim()) throw new Error("The answer engine returned an empty response. Please retry.");
     show(text);
-    if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 2000);   // the full heard question, never its last line (owner, 23 Oct)
+    if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);   // the full heard question, never its last line (owner, 23 Oct)
     const kind = ({ 0: "intro", 1: "story", 2: "reasoning", 3: "drill-down", 4: "your experience" }[meta.tier] || "") + (meta.length && ["closed", "which", "theirq", "logistics"].includes(meta.length.kind) ? " · short form" : "") + (meta.derived ? " · from everything heard" : "") + (meta.voice ? ` · voice ${meta.voice.passed}/${meta.voice.total}` : "");
     const spoken = (s) => s >= 90 ? `${Math.round(s / 60)} min` : `${s}s`;
     const len = meta.length && meta.length.secs ? ` · ~${spoken(meta.length.secs[0])}–${spoken(meta.length.secs[1])} spoken` : "";
@@ -3231,10 +3231,10 @@ async function generateAnswerRequest(question, card, opts = {}) {
     if (card.req !== ctl) return;                                      // aborted because this same card was re-asked
     card.streaming = false;
     if (e && e.name === "AbortError") {
-      if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 2000);
+      if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);
       stallRetry(); return;
     }
-    if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 2000);
+    if (consolidated && /^Deriving/.test(card.question)) card.question = plainHeard.replace(/\s+/g, " ").trim().slice(0, 4000);
     recoverAnswer(e && e.code || "", e && e.retryAfterMs || 1000);
   } finally { inflight.delete(ctl); clearTimeout(hardTimer); clearTimeout(fetchTimer); release(); if (card.req === ctl && card.anchorFlight === writeAnchor) card.anchorFlight = ""; if (answerCtl === ctl) answerCtl = null; }
 }

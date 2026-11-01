@@ -587,7 +587,7 @@ export function cutQuestion(heard: string, previous: PreviousTurn = NO_TURN, rea
   const q = (pointed + kept.map((i) => parts[i].text).join(" ")).replace(/\s+/g, " ").trim()
   // "And why?" is two words or fewer. Dropping it left the previous answer on screen.
   if (!q || (q.split(/\s+/).length < 3 && !shortFollowUp(q) && !shortFollowUp(text) && !shortLogistics(q) && !shortLogistics(text))) return ""
-  return (q.charAt(0).toUpperCase() + q.slice(1)).slice(0, 2000)
+  return (q.charAt(0).toUpperCase() + q.slice(1)).slice(0, 4000)
 }
 
 // The openers of an interviewer's ask or instruction. Before 26 Oct 2026 only how/what/why..., can/would you, tell me,
@@ -726,7 +726,7 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
     let from = 0
     while (from < parts.length - 1 && (parts[from].kind === "noise" || parts[from].kind === "own")) from++
     const whole = parts.slice(from).map((p) => p.text).join(" ").replace(/\s+/g, " ").trim()
-    return (whole && !noiseOnly(whole) ? whole : asked).slice(0, 2000)
+    return (whole && !noiseOnly(whole) ? whole : asked).slice(0, 4000)
   }
   // Stress round 5 (29 Oct 2026): unpinned with the derived ask (a retry sends both), the ask was cut out of heard AND
   // appended again, so the model was told to answer "...scope an access review? Anyway, how do you scope an access
@@ -735,7 +735,7 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
   const inHeard = asked && key(asked).length > 0 && key(heard).includes(key(asked))
   const cut = (inHeard ? cutQuestion(heard, previous, reask) : "") || cutQuestion([heard, asked].filter(Boolean).join("\n"), previous, reask)
   if (cut) return cut
-  if (asked && !noiseOnly(asked)) return asked.slice(0, 2000)
+  if (asked && !noiseOnly(asked)) return asked.slice(0, 4000)
   const bare = String(heard || "")
     .replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ")
     .replace(/\s+/g, " ")
@@ -744,7 +744,7 @@ export function questionToAnswer(heard: string, explicit: string, pinned = false
     const words = bare.split(/\s+/).filter(Boolean)
     // "Explain that" is two words. Dropping it left the previous answer on screen.
     const shortFollow = words.length >= 2 && words.length <= 9 && (PRESS.test(bare) || POINTS_BACK.test(bare))
-    if (topicFragment(bare) || words.length >= 3 || shortFollow || shortLogistics(bare)) return bare.slice(0, 2000)
+    if (topicFragment(bare) || words.length >= 3 || shortFollow || shortLogistics(bare)) return bare.slice(0, 4000)
   }
   return ""
 }
@@ -809,7 +809,7 @@ function deriveByCodeRaw(heard: string, history: unknown, reask = false): string
   const clean = cleanQuestion(heard) || cutQuestion(heard, reask ? NO_TURN : previousTurn(history), reask)
   if (clean) return clean
   const topic = topicFragment(String(heard).replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " "))
-  return topic ? String(heard).replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ").replace(/\s+/g, " ").trim().slice(0, 2000) : ""
+  return topic ? String(heard).replace(/^(?:You(?: \(typed\))?|Them(?: \(earlier\))?):\s*/gim, " ").replace(/\s+/g, " ").trim().slice(0, 4000) : ""
 }
 
 /**

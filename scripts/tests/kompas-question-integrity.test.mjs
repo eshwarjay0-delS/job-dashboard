@@ -27,7 +27,7 @@ test("a client-formed question is never overwritten by the stream meta abstracti
 });
 
 test("the server takes the formed question at full length and keeps re-asks question calibrated", () => {
-  assert.match(route, /str\(body\.derived, 2000\)/);
+  assert.match(route, /str\(body\.derived, 4000\)/);
   assert.ok(!route.includes("againAngle"));
   assert.ok(!route.includes("NEW VIEW REQUIRED"));
   assert.ok(!route.includes("plan.words * 1.3"));
@@ -35,13 +35,15 @@ test("the server takes the formed question at full length and keeps re-asks ques
   assert.match(route, /repeatQuestionGuidance\(tier\)/);
 });
 
-test("questionToAnswer keeps the whole pinned question and caps at 2000, never 900", () => {
+test("questionToAnswer keeps the whole pinned question and caps at 4000, never 900", () => {
   const start = answerLib.indexOf("export function questionToAnswer");
   const body = answerLib.slice(start, answerLib.indexOf("\n}", start));
   // 26 Oct 2026: a single recognised ask is no longer cut out of a pinned question (kompas-question-whole.test.mjs).
   assert.match(body, /const whole = parts\.slice\(from\)/);
   assert.ok(!body.includes("cutQuestion(asked)"), "a pinned question is never cut down to one clause");
   assert.ok(!body.includes("slice(0, 900)"), "the 900-char cut is gone from questionToAnswer");
+  assert.ok(!body.includes("slice(0, 2000)"), "the 2000-char cut is gone too: the cap is 4000, matching the heard window");
+  assert.match(body, /slice\(0, 4000\)/);
 });
 
 test("a three-part compound ask is answered whole, every part, in order", () => {

@@ -811,7 +811,7 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   }
 
   const heardAll = str(body.question, 4000)
-  const asked = str(body.derived, 2000)
+  const asked = str(body.derived, 4000)
   // The card already shows the question when the client pins it. A ramble still
   // yields to the ask inside that line. "Okay" stays unanswered. Anything else
   // typed or heard is the question — dropping it left the card on the previous answer.
