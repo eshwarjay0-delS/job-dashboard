@@ -9,7 +9,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 let screenName = "", bar = null;
 
 contextBridge.exposeInMainWorld("kompasDesktop", {
-  version: "0.7.0",
+  version: "0.8.3",
   systemAudio: true,
   captureCaptions: (options) => ipcRenderer.invoke("kompas:capture-captions", options || {}),
   monitorCaptions: (enabled) => ipcRenderer.invoke("kompas:caption-monitor", !!enabled),
