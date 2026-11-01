@@ -2954,6 +2954,46 @@ function heardDraft(lines, screen, answerText) {
   const q = bits.slice(-4).join(" ");
   return q.length > 600 ? "…" + q.slice(-600) : q;
 }
+// Spoken Windows captions have the same correction policy as the audio feed.
+// Ambiguous English homophones are converted ONLY in a matching technical
+// question context. All other names are handled by the user's dynamic
+// resume/JD/document vocabulary in fixTerms / fixPhrases, never guessed.
+function captionTechnicalCorrection(raw) {
+  let text = String(raw || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  const vocab = new Set(termVocab().map(v => v.toUpperCase()));
+  const technical = /\b(security|cyber|SOC|log|logs|logging|alerts?|events?|threat|incident|monitor(?:ing)?|rules?|detection|correlat\w*|dashboard|tool|platform|orchestrat\w*|automati\w*|playbooks?|authentication|access|privileg\w*|integration|endpoint|policy|risk|architecture|configur\w*|cloud|pipeline|audit|identity)\b/i.test(text);
+  const question = /(?:\?|^(?:what|how|why|which|tell|explain|describe|have|do|does|did|where|can|could|would|walk)\b)/i.test(text);
+  const context = technical || (question && /\b(experience|used|work|engineer|with|about)\b/i.test(text));
+  const homophones = [
+    { re: /\bseem\b/gi, word: "SIEM", context: /\b(?:seem)\b/i },
+    { re: /\b(?:sore|soar)\b/gi, word: "SOAR", context: /\b(?:automati\w*|orchestrat\w*|playbooks?|security|incident|SOC|platform|tool|integration|alerts?|work|used)\b/i },
+    { re: /\b(?:spear|spehr)\b/gi, word: "SIEM", context: /\b(?:logs?|SOC|correlat\w*|monitor\w*|security)\b/i },
+    { re: /\bcyber\s+ark\b/gi, word: "CyberArk", context: /\bcyber\s+ark\b/i },
+    { re: /\b(?:sam l|s a m l)\b/gi, word: "SAML", context: /\b(?:auth|identity|login|SSO|SAML|federat)\w*/i },
+    { re: /\b(?:o auth|oh auth|o\.?a\.?uth)\b/gi, word: "OAuth", context: /\b(?:auth|token|identity|login|SSO|API|scope)\w*/i },
+    { re: /\b(?:e d r)\b/gi, word: "EDR", context: /\b(?:endpoint|detection|response|security|alerts?)\b/i },
+    { re: /\b(?:x d r)\b/gi, word: "XDR", context: /\b(?:detection|response|security|alerts?)\b/i },
+    { re: /\b(?:p k i)\b/gi, word: "PKI", context: /\b(?:certificate|TLS|key|security|identity)\b/i },
+    { re: /\b(?:c y b e r a r k)\b/gi, word: "CyberArk", context: /\b(?:security|vault|pam|privileg|access|account)\w*/i },
+    { re: /\b(?:see i am)\b/gi, word: "SIEM", context: /\b(?:logs?|security|monitor|detection|alerts?)\w*/i }
+  ];
+  const base = text;
+  for (const item of homophones) {
+    if (!vocab.has(item.word.toUpperCase()) || !context || !item.context.test(base)) continue;
+    // "It would seem" is ordinary prose, never a product acronym.
+    if (item.word === "SIEM" && /\b(?:it|would|does|did|might|may|could|should)\s+seem\b/i.test(base)) continue;
+    text = text.replace(item.re, item.word);
+  }
+  // Canonical spellings of known technical acronyms, even if captions use
+  // lowercase letters; no blanket uppercase treatment of normal words.
+  if (context) for (const acronym of ["SIEM","SOAR","EDR","XDR","IAM","PAM","EPM","SAML","SCIM","OAuth","OIDC","PKI","SOC","SOX","NIST","MITRE","SAST","DAST","HSM","JIT","RBAC","ABAC","KMS","WAF","API","TLS","SQL","AD"]) {
+    if (!vocab.has(acronym.toUpperCase())) continue;
+    text = text.replace(new RegExp("\\b" + acronym + "\\b", "gi"), acronym);
+  }
+  return fixTerms(fixPhrases(text));
+}
+
 function onTranscript(who, text, lookedAgain, spokenAt) {
   text = fixTerms(fixPhrases(text));
   if (who === "Them") noteThem(text, spokenAt);
