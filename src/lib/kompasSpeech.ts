@@ -188,6 +188,17 @@ function collapseRepeats(text: string): { text: string; collapsed: boolean } {
   return { text: result.text, collapsed: guardDeLooped(result) }
 }
 
+/** RFC 9110 Retry-After may be seconds or an HTTP date. Preserve the
+ * upstream pacing advice without logging the provider's response body. */
+export function speechRetryAfterSeconds(raw: string | null, now = Date.now()): number {
+  const value = String(raw || "").trim()
+  const seconds = Number(value)
+  const date = value && !Number.isFinite(seconds) ? Date.parse(value) : NaN
+  const delay = value && Number.isFinite(seconds) && seconds > 0 ? seconds
+    : Number.isFinite(date) ? (date - now) / 1000 : 10
+  return Math.min(120, Math.max(1, Math.ceil(delay)))
+}
+
 export async function transcribeAudio(input: { audio: Uint8Array; mime: string; hint?: string; language?: string; purpose: SpeechPurpose; sessionId?: string; userHash?: string }): Promise<{ text: string; seconds: number | null; language: string | null; model: string; segments: SpokenStretch[]; words: SpokenWord[]; deLooped: boolean }> {
   const type = audioType(input.mime)
   if (!type) throw new SpeechError("bad-audio")
@@ -281,7 +292,7 @@ export async function transcribeAudio(input: { audio: Uint8Array; mime: string; 
 
   if (!response.ok) {
     record(false, response.status)
-    if (response.status === 429) throw new SpeechError("busy", Math.min(120, Math.max(1, Math.ceil(Number(response.headers.get("retry-after")) || 10))))
+    if (response.status === 429) throw new SpeechError("busy", speechRetryAfterSeconds(response.headers.get("retry-after")))
     if (response.status === 413) throw new SpeechError("too-large")
     if (response.status === 400 || response.status === 415 || response.status === 422) throw new SpeechError("bad-audio")
     throw new SpeechError("unavailable")
