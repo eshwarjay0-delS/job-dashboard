@@ -60,6 +60,23 @@ export async function createClient(): Promise<ServerClient> {
 // A supplied Bearer is an explicit account identity. Never silently switch to
 // ambient browser cookies if it is expired, malformed or rejected by Supabase.
 // The desktop must refresh its own credential; Supabase verifies the token.
+// For callers that can't send the site's session cookies — namely the Chrome
+// extension's background worker, which fetches /api/profile cross-origin —
+// authenticate via an `Authorization: Bearer <supabase access token>` header
+// instead. Falls back to the normal cookie session when no header is present,
+// so every existing (browser-tab) caller is unaffected.
+// Expiry check only — the signature is never trusted here; Supabase still
+// validates any token that is actually used. This exists to recognise a
+// credential that is already dead on arrival.
+function isExpiredJwt(token: string): boolean {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return false;
+    const payload = JSON.parse(Buffer.from(part.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"));
+    return typeof payload.exp === "number" && payload.exp * 1000 <= Date.now();
+  } catch { return false; }
+}
+
 export async function createClientFromRequest(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

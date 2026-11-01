@@ -347,6 +347,10 @@ type AnswerJob = {
   previousAnswer: string
   // Round 6: the last three turns, so a different question cannot get any of the last three answers again.
   previousTurns: Array<{ q: string; a: string }>
+  // Any dossier lane that timed out (general 300ms, bible/prepared 110ms):
+  // the prompt carries a DOSSIER NOTE for it and the response flags it,
+  // so a silently ungrounded answer is never mistaken for a grounded one.
+  groundingTimedOut: boolean
 }
 
 // The lanes, in order: an explicit OpenRouter pick from the live screen first,
@@ -628,7 +632,7 @@ async function streamAnswer(req: NextRequest, job: AnswerJob): Promise<Response>
           emit({ type: "replace", text: finalText })
         }
         emit({
-          type: "done", degraded, guarded: g.guarded, verified, repaired, repair,
+          type: "done", degraded, guarded: g.guarded, verified, repaired, repair, groundingTimedOut: job.groundingTimedOut,
           precision: { coverage: questionCoverage(job.question, finalText), flags: [...spokenQualityFlags(job.question, finalText), ...tangentSignals(job.question, finalText).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, finalText).map(t => `missing-named-term:${t}`)] },
           ledger: job.ledger,
           ...metaBase, provider: servedProvider, model: servedModel,
@@ -727,6 +731,7 @@ async function jsonAnswer(req: NextRequest, job: AnswerJob): Promise<NextRespons
     polished: true,
     precision: { coverage: questionCoverage(job.question, out), flags: [...spokenQualityFlags(job.question, out), ...tangentSignals(job.question, out).map(t => `off-topic-jargon:${t}`), ...missingNamedQuestionTerms(job.question, out).map(t => `missing-named-term:${t}`)] },
     degraded,
+    groundingTimedOut: job.groundingTimedOut,
     guarded: g.guarded,
     verified,
     repaired,
@@ -832,13 +837,22 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
   const jdSrc = str(config.jd, 8000)
   const docsSrc = str(config.documents, 8000)
   let grounding = ""
+  // A timed-out dossier read used to collapse to "" exactly like a genuinely
+  // empty dossier, so the answer proceeded as if no dossier existed and
+  // nothing marked the gap. The races below now report which case it was:
+  // a timeout is carried as a prompt note and a response flag, never silently.
+  let generalDossierTimedOut = false
+  let bibleTimedOut = false
+  let bibleTimeoutNote = ""
   if (!resumeSrc && !docsSrc) {
     let timer: ReturnType<typeof setTimeout> | undefined
     try {
-      grounding = await Promise.race([
-        dossierContext(hashUserId(user.id), "general"),
-        new Promise<string>((resolve) => { timer = setTimeout(() => resolve(""), 300) }),
+      const raced = await Promise.race([
+        dossierContext(hashUserId(user.id), "general").then((v) => ({ v, timedOut: false })),
+        new Promise<{ v: string; timedOut: boolean }>((resolve) => { timer = setTimeout(() => resolve({ v: "", timedOut: true }), 300) }),
       ])
+      grounding = raced.v
+      generalDossierTimedOut = raced.timedOut
     } catch { /* optional historical context must not block a live turn */ }
     finally { if (timer) clearTimeout(timer) }
   }
@@ -1005,20 +1019,30 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     try {
       const owner = hashUserId(user.id)
       const followUp = includeHistoryContext ? history.slice(-250) : undefined
-      const [master, prepared] = await Promise.all([
+      const [masterRaced, preparedRaced] = await Promise.all([
         Promise.race([
           import("@/lib/kompas-master-bible").then(m =>
-            m.masterBibleContext(owner, question, { followUp, maxChars: 1600 })).catch(() => ""),
-          new Promise<string>(resolve => { timerA = setTimeout(() => resolve(""), 110) }),
+            m.masterBibleContext(owner, question, { followUp, maxChars: 1600 })).catch(() => "").then((v) => ({ v, timedOut: false })),
+          new Promise<{ v: string; timedOut: boolean }>(resolve => { timerA = setTimeout(() => resolve({ v: "", timedOut: true }), 110) }),
         ]),
         Promise.race([
           import("@/lib/kompas-dossier-store").then(m =>
             m.activePreparedDossierContext(owner, resumeSrc, jdSrc, question, {
               followUp, firstPerson: personalEvidence, maxChars: 1800,
-            })).catch(() => ""),
-          new Promise<string>(resolve => { timerB = setTimeout(() => resolve(""), 110) }),
+            })).catch(() => "").then((v) => ({ v, timedOut: false })),
+          new Promise<{ v: string; timedOut: boolean }>(resolve => { timerB = setTimeout(() => resolve({ v: "", timedOut: true }), 110) }),
         ]),
       ])
+      const master = masterRaced.v
+      const prepared = preparedRaced.v
+      bibleTimedOut = masterRaced.timedOut || preparedRaced.timedOut
+      const timeoutNotes = [
+        masterRaced.timedOut ? "the earlier-session mini-dossier read timed out (110ms) and is not included" : "",
+        preparedRaced.timedOut ? "the prepared dossier read timed out (110ms) and is not included" : "",
+      ].filter(Boolean)
+      bibleTimeoutNote = timeoutNotes.length
+        ? `DOSSIER NOTE: ${timeoutNotes.join("; ")}. Answer from the resume, JD and sources provided; do not present dossier-specific project claims.`
+        : ""
       priorBibleContext = [
         prepared ? "PREPARED SOURCE-BOUND DOSSIER (source references still require verification):\n" + prepared : "",
         master ? "EARLIER SESSION MINI-DOSSIERS (rehearsal and context, not independent proof of work):\n" + master : "",
@@ -1057,7 +1081,9 @@ export async function answerForVerifiedUser(request: NextRequest, user: { id: st
     includeStoryContext && prep.persona ? `Persona: ${str(prep.persona, 800)}` : "",
     includeStoryContext && prep.projects ? `UNVERIFIED generated project summaries: ${str(prep.projects, 2000)}` : "",
     includeStoryContext && grounding ? `Historical context (personal claims require original source corroboration):\n${grounding.slice(0, 4500)}` : "",
+    generalDossierTimedOut ? "DOSSIER NOTE: the general dossier read timed out (300ms) and no dossier passages are included below. Answer from the resume, JD and sources provided; do not present dossier-specific project claims." : "",
     priorBibleContext ? `${priorBibleContext}` : "",
+    bibleTimeoutNote ? bibleTimeoutNote : "",
     resumeFacts ? `${resumeFacts}` : "",
     tier !== 0 && jdSrc && !["closing-question","acknowledgement","definition","logistics"].includes(rediscovered.intent) ? `JOB DESCRIPTION (role priorities, not candidate history):\n${jdSrc}` : "",
     docsSrc ? `ORIGINAL SOURCE DOCUMENTS:\n${docsSrc}` : "",
@@ -1134,6 +1160,7 @@ ${INTERVIEW}`
     opener: personalEvidence ? sourcedOpenerFor(question, groundingDocs) : null,
     previousAnswer,
     previousTurns,
+    groundingTimedOut: generalDossierTimedOut || bibleTimedOut,
   }
   if (body.stream) return streamAnswer(request, job)
   return jsonAnswer(request, job)
