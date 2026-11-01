@@ -32,7 +32,8 @@ test("revoked credentials fail closed after bounded attempts",async()=>{
 test("auth retry is wired to live answer and prep, not only a background timer",()=>{
  assert.match(src,/if \(!s\.__authRetried && await recoverLiveAuth\(\)\)/)
  assert.match(src,/if \(await recoverLiveAuth\(\)\) \{ recoverAnswer/)
- assert.match(src,/recoverAnswer\("AUTH"\); redirectToLogin\(\)/)
+ assert.match(src,/recoverAnswer\("AUTH"\); waitForAuthSilently\(/)
+ assert.doesNotMatch(src,/recoverAnswer\("AUTH"\); redirectToLogin\(\)/)
 })
 test("desktop renewal continues when renderer becomes backgrounded",()=>{
  const start=src.indexOf("function keepAuthAlive()"), end=src.indexOf("let __authProbeTimer",start)
