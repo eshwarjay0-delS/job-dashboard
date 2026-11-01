@@ -20,10 +20,13 @@ export interface AuthContext {
 
 export async function requireAuth(): Promise<AuthContext | { error: string; status: number }> {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return { error: "Not logged in", status: 401 }
-  const accounts = await listGoogleWorkspaceAccounts(session.user.id)
-  return { supabase, userId: session.user.id, accounts }
+  const { data: { user } } = await supabase.auth.getUser()
+  // Anonymous sessions are not authenticated users: mirror authBoundary, which
+  // treats is_anonymous as signed out. An anon user has no linked Google
+  // accounts, so this closes the gate without changing any data path.
+  if (!user || user.is_anonymous) return { error: "Not logged in", status: 401 }
+  const accounts = await listGoogleWorkspaceAccounts(user.id)
+  return { supabase, userId: user.id, accounts }
 }
 
 export function isAuthContext(ctx: unknown): ctx is AuthContext {

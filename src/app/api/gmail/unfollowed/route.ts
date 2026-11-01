@@ -8,15 +8,15 @@ import { createClient } from "@/lib/supabase/server"
 export async function GET() {
   try {
     const supabase = await createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || user.is_anonymous) return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
 
     // Existing rules remain user controlled; GET never recreates deleted rules.
 
     const { data, error } = await supabase
       .from("unfollowed_domains")
       .select("id, domain, company_name, reason, created_at")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .order("created_at", { ascending: true })
     if (error) throw error
 
@@ -29,8 +29,8 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const supabase = await createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || user.is_anonymous) return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
 
     const body = await req.json().catch(() => ({}))
     const domain = String(body.domain || "").trim().toLowerCase().replace(/^@/, "")
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
     const { error } = await supabase.from("unfollowed_domains").upsert(
       {
-        user_id: session.user.id,
+        user_id: user.id,
         domain,
         company_name: String(body.company_name || domain.split(".")[0]),
         reason: String(body.reason || ""),
@@ -58,8 +58,8 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const supabase = await createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || user.is_anonymous) return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
 
     const domain = new URL(req.url).searchParams.get("domain")?.trim().toLowerCase()
     if (!domain) return NextResponse.json({ ok: false, error: "Missing domain" }, { status: 400 })
@@ -67,7 +67,7 @@ export async function DELETE(req: Request) {
     const { error } = await supabase
       .from("unfollowed_domains")
       .delete()
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .eq("domain", domain)
     if (error) throw error
 

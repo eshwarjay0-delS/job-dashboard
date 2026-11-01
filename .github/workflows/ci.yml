@@ -103,6 +103,9 @@ jobs:
       - name: Verify speech container MIME parity
         run: node --experimental-strip-types --test scripts/tests/kompas-audio-upload-mime.test.mjs
 
+      - name: Verify full-SHA voice preview smoke gate fails closed (synthetic HTTP only)
+        run: node --test scripts/tests/kompas-voice-preview-smoke.test.mjs scripts/tests/kompas-voice-preview-resolve.test.mjs
+
       - name: Verify Git-integrated Vercel deployment status handling
         run: node --test scripts/tests/verify-vercel-git-status.test.mjs
 

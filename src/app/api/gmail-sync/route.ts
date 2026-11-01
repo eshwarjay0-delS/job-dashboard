@@ -193,10 +193,10 @@ function parseThread(thread: {
 export async function GET() {
   try {
     const supabase = await createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return NextResponse.json({ connected: false, reason: "not_logged_in", accounts: [] })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || user.is_anonymous) return NextResponse.json({ connected: false, reason: "not_logged_in", accounts: [] })
 
-    const accounts = await listGoogleWorkspaceAccounts(session.user.id)
+    const accounts = await listGoogleWorkspaceAccounts(user.id)
     return NextResponse.json({
       connected: accounts.some(a => a.gmail_enabled),
       accounts,
@@ -220,14 +220,14 @@ export async function POST(req: Request) {
     const max  = Math.min(Math.max(Number(body.max)  || 50, 1), 100)
 
     const supabase = await createClient()
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user || user.is_anonymous) {
       return NextResponse.json({ ok: false, error: "Not logged in" }, { status: 401 })
     }
 
     // 3 syncs per hour per user — each sync can make 10+ Gmail API calls
-    const rl = checkRateLimit(`gmail-sync:${session.user.id}`, { max: 3, windowMs: 60 * 60 * 1000 })
+    const rl = checkRateLimit(`gmail-sync:${user.id}`, { max: 3, windowMs: 60 * 60 * 1000 })
     if (!rl.ok) {
       return NextResponse.json(
         { ok: false, error: "Too many sync requests. Try again later." },
@@ -236,7 +236,7 @@ export async function POST(req: Request) {
     }
 
     const accountId = typeof body.accountId === "string" && body.accountId ? body.accountId : null
-    const accessToken = await getGoogleWorkspaceAccessToken(session.user.id, accountId)
+    const accessToken = await getGoogleWorkspaceAccessToken(user.id, accountId)
 
     if (!accessToken) {
       return NextResponse.json(
