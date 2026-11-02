@@ -79,6 +79,10 @@ function dropOldLogs() {
 }
 let accountSessionSync = null;
 let cloudArchive = null;
+// A verified native handoff stays in memory until the account cloud catalog
+// authenticates the SAME owner. Never write an unverified ticket into LS.
+const pendingDesktopHandoffs = new Map();
+let replayingDesktopHandoff = false;
 const LS = {
   get(k, d) { try { const v = localStorage.getItem("perfact." + k); return v ? JSON.parse(v) : d; } catch { return d; } },
   set(k, v) {
@@ -1442,6 +1446,7 @@ if (typeof window.kompasDesktop?.onAuthReady === "function") {
     // A newly verified native identity must reconcile all account-owned
     // sessions, not just re-enable the Start button.
     void accountSessionSync?.refresh();
+    if (pendingDesktopHandoffs.size) void resumePendingDesktopHandoffs();
     if (!running) void checkSessionReadiness();
   });
 }
@@ -5087,6 +5092,7 @@ accountSessionSync = window.KompasSessionCloud?.create({
     if (!banner) return;
     if (state.state === "synced") {
       banner.textContent = state.legacy ? state.legacy + " earlier sessions are on this device only. Import them once into this signed-in account to make them available everywhere." : "Sessions synchronized across your signed-in devices.";
+      if (pendingDesktopHandoffs.size) queueMicrotask(() => { void resumePendingDesktopHandoffs(); });
       if (cloudArchive) void cloudArchive.replay();
     } else if (state.state === "importing") {
       banner.textContent = "Importing your earlier sessions and verifying they are saved to this account…";
@@ -5331,51 +5337,94 @@ function launchInstalled(s) {
   });
 }
 let lastDesktopHandoff = { id: "", at: 0 };
+function handoffSyncNotice(message) {
+  const banner = $("cloudSyncStatus");
+  if (banner) { banner.textContent = message; banner.classList.remove("hidden"); }
+}
+// Native Electron has already checked the one-use ticket and account. The
+// renderer still MUST confirm the cloud owner before writing to localStorage:
+// a failed 401, offline response, or switched account must not mingle sessions.
+async function resumePendingDesktopHandoffs() {
+  if (!window.kompasDesktop || replayingDesktopHandoff || !pendingDesktopHandoffs.size) return false;
+  replayingDesktopHandoff = true;
+  let completed = false;
+  try {
+    if (!accountSessionSync || !await accountSessionSync.refresh() || !accountSessionSync.owner) {
+      for (const entry of pendingDesktopHandoffs.values()) entry.firstAttempt = false;
+      handoffSyncNotice("This saved interview is held safely in Kompas until your MarketFit account reconnects. No session was imported into an unverified account.");
+      return false;
+    }
+    const accountOwner = accountSessionSync.owner;
+    let matching = null;
+    for (const [id, entry] of pendingDesktopHandoffs) {
+      // New native builds attest the verified owner. An older 0.8.4 shell
+      // remains compatible ONLY when its first cloud refresh succeeds. If
+      // that first attempt failed, its later owner cannot be proven safely.
+      if (entry.session.__kompasVerifiedOwner
+          ? entry.session.__kompasVerifiedOwner === accountOwner
+          : entry.firstAttempt && !!accountOwner) { matching = [id, entry]; break; }
+    }
+    if (!matching) {
+      handoffSyncNotice("The pending interview could not be matched to this signed-in account. No session was imported. Update Kompas and reopen the interview from MarketFit.");
+      return false;
+    }
+    const [id, entry] = matching;
+    const s = entry.session;
+    const all = LS.get("sessions", []);
+    const incoming = { ...s };
+    for (const key of ["token", "refreshToken", "tokenExp", "access_token", "refresh_token",
+      "ownerId", "__kompasVerifiedOwner"]) delete incoming[key];
+    const index = all.findIndex(x => x.id === incoming.id);
+    if (index < 0) all.unshift(incoming);
+    else {
+      // Reopening transfers the latest resume/JD/instructions, while
+      // retaining independent transcript runs and local lifecycle state.
+      const previous = { ...all[index] };
+      for (const key of ["token", "refreshToken", "tokenExp", "access_token",
+        "refresh_token", "ownerId", "__kompasVerifiedOwner"]) delete previous[key];
+      const combined = { ...previous, ...incoming };
+      if (Array.isArray(previous.transcripts) || Array.isArray(incoming.transcripts)) {
+        const byKey = new Map();
+        for (const item of [...(previous.transcripts || []), ...(incoming.transcripts || [])])
+          if (item && typeof item.key === "string") byKey.set(item.key, item);
+        combined.transcripts = [...byKey.values()]
+          .sort((a, b) => (Number(a.at) || 0) - (Number(b.at) || 0)).slice(-20);
+      }
+      for (const key of ["runAt", "pausedAt", "endedAt", "endedBy"])
+        if (previous[key] !== undefined && incoming[key] === undefined) combined[key] = previous[key];
+      all[index] = combined;
+    }
+    // Only after an authenticated same-owner catalog response may the app
+    // persist the transferred session or start the interview.
+    LS.set("sessions", all);
+    sessions = all;
+    pendingDesktopHandoffs.delete(id);
+    lastDesktopHandoff = { id, at: Date.now() };
+    completed = true;
+    launchCopilot(index < 0 ? incoming : all[index]);
+    $("connectPanel").classList.add("hidden");
+    if (!$("startBtn").classList.contains("on")) $("startBtn").click();
+    return true;
+  } finally {
+    replayingDesktopHandoff = false;
+    // Process a second delivered ticket without an infinite retry loop when
+    // the first is blocked by missing authentication or an owner mismatch.
+    if (completed && pendingDesktopHandoffs.size)
+      queueMicrotask(() => { void resumePendingDesktopHandoffs(); });
+  }
+}
 async function openHandedSession(s) {
-  if (!s || !s.id || !window.kompasDesktop) return;
-  // takeSession() and onSession() can race during first load. Treat one
-  // delivery as one start, not two capture restarts.
+  if (!s || typeof s.id !== "string" || !/^[A-Za-z0-9:_-]{1,128}$/.test(s.id) ||
+      !window.kompasDesktop) return;
   const now = Date.now();
   if (lastDesktopHandoff.id === s.id && now - lastDesktopHandoff.at < 3000) return;
-  lastDesktopHandoff = { id: s.id, at: now };
-  // Verify the signed-in account before writing a newly handed-off interview.
-  // The desktop can receive it while its account session list is still loading.
-  if (accountSessionSync) await accountSessionSync.refresh();
-  const all = LS.get("sessions", []);
-  // Handoff auth credentials belong to Electron's protected token store. The
-  // account session cache must never persist a bearer/refresh token.
-  const incoming = { ...s };
-  for (const key of ["token", "refreshToken", "tokenExp", "access_token", "refresh_token"]) delete incoming[key];
-  const index = all.findIndex(x => x.id === incoming.id);
-  if (index < 0) all.unshift(incoming);
-  else {
-    // Reopening a known session must carry over the latest resume, JD and
-    // personal instructions from the sending browser, not keep a stale
-    // snapshot from a previous Windows launch. Preserve richer local history.
-    const previous = { ...all[index] };
-    for (const key of ["token", "refreshToken", "tokenExp", "access_token", "refresh_token"]) delete previous[key];
-    const combined = { ...previous, ...incoming };
-    // Each saved run has its own key. Include runs from both devices rather
-    // than picking one whole transcript list by length (equal-length lists can
-    // contain distinct runs). Keep the existing twenty-run retention rule.
-    if (Array.isArray(previous.transcripts) || Array.isArray(incoming.transcripts)) {
-      const byKey = new Map();
-      for (const entry of [...(previous.transcripts || []), ...(incoming.transcripts || [])])
-        if (entry && typeof entry.key === "string") byKey.set(entry.key, entry);
-      combined.transcripts = [...byKey.values()]
-        .sort((a, b) => (Number(a.at) || 0) - (Number(b.at) || 0)).slice(-20);
-    }
-    // A delayed browser handoff must not revive an interview already ended
-    // on this device or discard its lifecycle metadata.
-    for (const key of ["runAt", "pausedAt", "endedAt", "endedBy"])
-      if (previous[key] !== undefined && incoming[key] === undefined) combined[key] = previous[key];
-    all[index] = combined;
+  if (pendingDesktopHandoffs.has(s.id)) return;
+  if (pendingDesktopHandoffs.size >= 8) {
+    handoffSyncNotice("Eight interview connections are pending. Reconnect MarketFit before opening another; existing sessions are unchanged.");
+    return;
   }
-  LS.set("sessions", all);
-  sessions = all;
-  launchCopilot(index < 0 ? incoming : all[index]);
-  $("connectPanel").classList.add("hidden");
-  if (!$("startBtn").classList.contains("on")) $("startBtn").click();
+  pendingDesktopHandoffs.set(s.id, { session: { ...s }, firstAttempt: true });
+  return resumePendingDesktopHandoffs();
 }
 window.kompasDesktop?.takeSession?.().then(s => { if (s) openHandedSession(s); });
 window.kompasDesktop?.onSession?.(openHandedSession);
