@@ -253,6 +253,40 @@ test("caption press avoids pending 250–1500 ms audio flush and pins its own qu
   assert.match(section,/return await generateAnswer\(frozen, page, \{ pinned: true/);
 });
 
+// Broader spoken interview grammar: these are real questions, not just short
+// keyword fragments. Avoid dropping ordinary past-experience and tradeoff asks.
+const conversationalGrammarCases = [
+  ["What challenges have you faced when onboarding a new team? I'm going to take notes.", /What challenges have you faced/i, /going to take notes/i],
+  ["What logs would you inspect first during a production outage?", /What logs would you inspect/i, /neverthis/i],
+  ["What technical controls should a team implement first?", /What technical controls should a team/i, /neverthis/i],
+  ["How have you handled a vendor outage?", /How have you handled/i, /neverthis/i],
+  ["Have you ever disagreed with an auditor? I need to start the video.", /Have you ever disagreed/i, /start the video/i],
+  ["Did you validate the recovery time objective?", /Did you validate/i, /neverthis/i],
+  ["Do you prefer streaming or batch ingestion for this pipeline?", /Do you prefer/i, /neverthis/i],
+  ["What risks could we miss in a cloud migration?", /What risks could we miss/i, /neverthis/i],
+  ["What steps did they take after the incident?", /What steps did they take/i, /neverthis/i],
+  ["What mitigation would a team apply to reduce downtime?", /What mitigation would a team/i, /neverthis/i],
+  ["What lessons have you learned from a failed deployment?", /What lessons have you learned/i, /neverthis/i],
+  ["What metrics do you track for alert quality?", /What metrics do you track/i, /neverthis/i],
+  ["How has your approach to risk changed over time?", /How has your approach/i, /neverthis/i],
+  ["What actions will we take to recover this service?", /What actions will we take/i, /neverthis/i],
+  ["Have you ever negotiated a difficult deadline?", /Have you ever negotiated/i, /neverthis/i],
+  ["What are the SIEM architecture components?", /What are the SIEM architecture/i, /neverthis/i],
+];
+for (const [spoken, expected, absent] of conversationalGrammarCases) test("caption natural grammar: " + spoken.slice(0, 46), () => {
+  const q = captionFocus(spoken);
+  assert.match(q, expected);
+  if (absent.source !== "neverthis") assert.doesNotMatch(q, absent);
+});
+for (const narration of [
+  "I have been reviewing the access controls for the last month.",
+  "We are moving to the next section of the recording now.",
+  "I am going to open the next file and take notes.",
+  "The video has already started and the room is quiet."
+]) test("caption natural grammar rejects narration: " + narration.slice(0, 38), () => {
+  assert.equal(captionFocus(narration), "");
+});
+
 const nonQuestionFragments = [
   "Hello there", "Hi everyone", "Good morning", "Good afternoon.",
   "Good evening everyone", "Thanks for attending", "Thank you for joining",
