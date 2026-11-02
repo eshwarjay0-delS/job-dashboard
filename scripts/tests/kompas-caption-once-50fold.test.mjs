@@ -235,7 +235,8 @@ for (const [spoken, expected, absent] of focusCases) test("caption focus: "+spok
 });
 test("three-line caption presentation never deletes the question or transcript",()=>{
   const css=readFileSync(new URL("../../public/kompas/styles.css",import.meta.url),"utf8");
-  assert.match(css,/-webkit-line-clamp:3/);
+  assert.match(css,/#view-copilot \.q \.cap-text\{display:block;flex:1 1 0;max-height:calc\(3 \* 1\.45em\)/);
+  assert.match(app,/captionText\.scrollTop = captionText\.scrollHeight/);
   assert.match(css,/max-height:calc\(3 \* 1\.45em\)/);
   assert.match(css,/#view-copilot \.card \.q\{max-height:4\.65em\}/);
   assert.match(app,/page\.heard = "Them \(Windows Live Captions\): " \+ completeCaption/);
