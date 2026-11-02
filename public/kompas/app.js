@@ -3625,6 +3625,12 @@ function emptyPressReason(anyCapture, wantSys, hasThemCap, themSilent) {
   if (hasThemCap) return "Kompas hears the call audio but nothing has been transcribed yet — keep playing, then press AI Answer again.";
   return "Nothing heard yet — press Start, or type a question.";
 }
+// Safe in the browser and in the headless baseline replay. A missing renderer
+// never turns question selection into a thrown exception.
+function focusSpokenQuestion(text) {
+  try { return (typeof window !== "undefined" ? window.KompasCaptionFocus?.pick(text) : "") || ""; }
+  catch { return ""; }
+}
 async function aiAnswer(fromAuto, options = {}) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
@@ -3661,7 +3667,7 @@ async function aiAnswer(fromAuto, options = {}) {
     // transcript is stable; keep any queued voice decoding in the normal path
     // if the question has not actually finished yet.
     const spoken = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
-    const immediateAsk = !fromAuto && !finals.size ? (window.KompasCaptionFocus?.pick(spoken) || "") : "";
+    const immediateAsk = !fromAuto && !finals.size ? focusSpokenQuestion(spoken) : "";
     const hasCompleteAsk = immediateAsk.split(/\s+/).length >= 6 && /[?.!]$/.test(immediateAsk);
     if (!hasCompleteAsk && ((running && captures.length) || finals.size)) {
       flushing = true; if (!fromAuto) status("Catching your last words…", "live");
@@ -3682,7 +3688,7 @@ async function aiAnswer(fromAuto, options = {}) {
     // narration, without waiting for a model-based question-derivation call.
     const captionLines = pendingHeard().filter(t => t.fromCaption && t.who === "Them").slice(-24);
     if (!typedText && captionLines.length) {
-      const focused = window.KompasCaptionFocus?.pick(captionLines.map(t => t.text).join(" ")) || "";
+      const focused = focusSpokenQuestion(captionLines.map(t => t.text).join(" "));
       if (focused && focused.split(/\s+/).length >= 4) {
         answeredSeq = heardSeq; updatePending();
         const page = addCard(focused, ["…"]);
@@ -3700,7 +3706,7 @@ async function aiAnswer(fromAuto, options = {}) {
     if (!typedText && questionSource() === "Them" && pending.length) {
       const fromCall = pending.filter(t => t.who === "Them");
       const full = fromCall.map(t => t.text).join(" ").replace(/\s+/g, " ").trim();
-      const focused = window.KompasCaptionFocus?.pick(full) || "";
+      const focused = focusSpokenQuestion(full);
       if (focused && focused.length >= 25 && focused.length < full.length - 12 &&
           focused.split(/\s+/).length >= 6) {
         answeredSeq = heardSeq; updatePending();
