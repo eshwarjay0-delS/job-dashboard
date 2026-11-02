@@ -7,10 +7,11 @@ const { randomBytes } = require("node:crypto");
 const path = require("node:path");
 const JWT = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 const STATE_TTL = 10 * 60_000;
+const validOwner = s => typeof s === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(s);
 
 function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, now = Date.now }) {
   if (new URL(origin).protocol !== "https:") throw Error("MarketFit auth requires HTTPS");
-  let access = "", expiresAt = 0, flight = null;
+  let access = "", owner = "", expiresAt = 0, flight = null;
   const states = new Map();
   const file = () => path.join(profileDir(), "marketfit-auth.bin");
   const encrypted = () => !!safeStorage?.isEncryptionAvailable?.();
@@ -23,7 +24,7 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
     if (!encrypted() || !access) return false;
     try {
       const bytes = safeStorage.encryptString(JSON.stringify({
-        access_token: access, expires_at: expiresAt
+        access_token: access, expires_at: expiresAt, ownerId: owner
       }));
       fs.mkdirSync(profileDir(), { recursive: true });
       fs.writeFileSync(file(), bytes, { mode: 0o600 });
@@ -31,12 +32,13 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
     } catch { return false; }
   }
   function clear() {
-    access = ""; expiresAt = 0;
+    access = ""; owner = ""; expiresAt = 0;
     try { fs.rmSync(file(), { force: true }); } catch {}
   }
-  function setTokens(s) {
-    if (!valid(s)) return false;
+  function setTokens(s, verifiedOwner) {
+    if (!valid(s) || !validOwner(verifiedOwner)) return false;
     access = s.access_token;
+    owner = verifiedOwner;
     expiresAt = Number(s.expires_at) * 1000;
     persist();
     return true;
@@ -45,7 +47,7 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
     if (!encrypted()) return false; // Never load plaintext credentials.
     try {
       const s = JSON.parse(safeStorage.decryptString(fs.readFileSync(file())));
-      return setTokens(s);
+      return setTokens(s, s.ownerId);
     } catch { return false; }
   }
   function token() {
@@ -78,15 +80,18 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
     }
     return null;
   }
-  async function acceptCallback(payload) {
+  async function acceptCallback(payload, expectedOwner = "") {
     if (!valid(payload)) return false;
     try {
       const result = await net.fetch(origin + "/api/auth/refresh", {
         method: "POST", headers: { authorization: "Bearer " + payload.access_token },
         redirect: "error", cache: "no-store"
       });
-      if (!result.ok || (await result.json()).ok !== true) return false;
-      return setTokens(payload);
+      if (!result.ok) return false;
+      const verified = await result.json();
+      if (verified?.ok !== true || !validOwner(verified.userId) ||
+          (expectedOwner && verified.userId !== expectedOwner)) return false;
+      return setTokens(payload, verified.userId);
     } catch { return false; }
   }
   // Chrome and Electron MUST NOT rotate the same refresh token. This native
@@ -104,11 +109,14 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
         });
         if (response.status === 401) { clear(); return false; }
         if (!response.ok) return false;
-        return (await response.json())?.ok === true;
+        const verified = await response.json();
+        if (verified?.ok === true && verified.userId === owner) return true;
+        clear();
+        return false;
       } catch { return false; }
     })();
     try { return await flight; } finally { flight = null; }
   }
-  return { token, load, clear, issueState, callback, acceptCallback, renew };
+  return { token, ownerId:()=>owner, load, clear, issueState, callback, acceptCallback, renew };
 }
 module.exports = { createMarketFitDesktopAuth };
