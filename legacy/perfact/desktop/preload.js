@@ -9,9 +9,13 @@ const { contextBridge, ipcRenderer } = require("electron");
 let screenName = "", bar = null;
 
 contextBridge.exposeInMainWorld("kompasDesktop", {
-  version: "0.8.3",
+  version: "0.8.4",
   systemAudio: true,
   captureCaptionOnce: () => ipcRenderer.invoke("kompas:caption-once"),
+  captureScreen: () => ipcRenderer.invoke("kompas:capture-screen"),
+  refreshAuth: () => ipcRenderer.invoke("kompas:refresh-auth"),
+  openSignIn: () => ipcRenderer.send("kompas:open-signin"),
+  onAuthReady: fn => { if (typeof fn === "function") ipcRenderer.on("kompas:auth-ready", () => fn()); },
   setScreen: (name) => { screenName = String(name); ipcRenderer.send("kompas:screen", screenName); paintScreen(); },
   setLive: (on) => ipcRenderer.send("kompas:live", !!on),
   getPrivate: () => ipcRenderer.invoke("kompas:get-private"),

@@ -15,17 +15,19 @@
 // speakers are playing. The process is always Kompas.exe. Still not here: a blank process name, meeting detection.
 // Every launch asks whether to keep the window off the taskbar; the answer holds until Kompas quits (askTaskbar).
 // Pinned means above everything, the taskbar included, and the window cannot be lost: see holdOnTop and bringBack.
-const { app, BrowserWindow, ipcMain, screen, shell, Menu, session, protocol, net, desktopCapturer, powerMonitor, globalShortcut, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, screen, shell, Menu, session, protocol, net, desktopCapturer, powerMonitor, globalShortcut, dialog, safeStorage } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const { createMarketFitDesktopAuth } = require("./marketfit-auth.cjs");
+const { ticketFromArgv, redeemTicket } = require("./desktop-handoff.cjs");
 
 app.setName("Kompas");
 // Preserve the existing perfACT desktop while MarketFit gets its own native
 // instance and local session store. Both use the same installed Electron source,
 // but a preexisting standalone app must not intercept a MarketFit deep link.
 const MARKETFIT_SCHEME = "marketfit-kompas";
-const startedForMarketFit = process.argv.some(arg =>
-  typeof arg === "string" && /^marketfit-kompas:\/\//i.test(arg));
+const startedForMarketFit = !process.argv.some(arg =>
+  typeof arg === "string" && /^kompas:\/\/open(?:[/?#]|$)/i.test(arg));
 if (startedForMarketFit) {
   // Electron requires the destination to exist before app.setPath().
   // New installations have no MarketFit profile yet.
@@ -46,6 +48,16 @@ if (process.env.KOMPAS_DEBUG_PORT) app.commandLine.appendSwitch("remote-debuggin
 
 const PERFACT_API_ORIGIN = (process.env.KOMPAS_API_URL || "https://perfact-ten.vercel.app").replace(/\/+$/, "");
 const MARKETFIT_API_ORIGIN = "https://job-dashboard-fawn.vercel.app";
+const desktopAuth = createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir: () => app.getPath("userData"), origin: MARKETFIT_API_ORIGIN });
+let lastChromeSignIn = 0;
+function beginChromeSignIn() {
+  if (Date.now() - lastChromeSignIn < 8000) return;
+  lastChromeSignIn = Date.now();
+  const state = desktopAuth.issueState();
+  // User credentials stay in the existing Chrome account. The callback is one-use
+  // and must match a state this desktop issued, never an unsolicited deep link.
+  void shell.openExternal(MARKETFIT_API_ORIGIN + "/auth/desktop?state=" + encodeURIComponent(state)).catch(() => {});
+}
 let activeSite = "marketfit";
 const siteFor = (s) => s && s.site === "perfact" ? "perfact" : "marketfit";
 const appPathFor = () => activeSite === "marketfit" ? "/kompas/index.html" : "/index.html";
@@ -88,6 +100,22 @@ async function askTaskbar() {
 }
 
 // kompas://open?d=<base64url json> is the session the website just started. kompas://app/ is the page itself.
+async function sessionFromTicketArgv(argv) {
+  const ticket = ticketFromArgv(argv);
+  if (!ticket) return null;
+  const handed = await redeemTicket((url, options) => net.fetch(url, options), MARKETFIT_API_ORIGIN, ticket);
+  // The one-use server record was minted by the authenticated account. If
+  // credentials accompanied that saved interview, verify them independently
+  // before assigning them to this native profile.
+  if (handed.token && handed.refreshToken) {
+    const ok = await desktopAuth.acceptCallback({
+      access_token: handed.token, refresh_token: handed.refreshToken,
+      expires_at: handed.tokenExp
+    });
+    if (!ok) throw Error("Saved interview authentication is no longer valid");
+  }
+  return handed;
+}
 function sessionFromArgv(argv) {
   const raw = (argv || []).find(a => typeof a === "string" && /^(?:kompas|marketfit-kompas):/i.test(a) && !/^kompas:\/\/app\b/i.test(a));
   if (!raw) return null;
@@ -446,12 +474,19 @@ async function serve(req) {
   for (const h of FORWARD_HEADERS) { const v = req.headers.get(h); if (v) headers[h] = v; }
   const hasBody = !["GET", "HEAD"].includes(req.method);
   const rel = url.pathname === "/" ? "/index.html" : url.pathname;
+  const isMarketFitApi = activeSite === "marketfit" && /^\/api\//.test(rel);
+  if (isMarketFitApi && rel !== "/api/auth/refresh-token") {
+    await desktopAuth.renew(false);
+    const token = desktopAuth.token();
+    if (token) headers.authorization = "Bearer " + token;
+  }
   try {
     return await net.fetch(targetOrigin() + rel + url.search, {
       method: req.method,
       headers,
       body: hasBody ? await req.arrayBuffer() : undefined,
       cache: "no-store",
+      redirect: isMarketFitApi ? "error" : "follow",
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: "Kompas could not reach " + targetOrigin() + ": " + (err && err.message || err) }),
@@ -501,17 +536,11 @@ async function captionSnapshotOnce() {
   const windows = sources.filter(src => src.id && src.name && !/^Kompas(?:\s|$)/i.test(src.name));
   if (!windows.length) throw new Error("No capturable window was found. Open Windows Live Captions and retry.");
   const matched = windows.filter(w => isWindowsLiveCaption(w.name));
-  let target = matched.length === 1 ? matched[0] : null;
-  if (!target) {
-    const options = windows.slice(0, 12);
-    const choice = await dialog.showMessageBox(win, {
-      type: "question", title: "Caption Capture", message: "Choose the window to capture once",
-      detail: "Only the selected window will be sent for question recognition.",
-      buttons: [...options.map(w => w.name.slice(0, 64)), "Cancel"], cancelId: options.length, noLink: true,
-    });
-    if (choice.response >= options.length) throw new Error("Window capture cancelled");
-    target = options[choice.response];
-  }
+  // Never capture arbitrary foreground windows. The only allowed subject is
+  // the uniquely identified Windows Live Captions panel; if Windows does not
+  // expose that panel, fail closed rather than sending another app to OCR.
+  if (matched.length !== 1) throw new Error("Windows Live Captions was not uniquely detected. Open Live Captions and try again; no other window was captured.");
+  const target = matched[0];
   if (!target.thumbnail || target.thumbnail.isEmpty()) throw new Error("The selected window is blank or protected from capture");
   const jpeg = target.thumbnail.toJPEG(78);
   if (!jpeg.length || jpeg.length > 2200000) throw new Error("The chosen window image exceeds capture limits");
@@ -534,6 +563,23 @@ function wireIpc() {
   ipcMain.handle("kompas:get-private", () => !!config.isPrivate);
   ipcMain.handle("kompas:set-private", (_e, on) => setPrefs({ isPrivate: !!on }).isPrivate);
   ipcMain.handle("kompas:take-session", () => { const s = pendingSession; pendingSession = null; return s; });
+  ipcMain.handle("kompas:refresh-auth", (event) => {
+    if (!win || event.sender.id !== win.webContents.id) throw Error("Invalid auth caller");
+    return desktopAuth.renew(true);
+  });
+  ipcMain.on("kompas:open-signin", (event) => {
+    if (win && event.sender.id === win.webContents.id) beginChromeSignIn();
+  });
+  ipcMain.handle("kompas:capture-screen", async (event) => {
+    if (!win || event.sender.id !== win.webContents.id || !/^kompas:\/\/app\/kompas\//i.test(String(event.senderFrame?.url || ""))) throw Error("Invalid screen capture caller");
+    const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 1600, height: 1000 } });
+    const preferred = String(screen.getPrimaryDisplay().id);
+    const chosen = sources.find(x => String(x.display_id) === preferred) || sources[0];
+    if (!chosen?.thumbnail || chosen.thumbnail.isEmpty()) throw Error("No screen capture was available");
+    const bytes = chosen.thumbnail.toJPEG(76);
+    if (bytes.length < 1000 || bytes.length > 2800000) throw Error("Screen frame was unreadable or too large");
+    return "data:image/jpeg;base64," + bytes.toString("base64");
+  });
   ipcMain.handle("kompas:caption-once", (event) => {
     if (!win || event.sender.id !== win.webContents.id || !/^kompas:\/\/app\/kompas\//i.test(String(event.senderFrame?.url || ""))) throw new Error("Invalid caption capture caller");
     return captionSnapshotOnce();
@@ -542,8 +588,22 @@ function wireIpc() {
 
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
-  app.on("second-instance", (_e, argv) => {
-    const handed = sessionFromArgv(argv);
+  app.on("second-instance", async (_e, argv) => {
+    const callback = desktopAuth.callback(argv);
+    if (callback) {
+      const accepted = await desktopAuth.acceptCallback(callback);
+      if (accepted && win && !win.isDestroyed()) {
+        if (win.isMinimized()) win.restore();
+        win.show(); bringBack(); win.focus();
+        win.webContents.send("kompas:auth-ready");
+      } else if (!accepted) beginChromeSignIn();
+      return;
+    }
+    let handed = sessionFromArgv(argv);
+    if (ticketFromArgv(argv)) {
+      try { handed = await sessionFromTicketArgv(argv); }
+      catch { beginChromeSignIn(); }
+    }
     if (handed) {
       pendingSession = handed;
       const nextSite = siteFor(handed);
@@ -565,7 +625,12 @@ else {
     config = { onTop: true, isPrivate: typeof saved.isPrivate === "boolean" ? saved.isPrivate : true,
       bounds: saved.bounds || null, section: Number.isInteger(saved.section) ? saved.section : null,
       opacity, dock: typeof saved.dock === "string" && saved.dock ? saved.dock : null };
+    desktopAuth.load();
     pendingSession = sessionFromArgv(process.argv);
+    if (ticketFromArgv(process.argv)) {
+      try { pendingSession = await sessionFromTicketArgv(process.argv); }
+      catch { /* Leave the original saved session intact; retry in MarketFit. */ }
+    }
     // The installer page opens marketfit-kompas://open without an interview
     // payload. Route that first launch into MarketFit instead of perfACT.
     activeSite = pendingSession ? siteFor(pendingSession) : "marketfit";
@@ -573,6 +638,9 @@ else {
     lockDownSession();
     wireIpc();
     createWindow();
+    // Reuse the browser login already present. On first install the shell has
+    // no cookie jar, so initiate a state-bound handoff only when renewal fails.
+    void desktopAuth.renew(false).then(ok => { if (!ok && !desktopAuth.token()) beginChromeSignIn(); });
     const later = () => setTimeout(bringBack, 400);
     for (const ev of ["display-removed", "display-added", "display-metrics-changed"]) screen.on(ev, later);
     for (const ev of ["resume", "unlock-screen"]) powerMonitor.on(ev, later);

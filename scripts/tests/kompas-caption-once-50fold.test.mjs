@@ -178,8 +178,9 @@ test("wiring and privacy: one-shot only, no screen loop, native window selected 
   assert.match(html,/>▣ Caption Capture<\/button>/);
   assert.match(preload,/captureCaptionOnce:.*kompas:caption-once/);
   assert.match(main,/desktopCapturer\.getSources\(\{ types: \["window"\]/);
-  assert.match(main,/let target = matched\.length === 1 \? matched\[0\] : null/);
-  assert.match(main,/Only the selected window will be sent/);
+  assert.match(main,/if \(matched\.length !== 1\)/);
+  assert.match(main,/Windows Live Captions was not uniquely detected/);
+  assert.doesNotMatch(main,/Choose the window to capture once/);
   assert.doesNotMatch(main,/setInterval\([^)]*captionSnapshotOnce/);
   assert.doesNotMatch(client,/setInterval|MediaRecorder|getDisplayMedia/);
   assert.match(app,/flushHeard\(options\.captionOnce \? 250 : 1500\)/);
