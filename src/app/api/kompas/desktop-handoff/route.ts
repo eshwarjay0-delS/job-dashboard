@@ -72,7 +72,10 @@ export async function POST(request: NextRequest) {
     if (typeof session[field] !== "string" || (session[field] as string).length > max) {
       return NextResponse.json({ ok: false, error: "Invalid interview field: " + field }, { status: 400, headers: NO_STORE })
     }
-    safe[field] = session[field]
+    // Never persist the browser's rotating refresh-token family in a desktop
+    // transfer ticket. Native Windows receives a verified short-lived bearer
+    // and renews it through a state-bound Chrome handoff instead.
+    if (field !== "refreshToken") safe[field] = session[field]
   }
   // The browser's interview fields have no separate per-field length caps.
   // Only the overall safe transport limit (validated above) applies. Do not
