@@ -78,10 +78,14 @@ async function checkNativeDesktopUpdate() {
   }
 }
 
-let lastChromeSignIn = 0;
-function beginChromeSignIn() {
-  if (Date.now() - lastChromeSignIn < 8000) return;
-  lastChromeSignIn = Date.now();
+// Never reopen Chrome on a reconnect timer or while a verified session exists.
+// A single first-run browser handoff is allowed per native process; subsequent
+// reconnects remain silent until the user explicitly chooses to sign in.
+let chromeSignInAttempted = false;
+function beginChromeSignIn({ interactive = false } = {}) {
+  if (desktopAuth.token()) return;
+  if (!interactive && chromeSignInAttempted) return;
+  chromeSignInAttempted = true;
   const state = desktopAuth.issueState();
   // User credentials stay in the existing Chrome account. The callback is one-use
   // and must match a state this desktop issued, never an unsolicited deep link.
@@ -629,7 +633,7 @@ function wireIpc() {
     return desktopAuth.renew(true);
   });
   ipcMain.on("kompas:open-signin", (event) => {
-    if (win && event.sender.id === win.webContents.id) beginChromeSignIn();
+    if (win && event.sender.id === win.webContents.id) beginChromeSignIn({ interactive: true });
   });
   ipcMain.handle("kompas:capture-screen", async (event) => {
     if (!win || event.sender.id !== win.webContents.id || !/^kompas:\/\/app\/kompas\//i.test(String(event.senderFrame?.url || ""))) throw Error("Invalid screen capture caller");
