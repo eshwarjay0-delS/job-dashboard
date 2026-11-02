@@ -11,7 +11,7 @@ const validOwner = s => typeof s === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(s
 
 function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, now = Date.now }) {
   if (new URL(origin).protocol !== "https:") throw Error("MarketFit auth requires HTTPS");
-  let access = "", owner = "", expiresAt = 0, flight = null;
+  let access = "", refresh = "", owner = "", expiresAt = 0, flight = null;
   const states = new Map();
   const file = () => path.join(profileDir(), "marketfit-auth.bin");
   const encrypted = () => !!safeStorage?.isEncryptionAvailable?.();
@@ -24,20 +24,23 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
     if (!encrypted() || !access) return false;
     try {
       const bytes = safeStorage.encryptString(JSON.stringify({
-        access_token: access, expires_at: expiresAt, ownerId: owner
+        access_token: access, refresh_token: refresh, expires_at: expiresAt, ownerId: owner
       }));
       fs.mkdirSync(profileDir(), { recursive: true });
       fs.writeFileSync(file(), bytes, { mode: 0o600 });
       return true;
     } catch { return false; }
   }
+  const validGrant = (payload) => payload && typeof payload === "object" &&
+    typeof payload.token_hash === "string" && /^[a-f0-9]{64}$/.test(payload.token_hash);
   function clear() {
-    access = ""; owner = ""; expiresAt = 0;
+    access = ""; refresh = ""; owner = ""; expiresAt = 0;
     try { fs.rmSync(file(), { force: true }); } catch {}
   }
   function setTokens(s, verifiedOwner) {
     if (!valid(s) || !validOwner(verifiedOwner)) return false;
     access = s.access_token;
+    refresh = typeof s.refresh_token === "string" && s.refresh_token.length <= 16384 ? s.refresh_token : "";
     owner = verifiedOwner;
     expiresAt = Number(s.expires_at) * 1000;
     persist();
@@ -75,12 +78,33 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
       states.clear();
       try {
         const payload = JSON.parse(Buffer.from(d, "base64url").toString("utf8"));
-        return valid(payload) ? payload : null;
+        return valid(payload) || validGrant(payload) ? payload : null;
       } catch { return null; }
     }
     return null;
   }
   async function acceptCallback(payload, expectedOwner = "") {
+    if (validGrant(payload)) {
+      // The server issues a one-time Supabase OTP proof from an authenticated
+      // Chrome session. Redeeming it creates a separate native refresh family,
+      // so the desktop never rotates Chrome's cookie refresh token.
+      try {
+        const response = await net.fetch(origin + "/api/auth/desktop-session/redeem", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ token_hash: payload.token_hash }),
+          cache: "no-store", redirect: "error",
+        });
+        if (!response.ok) return false;
+        const result = await response.json();
+        if (result?.ok !== true || !validOwner(result.userId) ||
+            (expectedOwner && result.userId !== expectedOwner) ||
+            !valid(result) || typeof result.refresh_token !== "string" ||
+            result.refresh_token.length < 1 || result.refresh_token.length > 16384) return false;
+        return setTokens(result, result.userId);
+      } catch { return false; }
+    }
+    // Legacy bearer-only callback remains accepted for installed older shells,
+    // but it is NOT a durable trusted-device session.
     if (!valid(payload)) return false;
     try {
       const result = await net.fetch(origin + "/api/auth/refresh", {
@@ -91,17 +115,40 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
       const verified = await result.json();
       if (verified?.ok !== true || !validOwner(verified.userId) ||
           (expectedOwner && verified.userId !== expectedOwner)) return false;
-      return setTokens(payload, verified.userId);
+      // Do not import a browser refresh token, even if a malformed/older
+      // callback supplied one.
+      return setTokens({ access_token: payload.access_token, expires_at: payload.expires_at }, verified.userId);
     } catch { return false; }
   }
-  // Chrome and Electron MUST NOT rotate the same refresh token. This native
-  // client holds only an access JWT; after expiry it asks Chrome for a fresh,
-  // state-bound one-use handoff. Browser refresh tokens never leave Chrome.
+
+  // OS-trusted device: retain its independently minted refresh family, rotate
+  // it before expiry and keep the bearer private to Electron's main process.
+  // Network failures do not erase stored credentials or interrupt an interview.
   async function renew(force = false) {
-    if (!token()) return false;
-    if (!force) return true;
+    if (!force && token() && expiresAt > now() + 120000) return true;
     if (flight) return flight;
     flight = (async () => {
+      if (refresh) {
+        try {
+          const response = await net.fetch(origin + "/api/auth/refresh-token", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ refresh_token: refresh }),
+            cache: "no-store", redirect: "error",
+          });
+          if (response.status === 401) { clear(); return false; }
+          if (!response.ok) return !!token(); // retain credentials on a transient outage
+          const next = await response.json();
+          if (next?.ok !== true || next.userId !== owner ||
+              !valid(next) || typeof next.refresh_token !== "string" ||
+              !next.refresh_token || next.refresh_token.length > 16384) {
+            clear(); return false; // account mismatch or invalid renewal
+          }
+          return setTokens(next, owner);
+        } catch { return !!token(); }
+      }
+      if (!token()) return false;
+      if (!force) return true;
       try {
         const response = await net.fetch(origin + "/api/auth/refresh", {
           method: "POST", headers: { authorization: "Bearer " + access },
