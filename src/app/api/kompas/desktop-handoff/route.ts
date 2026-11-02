@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
   if (Object.keys(session).some(k => !allowed.has(k))) {
     return NextResponse.json({ ok: false, error: "Unrecognized interview fields." }, { status: 400, headers: NO_STORE })
   }
-  const safe: Record<string, unknown> = { site: "marketfit" }
+  const safe: Record<string, unknown> = { site: "marketfit", ownerId: user.id } // server-attested, never accepted from browser
   for (const [field, max] of Object.entries(FIELD_LIMITS)) {
     if (session[field] === undefined) continue
     if (typeof session[field] !== "string" || (session[field] as string).length > max) {
