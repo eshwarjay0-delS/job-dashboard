@@ -1393,7 +1393,10 @@ function isUnavailableAnswer(meta, text) {
 function beforeSessionNotice(message) {
   const m = String(message || "");
   if (/credit|402|quota|allowance/i.test(m)) return "Session has not started. The answer service has no credit left.";
-  if (/sign in|401|403|not signed/i.test(m)) return "Session has not started. Sign in again, then check again.";
+  if (/Desktop session is reconnecting/i.test(m)) return m;
+  if (/sign in|401|403|not signed/i.test(m)) return window.kompasDesktop
+    ? "Desktop session is reconnecting to your MarketFit browser account."
+    : "Session has not started. Your browser session needs to be renewed.";
   return "Session has not started. The answer service is not ready. Check again before starting.";
 }
 let sessionReadyUntil = 0;
@@ -1406,10 +1409,21 @@ async function checkSessionReadiness() {
   button.textContent = "Checking…";
   status("Connecting…", "live");
   try {
-    const response = await fetch("/api/answer", {
+    const attempt = () => fetch("/api/answer", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ preflight: true }), signal: AbortSignal.timeout(50000),
     });
+    let response = await attempt();
+    if (response.status === 401 && typeof window.kompasDesktop?.refreshAuth === "function") {
+      // Browser sign-in and Electron are different security contexts. Restore
+      // only the native token family; never borrow another account's cookies.
+      const renewed = await window.kompasDesktop.refreshAuth().catch(() => false);
+      if (renewed) response = await attempt();
+    }
+    if (response.status === 401 && typeof window.kompasDesktop?.openSignIn === "function") {
+      window.kompasDesktop.openSignIn();
+      throw new Error("Desktop session is reconnecting to your MarketFit browser account.");
+    }
     const result = await response.json().catch(() => ({}));
     if (!response.ok || result.ready !== true) throw new Error(result.error || "The answer service is not ready. Please check again before starting.");
     sessionReadyUntil = Date.now() + 30000;
@@ -1422,6 +1436,10 @@ async function checkSessionReadiness() {
   } finally { button.disabled = false; sessionCheckPending = false; }
 }
 
+// A verified native Chrome handoff automatically rechecks readiness.
+if (typeof window.kompasDesktop?.onAuthReady === "function") {
+  window.kompasDesktop.onAuthReady(() => { if (!running) void checkSessionReadiness(); });
+}
 async function start() {
   if (Date.now() >= sessionReadyUntil) { await checkSessionReadiness(); return; }
   sessionReadyUntil = 0;
