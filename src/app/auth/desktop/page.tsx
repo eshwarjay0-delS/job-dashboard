@@ -31,11 +31,10 @@ export default function DesktopSignIn() {
         window.location.assign(login)
         return
       }
-      const cookies = document.cookie.split(";").map(part => part.trim()).filter(part => /auth-token/i.test(part)).map(part => {
-        const at = part.indexOf("=")
-        return { name: part.slice(0, at), value: part.slice(at + 1) }   // raw: the desktop plants these byte-for-byte
-      }).filter(c => c.name && c.value)
-      const payload = JSON.stringify({ access_token: session.access_token, ["refresh" + "_token"]: session.refresh_token || "", expires_at: session.expires_at || 0, cookies })
+      // Never duplicate Chrome's rotating refresh-token family in Electron.
+      // The native app receives a short-lived bearer only after the callback
+      // passes its own one-use state and validates that bearer server-side.
+      const payload = JSON.stringify({ access_token: session.access_token, expires_at: session.expires_at || 0 })
       const b64 = btoa(unescape(encodeURIComponent(payload))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
       // Automatic handoff, nothing asked of the user (owner, 31 Oct 2026): the first protocol launch can be
       // swallowed — prompt dismissed, desktop still starting, link not yet claimed — so rerun it silently in a
