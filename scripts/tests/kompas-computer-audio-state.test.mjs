@@ -41,6 +41,15 @@ const audioTrack = { kind: 'audio', stop() {} };
 const available = () => ({ getAudioTracks: () => [audioTrack], getTracks: () => [audioTrack] });
 const noAudio = () => ({ getAudioTracks: () => [], getTracks: () => [{ stop() {} }] });
 
+test('initial source control render waits until lexical running and captures state exists', () => {
+  const runningAt = app.indexOf('let running = false;');
+  const capturesAt = app.indexOf('let captures = [];');
+  const renderAt = app.indexOf('\\nsyncSrc();', capturesAt);
+  assert.ok(runningAt >= 0 && capturesAt > runningAt && renderAt > capturesAt,
+    'initial syncSrc must run after both lexical declarations; otherwise app boot throws ReferenceError');
+  assert.equal(app.slice(uiStart, capturesAt).includes('\\nsyncSrc();'), false,
+    'do not invoke initial syncSrc in the temporal dead zone');
+});
 test('Windows output-mix handler remains wired and requires an explicit session capture', () => {
   assert.match(desktop, /setDisplayMediaRequestHandler/);
   assert.match(desktop, /audio: "loopback"/);
