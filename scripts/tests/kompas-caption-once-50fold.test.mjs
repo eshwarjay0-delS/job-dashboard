@@ -187,7 +187,8 @@ test("wiring and privacy: one-shot only, no screen loop, native window selected 
   assert.doesNotMatch(main,/Choose the window to capture once/);
   assert.doesNotMatch(main,/setInterval\([^)]*captionSnapshotOnce/);
   assert.doesNotMatch(client,/setInterval|MediaRecorder|getDisplayMedia/);
-  assert.match(app,/flushHeard\(options\.captionOnce \? 250 : 1500\)/);
+  assert.match(app,/const hasCompleteAsk = immediateAsk\.split/);
+  assert.match(app,/if \(!hasCompleteAsk && \(\(running && captures\.length\) \|\| finals\.size\)\)/);
   assert.match(screen,/const captionMode =/);
   assert.match(screen,/max_tokens: captionMode \? 1200 : 4096/);
   assert.match(screen,/source: "caption-window"/);
