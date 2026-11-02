@@ -3639,12 +3639,15 @@ async function aiAnswer(fromAuto, options = {}) {
         status("No caption question is ready for this session.", "err");
         return;
       }
+      const completeCaption = String(field.dataset?.captionRaw || frozen).trim();
       field.value = "";
+      if (field.dataset) field.dataset.captionRaw = "";
       const page = addCard(frozen, ["…"]);
-      page.heard = "Them (Windows Live Captions): " + frozen;
+      page.heard = "Them (Windows Live Captions): " + completeCaption;
       page.formed = page.heard;
-      page.screenTask = true;
-      logEvent({ t: "line", who: "Them (Windows caption)", text: frozen });
+      // Keep the original visible words for audit and follow-up; only the
+      // already focused question is pinned as the answer's actual ask.
+      logEvent({ t: "line", who: "Them (Windows caption)", text: completeCaption });
       showPressed(page, frozen);
       return await generateAnswer(frozen, page, { pinned: true, derived: frozen, source: "caption-window" });
     }
@@ -3681,7 +3684,6 @@ async function aiAnswer(fromAuto, options = {}) {
         page.heard = captionLines.map(t => "Them: " + t.text).join("\n");
         page.formed = page.heard;
         page.formSeq = captionLines[0].seq;
-        page.screenTask = true;
         showPressed(page, focused);
         return await generateAnswer(focused, page, { pinned: true, derived: focused, source: "caption-window" });
       }
