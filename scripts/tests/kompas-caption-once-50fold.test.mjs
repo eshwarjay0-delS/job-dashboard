@@ -180,6 +180,9 @@ test("shortcut is intercepted exactly once and concurrent clicks never double ca
 test("wiring and privacy: one-shot only, no screen loop, native window selected explicitly",()=>{
   assert.equal(dedupeCases.length+extractionCases.length+phraseCases.length+5,50);
   assert.match(html,/caption-once\.js/);
+  assert.match(html,/<script src="caption-focus\.js\?v=/);
+  const nativePackage=readFileSync(new URL("../../legacy/perfact/desktop/scripts/package.mjs",import.meta.url),"utf8");
+  assert.match(nativePackage,/"caption-focus\.js", "app\.js", "caption-once\.js"/);
   assert.match(html,/>▣ Caption Capture<\/button>/);
   assert.match(preload,/captureCaptionOnce:.*kompas:caption-once/);
   assert.match(main,/desktopCapturer\.getSources\(\{ types: \["window"\]/);
