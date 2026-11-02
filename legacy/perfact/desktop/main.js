@@ -107,10 +107,11 @@ async function sessionFromTicketArgv(argv) {
   // The one-use server record was minted by the authenticated account. If
   // credentials accompanied that saved interview, verify them independently
   // before assigning them to this native profile.
-  if (handed.token && handed.refreshToken) {
+  if (handed.token) {
+    // Validate the saved account's short-lived access bearer; do not copy its
+    // browser refresh token into the Windows app's independent profile.
     const ok = await desktopAuth.acceptCallback({
-      access_token: handed.token, refresh_token: handed.refreshToken,
-      expires_at: handed.tokenExp
+      access_token: handed.token, expires_at: handed.tokenExp
     });
     if (!ok) throw Error("Saved interview authentication is no longer valid");
   }
