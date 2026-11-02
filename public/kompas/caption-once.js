@@ -52,12 +52,18 @@
       // The SAME existing resume/JD/document vocabulary and technical
       // homophone correction functions are used for live computer audio.
       const corrected = fixTerms(fixPhrases(raw));
+      // Focus a real spoken question, not the surrounding video narration.
+      // This is synchronous local text selection; the frame was already frozen.
+      const focused = window.KompasCaptionFocus?.pick(corrected) || "";
+      if (!focused) throw new Error("No clear interview question in the visible captions. Capture again when the question is shown.");
       if (!corrected) throw new Error("No question remained after correction.");
       if (sessionId !== (typeof current !== "undefined" ? current?.id : null))
         throw new Error("Session changed during capture; the old caption was not submitted.");
       const input = document.getElementById("manualInput");
       if (!input) throw new Error("The Kompas question field is unavailable.");
-      input.value = combine(input.value, corrected);
+      // A deliberate capture is the only source for this answer. Do not join
+      // an unrelated mic transcript or an earlier question in the input.
+      input.value = focused;
       setChat(true);
       status("Caption recognized in " + Math.round(performance.now() - begun) +
         " ms; answering with the existing session context.", "live");
