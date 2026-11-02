@@ -12,7 +12,7 @@ const compiled = ts.transpileModule(src, { compilerOptions: {
 }}).outputText
 const module = { exports: {} }
 vm.runInNewContext(compiled, { module, exports: module.exports, require, console })
-const { buildDualDossierPlan, validateDossierSources, dossierCitationWarnings } = module.exports
+const { buildDualDossierPlan, validateDossierSources, dossierCitationWarnings, assertRequiredAudioIncluded } = module.exports
 
 function standard(extra = []) {
   return [
@@ -104,4 +104,68 @@ test("50 diverse role and format combinations retain source boundaries without a
       assert.ok(rolePrompt.system.includes("Never invent"))
     }
   }
+})
+
+
+test("Notebook audio sources participate in the SAME unified dossier with original file lineage", () => {
+  const media = { filename: "BNY_Security_Analyst_III_Interview_Guide.m4a",
+    sha256: "a".repeat(64), durationSeconds: 3311.16, transcriptStatus: "automatic" }
+  const sources = standard([{ id: "bnyAudio", kind: "audio_transcript",
+    title: "NotebookLM BNY audio", media,
+    text: "[00:00] Define the control failure; [00:30] compare actual permission with ticket state." }])
+  const p = buildDualDossierPlan(sources)
+  assert.equal(p.sources.length, 3)
+  assert.equal(p.sources[2].media.filename, media.filename)
+  assert.equal(p.sources[2].media.sha256, media.sha256)
+  for (const stage of [p.notebook, p.dossier, p.synthesis("a","b")]) {
+    assert.match(stage.user, /audio_transcript/)
+    assert.match(stage.user, /3311\.16/)
+    assert.match(stage.user, /actual permission/)
+    assert.match(stage.system, /SOURCE UNIFICATION/)
+    assert.match(stage.system, /not proof that the candidate/)
+  }
+  assert.doesNotThrow(() => assertRequiredAudioIncluded([media.sha256], p.sources))
+})
+
+test("A missing required BNY recording must block dossier generation, never silently create a complete PDF", () => {
+  const required = ["a".repeat(64), "b".repeat(64)]
+  const media = { filename: "one.m4a", sha256: required[0],
+    durationSeconds: 3000, transcriptStatus: "reviewed" }
+  const p = buildDualDossierPlan(standard([{ id: "one", kind: "audio_transcript",
+    title: "First Notebook audio", text: "[00:00] Evidence and decision", media }]))
+  assert.throws(() => assertRequiredAudioIncluded(required, p.sources), /Audio coverage incomplete/)
+  assert.throws(() => assertRequiredAudioIncluded(["invalid"], p.sources), /Expected audio manifest/)
+  assert.throws(() => assertRequiredAudioIncluded("not an array", p.sources), /Expected audio manifest/)
+  assert.doesNotThrow(() => assertRequiredAudioIncluded([], p.sources))
+  assert.doesNotThrow(() => assertRequiredAudioIncluded(undefined, p.sources))
+})
+
+test("Audio cannot be marked present with a title, empty transcript or fabricated media identity", () => {
+  const good = { filename: "Why_Closed_Vulnerability_Tickets_Are_Dangerous.m4a",
+    sha256: "c".repeat(64), durationSeconds: 3286.25, transcriptStatus: "automatic" }
+  for (const bad of [
+    { ...good, filename: "../recording.m4a" },
+    { ...good, sha256: "bad" },
+    { ...good, durationSeconds: 0 },
+    { ...good, transcriptStatus: "unverified" },
+    undefined,
+  ]) {
+    assert.throws(() => validateDossierSources(standard([{
+      id: "audio", kind: "audio_transcript", title: "Audio recording",
+      text: "[00:20] a real passage", media: bad,
+    }])))
+  }
+  assert.throws(() => validateDossierSources(standard([{
+    id: "audio", kind: "audio_transcript", title: "Audio recording", media: good, text: "",
+  }])))
+})
+
+test("Recording hash and transcript review status affect the persistent dossier identity", () => {
+  const mk = (sha256, transcriptStatus = "automatic") => buildDualDossierPlan(standard([{
+    id: "audio", kind: "audio_transcript", title: "Notebook spoken advice",
+    text: "[00:00] Validate source-state rather than ticket status.",
+    media: { filename: "BNY.m4a", sha256, durationSeconds: 3200, transcriptStatus },
+  }])).sourceDigest
+  assert.notEqual(mk("a".repeat(64)), mk("b".repeat(64)))
+  assert.notEqual(mk("a".repeat(64)), mk("a".repeat(64), "reviewed"))
 })
