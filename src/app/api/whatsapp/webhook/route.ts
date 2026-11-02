@@ -1339,8 +1339,11 @@ async function refine(from: string, replyTo: string, request: string, userId: st
 
   const meta = await metaPromise
   const source = await readPath(gen.file)
-  if (!source || !(await sameResumeFacts(source, file))) {
-    return sendText(from, "The update changed the resume’s contact email, so I stopped delivery. Reply to the original file to retry.")
+  if (!source) {
+    return sendText(from, "I could not verify the original resume for this update, so no file was sent.")
+  }
+  if (!(await sameResumeFacts(source, file))) {
+    return sendText(from, "The update failed identity/contact/date verification, so I stopped delivery. No file was sent.")
   }
   const changes = [...(gen.changes || []), request]
   const name = await outputNameFor(file)
