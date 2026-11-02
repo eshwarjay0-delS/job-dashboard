@@ -83,8 +83,10 @@ export function validateDossierSources(raw: unknown): DossierSource[] {
       const m = row.media
       if (!m || typeof m !== "object") return badInput("Audio transcript " + id + " needs original recording provenance.")
       const v = m as Record<string, unknown>
-      if (typeof v.filename !== "string" || !/^[^/\\\\\u0000-\u001f]{1,180}$/.test(v.filename) ||
-          !/\\.(m4a|mp3|wav|ogg|webm|mp4)$/i.test(v.filename) ||
+      if (typeof v.filename !== "string" || v.filename.length < 1 || v.filename.length > 180 ||
+          v.filename.includes("/") || v.filename.includes("\\") ||
+          /[\u0000-\u001f]/.test(v.filename) ||
+          !["m4a", "mp3", "wav", "ogg", "webm", "mp4"].some(ext => v.filename.toLowerCase().endsWith("." + ext)) ||
           typeof v.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(v.sha256) ||
           typeof v.durationSeconds !== "number" || !Number.isFinite(v.durationSeconds) ||
           v.durationSeconds <= 0 || v.durationSeconds > 24 * 3600 ||
