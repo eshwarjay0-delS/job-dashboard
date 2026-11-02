@@ -2,7 +2,7 @@
 
 // MarketFit-owned desktop auth. The website and Electron have separate session
 // stores; a browser login does NOT authenticate the native protocol's API calls.
-// No provider secret is embedded. Only the native main process owns credentials.
+// No provider secret is embedded. The main process holds only an access JWT.
 const { randomBytes } = require("node:crypto");
 const path = require("node:path");
 const JWT = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
@@ -10,22 +10,20 @@ const STATE_TTL = 10 * 60_000;
 
 function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, now = Date.now }) {
   if (new URL(origin).protocol !== "https:") throw Error("MarketFit auth requires HTTPS");
-  let access = "", refreshToken = "", expiresAt = 0, flight = null;
+  let access = "", expiresAt = 0, flight = null;
   const states = new Map();
   const file = () => path.join(profileDir(), "marketfit-auth.bin");
   const encrypted = () => !!safeStorage?.isEncryptionAvailable?.();
   const valid = (s) => !!s && typeof s === "object" &&
     typeof s.access_token === "string" && s.access_token.length <= 16384 &&
     JWT.test(s.access_token) &&
-    typeof s.refresh_token === "string" && s.refresh_token.length > 0 &&
-    s.refresh_token.length <= 16384 &&
     Number.isFinite(Number(s.expires_at)) && Number(s.expires_at) > 0;
 
   function persist() {
-    if (!encrypted() || !refreshToken) return false;
+    if (!encrypted() || !access) return false;
     try {
       const bytes = safeStorage.encryptString(JSON.stringify({
-        access_token: access, refresh_token: refreshToken, expires_at: expiresAt
+        access_token: access, expires_at: expiresAt
       }));
       fs.mkdirSync(profileDir(), { recursive: true });
       fs.writeFileSync(file(), bytes, { mode: 0o600 });
@@ -33,13 +31,12 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
     } catch { return false; }
   }
   function clear() {
-    access = ""; refreshToken = ""; expiresAt = 0;
+    access = ""; expiresAt = 0;
     try { fs.rmSync(file(), { force: true }); } catch {}
   }
   function setTokens(s) {
     if (!valid(s)) return false;
     access = s.access_token;
-    refreshToken = s.refresh_token;
     expiresAt = Number(s.expires_at) * 1000;
     persist();
     return true;
@@ -92,22 +89,22 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
       return setTokens(payload);
     } catch { return false; }
   }
+  // Chrome and Electron MUST NOT rotate the same refresh token. This native
+  // client holds only an access JWT; after expiry it asks Chrome for a fresh,
+  // state-bound one-use handoff. Browser refresh tokens never leave Chrome.
   async function renew(force = false) {
-    if (!force && token() && expiresAt - now() > 10 * 60_000) return true;
-    if (!refreshToken) return false;
+    if (!token()) return false;
+    if (!force) return true;
     if (flight) return flight;
     flight = (async () => {
       try {
-        const response = await net.fetch(origin + "/api/auth/refresh-token", {
-          method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshToken }), redirect: "error",
-          cache: "no-store"
+        const response = await net.fetch(origin + "/api/auth/refresh", {
+          method: "POST", headers: { authorization: "Bearer " + access },
+          cache: "no-store", redirect: "error"
         });
         if (response.status === 401) { clear(); return false; }
-        // Offline, rate limits, transient billing or provider outages are NOT logout.
         if (!response.ok) return false;
-        const payload = await response.json();
-        return payload?.ok === true && setTokens(payload);
+        return (await response.json())?.ok === true;
       } catch { return false; }
     })();
     try { return await flight; } finally { flight = null; }
