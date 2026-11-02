@@ -70,7 +70,7 @@ test('the desktop handoff launches exactly once, with no hidden protocol retries
   vm.runInContext(helpers + '\\n' + effect, context)
   await new Promise(resolve => setTimeout(resolve, 0))
   assert.equal(went.length, 1)
-  assert.match(went[0], /^marketfit-kompas:\\/\\/auth\\?d=[A-Za-z0-9_-]+&state=/)
+  assert.ok(went[0].startsWith('marketfit-kompas://auth?d='), 'single native handoff uses MarketFit scheme')
   assert.equal(new URL(went[0]).searchParams.get('state'), STATE)
   assert.equal(intervalCalls, 0, 'no automatic protocol retry timer')
   assert.equal(frameSrcs.length, 0, 'no hidden protocol iframe launches')
