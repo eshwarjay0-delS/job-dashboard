@@ -30,7 +30,7 @@ function harness({ verified = true, encryption = true } = {}) {
       if (url.endsWith("/api/auth/refresh")) {
         refreshCount++;
         const code = verified ? status : 401;
-        return { ok: code === 200, status: code, json: async () => ({ ok: code === 200 }) };
+        return { ok: code === 200, status: code, json: async () => ({ ok: code === 200, userId: "owner-A" }) };
       }
       throw Error("Native client attempted to rotate a browser refresh token");
     }
@@ -139,4 +139,45 @@ test("oversized or invalid callback text never becomes a desktop session", () =>
   assert.equal(h.auth.callback(["marketfit-kompas://auth?state=" + state + "&d=" + "a".repeat(24001)]), null);
   assert.equal(h.auth.callback([link(state, { ...SESSION, access_token: "not a jwt" })]), null);
   assert.equal(h.auth.token(), "");
+});
+
+test("verified native identity is bound to the same account that minted the interview ticket", async () => {
+  const h = harness();
+  const state = h.auth.issueState();
+  const payload = h.auth.callback([link(state)]);
+  assert.equal(await h.auth.acceptCallback(payload, "owner-B"), false);
+  assert.equal(h.auth.token(), "");
+  assert.equal(h.auth.ownerId(), "");
+  assert.equal(await h.auth.acceptCallback(payload, "owner-A"), true);
+  assert.equal(h.auth.ownerId(), "owner-A");
+});
+test("OS-encrypted native profile restores the owner scope without browser refresh credentials", async () => {
+  const h = harness();
+  const state = h.auth.issueState();
+  assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state)])), true);
+  const restored = h.factory();
+  assert.equal(restored.load(), true);
+  assert.equal(restored.ownerId(), "owner-A");
+  assert.equal(restored.token(), ACCESS);
+});
+test("expired native access can only resume after a verified same-account callback", async () => {
+  const h = harness();
+  const state = h.auth.issueState();
+  assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state)])), true);
+  h.setClock(2000000000000 + 10000);
+  assert.equal(h.auth.token(), "");
+  assert.equal(h.auth.ownerId(), "owner-A");
+  const newer = { access_token: NEXT, expires_at: 2200000000 };
+  const state2 = h.auth.issueState();
+  assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state2, newer)]), "owner-A"), true);
+  assert.equal(h.auth.ownerId(), "owner-A");
+  assert.equal(h.auth.token(), NEXT);
+});
+test("canonical Windows handoff retains the account-scoped session until validated", () => {
+  const main = require("node:fs").readFileSync("legacy/perfact/desktop/main.js", "utf8");
+  assert.match(main, /pendingSession\.ownerId/);
+  assert.match(main, /desktopAuth\.ownerId\(\) !== pendingSession\.ownerId/);
+  assert.match(main, /deliverSession\(\)/);
+  assert.match(main, /server-attested/);
+  assert.match(main, /Never expose bearer credentials/);
 });
