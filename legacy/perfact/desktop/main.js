@@ -20,6 +20,7 @@ const path = require("path");
 const fs = require("fs");
 const { createMarketFitDesktopAuth } = require("./marketfit-auth.cjs");
 const { ticketFromArgv, redeemTicket } = require("./desktop-handoff.cjs");
+const { chooseDesktopUpdate } = require("./desktop-update.cjs");
 
 app.setName("Kompas");
 // Preserve the existing perfACT desktop while MarketFit gets its own native
@@ -49,6 +50,34 @@ if (process.env.KOMPAS_DEBUG_PORT) app.commandLine.appendSwitch("remote-debuggin
 const PERFACT_API_ORIGIN = (process.env.KOMPAS_API_URL || "https://perfact-ten.vercel.app").replace(/\/+$/, "");
 const MARKETFIT_API_ORIGIN = "https://job-dashboard-fawn.vercel.app";
 const desktopAuth = createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir: () => app.getPath("userData"), origin: MARKETFIT_API_ORIGIN });
+let updateCheckDone = false;
+// Check the released Windows version on first visible launch, not inside the
+// user's interview or before the existing taskbar choice. A failed request is
+// non-fatal. Never run an installer or accept a remote-supplied executable URL.
+async function checkNativeDesktopUpdate() {
+  if (!startedForMarketFit || updateCheckDone) return;
+  updateCheckDone = true;
+  try {
+    const response = await net.fetch(MARKETFIT_API_ORIGIN + "/api/kompas/desktop-version", {
+      method: "GET", cache: "no-store", redirect: "error",
+    });
+    if (!response.ok) return;
+    const manifest = await response.json();
+    const offer = chooseDesktopUpdate(app.getVersion(), manifest);
+    if (!offer || !win || win.isDestroyed()) return;
+    const { response: decision } = await dialog.showMessageBox(win, {
+      type: "info", title: "Kompas update available",
+      message: "Kompas " + offer.version + " is ready",
+      detail: "A newer official MarketFit Windows build is available. Download it, quit Kompas fully, then open the new executable. Your saved sessions are not deleted.",
+      buttons: ["Download official update", "Later"], defaultId: 0, cancelId: 1, noLink: true,
+    });
+    if (decision === 0) await shell.openExternal(offer.downloadUrl);
+  } catch {
+    // Offline or temporarily unavailable update metadata must never disrupt
+    // a running or pending interview. A subsequent launch checks again.
+  }
+}
+
 let lastChromeSignIn = 0;
 function beginChromeSignIn() {
   if (Date.now() - lastChromeSignIn < 8000) return;
@@ -441,7 +470,7 @@ function createWindow() {
   wc.on("will-navigate", (e, url) => { if (!url.startsWith(ORIGIN + "/")) { e.preventDefault(); openExternal(url); } });
   wc.setWindowOpenHandler(({ url }) => { openExternal(url); return { action: "deny" }; });
   watchKeys(wc);
-  win.once("ready-to-show", () => { applyProtection(); win.show(); holdOnTop(); });
+  win.once("ready-to-show", () => { applyProtection(); win.show(); holdOnTop(); setTimeout(() => { void checkNativeDesktopUpdate(); }, 1200); });
   win.on("blur", () => { holdOnTop(); setTimeout(holdOnTop, 120); });
   win.on("show", holdOnTop);
   win.on("restore", holdOnTop);
