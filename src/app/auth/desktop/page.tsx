@@ -38,30 +38,12 @@ export default function DesktopSignIn() {
       const b64 = btoa(unescape(encodeURIComponent(payload))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
       // Prefer the isolated MarketFit handler over the legacy kompas handler,
       // which may still belong to an older application.
-      // Automatic handoff, nothing asked of the user (owner, 31 Oct 2026): the first protocol launch can be
-      // swallowed — prompt dismissed, desktop still starting, link not yet claimed — so rerun it silently in a
-      // hidden frame on both schemes the shell claims, three times over six seconds. No button, no instruction,
-      // no second navigation. Guarded so the sliced-effect tests, which run without timers or a DOM, still see
-      // exactly the one navigation above.
+      // Launch the protocol handler only once per explicit browser handoff.
+      // Repeating protocol URLs can restart the executable, trigger UAC, and
+      // reopen /auth/desktop even after Chrome has authenticated. A failed
+      // handoff stays visible rather than silently spawning more processes.
       setNote("Opening Kompas…")
       window.location.href = withState("marketfit-kompas://auth?d=" + b64, state)
-      try {
-        if (typeof setInterval === "function" && typeof document !== "undefined" && document.createElement && document.body) {
-          const links = [withState("kompas://auth?d=" + b64, state), withState("marketfit-kompas://auth?d=" + b64, state)]
-          const frame = document.createElement("iframe")
-          frame.style.display = "none"
-          document.body.appendChild(frame)
-          let n = 0
-          const timer = setInterval(() => {
-            n++
-            try { frame.src = links[n % links.length] } catch {}
-            if (n >= 3) {
-              clearInterval(timer)
-              if (!gone) setNote("Kompas should have opened. If it did not, reopen Kompas from your desktop icon.")
-            }
-          }, 2000)
-        }
-      } catch {}
     }).catch(() => {
       if (!gone) window.location.assign(login)
     })
