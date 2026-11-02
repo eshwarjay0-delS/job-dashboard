@@ -19,7 +19,7 @@ function score(s){
   if(technical.test(s))v+=2;
   if(/\?/.test(s))v+=1;
   if(/\b(?:you|your|we)\b/i.test(s))v+=1;
-  if(/\b(?:right|correct|okay|good|ready)\?$/i.test(s)&&s.split(/\s+/).length<12)v-=7;
+  if(/\b(?:right|correct|okay|good|ready)\?$/i.test(s)&&s.split(/\s+/).length<12&&!technical.test(s))v-=7;
   if(narrative.test(s)&&!question.test(s))v-=3;
   return v;
 }
