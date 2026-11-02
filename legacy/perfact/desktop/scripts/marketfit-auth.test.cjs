@@ -181,3 +181,13 @@ test("canonical Windows handoff retains the account-scoped session until validat
   assert.match(main, /server-attested/);
   assert.match(main, /Never expose bearer credentials/);
 });
+
+test("native take-session IPC and webContents delivery share the same owner gate", () => {
+  const main = require("node:fs").readFileSync("legacy/perfact/desktop/main.js", "utf8");
+  assert.match(main, /function takeVerifiedSession\(\)/);
+  assert.match(main, /desktopAuth\.ownerId\(\) !== pendingSession\.ownerId/);
+  assert.match(main, /ipcMain\.handle\("kompas:take-session", \(event\) => \{/);
+  assert.match(main, /const verified = takeVerifiedSession\(\)/);
+  assert.match(main, /function deliverSession\(\) \{[\s\S]{0,180}takeVerifiedSession\(\)/);
+  assert.match(main, /if \(u\.protocol === "marketfit-kompas:"\) return null/);
+});
