@@ -3648,9 +3648,16 @@ async function aiAnswer(fromAuto, options = {}) {
       showPressed(page, frozen);
       return await generateAnswer(frozen, page, { pinned: true, derived: frozen, source: "caption-window" });
     }
-    if ((running && captures.length) || finals.size) {
+    // A completed, already-transcribed interviewer ask should not wait an
+    // additional 1.5 seconds for *later* background speech. The captured
+    // transcript is stable; keep any queued voice decoding in the normal path
+    // if the question has not actually finished yet.
+    const spoken = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
+    const immediateAsk = !fromAuto && !finals.size ? (window.KompasCaptionFocus?.pick(spoken) || "") : "";
+    const hasCompleteAsk = immediateAsk.split(/\s+/).length >= 6 && /[?.!]$/.test(immediateAsk);
+    if (!hasCompleteAsk && ((running && captures.length) || finals.size)) {
       flushing = true; if (!fromAuto) status("Catching your last words…", "live");
-      try { await flushHeard(options.captionOnce ? 250 : 1500); } catch { /* words already written still get answered */ }
+      try { await flushHeard(1500); } catch { /* words already written still get answered */ }
       finally { flushing = false; }
     }
     if (sessionEpoch !== transcriptionEpoch) return;
@@ -3677,6 +3684,28 @@ async function aiAnswer(fromAuto, options = {}) {
         page.screenTask = true;
         showPressed(page, focused);
         return await generateAnswer(focused, page, { pinned: true, derived: focused, source: "caption-window" });
+      }
+    }
+    // A question from shared call audio can be followed by unrelated
+    // narration in the same transcribed turn. Keep the entire recording in
+    // the transcript, but pin just the explicit question instead of allowing
+    // a slower derive pass to elevate the trailing narration into the ask.
+    if (!typedText && questionSource() === "Them" && pending.length) {
+      const fromCall = pending.filter(t => t.who === "Them");
+      const full = fromCall.map(t => t.text).join(" ").replace(/\s+/g, " ").trim();
+      const focused = window.KompasCaptionFocus?.pick(full) || "";
+      if (focused && focused.length >= 25 && focused.length < full.length - 12 &&
+          focused.split(/\s+/).length >= 6) {
+        answeredSeq = heardSeq; updatePending();
+        const page = addCard(focused, ["…"]);
+        page.heard = fromCall.map(t => "Them: " + t.text).join("\n");
+        page.formed = page.heard;
+        page.formSeq = fromCall[0]?.seq;
+        page.singleSpokenTurn = true;
+        page.fullSpokenQuestion = focused;
+        logDecision("explicit-ask-before-trailing-narration", "Them", focused);
+        showPressed(page, focused);
+        return await generateAnswer(focused, page, { pinned: true, derived: focused, source: "spoken-question" });
       }
     }
     // Answer anyway (slice 2): a press right after "Nothing question-like" answers those same lines.
