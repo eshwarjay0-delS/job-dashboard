@@ -13,7 +13,7 @@ import { appDir, stampExe } from "./runtime.mjs";
 
 if (process.platform !== "win32") { console.error("Kompas.exe is a Windows build."); process.exit(1); }
 
-const COPILOT_FILES = ["index.html", "styles.css", "diamond.js", "jev.js", "levels-core.js", "anchors.js", "dossier-md.js", "correct.js", "anchor-flight.js", "screen-core.js", "screen-review.js", "account-sync.js", "desktop-focus.js", "qbank-problems.js", "qbank-library.js", "review-core.js", "pace-core.js", "score-core.js", "feedback.js", "qbank.js", "app.js", "caption-once.js", "version.json"];
+const COPILOT_FILES = ["index.html", "styles.css", "diamond.js", "jev.js", "levels-core.js", "anchors.js", "dossier-md.js", "correct.js", "anchor-flight.js", "screen-core.js", "screen-review.js", "account-sync.js", "desktop-focus.js", "qbank-problems.js", "qbank-library.js", "review-core.js", "pace-core.js", "score-core.js", "feedback.js", "qbank.js", "caption-focus.js", "app.js", "caption-once.js", "version.json"];
 // MFit is the canonical app; the earlier perfACT/copilot folder is gone.
 // Package the exact same HTML/JS that production serves from public/kompas.
 const source = path.resolve(appDir, "..", "..", "..", "public", "kompas");
