@@ -5188,7 +5188,10 @@ function packSession(s) {
     token: supabaseAccessToken(), // handed to the desktop app so its API calls are authenticated
     // The refresh token + expiry ride along so the desktop can renew the
     // access token itself instead of pinning a JWT that dies after an hour.
-    refreshToken: (supabaseSession() || {}).refresh_token || "",
+    // Do not duplicate Chrome's rotating refresh-token family into the
+    // ticket payload. The desktop bearer expires naturally and renews via a
+    // verified, state-bound Chrome callback.
+    refreshToken: "",
     tokenExp: (supabaseSession() || {}).expires_at || 0,
     // The same native Kompas shell opens the MarketFit session in MarketFit, not the standalone perfACT site.
     site: (location.pathname === "/kompas" || location.pathname.startsWith("/kompas/") || location.pathname.startsWith("/dashboard/kompas")) ? "marketfit" : "perfact",
