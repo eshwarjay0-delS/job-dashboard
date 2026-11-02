@@ -34,7 +34,14 @@ export type RoundTripResult = { ok: boolean, problems: string[] }
 export function extractFacts(text: string | null | undefined): ResumeFacts {
   const raw = String(text ?? '').normalize('NFC')
   // name is compared exactly (after NFC + whitespace), so a hyphen -> en dash change in a name still fails
-  const name = (raw.split(/\r?\n/).find(l => l.trim()) ?? '').trim().replace(/\s+/g, ' ')
+  const firstLine = (raw.split(/\r?\n/).find(l => l.trim()) ?? '').trim().replace(/\s+/g, ' ')
+  // Mammoth returns an entire Word paragraph as one line. A legitimate title
+  // rewrite can change "Alex Example | Engineer" to "Alex Example | Consultant"
+  // while leaving the person's name untouched. Compare only a clearly
+  // identifiable 2-5-token name prefix before a spaced header separator.
+  // If the prefix is ambiguous, retain the full-line strict comparison.
+  const prefix = firstLine.split(/\s+[|•·—–-]\s+/)[0].trim()
+  const name = /^(?:[\p{L}][\p{L}'’.-]*\s+){1,4}[\p{L}][\p{L}'’.-]*$/u.test(prefix) ? prefix : firstLine
   const t = raw.replace(DASH, '-')
   const emails = (t.match(EMAIL) ?? []).map(e => e.toLowerCase())
   const noEmail = t.replace(EMAIL, ' ')
