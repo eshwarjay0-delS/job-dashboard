@@ -24,7 +24,7 @@ const phrase = phraseContext.correct;
 function harness({ question="How does SIEM alert correlation work?", native=true,
                    payload, fail=false, switched=false, deferred=false } = {}) {
   const log={ captures:0, fetches:0, answers:[], status:[], shortcuts:0, event:0, windowEvents:0, releases:0 };
-  const input={ value:"" };
+  const input={ value:"", dataset:{} };
   const button={ disabled:false, onclick:null };
   const doc = {
     getElementById(id) {
@@ -140,6 +140,7 @@ test("single deliberate window capture triggers exactly one corrected AI Answer"
   assert.equal(h.log.fetches,1);
   assert.equal(h.log.request.mode,"caption-window");
   assert.equal(h.input.value,"How do you configure SIEM tool?");
+  assert.equal(h.input.dataset.captionRaw,"How do you configure SIEM tool?");
   assert.equal(h.log.answers.length,1);
   assert.equal(h.log.answers[0][1].captionOnce,true);
   assert.equal(h.button.disabled,false);
@@ -237,7 +238,7 @@ test("three-line caption presentation never deletes the question or transcript",
   assert.match(css,/-webkit-line-clamp:3/);
   assert.match(css,/max-height:calc\(3 \* 1\.45em\)/);
   assert.match(css,/#view-copilot \.card \.q\{max-height:4\.65em\}/);
-  assert.match(app,/page\.heard = "Them \(Windows Live Captions\): " \+ frozen/);
+  assert.match(app,/page\.heard = "Them \(Windows Live Captions\): " \+ completeCaption/);
   assert.match(app,/pinned: true, derived: frozen, source: "caption-window"/);
   assert.match(app,/const captionLines = pendingHeard\(\)\.filter\(t => t\.fromCaption/);
   assert.doesNotMatch(client,/setInterval|MediaRecorder|getDisplayMedia/);
