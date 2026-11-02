@@ -104,17 +104,22 @@ async function sessionFromTicketArgv(argv) {
   const ticket = ticketFromArgv(argv);
   if (!ticket) return null;
   const handed = await redeemTicket((url, options) => net.fetch(url, options), MARKETFIT_API_ORIGIN, ticket);
-  // The one-use server record was minted by the authenticated account. If
-  // credentials accompanied that saved interview, verify them independently
-  // before assigning them to this native profile.
+  // The server minted this one-use ticket for the authenticated account.
+  // The ownerId is server-attested and MUST be checked before the native
+  // renderer receives the session. Do not lose a redeemed interview just
+  // because Chrome's short-lived access bearer has expired in transit.
+  if (typeof handed.ownerId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(handed.ownerId))
+    throw Error("Saved interview ticket has no verified account owner");
   if (handed.token) {
-    // Validate the saved account's short-lived access bearer; do not copy its
-    // browser refresh token into the Windows app's independent profile.
-    const ok = await desktopAuth.acceptCallback({
+    const valid = await desktopAuth.acceptCallback({
       access_token: handed.token, expires_at: handed.tokenExp
-    });
-    if (!ok) throw Error("Saved interview authentication is no longer valid");
+    }, handed.ownerId);
+    if (!valid && desktopAuth.ownerId() !== handed.ownerId) beginChromeSignIn();
+  } else if (desktopAuth.ownerId() !== handed.ownerId || !desktopAuth.token()) {
+    beginChromeSignIn();
   }
+  // Keep this transfer pending until a verified Chrome callback proves the
+  // exact same account; no account-agnostic local import or cookie fallback.
   return handed;
 }
 function sessionFromArgv(argv) {
@@ -132,7 +137,18 @@ function sessionFromArgv(argv) {
 }
 function deliverSession() {
   if (!pendingSession || !win || win.isDestroyed()) return;
-  const s = pendingSession;
+  if (pendingSession.site !== "perfact") {
+    if (!pendingSession.ownerId ||
+        !desktopAuth.token() ||
+        desktopAuth.ownerId() !== pendingSession.ownerId) {
+      beginChromeSignIn();
+      return;
+    }
+  }
+  const s = { ...pendingSession };
+  // Never expose bearer credentials or the server-attested owner marker to
+  // localStorage / renderer; only the native auth controller may hold tokens.
+  for (const key of ["token", "refreshToken", "tokenExp", "access_token", "refresh_token", "ownerId"]) delete s[key];
   pendingSession = null;
   win.webContents.send("kompas:session", s);
 }
@@ -592,10 +608,12 @@ else {
   app.on("second-instance", async (_e, argv) => {
     const callback = desktopAuth.callback(argv);
     if (callback) {
-      const accepted = await desktopAuth.acceptCallback(callback);
+      const accepted = await desktopAuth.acceptCallback(callback, pendingSession?.ownerId || "");
       if (accepted && win && !win.isDestroyed()) {
         if (win.isMinimized()) win.restore();
         win.show(); bringBack(); win.focus();
+        if (win.webContents.isLoading()) return;
+        deliverSession();
         win.webContents.send("kompas:auth-ready");
       } else if (!accepted) beginChromeSignIn();
       return;
@@ -607,6 +625,7 @@ else {
     }
     if (handed) {
       pendingSession = handed;
+      if (handed.ownerId && (!desktopAuth.token() || desktopAuth.ownerId() !== handed.ownerId)) beginChromeSignIn();
       const nextSite = siteFor(handed);
       if (nextSite !== activeSite) {
         activeSite = nextSite;
@@ -630,7 +649,7 @@ else {
     pendingSession = sessionFromArgv(process.argv);
     if (ticketFromArgv(process.argv)) {
       try { pendingSession = await sessionFromTicketArgv(process.argv); }
-      catch { /* Leave the original saved session intact; retry in MarketFit. */ }
+      catch { pendingSession = null; /* Never adopt unverified raw ticket contents. */ }
     }
     // The installer page opens marketfit-kompas://open without an interview
     // payload. Route that first launch into MarketFit instead of perfACT.
