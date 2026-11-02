@@ -83,6 +83,7 @@ let cloudArchive = null;
 // authenticates the SAME owner. Never write an unverified ticket into LS.
 const pendingDesktopHandoffs = new Map();
 let replayingDesktopHandoff = false;
+let lastHandoffSyncState = "", lastHandoffSyncOwner = "";
 const LS = {
   get(k, d) { try { const v = localStorage.getItem("perfact." + k); return v ? JSON.parse(v) : d; } catch { return d; } },
   set(k, v) {
@@ -5090,9 +5091,16 @@ accountSessionSync = window.KompasSessionCloud?.create({
   notify: state => {
     const banner = $("cloudSyncStatus"), importBtn = $("importLocalSessions");
     if (!banner) return;
+    const ownerChangedOrRecovered = state.state === "synced" &&
+      (lastHandoffSyncState !== "synced" || lastHandoffSyncOwner !== state.owner);
+    lastHandoffSyncState = state.state;
+    lastHandoffSyncOwner = state.owner || "";
     if (state.state === "synced") {
       banner.textContent = state.legacy ? state.legacy + " earlier sessions are on this device only. Import them once into this signed-in account to make them available everywhere." : "Sessions synchronized across your signed-in devices.";
-      if (pendingDesktopHandoffs.size) queueMicrotask(() => { void resumePendingDesktopHandoffs(); });
+      // Do not re-enter refresh on every 'synced' notification: that creates
+      // an unbounded promise/microtask loop while the owner remains mismatched.
+      if (ownerChangedOrRecovered && pendingDesktopHandoffs.size)
+        queueMicrotask(() => { void resumePendingDesktopHandoffs(); });
       if (cloudArchive) void cloudArchive.replay();
     } else if (state.state === "importing") {
       banner.textContent = "Importing your earlier sessions and verifying they are saved to this account…";
