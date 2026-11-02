@@ -124,7 +124,7 @@ test("encrypted native storage never contains a browser refresh token", async ()
   assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state, { ...SESSION, refresh_token: "browser-only-secret" })])), true);
   const storage = [...h.files.values()][0].toString();
   assert.equal(storage.includes("browser-only-secret"), false);
-  assert.equal(storage.includes("refresh_token"), false);
+  assert.ok(storage.includes('"refresh_token":""'), "legacy browser-bearer handoff cannot import a browser refresh token");
 });
 test("if OS encryption is unavailable, native credentials stay memory only", async () => {
   const h = harness({ encryption: false });
