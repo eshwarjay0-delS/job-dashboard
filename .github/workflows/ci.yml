@@ -121,6 +121,9 @@ jobs:
       - name: Verify bounded Kompas speech uploads and private benchmark CLI
         run: node --experimental-strip-types --test scripts/tests/kompas-audio-upload.test.mjs scripts/tests/kompas-voice-metrics-cli.test.mjs
 
+      - name: Verify bounded 429 Retry-After recovery without losing captured speech
+        run: node --test scripts/tests/kompas-speech-429-retry.test.mjs
+
       - name: Verify speech container MIME parity
         run: node --experimental-strip-types --test scripts/tests/kompas-audio-upload-mime.test.mjs
 

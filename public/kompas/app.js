@@ -1949,6 +1949,25 @@ function interim(cap) {
   const blob = new Blob(chunks, { type: (cap.rec && cap.rec.mimeType) || MIME || "audio/webm" });
   if (blob.size > 4000) transcribe(blob, cap.who, { final: false, cap });
 }
+// Retry only a final captured phrase, using the provider's actual Retry-After
+// (delta seconds or HTTP date). Never re-upload interim captions or retry a
+// permanent error. A long provider cooldown is surfaced rather than ignored.
+function speechRetryDelay(status, retryAfter, attempt, final, now = Date.now()) {
+  if (!final || attempt !== 0 || !(status === 429 || (status >= 500 && status <= 599))) return null;
+  const raw = String(retryAfter || "").trim();
+  const fallback = status === 429 ? 1000 : 500;
+  if (!raw) return fallback;
+  let ms;
+  if (/^\d+(?:\.\d+)?$/.test(raw)) ms = Math.ceil(Number(raw) * 1000);
+  else {
+    const date = Date.parse(raw);
+    if (!Number.isFinite(date)) return fallback;
+    ms = Math.ceil(date - now);
+  }
+  // Never violate a server-specified cooldown by retrying early.
+  if (!Number.isFinite(ms) || ms > 60000) return null;
+  return Math.max(500, ms);
+}
 async function transcribe(blob, who, opt) {
   const epoch = opt.epoch ?? transcriptionEpoch;
   const cap = opt.cap; if (cap) cap.inflight++;
@@ -1967,13 +1986,10 @@ async function transcribe(blob, who, opt) {
         const res = await fetch("/api/transcribe", { method: "POST", signal: ctl.signal,
           headers: { "content-type": "application/octet-stream", "x-audio-mime": blob.type || "audio/webm", "x-whisper-prompt": encodeURIComponent(opt.prompt ?? whisperPrompt()), "x-speech-lang": String((typeof current !== "undefined" && current && current.language) || "en").slice(0, 2).toLowerCase() }, body: blob });
         if (!res.ok) {
-          retry = res.status === 429 || res.status >= 500;
-          const retrySeconds = Number(res.headers?.get("retry-after"));
-          if (res.status === 429) {
-            interimOffUntil = performance.now() + 60000;
-            if (retrySeconds > 2) retry = false;
-            delay = Math.min(2000, Math.max(500, retrySeconds * 1000 || 500));
-          }
+          const retryDelay = speechRetryDelay(res.status, res.headers?.get("retry-after"), attempt, !!opt.final);
+          retry = retryDelay !== null;
+          if (retry) delay = retryDelay;
+          if (res.status === 429) interimOffUntil = performance.now() + 60000;
           failure = `Transcription unavailable (${res.status}). This phrase was not transcribed; please repeat it or type it.`;
         } else {
           clean = cleanTranscript((await res.json()).text);
