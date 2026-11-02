@@ -10,6 +10,9 @@ on:
       - 'src/lib/whatsapp-resume-recovery.ts'
       - 'src/lib/whatsapp.ts'
       - 'src/lib/whatsapp-retry-policy.ts'
+      - 'src/lib/resume-identity.ts'
+      - 'src/lib/resume-round-trip-guard.ts'
+      - 'scripts/tests/resume-guards.test.mjs'
       - 'src/app/api/whatsapp/**'
       - 'scripts/tests/whatsapp-resume-recovery.test.mjs'
       - 'scripts/tests/whatsapp-resume-contract.test.mjs'
@@ -23,6 +26,9 @@ on:
       - 'src/lib/whatsapp-resume-recovery.ts'
       - 'src/lib/whatsapp.ts'
       - 'src/lib/whatsapp-retry-policy.ts'
+      - 'src/lib/resume-identity.ts'
+      - 'src/lib/resume-round-trip-guard.ts'
+      - 'scripts/tests/resume-guards.test.mjs'
       - 'src/app/api/whatsapp/**'
       - 'scripts/tests/whatsapp-resume-recovery.test.mjs'
       - 'scripts/tests/whatsapp-resume-contract.test.mjs'
@@ -39,4 +45,4 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs
+      - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs scripts/tests/resume-guards.test.mjs
