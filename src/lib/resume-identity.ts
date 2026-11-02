@@ -8,6 +8,6 @@ export function sameResumeIdentity(source: string, output: string): boolean {
   if (emails(source) !== emails(output)) return false
   if (!jdTermsGateOn()) return true
   const rt = checkRoundTrip(source, output)
-  if (!rt.ok) console.error("[resume] round-trip guard stopped delivery", { problems: rt.problems.length })
+  if (!rt.ok) console.error("[resume] round-trip guard stopped delivery", { problems: rt.problems.length, categories: [...new Set(rt.problems.map(p => p.startsWith("name changed") || p.startsWith("source has no name") ? "name" : p.split(" ")[0]))] })
   return rt.ok
 }
