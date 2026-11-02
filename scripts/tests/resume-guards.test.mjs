@@ -21,6 +21,32 @@ test('roundtrip: name changed fails', () => {
   const r = checkRoundTrip(SRC, SRC.replace('Alex Example', 'Alexander Example'))
   assert.equal(r.ok, false); assert.ok(r.problems.some(p => /name/i.test(p)))
 })
+test('roundtrip: same-paragraph header title may change while protected name stays identical', () => {
+  const source = SRC.replace('Alex Example\n', 'Alex Example | Security Engineer\n')
+  const output = source.replace('Alex Example | Security Engineer', 'Alex Example | Cloud Security Consultant')
+  assert.equal(checkRoundTrip(source, output).ok, true)
+})
+test('roundtrip: same-paragraph em dash header title may change', () => {
+  const source = SRC.replace('Alex Example\n', 'Alex Example — Security Engineer\n')
+  const output = source.replace('Alex Example — Security Engineer', 'Alex Example — Cloud Security Consultant')
+  assert.equal(checkRoundTrip(source, output).ok, true)
+})
+test('roundtrip: protected name mutation still fails inside same-paragraph header', () => {
+  const source = SRC.replace('Alex Example\n', 'Alex Example | Security Engineer\n')
+  const output = source.replace('Alex Example | Security Engineer', 'Alexander Example | Cloud Security Consultant')
+  assert.ok(checkRoundTrip(source, output).problems.some(p => p.startsWith('name changed')))
+})
+test('roundtrip: changed contact still fails even when header title changes', () => {
+  const source = SRC.replace('Alex Example\n', 'Alex Example | Security Engineer\n')
+  const output = source.replace('Alex Example | Security Engineer', 'Alex Example | Cloud Security Consultant')
+    .replace('alex.example@example.com', 'alex.changed@example.com')
+  assert.equal(checkRoundTrip(source, output).ok, false)
+})
+test('roundtrip: ambiguous single-token header prefix is not silently trusted', () => {
+  const source = SRC.replace('Alex Example\n', 'Alex | Example Engineer\n')
+  const output = source.replace('Alex | Example Engineer', 'Alex | Cloud Consultant')
+  assert.equal(checkRoundTrip(source, output).ok, false)
+})
 test('roundtrip: email changed fails', () => { assert.equal(checkRoundTrip(SRC, SRC.replace('alex.example@', 'alex.ex@')).ok, false); })
 test('roundtrip: phone changed fails', () => { assert.equal(checkRoundTrip(SRC, SRC.replace('010-1234', '010-1235')).ok, false); })
 test('roundtrip: phone reformatted only passes', () => { assert.equal(checkRoundTrip(SRC, SRC.replace('(555) 010-1234', '555-010-1234')).ok, true); })
