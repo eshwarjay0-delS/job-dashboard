@@ -191,8 +191,11 @@ test("wiring and privacy: one-shot only, no screen loop, native window selected 
   assert.doesNotMatch(main,/Choose the window to capture once/);
   assert.doesNotMatch(main,/setInterval\([^)]*captionSnapshotOnce/);
   assert.doesNotMatch(client,/setInterval|MediaRecorder|getDisplayMedia/);
-  assert.match(app,/const hasCompleteAsk = immediateAsk\.split/);
-  assert.match(app,/if \(!hasCompleteAsk && \(\(running && captures\.length\) \|\| finals\.size\)\)/);
+  // Voice dictation remains the last known-good full-turn intake path, never
+  // filtered through the stricter screenshot-only focus recognizer.
+  assert.doesNotMatch(app,/const hasCompleteAsk = immediateAsk\.split/);
+  assert.match(app,/await flushHeard\(options\.captionOnce \? 250 : 1500\)/);
+  assert.doesNotMatch(app,/explicit-ask-before-trailing-narration/);
   assert.match(screen,/const captionMode =/);
   assert.match(screen,/max_tokens: captionMode \? 1200 : 4096/);
   assert.match(screen,/source: "caption-window"/);
@@ -244,7 +247,8 @@ test("three-line caption presentation never deletes the question or transcript",
   assert.match(css,/#view-copilot \.card \.q\{max-height:4\.65em\}/);
   assert.match(app,/page\.heard = "Them \(Windows Live Captions\): " \+ completeCaption/);
   assert.match(app,/pinned: true, derived: frozen, source: "caption-window"/);
-  assert.match(app,/const captionLines = pendingHeard\(\)\.filter\(t => t\.fromCaption/);
+  assert.doesNotMatch(app,/const captionLines = pendingHeard\(\)\.filter\(t => t\.fromCaption/);
+  assert.match(app,/return await generateAnswer\(frozen, page, \{ pinned: true/);
   assert.doesNotMatch(client,/setInterval|MediaRecorder|getDisplayMedia/);
 });
 test("caption press avoids pending 250–1500 ms audio flush and pins its own question",()=>{
