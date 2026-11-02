@@ -1176,7 +1176,7 @@ $("sysBtn").onclick = async () => {
   syncSrc();
   reportSources();
 };
-syncSrc();
+// Initial source-state render must wait until running and captures are initialized.
 /* Look: paper stays the default. Opacity fades backgrounds only. Letters, including bold words, stay full ink. */
 const LOOK_FONTS = {
   times: '"Times New Roman", Times, Georgia, "Nimbus Roman", serif',
@@ -1524,6 +1524,9 @@ function reportSources() {
 /* ---- capture: voice-activity detection per source ---- */
 let sourceGeneration = { You: 0, Them: 0 };
 let captures = [];           // { who, stream, owner, rec, chunks, ... }
+// The initial speaker render reads running/captures; invoking it earlier
+// hits the lexical temporal dead zone and prevents Kompas from booting.
+syncSrc();
 let captureErrors = [];
 let audioCtx = null;
 let displayVideo = null;     // kept from the call-audio share, reused by Analyse Screen
