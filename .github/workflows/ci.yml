@@ -49,7 +49,7 @@ jobs:
           node --test scripts/tests/kompas-caption-once-50fold.test.mjs scripts/tests/kompas-desktop-screen-action.test.mjs
 
       - name: Verify 20 full interviewer questions, silent desktop auth and exact release stamp
-        run: node --test scripts/tests/kompas-full-question-desktop-reopen-20fold.test.mjs scripts/tests/kompas-desktop-auth-live-continuity.test.mjs scripts/tests/kompas-desktop-release-stamp.test.mjs
+        run: node --test scripts/tests/kompas-full-question-desktop-reopen-20fold.test.mjs scripts/tests/kompas-desktop-auth-live-continuity.test.mjs scripts/tests/kompas-desktop-release-stamp.test.mjs scripts/tests/kompas-trusted-device-auth.test.mjs
 
       - name: Verify 20-fold desktop/authentication/account-isolation runtime scenarios
         run: node --test scripts/tests/kompas-desktop-auth-20fold.test.mjs scripts/tests/desktop-signin-state.test.mjs scripts/tests/kompas-auth-refresh-lock.test.mjs scripts/tests/auth-boundaries.test.mjs scripts/tests/kompas-session-continuity.test.mjs scripts/tests/kompas-desktop-handoff-migration.test.mjs scripts/tests/kompas-desktop-ticket.test.mjs scripts/tests/kompas-desktop-handoff-cloud-gate.test.mjs
