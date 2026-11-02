@@ -32,7 +32,7 @@ test("native account-bound rotation reuses existing refresh endpoint but never b
   assert.match(desktop, /safeStorage\.encryptString/)
   assert.match(desktop, /refresh_token: refresh/)
   assert.match(desktop, /desktop-session\/redeem/)
-  assert.match(desktop, /single/i) // native callback nonce, one-use proof
+  assert.match(desktop, /states\.clear\(\)/) // native callback nonce is single-use
   assert.match(main, /hadSavedNativeAuth/)
   assert.match(main, /await desktopAuth\.renew\(true\)/)
 })
