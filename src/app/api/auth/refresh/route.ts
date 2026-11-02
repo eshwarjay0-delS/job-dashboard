@@ -20,13 +20,13 @@ export async function POST(request: NextRequest) {
     const supabase = await createClientFromRequest(request);
     const { data: first } = await supabase.auth.getUser();
     if (first.user) {
-      return NextResponse.json({ ok: true, refreshed: false }, { headers: noStore });
+      return NextResponse.json({ ok: true, refreshed: false, userId: first.user.id }, { headers: noStore });
     }
     const { data, error } = await supabase.auth.refreshSession();
     if (error || !data.session) {
       return NextResponse.json({ ok: false }, { status: 401, headers: noStore });
     }
-    return NextResponse.json({ ok: true, refreshed: true }, { headers: noStore });
+    return NextResponse.json({ ok: true, refreshed: true, userId: data.session.user.id }, { headers: noStore });
   } catch {
     return NextResponse.json({ ok: false }, { status: 401, headers: noStore });
   }
