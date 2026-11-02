@@ -55,34 +55,23 @@ test('the sign-in page passes on only a well-formed desktop state, nothing else 
   assert.equal(safeAuthNext('/auth/desktop?state=' + encodeURIComponent(STATE + '&x=1')), '/auth/desktop')
 })
 
-// Owner, 31 Oct 2026: the handoff must rerun itself automatically — no "Allow the browser to open Kompas"
-// instruction, no button, no second navigation. The first launch stays the one location navigation; retries
-// ride a hidden frame on both schemes the shell claims.
-test('the handoff reruns itself silently on both schemes, with no second navigation', async () => {
-  const srcs = []
-  const frame = { style: {} }
-  Object.defineProperty(frame, 'src', { set(v) { srcs.push(v) } })
-  let timerFn = null
-  let cleared = false
+// Regression: a completed Chrome session must not repeatedly spawn the Windows
+// protocol handler, because each invocation can relaunch Kompas and trigger UAC.
+test('the desktop handoff launches exactly once, with no hidden protocol retries', async () => {
   const went = []
+  const frameSrcs = []
+  let intervalCalls = 0
   const window = { location: { search: '?state=' + STATE, assign: url => went.push(url), set href(url) { went.push(url) } } }
   const context = vm.createContext({ window,
-    document: { cookie: 'sb-x-auth-token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3OCJ9.v'.repeat(1) + 'v'.repeat(30), createElement: () => frame, body: { appendChild: () => {} } },
+    document: { createElement: () => ({ set src(value) { frameSrcs.push(value) }, style: {} }), body: { appendChild: () => {} } },
     setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
-    setInterval: (fn) => { timerFn = fn; return 1 },
-    clearInterval: () => { cleared = true; timerFn = null },
+    setInterval: () => { intervalCalls++; return 1 },
     createClient: () => ({ auth: { getSession: async () => ({ data: { session: { access_token: 'test-access' } } }) } }) })
   vm.runInContext(helpers + '\n' + effect, context)
   await new Promise(resolve => setTimeout(resolve, 0))
   assert.equal(went.length, 1)
-  assert.match(went[0], /^marketfit-kompas:\/\/auth\?d=[A-Za-z0-9_-]+&state=/)
-  assert.ok(timerFn, 'retry loop scheduled')
-  timerFn(); timerFn(); timerFn()
-  assert.equal(srcs.length, 3)
-  assert.match(srcs[0], /^marketfit-kompas:\/\/auth\?d=[A-Za-z0-9_-]+&state=/)
-  assert.match(srcs[1], /^kompas:\/\/auth\?d=[A-Za-z0-9_-]+&state=/)
-  assert.match(srcs[2], /^marketfit-kompas:\/\/auth\?d=[A-Za-z0-9_-]+&state=/)
-  for (const src of srcs) assert.equal(new URL(src).searchParams.get('state'), STATE)
-  assert.equal(went.length, 1, 'retries use frames, never a second navigation')
-  assert.equal(cleared, true)
+  assert.ok(went[0].startsWith('marketfit-kompas://auth?d='), 'single native handoff uses MarketFit scheme')
+  assert.equal(new URL(went[0]).searchParams.get('state'), STATE)
+  assert.equal(intervalCalls, 0, 'no automatic protocol retry timer')
+  assert.equal(frameSrcs.length, 0, 'no hidden protocol iframe launches')
 })
