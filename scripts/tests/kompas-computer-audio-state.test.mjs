@@ -30,14 +30,14 @@ function harness(getDisplayMedia, attach) {
     window: { kompasDesktop: { systemAudio: true } },
     navigator: { mediaDevices: { getDisplayMedia } },
     MediaStream: class { constructor(tracks) { this.tracks = tracks; } },
-    attachSource: async (...args) => { if (attach) await attach(state, ...args); else state.captures.push({ who: 'Them' }); },
+    attachSource: async (...args) => { if (attach) await attach(state, ...args); else state.captures.push({ who: 'Them', stream: { getAudioTracks: () => [audioTrack] } }); },
     $: id => buttons[id],
   };
   const context = createContext(state);
   runInContext(code, context);
   return { state, buttons, attributes, api: context.api };
 }
-const audioTrack = { kind: 'audio', stop() {} };
+const audioTrack = { kind: 'audio', readyState: 'live', stop() {} };
 const available = () => ({ getAudioTracks: () => [audioTrack], getTracks: () => [audioTrack] });
 const noAudio = () => ({ getAudioTracks: () => [], getTracks: () => [{ stop() {} }] });
 
@@ -87,6 +87,20 @@ test('while loopback is pending the control says connecting, not listening', asy
   await pending;
   assert.match(buttons.sysBtn.title, /listening/);
 });
+test('ended or stopped computer-audio tracks never display listening', async () => {
+  const { state, buttons, api } = harness(async () => available());
+  await api.startSys();
+  assert.match(buttons.sysBtn.title, /listening/);
+  const cap = state.captures[0];
+  cap.stream.getAudioTracks = () => [{ readyState: 'ended' }];
+  api.syncSrc();
+  assert.match(buttons.sysBtn.title, /off/);
+  assert.equal(buttons.sysBtn.attributes['aria-pressed'], 'false');
+  cap.stream.getAudioTracks = () => [audioTrack];
+  cap.stopped = true;
+  api.syncSrc();
+  assert.match(buttons.sysBtn.title, /off/);
+});
 test('missing Windows audio track fails visibly and resets requested state', async () => {
   const { state, buttons, api } = harness(async () => noAudio());
   await api.startSys();
@@ -123,7 +137,7 @@ test('a returned but unattached audio track is not misrepresented as live', asyn
 test('cancelled pending capture does not restore stale busy state', async () => {
   let release;
   const { state, api, buttons } = harness(() => new Promise(resolve => { release = resolve; }),
-    async (s) => { if (s.srcOn.sys) s.captures.push({ who: 'Them' }); });
+    async (s) => { if (s.srcOn.sys) s.captures.push({ who: 'Them', stream: { getAudioTracks: () => [audioTrack] } }); });
   const pending = api.startSys();
   state.srcOn.sys = false;
   state.sourceGeneration.Them++;
