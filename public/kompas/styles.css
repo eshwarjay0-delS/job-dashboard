@@ -232,7 +232,7 @@ html.desktop-focus #view-copilot .card .q{max-height:calc(4.65em + 15px)}
 #view-copilot .q .caption{display:flex;gap:8px;align-items:baseline;margin:3px 0 0;padding:0;border:0;background:none;font-size:.86em;line-height:1.45}
 #view-copilot .q .caption.hidden{display:none}
 /* The spoken-caption text wraps to three lines; never truncate its source. */
-#view-copilot .q .cap-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;max-height:calc(3 * 1.45em);min-width:0;overflow:hidden;overflow-wrap:anywhere;white-space:normal}
+#view-copilot .q .cap-text{display:block;flex:1 1 0;max-height:calc(3 * 1.45em);min-width:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;overflow-wrap:anywhere;white-space:normal}
 #view-copilot .card .q.live{max-height:7em}
 html.desktop-focus #view-copilot .card .q.live{max-height:calc(7em + 15px)}
 #view-copilot .card.q-away .q{max-height:0!important;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important;border-bottom-width:0!important;overflow:hidden!important}
