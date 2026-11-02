@@ -896,7 +896,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   const source = await readPath(session.resumePath)
   if (!source || !(await sameResumeFacts(source, file))) {
     failureCode = "identity_mismatch"
-    await sayOutcome("I did not send a file. The draft changed the name or email on the resume, so I stopped. Your original resume and this job are saved for another try.")
+    await sayOutcome("I did not send a file because the exported draft failed the contact-details or employment-date preservation check. Your original resume and job description are saved for automatic recovery.")
     return;
   }
   const meta = await metaPromise
