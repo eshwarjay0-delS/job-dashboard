@@ -61,7 +61,7 @@ function harness({ question="How does SIEM alert correlation work?", native=true
     ctrlKey:true,shiftKey:true,altKey:false,metaKey:false,key:"S",
     preventDefault:()=>{prevented++;},stopImmediatePropagation:()=>{stopped++;}
   });return{stopped,prevented};};
-  return { ...log, context, button, input, key, release:()=>resolveFrame?.({image:"data:image/jpeg;base64,Zml4dHVyZQ==",source:"window"}) };
+  return { log, context, button, input, key, release:()=>resolveFrame?.({image:"data:image/jpeg;base64,Zml4dHVyZQ==",source:"window"}) };
 }
 
 const dedupeCases=[
@@ -132,30 +132,30 @@ for(const [raw,expected] of phraseCases) test("live-caption technical vocabulary
 test("single deliberate window capture triggers exactly one corrected AI Answer",async()=>{
   const h=harness({question:"How do you configure seem tool?"});
   assert.equal(await h.context.window.KompasCaptionOnce.capture(),true);
-  assert.equal(h.captures,1);
-  assert.equal(h.fetches,1);
-  assert.equal(h.request.mode,"caption-window");
+  assert.equal(h.log.captures,1);
+  assert.equal(h.log.fetches,1);
+  assert.equal(h.log.request.mode,"caption-window");
   assert.equal(h.input.value,"How do you configure SIEM tool?");
-  assert.equal(h.answers.length,1);
-  assert.equal(h.answers[0][1].captionOnce,true);
+  assert.equal(h.log.answers.length,1);
+  assert.equal(h.log.answers[0][1].captionOnce,true);
   assert.equal(h.button.disabled,false);
 });
 test("old desktop cannot capture, reports the missing native update",async()=>{
   const h=harness({native:false});
   assert.equal(await h.context.window.KompasCaptionOnce.capture(),false);
-  assert.equal(h.fetches,0);
-  assert.equal(h.answers.length,0);
-  assert.match(h.status.at(-1).text,/updated Kompas Windows app/);
+  assert.equal(h.log.fetches,0);
+  assert.equal(h.log.answers.length,0);
+  assert.match(h.log.status.at(-1).text,/updated Kompas Windows app/);
 });
 test("caption OCR without text never invents a question or answer",async()=>{
   const h=harness({payload:{needsAnswer:true,question:""}});
   assert.equal(await h.context.window.KompasCaptionOnce.capture(),false);
-  assert.equal(h.answers.length,0);
+  assert.equal(h.log.answers.length,0);
 });
 test("late response from a changed session is rejected",async()=>{
   const h=harness({switched:true});
   assert.equal(await h.context.window.KompasCaptionOnce.capture(),false);
-  assert.equal(h.answers.length,0);
+  assert.equal(h.log.answers.length,0);
   assert.equal(h.input.value,"");
 });
 test("shortcut is intercepted exactly once and concurrent clicks never double capture",async()=>{
@@ -163,10 +163,10 @@ test("shortcut is intercepted exactly once and concurrent clicks never double ca
   const first=h.context.window.KompasCaptionOnce.capture();
   const second=await h.context.window.KompasCaptionOnce.capture();
   assert.equal(second,false);
-  assert.equal(h.captures,1);
+  assert.equal(h.log.captures,1);
   h.release();
   assert.equal(await first,true);
-  assert.equal(h.answers.length,1);
+  assert.equal(h.log.answers.length,1);
   const shortcut=h.key();
   assert.equal(shortcut.stopped,1);
   assert.equal(shortcut.prevented,1);
