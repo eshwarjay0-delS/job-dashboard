@@ -67,7 +67,7 @@ test('the desktop handoff launches exactly once, with no hidden protocol retries
     setNote: () => {}, btoa, unescape, encodeURIComponent, URLSearchParams,
     setInterval: () => { intervalCalls++; return 1 },
     createClient: () => ({ auth: { getSession: async () => ({ data: { session: { access_token: 'test-access' } } }) } }) })
-  vm.runInContext(helpers + '\\n' + effect, context)
+  vm.runInContext(helpers + '\n' + effect, context)
   await new Promise(resolve => setTimeout(resolve, 0))
   assert.equal(went.length, 1)
   assert.ok(went[0].startsWith('marketfit-kompas://auth?d='), 'single native handoff uses MarketFit scheme')
