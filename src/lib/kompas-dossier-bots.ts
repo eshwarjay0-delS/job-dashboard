@@ -86,7 +86,7 @@ export function validateDossierSources(raw: unknown): DossierSource[] {
       if (typeof v.filename !== "string" || v.filename.length < 1 || v.filename.length > 180 ||
           v.filename.includes("/") || v.filename.includes("\\") ||
           /[\u0000-\u001f]/.test(v.filename) ||
-          !["m4a", "mp3", "wav", "ogg", "webm", "mp4"].some(ext => v.filename.toLowerCase().endsWith("." + ext)) ||
+          !["m4a", "mp3", "wav", "ogg", "webm", "mp4"].some(ext => typeof v.filename === "string" && v.filename.toLowerCase().endsWith("." + ext)) ||
           typeof v.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(v.sha256) ||
           typeof v.durationSeconds !== "number" || !Number.isFinite(v.durationSeconds) ||
           v.durationSeconds <= 0 || v.durationSeconds > 24 * 3600 ||

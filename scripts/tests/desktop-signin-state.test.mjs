@@ -75,3 +75,13 @@ test('the desktop handoff launches exactly once, with no hidden protocol retries
   assert.equal(intervalCalls, 0, 'no automatic protocol retry timer')
   assert.equal(frameSrcs.length, 0, 'no hidden protocol iframe launches')
 })
+
+test('native desktop never launches another automatic Chrome login on reconnect', () => {
+  const native = readFileSync(new URL('../../legacy/perfact/desktop/main.js', import.meta.url), 'utf8')
+  assert.match(native, /let chromeSignInAttempted = false/)
+  assert.match(native, /if \(desktopAuth\.token\(\)\) return/)
+  assert.match(native, /if \(!interactive && chromeSignInAttempted\) return/)
+  assert.match(native, /chromeSignInAttempted = true/)
+  assert.match(native, /beginChromeSignIn\(\{ interactive: true \}\)/)
+  assert.doesNotMatch(native, /Date\.now\(\) - lastChromeSignIn < 8000/)
+})
