@@ -71,7 +71,7 @@ function createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir, origin, 
           u.username || u.password ||
           [...u.searchParams.keys()].some(k => !["state", "d"].includes(k))) continue;
       const state = u.searchParams.get("state"), d = u.searchParams.get("d");
-      if (!state || !d || d.length > 24000 || states.get(state) <= now()) continue;
+      if (!state || !states.has(state) || !d || d.length > 24000 || states.get(state) <= now()) continue;
       // One use; callbacks from stale browser tabs cannot rotate identity.
       states.clear();
       try {
