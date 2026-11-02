@@ -6,6 +6,7 @@ const question=/\b(?:what|how|why|when|where|which|who|can you|could you|would y
 const filler=/^(?:yeah|yes|no|okay|ok|right|sure|good|thanks|thank you|umm?|uhh?|well|so|hmm|all right)[.!?,\s]*$/i;
 const social=/^(?:hello|hi|good (?:morning|afternoon|evening)|thank you|thanks|nice meeting|hold on|one moment|moving on|next question)\b/i;
 const narrative=/^(?:i(?:'m| am) going to|i (?:need|want|have|haven't|didn't)|let'?s (?:get|go|move|start)|thanks? (?:for|and)|good (?:morning|afternoon|evening))\b/i;
+const rejected=/^(?:previous question|next question|i need help|i want a moment|i need a moment)[.!?]*$/i;
 const intro=/^(?:okay|alright|all right|so|well|now|let's say|for example|suppose|imagine|assume|consider|if)\b/i;
 const technical=/\b(?:dns|dhcp|ip|http|https|endpoint|windows|linux|azure|aws|security|authentication|active directory|admin|privilege|cyberark|zscaler|crowdstrike|defender|routing|network|firewall|api|database|kubernetes|8\.8\.8\.8|hostname|host|browser|browse|ping|troubleshoot|incident|policy|exception|rollback)\b/i;
 function segments(raw){
@@ -24,7 +25,7 @@ function score(s){
 }
 function pick(value){
   const raw=clean(value).replace(/^(?:Them|Interviewer|You)\s*:\s*/i,"");
-  if(!raw||filler.test(raw)||social.test(raw)&&raw.split(/\s+/).length<7)return "";
+  if(!raw||filler.test(raw)||rejected.test(raw)||social.test(raw)&&raw.split(/\s+/).length<7)return "";
   const items=segments(raw);
   if(!items.length)return "";
   const scores=items.map(score);
@@ -38,8 +39,8 @@ function pick(value){
   // Include a compact setup immediately preceding the question, not old unrelated dialogue.
   for(let i=anchor-1;i>=Math.max(0,anchor-3);i--){
     const s=items[i];
-    if(scores[i]<0||question.test(s)&&!/^\s*(?:and|also|what about|how about)/i.test(s))break;
-    if(technical.test(s)||intro.test(s)||/\b(?:you|your|we|it|that|this|but|however)\b/i.test(s))start=i;
+    if(scores[i]<0||question.test(s)&&!/^\s*(?:and|also|what about|how about)/i.test(items[i+1]))break;
+    if(technical.test(s)||intro.test(s)||/\b(?:you|your|we|it|that|this|but|however)\b/i.test(s)||/^\s*(?:and|also|so)\b/i.test(items[i+1]))start=i;
     else break;
   }
   let end=anchor;
