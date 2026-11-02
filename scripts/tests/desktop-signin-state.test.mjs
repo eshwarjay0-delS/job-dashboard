@@ -86,3 +86,30 @@ test('the handoff reruns itself silently on both schemes, with no second navigat
   assert.equal(went.length, 1, 'retries use frames, never a second navigation')
   assert.equal(cleared, true)
 })
+
+test("first sign-in issues a new native-device session without transferring Chrome refresh tokens", async () => {
+  const went=[], fetched=[]
+  const proof = "a".repeat(64)
+  const session = { access_token:"a.b.c", refresh_token:"chrome-browser-refresh", expires_at:2000000000 }
+  const window = { location:{ search:"?state="+STATE, set href(url) { went.push(url) }, assign(url) { went.push(url) } } }
+  const ctx = vm.createContext({
+    window, document:{ cookie:"sb-test", body:null }, setNote:()=>{},
+    btoa, unescape, encodeURIComponent, URLSearchParams,
+    fetch:async (url, opts) => {
+      fetched.push({ url, opts })
+      return { ok:true, json:async()=>({ ok:true, token_hash:proof }) }
+    },
+    createClient:()=>({ auth:{ getSession:async()=>({ data:{session} }) } }),
+  })
+  vm.runInContext(helpers+"\n"+effect,ctx)
+  await new Promise(resolve => setTimeout(resolve,0))
+  assert.equal(went.length,1)
+  const payload=JSON.parse(Buffer.from(new URL(went[0]).searchParams.get("d"),"base64url").toString())
+  assert.equal(payload.token_hash,proof)
+  assert.equal(payload.access_token,"")
+  assert.equal(payload.expires_at,0)
+  assert.ok(!went[0].includes(session.refresh_token))
+  assert.equal(fetched.length,1)
+  assert.equal(fetched[0].url,"/api/auth/desktop-session/issue")
+  assert.equal(fetched[0].opts.credentials,"same-origin")
+})
