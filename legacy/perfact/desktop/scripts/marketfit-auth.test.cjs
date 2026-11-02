@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const { createMarketFitDesktopAuth } = require("../marketfit-auth.cjs");
 const ACCESS = "abc.def.ghi";
 const NEXT = "xyz.def.ghi";
-const SESSION = { access_token: ACCESS, refresh_token: "rotating-secret", expires_at: 2000000000 };
+const SESSION = { access_token: ACCESS, expires_at: 2000000000 };
 const ORIGIN = "https://job-dashboard-fawn.vercel.app";
 function harness({ verified = true, encryption = true } = {}) {
   let clock = 1793600000000, requests = [], files = new Map(), refreshCount = 0;
@@ -27,9 +27,12 @@ function harness({ verified = true, encryption = true } = {}) {
   const net = {
     fetch: async (url, options) => {
       requests.push({ url, options });
-      if (url.endsWith("/api/auth/refresh")) return { ok: verified, status: verified ? 200 : 401, json: async () => ({ ok: verified }) };
-      refreshCount++;
-      return { ok: status === 200, status, json: async () => ({ ok: true, ...SESSION, access_token: NEXT, refresh_token: "new-rotation" }) };
+      if (url.endsWith("/api/auth/refresh")) {
+        refreshCount++;
+        const code = verified ? status : 401;
+        return { ok: code === 200, status: code, json: async () => ({ ok: code === 200 }) };
+      }
+      throw Error("Native client attempted to rotate a browser refresh token");
     }
   };
   const factory = () => createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir: () => "/fake-user", origin: ORIGIN, now: () => clock });
@@ -77,16 +80,18 @@ test("verified browser handoff is available only to MarketFit API and stored enc
   assert.equal([...h.files.values()][0].toString().startsWith("enc:"), true);
   assert.equal(h.factory().load(), true);
 });
-test("refresh is single-flight and rotates both tokens", async () => {
+test("native bearer verification is single-flight, never rotates the Chrome token family", async () => {
   const h = harness();
   const state = h.auth.issueState();
   assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state)])), true);
+  const initial = h.getRefreshes();
   const all = await Promise.all([h.auth.renew(true), h.auth.renew(true), h.auth.renew(true)]);
   assert.deepEqual(all, [true, true, true]);
-  assert.equal(h.getRefreshes(), 1);
-  assert.equal(h.auth.token(), NEXT);
+  assert.equal(h.getRefreshes(), initial + 1);
+  assert.equal(h.auth.token(), ACCESS);
+  assert.equal(h.requests.every(r => !r.url.endsWith("/api/auth/refresh-token")), true);
 });
-test("transient non-401 failures do not revoke locally stored credentials", async () => {
+test("transient API validation failure preserves the native bearer", async () => {
   const h = harness();
   const state = h.auth.issueState();
   assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state)])), true);
@@ -95,7 +100,7 @@ test("transient non-401 failures do not revoke locally stored credentials", asyn
   assert.equal(h.auth.token(), ACCESS);
   assert.equal(h.files.size, 1);
 });
-test("verified revoked refresh token clears local auth rather than adopting browser cookies", async () => {
+test("verified revoked bearer fails closed without adopting browser cookies", async () => {
   const h = harness();
   const state = h.auth.issueState();
   assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state)])), true);
@@ -103,6 +108,23 @@ test("verified revoked refresh token clears local auth rather than adopting brow
   assert.equal(await h.auth.renew(true), false);
   assert.equal(h.auth.token(), "");
   assert.equal(h.files.size, 0);
+});
+test("after expiry the native shell requires a fresh Chrome handoff instead of rotating the refresh family", async () => {
+  const h = harness();
+  const state = h.auth.issueState();
+  assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state)])), true);
+  h.setClock(2000000000000 + 10000);
+  assert.equal(await h.auth.renew(true), false);
+  assert.equal(h.auth.token(), "");
+  assert.equal(h.requests.every(r => !r.url.endsWith("/api/auth/refresh-token")), true);
+});
+test("encrypted native storage never contains a browser refresh token", async () => {
+  const h = harness();
+  const state = h.auth.issueState();
+  assert.equal(await h.auth.acceptCallback(h.auth.callback([link(state, { ...SESSION, refresh_token: "browser-only-secret" })])), true);
+  const storage = [...h.files.values()][0].toString();
+  assert.equal(storage.includes("browser-only-secret"), false);
+  assert.equal(storage.includes("refresh_token"), false);
 });
 test("if OS encryption is unavailable, native credentials stay memory only", async () => {
   const h = harness({ encryption: false });
