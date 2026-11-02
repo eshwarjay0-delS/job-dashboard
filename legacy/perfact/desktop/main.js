@@ -139,13 +139,18 @@ async function sessionFromTicketArgv(argv) {
   // because Chrome's short-lived access bearer has expired in transit.
   if (typeof handed.ownerId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(handed.ownerId))
     throw Error("Saved interview ticket has no verified account owner");
-  if (handed.token) {
-    const valid = await desktopAuth.acceptCallback({
-      access_token: handed.token, expires_at: handed.tokenExp
-    }, handed.ownerId);
-    if (!valid && desktopAuth.ownerId() !== handed.ownerId) beginChromeSignIn();
-  } else if (desktopAuth.ownerId() !== handed.ownerId || !desktopAuth.token()) {
-    beginChromeSignIn();
+  // A trusted laptop keeps its own renewable session. A new browser-issued
+  // interview ticket should not replace it with a short-lived Chrome bearer.
+  if (desktopAuth.ownerId() === handed.ownerId) await desktopAuth.renew(false);
+  if (desktopAuth.ownerId() !== handed.ownerId || !desktopAuth.token()) {
+    if (handed.token) {
+      const valid = await desktopAuth.acceptCallback({
+        access_token: handed.token, expires_at: handed.tokenExp
+      }, handed.ownerId);
+      if (!valid && desktopAuth.ownerId() !== handed.ownerId) beginChromeSignIn();
+    } else if (!desktopAuth.ownerId() || desktopAuth.ownerId() !== handed.ownerId) {
+      beginChromeSignIn();
+    }
   }
   // Keep this transfer pending until a verified Chrome callback proves the
   // exact same account; no account-agnostic local import or cookie fallback.
@@ -188,7 +193,11 @@ function deliverSession() {
   if (!win || win.isDestroyed()) return;
   const s = takeVerifiedSession();
   if (s) win.webContents.send("kompas:session", s);
-  else if (pendingSession) beginChromeSignIn();
+  else if (pendingSession && desktopAuth.ownerId() === pendingSession.ownerId) {
+    // Credential may have rotated while the display was sleeping; retry
+    // silently, preserve the pending session and do not pop Chrome.
+    void desktopAuth.renew(false).then(ok => { if (ok) deliverSession(); });
+  } else if (pendingSession && !desktopAuth.ownerId()) beginChromeSignIn();
 }
 
 // A saved place is used only if enough of it is still on some screen to grab; otherwise, as on a first launch,
@@ -536,13 +545,27 @@ async function serve(req) {
     if (token) headers.authorization = "Bearer " + token;
   }
   try {
-    return await net.fetch(targetOrigin() + rel + url.search, {
+    const body = hasBody ? await req.arrayBuffer() : undefined;
+    const forward = () => net.fetch(targetOrigin() + rel + url.search, {
       method: req.method,
       headers,
-      body: hasBody ? await req.arrayBuffer() : undefined,
+      body,
       cache: "no-store",
       redirect: isMarketFitApi ? "error" : "follow",
     });
+    const first = await forward();
+    // A concurrent expiry can race the initial request. Rotate the native
+    // session once and replay only an authentication-rejected API request.
+    // Never retry a successful mutation or loop on a second 401.
+    if (isMarketFitApi && first.status === 401 &&
+        !rel.startsWith("/api/auth/") && await desktopAuth.renew(true)) {
+      const renewed = desktopAuth.token();
+      if (renewed) {
+        headers.authorization = "Bearer " + renewed;
+        return await forward();
+      }
+    }
+    return first;
   } catch (err) {
     return new Response(JSON.stringify({ error: "Kompas could not reach " + targetOrigin() + ": " + (err && err.message || err) }),
       { status: 502, headers: { "content-type": "application/json" } });
@@ -621,7 +644,7 @@ function wireIpc() {
     if (!win || event.sender.id !== win.webContents.id ||
         !/^kompas:\/\/app\//i.test(String(event.senderFrame?.url || ""))) return null;
     const verified = takeVerifiedSession();
-    if (!verified && pendingSession) beginChromeSignIn();
+    if (!verified && pendingSession && !desktopAuth.ownerId()) beginChromeSignIn();
     return verified;
   });
   ipcMain.handle("kompas:refresh-auth", (event) => {
@@ -659,7 +682,7 @@ else {
         if (win.webContents.isLoading()) return;
         deliverSession();
         win.webContents.send("kompas:auth-ready");
-      } else if (!accepted) beginChromeSignIn();
+      } // Failed/expired callbacks stay silent; only an explicit reconnect opens Chrome.
       return;
     }
     let handed = sessionFromArgv(argv);
@@ -669,7 +692,7 @@ else {
     }
     if (handed) {
       pendingSession = handed;
-      if (handed.ownerId && (!desktopAuth.token() || desktopAuth.ownerId() !== handed.ownerId)) beginChromeSignIn();
+      if (handed.ownerId && desktopAuth.ownerId() !== handed.ownerId) beginChromeSignIn();
       const nextSite = siteFor(handed);
       if (nextSite !== activeSite) {
         activeSite = nextSite;
@@ -689,7 +712,7 @@ else {
     config = { onTop: true, isPrivate: typeof saved.isPrivate === "boolean" ? saved.isPrivate : true,
       bounds: saved.bounds || null, section: Number.isInteger(saved.section) ? saved.section : null,
       opacity, dock: typeof saved.dock === "string" && saved.dock ? saved.dock : null };
-    desktopAuth.load();
+    const hadSavedNativeAuth = desktopAuth.load();
     pendingSession = sessionFromArgv(process.argv);
     if (ticketFromArgv(process.argv)) {
       try { pendingSession = await sessionFromTicketArgv(process.argv); }
@@ -702,9 +725,13 @@ else {
     lockDownSession();
     wireIpc();
     createWindow();
-    // Reuse the browser login already present. On first install the shell has
-    // no cookie jar, so initiate a state-bound handoff only when renewal fails.
-    void desktopAuth.renew(false).then(ok => { if (!ok && !desktopAuth.token()) beginChromeSignIn(); });
+    // First installation: establish the trusted Windows device once.
+    // Thereafter silently rotate its separately encrypted refresh family.
+    // Network loss, an expired bearer and wake-up must never open browser
+    // sign-in over an ongoing interview. Revocation still blocks private APIs.
+    void desktopAuth.renew(false).then(() => {
+      if (!hadSavedNativeAuth && !desktopAuth.ownerId()) beginChromeSignIn();
+    });
     const later = () => setTimeout(bringBack, 400);
     for (const ev of ["display-removed", "display-added", "display-metrics-changed"]) screen.on(ev, later);
     for (const ev of ["resume", "unlock-screen"]) powerMonitor.on(ev, later);
