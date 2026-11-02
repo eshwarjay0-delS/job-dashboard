@@ -37,8 +37,8 @@ export default function DesktopSignIn() {
       // First authorization establishes a NEW encrypted native session family.
       // Chrome retains its own rotating refresh token. Neither client shares
       // refresh credentials, so reopening Kompas needs no repeated web sign-in.
-      let desktopPayload: Record<string, string | number> = {
-        access_token: session.access_token, expires_at: session.expires_at || 0
+      let desktopPayload = {
+        token_hash: "", access_token: session.access_token, expires_at: session.expires_at || 0
       }
       try {
         const issued = await fetch("/api/auth/desktop-session/issue", {
@@ -49,7 +49,7 @@ export default function DesktopSignIn() {
         if (issued.ok) {
           const grant = await issued.json()
           if (grant?.ok === true && /^[a-f0-9]{64}$/.test(grant.token_hash))
-            desktopPayload = { token_hash: grant.token_hash }
+            desktopPayload = { token_hash: grant.token_hash, access_token: "", expires_at: 0 }
         }
       } catch {
         // Maintain the verified old bearer handoff when the device-grant route
