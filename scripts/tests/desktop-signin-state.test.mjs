@@ -26,7 +26,7 @@ async function visit(search, session = { access_token: 'aaa.bbb.ccc', refresh_to
 
 test('the desktop link carries back the state the desktop opened the page with', async () => {
   const link = await visit('?state=' + STATE)
-  assert.match(link, /^kompas:\/\/auth\?d=[A-Za-z0-9_-]+&state=/)
+  assert.match(link, /^marketfit-kompas:\/\/auth\?d=[A-Za-z0-9_-]+&state=/)
   assert.equal(new URL(link).searchParams.get('state'), STATE)
   assert.equal(JSON.parse(Buffer.from(new URL(link).searchParams.get('d'), 'base64url').toString()).access_token, 'aaa.bbb.ccc', 'the session itself is unchanged')
 })
@@ -34,7 +34,7 @@ test('the desktop link carries back the state the desktop opened the page with',
 test('a missing or malformed state is left off the link, as an older desktop expects', async () => {
   for (const search of ['', '?state=', '?state=short', '?state=' + 'a'.repeat(129), '?state=' + encodeURIComponent(STATE + '"><x'), '?state=' + encodeURIComponent(STATE + '&d=other')]) {
     const link = await visit(search)
-    assert.match(link, /^kompas:\/\/auth\?d=[A-Za-z0-9_-]+$/, search)
+    assert.match(link, /^marketfit-kompas:\/\/auth\?d=[A-Za-z0-9_-]+$/, search)
   }
 })
 
@@ -75,7 +75,7 @@ test('the handoff reruns itself silently on both schemes, with no second navigat
   vm.runInContext(helpers + '\n' + effect, context)
   await new Promise(resolve => setTimeout(resolve, 0))
   assert.equal(went.length, 1)
-  assert.match(went[0], /^kompas:\/\/auth\?d=[A-Za-z0-9_-]+&state=/)
+  assert.match(went[0], /^marketfit-kompas:\/\/auth\?d=[A-Za-z0-9_-]+&state=/)
   assert.ok(timerFn, 'retry loop scheduled')
   timerFn(); timerFn(); timerFn()
   assert.equal(srcs.length, 3)
