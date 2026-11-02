@@ -3,6 +3,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
+import mammoth from 'mammoth'
 import { checkRoundTrip, docxText } from '../../src/lib/resume-round-trip-guard.ts'
 import { buildKeywordReport } from '../../src/lib/resume-keyword-report.ts'
 
@@ -21,6 +22,32 @@ test('roundtrip: name changed fails', () => {
   const r = checkRoundTrip(SRC, SRC.replace('Alex Example', 'Alexander Example'))
   assert.equal(r.ok, false); assert.ok(r.problems.some(p => /name/i.test(p)))
 })
+test('roundtrip: same-paragraph header title may change while protected name stays identical', () => {
+  const source = SRC.replace('Alex Example\n', 'Alex Example | Security Engineer\n')
+  const output = source.replace('Alex Example | Security Engineer', 'Alex Example | Cloud Security Consultant')
+  assert.equal(checkRoundTrip(source, output).ok, true)
+})
+test('roundtrip: same-paragraph em dash header title may change', () => {
+  const source = SRC.replace('Alex Example\n', 'Alex Example — Security Engineer\n')
+  const output = source.replace('Alex Example — Security Engineer', 'Alex Example — Cloud Security Consultant')
+  assert.equal(checkRoundTrip(source, output).ok, true)
+})
+test('roundtrip: protected name mutation still fails inside same-paragraph header', () => {
+  const source = SRC.replace('Alex Example\n', 'Alex Example | Security Engineer\n')
+  const output = source.replace('Alex Example | Security Engineer', 'Alexander Example | Cloud Security Consultant')
+  assert.ok(checkRoundTrip(source, output).problems.some(p => p.startsWith('name changed')))
+})
+test('roundtrip: changed contact still fails even when header title changes', () => {
+  const source = SRC.replace('Alex Example\n', 'Alex Example | Security Engineer\n')
+  const output = source.replace('Alex Example | Security Engineer', 'Alex Example | Cloud Security Consultant')
+    .replace('alex.example@example.com', 'alex.changed@example.com')
+  assert.equal(checkRoundTrip(source, output).ok, false)
+})
+test('roundtrip: ambiguous single-token header prefix is not silently trusted', () => {
+  const source = SRC.replace('Alex Example\n', 'Alex | Example Engineer\n')
+  const output = source.replace('Alex | Example Engineer', 'Alex | Cloud Consultant')
+  assert.equal(checkRoundTrip(source, output).ok, false)
+})
 test('roundtrip: email changed fails', () => { assert.equal(checkRoundTrip(SRC, SRC.replace('alex.example@', 'alex.ex@')).ok, false); })
 test('roundtrip: phone changed fails', () => { assert.equal(checkRoundTrip(SRC, SRC.replace('010-1234', '010-1235')).ok, false); })
 test('roundtrip: phone reformatted only passes', () => { assert.equal(checkRoundTrip(SRC, SRC.replace('(555) 010-1234', '555-010-1234')).ok, true); })
@@ -37,6 +64,28 @@ test('roundtrip: docxText reads a .docx', async () => {
   const zip = new JSZip(); zip.file('word/document.xml', xml)
   const t = await docxText(await zip.generateAsync({ type: 'nodebuffer' }))
   assert.match(t, /^Alex Example\n/); assert.match(t, /& \(555\)/)
+})
+
+
+async function syntheticWordDocx(paragraphs) {
+  const xmlEscape = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const zip = new JSZip()
+  zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
+  zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>')
+  zip.file('word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>')
+  zip.file('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + paragraphs.map(p => '<w:p><w:r><w:t xml:space="preserve">' + xmlEscape(p) + '</w:t></w:r></w:p>').join('') + '</w:body></w:document>')
+  return zip.generateAsync({ type: 'nodebuffer' })
+}
+test('roundtrip: actual DOCX Mammoth extraction allows title edit but preserves protected name, contacts and repeated dates', async () => {
+  const original = await syntheticWordDocx(['Alex Example | Security Engineer', 'alex.example@example.com | 555-010-1234 | linkedin.com/in/alex-example', 'Example Corp — Jan 2020 – Present', 'Sample LLC — Jan 2020 – Dec 2021'])
+  const edited = await syntheticWordDocx(['Alex Example | IT Governance Consultant', 'alex.example@example.com | 555-010-1234 | linkedin.com/in/alex-example', 'Example Corp — Jan 2020 – Present', 'Sample LLC — Jan 2020 – Dec 2021'])
+  const originalText = (await mammoth.extractRawText({ buffer: original })).value
+  const editedText = (await mammoth.extractRawText({ buffer: edited })).value
+  assert.equal(checkRoundTrip(originalText, editedText).ok, true)
+  const renamed = await syntheticWordDocx(['Alexander Example | IT Governance Consultant', 'alex.example@example.com | 555-010-1234 | linkedin.com/in/alex-example', 'Example Corp — Jan 2020 – Present', 'Sample LLC — Jan 2020 – Dec 2021'])
+  assert.ok(checkRoundTrip(originalText, (await mammoth.extractRawText({ buffer: renamed })).value).problems.some(p => p.startsWith('name changed')))
+  const missingDate = await syntheticWordDocx(['Alex Example | IT Governance Consultant', 'alex.example@example.com | 555-010-1234 | linkedin.com/in/alex-example', 'Example Corp — Jan 2020 – Present', 'Sample LLC — Feb 2020 – Dec 2021'])
+  assert.ok(checkRoundTrip(originalText, (await mammoth.extractRawText({ buffer: missingDate })).value).problems.some(p => p.startsWith('date')))
 })
 
 const R = 'Built Python services, C++ engines and .NET apps. Ran CI-CD pipelines.'
