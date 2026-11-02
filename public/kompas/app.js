@@ -3016,10 +3016,10 @@ function onCaptionText(text) {
     lastCaption = r.next;
     if (!r.part) return;
     if (!captionAnnounced) { captionAnnounced = true; status("Caption capture connected — captions flow into the question box.", "live"); }
-    onTranscript("Them", r.part, false, Date.now());
+    onTranscript("Them", r.part, false, Date.now(), "caption");
   } catch {}
 }
-function onTranscript(who, text, lookedAgain, spokenAt) {
+function onTranscript(who, text, lookedAgain, spokenAt, intakeSource = "") {
   text = fixTerms(fixPhrases(text));
   if (who === "Them") noteThem(text, spokenAt);
   else if (who === "You" && captures.some(c => c.who === "Them")) {
@@ -3029,7 +3029,7 @@ function onTranscript(who, text, lookedAgain, spokenAt) {
   }
   logDecision(who === questionSource() ? "keep-can-open" : "keep-context", who, text);
   if (who === "You" && follow.on && !follow.sr) followHear(text, true);   // Follow along without live recognition
-  transcript.push({ who, text, at: Date.now(), seq: ++heardSeq });
+  transcript.push({ who, text, at: Date.now(), seq: ++heardSeq, ...(intakeSource === "caption" ? { fromCaption: true } : {}) });
   if (!answerCtl) {
     const shown = cards[idx] && (typeof cards[idx].answer === "string" ? cards[idx].answer : "");
     const draft = heardDraft(pendingHeard(), cards[idx] && cards[idx].question, shown);
@@ -3628,6 +3628,26 @@ async function aiAnswer(fromAuto, options = {}) {
   aiBusy = true; aiBusySince = Date.now(); clearTimeout(autoTimer);
   try {
     const sessionEpoch = transcriptionEpoch;
+    // Caption Capture is a deliberately frozen, already-read question. Do not
+    // wait for the microphone's trailing 250–1500 ms audio flush or combine
+    // its unrelated words with the selected Windows caption. The normal
+    // grounded answer service still receives the session/resume/JD/history.
+    if (options.captionOnce) {
+      const field = $("manualInput");
+      const frozen = String(field?.value || "").trim();
+      if (!frozen || sessionEpoch !== transcriptionEpoch) {
+        status("No caption question is ready for this session.", "err");
+        return;
+      }
+      field.value = "";
+      const page = addCard(frozen, ["…"]);
+      page.heard = "Them (Windows Live Captions): " + frozen;
+      page.formed = page.heard;
+      page.screenTask = true;
+      logEvent({ t: "line", who: "Them (Windows caption)", text: frozen });
+      showPressed(page, frozen);
+      return await generateAnswer(frozen, page, { pinned: true, derived: frozen, source: "caption-window" });
+    }
     if ((running && captures.length) || finals.size) {
       flushing = true; if (!fromAuto) status("Catching your last words…", "live");
       try { await flushHeard(options.captionOnce ? 250 : 1500); } catch { /* words already written still get answered */ }
@@ -3642,6 +3662,23 @@ async function aiAnswer(fromAuto, options = {}) {
     let pending = turnWindow(pendingHeard(), questionSource(), t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
+    // The native caption bridge preserves fragments immediately as they roll
+    // away from the Windows panel. Prefer the explicit ask over subsequent
+    // narration, without waiting for a model-based question-derivation call.
+    const captionLines = pending.filter(t => t.fromCaption && t.who === "Them");
+    if (!typedText && captionLines.length) {
+      const focused = window.KompasCaptionFocus?.pick(captionLines.map(t => t.text).join(" ")) || "";
+      if (focused && focused.split(/\s+/).length >= 4) {
+        answeredSeq = heardSeq; updatePending();
+        const page = addCard(focused, ["…"]);
+        page.heard = captionLines.map(t => "Them: " + t.text).join("\n");
+        page.formed = page.heard;
+        page.formSeq = captionLines[0].seq;
+        page.screenTask = true;
+        showPressed(page, focused);
+        return await generateAnswer(focused, page, { pinned: true, derived: focused, source: "caption-window" });
+      }
+    }
     // Answer anyway (slice 2): a press right after "Nothing question-like" answers those same lines.
     let anyway = false;
     try { const back = answerAnywayLines(answerAnywayHeld, { fromAuto, pending: pending.length, typed: typedText, now: Date.now() }); if (back) { pending = back; anyway = true; logDecision("answer-anyway", questionSource(), back.map(t => t.text).join(" ")); } } catch {}
