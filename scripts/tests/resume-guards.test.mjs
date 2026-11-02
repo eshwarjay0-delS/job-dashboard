@@ -66,3 +66,39 @@ test('keywords: Java not matched inside JavaScript', () => {
   const r = buildKeywordReport({ jobTerms: ['Java'], resumeText: 'JavaScript', supportedTerms: [] })
   assert.deepEqual(r.covered, [])
 })
+
+
+test('roundtrip: equivalent month and date presentation passes', () => {
+  const out = SRC.replace('Jan 2020', '01/2020').replace('03/2017', 'Mar 2017').replace('12/2019', '2019-12')
+  assert.equal(checkRoundTrip(SRC, out).ok, true)
+})
+test('roundtrip: harmless URL scheme and trailing slash formatting passes', () => {
+  const out = SRC.replace('linkedin.com/in/alex-example', 'https://www.linkedin.com/in/alex-example/')
+  assert.equal(checkRoundTrip(SRC, out).ok, true)
+})
+test('roundtrip: whitespace reflow outside the first name line passes', () => {
+  const out = SRC.replace(' | (555)', '\\n(555)').replace(' | linkedin.com', '\\nlinkedin.com')
+  assert.equal(checkRoundTrip(SRC, out).ok, true)
+})
+test('roundtrip: duplicate email removed is detected', () => {
+  const src = SRC + '\\nBackup: alex.example@example.com'
+  assert.equal(checkRoundTrip(src, SRC).ok, false)
+})
+test('roundtrip: duplicate date removed is detected', () => {
+  const src = SRC + '\\nProject completed Jan 2020'
+  assert.equal(checkRoundTrip(src, SRC).ok, false)
+})
+test('roundtrip: added date is detected even when experience dates survive', () => {
+  const out = SRC + '\\nAdditional certification completed in 2026'
+  assert.equal(checkRoundTrip(SRC, out).ok, false)
+})
+test('roundtrip: a changed name still fails despite matching contacts and dates', () => {
+  const out = SRC.replace('Alex Example', 'Alexandra Example')
+  assert.ok(checkRoundTrip(SRC, out).problems.some(p => p.startsWith('name changed')))
+})
+test('WhatsApp refusal explains all guarded categories without alleging a name change', async () => {
+  const {readFileSync} = await import('node:fs')
+  const route = readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8')
+  assert.match(route, /identity, contact, or date verification failed/)
+  assert.doesNotMatch(route, /The draft changed the name or email on the resume/)
+})
