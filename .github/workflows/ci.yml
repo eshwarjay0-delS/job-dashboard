@@ -39,6 +39,13 @@ jobs:
         run: npx tsc --noEmit --skipLibCheck
         continue-on-error: false
 
+      - name: Verify one-click Caption Capture and 50-fold question/spelling regression
+        run: |
+          node --check public/kompas/caption-once.js
+          node --check legacy/perfact/desktop/main.js
+          node --check legacy/perfact/desktop/preload.js
+          node --test scripts/tests/kompas-caption-once-50fold.test.mjs scripts/tests/kompas-desktop-screen-action.test.mjs
+
       - name: Verify 20 full interviewer questions, silent desktop auth and exact release stamp
         run: node --test scripts/tests/kompas-full-question-desktop-reopen-20fold.test.mjs scripts/tests/kompas-desktop-auth-live-continuity.test.mjs scripts/tests/kompas-desktop-release-stamp.test.mjs
 

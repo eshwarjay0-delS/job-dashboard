@@ -4,7 +4,7 @@ export default function KompasDesktopDownload() {
   // Prefer a public release host (R2) when configured. Until then the private
   // perfACT release lets the authorized owner install the same proven desktop.
   const publicDesktopUrl = (process.env.KOMPAS_DESKTOP_URL || "").trim();
-  const desktopUrl = publicDesktopUrl || "https://github.com/eshwarjay0-delS/parfAct/releases/download/desktop-latest/Kompas.exe";
+  const desktopUrl = publicDesktopUrl || "https://github.com/eshwarjay0-delS/job-dashboard/releases/download/kompas-desktop-latest/Kompas.exe";
   const privateRelease = !publicDesktopUrl;
 
   return (

@@ -11,7 +11,7 @@ test("desktop live toolbar contains Screen Answer immediately next to AI Answer"
   const screen = html.indexOf('id="screenCaptureAnswerBtn"')
   const auto = html.indexOf('id="autoBtn"')
   assert.ok(answer > 0 && screen > answer && auto > screen)
-  assert.match(html, /id="screenCaptureAnswerBtn"[^>]*title="Capture the current screen[^"]*"/)
+  assert.match(html, /id="screenCaptureAnswerBtn"[^>]*title="Caption Capture:[^"]*"/)
 })
 test("screen capture is enabled in desktop even when computer audio is unsupported", () => {
   const audioBlock = app.slice(app.indexOf("const NO_SYS_AUDIO"), app.indexOf("function syncSrc()"))
@@ -21,7 +21,10 @@ test("screen capture is enabled in desktop even when computer audio is unsupport
 })
 test("visible button, menu and keyboard shortcut share the same capture flow", () => {
   assert.match(app, /\$\("screenBtn"\)\.onclick = analyseScreen/)
-  assert.match(app, /\$\("screenCaptureAnswerBtn"\)\.onclick = analyseScreen/)
+  const caption = readFileSync("public/kompas/caption-once.js", "utf8")
+  assert.match(html, /caption-once\.js\?v=/)
+  assert.match(caption, /button\.onclick = \(\) => \{ void capture\(\); \}/)
+  assert.match(caption, /await aiAnswer\(false, \{ captionOnce: true \}\)/)
   assert.match(app, /e\.ctrlKey && e\.shiftKey && \(e\.key === "S" \|\| e\.key === "s"\)/)
   assert.match(app, /async function analyseScreen\(\)/)
   assert.doesNotMatch(app, /window\.KompasScreenReview\(\{/)

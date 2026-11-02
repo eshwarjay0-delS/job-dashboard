@@ -46,8 +46,8 @@ if (process.env.KOMPAS_DEBUG_PORT) app.commandLine.appendSwitch("remote-debuggin
 
 const PERFACT_API_ORIGIN = (process.env.KOMPAS_API_URL || "https://perfact-ten.vercel.app").replace(/\/+$/, "");
 const MARKETFIT_API_ORIGIN = "https://job-dashboard-fawn.vercel.app";
-let activeSite = "perfact";
-const siteFor = (s) => s && s.site === "marketfit" ? "marketfit" : "perfact";
+let activeSite = "marketfit";
+const siteFor = (s) => s && s.site === "perfact" ? "perfact" : "marketfit";
 const appPathFor = () => activeSite === "marketfit" ? "/kompas/index.html" : "/index.html";
 const targetOrigin = () => activeSite === "marketfit" ? MARKETFIT_API_ORIGIN : PERFACT_API_ORIGIN;
 const ORIGIN = "kompas://app";
@@ -490,6 +490,34 @@ function lockDownSession() {
   ses.protocol.handle("kompas", serve);
 }
 
+// One user action = one capture. The native desktop chooses ONLY a window,
+// preferring the uniquely named Windows Live Captions panel; no background
+// polling, recording, full-screen grab, or reuse of an old frame.
+function isWindowsLiveCaption(name) {
+  return /^(?:windows\s+)?live[\s-]*captions?(?:$|[\s—-])/i.test(String(name || "").trim());
+}
+async function captionSnapshotOnce() {
+  const sources = await desktopCapturer.getSources({ types: ["window"], thumbnailSize: { width: 1600, height: 900 }, fetchWindowIcons: false });
+  const windows = sources.filter(src => src.id && src.name && !/^Kompas(?:\s|$)/i.test(src.name));
+  if (!windows.length) throw new Error("No capturable window was found. Open Windows Live Captions and retry.");
+  const matched = windows.filter(w => isWindowsLiveCaption(w.name));
+  let target = matched.length === 1 ? matched[0] : null;
+  if (!target) {
+    const options = windows.slice(0, 12);
+    const choice = await dialog.showMessageBox(win, {
+      type: "question", title: "Caption Capture", message: "Choose the window to capture once",
+      detail: "Only the selected window will be sent for question recognition.",
+      buttons: [...options.map(w => w.name.slice(0, 64)), "Cancel"], cancelId: options.length, noLink: true,
+    });
+    if (choice.response >= options.length) throw new Error("Window capture cancelled");
+    target = options[choice.response];
+  }
+  if (!target.thumbnail || target.thumbnail.isEmpty()) throw new Error("The selected window is blank or protected from capture");
+  const jpeg = target.thumbnail.toJPEG(78);
+  if (!jpeg.length || jpeg.length > 2200000) throw new Error("The chosen window image exceeds capture limits");
+  return { image: "data:image/jpeg;base64," + jpeg.toString("base64"),
+    source: "window", name: target.name, capturedAt: Date.now() };
+}
 function wireIpc() {
   ipcMain.on("kompas:collapse", (_e, on) => setCollapsed(typeof on === "boolean" ? on : !collapsed));
   ipcMain.on("kompas:close", () => win && win.close());
@@ -506,6 +534,10 @@ function wireIpc() {
   ipcMain.handle("kompas:get-private", () => !!config.isPrivate);
   ipcMain.handle("kompas:set-private", (_e, on) => setPrefs({ isPrivate: !!on }).isPrivate);
   ipcMain.handle("kompas:take-session", () => { const s = pendingSession; pendingSession = null; return s; });
+  ipcMain.handle("kompas:caption-once", (event) => {
+    if (!win || event.sender.id !== win.webContents.id || !/^kompas:\/\/app\/kompas\//i.test(String(event.senderFrame?.url || ""))) throw new Error("Invalid caption capture caller");
+    return captionSnapshotOnce();
+  });
 }
 
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -536,7 +568,7 @@ else {
     pendingSession = sessionFromArgv(process.argv);
     // The installer page opens marketfit-kompas://open without an interview
     // payload. Route that first launch into MarketFit instead of perfACT.
-    activeSite = pendingSession ? siteFor(pendingSession) : (startedForMarketFit ? "marketfit" : "perfact");
+    activeSite = pendingSession ? siteFor(pendingSession) : "marketfit";
     Menu.setApplicationMenu(null);
     lockDownSession();
     wireIpc();

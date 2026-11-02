@@ -3575,7 +3575,7 @@ function emptyPressReason(anyCapture, wantSys, hasThemCap, themSilent) {
   if (hasThemCap) return "Kompas hears the call audio but nothing has been transcribed yet — keep playing, then press AI Answer again.";
   return "Nothing heard yet — press Start, or type a question.";
 }
-async function aiAnswer(fromAuto) {
+async function aiAnswer(fromAuto, options = {}) {
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
     else { status("Still working on the last answer — one moment.", "live"); return; }
@@ -3585,7 +3585,7 @@ async function aiAnswer(fromAuto) {
     const sessionEpoch = transcriptionEpoch;
     if ((running && captures.length) || finals.size) {
       flushing = true; if (!fromAuto) status("Catching your last words…", "live");
-      try { await flushHeard(1500); } catch { /* words already written still get answered */ }
+      try { await flushHeard(options.captionOnce ? 250 : 1500); } catch { /* words already written still get answered */ }
       finally { flushing = false; }
     }
     if (sessionEpoch !== transcriptionEpoch) return;
