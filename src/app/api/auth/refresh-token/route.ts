@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   const s = data.session;
   return NextResponse.json(
     {
-      ok: true,
+      ok: true, userId: s.user.id,
       // Property names are computed on purpose: a secret-scanning filter in
       // the editing pipeline mangles literal token assignments in this file.
       ["access" + "_token"]: s.access_token,
