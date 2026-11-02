@@ -124,3 +124,10 @@ test('WhatsApp refine: missing original and failed identity verification have di
   assert.match(route, /if \(!\(await sameResumeFacts\(source, file\)\)\) \{\s*return sendText\(from, "The update failed identity\/contact\/date verification, so I stopped delivery\. No file was sent\."\)/)
   assert.doesNotMatch(route, /The update changed the resume.s contact email, so I stopped delivery/)
 })
+
+test('resume identity: email-only mismatch logs category without exposing addresses', () => {
+  const identity = readFileSync(new URL('../../src/lib/resume-identity.ts', import.meta.url), 'utf8')
+  assert.match(identity, /if \(emails\(source\) !== emails\(output\)\) \{[\s\S]*?categories: \["email"\][\s\S]*?return false/)
+  assert.doesNotMatch(identity, /console\.error\([^\n]*(?:emails\(source\)|emails\(output\)|sourceText|outputText)/)
+  assert.equal(checkRoundTrip(SRC, SRC.replace('alex.example@example.com', 'other@example.com')).ok, false)
+})
