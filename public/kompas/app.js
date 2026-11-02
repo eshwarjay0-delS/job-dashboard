@@ -1150,7 +1150,8 @@ let sysAttempt = 0;
 function syncSrc() {
   // The speaker icon reports the ACTUAL capture track while a session runs,
   // not merely the requested toggle. Before Start it reports readiness only.
-  const sysLive = running && captures.some(c => c.who === "Them");
+  const sysLive = running && captures.some(c => c.who === "Them" && !c.stopped &&
+    c.stream?.getAudioTracks?.().some(track => track.readyState === "live"));
   const sysShownOn = running ? sysLive : srcOn.sys;
   const sysState = !running ? (srcOn.sys ? "ready for next Start" : "off")
     : sysLive ? "listening" : sysConnecting ? "connecting…" : "off";
