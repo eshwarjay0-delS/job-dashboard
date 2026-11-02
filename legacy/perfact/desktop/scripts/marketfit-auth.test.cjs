@@ -174,7 +174,7 @@ test("expired native access can only resume after a verified same-account callba
   assert.equal(h.auth.token(), NEXT);
 });
 test("canonical Windows handoff retains the account-scoped session until validated", () => {
-  const main = require("node:fs").readFileSync("legacy/perfact/desktop/main.js", "utf8");
+  const main = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "main.js"), "utf8");
   assert.match(main, /pendingSession\.ownerId/);
   assert.match(main, /desktopAuth\.ownerId\(\) !== pendingSession\.ownerId/);
   assert.match(main, /deliverSession\(\)/);
@@ -183,7 +183,7 @@ test("canonical Windows handoff retains the account-scoped session until validat
 });
 
 test("native take-session IPC and webContents delivery share the same owner gate", () => {
-  const main = require("node:fs").readFileSync("legacy/perfact/desktop/main.js", "utf8");
+  const main = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "main.js"), "utf8");
   assert.match(main, /function takeVerifiedSession\(\)/);
   assert.match(main, /desktopAuth\.ownerId\(\) !== pendingSession\.ownerId/);
   assert.match(main, /ipcMain\.handle\("kompas:take-session", \(event\) => \{/);
