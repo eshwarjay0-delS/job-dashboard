@@ -1151,7 +1151,49 @@ function syncSrc() {
   $("sysBtn").title = "Computer audio (interviewer) — " + (srcOn.sys ? "on" : "off");
 }
 $("micBtn").onclick = async () => { srcOn.mic = !srcOn.mic; syncSrc(); if (running) { if (srcOn.mic) await startMic(); else stopSource("You"); reportSources(); } };
-$("sysBtn").onclick = async () => { srcOn.sys = !srcOn.sys; syncSrc(); if (running) { if (srcOn.sys) await startSys(); else stopSource("Them"); reportSources(); } };
+// Do not present a requested computer-audio toggle as a verified capture.
+// Keep the status visible during the browser/Electron permission handshake.
+let sysConnecting = false;
+$("sysBtn").onclick = async () => {
+  if (sysConnecting) return;
+  if (!running) {
+    srcOn.sys = !srcOn.sys;
+    syncSrc();
+    status("Computer audio " + (srcOn.sys ? "armed — starts when listening begins" : "disabled") + ".", "live");
+    return;
+  }
+  if (!srcOn.sys) {
+    srcOn.sys = true;
+    sysConnecting = true;
+    $("sysBtn").disabled = true;
+    $("sysBtn").title = "Computer audio (interviewer) — connecting";
+    status("Connecting computer audio — allow Windows/browser sharing if prompted…", "live");
+    try {
+      await startSys();
+      const active = captures.some(c => c.who === "Them" && c.stream?.getAudioTracks().some(t => t.readyState === "live"));
+      if (!active) {
+        srcOn.sys = false;
+        syncSrc();
+        status("Computer audio unavailable. " + (captureErrors.slice(-1)[0] || "No live audio track was received; check Windows capture permissions and selected output device."), "err");
+      } else {
+        status("Computer audio connected — interviewer audio track is live.", "live");
+      }
+    } catch (error) {
+      srcOn.sys = false;
+      syncSrc();
+      status("Computer audio failed: " + (error?.message || "unknown capture error"), "err");
+    } finally {
+      sysConnecting = false;
+      $("sysBtn").disabled = false;
+      syncSrc();
+    }
+  } else {
+    srcOn.sys = false;
+    stopSource("Them");
+    syncSrc();
+    status("Computer audio disconnected.", "live");
+  }
+};
 syncSrc();
 /* Look: paper stays the default. Opacity fades backgrounds only. Letters, including bold words, stay full ink. */
 const LOOK_FONTS = {
