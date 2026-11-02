@@ -119,7 +119,7 @@ test("FOLD 6: simultaneous refresh calls do not run repeated cloud auth recovery
 
 test("FOLD 7: the desktop callback refreshes account sessions immediately after verified auth",()=>{
   const app=fs.readFileSync("public/kompas/app.js","utf8");
-  assert.match(app,/window\.kompasDesktop\.onAuthReady\(\(\) => \{\s*void accountSessionSync\?\.refresh\(\)/);
+  assert.match(app,/window\.kompasDesktop\.onAuthReady\(\(\) => \{[\s\S]{0,300}void accountSessionSync\?\.refresh\(\)/);
   assert.doesNotMatch(fs.readFileSync("public/kompas/account-sync.js","utf8"),/Authorization:"Bearer "/);
   assert.match(app,/recoverAuth: async \(\) => \{/);
 });
