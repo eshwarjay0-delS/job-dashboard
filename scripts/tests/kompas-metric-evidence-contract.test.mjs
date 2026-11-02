@@ -49,7 +49,7 @@ test("live answer policy excludes JD numbers and model transcripts from achieved
   assert.match(audienceSource, /a JD, question, prior AI answer, fictional scenario/i)
   assert.match(serviceSource, /\$\{EVIDENCE_POLICY\}/)
   assert.match(serviceSource, /sessionFacts\(resumeSrc, docsSrc\)/)
-  assert.match(serviceSource, /Never invent a count, percentage, duration, before\\/after figure, or an unsupported qualitative result/)
+  assert.ok(serviceSource.includes("Never invent a count, percentage, duration, before/after figure, or an unsupported qualitative result"))
   assert.doesNotMatch(serviceSource, /cut the queue to something the team could clear by lunch/)
 })
 
