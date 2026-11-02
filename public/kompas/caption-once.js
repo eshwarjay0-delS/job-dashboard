@@ -64,6 +64,7 @@
       // A deliberate capture is the only source for this answer. Do not join
       // an unrelated mic transcript or an earlier question in the input.
       input.value = focused;
+      if (input.dataset) input.dataset.captionRaw = corrected;
       setChat(true);
       status("Caption recognized in " + Math.round(performance.now() - begun) +
         " ms; answering with the existing session context.", "live");
