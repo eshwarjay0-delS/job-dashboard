@@ -2114,9 +2114,7 @@ function showCaption(who, text, isInterim) {
   $("capWho").textContent = who === "You" ? "You" : "Them";
   const captionText = $("capText");
   captionText.textContent = text;
-  // Keep the most recent three wrapped lines visible, not the first three
-  // of a caption whose earlier words have already scrolled off Windows.
-  captionText.scrollTop = captionText.scrollHeight;
+  captionText.scrollTop = captionText.scrollHeight; // show latest three lines
   const box = el.closest(".q"); if (box) { box.classList.add("live"); box.scrollTop = box.scrollHeight; }
   const card = $("card");
   if (who === "Them" && card && card.classList.contains("q-away") && !(cards[idx] && cards[idx].streaming)) card.classList.remove("q-away");
@@ -3021,10 +3019,10 @@ function onCaptionText(text) {
     lastCaption = r.next;
     if (!r.part) return;
     if (!captionAnnounced) { captionAnnounced = true; status("Caption capture connected — captions flow into the question box.", "live"); }
-    onTranscript("Them", r.part, false, Date.now(), "caption");
+    onTranscript("Them", r.part, false, Date.now());
   } catch {}
 }
-function onTranscript(who, text, lookedAgain, spokenAt, intakeSource = "") {
+function onTranscript(who, text, lookedAgain, spokenAt) {
   text = fixTerms(fixPhrases(text));
   if (who === "Them") noteThem(text, spokenAt);
   else if (who === "You" && captures.some(c => c.who === "Them")) {
@@ -3034,7 +3032,7 @@ function onTranscript(who, text, lookedAgain, spokenAt, intakeSource = "") {
   }
   logDecision(who === questionSource() ? "keep-can-open" : "keep-context", who, text);
   if (who === "You" && follow.on && !follow.sr) followHear(text, true);   // Follow along without live recognition
-  transcript.push({ who, text, at: Date.now(), seq: ++heardSeq, ...(intakeSource === "caption" ? { fromCaption: true } : {}) });
+  transcript.push({ who, text, at: Date.now(), seq: ++heardSeq });
   if (!answerCtl) {
     const shown = cards[idx] && (typeof cards[idx].answer === "string" ? cards[idx].answer : "");
     const draft = heardDraft(pendingHeard(), cards[idx] && cards[idx].question, shown);
@@ -3626,12 +3624,6 @@ function emptyPressReason(anyCapture, wantSys, hasThemCap, themSilent) {
   return "Nothing heard yet — press Start, or type a question.";
 }
 async function aiAnswer(fromAuto, options = {}) {
-  // Kept WITHIN aiAnswer because the headless interview-baseline runner
-  // extracts and replays this function without neighboring globals.
-  const focusSpokenQuestion = text => {
-    try { return (typeof window !== "undefined" ? window.KompasCaptionFocus?.pick(text) : "") || ""; }
-    catch { return ""; }
-  };
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
     else { status("Still working on the last answer — one moment.", "live"); return; }
@@ -3639,10 +3631,8 @@ async function aiAnswer(fromAuto, options = {}) {
   aiBusy = true; aiBusySince = Date.now(); clearTimeout(autoTimer);
   try {
     const sessionEpoch = transcriptionEpoch;
-    // Caption Capture is a deliberately frozen, already-read question. Do not
-    // wait for the microphone's trailing 250–1500 ms audio flush or combine
-    // its unrelated words with the selected Windows caption. The normal
-    // grounded answer service still receives the session/resume/JD/history.
+    // The one-shot caption snapshot is independent of voice dictation.
+    // Never flush or change microphone/audio history for a frozen caption.
     if (options.captionOnce) {
       const field = $("manualInput");
       const frozen = String(field?.value || "").trim();
@@ -3656,22 +3646,13 @@ async function aiAnswer(fromAuto, options = {}) {
       const page = addCard(frozen, ["…"]);
       page.heard = "Them (Windows Live Captions): " + completeCaption;
       page.formed = page.heard;
-      // Keep the original visible words for audit and follow-up; only the
-      // already focused question is pinned as the answer's actual ask.
       logEvent({ t: "line", who: "Them (Windows caption)", text: completeCaption });
       showPressed(page, frozen);
       return await generateAnswer(frozen, page, { pinned: true, derived: frozen, source: "caption-window" });
     }
-    // A completed, already-transcribed interviewer ask should not wait an
-    // additional 1.5 seconds for *later* background speech. The captured
-    // transcript is stable; keep any queued voice decoding in the normal path
-    // if the question has not actually finished yet.
-    const spoken = pendingHeard().filter(t => t.who === questionSource()).map(t => t.text).join(" ");
-    const immediateAsk = !fromAuto && !finals.size ? focusSpokenQuestion(spoken) : "";
-    const hasCompleteAsk = immediateAsk.split(/\s+/).length >= 6 && /[?.!]$/.test(immediateAsk);
-    if (!hasCompleteAsk && ((running && captures.length) || finals.size)) {
+    if ((running && captures.length) || finals.size) {
       flushing = true; if (!fromAuto) status("Catching your last words…", "live");
-      try { await flushHeard(1500); } catch { /* words already written still get answered */ }
+      try { await flushHeard(options.captionOnce ? 250 : 1500); } catch { /* words already written still get answered */ }
       finally { flushing = false; }
     }
     if (sessionEpoch !== transcriptionEpoch) return;
@@ -3683,44 +3664,6 @@ async function aiAnswer(fromAuto, options = {}) {
     let pending = turnWindow(pendingHeard(), questionSource(), t => t.who === questionSource() && (Q_CUE.test(t.text) || opensNewAsk(t.text)));
     const box = $("manualInput");
     const typedText = box ? box.value.trim() : "";
-    // The native caption bridge preserves fragments immediately as they roll
-    // away from the Windows panel. Prefer the explicit ask over subsequent
-    // narration, without waiting for a model-based question-derivation call.
-    const captionLines = pendingHeard().filter(t => t.fromCaption && t.who === "Them").slice(-24);
-    if (!typedText && captionLines.length) {
-      const focused = focusSpokenQuestion(captionLines.map(t => t.text).join(" "));
-      if (focused && focused.split(/\s+/).length >= 4) {
-        answeredSeq = heardSeq; updatePending();
-        const page = addCard(focused, ["…"]);
-        page.heard = captionLines.map(t => "Them: " + t.text).join("\n");
-        page.formed = page.heard;
-        page.formSeq = captionLines[0].seq;
-        showPressed(page, focused);
-        return await generateAnswer(focused, page, { pinned: true, derived: focused, source: "caption-window" });
-      }
-    }
-    // A question from shared call audio can be followed by unrelated
-    // narration in the same transcribed turn. Keep the entire recording in
-    // the transcript, but pin just the explicit question instead of allowing
-    // a slower derive pass to elevate the trailing narration into the ask.
-    if (!typedText && questionSource() === "Them" && pending.length) {
-      const fromCall = pending.filter(t => t.who === "Them");
-      const full = fromCall.map(t => t.text).join(" ").replace(/\s+/g, " ").trim();
-      const focused = focusSpokenQuestion(full);
-      if (focused && focused.length >= 25 && focused.length < full.length - 12 &&
-          focused.split(/\s+/).length >= 6) {
-        answeredSeq = heardSeq; updatePending();
-        const page = addCard(focused, ["…"]);
-        page.heard = fromCall.map(t => "Them: " + t.text).join("\n");
-        page.formed = page.heard;
-        page.formSeq = fromCall[0]?.seq;
-        page.singleSpokenTurn = true;
-        page.fullSpokenQuestion = focused;
-        logDecision("explicit-ask-before-trailing-narration", "Them", focused);
-        showPressed(page, focused);
-        return await generateAnswer(focused, page, { pinned: true, derived: focused, source: "spoken-question" });
-      }
-    }
     // Answer anyway (slice 2): a press right after "Nothing question-like" answers those same lines.
     let anyway = false;
     try { const back = answerAnywayLines(answerAnywayHeld, { fromAuto, pending: pending.length, typed: typedText, now: Date.now() }); if (back) { pending = back; anyway = true; logDecision("answer-anyway", questionSource(), back.map(t => t.text).join(" ")); } } catch {}
