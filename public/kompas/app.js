@@ -3665,7 +3665,7 @@ async function aiAnswer(fromAuto, options = {}) {
     // The native caption bridge preserves fragments immediately as they roll
     // away from the Windows panel. Prefer the explicit ask over subsequent
     // narration, without waiting for a model-based question-derivation call.
-    const captionLines = pending.filter(t => t.fromCaption && t.who === "Them");
+    const captionLines = pendingHeard().filter(t => t.fromCaption && t.who === "Them").slice(-24);
     if (!typedText && captionLines.length) {
       const focused = window.KompasCaptionFocus?.pick(captionLines.map(t => t.text).join(" ")) || "";
       if (focused && focused.split(/\s+/).length >= 4) {
