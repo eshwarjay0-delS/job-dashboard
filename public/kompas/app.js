@@ -2114,7 +2114,9 @@ function showCaption(who, text, isInterim) {
   $("capWho").textContent = who === "You" ? "You" : "Them";
   const captionText = $("capText");
   captionText.textContent = text;
-  captionText.scrollTop = captionText.scrollHeight; // show latest three lines
+  // Present only the latest three wrapped lines. The transcript retains the
+  // complete line for the previous, proven voice-question engine.
+  captionText.scrollTop = captionText.scrollHeight;
   const box = el.closest(".q"); if (box) { box.classList.add("live"); box.scrollTop = box.scrollHeight; }
   const card = $("card");
   if (who === "Them" && card && card.classList.contains("q-away") && !(cards[idx] && cards[idx].streaming)) card.classList.remove("q-away");
@@ -3631,8 +3633,10 @@ async function aiAnswer(fromAuto, options = {}) {
   aiBusy = true; aiBusySince = Date.now(); clearTimeout(autoTimer);
   try {
     const sessionEpoch = transcriptionEpoch;
-    // The one-shot caption snapshot is independent of voice dictation.
-    // Never flush or change microphone/audio history for a frozen caption.
+    // Deliberate Windows caption screenshot is frozen already. Do NOT wait for
+    // concurrent mic/call transcription and do NOT mix in its unrelated turns.
+    // The ordinary voice dictation and question derivation below remain
+    // identical to the previously released, stable implementation.
     if (options.captionOnce) {
       const field = $("manualInput");
       const frozen = String(field?.value || "").trim();
