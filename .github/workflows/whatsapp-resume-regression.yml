@@ -44,5 +44,5 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
       - run: node --test scripts/tests/whatsapp-resume-recovery.test.mjs scripts/tests/whatsapp-resume-contract.test.mjs scripts/tests/resume-guards.test.mjs
+      - run: npm run typecheck
