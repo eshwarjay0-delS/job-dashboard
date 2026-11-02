@@ -44,6 +44,8 @@ jobs:
           node --check public/kompas/caption-once.js
           node --check legacy/perfact/desktop/main.js
           node --check legacy/perfact/desktop/preload.js
+          node --check legacy/perfact/desktop/marketfit-auth.cjs
+          node --test legacy/perfact/desktop/scripts/marketfit-auth.test.cjs
           node --test scripts/tests/kompas-caption-once-50fold.test.mjs scripts/tests/kompas-desktop-screen-action.test.mjs
 
       - name: Verify 20 full interviewer questions, silent desktop auth and exact release stamp
