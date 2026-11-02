@@ -71,4 +71,8 @@ assert.ok(desktop.includes('app.setAsDefaultProtocolClient(MARKETFIT_SCHEME'));
 assert.ok(page.includes('window.location.assign(url)') && page.includes('"marketfit-kompas://open?ticket="') &&
   page.includes('prepareDesktopSession(s).then(openWithTicket)'), "Desktop must use account-bound one-time handoff ticket and protocol navigation, not an iframe or long URL payload");
 assert.ok(sfx.includes("marketfit-kompas"), "Outer Windows launcher must forward MarketFit deep links");
+assert.match(sfx, /SafeProtocolLink\(arg\)/, "Portable launch process must forward validated protocol arguments");
+assert.ok(sfx.includes("ticket=[A-Za-z0-9_-]{43}"), "Portable EXE must forward account-bound session tickets");
+assert.ok(sfx.includes("://auth/?") && sfx.includes("state=[A-Za-z0-9_-]{20,128}"), "Portable EXE must forward verified browser sign-in callbacks");
+assert.match(sfx, /--self-test-links/, "The Windows launcher must execute real protocol regression cases before release");
 console.log("MarketFit one-use owner-scoped ticket protocol, isolated desktop profile, and legacy compatibility: verified");
