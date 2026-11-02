@@ -54,14 +54,24 @@
     return [...output.values()].sort((a,b)=>(Number(b.createdAt)||0)-(Number(a.createdAt)||0));
   }
   function create(opts) {
-    const {storage,fetcher,read,write,render,notify,authToken} = opts;
+    const {storage,fetcher,read,write,render,notify,recoverAuth} = opts;
     const prefix = "perfact.cloud.";
     const getJSON = (key,fallback) => { try{return JSON.parse(storage.getItem(key))||fallback;}catch{return fallback;} };
     const putJSON = (key,value) => {try{storage.setItem(key,JSON.stringify(value));return true;}catch{return false;}};
-    let owner="", applied=false, busy=false, requesting=null, flushing=false, importing=false, lastCheck=0, lastError=0;
+    let owner="", applied=false, busy=false, requesting=null, flushing=false, importing=false, lastCheck=0, lastError=0, authFlight=null;
     let pending={}, local=[];
     const syncStatus=(status)=>{if(typeof notify==="function")notify(status);};
-    const headers=()=>{ const token=typeof authToken==="function"?authToken():""; return { "content-type":"application/json",...(token?{Authorization:"Bearer "+token}:{}) }; };
+    // Browser uses its authenticated SSR cookie; a guessed or stale JWT must
+    // not override that valid cookie. Electron's trusted main process injects
+    // its verified short-lived Bearer token when forwarding this request.
+    const headers=()=>({ "content-type":"application/json" });
+    function reviveAuth() {
+      if(typeof recoverAuth!=="function") return Promise.resolve(false);
+      if(authFlight) return authFlight;
+      authFlight = Promise.resolve().then(() => recoverAuth()).then(Boolean, () => false)
+        .finally(() => { authFlight=null; });
+      return authFlight;
+    }
     function persist() { if(owner){putJSON(prefix+"cache."+owner,read());putJSON(prefix+"pending."+owner,pending);} }
     function queue(op) {
       const previous=pending[op.id];
@@ -81,7 +91,12 @@
     }
     async function api(method, body, cursor = "") {
       const url = "/api/kompas/account-sessions" + (cursor ? "?after=" + encodeURIComponent(cursor) : "");
-      const response=await fetcher(url,{method,credentials:"same-origin",headers:headers(),...(body?{body:JSON.stringify(body)}:{}),cache:"no-store"});
+      const request = () => fetcher(url,{method,credentials:"same-origin",headers:headers(),...(body?{body:JSON.stringify(body)}:{}),cache:"no-store"});
+      let response=await request();
+      // One bounded recovery, only after an explicit unauthenticated response.
+      // The API rejects 401 before any mutation, so this cannot duplicate a
+      // previously accepted account update. All failed operations remain queued.
+      if(response.status===401 && await reviveAuth()) response=await request();
       if(!response.ok) throw new Error("Session synchronization unavailable ("+response.status+").");
       const parsed=await response.json();
       if(!parsed || !parsed.ok || !parsed.userId) throw new Error("Account session response unavailable.");
