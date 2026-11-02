@@ -90,6 +90,9 @@ const FACTS = [
   "Keep employers and client projects separated. Preserve corrected facts. When sources conflict, surface the contradiction and its source ids; do not silently choose.",
   "Acronyms and exact technical jargon get a simple definition before deeper mechanics; do not dilute correct technical details.",
   "Every personal claim or specific result requires an inline source citation in the form [S:id]. Use only ids supplied in the source bundle.",
+  "METRIC EVIDENCE LEDGER: Every personal achieved number requires the original source ID and digest, employer/project, candidate-owned action, metric name and unit, counted population, measurement window, numerator/denominator when applicable, baseline for improvement claims, and verification state. If any key element is missing, mark the figure candidate-reported/unverified or missing; never say it was independently measured.",
+  "Keep technical constants such as Windows event IDs, HTTP statuses, ports, CVE identifiers and software versions separate from outcome metrics. A job-description target, a model-generated interview response, another candidate's story or a generic benchmark is not the candidate's result.",
+  "When source documents support a responsibility but not its numerical outcome, create a qualitative evidence card and a specific measurement question instead of fabricating a count, percentage, SLA, restoration time, ticket ID or colleague conversation.",
   "Never use confidence, narrative polish, or a plausible story to replace missing proof. Interview preparation is not permission to impersonate invented work.",
 ].join("\n")
 
