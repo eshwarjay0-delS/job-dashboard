@@ -2,6 +2,7 @@
 // All resumes here are invented example data (example.com, 555 numbers).
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import JSZip from 'jszip'
 import mammoth from 'mammoth'
 import { checkRoundTrip, docxText } from '../../src/lib/resume-round-trip-guard.ts'
@@ -114,4 +115,19 @@ test('keywords: case-insensitive', () => {
 test('keywords: Java not matched inside JavaScript', () => {
   const r = buildKeywordReport({ jobTerms: ['Java'], resumeText: 'JavaScript', supportedTerms: [] })
   assert.deepEqual(r.covered, [])
+})
+
+// Guarded WhatsApp refine failures must never attribute a non-email mismatch to email.
+test('WhatsApp refine: missing original and failed identity verification have distinct, accurate refusals', () => {
+  const route = readFileSync(new URL('../../src/app/api/whatsapp/webhook/route.ts', import.meta.url), 'utf8')
+  assert.match(route, /if \(!source\) \{\s*return sendText\(from, "I could not verify the original resume for this update, so no file was sent\."\)/)
+  assert.match(route, /if \(!\(await sameResumeFacts\(source, file\)\)\) \{\s*return sendText\(from, "The update failed identity\/contact\/date verification, so I stopped delivery\. No file was sent\."\)/)
+  assert.doesNotMatch(route, /The update changed the resume.s contact email, so I stopped delivery/)
+})
+
+test('resume identity: email-only mismatch logs category without exposing addresses', () => {
+  const identity = readFileSync(new URL('../../src/lib/resume-identity.ts', import.meta.url), 'utf8')
+  assert.match(identity, /if \(emails\(source\) !== emails\(output\)\) \{[\s\S]*?categories: \["email"\][\s\S]*?return false/)
+  assert.doesNotMatch(identity, /console\.error\([^\n]*(?:emails\(source\)|emails\(output\)|sourceText|outputText)/)
+  assert.equal(checkRoundTrip(SRC, SRC.replace('alex.example@example.com', 'other@example.com')).ok, false)
 })
