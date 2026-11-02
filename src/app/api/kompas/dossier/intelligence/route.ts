@@ -5,7 +5,7 @@ import { checkRateLimit } from "@/lib/rateLimit"
 import { hashUserId } from "@/lib/sttLedger"
 import { readPreparedDossier, savePreparedDossier } from "@/lib/kompas-dossier-store"
 import {
-  buildDualDossierPlan, dossierCitationWarnings,
+  buildDualDossierPlan, dossierCitationWarnings, assertRequiredAudioIncluded,
   type DossierPrompt, type DossierStage,
 } from "@/lib/kompas-dossier-bots"
 
@@ -13,7 +13,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 120
 const HEADERS = { "Cache-Control": "no-store" }
-type RequestBody = { mode?: DossierStage | "combined"; sources?: unknown }
+type RequestBody = { mode?: DossierStage | "combined"; sources?: unknown; requiredAudioSha256?: unknown }
 const MAX_BYTES = 1_100_000
 
 /**
@@ -23,9 +23,11 @@ const MAX_BYTES = 1_100_000
  *
  * POST { mode: "notebook" | "dossier" | "combined", sources: [{
  *   id, kind: "resume"|"job_description"|"document"|"chat_transcript"|
- *   "interview_transcript"|"interview_expectations"|"candidate_correction",
+ *   "interview_transcript"|"interview_expectations"|"candidate_correction"|
+ *   "audio_transcript" (requires original media SHA-256, duration and ASR review status),
  *   title, text
- * }] }
+ * }], requiredAudioSha256?: [original media SHA-256, ...] }
+ * Required recordings without attributable transcript content block dossier completion.
  */
 /** Load a previously committed manuscript; no model invocation. */
 export async function GET(request: NextRequest) {
@@ -60,7 +62,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid dossier mode." }, { status: 400, headers: HEADERS })
   }
   let plan
-  try { plan = buildDualDossierPlan(body.sources) }
+  try { plan = buildDualDossierPlan(body.sources); assertRequiredAudioIncluded(body.requiredAudioSha256, plan.sources) }
   catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Invalid sources." }, { status: 400, headers: HEADERS })
   }
@@ -78,7 +80,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: true, mode, sourceDigest: plan.sourceDigest, version: plan.version,
         generation: { text: stage.text, provider: stage.provider, model: stage.model },
-        sourceManifest: plan.sources.map(({ id, kind, title, digest }) => ({ id, kind, title, digest })),
+        sourceManifest: plan.sources.map(({ id, kind, title, digest, media }) => ({ id, kind, title, digest, ...(media ? { media } : {}) })),
         citationWarnings: dossierCitationWarnings(stage.text, plan.sources),
         factualReview: "required", pdfExport: "not-yet-generated", googleNotebookApiUsed: false,
       }, { headers: HEADERS })
@@ -94,7 +96,7 @@ export async function POST(request: NextRequest) {
       notebook: { text: notebook.text, provider: notebook.provider, model: notebook.model },
       dossier: { text: dossier.text, provider: dossier.provider, model: dossier.model },
       unified: { text: combined.text, provider: combined.provider, model: combined.model },
-      sourceManifest: plan.sources.map(({ id, kind, title, digest }) => ({ id, kind, title, digest })),
+      sourceManifest: plan.sources.map(({ id, kind, title, digest, media }) => ({ id, kind, title, digest, ...(media ? { media } : {}) })),
       citationWarnings: dossierCitationWarnings(combined.text, plan.sources),
       factualReview: "required", pdfExport: "not-yet-generated", googleNotebookApiUsed: false,
       serverStored: true,
