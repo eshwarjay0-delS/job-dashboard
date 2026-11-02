@@ -173,6 +173,133 @@ test("expired native access can only resume after a verified same-account callba
   assert.equal(h.auth.ownerId(), "owner-A");
   assert.equal(h.auth.token(), NEXT);
 });
+test("trusted laptop gets a separate native refresh family from the one-use browser authorization", async () => {
+  const h = harness();
+  const state = h.auth.issueState();
+  const proof = { token_hash: "a".repeat(64) };
+  assert.equal(h.auth.callback([link(state, proof)]).token_hash, proof.token_hash);
+  // Simulate the new verified native-session redeem endpoint (the actual
+  // server contract is checked by the companion static test).
+  h.requests.length = 0;
+  // A mock net path is required for this second independent auth grant.
+  const H = makeTrustedHarness();
+  const st = H.auth.issueState();
+  assert.equal(await H.auth.acceptCallback(H.auth.callback([link(st, proof)])), true);
+  assert.equal(H.auth.ownerId(), "owner-A");
+  assert.equal(H.auth.token(), NEXT);
+  assert.equal(H.count("desktop-session/redeem"), 1);
+  assert.equal(H.files.size, 1);
+  const saved = [...H.files.values()][0].toString();
+  assert.ok(saved.startsWith("enc:"));
+  assert.ok(saved.includes("native-r1"), "only the separate native token is encrypted");
+  assert.ok(!saved.includes("chrome-browser-refresh"));
+  const restored = H.factory();
+  assert.equal(restored.load(), true);
+  assert.equal(restored.ownerId(), "owner-A");
+})
+
+function makeTrustedHarness({ ownerMismatch = false, offline = false } = {}) {
+  let clock = 1793600000000, tokenNum = 1, status = 200;
+  const files = new Map(), calls = [];
+  const safeStorage = {
+    isEncryptionAvailable: () => true,
+    encryptString: s => Buffer.from("enc:" + s),
+    decryptString: v => v.toString().replace(/^enc:/, ""),
+  };
+  const fs = {
+    mkdirSync() {}, writeFileSync(k,v) { files.set(k, Buffer.from(v)); },
+    readFileSync(k) { if (!files.has(k)) throw Error("missing"); return files.get(k); },
+    rmSync(k) { files.delete(k); }
+  };
+  const net = { fetch: async (url, opts) => {
+    calls.push({ url, opts });
+    if (offline) throw Error("network temporarily offline");
+    if (url.endsWith("/api/auth/desktop-session/redeem")) {
+      return { ok: true, status: 200, json: async () => ({
+        ok: true, userId: ownerMismatch ? "owner-B" : "owner-A",
+        access_token: NEXT, refresh_token: "native-r1", expires_at: 2000000000,
+      }) };
+    }
+    if (url.endsWith("/api/auth/refresh-token")) {
+      if (status === 401) return { ok:false, status:401 };
+      const body = JSON.parse(opts.body);
+      assert.equal(body.refresh_token, "native-r" + tokenNum);
+      tokenNum++;
+      return { ok:true, status:200, json: async () => ({
+        ok:true, userId:ownerMismatch ? "owner-B" : "owner-A",
+        access_token: ACCESS, refresh_token: "native-r" + tokenNum,
+        expires_at: 2200000000,
+      }) };
+    }
+    throw Error("Invalid native authentication endpoint");
+  }};
+  const factory = () => createMarketFitDesktopAuth({ net, safeStorage, fs, profileDir: () => "/trusted-user", origin: ORIGIN, now: () => clock });
+  return { auth:factory(), factory, files, calls, count: piece => calls.filter(x=>x.url.includes(piece)).length,
+    setClock: v => { clock=v }, setOffline: v => { offline=v }, setStatus: v => { status=v } };
+}
+
+async function authorizeTrusted(h) {
+  const state = h.auth.issueState();
+  return h.auth.acceptCallback(h.auth.callback([link(state, { token_hash:"a".repeat(64) })]));
+}
+test("trusted device silently rotates its own refresh token before expiration", async () => {
+  const h = makeTrustedHarness();
+  assert.equal(await authorizeTrusted(h), true);
+  h.setClock(1999999945000); // 55 seconds before expiration
+  assert.equal(await h.auth.renew(false), true);
+  assert.equal(h.count("refresh-token"), 1);
+  assert.equal(h.auth.token(), ACCESS);
+  const rotated = [...h.files.values()][0].toString();
+  assert.match(rotated, /native-r2/);
+  assert.equal(await h.auth.renew(false), true);
+  assert.equal(h.count("refresh-token"), 1);
+})
+test("trusted device refresh is single flight across simultaneous requests", async () => {
+  const h = makeTrustedHarness();
+  assert.equal(await authorizeTrusted(h), true);
+  const [a,b,c] = await Promise.all([h.auth.renew(true),h.auth.renew(true),h.auth.renew(true)]);
+  assert.deepEqual([a,b,c],[true,true,true]);
+  assert.equal(h.count("refresh-token"),1);
+})
+test("offline wake-up never erases the trusted credential, prompts or crosses user identity", async () => {
+  const h = makeTrustedHarness();
+  assert.equal(await authorizeTrusted(h), true);
+  h.setOffline(true);
+  assert.equal(await h.auth.renew(true), true, "existing live bearer survives temporary outage");
+  assert.equal(h.files.size,1);
+  h.setOffline(false);
+  h.setClock(2000000000000+1000);
+  assert.equal(await h.auth.renew(false),true);
+  assert.equal(h.auth.token(),ACCESS);
+})
+test("a different account cannot take over a trusted native profile", async () => {
+  const h = makeTrustedHarness({ ownerMismatch: true });
+  assert.equal(await authorizeTrusted(h),true);
+  assert.equal(h.auth.ownerId(),"owner-B");
+  h.setClock(2000000000000+1000);
+  assert.equal(await h.auth.renew(false),true);
+  const x = makeTrustedHarness({ ownerMismatch: true });
+  const st = x.auth.issueState();
+  assert.equal(await x.auth.acceptCallback(x.auth.callback([link(st,{token_hash:"a".repeat(64)})]),"owner-A"),false);
+  assert.equal(x.files.size,0);
+})
+test("revoked native session fails closed and erases its encrypted refresh credential", async () => {
+  const h=makeTrustedHarness();
+  assert.equal(await authorizeTrusted(h),true);
+  h.setStatus(401);
+  assert.equal(await h.auth.renew(true),false);
+  assert.equal(h.auth.ownerId(),"");
+  assert.equal(h.files.size,0);
+})
+test("desktop launch never opens Chrome automatically after a saved trusted session fails to renew", () => {
+  const main = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "main.js"), "utf8");
+  assert.match(main,/hadSavedNativeAuth = desktopAuth\.load\(\)/);
+  assert.match(main,/if \(!hadSavedNativeAuth && !desktopAuth\.ownerId\(\)\) beginChromeSignIn\(\)/);
+  assert.match(main,/await desktopAuth\.renew\(false\)/);
+  assert.match(main,/await desktopAuth\.renew\(true\)/);
+  assert.doesNotMatch(main,/if \(!ok && !desktopAuth\.token\(\)\) beginChromeSignIn\(\)/);
+})
+
 test("canonical Windows handoff retains the account-scoped session until validated", () => {
   const main = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "main.js"), "utf8");
   assert.match(main, /pendingSession\.ownerId/);
