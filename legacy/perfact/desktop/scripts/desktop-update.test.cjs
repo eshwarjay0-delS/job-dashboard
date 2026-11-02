@@ -38,7 +38,7 @@ test("native update is only a consented official browser download, never silent 
   const main=fs.readFileSync(path.join(__dirname,"..","main.js"),"utf8");
   assert.match(main,/chooseDesktopUpdate\(app\.getVersion\(\), manifest\)/);
   assert.match(main,/dialog\.showMessageBox\(win, \{/);
-  assert.match(main,/if \(response === 0\) await shell\.openExternal\(offer\.downloadUrl\)/);
+  assert.match(main,/if \(decision === 0\) await shell\.openExternal\(offer\.downloadUrl\)/);
   assert.match(main,/void checkNativeDesktopUpdate\(\)/);
   assert.doesNotMatch(main,/autoUpdater\.quitAndInstall|autoUpdater\.downloadUpdate/);
 });
