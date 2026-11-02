@@ -24,7 +24,7 @@ export default function DesktopSignIn() {
     const state = desktopState(window.location.search)
     const login = "/login?next=" + encodeURIComponent(withState("/auth/desktop", state))
     const supabase = createClient()
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (gone) return
       const session = data.session
       if (!session?.access_token) {
@@ -34,7 +34,29 @@ export default function DesktopSignIn() {
       // Never duplicate Chrome's rotating refresh-token family in Electron.
       // The native app receives a short-lived bearer only after the callback
       // passes its own one-use state and validates that bearer server-side.
-      const payload = JSON.stringify({ access_token: session.access_token, expires_at: session.expires_at || 0 })
+      // First authorization establishes a NEW encrypted native session family.
+      // Chrome retains its own rotating refresh token. Neither client shares
+      // refresh credentials, so reopening Kompas needs no repeated web sign-in.
+      let desktopPayload: Record<string, string | number> = {
+        access_token: session.access_token, expires_at: session.expires_at || 0
+      }
+      try {
+        const issued = await fetch("/api/auth/desktop-session/issue", {
+          method: "POST", credentials: "same-origin",
+          headers: { "content-type": "application/json" },
+          body: "{}", cache: "no-store",
+        })
+        if (issued.ok) {
+          const grant = await issued.json()
+          if (grant?.ok === true && /^[a-f0-9]{64}$/.test(grant.token_hash))
+            desktopPayload = { token_hash: grant.token_hash }
+        }
+      } catch {
+        // Maintain the verified old bearer handoff when the device-grant route
+        // is temporarily unavailable. No browser refresh token is transferred.
+      }
+      if (gone) return
+      const payload = JSON.stringify(desktopPayload)
       const b64 = btoa(unescape(encodeURIComponent(payload))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
       // Prefer the isolated MarketFit handler over the legacy kompas handler,
       // which may still belong to an older application.
