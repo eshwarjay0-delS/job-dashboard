@@ -36,7 +36,9 @@ export default function DesktopSignIn() {
       // passes its own one-use state and validates that bearer server-side.
       const payload = JSON.stringify({ access_token: session.access_token, expires_at: session.expires_at || 0 })
       const b64 = btoa(unescape(encodeURIComponent(payload))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
-      // Prefer the isolated MarketFit handler over the legacy kompas handler,\n      // which may still belong to an older application.\n      // Automatic handoff, nothing asked of the user (owner, 31 Oct 2026): the first protocol launch can be
+      // Prefer the isolated MarketFit handler over the legacy kompas handler,
+      // which may still belong to an older application.
+      // Automatic handoff, nothing asked of the user (owner, 31 Oct 2026): the first protocol launch can be
       // swallowed — prompt dismissed, desktop still starting, link not yet claimed — so rerun it silently in a
       // hidden frame on both schemes the shell claims, three times over six seconds. No button, no instruction,
       // no second navigation. Guarded so the sliced-effect tests, which run without timers or a DOM, still see
