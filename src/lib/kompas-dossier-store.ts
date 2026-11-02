@@ -21,7 +21,7 @@ export type SavedDossier = {
   version: string
   sourceDigest: string
   stages: { notebook?: string; dossier?: string; unified?: string }
-  sourceManifest: { id: string; kind: string; title: string; digest: string }[]
+  sourceManifest: { id: string; kind: string; title: string; digest: string; media?: DossierSource["media"] }[]
   createdAt: string
 }
 
@@ -35,7 +35,7 @@ export async function savePreparedDossier(
   const idx = buildFastDossierIndex(sources, sourceDigest, fp(resumeText.slice(0, 60000)), fp(jdText.slice(0, 8000)))
   const document: SavedDossier = {
     version: FAST_DOSSIER_VERSION, sourceDigest, stages,
-    sourceManifest: sources.map(({ id, kind, title, digest }) => ({ id, kind, title, digest })),
+    sourceManifest: sources.map(({ id, kind, title, digest, media }) => ({ id, kind, title, digest, ...(media ? { media } : {}) })),
     createdAt: idx.createdAt,
   }
   // Save first. Do not call a cache insertion durable persistence.
