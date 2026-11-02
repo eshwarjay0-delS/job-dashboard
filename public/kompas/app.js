@@ -1145,13 +1145,37 @@ if (window.kompasDesktop) {
   $("screenBtn").classList.remove("hidden");
   $("screenCaptureAnswerBtn")?.classList.remove("hidden");
 }
+let sysConnecting = false;
+let sysAttempt = 0;
 function syncSrc() {
-  $("micBtn").classList.toggle("on", srcOn.mic); $("sysBtn").classList.toggle("on", srcOn.sys);
+  // The speaker icon reports the ACTUAL capture track while a session runs,
+  // not merely the requested toggle. Before Start it reports readiness only.
+  const sysLive = running && captures.some(c => c.who === "Them");
+  const sysShownOn = running ? sysLive : srcOn.sys;
+  const sysState = !running ? (srcOn.sys ? "ready for next Start" : "off")
+    : sysLive ? "listening" : sysConnecting ? "connecting…" : "off";
+  $("micBtn").classList.toggle("on", srcOn.mic);
+  $("sysBtn").classList.toggle("on", sysShownOn);
+  $("sysBtn").classList.toggle("connecting", sysConnecting);
   $("micBtn").title = "Microphone (you) — " + (srcOn.mic ? "on" : "off");
-  $("sysBtn").title = "Computer audio (interviewer) — " + (srcOn.sys ? "on" : "off");
+  $("sysBtn").title = "Computer audio (interviewer) — " + sysState;
+  $("sysBtn").setAttribute?.("aria-pressed", String(sysShownOn));
+  $("sysBtn").setAttribute?.("aria-busy", String(sysConnecting));
 }
 $("micBtn").onclick = async () => { srcOn.mic = !srcOn.mic; syncSrc(); if (running) { if (srcOn.mic) await startMic(); else stopSource("You"); reportSources(); } };
-$("sysBtn").onclick = async () => { srcOn.sys = !srcOn.sys; syncSrc(); if (running) { if (srcOn.sys) await startSys(); else stopSource("Them"); reportSources(); } };
+$("sysBtn").onclick = async () => {
+  srcOn.sys = !srcOn.sys;
+  syncSrc();
+  if (!running) return;
+  if (srcOn.sys) {
+    status("Connecting to computer audio…", "live");
+    await startSys();
+  } else {
+    await stopSource("Them");
+  }
+  syncSrc();
+  reportSources();
+};
 syncSrc();
 /* Look: paper stays the default. Opacity fades backgrounds only. Letters, including bold words, stay full ink. */
 const LOOK_FONTS = {
@@ -1545,32 +1569,50 @@ async function startMic() {
 }
 async function startSys() {
   const generation = sourceGeneration.Them;
-  if (captures.some(c => c.who === "Them")) return;
-  // Phones have no system-audio capture: getDisplayMedia does not exist on
-  // mobile browsers. Never attempt it there — the phone mic hears both sides,
-  // and attempting it only produced a raw TypeError. (Owner, 31 Oct 2026:
-  // mobile audio never arrived the way desktop call audio does.)
-  // typeof navigator is the guard: the bare identifier throws where no
-  // navigator exists at all (test VMs), while typeof alone is safe.
-  if (typeof navigator === "undefined" || typeof navigator.mediaDevices?.getDisplayMedia !== "function") {
-    captureErrors.push("Call audio: not available on phones — the phone mic hears both sides");
-    srcOn.sys = false; syncSrc(); return;
-  }
+  if (captures.some(c => c.who === "Them")) { syncSrc(); return; }
+  const attempt = ++sysAttempt;
+  sysConnecting = true;
+  // A failed attempt must not remain displayed after a successful retry.
+  captureErrors = captureErrors.filter(message => !message.startsWith("Call audio:"));
+  syncSrc();
   try {
-    // systemAudio and selfBrowserSurface belong to the browser share dialog. Electron answers "Not supported"
-    // to that pair before main.js can hand back the output-mix loopback, so the desktop asks for video and
-    // audio only and the handler supplies the computer's sound.
+    if (typeof navigator === "undefined" || typeof navigator.mediaDevices?.getDisplayMedia !== "function") {
+      captureErrors.push("Call audio: system capture is unavailable on this device.");
+      srcOn.sys = false;
+      return;
+    }
+    // Electron's session handler supplies the Windows output-mix loopback;
+    // browser capture instead requires an explicit audio-sharing choice.
     const disp = window.kompasDesktop
       ? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
       : await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true, systemAudio: "include", selfBrowserSurface: "exclude" });
     const audio = disp.getAudioTracks();
     if (!audio.length) {
-      disp.getTracks().forEach(t => t.stop());
-      captureErrors.push("Call audio: none shared — choose the meeting TAB and tick “Share tab audio” (or Entire screen + “Share system audio”)");
-      srcOn.sys = false; syncSrc(); return;
+      disp.getTracks().forEach(track => track.stop());
+      captureErrors.push(window.kompasDesktop
+        ? "Call audio: Windows loopback returned no audio track. Check that the meeting app uses the Windows default output device, then retry."
+        : "Call audio: no audio track shared. Choose the meeting tab and enable Share tab audio, or enable Share system audio.");
+      srcOn.sys = false;
+      return;
     }
     await attachSource(new MediaStream(audio), "Them", disp, generation);
-  } catch (e) { if (generation !== sourceGeneration.Them || !running) return; captureErrors.push("Call audio: " + (e && e.name === "NotAllowedError" ? "share cancelled" : (e && e.message || e))); srcOn.sys = false; syncSrc(); }
+    if (generation === sourceGeneration.Them && running && srcOn.sys && !captures.some(c => c.who === "Them")) {
+      captureErrors.push("Call audio: the track was returned but could not be initialized. Retry the speaker button.");
+      srcOn.sys = false;
+    }
+  } catch (error) {
+    if (generation !== sourceGeneration.Them || !running) return;
+    const reason = error?.name === "NotAllowedError"
+      ? (window.kompasDesktop ? "Windows audio capture was denied; check desktop permissions and retry." : "audio sharing was cancelled or denied.")
+      : (error?.message || String(error));
+    captureErrors.push("Call audio: " + reason);
+    srcOn.sys = false;
+  } finally {
+    if (attempt === sysAttempt) {
+      sysConnecting = false;
+      syncSrc();
+    }
+  }
 }
 // Silence warning, shared by both capture tracks (parity, 1 Nov 2026): the microphone warned after 20 s of
 // silence, but the shared-audio track warned never, so a quiet or wrongly shared tab failed silently with no
@@ -1667,7 +1709,7 @@ function stopSource(who) {
     meter(who, 0, false);
   }
   captures = captures.filter(c => c.who !== who);
-  if (who === "Them") displayVideo = null;
+  if (who === "Them") { displayVideo = null; sysAttempt++; sysConnecting = false; syncSrc(); }
   return Promise.allSettled(finishing);
 }
 // Who can open a question (slice 2, 29 Oct 2026): askSource() maps each capture through roleOfSource(), so computer
