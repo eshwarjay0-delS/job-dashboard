@@ -2111,7 +2111,12 @@ function showCaption(who, text, isInterim) {
   if (who === "Them") noteThem(text);
   else if (themSpeaking() || echoOfThem(text) >= 0.5) return;
   el.classList.remove("hidden"); el.classList.toggle("interim", !!isInterim);
-  $("capWho").textContent = who === "You" ? "You" : "Them"; $("capText").textContent = text;
+  $("capWho").textContent = who === "You" ? "You" : "Them";
+  const captionText = $("capText");
+  captionText.textContent = text;
+  // Present only the latest three wrapped lines. The transcript retains the
+  // complete line for the previous, proven voice-question engine.
+  captionText.scrollTop = captionText.scrollHeight;
   const box = el.closest(".q"); if (box) { box.classList.add("live"); box.scrollTop = box.scrollHeight; }
   const card = $("card");
   if (who === "Them" && card && card.classList.contains("q-away") && !(cards[idx] && cards[idx].streaming)) card.classList.remove("q-away");
@@ -3628,6 +3633,27 @@ async function aiAnswer(fromAuto, options = {}) {
   aiBusy = true; aiBusySince = Date.now(); clearTimeout(autoTimer);
   try {
     const sessionEpoch = transcriptionEpoch;
+    // Deliberate Windows caption screenshot is frozen already. Do NOT wait for
+    // concurrent mic/call transcription and do NOT mix in its unrelated turns.
+    // The ordinary voice dictation and question derivation below remain
+    // identical to the previously released, stable implementation.
+    if (options.captionOnce) {
+      const field = $("manualInput");
+      const frozen = String(field?.value || "").trim();
+      if (!frozen || sessionEpoch !== transcriptionEpoch) {
+        status("No caption question is ready for this session.", "err");
+        return;
+      }
+      const completeCaption = String(field.dataset?.captionRaw || frozen).trim();
+      field.value = "";
+      if (field.dataset) field.dataset.captionRaw = "";
+      const page = addCard(frozen, ["…"]);
+      page.heard = "Them (Windows Live Captions): " + completeCaption;
+      page.formed = page.heard;
+      logEvent({ t: "line", who: "Them (Windows caption)", text: completeCaption });
+      showPressed(page, frozen);
+      return await generateAnswer(frozen, page, { pinned: true, derived: frozen, source: "caption-window" });
+    }
     if ((running && captures.length) || finals.size) {
       flushing = true; if (!fromAuto) status("Catching your last words…", "live");
       try { await flushHeard(options.captionOnce ? 250 : 1500); } catch { /* words already written still get answered */ }

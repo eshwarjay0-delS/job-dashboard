@@ -216,21 +216,25 @@ body{
 /* Prev/Next response toggles live on the action bar as pills (owner, 23 Oct 2026) — no absolute-positioned corner buttons. */
 .card{animation:cardIn .26s var(--ease) both}
 @keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.q{display:flex;gap:9px;font-size:16px;line-height:1.55;margin-bottom:14px;max-height:3.1em;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;transition:max-height .5s cubic-bezier(.22,1,.36,1),margin-bottom .5s cubic-bezier(.22,1,.36,1),opacity .3s linear}
+.q{display:flex;gap:9px;font-size:16px;line-height:1.55;margin-bottom:14px;max-height:4.65em;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;transition:max-height .5s cubic-bezier(.22,1,.36,1),margin-bottom .5s cubic-bezier(.22,1,.36,1),opacity .3s linear}
 .card.q-away .q{opacity:0;max-height:0;margin-bottom:0;overflow:hidden;pointer-events:none}
 /* The desktop panel (perfACT desktop/panel.css, injected by the shell) gives the question 6.2em with more weight than the
    two rules above and only fades it when it scrolls away, so on the desktop an invisible question held 99px plus margins
    over the answer (measured 27 Oct 2026 on its layout: answer top 342px collapsed vs 229px with this). These outweigh it:
    two lines when shown (plus the focus mode's divider), nothing at all when scrolled away. */
-#view-copilot .card .q{max-height:3.1em}
-html.desktop-focus #view-copilot .card .q{max-height:calc(3.1em + 15px)}
+/* Exactly three visible lines for the question area, regardless of native
+   desktop font zoom. The complete question remains in the DOM and transcript. */
+#view-copilot .card .q{max-height:4.65em}
+html.desktop-focus #view-copilot .card .q{max-height:calc(4.65em + 15px)}
 /* One section (owner, 27 Oct 2026: "combine both You and question section"): what is being said runs on a line inside
    the question box, and the box gives that line room while it shows. */
 .q-body{min-width:0}
 #view-copilot .q .caption{display:flex;gap:8px;align-items:baseline;margin:3px 0 0;padding:0;border:0;background:none;font-size:.86em;line-height:1.45}
 #view-copilot .q .caption.hidden{display:none}
-#view-copilot .card .q.live{max-height:5.4em}
-html.desktop-focus #view-copilot .card .q.live{max-height:calc(5.4em + 15px)}
+/* The spoken-caption text wraps to three lines; never truncate its source. */
+#view-copilot .q .cap-text{display:block;flex:1 1 0;max-height:calc(3 * 1.45em);min-width:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;overflow-wrap:anywhere;white-space:normal}
+#view-copilot .card .q.live{max-height:7em}
+html.desktop-focus #view-copilot .card .q.live{max-height:calc(7em + 15px)}
 #view-copilot .card.q-away .q{max-height:0!important;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important;border-bottom-width:0!important;overflow:hidden!important}
 .q b{font-weight:700}
 .a-head{font-size:14.5px;font-weight:700;margin:2px 0 9px}

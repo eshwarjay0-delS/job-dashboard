@@ -4,6 +4,10 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 
 const client = readFileSync(new URL("../../public/kompas/caption-once.js", import.meta.url), "utf8");
+const focusSource = readFileSync(new URL("../../public/kompas/caption-focus.js", import.meta.url), "utf8");
+const focusContext = {};
+runInNewContext(focusSource, focusContext);
+const captionFocus = focusContext.KompasCaptionFocus.pick;
 const app = readFileSync(new URL("../../public/kompas/app.js", import.meta.url), "utf8");
 const html = readFileSync(new URL("../../public/kompas/index.html", import.meta.url), "utf8");
 const main = readFileSync(new URL("../../legacy/perfact/desktop/main.js", import.meta.url), "utf8");
@@ -20,7 +24,7 @@ const phrase = phraseContext.correct;
 function harness({ question="How does SIEM alert correlation work?", native=true,
                    payload, fail=false, switched=false, deferred=false } = {}) {
   const log={ captures:0, fetches:0, answers:[], status:[], shortcuts:0, event:0, windowEvents:0, releases:0 };
-  const input={ value:"" };
+  const input={ value:"", dataset:{} };
   const button={ disabled:false, onclick:null };
   const doc = {
     getElementById(id) {
@@ -37,7 +41,7 @@ function harness({ question="How does SIEM alert correlation work?", native=true
     return Promise.resolve({image:"data:image/jpeg;base64,Zml4dHVyZQ==",source:"window"});
   };
   const context = {
-    window:{kompasDesktop:native?{captureCaptionOnce:capture}:null},
+    window:{kompasDesktop:native?{captureCaptionOnce:capture}:null,KompasCaptionFocus:{pick:captionFocus}},
     document:doc,
     status:(text,type)=>log.status.push({text,type}),
     fixTerms:x=>x, fixPhrases:phrase,
@@ -136,6 +140,7 @@ test("single deliberate window capture triggers exactly one corrected AI Answer"
   assert.equal(h.log.fetches,1);
   assert.equal(h.log.request.mode,"caption-window");
   assert.equal(h.input.value,"How do you configure SIEM tool?");
+  assert.equal(h.input.dataset.captionRaw,"How do you configure SIEM tool?");
   assert.equal(h.log.answers.length,1);
   assert.equal(h.log.answers[0][1].captionOnce,true);
   assert.equal(h.button.disabled,false);
@@ -175,6 +180,9 @@ test("shortcut is intercepted exactly once and concurrent clicks never double ca
 test("wiring and privacy: one-shot only, no screen loop, native window selected explicitly",()=>{
   assert.equal(dedupeCases.length+extractionCases.length+phraseCases.length+5,50);
   assert.match(html,/caption-once\.js/);
+  assert.match(html,/<script src="caption-focus\.js\?v=/);
+  const nativePackage=readFileSync(new URL("../../legacy/perfact/desktop/scripts/package.mjs",import.meta.url),"utf8");
+  assert.match(nativePackage,/"caption-focus\.js", "app\.js", "caption-once\.js"/);
   assert.match(html,/>▣ Caption Capture<\/button>/);
   assert.match(preload,/captureCaptionOnce:.*kompas:caption-once/);
   assert.match(main,/desktopCapturer\.getSources\(\{ types: \["window"\]/);
@@ -183,8 +191,117 @@ test("wiring and privacy: one-shot only, no screen loop, native window selected 
   assert.doesNotMatch(main,/Choose the window to capture once/);
   assert.doesNotMatch(main,/setInterval\([^)]*captionSnapshotOnce/);
   assert.doesNotMatch(client,/setInterval|MediaRecorder|getDisplayMedia/);
-  assert.match(app,/flushHeard\(options\.captionOnce \? 250 : 1500\)/);
+  // Voice dictation remains the last known-good full-turn intake path, never
+  // filtered through the stricter screenshot-only focus recognizer.
+  assert.doesNotMatch(app,/const hasCompleteAsk = immediateAsk\.split/);
+  assert.match(app,/await flushHeard\(options\.captionOnce \? 250 : 1500\)/);
+  assert.doesNotMatch(app,/explicit-ask-before-trailing-narration/);
   assert.match(screen,/const captionMode =/);
   assert.match(screen,/max_tokens: captionMode \? 1200 : 4096/);
   assert.match(screen,/source: "caption-window"/);
 });
+
+
+const focusCases = [
+  ["So this is CIA. Can you describe the high level architecture of a SIEM and what are the core components? I am going back to my thing.", /describe the high level architecture of a SIEM and what are the core components/i, /going back/i],
+  ["Because I'm reviewing files, tell me about a time when you adapted your communication style to explain a security risk to stakeholders. This will be my first job. I need a few notes.", /tell me about a time when you adapted your communication style/i, /first job/i],
+  ["Well, how would you build a detection pipeline? And how would you test false positives? I'm going to start the next video.", /how would you build a detection pipeline\? And how would you test false positives\?/i, /start the next video/i],
+  ["Please describe your approach to removing local admin rights.", /describe your approach to removing local admin/i, /neverthis/i],
+  ["Explain the difference between a SIEM and a SOAR platform.", /explain the difference between/i, /neverthis/i],
+  ["Can you walk me through your incident response triage?", /walk me through your incident response/i, /neverthis/i],
+  ["What are the components of a SIEM?", /what are the components/i, /neverthis/i],
+  ["What is CyberArk EPM?", /what is CyberArk/i, /neverthis/i],
+  ["How does SAML work?", /How does SAML work/i, /neverthis/i],
+  ["Why would a service account need JIT elevation?", /Why would/i, /neverthis/i],
+  ["Where do the log collectors forward telemetry?", /Where do/i, /neverthis/i],
+  ["Which tool would you choose for EDR triage?", /Which tool/i, /neverthis/i],
+  ["Describe zero trust segmentation without creating an outage.", /Describe zero trust/i, /neverthis/i],
+  ["Share an example of a tough security audit.", /Share an example/i, /neverthis/i],
+  ["Give me an example of an access review issue.", /Give me an example/i, /neverthis/i],
+  ["Tell me about a conflict you resolved with a security stakeholder.", /Tell me about a conflict/i, /neverthis/i],
+  ["Walk me through a typical vulnerability triage.", /Walk me through a typical/i, /neverthis/i],
+  ["Can you explain Kerberos delegation?", /Can you explain/i, /neverthis/i],
+  ["What happens when the cloud identity provider is unavailable?", /What happens when/i, /neverthis/i],
+  ["How would you validate an alert suppression change?", /How would you validate/i, /neverthis/i],
+  ["We use AWS and Azure. How do you keep identity policies consistent?", /How do you keep identity/i, /neverthis/i],
+  ["What are the steps of responding to a phishing alert? And how do you prove containment?", /What are the steps.*And how do you prove/i, /neverthis/i],
+  ["Can you describe the high-level architecture of a seem and the core components so. The core components are log collector layers.", /describe the high-level architecture/i, /core components are log collector layers/i],
+  ["I'm going to do a quick test. I'm going to start with the first one. I'm going to take notes.", /^$/, /neverthis/i],
+  ["Because this is my first cybersecurity job, I haven't done it in the wild yet.", /^$/, /neverthis/i],
+  ["Good afternoon. Thanks for attending.", /^$/, /neverthis/i],
+  ["SIEM", /^SIEM$/, /neverthis/i],
+  ["CyberArk EPM", /^CyberArk EPM$/, /neverthis/i],
+  ["Kubernetes", /^Kubernetes$/, /neverthis/i],
+  ["OAuth", /^OAuth$/, /neverthis/i],
+];
+for (const [spoken, expected, absent] of focusCases) test("caption focus: "+spoken.slice(0,42),()=>{
+  const q=captionFocus(spoken);
+  assert.match(q,expected);
+  if (absent.source!=="neverthis") assert.doesNotMatch(q,absent);
+});
+test("three-line caption presentation never deletes the question or transcript",()=>{
+  const css=readFileSync(new URL("../../public/kompas/styles.css",import.meta.url),"utf8");
+  assert.match(css,/#view-copilot \.q \.cap-text\{display:block;flex:1 1 0;max-height:calc\(3 \* 1\.45em\)/);
+  assert.match(app,/captionText\.scrollTop = captionText\.scrollHeight/);
+  assert.match(css,/max-height:calc\(3 \* 1\.45em\)/);
+  assert.match(css,/#view-copilot \.card \.q\{max-height:4\.65em\}/);
+  assert.match(app,/page\.heard = "Them \(Windows Live Captions\): " \+ completeCaption/);
+  assert.match(app,/pinned: true, derived: frozen, source: "caption-window"/);
+  assert.doesNotMatch(app,/const captionLines = pendingHeard\(\)\.filter\(t => t\.fromCaption/);
+  assert.match(app,/return await generateAnswer\(frozen, page, \{ pinned: true/);
+  assert.doesNotMatch(client,/setInterval|MediaRecorder|getDisplayMedia/);
+});
+test("caption press avoids pending 250–1500 ms audio flush and pins its own question",()=>{
+  const section=app.slice(app.indexOf("async function aiAnswer(fromAuto"), app.indexOf("$(\"screenBtn\").onclick"));
+  assert.ok(section.indexOf("if (options.captionOnce)") < section.indexOf("await flushHeard("));
+  assert.match(section,/return await generateAnswer\(frozen, page, \{ pinned: true/);
+});
+
+// Broader spoken interview grammar: these are real questions, not just short
+// keyword fragments. Avoid dropping ordinary past-experience and tradeoff asks.
+const conversationalGrammarCases = [
+  ["What challenges have you faced when onboarding a new team? I'm going to take notes.", /What challenges have you faced/i, /going to take notes/i],
+  ["What logs would you inspect first during a production outage?", /What logs would you inspect/i, /neverthis/i],
+  ["What technical controls should a team implement first?", /What technical controls should a team/i, /neverthis/i],
+  ["How have you handled a vendor outage?", /How have you handled/i, /neverthis/i],
+  ["Have you ever disagreed with an auditor? I need to start the video.", /Have you ever disagreed/i, /start the video/i],
+  ["Did you validate the recovery time objective?", /Did you validate/i, /neverthis/i],
+  ["Do you prefer streaming or batch ingestion for this pipeline?", /Do you prefer/i, /neverthis/i],
+  ["What risks could we miss in a cloud migration?", /What risks could we miss/i, /neverthis/i],
+  ["What steps did they take after the incident?", /What steps did they take/i, /neverthis/i],
+  ["What mitigation would a team apply to reduce downtime?", /What mitigation would a team/i, /neverthis/i],
+  ["What lessons have you learned from a failed deployment?", /What lessons have you learned/i, /neverthis/i],
+  ["What metrics do you track for alert quality?", /What metrics do you track/i, /neverthis/i],
+  ["How has your approach to risk changed over time?", /How has your approach/i, /neverthis/i],
+  ["What actions will we take to recover this service?", /What actions will we take/i, /neverthis/i],
+  ["Have you ever negotiated a difficult deadline?", /Have you ever negotiated/i, /neverthis/i],
+  ["What are the SIEM architecture components?", /What are the SIEM architecture/i, /neverthis/i],
+];
+for (const [spoken, expected, absent] of conversationalGrammarCases) test("caption natural grammar: " + spoken.slice(0, 46), () => {
+  const q = captionFocus(spoken);
+  assert.match(q, expected);
+  if (absent.source !== "neverthis") assert.doesNotMatch(q, absent);
+});
+for (const narration of [
+  "I have been reviewing the access controls for the last month.",
+  "We are moving to the next section of the recording now.",
+  "I am going to open the next file and take notes.",
+  "The video has already started and the room is quiet."
+]) test("caption natural grammar rejects narration: " + narration.slice(0, 38), () => {
+  assert.equal(captionFocus(narration), "");
+});
+
+const nonQuestionFragments = [
+  "Hello there", "Hi everyone", "Good morning", "Good afternoon.",
+  "Good evening everyone", "Thanks for attending", "Thank you for joining",
+  "Next question", "Previous question", "Moving on", "Hold on",
+  "One moment", "I need help", "I want a moment"
+];
+for (const phrase of nonQuestionFragments) test("caption focus ignores short non-question chatter: " + phrase, () => {
+  assert.equal(captionFocus(phrase), "", "Do not trigger an AI answer for conversational filler");
+});
+for (const keyword of ["SIEM", "CyberArk EPM", "OAuth", "Good security governance", "Next.js routing"]) {
+  test("caption focus preserves named keyword: " + keyword, () => {
+    assert.equal(captionFocus(keyword), keyword);
+  });
+}
