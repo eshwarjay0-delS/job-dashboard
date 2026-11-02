@@ -14,6 +14,7 @@
   function pick(value) {
     const raw = clean(value).replace(/^(?:(?:Them|Interviewer|You)\s*:\s*)/i, "");
     if (!raw || NOISE.test(raw) || NONQUESTION_FRAGMENT.test(raw)) return "";
+    ASK.lastIndex = 0;
     const matches = [...raw.matchAll(ASK)];
     const asks = matches.filter(m => {
       const tail = raw.slice(m.index + m[0].length).trim();
@@ -47,6 +48,7 @@
       if (RELATED.test(next)) { kept += " " + next; continue; }
       // A second independent question is retained only when explicit and
       // closely adjacent, not unrelated video narration after the ask.
+      ASK.lastIndex = 0;
       if (ASK.test(next) && kept.length < 400 && next.split(/\s+/).length <= 35) {
         ASK.lastIndex = 0;
         kept += " " + next;
@@ -55,6 +57,7 @@
       ASK.lastIndex = 0;
       break;
     }
+    // Never attach unrelated narration just because it follows a question.
     return kept.trim().slice(0, 3500);
   }
   root.KompasCaptionFocus = { pick };
