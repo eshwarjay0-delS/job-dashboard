@@ -131,26 +131,30 @@ function sessionFromArgv(argv) {
     if (!d) return null;
     const json = Buffer.from(d.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
     const s = JSON.parse(json);
-    if (s && typeof s === "object" && u.protocol === "marketfit-kompas:") s.site = "marketfit";
+    // MarketFit transfers must use the server's one-use ticket, never raw
+    // base64 session content that any untrusted URL can manufacture.
+    if (u.protocol === "marketfit-kompas:") return null;
     return s && typeof s === "object" && s.id ? s : null;
   } catch { return null; }
 }
-function deliverSession() {
-  if (!pendingSession || !win || win.isDestroyed()) return;
-  if (pendingSession.site !== "perfact") {
-    if (!pendingSession.ownerId ||
-        !desktopAuth.token() ||
-        desktopAuth.ownerId() !== pendingSession.ownerId) {
-      beginChromeSignIn();
-      return;
-    }
-  }
-  const s = { ...pendingSession };
-  // Never expose bearer credentials or the server-attested owner marker to
-  // localStorage / renderer; only the native auth controller may hold tokens.
-  for (const key of ["token", "refreshToken", "tokenExp", "access_token", "refresh_token", "ownerId"]) delete s[key];
+function takeVerifiedSession() {
+  if (!pendingSession) return null;
+  // All MarketFit sessions must be redeemed from server-issued one-use
+  // tickets and bound to their authenticated owner. Never accept arbitrary
+  // desktop://open?d= data as a trusted account session.
+  if (pendingSession.site !== "perfact" &&
+      (!pendingSession.ownerId || !desktopAuth.token() ||
+       desktopAuth.ownerId() !== pendingSession.ownerId)) return null;
+  const verified = { ...pendingSession };
+  for (const key of ["token", "refreshToken", "tokenExp", "access_token", "refresh_token", "ownerId"]) delete verified[key];
   pendingSession = null;
-  win.webContents.send("kompas:session", s);
+  return verified;
+}
+function deliverSession() {
+  if (!win || win.isDestroyed()) return;
+  const s = takeVerifiedSession();
+  if (s) win.webContents.send("kompas:session", s);
+  else if (pendingSession) beginChromeSignIn();
 }
 
 // A saved place is used only if enough of it is still on some screen to grab; otherwise, as on a first launch,
@@ -579,7 +583,13 @@ function wireIpc() {
   ipcMain.on("kompas:live", (_e, on) => holdAnswerKey(!!on));
   ipcMain.handle("kompas:get-private", () => !!config.isPrivate);
   ipcMain.handle("kompas:set-private", (_e, on) => setPrefs({ isPrivate: !!on }).isPrivate);
-  ipcMain.handle("kompas:take-session", () => { const s = pendingSession; pendingSession = null; return s; });
+  ipcMain.handle("kompas:take-session", (event) => {
+    if (!win || event.sender.id !== win.webContents.id ||
+        !/^kompas:\/\/app\//i.test(String(event.senderFrame?.url || ""))) return null;
+    const verified = takeVerifiedSession();
+    if (!verified && pendingSession) beginChromeSignIn();
+    return verified;
+  });
   ipcMain.handle("kompas:refresh-auth", (event) => {
     if (!win || event.sender.id !== win.webContents.id) throw Error("Invalid auth caller");
     return desktopAuth.renew(true);
@@ -621,7 +631,7 @@ else {
     let handed = sessionFromArgv(argv);
     if (ticketFromArgv(argv)) {
       try { handed = await sessionFromTicketArgv(argv); }
-      catch { beginChromeSignIn(); }
+      catch { handed = null; beginChromeSignIn(); }
     }
     if (handed) {
       pendingSession = handed;
