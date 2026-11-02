@@ -2111,7 +2111,12 @@ function showCaption(who, text, isInterim) {
   if (who === "Them") noteThem(text);
   else if (themSpeaking() || echoOfThem(text) >= 0.5) return;
   el.classList.remove("hidden"); el.classList.toggle("interim", !!isInterim);
-  $("capWho").textContent = who === "You" ? "You" : "Them"; $("capText").textContent = text;
+  $("capWho").textContent = who === "You" ? "You" : "Them";
+  const captionText = $("capText");
+  captionText.textContent = text;
+  // Keep the most recent three wrapped lines visible, not the first three
+  // of a caption whose earlier words have already scrolled off Windows.
+  captionText.scrollTop = captionText.scrollHeight;
   const box = el.closest(".q"); if (box) { box.classList.add("live"); box.scrollTop = box.scrollHeight; }
   const card = $("card");
   if (who === "Them" && card && card.classList.contains("q-away") && !(cards[idx] && cards[idx].streaming)) card.classList.remove("q-away");
