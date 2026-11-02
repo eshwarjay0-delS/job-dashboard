@@ -5,11 +5,15 @@
   const clean = value => String(value || "").replace(/[\u0000-\u001f]+/g, " ").replace(/\s+/g, " ").trim();
   const ASK = /\b(?:(?:can|could|would|will)\s+you\s+(?:please\s+)?(?:describe|explain|tell|show|walk|outline|share|give|compare|discuss|summari[sz]e)|tell\s+(?:me|us)\s+(?:about|a|an|how|what)|(?:walk|talk)\s+(?:me|us)\s+through|describe\b|explain\b|outline\b|compare\b|share\s+an?\s+example|give\s+(?:me|us)\s+(?:an?\s+)?example|what\s+(?:is|are|was|were|would|do|does|did|can|could|should|exactly|about|happens)|how\s+(?:do|does|did|would|could|can|should|is|are|was|were|much|many|long|about)|why\s+(?:is|are|did|do|does|would|could|should)|which\s+(?:of|one|approach|tool|framework|method|option)|when\s+(?:would|should|did|do|does|is)|where\s+(?:would|do|does|did|is)|who\s+(?:would|does|did|is))\b/gi;
   const NOISE = /^(?:(?:yeah|yes|no|okay|ok|right|sure|good|thanks|thank you|umm?|uhh?|well|so|like|you know|hmm|all right)[,.\s]*)+$/i;
+  // Short captions can be conversational filler, not interview keywords.
+  // Reject only complete, common discourse phrases; preserve technical and
+  // non-security keyword fragments (including terms such as Next.js).
+  const NONQUESTION_FRAGMENT = /^(?:hello(?:\s+(?:there|everyone))?|hi(?:\s+(?:there|everyone))?|good\s+(?:morning|afternoon|evening|night)(?:\s+(?:everyone|all))?|thanks?(?:\s+(?:for\s+(?:attending|joining|watching|listening)|everyone|all))?|thank\s+you(?:\s+(?:for\s+(?:attending|joining|watching|listening)|everyone|all))?|(?:next|previous)\s+question|moving\s+on|(?:please\s+)?(?:hold\s+on|one\s+moment)|i\s+(?:need|want)\s+(?:help|a\s+moment))\s*[.!]?$/i;
   const NONQUESTION_TAIL = /^(?:because\s+(?:this|that|it|i|we)|i(?:'m| am) going to\b|i (?:need|want|have|haven't|didn't)\b|let'?s (?:get|go|move|start)\b|good (?:afternoon|morning|evening)\b|thanks?\s+(?:for|and)\b|the (?:next|first) (?:one|thing|video|file)\b)/i;
   const RELATED = /^(?:and|also|so)\s+(?:what|how|why|which|where|when|can|could|would|do|does|did)\b/i;
   function pick(value) {
     const raw = clean(value).replace(/^(?:(?:Them|Interviewer|You)\s*:\s*)/i, "");
-    if (!raw || NOISE.test(raw)) return "";
+    if (!raw || NOISE.test(raw) || NONQUESTION_FRAGMENT.test(raw)) return "";
     const matches = [...raw.matchAll(ASK)];
     const asks = matches.filter(m => {
       const tail = raw.slice(m.index + m[0].length).trim();

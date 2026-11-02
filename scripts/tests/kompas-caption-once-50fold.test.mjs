@@ -252,3 +252,18 @@ test("caption press avoids pending 250–1500 ms audio flush and pins its own qu
   assert.ok(section.indexOf("if (options.captionOnce)") < section.indexOf("await flushHeard("));
   assert.match(section,/return await generateAnswer\(frozen, page, \{ pinned: true/);
 });
+
+const nonQuestionFragments = [
+  "Hello there", "Hi everyone", "Good morning", "Good afternoon.",
+  "Good evening everyone", "Thanks for attending", "Thank you for joining",
+  "Next question", "Previous question", "Moving on", "Hold on",
+  "One moment", "I need help", "I want a moment"
+];
+for (const phrase of nonQuestionFragments) test("caption focus ignores short non-question chatter: " + phrase, () => {
+  assert.equal(captionFocus(phrase), "", "Do not trigger an AI answer for conversational filler");
+});
+for (const keyword of ["SIEM", "CyberArk EPM", "OAuth", "Good security governance", "Next.js routing"]) {
+  test("caption focus preserves named keyword: " + keyword, () => {
+    assert.equal(captionFocus(keyword), keyword);
+  });
+}
