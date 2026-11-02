@@ -3625,13 +3625,13 @@ function emptyPressReason(anyCapture, wantSys, hasThemCap, themSilent) {
   if (hasThemCap) return "Kompas hears the call audio but nothing has been transcribed yet — keep playing, then press AI Answer again.";
   return "Nothing heard yet — press Start, or type a question.";
 }
-// Safe in the browser and in the headless baseline replay. A missing renderer
-// never turns question selection into a thrown exception.
-function focusSpokenQuestion(text) {
-  try { return (typeof window !== "undefined" ? window.KompasCaptionFocus?.pick(text) : "") || ""; }
-  catch { return ""; }
-}
 async function aiAnswer(fromAuto, options = {}) {
+  // Kept WITHIN aiAnswer because the headless interview-baseline runner
+  // extracts and replays this function without neighboring globals.
+  const focusSpokenQuestion = text => {
+    try { return (typeof window !== "undefined" ? window.KompasCaptionFocus?.pick(text) : "") || ""; }
+    catch { return ""; }
+  };
   if (aiBusy) {
     if (Date.now() - aiBusySince > 150000) aiBusy = false;   // a wedged latch must never mute the button (or a typed Enter) forever
     else { status("Still working on the last answer — one moment.", "live"); return; }
