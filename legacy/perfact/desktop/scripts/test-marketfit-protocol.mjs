@@ -51,8 +51,12 @@ assert.equal(unpack(perfact).site, "perfact");
 const parseFn = between(desktop, "function sessionFromArgv(argv) {", "function deliverSession() {");
 const context = { Buffer, URL };
 vm.runInNewContext(parseFn + "\nthis.parse = sessionFromArgv;", context);
-assert.equal(context.parse([marketfit]).site, "marketfit");
-assert.equal(context.parse([marketfit.replace("://open?d=", "://open/?d=")]).site, "marketfit", "Windows may normalize external-protocol paths with a slash");
+assert.equal(context.parse([marketfit]), null, "The untrusted raw MarketFit session must never bypass an account-scoped one-use ticket");
+assert.equal(context.parse([marketfit.replace("://open?d=", "://open/?d=")]), null,
+  "A path-normalized raw MarketFit deep link is not an authenticated session");
+assert.match(desktop, /sessionFromTicketArgv\(argv\)/);
+assert.match(desktop, /function takeVerifiedSession\(\)/);
+assert.match(desktop, /desktopAuth\.ownerId\(\) !== pendingSession\.ownerId/);
 assert.equal(context.parse([perfact]).site, "perfact");
 assert.equal(context.parse(["kompas://app/index.html"]), null);
 assert.equal(context.parse(["https://attacker.invalid"]), null);
@@ -67,4 +71,4 @@ assert.ok(desktop.includes('app.setAsDefaultProtocolClient(MARKETFIT_SCHEME'));
 assert.ok(page.includes('window.location.assign(url)') && page.includes('"marketfit-kompas://open?ticket="') &&
   page.includes('prepareDesktopSession(s).then(openWithTicket)'), "Desktop must use account-bound one-time handoff ticket and protocol navigation, not an iframe or long URL payload");
 assert.ok(sfx.includes("marketfit-kompas"), "Outer Windows launcher must forward MarketFit deep links");
-console.log("MarketFit native session protocol, isolated desktop profile, and standalone perfACT: verified");
+console.log("MarketFit one-use owner-scoped ticket protocol, isolated desktop profile, and legacy compatibility: verified");
