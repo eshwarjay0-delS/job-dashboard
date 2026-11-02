@@ -19,6 +19,7 @@ const { app, BrowserWindow, ipcMain, screen, shell, Menu, session, protocol, net
 const path = require("path");
 const fs = require("fs");
 const { createMarketFitDesktopAuth } = require("./marketfit-auth.cjs");
+const { ticketFromArgv, redeemTicket } = require("./desktop-handoff.cjs");
 
 app.setName("Kompas");
 // Preserve the existing perfACT desktop while MarketFit gets its own native
@@ -99,6 +100,22 @@ async function askTaskbar() {
 }
 
 // kompas://open?d=<base64url json> is the session the website just started. kompas://app/ is the page itself.
+async function sessionFromTicketArgv(argv) {
+  const ticket = ticketFromArgv(argv);
+  if (!ticket) return null;
+  const handed = await redeemTicket((url, options) => net.fetch(url, options), MARKETFIT_API_ORIGIN, ticket);
+  // The one-use server record was minted by the authenticated account. If
+  // credentials accompanied that saved interview, verify them independently
+  // before assigning them to this native profile.
+  if (handed.token && handed.refreshToken) {
+    const ok = await desktopAuth.acceptCallback({
+      access_token: handed.token, refresh_token: handed.refreshToken,
+      expires_at: handed.tokenExp
+    });
+    if (!ok) throw Error("Saved interview authentication is no longer valid");
+  }
+  return handed;
+}
 function sessionFromArgv(argv) {
   const raw = (argv || []).find(a => typeof a === "string" && /^(?:kompas|marketfit-kompas):/i.test(a) && !/^kompas:\/\/app\b/i.test(a));
   if (!raw) return null;
@@ -582,7 +599,11 @@ else {
       } else if (!accepted) beginChromeSignIn();
       return;
     }
-    const handed = sessionFromArgv(argv);
+    let handed = sessionFromArgv(argv);
+    if (ticketFromArgv(argv)) {
+      try { handed = await sessionFromTicketArgv(argv); }
+      catch { beginChromeSignIn(); }
+    }
     if (handed) {
       pendingSession = handed;
       const nextSite = siteFor(handed);
@@ -606,6 +627,10 @@ else {
       opacity, dock: typeof saved.dock === "string" && saved.dock ? saved.dock : null };
     desktopAuth.load();
     pendingSession = sessionFromArgv(process.argv);
+    if (ticketFromArgv(process.argv)) {
+      try { pendingSession = await sessionFromTicketArgv(process.argv); }
+      catch { /* Leave the original saved session intact; retry in MarketFit. */ }
+    }
     // The installer page opens marketfit-kompas://open without an interview
     // payload. Route that first launch into MarketFit instead of perfACT.
     activeSite = pendingSession ? siteFor(pendingSession) : "marketfit";
