@@ -133,7 +133,10 @@ test("desktop handoff updates existing account session without losing transcript
   const ctx={
     Date:{now:()=>10000},
     window:{kompasDesktop:{}},
-    accountSessionSync:{refresh:async()=>true},
+    accountSessionSync:{owner:"owner-A",refresh:async()=>true},
+    pendingDesktopHandoffs:new Map(),
+    replayingDesktopHandoff:false,
+    queueMicrotask,
     LS:{get:()=>stored,set(_key,v){stored=v}},
     sessions:stored,
     launchCopilot:s=>{opened=s},

@@ -146,6 +146,11 @@ function takeVerifiedSession() {
       (!pendingSession.ownerId || !desktopAuth.token() ||
        desktopAuth.ownerId() !== pendingSession.ownerId)) return null;
   const verified = { ...pendingSession };
+  // Account identity is not a credential. Transfer ONLY this server-verified
+  // owner marker so the renderer can compare it to the freshly authenticated
+  // cloud catalog before any localStorage or cross-device write. The renderer
+  // removes the marker before persisting the interview itself.
+  if (pendingSession.site !== "perfact") verified.__kompasVerifiedOwner = desktopAuth.ownerId();
   for (const key of ["token", "refreshToken", "tokenExp", "access_token", "refresh_token", "ownerId"]) delete verified[key];
   pendingSession = null;
   return verified;
