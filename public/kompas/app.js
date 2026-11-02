@@ -1438,7 +1438,12 @@ async function checkSessionReadiness() {
 
 // A verified native Chrome handoff automatically rechecks readiness.
 if (typeof window.kompasDesktop?.onAuthReady === "function") {
-  window.kompasDesktop.onAuthReady(() => { if (!running) void checkSessionReadiness(); });
+  window.kompasDesktop.onAuthReady(() => {
+    // A newly verified native identity must reconcile all account-owned
+    // sessions, not just re-enable the Start button.
+    void accountSessionSync?.refresh();
+    if (!running) void checkSessionReadiness();
+  });
 }
 async function start() {
   if (Date.now() >= sessionReadyUntil) { await checkSessionReadiness(); return; }
@@ -5054,7 +5059,22 @@ function resolveDocumentsText() {
 accountSessionSync = window.KompasSessionCloud?.create({
   storage: localStorage,
   fetcher: (url, opts) => fetch(url, opts),
-  authToken: () => supabaseAccessToken(),
+  // Chrome's Supabase SSR cookie is authoritative. Never attach the
+  // potentially stale browser JWT as an Authorization header: the API
+  // intentionally rejects an invalid explicit Bearer instead of falling
+  // back to a different cookie-account identity.
+  recoverAuth: async () => {
+    if (window.kompasDesktop) {
+      const verified = await window.kompasDesktop.refreshAuth?.().catch(() => false);
+      if (!verified) window.kompasDesktop.openSignIn?.();
+      return !!verified;
+    }
+    const res = await fetch("/api/auth/refresh", {
+      method: "POST", credentials: "same-origin", cache: "no-store",
+    });
+    if (!res.ok) return false;
+    return !!(await res.json().catch(() => null))?.ok;
+  },
   read: () => LS.get("sessions", []),
   write: rows => LS.set("sessions", rows),
   render: () => {
@@ -5204,7 +5224,9 @@ function packSession(s) {
     token: supabaseAccessToken(), // handed to the desktop app so its API calls are authenticated
     // The refresh token + expiry ride along so the desktop can renew the
     // access token itself instead of pinning a JWT that dies after an hour.
-    refreshToken: (supabaseSession() || {}).refresh_token || "",
+    // Refresh tokens belong only to Chrome's Supabase session. Desktop uses
+    // a verified short-lived JWT and a state-bound Chrome renewal handshake.
+    refreshToken: "",
     tokenExp: (supabaseSession() || {}).expires_at || 0,
     // The same native Kompas shell opens the MarketFit session in MarketFit, not the standalone perfACT site.
     site: (location.pathname === "/kompas" || location.pathname.startsWith("/kompas/") || location.pathname.startsWith("/dashboard/kompas")) ? "marketfit" : "perfact",
