@@ -48,6 +48,13 @@ const sfxExe = path.join(appDir, "dist", "sfx-stub.exe");
 const compiled = spawnSync(csc, ["/nologo", "/platform:x64", "/optimize+", `/out:${sfxExe}`,
   "/r:System.IO.Compression.FileSystem.dll", path.join(appDir, "scripts", "sfx.cs")], { stdio: "inherit" });
 if (compiled.status) { console.error("the x64 launcher did not compile"); process.exit(compiled.status || 1); }
+// Exercise the REAL compiled Windows launcher with auth and ticket handoffs.
+// A working Electron app is useless if the portable EXE drops the deep link.
+const nativeProtocolCheck = spawnSync(sfxExe, ["--self-test-links"], { stdio: "inherit" });
+if (nativeProtocolCheck.status !== 0) {
+  console.error("The Windows launcher rejected valid MarketFit ticket/auth protocol links.");
+  process.exit(nativeProtocolCheck.status || 1);
+}
 await stampExe(sfxExe);
 
 const zip = path.join(appDir, "dist", "payload.zip");
