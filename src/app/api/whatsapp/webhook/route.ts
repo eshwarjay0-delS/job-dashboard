@@ -957,6 +957,7 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
   console.info("[whatsapp] tailored document accepted by Meta", { job: job.slice(0, 12), message: sentId.slice(0, 16), overallCoverage: result.coverage, supportedCoverage: result.supported_coverage })
   finished = true
   await recordWhatsAppUsage(userId, "resume_tailor", result)
+  await sendText(from, resumeGapReport(result)).catch(error => console.error("[whatsapp] gap report send failed", String(error).slice(0, 160)))
   // Counted once the resume it started is delivered, so a failed run never makes a resume look more used.
   if (files) await markUsed(files.userDir, files.abs).catch(() => {})
 
@@ -1394,6 +1395,29 @@ function notAdded(result: TailorResult): string[] {
   // Some parts of the rewrite never came back: said whatever else the file shows.
   if ((result.partial && !result.skills_only) || (!out.length && result.quality?.status === "needs_review")) out.push("This result is incomplete and needs review. Reply to this file to request changes.")
   return out
+}
+
+// Every successful WhatsApp tailoring run gets an explicit, evidence-aware JD gap report.
+// Keyword presence is not proof of hands-on experience, and the percentage is not an employer ATS score.
+function resumeGapReport(result: TailorResult): string {
+  const analysis = result.keyword_analysis
+  const unique = (terms: string[] = []) => [...new Set(terms.map(t => String(t).trim()).filter(Boolean))]
+  const matched = unique(analysis?.matched || [])
+  const added = unique(analysis?.added || [])
+  const missing = unique([...(analysis?.missing || []), ...(result.jd_terms_unplaced || []), ...(result.quality?.missing || [])])
+  const covered = Number.isFinite(result.coverage) ? `${result.coverage}%` : "Not measured"
+  const supported = Number.isFinite(result.supported_coverage) ? `${result.supported_coverage}%` : "Not measured"
+  const list = (terms: string[]) => terms.length ? terms.slice(0, 20).join(", ") + (terms.length > 20 ? ` (+${terms.length - 20} more)` : "") : "None identified"
+  return [
+    "*MFit Resume Gap & Risk Report*",
+    `Estimated JD keyword coverage: ${covered} (not an employer ATS score)`,
+    `Resume-supported coverage: ${supported}`,
+    `Already matched: ${list(matched)}`,
+    `Newly placed: ${list(added)}`,
+    `Missing / unresolved JD terms: ${list(missing)}`,
+    `Risk: ${result.skills_only || result.partial || result.unchanged || missing.length ? "Needs review" : "Keyword review passed; experience evidence still requires verification"}`,
+    "Mandatory hands-on requirements must be supported by specific experience bullets, not just keywords. Verify each added claim before applying.",
+  ].join("\\n")
 }
 
 // The send check. sameResumeIdentity compares every email and, with the job-post terms gate on, runs the round-trip guard:
