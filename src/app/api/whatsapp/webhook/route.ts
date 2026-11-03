@@ -804,8 +804,8 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       userResumeDir: files ? files.userDir : path.join(INBOX_DIR, digits(from)),
       givenPath: session.resumePath,
       mode: "full",
-      // Reserve a second full attempt instead of consuming the entire webhook window.
-      maxMs: maxMs >= 120_000 ? Math.min(150_000, Math.floor(maxMs * 0.65)) : maxMs,
+      // Allow the primary full rewrite more time for long JDs and multi-page DOCX files; reserve the remaining window for validation and delivery.
+      maxMs: maxMs >= 120_000 ? Math.min(195_000, Math.floor(maxMs * 0.82)) : maxMs,
       // "redo" asks for a fresh rewrite, not the one kept for the same inputs.
       ...(files?.redo ? { noCache: true } : {}),
       // Match the dashboard defaults: summary left as written, skills + experience retargeted.
