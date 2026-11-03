@@ -1417,7 +1417,7 @@ function resumeGapReport(result: TailorResult): string {
     `Missing / unresolved JD terms: ${list(missing)}`,
     `Risk: ${result.skills_only || result.partial || result.unchanged || missing.length ? "Needs review" : "Keyword review passed; experience evidence still requires verification"}`,
     "Mandatory hands-on requirements must be supported by specific experience bullets, not just keywords. Verify each added claim before applying.",
-  ].join("\\n")
+  ].join("\n")
 }
 
 // The send check. sameResumeIdentity compares every email and, with the job-post terms gate on, runs the round-trip guard:
