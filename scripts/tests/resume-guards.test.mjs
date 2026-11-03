@@ -68,6 +68,21 @@ test('roundtrip: docxText reads a .docx', async () => {
 })
 
 
+test('roundtrip: DOCX extraction includes header/footer protected facts without dropping body', async () => {
+  const zip = new JSZip()
+  const paragraph = value => '<w:p><w:r><w:t>' + value + '</w:t></w:r></w:p>'
+  zip.file('word/document.xml', '<w:document><w:body>' + paragraph('Alex Example') + paragraph('Example Corp Jan 2020 - Present') + '</w:body></w:document>')
+  zip.file('word/header1.xml', '<w:hdr>' + paragraph('alex.example@example.com') + '</w:hdr>')
+  zip.file('word/footer1.xml', '<w:ftr>' + paragraph('linkedin.com/in/alex-example') + '</w:ftr>')
+  const extracted = await docxText(await zip.generateAsync({ type: 'nodebuffer' }))
+  assert.match(extracted, /^Alex Example/)
+  assert.match(extracted, /alex\.example@example\.com/)
+  assert.match(extracted, /linkedin\.com\/in\/alex-example/)
+  assert.equal(checkRoundTrip(extracted, extracted.replace('Jan 2020', 'Feb 2020')).ok, false)
+  assert.equal(checkRoundTrip(extracted, extracted.replace('alex.example@example.com', 'other@example.com')).ok, false)
+  assert.equal(checkRoundTrip(extracted, extracted.replace('linkedin.com/in/alex-example', 'linkedin.com/in/other')).ok, false)
+})
+
 async function syntheticWordDocx(paragraphs) {
   const xmlEscape = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   const zip = new JSZip()
