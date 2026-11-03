@@ -1155,7 +1155,8 @@ export async function runTailor(opts: {
         known: [...coveredScore], sourceResume: text,
         candidateInput: immediatePrefs.join("\\n"), timeoutMs: 4500,
       })
-      const suggested = feedbackTerms.filter(k => !coveredJdKeywords(tailoredText, [k]).has(k)).slice(0, 16)
+      const exportedText = await extractText(buffer)
+      const suggested = feedbackTerms.filter(k => !coveredJdKeywords(exportedText, [k]).has(k)).slice(0, 16)
       notes.push(`Gemini final-document gap feedback: ${suggested.length ? suggested.join(", ") : "no additional terms identified"}. Suggestions are not verified qualifications.`)
     } catch {
       notes.push("Gemini final-document feedback unavailable; deterministic DOCX coverage check still applied.")
