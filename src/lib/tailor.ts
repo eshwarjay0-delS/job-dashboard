@@ -342,7 +342,8 @@ export async function runTailor(opts: {
   const scoreKws = floorTerms(jd, targetKeywords(jdExtracted, [], jd))
   const jdKws = [...new Set([...targetKeywords(jdExtracted, jdGenerated, jd).filter(k => !isQualificationOrJunk(k)), ...scoreKws])]
   const floorKws = new Set(floorTerms(jd, scoreKws))
-  const shareOf = (shown: Set<string>) => (scoreKws.length ? scoreKws.filter(k => shown.has(k)).length / scoreKws.length : 1)
+  // An empty or unparseable JD keyword set is not 100% coverage. Never award a perfect match on an empty denominator.
+  const shareOf = (shown: Set<string>) => (scoreKws.length ? scoreKws.filter(k => shown.has(k)).length / scoreKws.length : 0)
   const forcedJdKws = explicitlyConfirmsAllRequirements(immediatePrefs)
     ? jdKws
     : [...coveredJdKeywords([text, ...immediatePrefs].join("\n"), jdKws)].filter(k => jdKws.includes(k))
