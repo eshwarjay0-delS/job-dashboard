@@ -10,10 +10,13 @@ const URL_RE = /\b(?:https?:\/\/|www\.)[^\s|,;()<>]+|\b(?:linkedin\.com|github\.
 const PHONE = /(?<![\w/-])((?:\+\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)|\d{2,4})[\s.-]?\d{3,4}[\s.-]?\d{3,4})(?:\s*(?:ext\.?|extension|x|#)\s*(\d{1,6}))?(?![\w/-])/gi
 // Unicode dashes (hyphen, NB hyphen, figure, en, em, minus) read as '-', so en-dash phones and ranges are seen.
 const DASH = /[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g
-// Standalone years in skills, technology versions and prose are not employment dates.\n// Match month-year and numeric month/year dates; do not count incidental year tokens.\nconst DATE = new RegExp(
+// Incidental standalone years in prose are not employment dates.
+// Preserve month/year and year-range employment dates.
+const DATE = new RegExp(
   `\\b(?:${MON})\\.?\\s+\\d{4}\\b` +           // Jan 2020
   `|\\b(?:0?[1-9]|1[0-2])\\/(?:19|20)\\d{2}\\b` + // 01/2020
   `|\\b(?:19|20)\\d{2}-(?:0[1-9]|1[0-2])\\b` +    // 2020-01
+  `|\\b(?:19|20)\\d{2}\\s*[-–—]\\s*(?:(?:19|20)\\d{2}|present|current)\\b` + // employment year ranges
   `|\\b(?:present|current|now)\\b`, 'gi')
 
 function normDate(d: string): string {
