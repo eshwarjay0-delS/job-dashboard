@@ -9,7 +9,7 @@ import path from "path"
 import { createHash } from "crypto"
 import { blob, keyOf } from "@/lib/storage"
 import { extractText, extractZones, applyRewrites, capRoleBullets, roleSpanMonths, type Edits, type Zones } from "./docx"
-import { adapt, expandConfirmedVocabulary, expandJdKeywordsTwice, type ConfirmedVocabulary } from "./claude"
+import { adapt, expandConfirmedVocabulary, expandJdKeywords, expandJdKeywordsTwice, type ConfirmedVocabulary } from "./claude"
 import { recentFeedback } from "./feedback"
 import { matchByKeywords, extractJdKeywords, requirementText, coveredJdKeywords, detectJDLevel, estimateYears } from "./keywords"
 import { modelFor, type LlmKeys, type ProviderPref, type TokenUsage } from "./llm"
@@ -1144,6 +1144,23 @@ export async function runTailor(opts: {
   // scored as an empty denominator (needs review) after the skills line was filled.
   const coveredScore = scoreKws.filter(k => afterKw.has(k))
   const qualityReport = resumeQuality({ matched: coveredScore.length, total: scoreKws.length, missing: scoreKws.filter(k => !afterKw.has(k)), weightedCoverage: best.cov, partial: qualityBlockers.some(k => k !== "unchanged"), unchanged: !diff.length })
+  // Independent Gemini feedback on the ACTUAL exported DOCX text. This is advisory:
+  // model-suggested vocabulary never inflates the measured JD coverage or asserts
+  // experience the candidate did not supply. Keep the pass short so WhatsApp
+  // can still finish uploading within the function time budget.
+  if (opts.keys.gemini && qualityReport.missing.length && Date.now() - started < Math.max(0, (opts.maxMs || 240_000) - 18_000)) {
+    try {
+      const feedbackTerms = await expandJdKeywords({
+        keys: { gemini: opts.keys.gemini }, pref: "gemini", jd,
+        known: [...coveredScore], sourceResume: text,
+        candidateInput: immediatePrefs.join("\\n"), timeoutMs: 4500,
+      })
+      const suggested = feedbackTerms.filter(k => !coveredJdKeywords(tailoredText, [k]).has(k)).slice(0, 16)
+      notes.push(`Gemini final-document gap feedback: ${suggested.length ? suggested.join(", ") : "no additional terms identified"}. Suggestions are not verified qualifications.`)
+    } catch {
+      notes.push("Gemini final-document feedback unavailable; deterministic DOCX coverage check still applied.")
+    }
+  }
   const token = !best.partial && diff.length && qualityReport.status === "coverage_met" ? key : `${key}x${createHash("sha1").update(buffer).digest("hex").slice(0, 8)}`
   await blob.put(`tailored/${token}.docx`, buffer)
   // Owner lock (Nov 1): a token minted with a dashboard caller id carries an owner
