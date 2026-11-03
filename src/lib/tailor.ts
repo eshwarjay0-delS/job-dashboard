@@ -1036,7 +1036,7 @@ export async function runTailor(opts: {
     added: kwAdded,
     missing: kwMissing,
     coverage_before: pctOf(kwMatched.length),
-    coverage_after: pctOf(afterKw.size),
+    coverage_after: pctOf(scoreKws.filter(k => afterKw.has(k)).length),
   }
   // Composite drivers (Jobright-style): skills = keyword coverage; identity = how
   // decisively the right resume was picked; experience = candidate years vs JD level.
