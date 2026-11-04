@@ -28,7 +28,7 @@ function loadRefusing(rel) {
 }
 const refusing = loadRefusing("src/lib/whatsapp-resume-acceptance.ts")
 const { resumeQuality } = loadTS("src/lib/resume-quality.ts")
-const { acceptableWhatsAppResume, whatsappResumeRejectionReasons } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
+const { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons } = loadTS("src/lib/whatsapp-resume-acceptance.ts")
 const { removeUnsupportedRewrites } = loadTS("src/lib/resume-unsupported-rewrites.ts")
 const make = (changes = {}) => ({
   token: "safe-docx-token", coverage: 100, supported_coverage: 100,
@@ -255,4 +255,13 @@ test("switch off: a placed gcp iam on the skills line is stripped, as master doe
   assert.equal(off.removed, 1)
   assert.deepEqual(off.edits.skills.map(s => s.idx), [2])
   assert.deepEqual(removeUnsupportedRewrites(edits, text => text.includes("gcp iam")).edits.skills.map(s => s.idx), [2])
+})
+
+test("Nov4 hold transparency: rejection codes become plain words, unknowns dropped", () => {
+  // Cross-realm note: loadTS returns vm-realm arrays, so deepEqual fails on
+  // prototypes even when contents match. Compare primitives only.
+  assert.equal(describeRejectionReasons(["draft_parts_missing", "quality_incomplete"]).join(" | "), "parts of the draft are missing | the quality report is incomplete")
+  assert.equal(describeRejectionReasons(["quality_not_deliverable", "quality_not_deliverable"]).join(" | "), "the quality report does not clear the delivery bar")
+  assert.equal(describeRejectionReasons(["some_future_blocker", "ats_check_failed"]).length, 0)
+  assert.equal(describeRejectionReasons([]).length, 0)
 })

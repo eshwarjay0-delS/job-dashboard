@@ -50,3 +50,26 @@ export function whatsappResumeRejectionReasons(result: TailorResult): string[] {
 export function acceptableWhatsAppResume(result: TailorResult): boolean {
   return whatsappResumeRejectionReasons(result).length === 0
 }
+
+/** Plain words for rejection codes, for the message that tells the user why a
+ * draft was held. Unknown codes are dropped, never shown as jargon. */
+const REJECTION_WORDS: Record<string, string> = {
+  no_document_token: "no finished document was produced",
+  unchanged: "the rewrite made no changes",
+  draft_parts_missing: "parts of the draft are missing",
+  quality_report_missing: "the quality report is missing",
+  quality_incomplete: "the quality report is incomplete",
+  quality_not_deliverable: "the quality report does not clear the delivery bar",
+  invalid_supported_denominator: "the supported-skills count is invalid",
+  supported_score_mismatch: "the quality counts do not match the job-post coverage",
+  unverified_jd_terms: "the draft added job-post terms that are not in your resume",
+}
+
+export function describeRejectionReasons(reasons: string[]): string[] {
+  const out: string[] = []
+  for (const reason of reasons) {
+    const words = REJECTION_WORDS[reason]
+    if (words && !out.includes(words)) out.push(words)
+  }
+  return out
+}

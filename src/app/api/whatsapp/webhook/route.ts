@@ -44,7 +44,7 @@ import { libraryOf, numberedEmails, candidatesFor } from "@/lib/library-pick-sto
 import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME } from "@/lib/library-pick"
 import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
 import { madeMeetsFloor } from "@/lib/made-floor"
-import { acceptableWhatsAppResume, whatsappResumeRejectionReasons } from "@/lib/whatsapp-resume-acceptance"
+import { acceptableWhatsAppResume, describeRejectionReasons, whatsappResumeRejectionReasons } from "@/lib/whatsapp-resume-acceptance"
 import { enqueueResumeRecovery, patchResumeRecovery, deferResumeRecovery, dueResumeRecoveries, hasResumeRecoveryForJD, markResumeDocumentAccepted, recordResumeDeliveryStatus, readResumeRecovery } from "@/lib/whatsapp-resume-recovery"
 import { recoveryTailorBudget, RECOVERY_MIN_TAILOR_MS } from "@/lib/whatsapp-recovery-budget"
 import { jobKeyOf, type SavedFile } from "@/lib/resume-library"
@@ -812,9 +812,16 @@ async function generate(from: string, session: Session, userId: string, maxMs = 
       sections: { summary: false, skills: true, experience: true },
     })
   } catch (e) {
-    failureCode = "provider_error"
+    // A timeout and a provider failure are different errors with different
+    // fixes, so they are told apart here and recorded apart (failureCode is
+    // persisted as the recovery record's errorCode). Nothing here changes
+    // the retry routing: both codes schedule the same automatic retry.
+    const timedOut = /timed out/i.test(String(e))
+    failureCode = timedOut ? "timeout" : "provider_error"
     console.error("[whatsapp] tailor failed", String(e).slice(0, 300))
-    await sayOutcome("I could not tailor your resume just now. Your resume and this job are saved, and MarketFit will try again.")
+    await sayOutcome(timedOut
+      ? "The rewrite ran out of time just now. Your resume and this job are saved, and MarketFit will try again."
+      : "I could not tailor your resume just now. Your resume and this job are saved, and MarketFit will try again.")
     return;
   }
 
@@ -1491,6 +1498,10 @@ function qualityStop(result: TailorResult): string {
   if (reasons.includes("ats_check_failed")) {
     const issues = (result.ats?.issues || []).slice(0, 4).join("; ")
     return `I did not send a file. The draft failed the ATS parse check${issues ? `: ${issues}` : ""}. Your resume and this job are saved for another try. No incomplete file was delivered.`
+  }
+  const named = describeRejectionReasons(reasons)
+  if (named.length) {
+    return `I did not send a file. The draft was held: ${named.join("; ")}. Your resume and this job are saved for another try. No incomplete file was delivered.`
   }
   return "I did not send a file. The draft did not pass the checks for a finished resume that stays within your real experience. Your resume and this job are saved for another try. No incomplete file was delivered."
 }
