@@ -126,3 +126,14 @@ test('generic specialty and attributes headings are not technical gaps; named te
   for (const word of ['specialty','attributes']) assert.ok(!terms.includes(word), word)
   for (const term of ['canton','sol','nist','iso 27001','cobit']) assert.ok(terms.includes(term), term)
 })
+
+test('Nov4 extraction junk: prose fragments, adverbs and recruiter names are not JD terms', () => {
+  const terms = extractJdKeywords(`Senior Cloud Security Engineer
+Experience with SIEM, Palo Alto firewalls and Data Mover required.
+Work closely with teams on cloud-based tools and government-issued devices.
+This opportunity-please apply today. Contact Sai Kumar on our Talent Acquisition team.
+Best regards,
+Sai Kumar`)
+  for (const term of ['cloud-based', 'government-issued', 'closely', 'opportunity-please', 'sai kumar']) assert.ok(!terms.includes(term), term)
+  for (const term of ['siem', 'palo alto', 'data mover']) assert.ok(terms.includes(term), term)
+})
