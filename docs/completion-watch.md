@@ -39,3 +39,13 @@ Other independently trackable work includes Poke-inspired Gmail/mobile updates, 
 Historical held-resume reports above remain incident evidence. The later owner-approved 90 percent fallback is recorded in docs/research/resume-confirmed-keyword-boundary.md; exact-run acceptance remains open.
 
 26 October reconciliation: PR #59 is already merged as cb3c5fae7d389b4e9e0f863e5906339c737e9051. Current production is READY at dpl_Er7qNLFVeehkTmiPM3ZMcEiQFvzg, commit 3ff966ed8171d97033ea3eeedd44c95987765133, with job-dashboard-fawn.vercel.app assigned and aliasError null. Supersedes the pending publication step; authenticated original-posting return acceptance remains pending. No application submitted.
+
+## 4 November reconciliation and report safety
+
+Fresh canonical master and production alias both resolve to 40a443a (READY production dpl_EfJ6Z9Gwp3iPthBQsM5K7rJdNGTL, aliasError null). Earlier October release-quota observations are historical, not a current blocker. Open issue120 still requires actual authorized 50-pair grading; issue148 still requires actual cross-device acceptance. Existing PR202 header/footer extraction is draft work and is not duplicated. Active Voice Delivery and WhatsApp Repair tasks remain enabled; no separately named Bible-Keeper task was visible. Older local picker work is not rebased or shipped over newer automatic account-sync behavior.
+
+The new automatic WhatsApp gap report can exceed sendText's 4000-unit cutoff and lose its final warning, and can report keyword review passed despite unverified added claims or incomplete quality. Continue the approved transparency repair: keep risk/evidence warnings before bounded keyword lists, show omitted counts, and require valid coverage plus completed quality without claim blockers before pass wording. No changes to generation, identity/date guards or delivery eligibility; no real outgoing messages.
+
+Report validation at publication: 10/13 focused cases fail before the repair, 13/13 pass after; TypeScript and focused ESLint pass. The broad unchanged-master comparison and production build are still running. Initial eight voice/caption failures reproduce on both checkouts. Current public stamp is 40a443a, desktop manifest 0.8.7; shared/account session APIs deny anonymous access with 401/no-store. No live report message or model generation was sent.
+
+Production Webpack build passed. Existing deploy-build test expected an obsolete entire prebuild command, omitting the already-landed date guards. Updated that exact expected command to preserve every old gate and include date/report regressions; Vercel's build mode was already correct. Release/source tests 38/38 pass. Broad comparison remains running; no overall green-suite claim.

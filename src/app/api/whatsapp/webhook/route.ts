@@ -1401,22 +1401,48 @@ function notAdded(result: TailorResult): string[] {
 // Keyword presence is not proof of hands-on experience, and the percentage is not an employer ATS score.
 function resumeGapReport(result: TailorResult): string {
   const analysis = result.keyword_analysis
-  const unique = (terms: string[] = []) => [...new Set(terms.map(t => String(t).trim()).filter(Boolean))]
+  const unique = (terms: string[] = []) => {
+    const seen = new Set<string>()
+    return terms.map(t => String(t).replace(/\s+/g, " ").trim()).filter(t => {
+      const key = t.toLowerCase()
+      if (!t || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
   const matched = unique(analysis?.matched || [])
   const added = unique(analysis?.added || [])
   const missing = unique([...(analysis?.missing || []), ...(result.jd_terms_unplaced || []), ...(result.quality?.missing || [])])
-  const covered = Number.isFinite(result.coverage) ? `${result.coverage}%` : "Not measured"
-  const supported = Number.isFinite(result.supported_coverage) ? `${result.supported_coverage}%` : "Not measured"
-  const list = (terms: string[]) => terms.length ? terms.slice(0, 20).join(", ") + (terms.length > 20 ? ` (+${terms.length - 20} more)` : "") : "None identified"
+  const unverified = unique(result.unverified_added_keywords || [])
+  const measured = (value: number | undefined): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100
+  const covered = measured(result.coverage) ? `${result.coverage}%` : "Not measured"
+  const supported = measured(result.supported_coverage) ? `${result.supported_coverage}%` : "Not measured"
+  // sendText truncates at 4000 UTF-16 units. Bound each list independently so
+  // no keyword list can erase the risk or evidence warning. Counts retain omissions.
+  const list = (terms: string[]) => {
+    if (!terms.length) return "None identified"
+    const shown: string[] = []
+    for (const term of terms.slice(0, 20)) {
+      const points = Array.from(term)
+      const short = points.slice(0, 120).join("") + (points.length > 120 ? "…" : "")
+      if ([...shown, short].join(", ").length > 600) break
+      shown.push(short)
+    }
+    return shown.join(", ") + (terms.length > shown.length ? ` (+${terms.length - shown.length} more)` : "")
+  }
+  const needsReview = result.skills_only || result.partial || result.unchanged || missing.length || unverified.length ||
+    result.quality_blockers?.length || result.quality?.incomplete || result.quality?.status !== "coverage_met" ||
+    !measured(result.coverage) || result.coverage < 95 || !measured(result.supported_coverage) || result.supported_coverage < 95
   return [
     "*MFit Resume Gap & Risk Report*",
     `Estimated JD keyword coverage: ${covered} (not an employer ATS score)`,
     `Resume-supported coverage: ${supported}`,
+    `Risk: ${needsReview ? "Needs review" : "Keyword review passed; experience evidence still requires verification"}`,
+    "Mandatory hands-on requirements must be supported by specific experience bullets, not just keywords. Verify each added claim before applying.",
     `Already matched: ${list(matched)}`,
     `Newly placed: ${list(added)}`,
     `Missing / unresolved JD terms: ${list(missing)}`,
-    `Risk: ${result.skills_only || result.partial || result.unchanged || missing.length ? "Needs review" : "Keyword review passed; experience evidence still requires verification"}`,
-    "Mandatory hands-on requirements must be supported by specific experience bullets, not just keywords. Verify each added claim before applying.",
+    `Added claims needing verification: ${list(unverified)}`,
   ].join("\n")
 }
 
