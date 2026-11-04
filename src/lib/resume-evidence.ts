@@ -24,7 +24,7 @@ export function explicitlyConfirmsAllRequirements(statements: readonly string[])
 /** Only explicit candidate assertions can expand deterministic evidence. Naming a
  * tool in an editing instruction, a question or a negation is not confirmation. */
 export function confirmedCandidateStatements(statements: readonly string[]): string[] {
-  return statements.flatMap(statement => statement.split(/[\n.!?;]+/)).flatMap(raw => {
+  return statements.flatMap(statement => statement.split(/[\n;]+|[.!?](?=\s|$)/)).flatMap(raw => {
     const line = raw.trim()
     if (!/^(?:i\s+(?:(?:have|possess)\b|(?:personally\s+)?(?:used|implemented|deployed|managed|tested|built|conducted|performed|worked)\b)|my\s+(?:experience|skills|background)\b|(?:confirmed experience|confirmed skills)\s*:)/i.test(line)) return []
     if (/^i\s+(?:have|possess)\s+(?:no|not|never)\b/i.test(line)) return []
