@@ -71,6 +71,13 @@ export interface TailorResult {
   supported_coverage?: number
   /** JD requirements not evidenced by the candidate; never add as claimed skills merely to raise a score. */
   unsupported_keywords?: string[]
+  /** Gemini enrichment visibility (Nov 4): the two pre-generation passes'
+   * suggestions, split by whether the exported file actually contains them.
+   * Blocked = the evidence gate refused them, not a missing pass. Absent on
+   * runs whose export recount failed. */
+  enrichment_suggested?: string[]
+  enrichment_placed?: string[]
+  enrichment_blocked?: string[]
   /** Unsupported requirements that appeared as new claims in the generated document. */
   unverified_added_keywords?: string[]
   // Per role: bullets rewritten and added, the listed JD skills this role must show to back the
@@ -1128,7 +1135,7 @@ export async function runTailor(opts: {
   try {
     const exportedText = (await docxText(buffer)).replace(/\s+/g, " ")
     const exportedCovered = coveredJdKeywords(exportedText, scoreKws)
-    exportedRecount = recountExported({ scoreKws, attainableKws, exportedCovered, placed: best.floor ?? [], writer: writerOnSkills, summary: best.floorSummary ?? [] })
+    exportedRecount = recountExported({ scoreKws, attainableKws, exportedCovered, placed: best.floor ?? [], writer: writerOnSkills, summary: best.floorSummary ?? [], enrichmentSuggested: jdGenerated, enrichmentCovered: coveredJdKeywords(exportedText, jdGenerated) })
   } catch (e) {
     notes.push(`Exported-file recount unavailable (${e instanceof Error ? e.message : "unknown error"}); numbers measured on tailored text.`)
   }
@@ -1204,6 +1211,11 @@ export async function runTailor(opts: {
     ...(finalPlaced.length ? { placed_from_jd: finalPlaced.map(k => jdSpelling(k, jd)) } : {}),
     ...(finalWriter.length ? { skills_from_jd_writer: finalWriter } : {}),
     ...(finalSummary.length ? { placed_in_summary: finalSummary.map(k => jdSpelling(k, jd)) } : {}),
+    ...(exportedRecount?.enrichment ? {
+      enrichment_suggested: jdGenerated.map(k => jdSpelling(k, jd)),
+      enrichment_placed: exportedRecount.enrichment.placed.map(k => jdSpelling(k, jd)),
+      enrichment_blocked: exportedRecount.enrichment.blocked.map(k => jdSpelling(k, jd)),
+    } : {}),
     ...(skillsOnly ? { skills_only: true } : {}),
     jd_terms_gate: jdGate ? "on" : "off",
     ...(bulletsReverted ? { bullets_reverted_for_jd_terms: bulletsReverted } : {}),

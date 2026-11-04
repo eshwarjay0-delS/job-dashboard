@@ -1451,6 +1451,11 @@ function resumeGapReport(result: TailorResult): string {
     `Newly placed: ${list(added)}`,
     `Missing / unresolved JD terms: ${list(missing)}`,
     `Added claims needing verification: ${list(unverified)}`,
+    // Enrichment visibility (Nov 4): the two Gemini passes run before
+    // editing, but their output used to be invisible — the reported
+    // coverage counts original JD terms only. Show suggested vs placed
+    // vs gate-blocked so a "no keywords added" report can be checked.
+    ...(result.enrichment_suggested?.length ? [`Gemini enrichment (two passes before editing): suggested ${result.enrichment_suggested.length} — placed in the file: ${list(result.enrichment_placed || [])} — not placed because your resume does not evidence them: ${list(result.enrichment_blocked || [])}`] : []),
   ].join("\n")
 }
 
