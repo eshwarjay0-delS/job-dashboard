@@ -142,7 +142,11 @@ test("item 1: the round-trip guard it calls stops a changed name, phone or date"
 test("item 5: terms the AI writer put on the skills line are named in the result and the reply", () => {
   const tailor = src("src/lib/tailor.ts")
   assert.ok(tailor.includes("skills_from_jd_writer?: string[]"))
-  assert.ok(tailor.includes("...(writerOnSkills.length ? { skills_from_jd_writer: writerOnSkills } : {}),"))
+  // Nov 4 exported-recount: writer terms reach the result through finalWriter,
+  // which is the recount-filtered list when the exported file was recounted
+  // (terms the file does not contain are not named) and writerOnSkills else.
+  assert.ok(tailor.includes("const finalWriter = exportedRecount ? exportedRecount.writer : writerOnSkills"))
+  assert.ok(tailor.includes("...(finalWriter.length ? { skills_from_jd_writer: finalWriter } : {}),"))
   assert.ok(tailor.includes("const writerOnSkills = jdGate && !refine"))
   const route = src("src/app/api/whatsapp/webhook/route.ts")
   assert.ok(route.includes("...(result.skills_from_jd_writer || [])"))

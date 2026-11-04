@@ -22,6 +22,8 @@ import { jdTermsGateOn, type JdTermsUnplacedReason } from "./jd-terms-gate"
 import { cleanTerm, isJunkTerm, isGuardUnsafe } from "./resume-skills-line"
 import { cacheSkipRefusedOn, refusedForReplay } from "./tailor-guards"
 import { atsCheck, type AtsResult } from "./resume-ats"
+import { docxText } from "./resume-round-trip-guard"
+import { recountExported } from "./resume-exported-recount"
 
 export interface TailorResult {
   /** Receipt policy for complete evidence-checked exports; never inferred from overlap. */
@@ -158,7 +160,7 @@ function normJD(jd: string): string {
 // Version 20 places missing job-post skills on the skills line and caches every finished run.
 // Version 21 removes unsupported skills-floor claims and refuses skills-only completion.
 // Version 22 adds the exported-document ATS parse check to the delivery gate.
-const CACHE_GENERATION = "22"
+const CACHE_GENERATION = "23"
 const inflightTailors = new Map<string, Promise<TailorResult>>()
 function cacheKeyOf(jd: string, filepath: string, sourceHash: string, prefs: string[]): string {
   return createHash("sha1")
@@ -1113,6 +1115,23 @@ export async function runTailor(opts: {
     ? [...coveredJdKeywords(skillsLines, unsupportedJdKws)].filter(k => !floorNamed.has(k.toLowerCase()) && !isCertification(k)).map(k => jdSpelling(k, jd))
     : []
   if (writerOnSkills.length) notes.push(`Job-post terms the writer put on the skills line, not as confirmed experience: ${writerOnSkills.join(", ")}`)
+  // Real-metrics recount (Nov 4): the caption's numbers must be measured on
+  // the exported file's bytes, never on in-memory tailored text alone. The
+  // buffer below is the exact file that gets stored and sent, so a term the
+  // export dropped is a term the file does not have, whatever the tailor
+  // counted. docxText keeps explicit breaks as newlines (mammoth's
+  // extractText glues the runs, turning "Zero<break/>Trust" into "ZeroTrust"),
+  // and whitespace is collapsed first so a term wrapped across lines in the
+  // document still counts. If the recount itself fails, the in-memory
+  // numbers stand and the failure is noted.
+  let exportedRecount: ReturnType<typeof recountExported> | null = null
+  try {
+    const exportedText = (await docxText(buffer)).replace(/\s+/g, " ")
+    const exportedCovered = coveredJdKeywords(exportedText, scoreKws)
+    exportedRecount = recountExported({ scoreKws, attainableKws, exportedCovered, placed: best.floor ?? [], writer: writerOnSkills, summary: best.floorSummary ?? [] })
+  } catch (e) {
+    notes.push(`Exported-file recount unavailable (${e instanceof Error ? e.message : "unknown error"}); numbers measured on tailored text.`)
+  }
   // ATS parseability of the exact bytes that will be stored: the exported
   // document text plus zones re-parsed from its buffer, never the edits.
   const exportedZones = await extractZones(buffer)
@@ -1135,8 +1154,9 @@ export async function runTailor(opts: {
   // The delivery score is the job post itself. Evidenced-only scoring reported 100% while
   // the file still showed about half the post, and a post the resume had never used
   // scored as an empty denominator (needs review) after the skills line was filled.
-  const coveredScore = scoreKws.filter(k => afterKw.has(k))
-  const qualityReport = resumeQuality({ matched: coveredScore.length, total: scoreKws.length, missing: scoreKws.filter(k => !afterKw.has(k)), weightedCoverage: best.cov, partial: qualityBlockers.some(k => k !== "unchanged"), unchanged: !diff.length })
+  const recount = exportedRecount
+  const coveredScore = recount ? scoreKws.filter(k => !recount.missing.includes(k)) : scoreKws.filter(k => afterKw.has(k))
+  const qualityReport = resumeQuality({ matched: coveredScore.length, total: scoreKws.length, missing: recount ? recount.missing : scoreKws.filter(k => !afterKw.has(k)), weightedCoverage: best.cov, partial: qualityBlockers.some(k => k !== "unchanged"), unchanged: !diff.length })
   // Independent Gemini feedback on the ACTUAL exported DOCX text. This is advisory:
   // model-suggested vocabulary never inflates the measured JD coverage or asserts
   // experience the candidate did not supply. Keep the pass short so WhatsApp
@@ -1166,6 +1186,9 @@ export async function runTailor(opts: {
     await blob.put(`tailored/${token}.owner.json`, JSON.stringify({ userId: opts.ownerId })).catch(() => {})
   }
 
+  const finalPlaced = exportedRecount ? exportedRecount.placed : (best.floor ?? [])
+  const finalWriter = exportedRecount ? exportedRecount.writer : writerOnSkills
+  const finalSummary = exportedRecount ? exportedRecount.summary : (best.floorSummary ?? [])
   const result: TailorResult = {
     quality: qualityReport,
     quality_blockers: qualityBlockers,
@@ -1173,14 +1196,14 @@ export async function runTailor(opts: {
     token, score: after, score_before: before, tier, matched, matched_on: matchedOn,
     ranked_candidates: rankedCandidates, what_changed: whatChanged(edits), edits, notes,
     applied_feedback: allPrefs, keyword_analysis, score_breakdown, diff, review,
-    ...(!qualityBlockers.length && !skillsOnly && best.cov >= RESUME_MIN_COVERAGE ? { quality_policy: "evidence-v1" as const } : {}),
-    cached: false, elapsed_ms: Date.now() - started, coverage: coveragePercent(best.cov), supported_coverage: coveragePercent(attainableCoverage), unsupported_keywords: unsupportedJdKws, unverified_added_keywords: unverifiedAdded, role_alignment,
+    ...(!qualityBlockers.length && !skillsOnly && (exportedRecount ? exportedRecount.coverage / 100 : best.cov) >= RESUME_MIN_COVERAGE ? { quality_policy: "evidence-v1" as const } : {}),
+    cached: false, elapsed_ms: Date.now() - started, coverage: exportedRecount ? exportedRecount.coverage : coveragePercent(best.cov), supported_coverage: exportedRecount ? exportedRecount.supportedCoverage : coveragePercent(attainableCoverage), unsupported_keywords: unsupportedJdKws, unverified_added_keywords: unverifiedAdded, role_alignment,
     experience_skills: { listed: claimedKw.size, shown: provenKw.size },
     ...(best.partial ? { partial: best.partial } : {}),
     ...(diff.length ? {} : { unchanged: true }),
-    ...(best.floor?.length ? { placed_from_jd: best.floor.map(k => jdSpelling(k, jd)) } : {}),
-    ...(writerOnSkills.length ? { skills_from_jd_writer: writerOnSkills } : {}),
-    ...(best.floorSummary?.length ? { placed_in_summary: best.floorSummary.map(k => jdSpelling(k, jd)) } : {}),
+    ...(finalPlaced.length ? { placed_from_jd: finalPlaced.map(k => jdSpelling(k, jd)) } : {}),
+    ...(finalWriter.length ? { skills_from_jd_writer: finalWriter } : {}),
+    ...(finalSummary.length ? { placed_in_summary: finalSummary.map(k => jdSpelling(k, jd)) } : {}),
     ...(skillsOnly ? { skills_only: true } : {}),
     jd_terms_gate: jdGate ? "on" : "off",
     ...(bulletsReverted ? { bullets_reverted_for_jd_terms: bulletsReverted } : {}),
