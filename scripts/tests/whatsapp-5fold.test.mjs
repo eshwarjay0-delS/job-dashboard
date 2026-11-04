@@ -112,6 +112,7 @@ test('fold 5: a run that cannot send a file says so instead of stopping', async 
     '@/lib/whatsapp-recovery-budget': load('src/lib/whatsapp-recovery-budget.ts'),
     '@/lib/whatsapp-upload-age': load('src/lib/whatsapp-upload-age.ts'),
     '@/lib/whatsapp-resume-acceptance': load('src/lib/whatsapp-resume-acceptance.ts'),
+    '@/lib/resume-risk': load('src/lib/resume-risk.ts'),
     '@/lib/whatsapp-resume-recovery': {
       enqueueResumeRecovery: async input => ({ ...input, status: statuses.shift() || 'pending' }),
       patchResumeRecovery: async () => {},

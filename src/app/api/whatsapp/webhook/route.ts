@@ -40,6 +40,7 @@ import { extractProfile } from "@/lib/profile"
 import { plainFailure } from "@/lib/plain-failure"
 import { createServiceClient, serviceClientAvailable } from "@/lib/supabase/service"
 import { isCertification } from "@/lib/keyword-targets"
+import { riskScore } from "@/lib/resume-risk"
 import { libraryOf, numberedEmails, candidatesFor } from "@/lib/library-pick-store"
 import { askWhichEmail, choiceIn, readChoice, live, rankFor, saidOf, DIFFERENT_RESUME } from "@/lib/library-pick"
 import { existingForJob, saveTailored, saveUpload, markUsed, relOf } from "@/lib/resume-library-store"
@@ -1525,13 +1526,27 @@ function captionFor(name: string, meta: Meta, result: TailorResult, update?: { r
   const supported = Number.isFinite(result.supported_coverage) ? `Skills your resume already supports: ${result.supported_coverage}%` : ""
   const overall = Number.isFinite(result.coverage) ? `JD keyword coverage ${result.coverage}%` : ""
   const atsLine = result.ats?.passed ? `ATS parse check: ${result.ats.score}%` : ""
+  // Nov 4: every delivered file reports ATS plus the risk factor score, side by
+  // side, both measured on the run's own record — never a model verdict. The
+  // risk rides the ATS line itself (never a line of its own), so the caption
+  // keeps its short shape: a separate risk line broke the five-line caption
+  // contract in whatsapp-single-request, and a result with no passing ATS
+  // check is a held run, not a delivery, so it carries no delivery caption.
+  const risk = atsLine ? riskScore({
+    coverage: result.coverage,
+    atsIssues: result.ats?.issues,
+    atsPassed: result.ats?.passed,
+    unverifiedAdded: result.unverified_added_keywords,
+    missing: [...(result.keyword_analysis?.missing || []), ...(result.quality?.missing || [])],
+    qualityBlockers: result.quality_blockers,
+  }) : null
   return [
     `*${name}*${update ? ` (update ${update.number})` : ""}`,
     ...(meta.role ? [`${meta.role}${meta.company ? ` · ${meta.company}` : ""}`] : []),
     ...more,
     ...(supported ? [supported] : []),
     ...(overall ? [overall] : []),
-    ...(atsLine ? [atsLine] : []),
+    ...(atsLine && risk ? [`${atsLine} · Risk factor: ${risk.score}/100 (${risk.level})`] : []),
     ...notAdded(result),
     "Reply to this file to request changes.",
   ].join("\n")
