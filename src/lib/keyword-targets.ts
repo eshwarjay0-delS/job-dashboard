@@ -78,6 +78,11 @@ const WORKPLACE_TERM = /^(?:remote|hybrid|on ?-?site|in office)\b.*\b(?:in|from|
 const AUTH_TERM = /\bauthori[sz](?:ed|ation) to work\b|\bwork authori[sz]ation\b|\bright to work\b/i
 
 /** A qualification or a word of the post that is not a skill: never written onto a resume, never counted in the match. */
+// Mirror of keywords.ts WORD_STOP adverbs/modifiers and resume-skills-line.ts
+// isJunkTerm: this file has no imports by design, so the list is duplicated
+// here. Keep the three lists identical.
+const JUNK_WORD = new Set(['closely', 'effectively', 'proactively', 'diligently', 'efficiently', 'independently', 'consistently', 'actively', 'directly', 'primarily', 'mainly', 'largely', 'generally', 'typically', 'successfully', 'seamlessly', 'rapidly', 'thoroughly', 'accurately', 'promptly', 'strategically', 'collaboratively', 'opportunity', 'please'])
+const MODIFIER_PART = new Set(['based', 'issued'])
 export function isQualificationOrJunk(term: string): boolean {
   const t = String(term || "").toLowerCase().trim()
   if (!t) return true
@@ -86,8 +91,11 @@ export function isQualificationOrJunk(term: string): boolean {
   if (US_STATE_WORDS.has(t)) return true
   if (WORK_STATUS.has(t.replace(/[^a-z0-9]+/g, "")) || POST_FILLER.has(t)) return true
   if (PAY_TERM.test(t) || WORKPLACE_TERM.test(t) || AUTH_TERM.test(t)) return true
-  const w = t.split(/[\s/-]+/).filter(Boolean)
-  return w.length > 0 && w.every(x => RANK_COMPANY.has(x)) && w.some(x => RANK.has(x))
+  const parts = t.split(/[\s/-]+/).filter(Boolean)
+  if (parts.length === 1 && JUNK_WORD.has(parts[0])) return true
+  if (parts.length > 1 && parts.some(p => MODIFIER_PART.has(p))) return true
+  if (parts.length > 1 && parts.every(p => JUNK_WORD.has(p))) return true
+  return parts.length > 0 && parts.every(x => RANK_COMPANY.has(x)) && parts.some(x => RANK.has(x))
 }
 
 // Lines and sentences of a post that are not about the work: benefits, the equal-opportunity line, the company's story,
