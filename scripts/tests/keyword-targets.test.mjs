@@ -2,7 +2,7 @@
 // micro-segmentation job of 19 Oct 2026: the job post's literal extraction and Gemini's two passes, as measured.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { targetKeywords, skillLike, placeInSkills, isCertification, jdSpelling, withoutAddedCerts, withoutUnsupportedSkills, weaveConfirmedVocabulary, parseConfirmedVocabulary } from '../../src/lib/keyword-targets.ts'
+import { targetKeywords, skillLike, placeInSkills, isCertification, isQualificationOrJunk, floorTerms, jdSpelling, withoutAddedCerts, withoutUnsupportedSkills, weaveConfirmedVocabulary, parseConfirmedVocabulary } from '../../src/lib/keyword-targets.ts'
 
 const literal = ['siem', 'splunk', 'ansible', 'aws', 'azure', 'zero trust', 'firewall', 'vpn', 'tcp/ip', 'dns', 'routing', 'network security',
   'compliance', 'nist', 'pci', 'python', 'policy', 'palo alto', 'ipsec', 'micro-segmentation', 'vpc', 'vnet', 'tcp', 'ip', 'globalprotect',
@@ -124,4 +124,12 @@ Develop Apex with Lightning Web Components (LWC), Salesforce CPQ, SOQL, SOSL, an
   assert.match(woven.text, /Configured approval processes/)
   assert.equal(has('netsuite'), false)
   assert.equal(has('saved searches'), false)
+})
+
+test('Nov4 junk filter: adverbs, modifiers and prose compounds are not skills', () => {
+  for (const term of ['closely', 'cloud-based', 'government-issued', 'opportunity-please', 'effectively']) assert.equal(isQualificationOrJunk(term), true, term)
+  for (const term of ['open-source', 'machine-learning', 'siem', 'row-level security']) assert.equal(isQualificationOrJunk(term), false, term)
+  const floor = floorTerms('Work closely with teams on cloud-based tools and government-issued devices. Handle opportunity-please requests. Use SIEM daily.', ['cloud-based', 'government-issued', 'closely', 'opportunity-please', 'siem'])
+  assert.equal(floor.length, 1)
+  assert.ok(floor.includes('siem'))
 })
